@@ -1,0 +1,118 @@
+{
+    "session": {
+        "tasks": [
+            {
+                "name": "task1",
+                "constants": [
+                    { "name": "frame_size", "value": 480},
+                    { "name": "sample_rate", "value": 48000 }
+                ],
+                "blocks": [
+                    {
+                        "name": "in",
+                        "algorithm": "jack_in",
+                        "constants": [
+                            { "name": "frame_size", "value": 480},
+                            { "name": "sample_rate", "value": 48000 }
+                        ],
+                        "terminals": [
+                            { "name": "out", "channels": 1 }
+                        ]
+                    },
+                    {
+                        "name": "infile",
+                        "algorithm": "wav_read",
+                        "constants": [
+                            { "name": "frame_size", "value": 480},
+                            { "name": "sample_rate", "value": 48000 }
+                        ],
+                        "terminals": [
+                            { "name": "out", "channels": 1 }
+                        ]
+                    },
+                    {
+                        "name": "volume",
+                        "algorithm": "gain",
+                        "constants": [
+                            { "name": "channels", "value": 1 },
+                            { "name": "frame_size", "value": 480 },
+                            { "name": "sample_rate", "value": 48000 }
+                        ],
+                        "terminals": [
+                            { "name": "in", "channels": 1 },
+                            { "name": "out", "channels": 1 }
+                        ],
+                        "connections": [
+                            { "source_block": "infile", "input_terminal": "in", "output_terminal": "out", "input_channel": 0, "output_channel": 0 }
+                        ]
+                    },
+                    {
+                        "name": "mic_volume",
+                        "algorithm": "gain",
+                        "constants": [
+                            { "name": "channels", "value": 1 },
+                            { "name": "frame_size", "value": 480 },
+                            { "name": "sample_rate", "value": 48000 }
+                        ],
+                        "terminals": [
+                            { "name": "in", "channels": 1 },
+                            { "name": "out", "channels": 1 }
+                        ],
+                        "connections": [
+                            { "source_block": "in", "input_terminal": "in", "output_terminal": "out", "input_channel": 0, "output_channel": 0 }
+                        ],
+                        "control_settings": [
+                            { "name": "gain", "value": 0.01 }
+                        ]
+                    },
+                    {
+                        "name": "mic",
+                        "algorithm": "smart_mic",
+                        "constants": [
+                            { "name": "frame_size", "value": 480 },
+                            { "name": "sample_rate", "value": 48000 }
+                        ],
+                        "terminals": [
+                            { "name": "mic_in", "channels": 1 },
+                            { "name": "ref_in", "channels": 1 },
+                            { "name": "mic_out", "channels": 1 }
+                        ],
+                        "connections": [
+                            { "source_block": "mic_volume", "input_terminal": "mic_in", "output_terminal": "out", "input_channel": 0, "output_channel": 0 },
+                            { "source_block": "volume", "input_terminal": "ref_in", "output_terminal": "out", "input_channel": 0, "output_channel": 0 }
+                        ]
+                    },
+                    {
+                        "name": "out",
+                        "algorithm": "jack_out",
+                        "constants": [
+                            { "name": "frame_size", "value": 480 },
+                            { "name": "sample_rate", "value": 48000 }
+                        ],
+                        "terminals": [
+                            { "name": "in", "channels": 2 }
+                        ],
+                        "connections": [
+                            { "source_block": "volume", "input_terminal": "in", "output_terminal": "out", "input_channel": 0, "output_channel": 0 },
+                            { "source_block": "volume", "input_terminal": "in", "output_terminal": "out", "input_channel": 1, "output_channel": 0 }
+                        ]
+                    },
+                    {
+                        "name": "outfile",
+                        "algorithm": "wav_write",
+                        "constants": [
+                            { "name": "frame_size", "value": 480 },
+                            { "name": "sample_rate", "value": 48000 }
+                        ],
+                        "terminals": [
+                            { "name": "in", "channels": 1 }
+                        ],
+                        "connections": [
+                            { "source_block": "mic", "input_terminal": "in", "output_terminal": "mic_out", "input_channel": 0, "output_channel": 0 }
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+}

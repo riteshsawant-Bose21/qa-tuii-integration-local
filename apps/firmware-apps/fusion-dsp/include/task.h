@@ -1,0 +1,203 @@
+#pragma once
+
+#include <bosepro/algorithm.h>
+#include <bosepro/configurable.h>
+#include <bosepro/configuration.h>
+
+#include <pthread.h>
+#include <spdlog/spdlog.h>
+
+#include <cstdint>
+#include <list>
+#include <map>
+#include <memory>
+#include <string>
+
+
+namespace bosepro {
+
+
+/// A periodic real-time task that runs in a separate thread.
+class PeriodicTask {
+public:
+    /// Create a new periodic task.
+    ///
+    /// @param  run_function  The function to run in the task thread.
+    /// @param  obj  The object to pass to the run function.
+    /// @param  period  The period of the task, relative to the base frame rate
+    ///                 of the system.
+    PeriodicTask(void (*run_function)(void *), void *obj, int_fast32_t period)
+        : run_function(run_function), obj(obj), period(period), ticks(0)
+    {
+        pthread_create(&thread, NULL, run, this);
+        pthread_mutexattr_t attr;
+        pthread_mutexattr_setprotocol(&attr, PTHREAD_PRIO_INHERIT);
+        pthread_mutex_init(&ticks_mutex, &attr);
+        pthread_cond_init(&ticks_cond, NULL);
+        task_id = task_count++;
+    }
+
+
+    /// Set the real-time priority of the task (between 0 and 99).  If this is
+    /// not called, the task will not be a real-time task.
+    ///
+    /// @param priority The real-time priority of the task.
+    void set_priority(int priority)
+    {
+        struct sched_param sched_param;
+        sched_param.sched_priority = priority;
+        if (pthread_setschedparam(thread, SCHED_FIFO, &sched_param) != 0)
+        {
+            SPDLOG_ERROR("Failed to set priority of periodic task");
+        }
+    }
+
+
+    /// Increment the task tick count, indicating one frame at the base frame
+    /// rate has passed.  This will wake the task according to its period.
+    void tick()
+    {
+        pthread_mutex_lock(&ticks_mutex);
+        ticks++;
+
+        if (ticks >= 2 * period)
+        {
+            SPDLOG_WARN("Periodic task {} is running behind", task_id);
+        }
+
+        if (ticks >= period)
+        {
+            pthread_cond_signal(&ticks_cond);
+        }
+
+        pthread_mutex_unlock(&ticks_mutex);
+    }
+
+
+private:
+    /// The function that runs the task thread.  It runs the task function
+    /// once per period, then waits for the next period to elapse.
+    ///
+    /// @param p_task A pointer to the task object.
+    static void *run(void *p_task)
+    {
+        PeriodicTask *task = (PeriodicTask *)p_task;
+        while (true)
+        {
+            pthread_mutex_lock(&task->ticks_mutex);
+            while (task->ticks < task->period)
+            {
+                pthread_cond_wait(&task->ticks_cond, &task->ticks_mutex);
+            }
+            task->ticks -= task->period;
+            pthread_mutex_unlock(&task->ticks_mutex);
+            task->run_function(task->obj);
+        }
+    }
+
+
+    static int task_count;
+    int task_id;
+    pthread_t thread;
+    pthread_mutex_t ticks_mutex;
+    pthread_cond_t ticks_cond;
+    void (*run_function)(void *);
+    void *obj;
+    int_fast32_t period;
+    int_fast32_t ticks;
+};
+
+
+/// A real-time audio processing task, which runs a collection of blocks that
+/// all have the same frame rate.
+class Task : public Configurable {
+public:
+    /// Create a task from a configuration.
+    ///
+    /// @param  configuration  The configuration for the task.
+    Task(const TaskConfiguration &configuration)
+        : Configurable(configuration)
+    {
+        // Create all of the blocks in the task.
+        for (auto &b : configuration.get_blocks())
+        {
+            const BlockConfiguration *bc =
+                reinterpret_cast<const BlockConfiguration *>(&b.second);
+
+            SPDLOG_DEBUG("Creating block: {}.", bc->get_name());
+
+            blocks.push_back(std::unique_ptr<Algorithm>(
+                ChildFactory<Algorithm,
+                     const BlockConfiguration &>::create_child(
+                         bc->get_algorithm(), *bc)));
+            block_map[bc->get_name()] = blocks.back().get();
+        }
+
+        for (auto &b : blocks)
+        {
+            b->initialize_terminals();
+            b->initialize_controls();
+            b->initialize_meters();
+        }
+
+        for (auto &b : configuration.get_blocks())
+        {
+            const BlockConfiguration *bc =
+                reinterpret_cast<const BlockConfiguration *>(&b.second);
+
+            // Blocks with no input terminals have no connections.
+            if (bc->count("connections") == 0)
+            {
+                SPDLOG_DEBUG("Block {} has no connections.", bc->get_name());
+                continue;
+            }
+
+            Algorithm *input_block = block_map[bc->get_name()];
+
+            SPDLOG_TRACE("Connecting block {}.", bc->get_name());
+
+            for (auto &c : bc->get_connections())
+            {
+                const ConnectionConfiguration *cc =
+                    reinterpret_cast<const ConnectionConfiguration *>(&c.second);
+                Algorithm *ouput_block = block_map[cc->get_source_block()];
+                Terminal &output_terminal =
+                    ouput_block->get_terminal(cc->get_output_terminal());
+                int output_channel = cc->get_output_channel();
+                int input_channel = cc->get_input_channel();
+
+                SPDLOG_TRACE("Connecting {}:{}:{} -> {}:{}:{}.",
+                             cc->get_source_block(), cc->get_output_terminal(),
+                             cc->get_output_channel(), bc->get_name(),
+                             cc->get_input_terminal(), cc->get_input_channel());
+
+                input_block->connect_terminal(cc->get_input_terminal(),
+                                              input_channel, output_terminal,
+                                              output_channel);
+            }
+        }
+    }
+
+
+    virtual ~Task() = default;
+
+
+    /// Run one frame of audio through all of the blocks in this task.
+    virtual void process() override
+    {
+        for (auto &block : blocks)
+        {
+            block->process();
+        }
+    }
+
+
+private:
+    // A list of blocks, for quickly processing in order.
+    std::list<std::unique_ptr<Algorithm>> blocks;
+    // A map of blocks, for accessing controls and meters.
+    std::map<std::string, Algorithm *> block_map;
+};
+
+
+} // namespace bosepro

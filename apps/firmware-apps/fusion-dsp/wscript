@@ -1,0 +1,27 @@
+
+top = '.'
+out = 'build'
+
+def options(opt):
+    opt.load('compiler_cxx')
+
+def configure(conf):
+    conf.load('compiler_cxx')
+    conf.env.append_value('CXXFLAGS', ['-std=c++11'])
+    conf.env.append_value('CXXFLAGS', ['-Wall', '-Wextra'])
+    conf.env.append_value('CXXFLAGS', ['-Werror', '-Wno-deprecated-copy-with-user-provided-copy'])
+    conf.env.append_value('CXXFLAGS', ['-Ofast'])
+    conf.env.append_value('CXXFLAGS', ['-DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE'])
+
+def build(bld):
+    bld.build_copy_includes = build_copy_includes
+    bld.build_copy_includes(bld, './include/bosepro/')
+    bld.program(target='TestAudio', source=bld.path.ant_glob(['src/*.cpp', 'src/*.c']), includes=['./include','/opt/homebrew/include'], lib=['jack', 'fmt', 'sndfile'], libpath='/opt/homebrew/lib')
+
+def build_copy_includes(bld, target_path):
+    bld(name='bosepro_includes', export_includes='./include/')
+    for h in bld.path.ant_glob('include/'):
+        bld(features='subst', source=h, target=target_path + h.path_from(bld.path.find_node('include/')),
+            is_copy=True)
+
+

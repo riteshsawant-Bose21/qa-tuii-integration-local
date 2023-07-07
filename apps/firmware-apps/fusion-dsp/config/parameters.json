@@ -1,0 +1,73 @@
+{
+    "algorithms": [
+        {
+            "name": "gain",
+            "constants": [
+                { "name": "channels", "default_value": 1 }
+            ],
+            "terminals": [
+                { "name": "in", "type": "audio", "default_channels": 1, "direction": "input" },
+                { "name": "out", "type": "audio", "default_channels": 1, "direction": "output" }
+            ],
+            "controls": [
+                { "name": "gain", "value_type": "float", "default_value": 1.0 },
+                { "name": "mute", "value_type": "bool", "default_value": false }
+            ]
+        },
+        {
+            "name": "jack_in",
+            "terminals": [
+                { "name": "out", "type": "audio", "default_channels": 1, "direction": "output" }
+            ]
+        },
+        {
+            "name": "jack_out",
+            "terminals": [
+                { "name": "in", "type": "audio", "default_channels": 1, "direction": "input" }
+            ]
+        },
+        {
+            "name": "mixer",
+            "terminals": [
+                { "name": "in", "type": "audio", "default_channels": 1, "direction": "input" },
+                { "name": "out", "type": "audio", "default_channels": 1, "direction": "output" }
+            ],
+            "controls": [
+                { "name": "gain", "value_type": "float", "default_value": 1.0 },
+                { "name": "mute", "value_type": "bool", "default_value": false }
+            ]
+        },
+        {
+            "name": "signal_generator",
+            "terminals": [
+                { "name": "out", "type": "audio", "default_channels": 1, "direction": "output" }
+            ]
+        },
+        {
+            "name": "smart_mic",
+            "terminals": [
+                { "name": "mic_in", "type": "audio", "default_channels": 1, "direction": "input" },
+                { "name": "ref_in", "type": "audio", "default_channels": 1, "direction": "input" },
+                { "name": "mic_out", "type": "audio", "default_channels": 1, "direction": "output" }
+            ]
+        },
+        {
+            "name": "wav_read",
+            "constants": [
+                { "name": "filename", "default_value": "in.wav" }
+            ],
+            "terminals": [
+                { "name": "out", "type": "audio", "default_channels": 1, "direction": "output" }
+            ]
+        },
+        {
+            "name": "wav_write",
+            "constants": [
+                { "name": "filename", "default_value": "out.wav" }
+            ],
+            "terminals": [
+                { "name": "in", "type": "audio", "default_channels": 1, "direction": "input" }
+            ]
+        }
+    ]
+}
