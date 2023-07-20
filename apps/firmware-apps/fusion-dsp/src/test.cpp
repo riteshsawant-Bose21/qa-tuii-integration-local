@@ -34,10 +34,16 @@ int main()
     spdlog::set_level(spdlog::level::trace);
     SPDLOG_INFO("bosepro test");
     Stuff stuff;
+    int err;
     jack_status_t jack_status;
     stuff.jack_client = jack_client_open("bosepro", JackNullOption,
                                          &jack_status, NULL);
     jack_client = stuff.jack_client;
+
+    if (stuff.jack_client == NULL) {
+        SPDLOG_CRITICAL("jack_client_open() failed, status: {}", (int)jack_status);
+        return 1;
+    }
 
     bosepro::Configuration configuration("config/test.json");
     bosepro::Parameters parameters("config/parameters.json");
@@ -45,9 +51,21 @@ int main()
 
     stuff.session = &session;
 
-    jack_set_process_callback(stuff.jack_client, rt_process, &stuff);
+    err = jack_set_process_callback(stuff.jack_client, rt_process, &stuff);
 
-    jack_activate(stuff.jack_client);
+    if (err != 0)
+    {
+        SPDLOG_CRITICAL("jack_set_process_callback() failed, err: {}", err);
+        return 1;
+    }
+
+    err = jack_activate(stuff.jack_client);
+
+    if (err != 0)
+    {
+        SPDLOG_CRITICAL("jack_activate() failed, err: {}", err);
+        return 1;
+    }
 
     sleep(-1);
     return 0;

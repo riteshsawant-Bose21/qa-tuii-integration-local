@@ -1,27 +1,73 @@
 
+import sys
+
+from waflib import Options
+
 top = '.'
 out = 'build'
 
 def options(opt):
     opt.load('compiler_cxx')
 
+    opt.add_option('--platform', type='string', default=sys.platform,
+                   help='Target platform for cross-compiling')
+
+def detect_platform(conf):
+    platforms = [
+        ('IS_LINUX', 'Linux', ['linux']),
+        ('IS_MACOS', 'macOS', ['darwin'])
+    ]
+
+    for key, name, strings in platforms:
+        conf.env[key] = False
+
+    conf.start_msg('Checking platform')
+    platform = Options.options.platform
+    for key, name, strings in platforms:
+        for s in strings:
+            if platform.startswith(s):
+                conf.env[key] = True
+                conf.end_msg(name, color='CYAN')
+                break
+
+
 def configure(conf):
     conf.load('compiler_cxx')
+
+    detect_platform(conf)
+
     conf.env.append_value('CXXFLAGS', ['-std=c++11'])
-    conf.env.append_value('CXXFLAGS', ['-Wall', '-Wextra'])
-    conf.env.append_value('CXXFLAGS', ['-Werror', '-Wno-deprecated-copy-with-user-provided-copy'])
+    conf.env.append_value('CXXFLAGS', ['-Wall', '-Wextra', '-Werror'])
+    # This is needed because of warnings in Boost property trees.
+    conf.env.append_value('CXXFLAGS',
+                          ['-Wno-deprecated-copy-with-user-provided-copy'])
     conf.env.append_value('CXXFLAGS', ['-Ofast'])
-    conf.env.append_value('CXXFLAGS', ['-DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE'])
+    conf.env.append_value('CXXFLAGS',
+                          ['-DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE'])
+
+    if conf.env['IS_MACOS']:
+        conf.env.append_value('INCLUDES', ['/opt/homebrew/include'])
+        conf.env.append_value('LIBPATH', ['/opt/homebrew/lib'])
+        conf.env.append_value('FRAMEWORK',
+                              ['AudioUnit', 'CoreAudio', 'CoreServices'])
+        conf.env.append_value('CXXFLAGS', '-DUSE_MAC_THREADS')
+
 
 def build(bld):
     bld.build_copy_includes = build_copy_includes
     bld.build_copy_includes(bld, './include/bosepro/')
-    bld.program(target='TestAudio', source=bld.path.ant_glob(['src/*.cpp', 'src/*.c']), includes=['./include','/opt/homebrew/include'], lib=['jack', 'fmt', 'sndfile'], libpath='/opt/homebrew/lib')
+    bld.program(target='TestAudio',
+                source=bld.path.ant_glob(['src/*.cpp', 'src/*.c']),
+                includes=['./include'],
+                lib=['jack', 'fmt', 'sndfile'])
+
 
 def build_copy_includes(bld, target_path):
     bld(name='bosepro_includes', export_includes='./include/')
     for h in bld.path.ant_glob('include/'):
-        bld(features='subst', source=h, target=target_path + h.path_from(bld.path.find_node('include/')),
+        bld(features='subst',
+            source=h,
+            target=target_path + h.path_from(bld.path.find_node('include/')),
             is_copy=True)
 
 
