@@ -61,10 +61,15 @@ ALGORITHM_REGISTER(SmartMic, "smart_mic");
 
 SmartMic::SmartMic(const bosepro::BlockConfiguration &configuration)
     : bosepro::Algorithm(configuration),
-      task_main_step(&SmartMic::run_main_step, this, 1),
-      task_2_step(&SmartMic::run_2_step, this, 1),
-      task_discrete_1_step(&SmartMic::run_discrete_1_step, this, 1),
-      task_spkdelay_step(&SmartMic::run_spkdelay_step, this, 50)
+      task_main_step(&SmartMic::run_main_step, this, get_sample_rate(),
+                     get_frame_size(), get_frame_size()),
+      task_2_step(&SmartMic::run_2_step, this, get_sample_rate(),
+                  get_frame_size(), get_frame_size()),
+      task_discrete_1_step(&SmartMic::run_discrete_1_step, this,
+                           get_sample_rate(), get_frame_size(),
+                           get_frame_size()),
+      task_spkdelay_step(&SmartMic::run_spkdelay_step, this, get_sample_rate(),
+                         get_frame_size() * 50, get_frame_size())
 {
     assign_terminal("mic_in", &mic_in);
     assign_terminal("ref_in", &ref_in);

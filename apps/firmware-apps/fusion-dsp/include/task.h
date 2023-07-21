@@ -7,7 +7,14 @@
 #include <pthread.h>
 #include <spdlog/spdlog.h>
 
+#ifdef USE_MAC_THREADS
+#include <mach/thread_policy.h>
+#include <mach/thread_act.h>
+#include <CoreAudio/HostTime.h>
+#endif
+
 #include <cstdint>
+#include <cstring>
 #include <list>
 #include <map>
 #include <memory>
@@ -26,14 +33,66 @@ public:
     /// @param  obj  The object to pass to the run function.
     /// @param  period  The period of the task, relative to the base frame rate
     ///                 of the system.
-    PeriodicTask(void (*run_function)(void *), void *obj, int_fast32_t period)
-        : run_function(run_function), obj(obj), period(period), ticks(0)
+    PeriodicTask(void (*run_function)(void *), void *obj,
+                 int_fast32_t sample_rate, int_fast32_t frame_size,
+                 int_fast32_t base_frame_size)
+        : run_function(run_function), obj(obj), sample_rate(sample_rate),
+          frame_size(frame_size), ticks(0)
     {
-        pthread_create(&thread, NULL, run, this);
+        int err;
         pthread_mutexattr_t attr;
-        pthread_mutexattr_setprotocol(&attr, PTHREAD_PRIO_INHERIT);
-        pthread_mutex_init(&ticks_mutex, &attr);
-        pthread_cond_init(&ticks_cond, NULL);
+
+        if (frame_size % base_frame_size != 0)
+        {
+            SPDLOG_CRITICAL("frame_size ({}) must be a multiple of "
+                            "base_frame_size ({})",
+                            frame_size, base_frame_size);
+        }
+
+        period = frame_size / base_frame_size;
+
+        err = pthread_create(&thread, NULL, run, this);
+
+        if (err != 0)
+        {
+            SPDLOG_CRITICAL("pthread_create() failed: {}", strerror(err));
+        }
+
+
+        err = pthread_mutexattr_init(&attr);
+
+        if (err != 0)
+        {
+            SPDLOG_CRITICAL("pthread_mutexattr_init() failed: {}",
+                            strerror(err));
+        }
+
+
+        err = pthread_mutexattr_setprotocol(&attr, PTHREAD_PRIO_INHERIT);
+
+        if (err != 0)
+        {
+            SPDLOG_CRITICAL("pthread_mutexattr_setprotocol() failed: {}",
+                            strerror(err));
+        }
+
+
+        err = pthread_mutex_init(&ticks_mutex, &attr);
+
+        if (err != 0)
+        {
+            SPDLOG_CRITICAL("pthread_mutex_init() failed: {}", strerror(err));
+        }
+
+
+        err = pthread_cond_init(&ticks_cond, NULL);
+
+        if (err != 0)
+        {
+            SPDLOG_CRITICAL("pthread_cond_init() failed: {}", strerror(err));
+        }
+
+
         task_id = task_count++;
     }
 
@@ -44,12 +103,43 @@ public:
     /// @param priority The real-time priority of the task.
     void set_priority(int priority)
     {
-        struct sched_param sched_param;
-        sched_param.sched_priority = priority;
-        if (pthread_setschedparam(thread, SCHED_FIFO, &sched_param) != 0)
+#ifdef USE_MAC_THREADS
+        // In macOS, the pthread real-time scheduler doesn't have actual
+        // real-time priority (but allows you to set real-time priority without
+        // complaint).  Instead, we need to use the native macOS threads to
+        // set priority.
+
+        thread_time_constraint_policy_data_t policy;
+
+        double frame_period_ns = frame_size * 1.0e9 / sample_rate;
+        policy.period = AudioConvertNanosToHostTime(frame_period_ns);
+        // thread_policy_set() doesn't like constraints more than 100ms
+        frame_period_ns = (frame_period_ns > 1.0e8) ? 1.0e8 : frame_period_ns;
+        policy.computation = AudioConvertNanosToHostTime(frame_period_ns / 2);
+        policy.constraint = AudioConvertNanosToHostTime(frame_period_ns);
+        policy.preemptible = 1;
+
+        kern_return_t result = thread_policy_set(pthread_mach_thread_np(thread),
+                                                 THREAD_TIME_CONSTRAINT_POLICY,
+            (thread_policy_t)&policy, THREAD_TIME_CONSTRAINT_POLICY_COUNT);
+
+        if (result != KERN_SUCCESS)
         {
-            SPDLOG_ERROR("Failed to set priority of periodic task");
+            SPDLOG_ERROR("Failed to set task priority {}", priority);
         }
+#else
+        int err;
+        struct sched_param sched_param;
+
+        sched_param.sched_priority = priority;
+
+        err = pthread_setschedparam(thread, SCHED_FIFO, &sched_param);
+
+        if (err != 0)
+        {
+            SPDLOG_ERROR("Failed to set task priority: {}", strerror(err));
+        }
+#endif
     }
 
 
@@ -62,7 +152,8 @@ public:
 
         if (ticks >= 2 * period)
         {
-            SPDLOG_WARN("Periodic task {} is running behind", task_id);
+            SPDLOG_WARN("Periodic task {} is running behind: {}, {}", task_id, ticks, period);
+            ticks = 1;
         }
 
         if (ticks >= period)
@@ -103,6 +194,8 @@ private:
     pthread_cond_t ticks_cond;
     void (*run_function)(void *);
     void *obj;
+    int_fast32_t sample_rate;
+    int_fast32_t frame_size;
     int_fast32_t period;
     int_fast32_t ticks;
 };
