@@ -40,7 +40,7 @@ void SignalGenerator::process()
 {
     for (int_fast32_t sample = 0; sample < get_frame_size(); sample++)
     {
-        out[sample] = std::sinf(phase);
+        out[sample] = std::sin(phase);
         phase += phase_inc;
 
         if (phase > 2.0f * 3.14159265f)

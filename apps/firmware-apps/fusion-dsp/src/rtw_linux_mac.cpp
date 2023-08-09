@@ -3,6 +3,7 @@
 #include <pthread.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <fcntl.h> // Linux needs this for O_CREAT and O_EXCL.
 #include <semaphore.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -28,7 +29,7 @@ void rtw_pthread_mutex_init_mac( void** mutexDW )
 void rtw_pthread_sem_create_mac( void** semaphoreDW1, void** semaphoreDW2, long initVal )
 {
     static int semcount = 0;
-    char* semName = (char *)malloc(sizeof(char)*32);
+    char* semName = (char *)malloc(sizeof(char)*100);
     snprintf(semName, 100, "sem_sync_%x%x", semcount++, getpid());
     
     *semaphoreDW1 = sem_open(semName, O_CREAT | O_EXCL, 0777, (int)initVal);
@@ -57,8 +58,8 @@ void* rtw_worker_task(void *_arg) {
 void* rtw_register_task(void(*f)(void)){
   static int semcount = 0;
   pthread_task_T *arg = (pthread_task_T*)malloc(sizeof(pthread_task_T));
-  arg->semaphoreName = (char *)malloc(sizeof(char)*32);
-  arg->doneSemaphoreName = (char *)malloc(sizeof(char)*32);
+  arg->semaphoreName = (char *)malloc(sizeof(char)*100);
+  arg->doneSemaphoreName = (char *)malloc(sizeof(char)*100);
   snprintf(arg->semaphoreName, 100, "Semaphore_%x", semcount);
   snprintf(arg->doneSemaphoreName, 100, "doneSemaphore_%x", semcount++);
   arg->semaphore = sem_open(arg->semaphoreName, O_CREAT | O_EXCL, 0777, 0);

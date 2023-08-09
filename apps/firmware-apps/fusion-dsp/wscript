@@ -1,4 +1,4 @@
-
+# NOTE: Using Python 3.5 features only for now, so Raphael Yocto SDK provided Python works.
 import sys
 
 from waflib import Options
@@ -14,34 +14,41 @@ def options(opt):
 
 def detect_platform(conf):
     platforms = [
-        ('IS_LINUX', 'Linux', ['linux']),
-        ('IS_MACOS', 'macOS', ['darwin'])
+        # FLAG          name       strings                is-cross-compile
+        ('IS_RAPHAEL', 'raphael', ['raphael', 'Raphael'], True),
+        ('IS_LINUX',   'Linux',   ['linux'],              False),
+        ('IS_MACOS',   'macOS',   ['darwin'],             False)
     ]
 
-    for key, name, strings in platforms:
+    conf.env['is_cross_compile'] = False
+    for key, name, strings, cross in platforms:
         conf.env[key] = False
 
-    conf.start_msg('Checking platform')
+    conf.start_msg('Detecting platform')
     platform = Options.options.platform
-    for key, name, strings in platforms:
+    for key, name, strings, is_cross in platforms:
         for s in strings:
             if platform.startswith(s):
                 conf.env[key] = True
+                conf.env['platform'] = name
+                conf.env['is_cross_compile'] = is_cross
                 conf.end_msg(name, color='CYAN')
-                break
-
+                return
 
 def configure(conf):
     conf.load('compiler_cxx')
 
     detect_platform(conf)
 
+    if conf.env.is_cross_compile:
+        conf.load(conf.env.platform, tooldir='wafconf')
+
     conf.env.append_value('CXXFLAGS', ['-std=c++11'])
     conf.env.append_value('CXXFLAGS', ['-Wall', '-Wextra', '-Werror'])
-    # This is needed because of warnings in Boost property trees.
-    conf.env.append_value('CXXFLAGS',
-                          ['-Wno-deprecated-copy-with-user-provided-copy'])
     conf.env.append_value('CXXFLAGS', ['-Ofast'])
+    
+    # spdlog from the Yocto SDK is configured for an external 'fmt' lib.
+    conf.env.append_value('CXXFLAGS', ['-DSPDLOG_FMT_EXTERNAL'])
     conf.env.append_value('CXXFLAGS',
                           ['-DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE'])
 
@@ -52,6 +59,24 @@ def configure(conf):
                               ['AudioUnit', 'CoreAudio', 'CoreServices'])
         conf.env.append_value('CXXFLAGS', '-DUSE_MAC_THREADS')
 
+        # This is needed because of warnings in Boost property trees.
+        conf.env.append_value('CXXFLAGS',
+                           ['-Wno-deprecated-copy-with-user-provided-copy'])
+    else:
+        conf.env.append_value('LDFLAGS', '-lpthread')
+
+        # A strict-overflow warning comes from Simulink generated code in 
+        # SmartMicDrvTsk_Ccode.cpp. The file has lots of code to account for
+        # overflow, but we should not disable this warning globally.
+        # TODO: How to disable for one file in Waf?
+        conf.env.append_value('CXXFLAGS', ['-Wno-strict-overflow'])
+
+        if conf.env['IS_LINUX']:
+            # NOTE: Doing the old way of boost::bind for now.
+            # /usr/include/boost/bind.hpp:36:1: note: ‘#pragma message: The practice of declaring the Bind placeholders (_1, _2, ...) in the 
+            # global namespace is deprecated. Please use <boost/bind/bind.hpp> + using namespace boost::placeholders, 
+            # or define BOOST_BIND_GLOBAL_PLACEHOLDERS to retain the current behavior.’            
+            conf.env.append_value('CXXFLAGS', '-DBOOST_BIND_GLOBAL_PLACEHOLDERS')
 
 def build(bld):
     bld.build_copy_includes = build_copy_includes

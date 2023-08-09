@@ -10,4 +10,4 @@ waf-*-*/
 waf3-*-*/
 # Lockfile
 .lock-waf_*_build
-
+wafconf/__pycache__

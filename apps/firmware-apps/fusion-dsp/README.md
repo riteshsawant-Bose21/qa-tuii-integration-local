@@ -37,3 +37,10 @@ To install on macOS:
 ~~~
 brew install jack boost spdlog libsndfile
 ~~~
+
+To install on Debian-based Linux:
+
+~~~
+sudo apt update
+sudo apt install jackd libjack-jackd2-dev libboost-dev libspdlog-dev libsndfile1 libsndfile1-dev
+~~~
