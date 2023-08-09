@@ -79,20 +79,11 @@ def configure(conf):
             conf.env.append_value('CXXFLAGS', '-DBOOST_BIND_GLOBAL_PLACEHOLDERS')
 
 def build(bld):
-    bld.build_copy_includes = build_copy_includes
-    bld.build_copy_includes(bld, './include/bosepro/')
+    bld(export_includes='./include', name='common-include')
+
     bld.program(target='TestAudio',
                 source=bld.path.ant_glob(['src/*.cpp', 'src/*.c']),
-                includes=['./include'],
+                use=['common-include'],
                 lib=['jack', 'fmt', 'sndfile'])
-
-
-def build_copy_includes(bld, target_path):
-    bld(name='bosepro_includes', export_includes='./include/')
-    for h in bld.path.ant_glob('include/'):
-        bld(features='subst',
-            source=h,
-            target=target_path + h.path_from(bld.path.find_node('include/')),
-            is_copy=True)
 
 
