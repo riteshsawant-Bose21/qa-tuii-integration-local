@@ -49,5 +49,5 @@ sudo apt install jackd libjack-jackd2-dev libboost-dev libspdlog-dev libsndfile1
 Loading DSP Code to the Mune device
 -----------------------------------
 
-VB1 does not support passwordless scp command.  To work around this limitation it is helpulu to install the sshpass utility.
+VB1 does not support passwordless scp command.  To work around this limitation it is helpulu to install the [sshpass](https://www.cyberciti.biz/faq/how-to-install-sshpass-on-macos-os-x/) utility.
 
