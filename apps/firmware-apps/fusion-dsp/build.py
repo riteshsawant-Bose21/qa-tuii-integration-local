@@ -53,12 +53,8 @@ def get_oci_run_flags(runner):
     flags.extend(['-v', './:/src'])
     flags.extend(['-v', '{}:/yocto'.format(args.platform_sdk)])
     
-    if sys.platform == 'linux':
-        # Don't use -u root with Linux. If you do, root will own all files and
-        # directories written by the build, since it has real Linux container
-        # support.
-        if runner == 'podman':
-            flags.append('--userns=keep-id')
+    if runner == 'podman':
+        flags.append('--userns=keep-id')
 
     if platform.machine() == 'arm64':
         # For running on ARM-based Mac
