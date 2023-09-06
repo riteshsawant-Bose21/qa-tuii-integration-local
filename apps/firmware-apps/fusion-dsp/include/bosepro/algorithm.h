@@ -9,6 +9,7 @@
 #include <bosepro/terminal.h>
 
 #include <cstdint>
+#include <functional>
 #include <map>
 #include <memory>
 #include <string>
@@ -184,6 +185,11 @@ public:
             c.second->initialize();
         }
 
+        for (auto &c : meta->controls)
+        {
+            c.second->initialize_post();
+        }
+
         if (meta->configuration->has_control_settings())
         {
             for (auto &s: meta->configuration->get_control_settings())
@@ -342,40 +348,55 @@ protected:
     /// Assign storage for a scalar control value.
     /// The value is not valid until after the algorithm's constructor (but
     /// before `process()` is called).
+    /// `POST_FUNCTION_SCALAR()` can be used to facilitate creating the
+    /// `post_function` argument from a member function, if needed.
     ///
     /// @param  name  The name of the control.
     /// @param  value  The storage for the control value.
+    /// @param  post_function  An optional function to be called after the value
+    ///                        is set.
     template <typename T>
-    void assign_control(const std::string &name, T *value)
+    void assign_control(const std::string &name, T *value,
+                        std::function<void()> post_function = nullptr)
     {
-        get_control(name).assign(value);
+        get_control(name).assign(value, post_function);
     }
 
 
     /// Assign storage for vector control values.
     /// The value is not valid until after the algorithm's constructor (but
     /// before `process()` is called).
+    /// `POST_FUNCTION_VECTOR()` can be used to facilitate creating the
+    /// `post_function` argument from a member function, if needed.
     ///
     /// @param  name  The name of the control.
     /// @param  value  The storage for the control value.
+    /// @param  post_function  An optional function to be called after the value
+    ///                        is set.
     template <typename T>
-    void assign_control(const std::string &name, std::vector<T> *value)
+    void assign_control(const std::string &name, std::vector<T> *value,
+                        std::function<void(int)> post_function = nullptr)
     {
-        get_control(name).assign(value);
+        get_control(name).assign(value, post_function);
     }
 
 
     /// Assign storage for matrix control values.
     /// The value is not valid until after the algorithm's constructor (but
     /// before `process()` is called).
+    /// `POST_FUNCTION_MATRIX()` can be used to facilitate creating the
+    /// `post_function` argument from a member function, if needed.
     ///
     /// @param  name  The name of the control.
     /// @param  value  The storage for the control value.
+    /// @param  post_function  An optional function to be called after the value
+    ///                        is set.
     template <typename T>
     void assign_control(const std::string &name,
-                        std::vector<std::vector<T>> *value)
+                        std::vector<std::vector<T>> *value,
+                        std::function<void(int, int)> post_function = nullptr)
     {
-        get_control(name).assign(value);
+        get_control(name).assign(value, post_function);
     }
 
 
@@ -439,6 +460,33 @@ private:
 /// @param  algorithm_name  The name use to reference the algorithm.
 #define ALGORITHM_REGISTER(algorithm_type, algorithm_name) \
     const bosepro::ChildCreatorImpl<bosepro::Algorithm, algorithm_type, const bosepro::BlockConfiguration &> algorithm_type::creator(algorithm_name)
+
+
+/// Create a lambda function that calls a member function on this object.
+/// This can be used to facilitate creating the post function in 
+/// `assign_control()` for scalar controls.
+#define POST_FUNCTION_SCALAR(func) \
+    [this]() { \
+        this->func(); \
+    }
+
+
+/// Create a lambda function that calls a member function on this object.
+/// This can be used to facilitate creating the post function in 
+/// `assign_control()` for vector controls.
+#define POST_FUNCTION_VECTOR(func) \
+    [this](int row_index) { \
+        this->func(row_index); \
+    }
+
+
+/// Create a lambda function that calls a member function on this object.
+/// This can be used to facilitate creating the post function in 
+/// `assign_control()` for matrix controls.
+#define POST_FUNCTION_MATRIX(func) \
+    [this](int row_index, int column_index) { \
+        this->func(row_index, column_index); \
+    }
 
 
 } // namespace bosepro

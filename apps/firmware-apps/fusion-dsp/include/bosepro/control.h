@@ -3,12 +3,14 @@
 #include <bosepro/configuration.h>
 #include <bosepro/parameters.h>
 
+#include <functional>
 #include <string>
 #include <vector>
 
 
 namespace bosepro {
 
+class Algorithm;
 
 /// A class for managing the data of a control.
 class Control {
@@ -36,27 +38,40 @@ public:
     virtual void initialize() = 0;
 
 
+    /// Initialize the control by calling the post function, if it exists.
+    /// This is done after `initialize()` is called on all of the controls, in
+    /// case more than one control uses the same post function.
+    virtual void initialize_post() = 0;
+
+
     /// Assign a pointer to store the value of a scalar control.
     ///
     /// @param  value  The pointer to store the value of the control.
+    /// @param  post_function  An optional function to be called after the value
+    ///                        is set (set to `nullptr` if not needed).
     template <typename T>
-    void assign(T *value);
+    void assign(T *value, std::function<void()> post_function);
 
 
     /// Assign a vector to store the values of a vector control. The vector will
     /// be re-sized to the length of the control.
     ///
     /// @param  value  The vector to store the values of the control.
+    /// @param  post_function  An optional function to be called after the value
+    ///                        is set (set to `nullptr` if not needed).
     template <typename T>
-    void assign(std::vector<T> *value);
+    void assign(std::vector<T> *value, std::function<void(int)> post_function);
 
 
     /// Assign a two-demensional vector to store the values of a matrix control.
     /// The vector will be re-sized to the dimensions of the control.
     ///
     /// @param  value  The vector to store the values of the control.
+    /// @param  post_function  An optional function to be called after the value
+    ///                        is set (set to `nullptr` if not needed).
     template <typename T>
-    void assign(std::vector<std::vector<T>> *value);
+    void assign(std::vector<std::vector<T>> *value,
+                std::function<void(int, int)> post_function);
 
 
     /// Set the value of the control.
@@ -104,12 +119,13 @@ public:
 
 private:
     std::string value_type;
+    int dimensions;
     int num_rows;
     int num_columns;
 };
 
 
-/// A type-specific version of `Control` with storage for the control's values.
+/// A type-specific version of `Control`.
 template <typename T>
 class ControlData : public Control {
 public:
@@ -122,18 +138,95 @@ public:
         : Control(parameter, configuration)
     {
         parameter.get_default_value(default_value);
-        scalar_value = nullptr;
-        vector_value = nullptr;
-        matrix_value = nullptr;
     }
 
+protected:
+    T default_value;
+};
+
+
+/// A type-specific version of `Control` with storage for scalar values.
+template <typename T>
+class ControlDataScalar : public ControlData<T> {
+public:
+    /// Create a control object for managing scalar control values.
+    ///
+    /// @param  parameter  The parameter that defines the control.
+    /// @param  configuration  The configuration to use for the control.
+    ControlDataScalar(const ControlParameter &parameter,
+                      const ControlConfiguration *configuration)
+        : ControlData<T>(parameter, configuration), scalar_value(nullptr),
+          post_function(nullptr)
+    {
+    }
 
     /// Assign a pointer to store the value of a scalar control.
     ///
     /// @param  value  The pointer to store the value of the control.
-    void assign(T *value)
+    /// @param  post_function  An optional function to be called after the value
+    ///                        is set (set to `nullptr` if not needed).
+    void assign(T *value, std::function<void()> post_function)
     {
         scalar_value = value;
+        this->post_function = post_function;
+    }
+
+
+    /// Initialize the control by setting its value to the default value.
+    virtual void initialize() override
+    {
+        *scalar_value = this->default_value;
+    }
+
+
+    /// Initialize the control by calling the post function, if it exists.
+    /// This is done after `initialize()` is called on all of the controls, in
+    /// case more than one control uses the same post function.
+    virtual void initialize_post() override
+    {
+        if (post_function != nullptr)
+        {
+            post_function();
+        }
+    }
+
+
+    /// Set the value of the control.
+    ///
+    /// @param  setting  The new setting for the control.
+    virtual void set(const ControlSetting &setting) override
+    {
+        T value;
+        setting.get_value(value);
+
+        *scalar_value = value;
+
+        if (post_function != nullptr)
+        {
+            post_function();
+        }
+    }
+
+
+private:
+    T *scalar_value;
+    std::function<void()> post_function;
+};
+
+
+/// A type-specific version of `Control` with storage for vector values.
+template <typename T>
+class ControlDataVector : public ControlData<T> {
+public:
+    /// Create a control object for managing vector control values.
+    ///
+    /// @param  parameter  The parameter that defines the control.
+    /// @param  configuration  The configuration to use for the control.
+    ControlDataVector(const ControlParameter &parameter,
+                      const ControlConfiguration *configuration)
+        : ControlData<T>(parameter, configuration), vector_value(nullptr),
+          post_function(nullptr)
+    {
     }
 
 
@@ -141,19 +234,12 @@ public:
     /// be re-sized to the length of the control.
     ///
     /// @param  value  The vector to store the values of the control.
-    void assign(std::vector<T> *value)
+    /// @param  post_function  An optional function to be called after the value
+    ///                        is set (set to `nullptr` if not needed).
+    void assign(std::vector<T> *value, std::function<void(int)> post_function)
     {
         vector_value = value;
-    }
-
-
-    /// Assign a two-demensional vector to store the values of a matrix control.
-    /// The vector will be re-sized to the dimensions of the control.
-    ///
-    /// @param  value  The vector to store the values of the control.
-    void assign(std::vector<std::vector<T>> *value)
-    {
-        matrix_value = value;
+        this->post_function = post_function;
     }
 
 
@@ -161,22 +247,109 @@ public:
     /// dimensions, and initializing the values to the default values.
     virtual void initialize() override
     {
-        if (scalar_value != nullptr)
+        vector_value->resize(this->get_num_rows());
+
+        std::fill(vector_value->begin(), vector_value->end(),
+                  this->default_value);
+    }
+
+
+    /// Initialize the control by calling the post function, if it exists.
+    /// This is done after `initialize()` is called on all of the controls, in
+    /// case more than one control uses the same post function.
+    virtual void initialize_post() override
+    {
+        if (post_function != nullptr)
         {
-            *scalar_value = default_value;
-        }
-        else if (vector_value != nullptr)
-        {
-            vector_value->resize(get_num_rows());
-            std::fill(vector_value->begin(), vector_value->end(), default_value);
-        }
-        else if (matrix_value != nullptr)
-        {
-            matrix_value->resize(get_num_rows());
-            for (auto &row : *matrix_value)
+            for (int row = 0; row < this->get_num_rows(); row++)
             {
-                row.resize(get_num_columns());
-                std::fill(row.begin(), row.end(), default_value);
+                post_function(row);
+            }
+        }
+    }
+
+
+    /// Set the value of the control.
+    ///
+    /// @param  setting  The new setting for the control.
+    virtual void set(const ControlSetting &setting) override
+    {
+        int row = setting.get_row();
+        T value;
+        setting.get_value(value);
+
+        (*vector_value)[row] = value;
+
+        if (post_function != nullptr)
+        {
+            post_function(row);
+        }
+    }
+
+
+private:
+    std::vector<T> *vector_value;
+    std::function<void(int)> post_function;
+};
+
+
+/// A type-specific version of `Control` with storage for matrix values.
+template <typename T>
+class ControlDataMatrix : public ControlData<T> {
+public:
+    /// Create a control object for managing matrix control values.
+    ///
+    /// @param  parameter  The parameter that defines the control.
+    /// @param  configuration  The configuration to use for the control.
+    ControlDataMatrix(const ControlParameter &parameter,
+                      const ControlConfiguration *configuration)
+        : ControlData<T>(parameter, configuration), matrix_value(nullptr),
+          post_function(nullptr)
+    {
+    }
+
+
+    /// Assign a vector to store the values of a matrix control. The vector will
+    /// be re-sized to the length of the control.
+    ///
+    /// @param  value  The vector to store the values of the control.
+    /// @param  post_function  An optional function to be called after the value
+    ///                        is set (set to `nullptr` if not needed).
+    void assign(std::vector<std::vector<T>> *value,
+                std::function<void(int, int)> post_function)
+    {
+        matrix_value = value;
+        this->post_function = post_function;
+    }
+
+
+    /// Initialize the control by resizing its storage to the configured
+    /// dimensions, and initializing the values to the default values.
+    virtual void initialize() override
+    {
+        matrix_value->resize(this->get_num_rows());
+
+        for (auto &row : *matrix_value)
+        {
+            row.resize(this->get_num_columns());
+            std::fill(row.begin(), row.end(), this->default_value);
+        }
+    }
+
+
+    /// Initialize the control by calling the post function, if it exists.
+    /// This is done after `initialize()` is called on all of the controls, in
+    /// case more than one control uses the same post function.
+    virtual void initialize_post() override
+    {
+        if (post_function != nullptr)
+        {
+            for (int row = 0; row < this->get_num_rows(); row++)
+            {
+                for (int column = 0; column < this->get_num_columns(); column++)
+                {
+                    post_function(row, column);
+                }
             }
         }
     }
@@ -192,26 +365,18 @@ public:
         T value;
         setting.get_value(value);
 
-        if (scalar_value)
+        (*matrix_value)[row][column] = value;
+
+        if (post_function != nullptr)
         {
-            *scalar_value = value;
-        }
-        else if (vector_value)
-        {
-            (*vector_value)[row] = value;
-        }
-        else if (matrix_value)
-        {
-            (*matrix_value)[row][column] = value;
+            post_function(row, column);
         }
     }
 
 
 private:
-    T default_value;
-    T *scalar_value;
-    std::vector<T> *vector_value;
     std::vector<std::vector<T>> *matrix_value;
+    std::function<void(int, int)> post_function;
 };
 
 

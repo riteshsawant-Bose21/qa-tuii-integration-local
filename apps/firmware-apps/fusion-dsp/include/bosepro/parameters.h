@@ -46,6 +46,14 @@ public:
     }
 
 
+    /// Get the number of dimensions for a parameter (0 for scalar, 1 for vector,
+    /// 2 for matrix).
+    int get_dimensions() const
+    {
+        return get_count("dimensions");
+    }
+
+
     /// Test whether parameters can be found for the algorithm of the given name.
     ///
     /// @param  name  The name of the algorithm.

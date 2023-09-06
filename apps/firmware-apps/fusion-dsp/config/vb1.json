@@ -1,0 +1,174 @@
+{
+    "session": {
+        "tasks": [
+            {
+                "name": "task1",
+                "constants": [
+                    { "name": "frame_size", "value": 32 },
+                    { "name": "sample_rate", "value": 48000 }
+                ],
+                "blocks": [
+                    {
+                        "name": "in",
+                        "algorithm": "jack_in",
+                        "constants": [
+                            { "name": "frame_size", "value": 32 },
+                            { "name": "sample_rate", "value": 48000 }
+                        ],
+                        "terminals": [
+                            { "name": "out", "channels": 2 }
+                        ],
+                        "controls": [
+                            { "name": "port_connection", "num_rows": 2 }
+                        ]
+                    },
+                    {
+                        "name": "volume",
+                        "algorithm": "gain",
+                        "constants": [
+                            { "name": "channels", "value": 2 },
+                            { "name": "frame_size", "value": 32 },
+                            { "name": "sample_rate", "value": 48000 }
+                        ],
+                        "terminals": [
+                            { "name": "in", "channels": 2 },
+                            { "name": "out", "channels": 2 }
+                        ],
+                        "connections": [
+                            { "source_block": "in", "input_terminal": "in", "output_terminal": "out", "input_channel": 0, "output_channel": 0 },
+                            { "source_block": "in", "input_terminal": "in", "output_terminal": "out", "input_channel": 1, "output_channel": 1 }
+                        ]
+                    },
+                    {
+                        "name": "speaker_eq",
+                        "algorithm": "peq",
+                        "constants": [
+                            { "name": "channels", "value": 2 },
+                            { "name": "bands", "value": 21 },
+                            { "name": "frame_size", "value": 32 },
+                            { "name": "sample_rate", "value": 48000 }
+                        ],
+                        "terminals": [
+                            { "name": "in", "channels": 2 },
+                            { "name": "out", "channels": 2 }
+                        ],
+                        "controls": [
+                            { "name": "band_enable", "num_rows": 21 },
+                            { "name": "gain", "num_rows": 21 },
+                            { "name": "frequency", "num_rows": 21 },
+                            { "name": "bandwidth", "num_rows": 21 }
+                        ],
+                        "connections": [
+                            { "source_block": "volume", "input_terminal": "in", "output_terminal": "out", "input_channel": 0, "output_channel": 0 },
+                            { "source_block": "volume", "input_terminal": "in", "output_terminal": "out", "input_channel": 1, "output_channel": 1 }
+                        ],
+                        "control_settings": [
+                            { "name": "band_enable", "row": 0, "value": true },
+                            { "name": "frequency", "row": 0, "value": 95.0 },
+                            { "name": "gain", "row": 0, "value": 3.0 },
+                            { "name": "bandwidth", "row": 0, "value": 0.85 },
+                            { "name": "band_enable", "row": 1, "value": true },
+                            { "name": "frequency", "row": 1, "value": 200.0 },
+                            { "name": "gain", "row": 1, "value": -3.0 },
+                            { "name": "bandwidth", "row": 1, "value": 0.4 },
+                            { "name": "band_enable", "row": 2, "value": true },
+                            { "name": "frequency", "row": 2, "value": 294.0 },
+                            { "name": "gain", "row": 2, "value": -4.5 },
+                            { "name": "bandwidth", "row": 2, "value": 0.4 },
+                            { "name": "band_enable", "row": 3, "value": true },
+                            { "name": "frequency", "row": 3, "value": 480.0 },
+                            { "name": "gain", "row": 3, "value": 3.0 },
+                            { "name": "bandwidth", "row": 3, "value": 0.85 },
+                            { "name": "band_enable", "row": 4, "value": true },
+                            { "name": "frequency", "row": 4, "value": 560.0 },
+                            { "name": "gain", "row": 4, "value": -2.0 },
+                            { "name": "bandwidth", "row": 4, "value": 0.333 },
+                            { "name": "band_enable", "row": 5, "value": true },
+                            { "name": "frequency", "row": 5, "value": 1054.0 },
+                            { "name": "gain", "row": 5, "value": 2.0 },
+                            { "name": "bandwidth", "row": 5, "value": 0.2 },
+                            { "name": "band_enable", "row": 6, "value": true },
+                            { "name": "frequency", "row": 6, "value": 1100.0 },
+                            { "name": "gain", "row": 6, "value": -5.0 },
+                            { "name": "bandwidth", "row": 6, "value": 0.6 },
+                            { "name": "band_enable", "row": 7, "value": true },
+                            { "name": "frequency", "row": 7, "value": 1290.0 },
+                            { "name": "gain", "row": 7, "value": -2.0 },
+                            { "name": "bandwidth", "row": 7, "value": 0.15 },
+                            { "name": "band_enable", "row": 8, "value": true },
+                            { "name": "frequency", "row": 8, "value": 1950.0 },
+                            { "name": "gain", "row": 8, "value": -4.5 },
+                            { "name": "bandwidth", "row": 8, "value": 0.65 },
+                            { "name": "band_enable", "row": 9, "value": true },
+                            { "name": "frequency", "row": 9, "value": 1962.0 },
+                            { "name": "gain", "row": 9, "value": 2.0 },
+                            { "name": "bandwidth", "row": 9, "value": 0.25 },
+                            { "name": "band_enable", "row": 10, "value": true },
+                            { "name": "frequency", "row": 10, "value": 2574.0 },
+                            { "name": "gain", "row": 10, "value": -3.0 },
+                            { "name": "bandwidth", "row": 10, "value": 0.35 },
+                            { "name": "band_enable", "row": 11, "value": true },
+                            { "name": "frequency", "row": 11, "value": 2900.0 },
+                            { "name": "gain", "row": 11, "value": -4.0 },
+                            { "name": "bandwidth", "row": 11, "value": 0.45 },
+                            { "name": "band_enable", "row": 12, "value": true },
+                            { "name": "frequency", "row": 12, "value": 3542.0 },
+                            { "name": "gain", "row": 12, "value": -3.0 },
+                            { "name": "bandwidth", "row": 12, "value": 0.25 },
+                            { "name": "band_enable", "row": 13, "value": true },
+                            { "name": "frequency", "row": 13, "value": 4691.0 },
+                            { "name": "gain", "row": 13, "value": 2.5 },
+                            { "name": "bandwidth", "row": 13, "value": 0.6 },
+                            { "name": "band_enable", "row": 14, "value": true },
+                            { "name": "frequency", "row": 14, "value": 7000.0 },
+                            { "name": "gain", "row": 14, "value": -2.0 },
+                            { "name": "bandwidth", "row": 14, "value": 0.4 },
+                            { "name": "band_enable", "row": 15, "value": true },
+                            { "name": "frequency", "row": 15, "value": 8000.0 },
+                            { "name": "gain", "row": 15, "value": 1.0 },
+                            { "name": "bandwidth", "row": 15, "value": 0.4 },
+                            { "name": "band_enable", "row": 16, "value": true },
+                            { "name": "frequency", "row": 16, "value": 15814.0 },
+                            { "name": "gain", "row": 16, "value": 3.0 },
+                            { "name": "bandwidth", "row": 16, "value": 1.25 },
+                            { "name": "band_enable", "row": 17, "value": true },
+                            { "name": "frequency", "row": 17, "value": 884.0 },
+                            { "name": "gain", "row": 17, "value": -0.8 },
+                            { "name": "bandwidth", "row": 17, "value": 0.25 },
+                            { "name": "band_enable", "row": 18, "value": true },
+                            { "name": "frequency", "row": 18, "value": 2102.0 },
+                            { "name": "gain", "row": 18, "value": -1.5 },
+                            { "name": "bandwidth", "row": 18, "value": 0.945 },
+                            { "name": "band_enable", "row": 19, "value": true },
+                            { "name": "frequency", "row": 19, "value": 4364.0 },
+                            { "name": "gain", "row": 19, "value": 0.75 },
+                            { "name": "bandwidth", "row": 19, "value": 0.945 },
+                            { "name": "band_enable", "row": 20, "value": true },
+                            { "name": "frequency", "row": 20, "value": 131.0 },
+                            { "name": "gain", "row": 20, "value": -1.5 },
+                            { "name": "bandwidth", "row": 20, "value": 0.573 }
+                        ]
+                    },
+                    {
+                        "name": "out",
+                        "algorithm": "jack_out",
+                        "constants": [
+                            { "name": "frame_size", "value": 32 },
+                            { "name": "sample_rate", "value": 48000 }
+                        ],
+                        "terminals": [
+                            { "name": "in", "channels": 2 }
+                        ],
+                        "controls": [
+                            { "name": "port_connection", "num_rows": 2 }
+                        ],
+                        "connections": [
+                            { "source_block": "speaker_eq", "input_terminal": "in", "output_terminal": "out", "input_channel": 0, "output_channel": 0 },
+                            { "source_block": "speaker_eq", "input_terminal": "in", "output_terminal": "out", "input_channel": 1, "output_channel": 0 }
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+}

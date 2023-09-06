@@ -16,14 +16,28 @@
         },
         {
             "name": "jack_in",
+            "constants": [
+                { "name": "client_name", "default_value": "mune_dsp" },
+                { "name": "port_name_prefix", "default_value": "input_" }
+            ],
             "terminals": [
                 { "name": "out", "type": "audio", "default_channels": 1, "direction": "output" }
+            ],
+            "controls": [
+                { "name": "port_connection", "dimensions": 1, "value_type": "string", "default_value": ""}
             ]
         },
         {
             "name": "jack_out",
+            "constants": [
+                { "name": "client_name", "default_value": "mune_dsp" },
+                { "name": "port_name_prefix", "default_value": "output_" }
+            ],
             "terminals": [
                 { "name": "in", "type": "audio", "default_channels": 1, "direction": "input" }
+            ],
+            "controls": [
+                { "name": "port_connection", "dimensions": 1, "value_type": "string", "default_value": ""}
             ]
         },
         {
@@ -33,14 +47,32 @@
                 { "name": "out", "type": "audio", "default_channels": 1, "direction": "output" }
             ],
             "controls": [
-                { "name": "gain", "value_type": "float", "default_value": 1.0 },
-                { "name": "mute", "value_type": "bool", "default_value": false }
+                { "name": "gain", "dimensions": 2, "value_type": "float", "default_value": 1.0 },
+                { "name": "mute", "dimensions": 2, "value_type": "bool", "default_value": false }
             ]
         },
         {
             "name": "signal_generator",
             "terminals": [
                 { "name": "out", "type": "audio", "default_channels": 1, "direction": "output" }
+            ]
+        },
+        {
+            "name": "peq",
+            "constants": [
+                { "name": "bands", "default_value": 1 },
+                { "name": "channels", "default_value": 1 }
+            ],
+            "terminals": [
+                { "name": "in", "type": "audio", "default_channels": 1, "direction": "input" },
+                { "name": "out", "type": "audio", "default_channels": 1, "direction": "output" }
+            ],
+            "controls": [
+                { "name": "bypass", "value_type": "bool", "default_value": false },
+                { "name": "band_enable", "dimensions": 1, "value_type": "bool", "default_value": true },
+                { "name": "gain", "dimensions": 1, "value_type": "float", "default_value": 0.0 },
+                { "name": "frequency", "dimensions": 1, "value_type": "float", "default_value": 1000.0 },
+                { "name": "bandwidth", "dimensions": 1, "value_type": "float", "default_value": 1.0 }
             ]
         },
         {
