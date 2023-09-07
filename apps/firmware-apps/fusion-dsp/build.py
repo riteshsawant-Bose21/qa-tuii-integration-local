@@ -53,8 +53,10 @@ def get_oci_run_flags(runner):
     flags.extend(['-v', './:/src'])
     flags.extend(['-v', '{}:/yocto'.format(args.platform_sdk)])
     
+
     if runner == 'podman':
         flags.append('--userns=keep-id')
+
 
     if platform.machine() == 'arm64':
         # For running on ARM-based Mac

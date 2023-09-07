@@ -43,7 +43,7 @@ def configure(conf):
     if conf.env.is_cross_compile:
         conf.load(conf.env.platform, tooldir='wafconf')
 
-    conf.env.append_value('CXXFLAGS', ['-std=c++11'])
+    conf.env.append_value('CXXFLAGS', ['-std=c++17'])
     conf.env.append_value('CXXFLAGS', ['-Wall', '-Wextra', '-Werror'])
     conf.env.append_value('CXXFLAGS', ['-Ofast'])
     
@@ -81,7 +81,7 @@ def configure(conf):
 def build(bld):
     bld(export_includes='./include', name='common-include')
 
-    bld.program(target='TestAudio',
+    bld.program(target='mune_dsp',
                 source=bld.path.ant_glob(['src/*.cpp', 'src/*.c']),
                 use=['common-include'],
                 lib=['jack', 'fmt', 'sndfile'])
