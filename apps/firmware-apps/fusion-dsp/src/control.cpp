@@ -44,32 +44,22 @@ void Control::assign(std::vector<std::vector<T>> *value,
 }
 
 
-template void Control::assign<bool>(bool *value,
-                                    std::function<void()> post_function);
-template void Control::assign<float>(float *value, 
-                                     std::function<void()> post_function);
-template void Control::assign<int_fast32_t>(int_fast32_t *value, 
-                                            std::function<void()> post_function);
-template void Control::assign<std::string>(std::string *value, 
-                                           std::function<void()> post_function);
-template void Control::assign<bool>(std::vector<bool> *value, 
-                                    std::function<void(int)> post_function);
-template void Control::assign<float>(std::vector<float> *value, 
-                                     std::function<void(int)> post_function);
-template void Control::assign<int_fast32_t>(std::vector<int_fast32_t> *value, 
-                                            std::function<void(int)> post_function);
-template void Control::assign<std::string>(std::vector<std::string> *value, 
-                                           std::function<void(int)> post_function);
-template void Control::assign<bool>(std::vector<std::vector<bool>> *value, 
-                                    std::function<void(int, int)> post_function);
-template void Control::assign<float>(std::vector<std::vector<float>> *value, 
+// Using an X Macro to declare all the template specializations for each
+// control type.
+#define DECLARE_TEMPLATE_CONTROL_TYPES \
+    X(bool) \
+    X(float) \
+    X(int_fast32_t) \
+    X(std::string)
+#define X(t) \
+    template void Control::assign<t>(t *value, \
+                                     std::function<void()> post_function); \
+    template void Control::assign<t>(std::vector<t> *value, \
+                                     std::function<void(int)> post_function); \
+    template void Control::assign<t>(std::vector<std::vector<t>> *value, \
                                      std::function<void(int, int)> post_function);
-template void Control::assign<int_fast32_t>(
-        std::vector<std::vector<int_fast32_t>> *value,
-        std::function<void(int, int)> post_function);
-template void Control::assign<std::string>(
-        std::vector<std::vector<std::string>> *value,
-        std::function<void(int, int)> post_function);
+DECLARE_TEMPLATE_CONTROL_TYPES
+#undef X
 
 
 Control *Control::create(const ControlParameter &parameter,
