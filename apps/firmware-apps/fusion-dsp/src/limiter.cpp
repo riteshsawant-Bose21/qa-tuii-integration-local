@@ -85,7 +85,6 @@ Limiter::Limiter(const bosepro::BlockConfiguration &configuration)
     peakGain = 0.0f;
     rmsLevel = 0.0f;
     rmsGain = 0.0f;
-    SPDLOG_INFO("Constructing limiter done");
 }
 
 
