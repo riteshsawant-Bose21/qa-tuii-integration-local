@@ -18,39 +18,40 @@ public:
     virtual void process() override;
 
 private:
-    // constants and terminals
+    // --- constants and terminals ---
     int_fast32_t channels;
-    int_fast32_t maxDelay;
+    int_fast32_t max_delay;
     std::vector<const float *> in;
-    std::vector<const float *> peakIn;
+    std::vector<const float *> peak_in;
     std::vector<float *> out;
-    // user controls
-    float peakThresh;
-    float peakAttack;
-    float peakRelease;
-    float rmsThresh;
-    float rmsAttack;
-    float rmsRelease;
+    // --- user controls ---
+    float peak_thresh;
+    float peak_attack;
+    float peak_release;
+    float rms_thresh;
+    float rms_attack;
+    float rms_release;
     int_fast32_t delay;
-    bool brickWall;                     // if instant attack
-    // processing variables
-    std::unique_ptr<float[]> buffer;    // for look-ahead delay
-    float peakLevel;
-    float peakGain;
-    float rmsLevel;
-    float rmsGain;
-    float rmsCoeff;
-    int_fast32_t readIndex; 
-    int_fast32_t writeIndex;
-    int_fast32_t bufferSize;
-    // user control parameters processing functions
-    void update_peakThresh();
-    void update_peakAttack();
-    void update_peakRelease();
-    void update_rmsThresh();
-    void update_rmsAttack();
-    void update_rmsRelease();
-    void update_delay();
+    // if instant attack
+    bool brick_wall;                     
+    // --- processing variables ---
+    // for look-ahead delay
+    std::unique_ptr<float[]> buffer;
+    float peak_level;
+    float peak_gain;
+    float rms_level;
+    float rms_gain;
+    float rms_coeff;
+    int_fast32_t read_index; 
+    int_fast32_t write_index;
+    int_fast32_t buffer_size;
+    // --- user control parameters processing functions ---
+    void update_peak_thresh();
+    void update_peak_attack();
+    void update_peak_release();
+    void update_rms_thresh();
+    void update_rms_attack();
+    void update_rms_release();
 
     ALGORITHM_DECLARE(Limiter);
 };
@@ -62,150 +63,169 @@ Limiter::Limiter(const bosepro::BlockConfiguration &configuration)
     : bosepro::Algorithm(configuration)
 {
     get_constant("channels", channels);
-    get_constant("maxDelay", maxDelay);
+    get_constant("max_delay", max_delay);
 
     assign_terminal("in", &in);
-    assign_terminal("peakIn", &peakIn);
+    assign_terminal("peak_in", &peak_in);
     assign_terminal("out", &out);
 
-    assign_control("peakThresh", &peakThresh, POST_FUNCTION_SCALAR(update_peakThresh));
-    assign_control("peakAttack", &peakAttack, POST_FUNCTION_SCALAR(update_peakAttack));
-    assign_control("peakRelease", &peakRelease, POST_FUNCTION_SCALAR(update_peakRelease));
-    assign_control("rmsThresh", &rmsThresh, POST_FUNCTION_SCALAR(update_rmsThresh));
-    assign_control("rmsAttack", &rmsAttack, POST_FUNCTION_SCALAR(update_rmsAttack));
-    assign_control("rmsRelease", &rmsRelease, POST_FUNCTION_SCALAR(update_rmsRelease));
-    assign_control("delay", &delay, POST_FUNCTION_SCALAR(update_delay));
-    assign_control("brickWall", &brickWall);
+    assign_control("peak_thresh", &peak_thresh, 
+        POST_FUNCTION_SCALAR(update_peak_thresh));
+    assign_control("peak_attack", &peak_attack, 
+        POST_FUNCTION_SCALAR(update_peak_attack));
+    assign_control("peak_release", &peak_release, 
+        POST_FUNCTION_SCALAR(update_peak_release));
+    assign_control("rms_thresh", &rms_thresh, 
+        POST_FUNCTION_SCALAR(update_rms_thresh));
+    assign_control("rms_attack", &rms_attack, 
+        POST_FUNCTION_SCALAR(update_rms_attack));
+    assign_control("rms_release", &rms_release, 
+        POST_FUNCTION_SCALAR(update_rms_release));
+    assign_control("delay", &delay);
+    assign_control("brick_wall", &brick_wall);
 
-    bufferSize = (maxDelay + get_frame_size() - 1)/get_frame_size();
-    bufferSize *= get_frame_size();
-    writeIndex = 0;
-    buffer = std::unique_ptr<float[]>(new float[channels * bufferSize]());
-    peakLevel = 0.0f;
-    peakGain = 0.0f;
-    rmsLevel = 0.0f;
-    rmsGain = 0.0f;
+    buffer_size = (max_delay + get_frame_size() - 1)/get_frame_size();
+    buffer_size *= get_frame_size();
+    write_index = 0;
+    buffer = std::unique_ptr<float[]>(new float[channels * buffer_size]());
+    peak_level = 0.0f;
+    peak_gain = 0.0f;
+    rms_level = 0.0f;
+    rms_gain = 0.0f;
 }
 
 
 void Limiter::process()
 {
-    int_fast32_t readIndex = writeIndex - delay;
-    if (readIndex < 0)
+    int_fast32_t read_index = write_index - delay;
+    if (read_index < 0)
     {
-        readIndex += bufferSize;
+        read_index += buffer_size;
     }
 
     for (int_fast32_t i = 0; i < get_frame_size(); i++)
     {
-        float peakEnergy;
-        float rmsEnergy;
+        float peak_energy;
+        float rms_energy;
 
         // find the highest energy (amplitude^2) across channels
-        peakEnergy = 0.0f;
-        rmsEnergy = 0.0f;
+        peak_energy = 0.0f;
+        rms_energy = 0.0f;
         for (int_fast32_t j = 0; j < channels; j++)
         {
             float square;
 
-            square = peakIn[j][i] * peakIn[j][i];
-            peakEnergy = (square > peakEnergy) ? square : peakEnergy;
+            square = peak_in[j][i] * peak_in[j][i];
+            peak_energy = (square > peak_energy) ? square : peak_energy;
             square = in[j][i] * in[j][i];
-            rmsEnergy = (square > rmsEnergy) ? square : rmsEnergy;
+            rms_energy = (square > rms_energy) ? square : rms_energy;
 
-            buffer[j * bufferSize + writeIndex + i] = in[j][i];
+            buffer[j * buffer_size + write_index + i] = in[j][i];
         }
 
-        // peakLevel is energy based (amplitude^2)
-        // peakAdjust is amplitude based
-        if (brickWall)
+        // peak_level is energy based (amplitude^2)
+        // peak_adjust is amplitude based
+        if (brick_wall)
         {
             // instant attack, slower release
-            peakLevel = (peakEnergy > peakLevel) ? peakEnergy : peakLevel + (peakEnergy - peakLevel) * peakRelease;
+            peak_level = (peak_energy > peak_level) ? peak_energy : peak_level + 
+                (peak_energy - peak_level) * peak_release;
             // apply threshold
-            float peakAdjust = peakThresh - 0.5f * log10f(peakLevel);  // 0.5 is a square-root to convert from energy to amplitude
+            // - log10(peak_level^1/2), 0.5 is a square-root to convert 
+            // from energy to amplitude
+            float peak_adjust = peak_thresh - 0.5f * log10f(peak_level);
             // limit gain range between 0 and -100 dB
-            peakAdjust = (peakAdjust > 0.0f) ? 0.0f : ((peakAdjust < -5.0f) ? -5.0f : peakAdjust);
-            peakGain = peakGain + (peakAdjust - peakGain) * peakAttack;
+            peak_adjust = (peak_adjust > 0.0f) ? 
+                0.0f : ((peak_adjust < -5.0f) ? -5.0f : peak_adjust);
+            peak_gain = peak_gain + (peak_adjust - peak_gain) * peak_attack;
         }
         else
         {
             // fast attack, slower release
-            peakLevel = peakLevel + (peakEnergy - peakLevel) * ((peakEnergy < peakLevel) ? peakRelease : peakAttack);
+            peak_level = peak_level + (peak_energy - peak_level) * 
+                ((peak_energy < peak_level) ? peak_release : peak_attack);
             // apply threshold
-            float peakAdjust = peakThresh - 0.5f * log10f(peakLevel);  // - log10(peakLevel^1/2), 0.5 is a square-root to convert from energy to amplitude
+            // - log10(peak_level^1/2), 0.5 is a square-root to convert 
+            // from energy to amplitude
+            float peak_adjust = peak_thresh - 0.5f * log10f(peak_level);
             // limit gain range between 0 and -100 dB
-            peakAdjust = (peakAdjust > 0.0f) ? 0.0f : ((peakAdjust < -5.0f) ? -5.0f : peakAdjust);
-            peakGain = peakAdjust;
+            peak_adjust = (peak_adjust > 0.0f) ? 
+                0.0f : ((peak_adjust < -5.0f) ? -5.0f : peak_adjust);
+            peak_gain = peak_adjust;
         }
         
         // RMS filter on squared signal (the M in RMS)
-        rmsLevel = rmsLevel + (rmsEnergy - rmsLevel) * rmsCoeff;
+        rms_level = rms_level + (rms_energy - rms_level) * rms_coeff;
         // apply threshold
-        float rmsAdjust = rmsThresh - 0.5f * log10f(rmsLevel);
+        float rms_adjust = rms_thresh - 0.5f * log10f(rms_level);
         // limit gain range between 0 and -100 dB
-        rmsAdjust = (rmsAdjust > 0.0f) ? 0.0f : ((rmsAdjust < -5.0f) ? -5.0f : rmsAdjust);
+        rms_adjust = (rms_adjust > 0.0f) ? 
+            0.0f : ((rms_adjust < -5.0f) ? -5.0f : rms_adjust);
         // apply attack and release filter
-        rmsGain = rmsGain + (rmsAdjust - rmsGain) * ((rmsAdjust > rmsGain) ? rmsRelease : rmsAttack);
+        rms_gain = rms_gain + (rms_adjust - rms_gain) * ((rms_adjust > rms_gain) ? 
+            rms_release : rms_attack);
 
         // get the linear gain
-        float g = powf(10.0f, (rmsGain < peakGain) ? rmsGain : peakGain);
+        float g = powf(10.0f, (rms_gain < peak_gain) ? rms_gain : peak_gain);
         
         // apply gain
         for (int j = 0; j < channels; j++)
         {
-            out[j][i] = g * buffer[j * bufferSize + readIndex];
+            out[j][i] = g * buffer[j * buffer_size + read_index];
         }
 
-        readIndex++;
-        if (readIndex >= bufferSize)
+        read_index++;
+        if (read_index >= buffer_size)
         {
-            readIndex = 0;
+            read_index = 0;
         }
     }
 
-    writeIndex += get_frame_size();
-    if (writeIndex >= bufferSize)
+    write_index += get_frame_size();
+    if (write_index >= buffer_size)
     {
-        writeIndex = 0;
+        write_index = 0;
     }
 }
 
-void Limiter::update_peakThresh()
+// convert peak threshold from dB to log10
+void Limiter::update_peak_thresh()
 {
-    peakThresh = 0.05 * peakThresh;  // convert peak threshold from dB to log10
+    peak_thresh = 0.05 * peak_thresh;
 }
 
-void Limiter::update_peakAttack()
+// convert attack time constant to integrator coefficient
+void Limiter::update_peak_attack()
 {
-    peakAttack = 1.0f - exp(-1.0/(get_sample_rate() * peakAttack));  // convert attack time constant to integrator coefficient
+    peak_attack = 1.0f - exp(-1.0/(get_sample_rate() * peak_attack));
 }
 
-void Limiter::update_peakRelease()
+// convert release time constant to integrator coefficient
+void Limiter::update_peak_release()
 {
-    peakRelease = 1.0f - exp(-1.0/(get_sample_rate() * peakRelease));  // convert release time constant to integrator coefficient
+    peak_release = 1.0f - exp(-1.0/(get_sample_rate() * peak_release));
 }
 
-void Limiter::update_rmsThresh()
+// convert RMS threshold from dB to log10
+void Limiter::update_rms_thresh()
 {
-    rmsThresh = 0.05 * rmsThresh;  // convert RMS threshold from dB to log10
+    rms_thresh = 0.05 * rms_thresh;
 }
 
-void Limiter::update_rmsAttack()
+// convert attack time constant to integrator coefficient
+void Limiter::update_rms_attack()
 {
-    rmsAttack = 1.0f - exp(-1.0/(get_sample_rate() * rmsAttack));  // convert attack time constant to integrator coefficient
-    rmsCoeff = 4.0f * ((rmsAttack > rmsRelease) ? rmsAttack : rmsRelease);  // RMS is 4 times faster than attack & release.
+    rms_attack = 1.0f - exp(-1.0/(get_sample_rate() * rms_attack));
+    // RMS is 4 times faster than attack & release.
+    rms_coeff = 4.0f * ((rms_attack > rms_release) ? rms_attack : rms_release);
 }
 
-void Limiter::update_rmsRelease()
+// convert release time constant to integrator coefficient
+void Limiter::update_rms_release()
 {
-    rmsRelease = 1.0f - exp(-1.0/(get_sample_rate() * rmsRelease));  // convert release time constant to integrator coefficient
-    rmsCoeff = 4.0f * ((rmsAttack > rmsRelease) ? rmsAttack : rmsRelease);  // RMS is 4 times faster than attack & release.
-}
-
-void Limiter::update_delay()
-{
-    delay = ((delay > 0.0) ? ((delay < maxDelay) ? delay : maxDelay) : 0); // limit delay to the proper range
+    rms_release = 1.0f - exp(-1.0/(get_sample_rate() * rms_release));
+    // RMS is 4 times faster than attack & release.
+    rms_coeff = 4.0f * ((rms_attack > rms_release) ? rms_attack : rms_release);
 }
 
 } // namespace

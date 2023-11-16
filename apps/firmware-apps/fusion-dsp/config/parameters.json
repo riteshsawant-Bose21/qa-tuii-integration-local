@@ -79,22 +79,22 @@
             "name": "limiter",
             "constants": [
                 { "name": "channels", "default_value": 1 },
-                { "name": "maxDelay", "default_value": 4800 }
+                { "name": "max_delay", "default_value": 4800 }
             ],
             "terminals": [
                 { "name": "in", "type": "audio", "default_channels": 1, "direction": "input" },
-                { "name": "peakIn", "type": "audio", "default_channels": 1, "direction": "input" },
+                { "name": "peak_in", "type": "audio", "default_channels": 1, "direction": "input" },
                 { "name": "out", "type": "audio", "default_channels": 1, "direction": "output" }
             ],
             "controls": [
-                { "name": "peakThresh", "value_type": "float", "default_value": 0.0 },
-                { "name": "peakAttack", "value_type": "float", "default_value": 0.001 },
-                { "name": "peakRelease", "value_type": "float", "default_value": 0.005 },
-                { "name": "rmsThresh", "value_type": "float", "default_value": 0.0 },
-                { "name": "rmsAttack", "value_type": "float", "default_value": 0.001 },
-                { "name": "rmsRelease", "value_type": "float", "default_value": 0.005 },
+                { "name": "peak_thresh", "value_type": "float", "default_value": 0.0 },
+                { "name": "peak_attack", "value_type": "float", "default_value": 0.001 },
+                { "name": "peak_release", "value_type": "float", "default_value": 0.005 },
+                { "name": "rms_thresh", "value_type": "float", "default_value": 0.0 },
+                { "name": "rms_attack", "value_type": "float", "default_value": 0.001 },
+                { "name": "rms_release", "value_type": "float", "default_value": 0.005 },
                 { "name": "delay", "value_type": "int", "default_value": 0 },
-                { "name": "brickWall", "value_type": "bool", "default_value": false }
+                { "name": "brick_wall", "value_type": "bool", "default_value": false }
             ]
         },
         {
