@@ -7,6 +7,7 @@
 
 #include <spdlog/spdlog.h>
 
+#include <cmath>
 #include <list>
 #include <memory>
 
@@ -31,6 +32,8 @@ public:
         // This makes the parameters available to all `Configurable` objects.
         set_parameters(parameters);
 
+        frames_to_run = -1;
+
         for (auto &t : configuration.get_tasks())
         {
             const TaskConfiguration &tc =
@@ -53,10 +56,38 @@ public:
         {
             task->process();
         }
+
+        if (frames_to_run > 0)
+        {
+            frames_to_run--;
+        }
+    }
+
+
+    /// Set the number of frames that the session is to run before finishing.
+    /// The progress of this duration can be checked using `finished_running()`.
+    ///
+    /// @param  seconds  The duration in seconds to run.
+    void set_seconds_to_run(double seconds)
+    {
+        frames_to_run =
+            std::ceil(seconds * get_sample_rate() / get_frame_size());
+    }
+
+
+    /// Test whether the session has finished running, in the case where a
+    /// duration has been set using `set_seconds_to_run()`.  If the duration
+    /// has not been set, this always returns `true`.
+    ///
+    /// @return  `true` if the session has finished running.
+    bool finished_running()
+    {
+        return frames_to_run == 0;
     }
 
 
 private:
+    int_fast32_t frames_to_run;
     std::list<std::unique_ptr<Task>> tasks;
 };
 

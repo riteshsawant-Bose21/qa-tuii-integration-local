@@ -1,4 +1,6 @@
 
+#include "wav_read.h"
+
 #include <bosepro/algorithm.h>
 
 #include <sndfile.h>
@@ -9,24 +11,12 @@
 #include <vector>
 
 
-namespace {
+namespace bosepro {
 
-
-class WavRead : public bosepro::Algorithm {
-public:
-    WavRead(const bosepro::BlockConfiguration &configuration);
-    virtual void process() override;
-
-private:
-    int channels;
-    std::vector<float *> out;
-    std::unique_ptr<float[]> buffer;
-    SNDFILE *sndfile;
-
-    ALGORITHM_DECLARE(WavRead);
-};
 
 ALGORITHM_REGISTER(WavRead, "wav_read");
+
+double WavRead::longest_file_time = 0.0;
 
 
 WavRead::WavRead(const bosepro::BlockConfiguration &configuration)
@@ -42,6 +32,10 @@ WavRead::WavRead(const bosepro::BlockConfiguration &configuration)
     SF_INFO sfinfo;
     get_constant("filename", filename);
     sndfile = sf_open(filename.c_str(), SFM_READ, &sfinfo);
+
+    double file_time = (double)sfinfo.frames / sfinfo.samplerate;
+    longest_file_time = (file_time > longest_file_time) ?
+        file_time : longest_file_time;
 }
 
 
