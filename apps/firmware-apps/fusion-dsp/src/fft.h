@@ -48,6 +48,10 @@ namespace fft {
 ///     - ...
 ///     - X[N/2-1].re
 ///     - X[N/2-1].im
+///
+/// Neither the forward or inverse FFT performs any scaling on the results.
+/// If you perform an N-point forward FFT followed by an inverse FFT, the
+/// output needs to be scaled by 1/N to match the original signal.
 class Fft {
 
 public:
@@ -97,7 +101,10 @@ public:
     /// Perform a real inverse FFT.  The input array should consist of only
     /// the positive half-spectrum, with the real and imaginay parts interleaved,
     /// and the first two values of the input array containing the real parts of
-    /// the DC and Nyquist bins, respectively.
+    /// the DC and Nyquist bins, respectively.  Note that this doesn't perform
+    /// any output scaling, as MATLAB and SciPy FFTs do.  If you perform an
+    /// N-point forward FFT followed by an inverse FFT, you need to scale the
+    /// output by 1/N to get the original signal.
     ///
     /// @param  out  The real, time-domain output signal.
     /// @param  in   The input complex positive helf-spectrum.
