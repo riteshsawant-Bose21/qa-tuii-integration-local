@@ -1,10 +1,11 @@
 // Arbitrary EQ ported from Katana-DSP-IP
 //
-// Apply EQ based on a target magnitude response curve.
-// Users can add unlimited numbers of arbitrarary bands
-// to construct tthe target magnitude response curve. Each
-// arbitrary band represents one of the raised cosine filter
-// shapes: high-shelf, low-shelf, peak, mesa. 
+// Apply EQ based on an "arbitrary" target magnitude response 
+// curve using cascaded warped FIR and FIR filters.
+// Users can add unlimited numbers of raised cosine filter
+// bands to construct the target magnitude response curve.
+// Choose raised cosine filter shapes from: 
+// high-shelf, low-shelf, peak, mesa. 
 
 #include <bosepro/algorithm.h>
 #include "fft.h"
