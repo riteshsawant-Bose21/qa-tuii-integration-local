@@ -19,25 +19,25 @@ typedef struct
 } float32x4_t;
 
 /* 2x SIMD operations */
-static float32x2_t vld1_f32(const float *src)
+inline float32x2_t vld1_f32(const float *src)
 {
     float32x2_t result = { src[0], src[1] };
     return result;
 }
 
-static float32x2_t vmul_n_f32(float32x2_t a, float b)
+inline float32x2_t vmul_n_f32(float32x2_t a, float b)
 {
     float32x2_t result = { a.val[0]*b, a.val[1]*b };
     return result;
 }
 
-static float32x2_t vmul_f32(float32x2_t a, float32x2_t b)
+inline float32x2_t vmul_f32(float32x2_t a, float32x2_t b)
 {
     float32x2_t result = { a.val[0]*b.val[0], a.val[1]*b.val[1] };
     return result;
 }
 
-static float32x2_t vmla_f32(float32x2_t a, float32x2_t b, float32x2_t c)
+inline float32x2_t vmla_f32(float32x2_t a, float32x2_t b, float32x2_t c)
 {
     float32x2_t result = {
         a.val[0]+b.val[0]*c.val[0],
@@ -45,43 +45,43 @@ static float32x2_t vmla_f32(float32x2_t a, float32x2_t b, float32x2_t c)
     return result;
 }
 
-static float32x2_t vdup_n_f32(float x)
+inline float32x2_t vdup_n_f32(float x)
 {
     float32x2_t result = { x, x };
     return result;
 }
 
-static float vget_lane_f32(float32x2_t a, int n)
+inline float vget_lane_f32(float32x2_t a, int n)
 {
     return a.val[n];
 }
 
-static float32x2_t vadd_f32(float32x2_t a, float32x2_t b)
+inline float32x2_t vadd_f32(float32x2_t a, float32x2_t b)
 {
     float32x2_t result = { a.val[0]+b.val[0], a.val[1]+b.val[1] };
     return result;
 }
 
-static float32x2_t vsub_f32(float32x2_t a, float32x2_t b)
+inline float32x2_t vsub_f32(float32x2_t a, float32x2_t b)
 {
     float32x2_t result = { a.val[0]-b.val[0], a.val[1]-b.val[1] };
     return result;
 }
 
-static void vst1_f32(float *dst, float32x2_t x)
+inline void vst1_f32(float *dst, float32x2_t x)
 {
     dst[0] = x.val[0];
     dst[1] = x.val[1];
 }
 
 /* 4x SIMD operations */
-static float32x4_t vld1q_f32(const float *src)
+inline float32x4_t vld1q_f32(const float *src)
 {
     float32x4_t result = { src[0], src[1], src[2], src[3] };
     return result;
 }
 
-static float32x4_t vmlaq_f32(float32x4_t a, float32x4_t b, float32x4_t c)
+inline float32x4_t vmlaq_f32(float32x4_t a, float32x4_t b, float32x4_t c)
 {
     float32x4_t result = {
         a.val[0]+b.val[0]*c.val[0],
@@ -91,7 +91,7 @@ static float32x4_t vmlaq_f32(float32x4_t a, float32x4_t b, float32x4_t c)
     return result;
 }
 
-static float32x4_t vmulq_f32(float32x4_t a, float32x4_t b)
+inline float32x4_t vmulq_f32(float32x4_t a, float32x4_t b)
 {
     float32x4_t result = {
         a.val[0]*b.val[0],
@@ -101,18 +101,18 @@ static float32x4_t vmulq_f32(float32x4_t a, float32x4_t b)
     return result;
 }
 
-static float32x4_t vdupq_n_f32(float x)
+inline float32x4_t vdupq_n_f32(float x)
 {
     float32x4_t result = { x, x, x, x };
     return result;
 }
 
-static float vgetq_lane_f32(float32x4_t a, int n)
+inline float vgetq_lane_f32(float32x4_t a, int n)
 {
     return a.val[n];
 }
 
-static float32x4_t vaddq_f32(float32x4_t a, float32x4_t b)
+inline float32x4_t vaddq_f32(float32x4_t a, float32x4_t b)
 {
     float32x4_t result = {
         a.val[0]+b.val[0],
@@ -122,7 +122,7 @@ static float32x4_t vaddq_f32(float32x4_t a, float32x4_t b)
     return result;
 }
 
-static float32x4_t vsubq_f32(float32x4_t a, float32x4_t b)
+inline float32x4_t vsubq_f32(float32x4_t a, float32x4_t b)
 {
     float32x4_t result = {
         a.val[0]-b.val[0],
@@ -132,13 +132,25 @@ static float32x4_t vsubq_f32(float32x4_t a, float32x4_t b)
     return result;
 }
 
-static void vst1q_f32(float *dst, float32x4_t x)
+inline void vst1q_f32(float *dst, float32x4_t x)
 {
     dst[0] = x.val[0];
     dst[1] = x.val[1];
     dst[2] = x.val[2];
     dst[3] = x.val[3];
 }
+
+inline float vaddvq_f32(float32x4_t a)
+{
+    return a.val[0]+a.val[1]+a.val[2]+a.val[3];
+}
+
+inline float32x4_t vsetq_lane_f32(float x, float32x4_t a, int n)
+{
+    a.val[n] = x;
+    return a;
+}
+
 #else 
     #include <arm_neon.h>
 #endif // ifndef __ARM_NEON
