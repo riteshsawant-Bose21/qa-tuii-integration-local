@@ -42,7 +42,8 @@ private:
     // how many freq bins per octave, default uses 1/60 octave bins,
     // so points_per_octave = 60
     int_fast32_t points_per_octave;
-    // how many octaves in the transition region, default 1
+    // how many octaves in the transition region/overlap between 
+    // FIR filter bands, default 1
     int_fast32_t transition_octaves;
     // usually set as 3 bands, which are the 3 cascaded wFIR->wFIR->FIR filters
     int_fast32_t num_bands;
@@ -187,10 +188,6 @@ ArbitraryEQ::ArbitraryEQ(const bosepro::BlockConfiguration &configuration)
 
 void ArbitraryEQ::update_band_enable(int band)
 {
-    if (band > max_user_bands)
-    {
-        SPDLOG_DEBUG("Band number exceeds maximum number of user bands");
-    }
     if (band < 0 || band >= max_user_bands)
     {
         SPDLOG_DEBUG("Selected band out of range");
@@ -202,10 +199,6 @@ void ArbitraryEQ::update_band_enable(int band)
 
 void ArbitraryEQ::update_frequency1(int band)
 {
-    if (band > max_user_bands)
-    {
-        SPDLOG_DEBUG("Band number exceeds maximum number of user bands");
-    }
     if (band < 0 || band >= max_user_bands)
     {
         SPDLOG_DEBUG("Selected band out of range");
@@ -217,10 +210,6 @@ void ArbitraryEQ::update_frequency1(int band)
 
 void ArbitraryEQ::update_frequency2(int band)
 {
-    if (band > max_user_bands)
-    {
-        SPDLOG_DEBUG("Band number exceeds maximum number of user bands");
-    }
     if (band < 0 || band >= max_user_bands)
     {
         SPDLOG_DEBUG("Selected band out of range");
@@ -232,10 +221,6 @@ void ArbitraryEQ::update_frequency2(int band)
 
 void ArbitraryEQ::update_gain(int band)
 {
-    if (band > max_user_bands)
-    {
-        SPDLOG_DEBUG("Band number exceeds maximum number of user bands");
-    }
     if (band < 0 || band >= max_user_bands)
     {
         SPDLOG_DEBUG("Selected band out of range");
@@ -247,10 +232,6 @@ void ArbitraryEQ::update_gain(int band)
 
 void ArbitraryEQ::update_bandwidth1(int band)
 {
-    if (band > max_user_bands)
-    {
-        SPDLOG_DEBUG("Band number exceeds maximum number of user bands");
-    }
     if (band < 0 || band >= max_user_bands)
     {
         SPDLOG_DEBUG("Selected band out of range");
@@ -262,10 +243,6 @@ void ArbitraryEQ::update_bandwidth1(int band)
 
 void ArbitraryEQ::update_bandwidth2(int band)
 {
-    if (band > max_user_bands)
-    {
-        SPDLOG_ERROR("Band number exceeds maximum number of user bands");
-    }
     if (band < 0 || band >= max_user_bands)
     {
         SPDLOG_ERROR("Selected band out of range");
@@ -277,10 +254,6 @@ void ArbitraryEQ::update_bandwidth2(int band)
 
 void ArbitraryEQ::update_filter_type(int band)
 {
-    if (band > max_user_bands)
-    {
-        SPDLOG_ERROR("Band number exceeds maximum number of user bands");
-    }
     if (type_map.count(filter_type.at(band)) == 0)
     {
         SPDLOG_ERROR("Illegal value '" + filter_type.at(band) + "' for 'type' parameter.");
@@ -608,10 +581,10 @@ void ArbitraryEQ::compute_optimal_lambda(void)
             }
         }
     }
-    // for (int band_idx{0}; band_idx < num_bands-1; ++band_idx)
-    // {
-    //     SPDLOG_DEBUG("ArbitraryEQ Optimal lambda, band {}: {}",band_idx,_lambda[band_idx]);
-    // }
+    for (int band_idx{0}; band_idx < num_bands-1; ++band_idx)
+    {
+        SPDLOG_TRACE("ArbitraryEQ Optimal lambda, band {}: {}",band_idx,_lambda[band_idx]);
+    }
 }
 
 
@@ -620,7 +593,7 @@ void ArbitraryEQ::process()
     for (int_fast32_t channel = 0; channel < channels; channel++)
     {
         memcpy(out[channel], in[channel], sizeof(float)*get_frame_size());
-        // Process through each filter band
+        // Process through each FIR filter band
         for (auto firFilter : _filters)
         {
             firFilter->process(out[channel], out[channel]);

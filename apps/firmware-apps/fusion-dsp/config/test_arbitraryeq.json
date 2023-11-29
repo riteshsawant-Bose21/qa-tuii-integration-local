@@ -26,7 +26,8 @@
                         "constants": [
                             { "name": "channels", "value": 1 },
                             { "name": "frame_size", "value": 480 },
-                            { "name": "sample_rate", "value": 48000 }
+                            { "name": "sample_rate", "value": 48000 },
+                            { "name": "max_user_bands", "value": 2 }
                         ],
                         "terminals": [
                             { "name": "in", "channels": 1 },

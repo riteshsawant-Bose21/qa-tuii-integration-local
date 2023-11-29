@@ -41,36 +41,6 @@ public:
     {
         return _enable;
     }
-    CosineFilterType show_type(void) const
-    {
-        return _type;
-    }
-    float show_gain(void) const
-    {
-        return _gain;
-    }
-    float show_frequency(int bandnum = 1) const
-    {
-        if (1 == bandnum)
-        {
-            return _freq1;
-        }
-        else
-        {
-            return _freq2;
-        }
-    }
-    float show_bandwidth(int bandnum = 1) const
-    {
-        if (1 == bandnum)
-        {
-            return _bw1;
-        }
-        else
-        {
-            return _bw2;
-        }
-    }
 private:
     static const std::map<std::string, filter::CosineFilterType> _type_map;
     filter::CosineFilterType _type{filter::CosineFilterType::HIGH_SHELF};
