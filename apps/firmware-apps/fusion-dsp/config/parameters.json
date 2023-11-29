@@ -76,6 +76,31 @@
             ]
         },
         {
+            "name": "arbitrary_eq",
+            "constants": [
+                { "name": "channels", "default_value": 1 },
+                { "name": "num_bands", "default_value": 3 },
+                { "name": "max_user_bands", "default_value": 20 },
+                { "name": "num_taps_wfir", "default_value": 384 },
+                { "name": "num_taps_fir", "default_value": 768 },
+                { "name": "points_per_octave", "default_value": 60 },
+                { "name": "transition_octaves", "default_value": 1 }
+            ],
+            "terminals": [
+                { "name": "in", "type": "audio", "default_channels": 1, "direction": "input" },
+                { "name": "out", "type": "audio", "default_channels": 1, "direction": "output" }
+            ],
+            "controls": [
+                { "name": "band_enable", "dimensions": 1, "value_type": "bool", "default_value": true },
+                { "name": "filter_type", "dimensions": 1, "value_type": "string", "default_value": "high_shelf" },
+                { "name": "gain", "dimensions": 1, "value_type": "float", "default_value": 0.0 },
+                { "name": "frequency1", "dimensions": 1, "value_type": "float", "default_value": 1000.0 },
+                { "name": "bandwidth1", "dimensions": 1, "value_type": "float", "default_value": 1.0 },
+                { "name": "frequency2", "dimensions": 1, "value_type": "float", "default_value": 2000.0 },
+                { "name": "bandwidth2", "dimensions": 1, "value_type": "float", "default_value": 1.0 }
+            ]
+        },
+        {
             "name": "limiter",
             "constants": [
                 { "name": "channels", "default_value": 1 },
