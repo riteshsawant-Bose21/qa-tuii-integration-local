@@ -1,14 +1,39 @@
 #include "arm_neon_defs.h"
 #include "iir.h"
+#include "iir_design.h"
+
+#include <spdlog/spdlog.h>
 
 #include <cmath>
+#include <memory>
 
 
 namespace filter {
 
 
-// This file contains many local functions, used as follows:
-//
+// The order in which a second-order section's a1, etc.,  coefficients appear
+// in the `coeffs` array.
+
+static const int IIR_A1_INDEX = 0;
+static const int IIR_A2_INDEX = 1;
+static const int IIR_B1_INDEX = 2;
+static const int IIR_B2_INDEX = 3;
+
+
+// The alignment required for the `state` and `coeffs` parameters passed to
+// `process()`, for filters that have 4 or more sections.
+
+static const int IIR_ALIGN = 4 * sizeof(float);
+
+
+// These functions help with coefficient and state indexing, working with
+// the alignment constraints for NEON optimized vector instructions.
+
+static int iir_state_size(int num_sections);
+static int iir_coeff_index_start(int section, int num_sections);
+static int iir_coeff_index_stride(int section, int num_sections);
+
+
 // iir_{1,2,4} each implement 1, 2 or 4 stages of direct-form 2 transposed
 // biquads.  When compiling for a non-ARM-NEON target, fake versions of the ARM
 // intrinsics will be used, so that the same main code is executed.  When
@@ -33,36 +58,156 @@ static void iir_4(const float * coeffs, float * state,
                   const float *in, float *out, int frame_size, float g);
 
 
-void iir_process(float *out, const float *in, float * state, float g,
-                 const float * coeffs, int num_sections, int frame_size)
+IirFilter::IirFilter(int num_sections, int num_channels)
+    : num_sections(num_sections),
+      num_channels(num_channels),
+      state_size(iir_state_size(num_sections)),
+      total_gain(1.0f)
+{
+    state = std::unique_ptr<float[]>(new (std::align_val_t(IIR_ALIGN))
+                                             float[num_channels * state_size]());
+    coeff = std::unique_ptr<float[]>(new (std::align_val_t(IIR_ALIGN))
+                                             float[4 * num_sections]());
+
+    section_gain.resize(num_sections);
+
+    for (auto &g : section_gain)
+    {
+        g = 1.0f;
+    }
+}
+
+
+void IirFilter::design_band(const std::string &method, int section,
+                            float frequency, float q, float gain_db,
+                            float sample_rate)
+{
+    filter::IirDesignBand *design_band =
+        bosepro::ObjectRegistry<filter::IirDesignBand>::get_object(method);
+    filter::IirDesignBandFunc design_func = design_band->get_function();
+    design_func(this, section, frequency, q, gain_db, sample_rate);
+}
+
+
+void IirFilter::design(const std::string &method, int start_section,
+                       float frequency, int order, float sample_rate,
+                       int max_sections)
+{
+    filter::IirDesign *iir_design =
+            bosepro::ObjectRegistry<filter::IirDesign>::get_object(method);
+    filter::IirDesignFunc design_func = iir_design->get_function();
+    design_func(this, start_section, frequency, order, sample_rate,
+                max_sections);
+}
+
+
+void IirFilter::set_section_coeffs(int section, double b0, double b1, double b2,
+                                   double a0, double a1, double a2)
+{
+    int index_start = iir_coeff_index_start(section, num_sections);
+    int index_stride = iir_coeff_index_stride(section, num_sections);
+
+    b1 /= b0;
+    b2 /= b0;
+    a1 /= a0;
+    a2 /= a0;
+
+    section_gain[section] = b0 / a0;
+
+    float tmp_gain = 1.0f;
+
+    for (auto g : section_gain)
+    {
+        tmp_gain *= g;
+    }
+
+    // Could put a mutex here.
+    total_gain = tmp_gain;
+
+    coeff[index_start + IIR_B1_INDEX * index_stride] = b1;
+    coeff[index_start + IIR_B2_INDEX * index_stride] = b2;
+    coeff[index_start + IIR_A1_INDEX * index_stride] = a1;
+    coeff[index_start + IIR_A2_INDEX * index_stride] = a2;
+}
+
+
+// Process one frame of audio through an IIR filter.
+//
+// The coefficients for all sections are normalized, with a1 and a2 being
+// divided by a0, and b1 and b2 divided by b0.  The gain `g` passed to this
+// function is the product of b0/a0 of all sections.
+//
+// This function is optimized to use vector operations, and thus requires the
+// coefficients in `coeff` to be stored in a particular order.
+//
+// For each group of 4 sections, the coefficients are arranged as:
+//
+// a1_1 a1_2 a1_3 a1_4 a2_1 ... a2_4 b1_1 ... b1_4 b2_1 ... b2_4
+//
+// If `num_sections % 4` is 2 or 3, the groups of 4 sections will be followed
+// by a group of 2 sections' coefficients arranged as:
+//
+// a1_1 a1_2 a2_1 a2_2 b1_1 b1_2 b2_1 b2_2
+//
+// Finally, if `num_sections` is odd, these will be followed by the odd
+// section's coefficients:
+//
+// a1 a2 b1 b2
+//
+// Writing coefficients in the correct order can be facilitated using
+// `iir_coeff_index_start()`, `iir_coeff_index_stride()`, and `IIR_A1_INDEX`,
+// etc. For example, to write the 4 coefficients to section `n`:
+//
+// ~~~
+// start = iir_coeff_index_start(n, num_sections);
+// stride = iir_coeff_index_stride(n, num_sections);
+// coeff[start + IIR_A1_INDEX * stride] = a1 / a0;
+// coeff[start + IIR_A2_INDEX * stride] = a2 / a0;
+// coeff[start + IIR_B1_INDEX * stride] = b1 / b0;
+// coeff[start + IIR_B2_INDEX * stride] = b2 / b0;
+// g *= b0/a0;
+// ~~~
+//
+// \param out  The array of output samples, of length `frame_size`.
+// \param in  The array of input samples, of length `frame_size`.
+// \param channel  The index of the channel to be processed.
+// \param frame_size  The number of samples to be processed.
+
+void IirFilter::process_impl(float *out, const float *in, int channel,
+                             int frame_size)
 {
     const float *x = in;
+    float *p_coeff = coeff.get();
+    float *p_state = &state[channel * state_size];
+    float g = total_gain;
+    int remaining_sections = num_sections;
 
-    while (num_sections)
+
+    while (remaining_sections)
     {
-        if (num_sections >= 4)
+        if (remaining_sections >= 4)
         {
-            iir_4(coeffs, state, x, out, frame_size, g);
+            iir_4(p_coeff, p_state, x, out, frame_size, g);
 
-            num_sections  -= 4;
-            coeffs       += 16;
-            state        += 8;
+            remaining_sections  -= 4;
+            p_coeff       += 16;
+            p_state       += 8;
         }
         else if (num_sections >= 2)
         {
-            iir_2(coeffs, state, x, out, frame_size, g);
+            iir_2(p_coeff, p_state, x, out, frame_size, g);
 
-            num_sections  -= 2;
-            coeffs       += 8;
-            state        += 4;
+            remaining_sections  -= 2;
+            p_coeff       += 8;
+            p_state       += 4;
         }
         else
         {
-            iir_1(coeffs, state, x, out, frame_size, g);
+            iir_1(p_coeff, p_state, x, out, frame_size, g);
 
-            num_sections  -= 1;
-            coeffs       += 4;
-            state        += 2;
+            remaining_sections  -= 1;
+            p_coeff       += 4;
+            p_state       += 2;
         }
 
         // Only apply the gain, g, during the first set of sections.
@@ -75,9 +220,66 @@ void iir_process(float *out, const float *in, float * state, float g,
 }
 
 
-int iir_state_size(int num_sections)
+// For multichannel filters, return the size of the `state` memory allocated
+// for each channel, such that alignment can be guaranteed for all channels.
+// This allows the state memory for all of the channels to be allocated from
+// a single aligned array of size `num_channels * iir_state_size(num_sections)`.
+//
+// \param num_sections  The number of second-order sections in the filter.
+// \return  `2 * num_sections`, rounded up to a multiple of 4.
+
+static int iir_state_size(int num_sections)
 {
     return ((num_sections & 1) != 0) ? 2 * num_sections + 2 : 2 * num_sections;
+}
+
+
+// Calculate the index of the first (a1) coefficient for a second-order
+// section. See `iir_process_impl()`.
+//
+// \param section  The index of this section.
+// \param num_sections  The total number of sections.
+// \return  The index of this section's a1 coefficient within a `coeff` array.
+
+static int iir_coeff_index_start(int section, int num_sections)
+{
+    if (section < (num_sections & ~0x3))
+    {
+        return 16 * (section >> 2) + (section & 0x3);
+    }
+    else if (section < (num_sections & ~0x1))
+    {
+        return 16 * (num_sections >> 2) + (section & 0x3);
+    }
+    else
+    {
+        return 16 * (num_sections >> 2) + 4 * (num_sections & 0x2);
+    }
+}
+
+
+// Calculate the index offset between coefficients of a second-order section.
+// See `iir_process_impl()`.
+//
+// \param section  The index of this section.
+// \param num_sections  The total number of sections.
+// \return  The index stride between this section's coefficients within a
+//     `coeff` array.
+
+static inline int iir_coeff_index_stride(int section, int num_sections)
+{
+    if (section < (num_sections & ~0x3))
+    {
+        return 4;
+    }
+    else if (section < (num_sections & ~0x1))
+    {
+        return 2;
+    }
+    else
+    {
+        return 1;
+    }
 }
 
 
@@ -87,10 +289,10 @@ int iir_state_size(int num_sections)
 static void iir_1(const float * coeffs, float * state,
                   const float *in, float *out, int frame_size, float g)
 {
-    float a1 = coeffs[A1_INDEX];
-    float a2 = coeffs[A2_INDEX];
-    float b1 = coeffs[B1_INDEX];
-    float b2 = coeffs[B2_INDEX];
+    float a1 = coeffs[IIR_A1_INDEX];
+    float a2 = coeffs[IIR_A2_INDEX];
+    float b1 = coeffs[IIR_B1_INDEX];
+    float b2 = coeffs[IIR_B2_INDEX];
 
     float v1 = state[0];
     float v2 = state[1];
@@ -134,10 +336,10 @@ static void iir_2(const float * coeffs, float * state,
     //  stage1_b1, stage2_b1,
     //  stage1_b2, stage2_b2
 
-    const float32x2_t a1 = vld1_f32(&coeffs[2*A1_INDEX]);
-    const float32x2_t a2 = vld1_f32(&coeffs[2*A2_INDEX]);
-    const float32x2_t b1 = vld1_f32(&coeffs[2*B1_INDEX]);
-    const float32x2_t b2 = vld1_f32(&coeffs[2*B2_INDEX]);
+    const float32x2_t a1 = vld1_f32(&coeffs[2 * IIR_A1_INDEX]);
+    const float32x2_t a2 = vld1_f32(&coeffs[2 * IIR_A2_INDEX]);
+    const float32x2_t b1 = vld1_f32(&coeffs[2 * IIR_B1_INDEX]);
+    const float32x2_t b2 = vld1_f32(&coeffs[2 * IIR_B2_INDEX]);
 
     // Load states for all 2 stages.  States are in the following order:
     //
@@ -199,10 +401,10 @@ static void iir_4(const float * coeffs, float * state,
     //  stage1_b1, stage2_b1, stage3_b1, stage4_b1,
     //  stage1_b2, stage2_b2, stage3_b2, stage4_b2
 
-    const float32x4_t a1 = vld1q_f32(&coeffs[4*A1_INDEX]);
-    const float32x4_t a2 = vld1q_f32(&coeffs[4*A2_INDEX]);
-    const float32x4_t b1 = vld1q_f32(&coeffs[4*B1_INDEX]);
-    const float32x4_t b2 = vld1q_f32(&coeffs[4*B2_INDEX]);
+    const float32x4_t a1 = vld1q_f32(&coeffs[4 * IIR_A1_INDEX]);
+    const float32x4_t a2 = vld1q_f32(&coeffs[4 * IIR_A2_INDEX]);
+    const float32x4_t b1 = vld1q_f32(&coeffs[4 * IIR_B1_INDEX]);
+    const float32x4_t b2 = vld1q_f32(&coeffs[4 * IIR_B2_INDEX]);
 
 
     // Load states for all 4 stages.  States are in the following order:

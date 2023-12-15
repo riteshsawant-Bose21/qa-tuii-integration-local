@@ -72,7 +72,7 @@
                 { "name": "band_enable", "dimensions": 1, "value_type": "bool", "default_value": true },
                 { "name": "gain", "dimensions": 1, "value_type": "float", "default_value": 0.0 },
                 { "name": "frequency", "dimensions": 1, "value_type": "float", "default_value": 1000.0 },
-                { "name": "bandwidth", "dimensions": 1, "value_type": "float", "default_value": 1.0 }
+                { "name": "q", "dimensions": 1, "value_type": "float", "default_value": 1.0 }
             ]
         },
         {

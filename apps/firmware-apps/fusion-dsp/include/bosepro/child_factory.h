@@ -1,5 +1,7 @@
 #pragma once
 
+#include <bosepro/object_registry.h>
+
 #include <spdlog/spdlog.h>
 
 #include <map>
@@ -22,45 +24,17 @@ public:
     /// @param  arg  The argument to pass to the child's constructor.
     static Parent *create_child(const std::string &child_name, ArgType arg)
     {
-        auto it = get_registry().find(child_name);
+        ChildCreator<Parent, ArgType> *creator = ObjectRegistry<ChildCreator<Parent, ArgType>>::get_object(child_name);
 
-        if (it != get_registry().end())
+        if (creator != nullptr)
         {
-            return it->second->create(arg);
+            return creator->create(arg);
         }
         else
         {
-            SPDLOG_ERROR("Unknown child name: {}", child_name);
+            SPDLOG_ERROR("Unknown child name: '{}'", child_name);
             return nullptr;
         }
-    }
-
-
-    /// Register a child creator with the factory.  This shouldn't be called
-    /// directly.  Use `CHILD_FACTORY_REGISTER()` instead.
-    ///
-    /// @param  child_name  The name of the child to register.
-    /// @param  creator  The creator for the child.
-    static void register_child(const std::string &child_name,
-                               ChildCreator<Parent, ArgType> *creator)
-    {
-        auto it = get_registry().find(child_name);
-
-        if (it == get_registry().end())
-        {
-            get_registry()[child_name] = creator;
-        }
-        else
-        {
-            SPDLOG_ERROR("Duplicate child name: {}", child_name);
-        }
-    }
-
-private:
-    static std::map<std::string, ChildCreator<Parent, ArgType> *> &get_registry()
-    {
-        static std::map<std::string, ChildCreator<Parent, ArgType> *> registry;
-        return registry;
     }
 };
 
@@ -72,7 +46,7 @@ class ChildCreator {
 public:
     ChildCreator<Parent, ArgType>(const std::string &child_name)
     {
-        ChildFactory<Parent, ArgType>::register_child(child_name, this);
+        ObjectRegistry<ChildCreator<Parent, ArgType>>::register_object(child_name, this);
     }
 
     virtual ~ChildCreator<Parent, ArgType>() = default;
