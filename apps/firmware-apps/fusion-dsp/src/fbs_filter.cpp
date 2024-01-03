@@ -156,7 +156,6 @@ void FilterManager::change_filter_to_static_or_dynamic(int filter_number, bool i
             }
 			// change this specific filter to be static or dynamic
 			_filter_container[i].set_is_static(is_static);
-            // found = true;
 			SPDLOG_TRACE("Changed filter at position: {} to 'isStatic': {}, due to command ", filter_number, is_static);
 			break;
 		}
