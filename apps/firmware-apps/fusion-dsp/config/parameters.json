@@ -76,6 +76,45 @@
             ]
         },
         {
+            "name": "feedback_suppression",
+            "constants": [
+                { "name": "channels", "default_value": 1 },
+                { "name": "fft_size", "default_value": 8192 },
+                { "name": "f0_amplitude_th", "default_value": -110 },
+                { "name": "num_filters", "default_value": 16 },
+                { "name": "rev_feedback_cand_freq_buf_size", "default_value": 60 },
+                { "name": "rise_factor_maximum_cutoff_threshold", "default_value": 120 },
+                { "name": "rise_factor_minimum_cutoff_threshold", "default_value": -25 },
+                { "name": "num_peaks_to_find", "default_value": 5 }
+            ],
+            "terminals": [
+                { "name": "in", "type": "audio", "default_channels": 1, "direction": "input" },
+                { "name": "out", "type": "audio", "default_channels": 1, "direction": "output" }
+            ],
+            "controls": [
+                { "name": "low_freq_ignore_freq", "value_type": "int", "default_value": 60 },
+                { "name": "high_freq_ignore_freq", "value_type": "int", "default_value": 18000 },
+                { "name": "mult_band_crossover_freq_mid", "value_type": "int", "default_value": 135 },
+                { "name": "mult_band_crossover_freq_high", "value_type": "int", "default_value": 600 },
+                { "name": "mult_band_crossover_freq_superhigh", "value_type": "int", "default_value": 4000 },
+                { "name": "before_filter_enabled_freq_counter_low", "value_type": "int", "default_value": 1 },
+                { "name": "before_filter_enabled_freq_counter_mid", "value_type": "int", "default_value": 1 },
+                { "name": "before_filter_enabled_freq_counter_high", "value_type": "int", "default_value": 2 },
+                { "name": "before_filter_enabled_freq_counter_superhigh", "value_type": "int", "default_value": 1 },
+                { "name": "default_filter_q", "value_type": "float", "default_value": "14.42" },
+                { "name": "incremental_filter_gain_step", "value_type": "float", "default_value": -3 },
+                { "name": "max_filter_gain", "value_type": "float", "default_value": -24 },
+                { "name": "initial_filter_gain", "value_type": "float", "default_value": -9 },
+                { "name": "max_num_filter_depth_adjustments_per_period", "value_type": "int", "default_value": 3 },
+                { "name": "frequency_error_margin_in_octaves_low", "value_type": "float", "default_value": 0.08333 },
+                { "name": "frequency_error_margin_in_octaves_mid", "value_type": "float", "default_value": 0.003125 },
+                { "name": "frequency_error_margin_in_octaves_high", "value_type": "float", "default_value": 0.006 },
+                { "name": "frequency_error_margin_in_octaves_superhigh", "value_type": "float", "default_value": 0.03333 },
+                { "name": "sensitivity", "value_type": "int", "default_value": 0 },
+                { "name": "filter_reset_time", "value_type": "float", "default_value": 300 }
+            ]
+        },
+        {
             "name": "arbitrary_eq",
             "constants": [
                 { "name": "channels", "default_value": 1 },
