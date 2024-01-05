@@ -250,7 +250,7 @@ void FeedbackSuppression::find_peaks()
             //Be sure we don't include the two FFT extrema outlined by these variables
             if((j > low_freq_ignore_freq) && (j <= high_freq_ignore_freq))
             {
-                //Then, see if it's greater than the peak at jMaxSoFar of fftData
+                //Then, see if it's greater than the peak at j_max_so_far of fftData
                 if(db_fft_data[j] > max_so_far)	
                 {
                     //Then make sure it's not the same index as ALL of the 
@@ -353,7 +353,7 @@ bool FeedbackSuppression::analyze_rise_factor(const PotentialFeedbackPeak & pote
     const FilterManager * filter_manager) const
 {
     //Ratio of current amplitude to past amplitude (dB, so we subtract), all divided by FFT 
-    // window time period. results in d_b rise per second
+    // window time period. results in dB rise per second
     int rise_factor = static_cast<int>((db_fft_data[potential_feedback_peak.fft_index] - 
         pre_db_fft_data[potential_feedback_peak.fft_index])/( (float)fft_size/get_sample_rate()));
     //if rise_factor is too big
@@ -398,8 +398,6 @@ bool FeedbackSuppression::fundamental_satisfies_this_harmonic_test(const int i_f
 // the harmonics test
 bool FeedbackSuppression::analyze_harmonics(const PotentialFeedbackPeak & potential_feedback_peak)
 {
-    //get pointer to struct we'll be using, based on the peak's multi band classification
-    // harmonic_analysis_parameters *harmonic_params = &_harmonic_analysis_parameters[potential_feedback_peak.multi_band_classification];
     //analyze each harmonic. must pass all tests in order to return true
     //second harmonic test
     if(!fundamental_satisfies_this_harmonic_test(potential_feedback_peak.fft_index,2,
@@ -560,7 +558,7 @@ void FeedbackSuppression::feedback_process()
         //populate the struct using this method
         potential_fb_peak = populate_peak_struct_from_peak_index(final_peak_index_list[i],potential_fb_peak);
 
-        //If this peak looks like feedback based on its riseFactor statistics
+        //If this peak looks like feedback based on its rise factor statistics
         if(analyze_rise_factor(potential_fb_peak,filter_manager.get()))
         {
             //and if this peak looks like feedback based on our harmonic analysis
