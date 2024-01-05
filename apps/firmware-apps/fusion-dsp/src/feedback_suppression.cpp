@@ -2,8 +2,11 @@
 //
 // Based on feedback peak detection and 
 // parametric filters. Apply notch filters
-// on detected feedback peaks. Assuming
-// 48kHz sampling frequency.
+// on detected feedback peaks. 
+//
+// For now an fft_size of 8192 is assumed
+// becuase the blackman window applied is 
+// hard-coded 
 //
 // algorithm related files used
 // - fbs_filter.cpp/.h
@@ -36,18 +39,12 @@ private:
     // --- constants and terminals ---
     int_fast32_t channels;
     int_fast32_t fft_size;
-    //for spectral peak detector
-    //Any peak with an amplitude below this will be ignored - dB
-    int_fast32_t f0_amplitude_th;
     //max number of notch filters to apply
     int_fast32_t num_filters;
     //number of peaks to track in each feeback peak detection process
     int_fast32_t num_peaks_to_find;
     //max buffer size to store candidate feedback frequencies
     uint_fast32_t rev_feedback_cand_freq_buf_size;
-    //rise factor test thresholds
-    int_fast32_t rise_factor_maximum_cutoff_threshold;
-    int_fast32_t rise_factor_minimum_cutoff_threshold;
 
     std::vector<const float *> in;
     std::vector<float *> out;
@@ -68,12 +65,19 @@ private:
     //the threshold to determine if a given frequency 
     //belongs to the superhigh-freq range
     int_fast32_t mult_band_crossover_freq_superhigh;
-    // Harmonics Analysis Parameters
-    //Peak appearance counter threshold for each spectral range
-    int_fast32_t before_filter_enabled_freq_counter[NUM_MULTI_BANDS];
+    // For spectral peak detector
+    //Any peak with an amplitude below this will be ignored - dB
+    int_fast32_t f0_amplitude_th;
     //error margin in octave for each spectral range, to determine 
     //whether two frequencies are close enough to each other
     float frequency_error_margin_in_octaves[NUM_MULTI_BANDS];
+    // Harmonics Analysis Parameters
+    //Peak appearance counter threshold for each spectral range
+    int_fast32_t before_filter_enabled_freq_counter[NUM_MULTI_BANDS];
+    // Rise factor analysis test thresholds
+    int_fast32_t rise_factor_maximum_cutoff_threshold;
+    int_fast32_t rise_factor_minimum_cutoff_threshold;
+    // Notch filters
     //default parametric filter Q factor when creating a notch filter
     float default_filter_q;
     //gain step size in dB when a notch filter needs to be strengthened
@@ -148,11 +152,8 @@ FeedbackSuppression::FeedbackSuppression(const bosepro::BlockConfiguration &conf
 {
     get_constant("channels", channels);
     get_constant("fft_size", fft_size);
-    get_constant("f0_amplitude_th", f0_amplitude_th);
     get_constant("num_filters", num_filters);
     get_constant("rev_feedback_cand_freq_buf_size", rev_feedback_cand_freq_buf_size);
-    get_constant("rise_factor_maximum_cutoff_threshold", rise_factor_maximum_cutoff_threshold);
-    get_constant("rise_factor_minimum_cutoff_threshold", rise_factor_minimum_cutoff_threshold);
     get_constant("num_peaks_to_find", num_peaks_to_find);
 
     assign_terminal("in", &in);
@@ -178,6 +179,15 @@ FeedbackSuppression::FeedbackSuppression(const bosepro::BlockConfiguration &conf
     assign_control("max_num_filter_depth_adjustments_per_period", &max_num_filter_depth_adjustments_per_period);
     assign_control("sensitivity", &sensitivity);
     assign_control("filter_reset_time", &filter_reset_time);
+    assign_control("f0_amplitude_th", &f0_amplitude_th);
+    assign_control("rise_factor_maximum_cutoff_threshold", &rise_factor_maximum_cutoff_threshold);
+    assign_control("rise_factor_minimum_cutoff_threshold", &rise_factor_minimum_cutoff_threshold);
+
+    // fft_size warning: we are hard coding the blackman window at 
+    // size = 8192 for now, so give an error if fft_size is different
+    if (fft_size != 8192)
+        SPDLOG_ERROR("fft_size can only be 8192 for now because the fft window is hard-coded!");
+
     // input buffer
     in_buffer = std::make_unique<float[]>(fft_size + get_frame_size());
     in_buff_ptr = 0;
@@ -631,8 +641,8 @@ void FeedbackSuppression::process()
         int_fast32_t band_n = 1;
         for (int_fast32_t i{2}; i < fft_size; i += 2)
         {
-            db_fft_data[band_n] = 20*log10(sqrt(fft_data[i]*fft_data[i] + 
-                fft_data[i+1]*fft_data[i+1]));
+            db_fft_data[band_n] = 10*log10(fft_data[i]*fft_data[i] + 
+                fft_data[i+1]*fft_data[i+1]);
             band_n++;
         }
 

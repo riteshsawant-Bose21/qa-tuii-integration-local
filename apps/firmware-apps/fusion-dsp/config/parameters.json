@@ -80,11 +80,8 @@
             "constants": [
                 { "name": "channels", "default_value": 1 },
                 { "name": "fft_size", "default_value": 8192 },
-                { "name": "f0_amplitude_th", "default_value": -110 },
                 { "name": "num_filters", "default_value": 16 },
                 { "name": "rev_feedback_cand_freq_buf_size", "default_value": 60 },
-                { "name": "rise_factor_maximum_cutoff_threshold", "default_value": 120 },
-                { "name": "rise_factor_minimum_cutoff_threshold", "default_value": -25 },
                 { "name": "num_peaks_to_find", "default_value": 5 }
             ],
             "terminals": [
@@ -111,7 +108,10 @@
                 { "name": "frequency_error_margin_in_octaves_high", "value_type": "float", "default_value": 0.006 },
                 { "name": "frequency_error_margin_in_octaves_superhigh", "value_type": "float", "default_value": 0.03333 },
                 { "name": "sensitivity", "value_type": "int", "default_value": 0 },
-                { "name": "filter_reset_time", "value_type": "float", "default_value": 300 }
+                { "name": "filter_reset_time", "value_type": "float", "default_value": 300 },
+                { "name": "rise_factor_maximum_cutoff_threshold", "value_type": "int", "default_value": 120 },
+                { "name": "rise_factor_minimum_cutoff_threshold", "value_type": "int", "default_value": -25 },
+                { "name": "f0_amplitude_th", "value_type": "int", "default_value": -110 }
             ]
         },
         {
