@@ -2,15 +2,15 @@
 // the notch filter and the filter manager classes for 
 // feedback suppression
 //
+#pragma once
+
+#include "fbs_structs.h"
+#include "iir.h"
+
 #include <iostream>
 #include <vector>
 #include <math.h>
 #include <ctime>
-#include "fbs_structs.h"
-#include "iir.h"
-
-
-using namespace std;
 
 //Class declaration for single parametric filter
 class FbsFilter
@@ -86,7 +86,7 @@ protected:
     //Number of filters instantiated so far. Helps to keep track of what filters are recent
     int _total_filters_intantiated;
     //vector - container of filters
-    vector <FbsFilter> _filter_container;
+    std::vector <FbsFilter> _filter_container;
     //sampling frequency of input signal
     int_fast32_t _sampling_rate;
 

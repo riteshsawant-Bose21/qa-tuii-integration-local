@@ -474,7 +474,7 @@ void FeedbackSuppression::update_panic_gain(bool feedback_found)
         }
         // reset the gain to 0 if it's a while since last adjustment of the gain
         if ((panic_gain < 0.0f)
-            && (difftime(time(NULL), panic_time_adjusted) > PANIC_RELEASE_TIME))
+            && (difftime(time(nullptr), panic_time_adjusted) > PANIC_RELEASE_TIME))
         {
             panic_gain = 0.0f;
             SPDLOG_TRACE("FBS Panic expired");

@@ -1,6 +1,6 @@
 // parameters, constants, and structs for the feedback 
 // suppression algorithm
-
+#pragma once
 
 // Number of spectral bands for the algorithm
 const int NUM_MULTI_BANDS = 4;

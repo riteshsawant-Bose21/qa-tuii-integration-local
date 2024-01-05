@@ -2,10 +2,10 @@
 // the notch filter and filter manager classes for 
 // feedback suppression
 //
-#include <bosepro/algorithm.h>
 #include "fbs_filter.h"
-#include <ctime>
+#include <bosepro/algorithm.h>
 
+#include <ctime>
 
 // constructor
 FbsFilter::FbsFilter(float frequency, float gain, float q, bool is_static, bool is_bypassed, 
@@ -30,19 +30,14 @@ int FbsFilter::get_time_since_adjusted()
     }
     else
     {
-        return static_cast<int>(difftime(time(NULL), _time_adjusted));
+        return static_cast<int>(difftime(time(nullptr), _time_adjusted));
     }
 }
 
 void FbsFilter::print_filter_contents() const
 {
-    cout << "# " << _number <<
-        ": Freq: " << _frequency <<
-        " Gain: " << _gain <<
-        " Q: " << _q <<
-        //" isStatic: " << _isStatic <<
-        //" isBypassed: " << _isBypassed <<
-		" numDepthAdj: " << _num_depth_adjustments_this_period;
+	SPDLOG_TRACE("Filter#{}: Freq={}, Gain={}, Q={}, static={}, bypassed={}, num depth adjust={}",
+		_number, _frequency, _gain, _q, _is_static, _is_bypassed, _num_depth_adjustments_this_period);
 }
 
 // constructor
@@ -113,8 +108,6 @@ int FilterManager::find_lowest_available_filter_position()
 	if(num_static_filters_found == _max_num_filters)
 		return -1;
 
-	// SPDLOG_TRACE("find_lowest_available_filter_position lowest_filter_position_available = {}",
-	// 	lowest_filter_position_available);
 	//NOTE: If we have "All" filters, this will return index 16. This is illegal
 	return lowest_filter_position_available;
 }
@@ -186,7 +179,7 @@ int FilterManager::remove_least_important_filter()
 	//error protection
     if(index_of_filter_to_remove == -1)
     {
-   	SPDLOG_TRACE("In remove_least_important_filter. Returning {}", -1);
+   		SPDLOG_TRACE("In remove_least_important_filter. Returning {}", -1);
     	return -1;
     }
     int filter_number_of_filter_to_remove = _filter_container[index_of_filter_to_remove].number();
@@ -277,8 +270,8 @@ FbsFilter* FilterManager::create_filter(float frequency, float gain, float q)
 
 	if(new_filter_number == -1)
 	{
-		return NULL;
-    	SPDLOG_TRACE("FBS: Tried to recycle a dynamic filter, but all filters are Static!");
+		SPDLOG_TRACE("FBS: Tried to recycle a dynamic filter, but all filters are Static!");
+		return nullptr;
 	}
 	//if no filters available
     if(!filters_available())
@@ -300,13 +293,12 @@ FbsFilter* FilterManager::create_filter(float frequency, float gain, float q)
 		//add our new filter to filterContainer at the back of the list
         _filter_container.push_back(new_filter);
 		//set up iir band
-		SPDLOG_DEBUG("new filter (iir design_band), freq={}, new_filter_number={}, q={}, g={}", 
-			frequency, new_filter_number, q, gain);
 		_iir->design_band("peq_cs", new_filter_number, frequency, q, gain, _sampling_rate);
+		new_filter.print_filter_contents();
 		//Return reference to the filter we just added
         return &_filter_container.back();
     }
-    return NULL;
+    return nullptr;
 }
 
 // Adjust the filter's gain, making it deeper if possible
@@ -338,8 +330,10 @@ void FilterManager::adjust_filter_depth(const FbsFilter* filter, float gain_step
 			// set up iir band
 			_iir->design_band("peq_cs", adjustable_filter->number(), adjustable_filter->frequency(), 
 				adjustable_filter->q(), adjustable_filter->gain(), _sampling_rate);
-			SPDLOG_DEBUG("------>> filter {} new adjusted gain={}", 
-				adjustable_filter->number(), adjustable_filter->gain());
+
+			// SPDLOG_DEBUG("------>> filter {} new adjusted gain={}", 
+			// 	adjustable_filter->number(), adjustable_filter->gain());
+
 			//Record that we've adjusted the depth of this filter
 			adjustable_filter->increment_num_depth_adjustments_this_period();
 			// filter's age is based on its most recent adjustment
@@ -363,7 +357,7 @@ const FbsFilter* FilterManager::filter_exists_at_this_frequency(const PotentialF
         }
     }
 	//If filter not found, return NULL
-    return NULL;
+    return nullptr;
 }
 
 //called at end of analyis period, to reset filter's depth adjustment 
@@ -392,7 +386,7 @@ void FilterManager::reset_all_filters()
 //Clears all dynamic filters' states, then destroys those objects
 void FilterManager::clear_all_dynamic_filters()
 {
-	vector<FbsFilter>::iterator my_filter_vector_iterator;
+	std::vector<FbsFilter>::iterator my_filter_vector_iterator;
 
 	//This is a tricky way of dealing with the issue
 	//which occurs when you delete just one item from a vector
@@ -420,7 +414,7 @@ void FilterManager::clear_all_dynamic_filters()
 // This prevents spurious filters from existing forever.
 void FilterManager::reset_expired_filters(int reset_time)
 {
-	vector<FbsFilter>::iterator my_filter_vector_iterator;
+	std::vector<FbsFilter>::iterator my_filter_vector_iterator;
 
 	for(my_filter_vector_iterator =_filter_container.begin(); my_filter_vector_iterator != _filter_container.end(); )
 	{
@@ -489,12 +483,7 @@ void FilterManager::print_filter_container_contents()
 
     for(unsigned int i=0; i < _filter_container.size(); i++)
     {
-        cout << i << ": Freq: " << _filter_container[i].frequency() <<
-            " Gain: " << _filter_container[i].gain() <<
-            " Q: " << _filter_container[i].q() <<
-            " isStatic: " << _filter_container[i].is_static() <<
-            " isBypassed: " << _filter_container[i].is_bypassed() <<
-			" numDepthAdj: " << _filter_container[i].num_depth_adjustments_this_period() << endl;
+        _filter_container[i].print_filter_contents();
     }
 }
 
