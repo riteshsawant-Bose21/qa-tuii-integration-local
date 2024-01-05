@@ -53,27 +53,40 @@ private:
     std::vector<float *> out;
     
     // --- user controls ---
-    //Any peak below this frequency index will be ignored
+    //Any peak below this frequency index (fft bin num) 
+    //will be ignored
     int_fast32_t low_freq_ignore_freq;
-    //Any peak above this frequency index will be ignored
+    //Any peak above this frequency index (fft bin num) 
+    //will be ignored
     int_fast32_t high_freq_ignore_freq;
+    //the threshold to determine if a given frequency
+    //belongs to the mid-freq or above range 
     int_fast32_t mult_band_crossover_freq_mid;
+    //the threshold to determine if a given frequency 
+    //belongs to the high-freq or above range
     int_fast32_t mult_band_crossover_freq_high;
+    //the threshold to determine if a given frequency 
+    //belongs to the superhigh-freq range
     int_fast32_t mult_band_crossover_freq_superhigh;
-    int_fast32_t before_filter_enabled_freq_counter_low;
-    int_fast32_t before_filter_enabled_freq_counter_mid;
-    int_fast32_t before_filter_enabled_freq_counter_high;
-    int_fast32_t before_filter_enabled_freq_counter_superhigh;
+    // Harmonics Analysis Parameters
+    //Peak appearance counter threshold for each spectral range
+    int_fast32_t before_filter_enabled_freq_counter[NUM_MULTI_BANDS];
+    //error margin in octave for each spectral range, to determine 
+    //whether two frequencies are close enough to each other
+    float frequency_error_margin_in_octaves[NUM_MULTI_BANDS];
+    //default parametric filter Q factor when creating a notch filter
     float default_filter_q;
+    //gain step size in dB when a notch filter needs to be strengthened
     float incremental_filter_gain_step;
+    //the deepest gain a notch filter can have
     float max_filter_gain;
+    //default parametric filter gain when creating a notch filter
     float initial_filter_gain;
+    //max number of times a notch filter can be adjusted each analysis process
     int_fast32_t max_num_filter_depth_adjustments_per_period;
-    float frequency_error_margin_in_octaves_low;
-    float frequency_error_margin_in_octaves_mid;
-    float frequency_error_margin_in_octaves_high;
-    float frequency_error_margin_in_octaves_superhigh;
+    //feedback peak detection sensitivity, 0-music, 1-speech 
     int_fast32_t sensitivity;
+    //how long a notch filter expires after creation, in sec
     float filter_reset_time;
 
     // --- processing variables ---
@@ -90,22 +103,18 @@ private:
     float panic_gain;
     // the time at which the panic gain was last strengthened
     time_t panic_time_adjusted;
+
+    // for spectral peak detection
+    //list of peak index to output from "find_peaks"
+    std::vector<int_fast32_t> final_peak_index_list;
+
     // feedback frequency candidate buffer
     //double-ended queue (circ buffer) containing potential feedback peak objects
-    std::deque <PotentialFeedbackPeak> _revolving_container; 
-
-    // for spectral peak detector 
-    //list of peak index to output from "find_peaks"
-    std::vector<int_fast32_t> _final_peak_index_list; 
-    float frequency_error_margin_in_octaves[NUM_MULTI_BANDS];
-
-    // HarmonicAnalysisParameters
-    int before_filter_enabled_freq_counter[NUM_MULTI_BANDS];
+    std::deque <PotentialFeedbackPeak> revolving_container; 
 
     // for notch filtering
-    std::unique_ptr<FilterManager> _filter_manager;
+    std::unique_ptr<FilterManager> filter_manager;
     int number_recent_filters_not_to_be_recycled;
-    std::unique_ptr<filter::IirFilter> iir;
 
     // --- processing functions ---
     void feedback_process();
@@ -126,14 +135,6 @@ private:
     // --- user control parameters processing functions ---
     void update_high_freq_ignore_freq();
     void update_low_freq_ignore_freq();
-    void update_freq_counter_low();
-    void update_freq_counter_mid();
-    void update_freq_counter_high();
-    void update_freq_counter_superhigh();
-    void update_error_margin_low();
-    void update_error_margin_mid();
-    void update_error_margin_high();
-    void update_error_margin_superhigh();
     void update_max_filter_gain();
 
     ALGORITHM_DECLARE(FeedbackSuppression);
@@ -159,28 +160,20 @@ FeedbackSuppression::FeedbackSuppression(const bosepro::BlockConfiguration &conf
 
     assign_control("low_freq_ignore_freq", &low_freq_ignore_freq, POST_FUNCTION_SCALAR(update_low_freq_ignore_freq));
     assign_control("high_freq_ignore_freq", &high_freq_ignore_freq, POST_FUNCTION_SCALAR(update_high_freq_ignore_freq));
+    assign_control("max_filter_gain", &max_filter_gain, POST_FUNCTION_SCALAR(update_max_filter_gain));
     assign_control("mult_band_crossover_freq_mid", &mult_band_crossover_freq_mid);
     assign_control("mult_band_crossover_freq_high", &mult_band_crossover_freq_high);
     assign_control("mult_band_crossover_freq_superhigh", &mult_band_crossover_freq_superhigh);
-    assign_control("before_filter_enabled_freq_counter_low", &before_filter_enabled_freq_counter_low, 
-        POST_FUNCTION_SCALAR(update_freq_counter_low));
-    assign_control("before_filter_enabled_freq_counter_mid", &before_filter_enabled_freq_counter_mid, 
-        POST_FUNCTION_SCALAR(update_freq_counter_mid));
-    assign_control("before_filter_enabled_freq_counter_high", &before_filter_enabled_freq_counter_high, 
-        POST_FUNCTION_SCALAR(update_freq_counter_high));
-    assign_control("before_filter_enabled_freq_counter_superhigh", &before_filter_enabled_freq_counter_superhigh, 
-        POST_FUNCTION_SCALAR(update_freq_counter_superhigh));
-    assign_control("frequency_error_margin_in_octaves_low", &frequency_error_margin_in_octaves_low, 
-        POST_FUNCTION_SCALAR(update_error_margin_low));
-    assign_control("frequency_error_margin_in_octaves_mid", &frequency_error_margin_in_octaves_mid, 
-        POST_FUNCTION_SCALAR(update_error_margin_mid));
-    assign_control("frequency_error_margin_in_octaves_high", &frequency_error_margin_in_octaves_high, 
-        POST_FUNCTION_SCALAR(update_error_margin_high));
-    assign_control("frequency_error_margin_in_octaves_superhigh", &frequency_error_margin_in_octaves_superhigh, 
-        POST_FUNCTION_SCALAR(update_error_margin_superhigh));
+    assign_control("before_filter_enabled_freq_counter_low", &before_filter_enabled_freq_counter[0]);
+    assign_control("before_filter_enabled_freq_counter_mid", &before_filter_enabled_freq_counter[1]);
+    assign_control("before_filter_enabled_freq_counter_high", &before_filter_enabled_freq_counter[2]);
+    assign_control("before_filter_enabled_freq_counter_superhigh", &before_filter_enabled_freq_counter[3]);
+    assign_control("frequency_error_margin_in_octaves_low", &frequency_error_margin_in_octaves[0]);
+    assign_control("frequency_error_margin_in_octaves_mid", &frequency_error_margin_in_octaves[1]);
+    assign_control("frequency_error_margin_in_octaves_high", &frequency_error_margin_in_octaves[2]);
+    assign_control("frequency_error_margin_in_octaves_superhigh", &frequency_error_margin_in_octaves[3]);
     assign_control("default_filter_q", &default_filter_q);
     assign_control("incremental_filter_gain_step", &incremental_filter_gain_step);
-    assign_control("max_filter_gain", &max_filter_gain, POST_FUNCTION_SCALAR(update_max_filter_gain));
     assign_control("initial_filter_gain", &initial_filter_gain);
     assign_control("max_num_filter_depth_adjustments_per_period", &max_num_filter_depth_adjustments_per_period);
     assign_control("sensitivity", &sensitivity);
@@ -196,7 +189,7 @@ FeedbackSuppression::FeedbackSuppression(const bosepro::BlockConfiguration &conf
     db_fft_data = std::make_unique<int[]>(fft_data_len);
     pre_db_fft_data = std::make_unique<int[]>(fft_data_len);
     // initialize peak detection related
-    _final_peak_index_list.reserve(num_peaks_to_find*2); 
+    final_peak_index_list.reserve(num_peaks_to_find*2); 
     // initialize panic gain related
     // the panic gain used to attenuate the whole signal (dB)
     panic_gain = 0.0f;
@@ -204,17 +197,34 @@ FeedbackSuppression::FeedbackSuppression(const bosepro::BlockConfiguration &conf
     panic_recent_filters = 0.0f;
     // initialize the filter manager
     number_recent_filters_not_to_be_recycled = static_cast<int>(num_filters * (.666f));
-    _filter_manager = std::unique_ptr<FilterManager>(new FilterManager(num_filters, 
+    filter_manager = std::unique_ptr<FilterManager>(new FilterManager(num_filters, 
         number_recent_filters_not_to_be_recycled, 0.0f, channels, get_sample_rate()));
 }
 
 
+void FeedbackSuppression::update_low_freq_ignore_freq()
+{
+    //convert from frequency in Hz to frequency index
+    low_freq_ignore_freq = (int)(low_freq_ignore_freq*fft_size/get_sample_rate());
+}
+
+void FeedbackSuppression::update_high_freq_ignore_freq()
+{
+    //convert from frequency in Hz to frequency index
+    high_freq_ignore_freq = (int)(high_freq_ignore_freq*fft_size/get_sample_rate());
+}
+
+void FeedbackSuppression::update_max_filter_gain()
+{
+    filter_manager->set_max_filter_gain(max_filter_gain);
+}
+
 // Get a list of potential feedback peaks,
-// store in _final_peak_index_list
+// store in final_peak_index_list
 void FeedbackSuppression::find_peaks()
 {
     // clear list from last time
-    _final_peak_index_list.clear(); 
+    final_peak_index_list.clear(); 
 
     // For every peak we're hoping to find
     for(int i=0; i < num_peaks_to_find; i++) 
@@ -234,12 +244,12 @@ void FeedbackSuppression::find_peaks()
                 if(db_fft_data[j] > max_so_far)	
                 {
                     //Then make sure it's not the same index as ALL of the 
-                    // LOW_FREQ_IGNORE_FREQUENCYS points in _final_peak_index_list
+                    // low_freq_ignore_freqs points in final_peak_index_list
                     //innocent until proven guilty.
                     bool peak_index_already_exists_in_list = false;
                     //check if this peak is already in the list
-                    for(unsigned int k=0; k < _final_peak_index_list.size(); k++)
-                        if(j == _final_peak_index_list[k])
+                    for(unsigned int k=0; k < final_peak_index_list.size(); k++)
+                        if(j == final_peak_index_list[k])
                             peak_index_already_exists_in_list = true;
                     //if it passes all those tests, j_max_so_far = j
                     if(!peak_index_already_exists_in_list)
@@ -259,67 +269,10 @@ void FeedbackSuppression::find_peaks()
         //if we found at least one peak large enough this round
         if(found_at_least_one_peak_higher_than_amplitude_threshold)
             //add index of this peak (j_max_so_far) to the vector
-            _final_peak_index_list.push_back(j_max_so_far); 
+            final_peak_index_list.push_back(j_max_so_far); 
     }
 }
 
-
-void FeedbackSuppression::update_low_freq_ignore_freq()
-{
-    //convert from frequency in Hz to frequency index
-    low_freq_ignore_freq = (int)(low_freq_ignore_freq*fft_size/get_sample_rate());
-}
-
-void FeedbackSuppression::update_high_freq_ignore_freq()
-{
-    //convert from frequency in Hz to frequency index
-    high_freq_ignore_freq = (int)(high_freq_ignore_freq*fft_size/get_sample_rate());
-}
-
-void FeedbackSuppression::update_max_filter_gain()
-{
-    _filter_manager->set_max_filter_gain(max_filter_gain);
-}
-
-void FeedbackSuppression::update_freq_counter_low()
-{
-    frequency_error_margin_in_octaves[0] = frequency_error_margin_in_octaves_low;
-}
-
-void FeedbackSuppression::update_freq_counter_mid()
-{
-    frequency_error_margin_in_octaves[1] = frequency_error_margin_in_octaves_mid;
-}
-
-void FeedbackSuppression::update_freq_counter_high()
-{
-    frequency_error_margin_in_octaves[2] = frequency_error_margin_in_octaves_high;
-}
-
-void FeedbackSuppression::update_freq_counter_superhigh()
-{
-    frequency_error_margin_in_octaves[3] = frequency_error_margin_in_octaves_superhigh;
-}
-
-void FeedbackSuppression::update_error_margin_low()
-{
-    before_filter_enabled_freq_counter[0] = before_filter_enabled_freq_counter_low;
-}
-
-void FeedbackSuppression::update_error_margin_mid()
-{
-    before_filter_enabled_freq_counter[1] = before_filter_enabled_freq_counter_mid;
-}
-
-void FeedbackSuppression::update_error_margin_high()
-{
-    before_filter_enabled_freq_counter[2] = before_filter_enabled_freq_counter_high;
-}
-
-void FeedbackSuppression::update_error_margin_superhigh()
-{
-    before_filter_enabled_freq_counter[3] = before_filter_enabled_freq_counter_superhigh;
-}
 
 // return the spectral band that corresponds to the given frequency-Hz
 MultibandFrequencyClassification FeedbackSuppression::multi_band_classification_for_this_frequency(int freq) const
@@ -338,7 +291,7 @@ MultibandFrequencyClassification FeedbackSuppression::multi_band_classification_
         }
         else
         {
-            //if higih
+            //if high
             if(freq < mult_band_crossover_freq_superhigh)
             {
                 return HIGH;
@@ -485,6 +438,7 @@ bool FeedbackSuppression::analyze_harmonics(const PotentialFeedbackPeak & potent
     return true; 
 }
 
+
 // update the panic gain
 // - if too many new notch filters were created recently, lower the gain
 // - raise the gain back up if no new notch filter is created
@@ -544,6 +498,7 @@ bool FeedbackSuppression::within_frequency_margin(float f1,float f2,float freque
     return false;
 }
 
+
 // For the feedback candidate frequency buffer
 // Check number of times given peak's frequency is in 
 // the range of the each frequency in the peak candidate buffer
@@ -551,11 +506,11 @@ int FeedbackSuppression::number_of_times_frequency_is_in_buffer(const PotentialF
 {
     int count = 0;
     //for each frequency currently in the revolving buffer
-    for(unsigned int i=0; i<_revolving_container.size(); i++)
+    for(unsigned int i=0; i<revolving_container.size(); i++)
     {
         //see if the peak's frequency is the same as this one, within an error range
         //if so, add to the count
-        if(within_frequency_margin(_revolving_container[i].frequency, peak.frequency, peak.frequency_error_margin_in_octaves))
+        if(within_frequency_margin(revolving_container[i].frequency, peak.frequency, peak.frequency_error_margin_in_octaves))
         {
             count++; 
         }
@@ -569,11 +524,11 @@ int FeedbackSuppression::number_of_times_frequency_is_in_buffer(const PotentialF
 void FeedbackSuppression::add_candidate(const PotentialFeedbackPeak & new_peak)
 {
     //If adding another frequency would mean exceeding the max size
-    if(rev_feedback_cand_freq_buf_size < (_revolving_container.size() + 1))
+    if(rev_feedback_cand_freq_buf_size < (revolving_container.size() + 1))
         //delete the oldest element (lower index)
-        _revolving_container.pop_front();
+        revolving_container.pop_front();
     //add the new element on the newest end (higher index)
-    _revolving_container.push_back(new_peak);
+    revolving_container.push_back(new_peak);
 }
 
 // Detect feedback peaks from dB FFT magnitude data.
@@ -583,33 +538,32 @@ void FeedbackSuppression::add_candidate(const PotentialFeedbackPeak & new_peak)
 void FeedbackSuppression::feedback_process()
 {
     // get list of indices of potential feedback peaks in FFT data
-    // in _final_peak_index_list
+    // in final_peak_index_list
     bool feedback_found = false;
     find_peaks();
     
     // Create a struct containing all necessary data regarding a possible peak.
     PotentialFeedbackPeak potential_fb_peak;
     // For every potential feedback peak
-    for(unsigned int i=0; i < _final_peak_index_list.size(); i++)
+    for(unsigned int i=0; i < final_peak_index_list.size(); i++)
     {
         //populate the struct using this method
-        potential_fb_peak = populate_peak_struct_from_peak_index(_final_peak_index_list[i],potential_fb_peak);
+        potential_fb_peak = populate_peak_struct_from_peak_index(final_peak_index_list[i],potential_fb_peak);
 
         //If this peak looks like feedback based on its riseFactor statistics
-        if(analyze_rise_factor(potential_fb_peak,_filter_manager.get()))
+        if(analyze_rise_factor(potential_fb_peak,filter_manager.get()))
         {
             //and if this peak looks like feedback based on our harmonic analysis
             if(analyze_harmonics(potential_fb_peak))
             {
                 //add it to our revolving potential feedback peak buffer
                 add_candidate(potential_fb_peak);
-
                 //if this potential feedback peak appears often enough (threshold dictated by its frequency band)
                 if(number_of_times_frequency_is_in_buffer(potential_fb_peak) >=
                     before_filter_enabled_freq_counter[potential_fb_peak.multi_band_classification])
                 {
                     //get possible address of filter currently at this frequency
-                    const FbsFilter* existing_filter = _filter_manager->filter_exists_at_this_frequency(potential_fb_peak);
+                    const FbsFilter* existing_filter = filter_manager->filter_exists_at_this_frequency(potential_fb_peak);
 
                     //if filter exists already at this frequency
                     if(existing_filter)
@@ -622,7 +576,7 @@ void FeedbackSuppression::feedback_process()
     						if(existing_filter->num_depth_adjustments_this_period() < max_num_filter_depth_adjustments_per_period)
     						{
     							//increase this filter's gain depth by a pre-defined incremental value
-    							_filter_manager->adjust_filter_depth(existing_filter,incremental_filter_gain_step);
+    							filter_manager->adjust_filter_depth(existing_filter,incremental_filter_gain_step);
     						}
                     	}
                     }
@@ -630,7 +584,7 @@ void FeedbackSuppression::feedback_process()
                     else
                     {
                         feedback_found = true;
-                        _filter_manager->create_filter(potential_fb_peak.frequency,initial_filter_gain,default_filter_q);
+                        filter_manager->create_filter(potential_fb_peak.frequency,initial_filter_gain,default_filter_q);
                     }
                 }
             }
@@ -638,9 +592,9 @@ void FeedbackSuppression::feedback_process()
 	}
 
 	//Reset all filter depth adjustment counters back to 0, so they can be deepened in the next analysis period
-	_filter_manager->reset_all_filters_num_depth_adjustments_this_period(); 
+	filter_manager->reset_all_filters_num_depth_adjustments_this_period(); 
     update_panic_gain(feedback_found);
-    _filter_manager->reset_expired_filters(filter_reset_time);
+    filter_manager->reset_expired_filters(filter_reset_time);
 
     //swap fft data pointers, so delayed data becomes current data
     pre_db_fft_data.swap(db_fft_data);
@@ -698,7 +652,7 @@ void FeedbackSuppression::process()
     }
 
     // apply notch filters on all channels
-    _filter_manager->_iir->process(out, in, get_frame_size());
+    filter_manager->_iir->process(out, in, get_frame_size());
 
     // apply panic gain
     if (panic_gain < 0.0f)
