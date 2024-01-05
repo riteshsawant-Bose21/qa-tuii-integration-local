@@ -28,6 +28,8 @@
 *   Use the Filter Design & Analysis Tool to design accurate
 *   single-precision filter coefficients.
 */
+#pragma once
+
 const float blackman_window_8192[8192] = {
     0,5.295762406e-008,2.118306242e-007,4.766194195e-007,8.473246567e-007,
     1.323947345e-006,1.906488592e-006,2.594950047e-006,3.389333187e-006,4.289640401e-006,
