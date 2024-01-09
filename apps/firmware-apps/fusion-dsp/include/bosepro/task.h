@@ -3,6 +3,7 @@
 #include <bosepro/algorithm.h>
 #include <bosepro/configurable.h>
 #include <bosepro/configuration.h>
+#include <bosepro/profile.h>
 
 #include <pthread.h>
 #include <spdlog/spdlog.h>
@@ -19,6 +20,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <vector>
 
 
 namespace bosepro {
@@ -269,27 +271,82 @@ public:
                                               output_channel);
             }
         }
+
+        if (configuration.has_constant("profile_blocks") > 0)
+        {
+            configuration.get_constant("profile_blocks").get_value(profile_blocks);
+        }
+
+        block_profile.resize(blocks.size());
+
+        task_profile.set_period((double)get_frame_size() / get_sample_rate());
+
+        for (auto &bp : block_profile)
+        {
+            bp.set_period((double)get_frame_size() / get_sample_rate());
+        }
     }
 
 
-    virtual ~Task() = default;
+    virtual ~Task()
+    {
+        SPDLOG_DEBUG("Task MIPS: {} first, {} max, {} avg.",
+                     task_profile.get_first_mips(),
+                     task_profile.get_max_mips(),
+                     task_profile.get_average_mips());
+
+        if (profile_blocks)
+        {
+            int block_index = 0;
+            for (auto &block : blocks)
+            {
+                SPDLOG_DEBUG("Block MIPS, {} ({}): {} first, {} max, {} avg.",
+                             block->get_block_name(),
+                             block->get_algorithm_name(),
+                             block_profile[block_index].get_first_mips(),
+                             block_profile[block_index].get_max_mips(),
+                             block_profile[block_index].get_average_mips());
+                block_index++;
+            }
+        }
+    }
 
 
     /// Run one frame of audio through all of the blocks in this task.
     virtual void process() override
     {
-        for (auto &block : blocks)
+        task_profile.start();
+
+        if (!profile_blocks)
         {
-            block->process();
+            for (auto &block : blocks)
+            {
+                block->process();
+            }
         }
+        else
+        {
+            int block_index = 0;
+            for (auto &block : blocks)
+            {
+                block_profile[block_index].start();
+                block->process();
+                block_profile[block_index++].finish();
+            }
+        }
+
+        task_profile.finish();
     }
 
 
 private:
+    Profile task_profile;
     // A list of blocks, for quickly processing in order.
     std::list<std::unique_ptr<Algorithm>> blocks;
+    std::vector<Profile> block_profile;
     // A map of blocks, for accessing controls and meters.
     std::map<std::string, Algorithm *> block_map;
+    bool profile_blocks = false;
 };
 
 

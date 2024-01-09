@@ -20,9 +20,13 @@ public:
 
     static bool has_client();
 
+    static jack_client_t *get_client();
+
     static bool set_process_callback(JackProcessCallback callback, void *arg,
                                      bool make_default_connections);
 
+    static bool set_process_thread(JackThreadCallback callback, void *arg,
+                                   bool make_default_connections);
 
 protected:
     int channels;

@@ -24,6 +24,8 @@ Jack::Jack(const BlockConfiguration &configuration, bool is_input)
 
         get_constant("client_name", client_name);
 
+        SPDLOG_DEBUG("JACK client name: {}", client_name);
+
         client = jack_client_open(client_name.c_str(), JackNullOption,
                                   &jack_status, NULL);
 
@@ -87,6 +89,12 @@ bool Jack::has_client()
 }
 
 
+jack_client_t *Jack::get_client()
+{
+    return client;
+}
+
+
 bool Jack::set_process_callback(JackProcessCallback callback, void *arg,
                                 bool make_default_connections)
 {
@@ -108,6 +116,45 @@ bool Jack::set_process_callback(JackProcessCallback callback, void *arg,
     if (err != 0)
     {
         SPDLOG_CRITICAL("jack_set_process_callback() failed, err: {}", err);
+        return false;
+    }
+
+    if (make_default_connections)
+    {
+        for (Jack *instance : instances)
+        {
+            if (!instance->connect_default_ports())
+            {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+
+bool Jack::set_process_thread(JackThreadCallback callback, void *arg,
+                              bool make_default_connections)
+{
+    int err;
+
+    if (client == nullptr)
+    {
+        SPDLOG_CRITICAL("JACK client is not initialized");
+        return false;
+    }
+
+    if (jack_set_process_thread(client, callback, arg) != 0)
+    {
+        return false;
+    }
+
+    err = jack_activate(client);
+
+    if (err != 0)
+    {
+        SPDLOG_CRITICAL("jack_set_process_thread() failed, err: {}", err);
         return false;
     }
 

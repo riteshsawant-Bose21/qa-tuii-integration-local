@@ -108,6 +108,20 @@ public:
     virtual void process() = 0;
 
 
+    /// Return the name of this block.
+    const std::string &get_block_name() const
+    {
+        return meta->configuration->get_name();
+    }
+
+
+    /// Return the name of this algorithm.
+    const std::string &get_algorithm_name() const
+    {
+        return meta->configuration->get_algorithm();
+    }
+
+
     /// Allocate buffers for all of the terminals.  This is called by the
     /// framework, not by the algorithm.
     void initialize_terminals()
