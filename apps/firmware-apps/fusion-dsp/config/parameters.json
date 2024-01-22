@@ -115,6 +115,22 @@
             ]
         },
         {
+            "name": "percepnet",
+            "constants": [
+                { "name": "channels", "default_value": 1 }
+            ],
+            "terminals": [
+                { "name": "in", "type": "audio", "default_channels": 1, "direction": "input" },
+                { "name": "out", "type": "audio", "default_channels": 1, "direction": "output" }
+            ],
+            "controls": [
+                { "name": "model_path", "value_type": "string", "default_value": "percepnet.onnx" },
+                { "name": "skip_frame", "value_type": "int", "default_value": 0 },
+                { "name": "ignore_pf_strength", "value_type": "int", "default_value": 0 },
+                { "name": "bypass", "value_type": "int", "default_value": 0 }
+            ]
+        },
+        {
             "name": "arbitrary_eq",
             "constants": [
                 { "name": "channels", "default_value": 1 },

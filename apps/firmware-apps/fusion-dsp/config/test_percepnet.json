@@ -1,0 +1,63 @@
+{
+    "session": {
+        "tasks": [
+            {
+                "name": "task1",
+                "constants": [
+                    { "name": "frame_size", "value": 480},
+                    { "name": "sample_rate", "value": 48000 }
+                ],
+                "blocks": [
+                    {
+                        "name": "infile",
+                        "algorithm": "wav_read",
+                        "constants": [
+                            { "name": "frame_size", "value": 480},
+                            { "name": "sample_rate", "value": 48000 },
+                            { "name": "filename", "value": "percepnet-noisy.wav" }
+                        ],
+                        "terminals": [
+                            { "name": "out", "channels": 1 }
+                        ]
+                    },
+                    {
+                        "name": "percepnet",
+                        "algorithm": "percepnet",
+                        "constants": [
+                            { "name": "channels", "value": 1 },
+                            { "name": "frame_size", "value": 480 },
+                            { "name": "sample_rate", "value": 48000 }
+                        ],
+                        "terminals": [
+                            { "name": "in", "channels": 1 },
+                            { "name": "out", "channels": 1 }
+                        ],
+                        "control_settings": [
+                            { "name": "model_path", "value": "percepnet.onnx" },
+                            { "name": "skip_frame", "value": 0 },
+                            { "name": "ignore_pf_strength", "value": 0 }
+                        ],
+                        "connections": [
+                            { "source_block": "infile", "input_terminal": "in", "output_terminal": "out", "input_channel": 0, "output_channel": 0 }
+                        ]
+                    },
+                    {
+                        "name": "outfile",
+                        "algorithm": "wav_write",
+                        "constants": [
+                            { "name": "frame_size", "value": 480 },
+                            { "name": "sample_rate", "value": 48000 },
+                            { "name": "filename", "value": "percepnet-noisy_out.wav" }
+                        ],
+                        "terminals": [
+                            { "name": "in", "channels": 1 }
+                        ],
+                        "connections": [
+                            { "source_block": "percepnet", "input_terminal": "in", "output_terminal": "out", "input_channel": 0, "output_channel": 0 }
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+}
