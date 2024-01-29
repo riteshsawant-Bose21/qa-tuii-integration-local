@@ -19,7 +19,6 @@
 #include "percepnet.h"
 #include "pitch.h"
 #include "fft.h"
-#include <bosepro/algorithm.h>
 
 #include <vector>
 
@@ -60,8 +59,8 @@ private:
 	CommonState common;
 
 	// for frame processing
-	int frameIn;
-	int frameOut;
+	int frame_in;
+	int frame_out;
 	// if skipping this frame's processing (to save computation)
 	// 0 means need to compute new gains (but apply previous gains), 
 	// 1 means need to update gains to apply (but don't compute new gains)
@@ -96,13 +95,13 @@ private:
 	void apply_window(float *x);
 	void forward_transform(fft_cpx *output, const float *input);
 	void frame_analysis(DenoiseState *st, fft_cpx *X, float *Ex, const float *input);
-	void compute_band_energy(float *bandE, const fft_cpx *X);
-	void compute_band_corr(float *bandE, const fft_cpx *X, const fft_cpx *P);
+	void compute_band_energy(float *band_e, const fft_cpx *X);
+	void compute_band_corr(float *band_e, const fft_cpx *X, const fft_cpx *P);
 	int compute_frame_features(DenoiseState *st, fft_cpx *X, fft_cpx *P,
 		float *Ex, float *Ep, float *Exp, float *features, const float *input);
 	void post_filtering(float *g, const float *Ey);
 	void smooth_gains(DenoiseState *st, float *g);
-	void interp_band_gain(float *g, const float *bandE);
+	void interp_band_gain(float *g, const float *band_e);
 	void apply_gains(fft_cpx *X, float *mel_gains);
 	void apply_limiter(float *x);
 	void inverse_transform(float *output, const fft_cpx *input);
@@ -111,7 +110,7 @@ private:
 	void pitch_filter(fft_cpx *X, const fft_cpx *P, const float *r);
 	void compute_onnx(const char *onnx, float *gains, float *rb_gains, const float *input);
 	void rnnoise_process_frame(DenoiseState *st, float *output, const float *input, int pf, 
-		int post, int lookahead, int frameSkip);
+		int post, int lookahead, int frame_skip);
 
 	// --- user control parameters processing functions ---
 	void update_model();
@@ -145,8 +144,8 @@ PercepNet::PercepNet(const bosepro::BlockConfiguration &configuration)
 
 	curr_fft = std::make_unique<fft::Fft>(WINDOW_SIZE);
 	
-	frameIn = -1;
-	frameOut = -1;
+	frame_in = -1;
+	frame_out = -1;
 }
 
 
@@ -242,10 +241,10 @@ void PercepNet::forward_transform(fft_cpx *output, const float *input)
 /**
  * @brief Converts 480 frequency bins into 34 Mel Bands
  *
- * @param bandE: The resulting Mel Band data
+ * @param band_e: The resulting Mel Band data
  * @param X: The input frequency data
  */
-void PercepNet::compute_band_energy(float *bandE, const fft_cpx *X)
+void PercepNet::compute_band_energy(float *band_e, const fft_cpx *X)
 {
 	int i;
 	float sum[NB_BANDS] = {0};
@@ -269,7 +268,7 @@ void PercepNet::compute_band_energy(float *bandE, const fft_cpx *X)
 	sum[NB_BANDS - 1] *= 2;
 	for (i = 0; i < NB_BANDS; i++)
 	{
-		bandE[i] = sum[i];
+		band_e[i] = sum[i];
 	}
 }
 
@@ -306,11 +305,11 @@ void PercepNet::frame_analysis(DenoiseState *st, fft_cpx *X, float *Ex, const fl
 /**
  * @brief Computes pitch coherence for each mel band?
  *
- * @param bandE: pitch coherence for each mel band
+ * @param band_e: pitch coherence for each mel band
  * @param X: FFT of original signal
  * @param P: FFT of pitch enhanced (comb filtered signal)
  */
-void PercepNet::compute_band_corr(float *bandE, const fft_cpx *X, const fft_cpx *P)
+void PercepNet::compute_band_corr(float *band_e, const fft_cpx *X, const fft_cpx *P)
 {
 	int i;
 	float sum[NB_BANDS] = {0};
@@ -333,7 +332,7 @@ void PercepNet::compute_band_corr(float *bandE, const fft_cpx *X, const fft_cpx 
 	sum[NB_BANDS - 1] *= 2;
 	for (i = 0; i < NB_BANDS; i++)
 	{
-		bandE[i] = sum[i];
+		band_e[i] = sum[i];
 	}
 }
 
@@ -440,8 +439,6 @@ int PercepNet::compute_frame_features(DenoiseState *st, fft_cpx *X, fft_cpx *P,
 
 	for (i = 0; i < FRAME_SIZE; i++)
 	{
-		// st->noisyE[i].r = X[i].r; // store noisy FFT bands for energy decay control later
-		// st->noisyE[i].i = X[i].i;
 		E += SQUARE(X[i].r) + SQUARE(X[i].i);
 	}
 	// fft is already scaled
@@ -579,9 +576,9 @@ void PercepNet::smooth_gains(DenoiseState *st, float *g)
  * @brief Converts 34 Mel Bands to 480 freq bins
  *
  * @param g: The resulting freqeuncy data
- * @param bandE: The input Mel Band data
+ * @param band_e: The input Mel Band data
  */
-void PercepNet::interp_band_gain(float *g, const float *bandE)
+void PercepNet::interp_band_gain(float *g, const float *band_e)
 {
 	int i;
 	memset(g, 0, FREQ_SIZE * sizeof(float));
@@ -593,7 +590,7 @@ void PercepNet::interp_band_gain(float *g, const float *bandE)
 		for (j = 0; j < band_size; j++)
 		{
 			float frac = (float)j / band_size;
-			g[(eband5ms[i]) + j] = (1 - frac) * bandE[i] + frac * bandE[i + 1];
+			g[(eband5ms[i]) + j] = (1 - frac) * band_e[i] + frac * band_e[i + 1];
 		}
 	}
 }
@@ -634,6 +631,12 @@ void PercepNet::apply_limiter(float *x)
 }
 
 
+/**
+ * @brief Do inverse FFT transform
+ *
+ * @param input: The fft results in complex form
+ * @param output: The time-domain output
+ */
 void PercepNet::inverse_transform(float *output, const fft_cpx *input)
 {
 	std::unique_ptr<float[]> buff = std::make_unique<float[]>(WINDOW_SIZE);
@@ -740,7 +743,7 @@ void PercepNet::compute_onnx(const char *onnx, float *gains, float *rb_gains, co
 		ORT_ABORT_ON_ERROR(O->CreateEnv(ORT_LOGGING_LEVEL_WARNING, "PercepNet", &env));
 		
 		ORT_ABORT_ON_ERROR(O->CreateSessionOptions(&session_options));
-		
+
 		ORT_ABORT_ON_ERROR(O->CreateSession(env, onnx, session_options, &session));
 		ORT_ABORT_ON_ERROR(O->GetAllocatorWithDefaultOptions(&ort_alloc));
 
@@ -858,10 +861,11 @@ void PercepNet::compute_onnx(const char *onnx, float *gains, float *rb_gains, co
  * @param pf: Whether to use pitch filtering
  * @param post: Whether to use post filtering / over-attenuation
  * @param lookahead: The number of lookahead frames to use during processing
- * @return float: 0 if processining is successful, 1 if not.
+ * @param frame_skip: Whether to do frame skipping to save computations, call 
+ * 						the model every other frame
  */
 void PercepNet::rnnoise_process_frame(DenoiseState *st, float *output, const float *input, int pf, 
-	int post, int lookahead, int frameSkip)
+	int post, int lookahead, int frame_skip)
 {
 
 	float features[NB_FEATURES_IN];
@@ -870,21 +874,21 @@ void PercepNet::rnnoise_process_frame(DenoiseState *st, float *output, const flo
 
 	int silence;
 
-	if (frameIn == -1 && frameOut == -1)
+	if (frame_in == -1 && frame_out == -1)
 	{
 		// First time through the loop
-		frameIn = lookahead;
-		frameOut = 0;
+		frame_in = lookahead;
+		frame_out = 0;
 		skip_switch = 1;
 	}
 	// toggle the frame skipping switch
 	skip_switch = 1 - skip_switch;
 
-	silence = compute_frame_features(st, X[frameIn], P[frameIn], Ex[frameIn], Ep[frameIn], Exp[frameIn], features, input);
+	silence = compute_frame_features(st, X[frame_in], P[frame_in], Ex[frame_in], Ep[frame_in], Exp[frame_in], features, input);
 	if (!silence)
 	{
 		// frame skipping turned on
-		if (frameSkip == 1) 
+		if (frame_skip == 1) 
 		{
 
 			// compute new gains and filter ratios since switch=compute stage
@@ -894,7 +898,7 @@ void PercepNet::rnnoise_process_frame(DenoiseState *st, float *output, const flo
 				compute_onnx(st->onnx, g, r, features);
 				if (post)
 				{
-					post_filtering(g, Ex[frameOut]);
+					post_filtering(g, Ex[frame_out]);
 				}
 				// normalize_gains(st, g);
 				smooth_gains(st, g);
@@ -926,39 +930,38 @@ void PercepNet::rnnoise_process_frame(DenoiseState *st, float *output, const flo
 			compute_onnx(st->onnx, g, r, features);
 			if (post)
 			{
-				post_filtering(g, Ex[frameOut]);
+				post_filtering(g, Ex[frame_out]);
 			}
 			smooth_gains(st, g);
 		}
 
 		if (ignore_strengths)
 		{ 
-			apply_gains(P[frameOut], g);
-		// smooth_energy(st, P[frameOut]);
+			apply_gains(P[frame_out], g);
 		}
 		else 
 		{
-			apply_gains(X[frameOut], g);
+			apply_gains(X[frame_out], g);
 			if (pf)
-				pitch_filter(X[frameOut], P[frameOut], r);
+				pitch_filter(X[frame_out], P[frame_out], r);
 		}
 	}
 
 	if (ignore_strengths)
 	{ 
-		frame_synthesis(st, output, P[frameOut]);
+		frame_synthesis(st, output, P[frame_out]);
 	}
 	else 
 	{
-		frame_synthesis(st, output, X[frameOut]);
+		frame_synthesis(st, output, X[frame_out]);
 	}
 
 	if (!silence) 
 	{
 	    apply_limiter(output);
 	}
-	frameIn = (frameIn + 1) % MAX_LOOKAHEAD;
-	frameOut = (frameOut + 1) % MAX_LOOKAHEAD;
+	frame_in = (frame_in + 1) % MAX_LOOKAHEAD;
+	frame_out = (frame_out + 1) % MAX_LOOKAHEAD;
 }
 
 

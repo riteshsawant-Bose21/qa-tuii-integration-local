@@ -1,5 +1,6 @@
 // parameters and structs for the PercepNet algorithm
 #pragma once
+#include <bosepro/algorithm.h>
 #include <onnxruntime_c_api.h>
 
 
@@ -10,7 +11,7 @@
 		OrtStatus* onnx_status = (expr);			     		\
 		if (onnx_status != nullptr) {                             	\
 			const char* msg = O->GetErrorMessage(onnx_status);	\
-			fprintf(stderr, "ONNX: %s\n", msg);		     		\
+			SPDLOG_ERROR("ONNX: {}", msg);		     		\
 			O->ReleaseStatus(onnx_status);                    	\
 			abort();                                           	\
 		}                                                      	\
@@ -116,8 +117,6 @@ struct DenoiseState
 	float r_pre[NB_BANDS];
 	float g_app[NB_BANDS];
 	float r_app[NB_BANDS];
-	fft_cpx lastE[FREQ_SIZE]; // last frame's output clean FFT bands
-	fft_cpx noisyE[FREQ_SIZE]; // this frame's input noisy FFT bands
 	const char* onnx;
 };
 

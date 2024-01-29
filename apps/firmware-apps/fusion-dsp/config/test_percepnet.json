@@ -14,7 +14,7 @@
                         "constants": [
                             { "name": "frame_size", "value": 480},
                             { "name": "sample_rate", "value": 48000 },
-                            { "name": "filename", "value": "percepnet-noisy.wav" }
+                            { "name": "filename", "value": "percepnet_clip.wav" }
                         ],
                         "terminals": [
                             { "name": "out", "channels": 1 }
@@ -47,7 +47,7 @@
                         "constants": [
                             { "name": "frame_size", "value": 480 },
                             { "name": "sample_rate", "value": 48000 },
-                            { "name": "filename", "value": "percepnet-noisy_out.wav" }
+                            { "name": "filename", "value": "percepnet_clip_out.wav" }
                         ],
                         "terminals": [
                             { "name": "in", "channels": 1 }
