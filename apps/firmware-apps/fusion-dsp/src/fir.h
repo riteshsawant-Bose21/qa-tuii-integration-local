@@ -23,6 +23,8 @@ public:
     /// \param sample_rate  the sample rate is used to calculate crossfade time 
     FirFilter(int num_taps, int_fast32_t frame_size, int_fast32_t sample_rate);
 
+    virtual ~FirFilter() = default;
+
     /// a vector of num_taps fir coefficients
     /// \param coeffs  the filter coefficients of length numTaps
     FirFilterBase *with_coefficients(const float *coeffs) override;
@@ -41,5 +43,3 @@ protected:
 };
 
 }
-
-// end of file
