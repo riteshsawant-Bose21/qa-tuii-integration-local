@@ -17,6 +17,7 @@
 // - iir_design.cpp/.h
 
 #include <bosepro/algorithm.h>
+#include <bosepro/task.h>
 #include "fft.h"
 #include "blackman_8192_coeffs.h"
 #include "fbs_filter.h"
@@ -34,6 +35,12 @@ public:
     virtual ~FeedbackSuppression() = default;
 
     virtual void process() override;
+
+    static void run_analysis_task(void *obj)
+    {
+        FeedbackSuppression *fbs = static_cast<FeedbackSuppression *>(obj);
+        fbs->analysis_process();
+    }
 
 private:
     // --- constants and terminals ---
@@ -94,11 +101,12 @@ private:
     float filter_reset_time;
 
     // --- processing variables ---
-    std::unique_ptr<float[]> in_buffer;
+    std::unique_ptr<float[]> in_buffer[2];
     std::unique_ptr<float[]> fft_data;
     std::unique_ptr<fft::Fft> curr_fft;
     int fft_data_len;
     int in_buff_ptr;
+    int in_buff_ping_pong;
     // current and previous frame's FFT db magnitudes
     std::unique_ptr<int[]> db_fft_data;
     std::unique_ptr<int[]> pre_db_fft_data;
@@ -122,6 +130,7 @@ private:
 
     // --- processing functions ---
     void feedback_process();
+    void analysis_process();
     void find_peaks();
     MultibandFrequencyClassification multi_band_classification_for_this_frequency(int freq) const;
     PotentialFeedbackPeak & populate_peak_struct_from_peak_index(int peakIndex, 
@@ -141,6 +150,8 @@ private:
     void update_low_freq_ignore_freq();
     void update_max_filter_gain();
 
+    bosepro::PeriodicTask analysis_task;
+
     ALGORITHM_DECLARE(FeedbackSuppression);
 };
 
@@ -148,7 +159,9 @@ ALGORITHM_REGISTER(FeedbackSuppression, "feedback_suppression");
 
 
 FeedbackSuppression::FeedbackSuppression(const bosepro::BlockConfiguration &configuration)
-    : bosepro::Algorithm(configuration)
+    : bosepro::Algorithm(configuration),
+      analysis_task(&FeedbackSuppression::run_analysis_task, this,
+                    get_sample_rate(), 8192, get_frame_size())
 {
     get_constant("channels", channels);
     get_constant("fft_size", fft_size);
@@ -189,8 +202,10 @@ FeedbackSuppression::FeedbackSuppression(const bosepro::BlockConfiguration &conf
         SPDLOG_ERROR("fft_size can only be 8192 for now because the fft window is hard-coded!");
 
     // input buffer
-    in_buffer = std::make_unique<float[]>(fft_size + get_frame_size());
+    in_buffer[0] = std::make_unique<float[]>(fft_size + get_frame_size());
+    in_buffer[1] = std::make_unique<float[]>(fft_size + get_frame_size());
     in_buff_ptr = 0;
+    in_buff_ping_pong = 0;
     // Initialize FFT objects
     curr_fft = std::make_unique<fft::Fft>(fft_size);
     fft_data = std::make_unique<float[]>(fft_size);
@@ -209,6 +224,8 @@ FeedbackSuppression::FeedbackSuppression(const bosepro::BlockConfiguration &conf
     number_recent_filters_not_to_be_recycled = static_cast<int>(num_filters * (.666f));
     filter_manager = std::unique_ptr<FilterManager>(new FilterManager(num_filters, 
         number_recent_filters_not_to_be_recycled, 0.0f, channels, get_sample_rate()));
+
+    analysis_task.set_priority(8);
 }
 
 
@@ -609,13 +626,47 @@ void FeedbackSuppression::feedback_process()
 }
 
 
+void FeedbackSuppression::analysis_process()
+{
+    float *pbuff = (in_buff_ping_pong == 0) ?
+        in_buffer[1].get() : in_buffer[0].get();
+
+    // multiply audio data by blackman window
+    for(int_fast32_t i = 0; i < fft_size; i++) 
+    {
+        pbuff[i] = pbuff[i] * blackman_window_8192[i];
+    }
+
+    // apply fft
+    curr_fft->forward(fft_data.get(), pbuff);
+    // fft data to db magnitude
+    // DC
+    db_fft_data[0] = 20*log10(fft_data[0]);
+    // Nyquist
+    db_fft_data[fft_data_len] = 20*log10(fft_data[1]);
+    // the rest
+    int_fast32_t band_n = 1;
+    for (int_fast32_t i{2}; i < fft_size; i += 2)
+    {
+        db_fft_data[band_n] = 10*log10(fft_data[i]*fft_data[i] + 
+                fft_data[i+1]*fft_data[i+1]);
+        band_n++;
+    }
+
+    // run feedback detection algorithm,
+    // update notch filters in filter manager
+    feedback_process();
+}
+
+
 void FeedbackSuppression::process()
 {
     // if fft_size input buffer filled, do detection
     // below, else proceed to apply notch filters
 
     // store data (on the first ch) to input buffer
-    memcpy(&in_buffer[in_buff_ptr], in[0], sizeof(float)*get_frame_size());
+    float *pbuff = in_buffer[in_buff_ping_pong].get();
+    memcpy(&pbuff[in_buff_ptr], in[0], sizeof(float)*get_frame_size());
     in_buff_ptr += get_frame_size();
 
     // when input buffer is filled,
@@ -623,41 +674,20 @@ void FeedbackSuppression::process()
     // reset input buffer pointer
     if(in_buff_ptr >= fft_size)
     {
-        // multiply audio data by blackman window
-        for(int_fast32_t i = 0; i < fft_size; i++) 
-        {
-            in_buffer[i] = in_buffer[i] * blackman_window_8192[i];
-        }
-        // apply fft
-        curr_fft->forward(fft_data.get(), in_buffer.get());
-        // fft data to db magnitude
-        // DC
-        db_fft_data[0] = 20*log10(fft_data[0]);
-        // Nyquist
-        db_fft_data[fft_data_len] = 20*log10(fft_data[1]);
-        // the rest
-        int_fast32_t band_n = 1;
-        for (int_fast32_t i{2}; i < fft_size; i += 2)
-        {
-            db_fft_data[band_n] = 10*log10(fft_data[i]*fft_data[i] + 
-                fft_data[i+1]*fft_data[i+1]);
-            band_n++;
-        }
-
-        // run feedback detection algorithm,
-        // update notch filters in filter manager
-        feedback_process();
-
         // check if need to store remaining samples
         // (because fft_size % frame_size != 0)
         int buff_remain_len = in_buff_ptr - fft_size;
         if (buff_remain_len > 0) 
         {
-            memcpy(&in_buffer[0], &in_buffer[fft_size], sizeof(float)*buff_remain_len);
+            memcpy(&pbuff[0], &pbuff[fft_size], sizeof(float)*buff_remain_len);
         }
         // reset input buffer pointer
         in_buff_ptr = buff_remain_len;
+
+        in_buff_ping_pong = (in_buff_ping_pong == 0) ? 1 : 0;
     }
+
+    analysis_task.tick();
 
     // apply notch filters on all channels
     filter_manager->_iir->process(out, in, get_frame_size());

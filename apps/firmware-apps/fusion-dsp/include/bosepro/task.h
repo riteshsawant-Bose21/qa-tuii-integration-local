@@ -94,8 +94,19 @@ public:
             SPDLOG_CRITICAL("pthread_cond_init() failed: {}", strerror(err));
         }
 
+        profile.set_period((double)frame_size / sample_rate);
 
         task_id = task_count++;
+    }
+
+
+    virtual ~PeriodicTask()
+    {
+        SPDLOG_DEBUG("Task {} MIPS: {} first, {} max, {} avg.",
+                     task_id,
+                     profile.get_first_mips(),
+                     profile.get_max_mips(),
+                     profile.get_average_mips());
     }
 
 
@@ -184,7 +195,9 @@ private:
             }
             task->ticks -= task->period;
             pthread_mutex_unlock(&task->ticks_mutex);
+            task->profile.start();
             task->run_function(task->obj);
+            task->profile.finish();
         }
     }
 
@@ -200,6 +213,7 @@ private:
     int_fast32_t frame_size;
     int_fast32_t period;
     int_fast32_t ticks;
+    Profile profile;
 };
 
 
