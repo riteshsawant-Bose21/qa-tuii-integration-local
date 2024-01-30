@@ -42,7 +42,6 @@ private:
     float rms_level;
     float rms_gain;
     float rms_coeff;
-    int_fast32_t read_index; 
     int_fast32_t write_index;
     int_fast32_t buffer_size;
     // --- user control parameters processing functions ---

@@ -15,6 +15,8 @@ public:
     _WFirFilter(int num_taps, float lambda, int_fast32_t frame_size, int_fast32_t sample_rate)
     : FirFilter{num_taps, frame_size, sample_rate}, _lambda{lambda} {}
 
+    virtual ~_WFirFilter() = default;
+
     /// Process one frame of audio through an FIR filter.
     ///
     /// \param out  The array of output samples, of length `frameSize`.
@@ -26,5 +28,3 @@ private:
 };
 
 }
-
-// end of file
