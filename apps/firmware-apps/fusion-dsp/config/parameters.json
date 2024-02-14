@@ -124,10 +124,24 @@
                 { "name": "out", "type": "audio", "default_channels": 1, "direction": "output" }
             ],
             "controls": [
-                { "name": "model_path", "value_type": "string", "default_value": "percepnet.onnx" },
+                { "name": "model_path", "value_type": "string", "default_value": "ml/percepnet.onnx" },
                 { "name": "skip_frame", "value_type": "int", "default_value": 0 },
                 { "name": "ignore_pf_strength", "value_type": "int", "default_value": 0 },
                 { "name": "bypass", "value_type": "int", "default_value": 0 }
+            ]
+        },
+        {
+            "name": "ml_benchmark",
+            "constants": [
+                { "name": "channels", "default_value": 1 }
+            ],
+            "terminals": [
+                { "name": "in", "type": "audio", "default_channels": 1, "direction": "input" },
+                { "name": "out", "type": "audio", "default_channels": 1, "direction": "output" }
+            ],
+            "controls": [
+                { "name": "model_path", "value_type": "string", "default_value": "ml/ml_linear_in256_frame1_out256.onnx" },
+                { "name": "max_input_time", "value_type": "int", "default_value": 10 }
             ]
         },
         {

@@ -14,15 +14,15 @@
                         "constants": [
                             { "name": "frame_size", "value": 480},
                             { "name": "sample_rate", "value": 48000 },
-                            { "name": "filename", "value": "percepnet_clip.wav" }
+                            { "name": "filename", "value": "percepnet-noisy.wav" }
                         ],
                         "terminals": [
                             { "name": "out", "channels": 1 }
                         ]
                     },
                     {
-                        "name": "percepnet",
-                        "algorithm": "percepnet",
+                        "name": "ml_benchmark",
+                        "algorithm": "ml_benchmark",
                         "constants": [
                             { "name": "channels", "value": 1 },
                             { "name": "frame_size", "value": 480 },
@@ -33,9 +33,8 @@
                             { "name": "out", "channels": 1 }
                         ],
                         "control_settings": [
-                            { "name": "model_path", "value": "ml/percepnet.onnx" },
-                            { "name": "skip_frame", "value": 0 },
-                            { "name": "ignore_pf_strength", "value": 0 }
+                            { "name": "model_path", "value": "ml/ml_conv1d_in256_frame1_out256.onnx" },
+                            { "name": "max_input_time", "value": 10 }
                         ],
                         "connections": [
                             { "source_block": "infile", "input_terminal": "in", "output_terminal": "out", "input_channel": 0, "output_channel": 0 }
@@ -47,13 +46,13 @@
                         "constants": [
                             { "name": "frame_size", "value": 480 },
                             { "name": "sample_rate", "value": 48000 },
-                            { "name": "filename", "value": "percepnet_clip_out.wav" }
+                            { "name": "filename", "value": "out.wav" }
                         ],
                         "terminals": [
                             { "name": "in", "channels": 1 }
                         ],
                         "connections": [
-                            { "source_block": "percepnet", "input_terminal": "in", "output_terminal": "out", "input_channel": 0, "output_channel": 0 }
+                            { "source_block": "infile", "input_terminal": "in", "output_terminal": "out", "input_channel": 0, "output_channel": 0 }
                         ]
                     }
                 ]
