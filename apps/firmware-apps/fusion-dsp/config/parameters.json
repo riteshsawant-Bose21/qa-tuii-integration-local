@@ -24,7 +24,12 @@
                 { "name": "out", "type": "audio", "default_channels": 1, "direction": "output" }
             ],
             "controls": [
-                { "name": "port_connection", "dimensions": 1, "value_type": "string", "default_value": ""}
+                { "name": "port_connection", "dimensions": 1, "value_type": "string", "default_value": ""},
+                { "name": "out_gain", "dimensions": 1, "value_type": "float", "default_value": 1.0 },
+                { "name": "out_mute", "dimensions": 1, "value_type": "bool", "default_value": false }
+            ],
+            "meters": [
+                { "name": "out_meter", "dimensions": 1, "value_type": "float" }
             ]
         },
         {
@@ -48,7 +53,12 @@
             ],
             "controls": [
                 { "name": "gain", "dimensions": 2, "value_type": "float", "default_value": 1.0 },
-                { "name": "mute", "dimensions": 2, "value_type": "bool", "default_value": false }
+                { "name": "mute", "dimensions": 2, "value_type": "bool", "default_value": false },
+                { "name": "out_gain", "dimensions": 1, "value_type": "float", "default_value": 1.0 },
+                { "name": "out_mute", "dimensions": 1, "value_type": "bool", "default_value": false }
+            ],
+            "meters": [
+                { "name": "out_meter", "dimensions": 1, "value_type": "float" }
             ]
         },
         {
@@ -65,14 +75,19 @@
             ],
             "terminals": [
                 { "name": "in", "type": "audio", "default_channels": 1, "direction": "input" },
-                { "name": "out", "type": "audio", "default_channels": 1, "direction": "output" }
+                { "name": "out", "type": "audio", "default_channels": 1, "direction": "output", "bypass_source": "in" }
             ],
             "controls": [
-                { "name": "bypass", "value_type": "bool", "default_value": false },
                 { "name": "band_enable", "dimensions": 1, "value_type": "bool", "default_value": true },
                 { "name": "gain", "dimensions": 1, "value_type": "float", "default_value": 0.0 },
                 { "name": "frequency", "dimensions": 1, "value_type": "float", "default_value": 1000.0 },
-                { "name": "q", "dimensions": 1, "value_type": "float", "default_value": 1.0 }
+                { "name": "q", "dimensions": 1, "value_type": "float", "default_value": 1.0 },
+                { "name": "bypass", "value_type": "bool", "default_value": false },
+                { "name": "out_gain", "dimensions": 1, "value_type": "float", "default_value": 1.0 },
+                { "name": "out_mute", "dimensions": 1, "value_type": "bool", "default_value": false }
+            ],
+            "meters": [
+                { "name": "out_meter", "dimensions": 1, "value_type": "float" }
             ]
         },
         {
@@ -148,7 +163,7 @@
             "terminals": [
                 { "name": "in", "type": "audio", "default_channels": 1, "direction": "input" },
                 { "name": "peak_in", "type": "audio", "default_channels": 1, "direction": "input" },
-                { "name": "out", "type": "audio", "default_channels": 1, "direction": "output" }
+                { "name": "out", "type": "audio", "default_channels": 1, "direction": "output", "bypass_source": "in" }
             ],
             "controls": [
                 { "name": "peak_thresh", "value_type": "float", "default_value": 0.0 },
@@ -158,7 +173,13 @@
                 { "name": "rms_attack", "value_type": "float", "default_value": 0.001 },
                 { "name": "rms_release", "value_type": "float", "default_value": 0.005 },
                 { "name": "delay", "value_type": "int", "default_value": 0 },
-                { "name": "brick_wall", "value_type": "bool", "default_value": false }
+                { "name": "brick_wall", "value_type": "bool", "default_value": false },
+                { "name": "bypass", "value_type": "bool", "default_value": false },
+                { "name": "out_gain", "dimensions": 1, "value_type": "float", "default_value": 1.0 },
+                { "name": "out_mute", "dimensions": 1, "value_type": "bool", "default_value": false }
+            ],
+            "meters": [
+                { "name": "out_meter", "dimensions": 1, "value_type": "float" }
             ]
         },
         {
@@ -176,6 +197,13 @@
             ],
             "terminals": [
                 { "name": "out", "type": "audio", "default_channels": 1, "direction": "output" }
+            ],
+            "controls": [
+                { "name": "out_gain", "dimensions": 1, "value_type": "float", "default_value": 1.0 },
+                { "name": "out_mute", "dimensions": 1, "value_type": "bool", "default_value": false }
+            ],
+            "meters": [
+                { "name": "out_meter", "dimensions": 1, "value_type": "float" }
             ]
         },
         {
