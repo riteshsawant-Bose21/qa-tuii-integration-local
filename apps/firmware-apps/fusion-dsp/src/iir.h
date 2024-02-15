@@ -1,5 +1,7 @@
 #pragma once
 
+#include <pthread.h>
+
 #include <memory>
 #include <string>
 #include <vector>
@@ -111,6 +113,7 @@ private:
     std::unique_ptr<float[]> state;
     std::vector<float> section_gain;
     float total_gain;
+    pthread_mutex_t mutex;
 
     void process_impl(float *out, const float *in, int channel, int frame_size);
 };

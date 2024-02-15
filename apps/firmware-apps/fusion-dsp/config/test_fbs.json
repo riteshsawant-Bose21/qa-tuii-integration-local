@@ -4,7 +4,7 @@
             {
                 "name": "task1",
                 "constants": [
-                    { "name": "frame_size", "value": 480},
+                    { "name": "frame_size", "value": 512},
                     { "name": "sample_rate", "value": 48000 }
                 ],
                 "blocks": [
@@ -12,7 +12,7 @@
                         "name": "infile",
                         "algorithm": "wav_read",
                         "constants": [
-                            { "name": "frame_size", "value": 480},
+                            { "name": "frame_size", "value": 512},
                             { "name": "sample_rate", "value": 48000 },
                             { "name": "filename", "value": "speech_mic_feedback.wav" }
                         ],
@@ -25,7 +25,7 @@
                         "algorithm": "feedback_suppression",
                         "constants": [
                             { "name": "channels", "value": 1 },
-                            { "name": "frame_size", "value": 480 },
+                            { "name": "frame_size", "value": 512 },
                             { "name": "sample_rate", "value": 48000 }
                         ],
                         "terminals": [
@@ -43,7 +43,7 @@
                         "name": "outfile",
                         "algorithm": "wav_write",
                         "constants": [
-                            { "name": "frame_size", "value": 480 },
+                            { "name": "frame_size", "value": 512 },
                             { "name": "sample_rate", "value": 48000 },
                             { "name": "filename", "value": "speech_mic_feedback_out.wav" }
                         ],

@@ -75,6 +75,30 @@ IirFilter::IirFilter(int num_sections, int num_channels)
     {
         g = 1.0f;
     }
+
+    int err;
+    pthread_mutexattr_t mutex_attr;
+
+    err = pthread_mutexattr_init(&mutex_attr);
+
+    if (err != 0)
+    {
+        SPDLOG_CRITICAL("pthread_mutexattr_init: {}", strerror(err));
+    }
+
+    err = pthread_mutexattr_setprotocol(&mutex_attr, PTHREAD_PRIO_INHERIT);
+
+    if (err != 0)
+    {
+        SPDLOG_CRITICAL("pthread_mutexattr_setprotocol: {}", strerror(err));
+    }
+
+    err = pthread_mutex_init(&mutex, &mutex_attr);
+
+    if (err != 0)
+    {
+        SPDLOG_CRITICAL("pthread_mutex_init: {}", strerror(err));
+    }
 }
 
 
@@ -121,13 +145,16 @@ void IirFilter::set_section_coeffs(int section, double b0, double b1, double b2,
         tmp_gain *= g;
     }
 
-    // Could put a mutex here.
+    pthread_mutex_lock(&mutex);
+
     total_gain = tmp_gain;
 
     coeff[index_start + IIR_B1_INDEX * index_stride] = b1;
     coeff[index_start + IIR_B2_INDEX * index_stride] = b2;
     coeff[index_start + IIR_A1_INDEX * index_stride] = a1;
     coeff[index_start + IIR_A2_INDEX * index_stride] = a2;
+
+    pthread_mutex_unlock(&mutex);
 }
 
 
@@ -182,6 +209,7 @@ void IirFilter::process_impl(float *out, const float *in, int channel,
     float g = total_gain;
     int remaining_sections = num_sections;
 
+    pthread_mutex_lock(&mutex);
 
     while (remaining_sections)
     {
@@ -217,6 +245,8 @@ void IirFilter::process_impl(float *out, const float *in, int channel,
         // stages are done in place.
         x = out;
     }
+
+    pthread_mutex_unlock(&mutex);
 }
 
 
