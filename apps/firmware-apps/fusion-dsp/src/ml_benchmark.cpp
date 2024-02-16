@@ -265,25 +265,25 @@ void ML_Benchmark::process()
 
 		// Calculate the time since `start()` was called.
 		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &finish_time);
-        timespec diff_time;
-        diff_time.tv_sec = finish_time.tv_sec - start_time.tv_sec;
-        diff_time.tv_nsec = finish_time.tv_nsec - start_time.tv_nsec;
-        if (diff_time.tv_nsec < 0)
-        {
-            diff_time.tv_sec--;
-            diff_time.tv_nsec += NSEC_MAX;
-        }
+		timespec diff_time;
+		diff_time.tv_sec = finish_time.tv_sec - start_time.tv_sec;
+		diff_time.tv_nsec = finish_time.tv_nsec - start_time.tv_nsec;
+		if (diff_time.tv_nsec < 0)
+		{
+			diff_time.tv_sec--;
+			diff_time.tv_nsec += NSEC_MAX;
+		}
 		// Track the maximum execution time 
-        if (diff_time.tv_sec > max_time.tv_sec
-            || (diff_time.tv_sec == max_time.tv_sec
-                && diff_time.tv_nsec > max_time.tv_nsec))
-        {
-            max_time.tv_sec = diff_time.tv_sec;
-            max_time.tv_nsec = diff_time.tv_nsec;
-        }
-        // Accumulate the total time, for reporting the average execution time.
-        total_time.tv_sec += diff_time.tv_sec;
-        total_time.tv_nsec += diff_time.tv_nsec;
+		if (diff_time.tv_sec > max_time.tv_sec
+			|| (diff_time.tv_sec == max_time.tv_sec
+				&& diff_time.tv_nsec > max_time.tv_nsec))
+		{
+			max_time.tv_sec = diff_time.tv_sec;
+			max_time.tv_nsec = diff_time.tv_nsec;
+		}
+		// Accumulate the total time, for reporting the average execution time.
+		total_time.tv_sec += diff_time.tv_sec;
+		total_time.tv_nsec += diff_time.tv_nsec;
 
 		num_frames += 1;
 	}
