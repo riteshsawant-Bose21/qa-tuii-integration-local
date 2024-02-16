@@ -24,7 +24,7 @@ public:
     Terminal(const TerminalParameter &parameter,
              const TerminalConfiguration *configuration,
              int_fast32_t frame_size)
-        : frame_size(frame_size)
+        : frame_size(frame_size), bypass(false), bypass_source(nullptr)
     {
         is_output_terminal = parameter.is_output();
 
