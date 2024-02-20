@@ -71,14 +71,14 @@ private:
 	size_t input_count;
 	std::vector<Ort::AllocatedStringPtr> input_name_allocated_strs;
 	std::vector<const char*> input_names;
-	std::vector<std::vector<int_fast32_t>> input_dims;
+	std::vector<std::vector<int64_t>> input_dims;
 	std::vector<size_t> input_tensor_sizes;
 	std::vector<std::vector<float>> input_tensor_values;
 	// Outputs
 	size_t output_count;   
 	std::vector<Ort::AllocatedStringPtr> output_name_allocated_strs;
 	std::vector<const char*> output_names;
-	std::vector<std::vector<int_fast32_t>> output_dims;
+	std::vector<std::vector<int64_t>> output_dims;
 	std::vector<size_t> output_tensor_sizes;
 	std::vector<std::vector<float>> output_tensor_values;
 	
