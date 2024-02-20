@@ -26,7 +26,6 @@ private:
     std::vector<float *> out;
     std::unique_ptr<filter::IirFilter> iir;
 
-    bool bypass;
     std::vector<bool> band_enable;
     std::vector<float> gain;
     std::vector<float> frequency;
@@ -49,7 +48,6 @@ Peq::Peq(const bosepro::BlockConfiguration &configuration)
     assign_terminal("in", &in);
     assign_terminal("out", &out);
 
-    assign_control("bypass", &bypass);
     assign_control("band_enable", &band_enable,
                    POST_FUNCTION_VECTOR(update_band));
     assign_control("gain", &gain, POST_FUNCTION_VECTOR(update_band));
@@ -63,19 +61,6 @@ Peq::Peq(const bosepro::BlockConfiguration &configuration)
 
 void Peq::process()
 {
-    if (bypass)
-    {
-        for (int_fast32_t channel = 0; channel < channels; channel++)
-        {
-            for (int_fast32_t sample = 0; sample < get_frame_size(); sample++)
-            {
-                out[channel][sample] = in[channel][sample];
-            }
-        }
-
-        return;
-    }
-
     iir->process(out, in, get_frame_size());
 }
 

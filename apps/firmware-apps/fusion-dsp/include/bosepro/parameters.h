@@ -195,6 +195,7 @@ public:
         return get_string("direction") == "output";
     }
 
+
     /// Get the default number of channels for the terminal.  The default
     /// number of channels must exist in the definition.
     ///
@@ -204,6 +205,25 @@ public:
         int default_channels;
         get_member_value("default_channels", default_channels);
         return default_channels;
+    }
+
+
+    /// Test whether this terminal has a bypass source.
+    bool has_bypass_source() const
+    {
+        return has_member("bypass_source");
+    }
+
+
+    /// Get the name of the bypass source for the terminal.  This is an input
+    /// terminal that is used as the source for the bypass signal to be copied
+    /// to this output terminal.  If no bypass source is defined, an empty
+    /// string is returned.
+    ///
+    /// @return  The name of an input terminal.
+    const std::string &get_bypass_source() const
+    {
+        return get_string("bypass_source");
     }
 };
 

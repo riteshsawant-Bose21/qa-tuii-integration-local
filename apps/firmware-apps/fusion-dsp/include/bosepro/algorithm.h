@@ -10,6 +10,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <list>
 #include <map>
 #include <memory>
 #include <string>
@@ -96,6 +97,57 @@ public:
 
                 meta->meters[name] =
                     std::unique_ptr<Meter>(Meter::create(mp, mc));
+            }
+        }
+
+
+        // Assign universal controls and meters to the associated output
+        // terminals.
+        for (auto &t : meta->parameters->get_terminals())
+        {
+            const TerminalParameter &tp =
+                    reinterpret_cast<const TerminalParameter &>(t.second);
+            const std::string &name = tp.get_name();
+            Terminal &terminal = *meta->terminals[name];
+
+            if (terminal.is_output())
+            {
+                const std::string gain_name = name + "_gain";
+                const std::string mute_name = name + "_mute";
+                const std::string meter_name = name + "_meter";
+                bool requires_processing = false;
+
+                if (meta->controls.count(gain_name) != 0)
+                {
+                    assign_control(gain_name, terminal.get_gain());
+                    requires_processing = true;
+                }
+
+                if (meta->controls.count(mute_name) != 0)
+                {
+                    assign_control(mute_name, terminal.get_mute());
+                    requires_processing = true;
+                }
+
+                if (meta->meters.count(meter_name) != 0)
+                {
+                    assign_meter(meter_name, terminal.get_meter());
+                    requires_processing = true;
+                }
+
+                if (tp.has_bypass_source()
+                    && meta->controls.count("bypass") != 0)
+                {
+                    assign_control("bypass", terminal.get_bypass());
+                    terminal.set_bypass_source(
+                        meta->terminals[tp.get_bypass_source()].get());
+                    requires_processing = true;
+                }
+
+                if (requires_processing)
+                {
+                    outputs_to_process.push_back(&terminal);
+                }
             }
         }
     }
@@ -264,6 +316,17 @@ public:
         for (auto &m : meta->meters)
         {
             m.second->initialize();
+        }
+    }
+
+
+    /// For any output terminals that have default gain, bypass, or meters,
+    /// process the output after the algorithm has finished processing.
+    void process_outputs()
+    {
+        for (auto &t : outputs_to_process)
+        {
+            t->process_output();
         }
     }
 
@@ -455,6 +518,7 @@ protected:
 private:
     /// Stores the non-real-time data for managing the algorithm.
     std::unique_ptr<AlgorithmMeta> meta;
+    std::list<Terminal *> outputs_to_process;
 };
 
 

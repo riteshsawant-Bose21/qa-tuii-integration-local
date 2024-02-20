@@ -336,6 +336,7 @@ public:
             for (auto &block : blocks)
             {
                 block->process();
+                block->process_outputs();
             }
         }
         else
@@ -345,6 +346,7 @@ public:
             {
                 block_profile[block_index].start();
                 block->process();
+                block->process_outputs();
                 block_profile[block_index++].finish();
             }
         }
