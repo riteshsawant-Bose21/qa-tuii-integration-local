@@ -50,7 +50,6 @@ private:
 	int_fast32_t skip_frame;
 	// if use comb filtered output directly for gain application
 	int_fast32_t ignore_strengths = 0;
-	int_fast32_t bypass;
 
 	// --- processing variables ---
 
@@ -133,7 +132,6 @@ PercepNet::PercepNet(const bosepro::BlockConfiguration &configuration)
 	assign_control("model_path", &model_path, POST_FUNCTION_SCALAR(update_model));
 	assign_control("skip_frame", &skip_frame);
 	assign_control("ignore_pf_strength", &ignore_strengths);
-	assign_control("bypass", &bypass);
 
 	rnnoise_create(model_path.c_str());
 
@@ -967,27 +965,14 @@ void PercepNet::rnnoise_process_frame(DenoiseState *st, float *output, const flo
 
 void PercepNet::process()
 {
-	if (bypass) 
+	// percepnet can process only one channel !
+	rnnoise_process_frame(st, out[0], in[0], 1, 1, 0, skip_frame);
+	// copy ch1 to the rest
+	for (int_fast32_t channel = 1; channel < channels; channel++)
 	{
-		for (int_fast32_t sample = 0; sample < FRAME_SIZE; sample++)
+		for (int_fast32_t sample = 0; sample < get_frame_size(); sample++)
 		{
-			for (int_fast32_t channel = 0; channel < channels; channel++)
-			{
-				out[channel][sample] = in[channel][sample] ;
-			}
-		}
-	}
-	else 
-	{
-		// percepnet can process only one channel !
-		rnnoise_process_frame(st, out[0], in[0], 1, 1, 0, skip_frame);
-		// copy ch1 to the rest
-		for (int_fast32_t channel = 1; channel < channels; channel++)
-		{
-			for (int_fast32_t sample = 0; sample < get_frame_size(); sample++)
-			{
-				out[channel][sample] = out[0][sample];
-			}
+			out[channel][sample] = out[0][sample];
 		}
 	}
 }
