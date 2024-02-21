@@ -136,9 +136,11 @@
             ],
             "terminals": [
                 { "name": "in", "type": "audio", "default_channels": 1, "direction": "input" },
-                { "name": "out", "type": "audio", "default_channels": 1, "direction": "output" }
+                { "name": "out", "type": "audio", "default_channels": 1, "direction": "output", "bypass_source": "in" }
             ],
             "controls": [
+                { "name": "bypass", "value_type": "bool", "default_value": false },
+                { "name": "model_path", "value_type": "string", "default_value": "ml/percepnet.onnx" },
                 { "name": "model_path", "value_type": "string", "default_value": "ml/percepnet.onnx" },
                 { "name": "skip_frame", "value_type": "int", "default_value": 0 },
                 { "name": "ignore_pf_strength", "value_type": "int", "default_value": 0 }
@@ -171,9 +173,10 @@
             ],
             "terminals": [
                 { "name": "in", "type": "audio", "default_channels": 1, "direction": "input" },
-                { "name": "out", "type": "audio", "default_channels": 1, "direction": "output" }
+                { "name": "out", "type": "audio", "default_channels": 1, "direction": "output", "bypass_source": "in" }
             ],
             "controls": [
+                { "name": "bypass", "value_type": "bool", "default_value": false },
                 { "name": "band_enable", "dimensions": 1, "value_type": "bool", "default_value": true },
                 { "name": "filter_type", "dimensions": 1, "value_type": "string", "default_value": "high_shelf" },
                 { "name": "gain", "dimensions": 1, "value_type": "float", "default_value": 0.0 },
@@ -217,6 +220,27 @@
                 { "name": "mic_in", "type": "audio", "default_channels": 1, "direction": "input" },
                 { "name": "ref_in", "type": "audio", "default_channels": 1, "direction": "input" },
                 { "name": "mic_out", "type": "audio", "default_channels": 1, "direction": "output" }
+            ]
+        },
+        {
+            "name": "delay",
+            "constants": [
+                { "name": "max_delay", "default_value": 4800 },
+                { "name": "channels", "default_value": 1 }
+            ],
+            "terminals": [
+                { "name": "in", "type": "audio", "default_channels": 1, "direction": "input" },
+                { "name": "out", "type": "audio", "default_channels": 1, "direction": "output", "bypass_source": "in" }
+            ],
+            "controls": [
+                { "name": "delay", "dimensions": 1, "value_type": "int", "default_value": 0 },
+                { "name": "channel_bypass", "dimensions": 1, "value_type": "bool", "default_value": false },
+                { "name": "bypass", "value_type": "bool", "default_value": false },
+                { "name": "out_gain", "dimensions": 1, "value_type": "float", "default_value": 1.0 },
+                { "name": "out_mute", "dimensions": 1, "value_type": "bool", "default_value": false }
+            ],
+            "meters": [
+                { "name": "out_meter", "dimensions": 1, "value_type": "float" }
             ]
         },
         {
