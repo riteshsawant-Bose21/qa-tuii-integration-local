@@ -1,6 +1,7 @@
 
 #include <bosepro/algorithm.h>
 
+#include <cmath>
 #include <cstdint>
 #include <vector>
 
@@ -93,10 +94,10 @@ void Compressor::process()
             ((level > smoothed_level) ? level_attack_coeff
                                       : level_release_coeff);
 
-        float attenuation = threshold * 0.05f - std::log10f(level);
+        float attenuation = threshold * 0.05f - log10f(level);
         attenuation = std::min(attenuation, 0.0f);
         attenuation *= ratio_scale;
-        attenuation = std::powf(10.0f, attenuation);
+        attenuation = powf(10.0f, attenuation);
 
         if (attenuation < g)
         {
@@ -126,15 +127,15 @@ void Compressor::update_ratio()
 
 void Compressor::update_attack()
 {
-    attack_coeff = 1.0f - std::expf(-1.0f / (attack_time / 1000.0f *
-                                    get_sample_rate()));
+    attack_coeff = 1.0f - expf(-1.0f / (attack_time / 1000.0f *
+                               get_sample_rate()));
 }
 
 
 void Compressor::update_release()
 {
-    release_coeff = 1.0f - std::expf(-1.0f / (release_time / 1000.0f *
-                                     get_sample_rate()));
+    release_coeff = 1.0f - expf(-1.0f / (release_time / 1000.0f *
+                                get_sample_rate()));
     level_release_coeff = release_coeff / 0.75f;
 }
 
