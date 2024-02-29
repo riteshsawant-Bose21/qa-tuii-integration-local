@@ -1,6 +1,7 @@
 
 #include <bosepro/algorithm.h>
 
+#include <cmath>
 #include <cstdint>
 #include <vector>
 
@@ -136,15 +137,15 @@ void Gate::update_hold()
 
 void Gate::update_attack()
 {
-    attack_coeff = 1.0f - std::expf(-1.0f / (attack_time / 1000.0f *
-                                    get_sample_rate()));
+    attack_coeff = 1.0f - expf(-1.0f / (attack_time / 1000.0f *
+                               get_sample_rate()));
 }
 
 
 void Gate::update_decay()
 {
-    decay_coeff = 1.0f - std::expf(-1.0f / (decay_time / 1000.0f *
-                                   get_sample_rate()));
+    decay_coeff = 1.0f - expf(-1.0f / (decay_time / 1000.0f *
+                              get_sample_rate()));
     level_release_coeff = decay_coeff / 0.75f;
 }
 
