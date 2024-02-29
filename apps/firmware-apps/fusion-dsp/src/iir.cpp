@@ -221,7 +221,7 @@ void IirFilter::process_impl(float *out, const float *in, int channel,
             p_coeff       += 16;
             p_state       += 8;
         }
-        else if (num_sections >= 2)
+        else if (remaining_sections >= 2)
         {
             iir_2(p_coeff, p_state, x, out, frame_size, g);
 

@@ -91,6 +91,30 @@
             ]
         },
         {
+            "name": "tone",
+            "constants": [
+                { "name": "channels", "default_value": 1 }
+            ],
+            "terminals": [
+                { "name": "in", "type": "audio", "default_channels": 1, "direction": "input" },
+                { "name": "out", "type": "audio", "default_channels": 1, "direction": "output", "bypass_source": "in" }
+            ],
+            "controls": [
+                { "name": "low_gain", "value_type": "float", "default_value": 0.0 },
+                { "name": "mid_gain", "value_type": "float", "default_value": 0.0 },
+                { "name": "high_gain", "value_type": "float", "default_value": 0.0 },
+                { "name": "low_bypass", "value_type": "bool", "default_value": false },
+                { "name": "mid_bypass", "value_type": "bool", "default_value": false },
+                { "name": "high_bypass", "value_type": "bool", "default_value": false },
+                { "name": "bypass", "value_type": "bool", "default_value": false },
+                { "name": "out_gain", "dimensions": 1, "value_type": "float", "default_value": 1.0 },
+                { "name": "out_mute", "dimensions": 1, "value_type": "bool", "default_value": false }
+            ],
+            "meters": [
+                { "name": "out_meter", "dimensions": 1, "value_type": "float" }
+            ]
+        },
+        {
             "name": "feedback_suppression",
             "constants": [
                 { "name": "channels", "default_value": 1 },
