@@ -1,6 +1,7 @@
 
 #include <bosepro/algorithm.h>
 
+#include <cmath>
 #include <cstdint>
 #include <vector>
 
@@ -98,9 +99,9 @@ Agc::Agc(const bosepro::BlockConfiguration &configuration)
     boost_hold_count.reset(new int_fast32_t[channels]());
     hold_counter.reset(new int_fast32_t[channels]());
 
-    level_attack_coeff = 1.0f - std::exp(-1.0f / (get_sample_rate() * 0.0005f));
-    level_release_coeff = 1.0f - std::exp(-1.0f / (get_sample_rate() * 0.1f));
-    fast_release_coeff = 1.0f - std::exp(-1.0f / (get_sample_rate() * 0.005f));
+    level_attack_coeff = 1.0f - exp(-1.0f / (get_sample_rate() * 0.0005f));
+    level_release_coeff = 1.0f - exp(-1.0f / (get_sample_rate() * 0.1f));
+    fast_release_coeff = 1.0f - exp(-1.0f / (get_sample_rate() * 0.005f));
 }
 
 
@@ -121,8 +122,8 @@ void Agc::process()
                  ? level_attack_coeff : fast_release_coeff);
         }
 
-        float log_level = 10.0f * std::log10(smoothed_level[channel]) + 20.0f;
-        float log_fast_level = 10.0f * std::log10(fast_level[channel]) + 20.0f;
+        float log_level = 10.0f * log10(smoothed_level[channel]) + 20.0f;
+        float log_fast_level = 10.0f * log10(fast_level[channel]) + 20.0f;
 
         if ((log_fast_level > activity_threshold[channel]) 
             || (hold_counter[channel] <= 0))
@@ -198,8 +199,8 @@ void Agc::process()
             g_step = 0.0f;
         }
 
-        g = std::powf(10.0f, g / 20.0f);
-        g_step = std::powf(10.0f, g_step / 20.0f);
+        g = powf(10.0f, g / 20.0f);
+        g_step = powf(10.0f, g_step / 20.0f);
 
         for (int_fast32_t sample = 0; sample < get_frame_size(); sample++)
         {
@@ -207,7 +208,7 @@ void Agc::process()
             g *= g_step;
         }
 
-        current_gain[channel] = 20.0f * std::log10f(g);
+        current_gain[channel] = 20.0f * log10f(g);
     }
 
 }
