@@ -272,6 +272,37 @@
             ]
         },
         {
+            "name": "agc",
+            "constants": [
+                { "name": "channels", "default_value": 1 }
+            ],
+            "terminals": [
+                { "name": "in", "type": "audio", "default_channels": 1, "direction": "input" },
+                { "name": "out", "type": "audio", "default_channels": 1, "direction": "output", "bypass_source": "in" }
+            ],
+            "controls": [
+                { "name": "activity_threshold", "dimensions": 1, "value_type": "float", "default_value": -40.0 },
+                { "name": "target_minimum", "dimensions": 1, "value_type": "float", "default_value": -6.0 },
+                { "name": "target_maximum", "dimensions": 1, "value_type": "float", "default_value": 6.0 },
+                { "name": "cut_rate", "dimensions": 1, "value_type": "float", "default_value": 5.0 },
+                { "name": "boost_rate", "dimensions": 1, "value_type": "float", "default_value": 5.0 },
+                { "name": "cut_range", "dimensions": 1, "value_type": "float", "default_value": 18.0 },
+                { "name": "boost_range", "dimensions": 1, "value_type": "float", "default_value": 6.0 },
+                { "name": "cut_hold", "dimensions": 1, "value_type": "float", "default_value": 3.0 },
+                { "name": "boost_hold", "dimensions": 1, "value_type": "float", "default_value": 3.0 },
+                { "name": "channel_bypass", "dimensions": 1, "value_type": "bool", "default_value": false },
+                { "name": "max_total_boost", "value_type": "float", "default_value": 24.0 },
+                { "name": "bypass", "value_type": "bool", "default_value": false },
+                { "name": "out_gain", "dimensions": 1, "value_type": "float", "default_value": 1.0 },
+                { "name": "out_mute", "dimensions": 1, "value_type": "bool", "default_value": false }
+            ],
+            "meters": [
+                { "name": "gain_meter", "dimensions": 1, "value_type": "float" },
+                { "name": "hold_meter", "dimensions": 1, "value_type": "bool" },
+                { "name": "out_meter", "dimensions": 1, "value_type": "float" }
+            ]
+        },
+        {
             "name": "delay",
             "constants": [
                 { "name": "max_delay", "default_value": 4800 },
