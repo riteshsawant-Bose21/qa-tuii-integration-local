@@ -61,12 +61,6 @@
                             { "name": "hold_meter", "num_rows": 1 },
                             { "name": "out_meter", "num_rows": 1 }
                         ],
-                        "control_settings": [
-                            { "name": "gain", "value": 20.0 },
-                            { "name": "frequency", "value": 1000.0 },
-                            { "name": "q", "value": 0.1 },
-                            { "name": "bypass", "value": false }
-                        ],
                         "connections": [
                             { "source_block": "infile", "input_terminal": "in", "output_terminal": "out", "input_channel": 0, "output_channel": 0 }
                         ]
