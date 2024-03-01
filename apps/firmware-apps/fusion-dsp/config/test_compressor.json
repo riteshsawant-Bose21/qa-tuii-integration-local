@@ -1,0 +1,79 @@
+{
+    "session": {
+        "tasks": [
+            {
+                "name": "task1",
+                "constants": [
+                    { "name": "frame_size", "value": 32},
+                    { "name": "sample_rate", "value": 48000 }
+                ],
+                "blocks": [
+                    {
+                        "name": "infile",
+                        "algorithm": "wav_read",
+                        "constants": [
+                            { "name": "frame_size", "value": 32},
+                            { "name": "sample_rate", "value": 48000 },
+                            { "name": "filename", "value": "in_step.wav" }
+                        ],
+                        "terminals": [
+                            { "name": "out", "channels": 1 }
+                        ],
+                        "controls": [
+                            { "name": "out_gain", "num_rows": 1 },
+                            { "name": "out_mute", "num_rows": 1 }
+                        ],
+                        "meters": [
+                            { "name": "out_meter", "num_rows": 1 }
+                        ]
+                    },
+                    {
+                        "name": "compressor",
+                        "algorithm": "compressor",
+                        "constants": [
+                            { "name": "channels", "value": 1 },
+                            { "name": "frame_size", "value": 32 },
+                            { "name": "sample_rate", "value": 48000 }
+                        ],
+                        "terminals": [
+                            { "name": "in", "channels": 1 },
+                            { "name": "sidechain_in", "channels": 1 },
+                            { "name": "out", "channels": 1 }
+                        ],
+                        "controls": [
+                            { "name": "out_gain", "num_rows": 1 },
+                            { "name": "out_mute", "num_rows": 1 }
+                        ],
+                        "meters": [
+                            { "name": "out_meter", "num_rows": 1 }
+                        ],
+                        "control_settings": [
+                            { "name": "threshold", "value_type": "float", "value": -10.0 },
+                            { "name": "attack", "value_type": "float", "value": 5.0 },
+                            { "name": "release", "value_type": "float", "value": 100.0 },
+                            { "name": "ratio", "value_type": "float", "value": 2.0 }
+                        ],
+                        "connections": [
+                            { "source_block": "infile", "input_terminal": "in", "output_terminal": "out", "input_channel": 0, "output_channel": 0 },
+                            { "source_block": "infile", "input_terminal": "sidechain_in", "output_terminal": "out", "input_channel": 0, "output_channel": 0 }
+                        ]
+                    },
+                    {
+                        "name": "outfile",
+                        "algorithm": "wav_write",
+                        "constants": [
+                            { "name": "frame_size", "value": 32 },
+                            { "name": "sample_rate", "value": 48000 }
+                        ],
+                        "terminals": [
+                            { "name": "in", "channels": 1 }
+                        ],
+                        "connections": [
+                            { "source_block": "compressor", "input_terminal": "in", "output_terminal": "out", "input_channel": 0, "output_channel": 0 }
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+}
