@@ -33,7 +33,7 @@
                             { "name": "out", "channels": 1 }
                         ],
                         "control_settings": [
-                            { "name": "model_path", "value": "ml/ml_conv1d_in256_frame1_out256.onnx" },
+                            { "name": "model_path", "value": "ml/ml_rnnoise_in42_frame1_out22_unit24.onnx" },
                             { "name": "max_input_time", "value": 10 }
                         ],
                         "connections": [

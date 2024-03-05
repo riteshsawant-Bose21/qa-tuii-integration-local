@@ -1,6 +1,6 @@
 // ml_benchmark
 //
-// Given an onnx model (without dynamic shapes), run a test inference, 
+// Given an onnx model (without dynamic input shapes), run a test inference, 
 // track the amount of time spent, and estimate MIPS required 
 // for the operation.
 // ONNXRuntime is limited to run on one thread here.
@@ -78,9 +78,8 @@ private:
 	size_t output_count;   
 	std::vector<Ort::AllocatedStringPtr> output_name_allocated_strs;
 	std::vector<const char*> output_names;
-	std::vector<std::vector<int64_t>> output_dims;
-	std::vector<size_t> output_tensor_sizes;
-	std::vector<std::vector<float>> output_tensor_values;
+	// std::vector<std::vector<int64_t>> output_dims;
+	// std::vector<size_t> output_tensor_sizes;
 	
 	// --- processing functions ---
 	template <typename T> T vector_product(const std::vector<T>& v);
@@ -155,10 +154,9 @@ void ML_Benchmark::update_model()
 	input_tensor_sizes.clear();
 	output_name_allocated_strs.clear();
 	output_names.clear();
-	output_dims.clear();
-	output_tensor_sizes.clear();
+	// output_dims.clear();
+	// output_tensor_sizes.clear();
 	input_tensor_values.clear();
-	output_tensor_values.clear();
 	for (size_t i=0; i<input_count; i++)
 	{
 		//******* Inputs *******/
@@ -183,15 +181,13 @@ void ML_Benchmark::update_model()
 		Ort::AllocatedStringPtr output_name = ort_session->GetOutputNameAllocated(i, allocator);
 		output_name_allocated_strs.push_back(std::move(output_name));
 		output_names.push_back(output_name_allocated_strs.back().get());
-		// Output type
-		Ort::TypeInfo output_type_info = ort_session->GetOutputTypeInfo(i);
-		auto output_tensor_info = output_type_info.GetTensorTypeAndShapeInfo();
-		// Output shape
-		output_dims.push_back(output_tensor_info.GetShape());
-		// Assume shape is [1 x frame_num x feat_dim] then output_dims[i][1] * output_dims[i][2];
-		output_tensor_sizes.push_back(vector_product(output_dims[i])); 
-		// Create output tensor buffer
-		output_tensor_values.push_back(std::vector<float>(output_tensor_sizes[i]));
+		// // Output type
+		// Ort::TypeInfo output_type_info = ort_session->GetOutputTypeInfo(i);
+		// auto output_tensor_info = output_type_info.GetTensorTypeAndShapeInfo();
+		// // Output shape
+		// output_dims.push_back(output_tensor_info.GetShape());
+		// // Assume shape is [1 x frame_num x feat_dim] then output_dims[i][1] * output_dims[i][2];
+		// output_tensor_sizes.push_back(vector_product(output_dims[i])); 
 	}
 }
 
@@ -240,23 +236,18 @@ void ML_Benchmark::process()
 		Ort::MemoryInfo memory_info = Ort::MemoryInfo::CreateCpu(OrtAllocatorType::OrtArenaAllocator, 
 			OrtMemType::OrtMemTypeDefault);
 		std::vector<Ort::Value> input_tensors;
-		std::vector<Ort::Value> output_tensors;
+		// std::vector<Ort::Value> output_tensors;
 		for (size_t i=0; i<input_count; i++)
 		{
 			// Create input tensors of ORT::Value, which is a tensor format used by ONNX Runtime
 			input_tensors.push_back(Ort::Value::CreateTensor<float>(memory_info,input_tensor_values[i].data(),
 				input_tensor_sizes[i],input_dims[i].data(),input_dims[i].size()));
 		}
-		for (size_t i=0; i<output_count; i++)
-		{
-			// Create output tensors of ORT::Value
-			output_tensors.push_back(Ort::Value::CreateTensor<float>(memory_info, output_tensor_values[i].data(), 
-				output_tensor_sizes[i],output_dims[i].data(), output_dims[i].size()));
-		}
-
 		// Run inference
-		ort_session->Run(Ort::RunOptions{nullptr}, input_names.data(), input_tensors.data(), input_count, 
-			output_names.data(), output_tensors.data(), output_count);
+		// ort_session->Run(Ort::RunOptions{nullptr}, input_names.data(), input_tensors.data(), input_count, 
+		// 	output_names.data(), output_tensors.data(), output_count);
+		auto output_tensors = ort_session->Run(Ort::RunOptions{nullptr}, input_names.data(), input_tensors.data(), input_count, 
+			output_names.data(), output_count);
 
 		// // Get the inference result output1 - uncomment if to use the results
 		// // for debugging and model verification
