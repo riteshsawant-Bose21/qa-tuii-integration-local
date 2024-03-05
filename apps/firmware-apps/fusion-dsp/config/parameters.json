@@ -180,7 +180,7 @@
                 { "name": "out", "type": "audio", "default_channels": 1, "direction": "output" }
             ],
             "controls": [
-                { "name": "model_path", "value_type": "string", "default_value": "ml/ml_linear_in256_frame1_out256.onnx" },
+                { "name": "model_path", "value_type": "string", "default_value": "ml/ml_rnnoise_in42_frame1_out22_unit24.onnx" },
                 { "name": "max_input_time", "value_type": "int", "default_value": 10 }
             ]
         },
