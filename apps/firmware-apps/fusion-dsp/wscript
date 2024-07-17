@@ -9,7 +9,7 @@ out = 'build'
 def options(opt):
     opt.load('compiler_cxx')
 
-    opt.add_option('--platform', type='string', default=sys.platform,
+    opt.add_option('--platform', type=str, default=sys.platform,
                    help='Target platform for cross-compiling')
 
 def detect_platform(conf):
