@@ -46,7 +46,7 @@ def configure(conf):
     conf.env.append_value('CXXFLAGS', ['-std=c++17'])
     conf.env.append_value('CXXFLAGS', ['-Wall', '-Wextra', '-Werror'])
     conf.env.append_value('CXXFLAGS', ['-Ofast'])
-    
+
     # spdlog from the Yocto SDK is configured for an external 'fmt' lib.
     conf.env.append_value('CXXFLAGS', ['-DSPDLOG_FMT_EXTERNAL'])
     conf.env.append_value('CXXFLAGS',
@@ -62,7 +62,7 @@ def configure(conf):
         # This is needed because of warnings in Boost property trees.
         conf.env.append_value('CXXFLAGS',
                            ['-Wno-deprecated-copy-with-user-provided-copy'])
-        
+
         onnx_path = conf.path.abspath() + '/libs/onnxruntime-osx-universal2-1.17.0'
     else:
         conf.env.append_value('LDFLAGS', '-lpthread')
@@ -77,7 +77,7 @@ def configure(conf):
             # NOTE: Doing the old way of boost::bind for now.
             # /usr/include/boost/bind.hpp:36:1: note: ‘#pragma message: The practice of declaring the Bind placeholders (_1, _2, ...) in the 
             # global namespace is deprecated. Please use <boost/bind/bind.hpp> + using namespace boost::placeholders, 
-            # or define BOOST_BIND_GLOBAL_PLACEHOLDERS to retain the current behavior.’            
+            # or define BOOST_BIND_GLOBAL_PLACEHOLDERS to retain the current behavior.’
             conf.env.append_value('CXXFLAGS', '-DBOOST_BIND_GLOBAL_PLACEHOLDERS')
             onnx_path = conf.path.abspath() + '/libs/onnxruntime-linux-x64-1.17.0'
         else:
@@ -95,4 +95,9 @@ def build(bld):
                 use=['common-include'],
                 lib=['jack', 'fmt', 'sndfile', 'boost_program_options', 'onnxruntime'])
 
+    bld.program(target='test_dsp',
+                source=bld.path.ant_glob(['src/*.cpp', 'src/*.c', 'test/*.cpp'],
+                                         excl=['src/mune_dsp.cpp']),
+                use=['common-include'],
+                lib=['jack', 'fmt', 'sndfile', 'boost_program_options', 'onnxruntime'])
 
