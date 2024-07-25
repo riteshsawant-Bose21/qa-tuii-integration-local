@@ -1,6 +1,7 @@
 #pragma once
 
 #include <bosepro/configuration.h>
+#include <bosepro/dspmemory.h>
 #include <bosepro/parameters.h>
 
 #include <functional>
@@ -19,7 +20,7 @@ public:
     ///
     /// @param  parameter  The parameter that defines the control.
     /// @param  configuration  The configuration to use for the control.
-    Control(const ControlParameter &parameter, 
+    Control(const ControlParameter &parameter,
             const ControlConfiguration *configuration)
     {
         value_type = parameter.get_value_type();
@@ -63,6 +64,24 @@ public:
     void assign(std::vector<T> *value, std::function<void(int)> post_function);
 
 
+    /// Assign coefficient memory to store the values of a vector control.
+    /// The memory will be re-sized to the length of the control.
+    ///
+    /// @param  value  The memory to store the values of the control.
+    template <typename T>
+    void assign(DspCoeffMemory<T[]> &value);
+
+
+    /// Assign parameter memory to store the values of a vector control.
+    /// The memory will be re-sized to the length of the control.
+    ///
+    /// @param  value  The memory to store the values of the control.
+    /// @param  post_function  A function to be called after the value is set.
+    template <typename T>
+    void assign(DspParamMemory<T[]> &value,
+                std::function<void(int)> post_function);
+
+
     /// Assign a two-demensional vector to store the values of a matrix control.
     /// The vector will be re-sized to the dimensions of the control.
     ///
@@ -72,6 +91,24 @@ public:
     template <typename T>
     void assign(std::vector<std::vector<T>> *value,
                 std::function<void(int, int)> post_function);
+
+
+    /// Assign coefficient memory to store the values of a matrix control.
+    /// The memory will be re-sized to the dimensions of the control.
+    ///
+    /// @param  value  The memory to store the values of the control.
+    /// @param  post_function  A function to be called after the value is set.
+    template <typename T>
+    void assign(DspCoeffMemory<T*[]> &value);
+
+
+    /// Assign parameter memory to store the values of a matrix control.
+    /// The memory will be re-sized to the dimensions of the control.
+    ///
+    /// @param  value  The memory to store the values of the control.
+    /// @param  post_function  A function to be called after the value is set.
+    template <typename T>
+    void assign(DspParamMemory<T*[]> &value, std::function<void(int, int)> post_function);
 
 
     /// Set the value of the control.
@@ -155,7 +192,7 @@ public:
     /// @param  configuration  The configuration to use for the control.
     ControlDataScalar(const ControlParameter &parameter,
                       const ControlConfiguration *configuration)
-        : ControlData<T>(parameter, configuration), scalar_value(nullptr),
+        : ControlData<T>(parameter, configuration), block_value(nullptr),
           post_function(nullptr)
     {
     }
@@ -167,7 +204,7 @@ public:
     ///                        is set (set to `nullptr` if not needed).
     void assign(T *value, std::function<void()> post_function)
     {
-        scalar_value = value;
+        block_value = value;
         this->post_function = post_function;
     }
 
@@ -175,7 +212,7 @@ public:
     /// Initialize the control by setting its value to the default value.
     virtual void initialize() override
     {
-        *scalar_value = this->default_value;
+        *block_value = this->default_value;
     }
 
 
@@ -199,7 +236,7 @@ public:
         T value;
         setting.get_value(value);
 
-        *scalar_value = value;
+        *block_value = value;
 
         if (post_function != nullptr)
         {
@@ -209,7 +246,7 @@ public:
 
 
 private:
-    T *scalar_value;
+    T *block_value;
     std::function<void()> post_function;
 };
 
@@ -224,8 +261,8 @@ public:
     /// @param  configuration  The configuration to use for the control.
     ControlDataVector(const ControlParameter &parameter,
                       const ControlConfiguration *configuration)
-        : ControlData<T>(parameter, configuration), vector_value(nullptr),
-          post_function(nullptr)
+        : ControlData<T>(parameter, configuration), block_value(nullptr),
+          vector_value(nullptr), post_function(nullptr)
     {
     }
 
@@ -243,14 +280,52 @@ public:
     }
 
 
+    /// Assign coefficient memory to store the values of a vector control.
+    /// The memory will be re-sized to the length of the control.
+    ///
+    /// @param  value  The memory to store the values of the control.
+    void assign(DspCoeffMemory<T[]> &value)
+    {
+        value.resize(this->get_num_rows());
+        block_value = value.get();
+
+        for (int row = 0; row < this->get_num_rows(); row++)
+        {
+            value[row] = this->default_value;
+        }
+    }
+
+
+    /// Assign parameter memory to store the values of a vector control.
+    /// The memory will be re-sized to the length of the control.
+    ///
+    /// @param  value  The memory to store the values of the control.
+    /// @param  post_function  A function to be called after the value is set.
+    void assign(DspParamMemory<T[]> &value,
+                std::function<void(int)> post_function)
+    {
+        value.resize(this->get_num_rows());
+        block_value = value.get();
+
+        for (int row = 0; row < this->get_num_rows(); row++)
+        {
+            value[row] = this->default_value;
+        }
+
+        this->post_function = post_function;
+    }
+
     /// Initialize the control by resizing its storage to the configured
     /// dimensions, and initializing the values to the default values.
     virtual void initialize() override
     {
-        vector_value->resize(this->get_num_rows());
+        if (vector_value != nullptr)
+        {
+            vector_value->resize(this->get_num_rows());
 
-        std::fill(vector_value->begin(), vector_value->end(),
-                  this->default_value);
+            std::fill(vector_value->begin(), vector_value->end(),
+                    this->default_value);
+        }
     }
 
 
@@ -278,7 +353,14 @@ public:
         T value;
         setting.get_value(value);
 
-        (*vector_value)[row] = value;
+        if (vector_value == nullptr)
+        {
+            block_value[row] = value;
+        }
+        else
+        {
+            (*vector_value)[row] = value;
+        }
 
         if (post_function != nullptr)
         {
@@ -288,6 +370,7 @@ public:
 
 
 private:
+    T *block_value;
     std::vector<T> *vector_value;
     std::function<void(int)> post_function;
 };
@@ -303,8 +386,8 @@ public:
     /// @param  configuration  The configuration to use for the control.
     ControlDataMatrix(const ControlParameter &parameter,
                       const ControlConfiguration *configuration)
-        : ControlData<T>(parameter, configuration), matrix_value(nullptr),
-          post_function(nullptr)
+        : ControlData<T>(parameter, configuration), block_value(nullptr),
+          matrix_value(nullptr), post_function(nullptr)
     {
     }
 
@@ -323,16 +406,44 @@ public:
     }
 
 
+    /// Assign coefficient memory to store the values of a matrix control.
+    /// The memory will be re-sized to the length of the control.
+    ///
+    /// @param  value  The memory to store the values of the control.
+    void assign(DspCoeffMemory<T*[]> &value)
+    {
+        value.resize(this->get_num_rows(), this->get_num_columns());
+        block_value = value.get();
+    }
+
+
+    /// Assign parameter memory to store the values of a matrix control.
+    /// The memory will be re-sized to the length of the control.
+    ///
+    /// @param  value  The memory to store the values of the control.
+    /// @param  post_function  A function to be called after the value is set.
+    void assign(DspParamMemory<T*[]> &value,
+                std::function<void(int, int)> post_function)
+    {
+        value.resize(this->get_num_rows(), this->get_num_columns());
+        block_value = value.get();
+        this->post_function = post_function;
+    }
+
+
     /// Initialize the control by resizing its storage to the configured
     /// dimensions, and initializing the values to the default values.
     virtual void initialize() override
     {
-        matrix_value->resize(this->get_num_rows());
-
-        for (auto &row : *matrix_value)
+        if (matrix_value != nullptr)
         {
-            row.resize(this->get_num_columns());
-            std::fill(row.begin(), row.end(), this->default_value);
+            matrix_value->resize(this->get_num_rows());
+
+            for (auto &row : *matrix_value)
+            {
+                row.resize(this->get_num_columns());
+                std::fill(row.begin(), row.end(), this->default_value);
+            }
         }
     }
 
@@ -365,7 +476,14 @@ public:
         T value;
         setting.get_value(value);
 
-        (*matrix_value)[row][column] = value;
+        if (matrix_value == nullptr)
+        {
+            block_value[row][column] = value;
+        }
+        else
+        {
+            (*matrix_value)[row][column] = value;
+        }
 
         if (post_function != nullptr)
         {
@@ -375,6 +493,7 @@ public:
 
 
 private:
+    T **block_value;
     std::vector<std::vector<T>> *matrix_value;
     std::function<void(int, int)> post_function;
 };

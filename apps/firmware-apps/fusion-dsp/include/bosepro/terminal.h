@@ -1,6 +1,7 @@
 #pragma once
 
 #include <bosepro/configuration.h>
+#include <bosepro/dspmemory.h>
 #include <bosepro/parameters.h>
 
 #include <spdlog/spdlog.h>
@@ -24,10 +25,11 @@ public:
     Terminal(const TerminalParameter &parameter,
              const TerminalConfiguration *configuration,
              int_fast32_t frame_size)
-        : frame_size(frame_size), bypass(false), bypass_source(nullptr)
+        : buffer(nullptr), single_buffer(nullptr), multi_buffer(nullptr),
+          data_size(0), frame_size(frame_size),
+          is_output_terminal(parameter.is_output()), bypass(false),
+          bypass_source(nullptr)
     {
-        is_output_terminal = parameter.is_output();
-
         if (configuration != nullptr)
         {
             num_channels = configuration->get_num_channels();
@@ -46,7 +48,6 @@ public:
                 smoothed_gain[i] = 1.0f;
             }
         }
-
 
         SPDLOG_TRACE("Created {} terminal '{}' with {} channels.",
                      is_output_terminal ? "output" : "input",
@@ -83,6 +84,31 @@ public:
     }
 
 
+    /// Assign a single channel input terminal to its memory.
+    ///
+    /// @param  signal_memory  A pointer to the signal memory to assign.
+    template <typename T>
+    void assign(DspSignalMemory<const T[]> &signal_memory)
+    {
+        if (is_output_terminal)
+        {
+            SPDLOG_CRITICAL("Cannot assign input buffer to output terminal.");
+            return;
+        }
+
+        if (num_channels != 1)
+        {
+            SPDLOG_CRITICAL("Cannot assign single channel input buffer to "
+                            "multi-channel terminal.");
+            return;
+        }
+
+        signal_memory.resize(0);
+        buffer = reinterpret_cast<void **>(&signal_memory);
+        data_size = sizeof(T);
+    }
+
+
     /// Assign a multi-channel input terminal to a buffer.
     ///
     /// @param  buffer  A pointer to the buffer to assign.
@@ -104,6 +130,30 @@ public:
         }
 
         single_buffer = nullptr;
+        data_size = sizeof(T);
+    }
+
+
+    /// Assign a multi-channel input terminal to its memory.
+    ///
+    /// @param  signal_memory  A pointer to the signal memory to assign.
+    template <typename T>
+    void assign(DspSignalMemory<const T*[]> &signal_memory)
+    {
+        if (is_output_terminal)
+        {
+            SPDLOG_CRITICAL("Cannot assign input buffer to output terminal.");
+            return;
+        }
+
+        signal_memory.resize(num_channels, 0);
+        buffer = (void **)signal_memory.get();
+
+        for (int i = 0; i < num_channels; i++)
+        {
+            buffer[i] = nullptr;
+        }
+
         data_size = sizeof(T);
     }
 
@@ -134,6 +184,31 @@ public:
     }
 
 
+    /// Assign a single channel output terminal to its memory.
+    ///
+    /// @param  signal_memory  A pointer to the signal memory to assign.
+    template <typename T>
+    void assign(DspSignalMemory<T[]> &signal_memory)
+    {
+        if (!is_output_terminal)
+        {
+            SPDLOG_CRITICAL("Cannot assign output buffer to input terminal.");
+            return;
+        }
+
+        if (num_channels != 1)
+        {
+            SPDLOG_CRITICAL("Cannot assign single channel output buffer to "
+                            "multi-channel terminal.");
+            return;
+        }
+
+        signal_memory.resize(frame_size/*, RegionManager::CACHE_LINE_SIZE*/);
+        buffer = (void **)&signal_memory;
+        data_size = sizeof(T);
+    }
+
+
     /// Assign a multi-channel output terminal to a buffer.
     ///
     /// @param  buffer  A pointer to the buffer to assign.
@@ -159,10 +234,30 @@ public:
     }
 
 
+    /// Assign a multi-channel output terminal to its memory.
+    ///
+    /// @param  signal_memory  A pointer to the signal memory to assign.
+    template <typename T>
+    void assign(DspSignalMemory<T*[]> &signal_memory)
+    {
+        if (!is_output_terminal)
+        {
+            SPDLOG_CRITICAL("Cannot assign output buffer to input terminal.");
+            return;
+        }
+
+        signal_memory.resize(num_channels, frame_size /*,
+                             RegionManager::CACHE_LINE_SIZE*/);
+        buffer = (void **)signal_memory.get();
+        data_size = sizeof(T);
+    }
+
+
     /// Initialize the terminal.  This allocates memory for output buffers.
     void initialize()
     {
-        if (single_buffer == nullptr && multi_buffer == nullptr)
+        if (buffer == nullptr && single_buffer == nullptr
+            && multi_buffer == nullptr)
         {
             SPDLOG_CRITICAL("No buffer assigned to terminal.");
         }
@@ -204,7 +299,11 @@ public:
     /// @return  A pointer to the buffer.
     void *get_buffer(int channel)
     {
-        if (single_buffer != nullptr)
+        if (buffer != nullptr)
+        {
+            return buffer[channel];
+        }
+        else if (single_buffer != nullptr)
         {
             return *single_buffer;
         }
@@ -255,7 +354,11 @@ public:
             return;
         }
 
-        if (single_buffer != nullptr)
+        if (buffer != nullptr)
+        {
+            buffer[channel] = output_terminal.get_buffer(output_channel);
+        }
+        else if (single_buffer != nullptr)
         {
             *single_buffer = output_terminal.get_buffer(output_channel);
         }
@@ -305,7 +408,15 @@ public:
         // Bypass by copying inputs to outputs.
         if (has_bypass() && bypass)
         {
-            if (single_buffer != nullptr)
+            if (buffer != nullptr)
+            {
+                for (int channel = 0; channel < num_channels; channel++)
+                {
+                    memcpy(buffer[channel], bypass_source->get_buffer(channel),
+                           frame_size * data_size);
+                }
+            }
+            else if (single_buffer != nullptr)
             {
                 memcpy(*single_buffer, bypass_source->get_buffer(0),
                        frame_size * data_size);
@@ -343,7 +454,16 @@ public:
                 {
                     float target_gain = mute[i] ? 0.0f : gain[i];
                     float g = smoothed_gain[i];
-                    float *pbuf = (float *)(*multi_buffer)[i];
+                    float *pbuf;
+
+                    if (buffer != nullptr)
+                    {
+                        pbuf = (float *)buffer[i];
+                    }
+                    else
+                    {
+                        pbuf = (float *)(*multi_buffer)[i];
+                    }
 
                     for (int j = 0; j < frame_size; j++)
                     {
@@ -372,7 +492,17 @@ public:
             {
                 for (int i = 0; i < num_channels; i++)
                 {
-                    const float *pbuf = (const float *)(*multi_buffer)[i];
+                    const float *pbuf;
+
+                    if (buffer != nullptr)
+                    {
+                        pbuf = (const float *)buffer[i];
+                    }
+                    else
+                    {
+                        pbuf = (const float *)(*multi_buffer)[i];
+                    }
+
                     for (int j = 0; j < frame_size; j++)
                     {
                         float a = std::fabs(pbuf[j]);
@@ -424,13 +554,14 @@ public:
 
 
 private:
-    bool is_output_terminal;
-    int num_channels;
-    int_fast32_t frame_size;
-    size_t data_size;
+    void **buffer;
     void **single_buffer;
     std::vector<void *> *multi_buffer;
     std::unique_ptr<char[]> out_buffer;
+    size_t data_size;
+    int_fast32_t frame_size;
+    int num_channels;
+    bool is_output_terminal;
 
     std::vector<float> gain;
     std::unique_ptr<float[]> smoothed_gain;

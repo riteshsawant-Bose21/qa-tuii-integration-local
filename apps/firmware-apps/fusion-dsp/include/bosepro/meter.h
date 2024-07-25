@@ -1,6 +1,7 @@
 #pragma once
 
 #include <bosepro/configuration.h>
+#include <bosepro/dspmemory.h>
 #include <bosepro/parameters.h>
 
 #include <string>
@@ -51,12 +52,28 @@ public:
     void assign(std::vector<T> *value);
 
 
+    /// Assign meter memory to store the values of a vector meter.
+    /// The memory will be re-sized to the length of the meter.
+    ///
+    /// @param  value  The memory to store the values of the meter.
+    template <typename T>
+    void assign(DspMeterMemory<T[]> &value);
+
+
     /// Assign a two-demensional vector to store the values of a matrix meter.
     /// The vector will be re-sized to the dimensions of the meter.
     ///
     /// @param  value  The vector to store the values of the meter.
     template <typename T>
     void assign(std::vector<std::vector<T>> *value);
+
+
+    /// Assign meter memory to store the values of a matrix meter.
+    /// The memory will be re-sized to the dimensions of the meter.
+    ///
+    /// @param  value  The memory to store the values of the meter.
+    template <typename T>
+    void assign(DspMeterMemory<T*[]> &value);
 
 
     /// Get the number of rows in the meter, or 1 if the control is a scalar.
@@ -110,11 +127,10 @@ public:
     /// @param  configuration  The configuration to use for the meter.
     MeterData(const MeterParameter &parameter,
               const MeterConfiguration *configuration)
-        : Meter(parameter, configuration)
+        : Meter(parameter, configuration), scalar_value(nullptr),
+          vector_value(nullptr), matrix_value(nullptr),
+          block_vector_value(nullptr), block_matrix_value(nullptr)
     {
-        scalar_value = nullptr;
-        vector_value = nullptr;
-        matrix_value = nullptr;
     }
 
 
@@ -137,6 +153,17 @@ public:
     }
 
 
+    /// Assign meter memory to store the values of a vector meter.
+    /// The memory will be re-sized to the length of the meter.
+    ///
+    /// @param  value  The memory to store the values of the meter.
+    void assign(DspMeterMemory<T[]> &value)
+    {
+        value.resize(get_num_rows());
+        block_vector_value = value.get();
+    }
+
+
     /// Assign a two-demensional vector to store the values of a matrix meter.
     /// The vector will be re-sized to the dimensions of the meter.
     ///
@@ -144,6 +171,17 @@ public:
     void assign(std::vector<std::vector<T>> *value)
     {
         matrix_value = value;
+    }
+
+
+    /// Assign meter memory to store the values of a matrix meter.
+    /// The memory will be re-sized to the dimensions of the meter.
+    ///
+    /// @param  value  The memory to store the values of the meter.
+    void assign(DspMeterMemory<T*[]> &value)
+    {
+        value.resize(get_num_rows(), get_num_columns());
+        block_matrix_value = value.get();
     }
 
 
@@ -170,6 +208,8 @@ private:
     const T *scalar_value;
     std::vector<T> *vector_value;
     std::vector<std::vector<T>> *matrix_value;
+    const T *block_vector_value;
+    const T * const *block_matrix_value;
 };
 
 

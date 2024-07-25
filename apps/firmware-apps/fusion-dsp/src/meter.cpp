@@ -1,5 +1,6 @@
 
 #include <bosepro/configuration.h>
+#include <bosepro/dspmemory.h>
 #include <bosepro/meter.h>
 #include <bosepro/parameters.h>
 
@@ -28,6 +29,14 @@ void Meter::assign(std::vector<T> *value)
 
 
 template <typename T>
+void Meter::assign(DspMeterMemory<T[]> &value)
+{
+    MeterData<T> *meter_data = dynamic_cast<MeterData<T> *>(this);
+    meter_data->assign(value);
+}
+
+
+template <typename T>
 void Meter::assign(std::vector<std::vector<T>> *value)
 {
     MeterData<T> *meter_data = dynamic_cast<MeterData<T> *>(this);
@@ -35,20 +44,29 @@ void Meter::assign(std::vector<std::vector<T>> *value)
 }
 
 
-template void Meter::assign<bool>(const bool *value);
-template void Meter::assign<float>(const float *value);
-template void Meter::assign<int_fast32_t>(const int_fast32_t *value);
-template void Meter::assign<std::string>(const std::string *value);
-template void Meter::assign<bool>(std::vector<bool> *value);
-template void Meter::assign<float>(std::vector<float> *value);
-template void Meter::assign<int_fast32_t>(std::vector<int_fast32_t> *value);
-template void Meter::assign<std::string>(std::vector<std::string> *value);
-template void Meter::assign<bool>(std::vector<std::vector<bool>> *value);
-template void Meter::assign<float>(std::vector<std::vector<float>> *value);
-template void Meter::assign<int_fast32_t>(
-        std::vector<std::vector<int_fast32_t>> *value);
-template void Meter::assign<std::string>(
-        std::vector<std::vector<std::string>> *value);
+template <typename T>
+void Meter::assign(DspMeterMemory<T*[]> &value)
+{
+    MeterData<T> *meter_data = dynamic_cast<MeterData<T> *>(this);
+    meter_data->assign(value);
+}
+
+
+// Using an X Macro to declare all the template specializations for each
+// meter type.
+#define DECLARE_TEMPLATE_METER_TYPES \
+    X(bool) \
+    X(float) \
+    X(int_fast32_t) \
+    X(std::string)
+#define X(t) \
+    template void Meter::assign<t>(const t *value); \
+    template void Meter::assign<t>(std::vector<t> *value); \
+    template void Meter::assign<t>(std::vector<std::vector<t>> *value); \
+    template void Meter::assign<t>(DspMeterMemory<t[]> &value); \
+    template void Meter::assign<t>(DspMeterMemory<t*[]> &value);
+DECLARE_TEMPLATE_METER_TYPES
+#undef X
 
 
 Meter *Meter::create(const MeterParameter &parameter,

@@ -4,6 +4,7 @@
 #include <bosepro/configurable.h>
 #include <bosepro/configuration.h>
 #include <bosepro/control.h>
+#include <bosepro/dspmemory.h>
 #include <bosepro/meter.h>
 #include <bosepro/parameters.h>
 #include <bosepro/terminal.h>
@@ -41,7 +42,6 @@ public:
     Algorithm(const BlockConfiguration &configuration)
         : Configurable(configuration)
     {
-        meta = std::unique_ptr<AlgorithmMeta>(new AlgorithmMeta());
         meta->configuration = &configuration;
         meta->parameters = get_parameters(configuration.get_algorithm());
 
@@ -383,6 +383,20 @@ protected:
     }
 
 
+    /// Assign signal memory to a single-channel input terminal.
+    /// The terminal will not be connected until after the algorithm's
+    /// constructor (but before `process()` is called).
+    ///
+    /// @param  name  The name of the terminal.
+    /// @param  signal_memory  The signal memory to assign to the terminal.
+    template <typename T>
+    void assign_terminal(const std::string &name,
+                         DspSignalMemory<const T[]> &signal_memory)
+    {
+        get_terminal(name).assign(signal_memory);
+    }
+
+
     /// Assign a buffer pointer to a multi-channel input terminal.
     /// The buffer is not valid until after the algorithm's constructor (but
     /// before `process()` is called).
@@ -393,6 +407,20 @@ protected:
     void assign_terminal(const std::string &name, std::vector<const T *> *buffer)
     {
         get_terminal(name).assign(buffer);
+    }
+
+
+    /// Assign signal memory to a multi-channel input terminal.
+    /// The terminal channels will not be connected until after the algorithm's
+    /// constructor (but before `process()` is called).
+    ///
+    /// @param  name  The name of the terminal.
+    /// @param  signal_memory  The signal memory to assign to the terminal.
+    template <typename T>
+    void assign_terminal(const std::string &name,
+                         DspSignalMemory<const T*[]> &signal_memory)
+    {
+        get_terminal(name).assign(signal_memory);
     }
 
 
@@ -409,6 +437,18 @@ protected:
     }
 
 
+    /// Assign signal memory to a single-channel output terminal.
+    ///
+    /// @param  name  The name of the terminal.
+    /// @param  signal_memory  The signal memory to assign to the terminal.
+    template <typename T>
+    void assign_terminal(const std::string &name,
+                         DspSignalMemory<T[]> &signal_memory)
+    {
+        get_terminal(name).assign(signal_memory);
+    }
+
+
     /// Assign buffer pointer to a multi-channel output terminal.
     /// The buffer is not valid until after the algorithm's constructor (but
     /// before `process()` is called).
@@ -419,6 +459,18 @@ protected:
     void assign_terminal(const std::string &name, std::vector<T *> *buffer)
     {
         get_terminal(name).assign(buffer);
+    }
+
+
+    /// Assign signal memory to a multi-channel output terminal.
+    ///
+    /// @param  name  The name of the terminal.
+    /// @param  signal_memory  The signal memory to assign to the terminal.
+    template <typename T>
+    void assign_terminal(const std::string &name,
+                         DspSignalMemory<T*[]> &signal_memory)
+    {
+        get_terminal(name).assign(signal_memory);
     }
 
 
@@ -458,6 +510,39 @@ protected:
     }
 
 
+    /// Assign storage for vector control values that are coefficients that
+    /// can used directly by the algorithm without conversion.
+    /// The value is not valid until after the algorithm's constructor (but
+    /// before `process()` is called).
+    ///
+    /// @param  name  The name of the control.
+    /// @param  value  The storage for the control value.
+    template <typename T>
+    void assign_control(const std::string &name, DspCoeffMemory<T[]> &value)
+    {
+        get_control(name).assign(value);
+    }
+
+
+    /// Assign storage for vector control values that are intermediate and
+    /// not used in real-time.  The post function is used to update the
+    /// algorithm's coefficients with values derived from the control value.
+    /// The value is not valid until after the algorithm's constructor (but
+    /// before `process()` is called).
+    /// `POST_FUNCTION_VECTOR()` can be used to facilitate creating the
+    /// `post_function` argument from a member function.
+    ///
+    /// @param  name  The name of the control.
+    /// @param  value  The storage for the control value.
+    /// @param  post_function  A function to be called after the value is set.
+    template <typename T>
+    void assign_control(const std::string &name, DspParamMemory<T[]> &value,
+                        std::function<void(int)> post_function)
+    {
+        get_control(name).assign(value, post_function);
+    }
+
+
     /// Assign storage for matrix control values.
     /// The value is not valid until after the algorithm's constructor (but
     /// before `process()` is called).
@@ -472,6 +557,39 @@ protected:
     void assign_control(const std::string &name,
                         std::vector<std::vector<T>> *value,
                         std::function<void(int, int)> post_function = nullptr)
+    {
+        get_control(name).assign(value, post_function);
+    }
+
+
+    /// Assign storage for matrix control values that are coefficients that
+    /// can used directly by the algorithm without conversion.
+    /// The value is not valid until after the algorithm's constructor (but
+    /// before `process()` is called).
+    ///
+    /// @param  name  The name of the control.
+    /// @param  value  The storage for the control value.
+    template <typename T>
+    void assign_control(const std::string &name, DspCoeffMemory<T*[]> &value)
+    {
+        get_control(name).assign(value);
+    }
+
+
+    /// Assign storage for matrix control values that are intermediate and
+    /// not used in real-time.  The post function is used to update the
+    /// algorithm's coefficients with values derived from the control value.
+    /// The value is not valid until after the algorithm's constructor (but
+    /// before `process()` is called).
+    /// `POST_FUNCTION_MATRIX()` can be used to facilitate creating the
+    /// `post_function` argument from a member function.
+    ///
+    /// @param  name  The name of the control.
+    /// @param  value  The storage for the control value.
+    /// @param  post_function  A function to be called after the value is set.
+    template <typename T>
+    void assign_control(const std::string &name, DspParamMemory<T*[]> &value,
+                        std::function<void(int, int)> post_function)
     {
         get_control(name).assign(value, post_function);
     }
@@ -501,6 +619,19 @@ protected:
     }
 
 
+    /// Assign storage for vector meter values.
+    /// The value is not valid until after the algorithm's constructor (but
+    /// before `process()` is called).
+    ///
+    /// @param  name  The name of the meter.
+    /// @param  value  The storage for the meter value.
+    template <typename T>
+    void assign_meter(const std::string &name, DspMeterMemory<T[]> &value)
+    {
+        get_meter(name).assign(value);
+    }
+
+
     /// Assign storage for matrix meter values.
     /// The value is not valid until after the algorithm's constructor (but
     /// before `process()` is called).
@@ -515,9 +646,22 @@ protected:
     }
 
 
+    /// Assign storage for matrix meter values.
+    /// The value is not valid until after the algorithm's constructor (but
+    /// before `process()` is called).
+    ///
+    /// @param  name  The name of the meter.
+    /// @param  value  The storage for the meter value.
+    template <typename T>
+    void assign_meter(const std::string &name, DspMeterMemory<T*[]> &value)
+    {
+        get_meter(name).assign(value);
+    }
+
+
 private:
     /// Stores the non-real-time data for managing the algorithm.
-    std::unique_ptr<AlgorithmMeta> meta;
+    DspParamMemory<AlgorithmMeta> meta;
     std::list<Terminal *> outputs_to_process;
 };
 
