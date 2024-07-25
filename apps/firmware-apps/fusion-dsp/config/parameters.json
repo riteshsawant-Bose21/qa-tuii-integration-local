@@ -291,14 +291,6 @@
             ]
         },
         {
-            "name": "smart_mic",
-            "terminals": [
-                { "name": "mic_in", "type": "audio", "default_channels": 1, "direction": "input" },
-                { "name": "ref_in", "type": "audio", "default_channels": 1, "direction": "input" },
-                { "name": "mic_out", "type": "audio", "default_channels": 1, "direction": "output" }
-            ]
-        },
-        {
             "name": "agc",
             "constants": [
                 { "name": "channels", "default_value": 1 }
