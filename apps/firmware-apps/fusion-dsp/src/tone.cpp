@@ -5,7 +5,6 @@
 
 #include <cstdint>
 #include <memory>
-#include <vector>
 
 namespace {
 
@@ -21,8 +20,8 @@ public:
 
 private:
     int_fast32_t channels;
-    std::vector<const float *> in;
-    std::vector<float *> out;
+    bosepro::DspSignalMemory<const float *[]> in;
+    bosepro::DspSignalMemory<float *[]> out;
     std::unique_ptr<filter::IirFilter> iir;
 
     float low_gain;
@@ -47,8 +46,8 @@ Tone::Tone(const bosepro::BlockConfiguration &configuration)
 {
     get_constant("channels", channels);
 
-    assign_terminal("in", &in);
-    assign_terminal("out", &out);
+    assign_terminal("in", in);
+    assign_terminal("out", out);
 
     assign_control("low_gain", &low_gain, POST_FUNCTION_SCALAR(update_low));
     assign_control("mid_gain", &mid_gain, POST_FUNCTION_SCALAR(update_mid));
@@ -64,7 +63,7 @@ Tone::Tone(const bosepro::BlockConfiguration &configuration)
 
 void Tone::process()
 {
-    iir->process(out, in, get_frame_size());
+    iir->process(out.get(), in.get(), get_frame_size());
 }
 
 

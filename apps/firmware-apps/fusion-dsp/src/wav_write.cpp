@@ -5,7 +5,6 @@
 
 #include <memory>
 #include <string>
-#include <vector>
 
 
 namespace {
@@ -18,7 +17,7 @@ public:
 
 private:
     int channels;
-    std::vector<const float *> in;
+    bosepro::DspSignalMemory<const float *[]> in;
     std::unique_ptr<float[]> buffer;
     SNDFILE *sndfile;
 
@@ -33,7 +32,7 @@ WavWrite::WavWrite(const bosepro::BlockConfiguration &configuration)
 {
     get_terminal_num_channels("in", channels);
 
-    assign_terminal("in", &in);
+    assign_terminal("in", in);
 
     buffer = std::unique_ptr<float[]>(new float[get_frame_size() * channels]());
 

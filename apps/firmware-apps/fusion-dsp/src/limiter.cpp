@@ -3,7 +3,6 @@
 #include <bosepro/algorithm.h>
 
 #include <cstdint>
-#include <vector>
 
 
 namespace {
@@ -21,9 +20,9 @@ private:
     // --- constants and terminals ---
     int_fast32_t channels;
     int_fast32_t max_delay;
-    std::vector<const float *> in;
-    std::vector<const float *> peak_in;
-    std::vector<float *> out;
+    bosepro::DspSignalMemory<const float *[]> in;
+    bosepro::DspSignalMemory<const float *[]> peak_in;
+    bosepro::DspSignalMemory<float *[]> out;
     // --- user controls ---
     float peak_thresh;
     float peak_attack;
@@ -64,9 +63,9 @@ Limiter::Limiter(const bosepro::BlockConfiguration &configuration)
     get_constant("channels", channels);
     get_constant("max_delay", max_delay);
 
-    assign_terminal("in", &in);
-    assign_terminal("peak_in", &peak_in);
-    assign_terminal("out", &out);
+    assign_terminal("in", in);
+    assign_terminal("peak_in", peak_in);
+    assign_terminal("out", out);
 
     assign_control("peak_thresh", &peak_thresh, 
         POST_FUNCTION_SCALAR(update_peak_thresh));

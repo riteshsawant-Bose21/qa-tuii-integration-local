@@ -45,13 +45,12 @@ public:
     /// Process one frame of audio, for multi-channel filters.  This applies
     /// the same filter to each channel.
     ///
-    /// \param  out  A vector of arrays of output samples, each of length
+    /// \param  out  A 2-D array of output samples, `num_channels` by
     ///             `frame_size`.
-    /// \param  in  A vector of arrays of input samples, each of length
+    /// \param  in  A 2-D array of input samples, `num_channels` by
     ///            `frame_size`.
     /// \param  frame_size  The number of samples to be processed.
-    void process(std::vector<float *> &out, std::vector<const float *> &in,
-                 int frame_size)
+    void process(float **out, const float **in, int frame_size)
     {
         for (int channel = 0; channel < num_channels; ++channel)
         {

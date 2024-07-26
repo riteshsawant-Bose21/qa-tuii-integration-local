@@ -19,8 +19,8 @@ public:
 private:
     int_fast32_t channels;
     int_fast32_t max_delay;
-    std::vector<const float *> in;
-    std::vector<float *> out;
+    bosepro::DspSignalMemory<const float *[]> in;
+    bosepro::DspSignalMemory<float *[]> out;
     std::vector<int_fast32_t> delay;
     std::vector<bool> channel_bypass;
     std::unique_ptr<float[]> buffer_data;
@@ -40,8 +40,8 @@ Delay::Delay(const bosepro::BlockConfiguration &configuration)
     get_constant("channels", channels);
     get_constant("max_delay", max_delay);
 
-    assign_terminal("in", &in);
-    assign_terminal("out", &out);
+    assign_terminal("in", in);
+    assign_terminal("out", out);
 
     assign_control("delay", &delay);
     assign_control("channel_bypass", &channel_bypass);

@@ -2,6 +2,6 @@
 
 namespace bosepro {
 
-const float Terminal::smooth_coeff = 0.999f;
+const float TerminalOutputProcessor::smooth_coeff = 0.999f;
 
 }

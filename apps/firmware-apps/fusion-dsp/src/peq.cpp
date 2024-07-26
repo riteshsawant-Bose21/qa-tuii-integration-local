@@ -22,8 +22,8 @@ public:
 private:
     int_fast32_t channels;
     int_fast32_t bands;
-    std::vector<const float *> in;
-    std::vector<float *> out;
+    bosepro::DspSignalMemory<const float *[]> in;
+    bosepro::DspSignalMemory<float *[]> out;
     std::unique_ptr<filter::IirFilter> iir;
 
     std::vector<bool> band_enable;
@@ -45,8 +45,8 @@ Peq::Peq(const bosepro::BlockConfiguration &configuration)
     get_constant("channels", channels);
     get_constant("bands", bands);
 
-    assign_terminal("in", &in);
-    assign_terminal("out", &out);
+    assign_terminal("in", in);
+    assign_terminal("out", out);
 
     assign_control("band_enable", &band_enable,
                    POST_FUNCTION_VECTOR(update_band));
@@ -61,7 +61,7 @@ Peq::Peq(const bosepro::BlockConfiguration &configuration)
 
 void Peq::process()
 {
-    iir->process(out, in, get_frame_size());
+    iir->process(out.get(), in.get(), get_frame_size());
 }
 
 

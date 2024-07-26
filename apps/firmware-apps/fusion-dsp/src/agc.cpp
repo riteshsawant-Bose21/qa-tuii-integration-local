@@ -20,8 +20,8 @@ public:
 private:
     int_fast32_t channels;
 
-    std::vector<const float *> in;
-    std::vector<float *> out;
+    bosepro::DspSignalMemory<const float *[]> in;
+    bosepro::DspSignalMemory<float *[]> out;
 
     std::vector<float> activity_threshold;
     std::vector<float> target_minimum;
@@ -68,8 +68,8 @@ Agc::Agc(const bosepro::BlockConfiguration &configuration)
 {
     get_constant("channels", channels);
 
-    assign_terminal("in", &in);
-    assign_terminal("out", &out);
+    assign_terminal("in", in);
+    assign_terminal("out", out);
 
     assign_control("activity_threshold", &activity_threshold);
     assign_control("target_minimum", &target_minimum);

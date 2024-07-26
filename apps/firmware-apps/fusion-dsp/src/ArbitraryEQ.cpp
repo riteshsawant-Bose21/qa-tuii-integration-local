@@ -51,9 +51,9 @@ private:
     // frequency response vector
     int_fast32_t max_user_bands;
 
-    std::vector<const float *> in;
-    std::vector<float *> out;
-    
+    bosepro::DspSignalMemory<const float*[]> in;
+    bosepro::DspSignalMemory<float*[]> out;
+
     // --- user controls ---
     std::vector<bool> band_enable;
     // raised cosine filter type: high_shelf, low_shelf, peak, mesa
@@ -132,8 +132,8 @@ ArbitraryEQ::ArbitraryEQ(const bosepro::BlockConfiguration &configuration)
     get_constant("num_taps_fir", num_taps_fir);
     get_constant("points_per_octave", points_per_octave);
     get_constant("transition_octaves", transition_octaves);
-    assign_terminal("in", &in);
-    assign_terminal("out", &out);
+    assign_terminal("in", in);
+    assign_terminal("out", out);
     assign_control("band_enable", &band_enable, POST_FUNCTION_VECTOR(update_band_enable));
     assign_control("filter_type", &filter_type, POST_FUNCTION_VECTOR(update_filter_type));
     assign_control("gain", &gain, POST_FUNCTION_VECTOR(update_gain));

@@ -3,7 +3,6 @@
 
 #include <cmath>
 #include <cstdint>
-#include <vector>
 
 
 namespace {
@@ -19,9 +18,9 @@ public:
 
 private:
     int_fast32_t channels;
-    std::vector<const float *> in;
-    std::vector<float *> out;
-    std::vector<const float *> sidechain_in;
+    bosepro::DspSignalMemory<const float *[]> in;
+    bosepro::DspSignalMemory<float *[]> out;
+    bosepro::DspSignalMemory<const float *[]> sidechain_in;
     bool sidechain_enabled;
     float threshold;
     float ratio;
@@ -50,9 +49,9 @@ Compressor::Compressor(const bosepro::BlockConfiguration &configuration)
 {
     get_constant("channels", channels);
 
-    assign_terminal("in", &in);
-    assign_terminal("out", &out);
-    assign_terminal("sidechain_in", &sidechain_in);
+    assign_terminal("in", in);
+    assign_terminal("out", out);
+    assign_terminal("sidechain_in", sidechain_in);
 
     assign_control("sidechain_enable", &sidechain_enabled);
     assign_control("threshold", &threshold);

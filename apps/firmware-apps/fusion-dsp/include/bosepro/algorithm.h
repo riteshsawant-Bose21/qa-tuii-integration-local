@@ -40,7 +40,7 @@ public:
     ///
     /// @param  configuration  The configuration to use for the algorithm.
     Algorithm(const BlockConfiguration &configuration)
-        : Configurable(configuration)
+        : Configurable(configuration), output_process_count(0)
     {
         meta->configuration = &configuration;
         meta->parameters = get_parameters(configuration.get_algorithm());
@@ -62,8 +62,7 @@ public:
                 configuration.has_terminal(name) ?
                 &configuration.get_terminal(tp.get_name()) : nullptr;
             meta->terminals[name] =
-                std::unique_ptr<Terminal>(new Terminal(tp, tc,
-                                                       get_frame_size()));
+                std::make_unique<Terminal>(Terminal(tp, tc, get_frame_size()));
         }
 
         // Create the control data for all of the controls in the algorithm.
@@ -100,6 +99,33 @@ public:
             }
         }
 
+        // Count up how many terminals we have.
+        for (auto &t : meta->parameters->get_terminals())
+        {
+            const TerminalParameter &tp =
+                    reinterpret_cast<const TerminalParameter &>(t.second);
+            const std::string &name = tp.get_name();
+            Terminal &terminal = *meta->terminals[name];
+
+            if (terminal.is_output())
+            {
+                const std::string gain_name = name + "_gain";
+                const std::string mute_name = name + "_mute";
+                const std::string meter_name = name + "_meter";
+
+                if ((meta->controls.count(gain_name) != 0)
+                    || (meta->controls.count(mute_name) != 0)
+                    || (meta->meters.count(meter_name) != 0)
+                    || (tp.has_bypass_source()
+                        && (meta->controls.count("bypass") != 0)))
+                {
+                    output_process_count++;
+                }
+            }
+        }
+
+        outputs_to_process.resize(output_process_count);
+        int top_index = 0;
 
         // Assign universal controls and meters to the associated output
         // terminals.
@@ -115,38 +141,38 @@ public:
                 const std::string gain_name = name + "_gain";
                 const std::string mute_name = name + "_mute";
                 const std::string meter_name = name + "_meter";
+                TerminalOutputProcessor &top = outputs_to_process[top_index];
                 bool requires_processing = false;
 
                 if (meta->controls.count(gain_name) != 0)
                 {
-                    assign_control(gain_name, terminal.get_gain());
+                    assign_control(gain_name, top.get_gain());
                     requires_processing = true;
                 }
 
                 if (meta->controls.count(mute_name) != 0)
                 {
-                    assign_control(mute_name, terminal.get_mute());
+                    assign_control(mute_name, top.get_mute());
                     requires_processing = true;
                 }
 
                 if (meta->meters.count(meter_name) != 0)
                 {
-                    assign_meter(meter_name, terminal.get_meter());
+                    assign_meter(meter_name, top.get_meter());
                     requires_processing = true;
                 }
 
                 if (tp.has_bypass_source()
                     && meta->controls.count("bypass") != 0)
                 {
-                    assign_control("bypass", terminal.get_bypass());
-                    terminal.set_bypass_source(
-                        meta->terminals[tp.get_bypass_source()].get());
+                    assign_control("bypass", top.get_bypass());
                     requires_processing = true;
                 }
 
                 if (requires_processing)
                 {
-                    outputs_to_process.push_back(&terminal);
+                    terminal.set_output_processor(&top);
+                    top_index++;
                 }
             }
         }
@@ -180,6 +206,30 @@ public:
     {
         SPDLOG_TRACE("Initializing terminals for '{}'.",
                      meta->configuration->get_algorithm());
+
+        // We have to do this here because the source buffers for the bypass
+        // function aren't available until after the terminals are assigned
+        // in the algorithm-specific constructor.
+        for (auto &t : meta->parameters->get_terminals())
+        {
+            const TerminalParameter &tp =
+                    reinterpret_cast<const TerminalParameter &>(t.second);
+            const std::string &name = tp.get_name();
+            Terminal &terminal = *meta->terminals[name];
+
+            if (terminal.is_output())
+            {
+                TerminalOutputProcessor *top = terminal.get_output_processor();
+
+                if (tp.has_bypass_source()
+                    && meta->controls.count("bypass") != 0
+                    && top != nullptr)
+                {
+                    top->set_bypass_source(
+                         meta->terminals[tp.get_bypass_source()]->get_buffers());
+                }
+            }
+        }
 
         for (auto &t : meta->terminals)
         {
@@ -324,9 +374,9 @@ public:
     /// process the output after the algorithm has finished processing.
     void process_outputs()
     {
-        for (auto &t : outputs_to_process)
+        for (int top_index = 0; top_index < output_process_count; top_index++)
         {
-            t->process_output();
+            outputs_to_process[top_index].process();
         }
     }
 
@@ -370,19 +420,6 @@ protected:
     }
 
 
-    /// Assign a buffer pointer to a single-channel input terminal.
-    /// The buffer is not valid until after the algorithm's constructor (but
-    /// before `process()` is called).
-    ///
-    /// @param  name  The name of the terminal.
-    /// @param  buffer  The buffer pointer to assign to the terminal.
-    template <typename T>
-    void assign_terminal(const std::string &name, const T **buffer)
-    {
-        get_terminal(name).assign(buffer);
-    }
-
-
     /// Assign signal memory to a single-channel input terminal.
     /// The terminal will not be connected until after the algorithm's
     /// constructor (but before `process()` is called).
@@ -394,19 +431,6 @@ protected:
                          DspSignalMemory<const T[]> &signal_memory)
     {
         get_terminal(name).assign(signal_memory);
-    }
-
-
-    /// Assign a buffer pointer to a multi-channel input terminal.
-    /// The buffer is not valid until after the algorithm's constructor (but
-    /// before `process()` is called).
-    ///
-    /// @param  name  The name of the terminal.
-    /// @param  buffer  The buffer pointer to assign to the terminal.
-    template <typename T>
-    void assign_terminal(const std::string &name, std::vector<const T *> *buffer)
-    {
-        get_terminal(name).assign(buffer);
     }
 
 
@@ -424,19 +448,6 @@ protected:
     }
 
 
-    /// Assign a buffer pointer to a single-channel output terminal.
-    /// The buffer is not valid until after the algorithm's constructor (but
-    /// before `process()` is called).
-    ///
-    /// @param  name  The name of the terminal.
-    /// @param  buffer  The buffer pointer to assign to the terminal.
-    template <typename T>
-    void assign_terminal(const std::string &name, T **buffer)
-    {
-        get_terminal(name).assign(buffer);
-    }
-
-
     /// Assign signal memory to a single-channel output terminal.
     ///
     /// @param  name  The name of the terminal.
@@ -446,19 +457,6 @@ protected:
                          DspSignalMemory<T[]> &signal_memory)
     {
         get_terminal(name).assign(signal_memory);
-    }
-
-
-    /// Assign buffer pointer to a multi-channel output terminal.
-    /// The buffer is not valid until after the algorithm's constructor (but
-    /// before `process()` is called).
-    ///
-    /// @param  name  The name of the terminal.
-    /// @param  buffer  The buffer pointer to assign to the terminal.
-    template <typename T>
-    void assign_terminal(const std::string &name, std::vector<T *> *buffer)
-    {
-        get_terminal(name).assign(buffer);
     }
 
 
@@ -662,7 +660,8 @@ protected:
 private:
     /// Stores the non-real-time data for managing the algorithm.
     DspParamMemory<AlgorithmMeta> meta;
-    std::list<Terminal *> outputs_to_process;
+    DspStateMemory<TerminalOutputProcessor[]> outputs_to_process;
+    int output_process_count;
 };
 
 

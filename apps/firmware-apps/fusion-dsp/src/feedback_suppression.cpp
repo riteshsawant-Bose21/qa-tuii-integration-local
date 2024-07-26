@@ -53,8 +53,8 @@ private:
     //max buffer size to store candidate feedback frequencies
     uint_fast32_t rev_feedback_cand_freq_buf_size;
 
-    std::vector<const float *> in;
-    std::vector<float *> out;
+    bosepro::DspSignalMemory<const float *[]> in;
+    bosepro::DspSignalMemory<float *[]> out;
     
     // --- user controls ---
     //Any peak below this frequency index (fft bin num) 
@@ -169,8 +169,8 @@ FeedbackSuppression::FeedbackSuppression(const bosepro::BlockConfiguration &conf
     get_constant("rev_feedback_cand_freq_buf_size", rev_feedback_cand_freq_buf_size);
     get_constant("num_peaks_to_find", num_peaks_to_find);
 
-    assign_terminal("in", &in);
-    assign_terminal("out", &out);
+    assign_terminal("in", in);
+    assign_terminal("out", out);
 
     assign_control("low_freq_ignore_freq", &low_freq_ignore_freq, POST_FUNCTION_SCALAR(update_low_freq_ignore_freq));
     assign_control("high_freq_ignore_freq", &high_freq_ignore_freq, POST_FUNCTION_SCALAR(update_high_freq_ignore_freq));
@@ -690,7 +690,7 @@ void FeedbackSuppression::process()
     analysis_task.tick();
 
     // apply notch filters on all channels
-    filter_manager->_iir->process(out, in, get_frame_size());
+    filter_manager->_iir->process(out.get(), in.get(), get_frame_size());
 
     // apply panic gain
     if (panic_gain < 0.0f)
