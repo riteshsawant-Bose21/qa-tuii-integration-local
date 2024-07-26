@@ -67,10 +67,8 @@ public:
             SPDLOG_ERROR("Fft: Couldn't initialize FFT of size {}.", size);
         }
 
-        io_buf = std::unique_ptr<float[]>(new (std::align_val_t(ALIGN_SIZE))
-                                          float[size]());
-        work_buf = std::unique_ptr<float[]>(new (std::align_val_t(ALIGN_SIZE))
-                                            float[size]());
+        io_buf.resize(size, ALIGN_SIZE);
+        work_buf.resize(size, ALIGN_SIZE);
     }
 
     ~Fft()
@@ -121,8 +119,8 @@ private:
     static const size_t ALIGN_SIZE = 4 * sizeof(float);
     int_fast32_t size;
     PFFFT_Setup *pffft_setup;
-    std::unique_ptr<float[]> io_buf;
-    std::unique_ptr<float[]> work_buf;
+    bosepro::DspTempMemory<float[]> io_buf;
+    bosepro::DspTempMemory<float[]> work_buf;
 };
 
 } // namespace fft

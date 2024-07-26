@@ -15,7 +15,6 @@
 #include <map>
 #include <memory>
 #include <string>
-#include <vector>
 
 
 namespace bosepro {
@@ -298,11 +297,6 @@ public:
 
         for (auto &c : meta->controls)
         {
-            c.second->initialize();
-        }
-
-        for (auto &c : meta->controls)
-        {
             c.second->initialize_post();
         }
 
@@ -490,24 +484,6 @@ protected:
     }
 
 
-    /// Assign storage for vector control values.
-    /// The value is not valid until after the algorithm's constructor (but
-    /// before `process()` is called).
-    /// `POST_FUNCTION_VECTOR()` can be used to facilitate creating the
-    /// `post_function` argument from a member function, if needed.
-    ///
-    /// @param  name  The name of the control.
-    /// @param  value  The storage for the control value.
-    /// @param  post_function  An optional function to be called after the value
-    ///                        is set.
-    template <typename T>
-    void assign_control(const std::string &name, std::vector<T> *value,
-                        std::function<void(int)> post_function = nullptr)
-    {
-        get_control(name).assign(value, post_function);
-    }
-
-
     /// Assign storage for vector control values that are coefficients that
     /// can used directly by the algorithm without conversion.
     /// The value is not valid until after the algorithm's constructor (but
@@ -536,25 +512,6 @@ protected:
     template <typename T>
     void assign_control(const std::string &name, DspParamMemory<T[]> &value,
                         std::function<void(int)> post_function)
-    {
-        get_control(name).assign(value, post_function);
-    }
-
-
-    /// Assign storage for matrix control values.
-    /// The value is not valid until after the algorithm's constructor (but
-    /// before `process()` is called).
-    /// `POST_FUNCTION_MATRIX()` can be used to facilitate creating the
-    /// `post_function` argument from a member function, if needed.
-    ///
-    /// @param  name  The name of the control.
-    /// @param  value  The storage for the control value.
-    /// @param  post_function  An optional function to be called after the value
-    ///                        is set.
-    template <typename T>
-    void assign_control(const std::string &name,
-                        std::vector<std::vector<T>> *value,
-                        std::function<void(int, int)> post_function = nullptr)
     {
         get_control(name).assign(value, post_function);
     }
@@ -611,34 +568,7 @@ protected:
     /// @param  name  The name of the meter.
     /// @param  value  The storage for the meter value.
     template <typename T>
-    void assign_meter(const std::string &name, std::vector<T> *value)
-    {
-        get_meter(name).assign(value);
-    }
-
-
-    /// Assign storage for vector meter values.
-    /// The value is not valid until after the algorithm's constructor (but
-    /// before `process()` is called).
-    ///
-    /// @param  name  The name of the meter.
-    /// @param  value  The storage for the meter value.
-    template <typename T>
     void assign_meter(const std::string &name, DspMeterMemory<T[]> &value)
-    {
-        get_meter(name).assign(value);
-    }
-
-
-    /// Assign storage for matrix meter values.
-    /// The value is not valid until after the algorithm's constructor (but
-    /// before `process()` is called).
-    ///
-    /// @param  name  The name of the meter.
-    /// @param  value  The storage for the meter value.
-    template <typename T>
-    void assign_meter(const std::string &name,
-                      std::vector<std::vector<T>> *value)
     {
         get_meter(name).assign(value);
     }

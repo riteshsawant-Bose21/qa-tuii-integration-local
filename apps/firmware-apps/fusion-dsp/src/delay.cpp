@@ -2,7 +2,6 @@
 #include <bosepro/algorithm.h>
 
 #include <cstdint>
-#include <vector>
 
 
 namespace {
@@ -21,10 +20,9 @@ private:
     int_fast32_t max_delay;
     bosepro::DspSignalMemory<const float *[]> in;
     bosepro::DspSignalMemory<float *[]> out;
-    std::vector<int_fast32_t> delay;
-    std::vector<bool> channel_bypass;
-    std::unique_ptr<float[]> buffer_data;
-    std::unique_ptr<float *[]> buffer;
+    bosepro::DspCoeffMemory<int_fast32_t[]> delay;
+    bosepro::DspCoeffMemory<bool[]> channel_bypass;
+    bosepro::DspStateMemory<float *[]> buffer;
     int_fast32_t buffer_size;
     int_fast32_t write_index;
 
@@ -43,20 +41,14 @@ Delay::Delay(const bosepro::BlockConfiguration &configuration)
     assign_terminal("in", in);
     assign_terminal("out", out);
 
-    assign_control("delay", &delay);
-    assign_control("channel_bypass", &channel_bypass);
+    assign_control("delay", delay);
+    assign_control("channel_bypass", channel_bypass);
 
     buffer_size = max_delay + 2 * get_frame_size() - 1;
     buffer_size /= get_frame_size();
     buffer_size *= get_frame_size();
 
-    buffer_data = std::unique_ptr<float[]>(new float[channels * buffer_size]());
-    buffer = std::unique_ptr<float *[]>(new float *[channels]);
-
-    for (int_fast32_t channel = 0; channel < channels; channel++)
-    {
-        buffer[channel] = &buffer_data[channel * buffer_size];
-    }
+    buffer.resize(channels, buffer_size);
 
     write_index = 0;
 }

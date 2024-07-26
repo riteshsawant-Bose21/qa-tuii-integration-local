@@ -55,16 +55,16 @@ private:
     bosepro::DspSignalMemory<float*[]> out;
 
     // --- user controls ---
-    std::vector<bool> band_enable;
+    bosepro::DspParamMemory<bool[]> band_enable;
     // raised cosine filter type: high_shelf, low_shelf, peak, mesa
-    std::vector<std::string> filter_type;
-    std::vector<float> gain;
-    std::vector<float> frequency1;
-    std::vector<float> bandwidth1;
+    bosepro::DspParamMemory<std::string[]> filter_type;
+    bosepro::DspParamMemory<float[]> gain;
+    bosepro::DspParamMemory<float[]> frequency1;
+    bosepro::DspParamMemory<float[]> bandwidth1;
     // only used when filter type is mesa
-    std::vector<float> frequency2;
+    bosepro::DspParamMemory<float[]> frequency2;
     // only used when filter type is mesa
-    std::vector<float> bandwidth2;
+    bosepro::DspParamMemory<float[]> bandwidth2;
 
     // --- processing variables ---
     static const std::map<std::string, filter::CosineFilterType> type_map;
@@ -134,13 +134,13 @@ ArbitraryEQ::ArbitraryEQ(const bosepro::BlockConfiguration &configuration)
     get_constant("transition_octaves", transition_octaves);
     assign_terminal("in", in);
     assign_terminal("out", out);
-    assign_control("band_enable", &band_enable, POST_FUNCTION_VECTOR(update_band_enable));
-    assign_control("filter_type", &filter_type, POST_FUNCTION_VECTOR(update_filter_type));
-    assign_control("gain", &gain, POST_FUNCTION_VECTOR(update_gain));
-    assign_control("frequency1", &frequency1, POST_FUNCTION_VECTOR(update_frequency1));
-    assign_control("frequency2", &frequency2, POST_FUNCTION_VECTOR(update_frequency2));
-    assign_control("bandwidth1", &bandwidth1, POST_FUNCTION_VECTOR(update_bandwidth1));
-    assign_control("bandwidth2", &bandwidth2, POST_FUNCTION_VECTOR(update_bandwidth2));
+    assign_control("band_enable", band_enable, POST_FUNCTION_VECTOR(update_band_enable));
+    assign_control("filter_type", filter_type, POST_FUNCTION_VECTOR(update_filter_type));
+    assign_control("gain", gain, POST_FUNCTION_VECTOR(update_gain));
+    assign_control("frequency1", frequency1, POST_FUNCTION_VECTOR(update_frequency1));
+    assign_control("frequency2", frequency2, POST_FUNCTION_VECTOR(update_frequency2));
+    assign_control("bandwidth1", bandwidth1, POST_FUNCTION_VECTOR(update_bandwidth1));
+    assign_control("bandwidth2", bandwidth2, POST_FUNCTION_VECTOR(update_bandwidth2));
     // Initialize FFT objects
     _fft_wfir = std::make_unique<fft::Fft>(num_taps_wfir);
     _fft_fir = std::make_unique<fft::Fft>(num_taps_fir);
@@ -254,11 +254,11 @@ void ArbitraryEQ::update_bandwidth2(int band)
 
 void ArbitraryEQ::update_filter_type(int band)
 {
-    if (type_map.count(filter_type.at(band)) == 0)
+    if (type_map.count(filter_type[band]) == 0)
     {
-        SPDLOG_ERROR("Illegal value '" + filter_type.at(band) + "' for 'type' parameter.");
+        SPDLOG_ERROR("Illegal value '" + filter_type[band] + "' for 'type' parameter.");
     }
-    filter::CosineFilterType f_type = type_map.find(filter_type.at(band))->second;
+    filter::CosineFilterType f_type = type_map.find(filter_type[band])->second;
     if (band < 0 || band >= max_user_bands)
     {
         SPDLOG_ERROR("Selected band out of range");

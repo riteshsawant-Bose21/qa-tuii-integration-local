@@ -35,7 +35,7 @@ private:
     bool brick_wall;                     
     // --- processing variables ---
     // for look-ahead delay
-    std::unique_ptr<float[]> buffer;
+    bosepro::DspStateMemory<float[]> buffer;
     float peak_level;
     float peak_gain;
     float rms_level;
@@ -58,7 +58,8 @@ ALGORITHM_REGISTER(Limiter, "limiter");
 
 
 Limiter::Limiter(const bosepro::BlockConfiguration &configuration)
-    : bosepro::Algorithm(configuration)
+    : bosepro::Algorithm(configuration), peak_level(0.0f), peak_gain(0.0f),
+      rms_level(0.0f), rms_gain(0.0f), write_index(0)
 {
     get_constant("channels", channels);
     get_constant("max_delay", max_delay);
@@ -84,12 +85,8 @@ Limiter::Limiter(const bosepro::BlockConfiguration &configuration)
 
     buffer_size = (max_delay + get_frame_size() - 1)/get_frame_size();
     buffer_size *= get_frame_size();
-    write_index = 0;
-    buffer = std::unique_ptr<float[]>(new float[channels * buffer_size]());
-    peak_level = 0.0f;
-    peak_gain = 0.0f;
-    rms_level = 0.0f;
-    rms_gain = 0.0f;
+    buffer.resize(channels * buffer_size);
+    memset(buffer.get(), 0, channels * buffer_size * sizeof(float));
 }
 
 

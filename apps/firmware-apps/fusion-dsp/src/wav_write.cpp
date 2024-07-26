@@ -3,7 +3,6 @@
 
 #include <sndfile.h>
 
-#include <memory>
 #include <string>
 
 
@@ -18,7 +17,7 @@ public:
 private:
     int channels;
     bosepro::DspSignalMemory<const float *[]> in;
-    std::unique_ptr<float[]> buffer;
+    bosepro::DspTempMemory<float[]> buffer;
     SNDFILE *sndfile;
 
     ALGORITHM_DECLARE(WavWrite);
@@ -34,7 +33,7 @@ WavWrite::WavWrite(const bosepro::BlockConfiguration &configuration)
 
     assign_terminal("in", in);
 
-    buffer = std::unique_ptr<float[]>(new float[get_frame_size() * channels]());
+    buffer.resize(get_frame_size() * channels);
 
     std::string filename;
     SF_INFO sfinfo;

@@ -38,7 +38,7 @@ private:
     static std::list<Jack *> instances;
 
     bool is_input;
-    std::vector<std::string> port_connections;
+    bosepro::DspParamMemory<std::string[]> port_connections;
 
     bool connect_default_ports();
 
