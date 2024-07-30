@@ -20,7 +20,6 @@
 #include "pitch.h"
 #include "fft.h"
 
-#include <vector>
 
 namespace {
 
@@ -38,8 +37,8 @@ private:
 	int_fast32_t channels;
 	int_fast32_t frame_size;
 
-	std::vector<const float *> in;
-	std::vector<float *> out;
+	bosepro::DspSignalMemory<const float *[]> in;
+	bosepro::DspSignalMemory<float *[]> out;
 	
 	// --- user controls ---
 	// onnx model path, default is percepnet.onnx
@@ -126,8 +125,8 @@ PercepNet::PercepNet(const bosepro::BlockConfiguration &configuration)
 	get_constant("channels", channels);
 	get_constant("frame_size", frame_size);
 
-	assign_terminal("in", &in);
-	assign_terminal("out", &out);
+	assign_terminal("in", in);
+	assign_terminal("out", out);
 
 	assign_control("model_path", &model_path, POST_FUNCTION_SCALAR(update_model));
 	assign_control("skip_frame", &skip_frame);

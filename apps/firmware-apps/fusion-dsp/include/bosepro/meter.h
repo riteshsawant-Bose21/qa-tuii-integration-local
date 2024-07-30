@@ -5,7 +5,6 @@
 #include <bosepro/parameters.h>
 
 #include <string>
-#include <vector>
 
 
 namespace bosepro {
@@ -44,28 +43,12 @@ public:
     void assign(const T *value);
 
 
-    /// Assign a vector to store the values of a vector meter. The vector will
-    /// be re-sized to the length of the meter.
-    ///
-    /// @param  value  The vector to store the values of the meter.
-    template <typename T>
-    void assign(std::vector<T> *value);
-
-
     /// Assign meter memory to store the values of a vector meter.
     /// The memory will be re-sized to the length of the meter.
     ///
     /// @param  value  The memory to store the values of the meter.
     template <typename T>
     void assign(DspMeterMemory<T[]> &value);
-
-
-    /// Assign a two-demensional vector to store the values of a matrix meter.
-    /// The vector will be re-sized to the dimensions of the meter.
-    ///
-    /// @param  value  The vector to store the values of the meter.
-    template <typename T>
-    void assign(std::vector<std::vector<T>> *value);
 
 
     /// Assign meter memory to store the values of a matrix meter.
@@ -127,8 +110,7 @@ public:
     /// @param  configuration  The configuration to use for the meter.
     MeterData(const MeterParameter &parameter,
               const MeterConfiguration *configuration)
-        : Meter(parameter, configuration), scalar_value(nullptr),
-          vector_value(nullptr), matrix_value(nullptr),
+        : Meter(parameter, configuration), block_scalar_value(nullptr),
           block_vector_value(nullptr), block_matrix_value(nullptr)
     {
     }
@@ -139,17 +121,7 @@ public:
     /// @param  value  The pointer to store the value of the meter.
     void assign(const T *value)
     {
-        scalar_value = value;
-    }
-
-
-    /// Assign a vector to store the values of a vector meter. The vector will
-    /// be re-sized to the length of the meter.
-    ///
-    /// @param  value  The vector to store the values of the meter.
-    void assign(std::vector<T> *value)
-    {
-        vector_value = value;
+        block_scalar_value = value;
     }
 
 
@@ -164,16 +136,6 @@ public:
     }
 
 
-    /// Assign a two-demensional vector to store the values of a matrix meter.
-    /// The vector will be re-sized to the dimensions of the meter.
-    ///
-    /// @param  value  The vector to store the values of the meter.
-    void assign(std::vector<std::vector<T>> *value)
-    {
-        matrix_value = value;
-    }
-
-
     /// Assign meter memory to store the values of a matrix meter.
     /// The memory will be re-sized to the dimensions of the meter.
     ///
@@ -185,29 +147,14 @@ public:
     }
 
 
-    /// Initialize the meter by resizing its storage to the configured
-    /// dimensions.
+    /// Initialize the meter.
     virtual void initialize() override
     {
-        if (vector_value != nullptr)
-        {
-            vector_value->resize(get_num_rows());
-        }
-        else if (matrix_value != nullptr)
-        {
-            matrix_value->resize(get_num_rows());
-            for (auto &row : *matrix_value)
-            {
-                row.resize(get_num_columns());
-            }
-        }
     }
 
 
 private:
-    const T *scalar_value;
-    std::vector<T> *vector_value;
-    std::vector<std::vector<T>> *matrix_value;
+    const T *block_scalar_value;
     const T *block_vector_value;
     const T * const *block_matrix_value;
 };

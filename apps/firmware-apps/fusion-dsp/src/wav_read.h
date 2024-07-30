@@ -4,9 +4,6 @@
 
 #include <sndfile.h>
 
-#include <memory>
-#include <vector>
-
 
 namespace bosepro {
 
@@ -23,8 +20,8 @@ public:
 
 private:
     int channels;
-    std::vector<float *> out;
-    std::unique_ptr<float[]> buffer;
+    bosepro::DspSignalMemory<float *[]> out;
+    bosepro::DspTempMemory<float[]> buffer;
     SNDFILE *sndfile;
     static double longest_file_time;
 

@@ -3,7 +3,6 @@
 
 #include <cstdint>
 #include <cstring>
-#include <vector>
 
 
 namespace {
@@ -19,11 +18,11 @@ public:
 private:
     int num_inputs;
     int num_outputs;
-    std::vector<const float *> in;
-    std::vector<float *> out;
+    bosepro::DspSignalMemory<const float *[]> in;
+    bosepro::DspSignalMemory<float *[]> out;
 
-    std::vector<std::vector<float>> gain;
-    std::vector<std::vector<bool>> mute;
+    bosepro::DspCoeffMemory<float *[]> gain;
+    bosepro::DspCoeffMemory<bool *[]> mute;
 
     ALGORITHM_DECLARE(Mixer);
 };
@@ -37,11 +36,11 @@ Mixer::Mixer(const bosepro::BlockConfiguration &configuration)
     get_terminal_num_channels("in", num_inputs);
     get_terminal_num_channels("out", num_outputs);
 
-    assign_terminal("in", &in);
-    assign_terminal("out", &out);
+    assign_terminal("in", in);
+    assign_terminal("out", out);
 
-    assign_control("gain", &gain);
-    assign_control("mute", &mute);
+    assign_control("gain", gain);
+    assign_control("mute", mute);
 }
 
 

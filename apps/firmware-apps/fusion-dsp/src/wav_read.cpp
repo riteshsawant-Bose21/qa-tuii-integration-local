@@ -6,9 +6,7 @@
 #include <sndfile.h>
 
 #include <cstring>
-#include <memory>
 #include <string>
-#include <vector>
 
 
 namespace bosepro {
@@ -24,9 +22,9 @@ WavRead::WavRead(const bosepro::BlockConfiguration &configuration)
 {
     get_terminal_num_channels("out", channels);
 
-    assign_terminal("out", &out);
+    assign_terminal("out", out);
 
-    buffer = std::unique_ptr<float[]>(new float[get_frame_size() * channels]());
+    buffer.resize(get_frame_size() * channels);
 
     std::string filename;
     SF_INFO sfinfo;

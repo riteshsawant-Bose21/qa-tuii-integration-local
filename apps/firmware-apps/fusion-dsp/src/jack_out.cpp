@@ -7,7 +7,6 @@
 
 #include <cstring>
 #include <string>
-#include <vector>
 
 
 namespace {
@@ -19,7 +18,7 @@ public:
     virtual void process() override;
 
 private:
-    std::vector<const float *> in;
+    bosepro::DspSignalMemory<const float *[]> in;
 
     ALGORITHM_DECLARE(JackOut);
 };
@@ -30,7 +29,7 @@ ALGORITHM_REGISTER(JackOut, "jack_out");
 JackOut::JackOut(const bosepro::BlockConfiguration &configuration)
     : bosepro::Jack(configuration, false)
 {
-    assign_terminal("in", &in);
+    assign_terminal("in", in);
 }
 
 
