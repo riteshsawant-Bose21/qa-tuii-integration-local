@@ -61,7 +61,7 @@ Jack::Jack(const BlockConfiguration &configuration, bool is_input)
         get_terminal_num_channels("in", channels);
     }
 
-    ports.resize(channels);
+    ports.resize(channels, 0);
 
     for (int channel = 0; channel < channels; channel++)
     {
@@ -74,9 +74,7 @@ Jack::Jack(const BlockConfiguration &configuration, bool is_input)
                                             0);
     }
 
-    port_connections.resize(channels);
-
-    assign_control("port_connection", &port_connections,
+    assign_control("port_connection", port_connections,
                    POST_FUNCTION_VECTOR(post_port_connection));
 
     instances.push_back(this);

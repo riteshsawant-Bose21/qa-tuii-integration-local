@@ -1,6 +1,7 @@
 #pragma once
 
 #include <bosepro/configuration.h>
+#include <bosepro/dspmemory.h>
 #include <bosepro/parameters.h>
 
 #include <spdlog/spdlog.h>
@@ -11,6 +12,133 @@
 
 
 namespace bosepro {
+
+
+/// A class to manage universal algorithm parameters (gain, mute, bypass, and
+/// level meter) for output terminals.
+class TerminalOutputProcessor {
+public:
+    TerminalOutputProcessor()
+        : smoothed_gain(), gain(), mute(), meter(), output_buffer(nullptr), bypass_buffer(nullptr),
+          frame_size(0), num_channels(0)
+    { }
+
+    void initialize(int_fast32_t frame_size, int num_channels, void **buffer)
+    {
+        this->frame_size = frame_size;
+        this->num_channels = num_channels;
+        output_buffer = (float **)buffer;
+        smoothed_gain.resize(num_channels);
+    }
+
+    /// Process the output signals of an output terminal to implement default
+    /// bypass, gain, and metering behavior.
+    void process()
+    {
+        // Bypass by copying inputs to outputs.
+        if (has_bypass() && bypass)
+        {
+            for (int channel = 0; channel < num_channels; channel++)
+            {
+                memcpy(output_buffer[channel], bypass_buffer[channel],
+                       frame_size * sizeof(float));
+            }
+        }
+
+        // Apply gain and mute.
+        if (has_gain())
+        {
+            for (int channel = 0; channel < num_channels; channel++)
+            {
+                float target_gain = mute[channel] ? 0.0f : gain[channel];
+                float g = smoothed_gain[channel];
+                float *pbuf = (float *)output_buffer[channel];
+
+                for (int sample = 0; sample < frame_size; sample++)
+                {
+                    pbuf[sample] *= g;
+                    g = smooth_coeff * g + (1.0f - smooth_coeff) * target_gain;
+                }
+
+                smoothed_gain[channel] = g;
+            }
+        }
+
+        // Calculate output peak meters.
+        if (has_meter())
+        {
+            for (int channel = 0; channel < num_channels; channel++)
+            {
+                const float *pbuf = (const float *)output_buffer[channel];
+
+                for (int sample = 0; sample < frame_size; sample++)
+                {
+                    float a = std::fabs(pbuf[sample]);
+                    meter[channel] = std::max(meter[channel], a);
+                }
+            }
+        }
+    }
+
+    DspCoeffMemory<float[]> &get_gain()
+    {
+        return gain;
+    }
+
+    DspCoeffMemory<bool[]> &get_mute()
+    {
+        return mute;
+    }
+
+    DspMeterMemory<float[]> &get_meter()
+    {
+        return meter;
+    }
+
+    bool *get_bypass()
+    {
+        return &bypass;
+    }
+
+    void set_bypass_source(void **buffer)
+    {
+        bypass_buffer = (const float **)buffer;
+    }
+
+
+private:
+    static const float smooth_coeff;
+
+    bool has_bypass() const
+    {
+        return bypass_buffer != nullptr;
+    }
+
+    bool has_gain() const
+    {
+        return gain.get() != nullptr;
+    }
+
+    bool has_mute() const
+    {
+        return mute.get() != nullptr;
+    }
+
+    bool has_meter() const
+    {
+        return meter.get() != nullptr;
+    }
+
+    DspStateMemory<float[]> smoothed_gain;
+    DspCoeffMemory<float[]> gain;
+    DspCoeffMemory<bool[]> mute;
+    DspMeterMemory<float[]> meter;
+    float **output_buffer;
+    const float **bypass_buffer;
+    int_fast32_t frame_size;
+    int num_channels;
+    bool bypass;
+};
 
 
 /// A class to manage a terminal for a block.
@@ -24,10 +152,9 @@ public:
     Terminal(const TerminalParameter &parameter,
              const TerminalConfiguration *configuration,
              int_fast32_t frame_size)
-        : frame_size(frame_size), bypass(false), bypass_source(nullptr)
+        : buffer(nullptr), top(nullptr), data_size(0), frame_size(frame_size),
+          is_output_terminal(parameter.is_output())
     {
-        is_output_terminal = parameter.is_output();
-
         if (configuration != nullptr)
         {
             num_channels = configuration->get_num_channels();
@@ -37,31 +164,17 @@ public:
             num_channels = parameter.get_default_channels();
         }
 
-        if (is_output_terminal)
-        {
-            smoothed_gain = std::unique_ptr<float[]>(new float[num_channels]);
-
-            for (int i = 0; i < num_channels; i++)
-            {
-                smoothed_gain[i] = 1.0f;
-            }
-        }
-
-
         SPDLOG_TRACE("Created {} terminal '{}' with {} channels.",
                      is_output_terminal ? "output" : "input",
                      parameter.get_name(), num_channels);
     }
 
 
-    virtual ~Terminal() = default;
-
-
-    /// Assign a single channel input terminal to a buffer.
+    /// Assign a single channel input terminal to its memory.
     ///
-    /// @param  buffer  A pointer to the buffer to assign.
+    /// @param  signal_memory  A pointer to the signal memory to assign.
     template <typename T>
-    void assign(const T **buffer)
+    void assign(DspSignalMemory<const T[]> &signal_memory)
     {
         if (is_output_terminal)
         {
@@ -76,18 +189,17 @@ public:
             return;
         }
 
-        single_buffer = reinterpret_cast<void **>(const_cast<T **>(buffer));
-        *single_buffer = nullptr;
-        multi_buffer = nullptr;
+        signal_memory.resize(0);
+        buffer = reinterpret_cast<void **>(&signal_memory);
         data_size = sizeof(T);
     }
 
 
-    /// Assign a multi-channel input terminal to a buffer.
+    /// Assign a multi-channel input terminal to its memory.
     ///
-    /// @param  buffer  A pointer to the buffer to assign.
+    /// @param  signal_memory  A pointer to the signal memory to assign.
     template <typename T>
-    void assign(std::vector<const T *> *buffer)
+    void assign(DspSignalMemory<const T*[]> &signal_memory)
     {
         if (is_output_terminal)
         {
@@ -95,24 +207,23 @@ public:
             return;
         }
 
-        multi_buffer = reinterpret_cast<std::vector<void *> *>(buffer);
-        multi_buffer->reserve(num_channels);
+        signal_memory.resize(num_channels, 0);
+        buffer = (void **)signal_memory.get();
 
-        for (auto &channel : *multi_buffer)
+        for (int i = 0; i < num_channels; i++)
         {
-            channel = nullptr;
+            buffer[i] = nullptr;
         }
 
-        single_buffer = nullptr;
         data_size = sizeof(T);
     }
 
 
-    /// Assign a single channel output terminal to a buffer.
+    /// Assign a single channel output terminal to its memory.
     ///
-    /// @param  buffer  A pointer to the buffer to assign.
+    /// @param  signal_memory  A pointer to the signal memory to assign.
     template <typename T>
-    void assign(T **buffer)
+    void assign(DspSignalMemory<T[]> &signal_memory)
     {
         if (!is_output_terminal)
         {
@@ -127,18 +238,17 @@ public:
             return;
         }
 
-        single_buffer = (void **)buffer;
-        *single_buffer = nullptr;
-        multi_buffer = nullptr;
+        signal_memory.resize(frame_size/*, RegionManager::CACHE_LINE_SIZE*/);
+        buffer = (void **)&signal_memory;
         data_size = sizeof(T);
     }
 
 
-    /// Assign a multi-channel output terminal to a buffer.
+    /// Assign a multi-channel output terminal to its memory.
     ///
-    /// @param  buffer  A pointer to the buffer to assign.
+    /// @param  signal_memory  A pointer to the signal memory to assign.
     template <typename T>
-    void assign(std::vector<T *> *buffer)
+    void assign(DspSignalMemory<T*[]> &signal_memory)
     {
         if (!is_output_terminal)
         {
@@ -146,15 +256,9 @@ public:
             return;
         }
 
-        multi_buffer = reinterpret_cast<std::vector<void *> *>(buffer);
-        multi_buffer->reserve(num_channels);
-
-        for (auto  &channel : *multi_buffer)
-        {
-            channel = nullptr;
-        }
-
-        single_buffer = nullptr;
+        signal_memory.resize(num_channels, frame_size /*,
+                             RegionManager::CACHE_LINE_SIZE*/);
+        buffer = (void **)signal_memory.get();
         data_size = sizeof(T);
     }
 
@@ -162,29 +266,14 @@ public:
     /// Initialize the terminal.  This allocates memory for output buffers.
     void initialize()
     {
-        if (single_buffer == nullptr && multi_buffer == nullptr)
+        if (buffer == nullptr)
         {
             SPDLOG_CRITICAL("No buffer assigned to terminal.");
         }
 
-        if (!is_output_terminal)
+        if (top != nullptr)
         {
-            return;
-        }
-
-        out_buffer = std::unique_ptr<char[]>(new char[frame_size * num_channels
-                                             * data_size]);
-
-        if (single_buffer != nullptr)
-        {
-            *single_buffer = out_buffer.get();
-        }
-        else
-        {
-            for (int i = 0; i < num_channels; i++)
-            {
-                (*multi_buffer)[i] = &out_buffer[i * frame_size * data_size];
-            }
+            top->initialize(frame_size, num_channels, buffer);
         }
     }
 
@@ -198,20 +287,41 @@ public:
     }
 
 
+    /// Get the frame size for the terminal.
+    ///
+    /// @return  The frame size.
+    int get_frame_size() const
+    {
+        return frame_size;
+    }
+
+
+    /// Get a pointer to the buffer for one channel of a terminal.
+    ///
+    /// @return  A pointer to the buffer.
+    const void **get_buffers() const
+    {
+        return (const void **)buffer;
+    }
+
+
+    /// Get a pointer to the buffer for one channel of a terminal.
+    ///
+    /// @return  A pointer to the buffer.
+    void **get_buffers()
+    {
+        return buffer;
+    }
+
+
+
     /// Get a pointer to the buffer for one channel of a terminal.
     ///
     /// @param  channel  The channel to get the buffer for.
     /// @return  A pointer to the buffer.
     void *get_buffer(int channel)
     {
-        if (single_buffer != nullptr)
-        {
-            return *single_buffer;
-        }
-        else
-        {
-            return (*multi_buffer)[channel];
-        }
+        return buffer[channel];
     }
 
 
@@ -255,132 +365,7 @@ public:
             return;
         }
 
-        if (single_buffer != nullptr)
-        {
-            *single_buffer = output_terminal.get_buffer(output_channel);
-        }
-        else
-        {
-            (*multi_buffer)[channel] =
-                output_terminal.get_buffer(output_channel);
-        }
-    }
-
-
-    /// Returns true if this terminal has a bypass source and can implement
-    /// default bypass behavior.
-    bool has_bypass() const
-    {
-        return bypass_source != nullptr;
-    }
-
-
-    /// Returns true if this terminal has a level meter and can implement
-    /// default output metering behavior.
-    bool has_meter() const
-    {
-        return meter.size() != 0;
-    }
-
-
-    /// Returns true if this terminal has a gain control and can implement
-    /// default output gain behavior.
-    bool has_gain() const
-    {
-        return gain.size() != 0;
-    }
-
-
-    /// Set the bypass source for the terminal.
-    void set_bypass_source(Terminal *source)
-    {
-        bypass_source = source;
-    }
-
-
-    /// Process the output signals of an output terminal to implement default
-    /// bypass, gain, and metering behavior.
-    void process_output()
-    {
-        // Bypass by copying inputs to outputs.
-        if (has_bypass() && bypass)
-        {
-            if (single_buffer != nullptr)
-            {
-                memcpy(*single_buffer, bypass_source->get_buffer(0),
-                       frame_size * data_size);
-            }
-            else
-            {
-                for (int i = 0; i < num_channels; i++)
-                {
-                    memcpy((*multi_buffer)[i], bypass_source->get_buffer(i),
-                           frame_size * data_size);
-                }
-            }
-        }
-
-        // Apply gain and mute.
-        if (has_gain())
-        {
-            if (single_buffer != nullptr)
-            {
-                float target_gain = mute[0] ? 0.0f : gain[0];
-                float g = smoothed_gain[0];
-
-                for (int i = 0; i < frame_size; i++)
-                {
-                    float *pbuf = (float *)*single_buffer;
-                    pbuf[i] *= g;
-                    g = smooth_coeff * g + (1.0f - smooth_coeff) * target_gain;
-                }
-
-                smoothed_gain[0] = g;
-            }
-            else
-            {
-                for (int i = 0; i < num_channels; i++)
-                {
-                    float target_gain = mute[i] ? 0.0f : gain[i];
-                    float g = smoothed_gain[i];
-                    float *pbuf = (float *)(*multi_buffer)[i];
-
-                    for (int j = 0; j < frame_size; j++)
-                    {
-                        pbuf[j] *= g;
-                        g = smooth_coeff * g + (1.0f - smooth_coeff) * target_gain;
-                    }
-
-                    smoothed_gain[i] = g;
-                }
-            }
-        }
-
-        // Calculate output peak meters.
-        if (has_meter())
-        {
-            if (single_buffer != nullptr)
-            {
-                for (int i = 0; i < frame_size; i++)
-                {
-                    const float *pbuf = (const float *)*single_buffer;
-                    float a = std::fabs(pbuf[i]);
-                    meter[0] = std::max(meter[0], a);
-                }
-            }
-            else
-            {
-                for (int i = 0; i < num_channels; i++)
-                {
-                    const float *pbuf = (const float *)(*multi_buffer)[i];
-                    for (int j = 0; j < frame_size; j++)
-                    {
-                        float a = std::fabs(pbuf[j]);
-                        meter[i] = std::max(meter[i], a);
-                    }
-                }
-            }
-        }
+        buffer[channel] = output_terminal.get_buffer(output_channel);
     }
 
 
@@ -391,55 +376,28 @@ public:
     }
 
 
-    /// Get a pointer to the gain values for implementing default output
-    /// gain control.
-    std::vector<float> *get_gain()
+    /// Assign a terminal output processor object to this terminal.
+    void set_output_processor(TerminalOutputProcessor *top)
     {
-        return &gain;
+        this->top = top;
     }
 
 
-    /// Get a pointer to the mute values for implementing default output
-    /// mute control.
-    std::vector<bool> *get_mute()
+    /// Return a pointer to the output processor for this terminal, if it has
+    /// one, or `nullptr` if it doesn't.
+    TerminalOutputProcessor *get_output_processor()
     {
-        return &mute;
-    }
-
-
-    /// Get a pointer to the meter values for implementing default output
-    /// meters.
-    std::vector<float> *get_meter()
-    {
-        return &meter;
-    }
-
-
-    /// Get a pointer to the bypass flag for implementing default bypass
-    /// control.
-    bool *get_bypass()
-    {
-        return &bypass;
+        return top;
     }
 
 
 private:
-    bool is_output_terminal;
-    int num_channels;
-    int_fast32_t frame_size;
+    void **buffer;
+    TerminalOutputProcessor *top;
     size_t data_size;
-    void **single_buffer;
-    std::vector<void *> *multi_buffer;
-    std::unique_ptr<char[]> out_buffer;
-
-    std::vector<float> gain;
-    std::unique_ptr<float[]> smoothed_gain;
-    std::vector<bool> mute;
-    std::vector<float> meter;
-    bool bypass;
-    Terminal *bypass_source;
-
-    static const float smooth_coeff;
+    int_fast32_t frame_size;
+    int num_channels;
+    bool is_output_terminal;
 };
 
 

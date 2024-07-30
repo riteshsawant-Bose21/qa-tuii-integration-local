@@ -2,7 +2,6 @@
 #include <bosepro/algorithm.h>
 
 #include <cstdint>
-#include <vector>
 
 
 namespace {
@@ -18,8 +17,8 @@ public:
 
 private:
     int_fast32_t channels;
-    std::vector<const float *> in;
-    std::vector<float *> out;
+    bosepro::DspSignalMemory<const float *[]> in;
+    bosepro::DspSignalMemory<float *[]> out;
     float gain;
     bool mute;
 
@@ -37,8 +36,8 @@ Gain::Gain(const bosepro::BlockConfiguration &configuration)
 {
     get_constant("channels", channels);
 
-    assign_terminal("in", &in);
-    assign_terminal("out", &out);
+    assign_terminal("in", in);
+    assign_terminal("out", out);
 
     assign_control("gain", &gain);
     assign_control("mute", &mute);

@@ -4,8 +4,6 @@
 #include <bosepro/algorithm.h>
 
 #include <cstdint>
-#include <memory>
-#include <vector>
 
 namespace {
 
@@ -21,9 +19,9 @@ public:
 
 private:
     int_fast32_t channels;
-    std::vector<const float *> in;
-    std::vector<float *> out;
-    std::unique_ptr<filter::IirFilter> iir;
+    bosepro::DspSignalMemory<const float *[]> in;
+    bosepro::DspSignalMemory<float *[]> out;
+    bosepro::DspStateMemory<filter::IirFilter> iir;
 
     float low_gain;
     float mid_gain;
@@ -47,8 +45,8 @@ Tone::Tone(const bosepro::BlockConfiguration &configuration)
 {
     get_constant("channels", channels);
 
-    assign_terminal("in", &in);
-    assign_terminal("out", &out);
+    assign_terminal("in", in);
+    assign_terminal("out", out);
 
     assign_control("low_gain", &low_gain, POST_FUNCTION_SCALAR(update_low));
     assign_control("mid_gain", &mid_gain, POST_FUNCTION_SCALAR(update_mid));
@@ -58,13 +56,13 @@ Tone::Tone(const bosepro::BlockConfiguration &configuration)
     assign_control("high_bypass", &high_bypass,
                    POST_FUNCTION_SCALAR(update_high));
 
-    iir = std::unique_ptr<filter::IirFilter>(new filter::IirFilter(3, channels));
+    new (iir.get()) filter::IirFilter(3, channels);
 }
 
 
 void Tone::process()
 {
-    iir->process(out, in, get_frame_size());
+    iir->process(out.get(), in.get(), get_frame_size());
 }
 
 
@@ -77,7 +75,7 @@ void Tone::update_low()
     }
     else
     {
-        iir->design_band("disabled", 0, 0.0, 0.0, 0.0, get_sample_rate());
+        iir->design_band("disabled", 0, 0.0f, 0.0f, 0.0f, get_sample_rate());
     }
 }
 
@@ -91,7 +89,7 @@ void Tone::update_mid()
     }
     else
     {
-        iir->design_band("disabled", 1, 0.0, 0.0, 0.0, get_sample_rate());
+        iir->design_band("disabled", 1, 0.0f, 0.0f, 0.0f, get_sample_rate());
     }
 }
 
@@ -105,7 +103,7 @@ void Tone::update_high()
     }
     else
     {
-        iir->design_band("disabled", 2, 0.0, 0.0, 0.0, get_sample_rate());
+        iir->design_band("disabled", 2, 0.0f, 0.0f, 0.0f, get_sample_rate());
     }
 }
 

@@ -3,7 +3,6 @@
 
 #include <cmath>
 #include <cstdint>
-#include <vector>
 
 
 namespace {
@@ -20,33 +19,33 @@ public:
 private:
     int_fast32_t channels;
 
-    std::vector<const float *> in;
-    std::vector<float *> out;
+    bosepro::DspSignalMemory<const float *[]> in;
+    bosepro::DspSignalMemory<float *[]> out;
 
-    std::vector<float> activity_threshold;
-    std::vector<float> target_minimum;
-    std::vector<float> target_maximum;
-    std::vector<float> cut_rate;
-    std::vector<float> boost_rate;
-    std::vector<float> cut_range;
-    std::vector<float> boost_range;
-    std::vector<float> cut_hold_time;
-    std::vector<float> boost_hold_time;
-    std::vector<bool> channel_bypass;
+    bosepro::DspCoeffMemory<float[]> activity_threshold;
+    bosepro::DspCoeffMemory<float[]> target_minimum;
+    bosepro::DspCoeffMemory<float[]> target_maximum;
+    bosepro::DspParamMemory<float[]> cut_rate;
+    bosepro::DspParamMemory<float[]> boost_rate;
+    bosepro::DspCoeffMemory<float[]> cut_range;
+    bosepro::DspCoeffMemory<float[]> boost_range;
+    bosepro::DspParamMemory<float[]> cut_hold_time;
+    bosepro::DspParamMemory<float[]> boost_hold_time;
+    bosepro::DspCoeffMemory<bool[]> channel_bypass;
     float max_total_boost;
 
-    std::vector<float> current_gain;
-    std::vector<bool> hold_meter;
+    bosepro::DspMeterMemory<float[]> current_gain;
+    bosepro::DspMeterMemory<bool[]> hold_meter;
     float current_total_boost;
 
-    std::unique_ptr<float[]> smoothed_level;
-    std::unique_ptr<float[]> fast_level;
-    std::unique_ptr<float[]> cut_step;
-    std::unique_ptr<float[]> boost_step;
-    std::unique_ptr<float[]> target_gain;
-    std::unique_ptr<int_fast32_t[]> cut_hold_count;
-    std::unique_ptr<int_fast32_t[]> boost_hold_count;
-    std::unique_ptr<int_fast32_t[]> hold_counter;
+    bosepro::DspStateMemory<float[]> smoothed_level;
+    bosepro::DspStateMemory<float[]> fast_level;
+    bosepro::DspStateMemory<float[]> cut_step;
+    bosepro::DspStateMemory<float[]> boost_step;
+    bosepro::DspStateMemory<float[]> target_gain;
+    bosepro::DspStateMemory<int_fast32_t[]> cut_hold_count;
+    bosepro::DspStateMemory<int_fast32_t[]> boost_hold_count;
+    bosepro::DspStateMemory<int_fast32_t[]> hold_counter;
 
     float level_attack_coeff;
     float level_release_coeff;
@@ -68,36 +67,36 @@ Agc::Agc(const bosepro::BlockConfiguration &configuration)
 {
     get_constant("channels", channels);
 
-    assign_terminal("in", &in);
-    assign_terminal("out", &out);
+    assign_terminal("in", in);
+    assign_terminal("out", out);
 
-    assign_control("activity_threshold", &activity_threshold);
-    assign_control("target_minimum", &target_minimum);
-    assign_control("target_maximum", &target_maximum);
-    assign_control("cut_rate", &cut_rate,
+    assign_control("activity_threshold", activity_threshold);
+    assign_control("target_minimum", target_minimum);
+    assign_control("target_maximum", target_maximum);
+    assign_control("cut_rate", cut_rate,
                    POST_FUNCTION_VECTOR(update_cut_rate));
-    assign_control("boost_rate", &boost_rate,
+    assign_control("boost_rate", boost_rate,
                    POST_FUNCTION_VECTOR(update_boost_rate));
-    assign_control("cut_range", &cut_range);
-    assign_control("boost_range", &boost_range);
-    assign_control("cut_hold", &cut_hold_time,
+    assign_control("cut_range", cut_range);
+    assign_control("boost_range", boost_range);
+    assign_control("cut_hold", cut_hold_time,
                    POST_FUNCTION_VECTOR(update_cut_hold));
-    assign_control("boost_hold", &boost_hold_time,
+    assign_control("boost_hold", boost_hold_time,
                    POST_FUNCTION_VECTOR(update_boost_hold));
-    assign_control("channel_bypass", &channel_bypass);
+    assign_control("channel_bypass", channel_bypass);
     assign_control("max_total_boost", &max_total_boost);
 
-    assign_meter("gain_meter", &current_gain);
-    assign_meter("hold_meter", &hold_meter);
+    assign_meter("gain_meter", current_gain);
+    assign_meter("hold_meter", hold_meter);
 
-    smoothed_level.reset(new float[channels]());
-    fast_level.reset(new float[channels]());
-    cut_step.reset(new float[channels]());
-    boost_step.reset(new float[channels]());
-    target_gain.reset(new float[channels]());
-    cut_hold_count.reset(new int_fast32_t[channels]());
-    boost_hold_count.reset(new int_fast32_t[channels]());
-    hold_counter.reset(new int_fast32_t[channels]());
+    smoothed_level.resize(channels);
+    fast_level.resize(channels);
+    cut_step.resize(channels);
+    boost_step.resize(channels);
+    target_gain.resize(channels);
+    cut_hold_count.resize(channels);
+    boost_hold_count.resize(channels);
+    hold_counter.resize(channels);
 
     level_attack_coeff = 1.0f - exp(-1.0f / (get_sample_rate() * 0.0005f));
     level_release_coeff = 1.0f - exp(-1.0f / (get_sample_rate() * 0.1f));

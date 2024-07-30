@@ -3,7 +3,6 @@
 #include <bosepro/algorithm.h>
 
 #include <cstdint>
-#include <vector>
 
 
 namespace {
@@ -21,9 +20,9 @@ private:
     // --- constants and terminals ---
     int_fast32_t channels;
     int_fast32_t max_delay;
-    std::vector<const float *> in;
-    std::vector<const float *> peak_in;
-    std::vector<float *> out;
+    bosepro::DspSignalMemory<const float *[]> in;
+    bosepro::DspSignalMemory<const float *[]> peak_in;
+    bosepro::DspSignalMemory<float *[]> out;
     // --- user controls ---
     float peak_thresh;
     float peak_attack;
@@ -36,7 +35,7 @@ private:
     bool brick_wall;                     
     // --- processing variables ---
     // for look-ahead delay
-    std::unique_ptr<float[]> buffer;
+    bosepro::DspStateMemory<float[]> buffer;
     float peak_level;
     float peak_gain;
     float rms_level;
@@ -59,14 +58,15 @@ ALGORITHM_REGISTER(Limiter, "limiter");
 
 
 Limiter::Limiter(const bosepro::BlockConfiguration &configuration)
-    : bosepro::Algorithm(configuration)
+    : bosepro::Algorithm(configuration), peak_level(0.0f), peak_gain(0.0f),
+      rms_level(0.0f), rms_gain(0.0f), write_index(0)
 {
     get_constant("channels", channels);
     get_constant("max_delay", max_delay);
 
-    assign_terminal("in", &in);
-    assign_terminal("peak_in", &peak_in);
-    assign_terminal("out", &out);
+    assign_terminal("in", in);
+    assign_terminal("peak_in", peak_in);
+    assign_terminal("out", out);
 
     assign_control("peak_thresh", &peak_thresh, 
         POST_FUNCTION_SCALAR(update_peak_thresh));
@@ -85,12 +85,8 @@ Limiter::Limiter(const bosepro::BlockConfiguration &configuration)
 
     buffer_size = (max_delay + get_frame_size() - 1)/get_frame_size();
     buffer_size *= get_frame_size();
-    write_index = 0;
-    buffer = std::unique_ptr<float[]>(new float[channels * buffer_size]());
-    peak_level = 0.0f;
-    peak_gain = 0.0f;
-    rms_level = 0.0f;
-    rms_gain = 0.0f;
+    buffer.resize(channels * buffer_size);
+    memset(buffer.get(), 0, channels * buffer_size * sizeof(float));
 }
 
 

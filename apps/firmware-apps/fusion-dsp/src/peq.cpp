@@ -4,8 +4,6 @@
 #include <bosepro/algorithm.h>
 
 #include <cstdint>
-#include <memory>
-#include <vector>
 
 namespace {
 
@@ -22,14 +20,14 @@ public:
 private:
     int_fast32_t channels;
     int_fast32_t bands;
-    std::vector<const float *> in;
-    std::vector<float *> out;
-    std::unique_ptr<filter::IirFilter> iir;
+    bosepro::DspSignalMemory<const float *[]> in;
+    bosepro::DspSignalMemory<float *[]> out;
+    bosepro::DspStateMemory<filter::IirFilter> iir;
 
-    std::vector<bool> band_enable;
-    std::vector<float> gain;
-    std::vector<float> frequency;
-    std::vector<float> q;
+    bosepro::DspParamMemory<bool[]> band_enable;
+    bosepro::DspParamMemory<float[]> gain;
+    bosepro::DspParamMemory<float[]> frequency;
+    bosepro::DspParamMemory<float[]> q;
 
     void update_band(int band);
 
@@ -45,23 +43,22 @@ Peq::Peq(const bosepro::BlockConfiguration &configuration)
     get_constant("channels", channels);
     get_constant("bands", bands);
 
-    assign_terminal("in", &in);
-    assign_terminal("out", &out);
+    assign_terminal("in", in);
+    assign_terminal("out", out);
 
-    assign_control("band_enable", &band_enable,
+    assign_control("band_enable", band_enable,
                    POST_FUNCTION_VECTOR(update_band));
-    assign_control("gain", &gain, POST_FUNCTION_VECTOR(update_band));
-    assign_control("frequency", &frequency, POST_FUNCTION_VECTOR(update_band));
-    assign_control("q", &q, POST_FUNCTION_VECTOR(update_band));
+    assign_control("gain", gain, POST_FUNCTION_VECTOR(update_band));
+    assign_control("frequency", frequency, POST_FUNCTION_VECTOR(update_band));
+    assign_control("q", q, POST_FUNCTION_VECTOR(update_band));
 
-    iir = std::unique_ptr<filter::IirFilter>(new filter::IirFilter(bands,
-                                                                   channels));
+    new (iir.get()) filter::IirFilter(bands, channels);
 }
 
 
 void Peq::process()
 {
-    iir->process(out, in, get_frame_size());
+    iir->process(out.get(), in.get(), get_frame_size());
 }
 
 
@@ -74,7 +71,7 @@ void Peq::update_band(int band)
     }
     else
     {
-        iir->design_band("disabled", band, 0.0, 0.0, 0.0, get_sample_rate());
+        iir->design_band("disabled", band, 0.0f, 0.0f, 0.0f, get_sample_rate());
     }
 }
 

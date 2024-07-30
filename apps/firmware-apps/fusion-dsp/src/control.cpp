@@ -1,12 +1,12 @@
 
 #include <bosepro/configuration.h>
 #include <bosepro/control.h>
+#include <bosepro/dspmemory.h>
 #include <bosepro/parameters.h>
 
 #include <cstdint>
 #include <functional>
 #include <string>
-#include <vector>
 
 
 namespace bosepro {
@@ -23,7 +23,17 @@ void Control::assign(T *value, std::function<void()> post_function)
 
 
 template <typename T>
-void Control::assign(std::vector<T> *value,
+void Control::assign(DspCoeffMemory<T[]> &value)
+{
+    dimensions = 1;
+    ControlDataVector<T> *control_data_vector =
+        dynamic_cast<ControlDataVector<T> *>(this);
+    control_data_vector->assign(value);
+}
+
+
+template <typename T>
+void Control::assign(DspParamMemory<T[]> &value,
                      std::function<void(int)> post_function)
 {
     dimensions = 1;
@@ -34,7 +44,17 @@ void Control::assign(std::vector<T> *value,
 
 
 template <typename T>
-void Control::assign(std::vector<std::vector<T>> *value, 
+void Control::assign(DspCoeffMemory<T*[]> &value)
+{
+    dimensions = 2;
+    ControlDataMatrix<T> *control_data_matrix =
+        dynamic_cast<ControlDataMatrix<T> *>(this);
+    control_data_matrix->assign(value);
+}
+
+
+template <typename T>
+void Control::assign(DspParamMemory<T*[]> &value,
                      std::function<void(int, int)> post_function)
 {
     dimensions = 2;
@@ -54,9 +74,11 @@ void Control::assign(std::vector<std::vector<T>> *value,
 #define X(t) \
     template void Control::assign<t>(t *value, \
                                      std::function<void()> post_function); \
-    template void Control::assign<t>(std::vector<t> *value, \
+    template void Control::assign<t>(DspCoeffMemory<t[]> &value); \
+    template void Control::assign<t>(DspParamMemory<t[]> &value, \
                                      std::function<void(int)> post_function); \
-    template void Control::assign<t>(std::vector<std::vector<t>> *value, \
+    template void Control::assign<t>(DspCoeffMemory<t*[]> &value); \
+    template void Control::assign<t>(DspParamMemory<t*[]> &value, \
                                      std::function<void(int, int)> post_function);
 DECLARE_TEMPLATE_CONTROL_TYPES
 #undef X

@@ -1,10 +1,10 @@
 #pragma once
 
+#include <bosepro/dspmemory.h>
+
 #include <pthread.h>
 
-#include <memory>
 #include <string>
-#include <vector>
 
 namespace filter {
 
@@ -45,13 +45,12 @@ public:
     /// Process one frame of audio, for multi-channel filters.  This applies
     /// the same filter to each channel.
     ///
-    /// \param  out  A vector of arrays of output samples, each of length
+    /// \param  out  A 2-D array of output samples, `num_channels` by
     ///             `frame_size`.
-    /// \param  in  A vector of arrays of input samples, each of length
+    /// \param  in  A 2-D array of input samples, `num_channels` by
     ///            `frame_size`.
     /// \param  frame_size  The number of samples to be processed.
-    void process(std::vector<float *> &out, std::vector<const float *> &in,
-                 int frame_size)
+    void process(float **out, const float **in, int frame_size)
     {
         for (int channel = 0; channel < num_channels; ++channel)
         {
@@ -106,14 +105,14 @@ public:
 
 
 private:
+    bosepro::DspCoeffMemory<float[]> coeff;
+    bosepro::DspStateMemory<float[]> state;
+    bosepro::DspParamMemory<float[]> section_gain;
+    pthread_mutex_t mutex;
+    float total_gain;
     int num_sections;
     int num_channels;
     int state_size;
-    std::unique_ptr<float[]> coeff;
-    std::unique_ptr<float[]> state;
-    std::vector<float> section_gain;
-    float total_gain;
-    pthread_mutex_t mutex;
 
     void process_impl(float *out, const float *in, int channel, int frame_size);
 };

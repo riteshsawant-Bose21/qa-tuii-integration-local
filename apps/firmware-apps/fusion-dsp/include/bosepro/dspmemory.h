@@ -5,6 +5,7 @@
 #include <array>
 #include <cstdlib>
 #include <forward_list>
+#include <map>
 #include <memory_resource>
 #include <new>
 #include <type_traits>
@@ -119,8 +120,14 @@ private:
         /// @param  count  The number of objects stored in the memory.
         void mark_for_destruction(void *p, size_t count)
         {
-            DestructionCount dc = {p, count};
-            to_destroy.push_front(dc);
+            if (to_destroy.count(p) != 0)
+            {
+                SPDLOG_CRITICAL("Can't mark pointer {} for destruction again",
+                                p);
+                return;
+            }
+
+            to_destroy[p] = count;
         }
 
 
@@ -138,28 +145,23 @@ private:
                 return 0;
             }
 
-            if ((to_destroy.front().count != 0) && (p != to_destroy.front().p))
+            if (to_destroy.count(p) == 0)
             {
-                SPDLOG_CRITICAL("Pointer mismatch for destruction! {} {} {}",
-                                p, to_destroy.front().p, to_destroy.front().count);
+                SPDLOG_CRITICAL("Pointer not found for destruction! {}", p);
                 return 0;
             }
 
-            size_t count = to_destroy.front().count;
-            to_destroy.pop_front();
+            size_t count = to_destroy[p];
+            to_destroy.erase(p);
             return count;
         }
 
 
     private:
-        struct DestructionCount {
-            void *p;
-            size_t count;
-        };
         static const size_t LARGE_CHUNK_SIZE = 4096;
         std::pmr::monotonic_buffer_resource mbr;
         std::forward_list<void *> large_chunks;
-        std::forward_list<DestructionCount> to_destroy;
+        std::map<void *, size_t> to_destroy;
     };
 
     std::array<Region, NUM_REGION_TYPES> region;
@@ -211,7 +213,6 @@ protected:
 template <typename T, RegionManager::RegionType R, RegionManager::RegionType R2=R>
 class DspMemory : public DspMemoryImpl {
 public:
-#if 0
     template <typename X = T, typename SFINAE = typename std::enable_if_t<std::is_default_constructible_v<X>>, typename P = SFINAE>
     DspMemory(size_t align=alignof(std::max_align_t))
     {
@@ -219,22 +220,12 @@ public:
         new (p) T();
     }
 
+
     template <typename X = T, typename = typename std::enable_if_t<!std::is_default_constructible_v<X>>>
     DspMemory(size_t align=alignof(std::max_align_t))
     {
         p = static_cast<T *>(allocate(sizeof(T), align, R));
     }
-#else
-    DspMemory(size_t align=alignof(std::max_align_t))
-    {
-        p = static_cast<T *>(allocate(sizeof(T), align, R));
-
-        if (std::is_default_constructible_v<T>)
-        {
-            new (p) T();
-        }
-    }
-#endif
 
 
     ~DspMemory()

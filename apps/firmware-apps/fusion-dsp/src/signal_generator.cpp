@@ -16,7 +16,7 @@ public:
     virtual void process() override;
 
 private:
-    float *out;
+    bosepro::DspSignalMemory<float[]> out;
     float phase;
     float phase_inc;
 
@@ -30,7 +30,7 @@ SignalGenerator::SignalGenerator(const bosepro::BlockConfiguration
                                  &configuration)
     : bosepro::Algorithm(configuration)
 {
-    assign_terminal("out", &out);
+    assign_terminal("out", out);
     phase = 0.0f;
     phase_inc = 1000.0f * 2.0f * 3.14159265f / get_sample_rate();
 }
