@@ -213,7 +213,6 @@ protected:
 template <typename T, RegionManager::RegionType R, RegionManager::RegionType R2=R>
 class DspMemory : public DspMemoryImpl {
 public:
-#if 0
     template <typename X = T, typename SFINAE = typename std::enable_if_t<std::is_default_constructible_v<X>>, typename P = SFINAE>
     DspMemory(size_t align=alignof(std::max_align_t))
     {
@@ -221,22 +220,12 @@ public:
         new (p) T();
     }
 
+
     template <typename X = T, typename = typename std::enable_if_t<!std::is_default_constructible_v<X>>>
     DspMemory(size_t align=alignof(std::max_align_t))
     {
         p = static_cast<T *>(allocate(sizeof(T), align, R));
     }
-#else
-    DspMemory(size_t align=alignof(std::max_align_t))
-    {
-        p = static_cast<T *>(allocate(sizeof(T), align, R));
-
-        if (std::is_default_constructible_v<T>)
-        {
-            new (p) T();
-        }
-    }
-#endif
 
 
     ~DspMemory()

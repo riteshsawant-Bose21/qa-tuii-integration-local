@@ -5,7 +5,6 @@
 #include <spdlog/spdlog.h>
 
 #include <cmath>
-#include <memory>
 
 
 namespace filter {
@@ -59,21 +58,18 @@ static void iir_4(const float * coeffs, float * state,
 
 
 IirFilter::IirFilter(int num_sections, int num_channels)
-    : num_sections(num_sections),
-      num_channels(num_channels),
-      state_size(iir_state_size(num_sections)),
-      total_gain(1.0f)
+    : total_gain(1.0f), num_sections(num_sections), num_channels(num_channels),
+      state_size(iir_state_size(num_sections))
 {
-    state = std::unique_ptr<float[]>(new (std::align_val_t(IIR_ALIGN))
-                                             float[num_channels * state_size]());
-    coeff = std::unique_ptr<float[]>(new (std::align_val_t(IIR_ALIGN))
-                                             float[4 * num_sections]());
-
+    state.resize(num_channels * state_size, IIR_ALIGN);
+    coeff.resize(4 * num_sections, IIR_ALIGN);
     section_gain.resize(num_sections);
 
-    for (auto &g : section_gain)
+    memset(state.get(), 0, num_channels * state_size * sizeof(float));
+
+    for (int section = 0; section < num_sections; section++)
     {
-        g = 1.0f;
+        section_gain[section] = 1.0f;
     }
 
     int err;
@@ -140,9 +136,9 @@ void IirFilter::set_section_coeffs(int section, double b0, double b1, double b2,
 
     float tmp_gain = 1.0f;
 
-    for (auto g : section_gain)
+    for (int s = 0; s < num_sections; s++)
     {
-        tmp_gain *= g;
+        tmp_gain *= section_gain[s];
     }
 
     pthread_mutex_lock(&mutex);

@@ -6,7 +6,6 @@
 
 #include <cstdint>
 #include <string>
-#include <vector>
 
 
 namespace bosepro {
@@ -21,23 +20,7 @@ void Meter::assign(const T *value)
 
 
 template <typename T>
-void Meter::assign(std::vector<T> *value)
-{
-    MeterData<T> *meter_data = dynamic_cast<MeterData<T> *>(this);
-    meter_data->assign(value);
-}
-
-
-template <typename T>
 void Meter::assign(DspMeterMemory<T[]> &value)
-{
-    MeterData<T> *meter_data = dynamic_cast<MeterData<T> *>(this);
-    meter_data->assign(value);
-}
-
-
-template <typename T>
-void Meter::assign(std::vector<std::vector<T>> *value)
 {
     MeterData<T> *meter_data = dynamic_cast<MeterData<T> *>(this);
     meter_data->assign(value);
@@ -61,8 +44,6 @@ void Meter::assign(DspMeterMemory<T*[]> &value)
     X(std::string)
 #define X(t) \
     template void Meter::assign<t>(const t *value); \
-    template void Meter::assign<t>(std::vector<t> *value); \
-    template void Meter::assign<t>(std::vector<std::vector<t>> *value); \
     template void Meter::assign<t>(DspMeterMemory<t[]> &value); \
     template void Meter::assign<t>(DspMeterMemory<t*[]> &value);
 DECLARE_TEMPLATE_METER_TYPES
