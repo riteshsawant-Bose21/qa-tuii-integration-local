@@ -433,7 +433,7 @@ void ArbitraryEQ::compute_coeffs(void)
         warped_gain = std::make_unique<float[]>(num_taps);
 
         // generate the warped target gain by interpolation
-        for (int tap{0}; tap < gain_length; ++tap)
+        for (int tap{0}; tap < gain_length - 1; ++tap)
         {
             warped_gain[2*tap] = ((1.0f - _interp_frac[band_idx][tap]) * 
                 band_target_mag[_interp_idx[band_idx][tap]] + _interp_frac[band_idx][tap] * 
