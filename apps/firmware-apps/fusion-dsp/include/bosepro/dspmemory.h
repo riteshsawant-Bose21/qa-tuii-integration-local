@@ -21,6 +21,10 @@ public:
     RegionManager() : region()
     { }
 
+    ~RegionManager()
+    {
+        close_region();
+    }
 
     /// Different platforms may provide different regions for different
     /// purposes.  For example, a platform such as a DSP with small L1 SRAM
@@ -70,6 +74,15 @@ public:
     {
         return region[rtype].get_destruction_count(p);
     }
+
+
+    /// Start using this region manager for future DspMemory allocations.
+    void open_region();
+
+
+    /// Stop using this region manager for future DspMemory allocations.
+    void close_region();
+
 
 private:
     /// An individual memory region.  The `RegionManager` handles the use
@@ -171,25 +184,49 @@ private:
 /// This class should not be used directly in algorithms.  It implements the
 /// common memory allocation functionality of all `DspMemory` types.
 class DspMemoryImpl {
+public:
+    static void set_region_manager(RegionManager *region_manager)
+    {
+        mgr = region_manager;
+    }
+
+
 protected:
     static void *allocate(size_t size, size_t align,
                           RegionManager::RegionType rt)
     {
-        return mgr.allocate(size, align, rt);
+        if (mgr == nullptr)
+        {
+            SPDLOG_CRITICAL("Region manager does not exist!");
+            return nullptr;
+        }
+
+        return mgr->allocate(size, align, rt);
     }
 
     static void mark_for_destruction(void *p, size_t count,
                                      RegionManager::RegionType rt)
     {
-        mgr.mark_for_destruction(p, count, rt);
+        if (mgr == nullptr)
+        {
+            SPDLOG_CRITICAL("Region manager does not exist!");
+        }
+
+        mgr->mark_for_destruction(p, count, rt);
     }
 
     static size_t get_destruction_count(void *p, RegionManager::RegionType rt)
     {
-        return mgr.get_destruction_count(p, rt);
+        if (mgr == nullptr)
+        {
+            SPDLOG_CRITICAL("Region manager does not exist!");
+            return 0;
+        }
+
+        return mgr->get_destruction_count(p, rt);
     }
 
-    static RegionManager mgr;
+    static RegionManager *mgr;
 };
 
 

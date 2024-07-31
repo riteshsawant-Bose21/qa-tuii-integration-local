@@ -3,6 +3,7 @@
 #include <bosepro/algorithm.h>
 #include <bosepro/configurable.h>
 #include <bosepro/configuration.h>
+#include <bosepro/dspmemory.h>
 #include <bosepro/profile.h>
 
 #include <pthread.h>
@@ -227,6 +228,10 @@ public:
     Task(const TaskConfiguration &configuration)
         : Configurable(configuration)
     {
+        // Use this task's region manager while allocating blocks within the
+        // task.
+        region_manager.open_region();
+
         // Create all of the blocks in the task.
         for (auto &b : configuration.get_blocks())
         {
@@ -299,11 +304,19 @@ public:
         {
             bp.set_period((double)get_frame_size() / get_sample_rate());
         }
+
+        region_manager.close_region();
     }
 
 
     virtual ~Task()
     {
+        // Use this task's region manager while destroying blocks within this
+        // task (will occur after this destructor exits, when `blocks` is
+        // destroyed).  The region will be closed when `region_manager` is
+        // destroyed.
+        region_manager.open_region();
+
         SPDLOG_DEBUG("Task MIPS: {} first, {} max, {} avg.",
                      task_profile.get_first_mips(),
                      task_profile.get_max_mips(),
@@ -356,6 +369,7 @@ public:
 
 
 private:
+    RegionManager region_manager;
     Profile task_profile;
     // A list of blocks, for quickly processing in order.
     std::list<std::unique_ptr<Algorithm>> blocks;
