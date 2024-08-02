@@ -10,6 +10,9 @@ TEST_SUITE_BEGIN("DSP Memory");
 
 TEST_CASE("Operators")
 {
+    bosepro::RegionManager region_manager;
+    region_manager.open_region();
+
     bosepro::DspStateMemory<float[]> s;
     CHECK(s.get() == nullptr);
     s.resize(32);
@@ -21,12 +24,14 @@ TEST_CASE("Operators")
     CHECK(sc.get() != nullptr);
     CHECK(sc.get() == *((float **)&sc));
     CHECK(sc.get() == &sc[0]);
-
 }
 
 
 TEST_CASE("Alignment")
 {
+    bosepro::RegionManager region_manager;
+    region_manager.open_region();
+
     // Make sure allocations with large alignments are successful, and that
     // the resulting pointers are aligned on the specified boundary.
     // Alternating small and large alignments ensure the allocator has to do
@@ -137,6 +142,9 @@ TEST_CASE("Constructors and Destructors")
 {
     SUBCASE("Default Constructors")
     {
+        bosepro::RegionManager region_manager;
+        region_manager.open_region();
+
         // If `DspMemory` is used with types that have default constructors,
         // the default constructors should be called for each allocated
         // element.
@@ -172,6 +180,9 @@ TEST_CASE("Constructors and Destructors")
 
     SUBCASE("Non-trivial Destructors")
     {
+        bosepro::RegionManager region_manager;
+        region_manager.open_region();
+
         // If `DspMemory` is used with types that have non-trivial destructors,
         // the destructors should be called for each allocated element when the
         // `DspMemory` is destroyed.
