@@ -16,13 +16,29 @@ namespace bosepro {
 /// configuration files and parameter definitions.
 class PropertyNavigator : public boost::property_tree::ptree {
 public:
-    /// Construct a property navigator from a JSON file.
+    /// Construct a property navigator from a JSON file.  This is used to
+    /// load entire configurations from files.
+    ///
+    /// @param  filename  The name of a JSON file.
     PropertyNavigator(const std::string &filename)
         : boost::property_tree::ptree()
     {
         boost::property_tree::ptree &pt = *this;
         boost::property_tree::read_json(filename, pt);
     }
+
+
+    /// Construct a property navigator from a JSON string.  This is used to
+    /// parse single JSON command strings.
+    ///
+    /// @param  ss  A string stream containing a JSON string.
+    PropertyNavigator(std::stringstream &ss)
+        : boost::property_tree::ptree()
+    {
+        boost::property_tree::ptree &pt = *this;
+        boost::property_tree::read_json(ss, pt);
+    }
+
 
 protected:
     /// Test whether the property has a member of the given name.

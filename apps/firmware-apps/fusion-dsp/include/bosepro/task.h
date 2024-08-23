@@ -4,6 +4,7 @@
 #include <bosepro/configurable.h>
 #include <bosepro/configuration.h>
 #include <bosepro/dspmemory.h>
+#include <bosepro/jack.h>
 #include <bosepro/profile.h>
 
 #include <pthread.h>
@@ -232,6 +233,15 @@ public:
         // task.
         region_manager.open_region();
 
+        frames_to_run = -1;
+
+        if (configuration.has_constant("jack_client_name") > 0)
+        {
+            std::string client_name;
+            configuration.get_constant("jack_client_name").get_value(client_name);
+            client = Jack::create_client(client_name, this);
+        }
+
         // Create all of the blocks in the task.
         for (auto &b : configuration.get_blocks())
         {
@@ -311,6 +321,11 @@ public:
 
     virtual ~Task()
     {
+        frames_to_run = 0;
+        client->stop();
+
+        Jack::destroy_client(client->get_name());
+
         // Use this task's region manager while destroying blocks within this
         // task (will occur after this destructor exits, when `blocks` is
         // destroyed).  The region will be closed when `region_manager` is
@@ -364,9 +379,66 @@ public:
             }
         }
 
+        if (frames_to_run > 0)
+        {
+            frames_to_run--;
+        }
+
         task_profile.finish();
     }
 
+
+    /// Get a pointer to a signal processing block with the given name.
+    ///
+    /// @param  name  The name of the block.
+    /// @return  A pointer to the block.
+    Algorithm *get_block(const std::string &name)
+    {
+        if (block_map.count(name) != 0)
+        {
+            return block_map[name];
+        }
+        else
+        {
+            return nullptr;
+        }
+    }
+
+
+    /// Start this task after it has been stopped with `stop()`.
+    void start()
+    {
+        client->start();
+    }
+
+
+    /// Stop running the task without destroying it.  It can be started again
+    /// with `start()`.
+    void stop()
+    {
+        client->stop();
+    }
+
+
+    /// Check whether a task has completed running, if it was set up to run for
+    /// only a certain amount of time with `set_seconds_to_run()`.
+    ///
+    /// @return  `true` if the task has finished running.
+    bool finished_running()
+    {
+        return frames_to_run == 0;
+    }
+
+
+    /// Set the number of seconds to run this task, after which it will stop
+    /// processing.
+    ///
+    /// @param  seconds  The number of seconds to run the task.
+    void set_seconds_to_run(double seconds)
+    {
+        frames_to_run =
+            std::ceil(seconds * get_sample_rate() / get_frame_size());
+    }
 
 private:
     RegionManager region_manager;
@@ -377,6 +449,9 @@ private:
     // A map of blocks, for accessing controls and meters.
     std::map<std::string, Algorithm *> block_map;
     bool profile_blocks = false;
+
+    JackClient *client;
+    int_fast32_t frames_to_run;
 };
 
 
