@@ -242,6 +242,11 @@ public:
             client = Jack::create_client(client_name, this);
         }
 
+        if (configuration.has_constant("cpu_affinity") > 0)
+        {
+            configuration.get_constant("cpu_affinity").get_value(cpu_affinity);
+        }
+
         // Create all of the blocks in the task.
         for (auto &b : configuration.get_blocks())
         {
@@ -440,6 +445,15 @@ public:
             std::ceil(seconds * get_sample_rate() / get_frame_size());
     }
 
+
+    /// Get the CPU affinity to be used for this task.
+    ///
+    /// @return  The CPU affinity configured for this task.
+    int_fast32_t get_cpu_affinity()
+    {
+        return cpu_affinity;
+    }
+
 private:
     RegionManager region_manager;
     Profile task_profile;
@@ -449,6 +463,7 @@ private:
     // A map of blocks, for accessing controls and meters.
     std::map<std::string, Algorithm *> block_map;
     bool profile_blocks = false;
+    int_fast32_t cpu_affinity;
 
     JackClient *client;
     int_fast32_t frames_to_run;

@@ -106,7 +106,14 @@ int main(int argc, char *argv[])
         {
             char buf[1024];
             memset(buf, 0, sizeof(buf));
-            read(connection_fd, buf, sizeof(buf) - 1);
+
+            int result = read(connection_fd, buf, sizeof(buf) - 1);
+
+            if (result < 0)
+            {
+                SPDLOG_ERROR("Couldn't read from socket.");
+            }
+
             if (buf[0] != '\0')
             {
                 SPDLOG_INFO("Got command: {}", buf);
