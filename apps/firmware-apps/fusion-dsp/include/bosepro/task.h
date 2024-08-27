@@ -227,7 +227,7 @@ public:
     ///
     /// @param  configuration  The configuration for the task.
     Task(const TaskConfiguration &configuration)
-        : Configurable(configuration)
+        : Configurable(configuration), client(nullptr)
     {
         // Use this task's region manager while allocating blocks within the
         // task.
@@ -327,9 +327,12 @@ public:
     virtual ~Task()
     {
         frames_to_run = 0;
-        client->stop();
 
-        Jack::destroy_client(client->get_name());
+        if (client != nullptr)
+        {
+            client->stop();
+            Jack::destroy_client(client->get_name());
+        }
 
         // Use this task's region manager while destroying blocks within this
         // task (will occur after this destructor exits, when `blocks` is
@@ -413,7 +416,14 @@ public:
     /// Start this task after it has been stopped with `stop()`.
     void start()
     {
-        client->start();
+        if (client != nullptr)
+        {
+            client->start();
+        }
+        else
+        {
+            SPDLOG_ERROR("No JACK client associated with this task.");
+        }
     }
 
 
@@ -421,7 +431,14 @@ public:
     /// with `start()`.
     void stop()
     {
-        client->stop();
+        if (client != nullptr)
+        {
+            client->stop();
+        }
+        else
+        {
+            SPDLOG_ERROR("No JACK client associated with this task.");
+        }
     }
 
 
