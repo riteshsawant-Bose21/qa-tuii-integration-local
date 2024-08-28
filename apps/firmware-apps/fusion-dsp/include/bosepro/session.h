@@ -38,8 +38,7 @@ public:
         {
             const TaskConfiguration &tc =
                 reinterpret_cast<const TaskConfiguration &>(t.second);
-            SPDLOG_DEBUG("Creating task: {}", tc.get_name());
-            tasks.push_back(std::unique_ptr<Task>(new Task(tc)));
+            create_task(tc);
         }
     }
 
@@ -54,7 +53,7 @@ public:
     {
         for (auto &task : tasks)
         {
-            task->process();
+            task.second->process();
         }
 
         if (frames_to_run > 0)
@@ -86,9 +85,155 @@ public:
     }
 
 
+    /// Create a task given a task configuration.  This will also start the
+    /// task.
+    ///
+    /// @param   task_configuration  The configuration for the task.
+    void create_task(const TaskConfiguration &task_configuration)
+    {
+        const std::string task_name = task_configuration.get_name();
+
+        if (tasks.count(task_name) != 0)
+        {
+            SPDLOG_CRITICAL("Duplicate tasks with name {}.", task_name);
+            return;
+        }
+
+        tasks[task_name] = std::unique_ptr<Task>(new Task(task_configuration));
+    }
+
+
+    /// Destroy the task with the given name.  This will also stop the task.
+    ///
+    /// @param  task_name  The name of the task to destroy.
+    void destroy_task(const std::string &task_name)
+    {
+        if (tasks.count(task_name) == 0)
+        {
+            SPDLOG_CRITICAL("Couldn't find task with name {}.", task_name);
+            return;
+        }
+
+        tasks.erase(task_name);
+    }
+
+
+    /// Start an existing task with the given name.
+    ///
+    /// @param  task_name  The name of the task to start.
+    void start_task(const std::string &task_name)
+    {
+        if (tasks.count(task_name) == 0)
+        {
+            SPDLOG_CRITICAL("Couldn't find task with name {}.", task_name);
+            return;
+        }
+
+        tasks[task_name]->start();
+    }
+
+
+    /// Stop an existing task with the given name.  The task will remain
+    /// available to run again using `start_tas()`.
+    ///
+    /// @param  task_name  The name of the task to stop.
+    void stop_task(const std::string &task_name)
+    {
+        if (tasks.count(task_name) == 0)
+        {
+            SPDLOG_CRITICAL("Couldn't find task with name {}.", task_name);
+            return;
+        }
+
+        tasks[task_name]->stop();
+    }
+
+
+    /// Start all of the tasks in the session.
+    void start()
+    {
+        SPDLOG_INFO("Starting session.");
+        for (auto &task : tasks)
+        {
+            task.second->start();
+        }
+    }
+
+
+    /// Stop all of the tasks in the session.
+    void stop()
+    {
+        SPDLOG_INFO("Stopping session.");
+        for (auto &task : tasks)
+        {
+            task.second->stop();
+        }
+    }
+
+
+    /// Process the provided command.
+    ///
+    /// @param  command  The command to process.
+    void process_command(const Command &command)
+    {
+        // TODO - we really need a better way to manage the different session
+        // commands.
+        if (command.get_target() == "session")
+        {
+            if (command.get_name() == "stop")
+            {
+                stop();
+            }
+            else if (command.get_name() == "destroy_task")
+            {
+                std::string task_name;
+                command.get_value(task_name);
+                destroy_task(task_name);
+            }
+            else if (command.get_name() == "create_task")
+            {
+                std::string filename;
+                command.get_value(filename);
+
+                bosepro::Configuration configuration(filename);
+                for (auto &t : configuration.get_session().get_tasks())
+                {
+                    const TaskConfiguration &tc =
+                        reinterpret_cast<const TaskConfiguration &>(t.second);
+                    create_task(tc);
+                }
+            }
+            else if (command.get_name() == "start_task")
+            {
+                std::string task_name;
+                command.get_value(task_name);
+                start_task(task_name);
+            }
+            else if (command.get_name() == "stop_task")
+            {
+                std::string task_name;
+                command.get_value(task_name);
+                stop_task(task_name);
+            }
+        }
+        else
+        {
+            for (auto &task : tasks)
+            {
+                std::string block_name;
+                Algorithm *block = task.second->get_block(command.get_target());
+                if (block != nullptr)
+                {
+                    block->set_control((const ControlSetting &)command);
+                    break;
+                }
+            }
+        }
+    }
+
 private:
     int_fast32_t frames_to_run;
-    std::list<std::unique_ptr<Task>> tasks;
+    std::map<std::string, std::unique_ptr<Task>> tasks;
 };
 
 

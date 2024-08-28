@@ -2,6 +2,7 @@
 
 #include <bosepro/property.h>
 
+#include <sstream>
 #include <string>
 
 
@@ -22,9 +23,22 @@ class ControlSetting;
 /// A configuration or set of configurations.
 class Configuration : public PropertyNavigator {
 public:
-    /// Build the configuration from the given JSON file.
+    /// Build the configuration from the given JSON file.  This is used to
+    /// load entire configurations from a JSON file.
+    ///
+    /// @param  filename  The name of a JSON configuration file.
     Configuration(const std::string &filename)
         : PropertyNavigator(filename)
+    {
+    }
+
+
+    /// Build the configuration from the given JSON string.  This is used to
+    /// create configurations from single JSON command strings.
+    ///
+    /// @param  ss  A string stream containing a JSON string.
+    Configuration(std::stringstream &ss)
+        : PropertyNavigator(ss)
     {
     }
 
@@ -277,6 +291,15 @@ class MeterConfiguration : public Configuration {
 /// The configuration for a control setting.
 class ControlSetting : public Configuration {
 public:
+    /// Create the control setting from a JSON string.
+    ///
+    /// @param  ss  A string stream containing the JSON string.
+    ControlSetting(std::stringstream &ss)
+        : Configuration(ss)
+    {
+    }
+
+
     /// Get the row index for this control setting.  If the row is not set,
     /// this method returns 0.
     ///
@@ -347,6 +370,28 @@ public:
     int get_input_channel() const
     {
         return get_index("input_channel");
+    }
+};
+
+
+/// A configuration containing a single command.
+class Command: public ControlSetting {
+public:
+    /// Create the command from a JSON string.
+    ///
+    /// @param  ss  A string stream containing the JSON command string.
+    Command(std::stringstream &ss)
+        : ControlSetting(ss)
+    {
+    }
+
+
+    /// Get the name of the target (usually a block name) for this command.
+    ///
+    /// @return  The name of the target.
+    const std::string &get_target() const
+    {
+        return get_string("target");
     }
 };
 
