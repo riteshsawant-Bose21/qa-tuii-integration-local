@@ -21,6 +21,7 @@ public:
           const MeterConfiguration *configuration)
     {
         value_type = parameter.get_value_type();
+        name = parameter.get_name();
 
         if (configuration != nullptr)
         {
@@ -93,7 +94,43 @@ public:
     static Meter *create(const MeterParameter &parameter,
                          const MeterConfiguration *configuration);
 
+
+    /// Get the name of this meter.
+    ///
+    /// @return  The name of the meter.
+    const std::string &get_name()
+    {
+        return name;
+    }
+
+
+    /// Set the name of the block that owns this meter.
+    ///
+    /// @param  name  The block name.
+    void set_block_name(const std::string &name)
+    {
+        block_name = name;
+    }
+
+
+    /// Get the name of the block that owns this meter.
+    ///
+    /// @return  The block name.
+    const std::string &get_block_name()
+    {
+        return block_name;
+    }
+
+
+    /// Send a JSON-formatted meter string using the provided callback.
+    ///
+    /// @param  meter_callback  The callback function used to send the
+    ///     meter data.
+    virtual void send(void (*meter_callback)(const std::string &)) = 0;
+
 private:
+    std::string name;
+    std::string block_name;
     std::string value_type;
     int num_rows;
     int num_columns;
@@ -151,6 +188,72 @@ public:
     virtual void initialize() override
     {
     }
+
+
+    /// Send the data for this meter as a JSON-formatted string using the
+    /// provided callback.
+    ///
+    /// @param  meter_callback  The callback function used to send the
+    ///     meter data.
+    virtual void send(void (*meter_callback)(const std::string &)) override
+    {
+        std::ostringstream message;
+        message << "{ \"source\": \"" << get_block_name() << "\"";
+        message << ", \"name\": \"" << get_name() << "\"";
+        message << ", \"value\": ";
+
+        if (block_scalar_value != nullptr)
+        {
+            print_value(message, *block_scalar_value);
+        }
+        else if (block_vector_value != nullptr)
+        {
+            message << "[";
+            for (int row = 0; row < get_num_rows() - 1; row++)
+            {
+                print_value(message, block_vector_value[row]);
+                message << ", ";
+            }
+            print_value(message, block_vector_value[get_num_rows() - 1]);
+            message << "]";
+        }
+        else
+        {
+            message << "[[";
+            for (int row = 0; row < get_num_rows(); row++)
+            {
+                for (int col = 0; col < get_num_columns() - 1; col++)
+                {
+                    print_value(message, block_matrix_value[row][col]);
+                    message << ", ";
+                }
+
+                print_value(message,
+                            block_matrix_value[row][get_num_columns() - 1]);
+                message << "]";
+
+                if (row != get_num_rows() - 1)
+                {
+                    message << ", [";
+                }
+                else
+                {
+                    message << "]";
+                }
+            }
+        }
+
+        message << " }\n";
+        meter_callback(message.str());
+    }
+
+
+    /// Format one meter value as a JSON-formatted value, and write it to the
+    /// meter message.
+    ///
+    /// @param  message  A string stream to whith the value will be written.
+    /// @param  value  The meter value.
+    void print_value(std::ostringstream &message, const T &value);
 
 
 private:

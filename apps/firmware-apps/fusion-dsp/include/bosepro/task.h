@@ -471,6 +471,19 @@ public:
         return cpu_affinity;
     }
 
+
+    /// Send meter data for each block in the task, using the provided callback.
+    ///
+    /// @param  meter_callback  A callback function used to send meter data.
+    void send_meters(void (*meter_callback)(const std::string &))
+    {
+        for (auto &block : blocks)
+        {
+            block->send_meters(meter_callback);
+        }
+    }
+
+
 private:
     RegionManager region_manager;
     Profile task_profile;

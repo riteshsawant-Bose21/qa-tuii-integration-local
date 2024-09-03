@@ -95,6 +95,8 @@ public:
 
                 meta->meters[name] =
                     std::unique_ptr<Meter>(Meter::create(mp, mc));
+
+                meta->meters[name]->set_block_name(configuration.get_name());
             }
         }
 
@@ -371,6 +373,19 @@ public:
         for (int top_index = 0; top_index < output_process_count; top_index++)
         {
             outputs_to_process[top_index].process();
+        }
+    }
+
+
+    /// Send meter data for all of the meters in this block.
+    ///
+    /// @param  meter_callback  A callback function for sending the meter
+    ///     JSON-formatted string.
+    void send_meters(void (*meter_callback)(const std::string &))
+    {
+        for (auto &meter : meta->meters)
+        {
+            meter.second->send(meter_callback);
         }
     }
 

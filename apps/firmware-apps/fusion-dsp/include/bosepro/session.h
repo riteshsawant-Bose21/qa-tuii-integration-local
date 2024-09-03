@@ -26,7 +26,7 @@ public:
     /// @param  parameters  The parameter definitions for the system.
     Session(const SessionConfiguration &configuration,
             const Parameters &parameters)
-        : Configurable(configuration)
+        : Configurable(configuration), meter_callback(nullptr)
     {
         SPDLOG_TRACE("Creating session.");
         // This makes the parameters available to all `Configurable` objects.
@@ -180,7 +180,17 @@ public:
         // commands.
         if (command.get_target() == "session")
         {
-            if (command.get_name() == "stop")
+            if (command.get_name() == "send_meters")
+            {
+                if (meter_callback != nullptr)
+                {
+                    for (auto &task : tasks)
+                    {
+                        task.second->send_meters(meter_callback);
+                    }
+                }
+            }
+            else if (command.get_name() == "stop")
             {
                 stop();
             }
@@ -231,9 +241,21 @@ public:
         }
     }
 
+
+    /// Set the callback used to send meters.  When the "send_meters" command
+    /// is sent to this session, every block in the session will send a
+    /// JSON-formatted string containing meter data for each of its meters.
+    ///
+    /// @param  meter_callback  The callback function used to send meter data.
+    void set_meter_callback(void (*meter_callback)(const std::string &))
+    {
+        this->meter_callback = meter_callback;
+    }
+
 private:
     int_fast32_t frames_to_run;
     std::map<std::string, std::unique_ptr<Task>> tasks;
+    void (*meter_callback)(const std::string &meter_message);
 };
 
 
