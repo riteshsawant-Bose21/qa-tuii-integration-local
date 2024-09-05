@@ -70,6 +70,7 @@ public:
             for (int channel = 0; channel < num_channels; channel++)
             {
                 const float *pbuf = (const float *)output_buffer[channel];
+                meter[channel] = 0.0;
 
                 for (int sample = 0; sample < frame_size; sample++)
                 {

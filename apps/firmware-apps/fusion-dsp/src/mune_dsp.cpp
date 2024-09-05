@@ -15,6 +15,17 @@
 
 #include <iostream>
 
+int connection_fd;
+
+void send_meter(const std::string &message)
+{
+    int size = send(connection_fd, message.c_str(), message.size(), 0);
+
+    if (size < 0)
+    {
+        SPDLOG_WARN("Couldn't send meter to socket.");
+    }
+}
 
 int main(int argc, char *argv[])
 {
@@ -62,6 +73,8 @@ int main(int argc, char *argv[])
             session.set_seconds_to_run(vm["time"].as<int>());
         }
 
+        session.set_meter_callback(send_meter);
+
         session.start();
 
 
@@ -90,7 +103,6 @@ int main(int argc, char *argv[])
         }
 
         struct sockaddr_in client;
-        int connection_fd;
         socklen_t len = sizeof(client);
 
         connection_fd = accept(server_fd, (struct sockaddr *)&client, &len);

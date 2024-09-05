@@ -76,4 +76,32 @@ Meter *Meter::create(const MeterParameter &parameter,
 }
 
 
+template<>
+void MeterData<int_fast32_t>::print_value(std::ostringstream &message, const int_fast32_t &value)
+{
+    message << value;
+}
+
+
+template<>
+void MeterData<float>::print_value(std::ostringstream &message, const float &value)
+{
+    message << value;
+}
+
+
+template<>
+void MeterData<bool>::print_value(std::ostringstream &message, const bool &value)
+{
+    message << (value ? "true" : "false");
+}
+
+
+template<>
+void MeterData<std::string>::print_value(std::ostringstream &message, const std::string &value)
+{
+    message << "\"" << value << "\"";
+}
+
+
 } // namespace bosepro
