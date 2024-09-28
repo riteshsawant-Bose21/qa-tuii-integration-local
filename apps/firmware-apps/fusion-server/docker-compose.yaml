@@ -65,6 +65,8 @@ services:
     networks:
       fusionnet:
         ipv4_address: ${NETWORK_PREFIX}.${LB1_SUFFIX}
+    ports:
+      - "8084:80"
     cap_add:
       - NET_ADMIN
       - NET_BROADCAST
@@ -82,6 +84,8 @@ services:
     networks:
       fusionnet:
         ipv4_address: ${NETWORK_PREFIX}.${LB2_SUFFIX}
+    ports:
+      - "8085:80"        
     cap_add:
       - NET_ADMIN
       - NET_BROADCAST

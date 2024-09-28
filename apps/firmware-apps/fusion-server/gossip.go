@@ -120,7 +120,7 @@ type ConfigServer struct {
 	list *memberlist.Memberlist
 }
 
-func (s *ConfigServer) UpdateKey(w http.ResponseWriter, r *http.Request) {
+func (s *ConfigServer) SetValue(w http.ResponseWriter, r *http.Request) {
 	var update struct {
 		Key   string      `json:"key"`
 		Value interface{} `json:"value"`
@@ -203,7 +203,7 @@ func main() {
 	flag.IntVar(&bindPort, "port", 7946, "Bind port")
 	flag.Parse()
 
-	fmt.Printf("Arguments received: %v\n", os.Args)
+	fmt.Printf("ARGUMENTS RECEIVED: %v\n", os.Args)
 
 	if nodeName == "" {
 		log.Fatal("Node name is required")
@@ -233,25 +233,36 @@ func main() {
 		list: list,
 	}
 
-	http.HandleFunc("/updateKey", configServer.UpdateKey)
+	log.Println("Setting up HTTP routes...")
+	http.HandleFunc("/setValue", configServer.SetValue)
 	http.HandleFunc("/getValue", configServer.GetValue)
 	http.HandleFunc("/upload", configServer.UploadJSON)
 	http.HandleFunc("/download", configServer.DownloadJSON)
 
 	log.Println("Registered routes:")
-	log.Println(" - /update")
-	log.Println(" - /config")
+	log.Println(" - /setValue")
+	log.Println(" - /getValue")
 	log.Println(" - /upload")
 	log.Println(" - /download")
 
 	addr := ":8080"
 	log.Printf("Starting server on %s", addr)
 	go func() {
+
+		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+    		if r.URL.Path != "/" {
+        		http.NotFound(w, r)
+        		return
+    		}
+    		fmt.Fprintf(w, "Fusion Server is running. Available endpoints: /setValue, /getValue, /upload, /download")
+		})
+
 		if err := http.ListenAndServe(addr, nil); err != nil {
 			log.Fatalf("Failed to start server: %v", err)
 		}
-	}()
 
+		log.Println("HTTP server goroutine started")
+	}()
 
 	for {
 		members := list.Members()

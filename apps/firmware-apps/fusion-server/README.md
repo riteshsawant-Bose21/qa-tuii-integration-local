@@ -72,7 +72,7 @@ Note: Use ports 8081, 8082, 8083, and 8084 for dsp1, dsp2, dsp3, and dsp4 respec
 To update a configuration value:
 
 ```bash
-curl -X POST http://localhost:8081/updateKey \
+curl -X POST http://localhost:8081/setValue \
      -H "Content-Type: application/json" \
      -d '{"key": "example_key", "value": "new_value"}'
 ```
