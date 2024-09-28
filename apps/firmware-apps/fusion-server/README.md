@@ -60,16 +60,16 @@ This project implements a high-availability, gossip-based distributed system usi
 1. Ensure Docker and Docker Compose are installed on your system
 2. Clone this repository
 3. Set up the necessary configuration files (`nginx.conf`, `keepalived-master.conf`, `keepalived-backup.conf`)
-4. Run `docker-compose up -d` to start the system
+4. Run `docker compose up -d` to start the system
 5. Access the service via the Virtual IP (172.18.0.10) on port 80
 
 ## Testing Failover
 
 To test the high availability setup:
 
-1. Stop the primary load balancer: `docker-compose stop loadbalancer1`
+1. Stop the primary load balancer: `docker compose stop loadbalancer1`
 2. Observe that the Virtual IP moves to the secondary load balancer
-3. Restart the primary: `docker-compose start loadbalancer1`
+3. Restart the primary: `docker compose start loadbalancer1`
 4. Verify that the system continues to function throughout this process
 
 ## Future Improvements
@@ -84,31 +84,31 @@ To test the high availability setup:
 docker build -t fusion-server .
 
 # Start images
-docker-compose up
+docker compose up
 
 # Stop single instance
-docker-compose stop dsp2
+docker compose stop dsp2
 
 # Watch logs
-docker-compose ps
+docker compose ps
 
 # Start single instance
-docker-compose start dsp2
+docker compose start dsp2
 
 # More drastic removal
-docker-compose rm -sf dsp2
+docker compose rm -sf dsp2
 
 # Recreate and start the service:
-docker-compose up -d dsp2
+docker compose up -d dsp2
 
 # Verify loadbalancer
-docker-compose exec loadbalancer1 ip addr show eth0
+docker compose exec loadbalancer1 ip addr show eth0
 
 # Simulate balancer failure
-docker-compose stop loadbalancer1
+docker compose stop loadbalancer1
 
 # Check that the virtual IP has moved to the backup node
-docker-compose exec loadbalancer2 ip addr show eth0
+docker compose exec loadbalancer2 ip addr show eth0
 
 # Restart the first load balancer and observe the IP moving back:
-docker-compose start loadbalancer1
+docker compose start loadbalancer1

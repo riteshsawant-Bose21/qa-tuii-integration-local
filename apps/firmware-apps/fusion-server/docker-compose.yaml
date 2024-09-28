@@ -1,66 +1,66 @@
-version: '3'
 services:    
+
   dsp1:
-    image: fusion-server
+    image: ${FUSION_SERVER_IMAGE}
     networks:
       fusionnet:
-        ipv4_address: 172.18.0.3
+        ipv4_address: ${NETWORK_PREFIX}.${DSP1_SUFFIX}
     ports:
-      - "7946:7946"
+      - "${DSP1_PORT}:${GOSSIP_PORT}"
     environment:
-      - SERVICE_IP=172.18.0.3
+      - SERVICE_IP=${NETWORK_PREFIX}.${DSP1_SUFFIX}
       - SERVICE_NAME=dsp1
-    command: ["./fusion-gossip", "--name", "dsp1", "--addr", "0.0.0.0", "--port", "7946"]
+    command: ${DSP1_COMMAND}
 
   dsp2:
-    image: fusion-server
+    image: ${FUSION_SERVER_IMAGE}
     networks:
       fusionnet:
-        ipv4_address: 172.18.0.4
+        ipv4_address: ${NETWORK_PREFIX}.${DSP2_SUFFIX}
     ports:
-      - "7947:7946"
+      - "${DSP2_PORT}:${GOSSIP_PORT}"
     environment:
-      - SERVICE_IP=172.18.0.4
+      - SERVICE_IP=${NETWORK_PREFIX}.${DSP2_SUFFIX}
       - SERVICE_NAME=dsp2
-    command: ["./fusion-gossip", "--name", "dsp2", "--addr", "0.0.0.0", "--port", "7946", "172.18.0.3:7946"]
+    command: ${DSP2_COMMAND}
     depends_on:
       - dsp1
 
   dsp3:
-    image: fusion-server
+    image: ${FUSION_SERVER_IMAGE}
     networks:
       fusionnet:
-        ipv4_address: 172.18.0.5
+        ipv4_address: ${NETWORK_PREFIX}.${DSP3_SUFFIX}
     ports:
-      - "7948:7946"
+      - "${DSP3_PORT}:${GOSSIP_PORT}"
     environment:
-      - SERVICE_IP=172.18.0.5
+      - SERVICE_IP=${NETWORK_PREFIX}.${DSP3_SUFFIX}
       - SERVICE_NAME=dsp3
-    command: ["./fusion-gossip", "--name", "dsp3", "--addr", "0.0.0.0", "--port", "7946", "172.18.0.3:7946"]
+    command: ${DSP3_COMMAND}
     depends_on:
       - dsp1
 
   dsp4:
-    image: fusion-server
+    image: ${FUSION_SERVER_IMAGE}
     networks:
       fusionnet:
-        ipv4_address: 172.18.0.6
+        ipv4_address: ${NETWORK_PREFIX}.${DSP4_SUFFIX}
     ports:
-      - "7949:7946"
+      - "${DSP4_PORT}:${GOSSIP_PORT}"
     environment:
-      - SERVICE_IP=172.18.0.6
+      - SERVICE_IP=${NETWORK_PREFIX}.${DSP4_SUFFIX}
       - SERVICE_NAME=dsp4
-    command: ["./fusion-gossip", "--name", "dsp4", "--addr", "0.0.0.0", "--port", "7946", "172.18.0.3:7946"]
+    command: ${DSP4_COMMAND}
     depends_on:
       - dsp1
 
   loadbalancer1:
-    image: nginx:latest
+    image: ${NGINX_IMAGE}
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ${NGINX_CONF_PATH}:/etc/nginx/nginx.conf:ro
     networks:
       fusionnet:
-        ipv4_address: 172.18.0.7
+        ipv4_address: ${NETWORK_PREFIX}.${LB1_SUFFIX}
     cap_add:
       - NET_ADMIN
       - NET_BROADCAST
@@ -72,12 +72,12 @@ services:
       - dsp4
 
   loadbalancer2:
-    image: nginx:latest
+    image: ${NGINX_IMAGE}
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ${NGINX_CONF_PATH}:/etc/nginx/nginx.conf:ro
     networks:
       fusionnet:
-        ipv4_address: 172.18.0.8
+        ipv4_address: ${NETWORK_PREFIX}.${LB2_SUFFIX}
     cap_add:
       - NET_ADMIN
       - NET_BROADCAST
@@ -89,32 +89,36 @@ services:
       - dsp4
 
   keepalived1:
-    image: osixia/keepalived:2.0.20
-    platform: linux/arm64
+    image: ${KEEPALIVED_IMAGE}
+    platform: ${KEEPALIVED_PLATFORM}
     volumes:
-      - ./keepalived-master.conf:/container/service/keepalived/assets/keepalived-master.conf
+      - ${KEEPALIVED_PRIMARY_CONF}:/container/service/keepalived/assets/${KEEPALIVED_PRIMARY_CONF}
     networks:
       fusionnet:
-        ipv4_address: 172.18.0.9
+        ipv4_address: ${NETWORK_PREFIX}.${KEEPALIVED1_SUFFIX}
     cap_add:
       - NET_ADMIN
       - NET_BROADCAST
       - NET_RAW
+    environment:
+      - KEEPALIVED_COMMAND=${KEEPALIVED_COMMAND}
     depends_on:
       - loadbalancer1
 
   keepalived2:
-    image: osixia/keepalived:2.0.20
-    platform: linux/arm64
+    image: ${KEEPALIVED_IMAGE}
+    platform: ${KEEPALIVED_PLATFORM}
     volumes:
-      - ./keepalived-backup.conf:/container/service/keepalived/assets/keepalived-backup.conf
+      - ${KEEPALIVED_BACKUP_CONF}:/container/service/keepalived/assets/${KEEPALIVED_BACKUP_CONF}
     networks:
       fusionnet:
-        ipv4_address: 172.18.0.10
+        ipv4_address: ${NETWORK_PREFIX}.${KEEPALIVED2_SUFFIX}
     cap_add:
       - NET_ADMIN
       - NET_BROADCAST
       - NET_RAW
+    environment:
+      - KEEPALIVED_COMMAND=${KEEPALIVED_COMMAND}
     depends_on:
       - loadbalancer2
 
