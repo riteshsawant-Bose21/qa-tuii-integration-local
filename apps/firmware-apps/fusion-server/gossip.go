@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -119,7 +120,7 @@ type ConfigServer struct {
 	list *memberlist.Memberlist
 }
 
-func (s *ConfigServer) UpdateConfig(w http.ResponseWriter, r *http.Request) {
+func (s *ConfigServer) UpdateKey(w http.ResponseWriter, r *http.Request) {
 	var update struct {
 		Key   string      `json:"key"`
 		Value interface{} `json:"value"`
@@ -135,7 +136,7 @@ func (s *ConfigServer) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"status": "update broadcasted"})
 }
 
-func (s *ConfigServer) GetConfig(w http.ResponseWriter, r *http.Request) {
+func (s *ConfigServer) GetValue(w http.ResponseWriter, r *http.Request) {
 	configMap := make(map[string]interface{})
 	config.Range(func(key, value interface{}) bool {
 		configMap[key.(string)] = value
@@ -144,6 +145,56 @@ func (s *ConfigServer) GetConfig(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(configMap)
+}
+
+func (s *ConfigServer) UploadJSON(w http.ResponseWriter, r *http.Request) {
+	// Check if the Content-Type is application/json
+	if r.Header.Get("Content-Type") != "application/json" {
+		http.Error(w, "Content-Type must be application/json", http.StatusUnsupportedMediaType)
+		return
+	}
+
+	// Read the request body
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Error reading request body", http.StatusInternalServerError)
+		return
+	}
+	defer r.Body.Close()
+
+	// Parse the JSON
+	var jsonConfig map[string]interface{}
+	err = json.Unmarshal(body, &jsonConfig)
+	if err != nil {
+		http.Error(w, "Error parsing JSON", http.StatusBadRequest)
+		return
+	}
+
+	// Broadcast each key-value pair
+	for key, value := range jsonConfig {
+		broadcastUpdate(s.list, key, value)
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "JSON data uploaded and broadcasted"})
+}
+
+func (s *ConfigServer) DownloadJSON(w http.ResponseWriter, r *http.Request) {
+	configMap := make(map[string]interface{})
+	config.Range(func(key, value interface{}) bool {
+		configMap[key.(string)] = value
+		return true
+	})
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Disposition", "attachment; filename=config.json")
+	
+	encoder := json.NewEncoder(w)
+	encoder.SetIndent("", "  ") // Pretty print the JSON
+	if err := encoder.Encode(configMap); err != nil {
+		http.Error(w, "Error encoding JSON", http.StatusInternalServerError)
+		return
+	}
 }
 
 func main() {
@@ -182,12 +233,25 @@ func main() {
 		list: list,
 	}
 
-	http.HandleFunc("/update", configServer.UpdateConfig)
-	http.HandleFunc("/config", configServer.GetConfig)
+	http.HandleFunc("/updateKey", configServer.UpdateKey)
+	http.HandleFunc("/getValue", configServer.GetValue)
+	http.HandleFunc("/upload", configServer.UploadJSON)
+	http.HandleFunc("/download", configServer.DownloadJSON)
 
+	log.Println("Registered routes:")
+	log.Println(" - /update")
+	log.Println(" - /config")
+	log.Println(" - /upload")
+	log.Println(" - /download")
+
+	addr := ":8080"
+	log.Printf("Starting server on %s", addr)
 	go func() {
-		log.Fatal(http.ListenAndServe(":8080", nil))
+		if err := http.ListenAndServe(addr, nil); err != nil {
+			log.Fatalf("Failed to start server: %v", err)
+		}
 	}()
+
 
 	for {
 		members := list.Members()

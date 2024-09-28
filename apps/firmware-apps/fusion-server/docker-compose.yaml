@@ -7,6 +7,7 @@ services:
         ipv4_address: ${NETWORK_PREFIX}.${DSP1_SUFFIX}
     ports:
       - "${DSP1_PORT}:${GOSSIP_PORT}"
+      - "8081:8080"
     environment:
       - SERVICE_IP=${NETWORK_PREFIX}.${DSP1_SUFFIX}
       - SERVICE_NAME=dsp1
@@ -19,6 +20,7 @@ services:
         ipv4_address: ${NETWORK_PREFIX}.${DSP2_SUFFIX}
     ports:
       - "${DSP2_PORT}:${GOSSIP_PORT}"
+      - "8082:8080"
     environment:
       - SERVICE_IP=${NETWORK_PREFIX}.${DSP2_SUFFIX}
       - SERVICE_NAME=dsp2
@@ -33,6 +35,7 @@ services:
         ipv4_address: ${NETWORK_PREFIX}.${DSP3_SUFFIX}
     ports:
       - "${DSP3_PORT}:${GOSSIP_PORT}"
+      - "8083:8080"
     environment:
       - SERVICE_IP=${NETWORK_PREFIX}.${DSP3_SUFFIX}
       - SERVICE_NAME=dsp3
@@ -47,6 +50,7 @@ services:
         ipv4_address: ${NETWORK_PREFIX}.${DSP4_SUFFIX}
     ports:
       - "${DSP4_PORT}:${GOSSIP_PORT}"
+      - "8080:8080"
     environment:
       - SERVICE_IP=${NETWORK_PREFIX}.${DSP4_SUFFIX}
       - SERVICE_NAME=dsp4
@@ -92,7 +96,8 @@ services:
     image: ${KEEPALIVED_IMAGE}
     platform: ${KEEPALIVED_PLATFORM}
     volumes:
-      - ${KEEPALIVED_PRIMARY_CONF}:/container/service/keepalived/assets/${KEEPALIVED_PRIMARY_CONF}
+      - ./${KEEPALIVED_PRIMARY_CONF}:/tmp/keepalived.conf:ro
+      - ./keepalived-entrypoint.sh:/keepalived-entrypoint.sh:ro
     networks:
       fusionnet:
         ipv4_address: ${NETWORK_PREFIX}.${KEEPALIVED1_SUFFIX}
@@ -102,6 +107,8 @@ services:
       - NET_RAW
     environment:
       - KEEPALIVED_COMMAND=${KEEPALIVED_COMMAND}
+      - NETWORK_PREFIX=${NETWORK_PREFIX}
+    entrypoint: ["/keepalived-entrypoint.sh"]
     depends_on:
       - loadbalancer1
 
@@ -109,7 +116,8 @@ services:
     image: ${KEEPALIVED_IMAGE}
     platform: ${KEEPALIVED_PLATFORM}
     volumes:
-      - ${KEEPALIVED_BACKUP_CONF}:/container/service/keepalived/assets/${KEEPALIVED_BACKUP_CONF}
+      - ./${KEEPALIVED_BACKUP_CONF}:/tmp/keepalived.conf:ro
+      - ./keepalived-entrypoint.sh:/keepalived-entrypoint.sh:ro
     networks:
       fusionnet:
         ipv4_address: ${NETWORK_PREFIX}.${KEEPALIVED2_SUFFIX}
@@ -119,6 +127,8 @@ services:
       - NET_RAW
     environment:
       - KEEPALIVED_COMMAND=${KEEPALIVED_COMMAND}
+      - NETWORK_PREFIX=${NETWORK_PREFIX}
+    entrypoint: ["/keepalived-entrypoint.sh"]      
     depends_on:
       - loadbalancer2
 
