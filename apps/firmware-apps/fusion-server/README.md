@@ -89,6 +89,9 @@ curl -X POST -H "Content-Type: application/json" -d @path/to/your/config.json ht
 curl -X POST -H "Content-Type: application/json" -d '{"key1": "value1", "key2": "value2"}' http://localhost:8080/upload
 ```
 
+### WebSocket Connection
+websocat ws://localhost:8080/ws
+
 ### Verifying Gossip Propagation
 
 To verify that the configuration change has propagated to other nodes, you can get the configuration from another DSP:

@@ -1,140 +1,91 @@
-services:    
-
+services:
   dsp1:
-    image: ${FUSION_SERVER_IMAGE}
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        KEEPALIVED_CONF: keepalived-primary.conf
+    image: fusion-gossip
     networks:
       fusionnet:
         ipv4_address: ${NETWORK_PREFIX}.${DSP1_SUFFIX}
     ports:
       - "${DSP1_PORT}:${GOSSIP_PORT}"
-      - "8081:8080"
+      - "8081:8081"
     environment:
       - SERVICE_IP=${NETWORK_PREFIX}.${DSP1_SUFFIX}
       - SERVICE_NAME=dsp1
-    command: ${DSP1_COMMAND}
+    command: --name dsp1 --addr 0.0.0.0 --port ${GOSSIP_PORT}
+    cap_add:
+      - NET_ADMIN
+      - NET_BROADCAST
+      - NET_RAW
 
   dsp2:
-    image: ${FUSION_SERVER_IMAGE}
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        KEEPALIVED_CONF: keepalived-backup1.conf
+    image: fusion-gossip
     networks:
       fusionnet:
         ipv4_address: ${NETWORK_PREFIX}.${DSP2_SUFFIX}
     ports:
       - "${DSP2_PORT}:${GOSSIP_PORT}"
-      - "8082:8080"
+      - "8082:8081"
     environment:
       - SERVICE_IP=${NETWORK_PREFIX}.${DSP2_SUFFIX}
       - SERVICE_NAME=dsp2
-    command: ${DSP2_COMMAND}
-    depends_on:
-      - dsp1
+    command: --name dsp2 --addr 0.0.0.0 --port ${GOSSIP_PORT} ${NETWORK_PREFIX}.${DSP1_SUFFIX}:${GOSSIP_PORT}
+    cap_add:
+      - NET_ADMIN
+      - NET_BROADCAST
+      - NET_RAW
 
   dsp3:
-    image: ${FUSION_SERVER_IMAGE}
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        KEEPALIVED_CONF: keepalived-backup2.conf
+    image: fusion-gossip
     networks:
       fusionnet:
         ipv4_address: ${NETWORK_PREFIX}.${DSP3_SUFFIX}
     ports:
       - "${DSP3_PORT}:${GOSSIP_PORT}"
-      - "8083:8080"
+      - "8083:8081"
     environment:
       - SERVICE_IP=${NETWORK_PREFIX}.${DSP3_SUFFIX}
       - SERVICE_NAME=dsp3
-    command: ${DSP3_COMMAND}
-    depends_on:
-      - dsp1
+    command: --name dsp3 --addr 0.0.0.0 --port ${GOSSIP_PORT} ${NETWORK_PREFIX}.${DSP1_SUFFIX}:${GOSSIP_PORT}
+    cap_add:
+      - NET_ADMIN
+      - NET_BROADCAST
+      - NET_RAW
 
   dsp4:
-    image: ${FUSION_SERVER_IMAGE}
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        KEEPALIVED_CONF: keepalived-backup3.conf
+    image: fusion-gossip
     networks:
       fusionnet:
         ipv4_address: ${NETWORK_PREFIX}.${DSP4_SUFFIX}
     ports:
       - "${DSP4_PORT}:${GOSSIP_PORT}"
-      - "8080:8080"
+      - "8084:8081"
     environment:
       - SERVICE_IP=${NETWORK_PREFIX}.${DSP4_SUFFIX}
       - SERVICE_NAME=dsp4
-    command: ${DSP4_COMMAND}
-    depends_on:
-      - dsp1
-
-  loadbalancer1:
-    image: ${NGINX_IMAGE}
-    volumes:
-      - ${NGINX_CONF_PATH}:/etc/nginx/nginx.conf:ro
-    networks:
-      fusionnet:
-        ipv4_address: ${NETWORK_PREFIX}.${LB1_SUFFIX}
-    ports:
-      - "8084:80"
+    command: --name dsp4 --addr 0.0.0.0 --port ${GOSSIP_PORT} ${NETWORK_PREFIX}.${DSP1_SUFFIX}:${GOSSIP_PORT}
     cap_add:
       - NET_ADMIN
       - NET_BROADCAST
       - NET_RAW
-    depends_on:
-      - dsp1
-      - dsp2
-      - dsp3
-      - dsp4
-
-  loadbalancer2:
-    image: ${NGINX_IMAGE}
-    volumes:
-      - ${NGINX_CONF_PATH}:/etc/nginx/nginx.conf:ro
-    networks:
-      fusionnet:
-        ipv4_address: ${NETWORK_PREFIX}.${LB2_SUFFIX}
-    ports:
-      - "8085:80"        
-    cap_add:
-      - NET_ADMIN
-      - NET_BROADCAST
-      - NET_RAW
-    depends_on:
-      - dsp1
-      - dsp2
-      - dsp3
-      - dsp4
-
-  keepalived1:
-    image: ${KEEPALIVED_IMAGE}
-    platform: ${KEEPALIVED_PLATFORM}
-    volumes:
-      - ./${KEEPALIVED_PRIMARY_CONF}:/tmp/keepalived.conf:ro
-      - ./keepalived-entrypoint.sh:/keepalived-entrypoint.sh:ro
-    networks:
-      fusionnet:
-        ipv4_address: ${NETWORK_PREFIX}.${KEEPALIVED1_SUFFIX}
-    cap_add:
-      - NET_ADMIN
-      - NET_BROADCAST
-      - NET_RAW
-    environment:
-      - KEEPALIVED_COMMAND=${KEEPALIVED_COMMAND}
-      - NETWORK_PREFIX=${NETWORK_PREFIX}
-    entrypoint: ["/keepalived-entrypoint.sh"]
-    depends_on:
-      - loadbalancer1
-
-  keepalived2:
-    image: ${KEEPALIVED_IMAGE}
-    platform: ${KEEPALIVED_PLATFORM}
-    volumes:
-      - ./${KEEPALIVED_BACKUP_CONF}:/tmp/keepalived.conf:ro
-      - ./keepalived-entrypoint.sh:/keepalived-entrypoint.sh:ro
-    networks:
-      fusionnet:
-        ipv4_address: ${NETWORK_PREFIX}.${KEEPALIVED2_SUFFIX}
-    cap_add:
-      - NET_ADMIN
-      - NET_BROADCAST
-      - NET_RAW
-    environment:
-      - KEEPALIVED_COMMAND=${KEEPALIVED_COMMAND}
-      - NETWORK_PREFIX=${NETWORK_PREFIX}
-    entrypoint: ["/keepalived-entrypoint.sh"]      
-    depends_on:
-      - loadbalancer2
 
 networks:
   fusionnet:

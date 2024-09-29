@@ -8,9 +8,13 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
+	"strings"
 	"sync"
+	"text/template"
 	"time"
 
+	"github.com/gorilla/websocket"
 	"github.com/hashicorp/memberlist"
 )
 
@@ -21,6 +25,8 @@ var (
 	nodeName      string
 	bindAddr      string
 	bindPort      int
+	clients       = make(map[*websocket.Conn]bool)
+	clientsMutex  sync.Mutex
 )
 
 type ConfigUpdate struct {
@@ -114,6 +120,7 @@ func broadcastUpdate(list *memberlist.Memberlist, key string, value interface{})
 		list.SendReliable(node, msg)
 	}
 	applyUpdate(update)
+	broadcastToClients(update)
 }
 
 type ConfigServer struct {
@@ -148,13 +155,11 @@ func (s *ConfigServer) GetValue(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *ConfigServer) UploadJSON(w http.ResponseWriter, r *http.Request) {
-	// Check if the Content-Type is application/json
 	if r.Header.Get("Content-Type") != "application/json" {
 		http.Error(w, "Content-Type must be application/json", http.StatusUnsupportedMediaType)
 		return
 	}
 
-	// Read the request body
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, "Error reading request body", http.StatusInternalServerError)
@@ -162,7 +167,6 @@ func (s *ConfigServer) UploadJSON(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	// Parse the JSON
 	var jsonConfig map[string]interface{}
 	err = json.Unmarshal(body, &jsonConfig)
 	if err != nil {
@@ -170,7 +174,6 @@ func (s *ConfigServer) UploadJSON(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Broadcast each key-value pair
 	for key, value := range jsonConfig {
 		broadcastUpdate(s.list, key, value)
 	}
@@ -190,11 +193,186 @@ func (s *ConfigServer) DownloadJSON(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Disposition", "attachment; filename=config.json")
 	
 	encoder := json.NewEncoder(w)
-	encoder.SetIndent("", "  ") // Pretty print the JSON
+	encoder.SetIndent("", "  ")
 	if err := encoder.Encode(configMap); err != nil {
 		http.Error(w, "Error encoding JSON", http.StatusInternalServerError)
 		return
 	}
+}
+
+var upgrader = websocket.Upgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
+}
+
+func handleWebSocket(w http.ResponseWriter, r *http.Request) {
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	clientsMutex.Lock()
+	clients[conn] = true
+	clientsMutex.Unlock()
+
+	log.Println("New WebSocket client connected")
+
+	currentConfig := make(map[string]interface{})
+	config.Range(func(key, value interface{}) bool {
+		currentConfig[key.(string)] = value
+		return true
+	})
+	conn.WriteJSON(map[string]interface{}{
+		"type":    "full_config",
+		"version": configVersion,
+		"config":  currentConfig,
+	})
+
+	defer func() {
+		clientsMutex.Lock()
+		delete(clients, conn)
+		clientsMutex.Unlock()
+		conn.Close()
+		log.Println("WebSocket client disconnected")
+	}()
+
+	for {
+		_, _, err := conn.ReadMessage()
+		if err != nil {
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+				log.Printf("error: %v", err)
+			}
+			break
+		}
+	}
+}
+
+func broadcastToClients(update ConfigUpdate) {
+	clientsMutex.Lock()
+	defer clientsMutex.Unlock()
+
+	for client := range clients {
+		err := client.WriteJSON(map[string]interface{}{
+			"type":   "update",
+			"update": update,
+		})
+		if err != nil {
+			log.Printf("error: %v", err)
+			client.Close()
+			delete(clients, client)
+		}
+	}
+}
+
+type HAProxyConfig struct {
+	Backends []string
+}
+
+func generateHAProxyConfig(members []*memberlist.Node) error {
+    config := HAProxyConfig{
+        Backends: make([]string, len(members)),
+    }
+    for i, member := range members {
+        config.Backends[i] = fmt.Sprintf("%s:%d", member.Addr, 8080)
+    }
+
+    tmpl := template.Must(template.New("haproxy").Parse(`
+global
+    log /dev/log local0
+    log /dev/log local1 notice
+    chroot /var/lib/haproxy
+    stats socket /run/haproxy/admin.sock mode 660 level admin expose-fd listeners
+    stats timeout 30s
+    user haproxy
+    group haproxy
+    pidfile /var/run/haproxy.pid
+
+defaults
+    log global
+    mode http
+    option httplog
+    option dontlognull
+    timeout connect 5000ms
+    timeout client 50000ms
+    timeout server 50000ms
+
+frontend http-in
+    bind *:80
+    default_backend servers
+
+backend servers
+    balance roundrobin
+    {{range .Backends}}
+    server {{.}} {{.}} check
+    {{end}}
+
+listen stats
+    bind *:8404
+    stats enable
+    stats uri /
+    stats refresh 5s
+`))
+
+    f, err := os.Create("/etc/haproxy/haproxy.cfg")
+    if err != nil {
+        return err
+    }
+    defer f.Close()
+
+    return tmpl.Execute(f, config)
+}
+
+func reloadHAProxy() error {
+    pidFile := "/var/run/haproxy.pid"
+    
+    if _, err := os.Stat(pidFile); os.IsNotExist(err) {
+        // If PID file doesn't exist, start HAProxy
+        cmd := exec.Command("haproxy", "-f", "/etc/haproxy/haproxy.cfg", "-W")
+        return cmd.Start()
+    }
+    
+    pidBytes, err := os.ReadFile(pidFile)
+    if err != nil {
+        return fmt.Errorf("failed to read HAProxy PID: %v", err)
+    }
+    pid := strings.TrimSpace(string(pidBytes))
+
+    cmd := exec.Command("haproxy", "-f", "/etc/haproxy/haproxy.cfg", "-sf", pid)
+    output, err := cmd.CombinedOutput()
+    if err != nil {
+        return fmt.Errorf("failed to reload HAProxy: %v, output: %s", err, output)
+    }
+    return nil
+}
+
+// Function to update Keepalived configuration
+func updateKeepalivedConfig(state string, priority int) error {
+	config := fmt.Sprintf(`
+vrrp_instance VI_1 {
+    state %s
+    interface eth0
+    virtual_router_id 51
+    priority %d
+    advert_int 1
+    authentication {
+        auth_type PASS
+        auth_pass your_secret_password
+    }
+    virtual_ipaddress {
+        %s
+    }
+}`, state, priority, bindAddr)
+
+	return os.WriteFile("/etc/keepalived/keepalived.conf", []byte(config), 0644)
+}
+
+func reloadKeepalived() error {
+    cmd := exec.Command("killall", "-HUP", "keepalived")
+    return cmd.Run()
 }
 
 func main() {
@@ -202,8 +380,6 @@ func main() {
 	flag.StringVar(&bindAddr, "addr", "0.0.0.0", "Bind address")
 	flag.IntVar(&bindPort, "port", 7946, "Bind port")
 	flag.Parse()
-
-	fmt.Printf("ARGUMENTS RECEIVED: %v\n", os.Args)
 
 	if nodeName == "" {
 		log.Fatal("Node name is required")
@@ -229,39 +405,52 @@ func main() {
 
 	log.Printf("Node %s listening on %s:%d", nodeName, bindAddr, bindPort)
 
+	// Initialize HAProxy and Keepalived
+	if err := generateHAProxyConfig(list.Members()); err != nil {
+		log.Fatalf("Failed to generate HAProxy config: %v", err)
+	}
+	if err := reloadHAProxy(); err != nil {
+		log.Fatalf("Failed to reload HAProxy: %v", err)
+	}
+
+	// Set up Keepalived (assuming the first node in alphabetical order is the master)
+	state := "BACKUP"
+	priority := 100
+	if list.Members()[0].Name == nodeName {
+		state = "MASTER"
+		priority = 101
+	}
+	if err := updateKeepalivedConfig(state, priority); err != nil {
+		log.Fatalf("Failed to update Keepalived config: %v", err)
+	}
+	if err := reloadKeepalived(); err != nil {
+		log.Fatalf("Failed to reload Keepalived: %v", err)
+	}
+
 	configServer := &ConfigServer{
 		list: list,
 	}
 
-	log.Println("Setting up HTTP routes...")
 	http.HandleFunc("/setValue", configServer.SetValue)
 	http.HandleFunc("/getValue", configServer.GetValue)
 	http.HandleFunc("/upload", configServer.UploadJSON)
 	http.HandleFunc("/download", configServer.DownloadJSON)
-
-	log.Println("Registered routes:")
-	log.Println(" - /setValue")
-	log.Println(" - /getValue")
-	log.Println(" - /upload")
-	log.Println(" - /download")
+	http.HandleFunc("/ws", handleWebSocket)
 
 	addr := ":8080"
 	log.Printf("Starting server on %s", addr)
 	go func() {
-
 		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-    		if r.URL.Path != "/" {
-        		http.NotFound(w, r)
-        		return
-    		}
-    		fmt.Fprintf(w, "Fusion Server is running. Available endpoints: /setValue, /getValue, /upload, /download")
+			if r.URL.Path != "/" {
+				http.NotFound(w, r)
+				return
+			}
+			fmt.Fprintf(w, "Fusion Server is running. Available endpoints: /setValue, /getValue, /upload, /download")
 		})
 
 		if err := http.ListenAndServe(addr, nil); err != nil {
 			log.Fatalf("Failed to start server: %v", err)
 		}
-
-		log.Println("HTTP server goroutine started")
 	}()
 
 	for {
@@ -269,6 +458,13 @@ func main() {
 		log.Printf("Current cluster members:")
 		for _, member := range members {
 			log.Printf("  %s: %s:%d", member.Name, member.Addr, member.Port)
+		}
+
+		// Update HAProxy configuration when membership changes
+		if err := generateHAProxyConfig(members); err != nil {
+			log.Printf("Failed to update HAProxy config: %v", err)
+		} else if err := reloadHAProxy(); err != nil {
+			log.Printf("Failed to reload HAProxy: %v", err)
 		}
 
 		time.Sleep(10 * time.Second)
