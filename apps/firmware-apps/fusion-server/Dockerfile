@@ -10,9 +10,7 @@ RUN apk --no-cache add \
 
 # Create necessary directories
 RUN mkdir -p /etc/haproxy /run/haproxy && \
-    mkdir -p /etc/keepalived && \
-    touch /etc/keepalived/keepalived.conf && \
-    chmod 644 /etc/keepalived/keepalived.conf
+    mkdir -p /etc/keepalived
 
 WORKDIR /app
 
@@ -31,9 +29,16 @@ RUN chmod +x /app/entrypoint.sh
 # Copy HAProxy configuration
 COPY haproxy.cfg /etc/haproxy/haproxy.cfg
 
+# Copy all Keepalived configuration files
+COPY keepalived-primary.conf /etc/keepalived/
+COPY keepalived-backup1.conf /etc/keepalived/
+COPY keepalived-backup2.conf /etc/keepalived/
+COPY keepalived-backup3.conf /etc/keepalived/
+
 # Set appropriate permissions
 RUN chmod 644 /etc/haproxy/haproxy.cfg && \
-    chown root:root /etc/haproxy/haproxy.cfg /etc/keepalived/keepalived.conf
+    chmod 644 /etc/keepalived/*.conf && \
+    chown root:root /etc/haproxy/haproxy.cfg /etc/keepalived/*.conf
 
 # Set the entrypoint
 ENTRYPOINT ["/app/entrypoint.sh"]

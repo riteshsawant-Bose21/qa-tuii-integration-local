@@ -2,34 +2,6 @@
 
 echo "Starting entrypoint script"
 
-# Generate Keepalived config
-echo "Generating Keepalived config"
-KEEPALIVED_CONF="/etc/keepalived/keepalived.conf"
-
-echo "Creating new keepalived.conf"
-cat << EOF > ${KEEPALIVED_CONF}
-vrrp_instance VI_1 {
-    state BACKUP
-    interface eth0
-    virtual_router_id 51
-    priority 100
-    advert_int 1
-    authentication {
-        auth_type PASS
-        auth_pass 1111
-    }
-    virtual_ipaddress {
-        ${SERVICE_IP}
-    }
-}
-EOF
-
-# Ensure the file was created
-if [ ! -f "${KEEPALIVED_CONF}" ]; then
-    echo "Failed to create keepalived.conf"
-    exit 1
-fi
-
 # Start Keepalived
 echo "Starting Keepalived"
 keepalived -n -l -D -f ${KEEPALIVED_CONF} &
@@ -39,9 +11,6 @@ KEEPALIVED_PID=$!
 echo "Starting HAProxy"
 haproxy -f /etc/haproxy/haproxy.cfg -db &
 HAPROXY_PID=$!
-
-# Add a delay before starting fusion-gossip
-sleep 5
 
 # Start fusion-gossip
 echo "Starting fusion-gossip"
