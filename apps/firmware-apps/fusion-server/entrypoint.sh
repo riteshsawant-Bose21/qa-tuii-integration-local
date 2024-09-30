@@ -1,61 +1,27 @@
 #!/bin/sh
 
-# Function to start a process
-start_process() {
-    echo "Starting $1..."
-    $@ &
-    echo $! > /var/run/$1.pid
-}
+# Remove stale PID file if it exists
+rm -f /run/keepalived/keepalived.pid
 
-# Function to stop a process
-stop_process() {
-    if [ -f /var/run/$1.pid ]; then
-        pid=$(cat /var/run/$1.pid)
-        if kill -0 $pid 2>/dev/null; then
-            echo "Stopping $1 (PID: $pid)..."
-            kill $pid
-            rm /var/run/$1.pid
-        else
-            echo "$1 is not running."
-            rm /var/run/$1.pid
-        fi
-    else
-        echo "$1 is not running."
-    fi
-}
-
-# Function to check if a process is running
-is_running() {
-    if [ -f /var/run/$1.pid ]; then
-        pid=$(cat /var/run/$1.pid)
-        if kill -0 $pid 2>/dev/null; then
-            return 0
-        else
-            rm /var/run/$1.pid
-            return 1
-        fi
-    else
-        return 1
-    fi
-}
-
-# Stop any existing processes
-stop_process keepalived
-
-# Start processes
-start_process keepalived -n -l -D -f ${KEEPALIVED_CONF}
+keepalived -n -l -D -f ${KEEPALIVED_CONF} &
+KEEPALIVED_PID=$!
+haproxy -f /etc/haproxy/haproxy.cfg -db &
+HAPROXY_PID=$!
+# Start fusion-gossip
+/app/fusion-gossip "$@" &
+FUSION_PID=$!
 
 # Wait for any process to exit
 wait -n
 
 # Check which process exited
-for process in keepalived haproxy fusion-gossip; do
-    if ! is_running $process; then
-        echo "$process exited unexpectedly"
-        exit 1
-    fi
-done
+if ! kill -0 $KEEPALIVED_PID 2>/dev/null; then
+   echo "Keepalived exited unexpectedly"
+elif ! kill -0 $HAPROXY_PID 2>/dev/null; then
+   echo "HAProxy exited unexpectedly"
+elif ! kill -0 $FUSION_PID 2>/dev/null; then
+   echo "fusion-gossip exited unexpectedly"
+fi
 
-# If we get here, all processes are still running
-echo "All processes exited unexpectedly"
-exit 1
+# Exit with status of process that exited first
+exit $?

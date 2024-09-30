@@ -359,31 +359,31 @@ func reloadHAProxy() error {
 	return nil
 }
 
-// // Function to update Keepalived configuration
-// func updateKeepalivedConfig(state string, priority int) error {
-// 	config := fmt.Sprintf(`
-// vrrp_instance VI_1 {
-//     state %s
-//     interface eth0
-//     virtual_router_id 51
-//     priority %d
-//     advert_int 1
-//     authentication {
-//         auth_type PASS
-//         auth_pass your_secret_password
-//     }
-//     virtual_ipaddress {
-//         %s
-//     }
-// }`, state, priority, bindAddr)
+// Function to update Keepalived configuration
+func updateKeepalivedConfig(state string, priority int) error {
+	config := fmt.Sprintf(`
+vrrp_instance VI_1 {
+    state %s
+    interface eth0
+    virtual_router_id 51
+    priority %d
+    advert_int 1
+    authentication {
+        auth_type PASS
+        auth_pass your_secret_password
+    }
+    virtual_ipaddress {
+        %s
+    }
+}`, state, priority, bindAddr)
 
-// 	return os.WriteFile("/etc/keepalived/keepalived.conf", []byte(config), 0644)
-// }
+	return os.WriteFile("/etc/keepalived/keepalived.conf", []byte(config), 0644)
+}
 
-// func reloadKeepalived() error {
-// 	cmd := exec.Command("killall", "-HUP", "keepalived")
-// 	return cmd.Run()
-// }
+func reloadKeepalived() error {
+	cmd := exec.Command("killall", "-HUP", "keepalived")
+	return cmd.Run()
+}
 
 func main() {
 	flag.StringVar(&nodeName, "name", "", "Node name")
@@ -423,19 +423,19 @@ func main() {
 		log.Fatalf("Failed to reload HAProxy: %v", err)
 	}
 
-	// // Set up Keepalived (assuming the first node in alphabetical order is the master)
-	// state := "BACKUP"
-	// priority := 100
-	// if list.Members()[0].Name == nodeName {
-	// 	state = "MASTER"
-	// 	priority = 101
-	// }
-	// if err := updateKeepalivedConfig(state, priority); err != nil {
-	// 	log.Fatalf("Failed to update Keepalived config: %v", err)
-	// }
-	// if err := reloadKeepalived(); err != nil {
-	// 	log.Fatalf("Failed to reload Keepalived: %v", err)
-	// }
+	// Set up Keepalived (assuming the first node in alphabetical order is the master)
+	state := "BACKUP"
+	priority := 100
+	if list.Members()[0].Name == nodeName {
+		state = "MASTER"
+		priority = 101
+	}
+	if err := updateKeepalivedConfig(state, priority); err != nil {
+		log.Fatalf("Failed to update Keepalived config: %v", err)
+	}
+	if err := reloadKeepalived(); err != nil {
+		log.Fatalf("Failed to reload Keepalived: %v", err)
+	}
 
 	configServer := &ConfigServer{
 		list: list,
