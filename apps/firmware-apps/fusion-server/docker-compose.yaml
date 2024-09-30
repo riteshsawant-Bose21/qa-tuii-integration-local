@@ -8,7 +8,7 @@ services:
       fusionnet:
         ipv4_address: ${NETWORK_PREFIX}.${DSP1_SUFFIX}
     ports:
-      - "9001:80"  # Expose HAProxy port to host
+      - "9001:80" # Expose HAProxy port to host
       - "${DSP1_PORT}:${GOSSIP_PORT}"
       - "8081:8081"
     environment:
@@ -30,7 +30,7 @@ services:
       fusionnet:
         ipv4_address: ${NETWORK_PREFIX}.${DSP2_SUFFIX}
     ports:
-      - "9002:80"  # Expose HAProxy port to host
+      - "9002:80" # Expose HAProxy port to host
       - "${DSP2_PORT}:${GOSSIP_PORT}"
       - "8082:8081"
     environment:
@@ -38,6 +38,8 @@ services:
       - SERVICE_IP=${NETWORK_PREFIX}.${DSP2_SUFFIX}
       - SERVICE_NAME=dsp2
     command: --name dsp2 --addr 0.0.0.0 --port ${GOSSIP_PORT} ${NETWORK_PREFIX}.${DSP1_SUFFIX}:${GOSSIP_PORT}
+    depends_on:
+      - dsp1
     cap_add:
       - NET_ADMIN
       - NET_BROADCAST
@@ -53,13 +55,15 @@ services:
         ipv4_address: ${NETWORK_PREFIX}.${DSP3_SUFFIX}
     ports:
       - "${DSP3_PORT}:${GOSSIP_PORT}"
-      - "9003:80"  # Expose HAProxy port to host
+      - "9003:80" # Expose HAProxy port to host
       - "8083:8081"
     environment:
       - KEEPALIVED_CONF=${KEEPALIVED_BACKUP2_CONF}
       - SERVICE_IP=${NETWORK_PREFIX}.${DSP3_SUFFIX}
       - SERVICE_NAME=dsp3
     command: --name dsp3 --addr 0.0.0.0 --port ${GOSSIP_PORT} ${NETWORK_PREFIX}.${DSP1_SUFFIX}:${GOSSIP_PORT}
+    depends_on:
+      - dsp2
     cap_add:
       - NET_ADMIN
       - NET_BROADCAST
@@ -74,7 +78,7 @@ services:
       fusionnet:
         ipv4_address: ${NETWORK_PREFIX}.${DSP4_SUFFIX}
     ports:
-      - "9004:80"  # Expose HAProxy port to host
+      - "9004:80" # Expose HAProxy port to host
       - "${DSP4_PORT}:${GOSSIP_PORT}"
       - "8084:8081"
     environment:
@@ -82,6 +86,8 @@ services:
       - SERVICE_IP=${NETWORK_PREFIX}.${DSP4_SUFFIX}
       - SERVICE_NAME=dsp4
     command: --name dsp4 --addr 0.0.0.0 --port ${GOSSIP_PORT} ${NETWORK_PREFIX}.${DSP1_SUFFIX}:${GOSSIP_PORT}
+    depends_on:
+      - dsp3
     cap_add:
       - NET_ADMIN
       - NET_BROADCAST

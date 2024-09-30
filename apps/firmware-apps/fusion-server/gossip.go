@@ -30,9 +30,10 @@ var (
 )
 
 type ConfigUpdate struct {
-	Version int64
-	Key     string
-	Value   interface{}
+	Version   int64       `json:"version"`
+	Key       string      `json:"key"`
+	Value     interface{} `json:"value"`
+	Broadcast bool        `json:"broadcast"`
 }
 
 type gossipDelegate struct{}
@@ -49,6 +50,10 @@ func (d *gossipDelegate) NotifyMsg(msg []byte) {
 	}
 
 	applyUpdate(update)
+
+	if update.Broadcast {
+		broadcastToClients(update)
+	}
 }
 
 func (d *gossipDelegate) GetBroadcasts(overhead, limit int) [][]byte {
@@ -109,9 +114,10 @@ func broadcastUpdate(list *memberlist.Memberlist, key string, value interface{})
 	configMutex.Lock()
 	configVersion++
 	update := ConfigUpdate{
-		Version: configVersion,
-		Key:     key,
-		Value:   value,
+		Version:   configVersion,
+		Key:       key,
+		Value:     value,
+		Broadcast: true,
 	}
 	configMutex.Unlock()
 
@@ -208,18 +214,33 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
+func addClient(conn *websocket.Conn) {
+	clientsMutex.Lock()
+	defer clientsMutex.Unlock()
+	clients[conn] = true
+	log.Printf("Client added. Total clients: %d", len(clients))
+}
+
+func removeClient(conn *websocket.Conn) {
+	clientsMutex.Lock()
+	defer clientsMutex.Unlock()
+	delete(clients, conn)
+	log.Printf("Client removed. Total clients: %d", len(clients))
+}
+
 func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Println(err)
+		log.Printf("Failed to upgrade WebSocket connection: %v", err)
 		return
 	}
 
-	clientsMutex.Lock()
-	clients[conn] = true
-	clientsMutex.Unlock()
+	addClient(conn)
 
-	log.Println("New WebSocket client connected")
+	defer func() {
+		removeClient(conn)
+		conn.Close()
+	}()
 
 	currentConfig := make(map[string]interface{})
 	config.Range(func(key, value interface{}) bool {
@@ -231,14 +252,6 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		"version": configVersion,
 		"config":  currentConfig,
 	})
-
-	defer func() {
-		clientsMutex.Lock()
-		delete(clients, conn)
-		clientsMutex.Unlock()
-		conn.Close()
-		log.Println("WebSocket client disconnected")
-	}()
 
 	for {
 		_, _, err := conn.ReadMessage()
@@ -255,13 +268,17 @@ func broadcastToClients(update ConfigUpdate) {
 	clientsMutex.Lock()
 	defer clientsMutex.Unlock()
 
+	message := map[string]interface{}{
+		"type":    "update",
+		"version": update.Version,
+		"key":     update.Key,
+		"value":   update.Value,
+	}
+
 	for client := range clients {
-		err := client.WriteJSON(map[string]interface{}{
-			"type":   "update",
-			"update": update,
-		})
+		err := client.WriteJSON(message)
 		if err != nil {
-			log.Printf("error: %v", err)
+			log.Printf("Error broadcasting to client: %v", err)
 			client.Close()
 			delete(clients, client)
 		}
@@ -314,7 +331,7 @@ backend servers
     {{end}}
 
 backend ws_back
-    balance source
+	balance source
     server server1 172.18.0.3:8080 check
     server server2 172.18.0.4:8080 check
     server server3 172.18.0.5:8080 check
@@ -325,6 +342,9 @@ listen stats
     stats enable
     stats uri /
     stats refresh 5s
+
+# Make sure there's a newline at the end of the file
+
 `))
 
 	f, err := os.Create("/etc/haproxy/haproxy.cfg")
@@ -359,32 +379,6 @@ func reloadHAProxy() error {
 	return nil
 }
 
-// Function to update Keepalived configuration
-func updateKeepalivedConfig(state string, priority int) error {
-	config := fmt.Sprintf(`
-vrrp_instance VI_1 {
-    state %s
-    interface eth0
-    virtual_router_id 51
-    priority %d
-    advert_int 1
-    authentication {
-        auth_type PASS
-        auth_pass your_secret_password
-    }
-    virtual_ipaddress {
-        %s
-    }
-}`, state, priority, bindAddr)
-
-	return os.WriteFile("/etc/keepalived/keepalived.conf", []byte(config), 0644)
-}
-
-func reloadKeepalived() error {
-	cmd := exec.Command("killall", "-HUP", "keepalived")
-	return cmd.Run()
-}
-
 func main() {
 	flag.StringVar(&nodeName, "name", "", "Node name")
 	flag.StringVar(&bindAddr, "addr", "0.0.0.0", "Bind address")
@@ -415,26 +409,12 @@ func main() {
 
 	log.Printf("Node %s listening on %s:%d", nodeName, bindAddr, bindPort)
 
-	// Initialize HAProxy and Keepalived
+	// Initialize HAProxy
 	if err := generateHAProxyConfig(list.Members()); err != nil {
 		log.Fatalf("Failed to generate HAProxy config: %v", err)
 	}
 	if err := reloadHAProxy(); err != nil {
 		log.Fatalf("Failed to reload HAProxy: %v", err)
-	}
-
-	// Set up Keepalived (assuming the first node in alphabetical order is the master)
-	state := "BACKUP"
-	priority := 100
-	if list.Members()[0].Name == nodeName {
-		state = "MASTER"
-		priority = 101
-	}
-	if err := updateKeepalivedConfig(state, priority); err != nil {
-		log.Fatalf("Failed to update Keepalived config: %v", err)
-	}
-	if err := reloadKeepalived(); err != nil {
-		log.Fatalf("Failed to reload Keepalived: %v", err)
 	}
 
 	configServer := &ConfigServer{
@@ -455,7 +435,7 @@ func main() {
 				http.NotFound(w, r)
 				return
 			}
-			fmt.Fprintf(w, "Fusion Server is running. Available endpoints: /setValue, /getValue, /upload, /download")
+			fmt.Fprintf(w, "Fusion Server is running. Available endpoints: /setValue, /getValue, /upload, /download, /ws")
 		})
 
 		if err := http.ListenAndServe(addr, nil); err != nil {
@@ -478,6 +458,5 @@ func main() {
 		}
 
 		time.Sleep(10 * time.Second)
-		broadcastUpdate(list, "example_key", time.Now().String())
 	}
 }
