@@ -191,7 +191,7 @@ func (s *ConfigServer) DownloadJSON(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Content-Disposition", "attachment; filename=config.json")
-	
+
 	encoder := json.NewEncoder(w)
 	encoder.SetIndent("", "  ")
 	if err := encoder.Encode(configMap); err != nil {
@@ -273,14 +273,14 @@ type HAProxyConfig struct {
 }
 
 func generateHAProxyConfig(members []*memberlist.Node) error {
-    config := HAProxyConfig{
-        Backends: make([]string, len(members)),
-    }
-    for i, member := range members {
-        config.Backends[i] = fmt.Sprintf("%s:%d", member.Addr, 8080)
-    }
+	config := HAProxyConfig{
+		Backends: make([]string, len(members)),
+	}
+	for i, member := range members {
+		config.Backends[i] = fmt.Sprintf("%s:%d", member.Addr, 8080)
+	}
 
-    tmpl := template.Must(template.New("haproxy").Parse(`
+	tmpl := template.Must(template.New("haproxy").Parse(`
 global
     log /dev/log local0
     log /dev/log local1 notice
@@ -302,6 +302,9 @@ defaults
 
 frontend http-in
     bind *:80
+    bind *:9001
+    acl is_websocket hdr(Upgrade) -i WebSocket
+   	use_backend ws_back if is_websocket
     default_backend servers
 
 backend servers
@@ -310,6 +313,13 @@ backend servers
     server {{.}} {{.}} check
     {{end}}
 
+backend ws_back
+    balance source
+    server server1 172.18.0.3:8080 check
+    server server2 172.18.0.4:8080 check
+    server server3 172.18.0.5:8080 check
+    server server4 172.18.0.6:8080 check
+
 listen stats
     bind *:8404
     stats enable
@@ -317,63 +327,63 @@ listen stats
     stats refresh 5s
 `))
 
-    f, err := os.Create("/etc/haproxy/haproxy.cfg")
-    if err != nil {
-        return err
-    }
-    defer f.Close()
+	f, err := os.Create("/etc/haproxy/haproxy.cfg")
+	if err != nil {
+		return err
+	}
+	defer f.Close()
 
-    return tmpl.Execute(f, config)
+	return tmpl.Execute(f, config)
 }
 
 func reloadHAProxy() error {
-    pidFile := "/var/run/haproxy.pid"
-    
-    if _, err := os.Stat(pidFile); os.IsNotExist(err) {
-        // If PID file doesn't exist, start HAProxy
-        cmd := exec.Command("haproxy", "-f", "/etc/haproxy/haproxy.cfg", "-W")
-        return cmd.Start()
-    }
-    
-    pidBytes, err := os.ReadFile(pidFile)
-    if err != nil {
-        return fmt.Errorf("failed to read HAProxy PID: %v", err)
-    }
-    pid := strings.TrimSpace(string(pidBytes))
+	pidFile := "/var/run/haproxy.pid"
 
-    cmd := exec.Command("haproxy", "-f", "/etc/haproxy/haproxy.cfg", "-sf", pid)
-    output, err := cmd.CombinedOutput()
-    if err != nil {
-        return fmt.Errorf("failed to reload HAProxy: %v, output: %s", err, output)
-    }
-    return nil
+	if _, err := os.Stat(pidFile); os.IsNotExist(err) {
+		// If PID file doesn't exist, start HAProxy
+		cmd := exec.Command("haproxy", "-f", "/etc/haproxy/haproxy.cfg", "-W")
+		return cmd.Start()
+	}
+
+	pidBytes, err := os.ReadFile(pidFile)
+	if err != nil {
+		return fmt.Errorf("failed to read HAProxy PID: %v", err)
+	}
+	pid := strings.TrimSpace(string(pidBytes))
+
+	cmd := exec.Command("haproxy", "-f", "/etc/haproxy/haproxy.cfg", "-sf", pid)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to reload HAProxy: %v, output: %s", err, output)
+	}
+	return nil
 }
 
-// Function to update Keepalived configuration
-func updateKeepalivedConfig(state string, priority int) error {
-	config := fmt.Sprintf(`
-vrrp_instance VI_1 {
-    state %s
-    interface eth0
-    virtual_router_id 51
-    priority %d
-    advert_int 1
-    authentication {
-        auth_type PASS
-        auth_pass your_secret_password
-    }
-    virtual_ipaddress {
-        %s
-    }
-}`, state, priority, bindAddr)
+// // Function to update Keepalived configuration
+// func updateKeepalivedConfig(state string, priority int) error {
+// 	config := fmt.Sprintf(`
+// vrrp_instance VI_1 {
+//     state %s
+//     interface eth0
+//     virtual_router_id 51
+//     priority %d
+//     advert_int 1
+//     authentication {
+//         auth_type PASS
+//         auth_pass your_secret_password
+//     }
+//     virtual_ipaddress {
+//         %s
+//     }
+// }`, state, priority, bindAddr)
 
-	return os.WriteFile("/etc/keepalived/keepalived.conf", []byte(config), 0644)
-}
+// 	return os.WriteFile("/etc/keepalived/keepalived.conf", []byte(config), 0644)
+// }
 
-func reloadKeepalived() error {
-    cmd := exec.Command("killall", "-HUP", "keepalived")
-    return cmd.Run()
-}
+// func reloadKeepalived() error {
+// 	cmd := exec.Command("killall", "-HUP", "keepalived")
+// 	return cmd.Run()
+// }
 
 func main() {
 	flag.StringVar(&nodeName, "name", "", "Node name")
@@ -413,19 +423,19 @@ func main() {
 		log.Fatalf("Failed to reload HAProxy: %v", err)
 	}
 
-	// Set up Keepalived (assuming the first node in alphabetical order is the master)
-	state := "BACKUP"
-	priority := 100
-	if list.Members()[0].Name == nodeName {
-		state = "MASTER"
-		priority = 101
-	}
-	if err := updateKeepalivedConfig(state, priority); err != nil {
-		log.Fatalf("Failed to update Keepalived config: %v", err)
-	}
-	if err := reloadKeepalived(); err != nil {
-		log.Fatalf("Failed to reload Keepalived: %v", err)
-	}
+	// // Set up Keepalived (assuming the first node in alphabetical order is the master)
+	// state := "BACKUP"
+	// priority := 100
+	// if list.Members()[0].Name == nodeName {
+	// 	state = "MASTER"
+	// 	priority = 101
+	// }
+	// if err := updateKeepalivedConfig(state, priority); err != nil {
+	// 	log.Fatalf("Failed to update Keepalived config: %v", err)
+	// }
+	// if err := reloadKeepalived(); err != nil {
+	// 	log.Fatalf("Failed to reload Keepalived: %v", err)
+	// }
 
 	configServer := &ConfigServer{
 		list: list,

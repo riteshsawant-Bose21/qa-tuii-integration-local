@@ -1,7 +1,7 @@
 # Fusion High-Availability Gossip-Based Distributed System
 
 ## Architecture Overview
-This project implements a high-availability, gossip-based distributed system using Docker containers. The system consists of multiple Data Service Provider (DSP) nodes that communicate using a gossip protocol, with a fault-tolerant load balancing layer for external access.
+This project implements a high-availability, gossip-based distributed system using Docker containers. The system consists of multiple Data Service Provider (DSP) nodes that communicate using a gossip protocol, with a fault-tolerant setup for high availability.
 
 ## Components
 
@@ -9,49 +9,46 @@ This project implements a high-availability, gossip-based distributed system usi
 - Implemented using custom `fusion-gossip` image
 - Communicate via gossip protocol for configuration sharing
 - Each node listens on port 7946 for inter-node communication
-- Nodes join the cluster by connecting to dsp1 (172.18.0.3:7946)
+- Nodes join the cluster automatically
 
-### 2. Load Balancers (loadbalancer1, loadbalancer2)
-- Use NGINX for load balancing
-- Two instances for high availability
-- Both expose port 80 for incoming traffic
-- Health checks ensure the load balancers are functioning correctly
+### 2. HAProxy
+- Used for load balancing
+- Runs on each DSP node
 
-### 3. Keepalived (keepalived1, keepalived2)
-- Manages high availability for load balancers
+### 3. Keepalived
+- Manages high availability for the system
 - Uses Virtual Router Redundancy Protocol (VRRP)
-- Maintains a Virtual IP (VIP) that floats between load balancer instances
-- Automatic failover if the primary load balancer fails
+- Maintains a Virtual IP (VIP) that floats between DSP instances
+- Automatic failover if the primary DSP fails
 
 ## Network Configuration
-- Custom Docker network `fusionnet` (172.18.0.0/16)
+- Custom Docker network (likely in the 172.18.0.0/16 range)
 - Each component has a static IP within this network
-- Virtual IP (172.18.0.10) managed by Keepalived
+- Virtual IP (172.18.0.2) managed by Keepalived
 
 ## High Availability Features
-1. **Load Balancer Redundancy**: Dual NGINX instances with Keepalived ensure continuous service even if one load balancer fails.
-2. **Automatic Failover**: Keepalived automatically moves the Virtual IP to the healthy load balancer instance.
-3. **DSP Node Resilience**: The gossip protocol allows the cluster to function and update even if some nodes are temporarily unavailable.
+1. **DSP Node Redundancy**: Multiple DSP instances ensure continuous service even if some nodes fail.
+2. **Automatic Failover**: Keepalived automatically moves the Virtual IP to the healthy DSP instance.
+3. **Gossip Protocol Resilience**: The gossip protocol allows the cluster to function and update even if some nodes are temporarily unavailable.
 
 ## Scalability
 - Additional DSP nodes can be easily added to the cluster
-- New nodes automatically join the gossip network through dsp1
+- New nodes automatically join the gossip network
 
 ## Configuration Management
 - Gossip protocol enables efficient propagation of configuration changes across all DSP nodes
 - Changes made to any node are automatically disseminated to all other nodes in the cluster
 
 ## Monitoring and Health Checks
-- Load balancers have built-in health checks
-- Keepalived monitors the status of NGINX processes
-- Consider implementing additional monitoring for DSP nodes and overall system health
+- Keepalived monitors the status of DSP processes
+- Consider implementing additional monitoring for overall system health
 
 ## Getting Started
 1. Ensure Docker and Docker Compose are installed on your system
 2. Clone this repository
-3. Set up the necessary configuration files (`nginx.conf`, `keepalived-master.conf`, `keepalived-backup.conf`)
+3. Set up the necessary configuration files (Keepalived configs for primary and backups)
 4. Run `docker compose up -d` to start the system
-5. Access the service via the Virtual IP (172.18.0.10) on port 80
+5. Access the service via the Virtual IP (172.18.0.2) on the appropriate port
 
 ## Using curl to Set and Get Values
 
@@ -62,17 +59,15 @@ The DSP nodes expose an HTTP API on port 8080 for setting and retrieving configu
 To retrieve the current configuration from a DSP node:
 
 ```bash
-curl http://localhost:8081/getValue
+curl http://localhost:9001/getValue
 ```
-
-Note: Use ports 8081, 8082, 8083, and 8084 for dsp1, dsp2, dsp3, and dsp4 respectively.
 
 ### Setting Key Values
 
 To update a configuration value:
 
 ```bash
-curl -X POST http://localhost:8081/setValue \
+curl -X POST http://localhost:9001/setValue \
      -H "Content-Type: application/json" \
      -d '{"key": "example_key", "value": "new_value"}'
 ```
@@ -81,23 +76,27 @@ Replace `"example_key"` and `"new_value"` with your desired key and value.
 
 ### Uploading a JSON File
 ```bash
-curl -X POST -H "Content-Type: application/json" -d @path/to/your/config.json http://localhost:8080/upload
+curl -X POST -H "Content-Type: application/json" -d @path/to/your/config.json http://localhost:9001/upload
 ```
 
 ### Uploading JSON data
 ```bash
-curl -X POST -H "Content-Type: application/json" -d '{"key1": "value1", "key2": "value2"}' http://localhost:8080/upload
+curl -X POST -H "Content-Type: application/json" -d '{"key1": "value1", "key2": "value2"}' http://localhost:9001/upload
 ```
 
 ### WebSocket Connection
-websocat ws://localhost:8080/ws
+To establish a WebSocket connection:
+```bash
+websocat ws://localhost:9001/ws
+```
+This allows for real-time communication with the DSP nodes.
 
 ### Verifying Gossip Propagation
 
 To verify that the configuration change has propagated to other nodes, you can get the configuration from another DSP:
 
 ```bash
-curl http://localhost:8082/config
+curl http://localhost:8083/getValue
 ```
 
 This should show the updated value for `"example_key"`.
@@ -106,9 +105,9 @@ Note: There might be a short delay before the change propagates to all nodes due
 
 ## Testing Failover
 To test the high availability setup:
-1. Stop the primary load balancer: `docker compose stop loadbalancer1`
-2. Observe that the Virtual IP moves to the secondary load balancer
-3. Restart the primary: `docker compose start loadbalancer1`
+1. Stop the primary DSP node: `docker compose stop dsp1`
+2. Observe that the Virtual IP moves to another DSP node
+3. Restart the primary: `docker compose start dsp1`
 4. Verify that the system continues to function throughout this process
 
 ## Future Improvements
@@ -136,7 +135,7 @@ docker compose stop dsp2
 
 ### Watch logs
 ```
-docker compose ps
+docker compose logs -f
 ```
 
 ### Start single instance
@@ -154,22 +153,82 @@ docker compose rm -sf dsp2
 docker compose up -d dsp2
 ```
 
-### Verify loadbalancer
+### Verify Keepalived status
 ```
-docker compose exec loadbalancer1 ip addr show eth0
-```
-
-### Simulate balancer failure
-```
-docker compose stop loadbalancer1
+docker compose exec dsp1 ip addr show eth0
 ```
 
-### Check that the virtual IP has moved to the backup node
+### Simulate node failure
 ```
-docker compose exec loadbalancer2 ip addr show eth0
+docker compose stop dsp1
 ```
 
-### Restart the first load balancer and observe the IP moving back:
+### Check that the virtual IP has moved to another node
 ```
-docker compose start loadbalancer1
+docker compose exec dsp2 ip addr show eth0
+```
+
+### Restart the first node and observe the cluster adjusting:
+```
+docker compose start dsp1
+```
+
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'fontSize': '30px'}}}%%
+graph TD
+    subgraph Network
+        VIP[Virtual IP: 172.18.0.2]
+        subgraph Container dsp1
+            D1[dsp1: 172.18.0.3]
+            K1[Keepalived Primary]
+            G1[Gossip Node]
+            S1[HTTP Server :8080]
+        end
+        subgraph Container dsp2
+            D2[dsp2: 172.18.0.4]
+            K2[Keepalived Backup1]
+            G2[Gossip Node]
+            S2[HTTP Server :8080]
+        end
+        subgraph Container dsp3
+            D3[dsp3: 172.18.0.5]
+            K3[Keepalived Backup2]
+            G3[Gossip Node]
+            S3[HTTP Server :8080]
+        end
+        subgraph Container dsp4
+            D4[dsp4: 172.18.0.6]
+            K4[Keepalived Backup3]
+            G4[Gossip Node]
+            S4[HTTP Server :8080]
+        end
+    end
+    
+    VIP --> D1
+    D1 <--> D2
+    D1 <--> D3
+    D1 <--> D4
+    D2 <--> D3
+    D2 <--> D4
+    D3 <--> D4
+    
+    K1 --> VIP
+    K2 -.-> VIP
+    K3 -.-> VIP
+    K4 -.-> VIP
+    
+    G1 <--> G2
+    G1 <--> G3
+    G1 <--> G4
+    G2 <--> G3
+    G2 <--> G4
+    G3 <--> G4
+
+    classDef container fill:#e6f3ff,stroke:#333,stroke-width:4px;
+    classDef component fill:#f9f9f9,stroke:#666,stroke-width:4px;
+    classDef vip fill:#ffcccc,stroke:#ff0000,stroke-width:4px;
+    
+    class D1,D2,D3,D4 container;
+    class K1,K2,K3,K4,G1,G2,G3,G4,S1,S2,S3,S4 component;
+    class VIP vip;
 ```

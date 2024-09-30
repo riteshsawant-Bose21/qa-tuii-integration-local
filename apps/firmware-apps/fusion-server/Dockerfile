@@ -18,10 +18,6 @@ WORKDIR /app
 COPY fusion-gossip .
 RUN chmod +x /app/fusion-gossip
 
-# Copy the HAProxy wrapper script
-COPY haproxy-wrapper.sh /usr/local/bin/haproxy-wrapper
-RUN chmod +x /usr/local/bin/haproxy-wrapper
-
 # Copy the entrypoint script
 COPY entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
@@ -42,6 +38,3 @@ RUN chmod 644 /etc/haproxy/haproxy.cfg && \
 
 # Set the entrypoint
 ENTRYPOINT ["/app/entrypoint.sh"]
-
-# Set PATH to include the wrapper script
-ENV PATH="/usr/local/bin:${PATH}"
