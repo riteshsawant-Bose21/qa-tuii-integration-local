@@ -1,7 +1,7 @@
 # Fusion High-Availability Gossip-Based Distributed System
 
 ## Architecture Overview
-This project implements a high-availability, gossip-based distributed system using Docker containers. The system consists of multiple Data Service Provider (DSP) nodes that communicate using a gossip protocol, with a fault-tolerant setup for high availability.
+This project implements a high-availability, [gossip-based distributed](https://github.com/hashicorp/memberlist) system. The system consists of multiple Data Service Provider (DSP) nodes that communicate using a gossip protocol, with a fault-tolerant setup for high availability.
 
 ## Components
 
@@ -11,18 +11,18 @@ This project implements a high-availability, gossip-based distributed system usi
 - Each node listens on port 7946 for inter-node communication
 - Nodes join the cluster automatically
 
-### 2. HAProxy
+### 2. [HAProxy](https://www.haproxy.org)
 - Used for load balancing
 - Runs on each DSP node
 
-### 3. Keepalived
+### 3. [Keepalived](https://www.keepalived.org)
 - Manages high availability for the system
 - Uses Virtual Router Redundancy Protocol (VRRP)
 - Maintains a Virtual IP (VIP) that floats between DSP instances
 - Automatic failover if the primary DSP fails
 
 ## Network Configuration
-- Custom Docker network (likely in the 172.18.0.0/16 range)
+- Custom Docker network (In the 172.18.0.0/16 range)
 - Each component has a static IP within this network
 - Virtual IP (172.18.0.2) managed by Keepalived
 
@@ -48,7 +48,7 @@ This project implements a high-availability, gossip-based distributed system usi
 2. Clone this repository
 3. Set up the necessary configuration files (Keepalived configs for primary and backups)
 4. Run `docker compose up -d` to start the system
-5. Access the service via the Virtual IP (172.18.0.2) on the appropriate port
+5. Access the service via the Virtual IP (localhost) on the appropriate port
 
 ## Using curl to Set and Get Values
 
