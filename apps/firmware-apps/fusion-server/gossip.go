@@ -52,6 +52,7 @@ func (d *gossipDelegate) NotifyMsg(msg []byte) {
 	applyUpdate(update)
 
 	if update.Broadcast {
+		log.Printf("----------------->>> NOTIFY from %s: nodeName")
 		broadcastToClients(update)
 	}
 }
