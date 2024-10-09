@@ -1,12 +1,13 @@
 FROM alpine:latest
 
-# Install necessary packages
+# Install necessary packages including ZeroMQ
 RUN apk --no-cache add \
     ca-certificates \
     curl \
     iputils \
     haproxy \
-    keepalived
+    keepalived \
+    zeromq
 
 # Create necessary directories
 RUN mkdir -p /etc/haproxy /run/haproxy && \

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -14,7 +15,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/gorilla/websocket"
+	"github.com/go-zeromq/zmq4"
 	"github.com/hashicorp/memberlist"
 )
 
@@ -25,8 +26,7 @@ var (
 	nodeName      string
 	bindAddr      string
 	bindPort      int
-	clients       = make(map[*websocket.Conn]bool)
-	clientsMutex  sync.Mutex
+	zmqPubSocket  zmq4.Socket
 )
 
 type ConfigUpdate struct {
@@ -52,7 +52,6 @@ func (d *gossipDelegate) NotifyMsg(msg []byte) {
 	applyUpdate(update)
 
 	if update.Broadcast {
-		log.Printf("----------------->>> NOTIFY from %s: nodeName")
 		broadcastToClients(update)
 	}
 }
@@ -207,82 +206,18 @@ func (s *ConfigServer) DownloadJSON(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-	CheckOrigin: func(r *http.Request) bool {
-		return true
-	},
-}
-
-func addClient(conn *websocket.Conn) {
-	clientsMutex.Lock()
-	defer clientsMutex.Unlock()
-	clients[conn] = true
-	log.Printf("Client added. Total clients: %d", len(clients))
-}
-
-func removeClient(conn *websocket.Conn) {
-	clientsMutex.Lock()
-	defer clientsMutex.Unlock()
-	delete(clients, conn)
-	log.Printf("Client removed. Total clients: %d", len(clients))
-}
-
-func handleWebSocket(w http.ResponseWriter, r *http.Request) {
-	conn, err := upgrader.Upgrade(w, r, nil)
+func broadcastToClients(update ConfigUpdate) {
+	message, err := json.Marshal(update)
 	if err != nil {
-		log.Printf("Failed to upgrade WebSocket connection: %v", err)
+		log.Printf("Error marshaling update: %v", err)
 		return
 	}
 
-	addClient(conn)
-
-	defer func() {
-		removeClient(conn)
-		conn.Close()
-	}()
-
-	currentConfig := make(map[string]interface{})
-	config.Range(func(key, value interface{}) bool {
-		currentConfig[key.(string)] = value
-		return true
-	})
-	conn.WriteJSON(map[string]interface{}{
-		"type":    "full_config",
-		"version": configVersion,
-		"config":  currentConfig,
-	})
-
-	for {
-		_, _, err := conn.ReadMessage()
-		if err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				log.Printf("error: %v", err)
-			}
-			break
-		}
-	}
-}
-
-func broadcastToClients(update ConfigUpdate) {
-	clientsMutex.Lock()
-	defer clientsMutex.Unlock()
-
-	message := map[string]interface{}{
-		"type":    "update",
-		"version": update.Version,
-		"key":     update.Key,
-		"value":   update.Value,
-	}
-
-	for client := range clients {
-		err := client.WriteJSON(message)
-		if err != nil {
-			log.Printf("Error broadcasting to client: %v", err)
-			client.Close()
-			delete(clients, client)
-		}
+	msg := zmq4.NewMsgFrom([]byte("config_update"), message)
+	err = zmqPubSocket.Send(msg)
+	if err != nil {
+		log.Printf("Error sending ZeroMQ message: %v", err)
+		return
 	}
 }
 
@@ -320,9 +255,6 @@ defaults
 
 frontend http-in
     bind *:80
-    bind *:9001
-    acl is_websocket hdr(Upgrade) -i WebSocket
-   	use_backend ws_back if is_websocket
     default_backend servers
 
 backend servers
@@ -330,13 +262,6 @@ backend servers
     {{range .Backends}}
     server {{.}} {{.}} check
     {{end}}
-
-backend ws_back
-	balance source
-    server server1 172.18.0.3:8080 check
-    server server2 172.18.0.4:8080 check
-    server server3 172.18.0.5:8080 check
-    server server4 172.18.0.6:8080 check
 
 listen stats
     bind *:8404
@@ -410,6 +335,14 @@ func main() {
 
 	log.Printf("Node %s listening on %s:%d", nodeName, bindAddr, bindPort)
 
+	// Initialize ZeroMQ PUB socket
+	zmqPubSocket = zmq4.NewPub(context.Background())
+	zmqBindAddr := fmt.Sprintf("tcp://%s:5555", bindAddr)
+	if err := zmqPubSocket.Listen(zmqBindAddr); err != nil {
+		log.Fatalf("Failed to bind ZeroMQ PUB socket: %v", err)
+	}
+	log.Printf("ZeroMQ PUB socket bound to %s", zmqBindAddr)
+
 	// Initialize HAProxy
 	if err := generateHAProxyConfig(list.Members()); err != nil {
 		log.Fatalf("Failed to generate HAProxy config: %v", err)
@@ -426,7 +359,6 @@ func main() {
 	http.HandleFunc("/getValue", configServer.GetValue)
 	http.HandleFunc("/upload", configServer.UploadJSON)
 	http.HandleFunc("/download", configServer.DownloadJSON)
-	http.HandleFunc("/ws", handleWebSocket)
 
 	addr := ":8080"
 	log.Printf("Starting server on %s", addr)
@@ -436,7 +368,7 @@ func main() {
 				http.NotFound(w, r)
 				return
 			}
-			fmt.Fprintf(w, "Fusion Server is running. Available endpoints: /setValue, /getValue, /upload, /download, /ws")
+			fmt.Fprintf(w, "Fusion Server is running. Available endpoints: /setValue, /getValue, /upload, /download")
 		})
 
 		if err := http.ListenAndServe(addr, nil); err != nil {

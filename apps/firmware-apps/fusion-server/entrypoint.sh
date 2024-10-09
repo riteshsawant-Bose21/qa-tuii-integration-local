@@ -5,8 +5,10 @@ rm -f /run/keepalived/keepalived.pid
 
 keepalived -n -l -D -f ${KEEPALIVED_CONF} &
 KEEPALIVED_PID=$!
+
 haproxy -f /etc/haproxy/haproxy.cfg -db &
 HAPROXY_PID=$!
+
 # Start fusion-gossip
 /app/fusion-gossip "$@" &
 FUSION_PID=$!
