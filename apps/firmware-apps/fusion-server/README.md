@@ -84,6 +84,16 @@ curl -X POST -H "Content-Type: application/json" -d @path/to/your/config.json ht
 curl -X POST -H "Content-Type: application/json" -d '{"key1": "value1", "key2": "value2"}' http://localhost:9001/upload
 ```
 
+### Setting volume, linear amplitude 0.0 - 1.0
+
+```bash
+curl -X POST -H "Content-Type: application/json" -d '{"volume": 0.7}' http://localhost:9001/setVolume
+```
+
+```bash
+echo '{"volume": 0.5}' | websocat ws://localhost:9001/ws
+```
+
 ### WebSocket Connection
 To establish a WebSocket connection:
 ```bash

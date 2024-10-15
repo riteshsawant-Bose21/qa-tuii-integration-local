@@ -29,6 +29,9 @@ var (
 	bindPort       int
 	wsClients      = make(map[*websocket.Conn]bool)
 	wsClientsMutex sync.Mutex
+	volumeValue    float64
+	volumeMutex    sync.RWMutex
+	list           *memberlist.Memberlist // Make list a global variable
 )
 
 var upgrader = websocket.Upgrader{
@@ -118,7 +121,8 @@ func applyUpdate(update ConfigUpdate) {
 	}
 }
 
-func broadcastUpdate(list *memberlist.Memberlist, key string, value interface{}) {
+func broadcastUpdate(key string, value interface{}) {
+
 	configMutex.Lock()
 	configVersion++
 	update := ConfigUpdate{
@@ -131,8 +135,12 @@ func broadcastUpdate(list *memberlist.Memberlist, key string, value interface{})
 
 	msg, _ := json.Marshal(update)
 	for _, node := range list.Members() {
-		list.SendReliable(node, msg)
+		err := list.SendReliable(node, msg)
+		if err != nil {
+			log.Printf("Error sending to node %s: %v", node.Name, err)
+		}
 	}
+
 	applyUpdate(update)
 	broadcastToClients(update)
 }
@@ -151,7 +159,7 @@ func (s *ConfigServer) SetValue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	broadcastUpdate(s.list, update.Key, update.Value)
+	broadcastUpdate(update.Key, update.Value)
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"status": "update broadcasted"})
@@ -189,7 +197,7 @@ func (s *ConfigServer) UploadJSON(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for key, value := range jsonConfig {
-		broadcastUpdate(s.list, key, value)
+		broadcastUpdate(key, value)
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -212,6 +220,27 @@ func (s *ConfigServer) DownloadJSON(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error encoding JSON", http.StatusInternalServerError)
 		return
 	}
+}
+
+func (s *ConfigServer) SetVolume(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var volumeUpdate struct {
+		Volume float64 `json:"volume"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&volumeUpdate); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	setVolumeValue(volumeUpdate.Volume)
+	broadcastVolumeUpdate()
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "volume updated"})
 }
 
 func broadcastToClients(update ConfigUpdate) {
@@ -328,13 +357,24 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 	wsClientsMutex.Lock()
 	wsClients[conn] = true
+	log.Printf("New WebSocket client connected. Total clients: %d", len(wsClients))
 	wsClientsMutex.Unlock()
 
 	for {
-		_, _, err := conn.ReadMessage()
+		_, message, err := conn.ReadMessage()
 		if err != nil {
 			log.Printf("WebSocket read error: %v", err)
 			break
+		}
+
+		// Process incoming volume messages
+		var volumeUpdate struct {
+			Volume float64 `json:"volume"`
+		}
+
+		if err := json.Unmarshal(message, &volumeUpdate); err == nil {
+			setVolumeValue(volumeUpdate.Volume)
+			broadcastVolumeUpdate()
 		}
 	}
 
@@ -343,8 +383,26 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	wsClientsMutex.Unlock()
 }
 
-func testWebSocketPublisher(ctx context.Context) {
+func setVolumeValue(value float64) {
+	volumeMutex.Lock()
+	defer volumeMutex.Unlock()
+	volumeValue = value
+}
 
+func getVolumeValue() float64 {
+	volumeMutex.RLock()
+	defer volumeMutex.RUnlock()
+	return volumeValue
+}
+
+// Updated broadcastVolumeUpdate function
+func broadcastVolumeUpdate() {
+	value := getVolumeValue()
+	broadcastUpdate("volume", value)
+}
+
+// Updated testVolumePublisher function
+func testVolumePublisher(ctx context.Context) {
 	const rate = 60
 
 	ticker := time.NewTicker(time.Second / rate)
@@ -366,19 +424,41 @@ func testWebSocketPublisher(ctx context.Context) {
 				phase -= 2 * math.Pi // Keep phase within 0-2π
 			}
 
-			update := ConfigUpdate{
-				Version:   time.Now().UnixNano(),
-				Key:       "volume",
-				Value:     value,
-				Broadcast: false,
-			}
-
-			broadcastToClients(update)
+			broadcastUpdate("volume", value)
 		}
 	}
 }
 
+func createMemberlist(nodeName, bindAddr string, bindPort int) (*memberlist.Memberlist, error) {
+	config := memberlist.DefaultLocalConfig()
+	config.Name = nodeName
+	config.BindAddr = bindAddr
+	config.BindPort = bindPort
+	config.Delegate = &gossipDelegate{}
+	config.Logger = log.New(&logFilter{minLevel: 3}, "", log.LstdFlags)
+
+	return memberlist.Create(config)
+}
+
+// logFilter is a custom io.Writer that filters log messages based on level
+type logFilter struct {
+	minLevel int
+}
+
+func (f *logFilter) Write(p []byte) (n int, err error) {
+	// The first byte represents the log level in memberlist
+	// 0 - Debug
+	// 1 - Info
+	// 2 - Warning
+	// 3 - Error
+	if len(p) > 0 && int(p[0]) >= f.minLevel {
+		return os.Stderr.Write(p)
+	}
+	return len(p), nil
+}
+
 func main() {
+
 	flag.StringVar(&nodeName, "name", "", "Node name")
 	flag.StringVar(&bindAddr, "addr", "0.0.0.0", "Bind address")
 	flag.IntVar(&bindPort, "port", 7946, "Bind port")
@@ -388,30 +468,13 @@ func main() {
 		log.Fatal("Node name is required")
 	}
 
-	config := memberlist.DefaultLocalConfig()
-	config.Name = nodeName
-	config.BindAddr = bindAddr
-	config.BindPort = bindPort
-	config.Delegate = &gossipDelegate{}
-
-	list, err := memberlist.Create(config)
+	var err error
+	list, err = createMemberlist(nodeName, bindAddr, bindPort)
 	if err != nil {
 		log.Fatalf("Failed to create memberlist: %v", err)
 	}
 
-	if members := flag.Args(); len(members) > 0 {
-		_, err := list.Join(members)
-		if err != nil {
-			log.Fatalf("Failed to join cluster: %v", err)
-		}
-	}
-
 	log.Printf("Node %s listening on %s:%d", nodeName, bindAddr, bindPort)
-
-	// Start the WebSocket test publisher
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	go testWebSocketPublisher(ctx)
 
 	// Initialize HAProxy
 	if err := generateHAProxyConfig(list.Members()); err != nil {
@@ -421,12 +484,18 @@ func main() {
 		log.Fatalf("Failed to reload HAProxy: %v", err)
 	}
 
+	// // Start the WebSocket test publisher
+	// ctx, cancel := context.WithCancel(context.Background())
+	// defer cancel()
+	// go testVolumePublisher(ctx)
+
 	configServer := &ConfigServer{
 		list: list,
 	}
 
 	http.HandleFunc("/setValue", configServer.SetValue)
 	http.HandleFunc("/getValue", configServer.GetValue)
+	http.HandleFunc("/setVolume", configServer.SetVolume)
 	http.HandleFunc("/upload", configServer.UploadJSON)
 	http.HandleFunc("/download", configServer.DownloadJSON)
 	http.HandleFunc("/ws", handleWebSocket)
@@ -439,7 +508,7 @@ func main() {
 				http.NotFound(w, r)
 				return
 			}
-			fmt.Fprintf(w, "Fusion Server is running. Available endpoints: /setValue, /getValue, /upload, /download, /ws")
+			fmt.Fprintf(w, "Fusion Server is running. Available endpoints: /setValue, /getValue, /setVolume, /upload, /download, /ws")
 		})
 
 		if err := http.ListenAndServe(addr, nil); err != nil {
