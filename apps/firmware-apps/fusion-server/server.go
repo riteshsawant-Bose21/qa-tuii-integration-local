@@ -16,19 +16,26 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/go-zeromq/zmq4"
+	"github.com/gorilla/websocket"
 	"github.com/hashicorp/memberlist"
 )
 
 var (
-	config        sync.Map
-	configMutex   sync.Mutex
-	configVersion int64
-	nodeName      string
-	bindAddr      string
-	bindPort      int
-	zmqPubSocket  zmq4.Socket
+	config         sync.Map
+	configMutex    sync.Mutex
+	configVersion  int64
+	nodeName       string
+	bindAddr       string
+	bindPort       int
+	wsClients      = make(map[*websocket.Conn]bool)
+	wsClientsMutex sync.Mutex
 )
+
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool {
+		return true // Allow all connections
+	},
+}
 
 type ConfigUpdate struct {
 	Version   int64       `json:"version"`
@@ -214,11 +221,16 @@ func broadcastToClients(update ConfigUpdate) {
 		return
 	}
 
-	msg := zmq4.NewMsgFrom([]byte("fusion-server"), message)
-	err = zmqPubSocket.Send(msg)
-	if err != nil {
-		log.Printf("Error sending message: %v", err)
-		return
+	wsClientsMutex.Lock()
+	defer wsClientsMutex.Unlock()
+
+	for client := range wsClients {
+		err := client.WriteMessage(websocket.TextMessage, message)
+		if err != nil {
+			log.Printf("Error sending message to WebSocket client: %v", err)
+			client.Close()
+			delete(wsClients, client)
+		}
 	}
 }
 
@@ -306,9 +318,33 @@ func reloadHAProxy() error {
 	return nil
 }
 
-func testZeroMQPublisher(ctx context.Context, socket zmq4.Socket) {
+func handleWebSocket(w http.ResponseWriter, r *http.Request) {
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Printf("Failed to upgrade connection to WebSocket: %v", err)
+		return
+	}
+	defer conn.Close()
 
-	// 60Hz
+	wsClientsMutex.Lock()
+	wsClients[conn] = true
+	wsClientsMutex.Unlock()
+
+	for {
+		_, _, err := conn.ReadMessage()
+		if err != nil {
+			log.Printf("WebSocket read error: %v", err)
+			break
+		}
+	}
+
+	wsClientsMutex.Lock()
+	delete(wsClients, conn)
+	wsClientsMutex.Unlock()
+}
+
+func testWebSocketPublisher(ctx context.Context) {
+
 	const rate = 60
 
 	ticker := time.NewTicker(time.Second / rate)
@@ -337,17 +373,7 @@ func testZeroMQPublisher(ctx context.Context, socket zmq4.Socket) {
 				Broadcast: false,
 			}
 
-			message, err := json.Marshal(update)
-			if err != nil {
-				log.Printf("Error marshaling update: %v", err)
-				continue
-			}
-
-			msg := zmq4.NewMsgFrom([]byte("fusion-server"), message)
-			err = socket.Send(msg)
-			if err != nil {
-				log.Printf("Error sending message: %v", err)
-			}
+			broadcastToClients(update)
 		}
 	}
 }
@@ -382,18 +408,10 @@ func main() {
 
 	log.Printf("Node %s listening on %s:%d", nodeName, bindAddr, bindPort)
 
-	// Initialize ZeroMQ PUB socket
-	zmqPubSocket = zmq4.NewPub(context.Background())
-	zmqBindAddr := fmt.Sprintf("tcp://%s:5555", bindAddr)
-	if err := zmqPubSocket.Listen(zmqBindAddr); err != nil {
-		log.Fatalf("Failed to bind ZeroMQ PUB socket: %v", err)
-	}
-	log.Printf("ZeroMQ PUB socket bound to %s", zmqBindAddr)
-
-	// Start the ZeroMQ test publisher
+	// Start the WebSocket test publisher
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	go testZeroMQPublisher(ctx, zmqPubSocket)
+	go testWebSocketPublisher(ctx)
 
 	// Initialize HAProxy
 	if err := generateHAProxyConfig(list.Members()); err != nil {
@@ -411,6 +429,7 @@ func main() {
 	http.HandleFunc("/getValue", configServer.GetValue)
 	http.HandleFunc("/upload", configServer.UploadJSON)
 	http.HandleFunc("/download", configServer.DownloadJSON)
+	http.HandleFunc("/ws", handleWebSocket)
 
 	addr := ":8080"
 	log.Printf("Starting server on %s", addr)
@@ -420,7 +439,7 @@ func main() {
 				http.NotFound(w, r)
 				return
 			}
-			fmt.Fprintf(w, "Fusion Server is running. Available endpoints: /setValue, /getValue, /upload, /download")
+			fmt.Fprintf(w, "Fusion Server is running. Available endpoints: /setValue, /getValue, /upload, /download, /ws")
 		})
 
 		if err := http.ListenAndServe(addr, nil); err != nil {

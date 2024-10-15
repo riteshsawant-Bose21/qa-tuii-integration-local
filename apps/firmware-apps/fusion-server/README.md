@@ -173,14 +173,6 @@ docker compose exec dsp2 ip addr show eth0
 docker compose start dsp1
 ```
 
-### Connect to message queue
-```
-python3 -m venv fusion_env
-source fusion_env/bin/activate
-pip install pyzmq
-python subscriber.py
-```
-
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': { 'fontSize': '30px'}}}%%
 graph TD
