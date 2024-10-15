@@ -4,7 +4,7 @@ GOBUILD=$(GOCMD) build
 GOCLEAN=$(GOCMD) clean
 GOTEST=$(GOCMD) test
 GOMOD=$(GOCMD) mod
-BINARY_NAME=fusion-gossip
+BINARY_NAME=fusion-server
 
 all: deps test build
 

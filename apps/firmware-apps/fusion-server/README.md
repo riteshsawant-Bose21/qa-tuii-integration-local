@@ -6,7 +6,7 @@ This project implements a high-availability, [gossip-based distributed](https://
 ## Components
 
 ### 1. DSP Nodes (dsp1, dsp2, dsp3, dsp4)
-- Implemented using custom `fusion-gossip` image
+- Implemented using custom `fusion-server` image
 - Communicate via gossip protocol for configuration sharing
 - Each node listens on port 7946 for inter-node communication
 - Nodes join the cluster automatically
@@ -120,7 +120,7 @@ To test the high availability setup:
 
 ### Build image
 ```
-docker build -t fusion-gossip .
+docker build -t fusion-server .
 ```
 
 ### Start images

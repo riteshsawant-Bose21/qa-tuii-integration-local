@@ -9,8 +9,8 @@ KEEPALIVED_PID=$!
 haproxy -f /etc/haproxy/haproxy.cfg -db &
 HAPROXY_PID=$!
 
-# Start fusion-gossip
-/app/fusion-gossip "$@" &
+# Start fusion-server
+/app/fusion-server "$@" &
 FUSION_PID=$!
 
 # Wait for any process to exit
@@ -22,7 +22,7 @@ if ! kill -0 $KEEPALIVED_PID 2>/dev/null; then
 elif ! kill -0 $HAPROXY_PID 2>/dev/null; then
    echo "HAProxy exited unexpectedly"
 elif ! kill -0 $FUSION_PID 2>/dev/null; then
-   echo "fusion-gossip exited unexpectedly"
+   echo "fusion-server exited unexpectedly"
 fi
 
 # Exit with status of process that exited first

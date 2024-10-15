@@ -15,9 +15,9 @@ RUN mkdir -p /etc/haproxy /run/haproxy && \
 
 WORKDIR /app
 
-# Copy the fusion-gossip binary
-COPY fusion-gossip .
-RUN chmod +x /app/fusion-gossip
+# Copy the fusion-server binary
+COPY fusion-server .
+RUN chmod +x /app/fusion-server
 
 # Copy the entrypoint script
 COPY entrypoint.sh /app/entrypoint.sh

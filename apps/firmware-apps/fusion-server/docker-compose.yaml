@@ -1,9 +1,10 @@
 services:
+
   dsp1:
     build:
       context: .
       dockerfile: Dockerfile
-    image: fusion-gossip
+    image: fusion-server
     networks:
       fusionnet:
         ipv4_address: ${NETWORK_PREFIX}.${DSP1_SUFFIX}
@@ -19,11 +20,12 @@ services:
       - NET_ADMIN
       - NET_BROADCAST
       - NET_RAW
+
   dsp2:
     build:
       context: .
       dockerfile: Dockerfile
-    image: fusion-gossip
+    image: fusion-server
     networks:
       fusionnet:
         ipv4_address: ${NETWORK_PREFIX}.${DSP2_SUFFIX}
@@ -46,7 +48,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: fusion-gossip
+    image: fusion-server
     networks:
       fusionnet:
         ipv4_address: ${NETWORK_PREFIX}.${DSP3_SUFFIX}
@@ -69,7 +71,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: fusion-gossip
+    image: fusion-server
     networks:
       fusionnet:
         ipv4_address: ${NETWORK_PREFIX}.${DSP4_SUFFIX}
