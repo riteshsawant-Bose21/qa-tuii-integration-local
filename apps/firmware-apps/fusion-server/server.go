@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"net/http"
 	"os"
 	"os/exec"
@@ -213,10 +214,10 @@ func broadcastToClients(update ConfigUpdate) {
 		return
 	}
 
-	msg := zmq4.NewMsgFrom([]byte("config_update"), message)
+	msg := zmq4.NewMsgFrom([]byte("fusion-server"), message)
 	err = zmqPubSocket.Send(msg)
 	if err != nil {
-		log.Printf("Error sending ZeroMQ message: %v", err)
+		log.Printf("Error sending message: %v", err)
 		return
 	}
 }
@@ -305,6 +306,52 @@ func reloadHAProxy() error {
 	return nil
 }
 
+func testZeroMQPublisher(ctx context.Context, socket zmq4.Socket) {
+
+	// 60Hz
+	const rate = 60
+
+	ticker := time.NewTicker(time.Second / rate)
+	defer ticker.Stop()
+
+	// Variables for sine wave generation
+	var phase float64
+	const frequency = 0.5 // Adjust this to change the frequency of the sine wave
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			// Generate a sine wave value between 0 and 1
+			value := (math.Sin(phase) + 1) / 2 // This transforms the sine wave to range 0-1
+			phase += frequency * 2 * math.Pi / rate
+			if phase > 2*math.Pi {
+				phase -= 2 * math.Pi // Keep phase within 0-2π
+			}
+
+			update := ConfigUpdate{
+				Version:   time.Now().UnixNano(),
+				Key:       "volume",
+				Value:     value,
+				Broadcast: false,
+			}
+
+			message, err := json.Marshal(update)
+			if err != nil {
+				log.Printf("Error marshaling update: %v", err)
+				continue
+			}
+
+			msg := zmq4.NewMsgFrom([]byte("fusion-server"), message)
+			err = socket.Send(msg)
+			if err != nil {
+				log.Printf("Error sending message: %v", err)
+			}
+		}
+	}
+}
+
 func main() {
 	flag.StringVar(&nodeName, "name", "", "Node name")
 	flag.StringVar(&bindAddr, "addr", "0.0.0.0", "Bind address")
@@ -342,6 +389,11 @@ func main() {
 		log.Fatalf("Failed to bind ZeroMQ PUB socket: %v", err)
 	}
 	log.Printf("ZeroMQ PUB socket bound to %s", zmqBindAddr)
+
+	// Start the ZeroMQ test publisher
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go testZeroMQPublisher(ctx, zmqPubSocket)
 
 	// Initialize HAProxy
 	if err := generateHAProxyConfig(list.Members()); err != nil {
