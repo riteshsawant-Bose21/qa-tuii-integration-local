@@ -29,8 +29,6 @@ var (
 	bindPort       int
 	wsClients      = make(map[*websocket.Conn]bool)
 	wsClientsMutex sync.Mutex
-	volumeValue    float64
-	volumeMutex    sync.RWMutex
 	list           *memberlist.Memberlist // Make list a global variable
 )
 
@@ -40,6 +38,12 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
+type GossipDelegate struct{}
+
+func (d *GossipDelegate) NodeMeta(limit int) []byte {
+	return []byte{}
+}
+
 type ConfigUpdate struct {
 	Version   int64       `json:"version"`
 	Key       string      `json:"key"`
@@ -47,13 +51,7 @@ type ConfigUpdate struct {
 	Broadcast bool        `json:"broadcast"`
 }
 
-type gossipDelegate struct{}
-
-func (d *gossipDelegate) NodeMeta(limit int) []byte {
-	return []byte{}
-}
-
-func (d *gossipDelegate) NotifyMsg(msg []byte) {
+func (d *GossipDelegate) NotifyMsg(msg []byte) {
 	var update ConfigUpdate
 	if err := json.Unmarshal(msg, &update); err != nil {
 		log.Printf("Error unmarshaling update: %v", err)
@@ -67,11 +65,11 @@ func (d *gossipDelegate) NotifyMsg(msg []byte) {
 	}
 }
 
-func (d *gossipDelegate) GetBroadcasts(overhead, limit int) [][]byte {
+func (d *GossipDelegate) GetBroadcasts(overhead, limit int) [][]byte {
 	return nil
 }
 
-func (d *gossipDelegate) LocalState(join bool) []byte {
+func (d *GossipDelegate) LocalState(join bool) []byte {
 	configMutex.Lock()
 	defer configMutex.Unlock()
 
@@ -88,7 +86,7 @@ func (d *gossipDelegate) LocalState(join bool) []byte {
 	return data
 }
 
-func (d *gossipDelegate) MergeRemoteState(buf []byte, join bool) {
+func (d *GossipDelegate) MergeRemoteState(buf []byte, join bool) {
 	var remoteState struct {
 		Version int64
 		Config  map[string]interface{}
@@ -222,22 +220,24 @@ func (s *ConfigServer) DownloadJSON(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+type VolumeUpdate struct {
+	Channel int     `json:"channel"`
+	Volume  float64 `json:"volume"`
+}
+
 func (s *ConfigServer) SetVolume(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	var volumeUpdate struct {
-		Volume float64 `json:"volume"`
-	}
+	var volumeUpdate VolumeUpdate
 	if err := json.NewDecoder(r.Body).Decode(&volumeUpdate); err != nil {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
 
-	setVolumeValue(volumeUpdate.Volume)
-	broadcastVolumeUpdate()
+	broadcastVolumeUpdate(volumeUpdate)
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"status": "volume updated"})
@@ -367,15 +367,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 
-		// Process incoming volume messages
-		var volumeUpdate struct {
-			Volume float64 `json:"volume"`
-		}
-
-		if err := json.Unmarshal(message, &volumeUpdate); err == nil {
-			setVolumeValue(volumeUpdate.Volume)
-			broadcastVolumeUpdate()
-		}
+		processVolumeMessage(message)
 	}
 
 	wsClientsMutex.Lock()
@@ -383,34 +375,27 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	wsClientsMutex.Unlock()
 }
 
-func setVolumeValue(value float64) {
-	volumeMutex.Lock()
-	defer volumeMutex.Unlock()
-	volumeValue = value
+func processVolumeMessage(message []byte) {
+	var volumeUpdate VolumeUpdate
+	if err := json.Unmarshal(message, &volumeUpdate); err == nil {
+		broadcastVolumeUpdate(volumeUpdate)
+	}
 }
 
-func getVolumeValue() float64 {
-	volumeMutex.RLock()
-	defer volumeMutex.RUnlock()
-	return volumeValue
+func broadcastVolumeUpdate(volumeUpdate VolumeUpdate) {
+	broadcastUpdate("volume", volumeUpdate)
 }
 
-// Updated broadcastVolumeUpdate function
-func broadcastVolumeUpdate() {
-	value := getVolumeValue()
-	broadcastUpdate("volume", value)
-}
-
-// Updated testVolumePublisher function
 func testVolumePublisher(ctx context.Context) {
 	const rate = 60
 
 	ticker := time.NewTicker(time.Second / rate)
 	defer ticker.Stop()
 
-	// Variables for sine wave generation
+	// Adjust this to change the frequency of the sine wave
+	const frequency = 0.5
+
 	var phase float64
-	const frequency = 0.5 // Adjust this to change the frequency of the sine wave
 
 	for {
 		select {
@@ -418,13 +403,56 @@ func testVolumePublisher(ctx context.Context) {
 			return
 		case <-ticker.C:
 			// Generate a sine wave value between 0 and 1
-			value := (math.Sin(phase) + 1) / 2 // This transforms the sine wave to range 0-1
+			volume := (math.Sin(phase) + 1) / 2 // This transforms the sine wave to range 0-1
 			phase += frequency * 2 * math.Pi / rate
 			if phase > 2*math.Pi {
 				phase -= 2 * math.Pi // Keep phase within 0-2π
 			}
 
-			broadcastUpdate("volume", value)
+			broadcastVolumeUpdate(VolumeUpdate{1, volume})
+		}
+	}
+}
+
+func testDrumBeatPublisher(ctx context.Context) {
+	const bpm = 120           // Beats per minute
+	const beatsPerMeasure = 4 // 4/4 time signature
+	const subBeats = 4        // Subdivisions per beat for finer control
+
+	// Calculate the duration of each subdivision
+	beatDuration := time.Minute / time.Duration(bpm)
+	subBeatDuration := beatDuration / time.Duration(subBeats)
+
+	ticker := time.NewTicker(subBeatDuration)
+	defer ticker.Stop()
+
+	beat := 0
+	subBeat := 0
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			if subBeat == 0 {
+
+				// Quarter note (main beat)
+				var volume = 0.2
+
+				// Snare on beats 2 and 4
+				if beat == 1 || beat == 3 {
+					volume += 0.1
+				}
+
+				broadcastVolumeUpdate(VolumeUpdate{1, volume})
+			}
+
+			// Move to the next sub-beat
+			subBeat++
+			if subBeat == subBeats {
+				subBeat = 0
+				beat = (beat + 1) % beatsPerMeasure
+			}
 		}
 	}
 }
@@ -434,18 +462,18 @@ func createMemberlist(nodeName, bindAddr string, bindPort int) (*memberlist.Memb
 	config.Name = nodeName
 	config.BindAddr = bindAddr
 	config.BindPort = bindPort
-	config.Delegate = &gossipDelegate{}
-	config.Logger = log.New(&logFilter{minLevel: 3}, "", log.LstdFlags)
+	config.Delegate = &GossipDelegate{}
+	config.Logger = log.New(&LogFilter{minLevel: 3}, "", log.LstdFlags)
 
 	return memberlist.Create(config)
 }
 
-// logFilter is a custom io.Writer that filters log messages based on level
-type logFilter struct {
+// LogFilter is a custom io.Writer that filters log messages based on level
+type LogFilter struct {
 	minLevel int
 }
 
-func (f *logFilter) Write(p []byte) (n int, err error) {
+func (f *LogFilter) Write(p []byte) (n int, err error) {
 	// The first byte represents the log level in memberlist
 	// 0 - Debug
 	// 1 - Info
@@ -484,10 +512,11 @@ func main() {
 		log.Fatalf("Failed to reload HAProxy: %v", err)
 	}
 
-	// // Start the WebSocket test publisher
-	// ctx, cancel := context.WithCancel(context.Background())
-	// defer cancel()
-	// go testVolumePublisher(ctx)
+	// Start the WebSocket test publisher
+	//ctx, cancel := context.WithCancel(context.Background())
+	//defer cancel()
+	//go testVolumePublisher(ctx)
+	//go testDrumBeatPublisher(ctx)
 
 	configServer := &ConfigServer{
 		list: list,

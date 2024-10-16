@@ -20,74 +20,74 @@ services:
       - NET_ADMIN
       - NET_BROADCAST
       - NET_RAW
-  # dsp2:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile
-  #   image: fusion-server
-  #   networks:
-  #     fusionnet:
-  #       ipv4_address: ${NETWORK_PREFIX}.${DSP2_SUFFIX}
-  #   ports:
-  #     - "9002:80" # Expose HAProxy port to host
-  #     - "${DSP2_PORT}:${GOSSIP_PORT}"
-  #     - "8082:8081"
-  #     - "5556:5555" # Expose ZeroMQ port (different host port to avoid conflicts)
-  #   environment:
-  #     - KEEPALIVED_CONF=${KEEPALIVED_BACKUP1_CONF}
-  #   command: --name dsp2 --addr 0.0.0.0 --port ${GOSSIP_PORT}
-  #   depends_on:
-  #     - dsp1
-  #   cap_add:
-  #     - NET_ADMIN
-  #     - NET_BROADCAST
-  #     - NET_RAW
+  dsp2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: fusion-server
+    networks:
+      fusionnet:
+        ipv4_address: ${NETWORK_PREFIX}.${DSP2_SUFFIX}
+    ports:
+      - "9002:80" # Expose HAProxy port to host
+      - "${DSP2_PORT}:${GOSSIP_PORT}"
+      - "8082:8081"
+      - "5556:5555" # Expose ZeroMQ port (different host port to avoid conflicts)
+    environment:
+      - KEEPALIVED_CONF=${KEEPALIVED_BACKUP1_CONF}
+    command: --name dsp2 --addr 0.0.0.0 --port ${GOSSIP_PORT}
+    depends_on:
+      - dsp1
+    cap_add:
+      - NET_ADMIN
+      - NET_BROADCAST
+      - NET_RAW
 
-  # dsp3:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile
-  #   image: fusion-server
-  #   networks:
-  #     fusionnet:
-  #       ipv4_address: ${NETWORK_PREFIX}.${DSP3_SUFFIX}
-  #   ports:
-  #     - "${DSP3_PORT}:${GOSSIP_PORT}"
-  #     - "9003:80" # Expose HAProxy port to host
-  #     - "8083:8081"
-  #     - "5557:5555" # Expose ZeroMQ port (different host port to avoid conflicts)
-  #   environment:
-  #     - KEEPALIVED_CONF=${KEEPALIVED_BACKUP2_CONF}
-  #   command: --name dsp3 --addr 0.0.0.0 --port ${GOSSIP_PORT}
-  #   depends_on:
-  #     - dsp2
-  #   cap_add:
-  #     - NET_ADMIN
-  #     - NET_BROADCAST
-  #     - NET_RAW
+  dsp3:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: fusion-server
+    networks:
+      fusionnet:
+        ipv4_address: ${NETWORK_PREFIX}.${DSP3_SUFFIX}
+    ports:
+      - "${DSP3_PORT}:${GOSSIP_PORT}"
+      - "9003:80" # Expose HAProxy port to host
+      - "8083:8081"
+      - "5557:5555" # Expose ZeroMQ port (different host port to avoid conflicts)
+    environment:
+      - KEEPALIVED_CONF=${KEEPALIVED_BACKUP2_CONF}
+    command: --name dsp3 --addr 0.0.0.0 --port ${GOSSIP_PORT}
+    depends_on:
+      - dsp2
+    cap_add:
+      - NET_ADMIN
+      - NET_BROADCAST
+      - NET_RAW
 
-  # dsp4:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile
-  #   image: fusion-server
-  #   networks:
-  #     fusionnet:
-  #       ipv4_address: ${NETWORK_PREFIX}.${DSP4_SUFFIX}
-  #   ports:
-  #     - "9004:80" # Expose HAProxy port to host
-  #     - "${DSP4_PORT}:${GOSSIP_PORT}"
-  #     - "8084:8081"
-  #     - "5558:5555" # Expose ZeroMQ port (different host port to avoid conflicts)
-  #   environment:
-  #     - KEEPALIVED_CONF=${KEEPALIVED_BACKUP3_CONF}
-  #   command: --name dsp4 --addr 0.0.0.0 --port ${GOSSIP_PORT}
-  #   depends_on:
-  #     - dsp3
-  #   cap_add:
-  #     - NET_ADMIN
-  #     - NET_BROADCAST
-  #     - NET_RAW
+  dsp4:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: fusion-server
+    networks:
+      fusionnet:
+        ipv4_address: ${NETWORK_PREFIX}.${DSP4_SUFFIX}
+    ports:
+      - "9004:80" # Expose HAProxy port to host
+      - "${DSP4_PORT}:${GOSSIP_PORT}"
+      - "8084:8081"
+      - "5558:5555" # Expose ZeroMQ port (different host port to avoid conflicts)
+    environment:
+      - KEEPALIVED_CONF=${KEEPALIVED_BACKUP3_CONF}
+    command: --name dsp4 --addr 0.0.0.0 --port ${GOSSIP_PORT}
+    depends_on:
+      - dsp3
+    cap_add:
+      - NET_ADMIN
+      - NET_BROADCAST
+      - NET_RAW
 
 networks:
   fusionnet:

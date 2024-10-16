@@ -47,8 +47,9 @@ This project implements a high-availability, [gossip-based distributed](https://
 1. Ensure Docker and Docker Compose are installed on your system
 2. Clone this repository
 3. Set up the necessary configuration files (Keepalived configs for primary and backups)
-4. Run `docker compose up -d` to start the system
-5. Access the service via the Virtual IP (localhost) on the appropriate port
+4. Create docker network with `docker network create --subnet=172.18.0.0/24 fusionnet`
+5. Run `docker compose up -d` to start the system
+6. Access the service via the Virtual IP (localhost) on the appropriate port
 
 ## Using curl to Set and Get Values
 
@@ -91,7 +92,7 @@ curl -X POST -H "Content-Type: application/json" -d '{"volume": 0.7}' http://loc
 ```
 
 ```bash
-echo '{"volume": 0.5}' | websocat ws://localhost:9001/ws
+echo '{"channel": 1, "volume": 0.8}' | websocat ws://localhost:9001/ws
 ```
 
 ### WebSocket Connection
