@@ -3,7 +3,6 @@ package main
 import (
 	"math"
 	"math/rand"
-	"time"
 )
 
 // generateWhiteNoise generates white noise and produces a floating-point value
@@ -25,8 +24,6 @@ import (
 //
 //	A float64 value between 0 and 1, representing the volume of white noise at the specified frequency.
 func generateWhiteNoise(sampleRate, frequency float64) float64 {
-	// Initialize random number generator
-	rand.Seed(time.Now().UnixNano())
 
 	// Calculate the number of samples per cycle
 	samplesPerCycle := sampleRate / frequency
@@ -62,8 +59,6 @@ func generateWhiteNoise(sampleRate, frequency float64) float64 {
 //
 //	A float64 value between 0 and 1, representing the volume of pink noise at the specified frequency.
 func generatePinkNoise(sampleRate, frequency float64) float64 {
-	// Initialize random number generator
-	rand.Seed(time.Now().UnixNano())
 
 	// Initialize pink noise state
 	const numGenerators = 16
@@ -116,8 +111,6 @@ func generatePinkNoise(sampleRate, frequency float64) float64 {
 //
 //	A float64 value between 0 and 1, representing the volume of brown noise at the specified frequency.
 func generateBrownNoise(sampleRate, frequency float64) float64 {
-	// Initialize random number generator
-	rand.Seed(time.Now().UnixNano())
 
 	// Calculate the number of samples per cycle
 	samplesPerCycle := int(sampleRate / frequency)

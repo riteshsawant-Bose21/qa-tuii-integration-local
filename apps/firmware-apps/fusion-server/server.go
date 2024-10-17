@@ -1,13 +1,11 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
 	"log"
-	"math"
 	"net/http"
 	"os"
 	"os/exec"
@@ -386,77 +384,6 @@ func broadcastVolumeUpdate(volumeUpdate VolumeUpdate) {
 	broadcastUpdate("volume", volumeUpdate)
 }
 
-func testVolumePublisher(ctx context.Context) {
-	const rate = 60
-
-	ticker := time.NewTicker(time.Second / rate)
-	defer ticker.Stop()
-
-	// Adjust this to change the frequency of the sine wave
-	const frequency = 0.5
-
-	var phase float64
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			// Generate a sine wave value between 0 and 1
-			volume := (math.Sin(phase) + 1) / 2 // This transforms the sine wave to range 0-1
-			phase += frequency * 2 * math.Pi / rate
-			if phase > 2*math.Pi {
-				phase -= 2 * math.Pi // Keep phase within 0-2π
-			}
-
-			broadcastVolumeUpdate(VolumeUpdate{1, volume})
-		}
-	}
-}
-
-func testDrumBeatPublisher(ctx context.Context) {
-	const bpm = 120           // Beats per minute
-	const beatsPerMeasure = 4 // 4/4 time signature
-	const subBeats = 4        // Subdivisions per beat for finer control
-
-	// Calculate the duration of each subdivision
-	beatDuration := time.Minute / time.Duration(bpm)
-	subBeatDuration := beatDuration / time.Duration(subBeats)
-
-	ticker := time.NewTicker(subBeatDuration)
-	defer ticker.Stop()
-
-	beat := 0
-	subBeat := 0
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			if subBeat == 0 {
-
-				// Quarter note (main beat)
-				var volume = 0.2
-
-				// Snare on beats 2 and 4
-				if beat == 1 || beat == 3 {
-					volume += 0.1
-				}
-
-				broadcastVolumeUpdate(VolumeUpdate{1, volume})
-			}
-
-			// Move to the next sub-beat
-			subBeat++
-			if subBeat == subBeats {
-				subBeat = 0
-				beat = (beat + 1) % beatsPerMeasure
-			}
-		}
-	}
-}
-
 func createMemberlist(nodeName, bindAddr string, bindPort int) (*memberlist.Memberlist, error) {
 	config := memberlist.DefaultLocalConfig()
 	config.Name = nodeName
@@ -511,12 +438,6 @@ func main() {
 	if err := reloadHAProxy(); err != nil {
 		log.Fatalf("Failed to reload HAProxy: %v", err)
 	}
-
-	// Start the WebSocket test publisher
-	//ctx, cancel := context.WithCancel(context.Background())
-	//defer cancel()
-	//go testVolumePublisher(ctx)
-	//go testDrumBeatPublisher(ctx)
 
 	configServer := &ConfigServer{
 		list: list,
