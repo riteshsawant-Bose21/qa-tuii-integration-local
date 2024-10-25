@@ -508,6 +508,7 @@ func main() {
 	}
 
 	monitorClusterState(list, nodeName)
+	startHealthCheck(list, nodeName)
 
 	log.Printf("Node %s listening on %s:%d", nodeName, bindAddr, bindPort)
 
