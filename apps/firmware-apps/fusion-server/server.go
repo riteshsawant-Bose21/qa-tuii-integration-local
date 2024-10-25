@@ -120,51 +120,46 @@ func applyUpdate(update ConfigUpdate) {
 	}
 }
 
-func broadcastUpdate(key string, value interface{}) {
-
-	configMutex.Lock()
-	configVersion++
-	update := ConfigUpdate{
-		Version:   configVersion,
-		Key:       key,
-		Value:     value,
-		Broadcast: true,
-	}
-	configMutex.Unlock()
-
-	msg, _ := json.Marshal(update)
-	for _, node := range list.Members() {
-		err := list.SendReliable(node, msg)
-		if err != nil {
-			log.Printf("Error sending to node %s: %v", node.Name, err)
-		}
-	}
-
-	applyUpdate(update)
-	broadcastToClients(update)
-}
-
 type ConfigServer struct {
 	list *memberlist.Memberlist
 }
 
 func (s *ConfigServer) SetValue(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	var update struct {
 		Key   string      `json:"key"`
 		Value interface{} `json:"value"`
 	}
+
 	if err := json.NewDecoder(r.Body).Decode(&update); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
+	// Store value directly in the config map before broadcasting
+	config.Store(update.Key, update.Value)
+
+	// Then broadcast the update
 	broadcastUpdate(update.Key, update.Value)
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"status": "update broadcasted"})
+	json.NewEncoder(w).Encode(map[string]string{
+		"status": "update stored and broadcasted",
+		"key":    update.Key,
+	})
 }
 
 func (s *ConfigServer) GetValue(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	configMap := make(map[string]interface{})
 	config.Range(func(key, value interface{}) bool {
 		configMap[key.(string)] = value
@@ -242,6 +237,38 @@ func (s *ConfigServer) SetVolume(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"status": "volume updated"})
+}
+
+func broadcastUpdate(key string, value interface{}) {
+	configMutex.Lock()
+	configVersion++
+	update := ConfigUpdate{
+		Version:   configVersion,
+		Key:       key,
+		Value:     value,
+		Broadcast: true,
+	}
+	configMutex.Unlock()
+
+	// Marshal update to JSON
+	msg, err := json.Marshal(update)
+	if err != nil {
+		log.Printf("Error marshaling update: %v", err)
+		return
+	}
+
+	// Send to all members
+	for _, node := range list.Members() {
+		if err := list.SendReliable(node, msg); err != nil {
+			log.Printf("Error sending to node %s: %v", node.Name, err)
+		}
+	}
+
+	// Apply update locally
+	applyUpdate(update)
+
+	// Broadcast to WebSocket clients
+	broadcastToClients(update)
 }
 
 func broadcastToClients(update ConfigUpdate) {
