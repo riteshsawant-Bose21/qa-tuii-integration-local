@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"math/rand/v2"
 	"net/url"
 	"os"
 	"os/signal"
@@ -69,13 +70,12 @@ func main() {
 			case "sin":
 				volume = generateSin(sinRate, &sinPhase)
 			default:
-				volume = generateNoise(*signalType, *sampleRate, *frequency)
+				volume = generateNoise(*sampleRate, *frequency)
 			}
 
 			message := fmt.Sprintf(`{"channel":%d,"volume":%.2f}`, *channel, volume)
 			err := c.WriteMessage(websocket.TextMessage, []byte(message))
 			if err != nil {
-				log.Println("Failed to send message:", err)
 				return
 			}
 
@@ -105,18 +105,39 @@ func main() {
 	}
 }
 
-func generateNoise(signalType string, sampleRate, frequency float64) float64 {
-	switch signalType {
-	case "white":
-		return generateWhiteNoise(sampleRate, frequency)
-	case "pink":
-		return generatePinkNoise(sampleRate, frequency)
-	case "brown":
-		return generateBrownNoise(sampleRate, frequency)
-	default:
-		log.Fatalf("Invalid noise type: %s", signalType)
-		return 0
+// generateNoise generates white noise and produces a floating-point value
+// representing volume at the specified frequency.
+//
+// This function works as follows:
+// 1. Initialize the random number generator with the current time as a seed.
+// 2. Calculate the number of samples per cycle based on the sample rate and frequency.
+// 3. Generate white noise by summing random values between -1 and 1 for one complete cycle.
+// 4. Normalize the noise to a range of 0 to 1.
+// 5. Ensure the result is clamped between 0 and 1.
+//
+// Parameters:
+//
+//	sampleRate: The number of samples per second (e.g., 44100 for standard audio)
+//	frequency: The desired frequency in Hz (e.g., 60 for 60Hz)
+//
+// Returns:
+//
+//	A float64 value between 0 and 1, representing the volume of white noise at the specified frequency.
+func generateNoise(sampleRate, frequency float64) float64 {
+
+	// Calculate the number of samples per cycle
+	samplesPerCycle := sampleRate / frequency
+
+	// Generate white noise
+	noise := 0.0
+	for i := 0; i < int(samplesPerCycle); i++ {
+		noise += rand.Float64()*2 - 1 // Generate random value between -1 and 1
 	}
+
+	// Normalize the noise to a range of 0 to 1
+	noise = (noise/samplesPerCycle + 1) / 2
+
+	return math.Max(0, math.Min(1, noise)) // Ensure the result is between 0 and 1
 }
 
 func generateSin(rate float64, phase *float64) float64 {

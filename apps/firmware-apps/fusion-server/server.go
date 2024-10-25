@@ -8,10 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"os/exec"
-	"strings"
 	"sync"
-	"text/template"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -28,6 +25,7 @@ var (
 	wsClients      = make(map[*websocket.Conn]bool)
 	wsClientsMutex sync.Mutex
 	list           *memberlist.Memberlist // Make list a global variable
+	persistence    *ConfigPersistence
 )
 
 var upgrader = websocket.Upgrader{
@@ -114,6 +112,11 @@ func applyUpdate(update ConfigUpdate) {
 		config.Store(update.Key, update.Value)
 		configVersion = update.Version
 		log.Printf("Applied update: %s = %v (version %d)", update.Key, update.Value, update.Version)
+
+		// Mark state as dirty for persistence
+		if persistence != nil {
+			persistence.MarkDirty()
+		}
 	}
 }
 
@@ -261,90 +264,6 @@ func broadcastToClients(update ConfigUpdate) {
 	}
 }
 
-type HAProxyConfig struct {
-	Backends []string
-}
-
-func generateHAProxyConfig(members []*memberlist.Node) error {
-	config := HAProxyConfig{
-		Backends: make([]string, len(members)),
-	}
-	for i, member := range members {
-		config.Backends[i] = fmt.Sprintf("%s:%d", member.Addr, 8080)
-	}
-
-	tmpl := template.Must(template.New("haproxy").Parse(`
-global
-    log /dev/log local0
-    log /dev/log local1 notice
-    chroot /var/lib/haproxy
-    stats socket /run/haproxy/admin.sock mode 660 level admin expose-fd listeners
-    stats timeout 30s
-    user haproxy
-    group haproxy
-    pidfile /var/run/haproxy.pid
-
-defaults
-    log global
-    mode http
-    option httplog
-    option dontlognull
-    timeout connect 5000ms
-    timeout client 50000ms
-    timeout server 50000ms
-
-frontend http-in
-    bind *:80
-    default_backend servers
-
-backend servers
-    balance roundrobin
-    {{range .Backends}}
-    server {{.}} {{.}} check
-    {{end}}
-
-listen stats
-    bind *:8404
-    stats enable
-    stats uri /
-    stats refresh 5s
-
-# Make sure there's a newline at the end of the file
-
-`))
-
-	f, err := os.Create("/etc/haproxy/haproxy.cfg")
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	return tmpl.Execute(f, config)
-}
-
-func reloadHAProxy() error {
-	pidFile := "/var/run/haproxy.pid"
-
-	if _, err := os.Stat(pidFile); os.IsNotExist(err) {
-		// If PID file doesn't exist, start HAProxy
-		cmd := exec.Command("haproxy", "-f", "/etc/haproxy/haproxy.cfg", "-W")
-		return cmd.Start()
-	}
-
-	pidBytes, err := os.ReadFile(pidFile)
-	if err != nil {
-		return fmt.Errorf("failed to read HAProxy PID: %v", err)
-	}
-	pid := strings.TrimSpace(string(pidBytes))
-
-	cmd := exec.Command("haproxy", "-f", "/etc/haproxy/haproxy.cfg", "-sf", pid)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("failed to reload HAProxy: %v, output: %s", err, output)
-	}
-	return nil
-}
-
 func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -431,10 +350,10 @@ func main() {
 
 	log.Printf("Node %s listening on %s:%d", nodeName, bindAddr, bindPort)
 
-	// Initialize HAProxy
 	if err := generateHAProxyConfig(list.Members()); err != nil {
 		log.Fatalf("Failed to generate HAProxy config: %v", err)
 	}
+
 	if err := reloadHAProxy(); err != nil {
 		log.Fatalf("Failed to reload HAProxy: %v", err)
 	}
@@ -443,6 +362,15 @@ func main() {
 		list: list,
 	}
 
+	// Initialize persistence
+	persistence = NewConfigPersistence("/var/lib/fusion/config.json")
+	if err := persistence.LoadState(); err != nil {
+		log.Printf("Error loading state: %v", err)
+	}
+	persistence.Start()
+	defer persistence.Stop()
+
+	// Set up routes
 	http.HandleFunc("/setValue", configServer.SetValue)
 	http.HandleFunc("/getValue", configServer.GetValue)
 	http.HandleFunc("/setVolume", configServer.SetVolume)

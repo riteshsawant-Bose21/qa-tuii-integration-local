@@ -43,6 +43,11 @@ This project implements a high-availability, [gossip-based distributed](https://
 - Keepalived monitors the status of DSP processes
 - Consider implementing additional monitoring for overall system health
 
+## Configuration Persistance
+Configuration state is saved to /var/lib/fusion/config.json. The live data exists
+in memory, but is serialized to disk. The serialized data is loaded from disk
+when the server is initialized.
+
 ## Getting Started
 1. Ensure Docker and Docker Compose are installed on your system
 2. Clone this repository
