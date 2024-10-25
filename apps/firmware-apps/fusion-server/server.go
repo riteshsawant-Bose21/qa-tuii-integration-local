@@ -392,19 +392,22 @@ func createMemberlist(nodeName, bindAddr string, bindPort int, joinAddrs []strin
 	config.BindAddr = bindAddr
 	config.BindPort = bindPort
 
-	// Create a new delegate instance
 	delegate := &GossipDelegate{
 		logger: log.New(os.Stdout, fmt.Sprintf("[GOSSIP-%s] ", nodeName), log.LstdFlags),
 	}
 	config.Delegate = delegate
 
-	// Increase timeouts and reduce intervals for faster sync
-	config.TCPTimeout = 5 * time.Second
-	config.PushPullInterval = 5 * time.Second // More frequent anti-entropy
-	config.GossipInterval = 100 * time.Millisecond
-	config.GossipNodes = 3
-	config.ProbeTimeout = 2 * time.Second
-	config.ProbeInterval = 1 * time.Second
+	// Increase timeouts and intervals for better reliability in Docker
+	config.TCPTimeout = 10 * time.Second           // Time to establish TCP connections
+	config.PushPullInterval = 15 * time.Second     // How often to do anti-entropy
+	config.ProbeTimeout = 5 * time.Second          // Timeout for probe messages
+	config.ProbeInterval = 2 * time.Second         // How often to probe other nodes
+	config.GossipInterval = 200 * time.Millisecond // How often to gossip
+	config.GossipNodes = 3                         // Number of nodes to gossip to
+
+	// Retry parameters
+	config.RetransmitMult = 3 // Retransmit multiplier
+	config.SuspicionMult = 6  // Suspicion multiplier
 
 	// Enable detailed logging
 	config.Logger = log.New(os.Stdout, fmt.Sprintf("[MEMBERLIST-%s] ", nodeName), log.LstdFlags)
@@ -414,17 +417,52 @@ func createMemberlist(nodeName, bindAddr string, bindPort int, joinAddrs []strin
 		return nil, fmt.Errorf("failed to create memberlist: %v", err)
 	}
 
-	// Join the cluster if we have addresses
+	// Join the cluster with retries if we have addresses
 	if len(joinAddrs) > 0 {
 		log.Printf("[DEBUG-%s] Attempting to join cluster at: %v", nodeName, joinAddrs)
-		n, err := list.Join(joinAddrs)
-		if err != nil {
-			return nil, fmt.Errorf("failed to join cluster: %v", err)
+
+		// Retry join up to 5 times
+		var n int
+		for retries := 0; retries < 5; retries++ {
+			n, err = list.Join(joinAddrs)
+			if err == nil {
+				log.Printf("[DEBUG-%s] Successfully joined cluster with %d nodes", nodeName, n)
+				break
+			}
+			log.Printf("[DEBUG-%s] Join attempt %d failed: %v", nodeName, retries+1, err)
+			time.Sleep(2 * time.Second)
 		}
-		log.Printf("[DEBUG-%s] Joined cluster with %d nodes", nodeName, n)
+		if err != nil {
+			return nil, fmt.Errorf("failed to join cluster after retries: %v", err)
+		}
 	}
 
 	return list, nil
+}
+
+// Add this health check function to monitor cluster state
+func startHealthCheck(list *memberlist.Memberlist, nodeName string) {
+	go func() {
+		for {
+			members := list.Members()
+			numMembers := len(members)
+			numAlive := 0
+
+			for _, member := range members {
+				if member.State != memberlist.StateAlive {
+					log.Printf("[HEALTH-%s] Node %s is not alive: state=%d",
+						nodeName, member.Name, member.State)
+				} else {
+					numAlive++
+				}
+			}
+
+			log.Printf("[HEALTH-%s] Cluster health: %d/%d nodes alive",
+				nodeName, numAlive, numMembers)
+
+			time.Sleep(10 * time.Second)
+		}
+	}()
 }
 
 // LogFilter is a custom io.Writer that filters log messages based on level

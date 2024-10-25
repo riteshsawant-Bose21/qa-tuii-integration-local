@@ -92,3 +92,9 @@ services:
 networks:
   fusionnet:
     external: true
+    driver_opts:
+      com.docker.network.driver.mtu: 1450
+    ipam:
+      driver: default
+      config:
+        - subnet: ${NETWORK_PREFIX}.0/16
