@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -34,9 +35,12 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-type GossipDelegate struct{}
+type GossipDelegate struct {
+	logger *log.Logger
+}
 
 func (d *GossipDelegate) NodeMeta(limit int) []byte {
+	//d.logger.Printf("NodeMeta called with limit: %d", limit)
 	return []byte{}
 }
 
@@ -50,18 +54,18 @@ type ConfigUpdate struct {
 func (d *GossipDelegate) NotifyMsg(msg []byte) {
 	var update ConfigUpdate
 	if err := json.Unmarshal(msg, &update); err != nil {
-		log.Printf("Error unmarshaling update: %v", err)
+		d.logger.Printf("Error unmarshaling update: %v", err)
 		return
 	}
 
-	applyUpdate(update)
+	// d.logger.Printf("Received gossip message: version=%d, key=%s",
+	// 	update.Version, update.Key)
 
-	if update.Broadcast {
-		broadcastToClients(update)
-	}
+	applyUpdate(update)
 }
 
 func (d *GossipDelegate) GetBroadcasts(overhead, limit int) [][]byte {
+	//d.logger.Printf("GetBroadcasts called: overhead=%d, limit=%d", overhead, limit)
 	return nil
 }
 
@@ -75,33 +79,85 @@ func (d *GossipDelegate) LocalState(join bool) []byte {
 		return true
 	})
 
-	data, _ := json.Marshal(map[string]interface{}{
+	data, err := json.Marshal(map[string]interface{}{
 		"Version": configVersion,
 		"Config":  state,
 	})
+	if err != nil {
+		d.logger.Printf("Error marshaling local state: %v", err)
+		return nil
+	}
+
+	d.logger.Printf("LocalState called (join=%v): sending version %d with %d keys",
+		join, configVersion, len(state))
 	return data
 }
 
 func (d *GossipDelegate) MergeRemoteState(buf []byte, join bool) {
+	d.logger.Printf("MergeRemoteState called with join=%v, data size=%d bytes",
+		join, len(buf))
+
 	var remoteState struct {
 		Version int64
 		Config  map[string]interface{}
 	}
 	if err := json.Unmarshal(buf, &remoteState); err != nil {
-		log.Printf("Error unmarshaling remote state: %v", err)
+		d.logger.Printf("Error unmarshaling remote state: %v", err)
+		d.logger.Printf("Raw data: %s", string(buf))
 		return
 	}
+
+	// d.logger.Printf("Processing remote state: version=%d, keys=%d",
+	// 	remoteState.Version, len(remoteState.Config))
 
 	configMutex.Lock()
 	defer configMutex.Unlock()
 
 	if remoteState.Version > configVersion {
+		//oldVersion := configVersion
+		oldState := make(map[string]interface{})
+		config.Range(func(key, value interface{}) bool {
+			oldState[key.(string)] = value
+			return true
+		})
+
 		configVersion = remoteState.Version
 		for k, v := range remoteState.Config {
 			config.Store(k, v)
 		}
-		log.Printf("Merged remote state, new version: %d", configVersion)
+
+		// d.logger.Printf("State merged: version %d -> %d", oldVersion, configVersion)
+		// d.logger.Printf("Old state: %+v", oldState)
+		// d.logger.Printf("New state: %+v", remoteState.Config)
+	} else {
+		// d.logger.Printf("Skipping merge: remote version %d not newer than local %d",
+		// 	remoteState.Version, configVersion)
 	}
+}
+
+func monitorClusterState(list *memberlist.Memberlist, nodeName string) {
+	go func() {
+		for {
+			members := list.Members()
+			log.Printf("[CLUSTER-%s] Current members (%d):", nodeName, len(members))
+			for _, member := range members {
+				log.Printf("[CLUSTER-%s]   - %s at %s:%d",
+					nodeName, member.Name, member.Addr, member.Port)
+			}
+
+			// Log current config state
+			configMap := make(map[string]interface{})
+			config.Range(func(key, value interface{}) bool {
+				configMap[key.(string)] = value
+				return true
+			})
+			state, _ := json.MarshalIndent(configMap, "", "  ")
+			log.Printf("[STATE-%s] Current config (version %d):\n%s",
+				nodeName, configVersion, string(state))
+
+			time.Sleep(5 * time.Second)
+		}
+	}()
 }
 
 func applyUpdate(update ConfigUpdate) {
@@ -330,15 +386,45 @@ func broadcastVolumeUpdate(volumeUpdate VolumeUpdate) {
 	broadcastUpdate("volume", volumeUpdate)
 }
 
-func createMemberlist(nodeName, bindAddr string, bindPort int) (*memberlist.Memberlist, error) {
+func createMemberlist(nodeName, bindAddr string, bindPort int, joinAddrs []string) (*memberlist.Memberlist, error) {
 	config := memberlist.DefaultLocalConfig()
 	config.Name = nodeName
 	config.BindAddr = bindAddr
 	config.BindPort = bindPort
-	config.Delegate = &GossipDelegate{}
-	config.Logger = log.New(&LogFilter{minLevel: 3}, "", log.LstdFlags)
 
-	return memberlist.Create(config)
+	// Create a new delegate instance
+	delegate := &GossipDelegate{
+		logger: log.New(os.Stdout, fmt.Sprintf("[GOSSIP-%s] ", nodeName), log.LstdFlags),
+	}
+	config.Delegate = delegate
+
+	// Increase timeouts and reduce intervals for faster sync
+	config.TCPTimeout = 5 * time.Second
+	config.PushPullInterval = 5 * time.Second // More frequent anti-entropy
+	config.GossipInterval = 100 * time.Millisecond
+	config.GossipNodes = 3
+	config.ProbeTimeout = 2 * time.Second
+	config.ProbeInterval = 1 * time.Second
+
+	// Enable detailed logging
+	config.Logger = log.New(os.Stdout, fmt.Sprintf("[MEMBERLIST-%s] ", nodeName), log.LstdFlags)
+
+	list, err := memberlist.Create(config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create memberlist: %v", err)
+	}
+
+	// Join the cluster if we have addresses
+	if len(joinAddrs) > 0 {
+		log.Printf("[DEBUG-%s] Attempting to join cluster at: %v", nodeName, joinAddrs)
+		n, err := list.Join(joinAddrs)
+		if err != nil {
+			return nil, fmt.Errorf("failed to join cluster: %v", err)
+		}
+		log.Printf("[DEBUG-%s] Joined cluster with %d nodes", nodeName, n)
+	}
+
+	return list, nil
 }
 
 // LogFilter is a custom io.Writer that filters log messages based on level
@@ -360,20 +446,30 @@ func (f *LogFilter) Write(p []byte) (n int, err error) {
 
 func main() {
 
+	var joinAddr string
 	flag.StringVar(&nodeName, "name", "", "Node name")
 	flag.StringVar(&bindAddr, "addr", "0.0.0.0", "Bind address")
 	flag.IntVar(&bindPort, "port", 7946, "Bind port")
+	flag.StringVar(&joinAddr, "join", "", "Address to join cluster (comma-separated)")
 	flag.Parse()
 
 	if nodeName == "" {
 		log.Fatal("Node name is required")
 	}
 
+	// Split join addresses
+	var joinAddrs []string
+	if joinAddr != "" {
+		joinAddrs = strings.Split(joinAddr, ",")
+	}
+
 	var err error
-	list, err = createMemberlist(nodeName, bindAddr, bindPort)
+	list, err = createMemberlist(nodeName, bindAddr, bindPort, joinAddrs)
 	if err != nil {
 		log.Fatalf("Failed to create memberlist: %v", err)
 	}
+
+	monitorClusterState(list, nodeName)
 
 	log.Printf("Node %s listening on %s:%d", nodeName, bindAddr, bindPort)
 
