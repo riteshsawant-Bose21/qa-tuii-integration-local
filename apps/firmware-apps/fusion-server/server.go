@@ -5,8 +5,10 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"sort"
 	"strings"
 	"sync"
@@ -40,6 +42,14 @@ type GossipDelegate struct {
 
 func (d *GossipDelegate) NodeMeta(limit int) []byte {
 	return []byte{}
+}
+
+type ConfigUpdate struct {
+	Key     string      `json:"key"`
+	Value   interface{} `json:"value"`
+	Version int64       `json:"version"`
+	NodeID  string      `json:"node_id"`
+	Time    time.Time   `json:"timestamp"`
 }
 
 func (d *GossipDelegate) NotifyMsg(msg []byte) {
@@ -827,6 +837,50 @@ func (f *LogFilter) Write(p []byte) (n int, err error) {
 // 	}()
 // }
 
+func checkConnectivity() error {
+	// Test direct backend connections
+	for _, addr := range []string{"172.18.0.3:8080", "172.18.0.4:8080"} {
+		log.Printf("Testing connection to %s...", addr)
+		conn, err := net.DialTimeout("tcp", addr, 2*time.Second)
+		if err != nil {
+			log.Printf("Failed to connect to %s: %v", addr, err)
+		} else {
+			log.Printf("Successfully connected to %s", addr)
+			conn.Close()
+		}
+
+		// Try HTTP request
+		resp, err := http.Get(fmt.Sprintf("http://%s/getValue", addr))
+		if err != nil {
+			log.Printf("HTTP request to %s failed: %v", addr, err)
+		} else {
+			log.Printf("HTTP request to %s succeeded with status: %d", addr, resp.StatusCode)
+			resp.Body.Close()
+		}
+	}
+
+	// Test VIP connection
+	log.Printf("Testing connection to VIP (172.18.0.2:80)...")
+	conn, err := net.DialTimeout("tcp", "172.18.0.2:80", 2*time.Second)
+	if err != nil {
+		log.Printf("Failed to connect to VIP: %v", err)
+	} else {
+		log.Printf("Successfully connected to VIP")
+		conn.Close()
+	}
+
+	// Check routing
+	cmd := exec.Command("ip", "route", "get", "172.18.0.2")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Printf("Failed to check routing: %v", err)
+	} else {
+		log.Printf("Route to VIP: %s", string(output))
+	}
+
+	return nil
+}
+
 func main() {
 	var joinAddr string
 	flag.StringVar(&nodeName, "name", "", "Node name")
@@ -906,6 +960,15 @@ func main() {
 		}
 	}()
 
+	go func() {
+		for {
+			if err := checkConnectivity(); err != nil {
+				log.Printf("Connectivity check failed: %v", err)
+			}
+			time.Sleep(10 * time.Second)
+		}
+	}()
+
 	for {
 		members := list.Members()
 		log.Printf("Current cluster members:")
@@ -922,4 +985,5 @@ func main() {
 
 		time.Sleep(10 * time.Second)
 	}
+
 }

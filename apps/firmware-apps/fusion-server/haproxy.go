@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/memberlist"
 )
@@ -24,15 +25,11 @@ func generateHAProxyConfig(members []*memberlist.Node) error {
 
 	tmpl := template.Must(template.New("haproxy").Parse(`
 global
-    log /dev/log local0
-    log /dev/log local1 notice
-    chroot /var/lib/haproxy
-    stats socket /run/haproxy/admin.sock mode 660 level admin expose-fd listeners
-    stats timeout 30s
+    log stdout format raw local0 debug
+    maxconn 32768
     user haproxy
     group haproxy
-    pidfile /var/run/haproxy.pid
-
+    
 defaults
     log global
     mode http
@@ -42,14 +39,17 @@ defaults
     timeout client 50000ms
     timeout server 50000ms
 
-frontend http-in
-    bind *:80
+frontend http_front
+    # Bind only to VIP - remove the *:80 binding to avoid conflicts
+    bind 172.18.0.2:8080
     default_backend servers
 
 backend servers
     balance roundrobin
+    option httpchk GET /getValue
+    default-server inter 2s fall 3 rise 2
     {{range .Backends}}
-    server {{.}} {{.}} check
+    server srv{{.}} {{.}} check
     {{end}}
 
 listen stats
@@ -59,7 +59,6 @@ listen stats
     stats refresh 5s
 
 # Make sure there's a newline at the end of the file
-
 `))
 
 	f, err := os.Create("/etc/haproxy/haproxy.cfg")
@@ -67,29 +66,52 @@ listen stats
 		return err
 	}
 	defer f.Close()
-
 	return tmpl.Execute(f, config)
 }
 
-func reloadHAProxy() error {
-	pidFile := "/var/run/haproxy.pid"
+func waitForVIP(timeout time.Duration) error {
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		out, err := exec.Command("ip", "addr", "show", "eth0").Output()
+		if err == nil && strings.Contains(string(out), "172.18.0.2") {
+			return nil
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+	return fmt.Errorf("timeout waiting for VIP")
+}
 
-	if _, err := os.Stat(pidFile); os.IsNotExist(err) {
-		// If PID file doesn't exist, start HAProxy
-		cmd := exec.Command("haproxy", "-f", "/etc/haproxy/haproxy.cfg", "-W")
-		return cmd.Start()
+func reloadHAProxy() error {
+	// Wait for VIP to be available
+	if err := waitForVIP(10 * time.Second); err != nil {
+		return fmt.Errorf("VIP not ready: %v", err)
 	}
 
+	pidFile := "/var/run/haproxy.pid"
+
+	// Check if HAProxy is running
+	if _, err := os.Stat(pidFile); os.IsNotExist(err) {
+		// Start HAProxy if not running
+		cmd := exec.Command("haproxy", "-f", "/etc/haproxy/haproxy.cfg", "-W", "-p", pidFile)
+		if err := cmd.Start(); err != nil {
+			return fmt.Errorf("failed to start HAProxy: %v", err)
+		}
+		return nil
+	}
+
+	// Read existing PID
 	pidBytes, err := os.ReadFile(pidFile)
 	if err != nil {
 		return fmt.Errorf("failed to read HAProxy PID: %v", err)
 	}
 	pid := strings.TrimSpace(string(pidBytes))
 
+	// Graceful reload
 	cmd := exec.Command("haproxy", "-f", "/etc/haproxy/haproxy.cfg", "-sf", pid)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("failed to reload HAProxy: %v, output: %s", err, output)
 	}
+
 	return nil
 }

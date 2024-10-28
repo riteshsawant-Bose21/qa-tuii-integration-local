@@ -22,7 +22,7 @@ This project implements a high-availability, [gossip-based distributed](https://
 - Automatic failover if the primary DSP fails
 
 ## Network Configuration
-- Custom Docker network (In the 172.18.0.0/16 range)
+- Custom Docker network (In the 172.18.0.0/24 range)
 - Each component has a static IP within this network
 - Virtual IP (172.18.0.2) managed by Keepalived
 
