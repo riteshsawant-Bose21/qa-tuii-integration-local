@@ -111,7 +111,9 @@ func (sm *StateManager) MergeRemoteState(remoteState map[string]*StateEntry, sou
 	sm.Lock()
 	defer sm.Unlock()
 
-	sm.logger.Printf("\n=== STARTING STATE MERGE FROM %s ===\n", sourceNodeID)
+	if debugMode {
+		sm.logger.Printf("\n=== STARTING STATE MERGE FROM %s ===\n", sourceNodeID)
+	}
 
 	for key, remoteEntry := range remoteState {
 		localEntry, exists := sm.state[key]
@@ -140,17 +142,24 @@ func (sm *StateManager) MergeRemoteState(remoteState map[string]*StateEntry, sou
 			continue
 		}
 
-		sm.logger.Printf(`
-[SYNC SKIP]
-Key: %s
-Remote Version: %d
-Local Version: %d
-Remote Node: %s
-Reason: Local version newer or equal`,
-			key, remoteEntry.Version, localEntry.Version, sourceNodeID)
+		if debugMode {
+
+			sm.logger.Printf(`
+		
+		[SYNC SKIP]
+		Key: %s
+		Remote Version: %d
+		Local Version: %d
+		Remote Node: %s
+		Reason: Local version newer or equal`,
+
+				key, remoteEntry.Version, localEntry.Version, sourceNodeID)
+		}
 	}
 
-	sm.logger.Printf("\n=== COMPLETED STATE MERGE FROM %s ===\n", sourceNodeID)
+	if debugMode {
+		sm.logger.Printf("\n=== COMPLETED STATE MERGE FROM %s ===\n", sourceNodeID)
+	}
 }
 
 func (sm *StateManager) VerifyState() string {
@@ -244,21 +253,26 @@ func (sm *StateManager) ApplyUpdate(update ConfigUpdate) error {
 		return nil
 	}
 
-	// Log rejected updates too
-	sm.logger.Printf(`
-[STATE CHANGE REJECTED]
-Key: %s
-Attempted Value: %+v
-Attempted Version: %d
-Current Version: %d
-Reason: Version not newer than current`,
-		update.Key, update.Value, update.Version, currentEntry.Version)
+	if debugMode {
+		sm.logger.Printf(`
+	[STATE CHANGE REJECTED]
+	Key: %s
+	Attempted Value: %+v
+	Attempted Version: %d
+	Current Version: %d
+	Reason: Version not newer than current`,
+			update.Key, update.Value, update.Version, currentEntry.Version)
+	}
 
 	return fmt.Errorf("update rejected: current version %d >= update version %d",
 		currentEntry.Version, update.Version)
 }
 
 func (sm *StateManager) logStateChange(operation string, key string, entry *StateEntry, reason string) {
+
+	if !debugMode {
+		return
+	}
 
 	valueJSON, err := json.MarshalIndent(entry.Value, "", "  ")
 	if err != nil {
@@ -286,6 +300,11 @@ Current Total Entries: %d
 }
 
 func (sm *StateManager) StartStateDumping(interval time.Duration) {
+
+	if !debugMode {
+		return
+	}
+
 	go func() {
 		ticker := time.NewTicker(interval)
 		defer ticker.Stop()

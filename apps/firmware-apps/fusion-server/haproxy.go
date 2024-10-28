@@ -40,8 +40,7 @@ defaults
     timeout server 50000ms
 
 frontend http_front
-    # Bind only to VIP - remove the *:80 binding to avoid conflicts
-    bind 172.18.0.2:8080
+    bind *:80
     default_backend servers
 
 backend servers

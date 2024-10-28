@@ -27,6 +27,9 @@ var (
 	wsClientsMutex sync.Mutex
 	list           *memberlist.Memberlist
 	persistence    *ConfigPersistence
+
+	debugMode     bool
+	debugInterval time.Duration
 )
 
 var upgrader = websocket.Upgrader{
@@ -97,15 +100,47 @@ func (d *GossipDelegate) MergeRemoteState(buf []byte, join bool) {
 	stateManager.MergeRemoteState(remoteState, d.nodeID)
 }
 
-func monitorClusterState(list *memberlist.Memberlist, nodeName string) {
-	logger := log.New(os.Stdout, fmt.Sprintf("[MONITOR-%s] ", nodeName), log.LstdFlags)
+// DebugLogger wraps the standard logger with debug-specific formatting
+type DebugLogger struct {
+	*log.Logger
+	enabled bool
+}
 
+func (d *DebugLogger) Printf(format string, v ...interface{}) {
+	if d.enabled {
+		d.Logger.Printf(format, v...)
+	}
+}
+
+// Create debug loggers for different components
+var (
+	debugMonitor *DebugLogger
+	debugHealth  *DebugLogger
+)
+
+func initDebugLoggers(nodeName string) {
+	prefix := fmt.Sprintf("[%s] ", nodeName)
+	debugMonitor = &DebugLogger{
+		Logger:  log.New(os.Stdout, prefix+"MONITOR: ", log.LstdFlags),
+		enabled: debugMode,
+	}
+	debugHealth = &DebugLogger{
+		Logger:  log.New(os.Stdout, prefix+"HEALTH: ", log.LstdFlags),
+		enabled: debugMode,
+	}
+}
+
+func monitorClusterState(list *memberlist.Memberlist) {
 	go func() {
 		for {
-			// Monitor cluster membership
+			if !debugMode {
+				time.Sleep(debugInterval)
+				continue
+			}
+
 			members := list.Members()
-			logger.Printf("Cluster Status:")
-			logger.Printf("  Members (%d):", len(members))
+			debugMonitor.Printf("Cluster Status:")
+			debugMonitor.Printf("  Members (%d):", len(members))
 
 			aliveCount := 0
 			for _, member := range members {
@@ -120,118 +155,80 @@ func monitorClusterState(list *memberlist.Memberlist, nodeName string) {
 					status = "DEAD"
 				}
 
-				logger.Printf("    - %s (%s:%d) Status: %s",
+				debugMonitor.Printf("    - %s (%s:%d) Status: %s",
 					member.Name, member.Addr, member.Port, status)
 			}
 
-			// Get current state
-			state := stateManager.GetFullState()
+			if debugMode {
+				state := stateManager.GetFullState()
+				nodeStats := make(map[string]int)
+				var oldestUpdate, newestUpdate time.Time
+				var totalEntries int
 
-			// Collect state statistics
-			nodeStats := make(map[string]int)
-			var oldestUpdate, newestUpdate time.Time
-			var totalEntries int
+				for _, entry := range state {
+					nodeStats[entry.NodeID]++
+					totalEntries++
 
-			for _, entry := range state {
-				nodeStats[entry.NodeID]++
-				totalEntries++
-
-				if oldestUpdate.IsZero() || entry.Timestamp.Before(oldestUpdate) {
-					oldestUpdate = entry.Timestamp
-				}
-				if entry.Timestamp.After(newestUpdate) {
-					newestUpdate = entry.Timestamp
-				}
-			}
-
-			// Log state summary
-			logger.Printf("State Summary:")
-			logger.Printf("  Version: %d", stateManager.version)
-			logger.Printf("  Total Entries: %d", totalEntries)
-			logger.Printf("  Entries by Node:")
-			for nodeID, count := range nodeStats {
-				logger.Printf("    - %s: %d entries", nodeID, count)
-			}
-
-			if !oldestUpdate.IsZero() {
-				logger.Printf("  Oldest Update: %v", oldestUpdate)
-				logger.Printf("  Newest Update: %v", newestUpdate)
-				logger.Printf("  State Age: %v", time.Since(oldestUpdate))
-			}
-
-			// Detailed state output (limited to prevent excessive logging)
-			const maxDetailedEntries = 10
-			if totalEntries > 0 {
-				logger.Printf("Recent State Entries (up to %d):", maxDetailedEntries)
-
-				// Convert to slice for sorting
-				type stateEntry struct {
-					key   string
-					entry *StateEntry
-				}
-				entries := make([]stateEntry, 0, len(state))
-				for k, v := range state {
-					entries = append(entries, stateEntry{k, v})
-				}
-
-				// Sort by timestamp, newest first
-				sort.Slice(entries, func(i, j int) bool {
-					return entries[i].entry.Timestamp.After(entries[j].entry.Timestamp)
-				})
-
-				// Log most recent entries
-				for i, entry := range entries {
-					if i >= maxDetailedEntries {
-						break
+					if oldestUpdate.IsZero() || entry.Timestamp.Before(oldestUpdate) {
+						oldestUpdate = entry.Timestamp
 					}
-					value, _ := json.Marshal(entry.entry.Value)
-					logger.Printf("    %s = %s (v%d from %s at %v)",
-						entry.key,
-						string(value),
-						entry.entry.Version,
-						entry.entry.NodeID,
-						entry.entry.Timestamp.Format(time.RFC3339))
+					if entry.Timestamp.After(newestUpdate) {
+						newestUpdate = entry.Timestamp
+					}
 				}
 
-				if totalEntries > maxDetailedEntries {
-					logger.Printf("    ... and %d more entries", totalEntries-maxDetailedEntries)
+				debugMonitor.Printf("State Summary:")
+				debugMonitor.Printf("  Version: %d", stateManager.version)
+				debugMonitor.Printf("  Total Entries: %d", totalEntries)
+				debugMonitor.Printf("  Entries by Node:")
+				for nodeID, count := range nodeStats {
+					debugMonitor.Printf("    - %s: %d entries", nodeID, count)
+				}
+
+				if !oldestUpdate.IsZero() {
+					debugMonitor.Printf("  Oldest Update: %v", oldestUpdate)
+					debugMonitor.Printf("  Newest Update: %v", newestUpdate)
+					debugMonitor.Printf("  State Age: %v", time.Since(oldestUpdate))
+				}
+
+				// Detailed state output (limited to prevent excessive logging)
+				if totalEntries > 0 {
+					const maxDetailedEntries = 10
+					debugMonitor.Printf("Recent State Entries (up to %d):", maxDetailedEntries)
+
+					type stateEntry struct {
+						key   string
+						entry *StateEntry
+					}
+					entries := make([]stateEntry, 0, len(state))
+					for k, v := range state {
+						entries = append(entries, stateEntry{k, v})
+					}
+
+					sort.Slice(entries, func(i, j int) bool {
+						return entries[i].entry.Timestamp.After(entries[j].entry.Timestamp)
+					})
+
+					for i, entry := range entries {
+						if i >= maxDetailedEntries {
+							break
+						}
+						value, _ := json.Marshal(entry.entry.Value)
+						debugMonitor.Printf("    %s = %s (v%d from %s at %v)",
+							entry.key,
+							string(value),
+							entry.entry.Version,
+							entry.entry.NodeID,
+							entry.entry.Timestamp.Format(time.RFC3339))
+					}
+
+					if totalEntries > maxDetailedEntries {
+						debugMonitor.Printf("    ... and %d more entries", totalEntries-maxDetailedEntries)
+					}
 				}
 			}
 
-			// Check cluster health
-			healthStatus := "HEALTHY"
-			var healthIssues []string
-
-			if aliveCount < len(members) {
-				healthStatus = "DEGRADED"
-				healthIssues = append(healthIssues,
-					fmt.Sprintf("%d of %d nodes not fully healthy",
-						len(members)-aliveCount, len(members)))
-			}
-
-			// Check for state inconsistencies across nodes
-			// Instead of just calculating the hash, we'll use it for comparison
-			// localHash := stateManager.VerifyState()
-			// for _, member := range members {
-			// 	if member.Name == nodeName || member.State != memberlist.StateAlive {
-			// 		continue
-			// 	}
-
-			// 	// TODO: Make an HTTP request
-			// 	// to each member to get their state hash. For now, we'll just
-			// 	// log that we're checking consistency.
-			// 	logger.Printf("  Checking state consistency with %s (local hash: %s)",
-			// 		member.Name, localHash[:8])
-			// }
-
-			logger.Printf("Cluster Health: %s", healthStatus)
-			if len(healthIssues) > 0 {
-				for _, issue := range healthIssues {
-					logger.Printf("  - %s", issue)
-				}
-			}
-
-			time.Sleep(5 * time.Second)
+			time.Sleep(debugInterval)
 		}
 	}()
 }
@@ -772,27 +769,31 @@ func createMemberlist(nodeName, bindAddr string, bindPort int, joinAddrs []strin
 	return list, nil
 }
 
-// Add this health check function to monitor cluster state
-func startHealthCheck(list *memberlist.Memberlist, nodeName string) {
+func startHealthCheck(list *memberlist.Memberlist) {
 	go func() {
 		for {
+			if !debugMode {
+				time.Sleep(debugInterval)
+				continue
+			}
+
 			members := list.Members()
 			numMembers := len(members)
 			numAlive := 0
 
 			for _, member := range members {
 				if member.State != memberlist.StateAlive {
-					log.Printf("[HEALTH-%s] Node %s is not alive: state=%d",
-						nodeName, member.Name, member.State)
+					debugHealth.Printf("Node %s is not alive: state=%d",
+						member.Name, member.State)
 				} else {
 					numAlive++
 				}
 			}
 
-			log.Printf("[HEALTH-%s] Cluster health: %d/%d nodes alive",
-				nodeName, numAlive, numMembers)
+			debugHealth.Printf("Cluster health: %d/%d nodes alive",
+				numAlive, numMembers)
 
-			time.Sleep(10 * time.Second)
+			time.Sleep(debugInterval)
 		}
 	}()
 }
@@ -814,47 +815,50 @@ func (f *LogFilter) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
-// func startStateVerification(list *memberlist.Memberlist) {
-// 	go func() {
-// 		for {
-// 			localHash := stateManager.VerifyState()
-// 			members := list.Members()
+func startStateVerification(list *memberlist.Memberlist) {
+	go func() {
+		for {
+			localHash := stateManager.VerifyState()
+			members := list.Members()
 
-// 			// Compare state with other nodes
-// 			for _, member := range members {
-// 				if member.Name == nodeName {
-// 					continue
-// 				}
+			// Compare state with other nodes
+			for _, member := range members {
+				if member.Name == nodeName {
+					continue
+				}
 
-// 				// TODO: Mke an HTTP request to each member
-// 				// to get their state hash and compare
-// 				// For now, we'll just log our hash
-// 				log.Printf("[VERIFY] Local state hash: %s", localHash)
-// 			}
+				// TODO: Mke an HTTP request to each member
+				// to get their state hash and compare
+				// For now, we'll just log our hash
+				log.Printf("[VERIFY] Local state hash: %s", localHash)
+			}
 
-// 			time.Sleep(30 * time.Second)
-// 		}
-// 	}()
-// }
+			time.Sleep(30 * time.Second)
+		}
+	}()
+}
 
 func checkConnectivity() error {
+	if !debugMode {
+		return nil
+	}
+
 	// Test direct backend connections
 	for _, addr := range []string{"172.18.0.3:8080", "172.18.0.4:8080"} {
-		log.Printf("Testing connection to %s...", addr)
+		debugHealth.Printf("Testing connection to %s...", addr)
 		conn, err := net.DialTimeout("tcp", addr, 2*time.Second)
 		if err != nil {
-			log.Printf("Failed to connect to %s: %v", addr, err)
+			debugHealth.Printf("Failed to connect to %s: %v", addr, err)
 		} else {
-			log.Printf("Successfully connected to %s", addr)
+			debugHealth.Printf("Successfully connected to %s", addr)
 			conn.Close()
 		}
 
-		// Try HTTP request
 		resp, err := http.Get(fmt.Sprintf("http://%s/getValue", addr))
 		if err != nil {
-			log.Printf("HTTP request to %s failed: %v", addr, err)
+			debugHealth.Printf("HTTP request to %s failed: %v", addr, err)
 		} else {
-			log.Printf("HTTP request to %s succeeded with status: %d", addr, resp.StatusCode)
+			debugHealth.Printf("HTTP request to %s succeeded with status: %d", addr, resp.StatusCode)
 			resp.Body.Close()
 		}
 	}
@@ -893,8 +897,11 @@ func main() {
 		log.Fatal("Node name is required")
 	}
 
+	initDebugLoggers(nodeName)
+
 	stateManager = NewStateManager(nodeName)
-	//stateManager.StartStateDumping(30 * time.Second)
+
+	stateManager.StartStateDumping(30 * time.Second)
 
 	// Split join addresses
 	var joinAddrs []string
@@ -908,9 +915,9 @@ func main() {
 		log.Fatalf("Failed to create memberlist: %v", err)
 	}
 
-	monitorClusterState(list, nodeName)
-	startHealthCheck(list, nodeName)
-	//startStateVerification(list)
+	monitorClusterState(list)
+	startHealthCheck(list)
+	startStateVerification(list)
 
 	// Initialize ConfigServer with StateManager
 	configServer := &ConfigServer{
@@ -971,9 +978,12 @@ func main() {
 
 	for {
 		members := list.Members()
-		log.Printf("Current cluster members:")
-		for _, member := range members {
-			log.Printf("  %s: %s:%d", member.Name, member.Addr, member.Port)
+
+		if debugMode {
+			log.Printf("Current cluster members:")
+			for _, member := range members {
+				log.Printf("  %s: %s:%d", member.Name, member.Addr, member.Port)
+			}
 		}
 
 		// Update HAProxy configuration when membership changes
