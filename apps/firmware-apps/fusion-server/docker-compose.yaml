@@ -36,8 +36,6 @@ services:
     environment:
       - KEEPALIVED_CONF=${KEEPALIVED_BACKUP1_CONF}
     command: --name dsp2 --addr 0.0.0.0 --port ${GOSSIP_PORT} --join ${NETWORK_PREFIX}.${DSP1_SUFFIX}:${GOSSIP_PORT}
-    depends_on:
-      - dsp1
     cap_add:
       - NET_ADMIN
       - NET_BROADCAST
@@ -59,8 +57,6 @@ services:
     environment:
       - KEEPALIVED_CONF=${KEEPALIVED_BACKUP2_CONF}
     command: --name dsp3 --addr 0.0.0.0 --port ${GOSSIP_PORT} --join ${NETWORK_PREFIX}.${DSP1_SUFFIX}:${GOSSIP_PORT},${NETWORK_PREFIX}.${DSP2_SUFFIX}:${GOSSIP_PORT}
-    depends_on:
-      - dsp2
     cap_add:
       - NET_ADMIN
       - NET_BROADCAST
@@ -82,8 +78,6 @@ services:
     environment:
       - KEEPALIVED_CONF=${KEEPALIVED_BACKUP3_CONF}
     command: --name dsp4 --addr 0.0.0.0 --port ${GOSSIP_PORT} --join ${NETWORK_PREFIX}.${DSP1_SUFFIX}:${GOSSIP_PORT},${NETWORK_PREFIX}.${DSP2_SUFFIX}:${GOSSIP_PORT},${NETWORK_PREFIX}.${DSP3_SUFFIX}:${GOSSIP_PORT}
-    depends_on:
-      - dsp3
     cap_add:
       - NET_ADMIN
       - NET_BROADCAST

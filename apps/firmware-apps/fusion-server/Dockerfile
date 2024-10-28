@@ -6,8 +6,7 @@ RUN apk --no-cache add \
     curl \
     iputils \
     haproxy \
-    keepalived \
-    zeromq
+    keepalived
 
 # Create necessary directories
 RUN mkdir -p /etc/haproxy /run/haproxy && \
