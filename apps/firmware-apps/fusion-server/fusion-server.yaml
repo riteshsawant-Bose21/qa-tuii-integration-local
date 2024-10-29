@@ -1,0 +1,10 @@
+#cloud-config
+packages:
+  - curl
+  - haproxy
+  - keepalived
+
+runcmd:
+  - mkdir -p /etc/haproxy /run/haproxy /etc/keepalived /app
+  - /app/entrypoint.sh
+  

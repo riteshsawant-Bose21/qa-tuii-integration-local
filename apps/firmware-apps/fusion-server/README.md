@@ -248,3 +248,7 @@ graph TD
     class K1,K2,K3,K4,G1,G2,G3,G4,S1,S2,S3,S4 component;
     class VIP vip;
 ```
+
+brew install --cask multipass
+multipass launch --name fusion-instance --cloud-init fusion-config.yaml
+

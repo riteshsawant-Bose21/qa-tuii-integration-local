@@ -1,29 +1,21 @@
 #!/bin/sh
-set -x
+set -e
 
-# Remove stale PID file if it exists
-rm -f /run/keepalived/keepalived.pid
+keepalived -n -l -D \
+    -f /home/ubuntu/keepalived/keepalived.conf \
+    --log-console \
+    --log-detail \
+    --dump-conf &
 
-keepalived -n -l -D -f ${KEEPALIVED_CONF} &
-KEEPALIVED_PID=$!
+# Give Keepalived time to initialize
+sleep 2
 
-haproxy -f /etc/haproxy/haproxy.cfg -db -V &
-HAPROXY_PID=$!
+# Start HAProxy with proper logging
+haproxy -f /home/ubuntu/haproxy/haproxy.cfg \
+    -db \
+    -V \
+    -L localhost \
+    -m 1024 &
 
+# Start fusion-server
 /app/fusion-server "$@" &
-FUSION_PID=$!
-
-# Wait for any process to exit
-wait -n
-
-# Check which process exited
-if ! kill -0 $HAPROXY_PID 2>/dev/null; then
-    echo "HAProxy exited unexpectedly"
-    cat /var/log/haproxy.log
-elif ! kill -0 $FUSION_PID 2>/dev/null; then
-    echo "fusion-server exited unexpectedly"
-fi
-
-# Kill all remaining processes
-kill $HAPROXY_PID $FUSION_PID 2>/dev/null
-exit $?

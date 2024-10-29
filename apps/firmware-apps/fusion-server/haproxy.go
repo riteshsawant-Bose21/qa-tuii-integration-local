@@ -19,6 +19,7 @@ func generateHAProxyConfig(members []*memberlist.Node) error {
 	config := HAProxyConfig{
 		Backends: make([]string, len(members)),
 	}
+
 	for i, member := range members {
 		config.Backends[i] = fmt.Sprintf("%s:%d", member.Addr, 8080)
 	}
@@ -29,7 +30,7 @@ global
     maxconn 32768
     user haproxy
     group haproxy
-    
+
 defaults
     log global
     mode http
@@ -56,23 +57,27 @@ listen stats
     stats enable
     stats uri /
     stats refresh 5s
-
-# Make sure there's a newline at the end of the file
 `))
 
-	f, err := os.Create("/etc/haproxy/haproxy.cfg")
+	// Create directory if it doesn't exist
+	if err := os.MkdirAll("/home/ubuntu/haproxy", 0755); err != nil {
+		return fmt.Errorf("failed to create directory: %v", err)
+	}
+
+	f, err := os.Create("/home/ubuntu/haproxy/haproxy.cfg")
 	if err != nil {
 		return err
 	}
 	defer f.Close()
+
 	return tmpl.Execute(f, config)
 }
 
 func waitForVIP(timeout time.Duration) error {
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
-		out, err := exec.Command("ip", "addr", "show", "eth0").Output()
-		if err == nil && strings.Contains(string(out), "172.18.0.2") {
+		out, err := exec.Command("ip", "addr", "show", "enp0s1").Output()
+		if err == nil && strings.Contains(string(out), "192.168.64.100") {
 			return nil
 		}
 		time.Sleep(500 * time.Millisecond)
@@ -91,7 +96,7 @@ func reloadHAProxy() error {
 	// Check if HAProxy is running
 	if _, err := os.Stat(pidFile); os.IsNotExist(err) {
 		// Start HAProxy if not running
-		cmd := exec.Command("haproxy", "-f", "/etc/haproxy/haproxy.cfg", "-W", "-p", pidFile)
+		cmd := exec.Command("haproxy", "-f", "/home/ubuntu/haproxy/haproxy.cfg", "-W", "-p", pidFile)
 		if err := cmd.Start(); err != nil {
 			return fmt.Errorf("failed to start HAProxy: %v", err)
 		}
@@ -106,7 +111,7 @@ func reloadHAProxy() error {
 	pid := strings.TrimSpace(string(pidBytes))
 
 	// Graceful reload
-	cmd := exec.Command("haproxy", "-f", "/etc/haproxy/haproxy.cfg", "-sf", pid)
+	cmd := exec.Command("haproxy", "-f", "/home/ubuntu/haproxy/haproxy.cfg", "-sf", pid)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("failed to reload HAProxy: %v, output: %s", err, output)
