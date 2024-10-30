@@ -726,19 +726,6 @@ func createMemberlist(nodeName, bindAddr string, bindPort int, joinAddrs []strin
 	}
 	config.Delegate = delegate
 
-	// Increase timeouts and intervals for better reliability in Docker
-	config.TCPTimeout = 10 * time.Second           // Time to establish TCP connections
-	config.PushPullInterval = 15 * time.Second     // How often to do anti-entropy
-	config.ProbeTimeout = 5 * time.Second          // Timeout for probe messages
-	config.ProbeInterval = 2 * time.Second         // How often to probe other nodes
-	config.GossipInterval = 200 * time.Millisecond // How often to gossip
-	config.GossipNodes = 3                         // Number of nodes to gossip to
-
-	// Retry parameters
-	config.RetransmitMult = 3 // Retransmit multiplier
-	config.SuspicionMult = 6  // Suspicion multiplier
-
-	// Enable detailed logging
 	config.Logger = log.New(os.Stdout, fmt.Sprintf("[MEMBERLIST-%s] ", nodeName), log.LstdFlags)
 
 	list, err := memberlist.Create(config)
@@ -900,7 +887,6 @@ func main() {
 	initDebugLoggers(nodeName)
 
 	stateManager = NewStateManager(nodeName)
-
 	stateManager.StartStateDumping(30 * time.Second)
 
 	// Split join addresses

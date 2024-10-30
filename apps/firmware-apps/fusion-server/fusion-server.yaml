@@ -1,4 +1,5 @@
 #cloud-config
+
 packages:
   - curl
   - haproxy
@@ -6,5 +7,139 @@ packages:
 
 runcmd:
   - mkdir -p /etc/haproxy /run/haproxy /etc/keepalived /app
-  - /app/entrypoint.sh
-  
+  - mkdir -p /home/bin /home/configs/haproxy /home/configs/keepalived
+  - systemctl enable haproxy.service
+  - systemctl enable keepalived.service
+  - systemctl start haproxy.service
+  - systemctl start keepalived.service
+
+vars:
+  virtual_ip: 172.18.0.2
+  virtual_netmask: 24
+  local_ip: 172.18.0.3
+  peer_ip: 172.18.0.4
+  download_ip: 172.18.0.4
+
+write_files:
+  - path: /app/entrypoint.sh
+    permissions: '0755'
+    content: |
+      #!/bin/sh
+      set -e
+      
+      keepalived -n -l -D \
+        -f /home/ubuntu/keepalived/keepalived.conf \
+        --log-console \
+        --log-detail \
+        --dump-conf &
+      
+      # Start HAProxy with proper logging
+      haproxy -f /home/ubuntu/haproxy/haproxy.cfg \
+        -db \
+        -V \
+        -L localhost \
+        -m 1024 &
+      
+      # Start fusion-server
+      /app/fusion-server "$@" &
+
+  - path: /home/configs/keepalived/keepalived.conf
+    permissions: '0755'
+    content: |
+      global_defs {
+        enable_script_security
+        max_auto_priority 99
+        vrrp_garp_master_delay 1
+        vrrp_garp_master_repeat 3
+        vrrp_garp_master_refresh 1
+        vrrp_garp_master_refresh_repeat 2
+        vrrp_skip_check_adv_addr
+        log_unknown_vrids
+      }
+
+      vrrp_instance VI_1 {
+        state MASTER
+        interface eth0
+        virtual_router_id 51
+        priority 100
+        advert_int 1
+        unicast_src_ip ${local_ip}
+        unicast_peer {
+          ${peer_ip}
+        }
+        authentication {
+          auth_type PASS
+          auth_pass bosepro
+        }
+        virtual_ipaddress {
+          ${virtual_ip}/${virtual_netmask}
+        }
+      }
+
+  - path: /home/configs/haproxy/haproxy.cfg
+    permissions: '0755'
+    content: |
+      global
+        log stdout format raw local0 debug
+        maxconn 32768
+        user haproxy
+        group haproxy
+
+      defaults
+        log global
+        mode http
+        option httplog
+        option dontlognull
+        timeout connect 5000ms
+        timeout client 50000ms
+        timeout server 50000ms
+
+      frontend http_front
+        bind *:80
+        default_backend servers
+
+      backend servers
+        balance roundrobin
+        option httpchk GET /getValue HTTP/1.1
+        http-check expect status 200
+        default-server inter 2s fall 3 rise 2
+
+  - path: /etc/systemd/system/haproxy.service
+    permissions: '0644'
+    content: |
+      [Unit]
+      Description=HAProxy Load Balancer
+      After=network.target
+
+      [Service]
+      Type=simple
+      ExecStart=/usr/sbin/haproxy -f /home/configs/haproxy/haproxy.cfg -db
+      Restart=always
+
+      [Install]
+      WantedBy=multi-user.target
+
+  - path: /etc/systemd/system/keepalived.service
+    permissions: '0644'
+    content: |
+      [Unit]
+      Description=Keepalived VRRP High Availability Monitor
+      After=network.target
+
+      [Service]
+      Type=simple
+      ExecStart=/usr/sbin/keepalived -n -l -D -f /home/configs/keepalived/keepalived.conf
+      Restart=always
+
+      [Install]
+      WantedBy=multi-user.target
+
+  - path: /home/ubuntu/bin/fusion-server
+    permissions: '0755'
+    content: |
+      #!/bin/bash
+      curl -L "http://${peer_ip}:8000/fusion-server" -o /home/ubuntu/bin/fusion-server
+      chmod +x /home/ubuntu/bin/fusion-server
+
+bootcmd:
+  - systemctl daemon-reload

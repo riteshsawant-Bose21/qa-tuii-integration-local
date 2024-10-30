@@ -110,7 +110,7 @@ func reloadHAProxy() error {
 	}
 	pid := strings.TrimSpace(string(pidBytes))
 
-	// Graceful reload
+	// Reload the config file
 	cmd := exec.Command("haproxy", "-f", "/home/ubuntu/haproxy/haproxy.cfg", "-sf", pid)
 	output, err := cmd.CombinedOutput()
 	if err != nil {

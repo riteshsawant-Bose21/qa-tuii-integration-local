@@ -28,8 +28,4 @@ fi
 echo "Renaming binary..."
 mv "$EXPECTED_BINARY" "$BINARY_NAME"
 
-# Build Docker image
-echo "Building Docker image..."
-docker build -t "$DOCKER_IMAGE_NAME" .
-
 echo "Build process completed successfully."
