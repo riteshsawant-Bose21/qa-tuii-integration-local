@@ -36,14 +36,33 @@ write_files:
         }
     }
 
+ - path: /etc/systemd/system/fusion-server.service
+   content: |
+    [Unit]
+    Description=Custom Binary Service
+    After=network.target
+
+    [Service]
+    Type=simple
+    ExecStart=/usr/local/bin/fusion-server --name fusion-server-01 --addr 0.0.0.0 --port 7946
+
+    Restart=always
+
+    [Install]
+    WantedBy=multi-user.target
+
 runcmd:
- - systemctl restart systemd-resolved
- # Create directories
+ # Set initial directory permissions
+ - sudo chown -R haproxy:haproxy /etc/haproxy
+ - sudo chmod 755 /etc/haproxy
+ - sudo chown -R root:root /etc/keepalived
  - sudo mkdir -p /etc/haproxy
  - sudo mkdir -p /etc/keepalived
- # Set correct ownership
- - sudo chown -R haproxy:haproxy /etc/haproxy
- - sudo chown -R root:root /etc/keepalived
+
+ # Copy over 
+ - curl -L "10.0.0.157:8000/fusion-server" -o /usr/local/bin/fusion-server
+ - chmod +x /usr/local/bin/fusion-server
+
  # Write HAProxy config
  - |
    sudo tee /etc/haproxy/haproxy.cfg << 'EOF'
@@ -69,6 +88,7 @@ runcmd:
     http-check expect status 200
     default-server inter 2s fall 3 rise 2
    EOF
+   
  # Write HAProxy service file
  - |
    sudo tee /etc/systemd/system/haproxy.service << 'EOF'
@@ -82,11 +102,15 @@ runcmd:
    [Install]
    WantedBy=multi-user.target
    EOF
- # Set permissions
- - sudo chmod 644 /etc/haproxy/haproxy.cfg
+
+ # Set file permissions (after files are created)
+ - sudo chown haproxy:haproxy /etc/haproxy/haproxy.cfg
+ - sudo chmod 666 /etc/haproxy/haproxy.cfg  # Temporarily very permissive for testing
  - sudo chmod 644 /etc/systemd/system/haproxy.service
  - sudo chmod 644 /etc/keepalived/keepalived.conf
+
  # Start services
+ - systemctl restart systemd-resolved
  - sudo systemctl daemon-reload
  - sudo systemctl enable haproxy
  - sudo systemctl start haproxy
