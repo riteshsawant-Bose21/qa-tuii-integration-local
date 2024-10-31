@@ -1,245 +1,252 @@
-# Fusion High-Availability Gossip-Based Distributed System
+# Fusion Server
 
-## Architecture Overview
-This project implements a high-availability, [gossip-based distributed](https://github.com/hashicorp/memberlist) system. The system consists of multiple servers that communicate using a gossip protocol, with a fault-tolerant setup for high availability.
+Fusion Server is a distributed configuration management system with high availability features, built using Go. It provides real-time configuration synchronization across multiple nodes with support for load balancing and failover.
 
-## Components
+## Features
 
-### 1. Fusion Servers (fusion1, fusion2, fusion3, fusion4)
-- Implemented using custom `fusion-server` service
-- Communicate via gossip protocol for configuration sharing
-- Each server listens on port 7946 for inter-server communication
-- Server join the cluster automatically
+- Distributed configuration storage with real-time synchronization
+- High availability with HAProxy load balancing and Keepalived failover
+- WebSocket support for real-time updates
+- REST API for configuration management
+- State persistence and recovery
+- JSON import/export functionality
+- Automatic HAProxy configuration management
+- Health monitoring and debug capabilities
 
-### 2. [HAProxy](https://www.haproxy.org)
-- Used for load balancing
-- Runs inside each server
+## Architecture
 
-### 3. [Keepalived](https://www.keepalived.org)
-- Manages high availability for the system
-- Uses Virtual Router Redundancy Protocol (VRRP)
-- Maintains a Virtual IP (VIP) that floats between DSP instances
-- Automatic failover if the primary DSP fails
+### Components
 
-## Network Configuration
-- Configured network in the 172.18.0.0/24 range
-- Each component has a static IP within this network
-- Virtual IP (172.18.0.2) managed by Keepalived
+1. **State Management**
+   - Distributed state synchronization across nodes
+   - Version-based conflict resolution
+   - Real-time state updates via WebSocket
+   - Persistent storage of configuration data
 
-## High Availability Features
-1. **Fusion Server Redundancy**: Multiple server instances ensure continuous service even if some servers fail.
-2. **Automatic Failover**: Keepalived automatically moves the Virtual IP to the healthy DSP instance.
-3. **Gossip Protocol Resilience**: The gossip protocol allows the cluster to function and update even if some servers are temporarily unavailable.
+2. **High Availability**
+   - HAProxy load balancing across cluster nodes
+   - Keepalived for VIP (Virtual IP) management
+   - Automatic failover support
+   - Dynamic backend server registration
 
-## Scalability
-- Additional Fusion Server servers can be easily added to the cluster
-- New servers automatically join the gossip network
+3. **Networking**
+   - Gossip-based cluster membership
+   - WebSocket connections for real-time updates
+   - REST API for configuration management
+   - Health check endpoints
 
-## Configuration Management
-- Gossip protocol enables efficient propagation of configuration changes across all fusion servers
-- Changes made to any server are automatically disseminated to all other servers in the cluster
+## Setup
 
-## Configuration Persistence
-Configuration state is saved to /var/lib/fusion/config.json. The live data exists
-in memory, but is serialized to disk. The serialized data is loaded from disk
-when the server is initialized.
+### Prerequisites
 
-## Getting Started
-1. Install Multipass on your system:
-   ```bash
-   # macOS
-   brew install --cask multipass
-   
-   # Ubuntu
-   sudo snap install multipass
-   ```
+- Linux environment
+- HAProxy
+- Keepalived
+- Go 1.x or higher
 
-2. Create the fusion instances using cloud-init:
-   ```bash
-   multipass launch --name dsp1 --cloud-init fusion-config.yaml
-   multipass launch --name dsp2 --cloud-init fusion-config.yaml
-   multipass launch --name dsp3 --cloud-init fusion-config.yaml
-   multipass launch --name dsp4 --cloud-init fusion-config.yaml
-   ```
+### Installation
 
-3. Verify the instances are running:
-   ```bash
-   multipass list
-   ```
-
-4. Access the instances:
-   ```bash
-   multipass shell dsp1
-   ```
-
-## Using curl to Set and Get Values
-
-The Fusion servers expose an HTTP API on port 8080 for setting and retrieving configuration values. You can interact with this API using curl commands.
-
-### Getting Key Values
+1. Clone the repository and build the server:
 ```bash
-curl http://$(multipass info dsp1 --format json | jq -r '.info.dsp1.ipv4[0]'):8080/getValue
+go build -o fusion-server
 ```
 
-### Setting Key Values
-```bash
-curl -X POST http://$(multipass info dsp1 --format json | jq -r '.info.dsp1.ipv4[0]'):8080/setValue \
-     -H "Content-Type: application/json" \
-     -d '{"key": "example_key", "value": "new_value"}'
+2. Configure the cloud-init file for node setup:
+```yaml
+#cloud-config
+package_update: true
+package_upgrade: true
+packages:
+  - haproxy
+  - keepalived
 ```
 
-### Uploading a JSON File
+3. Set up the required directories:
 ```bash
-curl -X POST -H "Content-Type: application/json" \
-     -d @path/to/your/config.json \
-     http://$(multipass info dsp1 --format json | jq -r '.info.dsp1.ipv4[0]'):8080/upload
+sudo mkdir -p /etc/haproxy
+sudo mkdir -p /etc/keepalived
+sudo mkdir -p /var/lib/fusion
 ```
 
-### Setting volume, linear amplitude 0.0 - 1.0
+### Configuration
+
+1. **HAProxy Configuration**
+   - Automatically generated based on cluster membership
+   - Default configuration includes:
+     - HTTP mode
+     - Round-robin load balancing
+     - Health checks on /getValue endpoint
+     - Statistics page on port 8404
+     - Configurable timeouts and connection limits
+
+2. **Keepalived Configuration**
+   - Virtual IP (VIP): 192.168.64.100
+   - VRRP configuration for high availability
+   - Automatic failover between nodes
+
+3. **Node Configuration**
+   - Each node requires:
+     - Unique node name
+     - Bind address and port
+     - Optional join address for cluster membership
+
+## Usage
+
+### Starting a Node
+
 ```bash
-curl -X POST -H "Content-Type: application/json" \
-     -d '{"volume": 0.7}' \
-     http://$(multipass info dsp1 --format json | jq -r '.info.dsp1.ipv4[0]'):8080/setVolume
+./fusion-server --name <node-name> --addr <bind-address> --port <port> [--join <existing-node-address>]
 ```
 
-### WebSocket Connection
-To establish a WebSocket connection:
-```bash
-websocat ws://$(multipass info dsp1 --format json | jq -r '.info.dsp1.ipv4[0]'):8080/ws
-```
+### API Endpoints
 
-## Testing Failover
-To test the high availability setup:
-1. Stop the primary Fusion server:
-   ```bash
-   multipass stop dsp1
-   ```
-2. Observe that the Virtual IP moves to another Fusion server
-3. Restart the primary:
-   ```bash
-   multipass start dsp1
-   ```
-4. Verify that the system continues to function throughout this process
+1. **Configuration Management**
+   - `POST /setValue` - Set a configuration value
+   - `GET /getValue` - Retrieve configuration value(s)
+   - `GET /ws` - WebSocket endpoint for real-time updates
 
-## Common Commands
+2. **State Management**
+   - `POST /upload` - Import configuration state
+   - `GET /download` - Export configuration state
 
-### List all instances
-```bash
-multipass list
-```
+3. **Volume Control**
+   - `POST /setVolume` - Update volume settings
 
-### Start instance
-```bash
-multipass start dsp1
-```
+### State Management
 
-### Stop instance
-```bash
-multipass stop dsp1
-```
+The system maintains a distributed state with the following features:
+- Version-based conflict resolution
+- Timestamp-based tie-breaking
+- Real-time state synchronization
+- Persistent state storage
+- State verification and validation
 
-### Delete instance
-```bash
-multipass delete dsp1
-```
+## High Availability
 
-### Purge deleted instances
-```bash
-multipass purge
-```
+### Load Balancing
 
-### Access instance shell
-```bash
-multipass shell dsp1
-```
+HAProxy provides load balancing with:
+- Round-robin distribution
+- Health checks every 2 seconds
+- Automatic backend server management
+- Statistics monitoring
 
-### Execute command on instance
-```bash
-multipass exec dsp1 -- command
-```
+### Failover
 
-### View instance information
-```bash
-multipass info dsp1
-```
+Keepalived ensures high availability through:
+- Virtual IP management
+- Automatic master/backup failover
+- VRRP protocol for IP takeover
+- Quick failure detection
 
-### Mount local directory to instance
-```bash
-multipass mount /local/path dsp1:/instance/path
-```
+## Monitoring
 
-### Verify Keepalived status
-```bash
-multipass exec dsp1 -- ip addr show eth0
-```
+1. **HAProxy Statistics**
+   - Available at `http://<node-ip>:8404/`
+   - Real-time server status
+   - Connection statistics
+   - Health check status
 
-### Check instance logs
-```bash
-multipass exec dsp1 -- sudo journalctl -u fusion-server
-```
+2. **Debug Mode**
+   - Cluster state monitoring
+   - Health check logging
+   - State verification
+   - Connectivity testing
 
-## Future Improvements
-- Implement secure communication between servers
-- Add a service discovery mechanism for dynamic scaling
-- Integrate with external monitoring and alerting systems
-- Implement automated backup and restore procedures for configuration data
+## Security
+
+- TLS support for secure communication
+- WebSocket origin checking
+- File permission management
+- Proper service isolation
+
+## Troubleshooting
+
+1. **VIP Issues**
+   - Check network interface configuration
+   - Verify Keepalived status
+   - Monitor VRRP advertisements
+
+2. **Cluster Synchronization**
+   - Check node connectivity
+   - Verify gossip protocol communication
+   - Monitor state version numbers
+
+3. **Load Balancer Issues**
+   - Check HAProxy configuration
+   - Verify backend health checks
+   - Monitor HAProxy logs
+
+## Dependencies
+
+- github.com/hashicorp/memberlist - Cluster membership and failure detection
+- github.com/gorilla/websocket - WebSocket support
+- Standard Go libraries
+
+## Diagram
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'fontSize': '30px'}}}%%
-graph TD
-    subgraph Network
-        VIP[Virtual IP: 172.18.0.2]
-        subgraph Container dsp1
-            D1[dsp1: 172.18.0.3]
-            K1[Keepalived Primary]
-            G1[Gossip Node]
-            S1[HTTP Server :8080]
+graph TB
+    subgraph Client Layer
+        C1[Client] 
+        C2[Client]
+        C3[Client]
+    end
+
+    subgraph Load Balancer Layer
+        VIP[Virtual IP<br>192.168.64.100]
+        HAP[HAProxy<br>Port 80]
+        KA[Keepalived<br>VRRP]
+    end
+
+    subgraph Server Layer
+        subgraph Node 1
+            F1[Fusion Server 1<br>Port 8080]
+            S1[(State 1)]
         end
-        subgraph Container dsp2
-            D2[dsp2: 172.18.0.4]
-            K2[Keepalived Backup1]
-            G2[Gossip Node]
-            S2[HTTP Server :8080]
+        
+        subgraph Node 2
+            F2[Fusion Server 2<br>Port 8080]
+            S2[(State 2)]
         end
-        subgraph Container dsp3
-            D3[dsp3: 172.18.0.5]
-            K3[Keepalived Backup2]
-            G3[Gossip Node]
-            S3[HTTP Server :8080]
-        end
-        subgraph Container dsp4
-            D4[dsp4: 172.18.0.6]
-            K4[Keepalived Backup3]
-            G4[Gossip Node]
-            S4[HTTP Server :8080]
+        
+        subgraph Node 3
+            F3[Fusion Server 3<br>Port 8080]
+            S3[(State 3)]
         end
     end
-    
-    VIP --> D1
-    D1 <--> D2
-    D1 <--> D3
-    D1 <--> D4
-    D2 <--> D3
-    D2 <--> D4
-    D3 <--> D4
-    
-    K1 --> VIP
-    K2 -.-> VIP
-    K3 -.-> VIP
-    K4 -.-> VIP
-    
-    G1 <--> G2
-    G1 <--> G3
-    G1 <--> G4
-    G2 <--> G3
-    G2 <--> G4
-    G3 <--> G4
 
-    classDef container fill:#e6f3ff,stroke:#333,stroke-width:4px;
-    classDef component fill:#f9f9f9,stroke:#666,stroke-width:4px;
-    classDef vip fill:#ffcccc,stroke:#ff0000,stroke-width:4px;
+    %% Client connections
+    C1 --> VIP
+    C2 --> VIP
+    C3 --> VIP
     
-    class D1,D2,D3,D4 container;
-    class K1,K2,K3,K4,G1,G2,G3,G4,S1,S2,S3,S4 component;
-    class VIP vip;
+    %% VIP to HAProxy
+    VIP --> HAP
+    KA --> VIP
+    
+    %% HAProxy to Fusion Servers
+    HAP --> F1
+    HAP --> F2
+    HAP --> F3
+    
+    %% State connections
+    F1 --> S1
+    F2 --> S2
+    F3 --> S3
+    
+    %% Gossip protocol connections
+    F1 <--> F2
+    F2 <--> F3
+    F1 <--> F3
+
+    classDef client fill:#a8e6cf
+    classDef lb fill:#ffd3b6
+    classDef server fill:#ffaaa5
+    classDef state fill:#dcedc1
+    
+    class C1,C2,C3 client
+    class VIP,HAP,KA lb
+    class F1,F2,F3 server
+    class S1,S2,S3 state
 ```
