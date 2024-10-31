@@ -39,25 +39,29 @@ write_files:
  - path: /etc/systemd/system/fusion-server.service
    content: |
     [Unit]
-    Description=Custom Binary Service
+    Description=Fusion Server
     After=network.target
 
     [Service]
     Type=simple
     ExecStart=/usr/local/bin/fusion-server --name fusion-server-01 --addr 0.0.0.0 --port 7946
-
     Restart=always
-
+    AmbientCapabilities=CAP_NET_BIND_SERVICE
+    
     [Install]
     WantedBy=multi-user.target
 
 runcmd:
  # Set initial directory permissions
+ - sudo mkdir -p /etc/haproxy
  - sudo chown -R haproxy:haproxy /etc/haproxy
  - sudo chmod 755 /etc/haproxy
- - sudo chown -R root:root /etc/keepalived
- - sudo mkdir -p /etc/haproxy
+ 
  - sudo mkdir -p /etc/keepalived
+ - sudo chown -R root:root /etc/keepalived
+
+ - sudo mkdir -p /var/lib/fusion
+ - sudo chown -R ubuntu:ubuntu /var/lib/fusion
 
  # Copy over 
  - curl -L "10.0.0.157:8000/fusion-server" -o /usr/local/bin/fusion-server
@@ -88,7 +92,7 @@ runcmd:
     http-check expect status 200
     default-server inter 2s fall 3 rise 2
    EOF
-   
+
  # Write HAProxy service file
  - |
    sudo tee /etc/systemd/system/haproxy.service << 'EOF'
@@ -116,3 +120,5 @@ runcmd:
  - sudo systemctl start haproxy
  - sudo systemctl enable keepalived
  - sudo systemctl start keepalived
+ - sudo systemctl enable fusion-server
+ - sudo systemctl start fusion-server
