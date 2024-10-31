@@ -183,6 +183,138 @@ Keepalived ensures high availability through:
 - github.com/gorilla/websocket - WebSocket support
 - Standard Go libraries
 
+## Development Environment
+
+### Multipass Setup
+
+[Multipass](https://multipass.run/) is used to create and manage Ubuntu VM instances for development and testing. It provides a quick way to spin up consistent Ubuntu environments across different platforms.
+
+#### Installation
+
+1. **Ubuntu**
+```bash
+sudo snap install multipass
+```
+
+2. **macOS**
+```bash
+brew install --cask multipass
+```
+
+3. **Windows**
+- Download the installer from [Multipass website](https://multipass.run/download/windows)
+
+#### Basic Commands
+
+1. **Create a new instance with cloud-config**
+```bash
+multipass launch --name fusion-1 --cloud-init cloud-config.yaml
+```
+
+2. **List instances**
+```bash
+multipass list
+```
+
+3. **Start/Stop instances**
+```bash
+multipass stop fusion-1
+multipass start fusion-1
+```
+
+4. **Access instance shell**
+```bash
+multipass shell fusion-1
+```
+
+5. **Get instance information**
+```bash
+multipass info fusion-1
+```
+
+6. **Mount local directory**
+```bash
+multipass mount /local/path fusion-1:/home/ubuntu/mounted
+```
+
+7. **Delete instance**
+```bash
+multipass delete fusion-1
+multipass purge  # Remove deleted instances completely
+```
+
+#### Creating Multiple Nodes
+
+For a three-node cluster setup:
+
+```bash
+# Create instances
+multipass launch --name fusion-1 --cloud-init cloud-config.yaml
+multipass launch --name fusion-2 --cloud-init cloud-config.yaml
+multipass launch --name fusion-3 --cloud-init cloud-config.yaml
+
+# Get IP addresses
+multipass list
+
+# Shell into instances
+multipass shell fusion-1
+```
+
+#### Useful Tips
+
+1. **Transfer files to instance**
+```bash
+multipass transfer /local/file.txt fusion-1:/home/ubuntu/
+```
+
+2. **Execute command in instance**
+```bash
+multipass exec fusion-1 -- command
+```
+
+3. **View instance logs**
+```bash
+multipass exec fusion-1 -- cat /var/log/cloud-init-output.log
+```
+
+4. **Resource allocation**
+```bash
+# Launch with specific resources
+multipass launch --name fusion-1 --cpus 2 --mem 2G --disk 10G --cloud-init cloud-config.yaml
+```
+
+5. **Network configuration**
+```bash
+# Get instance IP address
+multipass info fusion-1 | grep IPv4
+```
+
+#### Troubleshooting Multipass
+
+1. **Instance fails to start**
+   - Check cloud-init logs:
+   ```bash
+   multipass exec fusion-1 -- cat /var/log/cloud-init-output.log
+   ```
+   - Verify resource availability on host machine
+   - Ensure cloud-config.yaml is valid
+
+2. **Network connectivity issues**
+   - Verify host network connectivity
+   - Check instance network status:
+   ```bash
+   multipass exec fusion-1 -- ip addr
+   ```
+
+3. **Mount problems**
+   - Ensure source path exists
+   - Check permissions on host directory
+   - Unmount and retry:
+   ```bash
+   multipass unmount fusion-1
+   multipass mount /local/path fusion-1:/home/ubuntu/mounted
+   ```
+
 ## Diagram
 
 ```mermaid
