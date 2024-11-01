@@ -112,7 +112,68 @@ sudo mkdir -p /var/lib/fusion
 3. **Volume Control**
    - `POST /setVolume` - Update volume settings
 
-### State Management
+### Set a single value
+```bash
+curl -X POST http://localhost:8080/setValue \
+  -H "Content-Type: application/json" \
+  -d '{"key": "server.name", "value": "production-1"}'
+```
+
+### Set a nested configuration object
+```bash
+curl -X POST http://localhost:8080/setValue \
+  -H "Content-Type: application/json" \
+  -d '{
+    "key": "database.config",
+    "value": {
+      "host": "localhost",
+      "port": 5432,
+      "maxConnections": 100
+    }
+  }'
+```
+
+### Get a specific value
+```bash
+curl "http://localhost:8080/getValue?key=server.name"
+```
+
+### Get all configuration values
+```bash
+curl http://localhost:8080/getValue
+```
+
+### Download current configuration state
+```bash
+curl -O http://localhost:8080/download
+```
+
+### Download and save with specific filename
+```bash
+curl http://localhost:8080/download > backup_config.json
+```
+
+## Websockets
+
+### Simple connection that prints received messages
+```bash
+websocat ws://localhost:8080/ws
+```
+
+### Connect with interactive mode to send and receive messages
+```bash
+websocat -v ws://localhost:8080/ws
+```
+
+## Unix Domain Sockets
+
+### Get all values
+echo '{"action":"get"}' | nc -u localhost 7947
+
+### Set a value
+echo '{"action":"set","key":"test","value":"hello"}' | nc -u localhost 7947
+
+#### State Management
 
 The system maintains a distributed state with the following features:
 - Version-based conflict resolution

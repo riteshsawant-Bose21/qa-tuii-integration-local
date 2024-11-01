@@ -64,7 +64,7 @@ runcmd:
  - sudo chown -R ubuntu:ubuntu /var/lib/fusion
 
  # Copy over 
- - curl -L "10.0.0.157:8000/fusion-server" -o /usr/local/bin/fusion-server
+ - curl -L "10.0.0.157:8000/fusion/fusion-server" -o /usr/local/bin/fusion-server
  - chmod +x /usr/local/bin/fusion-server
 
  # Write HAProxy config

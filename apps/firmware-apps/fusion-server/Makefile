@@ -5,38 +5,77 @@ GOCLEAN=$(GOCMD) clean
 GOTEST=$(GOCMD) test
 GOMOD=$(GOCMD) mod
 BINARY_NAME=fusion-server
+MAIN_PATH=fusion/cmd/fusion
+BUILD_DIR=build
+BUILD_FLAGS=-tags netgo,osusergo
+LDFLAGS=-ldflags '-extldflags "-static"'
 
 all: deps test build
 
 build:
-	$(GOBUILD) -o $(BINARY_NAME) -v
+	mkdir -p $(BUILD_DIR)
+	cd fusion && CGO_ENABLED=0 GOOS=linux $(GOBUILD) $(BUILD_FLAGS) $(LDFLAGS) -o ../$(BUILD_DIR)/$(BINARY_NAME) -v ./cmd/fusion
 
 test:
-	$(GOTEST) -v ./...
+	cd fusion && CGO_ENABLED=0 $(GOTEST) $(BUILD_FLAGS) -v ./...
 
 clean:
 	$(GOCLEAN)
-	rm -f $(BINARY_NAME)
+	rm -rf $(BUILD_DIR)
 
 run:
-	$(GOBUILD) -o $(BINARY_NAME) -v
-	./$(BINARY_NAME)
+	cd fusion && CGO_ENABLED=0 GOOS=linux $(GOBUILD) $(BUILD_FLAGS) $(LDFLAGS) -o ../$(BUILD_DIR)/$(BINARY_NAME) -v ./cmd/fusion
+	./$(BUILD_DIR)/$(BINARY_NAME)
 
 deps:
-	$(GOMOD) download
-	$(GOMOD) verify
+	cd fusion && $(GOMOD) download
+	cd fusion && $(GOMOD) verify
 
 tidy:
-	$(GOMOD) tidy
+	cd fusion && $(GOMOD) tidy
 
 # Cross compilation
 build-linux:
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GOBUILD) -o $(BINARY_NAME)_linux_amd64 -v
+	mkdir -p $(BUILD_DIR)
+	cd fusion && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GOBUILD) $(BUILD_FLAGS) $(LDFLAGS) -o ../$(BUILD_DIR)/$(BINARY_NAME)_linux_amd64 -v ./cmd/fusion
 
 build-linux-arm32:
-	CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=7 $(GOBUILD) -o $(BINARY_NAME)_linux_arm32 -v
+	mkdir -p $(BUILD_DIR)
+	cd fusion && CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=7 $(GOBUILD) $(BUILD_FLAGS) $(LDFLAGS) -o ../$(BUILD_DIR)/$(BINARY_NAME)_linux_arm32 -v ./cmd/fusion
 
 build-linux-arm64:
-	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 $(GOBUILD) -o $(BINARY_NAME)_linux_arm64 -v
+	mkdir -p $(BUILD_DIR)
+	cd fusion && CGO_ENABLED=0 GOOS=linux GOARCH=arm64 $(GOBUILD) $(BUILD_FLAGS) $(LDFLAGS) -o ../$(BUILD_DIR)/$(BINARY_NAME)_linux_arm64 -v ./cmd/fusion
 
-.PHONY: all build test clean run deps tidy build-linux build-linux-arm32 build-linux-arm64
+# Development helpers
+fmt:
+	cd fusion && go fmt ./...
+
+vet:
+	cd fusion && go vet ./...
+
+lint:
+	cd fusion && golangci-lint run
+
+# Build all platforms
+build-all: build-linux build-linux-arm32 build-linux-arm64
+
+# Show help
+help:
+	@echo "Make targets:"
+	@echo " all - Run deps, test, and build"
+	@echo " build - Build for current platform"
+	@echo " test - Run tests"
+	@echo " clean - Clean build files"
+	@echo " run - Build and run locally"
+	@echo " deps - Download dependencies"
+	@echo " tidy - Tidy go.mod"
+	@echo " fmt - Format code"
+	@echo " vet - Run go vet"
+	@echo " lint - Run linter"
+	@echo " build-linux - Build for Linux amd64"
+	@echo " build-linux-arm32 - Build for Linux ARM32"
+	@echo " build-linux-arm64 - Build for Linux ARM64"
+	@echo " build-all - Build for all platforms"
+
+.PHONY: all build test clean run deps tidy fmt vet lint build-linux build-linux-arm32 build-linux-arm64 build-all help
