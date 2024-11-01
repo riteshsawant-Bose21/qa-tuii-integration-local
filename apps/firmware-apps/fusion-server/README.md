@@ -33,6 +33,7 @@ Fusion Server is a distributed configuration management system with high availab
    - Gossip-based cluster membership
    - WebSocket connections for real-time updates
    - REST API for configuration management
+   - Unix Domain sockets for configuration management 
    - Health check endpoints
 
 ## Setup
@@ -114,14 +115,14 @@ sudo mkdir -p /var/lib/fusion
 
 ### Set a single value
 ```bash
-curl -X POST http://localhost:8080/setValue \
+curl -X POST http://192.168.64.100:8080/setValue \
   -H "Content-Type: application/json" \
   -d '{"key": "server.name", "value": "production-1"}'
 ```
 
 ### Set a nested configuration object
 ```bash
-curl -X POST http://localhost:8080/setValue \
+curl -X POST http://192.168.64.100:8080/setValue \
   -H "Content-Type: application/json" \
   -d '{
     "key": "database.config",
@@ -135,34 +136,34 @@ curl -X POST http://localhost:8080/setValue \
 
 ### Get a specific value
 ```bash
-curl "http://localhost:8080/getValue?key=server.name"
+curl "http://192.168.64.100:8080/getValue?key=server.name"
 ```
 
 ### Get all configuration values
 ```bash
-curl http://localhost:8080/getValue
+curl http://192.168.64.100:8080/getValue
 ```
 
 ### Download current configuration state
 ```bash
-curl -O http://localhost:8080/download
+curl -O http://192.168.64.100:8080/download
 ```
 
 ### Download and save with specific filename
 ```bash
-curl http://localhost:8080/download > backup_config.json
+curl http://192.168.64.100:8080/download > backup_config.json
 ```
 
 ## Websockets
 
 ### Simple connection that prints received messages
 ```bash
-websocat ws://localhost:8080/ws
+websocat ws://192.168.64.100:8080/ws
 ```
 
 ### Connect with interactive mode to send and receive messages
 ```bash
-websocat -v ws://localhost:8080/ws
+websocat -v ws://192.168.64.100:8080/ws
 ```
 
 ## Unix Domain Sockets
@@ -265,11 +266,19 @@ brew install --cask multipass
 3. **Windows**
 - Download the installer from [Multipass website](https://multipass.run/download/windows)
 
+#### Binary Server
+Multipass will need to download the fusion-server binary from a remote location.
+For local development, start a webserver in your fusion-service source code directory.
+Multipass will download the file from build/fusion-server.
+```bash
+python3 -m http.server 8000 --bind 0.0.0.0
+```
+
 #### Basic Commands
 
 1. **Create a new instance with cloud-config**
 ```bash
-multipass launch --name fusion-1 --cloud-init cloud-config.yaml
+multipass launch --name fs1 --cloud-init cloud-config.yaml
 ```
 
 2. **List instances**
@@ -279,28 +288,28 @@ multipass list
 
 3. **Start/Stop instances**
 ```bash
-multipass stop fusion-1
-multipass start fusion-1
+multipass stop fs1
+multipass start fs1
 ```
 
 4. **Access instance shell**
 ```bash
-multipass shell fusion-1
+multipass shell fs1
 ```
 
 5. **Get instance information**
 ```bash
-multipass info fusion-1
+multipass info fs1
 ```
 
 6. **Mount local directory**
 ```bash
-multipass mount /local/path fusion-1:/home/ubuntu/mounted
+multipass mount /local/path fs1:/home/ubuntu/mounted
 ```
 
 7. **Delete instance**
 ```bash
-multipass delete fusion-1
+multipass delete fs1
 multipass purge  # Remove deleted instances completely
 ```
 
@@ -310,7 +319,7 @@ For a three-node cluster setup:
 
 ```bash
 # Create instances
-multipass launch --name fusion-1 --cloud-init cloud-config.yaml
+multipass launch --name fs1 --cloud-init cloud-config.yaml
 multipass launch --name fusion-2 --cloud-init cloud-config.yaml
 multipass launch --name fusion-3 --cloud-init cloud-config.yaml
 
@@ -318,36 +327,36 @@ multipass launch --name fusion-3 --cloud-init cloud-config.yaml
 multipass list
 
 # Shell into instances
-multipass shell fusion-1
+multipass shell fs1
 ```
 
 #### Useful Tips
 
 1. **Transfer files to instance**
 ```bash
-multipass transfer /local/file.txt fusion-1:/home/ubuntu/
+multipass transfer /local/file.txt fs1:/home/ubuntu/
 ```
 
 2. **Execute command in instance**
 ```bash
-multipass exec fusion-1 -- command
+multipass exec fs1 -- command
 ```
 
 3. **View instance logs**
 ```bash
-multipass exec fusion-1 -- cat /var/log/cloud-init-output.log
+multipass exec fs1 -- cat /var/log/cloud-init-output.log
 ```
 
 4. **Resource allocation**
 ```bash
 # Launch with specific resources
-multipass launch --name fusion-1 --cpus 2 --mem 2G --disk 10G --cloud-init cloud-config.yaml
+multipass launch --name fs1 --cpus 2 --mem 2G --disk 10G --cloud-init cloud-config.yaml
 ```
 
 5. **Network configuration**
 ```bash
 # Get instance IP address
-multipass info fusion-1 | grep IPv4
+multipass info fs1 | grep IPv4
 ```
 
 #### Troubleshooting Multipass
@@ -355,7 +364,7 @@ multipass info fusion-1 | grep IPv4
 1. **Instance fails to start**
    - Check cloud-init logs:
    ```bash
-   multipass exec fusion-1 -- cat /var/log/cloud-init-output.log
+   multipass exec fs1 -- cat /var/log/cloud-init-output.log
    ```
    - Verify resource availability on host machine
    - Ensure cloud-config.yaml is valid
@@ -364,16 +373,22 @@ multipass info fusion-1 | grep IPv4
    - Verify host network connectivity
    - Check instance network status:
    ```bash
-   multipass exec fusion-1 -- ip addr
+   multipass exec fs1 -- ip addr
    ```
+3. **systemd status**
+```bash
+multipass exec fs1 -- systemctl status haproxy
+multipass exec fs1 -- systemctl status keepalived
+multipass exec fs1 -- systemctl status fusion-server
+```
 
-3. **Mount problems**
+4. **Mount problems**
    - Ensure source path exists
    - Check permissions on host directory
    - Unmount and retry:
    ```bash
-   multipass unmount fusion-1
-   multipass mount /local/path fusion-1:/home/ubuntu/mounted
+   multipass unmount fs1
+   multipass mount /local/path fs1:/home/ubuntu/mounted
    ```
 
 ## Diagram

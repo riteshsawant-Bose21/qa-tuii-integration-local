@@ -64,8 +64,10 @@ runcmd:
  - sudo chown -R ubuntu:ubuntu /var/lib/fusion
 
  # Copy over 
- - curl -L "10.0.0.157:8000/fusion/fusion-server" -o /usr/local/bin/fusion-server
+ - GATEWAY=$(ip route show | grep default | awk '{print $3}')
+ - until curl -L "$GATEWAY:8000/build/fusion-server" -o /usr/local/bin/fusion-server; do sleep 5; done
  - chmod +x /usr/local/bin/fusion-server
+ - test -x /usr/local/bin/fusion-server || echo "Failed to set up fusion-server"
 
  # Write HAProxy config
  - |

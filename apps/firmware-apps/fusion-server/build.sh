@@ -19,13 +19,13 @@ echo "Building ${BINARY_NAME} for ${OS}_${ARCH}..."
 make "build-${OS}-${ARCH}"
 
 # Check if the build produced the expected binary
-if [ ! -f "$EXPECTED_BINARY" ]; then
+if [ ! -f "build/$EXPECTED_BINARY" ]; then
     echo "Error: Build failed to produce ${EXPECTED_BINARY}"
     exit 1
 fi
 
 # Rename the binary
 echo "Renaming binary..."
-mv "$EXPECTED_BINARY" "$BINARY_NAME"
+mv "build/$EXPECTED_BINARY" "build/$BINARY_NAME"
 
 echo "Build process completed successfully."
