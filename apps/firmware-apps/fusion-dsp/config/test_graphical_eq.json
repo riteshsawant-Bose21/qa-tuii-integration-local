@@ -1,0 +1,72 @@
+{
+    "session": {
+        "constants": [
+            { "name": "frame_size", "value": 256},
+            { "name": "sample_rate", "value": 48000 }
+        ],
+        "tasks": [
+            {
+                "name": "task1",
+                "constants": [
+                    { "name": "frame_size", "value": 256},
+                    { "name": "sample_rate", "value": 48000 }
+                ],
+                "blocks": [
+                    {
+                        "name": "infile",
+                        "algorithm": "wav_read",
+                        "constants": [
+                            { "name": "frame_size", "value": 256},
+                            { "name": "sample_rate", "value": 48000 }
+                        ],
+                        "terminals": [
+                            { "name": "out", "channels": 1 }
+                        ]
+                    },
+                    {
+                        "name": "volume",
+                        "algorithm": "graphical_eq",
+                        "constants": [
+                            { "name": "channels", "value": 1 },
+                            { "name": "frame_size", "value": 256 },
+                            { "name": "sample_rate", "value": 48000 }
+                        ],
+                        "terminals": [
+                            { "name": "in", "channels": 1 },
+                            { "name": "out", "channels": 1 }
+                        ],
+                        "controls": [
+                            { "name": "gain", "num_rows": 10 },
+                            { "name": "out_gain", "num_rows": 1 },
+                            { "name": "out_mute", "num_rows": 1 }
+                        ],
+                        "meters": [
+                            { "name": "out_meter", "num_rows": 1 }
+                        ],
+                        "control_settings": [
+                            { "name": "gain", "value": 20.0 },
+                            { "name": "bypass", "value": true }
+                        ],
+                        "connections": [
+                            { "source_block": "infile", "input_terminal": "in", "output_terminal": "out", "input_channel": 0, "output_channel": 0 }
+                        ]
+                    },
+                    {
+                        "name": "outfile",
+                        "algorithm": "wav_write",
+                        "constants": [
+                            { "name": "frame_size", "value": 256 },
+                            { "name": "sample_rate", "value": 48000 }
+                        ],
+                        "terminals": [
+                            { "name": "in", "channels": 1 }
+                        ],
+                        "connections": [
+                            { "source_block": "volume", "input_terminal": "in", "output_terminal": "out", "input_channel": 0, "output_channel": 0 }
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+}
