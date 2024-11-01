@@ -59,7 +59,7 @@ func (s *ConfigServer) SetValue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := s.broadcastUpdate(update.Key, update.Value); err != nil {
+	if err := s.broadcastUpdate(update.Key, update.Value, true); err != nil {
 		log.Printf("Error broadcasting update: %v", err)
 		http.Error(w, "Error broadcasting update", http.StatusInternalServerError)
 		return
@@ -111,17 +111,43 @@ func (s *ConfigServer) GetValue(w http.ResponseWriter, r *http.Request) {
 
 // HandleWebSocket manages WebSocket connections
 func (s *ConfigServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
+	// Initialize the upgrader with keepalive settings
+	s.upgrader.HandshakeTimeout = 10 * time.Second
+	s.upgrader.EnableCompression = true
+	s.upgrader.ReadBufferSize = 1024
+	s.upgrader.WriteBufferSize = 1024
+
 	conn, err := s.upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Printf("Failed to upgrade connection: %v", err)
 		return
 	}
 
+	// Set read deadline and pong handler for keepalive
+	conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+	conn.SetPongHandler(func(string) error {
+		conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+		return nil
+	})
+
+	// Start ping ticker in a separate goroutine
+	pingTicker := time.NewTicker(30 * time.Second)
+	go func() {
+		defer pingTicker.Stop()
+		for range pingTicker.C {
+			if err := conn.WriteControl(websocket.PingMessage, []byte{}, time.Now().Add(10*time.Second)); err != nil {
+				log.Printf("Ping failed: %v", err)
+				return
+			}
+		}
+	}()
+
 	s.wsLock.Lock()
 	s.wsClients[conn] = true
 	s.wsLock.Unlock()
 
 	defer func() {
+		pingTicker.Stop()
 		conn.Close()
 		s.wsLock.Lock()
 		delete(s.wsClients, conn)
@@ -147,7 +173,6 @@ func (s *ConfigServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 			}
 			break
 		}
-
 		if messageType == websocket.TextMessage {
 			s.handleWebSocketMessage(data)
 		}
@@ -156,9 +181,11 @@ func (s *ConfigServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 func (s *ConfigServer) handleWebSocketMessage(data []byte) {
 	var msg struct {
-		Type  string          `json:"type"`
-		Key   string          `json:"key"`
-		Value json.RawMessage `json:"value"`
+		Type    string          `json:"type"`
+		Key     string          `json:"key"`
+		Value   json.RawMessage `json:"value"`
+		Channel int             `json:"channel,omitempty"`
+		Volume  float64         `json:"volume,omitempty"`
 	}
 
 	if err := json.Unmarshal(data, &msg); err != nil {
@@ -167,21 +194,44 @@ func (s *ConfigServer) handleWebSocketMessage(data []byte) {
 	}
 
 	switch msg.Type {
+
 	case "update":
 		var value interface{}
 		if err := json.Unmarshal(msg.Value, &value); err != nil {
 			log.Printf("Invalid value in WebSocket message: %v", err)
 			return
 		}
-		if err := s.broadcastUpdate(msg.Key, value); err != nil {
+
+		if err := s.broadcastUpdate(msg.Key, value, true); err != nil {
 			log.Printf("Error broadcasting WebSocket update: %v", err)
 		}
+
+	case "volume":
+		// Validate volume range
+		if msg.Volume < 0.0 || msg.Volume > 1.0 {
+			log.Printf("Invalid volume value: %v (must be between 0.0 and 1.0)", msg.Volume)
+			return
+		}
+
+		// Create volume update
+		update := api.VolumeUpdate{
+			Channel: msg.Channel,
+			Volume:  msg.Volume,
+		}
+
+		// Create a composite key for the channel volume
+		volumeKey := fmt.Sprintf("volume:%d", msg.Channel)
+
+		if err := s.broadcastUpdate(volumeKey, update, false); err != nil {
+			log.Printf("Error broadcasting volume update: %v", err)
+		}
+
 	default:
 		log.Printf("Unknown WebSocket message type: %s", msg.Type)
 	}
 }
 
-func (s *ConfigServer) broadcastUpdate(key string, value interface{}) error {
+func (s *ConfigServer) broadcastUpdate(key string, value interface{}, applyUpdate bool) error {
 	update := api.ConfigUpdate{
 		Key:     key,
 		Value:   value,
@@ -190,9 +240,10 @@ func (s *ConfigServer) broadcastUpdate(key string, value interface{}) error {
 		Time:    time.Now().UTC(),
 	}
 
-	// Apply locally first
-	if err := s.stateManager.ApplyUpdate(update); err != nil {
-		return fmt.Errorf("failed to apply update: %v", err)
+	if applyUpdate {
+		if err := s.stateManager.ApplyUpdate(update); err != nil {
+			return fmt.Errorf("failed to apply update: %v", err)
+		}
 	}
 
 	// Broadcast to cluster
@@ -209,7 +260,6 @@ func (s *ConfigServer) broadcastUpdate(key string, value interface{}) error {
 		}
 	}
 
-	// Broadcast to WebSocket clients
 	s.broadcastToWebSocketClients(update)
 	return nil
 }
@@ -283,7 +333,7 @@ func (s *ConfigServer) UploadJSON(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for key, entry := range jsonImport.State {
-		if err := s.broadcastUpdate(key, entry.Value); err != nil {
+		if err := s.broadcastUpdate(key, entry.Value, true); err != nil {
 			log.Printf("Error importing key %s: %v", key, err)
 		}
 	}

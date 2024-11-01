@@ -1,11 +1,12 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
-	"fmt"
 	"log"
 	"math"
 	"math/rand/v2"
+	"net"
 	"net/url"
 	"os"
 	"os/signal"
@@ -14,12 +15,19 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+// VolumeMessage represents the WebSocket message structure expected by the server
+type VolumeMessage struct {
+	Type    string  `json:"type"`
+	Channel int     `json:"channel"`
+	Volume  float64 `json:"volume"`
+}
+
 func main() {
 	// Command-line flags
 	signalType := flag.String("type", "white", "Type of signal to generate (white, pink, brown, sin or drum)")
 	sampleRate := flag.Float64("rate", 44100, "Sample rate in Hz")
 	frequency := flag.Float64("freq", 60, "Frequency in Hz")
-	wsURL := flag.String("url", "ws://localhost:9001/ws", "WebSocket server URL")
+	wsURL := flag.String("url", "ws://192.168.64.100:8080/ws", "WebSocket server URL")
 	channel := flag.Int("channel", 1, "Channel number (default is 1)")
 	flag.Parse()
 
@@ -31,38 +39,90 @@ func main() {
 		log.Fatal("Failed to parse WebSocket URL:", err)
 	}
 
+	// Set up dialer with keepalive
+	dialer := websocket.Dialer{
+		HandshakeTimeout: 10 * time.Second,
+		ReadBufferSize:   1024,
+		WriteBufferSize:  1024,
+	}
+
 	// Connect to the WebSocket server
 	log.Printf("Connecting to %s", u.String())
-	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
+	c, _, err := dialer.Dial(u.String(), nil)
 	if err != nil {
 		log.Fatal("Failed to connect to WebSocket server:", err)
 	}
 	defer c.Close()
 
-	// Set up a channel to handle OS signals for graceful shutdown
+	// Set up ping handler
+	c.SetPingHandler(func(message string) error {
+		err := c.WriteControl(websocket.PongMessage, []byte(message), time.Now().Add(time.Second))
+		if err == websocket.ErrCloseSent {
+			return nil
+		} else if e, ok := err.(net.Error); ok && e.Temporary() {
+			return nil
+		}
+		return err
+	})
+
+	// Set up pong handler
+	c.SetPongHandler(func(string) error {
+		return c.SetReadDeadline(time.Now().Add(60 * time.Second))
+	})
+
+	// Set up message handling
+	done := make(chan struct{})
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
 
+	// Create tickers
 	const sinRate = 60
 	var sinPhase float64
 	var drumBeat int
 
-	// Create a ticker for all signal types
-	var ticker *time.Ticker
-	if *signalType == "drum" {
-		const bpm = 120 // Beats per minute
-		beatDuration := time.Minute / time.Duration(bpm)
-		ticker = time.NewTicker(beatDuration)
-	} else {
-		ticker = time.NewTicker(time.Second / time.Duration(*frequency))
-	}
-	defer ticker.Stop()
+	messageTicker := time.NewTicker(time.Second / time.Duration(*frequency))
+	pingTicker := time.NewTicker(30 * time.Second)
 
-	// Start noise generation and sending
-	done := make(chan struct{})
+	defer messageTicker.Stop()
+	defer pingTicker.Stop()
+
+	// Handle incoming messages
 	go func() {
 		defer close(done)
 		for {
+			_, message, err := c.ReadMessage()
+			if err != nil {
+				if !websocket.IsCloseError(err, websocket.CloseNormalClosure) {
+					log.Printf("Read error: %v", err)
+				}
+				return
+			}
+			log.Printf("Received: %s", message)
+		}
+	}()
+
+	// Main loop for sending messages
+	for {
+		select {
+		case <-done:
+			return
+		case <-interrupt:
+			log.Println("Interrupt received, closing connection...")
+			err := c.WriteMessage(
+				websocket.CloseMessage,
+				websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""),
+			)
+			if err != nil {
+				log.Printf("Error closing connection: %v", err)
+			}
+			return
+		case <-pingTicker.C:
+			err := c.WriteMessage(websocket.PingMessage, nil)
+			if err != nil {
+				log.Printf("Error sending ping: %v", err)
+				return
+			}
+		case <-messageTicker.C:
 			volume := 0.0
 			switch *signalType {
 			case "drum":
@@ -73,34 +133,22 @@ func main() {
 				volume = generateNoise(*sampleRate, *frequency)
 			}
 
-			message := fmt.Sprintf(`{"channel":%d,"volume":%.2f}`, *channel, volume)
-			err := c.WriteMessage(websocket.TextMessage, []byte(message))
-			if err != nil {
-				return
+			msg := VolumeMessage{
+				Type:    "volume",
+				Channel: *channel,
+				Volume:  math.Round(volume*100) / 100,
 			}
 
-			// Wait for the next tick instead of using time.Sleep
-			<-ticker.C
-		}
-	}()
-
-	// Wait for interrupt signal or error
-	for {
-		select {
-		case <-done:
-			return
-		case <-interrupt:
-			log.Println("Interrupt received, closing connection...")
-			err := c.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+			jsonMsg, err := json.Marshal(msg)
 			if err != nil {
-				log.Println("Error during closing websocket:", err)
+				log.Printf("Error marshaling message: %v", err)
+				continue
+			}
+
+			if err := c.WriteMessage(websocket.TextMessage, jsonMsg); err != nil {
+				log.Printf("Error sending message: %v", err)
 				return
 			}
-			select {
-			case <-done:
-			case <-time.After(time.Second):
-			}
-			return
 		}
 	}
 }
@@ -124,7 +172,6 @@ func main() {
 //
 //	A float64 value between 0 and 1, representing the volume of white noise at the specified frequency.
 func generateNoise(sampleRate, frequency float64) float64 {
-
 	// Calculate the number of samples per cycle
 	samplesPerCycle := sampleRate / frequency
 

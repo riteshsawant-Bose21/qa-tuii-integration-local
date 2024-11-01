@@ -345,6 +345,11 @@ multipass exec fs1 -- command
 3. **View instance logs**
 ```bash
 multipass exec fs1 -- cat /var/log/cloud-init-output.log
+multipass exec fs1 -- sudo journalctl
+multipass exec fs1 -- sudo dmesg -w
+multipass exec fs1 -- sudo journalctl -u haproxy -f
+multipass exec fs1 -- sudo journalctl -u keepalived-server -f
+multipass exec fs1 -- sudo journalctl -u fusion-server -f
 ```
 
 4. **Resource allocation**

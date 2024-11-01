@@ -26,9 +26,3 @@ type StateEntry struct {
 	NodeID    string      `json:"node_id"`
 	Timestamp time.Time   `json:"timestamp"`
 }
-
-// ClusterState represents the complete state of the cluster
-type ClusterState struct {
-	Version int64                 `json:"version"`
-	Entries map[string]StateEntry `json:"entries"`
-}
