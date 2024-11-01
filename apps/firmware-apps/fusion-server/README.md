@@ -1,250 +1,445 @@
-# Fusion High-Availability Gossip-Based Distributed System
+# Fusion Server
 
-## Architecture Overview
-This project implements a high-availability, [gossip-based distributed](https://github.com/hashicorp/memberlist) system. The system consists of multiple Data Service Provider (DSP) nodes that communicate using a gossip protocol, with a fault-tolerant setup for high availability.
+Fusion Server is a distributed configuration management system with high availability features, built using Go. It provides real-time configuration synchronization across multiple nodes with support for load balancing and failover.
 
-## Components
+## Features
 
-### 1. DSP Nodes (dsp1, dsp2, dsp3, dsp4)
-- Implemented using custom `fusion-server` image
-- Communicate via gossip protocol for configuration sharing
-- Each node listens on port 7946 for inter-node communication
-- Nodes join the cluster automatically
+- Distributed configuration storage with real-time synchronization
+- High availability with HAProxy load balancing and Keepalived failover
+- WebSocket support for real-time updates
+- REST API for configuration management
+- State persistence and recovery
+- JSON import/export functionality
+- Automatic HAProxy configuration management
+- Health monitoring and debug capabilities
 
-### 2. [HAProxy](https://www.haproxy.org)
-- Used for load balancing
-- Runs on each DSP node
+## Architecture
 
-### 3. [Keepalived](https://www.keepalived.org)
-- Manages high availability for the system
-- Uses Virtual Router Redundancy Protocol (VRRP)
-- Maintains a Virtual IP (VIP) that floats between DSP instances
-- Automatic failover if the primary DSP fails
+### Components
 
-## Network Configuration
-- Custom Docker network (In the 172.18.0.0/24 range)
-- Each component has a static IP within this network
-- Virtual IP (172.18.0.2) managed by Keepalived
+1. **State Management**
+   - Distributed state synchronization across nodes
+   - Version-based conflict resolution
+   - Real-time state updates via WebSocket
+   - Persistent storage of configuration data
 
-## High Availability Features
-1. **DSP Node Redundancy**: Multiple DSP instances ensure continuous service even if some nodes fail.
-2. **Automatic Failover**: Keepalived automatically moves the Virtual IP to the healthy DSP instance.
-3. **Gossip Protocol Resilience**: The gossip protocol allows the cluster to function and update even if some nodes are temporarily unavailable.
+2. **High Availability**
+   - HAProxy load balancing across cluster nodes
+   - Keepalived for VIP (Virtual IP) management
+   - Automatic failover support
+   - Dynamic backend server registration
 
-## Scalability
-- Additional DSP nodes can be easily added to the cluster
-- New nodes automatically join the gossip network
+3. **Networking**
+   - Gossip-based cluster membership
+   - WebSocket connections for real-time updates
+   - REST API for configuration management
+   - Health check endpoints
 
-## Configuration Management
-- Gossip protocol enables efficient propagation of configuration changes across all DSP nodes
-- Changes made to any node are automatically disseminated to all other nodes in the cluster
+## Setup
 
-## Monitoring and Health Checks
-- Keepalived monitors the status of DSP processes
-- Consider implementing additional monitoring for overall system health
+### Prerequisites
 
-## Configuration Persistance
-Configuration state is saved to /var/lib/fusion/config.json. The live data exists
-in memory, but is serialized to disk. The serialized data is loaded from disk
-when the server is initialized.
+- Linux environment
+- HAProxy
+- Keepalived
+- Go 1.x or higher
 
-## Getting Started
-1. Ensure Docker and Docker Compose are installed on your system
-2. Clone this repository
-3. Set up the necessary configuration files (Keepalived configs for primary and backups)
-4. Create docker network with `docker network create --subnet=172.18.0.0/24 fusionnet`
-5. Run `docker compose up -d` to start the system
-6. Access the service via the Virtual IP (localhost) on the appropriate port
+### Installation
 
-## Using curl to Set and Get Values
+1. Clone the repository and build the server:
+```bash
+go build -o fusion-server
+```
 
-The DSP nodes expose an HTTP API on port 8080 for setting and retrieving configuration values. You can interact with this API using curl commands.
+2. Configure the cloud-init file for node setup:
+```yaml
+#cloud-config
+package_update: true
+package_upgrade: true
+packages:
+  - haproxy
+  - keepalived
+```
 
-### Getting Key Values
+3. Set up the required directories:
+```bash
+sudo mkdir -p /etc/haproxy
+sudo mkdir -p /etc/keepalived
+sudo mkdir -p /var/lib/fusion
+```
 
-To retrieve the current configuration from a DSP node:
+### Configuration
+
+1. **HAProxy Configuration**
+   - Automatically generated based on cluster membership
+   - Default configuration includes:
+     - HTTP mode
+     - Round-robin load balancing
+     - Health checks on /getValue endpoint
+     - Statistics page on port 8404
+     - Configurable timeouts and connection limits
+
+2. **Keepalived Configuration**
+   - Virtual IP (VIP): 192.168.64.100
+   - VRRP configuration for high availability
+   - Automatic failover between nodes
+
+3. **Node Configuration**
+   - Each node requires:
+     - Unique node name
+     - Bind address and port
+     - Optional join address for cluster membership
+
+## Usage
+
+### Starting a Node
 
 ```bash
-curl http://localhost:9001/getValue
+./fusion-server --name <node-name> --addr <bind-address> --port <port> [--join <existing-node-address>]
 ```
 
-### Setting Key Values
+### API Endpoints
 
-To update a configuration value:
+1. **Configuration Management**
+   - `POST /setValue` - Set a configuration value
+   - `GET /getValue` - Retrieve configuration value(s)
+   - `GET /ws` - WebSocket endpoint for real-time updates
+
+2. **State Management**
+   - `POST /upload` - Import configuration state
+   - `GET /download` - Export configuration state
+
+3. **Volume Control**
+   - `POST /setVolume` - Update volume settings
+
+### Set a single value
+```bash
+curl -X POST http://localhost:8080/setValue \
+  -H "Content-Type: application/json" \
+  -d '{"key": "server.name", "value": "production-1"}'
+```
+
+### Set a nested configuration object
+```bash
+curl -X POST http://localhost:8080/setValue \
+  -H "Content-Type: application/json" \
+  -d '{
+    "key": "database.config",
+    "value": {
+      "host": "localhost",
+      "port": 5432,
+      "maxConnections": 100
+    }
+  }'
+```
+
+### Get a specific value
+```bash
+curl "http://localhost:8080/getValue?key=server.name"
+```
+
+### Get all configuration values
+```bash
+curl http://localhost:8080/getValue
+```
+
+### Download current configuration state
+```bash
+curl -O http://localhost:8080/download
+```
+
+### Download and save with specific filename
+```bash
+curl http://localhost:8080/download > backup_config.json
+```
+
+## Websockets
+
+### Simple connection that prints received messages
+```bash
+websocat ws://localhost:8080/ws
+```
+
+### Connect with interactive mode to send and receive messages
+```bash
+websocat -v ws://localhost:8080/ws
+```
+
+## Unix Domain Sockets
+
+### Get all values
+echo '{"action":"get"}' | nc -u localhost 7947
+
+### Set a value
+echo '{"action":"set","key":"test","value":"hello"}' | nc -u localhost 7947
+
+#### State Management
+
+The system maintains a distributed state with the following features:
+- Version-based conflict resolution
+- Timestamp-based tie-breaking
+- Real-time state synchronization
+- Persistent state storage
+- State verification and validation
+
+## High Availability
+
+### Load Balancing
+
+HAProxy provides load balancing with:
+- Round-robin distribution
+- Health checks every 2 seconds
+- Automatic backend server management
+- Statistics monitoring
+
+### Failover
+
+Keepalived ensures high availability through:
+- Virtual IP management
+- Automatic master/backup failover
+- VRRP protocol for IP takeover
+- Quick failure detection
+
+## Monitoring
+
+1. **HAProxy Statistics**
+   - Available at `http://<node-ip>:8404/`
+   - Real-time server status
+   - Connection statistics
+   - Health check status
+
+2. **Debug Mode**
+   - Cluster state monitoring
+   - Health check logging
+   - State verification
+   - Connectivity testing
+
+## Security
+
+- TLS support for secure communication
+- WebSocket origin checking
+- File permission management
+- Proper service isolation
+
+## Troubleshooting
+
+1. **VIP Issues**
+   - Check network interface configuration
+   - Verify Keepalived status
+   - Monitor VRRP advertisements
+
+2. **Cluster Synchronization**
+   - Check node connectivity
+   - Verify gossip protocol communication
+   - Monitor state version numbers
+
+3. **Load Balancer Issues**
+   - Check HAProxy configuration
+   - Verify backend health checks
+   - Monitor HAProxy logs
+
+## Dependencies
+
+- github.com/hashicorp/memberlist - Cluster membership and failure detection
+- github.com/gorilla/websocket - WebSocket support
+- Standard Go libraries
+
+## Development Environment
+
+### Multipass Setup
+
+[Multipass](https://multipass.run/) is used to create and manage Ubuntu VM instances for development and testing. It provides a quick way to spin up consistent Ubuntu environments across different platforms.
+
+#### Installation
+
+1. **Ubuntu**
+```bash
+sudo snap install multipass
+```
+
+2. **macOS**
+```bash
+brew install --cask multipass
+```
+
+3. **Windows**
+- Download the installer from [Multipass website](https://multipass.run/download/windows)
+
+#### Basic Commands
+
+1. **Create a new instance with cloud-config**
+```bash
+multipass launch --name fusion-1 --cloud-init cloud-config.yaml
+```
+
+2. **List instances**
+```bash
+multipass list
+```
+
+3. **Start/Stop instances**
+```bash
+multipass stop fusion-1
+multipass start fusion-1
+```
+
+4. **Access instance shell**
+```bash
+multipass shell fusion-1
+```
+
+5. **Get instance information**
+```bash
+multipass info fusion-1
+```
+
+6. **Mount local directory**
+```bash
+multipass mount /local/path fusion-1:/home/ubuntu/mounted
+```
+
+7. **Delete instance**
+```bash
+multipass delete fusion-1
+multipass purge  # Remove deleted instances completely
+```
+
+#### Creating Multiple Nodes
+
+For a three-node cluster setup:
 
 ```bash
-curl -X POST http://localhost:9001/setValue \
-     -H "Content-Type: application/json" \
-     -d '{"key": "example_key", "value": "new_value"}'
+# Create instances
+multipass launch --name fusion-1 --cloud-init cloud-config.yaml
+multipass launch --name fusion-2 --cloud-init cloud-config.yaml
+multipass launch --name fusion-3 --cloud-init cloud-config.yaml
+
+# Get IP addresses
+multipass list
+
+# Shell into instances
+multipass shell fusion-1
 ```
 
-Replace `"example_key"` and `"new_value"` with your desired key and value.
+#### Useful Tips
 
-### Uploading a JSON File
+1. **Transfer files to instance**
 ```bash
-curl -X POST -H "Content-Type: application/json" -d @path/to/your/config.json http://localhost:9001/upload
+multipass transfer /local/file.txt fusion-1:/home/ubuntu/
 ```
 
-### Uploading JSON data
+2. **Execute command in instance**
 ```bash
-curl -X POST -H "Content-Type: application/json" -d '{"key1": "value1", "key2": "value2"}' http://localhost:9001/upload
+multipass exec fusion-1 -- command
 ```
 
-### Setting volume, linear amplitude 0.0 - 1.0
-
+3. **View instance logs**
 ```bash
-curl -X POST -H "Content-Type: application/json" -d '{"volume": 0.7}' http://localhost:9001/setVolume
+multipass exec fusion-1 -- cat /var/log/cloud-init-output.log
 ```
 
+4. **Resource allocation**
 ```bash
-echo '{"channel": 1, "volume": 0.8}' | websocat ws://localhost:9001/ws
+# Launch with specific resources
+multipass launch --name fusion-1 --cpus 2 --mem 2G --disk 10G --cloud-init cloud-config.yaml
 ```
 
-### WebSocket Connection
-To establish a WebSocket connection:
+5. **Network configuration**
 ```bash
-websocat ws://localhost:9001/ws
-```
-This allows for real-time communication with the DSP nodes.
-
-### Verifying Gossip Propagation
-
-To verify that the configuration change has propagated to other nodes, you can get the configuration from another DSP:
-
-```bash
-curl http://localhost:8083/getValue
+# Get instance IP address
+multipass info fusion-1 | grep IPv4
 ```
 
-This should show the updated value for `"example_key"`.
+#### Troubleshooting Multipass
 
-Note: There might be a short delay before the change propagates to all nodes due to the nature of the gossip protocol.
+1. **Instance fails to start**
+   - Check cloud-init logs:
+   ```bash
+   multipass exec fusion-1 -- cat /var/log/cloud-init-output.log
+   ```
+   - Verify resource availability on host machine
+   - Ensure cloud-config.yaml is valid
 
-## Testing Failover
-To test the high availability setup:
-1. Stop the primary DSP node: `docker compose stop dsp1`
-2. Observe that the Virtual IP moves to another DSP node
-3. Restart the primary: `docker compose start dsp1`
-4. Verify that the system continues to function throughout this process
+2. **Network connectivity issues**
+   - Verify host network connectivity
+   - Check instance network status:
+   ```bash
+   multipass exec fusion-1 -- ip addr
+   ```
 
-## Future Improvements
-- Implement secure communication between nodes
-- Add a service discovery mechanism for dynamic scaling
-- Integrate with external monitoring and alerting systems
-- Implement automated backup and restore procedures for configuration data
+3. **Mount problems**
+   - Ensure source path exists
+   - Check permissions on host directory
+   - Unmount and retry:
+   ```bash
+   multipass unmount fusion-1
+   multipass mount /local/path fusion-1:/home/ubuntu/mounted
+   ```
 
-## Common Commands
-
-### Build image
-```
-docker build -t fusion-server .
-```
-
-### Start images
-```
-docker compose up
-```
-
-### Stop single instance
-```
-docker compose stop dsp2
-```
-
-### Watch logs
-```
-docker compose logs -f
-```
-
-### Start single instance
-```
-docker compose start dsp2
-```
-
-### More drastic removal
-```
-docker compose rm -sf dsp2
-```
-
-### Recreate and start the service:
-```
-docker compose up -d dsp2
-```
-
-### Verify Keepalived status
-```
-docker compose exec dsp1 ip addr show eth0
-```
-
-### Simulate node failure
-```
-docker compose stop dsp1
-```
-
-### Check that the virtual IP has moved to another node
-```
-docker compose exec dsp2 ip addr show eth0
-```
-
-### Restart the first node and observe the cluster adjusting:
-```
-docker compose start dsp1
-```
+## Diagram
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'fontSize': '30px'}}}%%
-graph TD
-    subgraph Network
-        VIP[Virtual IP: 172.18.0.2]
-        subgraph Container dsp1
-            D1[dsp1: 172.18.0.3]
-            K1[Keepalived Primary]
-            G1[Gossip Node]
-            S1[HTTP Server :8080]
+graph TB
+    subgraph Client Layer
+        C1[Client] 
+        C2[Client]
+        C3[Client]
+    end
+
+    subgraph Load Balancer Layer
+        VIP[Virtual IP<br>192.168.64.100]
+        HAP[HAProxy<br>Port 80]
+        KA[Keepalived<br>VRRP]
+    end
+
+    subgraph Server Layer
+        subgraph Node 1
+            F1[Fusion Server 1<br>Port 8080]
+            S1[(State 1)]
         end
-        subgraph Container dsp2
-            D2[dsp2: 172.18.0.4]
-            K2[Keepalived Backup1]
-            G2[Gossip Node]
-            S2[HTTP Server :8080]
+        
+        subgraph Node 2
+            F2[Fusion Server 2<br>Port 8080]
+            S2[(State 2)]
         end
-        subgraph Container dsp3
-            D3[dsp3: 172.18.0.5]
-            K3[Keepalived Backup2]
-            G3[Gossip Node]
-            S3[HTTP Server :8080]
-        end
-        subgraph Container dsp4
-            D4[dsp4: 172.18.0.6]
-            K4[Keepalived Backup3]
-            G4[Gossip Node]
-            S4[HTTP Server :8080]
+        
+        subgraph Node 3
+            F3[Fusion Server 3<br>Port 8080]
+            S3[(State 3)]
         end
     end
-    
-    VIP --> D1
-    D1 <--> D2
-    D1 <--> D3
-    D1 <--> D4
-    D2 <--> D3
-    D2 <--> D4
-    D3 <--> D4
-    
-    K1 --> VIP
-    K2 -.-> VIP
-    K3 -.-> VIP
-    K4 -.-> VIP
-    
-    G1 <--> G2
-    G1 <--> G3
-    G1 <--> G4
-    G2 <--> G3
-    G2 <--> G4
-    G3 <--> G4
 
-    classDef container fill:#e6f3ff,stroke:#333,stroke-width:4px;
-    classDef component fill:#f9f9f9,stroke:#666,stroke-width:4px;
-    classDef vip fill:#ffcccc,stroke:#ff0000,stroke-width:4px;
+    %% Client connections
+    C1 --> VIP
+    C2 --> VIP
+    C3 --> VIP
     
-    class D1,D2,D3,D4 container;
-    class K1,K2,K3,K4,G1,G2,G3,G4,S1,S2,S3,S4 component;
-    class VIP vip;
+    %% VIP to HAProxy
+    VIP --> HAP
+    KA --> VIP
+    
+    %% HAProxy to Fusion Servers
+    HAP --> F1
+    HAP --> F2
+    HAP --> F3
+    
+    %% State connections
+    F1 --> S1
+    F2 --> S2
+    F3 --> S3
+    
+    %% Gossip protocol connections
+    F1 <--> F2
+    F2 <--> F3
+    F1 <--> F3
+
+    classDef client fill:#a8e6cf
+    classDef lb fill:#ffd3b6
+    classDef server fill:#ffaaa5
+    classDef state fill:#dcedc1
+    
+    class C1,C2,C3 client
+    class VIP,HAP,KA lb
+    class F1,F2,F3 server
+    class S1,S2,S3 state
 ```
