@@ -395,19 +395,19 @@ multipass exec fs1 -- systemctl status fusion-server
 
 ```mermaid
 graph TB
-    subgraph Client Layer
+    subgraph Client
         C1[Client] 
         C2[Client]
         C3[Client]
     end
 
-    subgraph Load Balancer Layer
+    subgraph Load Balancer
         VIP[Virtual IP<br>192.168.64.100]
         HAP[HAProxy<br>Port 80]
         KA[Keepalived<br>VRRP]
     end
 
-    subgraph Server Layer
+    subgraph Server
         subgraph Node 1
             F1[Fusion Server 1<br>Port 8080]
             S1[(State 1)]
@@ -457,4 +457,36 @@ graph TB
     class VIP,HAP,KA lb
     class F1,F2,F3 server
     class S1,S2,S3 state
+```
+
+## Project Structure
+
+```
+fusion-server/
+├── build/
+│   └── fusion-server*        # Compiled binary
+├── fusion/
+│   ├── cmd/
+│   │   └── fusion/
+│   │       └── main.go      # Application entry point
+│   ├── configs/
+│   │   ├── entrypoint.sh*   # Container entrypoint script
+│   │   ├── haproxy.cfg      # HAProxy configuration
+│   │   ├── keepalived.conf  # Primary Keepalived configuration
+│   │   └── keepalived-backup.conf
+│   └── internal/
+│       ├── api/             # API type definitions
+│       ├── cluster/         # Cluster management
+│       ├── config/          # Configuration handling
+│       ├── logging/         # Debug logging facilities
+│       └── network/         # Network and proxy management
+├── tools/
+│   ├── noise-generator*     # Testing utility
+│   ├── build.sh
+│   ├── random.sh
+│   └── main.go
+├── Makefile
+├── build.sh
+├── fusion-server.yaml
+└── README.md
 ```
