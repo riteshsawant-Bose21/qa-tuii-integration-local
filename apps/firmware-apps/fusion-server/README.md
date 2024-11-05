@@ -38,40 +38,60 @@ Fusion Server is a distributed configuration management system with high availab
 
 ## Setup
 
-### Prerequisites
+#### Multipass
 
-- Linux environment
-- HAProxy
-- Keepalived
-- Go 1.x or higher
+[Multipass](https://multipass.run/) is used to create and manage Ubuntu VM instances for development and testing. It provides a quick way to spin up consistent Ubuntu environments across different platforms.
 
-### Installation
-
-1. Clone the repository and build the server:
+**macOS**
 ```bash
-go build -o fusion-server
+brew install --cask multipass
 ```
 
-2. Configure the cloud-init file for node setup:
-```yaml
-#cloud-config
-package_update: true
-package_upgrade: true
-packages:
-  - haproxy
-  - keepalived
-```
-
-3. Set up the required directories:
+**Ubuntu**
 ```bash
-sudo mkdir -p /etc/haproxy
-sudo mkdir -p /etc/keepalived
-sudo mkdir -p /var/lib/fusion
+sudo snap install multipass
 ```
+
+**Windows**
+- Download the installer from [Multipass website](https://multipass.run/download/windows)
+
+
+#### State Management
+
+The system maintains a distributed state with the following features:
+- Version-based conflict resolution
+- Timestamp-based tie-breaking
+- Real-time state synchronization
+- Persistent state storage
+- State verification and validation
+
+## High Availability
+
+### Load Balancing
+
+HAProxy provides load balancing with:
+- Round-robin distribution
+- Health checks every 2 seconds
+- Automatic backend server management
+- Statistics monitoring
+
+### Failover
+
+Keepalived ensures high availability through:
+- Virtual IP management
+- Automatic master/backup failover
+- VRRP protocol for IP takeover
+- Quick failure detection
+
+## Dependencies
+
+- github.com/hashicorp/memberlist - Cluster membership and failure detection
+- github.com/gorilla/websocket - WebSocket support
+- Standard Go libraries
 
 ### Configuration
 
-1. **HAProxy Configuration**
+   **HAProxy Configuration**
    - Automatically generated based on cluster membership
    - Default configuration includes:
      - HTTP mode
@@ -80,21 +100,32 @@ sudo mkdir -p /var/lib/fusion
      - Statistics page on port 8404
      - Configurable timeouts and connection limits
 
-2. **Keepalived Configuration**
+   **Keepalived Configuration**
    - Virtual IP (VIP): 192.168.64.100
    - VRRP configuration for high availability
    - Automatic failover between nodes
 
-3. **Node Configuration**
+   **Node Configuration**
    - Each node requires:
      - Unique node name
      - Bind address and port
      - Optional join address for cluster membership
 
+## Installation
+
+Clone the repository and build the server:
+```bash
+git clone git@github.com:BoseProfessional/fusion-services.git
+sh build.sh
+```
+
 ## Usage
+Launch a single server instance
+```bash
+sh launch.sh
+```
 
-### Starting a Node
-
+## Launch from within instance
 ```bash
 ./fusion-server --name <node-name> --addr <bind-address> --port <port> [--join <existing-node-address>]
 ```
@@ -174,33 +205,6 @@ echo '{"action":"get"}' | nc -u localhost 7947
 ### Set a value
 echo '{"action":"set","key":"test","value":"hello"}' | nc -u localhost 7947
 
-#### State Management
-
-The system maintains a distributed state with the following features:
-- Version-based conflict resolution
-- Timestamp-based tie-breaking
-- Real-time state synchronization
-- Persistent state storage
-- State verification and validation
-
-## High Availability
-
-### Load Balancing
-
-HAProxy provides load balancing with:
-- Round-robin distribution
-- Health checks every 2 seconds
-- Automatic backend server management
-- Statistics monitoring
-
-### Failover
-
-Keepalived ensures high availability through:
-- Virtual IP management
-- Automatic master/backup failover
-- VRRP protocol for IP takeover
-- Quick failure detection
-
 ## Monitoring
 
 1. **HAProxy Statistics**
@@ -238,41 +242,6 @@ Keepalived ensures high availability through:
    - Check HAProxy configuration
    - Verify backend health checks
    - Monitor HAProxy logs
-
-## Dependencies
-
-- github.com/hashicorp/memberlist - Cluster membership and failure detection
-- github.com/gorilla/websocket - WebSocket support
-- Standard Go libraries
-
-## Development Environment
-
-### Multipass Setup
-
-[Multipass](https://multipass.run/) is used to create and manage Ubuntu VM instances for development and testing. It provides a quick way to spin up consistent Ubuntu environments across different platforms.
-
-#### Installation
-
-1. **Ubuntu**
-```bash
-sudo snap install multipass
-```
-
-2. **macOS**
-```bash
-brew install --cask multipass
-```
-
-3. **Windows**
-- Download the installer from [Multipass website](https://multipass.run/download/windows)
-
-#### Binary Server
-Multipass will need to download the fusion-server binary from a remote location.
-For local development, start a webserver in your fusion-service source code directory.
-Multipass will download the file from build/fusion-server.
-```bash
-python3 -m http.server 8000 --bind 0.0.0.0
-```
 
 #### Basic Commands
 
