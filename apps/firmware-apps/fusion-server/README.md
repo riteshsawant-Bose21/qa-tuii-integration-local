@@ -120,10 +120,19 @@ sh build.sh
 ```
 
 ## Usage
-Launch a single server instance
+# Launch a single server instance
 ```bash
-sh launch.sh
+./launch.sh
 ```
+
+Create multipes instances with default name "fusion"
+```bash
+./launch.sh --instances 3
+```
+
+Create 4 instances with custom base name "mynode"
+./launch.sh --name mynode --instances 4
+
 
 ## Launch from within instance
 ```bash
@@ -167,7 +176,7 @@ curl -X POST http://192.168.64.100:8080/setValue \
 
 ### Get a specific value
 ```bash
-curl "http://192.168.64.100:8080/getValue?key=server.name"
+curl http://192.168.64.100:8080/getValue?key=server.name
 ```
 
 ### Get all configuration values
