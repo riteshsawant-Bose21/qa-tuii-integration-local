@@ -125,7 +125,7 @@ sh build.sh
 ./launch.sh
 ```
 
-Create multipes instances with default name "fusion"
+Create multiple instances with default name "fusion"
 ```bash
 ./launch.sh --instances 3
 ```
@@ -207,6 +207,8 @@ websocat -v ws://192.168.64.100:8080/ws
 ```
 
 ## Unix Domain Sockets
+Unix Domain Sockets are used to communicate between server instances. The
+socket is not public and can only be accessed within the internal network.
 
 ### Get all values
 echo '{"action":"get"}' | nc -u localhost 7947
@@ -254,9 +256,9 @@ echo '{"action":"set","key":"test","value":"hello"}' | nc -u localhost 7947
 
 #### Basic Commands
 
-1. **Create a new instance with cloud-config**
+1. **Create a new instance**
 ```bash
-multipass launch --name fs1 --cloud-init cloud-config.yaml
+./launch.sh
 ```
 
 2. **List instances**
@@ -297,9 +299,7 @@ For a three-node cluster setup:
 
 ```bash
 # Create instances
-multipass launch --name fs1 --cloud-init cloud-config.yaml
-multipass launch --name fusion-2 --cloud-init cloud-config.yaml
-multipass launch --name fusion-3 --cloud-init cloud-config.yaml
+./launch.sh --instances 3
 
 # Get IP addresses
 multipass list
@@ -329,14 +329,7 @@ multipass exec fs1 -- sudo journalctl -u haproxy -f
 multipass exec fs1 -- sudo journalctl -u keepalived-server -f
 multipass exec fs1 -- sudo journalctl -u fusion-server -f
 ```
-
-4. **Resource allocation**
-```bash
-# Launch with specific resources
-multipass launch --name fs1 --cpus 2 --mem 2G --disk 10G --cloud-init cloud-config.yaml
-```
-
-5. **Network configuration**
+4. **Network configuration**
 ```bash
 # Get instance IP address
 multipass info fs1 | grep IPv4
