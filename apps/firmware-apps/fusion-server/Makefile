@@ -5,8 +5,10 @@ GOCLEAN=$(GOCMD) clean
 GOTEST=$(GOCMD) test
 GOMOD=$(GOCMD) mod
 BINARY_NAME=fusion-server
+TEST_BINARY=fusion.test
 MAIN_PATH=fusion/cmd/fusion
 BUILD_DIR=build
+TEST_DIR=$(BUILD_DIR)/test
 BUILD_FLAGS=-tags netgo,osusergo
 LDFLAGS=-ldflags '-extldflags "-static"'
 
@@ -16,8 +18,12 @@ build:
 	mkdir -p $(BUILD_DIR)
 	cd fusion && CGO_ENABLED=0 GOOS=linux $(GOBUILD) $(BUILD_FLAGS) $(LDFLAGS) -o ../$(BUILD_DIR)/$(BINARY_NAME) -v ./cmd/fusion
 
-test:
-	cd fusion && CGO_ENABLED=0 $(GOTEST) $(BUILD_FLAGS) -v ./...
+# Test targets
+test: 
+	cd fusion && CGO_ENABLED=1 $(GOTEST) -v ./...
+
+test-verbose: 
+	cd fusion && CGO_ENABLED=1 $(GOTEST) -v -count=1 ./...
 
 clean:
 	$(GOCLEAN)
@@ -66,6 +72,7 @@ help:
 	@echo " all - Run deps, test, and build"
 	@echo " build - Build for current platform"
 	@echo " test - Run tests"
+	@echo " test-verbose - Run tests with verbose output and no caching"
 	@echo " clean - Clean build files"
 	@echo " run - Build and run locally"
 	@echo " deps - Download dependencies"
@@ -78,4 +85,4 @@ help:
 	@echo " build-linux-arm64 - Build for Linux ARM64"
 	@echo " build-all - Build for all platforms"
 
-.PHONY: all build test clean run deps tidy fmt vet lint build-linux build-linux-arm32 build-linux-arm64 build-all help
+.PHONY: all build test clean run deps tidy fmt vet lint build-linux build-linux-arm32 build-linux-arm64 build-all help test-verbose

@@ -113,7 +113,7 @@ Keepalived ensures high availability through:
 
 ## Installation
 
-Clone the repository and build the server:
+**Clone the repository and build the server**
 ```bash
 git clone git@github.com:BoseProfessional/fusion-services.git
 sh build.sh
@@ -125,24 +125,24 @@ sh build.sh
 ./launch.sh
 ```
 
-Create multiple instances with default name "fusion"
+**Create multiple instances with default name "fusion"**
 ```bash
 ./launch.sh --instances 3
 ```
 
 ### Launch from within instance
-This would only be used during development to restart and update the server.
+**This would only be used during development to restart and update the server.**
 ```bash
 ./fusion-server --name <node-name> --addr <bind-address> --port <port> [--join <existing-node-address>]
 ```
 
 ### Stopping instances
-Stop instances with default name
+**Stop instances with default name**
 ```bash
 ./launch.sh --kill
 ```
 
-Stop instances with specific name
+**Stop instances with specific name**
 ```bash
 ./launch.sh --name fusion --kill
 ```
@@ -375,7 +375,18 @@ multipass exec fs1 -- systemctl status fusion-server
    multipass mount /local/path fs1:/home/ubuntu/mounted
    ```
 
-## Diagram
+### Testing
+
+**Launch a single server instance**
+```bash
+./launch.sh
+```
+**Build and run test**
+```bash
+make test
+```
+
+### Diagram
 
 ```mermaid
 graph TB
