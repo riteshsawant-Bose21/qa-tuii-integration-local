@@ -3,19 +3,13 @@ package_update: true
 package_upgrade: true
 
 packages:
-  - curl
   - haproxy
   - keepalived
-  - nc
-  - iproute2
 
 write_files:
-  - path: /var/lib/fusion/config.json
-    permissions: '0644'
-    content: '{}'
-
   - path: /etc/systemd/system/fusion-server.service
     permissions: '0644'
+    owner: root:root
     content: |
       [Unit]
       Description=Fusion Server
@@ -31,8 +25,50 @@ write_files:
       [Install]
       WantedBy=multi-user.target
 
+  - path: /etc/keepalived/keepalived.conf
+    permissions: '0644'
+    owner: root:root
+    content: |
+      global_defs {
+        script_security
+      }
+
+      vrrp_script chk_haproxy {
+          script "/usr/local/bin/check-haproxy.sh"
+          interval 2
+          weight 2
+          user root
+      }
+
+      vrrp_instance VI_1 {
+          interface enp0s1
+          state BACKUP
+          nopreempt
+          virtual_router_id 51
+          priority 100
+          advert_int 1
+          authentication {
+              auth_type PASS
+              auth_pass fusionpass
+          }
+          virtual_ipaddress {
+              192.168.64.100/24
+          }
+          track_script {
+              chk_haproxy
+          }
+      }
+
+  - path: /usr/local/bin/check-haproxy.sh
+    permissions: '0755'
+    owner: root:root
+    content: |
+      #!/bin/bash
+      systemctl is-active --quiet haproxy
+
   - path: /usr/local/bin/setup-fusion.sh
     permissions: '0755'
+    owner: root:root
     content: |
       #!/bin/bash
       set -ex
@@ -62,7 +98,16 @@ write_files:
       systemctl daemon-reload
       systemctl enable fusion-server
       systemctl start fusion-server
+      
+      # Start keepalived
+      systemctl enable keepalived
+      systemctl start keepalived
+      
+      # Show status
+      echo "Service status:"
+      systemctl status fusion-server --no-pager || true
+      systemctl status keepalived --no-pager || true
+      ip addr show
 
 runcmd:
-  - systemctl restart systemd-resolved
   - bash -x /usr/local/bin/setup-fusion.sh

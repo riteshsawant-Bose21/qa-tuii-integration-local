@@ -28,7 +28,6 @@ defaults
 
 frontend http-in
  bind *:80
- default_backend servers
 
 backend servers
  balance roundrobin
