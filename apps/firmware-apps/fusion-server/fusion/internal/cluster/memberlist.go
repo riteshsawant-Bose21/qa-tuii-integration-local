@@ -11,16 +11,16 @@ import (
 
 // CreateMemberlist creates and configures a new memberlist instance
 func CreateMemberlist(nodeName, bindAddr string, bindPort int, joinAddrs []string) (*memberlist.Memberlist, error) {
-	config := memberlist.DefaultLANConfig() // Use LAN config instead of Local
+	config := memberlist.DefaultLANConfig()
 	config.Name = nodeName
 	config.BindAddr = bindAddr
 	config.BindPort = bindPort
 
-	// Disable TCP pings
-	config.TCPTimeout = 0
-	config.DisableTcpPings = true
+	// Enable TCP for join operations
+	config.TCPTimeout = 10 * time.Second // Give enough time for join
+	config.DisableTcpPings = false       // Enable TCP pings for initial join
 
-	// Use minimal protocol
+	// After successful join, we can use minimal UDP protocol
 	config.ProbeInterval = 5 * time.Second
 	config.ProbeTimeout = 2 * time.Second
 	config.SuspicionMult = 3
@@ -30,7 +30,6 @@ func CreateMemberlist(nodeName, bindAddr string, bindPort int, joinAddrs []strin
 		nodeID: nodeName,
 	}
 	config.Delegate = delegate
-
 	config.Logger = log.New(os.Stdout, fmt.Sprintf("[MEMBERLIST-%s] ", nodeName), log.LstdFlags)
 
 	list, err := memberlist.Create(config)
@@ -41,7 +40,6 @@ func CreateMemberlist(nodeName, bindAddr string, bindPort int, joinAddrs []strin
 	// Join the cluster with retries if we have addresses
 	if len(joinAddrs) > 0 {
 		log.Printf("[DEBUG-%s] Attempting to join cluster at: %v", nodeName, joinAddrs)
-
 		// Retry join up to 5 times
 		var n int
 		for retries := 0; retries < 5; retries++ {

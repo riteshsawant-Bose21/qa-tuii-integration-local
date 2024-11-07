@@ -1,126 +1,68 @@
 #cloud-config
 package_update: true
 package_upgrade: true
+
 packages:
- - curl
- - haproxy
- - keepalived
+  - curl
+  - haproxy
+  - keepalived
+  - nc
+  - iproute2
+
 write_files:
- - path: /etc/systemd/resolved.conf
-   content: |
-     [Resolve]
-     DNS=8.8.8.8
-     FallbackDNS=8.8.4.4
- - path: /etc/keepalived/keepalived.conf
-   content: |
-    ! Configuration File for keepalived
-    global_defs {
-      enable_script_security
-      max_auto_priority 99
-      vrrp_garp_master_delay 1
-      vrrp_garp_master_repeat 3
-      vrrp_garp_master_refresh 1
-      vrrp_garp_master_refresh_repeat 2
-      vrrp_skip_check_adv_addr
-      log_unknown_vrids
-    }
+  - path: /var/lib/fusion/config.json
+    permissions: '0644'
+    content: '{}'
 
-    vrrp_instance VI_1 {
-        state MASTER
-        interface enp0s1
-        virtual_router_id 51
-        priority 100
-        advert_int 1
-        virtual_ipaddress {
-            192.168.64.100/24
-        }
-    }
+  - path: /etc/systemd/system/fusion-server.service
+    permissions: '0644'
+    content: |
+      [Unit]
+      Description=Fusion Server
+      After=network-online.target
+      Wants=network-online.target
 
- - path: /etc/systemd/system/fusion-server.service
-   content: |
-    [Unit]
-    Description=Fusion Server
-    After=network.target
+      [Service]
+      Type=simple
+      ExecStart=/usr/local/bin/fusion-server -name %H -addr 0.0.0.0 -port 7946
+      Restart=always
+      RestartSec=5
 
-    [Service]
-    Type=simple
-    ExecStart=/usr/local/bin/fusion-server --name fusion-server-01 --addr 0.0.0.0 --port 7946
-    Restart=always
-    AmbientCapabilities=CAP_NET_BIND_SERVICE
-    
-    [Install]
-    WantedBy=multi-user.target
+      [Install]
+      WantedBy=multi-user.target
+
+  - path: /usr/local/bin/setup-fusion.sh
+    permissions: '0755'
+    content: |
+      #!/bin/bash
+      set -ex
+      
+      # Create required directories
+      mkdir -p /etc/haproxy /etc/keepalived /var/lib/fusion
+      
+      # Get gateway IP
+      GATEWAY=$(ip route show | grep default | awk '{print $3}')
+      echo "Gateway IP: $GATEWAY"
+      
+      # Download fusion-server with retry
+      MAX_RETRIES=5
+      RETRY_COUNT=0
+      while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+        if curl -L --connect-timeout 10 "http://$GATEWAY:8000/build/fusion-server" -o /usr/local/bin/fusion-server; then
+          chmod +x /usr/local/bin/fusion-server
+          echo "Successfully downloaded and configured fusion-server"
+          break
+        fi
+        RETRY_COUNT=$((RETRY_COUNT + 1))
+        echo "Attempt $RETRY_COUNT failed, retrying in 10 seconds..."
+        sleep 10
+      done
+      
+      # Enable and start services
+      systemctl daemon-reload
+      systemctl enable fusion-server
+      systemctl start fusion-server
 
 runcmd:
- # Set initial directory permissions
- - sudo mkdir -p /etc/haproxy
- - sudo chown -R haproxy:haproxy /etc/haproxy
- - sudo chmod 755 /etc/haproxy
- 
- - sudo mkdir -p /etc/keepalived
- - sudo chown -R root:root /etc/keepalived
-
- - sudo mkdir -p /var/lib/fusion
- - sudo chown -R ubuntu:ubuntu /var/lib/fusion
-
- # Copy over 
- - GATEWAY=$(ip route show | grep default | awk '{print $3}')
- - until curl -L "$GATEWAY:8000/build/fusion-server" -o /usr/local/bin/fusion-server; do sleep 5; done
- - chmod +x /usr/local/bin/fusion-server
- - test -x /usr/local/bin/fusion-server || echo "Failed to set up fusion-server"
-
- # Write HAProxy config
- - |
-   sudo tee /etc/haproxy/haproxy.cfg << 'EOF'
-   global
-    log stdout format raw local0 debug
-    maxconn 32768
-    user haproxy
-    group haproxy
-   defaults
-    log global
-    mode http
-    option httplog
-    option dontlognull
-    timeout connect 5000ms
-    timeout client 50000ms
-    timeout server 50000ms
-   frontend http_front
-    bind *:80
-    default_backend servers
-   backend servers
-    balance roundrobin
-    option httpchk GET /getValue HTTP/1.1
-    http-check expect status 200
-    default-server inter 2s fall 3 rise 2
-   EOF
-
- # Write HAProxy service file
- - |
-   sudo tee /etc/systemd/system/haproxy.service << 'EOF'
-   [Unit]
-   Description=HAProxy Load Balancer
-   After=network.target
-   [Service]
-   Type=simple
-   ExecStart=/usr/sbin/haproxy -f /etc/haproxy/haproxy.cfg -db
-   Restart=always
-   [Install]
-   WantedBy=multi-user.target
-   EOF
-
- # Set file permissions (after files are created)
- - sudo chown haproxy:haproxy /etc/haproxy/haproxy.cfg
- - sudo chmod 666 /etc/haproxy/haproxy.cfg  # Temporarily very permissive for testing
- - sudo chmod 644 /etc/systemd/system/haproxy.service
- - sudo chmod 644 /etc/keepalived/keepalived.conf
-
- # Start services
- - systemctl restart systemd-resolved
- - sudo systemctl daemon-reload
- - sudo systemctl enable haproxy
- - sudo systemctl start haproxy
- - sudo systemctl enable keepalived
- - sudo systemctl start keepalived
- - sudo systemctl enable fusion-server
- - sudo systemctl start fusion-server
+  - systemctl restart systemd-resolved
+  - bash -x /usr/local/bin/setup-fusion.sh
