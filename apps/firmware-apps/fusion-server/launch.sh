@@ -5,12 +5,14 @@ set -e
 BASE_NAME="fusion"
 NUM_INSTANCES=1
 JOIN_ADDRESS=""
+KILL_MODE=false
 
 # Function to display usage
 usage() {
-    echo "Usage: $0 [--name base_name] [--instances number_of_instances]"
+    echo "Usage: $0 [--name base_name] [--instances number_of_instances] [--kill]"
     echo "  --name      : Base name for instances (default: fusion)"
     echo "  --instances : Number of instances to create (default: 1)"
+    echo "  --kill      : Delete and purge all instances with the specified base name"
     exit 1
 }
 
@@ -29,6 +31,10 @@ while [[ $# -gt 0 ]]; do
             fi
             shift 2
             ;;
+        --kill)
+            KILL_MODE=true
+            shift
+            ;;
         -h|--help)
             usage
             ;;
@@ -39,6 +45,59 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# Function to kill all instances with given base name
+kill_instances() {
+    local base_name="$1"
+    echo "Looking for instances matching pattern: ${base_name}*"
+    
+    # Get list of matching instances
+    local instances=$(multipass list --format csv | grep "^${base_name}" | cut -d',' -f1)
+    
+    if [ -z "$instances" ]; then
+        echo "No instances found matching pattern '${base_name}*'"
+        return 0
+    fi
+    
+    echo "Found instances to delete:"
+    echo "$instances"
+    echo
+    
+    # Prompt for confirmation
+    read -p "Are you sure you want to delete these instances? (y/N) " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo "Operation cancelled"
+        exit 0
+    fi
+    
+    # Stop instances first
+    echo "Stopping instances..."
+    for instance in $instances; do
+        echo "Stopping $instance..."
+        multipass stop "$instance" || echo "Warning: Failed to stop $instance"
+    done
+    
+    # Delete instances
+    echo "Deleting instances..."
+    for instance in $instances; do
+        echo "Deleting $instance..."
+        multipass delete "$instance" || echo "Warning: Failed to delete $instance"
+    done
+    
+    # Purge all deleted instances
+    echo "Purging deleted instances..."
+    multipass purge
+    
+    echo "Instance cleanup complete!"
+}
+
+# Handle kill mode if specified
+if [ "$KILL_MODE" = true ]; then
+    kill_instances "$BASE_NAME"
+    exit 0
+fi
+
+# Rest of the original script continues here...
 echo "Starting cluster deployment..."
 echo "Base name: $BASE_NAME"
 echo "Number of instances: $NUM_INSTANCES"

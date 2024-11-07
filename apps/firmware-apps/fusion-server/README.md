@@ -120,7 +120,7 @@ sh build.sh
 ```
 
 ## Usage
-# Launch a single server instance
+### Launch a single server instance
 ```bash
 ./launch.sh
 ```
@@ -130,13 +130,21 @@ Create multiple instances with default name "fusion"
 ./launch.sh --instances 3
 ```
 
-Create 4 instances with custom base name "mynode"
-./launch.sh --name mynode --instances 4
-
-
-## Launch from within instance
+### Launch from within instance
+This would only be used during development to restart and update the server.
 ```bash
 ./fusion-server --name <node-name> --addr <bind-address> --port <port> [--join <existing-node-address>]
+```
+
+### Stopping instances
+Stop instances with default name
+```bash
+./launch.sh --kill
+```
+
+Stop instances with specific name
+```bash
+./launch.sh --name fusion --kill
 ```
 
 ### API Endpoints
