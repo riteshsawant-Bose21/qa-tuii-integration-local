@@ -87,6 +87,12 @@ type ClusterInfo struct {
 	LocalNode      string          `json:"local_node"`
 	Members        []ClusterMember `json:"members"`
 	LastUpdateTime time.Time       `json:"last_update_time"`
+
+	// Additional cluster metrics
+	SuspectNodes   int     `json:"suspect_nodes"`
+	DeadNodes      int     `json:"dead_nodes"`
+	ClusterHealth  float64 `json:"cluster_health"` // Percentage of healthy nodes
+	AvgPingLatency float64 `json:"avg_ping_latency_ms"`
 }
 
 // GetClusterInfo returns detailed information about the cluster

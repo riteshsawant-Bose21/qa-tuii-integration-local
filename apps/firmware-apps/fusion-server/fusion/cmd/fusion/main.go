@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -26,6 +27,7 @@ func main() {
 	flag.StringVar(&bindAddr, "addr", "0.0.0.0", "Bind address")
 	flag.IntVar(&bindPort, "port", 7946, "Bind port")
 	flag.StringVar(&joinAddr, "join", "", "Address to join cluster (comma-separated)")
+	metricsPort := flag.Int("metrics-port", 9090, "Metrics server port")
 	flag.Parse()
 
 	if nodeName == "" {
@@ -57,6 +59,9 @@ func main() {
 	cluster.StartHealthCheck(list)
 	cluster.StartStateVerification(list, stateManager)
 
+	// Initialize metrics collector
+	metricsCollector := cluster.NewMetricsCollector(list, stateManager)
+
 	// Initialize config server
 	configServer := config.NewConfigServer(list, stateManager)
 
@@ -77,24 +82,63 @@ func main() {
 		defer udpServer.Stop()
 	}
 
+	// Start metrics server on separate port
+	go func() {
+		metricsServer := &http.Server{
+			Addr:    fmt.Sprintf(":%d", *metricsPort),
+			Handler: setupMetricsRoutes(metricsCollector),
+		}
+		log.Printf("Starting metrics server on :%d", *metricsPort)
+		if err := metricsServer.ListenAndServe(); err != nil {
+			log.Printf("Metrics server error: %v", err)
+		}
+	}()
+
 	// Set up HTTP routes
-	setupHTTPRoutes(configServer)
+	setupHTTPRoutes(configServer, metricsCollector)
 
 	// Start HAProxy management
 	go network.ManageHAProxy(list)
 
-	// Start the server
+	// Start the main server
 	log.Printf("Starting server on :8080")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }
 
-func setupHTTPRoutes(server *config.ConfigServer) {
-	http.HandleFunc("/setValue", server.SetValue)
-	http.HandleFunc("/getValue", server.GetValue)
-	http.HandleFunc("/upload", server.UploadJSON)
-	http.HandleFunc("/download", server.DownloadJSON)
-	http.HandleFunc("/ws", server.HandleWebSocket)
-	http.HandleFunc("/", server.HandleRoot)
+func setupHTTPRoutes(server *config.ConfigServer, metrics *cluster.MetricsCollector) {
+	http.HandleFunc("/setValue", withLogging(server.SetValue, "setValue"))
+	http.HandleFunc("/getValue", withLogging(server.GetValue, "getValue"))
+	http.HandleFunc("/upload", withLogging(server.UploadJSON, "upload"))
+	http.HandleFunc("/download", withLogging(server.DownloadJSON, "download"))
+	http.HandleFunc("/ws", withWebSocketMetrics(server.HandleWebSocket, metrics))
+	http.HandleFunc("/", withLogging(server.HandleRoot, "root"))
+}
+
+func setupMetricsRoutes(metrics *cluster.MetricsCollector) *http.ServeMux {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/metrics", metrics.HandleMetrics)
+	mux.HandleFunc("/cluster/status", metrics.HandleClusterStatus)
+	mux.HandleFunc("/health", metrics.HandleHealthCheck)
+	return mux
+}
+
+// Middleware to log HTTP requests
+func withLogging(handler http.HandlerFunc, endpoint string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		handler(w, r)
+		duration := time.Since(start)
+		log.Printf("[HTTP] %s %s %s Duration: %v", r.Method, r.URL.Path, endpoint, duration)
+	}
+}
+
+// Special middleware for WebSocket connections
+func withWebSocketMetrics(handler http.HandlerFunc, metrics *cluster.MetricsCollector) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		metrics.UpdateWSCount(1)
+		handler(w, r)
+		metrics.UpdateWSCount(-1)
+	}
 }

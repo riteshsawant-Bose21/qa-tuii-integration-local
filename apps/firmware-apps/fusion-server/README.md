@@ -386,6 +386,148 @@ multipass exec fs1 -- systemctl status fusion-server
 make test
 ```
 
+## Monitoring
+
+1. **Metrics Server**
+   - Available on configurable port (default: 9090)
+   - Endpoints:
+     - `/metrics` - Complete system metrics
+     - `/cluster/status` - Detailed cluster information
+     - `/health` - Health check endpoint
+   - Metrics include:
+     - Cluster health and membership
+     - Configuration state statistics
+     - System resource usage
+     - Network connectivity
+     - Process health
+
+2. **HAProxy Statistics**
+   - Available at `http://<node-ip>:8404/`
+   - Real-time server status
+   - Connection statistics
+   - Health check status
+
+3. **Debug Mode**
+   - Cluster state monitoring
+   - Health check logging
+   - State verification
+   - Connectivity testing
+
+### Monitoring Endpoints
+
+#### Get Complete System Metrics
+```bash
+curl http://<node-ip>:9090/metrics
+```
+Response includes:
+- Timestamp
+- Cluster metrics
+- Node health
+- Configuration state
+- Network statistics
+- Process metrics
+- HAProxy status
+
+#### Check Cluster Status
+```bash
+curl http://<node-ip>:9090/cluster/status
+```
+Response includes:
+- Member count
+- Alive/suspect/dead nodes
+- Cluster health percentage
+- Node details
+- Ping latency
+
+#### Health Check
+```bash
+curl http://<node-ip>:9090/health
+```
+Response includes:
+- Overall status
+- Node health
+- Cluster health percentage
+
+### Command Line Flags
+```bash
+./fusion-server \
+  --name <node-name> \
+  --addr <bind-address> \
+  --port <port> \
+  --metrics-port 9090 \  # New flag for metrics server
+  [--join <existing-node-address>]
+```
+
+### Sample Metrics Output
+```json
+{
+  "timestamp": "2024-11-08T12:00:00Z",
+  "cluster": {
+    "member_count": 3,
+    "alive_count": 3,
+    "local_node": "node1",
+    "cluster_health": 100,
+    "members": [
+      {
+        "name": "node1",
+        "address": "192.168.64.101",
+        "port": 7946,
+        "state": "ALIVE"
+      }
+    ]
+  },
+  "node_health": {
+    "status": "ALIVE",
+    "uptime_seconds": 3600,
+    "health_check_count": 720
+  },
+  "config_keys": 15,
+  "websocket_clients": 3,
+  "cpu_usage": 2.5,
+  "memory_usage": 1048576,
+  "goroutines": 25
+}
+```
+
+### Monitoring Integration
+
+The metrics server can be integrated with monitoring systems:
+
+1. **Prometheus Configuration**
+```yaml
+scrape_configs:
+  - job_name: 'fusion'
+    static_configs:
+      - targets: ['localhost:9090']
+```
+
+2. **Grafana Dashboard**
+   - Import provided dashboard template
+   - Add Prometheus data source
+   - Configure alerts based on metrics
+
+### Common Monitoring Commands
+
+1. **Check all metrics**
+```bash
+curl -s http://192.168.64.100:9090/metrics | jq
+```
+
+2. **Monitor cluster health**
+```bash
+watch -n 1 'curl -s http://192.168.64.100:9090/health'
+```
+
+3. **Track cluster membership**
+```bash
+watch -n 1 'curl -s http://192.168.64.100:9090/cluster/status | jq .members'
+```
+
+4. **System resource usage**
+```bash
+curl -s http://192.168.64.100:9090/metrics | jq 'select(.cpu_usage, .memory_usage, .goroutines)'
+```
+
 ### Diagram
 
 ```mermaid
