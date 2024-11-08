@@ -183,7 +183,7 @@ curl -X POST http://192.168.64.100:8080/setValue \
 
 ### Get a specific value
 ```bash
-curl http://192.168.64.100:8080/getValue?key=server.name
+curl "http://192.168.64.100:8080/getValue?key=server.name"
 ```
 
 ### Get all configuration values
