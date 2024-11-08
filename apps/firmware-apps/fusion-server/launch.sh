@@ -115,7 +115,9 @@ cleanup() {
         echo
         echo "Cleaning up..."
         if [ ! -z "$PYTHON_PID" ]; then
-            kill $PYTHON_PID 2>/dev/null || true
+            # Send SIGTERM and wait for process to exit
+            kill -TERM $PYTHON_PID 2>/dev/null
+            wait $PYTHON_PID 2>/dev/null
             echo "Stopped Python HTTP server"
         fi
         
@@ -124,6 +126,11 @@ cleanup() {
         rm -f /tmp/cloud-init-${BASE_NAME}*.yaml
     fi
 }
+
+# Set up more comprehensive signal handling
+trap 'cleanup' EXIT
+trap 'exit 2' INT TERM
+
 
 # Set up trap but don't exit on errors
 set +e
