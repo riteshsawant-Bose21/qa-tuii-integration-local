@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"fusion/internal/api"
+	"fusion/internal/network"
 
 	"github.com/hashicorp/memberlist"
 )
@@ -21,12 +22,13 @@ type StateManagerInterface interface {
 
 // MetricsCollector handles system-wide metric collection
 type MetricsCollector struct {
-	list         *memberlist.Memberlist
-	stateManager StateManagerInterface
-	mutex        sync.RWMutex
-	metrics      SystemMetrics
-	wsConnCount  int
-	clusterInfo  ClusterInfo
+	list           *memberlist.Memberlist
+	stateManager   StateManagerInterface
+	mutex          sync.RWMutex
+	metrics        SystemMetrics
+	wsConnCount    int
+	clusterInfo    ClusterInfo
+	haproxyMetrics *network.HAProxyMetrics
 }
 
 // SystemMetrics represents the complete system state
@@ -57,6 +59,18 @@ type SystemMetrics struct {
 	// HAProxy metrics
 	HAProxyStatus string `json:"haproxy_status"`
 	BackendNodes  int    `json:"backend_nodes"`
+
+	// HAProxy metrics
+	HAProxy struct {
+		Status        string                   `json:"status"`
+		TotalRequests int64                    `json:"total_requests"`
+		CurrentConns  int                      `json:"current_conns"`
+		BytesIn       int64                    `json:"bytes_in"`
+		BytesOut      int64                    `json:"bytes_out"`
+		FrontendStats map[string]network.Stats `json:"frontend_stats"`
+		BackendStats  map[string]network.Stats `json:"backend_network.Stats"`
+		ServerStats   map[string]network.Stats `json:"server_stats"`
+	} `json:"haproxy"`
 }
 
 // NodeHealth represents health metrics for a single node
@@ -71,8 +85,9 @@ type NodeHealth struct {
 // NewMetricsCollector creates a new metrics collector
 func NewMetricsCollector(list *memberlist.Memberlist, stateManager StateManagerInterface) *MetricsCollector {
 	mc := &MetricsCollector{
-		list:         list,
-		stateManager: stateManager,
+		list:           list,
+		stateManager:   stateManager,
+		haproxyMetrics: network.NewHAProxyMetrics("/var/run/haproxy.sock"),
 	}
 
 	// Start periodic collection
@@ -129,6 +144,17 @@ func (mc *MetricsCollector) collect() {
 			HAProxyStatus: mc.checkHAProxy(),
 			BackendNodes:  len(mc.list.Members()),
 		}
+
+		// Get HAProxy stats
+		haproxyStats := mc.haproxyMetrics.GetStats()
+		mc.metrics.HAProxy.Status = haproxyStats.Status
+		mc.metrics.HAProxy.TotalRequests = haproxyStats.TotalRequests
+		mc.metrics.HAProxy.CurrentConns = haproxyStats.CurrentConns
+		mc.metrics.HAProxy.BytesIn = haproxyStats.BytesIn
+		mc.metrics.HAProxy.BytesOut = haproxyStats.BytesOut
+		mc.metrics.HAProxy.FrontendStats = haproxyStats.FrontendStats
+		mc.metrics.HAProxy.BackendStats = haproxyStats.BackendStats
+		mc.metrics.HAProxy.ServerStats = haproxyStats.ServerStats
 
 		mc.mutex.Unlock()
 	}

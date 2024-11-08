@@ -97,7 +97,6 @@ Keepalived ensures high availability through:
      - HTTP mode
      - Round-robin load balancing
      - Health checks on /getValue endpoint
-     - Statistics page on port 8404
      - Configurable timeouts and connection limits
 
    **Keepalived Configuration**
@@ -223,20 +222,6 @@ echo '{"action":"get"}' | nc -u localhost 7947
 
 ### Set a value
 echo '{"action":"set","key":"test","value":"hello"}' | nc -u localhost 7947
-
-## Monitoring
-
-1. **HAProxy Statistics**
-   - Available at `http://<node-ip>:8404/`
-   - Real-time server status
-   - Connection statistics
-   - Health check status
-
-2. **Debug Mode**
-   - Cluster state monitoring
-   - Health check logging
-   - State verification
-   - Connectivity testing
 
 ## Security
 
@@ -402,7 +387,6 @@ make test
      - Process health
 
 2. **HAProxy Statistics**
-   - Available at `http://<node-ip>:8404/`
    - Real-time server status
    - Connection statistics
    - Health check status
@@ -417,7 +401,7 @@ make test
 
 #### Get Complete System Metrics
 ```bash
-curl http://<node-ip>:9090/metrics
+curl http://http://192.168.64.100:9090/metrics
 ```
 Response includes:
 - Timestamp
@@ -430,7 +414,7 @@ Response includes:
 
 #### Check Cluster Status
 ```bash
-curl http://<node-ip>:9090/cluster/status
+curl http://http://192.168.64.100:9090/cluster/status
 ```
 Response includes:
 - Member count
@@ -439,22 +423,12 @@ Response includes:
 - Node details
 - Ping latency
 
-#### Health Check
-```bash
-curl http://<node-ip>:9090/health
-```
-Response includes:
-- Overall status
-- Node health
-- Cluster health percentage
-
 ### Command Line Flags
 ```bash
 ./fusion-server \
   --name <node-name> \
   --addr <bind-address> \
   --port <port> \
-  --metrics-port 9090 \  # New flag for metrics server
   [--join <existing-node-address>]
 ```
 
