@@ -109,18 +109,25 @@ PYTHON_PID=$!
 
 # Function to handle cleanup when script exits
 cleanup() {
-    echo "Cleaning up..."
-    if [ ! -z "$PYTHON_PID" ]; then
-        kill $PYTHON_PID 2>/dev/null || true
-        echo "Stopped Python HTTP server"
+    # Only perform cleanup if not already in progress
+    if [ -z "$CLEANUP_IN_PROGRESS" ]; then
+        CLEANUP_IN_PROGRESS=1
+        echo
+        echo "Cleaning up..."
+        if [ ! -z "$PYTHON_PID" ]; then
+            kill $PYTHON_PID 2>/dev/null || true
+            echo "Stopped Python HTTP server"
+        fi
+        
+        # Clean up temporary cloud-init files
+        echo "Cleaning up temporary cloud-init files..."
+        rm -f /tmp/cloud-init-${BASE_NAME}*.yaml
     fi
-    
-    # Clean up temporary cloud-init files
-    echo "Cleaning up temporary cloud-init files..."
-    rm -f /tmp/cloud-init-${BASE_NAME}*.yaml
 }
 
-trap cleanup EXIT SIGINT SIGTERM
+# Set up trap but don't exit on errors
+set +e
+trap cleanup EXIT
 
 # Function to create instance-specific cloud-init configuration
 create_cloud_init() {
@@ -131,15 +138,22 @@ create_cloud_init() {
     # Read the base configuration
     if [ ! -f "fusion-server.yaml" ]; then
         echo "Error: fusion-server.yaml not found"
-        exit 1
+        return 1
     fi
 
     # Create instance-specific cloud-init
     cp fusion-server.yaml "$cloud_init_file"
     
     if [ ! -z "$join_addr" ]; then
-        # For additional instances, add join parameter by replacing the ExecStart line
-        sed -i "s|ExecStart=/usr/local/bin/fusion-server.*|ExecStart=/usr/local/bin/fusion-server -name %H -addr 0.0.0.0 -port 7946 -join ${join_addr}|" "$cloud_init_file"
+        # For additional instances, modify the ExecStart line while preserving YAML structure
+        awk -v join="${join_addr}" '
+        /ExecStart=\/usr\/local\/bin\/fusion-server/ {
+            indent=$0
+            gsub(/[^ ].*$/, "", indent)  # Preserve indentation
+            print indent "ExecStart=/usr/local/bin/fusion-server -name %H -addr 0.0.0.0 -port 7946 -join " join
+            next
+        }
+        { print }' "$cloud_init_file" > "${cloud_init_file}.tmp" && mv "${cloud_init_file}.tmp" "$cloud_init_file"
     fi
 
     echo "$cloud_init_file"
@@ -148,47 +162,50 @@ create_cloud_init() {
 # Function to verify instance
 verify_instance() {
     local instance_name="$1"
+    local max_retries=30
+    local retry_count=0
     
-    # Wait for initialization
     echo "Waiting for instance $instance_name to initialize..."
-    sleep 15
-
-    # Check if binary exists and is executable
-    echo "Checking fusion-server binary for $instance_name..."
-    if ! multipass exec "$instance_name" -- test -x /usr/local/bin/fusion-server; then
-        echo "Error: fusion-server binary is missing or not executable in $instance_name"
-        multipass exec "$instance_name" -- ls -l /usr/local/bin/fusion-server || true
-        return 1
-    fi
-
-    # Check if service is running
-    echo "Checking fusion-server service for $instance_name..."
-    if multipass exec "$instance_name" -- systemctl is-active --quiet fusion-server; then
-        echo "fusion-server is running on $instance_name"
-        multipass exec "$instance_name" -- systemctl status fusion-server
-        echo "Instance info:"
-        multipass info "$instance_name"
+    
+    # Wait for instance to be ready
+    while [ $retry_count -lt $max_retries ]; do
+        if multipass exec "$instance_name" -- systemctl is-active --quiet fusion-server; then
+            echo "fusion-server is running on $instance_name"
+            multipass exec "$instance_name" -- systemctl status fusion-server
+            echo "Instance info:"
+            multipass info "$instance_name"
+            
+            # Show all listening ports
+            echo "Checking listening ports:"
+            multipass exec "$instance_name" -- ss -tulpn || true
+            return 0
+        fi
         
-        # Show all listening ports
-        echo "Checking listening ports:"
-        multipass exec "$instance_name" -- ss -tulpn || true
-        return 0
-    else
-        echo "fusion-server is not running on $instance_name, checking status and logs..."
-        multipass exec "$instance_name" -- systemctl status fusion-server || true
-        multipass exec "$instance_name" -- journalctl -u fusion-server --no-pager || true
-        return 1
-    fi
+        echo "Waiting for fusion-server to start (attempt $((retry_count + 1))/$max_retries)..."
+        sleep 10
+        ((retry_count++))
+    done
+    
+    echo "Error: fusion-server failed to start on $instance_name after $max_retries attempts"
+    multipass exec "$instance_name" -- systemctl status fusion-server || true
+    multipass exec "$instance_name" -- journalctl -u fusion-server --no-pager || true
+    return 1
 }
 
 # Launch first instance
 FIRST_INSTANCE="${BASE_NAME}1"
 echo "Launching first instance: $FIRST_INSTANCE"
 cloud_init_file=$(create_cloud_init "$FIRST_INSTANCE" "")
-multipass launch --name "$FIRST_INSTANCE" --cloud-init "$cloud_init_file" --memory 2G --cpus 2
+if ! multipass launch --name "$FIRST_INSTANCE" --cloud-init "$cloud_init_file" --memory 2G --cpus 2; then
+    echo "Failed to launch first instance"
+    exit 1
+fi
 
 # Verify first instance
-verify_instance "$FIRST_INSTANCE" || exit 1
+if ! verify_instance "$FIRST_INSTANCE"; then
+    echo "Failed to verify first instance"
+    exit 1
+fi
 
 # Get the IP of the first instance
 FIRST_IP=$(multipass info "$FIRST_INSTANCE" | grep IPv4 | head -1 | awk '{print $2}')
@@ -200,13 +217,19 @@ if [ "$NUM_INSTANCES" -gt 1 ]; then
         INSTANCE_NAME="${BASE_NAME}${i}"
         echo "Launching instance $i: $INSTANCE_NAME"
         cloud_init_file=$(create_cloud_init "$INSTANCE_NAME" "${FIRST_IP}:7946")
-        multipass launch --name "$INSTANCE_NAME" --cloud-init "$cloud_init_file" --memory 2G --cpus 2
         
-        # Verify additional instance
-        verify_instance "$INSTANCE_NAME" || exit 1
+        if ! multipass launch --name "$INSTANCE_NAME" --cloud-init "$cloud_init_file" --memory 2G --cpus 2; then
+            echo "Failed to launch instance $INSTANCE_NAME"
+            continue
+        fi
+        
+        if ! verify_instance "$INSTANCE_NAME"; then
+            echo "Failed to verify instance $INSTANCE_NAME"
+            continue
+        fi
     done
 fi
 
 echo "Cluster deployment complete!"
-echo "Created $NUM_INSTANCES instances with base name '$BASE_NAME'"
+echo "Created instances with base name '$BASE_NAME':"
 multipass list
