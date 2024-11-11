@@ -401,7 +401,7 @@ make test
 
 #### Get Complete System Metrics
 ```bash
-curl http://http://192.168.64.100:9090/metrics
+curl http://192.168.64.100:9090/metrics
 ```
 Response includes:
 - Timestamp
@@ -414,7 +414,7 @@ Response includes:
 
 #### Check Cluster Status
 ```bash
-curl http://http://192.168.64.100:9090/cluster/status
+curl http://192.168.64.100:9090/cluster/status
 ```
 Response includes:
 - Member count
