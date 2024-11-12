@@ -16,91 +16,26 @@ usage() {
     exit 1
 }
 
-# Parse command line arguments
-while [[ $# -gt 0 ]]; do
-    case $1 in
-        --name)
-            BASE_NAME="$2"
-            shift 2
-            ;;
-        --instances)
-            NUM_INSTANCES="$2"
-            if ! [[ "$NUM_INSTANCES" =~ ^[0-9]+$ ]] || [ "$NUM_INSTANCES" -lt 1 ]; then
-                echo "Error: Number of instances must be a positive integer"
-                exit 1
-            fi
-            shift 2
-            ;;
-        --kill)
-            KILL_MODE=true
-            shift
-            ;;
-        -h|--help)
-            usage
-            ;;
-        *)
-            echo "Unknown option: $1"
-            usage
-            ;;
-    esac
-done
-
-# Function to kill all instances with given base name
-kill_instances() {
-    local base_name="$1"
-    echo "Looking for instances matching pattern: ${base_name}*"
-    
-    # Get list of matching instances
-    local instances=$(multipass list --format csv | grep "^${base_name}" | cut -d',' -f1)
-    
-    if [ -z "$instances" ]; then
-        echo "No instances found matching pattern '${base_name}*'"
-        return 0
+# Function to generate cloud-init configuration
+generate_cloud_init() {
+    # Check if PyYAML is installed
+    if ! python3 -c "import yaml" 2>/dev/null; then
+        echo "PyYAML is not installed. Installing..."
+        pip3 install PyYAML
     fi
     
-    echo "Found instances to delete:"
-    echo "$instances"
-    echo
-    
-    # Prompt for confirmation
-    read -p "Are you sure you want to delete these instances? (y/N) " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo "Operation cancelled"
-        exit 0
-    fi
-    
-    # Stop instances first
-    echo "Stopping instances..."
-    for instance in $instances; do
-        echo "Stopping $instance..."
-        multipass stop "$instance" || echo "Warning: Failed to stop $instance"
-    done
-    
-    # Delete instances
-    echo "Deleting instances..."
-    for instance in $instances; do
-        echo "Deleting $instance..."
-        multipass delete "$instance" || echo "Warning: Failed to delete $instance"
-    done
-    
-    # Purge all deleted instances
-    echo "Purging deleted instances..."
-    multipass purge
-    
-    echo "Instance cleanup complete!"
+    # Generate the base cloud-init configuration
+    echo "Generating cloud-init configuration..."
+    ./scripts/generate_cloud_config.py > fusion-server.yaml
 }
 
-# Handle kill mode if specified
-if [ "$KILL_MODE" = true ]; then
-    kill_instances "$BASE_NAME"
-    exit 0
-fi
-
-# Rest of the original script continues here...
+# Add the cloud-init generation before starting the cluster deployment
 echo "Starting cluster deployment..."
 echo "Base name: $BASE_NAME"
 echo "Number of instances: $NUM_INSTANCES"
+
+# Generate cloud-init configuration
+generate_cloud_init
 
 # Start Python HTTP server in background
 echo "Starting Python HTTP server..."

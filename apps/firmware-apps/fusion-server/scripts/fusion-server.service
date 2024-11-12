@@ -1,0 +1,13 @@
+[Unit]
+Description=Fusion Server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/fusion-server -name %H -addr 0.0.0.0 -port 7946
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

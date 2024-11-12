@@ -1,4 +1,8 @@
 **/.DS_Store
 build
+cloud-init.yaml
+fusion-env
+fusion-server.yaml
+
 
 
