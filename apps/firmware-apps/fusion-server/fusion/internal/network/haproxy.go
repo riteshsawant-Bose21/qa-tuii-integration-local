@@ -33,13 +33,10 @@ defaults
 
 frontend http-in
  bind *:80
+ default_backend servers
 
 backend servers
  balance roundrobin
- option httpchk GET /health
- {{range .}}
- server {{.Name}} {{.Addr}}:8080 check
- {{end}}
 
 `
 

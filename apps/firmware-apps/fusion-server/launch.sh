@@ -1,6 +1,20 @@
 #!/bin/bash
 set -e
 
+# Function to check and enable IP forwarding
+check_ip_forwarding() {
+    if [[ "$(uname)" == "Darwin" ]]; then  # Check if running on macOS
+        if [ $(sysctl -n net.inet.ip.forwarding) -eq 0 ]; then
+            echo "Enabling IP forwarding..."
+            if ! sudo sysctl -w net.inet.ip.forwarding=1; then
+                echo "Failed to enable IP forwarding. Please run script with sudo or enable manually."
+                exit 1
+            fi
+            echo "IP forwarding enabled successfully."
+        fi
+    fi
+}
+
 # Default values
 BASE_NAME="fusion"
 NUM_INSTANCES=1
@@ -49,6 +63,9 @@ if [ "$KILL_MODE" = true ]; then
     exit 0
 fi
 
+# Check IP forwarding before proceeding
+check_ip_forwarding
+
 # Check for the fusion-server binary and build if not found
 if [ ! -f "build/fusion-server" ]; then
     echo "fusion-server binary not found in build directory"
@@ -73,7 +90,6 @@ fi
 
 # Function to setup and activate Python virtual environment
 setup_python_env() {
-    echo "Checking Python virtual environment..."
     
     # Check if virtual environment exists
     if [ ! -d "fusion-env" ]; then
@@ -118,13 +134,14 @@ echo "Number of instances: $NUM_INSTANCES"
 # Setup Python environment
 setup_python_env
 
+# Start Python HTTP server in background
+IP_ADDR=$(ifconfig | grep -A 1 "192.168.64" | grep "inet " | awk '{print $2}')
+echo "Starting download server on $IP_ADDR:8000"
+python3 -m http.server 8000 --bind "$SERVER_IP" > /dev/null 2>&1 &
+PYTHON_PID=$!
+
 # Generate cloud-init configuration
 generate_cloud_init
-
-# Start Python HTTP server in background
-echo "Starting download server..."
-python3 -m http.server 8000 --bind 0.0.0.0 &
-PYTHON_PID=$!
 
 # Function to handle cleanup when script exits
 cleanup() {
@@ -227,7 +244,7 @@ verify_instance() {
 FIRST_INSTANCE="${BASE_NAME}1"
 echo "Launching first instance: $FIRST_INSTANCE"
 cloud_init_file=$(create_cloud_init "$FIRST_INSTANCE" "")
-if ! multipass launch --name "$FIRST_INSTANCE" --cloud-init "$cloud_init_file" --memory 2G --cpus 2; then
+if ! multipass launch --name "$FIRST_INSTANCE" --cloud-init "$cloud_init_file" --memory 2G --cpus 2 ; then
     echo "Failed to launch first instance"
     exit 1
 fi

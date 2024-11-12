@@ -6,6 +6,7 @@ class literal_str(str): pass
 
 def literal_presenter(dumper, data):
     return dumper.represent_scalar('tag:yaml.org,2002:str', data, style='|')
+
 yaml.add_representer(literal_str, literal_presenter)
 
 def read_file(path):
@@ -20,8 +21,20 @@ def generate_config(scripts_dir="scripts"):
         'package_upgrade': True,
         'packages': [
             'haproxy',
-            'keepalived'
+            'keepalived',
+            'net-tools'  # Added for network troubleshooting
         ],
+        # Add network configuration
+        'network': {
+            'version': 2,
+            'ethernets': {
+                'eth0': {
+                    'dhcp4': True,
+                    'dhcp6': True,
+                    'optional': False
+                }
+            }
+        },
         'write_files': [
             {
                 'path': '/etc/systemd/system/fusion-server.service',
@@ -30,10 +43,22 @@ def generate_config(scripts_dir="scripts"):
                 'content': read_file(f"{scripts_dir}/fusion-server.service")
             },
             {
+                'path': '/etc/systemd/system/keepalived.service',
+                'permissions': '0644',
+                'owner': 'root:root',
+                'content': read_file(f"{scripts_dir}/keepalived.service")
+            },
+            {
                 'path': '/etc/keepalived/keepalived.conf',
                 'permissions': '0644',
                 'owner': 'root:root',
                 'content': read_file(f"{scripts_dir}/keepalived.conf")
+            },
+            {
+                'path': '/etc/systemd/system/haproxy.service',
+                'permissions': '0644',
+                'owner': 'root:root',
+                'content': read_file(f"{scripts_dir}/haproxy.service")
             },
             {
                 'path': '/usr/local/bin/check-haproxy.sh',
@@ -49,6 +74,9 @@ def generate_config(scripts_dir="scripts"):
             }
         ],
         'runcmd': [
+            # Add network verification steps
+            'systemctl restart systemd-networkd',
+            'networkctl status',
             'bash -x /usr/local/bin/setup-fusion.sh'
         ]
     }

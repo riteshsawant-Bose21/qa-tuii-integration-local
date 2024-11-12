@@ -77,6 +77,10 @@ systemctl daemon-reload
 systemctl enable fusion-server
 systemctl start fusion-server
 
+# Start haproxy
+systemctl enable haproxy
+systemctl start haproxy
+
 # Start keepalived
 systemctl enable keepalived
 systemctl start keepalived
@@ -84,6 +88,7 @@ systemctl start keepalived
 # Show status
 echo "Service status:"
 systemctl status fusion-server --no-pager || true
+systemctl status haproxy --no-pager || true
 systemctl status keepalived --no-pager || true
 ip addr show
 EOF

@@ -582,7 +582,6 @@ fusion-server/
 │   │       └── main.go      # Application entry point
 │   ├── configs/
 │   │   ├── entrypoint.sh*   # Container entrypoint script
-│   │   ├── haproxy.cfg      # HAProxy configuration
 │   │   ├── keepalived.conf  # Primary Keepalived configuration
 │   │   └── keepalived-backup.conf
 │   └── internal/
