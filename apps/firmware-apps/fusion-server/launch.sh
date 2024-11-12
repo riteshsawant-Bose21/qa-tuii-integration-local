@@ -122,7 +122,7 @@ setup_python_env
 generate_cloud_init
 
 # Start Python HTTP server in background
-echo "Starting Python HTTP server..."
+echo "Starting download server..."
 python3 -m http.server 8000 --bind 0.0.0.0 &
 PYTHON_PID=$!
 
@@ -137,7 +137,7 @@ cleanup() {
             # Send SIGTERM and wait for process to exit
             kill -TERM $PYTHON_PID 2>/dev/null
             wait $PYTHON_PID 2>/dev/null
-            echo "Stopped Python HTTP server"
+            echo "Stopped download server"
         fi
         
         # Clean up temporary cloud-init files

@@ -261,28 +261,28 @@ multipass list
 
 3. **Start/Stop instances**
 ```bash
-multipass stop fs1
-multipass start fs1
+multipass stop fusion1
+multipass start fusion1
 ```
 
 4. **Access instance shell**
 ```bash
-multipass shell fs1
+multipass shell fusion1
 ```
 
 5. **Get instance information**
 ```bash
-multipass info fs1
+multipass info fusion1
 ```
 
 6. **Mount local directory**
 ```bash
-multipass mount /local/path fs1:/home/ubuntu/mounted
+multipass mount /local/path fusion1:/home/ubuntu/mounted
 ```
 
 7. **Delete instance**
 ```bash
-multipass delete fs1
+multipass delete fusion1
 multipass purge  # Remove deleted instances completely
 ```
 
@@ -298,34 +298,34 @@ For a three-node cluster setup:
 multipass list
 
 # Shell into instances
-multipass shell fs1
+multipass shell fusion1
 ```
 
 #### Useful Tips
 
 1. **Transfer files to instance**
 ```bash
-multipass transfer /local/file.txt fs1:/home/ubuntu/
+multipass transfer /local/file.txt fusion1:/home/ubuntu/
 ```
 
 2. **Execute command in instance**
 ```bash
-multipass exec fs1 -- command
+multipass exec fusion1 -- command
 ```
 
 3. **View instance logs**
 ```bash
-multipass exec fs1 -- cat /var/log/cloud-init-output.log
-multipass exec fs1 -- sudo journalctl
-multipass exec fs1 -- sudo dmesg -w
-multipass exec fs1 -- sudo journalctl -u haproxy -f
-multipass exec fs1 -- sudo journalctl -u keepalived-server -f
-multipass exec fs1 -- sudo journalctl -u fusion-server -f
+multipass exec fusion1 -- cat /var/log/cloud-init-output.log
+multipass exec fusion1 -- sudo journalctl
+multipass exec fusion1 -- sudo dmesg -w
+multipass exec fusion1 -- sudo journalctl -u haproxy -f
+multipass exec fusion1 -- sudo journalctl -u keepalived-server -f
+multipass exec fusion1 -- sudo journalctl -u fusion-server -f
 ```
 4. **Network configuration**
 ```bash
 # Get instance IP address
-multipass info fs1 | grep IPv4
+multipass info fusion1 | grep IPv4
 ```
 
 #### Troubleshooting Multipass
@@ -333,7 +333,7 @@ multipass info fs1 | grep IPv4
 1. **Instance fails to start**
    - Check cloud-init logs:
    ```bash
-   multipass exec fs1 -- cat /var/log/cloud-init-output.log
+   multipass exec fusion1 -- cat /var/log/cloud-init-output.log
    ```
    - Verify resource availability on host machine
    - Ensure cloud-config.yaml is valid
@@ -342,13 +342,13 @@ multipass info fs1 | grep IPv4
    - Verify host network connectivity
    - Check instance network status:
    ```bash
-   multipass exec fs1 -- ip addr
+   multipass exec fusion1 -- ip addr
    ```
 3. **systemd status**
 ```bash
-multipass exec fs1 -- systemctl status haproxy
-multipass exec fs1 -- systemctl status keepalived
-multipass exec fs1 -- systemctl status fusion-server
+multipass exec fusion1 -- systemctl status haproxy
+multipass exec fusion1 -- systemctl status keepalived
+multipass exec fusion1 -- systemctl status fusion-server
 ```
 
 4. **Mount problems**
@@ -356,8 +356,8 @@ multipass exec fs1 -- systemctl status fusion-server
    - Check permissions on host directory
    - Unmount and retry:
    ```bash
-   multipass unmount fs1
-   multipass mount /local/path fs1:/home/ubuntu/mounted
+   multipass unmount fusion1
+   multipass mount /local/path fusion1:/home/ubuntu/mounted
    ```
 
 ### Testing
