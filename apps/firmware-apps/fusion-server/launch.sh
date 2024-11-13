@@ -83,98 +83,116 @@ cleanup() {
     fi
 }
 
-# Function to display instance status
+# Add these color and formatting definitions at the start of the script
+declare -r RED='\033[0;31m'
+declare -r GREEN='\033[0;32m'
+declare -r YELLOW='\033[1;33m'
+declare -r BLUE='\033[0;34m'
+declare -r CYAN='\033[0;36m'
+declare -r BOLD='\033[1m'
+declare -r NC='\033[0m' # No Color
+declare -r HEADER_LINE='━'
+declare -r CHECK_MARK='✓'
+declare -r CROSS_MARK='✗'
+declare -r ARROW='→'
+
+# Helper functions for formatted output
+print_header() {
+    local text="$1"
+    local width=60
+    local padding=$(( (width - ${#text}) / 2 ))
+    echo
+    printf "%${width}s\n" | tr ' ' "$HEADER_LINE"
+    printf "%${padding}s${BOLD}%s${NC}%${padding}s\n" "" "$text" ""
+    printf "%${width}s\n" | tr ' ' "$HEADER_LINE"
+}
+
+print_step() {
+    printf "${BLUE}${ARROW} ${BOLD}%s${NC}\n" "$1"
+}
+
+print_substep() {
+    printf "  ${CYAN}${ARROW} %s${NC}\n" "$1"
+}
+
+print_success() {
+    printf "${GREEN}${CHECK_MARK} %s${NC}\n" "$1"
+}
+
+print_error() {
+    printf "${RED}${CROSS_MARK} %s${NC}\n" "$1"
+}
+
+print_warning() {
+    printf "${YELLOW}⚠ %s${NC}\n" "$1"
+}
+
+print_progress() {
+    local current=$1
+    local total=$2
+    local text=$3
+    local width=50
+    local percentage=$((current * 100 / total))
+    local progress=$((current * width / total))
+    
+    printf "\r  ${CYAN}[%-${width}s] %d%% %s${NC}" \
+           "$(printf '%0.s█' $(seq 1 $progress))" \
+           "$percentage" \
+           "$text"
+    
+    if [ "$current" -eq "$total" ]; then
+        echo
+    fi
+}
+
+# Update the show_instance_status function
 show_instance_status() {
     local instance_name="$1"
     
-    echo "Instance Status:"
-    echo "==============="
-    
-    # Show network status
-    echo "Network Configuration:"
-    multipass exec "$instance_name" -- networkctl status
-    
-    # Show service status
-    echo
-    echo "Service Status:"
-    for service in fusion-server keepalived haproxy; do
-        echo
-        echo "=== $service ==="
-        multipass exec "$instance_name" -- systemctl status "$service" --no-pager || true
-    done
-    
-    # Show IP configuration
-    echo
-    echo "IP Configuration:"
-    multipass exec "$instance_name" -- ip addr show
+    if [ "$VERBOSE" = true ]; then
+        print_header "Instance Status: $instance_name"
+        
+        print_step "Network Configuration"
+        multipass exec "$instance_name" -- networkctl status
+        
+        print_step "Service Status"
+        for service in fusion-server keepalived haproxy; do
+            echo
+            printf "${CYAN}=== %s ===${NC}\n" "$service"
+            multipass exec "$instance_name" -- systemctl status "$service" --no-pager || true
+        done
+        
+        print_step "IP Configuration"
+        multipass exec "$instance_name" -- ip addr show
 
-    # Show process list
-    echo
-    echo "Process Status:"
-    multipass exec "$instance_name" -- ps aux | grep -E 'fusion-server|keepalived|haproxy' || true
+        print_step "Process Status"
+        multipass exec "$instance_name" -- ps aux | grep -E 'fusion-server|keepalived|haproxy' || true
+    else
+        print_header "Basic Status: $instance_name"
+        for service in fusion-server keepalived haproxy; do
+            status=$(multipass exec "$instance_name" -- systemctl is-active "$service" || echo "inactive")
+            if [ "$status" = "active" ]; then
+                print_success "$service is running"
+            else
+                print_error "$service is $status"
+            fi
+        done
+    fi
 }
 
-# Function to setup instance
-setup_instance() {
-    local instance_name="$1"
-    local instance_number="$2"
-    
-    echo "Setting up instance: $instance_name (number: $instance_number)"
-    
-    # Wait a bit for the instance to be ready
-    echo "Waiting for instance to initialize..."
-    sleep 10
-    
-    # Copy fusion-server binary
-    echo "Copying fusion-server binary..."
-    if ! multipass transfer build/fusion-server "$instance_name":/tmp/; then
-        echo "Error: Failed to copy fusion-server binary"
-        return 1
-    fi
-    
-    # Install binary and set permissions
-    echo "Installing binary..."
-    if ! multipass exec "$instance_name" -- sudo cp /tmp/fusion-server /usr/local/bin/ || \
-       ! multipass exec "$instance_name" -- sudo chmod 755 /usr/local/bin/fusion-server || \
-       ! multipass exec "$instance_name" -- rm /tmp/fusion-server; then
-        echo "Error: Failed to install fusion-server binary"
-        return 1
-    fi
-    
-    # Update keepalived priority based on instance number
-    echo "Configuring keepalived priority..."
-    local priority=$((100 - instance_number))
-    multipass exec "$instance_name" -- sudo sed -i "s/priority 100/priority ${priority}/" /etc/keepalived/keepalived.conf
-    
-    # Start services
-    echo "Starting services..."
-    if ! multipass exec "$instance_name" -- sudo systemctl daemon-reload || \
-       ! multipass exec "$instance_name" -- sudo systemctl enable --now fusion-server || \
-       ! multipass exec "$instance_name" -- sudo systemctl enable --now keepalived || \
-       ! multipass exec "$instance_name" -- sudo systemctl enable --now haproxy; then
-        echo "Error: Failed to start services"
-        return 1
-    fi
-    
-    # Show instance status
-    [ "$VERBOSE" = true ] && show_instance_status "$instance_name"
-    
-    return 0
-}
-
-# Function to verify instance services
+# Update the verify_instance function
 verify_instance() {
     local instance_name="$1"
     local max_retries=30
     local retry_count=0
     
-    echo "Verifying instance $instance_name..."
+    print_header "Verifying Instance: $instance_name"
     
-    echo "Verifying services..."
+    print_step "Checking Services"
     while [ $retry_count -lt $max_retries ]; do
         # Check if binary exists
         if ! multipass exec "$instance_name" -- test -x /usr/local/bin/fusion-server; then
-            echo "Waiting for fusion-server binary (attempt $((retry_count + 1))/$max_retries)..."
+            print_progress $retry_count $max_retries "Waiting for fusion-server binary..."
             sleep 5
             ((retry_count++))
             continue
@@ -184,81 +202,236 @@ verify_instance() {
         local all_services_running=true
         for service in fusion-server keepalived haproxy; do
             if ! multipass exec "$instance_name" -- systemctl is-active --quiet "$service"; then
-                echo "Service $service is not running"
+                print_warning "Service $service is not running"
                 all_services_running=false
                 break
             fi
         done
         
         if [ "$all_services_running" = true ]; then
-            echo "All services are running on $instance_name"
-            # Verify VIP is accessible and capture the response
-            echo "Checking VIP accessibility..."
+            print_success "All services are running on $instance_name"
+            print_substep "Checking VIP accessibility..."
+            
             local response
             response=$(multipass exec "$instance_name" -- curl -sf http://192.168.64.100:8080 2>/dev/null)
             if [ $? -eq 0 ]; then
-                echo "VIP is accessible"
-                echo "Server response: $response"
+                print_success "VIP is accessible"
+                printf "${CYAN}Server response: ${NC}%s\n" "$response"
                 return 0
             else
-                echo "Warning: VIP is not accessible yet (attempt $((retry_count + 1))/$max_retries)"
+                print_warning "VIP is not accessible yet (attempt $((retry_count + 1))/$max_retries)"
             fi
         fi
         
-        echo "Waiting for services to start (attempt $((retry_count + 1))/$max_retries)..."
+        print_progress $retry_count $max_retries "Waiting for services to start..."
         sleep 5
         ((retry_count++))
     done
     
-    echo "Error: services failed to start on $instance_name after $max_retries attempts"
-    # Show full status on failure
-    show_instance_status "$instance_name"
+    print_error "Services failed to start on $instance_name after $max_retries attempts"
+    [ "$VERBOSE" = true ] && show_instance_status "$instance_name"
     return 1
 }
 
-# Function to launch instance
+# Update the setup_instance function
+setup_instance() {
+    local instance_name="$1"
+    local instance_number="$2"
+    
+    print_header "Setting Up Instance: $instance_name"
+    
+    print_step "Initializing instance..."
+    sleep 10
+    
+    print_step "Copying fusion-server binary..."
+    if ! multipass transfer build/fusion-server "$instance_name":/tmp/; then
+        print_error "Failed to copy fusion-server binary"
+        return 1
+    fi
+    print_success "Binary copied successfully"
+    
+    print_step "Installing binary..."
+    if ! multipass exec "$instance_name" -- sudo cp /tmp/fusion-server /usr/local/bin/ || \
+       ! multipass exec "$instance_name" -- sudo chmod 755 /usr/local/bin/fusion-server || \
+       ! multipass exec "$instance_name" -- rm /tmp/fusion-server; then
+        print_error "Failed to install fusion-server binary"
+        return 1
+    fi
+    print_success "Binary installed successfully"
+    
+    print_step "Configuring keepalived priority..."
+    local priority=$((100 - instance_number))
+    multipass exec "$instance_name" -- sudo sed -i "s/priority 100/priority ${priority}/" /etc/keepalived/keepalived.conf
+    print_success "Priority set to $priority"
+    
+    print_step "Starting services..."
+    local services_started=true
+    for service in fusion-server keepalived haproxy; do
+        print_substep "Starting $service..."
+        if ! multipass exec "$instance_name" -- sudo systemctl daemon-reload || \
+           ! multipass exec "$instance_name" -- sudo systemctl enable --now "$service"; then
+            print_error "Failed to start $service"
+            services_started=false
+            break
+        fi
+        print_success "$service started successfully"
+    done
+    
+    if [ "$services_started" = false ]; then
+        return 1
+    fi
+    
+    [ "$VERBOSE" = true ] && show_instance_status "$instance_name"
+    
+    return 0
+}
+
+# Update the launch_instance function
 launch_instance() {
     local instance_name="$1"
     local instance_number="$2"
     local join_addr="$3"
     local cloud_init_file="/tmp/cloud-init-${instance_name}.yaml"
     
+    print_header "Launching Instance: $instance_name"
+    
     # Copy base cloud-init and modify if needed
     cp fusion-server.yaml "$cloud_init_file"
     
     if [ ! -z "$join_addr" ]; then
-        # Modify the fusion-server service to include join address
+        print_step "Configuring join address: $join_addr"
         sed -i.bak "s|ExecStart=/usr/local/bin/fusion-server.*|ExecStart=/usr/local/bin/fusion-server -name %H -addr 0.0.0.0 -port 7946 -join ${join_addr}|" "$cloud_init_file"
     fi
     
-    echo "Launching instance: $instance_name"
+    print_step "Creating multipass instance..."
     if ! multipass launch --name "$instance_name" --cloud-init "$cloud_init_file" --memory 2G --cpus 2; then
-        echo "Failed to launch instance $instance_name"
+        print_error "Failed to launch instance $instance_name"
         return 1
     fi
-    echo "Launched: $instance_name"
+    print_success "Instance launched successfully"
     
     # Setup the instance
     if ! setup_instance "$instance_name" "$instance_number"; then
-        echo "Failed to setup instance $instance_name"
+        print_error "Failed to setup instance $instance_name"
         return 1
     fi
     
     # Verify the instance
     if ! verify_instance "$instance_name"; then
-        echo "Failed to verify instance $instance_name"
+        print_error "Failed to verify instance $instance_name"
         return 1
     fi
     
+    print_success "Instance $instance_name is ready"
+    return 0
+}
+
+# Helper function for case-insensitive string comparison
+to_lower() {
+    echo "$1" | tr '[:upper:]' '[:lower:]'
+}
+
+# Updated prompt_yes_no function
+prompt_yes_no() {
+    local question="$1"
+    local default="${2:-n}"  # Default to 'n' if not specified
+    
+    while true; do
+        if [ "$default" = "y" ]; then
+            printf "${YELLOW}${question} [Y/n]${NC} "
+        else
+            printf "${YELLOW}${question} [y/N]${NC} "
+        fi
+        
+        read -r answer
+        
+        # Default handling
+        if [ -z "$answer" ]; then
+            answer=$default
+        fi
+        
+        # Convert to lowercase using the portable to_lower function
+        answer=$(to_lower "$answer")
+        
+        case "$answer" in
+            y|yes)
+                return 0
+                ;;
+            n|no)
+                return 1
+                ;;
+            *)
+                print_warning "Please answer 'yes' or 'no'"
+                ;;
+        esac
+    done
+}
+
+# Add function to check and handle existing instances
+check_existing_instances() {
+    local base_name="$1"
+    local existing_instances=()
+    
+    print_step "Checking for existing instances..."
+    
+    # Get list of existing instances matching base name
+    while IFS=, read -r name state ipv4 release; do
+        if [[ "$name" == "$base_name"* ]]; then
+            existing_instances+=("$name")
+        fi
+    done < <(multipass list --format csv)
+    
+    if [ ${#existing_instances[@]} -gt 0 ]; then
+        print_warning "Found existing instances:"
+        for instance in "${existing_instances[@]}"; do
+            local state=$(multipass info "$instance" | grep "State:" | awk '{print $2}')
+            printf "  ${CYAN}${ARROW} %s (State: %s)${NC}\n" "$instance" "$state"
+        done
+        
+        if prompt_yes_no "Would you like to delete these instances and continue?"; then
+            print_step "Removing existing instances..."
+            
+            for instance in "${existing_instances[@]}"; do
+                print_substep "Deleting instance: $instance"
+                if ! multipass delete "$instance"; then
+                    print_error "Failed to delete instance: $instance"
+                    return 1
+                fi
+            done
+            
+            print_substep "Purging deleted instances..."
+            if ! multipass purge; then
+                print_error "Failed to purge instances"
+                return 1
+            fi
+            
+            print_success "Successfully removed existing instances"
+            return 0
+        else
+            print_warning "Aborting due to existing instances"
+            exit 1
+        fi
+    fi
+    
+    print_success "No existing instances found with base name: $base_name"
     return 0
 }
 
 # Set up trap but don't exit on errors
 trap cleanup EXIT
 
-echo "Starting cluster deployment..."
-echo "Base name: $BASE_NAME"
-echo "Number of instances: $NUM_INSTANCES"
+echo
+print_header "Starting Cluster Deployment"
+echo
+print_step "Configuration:"
+print_substep "Base name: $BASE_NAME"
+print_substep "Number of instances: $NUM_INSTANCES"
+echo
+
+# Check for existing instances before proceeding
+if ! check_existing_instances "$BASE_NAME"; then
+    exit 1
+fi
 
 # Setup Python environment
 if [ ! -d "fusion-env" ]; then
