@@ -15,9 +15,8 @@ check_ip_forwarding() {
     fi
 }
 
-# Default values
 BASE_NAME="fusion"
-NUM_INSTANCES=1
+NUM_INSTANCES=""
 JOIN_ADDRESS=""
 KILL_MODE=false
 
@@ -52,6 +51,27 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+if [ -z "$NUM_INSTANCES" ]; then
+    while true; do
+        printf "${YELLOW}Enter number of instances [1]: ${NC}"
+        read -r answer
+        
+        # Default to 1 if empty
+        if [ -z "$answer" ]; then
+            NUM_INSTANCES=1
+            break
+        fi
+        
+        # Validate input is a positive integer
+        if [[ "$answer" =~ ^[0-9]+$ ]] && [ "$answer" -gt 0 ]; then
+            NUM_INSTANCES=$answer
+            break
+        else
+            print_warning "Please enter a positive number"
+        fi
+    done
+fi
+
 # Handle kill mode first
 if [ "$KILL_MODE" = true ]; then
     echo "Stopping and removing instances with base name: $BASE_NAME"
@@ -60,7 +80,7 @@ if [ "$KILL_MODE" = true ]; then
         multipass delete "$instance"
     done
     multipass purge
-    echo "Cleanup complete"
+    [ "$VERBOSE" = true ] && echo "Cleanup complete"
     exit 0
 fi
 
@@ -69,17 +89,17 @@ check_ip_forwarding
 
 # Function to handle cleanup when script exits
 cleanup() {
-    echo
-    echo "Cleaning up..."
+    [ "$VERBOSE" = true ] && echo
+    [ "$VERBOSE" = true ] && echo "Cleaning up..."
     
     # Clean up temporary cloud-init files
-    echo "Cleaning up temporary cloud-init files..."
+    [ "$VERBOSE" = true ] && echo "Cleaning up temporary cloud-init files..."
     rm -f /tmp/cloud-init-${BASE_NAME}*.yaml
     
     # Deactivate Python virtual environment if it's active
     if [ -n "$VIRTUAL_ENV" ]; then
         deactivate
-        echo "Deactivated Python virtual environment"
+        [ "$VERBOSE" = true ] && echo "Deactivated Python virtual environment"
     fi
 }
 
@@ -266,17 +286,46 @@ setup_instance() {
     
     print_step "Starting services..."
     local services_started=true
-    for service in fusion-server keepalived haproxy; do
-        print_substep "Starting $service..."
-        if ! multipass exec "$instance_name" -- sudo systemctl daemon-reload || \
-           ! multipass exec "$instance_name" -- sudo systemctl enable --now "$service"; then
-            print_error "Failed to start $service"
-            services_started=false
-            break
-        fi
-        print_success "$service started successfully"
-    done
-    
+
+    # Do daemon-reload once before starting services, with explicit stdin handling
+    print_substep "Reloading systemd daemon..."
+    if ! multipass exec "$instance_name" -- sudo systemctl daemon-reload </dev/null; then
+        print_error "Failed to reload systemd daemon"
+        services_started=false
+    else
+        print_success "Daemon reload completed"
+        
+        # Now start each service
+        for service in fusion-server keepalived haproxy; do
+            print_substep "Starting $service..."
+            
+            # Enable service (without starting)
+            if ! multipass exec "$instance_name" -- sudo systemctl enable "$service" </dev/null; then
+                print_error "Failed to enable $service"
+                services_started=false
+                break
+            fi
+            
+            # Start service separately
+            if ! multipass exec "$instance_name" -- sudo systemctl start "$service" </dev/null; then
+                print_error "Failed to start $service"
+                multipass exec "$instance_name" -- sudo systemctl status "$service"
+                services_started=false
+                break
+            fi
+            
+            # Verify service is actually running
+            if ! multipass exec "$instance_name" -- sudo systemctl is-active --quiet "$service" </dev/null; then
+                print_error "$service failed to start properly"
+                multipass exec "$instance_name" -- sudo systemctl status "$service"
+                services_started=false
+                break
+            fi
+            
+            print_success "$service started successfully"
+        done
+    fi
+
     if [ "$services_started" = false ]; then
         return 1
     fi
@@ -437,11 +486,11 @@ fi
 if [ ! -d "fusion-env" ]; then
     python3 -m venv fusion-env
 fi
-echo "Activating Python virtual environment..."
+[ "$VERBOSE" = true ] && echo "Activating Python virtual environment..."
 source fusion-env/bin/activate
 
 # Generate base cloud-init
-echo "Generating cloud-init configuration..."
+[ "$VERBOSE" = true ] && echo "Generating cloud-init configuration..."
 ./scripts/generate_cloud_config.py > fusion-server.yaml
 
 # Launch first instance
