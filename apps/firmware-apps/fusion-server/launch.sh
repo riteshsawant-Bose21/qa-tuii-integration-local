@@ -27,6 +27,7 @@ usage() {
     echo "  --name      : Base name for instances (default: fusion)"
     echo "  --instances : Number of instances to create (default: 1)"
     echo "  --kill      : Delete and purge all instances with the specified base name"
+    echo "  --verbose   : Show detailed status output during setup and verification"
     exit 1
 }
 
@@ -66,192 +67,214 @@ fi
 # Check IP forwarding before proceeding
 check_ip_forwarding
 
-# Check for the fusion-server binary and build if not found
-if [ ! -f "build/fusion-server" ]; then
-    echo "fusion-server binary not found in build directory"
-    echo "Running build.sh to generate binary..."
-    if [ ! -f "build.sh" ]; then
-        echo "Error: build.sh script not found"
-        exit 1
-    fi
-    
-    if ! ./build.sh; then
-        echo "Error: build.sh failed to generate binary"
-        exit 1
-    fi
-    
-    if [ ! -f "build/fusion-server" ]; then
-        echo "Error: build.sh completed but binary still not found"
-        exit 1
-    fi
-    
-    echo "Successfully built fusion-server binary"
-fi
-
-# Function to setup and activate Python virtual environment
-setup_python_env() {
-    
-    # Check if virtual environment exists
-    if [ ! -d "fusion-env" ]; then
-        echo "Creating new Python virtual environment..."
-        python3 -m venv fusion-env
-        if [ $? -ne 0 ]; then
-            echo "Failed to create virtual environment"
-            exit 1
-        fi
-    fi
-
-    # Activate virtual environment
-    echo "Activating Python virtual environment..."
-    source fusion-env/bin/activate
-    if [ $? -ne 0 ]; then
-        echo "Failed to activate virtual environment"
-        exit 1
-    fi
-
-    # Install PyYAML if not already installed
-    if ! python3 -c "import yaml" 2>/dev/null; then
-        echo "Installing PyYAML..."
-        python3 -m pip install PyYAML
-        if [ $? -ne 0 ]; then
-            echo "Failed to install PyYAML"
-            exit 1
-        fi
-    fi
-}
-
-# Function to generate cloud-init configuration
-generate_cloud_init() {
-    echo "Generating cloud-init configuration..."
-    ./scripts/generate_cloud_config.py > fusion-server.yaml
-}
-
-# Add the Python environment setup and cloud-init generation before starting the cluster deployment
-echo "Starting cluster deployment..."
-echo "Base name: $BASE_NAME"
-echo "Number of instances: $NUM_INSTANCES"
-
-# Setup Python environment
-setup_python_env
-
-# Start Python HTTP server in background
-IP_ADDR=$(ifconfig | grep -A 1 "192.168.64" | grep "inet " | awk '{print $2}')
-echo "Starting download server on $IP_ADDR:8000"
-python3 -m http.server 8000 > /dev/null 2>&1 &
-PYTHON_PID=$!
-
-# Generate cloud-init configuration
-generate_cloud_init
-
 # Function to handle cleanup when script exits
 cleanup() {
-    # Only perform cleanup if not already in progress
-    if [ -z "$CLEANUP_IN_PROGRESS" ]; then
-        CLEANUP_IN_PROGRESS=1
-        echo
-        echo "Cleaning up..."
-        if [ ! -z "$PYTHON_PID" ]; then
-            # Send SIGTERM and wait for process to exit
-            kill -TERM $PYTHON_PID 2>/dev/null
-            wait $PYTHON_PID 2>/dev/null
-            echo "Stopped download server"
-        fi
-        
-        # Clean up temporary cloud-init files
-        echo "Cleaning up temporary cloud-init files..."
-        rm -f /tmp/cloud-init-${BASE_NAME}*.yaml
-
-        # Deactivate Python virtual environment if it's active
-        if [ -n "$VIRTUAL_ENV" ]; then
-            deactivate
-            echo "Deactivated Python virtual environment"
-        fi
+    echo
+    echo "Cleaning up..."
+    
+    # Clean up temporary cloud-init files
+    echo "Cleaning up temporary cloud-init files..."
+    rm -f /tmp/cloud-init-${BASE_NAME}*.yaml
+    
+    # Deactivate Python virtual environment if it's active
+    if [ -n "$VIRTUAL_ENV" ]; then
+        deactivate
+        echo "Deactivated Python virtual environment"
     fi
 }
 
-# Set up more comprehensive signal handling
-trap 'cleanup' EXIT
-trap 'exit 2' INT TERM
-
-# Set up trap but don't exit on errors
-set +e
-trap cleanup EXIT
-
-# Function to create instance-specific cloud-init configuration
-create_cloud_init() {
+# Function to display instance status
+show_instance_status() {
     local instance_name="$1"
-    local join_addr="$2"
-    local cloud_init_file="/tmp/cloud-init-${instance_name}.yaml"
     
-    # Read the base configuration
-    if [ ! -f "fusion-server.yaml" ]; then
-        echo "Error: fusion-server.yaml not found"
+    echo "Instance Status:"
+    echo "==============="
+    
+    # Show network status
+    echo "Network Configuration:"
+    multipass exec "$instance_name" -- networkctl status
+    
+    # Show service status
+    echo
+    echo "Service Status:"
+    for service in fusion-server keepalived haproxy; do
+        echo
+        echo "=== $service ==="
+        multipass exec "$instance_name" -- systemctl status "$service" --no-pager || true
+    done
+    
+    # Show IP configuration
+    echo
+    echo "IP Configuration:"
+    multipass exec "$instance_name" -- ip addr show
+
+    # Show process list
+    echo
+    echo "Process Status:"
+    multipass exec "$instance_name" -- ps aux | grep -E 'fusion-server|keepalived|haproxy' || true
+}
+
+# Function to setup instance
+setup_instance() {
+    local instance_name="$1"
+    local instance_number="$2"
+    
+    echo "Setting up instance: $instance_name (number: $instance_number)"
+    
+    # Wait a bit for the instance to be ready
+    echo "Waiting for instance to initialize..."
+    sleep 10
+    
+    # Copy fusion-server binary
+    echo "Copying fusion-server binary..."
+    if ! multipass transfer build/fusion-server "$instance_name":/tmp/; then
+        echo "Error: Failed to copy fusion-server binary"
         return 1
     fi
-
-    # Create instance-specific cloud-init
-    cp fusion-server.yaml "$cloud_init_file"
     
-    if [ ! -z "$join_addr" ]; then
-        # For additional instances, modify the ExecStart line while preserving YAML structure
-        awk -v join="${join_addr}" '
-        /ExecStart=\/usr\/local\/bin\/fusion-server/ {
-            indent=$0
-            gsub(/[^ ].*$/, "", indent)  # Preserve indentation
-            print indent "ExecStart=/usr/local/bin/fusion-server -name %H -addr 0.0.0.0 -port 7946 -join " join
-            next
-        }
-        { print }' "$cloud_init_file" > "${cloud_init_file}.tmp" && mv "${cloud_init_file}.tmp" "$cloud_init_file"
+    # Install binary and set permissions
+    echo "Installing binary..."
+    if ! multipass exec "$instance_name" -- sudo cp /tmp/fusion-server /usr/local/bin/ || \
+       ! multipass exec "$instance_name" -- sudo chmod 755 /usr/local/bin/fusion-server || \
+       ! multipass exec "$instance_name" -- rm /tmp/fusion-server; then
+        echo "Error: Failed to install fusion-server binary"
+        return 1
     fi
-
-    echo "$cloud_init_file"
+    
+    # Update keepalived priority based on instance number
+    echo "Configuring keepalived priority..."
+    local priority=$((100 - instance_number))
+    multipass exec "$instance_name" -- sudo sed -i "s/priority 100/priority ${priority}/" /etc/keepalived/keepalived.conf
+    
+    # Start services
+    echo "Starting services..."
+    if ! multipass exec "$instance_name" -- sudo systemctl daemon-reload || \
+       ! multipass exec "$instance_name" -- sudo systemctl enable --now fusion-server || \
+       ! multipass exec "$instance_name" -- sudo systemctl enable --now keepalived || \
+       ! multipass exec "$instance_name" -- sudo systemctl enable --now haproxy; then
+        echo "Error: Failed to start services"
+        return 1
+    fi
+    
+    # Show instance status
+    [ "$VERBOSE" = true ] && show_instance_status "$instance_name"
+    
+    return 0
 }
 
-# Function to verify instance
+# Function to verify instance services
 verify_instance() {
     local instance_name="$1"
     local max_retries=30
     local retry_count=0
     
-    echo "Waiting for instance $instance_name to initialize..."
+    echo "Verifying instance $instance_name..."
     
-    # Wait for instance to be ready
+    echo "Verifying services..."
     while [ $retry_count -lt $max_retries ]; do
-        if multipass exec "$instance_name" -- systemctl is-active --quiet fusion-server; then
-            echo "fusion-server is running on $instance_name"
-            multipass exec "$instance_name" -- systemctl status fusion-server
-            echo "Instance info:"
-            multipass info "$instance_name"
-            
-            # Show all listening ports
-            echo "Checking listening ports:"
-            multipass exec "$instance_name" -- ss -tulpn || true
-            return 0
+        # Check if binary exists
+        if ! multipass exec "$instance_name" -- test -x /usr/local/bin/fusion-server; then
+            echo "Waiting for fusion-server binary (attempt $((retry_count + 1))/$max_retries)..."
+            sleep 5
+            ((retry_count++))
+            continue
         fi
         
-        echo "Waiting for fusion-server to start (attempt $((retry_count + 1))/$max_retries)..."
-        sleep 10
+        # Check services one by one
+        local all_services_running=true
+        for service in fusion-server keepalived haproxy; do
+            if ! multipass exec "$instance_name" -- systemctl is-active --quiet "$service"; then
+                echo "Service $service is not running"
+                all_services_running=false
+                break
+            fi
+        done
+        
+        if [ "$all_services_running" = true ]; then
+            echo "All services are running on $instance_name"
+            # Verify VIP is accessible and capture the response
+            echo "Checking VIP accessibility..."
+            local response
+            response=$(multipass exec "$instance_name" -- curl -sf http://192.168.64.100:8080 2>/dev/null)
+            if [ $? -eq 0 ]; then
+                echo "VIP is accessible"
+                echo "Server response: $response"
+                return 0
+            else
+                echo "Warning: VIP is not accessible yet (attempt $((retry_count + 1))/$max_retries)"
+            fi
+        fi
+        
+        echo "Waiting for services to start (attempt $((retry_count + 1))/$max_retries)..."
+        sleep 5
         ((retry_count++))
     done
     
-    echo "Error: fusion-server failed to start on $instance_name after $max_retries attempts"
-    multipass exec "$instance_name" -- systemctl status fusion-server || true
-    multipass exec "$instance_name" -- journalctl -u fusion-server --no-pager || true
+    echo "Error: services failed to start on $instance_name after $max_retries attempts"
+    # Show full status on failure
+    show_instance_status "$instance_name"
     return 1
 }
 
+# Function to launch instance
+launch_instance() {
+    local instance_name="$1"
+    local instance_number="$2"
+    local join_addr="$3"
+    local cloud_init_file="/tmp/cloud-init-${instance_name}.yaml"
+    
+    # Copy base cloud-init and modify if needed
+    cp fusion-server.yaml "$cloud_init_file"
+    
+    if [ ! -z "$join_addr" ]; then
+        # Modify the fusion-server service to include join address
+        sed -i.bak "s|ExecStart=/usr/local/bin/fusion-server.*|ExecStart=/usr/local/bin/fusion-server -name %H -addr 0.0.0.0 -port 7946 -join ${join_addr}|" "$cloud_init_file"
+    fi
+    
+    echo "Launching instance: $instance_name"
+    if ! multipass launch --name "$instance_name" --cloud-init "$cloud_init_file" --memory 2G --cpus 2; then
+        echo "Failed to launch instance $instance_name"
+        return 1
+    fi
+    echo "Launched: $instance_name"
+    
+    # Setup the instance
+    if ! setup_instance "$instance_name" "$instance_number"; then
+        echo "Failed to setup instance $instance_name"
+        return 1
+    fi
+    
+    # Verify the instance
+    if ! verify_instance "$instance_name"; then
+        echo "Failed to verify instance $instance_name"
+        return 1
+    fi
+    
+    return 0
+}
+
+# Set up trap but don't exit on errors
+trap cleanup EXIT
+
+echo "Starting cluster deployment..."
+echo "Base name: $BASE_NAME"
+echo "Number of instances: $NUM_INSTANCES"
+
+# Setup Python environment
+if [ ! -d "fusion-env" ]; then
+    python3 -m venv fusion-env
+fi
+echo "Activating Python virtual environment..."
+source fusion-env/bin/activate
+
+# Generate base cloud-init
+echo "Generating cloud-init configuration..."
+./scripts/generate_cloud_config.py > fusion-server.yaml
+
 # Launch first instance
 FIRST_INSTANCE="${BASE_NAME}1"
-echo "Launching first instance: $FIRST_INSTANCE"
-cloud_init_file=$(create_cloud_init "$FIRST_INSTANCE" "")
-if ! multipass launch --name "$FIRST_INSTANCE" --cloud-init "$cloud_init_file" --memory 2G --cpus 2 ; then
+if ! launch_instance "$FIRST_INSTANCE" 1 ""; then
     echo "Failed to launch first instance"
-    exit 1
-fi
-
-# Verify first instance
-if ! verify_instance "$FIRST_INSTANCE"; then
-    echo "Failed to verify first instance"
     exit 1
 fi
 
@@ -263,16 +286,8 @@ echo "First instance IP: $FIRST_IP"
 if [ "$NUM_INSTANCES" -gt 1 ]; then
     for i in $(seq 2 "$NUM_INSTANCES"); do
         INSTANCE_NAME="${BASE_NAME}${i}"
-        echo "Launching instance $i: $INSTANCE_NAME"
-        cloud_init_file=$(create_cloud_init "$INSTANCE_NAME" "${FIRST_IP}:7946")
-        
-        if ! multipass launch --name "$INSTANCE_NAME" --cloud-init "$cloud_init_file" --memory 2G --cpus 2; then
+        if ! launch_instance "$INSTANCE_NAME" "$i" "${FIRST_IP}:7946"; then
             echo "Failed to launch instance $INSTANCE_NAME"
-            continue
-        fi
-        
-        if ! verify_instance "$INSTANCE_NAME"; then
-            echo "Failed to verify instance $INSTANCE_NAME"
             continue
         fi
     done

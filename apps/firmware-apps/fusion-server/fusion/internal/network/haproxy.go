@@ -17,27 +17,26 @@ import (
 )
 
 const haproxyTemplate = `global
- log /dev/log local0
- stats socket /var/run/haproxy.sock mode 600 level admin
- stats timeout 2m
- maxconn 4096
+    log /dev/log local0
+    stats socket /var/run/haproxy.sock mode 600 level admin expose-fd listeners
+    stats timeout 2m
+    maxconn 4096
 
 defaults
- log global
- mode http
- option httplog
- option dontlognull
- timeout connect 5000
- timeout client 50000
- timeout server 50000
+    log global
+    mode http
+    option httplog
+    option dontlognull
+    timeout connect 5000
+    timeout client 50000
+    timeout server 50000
 
 frontend http-in
- bind *:80
- default_backend servers
-
+    bind *:80
+    default_backend servers
+    
 backend servers
- balance roundrobin
-
+    balance roundrobin
 `
 
 // ManageHAProxy continuously updates HAProxy configuration based on cluster membership

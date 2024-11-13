@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import yaml
+import os
 
 # Configure yaml to use | for literal blocks
 class literal_str(str): pass
@@ -16,25 +17,67 @@ def read_file(path):
 
 def generate_config(scripts_dir="scripts"):
     """Generate the cloud-init configuration."""
+    
+    # Updated keepalived.conf content
+    keepalived_conf = '''vrrp_script chk_haproxy {
+    script "/usr/local/bin/check-haproxy.sh"
+    interval 2
+    weight 2
+}
+
+global_defs {
+    enable_script_security
+}
+
+vrrp_instance VI_1 {
+    state BACKUP
+    interface enp0s1
+    virtual_router_id 51
+    priority 100
+    advert_int 1
+    authentication {
+        auth_type PASS
+        auth_pass fusion
+    }
+    virtual_ipaddress {
+        192.168.64.100/24
+    }
+    track_script {
+        chk_haproxy
+    }
+}'''
+
+    # Updated haproxy.cfg content
+    haproxy_conf = '''global
+    log /dev/log local0
+    stats socket /var/run/haproxy.sock mode 600 level admin expose-fd listeners
+    stats timeout 2m
+    maxconn 4096
+
+defaults
+    log global
+    mode http
+    option httplog
+    option dontlognull
+    timeout connect 5000
+    timeout client 50000
+    timeout server 50000
+
+frontend http-in
+    bind *:80
+    default_backend servers
+
+backend servers
+    balance roundrobin'''
+
     cloud_config = {
         'package_update': True,
         'package_upgrade': True,
         'packages': [
             'haproxy',
             'keepalived',
-            'net-tools'  # Added for network troubleshooting
+            'net-tools'
         ],
-        # Add network configuration
-        'network': {
-            'version': 2,
-            'ethernets': {
-                'eth0': {
-                    'dhcp4': True,
-                    'dhcp6': True,
-                    'optional': False
-                }
-            }
-        },
         'write_files': [
             {
                 'path': '/etc/systemd/system/fusion-server.service',
@@ -52,13 +95,13 @@ def generate_config(scripts_dir="scripts"):
                 'path': '/etc/keepalived/keepalived.conf',
                 'permissions': '0644',
                 'owner': 'root:root',
-                'content': read_file(f"{scripts_dir}/keepalived.conf")
+                'content': literal_str(keepalived_conf)
             },
             {
-                'path': '/etc/systemd/system/haproxy.service',
+                'path': '/etc/haproxy/haproxy.cfg',
                 'permissions': '0644',
                 'owner': 'root:root',
-                'content': read_file(f"{scripts_dir}/haproxy.service")
+                'content': literal_str(haproxy_conf)
             },
             {
                 'path': '/usr/local/bin/check-haproxy.sh',
@@ -72,12 +115,6 @@ def generate_config(scripts_dir="scripts"):
                 'owner': 'root:root',
                 'content': read_file(f"{scripts_dir}/setup-fusion.sh")
             }
-        ],
-        'runcmd': [
-            # Add network verification steps
-            'systemctl restart systemd-networkd',
-            'networkctl status',
-            'bash -x /usr/local/bin/setup-fusion.sh'
         ]
     }
     return cloud_config
@@ -85,7 +122,4 @@ def generate_config(scripts_dir="scripts"):
 if __name__ == "__main__":
     config = generate_config()
     print("#cloud-config")
-    # Use default_flow_style=False for block formatting
-    # Sort keys to maintain consistent ordering
     print(yaml.dump(config, default_flow_style=False, sort_keys=False))
-    
