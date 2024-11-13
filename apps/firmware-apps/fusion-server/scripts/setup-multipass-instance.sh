@@ -13,10 +13,6 @@ fi
 echo "Launching instance..."
 multipass launch --name $INSTANCE_NAME --memory 2G --cpus 2
 
-# Get the host's IP from the VM's perspective (gateway)
-HOST_IP=$(multipass exec $INSTANCE_NAME -- ip route | grep default | cut -d' ' -f3)
-echo "Host IP to use: $HOST_IP"
-
 echo "Creating directories..."
 multipass exec $INSTANCE_NAME -- sudo mkdir -p /usr/local/bin /etc/systemd/system /etc/keepalived
 
@@ -40,14 +36,6 @@ echo "Installing packages..."
 multipass exec $INSTANCE_NAME -- sudo apt-get update
 multipass exec $INSTANCE_NAME -- sudo apt-get install -y haproxy keepalived
 
-echo "Starting HTTP server for fusion-server download..."
-# Start HTTP server in the parent directory so build folder is accessible
-python3 -m http.server 8000 --bind 0.0.0.0 &
-HTTP_PID=$!
-
-# Wait a moment for the HTTP server to start
-sleep 2
-
 # Create a modified setup script that uses the correct IP
 cat > /tmp/modified-setup.sh << EOF
 #!/bin/bash
@@ -55,8 +43,6 @@ set -ex
 
 # Create required directories
 mkdir -p /etc/haproxy /etc/keepalived /var/lib/fusion
-
-echo "Using host IP: $HOST_IP"
 
 # Download fusion-server with retry
 MAX_RETRIES=5

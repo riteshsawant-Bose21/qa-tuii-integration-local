@@ -1,0 +1,699 @@
+#!/usr/bin/env python3
+import os
+import sys
+import venv
+import subprocess
+from pathlib import Path
+
+# Bootstrap environment setup
+def ensure_venv():
+    """Ensure we're running in a virtual environment with all dependencies."""
+    VENV_DIR = Path.home() / '.multipass-manager-env'
+    REQUIREMENTS = [
+        'click>=8.0.0',
+        'tabulate>=0.8.0'
+    ]
+
+    def is_venv():
+        return hasattr(sys, 'real_prefix') or (
+            hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix
+        )
+
+    def create_venv():
+        print("Creating virtual environment...")
+        venv.create(VENV_DIR, with_pip=True)
+
+    def install_requirements():
+        pip_path = VENV_DIR / ('Scripts' if os.name == 'nt' else 'bin') / 'pip'
+        requirements_file = VENV_DIR / 'requirements.txt'
+        
+        with open(requirements_file, 'w') as f:
+            f.write('\n'.join(REQUIREMENTS))
+        
+        print("Installing dependencies...")
+        subprocess.run([str(pip_path), 'install', '-r', str(requirements_file)], check=True)
+
+    def restart_in_venv():
+        python_path = VENV_DIR / ('Scripts' if os.name == 'nt' else 'bin') / 'python'
+        os.execl(str(python_path), str(python_path), *sys.argv)
+
+    if not is_venv():
+        if not VENV_DIR.exists():
+            create_venv()
+            install_requirements()
+        restart_in_venv()
+
+# Run environment bootstrap
+ensure_venv()
+
+import click
+import json
+from tabulate import tabulate
+from typing import List, Dict
+
+class MultipassManager:
+    def __init__(self, base_name: str = "fusion"):
+        self.base_name = base_name
+        self._vip_info = None
+
+    def _run_command(self, command: List[str], capture_output: bool = True, shell: bool = False) -> subprocess.CompletedProcess:
+        """Run a shell command and handle errors."""
+        try:
+            if shell:
+                cmd_str = ' '.join(command)
+                process = subprocess.run(
+                    cmd_str,
+                    shell=True,
+                    capture_output=capture_output,
+                    text=True,
+                    check=True
+                )
+            else:
+                process = subprocess.run(
+                    command,
+                    capture_output=capture_output,
+                    text=True,
+                    check=True
+                )
+            return process
+        except subprocess.CalledProcessError as e:
+            print(f"Debug - Command failed with return code {e.returncode}")
+            print(f"Debug - Error output: {e.stderr}")
+            raise
+
+    def get_disk_usage(self, instance_name: str) -> Dict:
+        """Get disk usage information for an instance."""
+        try:
+            result = self._run_command([
+                'multipass', 'exec', instance_name, '--',
+                'df', '-h', '/'
+            ])
+            # Parse df output, get the root filesystem line
+            lines = result.stdout.strip().split('\n')
+            if len(lines) >= 2:
+                # Get values from the second line (root filesystem)
+                values = lines[1].split()
+                return {
+                    'total': values[1],
+                    'used': values[2],
+                    'available': values[3],
+                    'use_percent': values[4]
+                }
+        except Exception as e:
+            return {
+                'error': str(e)
+            }
+        return None
+
+    def get_cpu_memory_usage(self, instance_name: str) -> Dict:
+        """Get CPU and memory usage information for an instance."""
+        try:
+            # Get CPU usage using top in batch mode
+            cpu_result = self._run_command([
+                'multipass', 'exec', instance_name, '--',
+                'top', '-bn1'
+            ])
+            
+            # Get memory info
+            mem_result = self._run_command([
+                'multipass', 'exec', instance_name, '--',
+                'free', '-m'
+            ])
+            
+            # Parse CPU usage from top output
+            cpu_usage = None
+            for line in cpu_result.stdout.split('\n'):
+                if '%Cpu(s)' in line:
+                    # Extract CPU idle percentage
+                    parts = line.split(',')
+                    for part in parts:
+                        if 'id' in part:  # idle percentage
+                            idle = float(part.split()[0])
+                            cpu_usage = round(100 - idle, 1)
+                            break
+            
+            # Parse memory usage
+            mem_lines = mem_result.stdout.strip().split('\n')
+            if len(mem_lines) >= 2:
+                mem_values = mem_lines[1].split()
+                total_mem = int(mem_values[1])
+                used_mem = int(mem_values[2])
+                mem_percent = round((used_mem / total_mem) * 100, 1)
+            
+            return {
+                'cpu_percent': cpu_usage,
+                'memory_percent': mem_percent,
+                'memory_total': total_mem,
+                'memory_used': used_mem
+            }
+            
+        except Exception as e:
+            return {
+                'error': str(e)
+            }
+
+    def get_instance_resources(self, instance_name: str) -> Dict:
+        """Get resource usage information for an instance using multipass info."""
+        try:
+            # Get disk usage (simpler command first)
+            disk_cmd = [
+                'multipass', 'exec', instance_name, '--',
+                'df', '/'
+            ]
+            disk_result = self._run_command(disk_cmd)
+            disk_lines = disk_result.stdout.strip().split('\n')
+            disk_usage = disk_lines[1].split()[4] if len(disk_lines) > 1 else 'N/A'
+
+            # Get memory usage (simpler command)
+            mem_cmd = [
+                'multipass', 'exec', instance_name, '--',
+                'free', '-m'
+            ]
+            mem_result = self._run_command(mem_cmd)
+            mem_lines = mem_result.stdout.strip().split('\n')
+            if len(mem_lines) > 1:
+                mem_values = mem_lines[1].split()
+                total_mem = int(mem_values[1])
+                used_mem = int(mem_values[2])
+                mem_usage = f"{round((used_mem / total_mem) * 100, 1)}%"
+            else:
+                mem_usage = 'N/A'
+
+            # Get CPU usage (simpler version)
+            cpu_cmd = [
+                'multipass', 'exec', instance_name, '--',
+                'top', '-bn1'
+            ]
+            cpu_result = self._run_command(cpu_cmd)
+            cpu_usage = 'N/A'
+            for line in cpu_result.stdout.split('\n'):
+                if '%Cpu(s)' in line:
+                    cpu_parts = line.split(',')
+                    for part in cpu_parts:
+                        if 'id' in part:
+                            idle = float(part.split()[0])
+                            cpu_usage = f"{round(100 - idle, 1)}%"
+                            break
+
+            return {
+                'cpu_percent': cpu_usage,
+                'memory_percent': mem_usage,
+                'disk_percent': disk_usage,
+                'error': None
+            }
+        except Exception as e:
+            print(f"Debug - Error getting resources for {instance_name}: {str(e)}")
+            print(f"Debug - Exception type: {type(e)}")
+            import traceback
+            print(f"Debug - Traceback: {traceback.format_exc()}")
+            return {
+                'cpu_percent': 'N/A',
+                'memory_percent': 'N/A',
+                'disk_percent': 'N/A',
+                'error': str(e)
+            }
+    
+    def get_instances(self) -> List[Dict]:
+        """Get all instances matching the base name pattern."""
+        result = self._run_command(['multipass', 'list', '--format', 'json'])
+        data = json.loads(result.stdout)
+        instances = []
+        
+        for instance in data['list']:
+            name = instance['name']
+            if name.startswith(self.base_name):
+                instance_data = {
+                    'name': name,
+                    'state': instance['state'],
+                    'ipv4': instance['ipv4'][0] if instance['ipv4'] else 'N/A',
+                    'memory': instance.get('memory', 'N/A'),
+                    'cpu': instance.get('cpu', 'N/A')
+                }
+                
+                # Get resource usage for running instances
+                if instance['state'] == 'Running':
+                    resources = self.get_instance_resources(name)
+                    instance_data.update({
+                        'cpu_percent': resources['cpu_percent'],
+                        'memory_percent': resources['memory_percent'],
+                        'disk_percent': resources['disk_percent']
+                    })
+                    if resources['error']:
+                        print(f"Debug - {name} resource error: {resources['error']}")
+                
+                instances.append(instance_data)
+        
+        return sorted(instances, key=lambda x: x['name'])
+
+    def get_vip_info(self, instance_name: str = None) -> Dict:
+        """Get VIP information from keepalived configuration or network interfaces."""
+        if self._vip_info:
+            return self._vip_info
+
+        # If no instance specified, find one running keepalived
+        if not instance_name:
+            instances = self.get_instances()
+            for instance in instances:
+                if (instance['state'] == 'Running' and 
+                    self.check_service_status(instance['name'], 'keepalived') == 'active'):
+                    instance_name = instance['name']
+                    break
+        
+        if not instance_name:
+            return None
+
+        try:
+            # First try to get from keepalived config
+            result = self._run_command([
+                'multipass', 'exec', instance_name, '--',
+                'sudo', 'cat', '/etc/keepalived/keepalived.conf'
+            ])
+            
+            # Parse keepalived config for virtual_ipaddress
+            import re
+            vip_match = re.search(r'virtual_ipaddress\s*{\s*([0-9.]+)', result.stdout)
+            if vip_match:
+                vip = vip_match.group(1)
+                # Try to get port from haproxy config
+                try:
+                    result = self._run_command([
+                        'multipass', 'exec', instance_name, '--',
+                        'sudo', 'cat', '/etc/haproxy/haproxy.cfg'
+                    ])
+                    port_match = re.search(r'bind\s*([0-9.]+):([0-9]+)', result.stdout)
+                    port = port_match.group(2) if port_match else '8080'
+                except:
+                    port = '8080'  # Default if can't read haproxy config
+                
+                self._vip_info = {'address': vip, 'port': port}
+                return self._vip_info
+
+        except Exception as e:
+            # Fallback to checking network interfaces
+            try:
+                result = self._run_command([
+                    'multipass', 'exec', instance_name, '--',
+                    'ip', 'addr', 'show'
+                ])
+                
+                # Look for an IP that's not the instance's main IP
+                instance_ips = set()
+                for instance in self.get_instances():
+                    if instance['ipv4'] != 'N/A':
+                        instance_ips.add(instance['ipv4'])
+                
+                # Find IPs in the output that aren't instance IPs
+                ip_matches = re.finditer(r'inet\s+([0-9.]+)/', result.stdout)
+                for match in ip_matches:
+                    ip = match.group(1)
+                    if ip not in instance_ips and not ip.startswith('127.'):
+                        self._vip_info = {'address': ip, 'port': '8080'}
+                        return self._vip_info
+                        
+            except Exception as fallback_error:
+                return None
+
+        return None
+
+    def check_vip_status(self, instance_name: str) -> Dict:
+        """Check if this instance holds the VIP and if the VIP is responding."""
+        status = {
+            'has_vip': False,
+            'is_responding': False,
+            'error': None
+        }
+        
+        try:
+            # First ensure we have VIP info
+            vip_info = self.get_vip_info(instance_name)
+            if not vip_info:
+                status['error'] = "Could not determine VIP address"
+                return status
+
+            # Check if instance has the VIP
+            result = self._run_command([
+                'multipass', 'exec', instance_name, '--',
+                'ip', 'addr', 'show'
+            ])
+            
+            if vip_info['address'] in result.stdout:
+                status['has_vip'] = True
+                
+                # If instance has VIP, check if it's responding
+                try:
+                    health_check = self._run_command([
+                        'multipass', 'exec', instance_name, '--',
+                        'curl', '-sf', f'http://{vip_info["address"]}:{vip_info["port"]}'
+                    ])
+                    status['is_responding'] = True
+                except subprocess.CalledProcessError:
+                    status['is_responding'] = False
+                    
+        except Exception as e:
+            status['error'] = str(e)
+            
+        return status
+
+    def get_cluster_status(self) -> Dict:
+        """Get overall cluster status summary including VIP status."""
+        instances = self.get_instances()
+        total_instances = len(instances)
+        running_instances = sum(1 for i in instances if i['state'] == 'Running')
+        
+        services_status = {
+            'fusion-server': {'active': 0, 'total': 0},
+            'keepalived': {'active': 0, 'total': 0},
+            'haproxy': {'active': 0, 'total': 0}
+        }
+        
+        vip_status = {
+            'active_node': None,
+            'is_responding': False,
+            'info': self.get_vip_info(),
+            'error': None
+        }
+        
+        for instance in instances:
+            instance_name = instance['name']
+            if instance['state'] == 'Running':
+                # Check services
+                for service in services_status:
+                    services_status[service]['total'] += 1
+                    if self.check_service_status(instance_name, service) == 'active':
+                        services_status[service]['active'] += 1
+                
+                # Check VIP status
+                vip_check = self.check_vip_status(instance_name)
+                if vip_check['has_vip']:
+                    vip_status['active_node'] = instance_name
+                    vip_status['is_responding'] = vip_check['is_responding']
+                if vip_check['error']:
+                    vip_status['error'] = vip_check['error']
+        
+        return {
+            'total_instances': total_instances,
+            'running_instances': running_instances,
+            'services': services_status,
+            'vip': vip_status
+        }
+
+    def check_service_status(self, instance_name: str, service: str) -> str:
+        try:
+            result = self._run_command([
+                'multipass', 'exec', instance_name, '--',
+                'systemctl', 'is-active', service
+            ])
+            return result.stdout.strip()
+        except:
+            return 'inactive'
+
+    def get_instance_details(self, instance_name: str) -> Dict:
+        details = {}
+        
+        services = ['fusion-server', 'keepalived', 'haproxy']
+        details['services'] = {
+            service: self.check_service_status(instance_name, service)
+            for service in services
+        }
+        
+        try:
+            result = self._run_command([
+                'multipass', 'exec', instance_name, '--',
+                'ip', 'addr', 'show'
+            ])
+            details['network'] = result.stdout
+        except:
+            details['network'] = 'Unable to fetch network information'
+        
+        return details
+
+class AliasedGroup(click.Group):
+    def get_command(self, ctx, cmd_name):
+        rv = click.Group.get_command(self, ctx, cmd_name)
+        if rv is not None:
+            return rv
+        matches = [x for x in self.list_commands(ctx) if x.startswith(cmd_name)]
+        if not matches:
+            return None
+        elif len(matches) == 1:
+            return click.Group.get_command(self, ctx, matches[0])
+        ctx.fail(f"Too many matches: {', '.join(sorted(matches))}")
+
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+
+@click.group(cls=AliasedGroup, context_settings=CONTEXT_SETTINGS, invoke_without_command=True)
+@click.option('--base-name', default='fusion', help='Base name for the instances')
+@click.pass_context
+def cli(ctx, base_name):
+    """
+    Multipass Instance Manager for Fusion Cluster
+
+    Commands:
+      status   Show cluster status (default command)
+      list     List all instances
+      inspect  Show detailed information about an instance
+      restart  Restart a service on an instance
+      version  Show version information
+    
+    Examples:
+      # Show cluster status
+      fusion-manager.py
+      
+      # List all instances
+      fusion-manager.py list
+      
+      # Inspect specific instance
+      fusion-manager.py inspect fusion1
+      
+      # Restart a service
+      fusion-manager.py restart fusion1 fusion-server
+    """
+    ctx.obj = MultipassManager(base_name)
+    
+    # If no command is provided, run status
+    if ctx.invoked_subcommand is None:
+        ctx.invoke(status)
+
+def box_title(title: str, width: int = 60) -> str:
+    """Create a boxed title with Unicode single line characters."""
+    title = f" {title} "
+    padding_width = (width - len(title)) // 2
+    top_bottom = "─" * width
+    padded_title = " " * padding_width + title + " " * (width - len(title) - padding_width)
+    
+    return (
+        f"┌{top_bottom}┐\n"
+        f"│{padded_title}│\n"
+        f"└{top_bottom}┘"
+    )
+
+def format_resource_value(value: str, type: str = 'percentage') -> str:
+    """Format resource values with colors based on thresholds."""
+    if value == 'N/A':
+        return click.style(value, fg='yellow')
+    
+    try:
+        if type == 'percentage':
+            num_value = float(value.rstrip('%'))
+            if num_value >= 90:
+                return click.style(f"{num_value:>5.1f}%", fg='red', bold=True)
+            elif num_value >= 75:
+                return click.style(f"{num_value:>5.1f}%", fg='yellow', bold=True)
+            else:
+                return click.style(f"{num_value:>5.1f}%", fg='green')
+        return value
+    except ValueError:
+        return value
+
+def create_table(data: List[List], headers: List[str], style: str = 'fancy_grid') -> str:
+    """Create a formatted table with consistent column widths and colors."""
+    # Format each cell in the table
+    formatted_data = []
+    for row in data:
+        formatted_row = []
+        for i, cell in enumerate(row):
+            if headers[i] in ['CPU %', 'Memory %', 'Disk Used']:
+                formatted_row.append(format_resource_value(str(cell)))
+            elif headers[i] == 'State':
+                color = 'green' if cell == 'Running' else 'red'
+                formatted_row.append(click.style(cell, fg=color))
+            elif headers[i] == 'VIP':
+                if cell == '✓':
+                    formatted_row.append(click.style('✓', fg='green', bold=True))
+                else:
+                    formatted_row.append(cell)
+            else:
+                formatted_row.append(cell)
+        formatted_data.append(formatted_row)
+
+    # Create the table with the specified style
+    return tabulate(
+        formatted_data,
+        headers=headers,
+        tablefmt=style,
+        numalign='right',
+        stralign='left',
+        colalign=('left',) + ('right',) * (len(headers) - 1)
+    )
+
+@cli.command()
+@click.pass_obj
+def status(manager: MultipassManager):
+    """Show overall cluster status (default command)."""
+    cluster_status = manager.get_cluster_status()
+    
+    # Display instance summary
+    click.echo()
+    click.secho(box_title("Cluster Summary"), fg='blue', bold=True)
+    click.echo(f"Total Instances: {cluster_status['total_instances']}")
+    click.echo(f"Running Instances: {cluster_status['running_instances']}")
+    
+    # Display VIP status
+    click.echo()
+    click.secho(box_title("Virtual IP Status"), fg='blue', bold=True)
+    vip_status = cluster_status['vip']
+    if vip_status['info']:
+        click.echo(f"VIP Address: {vip_status['info']['address']}")
+        click.echo(f"VIP Port: {vip_status['info']['port']}")
+        if vip_status['active_node']:
+            click.echo(f"Active Node: {vip_status['active_node']}")
+            status_color = 'green' if vip_status['is_responding'] else 'red'
+            status_text = 'Responding' if vip_status['is_responding'] else 'Not Responding'
+            click.secho(f"Status: {status_text}", fg=status_color)
+        else:
+            click.secho("Status: No Active Node", fg='red')
+    else:
+        click.secho("VIP Status: Could not determine VIP configuration", fg='red')
+    
+    if vip_status['error']:
+        click.secho(f"Error: {vip_status['error']}", fg='red')
+    
+    # Display service status
+    click.echo()
+    click.secho(box_title("Service Status"), fg='blue', bold=True)
+    for service, status in cluster_status['services'].items():
+        active = status['active']
+        total = status['total']
+        color = 'green' if active == total else 'yellow' if active > 0 else 'red'
+        click.secho(
+            f"{service}: {active}/{total} active",
+            fg=color
+        )
+                
+    # Display instance list with resource usage
+    if cluster_status['total_instances'] > 0:
+        click.echo()
+        click.secho(box_title("Instances"), fg='blue', bold=True)
+        instances = manager.get_instances()
+        
+        headers = ['Name', 'State', 'IPv4', 'CPU %', 'Memory %', 'Disk Used', 'VIP']
+        table_data = []
+        for instance in instances:
+            vip_holder = '✓' if instance['name'] == vip_status['active_node'] else ''
+            
+            # Format resource usage
+            cpu_usage = f"{instance.get('cpu_percent', 'N/A')}%" if instance.get('cpu_percent') is not None else 'N/A'
+            mem_usage = f"{instance.get('memory_percent', 'N/A')}%" if instance.get('memory_percent') is not None else 'N/A'
+            disk_usage = instance.get('disk_percent', 'N/A')
+            
+            table_data.append([
+                instance['name'],
+                instance['state'],
+                instance['ipv4'],
+                cpu_usage,
+                mem_usage,
+                disk_usage,
+                vip_holder
+            ])
+
+        click.echo(tabulate(table_data, headers=headers, tablefmt='grid'))
+
+    click.echo()
+
+@cli.command()
+@click.pass_obj
+def list(manager: MultipassManager):
+    """List all instances and their status."""
+    instances = manager.get_instances()
+    
+    if not instances:
+        click.secho(f"No instances found with base name '{manager.base_name}'", fg='yellow')
+        return
+
+    headers = ['Name', 'State', 'IPv4', 'Memory', 'CPU']
+    table_data = [[
+        instance['name'],
+        instance['state'],
+        instance['ipv4'],
+        instance['memory'],
+        instance['cpu']
+    ] for instance in instances]
+    
+    click.echo(tabulate(table_data, headers=headers, tablefmt='grid'))
+
+@cli.command()
+@click.argument('instance_name')
+@click.pass_obj
+def inspect(manager: MultipassManager, instance_name: str):
+    """Show detailed information about a specific instance."""
+    if not instance_name.startswith(manager.base_name):
+        click.secho(f"Warning: Instance name '{instance_name}' doesn't match base name pattern '{manager.base_name}'", fg='yellow')
+    
+    try:
+        details = manager.get_instance_details(instance_name)
+        
+        click.secho("\n=== Services ===", fg='blue', bold=True)
+        for service, status in details['services'].items():
+            color = 'green' if status == 'active' else 'red'
+            click.secho(f"{service}: {status}", fg=color)
+        
+        click.secho("\n=== Network Configuration ===", fg='blue', bold=True)
+        click.echo(details['network'])
+        
+    except click.ClickException as e:
+        click.secho(f"Error: Instance '{instance_name}' not found or inaccessible", fg='red')
+        sys.exit(1)
+
+@cli.command()
+@click.argument('instance_name')
+@click.argument('service_name')
+@click.pass_obj
+def restart(manager: MultipassManager, instance_name: str, service_name: str):
+    """Restart a specific service on an instance."""
+    valid_services = {'fusion-server', 'keepalived', 'haproxy'}
+    
+    if service_name not in valid_services:
+        click.secho(f"Error: Invalid service name. Must be one of: {', '.join(valid_services)}", fg='red')
+        sys.exit(1)
+    
+    try:
+        click.secho(f"Restarting {service_name} on {instance_name}...", fg='yellow')
+        manager._run_command([
+            'multipass', 'exec', instance_name, '--',
+            'sudo', 'systemctl', 'restart', service_name
+        ])
+        
+        status = manager.check_service_status(instance_name, service_name)
+        if status == 'active':
+            click.secho(f"Service {service_name} restarted successfully!", fg='green')
+        else:
+            click.secho(f"Service {service_name} failed to restart (status: {status})", fg='red')
+            sys.exit(1)
+            
+    except click.ClickException as e:
+        click.secho(f"Error restarting service: {e}", fg='red')
+        sys.exit(1)
+
+@cli.command()
+def version():
+    """Show version information."""
+    click.echo("Multipass Manager v1.0.0")
+    venv_path = Path.home() / '.multipass-manager-env'
+    click.echo(f"Virtual Environment: {venv_path}")
+    if venv_path.exists():
+        click.echo("Status: Installed")
+    else:
+        click.echo("Status: Not installed")
+
+if __name__ == '__main__':
+    cli()
