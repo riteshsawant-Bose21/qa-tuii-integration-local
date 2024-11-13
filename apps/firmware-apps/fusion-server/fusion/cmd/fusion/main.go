@@ -49,7 +49,7 @@ func main() {
 	}
 
 	// Create memberlist
-	list, err := cluster.CreateMemberlist(nodeName, bindAddr, bindPort, joinAddrs)
+	list, err := cluster.CreateMemberlist(nodeName, bindAddr, bindPort, joinAddrs, stateManager)
 	if err != nil {
 		log.Fatalf("Failed to create memberlist: %v", err)
 	}

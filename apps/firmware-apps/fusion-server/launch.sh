@@ -137,7 +137,7 @@ setup_python_env
 # Start Python HTTP server in background
 IP_ADDR=$(ifconfig | grep -A 1 "192.168.64" | grep "inet " | awk '{print $2}')
 echo "Starting download server on $IP_ADDR:8000"
-python3 -m http.server 8000 --bind "$SERVER_IP" > /dev/null 2>&1 &
+python3 -m http.server 8000 > /dev/null 2>&1 &
 PYTHON_PID=$!
 
 # Generate cloud-init configuration

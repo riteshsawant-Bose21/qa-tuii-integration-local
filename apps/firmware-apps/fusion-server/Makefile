@@ -5,26 +5,21 @@ GOCLEAN=$(GOCMD) clean
 GOTEST=$(GOCMD) test
 GOMOD=$(GOCMD) mod
 BINARY_NAME=fusion-server
-TEST_BINARY=fusion.test
 MAIN_PATH=fusion/cmd/fusion
 BUILD_DIR=build
-TEST_DIR=$(BUILD_DIR)/test
 BUILD_FLAGS=-tags netgo,osusergo
 LDFLAGS=-ldflags '-extldflags "-static"'
+
+# Force disable buffering for all commands
+SHELL := /bin/bash
+.SHELLFLAGS := -e
 
 all: deps test build
 
 build:
 	mkdir -p $(BUILD_DIR)
 	cd fusion && CGO_ENABLED=0 GOOS=linux $(GOBUILD) $(BUILD_FLAGS) $(LDFLAGS) -o ../$(BUILD_DIR)/$(BINARY_NAME) -v ./cmd/fusion
-
-# Test targets
-test: 
-	cd fusion && CGO_ENABLED=1 $(GOTEST) -v ./...
-
-test-verbose: 
-	cd fusion && CGO_ENABLED=1 $(GOTEST) -v -count=1 ./...
-
+	
 clean:
 	$(GOCLEAN)
 	rm -rf $(BUILD_DIR)
@@ -85,4 +80,4 @@ help:
 	@echo " build-linux-arm64 - Build for Linux ARM64"
 	@echo " build-all - Build for all platforms"
 
-.PHONY: all build test clean run deps tidy fmt vet lint build-linux build-linux-arm32 build-linux-arm64 build-all help test-verbose
+.PHONY: all build clean run deps tidy fmt vet lint build-linux build-linux-arm32 build-linux-arm64 build-all help test-verbose

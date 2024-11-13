@@ -2,6 +2,7 @@ package cluster
 
 import (
 	"fmt"
+	"fusion/internal/config"
 	"log"
 	"os"
 	"time"
@@ -10,11 +11,16 @@ import (
 )
 
 // CreateMemberlist creates and configures a new memberlist instance
-func CreateMemberlist(nodeName, bindAddr string, bindPort int, joinAddrs []string) (*memberlist.Memberlist, error) {
+func CreateMemberlist(nodeName, bindAddr string, bindPort int, joinAddrs []string, stateManager *config.StateManager) (*memberlist.Memberlist, error) {
 	config := memberlist.DefaultLANConfig()
 	config.Name = nodeName
 	config.BindAddr = bindAddr
 	config.BindPort = bindPort
+	config.Logger = log.New(os.Stdout, fmt.Sprintf("[MEMBERLIST-%s] ", nodeName), log.LstdFlags)
+
+	// Create delegate with state manager
+	delegate := NewGossipDelegate(nodeName, stateManager)
+	config.Delegate = delegate
 
 	// Enable TCP for join operations
 	config.TCPTimeout = 10 * time.Second // Give enough time for join
@@ -24,13 +30,6 @@ func CreateMemberlist(nodeName, bindAddr string, bindPort int, joinAddrs []strin
 	config.ProbeInterval = 5 * time.Second
 	config.ProbeTimeout = 2 * time.Second
 	config.SuspicionMult = 3
-
-	delegate := &GossipDelegate{
-		logger: log.New(os.Stdout, fmt.Sprintf("[GOSSIP-%s] ", nodeName), log.LstdFlags),
-		nodeID: nodeName,
-	}
-	config.Delegate = delegate
-	config.Logger = log.New(os.Stdout, fmt.Sprintf("[MEMBERLIST-%s] ", nodeName), log.LstdFlags)
 
 	list, err := memberlist.Create(config)
 	if err != nil {

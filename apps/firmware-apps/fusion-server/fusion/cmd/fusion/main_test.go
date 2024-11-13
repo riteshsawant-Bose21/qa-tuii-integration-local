@@ -2,10 +2,17 @@ package main
 
 import (
 	"bytes"
+	"encoding/csv"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"fusion/internal/api"
+	"net"
 	"net/http"
+	"os"
+	"os/exec"
+	"sort"
+	"strings"
 	"testing"
 	"time"
 )
@@ -13,6 +20,267 @@ import (
 const (
 	serverAddr = "http://192.168.64.100:8080"
 )
+
+// ClusterConfig holds the test configuration for the cluster
+type ClusterConfig struct {
+	nodes []clusterNode
+	vip   string
+}
+
+// Package level variables
+var (
+	clusterConfig *ClusterConfig
+)
+
+// MultipassNode represents a node discovered from multipass
+type MultipassNode struct {
+	Name   string
+	State  string
+	IPAddr string
+	Image  string
+}
+
+func logProgress(t *testing.T, msg string, duration time.Duration) {
+	t.Helper()
+	deadline := time.Now().Add(duration)
+	t.Logf("Starting: %s (timeout: %v)", msg, duration)
+
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+
+	for time.Now().Before(deadline) {
+		select {
+		case <-ticker.C:
+			remaining := time.Until(deadline).Round(time.Second)
+			t.Logf("%s - %v remaining...", msg, remaining)
+		default:
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
+}
+
+func checkClusterConnectivity(t *testing.T, nodes []clusterNode) {
+	t.Logf("\n=== Checking Cluster Connectivity ===")
+
+	// Get cluster info from each node
+	for _, node := range nodes {
+		resp, err := http.Get(node.address)
+		if err != nil {
+			t.Logf("❌ Failed to connect to %s: %v", node.address, err)
+			continue
+		}
+		defer resp.Body.Close()
+
+		var info struct {
+			NodeID      string   `json:"node_id"`
+			ClusterSize int      `json:"cluster_size"`
+			Members     []string `json:"members"`
+			Version     string   `json:"version"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&info); err != nil {
+			t.Logf("❌ Failed to decode response from %s: %v", node.address, err)
+			continue
+		}
+
+		t.Logf("\nNode: %s", node.address)
+		t.Logf("  ID: %s", info.NodeID)
+		t.Logf("  Cluster Size: %d", info.ClusterSize)
+		t.Logf("  Version: %s", info.Version)
+		if len(info.Members) > 0 {
+			t.Logf("  Known Members: %v", info.Members)
+		}
+	}
+}
+
+// DiscoverMultipassNodes discovers fusion nodes running in multipass
+func DiscoverMultipassNodes(baseName string) ([]MultipassNode, error) {
+	// Run multipass list with CSV output for easier parsing
+	cmd := exec.Command("multipass", "list", "--format", "csv")
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("failed to run multipass list: %v", err)
+	}
+
+	// Parse CSV output
+	reader := csv.NewReader(bytes.NewReader(output))
+	records, err := reader.ReadAll()
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse multipass output: %v", err)
+	}
+
+	var nodes []MultipassNode
+	// Skip header row
+	for _, record := range records[1:] {
+		// Only process records with enough fields
+		if len(record) < 4 {
+			continue
+		}
+
+		name := record[0]
+		// Only include nodes that match our base name
+		if !strings.HasPrefix(name, baseName) {
+			continue
+		}
+
+		node := MultipassNode{
+			Name:   name,
+			State:  record[1],
+			IPAddr: record[2],
+			Image:  record[3],
+		}
+
+		// Only include running nodes
+		if node.State == "Running" {
+			nodes = append(nodes, node)
+		}
+	}
+
+	return nodes, nil
+}
+
+// GetClusterConfig retrieves cluster configuration from environment, flags, or multipass
+func GetClusterConfig() (*ClusterConfig, error) {
+	var (
+		nodesFlag    = flag.String("nodes", "", "Comma-separated list of node addresses (e.g., 192.168.64.229:8080,192.168.64.230:8080)")
+		vipFlag      = flag.String("vip", "", "VIP address (e.g., 192.168.64.100:8080)")
+		baseNameFlag = flag.String("base-name", "fusion", "Base name for multipass instances")
+		portFlag     = flag.String("port", "8080", "Port for node services")
+		autoFlag     = flag.Bool("auto", false, "Automatically discover nodes using multipass")
+	)
+
+	if !flag.Parsed() {
+		flag.Parse()
+	}
+
+	cfg := &ClusterConfig{}
+
+	// Try environment variables first
+	nodesEnv := os.Getenv("FUSION_TEST_NODES")
+	vipEnv := os.Getenv("FUSION_TEST_VIP")
+	baseNameEnv := os.Getenv("FUSION_BASE_NAME")
+	autoEnv := os.Getenv("FUSION_AUTO_DISCOVER")
+
+	// Determine if we should use auto-discovery
+	useAuto := *autoFlag || autoEnv == "1" || autoEnv == "true"
+
+	// Get base name for multipass instances
+	baseName := baseNameEnv
+	if baseName == "" {
+		baseName = *baseNameFlag
+	}
+
+	// Auto-discover nodes if requested
+	if useAuto {
+		nodes, err := DiscoverMultipassNodes(baseName)
+		if err != nil {
+			return nil, fmt.Errorf("failed to discover multipass nodes: %v", err)
+		}
+
+		if len(nodes) == 0 {
+			return nil, fmt.Errorf("no running multipass nodes found with base name: %s", baseName)
+		}
+
+		// Sort nodes by name to ensure consistent ordering
+		// This assumes names end in numbers (fusion1, fusion2, etc.)
+		sort.Slice(nodes, func(i, j int) bool {
+			return nodes[i].Name < nodes[j].Name
+		})
+
+		port := *portFlag
+		for i, node := range nodes {
+			addr := fmt.Sprintf("http://%s:%s", node.IPAddr, port)
+			cfg.nodes = append(cfg.nodes, clusterNode{
+				address: addr,
+				nodeID:  fmt.Sprintf("node%d", i+1),
+			})
+		}
+
+		// For auto-discovery, assume VIP is on .100 if not specified
+		if vipEnv == "" && *vipFlag == "" {
+			// Extract the subnet from the first node's IP
+			parts := strings.Split(nodes[0].IPAddr, ".")
+			if len(parts) == 4 {
+				cfg.vip = fmt.Sprintf("http://%s.%s.%s.100:%s", parts[0], parts[1], parts[2], port)
+			}
+		}
+	}
+
+	// If not auto-discovering or if auto-discovery failed to set VIP, use manual configuration
+	if cfg.vip == "" {
+		cfg.vip = vipEnv
+		if cfg.vip == "" {
+			cfg.vip = *vipFlag
+		}
+	}
+
+	// If not auto-discovering or if we want to override discovered nodes
+	if !useAuto || nodesEnv != "" || *nodesFlag != "" {
+		nodesList := nodesEnv
+		if nodesList == "" {
+			nodesList = *nodesFlag
+		}
+
+		if nodesList != "" {
+			cfg.nodes = nil // Clear any auto-discovered nodes
+			addresses := strings.Split(nodesList, ",")
+			for i, addr := range addresses {
+				addr = strings.TrimSpace(addr)
+				if addr == "" {
+					continue
+				}
+
+				if !strings.HasPrefix(addr, "http://") {
+					addr = "http://" + addr
+				}
+
+				cfg.nodes = append(cfg.nodes, clusterNode{
+					address: addr,
+					nodeID:  fmt.Sprintf("node%d", i+1),
+				})
+			}
+		}
+	}
+
+	// Validate configuration
+	if cfg.vip == "" {
+		return nil, fmt.Errorf("VIP address must be provided via FUSION_TEST_VIP, --vip flag, or auto-discovery")
+	}
+
+	if !strings.HasPrefix(cfg.vip, "http://") {
+		cfg.vip = "http://" + cfg.vip
+	}
+
+	if len(cfg.nodes) == 0 {
+		return nil, fmt.Errorf("no nodes configured via environment, flags, or auto-discovery")
+	}
+
+	return cfg, nil
+}
+
+// Pretty print the configuration for debugging
+func (c *ClusterConfig) String() string {
+	var b strings.Builder
+	b.WriteString(fmt.Sprintf("VIP: %s\n", c.vip))
+	b.WriteString("Nodes:\n")
+	for i, node := range c.nodes {
+		b.WriteString(fmt.Sprintf("  %d: %s (ID: %s)\n", i+1, node.address, node.nodeID))
+	}
+	return b.String()
+}
+
+func TestMain(m *testing.M) {
+	cfg, err := GetClusterConfig()
+	if err != nil {
+		fmt.Printf("Failed to get cluster configuration: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Print configuration for debugging
+	fmt.Printf("Test Configuration:\n%s\n", cfg)
+
+	clusterConfig = cfg
+	os.Exit(m.Run())
+}
 
 func TestSetValue(t *testing.T) {
 	tests := []struct {
@@ -264,34 +532,31 @@ const requiredNodes = 3
 func verifyClusterHealth(t *testing.T, nodes []clusterNode) bool {
 	t.Helper()
 
-	// Try each node until we find one that responds
-	var clusterSize int
-	var lastErr error
-	deadline := time.Now().Add(10 * time.Second)
+	timeout := 10 * time.Second
+	t.Logf("Verifying cluster health across %d nodes...", len(nodes))
+
+	deadline := time.Now().Add(timeout)
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
 
 	for time.Now().Before(deadline) {
-		for _, node := range nodes {
+		for i, node := range nodes {
 			size, err := getClusterSize(node)
 			if err == nil {
-				clusterSize = size
-				if clusterSize >= requiredNodes {
-					t.Logf("Cluster is healthy with %d nodes", clusterSize)
+				if size >= requiredNodes {
+					t.Logf("✓ Cluster is healthy with %d nodes", size)
 					return true
 				}
-				t.Logf("Insufficient cluster size: got %d, want %d", clusterSize, requiredNodes)
-				// Don't break here, try other nodes
-				continue
+				t.Logf("Node %d reports cluster size %d/%d", i+1, size, requiredNodes)
+			} else {
+				t.Logf("Node %d health check failed: %v", i+1, err)
 			}
-			lastErr = err
 		}
-		time.Sleep(time.Second)
+		<-ticker.C
+		t.Logf("Still waiting for cluster health... %v remaining", time.Until(deadline).Round(time.Second))
 	}
 
-	if lastErr != nil {
-		t.Errorf("Failed to connect to any cluster node: %v", lastErr)
-	} else {
-		t.Errorf("Cluster too small: got %d nodes, want %d", clusterSize, requiredNodes)
-	}
+	t.Errorf("Cluster health check failed after %v", timeout)
 	return false
 }
 
@@ -323,14 +588,53 @@ func getClusterSize(node clusterNode) (int, error) {
 
 // TestClusterStateSync verifies that state changes are properly synchronized
 func TestClusterStateSync(t *testing.T) {
-	nodes := []clusterNode{
-		{address: "http://192.168.64.100:8080", nodeID: "node1"},
-		{address: "http://192.168.64.101:8080", nodeID: "node2"},
-		{address: "http://192.168.64.102:8080", nodeID: "node3"},
+
+	nodes := clusterConfig.nodes
+	if len(nodes) < 3 {
+		t.Fatalf("Test requires at least 3 nodes, but only %d available", len(nodes))
+	}
+
+	// Use just the first 3 nodes for consistency with original test
+	testNodes := nodes[:3]
+
+	checkClusterConnectivity(t, testNodes)
+
+	t.Logf("\n=== Test Configuration ===")
+	for i, node := range testNodes {
+		t.Logf("Node %d: %s", i, node.address)
+	}
+
+	// Run a simple ping test between nodes
+	t.Logf("\n=== Testing Inter-node Communication ===")
+	for i, node := range testNodes {
+		// Try to get state from this node
+		resp, err := http.Get(fmt.Sprintf("%s/getValue", node.address))
+		if err != nil {
+			t.Logf("❌ Node %d (%s) is not responding: %v", i, node.address, err)
+			t.Fatalf("Node %d is not accessible", i)
+		}
+		resp.Body.Close()
+		t.Logf("✓ Node %d (%s) is responding to API calls", i, node.address)
+	}
+
+	// Verify memberlist ports are accessible
+	t.Logf("\n=== Checking Memberlist Ports ===")
+	for i, node := range testNodes {
+		// Extract IP from node address
+		ip := strings.Split(strings.Split(node.address, "//")[1], ":")[0]
+
+		// Check memberlist port (default 7946)
+		conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:7946", ip), 2*time.Second)
+		if err != nil {
+			t.Logf("❌ Cannot connect to memberlist port on node %d (%s): %v", i, ip, err)
+		} else {
+			conn.Close()
+			t.Logf("✓ Node %d (%s) memberlist port is accessible", i, ip)
+		}
 	}
 
 	// Verify cluster health before running tests
-	if !verifyClusterHealth(t, nodes) {
+	if !verifyClusterHealth(t, testNodes) {
 		t.Fatal("Cluster health check failed - requires 3 running nodes")
 	}
 
@@ -374,22 +678,24 @@ func TestClusterStateSync(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Set value on the update node
-			err := setValueOnNode(nodes[tt.updateNode], tt.key, tt.value)
+			t.Logf("TEST: %s", tt.name)
+			t.Logf("Setting value on node %d (%s)...",
+				tt.updateNode, testNodes[tt.updateNode].address)
+			err := setValueOnNode(testNodes[tt.updateNode], tt.key, tt.value)
 			if err != nil {
 				t.Fatalf("Failed to set value on node %d: %v", tt.updateNode, err)
 			}
 
-			// Wait for sync and verify on other nodes
+			t.Logf("Waiting up to %v for sync across nodes %v...", tt.timeout, tt.verifyNodes)
 			success := waitForSync(tt.timeout, func() bool {
 				for _, nodeIdx := range tt.verifyNodes {
-					value, exists, err := getValueFromNode(nodes[nodeIdx], tt.key)
+					value, exists, err := getValueFromNode(testNodes[nodeIdx], tt.key)
 					if err != nil {
-						t.Logf("Error getting value from node %d: %v", nodeIdx, err)
+						t.Logf("Node %d check failed: %v", nodeIdx, err)
 						return false
 					}
 					if !exists {
-						t.Logf("Value doesn't exist on node %d", nodeIdx)
+						t.Logf("Value not yet present on node %d", nodeIdx)
 						return false
 					}
 					if !valueEquals(value, tt.value) {
@@ -400,8 +706,25 @@ func TestClusterStateSync(t *testing.T) {
 				return true
 			})
 
-			if !success && tt.expectedSync {
-				t.Errorf("Failed to sync state across cluster within timeout")
+			if success {
+				t.Logf("✓ Successfully synced across all nodes")
+			} else if tt.expectedSync {
+				// Try to get diagnostic information
+				t.Logf("Sync failed - Checking final state of all nodes:")
+				for i, node := range testNodes {
+					value, exists, err := getValueFromNode(node, tt.key)
+					t.Logf("Node %d (%s):\n  Exists: %v\n  Value: %v\n  Error: %v",
+						i, node.address, exists, value, err)
+				}
+				t.Errorf("Failed to sync state across cluster within %v", tt.timeout)
+			}
+
+			if !success {
+				t.Logf("Sync failed - Dumping full state of all nodes:")
+				for _, node := range testNodes {
+					dumpFullState(t, node)
+				}
+				t.Errorf("Failed to sync state across cluster within %v", tt.timeout)
 			}
 		})
 	}
@@ -409,14 +732,20 @@ func TestClusterStateSync(t *testing.T) {
 
 // TestStateConsistency verifies that the entire state is consistent
 func TestStateConsistency(t *testing.T) {
-	nodes := []clusterNode{
-		{address: "http://192.168.64.100:8080", nodeID: "node1"},
-		{address: "http://192.168.64.101:8080", nodeID: "node2"},
-		{address: "http://192.168.64.102:8080", nodeID: "node3"},
+	if clusterConfig == nil {
+		t.Fatal("Cluster configuration not initialized")
 	}
 
+	nodes := clusterConfig.nodes
+	if len(nodes) < 3 {
+		t.Fatalf("Test requires at least 3 nodes, but only %d available", len(nodes))
+	}
+
+	// Use just the first 3 nodes for consistency with original test
+	testNodes := nodes[:3]
+
 	// Verify cluster health before running tests
-	if !verifyClusterHealth(t, nodes) {
+	if !verifyClusterHealth(t, testNodes) {
 		t.Fatal("Cluster health check failed - requires 3 running nodes")
 	}
 
@@ -433,20 +762,21 @@ func TestStateConsistency(t *testing.T) {
 
 	// Set test data
 	for _, td := range testData {
-		err := setValueOnNode(nodes[td.nodeIndex], td.key, td.value)
+		err := setValueOnNode(testNodes[td.nodeIndex], td.key, td.value)
 		if err != nil {
 			t.Fatalf("Failed to set test data on node %d: %v", td.nodeIndex, err)
 		}
 	}
 
-	// Wait for initial sync
-	time.Sleep(5 * time.Second)
+	t.Log("Waiting for initial state sync...")
+	initialSyncTime := 5 * time.Second
+	logProgress(t, "Initial sync", initialSyncTime)
 
 	// Get full state from all nodes
-	states := make([]map[string]*api.StateEntry, len(nodes))
-	versions := make([]int64, len(nodes))
+	states := make([]map[string]*api.StateEntry, len(testNodes))
+	versions := make([]int64, len(testNodes))
 
-	for i, node := range nodes {
+	for i, node := range testNodes {
 		var err error
 		states[i], versions[i], err = getFullStateFromNode(node)
 		if err != nil {
@@ -454,9 +784,12 @@ func TestStateConsistency(t *testing.T) {
 		}
 	}
 
+	// Log version information for debugging
+	t.Logf("State versions across nodes: %v", versions)
+
 	// Verify states match
 	for key := range states[0] {
-		for i := 1; i < len(states); i++ {
+		for i := 1; i < len(testNodes); i++ {
 			entry1 := states[0][key]
 			entry2 := states[i][key]
 
@@ -466,9 +799,16 @@ func TestStateConsistency(t *testing.T) {
 			}
 
 			if !valueEquals(entry1.Value, entry2.Value) {
-				t.Errorf("State mismatch for key %s between node 0 and node %d", key, i)
+				t.Errorf("State mismatch for key %s between node 0 and node %d:\nNode 0: %+v\nNode %d: %+v",
+					key, i, entry1.Value, i, entry2.Value)
 			}
 		}
+	}
+
+	// Log success message with node details
+	t.Logf("Successfully verified state consistency across nodes:")
+	for i, node := range testNodes {
+		t.Logf("Node %d: %s (version: %d)", i, node.address, versions[i])
 	}
 }
 
@@ -503,25 +843,24 @@ func getValueFromNode(node clusterNode, key string) (interface{}, bool, error) {
 	}
 	defer resp.Body.Close()
 
-	var response map[string]interface{}
+	var response struct {
+		Exists bool                   `json:"exists"`
+		Value  map[string]interface{} `json:"value"`
+	}
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		return nil, false, fmt.Errorf("failed to decode response: %v", err)
 	}
 
-	exists, ok := response["exists"].(bool)
-	if !ok {
-		return nil, false, fmt.Errorf("missing or invalid 'exists' field in response")
-	}
-	if !exists {
+	if !response.Exists {
 		return nil, false, nil
 	}
 
-	value, ok := response["value"]
-	if !ok {
-		return nil, false, fmt.Errorf("missing 'value' field in response")
+	// Extract the actual value from the wrapper
+	if actualValue, ok := response.Value["value"]; ok {
+		return actualValue, true, nil
 	}
 
-	return value, true, nil
+	return response.Value, true, nil
 }
 
 func getFullStateFromNode(node clusterNode) (map[string]*api.StateEntry, int64, error) {
@@ -547,12 +886,15 @@ func getFullStateFromNode(node clusterNode) (map[string]*api.StateEntry, int64, 
 }
 
 func waitForSync(timeout time.Duration, check func() bool) bool {
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
 		if check() {
 			return true
 		}
-		time.Sleep(100 * time.Millisecond)
+		<-ticker.C
 	}
 	return false
 }
@@ -566,6 +908,20 @@ func valueEquals(v1, v2 interface{}) bool {
 		return false
 	}
 
+	// Check if v1 is a map that might contain our value
+	if m1, ok := v1.(map[string]interface{}); ok {
+		if val, exists := m1["value"]; exists {
+			v1 = val
+		}
+	}
+
+	// Check if v2 is a map that might contain our value
+	if m2, ok := v2.(map[string]interface{}); ok {
+		if val, exists := m2["value"]; exists {
+			v2 = val
+		}
+	}
+
 	// Convert both values to JSON for deep comparison
 	j1, err1 := json.Marshal(v1)
 	j2, err2 := json.Marshal(v2)
@@ -573,4 +929,22 @@ func valueEquals(v1, v2 interface{}) bool {
 		return false
 	}
 	return bytes.Equal(j1, j2)
+}
+
+func dumpFullState(t *testing.T, node clusterNode) {
+	resp, err := http.Get(fmt.Sprintf("%s/getValue", node.address))
+	if err != nil {
+		t.Logf("Failed to get full state from %s: %v", node.address, err)
+		return
+	}
+	defer resp.Body.Close()
+
+	var state map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&state); err != nil {
+		t.Logf("Failed to decode full state from %s: %v", node.address, err)
+		return
+	}
+
+	prettyState, _ := json.MarshalIndent(state, "", "  ")
+	t.Logf("Full state from %s:\n%s", node.address, string(prettyState))
 }
