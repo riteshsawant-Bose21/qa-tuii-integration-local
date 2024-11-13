@@ -68,7 +68,9 @@ frontend http-in
     default_backend servers
 
 backend servers
-    balance roundrobin'''
+    balance roundrobin
+    
+'''
 
     cloud_config = {
         'package_update': True,
