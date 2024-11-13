@@ -37,6 +37,7 @@ frontend http-in
     
 backend servers
     balance roundrobin
+	
 `
 
 // ManageHAProxy continuously updates HAProxy configuration based on cluster membership
