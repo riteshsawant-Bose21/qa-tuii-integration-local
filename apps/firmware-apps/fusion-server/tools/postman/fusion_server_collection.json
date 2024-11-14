@@ -1,0 +1,138 @@
+{
+	"info": {
+		"_postman_id": "d4ea0400-eed9-4580-8bc6-3b930dd20c58",
+		"name": "Fusion Server",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "4781136"
+	},
+	"item": [
+		{
+			"name": "Get All Values",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{api_url}}/getValue",
+					"host": [
+						"{{api_url}}"
+					],
+					"path": [
+						"getValue"
+					]
+				},
+				"description": "Get all configuration values"
+			},
+			"response": []
+		},
+		{
+			"name": "Get Specific Value",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{api_url}}/getValue?key=volume",
+					"host": [
+						"{{api_url}}"
+					],
+					"path": [
+						"getValue"
+					],
+					"query": [
+						{
+							"key": "key",
+							"value": "volume"
+						}
+					]
+				},
+				"description": "Get all value for a specific key"
+			},
+			"response": []
+		},
+		{
+			"name": "Download All Values",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{api_url}}/download",
+					"host": [
+						"{{api_url}}"
+					],
+					"path": [
+						"download"
+					]
+				},
+				"description": "Download all configuration data"
+			},
+			"response": []
+		},
+		{
+			"name": "Set Value",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"key\": \"volume\",\n    \"value\": {\n      \"min\": \"0.0\",\n      \"max\": 1.0,\n      \"current\": 0.5\n    }\n}\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{api_url}}/setValue",
+					"host": [
+						"{{api_url}}"
+					],
+					"path": [
+						"setValue"
+					]
+				},
+				"description": "Set a specific configuation value"
+			},
+			"response": []
+		},
+		{
+			"name": "Metrics",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{metrics_url}}/metrics",
+					"host": [
+						"{{metrics_url}}"
+					],
+					"path": [
+						"metrics"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Cluster Status",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{metrics_url}}/cluster/status",
+					"host": [
+						"{{metrics_url}}"
+					],
+					"path": [
+						"cluster",
+						"status"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

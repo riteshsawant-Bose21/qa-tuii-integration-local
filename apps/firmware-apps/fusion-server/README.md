@@ -135,7 +135,7 @@ multipass stop fusion1
 ```bash
 curl -X POST http://192.168.64.100:8080/setValue \
   -H "Content-Type: application/json" \
-  -d '{"key": "server.name", "value": "production-1"}'
+  -d '{"key": "test-key", "value": "test-value"}'
 ```
 
 ### Set a nested configuration object
@@ -143,18 +143,18 @@ curl -X POST http://192.168.64.100:8080/setValue \
 curl -X POST http://192.168.64.100:8080/setValue \
   -H "Content-Type: application/json" \
   -d '{
-    "key": "database.config",
+    "key": "volume",
     "value": {
-      "host": "localhost",
-      "port": 5432,
-      "maxConnections": 100
+      "min": "0.0",
+      "max": 1.0,
+      "current": 0.5
     }
   }'
 ```
 
 ### Get a specific value
 ```bash
-curl "http://192.168.64.100:8080/getValue?key=server.name"
+curl "http://192.168.64.100:8080/getValue?key=test-key"
 ```
 
 ### Get all configuration values

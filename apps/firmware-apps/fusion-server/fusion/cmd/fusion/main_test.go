@@ -350,7 +350,7 @@ func TestSetValue(t *testing.T) {
 				if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 					t.Fatalf("Failed to decode response: %v", err)
 				}
-				if response["status"] != "update stored and broadcasted" {
+				if response["status"] != "Updated and broadcasted" {
 					t.Errorf("Unexpected response status: %v", response["status"])
 				}
 			}

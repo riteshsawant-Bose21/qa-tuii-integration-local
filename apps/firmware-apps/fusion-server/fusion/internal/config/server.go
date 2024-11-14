@@ -67,7 +67,7 @@ func (s *ConfigServer) SetValue(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
-		"status": "update stored and broadcasted",
+		"status": "Updated and broadcasted",
 		"key":    update.Key,
 	})
 }
