@@ -1,14 +1,16 @@
+#include <arpa/inet.h>
+#include <atomic>
+#include <cstring>
+#include <functional>
+#include <iostream>
+#include <json/json.h>
+#include <map>
+#include <netinet/in.h>
+#include <string>
 #include <sys/socket.h>
 #include <sys/un.h>
-#include <json/json.h>
-#include <functional>
-#include <map>
-#include <string>
-#include <iostream>
 #include <thread>
 #include <unistd.h>
-#include <cstring>
-#include <atomic>
 
 // Define callback type for key/value changes
 using KeyValueCallback = std::function<void(const std::string&, 
@@ -33,25 +35,25 @@ public:
         callbacks_.erase(key);
     }
 
-    // Connect to the Unix domain socket
-    bool connect(const std::string& socket_path) {
-        sock_fd_ = socket(AF_UNIX, SOCK_STREAM, 0);
+    bool connect(const std::string& host, int port) {
+        sock_fd_ = socket(AF_INET, SOCK_DGRAM, 0);
         if (sock_fd_ == -1) {
             std::cerr << "Failed to create socket: " << strerror(errno) << std::endl;
             return false;
         }
 
-        struct sockaddr_un addr;
+        struct sockaddr_in addr;
         memset(&addr, 0, sizeof(addr));
-        addr.sun_family = AF_UNIX;
-        strncpy(addr.sun_path, socket_path.c_str(), sizeof(addr.sun_path) - 1);
+        addr.sin_family = AF_INET;
+        addr.sin_port = htons(port);
+        inet_pton(AF_INET, host.c_str(), &addr.sin_addr);
 
         if (::connect(sock_fd_, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
             std::cerr << "Failed to connect: " << strerror(errno) << std::endl;
             close(sock_fd_);
             return false;
         }
-
+        
         std::cout << "Connected to Unix domain socket" << std::endl;
         return true;
     }
@@ -156,7 +158,7 @@ int main() {
     });
 
     // Connect to the Unix domain socket
-    if (!monitor.connect("/tmp/kvmonitor.sock")) {
+    if (!monitor.connect("127.0.0.1", 7947)) {
         return 1;
     }
 

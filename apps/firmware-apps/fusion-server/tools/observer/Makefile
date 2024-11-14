@@ -5,6 +5,7 @@ UNAME_S := $(shell uname -s)
 CXX_X86 := g++
 CXX_ARM := aarch64-linux-gnu-g++
 
+
 # OSX-specific settings
 ifeq ($(UNAME_S),Darwin)
     CXX_X86 := clang++
@@ -12,9 +13,11 @@ ifeq ($(UNAME_S),Darwin)
     # Use proper flags for OSX ARM64 (Apple Silicon)
     OSX_ARM_FLAGS := -target arm64-apple-darwin
     OSX_X86_FLAGS := -target x86_64-apple-darwin
-    # Framework and library paths for OSX
+	# Framework and library paths for OSX
     OSX_INCLUDES := -I/usr/local/include -I/opt/homebrew/include
     OSX_LIB_PATHS := -L/usr/local/lib -L/opt/homebrew/lib
+else
+	LINUX_INCLUDES := -I/usr/include -I/usr/include/jsoncpp	
 endif
 
 # Common compiler flags
@@ -93,7 +96,7 @@ $(TARGET_ARM): $(OBJS_ARM)
 
 $(BUILD_DIR_ARM)/%.o: $(SRC_DIR)/%.cpp
 	@mkdir -p $(dir $@)
-	$(CXX_ARM) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+	$(CXX_ARM) $(CXXFLAGS) $(INCLUDES) $(LINUX_INCLUDES) -c $< -o $@
 
 # OSX x86_64 build
 osx-x86_64: $(TARGET_OSX_X86)

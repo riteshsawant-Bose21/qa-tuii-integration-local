@@ -189,10 +189,26 @@ Unix Domain Sockets are used to communicate between server instances. The
 socket is not public and can only be accessed within the internal network.
 
 ### Get all values
-echo '{"action":"get"}' | nc -u localhost 7947
+From with server instance:
+```bash
+echo '{"action":"get"}' | nc -u -w 1 localhost 7947
+```
+
+Outside of instance:
+```bash
+multipass exec fusion1 -- bash -c "echo '{\"action\":\"get\"}' | nc -u -w 1 -v localhost 7947"
+```
 
 ### Set a value
-echo '{"action":"set","key":"test","value":"hello"}' | nc -u localhost 7947
+From with server instance:
+```bash
+echo '{"action":"set","key":"test","value":"hello"}' | nc -u -w 1 localhost 7947
+```
+
+Outside of instance"
+```bash
+multipass exec fusion1 -- bash -c "multipass exec fusion1 -- bash -c "echo '{\"action\":\"set\",\"key\":\"test\",\"value\":\"hello\"}' | nc -u -w 1 localhost 7947""
+```
 
 ## Basic Commands
 
@@ -323,6 +339,9 @@ multipass exec fusion1 -- systemctl status fusion-server
 ```bash
 ./run-tests
 ```
+**Postman**
+Import the postman collection located at tools/postman/fusion_server_collection.json into Postman
+
 
 ## Monitoring
 

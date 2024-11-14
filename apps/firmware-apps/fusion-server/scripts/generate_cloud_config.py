@@ -78,6 +78,7 @@ backend servers
         'packages': [
             'haproxy',
             'keepalived',
+            'libjsoncpp25',
             'net-tools'
         ],
         'write_files': [
