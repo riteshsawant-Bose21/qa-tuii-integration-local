@@ -6,8 +6,9 @@ Fusion Server is a distributed configuration management system with high availab
 
 - Distributed configuration storage with real-time synchronization
 - High availability with HAProxy load balancing and Keepalived failover
-- WebSocket support for real-time updates
 - REST API for configuration management
+- WebSocket support for streaming updates
+- Unix Domain sockets for inter-network communication
 - State persistence and recovery
 - JSON import/export functionality
 - Automatic HAProxy configuration management
@@ -20,74 +21,24 @@ Fusion Server is a distributed configuration management system with high availab
 1. **State Management**
    - Distributed state synchronization across nodes
    - Version-based conflict resolution
-   - Real-time state updates via WebSocket
    - Persistent storage of configuration data
+   - Timestamp-based tie-breaking
+   - Real-time state synchronization
+   - State verification and validation
 
 2. **High Availability**
    - HAProxy load balancing across cluster nodes
    - Keepalived for VIP (Virtual IP) management
+   - VRRP protocol for IP takeover
    - Automatic failover support
    - Dynamic backend server registration
-
+   
 3. **Networking**
    - Gossip-based cluster membership
-   - WebSocket connections for real-time updates
    - REST API for configuration management
+   - WebSocket and Unix socket connections for streaming updates
    - Unix Domain sockets for configuration management 
    - Health check endpoints
-
-## Setup
-
-#### Multipass
-
-[Multipass](https://multipass.run/) is used to create and manage Ubuntu VM instances for development and testing. It provides a quick way to spin up consistent Ubuntu environments across different platforms.
-
-**macOS**
-```bash
-brew install --cask multipass
-```
-
-**Ubuntu**
-```bash
-sudo snap install multipass
-```
-
-**Windows**
-- Download the installer from [Multipass website](https://multipass.run/download/windows)
-
-
-#### State Management
-
-The system maintains a distributed state with the following features:
-- Version-based conflict resolution
-- Timestamp-based tie-breaking
-- Real-time state synchronization
-- Persistent state storage
-- State verification and validation
-
-## High Availability
-
-### Load Balancing
-
-HAProxy provides load balancing with:
-- Round-robin distribution
-- Health checks every 2 seconds
-- Automatic backend server management
-- Statistics monitoring
-
-### Failover
-
-Keepalived ensures high availability through:
-- Virtual IP management
-- Automatic master/backup failover
-- VRRP protocol for IP takeover
-- Quick failure detection
-
-## Dependencies
-
-- github.com/hashicorp/memberlist - Cluster membership and failure detection
-- github.com/gorilla/websocket - WebSocket support
-- Standard Go libraries
 
 ### Configuration
 
@@ -110,40 +61,60 @@ Keepalived ensures high availability through:
      - Bind address and port
      - Optional join address for cluster membership
 
+### Dependencies
+
+- [memberlist](github.com/hashicorp/memberlist) - Cluster membership and failure detection
+- [websocket](github.com/gorilla/websocket) - WebSocket support
+- [go]- (www.go.dev) Standard Go libraries
+
+
+## Setup
+
+#### Multipass
+
+[Multipass](https://multipass.run/) is used to create and manage Ubuntu VM instances for development and testing. It provides a quick way to spin up consistent Ubuntu environments across different platforms.
+
+**macOS**
+```bash
+brew install --cask multipass
+```
+
+**Ubuntu**
+```bash
+sudo snap install multipass
+```
+
+**Windows**
+- Download the installer from [Multipass website](https://multipass.run/download/windows)
+
 ## Installation
 
 **Clone the repository and build the server**
 ```bash
 git clone git@github.com:BoseProfessional/fusion-services.git
-sh build.sh
+./build-fusion-server
 ```
 
 ## Usage
 ### Launch a single server instance
 ```bash
-./launch.sh
+./launch
 ```
 
 **Create multiple instances with default name "fusion"**
 ```bash
-./launch.sh --instances 3
-```
-
-### Launch from within instance
-**This would only be used during development to restart and update the server.**
-```bash
-./fusion-server --name <node-name> --addr <bind-address> --port <port> [--join <existing-node-address>]
+./launch --instances 3
 ```
 
 ### Stopping instances
 **Stop instances with default name**
 ```bash
-./launch.sh --kill
+./launch --kill
 ```
 
 **Stop instances with specific name**
 ```bash
-./launch.sh --name fusion --kill
+multipass stop fusion1
 ```
 
 ### API Endpoints
@@ -223,35 +194,11 @@ echo '{"action":"get"}' | nc -u localhost 7947
 ### Set a value
 echo '{"action":"set","key":"test","value":"hello"}' | nc -u localhost 7947
 
-## Security
-
-- TLS support for secure communication
-- WebSocket origin checking
-- File permission management
-- Proper service isolation
-
-## Troubleshooting
-
-1. **VIP Issues**
-   - Check network interface configuration
-   - Verify Keepalived status
-   - Monitor VRRP advertisements
-
-2. **Cluster Synchronization**
-   - Check node connectivity
-   - Verify gossip protocol communication
-   - Monitor state version numbers
-
-3. **Load Balancer Issues**
-   - Check HAProxy configuration
-   - Verify backend health checks
-   - Monitor HAProxy logs
-
-#### Basic Commands
+## Basic Commands
 
 1. **Create a new instance**
 ```bash
-./launch.sh
+./launch
 ```
 
 2. **List instances**
@@ -292,7 +239,7 @@ For a three-node cluster setup:
 
 ```bash
 # Create instances
-./launch.sh --instances 3
+./launch --instances 3
 
 # Get IP addresses
 multipass list
@@ -328,7 +275,7 @@ multipass exec fusion1 -- sudo journalctl -u fusion-server -f
 multipass info fusion1 | grep IPv4
 ```
 
-#### Troubleshooting Multipass
+## Troubleshooting
 
 1. **Instance fails to start**
    - Check cloud-init logs:
@@ -351,29 +298,35 @@ multipass exec fusion1 -- systemctl status keepalived
 multipass exec fusion1 -- systemctl status fusion-server
 ```
 
-4. **Mount problems**
-   - Ensure source path exists
-   - Check permissions on host directory
-   - Unmount and retry:
-   ```bash
-   multipass unmount fusion1
-   multipass mount /local/path fusion1:/home/ubuntu/mounted
-   ```
+4. **VIP Issues**
+   - Check network interface configuration
+   - Verify Keepalived status
+   - Monitor VRRP advertisements
 
-### Testing
+5. **Cluster Synchronization**
+   - Check node connectivity
+   - Verify gossip protocol communication
+   - Monitor state version numbers
 
-**Launch a single server instance**
+6. **Load Balancer Issues**
+   - Check HAProxy configuration
+   - Verify backend health checks
+   - Monitor HAProxy logs
+
+## Testing
+
+**Launch multiple instance**
 ```bash
-./launch.sh
+./launch --instances 3
 ```
 **Build and run test**
 ```bash
-make test
+./run-tests
 ```
 
 ## Monitoring
 
-1. **Metrics Server**
+**Metrics Server**
    - Available on configurable port (default: 9090)
    - Endpoints:
      - `/metrics` - Complete system metrics
@@ -386,18 +339,6 @@ make test
      - Network connectivity
      - Process health
 
-2. **HAProxy Statistics**
-   - Real-time server status
-   - Connection statistics
-   - Health check status
-
-3. **Debug Mode**
-   - Cluster state monitoring
-   - Health check logging
-   - State verification
-   - Connectivity testing
-
-### Monitoring Endpoints
 
 #### Get Complete System Metrics
 ```bash
@@ -423,16 +364,7 @@ Response includes:
 - Node details
 - Ping latency
 
-### Command Line Flags
-```bash
-./fusion-server \
-  --name <node-name> \
-  --addr <bind-address> \
-  --port <port> \
-  [--join <existing-node-address>]
-```
-
-### Sample Metrics Output
+#### Sample Metrics Output
 ```json
 {
   "timestamp": "2024-11-08T12:00:00Z",
@@ -463,24 +395,7 @@ Response includes:
 }
 ```
 
-### Monitoring Integration
-
-The metrics server can be integrated with monitoring systems:
-
-1. **Prometheus Configuration**
-```yaml
-scrape_configs:
-  - job_name: 'fusion'
-    static_configs:
-      - targets: ['localhost:9090']
-```
-
-2. **Grafana Dashboard**
-   - Import provided dashboard template
-   - Add Prometheus data source
-   - Configure alerts based on metrics
-
-### Common Monitoring Commands
+### Monitoring Commands
 
 1. **Check all metrics**
 ```bash
@@ -568,35 +483,4 @@ graph TB
     class VIP,HAP,KA lb
     class F1,F2,F3 server
     class S1,S2,S3 state
-```
-
-## Project Structure
-
-```
-fusion-server/
-├── build/
-│   └── fusion-server*        # Compiled binary
-├── fusion/
-│   ├── cmd/
-│   │   └── fusion/
-│   │       └── main.go      # Application entry point
-│   ├── configs/
-│   │   ├── entrypoint.sh*   # Container entrypoint script
-│   │   ├── keepalived.conf  # Primary Keepalived configuration
-│   │   └── keepalived-backup.conf
-│   └── internal/
-│       ├── api/             # API type definitions
-│       ├── cluster/         # Cluster management
-│       ├── config/          # Configuration handling
-│       ├── logging/         # Debug logging facilities
-│       └── network/         # Network and proxy management
-├── tools/
-│   ├── noise-generator*     # Testing utility
-│   ├── build.sh
-│   ├── random.sh
-│   └── main.go
-├── Makefile
-├── build.sh
-├── fusion-server.yaml
-└── README.md
 ```
