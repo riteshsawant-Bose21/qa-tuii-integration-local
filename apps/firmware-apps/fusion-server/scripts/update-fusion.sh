@@ -1,5 +1,56 @@
 #!/bin/bash
 
+# Function to display help message
+show_help() {
+    cat << EOF
+Usage: $0 [OPTIONS]
+
+Updates the fusion-server binary on multipass instances matching a specified prefix.
+
+Options:
+    -h, --help          Show this help message
+    --prefix PREFIX     Specify the instance name prefix to match (default: fusion)
+
+Examples:
+    $0                  # Update all instances starting with 'fusion'
+    $0 --prefix test   # Update all instances starting with 'test'
+    $0 --help          # Show this help message
+
+The script will:
+1. Copy the new binary from build/fusion-server
+2. Stop the fusion-server service
+3. Install the new binary
+4. Restart the service
+5. Display the service status
+EOF
+    exit 0
+}
+
+# Default prefix
+PREFIX="fusion"
+
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -h|--help)
+            show_help
+            ;;
+        --prefix)
+            if [ -z "$2" ]; then
+                echo "Error: --prefix requires an argument"
+                exit 1
+            fi
+            PREFIX="$2"
+            shift 2
+            ;;
+        *)
+            echo "Error: Unknown argument: $1"
+            echo "Use --help to see available options"
+            exit 1
+            ;;
+    esac
+done
+
 # Path to the new binary
 BINARY_PATH="build/fusion-server"
 
@@ -9,8 +60,16 @@ if [ ! -f "$BINARY_PATH" ]; then
     exit 1
 fi
 
-# Get list of running multipass instances
-instances=$(multipass list --format csv | tail -n +2 | cut -d',' -f1)
+# Get list of running multipass instances that start with the specified prefix
+instances=$(multipass list --format csv | tail -n +2 | cut -d',' -f1 | grep "^$PREFIX")
+
+# Check if any matching instances were found
+if [ -z "$instances" ]; then
+    echo "No instances starting with '$PREFIX' were found"
+    exit 0
+fi
+
+echo "Updating instances with prefix: $PREFIX"
 
 for instance in $instances; do
     echo "Updating fusion-server on instance: $instance"

@@ -51,6 +51,18 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# Handle kill mode first
+if [ "$KILL_MODE" = true ]; then
+    echo "Stopping and removing instances with base name: $BASE_NAME"
+    for instance in $(multipass list --format csv | grep "^$BASE_NAME" | cut -d',' -f1); do
+        echo "Deleting instance: $instance"
+        multipass delete "$instance"
+    done
+    multipass purge
+    [ "$VERBOSE" = true ] && echo "Cleanup complete"
+    exit 0
+fi
+
 if [ -z "$NUM_INSTANCES" ]; then
     while true; do
         printf "${YELLOW}Enter number of instances [1]: ${NC}"
@@ -70,18 +82,6 @@ if [ -z "$NUM_INSTANCES" ]; then
             print_warning "Please enter a positive number"
         fi
     done
-fi
-
-# Handle kill mode first
-if [ "$KILL_MODE" = true ]; then
-    echo "Stopping and removing instances with base name: $BASE_NAME"
-    for instance in $(multipass list --format csv | grep "^$BASE_NAME" | cut -d',' -f1); do
-        echo "Deleting instance: $instance"
-        multipass delete "$instance"
-    done
-    multipass purge
-    [ "$VERBOSE" = true ] && echo "Cleanup complete"
-    exit 0
 fi
 
 # Check IP forwarding before proceeding
