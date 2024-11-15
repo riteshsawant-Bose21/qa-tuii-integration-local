@@ -38,9 +38,10 @@ type UDPServer struct {
 	wg           sync.WaitGroup
 	clients      map[string]*net.UDPAddr
 	clientsMux   sync.RWMutex
+	verbose      bool
 }
 
-func NewUDPServer(addr string, stateManager *config.StateManager) (*UDPServer, error) {
+func NewUDPServer(addr string, stateManager *config.StateManager, verbose bool) (*UDPServer, error) {
 	udpAddr, err := net.ResolveUDPAddr("udp", addr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve address: %v", err)
@@ -58,6 +59,7 @@ func NewUDPServer(addr string, stateManager *config.StateManager) (*UDPServer, e
 		stateManager: stateManager,
 		stopChan:     make(chan struct{}),
 		clients:      make(map[string]*net.UDPAddr),
+		verbose:      verbose,
 	}, nil
 }
 
@@ -260,10 +262,12 @@ func (s *UDPServer) SendUpdate(listenAddr string, update api.ConfigUpdate) error
 	deadClients := make([]string, 0)
 
 	for addrStr, clientAddr := range s.clients {
-		log.Printf("Sending UDP update to %s: %s", addrStr, string(data))
+		if s.verbose {
+			log.Printf("[UDP] Sending update to %s: %s", addrStr, string(data))
+		}
 		_, err = s.conn.WriteToUDP(data, clientAddr)
 		if err != nil {
-			log.Printf("Failed to send update to %s: %v", addrStr, err)
+			log.Printf("[ERROR] Failed to send update to %s: %v", addrStr, err)
 			deadClients = append(deadClients, addrStr)
 		}
 	}

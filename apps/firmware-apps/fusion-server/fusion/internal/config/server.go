@@ -294,23 +294,22 @@ func (s *ConfigServer) broadcastUpdate(update api.ConfigUpdate, applyUpdate bool
 		}
 	}
 
-	s.broadcastToWebSocketClients(update)
+	transformed := transformState(map[string]*api.StateEntry{"key": {Data: update.Update}})
+
+	s.broadcastToWebSocketClients(transformed)
 
 	for _, broadcaster := range s.broadcasters {
-		if err := broadcaster.BroadcastUpdate(update); err != nil {
+		if err := broadcaster.BroadcastUpdate(transformed); err != nil {
 			log.Printf("[ERROR] Failed to broadcast update: %v", err)
 		}
 	}
 	return nil
 }
 
-func (s *ConfigServer) broadcastToWebSocketClients(update api.ConfigUpdate) {
+func (s *ConfigServer) broadcastToWebSocketClients(update map[string]interface{}) {
 	message := map[string]interface{}{
-		"type":    "update",
-		"update":  update.Update,
-		"version": update.Version,
-		"node_id": update.NodeID,
-		"time":    update.Time,
+		"type":   "update",
+		"update": update,
 	}
 
 	s.wsLock.RLock()

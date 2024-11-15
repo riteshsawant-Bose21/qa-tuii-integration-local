@@ -205,6 +205,7 @@ private:
 
   void handleValueChange(const std::string &path, const Json::Value &old_val,
                          const Json::Value &new_val) {
+
     // Only print if the values are actually different
     if (old_val != new_val) {
       std::cout << getTimestamp() << " " << path << " changed from: ";
@@ -249,6 +250,7 @@ private:
 
   void handleResponse(const Json::Value &response) {
     try {
+
       Json::Value value = findTargetValue(response);
 
       if (!value.isNull()) {

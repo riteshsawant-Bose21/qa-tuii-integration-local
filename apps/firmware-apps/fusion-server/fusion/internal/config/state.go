@@ -56,7 +56,7 @@ func (sm *StateManager) ApplyUpdate(update api.ConfigUpdate) error {
 	sm.Lock()
 	defer sm.Unlock()
 
-	// Handle complete clear
+	// If update is empty, clear all state
 	if len(update.Update) == 0 {
 		sm.state = make(map[string]*api.StateEntry)
 		sm.version = update.Version
@@ -64,20 +64,22 @@ func (sm *StateManager) ApplyUpdate(update api.ConfigUpdate) error {
 		return nil
 	}
 
-	// For each top-level key in the update
+	// Extract the single key-value pair from the update
 	for key, value := range update.Update {
-		sm.state[key] = &api.StateEntry{
-			Data:      value,
-			Version:   update.Version,
-			NodeID:    update.NodeID,
-			Timestamp: update.Time,
+		existing, exists := sm.state[key]
+		if !exists || existing.Version < update.Version {
+			sm.state[key] = &api.StateEntry{
+				Data:      value,
+				Version:   update.Version,
+				NodeID:    update.NodeID,
+				Timestamp: update.Time,
+			}
+			if update.Version > sm.version {
+				sm.version = update.Version
+			}
+			sm.notifySubscribers()
 		}
 	}
-
-	if update.Version > sm.version {
-		sm.version = update.Version
-	}
-	sm.notifySubscribers()
 	return nil
 }
 

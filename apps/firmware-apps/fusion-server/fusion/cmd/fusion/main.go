@@ -72,7 +72,7 @@ func main() {
 	metricsCollector := cluster.NewMetricsCollector(list, stateManager)
 
 	// Initialize UDP server
-	udpServer, err := network.NewUDPServer(":7947", stateManager)
+	udpServer, err := network.NewUDPServer(":7947", stateManager, true)
 	if err != nil {
 		debugLogger.Printf("Failed to create UDP server: %v", err)
 	} else {
