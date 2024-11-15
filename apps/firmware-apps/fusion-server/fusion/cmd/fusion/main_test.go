@@ -443,6 +443,86 @@ func TestGetValue(t *testing.T) {
 	}
 }
 
+func TestUpdateValue(t *testing.T) {
+	// Set initial value
+	initialValue := map[string]interface{}{
+		"update_test_key": "initial_value",
+	}
+	jsonData, err := json.Marshal(initialValue)
+	if err != nil {
+		t.Fatalf("Failed to marshal initial value: %v", err)
+	}
+
+	resp, err := http.Post(fmt.Sprintf("%s/setValue", serverAddr),
+		"application/json",
+		bytes.NewBuffer(jsonData))
+	if err != nil {
+		t.Fatalf("Failed to set initial value: %v", err)
+	}
+	resp.Body.Close()
+
+	// Verify initial value was set
+	getValue, err := http.Get(fmt.Sprintf("%s/getValue?key=update_test_key", serverAddr))
+	if err != nil {
+		t.Fatalf("Failed to get initial value: %v", err)
+	}
+
+	var initialResponse struct {
+		Exists bool        `json:"exists"`
+		Value  interface{} `json:"value"`
+	}
+	if err := json.NewDecoder(getValue.Body).Decode(&initialResponse); err != nil {
+		t.Fatalf("Failed to decode initial get response: %v", err)
+	}
+	getValue.Body.Close()
+
+	if !initialResponse.Exists {
+		t.Fatal("Initial value was not set")
+	}
+	if initialResponse.Value != "initial_value" {
+		t.Errorf("Wrong initial value: got %v, want initial_value", initialResponse.Value)
+	}
+
+	// Update the value
+	updatedValue := map[string]interface{}{
+		"update_test_key": "updated_value",
+	}
+	jsonData, err = json.Marshal(updatedValue)
+	if err != nil {
+		t.Fatalf("Failed to marshal updated value: %v", err)
+	}
+
+	resp, err = http.Post(fmt.Sprintf("%s/setValue", serverAddr),
+		"application/json",
+		bytes.NewBuffer(jsonData))
+	if err != nil {
+		t.Fatalf("Failed to update value: %v", err)
+	}
+	resp.Body.Close()
+
+	// Verify the update
+	getValue, err = http.Get(fmt.Sprintf("%s/getValue?key=update_test_key", serverAddr))
+	if err != nil {
+		t.Fatalf("Failed to get updated value: %v", err)
+	}
+
+	var updatedResponse struct {
+		Exists bool        `json:"exists"`
+		Value  interface{} `json:"value"`
+	}
+	if err := json.NewDecoder(getValue.Body).Decode(&updatedResponse); err != nil {
+		t.Fatalf("Failed to decode updated get response: %v", err)
+	}
+	getValue.Body.Close()
+
+	if !updatedResponse.Exists {
+		t.Fatal("Updated value does not exist")
+	}
+	if updatedResponse.Value != "updated_value" {
+		t.Errorf("Wrong updated value: got %v, want updated_value", updatedResponse.Value)
+	}
+}
+
 func TestUploadDownloadJSON(t *testing.T) {
 	// First download the current state
 	resp, err := http.Get(fmt.Sprintf("%s/download", serverAddr))
