@@ -150,11 +150,14 @@ public:
       handleValueChange(path, old_val, new_val);
     });
 
+    // Request initial state
+    requestInitialState();
+
+    // Start listening for updates
     receiveThread = std::thread(&UDPValueMonitor::receiveLoop, this);
   }
 
   ~UDPValueMonitor() {
-    stopMonitoring();
     stop();
     if (sockfd >= 0) {
       close(sockfd);
@@ -168,32 +171,6 @@ public:
     }
   }
 
-  void startMonitoring() {
-    if (monitoring) {
-      stopMonitoring();
-    }
-
-    monitoring = true;
-    monitorThread = std::thread([this]() {
-      while (monitoring && running) {
-        requestValue();
-        std::this_thread::sleep_for(
-            std::chrono::milliseconds(MONITOR_INTERVAL_MS));
-      }
-    });
-
-    std::cout << "\nMonitoring " << targetKey_
-              << " changes (press Enter to exit)...\n";
-  }
-
-  void stopMonitoring() {
-    monitoring = false;
-    if (monitorThread.joinable()) {
-      monitorThread.join();
-    }
-    std::cout << "\nStopped monitoring\n";
-  }
-
 private:
   std::string getTimestamp() {
     const auto now = std::chrono::system_clock::now();
@@ -205,8 +182,6 @@ private:
 
   void handleValueChange(const std::string &path, const Json::Value &old_val,
                          const Json::Value &new_val) {
-
-    // Only print if the values are actually different
     if (old_val != new_val) {
       std::cout << getTimestamp() << " " << path << " changed from: ";
       Json::StyledWriter writer;
@@ -216,7 +191,7 @@ private:
     }
   }
 
-  void requestValue() {
+  void requestInitialState() {
     Json::Value message;
     message["action"] = "get";
     message["key"] = "state";
@@ -238,7 +213,15 @@ private:
         buffer[received] = '\0';
         Json::Value response;
         if (reader.parse(buffer, response)) {
-          handleResponse(response);
+          // Handle both initial state responses and update messages
+          if (response.isMember("action") &&
+              response["action"].asString() == "update") {
+            if (response.isMember("update")) {
+              handleUpdate(response["update"]);
+            }
+          } else {
+            handleResponse(response);
+          }
         }
       } else if (received < 0 && errno != EWOULDBLOCK && errno != EAGAIN) {
         std::cerr << "Error receiving data: " << strerror(errno) << std::endl;
@@ -248,11 +231,20 @@ private:
     }
   }
 
+  void handleUpdate(const Json::Value &update) {
+    try {
+      Json::Value value = findTargetValue(update);
+      if (!value.isNull()) {
+        jsonMonitor.update(targetKey_, value);
+      }
+    } catch (const std::exception &e) {
+      std::cerr << "Error handling update: " << e.what() << std::endl;
+    }
+  }
+
   void handleResponse(const Json::Value &response) {
     try {
-
       Json::Value value = findTargetValue(response);
-
       if (!value.isNull()) {
         jsonMonitor.update(targetKey_, value);
       }
@@ -288,16 +280,13 @@ private:
   struct sockaddr_in serverAddr;
   std::atomic<bool> running{true};
   std::thread receiveThread;
-  std::thread monitorThread;
   Json::FastWriter writer;
   Json::Reader reader;
 
   std::string targetKey_;
-  std::atomic<bool> monitoring{false};
   JsonMonitor jsonMonitor;
 
   static constexpr size_t BUFFER_SIZE = 65535;
-  static constexpr int MONITOR_INTERVAL_MS = 1000;
 };
 
 int main(int argc, char *argv[]) {
@@ -317,10 +306,8 @@ int main(int argc, char *argv[]) {
     std::cout << "Monitoring key: " << targetKey << "\n";
 
     UDPValueMonitor client(serverIP, port, targetKey);
-    client.startMonitoring();
+    std::cout << "\nListening for updates (press Enter to exit)...\n";
     std::cin.get();
-
-    client.stopMonitoring();
     client.stop();
   } catch (const std::exception &e) {
     std::cerr << "Error: " << e.what() << std::endl;
