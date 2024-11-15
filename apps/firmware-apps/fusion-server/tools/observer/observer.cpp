@@ -51,8 +51,7 @@ public:
 
     old_value = *current;
 
-    // Only proceed with update and notifications if the value has actually
-    // changed
+    // Only proceed with update and notifications if the value has changed
     if (old_value != new_value) {
       *current = new_value;
 
@@ -150,10 +149,8 @@ public:
       handleValueChange(path, old_val, new_val);
     });
 
-    // Request initial state
     requestInitialState();
 
-    // Start listening for updates
     receiveThread = std::thread(&UDPValueMonitor::receiveLoop, this);
 
     std::cout << "Initialized UDP monitor and waiting for updates...\n";
@@ -213,7 +210,6 @@ private:
       if (received > 0) {
         buffer[received] = '\0';
 
-        // Debug: print received message
         if (debug_) {
           std::cout << "Received: " << buffer << std::endl;
         }
@@ -241,7 +237,6 @@ private:
   }
 
   void handleUpdateMessage(const Json::Value &update) {
-    // Debug print the update structure
     if (debug_) {
       Json::StyledWriter writer;
       std::cout << "Processing update: " << writer.write(update) << std::endl;
@@ -257,7 +252,6 @@ private:
   }
 
   void handleStateResponse(const Json::Value &data) {
-    // Debug print the state response
     if (debug_) {
       Json::StyledWriter writer;
       std::cout << "Processing state response: " << writer.write(data)
