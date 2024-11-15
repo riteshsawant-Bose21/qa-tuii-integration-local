@@ -12,15 +12,12 @@ import (
 	"time"
 )
 
-// Message represents the incoming message structure
 type Message struct {
 	Action string          `json:"action"`
-	Key    string          `json:"key,omitempty"`
-	Value  interface{}     `json:"value,omitempty"`
+	Update json.RawMessage `json:"update,omitempty"`
 	Data   json.RawMessage `json:"data,omitempty"`
 }
 
-// Response represents the server response structure
 type Response struct {
 	Status  string      `json:"status"`
 	Message string      `json:"message,omitempty"`
@@ -31,9 +28,8 @@ type Broadcaster interface {
 	BroadcastUpdate(update api.ConfigUpdate) error
 }
 
-var _ broadcast.Broadcaster = (*UDPServer)(nil) // This will fail if interface doesn't match
+var _ broadcast.Broadcaster = (*UDPServer)(nil)
 
-// UDPServer handles UDP communication
 type UDPServer struct {
 	addr         string
 	conn         *net.UDPConn
@@ -65,25 +61,21 @@ func NewUDPServer(addr string, stateManager *config.StateManager) (*UDPServer, e
 	}, nil
 }
 
-// Start begins listening for UDP messages
 func (s *UDPServer) Start() {
 	s.wg.Add(1)
 	go s.listen()
 }
 
-// Stop halts the UDP server
 func (s *UDPServer) Stop() {
 	close(s.stopChan)
 	s.conn.Close()
 	s.wg.Wait()
 
-	// Clear clients
 	s.clientsMux.Lock()
 	s.clients = make(map[string]*net.UDPAddr)
 	s.clientsMux.Unlock()
 }
 
-// Listen method update to handle client disconnections
 func (s *UDPServer) listen() {
 	defer s.wg.Done()
 	buffer := make([]byte, 65535)
@@ -93,13 +85,11 @@ func (s *UDPServer) listen() {
 		case <-s.stopChan:
 			return
 		default:
-			// Set read deadline to handle potential blocking
 			s.conn.SetReadDeadline(time.Now().Add(1 * time.Second))
 			n, addr, err := s.conn.ReadFromUDP(buffer)
 
 			if err != nil {
 				if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
-					// This is just a timeout, continue listening
 					continue
 				}
 
@@ -122,26 +112,20 @@ func (s *UDPServer) listen() {
 
 func (s *UDPServer) removeClient(addr string) {
 	s.clientsMux.Lock()
-	if _, exists := s.clients[addr]; exists {
-		delete(s.clients, addr)
-	}
+	delete(s.clients, addr)
 	s.clientsMux.Unlock()
 }
 
-// Broadcaster interface
 func (s *UDPServer) BroadcastUpdate(update api.ConfigUpdate) error {
 	return s.SendUpdate(s.addr, update)
 }
 
-// Close method for Broadcaster interface
 func (s *UDPServer) Close() error {
 	s.Stop()
 	return nil
 }
 
 func (s *UDPServer) handleMessage(data []byte, addr *net.UDPAddr) {
-
-	// Store client address when we receive a message
 	s.clientsMux.Lock()
 	s.clients[addr.String()] = addr
 	s.clientsMux.Unlock()
@@ -165,21 +149,35 @@ func (s *UDPServer) handleMessage(data []byte, addr *net.UDPAddr) {
 		})
 
 	case "set":
-		if msg.Key == "" {
-			log.Printf("[ERROR] Set action missing key")
+		var update map[string]interface{}
+		if err := json.Unmarshal(msg.Update, &update); err != nil {
 			s.sendResponse(addr, Response{
 				Status:  "error",
-				Message: "Key is required for set action",
+				Message: fmt.Sprintf("Invalid update data: %v", err),
 			})
 			return
 		}
 
-		update := api.ConfigUpdate{
-			Key:   msg.Key,
-			Value: msg.Value,
+		if len(update) != 1 {
+			s.sendResponse(addr, Response{
+				Status:  "error",
+				Message: "Update must contain exactly one key-value pair",
+			})
+			return
 		}
 
-		if err := s.stateManager.ApplyUpdate(update); err != nil {
+		// Get key for response message
+		var key string
+		for k := range update {
+			key = k
+			break
+		}
+
+		configUpdate := api.ConfigUpdate{
+			Update: update,
+		}
+
+		if err := s.stateManager.ApplyUpdate(configUpdate); err != nil {
 			log.Printf("[ERROR] Failed to apply update: %v", err)
 			s.sendResponse(addr, Response{
 				Status:  "error",
@@ -190,7 +188,7 @@ func (s *UDPServer) handleMessage(data []byte, addr *net.UDPAddr) {
 
 		s.sendResponse(addr, Response{
 			Status:  "success",
-			Message: fmt.Sprintf("Successfully set %s", msg.Key),
+			Message: fmt.Sprintf("Successfully set %s", key),
 		})
 
 	case "update":
@@ -240,25 +238,27 @@ func (s *UDPServer) sendResponse(addr *net.UDPAddr, response Response) {
 	}
 }
 
-// SendUpdate sends an update via UDP
 func (s *UDPServer) SendUpdate(listenAddr string, update api.ConfigUpdate) error {
-
 	msg := Message{
 		Action: "update",
-		Key:    update.Key,
-		Value:  update.Value,
+		Update: json.RawMessage([]byte{}),
 	}
+
+	// Marshal the update map into raw JSON
+	updateBytes, err := json.Marshal(update.Update)
+	if err != nil {
+		return fmt.Errorf("failed to marshal update: %v", err)
+	}
+	msg.Update = updateBytes
 
 	data, err := json.Marshal(msg)
 	if err != nil {
 		return fmt.Errorf("failed to marshal message: %v", err)
 	}
 
-	// Send to all known clients
 	s.clientsMux.RLock()
 	deadClients := make([]string, 0)
 
-	// Send to all registered clients
 	for addrStr, clientAddr := range s.clients {
 		log.Printf("Sending UDP update to %s: %s", addrStr, string(data))
 		_, err = s.conn.WriteToUDP(data, clientAddr)
@@ -269,7 +269,6 @@ func (s *UDPServer) SendUpdate(listenAddr string, update api.ConfigUpdate) error
 	}
 	s.clientsMux.RUnlock()
 
-	// Clean up dead clients outside the read lock
 	for _, addr := range deadClients {
 		s.removeClient(addr)
 	}

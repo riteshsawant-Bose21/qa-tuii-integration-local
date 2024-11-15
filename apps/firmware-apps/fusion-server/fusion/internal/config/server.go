@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"sync"
@@ -15,68 +16,82 @@ import (
 	"github.com/hashicorp/memberlist"
 )
 
-// ConfigServer handles HTTP requests for configuration management
 type ConfigServer struct {
 	list         *memberlist.Memberlist
 	stateManager *StateManager
+	persistence  *ConfigPersistence
 	wsClients    map[*websocket.Conn]bool
 	wsLock       sync.RWMutex
 	upgrader     websocket.Upgrader
 	broadcasters []broadcast.Broadcaster
 }
 
-// NewConfigServer creates a new config server instance
-func NewConfigServer(list *memberlist.Memberlist, stateManager *StateManager, broadcasters ...broadcast.Broadcaster) *ConfigServer {
-
+func NewConfigServer(list *memberlist.Memberlist, stateManager *StateManager, persistence *ConfigPersistence,
+	broadcasters ...broadcast.Broadcaster) *ConfigServer {
 	return &ConfigServer{
 		list:         list,
 		stateManager: stateManager,
+		persistence:  persistence,
 		wsClients:    make(map[*websocket.Conn]bool),
 		upgrader: websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool {
-				return true // Allow all connections
+				return true
 			},
 		},
 		broadcasters: broadcasters,
 	}
 }
 
-// SetValue handles requests to update configuration values
 func (s *ConfigServer) SetValue(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	var update struct {
-		Key   string      `json:"key"`
-		Value interface{} `json:"value"`
+	// Read request body
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error reading request body: %v", err), http.StatusBadRequest)
+		return
 	}
+	defer r.Body.Close()
 
-	if err := json.NewDecoder(r.Body).Decode(&update); err != nil {
-		http.Error(w, fmt.Sprintf("Invalid request body: %v", err), http.StatusBadRequest)
+	// Validate JSON format
+	var update map[string]interface{}
+	if err := json.Unmarshal(body, &update); err != nil {
+		http.Error(w, fmt.Sprintf("Invalid JSON format: %v", err), http.StatusBadRequest)
 		return
 	}
 
-	if update.Key == "" {
-		http.Error(w, "Key cannot be empty", http.StatusBadRequest)
-		return
+	// Create config update
+	configUpdate := api.ConfigUpdate{
+		Update:  update,
+		Version: time.Now().UnixNano(),
+		NodeID:  s.list.LocalNode().Name,
+		Time:    time.Now().UTC(),
 	}
 
-	if err := s.broadcastUpdate(update.Key, update.Value, true); err != nil {
+	// Broadcast update
+	if err := s.broadcastUpdate(configUpdate, true); err != nil {
 		log.Printf("[ERROR] Error broadcasting update: %v", err)
 		http.Error(w, "Error broadcasting update", http.StatusInternalServerError)
 		return
 	}
 
+	// Send response
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
-		"status": "Updated and broadcasted",
-		"key":    update.Key,
-	})
+	response := map[string]interface{}{
+		"status":  "Updated and broadcasted",
+		"updates": update,
+	}
+
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Printf("[ERROR] Error encoding response: %v", err)
+		http.Error(w, "Error encoding response", http.StatusInternalServerError)
+		return
+	}
 }
 
-// GetValue handles requests to retrieve configuration values
 func (s *ConfigServer) GetValue(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -104,7 +119,6 @@ func (s *ConfigServer) GetValue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Return full state if no key specified
 	state := s.stateManager.GetFullState()
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
@@ -113,9 +127,7 @@ func (s *ConfigServer) GetValue(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// HandleWebSocket manages WebSocket connections
 func (s *ConfigServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
-	// Initialize the upgrader with keepalive settings
 	s.upgrader.HandshakeTimeout = 10 * time.Second
 	s.upgrader.EnableCompression = true
 	s.upgrader.ReadBufferSize = 1024
@@ -127,14 +139,12 @@ func (s *ConfigServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Set read deadline and pong handler for keepalive
 	conn.SetReadDeadline(time.Now().Add(60 * time.Second))
 	conn.SetPongHandler(func(string) error {
 		conn.SetReadDeadline(time.Now().Add(60 * time.Second))
 		return nil
 	})
 
-	// Start ping ticker in a separate goroutine
 	pingTicker := time.NewTicker(30 * time.Second)
 	go func() {
 		defer pingTicker.Stop()
@@ -158,7 +168,6 @@ func (s *ConfigServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		s.wsLock.Unlock()
 	}()
 
-	// Send current state to new client
 	state := s.stateManager.GetFullState()
 	if err := conn.WriteJSON(map[string]interface{}{
 		"type":    "initial_state",
@@ -186,8 +195,7 @@ func (s *ConfigServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 func (s *ConfigServer) handleWebSocketMessage(data []byte) {
 	var msg struct {
 		Type    string          `json:"type"`
-		Key     string          `json:"key"`
-		Value   json.RawMessage `json:"value"`
+		Update  json.RawMessage `json:"update,omitempty"`
 		Channel int             `json:"channel,omitempty"`
 		Volume  float64         `json:"volume,omitempty"`
 	}
@@ -198,35 +206,46 @@ func (s *ConfigServer) handleWebSocketMessage(data []byte) {
 	}
 
 	switch msg.Type {
-
 	case "update":
-		var value interface{}
-		if err := json.Unmarshal(msg.Value, &value); err != nil {
-			log.Printf("[ERROR] Invalid value in WebSocket message: %v", err)
+		var update map[string]interface{}
+		if err := json.Unmarshal(msg.Update, &update); err != nil {
+			log.Printf("[ERROR] Invalid update in WebSocket message: %v", err)
 			return
 		}
 
-		if err := s.broadcastUpdate(msg.Key, value, true); err != nil {
+		configUpdate := api.ConfigUpdate{
+			Update:  update,
+			Version: time.Now().UnixNano(),
+			NodeID:  s.list.LocalNode().Name,
+			Time:    time.Now().UTC(),
+		}
+
+		if err := s.broadcastUpdate(configUpdate, true); err != nil {
 			log.Printf("[ERROR] broadcastUpdate failed: %v", err)
 		}
 
 	case "volume":
-		// Validate volume range
 		if msg.Volume < 0.0 || msg.Volume > 1.0 {
 			log.Printf("[ERROR] Invalid volume value: %v (must be between 0.0 and 1.0)", msg.Volume)
 			return
 		}
 
-		// Create volume update
 		update := api.VolumeUpdate{
 			Channel: msg.Channel,
 			Volume:  msg.Volume,
 		}
 
-		// Create a composite key for the channel volume
 		volumeKey := fmt.Sprintf("volume:%d", msg.Channel)
+		volumeUpdate := api.ConfigUpdate{
+			Update: map[string]interface{}{
+				volumeKey: update,
+			},
+			Version: time.Now().UnixNano(),
+			NodeID:  s.list.LocalNode().Name,
+			Time:    time.Now().UTC(),
+		}
 
-		if err := s.broadcastUpdate(volumeKey, update, false); err != nil {
+		if err := s.broadcastUpdate(volumeUpdate, false); err != nil {
 			log.Printf("[ERROR] Error broadcasting volume update: %v", err)
 		}
 
@@ -235,23 +254,15 @@ func (s *ConfigServer) handleWebSocketMessage(data []byte) {
 	}
 }
 
-func (s *ConfigServer) broadcastUpdate(key string, value interface{}, applyUpdate bool) error {
-
-	update := api.ConfigUpdate{
-		Key:     key,
-		Value:   value,
-		Version: time.Now().UnixNano(),
-		NodeID:  s.list.LocalNode().Name,
-		Time:    time.Now().UTC(),
-	}
-
+func (s *ConfigServer) broadcastUpdate(update api.ConfigUpdate, applyUpdate bool) error {
 	if applyUpdate {
 		if err := s.stateManager.ApplyUpdate(update); err != nil {
 			return fmt.Errorf("failed to apply update: %v", err)
 		}
+
+		s.persistence.MarkDirty()
 	}
 
-	// Broadcast to cluster
 	data, err := json.Marshal(update)
 	if err != nil {
 		return fmt.Errorf("failed to marshal update: %v", err)
@@ -267,7 +278,6 @@ func (s *ConfigServer) broadcastUpdate(key string, value interface{}, applyUpdat
 
 	s.broadcastToWebSocketClients(update)
 
-	// Broadcast to all registered broadcasters
 	for _, broadcaster := range s.broadcasters {
 		if err := broadcaster.BroadcastUpdate(update); err != nil {
 			log.Printf("[ERROR] Failed to broadcast update: %v", err)
@@ -279,8 +289,7 @@ func (s *ConfigServer) broadcastUpdate(key string, value interface{}, applyUpdat
 func (s *ConfigServer) broadcastToWebSocketClients(update api.ConfigUpdate) {
 	message := map[string]interface{}{
 		"type":    "update",
-		"key":     update.Key,
-		"value":   update.Value,
+		"update":  update.Update,
 		"version": update.Version,
 		"node_id": update.NodeID,
 		"time":    update.Time,
@@ -298,7 +307,6 @@ func (s *ConfigServer) broadcastToWebSocketClients(update api.ConfigUpdate) {
 	}
 }
 
-// DownloadJSON handles state export requests
 func (s *ConfigServer) DownloadJSON(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -325,7 +333,6 @@ func (s *ConfigServer) DownloadJSON(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// UploadJSON handles state import requests
 func (s *ConfigServer) UploadJSON(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -345,7 +352,16 @@ func (s *ConfigServer) UploadJSON(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for key, entry := range jsonImport.State {
-		if err := s.broadcastUpdate(key, entry.Value, true); err != nil {
+		update := api.ConfigUpdate{
+			Update: map[string]interface{}{
+				key: entry.Data,
+			},
+			Version: time.Now().UnixNano(),
+			NodeID:  s.list.LocalNode().Name,
+			Time:    time.Now().UTC(),
+		}
+
+		if err := s.broadcastUpdate(update, true); err != nil {
 			log.Printf("[ERROR] Import key failed: %s: %v", key, err)
 		}
 	}
@@ -357,7 +373,6 @@ func (s *ConfigServer) UploadJSON(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// HandleRoot provides basic server information
 func (s *ConfigServer) HandleRoot(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
 		http.NotFound(w, r)

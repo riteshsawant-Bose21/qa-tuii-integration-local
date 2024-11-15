@@ -43,8 +43,8 @@ type SystemMetrics struct {
 	ConfigKeys     int               `json:"config_keys"`
 	ConfigVersion  int64             `json:"config_version"`
 	LastUpdateTime time.Time         `json:"last_update_time"`
-	ConfigState    map[string]string `json:"config_state"` // Summary of config state
-	ValueTypes     map[string]int    `json:"value_types"`  // Count of different value types
+	ConfigState    map[string]string `json:"config_state"`
+	ValueTypes     map[string]int    `json:"value_types"`
 
 	// Network metrics
 	WebSocketClients int     `json:"websocket_clients"`
@@ -59,16 +59,14 @@ type SystemMetrics struct {
 	// HAProxy metrics
 	HAProxyStatus string `json:"haproxy_status"`
 	BackendNodes  int    `json:"backend_nodes"`
-
-	// HAProxy metrics
-	HAProxy struct {
+	HAProxy       struct {
 		Status        string                   `json:"status"`
 		TotalRequests int64                    `json:"total_requests"`
 		CurrentConns  int                      `json:"current_conns"`
 		BytesIn       int64                    `json:"bytes_in"`
 		BytesOut      int64                    `json:"bytes_out"`
 		FrontendStats map[string]network.Stats `json:"frontend_stats"`
-		BackendStats  map[string]network.Stats `json:"backend_network.Stats"`
+		BackendStats  map[string]network.Stats `json:"backend_stats"`
 		ServerStats   map[string]network.Stats `json:"server_stats"`
 	} `json:"haproxy"`
 }
@@ -82,7 +80,6 @@ type NodeHealth struct {
 	HealthCheckCount int64     `json:"health_check_count"`
 }
 
-// NewMetricsCollector creates a new metrics collector
 func NewMetricsCollector(list *memberlist.Memberlist, stateManager StateManagerInterface) *MetricsCollector {
 	mc := &MetricsCollector{
 		list:           list,
@@ -90,10 +87,7 @@ func NewMetricsCollector(list *memberlist.Memberlist, stateManager StateManagerI
 		haproxyMetrics: network.NewHAProxyMetrics("/var/run/haproxy.sock"),
 	}
 
-	// Start periodic collection
 	go mc.collect()
-
-	// Start cluster monitoring
 	go mc.monitorCluster()
 
 	return mc
@@ -104,19 +98,16 @@ func (mc *MetricsCollector) collect() {
 	for range ticker.C {
 		mc.mutex.Lock()
 
-		// Get process stats
 		var mem runtime.MemStats
 		runtime.ReadMemStats(&mem)
 
-		// Get state and convert to summary
 		state := mc.stateManager.GetFullState()
 		stateSummary := make(map[string]string)
 		valueTypes := make(map[string]int)
 
 		for k, v := range state {
-			// Convert complex values to type summaries
 			if v != nil {
-				valueType := fmt.Sprintf("%T", v.Value)
+				valueType := fmt.Sprintf("%T", v.Data)
 				stateSummary[k] = valueType
 				valueTypes[valueType]++
 			} else {
@@ -131,7 +122,7 @@ func (mc *MetricsCollector) collect() {
 			NodeHealth: mc.metrics.NodeHealth,
 
 			ConfigKeys:     len(state),
-			ConfigVersion:  time.Now().UnixNano(), // Replace with actual version
+			ConfigVersion:  time.Now().UnixNano(),
 			LastUpdateTime: time.Now(),
 			ConfigState:    stateSummary,
 			ValueTypes:     valueTypes,
@@ -145,7 +136,6 @@ func (mc *MetricsCollector) collect() {
 			BackendNodes:  len(mc.list.Members()),
 		}
 
-		// Get HAProxy stats
 		haproxyStats := mc.haproxyMetrics.GetStats()
 		mc.metrics.HAProxy.Status = haproxyStats.Status
 		mc.metrics.HAProxy.TotalRequests = haproxyStats.TotalRequests
@@ -160,7 +150,6 @@ func (mc *MetricsCollector) collect() {
 	}
 }
 
-// HandleMetrics handles the /metrics endpoint
 func (mc *MetricsCollector) HandleMetrics(w http.ResponseWriter, r *http.Request) {
 	mc.mutex.RLock()
 	defer mc.mutex.RUnlock()
@@ -169,7 +158,6 @@ func (mc *MetricsCollector) HandleMetrics(w http.ResponseWriter, r *http.Request
 	json.NewEncoder(w).Encode(mc.metrics)
 }
 
-// HandleClusterStatus handles the /cluster/status endpoint
 func (mc *MetricsCollector) HandleClusterStatus(w http.ResponseWriter, r *http.Request) {
 	mc.mutex.RLock()
 	defer mc.mutex.RUnlock()
@@ -178,7 +166,6 @@ func (mc *MetricsCollector) HandleClusterStatus(w http.ResponseWriter, r *http.R
 	json.NewEncoder(w).Encode(mc.clusterInfo)
 }
 
-// HandleHealthCheck handles the /health endpoint
 func (mc *MetricsCollector) HandleHealthCheck(w http.ResponseWriter, r *http.Request) {
 	mc.mutex.RLock()
 	health := mc.metrics.NodeHealth
@@ -199,7 +186,6 @@ func (mc *MetricsCollector) HandleHealthCheck(w http.ResponseWriter, r *http.Req
 	})
 }
 
-// UpdateWSCount updates the WebSocket client count
 func (mc *MetricsCollector) UpdateWSCount(delta int) {
 	mc.mutex.Lock()
 	defer mc.mutex.Unlock()
@@ -213,7 +199,6 @@ func (mc *MetricsCollector) monitorCluster() {
 
 	for range ticker.C {
 		mc.mutex.Lock()
-
 		members := mc.list.Members()
 		clusterMembers := make([]ClusterMember, len(members))
 		aliveCount := 0
@@ -265,7 +250,7 @@ func (mc *MetricsCollector) monitorCluster() {
 }
 
 func (mc *MetricsCollector) calculateAvgPingLatency() float64 {
-	return 0.0 // Implement actual ping measurement
+	return 0.0 // Implementation needed
 }
 
 func (mc *MetricsCollector) checkHAProxy() string {
@@ -287,5 +272,5 @@ func (mc *MetricsCollector) getCPUUsage() float64 {
 }
 
 func (mc *MetricsCollector) getPID() int {
-	return 0 // Implement actual PID retrieval
+	return 0 // Implementation needed
 }

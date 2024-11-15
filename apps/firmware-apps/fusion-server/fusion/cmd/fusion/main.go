@@ -21,6 +21,10 @@ var (
 	joinAddr string
 )
 
+const (
+	stateInterval = 30
+)
+
 func main() {
 	// Parse command line flags
 	flag.StringVar(&nodeName, "name", "", "Node name")
@@ -40,7 +44,7 @@ func main() {
 
 	// Initialize state manager
 	stateManager := config.NewStateManager(nodeName)
-	stateManager.StartStateDumping(30 * time.Second)
+	stateManager.StartStateDumping(stateInterval * time.Second)
 
 	// Split join addresses
 	var joinAddrs []string
@@ -71,16 +75,14 @@ func main() {
 		defer udpServer.Stop()
 	}
 
-	// Initialize config server
-	configServer := config.NewConfigServer(list, stateManager, udpServer)
-
 	// Initialize persistence
 	persistence := config.NewConfigPersistence("/var/lib/fusion/config.json", stateManager)
 	if err := persistence.LoadState(); err != nil {
 		log.Printf("Error loading state: %v", err)
 	}
-	persistence.Start()
-	defer persistence.Stop()
+
+	// Initialize config server
+	configServer := config.NewConfigServer(list, stateManager, persistence, udpServer)
 
 	// Start metrics server on separate port
 	go func() {

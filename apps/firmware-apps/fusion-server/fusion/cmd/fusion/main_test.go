@@ -291,31 +291,27 @@ func TestSetValue(t *testing.T) {
 		{
 			name: "Valid key-value pair",
 			payload: map[string]interface{}{
-				"key":   "test_key",
-				"value": "test_value",
+				"test_key": "test_value",
 			},
 			wantStatus: http.StatusOK,
 		},
 		{
-			name: "Empty key",
-			payload: map[string]interface{}{
-				"key":   "",
-				"value": "test_value",
-			},
+			name:       "Empty object",
+			payload:    map[string]interface{}{},
 			wantStatus: http.StatusBadRequest,
 		},
 		{
-			name: "Missing key field",
+			name: "Multiple keys",
 			payload: map[string]interface{}{
-				"value": "test_value",
+				"key1": "value1",
+				"key2": "value2",
 			},
 			wantStatus: http.StatusBadRequest,
 		},
 		{
 			name: "Complex value",
 			payload: map[string]interface{}{
-				"key": "complex_key",
-				"value": map[string]interface{}{
+				"complex_key": map[string]interface{}{
 					"nested": "value",
 					"array":  []string{"one", "two", "three"},
 					"number": 42,
@@ -741,15 +737,12 @@ func TestStateConsistency(t *testing.T) {
 		t.Fatalf("Test requires at least 3 nodes, but only %d available", len(nodes))
 	}
 
-	// Use just the first 3 nodes for consistency with original test
 	testNodes := nodes[:3]
 
-	// Verify cluster health before running tests
 	if !verifyClusterHealth(t, testNodes) {
 		t.Fatal("Cluster health check failed - requires 3 running nodes")
 	}
 
-	// First, set some test data on different nodes
 	testData := []struct {
 		nodeIndex int
 		key       string
@@ -760,7 +753,6 @@ func TestStateConsistency(t *testing.T) {
 		{2, "consistency_test_3", []string{"a", "b", "c"}},
 	}
 
-	// Set test data
 	for _, td := range testData {
 		err := setValueOnNode(testNodes[td.nodeIndex], td.key, td.value)
 		if err != nil {
@@ -772,7 +764,6 @@ func TestStateConsistency(t *testing.T) {
 	initialSyncTime := 5 * time.Second
 	logProgress(t, "Initial sync", initialSyncTime)
 
-	// Get full state from all nodes
 	states := make([]map[string]*api.StateEntry, len(testNodes))
 	versions := make([]int64, len(testNodes))
 
@@ -784,10 +775,8 @@ func TestStateConsistency(t *testing.T) {
 		}
 	}
 
-	// Log version information for debugging
 	t.Logf("State versions across nodes: %v", versions)
 
-	// Verify states match
 	for key := range states[0] {
 		for i := 1; i < len(testNodes); i++ {
 			entry1 := states[0][key]
@@ -798,26 +787,25 @@ func TestStateConsistency(t *testing.T) {
 				continue
 			}
 
-			if !valueEquals(entry1.Value, entry2.Value) {
+			if !valueEquals(entry1.Data, entry2.Data) {
 				t.Errorf("State mismatch for key %s between node 0 and node %d:\nNode 0: %+v\nNode %d: %+v",
-					key, i, entry1.Value, i, entry2.Value)
+					key, i, entry1.Data, i, entry2.Data)
 			}
 		}
 	}
 
-	// Log success message with node details
 	t.Logf("Successfully verified state consistency across nodes:")
 	for i, node := range testNodes {
 		t.Logf("Node %d: %s (version: %d)", i, node.address, versions[i])
 	}
 }
 
-// Helper functions remain the same but with improved error handling
 func setValueOnNode(node clusterNode, key string, value interface{}) error {
+	// Create direct JSON format
 	payload := map[string]interface{}{
-		"key":   key,
-		"value": value,
+		key: value,
 	}
+
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("failed to marshal payload: %v", err)
