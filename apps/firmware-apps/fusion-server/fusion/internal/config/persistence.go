@@ -51,7 +51,7 @@ func (p *ConfigPersistence) LoadState() error {
 
 	file, err := os.Open(p.filePath)
 	if os.IsNotExist(err) {
-		log.Printf("No existing state file found at %s", p.filePath)
+		log.Printf("[ERROR] No existing state file found at %s", p.filePath)
 		return nil
 	} else if err != nil {
 		return fmt.Errorf("failed to open state file: %v", err)
@@ -129,7 +129,7 @@ func (p *ConfigPersistence) persistenceLoop() {
 			p.mutex.Lock()
 			if p.dirty {
 				if err := p.SaveState(); err != nil {
-					log.Printf("Failed to persist state: %v", err)
+					log.Printf("[ERROR] Failed to persist state: %v", err)
 				}
 			}
 			p.mutex.Unlock()

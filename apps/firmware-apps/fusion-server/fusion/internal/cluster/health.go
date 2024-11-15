@@ -26,7 +26,7 @@ func StartHealthCheck(list *memberlist.Memberlist) {
 				}
 			}
 
-			log.Printf("Cluster health: %d/%d nodes alive",
+			log.Printf("[HEALTH] Cluster health: %d/%d nodes alive",
 				numAlive, numMembers)
 
 			time.Sleep(10 * time.Second)
@@ -39,7 +39,7 @@ func StartStateVerification(list *memberlist.Memberlist, stateManager *config.St
 	go func() {
 		for {
 			hash := stateManager.VerifyState()
-			log.Printf("Local state hash: %s", hash)
+			log.Printf("[STATE] Local state hash: %s", hash)
 
 			// TODO: Implement cross-node state verification
 			// This could involve making HTTP requests to other nodes

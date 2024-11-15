@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"fusion/internal/api"
+	"fusion/internal/broadcast"
 
 	"github.com/gorilla/websocket"
 	"github.com/hashicorp/memberlist"
@@ -21,10 +22,12 @@ type ConfigServer struct {
 	wsClients    map[*websocket.Conn]bool
 	wsLock       sync.RWMutex
 	upgrader     websocket.Upgrader
+	broadcasters []broadcast.Broadcaster
 }
 
 // NewConfigServer creates a new config server instance
-func NewConfigServer(list *memberlist.Memberlist, stateManager *StateManager) *ConfigServer {
+func NewConfigServer(list *memberlist.Memberlist, stateManager *StateManager, broadcasters ...broadcast.Broadcaster) *ConfigServer {
+
 	return &ConfigServer{
 		list:         list,
 		stateManager: stateManager,
@@ -34,6 +37,7 @@ func NewConfigServer(list *memberlist.Memberlist, stateManager *StateManager) *C
 				return true // Allow all connections
 			},
 		},
+		broadcasters: broadcasters,
 	}
 }
 
@@ -60,7 +64,7 @@ func (s *ConfigServer) SetValue(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.broadcastUpdate(update.Key, update.Value, true); err != nil {
-		log.Printf("Error broadcasting update: %v", err)
+		log.Printf("[ERROR] Error broadcasting update: %v", err)
 		http.Error(w, "Error broadcasting update", http.StatusInternalServerError)
 		return
 	}
@@ -119,7 +123,7 @@ func (s *ConfigServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 	conn, err := s.upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Printf("Failed to upgrade connection: %v", err)
+		log.Printf("[ERROR] Failed to upgrade connection: %v", err)
 		return
 	}
 
@@ -136,7 +140,7 @@ func (s *ConfigServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		defer pingTicker.Stop()
 		for range pingTicker.C {
 			if err := conn.WriteControl(websocket.PingMessage, []byte{}, time.Now().Add(10*time.Second)); err != nil {
-				log.Printf("Ping failed: %v", err)
+				log.Printf("[ERROR] Ping failed: %v", err)
 				return
 			}
 		}
@@ -161,7 +165,7 @@ func (s *ConfigServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		"version": s.stateManager.GetVersion(),
 		"state":   state,
 	}); err != nil {
-		log.Printf("Error sending initial state: %v", err)
+		log.Printf("[ERROR] Failure sending initial state: %v", err)
 		return
 	}
 
@@ -169,7 +173,7 @@ func (s *ConfigServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		messageType, data, err := conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				log.Printf("WebSocket error: %v", err)
+				log.Printf("[ERROR] WebSocket error: %v", err)
 			}
 			break
 		}
@@ -189,7 +193,7 @@ func (s *ConfigServer) handleWebSocketMessage(data []byte) {
 	}
 
 	if err := json.Unmarshal(data, &msg); err != nil {
-		log.Printf("Invalid WebSocket message: %v", err)
+		log.Printf("[ERROR] Invalid WebSocket message: %v", err)
 		return
 	}
 
@@ -198,18 +202,18 @@ func (s *ConfigServer) handleWebSocketMessage(data []byte) {
 	case "update":
 		var value interface{}
 		if err := json.Unmarshal(msg.Value, &value); err != nil {
-			log.Printf("Invalid value in WebSocket message: %v", err)
+			log.Printf("[ERROR] Invalid value in WebSocket message: %v", err)
 			return
 		}
 
 		if err := s.broadcastUpdate(msg.Key, value, true); err != nil {
-			log.Printf("Error broadcasting WebSocket update: %v", err)
+			log.Printf("[ERROR] broadcastUpdate failed: %v", err)
 		}
 
 	case "volume":
 		// Validate volume range
 		if msg.Volume < 0.0 || msg.Volume > 1.0 {
-			log.Printf("Invalid volume value: %v (must be between 0.0 and 1.0)", msg.Volume)
+			log.Printf("[ERROR] Invalid volume value: %v (must be between 0.0 and 1.0)", msg.Volume)
 			return
 		}
 
@@ -223,15 +227,16 @@ func (s *ConfigServer) handleWebSocketMessage(data []byte) {
 		volumeKey := fmt.Sprintf("volume:%d", msg.Channel)
 
 		if err := s.broadcastUpdate(volumeKey, update, false); err != nil {
-			log.Printf("Error broadcasting volume update: %v", err)
+			log.Printf("[ERROR] Error broadcasting volume update: %v", err)
 		}
 
 	default:
-		log.Printf("Unknown WebSocket message type: %s", msg.Type)
+		log.Printf("[ERROR] Unknown WebSocket message type: %s", msg.Type)
 	}
 }
 
 func (s *ConfigServer) broadcastUpdate(key string, value interface{}, applyUpdate bool) error {
+
 	update := api.ConfigUpdate{
 		Key:     key,
 		Value:   value,
@@ -255,12 +260,19 @@ func (s *ConfigServer) broadcastUpdate(key string, value interface{}, applyUpdat
 	for _, node := range s.list.Members() {
 		if node.Name != s.list.LocalNode().Name {
 			if err := s.list.SendReliable(node, data); err != nil {
-				log.Printf("Failed to send to node %s: %v", node.Name, err)
+				log.Printf("[ERROR] Failed to send to node %s: %v", node.Name, err)
 			}
 		}
 	}
 
 	s.broadcastToWebSocketClients(update)
+
+	// Broadcast to all registered broadcasters
+	for _, broadcaster := range s.broadcasters {
+		if err := broadcaster.BroadcastUpdate(update); err != nil {
+			log.Printf("[ERROR] Failed to broadcast update: %v", err)
+		}
+	}
 	return nil
 }
 
@@ -279,7 +291,7 @@ func (s *ConfigServer) broadcastToWebSocketClients(update api.ConfigUpdate) {
 
 	for conn := range s.wsClients {
 		if err := conn.WriteJSON(message); err != nil {
-			log.Printf("Error sending to WebSocket client: %v", err)
+			log.Printf("[ERROR] Error sending to WebSocket client: %v", err)
 			conn.Close()
 			delete(s.wsClients, conn)
 		}
@@ -308,7 +320,7 @@ func (s *ConfigServer) DownloadJSON(w http.ResponseWriter, r *http.Request) {
 	encoder := json.NewEncoder(w)
 	encoder.SetIndent("", "  ")
 	if err := encoder.Encode(export); err != nil {
-		log.Printf("Error exporting state: %v", err)
+		log.Printf("[ERROR] Export state failed: %v", err)
 		http.Error(w, "Error exporting state", http.StatusInternalServerError)
 	}
 }
@@ -334,7 +346,7 @@ func (s *ConfigServer) UploadJSON(w http.ResponseWriter, r *http.Request) {
 
 	for key, entry := range jsonImport.State {
 		if err := s.broadcastUpdate(key, entry.Value, true); err != nil {
-			log.Printf("Error importing key %s: %v", key, err)
+			log.Printf("[ERROR] Import key failed: %s: %v", key, err)
 		}
 	}
 

@@ -47,7 +47,7 @@ func main() {
 	}
 
 	// Connect to the WebSocket server
-	log.Printf("Connecting to %s", u.String())
+	log.Printf("Connecting to websocket %s", u.String())
 	c, _, err := dialer.Dial(u.String(), nil)
 	if err != nil {
 		log.Fatal("Failed to connect to WebSocket server:", err)
@@ -93,7 +93,7 @@ func main() {
 			_, message, err := c.ReadMessage()
 			if err != nil {
 				if !websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-					log.Printf("Read error: %v", err)
+					log.Printf("[ERROR] Read error: %v", err)
 				}
 				return
 			}

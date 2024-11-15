@@ -62,17 +62,6 @@ func main() {
 	// Initialize metrics collector
 	metricsCollector := cluster.NewMetricsCollector(list, stateManager)
 
-	// Initialize config server
-	configServer := config.NewConfigServer(list, stateManager)
-
-	// Initialize persistence
-	persistence := config.NewConfigPersistence("/var/lib/fusion/config.json", stateManager)
-	if err := persistence.LoadState(); err != nil {
-		log.Printf("Error loading state: %v", err)
-	}
-	persistence.Start()
-	defer persistence.Stop()
-
 	// Initialize UDP server
 	udpServer, err := network.NewUDPServer(":7947", stateManager)
 	if err != nil {
@@ -81,6 +70,17 @@ func main() {
 		udpServer.Start()
 		defer udpServer.Stop()
 	}
+
+	// Initialize config server
+	configServer := config.NewConfigServer(list, stateManager, udpServer)
+
+	// Initialize persistence
+	persistence := config.NewConfigPersistence("/var/lib/fusion/config.json", stateManager)
+	if err := persistence.LoadState(); err != nil {
+		log.Printf("Error loading state: %v", err)
+	}
+	persistence.Start()
+	defer persistence.Stop()
 
 	// Start metrics server on separate port
 	go func() {
@@ -101,7 +101,7 @@ func main() {
 	go network.ManageHAProxy(list)
 
 	// Start the main server
-	log.Printf("Starting server on :8080")
+	log.Printf("Starting API server on :8080")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}

@@ -47,11 +47,11 @@ func ManageHAProxy(list *memberlist.Memberlist) {
 	for {
 		members := list.Members()
 		if err := generateConfig(tmpl, members); err != nil {
-			log.Printf("Failed to generate HAProxy config: %v", err)
+			log.Printf("[ERROR] Failed to generate HAProxy config: %v", err)
 		}
 
 		if err := reloadHAProxy(); err != nil {
-			log.Printf("Failed to reload HAProxy: %v", err)
+			log.Printf("[ERROR] Failed to reload HAProxy: %v", err)
 		}
 
 		time.Sleep(10 * time.Second)
