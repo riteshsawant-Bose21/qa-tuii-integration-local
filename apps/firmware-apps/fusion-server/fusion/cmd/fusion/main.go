@@ -32,6 +32,7 @@ func main() {
 	flag.IntVar(&bindPort, "port", 7946, "Bind port")
 	flag.StringVar(&joinAddr, "join", "", "Address to join cluster (comma-separated)")
 	metricsPort := flag.Int("metrics-port", 9090, "Metrics server port")
+	verbose := flag.Bool("verbose", false, "Verbose output")
 	flag.Parse()
 
 	if nodeName == "" {
@@ -44,7 +45,9 @@ func main() {
 
 	// Initialize state manager
 	stateManager := config.NewStateManager(nodeName)
-	stateManager.StartStateDumping(stateInterval * time.Second)
+	if *verbose {
+		stateManager.StartStateDumping(stateInterval * time.Second)
+	}
 
 	// Split join addresses
 	var joinAddrs []string
@@ -53,15 +56,17 @@ func main() {
 	}
 
 	// Create memberlist
-	list, err := cluster.CreateMemberlist(nodeName, bindAddr, bindPort, joinAddrs, stateManager)
+	list, err := cluster.CreateMemberlist(nodeName, bindAddr, bindPort, joinAddrs, stateManager, *verbose)
 	if err != nil {
 		log.Fatalf("Failed to create memberlist: %v", err)
 	}
 
 	// Start cluster monitoring
-	cluster.MonitorClusterState(list)
-	cluster.StartHealthCheck(list)
-	cluster.StartStateVerification(list, stateManager)
+	if *verbose {
+		cluster.MonitorClusterState(list)
+		cluster.StartHealthCheck(list)
+		cluster.StartStateVerification(list, stateManager)
+	}
 
 	// Initialize metrics collector
 	metricsCollector := cluster.NewMetricsCollector(list, stateManager)

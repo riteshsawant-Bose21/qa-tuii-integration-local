@@ -42,7 +42,7 @@ func StartStateVerification(list *memberlist.Memberlist, stateManager *config.St
 			log.Printf("[STATE] Local state hash: %s", hash)
 
 			// TODO: Implement cross-node state verification
-			// This could involve making HTTP requests to other nodes
+			// This could involve making requests to other nodes
 			// to compare state hashes
 
 			time.Sleep(30 * time.Second)

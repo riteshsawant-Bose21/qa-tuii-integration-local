@@ -3,6 +3,7 @@ package cluster
 import (
 	"fmt"
 	"fusion/internal/config"
+	"io"
 	"log"
 	"os"
 	"time"
@@ -10,45 +11,57 @@ import (
 	"github.com/hashicorp/memberlist"
 )
 
+const (
+	probeInterval = 5
+	probeTimeout  = 2
+	retryInterval = 2
+	retryTimes    = 5
+	suspicionMult = 3
+	tcpTimeout    = 10
+)
+
 // CreateMemberlist creates and configures a new memberlist instance
-func CreateMemberlist(nodeName, bindAddr string, bindPort int, joinAddrs []string, stateManager *config.StateManager) (*memberlist.Memberlist, error) {
+func CreateMemberlist(nodeName, bindAddr string, bindPort int, joinAddrs []string, stateManager *config.StateManager, verbose bool) (*memberlist.Memberlist, error) {
 	config := memberlist.DefaultLANConfig()
 	config.Name = nodeName
 	config.BindAddr = bindAddr
 	config.BindPort = bindPort
-	config.Logger = log.New(os.Stdout, fmt.Sprintf("[MEMBERLIST-%s] ", nodeName), log.LstdFlags)
 
-	// Create delegate with state manager
-	delegate := NewGossipDelegate(nodeName, stateManager)
+	// Logger configuration
+	if verbose {
+		config.Logger = log.New(os.Stdout, fmt.Sprintf("[MEMBERLIST-%s] ", nodeName), log.LstdFlags)
+	} else {
+		config.Logger = log.New(io.Discard, "", 0)
+	}
+
+	delegate := NewGossipDelegate(nodeName, stateManager, verbose)
 	config.Delegate = delegate
 
-	// Enable TCP for join operations
-	config.TCPTimeout = 10 * time.Second // Give enough time for join
-	config.DisableTcpPings = false       // Enable TCP pings for initial join
-
-	// After successful join, we can use minimal UDP protocol
-	config.ProbeInterval = 5 * time.Second
-	config.ProbeTimeout = 2 * time.Second
-	config.SuspicionMult = 3
+	config.TCPTimeout = tcpTimeout * time.Second
+	config.DisableTcpPings = false
+	config.ProbeInterval = probeInterval * time.Second
+	config.ProbeTimeout = probeTimeout * time.Second
+	config.SuspicionMult = suspicionMult
 
 	list, err := memberlist.Create(config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create memberlist: %v", err)
 	}
 
-	// Join the cluster with retries if we have addresses
 	if len(joinAddrs) > 0 {
-		log.Printf("[DEBUG-%s] Attempting to join cluster at: %v", nodeName, joinAddrs)
-		// Retry join up to 5 times
 		var n int
-		for retries := 0; retries < 5; retries++ {
+		for retries := 0; retries < retryTimes; retries++ {
 			n, err = list.Join(joinAddrs)
 			if err == nil {
-				log.Printf("[DEBUG-%s] Successfully joined cluster with %d nodes", nodeName, n)
+				if verbose {
+					log.Printf("[MEMBERLIST-%s] Successfully joined cluster with %d nodes", nodeName, n)
+				}
 				break
 			}
-			log.Printf("[DEBUG-%s] Join attempt %d failed: %v", nodeName, retries+1, err)
-			time.Sleep(2 * time.Second)
+			if verbose {
+				log.Printf("[MEMBERLIST-%s] Join attempt %d failed: %v", nodeName, retries+1, err)
+			}
+			time.Sleep(retryInterval * time.Second)
 		}
 		if err != nil {
 			return nil, fmt.Errorf("failed to join cluster after retries: %v", err)

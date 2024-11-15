@@ -12,13 +12,15 @@ type GossipDelegate struct {
 	logger       *log.Logger
 	nodeID       string
 	stateManager *config.StateManager
+	verbose      bool
 }
 
-func NewGossipDelegate(nodeID string, stateManager *config.StateManager) *GossipDelegate {
+func NewGossipDelegate(nodeID string, stateManager *config.StateManager, verbose bool) *GossipDelegate {
 	return &GossipDelegate{
 		logger:       log.New(os.Stdout, "[GOSSIP-"+nodeID+"] ", log.LstdFlags),
 		nodeID:       nodeID,
 		stateManager: stateManager,
+		verbose:      verbose,
 	}
 }
 
@@ -64,8 +66,10 @@ func (d *GossipDelegate) NotifyMsg(msg []byte) {
 		break
 	}
 
-	d.logger.Printf("Applied update for key %s from node %s (version: %d)",
-		updateKey, update.NodeID, update.Version)
+	if d.verbose {
+		d.logger.Printf("Applied update for key %s from node %s (version: %d)",
+			updateKey, update.NodeID, update.Version)
+	}
 }
 
 func (d *GossipDelegate) GetBroadcasts(overhead, limit int) [][]byte {
@@ -73,7 +77,10 @@ func (d *GossipDelegate) GetBroadcasts(overhead, limit int) [][]byte {
 }
 
 func (d *GossipDelegate) LocalState(join bool) []byte {
-	d.logger.Printf("LocalState requested (join=%v)", join)
+
+	if d.verbose {
+		d.logger.Printf("LocalState requested (join=%v)", join)
+	}
 
 	state := d.stateManager.GetFullState()
 	snapshot := struct {
@@ -92,8 +99,10 @@ func (d *GossipDelegate) LocalState(join bool) []byte {
 		return nil
 	}
 
-	d.logger.Printf("Providing local state with %d entries (version: %d)",
-		len(state), snapshot.Version)
+	if d.verbose {
+		d.logger.Printf("Providing local state with %d entries (version: %d)",
+			len(state), snapshot.Version)
+	}
 	return data
 }
 
@@ -102,7 +111,9 @@ func (d *GossipDelegate) MergeRemoteState(buf []byte, join bool) {
 		return
 	}
 
-	d.logger.Printf("MergeRemoteState called (join=%v, size=%d)", join, len(buf))
+	if d.verbose {
+		d.logger.Printf("MergeRemoteState called (join=%v, size=%d)", join, len(buf))
+	}
 
 	var snapshot struct {
 		Version int64                      `json:"version"`
@@ -115,8 +126,9 @@ func (d *GossipDelegate) MergeRemoteState(buf []byte, join bool) {
 		return
 	}
 
-	d.logger.Printf("Merging remote state from node %s with %d entries (version: %d)",
-		snapshot.NodeID, len(snapshot.State), snapshot.Version)
-
+	if d.verbose {
+		d.logger.Printf("Merging remote state from node %s with %d entries (version: %d)",
+			snapshot.NodeID, len(snapshot.State), snapshot.Version)
+	}
 	d.stateManager.MergeRemoteState(snapshot.State, snapshot.NodeID)
 }
