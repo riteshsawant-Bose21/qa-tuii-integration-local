@@ -81,7 +81,7 @@ func (s *ConfigServer) SetValue(w http.ResponseWriter, r *http.Request) {
 	// Send response
 	w.Header().Set("Content-Type", "application/json")
 	response := map[string]interface{}{
-		"status":  "Updated and broadcasted",
+		"status":  "success",
 		"updates": update,
 	}
 
@@ -125,6 +125,28 @@ func (s *ConfigServer) GetValue(w http.ResponseWriter, r *http.Request) {
 		"version": s.stateManager.GetVersion(),
 		"state":   state,
 	})
+}
+
+func (s *ConfigServer) ClearAllData(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	configUpdate := api.ConfigUpdate{
+		Update:  map[string]interface{}{},
+		Version: time.Now().UnixNano(),
+		NodeID:  s.list.LocalNode().Name,
+		Time:    time.Now().UTC(),
+	}
+
+	if err := s.broadcastUpdate(configUpdate, true); err != nil {
+		log.Printf("[ERROR] Error broadcasting clear update: %v", err)
+		http.Error(w, "Error clearing all data", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 func (s *ConfigServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {

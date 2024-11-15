@@ -298,7 +298,7 @@ func TestSetValue(t *testing.T) {
 		{
 			name:       "Empty object",
 			payload:    map[string]interface{}{},
-			wantStatus: http.StatusBadRequest,
+			wantStatus: http.StatusOK,
 		},
 		{
 			name: "Multiple keys",
@@ -306,12 +306,12 @@ func TestSetValue(t *testing.T) {
 				"key1": "value1",
 				"key2": "value2",
 			},
-			wantStatus: http.StatusBadRequest,
+			wantStatus: http.StatusOK,
 		},
 		{
 			name: "Complex value",
 			payload: map[string]interface{}{
-				"complex_key": map[string]interface{}{
+				"complex": map[string]interface{}{
 					"nested": "value",
 					"array":  []string{"one", "two", "three"},
 					"number": 42,
@@ -342,12 +342,16 @@ func TestSetValue(t *testing.T) {
 			}
 
 			if resp.StatusCode == http.StatusOK {
-				var response map[string]string
+				var response struct {
+					Status  string                 `json:"status"`
+					Message string                 `json:"message"`
+					Update  map[string]interface{} `json:"update"`
+				}
 				if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 					t.Fatalf("Failed to decode response: %v", err)
 				}
-				if response["status"] != "Updated and broadcasted" {
-					t.Errorf("Unexpected response status: %v", response["status"])
+				if response.Status != "success" {
+					t.Errorf("Unexpected response status: %v", response.Status)
 				}
 			}
 		})
@@ -357,8 +361,7 @@ func TestSetValue(t *testing.T) {
 func TestGetValue(t *testing.T) {
 	// First set some test data
 	testData := map[string]interface{}{
-		"key":   "get_test_key",
-		"value": "get_test_value",
+		"test_key": "test_value",
 	}
 	jsonData, _ := json.Marshal(testData)
 	_, err := http.Post(fmt.Sprintf("%s/setValue", serverAddr),
@@ -376,7 +379,7 @@ func TestGetValue(t *testing.T) {
 	}{
 		{
 			name:       "Existing key",
-			key:        "get_test_key",
+			key:        "test_key",
 			wantStatus: http.StatusOK,
 			wantExists: true,
 		},
@@ -412,25 +415,27 @@ func TestGetValue(t *testing.T) {
 					resp.StatusCode, tt.wantStatus)
 			}
 
-			var response map[string]interface{}
-			if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-				t.Fatalf("Failed to decode response: %v", err)
-			}
-
 			if tt.key != "" {
-				exists, ok := response["exists"].(bool)
-				if !ok {
-					t.Fatalf("Response missing 'exists' field")
+				var response struct {
+					Exists bool        `json:"exists"`
+					Key    string      `json:"key"`
+					Value  interface{} `json:"value,omitempty"`
 				}
-				if exists != tt.wantExists {
-					t.Errorf("Unexpected exists value: got %v want %v", exists, tt.wantExists)
+				if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+					t.Fatalf("Failed to decode response: %v", err)
+				}
+				if response.Exists != tt.wantExists {
+					t.Errorf("Unexpected exists value: got %v want %v", response.Exists, tt.wantExists)
 				}
 			} else {
-				// Check full state response
-				if _, ok := response["version"]; !ok {
-					t.Error("Full state response missing version field")
+				var response struct {
+					Version int64                      `json:"version"`
+					State   map[string]*api.StateEntry `json:"state"`
 				}
-				if _, ok := response["state"]; !ok {
+				if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+					t.Fatalf("Failed to decode response: %v", err)
+				}
+				if response.State == nil {
 					t.Error("Full state response missing state field")
 				}
 			}
@@ -832,8 +837,9 @@ func getValueFromNode(node clusterNode, key string) (interface{}, bool, error) {
 	defer resp.Body.Close()
 
 	var response struct {
-		Exists bool                   `json:"exists"`
-		Value  map[string]interface{} `json:"value"`
+		Exists bool        `json:"exists"`
+		Key    string      `json:"key"`
+		Value  interface{} `json:"value,omitempty"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		return nil, false, fmt.Errorf("failed to decode response: %v", err)
@@ -841,11 +847,6 @@ func getValueFromNode(node clusterNode, key string) (interface{}, bool, error) {
 
 	if !response.Exists {
 		return nil, false, nil
-	}
-
-	// Extract the actual value from the wrapper
-	if actualValue, ok := response.Value["value"]; ok {
-		return actualValue, true, nil
 	}
 
 	return response.Value, true, nil

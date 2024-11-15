@@ -112,6 +112,7 @@ func main() {
 func setupHTTPRoutes(server *config.ConfigServer, metrics *cluster.MetricsCollector) {
 	http.HandleFunc("/setValue", withLogging(server.SetValue, "setValue"))
 	http.HandleFunc("/getValue", withLogging(server.GetValue, "getValue"))
+	http.HandleFunc("/clear", withLogging(server.ClearAllData, "clear"))
 	http.HandleFunc("/upload", withLogging(server.UploadJSON, "upload"))
 	http.HandleFunc("/download", withLogging(server.DownloadJSON, "download"))
 	http.HandleFunc("/ws", withWebSocketMetrics(server.HandleWebSocket, metrics))

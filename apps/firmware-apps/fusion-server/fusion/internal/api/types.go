@@ -8,6 +8,7 @@ type ConfigUpdate struct {
 	Version int64                  `json:"version"`
 	NodeID  string                 `json:"node_id"`
 	Time    time.Time              `json:"timestamp"`
+	Clear   bool
 }
 
 // VolumeUpdate represents a volume change update
