@@ -25,7 +25,7 @@ type Response struct {
 }
 
 type Broadcaster interface {
-	BroadcastUpdate(update api.ConfigUpdate) error
+	BroadcastUpdate(map[string]interface{}) error
 }
 
 var _ broadcast.Broadcaster = (*UDPServer)(nil)
@@ -118,7 +118,7 @@ func (s *UDPServer) removeClient(addr string) {
 	s.clientsMux.Unlock()
 }
 
-func (s *UDPServer) BroadcastUpdate(update api.ConfigUpdate) error {
+func (s *UDPServer) BroadcastUpdate(update map[string]interface{}) error {
 	return s.SendUpdate(s.addr, update)
 }
 
@@ -240,14 +240,14 @@ func (s *UDPServer) sendResponse(addr *net.UDPAddr, response Response) {
 	}
 }
 
-func (s *UDPServer) SendUpdate(listenAddr string, update api.ConfigUpdate) error {
+func (s *UDPServer) SendUpdate(listenAddr string, update map[string]interface{}) error {
 	msg := Message{
 		Action: "update",
 		Update: json.RawMessage([]byte{}),
 	}
 
 	// Marshal the update map into raw JSON
-	updateBytes, err := json.Marshal(update.Update)
+	updateBytes, err := json.Marshal(update)
 	if err != nil {
 		return fmt.Errorf("failed to marshal update: %v", err)
 	}
