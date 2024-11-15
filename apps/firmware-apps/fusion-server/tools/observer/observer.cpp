@@ -155,6 +155,8 @@ public:
 
     // Start listening for updates
     receiveThread = std::thread(&UDPValueMonitor::receiveLoop, this);
+
+    std::cout << "Initialized UDP monitor and waiting for updates...\n";
   }
 
   ~UDPValueMonitor() {
@@ -194,7 +196,6 @@ private:
   void requestInitialState() {
     Json::Value message;
     message["action"] = "get";
-    message["key"] = "state";
     const auto jsonStr = writer.write(message);
     sendto(sockfd, jsonStr.c_str(), jsonStr.length(), 0,
            (struct sockaddr *)&serverAddr, sizeof(serverAddr));
@@ -211,16 +212,24 @@ private:
 
       if (received > 0) {
         buffer[received] = '\0';
+
+        // Debug: print received message
+        if (debug_) {
+          std::cout << "Received: " << buffer << std::endl;
+        }
+
         Json::Value response;
         if (reader.parse(buffer, response)) {
-          // Handle both initial state responses and update messages
-          if (response.isMember("action") &&
-              response["action"].asString() == "update") {
-            if (response.isMember("update")) {
-              handleUpdate(response["update"]);
+          if (response.isMember("action")) {
+            std::string action = response["action"].asString();
+            if (action == "update" && response.isMember("update")) {
+              handleUpdateMessage(response["update"]);
             }
-          } else {
-            handleResponse(response);
+          } else if (response.isMember("status") &&
+                     response["status"].asString() == "success") {
+            if (response.isMember("data")) {
+              handleStateResponse(response["data"]);
+            }
           }
         }
       } else if (received < 0 && errno != EWOULDBLOCK && errno != EAGAIN) {
@@ -231,49 +240,40 @@ private:
     }
   }
 
-  void handleUpdate(const Json::Value &update) {
-    try {
-      Json::Value value = findTargetValue(update);
-      if (!value.isNull()) {
-        jsonMonitor.update(targetKey_, value);
+  void handleUpdateMessage(const Json::Value &update) {
+    // Debug print the update structure
+    if (debug_) {
+      Json::StyledWriter writer;
+      std::cout << "Processing update: " << writer.write(update) << std::endl;
+    }
+
+    // Handle update format: {"key": {"volume": 0.8}}
+    if (update.isObject() && update.isMember("key")) {
+      const Json::Value &keyData = update["key"];
+      if (keyData.isObject() && keyData.isMember(targetKey_)) {
+        jsonMonitor.update(targetKey_, keyData[targetKey_]);
       }
-    } catch (const std::exception &e) {
-      std::cerr << "Error handling update: " << e.what() << std::endl;
     }
   }
 
-  void handleResponse(const Json::Value &response) {
-    try {
-      Json::Value value = findTargetValue(response);
-      if (!value.isNull()) {
-        jsonMonitor.update(targetKey_, value);
-      }
-    } catch (const std::exception &e) {
-      std::cerr << "Error handling response: " << e.what() << std::endl;
-    }
-  }
-
-  Json::Value findTargetValue(const Json::Value &root) {
-    // Check if this is the object containing our target key and value
-    if (root.isMember("key") && root["key"].asString() == targetKey_) {
-      if (root.isMember("value")) {
-        return root["value"];
-      }
+  void handleStateResponse(const Json::Value &data) {
+    // Debug print the state response
+    if (debug_) {
+      Json::StyledWriter writer;
+      std::cout << "Processing state response: " << writer.write(data)
+                << std::endl;
     }
 
-    // Recursive search in all object members
-    if (root.isObject()) {
-      for (const auto &key : root.getMemberNames()) {
-        if (root[key].isObject()) {
-          Json::Value result = findTargetValue(root[key]);
-          if (!result.isNull()) {
-            return result;
-          }
+    // Initial state response includes all values
+    if (data.isObject()) {
+      for (const auto &key : data.getMemberNames()) {
+        if (key == targetKey_ && data[key].isObject() &&
+            data[key].isMember("data")) {
+          jsonMonitor.update(targetKey_, data[key]["data"]);
+          break;
         }
       }
     }
-
-    return Json::nullValue;
   }
 
   int sockfd;
@@ -285,6 +285,7 @@ private:
 
   std::string targetKey_;
   JsonMonitor jsonMonitor;
+  bool debug_{false};
 
   static constexpr size_t BUFFER_SIZE = 65535;
 };
