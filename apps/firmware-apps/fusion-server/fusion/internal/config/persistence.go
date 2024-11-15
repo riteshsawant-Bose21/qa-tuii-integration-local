@@ -13,12 +13,14 @@ type ConfigPersistence struct {
 	filePath     string
 	stateManager *StateManager
 	mutex        sync.Mutex
+	verbose      bool
 }
 
-func NewConfigPersistence(filePath string, stateManager *StateManager) *ConfigPersistence {
+func NewConfigPersistence(filePath string, stateManager *StateManager, verbose bool) *ConfigPersistence {
 	return &ConfigPersistence{
 		filePath:     filePath,
 		stateManager: stateManager,
+		verbose:      verbose,
 	}
 }
 
@@ -82,7 +84,9 @@ func (p *ConfigPersistence) SaveState() error {
 		return fmt.Errorf("[ERROR] Failed to save state file: %v", err)
 	}
 
-	log.Printf("[PERSISTENCE] State saved successfully")
+	if p.verbose {
+		log.Printf("[PERSISTENCE] State saved successfully")
+	}
 	return nil
 }
 

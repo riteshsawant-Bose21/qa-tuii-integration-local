@@ -7,7 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"fusion/internal/api"
-	"net"
+	"io"
 	"net/http"
 	"os"
 	"os/exec"
@@ -415,28 +415,19 @@ func TestGetValue(t *testing.T) {
 					resp.StatusCode, tt.wantStatus)
 			}
 
+			var data map[string]interface{}
+			if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+				t.Fatalf("Failed to decode response: %v", err)
+			}
+
 			if tt.key != "" {
-				var response struct {
-					Exists bool        `json:"exists"`
-					Key    string      `json:"key"`
-					Value  interface{} `json:"value,omitempty"`
-				}
-				if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-					t.Fatalf("Failed to decode response: %v", err)
-				}
-				if response.Exists != tt.wantExists {
-					t.Errorf("Unexpected exists value: got %v want %v", response.Exists, tt.wantExists)
+				if data["exists"] != tt.wantExists {
+					t.Errorf("Unexpected exists value: got %v want %v", data["exists"], tt.wantExists)
 				}
 			} else {
-				var response struct {
-					Version int64                      `json:"version"`
-					State   map[string]*api.StateEntry `json:"state"`
-				}
-				if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-					t.Fatalf("Failed to decode response: %v", err)
-				}
-				if response.State == nil {
-					t.Error("Full state response missing state field")
+				// For full state request, just verify we got a non-empty map
+				if len(data) == 0 {
+					t.Error("Empty state response")
 				}
 			}
 		})
@@ -524,10 +515,22 @@ func TestUpdateValue(t *testing.T) {
 }
 
 func TestUploadDownloadJSON(t *testing.T) {
-	// First download the current state
+	// First set some test data
+	initialData := map[string]interface{}{
+		"upload_test": "initial_value",
+	}
+	jsonData, _ := json.Marshal(initialData)
+	_, err := http.Post(fmt.Sprintf("%s/setValue", serverAddr),
+		"application/json",
+		bytes.NewBuffer(jsonData))
+	if err != nil {
+		t.Fatalf("Failed to set initial data: %v", err)
+	}
+
+	// Download current state
 	resp, err := http.Get(fmt.Sprintf("%s/download", serverAddr))
 	if err != nil {
-		t.Fatalf("Failed to download initial state: %v", err)
+		t.Fatalf("Failed to download state: %v", err)
 	}
 	defer resp.Body.Close()
 
@@ -536,41 +539,66 @@ func TestUploadDownloadJSON(t *testing.T) {
 			resp.StatusCode, http.StatusOK)
 	}
 
-	var initialState map[string]interface{}
-	if err := json.NewDecoder(resp.Body).Decode(&initialState); err != nil {
-		t.Fatalf("Failed to decode initial state: %v", err)
+	// Set up new state values to upload
+	newState := map[string]*api.StateEntry{
+		"upload_test": {
+			Data: "modified_value",
+		},
+		"new_key": {
+			Data: "new_value",
+		},
 	}
 
-	// Modify the state
-	initialState["test_key"] = "test_value"
-	initialState["timestamp"] = time.Now()
+	// Upload modified state
+	uploadPayload := struct {
+		State map[string]*api.StateEntry `json:"state"`
+	}{
+		State: newState,
+	}
 
-	// Upload the modified state
-	jsonData, err := json.Marshal(initialState)
+	uploadData, err := json.Marshal(uploadPayload)
 	if err != nil {
-		t.Fatalf("Failed to marshal modified state: %v", err)
+		t.Fatalf("Failed to marshal upload data: %v", err)
 	}
 
 	uploadResp, err := http.Post(fmt.Sprintf("%s/upload", serverAddr),
 		"application/json",
-		bytes.NewBuffer(jsonData))
+		bytes.NewBuffer(uploadData))
 	if err != nil {
-		t.Fatalf("Failed to upload modified state: %v", err)
+		t.Fatalf("Failed to upload state: %v", err)
 	}
 	defer uploadResp.Body.Close()
 
 	if uploadResp.StatusCode != http.StatusOK {
-		t.Errorf("Upload returned wrong status: got %v want %v",
-			uploadResp.StatusCode, http.StatusOK)
+		body, _ := io.ReadAll(uploadResp.Body)
+		t.Errorf("Upload returned wrong status: got %v want %v. Body: %s",
+			uploadResp.StatusCode, http.StatusOK, string(body))
+		return
 	}
 
-	// Verify upload response
-	var uploadResponse map[string]interface{}
-	if err := json.NewDecoder(uploadResp.Body).Decode(&uploadResponse); err != nil {
-		t.Fatalf("Failed to decode upload response: %v", err)
+	// Verify uploaded data
+	getResp, err := http.Get(fmt.Sprintf("%s/getValue", serverAddr))
+	if err != nil {
+		t.Fatalf("Failed to get state after upload: %v", err)
 	}
-	if uploadResponse["status"] != "import complete" {
-		t.Errorf("Unexpected upload response status: %v", uploadResponse["status"])
+	defer getResp.Body.Close()
+
+	var finalState map[string]interface{}
+	if err := json.NewDecoder(getResp.Body).Decode(&finalState); err != nil {
+		t.Fatalf("Failed to decode final state: %v", err)
+	}
+
+	// Check if uploaded values are present with raw values
+	expectedValues := map[string]interface{}{
+		"upload_test": "modified_value",
+		"new_key":     "new_value",
+	}
+
+	for key, value := range expectedValues {
+		if finalState[key] != value {
+			t.Errorf("Mismatch for key %s: got %v, want %v",
+				key, finalState[key], value)
+		}
 	}
 }
 
@@ -669,52 +697,14 @@ func getClusterSize(node clusterNode) (int, error) {
 
 // TestClusterStateSync verifies that state changes are properly synchronized
 func TestClusterStateSync(t *testing.T) {
-
 	nodes := clusterConfig.nodes
 	if len(nodes) < 3 {
 		t.Fatalf("Test requires at least 3 nodes, but only %d available", len(nodes))
 	}
 
-	// Use just the first 3 nodes for consistency with original test
 	testNodes := nodes[:3]
-
 	checkClusterConnectivity(t, testNodes)
 
-	t.Logf("\n=== Test Configuration ===")
-	for i, node := range testNodes {
-		t.Logf("Node %d: %s", i, node.address)
-	}
-
-	// Run a simple ping test between nodes
-	t.Logf("\n=== Testing Inter-node Communication ===")
-	for i, node := range testNodes {
-		// Try to get state from this node
-		resp, err := http.Get(fmt.Sprintf("%s/getValue", node.address))
-		if err != nil {
-			t.Logf("❌ Node %d (%s) is not responding: %v", i, node.address, err)
-			t.Fatalf("Node %d is not accessible", i)
-		}
-		resp.Body.Close()
-		t.Logf("✓ Node %d (%s) is responding to API calls", i, node.address)
-	}
-
-	// Verify memberlist ports are accessible
-	t.Logf("\n=== Checking Memberlist Ports ===")
-	for i, node := range testNodes {
-		// Extract IP from node address
-		ip := strings.Split(strings.Split(node.address, "//")[1], ":")[0]
-
-		// Check memberlist port (default 7946)
-		conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:7946", ip), 2*time.Second)
-		if err != nil {
-			t.Logf("❌ Cannot connect to memberlist port on node %d (%s): %v", i, ip, err)
-		} else {
-			conn.Close()
-			t.Logf("✓ Node %d (%s) memberlist port is accessible", i, ip)
-		}
-	}
-
-	// Verify cluster health before running tests
 	if !verifyClusterHealth(t, testNodes) {
 		t.Fatal("Cluster health check failed - requires 3 running nodes")
 	}
@@ -760,50 +750,31 @@ func TestClusterStateSync(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Logf("TEST: %s", tt.name)
-			t.Logf("Setting value on node %d (%s)...",
-				tt.updateNode, testNodes[tt.updateNode].address)
 			err := setValueOnNode(testNodes[tt.updateNode], tt.key, tt.value)
 			if err != nil {
 				t.Fatalf("Failed to set value on node %d: %v", tt.updateNode, err)
 			}
 
-			t.Logf("Waiting up to %v for sync across nodes %v...", tt.timeout, tt.verifyNodes)
 			success := waitForSync(tt.timeout, func() bool {
 				for _, nodeIdx := range tt.verifyNodes {
 					value, exists, err := getValueFromNode(testNodes[nodeIdx], tt.key)
-					if err != nil {
-						t.Logf("Node %d check failed: %v", nodeIdx, err)
-						return false
-					}
-					if !exists {
-						t.Logf("Value not yet present on node %d", nodeIdx)
-						return false
-					}
-					if !valueEquals(value, tt.value) {
-						t.Logf("Value mismatch on node %d: got %v, want %v", nodeIdx, value, tt.value)
+					if err != nil || !exists || !valueEquals(value, tt.value) {
 						return false
 					}
 				}
 				return true
 			})
 
-			if success {
-				t.Logf("✓ Successfully synced across all nodes")
-			} else if tt.expectedSync {
-				// Try to get diagnostic information
-				t.Logf("Sync failed - Checking final state of all nodes:")
+			if !success && tt.expectedSync {
+				t.Logf("Sync failed - Dumping state of all nodes:")
 				for i, node := range testNodes {
-					value, exists, err := getValueFromNode(node, tt.key)
-					t.Logf("Node %d (%s):\n  Exists: %v\n  Value: %v\n  Error: %v",
-						i, node.address, exists, value, err)
-				}
-				t.Errorf("Failed to sync state across cluster within %v", tt.timeout)
-			}
-
-			if !success {
-				t.Logf("Sync failed - Dumping full state of all nodes:")
-				for _, node := range testNodes {
-					dumpFullState(t, node)
+					state, err := getFullStateFromNode(node)
+					if err != nil {
+						t.Logf("Failed to get state from node %d: %v", i, err)
+						continue
+					}
+					prettyState, _ := json.MarshalIndent(state, "", "  ")
+					t.Logf("Node %d state:\n%s", i, string(prettyState))
 				}
 				t.Errorf("Failed to sync state across cluster within %v", tt.timeout)
 			}
@@ -849,40 +820,33 @@ func TestStateConsistency(t *testing.T) {
 	initialSyncTime := 5 * time.Second
 	logProgress(t, "Initial sync", initialSyncTime)
 
-	states := make([]map[string]*api.StateEntry, len(testNodes))
-	versions := make([]int64, len(testNodes))
-
+	states := make([]map[string]interface{}, len(testNodes))
 	for i, node := range testNodes {
 		var err error
-		states[i], versions[i], err = getFullStateFromNode(node)
+		states[i], err = getFullStateFromNode(node)
 		if err != nil {
 			t.Fatalf("Failed to get state from node %d: %v", i, err)
 		}
 	}
 
-	t.Logf("State versions across nodes: %v", versions)
-
 	for key := range states[0] {
 		for i := 1; i < len(testNodes); i++ {
-			entry1 := states[0][key]
-			entry2 := states[i][key]
+			value1 := states[0][key]
+			value2 := states[i][key]
 
-			if entry2 == nil {
+			if value2 == nil {
 				t.Errorf("Key %s missing on node %d", key, i)
 				continue
 			}
 
-			if !valueEquals(entry1.Data, entry2.Data) {
+			if !valueEquals(value1, value2) {
 				t.Errorf("State mismatch for key %s between node 0 and node %d:\nNode 0: %+v\nNode %d: %+v",
-					key, i, entry1.Data, i, entry2.Data)
+					key, i, value1, i, value2)
 			}
 		}
 	}
 
-	t.Logf("Successfully verified state consistency across nodes:")
-	for i, node := range testNodes {
-		t.Logf("Node %d: %s (version: %d)", i, node.address, versions[i])
-	}
+	t.Logf("Successfully verified state consistency across nodes")
 }
 
 func setValueOnNode(node clusterNode, key string, value interface{}) error {
@@ -932,26 +896,19 @@ func getValueFromNode(node clusterNode, key string) (interface{}, bool, error) {
 	return response.Value, true, nil
 }
 
-func getFullStateFromNode(node clusterNode) (map[string]*api.StateEntry, int64, error) {
+func getFullStateFromNode(node clusterNode) (map[string]interface{}, error) {
 	resp, err := http.Get(fmt.Sprintf("%s/getValue", node.address))
 	if err != nil {
-		return nil, 0, fmt.Errorf("request failed: %v", err)
+		return nil, fmt.Errorf("request failed: %v", err)
 	}
 	defer resp.Body.Close()
 
-	var response struct {
-		Version int64                      `json:"version"`
-		State   map[string]*api.StateEntry `json:"state"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		return nil, 0, fmt.Errorf("failed to decode response: %v", err)
+	var state map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&state); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %v", err)
 	}
 
-	if response.State == nil {
-		return nil, 0, fmt.Errorf("node returned nil state")
-	}
-
-	return response.State, response.Version, nil
+	return state, nil
 }
 
 func waitForSync(timeout time.Duration, check func() bool) bool {
@@ -998,22 +955,4 @@ func valueEquals(v1, v2 interface{}) bool {
 		return false
 	}
 	return bytes.Equal(j1, j2)
-}
-
-func dumpFullState(t *testing.T, node clusterNode) {
-	resp, err := http.Get(fmt.Sprintf("%s/getValue", node.address))
-	if err != nil {
-		t.Logf("Failed to get full state from %s: %v", node.address, err)
-		return
-	}
-	defer resp.Body.Close()
-
-	var state map[string]interface{}
-	if err := json.NewDecoder(resp.Body).Decode(&state); err != nil {
-		t.Logf("Failed to decode full state from %s: %v", node.address, err)
-		return
-	}
-
-	prettyState, _ := json.MarshalIndent(state, "", "  ")
-	t.Logf("Full state from %s:\n%s", node.address, string(prettyState))
 }

@@ -113,18 +113,14 @@ func (s *ConfigServer) GetValue(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"exists": true,
-			"key":    key,
 			"value":  value,
 		})
 		return
 	}
 
-	state := s.stateManager.GetFullState()
+	state := transformState(s.stateManager.GetFullState())
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"version": s.stateManager.GetVersion(),
-		"state":   state,
-	})
+	json.NewEncoder(w).Encode(state)
 }
 
 func (s *ConfigServer) ClearAllData(w http.ResponseWriter, r *http.Request) {
@@ -190,7 +186,7 @@ func (s *ConfigServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		s.wsLock.Unlock()
 	}()
 
-	state := s.stateManager.GetFullState()
+	state := transformState(s.stateManager.GetFullState())
 	if err := conn.WriteJSON(map[string]interface{}{
 		"type":    "initial_state",
 		"version": s.stateManager.GetVersion(),
@@ -335,12 +331,31 @@ func (s *ConfigServer) DownloadJSON(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	state := s.stateManager.GetFullState()
+	state := transformState(s.stateManager.GetFullState())
 	export := map[string]interface{}{
-		"version":   s.stateManager.GetVersion(),
-		"timestamp": time.Now().UTC(),
-		"node_id":   s.list.LocalNode().Name,
-		"state":     state,
+		"state": state,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=config_export_%s.json",
+		time.Now().UTC().Format("20060102_150405")))
+
+	encoder := json.NewEncoder(w)
+	encoder.SetIndent("", "  ")
+	if err := encoder.Encode(export); err != nil {
+		log.Printf("[ERROR] Export state failed: %v", err)
+		http.Error(w, "Error exporting state", http.StatusInternalServerError)
+	}
+}
+
+func (s *ConfigServer) DumpState(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	export := map[string]interface{}{
+		"state": s.stateManager.GetFullState(),
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -411,10 +426,20 @@ func (s *ConfigServer) HandleRoot(w http.ResponseWriter, r *http.Request) {
 			"/ws",
 			"/download",
 			"/upload",
+			"/dump",
 		},
 		"cluster_size": len(s.list.Members()),
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(info)
+}
+
+// transformState converts a state map with metadata into a plain key-value map
+func transformState(state map[string]*api.StateEntry) map[string]interface{} {
+	result := make(map[string]interface{})
+	for key, entry := range state {
+		result[key] = entry.Data
+	}
+	return result
 }

@@ -81,7 +81,7 @@ func main() {
 	}
 
 	// Initialize persistence
-	persistence := config.NewConfigPersistence("/var/lib/fusion/config.json", stateManager)
+	persistence := config.NewConfigPersistence("/var/lib/fusion/config.json", stateManager, *verbose)
 	if err := persistence.LoadState(); err != nil {
 		log.Printf("Error loading state: %v", err)
 	}
@@ -102,7 +102,7 @@ func main() {
 	}()
 
 	// Set up HTTP routes
-	setupHTTPRoutes(configServer, metricsCollector)
+	setupHTTPRoutes(configServer, metricsCollector, *verbose)
 
 	// Start HAProxy management
 	go network.ManageHAProxy(list)
@@ -114,14 +114,15 @@ func main() {
 	}
 }
 
-func setupHTTPRoutes(server *config.ConfigServer, metrics *cluster.MetricsCollector) {
-	http.HandleFunc("/setValue", withLogging(server.SetValue, "setValue"))
-	http.HandleFunc("/getValue", withLogging(server.GetValue, "getValue"))
-	http.HandleFunc("/clear", withLogging(server.ClearAllData, "clear"))
-	http.HandleFunc("/upload", withLogging(server.UploadJSON, "upload"))
-	http.HandleFunc("/download", withLogging(server.DownloadJSON, "download"))
-	http.HandleFunc("/ws", withWebSocketMetrics(server.HandleWebSocket, metrics))
-	http.HandleFunc("/", withLogging(server.HandleRoot, "root"))
+func setupHTTPRoutes(server *config.ConfigServer, metrics *cluster.MetricsCollector, verbose bool) {
+	http.HandleFunc("/setValue", withLogging(server.SetValue, "setValue", verbose))
+	http.HandleFunc("/getValue", withLogging(server.GetValue, "getValue", verbose))
+	http.HandleFunc("/clear", withLogging(server.ClearAllData, "clear", verbose))
+	http.HandleFunc("/upload", withLogging(server.UploadJSON, "upload", verbose))
+	http.HandleFunc("/download", withLogging(server.DownloadJSON, "download", verbose))
+	http.HandleFunc("/dump", withLogging(server.DumpState, "dump", verbose))
+	http.HandleFunc("/ws", withWebSocketMetrics(server.HandleWebSocket, metrics, verbose))
+	http.HandleFunc("/", withLogging(server.HandleRoot, "root", verbose))
 }
 
 func setupMetricsRoutes(metrics *cluster.MetricsCollector) *http.ServeMux {
@@ -133,20 +134,29 @@ func setupMetricsRoutes(metrics *cluster.MetricsCollector) *http.ServeMux {
 }
 
 // Middleware to log HTTP requests
-func withLogging(handler http.HandlerFunc, endpoint string) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-		handler(w, r)
-		duration := time.Since(start)
-		log.Printf("[HTTP] %s %s %s Duration: %v", r.Method, r.URL.Path, endpoint, duration)
+func withLogging(handler http.HandlerFunc, endpoint string, verbose bool) http.HandlerFunc {
+
+	if verbose {
+		return func(w http.ResponseWriter, r *http.Request) {
+			start := time.Now()
+			handler(w, r)
+			duration := time.Since(start)
+			log.Printf("[HTTP] %s %s %s Duration: %v", r.Method, r.URL.Path, endpoint, duration)
+		}
+	} else {
+		return handler
 	}
 }
 
 // Special middleware for WebSocket connections
-func withWebSocketMetrics(handler http.HandlerFunc, metrics *cluster.MetricsCollector) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		metrics.UpdateWSCount(1)
-		handler(w, r)
-		metrics.UpdateWSCount(-1)
+func withWebSocketMetrics(handler http.HandlerFunc, metrics *cluster.MetricsCollector, verbose bool) http.HandlerFunc {
+	if verbose {
+		return func(w http.ResponseWriter, r *http.Request) {
+			metrics.UpdateWSCount(1)
+			handler(w, r)
+			metrics.UpdateWSCount(-1)
+		}
+	} else {
+		return handler
 	}
 }
