@@ -1,0 +1,98 @@
+# NOTE: Using Python 3.5 features only for now, so Raphael Yocto SDK provided Python works.
+import sys
+
+from waflib import Options
+
+top = '.'
+out = 'build'
+
+def options(opt):
+    opt.load('compiler_cxx')
+
+    opt.add_option('--platform', type=str, default=sys.platform,
+                   help='Target platform for cross-compiling')
+
+def detect_platform(conf):
+    platforms = [
+        # FLAG          name       strings                is-cross-compile
+        ('IS_VARMINI', 'varmini', ['varmini'],            True),
+        ('IS_RAPHAEL', 'raphael', ['raphael', 'Raphael'], True),
+        ('IS_LINUX',   'Linux',   ['linux'],              False),
+        ('IS_MACOS',   'macOS',   ['darwin'],             False)
+    ]
+
+    conf.env['is_cross_compile'] = False
+    for key, name, strings, cross in platforms:
+        conf.env[key] = False
+
+    conf.start_msg('Detecting platform')
+    platform = Options.options.platform
+    for key, name, strings, is_cross in platforms:
+        for s in strings:
+            if platform.startswith(s):
+                conf.env[key] = True
+                conf.env['platform'] = name
+                conf.env['is_cross_compile'] = is_cross
+                conf.end_msg(name, color='CYAN')
+                return
+
+def configure(conf):
+    conf.load('compiler_cxx')
+
+    detect_platform(conf)
+
+    if conf.env.is_cross_compile:
+        conf.load(conf.env.platform, tooldir='wafconf')
+
+    conf.env.append_value('CXXFLAGS', ['-std=c++17'])
+    conf.env.append_value('CXXFLAGS', ['-Wall', '-Wextra', '-Werror'])
+    conf.env.append_value('CXXFLAGS', ['-Ofast'])
+
+    # spdlog from the Yocto SDK is configured for an external 'fmt' lib.
+    conf.env.append_value('CXXFLAGS', ['-DSPDLOG_FMT_EXTERNAL'])
+    conf.env.append_value('CXXFLAGS',
+                          ['-DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE'])
+
+    if conf.env['IS_MACOS']:
+        conf.env.append_value('INCLUDES', ['/opt/homebrew/include'])
+        conf.env.append_value('LIBPATH', ['/opt/homebrew/lib'])
+        conf.env.append_value('FRAMEWORK',
+                              ['AudioUnit', 'CoreAudio', 'CoreServices'])
+        conf.env.append_value('CXXFLAGS', '-DUSE_MAC_THREADS')
+
+        # This is needed because of warnings in Boost property trees.
+        conf.env.append_value('CXXFLAGS',
+                           ['-Wno-deprecated-copy-with-user-provided-copy'])
+
+        onnx_path = conf.path.abspath() + '/libs/onnxruntime-osx-universal2-1.17.0'
+    else:
+        conf.env.append_value('LDFLAGS', '-lpthread')
+
+        if conf.env['IS_LINUX']:
+            # NOTE: Doing the old way of boost::bind for now.
+            # /usr/include/boost/bind.hpp:36:1: note: ‘#pragma message: The practice of declaring the Bind placeholders (_1, _2, ...) in the 
+            # global namespace is deprecated. Please use <boost/bind/bind.hpp> + using namespace boost::placeholders, 
+            # or define BOOST_BIND_GLOBAL_PLACEHOLDERS to retain the current behavior.’
+            conf.env.append_value('CXXFLAGS', '-DBOOST_BIND_GLOBAL_PLACEHOLDERS')
+            onnx_path = conf.path.abspath() + '/libs/onnxruntime-linux-x64-1.17.0'
+        else:
+            onnx_path = conf.path.abspath() + '/libs/onnxruntime-linux-aarch64-1.17.0'
+
+    # add onnxruntime library
+    conf.env.append_value('INCLUDES', [onnx_path+'/include'])
+    conf.env.append_value('LIBPATH', [onnx_path+'/lib'])
+
+def build(bld):
+    bld(export_includes=['./external/doctest', './include'], name='common-include')
+
+    bld.program(target='mune_dsp',
+                source=bld.path.ant_glob(['src/*.cpp', 'src/*.c']),
+                use=['common-include'],
+                lib=['jack', 'fmt', 'sndfile', 'boost_program_options', 'onnxruntime'])
+
+    bld.program(target='test_dsp',
+                source=bld.path.ant_glob(['src/*.cpp', 'src/*.c', 'test/*.cpp'],
+                                         excl=['src/mune_dsp.cpp']),
+                use=['common-include'],
+                lib=['jack', 'fmt', 'sndfile', 'boost_program_options', 'onnxruntime'])
+

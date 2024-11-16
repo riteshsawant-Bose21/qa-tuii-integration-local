@@ -1,0 +1,15 @@
+{
+    "session": {
+        "tasks": [
+            {
+                "name": "task1",
+                "blocks": [
+                    {
+                        "name": "cpu_mon",
+                        "algorithm": "cpu_usage"
+                    }
+                ]
+            }
+        ]
+    }
+}

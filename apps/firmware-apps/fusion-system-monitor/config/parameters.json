@@ -1,0 +1,30 @@
+{
+    "algorithms": [
+        {
+            "name": "cpu_usage",
+            "telemetry": [
+                { "name": "core1", "dimensions": 1, "value_type": "float", "telemetry_type": "system" },
+                { "name": "core1", "dimensions": 1, "value_type": "float", "telemetry_type": "system" },
+                { "name": "core1", "dimensions": 1, "value_type": "float", "telemetry_type": "system" },
+                { "name": "core1", "dimensions": 1, "value_type": "float", "telemetry_type": "system" },
+                { "name": "high_cpu_usage", "dimensions": 1, "value_type": "string", "telemetry_type": "event" }
+            ]
+        },
+        {
+            "name": "memory_usage",
+            "telemetry": [
+                { "name": "ram", "dimensions": 1, "value_type": "float", "telemetry_type": "system" },
+                { "name": "emmc", "dimensions": 1, "value_type": "float", "telemetry_type": "system" },
+                { "name": "low_ram", "dimensions": 1, "value_type": "string", "telemetry_type": "event" },
+                { "name": "low_emmc", "dimensions": 1, "value_type": "string", "telemetry_type": "event" }
+            ]
+        },
+        {
+            "name": "temperature",
+            "telemetry": [
+                { "name": "main_temp", "dimensions": 1, "value_type": "float" },
+                { "name": "high_temp", "dimensions": 1, "value_type": "string", "telemetry_type": "event" }
+            ]
+        }
+    ]
+}
