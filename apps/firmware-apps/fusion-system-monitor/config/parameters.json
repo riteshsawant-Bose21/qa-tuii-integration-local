@@ -4,9 +4,9 @@
             "name": "cpu_usage",
             "telemetry": [
                 { "name": "core1", "dimensions": 1, "value_type": "float", "telemetry_type": "system" },
-                { "name": "core1", "dimensions": 1, "value_type": "float", "telemetry_type": "system" },
-                { "name": "core1", "dimensions": 1, "value_type": "float", "telemetry_type": "system" },
-                { "name": "core1", "dimensions": 1, "value_type": "float", "telemetry_type": "system" },
+                { "name": "core2", "dimensions": 1, "value_type": "float", "telemetry_type": "system" },
+                { "name": "core3", "dimensions": 1, "value_type": "float", "telemetry_type": "system" },
+                { "name": "core4", "dimensions": 1, "value_type": "float", "telemetry_type": "system" },
                 { "name": "high_cpu_usage", "dimensions": 1, "value_type": "string", "telemetry_type": "event" }
             ]
         },
@@ -22,7 +22,7 @@
         {
             "name": "temperature",
             "telemetry": [
-                { "name": "main_temp", "dimensions": 1, "value_type": "float" },
+                { "name": "main_temp", "dimensions": 1, "value_type": "float", "telemetry_type": "system" },
                 { "name": "high_temp", "dimensions": 1, "value_type": "string", "telemetry_type": "event" }
             ]
         }
