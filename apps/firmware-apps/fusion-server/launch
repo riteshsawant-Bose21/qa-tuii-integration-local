@@ -98,12 +98,6 @@ cleanup() {
     
     # Remove generated cloud config file
     rm fusion-server.yaml 2>/dev/null
-
-    # Deactivate Python virtual environment if it's active
-    if [ -n "$VIRTUAL_ENV" ]; then
-        deactivate
-        [ "$VERBOSE" = true ] && echo "Deactivated Python virtual environment"
-    fi
 }
 
 # Add these color and formatting definitions at the start of the script
@@ -485,16 +479,9 @@ if ! check_existing_instances "$BASE_NAME"; then
     exit 1
 fi
 
-# Setup Python environment
-if [ ! -d "fusion-env" ]; then
-    python3 -m venv fusion-env
-fi
-[ "$VERBOSE" = true ] && echo "Activating Python virtual environment..."
-source fusion-env/bin/activate
-
 # Generate base cloud-init
 [ "$VERBOSE" = true ] && echo "Generating cloud-init configuration..."
-./scripts/generate_cloud_config.py > fusion-server.yaml
+./scripts/generate_cloud_config.sh > fusion-server.yaml
 
 # Launch first instance
 FIRST_INSTANCE="${BASE_NAME}1"
