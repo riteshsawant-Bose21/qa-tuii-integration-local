@@ -140,7 +140,7 @@ public:
                                std::string(strerror(errno)));
     }
 
-    int flags = fcntl(sockfd, F_GETFL, 0);
+    const auto flags = fcntl(sockfd, F_GETFL, 0);
     fcntl(sockfd, F_SETFL, flags | O_NONBLOCK);
 
     jsonMonitor.watch(targetKey_, [this](const std::string &path,
@@ -204,8 +204,9 @@ private:
     socklen_t senderLen = sizeof(senderAddr);
 
     while (running) {
-      ssize_t received = recvfrom(sockfd, buffer, BUFFER_SIZE, 0,
-                                  (struct sockaddr *)&senderAddr, &senderLen);
+      const ssize_t received =
+          recvfrom(sockfd, buffer, BUFFER_SIZE, 0,
+                   (struct sockaddr *)&senderAddr, &senderLen);
 
       if (received > 0) {
         buffer[received] = '\0';
@@ -292,9 +293,9 @@ int main(int argc, char *argv[]) {
       return 1;
     }
 
-    std::string serverIP = argv[1];
-    int port = std::stoi(argv[2]);
-    std::string targetKey = argv[3];
+    const std::string serverIP = argv[1];
+    const int port = std::stoi(argv[2]);
+    const std::string targetKey = argv[3];
 
     std::cout << "Starting UDPValueMonitor\n";
     std::cout << "Server: " << serverIP << ":" << port << "\n";
