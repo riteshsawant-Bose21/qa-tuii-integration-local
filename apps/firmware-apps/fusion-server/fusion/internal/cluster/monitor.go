@@ -1,19 +1,21 @@
 package cluster
 
 import (
-	"log"
+	"fusion/internal/logging"
 	"time"
 
 	"github.com/hashicorp/memberlist"
 )
 
 // MonitorClusterState continuously monitors the cluster membership state
-func MonitorClusterState(list *memberlist.Memberlist) {
+func MonitorClusterState(list *memberlist.Memberlist, nodeName string) {
 	go func() {
 		for {
 			members := list.Members()
-			log.Printf("[CLUSTER] Current cluster state:")
-			log.Printf("[CLUSTER] Total members: %d", len(members))
+			logger := logging.GetLogger(nodeName)
+
+			logger.Info("[CLUSTER] Current cluster state:")
+			logger.Info("[CLUSTER] Total members: %d", len(members))
 
 			for _, member := range members {
 				status := "ALIVE"
@@ -28,7 +30,7 @@ func MonitorClusterState(list *memberlist.Memberlist) {
 					status = "UNKNOWN"
 				}
 
-				log.Printf("[CLUSTER] - Node: %s, Address: %s:%d, Status: %s",
+				logger.Info("[CLUSTER] - Node: %s, Address: %s:%d, Status: %s",
 					member.Name,
 					member.Addr.String(),
 					member.Port,

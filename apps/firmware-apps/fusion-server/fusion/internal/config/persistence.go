@@ -3,7 +3,7 @@ package config
 import (
 	"encoding/json"
 	"fmt"
-	"log"
+	"fusion/internal/logging"
 	"os"
 	"path/filepath"
 	"sync"
@@ -13,13 +13,15 @@ type ConfigPersistence struct {
 	filePath     string
 	stateManager *StateManager
 	mutex        sync.Mutex
+	nodeName     string
 	verbose      bool
 }
 
-func NewConfigPersistence(filePath string, stateManager *StateManager, verbose bool) *ConfigPersistence {
+func NewConfigPersistence(filePath string, stateManager *StateManager, nodeName string, verbose bool) *ConfigPersistence {
 	return &ConfigPersistence{
 		filePath:     filePath,
 		stateManager: stateManager,
+		nodeName:     nodeName,
 		verbose:      verbose,
 	}
 }
@@ -28,6 +30,8 @@ func (p *ConfigPersistence) LoadState() error {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
+	logger := logging.GetLogger(p.nodeName)
+
 	dir := filepath.Dir(p.filePath)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return fmt.Errorf("[ERROR] Failed to create directory: %v", err)
@@ -35,7 +39,7 @@ func (p *ConfigPersistence) LoadState() error {
 
 	file, err := os.Open(p.filePath)
 	if os.IsNotExist(err) {
-		log.Printf("[INFO] No existing state file found at %s", p.filePath)
+		logger.Info("No existing state file found at %s", p.filePath)
 		return nil
 	} else if err != nil {
 		return fmt.Errorf("[ERROR] Failed to open state file: %v", err)
@@ -49,7 +53,7 @@ func (p *ConfigPersistence) LoadState() error {
 
 	for key, value := range state {
 		if err := p.stateManager.Set(key, value); err != nil {
-			log.Printf("[WARN] Error restoring key %s: %v", key, err)
+			logger.Warn("Error restoring key %s: %v", key, err)
 		}
 	}
 	return nil
@@ -85,7 +89,7 @@ func (p *ConfigPersistence) SaveState() error {
 	}
 
 	if p.verbose {
-		log.Printf("[PERSISTENCE] State saved successfully")
+		logging.GetLogger(p.nodeName).Debug("[PERSISTENCE] State saved successfully")
 	}
 	return nil
 }
@@ -93,7 +97,7 @@ func (p *ConfigPersistence) SaveState() error {
 func (p *ConfigPersistence) MarkDirty() {
 	go func() {
 		if err := p.SaveState(); err != nil {
-			log.Printf("[ERROR] Failed to persist state: %v", err)
+			logging.GetLogger(p.nodeName).Error("Failed to persist state: %v", err)
 		}
 	}()
 }

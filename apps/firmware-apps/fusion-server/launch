@@ -94,10 +94,10 @@ cleanup() {
     
     # Clean up temporary cloud-init files
     [ "$VERBOSE" = true ] && echo "Cleaning up temporary cloud-init files..."
-    rm -f /tmp/cloud-init-${BASE_NAME}*.yaml
+    rm -f /tmp/cloud-init-${BASE_NAME}*.yaml 2>/dev/null
     
     # Remove generated cloud config file
-    rm fusion-server.yaml
+    rm fusion-server.yaml 2>/dev/null
 
     # Deactivate Python virtual environment if it's active
     if [ -n "$VIRTUAL_ENV" ]; then

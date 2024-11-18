@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -35,13 +34,18 @@ func main() {
 	verbose := flag.Bool("verbose", false, "Verbose output")
 	flag.Parse()
 
-	if nodeName == "" {
-		log.Fatal("Node name is required")
-	}
-
 	// Initialize logging
-	debugLogger := logging.NewDebugLogger(nodeName)
-	log.Printf("Starting fusion server node: %s", nodeName)
+	logger := logging.GetLogger(nodeName)
+	if *verbose {
+		logger.SetLogLevel(logging.DEBUG)
+	}
+	logger.Info("Starting fusion server node: %s", nodeName)
+	defer logger.Close()
+
+	if nodeName == "" {
+		logger.Error("Node name is required")
+		return
+	}
 
 	// Initialize state manager
 	stateManager := config.NewStateManager(nodeName)
@@ -58,36 +62,38 @@ func main() {
 	// Create memberlist
 	list, err := cluster.CreateMemberlist(nodeName, bindAddr, bindPort, joinAddrs, stateManager, *verbose)
 	if err != nil {
-		log.Fatalf("Failed to create memberlist: %v", err)
+		logger.Error("Failed to create memberlist: %v", err)
+		return
 	}
 
 	// Start cluster monitoring
 	if *verbose {
-		cluster.MonitorClusterState(list)
-		cluster.StartHealthCheck(list)
-		cluster.StartStateVerification(list, stateManager)
+		cluster.MonitorClusterState(list, nodeName)
+		cluster.StartHealthCheck(list, nodeName)
+		cluster.StartStateVerification(list, stateManager, nodeName)
 	}
 
 	// Initialize metrics collector
 	metricsCollector := cluster.NewMetricsCollector(list, stateManager)
 
 	// Initialize UDP server
-	udpServer, err := network.NewUDPServer(":7947", stateManager, true)
+	udpServer, err := network.NewUDPServer(nodeName, ":7947", stateManager)
 	if err != nil {
-		debugLogger.Printf("Failed to create UDP server: %v", err)
+		logger.Error("Failed to create UDP server: %v", err)
+		return
 	} else {
 		udpServer.Start()
 		defer udpServer.Stop()
 	}
 
 	// Initialize persistence
-	persistence := config.NewConfigPersistence("/var/lib/fusion/config.json", stateManager, *verbose)
+	persistence := config.NewConfigPersistence("/var/lib/fusion/config.json", stateManager, nodeName, *verbose)
 	if err := persistence.LoadState(); err != nil {
-		log.Printf("Error loading state: %v", err)
+		logger.Error("Unable to load state: %v", err)
 	}
 
 	// Initialize config server
-	configServer := config.NewConfigServer(list, stateManager, persistence, udpServer)
+	configServer := config.NewConfigServer(nodeName, list, stateManager, persistence, udpServer)
 
 	// Start metrics server on separate port
 	go func() {
@@ -95,26 +101,26 @@ func main() {
 			Addr:    fmt.Sprintf(":%d", *metricsPort),
 			Handler: setupMetricsRoutes(metricsCollector),
 		}
-		log.Printf("Starting metrics server on :%d", *metricsPort)
+		logger.Info("Starting metrics server on :%d", *metricsPort)
 		if err := metricsServer.ListenAndServe(); err != nil {
-			log.Printf("Metrics server error: %v", err)
+			logger.Error("Metrics server error: %v", err)
 		}
 	}()
 
 	// Set up HTTP routes
-	setupHTTPRoutes(configServer, metricsCollector, *verbose)
+	setupHTTPRoutes(configServer, metricsCollector, nodeName, *verbose)
 
 	// Start HAProxy management
-	go network.ManageHAProxy(list)
+	go network.ManageHAProxy(list, nodeName)
 
 	// Start the main server
-	log.Printf("Starting API server on :8080")
+	logger.Info("Starting API server on :8080")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
-		log.Fatalf("Failed to start server: %v", err)
+		logger.Error("Failed to start server: %v", err)
 	}
 }
 
-func setupHTTPRoutes(server *config.ConfigServer, metrics *cluster.MetricsCollector, verbose bool) {
+func setupHTTPRoutes(server *config.ConfigServer, metrics *cluster.MetricsCollector, nodeName string, verbose bool) {
 	http.HandleFunc("/setValue", withLogging(server.SetValue, "setValue", verbose))
 	http.HandleFunc("/getValue", withLogging(server.GetValue, "getValue", verbose))
 	http.HandleFunc("/clear", withLogging(server.ClearAllData, "clear", verbose))
@@ -141,7 +147,7 @@ func withLogging(handler http.HandlerFunc, endpoint string, verbose bool) http.H
 			start := time.Now()
 			handler(w, r)
 			duration := time.Since(start)
-			log.Printf("[HTTP] %s %s %s Duration: %v", r.Method, r.URL.Path, endpoint, duration)
+			logging.GetLogger(nodeName).Debug("[HTTP] %s %s %s Duration: %v", r.Method, r.URL.Path, endpoint, duration)
 		}
 	} else {
 		return handler

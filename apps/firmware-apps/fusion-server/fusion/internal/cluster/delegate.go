@@ -4,12 +4,10 @@ import (
 	"encoding/json"
 	"fusion/internal/api"
 	"fusion/internal/config"
-	"log"
-	"os"
+	"fusion/internal/logging"
 )
 
 type GossipDelegate struct {
-	logger       *log.Logger
 	nodeID       string
 	stateManager *config.StateManager
 	verbose      bool
@@ -17,7 +15,6 @@ type GossipDelegate struct {
 
 func NewGossipDelegate(nodeID string, stateManager *config.StateManager, verbose bool) *GossipDelegate {
 	return &GossipDelegate{
-		logger:       log.New(os.Stdout, "[GOSSIP-"+nodeID+"] ", log.LstdFlags),
 		nodeID:       nodeID,
 		stateManager: stateManager,
 		verbose:      verbose,
@@ -34,7 +31,7 @@ func (d *GossipDelegate) NodeMeta(limit int) []byte {
 	}
 	data, err := json.Marshal(meta)
 	if err != nil {
-		d.logger.Printf("Error marshaling metadata: %v", err)
+		logging.GetLogger(d.nodeID).Error("Error marshaling metadata: %v", err)
 		return []byte{}
 	}
 	if len(data) > limit {
@@ -50,12 +47,12 @@ func (d *GossipDelegate) NotifyMsg(msg []byte) {
 
 	var update api.ConfigUpdate
 	if err := json.Unmarshal(msg, &update); err != nil {
-		d.logger.Printf("Error unmarshaling update: %v", err)
+		logging.GetLogger(d.nodeID).Error("Error unmarshaling update: %v", err)
 		return
 	}
 
 	if err := d.stateManager.ApplyUpdate(update); err != nil {
-		d.logger.Printf("Error applying update: %v", err)
+		logging.GetLogger(d.nodeID).Error("Error applying update: %v", err)
 		return
 	}
 
@@ -67,7 +64,7 @@ func (d *GossipDelegate) NotifyMsg(msg []byte) {
 	}
 
 	if d.verbose {
-		d.logger.Printf("Applied update for key %s from node %s (version: %d)",
+		logging.GetLogger(d.nodeID).Debug("Applied update for key %s from node %s (version: %d)",
 			updateKey, update.NodeID, update.Version)
 	}
 }
@@ -79,7 +76,7 @@ func (d *GossipDelegate) GetBroadcasts(overhead, limit int) [][]byte {
 func (d *GossipDelegate) LocalState(join bool) []byte {
 
 	if d.verbose {
-		d.logger.Printf("LocalState requested (join=%v)", join)
+		logging.GetLogger(d.nodeID).Debug("LocalState requested (join=%v)", join)
 	}
 
 	state := d.stateManager.GetFullState()
@@ -95,12 +92,12 @@ func (d *GossipDelegate) LocalState(join bool) []byte {
 
 	data, err := json.Marshal(snapshot)
 	if err != nil {
-		d.logger.Printf("Error marshaling local state: %v", err)
+		logging.GetLogger(d.nodeID).Error("Error marshaling local state: %v", err)
 		return nil
 	}
 
 	if d.verbose {
-		d.logger.Printf("Providing local state with %d entries (version: %d)",
+		logging.GetLogger(d.nodeID).Debug("Providing local state with %d entries (version: %d)",
 			len(state), snapshot.Version)
 	}
 	return data
@@ -112,7 +109,7 @@ func (d *GossipDelegate) MergeRemoteState(buf []byte, join bool) {
 	}
 
 	if d.verbose {
-		d.logger.Printf("MergeRemoteState called (join=%v, size=%d)", join, len(buf))
+		logging.GetLogger(d.nodeID).Debug("MergeRemoteState called (join=%v, size=%d)", join, len(buf))
 	}
 
 	var snapshot struct {
@@ -122,12 +119,12 @@ func (d *GossipDelegate) MergeRemoteState(buf []byte, join bool) {
 	}
 
 	if err := json.Unmarshal(buf, &snapshot); err != nil {
-		d.logger.Printf("Error unmarshaling remote state: %v", err)
+		logging.GetLogger(d.nodeID).Error("Error unmarshaling remote state: %v", err)
 		return
 	}
 
 	if d.verbose {
-		d.logger.Printf("Merging remote state from node %s with %d entries (version: %d)",
+		logging.GetLogger(d.nodeID).Debug("Merging remote state from node %s with %d entries (version: %d)",
 			snapshot.NodeID, len(snapshot.State), snapshot.Version)
 	}
 	d.stateManager.MergeRemoteState(snapshot.State, snapshot.NodeID)

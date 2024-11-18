@@ -1,16 +1,16 @@
 package cluster
 
 import (
-	"log"
 	"time"
 
 	"fusion/internal/config"
+	"fusion/internal/logging"
 
 	"github.com/hashicorp/memberlist"
 )
 
 // StartHealthCheck starts monitoring cluster health
-func StartHealthCheck(list *memberlist.Memberlist) {
+func StartHealthCheck(list *memberlist.Memberlist, nodeName string) {
 	go func() {
 		for {
 			members := list.Members()
@@ -21,12 +21,12 @@ func StartHealthCheck(list *memberlist.Memberlist) {
 				if member.State == memberlist.StateAlive {
 					numAlive++
 				} else {
-					log.Printf("Node %s is not alive: state=%d",
+					logging.GetLogger(nodeName).Info("Node %s is not alive: state=%d",
 						member.Name, member.State)
 				}
 			}
 
-			log.Printf("[HEALTH] Cluster health: %d/%d nodes alive",
+			logging.GetLogger(nodeName).Info("[HEALTH] Cluster health: %d/%d nodes alive",
 				numAlive, numMembers)
 
 			time.Sleep(10 * time.Second)
@@ -35,11 +35,11 @@ func StartHealthCheck(list *memberlist.Memberlist) {
 }
 
 // StartStateVerification starts periodic state verification
-func StartStateVerification(list *memberlist.Memberlist, stateManager *config.StateManager) {
+func StartStateVerification(list *memberlist.Memberlist, stateManager *config.StateManager, nodeName string) {
 	go func() {
 		for {
 			hash := stateManager.VerifyState()
-			log.Printf("[STATE] Local state hash: %s", hash)
+			logging.GetLogger(nodeName).Info("[STATE] Local state hash: %s", hash)
 
 			// TODO: Implement cross-node state verification
 			// This could involve making requests to other nodes

@@ -3,7 +3,7 @@ package network
 import (
 	"bufio"
 	"fmt"
-	"log"
+	"fusion/internal/logging"
 	"net"
 	"os"
 	"os/exec"
@@ -41,17 +41,19 @@ backend servers
 `
 
 // ManageHAProxy continuously updates HAProxy configuration based on cluster membership
-func ManageHAProxy(list *memberlist.Memberlist) {
+func ManageHAProxy(list *memberlist.Memberlist, nodeName string) {
 	tmpl := template.Must(template.New("haproxy").Parse(haproxyTemplate))
+
+	logger := logging.GetLogger(nodeName)
 
 	for {
 		members := list.Members()
 		if err := generateConfig(tmpl, members); err != nil {
-			log.Printf("[ERROR] Failed to generate HAProxy config: %v", err)
+			logger.Error("Failed to generate HAProxy config: %v", err)
 		}
 
 		if err := reloadHAProxy(); err != nil {
-			log.Printf("[ERROR] Failed to reload HAProxy: %v", err)
+			logger.Error("Failed to reload HAProxy: %v", err)
 		}
 
 		time.Sleep(10 * time.Second)
