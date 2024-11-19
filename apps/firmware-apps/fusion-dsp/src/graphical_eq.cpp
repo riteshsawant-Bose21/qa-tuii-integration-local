@@ -36,8 +36,6 @@ class GraphicalEq : public bosepro::Algorithm
 
         bosepro::DspParamMemory<float[]> gain;
 
-        bosepro::DspParamMemory<bool> bypass;
-
         void update_band(int band);
         
         ALGORITHM_DECLARE(GraphicalEq);
@@ -52,8 +50,10 @@ GraphicalEq::GraphicalEq(const bosepro::BlockConfiguration &configuration)
 {
     get_constant("channels", channels);
 
-    assign_control("gain", gain, POST_FUNCTION_VECTOR(update_band));
+    assign_terminal("in", in);
+    assign_terminal("out", out);
 
+    assign_control("gain", gain, POST_FUNCTION_VECTOR(update_band));
 
     new (iir.get()) filter::IirFilter(BANDS, channels);
 }
