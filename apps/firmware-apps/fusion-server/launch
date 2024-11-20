@@ -45,11 +45,34 @@ while [[ $# -gt 0 ]]; do
             KILL_MODE=true
             shift
             ;;
+        --verbose)
+            VERBOSE=true
+            shift
+            ;;
         *)
             usage
             ;;
     esac
 done
+
+
+if [ -n "$MULTIPASS_HOST" ]; then
+    # On a Linux host where 'multipass' is a snap, only the user's home
+    # directory is accessible by snaps, so create a directory somewhere under
+    # $HOME to use as the 'MULTIPASS_HOST' directory.
+    HOST_TEMP_DIR="$MULTIPASS_HOST/tmp"
+    HOST_BUILD_DIR="$MULTIPASS_HOST/build"
+    mkdir -p "$HOST_TEMP_DIR"
+    mkdir -p "$HOST_BUILD_DIR"
+    [ "$VERBOSE" = true ] && echo "Using HOST_TEMP_DIR=$HOST_TEMP_DIR"
+    [ "$VERBOSE" = true ] && echo "Using HOST_BUILD_DIR=$HOST_BUILD_DIR"
+    # Copy the main binary to HOST_BUILD_DIR
+    cp build/fusion-server "$HOST_BUILD_DIR/"
+else
+    # Default host paths, works on MacOS.
+    HOST_TEMP_DIR=/tmp
+    HOST_BUILD_DIR=./build
+fi
 
 # Handle kill mode first
 if [ "$KILL_MODE" = true ]; then
@@ -94,7 +117,7 @@ cleanup() {
     
     # Clean up temporary cloud-init files
     [ "$VERBOSE" = true ] && echo "Cleaning up temporary cloud-init files..."
-    rm -f /tmp/cloud-init-${BASE_NAME}*.yaml 2>/dev/null
+    rm -f "$HOST_TEMP_DIR"/cloud-init-${BASE_NAME}*.yaml 2>/dev/null
     
     # Remove generated cloud config file
     rm fusion-server.yaml 2>/dev/null
@@ -261,7 +284,7 @@ setup_instance() {
     sleep 10
     
     print_step "Copying fusion-server binary..."
-    if ! multipass transfer build/fusion-server "$instance_name":/tmp/; then
+    if ! multipass transfer "$HOST_BUILD_DIR/fusion-server" "$instance_name":/tmp/; then
         print_error "Failed to copy fusion-server binary"
         return 1
     fi
@@ -337,7 +360,7 @@ launch_instance() {
     local instance_name="$1"
     local instance_number="$2"
     local join_addr="$3"
-    local cloud_init_file="/tmp/cloud-init-${instance_name}.yaml"
+    local cloud_init_file="$HOST_TEMP_DIR/cloud-init-${instance_name}.yaml"
     
     print_header "Launching Instance: $instance_name"
     

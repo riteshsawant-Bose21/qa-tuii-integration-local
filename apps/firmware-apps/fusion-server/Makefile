@@ -12,7 +12,7 @@ LDFLAGS=-ldflags '-extldflags "-static"'
 
 # Force disable buffering for all commands
 SHELL := /bin/bash
-.SHELLFLAGS := -e
+.SHELLFLAGS := -ec
 
 all: deps test build
 
