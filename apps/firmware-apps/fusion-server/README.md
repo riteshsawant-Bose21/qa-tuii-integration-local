@@ -64,7 +64,7 @@ Fusion Server is a distributed configuration management system with high availab
 
 - [memberlist](github.com/hashicorp/memberlist) - Cluster membership and failure detection
 - [websocket](github.com/gorilla/websocket) - WebSocket support
-- [go]- (www.go.dev) Standard Go libraries
+- [go](www.go.dev) - Standard Go libraries
 
 
 ## Setup

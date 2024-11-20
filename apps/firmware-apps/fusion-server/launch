@@ -1,5 +1,9 @@
 #!/bin/bash
-set -ec
+if grep -q "Darwin" "/proc/version" 2>/dev/null || uname -a | grep -q "Darwin"; then
+    set -e  # OSX/Darwin
+else
+    set -ec # Linux
+fi
 
 BASE_NAME=""
 NUM_INSTANCES=""
@@ -500,6 +504,11 @@ if [ "$KILL_MODE" = true ]; then
     done
     
     echo
+    if ! prompt_yes_no "Are you sure you want to remove these instances?"; then
+        print_warning "Operation cancelled by user"
+        exit 0
+    fi
+    
     print_step "Removing instances..."
     for instance in "${instances[@]}"; do
         print_substep "Deleting instance: $instance"
