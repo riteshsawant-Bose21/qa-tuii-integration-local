@@ -1,4 +1,5 @@
 #!/bin/bash
+# See multipass.env for values of NET_INTERFACE and VIRTUAL_IP.
 
 # Function to read a file
 read_file() {
@@ -10,18 +11,18 @@ generate_config() {
     local scripts_dir=${1:-"scripts"}
     
     # Keepalived configuration
-    read -r -d '' KEEPALIVED_CONF << 'EOF'
-vrrp_script chk_haproxy {
- script "/usr/local/bin/check-haproxy.sh"
- interval 2
- weight 2
+    # Track and keepalive the main haproxy process
+    read -r -d '' KEEPALIVED_CONF << EOF_K
+vrrp_track_process haproxy-service {
+  process haproxy
+  delay 2
 }
 global_defs {
  enable_script_security
 }
 vrrp_instance VI_1 {
  state BACKUP
- interface enp0s1
+ interface $NET_INTERFACE
  virtual_router_id 51
  priority 100
  advert_int 1
@@ -30,13 +31,13 @@ vrrp_instance VI_1 {
  auth_pass fusion
  }
  virtual_ipaddress {
- 192.168.64.100/24
+ $VIRTUAL_IP/24
  }
- track_script {
- chk_haproxy
+ track_process {
+   haproxy-service
  }
 }
-EOF
+EOF_K
 
     # HAProxy configuration
     read -r -d '' HAPROXY_CONF << 'EOF'
@@ -91,11 +92,6 @@ $(echo "$KEEPALIVED_CONF" | sed 's/^/      /')
     owner: root:root
     content: |
 $(echo "$HAPROXY_CONF" | sed 's/^/      /')
-  - path: /usr/local/bin/check-haproxy.sh
-    permissions: '0755'
-    owner: root:root
-    content: |
-$(read_file "$scripts_dir/check-haproxy.sh" | sed 's/^/      /')
   - path: /usr/local/bin/setup-fusion.sh
     permissions: '0755'
     owner: root:root

@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+source multipass.env
+
 # Function to check and enable IP forwarding
 check_ip_forwarding() {
     if [[ "$(uname)" == "Darwin" ]]; then  # Check if running on macOS
@@ -55,13 +57,20 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+if [ "$VERBOSE" = true ]; then
+    echo "======== multipass.env environment ========"
+    echo "      VIRTUAL_IP: '$VIRTUAL_IP'"
+    echo "   NET_INTERFACE: '$NET_INTERFACE'"
+    echo "  MULTIPASS_DIR: '$MULTIPASS_DIR'"
+    echo ""
+fi
 
-if [ -n "$MULTIPASS_HOST" ]; then
+if [ -n "$MULTIPASS_DIR" ]; then
     # On a Linux host where 'multipass' is a snap, only the user's home
     # directory is accessible by snaps, so create a directory somewhere under
-    # $HOME to use as the 'MULTIPASS_HOST' directory.
-    HOST_TEMP_DIR="$MULTIPASS_HOST/tmp"
-    HOST_BUILD_DIR="$MULTIPASS_HOST/build"
+    # $HOME to use as the 'MULTIPASS_DIR' directory.
+    HOST_TEMP_DIR="$MULTIPASS_DIR/tmp"
+    HOST_BUILD_DIR="$MULTIPASS_DIR/build"
     mkdir -p "$HOST_TEMP_DIR"
     mkdir -p "$HOST_BUILD_DIR"
     [ "$VERBOSE" = true ] && echo "Using HOST_TEMP_DIR=$HOST_TEMP_DIR"
@@ -253,7 +262,7 @@ verify_instance() {
             print_substep "Checking VIP accessibility..."
             
             local response
-            response=$(multipass exec "$instance_name" -- curl -sf http://192.168.64.100:8080 2>/dev/null)
+            response=$(multipass exec "$instance_name" -- curl -sf http://$VIRTUAL_IP:8080 2>/dev/null)
             if [ $? -eq 0 ]; then
                 print_success "VIP is accessible"
                 printf "${CYAN}Server response: ${NC}%s\n" "$response"

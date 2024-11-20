@@ -51,7 +51,7 @@ Fusion Server is a distributed configuration management system with high availab
      - Configurable timeouts and connection limits
 
    **Keepalived Configuration**
-   - Virtual IP (VIP): 192.168.64.100
+   - Virtual IP (VIP): 192.168.64.100. The address to use is configurable in [multipass.env](multipass.env).
    - VRRP configuration for high availability
    - Automatic failover between nodes
 
