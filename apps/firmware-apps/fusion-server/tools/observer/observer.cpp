@@ -83,10 +83,6 @@ public:
     return *current;
   }
 
-private:
-  Json::Value data_;
-  std::unordered_map<std::string, std::vector<ChangeCallback>> watchers_;
-
   std::vector<std::string> split_path(const std::string &path) const {
     std::vector<std::string> parts;
     std::string current;
@@ -108,13 +104,17 @@ private:
 
     return parts;
   }
+
+private:
+  Json::Value data_;
+  std::unordered_map<std::string, std::vector<ChangeCallback>> watchers_;
 };
 
 class UDPValueMonitor {
 public:
   UDPValueMonitor(const std::string &serverIP, int port,
-                  const std::string &targetKey)
-      : targetKey_(targetKey) {
+                  const std::string &targetPath)
+      : targetPath_(targetPath), debug_(false) {
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd < 0) {
       throw std::runtime_error("Failed to create socket");
@@ -143,17 +143,15 @@ public:
     const auto flags = fcntl(sockfd, F_GETFL, 0);
     fcntl(sockfd, F_SETFL, flags | O_NONBLOCK);
 
-    jsonMonitor.watch(targetKey_, [this](const std::string &path,
-                                         const Json::Value &old_val,
-                                         const Json::Value &new_val) {
+    jsonMonitor.watch(targetPath_, [this](const std::string &path,
+                                          const Json::Value &old_val,
+                                          const Json::Value &new_val) {
       handleValueChange(path, old_val, new_val);
     });
 
     requestInitialState();
 
     receiveThread = std::thread(&UDPValueMonitor::receiveLoop, this);
-
-    std::cout << "Initialized UDP monitor and waiting for updates...\n";
   }
 
   ~UDPValueMonitor() {
@@ -182,11 +180,13 @@ private:
   void handleValueChange(const std::string &path, const Json::Value &old_val,
                          const Json::Value &new_val) {
     if (old_val != new_val) {
+      Json::StreamWriterBuilder builder;
+      builder["precision"] = 2;
+      builder["indentation"] = "";
+
       std::cout << getTimestamp() << " " << path << " changed from: ";
-      Json::StyledWriter writer;
-      std::cout << writer.write(old_val);
-      std::cout << "to: " << writer.write(new_val);
-      std::cout.flush();
+      std::cout << Json::writeString(builder, old_val);
+      std::cout << " to: " << Json::writeString(builder, new_val) << std::endl;
     }
   }
 
@@ -196,6 +196,35 @@ private:
     const auto jsonStr = writer.write(message);
     sendto(sockfd, jsonStr.c_str(), jsonStr.length(), 0,
            (struct sockaddr *)&serverAddr, sizeof(serverAddr));
+  }
+
+  Json::Value getValueAtPath(const Json::Value &root,
+                             const std::vector<std::string> &path_parts) {
+    const Json::Value *current = &root;
+    for (const auto &part : path_parts) {
+      if (!current->isObject() || !current->isMember(part)) {
+        return Json::nullValue;
+      }
+      current = &(*current)[part];
+    }
+    return *current;
+  }
+
+  void handleUpdateMessage(const Json::Value &update) {
+    if (debug_) {
+      Json::StyledWriter writer;
+      std::cout << "Processing update: " << writer.write(update) << std::endl;
+    }
+
+    // Get the path parts we're looking for
+    std::vector<std::string> path_parts = jsonMonitor.split_path(targetPath_);
+
+    // Extract the value at the target path
+    Json::Value value = getValueAtPath(update, path_parts);
+
+    if (!value.isNull()) {
+      jsonMonitor.update(targetPath_, value);
+    }
   }
 
   void receiveLoop() {
@@ -212,21 +241,23 @@ private:
         buffer[received] = '\0';
 
         if (debug_) {
-          std::cout << "Received: " << buffer << std::endl;
+          std::cout << "Received data: " << buffer << std::endl;
         }
 
         Json::Value response;
         if (reader.parse(buffer, response)) {
-          if (response.isMember("action")) {
-            std::string action = response["action"].asString();
-            if (action == "update" && response.isMember("update")) {
-              handleUpdateMessage(response["update"]);
+          // Handle initial state response
+          if (response.isMember("status") && response.isMember("data")) {
+            if (debug_) {
+              std::cout << "Processing initial state response" << std::endl;
             }
-          } else if (response.isMember("status") &&
-                     response["status"].asString() == "success") {
-            if (response.isMember("data")) {
-              handleStateResponse(response["data"]);
+            handleUpdateMessage(response["data"]);
+          } else {
+            // Handle direct update
+            if (debug_) {
+              std::cout << "Processing update message" << std::endl;
             }
+            handleUpdateMessage(response);
           }
         }
       } else if (received < 0 && errno != EWOULDBLOCK && errno != EAGAIN) {
@@ -237,40 +268,6 @@ private:
     }
   }
 
-  void handleUpdateMessage(const Json::Value &update) {
-    if (debug_) {
-      Json::StyledWriter writer;
-      std::cout << "Processing update: " << writer.write(update) << std::endl;
-    }
-
-    // Handle update format: {"key": {"volume": 0.8}}
-    if (update.isObject() && update.isMember("key")) {
-      const Json::Value &keyData = update["key"];
-      if (keyData.isObject() && keyData.isMember(targetKey_)) {
-        jsonMonitor.update(targetKey_, keyData[targetKey_]);
-      }
-    }
-  }
-
-  void handleStateResponse(const Json::Value &data) {
-    if (debug_) {
-      Json::StyledWriter writer;
-      std::cout << "Processing state response: " << writer.write(data)
-                << std::endl;
-    }
-
-    // Initial state response includes all values
-    if (data.isObject()) {
-      for (const auto &key : data.getMemberNames()) {
-        if (key == targetKey_ && data[key].isObject() &&
-            data[key].isMember("data")) {
-          jsonMonitor.update(targetKey_, data[key]["data"]);
-          break;
-        }
-      }
-    }
-  }
-
   int sockfd;
   struct sockaddr_in serverAddr;
   std::atomic<bool> running{true};
@@ -278,9 +275,9 @@ private:
   Json::FastWriter writer;
   Json::Reader reader;
 
-  std::string targetKey_;
+  std::string targetPath_;
   JsonMonitor jsonMonitor;
-  bool debug_{false};
+  bool debug_;
 
   static constexpr size_t BUFFER_SIZE = 65535;
 };
@@ -288,21 +285,21 @@ private:
 int main(int argc, char *argv[]) {
   try {
     if (argc != 4) {
-      std::cerr << "Usage: " << argv[0] << " <server_ip> <port> <key>\n";
-      std::cerr << "Example: " << argv[0] << " 127.0.0.1 7947 volume\n";
+      std::cerr << "Usage: " << argv[0] << " <server_ip> <port> <path>\n";
+      std::cerr << "Example: " << argv[0]
+                << " 127.0.0.1 7947 audio.settings.volume\n";
       return 1;
     }
 
     const std::string serverIP = argv[1];
     const int port = std::stoi(argv[2]);
-    const std::string targetKey = argv[3];
+    const std::string targetPath = argv[3];
 
     std::cout << "Starting UDPValueMonitor\n";
     std::cout << "Server: " << serverIP << ":" << port << "\n";
-    std::cout << "Monitoring key: " << targetKey << "\n";
+    std::cout << "Monitoring path: " << targetPath << "\n";
 
-    UDPValueMonitor client(serverIP, port, targetKey);
-    std::cout << "\nListening for updates (press Enter to exit)...\n";
+    UDPValueMonitor client(serverIP, port, targetPath);
     std::cin.get();
     client.stop();
   } catch (const std::exception &e) {

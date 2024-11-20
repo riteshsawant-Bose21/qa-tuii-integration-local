@@ -63,10 +63,11 @@ class MetricsApp extends StatelessWidget {
     return MaterialApp(
       title: 'Metrics Dashboard',
       theme: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: const Color(0xFF111827),
-        cardColor: const Color(0xFF1F2937),
+        scaffoldBackgroundColor: const Color(0xFF0A0F1E), // Deeper blue-black
+        cardColor: const Color(0xFF1A1F35), // Rich navy blue
       ),
       home: const MetricsDashboard(),
+      debugShowCheckedModeBanner: false,
     );
   }
 }
@@ -183,7 +184,7 @@ class _MetricsDashboardState extends State<MetricsDashboard> {
     } catch (e) {
       setState(() {
         error = e.toString();
-        print('Error details: $e'); // Added for debugging
+        print('Error details: $e');
       });
     }
   }
@@ -257,7 +258,20 @@ class _MetricsDashboardState extends State<MetricsDashboard> {
 
   Widget _buildMetricCard(String title, String value, String label) {
     return Card(
-      child: Padding(
+      elevation: 8, // Added shadow
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12), // Rounded corners
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          gradient: const LinearGradient(
+            // Subtle gradient
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF1A1F35), Color(0xFF252B4A)],
+          ),
+        ),
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
@@ -265,8 +279,9 @@ class _MetricsDashboardState extends State<MetricsDashboard> {
             Text(
               title,
               style: const TextStyle(
-                color: Color(0xFFD1D5DB),
+                color: Color(0xFFE2E8F0), // Lighter text
                 fontSize: 18,
+                fontWeight: FontWeight.w500,
               ),
             ),
             const Spacer(),
@@ -275,14 +290,14 @@ class _MetricsDashboardState extends State<MetricsDashboard> {
               style: const TextStyle(
                 fontSize: 32,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFFF3F4F6),
+                color: Color(0xFF60A5FA), // Bright blue for emphasis
               ),
             ),
             const SizedBox(height: 8),
             Text(
               label,
               style: const TextStyle(
-                color: Color(0xFF9CA3AF),
+                color: Color(0xFFCBD5E1), // Softer gray
                 fontSize: 14,
               ),
             ),
@@ -294,7 +309,19 @@ class _MetricsDashboardState extends State<MetricsDashboard> {
 
   Widget _buildSystemMetricsChart() {
     return Card(
-      child: Padding(
+      elevation: 8,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF1A1F35), Color(0xFF252B4A)],
+          ),
+        ),
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -302,38 +329,63 @@ class _MetricsDashboardState extends State<MetricsDashboard> {
             const Text(
               'System Metrics History',
               style: TextStyle(
-                color: Color(0xFFD1D5DB),
+                color: Color(0xFFE2E8F0),
                 fontSize: 18,
+                fontWeight: FontWeight.w500,
               ),
             ),
             const SizedBox(height: 16),
             Expanded(
               child: LineChart(
                 LineChartData(
-                  gridData: const FlGridData(show: true),
+                  gridData: FlGridData(
+                    show: true,
+                    drawVerticalLine: true,
+                    getDrawingHorizontalLine: (value) {
+                      return const FlLine(
+                        color: Color(0xFF2D3B55),
+                        strokeWidth: 1,
+                      );
+                    },
+                    getDrawingVerticalLine: (value) {
+                      return const FlLine(
+                        color: Color(0xFF2D3B55),
+                        strokeWidth: 1,
+                      );
+                    },
+                  ),
                   titlesData: FlTitlesData(
                     leftTitles: const AxisTitles(
                       sideTitles: SideTitles(
                         showTitles: true,
                         reservedSize: 40,
+                        interval: 20,
                       ),
                     ),
                     bottomTitles: AxisTitles(
                       sideTitles: SideTitles(
                         showTitles: true,
+                        interval: 4, // Show every fourth time label
                         getTitlesWidget: (value, meta) {
                           if (value.toInt() >= 0 &&
                               value.toInt() < history.length) {
-                            return Text(
-                              DateFormat('HH:mm:ss')
-                                  .format(history[value.toInt()].timestamp),
-                              style: const TextStyle(color: Color(0xFF9CA3AF)),
-                            );
+                            return const Text(""
+                                // DateFormat('HH:mm:ss')
+                                //     .format(history[value.toInt()].timestamp),
+                                // style: const TextStyle(
+                                //   color: Color(0xFFCBD5E1),
+                                //   fontSize: 11,
+                                // ),
+                                );
                           }
                           return const Text('');
                         },
                       ),
                     ),
+                  ),
+                  borderData: FlBorderData(
+                    show: true,
+                    border: Border.all(color: const Color(0xFF2D3B55)),
                   ),
                   lineBarsData: [
                     LineChartBarData(
@@ -342,6 +394,12 @@ class _MetricsDashboardState extends State<MetricsDashboard> {
                             entry.key.toDouble(), entry.value.cpuUsage);
                       }).toList(),
                       color: const Color(0xFF60A5FA),
+                      barWidth: 3,
+                      dotData: const FlDotData(show: false),
+                      belowBarData: BarAreaData(
+                        show: true,
+                        color: const Color(0x1A60A5FA),
+                      ),
                     ),
                     LineChartBarData(
                       spots: history.asMap().entries.map((entry) {
@@ -349,10 +407,101 @@ class _MetricsDashboardState extends State<MetricsDashboard> {
                             entry.key.toDouble(), entry.value.memoryUsage / 10);
                       }).toList(),
                       color: const Color(0xFF34D399),
+                      barWidth: 3,
+                      dotData: const FlDotData(show: false),
+                      belowBarData: BarAreaData(
+                        show: true,
+                        color: const Color(0x1A34D399),
+                      ),
                     ),
                   ],
                 ),
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildClusterStatus() {
+    return Card(
+      elevation: 8,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF1A1F35), Color(0xFF252B4A)],
+          ),
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Cluster Status',
+              style: TextStyle(
+                color: Color(0xFFE2E8F0),
+                fontSize: 18,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 16),
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 6,
+                childAspectRatio: 1.5,
+                crossAxisSpacing: 12, // Increased spacing
+                mainAxisSpacing: 12,
+              ),
+              itemCount: metrics!.members.length,
+              itemBuilder: (context, index) {
+                final member = metrics!.members[index];
+                return Container(
+                  decoration: BoxDecoration(
+                    color: member.stateColor
+                        .withOpacity(0.9), // Slightly transparent
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: [
+                      BoxShadow(
+                        color: member.stateColor.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  padding: const EdgeInsets.all(8),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        member.name,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        member.state,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12, // Smaller state text
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
           ],
         ),
@@ -392,11 +541,11 @@ class _MetricsDashboardState extends State<MetricsDashboard> {
                         getTitlesWidget: (value, meta) {
                           if (value.toInt() >= 0 &&
                               value.toInt() < history.length) {
-                            return Text(
-                              DateFormat('HH:mm:ss')
-                                  .format(history[value.toInt()].timestamp),
-                              style: const TextStyle(color: Color(0xFF9CA3AF)),
-                            );
+                            return const Text("");
+                            //   DateFormat('HH:mm:ss')
+                            //       .format(history[value.toInt()].timestamp),
+                            //   style: const TextStyle(color: Color(0xFF9CA3AF)),
+                            // );
                           }
                           return const Text('');
                         },
@@ -414,69 +563,6 @@ class _MetricsDashboardState extends State<MetricsDashboard> {
                   ],
                 ),
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildClusterStatus() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Cluster Status',
-              style: TextStyle(
-                color: Color(0xFFD1D5DB),
-                fontSize: 18,
-              ),
-            ),
-            const SizedBox(height: 16),
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 6,
-                childAspectRatio: 1.5,
-                crossAxisSpacing: 8,
-                mainAxisSpacing: 8,
-              ),
-              itemCount: metrics!.members.length,
-              itemBuilder: (context, index) {
-                final member = metrics!.members[index];
-                return Container(
-                  decoration: BoxDecoration(
-                    color: member.stateColor,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  padding: const EdgeInsets.all(8),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        member.name,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        member.state,
-                        style: const TextStyle(
-                          color: Colors.white,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                );
-              },
             ),
           ],
         ),

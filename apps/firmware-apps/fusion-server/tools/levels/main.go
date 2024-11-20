@@ -15,15 +15,182 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// VolumeMessage represents the WebSocket message structure expected by the server
 type VolumeMessage struct {
 	Type    string  `json:"type"`
 	Channel int     `json:"channel"`
 	Volume  float64 `json:"volume"`
 }
 
+type Client struct {
+	url            string
+	conn           *websocket.Conn
+	done           chan struct{}
+	messageTicker  *time.Ticker
+	pingTicker     *time.Ticker
+	signalType     string
+	sampleRate     float64
+	frequency      float64
+	channel        int
+	reconnectDelay time.Duration
+}
+
+func NewClient(url string, signalType string, sampleRate, frequency float64, channel int) *Client {
+	return &Client{
+		url:            url,
+		done:           make(chan struct{}),
+		messageTicker:  time.NewTicker(time.Second / time.Duration(frequency)),
+		pingTicker:     time.NewTicker(30 * time.Second),
+		signalType:     signalType,
+		sampleRate:     sampleRate,
+		frequency:      frequency,
+		channel:        channel,
+		reconnectDelay: time.Second,
+	}
+}
+
+func (c *Client) connect() error {
+	dialer := websocket.Dialer{
+		HandshakeTimeout: 10 * time.Second,
+		ReadBufferSize:   1024,
+		WriteBufferSize:  1024,
+	}
+
+	conn, _, err := dialer.Dial(c.url, nil)
+	if err != nil {
+		return err
+	}
+
+	c.conn = conn
+	c.setupHandlers()
+	return nil
+}
+
+func (c *Client) setupHandlers() {
+	c.conn.SetPingHandler(func(message string) error {
+		err := c.conn.WriteControl(websocket.PongMessage, []byte(message), time.Now().Add(time.Second))
+		if err == websocket.ErrCloseSent {
+			return nil
+		} else if e, ok := err.(net.Error); ok && e.Temporary() {
+			return nil
+		}
+		return err
+	})
+
+	c.conn.SetPongHandler(func(string) error {
+		return c.conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+	})
+}
+
+func (c *Client) reconnect() error {
+	for {
+		log.Printf("Attempting to reconnect in %v...", c.reconnectDelay)
+		time.Sleep(c.reconnectDelay)
+
+		if err := c.connect(); err != nil {
+			log.Printf("Reconnection failed: %v", err)
+			c.reconnectDelay *= 2
+			if c.reconnectDelay > 1*time.Minute {
+				c.reconnectDelay = 1 * time.Minute
+			}
+			continue
+		}
+
+		log.Println("Successfully reconnected")
+		c.reconnectDelay = time.Second
+		return nil
+	}
+}
+
+func (c *Client) Run() error {
+	if err := c.connect(); err != nil {
+		return err
+	}
+	defer c.Close()
+
+	interrupt := make(chan os.Signal, 1)
+	signal.Notify(interrupt, os.Interrupt)
+
+	var sinPhase float64
+	var drumBeat int
+
+	go c.readPump()
+
+	for {
+		select {
+		case <-c.done:
+			return nil
+		case <-interrupt:
+			return c.Close()
+		case <-c.pingTicker.C:
+			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				log.Printf("Error sending ping: %v", err)
+				if err := c.reconnect(); err != nil {
+					return err
+				}
+			}
+		case <-c.messageTicker.C:
+			volume := 0.0
+			switch c.signalType {
+			case "drum":
+				volume = generateDrum(&drumBeat)
+			case "sin":
+				volume = generateSin(60, &sinPhase)
+			default:
+				volume = generateNoise(c.sampleRate, c.frequency)
+			}
+
+			msg := VolumeMessage{
+				Type:    "volume",
+				Channel: c.channel,
+				Volume:  math.Round(volume*100) / 100,
+			}
+
+			if err := c.sendMessage(msg); err != nil {
+				log.Printf("Error sending message: %v", err)
+				if err := c.reconnect(); err != nil {
+					return err
+				}
+			}
+		}
+	}
+}
+
+func (c *Client) readPump() {
+	for {
+		_, message, err := c.conn.ReadMessage()
+		if err != nil {
+			if !websocket.IsCloseError(err, websocket.CloseNormalClosure) {
+				log.Printf("[ERROR] Read error: %v", err)
+				if err := c.reconnect(); err != nil {
+					log.Printf("Failed to reconnect: %v", err)
+					close(c.done)
+					return
+				}
+			}
+			return
+		}
+		log.Printf("Received: %s", message)
+	}
+}
+
+func (c *Client) sendMessage(msg VolumeMessage) error {
+	jsonMsg, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	}
+	return c.conn.WriteMessage(websocket.TextMessage, jsonMsg)
+}
+
+func (c *Client) Close() error {
+	c.messageTicker.Stop()
+	c.pingTicker.Stop()
+	return c.conn.WriteMessage(
+		websocket.CloseMessage,
+		websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""),
+	)
+}
+
 func main() {
-	// Command-line flags
 	signalType := flag.String("type", "white", "Type of signal to generate (white, pink, brown, sin or drum)")
 	sampleRate := flag.Float64("rate", 44100, "Sample rate in Hz")
 	frequency := flag.Float64("freq", 60, "Frequency in Hz")
@@ -33,123 +200,14 @@ func main() {
 
 	*channel = max(0, *channel-1)
 
-	// Parse the WebSocket URL
 	u, err := url.Parse(*wsURL)
 	if err != nil {
 		log.Fatal("Failed to parse WebSocket URL:", err)
 	}
 
-	// Set up dialer with keepalive
-	dialer := websocket.Dialer{
-		HandshakeTimeout: 10 * time.Second,
-		ReadBufferSize:   1024,
-		WriteBufferSize:  1024,
-	}
-
-	// Connect to the WebSocket server
-	log.Printf("Connecting to websocket %s", u.String())
-	c, _, err := dialer.Dial(u.String(), nil)
-	if err != nil {
-		log.Fatal("Failed to connect to WebSocket server:", err)
-	}
-	defer c.Close()
-
-	// Set up ping handler
-	c.SetPingHandler(func(message string) error {
-		err := c.WriteControl(websocket.PongMessage, []byte(message), time.Now().Add(time.Second))
-		if err == websocket.ErrCloseSent {
-			return nil
-		} else if e, ok := err.(net.Error); ok && e.Temporary() {
-			return nil
-		}
-		return err
-	})
-
-	// Set up pong handler
-	c.SetPongHandler(func(string) error {
-		return c.SetReadDeadline(time.Now().Add(60 * time.Second))
-	})
-
-	// Set up message handling
-	done := make(chan struct{})
-	interrupt := make(chan os.Signal, 1)
-	signal.Notify(interrupt, os.Interrupt)
-
-	// Create tickers
-	const sinRate = 60
-	var sinPhase float64
-	var drumBeat int
-
-	messageTicker := time.NewTicker(time.Second / time.Duration(*frequency))
-	pingTicker := time.NewTicker(30 * time.Second)
-
-	defer messageTicker.Stop()
-	defer pingTicker.Stop()
-
-	// Handle incoming messages
-	go func() {
-		defer close(done)
-		for {
-			_, message, err := c.ReadMessage()
-			if err != nil {
-				if !websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-					log.Printf("[ERROR] Read error: %v", err)
-				}
-				return
-			}
-			log.Printf("Received: %s", message)
-		}
-	}()
-
-	// Main loop for sending messages
-	for {
-		select {
-		case <-done:
-			return
-		case <-interrupt:
-			log.Println("Interrupt received, closing connection...")
-			err := c.WriteMessage(
-				websocket.CloseMessage,
-				websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""),
-			)
-			if err != nil {
-				log.Printf("Error closing connection: %v", err)
-			}
-			return
-		case <-pingTicker.C:
-			err := c.WriteMessage(websocket.PingMessage, nil)
-			if err != nil {
-				log.Printf("Error sending ping: %v", err)
-				return
-			}
-		case <-messageTicker.C:
-			volume := 0.0
-			switch *signalType {
-			case "drum":
-				volume = generateDrum(&drumBeat)
-			case "sin":
-				volume = generateSin(sinRate, &sinPhase)
-			default:
-				volume = generateNoise(*sampleRate, *frequency)
-			}
-
-			msg := VolumeMessage{
-				Type:    "volume",
-				Channel: *channel,
-				Volume:  math.Round(volume*100) / 100,
-			}
-
-			jsonMsg, err := json.Marshal(msg)
-			if err != nil {
-				log.Printf("Error marshaling message: %v", err)
-				continue
-			}
-
-			if err := c.WriteMessage(websocket.TextMessage, jsonMsg); err != nil {
-				log.Printf("Error sending message: %v", err)
-				return
-			}
-		}
+	client := NewClient(u.String(), *signalType, *sampleRate, *frequency, *channel)
+	if err := client.Run(); err != nil {
+		log.Fatal(err)
 	}
 }
 

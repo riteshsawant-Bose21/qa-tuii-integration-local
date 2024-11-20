@@ -3,8 +3,6 @@ package network
 import (
 	"encoding/json"
 	"fmt"
-	"fusion/internal/api"
-	"fusion/internal/broadcast"
 	"fusion/internal/config"
 	"fusion/internal/logging"
 	"net"
@@ -12,36 +10,18 @@ import (
 	"time"
 )
 
-type Message struct {
-	Action string          `json:"action"`
-	Update json.RawMessage `json:"update,omitempty"`
-	Data   json.RawMessage `json:"data,omitempty"`
-}
-
-type Response struct {
-	Status  string      `json:"status"`
-	Message string      `json:"message,omitempty"`
-	Data    interface{} `json:"data,omitempty"`
-}
-
-type Broadcaster interface {
-	BroadcastUpdate(map[string]interface{}) error
-}
-
-var _ broadcast.Broadcaster = (*UDPServer)(nil)
-
 type UDPServer struct {
-	nodeName     string
-	addr         string
-	conn         *net.UDPConn
-	stateManager *config.StateManager
-	stopChan     chan struct{}
-	wg           sync.WaitGroup
-	clients      map[string]*net.UDPAddr
-	clientsMux   sync.RWMutex
+	nodeName   string
+	addr       string
+	conn       *net.UDPConn
+	handler    *config.ConfigHandler
+	stopChan   chan struct{}
+	wg         sync.WaitGroup
+	clients    map[string]*net.UDPAddr
+	clientsMux sync.RWMutex
 }
 
-func NewUDPServer(nodeName string, addr string, stateManager *config.StateManager) (*UDPServer, error) {
+func NewUDPServer(nodeName string, addr string, handler *config.ConfigHandler) (*UDPServer, error) {
 	udpAddr, err := net.ResolveUDPAddr("udp", addr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve address: %v", err)
@@ -55,12 +35,12 @@ func NewUDPServer(nodeName string, addr string, stateManager *config.StateManage
 	logging.GetLogger(nodeName).Info("UDP server listening on %s", addr)
 
 	return &UDPServer{
-		nodeName:     nodeName,
-		addr:         addr,
-		conn:         conn,
-		stateManager: stateManager,
-		stopChan:     make(chan struct{}),
-		clients:      make(map[string]*net.UDPAddr),
+		nodeName: nodeName,
+		addr:     addr,
+		conn:     conn,
+		handler:  handler,
+		stopChan: make(chan struct{}),
+		clients:  make(map[string]*net.UDPAddr),
 	}, nil
 }
 
@@ -119,116 +99,24 @@ func (s *UDPServer) removeClient(addr string) {
 	s.clientsMux.Unlock()
 }
 
-func (s *UDPServer) BroadcastUpdate(update map[string]interface{}) error {
-	return s.SendUpdate(s.addr, update)
-}
-
-func (s *UDPServer) Close() error {
-	s.Stop()
-	return nil
-}
-
 func (s *UDPServer) handleMessage(data []byte, addr *net.UDPAddr) {
 	s.clientsMux.Lock()
 	s.clients[addr.String()] = addr
 	s.clientsMux.Unlock()
 
-	var msg Message
-	if err := json.Unmarshal(data, &msg); err != nil {
-		logging.GetLogger(s.nodeName).Error("Failed to unmarshal message: %v", err)
-		s.sendResponse(addr, Response{
+	response, err := s.handler.HandleUDPMessage(data)
+	if err != nil {
+		s.sendResponse(addr, config.Response{
 			Status:  "error",
-			Message: fmt.Sprintf("Invalid JSON: %v", err),
+			Message: err.Error(),
 		})
 		return
 	}
 
-	switch msg.Action {
-	case "get":
-		config := s.stateManager.GetFullState()
-		s.sendResponse(addr, Response{
-			Status: "success",
-			Data:   config,
-		})
-
-	case "set":
-		var update map[string]interface{}
-		if err := json.Unmarshal(msg.Update, &update); err != nil {
-			s.sendResponse(addr, Response{
-				Status:  "error",
-				Message: fmt.Sprintf("Invalid update data: %v", err),
-			})
-			return
-		}
-
-		if len(update) != 1 {
-			s.sendResponse(addr, Response{
-				Status:  "error",
-				Message: "Update must contain exactly one key-value pair",
-			})
-			return
-		}
-
-		// Get key for response message
-		var key string
-		for k := range update {
-			key = k
-			break
-		}
-
-		configUpdate := api.ConfigUpdate{
-			Update: update,
-		}
-
-		if err := s.stateManager.ApplyUpdate(configUpdate); err != nil {
-			logging.GetLogger(s.nodeName).Error("Failed to apply update: %v", err)
-			s.sendResponse(addr, Response{
-				Status:  "error",
-				Message: fmt.Sprintf("Failed to set value: %v", err),
-			})
-			return
-		}
-
-		s.sendResponse(addr, Response{
-			Status:  "success",
-			Message: fmt.Sprintf("Successfully set %s", key),
-		})
-
-	case "update":
-		var update api.ConfigUpdate
-		if err := json.Unmarshal(msg.Data, &update); err != nil {
-			logging.GetLogger(s.nodeName).Error("Failed to unmarshal update data: %v", err)
-			s.sendResponse(addr, Response{
-				Status:  "error",
-				Message: fmt.Sprintf("Invalid update data: %v", err),
-			})
-			return
-		}
-
-		if err := s.stateManager.ApplyUpdate(update); err != nil {
-			logging.GetLogger(s.nodeName).Error("Failed to apply update: %v", err)
-			s.sendResponse(addr, Response{
-				Status:  "error",
-				Message: fmt.Sprintf("Failed to apply update: %v", err),
-			})
-			return
-		}
-
-		s.sendResponse(addr, Response{
-			Status:  "success",
-			Message: "Update applied successfully",
-		})
-
-	default:
-		logging.GetLogger(s.nodeName).Error("Unknown action received: %s", msg.Action)
-		s.sendResponse(addr, Response{
-			Status:  "error",
-			Message: fmt.Sprintf("Unknown action: %s", msg.Action),
-		})
-	}
+	s.sendResponse(addr, response)
 }
 
-func (s *UDPServer) sendResponse(addr *net.UDPAddr, response Response) {
+func (s *UDPServer) sendResponse(addr *net.UDPAddr, response interface{}) {
 	data, err := json.Marshal(response)
 	if err != nil {
 		logging.GetLogger(s.nodeName).Error("Error marshaling response: %v", err)
@@ -241,22 +129,10 @@ func (s *UDPServer) sendResponse(addr *net.UDPAddr, response Response) {
 	}
 }
 
-func (s *UDPServer) SendUpdate(listenAddr string, update map[string]interface{}) error {
-	msg := Message{
-		Action: "update",
-		Update: json.RawMessage([]byte{}),
-	}
-
-	// Marshal the update map into raw JSON
-	updateBytes, err := json.Marshal(update)
+func (s *UDPServer) BroadcastUpdate(update map[string]interface{}) error {
+	data, err := json.Marshal(update)
 	if err != nil {
 		return fmt.Errorf("failed to marshal update: %v", err)
-	}
-	msg.Update = updateBytes
-
-	data, err := json.Marshal(msg)
-	if err != nil {
-		return fmt.Errorf("failed to marshal message: %v", err)
 	}
 
 	s.clientsMux.RLock()
@@ -276,5 +152,10 @@ func (s *UDPServer) SendUpdate(listenAddr string, update map[string]interface{})
 		s.removeClient(addr)
 	}
 
+	return nil
+}
+
+func (s *UDPServer) Close() error {
+	s.Stop()
 	return nil
 }

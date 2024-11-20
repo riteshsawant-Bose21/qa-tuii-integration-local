@@ -11,8 +11,7 @@ Fusion Server is a distributed configuration management system with high availab
 - Unix Domain sockets for inter-network communication
 - State persistence and recovery
 - JSON import/export functionality
-- Automatic HAProxy configuration management
-- Health monitoring and debug capabilities
+- Metrics monitoring and debug capabilities
 
 ## Architecture
 
@@ -38,7 +37,7 @@ Fusion Server is a distributed configuration management system with high availab
    - REST API for configuration management
    - WebSocket and Unix socket connections for streaming updates
    - Unix Domain sockets for configuration management 
-   - Health check endpoints
+   - Metrics endpoints
 
 ### Configuration
 
@@ -112,7 +111,12 @@ git clone git@github.com:BoseProfessional/fusion-services.git
 ./launch --kill
 ```
 
-**Stop instances with specific name**
+**Stop multiple instances with prefix**
+```bash
+multipass stop fusion
+```
+
+**Stop instance with specific name**
 ```bash
 multipass stop fusion1
 ```
@@ -135,7 +139,7 @@ multipass stop fusion1
 ```bash
 curl -X POST http://192.168.64.100:8080/setValue \
   -H "Content-Type: application/json" \
-  -d '{"key": "test-key", "value": "test-value"}'
+  -d '{"key": "value"}'
 ```
 
 ### Set a nested configuration object
@@ -143,8 +147,7 @@ curl -X POST http://192.168.64.100:8080/setValue \
 curl -X POST http://192.168.64.100:8080/setValue \
   -H "Content-Type: application/json" \
   -d '{
-    "key": "volume",
-    "value": {
+    "volume" : {
       "min": "0.0",
       "max": 1.0,
       "current": 0.5
@@ -154,7 +157,27 @@ curl -X POST http://192.168.64.100:8080/setValue \
 
 ### Get a specific value
 ```bash
-curl "http://192.168.64.100:8080/getValue?test-key"
+curl "http://192.168.64.100:8080/getValue?key"
+```
+
+Response if value exists:
+```json
+{
+  "exists": true,
+  "value": {
+    "current": 0.5,
+    "max": 1,
+    "min": "0.0"
+  }
+}
+```
+
+Response if value does not exist:
+```json
+{
+  "error": "key not found",
+  "exists": false
+}
 ```
 
 ### Get all configuration values
@@ -200,14 +223,32 @@ multipass exec fusion1 -- bash -c "echo '{\"action\":\"get\"}' | nc -u -w 1 -v l
 ```
 
 ### Set a value
-From with server instance:
 ```bash
-echo '{"action":"set","key":"test","value":"hello"}' | nc -u -w 1 localhost 7947
+echo '{"action":"set","test":"hello"}' | nc -u -w 1 localhost 7947
 ```
 
-Outside of instance"
+### Set a nested value
 ```bash
-multipass exec fusion1 -- bash -c "multipass exec fusion1 -- bash -c "echo '{\"action\":\"set\",\"key\":\"test\",\"value\":\"hello\"}' | nc -u -w 1 localhost 7947""
+echo '{
+  "action": "set",
+  "audio": {
+    "settings": {
+      "volume": 0.6
+    }
+  }
+}' | nc -u -w1 127.0.0.1 7947
+```
+
+### Set a value outside of instance
+```bash
+multipass exec fusion1 -- bash -c "echo '{
+  "action": "set",
+  "audio": {
+    "settings": {
+      "volume": 0.6
+    }
+  }
+}' | nc -u -w1 127.0.0.1 7947"
 ```
 
 ## Basic Commands
@@ -326,7 +367,7 @@ multipass exec fusion1 -- systemctl status fusion-server
 
 6. **Load Balancer Issues**
    - Check HAProxy configuration
-   - Verify backend health checks
+   - Verify backend metrics
    - Monitor HAProxy logs
 
 ## Testing
@@ -339,8 +380,16 @@ multipass exec fusion1 -- systemctl status fusion-server
 ```bash
 ./run-tests
 ```
-**Postman**
-Import the postman collection located at tools/postman/fusion_server_collection.json into Postman
+**Bruno**
+
+Bruno is a free alternative to Postman and requires no account to use.
+
+```bash
+brew install bruno
+```
+- Launch /Applications/Bruno.app
+- Import the Buron collection located at tools/api/fusion_api.json into Bruno
+- Set the environmant to dev using the drop-down menu at the top-right of the Bruno window.
 
 
 ## Monitoring
@@ -350,7 +399,6 @@ Import the postman collection located at tools/postman/fusion_server_collection.
    - Endpoints:
      - `/metrics` - Complete system metrics
      - `/cluster/status` - Detailed cluster information
-     - `/health` - Health check endpoint
    - Metrics include:
      - Cluster health and membership
      - Configuration state statistics
@@ -421,17 +469,12 @@ Response includes:
 curl -s http://192.168.64.100:9090/metrics | jq
 ```
 
-2. **Monitor cluster health**
-```bash
-watch -n 1 'curl -s http://192.168.64.100:9090/health'
-```
-
-3. **Track cluster membership**
+2. **Track cluster membership**
 ```bash
 watch -n 1 'curl -s http://192.168.64.100:9090/cluster/status | jq .members'
 ```
 
-4. **System resource usage**
+3. **System resource usage**
 ```bash
 curl -s http://192.168.64.100:9090/metrics | jq 'select(.cpu_usage, .memory_usage, .goroutines)'
 ```

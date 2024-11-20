@@ -76,24 +76,28 @@ func main() {
 	// Initialize metrics collector
 	metricsCollector := cluster.NewMetricsCollector(list, stateManager)
 
-	// Initialize UDP server
-	udpServer, err := network.NewUDPServer(nodeName, ":7947", stateManager)
-	if err != nil {
-		logger.Error("Failed to create UDP server: %v", err)
-		return
-	} else {
-		udpServer.Start()
-		defer udpServer.Stop()
-	}
-
 	// Initialize persistence
 	persistence := config.NewConfigPersistence("/var/lib/fusion/config.json", stateManager, nodeName, *verbose)
 	if err := persistence.LoadState(); err != nil {
 		logger.Error("Unable to load state: %v", err)
 	}
 
+	// Create the shared handler
+	handler := config.NewConfigHandler(nodeName, list, stateManager, persistence)
+
+	// Initialize UDP server
+	udpServer, err := network.NewUDPServer(nodeName, ":7947", handler)
+	if err != nil {
+		logger.Error("Failed to create UDP server: %v", err)
+		return
+	} else {
+		handler.AddBroadcaster(udpServer)
+		udpServer.Start()
+		defer udpServer.Stop()
+	}
+
 	// Initialize config server
-	configServer := config.NewConfigServer(nodeName, list, stateManager, persistence, udpServer)
+	configServer := config.NewConfigServer(nodeName, handler)
 
 	// Start metrics server on separate port
 	go func() {
@@ -108,7 +112,7 @@ func main() {
 	}()
 
 	// Set up HTTP routes
-	setupHTTPRoutes(configServer, metricsCollector, nodeName, *verbose)
+	setupHTTPRoutes(configServer, metricsCollector, *verbose)
 
 	// Start HAProxy management
 	go network.ManageHAProxy(list, nodeName)
@@ -120,7 +124,7 @@ func main() {
 	}
 }
 
-func setupHTTPRoutes(server *config.ConfigServer, metrics *cluster.MetricsCollector, nodeName string, verbose bool) {
+func setupHTTPRoutes(server *config.ConfigServer, metrics *cluster.MetricsCollector, verbose bool) {
 	http.HandleFunc("/setValue", withLogging(server.SetValue, "setValue", verbose))
 	http.HandleFunc("/getValue", withLogging(server.GetValue, "getValue", verbose))
 	http.HandleFunc("/clear", withLogging(server.ClearAllData, "clear", verbose))
