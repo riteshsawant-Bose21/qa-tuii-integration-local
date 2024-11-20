@@ -142,9 +142,9 @@ print_header() {
     local width=60
     local padding=$(( (width - ${#text}) / 2 ))
     echo
-    printf "%${width}s\n" | tr ' ' "$HEADER_LINE"
+    printf "%${width}s\n" | sed "s/ /$HEADER_LINE/g"
     printf "%${padding}s${BOLD}%s${NC}%${padding}s\n" "" "$text" ""
-    printf "%${width}s\n" | tr ' ' "$HEADER_LINE"
+    printf "%${width}s\n" | sed "s/ /$HEADER_LINE/g"
 }
 
 print_step() {
