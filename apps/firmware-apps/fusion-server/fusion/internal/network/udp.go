@@ -106,7 +106,7 @@ func (s *UDPServer) handleMessage(data []byte, addr *net.UDPAddr) {
 
 	response, err := s.handler.HandleUDPMessage(data)
 	if err != nil {
-		s.sendResponse(addr, config.Response{
+		s.sendResponse(addr, config.UDPResponse{
 			Status:  "error",
 			Message: err.Error(),
 		})

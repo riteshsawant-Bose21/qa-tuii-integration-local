@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -53,6 +54,13 @@ func main() {
 		stateManager.StartStateDumping(stateInterval * time.Second)
 	}
 
+	// Initialize persistence
+	persistence := config.NewConfigPersistence(
+		"/var/lib/fusion/config.json",
+		stateManager,
+		nodeName,
+		true,
+	)
 	// Split join addresses
 	var joinAddrs []string
 	if joinAddr != "" {
@@ -60,7 +68,7 @@ func main() {
 	}
 
 	// Create memberlist
-	list, err := cluster.CreateMemberlist(nodeName, bindAddr, bindPort, joinAddrs, stateManager, *verbose)
+	list, err := cluster.CreateMemberlist(nodeName, bindAddr, bindPort, joinAddrs, stateManager, persistence, *verbose)
 	if err != nil {
 		logger.Error("Failed to create memberlist: %v", err)
 		return
@@ -76,10 +84,8 @@ func main() {
 	// Initialize metrics collector
 	metricsCollector := cluster.NewMetricsCollector(list, stateManager)
 
-	// Initialize persistence
-	persistence := config.NewConfigPersistence("/var/lib/fusion/config.json", stateManager, nodeName, *verbose)
 	if err := persistence.LoadState(); err != nil {
-		logger.Error("Unable to load state: %v", err)
+		log.Fatalf("Failed to load state: %v", err)
 	}
 
 	// Create the shared handler

@@ -10,13 +10,15 @@ import (
 type GossipDelegate struct {
 	nodeID       string
 	stateManager *config.StateManager
+	persistence  *config.ConfigPersistence
 	verbose      bool
 }
 
-func NewGossipDelegate(nodeID string, stateManager *config.StateManager, verbose bool) *GossipDelegate {
+func NewGossipDelegate(nodeID string, stateManager *config.StateManager, persistence *config.ConfigPersistence, verbose bool) *GossipDelegate {
 	return &GossipDelegate{
 		nodeID:       nodeID,
 		stateManager: stateManager,
+		persistence:  persistence,
 		verbose:      verbose,
 	}
 }
@@ -58,7 +60,7 @@ func (d *GossipDelegate) NotifyMsg(msg []byte) {
 
 	// Get the single key from the update map
 	var updateKey string
-	for k := range update.Update {
+	for k := range update.Data {
 		updateKey = k
 		break
 	}
@@ -128,4 +130,7 @@ func (d *GossipDelegate) MergeRemoteState(buf []byte, join bool) {
 			snapshot.NodeID, len(snapshot.State), snapshot.Version)
 	}
 	d.stateManager.MergeRemoteState(snapshot.State, snapshot.NodeID)
+
+	// Persist after merging remote state
+	d.persistence.MarkDirty()
 }

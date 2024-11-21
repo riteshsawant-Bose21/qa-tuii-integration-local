@@ -21,20 +21,20 @@ const (
 )
 
 // CreateMemberlist creates and configures a new memberlist instance
-func CreateMemberlist(nodeName, bindAddr string, bindPort int, joinAddrs []string, stateManager *config.StateManager, verbose bool) (*memberlist.Memberlist, error) {
+func CreateMemberlist(nodeName, bindAddr string, bindPort int, joinAddrs []string,
+	stateManager *config.StateManager, persistence *config.ConfigPersistence, verbose bool) (*memberlist.Memberlist, error) {
 	config := memberlist.DefaultLANConfig()
 	config.Name = nodeName
 	config.BindAddr = bindAddr
 	config.BindPort = bindPort
 
-	// Logger configuration
 	if verbose {
 		config.Logger = log.New(os.Stdout, fmt.Sprintf("[MEMBERLIST-%s] ", nodeName), log.LstdFlags)
 	} else {
 		config.Logger = log.New(io.Discard, "", 0)
 	}
 
-	delegate := NewGossipDelegate(nodeName, stateManager, verbose)
+	delegate := NewGossipDelegate(nodeName, stateManager, persistence, verbose)
 	config.Delegate = delegate
 
 	config.TCPTimeout = tcpTimeout * time.Second

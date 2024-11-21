@@ -41,9 +41,8 @@ func NewConfigServer(nodeName string, handler *ConfigHandler) *ConfigServer {
 
 func (s *ConfigServer) BroadcastUpdate(update map[string]interface{}) error {
 	message := map[string]interface{}{
-		"type":    "update",
-		"update":  update,
-		"version": time.Now().UnixNano(),
+		"type": "set",
+		"data": update,
 	}
 
 	s.wsLock.RLock()
@@ -167,9 +166,9 @@ func (s *ConfigServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	// Get initial state through handler
-	state, err := s.handler.GetInitialState()
+	state, err := s.handler.HandleHTTPGet("")
 	if err != nil {
-		logging.GetLogger(s.nodeName).Error("Failed to get initial state: %v", err)
+		logging.GetLogger(s.nodeName).Error("Failed to get data: %v", err)
 		return
 	}
 

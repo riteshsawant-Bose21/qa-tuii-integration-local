@@ -345,7 +345,7 @@ func TestSetValue(t *testing.T) {
 				var response struct {
 					Status  string                 `json:"status"`
 					Message string                 `json:"message"`
-					Update  map[string]interface{} `json:"update"`
+					Data    map[string]interface{} `json:"data"`
 				}
 				if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 					t.Fatalf("Failed to decode response: %v", err)

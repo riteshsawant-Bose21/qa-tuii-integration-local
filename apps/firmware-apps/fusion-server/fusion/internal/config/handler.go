@@ -33,15 +33,15 @@ func NewConfigHandler(nodeName string, list *memberlist.Memberlist, stateManager
 }
 
 // Shared update handling logic
-func (h *ConfigHandler) handleUpdate(update map[string]interface{}) error {
+func (h *ConfigHandler) handleUpdate(data map[string]interface{}) error {
 	configUpdate := api.ConfigUpdate{
-		Update:  update,
+		Data:    data,
 		Version: time.Now().UnixNano(),
 		NodeID:  h.list.LocalNode().Name,
 		Time:    time.Now().UTC(),
 	}
 
-	return h.broadcastUpdate(configUpdate, true)
+	return h.broadcastUpdate(configUpdate)
 }
 
 func (h *ConfigHandler) transformState(state map[string]*api.StateEntry) map[string]interface{} {
@@ -52,39 +52,48 @@ func (h *ConfigHandler) transformState(state map[string]*api.StateEntry) map[str
 	return result
 }
 
-func (h *ConfigHandler) broadcastUpdate(update api.ConfigUpdate, applyUpdate bool) error {
-	if applyUpdate {
-		if err := h.stateManager.ApplyUpdate(update); err != nil {
-			return fmt.Errorf("failed to apply update: %v", err)
-		}
-		h.persistence.MarkDirty()
+func (h *ConfigHandler) broadcastUpdate(update api.ConfigUpdate) error {
+	logger := logging.GetLogger(h.nodeName)
+
+	if err := h.stateManager.ApplyUpdate(update); err != nil {
+		return fmt.Errorf("failed to apply update: %v", err)
 	}
 
-	// Transform update directly without the "key" wrapper
+	// Always persist state changes, regardless of source
+	h.persistence.MarkDirty()
+
+	// Transform state for broadcasting
 	state := make(map[string]*api.StateEntry)
-	for k, v := range update.Update {
-		state[k] = &api.StateEntry{Data: v}
+	for k, v := range update.Data {
+		state[k] = &api.StateEntry{
+			Data:      v,
+			Version:   update.Version,
+			Timestamp: update.Time,
+		}
 	}
-	transformed := h.transformState(state)
+	transformed := TransformState(state)
 
-	// Broadcast to cluster members
-	data, err := json.Marshal(update)
-	if err != nil {
-		return fmt.Errorf("failed to marshal update: %v", err)
-	}
+	// Only broadcast to other nodes if we're the origin
+	if update.NodeID == h.list.LocalNode().Name {
+		// Broadcast to cluster members
+		data, err := json.Marshal(update)
+		if err != nil {
+			return fmt.Errorf("failed to marshal update: %v", err)
+		}
 
-	for _, node := range h.list.Members() {
-		if node.Name != h.list.LocalNode().Name {
-			if err := h.list.SendReliable(node, data); err != nil {
-				logging.GetLogger(h.nodeName).Error("Failed to send to node %s: %v", node.Name, err)
+		for _, node := range h.list.Members() {
+			if node.Name != h.list.LocalNode().Name {
+				if err := h.list.SendReliable(node, data); err != nil {
+					logger.Error("Failed to send to node %s: %v", node.Name, err)
+				}
 			}
 		}
 	}
 
-	// Broadcast to websocket clients and other broadcasters
+	// Always broadcast to local clients
 	for _, broadcaster := range h.broadcasters {
 		if err := broadcaster.BroadcastUpdate(transformed); err != nil {
-			logging.GetLogger(h.nodeName).Error("Failed to broadcast update: %v", err)
+			logger.Error("Failed to broadcast update: %v", err)
 		}
 	}
 
@@ -92,11 +101,10 @@ func (h *ConfigHandler) broadcastUpdate(update api.ConfigUpdate, applyUpdate boo
 }
 
 func (h *ConfigHandler) GetInitialState() (WebSocketResponse, error) {
-	state := h.transformState(h.stateManager.GetFullState())
+	data := h.transformState(h.stateManager.GetFullState())
 	return WebSocketResponse{
-		Type:    "initial_state",
-		Version: h.stateManager.GetVersion(),
-		State:   state,
+		Type: "initial_state",
+		Data: data,
 	}, nil
 }
 
@@ -144,15 +152,8 @@ func (h *ConfigHandler) HandleUDPMessage(data []byte) (interface{}, error) {
 
 	switch msg.Action {
 	case "get":
-		// Transform the full state before returning it
 		fullState := h.stateManager.GetFullState()
-		transformed := make(map[string]interface{})
-
-		// Transform each state entry
-		for key, entry := range fullState {
-			transformed[key] = entry.Data
-		}
-
+		transformed := TransformState(fullState)
 		return map[string]interface{}{
 			"status": "success",
 			"data":   transformed,
@@ -165,7 +166,15 @@ func (h *ConfigHandler) HandleUDPMessage(data []byte) (interface{}, error) {
 		}
 		delete(update, "action")
 
-		if err := h.handleUpdate(update); err != nil {
+		// Create update with original node ID
+		configUpdate := api.ConfigUpdate{
+			Data:    update,
+			Version: time.Now().UnixNano(),
+			NodeID:  h.list.LocalNode().Name,
+			Time:    time.Now().UTC(),
+		}
+
+		if err := h.broadcastUpdate(configUpdate); err != nil {
 			return nil, fmt.Errorf("failed to handle update: %v", err)
 		}
 
@@ -180,17 +189,20 @@ func (h *ConfigHandler) HandleUDPMessage(data []byte) (interface{}, error) {
 }
 
 func (h *ConfigHandler) HandleClearAllData() error {
-	// Create an empty update to clear all data
 	configUpdate := api.ConfigUpdate{
-		Update:  map[string]interface{}{},
+		Data:    map[string]interface{}{},
 		Version: time.Now().UnixNano(),
 		NodeID:  h.list.LocalNode().Name,
 		Time:    time.Now().UTC(),
 	}
 
-	// Use broadcastUpdate with apply=true to clear and notify all clients
-	if err := h.broadcastUpdate(configUpdate, true); err != nil {
+	if err := h.broadcastUpdate(configUpdate); err != nil {
 		return fmt.Errorf("failed to clear all data: %v", err)
+	}
+
+	// Ensure the cleared state is persisted
+	if err := h.persistence.SaveState(); err != nil {
+		return fmt.Errorf("failed to persist cleared state: %v", err)
 	}
 
 	return nil
@@ -221,6 +233,10 @@ func (h *ConfigHandler) HandleDumpState() (map[string]interface{}, error) {
 	}, nil
 }
 
+func (h *ConfigHandler) ValidateState() error {
+	return h.persistence.ValidateStateFile()
+}
+
 // HandleWebSocketMessage handles incoming websocket messages
 func (h *ConfigHandler) HandleWebSocketMessage(data []byte) (*WebSocketResponse, error) {
 	var msg WebSocketMessage
@@ -230,19 +246,19 @@ func (h *ConfigHandler) HandleWebSocketMessage(data []byte) (*WebSocketResponse,
 
 	switch msg.Type {
 	case "update":
-		var update map[string]interface{}
-		if err := json.Unmarshal(msg.Update, &update); err != nil {
+		var data map[string]interface{}
+		if err := json.Unmarshal(msg.Data, &data); err != nil {
 			return nil, fmt.Errorf("invalid update in WebSocket message: %v", err)
 		}
 
 		configUpdate := api.ConfigUpdate{
-			Update:  update,
+			Data:    data,
 			Version: time.Now().UnixNano(),
 			NodeID:  h.list.LocalNode().Name,
 			Time:    time.Now().UTC(),
 		}
 
-		if err := h.broadcastUpdate(configUpdate, true); err != nil {
+		if err := h.broadcastUpdate(configUpdate); err != nil {
 			return nil, fmt.Errorf("broadcastUpdate failed: %v", err)
 		}
 
@@ -250,36 +266,6 @@ func (h *ConfigHandler) HandleWebSocketMessage(data []byte) (*WebSocketResponse,
 			Type:    "update_success",
 			Status:  "success",
 			Message: "Update applied successfully",
-		}, nil
-
-	case "volume":
-		if msg.Volume < 0.0 || msg.Volume > 1.0 {
-			return nil, fmt.Errorf("invalid volume value: %v (must be between 0.0 and 1.0)", msg.Volume)
-		}
-
-		update := api.VolumeUpdate{
-			Channel: msg.Channel,
-			Volume:  msg.Volume,
-		}
-
-		volumeKey := fmt.Sprintf("volume:%d", msg.Channel)
-		volumeUpdate := api.ConfigUpdate{
-			Update: map[string]interface{}{
-				volumeKey: update,
-			},
-			Version: time.Now().UnixNano(),
-			NodeID:  h.list.LocalNode().Name,
-			Time:    time.Now().UTC(),
-		}
-
-		if err := h.broadcastUpdate(volumeUpdate, false); err != nil {
-			return nil, fmt.Errorf("error broadcasting volume update: %v", err)
-		}
-
-		return &WebSocketResponse{
-			Type:    "volume_success",
-			Status:  "success",
-			Message: "Volume updated successfully",
 		}, nil
 
 	default:
@@ -310,7 +296,7 @@ func (h *ConfigHandler) HandleUpload(reader io.Reader) (map[string]interface{}, 
 
 	for key, entry := range jsonImport.State {
 		update := api.ConfigUpdate{
-			Update: map[string]interface{}{
+			Data: map[string]interface{}{
 				key: entry.Data,
 			},
 			Version: time.Now().UnixNano(),
@@ -318,7 +304,7 @@ func (h *ConfigHandler) HandleUpload(reader io.Reader) (map[string]interface{}, 
 			Time:    time.Now().UTC(),
 		}
 
-		if err := h.broadcastUpdate(update, true); err != nil {
+		if err := h.broadcastUpdate(update); err != nil {
 			logging.GetLogger(h.nodeName).Error("Import key failed: %s: %v", key, err)
 		}
 	}

@@ -4,7 +4,7 @@ import "time"
 
 // ConfigUpdate represents a configuration update in the system
 type ConfigUpdate struct {
-	Update  map[string]interface{} `json:"update"`
+	Data    map[string]interface{} `json:"data"`
 	Version int64                  `json:"version"`
 	NodeID  string                 `json:"node_id"`
 	Time    time.Time              `json:"timestamp"`
@@ -21,6 +21,5 @@ type VolumeUpdate struct {
 type StateEntry struct {
 	Data      interface{} `json:"data"`
 	Version   int64       `json:"version"`
-	NodeID    string      `json:"node_id"`
 	Timestamp time.Time   `json:"timestamp"`
 }

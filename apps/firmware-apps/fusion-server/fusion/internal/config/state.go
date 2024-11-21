@@ -41,11 +41,11 @@ func (sm *StateManager) Get(key string) (interface{}, bool) {
 }
 
 func (sm *StateManager) Set(key string, value interface{}) error {
-	update := map[string]interface{}{
+	data := map[string]interface{}{
 		key: value,
 	}
 	return sm.ApplyUpdate(api.ConfigUpdate{
-		Update:  update,
+		Data:    data,
 		Version: time.Now().UnixNano(),
 		NodeID:  sm.nodeID,
 		Time:    time.Now().UTC(),
@@ -57,7 +57,7 @@ func (sm *StateManager) ApplyUpdate(update api.ConfigUpdate) error {
 	defer sm.Unlock()
 
 	// If update is empty, clear all state
-	if len(update.Update) == 0 {
+	if len(update.Data) == 0 {
 		sm.state = make(map[string]*api.StateEntry)
 		sm.version = update.Version
 		sm.notifySubscribers()
@@ -65,13 +65,12 @@ func (sm *StateManager) ApplyUpdate(update api.ConfigUpdate) error {
 	}
 
 	// Extract the single key-value pair from the update
-	for key, value := range update.Update {
+	for key, value := range update.Data {
 		existing, exists := sm.state[key]
 		if !exists || existing.Version < update.Version {
 			sm.state[key] = &api.StateEntry{
 				Data:      value,
 				Version:   update.Version,
-				NodeID:    update.NodeID,
 				Timestamp: update.Time,
 			}
 			if update.Version > sm.version {
@@ -146,4 +145,12 @@ func (sm *StateManager) MergeRemoteState(remoteState map[string]*api.StateEntry,
 		}
 	}
 	sm.notifySubscribers()
+}
+
+func TransformState(state map[string]*api.StateEntry) map[string]interface{} {
+	result := make(map[string]interface{})
+	for key, entry := range state {
+		result[key] = entry.Data
+	}
+	return result
 }
