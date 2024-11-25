@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+if [ ! -f multipass.env ]; then
+    cp multipass_template.env multipass.env
+fi
 source multipass.env
 
 BASE_NAME=""
