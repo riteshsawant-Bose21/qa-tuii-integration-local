@@ -35,14 +35,14 @@ public:
 	virtual void process() override;
 
 private:
-	// --- constants and terminals ---
+	// --- properties and terminals ---
 	int_fast32_t channels;
 	int_fast32_t frame_size;
 
 	bosepro::DspSignalMemory<const float*[]> in;
 	bosepro::DspSignalMemory<float *[]> out;
 	
-	// --- user controls ---
+	// --- user parameters ---
 	// onnx model path
 	std::string model_path;
 	// for benchmarking: stop processing at how many secs of input
@@ -88,7 +88,7 @@ private:
 	double get_max_mips();
 	double get_average_mips();
 
-	// --- user control parameters processing functions ---
+	// --- user parameter processing functions ---
 	void update_model();
 	void update_max_input_time();
 
@@ -101,13 +101,15 @@ ALGORITHM_REGISTER(ML_Benchmark, "ml_benchmark");
 ML_Benchmark::ML_Benchmark(const bosepro::BlockConfiguration &configuration)
 	: bosepro::Algorithm(configuration)
 {
-	get_constant("channels", channels);
-	get_constant("frame_size", frame_size);
+	get_property("channels", channels);
+	get_property("frame_size", frame_size);
 
 	assign_terminal("in", in);
 	assign_terminal("out", out);
-	assign_control("model_path", &model_path, POST_FUNCTION_SCALAR(update_model));
-	assign_control("max_input_time", &max_input_time, POST_FUNCTION_SCALAR(update_max_input_time));
+	assign_parameter("model_path", &model_path,
+                     POST_FUNCTION_SCALAR(update_model));
+	assign_parameter("max_input_time", &max_input_time,
+                     POST_FUNCTION_SCALAR(update_max_input_time));
 
 	set_period((double)get_frame_size() / get_sample_rate());
 }

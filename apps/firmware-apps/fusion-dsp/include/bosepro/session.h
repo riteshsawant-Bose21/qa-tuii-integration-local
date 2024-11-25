@@ -2,7 +2,7 @@
 
 #include <bosepro/configurable.h>
 #include <bosepro/configuration.h>
-#include <bosepro/parameters.h>
+#include <bosepro/definition.h>
 #include <bosepro/task.h>
 
 #include <spdlog/spdlog.h>
@@ -19,27 +19,20 @@ namespace bosepro {
 /// a complete audio processing system.
 class Session : public Configurable {
 public:
-    /// Create a session using the given configuration and parameters.
+    /// Create a session using the given configuration and definitions.
     /// After this is done, the session is ready for `process()` to be called.
     ///
     /// @param  configuration  The configuration for the session.
-    /// @param  parameters  The parameter definitions for the system.
+    /// @param  definitions  The algorithm definitions for the system.
     Session(const SessionConfiguration &configuration,
-            const Parameters &parameters)
+            const Definition &definitions)
         : Configurable(configuration), meter_callback(nullptr)
     {
         SPDLOG_TRACE("Creating session.");
-        // This makes the parameters available to all `Configurable` objects.
-        set_parameters(parameters);
+        // This makes the definitions available to all `Configurable` objects.
+        set_definitions(definitions);
 
         frames_to_run = -1;
-
-        for (auto &t : configuration.get_tasks())
-        {
-            const TaskConfiguration &tc =
-                reinterpret_cast<const TaskConfiguration &>(t.second);
-            create_task(tc);
-        }
     }
 
 
@@ -82,6 +75,17 @@ public:
     bool finished_running()
     {
         return frames_to_run == 0;
+    }
+
+
+    void create_tasks(const Configuration &configuration)
+    {
+        for (auto &t : configuration.get_tasks())
+        {
+            const TaskConfiguration &tc =
+                reinterpret_cast<const TaskConfiguration &>(t.second);
+            create_task(tc);
+        }
     }
 
 
@@ -174,13 +178,13 @@ public:
     /// Process the provided command.
     ///
     /// @param  command  The command to process.
-    void process_command(const Command &command)
+    void process_parameter_setting(const ParameterSetting &setting)
     {
         // TODO - we really need a better way to manage the different session
         // commands.
-        if (command.get_target() == "session")
+        if (setting.get_target() == "session")
         {
-            if (command.get_name() == "send_meters")
+            if (setting.get_name() == "send_meters")
             {
                 if (meter_callback != nullptr)
                 {
@@ -190,20 +194,20 @@ public:
                     }
                 }
             }
-            else if (command.get_name() == "stop")
+            else if (setting.get_name() == "stop")
             {
                 stop();
             }
-            else if (command.get_name() == "destroy_task")
+            else if (setting.get_name() == "destroy_task")
             {
                 std::string task_name;
-                command.get_value(task_name);
+                setting.get_value(task_name);
                 destroy_task(task_name);
             }
-            else if (command.get_name() == "create_task")
+            else if (setting.get_name() == "create_task")
             {
                 std::string filename;
-                command.get_value(filename);
+                setting.get_value(filename);
 
                 bosepro::Configuration configuration(filename);
                 for (auto &t : configuration.get_session().get_tasks())
@@ -213,16 +217,16 @@ public:
                     create_task(tc);
                 }
             }
-            else if (command.get_name() == "start_task")
+            else if (setting.get_name() == "start_task")
             {
                 std::string task_name;
-                command.get_value(task_name);
+                setting.get_value(task_name);
                 start_task(task_name);
             }
-            else if (command.get_name() == "stop_task")
+            else if (setting.get_name() == "stop_task")
             {
                 std::string task_name;
-                command.get_value(task_name);
+                setting.get_value(task_name);
                 stop_task(task_name);
             }
         }
@@ -231,10 +235,10 @@ public:
             for (auto &task : tasks)
             {
                 std::string block_name;
-                Algorithm *block = task.second->get_block(command.get_target());
+                Algorithm *block = task.second->get_block(setting.get_target());
                 if (block != nullptr)
                 {
-                    block->set_control((const ControlSetting &)command);
+                    block->set_parameter(setting);
                     break;
                 }
             }

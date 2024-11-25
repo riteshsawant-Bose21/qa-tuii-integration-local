@@ -1,82 +1,106 @@
 {
     "session": {
-        "tasks": [
-            {
-                "name": "task1",
-                "constants": [
-                    { "name": "frame_size", "value": 480},
-                    { "name": "sample_rate", "value": 48000 }
-                ],
-                "blocks": [
-                    {
-                        "name": "infile",
-                        "algorithm": "wav_read",
-                        "constants": [
-                            { "name": "frame_size", "value": 480},
-                            { "name": "sample_rate", "value": 48000 },
-                            { "name": "filename", "value": "in.wav" }
-                        ],
-                        "terminals": [
-                            { "name": "out", "channels": 1 }
-                        ]
-                    },
-                    {
-                        "name": "volume",
-                        "algorithm": "gain",
-                        "constants": [
-                            { "name": "channels", "value": 1 },
-                            { "name": "frame_size", "value": 480 },
-                            { "name": "sample_rate", "value": 48000 }
-                        ],
-                        "terminals": [
-                            { "name": "in", "channels": 1 },
-                            { "name": "out", "channels": 1 }
-                        ],
-                        "connections": [
-                            { "source_block": "infile", "input_terminal": "in", "output_terminal": "out", "input_channel": 0, "output_channel": 0 }
-                        ],
-                        "control_settings": [
-                            { "name": "gain", "value": 1.0 }
-                        ]
-                    },
-                    {
-                        "name": "limiter",
-                        "algorithm": "limiter",
-                        "constants": [
-                            { "name": "channels", "value": 1 },
-                            { "name": "frame_size", "value": 480 },
-                            { "name": "sample_rate", "value": 48000 }
-                        ],
-                        "terminals": [
-                            { "name": "in", "channels": 1 },
-                            { "name": "peak_in", "channels": 1 },
-                            { "name": "out", "channels": 1 }
-                        ],
-                        "control_settings": [
-                            { "name": "peak_thresh", "value_type": "float", "value": -20.0 },
-                            { "name": "rms_thresh", "value_type": "float", "value": -20.0 }
-                        ],
-                        "connections": [
-                            { "source_block": "volume", "input_terminal": "in", "output_terminal": "out", "input_channel": 0, "output_channel": 0 },
-                            { "source_block": "volume", "input_terminal": "peak_in", "output_terminal": "out", "input_channel": 0, "output_channel": 0 }
-                        ]
-                    },
-                    {
-                        "name": "outfile",
-                        "algorithm": "wav_write",
-                        "constants": [
-                            { "name": "frame_size", "value": 480 },
-                            { "name": "sample_rate", "value": 48000 }
-                        ],
-                        "terminals": [
-                            { "name": "in", "channels": 1 }
-                        ],
-                        "connections": [
-                            { "source_block": "limiter", "input_terminal": "in", "output_terminal": "out", "input_channel": 0, "output_channel": 0 }
-                        ]
-                    }
-                ]
-            }
+        "property_settings": [
+            { "name": "frame_size", "value": 480},
+            { "name": "sample_rate", "value": 48000 }
         ]
-    }
+    },
+    "tasks": [
+        {
+            "name": "task1",
+            "property_settings": [
+                { "name": "frame_size", "value": 480},
+                { "name": "sample_rate", "value": 48000 }
+            ],
+            "blocks": [
+                {
+                    "name": "infile",
+                    "algorithm": "wav_read",
+                    "property_settings": [
+                        { "name": "frame_size", "value": 480},
+                        { "name": "sample_rate", "value": 48000 },
+                        { "name": "filename", "value": "in.wav" }
+                    ],
+                    "terminal_channels": [
+                        { "name": "out", "channels": 1 }
+                    ]
+                },
+                {
+                    "name": "volume",
+                    "algorithm": "gain",
+                    "property_settings": [
+                        { "name": "channels", "value": 1 },
+                        { "name": "frame_size", "value": 480 },
+                        { "name": "sample_rate", "value": 48000 }
+                    ]
+                },
+                {
+                    "name": "limiter",
+                    "algorithm": "limiter",
+                    "property_settings": [
+                        { "name": "channels", "value": 1 },
+                        { "name": "frame_size", "value": 480 },
+                        { "name": "sample_rate", "value": 48000 }
+                    ]
+                },
+                {
+                    "name": "outfile",
+                    "algorithm": "wav_write",
+                    "property_settings": [
+                        { "name": "frame_size", "value": 480 },
+                        { "name": "sample_rate", "value": 48000 }
+                    ],
+                    "terminal_channels": [
+                        { "name": "in", "channels": 1 }
+                    ]
+                }
+            ],
+            "block_connections": [
+                {
+                    "source_block": "infile",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "volume",
+                    "input_terminal": "in",
+                    "input_channel": 1
+                },
+                {
+                    "source_block": "volume",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "limiter",
+                    "input_terminal": "in",
+                    "input_channel": 1
+                },
+                {
+                    "source_block": "volume",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "limiter",
+                    "input_terminal": "peak_in",
+                    "input_channel": 1
+                },
+                {
+                    "source_block": "limiter",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "outfile",
+                    "input_terminal": "in",
+                    "input_channel": 1
+                }
+            ]
+        }
+    ],
+    "parameter_settings": [
+        {
+            "target": "limiter",
+            "name": "peak_threshold",
+            "value": -20.0
+        },
+        {
+            "target": "limiter",
+            "name": "rms_threshold",
+            "value": -20.0
+        }
+    ]
 }

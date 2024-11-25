@@ -14,13 +14,13 @@ namespace bosepro {
 /// A class for navigating a property tree.  This abstracts the Boost property
 /// tree class and provides some convenience methods common for navigating
 /// configuration files and parameter definitions.
-class PropertyNavigator : public boost::property_tree::ptree {
+class Navigator : public boost::property_tree::ptree {
 public:
     /// Construct a property navigator from a JSON file.  This is used to
     /// load entire configurations from files.
     ///
     /// @param  filename  The name of a JSON file.
-    PropertyNavigator(const std::string &filename)
+    Navigator(const std::string &filename)
         : boost::property_tree::ptree()
     {
         boost::property_tree::ptree &pt = *this;
@@ -32,7 +32,7 @@ public:
     /// parse single JSON command strings.
     ///
     /// @param  ss  A string stream containing a JSON string.
-    PropertyNavigator(std::stringstream &ss)
+    Navigator(std::stringstream &ss)
         : boost::property_tree::ptree()
     {
         boost::property_tree::ptree &pt = *this;
@@ -57,13 +57,13 @@ protected:
     ///
     /// @param  member_name  The name of the member.
     /// @return  The member of the given name.
-    const PropertyNavigator &get_member(const std::string &member_name) const
+    const Navigator &get_member(const std::string &member_name) const
     {
         if (!has_member(member_name))
         {
             SPDLOG_CRITICAL("Member {} not found.", member_name);
         }
-        return (const PropertyNavigator &)get_child(member_name);
+        return (const Navigator &)get_child(member_name);
     }
 
 
@@ -81,6 +81,132 @@ protected:
             SPDLOG_CRITICAL("Member {} not found.", member_name);
         }
         value = get<T>(member_name);
+    }
+
+
+    /// Get the value of the member of the given name, if it exists and agrees
+    /// with the type of the requested value.
+    ///
+    /// @param  member_name  The name of the member.
+    /// @param  value  The value of the member of the given name.
+    /// @return  True if the member exists and has a value of the requested
+    ///          type.
+    template <typename T>
+    bool try_member_value(const std::string &member_name, T &value) const
+    {
+        boost::optional<T> v;
+
+        if (!has_member(member_name))
+        {
+            SPDLOG_CRITICAL("Member {} not found.", member_name);
+            return false;
+        }
+
+        v = get_optional<T>(member_name);
+
+        if (v != boost::none)
+        {
+            value = *v;
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+
+    /// Get the number of elements in a list.
+    ///
+    /// @param  list_name  The name of the list.
+    /// @return  The number of elements in the list, or 0 if it does not exist.
+    size_t list_size(const std::string &list_name) const
+    {
+        if (!has_member(list_name))
+        {
+            return 0;
+        }
+
+        return get_child(list_name).size();
+    }
+
+
+    /// Get the value of the list member of the given name at the given index.
+    /// The list must exist: use `has_member()` to test for its existence before
+    /// calling this method.
+    /// The value must be convertible to the given type.
+    ///
+    /// @param  list_name  The name of the list.
+    /// @param  index  The index of the list member to retrieve.
+    /// @param  value  The value of the list member of the given name and index.
+    template <typename T>
+    void get_list_value(const std::string &list_name, int index, T &value) const
+    {
+        int n = 0;
+
+        if (!has_member(list_name))
+        {
+            SPDLOG_CRITICAL("List {} not found.", list_name);
+            return;
+        }
+
+        for (auto a : get_child(list_name))
+        {
+            if (n == index)
+            {
+                value = a.second.get_value<T>();
+                return;
+            }
+
+            n++;
+        }
+
+        SPDLOG_CRITICAL("List {} index {} out of range.", list_name, index);
+    }
+
+
+    /// Get the value of the member of a list of the given name at the given
+    /// index, if it exists and agrees with the type of the requested value.
+    ///
+    /// @param  list_name  The name of the list.
+    /// @param  index  The index of the list member to retrieve.
+    /// @param  value  The value of the list member of the given name and index.
+    /// @return  True if the member exists and has a value of the requested
+    ///          type.
+    template <typename T>
+    bool try_list_value(const std::string &list_name, int index, T &value) const
+    {
+        boost::optional<T> v;
+        int n = 0;
+
+        if (!has_member(list_name))
+        {
+            SPDLOG_CRITICAL("List {} not found.", list_name);
+            return false;
+        }
+
+        for (auto a : get_child(list_name))
+        {
+            if (n == index)
+            {
+                v = a.second.get_value_optional<T>();
+
+                if (v != boost::none)
+                {
+                    value = *v;
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+
+            n++;
+        }
+
+        SPDLOG_CRITICAL("List {} index {} out of range.", list_name, index);
+        return false;
     }
 
 
@@ -121,9 +247,9 @@ protected:
     /// @param  member_value  The value of interest of the member.
     /// @return  The property from the list which has a member with the given
     ///          name and value.
-    const PropertyNavigator &list_get_member(const std::string &list_name,
-                                             const std::string &member_name,
-                                             const std::string &member_value) const
+    const Navigator &list_get_member(const std::string &list_name,
+                                     const std::string &member_name,
+                                     const std::string &member_value) const
     {
         if (!has_member(list_name))
         {
@@ -134,14 +260,14 @@ protected:
         {
             if (a.second.get<std::string>(member_name) == member_value)
             {
-                return (const PropertyNavigator &)a.second;
+                return (const Navigator &)a.second;
             }
         }
 
         SPDLOG_CRITICAL("Member {} not found in list {}.", member_value,
                         list_name);
 
-        return (const PropertyNavigator &)get_child(list_name);
+        return (const Navigator &)get_child(list_name);
     }
 
 
@@ -170,6 +296,7 @@ protected:
         if (has_member(member_name))
         {
             get_member_value(member_name, index);
+            index--;
         }
 
         return index;

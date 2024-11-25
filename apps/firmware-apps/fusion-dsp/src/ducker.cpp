@@ -1,5 +1,6 @@
 
 #include <bosepro/algorithm.h>
+#include <bosepro/conversion.h>
 
 #include <cmath>
 #include <cstdint>
@@ -49,25 +50,27 @@ ALGORITHM_REGISTER(Ducker, "ducker");
 Ducker::Ducker(const bosepro::BlockConfiguration &configuration)
     : bosepro::Algorithm(configuration)
 {
-    get_constant("channels", channels);
+    get_property("channels", channels);
 
     assign_terminal("in", in);
     assign_terminal("out", out);
     assign_terminal("sidechain_in", sidechain_in);
 
-    assign_control("threshold", &threshold);
-    assign_control("range", &range);
-    assign_control("attack", &attack_time,
-                   POST_FUNCTION_SCALAR(update_attack));
-    assign_control("hold", &hold_time,
-                   POST_FUNCTION_SCALAR(update_hold));
-    assign_control("decay", &decay_time,
-                   POST_FUNCTION_SCALAR(update_decay));
+    assign_parameter("threshold", &threshold, bosepro::db_to_linear);
+    assign_parameter("range", &range, bosepro::db_to_linear);
+    assign_parameter("attack", &attack_time,
+                     POST_FUNCTION_SCALAR(update_attack));
+    assign_parameter("hold", &hold_time,
+                     POST_FUNCTION_SCALAR(update_hold));
+    assign_parameter("decay", &decay_time,
+                     POST_FUNCTION_SCALAR(update_decay));
 
     assign_meter("gain_meter", &current_gain);
 
     level_attack_coeff = 0.341f;
     current_gain = 1.0f;
+    hold_counter = 0;
+    smoothed_level = 0.0f;
 }
 
 

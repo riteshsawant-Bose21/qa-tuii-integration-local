@@ -1,76 +1,84 @@
 {
     "session": {
-        "tasks": [
-            {
-                "name": "task1",
-                "constants": [
-                    { "name": "frame_size", "value": 32},
-                    { "name": "sample_rate", "value": 48000 }
-                ],
-                "blocks": [
-                    {
-                        "name": "infile",
-                        "algorithm": "wav_read",
-                        "constants": [
-                            { "name": "frame_size", "value": 32},
-                            { "name": "sample_rate", "value": 48000 }
-                        ],
-                        "controls": [
-                            { "name": "out_gain", "num_rows": 1 },
-                            { "name": "out_mute", "num_rows": 1 }
-                        ],
-                        "meters": [
-                            { "name": "out_meter", "num_rows": 1 }
-                        ],
-                        "terminals": [
-                            { "name": "out", "channels": 1 }
-                        ]
-                    },
-                    {
-                        "name": "delay",
-                        "algorithm": "delay",
-                        "constants": [
-                            { "name": "channels", "value": 1 },
-                            { "name": "frame_size", "value": 32 },
-                            { "name": "sample_rate", "value": 48000 }
-                        ],
-                        "terminals": [
-                            { "name": "in", "channels": 1 },
-                            { "name": "out", "channels": 1 }
-                        ],
-                        "controls": [
-                            { "name": "delay", "num_rows": 1 },
-                            { "name": "channel_bypass", "num_rows": 1 },
-                            { "name": "out_gain", "num_rows": 1 },
-                            { "name": "out_mute", "num_rows": 1 }
-                        ],
-                        "meters": [
-                            { "name": "out_meter", "num_rows": 1 }
-                        ],
-                        "control_settings": [
-                            { "name": "delay", "value": 497 }
-                        ],
-                        "connections": [
-                            { "source_block": "infile", "input_terminal": "in", "output_terminal": "out", "input_channel": 0, "output_channel": 0 }
-                        ]
-                    },
-                    {
-                        "name": "outfile",
-                        "algorithm": "wav_write",
-                        "constants": [
-                            { "name": "frame_size", "value": 32 },
-                            { "name": "sample_rate", "value": 48000 }
-                        ],
-                        "terminals": [
-                            { "name": "in", "channels": 2 }
-                        ],
-                        "connections": [
-                            { "source_block": "delay", "input_terminal": "in", "output_terminal": "out", "input_channel": 0, "output_channel": 0 },
-                            { "source_block": "infile", "input_terminal": "in", "output_terminal": "out", "input_channel": 1, "output_channel": 0 }
-                        ]
-                    }
-                ]
-            }
+        "property_settings": [
+            { "name": "frame_size", "value": 32},
+            { "name": "sample_rate", "value": 48000 }
         ]
-    }
+    },
+    "tasks": [
+        {
+            "name": "task1",
+            "property_settings": [
+                { "name": "frame_size", "value": 32},
+                { "name": "sample_rate", "value": 48000 }
+            ],
+            "blocks": [
+                {
+                    "name": "infile",
+                    "algorithm": "wav_read",
+                    "property_settings": [
+                        { "name": "frame_size", "value": 32},
+                        { "name": "sample_rate", "value": 48000 }
+                    ],
+                    "terminal_channels": [
+                        { "name": "out", "channels": 1 }
+                    ]
+                },
+                {
+                    "name": "delay",
+                    "algorithm": "delay",
+                    "property_settings": [
+                        { "name": "channels", "value": 1 },
+                        { "name": "frame_size", "value": 32 },
+                        { "name": "sample_rate", "value": 48000 }
+                    ]
+                },
+                {
+                    "name": "outfile",
+                    "algorithm": "wav_write",
+                    "property_settings": [
+                        { "name": "frame_size", "value": 32 },
+                        { "name": "sample_rate", "value": 48000 }
+                    ],
+                    "terminal_channels": [
+                        { "name": "in", "channels": 2 }
+                    ]
+                }
+            ],
+            "block_connections": [
+                {
+                    "source_block": "infile",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "delay",
+                    "input_terminal": "in",
+                    "input_channel": 1
+                },
+                {
+                    "source_block": "delay",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "outfile",
+                    "input_terminal": "in",
+                    "input_channel": 1
+                },
+                {
+                    "source_block": "infile",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "outfile",
+                    "input_terminal": "in",
+                    "input_channel": 2
+                }
+            ]
+        }
+    ],
+    "parameter_settings": [
+        {
+            "target": "delay",
+            "name": "delay",
+            "index": [1],
+            "value": 497
+        }
+    ]
 }

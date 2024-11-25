@@ -1,184 +1,172 @@
 {
     "session": {
-        "constants": [
+        "property_settings": [
             { "name": "frame_size", "value": 256},
             { "name": "sample_rate", "value": 48000 }
-        ],
-        "tasks": [
-            {
-                "name": "task1",
-                "constants": [
-                    { "name": "jack_client_name", "value": "task1"},
-                    { "name": "frame_size", "value": 256},
-                    { "name": "sample_rate", "value": 48000 }
-                ],
-                "blocks": [
-                    {
-                        "name": "jack_in",
-                        "algorithm": "jack_in",
-                        "constants": [
-                            { "name": "client_name", "value": "task1"},
-                            { "name": "frame_size", "value": 256},
-                            { "name": "sample_rate", "value": 48000 }
-                        ],
-                        "terminals": [
-                            { "name": "out", "channels": 1 }
-                        ],
-                        "meters": [
-                            { "name": "out_meter", "num_rows": 1 }
-                        ],
-                        "controls": [
-                            { "name": "port_connection", "num_rows": 1 },
-                            { "name": "out_gain", "num_rows": 1 },
-                            { "name": "out_mute", "num_rows": 1 }
-                        ]
-                    },
-                    {
-                        "name": "volume",
-                        "algorithm": "peq",
-                        "constants": [
-                            { "name": "channels", "value": 1 },
-                            { "name": "bands", "value": 10 },
-                            { "name": "frame_size", "value": 256 },
-                            { "name": "sample_rate", "value": 48000 }
-                        ],
-                        "terminals": [
-                            { "name": "in", "channels": 1 },
-                            { "name": "out", "channels": 1 }
-                        ],
-                        "controls": [
-                            { "name": "gain", "num_rows": 10 },
-                            { "name": "band_enable", "num_rows": 10 },
-                            { "name": "frequency", "num_rows": 10 },
-                            { "name": "q", "num_rows": 10 },
-                            { "name": "out_gain", "num_rows": 1 },
-                            { "name": "out_mute", "num_rows": 1 }
-                        ],
-                        "meters": [
-                            { "name": "out_meter", "num_rows": 1 }
-                        ],
-                        "control_settings": [
-                            { "name": "gain", "value": 20.0 },
-                            { "name": "frequency", "value": 1000.0 },
-                            { "name": "q", "value": 0.1 },
-                            { "name": "bypass", "value": false }
-                        ],
-                        "connections": [
-                            { "source_block": "jack_in", "input_terminal": "in", "output_terminal": "out", "input_channel": 0, "output_channel": 0 }
-                        ]
-                    },
-                    {
-                        "name": "jack_out",
-                        "algorithm": "jack_out",
-                        "constants": [
-                            { "name": "client_name", "value": "task1"},
-                            { "name": "frame_size", "value": 256 },
-                            { "name": "sample_rate", "value": 48000 }
-                        ],
-                        "terminals": [
-                            { "name": "in", "channels": 1 }
-                        ],
-                        "meters": [
-                            { "name": "out_meter", "num_rows": 1 }
-                        ],
-                        "controls": [
-                            { "name": "port_connection", "num_rows": 1 },
-                            { "name": "out_gain", "num_rows": 1 },
-                            { "name": "out_mute", "num_rows": 1 }
-                        ],
-                        "connections": [
-                            { "source_block": "volume", "input_terminal": "in", "output_terminal": "out", "input_channel": 0, "output_channel": 0 }
-                        ]
-                    }
-                ]
-            },
-            {
-                "name": "task2",
-                "constants": [
-                    { "name": "jack_client_name", "value": "task2"},
-                    { "name": "frame_size", "value": 256},
-                    { "name": "sample_rate", "value": 48000 }
-                ],
-                "blocks": [
-                    {
-                        "name": "jack_in2",
-                        "algorithm": "jack_in",
-                        "constants": [
-                            { "name": "client_name", "value": "task2"},
-                            { "name": "frame_size", "value": 256},
-                            { "name": "sample_rate", "value": 48000 }
-                        ],
-                        "terminals": [
-                            { "name": "out", "channels": 1 }
-                        ],
-                        "meters": [
-                            { "name": "out_meter", "num_rows": 1 }
-                        ],
-                        "controls": [
-                            { "name": "port_connection", "num_rows": 1 },
-                            { "name": "out_gain", "num_rows": 1 },
-                            { "name": "out_mute", "num_rows": 1 }
-                        ]
-                    },
-                    {
-                        "name": "volume2",
-                        "algorithm": "peq",
-                        "constants": [
-                            { "name": "channels", "value": 1 },
-                            { "name": "bands", "value": 10 },
-                            { "name": "frame_size", "value": 256 },
-                            { "name": "sample_rate", "value": 48000 }
-                        ],
-                        "terminals": [
-                            { "name": "in", "channels": 1 },
-                            { "name": "out", "channels": 1 }
-                        ],
-                        "controls": [
-                            { "name": "gain", "num_rows": 10 },
-                            { "name": "band_enable", "num_rows": 10 },
-                            { "name": "frequency", "num_rows": 10 },
-                            { "name": "q", "num_rows": 10 },
-                            { "name": "out_gain", "num_rows": 1 },
-                            { "name": "out_mute", "num_rows": 1 }
-                        ],
-                        "meters": [
-                            { "name": "out_meter", "num_rows": 1 }
-                        ],
-                        "control_settings": [
-                            { "name": "gain", "value": 20.0 },
-                            { "name": "frequency", "value": 1000.0 },
-                            { "name": "q", "value": 0.1 },
-                            { "name": "bypass", "value": false }
-                        ],
-                        "connections": [
-                            { "source_block": "jack_in2", "input_terminal": "in", "output_terminal": "out", "input_channel": 0, "output_channel": 0 }
-                        ]
-                    },
-                    {
-                        "name": "jack_out2",
-                        "algorithm": "jack_out",
-                        "constants": [
-                            { "name": "client_name", "value": "task2"},
-                            { "name": "frame_size", "value": 256 },
-                            { "name": "sample_rate", "value": 48000 }
-                        ],
-                        "terminals": [
-                            { "name": "in", "channels": 1 }
-                        ],
-                        "meters": [
-                            { "name": "out_meter", "num_rows": 1 }
-                        ],
-                        "controls": [
-                            { "name": "port_connection", "num_rows": 1 },
-                            { "name": "out_gain", "num_rows": 1 },
-                            { "name": "out_mute", "num_rows": 1 }
-                        ],
-                        "connections": [
-                            { "source_block": "volume2", "input_terminal": "in", "output_terminal": "out", "input_channel": 0, "output_channel": 0 }
-                        ]
-                    }
-                ]
-            }
         ]
-    }
+    },
+    "tasks": [
+        {
+            "name": "task1",
+            "property_settings": [
+                { "name": "jack_client_name", "value": "task1"},
+                { "name": "frame_size", "value": 256},
+                { "name": "sample_rate", "value": 48000 }
+            ],
+            "blocks": [
+                {
+                    "name": "jack_in1",
+                    "algorithm": "jack_in",
+                    "property_settings": [
+                        { "name": "client_name", "value": "task1"},
+                        { "name": "frame_size", "value": 256},
+                        { "name": "sample_rate", "value": 48000 }
+                    ],
+                    "terminal_channels": [
+                        { "name": "out", "channels": 1 }
+                    ]
+                },
+                {
+                    "name": "peq1",
+                    "algorithm": "peq",
+                    "property_settings": [
+                        { "name": "channels", "value": 1 },
+                        { "name": "bands", "value": 10 },
+                        { "name": "frame_size", "value": 256 },
+                        { "name": "sample_rate", "value": 48000 }
+                    ]
+                },
+                {
+                    "name": "jack_out1",
+                    "algorithm": "jack_out",
+                    "property_settings": [
+                        { "name": "client_name", "value": "task1"},
+                        { "name": "frame_size", "value": 256 },
+                        { "name": "sample_rate", "value": 48000 }
+                    ],
+                    "terminal_channels": [
+                        { "name": "in", "channels": 1 }
+                    ]
+                }
+            ],
+            "block_connections": [
+                {
+                    "source_block": "jack_in1",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "peq1",
+                    "input_terminal": "in",
+                    "input_channel": 1
+                },
+                {
+                    "source_block": "peq1",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "jack_out1",
+                    "input_terminal": "in",
+                    "input_channel": 1
+                }
+            ]
+        },
+        {
+            "name": "task2",
+            "property_settings": [
+                { "name": "jack_client_name", "value": "task2"},
+                { "name": "frame_size", "value": 256},
+                { "name": "sample_rate", "value": 48000 }
+            ],
+            "blocks": [
+                {
+                    "name": "jack_in2",
+                    "algorithm": "jack_in",
+                    "property_settings": [
+                        { "name": "client_name", "value": "task2"},
+                        { "name": "frame_size", "value": 256},
+                        { "name": "sample_rate", "value": 48000 }
+                    ],
+                    "terminal_channels": [
+                        { "name": "out", "channels": 1 }
+                    ]
+                },
+                {
+                    "name": "peq2",
+                    "algorithm": "peq",
+                    "property_settings": [
+                        { "name": "channels", "value": 1 },
+                        { "name": "bands", "value": 10 },
+                        { "name": "frame_size", "value": 256 },
+                        { "name": "sample_rate", "value": 48000 }
+                    ]
+                },
+                {
+                    "name": "jack_out2",
+                    "algorithm": "jack_out",
+                    "property_settings": [
+                        { "name": "client_name", "value": "task2"},
+                        { "name": "frame_size", "value": 256 },
+                        { "name": "sample_rate", "value": 48000 }
+                    ],
+                    "terminal_channels": [
+                        { "name": "in", "channels": 1 }
+                    ]
+                }
+            ],
+            "block_connections": [
+                {
+                    "source_block": "jack_in2",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "peq2",
+                    "input_terminal": "in",
+                    "input_channel": 1
+                },
+                {
+                    "source_block": "peq2",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "jack_out2",
+                    "input_terminal": "in",
+                    "input_channel": 1
+                }
+            ]
+        }
+    ],
+    "parameter_settings": [
+        {
+            "target": "peq1",
+            "name": "gain",
+            "index": [1],
+            "value": 15.0
+        },
+        {
+            "target": "peq1",
+            "name": "frequency",
+            "index": [1],
+            "value": 1000.0
+        },
+        {
+            "target": "peq1",
+            "name": "q",
+            "index": [1],
+            "value": 1.414
+        },
+        {
+            "target": "peq2",
+            "name": "gain",
+            "index": [1],
+            "value": 15.0
+        },
+        {
+            "target": "peq2",
+            "name": "frequency",
+            "index": [1],
+            "value": 1000.0
+        },
+        {
+            "target": "peq2",
+            "name": "q",
+            "index": [1],
+            "value": 1.414
+        }
+    ]
 }

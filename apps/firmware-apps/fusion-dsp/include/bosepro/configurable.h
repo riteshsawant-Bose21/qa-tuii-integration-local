@@ -1,7 +1,7 @@
 #pragma once
 
 #include <bosepro/configuration.h>
-#include <bosepro/parameters.h>
+#include <bosepro/definition.h>
 
 #include <spdlog/spdlog.h>
 
@@ -22,18 +22,18 @@ public:
     /// @param  configuration  The configuration for this object.
     Configurable(const Configuration &configuration)
     {
-        if (configuration.has_constant("frame_size"))
+        if (configuration.has_property("frame_size"))
         {
-            configuration.get_constant("frame_size").get_value(frame_size);
+            configuration.get_property("frame_size").get_value(frame_size);
         }
         else
         {
             frame_size = 32;
         }
 
-        if (configuration.has_constant("sample_rate"))
+        if (configuration.has_property("sample_rate"))
         {
-            configuration.get_constant("sample_rate").get_value(sample_rate);
+            configuration.get_property("sample_rate").get_value(sample_rate);
         }
         else
         {
@@ -49,28 +49,28 @@ public:
 
 
 protected:
-    /// Set the parameter definitions for the entire system.
+    /// Set the algorithm definitions for the entire system.
     ///
-    /// @param  params  The parameter definitions.
-    void set_parameters(const Parameters &params)
+    /// @param  definition  The algorithm definitions.
+    void set_definitions(const Definition &definitions)
     {
-        parameters = &params;
+        this->definitions = &definitions;
     }
 
 
-    /// Get the parameter definitions for the named algorithm.
+    /// Get the definition for the named algorithm.
     ///
     /// @param  algorithm_name  The name of the algorithm.
-    /// @return  The parameter definitions for the algorithm.
-    const AlgorithmParameters *get_parameters(const std::string &algorithm_name) const
+    /// @return  The definition for the algorithm.
+    const AlgorithmDefinition *get_definition(const std::string &algorithm_name) const
     {
-        if (!parameters->has_algorithm(algorithm_name))
+        if (!definitions->has_algorithm(algorithm_name))
         {
-            SPDLOG_CRITICAL("No parameters defined for algorithm '{}'.",
+            SPDLOG_CRITICAL("No definition available for algorithm '{}'.",
                             algorithm_name);
         }
 
-        return &parameters->get_algorithm(algorithm_name);
+        return &definitions->get_algorithm(algorithm_name);
     }
 
 
@@ -93,7 +93,7 @@ protected:
 
 
 private:
-    static const Parameters *parameters;
+    static const Definition *definitions;
     int_fast32_t frame_size;
     int_fast32_t sample_rate;
 };

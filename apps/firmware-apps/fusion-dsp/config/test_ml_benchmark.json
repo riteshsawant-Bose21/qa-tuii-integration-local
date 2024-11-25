@@ -1,62 +1,82 @@
 {
     "session": {
-        "tasks": [
-            {
-                "name": "task1",
-                "constants": [
-                    { "name": "frame_size", "value": 480},
-                    { "name": "sample_rate", "value": 48000 }
-                ],
-                "blocks": [
-                    {
-                        "name": "infile",
-                        "algorithm": "wav_read",
-                        "constants": [
-                            { "name": "frame_size", "value": 480},
-                            { "name": "sample_rate", "value": 48000 },
-                            { "name": "filename", "value": "percepnet-noisy.wav" }
-                        ],
-                        "terminals": [
-                            { "name": "out", "channels": 1 }
-                        ]
-                    },
-                    {
-                        "name": "ml_benchmark",
-                        "algorithm": "ml_benchmark",
-                        "constants": [
-                            { "name": "channels", "value": 1 },
-                            { "name": "frame_size", "value": 480 },
-                            { "name": "sample_rate", "value": 48000 }
-                        ],
-                        "terminals": [
-                            { "name": "in", "channels": 1 },
-                            { "name": "out", "channels": 1 }
-                        ],
-                        "control_settings": [
-                            { "name": "model_path", "value": "ml/ml_rnnoise_in42_frame1_out22_unit24.onnx" },
-                            { "name": "max_input_time", "value": 10 }
-                        ],
-                        "connections": [
-                            { "source_block": "infile", "input_terminal": "in", "output_terminal": "out", "input_channel": 0, "output_channel": 0 }
-                        ]
-                    },
-                    {
-                        "name": "outfile",
-                        "algorithm": "wav_write",
-                        "constants": [
-                            { "name": "frame_size", "value": 480 },
-                            { "name": "sample_rate", "value": 48000 },
-                            { "name": "filename", "value": "out.wav" }
-                        ],
-                        "terminals": [
-                            { "name": "in", "channels": 1 }
-                        ],
-                        "connections": [
-                            { "source_block": "infile", "input_terminal": "in", "output_terminal": "out", "input_channel": 0, "output_channel": 0 }
-                        ]
-                    }
-                ]
-            }
+        "property_settings": [
+            { "name": "frame_size", "value": 480},
+            { "name": "sample_rate", "value": 48000 }
         ]
-    }
+    },
+    "tasks": [
+        {
+            "name": "task1",
+            "property_settings": [
+                { "name": "frame_size", "value": 480},
+                { "name": "sample_rate", "value": 48000 }
+            ],
+            "blocks": [
+                {
+                    "name": "infile",
+                    "algorithm": "wav_read",
+                    "property_settings": [
+                        { "name": "frame_size", "value": 480},
+                        { "name": "sample_rate", "value": 48000 },
+                        { "name": "filename", "value": "percepnet-noisy.wav" }
+                    ],
+                    "terminal_channels": [
+                        { "name": "out", "channels": 1 }
+                    ]
+                },
+                {
+                    "name": "ml_benchmark",
+                    "algorithm": "ml_benchmark",
+                    "property_settings": [
+                        { "name": "channels", "value": 1 },
+                        { "name": "frame_size", "value": 480 },
+                        { "name": "sample_rate", "value": 48000 }
+                    ]
+                },
+                {
+                    "name": "outfile",
+                    "algorithm": "wav_write",
+                    "property_settings": [
+                        { "name": "frame_size", "value": 480 },
+                        { "name": "sample_rate", "value": 48000 },
+                        { "name": "filename", "value": "out.wav" }
+                    ],
+                    "terminal_channels": [
+                        { "name": "in", "channels": 1 }
+                    ]
+                }
+            ],
+            "block_connections": [
+                {
+                    "source_block": "infile",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "ml_benchmark",
+                    "input_terminal": "in",
+                    "input_channel": 1
+                },
+                {
+                    "source_block": "ml_benchmark",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "outfile",
+                    "input_terminal": "in",
+                    "input_channel": 1
+                }
+            ]
+        }
+    ],
+    "parameter_settings": [
+        {
+            "target": "ml_benchmark",
+            "name": "model_path",
+            "value": "ml/ml_rnnoise_in42_frame1_out22_unit24.onnx"
+        },
+        {
+            "target": "ml_benchmark",
+            "name": "max_input_time",
+            "value": 10
+        }
+    ]
 }

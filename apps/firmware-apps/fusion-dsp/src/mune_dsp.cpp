@@ -1,7 +1,7 @@
 #include "wav_read.h"
 
 #include <bosepro/configuration.h>
-#include <bosepro/parameters.h>
+#include <bosepro/definition.h>
 #include <bosepro/profile.h>
 #include <bosepro/session.h>
 
@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
     boost::program_options::options_description desc("Allowed options");
     desc.add_options()
         ("configuration,c", boost::program_options::value<std::string>()->default_value("config/configuration.json"), "configuration file")
-        ("parameters,p", boost::program_options::value<std::string>()->default_value("config/parameters.json"), "parameter definition file")
+        ("definitions,d", boost::program_options::value<std::string>()->default_value("config/algorithm-definitions.json"), "algorithm definition file")
         ("time,t", boost::program_options::value<int>(), "time to run (seconds)")
         ("help,h", "print this message and exit")
     ;
@@ -55,8 +55,21 @@ int main(int argc, char *argv[])
     bosepro::Profile::set_cpu_mips(1800.0);
 
     bosepro::Configuration configuration(vm["configuration"].as<std::string>());
-    bosepro::Parameters parameters(vm["parameters"].as<std::string>());
-    bosepro::Session session(configuration.get_session(), parameters);
+    bosepro::Definition definitions(vm["definitions"].as<std::string>());
+    bosepro::Session session(configuration.get_session(), definitions);
+
+    if (configuration.has_tasks())
+    {
+        session.create_tasks(configuration);
+    }
+
+    if (configuration.has_parameter_settings())
+    {
+        for (auto &ps : configuration.get_parameter_settings())
+        {
+            session.process_parameter_setting((const bosepro::ParameterSetting &)ps.second);
+        }
+    }
 
     // Try to be psychic and run the way the user wants:
     //
@@ -128,13 +141,13 @@ int main(int argc, char *argv[])
 
             if (buf[0] != '\0')
             {
-                SPDLOG_INFO("Got command: {}", buf);
+                SPDLOG_INFO("Got parameter setting: {}", buf);
             }
 
             std::stringstream ss;
             ss << buf;
-            bosepro::Command command = bosepro::Command(ss);
-            session.process_command(command);
+            bosepro::ParameterSetting ps = bosepro::ParameterSetting(ss);
+            session.process_parameter_setting(ps);
             usleep(100);
         }
     }

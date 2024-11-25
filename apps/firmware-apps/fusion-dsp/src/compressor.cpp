@@ -1,6 +1,8 @@
 
 #include <bosepro/algorithm.h>
 
+#include <spdlog/spdlog.h>
+
 #include <cmath>
 #include <cstdint>
 
@@ -47,20 +49,20 @@ ALGORITHM_REGISTER(Compressor, "compressor");
 Compressor::Compressor(const bosepro::BlockConfiguration &configuration)
     : bosepro::Algorithm(configuration)
 {
-    get_constant("channels", channels);
+    get_property("channels", channels);
 
     assign_terminal("in", in);
     assign_terminal("out", out);
     assign_terminal("sidechain_in", sidechain_in);
 
-    assign_control("sidechain_enable", &sidechain_enabled);
-    assign_control("threshold", &threshold);
-    assign_control("ratio", &ratio,
-                   POST_FUNCTION_SCALAR(update_ratio));
-    assign_control("attack", &attack_time,
-                   POST_FUNCTION_SCALAR(update_attack));
-    assign_control("release", &release_time,
-                   POST_FUNCTION_SCALAR(update_release));
+    assign_parameter("sidechain_enable", &sidechain_enabled);
+    assign_parameter("threshold", &threshold);
+    assign_parameter("ratio", &ratio,
+                     POST_FUNCTION_SCALAR(update_ratio));
+    assign_parameter("attack", &attack_time,
+                     POST_FUNCTION_SCALAR(update_attack));
+    assign_parameter("release", &release_time,
+                     POST_FUNCTION_SCALAR(update_release));
 
     assign_meter("gain_meter", &current_gain);
 

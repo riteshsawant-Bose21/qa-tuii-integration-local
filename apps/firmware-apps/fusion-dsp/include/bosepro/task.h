@@ -235,16 +235,16 @@ public:
 
         frames_to_run = -1;
 
-        if (configuration.has_constant("jack_client_name") > 0)
+        if (configuration.has_property("jack_client_name") > 0)
         {
             std::string client_name;
-            configuration.get_constant("jack_client_name").get_value(client_name);
+            configuration.get_property("jack_client_name").get_value(client_name);
             client = Jack::create_client(client_name, this);
         }
 
-        if (configuration.has_constant("cpu_affinity") > 0)
+        if (configuration.has_property("cpu_affinity") > 0)
         {
-            configuration.get_constant("cpu_affinity").get_value(cpu_affinity);
+            configuration.get_property("cpu_affinity").get_value(cpu_affinity);
         }
 
         // Create all of the blocks in the task.
@@ -265,50 +265,34 @@ public:
         for (auto &b : blocks)
         {
             b->initialize_terminals();
-            b->initialize_controls();
+            b->initialize_parameters();
             b->initialize_meters();
         }
 
-        for (auto &b : configuration.get_blocks())
+        for (auto &c : configuration.get_block_connections())
         {
-            const BlockConfiguration *bc =
-                reinterpret_cast<const BlockConfiguration *>(&b.second);
+            const ConnectionConfiguration *cc =
+                reinterpret_cast<const ConnectionConfiguration *>(&c.second);
+            Algorithm *input_block = block_map[cc->get_destination_block()];
+            Algorithm *ouput_block = block_map[cc->get_source_block()];
+            Terminal &output_terminal =
+                ouput_block->get_terminal(cc->get_output_terminal());
+            int output_channel = cc->get_output_channel();
+            int input_channel = cc->get_input_channel();
 
-            // Blocks with no input terminals have no connections.
-            if (bc->count("connections") == 0)
-            {
-                SPDLOG_DEBUG("Block {} has no connections.", bc->get_name());
-                continue;
-            }
+            SPDLOG_TRACE("Connecting {}:{}:{} -> {}:{}:{}.",
+                    cc->get_source_block(), cc->get_output_terminal(),
+                    cc->get_output_channel(), cc->get_destination_block(),
+                    cc->get_input_terminal(), cc->get_input_channel());
 
-            Algorithm *input_block = block_map[bc->get_name()];
-
-            SPDLOG_TRACE("Connecting block {}.", bc->get_name());
-
-            for (auto &c : bc->get_connections())
-            {
-                const ConnectionConfiguration *cc =
-                    reinterpret_cast<const ConnectionConfiguration *>(&c.second);
-                Algorithm *ouput_block = block_map[cc->get_source_block()];
-                Terminal &output_terminal =
-                    ouput_block->get_terminal(cc->get_output_terminal());
-                int output_channel = cc->get_output_channel();
-                int input_channel = cc->get_input_channel();
-
-                SPDLOG_TRACE("Connecting {}:{}:{} -> {}:{}:{}.",
-                             cc->get_source_block(), cc->get_output_terminal(),
-                             cc->get_output_channel(), bc->get_name(),
-                             cc->get_input_terminal(), cc->get_input_channel());
-
-                input_block->connect_terminal(cc->get_input_terminal(),
-                                              input_channel, output_terminal,
-                                              output_channel);
-            }
+            input_block->connect_terminal(cc->get_input_terminal(),
+                    input_channel, output_terminal,
+                    output_channel);
         }
 
-        if (configuration.has_constant("profile_blocks") > 0)
+        if (configuration.has_property("profile_blocks") > 0)
         {
-            configuration.get_constant("profile_blocks").get_value(profile_blocks);
+            configuration.get_property("profile_blocks").get_value(profile_blocks);
         }
 
         block_profile.resize(blocks.size());
@@ -490,7 +474,7 @@ private:
     // A list of blocks, for quickly processing in order.
     std::list<std::unique_ptr<Algorithm>> blocks;
     std::vector<Profile> block_profile;
-    // A map of blocks, for accessing controls and meters.
+    // A map of blocks, for accessing parameters and meters.
     std::map<std::string, Algorithm *> block_map;
     bool profile_blocks = false;
     int_fast32_t cpu_affinity;

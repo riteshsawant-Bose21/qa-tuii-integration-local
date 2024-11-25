@@ -28,7 +28,7 @@ WavRead::WavRead(const bosepro::BlockConfiguration &configuration)
 
     std::string filename;
     SF_INFO sfinfo;
-    get_constant("filename", filename);
+    get_property("filename", filename);
     sndfile = sf_open(filename.c_str(), SFM_READ, &sfinfo);
 
     double file_time = (double)sfinfo.frames / sfinfo.samplerate;

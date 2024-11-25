@@ -1,82 +1,85 @@
 {
     "session": {
-        "constants": [
+        "property_settings": [
             { "name": "frame_size", "value": 32},
             { "name": "sample_rate", "value": 48000 }
-        ],
-        "tasks": [
-            {
-                "name": "task1",
-                "constants": [
-                    { "name": "frame_size", "value": 32},
-                    { "name": "sample_rate", "value": 48000 }
-                ],
-                "blocks": [
-                    {
-                        "name": "infile",
-                        "algorithm": "wav_read",
-                        "constants": [
-                            { "name": "frame_size", "value": 32},
-                            { "name": "sample_rate", "value": 48000 }
-                        ],
-                        "controls": [
-                            { "name": "out_gain", "num_rows": 1 },
-                            { "name": "out_mute", "num_rows": 1 }
-                        ],
-                        "meters": [
-                            { "name": "out_meter", "num_rows": 1 }
-                        ],
-                        "terminals": [
-                            { "name": "out", "channels": 1 }
-                        ]
-                    },
-                    {
-                        "name": "tone",
-                        "algorithm": "tone",
-                        "constants": [
-                            { "name": "channels", "value": 1 },
-                            { "name": "frame_size", "value": 32 },
-                            { "name": "sample_rate", "value": 48000 }
-                        ],
-                        "terminals": [
-                            { "name": "in", "channels": 1 },
-                            { "name": "out", "channels": 1 }
-                        ],
-                        "controls": [
-                            { "name": "out_gain", "num_rows": 1 },
-                            { "name": "out_mute", "num_rows": 1 }
-                        ],
-                        "meters": [
-                            { "name": "out_meter", "num_rows": 1 }
-                        ],
-                        "control_settings": [
-                            { "name": "low_gain", "value": 6.0 },
-                            { "name": "mid_gain", "value": 3.0 },
-                            { "name": "high_gain", "value": -6.0 },
-                            { "name": "low_bypass", "value": false },
-                            { "name": "mid_bypass", "value": false },
-                            { "name": "high_bypass", "value": false }
-                        ],
-                        "connections": [
-                            { "source_block": "infile", "input_terminal": "in", "output_terminal": "out", "input_channel": 0, "output_channel": 0 }
-                        ]
-                    },
-                    {
-                        "name": "outfile",
-                        "algorithm": "wav_write",
-                        "constants": [
-                            { "name": "frame_size", "value": 32 },
-                            { "name": "sample_rate", "value": 48000 }
-                        ],
-                        "terminals": [
-                            { "name": "in", "channels": 1 }
-                        ],
-                        "connections": [
-                            { "source_block": "tone", "input_terminal": "in", "output_terminal": "out", "input_channel": 0, "output_channel": 0 }
-                        ]
-                    }
-                ]
-            }
         ]
-    }
+    },
+    "tasks": [
+        {
+            "name": "task1",
+            "property_settings": [
+                { "name": "frame_size", "value": 32},
+                { "name": "sample_rate", "value": 48000 }
+            ],
+            "blocks": [
+                {
+                    "name": "infile",
+                    "algorithm": "wav_read",
+                    "property_settings": [
+                        { "name": "frame_size", "value": 32},
+                        { "name": "sample_rate", "value": 48000 }
+                    ],
+                    "terminal_channels": [
+                        { "name": "out", "channels": 1 }
+                    ]
+                },
+                {
+                    "name": "tone",
+                    "algorithm": "tone_control",
+                    "property_settings": [
+                        { "name": "channels", "value": 1 },
+                        { "name": "frame_size", "value": 32 },
+                        { "name": "sample_rate", "value": 48000 }
+                    ]
+                },
+                {
+                    "name": "outfile",
+                    "algorithm": "wav_write",
+                    "property_settings": [
+                        { "name": "frame_size", "value": 32 },
+                        { "name": "sample_rate", "value": 48000 }
+                    ],
+                    "terminal_channels": [
+                        { "name": "in", "channels": 1 }
+                    ]
+                }
+            ],
+            "block_connections": [
+                {
+                    "source_block": "infile",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "tone",
+                    "input_terminal": "in",
+                    "input_channel": 1
+                },
+                {
+                    "source_block": "tone",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "outfile",
+                    "input_terminal": "in",
+                    "input_channel": 1
+                }
+            ]
+        }
+    ],
+    "parameter_settings": [
+        {
+            "target": "tone",
+            "name": "low_gain",
+            "value": 6.0
+        },
+        {
+            "target": "tone",
+            "name": "mid_gain",
+            "value": 3.0
+        },
+        {
+            "target": "tone",
+            "name": "high_gain",
+            "value": -6.0
+        }
+    ]
 }

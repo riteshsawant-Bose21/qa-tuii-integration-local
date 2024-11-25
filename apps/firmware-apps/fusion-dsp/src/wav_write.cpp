@@ -40,7 +40,7 @@ WavWrite::WavWrite(const bosepro::BlockConfiguration &configuration)
     sfinfo.samplerate = get_sample_rate();
     sfinfo.channels = channels;
     sfinfo.format = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
-    get_constant("filename", filename);
+    get_property("filename", filename);
     sndfile = sf_open(filename.c_str(), SFM_WRITE, &sfinfo);
 }
 

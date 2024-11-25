@@ -140,7 +140,7 @@ Jack::Jack(const BlockConfiguration &configuration, bool is_input)
 {
     std::string client_name;
 
-    get_constant("client_name", client_name);
+    get_property("client_name", client_name);
 
     client = get_client(client_name);
 
@@ -165,7 +165,7 @@ Jack::Jack(const BlockConfiguration &configuration, bool is_input)
     client->attach_block(this);
 
     std::string port_name_prefix;
-    get_constant("port_name_prefix", port_name_prefix);
+    get_property("port_name_prefix", port_name_prefix);
 
     if (is_input)
     {
@@ -184,8 +184,8 @@ Jack::Jack(const BlockConfiguration &configuration, bool is_input)
         ports[channel].create(client, port_name.c_str(), is_input);
     }
 
-    assign_control("port_connection", port_connections,
-                   POST_FUNCTION_VECTOR(post_port_connection));
+    assign_parameter("port_connection", port_connections,
+                     POST_FUNCTION_VECTOR(post_port_connection));
 }
 
 

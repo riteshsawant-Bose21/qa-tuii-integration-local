@@ -1,5 +1,6 @@
 
 #include <bosepro/algorithm.h>
+#include <bosepro/conversion.h>
 
 #include <cstdint>
 
@@ -34,13 +35,13 @@ ALGORITHM_REGISTER(Gain, "gain");
 Gain::Gain(const bosepro::BlockConfiguration &configuration)
     : bosepro::Algorithm(configuration)
 {
-    get_constant("channels", channels);
+    get_property("channels", channels);
 
     assign_terminal("in", in);
     assign_terminal("out", out);
 
-    assign_control("gain", &gain);
-    assign_control("mute", &mute);
+    assign_parameter("gain", &gain, bosepro::db_to_linear);
+    assign_parameter("mute", &mute);
 
     smooth_coeff = 0.999f;
     smoothed_gain = 1.0f;

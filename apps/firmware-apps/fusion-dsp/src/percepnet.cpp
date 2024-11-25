@@ -40,7 +40,7 @@ private:
 	bosepro::DspSignalMemory<const float *[]> in;
 	bosepro::DspSignalMemory<float *[]> out;
 	
-	// --- user controls ---
+	// --- user properties ---
 	// onnx model path, default is percepnet.onnx
 	std::string model_path;
 	// if use frame skipping to save computation,
@@ -110,7 +110,7 @@ private:
 	void rnnoise_process_frame(DenoiseState *st, float *output, const float *input, int pf, 
 		int post, int lookahead, int frame_skip);
 
-	// --- user control parameters processing functions ---
+	// --- user parameter processing functions ---
 	void update_model();
 
 	ALGORITHM_DECLARE(PercepNet);
@@ -122,15 +122,16 @@ ALGORITHM_REGISTER(PercepNet, "percepnet");
 PercepNet::PercepNet(const bosepro::BlockConfiguration &configuration)
 	: bosepro::Algorithm(configuration)
 {
-	get_constant("channels", channels);
-	get_constant("frame_size", frame_size);
+	get_property("channels", channels);
+	get_property("frame_size", frame_size);
 
 	assign_terminal("in", in);
 	assign_terminal("out", out);
 
-	assign_control("model_path", &model_path, POST_FUNCTION_SCALAR(update_model));
-	assign_control("skip_frame", &skip_frame);
-	assign_control("ignore_pf_strength", &ignore_strengths);
+	assign_parameter("model_path", &model_path,
+                     POST_FUNCTION_SCALAR(update_model));
+	assign_parameter("skip_frame", &skip_frame);
+	assign_parameter("ignore_pf_strength", &ignore_strengths);
 
 	rnnoise_create(model_path.c_str());
 
