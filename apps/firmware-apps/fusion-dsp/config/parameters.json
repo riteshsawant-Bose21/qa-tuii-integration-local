@@ -91,6 +91,25 @@
             ]
         },
         {
+        "name": "graphic_eq",
+            "constants": [
+                { "name": "channels", "default_value": 1 }
+            ],
+            "terminals": [
+                { "name": "in", "type": "audio", "default_channels": 1, "direction": "input" },
+                { "name": "out", "type": "audio", "default_channels": 1, "direction": "output", "bypass_source": "in" }
+            ],
+            "controls": [
+                { "name": "gain", "dimensions": 1, "value_type": "float", "default_value": 0.0 },
+                { "name": "bypass", "value_type": "bool", "default_value": false },
+                { "name": "out_gain", "dimensions": 1, "value_type": "float", "default_value": 1.0 },
+                { "name": "out_mute", "dimensions": 1, "value_type": "bool", "default_value": false }
+            ],
+            "meters": [
+                { "name": "out_meter", "dimensions": 1, "value_type": "float" }
+            ]
+        },
+        {
             "name": "tone",
             "constants": [
                 { "name": "channels", "default_value": 1 }
