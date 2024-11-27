@@ -18,12 +18,12 @@ namespace {
         19952.623
     };
 
-class GraphicalEq : public bosepro::Algorithm
+class GraphicEq : public bosepro::Algorithm
 
 {
     public: 
-        GraphicalEq(const bosepro::BlockConfiguration &configuration);
-        virtual ~GraphicalEq() = default;
+        GraphicEq(const bosepro::BlockConfiguration &configuration);
+        virtual ~GraphicEq() = default;
 
         virtual void process() override;
 
@@ -38,14 +38,14 @@ class GraphicalEq : public bosepro::Algorithm
 
         void update_band(int band);
         
-        ALGORITHM_DECLARE(GraphicalEq);
+        ALGORITHM_DECLARE(GraphicEq);
 
 };
 
-ALGORITHM_REGISTER(GraphicalEq, "graphical_eq");
+ALGORITHM_REGISTER(GraphicEq, "graphic_eq");
 
 
-GraphicalEq::GraphicalEq(const bosepro::BlockConfiguration &configuration)
+GraphicEq::GraphicEq(const bosepro::BlockConfiguration &configuration)
     : bosepro::Algorithm(configuration)
 {
     get_constant("channels", channels);
@@ -58,12 +58,12 @@ GraphicalEq::GraphicalEq(const bosepro::BlockConfiguration &configuration)
     new (iir.get()) filter::IirFilter(BANDS, channels);
 }
 
-void GraphicalEq::process()
+void GraphicEq::process()
 {
     iir->process(out.get(), in.get(), get_frame_size());
 }
 
-void GraphicalEq::update_band(int band)
+void GraphicEq::update_band(int band)
 {
     iir->design_band("peq_cs", band, ISOFrequencies[band], Q, gain[band], get_sample_rate());
 }

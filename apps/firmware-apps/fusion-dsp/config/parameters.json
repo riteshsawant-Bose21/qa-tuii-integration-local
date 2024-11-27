@@ -91,7 +91,7 @@
             ]
         },
         {
-        "name": "graphical_eq",
+        "name": "graphic_eq",
             "constants": [
                 { "name": "channels", "default_value": 1 }
             ],

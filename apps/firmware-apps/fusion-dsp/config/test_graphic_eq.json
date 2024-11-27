@@ -25,7 +25,7 @@
                     },
                     {
                         "name": "volume",
-                        "algorithm": "graphical_eq",
+                        "algorithm": "graphic_eq",
                         "constants": [
                             { "name": "channels", "value": 1 },
                             { "name": "frame_size", "value": 256 },
