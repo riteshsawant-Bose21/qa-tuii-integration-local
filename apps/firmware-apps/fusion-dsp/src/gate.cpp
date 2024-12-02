@@ -1,5 +1,6 @@
 
 #include <bosepro/algorithm.h>
+#include <bosepro/conversion.h>
 
 #include <cmath>
 #include <cstdint>
@@ -23,7 +24,7 @@ private:
     bosepro::DspSignalMemory<const float *[]> sidechain_in;
     bool sidechain_enabled;
     float threshold;
-    float depth;
+    float range;
     float attack_time;
     float attack_coeff;
     float decay_time;
@@ -50,24 +51,21 @@ ALGORITHM_REGISTER(Gate, "gate");
 Gate::Gate(const bosepro::BlockConfiguration &configuration)
     : bosepro::Algorithm(configuration)
 {
-    get_constant("channels", channels);
+    get_property("channels", channels);
 
     assign_terminal("in", in);
     assign_terminal("out", out);
     assign_terminal("sidechain_in", sidechain_in);
 
-    assign_control("sidechain_enable", &sidechain_enabled);
-    assign_control("threshold", &threshold);
-    assign_control("depth", &depth);
-    assign_control("attack", &attack_time,
-                   POST_FUNCTION_SCALAR(update_attack));
-    assign_control("hold", &hold_time,
-                   POST_FUNCTION_SCALAR(update_hold));
-    assign_control("decay", &decay_time,
-                   POST_FUNCTION_SCALAR(update_decay));
-
-    assign_meter("gain_meter", &current_gain);
-    assign_meter("open_meter", &is_open);
+    assign_parameter("sidechain_enable", &sidechain_enabled);
+    assign_parameter("threshold", &threshold, bosepro::db_to_linear);
+    assign_parameter("range", &range, bosepro::db_to_linear);
+    assign_parameter("attack", &attack_time,
+                     POST_FUNCTION_SCALAR(update_attack));
+    assign_parameter("hold", &hold_time,
+                     POST_FUNCTION_SCALAR(update_hold));
+    assign_parameter("decay", &decay_time,
+                     POST_FUNCTION_SCALAR(update_decay));
 
     level_attack_coeff = 0.341f;
     current_gain = 1.0f;
@@ -115,7 +113,7 @@ void Gate::process()
         }
         else
         {
-            g += (depth - g) * decay_coeff;
+            g += (range - g) * decay_coeff;
         }
 
         for (int_fast32_t channel = 0; channel < channels; channel++)

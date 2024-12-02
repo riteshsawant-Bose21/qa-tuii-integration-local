@@ -48,12 +48,12 @@ ALGORITHM_REGISTER(GraphicEq, "graphic_eq");
 GraphicEq::GraphicEq(const bosepro::BlockConfiguration &configuration)
     : bosepro::Algorithm(configuration)
 {
-    get_constant("channels", channels);
+    get_property("channels", channels);
 
     assign_terminal("in", in);
     assign_terminal("out", out);
 
-    assign_control("gain", gain, POST_FUNCTION_VECTOR(update_band));
+    assign_parameter("gain", gain, POST_FUNCTION_VECTOR(update_band));
 
     new (iir.get()) filter::IirFilter(BANDS, channels);
 }

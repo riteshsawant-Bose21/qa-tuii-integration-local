@@ -1,5 +1,6 @@
 
 #include <bosepro/algorithm.h>
+#include <bosepro/conversion.h>
 
 #include <cstdint>
 #include <cstring>
@@ -8,10 +9,10 @@
 namespace {
 
 
-class Mixer : public bosepro::Algorithm {
+class MatrixMixer : public bosepro::Algorithm {
 public:
-    Mixer(const bosepro::BlockConfiguration &configuration);
-    virtual ~Mixer() = default;
+    MatrixMixer(const bosepro::BlockConfiguration &configuration);
+    virtual ~MatrixMixer() = default;
 
     virtual void process() override;
 
@@ -24,13 +25,13 @@ private:
     bosepro::DspCoeffMemory<float *[]> gain;
     bosepro::DspCoeffMemory<bool *[]> mute;
 
-    ALGORITHM_DECLARE(Mixer);
+    ALGORITHM_DECLARE(MatrixMixer);
 };
 
-ALGORITHM_REGISTER(Mixer, "mixer");
+ALGORITHM_REGISTER(MatrixMixer, "matrix_mixer");
 
 
-Mixer::Mixer(const bosepro::BlockConfiguration &configuration)
+MatrixMixer::MatrixMixer(const bosepro::BlockConfiguration &configuration)
     : bosepro::Algorithm(configuration)
 {
     get_terminal_num_channels("in", num_inputs);
@@ -39,12 +40,12 @@ Mixer::Mixer(const bosepro::BlockConfiguration &configuration)
     assign_terminal("in", in);
     assign_terminal("out", out);
 
-    assign_control("gain", gain);
-    assign_control("mute", mute);
+    assign_parameter("gain", gain, bosepro::db_to_linear);
+    assign_parameter("mute", mute);
 }
 
 
-void Mixer::process()
+void MatrixMixer::process()
 {
     for (int output = 0; output < num_outputs; output++)
     {

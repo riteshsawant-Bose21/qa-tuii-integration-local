@@ -1,12 +1,12 @@
 
 #include <bosepro/configurable.h>
-#include <bosepro/parameters.h>
+#include <bosepro/definition.h>
 
 
 namespace bosepro {
 
 
-const Parameters *Configurable::parameters;
+const Definition *Configurable::definitions;
 
 
 } // namespace bosepro

@@ -40,17 +40,17 @@ ALGORITHM_REGISTER(Peq, "peq");
 Peq::Peq(const bosepro::BlockConfiguration &configuration)
     : bosepro::Algorithm(configuration)
 {
-    get_constant("channels", channels);
-    get_constant("bands", bands);
+    get_property("channels", channels);
+    get_property("bands", bands);
 
     assign_terminal("in", in);
     assign_terminal("out", out);
 
-    assign_control("band_enable", band_enable,
-                   POST_FUNCTION_VECTOR(update_band));
-    assign_control("gain", gain, POST_FUNCTION_VECTOR(update_band));
-    assign_control("frequency", frequency, POST_FUNCTION_VECTOR(update_band));
-    assign_control("q", q, POST_FUNCTION_VECTOR(update_band));
+    assign_parameter("band_enable", band_enable,
+                     POST_FUNCTION_VECTOR(update_band));
+    assign_parameter("gain", gain, POST_FUNCTION_VECTOR(update_band));
+    assign_parameter("frequency", frequency, POST_FUNCTION_VECTOR(update_band));
+    assign_parameter("q", q, POST_FUNCTION_VECTOR(update_band));
 
     new (iir.get()) filter::IirFilter(bands, channels);
 }

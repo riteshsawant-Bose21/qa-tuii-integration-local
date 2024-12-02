@@ -33,7 +33,7 @@ public:
     virtual void process() override;
 
 private:
-    // --- constants and terminals ---
+    // --- properties and terminals ---
     int_fast32_t channels;
     // number of taps for the wFIR filters, default uses 384
     int_fast32_t num_taps_wfir;
@@ -54,7 +54,7 @@ private:
     bosepro::DspSignalMemory<const float*[]> in;
     bosepro::DspSignalMemory<float*[]> out;
 
-    // --- user controls ---
+    // --- user parameters ---
     bosepro::DspParamMemory<bool[]> band_enable;
     // raised cosine filter type: high_shelf, low_shelf, peak, mesa
     bosepro::DspParamMemory<std::string[]> filter_type;
@@ -101,7 +101,7 @@ private:
     void clear_target_magnitude(void);
     void recalculate(void);
 
-    // --- user control parameters processing functions ---
+    // --- user parameter processing functions ---
     void update_band_enable(int band);
     void update_gain(int band);
     void update_filter_type(int band);
@@ -125,22 +125,28 @@ const std::map<std::string, filter::CosineFilterType> ArbitraryEQ::type_map = {
 ArbitraryEQ::ArbitraryEQ(const bosepro::BlockConfiguration &configuration)
     : bosepro::Algorithm(configuration)
 {
-    get_constant("channels", channels);
-    get_constant("num_bands", num_bands);
-    get_constant("max_user_bands", max_user_bands);
-    get_constant("num_taps_wfir", num_taps_wfir);
-    get_constant("num_taps_fir", num_taps_fir);
-    get_constant("points_per_octave", points_per_octave);
-    get_constant("transition_octaves", transition_octaves);
+    get_property("channels", channels);
+    get_property("num_bands", num_bands);
+    get_property("max_user_bands", max_user_bands);
+    get_property("num_taps_wfir", num_taps_wfir);
+    get_property("num_taps_fir", num_taps_fir);
+    get_property("points_per_octave", points_per_octave);
+    get_property("transition_octaves", transition_octaves);
     assign_terminal("in", in);
     assign_terminal("out", out);
-    assign_control("band_enable", band_enable, POST_FUNCTION_VECTOR(update_band_enable));
-    assign_control("filter_type", filter_type, POST_FUNCTION_VECTOR(update_filter_type));
-    assign_control("gain", gain, POST_FUNCTION_VECTOR(update_gain));
-    assign_control("frequency1", frequency1, POST_FUNCTION_VECTOR(update_frequency1));
-    assign_control("frequency2", frequency2, POST_FUNCTION_VECTOR(update_frequency2));
-    assign_control("bandwidth1", bandwidth1, POST_FUNCTION_VECTOR(update_bandwidth1));
-    assign_control("bandwidth2", bandwidth2, POST_FUNCTION_VECTOR(update_bandwidth2));
+    assign_parameter("band_enable", band_enable,
+                     POST_FUNCTION_VECTOR(update_band_enable));
+    assign_parameter("filter_type", filter_type,
+                     POST_FUNCTION_VECTOR(update_filter_type));
+    assign_parameter("gain", gain, POST_FUNCTION_VECTOR(update_gain));
+    assign_parameter("frequency1", frequency1,
+                     POST_FUNCTION_VECTOR(update_frequency1));
+    assign_parameter("frequency2", frequency2,
+                     POST_FUNCTION_VECTOR(update_frequency2));
+    assign_parameter("bandwidth1", bandwidth1,
+                     POST_FUNCTION_VECTOR(update_bandwidth1));
+    assign_parameter("bandwidth2", bandwidth2,
+                     POST_FUNCTION_VECTOR(update_bandwidth2));
     // Initialize FFT objects
     _fft_wfir = std::make_unique<fft::Fft>(num_taps_wfir);
     _fft_fir = std::make_unique<fft::Fft>(num_taps_fir);

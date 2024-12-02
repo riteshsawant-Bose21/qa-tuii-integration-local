@@ -17,17 +17,17 @@ public:
     virtual void process() override;
 
 private:
-    // --- constants and terminals ---
+    // --- properties and terminals ---
     int_fast32_t channels;
     int_fast32_t max_delay;
     bosepro::DspSignalMemory<const float *[]> in;
     bosepro::DspSignalMemory<const float *[]> peak_in;
     bosepro::DspSignalMemory<float *[]> out;
-    // --- user controls ---
-    float peak_thresh;
+    // --- user parameters ---
+    float peak_threshold;
     float peak_attack;
     float peak_release;
-    float rms_thresh;
+    float rms_threshold;
     float rms_attack;
     float rms_release;
     int_fast32_t delay;
@@ -43,11 +43,11 @@ private:
     float rms_coeff;
     int_fast32_t write_index;
     int_fast32_t buffer_size;
-    // --- user control parameters processing functions ---
-    void update_peak_thresh();
+    // --- user parameter processing functions ---
+    void update_peak_threshold();
     void update_peak_attack();
     void update_peak_release();
-    void update_rms_thresh();
+    void update_rms_threshold();
     void update_rms_attack();
     void update_rms_release();
 
@@ -61,27 +61,27 @@ Limiter::Limiter(const bosepro::BlockConfiguration &configuration)
     : bosepro::Algorithm(configuration), peak_level(0.0f), peak_gain(0.0f),
       rms_level(0.0f), rms_gain(0.0f), write_index(0)
 {
-    get_constant("channels", channels);
-    get_constant("max_delay", max_delay);
+    get_property("channels", channels);
+    get_property("max_delay", max_delay);
 
     assign_terminal("in", in);
     assign_terminal("peak_in", peak_in);
     assign_terminal("out", out);
 
-    assign_control("peak_thresh", &peak_thresh, 
-        POST_FUNCTION_SCALAR(update_peak_thresh));
-    assign_control("peak_attack", &peak_attack, 
-        POST_FUNCTION_SCALAR(update_peak_attack));
-    assign_control("peak_release", &peak_release, 
-        POST_FUNCTION_SCALAR(update_peak_release));
-    assign_control("rms_thresh", &rms_thresh, 
-        POST_FUNCTION_SCALAR(update_rms_thresh));
-    assign_control("rms_attack", &rms_attack, 
-        POST_FUNCTION_SCALAR(update_rms_attack));
-    assign_control("rms_release", &rms_release, 
-        POST_FUNCTION_SCALAR(update_rms_release));
-    assign_control("delay", &delay);
-    assign_control("brick_wall", &brick_wall);
+    assign_parameter("peak_threshold", &peak_threshold,
+                     POST_FUNCTION_SCALAR(update_peak_threshold));
+    assign_parameter("peak_attack", &peak_attack,
+                     POST_FUNCTION_SCALAR(update_peak_attack));
+    assign_parameter("peak_release", &peak_release,
+                     POST_FUNCTION_SCALAR(update_peak_release));
+    assign_parameter("rms_threshold", &rms_threshold,
+                     POST_FUNCTION_SCALAR(update_rms_threshold));
+    assign_parameter("rms_attack", &rms_attack,
+                     POST_FUNCTION_SCALAR(update_rms_attack));
+    assign_parameter("rms_release", &rms_release,
+                     POST_FUNCTION_SCALAR(update_rms_release));
+    assign_parameter("delay", &delay);
+    assign_parameter("brick_wall", &brick_wall);
 
     buffer_size = (max_delay + get_frame_size() - 1)/get_frame_size();
     buffer_size *= get_frame_size();
@@ -97,6 +97,7 @@ void Limiter::process()
     {
         read_index += buffer_size;
     }
+    SPDLOG_TRACE("thresh {} {} {} {}", peak_level, rms_level, peak_gain, rms_gain);
 
     for (int_fast32_t i = 0; i < get_frame_size(); i++)
     {
@@ -128,7 +129,7 @@ void Limiter::process()
             // apply threshold
             // - log10(peak_level^1/2), 0.5 is a square-root to convert 
             // from energy to amplitude
-            float peak_adjust = peak_thresh - 0.5f * log10f(peak_level);
+            float peak_adjust = peak_threshold - 0.5f * log10f(peak_level);
             // limit gain range between 0 and -100 dB
             peak_adjust = (peak_adjust > 0.0f) ? 
                 0.0f : ((peak_adjust < -5.0f) ? -5.0f : peak_adjust);
@@ -142,7 +143,7 @@ void Limiter::process()
             // apply threshold
             // - log10(peak_level^1/2), 0.5 is a square-root to convert 
             // from energy to amplitude
-            float peak_adjust = peak_thresh - 0.5f * log10f(peak_level);
+            float peak_adjust = peak_threshold - 0.5f * log10f(peak_level);
             // limit gain range between 0 and -100 dB
             peak_adjust = (peak_adjust > 0.0f) ? 
                 0.0f : ((peak_adjust < -5.0f) ? -5.0f : peak_adjust);
@@ -152,7 +153,7 @@ void Limiter::process()
         // RMS filter on squared signal (the M in RMS)
         rms_level = rms_level + (rms_energy - rms_level) * rms_coeff;
         // apply threshold
-        float rms_adjust = rms_thresh - 0.5f * log10f(rms_level);
+        float rms_adjust = rms_threshold - 0.5f * log10f(rms_level);
         // limit gain range between 0 and -100 dB
         rms_adjust = (rms_adjust > 0.0f) ? 
             0.0f : ((rms_adjust < -5.0f) ? -5.0f : rms_adjust);
@@ -184,9 +185,9 @@ void Limiter::process()
 }
 
 // convert peak threshold from dB to log10
-void Limiter::update_peak_thresh()
+void Limiter::update_peak_threshold()
 {
-    peak_thresh = 0.05 * peak_thresh;
+    peak_threshold = 0.05 * peak_threshold;
 }
 
 // convert attack time constant to integrator coefficient
@@ -202,9 +203,9 @@ void Limiter::update_peak_release()
 }
 
 // convert RMS threshold from dB to log10
-void Limiter::update_rms_thresh()
+void Limiter::update_rms_threshold()
 {
-    rms_thresh = 0.05 * rms_thresh;
+    rms_threshold = 0.05 * rms_threshold;
 }
 
 // convert attack time constant to integrator coefficient

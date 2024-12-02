@@ -1,82 +1,120 @@
 {
     "session": {
-        "tasks": [
-            {
-                "name": "task1",
-                "constants": [
-                    { "name": "frame_size", "value": 32},
-                    { "name": "sample_rate", "value": 48000 }
-                ],
-                "blocks": [
-                    {
-                        "name": "infile",
-                        "algorithm": "wav_read",
-                        "constants": [
-                            { "name": "frame_size", "value": 32},
-                            { "name": "sample_rate", "value": 48000 },
-                            { "name": "filename", "value": "in-ducker-test.wav" }
-                        ],
-                        "terminals": [
-                            { "name": "out", "channels": 2 }
-                        ],
-                        "controls": [
-                            { "name": "out_gain", "num_rows": 2 },
-                            { "name": "out_mute", "num_rows": 2 }
-                        ],
-                        "meters": [
-                            { "name": "out_meter", "num_rows": 2 }
-                        ]
-                    },
-                    {
-                        "name": "ducker",
-                        "algorithm": "ducker",
-                        "constants": [
-                            { "name": "channels", "value": 1 },
-                            { "name": "frame_size", "value": 32 },
-                            { "name": "sample_rate", "value": 48000 }
-                        ],
-                        "terminals": [
-                            { "name": "in", "channels": 1 },
-                            { "name": "sidechain_in", "channels": 1 },
-                            { "name": "out", "channels": 1 }
-                        ],
-                        "controls": [
-                            { "name": "out_gain", "num_rows": 1 },
-                            { "name": "out_mute", "num_rows": 1 }
-                        ],
-                        "meters": [
-                            { "name": "out_meter", "num_rows": 1 }
-                        ],
-                        "control_settings": [
-                            { "name": "threshold", "value_type": "float", "value": 0.1 },
-                            { "name": "range", "value_type": "float", "value": 0.01 },
-                            { "name": "attack", "value_type": "float", "value": 0.5 },
-                            { "name": "decay", "value_type": "float", "value": 500.0 },
-                            { "name": "hold", "value_type": "float", "value": 1000.0 }
-                        ],
-                        "connections": [
-                            { "source_block": "infile", "input_terminal": "in", "output_terminal": "out", "input_channel": 0, "output_channel": 1 },
-                            { "source_block": "infile", "input_terminal": "sidechain_in", "output_terminal": "out", "input_channel": 0, "output_channel": 0 }
-                        ]
-                    },
-                    {
-                        "name": "outfile",
-                        "algorithm": "wav_write",
-                        "constants": [
-                            { "name": "frame_size", "value": 32 },
-                            { "name": "sample_rate", "value": 48000 },
-                            { "name": "filename", "value": "out-ducker-test.wav" }
-                        ],
-                        "terminals": [
-                            { "name": "in", "channels": 2 }
-                        ],
-                        "connections": [
-                            { "source_block": "infile", "input_terminal": "in", "output_terminal": "out", "input_channel": 0, "output_channel": 0 },
-                            { "source_block": "ducker", "input_terminal": "in", "output_terminal": "out", "input_channel": 1, "output_channel": 0 }
-                        ]
-                    }
-                ]
-            }
+        "property_settings": [
+            { "name": "frame_size", "value": 32},
+            { "name": "sample_rate", "value": 48000 }
         ]
-    }
+    },
+    "tasks": [
+        {
+            "name": "task1",
+            "property_settings": [
+                { "name": "frame_size", "value": 32},
+                { "name": "sample_rate", "value": 48000 }
+            ],
+            "blocks": [
+                {
+                    "name": "infile",
+                    "algorithm": "wav_read",
+                    "property_settings": [
+                        { "name": "frame_size", "value": 32},
+                        { "name": "sample_rate", "value": 48000 },
+                        { "name": "filename", "value": "in-ducker-test.wav" }
+                    ],
+                    "terminal_channels": [
+                        { "name": "out", "channels": 2 }
+                    ]
+                },
+                {
+                    "name": "ducker",
+                    "algorithm": "ducker",
+                    "property_settings": [
+                        { "name": "channels", "value": 1 },
+                        { "name": "frame_size", "value": 32 },
+                        { "name": "sample_rate", "value": 48000 }
+                    ],
+                    "control_settings": [
+                        { "name": "threshold", "value_type": "float", "value": 0.1 },
+                        { "name": "range", "value_type": "float", "value": 0.01 },
+                        { "name": "attack", "value_type": "float", "value": 0.5 },
+                        { "name": "decay", "value_type": "float", "value": 500.0 },
+                        { "name": "hold", "value_type": "float", "value": 1000.0 }
+                    ]
+                },
+                {
+                    "name": "outfile",
+                    "algorithm": "wav_write",
+                    "property_settings": [
+                        { "name": "frame_size", "value": 32 },
+                        { "name": "sample_rate", "value": 48000 },
+                        { "name": "filename", "value": "out-ducker-test.wav" }
+                    ],
+                    "terminal_channels": [
+                        { "name": "in", "channels": 2 }
+                    ]
+                }
+            ],
+            "block_connections": [
+                {
+                    "source_block": "infile",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "ducker",
+                    "input_terminal": "sidechain_in",
+                    "input_channel": 1
+                },
+                {
+                    "source_block": "infile",
+                    "output_terminal": "out",
+                    "output_channel": 2,
+                    "destination_block": "ducker",
+                    "input_terminal": "in",
+                    "input_channel": 1
+                },
+                {
+                    "source_block": "infile",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "outfile",
+                    "input_terminal": "in",
+                    "input_channel": 1
+                },
+                {
+                    "source_block": "ducker",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "outfile",
+                    "input_terminal": "in",
+                    "input_channel": 2
+                }
+            ]
+        }
+    ],
+    "parameter_settings": [
+        {
+            "target": "ducker",
+            "name": "threshold",
+            "value": -20.0
+        },
+        {
+            "target": "ducker",
+            "name": "range",
+            "value": -40.0
+        },
+        {
+            "target": "ducker",
+            "name": "attack",
+            "value": 0.5
+        },
+        {
+            "target": "ducker",
+            "name": "decay",
+            "value": 500.0
+        },
+        {
+            "target": "ducker",
+            "name": "hold",
+            "value": 1000.0
+        }
+    ]
 }

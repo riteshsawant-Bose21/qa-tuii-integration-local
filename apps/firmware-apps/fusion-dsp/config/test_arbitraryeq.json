@@ -1,82 +1,145 @@
 {
     "session": {
-        "tasks": [
-            {
-                "name": "task1",
-                "constants": [
-                    { "name": "frame_size", "value": 480},
-                    { "name": "sample_rate", "value": 48000 }
-                ],
-                "blocks": [
-                    {
-                        "name": "infile",
-                        "algorithm": "wav_read",
-                        "constants": [
-                            { "name": "frame_size", "value": 480},
-                            { "name": "sample_rate", "value": 48000 },
-                            { "name": "filename", "value": "log_sine_sweep_10_24k.wav" }
-                        ],
-                        "terminals": [
-                            { "name": "out", "channels": 1 }
-                        ]
-                    },
-                    {
-                        "name": "eq",
-                        "algorithm": "arbitrary_eq",
-                        "constants": [
-                            { "name": "channels", "value": 1 },
-                            { "name": "frame_size", "value": 480 },
-                            { "name": "sample_rate", "value": 48000 },
-                            { "name": "max_user_bands", "value": 2 }
-                        ],
-                        "terminals": [
-                            { "name": "in", "channels": 1 },
-                            { "name": "out", "channels": 1 }
-                        ],
-                        "connections": [
-                            { "source_block": "infile", "input_terminal": "in", "output_terminal": "out", "input_channel": 0, "output_channel": 0 }
-                        ],
-                        "controls": [
-                            { "name": "band_enable", "num_rows": 2 },
-                            { "name": "filter_type", "num_rows": 2 },
-                            { "name": "gain", "num_rows": 2 },
-                            { "name": "frequency1", "num_rows": 2 },
-                            { "name": "bandwidth1", "num_rows": 2 },
-                            { "name": "frequency2", "num_rows": 2 },
-                            { "name": "bandwidth2", "num_rows": 2 }
-                        ],
-                        "control_settings": [
-                            { "name": "band_enable", "row": 0, "value": true },
-                            { "name": "filter_type", "row": 0, "value": "high_shelf" },
-                            { "name": "gain", "row": 0, "value": -10.0 },
-                            { "name": "frequency1", "row": 0, "value": 4000.0 },
-                            { "name": "bandwidth1", "row": 0, "value": 2.0 },
-                            { "name": "band_enable", "row": 1, "value": true },
-                            { "name": "filter_type", "row": 1, "value": "mesa" },
-                            { "name": "gain", "row": 1, "value": 5.0 },
-                            { "name": "frequency1", "row": 1, "value": 250.0 },
-                            { "name": "bandwidth1", "row": 1, "value": 1.0 },
-                            { "name": "frequency2", "row": 1, "value": 1000.0 },
-                            { "name": "bandwidth2", "row": 1, "value": 3.0 }
-                        ]
-                    },
-                    {
-                        "name": "outfile",
-                        "algorithm": "wav_write",
-                        "constants": [
-                            { "name": "frame_size", "value": 480 },
-                            { "name": "sample_rate", "value": 48000 },
-                            { "name": "filename", "value": "log_sine_sweep_10_24k_arbitraryeq.wav" }
-                        ],
-                        "terminals": [
-                            { "name": "in", "channels": 1 }
-                        ],
-                        "connections": [
-                            { "source_block": "eq", "input_terminal": "in", "output_terminal": "out", "input_channel": 0, "output_channel": 0 }
-                        ]
-                    }
-                ]
-            }
+        "property_settings": [
+            { "name": "frame_size", "value": 480},
+            { "name": "sample_rate", "value": 48000 }
         ]
-    }
+    },
+    "tasks": [
+        {
+            "name": "task1",
+            "property_settings": [
+                { "name": "frame_size", "value": 480},
+                { "name": "sample_rate", "value": 48000 }
+            ],
+            "blocks": [
+                {
+                    "name": "infile",
+                    "algorithm": "wav_read",
+                    "property_settings": [
+                        { "name": "frame_size", "value": 480},
+                        { "name": "sample_rate", "value": 48000 },
+                        { "name": "filename", "value": "log_sine_sweep_10_24k.wav" }
+                    ],
+                    "terminal_channels": [
+                        { "name": "out", "channels": 1 }
+                    ]
+                },
+                {
+                    "name": "eq",
+                    "algorithm": "arbitrary_eq",
+                    "property_settings": [
+                        { "name": "channels", "value": 1 },
+                        { "name": "frame_size", "value": 480 },
+                        { "name": "sample_rate", "value": 48000 },
+                        { "name": "max_user_bands", "value": 2 }
+                    ]
+                },
+                {
+                    "name": "outfile",
+                    "algorithm": "wav_write",
+                    "property_settings": [
+                        { "name": "frame_size", "value": 480 },
+                        { "name": "sample_rate", "value": 48000 },
+                        { "name": "filename", "value": "log_sine_sweep_10_24k_arbitraryeq.wav" }
+                    ],
+                    "terminal_channels": [
+                        { "name": "in", "channels": 1 }
+                    ]
+                }
+            ],
+            "block_connections": [
+                {
+                    "source_block": "infile",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "eq",
+                    "input_terminal": "in",
+                    "input_channel": 1
+                },
+                {
+                    "source_block": "eq",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "outfile",
+                    "input_terminal": "in",
+                    "input_channel": 1
+                }
+            ]
+        }
+    ],
+    "parameter_settings": [
+        {
+            "target": "eq",
+            "name": "band_enable",
+            "index": [1],
+            "value": true
+        },
+        {
+            "target": "eq",
+            "name": "filter_type",
+            "index": [1],
+            "value": "high_shelf"
+        },
+        {
+            "target": "eq",
+            "name": "gain",
+            "index": [1],
+            "value": -10.0
+        },
+        {
+            "target": "eq",
+            "name": "frequency1",
+            "index": [1],
+            "value": 4000.0
+        },
+        {
+            "target": "eq",
+            "name": "bandwidth1",
+            "index": [1],
+            "value": 2.0
+        },
+        {
+            "target": "eq",
+            "name": "band_enable",
+            "index": [2],
+            "value": true
+        },
+        {
+            "target": "eq",
+            "name": "filter_type",
+            "index": [2],
+            "value": "mesa"
+        },
+        {
+            "target": "eq",
+            "name": "gain",
+            "index": [2],
+            "value": 5.0
+        },
+        {
+            "target": "eq",
+            "name": "frequency1",
+            "index": [2],
+            "value": 250.0
+        },
+        {
+            "target": "eq",
+            "name": "bandwidth1",
+            "index": [1],
+            "value": 1.0
+        },
+        {
+            "target": "eq",
+            "name": "frequency1",
+            "index": [2],
+            "value": 1000.0
+        },
+        {
+            "target": "eq",
+            "name": "bandwidth1",
+            "index": [1],
+            "value": 3.0
+        }
+    ]
 }

@@ -43,7 +43,7 @@ public:
     }
 
 private:
-    // --- constants and terminals ---
+    // --- properties and terminals ---
     int_fast32_t channels;
     int_fast32_t fft_size;
     //max number of notch filters to apply
@@ -56,7 +56,7 @@ private:
     bosepro::DspSignalMemory<const float *[]> in;
     bosepro::DspSignalMemory<float *[]> out;
     
-    // --- user controls ---
+    // --- user parameters ---
     //Any peak below this frequency index (fft bin num) 
     //will be ignored
     int_fast32_t low_freq_ignore_freq;
@@ -145,7 +145,7 @@ private:
     int number_of_times_frequency_is_in_buffer(const PotentialFeedbackPeak & peak) const;
     void add_candidate(const PotentialFeedbackPeak & newPeak);
 
-    // --- user control parameters processing functions ---
+    // --- user parameter processing functions ---
     void update_high_freq_ignore_freq();
     void update_low_freq_ignore_freq();
     void update_max_filter_gain();
@@ -163,38 +163,57 @@ FeedbackSuppression::FeedbackSuppression(const bosepro::BlockConfiguration &conf
       analysis_task(&FeedbackSuppression::run_analysis_task, this,
                     get_sample_rate(), 8192, get_frame_size())
 {
-    get_constant("channels", channels);
-    get_constant("fft_size", fft_size);
-    get_constant("num_filters", num_filters);
-    get_constant("rev_feedback_cand_freq_buf_size", rev_feedback_cand_freq_buf_size);
-    get_constant("num_peaks_to_find", num_peaks_to_find);
+    get_property("channels", channels);
+    get_property("fft_size", fft_size);
+    get_property("num_filters", num_filters);
+    get_property("rev_feedback_cand_freq_buf_size",
+                 rev_feedback_cand_freq_buf_size);
+    get_property("num_peaks_to_find", num_peaks_to_find);
 
     assign_terminal("in", in);
     assign_terminal("out", out);
 
-    assign_control("low_freq_ignore_freq", &low_freq_ignore_freq, POST_FUNCTION_SCALAR(update_low_freq_ignore_freq));
-    assign_control("high_freq_ignore_freq", &high_freq_ignore_freq, POST_FUNCTION_SCALAR(update_high_freq_ignore_freq));
-    assign_control("max_filter_gain", &max_filter_gain, POST_FUNCTION_SCALAR(update_max_filter_gain));
-    assign_control("mult_band_crossover_freq_mid", &mult_band_crossover_freq_mid);
-    assign_control("mult_band_crossover_freq_high", &mult_band_crossover_freq_high);
-    assign_control("mult_band_crossover_freq_superhigh", &mult_band_crossover_freq_superhigh);
-    assign_control("before_filter_enabled_freq_counter_low", &before_filter_enabled_freq_counter[0]);
-    assign_control("before_filter_enabled_freq_counter_mid", &before_filter_enabled_freq_counter[1]);
-    assign_control("before_filter_enabled_freq_counter_high", &before_filter_enabled_freq_counter[2]);
-    assign_control("before_filter_enabled_freq_counter_superhigh", &before_filter_enabled_freq_counter[3]);
-    assign_control("frequency_error_margin_in_octaves_low", &frequency_error_margin_in_octaves[0]);
-    assign_control("frequency_error_margin_in_octaves_mid", &frequency_error_margin_in_octaves[1]);
-    assign_control("frequency_error_margin_in_octaves_high", &frequency_error_margin_in_octaves[2]);
-    assign_control("frequency_error_margin_in_octaves_superhigh", &frequency_error_margin_in_octaves[3]);
-    assign_control("default_filter_q", &default_filter_q);
-    assign_control("incremental_filter_gain_step", &incremental_filter_gain_step);
-    assign_control("initial_filter_gain", &initial_filter_gain);
-    assign_control("max_num_filter_depth_adjustments_per_period", &max_num_filter_depth_adjustments_per_period);
-    assign_control("sensitivity", &sensitivity);
-    assign_control("filter_reset_time", &filter_reset_time);
-    assign_control("f0_amplitude_th", &f0_amplitude_th);
-    assign_control("rise_factor_maximum_cutoff_threshold", &rise_factor_maximum_cutoff_threshold);
-    assign_control("rise_factor_minimum_cutoff_threshold", &rise_factor_minimum_cutoff_threshold);
+    assign_parameter("low_freq_ignore_freq", &low_freq_ignore_freq,
+                     POST_FUNCTION_SCALAR(update_low_freq_ignore_freq));
+    assign_parameter("high_freq_ignore_freq", &high_freq_ignore_freq,
+                     POST_FUNCTION_SCALAR(update_high_freq_ignore_freq));
+    assign_parameter("max_filter_gain", &max_filter_gain,
+                     POST_FUNCTION_SCALAR(update_max_filter_gain));
+    assign_parameter("mult_band_crossover_freq_mid",
+                     &mult_band_crossover_freq_mid);
+    assign_parameter("mult_band_crossover_freq_high",
+                     &mult_band_crossover_freq_high);
+    assign_parameter("mult_band_crossover_freq_superhigh",
+                     &mult_band_crossover_freq_superhigh);
+    assign_parameter("before_filter_enabled_freq_counter_low",
+                     &before_filter_enabled_freq_counter[0]);
+    assign_parameter("before_filter_enabled_freq_counter_mid",
+                     &before_filter_enabled_freq_counter[1]);
+    assign_parameter("before_filter_enabled_freq_counter_high",
+                     &before_filter_enabled_freq_counter[2]);
+    assign_parameter("before_filter_enabled_freq_counter_superhigh",
+                     &before_filter_enabled_freq_counter[3]);
+    assign_parameter("frequency_error_margin_in_octaves_low",
+                     &frequency_error_margin_in_octaves[0]);
+    assign_parameter("frequency_error_margin_in_octaves_mid",
+                     &frequency_error_margin_in_octaves[1]);
+    assign_parameter("frequency_error_margin_in_octaves_high",
+                     &frequency_error_margin_in_octaves[2]);
+    assign_parameter("frequency_error_margin_in_octaves_superhigh",
+                     &frequency_error_margin_in_octaves[3]);
+    assign_parameter("default_filter_q", &default_filter_q);
+    assign_parameter("incremental_filter_gain_step",
+                     &incremental_filter_gain_step);
+    assign_parameter("initial_filter_gain", &initial_filter_gain);
+    assign_parameter("max_num_filter_depth_adjustments_per_period",
+                     &max_num_filter_depth_adjustments_per_period);
+    assign_parameter("sensitivity", &sensitivity);
+    assign_parameter("filter_reset_time", &filter_reset_time);
+    assign_parameter("f0_amplitude_th", &f0_amplitude_th);
+    assign_parameter("rise_factor_maximum_cutoff_threshold",
+                     &rise_factor_maximum_cutoff_threshold);
+    assign_parameter("rise_factor_minimum_cutoff_threshold",
+                     &rise_factor_minimum_cutoff_threshold);
 
     // fft_size warning: we are hard coding the blackman window at 
     // size = 8192 for now, so give an error if fft_size is different

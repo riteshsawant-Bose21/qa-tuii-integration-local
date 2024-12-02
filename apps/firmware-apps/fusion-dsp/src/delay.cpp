@@ -35,14 +35,14 @@ ALGORITHM_REGISTER(Delay, "delay");
 Delay::Delay(const bosepro::BlockConfiguration &configuration)
     : bosepro::Algorithm(configuration)
 {
-    get_constant("channels", channels);
-    get_constant("max_delay", max_delay);
+    get_property("channels", channels);
+    get_property("max_delay", max_delay);
 
     assign_terminal("in", in);
     assign_terminal("out", out);
 
-    assign_control("delay", delay);
-    assign_control("channel_bypass", channel_bypass);
+    assign_parameter("delay", delay);
+    assign_parameter("channel_bypass", channel_bypass);
 
     buffer_size = max_delay + 2 * get_frame_size() - 1;
     buffer_size /= get_frame_size();

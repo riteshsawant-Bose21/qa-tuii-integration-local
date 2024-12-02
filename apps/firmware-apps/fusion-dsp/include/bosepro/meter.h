@@ -1,8 +1,8 @@
 #pragma once
 
 #include <bosepro/configuration.h>
+#include <bosepro/definition.h>
 #include <bosepro/dspmemory.h>
-#include <bosepro/parameters.h>
 
 #include <string>
 
@@ -13,19 +13,82 @@ namespace bosepro {
 /// A class for managing the data of a meter.
 class Meter {
 public:
-    /// Create a meter object based on the type of the parameter.
+    /// Create a meter object based on the type of the meter value.
     ///
-    /// @param  parameter  The parameter that defines the meter.
+    /// @param  definition  The meter definition.
     /// @param  configuration  The configuration to use for the meter.
-    Meter(const MeterParameter &parameter,
-          const MeterConfiguration *configuration)
+    Meter(const MeterDefinition &definition,
+          const AlgorithmDefinition &algorithm,
+          const BlockConfiguration *configuration)
     {
-        value_type = parameter.get_value_type();
-        name = parameter.get_name();
+        value_type = definition.get_value_type();
+        name = definition.get_name();
+        num_rows = 1;
+        num_columns = 1;
+        int dimensions = definition.get_num_dimensions();
 
-        if (configuration != nullptr)
+        if (dimensions != 0)
         {
-            configuration->get_dimensions(num_rows, num_columns);
+            std::string rows_name;
+            std::string columns_name;
+            definition.get_dimensions(num_rows, num_columns,
+                                      rows_name, columns_name);
+
+            if (!rows_name.empty())
+            {
+                if (algorithm.has_property(rows_name))
+                {
+                    if (configuration->has_property(rows_name))
+                    {
+                        const PropertyConfiguration &pc =
+                            configuration->get_property(rows_name);
+                        pc.get_value(num_rows);
+                    }
+                    else
+                    {
+                        const PropertyDefinition &pd =
+                            algorithm.get_property(rows_name);
+                        pd.get_default_value(num_rows);
+                    }
+                }
+                else if (algorithm.has_terminal(rows_name))
+                {
+                    if (configuration->has_terminal(rows_name))
+                    {
+                        const TerminalConfiguration &tc =
+                            configuration->get_terminal(rows_name);
+                        num_rows = tc.get_num_channels();
+                    }
+                }
+            }
+
+            if (!columns_name.empty())
+            {
+                if (algorithm.has_property(columns_name))
+                {
+                    if (configuration->has_property(columns_name))
+                    {
+                        const PropertyConfiguration &pc =
+                            configuration->get_property(columns_name);
+                        pc.get_value(num_columns);
+                    }
+                    else
+                    {
+                        const PropertyDefinition &pd =
+                            algorithm.get_property(columns_name);
+                        pd.get_default_value(num_columns);
+                    }
+                }
+                else if (algorithm.has_terminal(columns_name))
+                {
+                    if (configuration->has_terminal(columns_name))
+                    {
+                        const TerminalConfiguration &tc =
+                            configuration->get_terminal(columns_name);
+                        num_columns = tc.get_num_channels();
+                    }
+                }
+            }
         }
     }
 
@@ -86,13 +149,14 @@ public:
     }
 
 
-    /// Create a meter object based on the type of the parameter.
+    /// Create a meter object based on the type of the meter.
     ///
-    /// @param  parameter  The parameter that defines the meter.
+    /// @param  definition  The meter definition.
     /// @param  configuration  The configuration to use for the meter.
     /// @return  A pointer to the meter object.
-    static Meter *create(const MeterParameter &parameter,
-                         const MeterConfiguration *configuration);
+    static Meter *create(const MeterDefinition &definition,
+                         const AlgorithmDefinition &algorithm,
+                         const BlockConfiguration *configuration);
 
 
     /// Get the name of this meter.
@@ -141,14 +205,16 @@ private:
 template <typename T>
 class MeterData : public Meter {
 public:
-    /// Create a meter object based on the type of the parameter.
+    /// Create a meter object based on the type of the meter value.
     ///
-    /// @param  parameter  The parameter that defines the meter.
+    /// @param  definition  The meter definition.
     /// @param  configuration  The configuration to use for the meter.
-    MeterData(const MeterParameter &parameter,
-              const MeterConfiguration *configuration)
-        : Meter(parameter, configuration), block_scalar_value(nullptr),
-          block_vector_value(nullptr), block_matrix_value(nullptr)
+    MeterData(const MeterDefinition &definition,
+              const AlgorithmDefinition &algorithm,
+              const BlockConfiguration *configuration)
+        : Meter(definition, algorithm, configuration),
+          block_scalar_value(nullptr), block_vector_value(nullptr),
+          block_matrix_value(nullptr)
     {
     }
 

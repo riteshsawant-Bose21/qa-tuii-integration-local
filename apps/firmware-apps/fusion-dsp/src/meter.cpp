@@ -1,8 +1,8 @@
 
 #include <bosepro/configuration.h>
+#include <bosepro/definition.h>
 #include <bosepro/dspmemory.h>
 #include <bosepro/meter.h>
-#include <bosepro/parameters.h>
 
 #include <cstdint>
 #include <string>
@@ -50,26 +50,28 @@ DECLARE_TEMPLATE_METER_TYPES
 #undef X
 
 
-Meter *Meter::create(const MeterParameter &parameter,
-                     const MeterConfiguration *configuration)
+Meter *Meter::create(const MeterDefinition &definition,
+                     const AlgorithmDefinition &algorithm,
+                     const BlockConfiguration *configuration)
 {
-    const std::string &value_type = parameter.get_value_type();
+    const std::string &value_type = definition.get_value_type();
 
     if (value_type == "bool")
     {
-        return new MeterData<bool>(parameter, configuration);
+        return new MeterData<bool>(definition, algorithm, configuration);
     }
     else if (value_type == "int")
     {
-        return new MeterData<int_fast32_t>(parameter, configuration);
+        return new MeterData<int_fast32_t>(definition, algorithm,
+                                           configuration);
     }
     else if (value_type == "float")
     {
-        return new MeterData<float>(parameter, configuration);
+        return new MeterData<float>(definition, algorithm, configuration);
     }
     else if (value_type == "string")
     {
-        return new MeterData<std::string>(parameter, configuration);
+        return new MeterData<std::string>(definition, algorithm, configuration);
     }
 
     return nullptr;

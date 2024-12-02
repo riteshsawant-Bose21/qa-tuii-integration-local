@@ -65,26 +65,26 @@ ALGORITHM_REGISTER(Agc, "agc");
 Agc::Agc(const bosepro::BlockConfiguration &configuration)
     : bosepro::Algorithm(configuration)
 {
-    get_constant("channels", channels);
+    get_property("channels", channels);
 
     assign_terminal("in", in);
     assign_terminal("out", out);
 
-    assign_control("activity_threshold", activity_threshold);
-    assign_control("target_minimum", target_minimum);
-    assign_control("target_maximum", target_maximum);
-    assign_control("cut_rate", cut_rate,
-                   POST_FUNCTION_VECTOR(update_cut_rate));
-    assign_control("boost_rate", boost_rate,
-                   POST_FUNCTION_VECTOR(update_boost_rate));
-    assign_control("cut_range", cut_range);
-    assign_control("boost_range", boost_range);
-    assign_control("cut_hold", cut_hold_time,
-                   POST_FUNCTION_VECTOR(update_cut_hold));
-    assign_control("boost_hold", boost_hold_time,
-                   POST_FUNCTION_VECTOR(update_boost_hold));
-    assign_control("channel_bypass", channel_bypass);
-    assign_control("max_total_boost", &max_total_boost);
+    assign_parameter("activity_threshold", activity_threshold);
+    assign_parameter("target_minimum", target_minimum);
+    assign_parameter("target_maximum", target_maximum);
+    assign_parameter("cut_rate", cut_rate,
+                     POST_FUNCTION_VECTOR(update_cut_rate));
+    assign_parameter("boost_rate", boost_rate,
+                     POST_FUNCTION_VECTOR(update_boost_rate));
+    assign_parameter("cut_range", cut_range);
+    assign_parameter("boost_range", boost_range);
+    assign_parameter("cut_hold", cut_hold_time,
+                     POST_FUNCTION_VECTOR(update_cut_hold));
+    assign_parameter("boost_hold", boost_hold_time,
+                     POST_FUNCTION_VECTOR(update_boost_hold));
+    assign_parameter("channel_bypass", channel_bypass);
+    assign_parameter("max_total_boost", &max_total_boost);
 
     assign_meter("gain_meter", current_gain);
     assign_meter("hold_meter", hold_meter);
