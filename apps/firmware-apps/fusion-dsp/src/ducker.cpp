@@ -92,7 +92,7 @@ void Ducker::process()
         {
             hold_counter = hold_count;
         }
-        else
+        else if (hold_counter > 0)
         {
             hold_counter--;
         }
