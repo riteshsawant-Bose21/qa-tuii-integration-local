@@ -917,6 +917,66 @@
             ]
         },
         {
+            "name": "graphic_eq",
+            "properties": [
+                {
+                    "name": "channels",
+                    "value_type": "integer",
+                    "default_value": 1,
+                    "minimum_value": 1,
+                    "maximum_value": 32
+                }
+            ],
+            "terminals": [
+                {
+                    "name": "in",
+                    "signal_type": "audio",
+                    "direction": "input",
+                    "channels": "channels"
+                },
+                {
+                    "name": "out",
+                    "signal_type": "audio",
+                    "direction": "output",
+                    "channels": "channels",
+                    "bypass_source": "in"
+                }
+            ],
+            "parameters": [
+                {
+                    "name": "gain",
+                    "value_type": "float",
+                    "dimensions": [31],
+                    "default_value": 0.0,
+                    "minimum_value": -20.0,
+                    "maximum_value": 20.0
+                },
+                {
+                    "name": "out_gain",
+                    "dimensions": ["channels"],
+                    "value_type": "float",
+                    "default_value": 0.0,
+                    "minimum_value": -60.0,
+                    "maximum_value": 12.0
+                },
+                {
+                    "name": "bypass",
+                    "value_type": "bool",
+                    "default_value": false
+                }
+            ],
+            "meters": [
+                {
+                    "name": "out_meter",
+                    "dimensions": ["channels"],
+                    "value_type": "float",
+                    "default_value": -60.0,
+                    "minimum_value": -60.0,
+                    "maximum_value": 0.0
+                }
+            ]
+        },
+        {
             "name": "jack_in",
             "properties": [
                 {
