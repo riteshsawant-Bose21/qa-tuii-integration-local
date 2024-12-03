@@ -41,11 +41,17 @@ BUILD_DIR_OSX_X86 := $(BUILD_DIR)/osx-x86_64
 BUILD_DIR_OSX_ARM := $(BUILD_DIR)/osx-arm64
 
 # Source files
-SRCS := $(wildcard $(SRC_DIR)/*.cpp)
-OBJS_X86 := $(SRCS:$(SRC_DIR)/%.cpp=$(BUILD_DIR_X86)/%.o)
-OBJS_ARM := $(SRCS:$(SRC_DIR)/%.cpp=$(BUILD_DIR_ARM)/%.o)
-OBJS_OSX_X86 := $(SRCS:$(SRC_DIR)/%.cpp=$(BUILD_DIR_OSX_X86)/%.o)
-OBJS_OSX_ARM := $(SRCS:$(SRC_DIR)/%.cpp=$(BUILD_DIR_OSX_ARM)/%.o)
+MAIN_SRCS := observer.cpp
+TEST_SRCS := observer_test.cpp
+OBJS_X86 := $(MAIN_SRCS:%.cpp=$(BUILD_DIR_X86)/%.o)
+OBJS_ARM := $(MAIN_SRCS:%.cpp=$(BUILD_DIR_ARM)/%.o)
+OBJS_OSX_X86 := $(MAIN_SRCS:%.cpp=$(BUILD_DIR_OSX_X86)/%.o)
+OBJS_OSX_ARM := $(MAIN_SRCS:%.cpp=$(BUILD_DIR_OSX_ARM)/%.o)
+
+TEST_OBJS_X86 := $(TEST_SRCS:%.cpp=$(BUILD_DIR_X86)/%.o)
+TEST_OBJS_ARM := $(TEST_SRCS:%.cpp=$(BUILD_DIR_ARM)/%.o)
+TEST_OBJS_OSX_X86 := $(TEST_SRCS:%.cpp=$(BUILD_DIR_OSX_X86)/%.o)
+TEST_OBJS_OSX_ARM := $(TEST_SRCS:%.cpp=$(BUILD_DIR_OSX_ARM)/%.o)
 
 # Library dependencies
 LIBS := -ljsoncpp
@@ -56,6 +62,21 @@ TARGET_X86 := $(BUILD_DIR_X86)/observer
 TARGET_ARM := $(BUILD_DIR_ARM)/observer
 TARGET_OSX_X86 := $(BUILD_DIR_OSX_X86)/observer
 TARGET_OSX_ARM := $(BUILD_DIR_OSX_ARM)/observer
+
+TEST_LIBS := $(LIBS) -lgtest -lgtest_main
+TEST_INCLUDES := $(INCLUDES)
+
+# Test source and target files
+TEST_SRCS := $(wildcard $(SRC_DIR)/*_test.cpp)
+TEST_OBJS_X86 := $(TEST_SRCS:$(SRC_DIR)/%.cpp=$(BUILD_DIR_X86)/%.o)
+TEST_OBJS_ARM := $(TEST_SRCS:$(SRC_DIR)/%.cpp=$(BUILD_DIR_ARM)/%.o)
+TEST_OBJS_OSX_X86 := $(TEST_SRCS:$(SRC_DIR)/%.cpp=$(BUILD_DIR_OSX_X86)/%.o)
+TEST_OBJS_OSX_ARM := $(TEST_SRCS:$(SRC_DIR)/%.cpp=$(BUILD_DIR_OSX_ARM)/%.o)
+
+TEST_TARGET_X86 := $(BUILD_DIR_X86)/observer_test
+TEST_TARGET_ARM := $(BUILD_DIR_ARM)/observer_test
+TEST_TARGET_OSX_X86 := $(BUILD_DIR_OSX_X86)/observer_test
+TEST_TARGET_OSX_ARM := $(BUILD_DIR_OSX_ARM)/observer_test
 
 # Default target depends on OS
 ifeq ($(UNAME_S),Darwin)
@@ -122,6 +143,42 @@ $(BUILD_DIR_OSX_ARM)/%.o: $(SRC_DIR)/%.cpp
 	@mkdir -p $(dir $@)
 	$(CXX_ARM) $(CXXFLAGS) $(OSX_ARM_FLAGS) $(INCLUDES) $(OSX_INCLUDES) -c $< -o $@
 
+test: test-$(shell uname -s | tr A-Z a-z)
+
+test-linux: test-x86_64 test-arm64
+
+test-darwin: test-osx-x86_64 test-osx-arm64
+
+test-x86_64: $(TEST_TARGET_X86)
+	./$(TEST_TARGET_X86)
+
+test-arm64: $(TEST_TARGET_ARM)
+	./$(TEST_TARGET_ARM)
+
+test-osx-x86_64: $(TEST_TARGET_OSX_X86)
+	./$(TEST_TARGET_OSX_X86)
+
+test-osx-arm64: $(TEST_TARGET_OSX_ARM)
+	./$(TEST_TARGET_OSX_ARM)
+
+$(TEST_TARGET_X86): $(TEST_OBJS_X86)
+	@mkdir -p $(dir $@)
+	$(CXX_X86) $(TEST_OBJS_X86) -o $(TEST_TARGET_X86) $(TEST_LIBS)
+
+$(TEST_TARGET_ARM): $(TEST_OBJS_ARM)
+	@mkdir -p $(dir $@)
+	$(CXX_ARM) $(TEST_OBJS_ARM) -o $(TEST_TARGET_ARM) $(TEST_LIBS)
+
+$(TEST_TARGET_OSX_X86): $(TEST_OBJS_OSX_X86)
+	@mkdir -p $(dir $@)
+	$(CXX_X86) $(OSX_X86_FLAGS) $(TEST_OBJS_OSX_X86) -o $(TEST_TARGET_OSX_X86) \
+		$(OSX_LIB_PATHS) $(TEST_LIBS)
+
+$(TEST_TARGET_OSX_ARM): $(TEST_OBJS_OSX_ARM)
+	@mkdir -p $(dir $@)
+	$(CXX_ARM) $(OSX_ARM_FLAGS) $(TEST_OBJS_OSX_ARM) -o $(TEST_TARGET_OSX_ARM) \
+		$(OSX_LIB_PATHS) $(TEST_LIBS)
+		
 # Clean build directories
 clean:
 	rm -rf $(BUILD_DIR)
@@ -139,12 +196,13 @@ install-arm-toolchain:
 install-deps:
 	@if [ "$(UNAME_S)" = "Linux" ]; then \
 		sudo apt-get update && \
-		sudo apt-get install -y libjsoncpp-dev; \
+		sudo apt-get install -y libjsoncpp-dev libgtest-dev; \
 	elif [ "$(UNAME_S)" = "Darwin" ]; then \
-		brew install jsoncpp; \
+		brew install jsoncpp googletest; \
 	fi
 
 .PHONY: all linux osx osx-universal x86_64 arm64 osx-x86_64 osx-arm64 clean install-arm-toolchain install-deps
+.PHONY: test test-linux test-darwin test-x86_64 test-arm64 test-osx-x86_64 test-osx-arm64
 
 # Help target
 help:
@@ -164,3 +222,13 @@ help:
 	@echo "Build configuration:"
 	@echo "  BUILD_TYPE=debug|release (current: $(BUILD_TYPE))"
 	@echo "  Current OS: $(UNAME_S)"
+	@echo ""
+	@echo "Test targets:"
+	@echo "  test             - Run tests for current platform"
+	@echo "  test-linux       - Run Linux tests (x86_64 and ARM64)"
+	@echo "  test-darwin      - Run OSX tests (x86_64 and ARM64)"
+	@echo "  test-x86_64      - Run x86_64 tests"
+	@echo "  test-arm64       - Run ARM64 tests"
+	@echo "  test-osx-x86_64  - Run OSX x86_64 tests"
+	@echo "  test-osx-arm64   - Run OSX ARM64 tests"
+
