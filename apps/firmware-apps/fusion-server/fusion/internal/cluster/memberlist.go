@@ -3,6 +3,7 @@ package cluster
 import (
 	"fmt"
 	"fusion/internal/config"
+	"fusion/internal/logging"
 	"io"
 	"log"
 	"os"
@@ -54,12 +55,14 @@ func CreateMemberlist(nodeName, bindAddr string, bindPort int, joinAddrs []strin
 			n, err = list.Join(joinAddrs)
 			if err == nil {
 				if verbose {
-					log.Printf("[MEMBERLIST-%s] Successfully joined cluster with %d nodes", nodeName, n)
+					logger := logging.GetLogger(nodeName)
+					logger.Info("[MEMBERLIST-%s] Successfully joined cluster with %d nodes", nodeName, n)
 				}
 				break
 			}
 			if verbose {
-				log.Printf("[MEMBERLIST-%s] Join attempt %d failed: %v", nodeName, retries+1, err)
+				logger := logging.GetLogger(nodeName)
+				logger.Info("[MEMBERLIST-%s] Join attempt %d failed: %v", nodeName, retries+1, err)
 			}
 			time.Sleep(retryInterval * time.Second)
 		}

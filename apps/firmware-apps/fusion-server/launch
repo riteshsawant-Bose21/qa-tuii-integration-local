@@ -296,7 +296,7 @@ launch_instance() {
     
     if [ ! -z "$join_addr" ]; then
         print_step "Configuring join address: $join_addr"
-        sed -i.bak "s|ExecStart=/usr/local/bin/fusion-server.*|ExecStart=/usr/local/bin/fusion-server -name %H -addr 0.0.0.0 -port 7946 -join ${join_addr}|" "$cloud_init_file"
+        sed -i.bak "s|ExecStart=/usr/local/bin/fusion-server.*|ExecStart=/usr/local/bin/fusion-server -name %H -addr 0.0.0.0 -port 7946 -join ${join_addr} -verbose|" "$cloud_init_file"
     fi
     
     print_step "Creating multipass instance..."

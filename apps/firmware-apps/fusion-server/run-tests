@@ -1,1 +1,52 @@
-cd fusion/cmd && go test -v ./... -args --auto --vip 192.168.64.100:8080
+#!/bin/bash
+
+function show_help() {
+    echo "Usage: ./run_tests.sh [--all|--controllers|--fusion] [--vip IP:PORT]"
+    echo "Options:"
+    echo "  --all         Run all tests (default)"
+    echo "  --controllers Run only controller tests 
+    echo "  --fusion      Run only fusion tests 
+    echo "  --vip         VIP address and port (default: 192.168.64.100:8080)"
+    exit 1
+}
+
+test_type="all"
+vip="192.168.64.100:8080"
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --all)
+            test_type="all"
+            shift
+            ;;
+        --controllers)
+            test_type="controllers"
+            shift
+            ;;
+        --fusion)
+            test_type="fusion"
+            shift
+            ;;
+        --vip)
+            vip="$2"
+            shift 2
+            ;;
+        *)
+            show_help
+            ;;
+    esac
+done
+
+cd fusion/test || exit 1
+
+case "$test_type" in
+    "all")
+        go test -v ./... -args --auto --vip "$vip"
+        ;;
+    "controllers")
+        go test -v ./cxa_test.go ./cxd_test.go
+        ;;
+    "fusion")
+        go test -v ./fusion_test.go -args --auto --vip "$vip"
+        ;;
+esac

@@ -3,13 +3,14 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 	"time"
 
 	"fusion/internal/cluster"
 	"fusion/internal/config"
+	"fusion/internal/controllers/cxa"
+	"fusion/internal/controllers/cxd"
 	"fusion/internal/logging"
 	"fusion/internal/network"
 )
@@ -22,7 +23,12 @@ var (
 )
 
 const (
-	stateInterval = 30
+	configDataPath        = "/var/lib/fusion/config.json"
+	stateDumpInterval     = 30
+	analogControllerPort  = ":8002"
+	digitalControllerPort = ":8003"
+	httpPort              = ":8080"
+	udpPort               = ":7947"
 )
 
 func main() {
@@ -51,12 +57,12 @@ func main() {
 	// Initialize state manager
 	stateManager := config.NewStateManager(nodeName)
 	if *verbose {
-		stateManager.StartStateDumping(stateInterval * time.Second)
+		stateManager.StartStateDumping(stateDumpInterval * time.Second)
 	}
 
 	// Initialize persistence
 	persistence := config.NewConfigPersistence(
-		"/var/lib/fusion/config.json",
+		configDataPath,
 		stateManager,
 		nodeName,
 		true,
@@ -85,25 +91,41 @@ func main() {
 	metricsCollector := cluster.NewMetricsCollector(list, stateManager)
 
 	if err := persistence.LoadState(); err != nil {
-		log.Fatalf("Failed to load state: %v", err)
+		logger.Error("Failed to load state: %v", err)
 	}
 
-	// Create the shared handler
-	handler := config.NewConfigHandler(nodeName, list, stateManager, persistence)
+	// Create the shared connection handler
+	connectionHandler := config.NewConfigHandler(nodeName, list, stateManager, persistence)
 
 	// Initialize UDP server
-	udpServer, err := network.NewUDPServer(nodeName, ":7947", handler)
+	udpServer, err := network.NewUDPServer(nodeName, udpPort, connectionHandler)
 	if err != nil {
 		logger.Error("Failed to create UDP server: %v", err)
 		return
 	} else {
-		handler.AddBroadcaster(udpServer)
+		connectionHandler.AddBroadcaster(udpServer)
 		udpServer.Start()
 		defer udpServer.Stop()
 	}
 
+	// Initialize analog controller receiver
+	analogReceiver, err := cxa.NewAnalogControllerReceiver(nodeName, connectionHandler, analogControllerPort)
+	if err != nil {
+		logger.Error("Failed to create analog receiver: %v", err)
+		return
+	}
+	defer analogReceiver.Close()
+
+	// Initialize digital controller receiver
+	digitalReceiver, err := cxd.NewDigitalControllerReceiver(nodeName, connectionHandler, digitalControllerPort)
+	if err != nil {
+		logger.Error("Failed to create digital receiver: %v", err)
+		return
+	}
+	defer digitalReceiver.Close()
+
 	// Initialize config server
-	configServer := config.NewConfigServer(nodeName, handler)
+	configServer := config.NewConfigServer(nodeName, connectionHandler)
 
 	// Start metrics server on separate port
 	go func() {
@@ -124,8 +146,8 @@ func main() {
 	go network.ManageHAProxy(list, nodeName)
 
 	// Start the main server
-	logger.Info("Starting API server on :8080")
-	if err := http.ListenAndServe(":8080", nil); err != nil {
+	logger.Info("Starting API server on %s", httpPort)
+	if err := http.ListenAndServe(httpPort, nil); err != nil {
 		logger.Error("Failed to start server: %v", err)
 	}
 }

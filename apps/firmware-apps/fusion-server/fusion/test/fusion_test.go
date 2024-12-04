@@ -750,6 +750,8 @@ func TestClusterStateSync(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Logf("TEST: %s", tt.name)
+			t.Logf("  Node: %s", testNodes[tt.updateNode])
+
 			err := setValueOnNode(testNodes[tt.updateNode], tt.key, tt.value)
 			if err != nil {
 				t.Fatalf("Failed to set value on node %d: %v", tt.updateNode, err)
@@ -757,6 +759,7 @@ func TestClusterStateSync(t *testing.T) {
 
 			success := waitForSync(tt.timeout, func() bool {
 				for _, nodeIdx := range tt.verifyNodes {
+					t.Logf("    Checking: %s", testNodes[nodeIdx])
 					value, exists, err := getValueFromNode(testNodes[nodeIdx], tt.key)
 					if err != nil || !exists || !valueEquals(value, tt.value) {
 						return false
@@ -847,6 +850,105 @@ func TestStateConsistency(t *testing.T) {
 	}
 
 	t.Logf("Successfully verified state consistency across nodes")
+}
+
+// TestClearEndpoint verifies that data is cleared on all nodes
+func TestClearEndpoint(t *testing.T) {
+	nodes := clusterConfig.nodes
+	if len(nodes) < 3 {
+		t.Fatalf("Test requires at least 3 nodes, but only %d available", len(nodes))
+	}
+
+	testNodes := nodes[:3]
+	if !verifyClusterHealth(t, testNodes) {
+		t.Fatal("Cluster health check failed - requires 3 running nodes")
+	}
+
+	// Set test data on each node
+	testData := []struct {
+		key   string
+		value interface{}
+	}{
+		{"clear_test_1", "value1"},
+		{"clear_test_2", 42},
+		{"clear_test_3", map[string]interface{}{"nested": "value"}},
+	}
+
+	// Set values on first node
+	for _, td := range testData {
+		err := setValueOnNode(testNodes[0], td.key, td.value)
+		if err != nil {
+			t.Fatalf("Failed to set test data: %v", err)
+		}
+	}
+
+	// Wait for sync
+	t.Log("Waiting for initial state sync...")
+	success := waitForSync(5*time.Second, func() bool {
+		for _, node := range testNodes {
+			state, err := getFullStateFromNode(node)
+			if err != nil {
+				return false
+			}
+			for _, td := range testData {
+				if _, exists := state[td.key]; !exists {
+					return false
+				}
+			}
+		}
+		return true
+	})
+
+	if !success {
+		t.Fatal("Failed to sync initial test data")
+	}
+
+	// Call clear on first node
+	req, err := http.NewRequest(http.MethodDelete, fmt.Sprintf("%s/clear", testNodes[0].address), nil)
+	if err != nil {
+		t.Fatalf("Failed to create DELETE request: %v", err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("Failed to call clear endpoint: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("Clear endpoint returned wrong status: got %v want %v",
+			resp.StatusCode, http.StatusOK)
+	}
+
+	// Verify all nodes are cleared
+	success = waitForSync(5*time.Second, func() bool {
+		for i, node := range testNodes {
+			state, err := getFullStateFromNode(node)
+			if err != nil {
+				t.Logf("Failed to get state from node %d: %v", i, err)
+				return false
+			}
+			if len(state) > 0 {
+				t.Logf("Node %d still has %d entries", i, len(state))
+				return false
+			}
+		}
+		return true
+	})
+
+	if !success {
+		t.Error("Failed to clear state across all nodes")
+		// Dump final state of all nodes for debugging
+		for i, node := range testNodes {
+			state, err := getFullStateFromNode(node)
+			if err != nil {
+				t.Logf("Failed to get state from node %d: %v", i, err)
+				continue
+			}
+			prettyState, _ := json.MarshalIndent(state, "", "  ")
+			t.Logf("Node %d final state:\n%s", i, string(prettyState))
+		}
+	}
 }
 
 func setValueOnNode(node clusterNode, key string, value interface{}) error {
