@@ -982,13 +982,13 @@
                 {
                     "name": "client_name",
                     "value_type": "string",
-                    "default_value": "fusion_dsp",
+                    "default_value": "",
                     "maximum_length": 32
                 },
                 {
                     "name": "port_name_prefix",
                     "value_type": "string",
-                    "default_value": "input_",
+                    "default_value": "",
                     "maximum_length": 32
                 }
             ],
@@ -1002,13 +1002,6 @@
                 }
             ],
             "parameters": [
-                {
-                    "name": "port_connection",
-                    "value_type": "string",
-                    "dimensions": ["out"],
-                    "default_value": "",
-                    "minimum_length": 128
-                },
                 {
                     "name": "out_gain",
                     "value_type": "float",
@@ -1047,13 +1040,13 @@
                 {
                     "name": "client_name",
                     "value_type": "string",
-                    "default_value": "fusion_dsp",
+                    "default_value": "",
                     "maximum_length": 32
                 },
                 {
                     "name": "port_name_prefix",
                     "value_type": "string",
-                    "default_value": "ouput_",
+                    "default_value": "",
                     "maximum_length": 32
                 }
             ],
@@ -1067,13 +1060,6 @@
                 }
             ],
             "parameters": [
-                {
-                    "name": "port_connection",
-                    "value_type": "string",
-                    "dimensions": ["in"],
-                    "default_value": "",
-                    "minimum_length": 128
-                },
                 {
                     "name": "gain",
                     "value_type": "float",

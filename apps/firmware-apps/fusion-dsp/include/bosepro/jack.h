@@ -184,6 +184,13 @@ public:
     Jack(const BlockConfiguration &configuration, bool is_input);
 
 
+    /// Specify a port connection for one of the JACK ports associated with
+    /// this "jack_in" or "jack_out" block.  This does not immediately
+    /// connect the port if the client has not yet been activated: the
+    /// connection is deferred until `connect_all()` has been called.
+    void connect_port(int_fast32_t channel, const std::string &connection);
+
+
     /// Connect all of the JACK ports associated with this "jack_in" or
     /// "jack_out" block.  This can only be done after the JACK client has
     /// been activated.
@@ -226,12 +233,13 @@ protected:
 
 private:
     static std::map<std::string, JackClient> clients;
+    static JackClient *current_client;
     JackClient *client;
 
     bool is_input;
     bosepro::DspParamMemory<std::string[]> port_connections;
 
-    void post_port_connection(int channel);
+    void make_port_connection(int channel);
 };
 
 

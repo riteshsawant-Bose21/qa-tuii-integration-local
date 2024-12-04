@@ -9,6 +9,7 @@
         {
             "name": "task1",
             "property_settings": [
+                { "name": "is_jack_client", "value": false },
                 { "name": "frame_size", "value": 512},
                 { "name": "sample_rate", "value": 48000 }
             ],

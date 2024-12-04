@@ -11,6 +11,7 @@ namespace bosepro {
 
 
 std::map<std::string, JackClient> Jack::clients;
+JackClient *Jack::current_client = nullptr;
 
 
 void JackPort::create(JackClient *client, const char *name, bool is_input)
@@ -30,9 +31,10 @@ void JackPort::connect(JackClient *client, const char *connection_name,
                            is_input ? connection_name : get_name(),
                            is_input ? get_name() : connection_name);
 
-    if (err != 0)
+    if (err != 0 && err != EEXIST)
     {
-        SPDLOG_ERROR("Unable to connect port.");
+        SPDLOG_ERROR("Unable to connect port {} {}.",
+                     get_name(), connection_name);
     }
 }
 
@@ -167,6 +169,11 @@ Jack::Jack(const BlockConfiguration &configuration, bool is_input)
     std::string port_name_prefix;
     get_property("port_name_prefix", port_name_prefix);
 
+    if (port_name_prefix.empty())
+    {
+        port_name_prefix = configuration.get_name() + "_";
+    }
+
     if (is_input)
     {
         get_terminal_num_channels("out", channels);
@@ -177,15 +184,13 @@ Jack::Jack(const BlockConfiguration &configuration, bool is_input)
     }
 
     ports.resize(channels);
+    port_connections.resize(channels);
 
     for (int channel = 0; channel < channels; channel++)
     {
         std::string port_name = port_name_prefix + std::to_string(channel + 1);
         ports[channel].create(client, port_name.c_str(), is_input);
     }
-
-    assign_parameter("port_connection", port_connections,
-                     POST_FUNCTION_VECTOR(post_port_connection));
 }
 
 
@@ -199,7 +204,9 @@ JackClient *Jack::create_client(const std::string &name, Task *task)
 
     clients.try_emplace(name, name, task);
 
-    return &clients.at(name);
+    current_client = &clients.at(name);
+
+    return current_client;
 }
 
 
@@ -211,6 +218,7 @@ void Jack::destroy_client(const std::string &name)
     }
 
     clients.erase(name);
+    current_client = nullptr;
 }
 
 
@@ -222,6 +230,11 @@ bool Jack::has_client()
 
 JackClient *Jack::get_client(const std::string &name)
 {
+    if (name.empty())
+    {
+        return current_client;
+    }
+
     if (clients.count(name) == 0)
     {
         SPDLOG_CRITICAL("Unable to find client {}!", name);
@@ -232,7 +245,14 @@ JackClient *Jack::get_client(const std::string &name)
 }
 
 
-void Jack::post_port_connection(int channel)
+void Jack::connect_port(int_fast32_t channel, const std::string &connection)
+{
+    port_connections[channel] = connection;
+    make_port_connection(channel);
+}
+
+
+void Jack::make_port_connection(int channel)
 {
     if (port_connections[channel].empty())
     {
@@ -250,7 +270,7 @@ void Jack::connect_all()
 {
     for (int channel = 0; channel < channels; channel++)
     {
-        post_port_connection(channel);
+        make_port_connection(channel);
     }
 }
 
