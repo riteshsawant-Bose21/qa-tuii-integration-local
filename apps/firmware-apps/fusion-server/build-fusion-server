@@ -5,7 +5,6 @@ set -euo pipefail
 BINARY_NAME="fusion-server"
 ARCH="arm64"
 OS="linux"
-DOCKER_IMAGE_NAME="fusion-server"
 EXPECTED_BINARY="${BINARY_NAME}_${OS}_${ARCH}"
 
 # Clean up old binary if it exists

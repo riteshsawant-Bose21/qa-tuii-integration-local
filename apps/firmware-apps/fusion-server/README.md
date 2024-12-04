@@ -95,12 +95,12 @@ git clone git@github.com:BoseProfessional/fusion-services.git
 ```
 
 ## Usage
-### Launch a single server instance
+### Launch a single server instance using multipass
 ```bash
 ./launch
 ```
 
-**Create multiple instances with default name "fusion"**
+**Create multiple instances with default named "fusion"**
 ```bash
 ./launch --instances 3
 ```
@@ -121,6 +121,39 @@ multipass stop fusion
 multipass stop fusion1
 ```
 
+### Launch a single server on local machine
+**Build fusion-server for local machine**
+```bash
+make help
+Make targets:
+ all - Run deps, test, and build
+ build - Build for current platform
+ test - Run tests
+ test-verbose - Run tests with verbose output and no caching
+ clean - Clean build files
+ run - Build and run locally
+ deps - Download dependencies
+ tidy - Tidy go.mod
+ fmt - Format code
+ vet - Run go vet
+ lint - Run linter
+ build-linux - Build for Linux amd64
+ build-linux-arm32 - Build for Linux ARM32
+ build-linux-arm64 - Build for Linux ARM64
+ build-darwin-arm64 - Build for macOS ARM64
+ build-all - Build for all platforms
+
+ make build-darwin-arm64
+```
+
+**Run binary built for local machine**
+```bash
+./build/fusion-server_darwin_arm64 --name fusion1
+```
+
+NOTE: Local builds don't support haproxy, keepalived or memberlist. You can ignore log output about issues related to this.
+Local builds are good for developing the various server components without dealing with instance management.
+ 
 ### API Endpoints
 
 1. **Configuration Management**

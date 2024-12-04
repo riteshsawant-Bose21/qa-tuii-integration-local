@@ -28,6 +28,34 @@ type AnalogControllerManager struct {
 	listener   net.Listener
 }
 
+// detectControllerType determines the controller type based on voltage patterns
+func detectControllerType(values []uint32) ControllerType {
+	if len(values) < 5 {
+		return CC1 // Default to CC1 if we don't have enough data
+	}
+
+	// Check for CC2 first
+	// CC2 must be in position 1 or 2 and uses REMOTE_CC2_SEL_VOLUME_B (3500)
+	// on channel 3 (position 1) or channel 4 (position 2)
+	if values[3] == REMOTE_CC2_SEL_VOLUME_B || values[4] == REMOTE_CC2_SEL_VOLUME_B {
+		return CC2
+	}
+
+	// Check for CC3 - must be in position 1
+	// Volume on channel 0 between CC3_MAX (5) and CC3_MIN (1937)
+	// One input line (1-4) must be below CC3_SEL_INPUT (3650)
+	if values[0] <= REMOTE_CC3_MIN_VOLUME {
+		for i := 1; i <= 4; i++ {
+			if values[i] < REMOTE_CC3_SEL_INPUT {
+				return CC3
+			}
+		}
+	}
+
+	// Default to CC1 - simple volume control between 70-2450
+	return CC1
+}
+
 func NewAnalogControllerManager(nodeName string, handler *config.ConfigHandler, listenAddr string) (*AnalogControllerManager, error) {
 	listener, err := net.Listen("tcp", listenAddr)
 	if err != nil {
@@ -58,7 +86,7 @@ func (dm *AnalogControllerManager) acceptConnections() {
 		dc := &AnalogControllerConnection{
 			deviceID: deviceID,
 			conn:     conn,
-			ctrlType: CC1, // TODO: Determine the correct controller type
+			ctrlType: CC1, // Initial type, will be updated after first reading
 		}
 
 		dm.deviceLock.Lock()
@@ -97,6 +125,7 @@ func (dm *AnalogControllerManager) handleDeviceConnection(dc *AnalogControllerCo
 	}()
 
 	buf := make([]byte, 20) // 5 uint32 values
+	firstRead := true
 	for {
 		_, err := dc.conn.Read(buf)
 		if err != nil {
@@ -112,6 +141,12 @@ func (dm *AnalogControllerManager) handleDeviceConnection(dc *AnalogControllerCo
 		}
 
 		dc.valueLock.Lock()
+		if firstRead {
+			dc.ctrlType = detectControllerType(values)
+			logger.Debug("Device %s detected as controller type: %v", dc.deviceID, dc.ctrlType)
+			firstRead = false
+		}
+
 		changed := false
 		for i := 0; i < 5; i++ {
 			if dc.values[i] != values[i] {
@@ -125,6 +160,7 @@ func (dm *AnalogControllerManager) handleDeviceConnection(dc *AnalogControllerCo
 			update := map[string]interface{}{
 				fmt.Sprintf("%s.values", dc.deviceID):     values,
 				fmt.Sprintf("%s.lastUpdate", dc.deviceID): time.Now().UTC(),
+				fmt.Sprintf("%s.type", dc.deviceID):       dc.ctrlType,
 			}
 
 			// Add individual values for easier access
@@ -146,6 +182,7 @@ func (dm *AnalogControllerManager) GetDeviceStates() map[string]interface{} {
 	for deviceID, dc := range dm.devices {
 		dc.valueLock.RLock()
 		deviceState := make(map[string]interface{})
+		deviceState["type"] = dc.ctrlType
 		for i := range dc.values {
 			deviceState[fmt.Sprintf("value%d", i)] = dc.values[i]
 		}
