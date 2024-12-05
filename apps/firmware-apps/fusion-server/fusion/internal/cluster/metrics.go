@@ -15,6 +15,11 @@ import (
 	"github.com/hashicorp/memberlist"
 )
 
+const (
+	contentType     = "Content-Type"
+	jsonContentType = "application/json"
+)
+
 // StateManagerInterface defines the interface for state management
 type StateManagerInterface interface {
 	GetFullState() map[string]*api.StateEntry
@@ -154,7 +159,7 @@ func (mc *MetricsCollector) HandleMetrics(w http.ResponseWriter, r *http.Request
 	mc.mutex.RLock()
 	defer mc.mutex.RUnlock()
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(contentType, jsonContentType)
 	json.NewEncoder(w).Encode(mc.metrics)
 }
 
@@ -162,7 +167,7 @@ func (mc *MetricsCollector) HandleClusterStatus(w http.ResponseWriter, r *http.R
 	mc.mutex.RLock()
 	defer mc.mutex.RUnlock()
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(contentType, jsonContentType)
 	json.NewEncoder(w).Encode(mc.clusterInfo)
 }
 
@@ -178,7 +183,7 @@ func (mc *MetricsCollector) HandleHealthCheck(w http.ResponseWriter, r *http.Req
 		w.WriteHeader(http.StatusServiceUnavailable)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(contentType, jsonContentType)
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"status":         status,
 		"node_health":    health,

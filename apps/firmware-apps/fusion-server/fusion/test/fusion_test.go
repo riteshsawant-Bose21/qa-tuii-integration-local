@@ -18,7 +18,8 @@ import (
 )
 
 const (
-	serverAddr = "http://192.168.64.100:8080"
+	serverAddr      = "http://192.168.64.100:8080"
+	jsonContentType = "application/json"
 )
 
 // ClusterConfig holds the test configuration for the cluster
@@ -329,7 +330,7 @@ func TestSetValue(t *testing.T) {
 			}
 
 			resp, err := http.Post(fmt.Sprintf("%s/setValue", serverAddr),
-				"application/json",
+				jsonContentType,
 				bytes.NewBuffer(jsonData))
 			if err != nil {
 				t.Fatalf("Failed to send request: %v", err)
@@ -365,7 +366,7 @@ func TestGetValue(t *testing.T) {
 	}
 	jsonData, _ := json.Marshal(testData)
 	_, err := http.Post(fmt.Sprintf("%s/setValue", serverAddr),
-		"application/json",
+		jsonContentType,
 		bytes.NewBuffer(jsonData))
 	if err != nil {
 		t.Fatalf("Failed to set test data: %v", err)
@@ -445,7 +446,7 @@ func TestUpdateValue(t *testing.T) {
 	}
 
 	resp, err := http.Post(fmt.Sprintf("%s/setValue", serverAddr),
-		"application/json",
+		jsonContentType,
 		bytes.NewBuffer(jsonData))
 	if err != nil {
 		t.Fatalf("Failed to set initial value: %v", err)
@@ -484,7 +485,7 @@ func TestUpdateValue(t *testing.T) {
 	}
 
 	resp, err = http.Post(fmt.Sprintf("%s/setValue", serverAddr),
-		"application/json",
+		jsonContentType,
 		bytes.NewBuffer(jsonData))
 	if err != nil {
 		t.Fatalf("Failed to update value: %v", err)
@@ -521,7 +522,7 @@ func TestUploadDownloadJSON(t *testing.T) {
 	}
 	jsonData, _ := json.Marshal(initialData)
 	_, err := http.Post(fmt.Sprintf("%s/setValue", serverAddr),
-		"application/json",
+		jsonContentType,
 		bytes.NewBuffer(jsonData))
 	if err != nil {
 		t.Fatalf("Failed to set initial data: %v", err)
@@ -562,7 +563,7 @@ func TestUploadDownloadJSON(t *testing.T) {
 	}
 
 	uploadResp, err := http.Post(fmt.Sprintf("%s/upload", serverAddr),
-		"application/json",
+		jsonContentType,
 		bytes.NewBuffer(uploadData))
 	if err != nil {
 		t.Fatalf("Failed to upload state: %v", err)
@@ -963,7 +964,7 @@ func setValueOnNode(node clusterNode, key string, value interface{}) error {
 	}
 
 	resp, err := http.Post(fmt.Sprintf("%s/setValue", node.address),
-		"application/json", bytes.NewBuffer(jsonData))
+		jsonContentType, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return fmt.Errorf("failed to send request: %v", err)
 	}

@@ -12,6 +12,11 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+const (
+	contentType     = "Content-Type"
+	jsonContentType = "application/json"
+)
+
 type ConfigServer struct {
 	nodeName  string
 	handler   *ConfigHandler
@@ -83,7 +88,7 @@ func (s *ConfigServer) SetValue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(contentType, jsonContentType)
 	json.NewEncoder(w).Encode(response)
 }
 
@@ -100,7 +105,7 @@ func (s *ConfigServer) GetValue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(contentType, jsonContentType)
 	json.NewEncoder(w).Encode(response)
 }
 
@@ -117,7 +122,7 @@ func (s *ConfigServer) DumpState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(contentType, jsonContentType)
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=config_export_%s.json",
 		time.Now().UTC().Format("20060102_150405")))
 
@@ -220,7 +225,7 @@ func (s *ConfigServer) DownloadJSON(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(contentType, jsonContentType)
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=config_export_%s.json",
 		time.Now().UTC().Format("20060102_150405")))
 
@@ -244,7 +249,7 @@ func (s *ConfigServer) UploadJSON(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(contentType, jsonContentType)
 	json.NewEncoder(w).Encode(response)
 }
 
@@ -260,6 +265,6 @@ func (s *ConfigServer) HandleRoot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(contentType, jsonContentType)
 	json.NewEncoder(w).Encode(info)
 }

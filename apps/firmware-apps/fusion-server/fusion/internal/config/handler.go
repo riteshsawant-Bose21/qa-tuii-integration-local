@@ -220,7 +220,7 @@ func (s *ConfigServer) ClearAllData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(contentType, jsonContentType)
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"status":  "success",
 		"message": "All data cleared successfully",
