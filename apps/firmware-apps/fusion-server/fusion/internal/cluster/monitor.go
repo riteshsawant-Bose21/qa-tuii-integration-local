@@ -8,11 +8,11 @@ import (
 )
 
 // MonitorClusterState continuously monitors the cluster membership state
-func MonitorClusterState(list *memberlist.Memberlist, nodeName string) {
+func MonitorClusterState(list *memberlist.Memberlist) {
 	go func() {
 		for {
 			members := list.Members()
-			logger := logging.GetLogger(nodeName)
+			logger := logging.GetLogger()
 
 			logger.Info("[CLUSTER] Current cluster state:")
 			logger.Info("[CLUSTER] Total members: %d", len(members))

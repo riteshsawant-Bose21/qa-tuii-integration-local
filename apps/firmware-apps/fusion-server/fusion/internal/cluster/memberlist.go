@@ -2,8 +2,8 @@ package cluster
 
 import (
 	"fmt"
-	"fusion/internal/config"
 	"fusion/internal/logging"
+	"fusion/internal/server"
 	"io"
 	"log"
 	"os"
@@ -23,7 +23,7 @@ const (
 
 // CreateMemberlist creates and configures a new memberlist instance
 func CreateMemberlist(nodeName, bindAddr string, bindPort int, joinAddrs []string,
-	stateManager *config.StateManager, persistence *config.ConfigPersistence, verbose bool) (*memberlist.Memberlist, error) {
+	stateManager *server.StateManager, persistence *server.ConfigPersistence, verbose bool) (*memberlist.Memberlist, error) {
 	config := memberlist.DefaultLANConfig()
 	config.Name = nodeName
 	config.BindAddr = bindAddr
@@ -35,7 +35,7 @@ func CreateMemberlist(nodeName, bindAddr string, bindPort int, joinAddrs []strin
 		config.Logger = log.New(io.Discard, "", 0)
 	}
 
-	delegate := NewGossipDelegate(nodeName, stateManager, persistence, verbose)
+	delegate := NewClusterDelegate(nodeName, stateManager, persistence, verbose)
 	config.Delegate = delegate
 
 	config.TCPTimeout = tcpTimeout * time.Second
@@ -55,13 +55,13 @@ func CreateMemberlist(nodeName, bindAddr string, bindPort int, joinAddrs []strin
 			n, err = list.Join(joinAddrs)
 			if err == nil {
 				if verbose {
-					logger := logging.GetLogger(nodeName)
+					logger := logging.GetLogger()
 					logger.Info("[MEMBERLIST-%s] Successfully joined cluster with %d nodes", nodeName, n)
 				}
 				break
 			}
 			if verbose {
-				logger := logging.GetLogger(nodeName)
+				logger := logging.GetLogger()
 				logger.Info("[MEMBERLIST-%s] Join attempt %d failed: %v", nodeName, retries+1, err)
 			}
 			time.Sleep(retryInterval * time.Second)

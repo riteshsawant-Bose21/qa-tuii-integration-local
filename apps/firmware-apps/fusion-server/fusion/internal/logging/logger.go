@@ -18,13 +18,21 @@ const (
 	ERROR
 )
 
+type LogConfig struct {
+	NodeName    string
+	LogDir      string
+	MaxFileSize int64
+	MaxFiles    int
+	LogLevel    LogLevel
+}
+
 type Logger struct {
-	nodeName    string
+	config      LogConfig
 	logFile     *os.File
 	logger      *log.Logger
 	fileLogger  *log.Logger
-	logLevel    LogLevel
-	mu          sync.Mutex
+	mu          sync.RWMutex
+	msgChan     chan string
 	initialized bool
 }
 
@@ -33,14 +41,21 @@ var (
 	once     sync.Once
 )
 
-func GetLogger(nodeName string) *Logger {
+func InitLogger(config LogConfig) {
 	once.Do(func() {
 		instance = &Logger{
-			nodeName: nodeName,
-			logLevel: INFO,
+			config:  config,
+			msgChan: make(chan string, 1000),
 		}
 		instance.initialize()
+		go instance.processLogs()
 	})
+}
+
+func GetLogger() *Logger {
+	if instance == nil {
+		panic("Logger not initialized. Call InitLogger first")
+	}
 	return instance
 }
 
@@ -48,48 +63,93 @@ func (l *Logger) initialize() {
 	if l.initialized {
 		return
 	}
-
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
 	// Set up console logger
 	l.logger = log.New(os.Stdout, "", log.LstdFlags)
 
-	// Set up file logger
-	logDir := "/var/log/fusion"
-	if err := os.MkdirAll(logDir, 0755); err != nil {
+	// Create log directory if it doesn't exist
+	if err := os.MkdirAll(l.config.LogDir, 0755); err != nil {
 		l.logger.Printf("Failed to create log directory: %v", err)
 		return
 	}
 
-	logPath := filepath.Join(logDir, fmt.Sprintf("fusion-%s.log", l.nodeName))
+	if err := l.rotateLogFileIfNeeded(); err != nil {
+		l.logger.Printf("Failed to setup log file: %v", err)
+		return
+	}
+
+	l.initialized = true
+}
+
+func (l *Logger) rotateLogFileIfNeeded() error {
+	if l.logFile != nil {
+		info, err := l.logFile.Stat()
+		if err != nil {
+			return err
+		}
+
+		if info.Size() < l.config.MaxFileSize*1024*1024 {
+			return nil
+		}
+
+		l.logFile.Close()
+	}
+
+	// Rotate existing log files
+	for i := l.config.MaxFiles - 1; i > 0; i-- {
+		oldPath := filepath.Join(l.config.LogDir, fmt.Sprintf("fusion-%s.%d.log", l.config.NodeName, i))
+		newPath := filepath.Join(l.config.LogDir, fmt.Sprintf("fusion-%s.%d.log", l.config.NodeName, i+1))
+		os.Rename(oldPath, newPath)
+	}
+
+	// Open new log file
+	logPath := filepath.Join(l.config.LogDir, fmt.Sprintf("fusion-%s.1.log", l.config.NodeName))
 	file, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
-		l.logger.Printf("Failed to open log file: %v", err)
-		return
+		return err
 	}
 
 	l.logFile = file
 	l.fileLogger = log.New(file, "", log.LstdFlags)
-	l.initialized = true
+	return nil
+}
+
+func (l *Logger) processLogs() {
+	for msg := range l.msgChan {
+		l.mu.RLock()
+		if l.fileLogger != nil {
+			if err := l.rotateLogFileIfNeeded(); err != nil {
+				l.logger.Printf("Failed to rotate log file: %v", err)
+			}
+			l.fileLogger.Println(msg)
+		}
+		l.logger.Println(msg)
+		l.mu.RUnlock()
+	}
 }
 
 func (l *Logger) log(level LogLevel, format string, args ...interface{}) {
-	if level < l.logLevel {
+	if level < l.config.LogLevel {
 		return
 	}
-
-	l.mu.Lock()
-	defer l.mu.Unlock()
 
 	timestamp := time.Now().Format("2006-01-02 15:04:05")
 	levelStr := [...]string{"DEBUG", "INFO", "WARN", "ERROR"}[level]
 	message := fmt.Sprintf(format, args...)
-	logMessage := fmt.Sprintf("%s [%s] [%s] %s", timestamp, l.nodeName, levelStr, message)
+	logMessage := fmt.Sprintf("%s [%s] [%s] %s", timestamp, l.config.NodeName, levelStr, message)
 
-	l.logger.Println(logMessage)
-	if l.fileLogger != nil {
-		l.fileLogger.Println(logMessage)
+	select {
+	case l.msgChan <- logMessage:
+	default:
+		// Channel is full, log directly
+		l.mu.RLock()
+		l.logger.Println(logMessage)
+		if l.fileLogger != nil {
+			l.fileLogger.Println(logMessage)
+		}
+		l.mu.RUnlock()
 	}
 }
 
@@ -109,13 +169,8 @@ func (l *Logger) Error(format string, args ...interface{}) {
 	l.log(ERROR, format, args...)
 }
 
-func (l *Logger) SetLogLevel(level LogLevel) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	l.logLevel = level
-}
-
 func (l *Logger) Close() {
+	close(l.msgChan)
 	if l.logFile != nil {
 		l.logFile.Close()
 	}

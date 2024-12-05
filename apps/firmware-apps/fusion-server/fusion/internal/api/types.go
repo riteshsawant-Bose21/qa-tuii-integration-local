@@ -2,7 +2,7 @@ package api
 
 import "time"
 
-// ConfigUpdate represents a configuration update in the system
+// DataUpdate represents a data update in the system
 type ConfigUpdate struct {
 	Data    map[string]interface{} `json:"data"`
 	Version int64                  `json:"version"`

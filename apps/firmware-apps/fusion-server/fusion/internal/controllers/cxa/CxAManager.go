@@ -3,8 +3,8 @@ package cxa
 import (
 	"encoding/binary"
 	"fmt"
-	"fusion/internal/config"
 	"fusion/internal/logging"
+	"fusion/internal/server"
 	"net"
 	"sync"
 	"time"
@@ -21,8 +21,7 @@ type AnalogControllerConnection struct {
 
 // AnalogControllerManager handles connections from CxA devices and manages their state
 type AnalogControllerManager struct {
-	nodeName   string
-	handler    *config.ConfigHandler
+	handler    *server.Handler
 	devices    map[string]*AnalogControllerConnection
 	deviceLock sync.RWMutex
 	listener   net.Listener
@@ -56,14 +55,13 @@ func detectControllerType(values []uint32) ControllerType {
 	return CC1
 }
 
-func NewAnalogControllerManager(nodeName string, handler *config.ConfigHandler, listenAddr string) (*AnalogControllerManager, error) {
+func NewAnalogControllerManager(handler *server.Handler, listenAddr string) (*AnalogControllerManager, error) {
 	listener, err := net.Listen("tcp", listenAddr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start device listener: %v", err)
 	}
 
 	dm := &AnalogControllerManager{
-		nodeName: nodeName,
 		handler:  handler,
 		devices:  make(map[string]*AnalogControllerConnection),
 		listener: listener,
@@ -74,7 +72,7 @@ func NewAnalogControllerManager(nodeName string, handler *config.ConfigHandler, 
 }
 
 func (dm *AnalogControllerManager) acceptConnections() {
-	logger := logging.GetLogger(dm.nodeName)
+	logger := logging.GetLogger()
 	for {
 		conn, err := dm.listener.Accept()
 		if err != nil {
@@ -109,7 +107,7 @@ func (dm *AnalogControllerManager) acceptConnections() {
 }
 
 func (dm *AnalogControllerManager) handleDeviceConnection(dc *AnalogControllerConnection) {
-	logger := logging.GetLogger(dm.nodeName)
+	logger := logging.GetLogger()
 	defer func() {
 		dc.conn.Close()
 		dm.deviceLock.Lock()

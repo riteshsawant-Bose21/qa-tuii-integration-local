@@ -1,15 +1,13 @@
 package cxa
 
-import (
-	"fusion/internal/config"
-)
+import "fusion/internal/server"
 
 type AnalogControllerReceiver struct {
 	manager *AnalogControllerManager
 }
 
-func NewAnalogControllerReceiver(nodeName string, handler *config.ConfigHandler, listenAddr string) (*AnalogControllerReceiver, error) {
-	manager, err := NewAnalogControllerManager(nodeName, handler, listenAddr)
+func NewAnalogControllerReceiver(handler *server.Handler, listenAddr string) (*AnalogControllerReceiver, error) {
+	manager, err := NewAnalogControllerManager(handler, listenAddr)
 	if err != nil {
 		return nil, err
 	}

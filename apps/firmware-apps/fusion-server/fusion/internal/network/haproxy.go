@@ -41,10 +41,10 @@ backend servers
 `
 
 // ManageHAProxy continuously updates HAProxy configuration based on cluster membership
-func ManageHAProxy(list *memberlist.Memberlist, nodeName string) {
+func ManageHAProxy(list *memberlist.Memberlist) {
 	tmpl := template.Must(template.New("haproxy").Parse(haproxyTemplate))
 
-	logger := logging.GetLogger(nodeName)
+	logger := logging.GetLogger()
 
 	for {
 		members := list.Members()

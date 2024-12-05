@@ -39,7 +39,7 @@ func NewTestDevice(t *testing.T) *TestDevice {
 }
 
 func MockManager(t *testing.T) (*cxd.Manager, string, error) {
-	manager, err := cxd.NewManager("testNode")
+	manager, err := cxd.NewManager()
 	if err != nil {
 		return nil, "", err
 	}
@@ -64,7 +64,7 @@ func TestFullSystemIntegration(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	manager, err := cxd.NewManager("testNode")
+	manager, err := cxd.NewManager()
 	if err != nil {
 		t.Fatalf("Failed to create manager: %v", err)
 	}

@@ -1,4 +1,4 @@
-package config
+package server
 
 import (
 	"encoding/json"
@@ -19,13 +19,13 @@ const (
 
 type ConfigServer struct {
 	nodeName  string
-	handler   *ConfigHandler
+	handler   *Handler
 	wsClients map[*websocket.Conn]bool
 	wsLock    sync.RWMutex
 	upgrader  websocket.Upgrader
 }
 
-func NewConfigServer(nodeName string, handler *ConfigHandler) *ConfigServer {
+func NewConfigServer(nodeName string, handler *Handler) *ConfigServer {
 	server := &ConfigServer{
 		nodeName:  nodeName,
 		handler:   handler,
@@ -55,7 +55,7 @@ func (s *ConfigServer) BroadcastUpdate(update map[string]interface{}) error {
 
 	for conn := range s.wsClients {
 		if err := conn.WriteJSON(message); err != nil {
-			logging.GetLogger(s.nodeName).Error("Error broadcasting to WebSocket client: %v", err)
+			logging.GetLogger().Error("Error broadcasting to WebSocket client: %v", err)
 			conn.Close()
 			delete(s.wsClients, conn)
 		}
@@ -117,7 +117,7 @@ func (s *ConfigServer) DumpState(w http.ResponseWriter, r *http.Request) {
 
 	state, err := s.handler.HandleDumpState()
 	if err != nil {
-		logging.GetLogger(s.nodeName).Error("Export state failed: %v", err)
+		logging.GetLogger().Error("Export state failed: %v", err)
 		http.Error(w, "Error exporting state", http.StatusInternalServerError)
 		return
 	}
@@ -129,7 +129,7 @@ func (s *ConfigServer) DumpState(w http.ResponseWriter, r *http.Request) {
 	encoder := json.NewEncoder(w)
 	encoder.SetIndent("", "  ")
 	if err := encoder.Encode(state); err != nil {
-		logging.GetLogger(s.nodeName).Error("Export state failed: %v", err)
+		logging.GetLogger().Error("Export state failed: %v", err)
 		http.Error(w, "Error exporting state", http.StatusInternalServerError)
 	}
 }
@@ -137,7 +137,7 @@ func (s *ConfigServer) DumpState(w http.ResponseWriter, r *http.Request) {
 func (s *ConfigServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	conn, err := s.upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		logging.GetLogger(s.nodeName).Error("Failed to upgrade connection: %v", err)
+		logging.GetLogger().Error("Failed to upgrade connection: %v", err)
 		return
 	}
 
@@ -152,7 +152,7 @@ func (s *ConfigServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		defer pingTicker.Stop()
 		for range pingTicker.C {
 			if err := conn.WriteControl(websocket.PingMessage, []byte{}, time.Now().Add(10*time.Second)); err != nil {
-				logging.GetLogger(s.nodeName).Error("Ping failed: %v", err)
+				logging.GetLogger().Error("Ping failed: %v", err)
 				return
 			}
 		}
@@ -173,12 +173,12 @@ func (s *ConfigServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	// Get initial state through handler
 	state, err := s.handler.HandleHTTPGet("")
 	if err != nil {
-		logging.GetLogger(s.nodeName).Error("Failed to get data: %v", err)
+		logging.GetLogger().Error("Failed to get data: %v", err)
 		return
 	}
 
 	if err := conn.WriteJSON(state); err != nil {
-		logging.GetLogger(s.nodeName).Error("Failure sending initial state: %v", err)
+		logging.GetLogger().Error("Failure sending initial state: %v", err)
 		return
 	}
 
@@ -186,7 +186,7 @@ func (s *ConfigServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		messageType, data, err := conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				logging.GetLogger(s.nodeName).Error("WebSocket error: %v", err)
+				logging.GetLogger().Error("WebSocket error: %v", err)
 			}
 			break
 		}
@@ -203,13 +203,13 @@ func (s *ConfigServer) handleWebSocketMessage(conn *websocket.Conn, data []byte)
 			"type":    "error",
 			"message": err.Error(),
 		}); err != nil {
-			logging.GetLogger(s.nodeName).Error("Error sending error response: %v", err)
+			logging.GetLogger().Error("Error sending error response: %v", err)
 		}
 		return
 	}
 
 	if err := conn.WriteJSON(response); err != nil {
-		logging.GetLogger(s.nodeName).Error("Error sending response: %v", err)
+		logging.GetLogger().Error("Error sending response: %v", err)
 	}
 }
 
@@ -232,7 +232,7 @@ func (s *ConfigServer) DownloadJSON(w http.ResponseWriter, r *http.Request) {
 	encoder := json.NewEncoder(w)
 	encoder.SetIndent("", "  ")
 	if err := encoder.Encode(response); err != nil {
-		logging.GetLogger(s.nodeName).Error("Export state failed: %v", err)
+		logging.GetLogger().Error("Export state failed: %v", err)
 		http.Error(w, "Error exporting state", http.StatusInternalServerError)
 	}
 }

@@ -11,7 +11,6 @@ import (
 
 // TCPController handles parameter control via TCP
 type TCPController struct {
-	nodeName      string
 	deviceID      string
 	port          int
 	conn          net.Conn
@@ -22,8 +21,8 @@ type TCPController struct {
 }
 
 // NewTCPController creates a new TCP controller for a device
-func NewTCPController(nodeName string, deviceID string, port int) (*TCPController, error) {
-	logger := logging.GetLogger(nodeName)
+func NewTCPController(deviceID string, port int) (*TCPController, error) {
+	logger := logging.GetLogger()
 	logger.Debug("NewTCPController: Starting TCP listener for device %s on port %d", deviceID, port)
 
 	addr := fmt.Sprintf(":%d", port)
@@ -37,7 +36,6 @@ func NewTCPController(nodeName string, deviceID string, port int) (*TCPControlle
 	logger.Debug("TCP listener created successfully")
 
 	controller := &TCPController{
-		nodeName:      nodeName,
 		deviceID:      deviceID,
 		port:          port,
 		listener:      listener,
@@ -126,7 +124,7 @@ func (c *TCPController) Subscribe(param string, callback func(string)) error {
 }
 
 func (c *TCPController) acceptLoop() {
-	logger := logging.GetLogger(c.nodeName)
+	logger := logging.GetLogger()
 	logger.Debug("AcceptLoop started for device %s on port %d", c.deviceID, c.port)
 
 	for {
@@ -168,7 +166,7 @@ func (c *TCPController) handleCommand(cmd string) error {
 		return c.handleSetParam(strings.TrimPrefix(cmd, "SA "))
 
 	default:
-		logger := logging.GetLogger(c.nodeName)
+		logger := logging.GetLogger()
 		logger.Info("Unknown command received: %s", cmd)
 		return nil
 	}
@@ -236,7 +234,7 @@ func (c *TCPController) handleSubscribe(cmd string) error {
 }
 
 func (c *TCPController) handleConnection(conn net.Conn) {
-	logger := logging.GetLogger(c.nodeName)
+	logger := logging.GetLogger()
 	defer func() {
 		conn.Close()
 		c.mutex.Lock()

@@ -3,16 +3,17 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"time"
 
 	"fusion/internal/cluster"
-	"fusion/internal/config"
 	"fusion/internal/controllers/cxa"
 	"fusion/internal/controllers/cxd"
 	"fusion/internal/logging"
 	"fusion/internal/network"
+	"fusion/internal/server"
 )
 
 var (
@@ -41,30 +42,34 @@ func main() {
 	verbose := flag.Bool("verbose", false, "Verbose output")
 	flag.Parse()
 
-	// Initialize logging
-	logger := logging.GetLogger(nodeName)
-	if *verbose {
-		logger.SetLogLevel(logging.DEBUG)
-	}
-	logger.Info("Starting fusion server node: %s", nodeName)
-	defer logger.Close()
-
 	if nodeName == "" {
-		logger.Error("Node name is required")
+		log.Fatal("Node name is required")
 		return
 	}
 
+	// Initialize logging
+	logging.InitLogger(logging.LogConfig{
+		NodeName:    nodeName,
+		LogDir:      "/var/log/fusion",
+		MaxFileSize: 100,
+		MaxFiles:    5,
+		LogLevel:    logging.DEBUG,
+	})
+
+	logger := logging.GetLogger()
+	logger.Info("Starting fusion server node: %s", nodeName)
+	defer logger.Close()
+
 	// Initialize state manager
-	stateManager := config.NewStateManager(nodeName)
+	stateManager := server.NewStateManager(nodeName)
 	if *verbose {
 		stateManager.StartStateDumping(stateDumpInterval * time.Second)
 	}
 
 	// Initialize persistence
-	persistence := config.NewConfigPersistence(
+	persistence := server.NewConfigPersistence(
 		configDataPath,
 		stateManager,
-		nodeName,
 		true,
 	)
 	// Split join addresses
@@ -82,9 +87,9 @@ func main() {
 
 	// Start cluster monitoring
 	if *verbose {
-		cluster.MonitorClusterState(list, nodeName)
-		cluster.StartHealthCheck(list, nodeName)
-		cluster.StartStateVerification(list, stateManager, nodeName)
+		cluster.MonitorClusterState(list)
+		cluster.StartHealthCheck(list)
+		cluster.StartStateVerification(list, stateManager)
 	}
 
 	// Initialize metrics collector
@@ -95,10 +100,10 @@ func main() {
 	}
 
 	// Create the shared connection handler
-	connectionHandler := config.NewConfigHandler(nodeName, list, stateManager, persistence)
+	connectionHandler := server.NewHandler(list, stateManager, persistence)
 
 	// Initialize UDP server
-	udpServer, err := network.NewUDPServer(nodeName, udpPort, connectionHandler)
+	udpServer, err := network.NewUDPServer(udpPort, connectionHandler)
 	if err != nil {
 		logger.Error("Failed to create UDP server: %v", err)
 		return
@@ -109,7 +114,7 @@ func main() {
 	}
 
 	// Initialize analog controller receiver
-	analogReceiver, err := cxa.NewAnalogControllerReceiver(nodeName, connectionHandler, analogControllerPort)
+	analogReceiver, err := cxa.NewAnalogControllerReceiver(connectionHandler, analogControllerPort)
 	if err != nil {
 		logger.Error("Failed to create analog receiver: %v", err)
 		return
@@ -117,7 +122,7 @@ func main() {
 	defer analogReceiver.Close()
 
 	// Initialize digital controller receiver
-	digitalReceiver, err := cxd.NewDigitalControllerReceiver(nodeName, connectionHandler, digitalControllerPort)
+	digitalReceiver, err := cxd.NewDigitalControllerReceiver(connectionHandler, digitalControllerPort)
 	if err != nil {
 		logger.Error("Failed to create digital receiver: %v", err)
 		return
@@ -125,7 +130,7 @@ func main() {
 	defer digitalReceiver.Close()
 
 	// Initialize config server
-	configServer := config.NewConfigServer(nodeName, connectionHandler)
+	configServer := server.NewConfigServer(nodeName, connectionHandler)
 
 	// Start metrics server on separate port
 	go func() {
@@ -143,7 +148,7 @@ func main() {
 	setupHTTPRoutes(configServer, metricsCollector, *verbose)
 
 	// Start HAProxy management
-	go network.ManageHAProxy(list, nodeName)
+	go network.ManageHAProxy(list)
 
 	// Start the main server
 	logger.Info("Starting API server on %s", httpPort)
@@ -152,7 +157,7 @@ func main() {
 	}
 }
 
-func setupHTTPRoutes(server *config.ConfigServer, metrics *cluster.MetricsCollector, verbose bool) {
+func setupHTTPRoutes(server *server.ConfigServer, metrics *cluster.MetricsCollector, verbose bool) {
 	http.HandleFunc("/setValue", withLogging(server.SetValue, "setValue", verbose))
 	http.HandleFunc("/getValue", withLogging(server.GetValue, "getValue", verbose))
 	http.HandleFunc("/clear", withLogging(server.ClearAllData, "clear", verbose))
@@ -179,7 +184,7 @@ func withLogging(handler http.HandlerFunc, endpoint string, verbose bool) http.H
 			start := time.Now()
 			handler(w, r)
 			duration := time.Since(start)
-			logging.GetLogger(nodeName).Debug("[HTTP] %s %s %s Duration: %v", r.Method, r.URL.Path, endpoint, duration)
+			logging.GetLogger().Debug("[HTTP] %s %s %s Duration: %v", r.Method, r.URL.Path, endpoint, duration)
 		}
 	} else {
 		return handler

@@ -11,25 +11,23 @@ import (
 
 // Manager coordinates UDP and TCP communication with devices
 type Manager struct {
-	nodeName string
-	devices  map[string]*Device
-	comms    map[string]*TCPController
-	udpComm  *Controller
-	mutex    sync.RWMutex
+	devices map[string]*Device
+	comms   map[string]*TCPController
+	udpComm *Controller
+	mutex   sync.RWMutex
 }
 
 // NewManager creates a new device manager
-func NewManager(nodeName string) (*Manager, error) {
+func NewManager() (*Manager, error) {
 	udpComm, err := NewController()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create UDP controller: %w", err)
 	}
 
 	return &Manager{
-		nodeName: nodeName,
-		devices:  make(map[string]*Device),
-		comms:    make(map[string]*TCPController),
-		udpComm:  udpComm,
+		devices: make(map[string]*Device),
+		comms:   make(map[string]*TCPController),
+		udpComm: udpComm,
 	}, nil
 }
 
@@ -101,7 +99,7 @@ func (m *Manager) Discover() error {
 
 // Listen starts TCP communication
 func (m *Manager) Listen(deviceID string, port int) error {
-	logger := logging.GetLogger(m.nodeName)
+	logger := logging.GetLogger()
 	logger.Debug("Manager.Listen called for device %s on port %d", deviceID, port)
 
 	m.mutex.Lock()
@@ -126,7 +124,7 @@ func (m *Manager) Listen(deviceID string, port int) error {
 	}
 
 	logger.Debug("Creating new TCP controller for device %s", deviceID)
-	comm, err := NewTCPController(m.nodeName, deviceID, port)
+	comm, err := NewTCPController(deviceID, port)
 	if err != nil {
 		logger.Error("Failed to create TCP controller: %v", err)
 		return fmt.Errorf("failed to create TCP controller: %w", err)

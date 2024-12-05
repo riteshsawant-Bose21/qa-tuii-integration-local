@@ -1,4 +1,4 @@
-package config
+package server
 
 import (
 	"crypto/sha256"
@@ -25,17 +25,15 @@ type ConfigPersistence struct {
 	filePath     string
 	stateManager *StateManager
 	mutex        sync.RWMutex
-	nodeName     string
 	verbose      bool
 	lastSave     time.Time
 	saveDebounce time.Duration
 }
 
-func NewConfigPersistence(filePath string, stateManager *StateManager, nodeName string, verbose bool) *ConfigPersistence {
+func NewConfigPersistence(filePath string, stateManager *StateManager, verbose bool) *ConfigPersistence {
 	return &ConfigPersistence{
 		filePath:     filePath,
 		stateManager: stateManager,
-		nodeName:     nodeName,
 		verbose:      verbose,
 		saveDebounce: 100 * time.Millisecond,
 	}
@@ -52,7 +50,7 @@ func (p *ConfigPersistence) calculateChecksum(state map[string]*api.StateEntry) 
 }
 
 func (p *ConfigPersistence) LoadState() error {
-	logger := logging.GetLogger(p.nodeName)
+	logger := logging.GetLogger()
 
 	// Ensure directory exists
 	p.mutex.Lock()
@@ -130,7 +128,7 @@ func (p *ConfigPersistence) SaveState() error {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
-	logger := logging.GetLogger(p.nodeName)
+	logger := logging.GetLogger()
 
 	// Get current state
 	state := p.stateManager.GetFullState()
@@ -211,7 +209,7 @@ func (p *ConfigPersistence) MarkDirty() {
 	}
 
 	if err := p.SaveState(); err != nil {
-		logging.GetLogger(p.nodeName).Error("Failed to persist state: %v", err)
+		logging.GetLogger().Error("Failed to persist state: %v", err)
 	}
 }
 

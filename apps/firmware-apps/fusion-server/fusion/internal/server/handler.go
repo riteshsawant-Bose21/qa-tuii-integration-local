@@ -1,10 +1,9 @@
-package config
+package server
 
 import (
 	"encoding/json"
 	"fmt"
 	"fusion/internal/api"
-	"fusion/internal/broadcast"
 	"fusion/internal/logging"
 	"io"
 	"net/http"
@@ -14,18 +13,16 @@ import (
 )
 
 // Common handler for both UDP and HTTP servers
-type ConfigHandler struct {
-	nodeName     string
+type Handler struct {
 	stateManager *StateManager
 	persistence  *ConfigPersistence
 	list         *memberlist.Memberlist
-	broadcasters []broadcast.Broadcaster
+	broadcasters []Broadcaster
 }
 
-func NewConfigHandler(nodeName string, list *memberlist.Memberlist, stateManager *StateManager,
-	persistence *ConfigPersistence) *ConfigHandler {
-	return &ConfigHandler{
-		nodeName:     nodeName,
+func NewHandler(list *memberlist.Memberlist, stateManager *StateManager,
+	persistence *ConfigPersistence) *Handler {
+	return &Handler{
 		stateManager: stateManager,
 		persistence:  persistence,
 		list:         list,
@@ -33,7 +30,7 @@ func NewConfigHandler(nodeName string, list *memberlist.Memberlist, stateManager
 }
 
 // Shared update handling logic
-func (h *ConfigHandler) handleUpdate(data map[string]interface{}) error {
+func (h *Handler) handleUpdate(data map[string]interface{}) error {
 	configUpdate := api.ConfigUpdate{
 		Data:    data,
 		Version: time.Now().UnixNano(),
@@ -44,7 +41,7 @@ func (h *ConfigHandler) handleUpdate(data map[string]interface{}) error {
 	return h.broadcastUpdate(configUpdate)
 }
 
-func (h *ConfigHandler) transformState(state map[string]*api.StateEntry) map[string]interface{} {
+func (h *Handler) transformState(state map[string]*api.StateEntry) map[string]interface{} {
 	result := make(map[string]interface{})
 	for key, entry := range state {
 		result[key] = entry.Data
@@ -52,8 +49,8 @@ func (h *ConfigHandler) transformState(state map[string]*api.StateEntry) map[str
 	return result
 }
 
-func (h *ConfigHandler) broadcastUpdate(update api.ConfigUpdate) error {
-	logger := logging.GetLogger(h.nodeName)
+func (h *Handler) broadcastUpdate(update api.ConfigUpdate) error {
+	logger := logging.GetLogger()
 
 	if err := h.stateManager.ApplyUpdate(update); err != nil {
 		return fmt.Errorf("failed to apply update: %v", err)
@@ -100,7 +97,7 @@ func (h *ConfigHandler) broadcastUpdate(update api.ConfigUpdate) error {
 	return nil
 }
 
-func (h *ConfigHandler) GetInitialState() (WebSocketResponse, error) {
+func (h *Handler) GetInitialState() (WebSocketResponse, error) {
 	data := h.transformState(h.stateManager.GetFullState())
 	return WebSocketResponse{
 		Type: "initial_state",
@@ -108,7 +105,7 @@ func (h *ConfigHandler) GetInitialState() (WebSocketResponse, error) {
 	}, nil
 }
 
-func (h *ConfigHandler) HandleHTTPGet(key string) (interface{}, error) {
+func (h *Handler) HandleHTTPGet(key string) (interface{}, error) {
 	if key != "" {
 		value, exists := h.stateManager.Get(key)
 		if !exists {
@@ -128,7 +125,7 @@ func (h *ConfigHandler) HandleHTTPGet(key string) (interface{}, error) {
 }
 
 // HTTP Server methods
-func (h *ConfigHandler) HandleHTTPSet(update map[string]interface{}) (interface{}, error) {
+func (h *Handler) HandleHTTPSet(update map[string]interface{}) (interface{}, error) {
 	if err := h.handleUpdate(update); err != nil {
 		return nil, fmt.Errorf("failed to handle update: %v", err)
 	}
@@ -140,7 +137,7 @@ func (h *ConfigHandler) HandleHTTPSet(update map[string]interface{}) (interface{
 }
 
 // UDP Server methods
-func (h *ConfigHandler) HandleUDPMessage(data []byte) (interface{}, error) {
+func (h *Handler) HandleUDPMessage(data []byte) (interface{}, error) {
 	var msg struct {
 		Action string          `json:"action"`
 		Raw    json.RawMessage `json:",omitempty"`
@@ -188,7 +185,7 @@ func (h *ConfigHandler) HandleUDPMessage(data []byte) (interface{}, error) {
 	}
 }
 
-func (h *ConfigHandler) HandleClearAllData() error {
+func (h *Handler) HandleClearAllData() error {
 	configUpdate := api.ConfigUpdate{
 		Data:    map[string]interface{}{},
 		Version: time.Now().UnixNano(),
@@ -227,18 +224,18 @@ func (s *ConfigServer) ClearAllData(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (h *ConfigHandler) HandleDumpState() (map[string]interface{}, error) {
+func (h *Handler) HandleDumpState() (map[string]interface{}, error) {
 	return map[string]interface{}{
 		"state": h.stateManager.GetFullState(),
 	}, nil
 }
 
-func (h *ConfigHandler) ValidateState() error {
+func (h *Handler) ValidateState() error {
 	return h.persistence.ValidateStateFile()
 }
 
 // HandleWebSocketMessage handles incoming websocket messages
-func (h *ConfigHandler) HandleWebSocketMessage(data []byte) (*WebSocketResponse, error) {
+func (h *Handler) HandleWebSocketMessage(data []byte) (*WebSocketResponse, error) {
 	var msg WebSocketMessage
 	if err := json.Unmarshal(data, &msg); err != nil {
 		return nil, fmt.Errorf("invalid WebSocket message: %v", err)
@@ -274,7 +271,7 @@ func (h *ConfigHandler) HandleWebSocketMessage(data []byte) (*WebSocketResponse,
 }
 
 // HandleDownload handles the download of the current state
-func (h *ConfigHandler) HandleDownload() (map[string]interface{}, error) {
+func (h *Handler) HandleDownload() (map[string]interface{}, error) {
 	state := h.transformState(h.stateManager.GetFullState())
 	return map[string]interface{}{
 		"state": state,
@@ -282,7 +279,7 @@ func (h *ConfigHandler) HandleDownload() (map[string]interface{}, error) {
 }
 
 // HandleUpload handles the upload of a new state
-func (h *ConfigHandler) HandleUpload(reader io.Reader) (map[string]interface{}, error) {
+func (h *Handler) HandleUpload(reader io.Reader) (map[string]interface{}, error) {
 	var jsonImport struct {
 		Version   int64                      `json:"version"`
 		Timestamp time.Time                  `json:"timestamp"`
@@ -305,7 +302,7 @@ func (h *ConfigHandler) HandleUpload(reader io.Reader) (map[string]interface{}, 
 		}
 
 		if err := h.broadcastUpdate(update); err != nil {
-			logging.GetLogger(h.nodeName).Error("Import key failed: %s: %v", key, err)
+			logging.GetLogger().Error("Import key failed: %s: %v", key, err)
 		}
 	}
 
@@ -316,7 +313,7 @@ func (h *ConfigHandler) HandleUpload(reader io.Reader) (map[string]interface{}, 
 }
 
 // GetServerInfo returns information about the server
-func (h *ConfigHandler) GetServerInfo() (map[string]interface{}, error) {
+func (h *Handler) GetServerInfo() (map[string]interface{}, error) {
 	return map[string]interface{}{
 		"name":    "Fusion Config Server",
 		"version": "1.0.0",
@@ -333,12 +330,12 @@ func (h *ConfigHandler) GetServerInfo() (map[string]interface{}, error) {
 	}, nil
 }
 
-// AddBroadcaster registers a new broadcaster with the ConfigHandler
-func (h *ConfigHandler) AddBroadcaster(broadcaster broadcast.Broadcaster) {
+// AddBroadcaster registers a new broadcaster with the Handler
+func (h *Handler) AddBroadcaster(broadcaster Broadcaster) {
 	h.broadcasters = append(h.broadcasters, broadcaster)
 }
 
-// Optional: Add a method to add multiple broadcasters at once
-func (h *ConfigHandler) AddBroadcasters(broadcasters ...broadcast.Broadcaster) {
+// AddBroadcasters registers multiple broadcasters with the Handler
+func (h *Handler) AddBroadcasters(broadcasters ...Broadcaster) {
 	h.broadcasters = append(h.broadcasters, broadcasters...)
 }

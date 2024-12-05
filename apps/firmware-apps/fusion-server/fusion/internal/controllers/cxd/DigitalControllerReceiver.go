@@ -2,8 +2,8 @@ package cxd
 
 import (
 	"fmt"
-	"fusion/internal/config"
 	"fusion/internal/logging"
+	"fusion/internal/server"
 	"strconv"
 	"strings"
 )
@@ -13,11 +13,11 @@ type DigitalControllerReceiver struct {
 	logger  *logging.Logger
 }
 
-func NewDigitalControllerReceiver(nodeName string, handler *config.ConfigHandler, listenAddr string) (*DigitalControllerReceiver, error) {
-	logger := logging.GetLogger(nodeName)
+func NewDigitalControllerReceiver(handler *server.Handler, listenAddr string) (*DigitalControllerReceiver, error) {
+	logger := logging.GetLogger()
 	logger.Debug("Creating new DigitalControllerReceiver with listenAddr: %s", listenAddr)
 
-	manager, err := NewManager(nodeName)
+	manager, err := NewManager()
 	if err != nil {
 		logger.Error("Failed to create manager: %v", err)
 		return nil, err
