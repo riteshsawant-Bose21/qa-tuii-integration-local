@@ -1,11 +1,22 @@
 #!/bin/bash
 set -euo pipefail
 
+# Build the fusion-server binary and optionally a release package.
+#
+# Usage:
+# $ ./build-fusion-server [-p]
+#   Arguments:
+#   -p    [optional] Build a release package with required config files, etc.
+
 # Define variables
 BINARY_NAME="fusion-server"
 ARCH="arm64"
 OS="linux"
 EXPECTED_BINARY="${BINARY_NAME}_${OS}_${ARCH}"
+
+# Basic semver versioning for version.info output and build package name.
+VERSION=0.0.1
+BUILD_NUMBER=1
 
 # Clean up old binary if it exists
 if [ -f "$BINARY_NAME" ]; then
@@ -26,5 +37,27 @@ fi
 # Rename the binary
 echo "Renaming binary..."
 mv "build/$EXPECTED_BINARY" "build/$BINARY_NAME"
+
+flag=${1-none}
+
+if [ "$flag" = '-p' ]; then
+    # Make a "release package" with the binary, config files and version info.
+    # Get the commit-id
+    commit_id=$(git rev-parse HEAD)
+    full_version=${VERSION}-${BUILD_NUMBER}+${commit_id:0:7}
+
+    cat << EOF_VERSION > build/version.info
+APP = fusion-server
+VERSION = $full_version
+BRANCH = $(git rev-parse --abbrev-ref HEAD)
+COMMIT_ID = $commit_id
+COMMIT_DATE = $(TZ=UTC0 git --no-pager log -1 --pretty='format:%cd' --date='format-local:%Y-%m-%dT%H:%M:%S+00:00')
+BUILD_DATE  = $(date -u -Iseconds)
+EOF_VERSION
+    
+    tar -czf "build/fusion-server_v${full_version}.tgz" scripts/*.service scripts/*.conf -C ./build "$BINARY_NAME" version.info
+    # Cleanup temp files
+    rm build/version.info
+fi
 
 echo "Build process completed successfully."
