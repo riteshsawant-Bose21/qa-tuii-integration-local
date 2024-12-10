@@ -3,10 +3,11 @@
 #include <bosepro/child_factory.h>
 #include <bosepro/configurable.h>
 #include <bosepro/configuration.h>
-#include <bosepro/control.h>
+#include <bosepro/conversion.h>
+#include <bosepro/parameter.h>
+#include <bosepro/definition.h>
 #include <bosepro/dspmemory.h>
 #include <bosepro/telemetry.h>
-#include <bosepro/parameters.h>
 #include <bosepro/terminal.h>
 
 #include <cstdint>
@@ -20,14 +21,13 @@
 namespace bosepro {
 
 
-/// A structure for managing the non-real-time data of an algorithm.  This will
-/// eventually help manage cache performance, keeping the real-time data more
-/// localized.
+/// A structure for managing the non-real-time data of an algorithm.  This
+/// helps manage cache performance, keeping the real-time data more localized.
 struct AlgorithmMeta {
-    const AlgorithmParameters *parameters;
+    const AlgorithmDefinition *definition;
     const BlockConfiguration *configuration;
     std::map<std::string, std::unique_ptr<Terminal>> terminals;
-    std::map<std::string, std::unique_ptr<Control>> controls;
+    std::map<std::string, std::unique_ptr<Parameter>> parameters;
     std::map<std::string, std::unique_ptr<Telemetry>> telemetry;
 };
 
@@ -42,70 +42,63 @@ public:
         : Configurable(configuration), output_process_count(0)
     {
         meta->configuration = &configuration;
-        meta->parameters = get_parameters(configuration.get_algorithm());
+        meta->definition = static_cast<const AlgorithmDefinition*>(get_definition(configuration.get_algorithm()));
 
-        // There is no need to create constant data, because we just look it
-        // up from the parameter definitions and configuration.
+        // There is no need to create property data, because we just look it
+        // up from the algorithm's property definitions and the configuration.
 
         // Create the terminal data for all of the terminals in the algorithm.
-        // We use the parameters rather than the configuration, because the
+        // We use the definition rather than the configuration, because the
         // configuration may not contain terminal settings if the number of
-        // channels is fixed or set to the default.
-        // We assume there must be terminals for all algorithms.
-        for (auto &t : meta->parameters->get_terminals())
+        // channels is fixed or derived from a property value.
+        // We assume there must be at least one terminal for every algorithm.
+        for (auto &t : meta->definition->get_terminals())
         {
-            const TerminalParameter &tp =
-                    reinterpret_cast<const TerminalParameter &>(t.second);
-            const std::string &name = tp.get_name();
-            const TerminalConfiguration *tc =
-                configuration.has_terminal(name) ?
-                &configuration.get_terminal(tp.get_name()) : nullptr;
+            const TerminalDefinition &td =
+                    reinterpret_cast<const TerminalDefinition &>(t.second);
+            const std::string &name = td.get_name();
             meta->terminals[name] =
-                std::make_unique<Terminal>(Terminal(tp, tc, get_frame_size()));
+                std::make_unique<Terminal>(Terminal(td, meta->configuration, get_frame_size()));
         }
 
-        // Create the control data for all of the controls in the algorithm.
-        if (meta->parameters->has_controls())
+        // Create the parameter data for all of the parameters in the algorithm.
+        if (meta->definition->has_parameters())
         {
-            for (auto &c: meta->parameters->get_controls())
+            for (auto &p: meta->definition->get_parameters())
             {
-                const ControlParameter &cp =
-                    reinterpret_cast<const ControlParameter &>(c.second);
-                const std::string &name = cp.get_name();
-                const ControlConfiguration *cc =
-                    configuration.has_control(name) ?
-                    &configuration.get_control(name) : nullptr;
+                const ParameterDefinition &pd =
+                    reinterpret_cast<const ParameterDefinition &>(p.second);
+                const std::string &name = pd.get_name();
 
-                meta->controls[name] =
-                    std::unique_ptr<Control>(Control::create(cp, cc));
+                meta->parameters[name] =
+                    std::unique_ptr<Parameter>(Parameter::create(pd,
+                                                                 static_cast<const ProcessorDefinition&>(*meta->definition),
+                                                                 meta->configuration));
             }
         }
 
-        // Create the telemetry data for all of the telemetry in the algorithm.
-        if (meta->parameters->has_telemetry())
+        // Create the meter data for all of the telemetry in the algorithm.
+        if (meta->definition->has_telemetry())
         {
-            for (auto &m: meta->parameters->get_telemetry())
+            for (auto &m: meta->definition->get_telemetry())
             {
-                const TelemetryParameter &mp =
-                    reinterpret_cast<const TelemetryParameter &>(m.second);
-                const std::string &name = mp.get_name();
-                const TelemetryConfiguration *mc =
-                    configuration.has_telemetry(name) ?
-                    &configuration.get_telemetry(name) : nullptr;
+                const TelemetryDefinition &md =
+                    reinterpret_cast<const TelemetryDefinition &>(m.second);
+                const std::string &name = md.get_name();
 
                 meta->telemetry[name] =
-                    std::unique_ptr<Telemetry>(Telemetry::create(mp, mc));
-
-                meta->telemetry[name]->set_block_name(configuration.get_name());
+                    std::unique_ptr<Telemetry>(Telemetry::create(md,
+                                                                 static_cast<const ProcessorDefinition&>(*meta->definition),
+                                                                 meta->configuration));
             }
         }
 
         // Count up how many terminals we have.
-        for (auto &t : meta->parameters->get_terminals())
+        for (auto &t : meta->definition->get_terminals())
         {
-            const TerminalParameter &tp =
-                    reinterpret_cast<const TerminalParameter &>(t.second);
-            const std::string &name = tp.get_name();
+            const TerminalDefinition &td =
+                    reinterpret_cast<const TerminalDefinition &>(t.second);
+            const std::string &name = td.get_name();
             Terminal &terminal = *meta->terminals[name];
 
             if (terminal.is_output())
@@ -114,11 +107,11 @@ public:
                 const std::string mute_name = name + "_mute";
                 const std::string telemetry_name = name + "_telemetry";
 
-                if ((meta->controls.count(gain_name) != 0)
-                    || (meta->controls.count(mute_name) != 0)
+                if ((meta->parameters.count(gain_name) != 0)
+                    || (meta->parameters.count(mute_name) != 0)
                     || (meta->telemetry.count(telemetry_name) != 0)
-                    || (tp.has_bypass_source()
-                        && (meta->controls.count("bypass") != 0)))
+                    || (td.has_bypass_source()
+                        && (meta->parameters.count("bypass") != 0)))
                 {
                     output_process_count++;
                 }
@@ -128,13 +121,13 @@ public:
         outputs_to_process.resize(output_process_count);
         int top_index = 0;
 
-        // Assign universal controls and telemetry to the associated output
+        // Assign universal parameters and telemetry to the associated output
         // terminals.
-        for (auto &t : meta->parameters->get_terminals())
+        for (auto &t : meta->definition->get_terminals())
         {
-            const TerminalParameter &tp =
-                    reinterpret_cast<const TerminalParameter &>(t.second);
-            const std::string &name = tp.get_name();
+            const TerminalDefinition &td =
+                    reinterpret_cast<const TerminalDefinition &>(t.second);
+            const std::string &name = td.get_name();
             Terminal &terminal = *meta->terminals[name];
 
             if (terminal.is_output())
@@ -145,15 +138,15 @@ public:
                 TerminalOutputProcessor &top = outputs_to_process[top_index];
                 bool requires_processing = false;
 
-                if (meta->controls.count(gain_name) != 0)
+                if (meta->parameters.count(gain_name) != 0)
                 {
-                    assign_control(gain_name, top.get_gain());
+                    assign_parameter(gain_name, top.get_gain(), db_to_linear);
                     requires_processing = true;
                 }
 
-                if (meta->controls.count(mute_name) != 0)
+                if (meta->parameters.count(mute_name) != 0)
                 {
-                    assign_control(mute_name, top.get_mute());
+                    assign_parameter(mute_name, top.get_mute());
                     requires_processing = true;
                 }
 
@@ -163,10 +156,10 @@ public:
                     requires_processing = true;
                 }
 
-                if (tp.has_bypass_source()
-                    && meta->controls.count("bypass") != 0)
+                if (td.has_bypass_source()
+                    && meta->parameters.count("bypass") != 0)
                 {
-                    assign_control("bypass", top.get_bypass());
+                    assign_parameter("bypass", top.get_bypass());
                     requires_processing = true;
                 }
 
@@ -211,23 +204,23 @@ public:
         // We have to do this here because the source buffers for the bypass
         // function aren't available until after the terminals are assigned
         // in the algorithm-specific constructor.
-        for (auto &t : meta->parameters->get_terminals())
+        for (auto &t : meta->definition->get_terminals())
         {
-            const TerminalParameter &tp =
-                    reinterpret_cast<const TerminalParameter &>(t.second);
-            const std::string &name = tp.get_name();
+            const TerminalDefinition &td =
+                    reinterpret_cast<const TerminalDefinition &>(t.second);
+            const std::string &name = td.get_name();
             Terminal &terminal = *meta->terminals[name];
 
             if (terminal.is_output())
             {
                 TerminalOutputProcessor *top = terminal.get_output_processor();
 
-                if (tp.has_bypass_source()
-                    && meta->controls.count("bypass") != 0
+                if (td.has_bypass_source()
+                    && meta->parameters.count("bypass") != 0
                     && top != nullptr)
                 {
                     top->set_bypass_source(
-                         meta->terminals[tp.get_bypass_source()]->get_buffers());
+                         meta->terminals[td.get_bypass_source()]->get_buffers());
                 }
             }
         }
@@ -271,80 +264,70 @@ public:
     }
 
 
-    /// Get a reference to a control by name.  This is called by the framework,
+    /// Get a reference to a parameter by name.  This is called by the framework,
     /// not by the algorithm.
     ///
-    /// @param  name  The name of the control.
-    /// @return  A reference to the control.
-    Control &get_control(const std::string &name)
+    /// @param  name  The name of the parameter.
+    /// @return  A reference to the parameter.
+    Parameter &get_parameter(const std::string &name)
     {
-        if (meta->controls.count(name) == 0)
+        if (meta->parameters.count(name) == 0)
         {
-            SPDLOG_CRITICAL("Unknown control '{}' in '{}'.",
+            SPDLOG_CRITICAL("Unknown parameter '{}' in '{}'.",
                             name, meta->configuration->get_algorithm());
         }
 
-        return *meta->controls[name];
+        return *meta->parameters[name];
     }
 
 
-    /// Initialize all of the controls.  This is called by the framework,
-    /// not by the algorithm.  This will allocate storage for the control
-    /// values, and set them to their defaults.  Then, if any control settings
+    /// Initialize all of the parameters.  This is called by the framework,
+    /// not by the algorithm.  This will allocate storage for the parameter
+    /// values, and set them to their defaults.  Then, if any parameter settings
     /// are present in the configuration, they will be applied.
-    void initialize_controls()
+    void initialize_parameters()
     {
-        SPDLOG_TRACE("Initializing controls for '{}'.",
+        SPDLOG_TRACE("Initializing parameters for '{}'.",
                      meta->configuration->get_algorithm());
 
-        for (auto &c : meta->controls)
+        for (auto &c : meta->parameters)
         {
             c.second->initialize_post();
         }
-
-        if (meta->configuration->has_control_settings())
-        {
-            for (auto &s: meta->configuration->get_control_settings())
-            {
-                const ControlSetting &cs =
-                    reinterpret_cast<const ControlSetting &>(s.second);
-                set_control(cs);
-            }
-        }
     }
 
 
-    /// Set a control value.  This is called by the framework, not by the
+    /// Set a parameter value.  This is called by the framework, not by the
     /// algorithm.
     ///
     /// @param  setting  The setting to apply.
-    /// @return  True if the setting was applied, false if the control was
+    /// @return  True if the setting was applied, false if the parameter was
     ///          not found.
-    bool set_control(const ControlSetting &setting)
+    bool set_parameter(const ParameterSetting &setting)
     {
-        if (meta->controls.count(setting.get_name()) == 0)
+        if (meta->parameters.count(setting.get_name()) == 0)
         {
-            SPDLOG_WARN("Unknown control '{}' in '{}'.", setting.get_name(),
+            SPDLOG_WARN("Unknown parameter '{}' in '{}'.", setting.get_name(),
                         meta->configuration->get_algorithm());
             return false;
         }
 
-        get_control(setting.get_name()).set(setting);
+        get_parameter(setting.get_name()).set(setting);
 
         return true;
     }
 
 
-    /// Get a reference to a telemetry by name.  This is called by the framework,
+    /// Get a reference to a meter by name.  This is called by the framework,
     /// not by the algorithm.
     ///
-    /// @param  name  The name of the telemetry.
-    /// @return  A reference to the telemetry.
+    /// @param  name  The name of the meter.
+    /// @return  A reference to the meter.
     Telemetry &get_telemetry(const std::string &name)
     {
         if (meta->telemetry.count(name) == 0)
         {
-            SPDLOG_CRITICAL("Unknown telemetry '{}' in '{}'.",
+            SPDLOG_CRITICAL("Unknown meter '{}' in '{}'.",
                             name, meta->configuration->get_algorithm());
         }
 
@@ -383,35 +366,35 @@ public:
     ///     JSON-formatted string.
     void send_telemetry(void (*telemetry_callback)(const std::string &))
     {
-        for (auto &telemetry : meta->telemetry)
+        for (auto &t : meta->telemetry)
         {
-            telemetry.second->send(telemetry_callback);
+            t.second->send(telemetry_callback);
         }
     }
 
 
 protected:
-    /// Get the value of a constant from the configuration.  If this constant
+    /// Get the value of a property from the configuration.  If this property
     /// is not specified in the configuration, the default value from the
     /// parameter definition is used.
     ///
-    /// @param  name  The name of the constant.
-    /// @param  value  The value of the constant.
+    /// @param  name  The name of the property.
+    /// @param  value  The value of the property.
     template <typename T>
-    void get_constant(const std::string &name, T &value)
+    void get_property(const std::string &name, T &value)
     {
-        if (meta->configuration->has_constant(name))
+        if (meta->configuration->has_property(name))
         {
-            meta->configuration->get_constant(name).get_value(value);
+            meta->configuration->get_property(name).get_value(value);
         }
-        else if (meta->parameters->has_constant(name))
+        else if (meta->definition->has_property(name))
         {
 
-            meta->parameters->get_constant(name).get_default_value(value);
+            meta->definition->get_property(name).get_default_value(value);
         }
         else
         {
-            SPDLOG_CRITICAL("Unknown constant '{}' in '{}'.",
+            SPDLOG_CRITICAL("Unknown property '{}' in '{}'.",
                             name, meta->configuration->get_algorithm());
         }
     }
@@ -481,94 +464,170 @@ protected:
     }
 
 
-    /// Assign storage for a scalar control value.
+    /// Assign storage for a scalar parameter value that is a coefficient that
+    /// can used directly by the algorithm without conversion.
+    /// The value is not valid until after the algorithm's constructor (but
+    /// before `process()` is called).
+    ///
+    /// @param  name  The name of the parameter.
+    /// @param  value  The storage for the parameter value.
+    template <typename T>
+    void assign_parameter(const std::string &name, T *value)
+    {
+        get_parameter(name).assign(value);
+    }
+
+
+    /// Assign storage for a scalar parameter value.
+    /// The value is not valid until after the algorithm's constructor (but
+    /// before `process()` is called).
+    /// `conversion_function()` is called to convert the value from its
+    /// user-facing value to an internal representation.  For example,
+    /// `db_to_linear()` in `conversion.h` can be used to convert the value
+    /// from dB to linear gain.
+    ///
+    /// @param  name  The name of the parameter.
+    /// @param  value  The storage for the parameter value.
+    /// @param  conversion_function  An function to be called to convert the
+    ///             value before it is set.
+    template <typename T>
+    void assign_parameter(const std::string &name, T *value,
+                          T (*conversion_function)(T))
+    {
+        get_parameter(name).assign(value, conversion_function);
+    }
+
+
+    /// Assign storage for a scalar parameter value that is intermediate and
+    /// not used in real-time.  The post function is used to update the
+    /// algorithm's coefficients with values derived from the parameter value.
     /// The value is not valid until after the algorithm's constructor (but
     /// before `process()` is called).
     /// `POST_FUNCTION_SCALAR()` can be used to facilitate creating the
     /// `post_function` argument from a member function, if needed.
     ///
-    /// @param  name  The name of the control.
-    /// @param  value  The storage for the control value.
-    /// @param  post_function  An optional function to be called after the value
-    ///                        is set.
+    /// @param  name  The name of the parameter.
+    /// @param  value  The storage for the parameter value.
+    /// @param  post_function  A function to be called after the value is set.
     template <typename T>
-    void assign_control(const std::string &name, T *value,
-                        std::function<void()> post_function = nullptr)
+    void assign_parameter(const std::string &name, T *value,
+                          std::function<void()> post_function)
     {
-        get_control(name).assign(value, post_function);
+        get_parameter(name).assign(value, post_function);
     }
 
 
-    /// Assign storage for vector control values that are coefficients that
+    /// Assign storage for vector parameter values that are coefficients that
     /// can used directly by the algorithm without conversion.
-    /// The value is not valid until after the algorithm's constructor (but
+    /// The values are not valid until after the algorithm's constructor (but
     /// before `process()` is called).
     ///
-    /// @param  name  The name of the control.
-    /// @param  value  The storage for the control value.
+    /// @param  name  The name of the parameter.
+    /// @param  value  The storage for the parameter value.
     template <typename T>
-    void assign_control(const std::string &name, DspCoeffMemory<T[]> &value)
+    void assign_parameter(const std::string &name, DspCoeffMemory<T[]> &value)
     {
-        get_control(name).assign(value);
+        get_parameter(name).assign(value);
     }
 
 
-    /// Assign storage for vector control values that are intermediate and
+    /// Assign storage for vector parameter values.
+    /// The values are not valid until after the algorithm's constructor (but
+    /// before `process()` is called).
+    /// `conversion_function()` is called to convert the value from its
+    /// user-facing value to an internal representation.  For example,
+    /// `db_to_linear()` in `conversion.h` can be used to convert the value
+    /// from dB to linear gain.
+    ///
+    /// @param  name  The name of the parameter.
+    /// @param  value  The storage for the parameter value.
+    /// @param  conversion_function  An function to be called to convert the
+    ///             value before it is set.
+    template <typename T>
+    void assign_parameter(const std::string &name, DspCoeffMemory<T[]> &value,
+                          T (*conversion_function)(T))
+    {
+        get_parameter(name).assign(value, conversion_function);
+    }
+
+
+    /// Assign storage for vector parameter values that are intermediate and
     /// not used in real-time.  The post function is used to update the
-    /// algorithm's coefficients with values derived from the control value.
-    /// The value is not valid until after the algorithm's constructor (but
+    /// algorithm's coefficients with values derived from the parameter value.
+    /// The values are not valid until after the algorithm's constructor (but
     /// before `process()` is called).
     /// `POST_FUNCTION_VECTOR()` can be used to facilitate creating the
     /// `post_function` argument from a member function.
     ///
-    /// @param  name  The name of the control.
-    /// @param  value  The storage for the control value.
+    /// @param  name  The name of the parameter.
+    /// @param  value  The storage for the parameter value.
     /// @param  post_function  A function to be called after the value is set.
     template <typename T>
-    void assign_control(const std::string &name, DspParamMemory<T[]> &value,
-                        std::function<void(int)> post_function)
+    void assign_parameter(const std::string &name, DspParamMemory<T[]> &value,
+                          std::function<void(int)> post_function)
     {
-        get_control(name).assign(value, post_function);
+        get_parameter(name).assign(value, post_function);
     }
 
 
-    /// Assign storage for matrix control values that are coefficients that
+    /// Assign storage for matrix parameter values that are coefficients that
     /// can used directly by the algorithm without conversion.
     /// The value is not valid until after the algorithm's constructor (but
     /// before `process()` is called).
     ///
-    /// @param  name  The name of the control.
-    /// @param  value  The storage for the control value.
+    /// @param  name  The name of the parameter.
+    /// @param  value  The storage for the parameter value.
     template <typename T>
-    void assign_control(const std::string &name, DspCoeffMemory<T*[]> &value)
+    void assign_parameter(const std::string &name, DspCoeffMemory<T*[]> &value)
     {
-        get_control(name).assign(value);
+        get_parameter(name).assign(value);
     }
 
 
-    /// Assign storage for matrix control values that are intermediate and
+    /// Assign storage for matrix parameter values that are coefficients that
+    /// can used directly by the algorithm without conversion.
+    /// The value is not valid until after the algorithm's constructor (but
+    /// before `process()` is called).
+    /// `conversion_function()` is called to convert the value from its
+    /// user-facing value to an internal representation.  For example,
+    /// `db_to_linear()` in `conversion.h` can be used to convert the value
+    /// from dB to linear gain.
+    ///
+    /// @param  name  The name of the parameter.
+    /// @param  value  The storage for the parameter value.
+    /// @param  conversion_function  An function to be called to convert the
+    ///             value before it is set.
+    template <typename T>
+    void assign_parameter(const std::string &name, DspCoeffMemory<T*[]> &value,
+                          T (*conversion_function)(T))
+    {
+        get_parameter(name).assign(value, conversion_function);
+    }
+
+
+    /// Assign storage for matrix parameter values that are intermediate and
     /// not used in real-time.  The post function is used to update the
-    /// algorithm's coefficients with values derived from the control value.
+    /// algorithm's coefficients with values derived from the parameter value.
     /// The value is not valid until after the algorithm's constructor (but
     /// before `process()` is called).
     /// `POST_FUNCTION_MATRIX()` can be used to facilitate creating the
     /// `post_function` argument from a member function.
     ///
-    /// @param  name  The name of the control.
-    /// @param  value  The storage for the control value.
+    /// @param  name  The name of the parameter.
+    /// @param  value  The storage for the parameter value.
     /// @param  post_function  A function to be called after the value is set.
     template <typename T>
-    void assign_control(const std::string &name, DspParamMemory<T*[]> &value,
-                        std::function<void(int, int)> post_function)
+    void assign_parameter(const std::string &name, DspParamMemory<T*[]> &value,
+                          std::function<void(int, int)> post_function)
     {
-        get_control(name).assign(value, post_function);
+        get_parameter(name).assign(value, post_function);
     }
 
 
-    /// Assign storage for a scalar telemetry value.
+    /// Assign storage for a scalar meter value.
     ///
-    /// @param  name  The name of the telemetry.
-    /// @param  value  The storage for the telemetry value.
+    /// @param  name  The name of the meter.
+    /// @param  value  The storage for the meter value.
     template <typename T>
     void assign_telemetry(const std::string &name, const T *value)
     {
@@ -576,12 +635,12 @@ protected:
     }
 
 
-    /// Assign storage for vector telemetry values.
+    /// Assign storage for vector meter values.
     /// The value is not valid until after the algorithm's constructor (but
     /// before `process()` is called).
     ///
-    /// @param  name  The name of the telemetry.
-    /// @param  value  The storage for the telemetry value.
+    /// @param  name  The name of the meter.
+    /// @param  value  The storage for the meter value.
     template <typename T>
     void assign_telemetry(const std::string &name, DspTelemetryMemory<T[]> &value)
     {
@@ -589,12 +648,12 @@ protected:
     }
 
 
-    /// Assign storage for matrix telemetry values.
+    /// Assign storage for matrix meter values.
     /// The value is not valid until after the algorithm's constructor (but
     /// before `process()` is called).
     ///
-    /// @param  name  The name of the telemetry.
-    /// @param  value  The storage for the telemetry value.
+    /// @param  name  The name of the meter.
+    /// @param  value  The storage for the meter value.
     template <typename T>
     void assign_telemetry(const std::string &name, DspTelemetryMemory<T*[]> &value)
     {
@@ -629,8 +688,8 @@ private:
 
 
 /// Create a lambda function that calls a member function on this object.
-/// This can be used to facilitate creating the post function in 
-/// `assign_control()` for scalar controls.
+/// This can be used to facilitate creating the post function in
+/// `assign_parameter()` for scalar parameters.
 #define POST_FUNCTION_SCALAR(func) \
     [this]() { \
         this->func(); \
@@ -638,8 +697,8 @@ private:
 
 
 /// Create a lambda function that calls a member function on this object.
-/// This can be used to facilitate creating the post function in 
-/// `assign_control()` for vector controls.
+/// This can be used to facilitate creating the post function in
+/// `assign_parameter()` for vector parameters.
 #define POST_FUNCTION_VECTOR(func) \
     [this](int row_index) { \
         this->func(row_index); \
@@ -647,8 +706,8 @@ private:
 
 
 /// Create a lambda function that calls a member function on this object.
-/// This can be used to facilitate creating the post function in 
-/// `assign_control()` for matrix controls.
+/// This can be used to facilitate creating the post function in
+/// `assign_parameter()` for matrix parameters.
 #define POST_FUNCTION_MATRIX(func) \
     [this](int row_index, int column_index) { \
         this->func(row_index, column_index); \

@@ -1,5 +1,5 @@
 #include <bosepro/configuration.h>
-#include <bosepro/parameters.h>
+#include <bosepro/definition.h>
 #include <bosepro/profile.h>
 #include <bosepro/session.h>
 
@@ -17,8 +17,12 @@
 
 int connection_fd;
 
-void send_telemetry(const std::string &message)
+std::mutex socket_mutex;
+
+void send_telemetry_cb(const std::string &message)
 {
+    std::lock_guard<std::mutex> guard(socket_mutex);
+    
     int size = send(connection_fd, message.c_str(), message.size(), 0);
 
     if (size < 0)
@@ -35,7 +39,7 @@ int main(int argc, char *argv[])
     boost::program_options::options_description desc("Allowed options");
     desc.add_options()
         ("configuration,c", boost::program_options::value<std::string>()->default_value("config/configuration.json"), "configuration file")
-        ("parameters,p", boost::program_options::value<std::string>()->default_value("config/parameters.json"), "parameter definition file")
+        ("definitions,d", boost::program_options::value<std::string>()->default_value("config/module-definitions.json"), "module definition file")
         ("time,t", boost::program_options::value<int>(), "time to run (seconds)")
         ("help,h", "print this message and exit")
     ;
@@ -51,19 +55,34 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    SPDLOG_INFO("Profile resolution {} ns", bosepro::Profile::get_resolution());
-    bosepro::Profile::set_cpu_mips(1800.0);
-
     bosepro::Configuration configuration(vm["configuration"].as<std::string>());
-    bosepro::Parameters parameters(vm["parameters"].as<std::string>());
-    bosepro::Session session(configuration.get_session(), parameters);
+    bosepro::Definition definitions(vm["definitions"].as<std::string>());
+    bosepro::Session session(configuration.get_session(), definitions);
+
+    if (configuration.has_tasks())
+    {
+        session.create_tasks(configuration);
+    }
+
+    if (configuration.has_na_tasks())
+    {
+        session.create_na_tasks(configuration);
+    }
+
+    if (configuration.has_parameter_settings())
+    {
+        for (auto &ps : configuration.get_parameter_settings())
+        {
+            session.process_parameter_setting((const bosepro::ParameterSetting &)ps.second);
+        }
+    }
 
     if (vm.count("time"))
     {
         session.set_seconds_to_run(vm["time"].as<int>());
     }
 
-    session.set_telemetry_callback(send_telemetry);
+    session.set_telemetry_callback(send_telemetry_cb);
 
     session.start();
 
@@ -91,39 +110,48 @@ int main(int argc, char *argv[])
         SPDLOG_ERROR("Couldn't listen to socket");
     }
 
-    struct sockaddr_in client;
-    socklen_t len = sizeof(client);
-
-    connection_fd = accept(server_fd, (struct sockaddr *)&client, &len);
-
-    if (connection_fd < 0)
+    while (1)
     {
-        SPDLOG_ERROR("Couldn't accept client");
-    }
+        if (connection_fd <= 0) 
+        {
+            struct sockaddr_in client;
+            socklen_t len = sizeof(client);
+            connection_fd = accept(server_fd, (struct sockaddr *)&client, &len);
 
-    SPDLOG_INFO("Socket connected");
+            if (connection_fd < 0) {
+                SPDLOG_ERROR("Couldn't accept client");
+                continue;
+            }
+        }
 
-    while(1)
-    {
         char buf[1024];
         memset(buf, 0, sizeof(buf));
 
         int result = read(connection_fd, buf, sizeof(buf) - 1);
 
-        if (result < 0)
+        if (result <= 0)
         {
-            SPDLOG_ERROR("Couldn't read from socket.");
+            SPDLOG_ERROR("Couldn't read from socket / Invalid socket.");
+            close(connection_fd); // Close the invalid socket
+            connection_fd = -1;   // Mark the connection as closed
+            continue;
         }
 
-        if (buf[0] != '\0')
+        buf[result] = '\0';
+
+        SPDLOG_INFO("Got parameter setting: '{}'", buf);
+
+        try
         {
-            SPDLOG_INFO("Got command: {}", buf);
+            std::stringstream ss(buf);
+            bosepro::ParameterSetting ps = bosepro::ParameterSetting(ss);
+            session.process_parameter_setting(ps);
+        }
+        catch (const std::exception &e)
+        {
+            SPDLOG_ERROR("Error processing ps: {}", e.what());
         }
 
-        std::stringstream ss;
-        ss << buf;
-        bosepro::Command command = bosepro::Command(ss);
-        session.process_command(command);
         usleep(100);
     }
 

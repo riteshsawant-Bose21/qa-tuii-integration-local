@@ -2,11 +2,15 @@
 
 #include <bosepro/configurable.h>
 #include <bosepro/configuration.h>
-#include <bosepro/parameters.h>
+#include <bosepro/definition.h>
 #include <bosepro/task.h>
 
 #include <spdlog/spdlog.h>
 
+#include <string>
+#include <vector>
+#include <functional>
+#include <map>
 #include <cmath>
 #include <list>
 #include <memory>
@@ -14,32 +18,35 @@
 
 namespace bosepro {
 
-
 /// A session is a collection of tasks that are run together.  It represents
 /// a complete audio processing system.
 class Session : public Configurable {
 public:
-    /// Create a session using the given configuration and parameters.
+    /// Create a session using the given configuration and definitions.
     /// After this is done, the session is ready for `process()` to be called.
     ///
     /// @param  configuration  The configuration for the session.
-    /// @param  parameters  The parameter definitions for the system.
+    /// @param  definitions  The parameter definitions for the system.
     Session(const SessionConfiguration &configuration,
-            const Parameters &parameters)
+            const Definition &definitions)
         : Configurable(configuration), telemetry_callback(nullptr)
     {
         SPDLOG_TRACE("Creating session.");
-        // This makes the parameters available to all `Configurable` objects.
-        set_parameters(parameters);
+        // This makes the definitions available to all `Configurable` objects.
+        set_definitions(definitions);
+
+        session_cmd_map = 
+        {
+            {"send_telemetry",  [this](const ParameterSetting& c){ cmd_send_telemetry(c); }},
+            {"stop",            [this](const ParameterSetting& c){ cmd_stop_all(c); }},
+            {"destroy_task",    [this](const ParameterSetting& c){ cmd_destroy_task(c); }},
+            {"create_task",     [this](const ParameterSetting& c){ cmd_create_task(c); }},
+            {"create_na_task",  [this](const ParameterSetting& c){ cmd_create_na_task(c); }},
+            {"start_task",      [this](const ParameterSetting& c){ cmd_start_task(c); }},
+            {"stop_task",       [this](const ParameterSetting& c){ cmd_stop_task(c); }}
+        };
 
         frames_to_run = -1;
-
-        for (auto &t : configuration.get_tasks())
-        {
-            const TaskConfiguration &tc =
-                reinterpret_cast<const TaskConfiguration &>(t.second);
-            create_task(tc);
-        }
     }
 
 
@@ -82,6 +89,17 @@ public:
     bool finished_running()
     {
         return frames_to_run == 0;
+    }
+
+
+    void create_tasks(const Configuration &configuration)
+    {
+        for (auto &t : configuration.get_tasks())
+        {
+            const TaskConfiguration &tc =
+                reinterpret_cast<const TaskConfiguration &>(t.second);
+            create_task(tc);
+        }
     }
 
 
@@ -149,6 +167,67 @@ public:
     }
 
 
+    /// Create a non-audio task given a task configuration.  This will also start the
+    /// task.
+    ///
+    /// @param   task_configuration  The configuration for the task.
+    void create_na_task(const TaskConfiguration &task_configuration)
+    {
+        const std::string task_name = task_configuration.get_name();
+
+        SPDLOG_INFO("Creating na_task {}.", task_name);
+        if (na_tasks.count(task_name) != 0)
+        {
+            SPDLOG_CRITICAL("Duplicate tasks with name {}.", task_name);
+            return;
+        }
+
+        na_tasks[task_name] = std::unique_ptr<NaTask>(new NaTask(task_configuration));
+    }
+
+
+    void create_na_tasks(const Configuration &configuration)
+    {
+        for (auto &t : configuration.get_na_tasks())
+        {
+            const TaskConfiguration &tc =
+                reinterpret_cast<const TaskConfiguration &>(t.second);
+            create_na_task(tc);
+        }
+    }
+
+
+    /// Start an existing na task with the given name.
+    ///
+    /// @param  task_name  The name of the task to start.
+    void start_na_task(const std::string &task_name)
+    {
+        if (na_tasks.count(task_name) == 0)
+        {
+            SPDLOG_CRITICAL("Couldn't find task with name {}.", task_name);
+            return;
+        }
+
+        na_tasks[task_name]->start();
+    }
+
+
+    /// Stop an existing na task with the given name.  The task will remain
+    /// available to run again using `start_na_task()`.
+    ///
+    /// @param  task_name  The name of the na task to stop.
+    void stop_na_task(const std::string &task_name)
+    {
+        if (na_tasks.count(task_name) == 0)
+        {
+            SPDLOG_CRITICAL("Couldn't find task with name {}.", task_name);
+            return;
+        }
+
+        na_tasks[task_name]->stop();
+    }
+    
+
     /// Start all of the tasks in the session.
     void start()
     {
@@ -156,6 +235,10 @@ public:
         for (auto &task : tasks)
         {
             task.second->start();
+        }
+        for (auto &na_task : na_tasks)
+        {
+            na_task.second->start();
         }
     }
 
@@ -168,62 +251,26 @@ public:
         {
             task.second->stop();
         }
+        for (auto &na_task : na_tasks)
+        {
+            na_task.second->stop();
+        }
     }
 
 
-    /// Process the provided command.
+    /// Process the provided setting.
     ///
-    /// @param  command  The command to process.
-    void process_command(const Command &command)
+    /// @param  setting  The setting to process.
+    void process_parameter_setting(const ParameterSetting &setting)
     {
-        // TODO - we really need a better way to manage the different session
-        // commands.
-        if (command.get_target() == "session")
+        if (setting.get_target() == "session")
         {
-            if (command.get_name() == "send_telemetry")
-            {
-                if (telemetry_callback != nullptr)
-                {
-                    for (auto &task : tasks)
-                    {
-                        task.second->send_telemetry(telemetry_callback);
-                    }
-                }
-            }
-            else if (command.get_name() == "stop")
-            {
-                stop();
-            }
-            else if (command.get_name() == "destroy_task")
-            {
-                std::string task_name;
-                command.get_value(task_name);
-                destroy_task(task_name);
-            }
-            else if (command.get_name() == "create_task")
-            {
-                std::string filename;
-                command.get_value(filename);
-
-                bosepro::Configuration configuration(filename);
-                for (auto &t : configuration.get_session().get_tasks())
-                {
-                    const TaskConfiguration &tc =
-                        reinterpret_cast<const TaskConfiguration &>(t.second);
-                    create_task(tc);
-                }
-            }
-            else if (command.get_name() == "start_task")
-            {
-                std::string task_name;
-                command.get_value(task_name);
-                start_task(task_name);
-            }
-            else if (command.get_name() == "stop_task")
-            {
-                std::string task_name;
-                command.get_value(task_name);
-                stop_task(task_name);
+            try {
+                // Use 'at' to retrieve the function. If setting.get_name() is not found,
+                // std::out_of_range will be thrown.
+                session_cmd_map.at(setting.get_name())(setting);
+            } catch (const std::out_of_range&) {
+                SPDLOG_WARN("Unknown session setting '{}'", setting.get_name());
             }
         }
         else
@@ -231,10 +278,10 @@ public:
             for (auto &task : tasks)
             {
                 std::string block_name;
-                Algorithm *block = task.second->get_block(command.get_target());
+                Algorithm *block = task.second->get_block(setting.get_target());
                 if (block != nullptr)
                 {
-                    block->set_control((const ControlSetting &)command);
+                    block->set_parameter(setting);
                     break;
                 }
             }
@@ -242,7 +289,7 @@ public:
     }
 
 
-    /// Set the callback used to send telemetry.  When the "send_telemetry" command
+    /// Set the callback used to send telemetry.  When the "send_telemetry" setting
     /// is sent to this session, every block in the session will send a
     /// JSON-formatted string containing telemetry data for each of its telemetry.
     ///
@@ -250,12 +297,55 @@ public:
     void set_telemetry_callback(void (*telemetry_callback)(const std::string &))
     {
         this->telemetry_callback = telemetry_callback;
+        for (auto &na_task : na_tasks)
+        {
+            na_task.second->set_telemetry_callback(telemetry_callback);
+        }
     }
+
+
+    /// Socket setting to send telemetry for all tasks
+    ///
+    /// @param setting 
+    void cmd_send_telemetry(const ParameterSetting& setting);
+
+    /// Socket setting to stop all tasks
+    ///
+    /// @param setting 
+    void cmd_stop_all(const ParameterSetting& setting);
+
+    /// Socket setting to destroy a specific task
+    ///
+    /// @param setting 
+    void cmd_destroy_task(const ParameterSetting& setting);
+
+    /// Socket setting to create an audio task
+    ///
+    /// @param setting 
+    void cmd_create_task(const ParameterSetting& setting);
+
+    /// Socket setting to create a non-audio task
+    ///
+    /// @param setting 
+    void cmd_create_na_task(const ParameterSetting& setting);
+
+    /// Socket setting to start a specific task
+    ///
+    /// @param setting 
+    void cmd_start_task(const ParameterSetting& setting);
+
+    /// Socket setting to stop a specific task
+    ///
+    /// @param setting 
+    void cmd_stop_task(const ParameterSetting& setting);
+
 
 private:
     int_fast32_t frames_to_run;
     std::map<std::string, std::unique_ptr<Task>> tasks;
+    std::map<std::string, std::unique_ptr<NaTask>> na_tasks;
     void (*telemetry_callback)(const std::string &telemetry_message);
+    std::map<std::string, std::function<void(const ParameterSetting&)>> session_cmd_map;
 };
 
 

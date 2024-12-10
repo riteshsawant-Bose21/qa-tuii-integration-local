@@ -1,57 +1,102 @@
-
-#include <bosepro/algorithm.h>
-
+#include <bosepro/module.h>
+#include <bosepro/task.h>
 #include <cstdint>
-
+#include <sstream>
+#include <string>
+#include <vector>
+#include <numeric>
+#include <algorithm>
 
 namespace {
 
-
-class CpuUsage : public bosepro::Algorithm
+class CpuUsage : public bosepro::Module
 {
 public:
     CpuUsage(const bosepro::BlockConfiguration &configuration);
     virtual ~CpuUsage() = default;
 
-    virtual void process() override;
+    virtual void process();
 
 private:
-    float cpu1;
-    float cpu2;
-    float cpu3;
-    float cpu4;
-    bool high_cpu_usage;
+    float cpu;
+    bool  high_cpu_usage;
+    uint64_t idle_time;
+    uint64_t total_time;
 
-    ALGORITHM_DECLARE(CpuUsage);
+    bool parse_cpu_stats();
+
+    MODULE_DECLARE(CpuUsage);
 };
 
-ALGORITHM_REGISTER(CpuUsage, "cpu_usage");
-
+MODULE_REGISTER(CpuUsage, "cpu_usage");
 
 CpuUsage::CpuUsage(const bosepro::BlockConfiguration &configuration)
-    : bosepro::Algorithm(configuration)
+    : bosepro::Module(configuration),
+      idle_time(0), total_time(0)
 {
-    assign_telemetry("gain_meter", &cpu1);
-    assign_telemetry("gain_meter", &cpu2);
-    assign_telemetry("gain_meter", &cpu3);
-    assign_telemetry("gain_meter", &cpu4);
-    assign_telemetry("gain_meter", &high_cpu_usage);
-
-    cpu1 = 0;
-    cpu2 = 0;
-    cpu3 = 0;
-    cpu4 = 0;
-    high_cpu_usage = false;
+    assign_telemetry("cpu", &cpu, nullptr);
+    assign_telemetry("high_cpu_usage", &high_cpu_usage, nullptr);
 }
 
+bool CpuUsage::parse_cpu_stats()
+{
+    std::ifstream stat_file("/proc/stat");
+    if (!stat_file.is_open()) {
+        SPDLOG_ERROR("Failed to open /proc/stat");
+        return false;
+    }
+
+    std::string line;
+
+    while (std::getline(stat_file, line)) {
+        if (line.find("cpu ") == 0) {
+            std::istringstream iss(line);
+            std::string cpu_label;
+            uint64_t user, nice, system, idle, iowait, irq, softirq, steal;
+
+            iss >> cpu_label >> user >> nice >> system >> idle >> iowait >> irq >> softirq >> steal;
+
+            uint64_t idle_t = idle + iowait;
+            uint64_t total_t = user + nice + system + idle_t + irq + softirq + steal;
+
+            idle_time = idle_t;
+            total_time = total_t;
+
+            return true;
+        }
+    }
+
+    return false;
+}
 
 void CpuUsage::process()
 {
-    cpu1 = 1;
-    cpu2 = 2;
-    cpu3 = 3;
-    cpu4 = 4;
-    high_cpu_usage = false;
+    static uint64_t prev_idle_time = 0;
+    static uint64_t prev_total_time = 0;
+
+    if (!parse_cpu_stats()) {
+        SPDLOG_ERROR("Failed to parse CPU stats");
+        return;
+    }
+
+    uint64_t delta_idle = idle_time - prev_idle_time;
+    uint64_t delta_total = total_time - prev_total_time;
+
+    cpu = delta_total == 0 ? 0.0f : (100.0f * static_cast<float>(delta_total - delta_idle) / static_cast<float>(delta_total));
+
+    prev_idle_time = idle_time;
+    prev_total_time = total_time;
+
+    if (cpu >= 80.0f && high_cpu_usage == false) 
+    {
+        high_cpu_usage = true;
+        send_event_telemetry("high_cpu_usage");
+    }
+    else if (cpu < 80.0f && high_cpu_usage == true)
+    {
+        high_cpu_usage = false;
+        send_event_telemetry("high_cpu_usage");
+    }
 }
 
 

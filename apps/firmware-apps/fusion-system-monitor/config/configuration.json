@@ -1,12 +1,19 @@
 {
     "session": {
-        "tasks": [
+        "na_tasks": [
             {
-                "name": "task1",
+                "name": "fw_monitor",
+                "property_settings": [
+                    { "name": "period_ms", "value": 2000 }
+                ],
                 "blocks": [
                     {
-                        "name": "cpu_mon",
-                        "algorithm": "cpu_usage"
+                        "name": "cpu_usage",
+                        "module": "cpu_usage",
+                        "telemetry": [
+                            { "name": "cpu" },
+                            { "name": "high_cpu_usage" }
+                        ]
                     }
                 ]
             }

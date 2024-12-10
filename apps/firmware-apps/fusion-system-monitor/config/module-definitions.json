@@ -1,0 +1,20 @@
+{
+    "modules": [
+        {
+            "name": "cpu_usage",
+            "telemetry": [
+                { 
+                    "name": "cpu", 
+                    "dimensions": 0, 
+                    "value_type": "float", 
+                    "telemetry_type": "system" 
+                },
+                { 
+                    "name": "high_cpu_usage", 
+                    "dimensions": 0, 
+                    "value_type": "bool", 
+                    "telemetry_type": "event" }
+            ]
+        }
+    ]
+}

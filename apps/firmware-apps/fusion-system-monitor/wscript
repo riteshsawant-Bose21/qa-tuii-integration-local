@@ -64,7 +64,6 @@ def configure(conf):
         conf.env.append_value('CXXFLAGS',
                            ['-Wno-deprecated-copy-with-user-provided-copy'])
 
-        onnx_path = conf.path.abspath() + '/libs/onnxruntime-osx-universal2-1.17.0'
     else:
         conf.env.append_value('LDFLAGS', '-lpthread')
 
@@ -74,13 +73,6 @@ def configure(conf):
             # global namespace is deprecated. Please use <boost/bind/bind.hpp> + using namespace boost::placeholders, 
             # or define BOOST_BIND_GLOBAL_PLACEHOLDERS to retain the current behavior.’
             conf.env.append_value('CXXFLAGS', '-DBOOST_BIND_GLOBAL_PLACEHOLDERS')
-            onnx_path = conf.path.abspath() + '/libs/onnxruntime-linux-x64-1.17.0'
-        else:
-            onnx_path = conf.path.abspath() + '/libs/onnxruntime-linux-aarch64-1.17.0'
-
-    # add onnxruntime library
-    conf.env.append_value('INCLUDES', [onnx_path+'/include'])
-    conf.env.append_value('LIBPATH', [onnx_path+'/lib'])
 
 def build(bld):
     bld(export_includes=['./external/doctest', './include'], name='common-include')
@@ -88,11 +80,4 @@ def build(bld):
     bld.program(target='mune_dsp',
                 source=bld.path.ant_glob(['src/*.cpp', 'src/*.c']),
                 use=['common-include'],
-                lib=['jack', 'fmt', 'sndfile', 'boost_program_options', 'onnxruntime'])
-
-    bld.program(target='test_dsp',
-                source=bld.path.ant_glob(['src/*.cpp', 'src/*.c', 'test/*.cpp'],
-                                         excl=['src/mune_dsp.cpp']),
-                use=['common-include'],
-                lib=['jack', 'fmt', 'sndfile', 'boost_program_options', 'onnxruntime'])
-
+                lib=['jack', 'fmt', 'sndfile', 'boost_program_options'])

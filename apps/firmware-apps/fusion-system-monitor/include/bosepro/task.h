@@ -1,6 +1,7 @@
 #pragma once
 
 #include <bosepro/algorithm.h>
+#include <bosepro/module.h>
 #include <bosepro/configurable.h>
 #include <bosepro/configuration.h>
 #include <bosepro/dspmemory.h>
@@ -235,16 +236,16 @@ public:
 
         frames_to_run = -1;
 
-        if (configuration.has_constant("jack_client_name") > 0)
+        if (configuration.has_property("jack_client_name") > 0)
         {
             std::string client_name;
-            configuration.get_constant("jack_client_name").get_value(client_name);
+            configuration.get_property("jack_client_name").get_value(client_name);
             client = Jack::create_client(client_name, this);
         }
 
-        if (configuration.has_constant("cpu_affinity") > 0)
+        if (configuration.has_property("cpu_affinity") > 0)
         {
-            configuration.get_constant("cpu_affinity").get_value(cpu_affinity);
+            configuration.get_property("cpu_affinity").get_value(cpu_affinity);
         }
 
         // Create all of the blocks in the task.
@@ -265,50 +266,34 @@ public:
         for (auto &b : blocks)
         {
             b->initialize_terminals();
-            b->initialize_controls();
+            b->initialize_parameters();
             b->initialize_telemetry();
         }
 
-        for (auto &b : configuration.get_blocks())
+        for (auto &c : configuration.get_block_connections())
         {
-            const BlockConfiguration *bc =
-                reinterpret_cast<const BlockConfiguration *>(&b.second);
+            const ConnectionConfiguration *cc =
+                reinterpret_cast<const ConnectionConfiguration *>(&c.second);
+            Algorithm *input_block = block_map[cc->get_destination_block()];
+            Algorithm *ouput_block = block_map[cc->get_source_block()];
+            Terminal &output_terminal =
+                ouput_block->get_terminal(cc->get_output_terminal());
+            int output_channel = cc->get_output_channel();
+            int input_channel = cc->get_input_channel();
 
-            // Blocks with no input terminals have no connections.
-            if (bc->count("connections") == 0)
-            {
-                SPDLOG_DEBUG("Block {} has no connections.", bc->get_name());
-                continue;
-            }
+            SPDLOG_TRACE("Connecting {}:{}:{} -> {}:{}:{}.",
+                    cc->get_source_block(), cc->get_output_terminal(),
+                    cc->get_output_channel(), cc->get_destination_block(),
+                    cc->get_input_terminal(), cc->get_input_channel());
 
-            Algorithm *input_block = block_map[bc->get_name()];
-
-            SPDLOG_TRACE("Connecting block {}.", bc->get_name());
-
-            for (auto &c : bc->get_connections())
-            {
-                const ConnectionConfiguration *cc =
-                    reinterpret_cast<const ConnectionConfiguration *>(&c.second);
-                Algorithm *ouput_block = block_map[cc->get_source_block()];
-                Terminal &output_terminal =
-                    ouput_block->get_terminal(cc->get_output_terminal());
-                int output_channel = cc->get_output_channel();
-                int input_channel = cc->get_input_channel();
-
-                SPDLOG_TRACE("Connecting {}:{}:{} -> {}:{}:{}.",
-                             cc->get_source_block(), cc->get_output_terminal(),
-                             cc->get_output_channel(), bc->get_name(),
-                             cc->get_input_terminal(), cc->get_input_channel());
-
-                input_block->connect_terminal(cc->get_input_terminal(),
-                                              input_channel, output_terminal,
-                                              output_channel);
-            }
+            input_block->connect_terminal(cc->get_input_terminal(),
+                    input_channel, output_terminal,
+                    output_channel);
         }
 
-        if (configuration.has_constant("profile_blocks") > 0)
+        if (configuration.has_property("profile_blocks") > 0)
         {
-            configuration.get_constant("profile_blocks").get_value(profile_blocks);
+            configuration.get_property("profile_blocks").get_value(profile_blocks);
         }
 
         block_profile.resize(blocks.size());
@@ -472,14 +457,14 @@ public:
     }
 
 
-    /// Send meter data for each block in the task, using the provided callback.
+    /// Send telemetry data for each block in the task, using the provided callback.
     ///
-    /// @param  meter_callback  A callback function used to send meter data.
-    void send_telemetry(void (*meter_callback)(const std::string &))
+    /// @param  telemetry_callback  A callback function used to send telemetry data.
+    void send_telemetry(void (*telemetry_callback)(const std::string &))
     {
         for (auto &block : blocks)
         {
-            block->send_telemetry(meter_callback);
+            block->send_telemetry(telemetry_callback);
         }
     }
 
@@ -490,13 +475,247 @@ private:
     // A list of blocks, for quickly processing in order.
     std::list<std::unique_ptr<Algorithm>> blocks;
     std::vector<Profile> block_profile;
-    // A map of blocks, for accessing controls and telemetry.
+    // A map of blocks, for accessing parameters and telemetry.
     std::map<std::string, Algorithm *> block_map;
     bool profile_blocks = false;
     int_fast32_t cpu_affinity;
 
     JackClient *client;
     int_fast32_t frames_to_run;
+};
+
+
+/// A non-real-time non-audio processing task, which starts a periodic task thread
+/// that runs a collection of blocks
+class NaTask : public Configurable {
+public:
+    /// Create a task from a configuration.
+    ///
+    /// @param  configuration  The configuration for the task.
+    NaTask(const TaskConfiguration &configuration)
+        : Configurable(configuration),
+        period_ms(0), period_ns(0),
+        telemetry_callback(nullptr)
+    {
+        // Use this task's region manager while allocating blocks within the
+        // task.
+        region_manager.open_region();
+
+        if (configuration.has_property("cpu_affinity") > 0)
+        {
+            configuration.get_property("cpu_affinity").get_value(cpu_affinity);
+        }
+
+        if (configuration.has_property("period_ms") > 0)
+        {
+            configuration.get_property("period_ms").get_value(period_ms);
+        }
+
+        period_ns = period_ms == 0 ? 0 : period_ms * 1'000'000; // Convert ms to nanoseconds
+
+        // Create all of the blocks in the task.
+        for (auto &b : configuration.get_blocks())
+        {
+            SPDLOG_DEBUG("Creating blocks");
+            const BlockConfiguration *bc =
+                reinterpret_cast<const BlockConfiguration *>(&b.second);
+
+            SPDLOG_DEBUG("Creating block: {}.", bc->get_name());
+
+            blocks.push_back(std::unique_ptr<Module>(
+                ChildFactory<Module,
+                     const BlockConfiguration &>::create_child(
+                         bc->get_module(), *bc)));
+            block_map[bc->get_name()] = blocks.back().get();
+        }
+
+        for (auto &b : blocks)
+        {
+            b->initialize_parameters();
+            b->initialize_telemetry();
+        }
+
+        region_manager.close_region();
+    }
+
+
+    virtual ~NaTask()
+    {
+        // Stop the thread if it's running
+        stop();
+
+        // Use this task's region manager while destroying blocks within this
+        // task (will occur after this destructor exits, when `blocks` is
+        // destroyed). The region will be closed when `region_manager` is
+        // destroyed.
+        region_manager.open_region();
+    }
+
+
+    /// Run process() on all of the blocks in this non-audio task.
+    ///
+    virtual void process() override
+    {
+        for (auto &block : blocks)
+        {
+            block->process();
+        }
+    }
+
+
+    /// Set the telemetry callback for this task and all its blocks
+    ///
+    /// @param telemetry_callback
+    void set_telemetry_callback(void (*telemetry_callback)(const std::string &))
+    {
+        this->telemetry_callback = telemetry_callback;
+        for (auto &block : blocks)
+        {
+            block->set_telemetry_callback(telemetry_callback);
+        }
+    }
+
+
+    /// Get a pointer to a module block with the given name.
+    ///
+    /// @param  name  The name of the block.
+    /// @return  A pointer to the block.
+    Module *get_block(const std::string &name)
+    {
+        if (block_map.count(name) != 0)
+        {
+            return block_map[name];
+        }
+        else
+        {
+            return nullptr;
+        }
+    }
+
+
+    /// Get the CPU affinity to be used for this non-audio task.
+    ///
+    /// @return  The CPU affinity configured for this task.
+    int_fast32_t get_cpu_affinity()
+    {
+        return cpu_affinity;
+    }
+
+
+    /// Get the period in milliseconds for this non-audio task.
+    ///
+    /// @return  The period in milliseconds configured for this task.
+    int_fast32_t get_period_ms()
+    {
+        return period_ms;
+    }
+
+
+    /// Check if a telemetry callback is registered with this non-audio task.
+    ///
+    /// @return  A bool indicating whether or not the callback is set.
+    bool has_telemetry_callback()
+    {
+        return this->telemetry_callback != nullptr;
+    }
+
+
+    /// Send telemetry data for each block in the task.
+    void send_telemetry()
+    {
+        for (auto &block : blocks)
+        {
+            block->send_telemetry();
+        }
+    }
+
+
+    /// Set the real-time priority of the task (between 0 and 99).
+    /// If this is not called, the task will not be a real-time task.
+    void set_priority(int priority)
+    {
+#ifdef USE_MAC_THREADS
+        // Mac-specific thread priority setting
+#else
+        struct sched_param sched_param;
+        sched_param.sched_priority = priority;
+
+        int err = pthread_setschedparam(thread, SCHED_FIFO, &sched_param);
+        if (err != 0) {
+            SPDLOG_ERROR("Failed to set task priority: {}", strerror(err));
+        }
+#endif
+    }
+
+
+    void start()
+    {
+        // we only start the periodic thread if there's a period
+        if (period_ns)
+        {
+            int err = pthread_create(&thread, nullptr, thread_entry_point, this);
+            if (err != 0) {
+                SPDLOG_CRITICAL("pthread_create() failed: {}", strerror(err));
+            }
+        }
+    }
+
+
+    void stop()
+    {
+        if (thread != 0) {
+            pthread_cancel(thread);
+            pthread_join(thread, nullptr);
+            thread = 0;
+        }
+    }
+
+
+private:
+    /// The static function that serves as the entry point for the thread.
+    static void* thread_entry_point(void* arg)
+    {
+        NaTask* task = static_cast<NaTask*>(arg);
+        return task->run();
+    }
+
+    /// The function that runs the task thread. It executes the task function
+    /// at the specified frequency.
+    void* run()
+    {
+        auto next_execution_time = std::chrono::steady_clock::now();
+
+        while (true) {
+            // Execute the task function
+            process();
+
+            // Calculate the next execution time
+            next_execution_time += std::chrono::nanoseconds(period_ns);
+
+            // Sleep until the next execution time
+            std::this_thread::sleep_until(next_execution_time);
+
+            // Check for cancellation
+            pthread_testcancel();
+        }
+
+        return nullptr; // Not reached
+    }
+
+
+    RegionManager region_manager;
+
+    // A list of blocks, for quickly processing in order.
+    std::list<std::unique_ptr<Module>> blocks;
+    // A map of blocks, for accessing parameters and telemetry.
+    std::map<std::string, Module *> block_map;
+
+    int_fast32_t cpu_affinity;
+    int_fast32_t period_ms;
+    int_fast32_t period_ns;
+
+    pthread_t thread;
+    void (*telemetry_callback)(const std::string &telemetry_message);
 };
 
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <bosepro/property.h>
+#include <bosepro/navigator.h>
 
 #include <sstream>
 #include <string>
@@ -12,23 +12,21 @@ namespace bosepro {
 class SessionConfiguration;
 class TaskConfiguration;
 class BlockConfiguration;
-class ConstantConfiguration;
+class PropertyConfiguration;
 class TerminalConfiguration;
-class ControlConfiguration;
-class TelemetryConfiguration;
 class ConnectionConfiguration;
-class ControlSetting;
+class ParameterSetting;
 
 
 /// A configuration or set of configurations.
-class Configuration : public PropertyNavigator {
+class Configuration : public Navigator {
 public:
     /// Build the configuration from the given JSON file.  This is used to
     /// load entire configurations from a JSON file.
     ///
     /// @param  filename  The name of a JSON configuration file.
     Configuration(const std::string &filename)
-        : PropertyNavigator(filename)
+        : Navigator(filename)
     {
     }
 
@@ -38,7 +36,7 @@ public:
     ///
     /// @param  ss  A string stream containing a JSON string.
     Configuration(std::stringstream &ss)
-        : PropertyNavigator(ss)
+        : Navigator(ss)
     {
     }
 
@@ -52,6 +50,68 @@ public:
     }
 
 
+    /// Test whether a list of tasks exists in this configuration.
+    ///
+    /// @return  True if the configuration contains a list of tasks.
+    bool has_tasks() const
+    {
+        return has_member("tasks");
+    }
+
+
+    /// Get the list of tasks in this configuration.
+    /// The list of tasks must exist: use `has_tasks()` to test whether it
+    /// exists before calling this function.
+    ///
+    /// @return  The list of tasks.
+    const TaskConfiguration &get_tasks() const
+    {
+        return (const TaskConfiguration &)get_member("tasks");
+    }
+
+
+    /// Test whether a list of non-audio tasks exists in this configuration.
+    ///
+    /// @return  True if the configuration contains a list of tasks.
+    bool has_na_tasks() const
+    {
+        return has_member("na_tasks");
+    }
+
+
+    /// Get the list of non-audio tasks in this configuration.
+    /// The list of tasks must exist: use `has_tasks()` to test whether it
+    /// exists before calling this function.
+    ///
+    /// @return  The list of tasks.
+    const TaskConfiguration &get_na_tasks() const
+    {
+        return (const TaskConfiguration &)get_member("na_tasks");
+    }
+
+
+    /// Test whether list of parameter settings exists in this configuration.
+    ///
+    /// @return  True if the configuration contains a list of parameter
+    ///          settings.
+    bool has_parameter_settings() const
+    {
+        return has_member("parameter_settings");
+    }
+
+
+    /// Get the list of parameter settings in this configuration.
+    /// The list of parameter settings must exist: use
+    /// `has_parameter_settings()` to test whether it exists before calling
+    /// this function.
+    ///
+    /// @return  The list of parameter settings.
+    const ParameterSetting &get_parameter_settings() const
+    {
+        return (const ParameterSetting &)get_member("parameter_settings");
+    }
+
+
     /// Get the name of this configuration.
     ///
     /// @return  The name of this configuration.
@@ -61,9 +121,9 @@ public:
     }
 
 
-    /// Get the value of a constant or control setting.
+    /// Get the value of a property or parameter setting.
     ///
-    /// @param  value  The value of this constant or control setting.
+    /// @param  value  The value of this property or parameter setting.
     template <typename T>
     void get_value(T &value) const
     {
@@ -71,37 +131,26 @@ public:
     }
 
 
-    /// Test whether this configuration has a constant with the given name.
+    /// Test whether this configuration has a property with the given name.
     ///
-    /// @param  name  The name of the constant.
-    /// @return  True if the constant exists, false otherwise.
-    bool has_constant(const std::string &name) const
+    /// @param  name  The name of the property.
+    /// @return  True if the property exists, false otherwise.
+    bool has_property(const std::string &name) const
     {
-        return list_has_member("constants", "name", name);
+        return list_has_member("property_settings", "name", name);
     }
 
 
-    /// Get the configuration for the constant with the given name.  The
-    /// constant must exist: use `has_constant()` to test for its existence
-    /// before calling this method.
+    /// Get the configuration for the property with the given name.  The
+    /// property must exist: use `has_property()` to test for its existence
+    /// before calling this function.
     ///
-    /// @param  name  The name of the constant.
-    /// @return  The constant configuration.
-    const ConstantConfiguration &get_constant(const std::string &name) const
+    /// @param  name  The name of the property.
+    /// @return  The property configuration.
+    const PropertyConfiguration &get_property(const std::string &name) const
     {
-        return (const ConstantConfiguration &)list_get_member("constants",
+        return (const PropertyConfiguration &)list_get_member("property_settings",
                                                               "name", name);
-    }
-
-
-    /// Get the number of rows and columns for this control or telemetry.
-    ///
-    /// @param  rows  The number of rows.
-    /// @param  columns  The number of columns.
-    void get_dimensions(int &rows, int &columns) const
-    {
-        rows = get_count("num_rows");
-        columns = get_count("num_columns");
     }
 };
 
@@ -109,13 +158,6 @@ public:
 /// The configuration for a session.
 class SessionConfiguration : public Configuration {
 public:
-    /// Get the list of tasks configured for this session.
-    ///
-    /// @return  The list of tasks.
-    const TaskConfiguration &get_tasks() const
-    {
-        return (const TaskConfiguration &)get_member("tasks");
-    }
 };
 
 
@@ -128,6 +170,26 @@ public:
     const BlockConfiguration &get_blocks() const
     {
         return (const BlockConfiguration &)get_member("blocks");
+    }
+
+
+    /// Test whether the task configuration has block connections specified.
+    ///
+    /// @return  True if the task configuration has block connections specified.
+    bool has_block_connections() const
+    {
+        return has_member("block_connections");
+    }
+
+
+    /// Get the list of connections configured for this task.  The list of
+    /// connections must exist: use `has_block_connections()` to test whether it
+    /// exists before calling this function.
+    ///
+    /// @return  The list of connections.
+    const ConnectionConfiguration &get_block_connections() const
+    {
+        return (const ConnectionConfiguration &)get_member("block_connections");
     }
 };
 
@@ -144,6 +206,15 @@ public:
     }
 
 
+    /// Get the name of the algorithm to use for this block.
+    ///
+    /// @return  The name of the algorithm.
+    const std::string &get_module() const
+    {
+        return get_string("module");
+    }
+
+
     /// Test whether the block configuration has a terminal of the given name.
     ///
     /// @param  name  The name of the terminal.
@@ -151,113 +222,26 @@ public:
     ///          name, false otherwise.
     bool has_terminal(const std::string &name) const
     {
-        return list_has_member("terminals", "name", name);
+        return list_has_member("terminal_channels", "name", name);
     }
 
 
     /// Get the terminal configuration for the terminal of the given name.
     /// The terminal configuration must exist: use `has_terminal()` to test
-    /// whether it exists before calling this method.
+    /// whether it exists before calling this function.
     ///
     /// @param  name  The name of the terminal.
     /// @return  The terminal configuration.
     const TerminalConfiguration &get_terminal(const std::string &name) const
     {
-        return (TerminalConfiguration &)list_get_member("terminals", "name",
-                                                        name);
-    }
-
-
-    /// Test whether the block configuration has a control of the given name.
-    ///
-    /// @param  name  The name of the control.
-    /// @return  True if the block configuration has a control of the given
-    ///          name, false otherwise.
-    bool has_control(const std::string &name) const
-    {
-        return list_has_member("controls", "name", name);
-    }
-
-
-    /// Get the control configuration for the control of the given name.  The
-    /// control configuration must exist: use `has_control()` to test whether
-    /// it exists before calling this method.
-    ///
-    /// @param  name  The name of the control.
-    /// @return  The control configuration.
-    const ControlConfiguration &get_control(const std::string &name) const
-    {
-        return (ControlConfiguration &)list_get_member("controls", "name", name);
-    }
-
-
-    /// Test whether the block configuration has a telemetry of the given name.
-    ///
-    /// @param  name  The name of the telemetry.
-    /// @return  True if the block configuration has a telemetry of the given
-    ///          name, false otherwise.
-    bool has_telemetry(const std::string &name) const
-    {
-        return list_has_member("telemetry", "name", name);
-    }
-
-
-    /// Get the telemetry configuration for the telemetry of the given name.  The
-    /// telemetry configuration must exist: use `has_telemetry()` to test whether it
-    /// exists before calling this method.
-    ///
-    /// @param  name  The name of the telemetry.
-    /// @return  The telemetry configuration.
-    const TelemetryConfiguration &get_telemetry(const std::string &name) const
-    {
-        return (TelemetryConfiguration &)list_get_member("telemetry", "name", name);
-    }
-
-
-    /// Test whether the block configuration has connections specified.
-    ///
-    /// @return  True if the block configuration has connections specified,
-    bool has_connections() const
-    {
-        return has_member("connections");
-    }
-
-
-    /// Get the list of connections configured for this block.  The list of
-    /// connections must exist: use `has_connections()` to test whether it
-    /// exists before calling this method.
-    ///
-    /// @return  The list of connections.
-    const ConnectionConfiguration &get_connections() const
-    {
-        return (const ConnectionConfiguration &)get_member("connections");
-    }
-
-
-    /// Test whether the block configuration has control settings specified.
-    ///
-    /// @return  True if the block configuration has control settings
-    ///          specified, false otherwise.
-    bool has_control_settings() const
-    {
-        return has_member("control_settings");
-    }
-
-
-    /// Get the list of control settings configured for this block.  The list
-    /// of control settings must exist: use `has_control_settings()` to test
-    /// whether it exists before calling this method.
-    ///
-    /// @return  The list of control settings.
-    const ControlSetting &get_control_settings() const
-    {
-        return (const ControlSetting &)get_member("control_settings");
+        return (TerminalConfiguration &)list_get_member("terminal_channels",
+                                                        "name", name);
     }
 };
 
 
-/// The configuration for a constant.
-class ConstantConfiguration : public Configuration {
+/// The configuration for a property.
+class PropertyConfiguration : public Configuration {
 
 
 };
@@ -276,47 +260,48 @@ public:
 };
 
 
-/// The configuration for a control.
-class ControlConfiguration : public Configuration {
-
-};
-
-
-/// The configuration for a telemetry.
-class TelemetryConfiguration : public Configuration {
-
-};
-
-
-/// The configuration for a control setting.
-class ControlSetting : public Configuration {
+/// The configuration for a parameter setting.
+class ParameterSetting : public Configuration {
 public:
-    /// Create the control setting from a JSON string.
+    /// Create the parameter setting from a JSON string.
     ///
     /// @param  ss  A string stream containing the JSON string.
-    ControlSetting(std::stringstream &ss)
+    ParameterSetting(std::stringstream &ss)
         : Configuration(ss)
     {
     }
 
 
-    /// Get the row index for this control setting.  If the row is not set,
-    /// this method returns 0.
+    /// Get the name of the target (usually a block) for this parameter setting.
+    ///
+    /// @return  The name of the target object for the parameter setting.
+    const std::string &get_target() const
+    {
+        return get_string("target");
+    }
+
+
+    /// Get the row index for this parameter setting.  If the row is not set,
+    /// this function returns 0.
     ///
     /// @return  The row index.
     int get_row() const
     {
-        return get_index("row");
+        int row;
+        get_list_value("index", 0, row);
+        return row - 1;
     }
 
 
-    /// Get the column index for this control setting.  If the column is not
-    /// set, this method returns 0.
+    /// Get the column index for this parameter setting.  If the column is not
+    /// set, this function returns 0.
     ///
     /// @return  The column index.
     int get_column() const
     {
-        return get_index("column");
+        int column;
+        get_list_value("index", 1, column);
+        return column - 1;
     }
 };
 
@@ -330,6 +315,15 @@ public:
     const std::string &get_source_block() const
     {
         return get_string("source_block");
+    }
+
+
+    /// Get the name of the destination block for the signal in this connection.
+    ///
+    /// @return  The name of the destination block.
+    const std::string &get_destination_block() const
+    {
+        return get_string("destination_block");
     }
 
 
@@ -370,28 +364,6 @@ public:
     int get_input_channel() const
     {
         return get_index("input_channel");
-    }
-};
-
-
-/// A configuration containing a single command.
-class Command: public ControlSetting {
-public:
-    /// Create the command from a JSON string.
-    ///
-    /// @param  ss  A string stream containing the JSON command string.
-    Command(std::stringstream &ss)
-        : ControlSetting(ss)
-    {
-    }
-
-
-    /// Get the name of the target (usually a block name) for this command.
-    ///
-    /// @return  The name of the target.
-    const std::string &get_target() const
-    {
-        return get_string("target");
     }
 };
 

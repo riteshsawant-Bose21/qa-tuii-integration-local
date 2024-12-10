@@ -2,7 +2,7 @@
 
 #include <bosepro/configuration.h>
 #include <bosepro/dspmemory.h>
-#include <bosepro/parameters.h>
+#include <bosepro/definition.h>
 
 #include <spdlog/spdlog.h>
 
@@ -15,11 +15,11 @@ namespace bosepro {
 
 
 /// A class to manage universal algorithm parameters (gain, mute, bypass, and
-/// level meter) for output terminals.
+/// level telemetry) for output terminals.
 class TerminalOutputProcessor {
 public:
     TerminalOutputProcessor()
-        : smoothed_gain(), gain(), mute(), meter(), output_buffer(nullptr), bypass_buffer(nullptr),
+        : smoothed_gain(), gain(), mute(), telemetry(), output_buffer(nullptr), bypass_buffer(nullptr),
           frame_size(0), num_channels(0)
     { }
 
@@ -32,7 +32,7 @@ public:
     }
 
     /// Process the output signals of an output terminal to implement default
-    /// bypass, gain, and metering behavior.
+    /// bypass, gain, and telemetry behavior.
     void process()
     {
         // Bypass by copying inputs to outputs.
@@ -46,11 +46,12 @@ public:
         }
 
         // Apply gain and mute.
-        if (has_gain())
+        if (has_gain() || has_mute())
         {
             for (int channel = 0; channel < num_channels; channel++)
             {
-                float target_gain = mute[channel] ? 0.0f : gain[channel];
+                float target_gain = (has_mute() && mute[channel]) ?
+                    0.0f : (has_gain() ? gain[channel] : 1.0);
                 float g = smoothed_gain[channel];
                 float *pbuf = (float *)output_buffer[channel];
 
@@ -64,18 +65,18 @@ public:
             }
         }
 
-        // Calculate output peak meters.
-        if (has_meter())
+        // Calculate output peak telemetry.
+        if (has_telemetry())
         {
             for (int channel = 0; channel < num_channels; channel++)
             {
                 const float *pbuf = (const float *)output_buffer[channel];
-                meter[channel] = 0.0;
+                telemetry[channel] = 0.0;
 
                 for (int sample = 0; sample < frame_size; sample++)
                 {
                     float a = std::fabs(pbuf[sample]);
-                    meter[channel] = std::max(meter[channel], a);
+                    telemetry[channel] = std::max(telemetry[channel], a);
                 }
             }
         }
@@ -91,9 +92,9 @@ public:
         return mute;
     }
 
-    DspMeterMemory<float[]> &get_meter()
+    DspTelemetryMemory<float[]> &get_telemetry()
     {
-        return meter;
+        return telemetry;
     }
 
     bool *get_bypass()
@@ -125,15 +126,15 @@ private:
         return mute.get() != nullptr;
     }
 
-    bool has_meter() const
+    bool has_telemetry() const
     {
-        return meter.get() != nullptr;
+        return telemetry.get() != nullptr;
     }
 
     DspStateMemory<float[]> smoothed_gain;
     DspCoeffMemory<float[]> gain;
     DspCoeffMemory<bool[]> mute;
-    DspMeterMemory<float[]> meter;
+    DspTelemetryMemory<float[]> telemetry;
     float **output_buffer;
     const float **bypass_buffer;
     int_fast32_t frame_size;
@@ -147,27 +148,53 @@ class Terminal {
 public:
     /// Create a terminal.
     ///
-    /// @param  parameter  The terminal parameter definition.
+    /// @param  definition  The terminal definition.
     /// @param  configuration  The configuration to use for the terminal.
     /// @param  frame_size  The number of elements in the signal per frame.
-    Terminal(const TerminalParameter &parameter,
-             const TerminalConfiguration *configuration,
+    Terminal(const TerminalDefinition &definition,
+             const BlockConfiguration *configuration,
              int_fast32_t frame_size)
         : buffer(nullptr), top(nullptr), data_size(0), frame_size(frame_size),
-          is_output_terminal(parameter.is_output())
+          is_output_terminal(definition.is_output())
     {
-        if (configuration != nullptr)
+        if (definition.has_channels())
         {
-            num_channels = configuration->get_num_channels();
+            std::string property_name;
+            int channels;
+            channels = definition.get_channels(property_name);
+
+            if (!property_name.empty())
+            {
+                if (configuration->has_property(property_name))
+                {
+                    const PropertyConfiguration &pc =
+                        configuration->get_property(property_name);
+                    pc.get_value(channels);
+                }
+                else
+                {
+                    const PropertyDefinition &pd =
+                        definition.get_property(property_name);
+                    pd.get_default_value(channels);
+                }
+            }
+
+            num_channels = channels;
+        }
+        else if (configuration->has_terminal(definition.get_name()))
+        {
+            const TerminalConfiguration &tc =
+                configuration->get_terminal(definition.get_name());
+            num_channels = tc.get_num_channels();
         }
         else
         {
-            num_channels = parameter.get_default_channels();
+            definition.get_minimum_channels();
         }
 
         SPDLOG_TRACE("Created {} terminal '{}' with {} channels.",
                      is_output_terminal ? "output" : "input",
-                     parameter.get_name(), num_channels);
+                     definition.get_name(), num_channels);
     }
 
 
