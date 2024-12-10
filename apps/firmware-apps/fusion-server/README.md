@@ -137,7 +137,7 @@ Make targets:
  fmt - Format code
  vet - Run go vet
  lint - Run linter
- build-linux - Build for Linux amd64
+ build-linux-amd64 - Build for Linux amd64
  build-linux-arm32 - Build for Linux ARM32
  build-linux-arm64 - Build for Linux ARM64
  build-darwin-arm64 - Build for macOS ARM64

@@ -36,7 +36,7 @@ tidy:
 	cd fusion && $(GOMOD) tidy
 
 # Cross compilation
-build-linux:
+build-linux-amd64:
 	mkdir -p $(BUILD_DIR)
 	cd fusion && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GOBUILD) $(BUILD_FLAGS) $(LDFLAGS) -o ../$(BUILD_DIR)/$(BINARY_NAME)_linux_amd64 -v ./cmd/fusion
 
@@ -63,7 +63,7 @@ lint:
 	cd fusion && golangci-lint run
 
 # Build all platforms
-build-all: build-linux build-linux-arm32 build-linux-arm64 build-darwin-arm64
+build-all: build-linux-amd64 build-linux-arm32 build-linux-arm64 build-darwin-arm64
 
 # Show help
 help:
@@ -79,11 +79,11 @@ help:
 	@echo " fmt - Format code"
 	@echo " vet - Run go vet"
 	@echo " lint - Run linter"
-	@echo " build-linux - Build for Linux amd64"
+	@echo " build-linux-amd64 - Build for Linux amd64"
 	@echo " build-linux-arm32 - Build for Linux ARM32"
 	@echo " build-linux-arm64 - Build for Linux ARM64"
 	@echo " build-darwin-arm64 - Build for macOS ARM64"
 	@echo " build-all - Build for all platforms"
 
-.PHONY: all build clean run deps tidy fmt vet lint build-linux build-linux-arm32 build-linux-arm64 build-darwin-arm64 build-all help test-verbose
+.PHONY: all build clean run deps tidy fmt vet lint build-linux-amd64 build-linux-arm32 build-linux-arm64 build-darwin-arm64 build-all help test-verbose
 	

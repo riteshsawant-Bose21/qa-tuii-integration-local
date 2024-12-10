@@ -6,11 +6,11 @@ set -euo pipefail
 # Usage:
 # $ ./build-fusion-server [-p]
 #   Arguments:
-#   -p    [optional] Build a release package with required config files, etc.
+#   --package    [optional] Build a release package with required config files, etc.
 
 # Define variables
 BINARY_NAME="fusion-server"
-ARCH="arm64"
+ARCH="${ARCH:-arm64}"
 OS="linux"
 EXPECTED_BINARY="${BINARY_NAME}_${OS}_${ARCH}"
 
@@ -35,29 +35,32 @@ if [ ! -f "build/$EXPECTED_BINARY" ]; then
 fi
 
 # Rename the binary
-echo "Renaming binary..."
-mv "build/$EXPECTED_BINARY" "build/$BINARY_NAME"
+echo "Linking binary to expected name..."
+pushd ./build
+ln -sf "$EXPECTED_BINARY" "$BINARY_NAME"
+popd
 
-flag=${1-none}
+flag=${1:-}
 
-if [ "$flag" = '-p' ]; then
+if [ "$flag" = '--package' ]; then
     # Make a "release package" with the binary, config files and version info.
     # Get the commit-id
     commit_id=$(git rev-parse HEAD)
     full_version=${VERSION}-${BUILD_NUMBER}+${commit_id:0:7}
 
-    cat << EOF_VERSION > build/version.info
-APP = fusion-server
-VERSION = $full_version
-BRANCH = $(git rev-parse --abbrev-ref HEAD)
-COMMIT_ID = $commit_id
-COMMIT_DATE = $(TZ=UTC0 git --no-pager log -1 --pretty='format:%cd' --date='format-local:%Y-%m-%dT%H:%M:%S+00:00')
-BUILD_DATE  = $(date -u -Iseconds)
+    cat << EOF_VERSION > build/fusion-server.info
+APP="fusion-server"
+VERSION="$full_version"
+BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+COMMIT_ID="$commit_id"
+COMMIT_DATE="$(TZ=UTC0 git --no-pager log -1 --pretty='format:%cd' --date='format-local:%Y-%m-%dT%H:%M:%S+00:00')"
+BUILD_DATE="$(date -u -Iseconds)"
 EOF_VERSION
     
-    tar -czf "build/fusion-server_v${full_version}.tgz" scripts/*.service scripts/*.conf -C ./build "$BINARY_NAME" version.info
+    tar -czhf "build/fusion-server_v${full_version}.tgz" scripts/*.service scripts/generate_cloud_config.sh \
+              build/$BINARY_NAME build/fusion-server.info
     # Cleanup temp files
-    rm build/version.info
+    rm build/fusion-server.info
 fi
 
 echo "Build process completed successfully."
