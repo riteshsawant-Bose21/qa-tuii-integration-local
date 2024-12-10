@@ -97,7 +97,6 @@ void Limiter::process()
     {
         read_index += buffer_size;
     }
-    SPDLOG_TRACE("thresh {} {} {} {}", peak_level, rms_level, peak_gain, rms_gain);
 
     for (int_fast32_t i = 0; i < get_frame_size(); i++)
     {

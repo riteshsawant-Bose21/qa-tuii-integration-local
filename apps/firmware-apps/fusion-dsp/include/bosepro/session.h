@@ -174,6 +174,89 @@ public:
         }
     }
 
+    /// Get a pointer to a signal processing block with the given name.
+    ///
+    /// @param  name  The name of the block.
+    /// @return  A pointer to the block.
+    Task *get_task(const std::string &name)
+    {
+        if (tasks.count(name) != 0)
+        {
+            return tasks[name].get();
+        }
+        else
+        {
+            return nullptr;
+        }
+    }
+
+
+    /// Process the list of task connections specified in a configuration,
+    /// connecting JACK input and output ports accordingly.
+    ///
+    /// @param  configuration  A list of task connections from the
+    ///                        configuration.
+    void connect_tasks(const TaskConnectionConfiguration &configuration)
+    {
+        Task *source_task = get_task(configuration.get_source_task());
+        Task *destination_task = get_task(configuration.get_destination_task());
+
+        // Either the source_task or destination_task names may not correspond
+        // to DSP tasks, because they may be specifying a connection to the
+        // system or an external JACK client.  In the case the connection is
+        // made between two DSP tasks, we set the connection in both tasks in
+        // case one of them needs to be stopped and restarted.
+
+        if (source_task != nullptr)
+        {
+            Jack *output_block =
+                dynamic_cast<Jack *>(source_task->get_block(configuration.get_output_block()));
+
+            if (output_block != nullptr)
+            {
+                std::string connection = configuration.get_destination_task()
+                    + ":" + configuration.get_input_block() + "_"
+                    + std::to_string(configuration.get_input_channel() + 1);
+
+                output_block->connect_port(configuration.get_output_channel(),
+                                           connection);
+            }
+            else
+            {
+                SPDLOG_ERROR("Nonexistent output block {} for task connection.",
+                             configuration.get_output_block());
+            }
+        }
+
+        if (destination_task != nullptr)
+        {
+            Jack *input_block =
+                dynamic_cast<Jack *>(destination_task->get_block(configuration.get_input_block()));
+
+            if (input_block != nullptr)
+            {
+                std::string connection = configuration.get_source_task()
+                    + ":" + configuration.get_output_block() + "_"
+                    + std::to_string(configuration.get_output_channel() + 1);
+
+                input_block->connect_port(configuration.get_output_channel(),
+                                          connection);
+            }
+            else
+            {
+                SPDLOG_ERROR("Nonexistent input block {} for task connection.",
+                             configuration.get_input_block());
+            }
+        }
+
+        if (source_task == nullptr && destination_task == nullptr)
+        {
+            SPDLOG_ERROR("Nonexistent tasks {} and {} for task connection.",
+                         configuration.get_source_task(),
+                         configuration.get_destination_task());
+        }
+    }
+
 
     /// Process the provided command.
     ///

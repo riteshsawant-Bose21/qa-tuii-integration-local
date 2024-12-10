@@ -71,6 +71,14 @@ int main(int argc, char *argv[])
         }
     }
 
+    if (configuration.has_task_connections())
+    {
+        for (auto &tc : configuration.get_task_connections())
+        {
+            session.connect_tasks((const bosepro::TaskConnectionConfiguration &)tc.second);
+        }
+    }
+
     // Try to be psychic and run the way the user wants:
     //
     //     1.  If any "jack_in" or "jack_out" blocks are defined,
