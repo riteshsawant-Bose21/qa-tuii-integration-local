@@ -14,6 +14,7 @@ import (
 	"fusion/internal/logging"
 	"fusion/internal/network"
 	"fusion/internal/server"
+	"fusion/internal/timers"
 )
 
 var (
@@ -92,6 +93,13 @@ func main() {
 		cluster.StartStateVerification(list, stateManager)
 	}
 
+	// Timer management
+	timerManager := timers.NewTimerManager("tasks.json", "history.json")
+	if err := timerManager.Start(); err != nil {
+		logger.Error("Error starting TimerManager: %v", err)
+		return
+	}
+
 	// Initialize metrics collector
 	metricsCollector := cluster.NewMetricsCollector(list, stateManager)
 
@@ -144,8 +152,8 @@ func main() {
 		}
 	}()
 
-	// Set up HTTP routes
 	setupHTTPRoutes(configServer, metricsCollector, *verbose)
+	setupTimerRoutes(timerManager, *verbose)
 
 	// Start HAProxy management
 	go network.ManageHAProxy(list)
@@ -166,6 +174,14 @@ func setupHTTPRoutes(server *server.ConfigServer, metrics *cluster.MetricsCollec
 	http.HandleFunc("/dump", withLogging(server.DumpState, "dump", verbose))
 	http.HandleFunc("/ws", withWebSocketMetrics(server.HandleWebSocket, metrics, verbose))
 	http.HandleFunc("/", withLogging(server.HandleRoot, "root", verbose))
+}
+
+func setupTimerRoutes(manager *timers.TimerManager, verbose bool) {
+	http.HandleFunc("/tasks", withLogging(manager.ListTasksHandler, "tasks", verbose))
+	http.HandleFunc("/tasks/add", withLogging(manager.AddTaskHandler, "addTask", verbose))
+	http.HandleFunc("/tasks/update", withLogging(manager.UpdateTaskHandler, "updateTask", verbose))
+	http.HandleFunc("/tasks/remove", withLogging(manager.RemoveTaskHandler, "removeTask", verbose))
+	http.HandleFunc("/history", withLogging(manager.ExecutionHistoryHandler, "history", verbose))
 }
 
 func setupMetricsRoutes(metrics *cluster.MetricsCollector) *http.ServeMux {
