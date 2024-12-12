@@ -144,7 +144,6 @@ struct PathPattern {
  */
 class JsonMonitor {
 public:
-  /// Function type for change notification callbacks
   using ChangeCallback = std::function<void(
       const std::string &, const Json::Value &, const Json::Value &)>;
 
@@ -159,6 +158,10 @@ public:
    * @brief Registers a callback for changes at a specific path
    * @param path The JSON path to watch
    * @param callback Function to call when the value changes
+   *
+   * Pattern watchers receive notifications for all changes to paths
+   * that match their pattern, with the full path of the change included
+   * in the notification.
    */
   void watch(const std::string &path, ChangeCallback callback) {
     if (path.empty()) {
@@ -172,48 +175,139 @@ public:
    * @brief Registers a pattern-based watcher for JSON path changes
    * @param pattern The pattern to watch (may include wildcards)
    * @param callback Function to call when matching paths change
-   *
-   * Pattern watchers receive notifications for all changes to paths
-   * that match their pattern, with the full path of the change included
-   * in the notification.
    */
   void watchPattern(const std::string &pattern, ChangeCallback callback) {
     pattern_watchers_[pattern].push_back(callback);
   }
 
   /**
-   * @brief Updates the value at a specific path
-   * @param path The JSON path to update
-   * @param new_value The new value to set
-   *
-   * Triggers registered callbacks for the path and all parent paths
-   * if the value actually changes.
+   * @brief Retrieves the current value at a specific path
+   * @param path The JSON path to query
+   * @return The value at the specified path, or null if not found
    */
-  void update(const std::string &path, const Json::Value &new_value) {
+  Json::Value get(const std::string &path) const {
     if (path.empty()) {
-      Json::Value old_value = data_;
-      if (old_value != new_value) {
-        data_ = new_value;
+      return data_;
+    }
+
+    std::vector<PathComponent> path_parts = splitPath(path);
+    const Json::Value *current = &data_;
+
+    for (const auto &part : path_parts) {
+      if (part.isArrayAccess) {
+        if (!current->isArray() ||
+            part.arrayIndex >= static_cast<int>(current->size())) {
+          return Json::nullValue;
+        }
+        current = &(*current)[part.arrayIndex];
+      } else {
+        if (!current->isObject() || !current->isMember(part.key)) {
+          return Json::nullValue;
+        }
+        current = &(*current)[part.key];
+      }
+    }
+    return *current;
+  }
+
+  void handleExternalUpdate(const std::string &path,
+                            const Json::Value &new_state) {
+
+    // Special handling for root updates
+    if (path.empty()) {
+      Json::Value old_state = data_;
+      if (old_state != new_state) {
+        data_ = new_state;
+        // Notify root watchers about root changes
         for (const auto &callback : root_watchers_) {
-          callback(path, old_value, new_value);
+          callback("", old_state, new_state); // Use empty path string
         }
       }
       return;
     }
 
-    std::vector<PathComponent> path_parts = split_path(path);
-    if (path_parts.empty())
+    // Validate and split path
+    std::vector<PathComponent> path_parts = splitPath(path);
+    if (path_parts.empty() && !path.empty()) { // Invalid path
       return;
+    }
 
+    Json::Value old_state = get(path);
+    updateInternalState(path, new_state);
+
+    // Only notify if there was an actual change
+    Json::Value current_state = get(path);
+    if (old_state != current_state) {
+      notifyWatchers(path, path_parts, old_state, current_state);
+    }
+  }
+
+  /**
+   * @brief Splits a path string into PathComponent objects
+   * @param path The path string to split (e.g., "root.child[0].value")
+   * @return Vector of PathComponent objects representing the path
+   */
+  std::vector<PathComponent> splitPath(const std::string &path) const {
+    std::vector<PathComponent> parts;
+    if (path.empty()) {
+      return parts; // Return empty vector for root path
+    }
+
+    std::string key;
+    std::string arrayPart;
+    bool inArray = false;
+
+    for (size_t i = 0; i < path.length(); ++i) {
+      char c = path[i];
+
+      if (c == '.') {
+        if (!key.empty()) {
+          parts.push_back(PathComponent(key));
+          key.clear();
+        }
+      } else if (c == '[') {
+        inArray = true;
+        if (!key.empty()) {
+          parts.push_back(PathComponent(key));
+          key.clear();
+        }
+      } else if (c == ']') {
+        inArray = false;
+        try {
+          int index = std::stoi(arrayPart);
+          if (index < 0) { // Reject negative indices early
+            return std::vector<PathComponent>(); // Return empty for invalid
+                                                 // path
+          }
+          parts.push_back(PathComponent("", index));
+        } catch (...) {
+          return std::vector<PathComponent>(); // Return empty for invalid array
+                                               // index
+        }
+        arrayPart.clear();
+      } else if (inArray) {
+        arrayPart += c;
+      } else {
+        key += c;
+      }
+    }
+
+    if (!key.empty()) {
+      parts.push_back(PathComponent(key));
+    }
+
+    return parts;
+  }
+
+private:
+  void updateInternalState(const std::string &path,
+                           const Json::Value &new_state) {
+    std::vector<PathComponent> path_parts = splitPath(path);
     Json::Value *current = &data_;
-    Json::Value old_value;
 
-    // Navigate to target location
-    for (const auto &part : path_parts) {
+    for (size_t i = 0; i < path_parts.size() - 1; ++i) {
+      const auto &part = path_parts[i];
       if (part.isArrayAccess) {
-        if (part.arrayIndex < 0)
-          return;
-
         if (!current->isArray()) {
           *current = Json::arrayValue;
         }
@@ -232,112 +326,23 @@ public:
       }
     }
 
-    old_value = *current;
-    if (old_value != new_value) {
-      *current = new_value;
-      notifyWatchers(path, path_parts, old_value, new_value);
-    }
-  }
-
-  /**
-   * @brief Retrieves the value at a specific path
-   * @param path The JSON path to query
-   * @return The value at the specified path, or null if the path doesn't exist
-   */
-  Json::Value get(const std::string &path) const {
-    std::vector<PathComponent> path_parts = split_path(path);
-    const Json::Value *current = &data_;
-
-    for (const auto &part : path_parts) {
-      if (current->isObject() && current->isMember(part.key)) {
-        current = &(*current)[part.key];
-        if (part.isArrayAccess) {
-          if (current->isArray() &&
-              part.arrayIndex < static_cast<int>(current->size())) {
-            current = &(*current)[part.arrayIndex];
-          } else {
-            return Json::nullValue;
-          }
-        }
-      } else {
-        return Json::nullValue;
+    const auto &last_part = path_parts.back();
+    if (last_part.isArrayAccess) {
+      if (!current->isArray()) {
+        *current = Json::arrayValue;
       }
-    }
-
-    return *current;
-  }
-
-  /**
-   * @brief Splits a path string into PathComponent objects
-   * @param path The path string to split (e.g., "root.child[0].value")
-   * @return Vector of PathComponent objects representing the path
-   */
-  std::vector<PathComponent> split_path(const std::string &path) const {
-    std::vector<PathComponent> parts;
-    std::string key;
-    std::string arrayPart;
-    bool inArray = false;
-
-    for (size_t i = 0; i < path.length(); ++i) {
-      char c = path[i];
-
-      if (c == '.') {
-        if (!key.empty()) {
-          parts.push_back(PathComponent(key));
-          key.clear();
-        }
-      } else if (c == '[') {
-        inArray = true;
-        // If this array appears at the end of the path, add key as standalone
-        size_t nextDot = path.find('.', i);
-        if (nextDot == std::string::npos && !key.empty()) {
-          parts.push_back(PathComponent(key));
-          key.clear();
-        }
-      } else if (c == ']') {
-        inArray = false;
-        try {
-          int index = std::stoi(arrayPart);
-          size_t nextDot = path.find('.', i);
-          if (nextDot == std::string::npos) {
-            // If this is the last component, make it standalone
-            parts.push_back(PathComponent("", index));
-          } else if (!key.empty()) {
-            // Otherwise combine with previous key
-            parts.push_back(PathComponent(key, index));
-            key.clear();
-          }
-        } catch (...) {
-          if (!key.empty()) {
-            parts.push_back(PathComponent(key));
-            key.clear();
-          }
-        }
-        arrayPart.clear();
-      } else if (inArray) {
-        arrayPart += c;
-      } else {
-        key += c;
+      while (current->size() <= static_cast<size_t>(last_part.arrayIndex)) {
+        current->append(Json::Value());
       }
+      (*current)[last_part.arrayIndex] = new_state;
+    } else {
+      if (!current->isObject()) {
+        *current = Json::objectValue;
+      }
+      (*current)[last_part.key] = new_state;
     }
-
-    if (!key.empty()) {
-      parts.push_back(PathComponent(key));
-    }
-
-    return parts;
   }
 
-  /**
-   * @brief Notifies all relevant watchers of a value change
-   * @param path The full path where the change occurred
-   * @param old_value The previous value at the path
-   * @param new_value The new value at the path
-   *
-   * Notifies both exact path watchers and pattern watchers that match
-   * the changed path. Always provides the deepest possible path in
-   * notifications.
-   */
   void notifyWatchers(const std::string &path,
                       const std::vector<PathComponent> &path_parts,
                       const Json::Value &old_value,
@@ -359,9 +364,15 @@ public:
         }
       }
     }
+
+    // Notify root watchers
+    if (!path.empty()) {
+      for (const auto &callback : root_watchers_) {
+        callback(path, old_value, new_value);
+      }
+    }
   }
 
-private:
   Json::Value data_;
   std::unordered_map<std::string, std::vector<ChangeCallback>> watchers_;
   std::unordered_map<std::string, std::vector<ChangeCallback>>
@@ -537,10 +548,10 @@ private:
         traverseAndUpdate(update, "", path);
       } else {
         // For exact paths, we can directly check and update
-        std::vector<PathComponent> path_parts = jsonMonitor.split_path(path);
+        std::vector<PathComponent> path_parts = jsonMonitor.splitPath(path);
         Json::Value value = getValueAtPath(update, path_parts);
         if (!value.isNull()) {
-          jsonMonitor.update(path, value);
+          jsonMonitor.handleExternalUpdate(path, value);
         }
       }
     }
@@ -553,14 +564,15 @@ private:
    * @param currentPath String representation of path to current node
    * @param pattern Pattern string to match against paths
    *
-   * Traverses both objects and arrays within the JSON structure. For objects,
-   * it examines each key-value pair. For arrays, it processes each element with
-   * its index. When a path matches the provided pattern, it triggers an update
-   * through the JsonMonitor.
+   * Traverses both objects and arrays within the JSON structure. For
+   * objects, it examines each key-value pair. For arrays, it processes each
+   * element with its index. When a path matches the provided pattern, it
+   * triggers an update through the JsonMonitor.
    *
    * Example patterns:
    * - "audio.settings.*" matches any path starting with "audio.settings"
-   * - "audio.*.gain" matches paths like "audio.eq.gain" or "audio.comp.gain"
+   * - "audio.*.gain" matches paths like "audio.eq.gain" or
+   * "audio.comp.gain"
    *
    * @note The function maintains the full path context during traversal,
    *       ensuring accurate path matching and updates at all levels
@@ -573,10 +585,10 @@ private:
         std::string newPath =
             currentPath.empty() ? key : currentPath + "." + key;
         PathPattern pathPattern(pattern);
-        std::vector<PathComponent> path_parts = jsonMonitor.split_path(newPath);
+        std::vector<PathComponent> path_parts = jsonMonitor.splitPath(newPath);
 
         if (pathPattern.matches(path_parts)) {
-          jsonMonitor.update(newPath, node[key]);
+          jsonMonitor.handleExternalUpdate(newPath, node[key]);
         }
         traverseAndUpdate(node[key], newPath, pattern);
       }
@@ -584,10 +596,10 @@ private:
       for (Json::ArrayIndex i = 0; i < node.size(); ++i) {
         std::string newPath = currentPath + "[" + std::to_string(i) + "]";
         PathPattern pathPattern(pattern);
-        std::vector<PathComponent> path_parts = jsonMonitor.split_path(newPath);
+        std::vector<PathComponent> path_parts = jsonMonitor.splitPath(newPath);
 
         if (pathPattern.matches(path_parts)) {
-          jsonMonitor.update(newPath, node[i]);
+          jsonMonitor.handleExternalUpdate(newPath, node[i]);
         }
         traverseAndUpdate(node[i], newPath, pattern);
       }

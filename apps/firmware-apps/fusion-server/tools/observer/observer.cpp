@@ -18,7 +18,7 @@ int main(int argc, char *argv[]) {
       targetPaths.push_back(argv[i]);
     }
 
-    std::cout << "Starting UDPValueMonitor\n";
+    std::cout << "Starting Value Observer\n";
     std::cout << "Server: " << serverIP << ":" << port << "\n";
     std::cout << "Monitoring paths:\n";
     for (const auto &path : targetPaths) {

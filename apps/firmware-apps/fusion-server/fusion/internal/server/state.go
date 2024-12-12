@@ -56,7 +56,6 @@ func (sm *StateManager) ApplyUpdate(update api.ConfigUpdate) error {
 	sm.Lock()
 	defer sm.Unlock()
 
-	// If update is empty, clear all state
 	if len(update.Data) == 0 {
 		sm.state = make(map[string]*api.StateEntry)
 		sm.version = update.Version
@@ -64,20 +63,34 @@ func (sm *StateManager) ApplyUpdate(update api.ConfigUpdate) error {
 		return nil
 	}
 
-	// Extract the single key-value pair from the update
 	for key, value := range update.Data {
-		existing, exists := sm.state[key]
-		if !exists || existing.Version < update.Version {
-			sm.state[key] = &api.StateEntry{
-				Data:      value,
-				Version:   update.Version,
-				Timestamp: update.Time,
+		var newValue interface{}
+		if valueMap, ok := value.(map[string]interface{}); ok {
+			existingValue, exists := sm.state[key]
+			if exists {
+				existingData, isMap := existingValue.Data.(map[string]interface{})
+				if isMap {
+					newValue = mergeMaps(existingData, valueMap)
+				} else {
+					newValue = valueMap
+				}
+			} else {
+				newValue = valueMap
 			}
-			if update.Version > sm.version {
-				sm.version = update.Version
-			}
-			sm.notifySubscribers()
+		} else {
+			newValue = value
 		}
+
+		sm.state[key] = &api.StateEntry{
+			Data:      newValue,
+			Version:   update.Version,
+			Timestamp: update.Time,
+		}
+
+		if update.Version > sm.version {
+			sm.version = update.Version
+		}
+		sm.notifySubscribers()
 	}
 	return nil
 }
@@ -153,4 +166,19 @@ func TransformState(state map[string]*api.StateEntry) map[string]interface{} {
 		result[key] = entry.Data
 	}
 	return result
+}
+
+func mergeMaps(existing, update map[string]interface{}) map[string]interface{} {
+	for key, value := range update {
+		if vMap, ok := value.(map[string]interface{}); ok {
+			if existingMap, exists := existing[key].(map[string]interface{}); exists {
+				existing[key] = mergeMaps(existingMap, vMap)
+			} else {
+				existing[key] = vMap
+			}
+		} else {
+			existing[key] = value
+		}
+	}
+	return existing
 }
