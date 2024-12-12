@@ -13,7 +13,14 @@
                     "name": "high_cpu_usage", 
                     "dimensions": 0, 
                     "value_type": "bool", 
-                    "telemetry_type": "event" }
+                    "telemetry_type": "event" 
+                },
+                { 
+                    "name": "test", 
+                    "dimensions": [3], 
+                    "value_type": "bool", 
+                    "telemetry_type": "meter" 
+                }
             ]
         }
     ]

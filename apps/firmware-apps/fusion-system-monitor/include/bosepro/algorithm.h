@@ -39,7 +39,10 @@ public:
     ///
     /// @param  configuration  The configuration to use for the algorithm.
     Algorithm(const BlockConfiguration &configuration)
-        : Configurable(configuration), output_process_count(0)
+        : Configurable(configuration), 
+          telemetry_callback(nullptr),
+          event_telemetry_callback(nullptr),
+          output_process_count(0)
     {
         meta->configuration = &configuration;
         meta->definition = static_cast<const AlgorithmDefinition*>(get_definition(configuration.get_algorithm()));
@@ -318,6 +321,13 @@ public:
     }
 
 
+    void set_telemetry_callbacks(void (*telemetry_callback)(const std::string &), void (*event_telemetry_callback)(const std::string &))
+    {
+        this->telemetry_callback = telemetry_callback;
+        this->event_telemetry_callback = event_telemetry_callback;
+    }
+
+
     /// Get a reference to a meter by name.  This is called by the framework,
     /// not by the algorithm.
     ///
@@ -361,14 +371,51 @@ public:
 
 
     /// Send telemetry data for all of the telemetry in this block.
-    ///
-    /// @param  telemetry_callback  A callback function for sending the telemetry
-    ///     JSON-formatted string.
-    void send_telemetry(void (*telemetry_callback)(const std::string &))
+    size_t get_telemetry_size()
     {
-        for (auto &t : meta->telemetry)
+        size_t size = 0;
+        for (auto &m : meta->telemetry)
         {
-            t.second->send(telemetry_callback);
+            if (m.second->get_telemetry_type() != "event")
+            {
+                size += m.second->get_telemetry_size();
+            }
+        }
+
+        return size;
+    }
+
+
+    /// Send telemetry data for all of the telemetry in this block.
+    void send_telemetry()
+    {
+        if(telemetry_callback)
+        {
+            for (auto &m : meta->telemetry)
+            {
+                if (m.second->get_telemetry_type() != "event")
+                {
+                    m.second->pre_process();
+                    m.second->send(telemetry_callback);
+                }
+            }
+        }
+    }
+
+
+    /// Send telemetry data for a specific event
+    ///
+    /// @param  name  The name of the telemetry object
+    void send_event_telemetry(const std::string &name)
+    {
+        if(event_telemetry_callback)
+        {
+            auto &m = get_telemetry(name);
+            if (m.get_telemetry_type() == "event") 
+            {
+                m.pre_process();
+                m.send(event_telemetry_callback);
+            }
         }
     }
 
@@ -659,6 +706,10 @@ protected:
     {
         get_telemetry(name).assign(value);
     }
+
+
+    void (*telemetry_callback)(const std::string &message);
+    void (*event_telemetry_callback)(const std::string &message);
 
 
 private:

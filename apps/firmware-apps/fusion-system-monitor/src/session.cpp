@@ -4,18 +4,29 @@
 namespace bosepro {
 
 
+void Session::register_request(const ParameterSetting&)
+{
+    size_t size = 0;
+    for (auto &task : tasks)
+    {
+        size += task.second->get_telemetry_size();
+    }
+    for (auto &na_task : na_tasks)
+    {
+        size += na_task.second->get_telemetry_size();
+    }
+}
+
+
 void Session::cmd_send_telemetry(const ParameterSetting&)
 {
-    if (telemetry_callback != nullptr)
+    for (auto &task : tasks)
     {
-        for (auto &task : tasks)
-        {
-            task.second->send_telemetry(telemetry_callback);
-        }
-        for (auto &na_task : na_tasks)
-        {
-            na_task.second->send_telemetry();
-        }
+        task.second->send_telemetry();
+    }
+    for (auto &na_task : na_tasks)
+    {
+        na_task.second->send_telemetry();
     }
 }
 

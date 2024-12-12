@@ -14,6 +14,7 @@
 #include <cmath>
 #include <list>
 #include <memory>
+#include <sys/mman.h>
 
 
 namespace bosepro {
@@ -29,7 +30,7 @@ public:
     /// @param  definitions  The parameter definitions for the system.
     Session(const SessionConfiguration &configuration,
             const Definition &definitions)
-        : Configurable(configuration), telemetry_callback(nullptr)
+        : Configurable(configuration)
     {
         SPDLOG_TRACE("Creating session.");
         // This makes the definitions available to all `Configurable` objects.
@@ -43,7 +44,8 @@ public:
             {"create_task",     [this](const ParameterSetting& c){ cmd_create_task(c); }},
             {"create_na_task",  [this](const ParameterSetting& c){ cmd_create_na_task(c); }},
             {"start_task",      [this](const ParameterSetting& c){ cmd_start_task(c); }},
-            {"stop_task",       [this](const ParameterSetting& c){ cmd_stop_task(c); }}
+            {"stop_task",       [this](const ParameterSetting& c){ cmd_stop_task(c); }},
+            {"test_telem_sz",   [this](const ParameterSetting& c){ register_request(c); }},
         };
 
         frames_to_run = -1;
@@ -294,14 +296,22 @@ public:
     /// JSON-formatted string containing telemetry data for each of its telemetry.
     ///
     /// @param  telemetry_callback  The callback function used to send telemetry data.
-    void set_telemetry_callback(void (*telemetry_callback)(const std::string &))
+    void set_telemetry_callbacks(void (*telemetry_callback)(const std::string &), void (*event_telemetry_callback)(const std::string &))
     {
-        this->telemetry_callback = telemetry_callback;
+        for (auto &task : tasks)
+        {
+            task.second->set_telemetry_callbacks(telemetry_callback, event_telemetry_callback);
+        }
         for (auto &na_task : na_tasks)
         {
-            na_task.second->set_telemetry_callback(telemetry_callback);
+            na_task.second->set_telemetry_callbacks(telemetry_callback, event_telemetry_callback);
         }
     }
+
+    /// Socket outgoing command to register this producer with telemetry service
+    ///
+    /// @param setting
+    void register_request(const ParameterSetting&);
 
 
     /// Socket setting to send telemetry for all tasks
@@ -344,7 +354,6 @@ private:
     int_fast32_t frames_to_run;
     std::map<std::string, std::unique_ptr<Task>> tasks;
     std::map<std::string, std::unique_ptr<NaTask>> na_tasks;
-    void (*telemetry_callback)(const std::string &telemetry_message);
     std::map<std::string, std::function<void(const ParameterSetting&)>> session_cmd_map;
 };
 

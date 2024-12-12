@@ -85,6 +85,7 @@ public:
 
         if (!try_list_value("dimensions", 0, rows_name))
         {
+            SPDLOG_DEBUG("getting num_rows");
             rows_name = "";
             try_list_value("dimensions", 0, num_rows);
         }

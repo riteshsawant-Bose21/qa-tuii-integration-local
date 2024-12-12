@@ -219,6 +219,12 @@ public:
     }
 
 
+    /// Get the telemetry size.
+    ///
+    /// @return  The telemetry size.
+    virtual size_t get_telemetry_size() = 0;
+
+
     /// Pre-process the meters
     ///
     virtual void pre_process(void) = 0;
@@ -318,6 +324,16 @@ public:
     }
 
 
+    virtual size_t get_telemetry_size() override
+    {
+        if constexpr (std::is_same_v<T, std::string>) {
+            return block_value->size();
+        } else {
+            return sizeof(T);
+        }
+    }
+
+
     /// Send the data for this meter as a JSON-formatted string using the
     /// provided callback.
     ///
@@ -401,6 +417,25 @@ public:
                 pre_function(row);
             }
         }
+    }
+
+
+    virtual size_t get_telemetry_size() override
+    {
+        size_t size = 0;
+        if constexpr (std::is_same_v<T, std::string>)
+        {
+            for (int row = 0; row < this->get_num_rows(); row++)
+            {
+                size += static_cast<const std::string>(block_value[row]).size();
+            }
+        }
+        else
+        {
+            size = sizeof(T) * this->get_num_rows();
+        }
+
+        return size;
     }
 
 
@@ -499,6 +534,28 @@ public:
                 }
             }
         }
+    }
+
+
+    virtual size_t get_telemetry_size() override
+    {
+        size_t size = 0;
+        if constexpr (std::is_same_v<T, std::string>)
+        {
+            for (int row = 0; row < this->get_num_rows(); row++)
+            {
+                for (int col = 0; col < this->get_num_columns(); col++)
+                {
+                    size += static_cast<const std::string>(block_value[row][col]).size();
+                }
+            }
+        }
+        else
+        {
+            size = sizeof(T) * this->get_num_rows() * this->get_num_columns();
+        }
+
+        return size;
     }
 
 

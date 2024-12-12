@@ -174,34 +174,45 @@ protected:
     /// @return  True if the member exists and has a value of the requested
     ///          type.
     template <typename T>
-    bool try_list_value(const std::string &list_name, int index, T &value) const
-    {
-        boost::optional<T> v;
+    bool try_list_value(const std::string &list_name, int index, T &value) const {
         int n = 0;
 
-        if (!has_member(list_name))
-        {
+        if (!has_member(list_name)) {
             SPDLOG_CRITICAL("List {} not found.", list_name);
             return false;
         }
 
-        for (auto a : get_child(list_name))
-        {
-            if (n == index)
-            {
-                v = a.second.get_value_optional<T>();
-
-                if (v != boost::none)
-                {
-                    value = *v;
-                    return true;
+        for (const auto &a : get_child(list_name)) {
+            if (n == index) {
+                // Check for int
+                if constexpr (std::is_same_v<T, int>) {
+                    auto opt_value = a.second.get_value_optional<int>();
+                    if (opt_value) {
+                        value = *opt_value;
+                        return true;
+                    }
                 }
-                else
-                {
+                // Check for std::string
+                else if constexpr (std::is_same_v<T, std::string>) {
+                    auto opt_value = a.second.get_value_optional<std::string>();
+                    if (opt_value) {
+                        // Ensure the value isn't an integer masquerading as a string
+                        auto int_check = a.second.get_value_optional<int>();
+                        if (int_check) {
+                            return false;
+                        }
+
+                        value = *opt_value;
+                        return true;
+                    }
+                } else {
+                    SPDLOG_CRITICAL("Unsupported type requested.");
                     return false;
                 }
-            }
 
+                SPDLOG_WARN("Value at index {} is not of expected type.", index);
+                return false;
+            }
             n++;
         }
 

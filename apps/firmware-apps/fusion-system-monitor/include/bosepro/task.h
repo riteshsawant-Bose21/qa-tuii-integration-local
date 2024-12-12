@@ -381,6 +381,18 @@ public:
     }
 
 
+    /// Set the telemetry callback for this task and all its blocks
+    ///
+    /// @param telemetry_callback
+    void set_telemetry_callbacks(void (*telemetry_callback)(const std::string &), void (*event_telemetry_callback)(const std::string &))
+    {
+        for (auto &block : blocks)
+        {
+            block->set_telemetry_callbacks(telemetry_callback, event_telemetry_callback);
+        }
+    }
+
+
     /// Get a pointer to a signal processing block with the given name.
     ///
     /// @param  name  The name of the block.
@@ -459,12 +471,25 @@ public:
 
     /// Send telemetry data for each block in the task, using the provided callback.
     ///
-    /// @param  telemetry_callback  A callback function used to send telemetry data.
-    void send_telemetry(void (*telemetry_callback)(const std::string &))
+    /// @return The size of memory for all telemetry items 
+    size_t get_telemetry_size()
+    {
+        size_t size = 0;
+        for (auto &block : blocks)
+        {
+            size += block->get_telemetry_size();
+        }
+
+        return size;
+    }
+
+
+    /// Send telemetry data for each block in the task, using the provided callback.
+    void send_telemetry()
     {
         for (auto &block : blocks)
         {
-            block->send_telemetry(telemetry_callback);
+            block->send_telemetry();
         }
     }
 
@@ -494,8 +519,7 @@ public:
     /// @param  configuration  The configuration for the task.
     NaTask(const TaskConfiguration &configuration)
         : Configurable(configuration),
-        period_ms(0), period_ns(0),
-        telemetry_callback(nullptr)
+        period_ms(0), period_ns(0)
     {
         // Use this task's region manager while allocating blocks within the
         // task.
@@ -566,12 +590,11 @@ public:
     /// Set the telemetry callback for this task and all its blocks
     ///
     /// @param telemetry_callback
-    void set_telemetry_callback(void (*telemetry_callback)(const std::string &))
+    void set_telemetry_callbacks(void (*telemetry_callback)(const std::string &), void (*event_telemetry_callback)(const std::string &))
     {
-        this->telemetry_callback = telemetry_callback;
         for (auto &block : blocks)
         {
-            block->set_telemetry_callback(telemetry_callback);
+            block->set_telemetry_callbacks(telemetry_callback, event_telemetry_callback);
         }
     }
 
@@ -611,12 +634,18 @@ public:
     }
 
 
-    /// Check if a telemetry callback is registered with this non-audio task.
+    /// Send telemetry data for each block in the task, using the provided callback.
     ///
-    /// @return  A bool indicating whether or not the callback is set.
-    bool has_telemetry_callback()
+    /// @return The size of memory for all telemetry items 
+    size_t get_telemetry_size()
     {
-        return this->telemetry_callback != nullptr;
+        size_t size = 0;
+        for (auto &block : blocks)
+        {
+            size += block->get_telemetry_size();
+        }
+
+        return size;
     }
 
 
@@ -715,7 +744,6 @@ private:
     int_fast32_t period_ns;
 
     pthread_t thread;
-    void (*telemetry_callback)(const std::string &telemetry_message);
 };
 
 

@@ -1,22 +1,23 @@
 {
     "session": {
-        "na_tasks": [
-            {
-                "name": "fw_monitor",
-                "property_settings": [
-                    { "name": "period_ms", "value": 2000 }
-                ],
-                "blocks": [
-                    {
-                        "name": "cpu_usage",
-                        "module": "cpu_usage",
-                        "telemetry": [
-                            { "name": "cpu" },
-                            { "name": "high_cpu_usage" }
-                        ]
-                    }
-                ]
-            }
-        ]
-    }
+    },
+    "na_tasks": [
+        {
+            "name": "fw_monitor",
+            "property_settings": [
+                { "name": "period_ms", "value": 2000 }
+            ],
+            "blocks": [
+                {
+                    "name": "cpu_usage",
+                    "module": "cpu_usage",
+                    "telemetry": [
+                        { "name": "cpu" },
+                        { "name": "high_cpu_usage" },
+                        { "name": "test" }
+                    ]
+                }
+            ]
+        }
+    ]
 }

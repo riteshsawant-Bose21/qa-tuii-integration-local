@@ -19,7 +19,11 @@ int connection_fd;
 
 std::mutex socket_mutex;
 
-void send_telemetry_cb(const std::string &message)
+
+/// Callback to send telemetry over a socket
+///
+/// @param message the message to send
+void send_telemetry_sock_cb(const std::string &message)
 {
     std::lock_guard<std::mutex> guard(socket_mutex);
     
@@ -30,6 +34,16 @@ void send_telemetry_cb(const std::string &message)
         SPDLOG_WARN("Couldn't send telemetry to socket.");
     }
 }
+
+
+/// Callback to update telemetry in shared memory
+///
+/// @param message the message to send
+// void update_telemetry_smem_cb(const std::string &message)
+// {
+    
+// }
+
 
 int main(int argc, char *argv[])
 {
@@ -82,7 +96,7 @@ int main(int argc, char *argv[])
         session.set_seconds_to_run(vm["time"].as<int>());
     }
 
-    session.set_telemetry_callback(send_telemetry_cb);
+    session.set_telemetry_callbacks(send_telemetry_sock_cb, send_telemetry_sock_cb);
 
     session.start();
 
