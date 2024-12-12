@@ -1559,6 +1559,63 @@
             ]
         },
         {
+            "name": "signal_generator",
+            "terminals": [
+                {
+                    "name": "out",
+                    "signal_type": "audio",
+                    "direction": "output",
+                    "channels": 1
+                }
+            ],
+            "parameters": [
+                {
+                    "name": "signal_type",
+                    "value_type": "string",
+                    "default_value": "noise",
+                    "allowed_values": ["noise", "sine", "sweep"]
+                },
+                {
+                    "name": "sine_frequency",
+                    "value_type": "float",
+                    "default_value": 1000.0,
+                    "minimum_value": 20.0,
+                    "maximum_value": 20000.0
+                },
+                {
+                    "name": "noise_type",
+                    "value_type": "string",
+                    "default_value": "pink",
+                    "allowed_values": ["pink", "white"]
+                },
+                {
+                    "name": "sweep_rate",
+                    "value_type": "string",
+                    "default_value": "slow",
+                    "allowed_values": ["fast", "slow"]
+                },
+                {
+                    "name": "sweep_run",
+                    "value_type": "bool",
+                    "default_value": false
+                },
+                {
+                    "name": "out_gain",
+                    "dimensions": [1],
+                    "value_type": "float",
+                    "default_value": 0.0,
+                    "minimum_value": -60.0,
+                    "maximum_value": 12.0
+                },
+                {
+                    "name": "out_mute",
+                    "dimensions": [1],
+                    "value_type": "bool",
+                    "default_value": false
+                }
+            ]
+        },
+        {
             "name": "wav_read",
             "properties": [
                 {
