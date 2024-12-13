@@ -1,0 +1,171 @@
+{
+    "session": {
+        "property_settings": [
+            {
+                "name": "sample_rate",
+                "value": 48000
+            },
+            {
+                "name": "frame_size",
+                "value": 256
+            }
+        ]
+    },
+    "tasks": [
+        {
+            "name": "task1",
+            "property_settings": [
+                {
+                    "name": "sample_rate",
+                    "value": 48000
+                },
+                {
+                    "name": "frame_size",
+                    "value": 256
+                }
+            ],
+            "blocks": [
+                {
+                    "name": "siggen",
+                    "algorithm": "signal_generator",
+                    "property_settings": [
+                        {
+                            "name": "sample_rate",
+                            "value": 48000
+                        },
+                        {
+                            "name": "frame_size",
+                            "value": 256
+                        }
+                    ]
+                },
+                {
+                    "name": "tone_eq1",
+                    "algorithm": "tone_control",
+                    "property_settings": [
+                        {
+                            "name": "sample_rate",
+                            "value": 48000
+                        },
+                        {
+                            "name": "frame_size",
+                            "value": 256
+                        },
+                        {
+                            "name": "channels",
+                            "value": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "gain1",
+                    "algorithm": "gain",
+                    "property_settings": [
+                        {
+                            "name": "sample_rate",
+                            "value": 48000
+                        },
+                        {
+                            "name": "frame_size",
+                            "value": 256
+                        },
+                        {
+                            "name": "channels",
+                            "value": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "limiter1",
+                    "algorithm": "limiter",
+                    "property_settings": [
+                        {
+                            "name": "sample_rate",
+                            "value": 48000
+                        },
+                        {
+                            "name": "frame_size",
+                            "value": 256
+                        },
+                        {
+                            "name": "channels",
+                            "value": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "out1",
+                    "algorithm": "jack_out",
+                    "property_settings": [
+                        {
+                            "name": "sample_rate",
+                            "value": 48000
+                        },
+                        {
+                            "name": "frame_size",
+                            "value": 256
+                        }
+                    ],
+                    "terminal_channels": [
+                        {
+                            "name": "in",
+                            "channels": 1
+                        }
+                    ]
+                }
+            ],
+            "block_connections": [
+                {
+                    "source_block": "siggen",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "tone_eq1",
+                    "input_terminal": "in",
+                    "input_channel": 1
+                },
+                {
+                    "source_block": "tone_eq1",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "gain1",
+                    "input_terminal": "in",
+                    "input_channel": 1
+                },
+                {
+                    "source_block": "gain1",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "limiter1",
+                    "input_terminal": "in",
+                    "input_channel": 1
+                },
+                {
+                    "source_block": "gain1",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "limiter1",
+                    "input_terminal": "peak_in",
+                    "input_channel": 1
+                },
+                {
+                    "source_block": "limiter1",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "out1",
+                    "input_terminal": "in",
+                    "input_channel": 1
+                }
+            ]
+        }
+    ],
+    "task_connections": [
+        {
+            "source_task": "task1",
+            "output_block": "out1",
+            "output_channel": 1,
+            "destination_task": "system",
+            "input_block": "playback",
+            "input_channel": 1
+        }
+    ]
+}

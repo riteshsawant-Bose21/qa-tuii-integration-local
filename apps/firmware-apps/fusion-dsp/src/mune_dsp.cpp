@@ -1,5 +1,7 @@
 #include "wav_read.h"
 
+#include <bosepro/observer.h>
+
 #include <bosepro/configuration.h>
 #include <bosepro/definition.h>
 #include <bosepro/profile.h>
@@ -15,6 +17,8 @@
 
 #include <iostream>
 
+
+bosepro::Session *psession;
 int connection_fd;
 
 void send_meter(const std::string &message)
@@ -27,6 +31,17 @@ void send_meter(const std::string &message)
     }
 }
 
+
+void handle_update(const std::string &update_setting)
+{
+    std::stringstream ss;
+    ss << update_setting;
+    bosepro::ParameterSetting ps = bosepro::ParameterSetting(ss);
+    psession->process_parameter_setting(ps);
+    SPDLOG_INFO("server update: {}", update_setting);
+}
+
+
 int main(int argc, char *argv[])
 {
     spdlog::set_level(spdlog::level::trace);
@@ -37,6 +52,7 @@ int main(int argc, char *argv[])
         ("configuration,c", boost::program_options::value<std::string>()->default_value("config/configuration.json"), "configuration file")
         ("definitions,d", boost::program_options::value<std::string>()->default_value("config/algorithm-definitions.json"), "algorithm definition file")
         ("time,t", boost::program_options::value<int>(), "time to run (seconds)")
+        ("serverip,s", boost::program_options::value<std::string>(), "IP address of fusion-server")
         ("help,h", "print this message and exit")
     ;
 
@@ -89,74 +105,38 @@ int main(int argc, char *argv[])
 
     if (bosepro::Jack::has_client())
     {
+        UDPValueMonitor *client = nullptr;
+        psession = &session;
+
         if (vm.count("time"))
         {
             session.set_seconds_to_run(vm["time"].as<int>());
+        }
+
+        std::vector<std::string> target_paths;
+
+        target_paths.push_back("settings.audio.*.*");
+
+        if (vm.count("serverip"))
+        {
+            SPDLOG_INFO("server ip {}", vm["serverip"].as<std::string>());
+            client = new UDPValueMonitor(vm["serverip"].as<std::string>(), 7947,
+                                         target_paths, handle_update);
         }
 
         session.set_meter_callback(send_meter);
 
         session.start();
 
-
-        int server_fd = socket(AF_INET, SOCK_STREAM, 0);
-        struct sockaddr_in address;
-
-        if (server_fd < 0)
-        {
-            SPDLOG_ERROR("Couldn't open socket");
-        }
-
-        address.sin_family = AF_INET;
-        address.sin_addr.s_addr = htonl(INADDR_ANY);
-        address.sin_port = htons(53508);
-
-        if (bind(server_fd, (const struct sockaddr *)&address, sizeof(address)) != 0)
-        {
-            SPDLOG_ERROR("Couldn't bind socket");
-        }
-
-        SPDLOG_INFO("Listening");
-
-        if (listen(server_fd, 5) != 0)
-        {
-            SPDLOG_ERROR("Couldn't listen to socket");
-        }
-
-        struct sockaddr_in client;
-        socklen_t len = sizeof(client);
-
-        connection_fd = accept(server_fd, (struct sockaddr *)&client, &len);
-
-        if (connection_fd < 0)
-        {
-            SPDLOG_ERROR("Couldn't accept client");
-        }
-
-        SPDLOG_INFO("Socket connected");
-
         while(1)
         {
-            char buf[1024];
-            memset(buf, 0, sizeof(buf));
+            usleep(1000);
+        }
 
-            int result = read(connection_fd, buf, sizeof(buf) - 1);
-
-            if (result < 0)
-            {
-                SPDLOG_ERROR("Couldn't read from socket.");
-            }
-
-            if (buf[0] != '\0')
-            {
-                SPDLOG_INFO("Got parameter setting: {}", buf);
-            }
-
-            std::stringstream ss;
-            ss << buf;
-            bosepro::ParameterSetting ps = bosepro::ParameterSetting(ss);
-            session.process_parameter_setting(ps);
-            usleep(100);
+        if (client != nullptr)
+        {
+            client->stop();
+            delete client;
         }
     }
     else
