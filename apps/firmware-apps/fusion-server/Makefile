@@ -1,5 +1,5 @@
 # Go parameters
-GOCMD=go
+GOCMD="/c/Program\ Files/Go/bin/go.exe"
 GOBUILD=$(GOCMD) build
 GOCLEAN=$(GOCMD) clean
 GOTEST=$(GOCMD) test
