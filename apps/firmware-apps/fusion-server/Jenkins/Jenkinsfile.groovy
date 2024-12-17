@@ -74,7 +74,7 @@ pipeline {
 							println("ver: '${ver}'")
 							sh '''
 								echo "Environment: `uname`"
-								make --version
+								make --version | head -1
 								export PATH="/e/Program Files/Go/Bin":$PATH >/dev/null 2>&1
 								./build-fusion-server --package
 								ls -l build/*
