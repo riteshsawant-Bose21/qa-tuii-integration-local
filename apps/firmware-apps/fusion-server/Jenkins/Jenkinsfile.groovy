@@ -36,8 +36,8 @@ pipeline {
 		stage('Check') {
 			when {
 				anyOf {
-					changeRequest target: 'master'
-					branch 'master'
+					changeRequest target: 'main'
+					branch 'main'
 					changeRequest target: 'develop'
 					branch 'develop'
 					changeRequest target: 'feat/jenkins-pipeline'
