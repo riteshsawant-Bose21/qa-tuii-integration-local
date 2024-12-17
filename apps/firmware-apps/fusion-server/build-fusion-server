@@ -40,14 +40,15 @@ flag=${1:-}
 
 if [ "$flag" = '--package' ]; then
     # Make a "release package" with the binary, config files and version info.
+    # Build servers will define VERSION in the environment, but set a default for local builds.
+    VERSION=${VERSION:-LOCAL}
     # Get the commit-id
     commit_id=$(git rev-parse HEAD)
     full_version=$VERSION
 
     cat << EOF_VERSION > build/fusion-server.info
 APP="fusion-server"
-# Build servers will define VERSION in the environment, but set a default for local builds.
-VERSION="${VERSION:-LOCAL}"
+VERSION="$VERSION"
 BRANCH="$(git rev-parse --abbrev-ref HEAD)"
 COMMIT_ID="$commit_id"
 COMMIT_DATE="$(TZ=UTC0 git --no-pager log -1 --pretty='format:%cd' --date='format-local:%Y-%m-%dT%H:%M:%S+00:00')"
