@@ -90,7 +90,7 @@ pipeline {
     					script {
                             				EMBEDDED_PATH_PART=env.CHANGE_BRANCH ?: env.BRANCH_NAME
                             				def server = Artifactory.server 'Bose-Artifactory'
-                            				def fileName = "fusion-server_*.tgz"
+                            				def fileName = "fusion-server_*.tar.gz"
                             				def binaryPath = sh(returnStdout: true, script: "find . -name '${fileName}' | head -1").trim()
 							def binaryFileName = sh(returnStdout: true, script: "basename -- '${binaryPath}'").trim()
 							def targetPath = String.format(ARTIFACTORY_TARGET, env.BuildType, EMBEDDED_PATH_PART, env.VERSION, binaryFileName)
