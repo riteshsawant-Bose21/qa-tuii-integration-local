@@ -73,7 +73,7 @@ pipeline {
 							println("gitHashShort: ${env.gitHashShort}")									
 							println("ver: '${ver}'")
 							sh '''
-								echo "Environment: `uname`"
+								echo "Environment: $(uname -a)"
 								make --version | head -1
 								export PATH="/e/Program Files/Go/Bin":$PATH >/dev/null 2>&1
 								./build-fusion-server --package
