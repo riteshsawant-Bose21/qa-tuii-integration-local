@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -eu
 
 if [ ! -f multipass.env ]; then
     cp multipass_template.env multipass.env
@@ -10,6 +10,9 @@ BASE_NAME=""
 NUM_INSTANCES=""
 JOIN_ADDRESS=""
 KILL_MODE=false
+# Host directories are set in `host_setup`
+HOST_TEMP_DIR=
+HOST_BUILD_DIR=
 
 # Color and formatting definitions
 declare -r RED='\033[0;31m'
@@ -429,7 +432,67 @@ check_existing_instances() {
     return 0
 }
 
+check_platform_arch() {
+    # Multipass cannot run a cross-architecture target OS, so we check that the 
+    # build/fusion-server symlink points to a platform-compatible binary.
+    # This avoids building and running a multipass instance just to find out the fusion-server
+    # copied in is not compatible.
+    target_arch=$(file -bL build/fusion-server | awk -F ',' '{print $2}' | sed 's/^ //')
+    host_arch=$(uname -m)
+    # | tr '_' '-')
+    host_target_ok=false
+
+    case "$host_arch" in
+        'x86'_'64') 
+            # x86_64 host can run x86-64 fusion-server.
+            [ "$target_arch" = 'x86-64' ] && host_target_ok=true
+            ;;
+        'arm64') 
+            # arm64 host can run aarch64 fusion-server in multipass.
+            [ "$target_arch" = 'ARM aarch64' ] && host_target_ok=true
+            ;;
+    esac
+
+    if [ "$host_target_ok" = 'false' ]; then
+        print_error "CPU architecture mismatch for fusion-server executable: Host=$host_arch, Target=$target_arch"
+        return 1
+    fi
+}
+
+host_setup() {
+    # Perform and host configuration necessary to run multipass.
+    # Use 'my_multipass_dir' so we don't have to keep checking for unbound MULTIPASS_DIR
+    my_multipass_dir="${MULTIPASS_DIR:-}"
+
+    if [ "$VERBOSE" ]; then
+        echo "multipass.env environment:"
+        echo "      VIRTUAL_IP: '$VIRTUAL_IP'"
+        echo "   NET_INTERFACE: '$NET_INTERFACE'"
+        echo "   MULTIPASS_DIR: '$my_multipass_dir'"
+        echo ""
+    fi
+
+    if [ -n "$my_multipass_dir" ]; then
+        # On a Linux host where 'multipass' is a snap, only the user's home
+        # directory is accessible by snaps, so create a directory somewhere under
+        # $HOME to use as the 'MULTIPASS_DIR' directory.
+        HOST_TEMP_DIR="$my_multipass_dir/tmp"
+        HOST_BUILD_DIR="$my_multipass_dir/build"
+        mkdir -p "$HOST_TEMP_DIR"
+        mkdir -p "$HOST_BUILD_DIR"
+        # Copy the main binary to HOST_BUILD_DIR
+        cp build/fusion-server "$HOST_BUILD_DIR/"
+    else
+        # Default host paths, works on MacOS.
+        HOST_TEMP_DIR=/tmp
+        HOST_BUILD_DIR=./build
+    fi
+    print_substep "Using HOST_TEMP_DIR=$HOST_TEMP_DIR"
+    print_substep "Using HOST_BUILD_DIR=$HOST_BUILD_DIR"
+}
+
 # Parse command line arguments
+VERBOSE=''
 while [[ $# -gt 0 ]]; do
     case $1 in
         --name)
@@ -458,32 +521,6 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
-
-if [ "$VERBOSE" = true ]; then
-    echo "multipass.env environment:"
-    echo "      VIRTUAL_IP: '$VIRTUAL_IP'"
-    echo "   NET_INTERFACE: '$NET_INTERFACE'"
-    echo "   MULTIPASS_DIR: '$MULTIPASS_DIR'"
-    echo ""
-fi
-
-if [ -n "$MULTIPASS_DIR" ]; then
-    # On a Linux host where 'multipass' is a snap, only the user's home
-    # directory is accessible by snaps, so create a directory somewhere under
-    # $HOME to use as the 'MULTIPASS_DIR' directory.
-    HOST_TEMP_DIR="$MULTIPASS_DIR/tmp"
-    HOST_BUILD_DIR="$MULTIPASS_DIR/build"
-    mkdir -p "$HOST_TEMP_DIR"
-    mkdir -p "$HOST_BUILD_DIR"
-    [ "$VERBOSE" = true ] && echo "Using HOST_TEMP_DIR=$HOST_TEMP_DIR"
-    [ "$VERBOSE" = true ] && echo "Using HOST_BUILD_DIR=$HOST_BUILD_DIR"
-    # Copy the main binary to HOST_BUILD_DIR
-    cp build/fusion-server "$HOST_BUILD_DIR/"
-else
-    # Default host paths, works on MacOS.
-    HOST_TEMP_DIR=/tmp
-    HOST_BUILD_DIR=./build
-fi
 
 if [ "$KILL_MODE" = true ]; then
     # If no specific kill base name provided, use the general base name
@@ -626,8 +663,16 @@ if [ -z "$NUM_INSTANCES" ]; then
     done
 fi
 
+print_step "System checks"
+
 # Check IP forwarding before proceeding
 check_ip_forwarding
+
+if ! check_platform_arch; then
+    exit 1
+fi
+
+host_setup
 
 # Set up trap but don't exit on errors
 trap cleanup EXIT

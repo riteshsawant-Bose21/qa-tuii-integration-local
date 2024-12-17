@@ -53,7 +53,7 @@ verify_binary() {
         echo "Binary is not executable"
         return 1
     fi
-    
+
     local file_size=$(stat -f%z "$binary" 2>/dev/null || stat -c%s "$binary")
     if [ "$file_size" -lt 1000 ]; then  # Adjust minimum size as needed
         echo "Binary file too small ($file_size bytes), likely invalid"
@@ -70,7 +70,7 @@ SUCCESS=false
 
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
     echo "Attempting download (try $((RETRY_COUNT + 1))/$MAX_RETRIES)..."
-    
+
     if curl -v -L --connect-timeout 10 --retry 3 --retry-delay 5 \
             --retry-connrefused --retry-max-time 60 \
             "http://${GATEWAY}:8000/build/fusion-server" \
@@ -79,7 +79,7 @@ while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
         SUCCESS=true
         break
     fi
-        
+
     RETRY_COUNT=$((RETRY_COUNT + 1))
     if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
         echo "Download or verification failed. Retrying in 10 seconds..."

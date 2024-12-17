@@ -1,3 +1,4 @@
+# Fusion haproxy service file
 [Unit]
 Description=HAProxy Load Balancer
 After=network.target
