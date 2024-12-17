@@ -3,7 +3,6 @@
 @Library(['ProJenkinsSharedLibrary']) _
 import JenkinsJobCleanup
 def JobCleanup = new JenkinsJobCleanup()
-JobCleanup.CheckPendingJob("Fusion/Fusion-Server/Build-Fusion-Server", env.BRANCH_NAME)
 def VERSION = ''
 def ARTIFACTORY_TARGET = "pro-fusion-local/Fusion-Server/%s/%s/%s/%s"
 
