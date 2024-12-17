@@ -55,7 +55,6 @@ pipeline {
 							sh """
             						  chmod +x ./Jenkins/SetVersionProperty.sh
             						  chmod +x ./build-fusion-server
-		    					  export PATH="/e/Program Files/Go/Bin":$PATH >/dev/null 2>&1 
           						"""
 						}
 					}
@@ -75,7 +74,8 @@ pipeline {
 							println("ver: '${ver}'")
 							sh '''
 								echo "Environment: `uname`"
-								make --version	
+								make --version
+								export PATH="/e/Program Files/Go/Bin":$PATH >/dev/null 2>&1
 								./build-fusion-server --package
 								ls -l build/*
 							'''
