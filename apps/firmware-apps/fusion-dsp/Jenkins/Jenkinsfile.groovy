@@ -4,6 +4,7 @@
 import java.util.regex.Pattern
 import JenkinsJobCleanup
 import groovy.json.JsonOutput
+def VERSION = ''
 def JobCleanup = new JenkinsJobCleanup()
 
 ARTIFACTORY_TARGET = "pro-fusion-local/Fusion-DSP/%s/%s/%s/%s"
@@ -17,8 +18,10 @@ pipeline {
 	}
 	environment {
 	        buildDir="${env.WORKSPACE}"
+		buildNumber="${env.BUILD_NUMBER}"
+		VersionFile="src/VERSION"
 	        SDK_DIR="/fusion-build-cache/bose/fusion/yocto-sdk/"
-    }
+    	}
 	
 	stages {
 		stage('Clone') {
@@ -61,6 +64,8 @@ pipeline {
 						}
 						sh'''
 						    git submodule update --init --recursive
+	  					    chmod +x ./Jenkins/SetVersionProperty.sh
+	    					    
 						'''
 						
 					}
@@ -72,6 +77,14 @@ pipeline {
 							if( env.CHANGE_ID ) {
 								githubNotify( "Build-Fusion-DSP", "Stage: Build Fusion-DSP Application ...", "PENDING" )
 				  		  	}
+							env.gitHashShort=env.GIT_COMMIT.take(7).trim().toString()
+		  					ver=sh(returnStdout:true, script: './Jenkins/SetVersionProperty.sh').trim()
+	      						env.VERSION=ver
+							println("buildDir: ${buildDir}")
+							println("GIT_COMMIT: ${env.GIT_COMMIT}")
+							println("VERSION: ${env.VERSION}")
+							println("gitHashShort: ${env.gitHashShort}")
+							println("ver: '${ver}'")
 							sh """
 							    source "$SDK_DIR"/environment-setup-cortexa53-crypto-poky-linux
 						            cd "$buildDir"
