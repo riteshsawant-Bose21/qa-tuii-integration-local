@@ -55,6 +55,7 @@ pipeline {
 					}
 					// Set github info in env. variable
 					githubInfo()
+					env.GIT_COMMIT=sh(returnStdout:true, script: 'git rev-parse HEAD').trim().toString()
 				}
 			}
 		}
@@ -92,7 +93,7 @@ pipeline {
 							if( env.CHANGE_ID ) {
 								githubNotify( "Build-Fusion-DSP", "Stage: Build Fusion-DSP Application ...", "PENDING" )
 				  		  	}
-							env.gitHashShort=sh(returnStdout:true, script: 'git rev-parse HEAD').take(7).trim().toString()
+							env.gitHashShort=env.GIT_COMMIT.take(7).trim().toString()
 		  					ver=sh(returnStdout:true, script: './Jenkins/SetVersionProperty.sh').trim()
 	      						env.VERSION=ver
 							println("buildDir: ${buildDir}")
