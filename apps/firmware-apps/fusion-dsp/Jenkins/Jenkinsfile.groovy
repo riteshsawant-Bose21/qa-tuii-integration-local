@@ -96,7 +96,6 @@ pipeline {
 		  					ver=sh(returnStdout:true, script: './Jenkins/SetVersionProperty.sh').trim()
 	      						env.VERSION=ver
 							println("buildDir: ${buildDir}")
-							println("GIT_COMMIT: ${env.GIT_COMMIT}")
 							println("VERSION: ${env.VERSION}")
 							println("gitHashShort: ${env.gitHashShort}")
 							println("ver: '${ver}'")
@@ -105,7 +104,6 @@ pipeline {
 						            cd "$buildDir"
 						            python3 waf configure --platform=varmini
 						            python3 waf build
-						            ls -l build/
 							"""
 							}
 						}
@@ -119,7 +117,6 @@ pipeline {
 				  		  	}
 							sh """
 						        python3 package.py
-						        ls -l build/
 							"""
 							}
 						}
@@ -131,23 +128,23 @@ pipeline {
 					}
 					steps {
     					script {
-                            EMBEDDED_PATH_PART=env.CHANGE_BRANCH ?: env.BRANCH_NAME
-                            def server = Artifactory.server 'Bose-Artifactory'
-                            def fileName = "fusion-dsp_*.tar.gz"
-                            def binaryPath = sh(returnStdout: true, script: "find . -name '${fileName}' | head -1").trim()
-							def binaryFileName = sh(returnStdout: true, script: "basename -- '${binaryPath}'").trim()
-							def targetPath = String.format(ARTIFACTORY_TARGET, env.BuildType, EMBEDDED_PATH_PART, env.VERSION, binaryFileName)
-							def fileSpec = """{
-								"files": [
-									{
-									"pattern": "${binaryPath}",
-									"flat": "false",
-									"target": "${targetPath}"
-									}
-								]
-							}"""
-							println("fileSpec: ${fileSpec}")
-							server.upload spec:fileSpec
+                            			EMBEDDED_PATH_PART=env.CHANGE_BRANCH ?: env.BRANCH_NAME
+                            			def server = Artifactory.server 'Bose-Artifactory'
+                            			def fileName = "fusion-dsp_*.tar.gz"
+                            			def binaryPath = sh(returnStdout: true, script: "find . -name '${fileName}' | head -1").trim()
+						def binaryFileName = sh(returnStdout: true, script: "basename -- '${binaryPath}'").trim()
+						def targetPath = String.format(ARTIFACTORY_TARGET, env.BuildType, EMBEDDED_PATH_PART, env.VERSION, binaryFileName)
+						def fileSpec = """{
+							"files": [
+								{
+								"pattern": "${binaryPath}",
+								"flat": "false",
+								"target": "${targetPath}"
+								}
+							]
+						}"""
+						println("fileSpec: ${fileSpec}")
+						server.upload spec:fileSpec
     						}
 					}
 				}
