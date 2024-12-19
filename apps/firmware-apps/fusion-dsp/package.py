@@ -10,8 +10,8 @@ import os
 APP_PATH = 'build/mune_dsp'
 INFO_PATH = 'build/fusion-dsp.info'
 
-# TODO: Get a real version for mune_dsp.
-version = "0.0.1"
+# Getting version from the Jenkins environment, if not set default to LOCAL version
+version = os.getenv('VERSION', 'LOCAL')
 
 git_hash = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('ascii').strip()
 git_branch = subprocess.check_output(['git', 'rev-parse', '--abbrev-ref', 'HEAD']).decode('ascii').strip()
