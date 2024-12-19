@@ -55,7 +55,6 @@ pipeline {
 					}
 					// Set github info in env. variable
 					githubInfo()
-					env.GIT_COMMIT=sh(returnStdout:true, script: 'git rev-parse HEAD').trim().toString()
 				}
 			}
 		}
