@@ -17,13 +17,29 @@ pipeline {
 		skipDefaultCheckout()
 	}
 	environment {
-	        buildDir="${env.WORKSPACE}"
+	    	buildDir="${env.WORKSPACE}"
 		buildNumber="${env.BUILD_NUMBER}"
+		branchName="${env.CHANGE_BRANCH}"
+		BuildType="Continuous"
 		VersionFile="src/VERSION"
-	        SDK_DIR="/fusion-build-cache/bose/fusion/yocto-sdk/"
+	    	SDK_DIR="/fusion-build-cache/bose/fusion/yocto-sdk/"
     	}
 	
 	stages {
+	    stage('Setup parameters') {
+            steps {
+                script { 
+                    properties([
+                        parameters([
+                            choice(
+                                choices: ['Continuous', 'Nighty', 'Release'], 
+                                name: 'BuildType'
+                            )
+                        ])
+                    ])
+                }
+            }
+	    }
 		stage('Clone') {
 			steps {
 				script {
@@ -67,7 +83,6 @@ pipeline {
 	  					    chmod +x ./Jenkins/SetVersionProperty.sh
 	    					    
 						'''
-						
 					}
 				}
 				
@@ -79,7 +94,7 @@ pipeline {
 				  		  	}
 							env.gitHashShort=env.GIT_COMMIT.take(7).trim().toString()
 		  					ver=sh(returnStdout:true, script: './Jenkins/SetVersionProperty.sh').trim()
-	      						env.VERSION=ver
+	      					env.VERSION=ver
 							println("buildDir: ${buildDir}")
 							println("GIT_COMMIT: ${env.GIT_COMMIT}")
 							println("VERSION: ${env.VERSION}")
@@ -96,14 +111,49 @@ pipeline {
 						}
 				}
 
-				// stage('Package DSP build') {
-				// }
+				stage('Package DSP build') {
+				    steps {
+						script {
+							if( env.CHANGE_ID ) {
+								githubNotify( "Package DSP build", "Stage: Build Fusion-DSP Application ...", "PENDING" )
+				  		  	}
+							sh """
+						        python3 package.py
+						        ls -l build/
+							"""
+							}
+						}
+				}
 
-				// stage('Artifactory') {
-				// }
+				stage('Upload to Artifactory') {
+					environment {
+						ASSETS_CREDS = credentials('pro-jenkins-artifactory')
+					}
+					steps {
+    					script {
+                            EMBEDDED_PATH_PART=env.CHANGE_BRANCH ?: env.BRANCH_NAME
+                            def server = Artifactory.server 'Bose-Artifactory'
+                            def fileName = "fusion-dsp_*.tar.gz"
+                            def binaryPath = sh(returnStdout: true, script: "find . -name '${fileName}' | head -1").trim()
+							def binaryFileName = sh(returnStdout: true, script: "basename -- '${binaryPath}'").trim()
+							def targetPath = String.format(ARTIFACTORY_TARGET, env.BuildType, EMBEDDED_PATH_PART, env.VERSION, binaryFileName)
+							def fileSpec = """{
+								"files": [
+									{
+									"pattern": "${binaryPath}",
+									"flat": "false",
+									"target": "${targetPath}"
+									}
+								]
+							}"""
+							println("fileSpec: ${fileSpec}")
+							server.upload spec:fileSpec
+    						}
+					}
+				}
 			}
 		}
-	}
+    }
 
 	post {
 		success {
