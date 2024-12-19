@@ -92,9 +92,9 @@ pipeline {
 							if( env.CHANGE_ID ) {
 								githubNotify( "Build-Fusion-DSP", "Stage: Build Fusion-DSP Application ...", "PENDING" )
 				  		  	}
-							env.gitHashShort=env.GIT_COMMIT.take(7).trim().toString()
+							env.gitHashShort=sh(returnStdout:true, script: 'git rev-parse HEAD').take(7).trim().toString()
 		  					ver=sh(returnStdout:true, script: './Jenkins/SetVersionProperty.sh').trim()
-	      					env.VERSION=ver
+	      						env.VERSION=ver
 							println("buildDir: ${buildDir}")
 							println("GIT_COMMIT: ${env.GIT_COMMIT}")
 							println("VERSION: ${env.VERSION}")
