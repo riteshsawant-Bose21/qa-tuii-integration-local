@@ -9,40 +9,12 @@
 #include <pthread.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <sys/un.h>
+#include <cstring>
 #include <unistd.h>
-
+#include <fcntl.h>
+#include <sys/mman.h> 
 #include <iostream>
-
-#define CMD_PORT 53509
-
-int connection_fd;
-
-std::mutex socket_mutex;
-
-
-/// Callback to send telemetry over a socket
-///
-/// @param message the message to send
-void send_telemetry_sock_cb(const std::string &message)
-{
-    std::lock_guard<std::mutex> guard(socket_mutex);
-    
-    int size = send(connection_fd, message.c_str(), message.size(), 0);
-
-    if (size < 0)
-    {
-        SPDLOG_WARN("Couldn't send telemetry to socket.");
-    }
-}
-
-
-/// Callback to update telemetry in shared memory
-///
-/// @param message the message to send
-// void update_telemetry_smem_cb(const std::string &message)
-// {
-    
-// }
 
 
 int main(int argc, char *argv[])
@@ -54,6 +26,7 @@ int main(int argc, char *argv[])
     desc.add_options()
         ("configuration,c", boost::program_options::value<std::string>()->default_value("config/configuration.json"), "configuration file")
         ("definitions,d", boost::program_options::value<std::string>()->default_value("config/module-definitions.json"), "module definition file")
+        ("telemetry,d", boost::program_options::value<std::string>()->default_value("config/telemetry-messages.json"), "telemetry commands file")
         ("time,t", boost::program_options::value<int>(), "time to run (seconds)")
         ("help,h", "print this message and exit")
     ;
@@ -72,6 +45,10 @@ int main(int argc, char *argv[])
     bosepro::Configuration configuration(vm["configuration"].as<std::string>());
     bosepro::Definition definitions(vm["definitions"].as<std::string>());
     bosepro::Session session(configuration.get_session(), definitions);
+    
+    // Initialize singleton TelemetryMonitor
+    auto& telemetry_monitor = bosepro::TelemetryMonitor::get_instance();
+    telemetry_monitor.initialize(vm["telemetry"].as<std::string>());
 
     if (configuration.has_tasks())
     {
@@ -96,78 +73,8 @@ int main(int argc, char *argv[])
         session.set_seconds_to_run(vm["time"].as<int>());
     }
 
-    session.set_telemetry_callbacks(send_telemetry_sock_cb, send_telemetry_sock_cb);
-
+    telemetry_monitor.start();
     session.start();
-
-    int server_fd = socket(AF_INET, SOCK_STREAM, 0);
-    struct sockaddr_in address;
-
-    if (server_fd < 0)
-    {
-        SPDLOG_ERROR("Couldn't open socket");
-    }
-
-    address.sin_family = AF_INET;
-    address.sin_addr.s_addr = htonl(INADDR_ANY);
-    address.sin_port = htons(CMD_PORT);
-
-    if (bind(server_fd, (const struct sockaddr *)&address, sizeof(address)) != 0)
-    {
-        SPDLOG_ERROR("Couldn't bind socket");
-    }
-
-    SPDLOG_INFO("Listening");
-
-    if (listen(server_fd, 5) != 0)
-    {
-        SPDLOG_ERROR("Couldn't listen to socket");
-    }
-
-    while (1)
-    {
-        if (connection_fd <= 0) 
-        {
-            struct sockaddr_in client;
-            socklen_t len = sizeof(client);
-            connection_fd = accept(server_fd, (struct sockaddr *)&client, &len);
-
-            if (connection_fd < 0) {
-                SPDLOG_ERROR("Couldn't accept client");
-                continue;
-            }
-        }
-
-        char buf[1024];
-        memset(buf, 0, sizeof(buf));
-
-        int result = read(connection_fd, buf, sizeof(buf) - 1);
-
-        if (result <= 0)
-        {
-            SPDLOG_ERROR("Couldn't read from socket / Invalid socket.");
-            close(connection_fd); // Close the invalid socket
-            connection_fd = -1;   // Mark the connection as closed
-            continue;
-        }
-
-        buf[result] = '\0';
-
-        SPDLOG_INFO("Got parameter setting: '{}'", buf);
-
-        try
-        {
-            std::stringstream ss(buf);
-            bosepro::ParameterSetting ps = bosepro::ParameterSetting(ss);
-            session.process_parameter_setting(ps);
-        }
-        catch (const std::exception &e)
-        {
-            SPDLOG_ERROR("Error processing ps: {}", e.what());
-        }
-
-        usleep(100);
-    }
 
     return 0;
 }

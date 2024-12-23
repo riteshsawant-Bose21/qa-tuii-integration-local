@@ -28,7 +28,6 @@ struct AlgorithmMeta {
     const BlockConfiguration *configuration;
     std::map<std::string, std::unique_ptr<Terminal>> terminals;
     std::map<std::string, std::unique_ptr<Parameter>> parameters;
-    std::map<std::string, std::unique_ptr<Telemetry>> telemetry;
 };
 
 
@@ -39,9 +38,7 @@ public:
     ///
     /// @param  configuration  The configuration to use for the algorithm.
     Algorithm(const BlockConfiguration &configuration)
-        : Configurable(configuration), 
-          telemetry_callback(nullptr),
-          event_telemetry_callback(nullptr),
+        : Configurable(configuration),
           output_process_count(0)
     {
         meta->configuration = &configuration;
@@ -83,16 +80,19 @@ public:
         // Create the meter data for all of the telemetry in the algorithm.
         if (meta->definition->has_telemetry())
         {
-            for (auto &m: meta->definition->get_telemetry())
+            for (auto &m : meta->definition->get_telemetry())
             {
-                const TelemetryDefinition &md =
-                    reinterpret_cast<const TelemetryDefinition &>(m.second);
-                const std::string &name = md.get_name();
+                const TelemetryDefinition &md = reinterpret_cast<const TelemetryDefinition &>(m.second);
+                std::unique_ptr<Telemetry> telemetry = 
+                std::unique_ptr<Telemetry>(Telemetry::create(
+                    md,
+                    static_cast<const ProcessorDefinition&>(*meta->definition),
+                    meta->configuration));
 
-                meta->telemetry[name] =
-                    std::unique_ptr<Telemetry>(Telemetry::create(md,
-                                                                 static_cast<const ProcessorDefinition&>(*meta->definition),
-                                                                 meta->configuration));
+                telemetry->set_block_name(this->get_block_name());
+
+                // Delegate the telemetry registration to the TelemetryMonitor
+                TelemetryMonitor::get_instance().register_telemetry(std::move(telemetry));
             }
         }
 
@@ -108,11 +108,11 @@ public:
             {
                 const std::string gain_name = name + "_gain";
                 const std::string mute_name = name + "_mute";
-                const std::string telemetry_name = name + "_telemetry";
+                const std::string meter_name = this->get_block_name() + "::" + name + "_meter";
 
                 if ((meta->parameters.count(gain_name) != 0)
                     || (meta->parameters.count(mute_name) != 0)
-                    || (meta->telemetry.count(telemetry_name) != 0)
+                    || (TelemetryMonitor::get_instance().has_meter(meter_name) != 0)
                     || (td.has_bypass_source()
                         && (meta->parameters.count("bypass") != 0)))
                 {
@@ -124,7 +124,7 @@ public:
         outputs_to_process.resize(output_process_count);
         int top_index = 0;
 
-        // Assign universal parameters and telemetry to the associated output
+        // Assign universal parameters and meter to the associated output
         // terminals.
         for (auto &t : meta->definition->get_terminals())
         {
@@ -137,7 +137,7 @@ public:
             {
                 const std::string gain_name = name + "_gain";
                 const std::string mute_name = name + "_mute";
-                const std::string telemetry_name = name + "_telemetry";
+                const std::string meter_name = this->get_block_name() + "::" + name + "_meter";
                 TerminalOutputProcessor &top = outputs_to_process[top_index];
                 bool requires_processing = false;
 
@@ -153,9 +153,9 @@ public:
                     requires_processing = true;
                 }
 
-                if (meta->telemetry.count(telemetry_name) != 0)
+                if (TelemetryMonitor::get_instance().has_meter(meter_name))
                 {
-                    assign_telemetry(telemetry_name, top.get_telemetry());
+                    assign_telemetry(meter_name, top.get_telemetry());
                     requires_processing = true;
                 }
 
@@ -176,7 +176,10 @@ public:
     }
 
 
-    virtual ~Algorithm() = default;
+    virtual ~Algorithm() 
+    {
+        TelemetryMonitor::get_instance().unregister_block(this->get_block_name());
+    }
 
 
     /// Process one frame of audio. Every algorithm must implement this.
@@ -321,44 +324,6 @@ public:
     }
 
 
-    void set_telemetry_callbacks(void (*telemetry_callback)(const std::string &), void (*event_telemetry_callback)(const std::string &))
-    {
-        this->telemetry_callback = telemetry_callback;
-        this->event_telemetry_callback = event_telemetry_callback;
-    }
-
-
-    /// Get a reference to a meter by name.  This is called by the framework,
-    /// not by the algorithm.
-    ///
-    /// @param  name  The name of the meter.
-    /// @return  A reference to the meter.
-    Telemetry &get_telemetry(const std::string &name)
-    {
-        if (meta->telemetry.count(name) == 0)
-        {
-            SPDLOG_CRITICAL("Unknown meter '{}' in '{}'.",
-                            name, meta->configuration->get_algorithm());
-        }
-
-        return *meta->telemetry[name];
-    }
-
-
-    /// Initialize all of the telemetry.  This is called by the framework,
-    /// not by the algorithm. This will allocate storage for the telemetry values.
-    void initialize_telemetry()
-    {
-        SPDLOG_TRACE("Initializing telemetry for '{}'.",
-                     meta->configuration->get_algorithm());
-
-        for (auto &m : meta->telemetry)
-        {
-            m.second->initialize();
-        }
-    }
-
-
     /// For any output terminals that have default gain, bypass, or telemetry,
     /// process the output after the algorithm has finished processing.
     void process_outputs()
@@ -366,56 +331,6 @@ public:
         for (int top_index = 0; top_index < output_process_count; top_index++)
         {
             outputs_to_process[top_index].process();
-        }
-    }
-
-
-    /// Send telemetry data for all of the telemetry in this block.
-    size_t get_telemetry_size()
-    {
-        size_t size = 0;
-        for (auto &m : meta->telemetry)
-        {
-            if (m.second->get_telemetry_type() != "event")
-            {
-                size += m.second->get_telemetry_size();
-            }
-        }
-
-        return size;
-    }
-
-
-    /// Send telemetry data for all of the telemetry in this block.
-    void send_telemetry()
-    {
-        if(telemetry_callback)
-        {
-            for (auto &m : meta->telemetry)
-            {
-                if (m.second->get_telemetry_type() != "event")
-                {
-                    m.second->pre_process();
-                    m.second->send(telemetry_callback);
-                }
-            }
-        }
-    }
-
-
-    /// Send telemetry data for a specific event
-    ///
-    /// @param  name  The name of the telemetry object
-    void send_event_telemetry(const std::string &name)
-    {
-        if(event_telemetry_callback)
-        {
-            auto &m = get_telemetry(name);
-            if (m.get_telemetry_type() == "event") 
-            {
-                m.pre_process();
-                m.send(event_telemetry_callback);
-            }
         }
     }
 
@@ -678,7 +593,7 @@ protected:
     template <typename T>
     void assign_telemetry(const std::string &name, const T *value)
     {
-        get_telemetry(name).assign(value);
+        TelemetryMonitor::get_instance().get_telemetry(this->get_block_name() + "::" + name).assign(value);
     }
 
 
@@ -691,7 +606,7 @@ protected:
     template <typename T>
     void assign_telemetry(const std::string &name, DspTelemetryMemory<T[]> &value)
     {
-        get_telemetry(name).assign(value);
+        TelemetryMonitor::get_instance().get_telemetry(this->get_block_name() + "::" + name).assign(value);
     }
 
 
@@ -704,12 +619,8 @@ protected:
     template <typename T>
     void assign_telemetry(const std::string &name, DspTelemetryMemory<T*[]> &value)
     {
-        get_telemetry(name).assign(value);
+        TelemetryMonitor::get_instance().get_telemetry(this->get_block_name() + "::" + name).assign(value);
     }
-
-
-    void (*telemetry_callback)(const std::string &message);
-    void (*event_telemetry_callback)(const std::string &message);
 
 
 private:

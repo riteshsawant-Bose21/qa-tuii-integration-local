@@ -92,12 +92,10 @@ void CpuUsage::process()
     if (cpu >= 80.0f && high_cpu_usage == false) 
     {
         high_cpu_usage = true;
-        send_event_telemetry("high_cpu_usage");
     }
     else if (cpu < 80.0f && high_cpu_usage == true)
     {
         high_cpu_usage = false;
-        send_event_telemetry("high_cpu_usage");
     }
 }
 

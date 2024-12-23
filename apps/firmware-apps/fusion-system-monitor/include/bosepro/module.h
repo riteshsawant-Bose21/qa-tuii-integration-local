@@ -26,7 +26,6 @@ struct ModuleMeta {
     const ModuleDefinition *definition;
     const BlockConfiguration *configuration;
     std::map<std::string, std::unique_ptr<Parameter>> parameters;
-    std::map<std::string, std::unique_ptr<Telemetry>> telemetry;
 };
 
 
@@ -37,9 +36,7 @@ public:
     ///
     /// @param  configuration  The configuration to use for the module.
     Module(const BlockConfiguration &configuration)
-        : Configurable(configuration),
-          telemetry_callback(nullptr),
-          event_telemetry_callback(nullptr)
+        : Configurable(configuration)
     {
         meta->configuration = &configuration;
         meta->definition = static_cast<const ModuleDefinition*>(get_definition(configuration.get_module()));
@@ -65,22 +62,28 @@ public:
         // Create the telemetry data for all of the telemetry in the module.
         if (meta->definition->has_telemetry())
         {
-            for (auto &m: meta->definition->get_telemetry())
+            for (auto &m : meta->definition->get_telemetry())
             {
-                const TelemetryDefinition &md =
-                    reinterpret_cast<const TelemetryDefinition &>(m.second);
-                const std::string &name = md.get_name();
+                const TelemetryDefinition &md = reinterpret_cast<const TelemetryDefinition &>(m.second);
+                std::unique_ptr<Telemetry> telemetry = 
+                std::unique_ptr<Telemetry>(Telemetry::create(
+                    md,
+                    static_cast<const ProcessorDefinition&>(*meta->definition),
+                    meta->configuration));
 
-                meta->telemetry[name] =
-                    std::unique_ptr<Telemetry>(Telemetry::create(md,
-                                                                 static_cast<const ProcessorDefinition&>(*meta->definition),
-                                                                 meta->configuration));
+                telemetry->set_block_name(this->get_block_name());
+
+                // Delegate the telemetry registration to the TelemetryMonitor
+                TelemetryMonitor::get_instance().register_telemetry(std::move(telemetry));
             }
         }
     }
 
 
-    virtual ~Module() = default;
+    virtual ~Module() 
+    {
+        TelemetryMonitor::get_instance().unregister_block(this->get_block_name());
+    }
 
 
     /// Run the modules process. Every module must implement this.
@@ -152,95 +155,6 @@ public:
         get_parameter(setting.get_name()).set(setting);
 
         return true;
-    }
-
-
-    void set_telemetry_callbacks(void (*telemetry_callback)(const std::string &), void (*event_telemetry_callback)(const std::string &))
-    {
-        this->telemetry_callback = telemetry_callback;
-        this->event_telemetry_callback = event_telemetry_callback;
-    }
-
-
-    /// Get a reference to a telemetry by name.  This is called by the framework,
-    /// not by the module.
-    ///
-    /// @param  name  The name of the telemetry.
-    /// @return  A reference to the telemetry.
-    Telemetry &get_telemetry(const std::string &name)
-    {
-        if (meta->telemetry.count(name) == 0)
-        {
-            SPDLOG_CRITICAL("Unknown telemetry '{}' in '{}'.",
-                            name, meta->configuration->get_module());
-        }
-        
-        return *meta->telemetry[name];
-    }
-
-
-    /// Initialize all of the telemetry.  This is called by the framework,
-    /// not by the module. This will allocate storage for the telemetry values.
-    void initialize_telemetry()
-    {
-        SPDLOG_TRACE("Initializing telemetry for '{}'.",
-                     meta->configuration->get_module());
-
-        for (auto &m : meta->telemetry)
-        {
-            m.second->initialize();
-        }
-    }
-
-
-    // Send telemetry data for all of the telemetry in this block.
-    size_t get_telemetry_size()
-    {
-        size_t size = 0;
-        for (auto &m : meta->telemetry)
-        {
-            if (m.second->get_telemetry_type() != "event")
-            {
-                size += m.second->get_telemetry_size();
-            }
-        }
-
-        return size;
-    }
-
-
-    /// Send telemetry data for all of the non-event telemetry in this block.
-    ///
-    void send_telemetry()
-    {
-        if(telemetry_callback)
-        {
-            for (auto &m : meta->telemetry)
-            {
-                if (m.second->get_telemetry_type() != "event")
-                {
-                    m.second->pre_process();
-                    m.second->send(telemetry_callback);
-                }
-            }
-        }
-    }
-
-
-    /// Send telemetry data for a specific event
-    ///
-    /// @param  name  The name of the telemetry object
-    void send_event_telemetry(const std::string &name)
-    {
-        if(event_telemetry_callback)
-        {
-            auto &m = get_telemetry(name);
-            if (m.get_telemetry_type() == "event") 
-            {
-                m.pre_process();
-                m.send(event_telemetry_callback);
-            }
-        }
     }
 
 
@@ -363,7 +277,7 @@ protected:
     void assign_telemetry(const std::string &name, const T *value,
                         std::function<void()> pre_function)
     {
-        get_telemetry(name).assign(value, pre_function);
+        TelemetryMonitor::get_instance().get_telemetry(this->get_block_name() + "::" + name).assign(value, pre_function);
     }
 
 
@@ -378,7 +292,7 @@ protected:
     void assign_telemetry(const std::string &name, DspTelemetryMemory<T[]> &value,
                         std::function<void(int)> pre_function)
     {
-        get_telemetry(name).assign(value, pre_function);
+        TelemetryMonitor::get_instance().get_telemetry(this->get_block_name() + "::" + name).assign(value, pre_function);
     }
 
 
@@ -393,12 +307,8 @@ protected:
     void assign_telemetry(const std::string &name, DspTelemetryMemory<T*[]> &value,
                         std::function<void(int, int)> pre_function)
     {
-        get_telemetry(name).assign(value, pre_function);
+        TelemetryMonitor::get_instance().get_telemetry(this->get_block_name() + "::" + name).assign(value, pre_function);
     }
-
-
-    void (*telemetry_callback)(const std::string &message);
-    void (*event_telemetry_callback)(const std::string &message);
 
 
 private:

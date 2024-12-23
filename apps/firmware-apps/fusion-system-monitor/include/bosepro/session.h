@@ -7,6 +7,7 @@
 
 #include <spdlog/spdlog.h>
 
+#include <sys/un.h>
 #include <string>
 #include <vector>
 #include <functional>
@@ -14,10 +15,10 @@
 #include <cmath>
 #include <list>
 #include <memory>
-#include <sys/mman.h>
 
 
 namespace bosepro {
+
 
 /// A session is a collection of tasks that are run together.  It represents
 /// a complete audio processing system.
@@ -31,21 +32,20 @@ public:
     Session(const SessionConfiguration &configuration,
             const Definition &definitions)
         : Configurable(configuration)
+          
     {
         SPDLOG_TRACE("Creating session.");
         // This makes the definitions available to all `Configurable` objects.
         set_definitions(definitions);
 
-        session_cmd_map = 
+        ps_command_map = 
         {
-            {"send_telemetry",  [this](const ParameterSetting& c){ cmd_send_telemetry(c); }},
             {"stop",            [this](const ParameterSetting& c){ cmd_stop_all(c); }},
             {"destroy_task",    [this](const ParameterSetting& c){ cmd_destroy_task(c); }},
             {"create_task",     [this](const ParameterSetting& c){ cmd_create_task(c); }},
             {"create_na_task",  [this](const ParameterSetting& c){ cmd_create_na_task(c); }},
             {"start_task",      [this](const ParameterSetting& c){ cmd_start_task(c); }},
-            {"stop_task",       [this](const ParameterSetting& c){ cmd_stop_task(c); }},
-            {"test_telem_sz",   [this](const ParameterSetting& c){ register_request(c); }},
+            {"stop_task",       [this](const ParameterSetting& c){ cmd_stop_task(c); }}
         };
 
         frames_to_run = -1;
@@ -169,6 +169,17 @@ public:
     }
 
 
+    void create_na_tasks(const Configuration &configuration)
+    {
+        for (auto &t : configuration.get_na_tasks())
+        {
+            const TaskConfiguration &tc =
+                reinterpret_cast<const TaskConfiguration &>(t.second);
+            create_na_task(tc);
+        }
+    }
+
+
     /// Create a non-audio task given a task configuration.  This will also start the
     /// task.
     ///
@@ -185,17 +196,6 @@ public:
         }
 
         na_tasks[task_name] = std::unique_ptr<NaTask>(new NaTask(task_configuration));
-    }
-
-
-    void create_na_tasks(const Configuration &configuration)
-    {
-        for (auto &t : configuration.get_na_tasks())
-        {
-            const TaskConfiguration &tc =
-                reinterpret_cast<const TaskConfiguration &>(t.second);
-            create_na_task(tc);
-        }
     }
 
 
@@ -270,7 +270,7 @@ public:
             try {
                 // Use 'at' to retrieve the function. If setting.get_name() is not found,
                 // std::out_of_range will be thrown.
-                session_cmd_map.at(setting.get_name())(setting);
+                ps_command_map.at(setting.get_name())(setting);
             } catch (const std::out_of_range&) {
                 SPDLOG_WARN("Unknown session setting '{}'", setting.get_name());
             }
@@ -290,34 +290,6 @@ public:
         }
     }
 
-
-    /// Set the callback used to send telemetry.  When the "send_telemetry" setting
-    /// is sent to this session, every block in the session will send a
-    /// JSON-formatted string containing telemetry data for each of its telemetry.
-    ///
-    /// @param  telemetry_callback  The callback function used to send telemetry data.
-    void set_telemetry_callbacks(void (*telemetry_callback)(const std::string &), void (*event_telemetry_callback)(const std::string &))
-    {
-        for (auto &task : tasks)
-        {
-            task.second->set_telemetry_callbacks(telemetry_callback, event_telemetry_callback);
-        }
-        for (auto &na_task : na_tasks)
-        {
-            na_task.second->set_telemetry_callbacks(telemetry_callback, event_telemetry_callback);
-        }
-    }
-
-    /// Socket outgoing command to register this producer with telemetry service
-    ///
-    /// @param setting
-    void register_request(const ParameterSetting&);
-
-
-    /// Socket setting to send telemetry for all tasks
-    ///
-    /// @param setting 
-    void cmd_send_telemetry(const ParameterSetting& setting);
 
     /// Socket setting to stop all tasks
     ///
@@ -354,7 +326,7 @@ private:
     int_fast32_t frames_to_run;
     std::map<std::string, std::unique_ptr<Task>> tasks;
     std::map<std::string, std::unique_ptr<NaTask>> na_tasks;
-    std::map<std::string, std::function<void(const ParameterSetting&)>> session_cmd_map;
+    std::map<std::string, std::function<void(const ParameterSetting&)>> ps_command_map;
 };
 
 

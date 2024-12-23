@@ -85,7 +85,6 @@ public:
 
         if (!try_list_value("dimensions", 0, rows_name))
         {
-            SPDLOG_DEBUG("getting num_rows");
             rows_name = "";
             try_list_value("dimensions", 0, num_rows);
         }
@@ -392,10 +391,19 @@ class ParameterDefinition : public Definition {
 /// The parameter definition for a meter.
 class TelemetryDefinition : public Definition {
 public:
+    /// Get the telemetry reate
+    ///
+    /// @return  The telemetry type.
+    const std::string &get_rate() const
+    {
+        return get_string("telemetry_rate");
+    }
+
+
     /// Get the telemetry type
     ///
     /// @return  The telemetry type.
-    const std::string &get_telemetry_type() const
+    const std::string &get_type() const
     {
         return get_string("telemetry_type");
     }

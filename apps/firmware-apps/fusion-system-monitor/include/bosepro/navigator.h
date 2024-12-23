@@ -84,6 +84,48 @@ protected:
     }
 
 
+    /// Set the value of the member of the given name.  The member must exist:
+    /// use `has_member()` to test for its existence before calling this method.
+    /// The value must be convertible to the given type.
+    ///
+    /// @param  member_name  The name of the member.
+    /// @param  value  The value to set the member of the given name.
+    template <typename T>
+    void set_member(const std::string &member_name, const T &value)
+    {
+        if (!has_member(member_name))
+        {
+            SPDLOG_CRITICAL("Member {} not found.", member_name);
+        }
+
+        put(member_name, value);
+    }
+
+
+    /// Set an array in the property tree.
+    /// This method creates or replaces a member with the given name, setting its value as an array.
+    ///
+    /// @param member_name The name of the member.
+    /// @param array The array to set as the member value.
+    template <typename T>
+    void set_list(const std::string &member_name, const std::vector<T> &array)
+    {
+        // Create a property tree node for the array
+        boost::property_tree::ptree array_node;
+
+        // Add each element of the vector to the node
+        for (const auto &value : array)
+        {
+            boost::property_tree::ptree element_node;
+            element_node.put("", value);  // Use an empty key for array elements
+            array_node.push_back(std::make_pair("", element_node));
+        }
+
+        // Set the array node in the property tree
+        put_child(member_name, array_node);
+    }
+
+
     /// Get the value of the member of the given name, if it exists and agrees
     /// with the type of the requested value.
     ///
@@ -269,9 +311,13 @@ protected:
 
         for (auto &a : get_child(list_name))
         {
-            if (a.second.get<std::string>(member_name) == member_value)
+            if (a.second.count(member_name) > 0)  // Boost ptree check for existing key
             {
-                return (const Navigator &)a.second;
+                // Compare the value of the member with the target value
+                if (a.second.get<std::string>(member_name) == member_value)
+                {
+                    return (const Navigator &)a.second;
+                }
             }
         }
 
@@ -295,6 +341,14 @@ protected:
         }
 
         return it->second.data();
+    }
+
+
+    const std::string serialize() const
+    {
+        std::ostringstream oss;
+        boost::property_tree::write_json(oss, *this, false); // `false` for compact JSON
+        return oss.str();
     }
 
 

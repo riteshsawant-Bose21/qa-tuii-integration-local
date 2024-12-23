@@ -7,19 +7,22 @@
                     "name": "cpu", 
                     "dimensions": 0, 
                     "value_type": "float", 
-                    "telemetry_type": "system" 
+                    "telemetry_type": "meter",
+                    "telemetry_rate": "LO" 
                 },
                 { 
                     "name": "high_cpu_usage", 
                     "dimensions": 0, 
                     "value_type": "bool", 
-                    "telemetry_type": "event" 
+                    "telemetry_type": "event",
+                    "telemetry_rate": "NA"
                 },
                 { 
                     "name": "test", 
                     "dimensions": [3], 
                     "value_type": "bool", 
-                    "telemetry_type": "meter" 
+                    "telemetry_type": "meter",
+                    "telemetry_rate": "HI"  
                 }
             ]
         }

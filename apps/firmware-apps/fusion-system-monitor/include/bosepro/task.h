@@ -267,7 +267,6 @@ public:
         {
             b->initialize_terminals();
             b->initialize_parameters();
-            b->initialize_telemetry();
         }
 
         for (auto &c : configuration.get_block_connections())
@@ -381,18 +380,6 @@ public:
     }
 
 
-    /// Set the telemetry callback for this task and all its blocks
-    ///
-    /// @param telemetry_callback
-    void set_telemetry_callbacks(void (*telemetry_callback)(const std::string &), void (*event_telemetry_callback)(const std::string &))
-    {
-        for (auto &block : blocks)
-        {
-            block->set_telemetry_callbacks(telemetry_callback, event_telemetry_callback);
-        }
-    }
-
-
     /// Get a pointer to a signal processing block with the given name.
     ///
     /// @param  name  The name of the block.
@@ -469,38 +456,13 @@ public:
     }
 
 
-    /// Send telemetry data for each block in the task, using the provided callback.
-    ///
-    /// @return The size of memory for all telemetry items 
-    size_t get_telemetry_size()
-    {
-        size_t size = 0;
-        for (auto &block : blocks)
-        {
-            size += block->get_telemetry_size();
-        }
-
-        return size;
-    }
-
-
-    /// Send telemetry data for each block in the task, using the provided callback.
-    void send_telemetry()
-    {
-        for (auto &block : blocks)
-        {
-            block->send_telemetry();
-        }
-    }
-
-
 private:
     RegionManager region_manager;
     Profile task_profile;
     // A list of blocks, for quickly processing in order.
     std::list<std::unique_ptr<Algorithm>> blocks;
     std::vector<Profile> block_profile;
-    // A map of blocks, for accessing parameters and telemetry.
+    // A map of blocks, for accessing parameters.
     std::map<std::string, Algorithm *> block_map;
     bool profile_blocks = false;
     int_fast32_t cpu_affinity;
@@ -556,7 +518,6 @@ public:
         for (auto &b : blocks)
         {
             b->initialize_parameters();
-            b->initialize_telemetry();
         }
 
         region_manager.close_region();
@@ -583,18 +544,6 @@ public:
         for (auto &block : blocks)
         {
             block->process();
-        }
-    }
-
-
-    /// Set the telemetry callback for this task and all its blocks
-    ///
-    /// @param telemetry_callback
-    void set_telemetry_callbacks(void (*telemetry_callback)(const std::string &), void (*event_telemetry_callback)(const std::string &))
-    {
-        for (auto &block : blocks)
-        {
-            block->set_telemetry_callbacks(telemetry_callback, event_telemetry_callback);
         }
     }
 
@@ -631,31 +580,6 @@ public:
     int_fast32_t get_period_ms()
     {
         return period_ms;
-    }
-
-
-    /// Send telemetry data for each block in the task, using the provided callback.
-    ///
-    /// @return The size of memory for all telemetry items 
-    size_t get_telemetry_size()
-    {
-        size_t size = 0;
-        for (auto &block : blocks)
-        {
-            size += block->get_telemetry_size();
-        }
-
-        return size;
-    }
-
-
-    /// Send telemetry data for each block in the task.
-    void send_telemetry()
-    {
-        for (auto &block : blocks)
-        {
-            block->send_telemetry();
-        }
     }
 
 
@@ -736,7 +660,7 @@ private:
 
     // A list of blocks, for quickly processing in order.
     std::list<std::unique_ptr<Module>> blocks;
-    // A map of blocks, for accessing parameters and telemetry.
+    // A map of blocks, for accessing parameters
     std::map<std::string, Module *> block_map;
 
     int_fast32_t cpu_affinity;

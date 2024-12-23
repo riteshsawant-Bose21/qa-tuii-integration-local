@@ -1,0 +1,43 @@
+{
+    "telemetry_messages": [
+        {
+            "message_name": "pub_register_req",
+            "packet_id": 0,
+            "parameters": {
+                "publisher_name": "fusion_system_monitor",
+                "block_size": [0, 0, 0]
+            }
+        },
+        {
+            "message_name": "pub_deregister_req",
+            "packet_id": 0,
+            "parameters": {
+                "publisher_name": "fusion_system_monitor"
+            }
+        },
+        {
+            "message_name": "update_meters_rsp",
+            "packet_id": 0,
+            "parameters": {
+                "publisher_name": "fusion_system_monitor",
+                "value": "OK" 
+            }
+        },
+        {
+            "message_name": "alarm_data",
+            "parameters": {
+                "publisher_name": "fusion_system_monitor",
+                "alarm_name": "",
+                "value_type": "",
+                "dimensions": [],
+                "value": []
+            }
+        },
+        {
+            "meter_name": "default",
+            "value_type": "",
+            "dimensions": [],
+            "value": []
+        }
+    ]
+}
