@@ -10,8 +10,8 @@ import os
 APP_PATH = 'build/mune_dsp'
 INFO_PATH = 'build/fusion-dsp.info'
 
-# TODO: Get a real version for mune_dsp.
-version = "0.0.1"
+# Getting version from the Jenkins environment, if not set default to LOCAL version
+version = os.getenv('VERSION', 'LOCAL')
 
 git_hash = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('ascii').strip()
 git_branch = subprocess.check_output(['git', 'rev-parse', '--abbrev-ref', 'HEAD']).decode('ascii').strip()
@@ -21,7 +21,6 @@ build_ts = os.path.getmtime(APP_PATH)
 # Get the commit date and build date in UTC.
 git_date = datetime.datetime.fromtimestamp(commit_ts, tz=datetime.timezone.utc).isoformat() 
 build_date = datetime.datetime.fromtimestamp(build_ts, tz=datetime.timezone.utc).isoformat('T', 'seconds')
-version += f'+{git_hash[0:7]}'
 
 # Write the fusion-dsp.info file.
 with open(INFO_PATH, "w") as info_file:
