@@ -1,7 +1,7 @@
 
 #include <bosepro/algorithm.h>
 #include <bosepro/jack.h>
-#include <bosepro/task.h>
+#include <bosepro/audio_task.h>
 
 #include <jack/jack.h>
 #include <spdlog/spdlog.h>
@@ -189,7 +189,7 @@ Jack::Jack(const BlockConfiguration &configuration, bool is_input)
 }
 
 
-JackClient *Jack::create_client(const std::string &name, Task *task)
+JackClient *Jack::create_client(const std::string &name, AudioTask *task)
 {
     if (clients.count(name) != 0)
     {

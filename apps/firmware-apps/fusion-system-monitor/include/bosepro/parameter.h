@@ -11,7 +11,6 @@
 
 namespace bosepro {
 
-class Algorithm;
 
 /// A class for managing the data of a parameter.
 class Parameter {

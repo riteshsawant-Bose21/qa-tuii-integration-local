@@ -14,7 +14,7 @@
 
 namespace bosepro {
 
-class Task;
+class AudioTask;
 class JackClient;
 class Jack;
 
@@ -75,7 +75,7 @@ public:
     ///
     /// @param  name  The name of the client.
     /// @param  task  The task that will perform processing for the client.
-    JackClient(const std::string &name, Task *task)
+    JackClient(const std::string &name, AudioTask *task)
         : name(name), task(task)
     {
         jack_status_t jack_status;
@@ -157,7 +157,7 @@ public:
 private:
     jack_client_t *client;
     std::string name;
-    Task *task;
+    AudioTask *task;
     std::set<Jack *> jack_blocks;
 
     bool set_process_thread(JackThreadCallback callback, void *arg);
@@ -195,7 +195,7 @@ public:
     /// @param  name  The name of the JACK client.
     /// @param  task  The task that will do processing for the client.
     /// @return  A pointer to the JACK client.
-    static JackClient *create_client(const std::string &name, Task *task);
+    static JackClient *create_client(const std::string &name, AudioTask *task);
 
 
     /// Destroy the JACK client with the given name.

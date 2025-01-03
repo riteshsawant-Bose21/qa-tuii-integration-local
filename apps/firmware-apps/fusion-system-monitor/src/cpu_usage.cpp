@@ -1,5 +1,5 @@
 #include <bosepro/module.h>
-#include <bosepro/task.h>
+#include <bosepro/periodic_task.h>
 #include <cstdint>
 #include <sstream>
 #include <string>

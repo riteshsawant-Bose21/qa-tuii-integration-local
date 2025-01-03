@@ -7,6 +7,7 @@
 
 #include <string>
 #include <functional>
+#include <optional>
 #include <thread>
 #include <atomic>
 #include <sys/un.h>
@@ -21,6 +22,7 @@
 namespace bosepro {
 
 
+/// struct to hold data for meters/event callbacks
 struct telemetry_cb_data {
     std::string message;
     std::string rate;
@@ -29,21 +31,22 @@ struct telemetry_cb_data {
 };
 
 
-/// A class for managing the data of a meter.
+/// A class for managing Telemetry data.
 class Telemetry {
 public:
-    /// Create a meter object based on the type of the definition.
+    /// Create a telemetry object based on the type of the definition.
     ///
-    /// @param  definition  The meter definition.
-    /// @param  configuration  The configuration to use for the meter.
+    /// @param  definition  The telemetry definition.
+    /// @param  processor  The processor (algorithm or module) definition
+    /// @param  configuration  The configuration to use for the telemetry.
     Telemetry(const TelemetryDefinition &definition,
               const ProcessorDefinition &processor,
               const BlockConfiguration *configuration)
     {
         name = definition.get_name();
         value_type = definition.get_value_type();
-        type = definition.get_type();
-        rate = definition.get_rate();
+        type = definition.get_type(); // type is unsed internally--meter or event
+        rate = definition.get_rate(); // rate is HI, MED, or LO
         
         num_rows = 1;
         num_columns = 1;
@@ -116,67 +119,68 @@ public:
 
     virtual ~Telemetry() = default;
 
-    /// Initialize the meter by resizing its storage to the configured
+    /// Initialize the telemetry by resizing its storage to the configured
     /// dimensions.
     virtual void initialize() = 0;
 
 
-    /// Assign a pointer to store the value of a scalar meter.
+    /// Assign a pointer to store the value of a scalar telemetry.
     ///
-    /// @param  value  The pointer to store the value of the meter.
+    /// @param  value  The pointer to store the value of the telemetry.
     template <typename T>
     void assign(const T *value);
 
 
-    /// Assign a pointer to store the value of a scalar meter.
+    /// Assign a pointer to store the value of a scalar telemetry.
     ///
-    /// @param  value  The pointer to store the value of the meter.
+    /// @param  value  The pointer to store the value of the telemetry.
+    /// @param  pre_function  A function to pre-process telemetry data.
     template <typename T>
     void assign(const T *value, std::function<void()> pre_function);
 
 
-    /// Assign meter memory to store the values of a vector meter.
-    /// The memory will be re-sized to the length of the meter.
+    /// Assign telemetry memory to store the values of a vector telemetry.
+    /// The memory will be re-sized to the length of the telemetry.
     ///
-    /// @param  value  The memory to store the values of the meter.
+    /// @param  value  The memory to store the values of the telemetry.
     template <typename T>
     void assign(DspTelemetryMemory<T[]> &value);
 
 
-    /// Assign meter memory to store the values of a vector meter.
-    /// The memory will be re-sized to the length of the meter.
+    /// Assign telemetry memory to store the values of a vector telemetry.
+    /// The memory will be re-sized to the length of the telemetry.
     ///
-    /// @param  value  The memory to store the values of the meter.
+    /// @param  value  The memory to store the values of the telemetry.
     template <typename T>
     void assign(DspTelemetryMemory<T[]> &value, std::function<void(int)> pre_function);
 
 
-    /// Assign meter memory to store the values of a matrix meter.
-    /// The memory will be re-sized to the dimensions of the meter.
+    /// Assign telemetry memory to store the values of a matrix telemetry.
+    /// The memory will be re-sized to the dimensions of the telemetry.
     ///
-    /// @param  value  The memory to store the values of the meter.
+    /// @param  value  The memory to store the values of the telemetry.
     template <typename T>
     void assign(DspTelemetryMemory<T*[]> &value);
 
 
-    /// Assign meter memory to store the values of a matrix meter.
-    /// The memory will be re-sized to the dimensions of the meter.
+    /// Assign telemetry memory to store the values of a matrix telemetry.
+    /// The memory will be re-sized to the dimensions of the telemetry.
     ///
-    /// @param  value  The memory to store the values of the meter.
+    /// @param  value  The memory to store the values of the telemetry.
     template <typename T>
     void assign(DspTelemetryMemory<T*[]> &value, std::function<void(int, int)> pre_function);
 
 
-    /// Get the number of rows in the meter, or 1 if the control is a scalar.
+    /// Get the number of rows in the telemetry, or 1 if the control is a scalar.
     ///
-    /// @return  The number of rows in the meter.
+    /// @return  The number of rows in the telemetry.
     int get_num_rows() const
     {
         return num_rows;
     }
 
 
-    /// Get the number of columns in the meter, or 1 if the control is a
+    /// Get the number of columns in the telemetry, or 1 if the control is a
     /// scalar or vector.
     int get_num_columns() const
     {
@@ -184,35 +188,36 @@ public:
     }
 
 
-    /// Get the name of the type of the meter's value.
+    /// Get the name of the type of the telemetry's value.
     ///
-    /// @return  The name of the type of the meter's value.
+    /// @return  The name of the type of the telemetry's value.
     const std::string &get_value_type() const
     {
         return value_type;
     }
 
 
-    /// Create a meter object based on the type of the definition.
+    /// Create a telemetry object based on the type of the definition.
     ///
-    /// @param  definition  The meter definition.
-    /// @param  configuration  The configuration to use for the meter.
-    /// @return  A pointer to the meter object.
+    /// @param  definition  The telemetry definition.
+    /// @param  definition  The processor definition.
+    /// @param  configuration  The configuration to use for the telemetry.
+    /// @return  A pointer to the telemetry object.
     static Telemetry *create(const TelemetryDefinition &definition,
                              const ProcessorDefinition &processor,
                              const BlockConfiguration *configuration);
 
 
-    /// Get the name of this meter.
+    /// Get the name of this telemetry.
     ///
-    /// @return  The name of the meter.
+    /// @return  The name of the telemetry.
     const std::string &get_name()
     {
         return name;
     }
 
 
-    /// Set the name of the block that owns this meter.
+    /// Set the name of the block that owns this telemetry.
     ///
     /// @param  name  The block name.
     void set_block_name(const std::string &name)
@@ -221,7 +226,7 @@ public:
     }
 
 
-    /// Get the name of the block that owns this meter.
+    /// Get the name of the block that owns this telemetry.
     ///
     /// @return  The block name.
     const std::string &get_block_name()
@@ -248,23 +253,34 @@ public:
     }
 
 
-    /// Get the telemetry size.
+    /// Try to calculate the minimum size the meters will take up in memory
     ///
-    /// @return  The telemetry size.
+    /// @return  The size of the meters json blob
     virtual size_t get_meters_size() = 0;
 
 
-    /// Pre-process the meters
-    ///
-    virtual void pre_process(void) = 0;
+    /// Pre-process the telemetry
+    virtual void pre_process() = 0;
 
 
     /// Send a JSON-formatted meter string using the provided callback.
     ///
-    /// @param  meters_callback  The callback function used to send the
-    ///     meter data.
-    virtual void send(std::function<void(telemetry_cb_data &)> meters_callback, int) = 0;
+    /// @param  meters_callback  The callback function used to send the meter data.
+    /// @param  items_remaining  The number of meters remaining in the block.
+    virtual void send_meters(std::function<void(telemetry_cb_data &)> meters_callback, int items_remaining) = 0;
+
+
+    /// Send a JSON-formatted event string using the provided callback.
+    ///
+    /// @param  meters_callback  The callback function used to send the event data.
     virtual void send_event(std::function<void(telemetry_cb_data &)> event_callback) = 0;
+
+
+    /// Wrapper for send_event that checks for changed values
+    ///
+    /// @param  meters_callback  The callback function used to send the event data.
+    virtual void send_event_if_changed(std::function<void(telemetry_cb_data &)> event_callback) = 0;
+
 
 private:
     std::string name;
@@ -292,6 +308,7 @@ public:
     {
     }
 
+
     /// Format one meter value as a JSON-formatted value, and write it to the
     /// meter message.
     ///
@@ -307,6 +324,7 @@ public:
     /// Create a meter object based on the type of the definition.
     ///
     /// @param  definition  The meter definition.
+    /// @param  processor  The processor (algorithm or module) definition
     /// @param  configuration  The configuration to use for the meter.
     TelemetryDataScalar(const TelemetryDefinition &definition,
                         const ProcessorDefinition &processor,
@@ -330,22 +348,21 @@ public:
     /// Assign a pointer to store the value of a scalar meter.
     ///
     /// @param  value  The pointer to store the value of the meter.
+    /// @param  pre_function  A function to be called before a meter is sent.
     void assign(const T *value, std::function<void()> pre_function)
     {
-        block_value = value;
+        assign(value);
         this->pre_function = pre_function;
     }
 
 
-    /// Initialize the meter.
-    ///
+    /// Initialize the telemetry.
     virtual void initialize() override
     {
     }
 
 
-    /// run the pre_function, if it exists, on the telemetry values
-    ///
+    /// Run the pre_function, if it exists, on the telemetry values
     virtual void pre_process() override
     {
         if (pre_function != nullptr)
@@ -355,6 +372,9 @@ public:
     }
 
 
+    /// Try to calculate the minimum size the meters will take up in memory
+    ///
+    /// @return  The size of the meters json blob
     virtual size_t get_meters_size() override
     {
         size_t size = 0;
@@ -375,7 +395,9 @@ public:
             size = MAX_FLOAT_STR_LEN;
         }
 
-        size += MAX_NAME_STR_LEN + MAX_VALUE_TYPE_STR_LEN;
+        size += this->get_block_name().size() + 2 +
+                this->get_name().size() + 2 +
+                this->get_value_type().size() + 1;
 
         return size;
     }
@@ -386,21 +408,24 @@ public:
     ///
     /// @param  meters_callback  The callback function used to send the
     ///     meter data.
-    virtual void send(std::function<void(telemetry_cb_data &)> meters_callback, int items_remaining) override
+    /// @param  items_remaining  The number of meters left in the block.
+    virtual void send_meters(std::function<void(telemetry_cb_data &)> meters_callback, int items_remaining) override
     {
         telemetry_cb_data cb_data = {};
 
         std::ostringstream message;
 
-        message << "{ \"block_name\": \"" << this->get_block_name() << "\"";
-        message << "{ \"meter_name\": \"" << this->get_name() << "\"";
-        message << ", \"value_type\": \"" << this->get_value_type() << "\"";
+        message << "{ \"block_name\": \"" << this->get_block_name() << "\",";
+        message << " \"meter_name\": \"" << this->get_name() << "\",";
+        message << " \"value_type\": \"" << this->get_value_type() << "\",";
         message << " \"dimensions\": 0,"; // Scalar telemetry
-        message << ", \"value\": ";
+        message << " \"value\": ";
 
         this->print_value(message, *block_value);
 
         message << " }\n";
+
+        SPDLOG_DEBUG("Message size: {}", message.str().size());
 
         cb_data.message = message.str();
         cb_data.rate = this->get_rate();
@@ -409,23 +434,23 @@ public:
     }
 
 
-    /// Send the data for this meter as a JSON-formatted string using the
+    /// Send the data for this event as a JSON-formatted string using the
     /// provided callback.
     ///
     /// @param  event_callback  The callback function used to send the
-    ///     meter data.
+    ///     event data.
     virtual void send_event(std::function<void(telemetry_cb_data &)> event_callback) override
     {
         telemetry_cb_data cb_data = {};
 
         std::ostringstream message;
 
-        message << "{ \"message_name\": \"alarm_data\",";
+        message << "{ \"message_name\": \"event\",";
         message << " \"parameters\": {";
         message << " \"block_name\": \"" << this->get_block_name() << "\",";
         message << " \"alarm_name\": \"" << this->get_name() << "\",";
         message << " \"dimensions\": 0,"; // Scalar telemetry
-        message << " \"value\": [";
+        message << " \"value\": ";
 
         // Append scalar value
         this->print_value(message, *block_value);
@@ -438,19 +463,38 @@ public:
     }
 
 
+    /// Wrapper for send_event to check for changed value
+    ///
+    /// @param  event_callback  The callback function used to send the
+    ///     event data.
+    virtual void send_event_if_changed(std::function<void(telemetry_cb_data &)> event_callback)
+    {
+        if (!block_value_prev || *block_value_prev != *block_value) {
+            if (!block_value_prev) {
+                block_value_prev = std::make_unique<T>(*block_value); // Allocate memory for block_value_prev
+            } else {
+                send_event(event_callback); // Send event if value has changed
+                *block_value_prev = *block_value; // Update previous value
+            }
+        }
+    }
+
+
 private:
     const T *block_value;
+    std::unique_ptr<T> block_value_prev;
     std::function<void()> pre_function;
 };
 
-/// A type-specific version of `Telemetry` for storing meter values.
+/// A type-specific version of `Telemetry` for storing telemetry values.
 template <typename T>
 class TelemetryDataVector : public TelemetryData<T> {
 public:
-    /// Create a meter object based on the type of the definition.
+    /// Create a telemetry object based on the type of the definition.
     ///
-    /// @param  definition  The meter definition.
-    /// @param  configuration  The configuration to use for the meter.
+    /// @param  definition  The telemetry definition.
+    /// @param  processor  The processor (algorithm or module) definition
+    /// @param  configuration  The configuration to use for the telemetry.
     TelemetryDataVector(const TelemetryDefinition &definition,
                         const ProcessorDefinition &processor,
                         const BlockConfiguration *configuration)
@@ -476,10 +520,10 @@ public:
     /// The memory will be re-sized to the length of the meter.
     ///
     /// @param  value  The memory to store the values of the meter.
+    /// @param  pre_function  A function to be called before a meter is sent.
     void assign(DspTelemetryMemory<T[]> &value, std::function<void(int)> pre_function)
     {
-        value.resize(this->get_num_rows());
-        block_value = value.get();
+        assign(value);
         this->pre_function = pre_function;
     }
 
@@ -489,8 +533,8 @@ public:
     {
     }
 
+
     /// run the pre_function (if it exists) on the telemetry values
-    ///
     virtual void pre_process() override
     {
         if (pre_function != nullptr)
@@ -503,31 +547,53 @@ public:
     }
 
 
+    /// Try to calculate the minimum size the meters will take up in memory
+    ///
+    /// @return  The size of the meters json blob
     virtual size_t get_meters_size() override
     {
         size_t size = 0;
+        // add """" and ", " and 2x " " for each value
         if constexpr (std::is_same_v<T, std::string>)
         {
-            for (int row = 0; row < this->get_num_rows(); row++)
+            for (int row = 0; row < this->get_num_rows() - 1; row++)
             {
-                size += static_cast<const std::string>(block_value[row]).size();
+                size += static_cast<const std::string>(block_value[row]).size() + 6;
             }
+            // compensate for extra """" and no ", "
+            size += static_cast<const std::string>(block_value[this->get_num_rows()]).size() + 2;
         }
         else if constexpr (std::is_same_v<T, bool>)
         {
-            size = MAX_BOOL_STR_LEN * this->get_num_rows();
+            // """" and ", "
+            size = (MAX_BOOL_STR_LEN + 6) * (this->get_num_rows() - 1);
+            // compensate for extra """" and no ", "
+            size += MAX_BOOL_STR_LEN + 2;
         }
         else if constexpr (std::is_same_v<T, int>)
         {
-            size = MAX_INT_STR_LEN * this->get_num_rows();
+            // """" and ", "
+            size = (MAX_INT_STR_LEN + 6) * (this->get_num_rows() - 1);
+            // compensate for extra """" and no ", "
+            size += MAX_INT_STR_LEN + 2;
         }
         if constexpr (std::is_same_v<T, float>)
         {
-            size = MAX_FLOAT_STR_LEN * this->get_num_rows();
+            // """" and ", "
+            size = (MAX_FLOAT_STR_LEN + 6) * (this->get_num_rows() - 1);
+            // compensate for extra """" and no ", "
+            size += MAX_FLOAT_STR_LEN + 2;
         }
 
-        // add name and type string sizes
-        size += MAX_NAME_STR_LEN + MAX_VALUE_TYPE_STR_LEN;
+        // what about dimensions? tack on 2 for now
+        size += 2;
+
+        // add block_name, name, type string sizes, and newline
+        size += this->get_block_name().size() + 2 +
+                this->get_name().size() + 2 +
+                this->get_value_type().size() + 1;
+
+        SPDLOG_DEBUG("Here size == {}", size);
 
         return size;
     }
@@ -538,17 +604,18 @@ public:
     ///
     /// @param  meters_callback  The callback function used to send the
     ///     meter data.
-    virtual void send(std::function<void(telemetry_cb_data &)> meters_callback, int items_remaining) override
+    /// @param  items_remaining  The number of meters left in the block.
+    virtual void send_meters(std::function<void(telemetry_cb_data &)> meters_callback, int items_remaining) override
     {
         telemetry_cb_data cb_data = {};
 
         std::ostringstream message;
 
-        message << "{ \"block_name\": \"" << this->get_block_name() << "\"";
-        message << "{ \"meter_name\": \"" << this->get_name() << "\"";
-        message << ", \"value_type\": \"" << this->get_value_type() << "\"";
+        message << "{ \"block_name\": \"" << this->get_block_name() << "\",";
+        message << " \"meter_name\": \"" << this->get_name() << "\",";
+        message << " \"value_type\": \"" << this->get_value_type() << "\",";
         message << " \"dimensions\": [" << this->get_num_rows() << "],"; // vector telemetry
-        message << ", \"value\": [";
+        message << " \"value\": [";
 
         for (int row = 0; row < this->get_num_rows() - 1; row++)
         {
@@ -560,6 +627,8 @@ public:
 
         message << " }\n";
 
+        SPDLOG_DEBUG("Message size: {}", message.str().size());
+
         cb_data.message = message.str();
         cb_data.rate = this->get_rate();
         cb_data.more_data = items_remaining ? true : false;
@@ -567,11 +636,11 @@ public:
     }
 
 
-    /// Send the data for this meter as a JSON-formatted string using the
+    /// Send the data for this event as a JSON-formatted string using the
     /// provided callback.
     ///
     /// @param  event_callback  The callback function used to send the
-    ///     meter data.
+    ///     event data.
     virtual void send_event(std::function<void(telemetry_cb_data &)> event_callback) override
     {
         telemetry_cb_data cb_data = {};
@@ -604,8 +673,29 @@ public:
     }
 
 
+    /// Wrapper for send_event to check for changed value
+    ///
+    /// @param  event_callback  The callback function used to send the
+    ///     event data.
+    virtual void send_event_if_changed(std::function<void(telemetry_cb_data &)> event_callback) override {
+        // Initialize block_value_prev if it doesn't exist.
+        if (!block_value_prev) {
+            block_value_prev = std::make_unique<std::vector<T>>(this->get_num_rows());
+        }
+
+        // Check for changes in values.
+        if (!std::equal(block_value, block_value + this->get_num_rows(), block_value_prev->begin())) {
+            send_event(event_callback);
+
+            // Copy updated values into block_value_prev.
+            std::copy(block_value, block_value + this->get_num_rows(), block_value_prev->begin());
+        }
+    }
+
+
 private:
     const T *block_value;
+    std::unique_ptr<std::vector<T>> block_value_prev;
     std::function<void(int)> pre_function;
 };
 
@@ -616,6 +706,7 @@ public:
     /// Create a meter object based on the type of the definition.
     ///
     /// @param  definition  The meter definition.
+    /// @param  processor  The processor (algorithm or module) definition
     /// @param  configuration  The configuration to use for the meter.
     TelemetryDataMatrix(const TelemetryDefinition &definition,
                         const ProcessorDefinition &processor,
@@ -642,23 +733,21 @@ public:
     /// The memory will be re-sized to the dimensions of the meter.
     ///
     /// @param  value  The memory to store the values of the meter.
+    /// @param  pre_function  function called before meter is sent
     void assign(DspTelemetryMemory<T*[]> &value, std::function<void(int, int)> pre_function)
     {
-        value.resize(this->get_num_rows(), this->get_num_columns());
-        block_value = value.get();
+        assign(value);
         this->pre_function = pre_function;
     }
 
 
     /// Initialize the meter.
-    ///
     virtual void initialize() override
     {
     }
 
 
     /// run the pre_function (if it exists) on the telemetry values
-    ///
     virtual void pre_process() override
     {
         if (pre_function != nullptr)
@@ -674,35 +763,58 @@ public:
     }
 
 
+    /// Try to calculate the minimum size the meters will take up in memory
+    ///
+    /// @return  The size of the meters json blob
     virtual size_t get_meters_size() override
     {
         size_t size = 0;
+        // add """", ", ", and 2x " " for each value and "[]" for each column
         if constexpr (std::is_same_v<T, std::string>)
         {
-            for (int row = 0; row < this->get_num_rows(); row++)
+            for (int row = 0; row < this->get_num_rows() - 1; row++)
             {
+                size += 2; // "[]"
                 for (int col = 0; col < this->get_num_columns(); col++)
                 {
-                    size += static_cast<const std::string>(block_value[row][col]).size();
+                    size += static_cast<const std::string>(block_value[row][col]).size() + 6;
                 }
             }
+            size -= 2; // compensate for already included """"
         }
-        // add [] for each column
         else if constexpr (std::is_same_v<T, bool>)
         {
-            size = MAX_BOOL_STR_LEN * this->get_num_rows() * this->get_num_columns() + 2 * this->get_num_columns();
+            // """" and ", "
+            size = (MAX_BOOL_STR_LEN + 6) * this->get_num_rows() * this->get_num_columns();
+            // "[]"
+            size += 4 * this->get_num_rows();
+            // extra """"
+            size -= 2;
         }
         else if constexpr (std::is_same_v<T, int>)
         {
-            size = MAX_INT_STR_LEN * this->get_num_rows() * this->get_num_columns() + 2 * this->get_num_columns();
+            size = (MAX_INT_STR_LEN + 6) * this->get_num_rows() * this->get_num_columns();
+            // "[]"
+            size += 4 * this->get_num_rows();
+            // extra """"
+            size -= 2;
         }
         if constexpr (std::is_same_v<T, float>)
         {
-            size = MAX_FLOAT_STR_LEN * this->get_num_rows() * this->get_num_columns() + 2 * this->get_num_columns();
+            size = (MAX_FLOAT_STR_LEN + 6) * this->get_num_rows() * this->get_num_columns();
+            // "[]"
+            size += 4 * this->get_num_rows();
+            // extra """"
+            size -= 2;
         }
 
-        // tack on size for meter_name and value_type strings
-        size += MAX_NAME_STR_LEN + MAX_VALUE_TYPE_STR_LEN;
+        // what about dimensions? tack on 6 for now
+        size += 6;
+
+        // add block_name, name, type string sizes, and newline
+        size += this->get_block_name().size() +
+                this->get_name().size() +
+                this->get_value_type().size() + 1;
 
         return size;
     }
@@ -713,9 +825,8 @@ public:
     ///
     /// @param  meters_callback  The callback function used to send the
     ///     meter data.
-    /// @param  rate  The callback function used to send the
-    ///     meter data.
-    virtual void send(std::function<void(telemetry_cb_data &)> meters_callback, int items_remaining) override
+    /// @param  items_remaining  The number of meters left in the block.
+    virtual void send_meters(std::function<void(telemetry_cb_data &)> meters_callback, int items_remaining) override
     {
         telemetry_cb_data cb_data = {};
 
@@ -804,8 +915,42 @@ public:
     }
 
 
+    /// Wrapper for send_event to check for changed value
+    ///
+    /// @param  event_callback  The callback function used to send the
+    ///     event data.
+    virtual void send_event_if_changed(std::function<void(telemetry_cb_data &)> event_callback) override {
+        // Initialize block_value_prev if it doesn't exist.
+        if (!block_value_prev) {
+            block_value_prev = std::make_unique<std::vector<std::vector<T>>>(this->get_num_rows());
+            for (int row = 0; row < this->get_num_rows(); ++row) {
+                (*block_value_prev)[row].resize(this->get_num_columns());
+            }
+        }
+
+        // Check for changes.
+        bool changed = false;
+        for (int row = 0; row < this->get_num_rows(); ++row) {
+            if (!std::equal(block_value[row], block_value[row] + this->get_num_columns(), (*block_value_prev)[row].begin())) {
+                changed = true;
+                break;
+            }
+        }
+
+        if (changed) {
+            send_event(event_callback);
+
+            // Update block_value_prev with new values.
+            for (int row = 0; row < this->get_num_rows(); ++row) {
+                std::copy(block_value[row], block_value[row] + this->get_num_columns(), (*block_value_prev)[row].begin());
+            }
+        }
+    }
+
+
 private:
     const T * const *block_value;
+    std::unique_ptr<std::vector<std::vector<T>>> block_value_prev;
     std::function<void(int, int)> pre_function;
 };
 
@@ -831,52 +976,63 @@ public:
     }
 
 
-    /// Get the json blob for the command with name name.
+    /// Get the json blob for the default command with name "name".
     ///
-    /// @return  The command json node
+    /// @return  TelemetryMessage of the command node
     TelemetryMessage get_default_command(const std::string name) const
     {
         return (TelemetryMessage &)list_get_member("telemetry_messages", "message_name", name);
     }
 
 
-    /// Get the json blob for the command with name name.
+    /// Get the json blob for the default meter update node.
     ///
-    /// @return  The command json node
+    /// @return  TelemetryMessage of the meter update node
     TelemetryMessage get_default_meter() const
     {
-        return (TelemetryMessage &)list_get_member("telemetry_messages", "meter_name", "default");
+        return (TelemetryMessage &)list_get_member("telemetry_messages", "meter_name", "");
     }
 
 
-    /// Get the name of the interface.
+    /// Get the name of the TelemetryMessage.
     ///
-    /// @return  The name of the interface.
+    /// @return  The name of the TelemetryMessage.
     const std::string &get_message_name() const
     {
         return get_string("message_name");
     }
 
 
-    /// Get the json blob for the command with name name.
+    /// Get the parameters node json 
     ///
-    /// @return  The name of the interface.
+    /// @return  TelemetryMessage of parameters node.
     TelemetryMessage &get_parameters() const
     {
         return (TelemetryMessage &)get_member("parameters");
     }
 
 
-    /// Get the json blob for the command with name name.
+    /// Get the string from "value" property.
     ///
-    /// @return  The name of the interface.
+    /// @return  string value of "value"
     const std::string get_value() const
     {
         return get_string("value");
     }
 
 
+    /// Get the string from "rate" property.
+    ///
+    /// @return  string value of "rate"
+    const std::string get_rate() const
+    {
+        return get_string("rate");
+    }
+
+
     /// Get the "block_path" array.
+    ///
+    /// @return  The block_path array
     std::vector<std::string> get_block_path()
     {
         const std::string block_path_key = "block_path";
@@ -891,6 +1047,8 @@ public:
 
 
     /// Get the "block_size" array.
+    ///
+    /// @return  The block_size array
     std::vector<std::string> get_block_size()
     {
         const std::string block_size_key = "block_size";
@@ -904,14 +1062,33 @@ public:
     }
 
 
-    /// Set the parameters.<member_name> value.
+    /// Set the parameters.value value.
     ///
-    /// @param member_name  The name of the member under "parameters".
-    /// @param value        The value to set for the specified member.
+    /// @param value  The value to set parameters.value.
     template <typename T>
     void set_value(const T &value)
     {
         set_member("value", value);
+    }
+
+
+    /// Set the parameters.type value.
+    ///
+    /// @param value  The value to set parameters.type.
+    template <typename T>
+    void set_type(const T &value)
+    {
+        set_member("type", value);
+    }
+
+
+    /// Set the parameters.rate value.
+    ///
+    /// @param value  The value to set parameters.rate.
+    template <typename T>
+    void set_rate(const T &value)
+    {
+        set_member("rate", value);
     }
 
 
@@ -926,9 +1103,9 @@ public:
     }
 
 
-    /// Get the json blob for the command with message_name name.
+    /// Serialize the telemetry message.
     ///
-    /// @return  The name of the interface.
+    /// @return  The json blob string
     const std::string serialize_command() const
     {
         return serialize();
@@ -943,22 +1120,28 @@ public:
         : serverpath("/tmp/telemetry_uds"),
           shm_addr(NUM_SHM_REGIONS, nullptr),
           telemetry_manager_addr(),
-          timeout(5),
-          stop_flag(false)
+          timeout(5)
     {
     }
 
 
-    /// Destructor
     ~TelemetryMonitor() 
     {
         stop();
     }
 
 
+    /// Get the singleton instance of TelemetryMonitor.
+    static TelemetryMonitor& get_instance() 
+    {
+        static TelemetryMonitor instance;
+        return instance;
+    }
+
+
     /// Initialize the singleton object. Connect and register with Fusion Telemetry Manager
     ///
-    /// @param filename 
+    /// @param filename  file to initialize the telemetry_messages
     void initialize(const std::string &filename)
     {
         telemetry_messages = std::make_unique<TelemetryMessage>(filename);
@@ -988,12 +1171,11 @@ public:
 
         struct stat statbuf;
         int n = 0;
-
         while (n < timeout)
         {
             if (stat(serverpath.c_str(), &statbuf) == 0 && S_ISSOCK(statbuf.st_mode)) 
             {
-                SPDLOG_DEBUG("Telemetry Manager UDS exists at {}", serverpath);
+                SPDLOG_INFO("Telemetry Manager UDS exists at {}", serverpath);
                 break;
             }
 
@@ -1004,7 +1186,7 @@ public:
             }
         }
 
-        if (!pub_register_req())
+        if (!register_with_telemetry_manager())
         {
             SPDLOG_CRITICAL("Failed to register with Telemetry Manager");
         }
@@ -1013,55 +1195,55 @@ public:
     }
 
 
-    /// Get the singleton instance of TelemetryMonitor.
-    static TelemetryMonitor& get_instance() 
-    {
-        static TelemetryMonitor instance;
-        return instance;
-    }
-
-
-    /// Start the telemetry monitoring thread.
+    /// Start the threads.
     void start() 
     {
         SPDLOG_INFO("Starting TelemetryMonitor thread...");
-        stop_flag.store(false); // Reset stop flag
         monitor_thread = std::thread(&TelemetryMonitor::monitor_loop, this);
+        events_thread = std::thread(&TelemetryMonitor::manage_events_loop, this);
     }
 
 
-    /// Stop the telemetry monitoring thread.
+    /// Stop the threads.
     void stop() 
     {
-        stop_flag.store(true);
         if (monitor_thread.joinable()) 
         {
             monitor_thread.join();
+        }
+        if (events_thread.joinable()) 
+        {
+            events_thread.join();
         }
     }
 
 
     /// Register a telemetry item.
-    void register_telemetry(std::unique_ptr<Telemetry> t) 
+    ///
+    /// @param telemetry  the unique_ptr to the telemetry item
+    void register_telemetry(std::unique_ptr<Telemetry> telemetry) 
     {
-        std::string qualified_name = t->get_block_name() + "::" + t->get_name();
+        std::string qualified_name = telemetry->get_block_name() + "::" +
+                                     telemetry->get_name();
 
-        if (t->get_type() == "meter")
+        if (telemetry->get_type() == "meter")
         {
-            meters[qualified_name] = std::move(t);
+            meters[qualified_name] = std::move(telemetry);
         }
-        else if (t->get_type() == "event")
+        else if (telemetry->get_type() == "event")
         {
-            events[qualified_name] = std::move(t);
+            events[qualified_name] = std::move(telemetry);
         }
         else
         {
-            SPDLOG_WARN("Unknown telemetry type '{}'", t->get_type());
+            SPDLOG_WARN("Unknown telemetry type '{}'", telemetry->get_type());
         }
     }
 
 
     /// Unregister all telemetry items associated with a block.
+    /// 
+    /// @param block_name  The name of the block to unregister telemetry
     void unregister_block(const std::string &block_name) 
     {
         const std::string prefix = block_name + "::";
@@ -1092,6 +1274,12 @@ public:
     }
 
 
+    /// Check if the telemetry monitor has a telemetry item of the
+    /// the qualified_name specified
+    ///
+    /// @param qualified_name  The name matching the pattern
+    ///                        block_name::telemetry_name
+    /// @return  True if the telemetry monitor has the telemetry item
     bool has_telemetry(const std::string &qualified_name)
     {
         if (meters.count(qualified_name) == 0)
@@ -1106,6 +1294,12 @@ public:
     }
 
 
+    /// Check if the telemetry monitor has a meter of the
+    /// the qualified_name specified
+    ///
+    /// @param qualified_name  The name matching the pattern
+    ///                        block_name::meter_name
+    /// @return  True if the telemetry monitor has the meter
     bool has_meter(const std::string &qualified_name)
     {
         if (meters.count(qualified_name) == 0)
@@ -1117,6 +1311,12 @@ public:
     }
 
 
+    /// Check if the telemetry monitor has an event of the
+    /// the qualified_name specified
+    ///
+    /// @param qualified_name  The name matching the pattern
+    ///                        block_name::event_name
+    /// @return  True if the telemetry monitor has the event
     bool has_event(const std::string &qualified_name)
     {
         if (events.count(qualified_name) == 0)
@@ -1128,6 +1328,11 @@ public:
     }
 
 
+    /// Get a telemetry item using it's qualified name 
+    ///
+    /// @param qualified_name  The name matching the pattern
+    ///                        block_name::telemetry_name
+    /// @return  The Telemetry
     Telemetry &get_telemetry(const std::string &qualified_name)
     {
         if (meters.count(qualified_name) == 0)
@@ -1143,6 +1348,11 @@ public:
     }
 
 
+    /// Get an event using it's qualified name 
+    ///
+    /// @param qualified_name  The name matching the pattern
+    ///                        block_name::meter_name
+    /// @return  The meter Telemetry
     Telemetry &get_meter(const std::string &qualified_name)
     {
         if (meters.count(qualified_name) == 0)
@@ -1154,6 +1364,11 @@ public:
     }
 
 
+    /// Get an event using it's qualified name 
+    ///
+    /// @param qualified_name  The name matching the pattern
+    ///                        block_name::event_name
+    /// @return  The event Telemetry
     Telemetry &get_event(const std::string &qualified_name)
     {
         if (events.count(qualified_name) == 0)
@@ -1165,15 +1380,22 @@ public:
     }
 
 
-    size_t get_meters_size(const std::string &telemetry_rate, size_t message_size)
+    /// Get the size of all meter messages for meters of the 
+    /// specified rate managed by the telemetry monitor. 
+    ///
+    /// @param update_rate  The meters update rate filter
+    /// @param default_message_size  The size of the default, empty
+    ///                              meters update message
+    /// @return  Total size of all meters of specified rate managed
+    size_t get_meters_size(const std::string &update_rate, size_t default_message_size)
     {
         size_t size = 0;
         for (auto &m : meters)
         {
-            if (m.second->get_rate() == telemetry_rate)
+            if (m.second->get_rate() == update_rate)
             {
                 size += m.second->get_meters_size();
-                size += message_size;
+                size += default_message_size;
             }
         }
 
@@ -1181,12 +1403,17 @@ public:
     }
 
 
-    int get_num_meters(const std::string &telemetry_rate)
+    /// Get the number of meters of the specified rate managed
+    /// by the telemetry monitor
+    ///
+    /// @param update_rate  The meters update rate filter
+    /// @return  Number of meters of specified rate managed
+    int get_num_meters(const std::string &update_rate)
     {
         int num_items = 0;
         for (auto &m : meters)
         {
-            if (m.second->get_type() == telemetry_rate)
+            if (m.second->get_rate() == update_rate)
             {
                 ++num_items;
             }
@@ -1196,14 +1423,12 @@ public:
     }
 
 
-    // Accessors for callbacks
-    std::function<void(telemetry_cb_data &)> get_meters_callback() const {
-        return meters_callback;
-    }
-
-
-    std::function<void(telemetry_cb_data &)> get_event_callback() const {
-        return event_callback;
+    /// Get the number of events managed by the telemetry monitor
+    ///
+    /// @return  Number of events managed
+    int get_num_events()
+    {
+        return events.size();
     }
 
 
@@ -1258,11 +1483,12 @@ public:
 
 
 private:
-    /// Send a pub_register_req to the telemetry manager
-    bool pub_register_req()
+    /// Pub initiated command to register with telemetry manager
+    bool register_with_telemetry_manager()
     {
         TelemetryMessage message = telemetry_messages->get_default_command("pub_register_req");
         size_t meter_blob_size = telemetry_messages->get_default_meter().serialize_command().size();
+        SPDLOG_DEBUG("meter blob \n{}\n size {}",  telemetry_messages->get_default_meter().serialize_command(), meter_blob_size);
         std::vector<size_t> block_size = {get_meters_size("HI", meter_blob_size),
                                           get_meters_size("MED", meter_blob_size),
                                           get_meters_size("LO", meter_blob_size)};
@@ -1348,36 +1574,109 @@ private:
     }
 
 
-    void pub_deregister_request()
+    /// Pub initiated command to deregister with the telemetry manager
+    bool deregister_with_telemetry_manager()
     {
-        TelemetryMessage pub_dereg_req = telemetry_messages->get_default_command("pub_deregister_req");
+        TelemetryMessage req = telemetry_messages->get_default_command("pub_deregister_req");
 
+        const std::string req_str = req.serialize_command();
+        if (sendto(telemetry_fd, req_str.c_str(), req_str.size(), 0,
+                (struct sockaddr *)&telemetry_manager_addr, sizeof(telemetry_manager_addr)) < 0)
+        {
+            SPDLOG_ERROR("Failed to send pub_deregister_req.");
+            return false;
+        }
 
+        // Wait for a response
+        char buf[1024];
+        struct sockaddr_un response_addr {};
+        socklen_t response_addr_len = sizeof(response_addr);
+        ssize_t recv_len = recvfrom(telemetry_fd, buf, sizeof(buf) - 1, 0,
+                                    (struct sockaddr *)&response_addr, &response_addr_len);
+
+        if (recv_len < 0)
+        {
+            SPDLOG_ERROR("Failed to receive response from telemetry manager.");
+            return false;
+        }
+
+        buf[recv_len] = '\0';
+
+        std::stringstream ss(buf);
+        TelemetryMessage response(ss);
+
+        if (response.get_message_name() == "pub_deregister_rsp" && response.get_parameters().get_value() == "OK")
+        {
+            SPDLOG_INFO("Received valid deregistration response: \n\n{}", response.serialize_command());
+        }
+        else
+        {
+            SPDLOG_ERROR("Received NOK response: \n\n{}", response.serialize_command());
+            return false;
+        }
+
+        // clean up telemetry_manager assets and pause the telemetry monitor
+        shm_addr.clear();
+        stop();
+
+        return true;
     }
 
 
-    // void update_meters_req(const ParameterSetting&)
-    // {
-    //     for (auto &task : tasks)
-    //     {
-    //         task.second->send_meters();
-    //     }
-    //     for (auto &na_task : na_tasks)
-    //     {
-    //         na_task.second->send_meters();
-    //     }
-    // }
-
-
-    void process_telemetry_message(TelemetryMessage message)
+    /// Update all meters with meters_callback when we recieve "update_meters_req"
+    /// command from telemetry manager. Send "update_meters_rsp" to confirm
+    ///
+    /// @param message  The TelemetryMessage from the manager
+    void update_meters(TelemetryMessage &message)
     {
-        std::string name = message.get_message_name();
+        std::string rate = message.get_parameters().get_rate();
+        int n = get_num_meters(rate);
+
+        for (auto &m: meters)
+        {
+            if (m.second->get_rate() == rate)
+            {
+                m.second->send_meters(meters_callback, --n);
+            }
+        }
+
+        TelemetryMessage rsp = telemetry_messages->get_default_command("update_meters_rsp");
+        rsp.get_parameters().set_value("OK");
+        rsp.get_parameters().set_rate(rate);
+
+        const std::string rsp_str = rsp.serialize_command();
+        if (sendto(telemetry_fd, rsp_str.c_str(), rsp_str.size(), 0,
+                (struct sockaddr *)&telemetry_manager_addr, sizeof(telemetry_manager_addr)) < 0)
+        {
+            SPDLOG_ERROR("Failed to send update_meters_rsp.");
+        }
+    }
+
+
+    /// Process messages from the telemetry manager
+    ///
+    /// @param message  TelemetryMessage from the telemetry manager
+    void process_telemetry_message(TelemetryMessage &message)
+    {
+        if (message.get_message_name() == "update_meters_req")
+        {
+            update_meters(message);
+        }
+    }
+
+
+    /// Send any events that have changed
+    void send_events()
+    {
+        for (auto &e: events)
+        {
+            e.second->send_event_if_changed(event_callback);
+        }
     }
 
 
     /// The main loop for monitoring telemetry data and executing commands.
     void monitor_loop() {
-            // Ensure the socket exists
         if (telemetry_fd < 0)
         {
             SPDLOG_CRITICAL("Invalid connection socket.");
@@ -1387,7 +1686,7 @@ private:
         struct sockaddr_un manager_addr;
         socklen_t manager_addr_len = sizeof(manager_addr);
 
-        while (!stop_flag.load())
+        while (1)
         {
             // Receive a message from the telemetry manager
             memset(buf, 0, sizeof(buf));
@@ -1402,7 +1701,7 @@ private:
 
             buf[result] = '\0';
 
-            SPDLOG_INFO("Received messagefrom telemetry manager: '{}'", buf);
+            SPDLOG_INFO("Received message from telemetry manager: \n{}", buf);
 
             try
             {
@@ -1421,10 +1720,21 @@ private:
 
         // Clean up the socket
         close(telemetry_fd);
-        SPDLOG_INFO("Telemetry manager command loop ended.");
     }
 
 
+    /// Loop for managing events.
+    void manage_events_loop() {
+        while (1)
+        {
+            send_events();
+
+            usleep(100000);
+        }
+    }
+
+
+    /// Setup send telemetry callback member funcs
     void setup_callbacks() {
         meters_callback = [this](telemetry_cb_data &cb_data) {
             update_meters_shm(cb_data);
@@ -1444,11 +1754,11 @@ private:
     std::vector<void *> shm_addr;
     struct sockaddr_un telemetry_manager_addr;
     int timeout;
-    std::atomic<bool> stop_flag;
 
     std::unique_ptr<TelemetryMessage> telemetry_messages;
 
     std::thread monitor_thread;
+    std::thread events_thread;
 
     std::map<std::string, std::unique_ptr<Telemetry>> meters;
     std::map<std::string, std::unique_ptr<Telemetry>> events;

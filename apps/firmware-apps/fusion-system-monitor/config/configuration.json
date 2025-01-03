@@ -1,7 +1,7 @@
 {
     "session": {
     },
-    "na_tasks": [
+    "periodic_tasks": [
         {
             "name": "fw_monitor",
             "property_settings": [

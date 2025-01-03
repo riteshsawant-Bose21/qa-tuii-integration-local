@@ -15,7 +15,7 @@
                     "dimensions": 0, 
                     "value_type": "bool", 
                     "telemetry_type": "event",
-                    "telemetry_rate": "NA"
+                    "telemetry_rate": "N/A"
                 },
                 { 
                     "name": "test", 

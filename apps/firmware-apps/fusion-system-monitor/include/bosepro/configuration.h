@@ -53,9 +53,9 @@ public:
     /// Test whether a list of tasks exists in this configuration.
     ///
     /// @return  True if the configuration contains a list of tasks.
-    bool has_tasks() const
+    bool has_audio_tasks() const
     {
-        return has_member("tasks");
+        return has_member("audio_tasks");
     }
 
 
@@ -64,18 +64,18 @@ public:
     /// exists before calling this function.
     ///
     /// @return  The list of tasks.
-    const TaskConfiguration &get_tasks() const
+    const TaskConfiguration &get_audio_tasks() const
     {
-        return (const TaskConfiguration &)get_member("tasks");
+        return (const TaskConfiguration &)get_member("audio_tasks");
     }
 
 
     /// Test whether a list of non-audio tasks exists in this configuration.
     ///
     /// @return  True if the configuration contains a list of tasks.
-    bool has_na_tasks() const
+    bool has_periodic_tasks() const
     {
-        return has_member("na_tasks");
+        return has_member("periodic_tasks");
     }
 
 
@@ -84,9 +84,9 @@ public:
     /// exists before calling this function.
     ///
     /// @return  The list of tasks.
-    const TaskConfiguration &get_na_tasks() const
+    const TaskConfiguration &get_periodic_tasks() const
     {
-        return (const TaskConfiguration &)get_member("na_tasks");
+        return (const TaskConfiguration &)get_member("periodic_tasks");
     }
 
 

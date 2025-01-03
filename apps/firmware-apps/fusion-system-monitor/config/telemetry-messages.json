@@ -20,11 +20,12 @@
             "packet_id": 0,
             "parameters": {
                 "publisher_name": "fusion_system_monitor",
-                "value": "OK" 
+                "value": "",
+                "rate": "" 
             }
         },
         {
-            "message_name": "alarm_data",
+            "message_name": "event",
             "parameters": {
                 "publisher_name": "fusion_system_monitor",
                 "alarm_name": "",
@@ -34,7 +35,8 @@
             }
         },
         {
-            "meter_name": "default",
+            "block_name": "",
+            "meter_name": "",
             "value_type": "",
             "dimensions": [],
             "value": []

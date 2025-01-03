@@ -3,7 +3,8 @@
 #include <bosepro/configurable.h>
 #include <bosepro/configuration.h>
 #include <bosepro/definition.h>
-#include <bosepro/task.h>
+#include <bosepro/audio_task.h>
+#include <bosepro/periodic_task.h>
 
 #include <spdlog/spdlog.h>
 
@@ -40,12 +41,12 @@ public:
 
         ps_command_map = 
         {
-            {"stop",            [this](const ParameterSetting& c){ cmd_stop_all(c); }},
-            {"destroy_task",    [this](const ParameterSetting& c){ cmd_destroy_task(c); }},
-            {"create_task",     [this](const ParameterSetting& c){ cmd_create_task(c); }},
-            {"create_na_task",  [this](const ParameterSetting& c){ cmd_create_na_task(c); }},
-            {"start_task",      [this](const ParameterSetting& c){ cmd_start_task(c); }},
-            {"stop_task",       [this](const ParameterSetting& c){ cmd_stop_task(c); }}
+            {"stop",                  [this](const ParameterSetting& c){ cmd_stop_all(c); }},
+            {"destroy_audio_task",    [this](const ParameterSetting& c){ cmd_destroy_audio_task(c); }},
+            {"create_audio_task",     [this](const ParameterSetting& c){ cmd_create_audio_task(c); }},
+            {"start_audio_task",      [this](const ParameterSetting& c){ cmd_start_audio_task(c); }},
+            {"stop_audio_task",       [this](const ParameterSetting& c){ cmd_stop_audio_task(c); }},
+            {"create_periodic_task",  [this](const ParameterSetting& c){ cmd_create_periodic_task(c); }}
         };
 
         frames_to_run = -1;
@@ -60,7 +61,7 @@ public:
     /// in a loop for file processing.
     virtual void process() override
     {
-        for (auto &task : tasks)
+        for (auto &task : audio_tasks)
         {
             task.second->process();
         }
@@ -94,13 +95,13 @@ public:
     }
 
 
-    void create_tasks(const Configuration &configuration)
+    void create_audio_tasks(const Configuration &configuration)
     {
-        for (auto &t : configuration.get_tasks())
+        for (auto &t : configuration.get_audio_tasks())
         {
             const TaskConfiguration &tc =
                 reinterpret_cast<const TaskConfiguration &>(t.second);
-            create_task(tc);
+            create_audio_task(tc);
         }
     }
 
@@ -109,47 +110,47 @@ public:
     /// task.
     ///
     /// @param   task_configuration  The configuration for the task.
-    void create_task(const TaskConfiguration &task_configuration)
+    void create_audio_task(const TaskConfiguration &task_configuration)
     {
         const std::string task_name = task_configuration.get_name();
 
-        if (tasks.count(task_name) != 0)
+        if (audio_tasks.count(task_name) != 0)
         {
             SPDLOG_CRITICAL("Duplicate tasks with name {}.", task_name);
             return;
         }
 
-        tasks[task_name] = std::unique_ptr<Task>(new Task(task_configuration));
+        audio_tasks[task_name] = std::unique_ptr<AudioTask>(new AudioTask(task_configuration));
     }
 
 
     /// Destroy the task with the given name.  This will also stop the task.
     ///
     /// @param  task_name  The name of the task to destroy.
-    void destroy_task(const std::string &task_name)
+    void destroy_audio_task(const std::string &task_name)
     {
-        if (tasks.count(task_name) == 0)
+        if (audio_tasks.count(task_name) == 0)
         {
             SPDLOG_CRITICAL("Couldn't find task with name {}.", task_name);
             return;
         }
 
-        tasks.erase(task_name);
+        audio_tasks.erase(task_name);
     }
 
 
     /// Start an existing task with the given name.
     ///
     /// @param  task_name  The name of the task to start.
-    void start_task(const std::string &task_name)
+    void start_audio_task(const std::string &task_name)
     {
-        if (tasks.count(task_name) == 0)
+        if (audio_tasks.count(task_name) == 0)
         {
             SPDLOG_CRITICAL("Couldn't find task with name {}.", task_name);
             return;
         }
 
-        tasks[task_name]->start();
+        audio_tasks[task_name]->start();
     }
 
 
@@ -157,25 +158,25 @@ public:
     /// available to run again using `start_task()`.
     ///
     /// @param  task_name  The name of the task to stop.
-    void stop_task(const std::string &task_name)
+    void stop_audio_task(const std::string &task_name)
     {
-        if (tasks.count(task_name) == 0)
+        if (audio_tasks.count(task_name) == 0)
         {
             SPDLOG_CRITICAL("Couldn't find task with name {}.", task_name);
             return;
         }
 
-        tasks[task_name]->stop();
+        audio_tasks[task_name]->stop();
     }
 
 
-    void create_na_tasks(const Configuration &configuration)
+    void create_periodic_tasks(const Configuration &configuration)
     {
-        for (auto &t : configuration.get_na_tasks())
+        for (auto &t : configuration.get_periodic_tasks())
         {
             const TaskConfiguration &tc =
                 reinterpret_cast<const TaskConfiguration &>(t.second);
-            create_na_task(tc);
+            create_periodic_task(tc);
         }
     }
 
@@ -184,49 +185,49 @@ public:
     /// task.
     ///
     /// @param   task_configuration  The configuration for the task.
-    void create_na_task(const TaskConfiguration &task_configuration)
+    void create_periodic_task(const TaskConfiguration &task_configuration)
     {
         const std::string task_name = task_configuration.get_name();
 
-        SPDLOG_INFO("Creating na_task {}.", task_name);
-        if (na_tasks.count(task_name) != 0)
+        SPDLOG_INFO("Creating periodic_task {}.", task_name);
+        if (periodic_tasks.count(task_name) != 0)
         {
             SPDLOG_CRITICAL("Duplicate tasks with name {}.", task_name);
             return;
         }
 
-        na_tasks[task_name] = std::unique_ptr<NaTask>(new NaTask(task_configuration));
+        periodic_tasks[task_name] = std::unique_ptr<PeriodicTask>(new PeriodicTask(task_configuration));
     }
 
 
     /// Start an existing na task with the given name.
     ///
     /// @param  task_name  The name of the task to start.
-    void start_na_task(const std::string &task_name)
+    void start_periodic_task(const std::string &task_name)
     {
-        if (na_tasks.count(task_name) == 0)
+        if (periodic_tasks.count(task_name) == 0)
         {
             SPDLOG_CRITICAL("Couldn't find task with name {}.", task_name);
             return;
         }
 
-        na_tasks[task_name]->start();
+        periodic_tasks[task_name]->start();
     }
 
 
     /// Stop an existing na task with the given name.  The task will remain
-    /// available to run again using `start_na_task()`.
+    /// available to run again using `start_periodic_task()`.
     ///
     /// @param  task_name  The name of the na task to stop.
-    void stop_na_task(const std::string &task_name)
+    void stop_periodic_task(const std::string &task_name)
     {
-        if (na_tasks.count(task_name) == 0)
+        if (periodic_tasks.count(task_name) == 0)
         {
             SPDLOG_CRITICAL("Couldn't find task with name {}.", task_name);
             return;
         }
 
-        na_tasks[task_name]->stop();
+        periodic_tasks[task_name]->stop();
     }
     
 
@@ -234,13 +235,13 @@ public:
     void start()
     {
         SPDLOG_INFO("Starting session.");
-        for (auto &task : tasks)
+        for (auto &task : audio_tasks)
         {
             task.second->start();
         }
-        for (auto &na_task : na_tasks)
+        for (auto &task : periodic_tasks)
         {
-            na_task.second->start();
+            task.second->start();
         }
     }
 
@@ -249,13 +250,13 @@ public:
     void stop()
     {
         SPDLOG_INFO("Stopping session.");
-        for (auto &task : tasks)
+        for (auto &task : audio_tasks)
         {
             task.second->stop();
         }
-        for (auto &na_task : na_tasks)
+        for (auto &task : periodic_tasks)
         {
-            na_task.second->stop();
+            task.second->stop();
         }
     }
 
@@ -277,7 +278,7 @@ public:
         }
         else
         {
-            for (auto &task : tasks)
+            for (auto &task : audio_tasks)
             {
                 std::string block_name;
                 Algorithm *block = task.second->get_block(setting.get_target());
@@ -290,7 +291,6 @@ public:
         }
     }
 
-
     /// Socket setting to stop all tasks
     ///
     /// @param setting 
@@ -299,33 +299,33 @@ public:
     /// Socket setting to destroy a specific task
     ///
     /// @param setting 
-    void cmd_destroy_task(const ParameterSetting& setting);
+    void cmd_destroy_audio_task(const ParameterSetting& setting);
 
     /// Socket setting to create an audio task
     ///
     /// @param setting 
-    void cmd_create_task(const ParameterSetting& setting);
-
-    /// Socket setting to create a non-audio task
-    ///
-    /// @param setting 
-    void cmd_create_na_task(const ParameterSetting& setting);
+    void cmd_create_audio_task(const ParameterSetting& setting);
 
     /// Socket setting to start a specific task
     ///
     /// @param setting 
-    void cmd_start_task(const ParameterSetting& setting);
+    void cmd_start_audio_task(const ParameterSetting& setting);
 
     /// Socket setting to stop a specific task
     ///
     /// @param setting 
-    void cmd_stop_task(const ParameterSetting& setting);
+    void cmd_stop_audio_task(const ParameterSetting& setting);
+
+    /// Socket setting to create a non-audio task
+    ///
+    /// @param setting 
+    void cmd_create_periodic_task(const ParameterSetting& setting);
 
 
 private:
     int_fast32_t frames_to_run;
-    std::map<std::string, std::unique_ptr<Task>> tasks;
-    std::map<std::string, std::unique_ptr<NaTask>> na_tasks;
+    std::map<std::string, std::unique_ptr<AudioTask>> audio_tasks;
+    std::map<std::string, std::unique_ptr<PeriodicTask>> periodic_tasks;
     std::map<std::string, std::function<void(const ParameterSetting&)>> ps_command_map;
 };
 

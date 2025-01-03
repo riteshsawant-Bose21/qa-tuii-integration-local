@@ -46,18 +46,17 @@ int main(int argc, char *argv[])
     bosepro::Definition definitions(vm["definitions"].as<std::string>());
     bosepro::Session session(configuration.get_session(), definitions);
     
-    // Initialize singleton TelemetryMonitor
+    // Get TelemetryMonitor instance
     auto& telemetry_monitor = bosepro::TelemetryMonitor::get_instance();
-    telemetry_monitor.initialize(vm["telemetry"].as<std::string>());
 
-    if (configuration.has_tasks())
+    if (configuration.has_audio_tasks())
     {
-        session.create_tasks(configuration);
+        session.create_audio_tasks(configuration);
     }
 
-    if (configuration.has_na_tasks())
+    if (configuration.has_periodic_tasks())
     {
-        session.create_na_tasks(configuration);
+        session.create_periodic_tasks(configuration);
     }
 
     if (configuration.has_parameter_settings())
@@ -73,6 +72,7 @@ int main(int argc, char *argv[])
         session.set_seconds_to_run(vm["time"].as<int>());
     }
 
+    telemetry_monitor.initialize(vm["telemetry"].as<std::string>());
     telemetry_monitor.start();
     session.start();
 

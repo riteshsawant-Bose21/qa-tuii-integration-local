@@ -1,7 +1,6 @@
 #pragma once
 
 #include <bosepro/algorithm.h>
-#include <bosepro/module.h>
 #include <bosepro/configurable.h>
 #include <bosepro/configuration.h>
 #include <bosepro/dspmemory.h>
@@ -30,7 +29,7 @@ namespace bosepro {
 
 
 /// A periodic real-time task that runs in a separate thread.
-class PeriodicTask {
+class AudioSubtask {
 public:
     /// Create a new periodic task.
     ///
@@ -38,7 +37,7 @@ public:
     /// @param  obj  The object to pass to the run function.
     /// @param  period  The period of the task, relative to the base frame rate
     ///                 of the system.
-    PeriodicTask(void (*run_function)(void *), void *obj,
+    AudioSubtask(void (*run_function)(void *), void *obj,
                  int_fast32_t sample_rate, int_fast32_t frame_size,
                  int_fast32_t base_frame_size)
         : run_function(run_function), obj(obj), sample_rate(sample_rate),
@@ -103,9 +102,9 @@ public:
     }
 
 
-    virtual ~PeriodicTask()
+    virtual ~AudioSubtask()
     {
-        SPDLOG_DEBUG("Task {} MIPS: {} first, {} max, {} avg.",
+        SPDLOG_DEBUG("AudioTask {} MIPS: {} first, {} max, {} avg.",
                      task_id,
                      profile.get_first_mips(),
                      profile.get_max_mips(),
@@ -168,7 +167,7 @@ public:
 
         if (ticks >= 2 * period)
         {
-            SPDLOG_WARN("Periodic task {} is running behind: {}, {}", task_id, ticks, period);
+            SPDLOG_WARN("Audio SubTask {} is running behind: {}, {}", task_id, ticks, period);
             ticks = 1;
         }
 
@@ -188,7 +187,7 @@ private:
     /// @param p_task A pointer to the task object.
     static void *run(void *p_task)
     {
-        PeriodicTask *task = (PeriodicTask *)p_task;
+        AudioSubtask *task = (AudioSubtask *)p_task;
         while (true)
         {
             pthread_mutex_lock(&task->ticks_mutex);
@@ -222,12 +221,12 @@ private:
 
 /// A real-time audio processing task, which runs a collection of blocks that
 /// all have the same frame rate.
-class Task : public Configurable {
+class AudioTask : public Configurable {
 public:
     /// Create a task from a configuration.
     ///
     /// @param  configuration  The configuration for the task.
-    Task(const TaskConfiguration &configuration)
+    AudioTask(const TaskConfiguration &configuration)
         : Configurable(configuration), client(nullptr)
     {
         // Use this task's region manager while allocating blocks within the
@@ -308,7 +307,7 @@ public:
     }
 
 
-    virtual ~Task()
+    virtual ~AudioTask()
     {
         frames_to_run = 0;
 
@@ -324,7 +323,7 @@ public:
         // destroyed.
         region_manager.open_region();
 
-        SPDLOG_DEBUG("Task MIPS: {} first, {} max, {} avg.",
+        SPDLOG_DEBUG("AudioTask MIPS: {} first, {} max, {} avg.",
                      task_profile.get_first_mips(),
                      task_profile.get_max_mips(),
                      task_profile.get_average_mips());
@@ -469,205 +468,6 @@ private:
 
     JackClient *client;
     int_fast32_t frames_to_run;
-};
-
-
-/// A non-real-time non-audio processing task, which starts a periodic task thread
-/// that runs a collection of blocks
-class NaTask : public Configurable {
-public:
-    /// Create a task from a configuration.
-    ///
-    /// @param  configuration  The configuration for the task.
-    NaTask(const TaskConfiguration &configuration)
-        : Configurable(configuration),
-        period_ms(0), period_ns(0)
-    {
-        // Use this task's region manager while allocating blocks within the
-        // task.
-        region_manager.open_region();
-
-        if (configuration.has_property("cpu_affinity") > 0)
-        {
-            configuration.get_property("cpu_affinity").get_value(cpu_affinity);
-        }
-
-        if (configuration.has_property("period_ms") > 0)
-        {
-            configuration.get_property("period_ms").get_value(period_ms);
-        }
-
-        period_ns = period_ms == 0 ? 0 : period_ms * 1'000'000; // Convert ms to nanoseconds
-
-        // Create all of the blocks in the task.
-        for (auto &b : configuration.get_blocks())
-        {
-            SPDLOG_DEBUG("Creating blocks");
-            const BlockConfiguration *bc =
-                reinterpret_cast<const BlockConfiguration *>(&b.second);
-
-            SPDLOG_DEBUG("Creating block: {}.", bc->get_name());
-
-            blocks.push_back(std::unique_ptr<Module>(
-                ChildFactory<Module,
-                     const BlockConfiguration &>::create_child(
-                         bc->get_module(), *bc)));
-            block_map[bc->get_name()] = blocks.back().get();
-        }
-
-        for (auto &b : blocks)
-        {
-            b->initialize_parameters();
-        }
-
-        region_manager.close_region();
-    }
-
-
-    virtual ~NaTask()
-    {
-        // Stop the thread if it's running
-        stop();
-
-        // Use this task's region manager while destroying blocks within this
-        // task (will occur after this destructor exits, when `blocks` is
-        // destroyed). The region will be closed when `region_manager` is
-        // destroyed.
-        region_manager.open_region();
-    }
-
-
-    /// Run process() on all of the blocks in this non-audio task.
-    ///
-    virtual void process() override
-    {
-        for (auto &block : blocks)
-        {
-            block->process();
-        }
-    }
-
-
-    /// Get a pointer to a module block with the given name.
-    ///
-    /// @param  name  The name of the block.
-    /// @return  A pointer to the block.
-    Module *get_block(const std::string &name)
-    {
-        if (block_map.count(name) != 0)
-        {
-            return block_map[name];
-        }
-        else
-        {
-            return nullptr;
-        }
-    }
-
-
-    /// Get the CPU affinity to be used for this non-audio task.
-    ///
-    /// @return  The CPU affinity configured for this task.
-    int_fast32_t get_cpu_affinity()
-    {
-        return cpu_affinity;
-    }
-
-
-    /// Get the period in milliseconds for this non-audio task.
-    ///
-    /// @return  The period in milliseconds configured for this task.
-    int_fast32_t get_period_ms()
-    {
-        return period_ms;
-    }
-
-
-    /// Set the real-time priority of the task (between 0 and 99).
-    /// If this is not called, the task will not be a real-time task.
-    void set_priority(int priority)
-    {
-#ifdef USE_MAC_THREADS
-        // Mac-specific thread priority setting
-#else
-        struct sched_param sched_param;
-        sched_param.sched_priority = priority;
-
-        int err = pthread_setschedparam(thread, SCHED_FIFO, &sched_param);
-        if (err != 0) {
-            SPDLOG_ERROR("Failed to set task priority: {}", strerror(err));
-        }
-#endif
-    }
-
-
-    void start()
-    {
-        // we only start the periodic thread if there's a period
-        if (period_ns)
-        {
-            int err = pthread_create(&thread, nullptr, thread_entry_point, this);
-            if (err != 0) {
-                SPDLOG_CRITICAL("pthread_create() failed: {}", strerror(err));
-            }
-        }
-    }
-
-
-    void stop()
-    {
-        if (thread != 0) {
-            pthread_cancel(thread);
-            pthread_join(thread, nullptr);
-            thread = 0;
-        }
-    }
-
-
-private:
-    /// The static function that serves as the entry point for the thread.
-    static void* thread_entry_point(void* arg)
-    {
-        NaTask* task = static_cast<NaTask*>(arg);
-        return task->run();
-    }
-
-    /// The function that runs the task thread. It executes the task function
-    /// at the specified frequency.
-    void* run()
-    {
-        auto next_execution_time = std::chrono::steady_clock::now();
-
-        while (true) {
-            // Execute the task function
-            process();
-
-            // Calculate the next execution time
-            next_execution_time += std::chrono::nanoseconds(period_ns);
-
-            // Sleep until the next execution time
-            std::this_thread::sleep_until(next_execution_time);
-
-            // Check for cancellation
-            pthread_testcancel();
-        }
-
-        return nullptr; // Not reached
-    }
-
-
-    RegionManager region_manager;
-
-    // A list of blocks, for quickly processing in order.
-    std::list<std::unique_ptr<Module>> blocks;
-    // A map of blocks, for accessing parameters
-    std::map<std::string, Module *> block_map;
-
-    int_fast32_t cpu_affinity;
-    int_fast32_t period_ms;
-    int_fast32_t period_ns;
-
-    pthread_t thread;
 };
 
 
