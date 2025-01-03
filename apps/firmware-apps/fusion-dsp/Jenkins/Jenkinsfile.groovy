@@ -62,8 +62,6 @@ pipeline {
 				anyOf {
 					changeRequest target: 'main'
 					branch 'main'
-					changeRequest target: 'devops/fix-github-notify-issue'
-					branch 'devops/fix-github-notify-issue'
 				}
 			}
 			stages {
