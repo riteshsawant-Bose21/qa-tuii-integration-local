@@ -19,7 +19,6 @@ pipeline {
 	environment {
 	    	buildDir="${env.WORKSPACE}"
 		buildNumber="${env.BUILD_NUMBER}"
-		branchName="${env.CHANGE_BRANCH}"
 		BuildType="Continuous"
 		VersionFile="src/VERSION"
 	    	SDK_DIR="/fusion-build-cache/bose/fusion/yocto-sdk/"
@@ -54,7 +53,7 @@ pipeline {
 							 ])
 					}
 					// Set github info in env. variable
-					githubInfo()
+					githubInfo(branch)
 				}
 			}
 		}
@@ -63,8 +62,6 @@ pipeline {
 				anyOf {
 					changeRequest target: 'main'
 					branch 'main'
-					changeRequest target: 'DEVOPS-61'
-					branch 'DEVOPS-61'
 				}
 			}
 			stages {
@@ -74,9 +71,7 @@ pipeline {
                     			}
 					steps {
 						script {
-						  if( env.CHANGE_ID ) {
 							githubNotify( "Build-Fusion-DSP", "Stage: Prepare ...", "PENDING" )
-				  		  }
 						}
 						sh'''
 						    git submodule update --init --recursive
@@ -89,9 +84,7 @@ pipeline {
 				stage('Build') {
 					steps {
 						script {
-							if( env.CHANGE_ID ) {
-								githubNotify( "Build-Fusion-DSP", "Stage: Build Fusion-DSP Application ...", "PENDING" )
-				  		  	}
+							githubNotify( "Build-Fusion-DSP", "Stage: Build Fusion-DSP Application ...", "PENDING" )
 							env.gitHashShort=env.GIT_COMMIT.take(7).trim().toString()
 		  					ver=sh(returnStdout:true, script: './Jenkins/SetVersionProperty.sh').trim()
 	      						env.VERSION=ver
@@ -105,21 +98,19 @@ pipeline {
 						            python3 waf configure --platform=varmini
 						            python3 waf build
 							"""
-							}
 						}
+					}
 				}
 
 				stage('Package DSP build') {
 				    steps {
 						script {
-							if( env.CHANGE_ID ) {
-								githubNotify( "Package DSP build", "Stage: Build Fusion-DSP Application ...", "PENDING" )
-				  		  	}
+							githubNotify( "Build-Fusion-DSP", "Stage: Build Fusion-DSP Application ...", "PENDING" )
 							sh """
 						        python3 package.py
 							"""
-							}
 						}
+					}
 				}
 
 				stage('Upload to Artifactory') {
@@ -155,18 +146,14 @@ pipeline {
 	post {
 		success {
 			script {
-			  if( env.CHANGE_ID ) {
 				githubNotify( "Build-Fusion-DSP", "Build succeeded", "SUCCESS", "${env.JOB_URL}${env.BUILD_NUMBER}/display/redirect" )
-			  }
 			}
 		}
 		failure {
 			script {
-			  if( env.CHANGE_ID ) {
 				githubNotify( "Build-Fusion-DSP", "Build failed", "FAILED", "${env.JOB_URL}${env.BUILD_NUMBER}/display/redirect" )
-			  }
 			}
-        }
+        	}
 		cleanup {
 			retry(3){
 			    cleanWs()
