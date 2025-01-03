@@ -62,8 +62,6 @@ pipeline {
 				anyOf {
 					changeRequest target: 'main'
 					branch 'main'
-					changeRequest target: 'DEVOPS-61'
-					branch 'DEVOPS-61'
 				}
 			}
 			stages {
@@ -107,7 +105,7 @@ pipeline {
 				stage('Package DSP build') {
 				    steps {
 						script {
-							githubNotify( "Package DSP build", "Stage: Build Fusion-DSP Application ...", "PENDING" )
+							githubNotify( "Build-Fusion-DSP", "Stage: Build Fusion-DSP Application ...", "PENDING" )
 							sh """
 						        python3 package.py
 							"""
