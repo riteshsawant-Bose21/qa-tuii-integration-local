@@ -110,19 +110,19 @@ public:
     }
 
 
-    /// Get the "block_path" array.
+    /// Get the "block_name" array.
     ///
-    /// @return  The block_path array
-    std::vector<std::string> get_block_path()
+    /// @return  The block_name array
+    std::vector<std::string> get_block_name()
     {
-        const std::string block_path_key = "block_path";
-        std::vector<std::string> block_path(3, "");
+        const std::string block_name_key = "block_name";
+        std::vector<std::string> block_name(3, "");
 
-        get_list_value(block_path_key, 0, block_path[0]);
-        get_list_value(block_path_key, 1, block_path[1]);
-        get_list_value(block_path_key, 2, block_path[2]);
+        get_list_value(block_name_key, 0, block_name[0]);
+        get_list_value(block_name_key, 1, block_name[1]);
+        get_list_value(block_name_key, 2, block_name[2]);
 
-        return block_path;
+        return block_name;
     }
 
 
@@ -174,7 +174,7 @@ public:
     /// Set the parameters.packet_id value with a timestamp.
     ///
     /// @param timestamp  The value to set packet_id.
-    void set_packet_id(std::string &timestamp)
+    void set_packet_id(std::string timestamp)
     {
         set_member("packet_id", timestamp);
     }
@@ -584,7 +584,6 @@ private:
 
         // Send the registration request
         const std::string reg_req_str = message.serialize_command() + "\0";
-        SPDLOG_DEBUG("Sending {}", reg_req_str);
         if (sendto(telemetry_fd, reg_req_str.c_str(), reg_req_str.size(), 0,
                 (struct sockaddr *)&telemetry_manager_addr, sizeof(telemetry_manager_addr)) < 0)
         {
@@ -630,7 +629,7 @@ private:
             return false;
         }
 
-        std::vector<std::string> shm_paths = response.get_parameters().get_block_path();
+        std::vector<std::string> shm_paths = response.get_parameters().get_block_name();
         std::vector<int> shm_fd(shm_paths.size(), -1);
 
         int i = 0;
