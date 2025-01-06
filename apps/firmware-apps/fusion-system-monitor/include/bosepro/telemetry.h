@@ -586,8 +586,6 @@ public:
                 this->get_name().size() + 2 +
                 this->get_value_type().size() + 1;
 
-        SPDLOG_DEBUG("Here size == {}", size);
-
         return size;
     }
 

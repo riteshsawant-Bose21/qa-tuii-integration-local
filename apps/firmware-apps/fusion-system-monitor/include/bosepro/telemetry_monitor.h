@@ -101,6 +101,15 @@ public:
     }
 
 
+    /// Get the string from "rate" property.
+    ///
+    /// @return  The string value of "rate"
+    const std::string get_rate() const
+    {
+        return get_string("packet_id");
+    }
+
+
     /// Get the "block_path" array.
     ///
     /// @return  The block_path array
@@ -153,13 +162,12 @@ public:
     }
 
 
-    /// Set the parameters.rate value.
-    ///
-    /// @param value  The value to set parameters.rate.
-    template <typename T>
-    void set_rate(const T &value)
+    /// Set the parameters.packet_id value with a timestamp.
+    void set_packet_id()
     {
-        set_member("rate", value);
+        auto now = std::chrono::steady_clock::now();
+        auto now_us = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count();
+        set_member("packet_id", static_cast<uint64_t>(now_us));
     }
 
 
@@ -564,9 +572,11 @@ private:
                                           get_meters_size("MED", meter_blob_size),
                                           get_meters_size("LO", meter_blob_size)};
         message.get_parameters().set_block_size(block_size);
+        message.get_parameters().set_packet_id();
 
         // Send the registration request
-        const std::string reg_req_str = message.serialize_command();
+        const std::string reg_req_str = message.serialize_command() + "\0";
+        SPDLOG_DEBUG("Sending {}", reg_req_str);
         if (sendto(telemetry_fd, reg_req_str.c_str(), reg_req_str.size(), 0,
                 (struct sockaddr *)&telemetry_manager_addr, sizeof(telemetry_manager_addr)) < 0)
         {
@@ -598,7 +608,9 @@ private:
         std::stringstream ss(buf);
         TelemetryMessage response(ss);
 
-        if (response.get_message_name() == "pub_register_rsp" && response.get_parameters().get_value() == "OK")
+        if (response.get_message_name() == "pub_register_rsp" && 
+            response.get_parameters().get_value() == "OK" && 
+            response.get_parameters().get_packet_id() == message.get_parameters().get_packet_id())
         {
             SPDLOG_INFO("Received valid registration response: \n\n{}", response.serialize_command());
         }
@@ -713,7 +725,7 @@ private:
 
         TelemetryMessage rsp = telemetry_messages->get_default_command("update_meters_rsp");
         rsp.get_parameters().set_value("OK");
-        rsp.get_parameters().set_rate(rate);
+        rsp.get_parameters().set_packet_id();
 
         const std::string rsp_str = rsp.serialize_command();
         if (sendto(telemetry_fd, rsp_str.c_str(), rsp_str.size(), 0,
