@@ -609,7 +609,7 @@ private:
 
         if (response.get_message_name() == "pub_register_rsp" && 
             response.get_parameters().get_value() == "OK" && 
-            response.get_parameters().get_packet_id() == message.get_parameters().get_packet_id())
+            response.get_packet_id() == message.get_packet_id())
         {
             SPDLOG_INFO("Received valid registration response: \n\n{}", response.serialize_command());
         }
