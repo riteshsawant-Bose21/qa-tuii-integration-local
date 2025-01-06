@@ -97,14 +97,14 @@ public:
     /// @return  The string value of "rate"
     const std::string get_rate() const
     {
-        return get_string("rate");
+        return get_string("type");
     }
 
 
-    /// Get the string from "rate" property.
+    /// Get the string from "packet_id" property.
     ///
-    /// @return  The string value of "rate"
-    const std::string get_rate() const
+    /// @return  The string value of "packet_id"
+    const std::string get_packet_id() const
     {
         return get_string("packet_id");
     }
@@ -567,12 +567,11 @@ private:
     {
         TelemetryMessage message = telemetry_messages->get_default_command("pub_register_req");
         size_t meter_blob_size = telemetry_messages->get_default_meter().serialize_command().size();
-        SPDLOG_DEBUG("meter blob \n{}\n size {}",  telemetry_messages->get_default_meter().serialize_command(), meter_blob_size);
         std::vector<size_t> block_size = {get_meters_size("HI", meter_blob_size),
                                           get_meters_size("MED", meter_blob_size),
                                           get_meters_size("LO", meter_blob_size)};
         message.get_parameters().set_block_size(block_size);
-        message.get_parameters().set_packet_id();
+        message.set_packet_id();
 
         // Send the registration request
         const std::string reg_req_str = message.serialize_command() + "\0";
@@ -725,7 +724,7 @@ private:
 
         TelemetryMessage rsp = telemetry_messages->get_default_command("update_meters_rsp");
         rsp.get_parameters().set_value("OK");
-        rsp.get_parameters().set_packet_id();
+        rsp.set_packet_id();
 
         const std::string rsp_str = rsp.serialize_command();
         if (sendto(telemetry_fd, rsp_str.c_str(), rsp_str.size(), 0,
