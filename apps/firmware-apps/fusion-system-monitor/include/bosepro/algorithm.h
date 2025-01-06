@@ -7,8 +7,8 @@
 #include <bosepro/parameter.h>
 #include <bosepro/definition.h>
 #include <bosepro/dspmemory.h>
-#include <bosepro/telemetry.h>
 #include <bosepro/terminal.h>
+#include <bosepro/telemetry_monitor.h>
 
 #include <cstdint>
 #include <functional>

@@ -2,6 +2,7 @@
 #include <bosepro/definition.h>
 #include <bosepro/profile.h>
 #include <bosepro/session.h>
+#include <bosepro/telemetry_monitor.h>
 
 #include <boost/program_options.hpp>
 #include <spdlog/spdlog.h>
