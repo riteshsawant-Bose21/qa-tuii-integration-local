@@ -205,7 +205,7 @@ class TelemetryMonitor {
 public:
     /// Constructor for singleton pattern--initialization in "initialize" method
     TelemetryMonitor()
-        : serverpath("/tmp/telemetry_uds"),
+        : serverpath("/tmp/telm_core.socket"),
           shm_addr(NUM_SHM_REGIONS, nullptr),
           telemetry_manager_addr(),
           timeout(5)
@@ -574,17 +574,17 @@ private:
     /// Pub initiated command to register with telemetry manager
     bool register_with_telemetry_manager()
     {
-        TelemetryMessage message = telemetry_messages->get_default_command("pub_register_req");
+        TelemetryMessage req = telemetry_messages->get_default_command("pub_register_req");
         size_t meter_blob_size = telemetry_messages->get_default_meter().serialize_command().size();
         std::vector<size_t> block_size = {get_meters_size("HI", meter_blob_size),
                                           get_meters_size("MED", meter_blob_size),
                                           get_meters_size("LO", meter_blob_size)};
-        message.get_parameters().set_block_size(block_size);
-        message.set_packet_id();
+        req.get_parameters().set_block_size(block_size);
+        req.set_packet_id();
 
         // Send the registration request
-        const std::string reg_req_str = message.serialize_command() + "\0";
-        if (sendto(telemetry_fd, reg_req_str.c_str(), reg_req_str.size(), 0,
+        const std::string req_str = req.serialize_command();
+        if (sendto(telemetry_fd, req_str.c_str(), req_str.size(), 0,
                 (struct sockaddr *)&telemetry_manager_addr, sizeof(telemetry_manager_addr)) < 0)
         {
             SPDLOG_ERROR("Failed to send registration request to telemetry manager.");
@@ -613,23 +613,23 @@ private:
         buf[recv_len] = '\0';
 
         std::stringstream ss(buf);
-        TelemetryMessage response(ss);
+        TelemetryMessage rsp(ss);
 
-        if (response.get_message_name() == "pub_register_rsp" && 
-            response.get_parameters().get_value() == "OK" && 
-            response.get_packet_id() == message.get_packet_id())
+        if (rsp.get_message_name() == "pub_register_rsp" && 
+            rsp.get_parameters().get_value() == "OK" && 
+            rsp.get_packet_id() == req.get_packet_id())
         {
-            SPDLOG_INFO("Received valid registration response: \n\n{}", response.serialize_command());
+            SPDLOG_INFO("Received valid registration rsp: \n\n{}", rsp.serialize_command());
         }
         else
         {
-            SPDLOG_ERROR("Received NOK response: \n\n{}", response.serialize_command());
+            SPDLOG_ERROR("Received NOK rsp: \n\n{}", rsp.serialize_command());
             close(telemetry_fd);
             telemetry_fd = -1;
             return false;
         }
 
-        std::vector<std::string> shm_paths = response.get_parameters().get_block_name();
+        std::vector<std::string> shm_paths = rsp.get_parameters().get_block_name();
         std::vector<int> shm_fd(shm_paths.size(), -1);
 
         int i = 0;
@@ -733,6 +733,8 @@ private:
         TelemetryMessage rsp = telemetry_messages->get_default_command("update_meters_rsp");
         rsp.get_parameters().set_value("OK");
         rsp.set_packet_id(message.get_packet_id());
+
+        SPDLOG_DEBUG("Sending message \n\n{}", rsp.serialize_command());
 
         const std::string rsp_str = rsp.serialize_command();
         if (sendto(telemetry_fd, rsp_str.c_str(), rsp_str.size(), 0,

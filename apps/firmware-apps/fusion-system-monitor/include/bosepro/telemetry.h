@@ -418,8 +418,6 @@ public:
 
         message << " }\n";
 
-        SPDLOG_DEBUG("Message size: {}", message.str().size());
-
         cb_data.message = message.str();
         cb_data.rate = this->get_rate();
         cb_data.more_data = items_remaining ? true : false;
@@ -617,8 +615,6 @@ public:
         message << "]";
 
         message << " }\n";
-
-        SPDLOG_DEBUG("Message size: {}", message.str().size());
 
         cb_data.message = message.str();
         cb_data.rate = this->get_rate();
