@@ -162,12 +162,21 @@ public:
     }
 
 
-    /// Set the parameters.packet_id value with a timestamp.
+    /// Set the packet_id value with a timestamp.
     void set_packet_id()
     {
         auto now = std::chrono::steady_clock::now();
         auto now_us = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count();
         set_member("packet_id", static_cast<uint64_t>(now_us));
+    }
+
+
+    /// Set the parameters.packet_id value with a timestamp.
+    ///
+    /// @param timestamp  The value to set packet_id.
+    void set_packet_id(std::string &timestamp)
+    {
+        set_member("packet_id", timestamp);
     }
 
 
@@ -724,7 +733,7 @@ private:
 
         TelemetryMessage rsp = telemetry_messages->get_default_command("update_meters_rsp");
         rsp.get_parameters().set_value("OK");
-        rsp.set_packet_id();
+        rsp.set_packet_id(message.get_packet_id());
 
         const std::string rsp_str = rsp.serialize_command();
         if (sendto(telemetry_fd, rsp_str.c_str(), rsp_str.size(), 0,
