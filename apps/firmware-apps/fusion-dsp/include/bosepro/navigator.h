@@ -140,14 +140,14 @@ protected:
     /// @param  index  The index of the list member to retrieve.
     /// @param  value  The value of the list member of the given name and index.
     template <typename T>
-    void get_list_value(const std::string &list_name, int index, T &value) const
+    bool get_list_value(const std::string &list_name, int index, T &value) const
     {
         int n = 0;
 
         if (!has_member(list_name))
         {
             SPDLOG_CRITICAL("List {} not found.", list_name);
-            return;
+            return false;
         }
 
         for (auto a : get_child(list_name))
@@ -155,13 +155,14 @@ protected:
             if (n == index)
             {
                 value = a.second.get_value<T>();
-                return;
+                return true;
             }
 
             n++;
         }
 
         SPDLOG_CRITICAL("List {} index {} out of range.", list_name, index);
+        return false;
     }
 
 

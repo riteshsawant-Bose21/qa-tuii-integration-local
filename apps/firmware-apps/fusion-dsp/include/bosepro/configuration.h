@@ -280,8 +280,11 @@ public:
     int get_row() const
     {
         int row;
-        get_list_value("index", 0, row);
-        return row - 1;
+        if (get_list_value("index", 0, row)) {
+            return row - 1;    
+        }
+        return 0;
+        
     }
 
 
@@ -292,8 +295,10 @@ public:
     int get_column() const
     {
         int column;
-        get_list_value("index", 1, column);
-        return column - 1;
+        if (get_list_value("index", 1, column)) {
+            return column - 1;
+        }
+        return 0;        
     }
 };
 
