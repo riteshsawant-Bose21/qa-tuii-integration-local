@@ -18,7 +18,7 @@ namespace bosepro {
 /// struct to hold data for meters/event callbacks
 struct telemetry_cb_data {
     std::string message;
-    std::string rate;
+    std::string period_type;
     std::string value_type;
     bool more_data;
 };
@@ -38,8 +38,8 @@ public:
     {
         name = definition.get_name();
         value_type = definition.get_value_type();
-        type = definition.get_type(); // type is unsed internally--meter or event
-        rate = definition.get_rate(); // rate is HI, MED, or LO
+        telemetry_type = definition.get_telemetry_type(); // telemetry type is unsed internally--meter or event
+        period_type = definition.get_period_type(); // period_type is HI, MED, or LO
         
         num_rows = 1;
         num_columns = 1;
@@ -231,18 +231,18 @@ public:
     /// Get the telemetry type.
     ///
     /// @return  The block name.
-    const std::string &get_rate() const
+    const std::string &get_period_type() const
     {
-        return rate;
+        return period_type;
     }
 
 
     /// Get the telemetry type.
     ///
     /// @return  The block name.
-    const std::string &get_type() const
+    const std::string &get_telemetry_type() const
     {
-        return type;
+        return telemetry_type;
     }
 
 
@@ -279,8 +279,8 @@ private:
     std::string name;
     std::string block_name;
     std::string value_type;
-    std::string type;
-    std::string rate;
+    std::string telemetry_type;
+    std::string period_type;
     int num_rows;
     int num_columns;
 };
@@ -419,7 +419,7 @@ public:
         message << " }\n";
 
         cb_data.message = message.str();
-        cb_data.rate = this->get_rate();
+        cb_data.period_type = this->get_period_type();
         cb_data.more_data = items_remaining ? true : false;
         meters_callback(cb_data);
     }
@@ -436,7 +436,11 @@ public:
 
         std::ostringstream message;
 
+        auto now = std::chrono::steady_clock::now();
+        auto now_us = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
+
         message << "{ \"message_name\": \"event\",";
+        message << " \"packet_id\": \"" << static_cast<uint64_t>(now_us) << "\",";
         message << " \"parameters\": {";
         message << " \"block_name\": \"" << this->get_block_name() << "\",";
         message << " \"alarm_name\": \"" << this->get_name() << "\",";
@@ -449,7 +453,7 @@ public:
         message << "] } }\n";
 
         cb_data.message = message.str();
-        cb_data.rate = this->get_rate();
+        cb_data.period_type = this->get_period_type();
         event_callback(cb_data);
     }
 
@@ -617,7 +621,7 @@ public:
         message << " }\n";
 
         cb_data.message = message.str();
-        cb_data.rate = this->get_rate();
+        cb_data.period_type = this->get_period_type();
         cb_data.more_data = items_remaining ? true : false;
         meters_callback(cb_data);
     }
@@ -634,8 +638,11 @@ public:
 
         std::ostringstream message;
 
+        auto now = std::chrono::steady_clock::now();
+        auto now_us = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
+
         message << "{ \"message_name\": \"alarm_data\",";
-        message << " \"packet_id\": 0,";
+        message << " \"packet_id\": \"" << static_cast<uint64_t>(now_us) << "\",";
         message << " \"parameters\": {";
         message << " \"block_name\": \"" << this->get_block_name() << "\",";
         message << " \"alarm_name\": \"" << this->get_name() << "\",";
@@ -655,7 +662,7 @@ public:
         message << "] } }\n";
 
         cb_data.message = message.str();
-        cb_data.rate = this->get_rate();
+        cb_data.period_type = this->get_period_type();
         event_callback(cb_data);
     }
 
@@ -849,7 +856,7 @@ public:
         message << " }\n";
         
         cb_data.message = message.str();
-        cb_data.rate = this->get_rate();
+        cb_data.period_type = this->get_period_type();
         cb_data.more_data = items_remaining ? true : false;
         meters_callback(cb_data);
     }
@@ -866,8 +873,11 @@ public:
 
         std::ostringstream message;
 
+        auto now = std::chrono::steady_clock::now();
+        auto now_us = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
+
         message << "{ \"message_name\": \"alarm_data\",";
-        message << " \"packet_id\": 0,";
+        message << " \"packet_id\": \"" << static_cast<uint64_t>(now_us) << "\",";
         message << " \"parameters\": {";
         message << " \"block_name\": \"" << this->get_block_name() << "\",";
         message << " \"alarm_name\": \"" << this->get_name() << "\",";
@@ -897,7 +907,7 @@ public:
         message << "] } }\n";
 
         cb_data.message = message.str();
-        cb_data.rate = this->get_rate();
+        cb_data.period_type = this->get_period_type();
         event_callback(cb_data);
     }
 

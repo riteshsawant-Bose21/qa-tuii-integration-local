@@ -95,9 +95,9 @@ public:
     /// Get the string from "rate" property.
     ///
     /// @return  The string value of "rate"
-    const std::string get_rate() const
+    const std::string get_period_type() const
     {
-        return get_string("type");
+        return get_string("period_type");
     }
 
 
@@ -162,16 +162,16 @@ public:
     }
 
 
-    /// Set the packet_id value with a timestamp.
+    /// Generate a timestamp and set the packet_id with it.
     void set_packet_id()
     {
         auto now = std::chrono::steady_clock::now();
-        auto now_us = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count();
+        auto now_us = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
         set_member("packet_id", static_cast<uint64_t>(now_us));
     }
 
 
-    /// Set the parameters.packet_id value with a timestamp.
+    /// Set the packet_id value with the specified timestamp.
     ///
     /// @param timestamp  The value to set packet_id.
     void set_packet_id(std::string timestamp)
@@ -314,17 +314,17 @@ public:
         std::string qualified_name = telemetry->get_block_name() + "::" +
                                      telemetry->get_name();
 
-        if (telemetry->get_type() == "meter")
+        if (telemetry->get_telemetry_type() == "meter")
         {
             meters[qualified_name] = std::move(telemetry);
         }
-        else if (telemetry->get_type() == "event")
+        else if (telemetry->get_telemetry_type() == "event")
         {
             events[qualified_name] = std::move(telemetry);
         }
         else
         {
-            SPDLOG_WARN("Unknown telemetry type '{}'", telemetry->get_type());
+            SPDLOG_WARN("Unknown telemetry type '{}'", telemetry->get_telemetry_type());
         }
     }
 
@@ -480,7 +480,7 @@ public:
         size_t size = 0;
         for (auto &m : meters)
         {
-            if (m.second->get_rate() == update_rate)
+            if (m.second->get_period_type() == update_rate)
             {
                 size += m.second->get_meters_size();
                 size += default_message_size;
@@ -501,7 +501,7 @@ public:
         int num_items = 0;
         for (auto &m : meters)
         {
-            if (m.second->get_rate() == update_rate)
+            if (m.second->get_period_type() == update_rate)
             {
                 ++num_items;
             }
@@ -541,9 +541,9 @@ public:
         static char* current_addr = nullptr; // Use char* for easier arithmetic
         static int offset = 0;
 
-        int region_index = cb_data.rate == "HI"  ? 0 :
-                           cb_data.rate == "MED" ? 1 :
-                           cb_data.rate == "LO"  ? 2 : -1;
+        int region_index = cb_data.period_type == "HI"  ? 0 :
+                           cb_data.period_type == "MED" ? 1 :
+                           cb_data.period_type == "LO"  ? 2 : -1;
 
         // Validate the region index and ensure shared memory is available
         if (region_index >= 0 && shm_addr[region_index] != nullptr)
@@ -719,12 +719,12 @@ private:
     /// @param message  The TelemetryMessage from the manager
     void update_meters(TelemetryMessage &message)
     {
-        std::string rate = message.get_parameters().get_rate();
+        std::string rate = message.get_parameters().get_period_type();
         int n = get_num_meters(rate);
 
         for (auto &m: meters)
         {
-            if (m.second->get_rate() == rate)
+            if (m.second->get_period_type() == rate)
             {
                 m.second->send_meters(meters_callback, --n);
             }
@@ -777,6 +777,7 @@ private:
         char buf[1024];
         struct sockaddr_un manager_addr;
         socklen_t manager_addr_len = sizeof(manager_addr);
+        int error_timeout = 0;
 
         while (1)
         {
@@ -788,8 +789,15 @@ private:
             if (result <= 0)
             {
                 SPDLOG_ERROR("Error receiving data from telemetry manager.");
+                error_timeout++;
+                if (error_timeout >= 10)
+                {
+                    SPDLOG_ERROR("Lost connection to telemetry manager... closing telemetry.");
+                    break;
+                }
                 continue;
             }
+            error_timeout = 0;
 
             buf[result] = '\0';
 

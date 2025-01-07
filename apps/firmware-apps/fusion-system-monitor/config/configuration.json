@@ -16,6 +16,18 @@
                         { "name": "high_cpu_usage" },
                         { "name": "test" }
                     ]
+                },
+                {
+                    "name": "space_usage",
+                    "module": "space_usage",
+                    "telemetry": [
+                        { "name": "ram" },
+                        { "name": "high_ram_usage" },
+                        { "name": "emmc" },
+                        { "name": "high_emmc_usage" },
+                        { "name": "usb_storage" },
+                        { "name": "usb_connected" }
+                    ]
                 }
             ]
         }

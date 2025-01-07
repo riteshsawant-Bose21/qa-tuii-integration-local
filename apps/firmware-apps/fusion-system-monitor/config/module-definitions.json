@@ -25,6 +25,53 @@
                     "telemetry_rate": "HI"  
                 }
             ]
+        },
+        {
+            "name": "space_usage",
+            "telemetry": [
+                { 
+                    "name": "ram", 
+                    "dimensions": 0, 
+                    "value_type": "float", 
+                    "telemetry_type": "meter",
+                    "telemetry_rate": "MED" 
+                },
+                { 
+                    "name": "high_ram_usage", 
+                    "dimensions": 0, 
+                    "value_type": "bool", 
+                    "telemetry_type": "event",
+                    "telemetry_rate": "N/A"
+                },
+                { 
+                    "name": "emmc", 
+                    "dimensions": 0, 
+                    "value_type": "float", 
+                    "telemetry_type": "meter",
+                    "telemetry_rate": "MED"  
+                },
+                { 
+                    "name": "high_emmc_usage", 
+                    "dimensions": 0, 
+                    "value_type": "bool", 
+                    "telemetry_type": "event",
+                    "telemetry_rate": "N/A"
+                },
+                { 
+                    "name": "usb_storage", 
+                    "dimensions": 0, 
+                    "value_type": "float", 
+                    "telemetry_type": "meter",
+                    "telemetry_rate": "MED"  
+                },
+                { 
+                    "name": "usb_connected", 
+                    "dimensions": 0, 
+                    "value_type": "bool", 
+                    "telemetry_type": "event",
+                    "telemetry_rate": "N/A"
+                }
+            ]
         }
     ]
 }

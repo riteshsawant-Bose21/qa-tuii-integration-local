@@ -394,16 +394,16 @@ public:
     /// Get the telemetry reate
     ///
     /// @return  The telemetry type.
-    const std::string &get_rate() const
+    const std::string &get_period_type() const
     {
-        return get_string("telemetry_rate");
+        return get_string("period_type");
     }
 
 
     /// Get the telemetry type
     ///
     /// @return  The telemetry type.
-    const std::string &get_type() const
+    const std::string &get_telemetry_type() const
     {
         return get_string("telemetry_type");
     }
