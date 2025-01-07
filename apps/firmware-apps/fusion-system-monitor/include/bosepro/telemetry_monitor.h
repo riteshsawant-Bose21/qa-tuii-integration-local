@@ -93,9 +93,9 @@ public:
     }
 
 
-    /// Get the string from "rate" property.
+    /// Get the string from "period_type" property.
     ///
-    /// @return  The string value of "rate"
+    /// @return  The string value of "period_type"
     const std::string get_period_type() const
     {
         return get_string("period_type");
@@ -471,18 +471,18 @@ public:
 
 
     /// Get the size of all meter messages for meters of the 
-    /// specified rate managed by the telemetry monitor. 
+    /// specified period_type managed by the telemetry monitor. 
     ///
-    /// @param update_rate  The meters update rate filter
+    /// @param period_type  The meters period_type filter
     /// @param default_message_size  The size of the default, empty
     ///                              meters update message
-    /// @return  Total size of all meters of specified rate managed
-    size_t get_meters_size(const std::string &update_rate, size_t default_message_size)
+    /// @return  Total size of all meters of specified period_type managed
+    size_t get_meters_size(const std::string &period_type, size_t default_message_size)
     {
         size_t size = 0;
         for (auto &m : meters)
         {
-            if (m.second->get_period_type() == update_rate)
+            if (m.second->get_period_type() == period_type)
             {
                 size += m.second->get_meters_size();
                 size += default_message_size;
@@ -493,17 +493,17 @@ public:
     }
 
 
-    /// Get the number of meters of the specified rate managed
+    /// Get the number of meters of the specified period_type managed
     /// by the telemetry monitor
     ///
-    /// @param update_rate  The meters update rate filter
-    /// @return  Number of meters of specified rate managed
-    int get_num_meters(const std::string &update_rate)
+    /// @param period_type The meters period_type filter
+    /// @return  Number of meters of specified period_type managed
+    int get_num_meters(const std::string &period_type)
     {
         int num_items = 0;
         for (auto &m : meters)
         {
-            if (m.second->get_period_type() == update_rate)
+            if (m.second->get_period_type() == period_type)
             {
                 ++num_items;
             }
@@ -691,13 +691,22 @@ private:
     /// @param message  The TelemetryMessage from the manager
     void update_meters(TelemetryMessage &message)
     {
-        std::string rate = message.get_parameters().get_period_type();
+        std::string period_type = message.get_parameters().get_period_type();
 
-        shm_manager->getSharedMemory(rate).resetWrite();
+        int region_index = period_type == "HI"  ? 0 :
+                           period_type == "MED" ? 1 :
+                           period_type == "LO"  ? 2 : -1;
+
+        // Validate the region index and ensure shared memory is available
+        if (region_index < 0) {
+            return;
+        }
+
+        shm_manager->getSharedMemory(shm_names[region_index]).resetWrite();
 
         for (auto &m: meters)
         {
-            if (m.second->get_period_type() == rate)
+            if (m.second->get_period_type() == period_type)
             {
                 m.second->send_meters(meters_callback);
             }
