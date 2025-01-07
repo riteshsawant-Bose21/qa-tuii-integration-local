@@ -8,21 +8,21 @@
                     "dimensions": 0, 
                     "value_type": "float", 
                     "telemetry_type": "meter",
-                    "telemetry_rate": "LO" 
+                    "period_type": "LO" 
                 },
                 { 
                     "name": "high_cpu_usage", 
                     "dimensions": 0, 
                     "value_type": "bool", 
                     "telemetry_type": "event",
-                    "telemetry_rate": "N/A"
+                    "period_type": "N/A"
                 },
                 { 
                     "name": "test", 
                     "dimensions": [3], 
                     "value_type": "bool", 
                     "telemetry_type": "meter",
-                    "telemetry_rate": "HI"  
+                    "period_type": "HI"  
                 }
             ]
         },
@@ -34,42 +34,42 @@
                     "dimensions": 0, 
                     "value_type": "float", 
                     "telemetry_type": "meter",
-                    "telemetry_rate": "MED" 
+                    "period_type": "MED" 
                 },
                 { 
                     "name": "high_ram_usage", 
                     "dimensions": 0, 
                     "value_type": "bool", 
                     "telemetry_type": "event",
-                    "telemetry_rate": "N/A"
+                    "period_type": "N/A"
                 },
                 { 
                     "name": "emmc", 
                     "dimensions": 0, 
                     "value_type": "float", 
                     "telemetry_type": "meter",
-                    "telemetry_rate": "MED"  
+                    "period_type": "MED"  
                 },
                 { 
                     "name": "high_emmc_usage", 
                     "dimensions": 0, 
                     "value_type": "bool", 
                     "telemetry_type": "event",
-                    "telemetry_rate": "N/A"
+                    "period_type": "N/A"
                 },
                 { 
                     "name": "usb_storage", 
                     "dimensions": 0, 
                     "value_type": "float", 
                     "telemetry_type": "meter",
-                    "telemetry_rate": "MED"  
+                    "period_type": "MED"  
                 },
                 { 
                     "name": "usb_connected", 
                     "dimensions": 0, 
                     "value_type": "bool", 
                     "telemetry_type": "event",
-                    "telemetry_rate": "N/A"
+                    "period_type": "N/A"
                 }
             ]
         }

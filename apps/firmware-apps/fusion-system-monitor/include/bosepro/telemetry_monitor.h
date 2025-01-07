@@ -1,6 +1,7 @@
 #pragma once
 
 #include <bosepro/telemetry.h>
+#include <bosepro/named_shared_memory_manager_factory.h>
 
 #include <string>
 #include <functional>
@@ -206,10 +207,11 @@ public:
     /// Constructor for singleton pattern--initialization in "initialize" method
     TelemetryMonitor()
         : serverpath("/tmp/telm_core.socket"),
-          shm_addr(NUM_SHM_REGIONS, nullptr),
+          shm_names(NUM_SHM_REGIONS, ""),
           telemetry_manager_addr(),
           timeout(5)
     {
+        shm_manager = &NamedSharedMemoryManagerFactory::getInstance();
     }
 
 
@@ -538,34 +540,22 @@ public:
     /// @param cb_data the telemetry callback data to write
     void update_meters_shm(bosepro::telemetry_cb_data &cb_data)
     {
-        static char* current_addr = nullptr; // Use char* for easier arithmetic
-        static int offset = 0;
-
         int region_index = cb_data.period_type == "HI"  ? 0 :
                            cb_data.period_type == "MED" ? 1 :
                            cb_data.period_type == "LO"  ? 2 : -1;
 
         // Validate the region index and ensure shared memory is available
-        if (region_index >= 0 && shm_addr[region_index] != nullptr)
-        {
-            if (current_addr == nullptr)
-            {
-                current_addr = static_cast<char*>(shm_addr[region_index]);
-            }
+        if (region_index < 0) {
+            return;
+        }
 
+        try {
             // Write the telemetry message into the shared memory region
-            memcpy(current_addr + offset, cb_data.message.c_str(), cb_data.message.length());
+            NamedSharedMemory& shm = shm_manager->getSharedMemory(shm_names[region_index]);
+            shm.write(cb_data.message.c_str(), cb_data.message.length(), "string");
 
-            if (cb_data.more_data)
-            {
-                offset += cb_data.message.length(); // Move the pointer forward
-            }
-            else
-            {
-                // Reset for the next telemetry write
-                current_addr = nullptr;
-                offset = 0;
-            }
+        } catch (const std::runtime_error& e) {
+            SPDLOG_ERROR("Error accessing shared memory: {}", e.what());
         }
     }
 
@@ -629,35 +619,17 @@ private:
             return false;
         }
 
-        std::vector<std::string> shm_paths = rsp.get_parameters().get_block_name();
-        std::vector<int> shm_fd(shm_paths.size(), -1);
-
-        int i = 0;
-        for (auto a : shm_paths)
-        {
-            if (block_size[i] == 0) 
-            {
-                ++i;
-                continue;
+        shm_names = rsp.get_parameters().get_block_name();
+        for (size_t i = 0; i < shm_names.size(); ++i) {
+            if (block_size[i] > 0) {
+                try {
+                    shm_manager->createSharedMemory(shm_names[i], block_size[i]);
+                    SPDLOG_INFO("Found shared memory region {} with size {}", shm_names[i], block_size[i]);
+                } catch (const std::runtime_error& e) {
+                    SPDLOG_CRITICAL("Failed to create shared memory: {}", e.what());
+                    return false;
+                }
             }
-
-            shm_fd[i] = shm_open(shm_paths[i].c_str(), O_RDWR, 0666);
-            if (shm_fd[i] < 0) 
-            {
-                SPDLOG_CRITICAL("shm_open failed for {}", shm_paths[i]);
-                return false;
-            }
-
-            // Map the shared memory into the process's address space
-            shm_addr[i] = mmap(nullptr, block_size[i], PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd[i], 0);
-            if (shm_addr[i] == MAP_FAILED) 
-            {
-                SPDLOG_CRITICAL("mmap failed for {}", shm_paths[i]);
-                close(shm_fd[i]);
-                return false;
-            }
-
-            ++i;
         }
 
         return true;
@@ -706,7 +678,7 @@ private:
         }
 
         // clean up telemetry_manager assets and pause the telemetry monitor
-        shm_addr.clear();
+        shm_names.clear();
         stop();
 
         return true;
@@ -720,13 +692,14 @@ private:
     void update_meters(TelemetryMessage &message)
     {
         std::string rate = message.get_parameters().get_period_type();
-        int n = get_num_meters(rate);
+
+        shm_manager->getSharedMemory(rate).resetWrite();
 
         for (auto &m: meters)
         {
             if (m.second->get_period_type() == rate)
             {
-                m.second->send_meters(meters_callback, --n);
+                m.second->send_meters(meters_callback);
             }
         }
 
@@ -849,9 +822,10 @@ private:
     std::function<void(telemetry_cb_data &)> meters_callback;
     std::function<void(telemetry_cb_data &)> event_callback;
 
+    NamedSharedMemoryManager* shm_manager;
     std::string serverpath;
     int telemetry_fd;
-    std::vector<void *> shm_addr;
+    std::vector<std::string> shm_names;
     struct sockaddr_un telemetry_manager_addr;
     int timeout;
 

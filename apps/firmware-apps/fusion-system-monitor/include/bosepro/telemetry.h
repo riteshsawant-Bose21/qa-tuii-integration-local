@@ -20,7 +20,6 @@ struct telemetry_cb_data {
     std::string message;
     std::string period_type;
     std::string value_type;
-    bool more_data;
 };
 
 
@@ -259,8 +258,7 @@ public:
     /// Send a JSON-formatted meter string using the provided callback.
     ///
     /// @param  meters_callback  The callback function used to send the meter data.
-    /// @param  items_remaining  The number of meters remaining in the block.
-    virtual void send_meters(std::function<void(telemetry_cb_data &)> meters_callback, int items_remaining) = 0;
+    virtual void send_meters(std::function<void(telemetry_cb_data &)> meters_callback) = 0;
 
 
     /// Send a JSON-formatted event string using the provided callback.
@@ -401,8 +399,7 @@ public:
     ///
     /// @param  meters_callback  The callback function used to send the
     ///     meter data.
-    /// @param  items_remaining  The number of meters left in the block.
-    virtual void send_meters(std::function<void(telemetry_cb_data &)> meters_callback, int items_remaining) override
+    virtual void send_meters(std::function<void(telemetry_cb_data &)> meters_callback) override
     {
         telemetry_cb_data cb_data = {};
 
@@ -420,7 +417,6 @@ public:
 
         cb_data.message = message.str();
         cb_data.period_type = this->get_period_type();
-        cb_data.more_data = items_remaining ? true : false;
         meters_callback(cb_data);
     }
 
@@ -598,7 +594,7 @@ public:
     /// @param  meters_callback  The callback function used to send the
     ///     meter data.
     /// @param  items_remaining  The number of meters left in the block.
-    virtual void send_meters(std::function<void(telemetry_cb_data &)> meters_callback, int items_remaining) override
+    virtual void send_meters(std::function<void(telemetry_cb_data &)> meters_callback) override
     {
         telemetry_cb_data cb_data = {};
 
@@ -622,7 +618,6 @@ public:
 
         cb_data.message = message.str();
         cb_data.period_type = this->get_period_type();
-        cb_data.more_data = items_remaining ? true : false;
         meters_callback(cb_data);
     }
 
@@ -820,7 +815,7 @@ public:
     /// @param  meters_callback  The callback function used to send the
     ///     meter data.
     /// @param  items_remaining  The number of meters left in the block.
-    virtual void send_meters(std::function<void(telemetry_cb_data &)> meters_callback, int items_remaining) override
+    virtual void send_meters(std::function<void(telemetry_cb_data &)> meters_callback) override
     {
         telemetry_cb_data cb_data = {};
 
@@ -857,7 +852,6 @@ public:
         
         cb_data.message = message.str();
         cb_data.period_type = this->get_period_type();
-        cb_data.more_data = items_remaining ? true : false;
         meters_callback(cb_data);
     }
 
