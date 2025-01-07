@@ -60,8 +60,10 @@ bool JackClient::set_process_thread(JackThreadCallback callback, void *arg)
         return false;
     }
 
-    if (jack_set_process_thread(client, callback, arg) != 0)
+    err = jack_set_process_thread(client, callback, arg);
+    if (err != 0)
     {
+        SPDLOG_CRITICAL("jack_set_process_thread() failed, err: {}", err);
         return false;
     }
 
@@ -69,7 +71,7 @@ bool JackClient::set_process_thread(JackThreadCallback callback, void *arg)
 
     if (err != 0)
     {
-        SPDLOG_CRITICAL("jack_set_process_thread() failed, err: {}", err);
+        SPDLOG_CRITICAL("jack_activate() failed, err: {}", err);
         return false;
     }
 
