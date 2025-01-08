@@ -8,6 +8,7 @@ MAIN_PATH=fusion/cmd/fusion
 BUILD_DIR=build
 BUILD_FLAGS=-tags netgo,osusergo
 LDFLAGS=-ldflags '-extldflags "-static"'
+DEBUG_FLAGS=-gcflags "all=-N -l"
 
 # Force disable buffering for all commands
 SHELL := /bin/bash
@@ -49,7 +50,7 @@ build-linux-arm64:
 
 build-darwin-arm64:
 	mkdir -p $(BUILD_DIR)
-	cd fusion && CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 $(GOBUILD) $(BUILD_FLAGS) $(LDFLAGS) -o ../$(BUILD_DIR)/$(BINARY_NAME)_darwin_arm64 -v ./cmd/fusion
+	cd fusion && CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 $(GOBUILD) $(BUILD_FLAGS) $(DEBUG_FLAGS) -o ../$(BUILD_DIR)/$(BINARY_NAME)_darwin_arm64 -v ./cmd/fusion
 
 # Development helpers
 fmt:
@@ -82,4 +83,5 @@ help:
 	@echo " build-darwin-arm64 - Build for macOS ARM64"
 	@echo " build-all - Build for all platforms"
 
-.PHONY: all build clean run deps tidy fmt vet lint build-linux-amd64 build-linux-arm32 build-linux-arm64 build-darwin-arm64 build-all help test-verbose
+.PHONY: all build clean run deps tidy fmt vet lint build-linux-amd64 build-linux-arm32 build-linux-arm64 build-darwin-arm64 build-all help
+	
