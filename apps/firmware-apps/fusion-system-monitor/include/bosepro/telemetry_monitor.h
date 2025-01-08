@@ -1,7 +1,7 @@
 #pragma once
 
 #include <bosepro/telemetry.h>
-#include <bosepro/named_shared_memory_manager_factory.h>
+#include <bosepro/shared_memory.h>
 
 #include <string>
 #include <functional>
@@ -195,7 +195,7 @@ public:
     /// Serialize the telemetry message.
     ///
     /// @return  The json blob string
-    const std::string serialize_command() const
+    const std::string serialize_message() const
     {
         return serialize();
     }
@@ -206,12 +206,12 @@ class TelemetryMonitor {
 public:
     /// Constructor for singleton pattern--initialization in "initialize" method
     TelemetryMonitor()
-        : serverpath("/tmp/telm_core.socket"),
+        : shm_manager(NamedSharedMemoryManager::getInstance()),
+          serverpath(""),
           shm_names(NUM_SHM_REGIONS, ""),
           telemetry_manager_addr(),
           timeout(5)
     {
-        shm_manager = &NamedSharedMemoryManagerFactory::getInstance();
     }
 
 
@@ -232,9 +232,10 @@ public:
     /// Initialize the singleton object. Connect and register with Fusion Telemetry Manager
     ///
     /// @param filename  file to initialize the telemetry_messages
-    void initialize(const std::string &filename)
+    void initialize(const std::string &filename, const std::string socket_path)
     {
         telemetry_messages = std::make_unique<TelemetryMessage>(filename);
+        serverpath = socket_path;
         
         telemetry_fd = socket(AF_UNIX, SOCK_DGRAM, 0);
         if (telemetry_fd < 0)
@@ -551,7 +552,7 @@ public:
 
         try {
             // Write the telemetry message into the shared memory region
-            NamedSharedMemory& shm = shm_manager->getSharedMemory(shm_names[region_index]);
+            NamedSharedMemory& shm = shm_manager.getSharedMemory(shm_names[region_index]);
             shm.write(cb_data.message.c_str(), cb_data.message.length(), "string");
 
         } catch (const std::runtime_error& e) {
@@ -561,23 +562,57 @@ public:
 
 
 private:
+    bool send_message(TelemetryMessage &message)
+    {
+        const std::string str = message.serialize_message();
+        if (sendto(telemetry_fd, str.c_str(), str.size(), 0,
+                (struct sockaddr *)&telemetry_manager_addr, sizeof(telemetry_manager_addr)) < 0)
+        {
+            SPDLOG_ERROR("Failed to send registration request to telemetry manager.");
+            return false;
+        }
+
+        return true;
+    }
+
+
+    TelemetryMessage recv_message()
+    {
+        char buf[256];
+        ssize_t recv_len = recvfrom(telemetry_fd, buf, sizeof(buf) - 1, 0,
+                                    nullptr, nullptr);
+        if (recv_len < 0)
+        {
+            SPDLOG_ERROR("Failed to receive response from telemetry manager.");
+            TelemetryMessage message("");
+            return message;
+        }
+
+        buf[recv_len] = '\0';
+
+        std::stringstream ss(buf);
+        TelemetryMessage message(ss);
+
+        return message;
+    }
+
     /// Pub initiated command to register with telemetry manager
     bool register_with_telemetry_manager()
     {
         TelemetryMessage req = telemetry_messages->get_default_command("pub_register_req");
-        size_t meter_blob_size = telemetry_messages->get_default_meter().serialize_command().size();
+        size_t meter_blob_size = telemetry_messages->get_default_meter().serialize_message().size();
         std::vector<size_t> block_size = {get_meters_size("HI", meter_blob_size),
                                           get_meters_size("MED", meter_blob_size),
                                           get_meters_size("LO", meter_blob_size)};
         req.get_parameters().set_block_size(block_size);
         req.set_packet_id();
 
+        SPDLOG_DEBUG("about to send_message");
+
         // Send the registration request
-        const std::string req_str = req.serialize_command();
-        if (sendto(telemetry_fd, req_str.c_str(), req_str.size(), 0,
-                (struct sockaddr *)&telemetry_manager_addr, sizeof(telemetry_manager_addr)) < 0)
+        if (!send_message(req))
         {
-            SPDLOG_ERROR("Failed to send registration request to telemetry manager.");
+            SPDLOG_ERROR("Connection to telemetry manager failed. Aborting");
             close(telemetry_fd);
             telemetry_fd = -1;
             return false;
@@ -586,34 +621,24 @@ private:
         SPDLOG_INFO("Registration request sent to telemetry manager.");
 
         // Wait for a response
-        char buf[1024];
-        struct sockaddr_un response_addr {};
-        socklen_t response_addr_len = sizeof(response_addr);
-        ssize_t recv_len = recvfrom(telemetry_fd, buf, sizeof(buf) - 1, 0,
-                                    (struct sockaddr *)&response_addr, &response_addr_len);
-
-        if (recv_len < 0)
+        TelemetryMessage rsp = recv_message();
+        if (rsp.serialize_message().empty())
         {
-            SPDLOG_ERROR("Failed to receive response from telemetry manager.");
+            SPDLOG_ERROR("Connection to telemetry manager failed. Aborting");
             close(telemetry_fd);
             telemetry_fd = -1;
             return false;
         }
 
-        buf[recv_len] = '\0';
-
-        std::stringstream ss(buf);
-        TelemetryMessage rsp(ss);
-
         if (rsp.get_message_name() == "pub_register_rsp" && 
             rsp.get_parameters().get_value() == "OK" && 
             rsp.get_packet_id() == req.get_packet_id())
         {
-            SPDLOG_INFO("Received valid registration rsp: \n\n{}", rsp.serialize_command());
+            SPDLOG_INFO("Received valid registration rsp: \n\n{}", rsp.serialize_message());
         }
         else
         {
-            SPDLOG_ERROR("Received NOK rsp: \n\n{}", rsp.serialize_command());
+            SPDLOG_ERROR("Received NOK rsp: \n\n{}", rsp.serialize_message());
             close(telemetry_fd);
             telemetry_fd = -1;
             return false;
@@ -623,7 +648,7 @@ private:
         for (size_t i = 0; i < shm_names.size(); ++i) {
             if (block_size[i] > 0) {
                 try {
-                    shm_manager->createSharedMemory(shm_names[i], block_size[i]);
+                    shm_manager.createSharedMemory(shm_names[i], block_size[i], false);
                     SPDLOG_INFO("Found shared memory region {} with size {}", shm_names[i], block_size[i]);
                 } catch (const std::runtime_error& e) {
                     SPDLOG_CRITICAL("Failed to create shared memory: {}", e.what());
@@ -641,39 +666,25 @@ private:
     {
         TelemetryMessage req = telemetry_messages->get_default_command("pub_deregister_req");
 
-        const std::string req_str = req.serialize_command();
-        if (sendto(telemetry_fd, req_str.c_str(), req_str.size(), 0,
-                (struct sockaddr *)&telemetry_manager_addr, sizeof(telemetry_manager_addr)) < 0)
+        if (!send_message(req))
         {
-            SPDLOG_ERROR("Failed to send pub_deregister_req.");
             return false;
         }
 
         // Wait for a response
-        char buf[1024];
-        struct sockaddr_un response_addr {};
-        socklen_t response_addr_len = sizeof(response_addr);
-        ssize_t recv_len = recvfrom(telemetry_fd, buf, sizeof(buf) - 1, 0,
-                                    (struct sockaddr *)&response_addr, &response_addr_len);
-
-        if (recv_len < 0)
+        TelemetryMessage rsp = recv_message();
+        if (rsp.serialize_message().empty())
         {
-            SPDLOG_ERROR("Failed to receive response from telemetry manager.");
             return false;
         }
 
-        buf[recv_len] = '\0';
-
-        std::stringstream ss(buf);
-        TelemetryMessage response(ss);
-
-        if (response.get_message_name() == "pub_deregister_rsp" && response.get_parameters().get_value() == "OK")
+        if (rsp.get_message_name() == "pub_deregister_rsp" && rsp.get_parameters().get_value() == "OK")
         {
-            SPDLOG_INFO("Received valid deregistration response: \n\n{}", response.serialize_command());
+            SPDLOG_INFO("Received valid deregistration response: \n\n{}", rsp.serialize_message());
         }
         else
         {
-            SPDLOG_ERROR("Received NOK response: \n\n{}", response.serialize_command());
+            SPDLOG_ERROR("Received NOK response: \n\n{}", rsp.serialize_message());
             return false;
         }
 
@@ -702,7 +713,7 @@ private:
             return;
         }
 
-        shm_manager->getSharedMemory(shm_names[region_index]).resetWrite();
+        shm_manager.getSharedMemory(shm_names[region_index]).resetWrite();
 
         for (auto &m: meters)
         {
@@ -716,11 +727,9 @@ private:
         rsp.get_parameters().set_value("OK");
         rsp.set_packet_id(message.get_packet_id());
 
-        SPDLOG_DEBUG("Sending message \n\n{}", rsp.serialize_command());
+        SPDLOG_DEBUG("Sending message: \n{}", rsp.serialize_message());
 
-        const std::string rsp_str = rsp.serialize_command();
-        if (sendto(telemetry_fd, rsp_str.c_str(), rsp_str.size(), 0,
-                (struct sockaddr *)&telemetry_manager_addr, sizeof(telemetry_manager_addr)) < 0)
+        if (!send_message(rsp))
         {
             SPDLOG_ERROR("Failed to send update_meters_rsp.");
         }
@@ -756,19 +765,12 @@ private:
             SPDLOG_CRITICAL("Invalid connection socket.");
         }
 
-        char buf[1024];
-        struct sockaddr_un manager_addr;
-        socklen_t manager_addr_len = sizeof(manager_addr);
         int error_timeout = 0;
-
         while (1)
         {
             // Receive a message from the telemetry manager
-            memset(buf, 0, sizeof(buf));
-            ssize_t result = recvfrom(telemetry_fd, buf, sizeof(buf) - 1, 0,
-                                    (struct sockaddr *)&manager_addr, &manager_addr_len);
-
-            if (result <= 0)
+            TelemetryMessage message = recv_message();
+            if (message.serialize_message().empty())
             {
                 SPDLOG_ERROR("Error receiving data from telemetry manager.");
                 error_timeout++;
@@ -781,16 +783,11 @@ private:
             }
             error_timeout = 0;
 
-            buf[result] = '\0';
-
-            SPDLOG_INFO("Received message from telemetry manager: \n{}", buf);
+            SPDLOG_INFO("Received message from telemetry manager: \n{}", message.serialize_message());
 
             try
             {
-                // Parse the received message into a ParameterSetting object
-                std::stringstream ss(buf);
-                TelemetryMessage ps = TelemetryMessage(ss);
-                process_telemetry_message(ps);
+                process_telemetry_message(message);
             }
             catch (const std::exception &e)
             {
@@ -831,7 +828,7 @@ private:
     std::function<void(telemetry_cb_data &)> meters_callback;
     std::function<void(telemetry_cb_data &)> event_callback;
 
-    NamedSharedMemoryManager* shm_manager;
+    NamedSharedMemoryManager& shm_manager;
     std::string serverpath;
     int telemetry_fd;
     std::vector<std::string> shm_names;

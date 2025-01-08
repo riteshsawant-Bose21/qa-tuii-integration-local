@@ -27,7 +27,8 @@ int main(int argc, char *argv[])
     desc.add_options()
         ("configuration,c", boost::program_options::value<std::string>()->default_value("config/configuration.json"), "configuration file")
         ("definitions,d", boost::program_options::value<std::string>()->default_value("config/module-definitions.json"), "module definition file")
-        ("telemetry,d", boost::program_options::value<std::string>()->default_value("config/telemetry-messages.json"), "telemetry commands file")
+        ("telemetry-messages,m", boost::program_options::value<std::string>()->default_value("config/telemetry-messages.json"), "telemetry commands file")
+        ("telemetry-configuration,p", boost::program_options::value<std::string>()->default_value("config/telemetry-configuration.json"), "telemetry configuration file")
         ("time,t", boost::program_options::value<int>(), "time to run (seconds)")
         ("help,h", "print this message and exit")
     ;
@@ -44,6 +45,7 @@ int main(int argc, char *argv[])
     }
 
     bosepro::Configuration configuration(vm["configuration"].as<std::string>());
+    bosepro::TelemetryConfiguration telem_configuration(vm["telemetry-configuration"].as<std::string>());
     bosepro::Definition definitions(vm["definitions"].as<std::string>());
     bosepro::Session session(configuration.get_session(), definitions);
     
@@ -73,7 +75,7 @@ int main(int argc, char *argv[])
         session.set_seconds_to_run(vm["time"].as<int>());
     }
 
-    telemetry_monitor.initialize(vm["telemetry"].as<std::string>());
+    telemetry_monitor.initialize(vm["telemetry-messages"].as<std::string>(), telem_configuration.get_socket_path());
     telemetry_monitor.start();
     session.start();
 

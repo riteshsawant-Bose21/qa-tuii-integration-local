@@ -408,7 +408,7 @@ public:
         message << "{ \"block_name\": \"" << this->get_block_name() << "\",";
         message << " \"meter_name\": \"" << this->get_name() << "\",";
         message << " \"value_type\": \"" << this->get_value_type() << "\",";
-        message << " \"dimensions\": 0,"; // Scalar telemetry
+        message << " \"dimensions\": [0],"; // Scalar telemetry
         message << " \"value\": ";
 
         this->print_value(message, *block_value);
@@ -438,15 +438,17 @@ public:
         message << "{ \"message_name\": \"event\",";
         message << " \"packet_id\": \"" << static_cast<uint64_t>(now_us) << "\",";
         message << " \"parameters\": {";
+        message << " \"name\": \"" << "fusion_system_monitor" << "\",";
         message << " \"block_name\": \"" << this->get_block_name() << "\",";
-        message << " \"alarm_name\": \"" << this->get_name() << "\",";
-        message << " \"dimensions\": 0,"; // Scalar telemetry
+        message << " \"event_name\": \"" << this->get_name() << "\",";
+        message << " \"value_type\": \"" << this->get_value_type() << "\",";
+        message << " \"dimensions\": [0],"; // Scalar telemetry
         message << " \"value\": ";
 
         // Append scalar value
         this->print_value(message, *block_value);
 
-        message << "] } }\n";
+        message << " } }\n";
 
         cb_data.message = message.str();
         cb_data.period_type = this->get_period_type();
@@ -636,11 +638,12 @@ public:
         auto now = std::chrono::steady_clock::now();
         auto now_us = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
 
-        message << "{ \"message_name\": \"alarm_data\",";
+        message << "{ \"message_name\": \"event\",";
         message << " \"packet_id\": \"" << static_cast<uint64_t>(now_us) << "\",";
         message << " \"parameters\": {";
+        message << " \"name\": \"" << "fusion_system_monitor" << "\",";
         message << " \"block_name\": \"" << this->get_block_name() << "\",";
-        message << " \"alarm_name\": \"" << this->get_name() << "\",";
+        message << " \"event_name\": \"" << this->get_name() << "\",";
         message << " \"dimensions\": [" << this->get_num_rows() << "],";
         message << " \"value\": [";
 
@@ -870,11 +873,12 @@ public:
         auto now = std::chrono::steady_clock::now();
         auto now_us = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
 
-        message << "{ \"message_name\": \"alarm_data\",";
+        message << "{ \"message_name\": \"event\",";
         message << " \"packet_id\": \"" << static_cast<uint64_t>(now_us) << "\",";
         message << " \"parameters\": {";
+        message << " \"name\": \"" << "fusion_system_monitor" << "\",";
         message << " \"block_name\": \"" << this->get_block_name() << "\",";
-        message << " \"alarm_name\": \"" << this->get_name() << "\",";
+        message << " \"event_name\": \"" << this->get_name() << "\",";
         message << " \"dimensions\": [" << this->get_num_rows() 
                 << ", " << this->get_num_columns() << "],";
         message << " \"value\": [";

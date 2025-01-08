@@ -15,6 +15,7 @@ class BlockConfiguration;
 class PropertyConfiguration;
 class TerminalConfiguration;
 class ConnectionConfiguration;
+class TelemetryConfiguration;
 class ParameterSetting;
 
 
@@ -364,6 +365,26 @@ public:
     int get_input_channel() const
     {
         return get_index("input_channel");
+    }
+};
+
+
+/// The configuration for telemetry services.
+class TelemetryConfiguration : public Configuration {
+public:
+    TelemetryConfiguration(const std::string& filename)
+        : Configuration(filename)
+    {
+    }
+    
+    /// Get the number of channels for this terminal.
+    ///
+    /// @return  The number of channels.
+    const std::string& get_socket_path() const
+    {
+        TelemetryConfiguration &socket_path((TelemetryConfiguration &)list_get_member("telemetry_configuration",
+                                                        "name", "socket_path"));
+        return socket_path.get_string("property");
     }
 };
 
