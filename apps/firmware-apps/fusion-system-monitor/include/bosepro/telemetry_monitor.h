@@ -562,13 +562,17 @@ public:
 
 
 private:
+    /// Helper method to send a message on the UDS
+    ///
+    /// @param message  TelemetryMessage with the message data
+    /// @return  true if message sent successfully, false otherwise
     bool send_message(TelemetryMessage &message)
     {
         const std::string str = message.serialize_message();
         if (sendto(telemetry_fd, str.c_str(), str.size(), 0,
                 (struct sockaddr *)&telemetry_manager_addr, sizeof(telemetry_manager_addr)) < 0)
         {
-            SPDLOG_ERROR("Failed to send registration request to telemetry manager.");
+            SPDLOG_ERROR("Failed to send message to telemetry manager.");
             return false;
         }
 
@@ -576,6 +580,9 @@ private:
     }
 
 
+    /// Helper method to receive a message on the UDS
+    ///
+    /// @return  TelemetryMessage with the data or empty if an error occurred
     TelemetryMessage recv_message()
     {
         char buf[256];
@@ -607,8 +614,6 @@ private:
         req.get_parameters().set_block_size(block_size);
         req.set_packet_id();
 
-        SPDLOG_DEBUG("about to send_message");
-
         // Send the registration request
         if (!send_message(req))
         {
@@ -617,8 +622,6 @@ private:
             telemetry_fd = -1;
             return false;
         }
-
-        SPDLOG_INFO("Registration request sent to telemetry manager.");
 
         // Wait for a response
         TelemetryMessage rsp = recv_message();
@@ -638,7 +641,7 @@ private:
         }
         else
         {
-            SPDLOG_ERROR("Received NOK rsp: \n\n{}", rsp.serialize_message());
+            SPDLOG_ERROR("Received bad rsp: \n\n{}", rsp.serialize_message());
             close(telemetry_fd);
             telemetry_fd = -1;
             return false;
@@ -665,6 +668,7 @@ private:
     bool deregister_with_telemetry_manager()
     {
         TelemetryMessage req = telemetry_messages->get_default_command("pub_deregister_req");
+        req.set_packet_id();
 
         if (!send_message(req))
         {
@@ -678,13 +682,15 @@ private:
             return false;
         }
 
-        if (rsp.get_message_name() == "pub_deregister_rsp" && rsp.get_parameters().get_value() == "OK")
+        if (rsp.get_message_name() == "pub_deregister_rsp" &&
+            rsp.get_parameters().get_value() == "OK" &&
+            rsp.get_packet_id() == req.get_packet_id())
         {
             SPDLOG_INFO("Received valid deregistration response: \n\n{}", rsp.serialize_message());
         }
         else
         {
-            SPDLOG_ERROR("Received NOK response: \n\n{}", rsp.serialize_message());
+            SPDLOG_ERROR("Received bad response: \n\n{}", rsp.serialize_message());
             return false;
         }
 
@@ -699,10 +705,10 @@ private:
     /// Update all meters with meters_callback when we recieve "update_meters_req"
     /// command from telemetry manager. Send "update_meters_rsp" to confirm
     ///
-    /// @param message  The TelemetryMessage from the manager
-    void update_meters(TelemetryMessage &message)
+    /// @param req  The meters_update_req TelemetryMessage from the manager
+    void update_meters(TelemetryMessage &req)
     {
-        std::string period_type = message.get_parameters().get_period_type();
+        std::string period_type = req.get_parameters().get_period_type();
 
         int region_index = period_type == "HI"  ? 0 :
                            period_type == "MED" ? 1 :
@@ -725,9 +731,9 @@ private:
 
         TelemetryMessage rsp = telemetry_messages->get_default_command("update_meters_rsp");
         rsp.get_parameters().set_value("OK");
-        rsp.set_packet_id(message.get_packet_id());
+        rsp.set_packet_id(req.get_packet_id());
 
-        SPDLOG_DEBUG("Sending message: \n{}", rsp.serialize_message());
+        SPDLOG_DEBUG("Sending response: \n{}", rsp.serialize_message());
 
         if (!send_message(rsp))
         {
@@ -744,6 +750,23 @@ private:
         if (message.get_message_name() == "update_meters_req")
         {
             update_meters(message);
+        }
+        else if (message.get_message_name() == "update_report_period_req")
+        {
+            // TODO
+        }
+        // TODO -- get all responses here too?
+        else if (message.get_message_name() == "pub_register_rsp")
+        {
+            // TODO
+        }
+        else if (message.get_message_name() == "pub_deregister_rsp")
+        {
+            // TODO
+        }
+        else if (message.get_message_name() == "event_rsp")
+        {
+            // TODO
         }
     }
 

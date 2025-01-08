@@ -24,14 +24,6 @@
             }
         },
         {
-            "message_name": "event_rsp",
-            "packet_id": 0,
-            "parameters": {
-                "name": "fusion_system_monitor",
-                "event_name": ""
-            }
-        },
-        {
             "block_name": "",
             "meter_name": "",
             "value_type": "",

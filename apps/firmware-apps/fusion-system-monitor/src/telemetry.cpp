@@ -78,68 +78,38 @@ DECLARE_TEMPLATE_METER_TYPES
 #undef X
 
 
-Telemetry *Telemetry::create(const TelemetryDefinition &definition,
-                             const ProcessorDefinition &processor,
-                             const BlockConfiguration *configuration)
+// Macro to create the appropriate TelemetryData
+#define CREATE_TELEMETRY(dimension, t, definition, processor, configuration) \
+    if (t == "bool")                                                        \
+        return new TelemetryData##dimension<bool>(definition, processor, configuration); \
+    else if (t == "int")                                                    \
+        return new TelemetryData##dimension<int_fast32_t>(definition, processor, configuration); \
+    else if (t == "float")                                                  \
+        return new TelemetryData##dimension<float>(definition, processor, configuration); \
+    else if (t == "string")                                                 \
+        return new TelemetryData##dimension<std::string>(definition, processor, configuration);
+
+
+Telemetry* Telemetry::create(const TelemetryDefinition& definition,
+                             const ProcessorDefinition& processor,
+                             const BlockConfiguration* configuration)
 {
-    const std::string &value_type = definition.get_value_type();
+    const std::string& value_type = definition.get_value_type();
     int dimensions = definition.get_num_dimensions();
 
-    switch(dimensions) {
+    switch (dimensions) {
     case 0:
-        if (value_type == "bool")
-        {
-            return new TelemetryDataScalar<bool>(definition, processor, configuration);
-        }
-        else if (value_type == "int")
-        {
-            return new TelemetryDataScalar<int_fast32_t>(definition,  processor, configuration);
-        }
-        else if (value_type == "float")
-        {
-            return new TelemetryDataScalar<float>(definition,  processor, configuration);
-        }
-        else if (value_type == "string")
-        {
-            return new TelemetryDataScalar<std::string>(definition,  processor, configuration);
-        }
+        CREATE_TELEMETRY(Scalar, value_type, definition, processor, configuration)
         break;
+
     case 1:
-        if (value_type == "bool")
-        {
-            return new TelemetryDataVector<bool>(definition, processor, configuration);
-        }
-        else if (value_type == "int")
-        {
-            return new TelemetryDataVector<int_fast32_t>(definition, processor, configuration);
-        }
-        else if (value_type == "float")
-        {
-            return new TelemetryDataVector<float>(definition, processor, configuration);
-        }
-        else if (value_type == "string")
-        {
-            return new TelemetryDataVector<std::string>(definition, processor, configuration);
-        }
+        CREATE_TELEMETRY(Vector, value_type, definition, processor, configuration)
         break;
+
     case 2:
-        if (value_type == "bool")
-        {
-            return new TelemetryDataMatrix<bool>(definition, processor, configuration);
-        }
-        else if (value_type == "int")
-        {
-            return new TelemetryDataMatrix<int_fast32_t>(definition, processor, configuration);
-        }
-        else if (value_type == "float")
-        {
-            return new TelemetryDataMatrix<float>(definition, processor, configuration);
-        }
-        else if (value_type == "string")
-        {
-            return new TelemetryDataMatrix<std::string>(definition, processor, configuration);
-        }
+        CREATE_TELEMETRY(Matrix, value_type, definition, processor, configuration)
         break;
+
     default:
         return nullptr;
     }
