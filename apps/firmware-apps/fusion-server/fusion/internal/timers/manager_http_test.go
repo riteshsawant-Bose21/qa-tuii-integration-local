@@ -13,6 +13,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const (
+	contentType     = "Content-Type"
+	jsonContentType = "application/json"
+)
+
 func TestTimerManagerEndpoints(t *testing.T) {
 	logger := logging.GetLogger()
 	defer logger.Close()
@@ -41,7 +46,7 @@ func TestTimerManagerEndpoints(t *testing.T) {
 		taskJSON, _ := json.Marshal(task)
 
 		req := httptest.NewRequest(http.MethodPost, "/tasks/add", bytes.NewReader(taskJSON))
-		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set(contentType, jsonContentType)
 		rec := httptest.NewRecorder()
 
 		mux.ServeHTTP(rec, req)
@@ -74,7 +79,7 @@ func TestTimerManagerEndpoints(t *testing.T) {
 		taskJSON, _ := json.Marshal(task)
 
 		req := httptest.NewRequest(http.MethodPut, "/tasks/update?id=test-task", bytes.NewReader(taskJSON))
-		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set(contentType, jsonContentType)
 		rec := httptest.NewRecorder()
 
 		mux.ServeHTTP(rec, req)

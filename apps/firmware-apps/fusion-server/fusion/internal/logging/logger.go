@@ -16,7 +16,16 @@ const (
 	INFO
 	WARN
 	ERROR
+	FATAL
 )
+
+var LogLevelStrings = map[LogLevel]string{
+	DEBUG: "DEBUG",
+	INFO:  "INFO",
+	WARN:  "WARN",
+	ERROR: "ERROR",
+	FATAL: "FATAL",
+}
 
 type LogConfig struct {
 	NodeName    string
@@ -87,17 +96,25 @@ func (l *Logger) rotateLogFileIfNeeded() error {
 	if l.logFile != nil {
 		info, err := l.logFile.Stat()
 		if err != nil {
-			return err
-		}
-
-		if info.Size() < l.config.MaxFileSize*1024*1024 {
+			if os.IsNotExist(err) {
+				// File already closed or deleted, continue to create a new file
+				l.logFile = nil
+			} else {
+				return err
+			}
+		} else if info.Size() < l.config.MaxFileSize*1024*1024 {
+			// File size is under the limit, no need to rotate
 			return nil
 		}
 
-		l.logFile.Close()
+		// Close the file before rotating
+		if err := l.logFile.Close(); err != nil {
+			l.logger.Printf("Failed to close log file during rotation: %v", err)
+		}
+		l.logFile = nil
 	}
 
-	// Rotate existing log files
+	// Perform rotation
 	for i := l.config.MaxFiles - 1; i > 0; i-- {
 		oldPath := filepath.Join(l.config.LogDir, fmt.Sprintf("fusion-%s.%d.log", l.config.NodeName, i))
 		newPath := filepath.Join(l.config.LogDir, fmt.Sprintf("fusion-%s.%d.log", l.config.NodeName, i+1))
@@ -136,7 +153,7 @@ func (l *Logger) log(level LogLevel, format string, args ...interface{}) {
 	}
 
 	timestamp := time.Now().Format("2006-01-02 15:04:05")
-	levelStr := [...]string{"DEBUG", "INFO", "WARN", "ERROR"}[level]
+	levelStr := LogLevelStrings[level]
 	message := fmt.Sprintf(format, args...)
 	logMessage := fmt.Sprintf("%s [%s] [%s] %s", timestamp, l.config.NodeName, levelStr, message)
 
@@ -153,6 +170,14 @@ func (l *Logger) log(level LogLevel, format string, args ...interface{}) {
 	}
 }
 
+func (l *Logger) Flush() {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	close(l.msgChan)
+	l.msgChan = make(chan string, 1000)
+}
+
 func (l *Logger) Debug(format string, args ...interface{}) {
 	l.log(DEBUG, format, args...)
 }
@@ -167,6 +192,12 @@ func (l *Logger) Warn(format string, args ...interface{}) {
 
 func (l *Logger) Error(format string, args ...interface{}) {
 	l.log(ERROR, format, args...)
+}
+
+func (l *Logger) Fatal(format string, args ...interface{}) {
+	l.log(FATAL, format, args...)
+	time.Sleep(50 * time.Millisecond)
+	os.Exit(1)
 }
 
 func (l *Logger) Close() {

@@ -144,8 +144,16 @@ func (p *ConfigPersistence) SaveState() error {
 		State:     state,
 	}
 
-	// Create temporary file
+	// Name the temporary file
 	tmpFile := p.filePath + ".tmp"
+
+	// Ensure the directory exists
+	dir := filepath.Dir(tmpFile)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("failed to create directory for temp file: %v", err)
+	}
+
+	// Create temporary file
 	file, err := os.OpenFile(tmpFile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		return fmt.Errorf("failed to create temp file: %v", err)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"fusion/internal/controllers/cxd"
+	"fusion/internal/logging"
 	"net"
 	"testing"
 	"time"
@@ -60,6 +61,14 @@ func TestFullSystemIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
+
+	logging.InitLogger(logging.LogConfig{
+		NodeName:    "TestFullSystemIntegration",
+		LogDir:      "/tmp/test_manager_test",
+		MaxFileSize: 100,
+		MaxFiles:    5,
+		LogLevel:    logging.DEBUG,
+	})
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()

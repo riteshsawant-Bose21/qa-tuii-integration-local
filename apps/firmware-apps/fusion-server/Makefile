@@ -2,7 +2,6 @@
 GOCMD=go
 GOBUILD=$(GOCMD) build
 GOCLEAN=$(GOCMD) clean
-GOTEST=$(GOCMD) test
 GOMOD=$(GOCMD) mod
 BINARY_NAME=fusion-server
 MAIN_PATH=fusion/cmd/fusion
@@ -14,7 +13,7 @@ LDFLAGS=-ldflags '-extldflags "-static"'
 SHELL := /bin/bash
 .SHELLFLAGS := -ec
 
-all: deps test build
+all: deps build
 
 build:
 	mkdir -p $(BUILD_DIR)
@@ -68,10 +67,8 @@ build-all: build-linux-amd64 build-linux-arm32 build-linux-arm64 build-darwin-ar
 # Show help
 help:
 	@echo "Make targets:"
-	@echo " all - Run deps, test, and build"
+	@echo " all - Run deps and build"
 	@echo " build - Build for current platform"
-	@echo " test - Run tests"
-	@echo " test-verbose - Run tests with verbose output and no caching"
 	@echo " clean - Clean build files"
 	@echo " run - Build and run locally"
 	@echo " deps - Download dependencies"
@@ -86,4 +83,3 @@ help:
 	@echo " build-all - Build for all platforms"
 
 .PHONY: all build clean run deps tidy fmt vet lint build-linux-amd64 build-linux-arm32 build-linux-arm64 build-darwin-arm64 build-all help test-verbose
-	

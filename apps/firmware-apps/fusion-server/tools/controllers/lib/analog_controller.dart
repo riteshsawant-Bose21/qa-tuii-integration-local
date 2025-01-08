@@ -46,14 +46,14 @@ class AnalogController {
       _heartbeatTimer = Timer.periodic(const Duration(seconds: 30), (_) {
         if (_socket != null) {
           try {
-            _socket!.add([0]); // Send heartbeat
+            _socket!.add([0]);
           } catch (e) {
             _handleDisconnect();
           }
         }
       });
     } catch (e) {
-      print('Connection error: $e'); // Add logging
+      print('Connection error: $e');
       _handleDisconnect();
     } finally {
       _isConnecting = false;
@@ -66,7 +66,6 @@ class AnalogController {
     _socket = null;
 
     if (mounted()) {
-      // Add mounted check
       onError('Server disconnected');
       if (_shouldReconnect) {
         _reconnectTimer?.cancel();

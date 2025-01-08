@@ -156,17 +156,14 @@ Local builds are good for developing the various server components without deali
  
 ### API Endpoints
 
-1. **Configuration Management**
+**Configuration Management**
    - `POST /setValue` - Set a configuration value
    - `GET /getValue` - Retrieve configuration value(s)
    - `GET /ws` - WebSocket endpoint for real-time updates
 
-2. **State Management**
+**State Management**
    - `POST /upload` - Import configuration state
    - `GET /download` - Export configuration state
-
-3. **Volume Control**
-   - `POST /setVolume` - Update volume settings
 
 ### Set a single value
 ```bash
