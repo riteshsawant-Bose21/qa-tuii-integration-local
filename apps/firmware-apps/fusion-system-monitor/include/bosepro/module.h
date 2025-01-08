@@ -29,7 +29,7 @@ struct ModuleMeta {
 };
 
 
-/// A base class for all signal proessing modules.
+/// A base class for all FW and HW modules.
 class Module : public Configurable {
 public:
     /// Create an module object based on the configuration for a block.
@@ -314,6 +314,59 @@ protected:
 private:
     /// Stores the non-real-time data for managing the module.
     DspParamMemory<ModuleMeta> meta;
+};
+
+
+/// A base class for all FW and HW modules.
+class Module : public Configurable {
+public:
+    /// Create an module object based on the configuration for a block.
+    ///
+    /// @param  configuration  The configuration to use for the module.
+    Module(const BlockConfiguration &configuration)
+        : Configurable(configuration)
+    {
+        meta->configuration = &configuration;
+        meta->definition = static_cast<const ModuleDefinition*>(get_definition(configuration.get_module()));
+
+        // There is no need to create constant data, because we just look it
+        // up from the definition and configuration.
+
+        // Create the parameter data for all parameters in the module.
+        if (meta->definition->has_parameters())
+        {
+            for (auto &p: meta->definition->get_parameters())
+            {
+                const ParameterDefinition &pd =
+                    reinterpret_cast<const ParameterDefinition &>(p.second);
+                const std::string &name = pd.get_name();
+
+                meta->parameters[name] =
+                    std::unique_ptr<Parameter>(Parameter::create(pd,
+                                                                 static_cast<const ProcessorDefinition&>(*meta->definition),
+                                                                 meta->configuration));
+            }
+        }
+        // Create the telemetry data for all of the telemetry in the module.
+        if (meta->definition->has_telemetry())
+        {
+            for (auto &m : meta->definition->get_telemetry())
+            {
+                const TelemetryDefinition &md = reinterpret_cast<const TelemetryDefinition &>(m.second);
+                std::unique_ptr<Telemetry> telemetry = 
+                std::unique_ptr<Telemetry>(Telemetry::create(
+                    md,
+                    static_cast<const ProcessorDefinition&>(*meta->definition),
+                    meta->configuration));
+
+                telemetry->set_block_name(this->get_block_name());
+
+                // Delegate the telemetry registration to the TelemetryMonitor
+                TelemetryMonitor::get_instance().register_telemetry(std::move(telemetry));
+            }
+        }
+    }
+
 };
 
 

@@ -1,5 +1,5 @@
 {
-    "modules": [
+    "fw_modules": [
         {
             "name": "cpu_usage",
             "telemetry": [
@@ -16,13 +16,6 @@
                     "value_type": "bool", 
                     "telemetry_type": "event",
                     "period_type": "N/A"
-                },
-                { 
-                    "name": "test", 
-                    "dimensions": [3], 
-                    "value_type": "bool", 
-                    "telemetry_type": "meter",
-                    "period_type": "HI"  
                 }
             ]
         },
@@ -70,6 +63,55 @@
                     "value_type": "bool", 
                     "telemetry_type": "event",
                     "period_type": "N/A"
+                }
+            ]
+        }
+    ],
+    "hw_modules": [
+        {
+            "name": "io_card",
+            "properties": [
+                {
+                    "name": "type",
+                    "value_type": "integer",
+                    "default_value": 0,
+                    "minimum_value": 0,
+                    "maximum_value": 32
+                },
+                {
+                    "name": "input_channels",
+                    "value_type": "integer",
+                    "default_value": 1,
+                    "minimum_value": 1,
+                    "maximum_value": 32
+                },
+                {
+                    "name": "output_channels",
+                    "value_type": "integer",
+                    "default_value": 1,
+                    "minimum_value": 1,
+                    "maximum_value": 32
+                },
+                {
+                    "name": "num_gpios",
+                    "value_type": "integer",
+                    "default_value": 0,
+                    "minimum_value": 0,
+                    "maximum_value": 8
+                },
+                {
+                    "name": "gpio_names",
+                    "value_type": "string",
+                    "dimensions": ["num_gpios"],
+                    "default_value": ""
+                }
+            ],
+            "parameters": [
+                {
+                    "name": "gpios",
+                    "value_type": "string",
+                    "dimensions": ["num_gpios", "num_endpoints_gpios"],
+                    "default_value": ""
                 }
             ]
         }
