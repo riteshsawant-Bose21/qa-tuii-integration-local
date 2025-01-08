@@ -19,17 +19,6 @@
 
 
 bosepro::Session *psession;
-int connection_fd;
-
-void send_meter(const std::string &message)
-{
-    int size = send(connection_fd, message.c_str(), message.size(), 0);
-
-    if (size < 0)
-    {
-        SPDLOG_WARN("Couldn't send meter to socket.");
-    }
-}
 
 
 void handle_update(const std::string &update_setting)
@@ -135,13 +124,17 @@ int main(int argc, char *argv[])
 
     // Try to be psychic and run the way the user wants:
     //
-    //     1.  If any "jack_in" or "jack_out" blocks are defined,
+    //     1.  If any tasks are specified with corresponding JACK clients,
     //         run using JACK indefinitely.
-    //     2.  Otherwise, if any "wav_read" blocks are defined, run
+    //     2.  If the "serverip" address is specified, but no JACK clients
+    //         currently exist, connect to the server and wait for further
+    //         instruction.
+    //     3.  Otherwise, if any "wav_read" blocks are defined, run
     //         enough frames to process the longest input WAV file and exit.
-    //     3.  Finally, run for a specified amount of time and exit.
+    //     4.  Finally, run for a specified amount of time and exit, or 10
+    //         seconds if no time is specified.
 
-    if (bosepro::Jack::has_client())
+    if (bosepro::Jack::has_client() || vm.count("serverip"))
     {
         UDPValueMonitor *client = nullptr;
         psession = &session;
@@ -161,8 +154,6 @@ int main(int argc, char *argv[])
             client = new UDPValueMonitor(vm["serverip"].as<std::string>(), 7947,
                                          target_paths, handle_update);
         }
-
-        session.set_meter_callback(send_meter);
 
         session.start();
 
@@ -186,6 +177,10 @@ int main(int argc, char *argv[])
         else if (vm.count("time"))
         {
             session.set_seconds_to_run(vm["time"].as<int>());
+        }
+        else
+        {
+            session.set_seconds_to_run(10);
         }
 
         while (!session.finished_running())
