@@ -42,10 +42,23 @@ void handle_update(const std::string &update_setting)
 }
 
 
+// Boost needs this structure and the corresponding `validate()` function to
+// allow the same option to repeated multiple times and counted (-vv, -qq).
+struct OptionCounter
+{
+    int count = 0;
+};
+
+void validate(boost::any &v, std::vector<std::string> const &, OptionCounter *, long)
+{
+    if (v.empty()) v = OptionCounter{1};
+    else ++boost::any_cast<OptionCounter &>(v).count;
+}
+
 int main(int argc, char *argv[])
 {
-    spdlog::set_level(spdlog::level::trace);
-    SPDLOG_INFO("mune_dsp");
+    OptionCounter verbosity;
+    OptionCounter quietness;
 
     boost::program_options::options_description desc("Allowed options");
     desc.add_options()
@@ -53,6 +66,8 @@ int main(int argc, char *argv[])
         ("definitions,d", boost::program_options::value<std::string>()->default_value("config/algorithm-definitions.json"), "algorithm definition file")
         ("time,t", boost::program_options::value<int>(), "time to run (seconds)")
         ("serverip,s", boost::program_options::value<std::string>(), "IP address of fusion-server")
+        ("verbose,v", boost::program_options::value(&verbosity)->zero_tokens(), "make logs more verbose")
+        ("quiet,q", boost::program_options::value(&quietness)->zero_tokens(), "make logs more quiet")
         ("help,h", "print this message and exit")
     ;
 
@@ -66,6 +81,29 @@ int main(int argc, char *argv[])
         std::cout << desc << std::endl;
         return 0;
     }
+
+    if (verbosity.count == 1)
+    {
+        spdlog::set_level(spdlog::level::debug);
+    }
+    else if (verbosity.count >= 2)
+    {
+        spdlog::set_level(spdlog::level::trace);
+    }
+    else if (quietness.count == 1)
+    {
+        spdlog::set_level(spdlog::level::warn);
+    }
+    else if (quietness.count >= 2)
+    {
+        spdlog::set_level(spdlog::level::off);
+    }
+    else
+    {
+        spdlog::set_level(spdlog::level::info);
+    }
+
+    SPDLOG_INFO("mune_dsp");
 
     SPDLOG_INFO("Profile resolution {} ns", bosepro::Profile::get_resolution());
     bosepro::Profile::set_cpu_mips(1800.0);

@@ -467,8 +467,8 @@ void FilterManager::print_filter_container_contents()
 {
 	SPDLOG_TRACE("Printing contents of all active filters");
 
-	int total_num_active_filters = _filter_container.size();
-	int num_static = 0;
+	[[maybe_unused]] int total_num_active_filters = _filter_container.size();
+	[[maybe_unused]] int num_static = 0;
 
 	for(unsigned int i=0; i < _filter_container.size(); i++)
 	{
