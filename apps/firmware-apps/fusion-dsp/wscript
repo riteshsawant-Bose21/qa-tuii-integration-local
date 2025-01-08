@@ -88,7 +88,7 @@ def build(bld):
     bld.program(target='mune_dsp',
                 source=bld.path.ant_glob(['src/*.cpp', 'src/*.c']),
                 use=['common-include'],
-                lib=['jack', 'fmt', 'sndfile', 'boost_program_options', 'onnxruntime'])
+                lib=['jack', 'fmt', 'sndfile', 'boost_program_options', 'onnxruntime', 'jsoncpp'])
 
     bld.program(target='test_dsp',
                 source=bld.path.ant_glob(['src/*.cpp', 'src/*.c', 'test/*.cpp'],

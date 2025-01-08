@@ -50,11 +50,12 @@ Building MuneDSP depends on the following:
 - Boost
 - spdlog
 - libsndfile
+- jsoncpp
 
 To install on macOS:
 
 ~~~
-brew install jack boost spdlog libsndfile
+brew install jack boost spdlog libsndfile jsoncpp
 ~~~
 
 To install on Debian-based Linux:
@@ -62,7 +63,7 @@ To install on Debian-based Linux:
 ~~~
 sudo apt update
 sudo apt install jackd libjack-jackd2-dev libboost-dev libspdlog-dev \
-    libsndfile1 libsndfile1-dev
+    libsndfile1 libsndfile1-dev libjson-cpp-dev
 ~~~
 
 Doctest was a dependency, but it is now imported as a submodule and doesn't
@@ -73,21 +74,53 @@ To build using submodules, need to have cloned this repo using the
 run `git submodule update --init --recursive`.
 
 
-Loading DSP Code to the Mune device
------------------------------------
+Running with the Fusion Server
+------------------------------
 
-VB1 does not support passwordless scp command.  To work around this limitation it is helpful to install the [sshpass](https://www.cyberciti.biz/faq/how-to-install-sshpass-on-macos-os-x/) utility.
+Here are the steps needed to run the DSP on a Mac, communicating with the
+Fusion Server.
 
-The loadDSP.sh script can then be used to load the new DSP code.
+First, build and run the Fusion Server as described in the fusion-services
+repo: <https://github.com/BoseProfessional/fusion-services>.  This does not
+need to run on locally: the server just needs to be available on the network.
 
-To start the newly loaded DSP code use the following commands:
+Start the JACK server.  This is easiest to do using `qjackctl`.  Click the
+"Settings" button and ensure the sample rate is set to 48 kHz and the frame size to
+256.  For the interface, select the audio device you want to play back through,
+such as "BuiltInSpeakerDevice".  Then press the "Start" button to start JACK.
 
-shh into the VB1 and:
+A simplified version of the first prototype configuration is included in
+`config/prototype0.json`.  This uses a pink noise generator, which goes through
+a tone control block, a gain block, and a limiter before being played to the
+selected output device.
 
-~~~	
-killall AudioProcess
-jackd -d alsa -P hw:1,0 -n 2 -r 48000 -p 32 &
-./jack_dep -A &
-jack_connect dante_in:capture_1 dante_out:playback_1
-jack_connect dante_in:capture_2 dante_out:playback_2
+Check the volume level of your output device, especially if wearing headphones!
+
+Start the DSP using the following command (replacing the IP address in the `-s`
+argument with the IP address through which the Fusion Server can be reached):
+
 ~~~
+DYLD_LIBRARY_PATH=libs/onnxruntime-osx-universal2-1.17.0/lib/: ./build/mune_dsp -c config/prototype0.json -s 192.168.1.100
+~~~
+
+You should hear pink noise.  You can adjust some of the dynamic parameters of
+the DSP blocks, such as:
+
+~~~
+curl --location '192.168.1.100:8080/setValue' --header 'Content-Type: application/json' --data '{ "settings": { "audio": { "tone_eq1": { "high_gain": 6.0 } } } }'
+~~~
+
+Similar commands can be used to set:
+
+- "tone_eq1", "low_gain" between -15.0 and 15.0
+- "tone_eq1", "mid_gain" between -15.0 and 15.0
+- "tone_eq1", "low_gain" between -15.0 and 15.0
+- "tone_eq1", "bypass" to true or false
+- "gain1", "gain" between -60.0 and 12.0
+- "gain1", "mute" to true or false
+
+You should hear audible changes in the noise output.
+
+If you quit the DSP (using ctrl-C) and restart, you will notice that it will
+resume with the latest settings that you applied.
+

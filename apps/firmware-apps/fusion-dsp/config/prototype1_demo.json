@@ -919,5 +919,19 @@
             "input_block": "playback",
             "input_channel": 2
         }
+    ],
+    "parameter_settings": [
+        {
+            "target": "matrix1",
+            "name": "mute",
+            "index": [1,1],
+            "value": false
+        },
+        {
+            "target": "matrix1",
+            "name": "mute",
+            "index": [2,2],
+            "value": false
+        }
     ]
 }
