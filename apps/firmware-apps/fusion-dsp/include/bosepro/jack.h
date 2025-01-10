@@ -54,7 +54,8 @@ public:
     /// @param  client  The JACK client this port is associated with.
     /// @param  connection_name  The name of the port to connect to.
     /// @param  is_input  `true` if this is an input port to the client.
-    void connect(JackClient *client, const char *connection_name, bool is_input);
+    void connect(JackClient *client, const std::string &connection_name,
+                 bool is_input);
 
 
     /// Disconnect this port from any/all ports it is connected to.

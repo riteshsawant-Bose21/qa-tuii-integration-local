@@ -24,10 +24,15 @@ void JackPort::create(JackClient *client, const char *name, bool is_input)
 }
 
 
-void JackPort::connect(JackClient *client, const char *connection_name,
+void JackPort::connect(JackClient *client, const std::string &connection_name,
                        bool is_input)
 {
-    if (!client->is_active())
+    std::string::size_type pos = connection_name.find(':');
+    std::string client_name = connection_name.substr(0, pos);
+    JackClient *other_client = Jack::get_client(client_name);
+
+    if (!client->is_active()
+        || (other_client != nullptr && !other_client->is_active()))
     {
         // We will connect all of the ports when the client is started, as
         // the JackClient::start() function takes care of connecting all
@@ -38,8 +43,8 @@ void JackPort::connect(JackClient *client, const char *connection_name,
     }
 
     int err = jack_connect(client->get_jack_client(),
-                           is_input ? connection_name : get_name(),
-                           is_input ? get_name() : connection_name);
+                           is_input ? connection_name.c_str() : get_name(),
+                           is_input ? get_name() : connection_name.c_str());
 
     if (err != 0 && err != EEXIST)
     {
@@ -253,7 +258,6 @@ JackClient *Jack::get_client(const std::string &name)
 
     if (clients.count(name) == 0)
     {
-        SPDLOG_CRITICAL("Unable to find client {}!", name);
         return nullptr;
     }
 
@@ -276,8 +280,7 @@ void Jack::make_port_connection(int channel)
     }
     else
     {
-        ports[channel].connect(client, port_connections[channel].c_str(),
-                               is_input);
+        ports[channel].connect(client, port_connections[channel], is_input);
     }
 }
 
