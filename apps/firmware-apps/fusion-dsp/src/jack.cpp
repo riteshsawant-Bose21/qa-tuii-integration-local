@@ -24,12 +24,27 @@ void JackPort::create(JackClient *client, const char *name, bool is_input)
 }
 
 
-void JackPort::connect(JackClient *client, const char *connection_name,
+void JackPort::connect(JackClient *client, const std::string &connection_name,
                        bool is_input)
 {
+    std::string::size_type pos = connection_name.find(':');
+    std::string client_name = connection_name.substr(0, pos);
+    JackClient *other_client = Jack::get_client(client_name);
+
+    if (!client->is_active()
+        || (other_client != nullptr && !other_client->is_active()))
+    {
+        // We will connect all of the ports when the client is started, as
+        // the JackClient::start() function takes care of connecting all
+        // of its ports.  JACK won't let you connect a port until the
+        // client is active.
+        SPDLOG_DEBUG("Deferring port connection for inactive client.");
+        return;
+    }
+
     int err = jack_connect(client->get_jack_client(),
-                           is_input ? connection_name : get_name(),
-                           is_input ? get_name() : connection_name);
+                           is_input ? connection_name.c_str() : get_name(),
+                           is_input ? get_name() : connection_name.c_str());
 
     if (err != 0 && err != EEXIST)
     {
@@ -41,6 +56,14 @@ void JackPort::connect(JackClient *client, const char *connection_name,
 
 void JackPort::disconnect(JackClient *client)
 {
+    if (!client->is_active())
+    {
+        // If the client was deactivated, the JACK automatically disconnected
+        // all of its ports.
+        SPDLOG_DEBUG("Skipping port disconnection for inactive client.");
+        return;
+    }
+
     int err = jack_port_disconnect(client->get_jack_client(), port);
 
     if (err != 0)
@@ -67,14 +90,6 @@ bool JackClient::set_process_thread(JackThreadCallback callback, void *arg)
         return false;
     }
 
-    err = jack_activate(client);
-
-    if (err != 0)
-    {
-        SPDLOG_CRITICAL("jack_activate() failed, err: {}", err);
-        return false;
-    }
-
     return true;
 }
 
@@ -95,7 +110,7 @@ void JackClient::jack_thread()
         if (pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset)
             != 0)
         {
-            SPDLOG_ERROR("Couldn't set thread affinity.");
+            SPDLOG_ERROR("Couldn't set thread affinity {}.", thread_affinity);
         }
     }
 #endif
@@ -121,6 +136,8 @@ void JackClient::start()
         SPDLOG_ERROR("Couldn't activate. {}", err);
     }
 
+    client_active = true;
+
     for (auto &block : jack_blocks)
     {
         block->connect_all();
@@ -136,6 +153,8 @@ void JackClient::stop()
     {
         SPDLOG_ERROR("Couldn't deactivate. {}", err);
     }
+
+    client_active = false;
 }
 
 
@@ -239,7 +258,6 @@ JackClient *Jack::get_client(const std::string &name)
 
     if (clients.count(name) == 0)
     {
-        SPDLOG_CRITICAL("Unable to find client {}!", name);
         return nullptr;
     }
 
@@ -262,8 +280,7 @@ void Jack::make_port_connection(int channel)
     }
     else
     {
-        ports[channel].connect(client, port_connections[channel].c_str(),
-                               is_input);
+        ports[channel].connect(client, port_connections[channel], is_input);
     }
 }
 

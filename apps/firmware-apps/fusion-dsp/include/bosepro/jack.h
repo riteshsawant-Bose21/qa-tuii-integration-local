@@ -54,7 +54,8 @@ public:
     /// @param  client  The JACK client this port is associated with.
     /// @param  connection_name  The name of the port to connect to.
     /// @param  is_input  `true` if this is an input port to the client.
-    void connect(JackClient *client, const char *connection_name, bool is_input);
+    void connect(JackClient *client, const std::string &connection_name,
+                 bool is_input);
 
 
     /// Disconnect this port from any/all ports it is connected to.
@@ -76,7 +77,7 @@ public:
     /// @param  name  The name of the client.
     /// @param  task  The task that will perform processing for the client.
     JackClient(const std::string &name, Task *task)
-        : name(name), task(task)
+        : name(name), task(task), client_active(false)
     {
         jack_status_t jack_status;
         client = jack_client_open(name.c_str(), JackNullOption, &jack_status,
@@ -154,10 +155,21 @@ public:
         return name;
     }
 
+
+    /// Check whether this client is currently active.
+    ///
+    /// @return  True if the client is active, false otherwise.
+    bool is_active() const
+    {
+        return client_active;
+    }
+
+
 private:
     jack_client_t *client;
     std::string name;
     Task *task;
+    bool client_active;
     std::set<Jack *> jack_blocks;
 
     bool set_process_thread(JackThreadCallback callback, void *arg);
