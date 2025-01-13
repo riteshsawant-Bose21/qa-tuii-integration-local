@@ -400,6 +400,17 @@ multipass exec fusion1 -- systemctl status fusion-server
    - Verify backend metrics
    - Monitor HAProxy logs
 
+7. **Multipass instance launch fails on a Mac with M4 series chip**
+Error message:
+```bash
+→ Checking for existing instances...
+list failed: Unexpected error in object_property_find_err() at ../../../qom/object.c:1330:
+qemu-system-aarch64: Property 'host-arm-cpu.sme' not found
+```
+Solution:
+Multipass has not yet released a version that resolves this issue on M4 Macs. In the meantime, you can install the package from this [workaround](https://github.com/canonical/multipass/issues/3842#issuecomment-2552189605).
+
+
 ## Testing
 
 **Launch multiple instance**
