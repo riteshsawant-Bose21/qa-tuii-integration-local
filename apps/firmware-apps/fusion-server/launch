@@ -588,10 +588,6 @@ if [ -z "$NUM_INSTANCES" ]; then
     done
 fi
 
-# Check IP forwarding before proceeding
-check_ip_forwarding
-
-
 # Handle kill mode first
 if [ "$KILL_MODE" = true ]; then
     # If no specific kill base name provided, use the general base name
