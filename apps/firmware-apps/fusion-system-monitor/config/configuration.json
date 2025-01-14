@@ -30,6 +30,36 @@
                     ]
                 }
             ]
+        },
+        {
+            "name": "proto_io",
+            "property_settings": [
+                { "name": "period_ms", "value": 0 }
+            ],
+            "blocks": [
+                {
+                    "name": "proto_io_card",
+                    "module": "io_card",
+                    "property_settings": [
+                        { "name": "type", "value": 3 },
+                        { "name": "slot", "value": 0 },
+                        { "name": "input_channels", "value": 2 },
+                        { "name": "output_channels", "value": 2 },
+                        { "name": "parameter_paths", "value": [
+                            "read_id",
+                            "phantom_power"
+                          ]
+                        }
+                    ],
+                    "parameters": [
+                        { "name": "read_id" },
+                        { "name": "phantom_power" }
+                    ],
+                    "telemetry": [
+                        { "name": "status" }
+                    ]
+                }
+            ]
         }
     ]
 }

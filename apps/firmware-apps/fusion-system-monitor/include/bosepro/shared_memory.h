@@ -175,11 +175,4 @@ public:
     }
 };
 
-class NamedSharedMemoryManagerFactory {
-public:
-    static std::unique_ptr<NamedSharedMemoryManager> createManager() {
-        return std::make_unique<NamedSharedMemoryManager>();
-    }
-};
-
 } // namespace bosepro

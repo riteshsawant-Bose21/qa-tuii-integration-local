@@ -216,6 +216,22 @@ public:
     }
 
 
+    /// Get the name of the processor to use for this block.
+    ///
+    /// @return  The name of the processor.
+    const std::string &get_processor() const
+    {
+        if (has_member("algorithm"))
+        {
+            return get_string("algorithm");
+        }
+        else
+        {
+            return get_string("module");
+        }
+    }
+
+
     /// Test whether the block configuration has a terminal of the given name.
     ///
     /// @param  name  The name of the terminal.

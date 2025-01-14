@@ -41,12 +41,13 @@ public:
 
         ps_command_map = 
         {
-            {"stop",                  [this](const ParameterSetting& c){ cmd_stop_all(c); }},
-            {"destroy_audio_task",    [this](const ParameterSetting& c){ cmd_destroy_audio_task(c); }},
-            {"create_audio_task",     [this](const ParameterSetting& c){ cmd_create_audio_task(c); }},
-            {"start_audio_task",      [this](const ParameterSetting& c){ cmd_start_audio_task(c); }},
-            {"stop_audio_task",       [this](const ParameterSetting& c){ cmd_stop_audio_task(c); }},
-            {"create_periodic_task",  [this](const ParameterSetting& c){ cmd_create_periodic_task(c); }}
+            {"stop",                    [this](const ParameterSetting& c){ return cmd_stop_all(c); }},
+            {"destroy_audio_task",      [this](const ParameterSetting& c){ return cmd_destroy_audio_task(c); }},
+            {"create_audio_task",       [this](const ParameterSetting& c){ return cmd_create_audio_task(c); }},
+            {"start_audio_task",        [this](const ParameterSetting& c){ return cmd_start_audio_task(c); }},
+            {"stop_audio_task",         [this](const ParameterSetting& c){ return cmd_stop_audio_task(c); }},
+            {"create_periodic_task",    [this](const ParameterSetting& c){ return cmd_create_periodic_task(c); }},
+            {"apply_parameter_setting", [this](const ParameterSetting& c){ return cmd_apply_parameter_setting(c); }}
         };
 
         frames_to_run = -1;
@@ -266,67 +267,67 @@ public:
     /// @param  setting  The setting to process.
     void process_parameter_setting(const ParameterSetting &setting)
     {
+        // session commands
         if (setting.get_target() == "session")
         {
             try {
-                // Use 'at' to retrieve the function. If setting.get_name() is not found,
-                // std::out_of_range will be thrown.
                 ps_command_map.at(setting.get_name())(setting);
             } catch (const std::out_of_range&) {
                 SPDLOG_WARN("Unknown session setting '{}'", setting.get_name());
             }
         }
+        // block parameter setting
         else
         {
-            for (auto &task : audio_tasks)
+            if (!ps_command_map["apply_parameter_setting"](setting))
             {
-                std::string block_name;
-                Algorithm *block = task.second->get_block(setting.get_target());
-                if (block != nullptr)
-                {
-                    block->set_parameter(setting);
-                    break;
-                }
+                SPDLOG_WARN("Unknown block '{}'", setting.get_target());
             }
         }
     }
 
+
     /// Socket setting to stop all tasks
     ///
     /// @param setting 
-    void cmd_stop_all(const ParameterSetting& setting);
+    bool cmd_stop_all(const ParameterSetting& setting);
 
     /// Socket setting to destroy a specific task
     ///
     /// @param setting 
-    void cmd_destroy_audio_task(const ParameterSetting& setting);
+    bool cmd_destroy_audio_task(const ParameterSetting& setting);
 
     /// Socket setting to create an audio task
     ///
     /// @param setting 
-    void cmd_create_audio_task(const ParameterSetting& setting);
+    bool cmd_create_audio_task(const ParameterSetting& setting);
 
     /// Socket setting to start a specific task
     ///
     /// @param setting 
-    void cmd_start_audio_task(const ParameterSetting& setting);
+    bool cmd_start_audio_task(const ParameterSetting& setting);
 
     /// Socket setting to stop a specific task
     ///
     /// @param setting 
-    void cmd_stop_audio_task(const ParameterSetting& setting);
+    bool cmd_stop_audio_task(const ParameterSetting& setting);
 
     /// Socket setting to create a non-audio task
     ///
     /// @param setting 
-    void cmd_create_periodic_task(const ParameterSetting& setting);
+    bool cmd_create_periodic_task(const ParameterSetting& setting);
+
+    /// Socket setting to apply parameter setting to a block
+    ///
+    /// @param setting 
+    bool cmd_apply_parameter_setting(const ParameterSetting& setting);
 
 
 private:
     int_fast32_t frames_to_run;
     std::map<std::string, std::unique_ptr<AudioTask>> audio_tasks;
     std::map<std::string, std::unique_ptr<PeriodicTask>> periodic_tasks;
-    std::map<std::string, std::function<void(const ParameterSetting&)>> ps_command_map;
+    std::map<std::string, std::function<bool(const ParameterSetting&)>> ps_command_map;
 };
 
 

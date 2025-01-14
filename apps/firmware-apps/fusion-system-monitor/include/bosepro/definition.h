@@ -13,6 +13,7 @@ class ModuleDefinition;
 class PropertyDefinition;
 class TerminalDefinition;
 class ParameterDefinition;
+class ControlDefinition;
 class TelemetryDefinition;
 
 
@@ -234,9 +235,9 @@ public:
     }
 
 
-    /// Test whether the algorithm has parameter definitions.
+    /// Test whether the processor has parameter definitions.
     ///
-    /// @return  True if the algorithm has parameter definitions, false
+    /// @return  True if the processor has parameter definitions, false
     ///          otherwise.
     bool has_parameters() const
     {
@@ -248,16 +249,16 @@ public:
     /// definitions must exist: use `has_parameters()` to test for their
     /// existence before calling this method.
     ///
-    /// @return  The parameter definitions for the algorithm.
+    /// @return  The parameter definitions for the processor.
     const ParameterDefinition &get_parameters() const
     {
         return (const ParameterDefinition &)get_member("parameters");
     }
 
 
-    /// Test whether the algorithm has meter definitions.
+    /// Test whether the processor has telemetry definitions.
     ///
-    /// @return  True if the algorithm has meter definitions, false
+    /// @return  True if the processor has telemetry definitions, false
     ///          otherwise.
     bool has_telemetry() const
     {
@@ -384,7 +385,7 @@ public:
 
 /// The interface definition for a parameter.
 class ParameterDefinition : public Definition {
-
+    
 };
 
 

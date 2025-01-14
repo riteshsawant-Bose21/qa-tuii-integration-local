@@ -1,5 +1,5 @@
 {
-    "fw_modules": [
+    "modules": [
         {
             "name": "cpu_usage",
             "telemetry": [
@@ -65,9 +65,7 @@
                     "period_type": "N/A"
                 }
             ]
-        }
-    ],
-    "hw_modules": [
+        },
         {
             "name": "io_card",
             "properties": [
@@ -77,6 +75,13 @@
                     "default_value": 0,
                     "minimum_value": 0,
                     "maximum_value": 32
+                },
+                {
+                    "name": "slot",
+                    "value_type": "integer",
+                    "default_value": 0,
+                    "minimum_value": 0,
+                    "maximum_value": 16
                 },
                 {
                     "name": "input_channels",
@@ -93,25 +98,34 @@
                     "maximum_value": 32
                 },
                 {
-                    "name": "num_gpios",
-                    "value_type": "integer",
-                    "default_value": 0,
-                    "minimum_value": 0,
-                    "maximum_value": 8
-                },
-                {
-                    "name": "gpio_names",
+                    "name": "parameter_paths",
                     "value_type": "string",
-                    "dimensions": ["num_gpios"],
-                    "default_value": ""
+                    "default_value": "",
+                    "minimum_value": 0,
+                    "maximum_value": 16
                 }
             ],
             "parameters": [
                 {
-                    "name": "gpios",
+                    "name": "read_id",
                     "value_type": "string",
-                    "dimensions": ["num_gpios", "num_endpoints_gpios"],
+                    "dimensions": 0,
                     "default_value": ""
+                },
+                {
+                    "name": "phantom_power",
+                    "value_type": "bool",
+                    "dimensions": ["output_channels"],
+                    "default_value": false
+                }
+            ],
+            "telemetry": [
+                {
+                    "name": "status",
+                    "dimensions": 0, 
+                    "value_type": "string", 
+                    "telemetry_type": "event",
+                    "period_type": "N/A"
                 }
             ]
         }

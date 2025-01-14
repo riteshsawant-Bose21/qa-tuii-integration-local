@@ -163,7 +163,7 @@ public:
     void assign(DspTelemetryMemory<T*[]> &value, std::function<void(int, int)> pre_function);
 
 
-    /// Get the number of rows in the telemetry, or 1 if the control is a scalar.
+    /// Get the number of rows in the telemetry, or 1 if the telemetry is a scalar.
     ///
     /// @return  The number of rows in the telemetry.
     int get_num_rows() const
@@ -172,7 +172,7 @@ public:
     }
 
 
-    /// Get the number of columns in the telemetry, or 1 if the control is a
+    /// Get the number of columns in the telemetry, or 1 if the telemetry is a
     /// scalar or vector.
     int get_num_columns() const
     {
