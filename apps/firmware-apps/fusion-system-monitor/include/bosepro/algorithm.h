@@ -205,7 +205,7 @@ public:
     void initialize_terminals()
     {
         SPDLOG_TRACE("Initializing terminals for '{}'.",
-                     meta->configuration->get_algorithm());
+                     meta->configuration->get_name());
 
         // We have to do this here because the source buffers for the bypass
         // function aren't available until after the terminals are assigned
@@ -248,7 +248,7 @@ public:
         if (meta->terminals.count(name) == 0)
         {
             SPDLOG_CRITICAL("Unknown terminal '{}' in '{}'.",
-                            name, meta->configuration->get_algorithm());
+                            name, meta->configuration->get_name());
         }
 
         return *meta->terminals[name];
@@ -280,7 +280,7 @@ public:
         if (meta->parameters.count(name) == 0)
         {
             SPDLOG_CRITICAL("Unknown parameter '{}' in '{}'.",
-                            name, meta->configuration->get_algorithm());
+                            name, meta->configuration->get_name());
         }
 
         return *meta->parameters[name];
@@ -294,7 +294,7 @@ public:
     void initialize_parameters()
     {
         SPDLOG_TRACE("Initializing parameters for '{}'.",
-                     meta->configuration->get_algorithm());
+                     meta->configuration->get_name());
 
         for (auto &c : meta->parameters)
         {
@@ -314,7 +314,7 @@ public:
         if (meta->parameters.count(setting.get_name()) == 0)
         {
             SPDLOG_WARN("Unknown parameter '{}' in '{}'.", setting.get_name(),
-                        meta->configuration->get_algorithm());
+                        meta->configuration->get_name());
             return false;
         }
 
@@ -357,7 +357,7 @@ protected:
         else
         {
             SPDLOG_CRITICAL("Unknown property '{}' in '{}'.",
-                            name, meta->configuration->get_algorithm());
+                            name, meta->configuration->get_name());
         }
     }
 

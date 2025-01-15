@@ -6,6 +6,7 @@
 #include <spdlog/spdlog.h>
 
 #include <string>
+#include <type_traits> // for std::is_same
 
 
 namespace bosepro {
@@ -76,12 +77,40 @@ protected:
     template <typename T>
     void get_member_value(const std::string &member_name, T &value) const
     {
+        // First, check that the member exists
         if (!has_member(member_name))
         {
-            SPDLOG_CRITICAL("Member {} not found.", member_name);
+            SPDLOG_CRITICAL("Member '{}' not found.", member_name);
         }
-        value = get<T>(member_name);
+
+        // If T is not std::vector<std::string>, do the usual single-value read.
+        if constexpr (!std::is_same<T, std::vector<std::string>>::value)
+        {
+            // Just retrieve a single value from the property tree.
+            // get<T>() is presumably your wrapper that calls m_ptree.get<T>(member_name)
+            value = get<T>(member_name);
+        }
+        else
+        {
+            // Here, T is std::vector<std::string>, so we expect multiple child nodes.
+
+            // Clear the vector to ensure it's empty before we start populating it.
+            value.clear();
+
+            // Get the child tree under 'member_name'.
+            // If you prefer optional-based checks, you could do get_child_optional instead.
+            auto &subtree = get_child(member_name);
+
+            // Now iterate over all child nodes. Each child is presumably a string entry.
+            for (auto &kv : subtree)
+            {
+                // kv.first is the child’s name (often empty if it’s an array-like structure).
+                // kv.second is the ptree node containing the data for that child.
+                value.push_back(kv.second.get_value<std::string>());
+            }
+        }
     }
+
 
 
     /// Set the value of the member of the given name.  The member must exist:
@@ -291,7 +320,7 @@ protected:
 
 
     /// Get the member of a list of properties which has a member with the given
-    /// name and value.  The list and must exist, and must contain a property
+    /// name and value.  The list and member must exist, and must contain a property
     /// with the given member and value: use `list_has_member()` to test for
     /// their existence before calling this method.
     ///
@@ -344,14 +373,6 @@ protected:
     }
 
 
-    const std::string serialize() const
-    {
-        std::ostringstream oss;
-        boost::property_tree::write_json(oss, *this, false); // `false` for compact JSON
-        return oss.str();
-    }
-
-
     /// Get the value (as an integer index) of the member of the given name.
     /// If the member does not exist, return 0.
     int get_index(const std::string &member_name) const
@@ -380,6 +401,17 @@ protected:
         }
 
         return count;
+    }
+
+
+    /// Get the serialized Navigator (ptree/json blob)
+    ///
+    /// @return The string with the serialized json
+    const std::string serialize() const
+    {
+        std::ostringstream oss;
+        boost::property_tree::write_json(oss, *this, false); // `false` for compact JSON
+        return oss.str();
     }
 };
 

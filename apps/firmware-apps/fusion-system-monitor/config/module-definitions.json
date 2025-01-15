@@ -115,15 +115,15 @@
                 {
                     "name": "phantom_power",
                     "value_type": "bool",
-                    "dimensions": ["output_channels"],
+                    "dimensions": 0,
                     "default_value": false
                 }
             ],
             "telemetry": [
                 {
-                    "name": "status",
+                    "name": "phantom_power",
                     "dimensions": 0, 
-                    "value_type": "string", 
+                    "value_type": "bool", 
                     "telemetry_type": "event",
                     "period_type": "N/A"
                 }

@@ -114,7 +114,7 @@ public:
         if (meta->parameters.count(name) == 0)
         {
             SPDLOG_CRITICAL("Unknown paramter '{}' in '{}'.",
-                            name, meta->configuration->get_module());
+                            name, meta->configuration->get_name());
         }
 
         return *meta->parameters[name];
@@ -128,7 +128,7 @@ public:
     void initialize_parameters()
     {
         SPDLOG_TRACE("Initializing parameters for '{}'.",
-                     meta->configuration->get_module());
+                     meta->configuration->get_name());
 
         for (auto &c : meta->parameters)
         {
@@ -148,7 +148,7 @@ public:
         if (meta->parameters.count(setting.get_name()) == 0)
         {
             SPDLOG_WARN("Unknown parameter '{}' in '{}'.", setting.get_name(),
-                        meta->configuration->get_module());
+                        meta->configuration->get_name());
             return false;
         }
 
@@ -179,7 +179,7 @@ protected:
         else
         {
             SPDLOG_CRITICAL("Unknown property '{}' in '{}'.",
-                            name, meta->configuration->get_module());
+                            name, meta->configuration->get_name());
         }
     }
 
@@ -281,6 +281,17 @@ protected:
     }
 
 
+    /// Assign storage for a scalar telemetry value.
+    ///
+    /// @param  name  The name of the telemetry.
+    /// @param  value  The storage for the telemetry value.
+    template <typename T>
+    void assign_telemetry(const std::string &name, const T *value)
+    {
+        TelemetryMonitor::get_instance().get_telemetry(this->get_block_name() + "::" + name).assign(value);
+    }
+
+
     /// Assign storage for vector telemetry values.
     /// The value is not valid until after the module's constructor (but
     /// before `process()` is called).
@@ -296,6 +307,20 @@ protected:
     }
 
 
+    /// Assign storage for vector telemetry values.
+    /// The value is not valid until after the module's constructor (but
+    /// before `process()` is called).
+    ///
+    /// @param  name  The name of the telemetry.
+    /// @param  value  The storage for the telemetry value.
+    /// @param  pre_function  A function to be called before the value is sent.
+    template <typename T>
+    void assign_telemetry(const std::string &name, DspTelemetryMemory<T[]> &value)
+    {
+        TelemetryMonitor::get_instance().get_telemetry(this->get_block_name() + "::" + name).assign(value);
+    }
+
+
     /// Assign storage for matrix telemetry values.
     /// The value is not valid until after the module's constructor (but
     /// before `process()` is called).
@@ -308,6 +333,20 @@ protected:
                         std::function<void(int, int)> pre_function)
     {
         TelemetryMonitor::get_instance().get_telemetry(this->get_block_name() + "::" + name).assign(value, pre_function);
+    }
+
+
+    /// Assign storage for matrix telemetry values.
+    /// The value is not valid until after the module's constructor (but
+    /// before `process()` is called).
+    ///
+    /// @param  name  The name of the telemetry.
+    /// @param  value  The storage for the telemetry value.
+    /// @param  pre_function  A function to be called before the value is sent.
+    template <typename T>
+    void assign_telemetry(const std::string &name, DspTelemetryMemory<T*[]> &value)
+    {
+        TelemetryMonitor::get_instance().get_telemetry(this->get_block_name() + "::" + name).assign(value);
     }
 
 
