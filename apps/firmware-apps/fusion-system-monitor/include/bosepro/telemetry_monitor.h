@@ -652,7 +652,7 @@ private:
             if (block_size[i] > 0) {
                 try {
                     shm_manager.createSharedMemory(shm_names[i], block_size[i], false);
-                    SPDLOG_INFO("Found shared memory region {} with size {}", shm_names[i], block_size[i]);
+                    SPDLOG_TRACE("Found shared memory region {} with size {}", shm_names[i], block_size[i]);
                 } catch (const std::runtime_error& e) {
                     SPDLOG_CRITICAL("Failed to create shared memory: {}", e.what());
                     return false;
@@ -719,7 +719,11 @@ private:
             return;
         }
 
-        shm_manager.getSharedMemory(shm_names[region_index]).resetWrite();
+        try {
+            shm_manager.getSharedMemory(shm_names[region_index]).resetWrite();
+        } catch(...) {
+            return;
+        }
 
         for (auto &m: meters)
         {
@@ -733,7 +737,7 @@ private:
         rsp.get_parameters().set_value("OK");
         rsp.set_packet_id(req.get_packet_id());
 
-        SPDLOG_DEBUG("Sending response: \n{}", rsp.serialize_message());
+        SPDLOG_TRACE("Sending response: \n{}", rsp.serialize_message());
 
         if (!send_message(rsp))
         {
@@ -806,7 +810,7 @@ private:
             }
             error_timeout = 0;
 
-            SPDLOG_INFO("Received message from telemetry manager: \n{}", message.serialize_message());
+            SPDLOG_TRACE("Received message from telemetry manager: \n{}", message.serialize_message());
 
             try
             {
