@@ -1,3 +1,5 @@
+#include <bosepro/observer.h>
+
 #include <bosepro/configuration.h>
 #include <bosepro/definition.h>
 #include <bosepro/profile.h>
@@ -10,18 +12,41 @@
 #include <pthread.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
-#include <sys/un.h>
-#include <cstring>
 #include <unistd.h>
-#include <fcntl.h>
-#include <sys/mman.h> 
+
 #include <iostream>
 
 
+bosepro::Session *psession;
+
+
+void handle_update(const std::string &update_setting)
+{
+    std::stringstream ss;
+    ss << update_setting;
+    bosepro::ParameterSetting ps = bosepro::ParameterSetting(ss);
+    psession->process_parameter_setting(ps);
+    SPDLOG_INFO("server update: {}", update_setting);
+}
+
+
+// Boost needs this structure and the corresponding `validate()` function to
+// allow the same option to repeated multiple times and counted (-vv, -qq).
+struct OptionCounter
+{
+    int count = 0;
+};
+
+void validate(boost::any &v, std::vector<std::string> const &, OptionCounter *, long)
+{
+    if (v.empty()) v = OptionCounter{1};
+    else ++boost::any_cast<OptionCounter &>(v).count;
+}
+
 int main(int argc, char *argv[])
 {
-    spdlog::set_level(spdlog::level::trace);
-    SPDLOG_INFO("fusion_system_monitor");
+    OptionCounter verbosity;
+    OptionCounter quietness;
 
     boost::program_options::options_description desc("Allowed options");
     desc.add_options()
@@ -29,7 +54,9 @@ int main(int argc, char *argv[])
         ("definitions,d", boost::program_options::value<std::string>()->default_value("config/module-definitions.json"), "module definition file")
         ("telemetry-messages,m", boost::program_options::value<std::string>()->default_value("config/telemetry-messages.json"), "telemetry commands file")
         ("telemetry-configuration,p", boost::program_options::value<std::string>()->default_value("config/telemetry-configuration.json"), "telemetry configuration file")
-        ("time,t", boost::program_options::value<int>(), "time to run (seconds)")
+        ("serverip,s", boost::program_options::value<std::string>(), "IP address of fusion-server")
+        ("verbose,v", boost::program_options::value(&verbosity)->zero_tokens(), "make logs more verbose")
+        ("quiet,q", boost::program_options::value(&quietness)->zero_tokens(), "make logs more quiet")
         ("help,h", "print this message and exit")
     ;
 
@@ -43,6 +70,29 @@ int main(int argc, char *argv[])
         std::cout << desc << std::endl;
         return 0;
     }
+
+    if (verbosity.count == 1)
+    {
+        spdlog::set_level(spdlog::level::debug);
+    }
+    else if (verbosity.count >= 2)
+    {
+        spdlog::set_level(spdlog::level::trace);
+    }
+    else if (quietness.count == 1)
+    {
+        spdlog::set_level(spdlog::level::warn);
+    }
+    else if (quietness.count >= 2)
+    {
+        spdlog::set_level(spdlog::level::off);
+    }
+    else
+    {
+        spdlog::set_level(spdlog::level::info);
+    }
+
+    SPDLOG_INFO("fusion_system_monitor");
 
     bosepro::Configuration configuration(vm["configuration"].as<std::string>());
     bosepro::TelemetryConfiguration telem_configuration(vm["telemetry-configuration"].as<std::string>());
@@ -70,14 +120,33 @@ int main(int argc, char *argv[])
         }
     }
 
-    if (vm.count("time"))
+    UDPValueMonitor *client = nullptr;
+    psession = &session;
+
+    std::vector<std::string> target_paths;
+
+    target_paths.push_back("settings.fw.*.*");
+
+    if (vm.count("serverip"))
     {
-        session.set_seconds_to_run(vm["time"].as<int>());
+        SPDLOG_INFO("server ip {}", vm["serverip"].as<std::string>());
+        client = new UDPValueMonitor(vm["serverip"].as<std::string>(), 7947,
+                                        target_paths, handle_update);
     }
 
     telemetry_monitor.initialize(vm["telemetry-messages"].as<std::string>(), telem_configuration.get_socket_path());
     telemetry_monitor.start();
-    session.start();
+
+    while(1)
+    {
+        usleep(1000);
+    }
+
+    if (client != nullptr)
+    {
+        client->stop();
+        delete client;
+    }
 
     return 0;
 }
