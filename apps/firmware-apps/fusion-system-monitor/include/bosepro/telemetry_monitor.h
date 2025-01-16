@@ -1,7 +1,7 @@
 #pragma once
 
 #include <bosepro/telemetry.h>
-#include <bosepro/shared_memory.h>
+#include <bosepro/NamedSharedMemoryManagerFactory.h>
 
 #include <string>
 #include <functional>
@@ -206,7 +206,7 @@ class TelemetryMonitor {
 public:
     /// Constructor for singleton pattern--initialization in "initialize" method
     TelemetryMonitor()
-        : shm_manager(NamedSharedMemoryManager::getInstance()),
+        : shm_manager(NamedSharedMemoryManagerFactory::getInstance()),
           serverpath(""),
           shm_names(NUM_SHM_REGIONS, ""),
           telemetry_manager_addr(),
@@ -553,7 +553,7 @@ public:
         try {
             // Write the telemetry message into the shared memory region
             NamedSharedMemory& shm = shm_manager.getSharedMemory(shm_names[region_index]);
-            shm.write(cb_data.message.c_str(), cb_data.message.length(), "string");
+            shm.writeMinimalStateToSharedMemory(cb_data.message.c_str(), cb_data.message.length(), "string");
 
         } catch (const std::runtime_error& e) {
             SPDLOG_ERROR("Error accessing shared memory: {}", e.what());
@@ -651,8 +651,8 @@ private:
         for (size_t i = 0; i < shm_names.size(); ++i) {
             if (block_size[i] > 0) {
                 try {
-                    shm_manager.createSharedMemory(shm_names[i], block_size[i], false);
-                    SPDLOG_INFO("Found shared memory region {} with size {}", shm_names[i], block_size[i]);
+                    shm_manager.getSharedMemory(shm_names[i]);
+                    SPDLOG_INFO("Found shared memory region {}", shm_names[i]);
                 } catch (const std::runtime_error& e) {
                     SPDLOG_CRITICAL("Failed to create shared memory: {}", e.what());
                     return false;
@@ -718,8 +718,6 @@ private:
         if (region_index < 0) {
             return;
         }
-
-        shm_manager.getSharedMemory(shm_names[region_index]).resetWrite();
 
         for (auto &m: meters)
         {
