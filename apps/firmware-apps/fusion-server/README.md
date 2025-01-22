@@ -590,3 +590,15 @@ graph TB
     class F1,F2,F3 server
     class S1,S2,S3 state
 ```
+
+shasum -a 256 build/fusion-server_darwin_arm64 
+
+curl -X POST \
+  -F "binary=@your_server_binary" \
+  -F "checksum=8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92" \
+  http://localhost:8080/updateBinary
+
+curl -X POST \
+  -F "binary=@build/fusion-server_darwin_arm64" \
+  -F "checksum=$(shasum -a 256 build/fusion-server_darwin_arm64  | cut -d ' ' -f 1)" \
+  http://localhost:8080/updateBinary

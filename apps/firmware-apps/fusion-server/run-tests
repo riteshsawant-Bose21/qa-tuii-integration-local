@@ -8,6 +8,7 @@ function show_help() {
     echo "  --controllers Run only controller tests"
     echo "  --fusion      Run only fusion tests"     
     echo "  --logger      Run only logger tests"     
+    echo "  --updater     Run only updater tests"     
     echo "  --vip         VIP address and port (default: 192.168.64.100:8080)"
     exit 1
 }
@@ -37,6 +38,10 @@ while [[ $# -gt 0 ]]; do
             test_type="logger"
             shift
             ;;
+        --updater)
+            test_type="updater"
+            shift
+            ;;
         --vip)
             vip="$2"
             shift 2
@@ -64,5 +69,8 @@ case "$test_type" in
         ;;
     "logger")
         go test -v ./logger_test.go
+        ;;
+    "updater")
+        go test -v ./updater_test.go
         ;;
 esac

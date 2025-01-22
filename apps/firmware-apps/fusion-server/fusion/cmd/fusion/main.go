@@ -43,6 +43,8 @@ func setupHTTPRoutes(server *server.ConfigServer, metrics *cluster.MetricsCollec
 	http.HandleFunc("/clear", withLogging(server.ClearAllData, "clear", verbose))
 	http.HandleFunc("/upload", withLogging(server.UploadJSON, "upload", verbose))
 	http.HandleFunc("/download", withLogging(server.DownloadJSON, "download", verbose))
+	http.HandleFunc("/updateBinary", withLogging(server.UpdateBinary, "updateBinary", verbose))
+	http.HandleFunc("/rollbackBinary", withLogging(server.RollbackBinary, "rollbackBinary", verbose))
 	http.HandleFunc("/dump", withLogging(server.DumpState, "dump", verbose))
 	http.HandleFunc("/ws", withWebSocketMetrics(server.HandleWebSocket, metrics, verbose))
 	http.HandleFunc("/", withLogging(server.HandleRoot, "root", verbose))
@@ -134,13 +136,13 @@ func initPersistence(configPath string, stateManager *server.StateManager) *serv
 }
 
 // initCluster initializes the cluster memberlist.
-func initCluster(nodeName, bindAddr string, bindPort int, joinAddr string, stateManager *server.StateManager, persistence *server.ConfigPersistence) (*memberlist.Memberlist, error) {
+func initCluster(nodeName, bindAddr string, bindPort int, joinAddr string, stateManager *server.StateManager, persistence *server.ConfigPersistence, updater *server.Updater) (*memberlist.Memberlist, error) {
 	var joinAddrs []string
 	if joinAddr != "" {
 		joinAddrs = strings.Split(joinAddr, ",")
 	}
 
-	list, err := cluster.CreateMemberlist(nodeName, bindAddr, bindPort, joinAddrs, stateManager, persistence, *verbose)
+	list, err := cluster.CreateMemberlist(nodeName, bindAddr, bindPort, joinAddrs, stateManager, persistence, updater, *verbose)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create memberlist: %w", err)
 	}
@@ -172,7 +174,7 @@ func startMetricsServer(port int, metrics *cluster.MetricsCollector) *http.Serve
 
 	go func() {
 		logger := logging.GetLogger()
-		logger.Info("Starting metrics server on port %d", port)
+		logger.Info("Starting metrics server on :%d", port)
 		if err := metricsServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			logger.Fatal("Metrics server failed: %v", err)
 		}
@@ -211,8 +213,9 @@ func main() {
 
 	stateManager := initStateManager(nodeName)
 	persistence := initPersistence(configDataPath, stateManager)
+	updater := server.NewUpdater()
 
-	clusterList, err := initCluster(nodeName, bindAddr, bindPort, joinAddr, stateManager, persistence)
+	clusterList, err := initCluster(nodeName, bindAddr, bindPort, joinAddr, stateManager, persistence, server.NewUpdater())
 	if err != nil {
 		logger.Error("Failed to initialize cluster: %v", err)
 	}
@@ -225,7 +228,7 @@ func main() {
 	metricsServer := startMetricsServer(*metricsPort, metricsCollector)
 	defer metricsServer.Shutdown(context.Background())
 
-	connectionHandler := server.NewHandler(clusterList, stateManager, persistence)
+	connectionHandler := server.NewHandler(clusterList, stateManager, persistence, updater)
 
 	udpServer := initUDPServer(udpPort, connectionHandler)
 	defer udpServer.Stop()
@@ -235,7 +238,7 @@ func main() {
 	setupHTTPRoutes(configServer, metricsCollector, *verbose)
 	setupTimerRoutes(timerManager, *verbose)
 
-	//go network.HandleBluetoothSerial(serialPort, baudRate)
+	logger.Info("%s is ALIVE and RUNNING", nodeName)
 
 	startAPIServer(httpPort)
 }

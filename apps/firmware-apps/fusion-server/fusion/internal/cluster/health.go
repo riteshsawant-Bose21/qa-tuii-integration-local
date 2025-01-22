@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 
@@ -12,6 +13,11 @@ import (
 	"fusion/internal/server"
 
 	"github.com/hashicorp/memberlist"
+)
+
+const (
+	checkInterval = 10
+	httpPort      = "8080"
 )
 
 // StartHealthCheck starts monitoring cluster health
@@ -34,7 +40,7 @@ func StartHealthCheck(list *memberlist.Memberlist) {
 			logging.GetLogger().Info("[HEALTH] Cluster health: %d/%d nodes alive",
 				numAlive, numMembers)
 
-			time.Sleep(10 * time.Second)
+			time.Sleep(checkInterval * time.Second)
 		}
 	}()
 }
@@ -56,7 +62,7 @@ func StartStateVerification(list *memberlist.Memberlist, stateManager *server.St
 					continue
 				}
 
-				url := fmt.Sprintf("http://%s/getValue", member.Addr.String())
+				url := fmt.Sprintf("http://%s:%s/getValue", member.Addr.String(), httpPort)
 				resp, err := http.Get(url)
 				if err != nil {
 					logging.GetLogger().Warn("Failed to get state from %s: %v", member.Name, err)
@@ -66,7 +72,9 @@ func StartStateVerification(list *memberlist.Memberlist, stateManager *server.St
 				var remoteState map[string]*api.StateEntry
 				if err := json.NewDecoder(resp.Body).Decode(&remoteState); err != nil {
 					resp.Body.Close()
-					logging.GetLogger().Warn("Failed to decode state from %s: %v", member.Name, err)
+					logging.GetLogger().Warn("Failed to decode state from %s %s: %v", member.Name, url, err)
+					body, _ := io.ReadAll(resp.Body)
+					logging.GetLogger().Warn("     Response Body: %s", string(body))
 					continue
 				}
 				resp.Body.Close()

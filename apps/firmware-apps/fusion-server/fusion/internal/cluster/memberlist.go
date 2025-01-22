@@ -23,7 +23,7 @@ const (
 
 // CreateMemberlist creates and configures a new memberlist instance
 func CreateMemberlist(nodeName, bindAddr string, bindPort int, joinAddrs []string,
-	stateManager *server.StateManager, persistence *server.ConfigPersistence, verbose bool) (*memberlist.Memberlist, error) {
+	stateManager *server.StateManager, persistence *server.ConfigPersistence, updater *server.Updater, verbose bool) (*memberlist.Memberlist, error) {
 	config := memberlist.DefaultLANConfig()
 	config.Name = nodeName
 	config.BindAddr = bindAddr
@@ -35,7 +35,7 @@ func CreateMemberlist(nodeName, bindAddr string, bindPort int, joinAddrs []strin
 		config.Logger = log.New(io.Discard, "", 0)
 	}
 
-	delegate := NewClusterDelegate(nodeName, stateManager, persistence, verbose)
+	delegate := NewClusterDelegate(nodeName, stateManager, persistence, updater, verbose)
 	config.Delegate = delegate
 
 	config.TCPTimeout = tcpTimeout * time.Second

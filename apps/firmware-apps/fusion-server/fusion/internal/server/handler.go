@@ -1,12 +1,17 @@
 package server
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/logging"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/hashicorp/memberlist"
@@ -18,19 +23,21 @@ type Handler struct {
 	persistence  *ConfigPersistence
 	list         *memberlist.Memberlist
 	broadcasters []Broadcaster
+	updater      *Updater
 }
 
 func NewHandler(list *memberlist.Memberlist, stateManager *StateManager,
-	persistence *ConfigPersistence) *Handler {
+	persistence *ConfigPersistence, updater *Updater) *Handler {
 	return &Handler{
 		stateManager: stateManager,
 		persistence:  persistence,
 		list:         list,
+		updater:      updater,
 	}
 }
 
 // Shared update handling logic
-func (h *Handler) handleUpdate(data map[string]interface{}) error {
+func (h *Handler) handleConfigUpdate(data map[string]interface{}) error {
 	configUpdate := api.ConfigUpdate{
 		Data:    data,
 		Version: time.Now().UnixNano(),
@@ -126,7 +133,7 @@ func (h *Handler) HandleHTTPGet(key string) (interface{}, error) {
 
 // HTTP Server methods
 func (h *Handler) HandleHTTPSet(update map[string]interface{}) (interface{}, error) {
-	if err := h.handleUpdate(update); err != nil {
+	if err := h.handleConfigUpdate(update); err != nil {
 		return nil, fmt.Errorf("failed to handle update: %v", err)
 	}
 
@@ -138,6 +145,7 @@ func (h *Handler) HandleHTTPSet(update map[string]interface{}) (interface{}, err
 
 // UDP Server methods
 func (h *Handler) HandleUDPMessage(data []byte) (interface{}, error) {
+
 	var msg struct {
 		Action string          `json:"action"`
 		Raw    json.RawMessage `json:",omitempty"`
@@ -278,7 +286,7 @@ func (h *Handler) HandleDownload() (map[string]interface{}, error) {
 	}, nil
 }
 
-// HandleUpload handles the upload of a new state
+// HandleUpload handles the upload of a new config state
 func (h *Handler) HandleUpload(reader io.Reader) (map[string]interface{}, error) {
 	var jsonImport struct {
 		Version   int64                      `json:"version"`
@@ -314,20 +322,34 @@ func (h *Handler) HandleUpload(reader io.Reader) (map[string]interface{}, error)
 
 // GetServerInfo returns information about the server
 func (h *Handler) GetServerInfo() (map[string]interface{}, error) {
-	return map[string]interface{}{
+	info := map[string]interface{}{
 		"name":    "Fusion Config Server",
 		"version": "1.0.0",
 		"node_id": h.list.LocalNode().Name,
 		"endpoints": []string{
 			"/setValue",
 			"/getValue",
+			"/clear",
 			"/ws",
 			"/download",
 			"/upload",
+			"/updateBinary",
+			"/rollbackBinary",
 			"/dump",
 		},
-		"cluster_size": len(h.list.Members()),
-	}, nil
+		"cluster_size":       len(h.list.Members()),
+		"update_in_progress": h.updater.currentUpdate != nil,
+	}
+
+	if h.updater.currentUpdate != nil {
+		info["update_status"] = map[string]interface{}{
+			"source_node": h.updater.currentUpdate.NodeID,
+			"time":        h.updater.currentUpdate.Time,
+			"progress":    float64(h.updater.currentAssembler.received) / float64(h.updater.currentAssembler.size) * 100,
+		}
+	}
+
+	return info, nil
 }
 
 // AddBroadcaster registers a new broadcaster with the Handler
@@ -338,4 +360,246 @@ func (h *Handler) AddBroadcaster(broadcaster Broadcaster) {
 // AddBroadcasters registers multiple broadcasters with the Handler
 func (h *Handler) AddBroadcasters(broadcasters ...Broadcaster) {
 	h.broadcasters = append(h.broadcasters, broadcasters...)
+}
+
+// HandleBinaryUpdate handles HTTP binary update requests
+func (h *Handler) HandleBinaryUpdate(w http.ResponseWriter, r *http.Request) {
+	// Read the uploaded binary
+	updateFile, header, err := r.FormFile("binary")
+	if err != nil {
+		logging.GetLogger().Error("Error reading binary: %v", err)
+		http.Error(w, "Error reading binary", http.StatusBadRequest)
+		return
+	}
+	defer updateFile.Close()
+
+	// Verify checksum/signature
+	if !VerifyChecksum(updateFile, r.FormValue("checksum")) {
+		logging.GetLogger().Error("Invalid checksum")
+		http.Error(w, "Invalid checksum", http.StatusBadRequest)
+		return
+	}
+
+	// Reset file pointer after checksum verification
+	if _, err := updateFile.Seek(0, 0); err != nil {
+		logging.GetLogger().Error("Error resetting file pointer: %v", err)
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		return
+	}
+
+	// Create a temporary file
+	tempPath := filepath.Join(os.TempDir(), header.Filename)
+	tempFile, err := os.Create(tempPath)
+	if err != nil {
+		logging.GetLogger().Error("Error creating temporary file: %v", err)
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		return
+	}
+	defer tempFile.Close()
+
+	// Copy uploaded binary to temporary file location
+	if _, err := io.Copy(tempFile, updateFile); err != nil {
+		logging.GetLogger().Error("Error moving binary to temporary file: %v", err)
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		return
+	}
+
+	// After verifying and saving the binary, initiate cluster-wide update
+	if err := h.InitiateBinaryUpdate(tempPath); err != nil {
+		logging.GetLogger().Error("Failed to initiate cluster update: %v", err)
+		// Don't return error to client since local update will proceed
+	}
+
+	// Schedule the update
+	go func() {
+		if err := h.updater.PerformUpdate(tempPath); err != nil {
+			logging.GetLogger().Error("Update failed: %v", err)
+		}
+	}()
+
+	w.WriteHeader(http.StatusOK)
+}
+
+// HandleBinaryUpdate handles HTTP binary rollback requests
+func (h *Handler) HandleBinaryRollback(w http.ResponseWriter, r *http.Request) {
+	logger := logging.GetLogger()
+
+	// Get rollback index from query parameter
+	indexStr := r.URL.Query().Get("index")
+	if indexStr == "" {
+		logger.Error("No rollback index provided")
+		http.Error(w, "Rollback index required", http.StatusBadRequest)
+		return
+	}
+
+	// Convert string to integer
+	index, err := strconv.Atoi(indexStr)
+	if err != nil {
+		logger.Error("Invalid rollback index: %v", err)
+		http.Error(w, "Invalid rollback index", http.StatusBadRequest)
+		return
+	}
+
+	currentBinaryPath, err := os.Executable()
+	if err != nil {
+		logger.Error("Failed to get current binary path: %v", err)
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		return
+	}
+
+	go func() {
+		if err := h.updater.PerformRollback(currentBinaryPath, index); err != nil {
+			logger.Error("Rollback failed: %v", err)
+		}
+	}()
+
+	w.WriteHeader(http.StatusOK)
+}
+
+// InitiateBinaryUpdate starts a cluster-wide binary update process
+func (h *Handler) InitiateBinaryUpdate(newBinaryPath string) error {
+	logger := logging.GetLogger()
+
+	// Generate update metadata
+	hash, size, err := getBinaryMetadata(newBinaryPath)
+	if err != nil {
+		return fmt.Errorf("failed to get binary metadata: %w", err)
+	}
+
+	update := BinaryUpdate{
+		NodeID:     h.list.LocalNode().Name,
+		Time:       time.Now().UTC(),
+		BinaryHash: hash,
+		BinarySize: size,
+	}
+
+	// Broadcast to cluster members
+	data, err := json.Marshal(update)
+	if err != nil {
+		return fmt.Errorf("failed to marshal update: %w", err)
+	}
+
+	message := BinaryMessage{
+		Type:    UpdateBinary,
+		Payload: data,
+	}
+
+	messageData, err := json.Marshal(message)
+	if err != nil {
+		return fmt.Errorf("failed to marshal message: %w", err)
+	}
+
+	for _, node := range h.list.Members() {
+		if node.Name != h.list.LocalNode().Name {
+			// First send metadata
+			if err := h.list.SendReliable(node, messageData); err != nil {
+				logger.Error("Failed to send update metadata to node %s: %v", node.Name, err)
+				continue
+			}
+
+			// Then stream the binary in chunks
+			if err := h.streamBinaryToNode(node, newBinaryPath); err != nil {
+				logger.Error("Failed to stream binary to node %s: %v", node.Name, err)
+				continue
+			}
+		}
+	}
+
+	return nil
+}
+
+// streamBinaryToNode sends a binary file to a cluster node in chunks
+func (h *Handler) streamBinaryToNode(node *memberlist.Node, binaryPath string) error {
+	const chunkSize = 1024 * 1024 // 1MB chunks
+
+	file, err := os.Open(binaryPath)
+	if err != nil {
+		return fmt.Errorf("failed to open binary: %w", err)
+	}
+	defer file.Close()
+
+	buf := make([]byte, chunkSize)
+	var offset int64
+	for {
+		n, err := file.Read(buf)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return fmt.Errorf("failed to read binary: %w", err)
+		}
+
+		chunk := BinaryChunk{
+			Data:   buf[:n],
+			Offset: offset,
+			Final:  false,
+		}
+		offset += int64(n)
+
+		chunkData, err := json.Marshal(chunk)
+		if err != nil {
+			return fmt.Errorf("failed to marshal chunk: %w", err)
+		}
+
+		message := BinaryMessage{
+			Type:    UpdateChunk,
+			Payload: chunkData,
+		}
+
+		messageData, err := json.Marshal(message)
+		if err != nil {
+			return fmt.Errorf("failed to marshal message: %w", err)
+		}
+
+		if err := h.list.SendReliable(node, messageData); err != nil {
+			return fmt.Errorf("failed to send message: %w", err)
+		}
+	}
+
+	// Send final chunk to indicate completion
+	finalChunk := BinaryChunk{
+		Data:   nil,
+		Offset: offset,
+		Final:  true,
+	}
+	chunkData, err := json.Marshal(finalChunk)
+	if err != nil {
+		return fmt.Errorf("failed to marshal final chunk: %w", err)
+	}
+
+	if err := h.list.SendReliable(node, chunkData); err != nil {
+		return fmt.Errorf("failed to send final chunk: %w", err)
+	}
+
+	message := BinaryMessage{
+		Type:    UpdateChunk,
+		Payload: chunkData,
+	}
+
+	messageData, err := json.Marshal(message)
+	if err != nil {
+		return fmt.Errorf("failed to marshal message: %w", err)
+	}
+	if err := h.list.SendReliable(node, messageData); err != nil {
+		return fmt.Errorf("failed to send message: %w", err)
+	}
+
+	return nil
+}
+
+// getBinaryMetadata calculates hash and size of a binary file
+func getBinaryMetadata(path string) (hash string, size int64, err error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return "", 0, err
+	}
+	defer file.Close()
+
+	hasher := sha256.New()
+	size, err = io.Copy(hasher, file)
+	if err != nil {
+		return "", 0, err
+	}
+
+	return hex.EncodeToString(hasher.Sum(nil)), size, nil
 }

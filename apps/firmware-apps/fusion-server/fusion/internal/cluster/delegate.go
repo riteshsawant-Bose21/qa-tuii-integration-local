@@ -11,14 +11,16 @@ type ClusterDelegate struct {
 	nodeID       string
 	stateManager *server.StateManager
 	persistence  *server.ConfigPersistence
+	updater      *server.Updater
 	verbose      bool
 }
 
-func NewClusterDelegate(nodeID string, stateManager *server.StateManager, persistence *server.ConfigPersistence, verbose bool) *ClusterDelegate {
+func NewClusterDelegate(nodeID string, stateManager *server.StateManager, persistence *server.ConfigPersistence, updater *server.Updater, verbose bool) *ClusterDelegate {
 	return &ClusterDelegate{
 		nodeID:       nodeID,
 		stateManager: stateManager,
 		persistence:  persistence,
+		updater:      updater,
 		verbose:      verbose,
 	}
 }
@@ -47,14 +49,26 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 		return
 	}
 
+	logger := logging.GetLogger()
+
+	// Try to decode as binary message first
+	var binaryMsg server.BinaryMessage
+	if err := json.Unmarshal(msg, &binaryMsg); err == nil {
+		if err = d.updater.PerformRemoteUpdate(binaryMsg); err != nil {
+			logger.Error("PerformRemoteUpdate error: %v", err)
+		}
+		return
+	}
+
+	// Handle the config update next
 	var update api.ConfigUpdate
 	if err := json.Unmarshal(msg, &update); err != nil {
-		logging.GetLogger().Error("Error unmarshaling update: %v", err)
+		logger.Error("Error unmarshaling update: %v", err)
 		return
 	}
 
 	if err := d.stateManager.ApplyUpdate(update); err != nil {
-		logging.GetLogger().Error("Error applying update: %v", err)
+		logger.Error("Error applying update: %v", err)
 		return
 	}
 
@@ -66,7 +80,7 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 	}
 
 	if d.verbose {
-		logging.GetLogger().Debug("Applied update for key %s from node %s (version: %d)",
+		logger.Debug("Applied update for key %s from node %s (version: %d)",
 			updateKey, update.NodeID, update.Version)
 	}
 }
@@ -77,8 +91,10 @@ func (d *ClusterDelegate) GetBroadcasts(overhead, limit int) [][]byte {
 
 func (d *ClusterDelegate) LocalState(join bool) []byte {
 
+	logger := logging.GetLogger()
+
 	if d.verbose {
-		logging.GetLogger().Debug("LocalState requested (join=%v)", join)
+		logger.Debug("LocalState requested (join=%v)", join)
 	}
 
 	state := d.stateManager.GetFullState()
@@ -94,12 +110,12 @@ func (d *ClusterDelegate) LocalState(join bool) []byte {
 
 	data, err := json.Marshal(snapshot)
 	if err != nil {
-		logging.GetLogger().Error("Error marshaling local state: %v", err)
+		logger.Error("Error marshaling local state: %v", err)
 		return nil
 	}
 
 	if d.verbose {
-		logging.GetLogger().Debug("Providing local state with %d entries (version: %d)",
+		logger.Debug("Providing local state with %d entries (version: %d)",
 			len(state), snapshot.Version)
 	}
 	return data
@@ -110,8 +126,10 @@ func (d *ClusterDelegate) MergeRemoteState(buf []byte, join bool) {
 		return
 	}
 
+	logger := logging.GetLogger()
+
 	if d.verbose {
-		logging.GetLogger().Debug("MergeRemoteState called (join=%v, size=%d)", join, len(buf))
+		logger.Debug("MergeRemoteState called (join=%v, size=%d)", join, len(buf))
 	}
 
 	var snapshot struct {
@@ -121,12 +139,12 @@ func (d *ClusterDelegate) MergeRemoteState(buf []byte, join bool) {
 	}
 
 	if err := json.Unmarshal(buf, &snapshot); err != nil {
-		logging.GetLogger().Error("Error unmarshaling remote state: %v", err)
+		logger.Error("Error unmarshaling remote state: %v", err)
 		return
 	}
 
 	if d.verbose {
-		logging.GetLogger().Debug("Merging remote state from node %s with %d entries (version: %d)",
+		logger.Debug("Merging remote state from node %s with %d entries (version: %d)",
 			snapshot.NodeID, len(snapshot.State), snapshot.Version)
 	}
 	d.stateManager.MergeRemoteState(snapshot.State, snapshot.NodeID)

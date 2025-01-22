@@ -268,3 +268,19 @@ func (s *ConfigServer) HandleRoot(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set(contentType, jsonContentType)
 	json.NewEncoder(w).Encode(info)
 }
+
+func (s *ConfigServer) UpdateBinary(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	s.handler.HandleBinaryUpdate(w, r)
+}
+
+func (s *ConfigServer) RollbackBinary(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	s.handler.HandleBinaryRollback(w, r)
+}

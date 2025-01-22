@@ -19,7 +19,8 @@ all: deps build
 build:
 	mkdir -p $(BUILD_DIR)
 	cd fusion && CGO_ENABLED=0 GOOS=linux $(GOBUILD) $(BUILD_FLAGS) $(LDFLAGS) -o ../$(BUILD_DIR)/$(BINARY_NAME) -v ./cmd/fusion
-	
+	cd $(BUILD_DIR) && ln -sf $(BINARY_NAME) fusion-server
+
 clean:
 	$(GOCLEAN)
 	rm -rf $(BUILD_DIR)
@@ -39,19 +40,23 @@ tidy:
 build-linux-amd64:
 	mkdir -p $(BUILD_DIR)
 	cd fusion && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GOBUILD) $(BUILD_FLAGS) $(LDFLAGS) -o ../$(BUILD_DIR)/$(BINARY_NAME)_linux_amd64 -v ./cmd/fusion
+	cd $(BUILD_DIR) && ln -sf $(BINARY_NAME)_linux_amd64 fusion-server
 
 build-linux-arm32:
 	mkdir -p $(BUILD_DIR)
 	cd fusion && CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=7 $(GOBUILD) $(BUILD_FLAGS) $(LDFLAGS) -o ../$(BUILD_DIR)/$(BINARY_NAME)_linux_arm32 -v ./cmd/fusion
+	cd $(BUILD_DIR) && ln -sf $(BINARY_NAME)_linux_arm32 fusion-server
 
 build-linux-arm64:
 	mkdir -p $(BUILD_DIR)
 	cd fusion && CGO_ENABLED=0 GOOS=linux GOARCH=arm64 $(GOBUILD) $(BUILD_FLAGS) $(LDFLAGS) -o ../$(BUILD_DIR)/$(BINARY_NAME)_linux_arm64 -v ./cmd/fusion
+	cd $(BUILD_DIR) && ln -sf $(BINARY_NAME)_linux_arm64 fusion-server
 
 build-darwin-arm64:
 	mkdir -p $(BUILD_DIR)
 	cd fusion && CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 $(GOBUILD) $(BUILD_FLAGS) $(DEBUG_FLAGS) -o ../$(BUILD_DIR)/$(BINARY_NAME)_darwin_arm64 -v ./cmd/fusion
-
+	cd $(BUILD_DIR) && ln -sf $(BINARY_NAME)_darwin_arm64 fusion-server
+	
 # Development helpers
 fmt:
 	cd fusion && go fmt ./...
