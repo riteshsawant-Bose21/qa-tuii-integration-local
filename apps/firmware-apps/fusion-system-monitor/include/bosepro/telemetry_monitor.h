@@ -555,9 +555,7 @@ public:
         try {
             // Write the telemetry message into the shared memory region
             NamedSharedMemory& shm = shm_manager.getSharedMemory(shm_names[region_index]);
-            shm.softResetWritePointer();
             shm.lightWeightWrite(cb_data.message.c_str(), cb_data.message.length());
-            shm.writeNumberBytesToSharedMemory();
 
         } catch (const std::runtime_error& e) {
             SPDLOG_ERROR("Error accessing shared memory: {}", e.what());
@@ -727,6 +725,8 @@ private:
             return;
         }
 
+        shm.softResetWritePointer();
+
         for (auto &m: meters)
         {
             if (m.second->get_period_type() == period_type)
@@ -734,6 +734,8 @@ private:
                 m.second->send_meters(meters_callback);
             }
         }
+
+        shm.writeNumberBytesToSharedMemory();
 
         TelemetryMessage rsp = telemetry_messages->get_default_command("update_meters_rsp");
         rsp.get_parameters().set_value("OK");
