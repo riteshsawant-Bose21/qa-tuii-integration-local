@@ -550,10 +550,14 @@ public:
             return;
         }
 
+        
+
         try {
             // Write the telemetry message into the shared memory region
             NamedSharedMemory& shm = shm_manager.getSharedMemory(shm_names[region_index]);
+            shm.softResetWritePointer();
             shm.lightWeightWrite(cb_data.message.c_str(), cb_data.message.length());
+            shm.writeNumberBytesToSharedMemory();
 
         } catch (const std::runtime_error& e) {
             SPDLOG_ERROR("Error accessing shared memory: {}", e.what());
@@ -653,7 +657,9 @@ private:
         for (size_t i = 0; i < shm_names.size(); ++i) {
             if (block_size[i] > 0) {
                 try {
-                    shm_manager.openSharedMemory(shm_names[i]);
+                    NamedSharedMemory &shm = shm_manager.openSharedMemory(shm_names[i]);
+                    shm.setPersonalityAsWriter();
+                    
                     SPDLOG_TRACE("Found shared memory region {} with size {}", shm_names[i], block_size[i]);
                 } catch (const std::runtime_error& e) {
                     SPDLOG_CRITICAL("Failed to create shared memory: {}", e.what());

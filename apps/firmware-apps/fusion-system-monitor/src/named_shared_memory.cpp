@@ -32,14 +32,6 @@ NamedSharedMemory::NamedSharedMemory(const char* name, std::size_t size, bool cr
         }
         region_ = mapped_region(shm_, read_write);
 
-         // Print the address
-         if (create) {
-            std::cout << "Address of shared memory in creator's address space: " << region_.get_address() << std::endl;
-         }
-         else {
-            std::cout << "Address of shared memory in non-creator's address space: " << region_.get_address() << std::endl;
-         }
-
 
         // Create or open the metadata shared memory region
         std::string metadataName = std::string(name) + "_metadata";
@@ -50,14 +42,6 @@ NamedSharedMemory::NamedSharedMemory(const char* name, std::size_t size, bool cr
             metadataShm_ = shared_memory_object(open_only, metadataName.c_str(), read_write);
         }
         metadataRegion_ = mapped_region(metadataShm_, read_write);
-        // Print the address
-         if (create) {
-            std::cout << "Address of metadata shared memory in creator's address space: " << metadataRegion_.get_address() << std::endl;
-         }
-         else {
-            std::cout << "Address of metadata shared memory in non-creator's address space: " << metadataRegion_.get_address() << std::endl;
-         }
-
 
         // Initialize shared mutex
         sharedMutex_ = static_cast<pthread_mutex_t*>(metadataRegion_.get_address());
@@ -104,12 +88,10 @@ NamedSharedMemory::NamedSharedMemory(const char* name)
         // Open the shared memory object
         shm_ = shared_memory_object(open_only, name, read_write);
         region_ = mapped_region(shm_, read_write);
-        std::cout << "Address of shared memory in non-creator's address space: " << region_.get_address() << std::endl;
 
          std::string metadataName = std::string(name) + "_metadata";
         metadataShm_ = shared_memory_object(open_only, metadataName.c_str(), read_write);
         metadataRegion_ = mapped_region(metadataShm_, read_write);
-        std::cout << "Address of metadata shared memory in non-creator's address space: " << metadataRegion_.get_address() << std::endl;
 
         // Point to the mutex address in the meta data shared memory
         void* metadataAddress = metadataRegion_.get_address();
