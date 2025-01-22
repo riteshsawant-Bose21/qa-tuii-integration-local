@@ -1,4 +1,6 @@
-#include <bosepro/NamedSharedMemoryManagerFactory.h>
+#include <bosepro/named_shared_memory_manager_factory.h>
+
+using namespace bosepro;
 
 // Static member definitions
 //NamedSharedMemoryManager* NamedSharedMemoryManagerFactory::instance_ = nullptr;

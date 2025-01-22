@@ -16,13 +16,6 @@
                     "value_type": "bool", 
                     "telemetry_type": "event",
                     "period_type": "N/A"
-                },
-                { 
-                    "name": "test", 
-                    "dimensions": [3], 
-                    "value_type": "bool", 
-                    "telemetry_type": "meter",
-                    "period_type": "HI"  
                 }
             ]
         },
@@ -67,6 +60,66 @@
                 { 
                     "name": "usb_connected", 
                     "dimensions": 0, 
+                    "value_type": "bool", 
+                    "telemetry_type": "event",
+                    "period_type": "N/A"
+                }
+            ]
+        },
+        {
+            "name": "io_card",
+            "properties": [
+                {
+                    "name": "type",
+                    "value_type": "integer",
+                    "default_value": 0,
+                    "minimum_value": 0,
+                    "maximum_value": 32
+                },
+                {
+                    "name": "slot",
+                    "value_type": "integer",
+                    "default_value": 0,
+                    "minimum_value": 0,
+                    "maximum_value": 16
+                },
+                {
+                    "name": "input_channels",
+                    "value_type": "integer",
+                    "default_value": 1,
+                    "minimum_value": 1,
+                    "maximum_value": 32
+                },
+                {
+                    "name": "output_channels",
+                    "value_type": "integer",
+                    "default_value": 1,
+                    "minimum_value": 1,
+                    "maximum_value": 32
+                },
+                {
+                    "name": "parameter_paths",
+                    "value_type": "string",
+                    "default_value": "",
+                    "minimum_value": 0,
+                    "maximum_value": 16
+                }
+            ],
+            "parameters": [
+                {
+                    "name": "read_id",
+                    "value_type": "string",
+                    "default_value": ""
+                },
+                {
+                    "name": "phantom_power",
+                    "value_type": "bool",
+                    "default_value": false
+                }
+            ],
+            "telemetry": [
+                {
+                    "name": "phantom_power",
                     "value_type": "bool", 
                     "telemetry_type": "event",
                     "period_type": "N/A"

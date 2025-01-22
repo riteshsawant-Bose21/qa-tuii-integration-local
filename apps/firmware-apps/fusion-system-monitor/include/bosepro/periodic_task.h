@@ -28,10 +28,6 @@ public:
         // Use this task's region manager while allocating blocks within the task.
         region_manager.open_region();
 
-        if (configuration.has_property("cpu_affinity")) {
-            configuration.get_property("cpu_affinity").get_value(cpu_affinity);
-        }
-
         if (configuration.has_property("period_ms")) {
             configuration.get_property("period_ms").get_value(period_ms);
         }

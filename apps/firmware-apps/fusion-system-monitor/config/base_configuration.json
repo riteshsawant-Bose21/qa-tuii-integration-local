@@ -13,8 +13,7 @@
                     "module": "cpu_usage",
                     "telemetry": [
                         { "name": "cpu" },
-                        { "name": "high_cpu_usage" },
-                        { "name": "test" }
+                        { "name": "high_cpu_usage" }
                     ]
                 },
                 {

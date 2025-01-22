@@ -1,26 +1,15 @@
 #ifndef NAMED_SHARED_MEMORY_H
 #define NAMED_SHARED_MEMORY_H
 
-
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
 #include <pthread.h>
 #include <string>
 #include <vector>
 #include <functional>
+#include <bosepro/named_shared_memory_utility.h>
 
-// Maximum number of WriteBlock elements
-#define MAX_WRITE_BLOCKS 100
-
-/**
- * @struct WriteBlock
- * Represents metadata for each write operation in shared memory.
- */
-struct WriteBlock {
-    std::string type;   // Type of the written data
-    std::size_t length; // Length of the data in bytes
-    void* pointer;      // Pointer to the written value in shared memory
-};
+namespace bosepro {
 
 /**
  * @class NamedSharedMemory
@@ -29,28 +18,22 @@ struct WriteBlock {
  */
 class NamedSharedMemory {
 public:
-    NamedSharedMemory(const std::string& name, std::size_t size, bool create = true);
-    NamedSharedMemory(const std::string& name);
+
+    static constexpr std::size_t META_DATA_SHM_LENGTH = Metadata::META_DATA_MAX_SIZE + sizeof(pthread_mutex_t*);
+
+
+    NamedSharedMemory(const char* name, std::size_t size, bool create = true);
+    NamedSharedMemory(const char* name);
     ~NamedSharedMemory();
 
     void write(const void* data, std::size_t size, const std::string& type);
-    void read(void* buffer, std::size_t size) const;
+    void lightWeightWrite(const void* data, std::size_t size);
 
-    /**
-     * Writes data and metadata to the shared memory in a single operation.
-     * @param data Pointer to the data to be written.
-     * @param size Size of the data in bytes.
-     * @param type A string representing the type of data (e.g., "int", "string", "json").
-     */
-    void writeFullStateToSharedMemory(const void* data, std::size_t size, const std::string& type);
+    std::size_t read(void* buffer, std::size_t bufferSize);
 
-    /**
-     * Writes data and metadata to the shared memory in a single operation.
-     * @param data Pointer to the data to be written.
-     * @param size Size of the data in bytes.
-     * @param type A string representing the type of data (e.g., "int", "string", "json").
-     */
-    void writeMinimalStateToSharedMemory(const void* data, std::size_t size, const std::string& type);    
+    void setPersonalityAsReader();
+    void setPersonalityAsWriter();
+    bool isReader() const;
 
 
     /**
@@ -59,7 +42,8 @@ public:
      * - Reads the data into the provided buffer.
      * @param buffer Pointer to the buffer to store the read data.
      */
-    void readFullStateFromSharedMemory(void* buffer);
+
+    std::size_t readFullStateFromSharedMemory(void* buffer, std::size_t bufferSize);
 
     /**
      * Reads metadata from shared memory and updates the relevant members.
@@ -70,6 +54,7 @@ public:
      * Writes the current metadata to the shared memory metadata region.
      */
     void writeMetaDataToSharedMemory();
+
 
     /**
      * Reads totalBytesWritten from the metadata in shared memory and updates the relevant member.
@@ -111,12 +96,6 @@ public:
      */
     std::size_t getTotalBytesWritten() const;
 
-    /**
-     * Gets the total number of bytes written to the shared memory.
-     * @return The total bytes written.
-     */
-    std::size_t getTotalBytesPresentInSHM() const;
-    
 
     /**
      * Gets the metadata for all write operations.
@@ -124,21 +103,31 @@ public:
      */
     const std::vector<WriteBlock>& getWriteBlocks() const;
 
+    /**
+     * Prints the value pointed to by each element of the writeBlocks_ vector.
+     * The type of each value is interpreted based on WriteBlock::type.
+     */
+    void printWriteBlocksValues() const;
+
    // Friend function  to access sharedMutex_ for synchronization
-    friend void accessSharedMemoryWithMutex(NamedSharedMemory& sharedMemory, const std::function<void()>& action);    
+    friend void accessSharedMemoryWithMutex(NamedSharedMemory& sharedMemory, const std::function<void()>& action);
 
 private:
-    std::string name_;                        // Name of the shared memory
-    std::size_t size_;                        // Total size of the shared memory in bytes
-    std::size_t totalBytesWritten_;           // Total bytes written to the shared memory
+    Metadata metaData;
     std::size_t totalBytesPresentInSHM_;           // Total bytes written to the shared memory by external producer
     boost::interprocess::shared_memory_object shm_; // Boost shared memory object
     boost::interprocess::mapped_region region_;     // Boost mapped region for accessing memory
-    std::vector<WriteBlock> writeBlocks_;     // Metadata for all write operations
 
     boost::interprocess::shared_memory_object metadataShm_; // Metadata shared memory
     boost::interprocess::mapped_region metadataRegion_;     // Metadata mapped region
     pthread_mutex_t* sharedMutex_; // Process-shared mutex
+
+    bool isReaderObject; //NamedSharedMemory can have personality of producer or consumer at a given time, not both
+
+
+
 };
+
+}
 
 #endif // NAMED_SHARED_MEMORY_H

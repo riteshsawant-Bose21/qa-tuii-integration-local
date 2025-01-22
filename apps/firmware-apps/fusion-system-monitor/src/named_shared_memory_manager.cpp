@@ -1,5 +1,7 @@
-#include <bosepro/NamedSharedMemoryManager.h>
+#include <bosepro/named_shared_memory_manager.h>
 #include <mutex>
+
+using namespace bosepro;
 
 // Static member definitions
 std::set<std::string> NamedSharedMemoryManager::globalSharedMemoryNames_;
@@ -19,7 +21,7 @@ NamedSharedMemory& NamedSharedMemoryManager::createSharedMemory(const std::strin
         throw std::runtime_error("Shared memory with this name already exists in the current manager: " + name);
     }
 
-    auto newSharedMemory = std::make_unique<NamedSharedMemory>(name, size);
+    auto newSharedMemory = std::make_unique<NamedSharedMemory>(name.c_str(), size);
 
     {
         std::lock_guard<std::mutex> lock(globalMutex_);
@@ -44,7 +46,7 @@ NamedSharedMemory& NamedSharedMemoryManager::openSharedMemory(const std::string&
 
     // Attempt to open the shared memory region
     try {
-        sharedMemoryMap_[name] = std::make_unique<NamedSharedMemory>(name);
+        sharedMemoryMap_[name] = std::make_unique<NamedSharedMemory>(name.c_str());
         return *sharedMemoryMap_[name];
     } catch (const std::exception& e) {
         throw std::runtime_error("Failed to open shared memory region '" + name + "': " + std::string(e.what()));

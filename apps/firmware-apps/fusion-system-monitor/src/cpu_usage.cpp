@@ -20,7 +20,6 @@ public:
 private:
     float cpu;
     bool  high_cpu_usage;
-    bosepro::DspTelemetryMemory<bool[]> test;
     uint64_t idle_time;
     uint64_t total_time;
 
@@ -37,7 +36,6 @@ CpuUsage::CpuUsage(const bosepro::BlockConfiguration &configuration)
 {
     assign_telemetry("cpu", &cpu, nullptr);
     assign_telemetry("high_cpu_usage", &high_cpu_usage, nullptr);
-    assign_telemetry("test", test, nullptr);
 }
 
 bool CpuUsage::parse_cpu_stats()

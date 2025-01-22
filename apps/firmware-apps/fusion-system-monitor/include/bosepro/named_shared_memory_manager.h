@@ -1,7 +1,7 @@
 #ifndef NAMED_SHARED_MEMORY_MANAGER_H
 #define NAMED_SHARED_MEMORY_MANAGER_H
 
-#include <bosepro/NamedSharedMemory.h>
+#include <bosepro/named_shared_memory.h>
 #include <map>
 #include <memory>
 #include <string>
@@ -9,6 +9,8 @@
 #include <set>
 #include <vector>
 #include <mutex>
+
+namespace bosepro {
 
 /**
  * @class NamedSharedMemoryManager
@@ -85,5 +87,7 @@ private:
     static std::set<std::string> globalSharedMemoryNames_;                     // Global set of shared memory names
     static std::mutex globalMutex_;                                           // Mutex for thread-safe access to global names
 };
+
+}
 
 #endif // NAMED_SHARED_MEMORY_MANAGER_H

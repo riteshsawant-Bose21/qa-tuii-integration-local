@@ -1,7 +1,7 @@
 #pragma once
 
 #include <bosepro/telemetry.h>
-#include <bosepro/NamedSharedMemoryManagerFactory.h>
+#include <bosepro/named_shared_memory_manager_factory.h>
 
 #include <string>
 #include <functional>
@@ -550,12 +550,14 @@ public:
             return;
         }
 
-        try {
+        try 
+        {
             // Write the telemetry message into the shared memory region
             NamedSharedMemory& shm = shm_manager.getSharedMemory(shm_names[region_index]);
-            shm.writeMinimalStateToSharedMemory(cb_data.message.c_str(), cb_data.message.length(), "string");
+            shm.lightWeightWrite(cb_data.message.c_str(), cb_data.message.length());
 
-        } catch (const std::runtime_error& e) {
+        } 
+        catch (const std::runtime_error& e) {
             SPDLOG_ERROR("Error accessing shared memory: {}", e.what());
         }
     }
@@ -614,6 +616,8 @@ private:
         req.get_parameters().set_block_size(block_size);
         req.set_packet_id();
 
+        SPDLOG_TRACE("Sending registration req: \n\n{}", req.serialize_message());
+
         // Send the registration request
         if (!send_message(req))
         {
@@ -637,7 +641,7 @@ private:
             rsp.get_parameters().get_value() == "OK" && 
             rsp.get_packet_id() == req.get_packet_id())
         {
-            SPDLOG_INFO("Received valid registration rsp: \n\n{}", rsp.serialize_message());
+            SPDLOG_TRACE("Received valid registration rsp: \n\n{}", rsp.serialize_message());
         }
         else
         {
@@ -651,8 +655,10 @@ private:
         for (size_t i = 0; i < shm_names.size(); ++i) {
             if (block_size[i] > 0) {
                 try {
-                    shm_manager.getSharedMemory(shm_names[i]);
-                    SPDLOG_INFO("Found shared memory region {}", shm_names[i]);
+                    NamedSharedMemory &shm = shm_manager.openSharedMemory(shm_names[i]);
+                    shm.setPersonalityAsWriter();
+                    
+                    SPDLOG_TRACE("Found shared memory region {} with size {}", shm_names[i], block_size[i]);
                 } catch (const std::runtime_error& e) {
                     SPDLOG_CRITICAL("Failed to create shared memory: {}", e.what());
                     return false;
@@ -719,19 +725,31 @@ private:
             return;
         }
 
+        NamedSharedMemory& shm = shm_manager.getSharedMemory(shm_names[region_index]);
+        shm.softResetWritePointer();
+
         for (auto &m: meters)
         {
             if (m.second->get_period_type() == period_type)
-            {
-                m.second->send_meters(meters_callback);
+            {   
+                try 
+                {
+                    m.second->send_meters(meters_callback);
+                } 
+                catch (const std::runtime_error& e) 
+                {
+                    SPDLOG_ERROR("Error accessing shared memory: {}", e.what());
+                }
             }
         }
+
+        shm.writeNumberBytesToSharedMemory();
 
         TelemetryMessage rsp = telemetry_messages->get_default_command("update_meters_rsp");
         rsp.get_parameters().set_value("OK");
         rsp.set_packet_id(req.get_packet_id());
 
-        SPDLOG_DEBUG("Sending response: \n{}", rsp.serialize_message());
+        SPDLOG_TRACE("Sending response: \n{}", rsp.serialize_message());
 
         if (!send_message(rsp))
         {
@@ -804,7 +822,7 @@ private:
             }
             error_timeout = 0;
 
-            SPDLOG_INFO("Received message from telemetry manager: \n{}", message.serialize_message());
+            SPDLOG_TRACE("Received message from telemetry manager: \n{}", message.serialize_message());
 
             try
             {
