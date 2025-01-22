@@ -411,7 +411,11 @@ public:
         message << " \"dimensions\": [0],"; // Scalar telemetry
         message << " \"value\": ";
 
-        this->print_value(message, *block_value);
+        std::ostringstream val; 
+        this->print_value(val, *block_value);
+        message << val.str();
+
+        SPDLOG_DEBUG("Writing meter {}:{} = {}", this->get_block_name(), this->get_name(), val.str());
 
         message << " }\n";
 
@@ -610,8 +614,11 @@ public:
 
         for (int row = 0; row < this->get_num_rows() - 1; row++)
         {
-            this->print_value(message, block_value[row]);
-            message << ", ";
+            std::ostringstream val; 
+            this->print_value(val, block_value[row]);
+            message << val.str() << ", ";
+
+            SPDLOG_DEBUG("Writing meter {}:{} = {}", this->get_block_name(), this->get_name(), val.str());
         }
         this->print_value(message, block_value[this->get_num_rows() - 1]);
         message << "]";
@@ -834,7 +841,11 @@ public:
         {
             for (int col = 0; col < this->get_num_columns() - 1; col++)
             {
-                this->print_value(message, block_value[row][col]);
+                std::ostringstream val;
+                this->print_value(val, block_value[row][col]);
+                message << val.str();
+
+                SPDLOG_DEBUG("Writing meter {}:{} = {}", this->get_block_name(), this->get_name(), val.str());
             }
 
             this->print_value(message,

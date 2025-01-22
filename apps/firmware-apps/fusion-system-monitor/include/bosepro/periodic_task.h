@@ -32,6 +32,7 @@ public:
             configuration.get_property("period_ms").get_value(period_ms);
         }
 
+        SPDLOG_DEBUG("Periodic task {} has period {}ms", configuration.get_name(), period_ms);
         period_ns = period_ms == 0 ? 0 : period_ms * 1'000'000; // Convert ms to nanoseconds
 
         // Create all of the blocks in the task.
@@ -121,8 +122,8 @@ private:
     std::map<std::string, Module *> block_map; // Map of block names to Module pointers
 
     int_fast32_t cpu_affinity; // CPU affinity for the task
-    int_fast32_t period_ms;    // Period in milliseconds
-    int_fast32_t period_ns;    // Period in nanoseconds
+    uint32_t period_ms;    // Period in milliseconds
+    uint32_t period_ns;    // Period in nanoseconds
 
     std::thread task_thread;       // Periodic task thread
 };
