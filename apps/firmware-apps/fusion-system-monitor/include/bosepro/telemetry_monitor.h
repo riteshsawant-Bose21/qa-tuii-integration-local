@@ -550,14 +550,14 @@ public:
             return;
         }
 
-        
-
-        try {
+        try 
+        {
             // Write the telemetry message into the shared memory region
             NamedSharedMemory& shm = shm_manager.getSharedMemory(shm_names[region_index]);
             shm.lightWeightWrite(cb_data.message.c_str(), cb_data.message.length());
 
-        } catch (const std::runtime_error& e) {
+        } 
+        catch (const std::runtime_error& e) {
             SPDLOG_ERROR("Error accessing shared memory: {}", e.what());
         }
     }
@@ -725,13 +725,21 @@ private:
             return;
         }
 
+        NamedSharedMemory& shm = shm_manager.getSharedMemory(shm_names[region_index]);
         shm.softResetWritePointer();
 
         for (auto &m: meters)
         {
             if (m.second->get_period_type() == period_type)
-            {
-                m.second->send_meters(meters_callback);
+            {   
+                try 
+                {
+                    m.second->send_meters(meters_callback);
+                } 
+                catch (const std::runtime_error& e) 
+                {
+                    SPDLOG_ERROR("Error accessing shared memory: {}", e.what());
+                }
             }
         }
 
