@@ -34,8 +34,8 @@ CpuUsage::CpuUsage(const bosepro::BlockConfiguration &configuration)
     : bosepro::Module(configuration),
       idle_time(0), total_time(0)
 {
-    assign_telemetry("cpu", &cpu, nullptr);
-    assign_telemetry("high_cpu_usage", &high_cpu_usage, nullptr);
+    assign_telemetry("cpu", &cpu);
+    assign_telemetry("high_cpu_usage", &high_cpu_usage);
 }
 
 bool CpuUsage::parse_cpu_stats()

@@ -46,12 +46,12 @@ SpaceUsage::SpaceUsage(const bosepro::BlockConfiguration &configuration)
       emmc_usage(0.0f), high_emmc_usage(false),
       usb_storage_usage(0.0f), usb_connected(false)
 {
-    assign_telemetry("ram", &ram_usage, nullptr);
-    assign_telemetry("high_ram_usage", &high_ram_usage, nullptr);
-    assign_telemetry("emmc", &emmc_usage, nullptr);
-    assign_telemetry("high_emmc_usage", &high_emmc_usage, nullptr);
-    assign_telemetry("usb_storage", &usb_storage_usage, nullptr);
-    assign_telemetry("usb_connected", &usb_connected, nullptr);
+    assign_telemetry("ram", &ram_usage);
+    assign_telemetry("high_ram_usage", &high_ram_usage);
+    assign_telemetry("emmc", &emmc_usage);
+    assign_telemetry("high_emmc_usage", &high_emmc_usage);
+    assign_telemetry("usb_storage", &usb_storage_usage);
+    assign_telemetry("usb_connected", &usb_connected);
 }
 
 bool SpaceUsage::parse_memory_info()

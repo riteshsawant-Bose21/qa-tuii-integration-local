@@ -136,6 +136,7 @@ int main(int argc, char *argv[])
 
     telemetry_monitor.initialize(vm["telemetry-messages"].as<std::string>(), telem_configuration.get_socket_path());
     telemetry_monitor.start();
+    session.start();
 
     while(1)
     {
