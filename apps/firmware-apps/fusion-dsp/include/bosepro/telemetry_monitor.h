@@ -210,7 +210,8 @@ public:
           serverpath(""),
           shm_names(NUM_SHM_REGIONS, ""),
           telemetry_manager_addr(),
-          timeout(5)
+          timeout(5),
+          initialized(false)
     {
     }
 
@@ -274,24 +275,31 @@ public:
             if (++n >= timeout)
             {
                 SPDLOG_CRITICAL("Telemetry Manager UDS does NOT exist at {}", serverpath);
+                return;
             }
         }
 
         if (!register_with_telemetry_manager())
         {
             SPDLOG_CRITICAL("Failed to register with Telemetry Manager");
+            return;
         }
 
         setup_callbacks();
+
+        initialized = true;
     }
 
 
     /// Start the threads.
     void start() 
     {
-        SPDLOG_INFO("Starting TelemetryMonitor thread...");
-        monitor_thread = std::thread(&TelemetryMonitor::monitor_loop, this);
-        events_thread = std::thread(&TelemetryMonitor::manage_events_loop, this);
+        if (initialized)
+        {
+            SPDLOG_INFO("Starting TelemetryMonitor thread...");
+            monitor_thread = std::thread(&TelemetryMonitor::monitor_loop, this);
+            events_thread = std::thread(&TelemetryMonitor::manage_events_loop, this);
+        }
     }
 
 
