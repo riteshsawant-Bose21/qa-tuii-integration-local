@@ -113,7 +113,6 @@ public:
 
 private:
     Metadata metaData;
-    std::size_t totalBytesPresentInSHM_;           // Total bytes written to the shared memory by external producer
     boost::interprocess::shared_memory_object shm_; // Boost shared memory object
     boost::interprocess::mapped_region region_;     // Boost mapped region for accessing memory
 
