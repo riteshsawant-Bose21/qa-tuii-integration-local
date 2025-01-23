@@ -11,7 +11,6 @@
 
 namespace bosepro {
 
-class Algorithm;
 
 /// A class for managing the data of a parameter.
 class Parameter {
@@ -23,7 +22,7 @@ public:
     /// @param  configuration  The configuration of the block owning the
     ///     parameter.
     Parameter(const ParameterDefinition &definition,
-              const AlgorithmDefinition &algorithm,
+              const ProcessorDefinition &processor,
               const BlockConfiguration *configuration)
     {
         value_type = definition.get_value_type();
@@ -40,7 +39,7 @@ public:
 
             if (!rows_name.empty())
             {
-                if (algorithm.has_property(rows_name))
+                if (processor.has_property(rows_name))
                 {
                     if (configuration->has_property(rows_name))
                     {
@@ -51,11 +50,11 @@ public:
                     else
                     {
                         const PropertyDefinition &pd =
-                            algorithm.get_property(rows_name);
+                            processor.get_property(rows_name);
                         pd.get_default_value(num_rows);
                     }
                 }
-                else if (algorithm.has_terminal(rows_name))
+                else if (processor.has_terminal(rows_name))
                 {
                     if (configuration->has_terminal(rows_name))
                     {
@@ -68,7 +67,7 @@ public:
 
             if (!columns_name.empty())
             {
-                if (algorithm.has_property(columns_name))
+                if (processor.has_property(columns_name))
                 {
                     if (configuration->has_property(columns_name))
                     {
@@ -79,11 +78,11 @@ public:
                     else
                     {
                         const PropertyDefinition &pd =
-                            algorithm.get_property(columns_name);
+                            processor.get_property(columns_name);
                         pd.get_default_value(num_columns);
                     }
                 }
-                else if (algorithm.has_terminal(columns_name))
+                else if (processor.has_terminal(columns_name))
                 {
                     if (configuration->has_terminal(columns_name))
                     {
@@ -112,7 +111,7 @@ public:
 
     /// Assign a pointer to store the value of a scalar parameter with a simple
     /// conversion function to convert from user-facing values to the internal
-    /// representation of the algorithm.
+    /// representation of the processor.
     ///
     /// @param  value  The pointer to store the value of the parameter.
     /// @param  conversion_function  A function to convert the value before it
@@ -140,7 +139,7 @@ public:
 
     /// Assign coefficient memory to store the values of a vector parameter with
     /// a simple conversion function to convert from user-facing values to the
-    /// internal representation of the algorithm.
+    /// internal representation of the processor.
     /// The memory will be re-sized to the length of the parameter.
     ///
     /// @param  value  The memory to store the values of the parameter.
@@ -171,7 +170,7 @@ public:
 
     /// Assign coefficient memory to store the values of a matrix parameter with
     /// a simple conversion function to convert from user-facing values to the
-    /// internal representation of the algorithm.
+    /// internal representation of the processor.
     /// The memory will be re-sized to the dimensions of the parameter.
     ///
     /// @param  value  The memory to store the values of the parameter.
@@ -234,7 +233,7 @@ public:
     ///     parameter.
     /// @return  A pointer to the created parameter object.
     static Parameter *create(const ParameterDefinition &definition,
-                             const AlgorithmDefinition &algorithm,
+                             const ProcessorDefinition &processor,
                              const BlockConfiguration *configuration);
 
 
@@ -256,9 +255,9 @@ public:
     /// @param  configuration  The configuration of the block owning the
     ///     parameter.
     ParameterData(const ParameterDefinition &definition,
-                  const AlgorithmDefinition &algorithm,
+                  const ProcessorDefinition &processor,
                   const BlockConfiguration *configuration)
-        : Parameter(definition, algorithm, configuration),
+        : Parameter(definition, processor, configuration),
           conversion_function(nullptr)
     {
         definition.get_default_value(default_value);
@@ -280,9 +279,9 @@ public:
     /// @param  configuration  The configuration of the block that owns the
     ///     parameter.
     ParameterDataScalar(const ParameterDefinition &definition,
-                        const AlgorithmDefinition &algorithm,
+                        const ProcessorDefinition &processor,
                         const BlockConfiguration *configuration)
-        : ParameterData<T>(definition, algorithm, configuration),
+        : ParameterData<T>(definition, processor, configuration),
           block_value(nullptr), post_function(nullptr)
     {
     }
@@ -300,7 +299,7 @@ public:
 
     /// Assign a pointer to store the value of a scalar parameter with a simple
     /// conversion function to convert from user-facing values to the internal
-    /// representation of the algorithm.
+    /// representation of the processor.
     ///
     /// @param  value  The pointer to store the value of the parameter.
     /// @param  conversion_function  A function to convert the value before it
@@ -378,9 +377,9 @@ public:
     /// @param  configuration  The configuration of the block owning the
     ///     parameter.
     ParameterDataVector(const ParameterDefinition &definition,
-                        const AlgorithmDefinition &algorithm,
+                        const ProcessorDefinition &processor,
                         const BlockConfiguration *configuration)
-        : ParameterData<T>(definition, algorithm, configuration),
+        : ParameterData<T>(definition, processor, configuration),
           block_value(nullptr), post_function(nullptr)
     {
     }
@@ -405,7 +404,7 @@ public:
 
     /// Assign coefficient memory to store the values of a vector parameter with
     /// a simple conversion function to convert from user-facing values to the
-    /// internal representation of the algorithm.
+    /// internal representation of the processor.
     /// The memory will be re-sized to the length of the parameter.
     ///
     /// @param  value  The memory to store the values of the parameter.
@@ -502,9 +501,9 @@ public:
     /// @param  configuration  The configuration for the block owning the
     ///     parameter.
     ParameterDataMatrix(const ParameterDefinition &definition,
-                        const AlgorithmDefinition &algorithm,
+                        const ProcessorDefinition &processor,
                         const BlockConfiguration *configuration)
-        : ParameterData<T>(definition, algorithm, configuration),
+        : ParameterData<T>(definition, processor, configuration),
           block_value(nullptr), post_function(nullptr)
     {
     }
@@ -531,7 +530,7 @@ public:
 
     /// Assign coefficient memory to store the values of a matrix parameter with
     /// a simple conversion function to convert from user-facing values to the
-    /// internal representation of the algorithm.
+    /// internal representation of the processor.
     /// The memory will be re-sized to the dimensions of the parameter.
     ///
     /// @param  value  The memory to store the values of the parameter.

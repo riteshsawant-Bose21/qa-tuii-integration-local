@@ -15,11 +15,11 @@ namespace bosepro {
 
 
 /// A class to manage universal algorithm parameters (gain, mute, bypass, and
-/// level meter) for output terminals.
+/// level telemetry) for output terminals.
 class TerminalOutputProcessor {
 public:
     TerminalOutputProcessor()
-        : smoothed_gain(), gain(), mute(), meter(), output_buffer(nullptr), bypass_buffer(nullptr),
+        : smoothed_gain(), gain(), mute(), telemetry(), output_buffer(nullptr), bypass_buffer(nullptr),
           frame_size(0), num_channels(0)
     { }
 
@@ -32,7 +32,7 @@ public:
     }
 
     /// Process the output signals of an output terminal to implement default
-    /// bypass, gain, and metering behavior.
+    /// bypass, gain, and telemetry behavior.
     void process()
     {
         // Bypass by copying inputs to outputs.
@@ -65,18 +65,18 @@ public:
             }
         }
 
-        // Calculate output peak meters.
-        if (has_meter())
+        // Calculate output peak telemetry.
+        if (has_telemetry())
         {
             for (int channel = 0; channel < num_channels; channel++)
             {
                 const float *pbuf = (const float *)output_buffer[channel];
-                meter[channel] = 0.0;
+                telemetry[channel] = 0.0;
 
                 for (int sample = 0; sample < frame_size; sample++)
                 {
                     float a = std::fabs(pbuf[sample]);
-                    meter[channel] = std::max(meter[channel], a);
+                    telemetry[channel] = std::max(telemetry[channel], a);
                 }
             }
         }
@@ -92,9 +92,9 @@ public:
         return mute;
     }
 
-    DspMeterMemory<float[]> &get_meter()
+    DspTelemetryMemory<float[]> &get_telemetry()
     {
-        return meter;
+        return telemetry;
     }
 
     bool *get_bypass()
@@ -126,15 +126,15 @@ private:
         return mute.get() != nullptr;
     }
 
-    bool has_meter() const
+    bool has_telemetry() const
     {
-        return meter.get() != nullptr;
+        return telemetry.get() != nullptr;
     }
 
     DspStateMemory<float[]> smoothed_gain;
     DspCoeffMemory<float[]> gain;
     DspCoeffMemory<bool[]> mute;
-    DspMeterMemory<float[]> meter;
+    DspTelemetryMemory<float[]> telemetry;
     float **output_buffer;
     const float **bypass_buffer;
     int_fast32_t frame_size;

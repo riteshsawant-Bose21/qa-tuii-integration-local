@@ -16,6 +16,7 @@ class PropertyConfiguration;
 class TerminalConfiguration;
 class BlockConnectionConfiguration;
 class TaskConnectionConfiguration;
+class TelemetryConfiguration;
 class ParameterSetting;
 
 
@@ -54,9 +55,9 @@ public:
     /// Test whether a list of tasks exists in this configuration.
     ///
     /// @return  True if the configuration contains a list of tasks.
-    bool has_tasks() const
+    bool has_audio_tasks() const
     {
-        return has_member("tasks");
+        return has_member("audio_tasks");
     }
 
 
@@ -65,9 +66,29 @@ public:
     /// exists before calling this function.
     ///
     /// @return  The list of tasks.
-    const TaskConfiguration &get_tasks() const
+    const TaskConfiguration &get_audio_tasks() const
     {
-        return (const TaskConfiguration &)get_member("tasks");
+        return (const TaskConfiguration &)get_member("audio_tasks");
+    }
+
+
+    /// Test whether a list of non-audio tasks exists in this configuration.
+    ///
+    /// @return  True if the configuration contains a list of tasks.
+    bool has_periodic_tasks() const
+    {
+        return has_member("periodic_tasks");
+    }
+
+
+    /// Get the list of non-audio tasks in this configuration.
+    /// The list of tasks must exist: use `has_tasks()` to test whether it
+    /// exists before calling this function.
+    ///
+    /// @return  The list of tasks.
+    const TaskConfiguration &get_periodic_tasks() const
+    {
+        return (const TaskConfiguration &)get_member("periodic_tasks");
     }
 
 
@@ -204,6 +225,31 @@ public:
     const std::string &get_algorithm() const
     {
         return get_string("algorithm");
+    }
+
+
+    /// Get the name of the algorithm to use for this block.
+    ///
+    /// @return  The name of the algorithm.
+    const std::string &get_module() const
+    {
+        return get_string("module");
+    }
+
+
+    /// Get the name of the processor to use for this block.
+    ///
+    /// @return  The name of the processor.
+    const std::string &get_processor() const
+    {
+        if (has_member("algorithm"))
+        {
+            return get_string("algorithm");
+        }
+        else
+        {
+            return get_string("module");
+        }
     }
 
 
@@ -423,6 +469,26 @@ public:
     int get_input_channel() const
     {
         return get_index("input_channel");
+    }
+};
+
+
+/// The configuration for telemetry services.
+class TelemetryConfiguration : public Configuration {
+public:
+    TelemetryConfiguration(const std::string& filename)
+        : Configuration(filename)
+    {
+    }
+    
+    /// Get the number of channels for this terminal.
+    ///
+    /// @return  The number of channels.
+    const std::string& get_socket_path() const
+    {
+        TelemetryConfiguration &socket_path((TelemetryConfiguration &)list_get_member("telemetry_configuration",
+                                                        "name", "socket_path"));
+        return socket_path.get_string("property");
     }
 };
 

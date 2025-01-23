@@ -60,17 +60,22 @@ protected:
 
     /// Get the definition for the named algorithm.
     ///
-    /// @param  algorithm_name  The name of the algorithm.
+    /// @param  name  The name of the algorithm or module.
     /// @return  The definition for the algorithm.
-    const AlgorithmDefinition *get_definition(const std::string &algorithm_name) const
+    const ProcessorDefinition *get_definition(const std::string &name) const
     {
-        if (!definitions->has_algorithm(algorithm_name))
+        if (definitions->has_algorithm(name))
         {
-            SPDLOG_CRITICAL("No definition available for algorithm '{}'.",
-                            algorithm_name);
+            return &definitions->get_algorithm(name);
+        }
+        else if (definitions->has_module(name))
+        {
+            return &definitions->get_module(name);
         }
 
-        return &definitions->get_algorithm(algorithm_name);
+        SPDLOG_CRITICAL("No definition available for algorithm/module '{}'.",
+                            name);
+        return nullptr;
     }
 
 

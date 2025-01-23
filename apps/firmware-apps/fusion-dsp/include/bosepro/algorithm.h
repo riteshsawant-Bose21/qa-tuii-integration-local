@@ -7,8 +7,8 @@
 #include <bosepro/parameter.h>
 #include <bosepro/definition.h>
 #include <bosepro/dspmemory.h>
-#include <bosepro/meter.h>
 #include <bosepro/terminal.h>
+#include <bosepro/telemetry_monitor.h>
 
 #include <cstdint>
 #include <functional>
@@ -28,7 +28,6 @@ struct AlgorithmMeta {
     const BlockConfiguration *configuration;
     std::map<std::string, std::unique_ptr<Terminal>> terminals;
     std::map<std::string, std::unique_ptr<Parameter>> parameters;
-    std::map<std::string, std::unique_ptr<Meter>> meters;
 };
 
 
@@ -42,7 +41,7 @@ public:
         : Configurable(configuration), output_process_count(0)
     {
         meta->configuration = &configuration;
-        meta->definition = get_definition(configuration.get_algorithm());
+        meta->definition = static_cast<const AlgorithmDefinition*>(get_definition(configuration.get_algorithm()));
 
         // There is no need to create property data, because we just look it
         // up from the algorithm's property definitions and the configuration.
@@ -72,24 +71,26 @@ public:
 
                 meta->parameters[name] =
                     std::unique_ptr<Parameter>(Parameter::create(pd,
-                                                                 *meta->definition,
+                                                                 static_cast<const ProcessorDefinition&>(*meta->definition),
                                                                  meta->configuration));
             }
         }
 
-        // Create the meter data for all of the meters in the algorithm.
-        if (meta->definition->has_meters())
+        // Create the meter data for all of the telemetry in the algorithm.
+        if (meta->definition->has_telemetry())
         {
-            for (auto &m: meta->definition->get_meters())
+            for (auto &m : meta->definition->get_telemetry())
             {
-                const MeterDefinition &md =
-                    reinterpret_cast<const MeterDefinition &>(m.second);
-                const std::string &name = md.get_name();
+                const TelemetryDefinition &md = reinterpret_cast<const TelemetryDefinition &>(m.second);
+                std::unique_ptr<Telemetry> telemetry = 
+                std::unique_ptr<Telemetry>(Telemetry::create(md,
+                                                             static_cast<const ProcessorDefinition&>(*meta->definition),
+                                                             meta->configuration));
 
-                meta->meters[name] =
-                    std::unique_ptr<Meter>(Meter::create(md,
-                                                         *meta->definition,
-                                                         meta->configuration));
+                telemetry->set_block_name(this->get_block_name());
+
+                // Delegate the telemetry registration to the TelemetryMonitor
+                TelemetryMonitor::get_instance().register_telemetry(std::move(telemetry));
             }
         }
 
@@ -105,11 +106,11 @@ public:
             {
                 const std::string gain_name = name + "_gain";
                 const std::string mute_name = name + "_mute";
-                const std::string meter_name = name + "_meter";
+                const std::string meter_name = this->get_block_name() + "::" + name + "_meter";
 
                 if ((meta->parameters.count(gain_name) != 0)
                     || (meta->parameters.count(mute_name) != 0)
-                    || (meta->meters.count(meter_name) != 0)
+                    || (TelemetryMonitor::get_instance().has_meter(meter_name) != 0)
                     || (td.has_bypass_source()
                         && (meta->parameters.count("bypass") != 0)))
                 {
@@ -121,7 +122,7 @@ public:
         outputs_to_process.resize(output_process_count);
         int top_index = 0;
 
-        // Assign universal parameters and meters to the associated output
+        // Assign universal parameters and meter to the associated output
         // terminals.
         for (auto &t : meta->definition->get_terminals())
         {
@@ -134,7 +135,7 @@ public:
             {
                 const std::string gain_name = name + "_gain";
                 const std::string mute_name = name + "_mute";
-                const std::string meter_name = name + "_meter";
+                const std::string meter_name = this->get_block_name() + "::" + name + "_meter";
                 TerminalOutputProcessor &top = outputs_to_process[top_index];
                 bool requires_processing = false;
 
@@ -150,9 +151,9 @@ public:
                     requires_processing = true;
                 }
 
-                if (meta->meters.count(meter_name) != 0)
+                if (TelemetryMonitor::get_instance().has_meter(meter_name))
                 {
-                    assign_meter(meter_name, top.get_meter());
+                    assign_telemetry(meter_name, top.get_telemetry());
                     requires_processing = true;
                 }
 
@@ -173,7 +174,10 @@ public:
     }
 
 
-    virtual ~Algorithm() = default;
+    virtual ~Algorithm() 
+    {
+        TelemetryMonitor::get_instance().unregister_block(this->get_block_name());
+    }
 
 
     /// Process one frame of audio. Every algorithm must implement this.
@@ -199,7 +203,7 @@ public:
     void initialize_terminals()
     {
         SPDLOG_TRACE("Initializing terminals for '{}'.",
-                     meta->configuration->get_algorithm());
+                     meta->configuration->get_name());
 
         // We have to do this here because the source buffers for the bypass
         // function aren't available until after the terminals are assigned
@@ -242,7 +246,7 @@ public:
         if (meta->terminals.count(name) == 0)
         {
             SPDLOG_CRITICAL("Unknown terminal '{}' in '{}'.",
-                            name, meta->configuration->get_algorithm());
+                            name, meta->configuration->get_name());
         }
 
         return *meta->terminals[name];
@@ -274,7 +278,7 @@ public:
         if (meta->parameters.count(name) == 0)
         {
             SPDLOG_CRITICAL("Unknown parameter '{}' in '{}'.",
-                            name, meta->configuration->get_algorithm());
+                            name, meta->configuration->get_name());
         }
 
         return *meta->parameters[name];
@@ -288,7 +292,7 @@ public:
     void initialize_parameters()
     {
         SPDLOG_TRACE("Initializing parameters for '{}'.",
-                     meta->configuration->get_algorithm());
+                     meta->configuration->get_name());
 
         for (auto &c : meta->parameters)
         {
@@ -308,7 +312,7 @@ public:
         if (meta->parameters.count(setting.get_name()) == 0)
         {
             SPDLOG_WARN("Unknown parameter '{}' in '{}'.", setting.get_name(),
-                        meta->configuration->get_algorithm());
+                        meta->configuration->get_name());
             return false;
         }
 
@@ -318,57 +322,13 @@ public:
     }
 
 
-    /// Get a reference to a meter by name.  This is called by the framework,
-    /// not by the algorithm.
-    ///
-    /// @param  name  The name of the meter.
-    /// @return  A reference to the meter.
-    Meter &get_meter(const std::string &name)
-    {
-        if (meta->meters.count(name) == 0)
-        {
-            SPDLOG_CRITICAL("Unknown meter '{}' in '{}'.",
-                            name, meta->configuration->get_algorithm());
-        }
-
-        return *meta->meters[name];
-    }
-
-
-    /// Initialize all of the meters.  This is called by the framework,
-    /// not by the algorithm. This will allocate storage for the meter values.
-    void initialize_meters()
-    {
-        SPDLOG_TRACE("Initializing meters for '{}'.",
-                     meta->configuration->get_algorithm());
-
-        for (auto &m : meta->meters)
-        {
-            m.second->initialize();
-        }
-    }
-
-
-    /// For any output terminals that have default gain, bypass, or meters,
+    /// For any output terminals that have default gain, bypass, or telemetry,
     /// process the output after the algorithm has finished processing.
     void process_outputs()
     {
         for (int top_index = 0; top_index < output_process_count; top_index++)
         {
             outputs_to_process[top_index].process();
-        }
-    }
-
-
-    /// Send meter data for all of the meters in this block.
-    ///
-    /// @param  meter_callback  A callback function for sending the meter
-    ///     JSON-formatted string.
-    void send_meters(void (*meter_callback)(const std::string &))
-    {
-        for (auto &meter : meta->meters)
-        {
-            meter.second->send(meter_callback);
         }
     }
 
@@ -395,7 +355,7 @@ protected:
         else
         {
             SPDLOG_CRITICAL("Unknown property '{}' in '{}'.",
-                            name, meta->configuration->get_algorithm());
+                            name, meta->configuration->get_name());
         }
     }
 
@@ -629,9 +589,9 @@ protected:
     /// @param  name  The name of the meter.
     /// @param  value  The storage for the meter value.
     template <typename T>
-    void assign_meter(const std::string &name, const T *value)
+    void assign_telemetry(const std::string &name, const T *value)
     {
-        get_meter(name).assign(value);
+        TelemetryMonitor::get_instance().get_telemetry(this->get_block_name() + "::" + name).assign(value);
     }
 
 
@@ -642,9 +602,9 @@ protected:
     /// @param  name  The name of the meter.
     /// @param  value  The storage for the meter value.
     template <typename T>
-    void assign_meter(const std::string &name, DspMeterMemory<T[]> &value)
+    void assign_telemetry(const std::string &name, DspTelemetryMemory<T[]> &value)
     {
-        get_meter(name).assign(value);
+        TelemetryMonitor::get_instance().get_telemetry(this->get_block_name() + "::" + name).assign(value);
     }
 
 
@@ -655,9 +615,9 @@ protected:
     /// @param  name  The name of the meter.
     /// @param  value  The storage for the meter value.
     template <typename T>
-    void assign_meter(const std::string &name, DspMeterMemory<T*[]> &value)
+    void assign_telemetry(const std::string &name, DspTelemetryMemory<T*[]> &value)
     {
-        get_meter(name).assign(value);
+        TelemetryMonitor::get_instance().get_telemetry(this->get_block_name() + "::" + name).assign(value);
     }
 
 

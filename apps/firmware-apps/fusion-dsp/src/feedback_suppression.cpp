@@ -17,7 +17,7 @@
 // - iir_design.cpp/.h
 
 #include <bosepro/algorithm.h>
-#include <bosepro/task.h>
+#include <bosepro/audio_task.h>
 #include "fft.h"
 #include "blackman_8192_coeffs.h"
 #include "fbs_filter.h"
@@ -150,7 +150,7 @@ private:
     void update_low_freq_ignore_freq();
     void update_max_filter_gain();
 
-    bosepro::PeriodicTask analysis_task;
+    bosepro::AudioSubtask analysis_task;
 
     ALGORITHM_DECLARE(FeedbackSuppression);
 };

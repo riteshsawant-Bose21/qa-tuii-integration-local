@@ -6,6 +6,7 @@
 #include <bosepro/definition.h>
 #include <bosepro/profile.h>
 #include <bosepro/session.h>
+#include <bosepro/telemetry_monitor.h>
 
 #include <boost/program_options.hpp>
 #include <spdlog/spdlog.h>
@@ -54,6 +55,8 @@ int main(int argc, char *argv[])
         ("configuration,c", boost::program_options::value<std::string>()->default_value("config/configuration.json"), "configuration file")
         ("definitions,d", boost::program_options::value<std::string>()->default_value("config/algorithm-definitions.json"), "algorithm definition file")
         ("time,t", boost::program_options::value<int>(), "time to run (seconds)")
+        ("telemetry-messages,m", boost::program_options::value<std::string>()->default_value("config/telemetry-messages.json"), "telemetry commands file")
+        ("telemetry-configuration,p", boost::program_options::value<std::string>()->default_value("config/telemetry-configuration.json"), "telemetry configuration file")
         ("serverip,s", boost::program_options::value<std::string>(), "IP address of fusion-server")
         ("verbose,v", boost::program_options::value(&verbosity)->zero_tokens(), "make logs more verbose")
         ("quiet,q", boost::program_options::value(&quietness)->zero_tokens(), "make logs more quiet")
@@ -98,12 +101,15 @@ int main(int argc, char *argv[])
     bosepro::Profile::set_cpu_mips(1800.0);
 
     bosepro::Configuration configuration(vm["configuration"].as<std::string>());
+    bosepro::TelemetryConfiguration telem_configuration(vm["telemetry-configuration"].as<std::string>());
     bosepro::Definition definitions(vm["definitions"].as<std::string>());
     bosepro::Session session(configuration.get_session(), definitions);
 
-    if (configuration.has_tasks())
+    auto& telemetry_monitor = bosepro::TelemetryMonitor::get_instance();
+    
+    if (configuration.has_audio_tasks())
     {
-        session.create_tasks(configuration);
+        session.create_audio_tasks(configuration);
     }
 
     if (configuration.has_parameter_settings())
@@ -155,6 +161,8 @@ int main(int argc, char *argv[])
                                          target_paths, handle_update);
         }
 
+        telemetry_monitor.initialize(vm["telemetry-messages"].as<std::string>(), telem_configuration.get_socket_path());
+        telemetry_monitor.start();
         session.start();
 
         while(1)

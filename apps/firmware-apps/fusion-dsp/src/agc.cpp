@@ -34,8 +34,8 @@ private:
     bosepro::DspCoeffMemory<bool[]> channel_bypass;
     float max_total_boost;
 
-    bosepro::DspMeterMemory<float[]> current_gain;
-    bosepro::DspMeterMemory<bool[]> hold_meter;
+    bosepro::DspTelemetryMemory<float[]> current_gain;
+    bosepro::DspTelemetryMemory<bool[]> hold_meter;
     float current_total_boost;
 
     bosepro::DspStateMemory<float[]> smoothed_level;
@@ -86,8 +86,8 @@ Agc::Agc(const bosepro::BlockConfiguration &configuration)
     assign_parameter("channel_bypass", channel_bypass);
     assign_parameter("max_total_boost", &max_total_boost);
 
-    assign_meter("gain_meter", current_gain);
-    assign_meter("hold_meter", hold_meter);
+    assign_telemetry("gain_meter", current_gain);
+    assign_telemetry("hold_meter", hold_meter);
 
     smoothed_level.resize(channels);
     fast_level.resize(channels);
