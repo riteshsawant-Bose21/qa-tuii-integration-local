@@ -1,5 +1,4 @@
-#ifndef NAMED_SHARED_MEMORY_H
-#define NAMED_SHARED_MEMORY_H
+#pragma once
 
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
@@ -114,7 +113,6 @@ public:
 
 private:
     Metadata metaData;
-    std::size_t totalBytesPresentInSHM_;           // Total bytes written to the shared memory by external producer
     boost::interprocess::shared_memory_object shm_; // Boost shared memory object
     boost::interprocess::mapped_region region_;     // Boost mapped region for accessing memory
 
@@ -129,5 +127,3 @@ private:
 };
 
 }
-
-#endif // NAMED_SHARED_MEMORY_H

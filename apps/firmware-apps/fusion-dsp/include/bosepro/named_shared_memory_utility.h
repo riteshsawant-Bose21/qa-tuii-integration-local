@@ -1,5 +1,4 @@
-#ifndef UTILITIES_H
-#define UTILITIES_H
+#pragma once
 
 #include <cstddef>
 #include <cstring>
@@ -85,5 +84,3 @@ struct Metadata {
 };
 
 }
-
-#endif // UTILITIES_H
