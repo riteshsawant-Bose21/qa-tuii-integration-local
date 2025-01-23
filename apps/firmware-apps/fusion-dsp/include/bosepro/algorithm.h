@@ -106,7 +106,7 @@ public:
             {
                 const std::string gain_name = name + "_gain";
                 const std::string mute_name = name + "_mute";
-                const std::string meter_name = this->get_block_name() + "::" + name + "_meter";
+                const std::string meter_name = name + "_meter";
 
                 if ((meta->parameters.count(gain_name) != 0)
                     || (meta->parameters.count(mute_name) != 0)
@@ -135,7 +135,7 @@ public:
             {
                 const std::string gain_name = name + "_gain";
                 const std::string mute_name = name + "_mute";
-                const std::string meter_name = this->get_block_name() + "::" + name + "_meter";
+                const std::string meter_name = name + "_meter";
                 TerminalOutputProcessor &top = outputs_to_process[top_index];
                 bool requires_processing = false;
 

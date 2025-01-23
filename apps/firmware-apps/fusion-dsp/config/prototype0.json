@@ -11,7 +11,7 @@
             }
         ]
     },
-    "tasks": [
+    "audio_tasks": [
         {
             "name": "task1",
             "property_settings": [

@@ -5,7 +5,7 @@
             { "name": "sample_rate", "value": 48000 }
         ]
     },
-    "tasks": [
+    "audio_tasks": [
         {
             "name": "task1",
             "property_settings": [
