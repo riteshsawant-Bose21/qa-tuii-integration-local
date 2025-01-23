@@ -6,7 +6,7 @@
 #include <spdlog/spdlog.h>
 
 #include <string>
-#include <type_traits> // for std::is_same
+#include <type_traits>
 
 
 namespace bosepro {
@@ -211,14 +211,14 @@ protected:
     /// @param  index  The index of the list member to retrieve.
     /// @param  value  The value of the list member of the given name and index.
     template <typename T>
-    void get_list_value(const std::string &list_name, int index, T &value) const
+    bool get_list_value(const std::string &list_name, int index, T &value) const
     {
         int n = 0;
 
         if (!has_member(list_name))
         {
             SPDLOG_CRITICAL("List {} not found.", list_name);
-            return;
+            return false;
         }
 
         for (auto a : get_child(list_name))
@@ -226,13 +226,14 @@ protected:
             if (n == index)
             {
                 value = a.second.get_value<T>();
-                return;
+                return true;
             }
 
             n++;
         }
 
         SPDLOG_CRITICAL("List {} index {} out of range.", list_name, index);
+        return false;
     }
 
 
@@ -320,7 +321,7 @@ protected:
 
 
     /// Get the member of a list of properties which has a member with the given
-    /// name and value.  The list and member must exist, and must contain a property
+    /// name and value. The list and member must exist, and must contain a property
     /// with the given member and value: use `list_has_member()` to test for
     /// their existence before calling this method.
     ///

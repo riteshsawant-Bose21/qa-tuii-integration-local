@@ -13,7 +13,6 @@ class ModuleDefinition;
 class PropertyDefinition;
 class TerminalDefinition;
 class ParameterDefinition;
-class ControlDefinition;
 class TelemetryDefinition;
 
 
@@ -385,7 +384,6 @@ public:
 
 /// The interface definition for a parameter.
 class ParameterDefinition : public Definition {
-    
 };
 
 

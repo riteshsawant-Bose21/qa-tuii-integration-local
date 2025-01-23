@@ -99,13 +99,7 @@ int main(int argc, char *argv[])
     bosepro::Definition definitions(vm["definitions"].as<std::string>());
     bosepro::Session session(configuration.get_session(), definitions);
     
-    // Get TelemetryMonitor instance
     auto& telemetry_monitor = bosepro::TelemetryMonitor::get_instance();
-
-    if (configuration.has_audio_tasks())
-    {
-        session.create_audio_tasks(configuration);
-    }
 
     if (configuration.has_periodic_tasks())
     {

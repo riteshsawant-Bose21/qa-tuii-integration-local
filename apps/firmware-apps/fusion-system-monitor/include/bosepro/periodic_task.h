@@ -98,8 +98,6 @@ public:
 private:
     /// The function that runs the task thread. It executes the task function at the specified frequency.
     void run() {
-        SPDLOG_INFO("Starting PeriodicTask periodic thread with period: {} ms", period_ms);
-
         auto next_execution_time = std::chrono::steady_clock::now();
 
         while (1) {

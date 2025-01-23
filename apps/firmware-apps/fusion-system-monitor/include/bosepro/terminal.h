@@ -369,13 +369,15 @@ public:
 
         if (channel < 0 || channel >= num_channels)
         {
-            SPDLOG_CRITICAL("Input channel index out of range.");
+            SPDLOG_CRITICAL("Input channel index ({}) out of range ({}).",
+                            channel, num_channels);
             return;
         }
 
         if (output_channel < 0 || output_channel >= output_terminal.num_channels)
         {
-            SPDLOG_CRITICAL("Output channel index out of range.");
+            SPDLOG_CRITICAL("Output channel index ({}) out of range ({}).",
+                            output_channel, output_terminal.num_channels);
             return;
         }
 

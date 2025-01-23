@@ -14,7 +14,8 @@ class TaskConfiguration;
 class BlockConfiguration;
 class PropertyConfiguration;
 class TerminalConfiguration;
-class ConnectionConfiguration;
+class BlockConnectionConfiguration;
+class TaskConnectionConfiguration;
 class TelemetryConfiguration;
 class ParameterSetting;
 
@@ -153,6 +154,26 @@ public:
         return (const PropertyConfiguration &)list_get_member("property_settings",
                                                               "name", name);
     }
+
+
+    /// Test whether the configuration has task connections specified.
+    ///
+    /// @return  True if the configuration has task connections specified.
+    bool has_task_connections() const
+    {
+        return has_member("task_connections");
+    }
+
+
+    /// Get the list of task connections in this configuration.  The list of
+    /// connections must exist: use `has_task_connections()` to test whether it
+    /// exists before calling this function.
+    ///
+    /// @return  The list of task connections.
+    const TaskConnectionConfiguration &get_task_connections() const
+    {
+        return (const TaskConnectionConfiguration &)get_member("task_connections");
+    }
 };
 
 
@@ -188,9 +209,9 @@ public:
     /// exists before calling this function.
     ///
     /// @return  The list of connections.
-    const ConnectionConfiguration &get_block_connections() const
+    const BlockConnectionConfiguration &get_block_connections() const
     {
-        return (const ConnectionConfiguration &)get_member("block_connections");
+        return (const BlockConnectionConfiguration &)get_member("block_connections");
     }
 };
 
@@ -305,8 +326,11 @@ public:
     int get_row() const
     {
         int row;
-        get_list_value("index", 0, row);
-        return row - 1;
+        if (get_list_value("index", 0, row)) {
+            return row - 1;    
+        }
+        return 0;
+        
     }
 
 
@@ -317,14 +341,16 @@ public:
     int get_column() const
     {
         int column;
-        get_list_value("index", 1, column);
-        return column - 1;
+        if (get_list_value("index", 1, column)) {
+            return column - 1;
+        }
+        return 0;        
     }
 };
 
 
-/// The configuration for a signal connection.
-class ConnectionConfiguration: public Configuration {
+/// The configuration for a signal connection between blocks.
+class BlockConnectionConfiguration: public Configuration {
 public:
     /// Get the name of the source block for the signal in this connection.
     ///
@@ -375,6 +401,68 @@ public:
 
 
     /// Get the index of the input channel in the destination block for the
+    /// signal in this connection.
+    ///
+    /// @return  The index of the input channel.
+    int get_input_channel() const
+    {
+        return get_index("input_channel");
+    }
+};
+
+
+/// The configuration for a signal connection between tasks.
+class TaskConnectionConfiguration: public Configuration {
+public:
+    /// Get the name of the source task for the signal in this connection.
+    ///
+    /// @return  The name of the source task.
+    const std::string &get_source_task() const
+    {
+        return get_string("source_task");
+    }
+
+
+    /// Get the name of the destination task for the signal in this connection.
+    ///
+    /// @return  The name of the destination task.
+    const std::string &get_destination_task() const
+    {
+        return get_string("destination_task");
+    }
+
+
+    /// Get the name of the output block in the source task for the signal
+    /// in this connection.
+    ///
+    /// @return  The name of the output block.
+    const std::string &get_output_block() const
+    {
+        return get_string("output_block");
+    }
+
+
+    /// Get the name of the input block in the destination task for the
+    /// signal in this connection.
+    ///
+    /// @return  The name of the input block.
+    const std::string &get_input_block() const
+    {
+        return get_string("input_block");
+    }
+
+
+    /// Get the index of the output channel in the output block for the signal
+    /// in this connection.
+    ///
+    /// @return  The index of the output channel.
+    int get_output_channel() const
+    {
+        return get_index("output_channel");
+    }
+
+
+    /// Get the index of the input channel in the input block for the
     /// signal in this connection.
     ///
     /// @return  The index of the input channel.

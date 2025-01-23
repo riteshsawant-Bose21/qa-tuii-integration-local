@@ -235,14 +235,32 @@ public:
 
         frames_to_run = -1;
 
-        if (configuration.has_property("jack_client_name") > 0)
+        bool is_jack_client = true;
+
+        // Set "is_jack_client" to false for non-JACK configurations (usually
+        // for file I/O testing).
+        if (configuration.has_property("is_jack_client"))
         {
-            std::string client_name;
-            configuration.get_property("jack_client_name").get_value(client_name);
-            client = Jack::create_client(client_name, this);
+            configuration.get_property("is_jack_client").get_value(is_jack_client);
         }
 
-        if (configuration.has_property("cpu_affinity") > 0)
+        if (is_jack_client)
+        {
+            // The client name is the same as the task name unless something
+            // else is specified in the configuration.
+            if (configuration.has_property("jack_client_name"))
+            {
+                std::string client_name;
+                configuration.get_property("jack_client_name").get_value(client_name);
+                client = Jack::create_client(client_name, this);
+            }
+            else
+            {
+                client = Jack::create_client(configuration.get_name(), this);
+            }
+        }
+
+        if (configuration.has_property("cpu_affinity"))
         {
             configuration.get_property("cpu_affinity").get_value(cpu_affinity);
         }
@@ -270,8 +288,8 @@ public:
 
         for (auto &c : configuration.get_block_connections())
         {
-            const ConnectionConfiguration *cc =
-                reinterpret_cast<const ConnectionConfiguration *>(&c.second);
+            const BlockConnectionConfiguration *cc =
+                reinterpret_cast<const BlockConnectionConfiguration *>(&c.second);
             Algorithm *input_block = block_map[cc->get_destination_block()];
             Algorithm *ouput_block = block_map[cc->get_source_block()];
             Terminal &output_terminal =
@@ -289,7 +307,7 @@ public:
                     output_channel);
         }
 
-        if (configuration.has_property("profile_blocks") > 0)
+        if (configuration.has_property("profile_blocks"))
         {
             configuration.get_property("profile_blocks").get_value(profile_blocks);
         }

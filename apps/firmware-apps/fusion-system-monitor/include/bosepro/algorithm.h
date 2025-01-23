@@ -38,8 +38,7 @@ public:
     ///
     /// @param  configuration  The configuration to use for the algorithm.
     Algorithm(const BlockConfiguration &configuration)
-        : Configurable(configuration),
-          output_process_count(0)
+        : Configurable(configuration), output_process_count(0)
     {
         meta->configuration = &configuration;
         meta->definition = static_cast<const AlgorithmDefinition*>(get_definition(configuration.get_algorithm()));
@@ -84,10 +83,9 @@ public:
             {
                 const TelemetryDefinition &md = reinterpret_cast<const TelemetryDefinition &>(m.second);
                 std::unique_ptr<Telemetry> telemetry = 
-                std::unique_ptr<Telemetry>(Telemetry::create(
-                    md,
-                    static_cast<const ProcessorDefinition&>(*meta->definition),
-                    meta->configuration));
+                std::unique_ptr<Telemetry>(Telemetry::create(md,
+                                                             static_cast<const ProcessorDefinition&>(*meta->definition),
+                                                             meta->configuration));
 
                 telemetry->set_block_name(this->get_block_name());
 
