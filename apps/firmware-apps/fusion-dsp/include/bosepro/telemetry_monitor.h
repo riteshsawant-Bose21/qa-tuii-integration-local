@@ -881,6 +881,7 @@ private:
     std::vector<std::string> shm_names;
     struct sockaddr_un telemetry_manager_addr;
     int timeout;
+    bool initialized;
 
     std::unique_ptr<TelemetryMessage> telemetry_messages;
 
