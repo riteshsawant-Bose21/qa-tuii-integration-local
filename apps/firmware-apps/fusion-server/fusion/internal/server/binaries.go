@@ -8,6 +8,7 @@ import (
 )
 
 const (
+	RollbackBinary = "binary_rollback"
 	UpdateBinary   = "binary_update"
 	UpdateChunk    = "binary_chunk"
 	UpdateMetadata = "binary_metadata"

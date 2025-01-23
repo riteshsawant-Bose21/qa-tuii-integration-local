@@ -440,6 +440,12 @@ func (h *Handler) HandleBinaryRollback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !h.updater.IsValidRollbackIndex(index) {
+		logger.Error("Rollback index out of range: %d", index)
+		http.Error(w, fmt.Sprintf("Rollback index must be between -%d and -1, got: %d", MaxBackups, index), http.StatusBadRequest)
+		return
+	}
+
 	currentBinaryPath, err := os.Executable()
 	if err != nil {
 		logger.Error("Failed to get current binary path: %v", err)
@@ -447,6 +453,13 @@ func (h *Handler) HandleBinaryRollback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Initiate cluster-wide rollback
+	if err := h.InitiateBinaryRollback(currentBinaryPath, index); err != nil {
+		logging.GetLogger().Error("Failed to initiate cluster rollback: %v", err)
+		// Don't return error to client since local rollback will proceed
+	}
+
+	// Schedule the update
 	go func() {
 		if err := h.updater.PerformRollback(currentBinaryPath, index); err != nil {
 			logger.Error("Rollback failed: %v", err)
@@ -467,13 +480,14 @@ func (h *Handler) InitiateBinaryUpdate(newBinaryPath string) error {
 	}
 
 	update := BinaryUpdate{
-		NodeID:     h.list.LocalNode().Name,
-		Time:       time.Now().UTC(),
+		BinaryHeader: BinaryHeader{
+			NodeID: h.list.LocalNode().Name,
+			Time:   time.Now().UTC(),
+		},
 		BinaryHash: hash,
 		BinarySize: size,
 	}
 
-	// Broadcast to cluster members
 	data, err := json.Marshal(update)
 	if err != nil {
 		return fmt.Errorf("failed to marshal update: %w", err)
@@ -489,7 +503,9 @@ func (h *Handler) InitiateBinaryUpdate(newBinaryPath string) error {
 		return fmt.Errorf("failed to marshal message: %w", err)
 	}
 
+	// Broadcast to cluster members
 	for _, node := range h.list.Members() {
+		// Only update the remote members. The local node will update itself.
 		if node.Name != h.list.LocalNode().Name {
 			// First send metadata
 			if err := h.list.SendReliable(node, messageData); err != nil {
@@ -500,6 +516,47 @@ func (h *Handler) InitiateBinaryUpdate(newBinaryPath string) error {
 			// Then stream the binary in chunks
 			if err := h.streamBinaryToNode(node, newBinaryPath); err != nil {
 				logger.Error("Failed to stream binary to node %s: %v", node.Name, err)
+				continue
+			}
+		}
+	}
+
+	return nil
+}
+
+// InitiateBinaryRollback starts a cluster-wide binary rollback process
+func (h *Handler) InitiateBinaryRollback(currentBinaryPath string, index int) error {
+	logger := logging.GetLogger()
+
+	rollback := BinaryRollback{
+		BinaryHeader: BinaryHeader{
+			NodeID: h.list.LocalNode().Name,
+			Time:   time.Now().UTC(),
+		},
+		BinaryPath: currentBinaryPath,
+		Index:      index,
+	}
+
+	data, err := json.Marshal(rollback)
+	if err != nil {
+		return fmt.Errorf("failed to marshal rollback: %w", err)
+	}
+
+	message := BinaryMessage{
+		Type:    RollbackBinary,
+		Payload: data,
+	}
+
+	messageData, err := json.Marshal(message)
+	if err != nil {
+		return fmt.Errorf("failed to marshal message: %w", err)
+	}
+
+	// Broadcast to cluster members
+	for _, node := range h.list.Members() {
+		if node.Name != h.list.LocalNode().Name {
+			if err := h.list.SendReliable(node, messageData); err != nil {
+				logger.Error("Failed to send rollback data to node %s: %v", node.Name, err)
 				continue
 			}
 		}

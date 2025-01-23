@@ -23,14 +23,24 @@ import (
 
 const (
 	compareBufferSize = 64 * 1024 // 64KB chunks
-	maxBackups        = 3
+	MaxBackups        = 3
 )
 
+type BinaryHeader struct {
+	NodeID string    // Source node ID
+	Time   time.Time // Timestamp of the update
+}
+
+type BinaryRollback struct {
+	BinaryHeader
+	BinaryPath string // Path to current binary
+	Index      int    // Rollback index
+}
+
 type BinaryUpdate struct {
-	NodeID     string    // Source node ID
-	Time       time.Time // Timestamp of the update
-	BinaryHash string    // SHA256 of the binary for verification
-	BinarySize int64     // Size of the binary for pre-allocation
+	BinaryHeader
+	BinaryHash string // SHA256 of the binary for verification
+	BinarySize int64  // Size of the binary for pre-allocation
 }
 
 type Updater struct {
@@ -97,14 +107,13 @@ func (u *Updater) PerformUpdate(newBinaryPath string) error {
 	}
 
 	// Clean up old backups keeping only the 3 most recent
-	if err := u.cleanupOldBackups(maxBackups); err != nil {
+	if err := u.cleanupOldBackups(MaxBackups); err != nil {
 		logger.Warn("Failed to cleanup old backups: %v", err)
 		// Continue with restart as this is not critical
 	}
 
 	logger.Info("Restarting fusion-server")
 
-	// Restart the server
 	return syscall.Exec(currentBinaryPath, os.Args, os.Environ())
 }
 
@@ -113,6 +122,19 @@ func (u *Updater) PerformRemoteUpdate(message BinaryMessage) error {
 	logger := logging.GetLogger()
 
 	switch message.Type {
+	case RollbackBinary:
+		var rollback BinaryRollback
+		if err := json.Unmarshal(message.Payload, &rollback); err != nil {
+			return err
+		}
+
+		logger.Info("PerformRemoteUpdate: Rollback started")
+
+		if err := u.PerformRollback(rollback.BinaryPath, rollback.Index); err != nil {
+			return err
+		}
+		return nil
+
 	case UpdateBinary:
 		var update BinaryUpdate
 		if err := json.Unmarshal(message.Payload, &update); err != nil {
@@ -128,22 +150,26 @@ func (u *Updater) PerformRemoteUpdate(message BinaryMessage) error {
 		if err := json.Unmarshal(message.Payload, &chunk); err != nil {
 			return err
 		}
+
 		if u.currentAssembler == nil {
 			return errors.New("no active binary update")
 		}
+
 		if err := u.currentAssembler.AddChunk(chunk); err != nil {
 			return err
 		}
+
 		if u.currentAssembler.IsComplete() {
+			logger.Info("PerformRemoteUpdate: Binary transfer complete")
+
 			binary, err := u.currentAssembler.Assemble()
 			if err != nil {
 				return err
 			}
+
 			if err := u.handleBinaryUpdate(binary); err != nil {
 				return err
 			}
-
-			logger.Info("PerformRemoteUpdate: Binary transfer complete")
 			return nil
 		}
 
@@ -151,6 +177,13 @@ func (u *Updater) PerformRemoteUpdate(message BinaryMessage) error {
 	}
 
 	return nil
+}
+
+func (u *Updater) IsValidRollbackIndex(index int) bool {
+	if index > -1 || index < -MaxBackups {
+		return false
+	}
+	return true
 }
 
 // PerformRollback rolls back to a specific backup version
@@ -165,8 +198,8 @@ func (u *Updater) PerformRollback(currentBinaryPath string, rollbackIndex int) e
 	}
 	defer u.updateMutex.Unlock()
 
-	if rollbackIndex > -1 || rollbackIndex < -maxBackups {
-		return fmt.Errorf("rollback index must be between -%d and -1, got: %d", maxBackups, rollbackIndex)
+	if !u.IsValidRollbackIndex(rollbackIndex) {
+		return fmt.Errorf("rollback index must be between -%d and -1, got: %d", MaxBackups, rollbackIndex)
 	}
 
 	positiveIndex := -rollbackIndex - 1
@@ -201,7 +234,8 @@ func (u *Updater) PerformRollback(currentBinaryPath string, rollbackIndex int) e
 	}
 
 	logging.GetLogger().Info("Successfully rolled back to backup from %v", time.Unix(0, backups[positiveIndex].timestamp))
-	return nil
+
+	return syscall.Exec(currentBinaryPath, os.Args, os.Environ())
 }
 
 func (u *Updater) CreateBackup(binaryPath string) error {
