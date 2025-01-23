@@ -40,6 +40,8 @@ backend servers
 	
 `
 
+const HAProxyConfigPath = "/etc/haproxy/haproxy.cfg"
+
 // ManageHAProxy continuously updates HAProxy configuration based on cluster membership
 func ManageHAProxy(list *memberlist.Memberlist) {
 	tmpl := template.Must(template.New("haproxy").Parse(haproxyTemplate))
@@ -61,7 +63,7 @@ func ManageHAProxy(list *memberlist.Memberlist) {
 }
 
 func generateConfig(tmpl *template.Template, members []*memberlist.Node) error {
-	file, err := os.Create("/etc/haproxy/haproxy.cfg")
+	file, err := os.Create(HAProxyConfigPath)
 	if err != nil {
 		return fmt.Errorf("failed to create config file: %v", err)
 	}
@@ -118,14 +120,15 @@ type Stats struct {
 // HAProxyMetrics manages HAProxy metrics collection
 type HAProxyMetrics struct {
 	socketPath string
+	configPath string
 	mutex      sync.RWMutex
 	stats      HAProxyStats
 }
 
-// NewHAProxyMetrics creates a new HAProxy metrics collector
-func NewHAProxyMetrics(socketPath string) *HAProxyMetrics {
+func NewHAProxyMetrics(socketPath, configPath string) *HAProxyMetrics {
 	hm := &HAProxyMetrics{
 		socketPath: socketPath,
+		configPath: configPath,
 		stats: HAProxyStats{
 			FrontendStats: make(map[string]Stats),
 			BackendStats:  make(map[string]Stats),
@@ -161,12 +164,15 @@ func (hm *HAProxyMetrics) collect() {
 func (hm *HAProxyMetrics) fetchStats() (HAProxyStats, error) {
 	conn, err := net.Dial("unix", hm.socketPath)
 	if err != nil {
-		return HAProxyStats{}, fmt.Errorf("failed to connect to HAProxy socket: %v", err)
+		return HAProxyStats{}, fmt.Errorf("failed to connect to HAProxy socket %s: %v", hm.socketPath, err)
 	}
 	defer conn.Close()
 
 	// Send stats command
-	fmt.Fprintf(conn, "show stat\n")
+	_, err = fmt.Fprint(conn, "show stat\n")
+	if err != nil {
+		return HAProxyStats{}, fmt.Errorf("failed to send command to HAProxy socket: %v", err)
+	}
 
 	stats := HAProxyStats{
 		Timestamp:     time.Now(),
@@ -192,7 +198,6 @@ func (hm *HAProxyMetrics) fetchStats() (HAProxyStats, error) {
 			continue
 		}
 
-		// Create a map of field names to values
 		values := make(map[string]string)
 		for i, field := range fields {
 			if i < len(headers) {
@@ -200,19 +205,23 @@ func (hm *HAProxyMetrics) fetchStats() (HAProxyStats, error) {
 			}
 		}
 
-		// Parse the stats based on proxy type
 		switch values["svname"] {
 		case "FRONTEND":
-			stats.FrontendStats[values["pxname"]] = parseProxyStats(values)
+			pxName := values["pxname"]
+			stats.FrontendStats[pxName] = parseProxyStats(values)
 			stats.TotalRequests += parseInt64(values["req_tot"])
-			stats.BytesIn += parseInt64(values["bytes_in"])
-			stats.BytesOut += parseInt64(values["bytes_out"])
+			stats.BytesIn += parseInt64(values["bin"])
+			stats.BytesOut += parseInt64(values["bout"])
 			stats.CurrentConns += parseInt(values["scur"])
 		case "BACKEND":
 			stats.BackendStats[values["pxname"]] = parseProxyStats(values)
 		default:
 			stats.ServerStats[values["svname"]] = parseProxyStats(values)
 		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return HAProxyStats{}, fmt.Errorf("error reading HAProxy stats: %v", err)
 	}
 
 	return stats, nil

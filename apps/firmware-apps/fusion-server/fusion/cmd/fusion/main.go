@@ -38,6 +38,9 @@ const (
 )
 
 func setupHTTPRoutes(server *server.ConfigServer, metrics *cluster.MetricsCollector, verbose bool) {
+	http.HandleFunc("/", withLogging(server.HandleRoot, "root", verbose))
+	http.HandleFunc("/dump", withLogging(server.DumpState, "dump", verbose))
+	http.HandleFunc("/endpoints", withLogging(server.GetEndpoints, "endpoints", verbose))
 	http.HandleFunc("/setValue", withLogging(server.SetValue, "setValue", verbose))
 	http.HandleFunc("/getValue", withLogging(server.GetValue, "getValue", verbose))
 	http.HandleFunc("/clear", withLogging(server.ClearAllData, "clear", verbose))
@@ -45,9 +48,7 @@ func setupHTTPRoutes(server *server.ConfigServer, metrics *cluster.MetricsCollec
 	http.HandleFunc("/download", withLogging(server.DownloadJSON, "download", verbose))
 	http.HandleFunc("/updateBinary", withLogging(server.UpdateBinary, "updateBinary", verbose))
 	http.HandleFunc("/rollbackBinary", withLogging(server.RollbackBinary, "rollbackBinary", verbose))
-	http.HandleFunc("/dump", withLogging(server.DumpState, "dump", verbose))
 	http.HandleFunc("/ws", withWebSocketMetrics(server.HandleWebSocket, metrics, verbose))
-	http.HandleFunc("/", withLogging(server.HandleRoot, "root", verbose))
 }
 
 func setupTimerRoutes(manager *timers.TimerManager, verbose bool) {

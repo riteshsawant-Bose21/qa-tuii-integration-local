@@ -16,8 +16,9 @@ import (
 )
 
 const (
-	contentType     = "Content-Type"
-	jsonContentType = "application/json"
+	contentType       = "Content-Type"
+	jsonContentType   = "application/json"
+	haproxySocketPath = "/var/run/haproxy.sock"
 )
 
 // StateManagerInterface defines the interface for state management
@@ -89,7 +90,7 @@ func NewMetricsCollector(list *memberlist.Memberlist, stateManager StateManagerI
 	mc := &MetricsCollector{
 		list:           list,
 		stateManager:   stateManager,
-		haproxyMetrics: network.NewHAProxyMetrics("/var/run/haproxy.sock"),
+		haproxyMetrics: network.NewHAProxyMetrics(haproxySocketPath, network.HAProxyConfigPath),
 	}
 
 	go mc.collect()

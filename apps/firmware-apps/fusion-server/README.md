@@ -12,6 +12,7 @@ Fusion Server is a distributed configuration management system with high availab
 - State persistence and recovery
 - JSON import/export functionality
 - Metrics monitoring and debug capabilities
+- Binary updating and rollback
 
 ## Architecture
 
@@ -279,6 +280,33 @@ multipass exec fusion1 -- bash -c "echo '{
     }
   }
 }' | nc -u -w1 127.0.0.1 7947"
+```
+
+## Updates
+
+A new fusion-server binary can be pushed and propogated across all running instances.
+  
+There are endpoints for updating the binary and rolling back a binary.
+  - `POST /updateBinary` - Post a new binary to replace the running fusion-server instance.
+  - `POST /rollbackBinary` - Rollback a binary a certain number of previous updates.
+
+
+The curl command can also be used to call the endpoints from the command line.
+```bash
+shasum -a 256 build/fusion-server_darwin_arm64 
+
+curl -X POST \
+  -F "binary=@your_server_binary" \
+  -F "checksum=8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92" \
+  http://localhost:8080/updateBinary
+```
+
+The checksum of the new binary can be calculated as part of the curl command.
+```bash
+curl -X POST \
+  -F "binary=@build/fusion-server_darwin_arm64" \
+  -F "checksum=$(shasum -a 256 build/fusion-server_darwin_arm64  | cut -d ' ' -f 1)" \
+  http://localhost:8080/updateBinary
 ```
 
 ## Basic Commands
@@ -590,15 +618,3 @@ graph TB
     class F1,F2,F3 server
     class S1,S2,S3 state
 ```
-
-shasum -a 256 build/fusion-server_darwin_arm64 
-
-curl -X POST \
-  -F "binary=@your_server_binary" \
-  -F "checksum=8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92" \
-  http://localhost:8080/updateBinary
-
-curl -X POST \
-  -F "binary=@build/fusion-server_darwin_arm64" \
-  -F "checksum=$(shasum -a 256 build/fusion-server_darwin_arm64  | cut -d ' ' -f 1)" \
-  http://localhost:8080/updateBinary

@@ -1,11 +1,15 @@
 package server
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"fusion/internal/logging"
 	"io"
 	"net/http"
+	"os"
+	"regexp"
+	"strings"
 	"sync"
 	"time"
 
@@ -13,8 +17,9 @@ import (
 )
 
 const (
-	contentType     = "Content-Type"
-	jsonContentType = "application/json"
+	contentType        = "Content-Type"
+	jsonContentType    = "application/json"
+	keepalivedConfPath = "/etc/keepalived/keepalived.conf"
 )
 
 type ConfigServer struct {
@@ -23,6 +28,12 @@ type ConfigServer struct {
 	wsClients map[*websocket.Conn]bool
 	wsLock    sync.RWMutex
 	upgrader  websocket.Upgrader
+}
+
+type Endpoints struct {
+	API       string `json:"api"`
+	Telemetry string `json:"telemetry"`
+	Metrics   string `json:"metrics"`
 }
 
 func NewConfigServer(nodeName string, handler *Handler) *ConfigServer {
@@ -64,8 +75,8 @@ func (s *ConfigServer) BroadcastUpdate(update map[string]interface{}) error {
 }
 
 func (s *ConfigServer) SetValue(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+
+	if !s.IsPostRequest(w, r) {
 		return
 	}
 
@@ -93,8 +104,8 @@ func (s *ConfigServer) SetValue(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *ConfigServer) GetValue(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+
+	if !s.IsGetRequest(w, r) {
 		return
 	}
 
@@ -110,8 +121,8 @@ func (s *ConfigServer) GetValue(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *ConfigServer) DumpState(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+
+	if !s.IsGetRequest(w, r) {
 		return
 	}
 
@@ -132,6 +143,27 @@ func (s *ConfigServer) DumpState(w http.ResponseWriter, r *http.Request) {
 		logging.GetLogger().Error("Export state failed: %v", err)
 		http.Error(w, "Error exporting state", http.StatusInternalServerError)
 	}
+}
+
+func (s *ConfigServer) GetEndpoints(w http.ResponseWriter, r *http.Request) {
+
+	if !s.IsGetRequest(w, r) {
+		return
+	}
+
+	vip, err := s.getVIPFromKeepalivedConfig(keepalivedConfPath)
+	if err != nil {
+		logging.GetLogger().Error("Unable to get VIP: %v", err)
+	}
+
+	endpoints := Endpoints{
+		API:       vip + ":8080",
+		Telemetry: vip + ":7070",
+		Metrics:   vip + ":9090",
+	}
+
+	w.Header().Set(contentType, jsonContentType)
+	json.NewEncoder(w).Encode(endpoints)
 }
 
 func (s *ConfigServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
@@ -196,6 +228,48 @@ func (s *ConfigServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (s *ConfigServer) getVIPFromKeepalivedConfig(configPath string) (string, error) {
+	file, err := os.Open(configPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to open Keepalived config file: %v", err)
+	}
+	defer file.Close()
+
+	var vip string
+	scanner := bufio.NewScanner(file)
+
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		// Look for "virtual_ipaddress {" and get the next IP
+		if strings.HasPrefix(line, "virtual_ipaddress") {
+			for scanner.Scan() {
+				nextLine := strings.TrimSpace(scanner.Text())
+				if strings.HasPrefix(nextLine, "}") { // End of block
+					break
+				}
+
+				// Extract IP address (e.g., 192.168.1.100/24)
+				vipRegex := regexp.MustCompile(`(\d+\.\d+\.\d+\.\d+)(/\d+)?`)
+				matches := vipRegex.FindStringSubmatch(nextLine)
+				if len(matches) > 0 {
+					vip = matches[1] // Get the IP portion
+					break
+				}
+			}
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return "", fmt.Errorf("error reading Keepalived config: %v", err)
+	}
+
+	if vip == "" {
+		return "", fmt.Errorf("no VIP found in Keepalived config")
+	}
+
+	return vip, nil
+}
+
 func (s *ConfigServer) handleWebSocketMessage(conn *websocket.Conn, data []byte) {
 	response, err := s.handler.HandleWebSocketMessage(data)
 	if err != nil {
@@ -214,8 +288,8 @@ func (s *ConfigServer) handleWebSocketMessage(conn *websocket.Conn, data []byte)
 }
 
 func (s *ConfigServer) DownloadJSON(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+
+	if !s.IsGetRequest(w, r) {
 		return
 	}
 
@@ -238,8 +312,8 @@ func (s *ConfigServer) DownloadJSON(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *ConfigServer) UploadJSON(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+
+	if !s.IsPostRequest(w, r) {
 		return
 	}
 
@@ -270,17 +344,31 @@ func (s *ConfigServer) HandleRoot(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *ConfigServer) UpdateBinary(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	if !s.IsPostRequest(w, r) {
 		return
 	}
 	s.handler.HandleBinaryUpdate(w, r)
 }
 
 func (s *ConfigServer) RollbackBinary(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	if !s.IsPostRequest(w, r) {
 		return
 	}
 	s.handler.HandleBinaryRollback(w, r)
+}
+
+func (s *ConfigServer) IsGetRequest(w http.ResponseWriter, r *http.Request) bool {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return false
+	}
+	return true
+}
+
+func (s *ConfigServer) IsPostRequest(w http.ResponseWriter, r *http.Request) bool {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return false
+	}
+	return true
 }
