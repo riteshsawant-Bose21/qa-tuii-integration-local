@@ -16,6 +16,7 @@
 #include <unistd.h>
 
 #include <iostream>
+#include <filesystem>
 
 
 bosepro::Session *psession;
@@ -49,10 +50,13 @@ int main(int argc, char *argv[])
     OptionCounter verbosity;
     OptionCounter quietness;
 
+    // Get the root application directory for default paths.
+    std::string app_path(std::filesystem::path(argv[0]).parent_path());
+    
     boost::program_options::options_description desc("Allowed options");
     desc.add_options()
-        ("configuration,c", boost::program_options::value<std::string>()->default_value("config/configuration.json"), "configuration file")
-        ("definitions,d", boost::program_options::value<std::string>()->default_value("config/algorithm-definitions.json"), "algorithm definition file")
+        ("configuration,c", boost::program_options::value<std::string>()->default_value(app_path + "/config/configuration.json"), "configuration file")
+        ("definitions,d", boost::program_options::value<std::string>()->default_value(app_path + "/config/algorithm-definitions.json"), "algorithm definition file")
         ("time,t", boost::program_options::value<int>(), "time to run (seconds)")
         ("serverip,s", boost::program_options::value<std::string>(), "IP address of fusion-server")
         ("verbose,v", boost::program_options::value(&verbosity)->zero_tokens(), "make logs more verbose")
