@@ -4,7 +4,7 @@
             "message_name": "pub_register_req",
             "packet_id": 0,
             "parameters": {
-                "name": "fusion_system_monitor",
+                "name": "",
                 "block_size": [0, 0, 0]
             }
         },
@@ -12,14 +12,14 @@
             "message_name": "pub_deregister_req",
             "packet_id": 0,
             "parameters": {
-                "name": "fusion_system_monitor"
+                "name": ""
             }
         },
         {
             "message_name": "update_meters_rsp",
             "packet_id": 0,
             "parameters": {
-                "name": "fusion_system_monitor",
+                "name": "",
                 "value": ""
             }
         },

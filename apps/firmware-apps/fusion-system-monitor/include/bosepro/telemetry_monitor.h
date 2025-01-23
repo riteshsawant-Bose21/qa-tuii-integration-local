@@ -143,6 +143,15 @@ public:
     }
 
 
+    /// Set the parameters.name value.
+    ///
+    /// @param value  The value to set parameters.value.
+    void set_name(const std::string &value)
+    {
+        set_member("name", value);
+    }
+
+
     /// Set the parameters.value value.
     ///
     /// @param value  The value to set parameters.value.
@@ -578,6 +587,7 @@ private:
     /// @return  true if message sent successfully, false otherwise
     bool send_message(TelemetryMessage &message)
     {
+        message.get_parameters().set_name("fusion_system_monitor");
         const std::string str = message.serialize_message();
         if (sendto(telemetry_fd, str.c_str(), str.size(), 0,
                 (struct sockaddr *)&telemetry_manager_addr, sizeof(telemetry_manager_addr)) < 0)
