@@ -246,7 +246,7 @@ public:
 
         struct sockaddr_un client_addr {};
         client_addr.sun_family = AF_UNIX;
-        std::string client_path = "/tmp/system_monitor_uds_" + std::to_string(getpid());
+        std::string client_path = "/tmp/dsp_uds_" + std::to_string(getpid());
         strncpy(client_addr.sun_path, client_path.c_str(), sizeof(client_addr.sun_path) - 1);
         unlink(client_path.c_str());
 

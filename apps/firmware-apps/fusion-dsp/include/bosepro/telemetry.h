@@ -442,7 +442,7 @@ public:
         message << "{ \"message_name\": \"event\",";
         message << " \"packet_id\": \"" << static_cast<uint64_t>(now_us) << "\",";
         message << " \"parameters\": {";
-        message << " \"name\": \"" << "fusion_system_monitor" << "\",";
+        message << " \"name\": \"" << "fusion_dsp" << "\",";
         message << " \"block_name\": \"" << this->get_block_name() << "\",";
         message << " \"event_name\": \"" << this->get_name() << "\",";
         message << " \"value_type\": \"" << this->get_value_type() << "\",";
@@ -648,7 +648,7 @@ public:
         message << "{ \"message_name\": \"event\",";
         message << " \"packet_id\": \"" << static_cast<uint64_t>(now_us) << "\",";
         message << " \"parameters\": {";
-        message << " \"name\": \"" << "fusion_system_monitor" << "\",";
+        message << " \"name\": \"" << "fusion_dsp" << "\",";
         message << " \"block_name\": \"" << this->get_block_name() << "\",";
         message << " \"event_name\": \"" << this->get_name() << "\",";
         message << " \"dimensions\": [" << this->get_num_rows() << "],";
@@ -888,7 +888,7 @@ public:
         message << "{ \"message_name\": \"event\",";
         message << " \"packet_id\": \"" << static_cast<uint64_t>(now_us) << "\",";
         message << " \"parameters\": {";
-        message << " \"name\": \"" << "fusion_system_monitor" << "\",";
+        message << " \"name\": \"" << "fusion_dsp" << "\",";
         message << " \"block_name\": \"" << this->get_block_name() << "\",";
         message << " \"event_name\": \"" << this->get_name() << "\",";
         message << " \"dimensions\": [" << this->get_num_rows() 
