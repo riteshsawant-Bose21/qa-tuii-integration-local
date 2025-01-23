@@ -94,7 +94,7 @@ int main(int argc, char *argv[])
     {
         spdlog::set_level(spdlog::level::info);
     }
-
+    
     SPDLOG_INFO("mune_dsp");
 
     SPDLOG_INFO("Profile resolution {} ns", bosepro::Profile::get_resolution());
