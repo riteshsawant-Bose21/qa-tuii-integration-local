@@ -464,7 +464,7 @@ public:
     ///
     /// @param  event_callback  The callback function used to send the
     ///     event data.
-    virtual void send_event_if_changed(std::function<void(telemetry_cb_data &)> event_callback)
+    virtual void send_event_if_changed(std::function<void(telemetry_cb_data &)> event_callback) override
     {
         if (!block_value_prev || *block_value_prev != *block_value) {
             if (!block_value_prev) {
@@ -676,7 +676,8 @@ public:
     ///
     /// @param  event_callback  The callback function used to send the
     ///     event data.
-    virtual void send_event_if_changed(std::function<void(telemetry_cb_data &)> event_callback) override {
+    virtual void send_event_if_changed(std::function<void(telemetry_cb_data &)> event_callback) override 
+    {
         // Initialize block_value_prev if it doesn't exist.
         if (!block_value_prev) {
             block_value_prev = std::make_unique<std::vector<T>>(this->get_num_rows());
@@ -925,7 +926,8 @@ public:
     ///
     /// @param  event_callback  The callback function used to send the
     ///     event data.
-    virtual void send_event_if_changed(std::function<void(telemetry_cb_data &)> event_callback) override {
+    virtual void send_event_if_changed(std::function<void(telemetry_cb_data &)> event_callback) override 
+    {
         // Initialize block_value_prev if it doesn't exist.
         if (!block_value_prev) {
             block_value_prev = std::make_unique<std::vector<std::vector<T>>>(this->get_num_rows());

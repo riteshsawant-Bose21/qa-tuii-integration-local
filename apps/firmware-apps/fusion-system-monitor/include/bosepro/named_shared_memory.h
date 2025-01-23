@@ -1,5 +1,4 @@
-#ifndef NAMED_SHARED_MEMORY_H
-#define NAMED_SHARED_MEMORY_H
+#pragma once
 
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
@@ -129,5 +128,3 @@ private:
 };
 
 }
-
-#endif // NAMED_SHARED_MEMORY_H

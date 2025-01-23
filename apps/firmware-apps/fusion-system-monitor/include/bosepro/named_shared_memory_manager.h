@@ -1,5 +1,4 @@
-#ifndef NAMED_SHARED_MEMORY_MANAGER_H
-#define NAMED_SHARED_MEMORY_MANAGER_H
+#pragma once
 
 #include <bosepro/named_shared_memory.h>
 #include <map>
@@ -89,5 +88,3 @@ private:
 };
 
 }
-
-#endif // NAMED_SHARED_MEMORY_MANAGER_H
