@@ -14,11 +14,22 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include <signal.h>
+#include <atomic>
 #include <iostream>
 
 
-bosepro::Session *psession;
+std::atomic<bool> g_running{true};
 
+void signal_handler(int signum)
+{
+    if (signum == SIGINT || signum == SIGTERM) {
+        g_running = false;
+    }
+}
+
+
+bosepro::Session *psession;
 
 void handle_update(const std::string &update_setting)
 {
@@ -43,8 +54,19 @@ void validate(boost::any &v, std::vector<std::string> const &, OptionCounter *, 
     else ++boost::any_cast<OptionCounter &>(v).count;
 }
 
+
 int main(int argc, char *argv[])
 {
+    // Register signal handler
+    struct sigaction sa;
+    sa.sa_handler = signal_handler;
+    sa.sa_flags = 0;
+    sigemptyset(&sa.sa_mask);
+
+    sigaction(SIGINT, &sa, nullptr);
+    sigaction(SIGTERM, &sa, nullptr);
+
+
     OptionCounter verbosity;
     OptionCounter quietness;
 
@@ -92,6 +114,7 @@ int main(int argc, char *argv[])
         spdlog::set_level(spdlog::level::info);
     }
 
+
     SPDLOG_INFO("fusion_system_monitor");
 
     bosepro::Configuration configuration(vm["configuration"].as<std::string>());
@@ -99,6 +122,7 @@ int main(int argc, char *argv[])
     bosepro::Definition definitions(vm["definitions"].as<std::string>());
     bosepro::Session session(configuration.get_session(), definitions);
     
+
     auto& telemetry_monitor = bosepro::TelemetryMonitor::get_instance();
 
     if (configuration.has_periodic_tasks())
@@ -114,6 +138,7 @@ int main(int argc, char *argv[])
         }
     }
 
+
     UDPValueMonitor *client = nullptr;
     psession = &session;
 
@@ -128,11 +153,13 @@ int main(int argc, char *argv[])
                                         target_paths, handle_update);
     }
 
-    telemetry_monitor.initialize(vm["telemetry-messages"].as<std::string>(), telem_configuration.get_socket_path());
+    telemetry_monitor.initialize(vm["telemetry-messages"].as<std::string>(),
+                                 telem_configuration.get_socket_path(),
+                                 configuration.get_session().get_name());
     telemetry_monitor.start();
     session.start();
 
-    while(1)
+    while(g_running)
     {
         usleep(1000);
     }
@@ -143,5 +170,9 @@ int main(int argc, char *argv[])
         delete client;
     }
 
+    telemetry_monitor.stop();
+    session.stop();
+
+    SPDLOG_INFO("fusion_system_monitor exiting...");
     return 0;
 }

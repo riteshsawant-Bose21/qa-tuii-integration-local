@@ -255,6 +255,10 @@ public:
         {
             task.second->stop();
         }
+        for (auto &task : periodic_tasks)
+        {
+            task.second->stop();
+        }
     }
 
     /// Get a pointer to a signal processing block with the given name.

@@ -23,7 +23,8 @@ public:
     PeriodicTask(const TaskConfiguration &configuration)
         : Configurable(configuration),
           period_ms(0),
-          period_ns(0)
+          period_ns(0),
+          stop_flag(false)
     {
         // Use this task's region manager while allocating blocks within the task.
         region_manager.open_region();
@@ -90,6 +91,8 @@ public:
     }
 
     void stop() {
+        stop_flag = true;
+
         if (task_thread.joinable()) {
             task_thread.join();
         }
@@ -100,7 +103,7 @@ private:
     void run() {
         auto next_execution_time = std::chrono::steady_clock::now();
 
-        while (1) {
+        while (!stop_flag) {
             // Execute the task function
             process();
 
@@ -122,6 +125,7 @@ private:
     int_fast32_t cpu_affinity; // CPU affinity for the task
     uint32_t period_ms;    // Period in milliseconds
     uint32_t period_ns;    // Period in nanoseconds
+    std::atomic<bool> stop_flag;
 
     std::thread task_thread;       // Periodic task thread
 };

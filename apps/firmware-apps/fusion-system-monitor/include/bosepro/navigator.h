@@ -42,6 +42,13 @@ public:
 
 
 protected:
+    /// Default constructor
+    Navigator()
+        : boost::property_tree::ptree()
+    {
+    }
+
+
     /// Test whether the property has a member of the given name.
     ///
     /// @param  member_name  The name of the member.
@@ -152,6 +159,31 @@ protected:
 
         // Set the array node in the property tree
         put_child(member_name, array_node);
+    }
+
+
+    /// Set a matrix in the property tree.
+    /// This method creates or replaces a member with the given name, setting its value as a matrix.
+    ///
+    /// @param member_name The name of the member.
+    /// @param matrix The matrix to set as the member value.
+    template <typename T>
+    void set_list(const std::string &member_name, const std::vector<std::vector<T>> &matrix)
+    {
+        boost::property_tree::ptree outer_array_node;
+        for (const auto &row : matrix)
+        {
+            boost::property_tree::ptree row_node;
+            for (const auto &val : row)
+            {
+                boost::property_tree::ptree val_node;
+                val_node.put("", val);
+                row_node.push_back(std::make_pair("", val_node));
+            }
+            outer_array_node.push_back(std::make_pair("", row_node));
+        }
+
+        put_child(member_name, outer_array_node);
     }
 
 

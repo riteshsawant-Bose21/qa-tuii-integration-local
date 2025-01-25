@@ -4,6 +4,8 @@
 #include <bosepro/configuration.h>
 #include <bosepro/definition.h>
 #include <bosepro/dspmemory.h>
+#include <bosepro/telemetry_message.h>
+#include <spdlog/fmt/ranges.h>
 
 #include <string>
 #include <functional>
@@ -13,14 +15,6 @@
 
 
 namespace bosepro {
-
-
-/// struct to hold data for meters/event callbacks
-struct telemetry_cb_data {
-    std::string message;
-    std::string period_type;
-    std::string value_type;
-};
 
 
 /// A class for managing Telemetry data.
@@ -258,19 +252,22 @@ public:
     /// Send a JSON-formatted meter string using the provided callback.
     ///
     /// @param  meters_callback  The callback function used to send the meter data.
-    virtual void send_meters(std::function<void(telemetry_cb_data &)> meters_callback) = 0;
+    virtual void send_meter(std::function<void(TelemetryMessage, std::string)> meters_callback, 
+                                               TelemetryMessage meter_msg) = 0;
 
 
     /// Send a JSON-formatted event string using the provided callback.
     ///
-    /// @param  meters_callback  The callback function used to send the event data.
-    virtual void send_event(std::function<void(telemetry_cb_data &)> event_callback) = 0;
+    /// @param  event_callback  The callback function used to send the event data.
+    virtual void send_event(std::function<void(TelemetryMessage)> event_callback, 
+                            TelemetryMessage event_msg) = 0;
 
 
     /// Wrapper for send_event that checks for changed values
     ///
-    /// @param  meters_callback  The callback function used to send the event data.
-    virtual void send_event_if_changed(std::function<void(telemetry_cb_data &)> event_callback) = 0;
+    /// @param  event_callback  The callback function used to send the event data.
+    virtual void send_event_if_changed(std::function<void(TelemetryMessage)> event_callback, 
+                                       TelemetryMessage event_msg) = 0;
 
 
 private:
@@ -399,29 +396,13 @@ public:
     ///
     /// @param  meters_callback  The callback function used to send the
     ///     meter data.
-    virtual void send_meters(std::function<void(telemetry_cb_data &)> meters_callback) override
+    virtual void send_meter(std::function<void(TelemetryMessage, std::string)> meters_callback, TelemetryMessage meter_msg) override
     {
-        telemetry_cb_data cb_data = {};
+        meter_msg.set_value(*block_value);
 
-        std::ostringstream message;
+        SPDLOG_DEBUG("Writing meter {}:{} = {}", this->get_block_name(), this->get_name(), *block_value);
 
-        message << "{ \"block_name\": \"" << this->get_block_name() << "\",";
-        message << " \"meter_name\": \"" << this->get_name() << "\",";
-        message << " \"value_type\": \"" << this->get_value_type() << "\",";
-        message << " \"dimensions\": [0],"; // Scalar telemetry
-        message << " \"value\": ";
-
-        std::ostringstream val; 
-        this->print_value(val, *block_value);
-        message << val.str();
-
-        SPDLOG_DEBUG("Writing meter {}:{} = {}", this->get_block_name(), this->get_name(), val.str());
-
-        message << " }\n";
-
-        cb_data.message = message.str();
-        cb_data.period_type = this->get_period_type();
-        meters_callback(cb_data);
+        meters_callback(meter_msg, this->get_period_type());
     }
 
 
@@ -430,33 +411,14 @@ public:
     ///
     /// @param  event_callback  The callback function used to send the
     ///     event data.
-    virtual void send_event(std::function<void(telemetry_cb_data &)> event_callback) override
+    virtual void send_event(std::function<void(TelemetryMessage)> event_callback, TelemetryMessage event_msg) override
     {
-        telemetry_cb_data cb_data = {};
+        event_msg.set_packet_id();
+        event_msg.get_parameters().set_value(*block_value);
 
-        std::ostringstream message;
+        SPDLOG_DEBUG("Sending event {}:{} = {}", this->get_block_name(), this->get_name(), *block_value);
 
-        auto now = std::chrono::steady_clock::now();
-        auto now_us = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
-
-        message << "{ \"message_name\": \"event\",";
-        message << " \"packet_id\": \"" << static_cast<uint64_t>(now_us) << "\",";
-        message << " \"parameters\": {";
-        message << " \"name\": \"" << "fusion_system_monitor" << "\",";
-        message << " \"block_name\": \"" << this->get_block_name() << "\",";
-        message << " \"event_name\": \"" << this->get_name() << "\",";
-        message << " \"value_type\": \"" << this->get_value_type() << "\",";
-        message << " \"dimensions\": [0],"; // Scalar telemetry
-        message << " \"value\": ";
-
-        // Append scalar value
-        this->print_value(message, *block_value);
-
-        message << " } }\n";
-
-        cb_data.message = message.str();
-        cb_data.period_type = this->get_period_type();
-        event_callback(cb_data);
+        event_callback(event_msg);
     }
 
 
@@ -464,13 +426,13 @@ public:
     ///
     /// @param  event_callback  The callback function used to send the
     ///     event data.
-    virtual void send_event_if_changed(std::function<void(telemetry_cb_data &)> event_callback) override
+    virtual void send_event_if_changed(std::function<void(TelemetryMessage)> event_callback, TelemetryMessage event_msg) override
     {
         if (!block_value_prev || *block_value_prev != *block_value) {
             if (!block_value_prev) {
                 block_value_prev = std::make_unique<T>(*block_value); // Allocate memory for block_value_prev
             } else {
-                send_event(event_callback); // Send event if value has changed
+                send_event(event_callback, event_msg); // Send event if value has changed
                 *block_value_prev = *block_value; // Update previous value
             }
         }
@@ -600,34 +562,14 @@ public:
     /// @param  meters_callback  The callback function used to send the
     ///     meter data.
     /// @param  items_remaining  The number of meters left in the block.
-    virtual void send_meters(std::function<void(telemetry_cb_data &)> meters_callback) override
+    virtual void send_meter(std::function<void(TelemetryMessage, std::string)> meters_callback, TelemetryMessage meter_msg) override
     {
-        telemetry_cb_data cb_data = {};
+        std::vector<T> tmp(block_value, block_value + this->get_num_rows());
+        meter_msg.set_value(tmp);
 
-        std::ostringstream message;
+        SPDLOG_DEBUG("Writing meter {}:{} = {}", this->get_block_name(), this->get_name(), tmp);
 
-        message << "{ \"block_name\": \"" << this->get_block_name() << "\",";
-        message << " \"meter_name\": \"" << this->get_name() << "\",";
-        message << " \"value_type\": \"" << this->get_value_type() << "\",";
-        message << " \"dimensions\": [" << this->get_num_rows() << "],"; // vector telemetry
-        message << " \"value\": [";
-
-        for (int row = 0; row < this->get_num_rows() - 1; row++)
-        {
-            std::ostringstream val; 
-            this->print_value(val, block_value[row]);
-            message << val.str() << ", ";
-
-            SPDLOG_DEBUG("Writing meter {}:{} = {}", this->get_block_name(), this->get_name(), val.str());
-        }
-        this->print_value(message, block_value[this->get_num_rows() - 1]);
-        message << "]";
-
-        message << " }\n";
-
-        cb_data.message = message.str();
-        cb_data.period_type = this->get_period_type();
-        meters_callback(cb_data);
+        meters_callback(meter_msg, this->get_period_type());
     }
 
 
@@ -636,39 +578,16 @@ public:
     ///
     /// @param  event_callback  The callback function used to send the
     ///     event data.
-    virtual void send_event(std::function<void(telemetry_cb_data &)> event_callback) override
+    virtual void send_event(std::function<void(TelemetryMessage)> event_callback, TelemetryMessage event_msg) override
     {
-        telemetry_cb_data cb_data = {};
+        std::vector<T> tmp(block_value, block_value + this->get_num_rows());
+        
+        event_msg.set_packet_id();
+        event_msg.get_parameters().set_value(tmp);
 
-        std::ostringstream message;
+        SPDLOG_DEBUG("Sending event {}:{} = {}", this->get_block_name(), this->get_name(), tmp);
 
-        auto now = std::chrono::steady_clock::now();
-        auto now_us = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
-
-        message << "{ \"message_name\": \"event\",";
-        message << " \"packet_id\": \"" << static_cast<uint64_t>(now_us) << "\",";
-        message << " \"parameters\": {";
-        message << " \"name\": \"" << "fusion_system_monitor" << "\",";
-        message << " \"block_name\": \"" << this->get_block_name() << "\",";
-        message << " \"event_name\": \"" << this->get_name() << "\",";
-        message << " \"dimensions\": [" << this->get_num_rows() << "],";
-        message << " \"value\": [";
-
-        // Append vector values
-        for (int row = 0; row < this->get_num_rows(); row++)
-        {
-            this->print_value(message, block_value[row]);
-            if (row < this->get_num_rows() - 1)
-            {
-                message << ", ";
-            }
-        }
-
-        message << "] } }\n";
-
-        cb_data.message = message.str();
-        cb_data.period_type = this->get_period_type();
-        event_callback(cb_data);
+        event_callback(event_msg);
     }
 
 
@@ -676,7 +595,7 @@ public:
     ///
     /// @param  event_callback  The callback function used to send the
     ///     event data.
-    virtual void send_event_if_changed(std::function<void(telemetry_cb_data &)> event_callback) override 
+    virtual void send_event_if_changed(std::function<void(TelemetryMessage)> event_callback, TelemetryMessage event_msg) override 
     {
         // Initialize block_value_prev if it doesn't exist.
         if (!block_value_prev) {
@@ -685,7 +604,7 @@ public:
 
         // Check for changes in values.
         if (!std::equal(block_value, block_value + this->get_num_rows(), block_value_prev->begin())) {
-            send_event(event_callback);
+            send_event(event_callback, event_msg);
 
             // Copy updated values into block_value_prev.
             std::copy(block_value, block_value + this->get_num_rows(), block_value_prev->begin());
@@ -826,48 +745,17 @@ public:
     /// @param  meters_callback  The callback function used to send the
     ///     meter data.
     /// @param  items_remaining  The number of meters left in the block.
-    virtual void send_meters(std::function<void(telemetry_cb_data &)> meters_callback) override
+    virtual void send_meter(std::function<void(TelemetryMessage, std::string)> meters_callback, TelemetryMessage meter_msg) override
     {
-        telemetry_cb_data cb_data = {};
-
-        std::ostringstream message;
-        
-        message << "{ \"block_name\": \"" << this->get_block_name() << "\"";
-        message << "{ \"meter_name\": \"" << this->get_name() << "\"";
-        message << ", \"value_type\": \"" << this->get_value_type() << "\"";
-        message << " \"dimensions\": [" << this->get_num_rows() << ", " << this->get_num_columns() << "],"; // vector telemetry
-        message << ", \"value\": [";
-        
-        for (int row = 0; row < this->get_num_rows(); row++)
-        {
-            for (int col = 0; col < this->get_num_columns() - 1; col++)
-            {
-                std::ostringstream val;
-                this->print_value(val, block_value[row][col]);
-                message << val.str();
-
-                SPDLOG_DEBUG("Writing meter {}:{} = {}", this->get_block_name(), this->get_name(), val.str());
-            }
-
-            this->print_value(message,
-                        block_value[row][this->get_num_columns() - 1]);
-            message << "]";
-
-            if (row != this->get_num_rows() - 1)
-            {
-                message << ", [";
-            }
-            else
-            {
-                message << "]";
-            }
+        std::vector<std::vector<T>> tmp(this->get_num_rows());
+        for (int r = 0; r < this->get_num_rows(); r++) {
+            tmp[r].assign(block_value[r], block_value[r] + this->get_num_columns());
         }
+        meter_msg.set_value(tmp);
 
-        message << " }\n";
-        
-        cb_data.message = message.str();
-        cb_data.period_type = this->get_period_type();
-        meters_callback(cb_data);
+        SPDLOG_DEBUG("Writing meter {}:{} = {}", this->get_block_name(), this->get_name(), tmp);
+
+        meters_callback(meter_msg, this->get_period_type());
     }
 
 
@@ -876,49 +764,19 @@ public:
     ///
     /// @param  event_callback  The callback function used to send the
     ///     meter data.
-    virtual void send_event(std::function<void(telemetry_cb_data &)> event_callback) override
+    virtual void send_event(std::function<void(TelemetryMessage)> event_callback, TelemetryMessage event_msg) override
     {
-        telemetry_cb_data cb_data = {};
-
-        std::ostringstream message;
-
-        auto now = std::chrono::steady_clock::now();
-        auto now_us = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
-
-        message << "{ \"message_name\": \"event\",";
-        message << " \"packet_id\": \"" << static_cast<uint64_t>(now_us) << "\",";
-        message << " \"parameters\": {";
-        message << " \"name\": \"" << "fusion_system_monitor" << "\",";
-        message << " \"block_name\": \"" << this->get_block_name() << "\",";
-        message << " \"event_name\": \"" << this->get_name() << "\",";
-        message << " \"dimensions\": [" << this->get_num_rows() 
-                << ", " << this->get_num_columns() << "],";
-        message << " \"value\": [";
-
-        // Append matrix values row by row
-        for (int row = 0; row < this->get_num_rows(); row++)
-        {
-            message << "[";
-            for (int col = 0; col < this->get_num_columns(); col++)
-            {
-                this->print_value(message, block_value[row][col]);
-                if (col < this->get_num_columns() - 1)
-                {
-                    message << ", ";
-                }
-            }
-            message << "]";
-            if (row < this->get_num_rows() - 1)
-            {
-                message << ", ";
-            }
+        std::vector<std::vector<T>> tmp(this->get_num_rows());
+        for (int r = 0; r < this->get_num_rows(); r++) {
+            tmp[r].assign(block_value[r], block_value[r] + this->get_num_columns());
         }
 
-        message << "] } }\n";
+        event_msg.set_packet_id();
+        event_msg.get_parameters().set_value(tmp);
 
-        cb_data.message = message.str();
-        cb_data.period_type = this->get_period_type();
-        event_callback(cb_data);
+        SPDLOG_DEBUG("Sending event {}:{} = {}", this->get_block_name(), this->get_name(), tmp);
+
+        event_callback(event_msg);
     }
 
 
@@ -926,7 +784,7 @@ public:
     ///
     /// @param  event_callback  The callback function used to send the
     ///     event data.
-    virtual void send_event_if_changed(std::function<void(telemetry_cb_data &)> event_callback) override 
+    virtual void send_event_if_changed(std::function<void(TelemetryMessage)> event_callback, TelemetryMessage event_msg) override 
     {
         // Initialize block_value_prev if it doesn't exist.
         if (!block_value_prev) {
@@ -946,7 +804,7 @@ public:
         }
 
         if (changed) {
-            send_event(event_callback);
+            send_event(event_callback, event_msg);
 
             // Update block_value_prev with new values.
             for (int row = 0; row < this->get_num_rows(); ++row) {

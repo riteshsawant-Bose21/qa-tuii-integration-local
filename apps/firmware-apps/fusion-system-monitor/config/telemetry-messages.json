@@ -29,6 +29,18 @@
             "value_type": "",
             "dimensions": [],
             "value": []
+        },
+        {
+            "message_name": "event",
+            "packet_id": 0,
+            "parameters": {
+                "name": "",
+                "block_name": "",
+                "event_name": "",
+                "value_type": "",
+                "dimensions": [],
+                "value": []
+            }
         }
     ]
 }
