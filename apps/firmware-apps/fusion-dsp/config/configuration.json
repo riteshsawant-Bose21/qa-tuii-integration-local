@@ -1,5 +1,6 @@
 {
     "session": {
+        "name": "mune_dsp",
         "property_settings": [
             { "name": "frame_size", "value": 256},
             { "name": "sample_rate", "value": 48000 }

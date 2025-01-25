@@ -1,0 +1,46 @@
+{
+    "telemetry_messages": [
+        {
+            "message_name": "pub_register_req",
+            "packet_id": 0,
+            "parameters": {
+                "name": "",
+                "block_size": [0, 0, 0]
+            }
+        },
+        {
+            "message_name": "pub_deregister_req",
+            "packet_id": 0,
+            "parameters": {
+                "name": ""
+            }
+        },
+        {
+            "message_name": "update_meters_rsp",
+            "packet_id": 0,
+            "parameters": {
+                "name": "",
+                "value": ""
+            }
+        },
+        {
+            "block_name": "",
+            "meter_name": "",
+            "value_type": "",
+            "dimensions": [],
+            "value": []
+        },
+        {
+            "message_name": "event",
+            "packet_id": 0,
+            "parameters": {
+                "name": "",
+                "block_name": "",
+                "event_name": "",
+                "value_type": "",
+                "dimensions": [],
+                "value": []
+            }
+        }
+    ]
+}

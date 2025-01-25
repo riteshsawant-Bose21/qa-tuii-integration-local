@@ -18,209 +18,16 @@
 namespace bosepro {
 
 
-/// A navigator with mutability for telemetry message json file
-class TelemetryMessage : public Navigator {
-public:
-    /// Build the command definitions for the system from the given JSON file.
-    ///
-    /// @param  filename  A JSON file containing the interface definitions.
-    TelemetryMessage(const std::string &filename)
-        : Navigator(filename)
-    {
-    }
-
-
-    /// Build the command definitions for the system from the given JSON file.
-    ///
-    /// @param  ss  A string stream containing a JSON string.
-    TelemetryMessage(std::stringstream &ss)
-        : Navigator(ss)
-    {
-    }
-
-
-    /// Get the json blob for the default command with name "name".
-    ///
-    /// @return  TelemetryMessage of the command node
-    TelemetryMessage get_default_command(const std::string name) const
-    {
-        return (TelemetryMessage &)list_get_member("telemetry_messages", "message_name", name);
-    }
-
-
-    /// Get the json blob for the default meter update node.
-    ///
-    /// @return  TelemetryMessage of the meter update node
-    TelemetryMessage get_default_meter() const
-    {
-        return (TelemetryMessage &)list_get_member("telemetry_messages", "meter_name", "");
-    }
-
-
-    /// Get the name of the TelemetryMessage.
-    ///
-    /// @return  The name of the TelemetryMessage.
-    const std::string &get_message_name() const
-    {
-        return get_string("message_name");
-    }
-
-
-    /// Get the parameters node json 
-    ///
-    /// @return  TelemetryMessage of parameters node.
-    TelemetryMessage &get_parameters() const
-    {
-        return (TelemetryMessage &)get_member("parameters");
-    }
-
-
-    /// Get the string from "value" property.
-    ///
-    /// @return  The string value of "value"
-    const std::string get_value() const
-    {
-        return get_string("value");
-    }
-
-
-    /// Get the string from "type" property.
-    ///
-    /// @return  The string value of "type"
-    const std::string get_type() const
-    {
-        return get_string("type");
-    }
-
-
-    /// Get the string from "period_type" property.
-    ///
-    /// @return  The string value of "period_type"
-    const std::string get_period_type() const
-    {
-        return get_string("period_type");
-    }
-
-
-    /// Get the string from "packet_id" property.
-    ///
-    /// @return  The string value of "packet_id"
-    const std::string get_packet_id() const
-    {
-        return get_string("packet_id");
-    }
-
-
-    /// Get the "block_name" array.
-    ///
-    /// @return  The block_name array
-    std::vector<std::string> get_block_name()
-    {
-        const std::string block_name_key = "block_name";
-        std::vector<std::string> block_name(3, "");
-
-        get_list_value(block_name_key, 0, block_name[0]);
-        get_list_value(block_name_key, 1, block_name[1]);
-        get_list_value(block_name_key, 2, block_name[2]);
-
-        return block_name;
-    }
-
-
-    /// Get the "block_size" array.
-    ///
-    /// @return  The block_size array
-    std::vector<std::string> get_block_size()
-    {
-        const std::string block_size_key = "block_size";
-        std::vector<std::string> block_size(3, "");
-
-        get_list_value(block_size_key, 0, block_size[0]);
-        get_list_value(block_size_key, 1, block_size[1]);
-        get_list_value(block_size_key, 2, block_size[2]);
-
-        return block_size;
-    }
-
-
-    /// Set the parameters.name value.
-    ///
-    /// @param value  The value to set parameters.value.
-    void set_name(const std::string &value)
-    {
-        set_member("name", value);
-    }
-
-
-    /// Set the parameters.value value.
-    ///
-    /// @param value  The value to set parameters.value.
-    template <typename T>
-    void set_value(const T &value)
-    {
-        set_member("value", value);
-    }
-
-
-    /// Set the parameters.type value.
-    ///
-    /// @param value  The value to set parameters.type.
-    template <typename T>
-    void set_type(const T &value)
-    {
-        set_member("type", value);
-    }
-
-
-    /// Generate a timestamp and set the packet_id with it.
-    void set_packet_id()
-    {
-        auto now = std::chrono::steady_clock::now();
-        auto now_us = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
-        set_member("packet_id", static_cast<uint64_t>(now_us));
-    }
-
-
-    /// Set the packet_id value with the specified timestamp.
-    ///
-    /// @param timestamp  The value to set packet_id.
-    void set_packet_id(std::string timestamp)
-    {
-        set_member("packet_id", timestamp);
-    }
-
-
-    /// Set the "block_size" array in the "parameters" object.
-    /// If "block_size" exists, it will be updated with the new values.
-    /// If it does not exist, an error is logged, and an exception is thrown.
-    ///
-    /// @param block_size The array of block sizes to set.
-    void set_block_size(const std::vector<size_t> &block_size)
-    {
-        set_list("block_size", block_size);
-    }
-
-
-    /// Serialize the telemetry message.
-    ///
-    /// @return  The json blob string
-    const std::string serialize_message() const
-    {
-        return serialize();
-    }
-};
-
-
 class TelemetryMonitor {
 public:
     /// Constructor for singleton pattern--initialization in "initialize" method
     TelemetryMonitor()
         : shm_manager(NamedSharedMemoryManagerFactory::getInstance()),
-          serverpath(""),
           shm_names(NUM_SHM_REGIONS, ""),
           telemetry_manager_addr(),
           timeout(5),
-          initialized(false)
+          initialized(false),
+          stop_flag(false)
     {
     }
 
@@ -228,6 +35,8 @@ public:
     ~TelemetryMonitor() 
     {
         stop();
+        std::string client_path = "/tmp/system_monitor_uds_" + std::to_string(getpid());
+        unlink(client_path.c_str());
     }
 
 
@@ -242,10 +51,13 @@ public:
     /// Initialize the singleton object. Connect and register with Fusion Telemetry Manager
     ///
     /// @param filename  file to initialize the telemetry_messages
-    void initialize(const std::string &filename, const std::string socket_path)
+    void initialize(const std::string &filename, 
+                    const std::string socket_path,
+                    const std::string pub_name)
     {
         telemetry_messages = std::make_unique<TelemetryMessage>(filename);
-        serverpath = socket_path;
+        server_path = socket_path;
+        publisher_name = pub_name;
         
         telemetry_fd = socket(AF_UNIX, SOCK_DGRAM, 0);
         if (telemetry_fd < 0)
@@ -255,7 +67,7 @@ public:
 
         struct sockaddr_un client_addr {};
         client_addr.sun_family = AF_UNIX;
-        std::string client_path = "/tmp/dsp_uds_" + std::to_string(getpid());
+        std::string client_path = "/tmp/system_monitor_uds_" + std::to_string(getpid());
         strncpy(client_addr.sun_path, client_path.c_str(), sizeof(client_addr.sun_path) - 1);
         unlink(client_path.c_str());
 
@@ -268,22 +80,22 @@ public:
 
         // Set up the telemetry manager address
         telemetry_manager_addr.sun_family = AF_UNIX;
-        strncpy(telemetry_manager_addr.sun_path, serverpath.c_str(), sizeof(telemetry_manager_addr.sun_path) - 1);
+        strncpy(telemetry_manager_addr.sun_path, server_path.c_str(), sizeof(telemetry_manager_addr.sun_path) - 1);
 
         struct stat statbuf;
         int n = 0;
         while (n < timeout)
         {
-            if (stat(serverpath.c_str(), &statbuf) == 0 && S_ISSOCK(statbuf.st_mode)) 
+            if (stat(server_path.c_str(), &statbuf) == 0 && S_ISSOCK(statbuf.st_mode)) 
             {
-                SPDLOG_INFO("Telemetry Manager UDS exists at {}", serverpath);
+                SPDLOG_INFO("Telemetry Manager UDS exists at {}", server_path);
                 break;
             }
 
             sleep(1);
             if (++n >= timeout)
             {
-                SPDLOG_CRITICAL("Telemetry Manager UDS does NOT exist at {}", serverpath);
+                SPDLOG_CRITICAL("Telemetry Manager UDS does NOT exist at {}", server_path);
                 return;
             }
         }
@@ -315,6 +127,8 @@ public:
     /// Stop the threads.
     void stop() 
     {
+        stop_flag = true;
+        
         if (monitor_thread.joinable()) 
         {
             monitor_thread.join();
@@ -323,6 +137,14 @@ public:
         {
             events_thread.join();
         }
+
+        if (telemetry_fd)
+        {
+            close(telemetry_fd);
+        }
+
+        std::string client_path = "/tmp/system_monitor_uds_" + std::to_string(getpid());
+        unlink(client_path.c_str());
     }
 
 
@@ -543,9 +365,11 @@ public:
     /// Callback to send event telemetry on UDS
     ///
     /// @param message the message to send
-    void send_event_uds(bosepro::telemetry_cb_data &cb_data)
+    void send_event_uds(TelemetryMessage event_msg)
     {
-        if (sendto(telemetry_fd, cb_data.message.c_str(), cb_data.message.size(), 0,
+        const char *msg = event_msg.serialize_message().c_str();
+
+        if (sendto(telemetry_fd, msg, strlen(msg), 0,
                 (struct sockaddr *)&telemetry_manager_addr, sizeof(telemetry_manager_addr)) < 0)
         {
             SPDLOG_WARN("Couldn't send telemetry to socket.");
@@ -556,11 +380,11 @@ public:
     /// Callback to update telemetry in shared memory
     ///
     /// @param cb_data the telemetry callback data to write
-    void update_meters_shm(bosepro::telemetry_cb_data &cb_data)
+    void update_meters_shm(TelemetryMessage meter_msg, std::string period_type)
     {
-        int region_index = cb_data.period_type == "HI"  ? 0 :
-                           cb_data.period_type == "MED" ? 1 :
-                           cb_data.period_type == "LO"  ? 2 : -1;
+        int region_index = period_type == "HI"  ? 0 :
+                           period_type == "MED" ? 1 :
+                           period_type == "LO"  ? 2 : -1;
 
         // Validate the region index and ensure shared memory is available
         if (region_index < 0) {
@@ -570,8 +394,10 @@ public:
         try 
         {
             // Write the telemetry message into the shared memory region
+            const char *msg = meter_msg.serialize_message().c_str();
+
             NamedSharedMemory& shm = shm_manager.getSharedMemory(shm_names[region_index]);
-            shm.lightWeightWrite(cb_data.message.c_str(), cb_data.message.length());
+            shm.lightWeightWrite(msg, strlen(msg));
 
         } 
         catch (const std::runtime_error& e) {
@@ -587,7 +413,7 @@ private:
     /// @return  true if message sent successfully, false otherwise
     bool send_message(TelemetryMessage &message)
     {
-        message.get_parameters().set_name("mune_dsp");
+        message.get_parameters().set_name(publisher_name);
         const std::string str = message.serialize_message();
         if (sendto(telemetry_fd, str.c_str(), str.size(), 0,
                 (struct sockaddr *)&telemetry_manager_addr, sizeof(telemetry_manager_addr)) < 0)
@@ -746,13 +572,15 @@ private:
         NamedSharedMemory& shm = shm_manager.getSharedMemory(shm_names[region_index]);
         shm.softResetWritePointer();
 
+        TelemetryMessage meter_msg(telemetry_messages->get_default_meter());
+
         for (auto &m: meters)
         {
             if (m.second->get_period_type() == period_type)
             {   
                 try 
                 {
-                    m.second->send_meters(meters_callback);
+                    m.second->send_meter(meters_callback, meter_msg);
                 } 
                 catch (const std::runtime_error& e) 
                 {
@@ -808,9 +636,12 @@ private:
     /// Send any events that have changed
     void send_events()
     {
+        TelemetryMessage event_msg(telemetry_messages->get_default_event());
+        event_msg.get_parameters().set_name(publisher_name);
+
         for (auto &e: events)
         {
-            e.second->send_event_if_changed(event_callback);
+            e.second->send_event_if_changed(event_callback, event_msg);
         }
     }
 
@@ -823,7 +654,7 @@ private:
         }
 
         int error_timeout = 0;
-        while (1)
+        while (!stop_flag)
         {
             // Receive a message from the telemetry manager
             TelemetryMessage message = recv_message();
@@ -853,15 +684,12 @@ private:
 
             usleep(100);
         }
-
-        // Clean up the socket
-        close(telemetry_fd);
     }
 
 
     /// Loop for managing events.
     void manage_events_loop() {
-        while (1)
+        while (!stop_flag)
         {
             send_events();
 
@@ -872,27 +700,30 @@ private:
 
     /// Setup send telemetry callback member funcs
     void setup_callbacks() {
-        meters_callback = [this](telemetry_cb_data &cb_data) {
-            update_meters_shm(cb_data);
+        meters_callback = [this](TelemetryMessage meter_msg, std::string period_type) {
+            update_meters_shm(meter_msg, period_type);
         };
 
-        event_callback = [this](telemetry_cb_data &cb_data) {
-            send_event_uds(cb_data);
+        event_callback = [this](TelemetryMessage event_msg) {
+            send_event_uds(event_msg);
         };
     }
 
 
-    std::function<void(telemetry_cb_data &)> meters_callback;
-    std::function<void(telemetry_cb_data &)> event_callback;
+    std::function<void(TelemetryMessage, std::string)> meters_callback;
+    std::function<void(TelemetryMessage)> event_callback;
+
+    std::string publisher_name;
+    std::string server_path;
 
     NamedSharedMemoryManager& shm_manager;
-    std::string serverpath;
     int telemetry_fd;
     std::vector<std::string> shm_names;
     struct sockaddr_un telemetry_manager_addr;
     int timeout;
     bool initialized;
-
+    std::atomic<bool> stop_flag;
+    
     std::unique_ptr<TelemetryMessage> telemetry_messages;
 
     std::thread monitor_thread;
