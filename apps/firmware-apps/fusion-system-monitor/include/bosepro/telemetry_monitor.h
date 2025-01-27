@@ -35,7 +35,6 @@ public:
     ~TelemetryMonitor() 
     {
         stop();
-        std::string client_path = "/tmp/" + publisher_name + std::to_string(getpid());
         unlink(client_path.c_str());
     }
 
@@ -56,8 +55,10 @@ public:
                     const std::string pub_name)
     {
         telemetry_messages = std::make_unique<TelemetryMessage>(filename);
+
         server_path = socket_path;
         publisher_name = pub_name;
+        client_path = "/tmp/" + publisher_name + "_" + std::to_string(getpid());
         
         telemetry_fd = socket(AF_UNIX, SOCK_DGRAM, 0);
         if (telemetry_fd < 0)
@@ -67,7 +68,6 @@ public:
 
         struct sockaddr_un client_addr {};
         client_addr.sun_family = AF_UNIX;
-        std::string client_path = "/tmp/" + publisher_name + std::to_string(getpid());
         strncpy(client_addr.sun_path, client_path.c_str(), sizeof(client_addr.sun_path) - 1);
         unlink(client_path.c_str());
 
@@ -143,7 +143,6 @@ public:
             close(telemetry_fd);
         }
 
-        std::string client_path = "/tmp/" + publisher_name + std::to_string(getpid());
         unlink(client_path.c_str());
     }
 
@@ -715,6 +714,7 @@ private:
 
     std::string publisher_name;
     std::string server_path;
+    std::string client_path;
 
     NamedSharedMemoryManager& shm_manager;
     int telemetry_fd;
