@@ -5,7 +5,6 @@
 #include <bosepro/definition.h>
 #include <bosepro/dspmemory.h>
 #include <bosepro/telemetry_message.h>
-#include <spdlog/fmt/ranges.h>
 
 #include <string>
 #include <functional>
