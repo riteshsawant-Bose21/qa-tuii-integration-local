@@ -5,7 +5,6 @@
 #include <bosepro/definition.h>
 #include <bosepro/dspmemory.h>
 #include <bosepro/telemetry_message.h>
-#include <spdlog/fmt/ranges.h>
 
 #include <string>
 #include <functional>
@@ -37,8 +36,8 @@ public:
         num_rows = 1;
         num_columns = 1;
 
-        int dimensions = definition.get_num_dimensions();
-        if (dimensions != 0)
+        int num_dimensions = definition.get_num_dimensions();
+        if (num_dimensions != 0)
         {
             std::string rows_name;
             std::string columns_name;
@@ -157,6 +156,17 @@ public:
     void assign(DspTelemetryMemory<T*[]> &value, std::function<void(int, int)> pre_function);
 
 
+    /// Create a telemetry object based on the type of the definition.
+    ///
+    /// @param  definition  The telemetry definition.
+    /// @param  definition  The processor definition.
+    /// @param  configuration  The configuration to use for the telemetry.
+    /// @return  A pointer to the telemetry object.
+    static Telemetry *create(const TelemetryDefinition &definition,
+                             const ProcessorDefinition &processor,
+                             const BlockConfiguration *configuration);
+
+
     /// Get the number of rows in the telemetry, or 1 if the telemetry is a scalar.
     ///
     /// @return  The number of rows in the telemetry.
@@ -174,32 +184,66 @@ public:
     }
 
 
-    /// Get the name of the type of the telemetry's value.
+    /// Get the name of this telemetry.
     ///
-    /// @return  The name of the type of the telemetry's value.
-    const std::string &get_value_type() const
+    /// @return  The name of the telemetry.
+    const std::string get_block_name()
     {
-        return value_type;
+        return block_name;
     }
-
-
-    /// Create a telemetry object based on the type of the definition.
-    ///
-    /// @param  definition  The telemetry definition.
-    /// @param  definition  The processor definition.
-    /// @param  configuration  The configuration to use for the telemetry.
-    /// @return  A pointer to the telemetry object.
-    static Telemetry *create(const TelemetryDefinition &definition,
-                             const ProcessorDefinition &processor,
-                             const BlockConfiguration *configuration);
 
 
     /// Get the name of this telemetry.
     ///
     /// @return  The name of the telemetry.
-    const std::string &get_name()
+    const std::string get_name()
     {
         return name;
+    }
+
+
+    /// Get the name of the type of the telemetry's value.
+    ///
+    /// @return  The name of the type of the telemetry's value.
+    const std::string get_dimensions() const
+    {
+        switch(num_dimensions) 
+        {
+            case 0:
+                return "0";
+            case 1:
+                return std::to_string(num_rows);
+            case 2:
+                return "[" + std::to_string(num_rows) + ", " + std::to_string(num_columns) + "]";
+        }
+        return "0";
+    }
+
+
+    /// Get the name of the type of the telemetry's value.
+    ///
+    /// @return  The name of the type of the telemetry's value.
+    const std::string get_value_type() const
+    {
+        return value_type;
+    }
+
+
+    /// Get the telemetry type.
+    ///
+    /// @return  The block name.
+    const std::string get_period_type() const
+    {
+        return period_type;
+    }
+
+
+    /// Get the telemetry type.
+    ///
+    /// @return  The block name.
+    const std::string get_telemetry_type() const
+    {
+        return telemetry_type;
     }
 
 
@@ -209,33 +253,6 @@ public:
     void set_block_name(const std::string &name)
     {
         block_name = name;
-    }
-
-
-    /// Get the name of the block that owns this telemetry.
-    ///
-    /// @return  The block name.
-    const std::string &get_block_name()
-    {
-        return block_name;
-    }
-
-
-    /// Get the telemetry type.
-    ///
-    /// @return  The block name.
-    const std::string &get_period_type() const
-    {
-        return period_type;
-    }
-
-
-    /// Get the telemetry type.
-    ///
-    /// @return  The block name.
-    const std::string &get_telemetry_type() const
-    {
-        return telemetry_type;
     }
 
 
@@ -276,6 +293,7 @@ private:
     std::string value_type;
     std::string telemetry_type;
     std::string period_type;
+    int num_dimensions;
     int num_rows;
     int num_columns;
 };
@@ -398,9 +416,13 @@ public:
     ///     meter data.
     virtual void send_meter(std::function<void(TelemetryMessage, std::string)> meters_callback, TelemetryMessage meter_msg) override
     {
+        meter_msg.set_block_name(this->get_block_name());
+        meter_msg.set_meter_name(this->get_name());
+        meter_msg.set_value_type(this->get_value_type());
+        meter_msg.set_dimensions(this->get_dimensions());
         meter_msg.set_value(*block_value);
 
-        SPDLOG_DEBUG("Writing meter {}:{} = {}", this->get_block_name(), this->get_name(), *block_value);
+        SPDLOG_TRACE("Writing meter: \n\n{}", meter_msg.serialize_message());
 
         meters_callback(meter_msg, this->get_period_type());
     }
@@ -414,9 +436,14 @@ public:
     virtual void send_event(std::function<void(TelemetryMessage)> event_callback, TelemetryMessage event_msg) override
     {
         event_msg.set_packet_id();
-        event_msg.get_parameters().set_value(*block_value);
+        TelemetryMessage &params(event_msg.get_parameters());
+        params.set_block_name(this->get_block_name());
+        params.set_event_name(this->get_name());
+        params.set_value_type(this->get_value_type());
+        params.set_dimensions(this->get_dimensions());
+        params.set_value(*block_value);
 
-        SPDLOG_DEBUG("Sending event {}:{} = {}", this->get_block_name(), this->get_name(), *block_value);
+        SPDLOG_TRACE("Sending event: \n\n{}", event_msg.serialize_message());
 
         event_callback(event_msg);
     }
@@ -564,10 +591,14 @@ public:
     /// @param  items_remaining  The number of meters left in the block.
     virtual void send_meter(std::function<void(TelemetryMessage, std::string)> meters_callback, TelemetryMessage meter_msg) override
     {
+        meter_msg.set_block_name(this->get_block_name());
+        meter_msg.set_meter_name(this->get_name());
+        meter_msg.set_value_type(this->get_value_type());
+        meter_msg.set_dimensions(this->get_dimensions());
         std::vector<T> tmp(block_value, block_value + this->get_num_rows());
         meter_msg.set_value(tmp);
 
-        SPDLOG_DEBUG("Writing meter {}:{} = {}", this->get_block_name(), this->get_name(), tmp);
+        SPDLOG_TRACE("Writing meter: \n\n{}", meter_msg.serialize_message());
 
         meters_callback(meter_msg, this->get_period_type());
     }
@@ -583,9 +614,14 @@ public:
         std::vector<T> tmp(block_value, block_value + this->get_num_rows());
         
         event_msg.set_packet_id();
-        event_msg.get_parameters().set_value(tmp);
+        TelemetryMessage &params(event_msg.get_parameters());
+        params.set_block_name(this->get_block_name());
+        params.set_event_name(this->get_name());
+        params.set_value_type(this->get_value_type());
+        params.set_dimensions(this->get_dimensions());
+        params.set_value(tmp);
 
-        SPDLOG_DEBUG("Sending event {}:{} = {}", this->get_block_name(), this->get_name(), tmp);
+        SPDLOG_TRACE("Sending event: \n\n{}", event_msg.serialize_message());
 
         event_callback(event_msg);
     }
@@ -747,13 +783,17 @@ public:
     /// @param  items_remaining  The number of meters left in the block.
     virtual void send_meter(std::function<void(TelemetryMessage, std::string)> meters_callback, TelemetryMessage meter_msg) override
     {
+        meter_msg.set_block_name(this->get_block_name());
+        meter_msg.set_meter_name(this->get_name());
+        meter_msg.set_value_type(this->get_value_type());
+        meter_msg.set_dimensions(this->get_dimensions());
         std::vector<std::vector<T>> tmp(this->get_num_rows());
         for (int r = 0; r < this->get_num_rows(); r++) {
             tmp[r].assign(block_value[r], block_value[r] + this->get_num_columns());
         }
         meter_msg.set_value(tmp);
 
-        SPDLOG_DEBUG("Writing meter {}:{} = {}", this->get_block_name(), this->get_name(), tmp);
+        SPDLOG_TRACE("Writing meter: \n\n{}", meter_msg.serialize_message());
 
         meters_callback(meter_msg, this->get_period_type());
     }
@@ -772,9 +812,14 @@ public:
         }
 
         event_msg.set_packet_id();
-        event_msg.get_parameters().set_value(tmp);
+        TelemetryMessage &params(event_msg.get_parameters());
+        params.set_block_name(this->get_block_name());
+        params.set_event_name(this->get_name());
+        params.set_value_type(this->get_value_type());
+        params.set_dimensions(this->get_dimensions());
+        params.set_value(tmp);
 
-        SPDLOG_DEBUG("Sending event {}:{} = {}", this->get_block_name(), this->get_name(), tmp);
+        SPDLOG_TRACE("Sending event: \n\n{}", event_msg.serialize_message());
 
         event_callback(event_msg);
     }
@@ -804,6 +849,7 @@ public:
         }
 
         if (changed) {
+
             send_event(event_callback, event_msg);
 
             // Update block_value_prev with new values.

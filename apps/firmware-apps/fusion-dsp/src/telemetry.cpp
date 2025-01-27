@@ -82,7 +82,7 @@ DECLARE_TEMPLATE_METER_TYPES
 #define CREATE_TELEMETRY(dimension, t, definition, processor, configuration) \
     if (t == "bool")                                                        \
         return new TelemetryData##dimension<bool>(definition, processor, configuration); \
-    else if (t == "int")                                                    \
+    else if (t == "integer")                                                    \
         return new TelemetryData##dimension<int_fast32_t>(definition, processor, configuration); \
     else if (t == "float")                                                  \
         return new TelemetryData##dimension<float>(definition, processor, configuration); \

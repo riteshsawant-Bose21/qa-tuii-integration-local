@@ -134,7 +134,7 @@ DECLARE_TEMPLATE_CONTROL_TYPES
 #define CREATE_PARAMETER(dimension, t, definition, processor, configuration) \
     if (t == "bool")                                                        \
         return new ParameterData##dimension<bool>(definition, processor, configuration); \
-    else if (t == "int")                                                    \
+    else if (t == "integer")                                                    \
         return new ParameterData##dimension<int_fast32_t>(definition, processor, configuration); \
     else if (t == "float")                                                  \
         return new ParameterData##dimension<float>(definition, processor, configuration); \
