@@ -35,7 +35,7 @@ public:
     ~TelemetryMonitor() 
     {
         stop();
-        std::string client_path = "/tmp/system_monitor_uds_" + std::to_string(getpid());
+        std::string client_path = "/tmp/" + publisher_name + std::to_string(getpid());
         unlink(client_path.c_str());
     }
 
@@ -67,7 +67,7 @@ public:
 
         struct sockaddr_un client_addr {};
         client_addr.sun_family = AF_UNIX;
-        std::string client_path = "/tmp/system_monitor_uds_" + std::to_string(getpid());
+        std::string client_path = "/tmp/" + publisher_name + std::to_string(getpid());
         strncpy(client_addr.sun_path, client_path.c_str(), sizeof(client_addr.sun_path) - 1);
         unlink(client_path.c_str());
 
@@ -143,7 +143,7 @@ public:
             close(telemetry_fd);
         }
 
-        std::string client_path = "/tmp/system_monitor_uds_" + std::to_string(getpid());
+        std::string client_path = "/tmp/" + publisher_name + std::to_string(getpid());
         unlink(client_path.c_str());
     }
 
