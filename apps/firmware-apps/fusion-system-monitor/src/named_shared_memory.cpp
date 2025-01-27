@@ -379,7 +379,7 @@ void NamedSharedMemory::printWriteBlocksValues() const {
         if (std::strcmp(block.type, "string") == 0 || std::strcmp(block.type, "json") == 0) {
             // Treat as null-terminated string
             std::cout << std::string(valueAddress, block.length);
-        } else if (std::strcmp(block.type, "int") == 0) {
+        } else if (std::strcmp(block.type, "integer") == 0) {
             // Treat as integer
             if (block.length != sizeof(int)) {
                 throw std::runtime_error("Invalid length for int type in WriteBlock");

@@ -144,18 +144,63 @@ public:
     }
 
 
-    /// Set the parameters.name value.
+    /// Set the name value.
     ///
-    /// @param value  The value to set parameters.value.
+    /// @param value  The value to set name.
     void set_name(const std::string &value)
     {
         set_member("name", value);
     }
 
 
-    /// Set the parameters.value value.
+    /// Set the block_name value.
     ///
-    /// @param value  The value to set parameters.value.
+    /// @param value  The value to set block_name.
+    void set_block_name(const std::string &value)
+    {
+        set_member("block_name", value);
+    }
+
+
+    /// Set the meter_name value.
+    ///
+    /// @param value  The value to set meter_name.
+    void set_meter_name(const std::string &value)
+    {
+        set_member("meter_name", value);
+    }
+
+
+    /// Set the event_name value.
+    ///
+    /// @param value  The value to set event_name.
+    void set_event_name(const std::string &value)
+    {
+        set_member("event_name", value);
+    }
+
+
+    /// Set the dimensions value.
+    ///
+    /// @param value  The value to set dimensions.
+    void set_dimensions(const std::string &value)
+    {
+        set_member("dimensions", value);
+    }
+
+
+    /// Set the value value.
+    ///
+    /// @param value  The value to set value_type.
+    void set_value_type(const std::string &value)
+    {
+        set_member("value_type", value);
+    }
+
+
+    /// Set the value value.
+    ///
+    /// @param value  The value to set value.
     template <typename T>
     void set_value(const T &value)
     {
@@ -163,9 +208,9 @@ public:
     }
 
 
-    /// Set the parameters.value value for value is a vector.
+    /// Set the value value for value is a vector.
     ///
-    /// @param vec  The value to set parameters.value.
+    /// @param vec  The value to set value.
     template <typename T>
     void set_value(const std::vector<T>& vec)
     {
@@ -174,9 +219,9 @@ public:
     }
 
 
-    /// Set the parameters.value value for value is a matrix.
+    /// Set the value value for value is a matrix.
     ///
-    /// @param value  The value to set parameters.value.
+    /// @param value  The value to set value.
     template <typename T>
     void set_value(const std::vector<std::vector<T>>& mat)
     {
@@ -185,9 +230,9 @@ public:
     }
 
 
-    /// Set the parameters.type value.
+    /// Set the type value.
     ///
-    /// @param value  The value to set parameters.type.
+    /// @param value  The value to set type.
     template <typename T>
     void set_type(const T &value)
     {

@@ -366,7 +366,8 @@ public:
     /// @param message the message to send
     void send_event_uds(TelemetryMessage event_msg)
     {
-        const char *msg = event_msg.serialize_message().c_str();
+        std::string serialized_tm = event_msg.serialize_message();
+        const char *msg = serialized_tm.c_str();
 
         if (sendto(telemetry_fd, msg, strlen(msg), 0,
                 (struct sockaddr *)&telemetry_manager_addr, sizeof(telemetry_manager_addr)) < 0)
@@ -393,7 +394,8 @@ public:
         try 
         {
             // Write the telemetry message into the shared memory region
-            const char *msg = meter_msg.serialize_message().c_str();
+            std::string serialized_tm = meter_msg.serialize_message();
+            const char *msg = serialized_tm.c_str();
 
             NamedSharedMemory& shm = shm_manager.getSharedMemory(shm_names[region_index]);
             shm.lightWeightWrite(msg, strlen(msg));
