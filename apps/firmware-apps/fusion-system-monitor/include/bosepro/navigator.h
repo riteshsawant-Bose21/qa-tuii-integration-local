@@ -42,13 +42,6 @@ public:
 
 
 protected:
-    /// Default constructor
-    Navigator()
-        : boost::property_tree::ptree()
-    {
-    }
-
-
     /// Test whether the property has a member of the given name.
     ///
     /// @param  member_name  The name of the member.
