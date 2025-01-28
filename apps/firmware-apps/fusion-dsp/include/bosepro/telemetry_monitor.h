@@ -452,6 +452,7 @@ private:
         return message;
     }
 
+
     /// Pub initiated command to register with telemetry manager
     bool register_with_telemetry_manager()
     {
