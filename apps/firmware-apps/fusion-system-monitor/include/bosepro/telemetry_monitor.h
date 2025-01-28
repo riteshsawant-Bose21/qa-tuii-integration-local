@@ -157,10 +157,12 @@ public:
 
         if (telemetry->get_telemetry_type() == "meter")
         {
+            SPDLOG_TRACE("Registering meter {}", qualified_name);
             meters[qualified_name] = std::move(telemetry);
         }
         else if (telemetry->get_telemetry_type() == "event")
         {
+            SPDLOG_TRACE("Registering event {}", qualified_name);
             events[qualified_name] = std::move(telemetry);
         }
         else
@@ -577,6 +579,7 @@ private:
 
         for (auto &m: meters)
         {
+            SPDLOG_TRACE("Update meter {} period_type {}", m.first, m.second->get_period_type());
             if (m.second->get_period_type() == period_type)
             {   
                 try 
@@ -672,7 +675,7 @@ private:
             }
             error_timeout = 0;
 
-            SPDLOG_TRACE("Received message from telemetry manager: \n{}", message.serialize_message());
+            SPDLOG_TRACE("Received message from telemetry manager: \n\n{}", message.serialize_message());
 
             try
             {

@@ -416,6 +416,11 @@ public:
     ///     meter data.
     virtual void send_meter(std::function<void(TelemetryMessage, std::string)> meters_callback, TelemetryMessage meter_msg) override
     {
+        if (!block_value) {
+            SPDLOG_ERROR("block_value is null in send_meter for {}::{}!", this->get_block_name(), this->get_name());
+            return; // or throw
+        }
+
         meter_msg.set_block_name(this->get_block_name());
         meter_msg.set_meter_name(this->get_name());
         meter_msg.set_value_type(this->get_value_type());
@@ -547,7 +552,7 @@ public:
                 size += static_cast<const std::string>(block_value[row]).size() + 6;
             }
             // compensate for extra """" and no ", "
-            size += static_cast<const std::string>(block_value[this->get_num_rows()]).size() + 2;
+            size += static_cast<const std::string>(block_value[this->get_num_rows() - 1]).size() + 2;
         }
         else if constexpr (std::is_same_v<T, bool>)
         {
@@ -591,6 +596,11 @@ public:
     /// @param  items_remaining  The number of meters left in the block.
     virtual void send_meter(std::function<void(TelemetryMessage, std::string)> meters_callback, TelemetryMessage meter_msg) override
     {
+        if (!block_value) {
+            SPDLOG_ERROR("block_value is null in send_meter for {}::{}!", this->get_block_name(), this->get_name());
+            return; // or throw
+        }
+
         meter_msg.set_block_name(this->get_block_name());
         meter_msg.set_meter_name(this->get_name());
         meter_msg.set_value_type(this->get_value_type());
@@ -783,6 +793,11 @@ public:
     /// @param  items_remaining  The number of meters left in the block.
     virtual void send_meter(std::function<void(TelemetryMessage, std::string)> meters_callback, TelemetryMessage meter_msg) override
     {
+        if (!block_value) {
+            SPDLOG_ERROR("block_value is null in send_meter for {}::{}!", this->get_block_name(), this->get_name());
+            return; // or throw
+        }
+
         meter_msg.set_block_name(this->get_block_name());
         meter_msg.set_meter_name(this->get_name());
         meter_msg.set_value_type(this->get_value_type());
