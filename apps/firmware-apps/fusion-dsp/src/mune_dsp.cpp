@@ -19,6 +19,7 @@
 #include <signal.h>
 #include <atomic>
 #include <iostream>
+#include <filesystem>
 
 
 std::atomic<bool> g_running{true};
@@ -71,10 +72,13 @@ int main(int argc, char *argv[])
     OptionCounter verbosity;
     OptionCounter quietness;
 
+    // Get the root application directory for default paths.
+    std::string app_path(std::filesystem::path(argv[0]).parent_path());
+    
     boost::program_options::options_description desc("Allowed options");
     desc.add_options()
-        ("configuration,c", boost::program_options::value<std::string>()->default_value("config/configuration.json"), "configuration file")
-        ("definitions,d", boost::program_options::value<std::string>()->default_value("config/algorithm-definitions.json"), "algorithm definition file")
+        ("configuration,c", boost::program_options::value<std::string>()->default_value(app_path + "/config/configuration.json"), "configuration file")
+        ("definitions,d", boost::program_options::value<std::string>()->default_value(app_path + "/config/algorithm-definitions.json"), "algorithm definition file")
         ("time,t", boost::program_options::value<int>(), "time to run (seconds)")
         ("telemetry-messages,m", boost::program_options::value<std::string>()->default_value("config/telemetry-messages.json"), "telemetry commands file")
         ("telemetry-configuration,p", boost::program_options::value<std::string>()->default_value("config/telemetry-configuration.json"), "telemetry configuration file")

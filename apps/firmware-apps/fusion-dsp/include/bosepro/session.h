@@ -326,7 +326,7 @@ public:
                     + ":" + configuration.get_output_block() + "_"
                     + std::to_string(configuration.get_output_channel() + 1);
 
-                input_block->connect_port(configuration.get_output_channel(),
+                input_block->connect_port(configuration.get_input_channel(),
                                           connection);
             }
             else
