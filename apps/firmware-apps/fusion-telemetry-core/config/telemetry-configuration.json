@@ -1,0 +1,18 @@
+{
+    "telemetry_configuration": [
+        {
+            "name": "socket_path",
+            "property": "/tmp/telm_core.socket"
+        },
+        {
+            "name": "meter_update_period_frames",
+            "property": [1, 1500, 1500000]
+        },
+        {
+            "name": "meter_report_period_frames",
+            "property": [15, 1500, 1500000]
+        }
+    ]
+}
+
+
