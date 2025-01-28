@@ -214,7 +214,6 @@ public:
     template <typename T>
     void set_value(const std::vector<T>& vec)
     {
-        // Vector type, so set it as a list/array
         set_list("value", vec);
     }
 
@@ -225,7 +224,6 @@ public:
     template <typename T>
     void set_value(const std::vector<std::vector<T>>& mat)
     {
-        // Vector type, so set it as a list/array
         set_list("value", mat);
     }
 

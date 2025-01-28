@@ -1113,7 +1113,7 @@
             ],
             "telemetry": [
                 {
-                    "name": "meter",
+                    "name": "in_meter",
                     "dimensions": ["in"],
                     "value_type": "float",
                     "default_value": -60.0,

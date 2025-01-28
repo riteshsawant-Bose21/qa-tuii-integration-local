@@ -110,7 +110,7 @@ public:
 
                 if ((meta->parameters.count(gain_name) != 0)
                     || (meta->parameters.count(mute_name) != 0)
-                    || (TelemetryMonitor::get_instance().has_meter(meter_name) != 0)
+                    || (TelemetryMonitor::get_instance().has_meter(this->get_block_name() +  "::" + meter_name) != 0)
                     || (td.has_bypass_source()
                         && (meta->parameters.count("bypass") != 0)))
                 {
@@ -151,7 +151,8 @@ public:
                     requires_processing = true;
                 }
 
-                if (TelemetryMonitor::get_instance().has_meter(meter_name))
+                if (TelemetryMonitor::get_instance().has_meter(this->get_block_name() +  
+                                                               "::" + meter_name))
                 {
                     assign_telemetry(meter_name, top.get_telemetry());
                     requires_processing = true;
