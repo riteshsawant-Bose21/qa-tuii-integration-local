@@ -603,6 +603,102 @@ func TestUploadDownloadJSON(t *testing.T) {
 	}
 }
 
+func TestUpdateValueRemoveNull(t *testing.T) {
+	// Set initial value
+	initialValue := map[string]interface{}{
+		"settings": map[string]interface{}{
+			"audio": map[string]interface{}{
+				"tone_eq1": map[string]interface{}{
+					"low_gain":  3.0,
+					"high_gain": 4.0,
+				},
+			},
+		},
+	}
+	jsonData, err := json.Marshal(initialValue)
+	if err != nil {
+		t.Fatalf("Failed to marshal initial value: %v", err)
+	}
+
+	resp, err := http.Post(fmt.Sprintf("%s/setValue", serverAddr),
+		jsonContentType,
+		bytes.NewBuffer(jsonData))
+	if err != nil {
+		t.Fatalf("Failed to set initial value: %v", err)
+	}
+	resp.Body.Close()
+
+	// Verify initial value was set
+	getValue, err := http.Get(fmt.Sprintf("%s/getValue?key=settings.audio.tone_eq1", serverAddr))
+	if err != nil {
+		t.Fatalf("Failed to get initial value: %v", err)
+	}
+
+	var initialResponse struct {
+		Exists bool                   `json:"exists"`
+		Value  map[string]interface{} `json:"value"`
+	}
+	if err := json.NewDecoder(getValue.Body).Decode(&initialResponse); err != nil {
+		t.Fatalf("Failed to decode initial get response: %v", err)
+	}
+	getValue.Body.Close()
+
+	if !initialResponse.Exists {
+		t.Fatal("Initial value was not set")
+	}
+	if initialResponse.Value["low_gain"] != 3.0 || initialResponse.Value["high_gain"] != 4.0 {
+		t.Errorf("Initial value mismatch: got %v", initialResponse.Value)
+	}
+
+	// Update the value with `null` for `high_gain`
+	updatedValue := map[string]interface{}{
+		"settings": map[string]interface{}{
+			"audio": map[string]interface{}{
+				"tone_eq1": map[string]interface{}{
+					"high_gain": nil,
+				},
+			},
+		},
+	}
+	jsonData, err = json.Marshal(updatedValue)
+	if err != nil {
+		t.Fatalf("Failed to marshal updated value: %v", err)
+	}
+
+	resp, err = http.Post(fmt.Sprintf("%s/setValue", serverAddr),
+		jsonContentType,
+		bytes.NewBuffer(jsonData))
+	if err != nil {
+		t.Fatalf("Failed to update value: %v", err)
+	}
+	resp.Body.Close()
+
+	// Verify the update
+	getValue, err = http.Get(fmt.Sprintf("%s/getValue?key=settings.audio.tone_eq1", serverAddr))
+	if err != nil {
+		t.Fatalf("Failed to get updated value: %v", err)
+	}
+
+	var updatedResponse struct {
+		Exists bool                   `json:"exists"`
+		Value  map[string]interface{} `json:"value"`
+	}
+	if err := json.NewDecoder(getValue.Body).Decode(&updatedResponse); err != nil {
+		t.Fatalf("Failed to decode updated get response: %v", err)
+	}
+	getValue.Body.Close()
+
+	if !updatedResponse.Exists {
+		t.Fatal("Updated value does not exist")
+	}
+	if _, exists := updatedResponse.Value["high_gain"]; exists {
+		t.Errorf("high_gain key was not removed as expected: got %v", updatedResponse.Value)
+	}
+	if updatedResponse.Value["low_gain"] != 3.0 {
+		t.Errorf("Wrong value for low_gain: got %v, want 3.0", updatedResponse.Value["low_gain"])
+	}
+}
+
 func TestRootEndpoint(t *testing.T) {
 	resp, err := http.Get(serverAddr)
 	if err != nil {

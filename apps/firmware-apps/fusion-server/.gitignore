@@ -1,8 +1,8 @@
 **/.DS_Store
+**/.xcuserstate
 build
 cloud-init.yaml
 fusion-env
 fusion-server.yaml
 multipass.env
 data
-

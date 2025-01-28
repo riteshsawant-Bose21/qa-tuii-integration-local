@@ -167,6 +167,7 @@ Local builds are good for developing the various server components without deali
    - `GET /download` - Export configuration state
 
 ### Set a single value
+This will set a single value.
 ```bash
 curl -X POST http://192.168.64.100:8080/setValue \
   -H "Content-Type: application/json" \
@@ -174,6 +175,8 @@ curl -X POST http://192.168.64.100:8080/setValue \
 ```
 
 ### Set a nested configuration object
+This will set multiple nested values. This call will not merge
+any existing values, so use caution.
 ```bash
 curl -X POST http://192.168.64.100:8080/setValue \
   -H "Content-Type: application/json" \
@@ -184,6 +187,39 @@ curl -X POST http://192.168.64.100:8080/setValue \
       "current": 0.5
     }
   }'
+```
+
+### Update a nested configuration object
+This will update multiple nested values. Existing values will be merged.
+If a value is set to null, it will be removed.
+```bash
+curl -X POST http://192.168.64.100:8080/setValue \
+  -H "Content-Type: application/json" \
+  -d '{
+    "settings": {
+    "audio": {
+      "tone_eq1" : {
+        "low_gain": null,
+        "high_gain": 10.0
+      }
+    }
+  }
+}' -H "Content-Type: application/json"
+```
+Result:
+```bash
+{
+  "status": "success",
+  "updates": {
+    "settings": {
+      "audio": {
+        "tone_eq1": {
+          "high_gain": 10
+        }
+      }
+    }
+  }
+}
 ```
 
 ### Get a specific value

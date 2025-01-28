@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/memberlist"
@@ -141,6 +142,100 @@ func (h *Handler) HandleHTTPSet(update map[string]interface{}) (interface{}, err
 		"status":  "success",
 		"updates": update,
 	}, nil
+}
+
+// HTTP Server methods
+func (h *Handler) HandleHTTPPatch(update map[string]interface{}) (interface{}, error) {
+
+	existingData := h.transformState(h.stateManager.GetFullState())
+
+	applyUpdate(existingData, update)
+
+	if err := h.handleConfigUpdate(existingData); err != nil {
+		return nil, fmt.Errorf("failed to handle update: %v", err)
+	}
+
+	return map[string]interface{}{
+		"status":  "success",
+		"updates": existingData,
+	}, nil
+}
+
+func applyUpdate(data map[string]interface{}, changes map[string]interface{}) {
+	for key, value := range changes {
+		if value == nil {
+			// Remove the field if the value is null
+			removeNestedField(data, key)
+		} else if subChanges, ok := value.(map[string]interface{}); ok {
+			// If the value is a map, recursively apply updates
+			if subData, exists := data[key].(map[string]interface{}); exists {
+				applyUpdate(subData, subChanges)
+			} else {
+				// Initialize a nested map if it doesn't exist
+				newSubData := make(map[string]interface{})
+				data[key] = newSubData
+				applyUpdate(newSubData, subChanges)
+			}
+		} else {
+			// Update the field if it's not null
+			updateNestedField(data, key, value)
+		}
+	}
+}
+
+// Helper function to update a nested field
+func updateNestedField(data map[string]interface{}, key string, value interface{}) {
+
+	keys := strings.Split(key, ".")
+
+	for i := 0; i < len(keys)-1; i++ {
+		subKey := keys[i]
+		if _, ok := data[subKey]; !ok {
+			data[subKey] = make(map[string]interface{})
+		}
+		// Ensure the intermediate value is a map
+		if subData, ok := data[subKey].(map[string]interface{}); ok {
+			data = subData
+		} else {
+			logging.GetLogger().Error("updateNestedField: intermediate value for key %s is not a map", subKey)
+			return
+		}
+	}
+	data[keys[len(keys)-1]] = value
+}
+
+func removeNestedField(data map[string]interface{}, key string) {
+
+	keys := strings.Split(key, ".")
+	for i := 0; i < len(keys)-1; i++ {
+		subKey := keys[i]
+		if subData, ok := data[subKey].(map[string]interface{}); ok {
+			data = subData
+		} else {
+			// If the intermediate structure doesn't exist or isn't a map, stop
+			return
+		}
+	}
+
+	// Remove the final key
+	delete(data, keys[len(keys)-1])
+
+	// Cleanup empty parent maps recursively
+	cleanupEmptyMaps(data, keys[:len(keys)-1])
+}
+
+func cleanupEmptyMaps(data map[string]interface{}, keys []string) {
+	for i := len(keys) - 1; i >= 0; i-- {
+		key := keys[i]
+		if subData, ok := data[key].(map[string]interface{}); ok {
+			if len(subData) == 0 {
+				delete(data, key)
+			} else {
+				// If this map is not empty, stop cleanup
+				break
+			}
+		}
+	}
 }
 
 // UDP Server methods

@@ -74,6 +74,23 @@ func (s *ConfigServer) BroadcastUpdate(update map[string]interface{}) error {
 	return nil
 }
 
+func (s *ConfigServer) GetValue(w http.ResponseWriter, r *http.Request) {
+
+	if !s.IsGetRequest(w, r) {
+		return
+	}
+
+	key := r.URL.Query().Get("key")
+	response, err := s.handler.HandleHTTPGet(key)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set(contentType, jsonContentType)
+	json.NewEncoder(w).Encode(response)
+}
+
 func (s *ConfigServer) SetValue(w http.ResponseWriter, r *http.Request) {
 
 	if !s.IsPostRequest(w, r) {
@@ -103,14 +120,26 @@ func (s *ConfigServer) SetValue(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-func (s *ConfigServer) GetValue(w http.ResponseWriter, r *http.Request) {
+func (s *ConfigServer) UpdateValue(w http.ResponseWriter, r *http.Request) {
 
-	if !s.IsGetRequest(w, r) {
+	if !s.IsPatchRequest(w, r) {
 		return
 	}
 
-	key := r.URL.Query().Get("key")
-	response, err := s.handler.HandleHTTPGet(key)
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error reading request body: %v", err), http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+
+	var update map[string]interface{}
+	if err := json.Unmarshal(body, &update); err != nil {
+		http.Error(w, fmt.Sprintf("Invalid JSON format: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	response, err := s.handler.HandleHTTPPatch(update)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -367,6 +396,14 @@ func (s *ConfigServer) IsGetRequest(w http.ResponseWriter, r *http.Request) bool
 
 func (s *ConfigServer) IsPostRequest(w http.ResponseWriter, r *http.Request) bool {
 	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return false
+	}
+	return true
+}
+
+func (s *ConfigServer) IsPatchRequest(w http.ResponseWriter, r *http.Request) bool {
+	if r.Method != http.MethodPatch {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return false
 	}
