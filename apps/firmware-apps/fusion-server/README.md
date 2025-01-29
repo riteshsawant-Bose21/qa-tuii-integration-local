@@ -193,7 +193,7 @@ curl -X POST http://192.168.64.100:8080/setValue \
 This will update multiple nested values. Existing values will be merged.
 If a value is set to null, it will be removed.
 ```bash
-curl -X POST http://192.168.64.100:8080/setValue \
+curl -X POST http://192.168.64.100:8080/updateValue  \
   -H "Content-Type: application/json" \
   -d '{
     "settings": {

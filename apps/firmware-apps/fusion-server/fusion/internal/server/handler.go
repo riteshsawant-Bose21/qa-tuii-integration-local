@@ -114,6 +114,7 @@ func (h *Handler) GetInitialState() (WebSocketResponse, error) {
 }
 
 func (h *Handler) HandleHTTPGet(key string) (interface{}, error) {
+
 	if key != "" {
 		value, exists := h.stateManager.Get(key)
 		if !exists {
@@ -132,8 +133,13 @@ func (h *Handler) HandleHTTPGet(key string) (interface{}, error) {
 	return state, nil
 }
 
-// HTTP Server methods
+// HandleHTTPSet will replace existing values with the updated values.
+// A PUT request is idempotent and is intended to fully replace the
+// resource at the target URI with the data provided in the request body.
 func (h *Handler) HandleHTTPSet(update map[string]interface{}) (interface{}, error) {
+
+	h.HandleClearAllData()
+
 	if err := h.handleConfigUpdate(update); err != nil {
 		return nil, fmt.Errorf("failed to handle update: %v", err)
 	}
@@ -144,7 +150,8 @@ func (h *Handler) HandleHTTPSet(update map[string]interface{}) (interface{}, err
 	}, nil
 }
 
-// HTTP Server methods
+// HandleHTTPPatch will update existing values, add new values and remove values
+// that are null.
 func (h *Handler) HandleHTTPPatch(update map[string]interface{}) (interface{}, error) {
 
 	existingData := h.transformState(h.stateManager.GetFullState())

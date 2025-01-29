@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"fusion/internal/api"
+	"fusion/internal/logging"
+	"strings"
 	"sync"
 	"time"
 )
@@ -34,10 +36,35 @@ func (sm *StateManager) GetVersion() int64 {
 func (sm *StateManager) Get(key string) (interface{}, bool) {
 	sm.RLock()
 	defer sm.RUnlock()
-	if entry, exists := sm.state[key]; exists {
-		return entry.Data, true
+
+	// Split the key into parts using the dot separator
+	parts := strings.Split(key, ".")
+
+	// Start traversing the state from the root
+	var current interface{} = TransformState(sm.state)
+
+	for _, part := range parts {
+
+		// Type assert current as a map to continue traversal
+		nestedMap, ok := current.(map[string]interface{})
+		if !ok {
+			logging.GetLogger().Warn("%s is not a supported type. Current type: %T", part, current)
+			return nil, false
+		}
+
+		// Look up the current key part in the map
+		value, exists := nestedMap[part]
+		if !exists {
+			logging.GetLogger().Warn("%s not found.", part)
+			return nil, false
+		}
+
+		// Move to the next level
+		current = value
 	}
-	return nil, false
+
+	// Return the final value found
+	return current, true
 }
 
 func (sm *StateManager) Set(key string, value interface{}) error {

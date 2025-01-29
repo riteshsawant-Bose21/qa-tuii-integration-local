@@ -276,7 +276,6 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	// Print configuration for debugging
 	fmt.Printf("Test Configuration:\n%s\n", cfg)
 
 	clusterConfig = cfg
@@ -603,8 +602,8 @@ func TestUploadDownloadJSON(t *testing.T) {
 	}
 }
 
-func TestUpdateValueRemoveNull(t *testing.T) {
-	// Set initial value
+func TestSetAndUpdateValue(t *testing.T) {
+	// Set the initial value
 	initialValue := map[string]interface{}{
 		"settings": map[string]interface{}{
 			"audio": map[string]interface{}{
@@ -620,19 +619,27 @@ func TestUpdateValueRemoveNull(t *testing.T) {
 		t.Fatalf("Failed to marshal initial value: %v", err)
 	}
 
+	// Send the initial POST request
 	resp, err := http.Post(fmt.Sprintf("%s/setValue", serverAddr),
-		jsonContentType,
+		"application/json",
 		bytes.NewBuffer(jsonData))
 	if err != nil {
 		t.Fatalf("Failed to set initial value: %v", err)
 	}
-	resp.Body.Close()
+	defer resp.Body.Close()
 
-	// Verify initial value was set
+	// Check the response status code
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("Unexpected status code: %d, response: %s", resp.StatusCode, string(body))
+	}
+
+	// Verify the initial value
 	getValue, err := http.Get(fmt.Sprintf("%s/getValue?key=settings.audio.tone_eq1", serverAddr))
 	if err != nil {
 		t.Fatalf("Failed to get initial value: %v", err)
 	}
+	defer getValue.Body.Close()
 
 	var initialResponse struct {
 		Exists bool                   `json:"exists"`
@@ -641,7 +648,6 @@ func TestUpdateValueRemoveNull(t *testing.T) {
 	if err := json.NewDecoder(getValue.Body).Decode(&initialResponse); err != nil {
 		t.Fatalf("Failed to decode initial get response: %v", err)
 	}
-	getValue.Body.Close()
 
 	if !initialResponse.Exists {
 		t.Fatal("Initial value was not set")
@@ -665,19 +671,32 @@ func TestUpdateValueRemoveNull(t *testing.T) {
 		t.Fatalf("Failed to marshal updated value: %v", err)
 	}
 
-	resp, err = http.Post(fmt.Sprintf("%s/setValue", serverAddr),
-		jsonContentType,
-		bytes.NewBuffer(jsonData))
+	// Create a PATCH request for updating the value
+	req, err := http.NewRequest("PATCH", fmt.Sprintf("%s/updateValue", serverAddr), bytes.NewBuffer(jsonData))
+	if err != nil {
+		t.Fatalf("Failed to create PATCH request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err = client.Do(req)
 	if err != nil {
 		t.Fatalf("Failed to update value: %v", err)
 	}
-	resp.Body.Close()
+	defer resp.Body.Close()
+
+	// Check the response status code
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("Unexpected status code: %d, response: %s", resp.StatusCode, string(body))
+	}
 
 	// Verify the update
 	getValue, err = http.Get(fmt.Sprintf("%s/getValue?key=settings.audio.tone_eq1", serverAddr))
 	if err != nil {
 		t.Fatalf("Failed to get updated value: %v", err)
 	}
+	defer getValue.Body.Close()
 
 	var updatedResponse struct {
 		Exists bool                   `json:"exists"`
@@ -686,7 +705,6 @@ func TestUpdateValueRemoveNull(t *testing.T) {
 	if err := json.NewDecoder(getValue.Body).Decode(&updatedResponse); err != nil {
 		t.Fatalf("Failed to decode updated get response: %v", err)
 	}
-	getValue.Body.Close()
 
 	if !updatedResponse.Exists {
 		t.Fatal("Updated value does not exist")

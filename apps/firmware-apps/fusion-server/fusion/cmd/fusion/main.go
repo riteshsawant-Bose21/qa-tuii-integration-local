@@ -134,7 +134,9 @@ func initStateManager(nodeName string) *server.StateManager {
 
 // initPersistence initializes the persistence layer.
 func initPersistence(configPath string, stateManager *server.StateManager) *server.ConfigPersistence {
-	return server.NewConfigPersistence(configPath, stateManager, true)
+	persistence := server.NewConfigPersistence(configPath, stateManager, true)
+	persistence.LoadState()
+	return persistence
 }
 
 // initCluster initializes the cluster memberlist.
