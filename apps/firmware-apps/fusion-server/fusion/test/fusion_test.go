@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"fusion/internal/api"
 	"io"
 	"net/http"
 	"os"
@@ -514,102 +513,20 @@ func TestUpdateValue(t *testing.T) {
 	}
 }
 
-func TestUploadDownloadJSON(t *testing.T) {
-	// First set some test data
-	initialData := map[string]interface{}{
-		"upload_test": "initial_value",
-	}
-	jsonData, _ := json.Marshal(initialData)
-	_, err := http.Post(fmt.Sprintf("%s/setValue", serverAddr),
-		jsonContentType,
-		bytes.NewBuffer(jsonData))
-	if err != nil {
-		t.Fatalf("Failed to set initial data: %v", err)
-	}
-
-	// Download current state
-	resp, err := http.Get(fmt.Sprintf("%s/download", serverAddr))
-	if err != nil {
-		t.Fatalf("Failed to download state: %v", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("Download returned wrong status: got %v want %v",
-			resp.StatusCode, http.StatusOK)
-	}
-
-	// Set up new state values to upload
-	newState := map[string]*api.StateEntry{
-		"upload_test": {
-			Data: "modified_value",
-		},
-		"new_key": {
-			Data: "new_value",
-		},
-	}
-
-	// Upload modified state
-	uploadPayload := struct {
-		State map[string]*api.StateEntry `json:"state"`
-	}{
-		State: newState,
-	}
-
-	uploadData, err := json.Marshal(uploadPayload)
-	if err != nil {
-		t.Fatalf("Failed to marshal upload data: %v", err)
-	}
-
-	uploadResp, err := http.Post(fmt.Sprintf("%s/upload", serverAddr),
-		jsonContentType,
-		bytes.NewBuffer(uploadData))
-	if err != nil {
-		t.Fatalf("Failed to upload state: %v", err)
-	}
-	defer uploadResp.Body.Close()
-
-	if uploadResp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(uploadResp.Body)
-		t.Errorf("Upload returned wrong status: got %v want %v. Body: %s",
-			uploadResp.StatusCode, http.StatusOK, string(body))
-		return
-	}
-
-	// Verify uploaded data
-	getResp, err := http.Get(fmt.Sprintf("%s/getValue", serverAddr))
-	if err != nil {
-		t.Fatalf("Failed to get state after upload: %v", err)
-	}
-	defer getResp.Body.Close()
-
-	var finalState map[string]interface{}
-	if err := json.NewDecoder(getResp.Body).Decode(&finalState); err != nil {
-		t.Fatalf("Failed to decode final state: %v", err)
-	}
-
-	// Check if uploaded values are present with raw values
-	expectedValues := map[string]interface{}{
-		"upload_test": "modified_value",
-		"new_key":     "new_value",
-	}
-
-	for key, value := range expectedValues {
-		if finalState[key] != value {
-			t.Errorf("Mismatch for key %s: got %v, want %v",
-				key, finalState[key], value)
-		}
-	}
-}
-
-func TestSetAndUpdateValue(t *testing.T) {
-	// Set the initial value
+func TestSetAndUpdateValues(t *testing.T) {
+	// Set the initial value with nested vectors and matrices
 	initialValue := map[string]interface{}{
 		"settings": map[string]interface{}{
 			"audio": map[string]interface{}{
 				"tone_eq1": map[string]interface{}{
-					"low_gain":  3.0,
-					"high_gain": 4.0,
+					"low_gain":    3.0,
+					"high_gain":   4.0,
+					"frequencies": []float64{100.0, 200.0, 300.0},
+					"matrix": [][]float64{
+						{1.1, 1.2, 1.3},
+						{2.1, 2.2, 2.3},
+						{3.1, 3.2, 3.3},
+					},
 				},
 			},
 		},
@@ -619,16 +536,12 @@ func TestSetAndUpdateValue(t *testing.T) {
 		t.Fatalf("Failed to marshal initial value: %v", err)
 	}
 
-	// Send the initial POST request
-	resp, err := http.Post(fmt.Sprintf("%s/setValue", serverAddr),
-		"application/json",
-		bytes.NewBuffer(jsonData))
+	resp, err := http.Post(fmt.Sprintf("%s/setValue", serverAddr), "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		t.Fatalf("Failed to set initial value: %v", err)
 	}
 	defer resp.Body.Close()
 
-	// Check the response status code
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 		t.Fatalf("Unexpected status code: %d, response: %s", resp.StatusCode, string(body))
@@ -652,16 +565,26 @@ func TestSetAndUpdateValue(t *testing.T) {
 	if !initialResponse.Exists {
 		t.Fatal("Initial value was not set")
 	}
-	if initialResponse.Value["low_gain"] != 3.0 || initialResponse.Value["high_gain"] != 4.0 {
-		t.Errorf("Initial value mismatch: got %v", initialResponse.Value)
+
+	// Verify numeric arrays
+	frequencies, ok := initialResponse.Value["frequencies"].([]interface{})
+	if !ok || len(frequencies) != 3 || frequencies[0] != 100.0 {
+		t.Errorf("Frequencies mismatch: got %v", frequencies)
 	}
 
-	// Update the value with `null` for `high_gain`
+	// Verify matrix values
+	matrix, ok := initialResponse.Value["matrix"].([]interface{})
+	if !ok || len(matrix) != 3 {
+		t.Errorf("Matrix mismatch: got %v", matrix)
+	}
+
+	// Update the value with `null` for `high_gain` and update `frequencies`
 	updatedValue := map[string]interface{}{
 		"settings": map[string]interface{}{
 			"audio": map[string]interface{}{
 				"tone_eq1": map[string]interface{}{
-					"high_gain": nil,
+					"high_gain":   nil,
+					"frequencies": []float64{400.0, 500.0},
 				},
 			},
 		},
@@ -671,13 +594,11 @@ func TestSetAndUpdateValue(t *testing.T) {
 		t.Fatalf("Failed to marshal updated value: %v", err)
 	}
 
-	// Create a PATCH request for updating the value
 	req, err := http.NewRequest("PATCH", fmt.Sprintf("%s/updateValue", serverAddr), bytes.NewBuffer(jsonData))
 	if err != nil {
 		t.Fatalf("Failed to create PATCH request: %v", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-
 	client := &http.Client{}
 	resp, err = client.Do(req)
 	if err != nil {
@@ -685,7 +606,6 @@ func TestSetAndUpdateValue(t *testing.T) {
 	}
 	defer resp.Body.Close()
 
-	// Check the response status code
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 		t.Fatalf("Unexpected status code: %d, response: %s", resp.StatusCode, string(body))
@@ -715,6 +635,142 @@ func TestSetAndUpdateValue(t *testing.T) {
 	if updatedResponse.Value["low_gain"] != 3.0 {
 		t.Errorf("Wrong value for low_gain: got %v, want 3.0", updatedResponse.Value["low_gain"])
 	}
+	frequencies, ok = updatedResponse.Value["frequencies"].([]interface{})
+	if !ok || len(frequencies) != 2 || frequencies[0] != 400.0 {
+		t.Errorf("Frequencies update mismatch: got %v", frequencies)
+	}
+}
+
+func TestPatchArrayElement(t *testing.T) {
+
+	initialConfig := map[string]interface{}{
+		"settings": map[string]interface{}{
+			"audio": map[string]interface{}{
+				"tone_eq1": map[string]interface{}{
+					"frequencies": []float64{100.0, 200.0, 300.0},
+					"matrix": [][]float64{
+						{1.1, 1.2, 1.3},
+						{2.1, 2.2, 2.3},
+						{3.1, 3.2, 3.3},
+					},
+				},
+			},
+		},
+	}
+	jsonData, err := json.Marshal(initialConfig)
+	if err != nil {
+		t.Fatalf("Failed to marshal initial configuration: %v", err)
+	}
+
+	// Send initial configuration
+	resp, err := http.Post(fmt.Sprintf("%s/setValue", serverAddr), "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		t.Fatalf("Failed to set initial configuration: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("Unexpected status code when setting initial config: %d, response: %s", resp.StatusCode, string(body))
+	}
+
+	// PATCH update an array element using query key parameter
+	updateData := map[string]interface{}{
+		"value": 250.0, // Update index 1 of `frequencies` to 250.0
+	}
+	jsonUpdate, err := json.Marshal(updateData)
+	if err != nil {
+		t.Fatalf("Failed to marshal update data: %v", err)
+	}
+
+	req, err := http.NewRequest("PATCH", fmt.Sprintf("%s/updateValue?key=settings.audio.tone_eq1.frequencies[1]", serverAddr), bytes.NewBuffer(jsonUpdate))
+	if err != nil {
+		t.Fatalf("Failed to create PATCH request for updating array element: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	client := &http.Client{}
+	resp, err = client.Do(req)
+	if err != nil {
+		t.Fatalf("Failed to update array element: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Verify update to array element
+	getValue, err := http.Get(fmt.Sprintf("%s/getValue?key=settings.audio.tone_eq1.frequencies", serverAddr))
+	if err != nil {
+		t.Fatalf("Failed to get updated array: %v", err)
+	}
+	defer getValue.Body.Close()
+
+	var updatedResponse struct {
+		Exists bool          `json:"exists"`
+		Value  []interface{} `json:"value"`
+	}
+	if err := json.NewDecoder(getValue.Body).Decode(&updatedResponse); err != nil {
+		t.Fatalf("Failed to decode updated array response: %v", err)
+	}
+
+	if !updatedResponse.Exists {
+		t.Fatal("Array does not exist after update")
+	}
+	if len(updatedResponse.Value) != 3 || updatedResponse.Value[1] != 250.0 {
+		t.Errorf("Failed to update array element: expected %v, got %v", 250.0, updatedResponse.Value[1])
+	}
+
+	// PATCH insert a new element into the array at index 3
+	insertData := map[string]interface{}{
+		"value": 400.0,
+	}
+	jsonInsert, err := json.Marshal(insertData)
+	if err != nil {
+		t.Fatalf("Failed to marshal insert data: %v", err)
+	}
+
+	req, err = http.NewRequest("PATCH", fmt.Sprintf("%s/updateValue?key=settings.audio.tone_eq1.frequencies[3]", serverAddr), bytes.NewBuffer(jsonInsert))
+	if err != nil {
+		t.Fatalf("Failed to create PATCH request for inserting array element: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err = client.Do(req)
+	if err != nil {
+		t.Fatalf("Failed to insert array element: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Verify new insertion in `frequencies`
+	getValue, err = http.Get(fmt.Sprintf("%s/getValue?key=settings.audio.tone_eq1.frequencies", serverAddr))
+	if err != nil {
+		t.Fatalf("Failed to get inserted array element: %v", err)
+	}
+	defer getValue.Body.Close()
+
+	if err := json.NewDecoder(getValue.Body).Decode(&updatedResponse); err != nil {
+		t.Fatalf("Failed to decode inserted array response: %v", err)
+	}
+
+	if len(updatedResponse.Value) != 4 || updatedResponse.Value[3] != 400.0 {
+		t.Errorf("Failed to insert new array element: expected %v at index 3, got %v", 400.0, updatedResponse.Value)
+	}
+
+	// PATCH update a matrix element
+	matrixUpdate := map[string]interface{}{
+		"value": 9.9, // Update `matrix[1][1]`
+	}
+	jsonMatrixUpdate, err := json.Marshal(matrixUpdate)
+	if err != nil {
+		t.Fatalf("Failed to marshal matrix update: %v", err)
+	}
+
+	req, err = http.NewRequest("PATCH", fmt.Sprintf("%s/updateValue?key=settings.audio.tone_eq1.matrix[1][1]", serverAddr), bytes.NewBuffer(jsonMatrixUpdate))
+	if err != nil {
+		t.Fatalf("Failed to create PATCH request for updating matrix: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err = client.Do(req)
+	if err != nil {
+		t.Fatalf("Failed to update matrix element: %v", err)
+	}
+	defer resp.Body.Close()
 }
 
 func TestRootEndpoint(t *testing.T) {

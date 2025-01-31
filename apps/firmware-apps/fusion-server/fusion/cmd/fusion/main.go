@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"fusion/internal/cluster"
@@ -45,8 +46,6 @@ func setupHTTPRoutes(server *server.ConfigServer, metrics *cluster.MetricsCollec
 	http.HandleFunc("/setValue", withLogging(server.SetValue, "setValue", verbose))
 	http.HandleFunc("/updateValue", withLogging(server.UpdateValue, "updateValue", verbose))
 	http.HandleFunc("/clear", withLogging(server.ClearAllData, "clear", verbose))
-	http.HandleFunc("/upload", withLogging(server.UploadJSON, "upload", verbose))
-	http.HandleFunc("/download", withLogging(server.DownloadJSON, "download", verbose))
 	http.HandleFunc("/updateBinary", withLogging(server.UpdateBinary, "updateBinary", verbose))
 	http.HandleFunc("/rollbackBinary", withLogging(server.RollbackBinary, "rollbackBinary", verbose))
 	http.HandleFunc("/ws", withWebSocketMetrics(server.HandleWebSocket, metrics, verbose))
@@ -200,10 +199,14 @@ func initUDPServer(port string, handler *server.Handler) *network.UDPServer {
 	return udpServer
 }
 
-// startAPIServer starts the main HTTP API server.
-func startAPIServer(port string) {
+// startAPIServer starts the main HTTP API server
+
+func startAPIServer(port string, wg *sync.WaitGroup) {
+	defer wg.Done()
+
 	logger := logging.GetLogger()
 	logger.Info("Starting API server on %s", port)
+
 	if err := http.ListenAndServe(port, nil); err != nil {
 		logger.Fatal("API server failed: %v", err)
 	}
@@ -242,7 +245,13 @@ func main() {
 	setupHTTPRoutes(configServer, metricsCollector, *verbose)
 	setupTimerRoutes(timerManager, *verbose)
 
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	go startAPIServer(httpPort, &wg)
+
+	time.Sleep(100 * time.Millisecond)
 	logger.Info("%s is ALIVE and RUNNING", nodeName)
 
-	startAPIServer(httpPort)
+	wg.Wait()
 }

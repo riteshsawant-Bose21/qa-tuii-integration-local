@@ -5,7 +5,7 @@
     {
       "type": "http",
       "name": "Clear",
-      "seq": 7,
+      "seq": 5,
       "request": {
         "url": "{{api_url}}/clear",
         "method": "DELETE",
@@ -20,6 +20,7 @@
         "vars": {},
         "assertions": [],
         "tests": "",
+        "docs": "",
         "auth": {
           "mode": "none"
         }
@@ -28,7 +29,7 @@
     {
       "type": "http",
       "name": "Cluster Status",
-      "seq": 6,
+      "seq": 8,
       "request": {
         "url": "{{metrics_url}}/cluster/status",
         "method": "GET",
@@ -43,6 +44,7 @@
         "vars": {},
         "assertions": [],
         "tests": "",
+        "docs": "",
         "auth": {
           "mode": "none"
         }
@@ -50,10 +52,10 @@
     },
     {
       "type": "http",
-      "name": "Download All Values",
-      "seq": 3,
+      "name": "Dump Raw Data",
+      "seq": 6,
       "request": {
-        "url": "{{api_url}}/download",
+        "url": "{{api_url}}/dump",
         "method": "GET",
         "headers": [],
         "params": [],
@@ -66,6 +68,31 @@
         "vars": {},
         "assertions": [],
         "tests": "",
+        "docs": "",
+        "auth": {
+          "mode": "none"
+        }
+      }
+    },
+    {
+      "type": "http",
+      "name": "Endpoints",
+      "seq": 10,
+      "request": {
+        "url": "{{api_url}}/endpoints",
+        "method": "GET",
+        "headers": [],
+        "params": [],
+        "body": {
+          "mode": "none",
+          "formUrlEncoded": [],
+          "multipartForm": []
+        },
+        "script": {},
+        "vars": {},
+        "assertions": [],
+        "tests": "",
+        "docs": "",
         "auth": {
           "mode": "none"
         }
@@ -74,7 +101,7 @@
     {
       "type": "http",
       "name": "Get All Values",
-      "seq": 1,
+      "seq": 2,
       "request": {
         "url": "{{api_url}}/getValue",
         "method": "GET",
@@ -89,6 +116,7 @@
         "vars": {},
         "assertions": [],
         "tests": "",
+        "docs": "",
         "auth": {
           "mode": "none"
         }
@@ -96,16 +124,16 @@
     },
     {
       "type": "http",
-      "name": "Get Specific Value",
-      "seq": 2,
+      "name": "Get Value From Node",
+      "seq": 9,
       "request": {
-        "url": "{{api_url}}/getValue?key=volume",
+        "url": "192.168.64.4:8080/getValue?key=audio",
         "method": "GET",
         "headers": [],
         "params": [
           {
             "name": "key",
-            "value": "volume",
+            "value": "audio",
             "type": "query",
             "enabled": true
           }
@@ -119,6 +147,38 @@
         "vars": {},
         "assertions": [],
         "tests": "",
+        "docs": "",
+        "auth": {
+          "mode": "none"
+        }
+      }
+    },
+    {
+      "type": "http",
+      "name": "Get Value",
+      "seq": 1,
+      "request": {
+        "url": "{{api_url}}/getValue?key=settings.audio.modifiers[2:4]",
+        "method": "GET",
+        "headers": [],
+        "params": [
+          {
+            "name": "key",
+            "value": "settings.audio.modifiers[2:4]",
+            "type": "query",
+            "enabled": true
+          }
+        ],
+        "body": {
+          "mode": "none",
+          "formUrlEncoded": [],
+          "multipartForm": []
+        },
+        "script": {},
+        "vars": {},
+        "assertions": [],
+        "tests": "",
+        "docs": "",
         "auth": {
           "mode": "none"
         }
@@ -127,7 +187,7 @@
     {
       "type": "http",
       "name": "Metrics",
-      "seq": 5,
+      "seq": 7,
       "request": {
         "url": "{{metrics_url}}/metrics",
         "method": "GET",
@@ -142,6 +202,45 @@
         "vars": {},
         "assertions": [],
         "tests": "",
+        "docs": "",
+        "auth": {
+          "mode": "none"
+        }
+      }
+    },
+    {
+      "type": "http",
+      "name": "Rollback",
+      "seq": 11,
+      "request": {
+        "url": "{{api_url}}/rollbackBinary?index=-3",
+        "method": "POST",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json",
+            "enabled": true
+          }
+        ],
+        "params": [
+          {
+            "name": "index",
+            "value": "-3",
+            "type": "query",
+            "enabled": true
+          }
+        ],
+        "body": {
+          "mode": "json",
+          "json": "",
+          "formUrlEncoded": [],
+          "multipartForm": []
+        },
+        "script": {},
+        "vars": {},
+        "assertions": [],
+        "tests": "",
+        "docs": "",
         "auth": {
           "mode": "none"
         }
@@ -150,7 +249,7 @@
     {
       "type": "http",
       "name": "Set Value",
-      "seq": 4,
+      "seq": 3,
       "request": {
         "url": "{{api_url}}/setValue",
         "method": "POST",
@@ -164,7 +263,7 @@
         "params": [],
         "body": {
           "mode": "json",
-          "json": "{\n    \"config\" : {\n    }\n}\n",
+          "json": "{\n  \"settings\": {\n    \"audio\": {\n      \"tone_eq1\" : {\n        \n      }\n    }\n  }\n}\n",
           "formUrlEncoded": [],
           "multipartForm": []
         },
@@ -172,13 +271,45 @@
         "vars": {},
         "assertions": [],
         "tests": "",
+        "docs": "",
+        "auth": {
+          "mode": "none"
+        }
+      }
+    },
+    {
+      "type": "http",
+      "name": "Update Value",
+      "seq": 4,
+      "request": {
+        "url": "{{api_url}}/updateValue",
+        "method": "PATCH",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json",
+            "enabled": true
+          }
+        ],
+        "params": [],
+        "body": {
+          "mode": "json",
+          "json": "{\n  \"settings\": {\n    \"audio\": {\n      \"tone_eq1\": {\n        \"bleep\": \"bleep\",\n        \"high_gain\": 8,\n        \"low_gain\": 10\n      },\n      \"modifiers\": [       \n        6.674e-11,\n        0.866,\n        10.49\n      ]\n    }\n  }\n}",
+          "formUrlEncoded": [],
+          "multipartForm": []
+        },
+        "script": {},
+        "vars": {},
+        "assertions": [],
+        "tests": "",
+        "docs": "",
         "auth": {
           "mode": "none"
         }
       }
     }
   ],
-  "activeEnvironmentUid": "Mb2u2btCqkQmBnMSV8uvY",
+  "activeEnvironmentUid": "Xbpjubxk0J1jt0cl6OUyS",
   "environments": [
     {
       "variables": [
@@ -188,9 +319,35 @@
           "enabled": true,
           "secret": false,
           "type": "text"
+        },
+        {
+          "name": "metrics_url",
+          "value": "192.168.64.100:9090",
+          "enabled": true,
+          "secret": false,
+          "type": "text"
         }
       ],
       "name": "dev"
+    },
+    {
+      "variables": [
+        {
+          "name": "api_url",
+          "value": "http://localhost:8080",
+          "enabled": true,
+          "secret": false,
+          "type": "text"
+        },
+        {
+          "name": "metrics_url",
+          "value": "http://localhost:9090",
+          "enabled": true,
+          "secret": false,
+          "type": "text"
+        }
+      ],
+      "name": "local"
     }
   ],
   "root": {

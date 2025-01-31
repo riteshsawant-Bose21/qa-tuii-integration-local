@@ -152,11 +152,11 @@ func (h *Handler) HandleHTTPSet(update map[string]interface{}) (interface{}, err
 
 // HandleHTTPPatch will update existing values, add new values and remove values
 // that are null.
-func (h *Handler) HandleHTTPPatch(update map[string]interface{}) (interface{}, error) {
+func (h *Handler) HandleHTTPPatch(value map[string]interface{}) (interface{}, error) {
 
 	existingData := h.transformState(h.stateManager.GetFullState())
 
-	applyUpdate(existingData, update)
+	applyPatch(existingData, value)
 
 	if err := h.handleConfigUpdate(existingData); err != nil {
 		return nil, fmt.Errorf("failed to handle update: %v", err)
@@ -168,81 +168,350 @@ func (h *Handler) HandleHTTPPatch(update map[string]interface{}) (interface{}, e
 	}, nil
 }
 
-func applyUpdate(data map[string]interface{}, changes map[string]interface{}) {
+func applyPatch(data map[string]interface{}, changes map[string]interface{}) error {
 	for key, value := range changes {
 		if value == nil {
-			// Remove the field if the value is null
 			removeNestedField(data, key)
 		} else if subChanges, ok := value.(map[string]interface{}); ok {
-			// If the value is a map, recursively apply updates
-			if subData, exists := data[key].(map[string]interface{}); exists {
-				applyUpdate(subData, subChanges)
+			if subData, exists := getNestedValue(data, key).(map[string]interface{}); exists {
+				if err := applyPatch(subData, subChanges); err != nil {
+					return err
+				}
 			} else {
-				// Initialize a nested map if it doesn't exist
 				newSubData := make(map[string]interface{})
-				data[key] = newSubData
-				applyUpdate(newSubData, subChanges)
+				setNestedValue(data, key, newSubData)
+				if err := applyPatch(newSubData, subChanges); err != nil {
+					return err
+				}
 			}
-		} else {
-			// Update the field if it's not null
-			updateNestedField(data, key, value)
-		}
-	}
-}
+		} else if subArray, ok := value.([]interface{}); ok {
+			existingValue := getNestedValue(data, key)
 
-// Helper function to update a nested field
-func updateNestedField(data map[string]interface{}, key string, value interface{}) {
-
-	keys := strings.Split(key, ".")
-
-	for i := 0; i < len(keys)-1; i++ {
-		subKey := keys[i]
-		if _, ok := data[subKey]; !ok {
-			data[subKey] = make(map[string]interface{})
-		}
-		// Ensure the intermediate value is a map
-		if subData, ok := data[subKey].(map[string]interface{}); ok {
-			data = subData
-		} else {
-			logging.GetLogger().Error("updateNestedField: intermediate value for key %s is not a map", subKey)
-			return
-		}
-	}
-	data[keys[len(keys)-1]] = value
-}
-
-func removeNestedField(data map[string]interface{}, key string) {
-
-	keys := strings.Split(key, ".")
-	for i := 0; i < len(keys)-1; i++ {
-		subKey := keys[i]
-		if subData, ok := data[subKey].(map[string]interface{}); ok {
-			data = subData
-		} else {
-			// If the intermediate structure doesn't exist or isn't a map, stop
-			return
-		}
-	}
-
-	// Remove the final key
-	delete(data, keys[len(keys)-1])
-
-	// Cleanup empty parent maps recursively
-	cleanupEmptyMaps(data, keys[:len(keys)-1])
-}
-
-func cleanupEmptyMaps(data map[string]interface{}, keys []string) {
-	for i := len(keys) - 1; i >= 0; i-- {
-		key := keys[i]
-		if subData, ok := data[key].(map[string]interface{}); ok {
-			if len(subData) == 0 {
-				delete(data, key)
+			if _, isExistingArray := existingValue.([]interface{}); isExistingArray && !isIndexedKey(key) {
+				setNestedValue(data, key, subArray)
 			} else {
-				// If this map is not empty, stop cleanup
-				break
+				existingArray, exists := existingValue.([]interface{})
+				if exists {
+					for i, v := range subArray {
+						if i < len(existingArray) {
+							existingArray[i] = v
+						} else {
+							return fmt.Errorf("index %d out of bounds for array %s", i, key)
+						}
+					}
+					setNestedValue(data, key, existingArray)
+				} else {
+					setNestedValue(data, key, subArray)
+				}
+			}
+		} else {
+			if err := updateNestedField(data, key, value); err != nil {
+				return err
 			}
 		}
 	}
+	return nil
+}
+
+// updateNestedField updates a nested value in a map, supporting array indexing and slicing
+func updateNestedField(data map[string]interface{}, key string, value interface{}) error {
+	keys := parseKeyPath(key)
+
+	for i := 0; i < len(keys)-1; i++ {
+		subKey := keys[i]
+
+		if index, isIndex := parseArrayIndex(subKey); isIndex {
+			parentKey := keys[i-1]
+			if array, ok := data[parentKey].([]interface{}); ok {
+				if index >= len(array) {
+					return fmt.Errorf("index %d out of bounds for array %s", index, parentKey)
+				}
+				if nestedMap, isMap := array[index].(map[string]interface{}); isMap {
+					data = nestedMap
+				} else {
+					return fmt.Errorf("expected map at index %d in array %s", index, parentKey)
+				}
+			} else {
+				return fmt.Errorf("expected array at key %s", parentKey)
+			}
+		} else {
+			if _, exists := data[subKey]; !exists {
+				data[subKey] = make(map[string]interface{})
+			}
+			if subData, ok := data[subKey].(map[string]interface{}); ok {
+				data = subData
+			} else {
+				return fmt.Errorf("intermediate value for key %s is not a map", subKey)
+			}
+		}
+	}
+
+	finalKey := keys[len(keys)-1]
+
+	if index, isIndex := parseArrayIndex(finalKey); isIndex {
+		parentKey := keys[len(keys)-2]
+		parentVal, exists := data[parentKey]
+
+		if !exists {
+			return fmt.Errorf("parent key %s does not exist", parentKey)
+		}
+
+		array, isArray := parentVal.([]interface{})
+		if !isArray {
+			return fmt.Errorf("expected an array at key %s but found %T", parentKey, parentVal)
+		}
+
+		if index >= len(array) {
+			return fmt.Errorf("index %d out of bounds for array %s", index, parentKey)
+		}
+
+		array[index] = value
+	} else {
+		data[finalKey] = value
+	}
+
+	return nil
+}
+
+// Helper function to remove a nested field, including array elements and slices
+func removeNestedField(data map[string]interface{}, key string) {
+	keys := parseKeyPath(key)
+
+	// Traverse to the last key before deletion
+	for i := 0; i < len(keys)-1; i++ {
+		subKey := keys[i]
+		if subData, ok := data[subKey].(map[string]interface{}); ok {
+			data = subData
+		} else {
+			return // Key not found
+		}
+	}
+
+	finalKey := keys[len(keys)-1]
+
+	if index, isIndex := parseArrayIndex(finalKey); isIndex {
+		if array, ok := data[keys[len(keys)-2]].([]interface{}); ok {
+			if index >= 0 && index < len(array) {
+				data[keys[len(keys)-2]] = append(array[:index], array[index+1:]...)
+			}
+		}
+	} else if start, end, isSlice := parseArraySlice(finalKey); isSlice {
+		if array, ok := data[keys[len(keys)-2]].([]interface{}); ok {
+			if start >= 0 && end <= len(array) && start < end {
+				data[keys[len(keys)-2]] = append(array[:start], array[end:]...)
+			}
+		}
+	} else {
+		// Normal field removal
+		delete(data, finalKey)
+	}
+}
+
+// getNestedValue retrieves a nested value from a map[string]interface{}, supporting arrays and slices.
+func getNestedValue(data map[string]interface{}, key string) interface{} {
+	keys := parseKeyPath(key)
+
+	var current interface{} = data
+
+	for _, part := range keys {
+		switch c := current.(type) {
+		case map[string]interface{}:
+			// Traverse into the map
+			if val, exists := c[part]; exists {
+				current = val
+			} else {
+				// Key not found
+				return nil
+			}
+		case []interface{}:
+			// Handle array indexing and slicing
+			if index, isIndex := parseArrayIndex(part); isIndex {
+				if index >= 0 && index < len(c) {
+					current = c[index]
+				} else {
+					// Out of bounds index
+					return nil
+				}
+			} else if start, end, isSlice := parseArraySlice(part); isSlice {
+				if start >= 0 && end <= len(c) && start < end {
+					return c[start:end] // Return the slice
+				}
+				// Invalid slice range
+				return nil
+			} else {
+				// Invalid key for an array
+				return nil
+			}
+		default:
+			// Unexpected type (not a map or slice)
+			return nil
+		}
+	}
+
+	return current
+}
+
+func isIndexedKey(key string) bool {
+	keys := parseKeyPath(key)
+	lastKey := keys[len(keys)-1]
+	_, isIndex := parseArrayIndex(lastKey)
+	return isIndex
+}
+
+func ensureArrayCapacity(parent map[string]interface{}, parentKey string, index int) {
+	existingArray, exists := parent[parentKey].([]interface{})
+
+	if !exists {
+		newArray := make([]interface{}, index+1)
+		parent[parentKey] = newArray
+		return
+	}
+
+	if index < len(existingArray) {
+		return
+	}
+
+	// Expand array while keeping existing values
+	newArray := make([]interface{}, index+1)
+	copy(newArray, existingArray) // Preserve existing values
+
+	parent[parentKey] = newArray
+}
+
+func setNestedValue(data map[string]interface{}, key string, value interface{}) {
+
+	logger := logging.GetLogger()
+
+	keys := parseKeyPath(key)
+	current := data
+
+	// Traverse the path and ensure maps/arrays exist
+	for i := 0; i < len(keys)-1; i++ {
+		subKey := keys[i]
+
+		// Detecting an array key
+		if index, isIndex := parseArrayIndex(subKey); isIndex {
+			if i == 0 {
+				logger.Error("Array index cannot be at root level.")
+				return
+			}
+
+			parentKey := keys[i-1]
+			parentVal, exists := current[parentKey]
+
+			if !exists {
+				logger.Warn("Parent key does not exist, skipping update.")
+				return
+			}
+
+			// Check if an array already exists before creating a new one
+			if _, isArray := parentVal.([]interface{}); !isArray {
+				logger.Error("Expected an array at key %s but found %T", parentKey, fmt.Sprintf("%T", parentVal))
+				return
+			}
+
+			ensureArrayCapacity(current, parentKey, index)
+
+			arrayRef := current[parentKey].([]interface{})
+
+			if index >= len(arrayRef) {
+				logger.Error("Index out of bounds after ensureArrayCapacity %d", index)
+				return
+			}
+
+			arrayRef[index] = value
+			return
+		} else {
+			// Ensure key exists and check its type
+			existingValue, exists := current[subKey]
+
+			// If the key exists, ensure we don't replace an existing array
+			if exists {
+				switch existingValue.(type) {
+				case []interface{}, map[string]interface{}:
+					// Value is already an array or a map, proceed
+				default:
+					logger.Error("Key %s exists but is not a map or array. Found %T", subKey, existingValue)
+					return
+				}
+			} else {
+				// Key does not exist, create a new structure
+				nextKey := keys[i+1]
+				if nextIndex, isIndex := parseArrayIndex(nextKey); isIndex {
+					// Only create a new array if it doesn't exist
+					if _, alreadyExists := current[subKey]; !alreadyExists {
+						current[subKey] = make([]interface{}, nextIndex+1)
+					}
+				} else {
+					current[subKey] = make(map[string]interface{})
+				}
+			}
+
+			// Move to the next level
+			if subData, ok := current[subKey].(map[string]interface{}); ok {
+				current = subData
+			} else if _, isArray := current[subKey].([]interface{}); isArray {
+				break
+			} else {
+				logger.Error("Intermediate value for key %s is not a map. Found %T", subKey, fmt.Sprintf("%T", current[subKey]))
+				return
+			}
+		}
+	}
+
+	// Final key update
+	finalKey := keys[len(keys)-1]
+	if index, isIndex := parseArrayIndex(finalKey); isIndex {
+		parentKey := keys[len(keys)-2]
+		parentVal, exists := current[parentKey]
+
+		if !exists {
+			logger.Error("Parent key does not exist, skipping update.")
+			return
+		}
+
+		_, isArray := parentVal.([]interface{})
+		if !isArray {
+			logger.Error("Expected an array at key %s but found %T", parentKey, fmt.Sprintf("%T", parentVal))
+			return
+		}
+
+		ensureArrayCapacity(current, parentKey, index)
+
+		arrayRef := current[parentKey].([]interface{})
+		arrayRef[index] = value
+
+	} else {
+		current[finalKey] = value
+	}
+}
+
+// Utility function to parse array indices (e.g., "3")
+func parseArrayIndex(key string) (int, bool) {
+	if i, err := strconv.Atoi(key); err == nil {
+		return i, true
+	}
+	return -1, false
+}
+
+// Utility function to parse array slices (e.g., "1:3")
+func parseArraySlice(key string) (int, int, bool) {
+	if strings.Contains(key, ":") {
+		parts := strings.Split(key, ":")
+		start, err1 := strconv.Atoi(parts[0])
+		end, err2 := strconv.Atoi(parts[1])
+		if err1 == nil && err2 == nil {
+			return start, end, true
+		}
+	}
+	return -1, -1, false
+}
+
+// Utility function to parse key paths, handling dots and array brackets
+func parseKeyPath(key string) []string {
+	return strings.FieldsFunc(key, func(r rune) bool {
+		return r == '.' || r == '[' || r == ']'
+	})
 }
 
 // UDP Server methods
@@ -388,40 +657,6 @@ func (h *Handler) HandleDownload() (map[string]interface{}, error) {
 	}, nil
 }
 
-// HandleUpload handles the upload of a new config state
-func (h *Handler) HandleUpload(reader io.Reader) (map[string]interface{}, error) {
-	var jsonImport struct {
-		Version   int64                      `json:"version"`
-		Timestamp time.Time                  `json:"timestamp"`
-		NodeID    string                     `json:"node_id"`
-		State     map[string]*api.StateEntry `json:"state"`
-	}
-
-	if err := json.NewDecoder(reader).Decode(&jsonImport); err != nil {
-		return nil, fmt.Errorf("invalid JSON: %v", err)
-	}
-
-	for key, entry := range jsonImport.State {
-		update := api.ConfigUpdate{
-			Data: map[string]interface{}{
-				key: entry.Data,
-			},
-			Version: time.Now().UnixNano(),
-			NodeID:  h.list.LocalNode().Name,
-			Time:    time.Now().UTC(),
-		}
-
-		if err := h.broadcastUpdate(update); err != nil {
-			logging.GetLogger().Error("Import key failed: %s: %v", key, err)
-		}
-	}
-
-	return map[string]interface{}{
-		"status":  "import complete",
-		"version": h.stateManager.GetVersion(),
-	}, nil
-}
-
 // GetServerInfo returns information about the server
 func (h *Handler) GetServerInfo() (map[string]interface{}, error) {
 	info := map[string]interface{}{
@@ -466,10 +701,13 @@ func (h *Handler) AddBroadcasters(broadcasters ...Broadcaster) {
 
 // HandleBinaryUpdate handles HTTP binary update requests
 func (h *Handler) HandleBinaryUpdate(w http.ResponseWriter, r *http.Request) {
+
+	logger := logging.GetLogger()
+
 	// Read the uploaded binary
 	updateFile, header, err := r.FormFile("binary")
 	if err != nil {
-		logging.GetLogger().Error("Error reading binary: %v", err)
+		logger.Error("Error reading binary: %v", err)
 		http.Error(w, "Error reading binary", http.StatusBadRequest)
 		return
 	}
@@ -477,14 +715,14 @@ func (h *Handler) HandleBinaryUpdate(w http.ResponseWriter, r *http.Request) {
 
 	// Verify checksum/signature
 	if !VerifyChecksum(updateFile, r.FormValue("checksum")) {
-		logging.GetLogger().Error("Invalid checksum")
+		logger.Error("Invalid checksum")
 		http.Error(w, "Invalid checksum", http.StatusBadRequest)
 		return
 	}
 
 	// Reset file pointer after checksum verification
 	if _, err := updateFile.Seek(0, 0); err != nil {
-		logging.GetLogger().Error("Error resetting file pointer: %v", err)
+		logger.Error("Error resetting file pointer: %v", err)
 		http.Error(w, "Server error", http.StatusInternalServerError)
 		return
 	}
@@ -493,7 +731,7 @@ func (h *Handler) HandleBinaryUpdate(w http.ResponseWriter, r *http.Request) {
 	tempPath := filepath.Join(os.TempDir(), header.Filename)
 	tempFile, err := os.Create(tempPath)
 	if err != nil {
-		logging.GetLogger().Error("Error creating temporary file: %v", err)
+		logger.Error("Error creating temporary file: %v", err)
 		http.Error(w, "Server error", http.StatusInternalServerError)
 		return
 	}
@@ -501,21 +739,21 @@ func (h *Handler) HandleBinaryUpdate(w http.ResponseWriter, r *http.Request) {
 
 	// Copy uploaded binary to temporary file location
 	if _, err := io.Copy(tempFile, updateFile); err != nil {
-		logging.GetLogger().Error("Error moving binary to temporary file: %v", err)
+		logger.Error("Error moving binary to temporary file: %v", err)
 		http.Error(w, "Server error", http.StatusInternalServerError)
 		return
 	}
 
 	// After verifying and saving the binary, initiate cluster-wide update
 	if err := h.InitiateBinaryUpdate(tempPath); err != nil {
-		logging.GetLogger().Error("Failed to initiate cluster update: %v", err)
+		logger.Error("Failed to initiate cluster update: %v", err)
 		// Don't return error to client since local update will proceed
 	}
 
 	// Schedule the update
 	go func() {
 		if err := h.updater.PerformUpdate(tempPath); err != nil {
-			logging.GetLogger().Error("Update failed: %v", err)
+			logger.Error("Update failed: %v", err)
 		}
 	}()
 

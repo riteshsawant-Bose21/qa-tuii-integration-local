@@ -121,11 +121,11 @@ func (s *ConfigServer) SetValue(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *ConfigServer) UpdateValue(w http.ResponseWriter, r *http.Request) {
-
 	if !s.IsPatchRequest(w, r) {
 		return
 	}
 
+	// Read the request body
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error reading request body: %v", err), http.StatusBadRequest)
@@ -133,20 +133,37 @@ func (s *ConfigServer) UpdateValue(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
+	// Parse the request body into a map
 	var update map[string]interface{}
 	if err := json.Unmarshal(body, &update); err != nil {
 		http.Error(w, fmt.Sprintf("Invalid JSON format: %v", err), http.StatusBadRequest)
 		return
 	}
 
-	response, err := s.handler.HandleHTTPPatch(update)
+	// Get the key query parameter (if provided)
+	key := r.URL.Query().Get("key")
+
+	var response interface{}
+	if key != "" {
+		// Use the existing config
+		configData := s.handler.transformState(s.handler.stateManager.GetFullState())
+		setNestedValue(configData, key, update["value"])
+		response, err = s.handler.HandleHTTPPatch(configData)
+	} else {
+		// If no key is provided, treat the entire body as the update map
+		response, err = s.handler.HandleHTTPPatch(update)
+	}
+
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	// Return the response as JSON
 	w.Header().Set(contentType, jsonContentType)
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, fmt.Sprintf("Error encoding response: %v", err), http.StatusInternalServerError)
+	}
 }
 
 func (s *ConfigServer) DumpState(w http.ResponseWriter, r *http.Request) {
@@ -316,7 +333,7 @@ func (s *ConfigServer) handleWebSocketMessage(conn *websocket.Conn, data []byte)
 	}
 }
 
-func (s *ConfigServer) DownloadJSON(w http.ResponseWriter, r *http.Request) {
+func (s *ConfigServer) DownloadState(w http.ResponseWriter, r *http.Request) {
 
 	if !s.IsGetRequest(w, r) {
 		return
@@ -338,22 +355,6 @@ func (s *ConfigServer) DownloadJSON(w http.ResponseWriter, r *http.Request) {
 		logging.GetLogger().Error("Export state failed: %v", err)
 		http.Error(w, "Error exporting state", http.StatusInternalServerError)
 	}
-}
-
-func (s *ConfigServer) UploadJSON(w http.ResponseWriter, r *http.Request) {
-
-	if !s.IsPostRequest(w, r) {
-		return
-	}
-
-	response, err := s.handler.HandleUpload(r.Body)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	w.Header().Set(contentType, jsonContentType)
-	json.NewEncoder(w).Encode(response)
 }
 
 func (s *ConfigServer) HandleRoot(w http.ResponseWriter, r *http.Request) {

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/logging"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -33,6 +34,19 @@ func (sm *StateManager) GetVersion() int64 {
 	return sm.version
 }
 
+// Get retrieves a nested value from the application's state using a dot-separated key path.
+// It supports accessing map keys, array indices, and array slices.
+//
+// Key Path Syntax:
+// - Dot-separated keys navigate through nested maps (e.g., "settings.audio.modifiers").
+// - Array indices can be used to retrieve a specific element (e.g., "settings.audio.modifiers[0]").
+// - Array slicing allows retrieving a subset of elements (e.g., "settings.audio.modifiers[1:3]").
+//
+// Parameters:
+// - key (string): A dot-separated key path that may include array indexing or slicing.
+//
+// Returns:
+// - (interface{}, bool): The retrieved value and a boolean indicating whether the key was found.
 func (sm *StateManager) Get(key string) (interface{}, bool) {
 	sm.RLock()
 	defer sm.RUnlock()
@@ -44,23 +58,90 @@ func (sm *StateManager) Get(key string) (interface{}, bool) {
 	var current interface{} = TransformState(sm.state)
 
 	for _, part := range parts {
+		// Check if the part contains array indexing or slicing
+		if strings.Contains(part, "[") && strings.Contains(part, "]") {
+			// Split the part into the key and the array access part
+			keyPart := part[:strings.Index(part, "[")]
+			arrayAccess := part[strings.Index(part, "[")+1 : strings.Index(part, "]")]
 
-		// Type assert current as a map to continue traversal
-		nestedMap, ok := current.(map[string]interface{})
-		if !ok {
-			logging.GetLogger().Warn("%s is not a supported type. Current type: %T", part, current)
-			return nil, false
+			// Type assert current as a map to continue traversal
+			nestedMap, ok := current.(map[string]interface{})
+			if !ok {
+				logging.GetLogger().Warn("%s is not a supported type. Current type: %T", part, current)
+				return nil, false
+			}
+
+			// Look up the keyPart in the map
+			value, exists := nestedMap[keyPart]
+			if !exists {
+				logging.GetLogger().Warn("%s not found.", keyPart)
+				return nil, false
+			}
+
+			// Type assert value as an array (slice)
+			array, ok := value.([]interface{})
+			if !ok {
+				logging.GetLogger().Warn("%s is not an array. Current type: %T", keyPart, value)
+				return nil, false
+			}
+
+			// Handle array access (indexing or slicing)
+			if strings.Contains(arrayAccess, ":") {
+				// Slice syntax
+				rangeParts := strings.Split(arrayAccess, ":")
+				start, end := 0, len(array)
+
+				// Parse start index
+				if rangeParts[0] != "" {
+					startIndex, err := strconv.Atoi(rangeParts[0])
+					if err != nil || startIndex < 0 || startIndex > len(array) {
+						logging.GetLogger().Warn("Invalid start index in %s", arrayAccess)
+						return nil, false
+					}
+					start = startIndex
+				}
+
+				// Parse end index
+				if rangeParts[1] != "" {
+					endIndex, err := strconv.Atoi(rangeParts[1])
+					if err != nil || endIndex < start || endIndex > len(array) {
+						logging.GetLogger().Warn("Invalid end index in %s", arrayAccess)
+						return nil, false
+					}
+					end = endIndex
+				}
+
+				// Return the sliced array
+				current = array[start:end]
+			} else {
+				// Index syntax
+				index, err := strconv.Atoi(arrayAccess)
+				if err != nil || index < 0 || index >= len(array) {
+					logging.GetLogger().Warn("Invalid index %s in %s", arrayAccess, part)
+					return nil, false
+				}
+
+				// Return the indexed value
+				current = array[index]
+			}
+		} else {
+			// Type assert current as a map to continue traversal
+			nestedMap, ok := current.(map[string]interface{})
+			if !ok {
+				logging.GetLogger().Warn("%s is not a supported type. Current type: %T", part, current)
+				return nil, false
+			}
+
+			// Look up the current key part in the map
+			value, exists := nestedMap[part]
+			if !exists {
+				logging.GetLogger().Warn("%s not found.", part)
+				return nil, false
+			}
+
+			// Move to the next level
+			current = value
 		}
-
-		// Look up the current key part in the map
-		value, exists := nestedMap[part]
-		if !exists {
-			logging.GetLogger().Warn("%s not found.", part)
-			return nil, false
-		}
-
-		// Move to the next level
-		current = value
 	}
 
 	// Return the final value found
@@ -79,6 +160,8 @@ func (sm *StateManager) Set(key string, value interface{}) error {
 	})
 }
 
+// ApplyUpdate applies a configuration update to the StateManager.
+// and notifieds subscribers of any changes.
 func (sm *StateManager) ApplyUpdate(update api.ConfigUpdate) error {
 	sm.Lock()
 	defer sm.Unlock()

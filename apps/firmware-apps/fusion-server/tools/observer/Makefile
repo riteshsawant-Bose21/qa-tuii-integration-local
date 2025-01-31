@@ -5,7 +5,6 @@ UNAME_S := $(shell uname -s)
 CXX_X86 := g++
 CXX_ARM := aarch64-linux-gnu-g++
 
-
 # OSX-specific settings
 ifeq ($(UNAME_S),Darwin)
     CXX_X86 := clang++
