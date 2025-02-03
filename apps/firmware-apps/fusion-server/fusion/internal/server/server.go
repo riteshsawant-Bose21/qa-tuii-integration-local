@@ -80,7 +80,12 @@ func (s *ConfigServer) GetValue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	key := r.URL.Query().Get("key")
+	key, err := getSingleQueryParam(r, "key")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	response, err := s.handler.HandleHTTPGet(key)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -140,8 +145,11 @@ func (s *ConfigServer) UpdateValue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get the key query parameter (if provided)
-	key := r.URL.Query().Get("key")
+	key, err := getSingleQueryParam(r, "key")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	var response interface{}
 	if key != "" {
@@ -409,4 +417,31 @@ func (s *ConfigServer) IsPatchRequest(w http.ResponseWriter, r *http.Request) bo
 		return false
 	}
 	return true
+}
+
+// getSingleQueryParam returns the value of the parameter if it exists exactly once.
+// If the key missing it returns an empty string.
+// If the key appears more than once it returns an error.
+func getSingleQueryParam(r *http.Request, param string) (string, error) {
+
+	if strings.Count(r.RequestURI, "?") > 1 {
+		return "", fmt.Errorf("multiple values provided for parameter %q", param)
+	}
+
+	params := r.URL.Query()[param]
+	if len(params) > 1 {
+		return "", fmt.Errorf("multiple values provided for parameter %q", param)
+	}
+
+	if len(params) == 0 {
+		return "", nil
+	}
+
+	// Optionally, validate that the key contains only allowed characters.
+	// For example, allow letters, digits, underscores, periods, square brackets:
+	validKey := regexp.MustCompile(`^[a-zA-Z0-9_.\[\]*]+$`)
+	if !validKey.MatchString(params[0]) {
+		return "", fmt.Errorf("invalid characters in parameter %q", param)
+	}
+	return params[0], nil
 }

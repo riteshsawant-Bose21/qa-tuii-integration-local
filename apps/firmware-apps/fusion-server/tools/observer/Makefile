@@ -41,16 +41,10 @@ BUILD_DIR_OSX_ARM := $(BUILD_DIR)/osx-arm64
 
 # Source files
 MAIN_SRCS := observer.cpp
-TEST_SRCS := observer_test.cpp
 OBJS_X86 := $(MAIN_SRCS:%.cpp=$(BUILD_DIR_X86)/%.o)
 OBJS_ARM := $(MAIN_SRCS:%.cpp=$(BUILD_DIR_ARM)/%.o)
 OBJS_OSX_X86 := $(MAIN_SRCS:%.cpp=$(BUILD_DIR_OSX_X86)/%.o)
 OBJS_OSX_ARM := $(MAIN_SRCS:%.cpp=$(BUILD_DIR_OSX_ARM)/%.o)
-
-TEST_OBJS_X86 := $(TEST_SRCS:%.cpp=$(BUILD_DIR_X86)/%.o)
-TEST_OBJS_ARM := $(TEST_SRCS:%.cpp=$(BUILD_DIR_ARM)/%.o)
-TEST_OBJS_OSX_X86 := $(TEST_SRCS:%.cpp=$(BUILD_DIR_OSX_X86)/%.o)
-TEST_OBJS_OSX_ARM := $(TEST_SRCS:%.cpp=$(BUILD_DIR_OSX_ARM)/%.o)
 
 # Library dependencies
 LIBS := -ljsoncpp
