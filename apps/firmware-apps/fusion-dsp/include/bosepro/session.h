@@ -122,6 +122,16 @@ public:
     }
 
 
+    /// Destroy all tasks in the session.  This will stop each task before
+    /// destroying it.
+    ///
+    /// @param  task_name  The name of the task to destroy.
+    void destroy_all_tasks()
+    {
+        tasks.clear();
+    }
+
+
     /// Start an existing task with the given name.
     ///
     /// @param  task_name  The name of the task to start.
@@ -138,7 +148,7 @@ public:
 
 
     /// Stop an existing task with the given name.  The task will remain
-    /// available to run again using `start_tas()`.
+    /// available to run again using `start_task()`.
     ///
     /// @param  task_name  The name of the task to stop.
     void stop_task(const std::string &task_name)
@@ -287,13 +297,17 @@ public:
                 setting.get_value(task_name);
                 destroy_task(task_name);
             }
+            else if (setting.get_name() == "destroy_all_tasks")
+            {
+                destroy_all_tasks();
+            }
             else if (setting.get_name() == "create_task")
             {
                 std::string filename;
                 setting.get_value(filename);
 
                 bosepro::Configuration configuration(filename);
-                for (auto &t : configuration.get_session().get_tasks())
+                for (auto &t : configuration.get_tasks())
                 {
                     const TaskConfiguration &tc =
                         reinterpret_cast<const TaskConfiguration &>(t.second);

@@ -27,8 +27,8 @@ void handle_update(const std::string &update_setting)
     std::stringstream ss;
     ss << update_setting;
     bosepro::ParameterSetting ps = bosepro::ParameterSetting(ss);
-    psession->process_parameter_setting(ps);
     SPDLOG_INFO("server update: {}", update_setting);
+    psession->process_parameter_setting(ps);
 }
 
 
@@ -150,6 +150,9 @@ int main(int argc, char *argv[])
 
         std::vector<std::string> target_paths;
 
+        // Path for the static configuration
+        target_paths.push_back("dsp_static_config");
+        // Path for dynamic parameter setttings
         target_paths.push_back("settings.audio.*.*");
 
         if (vm.count("serverip"))
