@@ -145,7 +145,7 @@ public:
     }
 
 
-    /// Destroy the task with the given name.  This will also stop the task.
+    /// Destroy all audio tasks.
     ///
     /// @param  task_name  The name of the task to destroy.
     void destroy_audio_tasks()
@@ -198,22 +198,12 @@ public:
     }
 
 
-    /// Destroy the task with the given name.  This will also stop the task.
+    /// Destroy all periodic tasks
     ///
     /// @param  task_name  The name of the task to destroy.
     void destroy_periodic_tasks()
     {
         periodic_tasks.clear();
-    }
-
-
-    /// Destroy all tasks in the session.  This will stop each task before
-    /// destroying it.
-    ///
-    /// @param  task_name  The name of the task to destroy.
-    void destroy_all_tasks()
-    {
-        tasks.clear();
     }
 
 
