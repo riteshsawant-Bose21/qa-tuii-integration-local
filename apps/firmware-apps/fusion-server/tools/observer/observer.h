@@ -10,7 +10,7 @@
 #include <json/json.h>
 #include <mutex>
 #include <netinet/in.h>
-#include <regex>
+#include <poll.h>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -20,14 +20,21 @@
 #include <unordered_map>
 #include <vector>
 
+/**
+ * @brief Represents a component of a JSON path.
+ *
+ * A path component may be a key (when accessing an object) or an array index.
+ */
 struct PathComponent {
-  std::string key;
-  int arrayIndex; // Valid only if isArrayAccess is true
-  bool isArrayAccess;
+  std::string key;    ///< The object key.
+  int arrayIndex;     ///< Valid only if isArrayAccess is true.
+  bool isArrayAccess; ///< True if this component represents an array index.
 
-  PathComponent(const std::string &k)
+  explicit PathComponent(const std::string &k)
       : key(k), arrayIndex(-1), isArrayAccess(false) {}
-  PathComponent(int idx) : key(""), arrayIndex(idx), isArrayAccess(true) {}
+
+  explicit PathComponent(int idx)
+      : key(""), arrayIndex(idx), isArrayAccess(true) {}
 };
 
 /**
@@ -44,17 +51,19 @@ struct PathComponent {
  *   - Otherwise, index holds the required numeric index.
  */
 struct PatternComponent {
-  std::string key; // valid if not an array access
-  bool isArrayAccess = false;
-  bool isArrayWildcard = false;
-  bool isSlice = false; // if true, then use sliceStart and sliceEnd
-  int index = -1;       // used for literal index
-  int sliceStart = 0;   // inclusive lower bound
-  int sliceEnd = 0;     // inclusive upper bound
+  std::string key; ///< Valid if not an array access.
+  bool isArrayAccess =
+      false; ///< True if this token represents an array access.
+  bool isArrayWildcard = false; ///< True if the array index is a wildcard.
+  bool isSlice = false;         ///< True if a slice is specified.
+  int index = -1;               ///< Used for a literal numeric index.
+  int sliceStart = 0;           ///< Inclusive lower bound for a slice.
+  int sliceEnd = 0;             ///< Inclusive upper bound for a slice.
 };
 
 /**
  * @brief Parse a subscription pattern string into components.
+ *
  * Examples:
  *   - "settings.audio.*.*.[*]" splits into:
  *         "settings", "audio", "*" , "*" , "[*]"
@@ -75,7 +84,7 @@ inline std::vector<PatternComponent> parsePattern(const std::string &pattern) {
     if (token.empty())
       continue;
 
-    // If token is exactly "[*]", then it means “any array element”
+    // Token exactly "[*]" means “any array element”
     if (token == "[*]") {
       PatternComponent pc;
       pc.isArrayAccess = true;
@@ -84,31 +93,30 @@ inline std::vector<PatternComponent> parsePattern(const std::string &pattern) {
       continue;
     }
 
-    // If token contains a '[' and ends with ']'
+    // If token contains '[' and ends with ']'
     size_t bracketPos = token.find('[');
     if (bracketPos != std::string::npos && token.back() == ']') {
-      // First, if there is a key portion before the '[' add that as a
-      // component.
-      std::string keyPart = token.substr(0, bracketPos);
+      // Add any key portion before '['.
+      const std::string keyPart = token.substr(0, bracketPos);
       if (!keyPart.empty()) {
         PatternComponent pc;
         pc.key = keyPart;
         components.push_back(pc);
       }
 
-      // Now process the content within the brackets.
-      std::string inside =
+      // Process the bracketed part.
+      const std::string inside =
           token.substr(bracketPos + 1, token.size() - bracketPos - 2);
       PatternComponent pcArr;
       pcArr.isArrayAccess = true;
       if (inside == "*") {
         pcArr.isArrayWildcard = true;
       } else if (inside.find(':') != std::string::npos) {
-        // This is a slice pattern.
+        // Slice pattern.
         pcArr.isSlice = true;
-        size_t colonPos = inside.find(':');
-        std::string startStr = inside.substr(0, colonPos);
-        std::string endStr = inside.substr(colonPos + 1);
+        const size_t colonPos = inside.find(':');
+        const std::string startStr = inside.substr(0, colonPos);
+        const std::string endStr = inside.substr(colonPos + 1);
         try {
           pcArr.sliceStart = std::stoi(startStr);
           pcArr.sliceEnd = std::stoi(endStr);
@@ -117,7 +125,7 @@ inline std::vector<PatternComponent> parsePattern(const std::string &pattern) {
                                    token);
         }
       } else {
-        // Otherwise, literal numeric index.
+        // Literal numeric index.
         for (char c : inside) {
           if (!std::isdigit(c))
             throw std::runtime_error("Invalid array index in pattern: " +
@@ -128,11 +136,10 @@ inline std::vector<PatternComponent> parsePattern(const std::string &pattern) {
         } catch (const std::exception &) {
           throw std::runtime_error("Invalid array index in pattern: " + token);
         }
-        pcArr.index = std::stoi(inside);
       }
       components.push_back(pcArr);
     } else {
-      // Otherwise, token is a simple key.
+      // Simple key token.
       PatternComponent pc;
       pc.key = token;
       components.push_back(pc);
@@ -142,60 +149,45 @@ inline std::vector<PatternComponent> parsePattern(const std::string &pattern) {
 }
 
 /**
- * @brief Retrieves an aggregated JSON value for a subscription that may include
- * a slice.
+ * @brief Retrieves a JSON value by traversing a JSON tree using a vector of
+ * path components.
  *
- * Given a JSON root (for example, the current internal state or a copy of it)
- * and a subscription string (like "settings.telemetry.report_period[1:3]"),
- * this function parses the subscription and then traverses the JSON.
- * When it encounters a slice token, it aggregates all elements whose index is
- * between sliceStart and sliceEnd (inclusive) into a JSON array.
- *
- * @param root The JSON value (state) to search.
- * @param subscription The subscription pattern string.
- * @return The aggregated JSON value, or null if the subscription cannot be
- * fully resolved.
+ * @param root The root JSON value to traverse.
+ * @param pathParts A vector of PathComponent specifying the path.
+ * @param verbose If true, prints error messages.
+ * @return The JSON value at the given path or Json::nullValue if not found.
  */
-inline Json::Value getAggregatedFrom(const Json::Value &root,
-                                     const std::string &subscription) {
-  // Parse the subscription into tokens (PatternComponent objects)
-  std::vector<PatternComponent> tokens = parsePattern(subscription);
-  Json::Value current = root;
-  for (const auto &token : tokens) {
-    if (!token.isArrayAccess) {
-      // Normal key: current must be an object and contain the key.
-      if (!current.isObject() || !current.isMember(token.key))
+inline Json::Value
+getJsonValueAtPath(const Json::Value &root,
+                   const std::vector<PathComponent> &pathParts,
+                   bool verbose = false) {
+  const Json::Value *current = &root;
+  for (const auto &part : pathParts) {
+    if (part.isArrayAccess) {
+      if (!current->isArray()) {
+        if (verbose)
+          std::cout << "Expected an array but found non-array at index: "
+                    << part.arrayIndex << std::endl;
         return Json::nullValue;
-      current = current[token.key];
-    } else {
-      // Token is an array access.
-      if (token.isSlice) {
-        // If current is not an array, we cannot aggregate.
-        if (!current.isArray())
-          return Json::nullValue;
-        Json::Value aggregated(Json::arrayValue);
-        int maxIndex = static_cast<int>(current.size()) - 1;
-        int end = std::min(token.sliceEnd, maxIndex);
-        // Aggregate all values from sliceStart to end (inclusive)
-        for (int j = token.sliceStart; j <= end; ++j) {
-          aggregated.append(current[j]);
-        }
-        current = aggregated;
-      } else if (token.isArrayWildcard) {
-        // For wildcards, we simply expect current to be an array.
-        if (!current.isArray())
-          return Json::nullValue;
-        // Here we simply leave current as is (or you could copy it if desired).
-      } else {
-        // Literal array index.
-        if (!current.isArray() ||
-            token.index >= static_cast<int>(current.size()))
-          return Json::nullValue;
-        current = current[token.index];
       }
+      if (part.arrayIndex >= static_cast<int>(current->size())) {
+        if (verbose)
+          std::cout << "Array index " << part.arrayIndex
+                    << " is out of bounds (size: " << current->size() << ")"
+                    << std::endl;
+        return Json::nullValue;
+      }
+      current = &((*current)[part.arrayIndex]);
+    } else {
+      if (!current->isObject() || !current->isMember(part.key)) {
+        if (verbose)
+          std::cout << "Key not found in object: " << part.key << std::endl;
+        return Json::nullValue;
+      }
+      current = &((*current)[part.key]);
     }
   }
-  return current;
+  return *current;
 }
 
 /**
@@ -225,17 +217,19 @@ inline bool patternMatchesPath(const std::vector<PatternComponent> &pattern,
       }
       ++pIdx;
       ++pathIdx;
-      continue;
+    } else {
+      if (pcomp.key != "*" && pcomp.key != comp.key)
+        return false;
+      ++pIdx;
+      ++pathIdx;
     }
-
-    if (pcomp.key != "*" && pcomp.key != comp.key)
-      return false;
-    ++pIdx;
-    ++pathIdx;
   }
-  // Require that both the pattern and the path have been fully matched.
   return (pIdx == pattern.size() && pathIdx == path.size());
 }
+
+// -----------------------------------------------------------------------------
+// Class: JsonMonitor
+// -----------------------------------------------------------------------------
 
 /**
  * @brief Monitors and manages JSON data with support for path-based access and
@@ -243,13 +237,26 @@ inline bool patternMatchesPath(const std::vector<PatternComponent> &pattern,
  */
 class JsonMonitor {
 public:
+  /// Type definition for change notification callbacks.
   using ChangeCallback = std::function<void(
       const std::string &, const Json::Value &, const Json::Value &)>;
 
+  /**
+   * @brief Constructs a JsonMonitor with an optional initial JSON state.
+   * @param initial_data The initial JSON state (default is an empty object).
+   * @param verbose If true, enables verbose logging.
+   */
   JsonMonitor(Json::Value initial_data = Json::objectValue,
               bool verbose = false)
       : data_(initial_data), verbose_(verbose) {}
 
+  /**
+   * @brief Register a callback to be notified when a concrete path is updated.
+   *
+   * @param path The concrete JSON path to watch. An empty string indicates the
+   * root.
+   * @param callback The function to call when the specified path is updated.
+   */
   void watch(const std::string &path, ChangeCallback callback) {
     if (path.empty()) {
       root_watchers_.push_back(callback);
@@ -258,39 +265,58 @@ public:
     }
   }
 
+  /**
+   * @brief Register a callback to be notified when a subscription pattern is
+   * updated.
+   *
+   * @param pattern The subscription pattern string (may include wildcards).
+   * @param callback The function to call when an update matching the pattern
+   * occurs.
+   */
   void watchPattern(const std::string &pattern, ChangeCallback callback) {
     pattern_watchers_[pattern].push_back(callback);
   }
 
+  /**
+   * @brief Retrieve the JSON value at a given path.
+   *
+   * @param path The concrete JSON path (dot and bracket notation).
+   * @return The JSON value at the path, or null if the path is invalid.
+   */
   Json::Value get(const std::string &path) const {
-    if (path.empty()) {
+    std::lock_guard<std::mutex> lock(state_mutex_);
+    if (path.empty())
       return data_;
-    }
 
     std::vector<PathComponent> path_parts = splitPath(path);
     const Json::Value *current = &data_;
     for (const auto &part : path_parts) {
       if (part.isArrayAccess) {
         if (!current->isArray() ||
-            part.arrayIndex >= static_cast<int>(current->size())) {
+            part.arrayIndex >= static_cast<int>(current->size()))
           return Json::nullValue;
-        }
-        current = &(*current)[part.arrayIndex];
+        current = &((*current)[part.arrayIndex]);
       } else {
-        if (!current->isObject() || !current->isMember(part.key)) {
+        if (!current->isObject() || !current->isMember(part.key))
           return Json::nullValue;
-        }
-        current = &(*current)[part.key];
+        current = &((*current)[part.key]);
       }
     }
     return *current;
   }
 
+  /**
+   * @brief Splits a JSON path string into its component parts.
+   *
+   * The path is expected in a dot/bracket notation (e.g., "settings.audio[0]").
+   *
+   * @param path The JSON path string.
+   * @return A vector of PathComponent representing the path.
+   */
   std::vector<PathComponent> splitPath(const std::string &path) const {
     std::vector<PathComponent> parts;
-    if (path.empty()) {
+    if (path.empty())
       return parts;
-    }
     std::string key;
     std::string arrayPart;
     bool inArray = false;
@@ -311,14 +337,11 @@ public:
         inArray = false;
         try {
           int index = std::stoi(arrayPart);
-          if (index < 0) {
-            // Invalid path
-            return std::vector<PathComponent>();
-          }
+          if (index < 0)
+            return std::vector<PathComponent>(); // invalid
           parts.push_back(PathComponent(index));
         } catch (...) {
-          // Invalid index
-          return std::vector<PathComponent>();
+          return std::vector<PathComponent>(); // invalid index
         }
         arrayPart.clear();
       } else if (inArray) {
@@ -327,134 +350,159 @@ public:
         key += c;
       }
     }
+
     if (!key.empty()) {
       parts.push_back(PathComponent(key));
     }
+
     if (verbose_) {
       std::cout << "Parsed concrete path: ";
       for (const auto &p : parts) {
-        if (p.isArrayAccess) {
+        if (p.isArrayAccess)
           std::cout << "[" << p.arrayIndex << "] ";
-        } else {
+        else
           std::cout << p.key << " ";
-        }
       }
       std::cout << std::endl;
     }
     return parts;
   }
 
+  /**
+   * @brief Process an external JSON update for a given path.
+   *
+   * This function updates the internal state and notifies any registered
+   * watchers (exact, pattern, and root watchers) if the state has changed.
+   *
+   * @param path The concrete JSON path that has been updated.
+   * @param new_state The new JSON state for that path.
+   */
   void handleExternalUpdate(const std::string &path,
                             const Json::Value &new_state) {
     std::lock_guard<std::mutex> lock(state_mutex_);
 
     if (verbose_) {
-      std::cout << "Received update for path: " << path << std::endl;
+      log("Received update for path: " + path);
     }
 
-    // Save a copy of the current internal state.
     Json::Value oldData = data_;
-
-    // Update the internal state.
     updateInternalState(path, new_state);
-
-    // After update, the internal state is newData.
     Json::Value newData = data_;
 
-    // Check if the update actually changed the state
     if (oldData == newData) {
-      // No actual change occurred, so don't notify watchers.
       if (verbose_) {
-        std::cout << "No change detected for path: " << path << std::endl;
+        log("No change detected for path: " + path);
       }
       return;
     }
 
-    // Notify exact (non-pattern) watchers as before.
-    auto it = watchers_.find(path);
+    const Json::Value oldValue = extractValue(oldData, path);
+    const Json::Value newValue = extractValue(newData, path);
+
+    // Notify exact-match watchers.
+    const auto it = watchers_.find(path);
     if (it != watchers_.end()) {
-      for (const auto &callback : it->second) {
-        if (verbose_) {
-          std::cout << "Triggering exact watcher for: " << path << std::endl;
-        }
-        callback(path, extractValue(oldData, path),
-                 extractValue(newData, path));
-      }
+      if (verbose_)
+        log("Triggering exact watchers for: " + path);
+      for (const auto &callback : it->second)
+        callback(path, oldValue, newValue);
     }
 
-    // Now handle pattern watchers.
+    // Notify pattern watchers.
     for (const auto &[subscription, callbacks] : pattern_watchers_) {
-      std::vector<PatternComponent> tokens = parsePattern(subscription);
+      const auto &tokens = getParsedPattern(subscription);
       std::vector<PathComponent> splitP = splitPath(path);
       if (patternMatchesPath(tokens, splitP)) {
-        for (const auto &callback : callbacks) {
-          // Use the concrete update path here.
-          callback(path, extractValue(oldData, path),
-                   extractValue(newData, path));
-        }
+        for (const auto &callback : callbacks)
+          callback(path, oldValue, newValue);
       }
     }
 
-    // Finally, trigger root watchers regardless of the path.
+    // Notify root watchers.
     for (const auto &callback : root_watchers_) {
       if (verbose_) {
-        std::cout << "Triggering root watcher for: " << path << std::endl;
+        log("Triggering root watchers for: " + path);
       }
-      callback(path, extractValue(oldData, path), extractValue(newData, path));
+      callback(path, oldValue, newValue);
     }
   }
 
+  /**
+   * @brief Retrieves the parsed pattern for the given subscription, using a
+   * cache.
+   *
+   * @param pattern The subscription pattern string.
+   * @return The parsed pattern as a vector of PatternComponent.
+   */
+  const std::vector<PatternComponent> &
+  getParsedPattern(const std::string &pattern) {
+    std::lock_guard<std::mutex> lock(cache_mutex_);
+    const auto it = parsedPatternCache_.find(pattern);
+    if (it != parsedPatternCache_.end()) {
+      return it->second;
+    }
+
+    // Parse and cache the pattern.
+    parsedPatternCache_[pattern] = parsePattern(pattern);
+    return parsedPatternCache_[pattern];
+  }
+
+  /**
+   * @brief Enable or disable verbose logging.
+   * @param verbose Set to true to enable detailed logging.
+   */
   void setVerbose(bool verbose) { verbose_ = verbose; }
 
 private:
+  // Helper for logging.
+  void log(const std::string &message) const {
+    std::cout << "[JsonMonitor] " << message << std::endl;
+  }
+
+  /**
+   * @brief Updates the internal JSON state at a given path.
+   *
+   * If the path is empty, the entire state is replaced. Otherwise, the function
+   * traverses (and creates nodes as needed) and updates the target node.
+   *
+   * @param path The JSON path to update.
+   * @param new_state The new JSON value to set at the path.
+   */
   void updateInternalState(const std::string &path,
                            const Json::Value &new_state) {
-    // If updating the root, replace entirely.
     if (path.empty()) {
       data_ = new_state;
       return;
     }
-
     std::vector<PathComponent> path_parts = splitPath(path);
     Json::Value *current = &data_;
-    // Traverse all tokens except the last one.
     for (size_t i = 0; i < path_parts.size() - 1; ++i) {
       const auto &part = path_parts[i];
       if (part.isArrayAccess) {
-        if (!current->isArray()) {
-          // Do not overwrite if it exists. Only create if missing.
+        if (!current->isArray())
           *current = Json::arrayValue;
-        }
-        // Expand the array if needed.
-        while (current->size() <= static_cast<size_t>(part.arrayIndex)) {
+        while (current->size() <= static_cast<size_t>(part.arrayIndex))
           current->append(Json::Value());
-        }
-        current = &(*current)[part.arrayIndex];
+        current = &((*current)[part.arrayIndex]);
       } else {
-        bool nextIsArray = false;
-        if (i + 1 < path_parts.size() && path_parts[i + 1].isArrayAccess)
-          nextIsArray = true;
+        bool nextIsArray =
+            (i + 1 < path_parts.size() && path_parts[i + 1].isArrayAccess);
         if (!current->isObject())
           *current = Json::objectValue;
-        // Only create the member if it doesn’t exist.
         if (!current->isMember(part.key)) {
-          if (nextIsArray)
-            (*current)[part.key] = Json::arrayValue;
-          else
-            (*current)[part.key] = Json::objectValue;
+          (*current)[part.key] =
+              nextIsArray ? Json::arrayValue : Json::objectValue;
         }
         current = &((*current)[part.key]);
       }
     }
-
-    // Update the final token.
+    // Update final token.
     const auto &last_part = path_parts.back();
     if (last_part.isArrayAccess) {
       if (!current->isArray())
         *current = Json::arrayValue;
-      while (current->size() <= static_cast<size_t>(last_part.arrayIndex)) {
+      while (current->size() <= static_cast<size_t>(last_part.arrayIndex))
         current->append(Json::Value());
-      }
       (*current)[last_part.arrayIndex] = new_state;
     } else {
       if (!current->isObject())
@@ -463,160 +511,199 @@ private:
     }
   }
 
+  /**
+   * @brief Extracts the JSON value from a state at the specified path.
+   *
+   * @param state The root JSON state.
+   * @param path The concrete JSON path.
+   * @return The JSON value at the path, or Json::nullValue if not found.
+   */
   Json::Value extractValue(const Json::Value &state,
                            const std::string &path) const {
     if (path.empty())
       return state;
     std::vector<PathComponent> parts = splitPath(path);
-    const Json::Value *current = &state;
-    for (const auto &part : parts) {
-      if (part.isArrayAccess) {
-        if (!current->isArray() ||
-            part.arrayIndex >= static_cast<int>(current->size()))
-          return Json::nullValue;
-        current = &(*current)[part.arrayIndex];
-      } else {
-        if (!current->isObject() || !current->isMember(part.key))
-          return Json::nullValue;
-        current = &(*current)[part.key];
-      }
-    }
-    return *current;
+    return getJsonValueAtPath(state, parts, verbose_);
   }
 
-  void notifyWatchers(const std::string &path,
-                      const std::vector<PathComponent> &path_parts,
-                      const Json::Value &old_value,
-                      const Json::Value &new_value) {
-    if (verbose_) {
-      std::cout << "Notifying watchers for: " << path << std::endl;
-    }
-
-    // First, trigger any exact-match watchers.
-    auto it = watchers_.find(path);
-    if (it != watchers_.end()) {
-      for (const auto &callback : it->second) {
-        callback(path, extractValue(old_value, path),
-                 extractValue(new_value, path));
-      }
-    }
-
-    // Next, loop over pattern watchers.
-    for (const auto &[pattern, callbacks] : pattern_watchers_) {
-      std::vector<PatternComponent> parsedPattern;
-      try {
-        parsedPattern = parsePattern(pattern);
-      } catch (const std::exception &ex) {
-        if (verbose_) {
-          std::cerr << "Error parsing pattern \"" << pattern
-                    << "\": " << ex.what() << std::endl;
-        }
-        continue;
-      }
-      if (patternMatchesPath(parsedPattern, path_parts)) {
-        if (verbose_) {
-          std::cout << "Pattern \"" << pattern
-                    << "\" matched for path: " << path << std::endl;
-        }
-        for (const auto &callback : callbacks) {
-          callback(path, old_value, new_value);
-        }
-      }
-    }
-    // Finally, trigger any root watchers (regardless of whether path is empty).
-    for (const auto &callback : root_watchers_) {
-      if (verbose_) {
-        std::cout << "Triggering root watcher for: " << path << std::endl;
-      }
-      callback(path, old_value, new_value);
-    }
-  }
-
-  std::mutex state_mutex_;
+  mutable std::mutex state_mutex_;
   Json::Value data_;
   bool verbose_;
   std::unordered_map<std::string, std::vector<ChangeCallback>> watchers_;
   std::unordered_map<std::string, std::vector<ChangeCallback>>
       pattern_watchers_;
   std::vector<ChangeCallback> root_watchers_;
+
+  // Cache for parsed subscription patterns.
+  std::unordered_map<std::string, std::vector<PatternComponent>>
+      parsedPatternCache_;
+  mutable std::mutex cache_mutex_;
 };
 
+/**
+ * @brief A RAII wrapper for a UDP socket.
+ *
+ * This class handles creation and cleanup of a UDP socket.
+ */
+class UDPSocket {
+public:
+  /**
+   * @brief Constructs a UDPSocket.
+   *
+   * @param domain The protocol family (e.g., AF_INET).
+   * @param type The socket type (e.g., SOCK_DGRAM).
+   * @param protocol The protocol to use.
+   * @throws std::runtime_error if socket creation fails.
+   */
+  UDPSocket(int domain, int type, int protocol)
+      : sockfd_(::socket(domain, type, protocol)) {
+    if (sockfd_ < 0)
+      throw std::runtime_error("Failed to create socket");
+  }
+
+  ~UDPSocket() {
+    if (sockfd_ >= 0) {
+      ::close(sockfd_);
+    }
+  }
+
+  int get() const { return sockfd_; }
+
+  // Non-copyable.
+  UDPSocket(const UDPSocket &) = delete;
+  UDPSocket &operator=(const UDPSocket &) = delete;
+
+private:
+  int sockfd_;
+};
+
+/**
+ * @brief Monitors remote JSON values via UDP and updates a local JsonMonitor.
+ *
+ * The UDPValueMonitor listens for incoming JSON messages via UDP, processes
+ * them, and notifies registered callbacks.
+ */
 class UDPValueMonitor {
 public:
+  /**
+   * @brief Constructs a UDPValueMonitor.
+   *
+   * Sets up the UDP socket, binds to a local port, registers callbacks,
+   * sends an initial state request, and starts the receive thread.
+   *
+   * @param serverIP The server's IP address.
+   * @param port The server's port number.
+   * @param targetPaths A vector of JSON paths or patterns to monitor.
+   * @param verbose If true, enables verbose logging.
+   * @throws std::runtime_error on socket or binding errors.
+   */
   UDPValueMonitor(const std::string &serverIP, int port,
                   const std::vector<std::string> &targetPaths,
                   bool verbose = false)
-      : targetPaths_(targetPaths), verbose_(verbose) {
-    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (sockfd < 0) {
-      throw std::runtime_error("Failed to create socket");
-    }
-    memset(&serverAddr, 0, sizeof(serverAddr));
+      : targetPaths_(targetPaths), verbose_(verbose),
+        jsonMonitor_(Json::objectValue, verbose) {
+    const int sockfd = udpSocket_.get();
+
+    // Set up the server address.
+    sockaddr_in serverAddr;
+    std::memset(&serverAddr, 0, sizeof(serverAddr));
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(port);
-    if (inet_pton(AF_INET, serverIP.c_str(), &serverAddr.sin_addr) <= 0) {
-      close(sockfd);
-      throw std::runtime_error("Invalid address");
-    }
-    struct sockaddr_in clientAddr;
-    memset(&clientAddr, 0, sizeof(clientAddr));
+    if (inet_pton(AF_INET, serverIP.c_str(), &serverAddr.sin_addr) <= 0)
+      throw std::runtime_error("Invalid server address: " + serverIP);
+
+    // Bind the socket to any available local port.
+    sockaddr_in clientAddr;
+    std::memset(&clientAddr, 0, sizeof(clientAddr));
     clientAddr.sin_family = AF_INET;
     clientAddr.sin_addr.s_addr = INADDR_ANY;
     clientAddr.sin_port = htons(0);
-    if (bind(sockfd, (struct sockaddr *)&clientAddr, sizeof(clientAddr)) < 0) {
-      close(sockfd);
+    if (bind(sockfd, reinterpret_cast<sockaddr *>(&clientAddr),
+             sizeof(clientAddr)) < 0)
       throw std::runtime_error("Failed to bind socket: " +
                                std::string(strerror(errno)));
-    }
-    const auto flags = fcntl(sockfd, F_GETFL, 0);
+
+    // Set socket non-blocking.
+    int flags = fcntl(sockfd, F_GETFL, 0);
     fcntl(sockfd, F_SETFL, flags | O_NONBLOCK);
-    jsonMonitor.setVerbose(verbose_);
+
+    // Register watchers based on whether the path contains a wildcard.
     for (const auto &path : targetPaths_) {
       if (path.find('*') != std::string::npos) {
-        jsonMonitor.watchPattern(path, [this](const std::string &p,
-                                              const Json::Value &old_val,
-                                              const Json::Value &new_val) {
+        jsonMonitor_.watchPattern(path, [this](const std::string &p,
+                                               const Json::Value &old_val,
+                                               const Json::Value &new_val) {
           handleValueChange(p, old_val, new_val);
         });
       } else {
-        jsonMonitor.watch(path, [this](const std::string &p,
-                                       const Json::Value &old_val,
-                                       const Json::Value &new_val) {
+        jsonMonitor_.watch(path, [this](const std::string &p,
+                                        const Json::Value &old_val,
+                                        const Json::Value &new_val) {
           handleValueChange(p, old_val, new_val);
         });
       }
     }
-    requestInitialState();
-    receiveThread = std::thread(&UDPValueMonitor::receiveLoop, this);
-  }
-  ~UDPValueMonitor() {
-    stop();
-    if (sockfd >= 0) {
-      close(sockfd);
-    }
+    requestInitialState(serverAddr);
+    receiveThread_ = std::thread(&UDPValueMonitor::receiveLoop, this);
   }
 
+  ~UDPValueMonitor() { stop(); }
+
+  /**
+   * @brief Stops the UDPValueMonitor and joins the receive thread.
+   */
   void stop() {
-    running = false;
-    if (receiveThread.joinable()) {
-      receiveThread.join();
-    }
+    running_ = false;
+    if (receiveThread_.joinable())
+      receiveThread_.join();
   }
 
-  // For testing purposes only.
+  /**
+   * @brief For testing: Get the JSON value at a given path.
+   *
+   * @param path The JSON path.
+   * @return The JSON value.
+   */
   Json::Value get(const std::string &path) const {
-    return jsonMonitor.get(path);
+    return jsonMonitor_.get(path);
+  }
+
+  /**
+   * @brief For testing: Get the local port to which the socket is bound.
+   *
+   * @return The local port number, or -1 on error.
+   */
+  int getLocalPort() const {
+    sockaddr_in localAddr;
+    socklen_t addrLen = sizeof(localAddr);
+    if (getsockname(udpSocket_.get(), reinterpret_cast<sockaddr *>(&localAddr),
+                    &addrLen) == 0)
+      return ntohs(localAddr.sin_port);
+    return -1;
   }
 
 private:
-  std::string getTimestamp() {
-    const auto now = std::chrono::system_clock::now();
-    const auto now_c = std::chrono::system_clock::to_time_t(now);
+  // Logging helper.
+  void log(const std::string &message) const {
+    std::cout << "[UDPValueMonitor] " << message << std::endl;
+  }
+
+  /**
+   * @brief Returns the current timestamp as a string (HH:MM:SS).
+   */
+  std::string getTimestamp() const {
+    auto now = std::chrono::system_clock::now();
+    auto now_c = std::chrono::system_clock::to_time_t(now);
+    struct tm local_tm;
+    localtime_r(&now_c, &local_tm);
     std::stringstream ss;
-    ss << std::put_time(std::localtime(&now_c), "%H:%M:%S");
+    ss << std::put_time(&local_tm, "%H:%M:%S");
     return ss.str();
   }
 
+  /**
+   * @brief Handles a monitored value change.
+   */
   void handleValueChange(const std::string &path, const Json::Value &old_val,
                          const Json::Value &new_val) {
     if (old_val != new_val) {
@@ -624,160 +711,170 @@ private:
       builder["precision"] = 2;
       builder["indentation"] = "";
       if (verbose_) {
-        std::cout << getTimestamp() << " " << path << " changed from: ";
-        std::cout << Json::writeString(builder, old_val);
-        std::cout << " to: " << Json::writeString(builder, new_val)
+        std::cout << getTimestamp() << " " << path
+                  << " changed from: " << Json::writeString(builder, old_val)
+                  << " to: " << Json::writeString(builder, new_val)
                   << std::endl;
       }
     }
   }
 
-  void requestInitialState() {
+  /**
+   * @brief Sends an initial state request to the server.
+   */
+  void requestInitialState(const sockaddr_in &serverAddr) {
     Json::Value message;
     message["action"] = "get";
-    Json::FastWriter writer;
-    const auto jsonStr = writer.write(message);
-    sendto(sockfd, jsonStr.c_str(), jsonStr.length(), 0,
-           (struct sockaddr *)&serverAddr, sizeof(serverAddr));
+    Json::StreamWriterBuilder writerBuilder;
+    std::string jsonStr = Json::writeString(writerBuilder, message);
+    ssize_t sent = sendto(udpSocket_.get(), jsonStr.c_str(), jsonStr.length(),
+                          0, reinterpret_cast<const sockaddr *>(&serverAddr),
+                          sizeof(serverAddr));
+    if (sent < 0 && verbose_) {
+      log("Failed to send initial state request: " +
+          std::string(strerror(errno)));
+    }
   }
 
+  /**
+   * @brief Retrieves a JSON value at a given path from a JSON tree.
+   */
   Json::Value getValueAtPath(const Json::Value &root,
-                             const std::vector<PathComponent> &path_parts) {
-    const Json::Value *current = &root;
-    for (const auto &part : path_parts) {
-      if (part.isArrayAccess) {
-        if (!current->isArray()) {
-          if (verbose_) {
-            std::cout
-                << "Expected array but found non-array at path component: "
-                << part.arrayIndex << std::endl;
-          }
-          return Json::nullValue;
-        }
-        if (part.arrayIndex >= static_cast<int>(current->size())) {
-          if (verbose_) {
-            std::cout << "Array index out of bounds: " << part.arrayIndex
-                      << std::endl;
-          }
-          return Json::nullValue;
-        }
-        current = &(*current)[part.arrayIndex];
-      } else {
-        if (!current->isObject() || !current->isMember(part.key)) {
-          if (verbose_) {
-            std::cout << "Key not found in object: " << part.key << std::endl;
-          }
-          return Json::nullValue;
-        }
-        current = &(*current)[part.key];
-      }
-    }
-    return *current;
+                             const std::vector<PathComponent> &pathParts) {
+    return getJsonValueAtPath(root, pathParts, verbose_);
   }
 
-  void handleUpdateMessage(const Json::Value &update) {
-    if (verbose_) {
-      std::cout << "Processing incoming JSON update: " << update << std::endl;
-    }
-    for (const auto &path : targetPaths_) {
-      // If the path is a pattern (contains a wildcard), traverse the update
-      // tree.
-      if (path.find('*') != std::string::npos) {
-        traverseAndUpdate(update, "", path);
+  /**
+   * @brief Helper to construct a JSON path string from a vector of
+   * PathComponent.
+   */
+  std::string constructPath(const std::vector<PathComponent> &path) const {
+    std::ostringstream oss;
+    for (size_t i = 0; i < path.size(); ++i) {
+      if (path[i].isArrayAccess) {
+        oss << "[" << path[i].arrayIndex << "]";
       } else {
-        // Otherwise, treat it as a concrete path.
-        std::vector<PathComponent> path_parts = jsonMonitor.splitPath(path);
-        Json::Value value = getValueAtPath(update, path_parts);
-        if (!value.isNull()) {
-          if (verbose_) {
-            std::cout << "Detected value at " << path << ": " << value
-                      << std::endl;
-          }
-          jsonMonitor.handleExternalUpdate(path, value);
-        } else {
-          if (verbose_) {
-            std::cout << "No matching value found for path: " << path
-                      << std::endl;
-          }
-        }
+        if (i > 0)
+          oss << ".";
+        oss << path[i].key;
       }
     }
+    return oss.str();
   }
 
+  /**
+   * @brief Recursively traverses a JSON node and updates matching paths.
+   */
   void traverseAndUpdate(const Json::Value &node,
-                         const std::string &currentPath,
-                         const std::string &pattern) {
+                         std::vector<PathComponent> &currentPath,
+                         const std::vector<PatternComponent> &parsedPattern) {
+    if (patternMatchesPath(parsedPattern, currentPath)) {
+      const std::string pathStr = constructPath(currentPath);
+      jsonMonitor_.handleExternalUpdate(pathStr, node);
+    }
     if (node.isObject()) {
       for (const auto &key : node.getMemberNames()) {
-        std::string newPath =
-            currentPath.empty() ? key : currentPath + "." + key;
-        std::vector<PathComponent> path_parts = jsonMonitor.splitPath(newPath);
-        try {
-          auto parsedPattern = parsePattern(pattern);
-          if (patternMatchesPath(parsedPattern, path_parts)) {
-            jsonMonitor.handleExternalUpdate(newPath, node[key]);
-          }
-        } catch (...) {
-        }
-        traverseAndUpdate(node[key], newPath, pattern);
+        currentPath.push_back(PathComponent(key));
+        traverseAndUpdate(node[key], currentPath, parsedPattern);
+        currentPath.pop_back();
       }
     } else if (node.isArray()) {
       for (Json::ArrayIndex i = 0; i < node.size(); ++i) {
-        std::string newPath = currentPath + "[" + std::to_string(i) + "]";
-        std::vector<PathComponent> path_parts = jsonMonitor.splitPath(newPath);
-        try {
-          auto parsedPattern = parsePattern(pattern);
-          if (patternMatchesPath(parsedPattern, path_parts)) {
-            jsonMonitor.handleExternalUpdate(newPath, node[i]);
-          }
-        } catch (...) {
-        }
-        traverseAndUpdate(node[i], newPath, pattern);
+        currentPath.push_back(PathComponent(static_cast<int>(i)));
+        traverseAndUpdate(node[i], currentPath, parsedPattern);
+        currentPath.pop_back();
       }
     }
   }
 
-  void receiveLoop() {
-    char buffer[BUFFER_SIZE];
-    struct sockaddr_in senderAddr;
-    socklen_t senderLen = sizeof(senderAddr);
-    while (running) {
-      const ssize_t received =
-          recvfrom(sockfd, buffer, BUFFER_SIZE, 0,
-                   (struct sockaddr *)&senderAddr, &senderLen);
-      if (received > 0) {
-        buffer[received] = '\0';
-        if (verbose_) {
-          std::cout << "Received data: " << buffer << std::endl;
+  /**
+   * @brief Processes an incoming JSON update message.
+   */
+  void handleUpdateMessage(const Json::Value &update) {
+    if (verbose_)
+      log("Processing incoming JSON update: " + update.toStyledString());
+
+    for (const auto &path : targetPaths_) {
+      if (path.find('*') != std::string::npos) {
+        const auto &parsedPattern = jsonMonitor_.getParsedPattern(path);
+        std::vector<PathComponent> currentPath;
+        traverseAndUpdate(update, currentPath, parsedPattern);
+      } else {
+        auto path_parts = jsonMonitor_.splitPath(path);
+        Json::Value value = getValueAtPath(update, path_parts);
+        if (!value.isNull()) {
+          if (verbose_)
+            log("Detected value at " + path + ": " + value.toStyledString());
+          jsonMonitor_.handleExternalUpdate(path, value);
+        } else if (verbose_) {
+          log("No matching value found for path: " + path);
         }
+      }
+    }
+  }
+
+  /**
+   * @brief Main loop that listens for incoming UDP messages.
+   */
+  void receiveLoop() {
+    pollfd pfd;
+    pfd.fd = udpSocket_.get();
+    pfd.events = POLLIN;
+    constexpr size_t BUFFER_SIZE = 65535;
+    char buffer[BUFFER_SIZE];
+    sockaddr_in senderAddr;
+    socklen_t senderLen = sizeof(senderAddr);
+
+    while (running_) {
+      const int pollResult = poll(&pfd, 1, 1000);
+      if (pollResult < 0) {
+        if (errno == EINTR)
+          continue;
+        std::cerr << "Poll error: " << strerror(errno) << std::endl;
+        break;
+      } else if (pollResult == 0) {
+        continue;
+      }
+
+      if (pfd.revents & POLLIN) {
+        const ssize_t received =
+            recvfrom(udpSocket_.get(), buffer, BUFFER_SIZE - 1, 0,
+                     reinterpret_cast<sockaddr *>(&senderAddr), &senderLen);
+        if (received < 0) {
+          if (errno == EWOULDBLOCK || errno == EAGAIN)
+            continue;
+          std::cerr << "Error receiving data: " << strerror(errno) << std::endl;
+          continue;
+        }
+        buffer[received] = '\0';
+        if (verbose_)
+          log("Received data: " + std::string(buffer));
+
         Json::Value response;
-        Json::Reader reader;
-        if (reader.parse(buffer, response)) {
+        Json::CharReaderBuilder readerBuilder;
+        std::istringstream iss(buffer);
+        std::string errs;
+        if (Json::parseFromStream(readerBuilder, iss, &response, &errs)) {
           if (response.isMember("status") && response.isMember("data")) {
-            if (verbose_) {
-              std::cout << "Processing initial state response" << std::endl;
-            }
+            if (verbose_)
+              log("Processing initial state response");
             handleUpdateMessage(response["data"]);
           } else {
-            if (verbose_) {
-              std::cout << "Processing update message" << std::endl;
-            }
+            if (verbose_)
+              log("Processing update message");
             handleUpdateMessage(response);
           }
+        } else if (verbose_) {
+          std::cerr << "Failed to parse JSON: " << errs << std::endl;
         }
-      } else if (received < 0 && errno != EWOULDBLOCK && errno != EAGAIN) {
-        std::cerr << "Error receiving data: " << strerror(errno) << std::endl;
       }
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
   }
 
-  int sockfd;
-  struct sockaddr_in serverAddr;
-  std::atomic<bool> running{true};
-  std::thread receiveThread;
+  UDPSocket udpSocket_{AF_INET, SOCK_DGRAM, 0};
+  std::atomic<bool> running_{true};
+  std::thread receiveThread_;
   std::vector<std::string> targetPaths_;
-  JsonMonitor jsonMonitor;
   bool verbose_;
-  static constexpr size_t BUFFER_SIZE = 65535;
+  JsonMonitor jsonMonitor_;
 };
