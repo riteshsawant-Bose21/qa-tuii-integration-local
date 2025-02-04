@@ -500,9 +500,9 @@ private:
       message = "{ \"target\": \"session\", \"name\": \"destroy_all_periodic_tasks\" }";
       updateHandler_(message);
 
-      std::ofstream dsp_config("/tmp/fw_config.json");
-      dsp_config << new_val;
-      dsp_config.close();
+      std::ofstream fw_config("/tmp/fw_config.json");
+      fw_config << new_val;
+      fw_config.close();
 
       message = "{ \"target\": \"session\", \"name\": \"create_periodic_task\", \"value\": \"/tmp/fw_config.json\" }";
       updateHandler_(message);
