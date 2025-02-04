@@ -266,11 +266,16 @@ public:
     virtual void pre_process() = 0;
 
 
-    /// Send a JSON-formatted meter string using the provided callback.
+    /// Send the data for this meter as a JSON-formatted string using the
+    /// provided callback.
     ///
-    /// @param  meters_callback  The callback function used to send the meter data.
-    virtual void send_meter(std::function<void(TelemetryMessage, std::string)> meters_callback, 
-                                               TelemetryMessage meter_msg) = 0;
+    /// @param  meters_callback   The callback function used to send the
+    ///     meter data.
+    /// @param  meter_message     A TelemetryMessage with the meter data
+    /// @param  meters_remaining  The number of meters left in the block.
+    virtual void send_meter(std::function<void(TelemetryMessage, std::string, size_t)> meters_callback, 
+                                               TelemetryMessage meter_msg, 
+                                               size_t meters_remaining) = 0;
 
 
     /// Send a JSON-formatted event string using the provided callback.
@@ -412,9 +417,13 @@ public:
     /// Send the data for this meter as a JSON-formatted string using the
     /// provided callback.
     ///
-    /// @param  meters_callback  The callback function used to send the
+    /// @param  meters_callback   The callback function used to send the
     ///     meter data.
-    virtual void send_meter(std::function<void(TelemetryMessage, std::string)> meters_callback, TelemetryMessage meter_msg) override
+    /// @param  meter_message     A TelemetryMessage with the meter data
+    /// @param  meters_remaining  The number of meters left in the block.
+    virtual void send_meter(std::function<void(TelemetryMessage, std::string, size_t)> meters_callback, 
+                                               TelemetryMessage meter_msg, 
+                                               size_t meters_remaining) override
     {
         if (!block_value) {
             SPDLOG_ERROR("block_value is null in send_meter for {}::{}!", this->get_block_name(), this->get_name());
@@ -429,7 +438,7 @@ public:
 
         SPDLOG_TRACE("Writing meter: \n\n{}", meter_msg.serialize_message());
 
-        meters_callback(meter_msg, this->get_period_type());
+        meters_callback(meter_msg, this->get_period_type(), meters_remaining);
     }
 
 
@@ -591,10 +600,13 @@ public:
     /// Send the data for this meter as a JSON-formatted string using the
     /// provided callback.
     ///
-    /// @param  meters_callback  The callback function used to send the
+    /// @param  meters_callback   The callback function used to send the
     ///     meter data.
-    /// @param  items_remaining  The number of meters left in the block.
-    virtual void send_meter(std::function<void(TelemetryMessage, std::string)> meters_callback, TelemetryMessage meter_msg) override
+    /// @param  meter_message     A TelemetryMessage with the meter data
+    /// @param  meters_remaining  The number of meters left in the block.
+    virtual void send_meter(std::function<void(TelemetryMessage, std::string, size_t)> meters_callback, 
+                                               TelemetryMessage meter_msg, 
+                                               size_t meters_remaining) override
     {
         if (!block_value) {
             SPDLOG_ERROR("block_value is null in send_meter for {}::{}!", this->get_block_name(), this->get_name());
@@ -610,7 +622,7 @@ public:
 
         SPDLOG_TRACE("Writing meter: \n\n{}", meter_msg.serialize_message());
 
-        meters_callback(meter_msg, this->get_period_type());
+        meters_callback(meter_msg, this->get_period_type(), meters_remaining);
     }
 
 
@@ -788,10 +800,13 @@ public:
     /// Send the data for this meter as a JSON-formatted string using the
     /// provided callback.
     ///
-    /// @param  meters_callback  The callback function used to send the
+    /// @param  meters_callback   The callback function used to send the
     ///     meter data.
-    /// @param  items_remaining  The number of meters left in the block.
-    virtual void send_meter(std::function<void(TelemetryMessage, std::string)> meters_callback, TelemetryMessage meter_msg) override
+    /// @param  meter_message     A TelemetryMessage with the meter data
+    /// @param  meters_remaining  The number of meters left in the block.
+    virtual void send_meter(std::function<void(TelemetryMessage, std::string, size_t)> meters_callback, 
+                                               TelemetryMessage meter_msg, 
+                                               size_t meters_remaining) override
     {
         if (!block_value) {
             SPDLOG_ERROR("block_value is null in send_meter for {}::{}!", this->get_block_name(), this->get_name());
@@ -810,7 +825,7 @@ public:
 
         SPDLOG_TRACE("Writing meter: \n\n{}", meter_msg.serialize_message());
 
-        meters_callback(meter_msg, this->get_period_type());
+        meters_callback(meter_msg, this->get_period_type(), meters_remaining);
     }
 
 
