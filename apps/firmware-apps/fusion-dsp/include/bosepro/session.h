@@ -41,13 +41,18 @@ public:
 
         ps_command_map = 
         {
-            {"stop",                    [this](const ParameterSetting& c){ return cmd_stop_all(c); }},
-            {"destroy_audio_task",      [this](const ParameterSetting& c){ return cmd_destroy_audio_task(c); }},
-            {"create_audio_task",       [this](const ParameterSetting& c){ return cmd_create_audio_task(c); }},
-            {"start_audio_task",        [this](const ParameterSetting& c){ return cmd_start_audio_task(c); }},
-            {"stop_audio_task",         [this](const ParameterSetting& c){ return cmd_stop_audio_task(c); }},
-            {"create_periodic_task",    [this](const ParameterSetting& c){ return cmd_create_periodic_task(c); }},
-            {"apply_parameter_setting", [this](const ParameterSetting& c){ return cmd_apply_parameter_setting(c); }}
+            {"stop",                        [this](const ParameterSetting& c){ return cmd_stop_all(c); }},
+            {"destroy_audio_task",          [this](const ParameterSetting& c){ return cmd_destroy_audio_task(c); }},
+            {"destroy_all_audio_tasks",     [this](const ParameterSetting& c){ return cmd_destroy_audio_tasks(c); }},
+            {"create_audio_task",           [this](const ParameterSetting& c){ return cmd_create_audio_task(c); }},
+            {"destroy_periodic_task",       [this](const ParameterSetting& c){ return cmd_destroy_periodic_task(c); }},
+            {"destroy_all_periodic_tasks",  [this](const ParameterSetting& c){ return cmd_destroy_periodic_tasks(c); }},
+            {"create_periodic_task",        [this](const ParameterSetting& c){ return cmd_create_periodic_task(c); }},
+            {"start_audio_task",            [this](const ParameterSetting& c){ return cmd_start_audio_task(c); }},
+            {"stop_audio_task",             [this](const ParameterSetting& c){ return cmd_stop_audio_task(c); }},
+            {"start_periodic_task",         [this](const ParameterSetting& c){ return cmd_start_periodic_task(c); }},
+            {"stop_periodic_task",          [this](const ParameterSetting& c){ return cmd_stop_periodic_task(c); }},
+            {"apply_parameter_setting",     [this](const ParameterSetting& c){ return cmd_apply_parameter_setting(c); }}
         };
 
         frames_to_run = -1;
@@ -137,6 +142,68 @@ public:
         }
 
         audio_tasks.erase(task_name);
+    }
+
+
+    /// Destroy the task with the given name.  This will also stop the task.
+    ///
+    /// @param  task_name  The name of the task to destroy.
+    void destroy_audio_tasks()
+    {
+        audio_tasks.clear();
+    }
+
+
+    void create_periodic_tasks(const Configuration &configuration)
+    {
+        for (auto &t : configuration.get_periodic_tasks())
+        {
+            const TaskConfiguration &tc =
+                reinterpret_cast<const TaskConfiguration &>(t.second);
+            create_periodic_task(tc);
+        }
+    }
+
+
+    /// Create a task given a task configuration.  This will also start the
+    /// task.
+    ///
+    /// @param   task_configuration  The configuration for the task.
+    void create_periodic_task(const TaskConfiguration &task_configuration)
+    {
+        const std::string task_name = task_configuration.get_name();
+
+        if (periodic_tasks.count(task_name) != 0)
+        {
+            SPDLOG_CRITICAL("Duplicate tasks with name {}.", task_name);
+            return;
+        }
+
+        periodic_tasks[task_name] = std::unique_ptr<PeriodicTask>(new PeriodicTask(task_configuration));
+    }
+
+
+    /// Destroy the task with the given name.  This will also stop the task.
+    ///
+    /// @param  task_name  The name of the task to destroy.
+    void destroy_periodic_task(const std::string &task_name)
+    {
+        if (periodic_tasks.count(task_name) == 0)
+        {
+            SPDLOG_CRITICAL("Couldn't find task with name {}.", task_name);
+            return;
+        }
+
+        periodic_tasks.erase(task_name);
+    }
+
+
+    /// Destroy the task with the given name.  This will also stop the task.
+    ///
+    /// @param  task_name  The name of the task to destroy.
+    void destroy_periodic_tasks()
+    {
+        periodic_tasks.clear();
     }
 
 
