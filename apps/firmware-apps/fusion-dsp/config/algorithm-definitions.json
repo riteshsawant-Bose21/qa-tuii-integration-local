@@ -118,14 +118,16 @@
                     "default_value": false
                 }
             ],
-            "meters": [
+            "telemetry": [
                 {
                     "name": "in_meter",
                     "dimensions": ["channels"],
                     "value_type": "float",
                     "default_value": -36.0,
                     "minimum_value": -36.0,
-                    "maximum_value": 24.0
+                    "maximum_value": 24.0,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
                 },
                 {
                     "name": "out_meter",
@@ -133,7 +135,9 @@
                     "value_type": "float",
                     "default_value": -60.0,
                     "minimum_value": -60.0,
-                    "maximum_value": 0.0
+                    "maximum_value": 0.0,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
                 },
                 {
                     "name": "gain_meter",
@@ -141,13 +145,17 @@
                     "value_type": "float",
                     "default_value": 0.0,
                     "minimum_value": -24.0,
-                    "maximum_value": 24.0
+                    "maximum_value": 24.0,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
                 },
                 {
                     "name": "hold_meter",
                     "dimensions": ["channels"],
                     "value_type": "bool",
-                    "default_value": false
+                    "default_value": false,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
                 }
             ]
         },
@@ -279,14 +287,16 @@
                     "default_value": false
                 }
             ],
-            "meters": [
+            "telemetry": [
                 {
                     "name": "out_meter",
                     "dimensions": ["channels"],
                     "value_type": "float",
                     "default_value": -60.0,
                     "minimum_value": -60.0,
-                    "maximum_value": 0.0
+                    "maximum_value": 0.0,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
                 }
             ]
         },
@@ -370,14 +380,16 @@
                     "default_value": false
                 }
             ],
-            "meters": [
+            "telemetry": [
                 {
                     "name": "gain_meter",
                     "dimensions": ["channels"],
                     "value_type": "float",
                     "default_value": -60.0,
                     "minimum_value": 12.0,
-                    "maximum_value": 0.0
+                    "maximum_value": 0.0,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
                 },
                 {
                     "name": "out_meter",
@@ -385,7 +397,9 @@
                     "value_type": "float",
                     "default_value": -60.0,
                     "minimum_value": -60.0,
-                    "maximum_value": 0.0
+                    "maximum_value": 0.0,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
                 }
             ]
         },
@@ -443,14 +457,16 @@
                     "default_value": false
                 }
             ],
-            "meters": [
+            "telemetry": [
                 {
                     "name": "out_meter",
                     "dimensions": ["channels"],
                     "value_type": "float",
                     "default_value": -60.0,
                     "minimum_value": -60.0,
-                    "maximum_value": 0.0
+                    "maximum_value": 0.0,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
                 }
             ]
         },
@@ -528,13 +544,15 @@
                     "default_value": false
                 }
             ],
-            "meters": [
+            "telemetry": [
                 {
                     "name": "gain_meter",
                     "value_type": "float",
                     "default_value": -42.0,
                     "minimum_value": -42.0,
-                    "maximum_value": 0.0
+                    "maximum_value": 0.0,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
                 },
                 {
                     "name": "out_meter",
@@ -542,7 +560,9 @@
                     "value_type": "float",
                     "default_value": -60.0,
                     "minimum_value": -60.0,
-                    "maximum_value": 0.0
+                    "maximum_value": 0.0,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
                 }
             ]
         },
@@ -802,14 +822,16 @@
                     "default_value": false
                 }
             ],
-            "meters": [
+            "telemetry": [
                 {
                     "name": "out_meter",
                     "dimensions": ["channels"],
                     "value_type": "float",
                     "default_value": -60.0,
                     "minimum_value": -60.0,
-                    "maximum_value": 0.0
+                    "maximum_value": 0.0,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
                 }
             ]
         },
@@ -900,11 +922,13 @@
                     "default_value": false
                 }
             ],
-            "meters": [
+            "telemetry": [
                 {
                     "name": "open",
                     "value_type": "bool",
-                    "default_value": false
+                    "default_value": false,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
                 },
                 {
                     "name": "out_meter",
@@ -912,7 +936,9 @@
                     "value_type": "float",
                     "default_value": -60.0,
                     "minimum_value": -60.0,
-                    "maximum_value": 0.0
+                    "maximum_value": 0.0,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
                 }
             ]
         },
@@ -965,14 +991,16 @@
                     "default_value": false
                 }
             ],
-            "meters": [
+            "telemetry": [
                 {
                     "name": "out_meter",
                     "dimensions": ["channels"],
                     "value_type": "float",
                     "default_value": -60.0,
                     "minimum_value": -60.0,
-                    "maximum_value": 0.0
+                    "maximum_value": 0.0,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
                 }
             ]
         },
@@ -1023,14 +1051,16 @@
                     "default_value": false
                 }
             ],
-            "meters": [
+            "telemetry": [
                 {
                     "name": "out_meter",
                     "dimensions": ["out"],
                     "value_type": "float",
                     "default_value": -60.0,
                     "minimum_value": -60.0,
-                    "maximum_value": 24.0
+                    "maximum_value": 24.0,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
                 }
             ]
         },
@@ -1081,14 +1111,16 @@
                     "default_value": false
                 }
             ],
-            "meters": [
+            "telemetry": [
                 {
-                    "name": "meter",
+                    "name": "in_meter",
                     "dimensions": ["in"],
                     "value_type": "float",
                     "default_value": -60.0,
                     "minimum_value": -60.0,
-                    "maximum_value": 24.0
+                    "maximum_value": 24.0,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
                 }
             ]
         },
@@ -1192,27 +1224,33 @@
                     "default_value": false
                 }
             ],
-            "meters": [
+            "telemetry": [
                 {
                     "name": "peak_gain",
                     "value_type": "float",
                     "default_value": 0.0,
                     "minimum_value": -42.0,
-                    "maximum_value": 0.0
+                    "maximum_value": 0.0,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
                 },
                 {
                     "name": "rms_gain",
                     "value_type": "float",
                     "default_value": 0.0,
                     "minimum_value": -42.0,
-                    "maximum_value": 0.0
+                    "maximum_value": 0.0,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
                 },
                 {
                     "name": "total_gain",
                     "value_type": "float",
                     "default_value": 0.0,
                     "minimum_value": -42.0,
-                    "maximum_value": 0.0
+                    "maximum_value": 0.0,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
                 },
                 {
                     "name": "out_meter",
@@ -1220,7 +1258,9 @@
                     "value_type": "float",
                     "default_value": -60.0,
                     "minimum_value": -60.0,
-                    "maximum_value": 0.0
+                    "maximum_value": 0.0,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
                 }
             ]
         },
@@ -1270,12 +1310,14 @@
                     "default_value": false
                 }
             ],
-            "meters": [
+            "telemetry": [
                 {
                     "name": "input_presence",
                     "dimensions": ["in"],
                     "value_type": "bool",
-                    "default_value": false
+                    "default_value": false,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
                 }
             ]
         },
@@ -1405,14 +1447,16 @@
                     "default_value": false
                 }
             ],
-            "meters": [
+            "telemetry": [
                 {
                     "name": "out_meter",
                     "dimensions": ["channels"],
                     "value_type": "float",
                     "default_value": -60.0,
                     "minimum_value": -60.0,
-                    "maximum_value": 0.0
+                    "maximum_value": 0.0,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
                 }
             ]
         },
@@ -1547,14 +1591,16 @@
                     "default_value": false
                 }
             ],
-            "meters": [
+            "telemetry": [
                 {
                     "name": "out_meter",
                     "dimensions": ["channels"],
                     "value_type": "float",
                     "default_value": -60.0,
                     "minimum_value": -60.0,
-                    "maximum_value": 0.0
+                    "maximum_value": 0.0,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
                 }
             ]
         },
@@ -1650,14 +1696,16 @@
                     "default_value": false
                 }
             ],
-            "meters": [
+            "telemetry": [
                 {
                     "name": "out_meter",
                     "dimensions": ["out"],
                     "value_type": "float",
                     "default_value": -60.0,
                     "minimum_value": -60.0,
-                    "maximum_value": 0.0
+                    "maximum_value": 0.0,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
                 }
             ]
         },

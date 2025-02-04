@@ -1,5 +1,6 @@
 {
     "session": {
+        "name": "mune_dsp",
         "property_settings": [
             {
                 "name": "sample_rate",
@@ -11,7 +12,7 @@
             }
         ]
     },
-    "tasks": [
+    "audio_tasks": [
         {
             "name": "task1",
             "property_settings": [

@@ -64,7 +64,7 @@ Compressor::Compressor(const bosepro::BlockConfiguration &configuration)
     assign_parameter("release", &release_time,
                      POST_FUNCTION_SCALAR(update_release));
 
-    assign_meter("gain_meter", &current_gain);
+    assign_telemetry("gain_meter", &current_gain);
 
     level_attack_coeff = 0.41666667f;
     current_gain = 1.0f;

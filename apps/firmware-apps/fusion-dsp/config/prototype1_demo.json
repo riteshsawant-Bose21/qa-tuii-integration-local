@@ -7,11 +7,11 @@
             },
             {
                 "name": "frame_size",
-                "value": 32
+                "value": 256
             }
         ]
     },
-    "tasks": [
+    "audio_tasks": [
         {
             "name": "task1",
             "property_settings": [
@@ -25,7 +25,7 @@
                 },
                 {
                     "name": "frame_size",
-                    "value": 32
+                    "value": 256
                 },
                 {
                     "name": "cpu_affinity",
@@ -47,7 +47,7 @@
                         },
                         {
                             "name": "frame_size",
-                            "value": 32
+                            "value": 256
                         }
                     ],
                     "terminal_channels": [
@@ -67,7 +67,7 @@
                         },
                         {
                             "name": "frame_size",
-                            "value": 32
+                            "value": 256
                         },
                         {
                             "name": "channels",
@@ -85,7 +85,7 @@
                         },
                         {
                             "name": "frame_size",
-                            "value": 32
+                            "value": 256
                         },
                         {
                             "name": "channels",
@@ -107,7 +107,7 @@
                         },
                         {
                             "name": "frame_size",
-                            "value": 32
+                            "value": 256
                         }
                     ],
                     "terminal_channels": [
@@ -158,7 +158,7 @@
                 },
                 {
                     "name": "frame_size",
-                    "value": 32
+                    "value": 256
                 },
                 {
                     "name": "cpu_affinity",
@@ -180,7 +180,7 @@
                         },
                         {
                             "name": "frame_size",
-                            "value": 32
+                            "value": 256
                         }
                     ],
                     "terminal_channels": [
@@ -200,7 +200,7 @@
                         },
                         {
                             "name": "frame_size",
-                            "value": 32
+                            "value": 256
                         },
                         {
                             "name": "channels",
@@ -218,7 +218,7 @@
                         },
                         {
                             "name": "frame_size",
-                            "value": 32
+                            "value": 256
                         },
                         {
                             "name": "channels",
@@ -240,7 +240,7 @@
                         },
                         {
                             "name": "frame_size",
-                            "value": 32
+                            "value": 256
                         }
                     ],
                     "terminal_channels": [
@@ -291,7 +291,7 @@
                 },
                 {
                     "name": "frame_size",
-                    "value": 32
+                    "value": 256
                 },
                 {
                     "name": "cpu_affinity",
@@ -313,7 +313,7 @@
                         },
                         {
                             "name": "frame_size",
-                            "value": 32
+                            "value": 256
                         }
                     ],
                     "terminal_channels": [
@@ -337,7 +337,7 @@
                         },
                         {
                             "name": "frame_size",
-                            "value": 32
+                            "value": 256
                         }
                     ],
                     "terminal_channels": [
@@ -361,7 +361,7 @@
                         },
                         {
                             "name": "frame_size",
-                            "value": 32
+                            "value": 256
                         }
                     ],
                     "terminal_channels": [
@@ -389,7 +389,7 @@
                         },
                         {
                             "name": "frame_size",
-                            "value": 32
+                            "value": 256
                         }
                     ],
                     "terminal_channels": [
@@ -413,7 +413,7 @@
                         },
                         {
                             "name": "frame_size",
-                            "value": 32
+                            "value": 256
                         }
                     ],
                     "terminal_channels": [
@@ -494,7 +494,7 @@
                         },
                         {
                             "name": "frame_size",
-                            "value": 32
+                            "value": 256
                         }
                     ],
                     "terminal_channels": [
@@ -514,7 +514,7 @@
                         },
                         {
                             "name": "frame_size",
-                            "value": 32
+                            "value": 256
                         },
                         {
                             "name": "channels",
@@ -532,7 +532,7 @@
                         },
                         {
                             "name": "frame_size",
-                            "value": 32
+                            "value": 256
                         },
                         {
                             "name": "channels",
@@ -554,7 +554,7 @@
                         },
                         {
                             "name": "frame_size",
-                            "value": 32
+                            "value": 256
                         },
                         {
                             "name": "channels",
@@ -572,7 +572,7 @@
                         },
                         {
                             "name": "frame_size",
-                            "value": 32
+                            "value": 256
                         },
                         {
                             "name": "channels",
@@ -594,7 +594,7 @@
                         },
                         {
                             "name": "frame_size",
-                            "value": 32
+                            "value": 256
                         }
                     ],
                     "terminal_channels": [
@@ -691,7 +691,7 @@
                         },
                         {
                             "name": "frame_size",
-                            "value": 32
+                            "value": 256
                         }
                     ],
                     "terminal_channels": [
@@ -711,7 +711,7 @@
                         },
                         {
                             "name": "frame_size",
-                            "value": 32
+                            "value": 256
                         },
                         {
                             "name": "channels",
@@ -729,7 +729,7 @@
                         },
                         {
                             "name": "frame_size",
-                            "value": 32
+                            "value": 256
                         },
                         {
                             "name": "channels",
@@ -751,7 +751,7 @@
                         },
                         {
                             "name": "frame_size",
-                            "value": 32
+                            "value": 256
                         },
                         {
                             "name": "channels",
@@ -769,7 +769,7 @@
                         },
                         {
                             "name": "frame_size",
-                            "value": 32
+                            "value": 256
                         },
                         {
                             "name": "channels",
@@ -791,7 +791,7 @@
                         },
                         {
                             "name": "frame_size",
-                            "value": 32
+                            "value": 256
                         }
                     ],
                     "terminal_channels": [

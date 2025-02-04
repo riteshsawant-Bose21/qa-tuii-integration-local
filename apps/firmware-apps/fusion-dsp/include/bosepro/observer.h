@@ -6,6 +6,7 @@
 #include <functional>
 #include <fstream>
 #include <iomanip>
+#include <fstream>
 #include <iostream>
 #include <json/json.h>
 #include <netinet/in.h>
@@ -485,28 +486,39 @@ private:
   void handleValueChange(const std::string &path, const Json::Value &old_val,
                          const Json::Value &new_val) {
     std::vector<PathComponent> path_parts = jsonMonitor.splitPath(path);
-    std::string dsp_message;
+    std::string message;
 
-    if (path_parts[0].key == "settings" && path_parts[1].key == "audio") {
+    if (path_parts[0].key == "settings") {
       if (old_val != new_val) {
-        dsp_message = "{ \"target\": \"" + path_parts[2].key
+        message = "{ \"target\": \"" + path_parts[2].key
             + "\", \"name\": \"" + path_parts[3].key
             + "\", \"value\": " + (new_val.isString() ? "\"" : "")
             + new_val.asString() + (new_val.isString() ? "\"" : "") + " }";
 
-        updateHandler_(dsp_message);
+        updateHandler_(message);
       }
     }
+    else if (path_parts[0].key == "fw_static_config") {
+      message = "{ \"target\": \"session\", \"name\": \"destroy_all_periodic_tasks\" }";
+      updateHandler_(message);
+
+      std::ofstream fw_config("/tmp/fw_config.json");
+      fw_config << new_val;
+      fw_config.close();
+
+      message = "{ \"target\": \"session\", \"name\": \"create_periodic_task\", \"value\": \"/tmp/fw_config.json\" }";
+      updateHandler_(message);
+    }
     else if (path_parts[0].key == "dsp_static_config") {
-      dsp_message = "{ \"target\": \"session\", \"name\": \"destroy_all_tasks\" }";
-      updateHandler_(dsp_message);
+      message = "{ \"target\": \"session\", \"name\": \"destroy_all_audio_tasks\" }";
+      updateHandler_(message);
 
       std::ofstream dsp_config("/tmp/dsp_config.json");
       dsp_config << new_val;
       dsp_config.close();
-
-      dsp_message = "{ \"target\": \"session\", \"name\": \"create_task\", \"value\": \"/tmp/dsp_config.json\" }";
-      updateHandler_(dsp_message);
+      
+      message = "{ \"target\": \"session\", \"name\": \"create_audio_task\", \"value\": \"/tmp/dsp_config.json\" }";
+      updateHandler_(message);
     }
   }
 

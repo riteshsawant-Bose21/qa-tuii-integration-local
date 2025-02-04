@@ -9,10 +9,11 @@ namespace bosepro {
 
 
 class AlgorithmDefinition;
+class ModuleDefinition;
 class PropertyDefinition;
 class TerminalDefinition;
 class ParameterDefinition;
-class MeterDefinition;
+class TelemetryDefinition;
 
 
 /// A definition of an interface or set of definitions.
@@ -37,7 +38,7 @@ public:
 
 
     /// Get the name of the type of the interface's value (for Property,
-    /// Parameter, and Meter interfaces).
+    /// Parameter, and Telemetry interfaces).
     ///
     /// @return  The name of the type of the interface's value.
     const std::string &get_value_type() const
@@ -46,7 +47,7 @@ public:
     }
 
 
-    /// Get the number of dimensions for a parameter or meter (0 for scalar,
+    /// Get the number of dimensions for a parameter or telemetry (0 for scalar,
     /// 1 for vector, 2 for matrix).
     int get_num_dimensions() const
     {
@@ -54,7 +55,7 @@ public:
     }
 
 
-    /// Get the sizes of each dimension for a parameters or meters.  These may
+    /// Get the sizes of each dimension for a parameters or telemetry.  These may
     /// be specified as fixed integer values (causing `num_rows` and/or
     /// `num_columns` to be updated), or as the names of properties or
     /// terminals from which the sizes are inherited (causing `rows_name` and/or
@@ -127,6 +128,31 @@ public:
     }
 
 
+    /// Test whether a definition can be found for the module of the given
+    /// name.
+    ///
+    /// @param  name  The name of the module.
+    /// @return  True if a definition can be found for the module, false
+    ///          otherwise.
+    bool has_module(const std::string &name) const
+    {
+        return list_has_member("modules", "name", name);
+    }
+
+
+    /// Get the definition for the module of the given name.  The module
+    /// must exist: use `has_module()` to test for its existence before
+    /// calling this method.
+    ///
+    /// @param  name  The name of the module.
+    /// @return  The definition for the module.
+    const ModuleDefinition &get_module(const std::string &name) const
+    {
+        return (const ModuleDefinition &)list_get_member("modules",
+                                                            "name", name);
+    }
+
+
     /// Test whether a property definition of the given name exists.
     ///
     /// @param  name  The name of the property.
@@ -151,7 +177,7 @@ public:
 
 
     /// Get the default value for the interface (for Property, Parameter,
-    /// and Meter interfaces).  The default value must exist for this definition.
+    /// and Telemetry interfaces).  The default value must exist for this definition.
     ///
     /// @param  value  The default value for the interface.
     template <typename T>
@@ -162,8 +188,7 @@ public:
 };
 
 
-/// The interface definitions for an algorithm.
-class AlgorithmDefinition : public Definition {
+class ProcessorDefinition : public Definition {
 public:
     /// Test whether the algorithm has terminal definitions.
     ///
@@ -209,9 +234,9 @@ public:
     }
 
 
-    /// Test whether the algorithm has parameter definitions.
+    /// Test whether the processor has parameter definitions.
     ///
-    /// @return  True if the algorithm has parameter definitions, false
+    /// @return  True if the processor has parameter definitions, false
     ///          otherwise.
     bool has_parameters() const
     {
@@ -223,32 +248,44 @@ public:
     /// definitions must exist: use `has_parameters()` to test for their
     /// existence before calling this method.
     ///
-    /// @return  The parameter definitions for the algorithm.
+    /// @return  The parameter definitions for the processor.
     const ParameterDefinition &get_parameters() const
     {
         return (const ParameterDefinition &)get_member("parameters");
     }
 
 
-    /// Test whether the algorithm has meter definitions.
+    /// Test whether the processor has telemetry definitions.
     ///
-    /// @return  True if the algorithm has meter definitions, false
+    /// @return  True if the processor has telemetry definitions, false
     ///          otherwise.
-    bool has_meters() const
+    bool has_telemetry() const
     {
-        return has_member("meters");
+        return has_member("telemetry");
     }
 
 
     /// Get the meter definitions for the algorithm.  The meter definitions
-    /// must exist: use `has_meters()` to test for their existence before
+    /// must exist: use `has_telemetry()` to test for their existence before
     /// calling this method.
     ///
     /// @return  The meter definitions for the algorithm.
-    const MeterDefinition &get_meters() const
+    const TelemetryDefinition &get_telemetry() const
     {
-        return (const MeterDefinition &)get_member("meters");
+        return (const TelemetryDefinition &)get_member("telemetry");
     }
+};
+
+
+/// The interface definitions for an algorithm.
+class AlgorithmDefinition : public ProcessorDefinition {
+
+};
+
+
+/// The interface definitions for an module.
+class ModuleDefinition : public ProcessorDefinition {
+
 };
 
 
@@ -347,13 +384,28 @@ public:
 
 /// The interface definition for a parameter.
 class ParameterDefinition : public Definition {
-
 };
 
 
 /// The parameter definition for a meter.
-class MeterDefinition : public Definition {
+class TelemetryDefinition : public Definition {
+public:
+    /// Get the telemetry reate
+    ///
+    /// @return  The telemetry type.
+    const std::string &get_period_type() const
+    {
+        return get_string("period_type");
+    }
 
+
+    /// Get the telemetry type
+    ///
+    /// @return  The telemetry type.
+    const std::string &get_telemetry_type() const
+    {
+        return get_string("telemetry_type");
+    }
 };
 
 

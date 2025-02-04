@@ -631,11 +631,11 @@ template<typename T>
 using DspParamMemory = DspMemory<T, RegionManager::SLOW>;
 
 
-/// Memory that is used for storing meter values.  Meter memory is written
-/// in real-time by the algorithm, and read in non-real-time as the meters are
+/// Memory that is used for storing telemetry values.  Telemetry memory is written
+/// in real-time by the algorithm, and read in non-real-time as the telemetry are
 /// displayed.
 template<typename T>
-using DspMeterMemory = DspMemory<T, RegionManager::FAST>;
+using DspTelemetryMemory = DspMemory<T, RegionManager::FAST>;
 
 
 } // namespace bosepro

@@ -6,6 +6,7 @@
 #include <spdlog/spdlog.h>
 
 #include <string>
+#include <type_traits>
 
 
 namespace bosepro {
@@ -76,11 +77,106 @@ protected:
     template <typename T>
     void get_member_value(const std::string &member_name, T &value) const
     {
+        // First, check that the member exists
+        if (!has_member(member_name))
+        {
+            SPDLOG_CRITICAL("Member '{}' not found.", member_name);
+        }
+
+        // If T is not std::vector<std::string>, do the usual single-value read.
+        if constexpr (!std::is_same<T, std::vector<std::string>>::value)
+        {
+            // Just retrieve a single value from the property tree.
+            // get<T>() is presumably your wrapper that calls m_ptree.get<T>(member_name)
+            value = get<T>(member_name);
+        }
+        else
+        {
+            // Here, T is std::vector<std::string>, so we expect multiple child nodes.
+
+            // Clear the vector to ensure it's empty before we start populating it.
+            value.clear();
+
+            // Get the child tree under 'member_name'.
+            // If you prefer optional-based checks, you could do get_child_optional instead.
+            auto &subtree = get_child(member_name);
+
+            // Now iterate over all child nodes. Each child is presumably a string entry.
+            for (auto &kv : subtree)
+            {
+                // kv.first is the child’s name (often empty if it’s an array-like structure).
+                // kv.second is the ptree node containing the data for that child.
+                value.push_back(kv.second.get_value<std::string>());
+            }
+        }
+    }
+
+
+
+    /// Set the value of the member of the given name.  The member must exist:
+    /// use `has_member()` to test for its existence before calling this method.
+    /// The value must be convertible to the given type.
+    ///
+    /// @param  member_name  The name of the member.
+    /// @param  value  The value to set the member of the given name.
+    template <typename T>
+    void set_member(const std::string &member_name, const T &value)
+    {
         if (!has_member(member_name))
         {
             SPDLOG_CRITICAL("Member {} not found.", member_name);
         }
-        value = get<T>(member_name);
+
+        put(member_name, value);
+    }
+
+
+    /// Set an array in the property tree.
+    /// This method creates or replaces a member with the given name, setting its value as an array.
+    ///
+    /// @param member_name The name of the member.
+    /// @param array The array to set as the member value.
+    template <typename T>
+    void set_list(const std::string &member_name, const std::vector<T> &array)
+    {
+        // Create a property tree node for the array
+        boost::property_tree::ptree array_node;
+
+        // Add each element of the vector to the node
+        for (const auto &value : array)
+        {
+            boost::property_tree::ptree element_node;
+            element_node.put("", value);  // Use an empty key for array elements
+            array_node.push_back(std::make_pair("", element_node));
+        }
+
+        // Set the array node in the property tree
+        put_child(member_name, array_node);
+    }
+
+
+    /// Set a matrix in the property tree.
+    /// This method creates or replaces a member with the given name, setting its value as a matrix.
+    ///
+    /// @param member_name The name of the member.
+    /// @param matrix The matrix to set as the member value.
+    template <typename T>
+    void set_list(const std::string &member_name, const std::vector<std::vector<T>> &matrix)
+    {
+        boost::property_tree::ptree outer_array_node;
+        for (const auto &row : matrix)
+        {
+            boost::property_tree::ptree row_node;
+            for (const auto &val : row)
+            {
+                boost::property_tree::ptree val_node;
+                val_node.put("", val);
+                row_node.push_back(std::make_pair("", val_node));
+            }
+            outer_array_node.push_back(std::make_pair("", row_node));
+        }
+
+        put_child(member_name, outer_array_node);
     }
 
 
@@ -175,34 +271,45 @@ protected:
     /// @return  True if the member exists and has a value of the requested
     ///          type.
     template <typename T>
-    bool try_list_value(const std::string &list_name, int index, T &value) const
-    {
-        boost::optional<T> v;
+    bool try_list_value(const std::string &list_name, int index, T &value) const {
         int n = 0;
 
-        if (!has_member(list_name))
-        {
+        if (!has_member(list_name)) {
             SPDLOG_CRITICAL("List {} not found.", list_name);
             return false;
         }
 
-        for (auto a : get_child(list_name))
-        {
-            if (n == index)
-            {
-                v = a.second.get_value_optional<T>();
-
-                if (v != boost::none)
-                {
-                    value = *v;
-                    return true;
+        for (const auto &a : get_child(list_name)) {
+            if (n == index) {
+                // Check for int
+                if constexpr (std::is_same_v<T, int>) {
+                    auto opt_value = a.second.get_value_optional<int>();
+                    if (opt_value) {
+                        value = *opt_value;
+                        return true;
+                    }
                 }
-                else
-                {
+                // Check for std::string
+                else if constexpr (std::is_same_v<T, std::string>) {
+                    auto opt_value = a.second.get_value_optional<std::string>();
+                    if (opt_value) {
+                        // Ensure the value isn't an integer masquerading as a string
+                        auto int_check = a.second.get_value_optional<int>();
+                        if (int_check) {
+                            return false;
+                        }
+
+                        value = *opt_value;
+                        return true;
+                    }
+                } else {
+                    SPDLOG_CRITICAL("Unsupported type requested.");
                     return false;
                 }
-            }
 
+                SPDLOG_WARN("Value at index {} is not of expected type.", index);
+                return false;
+            }
             n++;
         }
 
@@ -239,7 +346,7 @@ protected:
 
 
     /// Get the member of a list of properties which has a member with the given
-    /// name and value.  The list and must exist, and must contain a property
+    /// name and value. The list and member must exist, and must contain a property
     /// with the given member and value: use `list_has_member()` to test for
     /// their existence before calling this method.
     ///
@@ -259,9 +366,13 @@ protected:
 
         for (auto &a : get_child(list_name))
         {
-            if (a.second.get<std::string>(member_name) == member_value)
+            if (a.second.count(member_name) > 0)  // Boost ptree check for existing key
             {
-                return (const Navigator &)a.second;
+                // Compare the value of the member with the target value
+                if (a.second.get<std::string>(member_name) == member_value)
+                {
+                    return (const Navigator &)a.second;
+                }
             }
         }
 
@@ -316,6 +427,17 @@ protected:
         }
 
         return count;
+    }
+
+
+    /// Get the serialized Navigator (ptree/json blob)
+    ///
+    /// @return The string with the serialized json
+    const std::string serialize() const
+    {
+        std::ostringstream oss;
+        boost::property_tree::write_json(oss, *this, false); // `false` for compact JSON
+        return oss.str();
     }
 };
 

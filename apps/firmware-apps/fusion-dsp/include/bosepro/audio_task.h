@@ -29,7 +29,7 @@ namespace bosepro {
 
 
 /// A periodic real-time task that runs in a separate thread.
-class PeriodicTask {
+class AudioSubtask {
 public:
     /// Create a new periodic task.
     ///
@@ -37,7 +37,7 @@ public:
     /// @param  obj  The object to pass to the run function.
     /// @param  period  The period of the task, relative to the base frame rate
     ///                 of the system.
-    PeriodicTask(void (*run_function)(void *), void *obj,
+    AudioSubtask(void (*run_function)(void *), void *obj,
                  int_fast32_t sample_rate, int_fast32_t frame_size,
                  int_fast32_t base_frame_size)
         : run_function(run_function), obj(obj), sample_rate(sample_rate),
@@ -102,9 +102,9 @@ public:
     }
 
 
-    virtual ~PeriodicTask()
+    virtual ~AudioSubtask()
     {
-        SPDLOG_DEBUG("Task {} MIPS: {} first, {} max, {} avg.",
+        SPDLOG_DEBUG("AudioTask {} MIPS: {} first, {} max, {} avg.",
                      task_id,
                      profile.get_first_mips(),
                      profile.get_max_mips(),
@@ -167,7 +167,7 @@ public:
 
         if (ticks >= 2 * period)
         {
-            SPDLOG_WARN("Periodic task {} is running behind: {}, {}", task_id, ticks, period);
+            SPDLOG_WARN("Audio SubTask {} is running behind: {}, {}", task_id, ticks, period);
             ticks = 1;
         }
 
@@ -187,7 +187,7 @@ private:
     /// @param p_task A pointer to the task object.
     static void *run(void *p_task)
     {
-        PeriodicTask *task = (PeriodicTask *)p_task;
+        AudioSubtask *task = (AudioSubtask *)p_task;
         while (true)
         {
             pthread_mutex_lock(&task->ticks_mutex);
@@ -221,12 +221,12 @@ private:
 
 /// A real-time audio processing task, which runs a collection of blocks that
 /// all have the same frame rate.
-class Task : public Configurable {
+class AudioTask : public Configurable {
 public:
     /// Create a task from a configuration.
     ///
     /// @param  configuration  The configuration for the task.
-    Task(const TaskConfiguration &configuration)
+    AudioTask(const TaskConfiguration &configuration)
         : Configurable(configuration), client(nullptr)
     {
         // Use this task's region manager while allocating blocks within the
@@ -284,7 +284,6 @@ public:
         {
             b->initialize_terminals();
             b->initialize_parameters();
-            b->initialize_meters();
         }
 
         for (auto &c : configuration.get_block_connections())
@@ -326,7 +325,7 @@ public:
     }
 
 
-    virtual ~Task()
+    virtual ~AudioTask()
     {
         frames_to_run = 0;
 
@@ -342,7 +341,7 @@ public:
         // destroyed.
         region_manager.open_region();
 
-        SPDLOG_DEBUG("Task MIPS: {} first, {} max, {} avg.",
+        SPDLOG_DEBUG("AudioTask MIPS: {} first, {} max, {} avg.",
                      task_profile.get_first_mips(),
                      task_profile.get_max_mips(),
                      task_profile.get_average_mips());
@@ -474,25 +473,13 @@ public:
     }
 
 
-    /// Send meter data for each block in the task, using the provided callback.
-    ///
-    /// @param  meter_callback  A callback function used to send meter data.
-    void send_meters(void (*meter_callback)(const std::string &))
-    {
-        for (auto &block : blocks)
-        {
-            block->send_meters(meter_callback);
-        }
-    }
-
-
 private:
     RegionManager region_manager;
     Profile task_profile;
     // A list of blocks, for quickly processing in order.
     std::list<std::unique_ptr<Algorithm>> blocks;
     std::vector<Profile> block_profile;
-    // A map of blocks, for accessing parameters and meters.
+    // A map of blocks, for accessing parameters.
     std::map<std::string, Algorithm *> block_map;
     bool profile_blocks = false;
     int_fast32_t cpu_affinity;

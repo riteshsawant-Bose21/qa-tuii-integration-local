@@ -130,82 +130,36 @@ DECLARE_TEMPLATE_CONTROL_TYPES
 #undef X
 
 
-Parameter *Parameter::create(const ParameterDefinition &definition,
-                             const AlgorithmDefinition &algorithm,
-                             const BlockConfiguration *configuration)
+// Macro to create the appropriate ParameterData
+#define CREATE_PARAMETER(dimension, t, definition, processor, configuration) \
+    if (t == "bool")                                                        \
+        return new ParameterData##dimension<bool>(definition, processor, configuration); \
+    else if (t == "integer")                                                    \
+        return new ParameterData##dimension<int_fast32_t>(definition, processor, configuration); \
+    else if (t == "float")                                                  \
+        return new ParameterData##dimension<float>(definition, processor, configuration); \
+    else if (t == "string")                                                 \
+        return new ParameterData##dimension<std::string>(definition, processor, configuration);
+
+
+Parameter *Parameter::create(const ParameterDefinition& definition,
+                             const ProcessorDefinition& processor,
+                             const BlockConfiguration* configuration)
 {
-    const std::string &value_type = definition.get_value_type();
+    const std::string& value_type = definition.get_value_type();
     int dimensions = definition.get_num_dimensions();
 
-    switch (dimensions)
-    {
+    switch (dimensions) {
     case 0:
-        if (value_type == "bool")
-        {
-            return new ParameterDataScalar<bool>(definition, algorithm,
-                                                 configuration);
-        }
-        else if (value_type == "integer")
-        {
-            return new ParameterDataScalar<int_fast32_t>(definition, algorithm,
-                                                         configuration);
-        }
-        else if (value_type == "float")
-        {
-            return new ParameterDataScalar<float>(definition, algorithm,
-                                                  configuration);
-        }
-        else if (value_type == "string")
-        {
-            return new ParameterDataScalar<std::string>(definition, algorithm,
-                                                        configuration);
-        }
+        CREATE_PARAMETER(Scalar, value_type, definition, processor, configuration)
         break;
 
     case 1:
-        if (value_type == "bool")
-        {
-            return new ParameterDataVector<bool>(definition, algorithm,
-                                                 configuration);
-        }
-        else if (value_type == "integer")
-        {
-            return new ParameterDataVector<int_fast32_t>(definition, algorithm,
-                                                         configuration);
-        }
-        else if (value_type == "float")
-        {
-            return new ParameterDataVector<float>(definition, algorithm,
-                                                  configuration);
-        }
-        else if (value_type == "string")
-        {
-            return new ParameterDataVector<std::string>(definition, algorithm,
-                                                        configuration);
-        }
+        CREATE_PARAMETER(Vector, value_type, definition, processor, configuration)
         break;
 
     case 2:
-        if (value_type == "bool")
-        {
-            return new ParameterDataMatrix<bool>(definition, algorithm,
-                                                 configuration);
-        }
-        else if (value_type == "integer")
-        {
-            return new ParameterDataMatrix<int_fast32_t>(definition, algorithm,
-                                                         configuration);
-        }
-        else if (value_type == "float")
-        {
-            return new ParameterDataMatrix<float>(definition, algorithm,
-                                                  configuration);
-        }
-        else if (value_type == "string")
-        {
-            return new ParameterDataMatrix<std::string>(definition, algorithm,
-                                                        configuration);
-        }
+        CREATE_PARAMETER(Matrix, value_type, definition, processor, configuration)
         break;
 
     default:

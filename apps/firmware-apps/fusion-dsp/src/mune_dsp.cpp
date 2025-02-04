@@ -6,6 +6,7 @@
 #include <bosepro/definition.h>
 #include <bosepro/profile.h>
 #include <bosepro/session.h>
+#include <bosepro/telemetry_monitor.h>
 
 #include <boost/program_options.hpp>
 #include <spdlog/spdlog.h>
@@ -15,12 +16,23 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include <signal.h>
+#include <atomic>
 #include <iostream>
 #include <filesystem>
 
 
-bosepro::Session *psession;
+std::atomic<bool> g_running{true};
 
+void signal_handler(int signum)
+{
+    if (signum == SIGINT || signum == SIGTERM) {
+        g_running = false;
+    }
+}
+
+
+bosepro::Session *psession;
 
 void handle_update(const std::string &update_setting)
 {
@@ -47,6 +59,16 @@ void validate(boost::any &v, std::vector<std::string> const &, OptionCounter *, 
 
 int main(int argc, char *argv[])
 {
+    // Register signal handler
+    struct sigaction sa;
+    sa.sa_handler = signal_handler;
+    sa.sa_flags = 0;
+    sigemptyset(&sa.sa_mask);
+
+    sigaction(SIGINT, &sa, nullptr);
+    sigaction(SIGTERM, &sa, nullptr);
+
+
     OptionCounter verbosity;
     OptionCounter quietness;
 
@@ -58,6 +80,8 @@ int main(int argc, char *argv[])
         ("configuration,c", boost::program_options::value<std::string>()->default_value(app_path + "/config/configuration.json"), "configuration file")
         ("definitions,d", boost::program_options::value<std::string>()->default_value(app_path + "/config/algorithm-definitions.json"), "algorithm definition file")
         ("time,t", boost::program_options::value<int>(), "time to run (seconds)")
+        ("telemetry-messages,m", boost::program_options::value<std::string>()->default_value("config/telemetry-messages.json"), "telemetry commands file")
+        ("telemetry-configuration,p", boost::program_options::value<std::string>()->default_value("config/telemetry-configuration.json"), "telemetry configuration file")
         ("serverip,s", boost::program_options::value<std::string>(), "IP address of fusion-server")
         ("verbose,v", boost::program_options::value(&verbosity)->zero_tokens(), "make logs more verbose")
         ("quiet,q", boost::program_options::value(&quietness)->zero_tokens(), "make logs more quiet")
@@ -95,19 +119,22 @@ int main(int argc, char *argv[])
     {
         spdlog::set_level(spdlog::level::info);
     }
-
+    
     SPDLOG_INFO("mune_dsp");
 
     SPDLOG_INFO("Profile resolution {} ns", bosepro::Profile::get_resolution());
     bosepro::Profile::set_cpu_mips(1800.0);
 
     bosepro::Configuration configuration(vm["configuration"].as<std::string>());
+    bosepro::TelemetryConfiguration telem_configuration(vm["telemetry-configuration"].as<std::string>());
     bosepro::Definition definitions(vm["definitions"].as<std::string>());
     bosepro::Session session(configuration.get_session(), definitions);
 
-    if (configuration.has_tasks())
+    auto& telemetry_monitor = bosepro::TelemetryMonitor::get_instance();
+    
+    if (configuration.has_audio_tasks())
     {
-        session.create_tasks(configuration);
+        session.create_audio_tasks(configuration);
     }
 
     if (configuration.has_parameter_settings())
@@ -162,9 +189,13 @@ int main(int argc, char *argv[])
                                          target_paths, handle_update);
         }
 
+        telemetry_monitor.initialize(vm["telemetry-messages"].as<std::string>(), 
+                                     telem_configuration.get_socket_path(),
+                                     configuration.get_session().get_name());
+        telemetry_monitor.start();
         session.start();
 
-        while(1)
+        while(g_running)
         {
             usleep(1000);
         }
@@ -174,6 +205,9 @@ int main(int argc, char *argv[])
             client->stop();
             delete client;
         }
+
+        telemetry_monitor.stop();
+        session.stop();
     }
     else
     {
@@ -198,5 +232,6 @@ int main(int argc, char *argv[])
         SPDLOG_INFO("Finished running.");
     }
 
+    SPDLOG_INFO("mune_dsp exiting...");
     return 0;
 }
