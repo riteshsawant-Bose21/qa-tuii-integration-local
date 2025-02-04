@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <functional>
 #include <iomanip>
+#include <fstream>
 #include <iostream>
 #include <json/json.h>
 #include <netinet/in.h>
