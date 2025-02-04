@@ -4,6 +4,7 @@
 #include <cstring>
 #include <fcntl.h>
 #include <functional>
+#include <fstream>
 #include <iomanip>
 #include <fstream>
 #include <iostream>
@@ -515,7 +516,7 @@ private:
       std::ofstream dsp_config("/tmp/dsp_config.json");
       dsp_config << new_val;
       dsp_config.close();
-
+      
       message = "{ \"target\": \"session\", \"name\": \"create_audio_task\", \"value\": \"/tmp/dsp_config.json\" }";
       updateHandler_(message);
     }

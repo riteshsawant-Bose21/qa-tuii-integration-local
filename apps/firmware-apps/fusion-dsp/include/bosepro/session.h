@@ -207,6 +207,16 @@ public:
     }
 
 
+    /// Destroy all tasks in the session.  This will stop each task before
+    /// destroying it.
+    ///
+    /// @param  task_name  The name of the task to destroy.
+    void destroy_all_tasks()
+    {
+        tasks.clear();
+    }
+
+
     /// Start an existing task with the given name.
     ///
     /// @param  task_name  The name of the task to start.
