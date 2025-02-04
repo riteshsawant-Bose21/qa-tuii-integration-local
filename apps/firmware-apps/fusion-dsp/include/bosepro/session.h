@@ -238,36 +238,6 @@ public:
     }
 
 
-    void create_periodic_tasks(const Configuration &configuration)
-    {
-        for (auto &t : configuration.get_periodic_tasks())
-        {
-            const TaskConfiguration &tc =
-                reinterpret_cast<const TaskConfiguration &>(t.second);
-            create_periodic_task(tc);
-        }
-    }
-
-
-    /// Create a non-audio task given a task configuration.  This will also start the
-    /// task.
-    ///
-    /// @param   task_configuration  The configuration for the task.
-    void create_periodic_task(const TaskConfiguration &task_configuration)
-    {
-        const std::string task_name = task_configuration.get_name();
-
-        SPDLOG_INFO("Creating periodic_task {}.", task_name);
-        if (periodic_tasks.count(task_name) != 0)
-        {
-            SPDLOG_CRITICAL("Duplicate tasks with name {}.", task_name);
-            return;
-        }
-
-        periodic_tasks[task_name] = std::unique_ptr<PeriodicTask>(new PeriodicTask(task_configuration));
-    }
-
-
     /// Start an existing na task with the given name.
     ///
     /// @param  task_name  The name of the task to start.
@@ -447,10 +417,30 @@ public:
     /// @param setting 
     bool cmd_destroy_audio_task(const ParameterSetting& setting);
 
+    /// Socket setting to destroy a specific task
+    ///
+    /// @param setting 
+    bool cmd_destroy_audio_tasks(const ParameterSetting& setting);
+
     /// Socket setting to create an audio task
     ///
     /// @param setting 
     bool cmd_create_audio_task(const ParameterSetting& setting);
+
+    /// Socket setting to destroy a specific task
+    ///
+    /// @param setting 
+    bool cmd_destroy_periodic_task(const ParameterSetting& setting);
+
+    /// Socket setting to destroy a specific task
+    ///
+    /// @param setting 
+    bool cmd_destroy_periodic_tasks(const ParameterSetting& setting);
+
+    /// Socket setting to create an audio task
+    ///
+    /// @param setting 
+    bool cmd_create_periodic_task(const ParameterSetting& setting);
 
     /// Socket setting to start a specific task
     ///
@@ -462,10 +452,15 @@ public:
     /// @param setting 
     bool cmd_stop_audio_task(const ParameterSetting& setting);
 
-    /// Socket setting to create a non-audio task
+    /// Socket setting to start a specific task
     ///
     /// @param setting 
-    bool cmd_create_periodic_task(const ParameterSetting& setting);
+    bool cmd_start_periodic_task(const ParameterSetting& setting);
+
+    /// Socket setting to stop a specific task
+    ///
+    /// @param setting 
+    bool cmd_stop_periodic_task(const ParameterSetting& setting);
 
     /// Socket setting to apply parameter setting to a block
     ///

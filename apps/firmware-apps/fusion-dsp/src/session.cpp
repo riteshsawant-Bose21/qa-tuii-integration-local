@@ -30,7 +30,7 @@ bool Session::cmd_destroy_audio_task(const ParameterSetting& setting)
 }
 
 
-bool Session::cmd_destroy_audio_tasks(const ParameterSetting& setting)
+bool Session::cmd_destroy_audio_tasks(const ParameterSetting&)
 {
     destroy_audio_tasks();
 
@@ -64,7 +64,7 @@ bool Session::cmd_destroy_periodic_task(const ParameterSetting& setting)
 }
 
 
-bool Session::cmd_destroy_periodic_tasks(const ParameterSetting& setting)
+bool Session::cmd_destroy_periodic_tasks(const ParameterSetting&)
 {
     destroy_periodic_tasks();
 
