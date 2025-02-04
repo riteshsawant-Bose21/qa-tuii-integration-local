@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:developer' as developer;
 
 class AnalogController {
   Socket? _socket;
@@ -29,11 +30,11 @@ class AnalogController {
       _socket!.listen(
         (_) {},
         onError: (error) {
-          print('Socket error: $error'); // Add logging
+          developer.log('Socket error: $error'); // Add logging
           _handleDisconnect();
         },
         onDone: () {
-          print('Socket closed'); // Add logging
+          developer.log('Socket closed'); // Add logging
           _handleDisconnect();
         },
         cancelOnError:
@@ -53,7 +54,7 @@ class AnalogController {
         }
       });
     } catch (e) {
-      print('Connection error: $e');
+      developer.log('Connection error: $e');
       _handleDisconnect();
     } finally {
       _isConnecting = false;

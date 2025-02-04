@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
+import 'dart:developer' as developer;
 
 class DigitalController {
   Socket? _socket;
@@ -30,11 +31,11 @@ class DigitalController {
       _socket!.listen(
         _handleData,
         onError: (error) {
-          print('Socket error: $error');
+          developer.log('Socket error: $error');
           _handleDisconnect();
         },
         onDone: () {
-          print('Socket closed');
+          developer.log('Socket closed');
           _handleDisconnect();
         },
         cancelOnError: false,
@@ -52,7 +53,7 @@ class DigitalController {
         }
       });
     } catch (e) {
-      print('Connection error: $e');
+      developer.log('Connection error: $e');
       _handleDisconnect();
     } finally {
       _isConnecting = false;

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:developer' as developer;
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
@@ -33,9 +34,9 @@ class ApiService {
       );
 
       // Debug information
-      print('Response status code: ${response.statusCode}');
-      print('Response headers: ${response.headers}');
-      print(
+      developer.log('Response status code: ${response.statusCode}');
+      developer.log('Response headers: ${response.headers}');
+      developer.log(
           'Response body: ${response.body.substring(0, math.min(200, response.body.length))}...');
 
       if (response.statusCode == 200) {
@@ -184,7 +185,7 @@ class _MetricsDashboardState extends State<MetricsDashboard> {
     } catch (e) {
       setState(() {
         error = e.toString();
-        print('Error details: $e');
+        developer.log('Error details: $e');
       });
     }
   }

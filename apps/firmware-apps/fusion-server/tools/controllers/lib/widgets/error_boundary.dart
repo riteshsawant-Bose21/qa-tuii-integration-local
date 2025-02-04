@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:developer' as developer;
 
 class ErrorBoundary extends StatefulWidget {
   final Widget child;
@@ -26,7 +27,7 @@ class _ErrorBoundaryState extends State<ErrorBoundary> {
   }
 
   void _handleError(FlutterErrorDetails details) {
-    print('Caught error: ${details.exception}');
+    developer.log('Caught error: ${details.exception}');
     _originalOnError?.call(details);
   }
 
