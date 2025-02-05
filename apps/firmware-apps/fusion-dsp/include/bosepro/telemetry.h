@@ -259,7 +259,7 @@ public:
     /// Try to calculate the minimum size the meters will take up in memory
     ///
     /// @return  The size of the meters json blob
-    virtual size_t get_meters_size() = 0;
+    virtual size_t get_meter_size() = 0;
 
 
     /// Pre-process the telemetry
@@ -386,7 +386,7 @@ public:
     /// Try to calculate the minimum size the meters will take up in memory
     ///
     /// @return  The size of the meters json blob
-    virtual size_t get_meters_size() override
+    virtual size_t get_meter_size() override
     {
         size_t size = 0;
         if constexpr (std::is_same_v<T, std::string>) 
@@ -550,7 +550,7 @@ public:
     /// Try to calculate the minimum size the meters will take up in memory
     ///
     /// @return  The size of the meters json blob
-    virtual size_t get_meters_size() override
+    virtual size_t get_meter_size() override
     {
         size_t size = 0;
         // add """" and ", " and 2x " " for each value
@@ -743,7 +743,7 @@ public:
     /// Try to calculate the minimum size the meters will take up in memory
     ///
     /// @return  The size of the meters json blob
-    virtual size_t get_meters_size() override
+    virtual size_t get_meter_size() override
     {
         size_t size = 0;
         // add """", ", ", and 2x " " for each value and "[]" for each column

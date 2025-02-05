@@ -325,12 +325,13 @@ public:
         {
             if (m.second->get_period_type() == period_type)
             {
-                size += m.second->get_meters_size();
+                size += m.second->get_meter_size();
                 size += default_message_size;
+                size += 2; // ", "
             }
         }
 
-        return size;
+        return size - 2; // remove last ", "
     }
 
 
@@ -399,7 +400,8 @@ public:
             std::string serialized_tm = meter_msg.serialize_message();
             if (meters_remaining) 
             {
-                serialized_tm += ", ";
+                serialized_tm.pop_back();
+                serialized_tm.append(",\n");
             }
 
             const char *msg = serialized_tm.c_str();
@@ -456,6 +458,7 @@ private:
 
         return message;
     }
+
 
     /// Pub initiated command to register with telemetry manager
     bool register_with_telemetry_manager()
