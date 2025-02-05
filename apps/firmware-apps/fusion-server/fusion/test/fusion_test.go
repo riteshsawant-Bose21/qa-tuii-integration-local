@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"reflect"
 	"sort"
 	"strings"
 	"testing"
@@ -1021,6 +1022,167 @@ func TestStateConsistency(t *testing.T) {
 	}
 
 	t.Logf("Successfully verified state consistency across nodes")
+}
+
+// TestPatchOutOfBounds verifies that an update using an out‐of‑bound array index
+// expands the array. For an initial array [100, 200, 300], updating index 5 with 500
+// should yield [100, 200, 300, nil, nil, 500].
+func TestPatchOutOfBounds(t *testing.T) {
+	// Set initial configuration with an array of three elements.
+	initialConfig := map[string]interface{}{
+		"settings": map[string]interface{}{
+			"audio": map[string]interface{}{
+				"tone_eq1": map[string]interface{}{
+					"frequencies": []float64{100.0, 200.0, 300.0},
+				},
+			},
+		},
+	}
+	jsonData, err := json.Marshal(initialConfig)
+	if err != nil {
+		t.Fatalf("Failed to marshal initial configuration: %v", err)
+	}
+
+	resp, err := http.Post(fmt.Sprintf("%s/setValue", serverAddr), jsonContentType, bytes.NewBuffer(jsonData))
+	if err != nil {
+		t.Fatalf("Failed to set initial configuration: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("Unexpected status code when setting initial config: %d, response: %s", resp.StatusCode, string(body))
+	}
+
+	// Attempt to update an element at index 5 (which is out-of-bound for an array of length 3).
+	updateData := map[string]interface{}{
+		"value": 500.0,
+	}
+	jsonUpdate, err := json.Marshal(updateData)
+	if err != nil {
+		t.Fatalf("Failed to marshal update data: %v", err)
+	}
+
+	req, err := http.NewRequest("PATCH", fmt.Sprintf("%s/updateValue?key=settings.audio.tone_eq1.frequencies[5]", serverAddr), bytes.NewBuffer(jsonUpdate))
+	if err != nil {
+		t.Fatalf("Failed to create PATCH request for out-of-bound update: %v", err)
+	}
+	req.Header.Set("Content-Type", jsonContentType)
+	client := &http.Client{}
+	resp, err = client.Do(req)
+	if err != nil {
+		t.Fatalf("Failed to execute PATCH request for out-of-bound update: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// The current implementation returns 200.
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("Unexpected status code for out-of-bound update: got %d", resp.StatusCode)
+	}
+
+	// Verify that the array is expanded.
+	getValue, err := http.Get(fmt.Sprintf("%s/getValue?key=settings.audio.tone_eq1.frequencies", serverAddr))
+	if err != nil {
+		t.Fatalf("Failed to get updated array: %v", err)
+	}
+	defer getValue.Body.Close()
+
+	var updatedResponse struct {
+		Exists bool          `json:"exists"`
+		Value  []interface{} `json:"value"`
+	}
+	if err := json.NewDecoder(getValue.Body).Decode(&updatedResponse); err != nil {
+		t.Fatalf("Failed to decode updated array response: %v", err)
+	}
+
+	if !updatedResponse.Exists {
+		t.Fatal("Array does not exist after out-of-bound update")
+	}
+
+	// Expecting that the array is expanded to length 6 with nil placeholders.
+	expected := []interface{}{100.0, 200.0, 300.0, nil, nil, 500.0}
+	if !reflect.DeepEqual(updatedResponse.Value, expected) {
+		t.Errorf("Out-of-bound update expected array %v, got %v", expected, updatedResponse.Value)
+	}
+}
+
+// TestPatchRemoveArrayElement verifies that when patching an array element with a JSON null,
+// the element is set to null while the array length remains unchanged. For an initial array
+// [100, 200, 300], patching index 1 should yield [100, nil, 300].
+func TestPatchRemoveArrayElement(t *testing.T) {
+	// Set initial configuration with an array of three elements.
+	initialConfig := map[string]interface{}{
+		"settings": map[string]interface{}{
+			"audio": map[string]interface{}{
+				"tone_eq1": map[string]interface{}{
+					"frequencies": []float64{100.0, 200.0, 300.0},
+				},
+			},
+		},
+	}
+	jsonData, err := json.Marshal(initialConfig)
+	if err != nil {
+		t.Fatalf("Failed to marshal initial configuration: %v", err)
+	}
+
+	resp, err := http.Post(fmt.Sprintf("%s/setValue", serverAddr), jsonContentType, bytes.NewBuffer(jsonData))
+	if err != nil {
+		t.Fatalf("Failed to set initial configuration: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("Unexpected status code when setting initial config: %d, response: %s", resp.StatusCode, string(body))
+	}
+
+	// PATCH update: set the element at index 1 to null.
+	removeData := map[string]interface{}{
+		"value": nil,
+	}
+	jsonRemove, err := json.Marshal(removeData)
+	if err != nil {
+		t.Fatalf("Failed to marshal removal data: %v", err)
+	}
+
+	req, err := http.NewRequest("PATCH", fmt.Sprintf("%s/updateValue?key=settings.audio.tone_eq1.frequencies[1]", serverAddr), bytes.NewBuffer(jsonRemove))
+	if err != nil {
+		t.Fatalf("Failed to create PATCH request for removing array element: %v", err)
+	}
+	req.Header.Set("Content-Type", jsonContentType)
+	client := &http.Client{}
+	resp, err = client.Do(req)
+	if err != nil {
+		t.Fatalf("Failed to send PATCH request for removal: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("Unexpected status code for removal: %d, response: %s", resp.StatusCode, string(body))
+	}
+
+	// Verify that the element at index 1 has been set to null.
+	getValue, err := http.Get(fmt.Sprintf("%s/getValue?key=settings.audio.tone_eq1.frequencies", serverAddr))
+	if err != nil {
+		t.Fatalf("Failed to get updated array: %v", err)
+	}
+	defer getValue.Body.Close()
+
+	var updatedResponse struct {
+		Exists bool          `json:"exists"`
+		Value  []interface{} `json:"value"`
+	}
+	if err := json.NewDecoder(getValue.Body).Decode(&updatedResponse); err != nil {
+		t.Fatalf("Failed to decode updated array response: %v", err)
+	}
+
+	if !updatedResponse.Exists {
+		t.Fatal("Array does not exist after removal update")
+	}
+
+	// Expecting that the array remains length 3 with the second element set to nil.
+	expected := []interface{}{100.0, nil, 300.0}
+	if !reflect.DeepEqual(updatedResponse.Value, expected) {
+		t.Errorf("Expected updated array %v, got %v", expected, updatedResponse.Value)
+	}
 }
 
 // TestClearEndpoint verifies that data is cleared on all nodes

@@ -1,6 +1,6 @@
 # TimerManager
 
-`TimerManager` is a Go package for managing and scheduling tasks using cron expressions. It provides a flexible and persistent system for executing scheduled tasks, with features for task management, execution history, and HTTP endpoints for interaction.
+`TimerManager` manages and schedules tasks using cron expressions. It provides a flexible and persistent system for executing scheduled tasks, with features for task management, execution history, and HTTP endpoints for interaction.
 
 ## Features
 

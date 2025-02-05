@@ -56,7 +56,7 @@ func setupTimerRoutes(manager *timers.TimerManager, verbose bool) {
 	http.HandleFunc("/tasks/add", withLogging(manager.AddTaskHandler, "addTask", verbose))
 	http.HandleFunc("/tasks/update", withLogging(manager.UpdateTaskHandler, "updateTask", verbose))
 	http.HandleFunc("/tasks/remove", withLogging(manager.RemoveTaskHandler, "removeTask", verbose))
-	http.HandleFunc("/history", withLogging(manager.ExecutionHistoryHandler, "history", verbose))
+	http.HandleFunc("/tasks/history", withLogging(manager.ExecutionHistoryHandler, "history", verbose))
 }
 
 func setupMetricsRoutes(metrics *cluster.MetricsCollector) *http.ServeMux {

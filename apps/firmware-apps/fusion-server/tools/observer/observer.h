@@ -710,12 +710,9 @@ private:
       Json::StreamWriterBuilder builder;
       builder["precision"] = 2;
       builder["indentation"] = "";
-      if (verbose_) {
-        std::cout << getTimestamp() << " " << path
-                  << " changed from: " << Json::writeString(builder, old_val)
-                  << " to: " << Json::writeString(builder, new_val)
-                  << std::endl;
-      }
+      std::cout << getTimestamp() << " " << path
+                << " changed from: " << Json::writeString(builder, old_val)
+                << " to: " << Json::writeString(builder, new_val) << std::endl;
     }
   }
 
