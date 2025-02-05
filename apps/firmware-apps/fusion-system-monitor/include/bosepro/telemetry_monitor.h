@@ -382,7 +382,7 @@ public:
     /// Callback to update telemetry in shared memory
     ///
     /// @param cb_data the telemetry callback data to write
-    void update_meters_shm(TelemetryMessage meter_msg, std::string period_type)
+    void update_meters_shm(TelemetryMessage meter_msg, std::string period_type, size_t meters_remaining)
     {
         int region_index = period_type == "HI"  ? 0 :
                            period_type == "MED" ? 1 :
@@ -397,6 +397,11 @@ public:
         {
             // Write the telemetry message into the shared memory region
             std::string serialized_tm = meter_msg.serialize_message();
+            if (meters_remaining) 
+            {
+                serialized_tm += ", ";
+            }
+
             const char *msg = serialized_tm.c_str();
 
             NamedSharedMemory& shm = shm_manager.getSharedMemory(shm_names[region_index]);
@@ -451,6 +456,7 @@ private:
 
         return message;
     }
+
 
     /// Pub initiated command to register with telemetry manager
     bool register_with_telemetry_manager()
@@ -577,6 +583,8 @@ private:
 
         TelemetryMessage meter_msg(telemetry_messages->get_default_meter());
 
+        size_t n = get_num_meters(period_type);
+
         for (auto &m: meters)
         {
             SPDLOG_TRACE("Update meter {} period_type {}", m.first, m.second->get_period_type());
@@ -584,7 +592,7 @@ private:
             {   
                 try 
                 {
-                    m.second->send_meter(meters_callback, meter_msg);
+                    m.second->send_meter(meters_callback, meter_msg, --n);
                 } 
                 catch (const std::runtime_error& e) 
                 {
@@ -704,8 +712,10 @@ private:
 
     /// Setup send telemetry callback member funcs
     void setup_callbacks() {
-        meters_callback = [this](TelemetryMessage meter_msg, std::string period_type) {
-            update_meters_shm(meter_msg, period_type);
+        meters_callback = [this](TelemetryMessage meter_msg, 
+                                 std::string period_type, 
+                                 size_t meters_remaining) {
+            update_meters_shm(meter_msg, period_type, meters_remaining);
         };
 
         event_callback = [this](TelemetryMessage event_msg) {
@@ -714,7 +724,7 @@ private:
     }
 
 
-    std::function<void(TelemetryMessage, std::string)> meters_callback;
+    std::function<void(TelemetryMessage, std::string, size_t)> meters_callback;
     std::function<void(TelemetryMessage)> event_callback;
 
     std::string publisher_name;
