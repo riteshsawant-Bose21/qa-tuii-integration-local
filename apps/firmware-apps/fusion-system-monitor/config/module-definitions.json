@@ -5,14 +5,12 @@
             "telemetry": [
                 { 
                     "name": "cpu", 
-                    "dimensions": 0, 
                     "value_type": "float", 
                     "telemetry_type": "meter",
                     "period_type": "LO" 
                 },
                 { 
                     "name": "high_cpu_usage", 
-                    "dimensions": 0, 
                     "value_type": "bool", 
                     "telemetry_type": "event",
                     "period_type": "N/A"
@@ -24,42 +22,36 @@
             "telemetry": [
                 { 
                     "name": "ram", 
-                    "dimensions": 0, 
                     "value_type": "float", 
                     "telemetry_type": "meter",
                     "period_type": "MED" 
                 },
                 { 
                     "name": "high_ram_usage", 
-                    "dimensions": 0, 
                     "value_type": "bool", 
                     "telemetry_type": "event",
                     "period_type": "N/A"
                 },
                 { 
                     "name": "emmc", 
-                    "dimensions": 0, 
                     "value_type": "float", 
                     "telemetry_type": "meter",
                     "period_type": "MED"  
                 },
                 { 
                     "name": "high_emmc_usage", 
-                    "dimensions": 0, 
                     "value_type": "bool", 
                     "telemetry_type": "event",
                     "period_type": "N/A"
                 },
                 { 
                     "name": "usb_storage", 
-                    "dimensions": 0, 
                     "value_type": "float", 
                     "telemetry_type": "meter",
                     "period_type": "MED"  
                 },
                 { 
                     "name": "usb_connected", 
-                    "dimensions": 0, 
                     "value_type": "bool", 
                     "telemetry_type": "event",
                     "period_type": "N/A"

@@ -36,7 +36,7 @@ public:
         num_rows = 1;
         num_columns = 1;
 
-        int num_dimensions = definition.get_num_dimensions();
+        num_dimensions = definition.get_num_dimensions();
         if (num_dimensions != 0)
         {
             std::string rows_name;
@@ -207,16 +207,24 @@ public:
     /// @return  The name of the type of the telemetry's value.
     const std::string get_dimensions() const
     {
+        std::string dim = "[";
         switch(num_dimensions) 
         {
             case 0:
-                return "0";
+                dim.append("0");
+                break;
             case 1:
-                return std::to_string(num_rows);
+                dim.append(std::to_string(num_rows));
+                break;
             case 2:
-                return "[" + std::to_string(num_rows) + ", " + std::to_string(num_columns) + "]";
+                dim.append(std::to_string(num_rows) + ", " + std::to_string(num_columns));
+                break;
+            case 3:
+                SPDLOG_ERROR("Bad 'num_dimensions' {}", num_dimensions);
         }
-        return "0";
+        dim.append("]");
+
+        return dim;
     }
 
 
@@ -259,7 +267,7 @@ public:
     /// Try to calculate the minimum size the meters will take up in memory
     ///
     /// @return  The size of the meters json blob
-    virtual size_t get_meters_size() = 0;
+    virtual size_t get_meter_size() = 0;
 
 
     /// Pre-process the telemetry
@@ -386,7 +394,7 @@ public:
     /// Try to calculate the minimum size the meters will take up in memory
     ///
     /// @return  The size of the meters json blob
-    virtual size_t get_meters_size() override
+    virtual size_t get_meter_size() override
     {
         size_t size = 0;
         if constexpr (std::is_same_v<T, std::string>) 
@@ -550,7 +558,7 @@ public:
     /// Try to calculate the minimum size the meters will take up in memory
     ///
     /// @return  The size of the meters json blob
-    virtual size_t get_meters_size() override
+    virtual size_t get_meter_size() override
     {
         size_t size = 0;
         // add """" and ", " and 2x " " for each value
@@ -743,7 +751,7 @@ public:
     /// Try to calculate the minimum size the meters will take up in memory
     ///
     /// @return  The size of the meters json blob
-    virtual size_t get_meters_size() override
+    virtual size_t get_meter_size() override
     {
         size_t size = 0;
         // add """", ", ", and 2x " " for each value and "[]" for each column
