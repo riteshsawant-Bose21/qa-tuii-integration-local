@@ -179,6 +179,8 @@ int main(int argc, char *argv[])
 
         // Path for the static configuration
         target_paths.push_back("dsp_static_config");
+        // Path for dynamic parameter setttings with vector indices
+        target_paths.push_back("settings.audio.*.*[*]");
         // Path for dynamic parameter setttings
         target_paths.push_back("settings.audio.*.*");
 
