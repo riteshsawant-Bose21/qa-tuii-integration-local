@@ -331,7 +331,12 @@ public:
             }
         }
 
-        return size - 2; // remove last ", "
+        if (size >= 2)
+        {
+            size = size - 2; // remove last ", "
+        }
+
+        return size; 
     }
 
 
