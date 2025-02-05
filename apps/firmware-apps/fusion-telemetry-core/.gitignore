@@ -30,3 +30,11 @@
 *.exe
 *.out
 *.app
+
+build
+
+# waf build system artifacts.
+.waf[0-9]*-*/
+waf[0-9]*-*/
+.lock-waf*
+wafconf/__pycache__
