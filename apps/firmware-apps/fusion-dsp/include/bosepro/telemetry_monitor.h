@@ -333,7 +333,7 @@ public:
 
         if (size >= 2)
         {
-            size = size - 2; // remove last ", "
+            size -= 2; // remove last ", "
         }
 
         return size; 

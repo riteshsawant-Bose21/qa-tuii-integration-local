@@ -36,7 +36,7 @@ public:
         num_rows = 1;
         num_columns = 1;
 
-        int num_dimensions = definition.get_num_dimensions();
+        num_dimensions = definition.get_num_dimensions();
         if (num_dimensions != 0)
         {
             std::string rows_name;
@@ -207,16 +207,24 @@ public:
     /// @return  The name of the type of the telemetry's value.
     const std::string get_dimensions() const
     {
+        std::string dim = "[";
         switch(num_dimensions) 
         {
             case 0:
-                return "0";
+                dim.append("0");
+                break;
             case 1:
-                return std::to_string(num_rows);
+                dim.append(std::to_string(num_rows));
+                break;
             case 2:
-                return "[" + std::to_string(num_rows) + ", " + std::to_string(num_columns) + "]";
+                dim.append(std::to_string(num_rows) + ", " + std::to_string(num_columns));
+                break;
+            case 3:
+                SPDLOG_ERROR("Bad 'num_dimensions' {}", num_dimensions);
         }
-        return "0";
+        dim.append("]");
+
+        return dim;
     }
 
 
