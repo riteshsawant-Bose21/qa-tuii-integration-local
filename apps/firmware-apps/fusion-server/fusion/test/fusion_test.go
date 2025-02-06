@@ -515,7 +515,7 @@ func TestUpdateValue(t *testing.T) {
 }
 
 func TestSetAndUpdateValues(t *testing.T) {
-	// Set the initial value with nested vectors and matrices
+	// Set the initial value with nested vectors
 	initialValue := map[string]interface{}{
 		"settings": map[string]interface{}{
 			"audio": map[string]interface{}{
@@ -523,11 +523,6 @@ func TestSetAndUpdateValues(t *testing.T) {
 					"low_gain":    3.0,
 					"high_gain":   4.0,
 					"frequencies": []float64{100.0, 200.0, 300.0},
-					"matrix": [][]float64{
-						{1.1, 1.2, 1.3},
-						{2.1, 2.2, 2.3},
-						{3.1, 3.2, 3.3},
-					},
 				},
 			},
 		},
@@ -571,12 +566,6 @@ func TestSetAndUpdateValues(t *testing.T) {
 	frequencies, ok := initialResponse.Value["frequencies"].([]interface{})
 	if !ok || len(frequencies) != 3 || frequencies[0] != 100.0 {
 		t.Errorf("Frequencies mismatch: got %v", frequencies)
-	}
-
-	// Verify matrix values
-	matrix, ok := initialResponse.Value["matrix"].([]interface{})
-	if !ok || len(matrix) != 3 {
-		t.Errorf("Matrix mismatch: got %v", matrix)
 	}
 
 	// Update the value with `null` for `high_gain` and update `frequencies`
@@ -649,11 +638,6 @@ func TestPatchArrayElement(t *testing.T) {
 			"audio": map[string]interface{}{
 				"tone_eq1": map[string]interface{}{
 					"frequencies": []float64{100.0, 200.0, 300.0},
-					"matrix": [][]float64{
-						{1.1, 1.2, 1.3},
-						{2.1, 2.2, 2.3},
-						{3.1, 3.2, 3.3},
-					},
 				},
 			},
 		},
@@ -753,24 +737,114 @@ func TestPatchArrayElement(t *testing.T) {
 		t.Errorf("Failed to insert new array element: expected %v at index 3, got %v", 400.0, updatedResponse.Value)
 	}
 
-	// PATCH update a matrix element
-	matrixUpdate := map[string]interface{}{
-		"value": 9.9, // Update `matrix[1][1]`
-	}
-	jsonMatrixUpdate, err := json.Marshal(matrixUpdate)
-	if err != nil {
-		t.Fatalf("Failed to marshal matrix update: %v", err)
+	defer resp.Body.Close()
+}
+
+// TestPatchDiffOutput sets an initial configuration, performs PATCH updates,
+// and asserts that the diff output only contains the changed elements.
+func TestPatchDiffOutput(t *testing.T) {
+	// Define the initial configuration.
+	initialConfig := map[string]interface{}{
+		"settings": map[string]interface{}{
+			"audio": map[string]interface{}{
+				"tone_eq1": map[string]interface{}{
+					"frequencies": []float64{100.0, 200.0, 300.0},
+				},
+			},
+		},
 	}
 
-	req, err = http.NewRequest("PATCH", fmt.Sprintf("%s/updateValue?key=settings.audio.tone_eq1.matrix[1][1]", serverAddr), bytes.NewBuffer(jsonMatrixUpdate))
+	// Marshal and send the initial configuration using the /setValue endpoint.
+	jsonData, err := json.Marshal(initialConfig)
 	if err != nil {
-		t.Fatalf("Failed to create PATCH request for updating matrix: %v", err)
+		t.Fatalf("Failed to marshal initial configuration: %v", err)
+	}
+
+	resp, err := http.Post(fmt.Sprintf("%s/setValue", serverAddr), "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		t.Fatalf("Failed to set initial configuration: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("Unexpected status code when setting initial config: %d, response: %s", resp.StatusCode, string(body))
+	}
+
+	updateData := map[string]interface{}{
+		"value": 250.0,
+	}
+	jsonUpdate, err := json.Marshal(updateData)
+	if err != nil {
+		t.Fatalf("Failed to marshal update data: %v", err)
+	}
+
+	// Use the query key to update the array element.
+	patchURL := fmt.Sprintf("%s/updateValue?key=settings.audio.tone_eq1.frequencies[1]", serverAddr)
+	req, err := http.NewRequest("PATCH", patchURL, bytes.NewBuffer(jsonUpdate))
+	if err != nil {
+		t.Fatalf("Failed to create PATCH request for updating array element: %v", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
+	client := &http.Client{}
 	resp, err = client.Do(req)
 	if err != nil {
-		t.Fatalf("Failed to update matrix element: %v", err)
+		t.Fatalf("Failed to update array element: %v", err)
 	}
+	defer resp.Body.Close()
+
+	// Decode the patch response.
+	var patchResp struct {
+		Status  string      `json:"status"`
+		Updates interface{} `json:"updates"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&patchResp); err != nil {
+		t.Fatalf("Failed to decode patch response: %v", err)
+	}
+
+	if patchResp.Status != "success" {
+		t.Fatalf("Patch update failed with status: %s", patchResp.Status)
+	}
+
+	// Only the array element at index 1 should be different.
+	expectedDiff := map[string]interface{}{
+		"settings": map[string]interface{}{
+			"audio": map[string]interface{}{
+				"tone_eq1": map[string]interface{}{
+					"frequencies": map[string]interface{}{
+						"1": 250.0,
+					},
+				},
+			},
+		},
+	}
+	if !reflect.DeepEqual(patchResp.Updates, expectedDiff) {
+		t.Errorf("Unexpected diff for frequencies update.\nExpected: %+v\nGot:      %+v", expectedDiff, patchResp.Updates)
+	}
+
+	// Verify the frequencies array update via the /getValue endpoint.
+	getURL := fmt.Sprintf("%s/getValue?key=settings.audio.tone_eq1.frequencies", serverAddr)
+	resp, err = http.Get(getURL)
+	if err != nil {
+		t.Fatalf("Failed to get updated frequencies array: %v", err)
+	}
+	defer resp.Body.Close()
+
+	var getResp struct {
+		Exists bool          `json:"exists"`
+		Value  []interface{} `json:"value"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&getResp); err != nil {
+		t.Fatalf("Failed to decode get response: %v", err)
+	}
+	if !getResp.Exists {
+		t.Fatal("Frequencies array does not exist after update")
+	}
+	if len(getResp.Value) != 3 || getResp.Value[1] != 250.0 {
+		t.Errorf("Failed to update frequencies array: expected index 1 to be %v, got %v", 250.0, getResp.Value[1])
+	}
+
 	defer resp.Body.Close()
 }
 

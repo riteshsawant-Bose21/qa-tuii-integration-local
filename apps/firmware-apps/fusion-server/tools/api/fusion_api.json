@@ -3,313 +3,499 @@
   "version": "1",
   "items": [
     {
-      "type": "http",
-      "name": "Clear",
-      "seq": 5,
-      "request": {
-        "url": "{{api_url}}/clear",
-        "method": "DELETE",
-        "headers": [],
-        "params": [],
-        "body": {
-          "mode": "none",
-          "formUrlEncoded": [],
-          "multipartForm": []
-        },
-        "script": {},
-        "vars": {},
-        "assertions": [],
-        "tests": "",
-        "docs": "",
-        "auth": {
-          "mode": "none"
-        }
-      }
-    },
-    {
-      "type": "http",
-      "name": "Cluster Status",
-      "seq": 8,
-      "request": {
-        "url": "{{metrics_url}}/cluster/status",
-        "method": "GET",
-        "headers": [],
-        "params": [],
-        "body": {
-          "mode": "none",
-          "formUrlEncoded": [],
-          "multipartForm": []
-        },
-        "script": {},
-        "vars": {},
-        "assertions": [],
-        "tests": "",
-        "docs": "",
-        "auth": {
-          "mode": "none"
-        }
-      }
-    },
-    {
-      "type": "http",
-      "name": "Dump Raw Data",
-      "seq": 6,
-      "request": {
-        "url": "{{api_url}}/dump",
-        "method": "GET",
-        "headers": [],
-        "params": [],
-        "body": {
-          "mode": "none",
-          "formUrlEncoded": [],
-          "multipartForm": []
-        },
-        "script": {},
-        "vars": {},
-        "assertions": [],
-        "tests": "",
-        "docs": "",
-        "auth": {
-          "mode": "none"
-        }
-      }
-    },
-    {
-      "type": "http",
-      "name": "Endpoints",
-      "seq": 10,
-      "request": {
-        "url": "{{api_url}}/endpoints",
-        "method": "GET",
-        "headers": [],
-        "params": [],
-        "body": {
-          "mode": "none",
-          "formUrlEncoded": [],
-          "multipartForm": []
-        },
-        "script": {},
-        "vars": {},
-        "assertions": [],
-        "tests": "",
-        "docs": "",
-        "auth": {
-          "mode": "none"
-        }
-      }
-    },
-    {
-      "type": "http",
-      "name": "Get All Values",
-      "seq": 2,
-      "request": {
-        "url": "{{api_url}}/getValue",
-        "method": "GET",
-        "headers": [],
-        "params": [],
-        "body": {
-          "mode": "none",
-          "formUrlEncoded": [],
-          "multipartForm": []
-        },
-        "script": {},
-        "vars": {},
-        "assertions": [],
-        "tests": "",
-        "docs": "",
-        "auth": {
-          "mode": "none"
-        }
-      }
-    },
-    {
-      "type": "http",
-      "name": "Get Value From Node",
-      "seq": 9,
-      "request": {
-        "url": "192.168.64.4:8080/getValue?key=audio",
-        "method": "GET",
-        "headers": [],
-        "params": [
-          {
-            "name": "key",
-            "value": "audio",
-            "type": "query",
-            "enabled": true
+      "type": "folder",
+      "name": "Timers",
+      "items": [
+        {
+          "type": "http",
+          "name": "Get Tasks",
+          "seq": 1,
+          "request": {
+            "url": "{{api_url}}/tasks",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
           }
-        ],
-        "body": {
-          "mode": "none",
-          "formUrlEncoded": [],
-          "multipartForm": []
         },
-        "script": {},
-        "vars": {},
-        "assertions": [],
-        "tests": "",
-        "docs": "",
-        "auth": {
-          "mode": "none"
-        }
-      }
-    },
-    {
-      "type": "http",
-      "name": "Get Value",
-      "seq": 1,
-      "request": {
-        "url": "{{api_url}}/getValue?key=settings.audio.modifiers[2:4]",
-        "method": "GET",
-        "headers": [],
-        "params": [
-          {
-            "name": "key",
-            "value": "settings.audio.modifiers[2:4]",
-            "type": "query",
-            "enabled": true
+        {
+          "type": "http",
+          "name": "Add Task",
+          "seq": 2,
+          "request": {
+            "url": "{{api_url}}/tasks/add",
+            "method": "POST",
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/json",
+                "enabled": true
+              }
+            ],
+            "params": [],
+            "body": {
+              "mode": "json",
+              "json": "{\n  \"id\": \"test\",\n  \"cron_expr\": \"*/5 * * * *\",\n  \"description\": \"updated\"\n}",
+              "formUrlEncoded": [],
+              "multipartForm": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
           }
-        ],
-        "body": {
-          "mode": "none",
-          "formUrlEncoded": [],
-          "multipartForm": []
         },
-        "script": {},
-        "vars": {},
-        "assertions": [],
-        "tests": "",
-        "docs": "",
-        "auth": {
-          "mode": "none"
+        {
+          "type": "http",
+          "name": "Get Tasks History",
+          "seq": 3,
+          "request": {
+            "url": "{{api_url}}/tasks/history",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Update Task",
+          "seq": 4,
+          "request": {
+            "url": "{{api_url}}/tasks/update?id=test",
+            "method": "PUT",
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/json",
+                "enabled": true
+              }
+            ],
+            "params": [
+              {
+                "name": "id",
+                "value": "test",
+                "type": "query",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "json",
+              "json": "{\n  \"cron_expr\": \"*/5 * * * *\",\n  \"description\": \"updated\"\n}",
+              "formUrlEncoded": [],
+              "multipartForm": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Remove Task",
+          "seq": 5,
+          "request": {
+            "url": "{{api_url}}/tasks/remove?id=test",
+            "method": "DELETE",
+            "headers": [],
+            "params": [
+              {
+                "name": "id",
+                "value": "test",
+                "type": "query",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
         }
-      }
+      ]
     },
     {
-      "type": "http",
+      "type": "folder",
       "name": "Metrics",
-      "seq": 7,
-      "request": {
-        "url": "{{metrics_url}}/metrics",
-        "method": "GET",
-        "headers": [],
-        "params": [],
-        "body": {
-          "mode": "none",
-          "formUrlEncoded": [],
-          "multipartForm": []
+      "items": [
+        {
+          "type": "http",
+          "name": "Metrics",
+          "seq": 1,
+          "request": {
+            "url": "{{metrics_url}}/metrics",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
         },
-        "script": {},
-        "vars": {},
-        "assertions": [],
-        "tests": "",
-        "docs": "",
-        "auth": {
-          "mode": "none"
+        {
+          "type": "http",
+          "name": "Cluster Status",
+          "seq": 2,
+          "request": {
+            "url": "{{metrics_url}}/cluster/status",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Endpoints",
+          "seq": 3,
+          "request": {
+            "url": "{{api_url}}/endpoints",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
         }
-      }
+      ]
     },
     {
-      "type": "http",
-      "name": "Rollback",
-      "seq": 11,
-      "request": {
-        "url": "{{api_url}}/rollbackBinary?index=-3",
-        "method": "POST",
-        "headers": [
-          {
-            "name": "Content-Type",
-            "value": "application/json",
-            "enabled": true
+      "type": "folder",
+      "name": "Binary Update",
+      "items": [
+        {
+          "type": "http",
+          "name": "Rollback",
+          "seq": 1,
+          "request": {
+            "url": "{{api_url}}/rollbackBinary?index=-3",
+            "method": "POST",
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/json",
+                "enabled": true
+              }
+            ],
+            "params": [
+              {
+                "name": "index",
+                "value": "-3",
+                "type": "query",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "json",
+              "json": "",
+              "formUrlEncoded": [],
+              "multipartForm": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
           }
-        ],
-        "params": [
-          {
-            "name": "index",
-            "value": "-3",
-            "type": "query",
-            "enabled": true
-          }
-        ],
-        "body": {
-          "mode": "json",
-          "json": "",
-          "formUrlEncoded": [],
-          "multipartForm": []
-        },
-        "script": {},
-        "vars": {},
-        "assertions": [],
-        "tests": "",
-        "docs": "",
-        "auth": {
-          "mode": "none"
         }
-      }
+      ]
     },
     {
-      "type": "http",
-      "name": "Set Value",
-      "seq": 3,
-      "request": {
-        "url": "{{api_url}}/setValue",
-        "method": "POST",
-        "headers": [
-          {
-            "name": "Content-Type",
-            "value": "application/json",
-            "enabled": true
+      "type": "folder",
+      "name": "Config",
+      "items": [
+        {
+          "type": "http",
+          "name": "Get Value",
+          "seq": 1,
+          "request": {
+            "url": "{{api_url}}/getValue?key=settings.audio.tone_eq1",
+            "method": "GET",
+            "headers": [],
+            "params": [
+              {
+                "name": "key",
+                "value": "settings.audio.tone_eq1",
+                "type": "query",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
           }
-        ],
-        "params": [],
-        "body": {
-          "mode": "json",
-          "json": "{\n  \"settings\": {\n    \"audio\": {\n      \"tone_eq1\" : {\n        \n      }\n    }\n  }\n}\n",
-          "formUrlEncoded": [],
-          "multipartForm": []
         },
-        "script": {},
-        "vars": {},
-        "assertions": [],
-        "tests": "",
-        "docs": "",
-        "auth": {
-          "mode": "none"
-        }
-      }
-    },
-    {
-      "type": "http",
-      "name": "Update Value",
-      "seq": 4,
-      "request": {
-        "url": "{{api_url}}/updateValue",
-        "method": "PATCH",
-        "headers": [
-          {
-            "name": "Content-Type",
-            "value": "application/json",
-            "enabled": true
+        {
+          "type": "http",
+          "name": "Get All Values",
+          "seq": 2,
+          "request": {
+            "url": "{{api_url}}/getValue",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
           }
-        ],
-        "params": [],
-        "body": {
-          "mode": "json",
-          "json": "{\n  \"settings\": {\n    \"audio\": {\n      \"tone_eq1\": {\n        \"bleep\": \"bleep\",\n        \"high_gain\": 8,\n        \"low_gain\": 10\n      },\n      \"modifiers\": [       \n        6.674e-11,\n        0.866,\n        10.49\n      ]\n    }\n  }\n}",
-          "formUrlEncoded": [],
-          "multipartForm": []
         },
-        "script": {},
-        "vars": {},
-        "assertions": [],
-        "tests": "",
-        "docs": "",
-        "auth": {
-          "mode": "none"
+        {
+          "type": "http",
+          "name": "Set Value",
+          "seq": 3,
+          "request": {
+            "url": "{{api_url}}/setValue",
+            "method": "POST",
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/json",
+                "enabled": true
+              }
+            ],
+            "params": [
+              {
+                "name": "key",
+                "value": "settings.telemetry.report_period[1]",
+                "type": "query",
+                "enabled": false
+              }
+            ],
+            "body": {
+              "mode": "json",
+              "json": "{\n  \"settings\": {\n    \"audio\": {\n      \"peq1\": 5.0,\n      \"tone_eq1\": {\n        \"frequencies\": [\n          101,\n          300,\n          300\n        ],\n        \"high_gain\": 4,\n        \"low_gain\": 3\n      }\n    }\n  }\n}\n",
+              "formUrlEncoded": [],
+              "multipartForm": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Clear",
+          "seq": 4,
+          "request": {
+            "url": "{{api_url}}/clear",
+            "method": "DELETE",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Update Value",
+          "seq": 5,
+          "request": {
+            "url": "{{api_url}}/updateValue?key=settings.audio.tone_eq1.frequencies[2]",
+            "method": "PATCH",
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/json",
+                "enabled": true
+              }
+            ],
+            "params": [
+              {
+                "name": "key",
+                "value": "settings.audio.tone_eq1.frequencies[2]",
+                "type": "query",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "json",
+              "json": "{\n  \"value\": 100\n}",
+              "formUrlEncoded": [],
+              "multipartForm": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Dump Raw Data",
+          "seq": 6,
+          "request": {
+            "url": "{{api_url}}/dump",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Get Value From Node",
+          "seq": 7,
+          "request": {
+            "url": "192.168.64.4:8080/getValue?key=audio",
+            "method": "GET",
+            "headers": [],
+            "params": [
+              {
+                "name": "key",
+                "value": "audio",
+                "type": "query",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
         }
-      }
+      ]
     }
   ],
-  "activeEnvironmentUid": "Xbpjubxk0J1jt0cl6OUyS",
+  "activeEnvironmentUid": "Rf6EZ7UNhcPIIeh6uldP8",
   "environments": [
     {
       "variables": [

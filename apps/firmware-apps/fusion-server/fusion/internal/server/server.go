@@ -8,7 +8,9 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"reflect"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -31,9 +33,9 @@ type ConfigServer struct {
 }
 
 type Endpoints struct {
-	API       string `json:"api"`
-	Telemetry string `json:"telemetry"`
-	Metrics   string `json:"metrics"`
+	API       string   `json:"api"`
+	Telemetry []string `json:"telemetry"`
+	Metrics   string   `json:"metrics"`
 }
 
 func NewConfigServer(nodeName string, handler *Handler) *ConfigServer {
@@ -151,20 +153,41 @@ func (s *ConfigServer) UpdateValue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var response interface{}
+	configData := s.handler.transformState(s.handler.stateManager.GetFullState())
+
+	// Create a deep copy of configData to preserve the original configuration.
+	originalConfig, err := deepCopy(configData)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error copying original configuration: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	var updatedData interface{}
 	if key != "" {
 		// Use the existing config
-		configData := s.handler.transformState(s.handler.stateManager.GetFullState())
 		setNestedValue(configData, key, update["value"])
-		response, err = s.handler.HandleHTTPPatch(configData)
+		updatedData, err = s.handler.HandleHTTPPatch(configData)
 	} else {
 		// If no key is provided, treat the entire body as the update map
-		response, err = s.handler.HandleHTTPPatch(update)
+		updatedData, err = s.handler.HandleHTTPPatch(update)
 	}
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+
+	// Calculate the difference between configData and updatedData
+	diffData := calculateDiff(originalConfig, updatedData)
+
+	logger := logging.GetLogger()
+	logger.Debug("------------------>>>>> %v", originalConfig)
+	logger.Debug("------------------>>>>> %v", updatedData)
+	logger.Debug("------------------>>>>> %v", diffData)
+
+	response := map[string]interface{}{
+		"status":  "success",
+		"updates": diffData,
 	}
 
 	// Return the response as JSON
@@ -212,7 +235,7 @@ func (s *ConfigServer) GetEndpoints(w http.ResponseWriter, r *http.Request) {
 
 	endpoints := Endpoints{
 		API:       vip + ":8080",
-		Telemetry: vip + ":7070",
+		Telemetry: []string{vip + ":7070"},
 		Metrics:   vip + ":9090",
 	}
 
@@ -444,4 +467,89 @@ func getSingleQueryParam(r *http.Request, param string) (string, error) {
 		return "", fmt.Errorf("invalid characters in parameter %q", param)
 	}
 	return params[0], nil
+}
+
+// deepCopy creates a deep copy of the provided data using JSON marshalling.
+// It works well for data structures that can be represented in JSON, such as maps.
+func deepCopy(data interface{}) (interface{}, error) {
+	bytes, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+	var copy interface{}
+	if err := json.Unmarshal(bytes, &copy); err != nil {
+		return nil, err
+	}
+	return copy, nil
+}
+
+// calculateDiff compares the original and updated configurations and returns the differences.
+// It handles maps and slices (arrays) recursively.
+func calculateDiff(oldData, newData interface{}) interface{} {
+	// If both values are slices, delegate to calculateSliceDiff.
+	if oldSlice, ok := oldData.([]interface{}); ok {
+		if newSlice, ok2 := newData.([]interface{}); ok2 {
+			return calculateSliceDiff(oldSlice, newSlice)
+		}
+	}
+
+	// If both values are maps, compare them key by key.
+	if oldMap, ok := oldData.(map[string]interface{}); ok {
+		if newMap, ok2 := newData.(map[string]interface{}); ok2 {
+			diff := make(map[string]interface{})
+
+			// Check keys in newMap.
+			for key, newVal := range newMap {
+				if oldVal, exists := oldMap[key]; exists {
+					subDiff := calculateDiff(oldVal, newVal)
+					if subDiff != nil {
+						diff[key] = subDiff
+					}
+				} else {
+					// New key added.
+					diff[key] = newVal
+				}
+			}
+
+			// Check for keys that were removed.
+			for key := range oldMap {
+				if _, exists := newMap[key]; !exists {
+					diff[key] = nil
+				}
+			}
+			if len(diff) > 0 {
+				return diff
+			}
+			return nil
+		}
+	}
+
+	// For other (atomic) types, if they are not deeply equal, return newData.
+	if !reflect.DeepEqual(oldData, newData) {
+		return newData
+	}
+	return nil
+}
+
+// calculateSliceDiff compares two slices element by element.
+// If the slices have different lengths, it returns the new slice entirely.
+// Otherwise, it returns a map where the keys are the (stringified) indices of changed elements.
+func calculateSliceDiff(oldSlice, newSlice []interface{}) interface{} {
+	if len(oldSlice) != len(newSlice) {
+		return newSlice
+	}
+
+	diffMap := make(map[string]interface{})
+	for i, newVal := range newSlice {
+		subDiff := calculateDiff(oldSlice[i], newVal)
+		if subDiff != nil {
+			// Use the index (converted to string) as the key.
+			diffMap[strconv.Itoa(i)] = subDiff
+		}
+	}
+
+	if len(diffMap) > 0 {
+		return diffMap
+	}
+	return nil
 }

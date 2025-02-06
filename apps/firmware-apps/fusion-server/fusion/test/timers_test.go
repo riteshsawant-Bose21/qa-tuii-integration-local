@@ -268,7 +268,6 @@ func TestHTTPEndpointErrorCases(t *testing.T) {
 	mux.HandleFunc("/tasks/remove", manager.RemoveTaskHandler)
 	mux.HandleFunc("/tasks/history", manager.ExecutionHistoryHandler)
 
-	// --- ListTasksHandler ---
 	t.Run("ListTasksHandler wrong method", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/tasks", nil)
 		rec := httptest.NewRecorder()
@@ -276,7 +275,6 @@ func TestHTTPEndpointErrorCases(t *testing.T) {
 		assert.Equal(t, http.StatusMethodNotAllowed, rec.Code)
 	})
 
-	// --- AddTaskHandler ---
 	t.Run("AddTaskHandler wrong method", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/tasks/add", nil)
 		rec := httptest.NewRecorder()
@@ -303,7 +301,6 @@ func TestHTTPEndpointErrorCases(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
 	})
 
-	// --- UpdateTaskHandler ---
 	t.Run("UpdateTaskHandler wrong method", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/tasks/update?id=test", nil)
 		rec := httptest.NewRecorder()
@@ -339,7 +336,6 @@ func TestHTTPEndpointErrorCases(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
 	})
 
-	// --- RemoveTaskHandler ---
 	t.Run("RemoveTaskHandler wrong method", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/tasks/remove?id=test", nil)
 		rec := httptest.NewRecorder()
@@ -354,7 +350,6 @@ func TestHTTPEndpointErrorCases(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
 	})
 
-	// --- ExecutionHistoryHandler ---
 	t.Run("ExecutionHistoryHandler wrong method", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/tasks/history", nil)
 		rec := httptest.NewRecorder()

@@ -162,10 +162,7 @@ func (h *Handler) HandleHTTPPatch(value map[string]interface{}) (interface{}, er
 		return nil, fmt.Errorf("failed to handle update: %v", err)
 	}
 
-	return map[string]interface{}{
-		"status":  "success",
-		"updates": existingData,
-	}, nil
+	return existingData, nil
 }
 
 func applyPatch(data map[string]interface{}, changes map[string]interface{}) error {
