@@ -38,9 +38,11 @@ private:
     bosepro::DspStateMemory<float[]> buffer;
     float peak_level;
     float peak_gain;
+    float peak_gain_telemetry;
     float total_gain;
     float rms_level;
     float rms_gain;
+    float rms_gain_telemetry;
     float rms_coeff;
     int_fast32_t write_index;
     int_fast32_t buffer_size;
@@ -84,9 +86,9 @@ Limiter::Limiter(const bosepro::BlockConfiguration &configuration)
     assign_parameter("delay", &delay);
     assign_parameter("brick_wall", &brick_wall);
 
-    assign_telemetry("peak_gain", &peak_gain);
-    assign_telemetry("rms_gain", &rms_gain);
-    assign_telemetry("total_gain", &total_gain);
+    assign_telemetry("peak_gain", &peak_gain_telemetry);
+    assign_telemetry("rms_gain", &rms_gain_telemetry);
+    assign_telemetry("total_gain", &total_gain, bosepro::linear_to_db);
 
     buffer_size = (max_delay + get_frame_size() - 1)/get_frame_size();
     buffer_size *= get_frame_size();
@@ -167,6 +169,8 @@ void Limiter::process()
 
         // get the linear gain
         float g = powf(10.0f, (rms_gain < peak_gain) ? rms_gain : peak_gain);
+        peak_gain_telemetry = peak_gain * 20.0f;
+        rms_gain_telemetry = rms_gain * 20.0f;
         total_gain = g;
 
         // apply gain

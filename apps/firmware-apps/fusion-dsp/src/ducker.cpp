@@ -65,7 +65,7 @@ Ducker::Ducker(const bosepro::BlockConfiguration &configuration)
     assign_parameter("decay", &decay_time,
                      POST_FUNCTION_SCALAR(update_decay));
 
-    assign_telemetry("gain_meter", &current_gain);
+    assign_telemetry("gain_meter", &current_gain, bosepro::linear_to_db);
 
     level_attack_coeff = 0.341f;
     current_gain = 1.0f;
