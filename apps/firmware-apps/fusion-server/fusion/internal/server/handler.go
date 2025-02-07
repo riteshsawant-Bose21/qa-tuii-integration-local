@@ -8,6 +8,7 @@ import (
 	"fusion/internal/api"
 	"fusion/internal/logging"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -539,15 +540,7 @@ func (h *Handler) HandleUDPMessage(data []byte) (interface{}, error) {
 		}
 		delete(update, "action")
 
-		// Create update with original node ID
-		configUpdate := api.ConfigUpdate{
-			Data:    update,
-			Version: time.Now().UnixNano(),
-			NodeID:  h.list.LocalNode().Name,
-			Time:    time.Now().UTC(),
-		}
-
-		if err := h.broadcastUpdate(configUpdate); err != nil {
+		if err := h.handleConfigUpdate(update); err != nil {
 			return nil, fmt.Errorf("failed to handle update: %v", err)
 		}
 
@@ -562,14 +555,8 @@ func (h *Handler) HandleUDPMessage(data []byte) (interface{}, error) {
 }
 
 func (h *Handler) HandleClearAllData() error {
-	configUpdate := api.ConfigUpdate{
-		Data:    map[string]interface{}{},
-		Version: time.Now().UnixNano(),
-		NodeID:  h.list.LocalNode().Name,
-		Time:    time.Now().UTC(),
-	}
 
-	if err := h.broadcastUpdate(configUpdate); err != nil {
+	if err := h.handleConfigUpdate(map[string]interface{}{}); err != nil {
 		return fmt.Errorf("failed to clear all data: %v", err)
 	}
 
@@ -593,7 +580,7 @@ func (s *ConfigServer) ClearAllData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set(contentType, jsonContentType)
+	w.Header().Set(api.ContentType, api.JsonContentType)
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"status":  "success",
 		"message": "All data cleared successfully",
@@ -624,15 +611,8 @@ func (h *Handler) HandleWebSocketMessage(data []byte) (*WebSocketResponse, error
 			return nil, fmt.Errorf("invalid update in WebSocket message: %v", err)
 		}
 
-		configUpdate := api.ConfigUpdate{
-			Data:    data,
-			Version: time.Now().UnixNano(),
-			NodeID:  h.list.LocalNode().Name,
-			Time:    time.Now().UTC(),
-		}
-
-		if err := h.broadcastUpdate(configUpdate); err != nil {
-			return nil, fmt.Errorf("broadcastUpdate failed: %v", err)
+		if err := h.handleConfigUpdate(data); err != nil {
+			return nil, fmt.Errorf("failed to handle update: %v", err)
 		}
 
 		return &WebSocketResponse{
@@ -667,8 +647,8 @@ func (h *Handler) GetServerInfo() (map[string]interface{}, error) {
 			"/ws",
 			"/download",
 			"/upload",
-			"/updateBinary",
-			"/rollbackBinary",
+			"/updateVersion",
+			"/rollbackVersion",
 			"/dump",
 		},
 		"cluster_size":       len(h.list.Members()),
@@ -696,12 +676,19 @@ func (h *Handler) AddBroadcasters(broadcasters ...Broadcaster) {
 	h.broadcasters = append(h.broadcasters, broadcasters...)
 }
 
-// HandleBinaryUpdate handles HTTP binary update requests
-func (h *Handler) HandleBinaryUpdate(w http.ResponseWriter, r *http.Request) {
+// HandleVersionUpdate handles HTTP binary update requests
+func (h *Handler) HandleVersionUpdate(w http.ResponseWriter, r *http.Request) {
 
 	logger := logging.GetLogger()
 
-	// Read the uploaded binary
+	// Parse the multipart form data
+	if err := r.ParseMultipartForm(32 << 20); err != nil {
+		logger.Error("Error parsing multipart form: %v", err)
+		http.Error(w, "Error parsing form data", http.StatusBadRequest)
+		return
+	}
+
+	// Retrieve the file from the posted form-data.
 	updateFile, header, err := r.FormFile("binary")
 	if err != nil {
 		logger.Error("Error reading binary: %v", err)
@@ -742,9 +729,9 @@ func (h *Handler) HandleBinaryUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// After verifying and saving the binary, initiate cluster-wide update
-	if err := h.InitiateBinaryUpdate(tempPath); err != nil {
+	if err := h.InitiateVersionUpdate(tempPath); err != nil {
 		logger.Error("Failed to initiate cluster update: %v", err)
-		// Don't return error to client since local update will proceed
+		http.Error(w, "Server error", http.StatusInternalServerError)
 	}
 
 	// Schedule the update
@@ -757,8 +744,8 @@ func (h *Handler) HandleBinaryUpdate(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// HandleBinaryUpdate handles HTTP binary rollback requests
-func (h *Handler) HandleBinaryRollback(w http.ResponseWriter, r *http.Request) {
+// HandleVersionRollback handles HTTP binary rollback requests
+func (h *Handler) HandleVersionRollback(w http.ResponseWriter, r *http.Request) {
 	logger := logging.GetLogger()
 
 	// Get rollback index from query parameter
@@ -806,8 +793,8 @@ func (h *Handler) HandleBinaryRollback(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// InitiateBinaryUpdate starts a cluster-wide binary update process
-func (h *Handler) InitiateBinaryUpdate(newBinaryPath string) error {
+// InitiateVersionUpdate starts a cluster-wide binary update process
+func (h *Handler) InitiateVersionUpdate(newBinaryPath string) error {
 	logger := logging.GetLogger()
 
 	// Generate update metadata
@@ -830,8 +817,8 @@ func (h *Handler) InitiateBinaryUpdate(newBinaryPath string) error {
 		return fmt.Errorf("failed to marshal update: %w", err)
 	}
 
-	message := BinaryMessage{
-		Type:    UpdateBinary,
+	message := VersionMessage{
+		Type:    VersionUpdate,
 		Payload: data,
 	}
 
@@ -879,8 +866,8 @@ func (h *Handler) InitiateBinaryRollback(currentBinaryPath string, index int) er
 		return fmt.Errorf("failed to marshal rollback: %w", err)
 	}
 
-	message := BinaryMessage{
-		Type:    RollbackBinary,
+	message := VersionMessage{
+		Type:    VersionRollback,
 		Payload: data,
 	}
 
@@ -935,7 +922,7 @@ func (h *Handler) streamBinaryToNode(node *memberlist.Node, binaryPath string) e
 			return fmt.Errorf("failed to marshal chunk: %w", err)
 		}
 
-		message := BinaryMessage{
+		message := VersionMessage{
 			Type:    UpdateChunk,
 			Payload: chunkData,
 		}
@@ -965,7 +952,7 @@ func (h *Handler) streamBinaryToNode(node *memberlist.Node, binaryPath string) e
 		return fmt.Errorf("failed to send final chunk: %w", err)
 	}
 
-	message := BinaryMessage{
+	message := VersionMessage{
 		Type:    UpdateChunk,
 		Payload: chunkData,
 	}
@@ -979,6 +966,65 @@ func (h *Handler) streamBinaryToNode(node *memberlist.Node, binaryPath string) e
 	}
 
 	return nil
+}
+
+// HandleAudioUpload handles HTTP audio file update requests.
+func (h *Handler) HandleAudioUpload(w http.ResponseWriter, r *http.Request) {
+	logger := logging.GetLogger()
+
+	// Parse the multipart form data
+	if err := r.ParseMultipartForm(32 << 20); err != nil {
+		logger.Error("Error parsing multipart form: %v", err)
+		http.Error(w, "Error parsing form data", http.StatusBadRequest)
+		return
+	}
+
+	// Retrieve the file from the posted form-data.
+	audioFile, header, err := r.FormFile("binary")
+	if err != nil {
+		logger.Error("Error reading binary: %v", err)
+		http.Error(w, "Error reading binary", http.StatusBadRequest)
+		return
+	}
+	defer audioFile.Close()
+
+	// Define the destination directory and file path.
+	destDir := "/var/lib/fusion/audio"
+	destPath := filepath.Join(destDir, header.Filename)
+
+	// Ensure that the destination directory exists.
+	if err := os.MkdirAll(destDir, 0755); err != nil {
+		logger.Error("Error creating destination directory: %v", err)
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		return
+	}
+
+	// Create the destination file.
+	dstFile, err := os.Create(destPath)
+	if err != nil {
+		logger.Error("Error creating destination file: %v", err)
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		return
+	}
+	defer dstFile.Close()
+
+	// Copy the uploaded file's content to the destination file.
+	if _, err := io.Copy(dstFile, audioFile); err != nil {
+		logger.Error("Error copying file to destination: %v", err)
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		return
+	}
+
+	existingData := h.transformState(h.stateManager.GetFullState())
+	addAudioFilesToConfig(destDir, existingData)
+
+	if err := h.handleConfigUpdate(existingData); err != nil {
+		logger.Error("Failed to handle update: %v", err)
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 // getBinaryMetadata calculates hash and size of a binary file
@@ -996,4 +1042,29 @@ func getBinaryMetadata(path string) (hash string, size int64, err error) {
 	}
 
 	return hex.EncodeToString(hasher.Sum(nil)), size, nil
+}
+
+// addAudioFilesToConfig calculates hash and size of a binary file
+func addAudioFilesToConfig(audioDir string, existingData map[string]interface{}) {
+
+	// Read the directory entries.
+	entries, err := os.ReadDir(audioDir)
+	if err != nil {
+		log.Printf("Error reading directory %s: %v", audioDir, err)
+		return
+	}
+
+	// Collect file names (ignoring subdirectories).
+	var fileNames []string
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			fileNames = append(fileNames, entry.Name())
+		}
+	}
+
+	// Add the "audio_files" section to the settings.
+	existingData["audio_files"] = map[string]interface{}{
+		"location": audioDir,
+		"files":    fileNames,
+	}
 }

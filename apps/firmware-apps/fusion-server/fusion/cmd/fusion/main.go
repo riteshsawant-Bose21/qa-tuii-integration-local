@@ -5,10 +5,12 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"time"
 
+	"fusion/internal/api"
 	"fusion/internal/cluster"
 	"fusion/internal/logging"
 	"fusion/internal/network"
@@ -28,14 +30,12 @@ var (
 )
 
 const (
-	configDataPath        = "/var/lib/fusion/config.json"
-	stateDumpInterval     = 30
-	analogControllerPort  = ":8002"
-	digitalControllerPort = ":8003"
-	httpPort              = ":8080"
-	udpPort               = ":7947"
-	serialPort            = "/tmp/ttyFusionServer"
-	baudRate              = 9600
+	fusionDataPath    = "/var/lib/fusion"
+	configDataPath    = fusionDataPath + "/config.json"
+	audioDataPath     = fusionDataPath + "/audio"
+	stateDumpInterval = 30
+	serialPort        = "/tmp/ttyFusionServer"
+	baudRate          = 9600
 )
 
 func setupHTTPRoutes(server *server.ConfigServer, metrics *cluster.MetricsCollector, verbose bool) {
@@ -46,8 +46,9 @@ func setupHTTPRoutes(server *server.ConfigServer, metrics *cluster.MetricsCollec
 	http.HandleFunc("/setValue", withLogging(server.SetValue, "setValue", verbose))
 	http.HandleFunc("/updateValue", withLogging(server.UpdateValue, "updateValue", verbose))
 	http.HandleFunc("/clear", withLogging(server.ClearAllData, "clear", verbose))
-	http.HandleFunc("/updateBinary", withLogging(server.UpdateBinary, "updateBinary", verbose))
-	http.HandleFunc("/rollbackBinary", withLogging(server.RollbackBinary, "rollbackBinary", verbose))
+	http.HandleFunc("/updateVersion", withLogging(server.UpdateVersion, "updateVersion", verbose))
+	http.HandleFunc("/rollbackVersion", withLogging(server.RollbackVersion, "rollbackVersion", verbose))
+	http.HandleFunc("/uploadAudio", withLogging(server.UploadAudio, "uploadAudio", verbose))
 	http.HandleFunc("/ws", withWebSocketMetrics(server.HandleWebSocket, metrics, verbose))
 }
 
@@ -159,6 +160,20 @@ func initCluster(nodeName, bindAddr string, bindPort int, joinAddr string, state
 	return list, nil
 }
 
+func initAudioFileStore(filePath string) error {
+	// Create the directory (and any necessary parent directories) with mode 0777.
+	// Note: os.MkdirAll might be affected by the process's umask.
+	if err := os.MkdirAll(filePath, 0777); err != nil {
+		return fmt.Errorf("failed to create audio directory: %v", err)
+	}
+
+	// Explicitly set the directory's permissions to 0777 to ensure world-writable access.
+	if err := os.Chmod(filePath, 0777); err != nil {
+		return fmt.Errorf("failed to set permissions on audio directory: %v", err)
+	}
+	return nil
+}
+
 // initTimerManager initializes the timer manager.
 func initTimerManager() *timers.TimerManager {
 	timerManager := timers.NewTimerManager("tasks.json", "history.json")
@@ -222,6 +237,11 @@ func main() {
 	persistence := initPersistence(configDataPath, stateManager)
 	updater := server.NewUpdater()
 
+	err := initAudioFileStore(audioDataPath)
+	if err != nil {
+		logger.Error("Failed to create audio store: %v", err)
+	}
+
 	clusterList, err := initCluster(nodeName, bindAddr, bindPort, joinAddr, stateManager, persistence, server.NewUpdater())
 	if err != nil {
 		logger.Error("Failed to initialize cluster: %v", err)
@@ -237,10 +257,10 @@ func main() {
 
 	connectionHandler := server.NewHandler(clusterList, stateManager, persistence, updater)
 
-	udpServer := initUDPServer(udpPort, connectionHandler)
+	udpServer := initUDPServer(api.UDPPort, connectionHandler)
 	defer udpServer.Stop()
 
-	configServer := server.NewConfigServer(nodeName, connectionHandler)
+	configServer := server.NewConfigServer(nodeName, connectionHandler, clusterList)
 
 	setupHTTPRoutes(configServer, metricsCollector, *verbose)
 	setupTimerRoutes(timerManager, *verbose)
@@ -248,7 +268,7 @@ func main() {
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	go startAPIServer(httpPort, &wg)
+	go startAPIServer(api.HTTPPort, &wg)
 
 	time.Sleep(100 * time.Millisecond)
 	logger.Info("%s is ALIVE and RUNNING", nodeName)

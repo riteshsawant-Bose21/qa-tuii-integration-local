@@ -4,7 +4,7 @@ set -eu
 
 # Fusion server configuration and startup script
 fusion_server_service_path=/etc/systemd/system/fusion-server.service
-fusion_server_setup_path=/usr/local/bin/setup-fusion.sh
+haproxy_conf_data_path=/usr/local/bin/haproxy_conf_data.sh
 
 # Keepalived configuration
 keepalived_service_path=/etc/systemd/system/keepalived.service
@@ -122,11 +122,10 @@ $(indent_content "$scripts_dir/haproxy.service")
     owner: root:root
     content: |
 $(indent_content 'haproxy_conf_data')
-  - path: $fusion_server_setup_path
+  - path: $haproxy_conf_data_path
     permissions: '0755'
     owner: root:root
     content: |
-$(indent_content "$scripts_dir/setup-fusion.sh")
 EOF
 }
 

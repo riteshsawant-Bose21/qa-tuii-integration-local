@@ -13,12 +13,13 @@ import (
 )
 
 const (
-	probeInterval = 5
-	probeTimeout  = 2
-	retryInterval = 2
-	retryTimes    = 5
-	suspicionMult = 3
-	tcpTimeout    = 10
+	probeInterval    = 5
+	probeTimeout     = 2
+	pushPullInterval = 30
+	retryInterval    = 2
+	retryTimes       = 5
+	suspicionMult    = 3
+	tcpTimeout       = 10
 )
 
 // CreateMemberlist creates and configures a new memberlist instance
@@ -43,6 +44,7 @@ func CreateMemberlist(nodeName, bindAddr string, bindPort int, joinAddrs []strin
 	config.ProbeInterval = probeInterval * time.Second
 	config.ProbeTimeout = probeTimeout * time.Second
 	config.SuspicionMult = suspicionMult
+	config.PushPullInterval = pushPullInterval * time.Second
 
 	list, err := memberlist.Create(config)
 	if err != nil {
@@ -72,4 +74,14 @@ func CreateMemberlist(nodeName, bindAddr string, bindPort int, joinAddrs []strin
 	}
 
 	return list, nil
+}
+
+// GetClusterIPs retrieves the list of IP addresses of all nodes in the memberlist cluster.
+func GetClusterIPs(mList *memberlist.Memberlist) []string {
+	var ips []string
+	for _, member := range mList.Members() {
+		// Extract IP address of each member
+		ips = append(ips, member.Addr.String())
+	}
+	return ips
 }

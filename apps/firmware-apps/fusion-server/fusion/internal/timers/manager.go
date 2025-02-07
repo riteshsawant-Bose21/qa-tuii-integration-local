@@ -9,15 +9,14 @@ import (
 	"sync"
 	"time"
 
+	"fusion/internal/api"
 	"fusion/internal/logging"
 
 	"github.com/robfig/cron/v3"
 )
 
 const (
-	contentType     = "Content-Type"
-	jsonContentType = "application/json"
-	MaxHistory      = 100
+	MaxHistory = 100
 )
 
 // TimerTask represents a task with a unique ID, a cron expression, and a function to execute.
@@ -312,7 +311,7 @@ func (tm *TimerManager) ListTasksHandler(w http.ResponseWriter, r *http.Request)
 	}
 	tm.mu.Unlock()
 
-	w.Header().Set(contentType, jsonContentType)
+	w.Header().Set(api.ContentType, api.JsonContentType)
 	json.NewEncoder(w).Encode(tasks)
 }
 
@@ -427,6 +426,6 @@ func (tm *TimerManager) ExecutionHistoryHandler(w http.ResponseWriter, r *http.R
 	history := tm.executionHistory
 	tm.mu.Unlock()
 
-	w.Header().Set(contentType, jsonContentType)
+	w.Header().Set(api.ContentType, api.JsonContentType)
 	json.NewEncoder(w).Encode(history)
 }

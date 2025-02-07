@@ -52,12 +52,13 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 	logger := logging.GetLogger()
 
 	// Try to decode as binary message first
-	var binaryMsg server.BinaryMessage
+	var binaryMsg server.VersionMessage
 	if err := json.Unmarshal(msg, &binaryMsg); err == nil {
 		if err = d.updater.PerformRemoteUpdate(binaryMsg); err != nil {
 			logger.Error("PerformRemoteUpdate error: %v", err)
+			return
 		}
-		return
+		// Ignore error at this level so we can check for api.ConfigUpdate
 	}
 
 	// Handle the config update next

@@ -68,14 +68,16 @@ func (p *ConfigPersistence) LoadState() error {
 		return nil
 	} else if err != nil {
 		logger.Error("Failed to open state file: %v", err)
-		return nil // Allow service to start with empty state
+		// Allow service to start with empty state
+		return nil
 	}
 	defer file.Close()
 
 	data, err := io.ReadAll(file)
 	if err != nil {
 		logger.Error("Failed to read state file: %v", err)
-		return nil // Allow service to start with empty state
+		// Allow service to start with empty state
+		return nil
 	}
 
 	var persistentState PersistentState
@@ -88,14 +90,16 @@ func (p *ConfigPersistence) LoadState() error {
 		} else {
 			logger.Info("Corrupted state file backed up to: %s", backupPath)
 		}
-		return nil // Allow service to start with empty state
+		// Allow service to start with empty state
+		return nil
 	}
 
 	// Verify checksum without holding any locks
 	calculatedChecksum, err := p.calculateChecksum(persistentState.State)
 	if err != nil {
 		logger.Error("Failed to calculate checksum: %v", err)
-		return nil // Allow service to start with empty state
+		// Allow service to start with empty state
+		return nil
 	}
 
 	if calculatedChecksum != persistentState.Checksum {
@@ -107,7 +111,8 @@ func (p *ConfigPersistence) LoadState() error {
 		} else {
 			logger.Info("Corrupted state file backed up to: %s", backupPath)
 		}
-		return nil // Allow service to start with empty state
+		// Allow service to start with empty state
+		return nil
 	}
 
 	// Apply state entries

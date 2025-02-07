@@ -117,12 +117,12 @@ func (u *Updater) PerformUpdate(newBinaryPath string) error {
 	return syscall.Exec(currentBinaryPath, os.Args, os.Environ())
 }
 
-func (u *Updater) PerformRemoteUpdate(message BinaryMessage) error {
+func (u *Updater) PerformRemoteUpdate(message VersionMessage) error {
 
 	logger := logging.GetLogger()
 
 	switch message.Type {
-	case RollbackBinary:
+	case VersionRollback:
 		var rollback BinaryRollback
 		if err := json.Unmarshal(message.Payload, &rollback); err != nil {
 			return err
@@ -135,7 +135,7 @@ func (u *Updater) PerformRemoteUpdate(message BinaryMessage) error {
 		}
 		return nil
 
-	case UpdateBinary:
+	case VersionUpdate:
 		var update BinaryUpdate
 		if err := json.Unmarshal(message.Payload, &update); err != nil {
 			return err

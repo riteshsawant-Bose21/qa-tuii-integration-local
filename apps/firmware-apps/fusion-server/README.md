@@ -162,10 +162,6 @@ Local builds are good for developing the various server components without deali
    - `GET /getValue` - Retrieve configuration value(s)
    - `GET /ws` - WebSocket endpoint for real-time updates
 
-**State Management**
-   - `POST /upload` - Import configuration state
-   - `GET /download` - Export configuration state
-
 ### Set a single value
 This will set a single value.
 ```bash
@@ -323,26 +319,26 @@ multipass exec fusion1 -- bash -c "echo '{
 A new fusion-server binary can be pushed and propogated across all running instances.
   
 There are endpoints for updating the binary and rolling back a binary.
-  - `POST /updateBinary` - Post a new binary to replace the running fusion-server instance.
-  - `POST /rollbackBinary` - Rollback a binary a certain number of previous updates.
+  - `POST /updateVersion` - Post a new binary to replace the running fusion-server instance.
+  - `POST /rollbackVersion` - Rollback a binary a certain number of previous updates.
 
 
 The curl command can also be used to call the endpoints from the command line.
 ```bash
-shasum -a 256 build/fusion-server_darwin_arm64 
+shasum -a 256 build/fusion-server_linux_arm64 
 
 curl -X POST \
   -F "binary=@your_server_binary" \
   -F "checksum=8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92" \
-  http://localhost:8080/updateBinary
+  http://localhost:8080/updateVersion
 ```
 
 The checksum of the new binary can be calculated as part of the curl command.
 ```bash
 curl -X POST \
-  -F "binary=@build/fusion-server_darwin_arm64" \
-  -F "checksum=$(shasum -a 256 build/fusion-server_darwin_arm64  | cut -d ' ' -f 1)" \
-  http://localhost:8080/updateBinary
+  -F "binary=@build/fusion-server_linux_arm64" \
+  -F "checksum=$(shasum -a 256 build/fusion-server_linux_arm64  | cut -d ' ' -f 1)" \
+  http://192.168.64.100:8080/updateVersion
 ```
 
 ## Basic Commands

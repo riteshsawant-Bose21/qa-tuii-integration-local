@@ -8,10 +8,10 @@ import (
 )
 
 const (
-	RollbackBinary = "binary_rollback"
-	UpdateBinary   = "binary_update"
-	UpdateChunk    = "binary_chunk"
-	UpdateMetadata = "binary_metadata"
+	VersionRollback = "binary_rollback"
+	VersionUpdate   = "binary_update"
+	UpdateChunk     = "binary_chunk"
+	UpdateMetadata  = "binary_metadata"
 )
 
 type BinaryAssembler struct {
@@ -27,7 +27,7 @@ type BinaryChunk struct {
 	Final  bool   `json:"final"`  // Indicates if this is the last chunk
 }
 
-type BinaryMessage struct {
+type VersionMessage struct {
 	Type    string          `json:"type"`
 	Payload json.RawMessage `json:"payload"`
 }

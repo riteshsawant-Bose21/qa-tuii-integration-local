@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"fusion/internal/logging"
 	"io"
 	"net/http"
 	"os"
@@ -15,21 +14,24 @@ import (
 	"sync"
 	"time"
 
+	"fusion/internal/api"
+	"fusion/internal/logging"
+
 	"github.com/gorilla/websocket"
+	"github.com/hashicorp/memberlist"
 )
 
 const (
-	contentType        = "Content-Type"
-	jsonContentType    = "application/json"
 	keepalivedConfPath = "/etc/keepalived/keepalived.conf"
 )
 
 type ConfigServer struct {
-	nodeName  string
-	handler   *Handler
-	wsClients map[*websocket.Conn]bool
-	wsLock    sync.RWMutex
-	upgrader  websocket.Upgrader
+	nodeName    string
+	handler     *Handler
+	wsClients   map[*websocket.Conn]bool
+	wsLock      sync.RWMutex
+	upgrader    websocket.Upgrader
+	clusterList *memberlist.Memberlist
 }
 
 type Endpoints struct {
@@ -38,7 +40,7 @@ type Endpoints struct {
 	Metrics   string   `json:"metrics"`
 }
 
-func NewConfigServer(nodeName string, handler *Handler) *ConfigServer {
+func NewConfigServer(nodeName string, handler *Handler, clusterList *memberlist.Memberlist) *ConfigServer {
 	server := &ConfigServer{
 		nodeName:  nodeName,
 		handler:   handler,
@@ -52,6 +54,7 @@ func NewConfigServer(nodeName string, handler *Handler) *ConfigServer {
 			ReadBufferSize:    1024,
 			WriteBufferSize:   1024,
 		},
+		clusterList: clusterList,
 	}
 	handler.AddBroadcaster(server)
 	return server
@@ -94,7 +97,7 @@ func (s *ConfigServer) GetValue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set(contentType, jsonContentType)
+	w.Header().Set(api.ContentType, api.JsonContentType)
 	json.NewEncoder(w).Encode(response)
 }
 
@@ -123,7 +126,7 @@ func (s *ConfigServer) SetValue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set(contentType, jsonContentType)
+	w.Header().Set(api.ContentType, api.JsonContentType)
 	json.NewEncoder(w).Encode(response)
 }
 
@@ -177,13 +180,7 @@ func (s *ConfigServer) UpdateValue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Calculate the difference between configData and updatedData
 	diffData := calculateDiff(originalConfig, updatedData)
-
-	logger := logging.GetLogger()
-	logger.Debug("------------------>>>>> %v", originalConfig)
-	logger.Debug("------------------>>>>> %v", updatedData)
-	logger.Debug("------------------>>>>> %v", diffData)
 
 	response := map[string]interface{}{
 		"status":  "success",
@@ -191,7 +188,7 @@ func (s *ConfigServer) UpdateValue(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Return the response as JSON
-	w.Header().Set(contentType, jsonContentType)
+	w.Header().Set(api.ContentType, api.JsonContentType)
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		http.Error(w, fmt.Sprintf("Error encoding response: %v", err), http.StatusInternalServerError)
 	}
@@ -210,7 +207,7 @@ func (s *ConfigServer) DumpState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set(contentType, jsonContentType)
+	w.Header().Set(api.ContentType, api.JsonContentType)
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=config_export_%s.json",
 		time.Now().UTC().Format("20060102_150405")))
 
@@ -233,13 +230,19 @@ func (s *ConfigServer) GetEndpoints(w http.ResponseWriter, r *http.Request) {
 		logging.GetLogger().Error("Unable to get VIP: %v", err)
 	}
 
-	endpoints := Endpoints{
-		API:       vip + ":8080",
-		Telemetry: []string{vip + ":7070"},
-		Metrics:   vip + ":9090",
+	clusterAddresses := s.getClusterIPs()
+	var addressesWithPort []string
+	for _, addr := range clusterAddresses {
+		addressesWithPort = append(addressesWithPort, addr+api.ZMQPort)
 	}
 
-	w.Header().Set(contentType, jsonContentType)
+	endpoints := Endpoints{
+		API:       vip + api.HTTPPort,
+		Telemetry: addressesWithPort,
+		Metrics:   vip + api.MetricsPort,
+	}
+
+	w.Header().Set(api.ContentType, api.JsonContentType)
 	json.NewEncoder(w).Encode(endpoints)
 }
 
@@ -347,6 +350,15 @@ func (s *ConfigServer) getVIPFromKeepalivedConfig(configPath string) (string, er
 	return vip, nil
 }
 
+func (s *ConfigServer) getClusterIPs() []string {
+	var ips []string
+	for _, member := range s.clusterList.Members() {
+		// Extract IP address of each member
+		ips = append(ips, member.Addr.String())
+	}
+	return ips
+}
+
 func (s *ConfigServer) handleWebSocketMessage(conn *websocket.Conn, data []byte) {
 	response, err := s.handler.HandleWebSocketMessage(data)
 	if err != nil {
@@ -376,7 +388,7 @@ func (s *ConfigServer) DownloadState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set(contentType, jsonContentType)
+	w.Header().Set(api.ContentType, api.JsonContentType)
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=config_export_%s.json",
 		time.Now().UTC().Format("20060102_150405")))
 
@@ -400,22 +412,29 @@ func (s *ConfigServer) HandleRoot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set(contentType, jsonContentType)
+	w.Header().Set(api.ContentType, api.JsonContentType)
 	json.NewEncoder(w).Encode(info)
 }
 
-func (s *ConfigServer) UpdateBinary(w http.ResponseWriter, r *http.Request) {
+func (s *ConfigServer) UpdateVersion(w http.ResponseWriter, r *http.Request) {
 	if !s.IsPostRequest(w, r) {
 		return
 	}
-	s.handler.HandleBinaryUpdate(w, r)
+	s.handler.HandleVersionUpdate(w, r)
 }
 
-func (s *ConfigServer) RollbackBinary(w http.ResponseWriter, r *http.Request) {
+func (s *ConfigServer) RollbackVersion(w http.ResponseWriter, r *http.Request) {
 	if !s.IsPostRequest(w, r) {
 		return
 	}
-	s.handler.HandleBinaryRollback(w, r)
+	s.handler.HandleVersionRollback(w, r)
+}
+
+func (s *ConfigServer) UploadAudio(w http.ResponseWriter, r *http.Request) {
+	if !s.IsPostRequest(w, r) {
+		return
+	}
+	s.handler.HandleAudioUpload(w, r)
 }
 
 func (s *ConfigServer) IsGetRequest(w http.ResponseWriter, r *http.Request) bool {

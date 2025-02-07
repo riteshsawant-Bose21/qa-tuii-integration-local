@@ -17,7 +17,6 @@ import (
 
 const (
 	checkInterval = 10
-	httpPort      = "8080"
 )
 
 // StartHealthCheck starts monitoring cluster health
@@ -62,7 +61,7 @@ func StartStateVerification(list *memberlist.Memberlist, stateManager *server.St
 					continue
 				}
 
-				url := fmt.Sprintf("http://%s:%s/getValue", member.Addr.String(), httpPort)
+				url := fmt.Sprintf("http://%s%s/getValue", member.Addr.String(), api.HTTPPort)
 				resp, err := http.Get(url)
 				if err != nil {
 					logging.GetLogger().Warn("Failed to get state from %s: %v", member.Name, err)
