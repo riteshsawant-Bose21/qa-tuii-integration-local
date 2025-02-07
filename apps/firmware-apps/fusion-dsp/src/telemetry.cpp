@@ -21,6 +21,14 @@ void Telemetry::assign(const T *value)
 
 
 template <typename T>
+void Telemetry::assign(const T *value, T (*conversion_function)(T))
+{
+    TelemetryDataScalar<T> *telemetry_data = dynamic_cast<TelemetryDataScalar<T> *>(this);
+    telemetry_data->assign(value, conversion_function);
+}
+
+
+template <typename T>
 void Telemetry::assign(const T *value, std::function<void()> pre_function)
 {
     TelemetryDataScalar<T> *telemetry_data = dynamic_cast<TelemetryDataScalar<T> *>(this);
@@ -33,6 +41,14 @@ void Telemetry::assign(DspTelemetryMemory<T[]> &value)
 {
     TelemetryDataVector<T> *telemetry_data = dynamic_cast<TelemetryDataVector<T> *>(this);
     telemetry_data->assign(value);
+}
+
+
+template <typename T>
+void Telemetry::assign(DspTelemetryMemory<T[]> &value, T (*conversion_function)(T))
+{
+    TelemetryDataVector<T> *telemetry_data = dynamic_cast<TelemetryDataVector<T> *>(this);
+    telemetry_data->assign(value, conversion_function);
 }
 
 
@@ -53,6 +69,14 @@ void Telemetry::assign(DspTelemetryMemory<T*[]> &value)
 
 
 template <typename T>
+void Telemetry::assign(DspTelemetryMemory<T*[]> &value, T (*conversion_function)(T))
+{
+    TelemetryDataMatrix<T> *telemetry_data = dynamic_cast<TelemetryDataMatrix<T> *>(this);
+    telemetry_data->assign(value, conversion_function);
+}
+
+
+template <typename T>
 void Telemetry::assign(DspTelemetryMemory<T*[]> &value, std::function<void(int, int)> pre_function)
 {
     TelemetryDataMatrix<T> *telemetry_data = dynamic_cast<TelemetryDataMatrix<T> *>(this);
@@ -69,10 +93,13 @@ void Telemetry::assign(DspTelemetryMemory<T*[]> &value, std::function<void(int, 
     X(std::string)
 #define X(t) \
     template void Telemetry::assign<t>(const t *value); \
+    template void Telemetry::assign<t>(const t *value, t (* conversion_function)(t)); \
     template void Telemetry::assign<t>(const t *value, std::function<void()> pre_function); \
     template void Telemetry::assign<t>(DspTelemetryMemory<t[]> &value); \
+    template void Telemetry::assign<t>(DspTelemetryMemory<t[]> &value, t (*conversion_function)(t)); \
     template void Telemetry::assign<t>(DspTelemetryMemory<t[]> &value, std::function<void(int)> pre_function); \
     template void Telemetry::assign<t>(DspTelemetryMemory<t*[]> &value); \
+    template void Telemetry::assign<t>(DspTelemetryMemory<t*[]> &value, t (* conversion_function)(t)); \
     template void Telemetry::assign<t>(DspTelemetryMemory<t*[]> &value, std::function<void(int, int)> pre_function);
 DECLARE_TEMPLATE_METER_TYPES
 #undef X
