@@ -166,10 +166,16 @@ func (sm *StateManager) ApplyUpdate(update api.ConfigUpdate) error {
 	sm.Lock()
 	defer sm.Unlock()
 
-	if len(update.Data) == 0 {
+	// If the Clear flag is set, clear the state and return immediately.
+	if update.Clear {
 		sm.state = make(map[string]*api.StateEntry)
 		sm.version = update.Version
 		sm.notifySubscribers()
+		return nil
+	}
+
+	// If there's no data to apply, do nothing.
+	if len(update.Data) == 0 {
 		return nil
 	}
 
@@ -210,7 +216,12 @@ func (sm *StateManager) GetFullState() map[string]*api.StateEntry {
 	defer sm.RUnlock()
 	stateCopy := make(map[string]*api.StateEntry, len(sm.state))
 	for k, v := range sm.state {
-		stateCopy[k] = v
+		entryCopy := api.StateEntry{
+			Data:      v.Data,
+			Version:   v.Version,
+			Timestamp: v.Timestamp,
+		}
+		stateCopy[k] = &entryCopy
 	}
 	return stateCopy
 }
@@ -276,6 +287,14 @@ func TransformState(state map[string]*api.StateEntry) map[string]interface{} {
 		result[key] = entry.Data
 	}
 	return result
+}
+
+func (sm *StateManager) SetState(state map[string]*api.StateEntry) {
+	sm.RLock()
+	defer sm.RUnlock()
+	sm.state = state
+	sm.version = time.Now().UnixNano()
+	sm.notifySubscribers()
 }
 
 func mergeMaps(existing, update map[string]interface{}) map[string]interface{} {

@@ -39,8 +39,8 @@ func NewConfigPersistence(filePath string, stateManager *StateManager, verbose b
 	}
 }
 
-// calculateChecksum generates a SHA-256 hash of the state
-func (p *ConfigPersistence) calculateChecksum(state map[string]*api.StateEntry) (string, error) {
+// CalculateChecksum generates a SHA-256 hash of the state
+func (p *ConfigPersistence) CalculateChecksum(state map[string]*api.StateEntry) (string, error) {
 	data, err := json.Marshal(state)
 	if err != nil {
 		return "", err
@@ -95,7 +95,7 @@ func (p *ConfigPersistence) LoadState() error {
 	}
 
 	// Verify checksum without holding any locks
-	calculatedChecksum, err := p.calculateChecksum(persistentState.State)
+	calculatedChecksum, err := p.CalculateChecksum(persistentState.State)
 	if err != nil {
 		logger.Error("Failed to calculate checksum: %v", err)
 		// Allow service to start with empty state
@@ -137,7 +137,7 @@ func (p *ConfigPersistence) SaveState() error {
 
 	// Get current state
 	state := p.stateManager.GetFullState()
-	checksum, err := p.calculateChecksum(state)
+	checksum, err := p.CalculateChecksum(state)
 	if err != nil {
 		return fmt.Errorf("failed to calculate checksum: %v", err)
 	}
@@ -217,7 +217,7 @@ func (p *ConfigPersistence) SaveState() error {
 
 func (p *ConfigPersistence) MarkDirty() {
 
-	if time.Since(p.lastSave) < p.saveDebounce {
+	if time.Since(p.getLastSave()) < p.saveDebounce {
 		time.Sleep(p.saveDebounce)
 	}
 
@@ -242,7 +242,7 @@ func (p *ConfigPersistence) ValidateStateFile() error {
 		return fmt.Errorf("failed to decode state file: %v", err)
 	}
 
-	calculatedChecksum, err := p.calculateChecksum(persistentState.State)
+	calculatedChecksum, err := p.CalculateChecksum(persistentState.State)
 	if err != nil {
 		return fmt.Errorf("failed to calculate checksum: %v", err)
 	}
@@ -252,4 +252,11 @@ func (p *ConfigPersistence) ValidateStateFile() error {
 	}
 
 	return nil
+}
+
+// getLastSave returns the last save time safely
+func (p *ConfigPersistence) getLastSave() time.Time {
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
+	return p.lastSave
 }
