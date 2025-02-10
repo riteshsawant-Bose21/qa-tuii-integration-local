@@ -21,6 +21,9 @@ import (
 )
 
 var (
+	Version     string
+	Commit      string
+	BuildTime   string
 	nodeName    string
 	bindAddr    string
 	bindPort    int
@@ -98,6 +101,7 @@ func withWebSocketMetrics(handler http.HandlerFunc, metrics *cluster.MetricsColl
 
 // parseFlags parses and validates command-line flags.
 func parseFlags() {
+	versionFlag := flag.Bool("version", false, "Show version information")
 	flag.StringVar(&nodeName, "name", "", "Node name")
 	flag.StringVar(&bindAddr, "addr", "0.0.0.0", "Bind address")
 	flag.IntVar(&bindPort, "port", 7946, "Bind port")
@@ -105,6 +109,11 @@ func parseFlags() {
 	metricsPort = flag.Int("metrics-port", 9090, "Metrics server port")
 	verbose = flag.Bool("verbose", false, "Verbose output")
 	flag.Parse()
+
+	if *versionFlag {
+		fmt.Printf("Version: %s\nCommit: %s\nBuild Time: %s\n", Version, Commit, BuildTime)
+		os.Exit(0)
+	}
 
 	if nodeName == "" {
 		logging.GetLogger().Fatal("Node name is required")
@@ -228,10 +237,11 @@ func startAPIServer(port string, wg *sync.WaitGroup) {
 }
 
 func main() {
-	logger := initLogging(nodeName)
-	defer logger.Close()
 
 	parseFlags()
+
+	logger := initLogging(nodeName)
+	defer logger.Close()
 
 	stateManager := initStateManager(nodeName)
 	persistence := initPersistence(configDataPath, stateManager)
@@ -272,6 +282,7 @@ func main() {
 
 	time.Sleep(100 * time.Millisecond)
 	logger.Info("%s is ALIVE and RUNNING", nodeName)
+	logger.Info("Version: %s Commit: %s Build Time: %s", Version, Commit, BuildTime)
 
 	wg.Wait()
 }

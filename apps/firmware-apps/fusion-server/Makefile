@@ -7,8 +7,15 @@ BINARY_NAME=fusion-server
 MAIN_PATH=fusion/cmd/fusion
 BUILD_DIR=build
 BUILD_FLAGS=-tags netgo,osusergo
-LDFLAGS=-ldflags '-extldflags "-static"'
 DEBUG_FLAGS=-gcflags "all=-N -l"
+
+# Versioning
+VERSION ?= 1.0.0-alpha.1
+COMMIT := $(shell git rev-parse --short HEAD)
+BUILD_TIME := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
+
+# LDFLAGS to embed version info
+LDFLAGS=-ldflags "-X main.Version=$(VERSION) -X main.Commit=$(COMMIT) -X main.BuildTime=$(BUILD_TIME)"
 
 # Force disable buffering for all commands
 SHELL := /bin/bash
@@ -54,7 +61,7 @@ build-linux-arm64:
 
 build-darwin-arm64:
 	mkdir -p $(BUILD_DIR)
-	cd fusion && CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 $(GOBUILD) $(BUILD_FLAGS) $(DEBUG_FLAGS) -o ../$(BUILD_DIR)/$(BINARY_NAME)_darwin_arm64 -v ./cmd/fusion
+	cd fusion && CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 $(GOBUILD) $(BUILD_FLAGS) $(DEBUG_FLAGS) $(LDFLAGS) -o ../$(BUILD_DIR)/$(BINARY_NAME)_darwin_arm64 -v ./cmd/fusion
 	cd $(BUILD_DIR) && ln -sf $(BINARY_NAME)_darwin_arm64 fusion-server
 	
 # Development helpers
@@ -89,4 +96,3 @@ help:
 	@echo " build-all - Build for all platforms"
 
 .PHONY: all build clean run deps tidy fmt vet lint build-linux-amd64 build-linux-arm32 build-linux-arm64 build-darwin-arm64 build-all help
-	
