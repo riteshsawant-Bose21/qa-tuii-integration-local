@@ -116,7 +116,7 @@
                 {
                     "name": "bypass",
                     "value_type": "bool",
-                    "default_value": false
+                    "default_value": true
                 }
             ],
             "telemetry": [
