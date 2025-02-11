@@ -80,4 +80,4 @@ def build(bld):
                 source=bld.path.ant_glob(['src/*.cc']),
                 use=['default-include'],
                 # Note: pthread or mac-threads is determined above.
-                lib=['boost_program_options', 'spdlog', 'fmt', 'jsoncpp'])
+                lib=['boost_program_options', 'spdlog', 'fmt', 'jsoncpp', 'zmq'])
