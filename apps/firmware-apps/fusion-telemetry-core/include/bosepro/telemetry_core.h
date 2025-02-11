@@ -6,6 +6,8 @@
 #include <memory>
 #include <string>
 #include <variant>
+#include <zmq.h>
+#include <zmq.hpp>
 #include "navigator.h"
 #include "telemetry_configuration.h"
 #include "named_shared_memory_manager_factory.h"
@@ -217,58 +219,72 @@ class telemetryPublisher
         uint32_t comm_fail_count;
 };
 
-class telemetrySubscriber
+class telemetrySubscriberInterfaceBase
 {
     public:
-        telemetrySubscriber(std::string& sub_name,
-                            const telmVariantSockAddr& sub_addr):
-                            name(sub_name)
+        virtual int  init() = 0;
+        virtual int  attach(std::string&) = 0;   // Bind or connect
+        virtual int send(const std::string&) = 0;
+};
+
+class telemetrySubscriberZmqInterface : public telemetrySubscriberInterfaceBase
+{
+    public:
+        telemetrySubscriberZmqInterface(): telm_zmq_context(1) {}
+
+        ~telemetrySubscriberZmqInterface()
         {
-            v_sock_addr = new telmVariantSockAddr(sub_addr);
-            comm_fail_count = 0;
+            telm_zmq_socket.close();
         }
 
-        ~telemetrySubscriber()
+        int init() override
         {
-            delete v_sock_addr;
+            int ret_val = 0;
+
+            telm_zmq_socket = zmq::socket_t(telm_zmq_context, ZMQ_PUB);
+
+            return ret_val;
         }
 
-        /// Get socket address of the Subscriber
-        ///
-        /// @param  pub_sock_addr  Return Socket address
-        /// @param  sock_type      Returns socket type (UNIX/Internet)
-        void get_address(telmVariantSockAddr& sub_sock_addr, int& sock_type)
+        int attach(std::string& addr) override
         {
-            sub_sock_addr = *v_sock_addr;
-            sock_type = v_sock_addr->index();
+            telm_zmq_socket.bind(addr.c_str());
+
+            return 0;
         }
 
-        uint32_t increment_fail_comm()
+        int send(const std::string& pub_data) override
         {
-            return ++comm_fail_count;
-        }
+            int ret_val = 0;
+            zmq::message_t msg(pub_data.size());
+            memcpy(msg.data(), pub_data.c_str(), pub_data.size());
 
-        void reset_fail_comm()
-        {
-            comm_fail_count = 0;
-        }
-
-        uint32_t get_comm_fail_cnt()
-        {
-            return comm_fail_count;
+            try
+            {
+                auto send_res = telm_zmq_socket.send(msg,
+                                                     zmq::send_flags::none);
+                if (send_res.has_value())
+                {
+                    SPDLOG_DEBUG("Message sent successfully ({} bytes)",
+                                 send_res.value());
+                }
+                else
+                {
+                    SPDLOG_ERROR("Message send failed, EAGAIN encountered.");
+                    ret_val = -1;
+                }
+            }
+            catch (const zmq::error_t& e)
+            {
+                SPDLOG_ERROR("Error sending message: {}", e.what());
+                ret_val = -1;
+            }
+            return ret_val;
         }
 
     private:
-        /// Subscriber name
-        std::string name;
-
-        /// Subscriber socket address.
-        /// The address is stored as a 'variant' to accomodate either
-        /// UNIX or Internet socket type.
-        telmVariantSockAddr *v_sock_addr;
-
-        uint32_t comm_fail_count;
-
+        zmq::context_t telm_zmq_context;
+        zmq::socket_t  telm_zmq_socket;
 };
 
 class telemetryManager
@@ -285,7 +301,6 @@ class telemetryManager
             int null_fd = 0;
 
             clear_publishers();
-            clear_subscribers();
 
             set_socket_descriptors(null_fd, null_fd);
 
@@ -309,6 +324,7 @@ class telemetryManager
         ///                        periods for the system.
         /// @return Success(0)/Failure (-1)
         int init(std::string& core_ip, std::string& core_path,
+                 std::string& pub_sock_address,
                  std::vector<uint32_t>& update_periods,
                  std::vector<uint32_t>& report_periods)
         {
@@ -330,17 +346,6 @@ class telemetryManager
                 core_ip_port = std::stoi(core_ip.substr(port_idx+1));
             }
 
-            if ( ((report_periods[TELM_METER_CTGRY_HI_PRIO] %
-                      update_periods[TELM_METER_CTGRY_HI_PRIO]) != 0)  ||
-                    ((report_periods[TELM_METER_CTGRY_MED_PRIO] %
-                      update_periods[TELM_METER_CTGRY_MED_PRIO]) != 0) ||
-                    ((report_periods[TELM_METER_CTGRY_LO_PRIO] %
-                      update_periods[TELM_METER_CTGRY_LO_PRIO]) != 0))
-            {
-                SPDLOG_CRITICAL("Reporting periods MUST be multiple of Update periods");
-                ret_val = -1;
-            }
-
             if (ret_val == 0)
             {
                 if (set_meter_update_periods(update_periods) != 0)
@@ -348,7 +353,10 @@ class telemetryManager
                     SPDLOG_CRITICAL("Invalid \"update periods\"");
                     ret_val = -1;
                 }
-                SPDLOG_DEBUG("Update periods: {} {} {}", hi_update_period_frames, med_update_period_frames, lo_update_period_frames);
+                SPDLOG_DEBUG("Update periods: {} {} {}",
+                              hi_update_period_frames,
+                              med_update_period_frames,
+                              lo_update_period_frames);
             }
 
             if (ret_val == 0)
@@ -358,25 +366,27 @@ class telemetryManager
                     SPDLOG_CRITICAL("Invalid \"report periods\"");
                     ret_val = -1;
                 }
-                SPDLOG_DEBUG("Report periods: {} {} {}", hi_report_period_frames, med_report_period_frames, lo_report_period_frames);
+                SPDLOG_DEBUG("Report periods: {} {} {}",
+                              hi_report_period_frames,
+                              med_report_period_frames,
+                              lo_report_period_frames);
             }
 
             if (ret_val == 0)
             {
-                report_period_factor[TELM_METER_CTGRY_HI_PRIO] =
-                    report_periods[TELM_METER_CTGRY_HI_PRIO] /
-                    update_periods[TELM_METER_CTGRY_HI_PRIO];
-
-                report_period_factor[TELM_METER_CTGRY_MED_PRIO] =
-                    report_periods[TELM_METER_CTGRY_MED_PRIO] /
-                    update_periods[TELM_METER_CTGRY_MED_PRIO];
-
-                report_period_factor[TELM_METER_CTGRY_LO_PRIO] =
-                    report_periods[TELM_METER_CTGRY_LO_PRIO] /
-                    update_periods[TELM_METER_CTGRY_LO_PRIO];
-
-                init_success = true;
-                SPDLOG_DEBUG("Report Factors: {} {} {}", report_period_factor[0],report_period_factor[1],report_period_factor[2]);
+                // Initialize socket for meter data TX.
+                if (subscriber_channel.init() == 0)
+                {
+                    if (subscriber_channel.attach(pub_sock_address) == 0)
+                    {
+                        init_success = true;
+                    }
+                    else
+                    {
+                        SPDLOG_ERROR("Socket bind failed! ");
+                        ret_val = -1;
+                    }
+                }
             }
 
             return ret_val;
@@ -492,102 +502,6 @@ class telemetryManager
             return ret_val;
         }
 
-        /// Add new subscriber to registerd list
-        ///
-        /// @param  sub_name  Subscriber name
-        /// @param  sub_addr  Subscriber address
-        /// @return Success(0)/Failure (-1)
-        int add_subscriber(std::string sub_name,
-                           const telmVariantSockAddr& sub_addr)
-        {
-            int ret_val = 0;
-
-            auto new_entry = subscribers.emplace(
-                    sub_name,
-                    std::make_unique<telemetrySubscriber>(sub_name,sub_addr));
-
-            //Check list if already exists and Insert into Publisher list
-            //(emplace returns false if key already existe
-            if (!new_entry.second)
-            {
-                SPDLOG_ERROR("Subscriber '{}' already exists.", sub_name);
-                ret_val = -1;
-            }
-            else
-            {
-                // Increment subscriber count
-                //subscriber_count[sock_addr.index()]++;
-                subscriber_count[sub_addr.index()]++;
-            }
-
-            return ret_val;;
-        }
-
-        /// Register a new subscriber to the system
-        /// This is used to register external subscribers.
-        ///
-        /// @param   sub_name  Subscriber name.
-        /// @param   pub_addr  Subscriber socket address
-        /// @return Success(0)/Failure (-1)
-        int register_subscriber(std::string sub_name,
-                                const struct sockaddr_in& sub_addr)
-        {
-            int ret_val = 0;
-
-            ret_val = add_subscriber(sub_name, sub_addr);
-
-            return ret_val;;
-        }
-
-        /// Register a new subscriber to the system
-        /// This is used to register internal subscribers.
-        ///
-        /// @param   sub_name  Subscriber name.
-        /// @return Success(0)/Failure (-1)
-        int register_subscriber(std::string sub_name)
-        {
-            int ret_val = 0;
-            struct sockaddr_un sub_addr;
-
-            get_last_rcvd_addr(sub_addr);
-
-            ret_val = add_subscriber(sub_name, sub_addr);
-
-            return ret_val;;
-        }
-
-        /// Deregister an existing subscriber from the system
-        ///
-        /// @param   sub_name  Subscriber name.
-        /// @return Success(0)/Failure (-1)
-        int deregister_subscriber(std::string sub_name)
-        {
-            int ret_val = 0;
-
-            std::map<std::string,
-                     std::unique_ptr<telemetrySubscriber>>::iterator sub_it;
-            sub_it =  subscribers.find(sub_name);
-
-            if (sub_it != subscribers.end())
-            {
-                telmVariantSockAddr sub_sock_addr;
-                int sock_type;
-
-                // Get Sub. type
-                sub_it->second->get_address(sub_sock_addr, sock_type);
-
-                subscriber_count[sock_type]--;
-                deregister_endpoint_name.assign(sub_name);
-            }
-            else
-            {
-                ret_val = -1;
-                SPDLOG_ERROR("Publiher not found");
-            }
-
-            return ret_val;
-        }
-
         /// Set the system HI, MED & LO meter report periods
         ///
         /// @param   periods  Vector with the 3 period values
@@ -597,7 +511,7 @@ class telemetryManager
             int ret_val = 0;
 
             // Validate periods
-            if ( (periods.size() <= 0)      ||
+            if ( (periods.size() <= 0)                      ||
                  (periods.size() > TELM_METER_CTGRY_MAX)    ||
                  (periods[TELM_METER_CTGRY_HI_PRIO] >=
                         periods[TELM_METER_CTGRY_MED_PRIO]) ||
@@ -611,9 +525,38 @@ class telemetryManager
             }
             else
             {
-                hi_report_period_frames  = periods[TELM_METER_CTGRY_HI_PRIO];
-                med_report_period_frames = periods[TELM_METER_CTGRY_MED_PRIO];
-                lo_report_period_frames  = periods[TELM_METER_CTGRY_LO_PRIO];
+                if ( ((periods[TELM_METER_CTGRY_HI_PRIO] %
+                       hi_update_period_frames) != 0)  ||
+                     ((periods[TELM_METER_CTGRY_MED_PRIO] %
+                       med_update_period_frames) != 0) ||
+                     ((periods[TELM_METER_CTGRY_LO_PRIO] %
+                       lo_update_period_frames) != 0))
+                {
+                    SPDLOG_CRITICAL("Reporting periods MUST be multiple of Update periods");
+                    ret_val = -1;
+                }
+                else
+                {
+                    hi_report_period_frames  =
+                        periods[TELM_METER_CTGRY_HI_PRIO];
+                    med_report_period_frames =
+                        periods[TELM_METER_CTGRY_MED_PRIO];
+                    lo_report_period_frames  =
+                        periods[TELM_METER_CTGRY_LO_PRIO];
+
+                    report_period_factor[TELM_METER_CTGRY_HI_PRIO] =
+                        periods[TELM_METER_CTGRY_HI_PRIO] /
+                        hi_update_period_frames;
+
+                    report_period_factor[TELM_METER_CTGRY_MED_PRIO] =
+                        periods[TELM_METER_CTGRY_MED_PRIO] /
+                        med_update_period_frames;
+
+                    report_period_factor[TELM_METER_CTGRY_LO_PRIO] =
+                        periods[TELM_METER_CTGRY_LO_PRIO] /
+                        lo_update_period_frames;
+
+                }
             }
 
             return ret_val;
@@ -781,11 +724,7 @@ class telemetryManager
         {
             type = TELM_REQUESTER_MAX_TYPE;
 
-            if (subscribers.find(req_name) != subscribers.end())
-            {
-                type = TELM_REQUESTER_SUBSCRIBER_TYPE;
-            }
-            else if (publishers.find(req_name) != publishers.end())
+            if (publishers.find(req_name) != publishers.end())
             {
                 type = TELM_REQUESTER_PUBLISHER_TYPE;
             }
@@ -879,8 +818,8 @@ class telemetryManager
         std::string get_pub_shared_mem_name(std::string pub_name,
                                             enum eMeterCategory meter_type)
         {
-            std::map<std::string, std::unique_ptr<telemetryPublisher>>::iterator
-                                                                      pub_it;
+            std::map<std::string,
+                     std::unique_ptr<telemetryPublisher>>::iterator pub_it;
             pub_it =  publishers.find(pub_name);
 
             if (pub_it != publishers.end())
@@ -937,15 +876,6 @@ class telemetryManager
             return publisher_count[TELM_CONN_TYPE_UNIX_SOCK];
         }
 
-        /// Get number of registered subscribers in the system
-        ///
-        /// @return  Registered Subscribers count.
-        uint32_t get_subscriber_count()
-        {
-            return ( subscriber_count[TELM_CONN_TYPE_UNIX_SOCK] +
-                     subscriber_count[TELM_CONN_TYPE_INTERNET_SOCK]);
-        }
-
         /// Get the publisher name at specified index in the list
         ///
         /// @param index    Index to search
@@ -992,9 +922,7 @@ class telemetryManager
         std::map<std::string,
                  std::unique_ptr<telemetryPublisher>> publishers;
 
-        // Subscriber list
-        std::map<std::string,
-                 std::unique_ptr<telemetrySubscriber>> subscribers;
+        telemetrySubscriberZmqInterface subscriber_channel;
 
         // Message and Response handler registry
         std::map<const std::string, telmPairMsgHdlr> message_handler;
@@ -1022,6 +950,7 @@ class telemetryManager
         uint32_t publisher_count[TELM_CONN_TYPE_MAX];
         uint32_t subscriber_count[TELM_CONN_TYPE_MAX];
 
+        std::string subscriber_port_address; // Socket address for subscribers
         std::string core_sock_path;   // UNIX sockeet path
         std::string core_ip_addr;     // IP address
         uint32_t    core_ip_port;     // Port number
@@ -1094,15 +1023,10 @@ class telemetryManager
 
                 find_type(deregister_endpoint_name, end_type);
 
-                if (end_type == TELM_REQUESTER_SUBSCRIBER_TYPE)
-                {
-                    subscribers.erase(deregister_endpoint_name);
-                }
-                else
+                if (end_type == TELM_REQUESTER_PUBLISHER_TYPE)
                 {
                     publishers.erase(deregister_endpoint_name);
                 }
-
                 deregister_endpoint_name.clear();
             }
 
@@ -1150,12 +1074,6 @@ class telemetryManager
 
             // Delete all publishers
             publishers.clear();
-        }
-
-        void clear_subscribers()
-        {
-            // Delete all subscribers
-            subscribers.clear();
         }
 
         /// Get the source address of the last received packet from the

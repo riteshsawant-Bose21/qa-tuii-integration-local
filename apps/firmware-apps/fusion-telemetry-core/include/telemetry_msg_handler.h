@@ -5,26 +5,6 @@
 
 #define REQ_RESP_ARG_SIZE 256
 
-int process_sub_register_req(bosepro::telemetryManager& telm_mgr,
-                              const bosepro::Telemetry_configuration& proc_pkt,
-                              uint64_t& pkt_id, std::string& req_name,
-                              void *argval);
-int process_sub_register_rsp(bosepro::telemetryManager& telm_mgr,
-                              std::string& req_name,
-                              uint64_t pkt_id, bool ok_nok,
-                              std::ostringstream& message,
-                              void *argval);
-
-int process_sub_deregister_req(bosepro::telemetryManager& telm_mgr,
-                             const bosepro::Telemetry_configuration& proc_pkt,
-                             uint64_t& pkt_id, std::string& req_name,
-                             void *unused);
-int process_sub_deregister_rsp(bosepro::telemetryManager& telm_mgr,
-                             std::string& req_name,
-                             uint64_t pkt_id, bool ok_nok,
-                             std::ostringstream& message,
-                             void *unused);
-
 int process_pub_register_req(bosepro::telemetryManager& telm_mgr,
                              const bosepro::Telemetry_configuration& proc_pkt,
                              uint64_t& pkt_id, std::string& req_name,

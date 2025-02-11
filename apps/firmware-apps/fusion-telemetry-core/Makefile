@@ -1,27 +1,22 @@
 ifeq ($(ARCH),arm64)
-	LIBS = \
-       	-lstdc++ -lrt -lpthread \
-       	-L ${SDK_DIR}/sysroots/cortexa53-crypto-poky-linux/usr/lib \
-       	-lboost_program_options -lspdlog -lfmt -std=c++17
+	LIBS = -L ${SDK_DIR}/sysroots/cortexa53-crypto-poky-linux/usr/lib
 	
-	CXX_CFLAGS = -Wall -I ${SDK_DIR}/sysroots/cortexa53-crypto-poky-linux/usr/include\
-		     -I ./include \
-		     -I ./include/bosepro \
-		     -DSPDLOG_FMT_EXTERNAL -DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE
+	CXX_CFLAGS = -I ${SDK_DIR}/sysroots/cortexa53-crypto-poky-linux/usr/include
 else
 	CC=g++
-	
-	LIBS =\
-	      -lstdc++ -lrt -lpthread -lboost_program_options \
-              -lspdlog -lfmt -std=c++17
-	
-	CXX_CFLAGS = -Wall \
-		     -I ./include \
-		     -I ./include/bosepro \
-		     -DSPDLOG_FMT_EXTERNAL -DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE
+	CXX_CFLAGS = -I /usr/include/jsoncpp
+
 endif
 
 .PHONY: clean  all
+
+LIBS += -lstdc++ -lrt -lpthread -lboost_program_options \
+	-lspdlog -lfmt -lzmq -std=c++17 -ljsoncpp -lzmq
+
+CXX_CFLAGS += -Wall \
+	      -I ./include \
+	      -I ./include/bosepro \
+	      -DSPDLOG_FMT_EXTERNAL -DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE
 
 SRCDIR = src
 OBJDIR = obj

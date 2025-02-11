@@ -5,6 +5,14 @@
             "property": "/tmp/telm_core.socket"
         },
         {
+            "name": "subscriber_socket_path",
+            "property": "tcp://*:5678"
+        },
+        {
+            "name": "fusion_server_port",
+            "property": 7947
+        },
+        {
             "name": "meter_update_period_frames",
             "property": [1, 1500, 1500000]
         },

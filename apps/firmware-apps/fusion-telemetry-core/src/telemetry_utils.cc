@@ -56,8 +56,6 @@ int open_inet_udp_socket(std::string ip_addr, uint32_t port_num)
 
     int sd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (sd < 0) {
-        //TODO: Report error
-
         return -1;
     }
 
@@ -69,22 +67,16 @@ int open_inet_udp_socket(std::string ip_addr, uint32_t port_num)
     int r = setsockopt(sd, SOL_SOCKET, SO_REUSEADDR, (char *)&one,
             sizeof(one));
     if (r < 0) {
-        //TODO: Report error
-
         return -1;
     }
 
     one = 1;
     r = setsockopt(sd, SOL_SOCKET, SO_REUSEPORT, (char *)&one, sizeof(one));
     if (r < 0) {
-        //TODO: Report error
-
         return -1;
     }
 
     if (bind(sd, (struct sockaddr *)&inet_socket_addr, sizeof(inet_socket_addr)) < 0) {
-        //TODO: Report error
-
         return -1;
     }
 

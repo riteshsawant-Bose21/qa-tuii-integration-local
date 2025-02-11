@@ -7,149 +7,10 @@
 #include <list>
 #include <algorithm>
 #include <boost/program_options.hpp>
+#include <boost/json/src.hpp>
 #include "telemetry_core.h"
 #include "telemetry_utils.h"
 #include "telemetry_msg_handler.h"
-
-// Message Format:
-//  "parameters": {
-//     "name": <Name>,
-//     "address": "IP:Port",
-//     "mask": 0
-//  }
-int process_sub_register_req(bosepro::telemetryManager& telm_mgr,
-                             const bosepro::Telemetry_configuration& proc_pkt,
-                             uint64_t& pkt_id, std::string& req_name,
-                             void *unused)
-{
-    std::string sub_address;
-    uint32_t mask;
-    int ret_val = 0;
-
-    (void)mask; //TODO: Remove when mask is used
-
-    // Get Sub name & address
-    if ((proc_pkt.get_value("name", req_name)) &&
-        (proc_pkt.get_value("address", sub_address)))
-    {
-        SPDLOG_DEBUG("Sub. Name: {}, Address: {}", req_name, sub_address);
-
-        //  Process address
-        if (sub_address.compare("0") == 0)
-        {
-            // Register subscriber
-            ret_val = telm_mgr.register_subscriber(req_name);
-        }
-        else
-        {
-            // External Sub
-            std::string sub_ip;
-            uint32_t    sub_port;
-            struct sockaddr_in sub_in_addr;
-
-            std::size_t port_idx = sub_address.find(":");
-            sub_ip = sub_address.substr(0, port_idx);
-            sub_port = std::stoi(sub_address.substr(port_idx+1));
-
-            sub_in_addr.sin_family      = AF_INET;
-            sub_in_addr.sin_port        = htons(sub_port);
-            sub_in_addr.sin_addr.s_addr = inet_addr(sub_ip.c_str());
-
-            // Register subscriber
-            ret_val = telm_mgr.register_subscriber(req_name, sub_in_addr);
-        }
-    }
-    else
-    {
-        ret_val = -1;
-    }
-
-    return ret_val;
-}
-
-// Message Format:
-//   message_name:sub_register_rsp,
-//      packet_id: pkt_id,
-//      parameters:{
-//      name:Sub Name
-//      period:[HI, MED, LO]
-//      value:OK_NOK(0/1)
-//   }
-int process_sub_register_rsp(bosepro::telemetryManager& telm_mgr,
-                             std::string& req_name,
-                             uint64_t pkt_id, bool ok_nok,
-                             std::ostringstream& message,
-                             void *unused)
-{
-    std::vector<int> periods(3,0);
-
-    telm_mgr.get_meter_report_periods(periods);
-
-    message << "{";
-    message << "\"message_name\":\"sub_register_rsp\",";
-    message << "\"packet_id\":" << pkt_id << ",";
-    message << "\"parameters\":{";
-    message << "\"name\":\"" << req_name << "\",";
-    message << "\"period\":[";
-    message << periods[0] << ",";
-    message << periods[1] << ",";
-    message << periods[2] << "],";
-    message << "\"value\":\"" << (ok_nok ? "OK" : "NOK") << "\"";
-    message << "}";
-    message << "}\n";
-
-    return 0;
-}
-
-// Message Format:
-//  "parameters": {
-//     "name": <Name>
-//  }
-int process_sub_deregister_req(bosepro::telemetryManager& telm_mgr,
-                             const bosepro::Telemetry_configuration& proc_pkt,
-                             uint64_t& pkt_id, std::string& req_name,
-                             void *unused)
-{
-    int ret_val = 0;
-
-    // Get Sub name
-    if (proc_pkt.get_value("name", req_name))
-    {
-        SPDLOG_DEBUG("Sub. Name: {}", req_name);
-        ret_val = telm_mgr.deregister_subscriber(req_name);
-    }
-    else
-    {
-        ret_val = -1;
-    }
-
-    return ret_val;
-}
-
-// Message Format:
-//   message_name:sub_register_rsp,
-//      packet_id: pkt_id,
-//      parameters:{
-//      name:sub_name
-//      value:OK_NOK(0/1)
-//   }
-int process_sub_deregister_rsp(bosepro::telemetryManager& telm_mgr,
-                             std::string& req_name,
-                             uint64_t pkt_id, bool ok_nok,
-                             std::ostringstream& message,
-                             void *unused)
-{
-    message << "{";
-    message << "\"message_name\":\"sub_deregister_rsp\",";
-    message << "\"packet_id\":" << pkt_id << ",";
-    message << "\"parameters\":{";
-    message << "\"name\":\"" << req_name << "\",";
-    message << "\"value\":\"" << (ok_nok ? "OK" : "NOK") << "\"";
-    message << "}";
-    message << "}\n";
-
-    return 0;
-}
 
 // Message Format:
 //  "parameters": {
@@ -335,8 +196,6 @@ int process_update_meters_rsp(bosepro::telemetryManager& telm_mgr,
     if ((proc_pkt.get_value("name", req_name)) &&
         (proc_pkt.get_value("value", ok_nok)))
     {
-        //SPDLOG_DEBUG("Pub. Name: {}, Value: {} ", req_name, ok_nok);
-
         // This validates if the response matches one of the
         // requests (process_update_meters_req()).
         ret_val = telm_mgr.validate_update_meter_rsp(pkt_id, req_name,
@@ -378,10 +237,49 @@ int process_meter_data(bosepro::telemetryManager& telm_mgr,
     // Check if it is time to report meter data
     if (ok_nok && telm_mgr.time_to_report_meter(req_name, *meter_type_ptr))
     {
-        size = telm_mgr.get_meter_data(req_name, *meter_type_ptr, meter_data);
+        int err_cnt = 0;
+        while (1)
+        {
+            size = telm_mgr.get_meter_data(req_name,
+                                           *meter_type_ptr,
+                                           meter_data);
+
+            std::stringstream temp;
+            temp << "[" << meter_data << "]";
+
+            // Validate meter data format
+            try {
+                // Handle JSON parsing errors, e.g., invalid syntax,
+                // file not found etc.
+                bosepro::Telemetry_configuration verify_meter(temp);
+
+                ret_val = 0;
+                break;
+
+            } catch (const boost::property_tree::json_parser::json_parser_error& e) {
+                if (++err_cnt >= 5)
+                {
+                    SPDLOG_WARN("Corrupted meter Data!");
+                    break;
+                }
+                else
+                {
+                    SPDLOG_DEBUG("JSON parser error: {} at line {}",
+                                 e.what(), e.line());
+                    continue;
+                }
+            } catch (const std::exception& e) {
+                // Handle other standard exceptions that might occur
+                SPDLOG_ERROR("Standard exception: {} ", e.what());
+            } catch (...) {
+                // Handle any other unexpected exceptions
+                SPDLOG_ERROR("Unknown exception occurred ");
+            }
+
+        } //while(1)
 
         SPDLOG_DEBUG("Meter Data SIze: {}", size);
-        if (size > 0)
+        if ((ret_val == 0) && (size > 0) )
         {
             uint64_t tx_pkt_id = get_realtime_ns();
 
@@ -389,20 +287,18 @@ int process_meter_data(bosepro::telemetryManager& telm_mgr,
             {
                 case TELM_METER_CTGRY_HI_PRIO:
                     meter_type.assign("HI");
-                    ret_val = 0;
                     break;
 
                 case TELM_METER_CTGRY_MED_PRIO:
                     meter_type.assign("MED");
-                    ret_val = 0;
                     break;
 
                 case TELM_METER_CTGRY_LO_PRIO:
                     meter_type.assign("LO");
-                    ret_val = 0;
                     break;
 
                 default:
+                    ret_val = -1;
                     SPDLOG_ERROR("Invalid meter type");
             }
 
@@ -416,11 +312,10 @@ int process_meter_data(bosepro::telemetryManager& telm_mgr,
                 message << "\"name\":\"" << req_name << "\",";
                 message << "\"type\":\"" << meter_type << "\",";
                 message << "\"length\":" << meter_data.size() << ",";
-                message << "\"value\":" << meter_data;
+                message << "\"value\":[" << meter_data << "]";
                 message << "}";
                 message << "}\n";
             }
-
         }
     }
 

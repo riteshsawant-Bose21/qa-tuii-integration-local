@@ -7,33 +7,17 @@ uint64_t get_realtime_ns();
 int bosepro::telemetryManager::send_data(const std::string destination_name,
                                          std::ostringstream& message)
 {
-    enum etelemetryEndpointTypes end_type;
-    int ret_val = 0;
+    //enum etelemetryEndpointTypes end_type;
+    int ret_val = -1;
     telmVariantSockAddr sock_addr;
+    std::map<std::string,
+             std::unique_ptr<telemetryPublisher>>::iterator pub_it;
 
-    find_type(destination_name, end_type);
-
-    if (end_type == TELM_REQUESTER_SUBSCRIBER_TYPE)
+    pub_it =  publishers.find(destination_name);
+    if (pub_it != publishers.end())
     {
-        int sock_type;
-
-        // Get address
-        subscribers[destination_name]->get_address(sock_addr, sock_type);
-    }
-    else if (end_type == TELM_REQUESTER_PUBLISHER_TYPE)
-    {
-        // Get address
         publishers[destination_name]->get_address(sock_addr);
-    }
-    else
-    {
-        // Not Found
-        SPDLOG_ERROR("Endpoint '{}' not found!", destination_name);
-        ret_val = -1;
-    }
 
-    if (ret_val == 0)
-    {
         if ( (socket_fd[TELM_CONN_TYPE_UNIX_SOCK] == 0) ||
                 (socket_fd[TELM_CONN_TYPE_INTERNET_SOCK] == 0))
         {
@@ -45,28 +29,13 @@ int bosepro::telemetryManager::send_data(const std::string destination_name,
 
             if (ret_val == -1)
             {
-                if (end_type == TELM_REQUESTER_SUBSCRIBER_TYPE)
-                {
-                    subscribers[destination_name]->increment_fail_comm();
-                }
-                else if (end_type == TELM_REQUESTER_PUBLISHER_TYPE)
-                {
-                    publishers[destination_name]->increment_fail_comm();
-                }
-
                 // TX Fail
+                publishers[destination_name]->increment_fail_comm();
                 SPDLOG_ERROR("Send message fail!");
             }
             else
             {
-                if (end_type == TELM_REQUESTER_SUBSCRIBER_TYPE)
-                {
-                    subscribers[destination_name]->reset_fail_comm();
-                }
-                else if (end_type == TELM_REQUESTER_PUBLISHER_TYPE)
-                {
-                    publishers[destination_name]->reset_fail_comm();
-                }
+                publishers[destination_name]->reset_fail_comm();
             }
         }
     }
@@ -251,14 +220,8 @@ void bosepro::telemetryManager::send_update_request()
 
 int bosepro::telemetryManager::send_meter_data(std::ostringstream& meter_data)
 {
-    int ret_val = 0;
 
-    for (auto& subs : subscribers)
-    {
-        ret_val |= send_data(subs.first, meter_data);
-    }
-
-    return ret_val;
+    return subscriber_channel.send(meter_data.str());
 }
 
 int bosepro::telemetryManager::validate_update_meter_rsp(
@@ -280,7 +243,7 @@ int bosepro::telemetryManager::validate_update_meter_rsp(
         }
         else
         {
-            SPDLOG_ERROR("update_meters_req/rsp packet mismatch ({}/{})",
+            SPDLOG_WARN("update_meters_req/rsp packet mismatch ({}/{})",
                          req_name, pub_name);
             ret_val = -1;
         }
@@ -295,6 +258,7 @@ int bosepro::telemetryManager::validate_update_meter_rsp(
     return ret_val;
 }
 
+uint64_t get_realtime_ns();
 bool bosepro::telemetryManager::time_to_report_meter(
                                             std::string& pub_name,
                                             enum eMeterCategory& meter_type)
@@ -310,7 +274,7 @@ bool bosepro::telemetryManager::time_to_report_meter(
     if (pub_it != publishers.end())
     {
         tick_cnt = pub_it->second->advance_report_tick(meter_type);
-        if (tick_cnt == report_period_factor[meter_type])
+        if ( (tick_cnt % report_period_factor[meter_type]) == 0)
         {
             pub_it->second->reset_report_tick(meter_type);
             ret_val = true;
@@ -329,26 +293,12 @@ void bosepro::telemetryManager::cleanup_dead_endpoints()
             SPDLOG_INFO("Timeout! De-registering Publisher: {}", pubs->first);
             deregister_publisher(pubs->first);
             pubs = publishers.erase(pubs);
+            publisher_count[TELM_CONN_TYPE_UNIX_SOCK]--;
         }
         else
         {
             ++pubs;
         }
     }
-
-    for (auto subs = subscribers.begin(); subs != subscribers.end();)
-    {
-        if (subs->second->get_comm_fail_cnt() >= MAX_COMM_FAIL_COUNT)
-        {
-            SPDLOG_INFO("Timeout! De-registering Subscriber: {}", subs->first);
-            deregister_subscriber(subs->first);
-            subs = subscribers.erase(subs);
-        }
-        else
-        {
-            ++subs;
-        }
-    }
-
     deregister_endpoint_name.clear();
 }

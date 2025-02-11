@@ -19,6 +19,7 @@
 #include <poll.h>
 #include <spdlog/spdlog.h>
 #include <spdlog/fmt/ostr.h>
+#include "observer.h"
 #include "telemetry_core.h"
 #include "telemetry_msg_handler.h"
 #include "telemetry_utils.h"
@@ -28,6 +29,9 @@
 #define RX_BUFFER_SIZE   1024
 
 #define CORE_SOCKET_PATH  "/tmp/telmery-core"
+#define FUSERV_SOCKET_PATH  "/tmp/telmery-core-fuserv"
+
+#define FUSION_SERVER_PORT_DEFAULT 7947
 
 sig_atomic_t volatile telm_running = 1;
 
@@ -41,25 +45,7 @@ int register_message_handlers(bosepro::telemetryManager& telm_mgr)
 {
     int ret_val;
 
-    // Register all message req/rsp handlers here
-
-    // Message: sub_register_req
-    ret_val = telm_mgr.register_message_handler("sub_register_req",
-                                       process_sub_register_req,
-                                       process_sub_register_rsp);
-    if (ret_val != 0)
-    {
-        return ret_val;
-    }
-
-    // Message: sub_deregister_req
-    ret_val = telm_mgr.register_message_handler("sub_deregister_req",
-                                      process_sub_deregister_req,
-                                      process_sub_deregister_rsp);
-    if (ret_val != 0)
-    {
-        return ret_val;
-    }
+    //// Register all message req/rsp handlers here
 
     // Message: pub_register_req
     ret_val = telm_mgr.register_message_handler("pub_register_req",
@@ -111,11 +97,53 @@ int register_message_handlers(bosepro::telemetryManager& telm_mgr)
     ret_val = telm_mgr.register_message_handler("update_report_period_req",
                                        process_update_report_period_req,
                                        process_update_report_period_rsp);
+    if (ret_val != 0)
+    {
+        return ret_val;
+    }
+
+    // Meter report period configuraton message from fusion-server
+    ret_val = telm_mgr.register_message_handler("report_period",
+                                       process_update_report_period_req,
+                                       NULL);
     return ret_val;
+
 
 }
 
-#define HI_METERS_UPDATE_PERIOD_NS  550000.0  // 2/3 ms (approx. )
+std::string core_path_for_obsvr;
+void handle_update(const std::string &update_setting)
+{
+    std::string fuserv_path(FUSERV_SOCKET_PATH);
+    // Internal UNIX socket for receiving messages
+    // from Observer thread
+    int observer_sock_fd = open_unix_udp_socket(fuserv_path);
+    struct sockaddr_un core_addr_obs;
+
+    core_addr_obs.sun_family = AF_UNIX;
+    snprintf(core_addr_obs.sun_path, (core_path_for_obsvr.size()+1),
+             "%s", core_path_for_obsvr.c_str());
+
+    if (observer_sock_fd  != -1)
+    {
+        sendto(observer_sock_fd, update_setting.data(),
+               update_setting.size(), 0,
+               (struct sockaddr *) &core_addr_obs,
+               sizeof(core_addr_obs));
+
+        // Could not find a clean way to close on program exit,
+        // so opening and closing each call.
+        close(observer_sock_fd);
+    }
+    else
+    {
+        SPDLOG_ERROR("Observer socket open failed!");
+    }
+
+    SPDLOG_DEBUG("server update: {}", update_setting);
+}
+
+#define HI_METERS_UPDATE_PERIOD_NS  600000.0  // 2/3 ms (approx. )
 
 int main(int argc, char* argv[])
 {
@@ -123,7 +151,9 @@ int main(int argc, char* argv[])
     std::vector<uint32_t> report_periods = {0, 0, 0};
     std::string core_path;
     std::string core_ip;
+    std::string core_pub_addr;
     uint64_t start_tstamp_ns;
+    uint32_t fus_serv_port = FUSION_SERVER_PORT_DEFAULT;
 
     signal(SIGINT, &sig_handler);
     signal(SIGTERM, &sig_handler);
@@ -182,10 +212,22 @@ int main(int argc, char* argv[])
             }
             SPDLOG_INFO("Socket path - '{}'", core_path);
         }
+        else if (temp_str.compare("subscriber_socket_path") == 0)
+        {
+            temp->get_value("property", core_pub_addr);
+            SPDLOG_INFO("Sub Socket path - '{}'", core_pub_addr);
+        }
+        else if (temp_str.compare("fusion_server_port") == 0)
+        {
+            temp->get_value("property", fus_serv_port);
+            SPDLOG_INFO("Fusion Server Port - '{}'", fus_serv_port);
+        }
         else if (temp_str.compare("meter_update_period_frames") == 0)
         {
             // Use periods from file if not provided in command line
-            if ( (update_periods[0] == 0) && (update_periods[1] == 0) && (update_periods[2] == 0))
+            if ( (update_periods[0] == 0) &&
+                 (update_periods[1] == 0) &&
+                 (update_periods[2] == 0))
             {
                 update_periods.clear();
                 temp->get_config_value_vector("property", update_periods);
@@ -196,7 +238,9 @@ int main(int argc, char* argv[])
         else if (temp_str.compare("meter_report_period_frames") == 0)
         {
             // Use periods from file if not provided in command line
-            if ( (report_periods[0] == 0) && (report_periods[1] == 0) && (report_periods[2] == 0))
+            if ( (report_periods[0] == 0) &&
+                 (report_periods[1] == 0) &&
+                 (report_periods[2] == 0))
             {
                 report_periods.clear();
                 temp->get_config_value_vector("property", report_periods);
@@ -252,9 +296,6 @@ int main(int argc, char* argv[])
                               std::make_unique<bosepro::telemetryManager>();
 
     struct pollfd telmPollFds[TELM_CONN_TYPE_MAX];
-    uint32_t core_hi_period_frms;
-    uint32_t core_med_period_frms;
-    uint32_t core_lo_period_frms;
     int poll_ret;
     int ux_sock_fd;
     int inet_sock_fd;
@@ -281,11 +322,11 @@ int main(int argc, char* argv[])
             poll_ret = ppoll(&tempPollFds, 1, &poll_timeout, NULL);
             end = get_realtime_ns() - start;
 
-            if (end > 620000)
+            if (end > 671000)
             {
                 calibrated_period_ns -= 10;
             }
-            else if (end < 615000)
+            else if (end < 670000)
             {
                 calibrated_period_ns += 10;
             }
@@ -300,8 +341,22 @@ int main(int argc, char* argv[])
                      calibrated_period_ns, end);
     }
 
+    // A copy for the Observer thread
+    core_path_for_obsvr = core_path;
+    SPDLOG_DEBUG("Core Path (Obs): {}",core_path_for_obsvr );
+
+    // Initialize Observer framework
+    UDPValueMonitor *client = nullptr;
+    std::vector<std::string> target_paths;
+
+    target_paths.push_back("settings.telemetry.*.*");
+
+    client = new UDPValueMonitor("127.0.0.1", fus_serv_port,
+                                 target_paths, handle_update);
+
     // Initialize manager
-    if (telmMgr->init(core_ip, core_path, update_periods, report_periods) != 0)
+    if (telmMgr->init(core_ip, core_path, core_pub_addr,
+                      update_periods, report_periods) != 0)
     {
         SPDLOG_ERROR("Failed initialization");
         exit(1);
@@ -319,10 +374,8 @@ int main(int argc, char* argv[])
     ux_sock_fd = open_unix_udp_socket(ux_path);
     inet_sock_fd = open_inet_udp_socket(inet_ip, inet_port);
 
-    telmMgr->set_socket_descriptors(ux_sock_fd, inet_sock_fd);
 
-    telmMgr->get_meter_report_periods(
-            core_hi_period_frms, core_med_period_frms, core_lo_period_frms);
+    telmMgr->set_socket_descriptors(ux_sock_fd, inet_sock_fd);
 
     // Setup poll FD
     telmPollFds[TELM_CONN_TYPE_UNIX_SOCK].fd =
@@ -391,11 +444,6 @@ int main(int argc, char* argv[])
 
             // Responses to update request are handled by the message handler
 
-            // Incase periods were updated in previous message
-            telmMgr->get_meter_report_periods(core_hi_period_frms,
-                                              core_med_period_frms,
-                                              core_lo_period_frms);
-
             poll_timeout.tv_nsec = calibrated_period_ns;
         }
         else
@@ -441,6 +489,12 @@ int main(int argc, char* argv[])
         telmMgr->cleanup_dead_endpoints();
 
     }  // while(1)
+
+    if (client != nullptr)
+    {
+        client->stop();
+        delete client;
+    }
 
     close(ux_sock_fd);
     close(inet_sock_fd);
