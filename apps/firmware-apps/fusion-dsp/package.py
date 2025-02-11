@@ -36,8 +36,10 @@ required_files = [
     INFO_PATH,
     APP_PATH,
     'config/algorithm-definitions.json',
-    'config/base.json',
-    'config/prototype1_demo.json'
+    'config/configuration.json',
+    'config/prototype1_demo.json',
+    'config/telemetry-configuration.json',
+    'config/telemetry-messages.json'
 ]
 
 print(f'Creating build package...')
