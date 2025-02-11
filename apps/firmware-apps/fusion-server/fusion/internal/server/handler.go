@@ -77,7 +77,6 @@ func (h *Handler) broadcastUpdate(update api.ConfigUpdate) error {
 			Timestamp: update.Time,
 		}
 	}
-	transformed := TransformState(state)
 
 	// Only broadcast to other nodes if we're the origin
 	if update.NodeID == h.list.LocalNode().Name {
@@ -95,6 +94,8 @@ func (h *Handler) broadcastUpdate(update api.ConfigUpdate) error {
 			}
 		}
 	}
+
+	transformed := TransformState(state)
 
 	// Always broadcast to local clients
 	for _, broadcaster := range h.broadcasters {
@@ -556,7 +557,15 @@ func (h *Handler) HandleUDPMessage(data []byte) (interface{}, error) {
 
 func (h *Handler) HandleClearAllData() error {
 
-	if err := h.handleConfigUpdate(map[string]interface{}{}); err != nil {
+	configUpdate := api.ConfigUpdate{
+		Data:    map[string]interface{}{},
+		Version: time.Now().UnixNano(),
+		NodeID:  h.list.LocalNode().Name,
+		Time:    time.Now().UTC(),
+		Clear:   true,
+	}
+
+	if err := h.broadcastUpdate(configUpdate); err != nil {
 		return fmt.Errorf("failed to clear all data: %v", err)
 	}
 
