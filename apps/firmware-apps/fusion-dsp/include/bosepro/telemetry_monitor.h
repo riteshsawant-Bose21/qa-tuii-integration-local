@@ -136,12 +136,12 @@ public:
 
         if (initialized)
         {
-            SPDLOG_INFO("Starting TelemetryMonitor thread...");
+            SPDLOG_INFO("Starting TelemetryMonitor...");
             monitor_thread = std::thread(&TelemetryMonitor::monitor_loop, this);
             events_thread = std::thread(&TelemetryMonitor::manage_events_loop, this);
-        }
 
-        running = true;
+            running = true;
+        }
     }
 
 
@@ -165,6 +165,8 @@ public:
         {
             deregister_with_telemetry_manager();
         }
+
+        SPDLOG_INFO("Stopping TelemetryMonitor...");
 
         stop_flag = true;
         
@@ -572,6 +574,8 @@ private:
             }
         }
 
+        SPDLOG_INFO("Successfully registered with telemetry core");
+
         return true;
     }
 
@@ -598,7 +602,7 @@ private:
             rsp.get_parameters().get_value() == "OK" &&
             rsp.get_packet_id() == req.get_packet_id())
         {
-            SPDLOG_INFO("Received valid deregistration response: \n\n{}", rsp.serialize_message());
+            SPDLOG_TRACE("Received valid deregistration response: \n\n{}", rsp.serialize_message());
         }
         else
         {
@@ -607,9 +611,10 @@ private:
         }
 
         // clean up telemetry_manager assets and pause the telemetry monitor
-        unregister_all_telemetry();
         stop();
+        unregister_all_telemetry();
 
+        SPDLOG_INFO("Successfully de-registered from telemetry core");
 
         return true;
     }
