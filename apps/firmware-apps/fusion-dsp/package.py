@@ -14,7 +14,7 @@ INFO_PATH = 'build/fusion-dsp.info'
 version = os.getenv('VERSION', 'LOCAL')
 
 git_hash = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('ascii').strip()
-git_branch = subprocess.check_output(['git', 'rev-parse', '--abbrev-ref', 'HEAD']).decode('ascii').strip()
+git_branch = subprocess.check_output(['git', 'show', '-s', '--pretty=%D', 'HEAD']).decode('ascii').strip()
 commit_ts = int(subprocess.check_output(['git', 'show', '-s', '--format=%ct', 'HEAD']).decode('ascii').strip())
 build_ts = os.path.getmtime(APP_PATH)
 
