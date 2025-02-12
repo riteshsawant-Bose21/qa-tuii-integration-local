@@ -42,9 +42,9 @@ pipeline {
 		stage('Clone') {
 			steps {
 				script {
-					def branch = env.CHANGE_BRANCH ?: env.BRANCH_NAME
+					env.branch = env.CHANGE_BRANCH ?: env.BRANCH_NAME
 					retry(3){
-						checkout([$class: 'GitSCM',branches: [[name: "${branch}"]],
+						checkout([$class: 'GitSCM',branches: [[name: "${env.branch}"]],
 							  doGenerateSubmoduleConfigurations: false,
 							  extensions: [[$class: 'CloneOption', depth: 1, noTags: false, reference: '', shallow: true, timeout: 30]],
 							  userRemoteConfigs: [[credentialsId: '5801fa82-23a0-4402-868e-7ca5fa2c6638',
@@ -53,7 +53,7 @@ pipeline {
 							 ])
 					}
 					// Set github info in env. variable
-					githubInfo(branch)
+					githubInfo(env.branch)
 				}
 			}
 		}
