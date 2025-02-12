@@ -9,11 +9,13 @@
 #include <sys/un.h>
 #include <sys/socket.h>
 #include <cstring>
+#include <cerrno>
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/mman.h> 
 #include <iostream>
 
+#define METER_TIMEOUT 5
 
 namespace bosepro {
 
@@ -25,8 +27,9 @@ public:
         : shm_manager(NamedSharedMemoryManagerFactory::getInstance()),
           shm_names(NUM_SHM_REGIONS, ""),
           telemetry_manager_addr(),
-          timeout(5),
+          error(0),
           initialized(false),
+          running(false),
           stop_flag(false)
     {
     }
@@ -54,6 +57,11 @@ public:
                     const std::string socket_path,
                     const std::string pub_name)
     {
+        if (running || initialized)
+        {
+            return;
+        }
+
         telemetry_messages = std::make_unique<TelemetryMessage>(filename);
 
         server_path = socket_path;
@@ -84,7 +92,7 @@ public:
 
         struct stat statbuf;
         int n = 0;
-        while (n < timeout)
+        while (n < METER_TIMEOUT)
         {
             if (stat(server_path.c_str(), &statbuf) == 0 && S_ISSOCK(statbuf.st_mode)) 
             {
@@ -93,7 +101,7 @@ public:
             }
 
             sleep(1);
-            if (++n >= timeout)
+            if (++n >= METER_TIMEOUT)
             {
                 SPDLOG_CRITICAL("Telemetry Manager UDS does NOT exist at {}", server_path);
                 return;
@@ -112,21 +120,52 @@ public:
     }
 
 
+    /// check if the monitor is currently running
+    bool is_running()
+    {
+        return running;
+    }
+
+
     /// Start the threads.
     void start() 
     {
+        stop_flag = false;
+
+        error = 0;
+
         if (initialized)
         {
             SPDLOG_INFO("Starting TelemetryMonitor thread...");
             monitor_thread = std::thread(&TelemetryMonitor::monitor_loop, this);
             events_thread = std::thread(&TelemetryMonitor::manage_events_loop, this);
         }
+
+        running = true;
     }
 
 
-    /// Stop the threads.
+    /// Stop the TelemetryMonitor and reset it's data for a new registration.
+    void unregister_all_telemetry() 
+    {
+        meters.clear();
+        events.clear();
+    }
+
+
+    /// Stop the TelemetryMonitor and reset it's data for a new registration.
     void stop() 
     {
+        if (!running) 
+        {
+            return;
+        }
+
+        if (!error) 
+        {
+            deregister_with_telemetry_manager();
+        }
+
         stop_flag = true;
         
         if (monitor_thread.joinable()) 
@@ -143,7 +182,12 @@ public:
             close(telemetry_fd);
         }
 
+        shm_names.clear();
+
         unlink(client_path.c_str());
+
+        initialized = false;
+        running = false;
     }
 
 
@@ -369,6 +413,7 @@ public:
     }
 
 
+private:
     /// Callback to send event telemetry on UDS
     ///
     /// @param message the message to send
@@ -421,7 +466,6 @@ public:
     }
 
 
-private:
     /// Helper method to send a message on the UDS
     ///
     /// @param message  TelemetryMessage with the message data
@@ -433,7 +477,8 @@ private:
         if (sendto(telemetry_fd, str.c_str(), str.size(), 0,
                 (struct sockaddr *)&telemetry_manager_addr, sizeof(telemetry_manager_addr)) < 0)
         {
-            SPDLOG_ERROR("Failed to send message to telemetry manager.");
+            SPDLOG_ERROR("Failed to send message to telemetry manager: {}", strerror(errno));
+            ++error;
             return false;
         }
 
@@ -451,7 +496,8 @@ private:
                                     nullptr, nullptr);
         if (recv_len < 0)
         {
-            SPDLOG_ERROR("Failed to receive response from telemetry manager.");
+            SPDLOG_ERROR("Failed to receive response from telemetry manager: {}", strerror(errno));
+            ++error;
             TelemetryMessage message("");
             return message;
         }
@@ -538,7 +584,7 @@ private:
 
         if (!send_message(req))
         {
-            return false;
+            return false; 
         }
 
         // Wait for a response
@@ -561,8 +607,9 @@ private:
         }
 
         // clean up telemetry_manager assets and pause the telemetry monitor
-        shm_names.clear();
+        unregister_all_telemetry();
         stop();
+
 
         return true;
     }
@@ -628,24 +675,25 @@ private:
     /// @param message  TelemetryMessage from the telemetry manager
     void process_telemetry_message(TelemetryMessage &message)
     {
-        if (message.get_message_name() == "update_meters_req")
+        std::string msg_name = message.get_message_name();
+        if (msg_name == "update_meters_req")
         {
             update_meters(message);
         }
-        else if (message.get_message_name() == "update_report_period_req")
+        else if (msg_name == "update_report_period_req")
         {
             // TODO
         }
         // TODO -- get all responses here too?
-        else if (message.get_message_name() == "pub_register_rsp")
+        else if (msg_name == "pub_register_rsp")
         {
             // TODO
         }
-        else if (message.get_message_name() == "pub_deregister_rsp")
+        else if (msg_name == "pub_deregister_rsp")
         {
             // TODO
         }
-        else if (message.get_message_name() == "event_rsp")
+        else if (msg_name == "event_rsp")
         {
             // TODO
         }
@@ -672,23 +720,23 @@ private:
             SPDLOG_CRITICAL("Invalid connection socket.");
         }
 
-        int error_timeout = 0;
         while (!stop_flag)
         {
+            if (error >= METER_TIMEOUT)
+            {
+                SPDLOG_ERROR("Lost connection to telemetry manager... closing telemetry.");
+                stop();
+                break;
+            }
+
             // Receive a message from the telemetry manager
             TelemetryMessage message = recv_message();
             if (message.serialize_message().empty())
             {
                 SPDLOG_ERROR("Error receiving data from telemetry manager.");
-                error_timeout++;
-                if (error_timeout >= 10)
-                {
-                    SPDLOG_ERROR("Lost connection to telemetry manager... closing telemetry.");
-                    break;
-                }
+                ++error;
                 continue;
             }
-            error_timeout = 0;
 
             SPDLOG_TRACE("Received message from telemetry manager: \n\n{}", message.serialize_message());
 
@@ -702,7 +750,11 @@ private:
             }
 
             usleep(100);
+
+            error = 0;
         }
+
+        stop();
     }
 
 
@@ -742,8 +794,9 @@ private:
     int telemetry_fd;
     std::vector<std::string> shm_names;
     struct sockaddr_un telemetry_manager_addr;
-    int timeout;
-    bool initialized;
+    int error;
+    std::atomic<bool> initialized;
+    std::atomic<bool> running;
     std::atomic<bool> stop_flag;
     
     std::unique_ptr<TelemetryMessage> telemetry_messages;

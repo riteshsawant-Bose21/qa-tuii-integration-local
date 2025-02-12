@@ -151,11 +151,16 @@ public:
     void destroy_audio_tasks()
     {
         audio_tasks.clear();
+
+        bosepro::TelemetryMonitor::get_instance().stop();
+        bosepro::TelemetryMonitor::get_instance().unregister_all_telemetry();
     }
 
 
     void create_periodic_tasks(const Configuration &configuration)
     {
+        bosepro::TelemetryMonitor::get_instance().stop();
+        
         for (auto &t : configuration.get_periodic_tasks())
         {
             const TaskConfiguration &tc =
@@ -204,6 +209,9 @@ public:
     void destroy_periodic_tasks()
     {
         periodic_tasks.clear();
+
+        bosepro::TelemetryMonitor::get_instance().stop();
+        bosepro::TelemetryMonitor::get_instance().unregister_all_telemetry();
     }
 
 

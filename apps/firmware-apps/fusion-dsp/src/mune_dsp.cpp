@@ -193,10 +193,18 @@ int main(int argc, char *argv[])
                                      telem_configuration.get_socket_path(),
                                      configuration.get_session().get_name());
         telemetry_monitor.start();
+
         session.start();
 
         while(g_running)
         {
+            if (!telemetry_monitor.is_running()) 
+            {
+                telemetry_monitor.initialize(vm["telemetry-messages"].as<std::string>(), 
+                                     telem_configuration.get_socket_path(),
+                                     configuration.get_session().get_name());
+                telemetry_monitor.start();
+            }
             usleep(1000);
         }
 
