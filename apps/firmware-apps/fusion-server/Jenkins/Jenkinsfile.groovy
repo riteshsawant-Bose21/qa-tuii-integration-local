@@ -14,7 +14,6 @@ pipeline {
 	environment {
 		buildNumber="${env.BUILD_NUMBER}"
 		buildDir="${env.WORKSPACE}"
-		branchName="${env.CHANGE_BRANCH}"
 		BuildType="Continuous"
 		VersionFile="fusion/VERSION"
 	}
@@ -38,10 +37,6 @@ pipeline {
 				anyOf {
 					changeRequest target: 'main'
 					branch 'main'
-					changeRequest target: 'develop'
-					branch 'develop'
-					changeRequest target: 'feat/jenkins-pipeline'
-					branch 'feat/jenkins-pipeline'
 					changeRequest target: 'release/.*', comparator: 'REGEXP'
 					branch pattern: 'release/.*', comparator: 'REGEXP'
 				}
