@@ -42,7 +42,7 @@ pipeline {
 		stage('Clone') {
 			steps {
 				script {
-					def env.branch = env.CHANGE_BRANCH ?: env.BRANCH_NAME
+					env.branch = env.CHANGE_BRANCH ?: env.BRANCH_NAME
 					retry(3){
 						checkout([$class: 'GitSCM',branches: [[name: "${env.branch}"]],
 							  doGenerateSubmoduleConfigurations: false,
