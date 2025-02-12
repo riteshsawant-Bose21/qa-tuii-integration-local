@@ -22,6 +22,7 @@ private:
     bosepro::DspSignalMemory<const float *[]> in;
     bosepro::DspSignalMemory<float *[]> out;
 
+    bosepro::DspCoeffMemory<float[]> in_meter;
     bosepro::DspCoeffMemory<float[]> activity_threshold;
     bosepro::DspCoeffMemory<float[]> target_minimum;
     bosepro::DspCoeffMemory<float[]> target_maximum;
@@ -86,6 +87,7 @@ Agc::Agc(const bosepro::BlockConfiguration &configuration)
     assign_parameter("channel_bypass", channel_bypass);
     assign_parameter("max_total_boost", &max_total_boost);
 
+    assign_telemetry("in_meter", in_meter, bosepro::linear_to_db);
     assign_telemetry("gain_meter", current_gain);
     assign_telemetry("hold_meter", hold_meter);
 
@@ -110,6 +112,7 @@ void Agc::process()
 
     for (int_fast32_t channel = 0; channel < channels; channel++)
     {
+        in_meter[channel] = 0.0;
         for (int_fast32_t sample = 0; sample < get_frame_size(); sample++)
         {
             float energy = in[channel][sample] * in[channel][sample];
@@ -119,6 +122,8 @@ void Agc::process()
             fast_level[channel] += (energy - fast_level[channel]) *
                 ((energy > fast_level[channel])
                  ? level_attack_coeff : fast_release_coeff);
+            in_meter[channel] = std::max(in_meter[channel],
+                                         std::fabs(in[channel][sample]));
         }
 
         float log_level = 10.0f * log10(smoothed_level[channel]) + 20.0f;

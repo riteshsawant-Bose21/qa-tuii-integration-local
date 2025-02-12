@@ -1,4 +1,5 @@
 {
+    "version": "0.1.0",
     "algorithms": [
         {
             "name": "agc",
@@ -115,7 +116,7 @@
                 {
                     "name": "bypass",
                     "value_type": "bool",
-                    "default_value": false
+                    "default_value": true
                 }
             ],
             "telemetry": [

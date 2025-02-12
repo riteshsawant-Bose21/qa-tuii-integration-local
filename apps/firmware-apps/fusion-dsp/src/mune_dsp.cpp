@@ -80,8 +80,8 @@ int main(int argc, char *argv[])
         ("configuration,c", boost::program_options::value<std::string>()->default_value(app_path + "/config/configuration.json"), "configuration file")
         ("definitions,d", boost::program_options::value<std::string>()->default_value(app_path + "/config/algorithm-definitions.json"), "algorithm definition file")
         ("time,t", boost::program_options::value<int>(), "time to run (seconds)")
-        ("telemetry-messages,m", boost::program_options::value<std::string>()->default_value("config/telemetry-messages.json"), "telemetry commands file")
-        ("telemetry-configuration,p", boost::program_options::value<std::string>()->default_value("config/telemetry-configuration.json"), "telemetry configuration file")
+        ("telemetry-messages,m", boost::program_options::value<std::string>()->default_value(app_path + "/config/telemetry-messages.json"), "telemetry commands file")
+        ("telemetry-configuration,p", boost::program_options::value<std::string>()->default_value(app_path + "/config/telemetry-configuration.json"), "telemetry configuration file")
         ("serverip,s", boost::program_options::value<std::string>(), "IP address of fusion-server")
         ("verbose,v", boost::program_options::value(&verbosity)->zero_tokens(), "make logs more verbose")
         ("quiet,q", boost::program_options::value(&quietness)->zero_tokens(), "make logs more quiet")
@@ -179,6 +179,8 @@ int main(int argc, char *argv[])
 
         // Path for the static configuration
         target_paths.push_back("dsp_static_config");
+        // Path for dynamic parameter setttings with vector indices
+        target_paths.push_back("settings.audio.*.*[*]");
         // Path for dynamic parameter setttings
         target_paths.push_back("settings.audio.*.*");
 
