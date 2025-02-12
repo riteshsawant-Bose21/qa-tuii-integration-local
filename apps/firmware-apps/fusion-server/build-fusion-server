@@ -49,7 +49,7 @@ if [ "$flag" = '--package' ]; then
     cat << EOF_VERSION > build/fusion-server.info
 APP="fusion-server"
 VERSION="$VERSION"
-BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+BRANCH="$(git show -s --pretty=%D HEAD)"
 COMMIT_ID="$commit_id"
 COMMIT_DATE="$(TZ=UTC0 git --no-pager log -1 --pretty='format:%cd' --date='format-local:%Y-%m-%dT%H:%M:%S+00:00')"
 BUILD_DATE="$(date -u -Iseconds)"
