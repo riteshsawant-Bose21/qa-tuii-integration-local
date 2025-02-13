@@ -524,7 +524,7 @@ private:
         req.get_parameters().set_block_size(block_size);
         req.set_packet_id();
 
-        SPDLOG_TRACE("Sending registration req: \n\n{}", req.serialize_message());
+        SPDLOG_DEBUG("Sending registration req: \n\n{}", req.serialize_message());
 
         // Send the registration request
         if (!send_message(req))
@@ -585,6 +585,8 @@ private:
     {
         TelemetryMessage req = telemetry_messages->get_default_command("pub_deregister_req");
         req.set_packet_id();
+
+        SPDLOG_DEBUG("Sending deregistration req: \n\n{}", req.serialize_message());
 
         if (!send_message(req))
         {
