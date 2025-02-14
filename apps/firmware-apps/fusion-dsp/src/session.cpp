@@ -75,6 +75,8 @@ bool Session::cmd_create_audio_task(const ParameterSetting& setting)
         }
     }
 
+    start();
+
     return true;
 }
 
