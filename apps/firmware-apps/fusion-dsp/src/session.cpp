@@ -44,11 +44,38 @@ bool Session::cmd_create_audio_task(const ParameterSetting& setting)
     setting.get_value(filename);
 
     Configuration config(filename);
-    for (auto &t : config.get_session().get_audio_tasks()) {
-        const TaskConfiguration &tc = 
-            reinterpret_cast<const TaskConfiguration &>(t.second);
-        create_audio_task(tc);
+
+    if (config.has_audio_tasks())
+    {
+        for (auto &t : config.get_audio_tasks())
+        {
+            const TaskConfiguration &tc =
+                reinterpret_cast<const TaskConfiguration &>(t.second);
+            create_audio_task(tc);
+        }
     }
+
+    if (config.has_parameter_settings())
+    {
+        for (auto &p : config.get_parameter_settings())
+        {
+            const ParameterSetting &ps =
+                reinterpret_cast<const ParameterSetting &>(p.second);
+            process_parameter_setting(ps);
+        }
+    }
+
+    if (config.has_task_connections())
+    {
+        for (auto &c : config.get_task_connections())
+        {
+            const TaskConnectionConfiguration &tc =
+                reinterpret_cast<const TaskConnectionConfiguration &>(c.second);
+            connect_tasks(tc);
+        }
+    }
+
+    start();
 
     return true;
 }
