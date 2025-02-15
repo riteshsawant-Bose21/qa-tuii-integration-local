@@ -161,14 +161,32 @@ public:
             return;
         }
 
-        if (!error) 
-        {
-            deregister_with_telemetry_manager();
-        }
-
         SPDLOG_INFO("Stopping TelemetryMonitor...");
 
-        stop_flag = true;
+        // if we fail to deregister, chances are we lost connection
+        // and telemetry monitor has done it already
+        // or we get NAK--no prob
+        if (!deregister_with_telemetry_manager())
+        {
+            stop_flag = true;
+        }
+        // after deregistering, stop_flag set in handle_deregister()
+        // wait for it--if we don't get it, weird.
+        else
+        {
+            // we could also wait on the in flight message being present...
+            int timeout = 0;
+            while (!stop_flag) 
+            {
+                if(++timeout > 5) 
+                {
+                    SPDLOG_ERROR("Timing out on stop flag trying to stop!?");
+                    stop_flag = true;
+                    break;
+                }
+                usleep(200000);
+            }
+        }
         
         if (monitor_thread.joinable()) 
         {
@@ -535,7 +553,8 @@ private:
             return false;
         }
 
-        // Wait for a response
+        // For registration, monitor_loop thread is not yet running, 
+        // so we catch the response here as well.
         TelemetryMessage rsp = recv_message();
         if (rsp.serialize_message().empty())
         {
@@ -588,35 +607,13 @@ private:
 
         SPDLOG_DEBUG("Sending deregistration req: \n\n{}", req.serialize_message());
 
+        msg_in_flight[req.get_packet_id()] = req.get_message_name();
+
         if (!send_message(req))
         {
+            msg_in_flight.erase(req.get_packet_id());
             return false; 
         }
-
-        // Wait for a response
-        TelemetryMessage rsp = recv_message();
-        if (rsp.serialize_message().empty())
-        {
-            return false;
-        }
-
-        if (rsp.get_message_name() == "pub_deregister_rsp" &&
-            rsp.get_parameters().get_value() == "OK" &&
-            rsp.get_packet_id() == req.get_packet_id())
-        {
-            SPDLOG_TRACE("Received valid deregistration response: \n\n{}", rsp.serialize_message());
-        }
-        else
-        {
-            SPDLOG_ERROR("Received bad response: \n\n{}", rsp.serialize_message());
-            return false;
-        }
-
-        // clean up telemetry_manager assets and pause the telemetry monitor
-        stop();
-        unregister_all_telemetry();
-
-        SPDLOG_INFO("Successfully de-registered from telemetry core");
 
         return true;
     }
@@ -677,6 +674,37 @@ private:
     }
 
 
+    // Handle the deregistration process
+    void handle_deregistration(TelemetryMessage &rsp) 
+    {
+        if (rsp.get_parameters().get_name() == publisher_name &&
+            rsp.get_parameters().get_value() == "OK")
+        {
+            try {
+                if (msg_in_flight.at(rsp.get_packet_id()) == "pub_deregister_req")
+                {
+                    SPDLOG_TRACE("Received valid deregistration response: \n\n{}", rsp.serialize_message());
+                    msg_in_flight.erase(rsp.get_packet_id());
+                } 
+                else
+                {
+                    SPDLOG_ERROR("Bad msg_in_flight setup... size: {}", msg_in_flight.size());
+                }
+            } catch (const std::out_of_range&) {
+                SPDLOG_ERROR("Couldn't find deregistration packet!");
+            }
+        }
+        else
+        {
+            SPDLOG_ERROR("Received bad response: \n\n{}", rsp.serialize_message());
+        }
+
+        stop_flag = true;
+
+        SPDLOG_INFO("Successfully de-registered from telemetry core");
+    }
+
+
     /// Process messages from the telemetry manager
     ///
     /// @param message  TelemetryMessage from the telemetry manager
@@ -692,13 +720,13 @@ private:
             // TODO
         }
         // TODO -- get all responses here too?
-        else if (msg_name == "pub_register_rsp")
+        else if (msg_name == "update_report_period_rsp")
         {
             // TODO
         }
         else if (msg_name == "pub_deregister_rsp")
         {
-            // TODO
+            handle_deregistration(message);
         }
         else if (msg_name == "event_rsp")
         {
@@ -760,8 +788,6 @@ private:
 
             error = 0;
         }
-
-        stop();
     }
 
 
@@ -813,6 +839,8 @@ private:
 
     std::map<std::string, std::unique_ptr<Telemetry>> meters;
     std::map<std::string, std::unique_ptr<Telemetry>> events;
+
+    std::map<std::string, std::string> msg_in_flight;
 };
 
 } // namespace bosepro

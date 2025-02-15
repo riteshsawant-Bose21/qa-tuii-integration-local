@@ -22,6 +22,8 @@ bool Session::cmd_stop_all(const ParameterSetting&)
 
 bool Session::cmd_destroy_audio_task(const ParameterSetting& setting)
 {
+    // no need to stop telemetry, because meters just shrunk
+
     std::string task_name;
     setting.get_value(task_name);
     destroy_audio_task(task_name);
@@ -32,6 +34,11 @@ bool Session::cmd_destroy_audio_task(const ParameterSetting& setting)
 
 bool Session::cmd_destroy_audio_tasks(const ParameterSetting&)
 {
+    ready = false;
+
+    // stop telemetry because all the tasks are gone!
+    bosepro::TelemetryMonitor::get_instance().stop();
+
     destroy_audio_tasks();
 
     return true;
@@ -44,6 +51,11 @@ bool Session::cmd_create_audio_task(const ParameterSetting& setting)
     setting.get_value(filename);
 
     Configuration config(filename);
+
+    ready = false;
+
+    // NEED to redo telemetry because meters GREW
+    bosepro::TelemetryMonitor::get_instance().stop();
 
     if (config.has_audio_tasks())
     {
@@ -83,6 +95,8 @@ bool Session::cmd_create_audio_task(const ParameterSetting& setting)
 
 bool Session::cmd_destroy_periodic_task(const ParameterSetting& setting)
 {
+    // no need to stop telemetry, because meters just shrunk
+
     std::string task_name;
     setting.get_value(task_name);
     destroy_periodic_task(task_name);
@@ -93,6 +107,11 @@ bool Session::cmd_destroy_periodic_task(const ParameterSetting& setting)
 
 bool Session::cmd_destroy_periodic_tasks(const ParameterSetting&)
 {
+    ready = false;
+
+    // stop telemetry because all the tasks are gone!
+    bosepro::TelemetryMonitor::get_instance().stop();
+
     destroy_periodic_tasks();
 
     return true;
@@ -101,15 +120,35 @@ bool Session::cmd_destroy_periodic_tasks(const ParameterSetting&)
 
 bool Session::cmd_create_periodic_task(const ParameterSetting& setting)
 {
+    ready = false;
+
+    // NEED to redo telemetry because meters GREW
+    bosepro::TelemetryMonitor::get_instance().stop();
+
     std::string filename;
     setting.get_value(filename);
 
     Configuration config(filename);
-    for (auto &t : config.get_session().get_periodic_tasks()) {
-        const TaskConfiguration &tc = 
-            reinterpret_cast<const TaskConfiguration &>(t.second);
-        create_periodic_task(tc);
+    if (config.has_periodic_tasks())
+    {
+        for (auto &t : config.get_periodic_tasks()) {
+            const TaskConfiguration &tc = 
+                reinterpret_cast<const TaskConfiguration &>(t.second);
+            create_periodic_task(tc);
+        }
     }
+
+    if (config.has_parameter_settings())
+    {
+        for (auto &p : config.get_parameter_settings())
+        {
+            const ParameterSetting &ps =
+                reinterpret_cast<const ParameterSetting &>(p.second);
+            process_parameter_setting(ps);
+        }
+    }
+
+    start();
 
     return true;
 }

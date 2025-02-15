@@ -76,6 +76,15 @@ public:
     }
 
 
+    /// Get the name of the TelemetryMessage.
+    ///
+    /// @return  The name of the TelemetryMessage.
+    const std::string get_name() const
+    {
+        return get_string("name");
+    }
+
+
     /// Get the string from "value" property.
     ///
     /// @return  The string value of "value"
