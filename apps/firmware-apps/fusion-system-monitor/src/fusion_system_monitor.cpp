@@ -176,7 +176,9 @@ int main(int argc, char *argv[])
             {
                 telemetry_monitor.initialize(vm["telemetry-messages"].as<std::string>(), 
                                     telem_configuration.get_socket_path(),
-                                    configuration.get_session().get_name());
+                                    configuration.get_session().has_name()
+                                     ? configuration.get_session().get_name()
+                                     : "fusion_system_monitor");
                 telemetry_monitor.start();
             }
         }
