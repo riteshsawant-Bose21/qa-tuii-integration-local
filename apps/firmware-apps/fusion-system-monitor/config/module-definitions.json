@@ -6,6 +6,8 @@
                 { 
                     "name": "cpu", 
                     "value_type": "float", 
+                    "minimum_value": 0.0,
+                    "maximum_value": 100.0,
                     "telemetry_type": "meter",
                     "period_type": "LO" 
                 },
@@ -23,6 +25,8 @@
                 { 
                     "name": "ram", 
                     "value_type": "float", 
+                    "minimum_value": 0.0,
+                    "maximum_value": 100.0,
                     "telemetry_type": "meter",
                     "period_type": "MED" 
                 },
@@ -35,6 +39,8 @@
                 { 
                     "name": "emmc", 
                     "value_type": "float", 
+                    "minimum_value": 0.0,
+                    "maximum_value": 100.0,
                     "telemetry_type": "meter",
                     "period_type": "MED"  
                 },
@@ -47,6 +53,8 @@
                 { 
                     "name": "usb_storage", 
                     "value_type": "float", 
+                    "minimum_value": 0.0,
+                    "maximum_value": 100.0,
                     "telemetry_type": "meter",
                     "period_type": "MED"  
                 },

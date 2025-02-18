@@ -114,6 +114,15 @@ public:
     }
 
 
+    /// Test whether the configuration has a name specified.
+    ///
+    /// @return  True if the configuration has a name specified.
+    bool has_name() const
+    {
+        return has_member("name");
+    }
+
+    
     /// Get the name of this configuration.
     ///
     /// @return  The name of this configuration.

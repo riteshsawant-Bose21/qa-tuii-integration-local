@@ -185,6 +185,30 @@ public:
     {
         get_member_value<T>("default_value", value);
     }
+
+
+    /// Get the minimum value for the interface (for Property, Parameter,
+    /// and Telemetry interfaces).  The minimum value must exist for this
+    /// definition.
+    ///
+    /// @param  value  The minimum value for the interface.
+    template <typename T>
+    void get_minimum_value(T &value) const
+    {   
+        get_member_value<T>("minimum_value", value);
+    }
+
+
+    /// Get the maximum value for the interface (for Property, Parameter,
+    /// and Telemetry interfaces).  The maximum value must exist for this
+    /// definition.
+    ///
+    /// @param  value  The maximum value for the interface.
+    template <typename T>
+    void get_maximum_value(T &value) const
+    {
+        get_member_value<T>("maximum_value", value);
+    }
 };
 
 

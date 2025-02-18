@@ -32,7 +32,7 @@ public:
     /// @param  definitions  The parameter definitions for the system.
     Session(const SessionConfiguration &configuration,
             const Definition &definitions)
-        : Configurable(configuration)
+        : Configurable(configuration), ready(false)
           
     {
         SPDLOG_TRACE("Creating session.");
@@ -103,12 +103,19 @@ public:
 
     void create_audio_tasks(const Configuration &configuration)
     {
+        ready = false;
+
+        bosepro::TelemetryMonitor::get_instance().stop();
+        bosepro::TelemetryMonitor::get_instance().unregister_all_telemetry();
+
         for (auto &t : configuration.get_audio_tasks())
         {
             const TaskConfiguration &tc =
                 reinterpret_cast<const TaskConfiguration &>(t.second);
             create_audio_task(tc);
         }
+
+        ready = true;
     }
 
 
@@ -145,7 +152,7 @@ public:
     }
 
 
-    /// Destroy the task with the given name.  This will also stop the task.
+    /// Destroy all audio tasks.
     ///
     /// @param  task_name  The name of the task to destroy.
     void destroy_audio_tasks()
@@ -155,7 +162,7 @@ public:
 
 
     void create_periodic_tasks(const Configuration &configuration)
-    {
+    {   
         for (auto &t : configuration.get_periodic_tasks())
         {
             const TaskConfiguration &tc =
@@ -198,12 +205,15 @@ public:
     }
 
 
-    /// Destroy the task with the given name.  This will also stop the task.
+    /// Destroy all periodic tasks
     ///
     /// @param  task_name  The name of the task to destroy.
     void destroy_periodic_tasks()
     {
         periodic_tasks.clear();
+
+        bosepro::TelemetryMonitor::get_instance().stop();
+        bosepro::TelemetryMonitor::get_instance().unregister_all_telemetry();
     }
 
 
@@ -281,12 +291,16 @@ public:
         {
             task.second->start();
         }
+
+        ready = true;
     }
 
 
     /// Stop all of the tasks in the session.
     void stop()
     {
+        ready = false;
+
         SPDLOG_INFO("Stopping session.");
         for (auto &task : audio_tasks)
         {
@@ -407,6 +421,15 @@ public:
     }
 
 
+    /// Retrieve the ready flag
+    ///
+    /// @return  the ready flag bool
+    bool is_ready()
+    {
+        return ready;
+    }
+
+
     /// Socket setting to stop all tasks
     ///
     /// @param setting 
@@ -473,6 +496,8 @@ private:
     std::map<std::string, std::unique_ptr<AudioTask>> audio_tasks;
     std::map<std::string, std::unique_ptr<PeriodicTask>> periodic_tasks;
     std::map<std::string, std::function<bool(const ParameterSetting&)>> ps_command_map;
+
+    std::atomic<bool> ready;
 };
 
 

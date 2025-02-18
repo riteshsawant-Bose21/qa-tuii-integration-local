@@ -153,6 +153,11 @@ int main(int argc, char *argv[])
 
     std::vector<std::string> target_paths;
 
+    // Path for the static configuration
+    target_paths.push_back("fw_static_config");
+    // Path for dynamic parameter setttings with vector indices
+    target_paths.push_back("settings.fw.*.*[*]");
+    // Path for dynamic parameter setttings
     target_paths.push_back("settings.fw.*.*");
 
     if (vm.count("serverip"))
@@ -162,14 +167,26 @@ int main(int argc, char *argv[])
                                         target_paths, handle_update);
     }
 
-    telemetry_monitor.initialize(vm["telemetry-messages"].as<std::string>(),
-                                 telem_configuration.get_socket_path(),
-                                 configuration.get_session().get_name());
-    telemetry_monitor.start();
-    session.start();
+    // if we boot up on empty config, no need to start up telemetry
+    if (configuration.has_periodic_tasks())
+    {
+        session.start();
+    }
 
     while(g_running)
     {
+        if (!telemetry_monitor.is_running()) 
+        {
+            if (session.is_ready())
+            {
+                telemetry_monitor.initialize(vm["telemetry-messages"].as<std::string>(), 
+                                    telem_configuration.get_socket_path(),
+                                    configuration.get_session().has_name()
+                                     ? configuration.get_session().get_name()
+                                     : "fusion_system_monitor");
+                telemetry_monitor.start();
+            }
+        }
         usleep(1000);
     }
 
