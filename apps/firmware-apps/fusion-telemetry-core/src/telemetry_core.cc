@@ -159,9 +159,17 @@ int main(int argc, char* argv[])
     signal(SIGTERM, &sig_handler);
     signal(SIGKILL, &sig_handler);
 
+    // Note: on actual devices CONFIG_PATH will be set appropriately. And shared configuration 
+    // like telemetry-configuration.json will have symlinks to the "real" file.
+    std::string config_path = "config"; // Default config path for local testing, etc.
+    auto envConfigPath = getenv("CONFIG_PATH");
+    if (envConfigPath) {
+        config_path = envConfigPath;
+    }
+
     boost::program_options::options_description desc("Allowed options");
     desc.add_options()
-        ("configuration,c", boost::program_options::value<std::string>()->default_value("config/telemetry-configuration.json"), "configuration file")
+        ("configuration,c", boost::program_options::value<std::string>()->default_value(config_path + "/telemetry-configuration.json"), "configuration file")
         ("socket-path,p", boost::program_options::value<std::string>(&core_path), "Core UNIX Domain Socket Path")
         ("system-ip,i", boost::program_options::value<std::string>(&core_ip)->required(), "System IP Address")
         ("update-period,u", boost::program_options::value<std::vector<uint32_t>>(&update_periods)->multitoken(), "HI Freq., MED Freq. & LO Freq. update periods (Frames)")
