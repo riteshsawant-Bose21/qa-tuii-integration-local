@@ -116,6 +116,17 @@ public:
     void assign(const T *value);
 
 
+    /// Assign a pointer to store the value of a scalar telemetry with a simple
+    /// conversion function to convert from the internal representation of the
+    /// processor to the user-facing value.
+    ///
+    /// @param  value  The pointer to store the value of the telemetry.
+    /// @param  conversion_function  A function to convert the internal value
+    ///                              before sending the meter data.
+    template <typename T>
+    void assign(const T *value, T (*conversion_function)(T));
+
+
     /// Assign a pointer to store the value of a scalar telemetry.
     ///
     /// @param  value  The pointer to store the value of the telemetry.
@@ -132,6 +143,18 @@ public:
     void assign(DspTelemetryMemory<T[]> &value);
 
 
+    /// Assign a pointer to store the values of a vector telemetry with a simple
+    /// conversion function to convert from the internal representation of the
+    /// processor to the user-facing value.
+    /// The memory will be re-sized to the length of the telemetry.
+    ///
+    /// @param  value  The memory to store the values of the telemetry.
+    /// @param  conversion_function  A function to convert the internal value
+    ///                              before sending the meter data.
+    template <typename T>
+    void assign(DspTelemetryMemory<T[]> &value, T (*conversion_function)(T));
+
+
     /// Assign telemetry memory to store the values of a vector telemetry.
     /// The memory will be re-sized to the length of the telemetry.
     ///
@@ -146,6 +169,18 @@ public:
     /// @param  value  The memory to store the values of the telemetry.
     template <typename T>
     void assign(DspTelemetryMemory<T*[]> &value);
+
+
+    /// Assign a pointer to store the values of a matrix telemetry with a simple
+    /// conversion function to convert from the internal representation of the
+    /// processor to the user-facing value.
+    /// The memory will be re-sized to the dimensions of the telemetry.
+    ///
+    /// @param  value  The memory to store the values of the telemetry.
+    /// @param  conversion_function  A function to convert the internal value
+    ///                              before sending the meter data.
+    template <typename T>
+    void assign(DspTelemetryMemory<T*[]> &value, T (*conversion_function)(T));
 
 
     /// Assign telemetry memory to store the values of a matrix telemetry.
@@ -323,8 +358,15 @@ public:
     TelemetryData(const TelemetryDefinition &definition,
                   const ProcessorDefinition &processor,
                   const BlockConfiguration *configuration)
-        : Telemetry(definition, processor, configuration)
+        : Telemetry(definition, processor, configuration),
+          conversion_function(nullptr)
     {
+        if constexpr (std::is_same_v<T, int_fast32_t>
+                      || std::is_same_v<T, float>)
+        {
+            definition.get_minimum_value(minimum_value);
+            definition.get_maximum_value(maximum_value);
+        }
     }
 
 
@@ -334,6 +376,43 @@ public:
     /// @param  message  A string stream to whith the value will be written.
     /// @param  value  The meter value.
     void print_value(std::ostringstream &message, const T &value);
+
+
+    T prepare_value(const T &value)
+    {
+        T prepared_value;
+
+        if (conversion_function != nullptr)
+        {
+            prepared_value = conversion_function(value);
+        }
+        else
+        {
+            prepared_value = value;
+        }
+
+        if constexpr (std::is_same_v<T, int_fast32_t>
+                      || std::is_same_v<T, float>)
+        {
+            if (prepared_value < minimum_value)
+            {
+                prepared_value = minimum_value;
+            }
+            else if (prepared_value > maximum_value)
+            {
+                prepared_value = maximum_value;
+            }
+        }
+
+        return prepared_value;
+    }
+
+protected:
+    T (*conversion_function)(T);
+
+private:
+    T minimum_value;
+    T maximum_value;
 };
 
 /// A type-specific version of `Telemetry` for storing meter values.
@@ -361,6 +440,20 @@ public:
     void assign(const T *value)
     {
         block_value = value;
+    }
+
+
+    /// Assign a pointer to store the value of a scalar meter with a simple
+    /// conversion function to convert from the internal representation of the
+    /// processor to the user-facing value.
+    ///
+    /// @param  value  The pointer to store the value of the meter.
+    /// @param  conversion_function  A function to convert the internal value
+    ///                              before sending the meter data.
+    void assign(const T *value, T (*conversion_function)(T))
+    {
+        assign(value);
+        this->conversion_function = conversion_function;
     }
 
 
@@ -405,7 +498,7 @@ public:
         {
             size = MAX_BOOL_STR_LEN;
         }
-        else if constexpr (std::is_same_v<T, int>)
+        else if constexpr (std::is_same_v<T, int_fast32_t>)
         {
             size = MAX_INT_STR_LEN;
         }
@@ -442,7 +535,7 @@ public:
         meter_msg.set_meter_name(this->get_name());
         meter_msg.set_value_type(this->get_value_type());
         meter_msg.set_dimensions(this->get_dimensions());
-        meter_msg.set_value(*block_value);
+        meter_msg.set_value(this->prepare_value(*block_value));
 
         SPDLOG_TRACE("Writing meter: \n\n{}", meter_msg.serialize_message());
 
@@ -463,7 +556,7 @@ public:
         params.set_event_name(this->get_name());
         params.set_value_type(this->get_value_type());
         params.set_dimensions(this->get_dimensions());
-        params.set_value(*block_value);
+        params.set_value(this->prepare_value(*block_value));
 
         SPDLOG_TRACE("Sending event: \n\n{}", event_msg.serialize_message());
 
@@ -524,6 +617,21 @@ public:
     }
 
 
+    /// Assign a pointer to store the value of a vector meter with a simple
+    /// conversion function to convert from the internal representation of the
+    /// processor to the user-facing value.
+    /// The memory will be re-sized to the length of the meter.
+    ///
+    /// @param  value  The memory to store the values of the meter.
+    /// @param  conversion_function  A function to convert the internal value
+    ///                              before sending the meter data.
+    void assign(DspTelemetryMemory<T[]> &value, T (*conversion_function)(T))
+    {
+        assign(value);
+        this->conversion_function = conversion_function;
+    }
+
+
     /// Assign meter memory to store the values of a vector meter.
     /// The memory will be re-sized to the length of the meter.
     ///
@@ -578,7 +686,7 @@ public:
             // compensate for extra """" and no ", "
             size += MAX_BOOL_STR_LEN + 2;
         }
-        else if constexpr (std::is_same_v<T, int>)
+        else if constexpr (std::is_same_v<T, int_fast32_t>)
         {
             // """" and ", "
             size = (MAX_INT_STR_LEN + 6) * (this->get_num_rows() - 1);
@@ -626,6 +734,10 @@ public:
         meter_msg.set_value_type(this->get_value_type());
         meter_msg.set_dimensions(this->get_dimensions());
         std::vector<T> tmp(block_value, block_value + this->get_num_rows());
+        for (auto &&value : tmp)
+        {
+            value = this->prepare_value(value);
+        }
         meter_msg.set_value(tmp);
 
         SPDLOG_TRACE("Writing meter: \n\n{}", meter_msg.serialize_message());
@@ -649,6 +761,10 @@ public:
         params.set_event_name(this->get_name());
         params.set_value_type(this->get_value_type());
         params.set_dimensions(this->get_dimensions());
+        for (auto &&value : tmp)
+        {
+            value = this->prepare_value(value);
+        }
         params.set_value(tmp);
 
         SPDLOG_TRACE("Sending event: \n\n{}", event_msg.serialize_message());
@@ -714,6 +830,21 @@ public:
     }
 
 
+    /// Assign a pointer to store the value of a matrix meter with a simple
+    /// conversion function to convert from the internal representation of the
+    /// processor to the user-facing value.
+    /// The memory will be re-sized to the dimensions of the meter.
+    ///
+    /// @param  value  The memory to store the values of the meter.
+    /// @param  conversion_function  A function to convert the internal value
+    ///                              before sending the meter data.
+    void assign(DspTelemetryMemory<T*[]> &value, T (*conversion_function)(T))
+    {
+        assign(value);
+        this->conversion_function = conversion_function;
+    }
+
+
     /// Assign meter memory to store the values of a matrix meter.
     /// The memory will be re-sized to the dimensions of the meter.
     ///
@@ -776,7 +907,7 @@ public:
             // extra """"
             size -= 2;
         }
-        else if constexpr (std::is_same_v<T, int>)
+        else if constexpr (std::is_same_v<T, int_fast32_t>)
         {
             size = (MAX_INT_STR_LEN + 6) * this->get_num_rows() * this->get_num_columns();
             // "[]"
@@ -828,6 +959,10 @@ public:
         std::vector<std::vector<T>> tmp(this->get_num_rows());
         for (int r = 0; r < this->get_num_rows(); r++) {
             tmp[r].assign(block_value[r], block_value[r] + this->get_num_columns());
+            for (auto &&value : tmp[r])
+            {
+                value = this->prepare_value(value);
+            }
         }
         meter_msg.set_value(tmp);
 
@@ -847,6 +982,10 @@ public:
         std::vector<std::vector<T>> tmp(this->get_num_rows());
         for (int r = 0; r < this->get_num_rows(); r++) {
             tmp[r].assign(block_value[r], block_value[r] + this->get_num_columns());
+            for (auto &&value : tmp[r])
+            {
+                value = this->prepare_value(value);
+            }
         }
 
         event_msg.set_packet_id();

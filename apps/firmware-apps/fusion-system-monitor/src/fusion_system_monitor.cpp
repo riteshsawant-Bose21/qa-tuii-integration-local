@@ -71,12 +71,15 @@ int main(int argc, char *argv[])
     OptionCounter verbosity;
     OptionCounter quietness;
 
+    // Get the root application directory for default paths.
+    std::string app_path(std::filesystem::path(argv[0]).parent_path());
+
     boost::program_options::options_description desc("Allowed options");
     desc.add_options()
-        ("configuration,c", boost::program_options::value<std::string>()->default_value("config/configuration.json"), "configuration file")
-        ("definitions,d", boost::program_options::value<std::string>()->default_value("config/module-definitions.json"), "module definition file")
-        ("telemetry-messages,m", boost::program_options::value<std::string>()->default_value("config/telemetry-messages.json"), "telemetry commands file")
-        ("telemetry-configuration,p", boost::program_options::value<std::string>()->default_value("config/telemetry-configuration.json"), "telemetry configuration file")
+        ("configuration,c", boost::program_options::value<std::string>()->default_value(app_path + "/config/configuration.json"), "configuration file")
+        ("definitions,d", boost::program_options::value<std::string>()->default_value(app_path + "/config/algorithm-definitions.json"), "algorithm definition file")
+        ("telemetry-messages,m", boost::program_options::value<std::string>()->default_value(app_path + "/config/telemetry-messages.json"), "telemetry commands file")
+        ("telemetry-configuration,p", boost::program_options::value<std::string>()->default_value(app_path + "/config/telemetry-configuration.json"), "telemetry configuration file")
         ("serverip,s", boost::program_options::value<std::string>(), "IP address of fusion-server")
         ("verbose,v", boost::program_options::value(&verbosity)->zero_tokens(), "make logs more verbose")
         ("quiet,q", boost::program_options::value(&quietness)->zero_tokens(), "make logs more quiet")
@@ -145,6 +148,11 @@ int main(int argc, char *argv[])
 
     std::vector<std::string> target_paths;
 
+    // Path for the static configuration
+    target_paths.push_back("fw_static_config");
+    // Path for dynamic parameter setttings with vector indices
+    target_paths.push_back("settings.fw.*.*[*]");
+    // Path for dynamic parameter setttings
     target_paths.push_back("settings.fw.*.*");
 
     if (vm.count("serverip"))
@@ -154,14 +162,24 @@ int main(int argc, char *argv[])
                                         target_paths, handle_update);
     }
 
-    telemetry_monitor.initialize(vm["telemetry-messages"].as<std::string>(),
-                                 telem_configuration.get_socket_path(),
-                                 configuration.get_session().get_name());
-    telemetry_monitor.start();
-    session.start();
+    // if we boot up on empty config, no need to start up telemetry
+    if (configuration.has_periodic_tasks())
+    {
+        session.start();
+    }
 
     while(g_running)
     {
+        if (!telemetry_monitor.is_running()) 
+        {
+            if (session.is_ready())
+            {
+                telemetry_monitor.initialize(vm["telemetry-messages"].as<std::string>(), 
+                                    telem_configuration.get_socket_path(),
+                                    configuration.get_session().get_name());
+                telemetry_monitor.start();
+            }
+        }
         usleep(1000);
     }
 
