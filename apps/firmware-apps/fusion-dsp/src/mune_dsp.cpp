@@ -196,16 +196,18 @@ int main(int argc, char *argv[])
         {
             session.start();
         }
-        
+
         while(g_running)
         {
-            if (!telemetry_monitor.is_running()) 
+            if (!telemetry_monitor.is_running())
             {
                 if (session.is_ready())
                 {
-                    telemetry_monitor.initialize(vm["telemetry-messages"].as<std::string>(), 
+                    telemetry_monitor.initialize(vm["telemetry-messages"].as<std::string>(),
                                      telem_configuration.get_socket_path(),
-                                     configuration.get_session().get_name());
+                                     configuration.get_session().has_name()
+                                     ? configuration.get_session().get_name()
+                                     : "fusion_dsp");
                     telemetry_monitor.start();
                 }
             }
