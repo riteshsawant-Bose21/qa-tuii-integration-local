@@ -71,16 +71,21 @@ int main(int argc, char *argv[])
     OptionCounter verbosity;
     OptionCounter quietness;
 
-    // Get the root application directory for default paths.
-    std::string app_path(std::filesystem::path(argv[0]).parent_path());
+    // Note: on actual devices CONFIG_PATH will be set appropriately. And shared configuration 
+    // like telemetry-configuration.json will have symlinks to the "real" file.
+    std::string config_path = "config"; // Default config path for local testing, etc.
+    auto envConfigPath = getenv("CONFIG_PATH");
+    if (envConfigPath) {
+        config_path = envConfigPath;
+    }
 
     boost::program_options::options_description desc("Allowed options");
     desc.add_options()
-        ("configuration,c", boost::program_options::value<std::string>()->default_value(app_path + "/config/configuration.json"), "configuration file")
-        ("definitions,d", boost::program_options::value<std::string>()->default_value(app_path + "/config/algorithm-definitions.json"), "algorithm definition file")
-        ("telemetry-messages,m", boost::program_options::value<std::string>()->default_value(app_path + "/config/telemetry-messages.json"), "telemetry commands file")
-        ("telemetry-configuration,p", boost::program_options::value<std::string>()->default_value(app_path + "/config/telemetry-configuration.json"), "telemetry configuration file")
-        ("serverip,s", boost::program_options::value<std::string>(), "IP address of fusion-server")
+        ("configuration,c", boost::program_options::value<std::string>()->default_value(config_path + "/configuration.json"), "configuration file")
+        ("definitions,d", boost::program_options::value<std::string>()->default_value(config_path + "/module-definitions.json"), "module definition file")
+        ("telemetry-messages,m", boost::program_options::value<std::string>()->default_value(config_path + "/telemetry-messages.json"), "telemetry commands file")
+        ("telemetry-configuration,p", boost::program_options::value<std::string>()->default_value(config_path + "/telemetry-configuration.json"), "telemetry configuration file")
+        ("serverip,s", boost::program_options::value<std::string>(), "127.0.0.1")
         ("verbose,v", boost::program_options::value(&verbosity)->zero_tokens(), "make logs more verbose")
         ("quiet,q", boost::program_options::value(&quietness)->zero_tokens(), "make logs more quiet")
         ("help,h", "print this message and exit")
