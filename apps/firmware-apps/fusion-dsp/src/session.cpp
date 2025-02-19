@@ -54,7 +54,7 @@ bool Session::cmd_create_audio_task(const ParameterSetting& setting)
 
     ready = false;
 
-    // NEED to redo telemetry because meters GREW
+    // NEED to redo telemetry because meters shm needs to grow
     bosepro::TelemetryMonitor::get_instance().stop();
 
     if (config.has_audio_tasks())
@@ -87,6 +87,7 @@ bool Session::cmd_create_audio_task(const ParameterSetting& setting)
         }
     }
 
+    // ready set in start
     start();
 
     return true;
@@ -148,6 +149,7 @@ bool Session::cmd_create_periodic_task(const ParameterSetting& setting)
         }
     }
 
+    // ready set in start
     start();
 
     return true;
