@@ -195,14 +195,26 @@ int main(int argc, char *argv[])
                                          target_paths, handle_update);
         }
 
-        telemetry_monitor.initialize(vm["telemetry-messages"].as<std::string>(), 
-                                     telem_configuration.get_socket_path(),
-                                     configuration.get_session().get_name());
-        telemetry_monitor.start();
-        session.start();
+        // if we boot up on empty config, no need to start up telemetry
+        if (configuration.has_audio_tasks())
+        {
+            session.start();
+        }
 
         while(g_running)
         {
+            if (!telemetry_monitor.is_running())
+            {
+                if (session.is_ready())
+                {
+                    telemetry_monitor.initialize(vm["telemetry-messages"].as<std::string>(),
+                                     telem_configuration.get_socket_path(),
+                                     configuration.get_session().has_name()
+                                     ? configuration.get_session().get_name()
+                                     : "fusion_dsp");
+                    telemetry_monitor.start();
+                }
+            }
             usleep(1000);
         }
 
