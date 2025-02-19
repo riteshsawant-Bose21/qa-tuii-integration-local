@@ -1,5 +1,5 @@
 {
-    "version": "0.1.0",
+    "version": "0.1.1",
     "algorithms": [
         {
             "name": "agc",
@@ -384,7 +384,6 @@
             "telemetry": [
                 {
                     "name": "gain_meter",
-                    "dimensions": ["channels"],
                     "value_type": "float",
                     "default_value": -60.0,
                     "minimum_value": 12.0,
