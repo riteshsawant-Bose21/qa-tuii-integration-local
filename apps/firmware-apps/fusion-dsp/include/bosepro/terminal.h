@@ -152,6 +152,7 @@ public:
     /// @param  configuration  The configuration to use for the terminal.
     /// @param  frame_size  The number of elements in the signal per frame.
     Terminal(const TerminalDefinition &definition,
+             const ProcessorDefinition &processor,
              const BlockConfiguration *configuration,
              int_fast32_t frame_size)
         : buffer(nullptr), top(nullptr), data_size(0), frame_size(frame_size),
@@ -174,7 +175,7 @@ public:
                 else
                 {
                     const PropertyDefinition &pd =
-                        definition.get_property(property_name);
+                        processor.get_property(property_name);
                     pd.get_default_value(channels);
                 }
             }
