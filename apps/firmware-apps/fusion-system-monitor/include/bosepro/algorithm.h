@@ -28,6 +28,8 @@ struct AlgorithmMeta {
     const BlockConfiguration *configuration;
     std::map<std::string, std::unique_ptr<Terminal>> terminals;
     std::map<std::string, std::unique_ptr<Parameter>> parameters;
+    std::string block_name;
+    std::string algorithm_name;
 };
 
 
@@ -42,6 +44,8 @@ public:
     {
         meta->configuration = &configuration;
         meta->definition = static_cast<const AlgorithmDefinition*>(get_definition(configuration.get_algorithm()));
+        meta->block_name = configuration.get_name();
+        meta->algorithm_name = configuration.get_algorithm();
 
         // There is no need to create property data, because we just look it
         // up from the algorithm's property definitions and the configuration.
@@ -154,7 +158,7 @@ public:
                 if (TelemetryMonitor::get_instance().has_meter(this->get_block_name() +  
                                                                "::" + meter_name))
                 {
-                    assign_telemetry(meter_name, top.get_telemetry());
+                    assign_telemetry(meter_name, top.get_telemetry(), linear_to_db);
                     requires_processing = true;
                 }
 
@@ -188,14 +192,14 @@ public:
     /// Return the name of this block.
     const std::string &get_block_name() const
     {
-        return meta->configuration->get_name();
+        return meta->block_name;
     }
 
 
     /// Return the name of this algorithm.
     const std::string &get_algorithm_name() const
     {
-        return meta->configuration->get_algorithm();
+        return meta->algorithm_name;
     }
 
 
@@ -596,6 +600,22 @@ protected:
     }
 
 
+    /// Assign storage for a scalar meter value, along with a conversion
+    /// function to convert the value from its internal representation to a
+    /// user-facing value.  For example, `linear_to_db()` in `conversion.h`
+    ///
+    /// @param  name  The name of the meter.
+    /// @param  value  The storage for the meter value.
+    /// @param  conversion_function  An function to be called to convert the
+    ///                              value before meter data is sent.
+    template <typename T>
+    void assign_telemetry(const std::string &name, const T *value,
+                          T (*conversion_function)(T))
+    {
+        TelemetryMonitor::get_instance().get_telemetry(this->get_block_name() + "::" + name).assign(value, conversion_function);
+    }
+
+
     /// Assign storage for vector meter values.
     /// The value is not valid until after the algorithm's constructor (but
     /// before `process()` is called).
@@ -609,6 +629,24 @@ protected:
     }
 
 
+    /// Assign storage for vector meter values, along with a conversion
+    /// function to convert the value from its internal representation to a
+    /// user-facing value.  For example, `linear_to_db()` in `conversion.h`
+    /// The value is not valid until after the algorithm's constructor (but
+    /// before `process()` is called).
+    ///
+    /// @param  name  The name of the meter.
+    /// @param  value  The storage for the meter value.
+    /// @param  conversion_function  An function to be called to convert the
+    ///                              value before meter data is sent.
+    template <typename T>
+    void assign_telemetry(const std::string &name, DspTelemetryMemory<T[]> &value,
+                          T (*conversion_function)(T))
+    {
+        TelemetryMonitor::get_instance().get_telemetry(this->get_block_name() + "::" + name).assign(value, conversion_function);
+    }
+
+
     /// Assign storage for matrix meter values.
     /// The value is not valid until after the algorithm's constructor (but
     /// before `process()` is called).
@@ -619,6 +657,24 @@ protected:
     void assign_telemetry(const std::string &name, DspTelemetryMemory<T*[]> &value)
     {
         TelemetryMonitor::get_instance().get_telemetry(this->get_block_name() + "::" + name).assign(value);
+    }
+
+
+    /// Assign storage for matrix meter values, along with a conversion
+    /// function to convert the value from its internal representation to a
+    /// user-facing value.  For example, `linear_to_db()` in `conversion.h`
+    /// The value is not valid until after the algorithm's constructor (but
+    /// before `process()` is called).
+    ///
+    /// @param  name  The name of the meter.
+    /// @param  value  The storage for the meter value.
+    /// @param  conversion_function  An function to be called to convert the
+    ///                              value before meter data is sent.
+    template <typename T>
+    void assign_telemetry(const std::string &name, DspTelemetryMemory<T*[]> &value,
+                          T (*conversion_function)(T))
+    {
+        TelemetryMonitor::get_instance().get_telemetry(this->get_block_name() + "::" + name).assign(value, conversion_function);
     }
 
 

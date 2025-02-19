@@ -26,6 +26,8 @@ struct ModuleMeta {
     const ModuleDefinition *definition;
     const BlockConfiguration *configuration;
     std::map<std::string, std::unique_ptr<Parameter>> parameters;
+    std::string block_name;
+    std::string module_name;
 };
 
 
@@ -40,6 +42,8 @@ public:
     {
         meta->configuration = &configuration;
         meta->definition = static_cast<const ModuleDefinition*>(get_definition(configuration.get_module()));
+        meta->block_name = configuration.get_name();
+        meta->module_name = configuration.get_module();
 
         // There is no need to create constant data, because we just look it
         // up from the definition and configuration.
@@ -93,14 +97,14 @@ public:
     /// Return the name of this block.
     const std::string &get_block_name() const
     {
-        return meta->configuration->get_name();
+        return meta->block_name;
     }
 
 
     /// Return the name of this module.
     const std::string &get_module_name() const
     {
-        return meta->configuration->get_module();
+        return meta->module_name;
     }
 
 
