@@ -82,16 +82,6 @@ def profile(config_name):
     return model
     
 
-p = {
-    'bands': range(5, 38, 4),
-    'channels': range(1, 10)
-}
-feature_dict = {
-    'bands': lambda x: x['bands'],
-    'channels': lambda x: x['channels'],
-    'bandchannels': lambda x: x['bands']*x['channels']
-}
-
 
 configurations = {
     'agc' : {
@@ -135,7 +125,7 @@ configurations = {
         },
         'wav_input' : 'MD24_10.wav',
         'csv_dump' : 'matrix_mixer_timings.csv',
-        'format_string' : 'T = {0} + {1}*num_inputs + {2}*num_outputs + {3}*num_inputs*num_outputs'
+        'format_string' : 'T = {0} + {1}*num_inputs*num_outputs'
     },
     'passthrough' : {
         'path' : 'profile_passthrough.json.jinja',
@@ -155,7 +145,7 @@ configurations = {
         },
         'wav_input' : 'MD24_10.wav',
         'csv_dump' : 'peq_tmp.csv',
-        'format_string' : 'T = {0} + {1}*bands + {2}*channels + {3}*bands*channels'
+        'format_string' : 'T = {0} + {1}*bands*channels'
     },
     'tone' : {
         'path' : 'profile_tone.json.jinja'
