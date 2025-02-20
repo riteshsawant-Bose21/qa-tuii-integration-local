@@ -24,7 +24,9 @@
 #include <string>
 #include <vector>
 
+
 namespace bosepro {
+
 
 /// A periodic real-time task that runs in a separate thread.
 class AudioSubtask {
@@ -36,10 +38,10 @@ public:
     /// @param  period  The period of the task, relative to the base frame rate
     ///                 of the system.
     AudioSubtask(void (*run_function)(void *), void *obj,
-                    int_fast32_t sample_rate, int_fast32_t frame_size,
-                    int_fast32_t base_frame_size)
+                int_fast32_t sample_rate, int_fast32_t frame_size,
+                int_fast32_t base_frame_size)
         : run_function(run_function), obj(obj), sample_rate(sample_rate),
-            frame_size(frame_size), ticks(0)
+          frame_size(frame_size), ticks(0)
     {
         int err;
         pthread_mutexattr_t attr;
@@ -68,6 +70,7 @@ public:
                             strerror(err));
         }
 
+
         err = pthread_mutexattr_setprotocol(&attr, PTHREAD_PRIO_INHERIT);
 
         if (err != 0)
@@ -76,12 +79,15 @@ public:
                             strerror(err));
         }
 
+
+
         err = pthread_mutex_init(&ticks_mutex, &attr);
 
         if (err != 0)
         {
             SPDLOG_CRITICAL("pthread_mutex_init() failed: {}", strerror(err));
         }
+
 
         err = pthread_cond_init(&ticks_cond, NULL);
 
@@ -95,13 +101,14 @@ public:
         task_id = task_count++;
     }
 
+
     virtual ~AudioSubtask()
     {
         SPDLOG_DEBUG("AudioTask {} MIPS: {} first, {} max, {} avg.",
-                        task_id,
-                        profile.get_first_mips(),
-                        profile.get_max_mips(),
-                        profile.get_average_mips());
+                    task_id,
+                    profile.get_first_mips(),
+                    profile.get_max_mips(),
+                    profile.get_average_mips());
     }
 
     /// Set the real-time priority of the task (between 0 and 99).  If this is
@@ -109,7 +116,7 @@ public:
     ///
     /// @param priority The real-time priority of the task.
     void set_priority(int priority)
-        {
+    {
 #ifdef USE_MAC_THREADS
         // In macOS, the pthread real-time scheduler doesn't have actual
         // real-time priority (but allows you to set real-time priority without
@@ -127,8 +134,8 @@ public:
         policy.preemptible = 1;
 
         kern_return_t result = thread_policy_set(pthread_mach_thread_np(thread),
-                                                    THREAD_TIME_CONSTRAINT_POLICY,
-                                                    (thread_policy_t)&policy, THREAD_TIME_CONSTRAINT_POLICY_COUNT);
+                                                THREAD_TIME_CONSTRAINT_POLICY,
+                                                (thread_policy_t)&policy, THREAD_TIME_CONSTRAINT_POLICY_COUNT);
 
         if (result != KERN_SUCCESS)
         {
@@ -148,6 +155,7 @@ public:
         }
 #endif
     }
+
 
     /// Increment the task tick count, indicating one frame at the base frame
     /// rate has passed.  This will wake the task according to its period.
@@ -169,6 +177,7 @@ public:
 
         pthread_mutex_unlock(&ticks_mutex);
     }
+
 
 private:
     /// The function that runs the task thread.  It runs the task function
@@ -193,6 +202,7 @@ private:
         }
     }
 
+
     static int task_count;
     int task_id;
     pthread_t thread;
@@ -209,8 +219,7 @@ private:
 
 /// A real-time audio processing task, which runs a collection of blocks that
 /// all have the same frame rate.
-class AudioTask : public Configurable
-{
+class AudioTask : public Configurable {
 public:
     /// Create a task from a configuration.
     ///
@@ -264,7 +273,8 @@ public:
 
             blocks.push_back(std::unique_ptr<Algorithm>(
                 ChildFactory<Algorithm,
-                                const BlockConfiguration &>::create_child(bc->get_algorithm(), *bc)));
+                    const BlockConfiguration &>::create_child(
+                        bc->get_algorithm(), *bc)));
             block_map[bc->get_name()] = blocks.back().get();
         }
 
@@ -286,13 +296,13 @@ public:
             int input_channel = cc->get_input_channel();
 
             SPDLOG_TRACE("Connecting {}:{}:{} -> {}:{}:{}.",
-                            cc->get_source_block(), cc->get_output_terminal(),
-                            cc->get_output_channel(), cc->get_destination_block(),
-                            cc->get_input_terminal(), cc->get_input_channel());
+                    cc->get_source_block(), cc->get_output_terminal(),
+                    cc->get_output_channel(), cc->get_destination_block(),
+                    cc->get_input_terminal(), cc->get_input_channel());
 
             input_block->connect_terminal(cc->get_input_terminal(),
-                                            input_channel, output_terminal,
-                                            output_channel);
+                    input_channel, output_terminal,
+                    output_channel);
         }
 
         task_profile.set_period((double)get_frame_size() / get_sample_rate());
@@ -334,6 +344,7 @@ public:
         region_manager.close_region();
     }
 
+
     virtual ~AudioTask()
     {
         frames_to_run = 0;
@@ -351,9 +362,9 @@ public:
         region_manager.open_region();
 
         SPDLOG_DEBUG("AudioTask MIPS: {} first, {} max, {} avg.",
-                        task_profile.get_first_mips(),
-                        task_profile.get_max_mips(),
-                        task_profile.get_average_mips());
+                    task_profile.get_first_mips(),
+                    task_profile.get_max_mips(),
+                    task_profile.get_average_mips());
 
         if (profile_blocks)
         {
@@ -361,20 +372,20 @@ public:
             for (auto &block : blocks)
             {
                 SPDLOG_DEBUG("Block MIPS, {} ({}): {} first, {} max, {} avg.",
-                                block->get_block_name(),
-                                block->get_algorithm_name(),
-                                block_profile[block_index].get_first_mips(),
-                                block_profile[block_index].get_max_mips(),
-                                block_profile[block_index].get_average_mips());
+                            block->get_block_name(),
+                            block->get_algorithm_name(),
+                            block_profile[block_index].get_first_mips(),
+                            block_profile[block_index].get_max_mips(),
+                            block_profile[block_index].get_average_mips());
                 block_index++;
             }
         }
     }
 
+
     /// Run one frame of audio through all of the blocks in this task.
     virtual void process() override
     {
-
         task_profile.start();
 
         if (!profile_blocks)
@@ -387,7 +398,6 @@ public:
         }
         else
         {
-
             int block_index = 0;
             for (auto &block : blocks)
             {
@@ -436,6 +446,7 @@ public:
         }
     }
 
+
     /// Start this task after it has been stopped with `stop()`.
     void start()
     {
@@ -448,6 +459,7 @@ public:
             SPDLOG_ERROR("No JACK client associated with this task.");
         }
     }
+
 
     /// Stop running the task without destroying it.  It can be started again
     /// with `start()`.
@@ -463,6 +475,7 @@ public:
         }
     }
 
+
     /// Check whether a task has completed running, if it was set up to run for
     /// only a certain amount of time with `set_seconds_to_run()`.
     ///
@@ -471,6 +484,7 @@ public:
     {
         return frames_to_run == 0;
     }
+
 
     /// Set the number of seconds to run this task, after which it will stop
     /// processing.
@@ -482,6 +496,7 @@ public:
             std::ceil(seconds * get_sample_rate() / get_frame_size());
     }
 
+
     /// Get the CPU affinity to be used for this task.
     ///
     /// @return  The CPU affinity configured for this task.
@@ -489,6 +504,7 @@ public:
     {
         return cpu_affinity;
     }
+
 
 private:
     RegionManager region_manager;
@@ -501,9 +517,11 @@ private:
     std::map<std::string, Algorithm *> block_map;
     bool profile_blocks = false;
     int_fast32_t cpu_affinity;
+
     JackClient *client;
     int_fast32_t frames_to_run;
     std::ofstream log_file;
 };
+
 
 } // namespace bosepro
