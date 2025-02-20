@@ -4,6 +4,8 @@
 
 #include <cstdint>
 #include <time.h>
+#include <fstream>
+#include <iostream>
 
 namespace bosepro {
 
@@ -33,7 +35,7 @@ public:
 
 
     /// Finish a timing run.
-    inline void finish()
+    inline double finish()
     {
         timespec finish_time;
         clock_gettime(CLOCK_THREAD_CPUTIME_ID, &finish_time);
@@ -55,7 +57,9 @@ public:
         {
             first_time.tv_sec = diff_time.tv_sec;
             first_time.tv_nsec = diff_time.tv_nsec;
-            return;
+
+
+            return timespec_to_seconds(diff_time);
         }
 
         // Track the maximum execution time (the one we really care about).
@@ -78,6 +82,8 @@ public:
         }
 
         num_runs++;
+
+        return timespec_to_seconds(diff_time);
     }
 
 
@@ -161,6 +167,7 @@ public:
     {
         return get_average_time() * cpu_mips * inv_period;
     }
+
 
 private:
     static const long NSEC_MAX = 1000000000L;
