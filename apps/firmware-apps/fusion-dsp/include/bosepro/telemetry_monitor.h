@@ -26,6 +26,7 @@ public:
     TelemetryMonitor()
         : shm_manager(NamedSharedMemoryManagerFactory::getInstance()),
           shm_names(NUM_SHM_REGIONS, ""),
+          shm_sizes(NUM_SHM_REGIONS, 0),
           telemetry_manager_addr(),
           error(0),
           initialized(false),
@@ -202,14 +203,15 @@ public:
             close(telemetry_fd);
         }
 
-        for (auto &n : shm_names)
+        for (int i = 0; i < NUM_SHM_REGIONS; ++i)
         {
-            if (!n.empty())
+            if (shm_sizes[i] != 0 && !shm_names[i].empty())
             {
-                shm_manager.removeSharedMemory(n);
+                shm_manager.removeSharedMemory(shm_names[i]);
             }
         }
         shm_names.clear();
+        shm_sizes.clear();
 
         unlink(client_path.c_str());
 
@@ -543,10 +545,10 @@ private:
     {
         TelemetryMessage req = telemetry_messages->get_default_command("pub_register_req");
         size_t meter_blob_size = telemetry_messages->get_default_meter().serialize_message().size();
-        std::vector<size_t> block_size = {get_meters_size("HI", meter_blob_size),
-                                          get_meters_size("MED", meter_blob_size),
-                                          get_meters_size("LO", meter_blob_size)};
-        req.get_parameters().set_block_size(block_size);
+        shm_sizes = {get_meters_size("HI", meter_blob_size),
+                      get_meters_size("MED", meter_blob_size),
+                      get_meters_size("LO", meter_blob_size)};
+        req.get_parameters().set_block_size(shm_sizes);
         req.set_packet_id();
 
         SPDLOG_DEBUG("Sending registration req: \n\n{}", req.serialize_message());
@@ -587,12 +589,12 @@ private:
 
         shm_names = rsp.get_parameters().get_block_name();
         for (size_t i = 0; i < shm_names.size(); ++i) {
-            if (block_size[i] > 0) {
+            if (shm_sizes[i] > 0) {
                 try {
                     NamedSharedMemory &shm = shm_manager.openSharedMemory(shm_names[i]);
                     shm.setPersonalityAsWriter();
                     
-                    SPDLOG_TRACE("Found shared memory region {} with size {}", shm_names[i], block_size[i]);
+                    SPDLOG_TRACE("Found shared memory region {} with size {}", shm_names[i], shm_sizes[i]);
                 } catch (const std::runtime_error& e) {
                     SPDLOG_CRITICAL("Failed to create shared memory: {}", e.what());
                     return false;
@@ -833,8 +835,11 @@ private:
     NamedSharedMemoryManager& shm_manager;
     int telemetry_fd;
     std::vector<std::string> shm_names;
+    std::vector<size_t> shm_sizes;
     struct sockaddr_un telemetry_manager_addr;
+
     int error;
+    
     std::atomic<bool> initialized;
     std::atomic<bool> running;
     std::atomic<bool> stop_flag;
