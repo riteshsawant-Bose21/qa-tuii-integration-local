@@ -61,7 +61,10 @@ public:
                     reinterpret_cast<const TerminalDefinition &>(t.second);
             const std::string &name = td.get_name();
             meta->terminals[name] =
-                std::make_unique<Terminal>(Terminal(td, meta->configuration, get_frame_size()));
+                std::make_unique<Terminal>(Terminal(td,
+                                                    static_cast<const ProcessorDefinition&>(*meta->definition),
+                                                    meta->configuration,
+                                                    get_frame_size()));
         }
 
         // Create the parameter data for all of the parameters in the algorithm.
