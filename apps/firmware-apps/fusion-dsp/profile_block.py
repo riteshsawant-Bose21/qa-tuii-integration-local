@@ -129,8 +129,8 @@ configurations = {
             'num_outputs' : range(1, 60, 4)
         },
         'features' : {
-            'num_inputs' : lambda x: x['num_inputs'],
-            'num_outputs' : lambda x: x['num_outputs'],
+            # 'num_inputs' : lambda x: x['num_inputs'],
+            # 'num_outputs' : lambda x: x['num_outputs'],
             'num_crosspoints' : lambda x: x['num_inputs']*x['num_outputs']
         },
         'wav_input' : 'MD24_10.wav',
@@ -149,8 +149,8 @@ configurations = {
             'channels': range(1, 10)
         },
         'features': {
-            'bands': lambda x: x['bands'],
-            'channels': lambda x: x['channels'],
+            # 'bands': lambda x: x['bands'],
+            # 'channels': lambda x: x['channels'],
             'bandchannels': lambda x: x['bands']*x['channels']
         },
         'wav_input' : 'MD24_10.wav',
