@@ -47,7 +47,8 @@ def profile(config_name):
         
         env = {'DYLD_LIBRARY_PATH' : 'libs/onnxruntime-osx-universal2-1.17.0/lib/:'}
         run(['./build/mune_dsp','-c', 'tmp.json'],
-            env=env
+            # If running on MacOS and having trouble with dylib, uncomment this.
+            # env=env
             )
         df = pd.read_csv('timings.csv')
         for feature, formula in feature_dict.items():
