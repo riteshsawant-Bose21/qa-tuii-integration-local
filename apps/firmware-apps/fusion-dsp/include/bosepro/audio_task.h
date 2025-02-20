@@ -307,14 +307,36 @@ public:
                     output_channel);
         }
 
+        task_profile.set_period((double)get_frame_size() / get_sample_rate());
+
+        if (configuration.has_property("timing_log_file"))
+        {
+            std::string timing_log_file;
+            configuration.get_property("timing_log_file").get_value(timing_log_file);
+            log_file = std::ofstream(timing_log_file, std::ios::binary);
+            SPDLOG_DEBUG("Logging to file: {}", timing_log_file);
+            log_file << configuration.get_name();
+        }
+
         if (configuration.has_property("profile_blocks"))
         {
             configuration.get_property("profile_blocks").get_value(profile_blocks);
+            if (log_file)
+            {
+                for (auto &block : blocks)
+                {
+                    log_file << "," << block->get_block_name();
+                }
+            }
+        }
+
+        if (log_file)
+        {
+            log_file << "\n";
         }
 
         block_profile.resize(blocks.size());
-
-        task_profile.set_period((double)get_frame_size() / get_sample_rate());
+        block_timings.resize(blocks.size());
 
         for (auto &bp : block_profile)
         {
@@ -384,7 +406,8 @@ public:
                 block_profile[block_index].start();
                 block->process();
                 block->process_outputs();
-                block_profile[block_index++].finish();
+                block_timings[block_index] = block_profile[block_index].finish();
+                block_index++;
             }
         }
 
@@ -393,9 +416,21 @@ public:
             frames_to_run--;
         }
 
-        task_profile.finish();
-    }
+        double task_time = task_profile.finish();
 
+        if (log_file)
+        {
+            log_file << task_time;
+            if (profile_blocks)
+            {
+                for (double time : block_timings)
+                {
+                    log_file << "," << time;
+                }
+            }
+            log_file << std::endl;
+        }
+    }
 
     /// Get a pointer to a signal processing block with the given name.
     ///
@@ -479,6 +514,7 @@ private:
     // A list of blocks, for quickly processing in order.
     std::list<std::unique_ptr<Algorithm>> blocks;
     std::vector<Profile> block_profile;
+    std::vector<double> block_timings;
     // A map of blocks, for accessing parameters.
     std::map<std::string, Algorithm *> block_map;
     bool profile_blocks = false;
@@ -486,6 +522,7 @@ private:
 
     JackClient *client;
     int_fast32_t frames_to_run;
+    std::ofstream log_file;
 };
 
 
