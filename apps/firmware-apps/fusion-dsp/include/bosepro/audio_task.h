@@ -38,8 +38,8 @@ public:
     /// @param  period  The period of the task, relative to the base frame rate
     ///                 of the system.
     AudioSubtask(void (*run_function)(void *), void *obj,
-                int_fast32_t sample_rate, int_fast32_t frame_size,
-                int_fast32_t base_frame_size)
+                 int_fast32_t sample_rate, int_fast32_t frame_size,
+                 int_fast32_t base_frame_size)
         : run_function(run_function), obj(obj), sample_rate(sample_rate),
           frame_size(frame_size), ticks(0)
     {
@@ -62,6 +62,7 @@ public:
             SPDLOG_CRITICAL("pthread_create() failed: {}", strerror(err));
         }
 
+
         err = pthread_mutexattr_init(&attr);
 
         if (err != 0)
@@ -78,7 +79,6 @@ public:
             SPDLOG_CRITICAL("pthread_mutexattr_setprotocol() failed: {}",
                             strerror(err));
         }
-
 
 
         err = pthread_mutex_init(&ticks_mutex, &attr);
@@ -105,11 +105,12 @@ public:
     virtual ~AudioSubtask()
     {
         SPDLOG_DEBUG("AudioTask {} MIPS: {} first, {} max, {} avg.",
-                    task_id,
-                    profile.get_first_mips(),
-                    profile.get_max_mips(),
-                    profile.get_average_mips());
+                     task_id,
+                     profile.get_first_mips(),
+                     profile.get_max_mips(),
+                     profile.get_average_mips());
     }
+
 
     /// Set the real-time priority of the task (between 0 and 99).  If this is
     /// not called, the task will not be a real-time task.
@@ -134,8 +135,8 @@ public:
         policy.preemptible = 1;
 
         kern_return_t result = thread_policy_set(pthread_mach_thread_np(thread),
-                                                THREAD_TIME_CONSTRAINT_POLICY,
-                                                (thread_policy_t)&policy, THREAD_TIME_CONSTRAINT_POLICY_COUNT);
+                                                 THREAD_TIME_CONSTRAINT_POLICY,
+            (thread_policy_t)&policy, THREAD_TIME_CONSTRAINT_POLICY_COUNT);
 
         if (result != KERN_SUCCESS)
         {
@@ -217,6 +218,7 @@ private:
     Profile profile;
 };
 
+
 /// A real-time audio processing task, which runs a collection of blocks that
 /// all have the same frame rate.
 class AudioTask : public Configurable {
@@ -273,8 +275,8 @@ public:
 
             blocks.push_back(std::unique_ptr<Algorithm>(
                 ChildFactory<Algorithm,
-                    const BlockConfiguration &>::create_child(
-                        bc->get_algorithm(), *bc)));
+                     const BlockConfiguration &>::create_child(
+                         bc->get_algorithm(), *bc)));
             block_map[bc->get_name()] = blocks.back().get();
         }
 
@@ -362,9 +364,9 @@ public:
         region_manager.open_region();
 
         SPDLOG_DEBUG("AudioTask MIPS: {} first, {} max, {} avg.",
-                    task_profile.get_first_mips(),
-                    task_profile.get_max_mips(),
-                    task_profile.get_average_mips());
+                     task_profile.get_first_mips(),
+                     task_profile.get_max_mips(),
+                     task_profile.get_average_mips());
 
         if (profile_blocks)
         {
@@ -372,11 +374,11 @@ public:
             for (auto &block : blocks)
             {
                 SPDLOG_DEBUG("Block MIPS, {} ({}): {} first, {} max, {} avg.",
-                            block->get_block_name(),
-                            block->get_algorithm_name(),
-                            block_profile[block_index].get_first_mips(),
-                            block_profile[block_index].get_max_mips(),
-                            block_profile[block_index].get_average_mips());
+                             block->get_block_name(),
+                             block->get_algorithm_name(),
+                             block_profile[block_index].get_first_mips(),
+                             block_profile[block_index].get_max_mips(),
+                             block_profile[block_index].get_average_mips());
                 block_index++;
             }
         }
