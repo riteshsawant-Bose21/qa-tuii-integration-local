@@ -607,11 +607,10 @@ public:
     const int sockfd = udpSocket_.get();
 
     // Set up the server address.
-    sockaddr_in serverAddr;
-    std::memset(&serverAddr, 0, sizeof(serverAddr));
-    serverAddr.sin_family = AF_INET;
-    serverAddr.sin_port = htons(port);
-    if (inet_pton(AF_INET, serverIP.c_str(), &serverAddr.sin_addr) <= 0)
+    std::memset(&serverAddr_, 0, sizeof(serverAddr_));
+    serverAddr_.sin_family = AF_INET;
+    serverAddr_.sin_port = htons(port);
+    if (inet_pton(AF_INET, serverIP.c_str(), &serverAddr_.sin_addr) <= 0)
       throw std::runtime_error("Invalid server address: " + serverIP);
 
     // Bind the socket to any available local port.
@@ -645,7 +644,7 @@ public:
         });
       }
     }
-    requestInitialState(serverAddr);
+    requestInitialState(serverAddr_);
     receiveThread_ = std::thread(&UDPValueMonitor::receiveLoop, this);
   }
 
@@ -764,6 +763,7 @@ private:
       log("Failed to send initial state request: " +
           std::string(strerror(errno)));
     }
+    receivedInitialState_ = false;
   }
 
   /**
@@ -863,6 +863,8 @@ private:
         std::cerr << "Poll error: " << strerror(errno) << std::endl;
         break;
       } else if (pollResult == 0) {
+        if (!receivedInitialState_)
+          requestInitialState(serverAddr_);
         continue;
       }
 
@@ -888,6 +890,7 @@ private:
           if (response.isMember("status") && response.isMember("data")) {
             if (verbose_)
               log("Processing initial state response");
+            receivedInitialState_ = true;
             handleUpdateMessage(response["data"]);
           } else {
             if (verbose_)
@@ -908,4 +911,6 @@ private:
   void (*updateHandler_)(const std::string &);
   bool verbose_;
   JsonMonitor jsonMonitor_;
+  sockaddr_in serverAddr_;
+  bool receivedInitialState_{false};
 };

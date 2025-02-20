@@ -28,6 +28,8 @@ struct AlgorithmMeta {
     const BlockConfiguration *configuration;
     std::map<std::string, std::unique_ptr<Terminal>> terminals;
     std::map<std::string, std::unique_ptr<Parameter>> parameters;
+    std::string block_name;
+    std::string algorithm_name;
 };
 
 
@@ -42,6 +44,8 @@ public:
     {
         meta->configuration = &configuration;
         meta->definition = static_cast<const AlgorithmDefinition*>(get_definition(configuration.get_algorithm()));
+        meta->block_name = configuration.get_name();
+        meta->algorithm_name = configuration.get_algorithm();
 
         // There is no need to create property data, because we just look it
         // up from the algorithm's property definitions and the configuration.
@@ -57,7 +61,10 @@ public:
                     reinterpret_cast<const TerminalDefinition &>(t.second);
             const std::string &name = td.get_name();
             meta->terminals[name] =
-                std::make_unique<Terminal>(Terminal(td, meta->configuration, get_frame_size()));
+                std::make_unique<Terminal>(Terminal(td,
+                                                    static_cast<const ProcessorDefinition&>(*meta->definition),
+                                                    meta->configuration,
+                                                    get_frame_size()));
         }
 
         // Create the parameter data for all of the parameters in the algorithm.
@@ -188,14 +195,14 @@ public:
     /// Return the name of this block.
     const std::string &get_block_name() const
     {
-        return meta->configuration->get_name();
+        return meta->block_name;
     }
 
 
     /// Return the name of this algorithm.
     const std::string &get_algorithm_name() const
     {
-        return meta->configuration->get_algorithm();
+        return meta->algorithm_name;
     }
 
 
