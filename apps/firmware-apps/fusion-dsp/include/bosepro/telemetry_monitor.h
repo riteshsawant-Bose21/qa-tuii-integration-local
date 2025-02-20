@@ -202,6 +202,13 @@ public:
             close(telemetry_fd);
         }
 
+        for (auto &n : shm_names)
+        {
+            if (!n.empty())
+            {
+                shm_manager.removeSharedMemory(n);
+            }
+        }
         shm_names.clear();
 
         unlink(client_path.c_str());
