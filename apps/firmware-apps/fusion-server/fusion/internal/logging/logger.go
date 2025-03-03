@@ -164,10 +164,9 @@ func (l *Logger) log(level LogLevel, format string, args ...interface{}) {
 		return
 	}
 
-	timestamp := time.Now().Format("2006-01-02 15:04:05")
 	levelStr := LogLevelStrings[level]
 	message := fmt.Sprintf(format, args...)
-	logMessage := fmt.Sprintf("%s [%s] [%s] %s", timestamp, l.config.NodeName, levelStr, message)
+	logMessage := fmt.Sprintf("[%s] [%s] %s", l.config.NodeName, levelStr, message)
 
 	l.mu.RLock()
 	closed := l.closed

@@ -7,6 +7,7 @@ fi
 source multipass.env
 
 BASE_NAME=""
+KILL_BASE_NAME="fusion"
 NUM_INSTANCES=""
 JOIN_ADDRESS=""
 KILL_MODE=false
@@ -505,10 +506,12 @@ while [[ $# -gt 0 ]]; do
             ;;
         --kill)
             KILL_MODE=true
-            # Check if next argument exists and doesn't start with --
-            if [[ -n "$2" && ! "$2" =~ ^-- ]]; then
+            # Only check $2 if there is at least one more argument
+            if [[ $# -ge 2 && "$2" != --* ]]; then
                 KILL_BASE_NAME="$2"
                 shift
+            else
+                echo "Using default base name: fusion."
             fi
             shift
             ;;

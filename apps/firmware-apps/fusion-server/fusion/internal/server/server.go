@@ -2,11 +2,14 @@ package server
 
 import (
 	"bufio"
+	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -217,6 +220,49 @@ func (s *ConfigServer) DumpState(w http.ResponseWriter, r *http.Request) {
 		logging.GetLogger().Error("Export state failed: %v", err)
 		http.Error(w, "Error exporting state", http.StatusInternalServerError)
 	}
+}
+
+func (s *ConfigServer) DROProcess(w http.ResponseWriter, r *http.Request) {
+
+	if !s.IsPostRequest(w, r) {
+		return
+	}
+
+	// Read the request body.
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Failed to read request body: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer r.Body.Close()
+
+	// Validate the JSON structure here.
+	var temp any
+	if err := json.Unmarshal(body, &temp); err != nil {
+		http.Error(w, "Invalid JSON: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Invoke the command using a context
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "python3", "/usr/local/bin/resource_solver.pyz", "--json-buffer")
+	cmd.Stdin = bytes.NewBuffer(body)
+
+	// TODO: This is a multipass fix
+	env := os.Environ()
+	env = append(env, "PYTHONPATH=/home/ubuntu/.local/lib/python3.12/site-packages")
+	cmd.Env = env
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		logging.GetLogger().Error("Error executing dsp_manager: %v, output: %s", err, output)
+		http.Error(w, "Error processing config: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(output)
 }
 
 func (s *ConfigServer) GetEndpoints(w http.ResponseWriter, r *http.Request) {

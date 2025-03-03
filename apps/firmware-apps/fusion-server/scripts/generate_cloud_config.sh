@@ -96,6 +96,8 @@ packages:
   - keepalived
   - libjsoncpp25
   - net-tools
+  - python3
+  - python3-pip
 write_files:
   - path: $fusion_server_service_path
     permissions: '0644'
@@ -126,6 +128,9 @@ $(indent_content 'haproxy_conf_data')
     permissions: '0755'
     owner: root:root
     content: |
+runcmd:
+  - pip3 install --upgrade pip --break-system-packages
+  - pip3 install ortools>=9.6 requests>=2.31.0 jsonschema==4.23.0 referencing --break-system-packages
 EOF
 }
 

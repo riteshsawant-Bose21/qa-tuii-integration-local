@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -28,8 +29,9 @@ var (
 	bindAddr    string
 	bindPort    int
 	joinAddr    string
-	metricsPort *int
-	verbose     *bool
+	metricsPort int
+	enableBLE   bool
+	verbose     bool
 )
 
 const (
@@ -39,11 +41,14 @@ const (
 	stateDumpInterval = 30
 	serialPort        = "/tmp/ttyFusionServer"
 	baudRate          = 9600
+	bleServiceUUID    = "B053"
+	bleCharacterUUID  = "AD10"
 )
 
 func setupHTTPRoutes(server *server.ConfigServer, metrics *cluster.MetricsCollector, verbose bool) {
 	http.HandleFunc("/", withLogging(server.HandleRoot, "root", verbose))
 	http.HandleFunc("/dump", withLogging(server.DumpState, "dump", verbose))
+	http.HandleFunc("/dro/process", withLogging(server.DROProcess, "process", verbose))
 	http.HandleFunc("/endpoints", withLogging(server.GetEndpoints, "endpoints", verbose))
 	http.HandleFunc("/getValue", withLogging(server.GetValue, "getValue", verbose))
 	http.HandleFunc("/setValue", withLogging(server.SetValue, "setValue", verbose))
@@ -53,6 +58,7 @@ func setupHTTPRoutes(server *server.ConfigServer, metrics *cluster.MetricsCollec
 	http.HandleFunc("/rollbackVersion", withLogging(server.RollbackVersion, "rollbackVersion", verbose))
 	http.HandleFunc("/uploadAudio", withLogging(server.UploadAudio, "uploadAudio", verbose))
 	http.HandleFunc("/ws", withWebSocketMetrics(server.HandleWebSocket, metrics, verbose))
+
 }
 
 func setupTimerRoutes(manager *timers.TimerManager, verbose bool) {
@@ -106,17 +112,20 @@ func parseFlags() {
 	flag.StringVar(&bindAddr, "addr", "0.0.0.0", "Bind address")
 	flag.IntVar(&bindPort, "port", 7946, "Bind port")
 	flag.StringVar(&joinAddr, "join", "", "Address to join cluster (comma-separated)")
-	metricsPort = flag.Int("metrics-port", 9090, "Metrics server port")
-	verbose = flag.Bool("verbose", false, "Verbose output")
+	flag.IntVar(&metricsPort, "metrics-port", 9090, "Metrics server port")
+	flag.BoolVar(&enableBLE, "enableBLE", true, "Enable BLE")
+	flag.BoolVar(&verbose, "verbose", false, "Verbose output")
+
 	flag.Parse()
 
 	if *versionFlag {
-		fmt.Printf("Version: %s\nCommit: %s\nBuild Time: %s\n", Version, Commit, BuildTime)
+		log.Printf("Version: %s\nCommit: %s\nBuild Time: %s\n", Version, Commit, BuildTime)
 		os.Exit(0)
 	}
 
 	if nodeName == "" {
-		logging.GetLogger().Fatal("Node name is required")
+		// We can't use Logging as it requires the node name to initalize.
+		log.Fatal("Node name is required")
 	}
 }
 
@@ -135,7 +144,7 @@ func initLogging(nodeName string) *logging.Logger {
 // initStateManager initializes the state manager.
 func initStateManager(nodeName string) *server.StateManager {
 	stateManager := server.NewStateManager(nodeName)
-	if *verbose {
+	if verbose {
 		stateManager.StartStateDumping(stateDumpInterval * time.Second)
 	}
 	return stateManager
@@ -143,9 +152,7 @@ func initStateManager(nodeName string) *server.StateManager {
 
 // initPersistence initializes the persistence layer.
 func initPersistence(configPath string, stateManager *server.StateManager) *server.ConfigPersistence {
-	persistence := server.NewConfigPersistence(configPath, stateManager, true)
-	persistence.LoadState()
-	return persistence
+	return server.NewConfigPersistence(configPath, stateManager, true)
 }
 
 // initCluster initializes the cluster memberlist.
@@ -155,12 +162,12 @@ func initCluster(nodeName, bindAddr string, bindPort int, joinAddr string, state
 		joinAddrs = strings.Split(joinAddr, ",")
 	}
 
-	list, err := cluster.CreateMemberlist(nodeName, bindAddr, bindPort, joinAddrs, stateManager, persistence, updater, *verbose)
+	list, err := cluster.CreateMemberlist(nodeName, bindAddr, bindPort, joinAddrs, stateManager, persistence, updater, verbose)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create memberlist: %w", err)
 	}
 
-	if *verbose {
+	if verbose {
 		cluster.MonitorClusterState(list)
 		cluster.StartHealthCheck(list)
 		cluster.StartStateVerification(list, stateManager)
@@ -169,17 +176,36 @@ func initCluster(nodeName, bindAddr string, bindPort int, joinAddr string, state
 	return list, nil
 }
 
-func initAudioFileStore(filePath string) error {
-	// Create the directory (and any necessary parent directories) with mode 0777.
-	// Note: os.MkdirAll might be affected by the process's umask.
-	if err := os.MkdirAll(filePath, 0777); err != nil {
-		return fmt.Errorf("failed to create audio directory: %v", err)
+func initDataPaths() error {
+	// Check if the directory exists
+	info, err := os.Stat(fusionDataPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			// Directory does not exist; create it with mode 0777.
+			if err := os.MkdirAll(fusionDataPath, 0777); err != nil {
+				return fmt.Errorf("failed to create audio directory: %v", err)
+			}
+			// Retrieve info after creation.
+			info, err = os.Stat(fusionDataPath)
+			if err != nil {
+				return fmt.Errorf("failed to stat audio directory after creation: %v", err)
+			}
+		} else {
+			return fmt.Errorf("failed to stat audio directory: %v", err)
+		}
+	} else if !info.IsDir() {
+		// The path exists but is not a directory.
+		return fmt.Errorf("%s exists but is not a directory", fusionDataPath)
 	}
 
-	// Explicitly set the directory's permissions to 0777 to ensure world-writable access.
-	if err := os.Chmod(filePath, 0777); err != nil {
-		return fmt.Errorf("failed to set permissions on audio directory: %v", err)
+	// Check if the directory has the desired permissions (0777).
+	currentPerm := info.Mode().Perm()
+	if currentPerm != 0777 {
+		if err := os.Chmod(fusionDataPath, 0777); err != nil {
+			return fmt.Errorf("failed to set permissions on audio directory: %v", err)
+		}
 	}
+
 	return nil
 }
 
@@ -210,12 +236,30 @@ func startMetricsServer(port int, metrics *cluster.MetricsCollector) *http.Serve
 	return metricsServer
 }
 
+// initBLEServer initializes the Bluetooth server.
+func initBLEServer() *network.BLEServer {
+
+	logger := logging.GetLogger()
+
+	bleServer, err := network.NewBLEServer(bleServiceUUID, bleCharacterUUID)
+	if err != nil {
+		logger.Error("Failed to create BLE server: %v", err)
+		return nil
+	}
+
+	logger.Info("BLE server initialized: %s %s", bleServiceUUID, bleCharacterUUID)
+
+	return bleServer
+}
+
 // initUDPServer initializes the UDP server.
 func initUDPServer(port string, handler *server.Handler) *network.UDPServer {
 
+	logger := logging.GetLogger()
+
 	udpServer, err := network.NewUDPServer(port, handler)
 	if err != nil {
-		logging.GetLogger().Error("Failed to create UDP server: %v", err)
+		logger.Fatal("Failed to create UDP server: %v", err)
 	}
 
 	handler.AddBroadcaster(udpServer)
@@ -243,18 +287,21 @@ func main() {
 	logger := initLogging(nodeName)
 	defer logger.Close()
 
-	stateManager := initStateManager(nodeName)
-	persistence := initPersistence(configDataPath, stateManager)
-	updater := server.NewUpdater()
-
-	err := initAudioFileStore(audioDataPath)
+	err := initDataPaths()
 	if err != nil {
-		logger.Error("Failed to create audio store: %v", err)
+		logger.Fatal("Failed to create data paths: %v", err)
 	}
+
+	stateManager := initStateManager(nodeName)
+
+	persistence := initPersistence(configDataPath, stateManager)
+	persistence.LoadState()
+
+	updater := server.NewUpdater()
 
 	clusterList, err := initCluster(nodeName, bindAddr, bindPort, joinAddr, stateManager, persistence, server.NewUpdater())
 	if err != nil {
-		logger.Error("Failed to initialize cluster: %v", err)
+		logger.Fatal("Failed to initialize cluster: %v", err)
 	}
 
 	timerManager := initTimerManager()
@@ -262,18 +309,27 @@ func main() {
 
 	metricsCollector := cluster.NewMetricsCollector(clusterList, stateManager)
 
-	metricsServer := startMetricsServer(*metricsPort, metricsCollector)
+	metricsServer := startMetricsServer(metricsPort, metricsCollector)
 	defer metricsServer.Shutdown(context.Background())
 
 	connectionHandler := server.NewHandler(clusterList, stateManager, persistence, updater)
+
+	if enableBLE {
+		bleServer := initBLEServer()
+		if bleServer == nil {
+			logger.Info("Bluetooth not available. Continuing with initialization.")
+		} else {
+			defer bleServer.Stop()
+		}
+	}
 
 	udpServer := initUDPServer(api.UDPPort, connectionHandler)
 	defer udpServer.Stop()
 
 	configServer := server.NewConfigServer(nodeName, connectionHandler, clusterList)
 
-	setupHTTPRoutes(configServer, metricsCollector, *verbose)
-	setupTimerRoutes(timerManager, *verbose)
+	setupHTTPRoutes(configServer, metricsCollector, verbose)
+	setupTimerRoutes(timerManager, verbose)
 
 	var wg sync.WaitGroup
 	wg.Add(1)

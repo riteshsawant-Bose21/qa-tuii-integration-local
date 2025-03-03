@@ -1,5 +1,7 @@
 **/.DS_Store
-**/.xcuserstate
+**/.vscode
+**/xcuserdata
+**/xcuserstate
 build
 cloud-init.yaml
 fusion-env

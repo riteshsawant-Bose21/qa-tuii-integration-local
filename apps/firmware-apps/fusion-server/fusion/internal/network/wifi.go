@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -92,7 +93,7 @@ func (c *WifiCommunicator) SendMessage(targetID string, content string) error {
 		return fmt.Errorf("device %s not found", targetID)
 	}
 
-	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", device.IP, c.port))
+	conn, err := net.Dial("tcp", net.JoinHostPort(device.IP, strconv.Itoa(c.port)))
 	if err != nil {
 		return fmt.Errorf("failed to connect to device: %v", err)
 	}
