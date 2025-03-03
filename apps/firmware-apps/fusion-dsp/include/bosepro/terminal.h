@@ -160,6 +160,13 @@ public:
     {
         if (definition.has_channels())
         {
+            if (configuration->has_terminal(definition.get_name()))
+            {
+                throw std::runtime_error("Unexpected terminal_channels specification for '"
+                                         + definition.get_name()
+                                         + "' in configuration.");
+            }
+
             std::string property_name;
             int channels;
             channels = definition.get_channels(property_name);
@@ -171,6 +178,22 @@ public:
                     const PropertyConfiguration &pc =
                         configuration->get_property(property_name);
                     pc.get_value(channels);
+
+                    const PropertyDefinition &pd =
+                        processor.get_property(property_name);
+
+                    int_fast32_t minimum_channels;
+                    int_fast32_t maximum_channels;
+
+                    pd.get_minimum_value(minimum_channels);
+                    pd.get_maximum_value(maximum_channels);
+
+                    if (channels < minimum_channels
+                        || channels > maximum_channels)
+                    {
+                        throw std::runtime_error("Invalid number of channels for terminal '"
+                                                 + definition.get_name() + "'.");
+                    }
                 }
                 else
                 {
@@ -187,10 +210,20 @@ public:
             const TerminalConfiguration &tc =
                 configuration->get_terminal(definition.get_name());
             num_channels = tc.get_num_channels();
+
+            if (num_channels < definition.get_minimum_channels()
+                || num_channels > definition.get_maximum_channels())
+            {
+                throw std::runtime_error("Invalid number of channels for terminal '"
+                                         + definition.get_name() + "'.");
+            }
         }
         else
         {
-            definition.get_minimum_channels();
+            SPDLOG_DEBUG("No channel count specified for terminal '{}', using {}.",
+                         definition.get_name(),
+                         definition.get_minimum_channels());
+            num_channels = definition.get_minimum_channels();
         }
 
         SPDLOG_TRACE("Created {} terminal '{}' with {} channels.",
@@ -363,37 +396,35 @@ public:
     {
         if (is_output_terminal || !output_terminal.is_output())
         {
-            SPDLOG_CRITICAL("A connection must be made from an input terminal "
-                            "to an output terminal.");
-            return;
+            throw std::runtime_error("A connection must be made from an input "
+                                     "terminal to an output terminal.");
         }
 
         if (channel < 0 || channel >= num_channels)
         {
-            SPDLOG_CRITICAL("Input channel index ({}) out of range ({}).",
-                            channel, num_channels);
-            return;
+            throw std::runtime_error("Input channel index out of range.");
         }
 
         if (output_channel < 0 || output_channel >= output_terminal.num_channels)
         {
-            SPDLOG_CRITICAL("Output channel index ({}) out of range ({}).",
-                            output_channel, output_terminal.num_channels);
-            return;
+            throw std::runtime_error("Output channel index out of range.");
         }
 
         if (frame_size != output_terminal.frame_size)
         {
-            SPDLOG_CRITICAL("Cannot connect terminals with different frame "
-                            "sizes.");
-            return;
+            throw std::runtime_error("Cannot connect terminals with different "
+                                     "frame sizes.");
         }
 
         if (data_size != output_terminal.data_size)
         {
-            SPDLOG_CRITICAL("Cannot connect terminals with different data "
-                            "types.");
-            return;
+            throw std::runtime_error("Cannot connect terminals with different "
+                                     "data types.");
+        }
+
+        if (buffer[channel] != nullptr)
+        {
+            throw std::runtime_error("Input channel already connected.");
         }
 
         buffer[channel] = output_terminal.get_buffer(output_channel);

@@ -129,8 +129,8 @@ public:
 
         if (audio_tasks.count(task_name) != 0)
         {
-            SPDLOG_CRITICAL("Duplicate tasks with name {}.", task_name);
-            return;
+            throw std::runtime_error("Duplicate tasks with name '"
+                                     + task_name + "'.");
         }
 
         audio_tasks[task_name] = std::unique_ptr<AudioTask>(new AudioTask(task_configuration));
@@ -361,8 +361,9 @@ public:
             }
             else
             {
-                SPDLOG_ERROR("Nonexistent output block {} for task connection.",
-                             configuration.get_output_block());
+                throw std::runtime_error("Nonexistent output block '"
+                                         + configuration.get_output_block()
+                                         + "' for task connection.");
             }
         }
 
@@ -382,16 +383,19 @@ public:
             }
             else
             {
-                SPDLOG_ERROR("Nonexistent input block {} for task connection.",
-                             configuration.get_input_block());
+                throw std::runtime_error("Nonexistent input block '"
+                                         + configuration.get_input_block()
+                                         + "' for task connection.");
             }
         }
 
         if (source_task == nullptr && destination_task == nullptr)
         {
-            SPDLOG_ERROR("Nonexistent tasks {} and {} for task connection.",
-                         configuration.get_source_task(),
-                         configuration.get_destination_task());
+            throw std::runtime_error("Nonexistent tasks '"
+                                     + configuration.get_source_task()
+                                     + "' and '"
+                                     + configuration.get_destination_task()
+                                     + "' for task connection.");
         }
     }
 
@@ -407,7 +411,8 @@ public:
             try {
                 ps_command_map.at(setting.get_name())(setting);
             } catch (const std::out_of_range&) {
-                SPDLOG_WARN("Unknown session setting '{}'", setting.get_name());
+                throw std::runtime_error("Unknown session parameter '"
+                                         + setting.get_name() + "'");
             }
         }
         // block parameter setting
@@ -415,7 +420,8 @@ public:
         {
             if (!ps_command_map["apply_parameter_setting"](setting))
             {
-                SPDLOG_WARN("Unknown block '{}'", setting.get_target());
+                throw std::runtime_error("Unknown block '"
+                                         + setting.get_target() + "'");
             }
         }
     }

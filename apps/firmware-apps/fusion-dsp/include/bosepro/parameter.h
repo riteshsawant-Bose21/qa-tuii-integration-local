@@ -46,6 +46,19 @@ public:
                         const PropertyConfiguration &pc =
                             configuration->get_property(rows_name);
                         pc.get_value(num_rows);
+
+                        const PropertyDefinition &pd =
+                            processor.get_property(rows_name);
+                        int_fast32_t minimum_rows;
+                        int_fast32_t maximum_rows;
+                        pd.get_minimum_value(minimum_rows);
+                        pd.get_maximum_value(maximum_rows);
+
+                        if (num_rows < minimum_rows || num_rows > maximum_rows)
+                        {
+                            throw std::runtime_error("Invalid number of rows for property '"
+                                    + rows_name + "'.");
+                        }
                     }
                     else
                     {
@@ -74,6 +87,20 @@ public:
                         const PropertyConfiguration &pc =
                             configuration->get_property(columns_name);
                         pc.get_value(num_columns);
+
+                        const PropertyDefinition &pd =
+                            processor.get_property(columns_name);
+                        int_fast32_t minimum_columns;
+                        int_fast32_t maximum_columns;
+                        pd.get_minimum_value(minimum_columns);
+                        pd.get_maximum_value(maximum_columns);
+
+                        if (num_columns < minimum_columns
+                            || num_columns > maximum_columns)
+                        {
+                            throw std::runtime_error("Invalid number of columns for property '"
+                                    + columns_name + "'.");
+                        }
                     }
                     else
                     {
@@ -261,11 +288,92 @@ public:
           conversion_function(nullptr)
     {
         definition.get_default_value(default_value);
+
+        if (definition.has_minimum_value())
+        {
+            definition.get_minimum_value(minimum_value);
+        }
+
+        if (definition.has_maximum_value())
+        {
+            definition.get_maximum_value(maximum_value);
+        }
+
+        if (definition.has_maximum_length())
+        {
+            maximum_length = definition.get_maximum_length();
+        }
+
+        if (definition.has_allowed_values())
+        {
+            definition.get_allowed_values(allowed_values);
+        }
     }
+
 
 protected:
     T default_value;
     T (*conversion_function)(T);
+
+
+    /// Get the value for a parameter setting.  If the value is not valid
+    /// (out of range, not allowed, etc.), an exception is thrown.
+    ///
+    /// @param  setting  The setting to get the value from.
+    /// @param  value  The value to set.
+    void get_setting_value(const ParameterSetting &setting, T &value) const
+    {
+        T preliminary_value;
+
+        setting.get_value(preliminary_value);
+
+        if (!allowed_values.empty())
+        {
+            // Both numeric types and strings can have allowed values, so check
+            // that first.
+            if (allowed_values.count(preliminary_value) == 0)
+            {
+                throw std::runtime_error("Parameter setting value not allowed.");
+            }
+        }
+        else if constexpr(std::is_same_v<T, int_fast32_t>
+                          || std::is_same_v<T, float>)
+        {
+            // Numeric types must have minimum/maximum if they don't have
+            // allowed values.
+            if (preliminary_value < minimum_value
+                || preliminary_value > maximum_value)
+            {
+                throw std::runtime_error("Parameter setting value out of range.");
+            }
+        }
+        else if constexpr(std::is_same_v<T, std::string>)
+        {
+            // Strings must have a maximum length if they don't have allowed
+            // values.
+            if (maximum_length > 0
+                && preliminary_value.length() > maximum_length)
+            {
+                throw std::runtime_error("Parameter setting value string too long.");
+            }
+        }
+
+        if (conversion_function != nullptr)
+        {
+            value = conversion_function(preliminary_value);
+        }
+        else
+        {
+            value = preliminary_value;
+        }
+    }
+
+
+private:
+    T minimum_value;
+    T maximum_value;
+    size_t maximum_length;
+    std::set<T> allowed_values;
 };
 
 
@@ -342,17 +450,16 @@ public:
     /// @param  setting  The new setting for the parameter.
     virtual void set(const ParameterSetting &setting) override
     {
-        T value;
-        setting.get_value(value);
+        if (setting.has_row())
+        {
+            throw std::runtime_error("Parameter setting has unexpected index.");
+        }
 
-        if (this->conversion_function == nullptr)
-        {
-            *block_value = value;
-        }
-        else
-        {
-            *block_value = this->conversion_function(value);
-        }
+        T value;
+
+        this->get_setting_value(setting, value);
+
+        *block_value = value;
 
         if (post_function != nullptr)
         {
@@ -469,14 +576,19 @@ public:
         T value;
         setting.get_value(value);
 
-        if (this->conversion_function == nullptr)
+        if (row < 0 || row >= this->get_num_rows())
         {
-            block_value[row] = value;
+            throw std::runtime_error("Parameter setting index out of range.");
         }
-        else
+
+        if (setting.has_column())
         {
-            block_value[row] = this->conversion_function(value);
+            throw std::runtime_error("Parameter setting has unexpected index.");
         }
+
+        this->get_setting_value(setting, value);
+
+        block_value[row] = value;
 
         if (post_function != nullptr)
         {
@@ -605,14 +717,15 @@ public:
         T value;
         setting.get_value(value);
 
-        if (this->conversion_function == nullptr)
+        if (row < 0 || row >= this->get_num_rows()
+            || column < 0 || column >= this->get_num_columns())
         {
-            block_value[row][column] = value;
+            throw std::runtime_error("Parameter setting index out of range.");
         }
-        else
-        {
-            block_value[row][column] = this->conversion_function(value);
-        }
+
+        this->get_setting_value(setting, value);
+
+        block_value[row][column] = value;
 
         if (post_function != nullptr)
         {
