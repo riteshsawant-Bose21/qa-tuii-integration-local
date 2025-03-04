@@ -6,5 +6,6 @@ build
 cloud-init.yaml
 fusion-env
 fusion-server.yaml
+fusion/test/dummy
 multipass.env
 data

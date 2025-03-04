@@ -602,10 +602,6 @@ func (h *Handler) HandleDumpState() (map[string]interface{}, error) {
 	}, nil
 }
 
-func (h *Handler) ValidateState() error {
-	return h.persistence.ValidateStateFile()
-}
-
 // HandleWebSocketMessage handles incoming websocket messages
 func (h *Handler) HandleWebSocketMessage(data []byte) (*WebSocketResponse, error) {
 	var msg WebSocketMessage

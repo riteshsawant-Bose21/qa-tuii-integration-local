@@ -36,7 +36,7 @@ var (
 
 const (
 	fusionDataPath    = "/var/lib/fusion"
-	configDataPath    = fusionDataPath + "/config.json"
+	configDataPath    = fusionDataPath + "/config.db"
 	audioDataPath     = fusionDataPath + "/audio"
 	stateDumpInterval = 30
 	serialPort        = "/tmp/ttyFusionServer"
@@ -151,7 +151,7 @@ func initStateManager(nodeName string) *server.StateManager {
 }
 
 // initPersistence initializes the persistence layer.
-func initPersistence(configPath string, stateManager *server.StateManager) *server.ConfigPersistence {
+func initPersistence(configPath string, stateManager *server.StateManager) (*server.ConfigPersistence, error) {
 	return server.NewConfigPersistence(configPath, stateManager, true)
 }
 
@@ -183,12 +183,12 @@ func initDataPaths() error {
 		if os.IsNotExist(err) {
 			// Directory does not exist; create it with mode 0777.
 			if err := os.MkdirAll(fusionDataPath, 0777); err != nil {
-				return fmt.Errorf("failed to create audio directory: %v", err)
+				return fmt.Errorf("failed to create data directory: %v", err)
 			}
 			// Retrieve info after creation.
 			info, err = os.Stat(fusionDataPath)
 			if err != nil {
-				return fmt.Errorf("failed to stat audio directory after creation: %v", err)
+				return fmt.Errorf("failed to stat data directory after creation: %v", err)
 			}
 		} else {
 			return fmt.Errorf("failed to stat audio directory: %v", err)
@@ -202,7 +202,7 @@ func initDataPaths() error {
 	currentPerm := info.Mode().Perm()
 	if currentPerm != 0777 {
 		if err := os.Chmod(fusionDataPath, 0777); err != nil {
-			return fmt.Errorf("failed to set permissions on audio directory: %v", err)
+			return fmt.Errorf("failed to set permissions on data directory: %v", err)
 		}
 	}
 
@@ -294,7 +294,10 @@ func main() {
 
 	stateManager := initStateManager(nodeName)
 
-	persistence := initPersistence(configDataPath, stateManager)
+	persistence, err := initPersistence(configDataPath, stateManager)
+	if err != nil {
+		logger.Fatal("Failed to initialize persistence: %v", err)
+	}
 	persistence.LoadState()
 
 	updater := server.NewUpdater()

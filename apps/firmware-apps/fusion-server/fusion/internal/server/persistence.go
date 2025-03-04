@@ -6,14 +6,13 @@ import (
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/logging"
-	"io"
-	"os"
-	"path/filepath"
 	"sync"
 	"time"
+
+	"go.etcd.io/bbolt"
 )
 
-// PersistentState represents the structure we'll save to disk
+// PersistentState represents the structure saved in database
 type PersistentState struct {
 	Version   int64                      `json:"version"`
 	Timestamp time.Time                  `json:"timestamp"`
@@ -22,21 +21,33 @@ type PersistentState struct {
 }
 
 type ConfigPersistence struct {
-	filePath     string
+	dbPath       string
 	stateManager *StateManager
 	mutex        sync.RWMutex
+	db           *bbolt.DB
 	verbose      bool
 	lastSave     time.Time
 	saveDebounce time.Duration
 }
 
-func NewConfigPersistence(filePath string, stateManager *StateManager, verbose bool) *ConfigPersistence {
+func NewConfigPersistence(dbPath string, stateManager *StateManager, verbose bool) (*ConfigPersistence, error) {
+	db, err := bbolt.Open(dbPath, 0600, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open database: %v", err)
+	}
+
 	return &ConfigPersistence{
-		filePath:     filePath,
+		dbPath:       dbPath,
 		stateManager: stateManager,
+		db:           db,
 		verbose:      verbose,
 		saveDebounce: 100 * time.Millisecond,
-	}
+	}, nil
+}
+
+// Close closes the database instance safely.
+func (p *ConfigPersistence) Close() {
+	p.db.Close()
 }
 
 // CalculateChecksum generates a SHA-256 hash of the state
@@ -49,73 +60,30 @@ func (p *ConfigPersistence) CalculateChecksum(state map[string]*api.StateEntry) 
 	return fmt.Sprintf("%x", hash), nil
 }
 
+// LoadState retrieves the latest state from the database
 func (p *ConfigPersistence) LoadState() error {
 	logger := logging.GetLogger()
 
-	// Ensure directory exists
-	p.mutex.Lock()
-	dir := filepath.Dir(p.filePath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		p.mutex.Unlock()
-		return fmt.Errorf("failed to create directory: %v", err)
-	}
-
-	file, err := os.Open(p.filePath)
-	p.mutex.Unlock()
-
-	if os.IsNotExist(err) {
-		logger.Info("No existing state file found at %s", p.filePath)
-		return nil
-	} else if err != nil {
-		logger.Error("Failed to open state file: %v", err)
-		// Allow service to start with empty state
-		return nil
-	}
-	defer file.Close()
-
-	data, err := io.ReadAll(file)
-	if err != nil {
-		logger.Error("Failed to read state file: %v", err)
-		// Allow service to start with empty state
-		return nil
-	}
-
 	var persistentState PersistentState
-	if err := json.Unmarshal(data, &persistentState); err != nil {
-		logger.Error("Failed to decode state file: %v", err)
-		// Try to rename corrupted file for investigation
-		backupPath := p.filePath + ".corrupted"
-		if renameErr := os.Rename(p.filePath, backupPath); renameErr != nil {
-			logger.Error("Failed to backup corrupted state file: %v", renameErr)
-		} else {
-			logger.Info("Corrupted state file backed up to: %s", backupPath)
+	err := p.db.View(func(tx *bbolt.Tx) error {
+		b := tx.Bucket([]byte("state"))
+		if b == nil {
+			logger.Info("No existing state found in database")
+			return nil // Allow service to start with empty state
 		}
-		// Allow service to start with empty state
-		return nil
-	}
-
-	// Verify checksum without holding any locks
-	calculatedChecksum, err := p.CalculateChecksum(persistentState.State)
+		val := b.Get([]byte("latest"))
+		if val == nil {
+			logger.Info("No saved state in database")
+			return nil
+		}
+		return json.Unmarshal(val, &persistentState)
+	})
 	if err != nil {
-		logger.Error("Failed to calculate checksum: %v", err)
-		// Allow service to start with empty state
+		logger.Error("Failed to load state from database: %v", err)
 		return nil
 	}
 
-	if calculatedChecksum != persistentState.Checksum {
-		logger.Error("State file corruption detected: checksum mismatch")
-		// Backup the corrupted file for investigation
-		backupPath := p.filePath + ".corrupted"
-		if err := os.Rename(p.filePath, backupPath); err != nil {
-			logger.Error("Failed to backup corrupted state file: %v", err)
-		} else {
-			logger.Info("Corrupted state file backed up to: %s", backupPath)
-		}
-		// Allow service to start with empty state
-		return nil
-	}
-
-	// Apply state entries
+	// Restore state
 	for key, entry := range persistentState.State {
 		if err := p.stateManager.Set(key, entry.Data); err != nil {
 			logger.Warn("Error restoring key %s: %v", key, err)
@@ -123,12 +91,12 @@ func (p *ConfigPersistence) LoadState() error {
 	}
 
 	if p.verbose {
-		logger.Info("Loaded state version %d from %s", persistentState.Version, p.filePath)
+		logger.Info("Loaded state version %d from database", persistentState.Version)
 	}
-
 	return nil
 }
 
+// SaveState persists the state to database
 func (p *ConfigPersistence) SaveState() error {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
@@ -149,74 +117,32 @@ func (p *ConfigPersistence) SaveState() error {
 		State:     state,
 	}
 
-	// Name the temporary file
-	tmpFile := p.filePath + ".tmp"
-
-	// Ensure the directory exists
-	dir := filepath.Dir(tmpFile)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return fmt.Errorf("failed to create directory for temp file: %v", err)
-	}
-
-	// Create temporary file
-	file, err := os.OpenFile(tmpFile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
-	if err != nil {
-		return fmt.Errorf("failed to create temp file: %v", err)
-	}
-	defer func() {
-		file.Close()
+	// Store in database
+	err = p.db.Update(func(tx *bbolt.Tx) error {
+		b, err := tx.CreateBucketIfNotExists([]byte("state"))
 		if err != nil {
-			os.Remove(tmpFile)
+			return err
 		}
-	}()
-
-	// Write to temporary file
-	encoder := json.NewEncoder(file)
-	encoder.SetIndent("", "  ")
-	if err := encoder.Encode(persistentState); err != nil {
-		return fmt.Errorf("failed to encode state: %v", err)
-	}
-
-	// Ensure all data is written to disk
-	if err := file.Sync(); err != nil {
-		return fmt.Errorf("failed to sync temp file: %v", err)
-	}
-
-	// Close file before rename
-	if err := file.Close(); err != nil {
-		return fmt.Errorf("failed to close temp file: %v", err)
-	}
-
-	// Atomic rename
-	backupFile := p.filePath + ".bak"
-	if _, err := os.Stat(p.filePath); err == nil {
-		if err := os.Rename(p.filePath, backupFile); err != nil {
-			return fmt.Errorf("failed to create backup: %v", err)
+		data, err := json.Marshal(persistentState)
+		if err != nil {
+			return err
 		}
+		return b.Put([]byte("latest"), data)
+	})
+	if err != nil {
+		return fmt.Errorf("failed to save state: %v", err)
 	}
-
-	if err := os.Rename(tmpFile, p.filePath); err != nil {
-		// Try to restore backup if rename fails
-		if _, err := os.Stat(backupFile); err == nil {
-			os.Rename(backupFile, p.filePath)
-		}
-		return fmt.Errorf("failed to save state file: %v", err)
-	}
-
-	// Remove backup file after successful save
-	os.Remove(backupFile)
 
 	if p.verbose {
-		logger.Debug("State saved successfully (version: %d, checksum: %s)",
-			persistentState.Version, checksum[:8])
+		logger.Debug("State saved successfully (version: %d, checksum: %s)", persistentState.Version, checksum[:8])
 	}
 
 	p.lastSave = time.Now()
 	return nil
 }
 
+// MarkDirty triggers a state save with debounce logic
 func (p *ConfigPersistence) MarkDirty() {
-
 	if time.Since(p.getLastSave()) < p.saveDebounce {
 		time.Sleep(p.saveDebounce)
 	}
@@ -226,29 +152,38 @@ func (p *ConfigPersistence) MarkDirty() {
 	}
 }
 
-// ValidateStateFile verifies if a state file is valid
-func (p *ConfigPersistence) ValidateStateFile() error {
+// ValidateState verifies if the state in database is valid
+func (p *ConfigPersistence) ValidateState() error {
 	p.mutex.RLock()
 	defer p.mutex.RUnlock()
 
-	file, err := os.Open(p.filePath)
-	if err != nil {
-		return fmt.Errorf("failed to open state file: %v", err)
-	}
-	defer file.Close()
+	logger := logging.GetLogger()
 
 	var persistentState PersistentState
-	if err := json.NewDecoder(file).Decode(&persistentState); err != nil {
-		return fmt.Errorf("failed to decode state file: %v", err)
+	err := p.db.View(func(tx *bbolt.Tx) error {
+		b := tx.Bucket([]byte("state"))
+		if b == nil {
+			return fmt.Errorf("state bucket not found")
+		}
+		val := b.Get([]byte("latest"))
+		if val == nil {
+			return fmt.Errorf("no saved state in database")
+		}
+		return json.Unmarshal(val, &persistentState)
+	})
+	if err != nil {
+		logger.Error("Failed to validate state: %v", err)
+		return err
 	}
 
+	// Verify checksum
 	calculatedChecksum, err := p.CalculateChecksum(persistentState.State)
 	if err != nil {
 		return fmt.Errorf("failed to calculate checksum: %v", err)
 	}
 
 	if calculatedChecksum != persistentState.Checksum {
-		return fmt.Errorf("state file corruption detected: checksum mismatch")
+		return fmt.Errorf("state corruption detected: checksum mismatch")
 	}
 
 	return nil

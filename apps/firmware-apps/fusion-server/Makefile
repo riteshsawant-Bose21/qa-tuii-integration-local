@@ -63,7 +63,7 @@ build-darwin-arm64:
 	mkdir -p $(BUILD_DIR)
 	cd fusion && CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 $(GOBUILD) $(BUILD_FLAGS) $(DEBUG_FLAGS) $(LDFLAGS) -o ../$(BUILD_DIR)/$(BINARY_NAME)_darwin_arm64 -v ./cmd/fusion
 	cd $(BUILD_DIR) && ln -sf $(BINARY_NAME)_darwin_arm64 fusion-server
-	
+
 # Development helpers
 fmt:
 	cd fusion && go fmt ./...

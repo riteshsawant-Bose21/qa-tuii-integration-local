@@ -422,6 +422,20 @@ multipass exec fusion1 -- sudo journalctl -u fusion-server -f
 multipass info fusion1 | grep IPv4
 ```
 
+5. **Inspecting the database**
+# fusion-server used bbolt, a key-value store to store configuration data.
+
+# To look at the current state of the database, you can run this command:
+```bash
+./scripts/inspect-config.sh fusion1 get state latest  | jq
+```
+# This script is using the bbolt command, which is installed along with fusion-server.
+
+# You can use jq to further filter the json returned by the script like this:
+```bash
+./scripts/inspect-config.sh fusion1 get state latest | jq '.state.user_setting.data'
+```
+
 ## Troubleshooting
 
 1. **Instance fails to start**

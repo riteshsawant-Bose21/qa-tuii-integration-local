@@ -7,6 +7,7 @@ require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/hashicorp/memberlist v0.5.1
 	github.com/robfig/cron/v3 v3.0.1
+	go.etcd.io/bbolt v1.4.0
 )
 
 require (

@@ -27,7 +27,7 @@ vrrp_instance VI_1 {
   advert_int 1
   authentication {
     auth_type PASS
-    auth_pass fusion
+    auth_pass fusion 
   }
   virtual_ipaddress {
     $VIRTUAL_IP/24
@@ -96,8 +96,7 @@ packages:
   - keepalived
   - libjsoncpp25
   - net-tools
-  - python3
-  - python3-pip
+  - wget
 write_files:
   - path: $fusion_server_service_path
     permissions: '0644'
@@ -129,6 +128,8 @@ $(indent_content 'haproxy_conf_data')
     owner: root:root
     content: |
 runcmd:
+  - python3
+  - python3-pip
   - pip3 install --upgrade pip --break-system-packages
   - pip3 install ortools>=9.6 requests>=2.31.0 jsonschema==4.23.0 referencing --break-system-packages
 EOF

@@ -14,6 +14,7 @@ KILL_MODE=false
 # Host directories are set in `host_setup`
 HOST_TEMP_DIR=
 HOST_BUILD_DIR=
+HOST_BBOLT_DIR=
 
 # Color and formatting definitions
 declare -r RED='\033[0;31m'
@@ -219,17 +220,33 @@ setup_instance() {
         print_error "Failed to copy fusion-server binary"
         return 1
     fi
-    print_success "Binary copied successfully"
+    print_success "fusion-server copied successfully"
     
-    print_step "Installing binary..."
+    print_step "Installing fusion-server..."
     if ! multipass exec "$instance_name" -- sudo cp /tmp/fusion-server /usr/local/bin/ || \
        ! multipass exec "$instance_name" -- sudo chmod 755 /usr/local/bin/fusion-server || \
        ! multipass exec "$instance_name" -- rm /tmp/fusion-server; then
         print_error "Failed to install fusion-server binary"
         return 1
     fi
-    print_success "Binary installed successfully"
+    print_success "fusion-server installed successfully"
     
+    print_step "Copying bbolt binary..."
+    if ! multipass transfer "$HOST_BBOLT_DIR/bbolt-linux-arm64" "$instance_name":/tmp/bbolt; then
+        print_error "Failed to copy bbolt binary"
+        return 1
+    fi
+    print_success "bbolt copied successfully"
+
+    print_step "Installing bbolt..."
+    if ! multipass exec "$instance_name" -- sudo cp /tmp/bbolt /usr/local/bin/ || \
+       ! multipass exec "$instance_name" -- sudo chmod 755 /usr/local/bin/bbolt || \
+       ! multipass exec "$instance_name" -- rm /tmp/bbolt; then
+        print_error "Failed to install bbolt binary"
+        return 1
+    fi
+    print_success "bbolt installed successfully"
+
     print_step "Configuring keepalived priority..."
     local priority=$((100 - instance_number))
     multipass exec "$instance_name" -- sudo sed -i "s/priority 100/priority ${priority}/" /etc/keepalived/keepalived.conf
@@ -479,17 +496,23 @@ host_setup() {
         # $HOME to use as the 'MULTIPASS_DIR' directory.
         HOST_TEMP_DIR="$my_multipass_dir/tmp"
         HOST_BUILD_DIR="$my_multipass_dir/build"
+        HOST_BBOLT_DIR="$my_multipass_dir/tools/bbolt/cmd"
         mkdir -p "$HOST_TEMP_DIR"
         mkdir -p "$HOST_BUILD_DIR"
+        mkdir -p "$HOST_BBOLT_DIR"
         # Copy the main binary to HOST_BUILD_DIR
         cp build/fusion-server "$HOST_BUILD_DIR/"
+        # Copy the bbolt binary to HOST_BUILD_DIR
+        cp tools/bbolt/cmd/ bbolt-linux-arm64 "$HOST_BBOLT_DIR/bbolt"
     else
         # Default host paths, works on MacOS.
         HOST_TEMP_DIR=/tmp
         HOST_BUILD_DIR=./build
+        HOST_BBOLT_DIR=./tools/bbolt/cmd
     fi
     print_substep "Using HOST_TEMP_DIR=$HOST_TEMP_DIR"
     print_substep "Using HOST_BUILD_DIR=$HOST_BUILD_DIR"
+    print_substep "Using HOST_BBOLT_DIR=$HOST_BBOLT_DIR"
 }
 
 # Parse command line arguments

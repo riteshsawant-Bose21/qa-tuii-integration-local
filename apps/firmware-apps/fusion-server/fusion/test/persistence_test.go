@@ -1,7 +1,6 @@
 package main
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sync"
@@ -27,7 +26,7 @@ func TestMarkDirtyConcurrent(t *testing.T) {
 
 	// Create a temporary directory and file for our test state.
 	tmpDir := t.TempDir()
-	configPath := filepath.Join(tmpDir, "config.json")
+	configPath := filepath.Join(tmpDir, "config.db")
 
 	sm := server.NewStateManager("test_manager")
 	if err := sm.Set("testKey", "testValue"); err != nil {
@@ -35,7 +34,10 @@ func TestMarkDirtyConcurrent(t *testing.T) {
 	}
 
 	// Create the persistence object.
-	cp := server.NewConfigPersistence(configPath, sm, true)
+	cp, err := server.NewConfigPersistence(configPath, sm, true)
+	if err != nil {
+		t.Fatalf("Failed to initialize persistance: %v", err)
+	}
 
 	// Run many goroutines calling MarkDirty concurrently.
 	const numGoroutines = 50
@@ -56,7 +58,7 @@ func TestMarkDirtyConcurrent(t *testing.T) {
 	wg.Wait()
 
 	// After all MarkDirty calls, we can try validating the state file.
-	if err := cp.ValidateStateFile(); err != nil {
+	if err := cp.ValidateState(); err != nil {
 		t.Errorf("ValidateStateFile error: %v", err)
 	}
 
@@ -70,10 +72,13 @@ func TestMarkDirtyConcurrent(t *testing.T) {
 // LoadState logs an info message and returns nil (allowing the service to start with an empty state).
 func TestLoadStateNonExistent(t *testing.T) {
 	tmpDir := t.TempDir()
-	configPath := filepath.Join(tmpDir, "nonexistent.json")
+	configPath := filepath.Join(tmpDir, "nonexistent.db")
 
 	sm := server.NewStateManager("testnode")
-	cp := server.NewConfigPersistence(configPath, sm, false)
+	cp, err := server.NewConfigPersistence(configPath, sm, false)
+	if err != nil {
+		t.Fatalf("Failed to initialize persistance: %v", err)
+	}
 
 	// Call LoadState. Since the file doesn't exist, it should return nil.
 	if err := cp.LoadState(); err != nil {
@@ -81,10 +86,9 @@ func TestLoadStateNonExistent(t *testing.T) {
 	}
 }
 
-// TestSaveAndLoadState verifies that after saving state to disk, the same state can be loaded back.
 func TestSaveAndLoadState(t *testing.T) {
 	tmpDir := t.TempDir()
-	configPath := filepath.Join(tmpDir, "config.json")
+	configPath := filepath.Join(tmpDir, "config.db")
 
 	sm := server.NewStateManager("testnode")
 	testKey, testValue := "testKey", "testValue"
@@ -93,17 +97,27 @@ func TestSaveAndLoadState(t *testing.T) {
 	}
 
 	// Create the persistence object.
-	cp := server.NewConfigPersistence(configPath, sm, false)
+	cp, err := server.NewConfigPersistence(configPath, sm, false)
+	if err != nil {
+		t.Fatalf("Failed to initialize persistence: %v", err)
+	}
+	defer cp.Close() // CLOSE THE DB AFTER USE
 
 	// Save the state.
 	if err := cp.SaveState(); err != nil {
 		t.Fatalf("SaveState failed: %v", err)
 	}
+	cp.Close()
 
-	// Create a new StateManager instance and persistence object to load the saved state.
-	// (This simulates restarting the service.)
+	// Simulate restart by creating a new persistence object.
 	newSM := server.NewStateManager("testnode")
-	newCP := server.NewConfigPersistence(configPath, newSM, false)
+	newCP, err := server.NewConfigPersistence(configPath, newSM, false)
+	if err != nil {
+		t.Fatalf("Failed to initialize persistence: %v", err)
+	}
+	defer newCP.Close()
+
+	// Load the saved state.
 	if err := newCP.LoadState(); err != nil {
 		t.Fatalf("LoadState failed: %v", err)
 	}
@@ -122,92 +136,24 @@ func TestSaveAndLoadState(t *testing.T) {
 // TestValidateStateFile verifies that after a proper save the ValidateStateFile returns nil.
 func TestValidateStateFile(t *testing.T) {
 	tmpDir := t.TempDir()
-	configPath := filepath.Join(tmpDir, "config.json")
+	configPath := filepath.Join(tmpDir, "config.db")
 
 	sm := server.NewStateManager("testnode")
 	if err := sm.Set("key", "value"); err != nil {
 		t.Fatalf("Failed to set state: %v", err)
 	}
-	cp := server.NewConfigPersistence(configPath, sm, false)
+	cp, err := server.NewConfigPersistence(configPath, sm, false)
+	if err != nil {
+		t.Fatalf("Failed to initialize persistance: %v", err)
+	}
+
 	if err := cp.SaveState(); err != nil {
 		t.Fatalf("SaveState failed: %v", err)
 	}
 
 	// Validate the state file.
-	if err := cp.ValidateStateFile(); err != nil {
+	if err := cp.ValidateState(); err != nil {
 		t.Fatalf("ValidateStateFile failed: %v", err)
-	}
-}
-
-// TestCorruptedStateFile verifies that if the state file is corrupted (e.g. invalid JSON),
-// LoadState renames it with a ".corrupted" suffix.
-func TestCorruptedStateFile(t *testing.T) {
-	tmpDir := t.TempDir()
-	configPath := filepath.Join(tmpDir, "config.json")
-
-	// Write a corrupted JSON file.
-	corruptContent := []byte("{ this is not valid json }")
-	if err := ioutil.WriteFile(configPath, corruptContent, 0644); err != nil {
-		t.Fatalf("Failed to write corrupted file: %v", err)
-	}
-
-	sm := server.NewStateManager("testnode")
-	cp := server.NewConfigPersistence(configPath, sm, false)
-
-	// LoadState should log an error, backup the corrupted file, and return nil.
-	if err := cp.LoadState(); err != nil {
-		t.Errorf("LoadState should not fail outright on corrupted file, but got: %v", err)
-	}
-
-	// The original file should be renamed to have a ".corrupted" suffix.
-	corruptedBackup := configPath + ".corrupted"
-	if _, err := os.Stat(corruptedBackup); os.IsNotExist(err) {
-		t.Errorf("Expected corrupted file backup %s to exist", corruptedBackup)
-	}
-
-	// Optionally, check that the original file no longer exists.
-	if _, err := os.Stat(configPath); err == nil {
-		t.Errorf("Expected original file %s to have been renamed", configPath)
-	}
-}
-
-// TestBackupRemoval tests that the backup file is removed after a successful save.
-// This test saves state, then changes the file so that a backup would be created, then saves again,
-// and verifies that the backup file no longer exists.
-func TestBackupRemoval(t *testing.T) {
-	tmpDir := t.TempDir()
-	configPath := filepath.Join(tmpDir, "config.json")
-	backupPath := configPath + ".bak"
-
-	sm := server.NewStateManager("testnode")
-	if err := sm.Set("key", "initial"); err != nil {
-		t.Fatalf("Failed to set state: %v", err)
-	}
-	cp := server.NewConfigPersistence(configPath, sm, false)
-
-	// First save.
-	if err := cp.SaveState(); err != nil {
-		t.Fatalf("First SaveState failed: %v", err)
-	}
-
-	// Simulate an update by writing an extra backup file manually.
-	if err := os.WriteFile(backupPath, []byte("backup content"), 0644); err != nil {
-		t.Fatalf("Failed to write backup file: %v", err)
-	}
-
-	// Change state.
-	if err := sm.Set("key", "updated"); err != nil {
-		t.Fatalf("Failed to update state: %v", err)
-	}
-
-	// Save again. This should remove the backup file on success.
-	if err := cp.SaveState(); err != nil {
-		t.Fatalf("Second SaveState failed: %v", err)
-	}
-
-	// Check that backup file is removed.
-	if _, err := os.Stat(backupPath); err == nil {
-		t.Errorf("Expected backup file %s to be removed after successful save", backupPath)
 	}
 }
 
@@ -224,7 +170,10 @@ func TestChecksumCalculation(t *testing.T) {
 
 	sm.SetState(state)
 
-	cp := server.NewConfigPersistence("dummy", sm, false)
+	cp, err := server.NewConfigPersistence("dummy", sm, false)
+	if err != nil {
+		t.Fatalf("Failed to initialize persistance: %v", err)
+	}
 
 	// Get the full state.
 	fullState := sm.GetFullState()
