@@ -37,9 +37,18 @@ void handle_update(const std::string &update_setting)
 {
     std::stringstream ss;
     ss << update_setting;
-    bosepro::ParameterSetting ps = bosepro::ParameterSetting(ss);
-    SPDLOG_INFO("server update: {}", update_setting);
-    psession->process_parameter_setting(ps);
+    SPDLOG_DEBUG("Server update: {}", update_setting);
+
+    try
+    {
+        bosepro::ParameterSetting ps = bosepro::ParameterSetting(ss);
+        psession->process_parameter_setting(ps);
+    }
+    catch (const std::exception &e)
+    {
+        SPDLOG_ERROR("Error processing parameter setting: {} - {}",
+                     update_setting, e.what());
+    }
 }
 
 
@@ -78,7 +87,7 @@ int main(int argc, char *argv[])
     if (envConfigPath) {
         config_path = envConfigPath;
     }
-    
+
     boost::program_options::options_description desc("Allowed options");
     desc.add_options()
         ("configuration,c", boost::program_options::value<std::string>()->default_value(config_path + "/configuration.json"), "configuration file")
@@ -123,7 +132,7 @@ int main(int argc, char *argv[])
     {
         spdlog::set_level(spdlog::level::info);
     }
-    
+
     SPDLOG_INFO("mune_dsp");
 
     SPDLOG_INFO("Profile resolution {} ns", bosepro::Profile::get_resolution());
@@ -135,7 +144,7 @@ int main(int argc, char *argv[])
     bosepro::Session session(configuration.get_session(), definitions);
 
     auto& telemetry_monitor = bosepro::TelemetryMonitor::get_instance();
-    
+
     if (configuration.has_audio_tasks())
     {
         session.create_audio_tasks(configuration);

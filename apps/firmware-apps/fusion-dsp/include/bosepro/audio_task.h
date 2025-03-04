@@ -271,13 +271,33 @@ public:
             const BlockConfiguration *bc =
                 reinterpret_cast<const BlockConfiguration *>(&b.second);
 
+            if (block_map.count(bc->get_name()) != 0)
+            {
+                throw std::runtime_error("Duplicate blocks with name '"
+                                         + bc->get_name() + "'.");
+            }
+
             SPDLOG_DEBUG("Creating block: {}.", bc->get_name());
 
-            blocks.push_back(std::unique_ptr<Algorithm>(
-                ChildFactory<Algorithm,
-                     const BlockConfiguration &>::create_child(
-                         bc->get_algorithm(), *bc)));
-            block_map[bc->get_name()] = blocks.back().get();
+            try
+            {
+                blocks.push_back(std::unique_ptr<Algorithm>(
+                            ChildFactory<Algorithm,
+                            const BlockConfiguration &>::create_child(
+                                bc->get_algorithm(), *bc)));
+                block_map[bc->get_name()] = blocks.back().get();
+            }
+            catch (std::exception &e)
+            {
+                throw std::runtime_error("Failed to create block '"
+                                         + bc->get_name() + "': " + e.what());
+            }
+
+            if (blocks.back() == nullptr)
+            {
+                throw std::runtime_error("Failed to create block '"
+                                         + bc->get_name() + ".'");
+            }
         }
 
         for (auto &b : blocks)
@@ -290,6 +310,19 @@ public:
         {
             const BlockConnectionConfiguration *cc =
                 reinterpret_cast<const BlockConnectionConfiguration *>(&c.second);
+
+            if (block_map.count(cc->get_source_block()) == 0)
+            {
+                throw std::runtime_error("Block '" + cc->get_source_block()
+                                         + "' not found.");
+            }
+
+            if (block_map.count(cc->get_destination_block()) == 0)
+            {
+                throw std::runtime_error("Block '" + cc->get_destination_block()
+                                         + "' not found.");
+            }
+
             Algorithm *input_block = block_map[cc->get_destination_block()];
             Algorithm *ouput_block = block_map[cc->get_source_block()];
             Terminal &output_terminal =

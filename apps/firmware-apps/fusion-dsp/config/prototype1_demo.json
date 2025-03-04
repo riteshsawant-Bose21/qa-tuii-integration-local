@@ -352,10 +352,6 @@
                     "algorithm": "matrix_mixer",
                     "property_settings": [
                         {
-                            "name": "client_name",
-                            "value": "task3"
-                        },
-                        {
                             "name": "sample_rate",
                             "value": 48000
                         },

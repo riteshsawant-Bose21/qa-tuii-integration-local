@@ -5,6 +5,7 @@
 
 #include <spdlog/spdlog.h>
 
+#include <set>
 #include <string>
 #include <type_traits>
 
@@ -60,10 +61,6 @@ protected:
     /// @return  The member of the given name.
     const Navigator &get_member(const std::string &member_name) const
     {
-        if (!has_member(member_name))
-        {
-            SPDLOG_CRITICAL("Member {} not found.", member_name);
-        }
         return (const Navigator &)get_child(member_name);
     }
 
@@ -77,12 +74,6 @@ protected:
     template <typename T>
     void get_member_value(const std::string &member_name, T &value) const
     {
-        // First, check that the member exists
-        if (!has_member(member_name))
-        {
-            SPDLOG_CRITICAL("Member '{}' not found.", member_name);
-        }
-
         // If T is not std::vector<std::string>, do the usual single-value read.
         if constexpr (!std::is_same<T, std::vector<std::string>>::value)
         {
@@ -112,7 +103,6 @@ protected:
     }
 
 
-
     /// Set the value of the member of the given name.  The member must exist:
     /// use `has_member()` to test for its existence before calling this method.
     /// The value must be convertible to the given type.
@@ -122,11 +112,6 @@ protected:
     template <typename T>
     void set_member(const std::string &member_name, const T &value)
     {
-        if (!has_member(member_name))
-        {
-            SPDLOG_CRITICAL("Member {} not found.", member_name);
-        }
-
         put(member_name, value);
     }
 
@@ -192,12 +177,6 @@ protected:
     {
         boost::optional<T> v;
 
-        if (!has_member(member_name))
-        {
-            SPDLOG_CRITICAL("Member {} not found.", member_name);
-            return false;
-        }
-
         v = get_optional<T>(member_name);
 
         if (v != boost::none)
@@ -236,29 +215,39 @@ protected:
     /// @param  index  The index of the list member to retrieve.
     /// @param  value  The value of the list member of the given name and index.
     template <typename T>
-    bool get_list_value(const std::string &list_name, int index, T &value) const
+    void get_list_value(const std::string &list_name, int index, T &value) const
     {
         int n = 0;
-
-        if (!has_member(list_name))
-        {
-            SPDLOG_CRITICAL("List {} not found.", list_name);
-            return false;
-        }
 
         for (auto a : get_child(list_name))
         {
             if (n == index)
             {
                 value = a.second.get_value<T>();
-                return true;
+                return;
             }
 
             n++;
         }
 
-        SPDLOG_CRITICAL("List {} index {} out of range.", list_name, index);
-        return false;
+        throw std::runtime_error("List '" + list_name + "' index "
+                                 + std::to_string(index) + " out of range.");
+    }
+
+
+    /// Populate the given set with the values of the list of the given name.
+    /// The list must exist: use `has_member()` to test for its existence before
+    /// calling this function.
+    ///
+    /// @param  list_name  The name of the list.
+    /// @param  value  The set to populate with the values of the list.
+    template <typename T>
+    void get_list_values(const std::string &list_name, std::set<T> &value) const
+    {
+        for (auto a : get_child(list_name))
+        {
+            value.insert(a.second.get_value<T>());
+        }
     }
 
 
@@ -273,11 +262,6 @@ protected:
     template <typename T>
     bool try_list_value(const std::string &list_name, int index, T &value) const {
         int n = 0;
-
-        if (!has_member(list_name)) {
-            SPDLOG_CRITICAL("List {} not found.", list_name);
-            return false;
-        }
 
         for (const auto &a : get_child(list_name)) {
             if (n == index) {
@@ -302,19 +286,17 @@ protected:
                         value = *opt_value;
                         return true;
                     }
-                } else {
-                    SPDLOG_CRITICAL("Unsupported type requested.");
-                    return false;
                 }
 
-                SPDLOG_WARN("Value at index {} is not of expected type.", index);
-                return false;
+                throw std::runtime_error("Value of '" + list_name
+                                         + "' at index " + std::to_string(index)
+                                         + " is not of expected type.");
             }
             n++;
         }
 
-        SPDLOG_CRITICAL("List {} index {} out of range.", list_name, index);
-        return false;
+        throw std::runtime_error("List '" + list_name + "' index "
+                                 + std::to_string(index) + " out of range.");
     }
 
 
@@ -359,11 +341,6 @@ protected:
                                      const std::string &member_name,
                                      const std::string &member_value) const
     {
-        if (!has_member(list_name))
-        {
-            SPDLOG_CRITICAL("List {} not found.", list_name);
-        }
-
         for (auto &a : get_child(list_name))
         {
             if (a.second.count(member_name) > 0)  // Boost ptree check for existing key
@@ -375,9 +352,6 @@ protected:
                 }
             }
         }
-
-        SPDLOG_CRITICAL("Member {} not found in list {}.", member_value,
-                        list_name);
 
         return (const Navigator &)get_child(list_name);
     }
@@ -392,7 +366,7 @@ protected:
 
         if (it == not_found())
         {
-            SPDLOG_CRITICAL("Member {} not found.", member_name);
+            throw std::runtime_error("Member '" + member_name + "' not found.");
         }
 
         return it->second.data();
@@ -400,32 +374,19 @@ protected:
 
 
     /// Get the value (as an integer index) of the member of the given name.
-    /// If the member does not exist, return 0.
     int get_index(const std::string &member_name) const
     {
-        int index = 0;
-
-        if (has_member(member_name))
-        {
-            get_member_value(member_name, index);
-            index--;
-        }
-
-        return index;
+        int index;
+        get_member_value(member_name, index);
+        return index - 1;
     }
 
 
     /// Get the value (as an integer count) of the member of the given name.
-    /// If the member does not exist, return 0.
     int get_count(const std::string &member_name) const
     {
-        int count = 0;
-
-        if (has_member(member_name))
-        {
-            get_member_value(member_name, count);
-        }
-
+        int count;
+        get_member_value(member_name, count);
         return count;
     }
 

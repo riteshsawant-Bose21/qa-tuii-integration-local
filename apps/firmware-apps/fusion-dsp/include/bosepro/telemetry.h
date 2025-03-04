@@ -53,6 +53,19 @@ public:
                         const PropertyConfiguration &pc =
                             configuration->get_property(rows_name);
                         pc.get_value(num_rows);
+
+                        const PropertyDefinition &pd =
+                            processor.get_property(rows_name);
+                        int_fast32_t minimum_rows;
+                        int_fast32_t maximum_rows;
+                        pd.get_minimum_value(minimum_rows);
+                        pd.get_maximum_value(maximum_rows);
+
+                        if (num_rows < minimum_rows || num_rows > maximum_rows)
+                        {
+                            throw std::runtime_error("Invalid number of rows for property '"
+                                    + rows_name + "'.");
+                        }
                     }
                     else
                     {
@@ -81,6 +94,20 @@ public:
                         const PropertyConfiguration &pc =
                             configuration->get_property(columns_name);
                         pc.get_value(num_columns);
+
+                        const PropertyDefinition &pd =
+                            processor.get_property(columns_name);
+                        int_fast32_t minimum_columns;
+                        int_fast32_t maximum_columns;
+                        pd.get_minimum_value(minimum_columns);
+                        pd.get_maximum_value(maximum_columns);
+
+                        if (num_columns < minimum_columns
+                            || num_columns > maximum_columns)
+                        {
+                            throw std::runtime_error("Invalid number of columns for property '"
+                                    + columns_name + "'.");
+                        }
                     }
                     else
                     {

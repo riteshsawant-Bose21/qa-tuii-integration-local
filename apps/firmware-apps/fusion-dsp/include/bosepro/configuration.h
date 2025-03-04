@@ -142,6 +142,15 @@ public:
     }
 
 
+    /// Test whether this configuration has property settings.
+    ///
+    /// @return  True if property settings exist, false otherwise.
+    bool has_properties() const
+    {
+        return has_member("property_settings");
+    }
+
+
     /// Test whether this configuration has a property with the given name.
     ///
     /// @param  name  The name of the property.
@@ -162,6 +171,17 @@ public:
     {
         return (const PropertyConfiguration &)list_get_member("property_settings",
                                                               "name", name);
+    }
+
+
+    /// Get the list of property settings in this configuration.  The list of
+    /// properties must exist: use `has_properties()` to test whether it
+    /// exists before calling this function.
+    ///
+    /// @return  The list of property settings.
+    const PropertyConfiguration &get_properties() const
+    {
+        return (const PropertyConfiguration &)get_member("property_settings");
     }
 
 
@@ -284,6 +304,27 @@ public:
         return (TerminalConfiguration &)list_get_member("terminal_channels",
                                                         "name", name);
     }
+
+
+    /// Test whether the block configuration has any terminals.
+    ///
+    /// @return  True if the block configuration has any terminals, false
+    ///         otherwise.
+    bool has_terminals() const
+    {
+        return has_member("terminal_channels");
+    }
+
+
+    /// Get the list of terminal configurations for this block.  The list of
+    /// terminals must exist: use `has_terminals()` to test whether it exists
+    /// before calling this function.
+    ///
+    /// @return  The list of terminal configurations.
+    const TerminalConfiguration &get_terminals() const
+    {
+        return (TerminalConfiguration &)get_member("terminal_channels");
+    }
 };
 
 
@@ -328,6 +369,15 @@ public:
     }
 
 
+    /// Test whether the parameter setting has a row index specified.
+    bool has_row() const
+    {
+        size_t index_size = list_size("index");
+
+        return index_size == 1 || index_size == 2;
+    }
+
+
     /// Get the row index for this parameter setting.  If the row is not set,
     /// this function returns 0.
     ///
@@ -335,11 +385,17 @@ public:
     int get_row() const
     {
         int row;
-        if (get_list_value("index", 0, row)) {
-            return row - 1;    
-        }
-        return 0;
-        
+        get_list_value("index", 0, row);
+        return row - 1;
+    }
+
+
+    /// Test whether the parameter setting has a column index specified.
+    bool has_column() const
+    {
+        size_t index_size = list_size("index");
+
+        return index_size == 2;
     }
 
 
@@ -350,10 +406,8 @@ public:
     int get_column() const
     {
         int column;
-        if (get_list_value("index", 1, column)) {
-            return column - 1;
-        }
-        return 0;        
+        get_list_value("index", 1, column);
+        return column - 1;
     }
 };
 

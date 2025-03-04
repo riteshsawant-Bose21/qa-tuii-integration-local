@@ -2,6 +2,7 @@
 
 #include <bosepro/navigator.h>
 
+#include <set>
 #include <string>
 
 
@@ -187,6 +188,15 @@ public:
     }
 
 
+    /// Test whether the interface has a minimum value.
+    ///
+    /// @return  True if the interface has a minimum value, false otherwise.
+    bool has_minimum_value() const
+    {
+        return has_member("minimum_value");
+    }
+
+
     /// Get the minimum value for the interface (for Property, Parameter,
     /// and Telemetry interfaces).  The minimum value must exist for this
     /// definition.
@@ -199,6 +209,15 @@ public:
     }
 
 
+    /// Test whether the interface has a maximum value.
+    ///
+    /// @return  True if the interface has a maximum value, false otherwise.
+    bool has_maximum_value() const
+    {
+        return has_member("maximum_value");
+    }
+
+
     /// Get the maximum value for the interface (for Property, Parameter,
     /// and Telemetry interfaces).  The maximum value must exist for this
     /// definition.
@@ -208,6 +227,63 @@ public:
     void get_maximum_value(T &value) const
     {
         get_member_value<T>("maximum_value", value);
+    }
+
+
+    /// Test whether the interface has a maximum length.
+    ///
+    /// @return  True if the interface has a maximum length, false otherwise.
+    bool has_maximum_length() const
+    {
+        return has_member("maximum_length");
+    }
+
+
+    /// Get the maximum length for the interface (for Property, Parameter,
+    /// and Telemetry interfaces).  The maximum length must exist for this
+    /// definition.
+    ///
+    /// @return  length  The maximum length for a string-valued interface.
+    size_t get_maximum_length() const
+    {
+        size_t length;
+        get_member_value<size_t>("maximum_length", length);
+        return length;
+    }
+
+
+    /// Test whether the interface has allowed values.
+    ///
+    /// @return  True if the interface has allowed values, false otherwise.
+    bool has_allowed_values() const
+    {
+        return has_member("allowed_values");
+    }
+
+
+    /// Get the allowed values for the interface (for Property, Parameter,
+    /// and Telemetry interfaces).  The allowed values must exist for this
+    /// definition.
+    ///
+    /// @param  values  A set that will be populated with the allowed values
+    ///                 for the interface.
+    template <typename T>
+    void get_allowed_values(std::set<T> &values) const
+    {
+        get_list_values("allowed_values", values);
+    }
+
+
+    /// Test whether the provided value is allowed for the interface.  The
+    /// allowed values must exist for this definition.
+    ///
+    /// @param  value  The value to test.
+    template <typename T>
+    bool is_allowed_value(const T &value) const
+    {
+        std::set<T> allowed_values;
+        get_allowed_values(allowed_values);
+        return allowed_values.find(value) != allowed_values.end();
     }
 };
 
