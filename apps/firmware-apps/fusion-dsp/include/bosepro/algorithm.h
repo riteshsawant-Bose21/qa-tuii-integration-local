@@ -316,6 +316,39 @@ public:
     }
 
 
+    /// Get the largest frame size of any empty (unconnected) input terminal in
+    /// this block.  This is called by the framework, not by the algorithm.
+    int get_empty_frame_size() const
+    {
+        int largest_frame_size = 0;
+
+        for (auto &t : meta->terminals)
+        {
+            if (!t.second->is_output() && t.second->is_unconnected())
+            {
+                largest_frame_size = std::max(largest_frame_size,
+                                              t.second->get_frame_size());
+            }
+        }
+
+        return largest_frame_size;
+    }
+
+
+    /// Connect any unconnected input terminals to the provided signal memory.
+    /// This is called by the framework, not by the algorithm.
+    void set_empty_signal(DspSignalMemory<const float[]> &signal_memory)
+    {
+        for (auto &t : meta->terminals)
+        {
+            if (!t.second->is_output())
+            {
+                t.second->set_empty_signal(signal_memory.get());
+            }
+        }
+    }
+
+
     /// Get a reference to a parameter by name.  This is called by the framework,
     /// not by the algorithm.
     ///
