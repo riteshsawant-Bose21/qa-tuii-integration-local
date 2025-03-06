@@ -438,6 +438,26 @@ public:
     }
 
 
+    /// Return true if this is an input terminal and has unconnected channels.
+    bool is_unconnected() const
+    {
+        if (is_output_terminal)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < num_channels; i++)
+        {
+            if (buffer[i] == nullptr)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+
     /// Assign a terminal output processor object to this terminal.
     void set_output_processor(TerminalOutputProcessor *top)
     {
@@ -450,6 +470,26 @@ public:
     TerminalOutputProcessor *get_output_processor()
     {
         return top;
+    }
+
+
+    /// Connect unconnected input channels to the provided buffer.
+    void set_empty_signal(const void *empty_buffer)
+    {
+        if (is_output_terminal)
+        {
+            SPDLOG_ERROR("Cannot assign empty signal to output terminal.");
+            return;
+        }
+
+        for (int i = 0; i < num_channels; i++)
+        {
+            if (buffer[i] == nullptr)
+            {
+                SPDLOG_DEBUG("Assigning empty signal to input channel {}.", i);
+                buffer[i] = (void *)empty_buffer;
+            }
+        }
     }
 
 

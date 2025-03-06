@@ -340,6 +340,23 @@ public:
                     output_channel);
         }
 
+        int max_frame_size = 0;
+        for (auto &b : blocks)
+        {
+            max_frame_size = std::max(max_frame_size, b->get_empty_frame_size());
+        }
+
+        if (max_frame_size > 0)
+        {
+            SPDLOG_DEBUG("Creating empty signal with size: {}.", max_frame_size);
+            empty_signal.resize(max_frame_size);
+
+            for (auto &b : blocks)
+            {
+                b->set_empty_signal(empty_signal);
+            }
+        }
+
         task_profile.set_period((double)get_frame_size() / get_sample_rate());
 
         if (configuration.has_property("timing_log_file"))
@@ -552,6 +569,7 @@ private:
     std::map<std::string, Algorithm *> block_map;
     bool profile_blocks = false;
     int_fast32_t cpu_affinity;
+    DspSignalMemory<const float []> empty_signal;
 
     JackClient *client;
     int_fast32_t frames_to_run;
