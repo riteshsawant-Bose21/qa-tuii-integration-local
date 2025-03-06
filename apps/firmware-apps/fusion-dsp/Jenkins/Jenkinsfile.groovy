@@ -48,8 +48,8 @@ pipeline {
 							  doGenerateSubmoduleConfigurations: false,
 							  extensions: [[$class: 'CloneOption', depth: 1, noTags: false, reference: '', shallow: true, timeout: 30]],
 							  userRemoteConfigs: [[credentialsId: '5801fa82-23a0-4402-868e-7ca5fa2c6638',
-									       name: 'pro-mune-dsp',
-									       url: 'https://github.com/BoseProfessional/pro-mune-dsp.git']]
+									       name: 'fusion-dsp',
+									       url: 'https://github.com/BoseProfessional/fusion-dsp.git']]
 							 ])
 					}
 					// Set github info in env. variable

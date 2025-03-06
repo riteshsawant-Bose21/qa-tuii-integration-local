@@ -86,14 +86,14 @@ def configure(conf):
 def build(bld):
     bld(export_includes=['./external/doctest', './include'], name='common-include')
 
-    bld.program(target='mune_dsp',
+    bld.program(target='fusion_dsp',
                 source=bld.path.ant_glob(['src/*.cpp', 'src/*.c']),
                 use=['common-include'],
                 lib=['jack', 'fmt', 'sndfile', 'boost_program_options', 'onnxruntime', 'jsoncpp'])
 
     bld.program(target='test_dsp',
                 source=bld.path.ant_glob(['src/*.cpp', 'src/*.c', 'test/*.cpp'],
-                                         excl=['src/mune_dsp.cpp']),
+                                         excl=['src/fusion_dsp.cpp']),
                 use=['common-include'],
                 lib=['jack', 'fmt', 'sndfile', 'boost_program_options', 'onnxruntime'])
 

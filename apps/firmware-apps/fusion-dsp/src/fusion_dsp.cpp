@@ -133,7 +133,7 @@ int main(int argc, char *argv[])
         spdlog::set_level(spdlog::level::info);
     }
 
-    SPDLOG_INFO("mune_dsp");
+    SPDLOG_INFO("fusion_dsp");
 
     SPDLOG_INFO("Profile resolution {} ns", bosepro::Profile::get_resolution());
     bosepro::Profile::set_cpu_mips(1800.0);
@@ -259,6 +259,6 @@ int main(int argc, char *argv[])
         SPDLOG_INFO("Finished running.");
     }
 
-    SPDLOG_INFO("mune_dsp exiting...");
+    SPDLOG_INFO("fusion_dsp exiting...");
     return 0;
 }
