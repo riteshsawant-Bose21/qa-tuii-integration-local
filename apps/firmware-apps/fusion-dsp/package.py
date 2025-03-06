@@ -7,7 +7,7 @@ import datetime
 import os
 
 
-APP_PATH = 'build/mune_dsp'
+APP_PATH = 'build/fusion_dsp'
 INFO_PATH = 'build/fusion-dsp.info'
 
 # Getting version from the Jenkins environment, if not set default to LOCAL version
@@ -24,7 +24,7 @@ build_date = datetime.datetime.fromtimestamp(build_ts, tz=datetime.timezone.utc)
 
 # Write the fusion-dsp.info file.
 with open(INFO_PATH, "w") as info_file:
-    info_file.write(f'APP="mune-dsp"\n')
+    info_file.write(f'APP="fusion-dsp"\n')
     info_file.write(f'VERSION="{version}"\n')
     info_file.write(f'BRANCH="{git_branch}"\n')
     info_file.write(f'COMMIT_ID="{git_hash}"\n')

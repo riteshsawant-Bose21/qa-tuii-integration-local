@@ -46,7 +46,7 @@ def profile(config_name):
         f.close()
         
         env = {'DYLD_LIBRARY_PATH' : 'libs/onnxruntime-osx-universal2-1.17.0/lib/:'}
-        run(['./build/mune_dsp','-c', 'tmp.json'],
+        run(['./build/fusion_dsp','-c', 'tmp.json'],
             # If running on MacOS and having trouble with dylib, uncomment this.
             # env=env
             )

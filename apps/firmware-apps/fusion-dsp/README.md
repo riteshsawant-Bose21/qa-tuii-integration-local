@@ -1,5 +1,5 @@
-Mune DSP
-========
+Fusion DSP
+==========
 
 Building
 --------
@@ -44,7 +44,7 @@ Running `python3 waf build` does not require a platform argument.
 Dependencies
 ------------
 
-Building MuneDSP depends on the following:
+Building Fusion DSP depends on the following:
 
 - JACK Audio Connection Kit
 - Boost
@@ -100,7 +100,7 @@ Start the DSP using the following command (replacing the IP address in the `-s`
 argument with the IP address through which the Fusion Server can be reached):
 
 ~~~
-DYLD_LIBRARY_PATH=libs/onnxruntime-osx-universal2-1.17.0/lib/: ./build/mune_dsp -c config/prototype0.json -s 192.168.1.100
+DYLD_LIBRARY_PATH=libs/onnxruntime-osx-universal2-1.17.0/lib/: ./build/fusion_dsp -c config/prototype0.json -s 192.168.1.100
 ~~~
 
 You should hear pink noise.  You can adjust some of the dynamic parameters of
