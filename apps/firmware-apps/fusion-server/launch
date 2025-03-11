@@ -11,6 +11,11 @@ KILL_BASE_NAME="fusion"
 NUM_INSTANCES=""
 JOIN_ADDRESS=""
 KILL_MODE=false
+# HOST_OS_ARCH and TARGET_BINARY_ARCH are set in check_platform_arch
+# These will use 'arm64' or 'amd64' (not x86-64)
+HOST_OS_ARCH=""
+TARGET_BINARY_ARCH=""
+
 # Host directories are set in `host_setup`
 HOST_TEMP_DIR=
 HOST_BUILD_DIR=
@@ -62,7 +67,7 @@ cleanup() {
     
     # Clean up temporary cloud-init files
     [ "$VERBOSE" = true ] && echo "Cleaning up temporary cloud-init files..."
-    rm -f "$HOST_TEMP_DIR"/cloud-init-${BASE_NAME}*.yaml 2>/dev/null
+    rm -f "$HOST_TEMP_DIR"/fusion-server.yaml 2>/dev/null
     
     # Remove generated cloud config file
     rm fusion-server.yaml 2>/dev/null
@@ -229,7 +234,7 @@ setup_instance() {
     print_success "fusion-server installed successfully"
     
     print_step "Copying bbolt binary..."
-    if ! multipass transfer "$HOST_BBOLT_DIR/bbolt-linux-arm64" "$instance_name":/tmp/bbolt; then
+    if ! multipass transfer "$HOST_BBOLT_DIR/bbolt-linux-$TARGET_BINARY_ARCH" "$instance_name":/tmp/bbolt; then
         print_error "Failed to copy bbolt binary"
         return 1
     fi
@@ -304,12 +309,17 @@ launch_instance() {
     local instance_name="$1"
     local instance_number="$2"
     local join_addr="$3"
+    local cloud_init_file="$HOST_TEMP_DIR/fusion-server.yaml"
+
+    # Copy to an accesible location. Linux default security for the multipass
+    # snap prevents open access to the local filesystem.
+    cp fusion-server.yaml "$cloud_init_file"
     
     print_header "Launching Instance: $instance_name"
     
     # Create and launch instance
     print_step "Creating multipass instance..."
-    if ! multipass launch --name "$instance_name" --cloud-init "fusion-server.yaml" --memory 2G --cpus 2; then
+    if ! multipass launch --name "$instance_name" --cloud-init "$cloud_init_file" --memory 2G --cpus 2; then
         print_error "Failed to launch instance $instance_name"
         return 1
     fi
@@ -460,19 +470,22 @@ check_platform_arch() {
     # copied in is not compatible.
     target_arch=$(file -bL build/fusion-server | awk -F ',' '{print $2}' | sed 's/^ //')
     host_arch=$(uname -m)
-    # | tr '_' '-')
+    TARGET_BINARY_ARCH=$host_arch
+    host_os=$(uname | tr '[:upper:]' '[:lower:]')
     host_target_ok=false
 
     case "$host_arch" in
         'x86'_'64') 
             # x86_64 host can run x86-64 fusion-server.
             [ "$target_arch" = 'x86-64' ] && host_target_ok=true
+            TARGET_BINARY_ARCH=amd64
             ;;
         'arm64') 
             # arm64 host can run aarch64 fusion-server in multipass.
             [ "$target_arch" = 'ARM aarch64' ] && host_target_ok=true
             ;;
     esac
+    HOST_OS_ARCH="$host_os-$TARGET_BINARY_ARCH"
 
     if [ "$host_target_ok" = 'false' ]; then
         print_error "CPU architecture mismatch for fusion-server executable: Host=$host_arch, Target=$target_arch"
@@ -491,6 +504,7 @@ host_setup() {
         echo "   NET_INTERFACE: '$NET_INTERFACE'"
         echo "   MULTIPASS_DIR: '$my_multipass_dir'"
         echo ""
+        echo "HOST_OS_ARCH: '$HOST_OS_ARCH'"
     fi
 
     if [ -n "$my_multipass_dir" ]; then
@@ -506,7 +520,7 @@ host_setup() {
         # Copy the main binary to HOST_BUILD_DIR
         cp build/fusion-server "$HOST_BUILD_DIR/"
         # Copy the bbolt binary to HOST_BUILD_DIR
-        cp tools/bbolt/cmd/ bbolt-linux-arm64 "$HOST_BBOLT_DIR/bbolt"
+        cp "tools/bbolt/cmd/bbolt-linux-$TARGET_BINARY_ARCH" "$HOST_BBOLT_DIR/"
     else
         # Default host paths, works on MacOS.
         HOST_TEMP_DIR=/tmp
@@ -551,6 +565,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# Handle kill mode first
 if [ "$KILL_MODE" = true ]; then
     # If no specific kill base name provided, use the general base name
     if [ -z "$KILL_BASE_NAME" ]; then
@@ -617,48 +632,6 @@ if [ -z "$NUM_INSTANCES" ]; then
     done
 fi
 
-# Handle kill mode first
-if [ "$KILL_MODE" = true ]; then
-    # If no specific kill base name provided, use the general base name
-    if [ -z "$KILL_BASE_NAME" ]; then
-        KILL_BASE_NAME="$BASE_NAME"
-    fi
-    print_header "Instance Cleanup"
-    print_step "Checking for instances with base name: $KILL_BASE_NAME"
-    
-    # Get list of matching instances
-    instances=()
-    while IFS=, read -r name state ipv4 release; do
-        if [[ "$name" =~ ^"$KILL_BASE_NAME" ]]; then
-            instances+=("$name")
-        fi
-    done < <(multipass list --format csv)
-    
-    if [ ${#instances[@]} -eq 0 ]; then
-        print_warning "No instances found matching base name: $KILL_BASE_NAME"
-        exit 0
-    fi
-
-    print_substep "Found ${#instances[@]} instance(s) to remove:"
-    for instance in "${instances[@]}"; do
-        # Move the state retrieval into a separate statement
-        state=$(multipass info "$instance" | grep "State:" | awk '{print $2}')
-        printf "  ${CYAN}${ARROW} %s (State: %s)${NC}\n" "$instance" "$state"
-    done
-    
-    echo
-    print_step "Removing instances..."
-    for instance in "${instances[@]}"; do
-        print_substep "Deleting instance: $instance"
-        multipass delete "$instance"
-    done
-    
-    print_step "Purging deleted instances..."
-    multipass purge
-    print_success "Successfully removed ${#instances[@]} instance(s)"
-    exit 0
-fi
-
 # Prompting for base name
 if [ -z "$BASE_NAME" ]; then
     printf "${YELLOW}Enter base name for instances [fusion]: ${NC}"
@@ -690,11 +663,13 @@ fi
 
 print_step "System checks"
 
-check_ip_forwarding
-
+# Note: `check_platform_arch` sets HOST_OS_ARCH and TARGET_BINARY_ARCH
 if ! check_platform_arch; then
     exit 1
 fi
+
+# Check IP forwarding before proceeding
+check_ip_forwarding
 
 host_setup
 
