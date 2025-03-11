@@ -294,13 +294,13 @@ func TestRESTEndpointOverBLE(t *testing.T) {
 	}
 
 	// Parse and validate the response
-	var response map[string]interface{}
+	var response map[string]any
 	err = json.Unmarshal(data, &response)
 	if err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
 	}
 
-	payload := response["payload"].(map[string]interface{})
+	payload := response["payload"].(map[string]any)
 	if payload["status"] != float64(200) {
 		t.Errorf("Expected status 200, got %v", payload["status"])
 	}
@@ -334,13 +334,13 @@ func TestJSONDataOverBLE(t *testing.T) {
 	}
 
 	// Validate response
-	var response map[string]interface{}
+	var response map[string]any
 	err = json.Unmarshal(data, &response)
 	if err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
 	}
 
-	payload := response["payload"].(map[string]interface{})
+	payload := response["payload"].(map[string]any)
 	if payload["status"] != float64(201) {
 		t.Errorf("Expected status 201, got %v", payload["status"])
 	}

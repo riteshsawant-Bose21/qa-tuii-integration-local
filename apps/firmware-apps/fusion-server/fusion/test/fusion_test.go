@@ -285,24 +285,24 @@ func TestMain(m *testing.M) {
 func TestSetValue(t *testing.T) {
 	tests := []struct {
 		name       string
-		payload    map[string]interface{}
+		payload    map[string]any
 		wantStatus int
 	}{
 		{
 			name: "Valid key-value pair",
-			payload: map[string]interface{}{
+			payload: map[string]any{
 				"test_key": "test_value",
 			},
 			wantStatus: http.StatusOK,
 		},
 		{
 			name:       "Empty object",
-			payload:    map[string]interface{}{},
+			payload:    map[string]any{},
 			wantStatus: http.StatusOK,
 		},
 		{
 			name: "Multiple keys",
-			payload: map[string]interface{}{
+			payload: map[string]any{
 				"key1": "value1",
 				"key2": "value2",
 			},
@@ -310,8 +310,8 @@ func TestSetValue(t *testing.T) {
 		},
 		{
 			name: "Complex value",
-			payload: map[string]interface{}{
-				"complex": map[string]interface{}{
+			payload: map[string]any{
+				"complex": map[string]any{
 					"nested": "value",
 					"array":  []string{"one", "two", "three"},
 					"number": 42,
@@ -343,9 +343,9 @@ func TestSetValue(t *testing.T) {
 
 			if resp.StatusCode == http.StatusOK {
 				var response struct {
-					Status  string                 `json:"status"`
-					Message string                 `json:"message"`
-					Data    map[string]interface{} `json:"data"`
+					Status  string         `json:"status"`
+					Message string         `json:"message"`
+					Data    map[string]any `json:"data"`
 				}
 				if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 					t.Fatalf("Failed to decode response: %v", err)
@@ -360,7 +360,7 @@ func TestSetValue(t *testing.T) {
 
 func TestGetValue(t *testing.T) {
 	// First set some test data
-	testData := map[string]interface{}{
+	testData := map[string]any{
 		"test_key": "test_value",
 	}
 	jsonData, _ := json.Marshal(testData)
@@ -415,7 +415,7 @@ func TestGetValue(t *testing.T) {
 					resp.StatusCode, tt.wantStatus)
 			}
 
-			var data map[string]interface{}
+			var data map[string]any
 			if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
 				t.Fatalf("Failed to decode response: %v", err)
 			}
@@ -436,7 +436,7 @@ func TestGetValue(t *testing.T) {
 
 func TestUpdateValue(t *testing.T) {
 	// Set initial value
-	initialValue := map[string]interface{}{
+	initialValue := map[string]any{
 		"update_test_key": "initial_value",
 	}
 	jsonData, err := json.Marshal(initialValue)
@@ -459,8 +459,8 @@ func TestUpdateValue(t *testing.T) {
 	}
 
 	var initialResponse struct {
-		Exists bool        `json:"exists"`
-		Value  interface{} `json:"value"`
+		Exists bool `json:"exists"`
+		Value  any  `json:"value"`
 	}
 	if err := json.NewDecoder(getValue.Body).Decode(&initialResponse); err != nil {
 		t.Fatalf("Failed to decode initial get response: %v", err)
@@ -475,7 +475,7 @@ func TestUpdateValue(t *testing.T) {
 	}
 
 	// Update the value
-	updatedValue := map[string]interface{}{
+	updatedValue := map[string]any{
 		"update_test_key": "updated_value",
 	}
 	jsonData, err = json.Marshal(updatedValue)
@@ -498,8 +498,8 @@ func TestUpdateValue(t *testing.T) {
 	}
 
 	var updatedResponse struct {
-		Exists bool        `json:"exists"`
-		Value  interface{} `json:"value"`
+		Exists bool `json:"exists"`
+		Value  any  `json:"value"`
 	}
 	if err := json.NewDecoder(getValue.Body).Decode(&updatedResponse); err != nil {
 		t.Fatalf("Failed to decode updated get response: %v", err)
@@ -516,10 +516,10 @@ func TestUpdateValue(t *testing.T) {
 
 func TestSetAndUpdateValues(t *testing.T) {
 	// Set the initial value with nested vectors
-	initialValue := map[string]interface{}{
-		"settings": map[string]interface{}{
-			"audio": map[string]interface{}{
-				"tone_eq1": map[string]interface{}{
+	initialValue := map[string]any{
+		"settings": map[string]any{
+			"audio": map[string]any{
+				"tone_eq1": map[string]any{
 					"low_gain":    3.0,
 					"high_gain":   4.0,
 					"frequencies": []float64{100.0, 200.0, 300.0},
@@ -551,8 +551,8 @@ func TestSetAndUpdateValues(t *testing.T) {
 	defer getValue.Body.Close()
 
 	var initialResponse struct {
-		Exists bool                   `json:"exists"`
-		Value  map[string]interface{} `json:"value"`
+		Exists bool           `json:"exists"`
+		Value  map[string]any `json:"value"`
 	}
 	if err := json.NewDecoder(getValue.Body).Decode(&initialResponse); err != nil {
 		t.Fatalf("Failed to decode initial get response: %v", err)
@@ -563,16 +563,16 @@ func TestSetAndUpdateValues(t *testing.T) {
 	}
 
 	// Verify numeric arrays
-	frequencies, ok := initialResponse.Value["frequencies"].([]interface{})
+	frequencies, ok := initialResponse.Value["frequencies"].([]any)
 	if !ok || len(frequencies) != 3 || frequencies[0] != 100.0 {
 		t.Errorf("Frequencies mismatch: got %v", frequencies)
 	}
 
 	// Update the value with `null` for `high_gain` and update `frequencies`
-	updatedValue := map[string]interface{}{
-		"settings": map[string]interface{}{
-			"audio": map[string]interface{}{
-				"tone_eq1": map[string]interface{}{
+	updatedValue := map[string]any{
+		"settings": map[string]any{
+			"audio": map[string]any{
+				"tone_eq1": map[string]any{
 					"high_gain":   nil,
 					"frequencies": []float64{400.0, 500.0},
 				},
@@ -609,8 +609,8 @@ func TestSetAndUpdateValues(t *testing.T) {
 	defer getValue.Body.Close()
 
 	var updatedResponse struct {
-		Exists bool                   `json:"exists"`
-		Value  map[string]interface{} `json:"value"`
+		Exists bool           `json:"exists"`
+		Value  map[string]any `json:"value"`
 	}
 	if err := json.NewDecoder(getValue.Body).Decode(&updatedResponse); err != nil {
 		t.Fatalf("Failed to decode updated get response: %v", err)
@@ -625,7 +625,7 @@ func TestSetAndUpdateValues(t *testing.T) {
 	if updatedResponse.Value["low_gain"] != 3.0 {
 		t.Errorf("Wrong value for low_gain: got %v, want 3.0", updatedResponse.Value["low_gain"])
 	}
-	frequencies, ok = updatedResponse.Value["frequencies"].([]interface{})
+	frequencies, ok = updatedResponse.Value["frequencies"].([]any)
 	if !ok || len(frequencies) != 2 || frequencies[0] != 400.0 {
 		t.Errorf("Frequencies update mismatch: got %v", frequencies)
 	}
@@ -633,10 +633,10 @@ func TestSetAndUpdateValues(t *testing.T) {
 
 func TestPatchArrayElement(t *testing.T) {
 
-	initialConfig := map[string]interface{}{
-		"settings": map[string]interface{}{
-			"audio": map[string]interface{}{
-				"tone_eq1": map[string]interface{}{
+	initialConfig := map[string]any{
+		"settings": map[string]any{
+			"audio": map[string]any{
+				"tone_eq1": map[string]any{
 					"frequencies": []float64{100.0, 200.0, 300.0},
 				},
 			},
@@ -660,7 +660,7 @@ func TestPatchArrayElement(t *testing.T) {
 	}
 
 	// PATCH update an array element using query key parameter
-	updateData := map[string]interface{}{
+	updateData := map[string]any{
 		"value": 250.0, // Update index 1 of `frequencies` to 250.0
 	}
 	jsonUpdate, err := json.Marshal(updateData)
@@ -688,8 +688,8 @@ func TestPatchArrayElement(t *testing.T) {
 	defer getValue.Body.Close()
 
 	var updatedResponse struct {
-		Exists bool          `json:"exists"`
-		Value  []interface{} `json:"value"`
+		Exists bool  `json:"exists"`
+		Value  []any `json:"value"`
 	}
 	if err := json.NewDecoder(getValue.Body).Decode(&updatedResponse); err != nil {
 		t.Fatalf("Failed to decode updated array response: %v", err)
@@ -703,7 +703,7 @@ func TestPatchArrayElement(t *testing.T) {
 	}
 
 	// PATCH insert a new element into the array at index 3
-	insertData := map[string]interface{}{
+	insertData := map[string]any{
 		"value": 400.0,
 	}
 	jsonInsert, err := json.Marshal(insertData)
@@ -744,10 +744,10 @@ func TestPatchArrayElement(t *testing.T) {
 // and asserts that the diff output only contains the changed elements.
 func TestPatchDiffOutput(t *testing.T) {
 	// Define the initial configuration.
-	initialConfig := map[string]interface{}{
-		"settings": map[string]interface{}{
-			"audio": map[string]interface{}{
-				"tone_eq1": map[string]interface{}{
+	initialConfig := map[string]any{
+		"settings": map[string]any{
+			"audio": map[string]any{
+				"tone_eq1": map[string]any{
 					"frequencies": []float64{100.0, 200.0, 300.0},
 				},
 			},
@@ -771,7 +771,7 @@ func TestPatchDiffOutput(t *testing.T) {
 		t.Fatalf("Unexpected status code when setting initial config: %d, response: %s", resp.StatusCode, string(body))
 	}
 
-	updateData := map[string]interface{}{
+	updateData := map[string]any{
 		"value": 250.0,
 	}
 	jsonUpdate, err := json.Marshal(updateData)
@@ -795,8 +795,8 @@ func TestPatchDiffOutput(t *testing.T) {
 
 	// Decode the patch response.
 	var patchResp struct {
-		Status  string      `json:"status"`
-		Updates interface{} `json:"updates"`
+		Status  string `json:"status"`
+		Updates any    `json:"updates"`
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&patchResp); err != nil {
@@ -808,11 +808,11 @@ func TestPatchDiffOutput(t *testing.T) {
 	}
 
 	// Only the array element at index 1 should be different.
-	expectedDiff := map[string]interface{}{
-		"settings": map[string]interface{}{
-			"audio": map[string]interface{}{
-				"tone_eq1": map[string]interface{}{
-					"frequencies": map[string]interface{}{
+	expectedDiff := map[string]any{
+		"settings": map[string]any{
+			"audio": map[string]any{
+				"tone_eq1": map[string]any{
+					"frequencies": map[string]any{
 						"1": 250.0,
 					},
 				},
@@ -832,8 +832,8 @@ func TestPatchDiffOutput(t *testing.T) {
 	defer resp.Body.Close()
 
 	var getResp struct {
-		Exists bool          `json:"exists"`
-		Value  []interface{} `json:"value"`
+		Exists bool  `json:"exists"`
+		Value  []any `json:"value"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&getResp); err != nil {
 		t.Fatalf("Failed to decode get response: %v", err)
@@ -860,7 +860,7 @@ func TestRootEndpoint(t *testing.T) {
 			resp.StatusCode, http.StatusOK)
 	}
 
-	var response map[string]interface{}
+	var response map[string]any
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode root response: %v", err)
 	}
@@ -958,7 +958,7 @@ func TestClusterStateSync(t *testing.T) {
 	tests := []struct {
 		name         string
 		key          string
-		value        interface{}
+		value        any
 		updateNode   int
 		verifyNodes  []int
 		expectedSync bool
@@ -976,7 +976,7 @@ func TestClusterStateSync(t *testing.T) {
 		{
 			name:         "Complex object sync",
 			key:          "test_sync_object",
-			value:        map[string]interface{}{"nested": "value", "number": 42},
+			value:        map[string]any{"nested": "value", "number": 42},
 			updateNode:   1,
 			verifyNodes:  []int{0, 2},
 			expectedSync: true,
@@ -1051,7 +1051,7 @@ func TestStateConsistency(t *testing.T) {
 	testData := []struct {
 		nodeIndex int
 		key       string
-		value     interface{}
+		value     any
 	}{
 		{0, "consistency_test_1", "value1"},
 		{1, "consistency_test_2", 42},
@@ -1069,7 +1069,7 @@ func TestStateConsistency(t *testing.T) {
 	initialSyncTime := 5 * time.Second
 	logProgress(t, "Initial sync", initialSyncTime)
 
-	states := make([]map[string]interface{}, len(testNodes))
+	states := make([]map[string]any, len(testNodes))
 	for i, node := range testNodes {
 		var err error
 		states[i], err = getFullStateFromNode(node)
@@ -1103,10 +1103,10 @@ func TestStateConsistency(t *testing.T) {
 // should yield [100, 200, 300, nil, nil, 500].
 func TestPatchOutOfBounds(t *testing.T) {
 	// Set initial configuration with an array of three elements.
-	initialConfig := map[string]interface{}{
-		"settings": map[string]interface{}{
-			"audio": map[string]interface{}{
-				"tone_eq1": map[string]interface{}{
+	initialConfig := map[string]any{
+		"settings": map[string]any{
+			"audio": map[string]any{
+				"tone_eq1": map[string]any{
 					"frequencies": []float64{100.0, 200.0, 300.0},
 				},
 			},
@@ -1128,7 +1128,7 @@ func TestPatchOutOfBounds(t *testing.T) {
 	}
 
 	// Attempt to update an element at index 5 (which is out-of-bound for an array of length 3).
-	updateData := map[string]interface{}{
+	updateData := map[string]any{
 		"value": 500.0,
 	}
 	jsonUpdate, err := json.Marshal(updateData)
@@ -1161,8 +1161,8 @@ func TestPatchOutOfBounds(t *testing.T) {
 	defer getValue.Body.Close()
 
 	var updatedResponse struct {
-		Exists bool          `json:"exists"`
-		Value  []interface{} `json:"value"`
+		Exists bool  `json:"exists"`
+		Value  []any `json:"value"`
 	}
 	if err := json.NewDecoder(getValue.Body).Decode(&updatedResponse); err != nil {
 		t.Fatalf("Failed to decode updated array response: %v", err)
@@ -1173,7 +1173,7 @@ func TestPatchOutOfBounds(t *testing.T) {
 	}
 
 	// Expecting that the array is expanded to length 6 with nil placeholders.
-	expected := []interface{}{100.0, 200.0, 300.0, nil, nil, 500.0}
+	expected := []any{100.0, 200.0, 300.0, nil, nil, 500.0}
 	if !reflect.DeepEqual(updatedResponse.Value, expected) {
 		t.Errorf("Out-of-bound update expected array %v, got %v", expected, updatedResponse.Value)
 	}
@@ -1184,10 +1184,10 @@ func TestPatchOutOfBounds(t *testing.T) {
 // [100, 200, 300], patching index 1 should yield [100, nil, 300].
 func TestPatchRemoveArrayElement(t *testing.T) {
 	// Set initial configuration with an array of three elements.
-	initialConfig := map[string]interface{}{
-		"settings": map[string]interface{}{
-			"audio": map[string]interface{}{
-				"tone_eq1": map[string]interface{}{
+	initialConfig := map[string]any{
+		"settings": map[string]any{
+			"audio": map[string]any{
+				"tone_eq1": map[string]any{
 					"frequencies": []float64{100.0, 200.0, 300.0},
 				},
 			},
@@ -1209,7 +1209,7 @@ func TestPatchRemoveArrayElement(t *testing.T) {
 	}
 
 	// PATCH update: set the element at index 1 to null.
-	removeData := map[string]interface{}{
+	removeData := map[string]any{
 		"value": nil,
 	}
 	jsonRemove, err := json.Marshal(removeData)
@@ -1241,8 +1241,8 @@ func TestPatchRemoveArrayElement(t *testing.T) {
 	defer getValue.Body.Close()
 
 	var updatedResponse struct {
-		Exists bool          `json:"exists"`
-		Value  []interface{} `json:"value"`
+		Exists bool  `json:"exists"`
+		Value  []any `json:"value"`
 	}
 	if err := json.NewDecoder(getValue.Body).Decode(&updatedResponse); err != nil {
 		t.Fatalf("Failed to decode updated array response: %v", err)
@@ -1253,7 +1253,7 @@ func TestPatchRemoveArrayElement(t *testing.T) {
 	}
 
 	// Expecting that the array remains length 3 with the second element set to nil.
-	expected := []interface{}{100.0, nil, 300.0}
+	expected := []any{100.0, nil, 300.0}
 	if !reflect.DeepEqual(updatedResponse.Value, expected) {
 		t.Errorf("Expected updated array %v, got %v", expected, updatedResponse.Value)
 	}
@@ -1288,9 +1288,193 @@ func TestClearEndpoint(t *testing.T) {
 
 }
 
-func setValueOnNode(node clusterNode, key string, value interface{}) error {
+func TestSnapshotCreateList(t *testing.T) {
+	// Use a unique snapshot name for this test.
+	snapshotName := "test_snapshot_create_list"
+
+	// Create Snapshot
+	createURL := fmt.Sprintf("%s/snapshots/create", serverAddr)
+	reqBody := map[string]string{"name": snapshotName}
+	jsonData, err := json.Marshal(reqBody)
+	if err != nil {
+		t.Fatalf("Failed to marshal create snapshot request: %v", err)
+	}
+	resp, err := http.Post(createURL, jsonContentType, bytes.NewBuffer(jsonData))
+	if err != nil {
+		t.Fatalf("Failed to send create snapshot request: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("Create snapshot returned status %d: %s", resp.StatusCode, string(body))
+	}
+	var createResp map[string]string
+	if err := json.NewDecoder(resp.Body).Decode(&createResp); err != nil {
+		t.Fatalf("Failed to decode create snapshot response: %v", err)
+	}
+	if createResp["status"] != "snapshot created" {
+		t.Errorf("Unexpected create snapshot status: %v", createResp["status"])
+	}
+	if createResp["snapshot"] != snapshotName {
+		t.Errorf("Expected snapshot name %s, got %s", snapshotName, createResp["snapshot"])
+	}
+
+	// List Snapshots
+	listURL := fmt.Sprintf("%s/snapshots", serverAddr)
+	resp, err = http.Get(listURL)
+	if err != nil {
+		t.Fatalf("Failed to list snapshots: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("List snapshots returned status %d: %s", resp.StatusCode, string(body))
+	}
+	var listResp struct {
+		Snapshots []string `json:"snapshots"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&listResp); err != nil {
+		t.Fatalf("Failed to decode list snapshots response: %v", err)
+	}
+	found := false
+	for _, s := range listResp.Snapshots {
+		if s == snapshotName {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("Snapshot %s not found in snapshot list: %v", snapshotName, listResp.Snapshots)
+	}
+}
+
+func TestSnapshotActivate(t *testing.T) {
+	snapshotName := "test_snapshot_activate"
+
+	// Create Snapshot
+	createURL := fmt.Sprintf("%s/snapshots/create", serverAddr)
+	reqBody := map[string]string{"name": snapshotName}
+	jsonData, err := json.Marshal(reqBody)
+	if err != nil {
+		t.Fatalf("Failed to marshal create snapshot request: %v", err)
+	}
+	resp, err := http.Post(createURL, jsonContentType, bytes.NewBuffer(jsonData))
+	if err != nil {
+		t.Fatalf("Failed to send create snapshot request: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("Create snapshot returned status %d: %s", resp.StatusCode, string(body))
+	}
+
+	// Activate Snapshot
+	activateURL := fmt.Sprintf("%s/snapshots/activate", serverAddr)
+	reqBody = map[string]string{"name": snapshotName}
+	jsonData, err = json.Marshal(reqBody)
+	if err != nil {
+		t.Fatalf("Failed to marshal activate snapshot request: %v", err)
+	}
+	req, err := http.NewRequest(http.MethodPut, activateURL, bytes.NewBuffer(jsonData))
+	if err != nil {
+		t.Fatalf("Failed to create activate snapshot request: %v", err)
+	}
+	req.Header.Set("Content-Type", jsonContentType)
+	client := &http.Client{}
+	resp, err = client.Do(req)
+	if err != nil {
+		t.Fatalf("Failed to send activate snapshot request: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("Activate snapshot returned status %d: %s", resp.StatusCode, string(body))
+	}
+	var activateResp map[string]string
+	if err := json.NewDecoder(resp.Body).Decode(&activateResp); err != nil {
+		t.Fatalf("Failed to decode activate snapshot response: %v", err)
+	}
+	if activateResp["status"] != "snapshot activated" {
+		t.Errorf("Unexpected activate snapshot status: %v", activateResp["status"])
+	}
+	if activateResp["snapshot"] != snapshotName {
+		t.Errorf("Expected snapshot name %s, got %s", snapshotName, activateResp["snapshot"])
+	}
+}
+
+func TestSnapshotDelete(t *testing.T) {
+	snapshotName := "test_snapshot_delete"
+	// Create Snapshot
+	createURL := fmt.Sprintf("%s/snapshots/create", serverAddr)
+	reqBody := map[string]string{"name": snapshotName}
+	jsonData, err := json.Marshal(reqBody)
+	if err != nil {
+		t.Fatalf("Failed to marshal create snapshot request: %v", err)
+	}
+	resp, err := http.Post(createURL, jsonContentType, bytes.NewBuffer(jsonData))
+	if err != nil {
+		t.Fatalf("Failed to send create snapshot request: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("Create snapshot returned status %d: %s", resp.StatusCode, string(body))
+	}
+
+	// Delete Snapshot
+	deleteURL := fmt.Sprintf("%s/snapshots/delete?name=%s", serverAddr, snapshotName)
+	req, err := http.NewRequest(http.MethodDelete, deleteURL, nil)
+	if err != nil {
+		t.Fatalf("Failed to create delete snapshot request: %v", err)
+	}
+	client := &http.Client{}
+	resp, err = client.Do(req)
+	if err != nil {
+		t.Fatalf("Failed to send delete snapshot request: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("Delete snapshot returned status %d: %s", resp.StatusCode, string(body))
+	}
+	var deleteResp map[string]string
+	if err := json.NewDecoder(resp.Body).Decode(&deleteResp); err != nil {
+		t.Fatalf("Failed to decode delete snapshot response: %v", err)
+	}
+	if deleteResp["status"] != "snapshot deleted" {
+		t.Errorf("Unexpected delete snapshot status: %v", deleteResp["status"])
+	}
+	if deleteResp["snapshot"] != snapshotName {
+		t.Errorf("Expected snapshot name %s, got %s", snapshotName, deleteResp["snapshot"])
+	}
+
+	// Verify Deletion by Listing Snapshots
+	listURL := fmt.Sprintf("%s/snapshots", serverAddr)
+	resp, err = http.Get(listURL)
+	if err != nil {
+		t.Fatalf("Failed to list snapshots: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("List snapshots returned status %d: %s", resp.StatusCode, string(body))
+	}
+	var listResp struct {
+		Snapshots []string `json:"snapshots"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&listResp); err != nil {
+		t.Fatalf("Failed to decode list snapshots response: %v", err)
+	}
+	for _, s := range listResp.Snapshots {
+		if s == snapshotName {
+			t.Errorf("Snapshot %s still found in snapshot list after deletion", snapshotName)
+		}
+	}
+}
+
+func setValueOnNode(node clusterNode, key string, value any) error {
 	// Create direct JSON format
-	payload := map[string]interface{}{
+	payload := map[string]any{
 		key: value,
 	}
 
@@ -1312,7 +1496,7 @@ func setValueOnNode(node clusterNode, key string, value interface{}) error {
 	return nil
 }
 
-func getValueFromNode(node clusterNode, key string) (interface{}, bool, error) {
+func getValueFromNode(node clusterNode, key string) (any, bool, error) {
 	resp, err := http.Get(fmt.Sprintf("%s/getValue?key=%s", node.address, key))
 	if err != nil {
 		return nil, false, fmt.Errorf("request failed: %v", err)
@@ -1320,9 +1504,9 @@ func getValueFromNode(node clusterNode, key string) (interface{}, bool, error) {
 	defer resp.Body.Close()
 
 	var response struct {
-		Exists bool        `json:"exists"`
-		Key    string      `json:"key"`
-		Value  interface{} `json:"value,omitempty"`
+		Exists bool   `json:"exists"`
+		Key    string `json:"key"`
+		Value  any    `json:"value,omitempty"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		return nil, false, fmt.Errorf("failed to decode response: %v", err)
@@ -1335,14 +1519,14 @@ func getValueFromNode(node clusterNode, key string) (interface{}, bool, error) {
 	return response.Value, true, nil
 }
 
-func getFullStateFromNode(node clusterNode) (map[string]interface{}, error) {
+func getFullStateFromNode(node clusterNode) (map[string]any, error) {
 	resp, err := http.Get(fmt.Sprintf("%s/getValue", node.address))
 	if err != nil {
 		return nil, fmt.Errorf("request failed: %v", err)
 	}
 	defer resp.Body.Close()
 
-	var state map[string]interface{}
+	var state map[string]any
 	if err := json.NewDecoder(resp.Body).Decode(&state); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %v", err)
 	}
@@ -1364,7 +1548,7 @@ func waitForSync(timeout time.Duration, check func() bool) bool {
 	return false
 }
 
-func valueEquals(v1, v2 interface{}) bool {
+func valueEquals(v1, v2 any) bool {
 	// Handle nil cases explicitly
 	if v1 == nil && v2 == nil {
 		return true
@@ -1374,14 +1558,14 @@ func valueEquals(v1, v2 interface{}) bool {
 	}
 
 	// Check if v1 is a map that might contain our value
-	if m1, ok := v1.(map[string]interface{}); ok {
+	if m1, ok := v1.(map[string]any); ok {
 		if val, exists := m1["value"]; exists {
 			v1 = val
 		}
 	}
 
 	// Check if v2 is a map that might contain our value
-	if m2, ok := v2.(map[string]interface{}); ok {
+	if m2, ok := v2.(map[string]any); ok {
 		if val, exists := m2["value"]; exists {
 			v2 = val
 		}

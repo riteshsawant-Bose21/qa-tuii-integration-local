@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/memberlist"
+	"go.etcd.io/bbolt"
 )
 
 // Common handler for both UDP and HTTP servers
@@ -26,6 +27,7 @@ type Handler struct {
 	list         *memberlist.Memberlist
 	broadcasters []Broadcaster
 	updater      *Updater
+	endpoints    []string
 }
 
 func NewHandler(list *memberlist.Memberlist, stateManager *StateManager,
@@ -39,7 +41,7 @@ func NewHandler(list *memberlist.Memberlist, stateManager *StateManager,
 }
 
 // Shared update handling logic
-func (h *Handler) handleConfigUpdate(data map[string]interface{}) error {
+func (h *Handler) handleConfigUpdate(data map[string]any) error {
 	configUpdate := api.ConfigUpdate{
 		Data:    data,
 		Version: time.Now().UnixNano(),
@@ -50,8 +52,8 @@ func (h *Handler) handleConfigUpdate(data map[string]interface{}) error {
 	return h.broadcastUpdate(configUpdate)
 }
 
-func (h *Handler) transformState(state map[string]*api.StateEntry) map[string]interface{} {
-	result := make(map[string]interface{})
+func (h *Handler) transformState(state map[string]*api.StateEntry) map[string]any {
+	result := make(map[string]any)
 	for key, entry := range state {
 		result[key] = entry.Data
 	}
@@ -107,6 +109,10 @@ func (h *Handler) broadcastUpdate(update api.ConfigUpdate) error {
 	return nil
 }
 
+func (h *Handler) SetEndpoints(endpoints []string) {
+	h.endpoints = endpoints
+}
+
 func (h *Handler) GetInitialState() (WebSocketResponse, error) {
 	data := h.transformState(h.stateManager.GetFullState())
 	return WebSocketResponse{
@@ -115,17 +121,17 @@ func (h *Handler) GetInitialState() (WebSocketResponse, error) {
 	}, nil
 }
 
-func (h *Handler) HandleHTTPGet(key string) (interface{}, error) {
+func (h *Handler) HandleHTTPGet(key string) (any, error) {
 
 	if key != "" {
 		value, exists := h.stateManager.Get(key)
 		if !exists {
-			return map[string]interface{}{
+			return map[string]any{
 				"exists": false,
 				"error":  "key not found",
 			}, nil
 		}
-		return map[string]interface{}{
+		return map[string]any{
 			"exists": true,
 			"value":  value,
 		}, nil
@@ -138,7 +144,7 @@ func (h *Handler) HandleHTTPGet(key string) (interface{}, error) {
 // HandleHTTPSet will replace existing values with the updated values.
 // A PUT request is idempotent and is intended to fully replace the
 // resource at the target URI with the data provided in the request body.
-func (h *Handler) HandleHTTPSet(update map[string]interface{}) (interface{}, error) {
+func (h *Handler) HandleHTTPSet(update map[string]any) (any, error) {
 
 	h.HandleClearAllData()
 
@@ -146,7 +152,7 @@ func (h *Handler) HandleHTTPSet(update map[string]interface{}) (interface{}, err
 		return nil, fmt.Errorf("failed to handle update: %v", err)
 	}
 
-	return map[string]interface{}{
+	return map[string]any{
 		"status":  "success",
 		"updates": update,
 	}, nil
@@ -154,7 +160,7 @@ func (h *Handler) HandleHTTPSet(update map[string]interface{}) (interface{}, err
 
 // HandleHTTPPatch will update existing values, add new values and remove values
 // that are null.
-func (h *Handler) HandleHTTPPatch(value map[string]interface{}) (interface{}, error) {
+func (h *Handler) HandleHTTPPatch(value map[string]any) (any, error) {
 
 	existingData := h.transformState(h.stateManager.GetFullState())
 
@@ -167,29 +173,29 @@ func (h *Handler) HandleHTTPPatch(value map[string]interface{}) (interface{}, er
 	return existingData, nil
 }
 
-func applyPatch(data map[string]interface{}, changes map[string]interface{}) error {
+func applyPatch(data map[string]any, changes map[string]any) error {
 	for key, value := range changes {
 		if value == nil {
 			removeNestedField(data, key)
-		} else if subChanges, ok := value.(map[string]interface{}); ok {
-			if subData, exists := getNestedValue(data, key).(map[string]interface{}); exists {
+		} else if subChanges, ok := value.(map[string]any); ok {
+			if subData, exists := getNestedValue(data, key).(map[string]any); exists {
 				if err := applyPatch(subData, subChanges); err != nil {
 					return err
 				}
 			} else {
-				newSubData := make(map[string]interface{})
+				newSubData := make(map[string]any)
 				setNestedValue(data, key, newSubData)
 				if err := applyPatch(newSubData, subChanges); err != nil {
 					return err
 				}
 			}
-		} else if subArray, ok := value.([]interface{}); ok {
+		} else if subArray, ok := value.([]any); ok {
 			existingValue := getNestedValue(data, key)
 
-			if _, isExistingArray := existingValue.([]interface{}); isExistingArray && !isIndexedKey(key) {
+			if _, isExistingArray := existingValue.([]any); isExistingArray && !isIndexedKey(key) {
 				setNestedValue(data, key, subArray)
 			} else {
-				existingArray, exists := existingValue.([]interface{})
+				existingArray, exists := existingValue.([]any)
 				if exists {
 					for i, v := range subArray {
 						if i < len(existingArray) {
@@ -213,19 +219,19 @@ func applyPatch(data map[string]interface{}, changes map[string]interface{}) err
 }
 
 // updateNestedField updates a nested value in a map, supporting array indexing and slicing
-func updateNestedField(data map[string]interface{}, key string, value interface{}) error {
+func updateNestedField(data map[string]any, key string, value any) error {
 	keys := parseKeyPath(key)
 
-	for i := 0; i < len(keys)-1; i++ {
+	for i := range len(keys) - 1 {
 		subKey := keys[i]
 
 		if index, isIndex := parseArrayIndex(subKey); isIndex {
 			parentKey := keys[i-1]
-			if array, ok := data[parentKey].([]interface{}); ok {
+			if array, ok := data[parentKey].([]any); ok {
 				if index >= len(array) {
 					return fmt.Errorf("index %d out of bounds for array %s", index, parentKey)
 				}
-				if nestedMap, isMap := array[index].(map[string]interface{}); isMap {
+				if nestedMap, isMap := array[index].(map[string]any); isMap {
 					data = nestedMap
 				} else {
 					return fmt.Errorf("expected map at index %d in array %s", index, parentKey)
@@ -235,9 +241,9 @@ func updateNestedField(data map[string]interface{}, key string, value interface{
 			}
 		} else {
 			if _, exists := data[subKey]; !exists {
-				data[subKey] = make(map[string]interface{})
+				data[subKey] = make(map[string]any)
 			}
-			if subData, ok := data[subKey].(map[string]interface{}); ok {
+			if subData, ok := data[subKey].(map[string]any); ok {
 				data = subData
 			} else {
 				return fmt.Errorf("intermediate value for key %s is not a map", subKey)
@@ -255,7 +261,7 @@ func updateNestedField(data map[string]interface{}, key string, value interface{
 			return fmt.Errorf("parent key %s does not exist", parentKey)
 		}
 
-		array, isArray := parentVal.([]interface{})
+		array, isArray := parentVal.([]any)
 		if !isArray {
 			return fmt.Errorf("expected an array at key %s but found %T", parentKey, parentVal)
 		}
@@ -273,13 +279,13 @@ func updateNestedField(data map[string]interface{}, key string, value interface{
 }
 
 // Helper function to remove a nested field, including array elements and slices
-func removeNestedField(data map[string]interface{}, key string) {
+func removeNestedField(data map[string]any, key string) {
 	keys := parseKeyPath(key)
 
 	// Traverse to the last key before deletion
-	for i := 0; i < len(keys)-1; i++ {
+	for i := range len(keys) - 1 {
 		subKey := keys[i]
-		if subData, ok := data[subKey].(map[string]interface{}); ok {
+		if subData, ok := data[subKey].(map[string]any); ok {
 			data = subData
 		} else {
 			return // Key not found
@@ -289,13 +295,13 @@ func removeNestedField(data map[string]interface{}, key string) {
 	finalKey := keys[len(keys)-1]
 
 	if index, isIndex := parseArrayIndex(finalKey); isIndex {
-		if array, ok := data[keys[len(keys)-2]].([]interface{}); ok {
+		if array, ok := data[keys[len(keys)-2]].([]any); ok {
 			if index >= 0 && index < len(array) {
 				data[keys[len(keys)-2]] = append(array[:index], array[index+1:]...)
 			}
 		}
 	} else if start, end, isSlice := parseArraySlice(finalKey); isSlice {
-		if array, ok := data[keys[len(keys)-2]].([]interface{}); ok {
+		if array, ok := data[keys[len(keys)-2]].([]any); ok {
 			if start >= 0 && end <= len(array) && start < end {
 				data[keys[len(keys)-2]] = append(array[:start], array[end:]...)
 			}
@@ -306,15 +312,15 @@ func removeNestedField(data map[string]interface{}, key string) {
 	}
 }
 
-// getNestedValue retrieves a nested value from a map[string]interface{}, supporting arrays and slices.
-func getNestedValue(data map[string]interface{}, key string) interface{} {
+// getNestedValue retrieves a nested value from a map[string]any, supporting arrays and slices.
+func getNestedValue(data map[string]any, key string) any {
 	keys := parseKeyPath(key)
 
-	var current interface{} = data
+	var current any = data
 
 	for _, part := range keys {
 		switch c := current.(type) {
-		case map[string]interface{}:
+		case map[string]any:
 			// Traverse into the map
 			if val, exists := c[part]; exists {
 				current = val
@@ -322,7 +328,7 @@ func getNestedValue(data map[string]interface{}, key string) interface{} {
 				// Key not found
 				return nil
 			}
-		case []interface{}:
+		case []any:
 			// Handle array indexing and slicing
 			if index, isIndex := parseArrayIndex(part); isIndex {
 				if index >= 0 && index < len(c) {
@@ -357,11 +363,11 @@ func isIndexedKey(key string) bool {
 	return isIndex
 }
 
-func ensureArrayCapacity(parent map[string]interface{}, parentKey string, index int) {
-	existingArray, exists := parent[parentKey].([]interface{})
+func ensureArrayCapacity(parent map[string]any, parentKey string, index int) {
+	existingArray, exists := parent[parentKey].([]any)
 
 	if !exists {
-		newArray := make([]interface{}, index+1)
+		newArray := make([]any, index+1)
 		parent[parentKey] = newArray
 		return
 	}
@@ -371,13 +377,13 @@ func ensureArrayCapacity(parent map[string]interface{}, parentKey string, index 
 	}
 
 	// Expand array while keeping existing values
-	newArray := make([]interface{}, index+1)
+	newArray := make([]any, index+1)
 	copy(newArray, existingArray) // Preserve existing values
 
 	parent[parentKey] = newArray
 }
 
-func setNestedValue(data map[string]interface{}, key string, value interface{}) {
+func setNestedValue(data map[string]any, key string, value any) {
 
 	logger := logging.GetLogger()
 
@@ -385,7 +391,7 @@ func setNestedValue(data map[string]interface{}, key string, value interface{}) 
 	current := data
 
 	// Traverse the path and ensure maps/arrays exist
-	for i := 0; i < len(keys)-1; i++ {
+	for i := range len(keys) - 1 {
 		subKey := keys[i]
 
 		// Detecting an array key
@@ -404,14 +410,14 @@ func setNestedValue(data map[string]interface{}, key string, value interface{}) 
 			}
 
 			// Check if an array already exists before creating a new one
-			if _, isArray := parentVal.([]interface{}); !isArray {
+			if _, isArray := parentVal.([]any); !isArray {
 				logger.Error("Expected an array at key %s but found %T", parentKey, fmt.Sprintf("%T", parentVal))
 				return
 			}
 
 			ensureArrayCapacity(current, parentKey, index)
 
-			arrayRef := current[parentKey].([]interface{})
+			arrayRef := current[parentKey].([]any)
 
 			if index >= len(arrayRef) {
 				logger.Error("Index out of bounds after ensureArrayCapacity %d", index)
@@ -427,7 +433,7 @@ func setNestedValue(data map[string]interface{}, key string, value interface{}) 
 			// If the key exists, ensure we don't replace an existing array
 			if exists {
 				switch existingValue.(type) {
-				case []interface{}, map[string]interface{}:
+				case []any, map[string]any:
 					// Value is already an array or a map, proceed
 				default:
 					logger.Error("Key %s exists but is not a map or array. Found %T", subKey, existingValue)
@@ -439,17 +445,17 @@ func setNestedValue(data map[string]interface{}, key string, value interface{}) 
 				if nextIndex, isIndex := parseArrayIndex(nextKey); isIndex {
 					// Only create a new array if it doesn't exist
 					if _, alreadyExists := current[subKey]; !alreadyExists {
-						current[subKey] = make([]interface{}, nextIndex+1)
+						current[subKey] = make([]any, nextIndex+1)
 					}
 				} else {
-					current[subKey] = make(map[string]interface{})
+					current[subKey] = make(map[string]any)
 				}
 			}
 
 			// Move to the next level
-			if subData, ok := current[subKey].(map[string]interface{}); ok {
+			if subData, ok := current[subKey].(map[string]any); ok {
 				current = subData
-			} else if _, isArray := current[subKey].([]interface{}); isArray {
+			} else if _, isArray := current[subKey].([]any); isArray {
 				break
 			} else {
 				logger.Error("Intermediate value for key %s is not a map. Found %T", subKey, fmt.Sprintf("%T", current[subKey]))
@@ -469,7 +475,7 @@ func setNestedValue(data map[string]interface{}, key string, value interface{}) 
 			return
 		}
 
-		_, isArray := parentVal.([]interface{})
+		_, isArray := parentVal.([]any)
 		if !isArray {
 			logger.Error("Expected an array at key %s but found %T", parentKey, fmt.Sprintf("%T", parentVal))
 			return
@@ -477,7 +483,7 @@ func setNestedValue(data map[string]interface{}, key string, value interface{}) 
 
 		ensureArrayCapacity(current, parentKey, index)
 
-		arrayRef := current[parentKey].([]interface{})
+		arrayRef := current[parentKey].([]any)
 		arrayRef[index] = value
 
 	} else {
@@ -514,7 +520,7 @@ func parseKeyPath(key string) []string {
 }
 
 // UDP Server methods
-func (h *Handler) HandleUDPMessage(data []byte) (interface{}, error) {
+func (h *Handler) HandleUDPMessage(data []byte) (any, error) {
 
 	var msg struct {
 		Action string          `json:"action"`
@@ -529,13 +535,13 @@ func (h *Handler) HandleUDPMessage(data []byte) (interface{}, error) {
 	case "get":
 		fullState := h.stateManager.GetFullState()
 		transformed := TransformState(fullState)
-		return map[string]interface{}{
+		return map[string]any{
 			"status": "success",
 			"data":   transformed,
 		}, nil
 
 	case "set":
-		var update map[string]interface{}
+		var update map[string]any
 		if err := json.Unmarshal(data, &update); err != nil {
 			return nil, fmt.Errorf("invalid JSON: %v", err)
 		}
@@ -545,7 +551,7 @@ func (h *Handler) HandleUDPMessage(data []byte) (interface{}, error) {
 			return nil, fmt.Errorf("failed to handle update: %v", err)
 		}
 
-		return map[string]interface{}{
+		return map[string]any{
 			"status":  "success",
 			"message": "Update applied successfully",
 		}, nil
@@ -558,7 +564,7 @@ func (h *Handler) HandleUDPMessage(data []byte) (interface{}, error) {
 func (h *Handler) HandleClearAllData() error {
 
 	configUpdate := api.ConfigUpdate{
-		Data:    map[string]interface{}{},
+		Data:    map[string]any{},
 		Version: time.Now().UnixNano(),
 		NodeID:  h.list.LocalNode().Name,
 		Time:    time.Now().UTC(),
@@ -590,14 +596,14 @@ func (s *ConfigServer) ClearAllData(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set(api.ContentType, api.JsonContentType)
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	json.NewEncoder(w).Encode(map[string]any{
 		"status":  "success",
 		"message": "All data cleared successfully",
 	})
 }
 
-func (h *Handler) HandleDumpState() (map[string]interface{}, error) {
-	return map[string]interface{}{
+func (h *Handler) HandleDumpState() (map[string]any, error) {
+	return map[string]any{
 		"state": h.stateManager.GetFullState(),
 	}, nil
 }
@@ -611,7 +617,7 @@ func (h *Handler) HandleWebSocketMessage(data []byte) (*WebSocketResponse, error
 
 	switch msg.Type {
 	case "update":
-		var data map[string]interface{}
+		var data map[string]any
 		if err := json.Unmarshal(msg.Data, &data); err != nil {
 			return nil, fmt.Errorf("invalid update in WebSocket message: %v", err)
 		}
@@ -632,9 +638,9 @@ func (h *Handler) HandleWebSocketMessage(data []byte) (*WebSocketResponse, error
 }
 
 // HandleDownload handles the download of the current state
-func (h *Handler) HandleDownload() (map[string]interface{}, error) {
+func (h *Handler) HandleDownload() (map[string]any, error) {
 	state := h.transformState(h.stateManager.GetFullState())
-	return map[string]interface{}{
+	return map[string]any{
 		"state": state,
 	}, nil
 }
@@ -642,20 +648,10 @@ func (h *Handler) HandleDownload() (map[string]interface{}, error) {
 // GetServerInfo returns information about the server
 func (h *Handler) GetServerInfo() (map[string]interface{}, error) {
 	info := map[string]interface{}{
-		"name":    "Fusion Config Server",
-		"version": "1.0.0",
-		"node_id": h.list.LocalNode().Name,
-		"endpoints": []string{
-			"/setValue",
-			"/getValue",
-			"/clear",
-			"/ws",
-			"/download",
-			"/upload",
-			"/updateVersion",
-			"/rollbackVersion",
-			"/dump",
-		},
+		"name":               "Fusion Config Server",
+		"version":            "1.0.0",
+		"node_id":            h.list.LocalNode().Name,
+		"endpoints":          h.endpoints,
 		"cluster_size":       len(h.list.Members()),
 		"update_in_progress": h.updater.currentUpdate != nil,
 	}
@@ -1032,6 +1028,44 @@ func (h *Handler) HandleAudioUpload(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// HandleListSnapshots retrieves a list of snapshot keys from the persistence layer.
+// It lists all keys in the default bucket except the default state key.
+func (h *Handler) HandleListSnapshots() ([]string, error) {
+	var snapshots []string
+	err := h.persistence.db.View(func(tx *bbolt.Tx) error {
+		b := tx.Bucket([]byte(defaultBucketName))
+		if b == nil {
+			// No bucket means no snapshots.
+			return nil
+		}
+		// Iterate over all keys in the bucket.
+		return b.ForEach(func(k, v []byte) error {
+			key := string(k)
+			// Exclude the default state key (which holds the active state).
+			if key != defaultStateKey {
+				snapshots = append(snapshots, key)
+			}
+			return nil
+		})
+	})
+	return snapshots, err
+}
+
+// HandleCreateSnapshot saves the current state as a snapshot with the given name.
+func (h *Handler) HandleCreateSnapshot(name string) error {
+	return h.persistence.SaveSnapshot(name)
+}
+
+// HandleActivateSnapshot sets the given snapshot as active.
+func (h *Handler) HandleActivateSnapshot(name string) error {
+	return h.persistence.ActivateSnapshot(name)
+}
+
+// HandleDeleteSnapshot deletes a snapshot with the given name from persistence.
+func (h *Handler) HandleDeleteSnapshot(name string) error {
+	return h.persistence.DeleteSnapshot(name)
+}
+
 // getBinaryMetadata calculates hash and size of a binary file
 func getBinaryMetadata(path string) (hash string, size int64, err error) {
 	file, err := os.Open(path)
@@ -1050,7 +1084,7 @@ func getBinaryMetadata(path string) (hash string, size int64, err error) {
 }
 
 // addAudioFilesToConfig calculates hash and size of a binary file
-func addAudioFilesToConfig(audioDir string, existingData map[string]interface{}) {
+func addAudioFilesToConfig(audioDir string, existingData map[string]any) {
 
 	// Read the directory entries.
 	entries, err := os.ReadDir(audioDir)
@@ -1068,7 +1102,7 @@ func addAudioFilesToConfig(audioDir string, existingData map[string]interface{})
 	}
 
 	// Add the "audio_files" section to the settings.
-	existingData["audio_files"] = map[string]interface{}{
+	existingData["audio_files"] = map[string]any{
 		"location": audioDir,
 		"files":    fileNames,
 	}

@@ -114,7 +114,7 @@ func (s *UDPServer) handleMessage(data []byte, addr *net.UDPAddr) {
 	s.sendResponse(addr, response)
 }
 
-func (s *UDPServer) sendResponse(addr *net.UDPAddr, response interface{}) {
+func (s *UDPServer) sendResponse(addr *net.UDPAddr, response any) {
 	data, err := json.Marshal(response)
 	if err != nil {
 		logging.GetLogger().Error("Error marshaling response: %v", err)
@@ -127,7 +127,7 @@ func (s *UDPServer) sendResponse(addr *net.UDPAddr, response interface{}) {
 	}
 }
 
-func (s *UDPServer) BroadcastUpdate(update map[string]interface{}) error {
+func (s *UDPServer) BroadcastUpdate(update map[string]any) error {
 	data, err := json.Marshal(update)
 	if err != nil {
 		return fmt.Errorf("failed to marshal update: %v", err)

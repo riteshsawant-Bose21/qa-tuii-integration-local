@@ -91,7 +91,7 @@ func (dm *AnalogControllerManager) acceptConnections() {
 		dm.devices[deviceID] = dc
 		dm.deviceLock.Unlock()
 
-		update := map[string]interface{}{
+		update := map[string]any{
 			fmt.Sprintf("%s.connected", deviceID):     true,
 			fmt.Sprintf("%s.lastConnected", deviceID): time.Now().UTC(),
 		}
@@ -114,7 +114,7 @@ func (dm *AnalogControllerManager) handleDeviceConnection(dc *AnalogControllerCo
 		delete(dm.devices, dc.deviceID)
 		dm.deviceLock.Unlock()
 
-		update := map[string]interface{}{
+		update := map[string]any{
 			fmt.Sprintf("%s.connected", dc.deviceID):        false,
 			fmt.Sprintf("%s.lastDisconnected", dc.deviceID): time.Now().UTC(),
 		}
@@ -133,7 +133,7 @@ func (dm *AnalogControllerManager) handleDeviceConnection(dc *AnalogControllerCo
 
 		// Process the received values
 		values := make([]uint32, 5)
-		for i := 0; i < 5; i++ {
+		for i := range 5 {
 			voltage := binary.BigEndian.Uint32(buf[i*4 : (i+1)*4])
 			values[i] = voltage
 		}
@@ -146,7 +146,7 @@ func (dm *AnalogControllerManager) handleDeviceConnection(dc *AnalogControllerCo
 		}
 
 		changed := false
-		for i := 0; i < 5; i++ {
+		for i := range 5 {
 			if dc.values[i] != values[i] {
 				changed = true
 				dc.values[i] = values[i]
@@ -155,7 +155,7 @@ func (dm *AnalogControllerManager) handleDeviceConnection(dc *AnalogControllerCo
 		dc.valueLock.Unlock()
 
 		if changed {
-			update := map[string]interface{}{
+			update := map[string]any{
 				fmt.Sprintf("%s.values", dc.deviceID):     values,
 				fmt.Sprintf("%s.lastUpdate", dc.deviceID): time.Now().UTC(),
 				fmt.Sprintf("%s.type", dc.deviceID):       dc.ctrlType,
@@ -172,14 +172,14 @@ func (dm *AnalogControllerManager) handleDeviceConnection(dc *AnalogControllerCo
 	}
 }
 
-func (dm *AnalogControllerManager) GetDeviceStates() map[string]interface{} {
+func (dm *AnalogControllerManager) GetDeviceStates() map[string]any {
 	dm.deviceLock.RLock()
 	defer dm.deviceLock.RUnlock()
 
-	states := make(map[string]interface{})
+	states := make(map[string]any)
 	for deviceID, dc := range dm.devices {
 		dc.valueLock.RLock()
-		deviceState := make(map[string]interface{})
+		deviceState := make(map[string]any)
 		deviceState["type"] = dc.ctrlType
 		for i := range dc.values {
 			deviceState[fmt.Sprintf("value%d", i)] = dc.values[i]

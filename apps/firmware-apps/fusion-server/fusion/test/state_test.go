@@ -32,10 +32,10 @@ func TestApplyUpdateAndGetNestedValues(t *testing.T) {
 
 	// Create nested data with an array.
 	update := api.ConfigUpdate{
-		Data: map[string]interface{}{
-			"settings": map[string]interface{}{
-				"audio": map[string]interface{}{
-					"modifiers": []interface{}{"bass", "treble", "echo"},
+		Data: map[string]any{
+			"settings": map[string]any{
+				"audio": map[string]any{
+					"modifiers": []any{"bass", "treble", "echo"},
 				},
 			},
 		},
@@ -52,7 +52,7 @@ func TestApplyUpdateAndGetNestedValues(t *testing.T) {
 	if !ok {
 		t.Fatalf("Failed to get nested key 'settings.audio'")
 	}
-	_, ok = val.(map[string]interface{})
+	_, ok = val.(map[string]any)
 	if !ok {
 		t.Fatalf("Expected a map for 'settings.audio', got %T", val)
 	}
@@ -71,11 +71,11 @@ func TestApplyUpdateAndGetNestedValues(t *testing.T) {
 	if !ok {
 		t.Fatalf("Failed to get array slice 'settings.audio.modifiers[0:2]'")
 	}
-	slice, ok := val.([]interface{})
+	slice, ok := val.([]any)
 	if !ok {
 		t.Fatalf("Expected slice type, got %T", val)
 	}
-	expected := []interface{}{"bass", "treble"}
+	expected := []any{"bass", "treble"}
 	if !reflect.DeepEqual(slice, expected) {
 		t.Errorf("Expected %v, got %v", expected, slice)
 	}
@@ -104,7 +104,7 @@ func TestSubscribeNotification(t *testing.T) {
 
 	// Apply an update.
 	update := api.ConfigUpdate{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"foo": "bar",
 		},
 		Version: time.Now().UnixNano(),
@@ -128,7 +128,7 @@ func TestMergeRemoteState(t *testing.T) {
 
 	// Local state: key "a" with version 100.
 	if err := sm.ApplyUpdate(api.ConfigUpdate{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"a": "local",
 		},
 		Version: 100,
@@ -176,7 +176,7 @@ func TestMergeRemoteState(t *testing.T) {
 func TestVerifyState(t *testing.T) {
 	sm := server.NewStateManager("node-1")
 	if err := sm.ApplyUpdate(api.ConfigUpdate{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"key": "value",
 		},
 		Version: 12345,
@@ -223,8 +223,8 @@ func TestNestedMergeMapsViaApplyUpdate(t *testing.T) {
 
 	// First update: add a nested map.
 	update1 := api.ConfigUpdate{
-		Data: map[string]interface{}{
-			"config": map[string]interface{}{
+		Data: map[string]any{
+			"config": map[string]any{
 				"param1": "value1",
 				"param2": "value2",
 			},
@@ -239,8 +239,8 @@ func TestNestedMergeMapsViaApplyUpdate(t *testing.T) {
 
 	// Second update: update only param2.
 	update2 := api.ConfigUpdate{
-		Data: map[string]interface{}{
-			"config": map[string]interface{}{
+		Data: map[string]any{
+			"config": map[string]any{
 				"param2": "updated",
 			},
 		},
@@ -267,8 +267,8 @@ func TestArrayIndexErrors(t *testing.T) {
 	sm := server.NewStateManager("node-1")
 	// Set state with an array.
 	update := api.ConfigUpdate{
-		Data: map[string]interface{}{
-			"numbers": []interface{}{1, 2, 3},
+		Data: map[string]any{
+			"numbers": []any{1, 2, 3},
 		},
 		Version: 300,
 		NodeID:  "node-1",
@@ -303,8 +303,8 @@ func TestArraySliceEdgeCases(t *testing.T) {
 	sm := server.NewStateManager("node-1")
 	// Set state with an array.
 	update := api.ConfigUpdate{
-		Data: map[string]interface{}{
-			"letters": []interface{}{"a", "b", "c", "d"},
+		Data: map[string]any{
+			"letters": []any{"a", "b", "c", "d"},
 		},
 		Version: 400,
 		NodeID:  "node-1",
@@ -319,11 +319,11 @@ func TestArraySliceEdgeCases(t *testing.T) {
 	if !ok {
 		t.Fatalf("Failed to get slice letters[:2]")
 	}
-	slice, ok := val.([]interface{})
+	slice, ok := val.([]any)
 	if !ok {
 		t.Fatalf("Expected a slice, got %T", val)
 	}
-	expected := []interface{}{"a", "b"}
+	expected := []any{"a", "b"}
 	if !reflect.DeepEqual(slice, expected) {
 		t.Errorf("Expected %v, got %v", expected, slice)
 	}
@@ -333,11 +333,11 @@ func TestArraySliceEdgeCases(t *testing.T) {
 	if !ok {
 		t.Fatalf("Failed to get slice letters[2:]")
 	}
-	slice, ok = val.([]interface{})
+	slice, ok = val.([]any)
 	if !ok {
 		t.Fatalf("Expected a slice, got %T", val)
 	}
-	expected = []interface{}{"c", "d"}
+	expected = []any{"c", "d"}
 	if !reflect.DeepEqual(slice, expected) {
 		t.Errorf("Expected %v, got %v", expected, slice)
 	}
@@ -349,7 +349,7 @@ func TestMultipleSubscribers(t *testing.T) {
 	sub2 := sm.Subscribe()
 
 	update := api.ConfigUpdate{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"key": "value",
 		},
 		Version: 500,
@@ -363,7 +363,7 @@ func TestMultipleSubscribers(t *testing.T) {
 	// Check that both subscribers receive a notification.
 	received := 0
 	// Attempt to read from both channels.
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		select {
 		case <-sub1:
 			received++
@@ -384,14 +384,14 @@ func TestGetWithComplexPath(t *testing.T) {
 
 	// Prepare a complex nested structure.
 	update := api.ConfigUpdate{
-		Data: map[string]interface{}{
-			"outer": map[string]interface{}{
-				"inner": []interface{}{
-					map[string]interface{}{
+		Data: map[string]any{
+			"outer": map[string]any{
+				"inner": []any{
+					map[string]any{
 						"name":  "first",
 						"score": 10,
 					},
-					map[string]interface{}{
+					map[string]any{
 						"name":  "second",
 						"score": 20,
 					},
@@ -434,7 +434,7 @@ func TestApplyUpdateWithClearFlag(t *testing.T) {
 	sm := server.NewStateManager("node-1")
 	// First, apply a normal update.
 	update := api.ConfigUpdate{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"key": "value",
 		},
 		Version: 1000,
@@ -450,7 +450,7 @@ func TestApplyUpdateWithClearFlag(t *testing.T) {
 
 	// Now, apply an update with the Clear flag.
 	clearUpdate := api.ConfigUpdate{
-		Data:    map[string]interface{}{"irrelevant": "data"},
+		Data:    map[string]any{"irrelevant": "data"},
 		Version: 2000,
 		NodeID:  "node-1",
 		Time:    time.Now().UTC(),
@@ -471,7 +471,7 @@ func TestMergeRemoteStateWithEqualVersion(t *testing.T) {
 	sm := server.NewStateManager("node-1")
 	// Set local state with a given version.
 	localUpdate := api.ConfigUpdate{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"x": "local",
 		},
 		Version: 5000,

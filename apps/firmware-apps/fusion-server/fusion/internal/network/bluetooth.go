@@ -26,15 +26,15 @@ const (
 
 // BluetoothHTTPRequest represents the structure of incoming HTTP-like messages.
 type BluetoothHTTPRequest struct {
-	Method string                 `json:"method"` // "GET" or "POST"
-	URL    string                 `json:"url"`    // The API endpoint
-	Body   map[string]interface{} `json:"body"`   // Optional body for POST requests
+	Method string         `json:"method"` // "GET" or "POST"
+	URL    string         `json:"url"`    // The API endpoint
+	Body   map[string]any `json:"body"`   // Optional body for POST requests
 }
 
 // BluetoothHTTPResponse represents the structure of outgoing HTTP responses.
 type BluetoothHTTPResponse struct {
-	Type    string                 `json:"type"` // "response" or "error"
-	Payload map[string]interface{} `json:"payload"`
+	Type    string         `json:"type"` // "response" or "error"
+	Payload map[string]any `json:"payload"`
 }
 
 // ResponseChunk defines the structure of each chunk notification.
@@ -60,7 +60,7 @@ func performHTTPRequest(req BluetoothHTTPRequest) (BluetoothHTTPResponse, error)
 	default:
 		return BluetoothHTTPResponse{
 			Type: "error",
-			Payload: map[string]interface{}{
+			Payload: map[string]any{
 				"error": "Unsupported HTTP method",
 			},
 		}, fmt.Errorf("unsupported HTTP method: %s", req.Method)
@@ -69,7 +69,7 @@ func performHTTPRequest(req BluetoothHTTPRequest) (BluetoothHTTPResponse, error)
 	if err != nil {
 		return BluetoothHTTPResponse{
 			Type: "error",
-			Payload: map[string]interface{}{
+			Payload: map[string]any{
 				"error": err.Error(),
 			},
 		}, err
@@ -79,7 +79,7 @@ func performHTTPRequest(req BluetoothHTTPRequest) (BluetoothHTTPResponse, error)
 	body, _ := io.ReadAll(httpResp.Body)
 	response = BluetoothHTTPResponse{
 		Type: "response",
-		Payload: map[string]interface{}{
+		Payload: map[string]any{
 			"status": httpResp.StatusCode,
 			"body":   string(body),
 		},
@@ -122,12 +122,9 @@ func enqueueResponseChunks(response []byte, ch chan []byte, logger *logging.Logg
 	totalChunks := (len(response) + maxChunkSize - 1) / maxChunkSize
 	//logger.Debug("Sending response in %d chunks", totalChunks)
 
-	for i := 0; i < totalChunks; i++ {
+	for i := range totalChunks {
 		start := i * maxChunkSize
-		end := start + maxChunkSize
-		if end > len(response) {
-			end = len(response)
-		}
+		end := min(start+maxChunkSize, len(response))
 		chunkData := response[start:end]
 
 		rc := ResponseChunk{
@@ -195,7 +192,7 @@ func NewBLEServer(serviceUUID string, characterUUID string) (*BLEServer, error) 
 
 		// Try to unmarshal the entire accumulated data.
 		accumulated := server.globalRequestBuffer.Bytes()
-		var dummy map[string]interface{}
+		var dummy map[string]any
 		err := json.Unmarshal(accumulated, &dummy)
 		if err != nil {
 			// If error indicates incomplete JSON, just acknowledge and wait for more.

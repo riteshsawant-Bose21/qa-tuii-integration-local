@@ -15,7 +15,6 @@ import (
 // TestMarkDirtyConcurrent checks for potential race conditions by calling MarkDirty concurrently.
 // (Run this test with `go test -race`.)
 func TestMarkDirtyConcurrent(t *testing.T) {
-
 	logging.InitLogger(logging.LogConfig{
 		NodeName:    "PersistenceTest",
 		LogDir:      "/tmp/persistence_test",
@@ -36,7 +35,7 @@ func TestMarkDirtyConcurrent(t *testing.T) {
 	// Create the persistence object.
 	cp, err := server.NewConfigPersistence(configPath, sm, true)
 	if err != nil {
-		t.Fatalf("Failed to initialize persistance: %v", err)
+		t.Fatalf("Failed to initialize persistence: %v", err)
 	}
 
 	// Run many goroutines calling MarkDirty concurrently.
@@ -44,11 +43,11 @@ func TestMarkDirtyConcurrent(t *testing.T) {
 	const iterations = 20
 	var wg sync.WaitGroup
 
-	for i := 0; i < numGoroutines; i++ {
+	for i := range numGoroutines {
 		wg.Add(1)
 		go func(id int) {
 			defer wg.Done()
-			for j := 0; j < iterations; j++ {
+			for range iterations {
 				cp.MarkDirty()
 				// Optionally sleep a bit to simulate work.
 				time.Sleep(5 * time.Millisecond)
@@ -57,9 +56,9 @@ func TestMarkDirtyConcurrent(t *testing.T) {
 	}
 	wg.Wait()
 
-	// After all MarkDirty calls, we can try validating the state file.
+	// After all MarkDirty calls, validate the state file.
 	if err := cp.ValidateState(); err != nil {
-		t.Errorf("ValidateStateFile error: %v", err)
+		t.Errorf("ValidateState failed: %v", err)
 	}
 
 	// Optionally, check that the state file exists.
@@ -71,13 +70,22 @@ func TestMarkDirtyConcurrent(t *testing.T) {
 // TestLoadStateNonExistent verifies that when the state file does not exist,
 // LoadState logs an info message and returns nil (allowing the service to start with an empty state).
 func TestLoadStateNonExistent(t *testing.T) {
+
+	logging.InitLogger(logging.LogConfig{
+		NodeName:    "TestLoadStateNonExistent",
+		LogDir:      "/tmp/persistence_test",
+		MaxFileSize: 100,
+		MaxFiles:    5,
+		LogLevel:    logging.DEBUG,
+	})
+
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "nonexistent.db")
 
 	sm := server.NewStateManager("testnode")
 	cp, err := server.NewConfigPersistence(configPath, sm, false)
 	if err != nil {
-		t.Fatalf("Failed to initialize persistance: %v", err)
+		t.Fatalf("Failed to initialize persistence: %v", err)
 	}
 
 	// Call LoadState. Since the file doesn't exist, it should return nil.
@@ -86,6 +94,7 @@ func TestLoadStateNonExistent(t *testing.T) {
 	}
 }
 
+// TestSaveAndLoadState tests that saving and then loading the state using the latest key works as expected.
 func TestSaveAndLoadState(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.db")
@@ -101,12 +110,13 @@ func TestSaveAndLoadState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to initialize persistence: %v", err)
 	}
-	defer cp.Close() // CLOSE THE DB AFTER USE
 
 	// Save the state.
 	if err := cp.SaveState(); err != nil {
 		t.Fatalf("SaveState failed: %v", err)
 	}
+
+	// Close the first persistence instance before simulating a restart.
 	cp.Close()
 
 	// Simulate restart by creating a new persistence object.
@@ -133,7 +143,7 @@ func TestSaveAndLoadState(t *testing.T) {
 	}
 }
 
-// TestValidateStateFile verifies that after a proper save the ValidateStateFile returns nil.
+// TestValidateStateFile verifies that after a proper save the ValidateState returns nil.
 func TestValidateStateFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.db")
@@ -144,7 +154,7 @@ func TestValidateStateFile(t *testing.T) {
 	}
 	cp, err := server.NewConfigPersistence(configPath, sm, false)
 	if err != nil {
-		t.Fatalf("Failed to initialize persistance: %v", err)
+		t.Fatalf("Failed to initialize persistence: %v", err)
 	}
 
 	if err := cp.SaveState(); err != nil {
@@ -153,7 +163,7 @@ func TestValidateStateFile(t *testing.T) {
 
 	// Validate the state file.
 	if err := cp.ValidateState(); err != nil {
-		t.Fatalf("ValidateStateFile failed: %v", err)
+		t.Fatalf("ValidateState failed: %v", err)
 	}
 }
 
@@ -172,7 +182,7 @@ func TestChecksumCalculation(t *testing.T) {
 
 	cp, err := server.NewConfigPersistence("dummy", sm, false)
 	if err != nil {
-		t.Fatalf("Failed to initialize persistance: %v", err)
+		t.Fatalf("Failed to initialize persistence: %v", err)
 	}
 
 	// Get the full state.
@@ -185,10 +195,86 @@ func TestChecksumCalculation(t *testing.T) {
 	// Serialize the same state and calculate again.
 	checksum2, err := cp.CalculateChecksum(fullState)
 	if err != nil {
-		t.Fatalf("calculateChecksum returned error: %v", err)
+		t.Fatalf("CalculateChecksum returned error: %v", err)
 	}
 
 	if checksum1 != checksum2 {
 		t.Errorf("Expected same checksum for identical state, got %s and %s", checksum1, checksum2)
+	}
+}
+
+// TestActiveSnapshot tests the snapshot functionality.
+// It verifies that saving a snapshot and activating it via the active snapshot pointer
+// causes LoadState() to load the snapshot's state.
+func TestActiveSnapshot(t *testing.T) {
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "config.db")
+
+	// Initialize state manager and persistence.
+	sm := server.NewStateManager("testnode")
+	if err := sm.Set("key", "value_latest"); err != nil {
+		t.Fatalf("Failed to set initial state: %v", err)
+	}
+
+	cp, err := server.NewConfigPersistence(configPath, sm, false)
+	if err != nil {
+		t.Fatalf("Failed to initialize persistence: %v", err)
+	}
+
+	// Save the initial state
+	if err := cp.SaveState(); err != nil {
+		t.Fatalf("SaveState failed: %v", err)
+	}
+
+	// Modify state to simulate a snapshot.
+	if err := sm.Set("key", "value_snapshot"); err != nil {
+		t.Fatalf("Failed to update state: %v", err)
+	}
+
+	// Save the new state as a snapshot with key "snapshot1".
+	if err := cp.SaveSnapshot("snapshot1"); err != nil {
+		t.Fatalf("SaveSnapshot failed: %v", err)
+	}
+
+	// Change the state again to simulate a difference.
+	if err := sm.Set("key", "value_modified"); err != nil {
+		t.Fatalf("Failed to modify state: %v", err)
+	}
+
+	// Activate the snapshot "snapshot1".
+	if err := cp.ActivateSnapshot("snapshot1"); err != nil {
+		t.Fatalf("ActivateSnapshot failed: %v", err)
+	}
+
+	// Verify that the state manager now holds the snapshot's state.
+	fullState := sm.GetFullState()
+	entry, exists := fullState["key"]
+	if !exists {
+		t.Fatalf("Key 'key' not found after activating snapshot")
+	}
+	if entry.Data != "value_snapshot" {
+		t.Errorf("Expected active snapshot state 'value_snapshot', got %v", entry.Data)
+	}
+	cp.Close()
+
+	// Simulate a new instance loading state to verify the active pointer.
+	newSM := server.NewStateManager("testnode")
+	newCP, err := server.NewConfigPersistence(configPath, newSM, false)
+	if err != nil {
+		t.Fatalf("Failed to reinitialize persistence: %v", err)
+	}
+	defer newCP.Close()
+
+	if err := newCP.LoadState(); err != nil {
+		t.Fatalf("LoadState failed: %v", err)
+	}
+
+	newState := newSM.GetFullState()
+	newEntry, exists := newState["key"]
+	if !exists {
+		t.Fatalf("Key 'key' not found after reloading state")
+	}
+	if newEntry.Data != "value_snapshot" {
+		t.Errorf("Expected reloaded state to be 'value_snapshot', got %v", newEntry.Data)
 	}
 }

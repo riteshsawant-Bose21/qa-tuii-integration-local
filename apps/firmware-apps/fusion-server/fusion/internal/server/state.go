@@ -46,8 +46,8 @@ func (sm *StateManager) GetVersion() int64 {
 // - key (string): A dot-separated key path that may include array indexing or slicing.
 //
 // Returns:
-// - (interface{}, bool): The retrieved value and a boolean indicating whether the key was found.
-func (sm *StateManager) Get(key string) (interface{}, bool) {
+// - (any, bool): The retrieved value and a boolean indicating whether the key was found.
+func (sm *StateManager) Get(key string) (any, bool) {
 	sm.RLock()
 	defer sm.RUnlock()
 
@@ -55,7 +55,7 @@ func (sm *StateManager) Get(key string) (interface{}, bool) {
 	parts := strings.Split(key, ".")
 
 	// Start traversing the state from the root
-	var current interface{} = TransformState(sm.state)
+	var current any = TransformState(sm.state)
 
 	for _, part := range parts {
 		// Check if the part contains array indexing or slicing
@@ -65,7 +65,7 @@ func (sm *StateManager) Get(key string) (interface{}, bool) {
 			arrayAccess := part[strings.Index(part, "[")+1 : strings.Index(part, "]")]
 
 			// Type assert current as a map to continue traversal
-			nestedMap, ok := current.(map[string]interface{})
+			nestedMap, ok := current.(map[string]any)
 			if !ok {
 				logging.GetLogger().Warn("%s is not a supported type. Current type: %T", part, current)
 				return nil, false
@@ -79,7 +79,7 @@ func (sm *StateManager) Get(key string) (interface{}, bool) {
 			}
 
 			// Type assert value as an array (slice)
-			array, ok := value.([]interface{})
+			array, ok := value.([]any)
 			if !ok {
 				logging.GetLogger().Warn("%s is not an array. Current type: %T", keyPart, value)
 				return nil, false
@@ -126,7 +126,7 @@ func (sm *StateManager) Get(key string) (interface{}, bool) {
 			}
 		} else {
 			// Type assert current as a map to continue traversal
-			nestedMap, ok := current.(map[string]interface{})
+			nestedMap, ok := current.(map[string]any)
 			if !ok {
 				logging.GetLogger().Warn("%s is not a supported type. Current type: %T", part, current)
 				return nil, false
@@ -148,8 +148,8 @@ func (sm *StateManager) Get(key string) (interface{}, bool) {
 	return current, true
 }
 
-func (sm *StateManager) Set(key string, value interface{}) error {
-	data := map[string]interface{}{
+func (sm *StateManager) Set(key string, value any) error {
+	data := map[string]any{
 		key: value,
 	}
 	return sm.ApplyUpdate(api.ConfigUpdate{
@@ -161,7 +161,7 @@ func (sm *StateManager) Set(key string, value interface{}) error {
 }
 
 // ApplyUpdate applies a configuration update to the StateManager.
-// and notifieds subscribers of any changes.
+// and notifies subscribers of any changes.
 func (sm *StateManager) ApplyUpdate(update api.ConfigUpdate) error {
 	sm.Lock()
 	defer sm.Unlock()
@@ -180,11 +180,11 @@ func (sm *StateManager) ApplyUpdate(update api.ConfigUpdate) error {
 	}
 
 	for key, value := range update.Data {
-		var newValue interface{}
-		if valueMap, ok := value.(map[string]interface{}); ok {
+		var newValue any
+		if valueMap, ok := value.(map[string]any); ok {
 			existingValue, exists := sm.state[key]
 			if exists {
-				existingData, isMap := existingValue.Data.(map[string]interface{})
+				existingData, isMap := existingValue.Data.(map[string]any)
 				if isMap {
 					newValue = mergeMaps(existingData, valueMap)
 				} else {
@@ -281,12 +281,16 @@ func (sm *StateManager) MergeRemoteState(remoteState map[string]*api.StateEntry,
 	sm.notifySubscribers()
 }
 
-func TransformState(state map[string]*api.StateEntry) map[string]interface{} {
-	result := make(map[string]interface{})
+func TransformState(state map[string]*api.StateEntry) map[string]any {
+	result := make(map[string]any)
 	for key, entry := range state {
 		result[key] = entry.Data
 	}
 	return result
+}
+
+func (sm *StateManager) GetState() map[string]*api.StateEntry {
+	return sm.state
 }
 
 func (sm *StateManager) SetState(state map[string]*api.StateEntry) {
@@ -297,10 +301,10 @@ func (sm *StateManager) SetState(state map[string]*api.StateEntry) {
 	sm.notifySubscribers()
 }
 
-func mergeMaps(existing, update map[string]interface{}) map[string]interface{} {
+func mergeMaps(existing, update map[string]any) map[string]any {
 	for key, value := range update {
-		if vMap, ok := value.(map[string]interface{}); ok {
-			if existingMap, exists := existing[key].(map[string]interface{}); exists {
+		if vMap, ok := value.(map[string]any); ok {
+			if existingMap, exists := existing[key].(map[string]any); exists {
 				existing[key] = mergeMaps(existingMap, vMap)
 			} else {
 				existing[key] = vMap

@@ -63,8 +63,8 @@ func NewConfigServer(nodeName string, handler *Handler, clusterList *memberlist.
 	return server
 }
 
-func (s *ConfigServer) BroadcastUpdate(update map[string]interface{}) error {
-	message := map[string]interface{}{
+func (s *ConfigServer) BroadcastUpdate(update map[string]any) error {
+	message := map[string]any{
 		"type": "set",
 		"data": update,
 	}
@@ -117,7 +117,7 @@ func (s *ConfigServer) SetValue(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	var update map[string]interface{}
+	var update map[string]any
 	if err := json.Unmarshal(body, &update); err != nil {
 		http.Error(w, fmt.Sprintf("Invalid JSON format: %v", err), http.StatusBadRequest)
 		return
@@ -147,7 +147,7 @@ func (s *ConfigServer) UpdateValue(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	// Parse the request body into a map
-	var update map[string]interface{}
+	var update map[string]any
 	if err := json.Unmarshal(body, &update); err != nil {
 		http.Error(w, fmt.Sprintf("Invalid JSON format: %v", err), http.StatusBadRequest)
 		return
@@ -168,7 +168,7 @@ func (s *ConfigServer) UpdateValue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var updatedData interface{}
+	var updatedData any
 	if key != "" {
 		// Use the existing config
 		setNestedValue(configData, key, update["value"])
@@ -185,7 +185,7 @@ func (s *ConfigServer) UpdateValue(w http.ResponseWriter, r *http.Request) {
 
 	diffData := calculateDiff(originalConfig, updatedData)
 
-	response := map[string]interface{}{
+	response := map[string]any{
 		"status":  "success",
 		"updates": diffData,
 	}
@@ -408,7 +408,7 @@ func (s *ConfigServer) getClusterIPs() []string {
 func (s *ConfigServer) handleWebSocketMessage(conn *websocket.Conn, data []byte) {
 	response, err := s.handler.HandleWebSocketMessage(data)
 	if err != nil {
-		if err := conn.WriteJSON(map[string]interface{}{
+		if err := conn.WriteJSON(map[string]any{
 			"type":    "error",
 			"message": err.Error(),
 		}); err != nil {
@@ -483,6 +483,114 @@ func (s *ConfigServer) UploadAudio(w http.ResponseWriter, r *http.Request) {
 	s.handler.HandleAudioUpload(w, r)
 }
 
+// ListSnapshots handles GET /snapshots.
+func (s *ConfigServer) ListSnapshots(w http.ResponseWriter, r *http.Request) {
+	if !s.IsGetRequest(w, r) {
+		return
+	}
+
+	snapshots, err := s.handler.HandleListSnapshots()
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error listing snapshots: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set(api.ContentType, api.JsonContentType)
+	json.NewEncoder(w).Encode(map[string]any{"snapshots": snapshots})
+}
+
+// CreateSnapshot handles POST /snapshots/create.
+// It accepts an optional JSON body {"name": "snapshotName"}.
+// If no name is provided, a timestamp-based name is generated.
+func (s *ConfigServer) CreateSnapshot(w http.ResponseWriter, r *http.Request) {
+	if !s.IsPostRequest(w, r) {
+		return
+	}
+
+	var req struct {
+		Name string `json:"name"`
+	}
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil && err != io.EOF {
+		http.Error(w, fmt.Sprintf("Invalid JSON: %v", err), http.StatusBadRequest)
+		return
+	}
+	snapshotName := req.Name
+	if snapshotName == "" {
+		snapshotName = "snapshot_" + time.Now().UTC().Format("20060102_150405")
+	}
+	if err := s.handler.HandleCreateSnapshot(snapshotName); err != nil {
+		http.Error(w, fmt.Sprintf("Error creating snapshot: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set(api.ContentType, api.JsonContentType)
+	json.NewEncoder(w).Encode(map[string]string{
+		"status":   "snapshot created",
+		"snapshot": snapshotName,
+	})
+}
+
+// ActivateSnapshotHTTP handles PUT /snapshots/activate.
+// It expects a JSON body {"name": "snapshotName"}.
+func (s *ConfigServer) ActivateSnapshotHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		Name string `json:"name"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, fmt.Sprintf("Invalid JSON: %v", err), http.StatusBadRequest)
+		return
+	}
+	if req.Name == "" {
+		http.Error(w, "Snapshot name is required", http.StatusBadRequest)
+		return
+	}
+	if err := s.handler.HandleActivateSnapshot(req.Name); err != nil {
+		http.Error(w, fmt.Sprintf("Error activating snapshot: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set(api.ContentType, api.JsonContentType)
+	json.NewEncoder(w).Encode(map[string]string{
+		"status":   "snapshot activated",
+		"snapshot": req.Name,
+	})
+}
+
+// DeleteSnapshot handles DELETE /snapshots/delete.
+// It expects a query parameter "name" for the snapshot to delete.
+func (s *ConfigServer) DeleteSnapshot(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	snapshotName, err := getSingleQueryParam(r, "name")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if snapshotName == "" {
+		http.Error(w, "Snapshot name is required", http.StatusBadRequest)
+		return
+	}
+	if err := s.handler.HandleDeleteSnapshot(snapshotName); err != nil {
+		http.Error(w, fmt.Sprintf("Error deleting snapshot: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set(api.ContentType, api.JsonContentType)
+	json.NewEncoder(w).Encode(map[string]string{
+		"status":   "snapshot deleted",
+		"snapshot": snapshotName,
+	})
+}
+
 func (s *ConfigServer) IsGetRequest(w http.ResponseWriter, r *http.Request) bool {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -536,12 +644,12 @@ func getSingleQueryParam(r *http.Request, param string) (string, error) {
 
 // deepCopy creates a deep copy of the provided data using JSON marshalling.
 // It works well for data structures that can be represented in JSON, such as maps.
-func deepCopy(data interface{}) (interface{}, error) {
+func deepCopy(data any) (any, error) {
 	bytes, err := json.Marshal(data)
 	if err != nil {
 		return nil, err
 	}
-	var copy interface{}
+	var copy any
 	if err := json.Unmarshal(bytes, &copy); err != nil {
 		return nil, err
 	}
@@ -550,18 +658,18 @@ func deepCopy(data interface{}) (interface{}, error) {
 
 // calculateDiff compares the original and updated configurations and returns the differences.
 // It handles maps and slices (arrays) recursively.
-func calculateDiff(oldData, newData interface{}) interface{} {
+func calculateDiff(oldData, newData any) any {
 	// If both values are slices, delegate to calculateSliceDiff.
-	if oldSlice, ok := oldData.([]interface{}); ok {
-		if newSlice, ok2 := newData.([]interface{}); ok2 {
+	if oldSlice, ok := oldData.([]any); ok {
+		if newSlice, ok2 := newData.([]any); ok2 {
 			return calculateSliceDiff(oldSlice, newSlice)
 		}
 	}
 
 	// If both values are maps, compare them key by key.
-	if oldMap, ok := oldData.(map[string]interface{}); ok {
-		if newMap, ok2 := newData.(map[string]interface{}); ok2 {
-			diff := make(map[string]interface{})
+	if oldMap, ok := oldData.(map[string]any); ok {
+		if newMap, ok2 := newData.(map[string]any); ok2 {
+			diff := make(map[string]any)
 
 			// Check keys in newMap.
 			for key, newVal := range newMap {
@@ -599,12 +707,12 @@ func calculateDiff(oldData, newData interface{}) interface{} {
 // calculateSliceDiff compares two slices element by element.
 // If the slices have different lengths, it returns the new slice entirely.
 // Otherwise, it returns a map where the keys are the (stringified) indices of changed elements.
-func calculateSliceDiff(oldSlice, newSlice []interface{}) interface{} {
+func calculateSliceDiff(oldSlice, newSlice []any) any {
 	if len(oldSlice) != len(newSlice) {
 		return newSlice
 	}
 
-	diffMap := make(map[string]interface{})
+	diffMap := make(map[string]any)
 	for i, newVal := range newSlice {
 		subDiff := calculateDiff(oldSlice[i], newVal)
 		if subDiff != nil {

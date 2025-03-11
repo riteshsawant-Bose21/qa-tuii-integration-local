@@ -12,16 +12,14 @@ type ClusterDelegate struct {
 	stateManager *server.StateManager
 	persistence  *server.ConfigPersistence
 	updater      *server.Updater
-	verbose      bool
 }
 
-func NewClusterDelegate(nodeID string, stateManager *server.StateManager, persistence *server.ConfigPersistence, updater *server.Updater, verbose bool) *ClusterDelegate {
+func NewClusterDelegate(nodeID string, stateManager *server.StateManager, persistence *server.ConfigPersistence, updater *server.Updater) *ClusterDelegate {
 	return &ClusterDelegate{
 		nodeID:       nodeID,
 		stateManager: stateManager,
 		persistence:  persistence,
 		updater:      updater,
-		verbose:      verbose,
 	}
 }
 
@@ -80,10 +78,8 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 		break
 	}
 
-	if d.verbose {
-		logger.Debug("Applied update for key %s from node %s (version: %d)",
-			updateKey, update.NodeID, update.Version)
-	}
+	logger.Debug("Applied update for key %s from node %s (version: %d)",
+		updateKey, update.NodeID, update.Version)
 }
 
 func (d *ClusterDelegate) GetBroadcasts(overhead, limit int) [][]byte {
@@ -93,10 +89,7 @@ func (d *ClusterDelegate) GetBroadcasts(overhead, limit int) [][]byte {
 func (d *ClusterDelegate) LocalState(join bool) []byte {
 
 	logger := logging.GetLogger()
-
-	if d.verbose {
-		logger.Debug("LocalState requested (join=%v)", join)
-	}
+	logger.Debug("LocalState requested (join=%v)", join)
 
 	state := d.stateManager.GetFullState()
 	snapshot := struct {
@@ -115,10 +108,9 @@ func (d *ClusterDelegate) LocalState(join bool) []byte {
 		return nil
 	}
 
-	if d.verbose {
-		logger.Debug("Providing local state with %d entries (version: %d)",
-			len(state), snapshot.Version)
-	}
+	logger.Debug("Providing local state with %d entries (version: %d)",
+		len(state), snapshot.Version)
+
 	return data
 }
 
@@ -128,10 +120,7 @@ func (d *ClusterDelegate) MergeRemoteState(buf []byte, join bool) {
 	}
 
 	logger := logging.GetLogger()
-
-	if d.verbose {
-		logger.Debug("MergeRemoteState called (join=%v, size=%d)", join, len(buf))
-	}
+	logger.Debug("MergeRemoteState called (join=%v, size=%d)", join, len(buf))
 
 	var snapshot struct {
 		Version int64                      `json:"version"`
@@ -144,10 +133,8 @@ func (d *ClusterDelegate) MergeRemoteState(buf []byte, join bool) {
 		return
 	}
 
-	if d.verbose {
-		logger.Debug("Merging remote state from node %s with %d entries (version: %d)",
-			snapshot.NodeID, len(snapshot.State), snapshot.Version)
-	}
+	logger.Debug("Merging remote state from node %s with %d entries (version: %d)",
+		snapshot.NodeID, len(snapshot.State), snapshot.Version)
 	d.stateManager.MergeRemoteState(snapshot.State, snapshot.NodeID)
 
 	// Persist after merging remote state

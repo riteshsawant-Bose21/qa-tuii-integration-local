@@ -65,7 +65,7 @@ func StringToHardwareID(s string) ([4]uint32, error) {
 		return result, fmt.Errorf("invalid hardware ID length")
 	}
 
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		value, err := fmt.Sscanf(s[i*8:(i+1)*8], "%08x", &result[i])
 		if err != nil || value != 1 {
 			return result, fmt.Errorf("invalid hardware ID format")
@@ -118,7 +118,7 @@ func CIDRToIPMask(cidr int) net.IPMask {
 		return nil
 	}
 	mask := make(net.IPMask, 4)
-	for i := 0; i < cidr; i++ {
+	for i := range cidr {
 		mask[i/8] |= 1 << uint(7-i%8)
 	}
 	return mask

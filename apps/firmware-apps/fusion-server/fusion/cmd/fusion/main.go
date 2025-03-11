@@ -32,6 +32,7 @@ var (
 	metricsPort int
 	enableBLE   bool
 	verbose     bool
+	endpoints   []string
 )
 
 const (
@@ -46,27 +47,31 @@ const (
 )
 
 func setupHTTPRoutes(server *server.ConfigServer, metrics *cluster.MetricsCollector, verbose bool) {
-	http.HandleFunc("/", withLogging(server.HandleRoot, "root", verbose))
-	http.HandleFunc("/dump", withLogging(server.DumpState, "dump", verbose))
-	http.HandleFunc("/dro/process", withLogging(server.DROProcess, "process", verbose))
-	http.HandleFunc("/endpoints", withLogging(server.GetEndpoints, "endpoints", verbose))
-	http.HandleFunc("/getValue", withLogging(server.GetValue, "getValue", verbose))
-	http.HandleFunc("/setValue", withLogging(server.SetValue, "setValue", verbose))
-	http.HandleFunc("/updateValue", withLogging(server.UpdateValue, "updateValue", verbose))
-	http.HandleFunc("/clear", withLogging(server.ClearAllData, "clear", verbose))
-	http.HandleFunc("/updateVersion", withLogging(server.UpdateVersion, "updateVersion", verbose))
-	http.HandleFunc("/rollbackVersion", withLogging(server.RollbackVersion, "rollbackVersion", verbose))
-	http.HandleFunc("/uploadAudio", withLogging(server.UploadAudio, "uploadAudio", verbose))
-	http.HandleFunc("/ws", withWebSocketMetrics(server.HandleWebSocket, metrics, verbose))
+	registerEndpoint("/", withLogging(server.HandleRoot, "root", verbose))
+	registerEndpoint("/dump", withLogging(server.DumpState, "dump", verbose))
+	registerEndpoint("/dro/process", withLogging(server.DROProcess, "process", verbose))
+	registerEndpoint("/endpoints", withLogging(server.GetEndpoints, "endpoints", verbose))
+	registerEndpoint("/getValue", withLogging(server.GetValue, "getValue", verbose))
+	registerEndpoint("/setValue", withLogging(server.SetValue, "setValue", verbose))
+	registerEndpoint("/updateValue", withLogging(server.UpdateValue, "updateValue", verbose))
+	registerEndpoint("/clear", withLogging(server.ClearAllData, "clear", verbose))
+	registerEndpoint("/updateVersion", withLogging(server.UpdateVersion, "updateVersion", verbose))
+	registerEndpoint("/rollbackVersion", withLogging(server.RollbackVersion, "rollbackVersion", verbose))
+	registerEndpoint("/snapshots", withLogging(server.ListSnapshots, "listSnapshots", verbose))
+	registerEndpoint("/snapshots/create", withLogging(server.CreateSnapshot, "createSnapshot", verbose))
+	registerEndpoint("/snapshots/activate", withLogging(server.ActivateSnapshotHTTP, "activateSnapshot", verbose))
+	registerEndpoint("/snapshots/delete", withLogging(server.DeleteSnapshot, "deleteSnapshot", verbose))
+	registerEndpoint("/uploadAudio", withLogging(server.UploadAudio, "uploadAudio", verbose))
+	registerEndpoint("/ws", withWebSocketMetrics(server.HandleWebSocket, metrics, verbose))
 
 }
 
 func setupTimerRoutes(manager *timers.TimerManager, verbose bool) {
-	http.HandleFunc("/tasks", withLogging(manager.ListTasksHandler, "tasks", verbose))
-	http.HandleFunc("/tasks/add", withLogging(manager.AddTaskHandler, "addTask", verbose))
-	http.HandleFunc("/tasks/update", withLogging(manager.UpdateTaskHandler, "updateTask", verbose))
-	http.HandleFunc("/tasks/remove", withLogging(manager.RemoveTaskHandler, "removeTask", verbose))
-	http.HandleFunc("/tasks/history", withLogging(manager.ExecutionHistoryHandler, "history", verbose))
+	registerEndpoint("/tasks", withLogging(manager.ListTasksHandler, "tasks", verbose))
+	registerEndpoint("/tasks/add", withLogging(manager.AddTaskHandler, "addTask", verbose))
+	registerEndpoint("/tasks/update", withLogging(manager.UpdateTaskHandler, "updateTask", verbose))
+	registerEndpoint("/tasks/remove", withLogging(manager.RemoveTaskHandler, "removeTask", verbose))
+	registerEndpoint("/tasks/history", withLogging(manager.ExecutionHistoryHandler, "history", verbose))
 }
 
 func setupMetricsRoutes(metrics *cluster.MetricsCollector) *http.ServeMux {
@@ -130,13 +135,19 @@ func parseFlags() {
 }
 
 // initLogging initializes the logging system.
-func initLogging(nodeName string) *logging.Logger {
+func initLogging(nodeName string, verbose bool) *logging.Logger {
+
+	logLevel := logging.INFO
+	if verbose {
+		logLevel = logging.DEBUG
+	}
+
 	logging.InitLogger(logging.LogConfig{
 		NodeName:    nodeName,
 		LogDir:      "/var/log/fusion",
 		MaxFileSize: 100,
 		MaxFiles:    5,
-		LogLevel:    logging.DEBUG,
+		LogLevel:    logLevel,
 	})
 	return logging.GetLogger()
 }
@@ -268,7 +279,6 @@ func initUDPServer(port string, handler *server.Handler) *network.UDPServer {
 }
 
 // startAPIServer starts the main HTTP API server
-
 func startAPIServer(port string, wg *sync.WaitGroup) {
 	defer wg.Done()
 
@@ -280,11 +290,17 @@ func startAPIServer(port string, wg *sync.WaitGroup) {
 	}
 }
 
+// registerEndpoint registers a handler and tracks the endpoint.
+func registerEndpoint(pattern string, handlerFunc http.HandlerFunc) {
+	endpoints = append(endpoints, pattern)
+	http.HandleFunc(pattern, handlerFunc)
+}
+
 func main() {
 
 	parseFlags()
 
-	logger := initLogging(nodeName)
+	logger := initLogging(nodeName, verbose)
 	defer logger.Close()
 
 	err := initDataPaths()
@@ -333,6 +349,8 @@ func main() {
 
 	setupHTTPRoutes(configServer, metricsCollector, verbose)
 	setupTimerRoutes(timerManager, verbose)
+
+	connectionHandler.SetEndpoints(endpoints)
 
 	var wg sync.WaitGroup
 	wg.Add(1)

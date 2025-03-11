@@ -108,7 +108,7 @@ func TestExecutionHistoryRotation(t *testing.T) {
 	defer manager.Stop()
 
 	// Add tasks to generate history
-	for i := 0; i < timers.MaxHistory+10; i++ {
+	for i := range timers.MaxHistory + 10 {
 		taskID := "task-" + strconv.Itoa(i)
 		err = manager.AddTask(taskID, "*/5 * * * *", "Test task", func() {
 			logger.Info("Task '%s' executed", taskID)
@@ -124,7 +124,7 @@ func TestExecutionHistoryRotation(t *testing.T) {
 	assert.Len(t, history, timers.MaxHistory)
 
 	// Verify oldest records are dropped
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		assert.NotContains(t, history, "task-"+strconv.Itoa(i))
 	}
 }
@@ -551,7 +551,7 @@ func TestConcurrentModifications(t *testing.T) {
 	numTasks := 100
 
 	// Concurrently add tasks.
-	for i := 0; i < numTasks; i++ {
+	for i := range numTasks {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
@@ -571,7 +571,7 @@ func TestConcurrentModifications(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		for i := 0; i < 50; i++ {
+		for range 50 {
 			_ = manager.ListTasks()
 			time.Sleep(10 * time.Millisecond)
 		}
@@ -581,7 +581,7 @@ func TestConcurrentModifications(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		for i := 0; i < 50; i++ {
+		for i := range 50 {
 			tasks := manager.ListTasks()
 			if len(tasks) > 0 {
 				// Use i mod len(tasks) to pick one task.
@@ -593,7 +593,7 @@ func TestConcurrentModifications(t *testing.T) {
 	}()
 
 	// Concurrently remove tasks.
-	for i := 0; i < numTasks; i++ {
+	for i := range numTasks {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()

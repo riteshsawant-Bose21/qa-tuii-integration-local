@@ -183,7 +183,7 @@ func (mc *MetricsCollector) HandleHealthCheck(w http.ResponseWriter, r *http.Req
 	}
 
 	w.Header().Set(api.ContentType, api.JsonContentType)
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	json.NewEncoder(w).Encode(map[string]any{
 		"status":         status,
 		"node_health":    health,
 		"cluster_health": clusterHealth,

@@ -36,7 +36,7 @@ func CreateMemberlist(nodeName, bindAddr string, bindPort int, joinAddrs []strin
 		config.Logger = log.New(io.Discard, "", 0)
 	}
 
-	delegate := NewClusterDelegate(nodeName, stateManager, persistence, updater, verbose)
+	delegate := NewClusterDelegate(nodeName, stateManager, persistence, updater)
 	config.Delegate = delegate
 
 	config.TCPTimeout = tcpTimeout * time.Second

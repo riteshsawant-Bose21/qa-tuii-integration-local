@@ -159,7 +159,8 @@ func (l *Logger) processLogs() {
 
 // log sends the formatted log message to the channel if the logger is not closed.
 // If the logger is closed (or if sending to the channel panics), it logs directly.
-func (l *Logger) log(level LogLevel, format string, args ...interface{}) {
+func (l *Logger) log(level LogLevel, format string, args ...any) {
+
 	if level < l.config.LogLevel {
 		return
 	}
@@ -209,23 +210,23 @@ func (l *Logger) log(level LogLevel, format string, args ...interface{}) {
 	}()
 }
 
-func (l *Logger) Debug(format string, args ...interface{}) {
+func (l *Logger) Debug(format string, args ...any) {
 	l.log(DEBUG, format, args...)
 }
 
-func (l *Logger) Info(format string, args ...interface{}) {
+func (l *Logger) Info(format string, args ...any) {
 	l.log(INFO, format, args...)
 }
 
-func (l *Logger) Warn(format string, args ...interface{}) {
+func (l *Logger) Warn(format string, args ...any) {
 	l.log(WARN, format, args...)
 }
 
-func (l *Logger) Error(format string, args ...interface{}) {
+func (l *Logger) Error(format string, args ...any) {
 	l.log(ERROR, format, args...)
 }
 
-func (l *Logger) Fatal(format string, args ...interface{}) {
+func (l *Logger) Fatal(format string, args ...any) {
 	l.log(FATAL, format, args...)
 	time.Sleep(50 * time.Millisecond)
 	os.Exit(1)
