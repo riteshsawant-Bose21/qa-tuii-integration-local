@@ -3,7 +3,10 @@
 set -eu
 
 # Fusion server configuration and startup script
+fusion_server_start_path=/usr/local/bin/fusion-server-start.sh
 fusion_server_service_path=/etc/systemd/system/fusion-server.service
+
+# haproxy confi
 haproxy_conf_data_path=/usr/local/bin/haproxy_conf_data.sh
 
 # Keepalived configuration
@@ -98,6 +101,11 @@ packages:
   - net-tools
   - wget
 write_files:
+  - path: $fusion_server_start_path
+    permissions: '0644'
+    owner: root:root
+    content: |
+$(indent_content "$scripts_dir/fusion-server-start.sh")
   - path: $fusion_server_service_path
     permissions: '0644'
     owner: root:root

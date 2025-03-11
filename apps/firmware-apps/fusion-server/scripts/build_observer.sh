@@ -1,3 +1,4 @@
+# Create an instance to build a linux binary of the config observer
 multipass exec arm-builder -- mkdir -p observer
 multipass transfer tools/observer/Makefile arm-builder:observer/Makefile
 multipass transfer tools/observer/observer.cpp arm-builder:observer/observer.cpp

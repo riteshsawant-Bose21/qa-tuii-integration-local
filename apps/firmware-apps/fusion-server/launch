@@ -117,7 +117,6 @@ print_progress() {
     fi
 }
 
-# Update the show_instance_status function
 show_instance_status() {
     local instance_name="$1"
     
@@ -152,7 +151,6 @@ show_instance_status() {
     fi
 }
 
-# Update the verify_instance function
 verify_instance() {
     local instance_name="$1"
     local max_retries=30
@@ -205,7 +203,6 @@ verify_instance() {
     return 1
 }
 
-# Update the setup_instance function
 setup_instance() {
     local instance_name="$1"
     local instance_number="$2"
@@ -303,52 +300,62 @@ setup_instance() {
     return 0
 }
 
-# Update the launch_instance function
 launch_instance() {
     local instance_name="$1"
     local instance_number="$2"
     local join_addr="$3"
-    local cloud_init_file="$HOST_TEMP_DIR/cloud-init-${instance_name}.yaml"
     
     print_header "Launching Instance: $instance_name"
     
-    # Copy base cloud-init and modify if needed
-    cp fusion-server.yaml "$cloud_init_file"
-    
-    if [ ! -z "$join_addr" ]; then
-        print_step "Configuring join address: $join_addr"
-        sed -i.bak "s|ExecStart=/usr/local/bin/fusion-server.*|ExecStart=/usr/local/bin/fusion-server -name %H -addr 0.0.0.0 -port 7946 -join ${join_addr} -verbose|" "$cloud_init_file"
-    fi
-    
+    # Create and launch instance
     print_step "Creating multipass instance..."
-    if ! multipass launch --name "$instance_name" --cloud-init "$cloud_init_file" --memory 2G --cpus 2; then
+    if ! multipass launch --name "$instance_name" --cloud-init "fusion-server.yaml" --memory 2G --cpus 2; then
         print_error "Failed to launch instance $instance_name"
         return 1
     fi
     print_success "Instance launched successfully"
     
+    # Retrieve the assigned IP address
+    local instance_ip
+    instance_ip=$(multipass info "$instance_name" | awk '/IPv4/{print $2}')
+    
+    if [ -z "$instance_ip" ]; then
+        print_error "Failed to retrieve IP address for $instance_name"
+        return 1
+    fi
+    
+    print_step "Instance IP: $instance_ip"
+    
+    # Update fusion-server systemd service to use the correct IP
+    print_step "Configuring fusion-server service inside instance..."
+    multipass exec "$instance_name" -- bash -c "
+        sudo sed -i 's|ExecStart=/usr/local/bin/fusion-server.*|ExecStart=/usr/local/bin/fusion-server -name $instance_name -addr $instance_ip -port 7946 ${join_addr:+-join $join_addr} -verbose|' /etc/systemd/system/fusion-server.service
+        sudo systemctl daemon-reload
+        sudo systemctl restart fusion-server
+    "
+
+    print_step "Fusion-server service updated and restarted."
+
     # Setup the instance
     if ! setup_instance "$instance_name" "$instance_number"; then
         print_error "Failed to setup instance $instance_name"
         return 1
     fi
-    
+
     # Verify the instance
     if ! verify_instance "$instance_name"; then
         print_error "Failed to verify instance $instance_name"
         return 1
     fi
-    
+
     print_success "Instance $instance_name is ready"
     return 0
 }
 
-# Helper function for case-insensitive string comparison
 to_lower() {
     echo "$1" | tr '[:upper:]' '[:lower:]'
 }
 
-# Function to prompt for base name
 prompt_base_name() {
     local default="fusion"
     printf "${YELLOW}Enter base name for instances [${default}]: ${NC}"
@@ -356,7 +363,6 @@ prompt_base_name() {
     echo "${input_base_name:-$default}"
 }
 
-# Function to prompt for number of instances
 prompt_num_instances() {
     local default=1
     printf "${YELLOW}Enter number of instances [${default}]: ${NC}"
@@ -364,7 +370,6 @@ prompt_num_instances() {
     echo "${input_num:-$default}"
 }
 
-# Updated prompt_yes_no function
 prompt_yes_no() {
     local question="$1"
     local default="${2:-n}"  # Default to 'n' if not specified
@@ -383,7 +388,6 @@ prompt_yes_no() {
             answer=$default
         fi
         
-        # Convert to lowercase using the portable to_lower function
         answer=$(to_lower "$answer")
         
         case "$answer" in
@@ -400,7 +404,6 @@ prompt_yes_no() {
     done
 }
 
-# Add function to check and handle existing instances
 check_existing_instances() {
     local base_name="$1"
     local existing_instances=()
@@ -687,7 +690,6 @@ fi
 
 print_step "System checks"
 
-# Check IP forwarding before proceeding
 check_ip_forwarding
 
 if ! check_platform_arch; then
@@ -707,7 +709,6 @@ print_substep "Base name: $BASE_NAME"
 print_substep "Number of instances: $NUM_INSTANCES"
 echo
 
-# Check for existing instances before proceeding
 if ! check_existing_instances "$BASE_NAME"; then
     exit 1
 fi

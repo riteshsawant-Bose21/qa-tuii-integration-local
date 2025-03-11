@@ -1,4 +1,6 @@
 #!/bin/bash
+
+# Monitor the fusion-server log of a specific instance
 set -ex
 
 if [ $# -eq 0 ]; then

@@ -6,7 +6,7 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/usr/local/bin/fusion-server -name %H -addr 0.0.0.0 -port 7946 -verbose
+ExecStart=/usr/local/bin/fusion-server-start.sh
 Restart=always
 RestartSec=5
 

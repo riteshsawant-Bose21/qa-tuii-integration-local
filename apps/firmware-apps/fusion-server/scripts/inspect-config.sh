@@ -1,4 +1,6 @@
 #!/bin/bash
+
+# Script used to inspect the config.db database used by fusion-server
 set -e
 
 if [ $# -lt 2 ]; then
