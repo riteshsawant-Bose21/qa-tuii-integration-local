@@ -2,14 +2,11 @@ package server
 
 import (
 	"bufio"
-	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
-	"os/exec"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -190,7 +187,6 @@ func (s *ConfigServer) UpdateValue(w http.ResponseWriter, r *http.Request) {
 		"updates": diffData,
 	}
 
-	// Return the response as JSON
 	w.Header().Set(api.ContentType, api.JsonContentType)
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		http.Error(w, fmt.Sprintf("Error encoding response: %v", err), http.StatusInternalServerError)
@@ -203,66 +199,14 @@ func (s *ConfigServer) DumpState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	state, err := s.handler.HandleDumpState()
-	if err != nil {
-		logging.GetLogger().Error("Export state failed: %v", err)
-		http.Error(w, "Error exporting state", http.StatusInternalServerError)
-		return
-	}
+	state := map[string]any{"state": s.handler.stateManager.GetFullState()}
 
 	w.Header().Set(api.ContentType, api.JsonContentType)
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=config_export_%s.json",
-		time.Now().UTC().Format("20060102_150405")))
-
 	encoder := json.NewEncoder(w)
-	encoder.SetIndent("", "  ")
 	if err := encoder.Encode(state); err != nil {
 		logging.GetLogger().Error("Export state failed: %v", err)
 		http.Error(w, "Error exporting state", http.StatusInternalServerError)
 	}
-}
-
-func (s *ConfigServer) DROProcess(w http.ResponseWriter, r *http.Request) {
-
-	if !s.IsPostRequest(w, r) {
-		return
-	}
-
-	// Read the request body.
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, "Failed to read request body: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	defer r.Body.Close()
-
-	// Validate the JSON structure here.
-	var temp any
-	if err := json.Unmarshal(body, &temp); err != nil {
-		http.Error(w, "Invalid JSON: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	// Invoke the command using a context
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	cmd := exec.CommandContext(ctx, "python3", "/usr/local/bin/resource_solver.pyz", "--json-buffer")
-	cmd.Stdin = bytes.NewBuffer(body)
-
-	// TODO: This is a multipass fix
-	env := os.Environ()
-	env = append(env, "PYTHONPATH=/home/ubuntu/.local/lib/python3.12/site-packages")
-	cmd.Env = env
-
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		logging.GetLogger().Error("Error executing dsp_manager: %v, output: %s", err, output)
-		http.Error(w, "Error processing config: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(output)
 }
 
 func (s *ConfigServer) GetEndpoints(w http.ResponseWriter, r *http.Request) {
@@ -271,7 +215,7 @@ func (s *ConfigServer) GetEndpoints(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vip, err := s.getVIPFromKeepalivedConfig(keepalivedConfPath)
+	vip, err := GetVIPAddress()
 	if err != nil {
 		logging.GetLogger().Error("Unable to get VIP: %v", err)
 	}
@@ -352,48 +296,6 @@ func (s *ConfigServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 			s.handleWebSocketMessage(conn, data)
 		}
 	}
-}
-
-func (s *ConfigServer) getVIPFromKeepalivedConfig(configPath string) (string, error) {
-	file, err := os.Open(configPath)
-	if err != nil {
-		return "", fmt.Errorf("failed to open Keepalived config file: %v", err)
-	}
-	defer file.Close()
-
-	var vip string
-	scanner := bufio.NewScanner(file)
-
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		// Look for "virtual_ipaddress {" and get the next IP
-		if strings.HasPrefix(line, "virtual_ipaddress") {
-			for scanner.Scan() {
-				nextLine := strings.TrimSpace(scanner.Text())
-				if strings.HasPrefix(nextLine, "}") { // End of block
-					break
-				}
-
-				// Extract IP address (e.g., 192.168.1.100/24)
-				vipRegex := regexp.MustCompile(`(\d+\.\d+\.\d+\.\d+)(/\d+)?`)
-				matches := vipRegex.FindStringSubmatch(nextLine)
-				if len(matches) > 0 {
-					vip = matches[1] // Get the IP portion
-					break
-				}
-			}
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		return "", fmt.Errorf("error reading Keepalived config: %v", err)
-	}
-
-	if vip == "" {
-		return "", fmt.Errorf("no VIP found in Keepalived config")
-	}
-
-	return vip, nil
 }
 
 func (s *ConfigServer) getClusterIPs() []string {
@@ -613,6 +515,49 @@ func (s *ConfigServer) IsPatchRequest(w http.ResponseWriter, r *http.Request) bo
 		return false
 	}
 	return true
+}
+
+// GetVIPAddress returns the VIP address retrieved from keepalived
+func GetVIPAddress() (string, error) {
+	file, err := os.Open(keepalivedConfPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to open Keepalived config file: %v", err)
+	}
+	defer file.Close()
+
+	var vip string
+	scanner := bufio.NewScanner(file)
+
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		// Look for "virtual_ipaddress {" and get the next IP
+		if strings.HasPrefix(line, "virtual_ipaddress") {
+			for scanner.Scan() {
+				nextLine := strings.TrimSpace(scanner.Text())
+				if strings.HasPrefix(nextLine, "}") { // End of block
+					break
+				}
+
+				// Extract IP address (e.g., 192.168.1.100/24)
+				vipRegex := regexp.MustCompile(`(\d+\.\d+\.\d+\.\d+)(/\d+)?`)
+				matches := vipRegex.FindStringSubmatch(nextLine)
+				if len(matches) > 0 {
+					vip = matches[1] // Get the IP portion
+					break
+				}
+			}
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return "", fmt.Errorf("error reading Keepalived config: %v", err)
+	}
+
+	if vip == "" {
+		return "", fmt.Errorf("no VIP found in Keepalived config")
+	}
+
+	return vip, nil
 }
 
 // getSingleQueryParam returns the value of the parameter if it exists exactly once.

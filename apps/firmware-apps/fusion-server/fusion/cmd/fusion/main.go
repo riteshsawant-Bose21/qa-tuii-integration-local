@@ -7,7 +7,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strings"
 	"sync"
 	"time"
 
@@ -28,33 +27,27 @@ var (
 	nodeName    string
 	bindAddr    string
 	bindPort    int
-	joinAddr    string
 	metricsPort int
-	enableBLE   bool
 	verbose     bool
 	endpoints   []string
 )
 
 const (
-	fusionDataPath    = "/var/lib/fusion"
-	configDataPath    = fusionDataPath + "/config.db"
-	audioDataPath     = fusionDataPath + "/audio"
-	stateDumpInterval = 30
-	serialPort        = "/tmp/ttyFusionServer"
-	baudRate          = 9600
-	bleServiceUUID    = "B053"
-	bleCharacterUUID  = "AD10"
+	fusionDataPath   = "/var/lib/fusion"
+	configDataPath   = fusionDataPath + "/config.db"
+	bleServiceUUID   = "B053"
+	bleCharacterUUID = "AD10"
 )
 
 func setupHTTPRoutes(server *server.ConfigServer, metrics *cluster.MetricsCollector, verbose bool) {
 	registerEndpoint("/", withLogging(server.HandleRoot, "root", verbose))
 	registerEndpoint("/dump", withLogging(server.DumpState, "dump", verbose))
-	registerEndpoint("/dro/process", withLogging(server.DROProcess, "process", verbose))
 	registerEndpoint("/endpoints", withLogging(server.GetEndpoints, "endpoints", verbose))
 	registerEndpoint("/getValue", withLogging(server.GetValue, "getValue", verbose))
 	registerEndpoint("/setValue", withLogging(server.SetValue, "setValue", verbose))
 	registerEndpoint("/updateValue", withLogging(server.UpdateValue, "updateValue", verbose))
 	registerEndpoint("/clear", withLogging(server.ClearAllData, "clear", verbose))
+	registerEndpoint("/members", withLogging(server.GetMembers, "members", verbose))
 	registerEndpoint("/updateVersion", withLogging(server.UpdateVersion, "updateVersion", verbose))
 	registerEndpoint("/rollbackVersion", withLogging(server.RollbackVersion, "rollbackVersion", verbose))
 	registerEndpoint("/snapshots", withLogging(server.ListSnapshots, "listSnapshots", verbose))
@@ -63,7 +56,6 @@ func setupHTTPRoutes(server *server.ConfigServer, metrics *cluster.MetricsCollec
 	registerEndpoint("/snapshots/delete", withLogging(server.DeleteSnapshot, "deleteSnapshot", verbose))
 	registerEndpoint("/uploadAudio", withLogging(server.UploadAudio, "uploadAudio", verbose))
 	registerEndpoint("/ws", withWebSocketMetrics(server.HandleWebSocket, metrics, verbose))
-
 }
 
 func setupTimerRoutes(manager *timers.TimerManager, verbose bool) {
@@ -116,9 +108,7 @@ func parseFlags() {
 	flag.StringVar(&nodeName, "name", "", "Node name")
 	flag.StringVar(&bindAddr, "addr", "0.0.0.0", "Bind address")
 	flag.IntVar(&bindPort, "port", 7946, "Bind port")
-	flag.StringVar(&joinAddr, "join", "", "Address to join cluster (comma-separated)")
 	flag.IntVar(&metricsPort, "metrics-port", 9090, "Metrics server port")
-	flag.BoolVar(&enableBLE, "enableBLE", true, "Enable BLE")
 	flag.BoolVar(&verbose, "verbose", false, "Verbose output")
 
 	flag.Parse()
@@ -154,11 +144,7 @@ func initLogging(nodeName string, verbose bool) *logging.Logger {
 
 // initStateManager initializes the state manager.
 func initStateManager(nodeName string) *server.StateManager {
-	stateManager := server.NewStateManager(nodeName)
-	if verbose {
-		stateManager.StartStateDumping(stateDumpInterval * time.Second)
-	}
-	return stateManager
+	return server.NewStateManager(nodeName, verbose)
 }
 
 // initPersistence initializes the persistence layer.
@@ -167,21 +153,11 @@ func initPersistence(configPath string, stateManager *server.StateManager) (*ser
 }
 
 // initCluster initializes the cluster memberlist.
-func initCluster(nodeName, bindAddr string, bindPort int, joinAddr string, stateManager *server.StateManager, persistence *server.ConfigPersistence, updater *server.Updater) (*memberlist.Memberlist, error) {
-	var joinAddrs []string
-	if joinAddr != "" {
-		joinAddrs = strings.Split(joinAddr, ",")
-	}
+func initCluster(nodeName, bindAddr string, bindPort int, stateManager *server.StateManager, persistence *server.ConfigPersistence, updater *server.Updater) (*memberlist.Memberlist, error) {
 
-	list, err := cluster.CreateMemberlist(nodeName, bindAddr, bindPort, joinAddrs, stateManager, persistence, updater, verbose)
+	list, err := cluster.CreateMemberlist(nodeName, bindAddr, bindPort, stateManager, persistence, updater, verbose)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create memberlist: %w", err)
-	}
-
-	if verbose {
-		cluster.MonitorClusterState(list)
-		cluster.StartHealthCheck(list)
-		cluster.StartStateVerification(list, stateManager)
 	}
 
 	return list, nil
@@ -250,15 +226,11 @@ func startMetricsServer(port int, metrics *cluster.MetricsCollector) *http.Serve
 // initBLEServer initializes the Bluetooth server.
 func initBLEServer() *network.BLEServer {
 
-	logger := logging.GetLogger()
-
 	bleServer, err := network.NewBLEServer(bleServiceUUID, bleCharacterUUID)
 	if err != nil {
-		logger.Error("Failed to create BLE server: %v", err)
+		logging.GetLogger().Error("Failed to create BLE server: %v", err)
 		return nil
 	}
-
-	logger.Info("BLE server initialized: %s %s", bleServiceUUID, bleCharacterUUID)
 
 	return bleServer
 }
@@ -266,10 +238,9 @@ func initBLEServer() *network.BLEServer {
 // initUDPServer initializes the UDP server.
 func initUDPServer(port string, handler *server.Handler) *network.UDPServer {
 
-	logger := logging.GetLogger()
-
 	udpServer, err := network.NewUDPServer(port, handler)
 	if err != nil {
+		logger := logging.GetLogger()
 		logger.Fatal("Failed to create UDP server: %v", err)
 	}
 
@@ -318,7 +289,7 @@ func main() {
 
 	updater := server.NewUpdater()
 
-	clusterList, err := initCluster(nodeName, bindAddr, bindPort, joinAddr, stateManager, persistence, server.NewUpdater())
+	clusterList, err := initCluster(nodeName, bindAddr, bindPort, stateManager, persistence, server.NewUpdater())
 	if err != nil {
 		logger.Fatal("Failed to initialize cluster: %v", err)
 	}
@@ -333,13 +304,11 @@ func main() {
 
 	connectionHandler := server.NewHandler(clusterList, stateManager, persistence, updater)
 
-	if enableBLE {
-		bleServer := initBLEServer()
-		if bleServer == nil {
-			logger.Info("Bluetooth not available. Continuing with initialization.")
-		} else {
-			defer bleServer.Stop()
-		}
+	bleServer := initBLEServer()
+	if bleServer == nil {
+		logger.Info("Bluetooth not available. Continuing with initialization.")
+	} else {
+		defer bleServer.Stop()
 	}
 
 	udpServer := initUDPServer(api.UDPPort, connectionHandler)

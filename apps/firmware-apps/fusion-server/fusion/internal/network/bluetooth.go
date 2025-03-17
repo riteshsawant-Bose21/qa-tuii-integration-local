@@ -285,6 +285,8 @@ func NewBLEServer(serviceUUID string, characterUUID string) (*BLEServer, error) 
 		}
 	}()
 
+	logger.Info("BLE server initialized: %s %s", serviceUUID, characterUUID)
+
 	return server, nil
 }
 

@@ -7,6 +7,10 @@ import (
 	"github.com/hashicorp/memberlist"
 )
 
+const (
+	rejoinInterval = 5
+)
+
 // MonitorClusterState continuously monitors the cluster membership state
 func MonitorClusterState(list *memberlist.Memberlist) {
 	go func() {
@@ -58,6 +62,30 @@ func GetClusterMembers(list *memberlist.Memberlist) []ClusterMember {
 	}
 
 	return result
+}
+
+func RejoinClusterMonitor(name string, address string, list *memberlist.Memberlist) {
+	go func() {
+
+		logger := logging.GetLogger()
+
+		for {
+
+			member, err := IsMember(address, list)
+			if err != nil {
+				logger.Error("IsMember error: %v", err)
+			}
+
+			if !member {
+				err = JoinMemberlist(name, list, address)
+				if err != nil {
+					logger.Error("Unable to rejoin memberlist: %v", err)
+				}
+			}
+
+			time.Sleep(rejoinInterval * time.Second)
+		}
+	}()
 }
 
 // ClusterMember represents a member in the cluster

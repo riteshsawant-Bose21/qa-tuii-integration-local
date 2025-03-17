@@ -27,7 +27,7 @@ func TestMarkDirtyConcurrent(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.db")
 
-	sm := server.NewStateManager("test_manager")
+	sm := server.NewStateManager("test_manager", false)
 	if err := sm.Set("testKey", "testValue"); err != nil {
 		t.Fatalf("Failed to set initial state: %v", err)
 	}
@@ -82,7 +82,7 @@ func TestLoadStateNonExistent(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "nonexistent.db")
 
-	sm := server.NewStateManager("testnode")
+	sm := server.NewStateManager("testnode", false)
 	cp, err := server.NewConfigPersistence(configPath, sm, false)
 	if err != nil {
 		t.Fatalf("Failed to initialize persistence: %v", err)
@@ -99,7 +99,7 @@ func TestSaveAndLoadState(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.db")
 
-	sm := server.NewStateManager("testnode")
+	sm := server.NewStateManager("testnode", false)
 	testKey, testValue := "testKey", "testValue"
 	if err := sm.Set(testKey, testValue); err != nil {
 		t.Fatalf("Failed to set initial state: %v", err)
@@ -120,7 +120,7 @@ func TestSaveAndLoadState(t *testing.T) {
 	cp.Close()
 
 	// Simulate restart by creating a new persistence object.
-	newSM := server.NewStateManager("testnode")
+	newSM := server.NewStateManager("testnode", false)
 	newCP, err := server.NewConfigPersistence(configPath, newSM, false)
 	if err != nil {
 		t.Fatalf("Failed to initialize persistence: %v", err)
@@ -148,7 +148,7 @@ func TestValidateStateFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.db")
 
-	sm := server.NewStateManager("testnode")
+	sm := server.NewStateManager("testnode", false)
 	if err := sm.Set("key", "value"); err != nil {
 		t.Fatalf("Failed to set state: %v", err)
 	}
@@ -170,7 +170,7 @@ func TestValidateStateFile(t *testing.T) {
 // TestChecksumCalculation verifies that the checksum calculated on the state
 // remains consistent when the same state is used.
 func TestChecksumCalculation(t *testing.T) {
-	sm := server.NewStateManager("testnode")
+	sm := server.NewStateManager("testnode", false)
 
 	// Set a known state.
 	state := map[string]*api.StateEntry{
@@ -211,7 +211,7 @@ func TestActiveSnapshot(t *testing.T) {
 	configPath := filepath.Join(tmpDir, "config.db")
 
 	// Initialize state manager and persistence.
-	sm := server.NewStateManager("testnode")
+	sm := server.NewStateManager("testnode", false)
 	if err := sm.Set("key", "value_latest"); err != nil {
 		t.Fatalf("Failed to set initial state: %v", err)
 	}
@@ -258,7 +258,7 @@ func TestActiveSnapshot(t *testing.T) {
 	cp.Close()
 
 	// Simulate a new instance loading state to verify the active pointer.
-	newSM := server.NewStateManager("testnode")
+	newSM := server.NewStateManager("testnode", false)
 	newCP, err := server.NewConfigPersistence(configPath, newSM, false)
 	if err != nil {
 		t.Fatalf("Failed to reinitialize persistence: %v", err)

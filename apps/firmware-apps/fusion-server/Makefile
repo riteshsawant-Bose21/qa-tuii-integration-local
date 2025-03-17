@@ -10,7 +10,7 @@ BUILD_FLAGS=-tags netgo,osusergo
 DEBUG_FLAGS=-gcflags "all=-N -l"
 
 # Versioning
-VERSION ?= 1.0.0-alpha.1
+VERSION ?= 1.0.0-alpha.2
 COMMIT := $(shell git rev-parse --short HEAD)
 BUILD_TIME := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 

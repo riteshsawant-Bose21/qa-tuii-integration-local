@@ -12,6 +12,10 @@ import (
 	"time"
 )
 
+const (
+	stateDumpInterval = 30
+)
+
 type StateManager struct {
 	sync.RWMutex
 	state       map[string]*api.StateEntry
@@ -20,12 +24,18 @@ type StateManager struct {
 	subscribers []chan struct{}
 }
 
-func NewStateManager(nodeID string) *StateManager {
-	return &StateManager{
+func NewStateManager(nodeID string, verbose bool) *StateManager {
+	stateManager := &StateManager{
 		state:       make(map[string]*api.StateEntry),
 		nodeID:      nodeID,
 		subscribers: make([]chan struct{}, 0),
 	}
+
+	if verbose {
+		stateManager.StartStateDumping(stateDumpInterval * time.Second)
+	}
+
+	return stateManager
 }
 
 func (sm *StateManager) GetVersion() int64 {

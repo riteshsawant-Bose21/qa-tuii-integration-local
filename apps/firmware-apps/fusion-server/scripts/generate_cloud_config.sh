@@ -135,11 +135,6 @@ $(indent_content 'haproxy_conf_data')
     permissions: '0755'
     owner: root:root
     content: |
-runcmd:
-  - python3
-  - python3-pip
-  - pip3 install --upgrade pip --break-system-packages
-  - pip3 install ortools>=9.6 requests>=2.31.0 jsonschema==4.23.0 referencing --break-system-packages
 EOF
 }
 

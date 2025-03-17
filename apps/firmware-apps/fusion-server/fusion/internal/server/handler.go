@@ -583,7 +583,6 @@ func (h *Handler) HandleClearAllData() error {
 	return nil
 }
 
-// HTTP handler in ConfigServer that uses it:
 func (s *ConfigServer) ClearAllData(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodDelete {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -602,10 +601,20 @@ func (s *ConfigServer) ClearAllData(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (h *Handler) HandleDumpState() (map[string]any, error) {
-	return map[string]any{
-		"state": h.stateManager.GetFullState(),
-	}, nil
+func (s *ConfigServer) GetMembers(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	members := s.handler.list.Members()
+
+	w.Header().Set(api.ContentType, api.JsonContentType)
+	if err := json.NewEncoder(w).Encode(members); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 }
 
 // HandleWebSocketMessage handles incoming websocket messages
