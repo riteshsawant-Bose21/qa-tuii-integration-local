@@ -11,10 +11,29 @@ type ConfigUpdate struct {
 	Clear   bool
 }
 
-// VolumeUpdate represents a volume change update
-type VolumeUpdate struct {
-	Channel int     `json:"channel"`
-	Volume  float64 `json:"volume"`
+// SnapshotOp is a custom type representing snapshot operations.
+type SnapshotOp string
+
+const (
+	SnapshotOpCreate   SnapshotOp = "create"
+	SnapshotOpDelete   SnapshotOp = "delete"
+	SnapshotOpActivate SnapshotOp = "activate"
+)
+
+// SnapshotMetadata holds metadata information from the database.
+type SnapshotMetadata struct {
+	ActiveSnapshot string    `json:"active_snapshot"`
+	Timestamp      time.Time `json:"timestamp"`
+	DBHash         string    `json:"hash"`
+}
+
+// SnapshotUpdate represents a snapshot update operation broadcast across the cluster.
+type SnapshotUpdate struct {
+	Op        SnapshotOp     `json:"op"`
+	Name      string         `json:"name"`
+	Data      map[string]any `json:"data,omitempty"`
+	Node      string         `json:"node"`
+	Timestamp time.Time      `json:"timestamp"`
 }
 
 // StateEntry represents a single entry in the state

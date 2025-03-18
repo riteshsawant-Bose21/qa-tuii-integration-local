@@ -5,7 +5,7 @@ show_help() {
     cat << EOF
 Usage: $0 [OPTIONS]
 
-Delete the saved config data stored in /var/lib/fusion/config.db
+Delete the saved config data stored in /var/lib/fusion/fusion.db
 
 Options:
     -h, --help          Show this help message
@@ -17,7 +17,7 @@ Examples:
     $0 --help          # Show this help message
 
 The script will:
-    Delete the saved config data stored in /var/lib/fusion/config.db
+    Delete the saved config data stored in /var/lib/fusion/fusion.db
 EOF
     exit 0
 }
@@ -66,7 +66,7 @@ for instance in $instances; do
         
         systemctl stop fusion-server
         
-        truncate -s 0 /var/lib/fusion/config.db 2>/dev/null
+        truncate -s 0 /var/lib/fusion/fusion.db 2>/dev/null
                 
         systemctl start fusion-server
         

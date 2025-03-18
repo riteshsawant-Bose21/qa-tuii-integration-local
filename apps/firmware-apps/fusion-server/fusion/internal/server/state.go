@@ -1,19 +1,12 @@
 package server
 
 import (
-	"crypto/sha256"
-	"encoding/json"
-	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/logging"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
-)
-
-const (
-	stateDumpInterval = 30
 )
 
 type StateManager struct {
@@ -29,10 +22,6 @@ func NewStateManager(nodeID string, verbose bool) *StateManager {
 		state:       make(map[string]*api.StateEntry),
 		nodeID:      nodeID,
 		subscribers: make([]chan struct{}, 0),
-	}
-
-	if verbose {
-		stateManager.StartStateDumping(stateDumpInterval * time.Second)
 	}
 
 	return stateManager
@@ -251,29 +240,6 @@ func (sm *StateManager) notifySubscribers() {
 		default:
 		}
 	}
-}
-
-func (sm *StateManager) VerifyState() string {
-	sm.RLock()
-	defer sm.RUnlock()
-	data, err := json.Marshal(sm.state)
-	if err != nil {
-		return ""
-	}
-	hash := sha256.Sum256(data)
-	return fmt.Sprintf("%x", hash)
-}
-
-func (sm *StateManager) StartStateDumping(interval time.Duration) {
-	go func() {
-		for {
-			time.Sleep(interval)
-			sm.RLock()
-			fmt.Printf("[STATE] Current state version: %d, entries: %d\n",
-				sm.version, len(sm.state))
-			sm.RUnlock()
-		}
-	}()
 }
 
 func (sm *StateManager) MergeRemoteState(remoteState map[string]*api.StateEntry, sourceNodeID string) {

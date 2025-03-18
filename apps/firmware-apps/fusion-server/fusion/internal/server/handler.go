@@ -17,10 +17,9 @@ import (
 	"time"
 
 	"github.com/hashicorp/memberlist"
-	"go.etcd.io/bbolt"
 )
 
-// Common handler for both UDP and HTTP servers
+// Handler is the common handler for both UDP and HTTP servers.
 type Handler struct {
 	stateManager *StateManager
 	persistence  *ConfigPersistence
@@ -40,16 +39,40 @@ func NewHandler(list *memberlist.Memberlist, stateManager *StateManager,
 	}
 }
 
-// Shared update handling logic
+// broadcastToNodes sends the given JSON message to all nodes except the local one.
+func (h *Handler) broadcastToNodes(messageData []byte) {
+	logger := logging.GetLogger()
+	for _, node := range h.list.Members() {
+		if node.Name == h.list.LocalNode().Name {
+			continue
+		}
+		if err := h.list.SendReliable(node, messageData); err != nil {
+			logger.Error("Failed to send message to node %s: %v", node.Name, err)
+		}
+	}
+}
+
 func (h *Handler) handleConfigUpdate(data map[string]any) error {
-	configUpdate := api.ConfigUpdate{
+	update := api.ConfigUpdate{
 		Data:    data,
 		Version: time.Now().UnixNano(),
 		NodeID:  h.list.LocalNode().Name,
 		Time:    time.Now().UTC(),
 	}
 
-	return h.broadcastUpdate(configUpdate)
+	return h.broadcastUpdate(update)
+}
+
+func (h *Handler) handleSnapshotOperation(name string, op api.SnapshotOp, data map[string]any) error {
+	snapshotUpdate := api.SnapshotUpdate{
+		Op:        op,
+		Name:      name,
+		Data:      data,
+		Node:      h.list.LocalNode().Name,
+		Timestamp: time.Now().UTC(),
+	}
+
+	return h.broadcastSnapshotUpdate(snapshotUpdate)
 }
 
 func (h *Handler) transformState(state map[string]*api.StateEntry) map[string]any {
@@ -64,13 +87,13 @@ func (h *Handler) broadcastUpdate(update api.ConfigUpdate) error {
 	logger := logging.GetLogger()
 
 	if err := h.stateManager.ApplyUpdate(update); err != nil {
-		return fmt.Errorf("failed to apply update: %v", err)
+		return fmt.Errorf("failed to apply update: %w", err)
 	}
 
-	// Always persist state changes, regardless of source
+	// Mark state as dirty so it will be persisted.
 	h.persistence.MarkDirty()
 
-	// Transform state for broadcasting
+	// Prepare state entries for broadcast.
 	state := make(map[string]*api.StateEntry)
 	for k, v := range update.Data {
 		state[k] = &api.StateEntry{
@@ -80,32 +103,33 @@ func (h *Handler) broadcastUpdate(update api.ConfigUpdate) error {
 		}
 	}
 
-	// Only broadcast to other nodes if we're the origin
+	// If this is the originating node, broadcast to other nodes.
 	if update.NodeID == h.list.LocalNode().Name {
-		// Broadcast to cluster members
 		data, err := json.Marshal(update)
 		if err != nil {
-			return fmt.Errorf("failed to marshal update: %v", err)
+			return fmt.Errorf("failed to marshal update: %w", err)
 		}
-
-		for _, node := range h.list.Members() {
-			if node.Name != h.list.LocalNode().Name {
-				if err := h.list.SendReliable(node, data); err != nil {
-					logger.Error("Failed to send to node %s: %v", node.Name, err)
-				}
-			}
-		}
+		h.broadcastToNodes(data)
 	}
 
+	// Always broadcast update to local clients.
 	transformed := TransformState(state)
-
-	// Always broadcast to local clients
 	for _, broadcaster := range h.broadcasters {
 		if err := broadcaster.BroadcastUpdate(transformed); err != nil {
-			logger.Error("Failed to broadcast update: %v", err)
+			logger.Error("Failed to broadcast update to local clients: %v", err)
 		}
 	}
 
+	return nil
+}
+
+func (h *Handler) broadcastSnapshotUpdate(snapshotUpdate api.SnapshotUpdate) error {
+	bytes, err := json.Marshal(snapshotUpdate)
+	if err != nil {
+		return fmt.Errorf("failed to marshal snapshot update: %w", err)
+	}
+
+	h.broadcastToNodes(bytes)
 	return nil
 }
 
@@ -122,7 +146,6 @@ func (h *Handler) GetInitialState() (WebSocketResponse, error) {
 }
 
 func (h *Handler) HandleHTTPGet(key string) (any, error) {
-
 	if key != "" {
 		value, exists := h.stateManager.Get(key)
 		if !exists {
@@ -141,15 +164,13 @@ func (h *Handler) HandleHTTPGet(key string) (any, error) {
 	return state, nil
 }
 
-// HandleHTTPSet will replace existing values with the updated values.
-// A PUT request is idempotent and is intended to fully replace the
-// resource at the target URI with the data provided in the request body.
+// HandleHTTPSet replaces the entire configuration state with the new data.
 func (h *Handler) HandleHTTPSet(update map[string]any) (any, error) {
-
+	// Clear all existing data before applying the update.
 	h.HandleClearAllData()
 
 	if err := h.handleConfigUpdate(update); err != nil {
-		return nil, fmt.Errorf("failed to handle update: %v", err)
+		return nil, fmt.Errorf("failed to handle update: %w", err)
 	}
 
 	return map[string]any{
@@ -158,16 +179,15 @@ func (h *Handler) HandleHTTPSet(update map[string]any) (any, error) {
 	}, nil
 }
 
-// HandleHTTPPatch will update existing values, add new values and remove values
-// that are null.
+// HandleHTTPPatch updates only the specified fields.
 func (h *Handler) HandleHTTPPatch(value map[string]any) (any, error) {
-
 	existingData := h.transformState(h.stateManager.GetFullState())
-
-	applyPatch(existingData, value)
+	if err := applyPatch(existingData, value); err != nil {
+		return nil, fmt.Errorf("failed to apply patch: %w", err)
+	}
 
 	if err := h.handleConfigUpdate(existingData); err != nil {
-		return nil, fmt.Errorf("failed to handle update: %v", err)
+		return nil, fmt.Errorf("failed to handle update after patch: %w", err)
 	}
 
 	return existingData, nil
@@ -175,10 +195,12 @@ func (h *Handler) HandleHTTPPatch(value map[string]any) (any, error) {
 
 func applyPatch(data map[string]any, changes map[string]any) error {
 	for key, value := range changes {
-		if value == nil {
+		switch {
+		case value == nil:
 			removeNestedField(data, key)
-		} else if subChanges, ok := value.(map[string]any); ok {
-			if subData, exists := getNestedValue(data, key).(map[string]any); exists {
+		case isMap(value):
+			subChanges := value.(map[string]any)
+			if subData, ok := getNestedValue(data, key).(map[string]any); ok {
 				if err := applyPatch(subData, subChanges); err != nil {
 					return err
 				}
@@ -189,14 +211,13 @@ func applyPatch(data map[string]any, changes map[string]any) error {
 					return err
 				}
 			}
-		} else if subArray, ok := value.([]any); ok {
+		case isArray(value):
+			subArray := value.([]any)
 			existingValue := getNestedValue(data, key)
-
 			if _, isExistingArray := existingValue.([]any); isExistingArray && !isIndexedKey(key) {
 				setNestedValue(data, key, subArray)
 			} else {
-				existingArray, exists := existingValue.([]any)
-				if exists {
+				if existingArray, ok := existingValue.([]any); ok {
 					for i, v := range subArray {
 						if i < len(existingArray) {
 							existingArray[i] = v
@@ -209,7 +230,7 @@ func applyPatch(data map[string]any, changes map[string]any) error {
 					setNestedValue(data, key, subArray)
 				}
 			}
-		} else {
+		default:
 			if err := updateNestedField(data, key, value); err != nil {
 				return err
 			}
@@ -218,141 +239,116 @@ func applyPatch(data map[string]any, changes map[string]any) error {
 	return nil
 }
 
-// updateNestedField updates a nested value in a map, supporting array indexing and slicing
+func isMap(v any) bool {
+	_, ok := v.(map[string]any)
+	return ok
+}
+
+func isArray(v any) bool {
+	_, ok := v.([]any)
+	return ok
+}
+
+// updateNestedField updates a nested field (supporting array indices) in a map.
 func updateNestedField(data map[string]any, key string, value any) error {
 	keys := parseKeyPath(key)
-
-	for i := range len(keys) - 1 {
+	for i := 0; i < len(keys)-1; i++ {
 		subKey := keys[i]
-
 		if index, isIndex := parseArrayIndex(subKey); isIndex {
 			parentKey := keys[i-1]
-			if array, ok := data[parentKey].([]any); ok {
-				if index >= len(array) {
-					return fmt.Errorf("index %d out of bounds for array %s", index, parentKey)
-				}
-				if nestedMap, isMap := array[index].(map[string]any); isMap {
-					data = nestedMap
-				} else {
-					return fmt.Errorf("expected map at index %d in array %s", index, parentKey)
-				}
-			} else {
-				return fmt.Errorf("expected array at key %s", parentKey)
+			array, ok := data[parentKey].([]any)
+			if !ok || index >= len(array) {
+				return fmt.Errorf("index %d out of bounds for array %s", index, parentKey)
 			}
+			nestedMap, ok := array[index].(map[string]any)
+			if !ok {
+				return fmt.Errorf("expected map at index %d in array %s", index, parentKey)
+			}
+			data = nestedMap
 		} else {
 			if _, exists := data[subKey]; !exists {
 				data[subKey] = make(map[string]any)
 			}
-			if subData, ok := data[subKey].(map[string]any); ok {
-				data = subData
-			} else {
+			subData, ok := data[subKey].(map[string]any)
+			if !ok {
 				return fmt.Errorf("intermediate value for key %s is not a map", subKey)
 			}
+			data = subData
 		}
 	}
 
 	finalKey := keys[len(keys)-1]
-
 	if index, isIndex := parseArrayIndex(finalKey); isIndex {
 		parentKey := keys[len(keys)-2]
 		parentVal, exists := data[parentKey]
-
 		if !exists {
 			return fmt.Errorf("parent key %s does not exist", parentKey)
 		}
-
-		array, isArray := parentVal.([]any)
-		if !isArray {
-			return fmt.Errorf("expected an array at key %s but found %T", parentKey, parentVal)
-		}
-
-		if index >= len(array) {
+		array, ok := parentVal.([]any)
+		if !ok || index >= len(array) {
 			return fmt.Errorf("index %d out of bounds for array %s", index, parentKey)
 		}
-
 		array[index] = value
 	} else {
 		data[finalKey] = value
 	}
-
 	return nil
 }
 
-// Helper function to remove a nested field, including array elements and slices
 func removeNestedField(data map[string]any, key string) {
 	keys := parseKeyPath(key)
-
-	// Traverse to the last key before deletion
-	for i := range len(keys) - 1 {
+	// Traverse to the parent of the target key.
+	for i := 0; i < len(keys)-1; i++ {
 		subKey := keys[i]
 		if subData, ok := data[subKey].(map[string]any); ok {
 			data = subData
 		} else {
-			return // Key not found
+			return // Key not found or not a map.
 		}
 	}
-
 	finalKey := keys[len(keys)-1]
-
 	if index, isIndex := parseArrayIndex(finalKey); isIndex {
-		if array, ok := data[keys[len(keys)-2]].([]any); ok {
-			if index >= 0 && index < len(array) {
-				data[keys[len(keys)-2]] = append(array[:index], array[index+1:]...)
-			}
+		if array, ok := data[keys[len(keys)-2]].([]any); ok && index >= 0 && index < len(array) {
+			data[keys[len(keys)-2]] = append(array[:index], array[index+1:]...)
 		}
 	} else if start, end, isSlice := parseArraySlice(finalKey); isSlice {
-		if array, ok := data[keys[len(keys)-2]].([]any); ok {
-			if start >= 0 && end <= len(array) && start < end {
-				data[keys[len(keys)-2]] = append(array[:start], array[end:]...)
-			}
+		if array, ok := data[keys[len(keys)-2]].([]any); ok && start >= 0 && end <= len(array) && start < end {
+			data[keys[len(keys)-2]] = append(array[:start], array[end:]...)
 		}
 	} else {
-		// Normal field removal
 		delete(data, finalKey)
 	}
 }
 
-// getNestedValue retrieves a nested value from a map[string]any, supporting arrays and slices.
 func getNestedValue(data map[string]any, key string) any {
 	keys := parseKeyPath(key)
-
-	var current any = data
-
+	current := any(data)
 	for _, part := range keys {
 		switch c := current.(type) {
 		case map[string]any:
-			// Traverse into the map
-			if val, exists := c[part]; exists {
-				current = val
-			} else {
-				// Key not found
+			val, exists := c[part]
+			if !exists {
 				return nil
 			}
+			current = val
 		case []any:
-			// Handle array indexing and slicing
 			if index, isIndex := parseArrayIndex(part); isIndex {
-				if index >= 0 && index < len(c) {
-					current = c[index]
-				} else {
-					// Out of bounds index
+				if index < 0 || index >= len(c) {
 					return nil
 				}
+				current = c[index]
 			} else if start, end, isSlice := parseArraySlice(part); isSlice {
-				if start >= 0 && end <= len(c) && start < end {
-					return c[start:end] // Return the slice
+				if start < 0 || end > len(c) || start >= end {
+					return nil
 				}
-				// Invalid slice range
-				return nil
+				return c[start:end]
 			} else {
-				// Invalid key for an array
 				return nil
 			}
 		default:
-			// Unexpected type (not a map or slice)
 			return nil
 		}
 	}
-
 	return current
 }
 
@@ -365,133 +361,87 @@ func isIndexedKey(key string) bool {
 
 func ensureArrayCapacity(parent map[string]any, parentKey string, index int) {
 	existingArray, exists := parent[parentKey].([]any)
-
 	if !exists {
-		newArray := make([]any, index+1)
-		parent[parentKey] = newArray
+		parent[parentKey] = make([]any, index+1)
 		return
 	}
-
 	if index < len(existingArray) {
 		return
 	}
-
-	// Expand array while keeping existing values
 	newArray := make([]any, index+1)
-	copy(newArray, existingArray) // Preserve existing values
-
+	copy(newArray, existingArray)
 	parent[parentKey] = newArray
 }
 
 func setNestedValue(data map[string]any, key string, value any) {
-
 	logger := logging.GetLogger()
-
 	keys := parseKeyPath(key)
 	current := data
-
-	// Traverse the path and ensure maps/arrays exist
-	for i := range len(keys) - 1 {
+	for i := 0; i < len(keys)-1; i++ {
 		subKey := keys[i]
-
-		// Detecting an array key
 		if index, isIndex := parseArrayIndex(subKey); isIndex {
 			if i == 0 {
-				logger.Error("Array index cannot be at root level.")
+				logger.Error("Array index cannot be at the root level.")
 				return
 			}
-
 			parentKey := keys[i-1]
 			parentVal, exists := current[parentKey]
-
 			if !exists {
-				logger.Warn("Parent key does not exist, skipping update.")
+				logger.Warn("Parent key %s does not exist, skipping update.", parentKey)
 				return
 			}
-
-			// Check if an array already exists before creating a new one
-			if _, isArray := parentVal.([]any); !isArray {
-				logger.Error("Expected an array at key %s but found %T", parentKey, fmt.Sprintf("%T", parentVal))
+			if _, ok := parentVal.([]any); !ok {
+				logger.Error("Expected an array at key %s but got %T", parentKey, parentVal)
 				return
 			}
-
 			ensureArrayCapacity(current, parentKey, index)
-
 			arrayRef := current[parentKey].([]any)
-
 			if index >= len(arrayRef) {
-				logger.Error("Index out of bounds after ensureArrayCapacity %d", index)
+				logger.Error("Index %d out of bounds after ensureArrayCapacity", index)
 				return
 			}
-
 			arrayRef[index] = value
 			return
 		} else {
-			// Ensure key exists and check its type
-			existingValue, exists := current[subKey]
-
-			// If the key exists, ensure we don't replace an existing array
-			if exists {
-				switch existingValue.(type) {
-				case []any, map[string]any:
-					// Value is already an array or a map, proceed
-				default:
-					logger.Error("Key %s exists but is not a map or array. Found %T", subKey, existingValue)
-					return
-				}
-			} else {
-				// Key does not exist, create a new structure
+			if _, exists := current[subKey]; !exists {
+				// Create new container based on the next key.
 				nextKey := keys[i+1]
-				if nextIndex, isIndex := parseArrayIndex(nextKey); isIndex {
-					// Only create a new array if it doesn't exist
-					if _, alreadyExists := current[subKey]; !alreadyExists {
-						current[subKey] = make([]any, nextIndex+1)
-					}
+				if _, isNextIndex := parseArrayIndex(nextKey); isNextIndex {
+					current[subKey] = make([]any, 0)
 				} else {
 					current[subKey] = make(map[string]any)
 				}
 			}
-
-			// Move to the next level
 			if subData, ok := current[subKey].(map[string]any); ok {
 				current = subData
-			} else if _, isArray := current[subKey].([]any); isArray {
+			} else if _, ok := current[subKey].([]any); ok {
 				break
 			} else {
-				logger.Error("Intermediate value for key %s is not a map. Found %T", subKey, fmt.Sprintf("%T", current[subKey]))
+				logger.Error("Intermediate value for key %s is not a map", subKey)
 				return
 			}
 		}
 	}
-
-	// Final key update
 	finalKey := keys[len(keys)-1]
 	if index, isIndex := parseArrayIndex(finalKey); isIndex {
 		parentKey := keys[len(keys)-2]
 		parentVal, exists := current[parentKey]
-
 		if !exists {
-			logger.Error("Parent key does not exist, skipping update.")
+			logger.Error("Parent key %s does not exist, skipping update.", parentKey)
 			return
 		}
-
-		_, isArray := parentVal.([]any)
-		if !isArray {
-			logger.Error("Expected an array at key %s but found %T", parentKey, fmt.Sprintf("%T", parentVal))
+		if _, ok := parentVal.([]any); !ok {
+			logger.Error("Expected an array at key %s but got %T", parentKey, parentVal)
 			return
 		}
-
 		ensureArrayCapacity(current, parentKey, index)
-
 		arrayRef := current[parentKey].([]any)
 		arrayRef[index] = value
-
 	} else {
 		current[finalKey] = value
 	}
 }
 
-// Utility function to parse array indices (e.g., "3")
 func parseArrayIndex(key string) (int, bool) {
 	if i, err := strconv.Atoi(key); err == nil {
 		return i, true
@@ -499,7 +449,6 @@ func parseArrayIndex(key string) (int, bool) {
 	return -1, false
 }
 
-// Utility function to parse array slices (e.g., "1:3")
 func parseArraySlice(key string) (int, int, bool) {
 	if strings.Contains(key, ":") {
 		parts := strings.Split(key, ":")
@@ -512,7 +461,6 @@ func parseArraySlice(key string) (int, int, bool) {
 	return -1, -1, false
 }
 
-// Utility function to parse key paths, handling dots and array brackets
 func parseKeyPath(key string) []string {
 	return strings.FieldsFunc(key, func(r rune) bool {
 		return r == '.' || r == '[' || r == ']'
@@ -521,14 +469,13 @@ func parseKeyPath(key string) []string {
 
 // UDP Server methods
 func (h *Handler) HandleUDPMessage(data []byte) (any, error) {
-
 	var msg struct {
 		Action string          `json:"action"`
 		Raw    json.RawMessage `json:",omitempty"`
 	}
 
 	if err := json.Unmarshal(data, &msg); err != nil {
-		return nil, fmt.Errorf("invalid JSON: %v", err)
+		return nil, fmt.Errorf("invalid JSON: %w", err)
 	}
 
 	switch msg.Action {
@@ -543,14 +490,12 @@ func (h *Handler) HandleUDPMessage(data []byte) (any, error) {
 	case "set":
 		var update map[string]any
 		if err := json.Unmarshal(data, &update); err != nil {
-			return nil, fmt.Errorf("invalid JSON: %v", err)
+			return nil, fmt.Errorf("invalid JSON: %w", err)
 		}
 		delete(update, "action")
-
 		if err := h.handleConfigUpdate(update); err != nil {
-			return nil, fmt.Errorf("failed to handle update: %v", err)
+			return nil, fmt.Errorf("failed to handle update: %w", err)
 		}
-
 		return map[string]any{
 			"status":  "success",
 			"message": "Update applied successfully",
@@ -562,7 +507,6 @@ func (h *Handler) HandleUDPMessage(data []byte) (any, error) {
 }
 
 func (h *Handler) HandleClearAllData() error {
-
 	configUpdate := api.ConfigUpdate{
 		Data:    map[string]any{},
 		Version: time.Now().UnixNano(),
@@ -572,14 +516,12 @@ func (h *Handler) HandleClearAllData() error {
 	}
 
 	if err := h.broadcastUpdate(configUpdate); err != nil {
-		return fmt.Errorf("failed to clear all data: %v", err)
+		return fmt.Errorf("failed to clear all data: %w", err)
 	}
 
-	// Ensure the cleared state is persisted
 	if err := h.persistence.SaveState(); err != nil {
-		return fmt.Errorf("failed to persist cleared state: %v", err)
+		return fmt.Errorf("failed to persist cleared state: %w", err)
 	}
-
 	return nil
 }
 
@@ -608,33 +550,28 @@ func (s *ConfigServer) GetMembers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	members := s.handler.list.Members()
-
 	w.Header().Set(api.ContentType, api.JsonContentType)
 	if err := json.NewEncoder(w).Encode(members); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
 }
 
-// HandleWebSocketMessage handles incoming websocket messages
 func (h *Handler) HandleWebSocketMessage(data []byte) (*WebSocketResponse, error) {
 	var msg WebSocketMessage
 	if err := json.Unmarshal(data, &msg); err != nil {
-		return nil, fmt.Errorf("invalid WebSocket message: %v", err)
+		return nil, fmt.Errorf("invalid WebSocket message: %w", err)
 	}
 
 	switch msg.Type {
 	case "update":
-		var data map[string]any
-		if err := json.Unmarshal(msg.Data, &data); err != nil {
-			return nil, fmt.Errorf("invalid update in WebSocket message: %v", err)
+		var updateData map[string]any
+		if err := json.Unmarshal(msg.Data, &updateData); err != nil {
+			return nil, fmt.Errorf("invalid update in WebSocket message: %w", err)
 		}
-
-		if err := h.handleConfigUpdate(data); err != nil {
-			return nil, fmt.Errorf("failed to handle update: %v", err)
+		if err := h.handleConfigUpdate(updateData); err != nil {
+			return nil, fmt.Errorf("failed to handle update: %w", err)
 		}
-
 		return &WebSocketResponse{
 			Type:    "update_success",
 			Status:  "success",
@@ -646,15 +583,11 @@ func (h *Handler) HandleWebSocketMessage(data []byte) (*WebSocketResponse, error
 	}
 }
 
-// HandleDownload handles the download of the current state
 func (h *Handler) HandleDownload() (map[string]any, error) {
 	state := h.transformState(h.stateManager.GetFullState())
-	return map[string]any{
-		"state": state,
-	}, nil
+	return map[string]any{"state": state}, nil
 }
 
-// GetServerInfo returns information about the server
 func (h *Handler) GetServerInfo() (map[string]interface{}, error) {
 	info := map[string]interface{}{
 		"name":               "Fusion Config Server",
@@ -672,33 +605,25 @@ func (h *Handler) GetServerInfo() (map[string]interface{}, error) {
 			"progress":    float64(h.updater.currentAssembler.received) / float64(h.updater.currentAssembler.size) * 100,
 		}
 	}
-
 	return info, nil
 }
 
-// AddBroadcaster registers a new broadcaster with the Handler
 func (h *Handler) AddBroadcaster(broadcaster Broadcaster) {
 	h.broadcasters = append(h.broadcasters, broadcaster)
 }
 
-// AddBroadcasters registers multiple broadcasters with the Handler
 func (h *Handler) AddBroadcasters(broadcasters ...Broadcaster) {
 	h.broadcasters = append(h.broadcasters, broadcasters...)
 }
 
-// HandleVersionUpdate handles HTTP binary update requests
 func (h *Handler) HandleVersionUpdate(w http.ResponseWriter, r *http.Request) {
-
 	logger := logging.GetLogger()
-
-	// Parse the multipart form data
 	if err := r.ParseMultipartForm(32 << 20); err != nil {
 		logger.Error("Error parsing multipart form: %v", err)
 		http.Error(w, "Error parsing form data", http.StatusBadRequest)
 		return
 	}
 
-	// Retrieve the file from the posted form-data.
 	updateFile, header, err := r.FormFile("binary")
 	if err != nil {
 		logger.Error("Error reading binary: %v", err)
@@ -707,21 +632,18 @@ func (h *Handler) HandleVersionUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 	defer updateFile.Close()
 
-	// Verify checksum/signature
 	if !VerifyChecksum(updateFile, r.FormValue("checksum")) {
 		logger.Error("Invalid checksum")
 		http.Error(w, "Invalid checksum", http.StatusBadRequest)
 		return
 	}
 
-	// Reset file pointer after checksum verification
 	if _, err := updateFile.Seek(0, 0); err != nil {
 		logger.Error("Error resetting file pointer: %v", err)
 		http.Error(w, "Server error", http.StatusInternalServerError)
 		return
 	}
 
-	// Create a temporary file
 	tempPath := filepath.Join(os.TempDir(), header.Filename)
 	tempFile, err := os.Create(tempPath)
 	if err != nil {
@@ -731,20 +653,18 @@ func (h *Handler) HandleVersionUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tempFile.Close()
 
-	// Copy uploaded binary to temporary file location
 	if _, err := io.Copy(tempFile, updateFile); err != nil {
 		logger.Error("Error moving binary to temporary file: %v", err)
 		http.Error(w, "Server error", http.StatusInternalServerError)
 		return
 	}
 
-	// After verifying and saving the binary, initiate cluster-wide update
 	if err := h.InitiateVersionUpdate(tempPath); err != nil {
 		logger.Error("Failed to initiate cluster update: %v", err)
 		http.Error(w, "Server error", http.StatusInternalServerError)
+		return
 	}
 
-	// Schedule the update
 	go func() {
 		if err := h.updater.PerformUpdate(tempPath); err != nil {
 			logger.Error("Update failed: %v", err)
@@ -754,11 +674,8 @@ func (h *Handler) HandleVersionUpdate(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// HandleVersionRollback handles HTTP binary rollback requests
 func (h *Handler) HandleVersionRollback(w http.ResponseWriter, r *http.Request) {
 	logger := logging.GetLogger()
-
-	// Get rollback index from query parameter
 	indexStr := r.URL.Query().Get("index")
 	if indexStr == "" {
 		logger.Error("No rollback index provided")
@@ -766,7 +683,6 @@ func (h *Handler) HandleVersionRollback(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Convert string to integer
 	index, err := strconv.Atoi(indexStr)
 	if err != nil {
 		logger.Error("Invalid rollback index: %v", err)
@@ -787,13 +703,10 @@ func (h *Handler) HandleVersionRollback(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Initiate cluster-wide rollback
 	if err := h.InitiateBinaryRollback(currentBinaryPath, index); err != nil {
-		logging.GetLogger().Error("Failed to initiate cluster rollback: %v", err)
-		// Don't return error to client since local rollback will proceed
+		logger.Error("Failed to initiate cluster rollback: %v", err)
 	}
 
-	// Schedule the update
 	go func() {
 		if err := h.updater.PerformRollback(currentBinaryPath, index); err != nil {
 			logger.Error("Rollback failed: %v", err)
@@ -803,11 +716,8 @@ func (h *Handler) HandleVersionRollback(w http.ResponseWriter, r *http.Request) 
 	w.WriteHeader(http.StatusOK)
 }
 
-// InitiateVersionUpdate starts a cluster-wide binary update process
 func (h *Handler) InitiateVersionUpdate(newBinaryPath string) error {
 	logger := logging.GetLogger()
-
-	// Generate update metadata
 	hash, size, err := getBinaryMetadata(newBinaryPath)
 	if err != nil {
 		return fmt.Errorf("failed to get binary metadata: %w", err)
@@ -837,30 +747,21 @@ func (h *Handler) InitiateVersionUpdate(newBinaryPath string) error {
 		return fmt.Errorf("failed to marshal message: %w", err)
 	}
 
-	// Broadcast to cluster members
-	for _, node := range h.list.Members() {
-		// Only update the remote members. The local node will update itself.
-		if node.Name != h.list.LocalNode().Name {
-			// First send metadata
-			if err := h.list.SendReliable(node, messageData); err != nil {
-				logger.Error("Failed to send update metadata to node %s: %v", node.Name, err)
-				continue
-			}
+	h.broadcastToNodes(messageData)
 
-			// Then stream the binary in chunks
-			if err := h.streamBinaryToNode(node, newBinaryPath); err != nil {
-				logger.Error("Failed to stream binary to node %s: %v", node.Name, err)
-				continue
-			}
+	// Stream the binary to each node.
+	for _, node := range h.list.Members() {
+		if node.Name == h.list.LocalNode().Name {
+			continue
+		}
+		if err := h.streamBinaryToNode(node, newBinaryPath); err != nil {
+			logger.Error("Failed to stream binary to node %s: %v", node.Name, err)
 		}
 	}
-
 	return nil
 }
 
-// InitiateBinaryRollback starts a cluster-wide binary rollback process
 func (h *Handler) InitiateBinaryRollback(currentBinaryPath string, index int) error {
-	logger := logging.GetLogger()
 
 	rollback := BinaryRollback{
 		BinaryHeader: BinaryHeader{
@@ -886,23 +787,12 @@ func (h *Handler) InitiateBinaryRollback(currentBinaryPath string, index int) er
 		return fmt.Errorf("failed to marshal message: %w", err)
 	}
 
-	// Broadcast to cluster members
-	for _, node := range h.list.Members() {
-		if node.Name != h.list.LocalNode().Name {
-			if err := h.list.SendReliable(node, messageData); err != nil {
-				logger.Error("Failed to send rollback data to node %s: %v", node.Name, err)
-				continue
-			}
-		}
-	}
-
+	h.broadcastToNodes(messageData)
 	return nil
 }
 
-// streamBinaryToNode sends a binary file to a cluster node in chunks
 func (h *Handler) streamBinaryToNode(node *memberlist.Node, binaryPath string) error {
-	const chunkSize = 1024 * 1024 // 1MB chunks
-
+	const chunkSize = 1024 * 1024 // 1MB
 	file, err := os.Open(binaryPath)
 	if err != nil {
 		return fmt.Errorf("failed to open binary: %w", err)
@@ -936,18 +826,16 @@ func (h *Handler) streamBinaryToNode(node *memberlist.Node, binaryPath string) e
 			Type:    UpdateChunk,
 			Payload: chunkData,
 		}
-
 		messageData, err := json.Marshal(message)
 		if err != nil {
 			return fmt.Errorf("failed to marshal message: %w", err)
 		}
 
 		if err := h.list.SendReliable(node, messageData); err != nil {
-			return fmt.Errorf("failed to send message: %w", err)
+			return fmt.Errorf("failed to send chunk message: %w", err)
 		}
 	}
 
-	// Send final chunk to indicate completion
 	finalChunk := BinaryChunk{
 		Data:   nil,
 		Offset: offset,
@@ -958,38 +846,29 @@ func (h *Handler) streamBinaryToNode(node *memberlist.Node, binaryPath string) e
 		return fmt.Errorf("failed to marshal final chunk: %w", err)
 	}
 
-	if err := h.list.SendReliable(node, chunkData); err != nil {
-		return fmt.Errorf("failed to send final chunk: %w", err)
-	}
-
 	message := VersionMessage{
 		Type:    UpdateChunk,
 		Payload: chunkData,
 	}
-
 	messageData, err := json.Marshal(message)
 	if err != nil {
-		return fmt.Errorf("failed to marshal message: %w", err)
+		return fmt.Errorf("failed to marshal final message: %w", err)
 	}
 	if err := h.list.SendReliable(node, messageData); err != nil {
-		return fmt.Errorf("failed to send message: %w", err)
+		return fmt.Errorf("failed to send final chunk message: %w", err)
 	}
 
 	return nil
 }
 
-// HandleAudioUpload handles HTTP audio file update requests.
 func (h *Handler) HandleAudioUpload(w http.ResponseWriter, r *http.Request) {
 	logger := logging.GetLogger()
-
-	// Parse the multipart form data
 	if err := r.ParseMultipartForm(32 << 20); err != nil {
 		logger.Error("Error parsing multipart form: %v", err)
 		http.Error(w, "Error parsing form data", http.StatusBadRequest)
 		return
 	}
 
-	// Retrieve the file from the posted form-data.
 	audioFile, header, err := r.FormFile("binary")
 	if err != nil {
 		logger.Error("Error reading binary: %v", err)
@@ -998,18 +877,14 @@ func (h *Handler) HandleAudioUpload(w http.ResponseWriter, r *http.Request) {
 	}
 	defer audioFile.Close()
 
-	// Define the destination directory and file path.
 	destDir := "/var/lib/fusion/audio"
 	destPath := filepath.Join(destDir, header.Filename)
-
-	// Ensure that the destination directory exists.
 	if err := os.MkdirAll(destDir, 0755); err != nil {
 		logger.Error("Error creating destination directory: %v", err)
 		http.Error(w, "Server error", http.StatusInternalServerError)
 		return
 	}
 
-	// Create the destination file.
 	dstFile, err := os.Create(destPath)
 	if err != nil {
 		logger.Error("Error creating destination file: %v", err)
@@ -1018,7 +893,6 @@ func (h *Handler) HandleAudioUpload(w http.ResponseWriter, r *http.Request) {
 	}
 	defer dstFile.Close()
 
-	// Copy the uploaded file's content to the destination file.
 	if _, err := io.Copy(dstFile, audioFile); err != nil {
 		logger.Error("Error copying file to destination: %v", err)
 		http.Error(w, "Server error", http.StatusInternalServerError)
@@ -1027,55 +901,58 @@ func (h *Handler) HandleAudioUpload(w http.ResponseWriter, r *http.Request) {
 
 	existingData := h.transformState(h.stateManager.GetFullState())
 	addAudioFilesToConfig(destDir, existingData)
-
 	if err := h.handleConfigUpdate(existingData); err != nil {
-		logger.Error("Failed to handle update: %v", err)
+		logger.Error("Failed to handle audio config update: %v", err)
 		http.Error(w, "Server error", http.StatusInternalServerError)
 		return
 	}
-
 	w.WriteHeader(http.StatusOK)
 }
 
-// HandleListSnapshots retrieves a list of snapshot keys from the persistence layer.
-// It lists all keys in the default bucket except the default state key.
 func (h *Handler) HandleListSnapshots() ([]string, error) {
-	var snapshots []string
-	err := h.persistence.db.View(func(tx *bbolt.Tx) error {
-		b := tx.Bucket([]byte(defaultBucketName))
-		if b == nil {
-			// No bucket means no snapshots.
-			return nil
-		}
-		// Iterate over all keys in the bucket.
-		return b.ForEach(func(k, v []byte) error {
-			key := string(k)
-			// Exclude the default state key (which holds the active state).
-			if key != defaultStateKey {
-				snapshots = append(snapshots, key)
-			}
-			return nil
-		})
-	})
-	return snapshots, err
+	return h.persistence.ListSnapshots()
 }
 
-// HandleCreateSnapshot saves the current state as a snapshot with the given name.
 func (h *Handler) HandleCreateSnapshot(name string) error {
-	return h.persistence.SaveSnapshot(name)
+	if err := h.persistence.SaveSnapshot(name); err != nil {
+		return fmt.Errorf("failed to create snapshot: %w", err)
+	}
+
+	data := h.transformState(h.stateManager.GetFullState())
+	if err := h.handleSnapshotOperation(name, api.SnapshotOpCreate, data); err != nil {
+		return fmt.Errorf("failed to handle snapshot update: %w", err)
+	}
+	return nil
 }
 
-// HandleActivateSnapshot sets the given snapshot as active.
 func (h *Handler) HandleActivateSnapshot(name string) error {
-	return h.persistence.ActivateSnapshot(name)
+	if err := h.persistence.ActivateSnapshot(name); err != nil {
+		return fmt.Errorf("failed to activate snapshot: %w", err)
+	}
+	if err := h.handleSnapshotOperation(name, api.SnapshotOpActivate, nil); err != nil {
+		return fmt.Errorf("failed to handle snapshot activate: %w", err)
+	}
+	return nil
 }
 
-// HandleDeleteSnapshot deletes a snapshot with the given name from persistence.
 func (h *Handler) HandleDeleteSnapshot(name string) error {
-	return h.persistence.DeleteSnapshot(name)
+	if err := h.persistence.DeleteSnapshot(name); err != nil {
+		return fmt.Errorf("failed to delete snapshot: %w", err)
+	}
+	if err := h.handleSnapshotOperation(name, api.SnapshotOpDelete, nil); err != nil {
+		return fmt.Errorf("failed to handle snapshot delete: %w", err)
+	}
+	return nil
 }
 
-// getBinaryMetadata calculates hash and size of a binary file
+func (h *Handler) HandleSnapshotExists(name string) (bool, error) {
+	return h.persistence.SnapshotExists(name)
+}
+
+func (h *Handler) HandleGetSnapshotMetadata() (api.SnapshotMetadata, error) {
+	return h.persistence.GetSnapshotMetadata()
+}
+
 func getBinaryMetadata(path string) (hash string, size int64, err error) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -1088,29 +965,21 @@ func getBinaryMetadata(path string) (hash string, size int64, err error) {
 	if err != nil {
 		return "", 0, err
 	}
-
 	return hex.EncodeToString(hasher.Sum(nil)), size, nil
 }
 
-// addAudioFilesToConfig calculates hash and size of a binary file
 func addAudioFilesToConfig(audioDir string, existingData map[string]any) {
-
-	// Read the directory entries.
 	entries, err := os.ReadDir(audioDir)
 	if err != nil {
 		log.Printf("Error reading directory %s: %v", audioDir, err)
 		return
 	}
-
-	// Collect file names (ignoring subdirectories).
 	var fileNames []string
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			fileNames = append(fileNames, entry.Name())
 		}
 	}
-
-	// Add the "audio_files" section to the settings.
 	existingData["audio_files"] = map[string]any{
 		"location": audioDir,
 		"files":    fileNames,

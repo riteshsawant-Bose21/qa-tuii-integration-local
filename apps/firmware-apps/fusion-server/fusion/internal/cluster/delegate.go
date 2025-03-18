@@ -49,17 +49,60 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 
 	logger := logging.GetLogger()
 
-	// Try to decode as binary message first
-	var binaryMsg server.VersionMessage
-	if err := json.Unmarshal(msg, &binaryMsg); err == nil {
-		if err = d.updater.PerformRemoteUpdate(binaryMsg); err != nil {
-			logger.Error("PerformRemoteUpdate error: %v", err)
-			return
-		}
-		// Ignore error at this level so we can check for api.ConfigUpdate
+	// Attempt to unmarshal into a generic map to check for a snapshot op.
+	var genericMsg map[string]any
+	if err := json.Unmarshal(msg, &genericMsg); err != nil {
+		logger.Error("Error unmarshaling message into generic map: %v", err)
+		return
 	}
 
-	// Handle the config update next
+	// If an "op" field exists, assume this is a snapshot operation.
+	if opVal, ok := genericMsg["op"]; ok {
+		opStr, ok := opVal.(string)
+		if !ok {
+			logger.Error("Snapshot operation field is not a string")
+			return
+		}
+
+		// Unmarshal into a SnapshotUpdate.
+		var snapshotUpdate api.SnapshotUpdate
+		if err := json.Unmarshal(msg, &snapshotUpdate); err != nil {
+			logger.Error("Error unmarshaling SnapshotUpdate: %v", err)
+			return
+		}
+
+		logger.Debug("Processing snapshot op %q for snapshot %q", opStr, snapshotUpdate.Name)
+		switch api.SnapshotOp(opStr) {
+		case api.SnapshotOpCreate:
+			if err := d.persistence.SaveSnapshot(snapshotUpdate.Name); err != nil {
+				logger.Error("Error creating snapshot: %v", err)
+			}
+		case api.SnapshotOpActivate:
+			if err := d.persistence.ActivateSnapshot(snapshotUpdate.Name); err != nil {
+				logger.Error("Error activating snapshot: %v", err)
+			}
+		case api.SnapshotOpDelete:
+			if err := d.persistence.DeleteSnapshot(snapshotUpdate.Name); err != nil {
+				logger.Error("Error deleting snapshot: %v", err)
+			}
+		default:
+			logger.Error("Unknown snapshot op: %s", opStr)
+		}
+		// Exit early to prevent further processing.
+		return
+	}
+
+	// Handle binary version message.
+	var binaryMsg server.VersionMessage
+	if err := json.Unmarshal(msg, &binaryMsg); err == nil {
+		if err := d.updater.PerformRemoteUpdate(binaryMsg); err != nil {
+			logger.Error("PerformRemoteUpdate error: %v", err)
+		}
+		// Exit early to prevent further processing.
+		return
+	}
+
+	// Process config update.
 	var update api.ConfigUpdate
 	if err := json.Unmarshal(msg, &update); err != nil {
 		logger.Error("Error unmarshaling update: %v", err)
@@ -71,7 +114,7 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 		return
 	}
 
-	// Get the single key from the update map
+	// Log the update for a representative key.
 	var updateKey string
 	for k := range update.Data {
 		updateKey = k
@@ -137,6 +180,5 @@ func (d *ClusterDelegate) MergeRemoteState(buf []byte, join bool) {
 		snapshot.NodeID, len(snapshot.State), snapshot.Version)
 	d.stateManager.MergeRemoteState(snapshot.State, snapshot.NodeID)
 
-	// Persist after merging remote state
 	d.persistence.MarkDirty()
 }

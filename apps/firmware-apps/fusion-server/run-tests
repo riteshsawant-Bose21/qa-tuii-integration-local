@@ -9,6 +9,7 @@ function show_help() {
     echo "  --fusion      Run only fusion tests"     
     echo "  --logger      Run only logger tests"     
     echo "  --persistence Run only persistence tests"     
+    echo "  --snapshot    Run only snapshot tests"     
     echo "  --state       Run only state manager tests"     
     echo "  --timers      Run only timer tests"     
     echo "  --updater     Run only updater tests"     
@@ -45,6 +46,10 @@ while [[ $# -gt 0 ]]; do
             test_type="persistence"
             shift
             ;;
+        --snapshot)
+            test_type="snapshot"
+            shift
+            ;;
         --state)
             test_type="state"
             shift
@@ -67,6 +72,8 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+sh scripts/clear-config.sh
+
 cd fusion/test || exit 1
 
 case "$test_type" in
@@ -87,6 +94,9 @@ case "$test_type" in
         ;;
     "persistence")
         go test -v --race ./persistence_test.go
+        ;;
+    "snapshot")
+        go test -v --race ./snapshot_test.go
         ;;
     "state")
         go test -v --race ./state_test.go

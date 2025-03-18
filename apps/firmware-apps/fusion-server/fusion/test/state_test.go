@@ -173,25 +173,6 @@ func TestMergeRemoteState(t *testing.T) {
 	}
 }
 
-func TestVerifyState(t *testing.T) {
-	sm := server.NewStateManager("node-1", false)
-	if err := sm.ApplyUpdate(api.ConfigUpdate{
-		Data: map[string]any{
-			"key": "value",
-		},
-		Version: 12345,
-		NodeID:  "node-1",
-		Time:    time.Now().UTC(),
-	}); err != nil {
-		t.Fatalf("ApplyUpdate failed: %v", err)
-	}
-
-	hash := sm.VerifyState()
-	if hash == "" {
-		t.Errorf("Expected non-empty hash from VerifyState")
-	}
-}
-
 func TestSetStateAndGetFullState(t *testing.T) {
 	sm := server.NewStateManager("node-1", false)
 

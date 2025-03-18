@@ -3,123 +3,54 @@
   "version": "1",
   "items": [
     {
-      "type": "folder",
-      "name": "Binaries",
-      "items": [
-        {
-          "type": "http",
-          "name": "Rollback Version",
-          "seq": 1,
-          "request": {
-            "url": "{{api_url}}/rollbackVersion?index=-1",
-            "method": "POST",
-            "headers": [
-              {
-                "name": "Content-Type",
-                "value": "application/json",
-                "enabled": true
-              }
-            ],
-            "params": [
-              {
-                "name": "index",
-                "value": "-1",
-                "type": "query",
-                "enabled": true
-              }
-            ],
-            "body": {
-              "mode": "json",
-              "json": "",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
+      "type": "http",
+      "name": "Members",
+      "seq": 2,
+      "request": {
+        "url": "{{api_url}}/members",
+        "method": "GET",
+        "headers": [],
+        "params": [],
+        "body": {
+          "mode": "none",
+          "formUrlEncoded": [],
+          "multipartForm": [],
+          "file": []
         },
-        {
-          "type": "http",
-          "name": "Update Version",
-          "seq": 2,
-          "request": {
-            "url": "{{api_url}}/updateVersion",
-            "method": "POST",
-            "headers": [],
-            "params": [],
-            "body": {
-              "mode": "multipartForm",
-              "formUrlEncoded": [],
-              "multipartForm": [
-                {
-                  "type": "file",
-                  "name": "binary",
-                  "value": [
-                    "/Users/gragan/inprogress/bose/fusion-server/build/fusion-server_linux_arm64"
-                  ],
-                  "enabled": true
-                },
-                {
-                  "type": "text",
-                  "name": "checksum",
-                  "value": "f6c38b795d725eaeeaefdc880f689dbe4d86811e055ed626cd0b7240d9130dd5",
-                  "enabled": true
-                }
-              ],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        },
-        {
-          "type": "http",
-          "name": "Upload Audio File",
-          "seq": 3,
-          "request": {
-            "url": "{{api_url}}/uploadAudio",
-            "method": "POST",
-            "headers": [],
-            "params": [],
-            "body": {
-              "mode": "multipartForm",
-              "formUrlEncoded": [],
-              "multipartForm": [
-                {
-                  "type": "file",
-                  "name": "binary",
-                  "value": [
-                    "/Users/gragan/inprogress/semitone/PatternPro/vmpc-juce/editables/JUCE/extras/AudioPluginHost/Builds/Android/app/src/main/assets/cello.wav"
-                  ],
-                  "enabled": true
-                }
-              ],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
+        "script": {},
+        "vars": {},
+        "assertions": [],
+        "tests": "",
+        "docs": "",
+        "auth": {
+          "mode": "none"
         }
-      ]
+      }
+    },
+    {
+      "type": "http",
+      "name": "Root",
+      "seq": 1,
+      "request": {
+        "url": "{{api_url}}/",
+        "method": "GET",
+        "headers": [],
+        "params": [],
+        "body": {
+          "mode": "none",
+          "formUrlEncoded": [],
+          "multipartForm": [],
+          "file": []
+        },
+        "script": {},
+        "vars": {},
+        "assertions": [],
+        "tests": "",
+        "docs": "",
+        "auth": {
+          "mode": "none"
+        }
+      }
     },
     {
       "type": "folder",
@@ -384,6 +315,277 @@
     },
     {
       "type": "folder",
+      "name": "Binaries",
+      "items": [
+        {
+          "type": "http",
+          "name": "Rollback Version",
+          "seq": 1,
+          "request": {
+            "url": "{{api_url}}/rollbackVersion?index=-1",
+            "method": "POST",
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/json",
+                "enabled": true
+              }
+            ],
+            "params": [
+              {
+                "name": "index",
+                "value": "-1",
+                "type": "query",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "json",
+              "json": "",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Update Version",
+          "seq": 2,
+          "request": {
+            "url": "{{api_url}}/updateVersion",
+            "method": "POST",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "multipartForm",
+              "formUrlEncoded": [],
+              "multipartForm": [
+                {
+                  "type": "file",
+                  "name": "binary",
+                  "value": [
+                    "/Users/gragan/inprogress/bose/fusion-server/build/fusion-server_linux_arm64"
+                  ],
+                  "enabled": true
+                },
+                {
+                  "type": "text",
+                  "name": "checksum",
+                  "value": "f6c38b795d725eaeeaefdc880f689dbe4d86811e055ed626cd0b7240d9130dd5",
+                  "enabled": true
+                }
+              ],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Upload Audio File",
+          "seq": 3,
+          "request": {
+            "url": "{{api_url}}/uploadAudio",
+            "method": "POST",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "multipartForm",
+              "formUrlEncoded": [],
+              "multipartForm": [
+                {
+                  "type": "file",
+                  "name": "binary",
+                  "value": [
+                    "/Users/gragan/inprogress/semitone/PatternPro/vmpc-juce/editables/JUCE/extras/AudioPluginHost/Builds/Android/app/src/main/assets/cello.wav"
+                  ],
+                  "enabled": true
+                }
+              ],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "folder",
+      "name": "Snapshots",
+      "items": [
+        {
+          "type": "http",
+          "name": "List",
+          "seq": 3,
+          "request": {
+            "url": "{{api_url}}/snapshots",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Delete",
+          "seq": 2,
+          "request": {
+            "url": "{{api_url}}/snapshots/delete?name=TestSnapshot",
+            "method": "DELETE",
+            "headers": [],
+            "params": [
+              {
+                "name": "name",
+                "value": "TestSnapshot",
+                "type": "query",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Create",
+          "seq": 1,
+          "request": {
+            "url": "{{api_url}}/snapshots/create?name=TestSnapshot",
+            "method": "POST",
+            "headers": [],
+            "params": [
+              {
+                "name": "name",
+                "value": "TestSnapshot",
+                "type": "query",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Activate",
+          "seq": 4,
+          "request": {
+            "url": "{{api_url}}/snapshots/activate?name=TestSnapshot",
+            "method": "PUT",
+            "headers": [],
+            "params": [
+              {
+                "name": "name",
+                "value": "TestSnapshot",
+                "type": "query",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Metadata",
+          "seq": 5,
+          "request": {
+            "url": "{{api_url}}/snapshots/metadata",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "folder",
       "name": "Timers",
       "items": [
         {
@@ -621,63 +823,9 @@
           }
         }
       ]
-    },
-    {
-      "type": "http",
-      "name": "Root",
-      "seq": 1,
-      "request": {
-        "url": "{{api_url}}/",
-        "method": "GET",
-        "headers": [],
-        "params": [],
-        "body": {
-          "mode": "none",
-          "formUrlEncoded": [],
-          "multipartForm": [],
-          "file": []
-        },
-        "script": {},
-        "vars": {},
-        "assertions": [],
-        "tests": "",
-        "docs": "",
-        "auth": {
-          "mode": "none"
-        }
-      }
-    },
-    {
-      "type": "folder",
-      "name": "Snapshots"
-    },
-    {
-      "type": "http",
-      "name": "Members",
-      "seq": 3,
-      "request": {
-        "url": "{{api_url}}/members",
-        "method": "GET",
-        "headers": [],
-        "params": [],
-        "body": {
-          "mode": "none",
-          "formUrlEncoded": [],
-          "multipartForm": [],
-          "file": []
-        },
-        "script": {},
-        "vars": {},
-        "assertions": [],
-        "tests": "",
-        "docs": "",
-        "auth": {
-          "mode": "none"
-        }
-      }
     }
   ],
-  "activeEnvironmentUid": "Qj7SBAw0GkOBJ4V7u6WYR",
+  "activeEnvironmentUid": "RMIUhpnNw7djiTbp0TrYH",
   "environments": [
     {
       "variables": [
@@ -736,7 +884,7 @@
       "node_modules",
       ".git"
     ],
-    "size": 0.03155708312988281,
-    "filesCount": 22
+    "size": 0.03175544738769531,
+    "filesCount": 24
   }
 }

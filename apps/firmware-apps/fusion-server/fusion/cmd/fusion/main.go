@@ -34,7 +34,7 @@ var (
 
 const (
 	fusionDataPath   = "/var/lib/fusion"
-	configDataPath   = fusionDataPath + "/config.db"
+	configDataPath   = fusionDataPath + "/fusion.db"
 	bleServiceUUID   = "B053"
 	bleCharacterUUID = "AD10"
 )
@@ -54,6 +54,7 @@ func setupHTTPRoutes(server *server.ConfigServer, metrics *cluster.MetricsCollec
 	registerEndpoint("/snapshots/create", withLogging(server.CreateSnapshot, "createSnapshot", verbose))
 	registerEndpoint("/snapshots/activate", withLogging(server.ActivateSnapshotHTTP, "activateSnapshot", verbose))
 	registerEndpoint("/snapshots/delete", withLogging(server.DeleteSnapshot, "deleteSnapshot", verbose))
+	registerEndpoint("/snapshots/metadata", withLogging(server.GetSnapshotMetadata, "snapshotMetadata", verbose))
 	registerEndpoint("/uploadAudio", withLogging(server.UploadAudio, "uploadAudio", verbose))
 	registerEndpoint("/ws", withWebSocketMetrics(server.HandleWebSocket, metrics, verbose))
 }
@@ -149,7 +150,7 @@ func initStateManager(nodeName string) *server.StateManager {
 
 // initPersistence initializes the persistence layer.
 func initPersistence(configPath string, stateManager *server.StateManager) (*server.ConfigPersistence, error) {
-	return server.NewConfigPersistence(configPath, stateManager, true)
+	return server.NewConfigPersistence(configPath, stateManager, verbose)
 }
 
 // initCluster initializes the cluster memberlist.
@@ -285,7 +286,11 @@ func main() {
 	if err != nil {
 		logger.Fatal("Failed to initialize persistence: %v", err)
 	}
-	persistence.LoadState()
+
+	err = persistence.LoadActiveSnapshot()
+	if err != nil {
+		logger.Fatal("Failed to load initial state: %v", err)
+	}
 
 	updater := server.NewUpdater()
 

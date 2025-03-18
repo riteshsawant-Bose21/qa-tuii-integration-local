@@ -12,6 +12,10 @@ import (
 	"fusion/internal/server"
 )
 
+const (
+	databaseName = "fusion.db"
+)
+
 // TestMarkDirtyConcurrent checks for potential race conditions by calling MarkDirty concurrently.
 // (Run this test with `go test -race`.)
 func TestMarkDirtyConcurrent(t *testing.T) {
@@ -25,7 +29,7 @@ func TestMarkDirtyConcurrent(t *testing.T) {
 
 	// Create a temporary directory and file for our test state.
 	tmpDir := t.TempDir()
-	configPath := filepath.Join(tmpDir, "config.db")
+	configPath := filepath.Join(tmpDir, databaseName)
 
 	sm := server.NewStateManager("test_manager", false)
 	if err := sm.Set("testKey", "testValue"); err != nil {
@@ -67,12 +71,12 @@ func TestMarkDirtyConcurrent(t *testing.T) {
 	}
 }
 
-// TestLoadStateNonExistent verifies that when the state file does not exist,
-// LoadState logs an info message and returns nil (allowing the service to start with an empty state).
-func TestLoadStateNonExistent(t *testing.T) {
+// TestLoadActiveSnapshotNonExistent verifies that when the state file does not exist,
+// LoadActiveSnapshot logs an info message and returns nil (allowing the service to start with an empty state).
+func TestLoadActiveSnapshotNonExistent(t *testing.T) {
 
 	logging.InitLogger(logging.LogConfig{
-		NodeName:    "TestLoadStateNonExistent",
+		NodeName:    "TestLoadActiveSnapshotNonExistent",
 		LogDir:      "/tmp/persistence_test",
 		MaxFileSize: 100,
 		MaxFiles:    5,
@@ -88,16 +92,16 @@ func TestLoadStateNonExistent(t *testing.T) {
 		t.Fatalf("Failed to initialize persistence: %v", err)
 	}
 
-	// Call LoadState. Since the file doesn't exist, it should return nil.
-	if err := cp.LoadState(); err != nil {
-		t.Fatalf("LoadState failed on non-existent file: %v", err)
+	// Call LoadActiveSnapshot. Since the file doesn't exist, it should return nil.
+	if err := cp.LoadActiveSnapshot(); err != nil {
+		t.Fatalf("LoadActiveSnapshot failed on non-existent file: %v", err)
 	}
 }
 
-// TestSaveAndLoadState tests that saving and then loading the state using the latest key works as expected.
-func TestSaveAndLoadState(t *testing.T) {
+// TestSaveAndLoadActiveSnapshot tests that saving and then loading the state using the latest key works as expected.
+func TestSaveAndLoadActiveSnapshot(t *testing.T) {
 	tmpDir := t.TempDir()
-	configPath := filepath.Join(tmpDir, "config.db")
+	configPath := filepath.Join(tmpDir, databaseName)
 
 	sm := server.NewStateManager("testnode", false)
 	testKey, testValue := "testKey", "testValue"
@@ -128,8 +132,8 @@ func TestSaveAndLoadState(t *testing.T) {
 	defer newCP.Close()
 
 	// Load the saved state.
-	if err := newCP.LoadState(); err != nil {
-		t.Fatalf("LoadState failed: %v", err)
+	if err := newCP.LoadActiveSnapshot(); err != nil {
+		t.Fatalf("LoadActiveSnapshot failed: %v", err)
 	}
 
 	// Check that the state was applied.
@@ -143,10 +147,10 @@ func TestSaveAndLoadState(t *testing.T) {
 	}
 }
 
-// TestValidateStateFile verifies that after a proper save the ValidateState returns nil.
+// TestValidateStateFile verifies that after a proper save ValidateState returns without error.
 func TestValidateStateFile(t *testing.T) {
 	tmpDir := t.TempDir()
-	configPath := filepath.Join(tmpDir, "config.db")
+	configPath := filepath.Join(tmpDir, databaseName)
 
 	sm := server.NewStateManager("testnode", false)
 	if err := sm.Set("key", "value"); err != nil {
@@ -205,10 +209,10 @@ func TestChecksumCalculation(t *testing.T) {
 
 // TestActiveSnapshot tests the snapshot functionality.
 // It verifies that saving a snapshot and activating it via the active snapshot pointer
-// causes LoadState() to load the snapshot's state.
+// causes LoadActiveSnapshot() to load the snapshot's state.
 func TestActiveSnapshot(t *testing.T) {
 	tmpDir := t.TempDir()
-	configPath := filepath.Join(tmpDir, "config.db")
+	configPath := filepath.Join(tmpDir, databaseName)
 
 	// Initialize state manager and persistence.
 	sm := server.NewStateManager("testnode", false)
@@ -265,8 +269,8 @@ func TestActiveSnapshot(t *testing.T) {
 	}
 	defer newCP.Close()
 
-	if err := newCP.LoadState(); err != nil {
-		t.Fatalf("LoadState failed: %v", err)
+	if err := newCP.LoadActiveSnapshot(); err != nil {
+		t.Fatalf("LoadActiveSnapshot failed: %v", err)
 	}
 
 	newState := newSM.GetFullState()

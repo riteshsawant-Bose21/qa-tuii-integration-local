@@ -68,8 +68,8 @@ func CreateMemberlist(nodeName, bindAddr string, bindPort int,
 	if verbose {
 		MonitorClusterState(list)
 		StartHealthCheck(list)
-		StartStateVerification(list, stateManager)
 	}
+	StartStateVerification(list, stateManager)
 
 	return list, nil
 }

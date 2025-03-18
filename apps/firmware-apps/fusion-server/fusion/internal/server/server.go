@@ -402,25 +402,37 @@ func (s *ConfigServer) ListSnapshots(w http.ResponseWriter, r *http.Request) {
 }
 
 // CreateSnapshot handles POST /snapshots/create.
-// It accepts an optional JSON body {"name": "snapshotName"}.
-// If no name is provided, a timestamp-based name is generated.
+// It expects a query parameter "name" for the snapshot to create.
 func (s *ConfigServer) CreateSnapshot(w http.ResponseWriter, r *http.Request) {
 	if !s.IsPostRequest(w, r) {
 		return
 	}
 
-	var req struct {
-		Name string `json:"name"`
-	}
-	err := json.NewDecoder(r.Body).Decode(&req)
-	if err != nil && err != io.EOF {
-		http.Error(w, fmt.Sprintf("Invalid JSON: %v", err), http.StatusBadRequest)
+	snapshotName, err := getSingleQueryParam(r, "name")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	snapshotName := req.Name
 	if snapshotName == "" {
-		snapshotName = "snapshot_" + time.Now().UTC().Format("20060102_150405")
+		http.Error(w, "Snapshot name is required", http.StatusBadRequest)
+		return
 	}
+
+	if snapshotName == defaultSnapshotKey {
+		http.Error(w, "default snapshot cannot be created", http.StatusBadRequest)
+		return
+	}
+
+	exists, err := s.handler.HandleSnapshotExists(snapshotName)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error checking snapshot existence: %v", err), http.StatusInternalServerError)
+		return
+	}
+	if exists {
+		http.Error(w, "Snapshot already exists", http.StatusConflict)
+		return
+	}
+
 	if err := s.handler.HandleCreateSnapshot(snapshotName); err != nil {
 		http.Error(w, fmt.Sprintf("Error creating snapshot: %v", err), http.StatusInternalServerError)
 		return
@@ -434,25 +446,23 @@ func (s *ConfigServer) CreateSnapshot(w http.ResponseWriter, r *http.Request) {
 }
 
 // ActivateSnapshotHTTP handles PUT /snapshots/activate.
-// It expects a JSON body {"name": "snapshotName"}.
+// It expects a query parameter "name" for the snapshot to activate.
 func (s *ConfigServer) ActivateSnapshotHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPut {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	var req struct {
-		Name string `json:"name"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, fmt.Sprintf("Invalid JSON: %v", err), http.StatusBadRequest)
+	snapshotName, err := getSingleQueryParam(r, "name")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if req.Name == "" {
+	if snapshotName == "" {
 		http.Error(w, "Snapshot name is required", http.StatusBadRequest)
 		return
 	}
-	if err := s.handler.HandleActivateSnapshot(req.Name); err != nil {
+	if err := s.handler.HandleActivateSnapshot(snapshotName); err != nil {
 		http.Error(w, fmt.Sprintf("Error activating snapshot: %v", err), http.StatusInternalServerError)
 		return
 	}
@@ -460,7 +470,7 @@ func (s *ConfigServer) ActivateSnapshotHTTP(w http.ResponseWriter, r *http.Reque
 	w.Header().Set(api.ContentType, api.JsonContentType)
 	json.NewEncoder(w).Encode(map[string]string{
 		"status":   "snapshot activated",
-		"snapshot": req.Name,
+		"snapshot": snapshotName,
 	})
 }
 
@@ -481,6 +491,12 @@ func (s *ConfigServer) DeleteSnapshot(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Snapshot name is required", http.StatusBadRequest)
 		return
 	}
+
+	if snapshotName == defaultSnapshotKey {
+		http.Error(w, "default snapshot cannot be deleted", http.StatusBadRequest)
+		return
+	}
+
 	if err := s.handler.HandleDeleteSnapshot(snapshotName); err != nil {
 		http.Error(w, fmt.Sprintf("Error deleting snapshot: %v", err), http.StatusInternalServerError)
 		return
@@ -491,6 +507,22 @@ func (s *ConfigServer) DeleteSnapshot(w http.ResponseWriter, r *http.Request) {
 		"status":   "snapshot deleted",
 		"snapshot": snapshotName,
 	})
+}
+
+// GetSnapshotMetadata handles GET /snapshots/metadata
+func (s *ConfigServer) GetSnapshotMetadata(w http.ResponseWriter, r *http.Request) {
+	if !s.IsGetRequest(w, r) {
+		return
+	}
+
+	metadata, err := s.handler.HandleGetSnapshotMetadata()
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error getting snapshot metadata: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set(api.ContentType, api.JsonContentType)
+	json.NewEncoder(w).Encode(map[string]any{"metadata": metadata})
 }
 
 func (s *ConfigServer) IsGetRequest(w http.ResponseWriter, r *http.Request) bool {
