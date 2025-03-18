@@ -1064,6 +1064,8 @@ class telemetryManager
             }
         }
 
+        void meter_update_req_clean();
+
         void clear_publishers()
         {
             for (auto& pubs : publishers)

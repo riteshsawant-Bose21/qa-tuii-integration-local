@@ -2,6 +2,8 @@
 #include <sys/stat.h>
 #include "telemetry_msg_handler.h"
 
+#define  UPDATE_REQ_TIMEOUT_NS (1000000000L * 10)
+
 uint64_t get_realtime_ns();
 
 int bosepro::telemetryManager::send_data(const std::string destination_name,
@@ -43,7 +45,6 @@ int bosepro::telemetryManager::send_data(const std::string destination_name,
     return ret_val;
 }
 
-uint64_t meter_tstamp_ns;
 int bosepro::telemetryManager::process_rx_packet(std::string& packet)
 {
     std::string msg_name;
@@ -84,10 +85,6 @@ int bosepro::telemetryManager::process_rx_packet(std::string& packet)
                     // This is a meters_data message
                     if (msg_name.compare("update_meters_rsp") == 0)
                     {
-                        uint64_t temp_tstamp_ns = get_realtime_ns();
-
-                        meter_tstamp_ns = temp_tstamp_ns;
-
                         // The 'message' string was built in
                         // process_meter_data()
                         ret_val = send_meter_data(message);
@@ -149,7 +146,7 @@ void bosepro::telemetryManager::send_update_request()
     // Flush tracker of all unresponded reequests (timeout)
     if (lo_meter)
     {
-        meter_update_tracker.clear();
+        meter_update_req_clean();
     }
 
     for (auto& pubs : publishers)
@@ -301,4 +298,22 @@ void bosepro::telemetryManager::cleanup_dead_endpoints()
         }
     }
     deregister_endpoint_name.clear();
+}
+
+void bosepro::telemetryManager::meter_update_req_clean()
+{
+    uint64_t cur_time = get_realtime_ns();
+
+    for (auto req_entry = meter_update_tracker.begin();
+            req_entry != meter_update_tracker.end();)
+    {
+        if ((cur_time - req_entry->first) < UPDATE_REQ_TIMEOUT_NS)
+        {
+            req_entry++;
+        }
+        else
+        {
+            req_entry = meter_update_tracker.erase(req_entry);
+        }
+    }
 }
