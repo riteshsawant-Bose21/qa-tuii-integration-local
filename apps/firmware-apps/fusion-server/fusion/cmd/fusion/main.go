@@ -16,14 +16,12 @@ import (
 	"fusion/internal/network"
 	"fusion/internal/server"
 	"fusion/internal/timers"
+	"fusion/internal/version"
 
 	"github.com/hashicorp/memberlist"
 )
 
 var (
-	Version     string
-	Commit      string
-	BuildTime   string
 	nodeName    string
 	bindAddr    string
 	bindPort    int
@@ -33,15 +31,17 @@ var (
 )
 
 const (
-	fusionDataPath   = "/var/lib/fusion"
-	configDataPath   = fusionDataPath + "/fusion.db"
-	bleServiceUUID   = "B053"
-	bleCharacterUUID = "AD10"
+	bleCharacterUUID   = "AD10"
+	bleServiceUUID     = "B053"
+	fusionDataPath     = "/var/lib/fusion"
+	fusionDatabaseName = "fusion.db"
+	fusionDatabasePath = fusionDataPath + "/" + fusionDatabaseName
+	startupWaitDelay   = 100
 )
 
 func setupHTTPRoutes(server *server.ConfigServer, metrics *cluster.MetricsCollector, verbose bool) {
 	registerEndpoint("/", withLogging(server.HandleRoot, "root", verbose))
-	registerEndpoint("/dump", withLogging(server.DumpState, "dump", verbose))
+	registerEndpoint("/export", withLogging(server.ExportState, "export", verbose))
 	registerEndpoint("/endpoints", withLogging(server.GetEndpoints, "endpoints", verbose))
 	registerEndpoint("/getValue", withLogging(server.GetValue, "getValue", verbose))
 	registerEndpoint("/setValue", withLogging(server.SetValue, "setValue", verbose))
@@ -55,6 +55,9 @@ func setupHTTPRoutes(server *server.ConfigServer, metrics *cluster.MetricsCollec
 	registerEndpoint("/snapshots/activate", withLogging(server.ActivateSnapshotHTTP, "activateSnapshot", verbose))
 	registerEndpoint("/snapshots/delete", withLogging(server.DeleteSnapshot, "deleteSnapshot", verbose))
 	registerEndpoint("/snapshots/metadata", withLogging(server.GetSnapshotMetadata, "snapshotMetadata", verbose))
+	registerEndpoint("/snapshots/snapshot", withLogging(server.GetSnapshot, "getSnapshot", verbose))
+	registerEndpoint("/snapshots/export", withLogging(server.ExportSnapshots, "exportSnapshots", verbose))
+	registerEndpoint("/snapshots/import", withLogging(server.ImportSnapshots, "importSnapshots", verbose))
 	registerEndpoint("/uploadAudio", withLogging(server.UploadAudio, "uploadAudio", verbose))
 	registerEndpoint("/ws", withWebSocketMetrics(server.HandleWebSocket, metrics, verbose))
 }
@@ -115,7 +118,7 @@ func parseFlags() {
 	flag.Parse()
 
 	if *versionFlag {
-		log.Printf("Version: %s\nCommit: %s\nBuild Time: %s\n", Version, Commit, BuildTime)
+		log.Printf("Version: %s\nCommit: %s\nBuild Time: %s\n", version.Version, version.Commit, version.BuildTime)
 		os.Exit(0)
 	}
 
@@ -145,7 +148,7 @@ func initLogging(nodeName string, verbose bool) *logging.Logger {
 
 // initStateManager initializes the state manager.
 func initStateManager(nodeName string) *server.StateManager {
-	return server.NewStateManager(nodeName, verbose)
+	return server.NewStateManager(nodeName)
 }
 
 // initPersistence initializes the persistence layer.
@@ -282,7 +285,7 @@ func main() {
 
 	stateManager := initStateManager(nodeName)
 
-	persistence, err := initPersistence(configDataPath, stateManager)
+	persistence, err := initPersistence(fusionDatabasePath, stateManager)
 	if err != nil {
 		logger.Fatal("Failed to initialize persistence: %v", err)
 	}
@@ -331,9 +334,9 @@ func main() {
 
 	go startAPIServer(api.HTTPPort, &wg)
 
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(startupWaitDelay * time.Millisecond)
 	logger.Info("%s is ALIVE and RUNNING", nodeName)
-	logger.Info("Version: %s Commit: %s Build Time: %s", Version, Commit, BuildTime)
+	logger.Info("Version: %s Commit: %s Build Time: %s", version.Version, version.Commit, version.BuildTime)
 
 	wg.Wait()
 }

@@ -1,3 +1,5 @@
+//go:build controllers
+
 package main
 
 import (
@@ -59,15 +61,15 @@ func MockManager(t *testing.T) (*cxd.Manager, string, error) {
 
 func TestFullSystemIntegration(t *testing.T) {
 	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
+		t.Skip("Skipping test in short mode")
 	}
 
 	logging.InitLogger(logging.LogConfig{
 		NodeName:    "TestFullSystemIntegration",
-		LogDir:      "/tmp/test_manager_test",
+		LogDir:      "/tmp/cxd_test",
 		MaxFileSize: 100,
 		MaxFiles:    5,
-		LogLevel:    logging.DEBUG,
+		LogLevel:    logging.INFO,
 	})
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -128,6 +130,15 @@ func TestFullSystemIntegration(t *testing.T) {
 }
 
 func TestDeviceValues(t *testing.T) {
+
+	logging.InitLogger(logging.LogConfig{
+		NodeName:    "TestFullSystemIntegration",
+		LogDir:      "/tmp/cxd_test",
+		MaxFileSize: 100,
+		MaxFiles:    5,
+		LogLevel:    logging.INFO,
+	})
+
 	tests := []struct {
 		name      string
 		param     string
@@ -229,6 +240,15 @@ func TestDeviceValues(t *testing.T) {
 }
 
 func TestManagerControl(t *testing.T) {
+
+	logging.InitLogger(logging.LogConfig{
+		NodeName:    "TestFullSystemIntegration",
+		LogDir:      "/tmp/cxd_test",
+		MaxFileSize: 100,
+		MaxFiles:    5,
+		LogLevel:    logging.INFO,
+	})
+
 	manager, deviceID, err := MockManager(t)
 	if err != nil {
 		t.Fatalf("Failed to create mock manager: %v", err)

@@ -77,6 +77,76 @@ func SetGlobalLogger(l *Logger) {
 	instance = l
 }
 
+func (l *Logger) Debug(format string, args ...any) {
+	l.log(DEBUG, format, args...)
+}
+
+func (l *Logger) Info(format string, args ...any) {
+	l.log(INFO, format, args...)
+}
+
+func (l *Logger) Warn(format string, args ...any) {
+	l.log(WARN, format, args...)
+}
+
+func (l *Logger) Error(format string, args ...any) {
+	l.log(ERROR, format, args...)
+}
+
+func (l *Logger) Fatal(format string, args ...any) {
+	l.log(FATAL, format, args...)
+	time.Sleep(50 * time.Millisecond)
+	os.Exit(1)
+}
+
+// Flush drains the log channel by closing and re-creating it.
+// Note: In this implementation, Flush is used only to clear the buffer,
+// and does not mark the logger as closed.
+func (l *Logger) Flush() {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	// Close the channel safely if not already closed.
+	if !l.closed {
+		close(l.msgChan)
+		l.msgChan = make(chan string, 1000)
+	}
+}
+
+// Close marks the logger as closed and closes its channel and file.
+func (l *Logger) Close() {
+	l.mu.Lock()
+	if !l.closed {
+		l.closed = true
+		close(l.msgChan)
+	}
+	l.mu.Unlock()
+
+	if l.logFile != nil {
+		l.logFile.Close()
+	}
+}
+
+// NewDummyLogger returns a logger used for testing to avoid panics
+func NewDummyLogger() *Logger {
+	return &Logger{
+		// A dummy configuration; these values won’t really be used.
+		config: LogConfig{
+			NodeName:    "dummy",
+			LogDir:      "",
+			MaxFileSize: 1,
+			MaxFiles:    1,
+			LogLevel:    DEBUG,
+		},
+		// Use io.Discard so nothing is actually written.
+		logger:     log.New(io.Discard, "", 0),
+		fileLogger: log.New(io.Discard, "", 0),
+		// Create a channel, but mark the logger as closed so it never sends.
+		msgChan:     make(chan string, 1000),
+		initialized: true,
+		closed:      true,
+	}
+}
+
 func (l *Logger) initialize() {
 	if l.initialized {
 		return
@@ -208,74 +278,4 @@ func (l *Logger) log(level LogLevel, format string, args ...any) {
 			l.mu.RUnlock()
 		}
 	}()
-}
-
-func (l *Logger) Debug(format string, args ...any) {
-	l.log(DEBUG, format, args...)
-}
-
-func (l *Logger) Info(format string, args ...any) {
-	l.log(INFO, format, args...)
-}
-
-func (l *Logger) Warn(format string, args ...any) {
-	l.log(WARN, format, args...)
-}
-
-func (l *Logger) Error(format string, args ...any) {
-	l.log(ERROR, format, args...)
-}
-
-func (l *Logger) Fatal(format string, args ...any) {
-	l.log(FATAL, format, args...)
-	time.Sleep(50 * time.Millisecond)
-	os.Exit(1)
-}
-
-// Flush drains the log channel by closing and re-creating it.
-// Note: In this implementation, Flush is used only to clear the buffer,
-// and does not mark the logger as closed.
-func (l *Logger) Flush() {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	// Close the channel safely if not already closed.
-	if !l.closed {
-		close(l.msgChan)
-		l.msgChan = make(chan string, 1000)
-	}
-}
-
-// Close marks the logger as closed and closes its channel and file.
-func (l *Logger) Close() {
-	l.mu.Lock()
-	if !l.closed {
-		l.closed = true
-		close(l.msgChan)
-	}
-	l.mu.Unlock()
-
-	if l.logFile != nil {
-		l.logFile.Close()
-	}
-}
-
-// NewDummyLogger returns a logger used for testing to avoid panics
-func NewDummyLogger() *Logger {
-	return &Logger{
-		// A dummy configuration; these values won’t really be used.
-		config: LogConfig{
-			NodeName:    "dummy",
-			LogDir:      "",
-			MaxFileSize: 1,
-			MaxFiles:    1,
-			LogLevel:    DEBUG,
-		},
-		// Use io.Discard so nothing is actually written.
-		logger:     log.New(io.Discard, "", 0),
-		fileLogger: log.New(io.Discard, "", 0),
-		// Create a channel, but mark the logger as closed so it never sends.
-		msgChan:     make(chan string, 1000),
-		initialized: true,
-		closed:      true,
-	}
 }

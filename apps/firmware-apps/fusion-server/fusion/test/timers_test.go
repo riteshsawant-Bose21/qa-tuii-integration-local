@@ -26,7 +26,7 @@ func TestTimerManager(t *testing.T) {
 		LogDir:      "/tmp/test_timer_manager_test",
 		MaxFileSize: 100,
 		MaxFiles:    5,
-		LogLevel:    logging.DEBUG,
+		LogLevel:    logging.INFO,
 	})
 
 	logger := logging.GetLogger()
@@ -84,7 +84,7 @@ func TestExecutionHistoryRotation(t *testing.T) {
 		LogDir:      "/tmp/test_timer_manager_test",
 		MaxFileSize: 100,
 		MaxFiles:    5,
-		LogLevel:    logging.DEBUG,
+		LogLevel:    logging.INFO,
 	})
 
 	logger := logging.GetLogger()
@@ -136,7 +136,7 @@ func TestTimerManagerEndpoints(t *testing.T) {
 		LogDir:      "/tmp/test_timer_manager_test",
 		MaxFileSize: 100,
 		MaxFiles:    5,
-		LogLevel:    logging.DEBUG,
+		LogLevel:    logging.INFO,
 	})
 
 	logger := logging.GetLogger()
@@ -244,7 +244,7 @@ func TestTimerManagerEndpoints(t *testing.T) {
 	})
 }
 
-func TestHTTPEndpointErrorCases(t *testing.T) {
+func TestTimersEndpointErrorCases(t *testing.T) {
 	// Create temporary files for persistence.
 	tasksFile, err := os.CreateTemp("", "tasks_http_error_*.json")
 	require.NoError(t, err)
@@ -358,14 +358,14 @@ func TestHTTPEndpointErrorCases(t *testing.T) {
 	})
 }
 
-func TestTasksPersistence(t *testing.T) {
+func TestTimerTasksPersistence(t *testing.T) {
 
 	logging.InitLogger(logging.LogConfig{
 		NodeName:    "TimeManager",
 		LogDir:      "/tmp/test_timer_manager_test",
 		MaxFileSize: 100,
 		MaxFiles:    5,
-		LogLevel:    logging.DEBUG,
+		LogLevel:    logging.INFO,
 	})
 
 	logger := logging.GetLogger()
@@ -409,14 +409,14 @@ func TestTasksPersistence(t *testing.T) {
 	assert.Equal(t, "persist-task", tasks[0].ID)
 }
 
-func TestHistoryPersistence(t *testing.T) {
+func TestTimerHistoryPersistence(t *testing.T) {
 
 	logging.InitLogger(logging.LogConfig{
 		NodeName:    "TimeManager",
 		LogDir:      "/tmp/test_timer_manager_test",
 		MaxFileSize: 100,
 		MaxFiles:    5,
-		LogLevel:    logging.DEBUG,
+		LogLevel:    logging.INFO,
 	})
 
 	logging.SetGlobalLogger(logging.NewDummyLogger())
@@ -457,8 +457,8 @@ func TestHistoryPersistence(t *testing.T) {
 	assert.Equal(t, "Second execution", history[1].Description)
 }
 
-// TestUpdateNonExistentTask verifies that attempting to update a task that doesn't exist returns an error.
-func TestUpdateNonExistentTask(t *testing.T) {
+// TestTimerUpdateNonExistentTask verifies that attempting to update a task that doesn't exist returns an error.
+func TestTimerUpdateNonExistentTask(t *testing.T) {
 	// Create temporary files for persistence.
 	tasksFile, err := os.CreateTemp("", "tasks_update_nonexistent_*.json")
 	require.NoError(t, err)
@@ -480,8 +480,8 @@ func TestUpdateNonExistentTask(t *testing.T) {
 	assert.Contains(t, err.Error(), "no task found")
 }
 
-// TestRemoveNonExistentTask verifies that attempting to remove a non-existent task returns an error.
-func TestRemoveNonExistentTask(t *testing.T) {
+// TestTimerRemoveNonExistentTask verifies that attempting to remove a non-existent task returns an error.
+func TestTimerRemoveNonExistentTask(t *testing.T) {
 	// Create temporary files for persistence.
 	tasksFile, err := os.CreateTemp("", "tasks_remove_nonexistent_*.json")
 	require.NoError(t, err)
@@ -503,8 +503,8 @@ func TestRemoveNonExistentTask(t *testing.T) {
 	assert.Contains(t, err.Error(), "no task found")
 }
 
-// TestUpdateTaskInvalidCron verifies that updating an existing task with an invalid cron expression returns an error.
-func TestUpdateTaskInvalidCron(t *testing.T) {
+// TestTimerUpdateTaskInvalidCron verifies that updating an existing task with an invalid cron expression returns an error.
+func TestTimerUpdateTaskInvalidCron(t *testing.T) {
 	// Create temporary files for persistence.
 	tasksFile, err := os.CreateTemp("", "tasks_update_invalidcron_*.json")
 	require.NoError(t, err)
@@ -532,7 +532,7 @@ func TestUpdateTaskInvalidCron(t *testing.T) {
 	// assert.Contains(t, err.Error(), "expected")
 }
 
-func TestConcurrentModifications(t *testing.T) {
+func TestTimerConcurrentTaskModifications(t *testing.T) {
 	// Create temporary files for tasks and history persistence.
 	tasksFile, err := os.CreateTemp("", "tasks_concurrency_*.json")
 	require.NoError(t, err)

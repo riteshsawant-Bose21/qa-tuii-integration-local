@@ -29,10 +29,10 @@ Examples:
   # List all buckets:
   $0 fusion1 buckets
 
-  # List keys in the "state" bucket:
+  # List keys in the "fusion" bucket:
   $0 fusion1 keys state
 
-  # Retrieve the value for "mykey" in the "state" bucket:
+  # Retrieve the value for "mykey" in the "fusion" bucket:
   $0 fusion1 get state mykey | jq
 
   # Filter on a specific JSON key in the database

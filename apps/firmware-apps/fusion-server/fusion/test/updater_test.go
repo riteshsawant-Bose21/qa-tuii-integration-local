@@ -20,7 +20,7 @@ var executablePath = os.Executable
 // Integration test for the entire update process
 func TestPerformUpdate(t *testing.T) {
 	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
+		t.Skip("Skipping test in short mode")
 	}
 
 	logging.InitLogger(logging.LogConfig{
@@ -28,7 +28,7 @@ func TestPerformUpdate(t *testing.T) {
 		LogDir:      "/tmp/updater_test",
 		MaxFileSize: 100,
 		MaxFiles:    5,
-		LogLevel:    logging.DEBUG,
+		LogLevel:    logging.INFO,
 	})
 
 	// Determine the correct binary name based on runtime.GOOS and runtime.GOARCH
@@ -108,7 +108,7 @@ func TestPerformUpdate(t *testing.T) {
 
 func TestPerformRollback(t *testing.T) {
 	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
+		t.Skip("Skipping test in short mode")
 	}
 
 	logging.InitLogger(logging.LogConfig{
@@ -116,7 +116,7 @@ func TestPerformRollback(t *testing.T) {
 		LogDir:      "/tmp/rollback_test",
 		MaxFileSize: 100,
 		MaxFiles:    5,
-		LogLevel:    logging.DEBUG,
+		LogLevel:    logging.INFO,
 	})
 
 	// Determine the binary name based on runtime.GOOS and runtime.GOARCH

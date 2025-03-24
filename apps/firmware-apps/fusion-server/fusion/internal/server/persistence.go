@@ -1,23 +1,27 @@
 package server
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/logging"
+	"io"
+	"net/http"
 	"sync"
 	"time"
 
+	"github.com/hashicorp/memberlist"
 	"go.etcd.io/bbolt"
 )
 
 const (
-	snapshotMetadataBucket = "snapshot_metadata"
-	metadataKey            = "metadata"
-	defaultBucketName      = "state"
+	defaultBucketName      = "fusion"
 	defaultSnapshotKey     = "default"
+	metadataKey            = "metadata"
+	snapshotMetadataBucket = "snapshot_metadata"
 )
 
 // PersistentState represents the saved state structure.
@@ -34,7 +38,6 @@ type ConfigPersistence struct {
 	stateManager *StateManager
 	db           *bbolt.DB
 	verbose      bool
-
 	mutex        sync.RWMutex
 	lastSave     time.Time
 	saveDebounce time.Duration
@@ -70,8 +73,8 @@ func (p *ConfigPersistence) CalculateChecksum(state map[string]*api.StateEntry) 
 	return fmt.Sprintf("%x", hash), nil
 }
 
-// SaveMetadata saves the api.SnapshotMetadata into the metadata bucket.
-func (p *ConfigPersistence) SaveMetadata(meta api.SnapshotMetadata) error {
+// saveMetadata saves the api.SnapshotMetadata into the metadata bucket.
+func (p *ConfigPersistence) saveMetadata(meta api.SnapshotMetadata) error {
 	data, err := json.Marshal(meta)
 	if err != nil {
 		return fmt.Errorf("failed to marshal metadata: %w", err)
@@ -105,54 +108,6 @@ func (p *ConfigPersistence) LoadMetadata() (api.SnapshotMetadata, error) {
 	return meta, nil
 }
 
-// getActiveSnapshotKey retrieves the active snapshot key from metadata.
-func (p *ConfigPersistence) getActiveSnapshotKey() (string, error) {
-	meta, err := p.LoadMetadata()
-	if err != nil || meta.ActiveSnapshot == "" {
-		return defaultSnapshotKey, nil
-	}
-	return meta.ActiveSnapshot, nil
-}
-
-// persistState saves the current state under the given snapshot key.
-// Note that it does not update lastSave; the caller should update lastSave as needed.
-func (p *ConfigPersistence) persistState(snapshotKey string) (*PersistentState, error) {
-	state := p.stateManager.GetFullState()
-	checksum, err := p.CalculateChecksum(state)
-	if err != nil {
-		return nil, fmt.Errorf("failed to calculate checksum: %w", err)
-	}
-
-	ps := &PersistentState{
-		Version:   p.stateManager.GetVersion(),
-		Timestamp: time.Now().UTC(),
-		Checksum:  checksum,
-		State:     state,
-	}
-
-	data, err := json.Marshal(ps)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal state: %w", err)
-	}
-
-	err = p.db.Update(func(tx *bbolt.Tx) error {
-		bucket, err := tx.CreateBucketIfNotExists([]byte(defaultBucketName))
-		if err != nil {
-			return fmt.Errorf("failed to create bucket '%s': %w", defaultBucketName, err)
-		}
-		return bucket.Put([]byte(snapshotKey), data)
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to save state: %w", err)
-	}
-
-	if err := p.updateDBHash(); err != nil {
-		return nil, err
-	}
-
-	return ps, nil
-}
-
 // LoadActiveSnapshot ensures default buckets exist, loads the active snapshot, and activates it.
 func (p *ConfigPersistence) LoadActiveSnapshot() error {
 	if err := p.createDefaultBuckets(); err != nil {
@@ -168,7 +123,7 @@ func (p *ConfigPersistence) LoadActiveSnapshot() error {
 		return fmt.Errorf("failed to activate snapshot: %w", err)
 	}
 
-	logging.GetLogger().Info("Activated initial snapshot: %s", snapshotName)
+	logging.GetLogger().Debug("Activated initial snapshot: %s", snapshotName)
 	return nil
 }
 
@@ -195,7 +150,9 @@ func (p *ConfigPersistence) SaveState() error {
 		meta = api.SnapshotMetadata{}
 	}
 	meta.Timestamp = ps.Timestamp
-	if err := p.SaveMetadata(meta); err != nil {
+	meta.Valid = len(ps.State) > 0
+
+	if err := p.saveMetadata(meta); err != nil {
 		return fmt.Errorf("failed to update metadata: %w", err)
 	}
 
@@ -204,45 +161,6 @@ func (p *ConfigPersistence) SaveState() error {
 			ps.Version, ps.Checksum[:8], snapshotKey)
 	}
 	return nil
-}
-
-// createDefaultBuckets ensures that the metadata and default state buckets exist.
-// If a default snapshot is not present, it is created.
-func (p *ConfigPersistence) createDefaultBuckets() error {
-	if err := p.db.Update(func(tx *bbolt.Tx) error {
-		_, err := tx.CreateBucketIfNotExists([]byte(snapshotMetadataBucket))
-		return err
-	}); err != nil {
-		return fmt.Errorf("failed to create metadata bucket: %w", err)
-	}
-
-	return p.db.Update(func(tx *bbolt.Tx) error {
-		bucket, err := tx.CreateBucketIfNotExists([]byte(defaultBucketName))
-		if err != nil {
-			return fmt.Errorf("failed to create bucket '%s': %w", defaultBucketName, err)
-		}
-		if bucket.Get([]byte(defaultSnapshotKey)) == nil {
-			state := p.stateManager.GetFullState()
-			checksum, err := p.CalculateChecksum(state)
-			if err != nil {
-				return fmt.Errorf("failed to calculate checksum for default snapshot: %w", err)
-			}
-			ps := PersistentState{
-				Version:   p.stateManager.GetVersion(),
-				Timestamp: time.Now().UTC(),
-				Checksum:  checksum,
-				State:     state,
-			}
-			data, err := json.Marshal(ps)
-			if err != nil {
-				return fmt.Errorf("failed to marshal default snapshot: %w", err)
-			}
-			if err := bucket.Put([]byte(defaultSnapshotKey), data); err != nil {
-				return fmt.Errorf("failed to save default snapshot: %w", err)
-			}
-		}
-		return nil
-	})
 }
 
 // MarkDirty triggers a state save with debounce logic.
@@ -288,8 +206,8 @@ func (p *ConfigPersistence) ValidateState() error {
 	return nil
 }
 
-// SaveSnapshot saves the current state under a custom snapshot key.
-func (p *ConfigPersistence) SaveSnapshot(snapshotKey string) error {
+// CreateSnapshot saves the current state under a custom snapshot key.
+func (p *ConfigPersistence) CreateSnapshot(snapshotKey string) error {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
@@ -328,7 +246,7 @@ func (p *ConfigPersistence) ActivateSnapshot(snapshotKey string) error {
 		meta = api.SnapshotMetadata{}
 	}
 	meta.ActiveSnapshot = snapshotKey
-	if err := p.SaveMetadata(meta); err != nil {
+	if err := p.saveMetadata(meta); err != nil {
 		return fmt.Errorf("failed to update active snapshot metadata: %w", err)
 	}
 
@@ -370,7 +288,6 @@ func (p *ConfigPersistence) DeleteSnapshot(snapshotKey string) error {
 		return nil
 	})
 	if err != nil {
-		logging.GetLogger().Error("Deletion error for snapshot '%s': %v", snapshotKey, err)
 		return fmt.Errorf("failed to delete snapshot '%s': %w", snapshotKey, err)
 	}
 
@@ -378,16 +295,14 @@ func (p *ConfigPersistence) DeleteSnapshot(snapshotKey string) error {
 	meta, err := p.LoadMetadata()
 	if err == nil && meta.ActiveSnapshot == snapshotKey {
 		meta.ActiveSnapshot = ""
-		if err := p.SaveMetadata(meta); err != nil {
-			logging.GetLogger().Error("Failed to update metadata after deleting snapshot '%s': %v", snapshotKey, err)
+		if err := p.saveMetadata(meta); err != nil {
 			return fmt.Errorf("failed to update metadata after deleting active snapshot: %w", err)
 		}
 	}
 
 	// Update the overall DB hash
 	if err := p.updateDBHash(); err != nil {
-		logging.GetLogger().Error("Failed to update DB hash after deleting snapshot '%s': %v", snapshotKey, err)
-		return err
+		return fmt.Errorf("to update DB hash after deleting snapshot '%s': %v", snapshotKey, err)
 	}
 
 	return nil
@@ -442,6 +357,237 @@ func (p *ConfigPersistence) GetSnapshotMetadata() (api.SnapshotMetadata, error) 
 	return meta, nil
 }
 
+// GetSnapshot retrieves the snapshot data.
+func (p *ConfigPersistence) GetSnapshot(name string) (any, error) {
+	exists, err := p.SnapshotExists(name)
+	if err != nil {
+		return nil, fmt.Errorf("error checking snapshot existence: %w", err)
+	}
+	if !exists {
+		return nil, fmt.Errorf("snapshot does not exist")
+	}
+
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
+
+	var data []byte
+	err = p.db.View(func(tx *bbolt.Tx) error {
+		b := tx.Bucket([]byte(defaultBucketName))
+		if b == nil {
+			return fmt.Errorf("state bucket not found")
+		}
+		data = b.Get([]byte(name))
+		if data == nil {
+			return fmt.Errorf("snapshot '%s' not found", name)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// Unmarshal the raw JSON data into an any
+	var result any
+	if err := json.Unmarshal(data, &result); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal snapshot data: %w", err)
+	}
+	return result, nil
+}
+
+// ExportSnapshots retrieves the entire bbolt database in JSON.
+func (p *ConfigPersistence) ExportSnapshots() (any, error) {
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
+
+	// dbExport will hold the entire database content.
+	dbExport := make(map[string]map[string]any)
+
+	// Start a read-only transaction.
+	err := p.db.View(func(tx *bbolt.Tx) error {
+		// Iterate over every bucket in the database.
+		return tx.ForEach(func(bucketName []byte, b *bbolt.Bucket) error {
+			bucket := string(bucketName)
+			dbExport[bucket] = make(map[string]any)
+
+			// Iterate over each key/value pair in the bucket.
+			err := b.ForEach(func(k, v []byte) error {
+				var value any
+				// Try to unmarshal the JSON value.
+				if err := json.Unmarshal(v, &value); err != nil {
+					// If unmarshaling fails, store the raw string.
+					dbExport[bucket][string(k)] = string(v)
+				} else {
+					dbExport[bucket][string(k)] = value
+				}
+				return nil
+			})
+			return err
+		})
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to export snapshots: %w", err)
+	}
+	return dbExport, nil
+}
+
+// ImportSnapshots imports the snapshot data into the database
+func (p *ConfigPersistence) ImportSnapshots(importData map[string]any) error {
+
+	// Get the snapshots from the import (fusion bucket).
+	snapshotsData, ok := importData[defaultBucketName]
+	if !ok {
+		return fmt.Errorf("export does not contain fusion bucket")
+	}
+
+	// Assert snapshotsData is a map[string]any.
+	snapshots, ok := snapshotsData.(map[string]any)
+	if !ok {
+		return fmt.Errorf("snapshots data is not in the expected format")
+	}
+
+	// Replace the entire state bucket in an atomic transaction.
+	err := p.db.Update(func(tx *bbolt.Tx) error {
+		bucket, err := tx.CreateBucketIfNotExists([]byte(defaultBucketName))
+		if err != nil {
+			return fmt.Errorf("failed to create state bucket: %w", err)
+		}
+
+		// Clear existing keys.
+		var keysToDelete []string
+		err = bucket.ForEach(func(k, v []byte) error {
+			keysToDelete = append(keysToDelete, string(k))
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+		for _, k := range keysToDelete {
+			if err := bucket.Delete([]byte(k)); err != nil {
+				return fmt.Errorf("failed to delete key %s: %w", k, err)
+			}
+		}
+
+		// Insert new keys from the export.
+		for key, value := range snapshots {
+			// Marshal each snapshot value into JSON bytes.
+			marshaledValue, err := json.Marshal(value)
+			if err != nil {
+				return fmt.Errorf("failed to marshal snapshot value for key %s: %w", key, err)
+			}
+			if err := bucket.Put([]byte(key), marshaledValue); err != nil {
+				return fmt.Errorf("failed to put key %s: %w", key, err)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	// Update the overall database hash.
+	if err := p.updateDBHash(); err != nil {
+		return fmt.Errorf("failed to update DB hash after import: %w", err)
+	}
+	return nil
+}
+
+func (p *ConfigPersistence) SyncFullStateFromCluster(list *memberlist.Memberlist) error {
+	logger := logging.GetLogger()
+
+	// NodeSnapshot holds a member and its snapshot metadata.
+	type NodeSnapshot struct {
+		Member   *memberlist.Node
+		Metadata api.SnapshotMetadata
+	}
+
+	var snapshots []NodeSnapshot
+
+	// Query all live cluster members for their snapshot metadata.
+	members := list.Members()
+	for _, member := range members {
+		if member.State != memberlist.StateAlive {
+			continue
+		}
+		// Each node must expose its metadata at /snapshots/metadata.
+		url := fmt.Sprintf("http://%s%s/snapshots/metadata", member.Addr.String(), api.HTTPPort)
+		resp, err := http.Get(url)
+		if err != nil {
+			logger.Warn("Failed to get metadata from %s: %v", member.Name, err)
+			continue
+		}
+		body, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			logger.Warn("Error reading response body from %s: %v", member.Name, err)
+			continue
+		}
+		var metadata api.SnapshotMetadata
+		if err := json.Unmarshal(body, &metadata); err != nil {
+			logger.Warn("Failed to unmarshal JSON from %s: %v", member.Name, err)
+			continue
+		}
+		snapshots = append(snapshots, NodeSnapshot{Member: member, Metadata: metadata})
+	}
+
+	if len(snapshots) == 0 {
+		return fmt.Errorf("no snapshots available from cluster peers")
+	}
+
+	// Identify the node with the most recent full state (based on metadata timestamp).
+	leader := snapshots[0]
+	for _, s := range snapshots[1:] {
+		if s.Metadata.Timestamp.After(leader.Metadata.Timestamp) {
+			leader = s
+		}
+	}
+	logger.Info("Syncing full state from node %s with snapshot timestamp %v", leader.Member.Name, leader.Metadata.Timestamp)
+
+	// Fetch the full export from the leader node.
+	exportURL := fmt.Sprintf("http://%s%s/snapshots/export", leader.Member.Addr.String(), api.HTTPPort)
+	resp, err := http.Get(exportURL)
+	if err != nil {
+		return fmt.Errorf("failed to fetch full export from node %s: %w", leader.Member.Name, err)
+	}
+	exportData, err := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if err != nil {
+		return fmt.Errorf("failed to read full export data: %w", err)
+	}
+
+	var exportMap map[string]any
+	if err := json.Unmarshal(exportData, &exportMap); err != nil {
+		return fmt.Errorf("failed to unmarshal exportData: %w", err)
+	}
+
+	// Import the full export into the local database.
+	if err := p.ImportSnapshots(exportMap); err != nil {
+		return fmt.Errorf("failed to import full export: %w", err)
+	}
+	logger.Info("Local instance successfully synced with the leader's full state.")
+
+	// Propagate the full export to nodes that are out-of-sync.
+	// For each node with an older snapshot timestamp, POST the export to /snapshots/import.
+	for _, nodeSnap := range snapshots {
+		if nodeSnap.Metadata.Timestamp.Before(leader.Metadata.Timestamp) {
+			importURL := fmt.Sprintf("http://%s%s/snapshots/import", nodeSnap.Member.Addr.String(), api.HTTPPort)
+			resp, err := http.Post(importURL, "application/json", bytes.NewReader(exportData))
+			if err != nil {
+				logger.Warn("Failed to push full export to node %s: %v", nodeSnap.Member.Name, err)
+				continue
+			}
+			resp.Body.Close()
+			if resp.StatusCode != http.StatusOK {
+				logger.Warn("Node %s responded with status %d during sync", nodeSnap.Member.Name, resp.StatusCode)
+			} else {
+				logger.Info("Successfully pushed full export to node %s", nodeSnap.Member.Name)
+			}
+		}
+	}
+
+	logger.Info("Full cluster state synchronization complete.")
+	return nil
+}
+
 // getLastSave returns the last save time.
 func (p *ConfigPersistence) getLastSave() time.Time {
 	p.mutex.RLock()
@@ -460,7 +606,7 @@ func (p *ConfigPersistence) updateDBHash() error {
 		meta = api.SnapshotMetadata{}
 	}
 	meta.DBHash = newHash
-	return p.SaveMetadata(meta)
+	return p.saveMetadata(meta)
 }
 
 // computeDBHash computes a SHA-256 hash over all buckets and their key/value pairs.
@@ -481,4 +627,91 @@ func (p *ConfigPersistence) computeDBHash() (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(hash.Sum(nil)), nil
+}
+
+// createDefaultBuckets ensures that the metadata and default state buckets exist.
+// If a default snapshot is not present, it is created.
+func (p *ConfigPersistence) createDefaultBuckets() error {
+	if err := p.db.Update(func(tx *bbolt.Tx) error {
+		_, err := tx.CreateBucketIfNotExists([]byte(snapshotMetadataBucket))
+		return err
+	}); err != nil {
+		return fmt.Errorf("failed to create metadata bucket: %w", err)
+	}
+
+	return p.db.Update(func(tx *bbolt.Tx) error {
+		bucket, err := tx.CreateBucketIfNotExists([]byte(defaultBucketName))
+		if err != nil {
+			return fmt.Errorf("failed to create bucket '%s': %w", defaultBucketName, err)
+		}
+		if bucket.Get([]byte(defaultSnapshotKey)) == nil {
+			state := p.stateManager.GetFullState()
+			checksum, err := p.CalculateChecksum(state)
+			if err != nil {
+				return fmt.Errorf("failed to calculate checksum for default snapshot: %w", err)
+			}
+			ps := PersistentState{
+				Version:   p.stateManager.GetVersion(),
+				Timestamp: time.Now().UTC(),
+				Checksum:  checksum,
+				State:     state,
+			}
+			data, err := json.Marshal(ps)
+			if err != nil {
+				return fmt.Errorf("failed to marshal default snapshot: %w", err)
+			}
+			if err := bucket.Put([]byte(defaultSnapshotKey), data); err != nil {
+				return fmt.Errorf("failed to save default snapshot: %w", err)
+			}
+		}
+		return nil
+	})
+}
+
+// getActiveSnapshotKey retrieves the active snapshot key from metadata.
+func (p *ConfigPersistence) getActiveSnapshotKey() (string, error) {
+	meta, err := p.LoadMetadata()
+	if err != nil || meta.ActiveSnapshot == "" {
+		return defaultSnapshotKey, nil
+	}
+	return meta.ActiveSnapshot, nil
+}
+
+// persistState saves the current state under the given snapshot key.
+// Note that it does not update lastSave; the caller should update lastSave as needed.
+func (p *ConfigPersistence) persistState(snapshotKey string) (*PersistentState, error) {
+	state := p.stateManager.GetFullState()
+	checksum, err := p.CalculateChecksum(state)
+	if err != nil {
+		return nil, fmt.Errorf("failed to calculate checksum: %w", err)
+	}
+
+	ps := &PersistentState{
+		Version:   p.stateManager.GetVersion(),
+		Timestamp: time.Now().UTC(),
+		Checksum:  checksum,
+		State:     state,
+	}
+
+	data, err := json.Marshal(ps)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal state: %w", err)
+	}
+
+	err = p.db.Update(func(tx *bbolt.Tx) error {
+		bucket, err := tx.CreateBucketIfNotExists([]byte(defaultBucketName))
+		if err != nil {
+			return fmt.Errorf("failed to create bucket '%s': %w", defaultBucketName, err)
+		}
+		return bucket.Put([]byte(snapshotKey), data)
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to save state: %w", err)
+	}
+
+	if err := p.updateDBHash(); err != nil {
+		return nil, err
+	}
+
+	return ps, nil
 }

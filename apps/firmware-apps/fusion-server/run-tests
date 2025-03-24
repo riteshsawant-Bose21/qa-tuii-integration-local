@@ -9,6 +9,7 @@ function show_help() {
     echo "  --fusion      Run only fusion tests"     
     echo "  --logger      Run only logger tests"     
     echo "  --persistence Run only persistence tests"     
+    echo "  --short       Run short versions of all tests"     
     echo "  --snapshot    Run only snapshot tests"     
     echo "  --state       Run only state manager tests"     
     echo "  --timers      Run only timer tests"     
@@ -17,7 +18,7 @@ function show_help() {
     exit 1
 }
 
-test_type="all"
+test_type="short"
 vip="192.168.64.100:8080"
 
 while [[ $# -gt 0 ]]; do
@@ -44,6 +45,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --persistence)
             test_type="persistence"
+            shift
+            ;;
+        --short)
+            test_type="short"
             shift
             ;;
         --snapshot)
@@ -78,7 +83,7 @@ cd fusion/test || exit 1
 
 case "$test_type" in
     "all")
-        go test -v --race  ./... -args --auto --vip "$vip"
+        go test -v --race ./... -args --auto --vip "$vip"
         ;;
     "bluetooth")
         go test -v --race ./bluetooth_test.go
@@ -94,6 +99,9 @@ case "$test_type" in
         ;;
     "persistence")
         go test -v --race ./persistence_test.go
+        ;;
+    "short")
+        go test -v --race  -short -tags='!exclude' ./... -args --auto --vip "$vip"
         ;;
     "snapshot")
         go test -v --race ./snapshot_test.go

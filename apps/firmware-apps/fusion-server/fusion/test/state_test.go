@@ -12,7 +12,7 @@ import (
 )
 
 func TestSetAndGetSimpleValue(t *testing.T) {
-	sm := server.NewStateManager("node-1", false)
+	sm := server.NewStateManager("node-1")
 	value := "hello world"
 	if err := sm.Set("greeting", value); err != nil {
 		t.Fatalf("Set failed: %v", err)
@@ -28,7 +28,7 @@ func TestSetAndGetSimpleValue(t *testing.T) {
 }
 
 func TestApplyUpdateAndGetNestedValues(t *testing.T) {
-	sm := server.NewStateManager("node-1", false)
+	sm := server.NewStateManager("node-1")
 
 	// Create nested data with an array.
 	update := api.ConfigUpdate{
@@ -40,7 +40,6 @@ func TestApplyUpdateAndGetNestedValues(t *testing.T) {
 			},
 		},
 		Version: time.Now().UnixNano(),
-		NodeID:  "node-1",
 		Time:    time.Now().UTC(),
 	}
 	if err := sm.ApplyUpdate(update); err != nil {
@@ -88,10 +87,10 @@ func TestGetInvalidKey(t *testing.T) {
 		LogDir:      "/tmp/state_test",
 		MaxFileSize: 100,
 		MaxFiles:    5,
-		LogLevel:    logging.DEBUG,
+		LogLevel:    logging.INFO,
 	})
 
-	sm := server.NewStateManager("node-1", false)
+	sm := server.NewStateManager("node-1")
 	// No data has been set yet.
 	if _, ok := sm.Get("nonexistent.key"); ok {
 		t.Errorf("Expected key 'nonexistent.key' to be not found")
@@ -99,7 +98,7 @@ func TestGetInvalidKey(t *testing.T) {
 }
 
 func TestSubscribeNotification(t *testing.T) {
-	sm := server.NewStateManager("node-1", false)
+	sm := server.NewStateManager("node-1")
 	sub := sm.Subscribe()
 
 	// Apply an update.
@@ -108,7 +107,6 @@ func TestSubscribeNotification(t *testing.T) {
 			"foo": "bar",
 		},
 		Version: time.Now().UnixNano(),
-		NodeID:  "node-1",
 		Time:    time.Now().UTC(),
 	}
 	if err := sm.ApplyUpdate(update); err != nil {
@@ -124,7 +122,7 @@ func TestSubscribeNotification(t *testing.T) {
 }
 
 func TestMergeRemoteState(t *testing.T) {
-	sm := server.NewStateManager("node-1", false)
+	sm := server.NewStateManager("node-1")
 
 	// Local state: key "a" with version 100.
 	if err := sm.ApplyUpdate(api.ConfigUpdate{
@@ -132,7 +130,6 @@ func TestMergeRemoteState(t *testing.T) {
 			"a": "local",
 		},
 		Version: 100,
-		NodeID:  "node-1",
 		Time:    time.Now().UTC(),
 	}); err != nil {
 		t.Fatalf("ApplyUpdate failed: %v", err)
@@ -174,7 +171,7 @@ func TestMergeRemoteState(t *testing.T) {
 }
 
 func TestSetStateAndGetFullState(t *testing.T) {
-	sm := server.NewStateManager("node-1", false)
+	sm := server.NewStateManager("node-1")
 
 	// Prepare a new state.
 	newState := map[string]*api.StateEntry{
@@ -200,7 +197,7 @@ func TestSetStateAndGetFullState(t *testing.T) {
 }
 
 func TestNestedMergeMapsViaApplyUpdate(t *testing.T) {
-	sm := server.NewStateManager("node-1", false)
+	sm := server.NewStateManager("node-1")
 
 	// First update: add a nested map.
 	update1 := api.ConfigUpdate{
@@ -211,7 +208,6 @@ func TestNestedMergeMapsViaApplyUpdate(t *testing.T) {
 			},
 		},
 		Version: 100,
-		NodeID:  "node-1",
 		Time:    time.Now().UTC(),
 	}
 	if err := sm.ApplyUpdate(update1); err != nil {
@@ -226,7 +222,6 @@ func TestNestedMergeMapsViaApplyUpdate(t *testing.T) {
 			},
 		},
 		Version: 200,
-		NodeID:  "node-1",
 		Time:    time.Now().UTC(),
 	}
 	if err := sm.ApplyUpdate(update2); err != nil {
@@ -245,14 +240,13 @@ func TestNestedMergeMapsViaApplyUpdate(t *testing.T) {
 }
 
 func TestArrayIndexErrors(t *testing.T) {
-	sm := server.NewStateManager("node-1", false)
+	sm := server.NewStateManager("node-1")
 	// Set state with an array.
 	update := api.ConfigUpdate{
 		Data: map[string]any{
 			"numbers": []any{1, 2, 3},
 		},
 		Version: 300,
-		NodeID:  "node-1",
 		Time:    time.Now().UTC(),
 	}
 	if err := sm.ApplyUpdate(update); err != nil {
@@ -281,14 +275,13 @@ func TestArrayIndexErrors(t *testing.T) {
 }
 
 func TestArraySliceEdgeCases(t *testing.T) {
-	sm := server.NewStateManager("node-1", false)
+	sm := server.NewStateManager("node-1")
 	// Set state with an array.
 	update := api.ConfigUpdate{
 		Data: map[string]any{
 			"letters": []any{"a", "b", "c", "d"},
 		},
 		Version: 400,
-		NodeID:  "node-1",
 		Time:    time.Now().UTC(),
 	}
 	if err := sm.ApplyUpdate(update); err != nil {
@@ -325,7 +318,7 @@ func TestArraySliceEdgeCases(t *testing.T) {
 }
 
 func TestMultipleSubscribers(t *testing.T) {
-	sm := server.NewStateManager("node-1", false)
+	sm := server.NewStateManager("node-1")
 	sub1 := sm.Subscribe()
 	sub2 := sm.Subscribe()
 
@@ -334,7 +327,6 @@ func TestMultipleSubscribers(t *testing.T) {
 			"key": "value",
 		},
 		Version: 500,
-		NodeID:  "node-1",
 		Time:    time.Now().UTC(),
 	}
 	if err := sm.ApplyUpdate(update); err != nil {
@@ -361,7 +353,7 @@ func TestMultipleSubscribers(t *testing.T) {
 
 // Additional helper: test retrieval using a complex path for nested arrays.
 func TestGetWithComplexPath(t *testing.T) {
-	sm := server.NewStateManager("node-1", false)
+	sm := server.NewStateManager("node-1")
 
 	// Prepare a complex nested structure.
 	update := api.ConfigUpdate{
@@ -380,7 +372,6 @@ func TestGetWithComplexPath(t *testing.T) {
 			},
 		},
 		Version: 600,
-		NodeID:  "node-1",
 		Time:    time.Now().UTC(),
 	}
 	if err := sm.ApplyUpdate(update); err != nil {
@@ -412,14 +403,13 @@ func TestGetWithComplexPath(t *testing.T) {
 }
 
 func TestApplyUpdateWithClearFlag(t *testing.T) {
-	sm := server.NewStateManager("node-1", false)
+	sm := server.NewStateManager("node-1")
 	// First, apply a normal update.
 	update := api.ConfigUpdate{
 		Data: map[string]any{
 			"key": "value",
 		},
 		Version: 1000,
-		NodeID:  "node-1",
 		Time:    time.Now().UTC(),
 	}
 	if err := sm.ApplyUpdate(update); err != nil {
@@ -433,7 +423,6 @@ func TestApplyUpdateWithClearFlag(t *testing.T) {
 	clearUpdate := api.ConfigUpdate{
 		Data:    map[string]any{"irrelevant": "data"},
 		Version: 2000,
-		NodeID:  "node-1",
 		Time:    time.Now().UTC(),
 		Clear:   true,
 	}
@@ -449,14 +438,13 @@ func TestApplyUpdateWithClearFlag(t *testing.T) {
 }
 
 func TestMergeRemoteStateWithEqualVersion(t *testing.T) {
-	sm := server.NewStateManager("node-1", false)
+	sm := server.NewStateManager("node-1")
 	// Set local state with a given version.
 	localUpdate := api.ConfigUpdate{
 		Data: map[string]any{
 			"x": "local",
 		},
 		Version: 5000,
-		NodeID:  "node-1",
 		Time:    time.Now().UTC(),
 	}
 	if err := sm.ApplyUpdate(localUpdate); err != nil {

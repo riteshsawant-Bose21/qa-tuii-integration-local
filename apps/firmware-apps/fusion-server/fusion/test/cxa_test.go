@@ -1,3 +1,5 @@
+//go:build controllers
+
 package main
 
 import (

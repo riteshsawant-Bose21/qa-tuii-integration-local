@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"fusion/internal/api"
 	"fusion/internal/logging"
 	"io"
 	"mime/multipart"
@@ -117,7 +118,7 @@ func (u *Updater) PerformUpdate(newBinaryPath string) error {
 	return syscall.Exec(currentBinaryPath, os.Args, os.Environ())
 }
 
-func (u *Updater) PerformRemoteUpdate(message VersionMessage) error {
+func (u *Updater) PerformRemoteUpdate(message api.VersionMessage) error {
 
 	logger := logging.GetLogger()
 

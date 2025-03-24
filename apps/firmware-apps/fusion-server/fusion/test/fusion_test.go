@@ -20,6 +20,7 @@ import (
 const (
 	serverAddr      = "http://192.168.64.100:8080"
 	jsonContentType = "application/json"
+	testTimeout     = 5 * time.Second
 )
 
 // ClusterConfig holds the test configuration for the cluster
@@ -971,7 +972,7 @@ func TestClusterStateSync(t *testing.T) {
 			updateNode:   0,
 			verifyNodes:  []int{1, 2},
 			expectedSync: true,
-			timeout:      5 * time.Second,
+			timeout:      testTimeout,
 		},
 		{
 			name:         "Complex object sync",
@@ -980,7 +981,7 @@ func TestClusterStateSync(t *testing.T) {
 			updateNode:   1,
 			verifyNodes:  []int{0, 2},
 			expectedSync: true,
-			timeout:      5 * time.Second,
+			timeout:      testTimeout,
 		},
 		{
 			name:         "Array value sync",
@@ -989,7 +990,7 @@ func TestClusterStateSync(t *testing.T) {
 			updateNode:   2,
 			verifyNodes:  []int{0, 1},
 			expectedSync: true,
-			timeout:      5 * time.Second,
+			timeout:      testTimeout,
 		},
 	}
 

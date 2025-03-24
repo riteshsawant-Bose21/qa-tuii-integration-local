@@ -1,9 +1,8 @@
 package server
 
 import (
-	"encoding/json"
 	"fmt"
-	"sort"
+	"slices"
 	"sync"
 )
 
@@ -27,9 +26,13 @@ type BinaryChunk struct {
 	Final  bool   `json:"final"`  // Indicates if this is the last chunk
 }
 
-type VersionMessage struct {
-	Type    string          `json:"type"`
-	Payload json.RawMessage `json:"payload"`
+func IsValidBinaryUpdateType(updateType string) bool {
+	switch updateType {
+	case VersionRollback, VersionUpdate, UpdateChunk, UpdateMetadata:
+		return true
+	default:
+		return false
+	}
 }
 
 func NewBinaryAssembler(expectedSize int64) *BinaryAssembler {
@@ -72,7 +75,7 @@ func (ba *BinaryAssembler) Assemble() ([]byte, error) {
 	for offset := range ba.chunks {
 		offsets = append(offsets, offset)
 	}
-	sort.Slice(offsets, func(i, j int) bool { return offsets[i] < offsets[j] })
+	slices.Sort(offsets)
 
 	// Copy chunks in order
 	for _, offset := range offsets {

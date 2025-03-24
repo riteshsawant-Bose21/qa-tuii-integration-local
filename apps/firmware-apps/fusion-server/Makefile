@@ -15,7 +15,7 @@ COMMIT := $(shell git rev-parse --short HEAD)
 BUILD_TIME := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 
 # LDFLAGS to embed version info
-LDFLAGS=-ldflags "-X main.Version=$(VERSION) -X main.Commit=$(COMMIT) -X main.BuildTime=$(BUILD_TIME)"
+LDFLAGS = -ldflags "-X fusion/internal/version.Version=$(VERSION) -X fusion/internal/version.Commit=$(COMMIT) -X fusion/internal/version.BuildTime=$(BUILD_TIME)"
 
 # Force disable buffering for all commands
 SHELL := /bin/bash

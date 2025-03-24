@@ -49,80 +49,49 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 
 	logger := logging.GetLogger()
 
-	// Attempt to unmarshal into a generic map to check for a snapshot op.
-	var genericMsg map[string]any
-	if err := json.Unmarshal(msg, &genericMsg); err != nil {
-		logger.Error("Error unmarshaling message into generic map: %v", err)
+	var message api.NotifyMessage
+	if err := json.Unmarshal(msg, &message); err != nil {
+		logger.Error("Error unmarshaling message: %v", err)
 		return
 	}
 
-	// If an "op" field exists, assume this is a snapshot operation.
-	if opVal, ok := genericMsg["op"]; ok {
-		opStr, ok := opVal.(string)
-		if !ok {
-			logger.Error("Snapshot operation field is not a string")
+	// Check which message type was unmarshaled.
+	switch message.Operation {
+
+	case api.NotifyOpConfigUpdate:
+		if err := d.stateManager.ApplyUpdate(*message.ConfigUpdate); err != nil {
+			logger.Error("Error applying update: %v", err)
 			return
 		}
 
-		// Unmarshal into a SnapshotUpdate.
-		var snapshotUpdate api.SnapshotUpdate
-		if err := json.Unmarshal(msg, &snapshotUpdate); err != nil {
-			logger.Error("Error unmarshaling SnapshotUpdate: %v", err)
-			return
+	case api.NotifyOpSnapActivate:
+		if err := d.persistence.ActivateSnapshot(message.SnapshotUpdate.Name); err != nil {
+			logger.Error("Error activating snapshot: %v", err)
 		}
 
-		logger.Debug("Processing snapshot op %q for snapshot %q", opStr, snapshotUpdate.Name)
-		switch api.SnapshotOp(opStr) {
-		case api.SnapshotOpCreate:
-			if err := d.persistence.SaveSnapshot(snapshotUpdate.Name); err != nil {
-				logger.Error("Error creating snapshot: %v", err)
-			}
-		case api.SnapshotOpActivate:
-			if err := d.persistence.ActivateSnapshot(snapshotUpdate.Name); err != nil {
-				logger.Error("Error activating snapshot: %v", err)
-			}
-		case api.SnapshotOpDelete:
-			if err := d.persistence.DeleteSnapshot(snapshotUpdate.Name); err != nil {
-				logger.Error("Error deleting snapshot: %v", err)
-			}
-		default:
-			logger.Error("Unknown snapshot op: %s", opStr)
+	case api.NotifyOpSnapCreate:
+		if err := d.persistence.CreateSnapshot(message.SnapshotUpdate.Name); err != nil {
+			logger.Error("Error creating snapshot: %v", err)
 		}
-		// Exit early to prevent further processing.
-		return
-	}
 
-	// Handle binary version message.
-	var binaryMsg server.VersionMessage
-	if err := json.Unmarshal(msg, &binaryMsg); err == nil {
-		if err := d.updater.PerformRemoteUpdate(binaryMsg); err != nil {
+	case api.NotifyOpSnapDelete:
+		if err := d.persistence.DeleteSnapshot(message.SnapshotUpdate.Name); err != nil {
+			logger.Error("Error deleting snapshot: %v", err)
+		}
+
+	case api.NotifyOpSnapImport:
+		if err := d.persistence.ImportSnapshots(message.SnapshotUpdate.Data); err != nil {
+			logger.Error("Error deleting snapshot: %v", err)
+		}
+
+	case api.NotifyOpVersionUpdate:
+		if err := d.updater.PerformRemoteUpdate(*message.VersionMessage); err != nil {
 			logger.Error("PerformRemoteUpdate error: %v", err)
 		}
-		// Exit early to prevent further processing.
-		return
-	}
 
-	// Process config update.
-	var update api.ConfigUpdate
-	if err := json.Unmarshal(msg, &update); err != nil {
-		logger.Error("Error unmarshaling update: %v", err)
-		return
+	default:
+		logger.Error("Unknown message type")
 	}
-
-	if err := d.stateManager.ApplyUpdate(update); err != nil {
-		logger.Error("Error applying update: %v", err)
-		return
-	}
-
-	// Log the update for a representative key.
-	var updateKey string
-	for k := range update.Data {
-		updateKey = k
-		break
-	}
-
-	logger.Debug("Applied update for key %s from node %s (version: %d)",
-		updateKey, update.NodeID, update.Version)
 }
 
 func (d *ClusterDelegate) GetBroadcasts(overhead, limit int) [][]byte {

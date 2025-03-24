@@ -83,10 +83,10 @@
         },
         {
           "type": "http",
-          "name": "Dump Raw Data",
+          "name": "Export Raw Data",
           "seq": 6,
           "request": {
-            "url": "{{api_url}}/dump",
+            "url": "{{api_url}}/export",
             "method": "GET",
             "headers": [],
             "params": [],
@@ -466,13 +466,13 @@
           "name": "Delete",
           "seq": 2,
           "request": {
-            "url": "{{api_url}}/snapshots/delete?name=TestSnapshot",
+            "url": "{{api_url}}/snapshots/delete?name=test_snapshot_delete",
             "method": "DELETE",
             "headers": [],
             "params": [
               {
                 "name": "name",
-                "value": "TestSnapshot",
+                "value": "test_snapshot_delete",
                 "type": "query",
                 "enabled": true
               }
@@ -530,13 +530,13 @@
           "name": "Activate",
           "seq": 4,
           "request": {
-            "url": "{{api_url}}/snapshots/activate?name=TestSnapshot",
+            "url": "{{api_url}}/snapshots/activate?name=default",
             "method": "PUT",
             "headers": [],
             "params": [
               {
                 "name": "name",
-                "value": "TestSnapshot",
+                "value": "default",
                 "type": "query",
                 "enabled": true
               }
@@ -568,6 +568,89 @@
             "params": [],
             "body": {
               "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Snapshot",
+          "seq": 8,
+          "request": {
+            "url": "{{api_url}}/snapshots/snapshot?name=default",
+            "method": "GET",
+            "headers": [],
+            "params": [
+              {
+                "name": "name",
+                "value": "default",
+                "type": "query",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Export",
+          "seq": 6,
+          "request": {
+            "url": "{{api_url}}/snapshots/export",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Import",
+          "seq": 7,
+          "request": {
+            "url": "{{api_url}}/snapshots/import",
+            "method": "POST",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "json",
+              "json": "{\n}",
               "formUrlEncoded": [],
               "multipartForm": [],
               "file": []

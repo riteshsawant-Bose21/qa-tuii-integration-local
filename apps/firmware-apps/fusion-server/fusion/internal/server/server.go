@@ -26,7 +26,7 @@ const (
 )
 
 type ConfigServer struct {
-	nodeName    string
+	node        string
 	handler     *Handler
 	wsClients   map[*websocket.Conn]bool
 	wsLock      sync.RWMutex
@@ -40,9 +40,9 @@ type Endpoints struct {
 	Metrics   string   `json:"metrics"`
 }
 
-func NewConfigServer(nodeName string, handler *Handler, clusterList *memberlist.Memberlist) *ConfigServer {
+func NewConfigServer(node string, handler *Handler, clusterList *memberlist.Memberlist) *ConfigServer {
 	server := &ConfigServer{
-		nodeName:  nodeName,
+		node:      node,
 		handler:   handler,
 		wsClients: make(map[*websocket.Conn]bool),
 		upgrader: websocket.Upgrader{
@@ -60,11 +60,7 @@ func NewConfigServer(nodeName string, handler *Handler, clusterList *memberlist.
 	return server
 }
 
-func (s *ConfigServer) BroadcastUpdate(update map[string]any) error {
-	message := map[string]any{
-		"type": "set",
-		"data": update,
-	}
+func (s *ConfigServer) BroadcastUpdate(message api.NotifyMessage) error {
 
 	s.wsLock.RLock()
 	defer s.wsLock.RUnlock()
@@ -156,7 +152,7 @@ func (s *ConfigServer) UpdateValue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	configData := s.handler.transformState(s.handler.stateManager.GetFullState())
+	configData := TransformState(s.handler.stateManager.GetFullState())
 
 	// Create a deep copy of configData to preserve the original configuration.
 	originalConfig, err := deepCopy(configData)
@@ -193,7 +189,7 @@ func (s *ConfigServer) UpdateValue(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *ConfigServer) DumpState(w http.ResponseWriter, r *http.Request) {
+func (s *ConfigServer) ExportState(w http.ResponseWriter, r *http.Request) {
 
 	if !s.IsGetRequest(w, r) {
 		return
@@ -298,56 +294,6 @@ func (s *ConfigServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *ConfigServer) getClusterIPs() []string {
-	var ips []string
-	for _, member := range s.clusterList.Members() {
-		// Extract IP address of each member
-		ips = append(ips, member.Addr.String())
-	}
-	return ips
-}
-
-func (s *ConfigServer) handleWebSocketMessage(conn *websocket.Conn, data []byte) {
-	response, err := s.handler.HandleWebSocketMessage(data)
-	if err != nil {
-		if err := conn.WriteJSON(map[string]any{
-			"type":    "error",
-			"message": err.Error(),
-		}); err != nil {
-			logging.GetLogger().Error("Error sending error response: %v", err)
-		}
-		return
-	}
-
-	if err := conn.WriteJSON(response); err != nil {
-		logging.GetLogger().Error("Error sending response: %v", err)
-	}
-}
-
-func (s *ConfigServer) DownloadState(w http.ResponseWriter, r *http.Request) {
-
-	if !s.IsGetRequest(w, r) {
-		return
-	}
-
-	response, err := s.handler.HandleDownload()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set(api.ContentType, api.JsonContentType)
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=config_export_%s.json",
-		time.Now().UTC().Format("20060102_150405")))
-
-	encoder := json.NewEncoder(w)
-	encoder.SetIndent("", "  ")
-	if err := encoder.Encode(response); err != nil {
-		logging.GetLogger().Error("Export state failed: %v", err)
-		http.Error(w, "Error exporting state", http.StatusInternalServerError)
-	}
-}
-
 func (s *ConfigServer) HandleRoot(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
 		http.NotFound(w, r)
@@ -401,6 +347,35 @@ func (s *ConfigServer) ListSnapshots(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]any{"snapshots": snapshots})
 }
 
+// ActivateSnapshotHTTP handles PUT /snapshots/activate.
+// It expects a query parameter "name" for the snapshot to activate.
+func (s *ConfigServer) ActivateSnapshotHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	snapshotName, err := getSingleQueryParam(r, "name")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if snapshotName == "" {
+		http.Error(w, "Snapshot name is required", http.StatusBadRequest)
+		return
+	}
+	if err := s.handler.HandleActivateSnapshot(snapshotName); err != nil {
+		http.Error(w, fmt.Sprintf("Error activating snapshot: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set(api.ContentType, api.JsonContentType)
+	json.NewEncoder(w).Encode(map[string]string{
+		"status":   "snapshot activated",
+		"snapshot": snapshotName,
+	})
+}
+
 // CreateSnapshot handles POST /snapshots/create.
 // It expects a query parameter "name" for the snapshot to create.
 func (s *ConfigServer) CreateSnapshot(w http.ResponseWriter, r *http.Request) {
@@ -441,35 +416,6 @@ func (s *ConfigServer) CreateSnapshot(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set(api.ContentType, api.JsonContentType)
 	json.NewEncoder(w).Encode(map[string]string{
 		"status":   "snapshot created",
-		"snapshot": snapshotName,
-	})
-}
-
-// ActivateSnapshotHTTP handles PUT /snapshots/activate.
-// It expects a query parameter "name" for the snapshot to activate.
-func (s *ConfigServer) ActivateSnapshotHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPut {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	snapshotName, err := getSingleQueryParam(r, "name")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	if snapshotName == "" {
-		http.Error(w, "Snapshot name is required", http.StatusBadRequest)
-		return
-	}
-	if err := s.handler.HandleActivateSnapshot(snapshotName); err != nil {
-		http.Error(w, fmt.Sprintf("Error activating snapshot: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set(api.ContentType, api.JsonContentType)
-	json.NewEncoder(w).Encode(map[string]string{
-		"status":   "snapshot activated",
 		"snapshot": snapshotName,
 	})
 }
@@ -525,6 +471,76 @@ func (s *ConfigServer) GetSnapshotMetadata(w http.ResponseWriter, r *http.Reques
 	json.NewEncoder(w).Encode(map[string]any{"metadata": metadata})
 }
 
+// GetSnapshot handles GET /snapshots/snapshot
+func (s *ConfigServer) GetSnapshot(w http.ResponseWriter, r *http.Request) {
+	if !s.IsGetRequest(w, r) {
+		return
+	}
+
+	snapshotName, err := getSingleQueryParam(r, "name")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if snapshotName == "" {
+		http.Error(w, "Snapshot name is required", http.StatusBadRequest)
+		return
+	}
+
+	snapshot, err := s.handler.HandleGetSnapshot(snapshotName)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error getting snapshot: %v", err), http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set(api.ContentType, api.JsonContentType)
+	json.NewEncoder(w).Encode(snapshot)
+}
+
+// ExportSnapshots handles POST /snapshots/export
+func (s *ConfigServer) ExportSnapshots(w http.ResponseWriter, r *http.Request) {
+	if !s.IsGetRequest(w, r) {
+		return
+	}
+
+	snapshots, err := s.handler.HandleExportSnapshots()
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error exporting snapshots: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set(api.ContentType, api.JsonContentType)
+	json.NewEncoder(w).Encode(snapshots)
+}
+
+// ImportSnapshots handles POST /snapshots/import
+func (s *ConfigServer) ImportSnapshots(w http.ResponseWriter, r *http.Request) {
+	if !s.IsPostRequest(w, r) {
+		return
+	}
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error reading request body: %v", err), http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+
+	// Unmarshal the JSON data into the map
+	var data map[string]any
+	err = json.Unmarshal(body, &data)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("error unmarshaling json: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	err = s.handler.HandleImportSnapshots(data)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error importing snapshots: %v", err), http.StatusInternalServerError)
+		return
+	}
+}
+
 func (s *ConfigServer) IsGetRequest(w http.ResponseWriter, r *http.Request) bool {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -547,6 +563,38 @@ func (s *ConfigServer) IsPatchRequest(w http.ResponseWriter, r *http.Request) bo
 		return false
 	}
 	return true
+}
+
+func (s *ConfigServer) ClearAllData(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if err := s.handler.HandleClearAllData(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set(api.ContentType, api.JsonContentType)
+	json.NewEncoder(w).Encode(map[string]any{
+		"status":  "success",
+		"message": "All data cleared successfully",
+	})
+}
+
+func (s *ConfigServer) GetMembers(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	members := s.handler.list.Members()
+	w.Header().Set(api.ContentType, api.JsonContentType)
+	if err := json.NewEncoder(w).Encode(members); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 // GetVIPAddress returns the VIP address retrieved from keepalived
@@ -702,4 +750,30 @@ func calculateSliceDiff(oldSlice, newSlice []any) any {
 		return diffMap
 	}
 	return nil
+}
+
+func (s *ConfigServer) getClusterIPs() []string {
+	var ips []string
+	for _, member := range s.clusterList.Members() {
+		// Extract IP address of each member
+		ips = append(ips, member.Addr.String())
+	}
+	return ips
+}
+
+func (s *ConfigServer) handleWebSocketMessage(conn *websocket.Conn, data []byte) {
+	response, err := s.handler.HandleWebSocketMessage(data)
+	if err != nil {
+		if err := conn.WriteJSON(map[string]any{
+			"type":    "error",
+			"message": err.Error(),
+		}); err != nil {
+			logging.GetLogger().Error("Error sending error response: %v", err)
+		}
+		return
+	}
+
+	if err := conn.WriteJSON(response); err != nil {
+		logging.GetLogger().Error("Error sending response: %v", err)
+	}
 }
