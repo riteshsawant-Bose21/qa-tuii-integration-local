@@ -62,17 +62,23 @@ if [ "$PACKAGE" = true ]; then
     commit_id=$(git rev-parse HEAD)
     full_version=$VERSION
 
+    # Jenkins will set a 'branchName' environment variable, but for local builds we need to get it.
+    BRANCH=${branchName:-}
+    if [ -z "$BRANCH" ]; then
+        BRANCH=$(git rev-parse --abbrev-ref HEAD)
+    fi
+
     cat << EOF_VERSION > build/fusion-server.info
 APP="fusion-server"
 VERSION="$VERSION"
-BRANCH="$branchName"
+BRANCH="$BRANCH"
 COMMIT_ID="$commit_id"
 COMMIT_DATE="$(TZ=UTC0 git --no-pager log -1 --pretty='format:%cd' --date='format-local:%Y-%m-%dT%H:%M:%S+00:00')"
 BUILD_DATE="$(date -u -Iseconds)"
 EOF_VERSION
     
     tar -czhf "build/fusion-server_${full_version}.tar.gz" scripts/*.service scripts/generate_cloud_config.sh \
-              build/$BINARY_NAME build/fusion-server.info
+              build/$BINARY_NAME build/fusion-server.info scripts/fusion-server-start.sh
     rm build/fusion-server.info
 fi
 
