@@ -7,7 +7,7 @@ import groovy.json.JsonOutput
 def VERSION = ''
 def JobCleanup = new JenkinsJobCleanup()
 
-NEXUS_TARGET = "Fusion-DSP/%s/%s/%s/%s"
+NEXUS_TARGET = "Fusion-DSP/%s/%s"
 
 pipeline {
 	agent { label 'pro-fusion-container' }
