@@ -10,11 +10,11 @@ import (
 type ClusterDelegate struct {
 	nodeID       string
 	stateManager *server.StateManager
-	persistence  *server.ConfigPersistence
+	persistence  *server.Persistence
 	updater      *server.Updater
 }
 
-func NewClusterDelegate(nodeID string, stateManager *server.StateManager, persistence *server.ConfigPersistence, updater *server.Updater) *ClusterDelegate {
+func NewClusterDelegate(nodeID string, stateManager *server.StateManager, persistence *server.Persistence, updater *server.Updater) *ClusterDelegate {
 	return &ClusterDelegate{
 		nodeID:       nodeID,
 		stateManager: stateManager,

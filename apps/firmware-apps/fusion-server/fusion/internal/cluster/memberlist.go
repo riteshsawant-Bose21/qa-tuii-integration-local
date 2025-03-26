@@ -31,7 +31,7 @@ const (
 
 // CreateMemberlist creates and configures a new memberlist instance
 func CreateMemberlist(nodeName, bindAddr string, bindPort int,
-	stateManager *server.StateManager, persistence *server.ConfigPersistence, updater *server.Updater, verbose bool) (*memberlist.Memberlist, error) {
+	stateManager *server.StateManager, persistence *server.Persistence, updater *server.Updater, verbose bool) (*memberlist.Memberlist, error) {
 	config := memberlist.DefaultLANConfig()
 	config.Name = nodeName
 	config.BindAddr = bindAddr
@@ -58,36 +58,18 @@ func CreateMemberlist(nodeName, bindAddr string, bindPort int,
 		return nil, fmt.Errorf("failed to create memberlist: %v", err)
 	}
 
-	err = JoinMemberlist(nodeName, list, bindAddr)
-	if err != nil {
-		return nil, fmt.Errorf("failed to join cluster after retries: %v", err)
-	}
-
-	RejoinClusterMonitor(nodeName, bindAddr, list)
-
 	if verbose {
 		MonitorClusterState(list)
 		StartHealthCheck(list)
 	}
-	StartStateVerification(list, stateManager)
 
 	return list, nil
 }
 
-// GetClusterIPs retrieves the list of IP addresses of all nodes in the memberlist cluster.
-func GetClusterIPs(mList *memberlist.Memberlist) []string {
-	var ips []string
-	for _, member := range mList.Members() {
-		// Extract IP address of each member
-		ips = append(ips, member.Addr.String())
-	}
-	return ips
-}
-
 // JoinMemberlist adds the node to the memberlist
-func JoinMemberlist(nodeName string, list *memberlist.Memberlist, bindAddr string) error {
+func (c *Cluster) JoinMemberlist() error {
 
-	joinAddrs, err := getJoinAddresses(bindAddr)
+	joinAddrs, err := c.getJoinAddresses(c.bindAddr)
 	if err != nil {
 		return err
 	}
@@ -100,13 +82,13 @@ func JoinMemberlist(nodeName string, list *memberlist.Memberlist, bindAddr strin
 
 	for retries := range retryTimes {
 
-		n, err := list.Join(joinAddrs)
+		n, err := c.Memberlist.Join(joinAddrs)
 		if err == nil {
-			logger.Info("[MEMBERLIST-%s] Successfully joined cluster with %d nodes", nodeName, n)
+			logger.Info("[MEMBERLIST-%s] Successfully joined cluster with %d nodes", c.nodeName, n)
 			return nil
 		}
 
-		logger.Warn("[MEMBERLIST-%s] Join attempt %d failed: %v", nodeName, retries+1, err)
+		logger.Warn("[MEMBERLIST-%s] Join attempt %d failed: %v", c.nodeName, retries+1, err)
 
 		time.Sleep(retryInterval * time.Second)
 	}
@@ -115,14 +97,14 @@ func JoinMemberlist(nodeName string, list *memberlist.Memberlist, bindAddr strin
 }
 
 // IsMember returns true if the address is part of the memberlist
-func IsMember(address string, list *memberlist.Memberlist) (bool, error) {
+func (c *Cluster) IsMember() (bool, error) {
 
-	liveAddrs, err := GetLiveNodeAddresses()
+	liveAddrs, err := c.GetLiveNodeAddresses()
 	if err != nil {
 		return false, err
 	}
 
-	if slices.Contains(liveAddrs, address) {
+	if slices.Contains(liveAddrs, c.bindAddr) {
 		return true, nil
 	}
 
@@ -130,14 +112,9 @@ func IsMember(address string, list *memberlist.Memberlist) (bool, error) {
 }
 
 // GetLiveNodeAddresses a list of live node addresses
-func GetLiveNodeAddresses() ([]string, error) {
+func (c *Cluster) GetLiveNodeAddresses() ([]string, error) {
 
-	vip, err := server.GetVIPAddress()
-	if err != nil {
-		return nil, fmt.Errorf("unable to retrieve VIP: %w", err)
-	}
-
-	url := fmt.Sprintf("http://%s%s/members", vip, api.HTTPPort)
+	url := fmt.Sprintf("http://%s%s/members", c.vip, api.HTTPPort)
 	resp, err := http.Get(url)
 	if err != nil {
 		if errors.Is(err, syscall.ECONNREFUSED) {
@@ -169,9 +146,9 @@ func GetLiveNodeAddresses() ([]string, error) {
 }
 
 // getJoinAddresses returns a list of memberlist member addresses
-func getJoinAddresses(bindAddr string) ([]string, error) {
+func (c *Cluster) getJoinAddresses(bindAddr string) ([]string, error) {
 
-	joinAddrs, err := GetLiveNodeAddresses()
+	joinAddrs, err := c.GetLiveNodeAddresses()
 	if err != nil {
 		return nil, err
 	}

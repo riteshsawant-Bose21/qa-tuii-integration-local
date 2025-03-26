@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"fusion/internal/logging"
-	"fusion/internal/server"
 
 	"github.com/hashicorp/memberlist"
 )
@@ -35,18 +34,5 @@ func StartHealthCheck(list *memberlist.Memberlist) {
 
 			time.Sleep(checkInterval * time.Second)
 		}
-	}()
-}
-
-// StartStateVerification starts periodic state verification
-func StartStateVerification(list *memberlist.Memberlist, stateManager *server.StateManager) {
-	go func() {
-
-		for {
-			stateManager.ValidateMemberState(list)
-			server.ValidateSnapshots(list)
-			time.Sleep(checkInterval * time.Second)
-		}
-
 	}()
 }

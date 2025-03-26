@@ -45,7 +45,7 @@ func TestActiveSnapshot(t *testing.T) {
 		t.Fatalf("Failed to set initial state: %v", err)
 	}
 
-	cp, err := server.NewConfigPersistence(configPath, sm, false)
+	cp, err := server.NewPersistence(configPath, sm, false)
 	if err != nil {
 		t.Fatalf("Failed to initialize persistence: %v", err)
 	}
@@ -88,7 +88,7 @@ func TestActiveSnapshot(t *testing.T) {
 
 	// Simulate a new instance loading state to verify the active pointer.
 	newSM := server.NewStateManager("testnode")
-	newCP, err := server.NewConfigPersistence(configPath, newSM, false)
+	newCP, err := server.NewPersistence(configPath, newSM, false)
 	if err != nil {
 		t.Fatalf("Failed to reinitialize persistence: %v", err)
 	}
@@ -124,7 +124,7 @@ func TestLoadActiveSnapshotNonExistent(t *testing.T) {
 	configPath := filepath.Join(tmpDir, "nonexistent.db")
 
 	sm := server.NewStateManager("testnode")
-	cp, err := server.NewConfigPersistence(configPath, sm, false)
+	cp, err := server.NewPersistence(configPath, sm, false)
 	if err != nil {
 		t.Fatalf("Failed to initialize persistence: %v", err)
 	}
@@ -147,7 +147,7 @@ func TestSaveAndLoadActiveSnapshot(t *testing.T) {
 	}
 
 	// Create the persistence object.
-	cp, err := server.NewConfigPersistence(configPath, sm, false)
+	cp, err := server.NewPersistence(configPath, sm, false)
 	if err != nil {
 		t.Fatalf("Failed to initialize persistence: %v", err)
 	}
@@ -162,7 +162,7 @@ func TestSaveAndLoadActiveSnapshot(t *testing.T) {
 
 	// Simulate restart by creating a new persistence object.
 	newSM := server.NewStateManager("testnode")
-	newCP, err := server.NewConfigPersistence(configPath, newSM, false)
+	newCP, err := server.NewPersistence(configPath, newSM, false)
 	if err != nil {
 		t.Fatalf("Failed to initialize persistence: %v", err)
 	}

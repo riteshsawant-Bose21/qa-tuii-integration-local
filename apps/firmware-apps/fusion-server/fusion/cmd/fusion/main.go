@@ -17,8 +17,6 @@ import (
 	"fusion/internal/server"
 	"fusion/internal/timers"
 	"fusion/internal/version"
-
-	"github.com/hashicorp/memberlist"
 )
 
 var (
@@ -39,10 +37,10 @@ const (
 	startupWaitDelay   = 100
 )
 
-func setupHTTPRoutes(server *server.ConfigServer, metrics *cluster.MetricsCollector, verbose bool) {
+func setupHTTPRoutes(cluster *cluster.Cluster, server *server.ConfigServer, metrics *cluster.MetricsCollector, verbose bool) {
 	registerEndpoint("/", withLogging(server.HandleRoot, "root", verbose))
 	registerEndpoint("/export", withLogging(server.ExportState, "export", verbose))
-	registerEndpoint("/endpoints", withLogging(server.GetEndpoints, "endpoints", verbose))
+	registerEndpoint("/endpoints", withLogging(cluster.GetEndpoints, "endpoints", verbose))
 	registerEndpoint("/getValue", withLogging(server.GetValue, "getValue", verbose))
 	registerEndpoint("/setValue", withLogging(server.SetValue, "setValue", verbose))
 	registerEndpoint("/updateValue", withLogging(server.UpdateValue, "updateValue", verbose))
@@ -93,7 +91,7 @@ func withLogging(handler http.HandlerFunc, endpoint string, verbose bool) http.H
 	}
 }
 
-// Special middleware for WebSocket connections
+// Middleware for WebSocket connections
 func withWebSocketMetrics(handler http.HandlerFunc, metrics *cluster.MetricsCollector, verbose bool) http.HandlerFunc {
 	if verbose {
 		return func(w http.ResponseWriter, r *http.Request) {
@@ -146,58 +144,61 @@ func initLogging(nodeName string, verbose bool) *logging.Logger {
 	return logging.GetLogger()
 }
 
+// initPersistence initializes the persistence layer.
+func initPersistence(configPath string, stateManager *server.StateManager) *server.Persistence {
+
+	logger := logging.GetLogger()
+
+	persistence, err := server.NewPersistence(configPath, stateManager, verbose)
+	if err != nil {
+		logger.Fatal("Failed to initialize persistence: %v", err)
+	}
+
+	err = persistence.LoadActiveSnapshot()
+	if err != nil {
+		logger.Fatal("Failed to to load initial state: %v", err)
+	}
+
+	return persistence
+}
+
 // initStateManager initializes the state manager.
 func initStateManager(nodeName string) *server.StateManager {
 	return server.NewStateManager(nodeName)
 }
 
-// initPersistence initializes the persistence layer.
-func initPersistence(configPath string, stateManager *server.StateManager) (*server.ConfigPersistence, error) {
-	return server.NewConfigPersistence(configPath, stateManager, verbose)
-}
+func initDataPaths() {
 
-// initCluster initializes the cluster memberlist.
-func initCluster(nodeName, bindAddr string, bindPort int, stateManager *server.StateManager, persistence *server.ConfigPersistence, updater *server.Updater) (*memberlist.Memberlist, error) {
+	logger := logging.GetLogger()
 
-	list, err := cluster.CreateMemberlist(nodeName, bindAddr, bindPort, stateManager, persistence, updater, verbose)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create memberlist: %w", err)
-	}
-
-	return list, nil
-}
-
-func initDataPaths() error {
 	// Check if the directory exists
 	info, err := os.Stat(fusionDataPath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			// Directory does not exist; create it with mode 0777.
 			if err := os.MkdirAll(fusionDataPath, 0777); err != nil {
-				return fmt.Errorf("failed to create data directory: %v", err)
+				logger.Fatal("Failed to create data directory: %v", err)
 			}
 			// Retrieve info after creation.
 			info, err = os.Stat(fusionDataPath)
 			if err != nil {
-				return fmt.Errorf("failed to stat data directory after creation: %v", err)
+				logger.Fatal("Failed to to stat data directory after creation: %v", err)
 			}
 		} else {
-			return fmt.Errorf("failed to stat audio directory: %v", err)
+			logger.Fatal("Failed to to stat audio directory: %v", err)
 		}
 	} else if !info.IsDir() {
-		// The path exists but is not a directory.
-		return fmt.Errorf("%s exists but is not a directory", fusionDataPath)
+		// The path exists but is not a directory
+		logger.Fatal("%s exists but is not a directory", fusionDataPath)
 	}
 
 	// Check if the directory has the desired permissions (0777).
 	currentPerm := info.Mode().Perm()
 	if currentPerm != 0777 {
 		if err := os.Chmod(fusionDataPath, 0777); err != nil {
-			return fmt.Errorf("failed to set permissions on data directory: %v", err)
+			logger.Fatal("Failed to set permissions on data directory: %v", err)
 		}
 	}
-
-	return nil
 }
 
 // initTimerManager initializes the timer manager.
@@ -232,10 +233,9 @@ func initBLEServer() *network.BLEServer {
 
 	bleServer, err := network.NewBLEServer(bleServiceUUID, bleCharacterUUID)
 	if err != nil {
-		logging.GetLogger().Error("Failed to create BLE server: %v", err)
+		logging.GetLogger().Info("Bluetooth not available: %v", err)
 		return nil
 	}
-
 	return bleServer
 }
 
@@ -278,53 +278,37 @@ func main() {
 	logger := initLogging(nodeName, verbose)
 	defer logger.Close()
 
-	err := initDataPaths()
-	if err != nil {
-		logger.Fatal("Failed to create data paths: %v", err)
-	}
+	initDataPaths()
 
 	stateManager := initStateManager(nodeName)
 
-	persistence, err := initPersistence(fusionDatabasePath, stateManager)
-	if err != nil {
-		logger.Fatal("Failed to initialize persistence: %v", err)
-	}
-
-	err = persistence.LoadActiveSnapshot()
-	if err != nil {
-		logger.Fatal("Failed to load initial state: %v", err)
-	}
+	persistence := initPersistence(fusionDatabasePath, stateManager)
 
 	updater := server.NewUpdater()
 
-	clusterList, err := initCluster(nodeName, bindAddr, bindPort, stateManager, persistence, server.NewUpdater())
-	if err != nil {
-		logger.Fatal("Failed to initialize cluster: %v", err)
-	}
+	cluster := cluster.NewCluster(nodeName, bindAddr, bindPort, stateManager, persistence, updater, verbose)
+
+	stateManager.StartStateVerification(cluster.Memberlist)
 
 	timerManager := initTimerManager()
 	defer timerManager.Stop()
 
-	metricsCollector := cluster.NewMetricsCollector(clusterList, stateManager)
+	metricsCollector := cluster.NewMetricsCollector()
 
 	metricsServer := startMetricsServer(metricsPort, metricsCollector)
 	defer metricsServer.Shutdown(context.Background())
 
-	connectionHandler := server.NewHandler(clusterList, stateManager, persistence, updater)
+	connectionHandler := server.NewHandler(cluster.Memberlist, stateManager, persistence, updater)
 
 	bleServer := initBLEServer()
-	if bleServer == nil {
-		logger.Info("Bluetooth not available. Continuing with initialization.")
-	} else {
-		defer bleServer.Stop()
-	}
+	defer bleServer.Stop()
 
 	udpServer := initUDPServer(api.UDPPort, connectionHandler)
 	defer udpServer.Stop()
 
-	configServer := server.NewConfigServer(nodeName, connectionHandler, clusterList)
+	configServer := server.NewConfigServer(nodeName, connectionHandler, cluster.Memberlist)
 
-	setupHTTPRoutes(configServer, metricsCollector, verbose)
+	setupHTTPRoutes(cluster, configServer, metricsCollector, verbose)
 	setupTimerRoutes(timerManager, verbose)
 
 	connectionHandler.SetEndpoints(endpoints)
@@ -334,6 +318,7 @@ func main() {
 
 	go startAPIServer(api.HTTPPort, &wg)
 
+	// Wait a small amount of time for startAPIServer to come up before printing info
 	time.Sleep(startupWaitDelay * time.Millisecond)
 	logger.Info("%s is ALIVE and RUNNING", nodeName)
 	logger.Info("Version: %s Commit: %s Build Time: %s", version.Version, version.Commit, version.BuildTime)

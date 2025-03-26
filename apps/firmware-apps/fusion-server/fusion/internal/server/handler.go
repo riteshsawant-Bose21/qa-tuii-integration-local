@@ -15,7 +15,7 @@ import (
 // Handler is the common handler for both UDP and HTTP servers.
 type Handler struct {
 	stateManager *StateManager
-	persistence  *ConfigPersistence
+	persistence  *Persistence
 	list         *memberlist.Memberlist
 	broadcasters []Broadcaster
 	updater      *Updater
@@ -23,7 +23,7 @@ type Handler struct {
 }
 
 func NewHandler(list *memberlist.Memberlist, stateManager *StateManager,
-	persistence *ConfigPersistence, updater *Updater) *Handler {
+	persistence *Persistence, updater *Updater) *Handler {
 	return &Handler{
 		stateManager: stateManager,
 		persistence:  persistence,

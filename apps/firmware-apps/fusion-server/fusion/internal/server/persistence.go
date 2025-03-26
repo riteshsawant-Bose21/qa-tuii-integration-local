@@ -32,8 +32,8 @@ type PersistentState struct {
 	State     map[string]*api.StateEntry `json:"state"`
 }
 
-// ConfigPersistence handles state persistence and metadata management.
-type ConfigPersistence struct {
+// Persistence handles state persistence and metadata management.
+type Persistence struct {
 	dbPath       string
 	stateManager *StateManager
 	db           *bbolt.DB
@@ -43,13 +43,13 @@ type ConfigPersistence struct {
 	saveDebounce time.Duration
 }
 
-// NewConfigPersistence opens the database and returns a new persistence instance.
-func NewConfigPersistence(dbPath string, stateManager *StateManager, verbose bool) (*ConfigPersistence, error) {
+// NewPersistence opens the database and returns a new persistence instance.
+func NewPersistence(dbPath string, stateManager *StateManager, verbose bool) (*Persistence, error) {
 	db, err := bbolt.Open(dbPath, 0600, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
-	return &ConfigPersistence{
+	return &Persistence{
 		dbPath:       dbPath,
 		stateManager: stateManager,
 		db:           db,
@@ -59,12 +59,12 @@ func NewConfigPersistence(dbPath string, stateManager *StateManager, verbose boo
 }
 
 // Close safely closes the database.
-func (p *ConfigPersistence) Close() {
+func (p *Persistence) Close() {
 	p.db.Close()
 }
 
 // CalculateChecksum returns a SHA-256 hash of the provided state.
-func (p *ConfigPersistence) CalculateChecksum(state map[string]*api.StateEntry) (string, error) {
+func (p *Persistence) CalculateChecksum(state map[string]*api.StateEntry) (string, error) {
 	data, err := json.Marshal(state)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal state for checksum: %w", err)
@@ -74,7 +74,7 @@ func (p *ConfigPersistence) CalculateChecksum(state map[string]*api.StateEntry) 
 }
 
 // saveMetadata saves the api.SnapshotMetadata into the metadata bucket.
-func (p *ConfigPersistence) saveMetadata(meta api.SnapshotMetadata) error {
+func (p *Persistence) saveMetadata(meta api.SnapshotMetadata) error {
 	data, err := json.Marshal(meta)
 	if err != nil {
 		return fmt.Errorf("failed to marshal metadata: %w", err)
@@ -89,7 +89,7 @@ func (p *ConfigPersistence) saveMetadata(meta api.SnapshotMetadata) error {
 }
 
 // LoadMetadata retrieves and unmarshals the api.SnapshotMetadata from the database.
-func (p *ConfigPersistence) LoadMetadata() (api.SnapshotMetadata, error) {
+func (p *Persistence) LoadMetadata() (api.SnapshotMetadata, error) {
 	var meta api.SnapshotMetadata
 	err := p.db.View(func(tx *bbolt.Tx) error {
 		metaBucket := tx.Bucket([]byte(snapshotMetadataBucket))
@@ -109,7 +109,7 @@ func (p *ConfigPersistence) LoadMetadata() (api.SnapshotMetadata, error) {
 }
 
 // LoadActiveSnapshot ensures default buckets exist, loads the active snapshot, and activates it.
-func (p *ConfigPersistence) LoadActiveSnapshot() error {
+func (p *Persistence) LoadActiveSnapshot() error {
 	if err := p.createDefaultBuckets(); err != nil {
 		return err
 	}
@@ -128,7 +128,7 @@ func (p *ConfigPersistence) LoadActiveSnapshot() error {
 }
 
 // SaveState persists the current state using the active snapshot key.
-func (p *ConfigPersistence) SaveState() error {
+func (p *Persistence) SaveState() error {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
@@ -164,7 +164,7 @@ func (p *ConfigPersistence) SaveState() error {
 }
 
 // MarkDirty triggers a state save with debounce logic.
-func (p *ConfigPersistence) MarkDirty() {
+func (p *Persistence) MarkDirty() {
 	if time.Since(p.getLastSave()) < p.saveDebounce {
 		time.Sleep(p.saveDebounce)
 	}
@@ -175,7 +175,7 @@ func (p *ConfigPersistence) MarkDirty() {
 }
 
 // ValidateState checks that the persisted state exists and its checksum is valid.
-func (p *ConfigPersistence) ValidateState() error {
+func (p *Persistence) ValidateState() error {
 	p.mutex.RLock()
 	defer p.mutex.RUnlock()
 
@@ -207,7 +207,7 @@ func (p *ConfigPersistence) ValidateState() error {
 }
 
 // CreateSnapshot saves the current state under a custom snapshot key.
-func (p *ConfigPersistence) CreateSnapshot(snapshotKey string) error {
+func (p *Persistence) CreateSnapshot(snapshotKey string) error {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
@@ -224,7 +224,7 @@ func (p *ConfigPersistence) CreateSnapshot(snapshotKey string) error {
 }
 
 // ActivateSnapshot restores the state from the given snapshot key and updates metadata.
-func (p *ConfigPersistence) ActivateSnapshot(snapshotKey string) error {
+func (p *Persistence) ActivateSnapshot(snapshotKey string) error {
 	var ps PersistentState
 	err := p.db.View(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte(defaultBucketName))
@@ -268,7 +268,7 @@ func (p *ConfigPersistence) ActivateSnapshot(snapshotKey string) error {
 }
 
 // DeleteSnapshot removes the snapshot and clears the active pointer if it was active.
-func (p *ConfigPersistence) DeleteSnapshot(snapshotKey string) error {
+func (p *Persistence) DeleteSnapshot(snapshotKey string) error {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
@@ -309,7 +309,7 @@ func (p *ConfigPersistence) DeleteSnapshot(snapshotKey string) error {
 }
 
 // ListSnapshots returns a list of all snapshot keys.
-func (p *ConfigPersistence) ListSnapshots() ([]string, error) {
+func (p *Persistence) ListSnapshots() ([]string, error) {
 	p.mutex.RLock()
 	defer p.mutex.RUnlock()
 
@@ -328,7 +328,7 @@ func (p *ConfigPersistence) ListSnapshots() ([]string, error) {
 }
 
 // SnapshotExists checks if a snapshot with the given name exists.
-func (p *ConfigPersistence) SnapshotExists(name string) (bool, error) {
+func (p *Persistence) SnapshotExists(name string) (bool, error) {
 	p.mutex.RLock()
 	defer p.mutex.RUnlock()
 
@@ -346,7 +346,7 @@ func (p *ConfigPersistence) SnapshotExists(name string) (bool, error) {
 }
 
 // GetSnapshotMetadata retrieves the snapshot metadata.
-func (p *ConfigPersistence) GetSnapshotMetadata() (api.SnapshotMetadata, error) {
+func (p *Persistence) GetSnapshotMetadata() (api.SnapshotMetadata, error) {
 	p.mutex.RLock()
 	defer p.mutex.RUnlock()
 
@@ -358,7 +358,7 @@ func (p *ConfigPersistence) GetSnapshotMetadata() (api.SnapshotMetadata, error) 
 }
 
 // GetSnapshot retrieves the snapshot data.
-func (p *ConfigPersistence) GetSnapshot(name string) (any, error) {
+func (p *Persistence) GetSnapshot(name string) (any, error) {
 	exists, err := p.SnapshotExists(name)
 	if err != nil {
 		return nil, fmt.Errorf("error checking snapshot existence: %w", err)
@@ -395,7 +395,7 @@ func (p *ConfigPersistence) GetSnapshot(name string) (any, error) {
 }
 
 // ExportSnapshots retrieves the entire bbolt database in JSON.
-func (p *ConfigPersistence) ExportSnapshots() (any, error) {
+func (p *Persistence) ExportSnapshots() (any, error) {
 	p.mutex.RLock()
 	defer p.mutex.RUnlock()
 
@@ -431,7 +431,7 @@ func (p *ConfigPersistence) ExportSnapshots() (any, error) {
 }
 
 // ImportSnapshots imports the snapshot data into the database
-func (p *ConfigPersistence) ImportSnapshots(importData map[string]any) error {
+func (p *Persistence) ImportSnapshots(importData map[string]any) error {
 
 	// Get the snapshots from the import (fusion bucket).
 	snapshotsData, ok := importData[defaultBucketName]
@@ -491,7 +491,7 @@ func (p *ConfigPersistence) ImportSnapshots(importData map[string]any) error {
 	return nil
 }
 
-func (p *ConfigPersistence) SyncFullStateFromCluster(list *memberlist.Memberlist) error {
+func (p *Persistence) SyncFullStateFromCluster(list *memberlist.Memberlist) error {
 	logger := logging.GetLogger()
 
 	// NodeSnapshot holds a member and its snapshot metadata.
@@ -589,14 +589,14 @@ func (p *ConfigPersistence) SyncFullStateFromCluster(list *memberlist.Memberlist
 }
 
 // getLastSave returns the last save time.
-func (p *ConfigPersistence) getLastSave() time.Time {
+func (p *Persistence) getLastSave() time.Time {
 	p.mutex.RLock()
 	defer p.mutex.RUnlock()
 	return p.lastSave
 }
 
 // updateDBHash recalculates the overall database hash and updates it in metadata.
-func (p *ConfigPersistence) updateDBHash() error {
+func (p *Persistence) updateDBHash() error {
 	newHash, err := p.computeDBHash()
 	if err != nil {
 		return fmt.Errorf("failed to compute DB hash: %w", err)
@@ -610,7 +610,7 @@ func (p *ConfigPersistence) updateDBHash() error {
 }
 
 // computeDBHash computes a SHA-256 hash over all buckets and their key/value pairs.
-func (p *ConfigPersistence) computeDBHash() (string, error) {
+func (p *Persistence) computeDBHash() (string, error) {
 	hash := sha256.New()
 	err := p.db.View(func(tx *bbolt.Tx) error {
 		return tx.ForEach(func(name []byte, b *bbolt.Bucket) error {
@@ -631,7 +631,7 @@ func (p *ConfigPersistence) computeDBHash() (string, error) {
 
 // createDefaultBuckets ensures that the metadata and default state buckets exist.
 // If a default snapshot is not present, it is created.
-func (p *ConfigPersistence) createDefaultBuckets() error {
+func (p *Persistence) createDefaultBuckets() error {
 	if err := p.db.Update(func(tx *bbolt.Tx) error {
 		_, err := tx.CreateBucketIfNotExists([]byte(snapshotMetadataBucket))
 		return err
@@ -669,7 +669,7 @@ func (p *ConfigPersistence) createDefaultBuckets() error {
 }
 
 // getActiveSnapshotKey retrieves the active snapshot key from metadata.
-func (p *ConfigPersistence) getActiveSnapshotKey() (string, error) {
+func (p *Persistence) getActiveSnapshotKey() (string, error) {
 	meta, err := p.LoadMetadata()
 	if err != nil || meta.ActiveSnapshot == "" {
 		return defaultSnapshotKey, nil
@@ -679,7 +679,7 @@ func (p *ConfigPersistence) getActiveSnapshotKey() (string, error) {
 
 // persistState saves the current state under the given snapshot key.
 // Note that it does not update lastSave; the caller should update lastSave as needed.
-func (p *ConfigPersistence) persistState(snapshotKey string) (*PersistentState, error) {
+func (p *Persistence) persistState(snapshotKey string) (*PersistentState, error) {
 	state := p.stateManager.GetFullState()
 	checksum, err := p.CalculateChecksum(state)
 	if err != nil {

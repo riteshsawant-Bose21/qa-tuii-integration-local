@@ -15,6 +15,13 @@ type ConfigUpdate struct {
 	Clear   bool
 }
 
+// Endpoints contains the REST API endpoint information
+type Endpoints struct {
+	API       string   `json:"api"`
+	Telemetry []string `json:"telemetry"`
+	Metrics   string   `json:"metrics"`
+}
+
 // SnapshotMetadata holds metadata information from the database.
 type SnapshotMetadata struct {
 	ActiveSnapshot string    `json:"active_snapshot"`

@@ -37,7 +37,7 @@ func TestMarkDirtyConcurrent(t *testing.T) {
 	}
 
 	// Create the persistence object.
-	cp, err := server.NewConfigPersistence(configPath, sm, true)
+	cp, err := server.NewPersistence(configPath, sm, true)
 	if err != nil {
 		t.Fatalf("Failed to initialize persistence: %v", err)
 	}
@@ -80,7 +80,7 @@ func TestValidateStateFile(t *testing.T) {
 	if err := sm.Set("key", "value"); err != nil {
 		t.Fatalf("Failed to set state: %v", err)
 	}
-	cp, err := server.NewConfigPersistence(configPath, sm, false)
+	cp, err := server.NewPersistence(configPath, sm, false)
 	if err != nil {
 		t.Fatalf("Failed to initialize persistence: %v", err)
 	}
@@ -108,7 +108,7 @@ func TestChecksumCalculation(t *testing.T) {
 
 	sm.SetState(state)
 
-	cp, err := server.NewConfigPersistence("dummy", sm, false)
+	cp, err := server.NewPersistence("dummy", sm, false)
 	if err != nil {
 		t.Fatalf("Failed to initialize persistence: %v", err)
 	}

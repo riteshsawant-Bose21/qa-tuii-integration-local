@@ -84,10 +84,10 @@ type NodeHealth struct {
 	HealthCheckCount int64     `json:"health_check_count"`
 }
 
-func NewMetricsCollector(list *memberlist.Memberlist, stateManager StateManagerInterface) *MetricsCollector {
+func (c *Cluster) NewMetricsCollector() *MetricsCollector {
 	mc := &MetricsCollector{
-		list:           list,
-		stateManager:   stateManager,
+		list:           c.Memberlist,
+		stateManager:   c.StateManager,
 		haproxyMetrics: network.NewHAProxyMetrics(haproxySocketPath, network.HAProxyConfigPath),
 	}
 

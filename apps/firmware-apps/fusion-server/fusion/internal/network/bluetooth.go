@@ -159,8 +159,7 @@ func NewBLEServer(serviceUUID string, characterUUID string) (*BLEServer, error) 
 	// Initialize the default BLE device.
 	d, err := dev.DefaultDevice()
 	if err != nil {
-		logger.Error("BLE device initialization failed: %v", err)
-		return nil, fmt.Errorf("failed to initialize BLE device: %w", err)
+		return nil, err
 	}
 	ble.SetDefaultDevice(d)
 
