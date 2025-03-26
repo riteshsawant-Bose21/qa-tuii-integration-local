@@ -7,7 +7,7 @@ import groovy.json.JsonOutput
 def VERSION = ''
 def JobCleanup = new JenkinsJobCleanup()
 
-ARTIFACTORY_TARGET = "pro-fusion-local/Fusion-DSP/%s/%s/%s/%s"
+NEXUS_TARGET = "Fusion-DSP/%s/%s/%s/%s"
 
 pipeline {
 	agent { label 'pro-fusion-container' }
@@ -17,6 +17,8 @@ pipeline {
 		skipDefaultCheckout()
 	}
 	environment {
+		NEXUS_URL = '10.100.109.38:8081'
+		CREDENTIALS_ID = 'jenkins-artifact-deployer'
 	    	buildDir="${env.WORKSPACE}"
 		buildNumber="${env.BUILD_NUMBER}"
 		BuildType="Continuous"
@@ -113,29 +115,18 @@ pipeline {
 					}
 				}
 
-				stage('Upload to Artifactory') {
-					environment {
-						ASSETS_CREDS = credentials('pro-jenkins-artifactory')
-					}
+				stage('Upload to Nexus repository') {
 					steps {
     					script {
                             			EMBEDDED_PATH_PART=env.CHANGE_BRANCH ?: env.BRANCH_NAME
-                            			def server = Artifactory.server 'Bose-Artifactory'
                             			def fileName = "fusion-dsp_*.tar.gz"
                             			def binaryPath = sh(returnStdout: true, script: "find . -name '${fileName}' | head -1").trim()
 						def binaryFileName = sh(returnStdout: true, script: "basename -- '${binaryPath}'").trim()
-						def targetPath = String.format(ARTIFACTORY_TARGET, env.BuildType, EMBEDDED_PATH_PART, env.VERSION, binaryFileName)
-						def fileSpec = """{
-							"files": [
-								{
-								"pattern": "${binaryPath}",
-								"flat": "false",
-								"target": "${targetPath}"
-								}
-							]
-						}"""
-						println("fileSpec: ${fileSpec}")
-						server.upload spec:fileSpec
+						def artifacts = []
+						// def targetPath = String.format(NEXUS_TARGET, env.BuildType, EMBEDDED_PATH_PART, env.VERSION, binaryFileName)
+						def targetPath = String.format(NEXUS_TARGET, env.BuildType, EMBEDDED_PATH_PART)
+						println("binaryPath: ${binaryPath}")
+						println("binaryFileName: ${binaryFileName}")
     						}
 					}
 				}
