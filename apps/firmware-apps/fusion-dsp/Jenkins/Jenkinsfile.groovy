@@ -122,7 +122,7 @@ pipeline {
                                 			EMBEDDED_PATH_PART=env.CHANGE_BRANCH ?: env.BRANCH_NAME
     						    	def artifacts = []
 							def filesToUpload = findFiles(glob: 'fusion-dsp_*.tar.gz')
-							filesToUpload_1.each { file ->
+							filesToUpload.each { file ->
                                     				artifacts.add([artifactId: file.name.substring(0, file.name.lastIndexOf('_')), file: file.path, type: 'tar.gz'])
 							}
     						    	def targetPath = String.format(NEXUS_TARGET, env.BuildType, EMBEDDED_PATH_PART)
