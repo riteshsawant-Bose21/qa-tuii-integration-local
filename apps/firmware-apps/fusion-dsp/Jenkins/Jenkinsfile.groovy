@@ -118,16 +118,26 @@ pipeline {
 				stage('Upload to Nexus repository') {
 					steps {
     					script {
-                            			EMBEDDED_PATH_PART=env.CHANGE_BRANCH ?: env.BRANCH_NAME
-                            			def fileName = "fusion-dsp_*.tar.gz"
-                            			def binaryPath = sh(returnStdout: true, script: "find . -name '${fileName}' | head -1").trim()
-						def binaryFileName = sh(returnStdout: true, script: "basename -- '${binaryPath}'").trim()
-						def artifacts = []
-						// def targetPath = String.format(NEXUS_TARGET, env.BuildType, EMBEDDED_PATH_PART, env.VERSION, binaryFileName)
-						def targetPath = String.format(NEXUS_TARGET, env.BuildType, EMBEDDED_PATH_PART)
-						println("binaryPath: ${binaryPath}")
-						println("binaryFileName: ${binaryFileName}")
-    						}
+						dir( 'build/' ) {
+                                			EMBEDDED_PATH_PART=env.CHANGE_BRANCH ?: env.BRANCH_NAME
+    						    	def artifacts = []
+							def filesToUpload = findFiles(glob: 'fusion-dsp_*.tar.gz')
+							filesToUpload_1.each { file ->
+                                    				artifacts.add([artifactId: file.name.substring(0, file.name.lastIndexOf('_')), file: file.path, type: 'tar.gz'])
+							}
+    						    	def targetPath = String.format(NEXUS_TARGET, env.BuildType, EMBEDDED_PATH_PART)
+							nexusArtifactUploader(
+			                                    nexusVersion: 'nexus3',
+			                                    protocol: 'http',
+			                                    nexusUrl: "${NEXUS_URL}",
+			                                    repository: "pro-fusion-local/${targetPath}",
+			                                    version: "${env.VERSION}",
+			                                    groupId: "",
+			                                    credentialsId: "${CREDENTIALS_ID}",
+			                                    artifacts: artifacts
+			                                )
+    					    	}						
+    					    }
 					}
 				}
 			}
