@@ -1,6 +1,7 @@
 #!/bin/bash
 
-# Function to display help message
+# Push a new fusion-server binary to the specified instances.
+
 show_help() {
     cat << EOF
 Usage: $0 [OPTIONS]

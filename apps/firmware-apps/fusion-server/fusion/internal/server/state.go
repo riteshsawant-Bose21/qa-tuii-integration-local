@@ -1,33 +1,47 @@
 package server
 
 import (
-	"crypto/sha256"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/logging"
+	"io"
+	"net/http"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/hashicorp/memberlist"
 )
 
+const (
+	checkInterval = 30
+)
+
+// StateManager manages a synchronized in-memory application state across distributed nodes.
+// It supports subscriptions, versioning, and nested key access.
 type StateManager struct {
 	sync.RWMutex
 	state       map[string]*api.StateEntry
 	version     int64
-	nodeID      string
+	node        string
 	subscribers []chan struct{}
 }
 
-func NewStateManager(nodeID string) *StateManager {
-	return &StateManager{
+// NewStateManager creates and initializes a new StateManager for the given node.
+func NewStateManager(node string) *StateManager {
+	stateManager := &StateManager{
 		state:       make(map[string]*api.StateEntry),
-		nodeID:      nodeID,
+		node:        node,
 		subscribers: make([]chan struct{}, 0),
 	}
+	return stateManager
 }
 
+// GetVersion returns the current version of the state.
 func (sm *StateManager) GetVersion() int64 {
 	sm.RLock()
 	defer sm.RUnlock()
@@ -35,150 +49,127 @@ func (sm *StateManager) GetVersion() int64 {
 }
 
 // Get retrieves a nested value from the application's state using a dot-separated key path.
-// It supports accessing map keys, array indices, and array slices.
 //
 // Key Path Syntax:
-// - Dot-separated keys navigate through nested maps (e.g., "settings.audio.modifiers").
-// - Array indices can be used to retrieve a specific element (e.g., "settings.audio.modifiers[0]").
-// - Array slicing allows retrieving a subset of elements (e.g., "settings.audio.modifiers[1:3]").
+//   - Dot-separated keys for nested maps: "settings.audio.volume"
+//   - Array index access: "modifiers[0]"
+//   - Array slice access: "modifiers[1:3]"
 //
-// Parameters:
-// - key (string): A dot-separated key path that may include array indexing or slicing.
-//
-// Returns:
-// - (interface{}, bool): The retrieved value and a boolean indicating whether the key was found.
-func (sm *StateManager) Get(key string) (interface{}, bool) {
+// Returns the found value and a boolean indicating if the key was found.
+func (sm *StateManager) Get(key string) (any, bool) {
 	sm.RLock()
 	defer sm.RUnlock()
 
-	// Split the key into parts using the dot separator
 	parts := strings.Split(key, ".")
-
-	// Start traversing the state from the root
-	var current interface{} = TransformState(sm.state)
+	var current any = TransformState(sm.state)
+	logger := logging.GetLogger()
 
 	for _, part := range parts {
-		// Check if the part contains array indexing or slicing
 		if strings.Contains(part, "[") && strings.Contains(part, "]") {
-			// Split the part into the key and the array access part
 			keyPart := part[:strings.Index(part, "[")]
 			arrayAccess := part[strings.Index(part, "[")+1 : strings.Index(part, "]")]
 
-			// Type assert current as a map to continue traversal
-			nestedMap, ok := current.(map[string]interface{})
+			nestedMap, ok := current.(map[string]any)
 			if !ok {
-				logging.GetLogger().Warn("%s is not a supported type. Current type: %T", part, current)
+				logger.Warn("%s is not a supported type. Current type: %T", part, current)
 				return nil, false
 			}
 
-			// Look up the keyPart in the map
 			value, exists := nestedMap[keyPart]
 			if !exists {
-				logging.GetLogger().Warn("%s not found.", keyPart)
+				logger.Warn("%s not found.", keyPart)
 				return nil, false
 			}
 
-			// Type assert value as an array (slice)
-			array, ok := value.([]interface{})
+			array, ok := value.([]any)
 			if !ok {
-				logging.GetLogger().Warn("%s is not an array. Current type: %T", keyPart, value)
+				logger.Warn("%s is not an array. Current type: %T", keyPart, value)
 				return nil, false
 			}
 
-			// Handle array access (indexing or slicing)
 			if strings.Contains(arrayAccess, ":") {
-				// Slice syntax
 				rangeParts := strings.Split(arrayAccess, ":")
 				start, end := 0, len(array)
 
-				// Parse start index
 				if rangeParts[0] != "" {
 					startIndex, err := strconv.Atoi(rangeParts[0])
 					if err != nil || startIndex < 0 || startIndex > len(array) {
-						logging.GetLogger().Warn("Invalid start index in %s", arrayAccess)
+						logger.Warn("Invalid start index in %s", arrayAccess)
 						return nil, false
 					}
 					start = startIndex
 				}
-
-				// Parse end index
 				if rangeParts[1] != "" {
 					endIndex, err := strconv.Atoi(rangeParts[1])
 					if err != nil || endIndex < start || endIndex > len(array) {
-						logging.GetLogger().Warn("Invalid end index in %s", arrayAccess)
+						logger.Warn("Invalid end index in %s", arrayAccess)
 						return nil, false
 					}
 					end = endIndex
 				}
 
-				// Return the sliced array
 				current = array[start:end]
 			} else {
-				// Index syntax
 				index, err := strconv.Atoi(arrayAccess)
 				if err != nil || index < 0 || index >= len(array) {
-					logging.GetLogger().Warn("Invalid index %s in %s", arrayAccess, part)
+					logger.Warn("Invalid index %s in %s", arrayAccess, part)
 					return nil, false
 				}
-
-				// Return the indexed value
 				current = array[index]
 			}
 		} else {
-			// Type assert current as a map to continue traversal
-			nestedMap, ok := current.(map[string]interface{})
+			nestedMap, ok := current.(map[string]any)
 			if !ok {
-				logging.GetLogger().Warn("%s is not a supported type. Current type: %T", part, current)
+				logger.Warn("%s is not a supported type. Current type: %T", part, current)
 				return nil, false
 			}
 
-			// Look up the current key part in the map
 			value, exists := nestedMap[part]
 			if !exists {
-				logging.GetLogger().Warn("%s not found.", part)
+				logger.Warn("%s not found.", part)
 				return nil, false
 			}
 
-			// Move to the next level
 			current = value
 		}
 	}
-
-	// Return the final value found
 	return current, true
 }
 
-func (sm *StateManager) Set(key string, value interface{}) error {
-	data := map[string]interface{}{
+// Set updates a key in the state with the given value and applies the update.
+func (sm *StateManager) Set(key string, value any) error {
+	data := map[string]any{
 		key: value,
 	}
 	return sm.ApplyUpdate(api.ConfigUpdate{
 		Data:    data,
 		Version: time.Now().UnixNano(),
-		NodeID:  sm.nodeID,
 		Time:    time.Now().UTC(),
 	})
 }
 
-// ApplyUpdate applies a configuration update to the StateManager.
-// and notifieds subscribers of any changes.
+// ApplyUpdate applies a configuration update to the internal state and notifies subscribers.
 func (sm *StateManager) ApplyUpdate(update api.ConfigUpdate) error {
 	sm.Lock()
 	defer sm.Unlock()
 
-	if len(update.Data) == 0 {
+	if update.Clear {
 		sm.state = make(map[string]*api.StateEntry)
 		sm.version = update.Version
 		sm.notifySubscribers()
 		return nil
 	}
 
+	if len(update.Data) == 0 {
+		return nil
+	}
+
 	for key, value := range update.Data {
-		var newValue interface{}
-		if valueMap, ok := value.(map[string]interface{}); ok {
+		var newValue any
+		if valueMap, ok := value.(map[string]any); ok {
 			existingValue, exists := sm.state[key]
 			if exists {
-				existingData, isMap := existingValue.Data.(map[string]interface{})
+				existingData, isMap := existingValue.Data.(map[string]any)
 				if isMap {
 					newValue = mergeMaps(existingData, valueMap)
 				} else {
@@ -205,16 +196,24 @@ func (sm *StateManager) ApplyUpdate(update api.ConfigUpdate) error {
 	return nil
 }
 
+// GetFullState returns a deep copy of the internal state including version and timestamp metadata.
 func (sm *StateManager) GetFullState() map[string]*api.StateEntry {
 	sm.RLock()
 	defer sm.RUnlock()
 	stateCopy := make(map[string]*api.StateEntry, len(sm.state))
 	for k, v := range sm.state {
-		stateCopy[k] = v
+		entryCopy := api.StateEntry{
+			Data:      v.Data,
+			Version:   v.Version,
+			Timestamp: v.Timestamp,
+		}
+		stateCopy[k] = &entryCopy
 	}
 	return stateCopy
 }
 
+// Subscribe registers a new listener to be notified when the state changes.
+// Returns a buffered channel that will receive a signal on update.
 func (sm *StateManager) Subscribe() chan struct{} {
 	sm.Lock()
 	defer sm.Unlock()
@@ -223,6 +222,7 @@ func (sm *StateManager) Subscribe() chan struct{} {
 	return ch
 }
 
+// notifySubscribers sends update signals to all subscribed channels.
 func (sm *StateManager) notifySubscribers() {
 	for _, ch := range sm.subscribers {
 		select {
@@ -232,29 +232,7 @@ func (sm *StateManager) notifySubscribers() {
 	}
 }
 
-func (sm *StateManager) VerifyState() string {
-	sm.RLock()
-	defer sm.RUnlock()
-	data, err := json.Marshal(sm.state)
-	if err != nil {
-		return ""
-	}
-	hash := sha256.Sum256(data)
-	return fmt.Sprintf("%x", hash)
-}
-
-func (sm *StateManager) StartStateDumping(interval time.Duration) {
-	go func() {
-		for {
-			time.Sleep(interval)
-			sm.RLock()
-			fmt.Printf("[STATE] Current state version: %d, entries: %d\n",
-				sm.version, len(sm.state))
-			sm.RUnlock()
-		}
-	}()
-}
-
+// MergeRemoteState integrates a remote state into the local state if the remote version is newer.
 func (sm *StateManager) MergeRemoteState(remoteState map[string]*api.StateEntry, sourceNodeID string) {
 	sm.Lock()
 	defer sm.Unlock()
@@ -270,18 +248,191 @@ func (sm *StateManager) MergeRemoteState(remoteState map[string]*api.StateEntry,
 	sm.notifySubscribers()
 }
 
-func TransformState(state map[string]*api.StateEntry) map[string]interface{} {
-	result := make(map[string]interface{})
+// GetState returns the internal state map without making a copy.
+func (sm *StateManager) GetState() map[string]*api.StateEntry {
+	return sm.state
+}
+
+// SetState replaces the entire state map and updates the version timestamp.
+func (sm *StateManager) SetState(state map[string]*api.StateEntry) {
+	sm.RLock()
+	defer sm.RUnlock()
+	sm.state = state
+	sm.version = time.Now().UnixNano()
+	sm.notifySubscribers()
+}
+
+// validateMemberState fetches and compares state from other cluster members
+// to check consistency. Logs any inconsistencies found.
+func (sm *StateManager) validateMemberState(list *memberlist.Memberlist) {
+	logger := logging.GetLogger()
+	localState := sm.GetState()
+	consistent := true
+	members := list.Members()
+
+	for _, member := range members {
+		if member.State != memberlist.StateAlive || member.Name == list.LocalNode().Name {
+			continue
+		}
+
+		url := fmt.Sprintf("http://%s%s/export", member.Addr.String(), api.HTTPPort)
+		resp, err := http.Get(url)
+		if err != nil {
+			logger.Warn("Failed to get state from %s: %v", member.Name, err)
+			continue
+		}
+
+		body, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			logger.Warn("Error reading response body from %s: %v", member.Name, err)
+			continue
+		}
+
+		var remoteState api.RawState
+		if err := json.Unmarshal(body, &remoteState); err != nil {
+			logger.Warn("Failed to unmarshal JSON from %s: %v. Raw JSON: %s", member.Name, err, string(body))
+			continue
+		}
+
+		if !reflect.DeepEqual(localState, remoteState.State) {
+			logger.Warn("[STATE] Inconsistent state detected with node %s", member.Name)
+			consistent = false
+		}
+	}
+
+	if consistent {
+		logger.Info("[STATE] State consistent across cluster")
+	}
+}
+
+// StartStateVerification starts periodic state verification
+func (sm *StateManager) StartStateVerification(list *memberlist.Memberlist) {
+	go func() {
+
+		for {
+			sm.validateMemberState(list)
+			ValidateSnapshots(list)
+			time.Sleep(checkInterval * time.Second)
+		}
+
+	}()
+}
+
+// ValidateSnapshots checks if all nodes in the cluster have consistent snapshot metadata and resolves any mismatches.
+func ValidateSnapshots(list *memberlist.Memberlist) {
+	logger := logging.GetLogger()
+	members := list.Members()
+
+	var snapshots []api.SnapshotMemberMetadata
+
+	// Collect metadata for all alive members.
+	for _, member := range members {
+		if member.State != memberlist.StateAlive {
+			continue
+		}
+
+		url := fmt.Sprintf("http://%s%s/snapshots/metadata", member.Addr.String(), api.HTTPPort)
+		resp, err := http.Get(url)
+		if err != nil {
+			logger.Warn("Failed to get metadata from %s: %v", member.Name, err)
+			continue
+		}
+
+		body, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			logger.Warn("Error reading response body from %s: %v", member.Name, err)
+			continue
+		}
+
+		var metadata api.SnapshotMetadata
+		if err := json.Unmarshal(body, &metadata); err != nil {
+			logger.Warn("Failed to unmarshal JSON from %s: %v. Raw JSON: %s", member.Name, err, string(body))
+			continue
+		}
+
+		snapshots = append(snapshots, api.SnapshotMemberMetadata{Member: member, Metadata: metadata})
+	}
+
+	// Check for consistency by comparing DBHash values.
+	consistent := true
+	if len(snapshots) > 0 {
+		firstHash := snapshots[0].Metadata.DBHash
+		for _, ms := range snapshots[1:] {
+			if ms.Metadata.DBHash != firstHash {
+				consistent = false
+				break
+			}
+		}
+	}
+
+	if consistent {
+		logger.Info("[SNAPSHOTS] Snapshots consistent across cluster")
+		return
+	}
+
+	logger.Warn("[SNAPSHOTS] Inconsistent Snapshot detected")
+
+	rectifySnapshots(snapshots)
+}
+
+// rectifySnapshots resolves snapshot inconsistencies by pushing the most current snapshot to all outdated nodes.
+func rectifySnapshots(snapshots []api.SnapshotMemberMetadata) {
+	logger := logging.GetLogger()
+
+	// Determine the snapshot with the most recent timestamp.
+	mostCurrent := snapshots[0]
+	for _, ms := range snapshots[1:] {
+		if ms.Metadata.Timestamp.After(mostCurrent.Metadata.Timestamp) {
+			mostCurrent = ms
+		}
+	}
+	logger.Info("Most current snapshot found on member %s with timestamp %v",
+		mostCurrent.Member.Name, mostCurrent.Metadata.Timestamp)
+
+	// Propagate the most current snapshot to all nodes with outdated data.
+	for _, ms := range snapshots {
+		if ms.Metadata.DBHash != mostCurrent.Metadata.DBHash {
+			importURL := fmt.Sprintf("http://%s%s/snapshots/import", ms.Member.Addr.String(), api.HTTPPort)
+			// Prepare payload with all necessary snapshot data.
+			payload, err := json.Marshal(map[string]interface{}{
+				"active_snapshot": mostCurrent.Metadata.ActiveSnapshot,
+				"timestamp":       mostCurrent.Metadata.Timestamp,
+				"hash":            mostCurrent.Metadata.DBHash,
+				"valid":           mostCurrent.Metadata.Valid,
+			})
+			if err != nil {
+				logger.Warn("Failed to marshal payload for %s: %v", ms.Member.Name, err)
+				continue
+			}
+
+			resp, err := http.Post(importURL, "application/json", bytes.NewBuffer(payload))
+			if err != nil {
+				logger.Warn("Failed to import snapshot on %s: %v", ms.Member.Name, err)
+				continue
+			}
+			resp.Body.Close()
+			logger.Info("Successfully synced snapshot on %s", ms.Member.Name)
+		}
+	}
+}
+
+// TransformState removes metadata and returns a simplified map of key-value data from the state.
+func TransformState(state map[string]*api.StateEntry) map[string]any {
+	result := make(map[string]any)
 	for key, entry := range state {
 		result[key] = entry.Data
 	}
 	return result
 }
 
-func mergeMaps(existing, update map[string]interface{}) map[string]interface{} {
+// mergeMaps recursively merges two maps.
+// Values from the update map overwrite or are merged into the existing map.
+func mergeMaps(existing, update map[string]any) map[string]any {
 	for key, value := range update {
-		if vMap, ok := value.(map[string]interface{}); ok {
-			if existingMap, exists := existing[key].(map[string]interface{}); exists {
+		if vMap, ok := value.(map[string]any); ok {
+			if existingMap, exists := existing[key].(map[string]any); exists {
 				existing[key] = mergeMaps(existingMap, vMap)
 			} else {
 				existing[key] = vMap

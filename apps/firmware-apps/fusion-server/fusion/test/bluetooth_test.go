@@ -226,21 +226,21 @@ func TestTimeoutScenarios(t *testing.T) {
 	mockClient := NewMockBLEClient()
 	charUUID := "1234"
 
-	// Test 1: Immediate timeout
+	// Immediate timeout
 	mockClient.err = errors.New("simulated timeout")
 	_, err := ReadWithTimeout(mockClient, charUUID, 1*time.Millisecond)
 	if err == nil {
 		t.Fatal("Expected timeout error, got nil")
 	}
 
-	// Test 2: Profile discovery failure
+	// Profile discovery failure
 	mockClient.err = errors.New("profile discovery failed")
 	_, err = ReadWithTimeout(mockClient, charUUID, time.Second)
 	if err == nil || !strings.Contains(err.Error(), "failed to discover profile") {
 		t.Fatalf("Expected profile discovery error, got: %v", err)
 	}
 
-	// Test 3: Characteristic not found
+	// Characteristic not found
 	mockClient.err = nil
 	mockClient.profile.Services = []*ble.Service{} // Empty services
 	_, err = ReadWithTimeout(mockClient, charUUID, time.Second)
@@ -248,7 +248,7 @@ func TestTimeoutScenarios(t *testing.T) {
 		t.Fatalf("Expected characteristic not found error, got: %v", err)
 	}
 
-	// Test 4: Successful read just before timeout
+	// Successful read just before timeout
 	expectedData := []byte("test data")
 	mockClient.data = expectedData
 	char := &ble.Characteristic{
@@ -294,13 +294,13 @@ func TestRESTEndpointOverBLE(t *testing.T) {
 	}
 
 	// Parse and validate the response
-	var response map[string]interface{}
+	var response map[string]any
 	err = json.Unmarshal(data, &response)
 	if err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
 	}
 
-	payload := response["payload"].(map[string]interface{})
+	payload := response["payload"].(map[string]any)
 	if payload["status"] != float64(200) {
 		t.Errorf("Expected status 200, got %v", payload["status"])
 	}
@@ -334,13 +334,13 @@ func TestJSONDataOverBLE(t *testing.T) {
 	}
 
 	// Validate response
-	var response map[string]interface{}
+	var response map[string]any
 	err = json.Unmarshal(data, &response)
 	if err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
 	}
 
-	payload := response["payload"].(map[string]interface{})
+	payload := response["payload"].(map[string]any)
 	if payload["status"] != float64(201) {
 		t.Errorf("Expected status 201, got %v", payload["status"])
 	}

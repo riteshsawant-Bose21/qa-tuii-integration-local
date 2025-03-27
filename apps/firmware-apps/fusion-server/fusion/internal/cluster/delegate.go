@@ -10,18 +10,16 @@ import (
 type ClusterDelegate struct {
 	nodeID       string
 	stateManager *server.StateManager
-	persistence  *server.ConfigPersistence
+	persistence  *server.Persistence
 	updater      *server.Updater
-	verbose      bool
 }
 
-func NewClusterDelegate(nodeID string, stateManager *server.StateManager, persistence *server.ConfigPersistence, updater *server.Updater, verbose bool) *ClusterDelegate {
+func NewClusterDelegate(nodeID string, stateManager *server.StateManager, persistence *server.Persistence, updater *server.Updater) *ClusterDelegate {
 	return &ClusterDelegate{
 		nodeID:       nodeID,
 		stateManager: stateManager,
 		persistence:  persistence,
 		updater:      updater,
-		verbose:      verbose,
 	}
 }
 
@@ -51,37 +49,48 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 
 	logger := logging.GetLogger()
 
-	// Try to decode as binary message first
-	var binaryMsg server.BinaryMessage
-	if err := json.Unmarshal(msg, &binaryMsg); err == nil {
-		if err = d.updater.PerformRemoteUpdate(binaryMsg); err != nil {
+	var message api.NotifyMessage
+	if err := json.Unmarshal(msg, &message); err != nil {
+		logger.Error("Error unmarshaling message: %v", err)
+		return
+	}
+
+	// Check which message type was unmarshaled.
+	switch message.Operation {
+
+	case api.NotifyOpConfigUpdate:
+		if err := d.stateManager.ApplyUpdate(*message.ConfigUpdate); err != nil {
+			logger.Error("Error applying update: %v", err)
+			return
+		}
+
+	case api.NotifyOpSnapActivate:
+		if err := d.persistence.ActivateSnapshot(message.SnapshotUpdate.Name); err != nil {
+			logger.Error("Error activating snapshot: %v", err)
+		}
+
+	case api.NotifyOpSnapCreate:
+		if err := d.persistence.CreateSnapshot(message.SnapshotUpdate.Name); err != nil {
+			logger.Error("Error creating snapshot: %v", err)
+		}
+
+	case api.NotifyOpSnapDelete:
+		if err := d.persistence.DeleteSnapshot(message.SnapshotUpdate.Name); err != nil {
+			logger.Error("Error deleting snapshot: %v", err)
+		}
+
+	case api.NotifyOpSnapImport:
+		if err := d.persistence.ImportSnapshots(message.SnapshotUpdate.Data); err != nil {
+			logger.Error("Error deleting snapshot: %v", err)
+		}
+
+	case api.NotifyOpVersionUpdate:
+		if err := d.updater.PerformRemoteUpdate(*message.VersionMessage); err != nil {
 			logger.Error("PerformRemoteUpdate error: %v", err)
 		}
-		return
-	}
 
-	// Handle the config update next
-	var update api.ConfigUpdate
-	if err := json.Unmarshal(msg, &update); err != nil {
-		logger.Error("Error unmarshaling update: %v", err)
-		return
-	}
-
-	if err := d.stateManager.ApplyUpdate(update); err != nil {
-		logger.Error("Error applying update: %v", err)
-		return
-	}
-
-	// Get the single key from the update map
-	var updateKey string
-	for k := range update.Data {
-		updateKey = k
-		break
-	}
-
-	if d.verbose {
-		logger.Debug("Applied update for key %s from node %s (version: %d)",
-			updateKey, update.NodeID, update.Version)
+	default:
+		logger.Error("Unknown message type")
 	}
 }
 
@@ -92,10 +101,7 @@ func (d *ClusterDelegate) GetBroadcasts(overhead, limit int) [][]byte {
 func (d *ClusterDelegate) LocalState(join bool) []byte {
 
 	logger := logging.GetLogger()
-
-	if d.verbose {
-		logger.Debug("LocalState requested (join=%v)", join)
-	}
+	logger.Debug("LocalState requested (join=%v)", join)
 
 	state := d.stateManager.GetFullState()
 	snapshot := struct {
@@ -114,10 +120,9 @@ func (d *ClusterDelegate) LocalState(join bool) []byte {
 		return nil
 	}
 
-	if d.verbose {
-		logger.Debug("Providing local state with %d entries (version: %d)",
-			len(state), snapshot.Version)
-	}
+	logger.Debug("Providing local state with %d entries (version: %d)",
+		len(state), snapshot.Version)
+
 	return data
 }
 
@@ -127,10 +132,7 @@ func (d *ClusterDelegate) MergeRemoteState(buf []byte, join bool) {
 	}
 
 	logger := logging.GetLogger()
-
-	if d.verbose {
-		logger.Debug("MergeRemoteState called (join=%v, size=%d)", join, len(buf))
-	}
+	logger.Debug("MergeRemoteState called (join=%v, size=%d)", join, len(buf))
 
 	var snapshot struct {
 		Version int64                      `json:"version"`
@@ -143,12 +145,9 @@ func (d *ClusterDelegate) MergeRemoteState(buf []byte, join bool) {
 		return
 	}
 
-	if d.verbose {
-		logger.Debug("Merging remote state from node %s with %d entries (version: %d)",
-			snapshot.NodeID, len(snapshot.State), snapshot.Version)
-	}
+	logger.Debug("Merging remote state from node %s with %d entries (version: %d)",
+		snapshot.NodeID, len(snapshot.State), snapshot.Version)
 	d.stateManager.MergeRemoteState(snapshot.State, snapshot.NodeID)
 
-	// Persist after merging remote state
 	d.persistence.MarkDirty()
 }

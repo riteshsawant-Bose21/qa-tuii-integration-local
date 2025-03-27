@@ -1,8 +1,12 @@
 **/.DS_Store
-**/.xcuserstate
+**/.vscode
+**/xcuserdata
+**/xcuserstate
 build
 cloud-init.yaml
 fusion-env
 fusion-server.yaml
+fusion/test/dummy
+fusion/test/tasks_test.json
 multipass.env
 data

@@ -4,113 +4,18 @@
   "items": [
     {
       "type": "http",
-      "name": "Clear",
-      "seq": 5,
-      "request": {
-        "url": "{{api_url}}/clear",
-        "method": "DELETE",
-        "headers": [],
-        "params": [],
-        "body": {
-          "mode": "none",
-          "formUrlEncoded": [],
-          "multipartForm": []
-        },
-        "script": {},
-        "vars": {},
-        "assertions": [],
-        "tests": "",
-        "docs": "",
-        "auth": {
-          "mode": "none"
-        }
-      }
-    },
-    {
-      "type": "http",
-      "name": "Cluster Status",
-      "seq": 8,
-      "request": {
-        "url": "{{metrics_url}}/cluster/status",
-        "method": "GET",
-        "headers": [],
-        "params": [],
-        "body": {
-          "mode": "none",
-          "formUrlEncoded": [],
-          "multipartForm": []
-        },
-        "script": {},
-        "vars": {},
-        "assertions": [],
-        "tests": "",
-        "docs": "",
-        "auth": {
-          "mode": "none"
-        }
-      }
-    },
-    {
-      "type": "http",
-      "name": "Dump Raw Data",
-      "seq": 6,
-      "request": {
-        "url": "{{api_url}}/dump",
-        "method": "GET",
-        "headers": [],
-        "params": [],
-        "body": {
-          "mode": "none",
-          "formUrlEncoded": [],
-          "multipartForm": []
-        },
-        "script": {},
-        "vars": {},
-        "assertions": [],
-        "tests": "",
-        "docs": "",
-        "auth": {
-          "mode": "none"
-        }
-      }
-    },
-    {
-      "type": "http",
-      "name": "Endpoints",
-      "seq": 10,
-      "request": {
-        "url": "{{api_url}}/endpoints",
-        "method": "GET",
-        "headers": [],
-        "params": [],
-        "body": {
-          "mode": "none",
-          "formUrlEncoded": [],
-          "multipartForm": []
-        },
-        "script": {},
-        "vars": {},
-        "assertions": [],
-        "tests": "",
-        "docs": "",
-        "auth": {
-          "mode": "none"
-        }
-      }
-    },
-    {
-      "type": "http",
-      "name": "Get All Values",
+      "name": "Members",
       "seq": 2,
       "request": {
-        "url": "{{api_url}}/getValue",
+        "url": "{{api_url}}/members",
         "method": "GET",
         "headers": [],
         "params": [],
         "body": {
           "mode": "none",
           "formUrlEncoded": [],
-          "multipartForm": []
+          "multipartForm": [],
+          "file": []
         },
         "script": {},
         "vars": {},
@@ -124,55 +29,18 @@
     },
     {
       "type": "http",
-      "name": "Get Value From Node",
-      "seq": 9,
-      "request": {
-        "url": "192.168.64.4:8080/getValue?key=audio",
-        "method": "GET",
-        "headers": [],
-        "params": [
-          {
-            "name": "key",
-            "value": "audio",
-            "type": "query",
-            "enabled": true
-          }
-        ],
-        "body": {
-          "mode": "none",
-          "formUrlEncoded": [],
-          "multipartForm": []
-        },
-        "script": {},
-        "vars": {},
-        "assertions": [],
-        "tests": "",
-        "docs": "",
-        "auth": {
-          "mode": "none"
-        }
-      }
-    },
-    {
-      "type": "http",
-      "name": "Get Value",
+      "name": "Root",
       "seq": 1,
       "request": {
-        "url": "{{api_url}}/getValue?key=settings.audio.modifiers[2:4]",
+        "url": "{{api_url}}/",
         "method": "GET",
         "headers": [],
-        "params": [
-          {
-            "name": "key",
-            "value": "settings.audio.modifiers[2:4]",
-            "type": "query",
-            "enabled": true
-          }
-        ],
+        "params": [],
         "body": {
           "mode": "none",
           "formUrlEncoded": [],
-          "multipartForm": []
+          "multipartForm": [],
+          "file": []
         },
         "script": {},
         "vars": {},
@@ -185,131 +53,862 @@
       }
     },
     {
-      "type": "http",
+      "type": "folder",
+      "name": "Config",
+      "items": [
+        {
+          "type": "http",
+          "name": "Clear",
+          "seq": 4,
+          "request": {
+            "url": "{{api_url}}/clear",
+            "method": "DELETE",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Export Raw Data",
+          "seq": 6,
+          "request": {
+            "url": "{{api_url}}/export",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Get All Values",
+          "seq": 2,
+          "request": {
+            "url": "{{api_url}}/getValue",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Get Value From Node",
+          "seq": 7,
+          "request": {
+            "url": "192.168.64.4:8080/getValue?key=audio",
+            "method": "GET",
+            "headers": [],
+            "params": [
+              {
+                "name": "key",
+                "value": "audio",
+                "type": "query",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Get Value",
+          "seq": 1,
+          "request": {
+            "url": "{{api_url}}/getValue?key=settings.audio.tone_eq1",
+            "method": "GET",
+            "headers": [],
+            "params": [
+              {
+                "name": "key",
+                "value": "settings.audio.tone_eq1",
+                "type": "query",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Set Value",
+          "seq": 3,
+          "request": {
+            "url": "{{api_url}}/setValue",
+            "method": "POST",
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/json",
+                "enabled": true
+              }
+            ],
+            "params": [
+              {
+                "name": "key",
+                "value": "settings.telemetry.report_period[1]",
+                "type": "query",
+                "enabled": false
+              }
+            ],
+            "body": {
+              "mode": "json",
+              "json": "{\n    \"request_id\": \"06cc335f-adb1-4d4c-b575-ce4d9f030edb\",\n    \"property_settings\": [\n        {\n            \"name\": \"sample_rate\",\n            \"value\": 48000\n        },\n        {\n            \"name\": \"frame_size\",\n            \"value\": 256\n        }\n    ],\n    \"blocks\": [\n        {\n            \"name\": \"in1\",\n            \"algorithm\": \"jack_in\",\n            \"location\": \"\",\n            \"id\": \"023964\",\n            \"property_settings\": [\n                {\n                    \"name\": \"sample_rate\",\n                    \"value\": 48000\n                },\n                {\n                    \"name\": \"frame_size\",\n                    \"value\": 256\n                }\n            ],\n            \"terminal_channels\": [\n                {\n                    \"name\": \"out\",\n                    \"channels\": 1\n                }\n            ]\n        },\n        {\n            \"name\": \"in2\",\n            \"algorithm\": \"jack_in\",\n            \"location\": \"\",\n            \"id\": \"031899\",\n            \"property_settings\": [\n                {\n                    \"name\": \"sample_rate\",\n                    \"value\": 48000\n                },\n                {\n                    \"name\": \"frame_size\",\n                    \"value\": 256\n                }\n            ],\n            \"terminal_channels\": [\n                {\n                    \"name\": \"out\",\n                    \"channels\": 1\n                }\n            ]\n        },\n        {\n            \"name\": \"out2\",\n            \"algorithm\": \"jack_out\",\n            \"location\": \"\",\n            \"id\": \"036149\",\n            \"property_settings\": [\n                {\n                    \"name\": \"sample_rate\",\n                    \"value\": 48000\n                },\n                {\n                    \"name\": \"frame_size\",\n                    \"value\": 256\n                }\n            ],\n            \"terminal_channels\": [\n                {\n                    \"name\": \"in\",\n                    \"channels\": 1\n                }\n            ]\n        },\n        {\n            \"name\": \"out1\",\n            \"algorithm\": \"jack_out\",\n            \"location\": \"\",\n            \"id\": \"030641\",\n            \"property_settings\": [\n                {\n                    \"name\": \"sample_rate\",\n                    \"value\": 48000\n                },\n                {\n                    \"name\": \"frame_size\",\n                    \"value\": 256\n                }\n            ],\n            \"terminal_channels\": [\n                {\n                    \"name\": \"in\",\n                    \"channels\": 1\n                }\n            ]\n        },\n        {\n            \"name\": \"delay1\",\n            \"algorithm\": \"delay\",\n            \"location\": \"\",\n            \"id\": \"013848\",\n            \"property_settings\": [\n                {\n                    \"name\": \"sample_rate\",\n                    \"value\": 48000\n                },\n                {\n                    \"name\": \"frame_size\",\n                    \"value\": 256\n                },\n                {\n                    \"name\": \"channels\",\n                    \"value\": 1\n                }\n            ]\n        },\n        {\n            \"name\": \"agc1\",\n            \"algorithm\": \"agc\",\n            \"location\": \"\",\n            \"id\": \"020045\",\n            \"property_settings\": [\n                {\n                    \"name\": \"sample_rate\",\n                    \"value\": 48000\n                },\n                {\n                    \"name\": \"frame_size\",\n                    \"value\": 256\n                },\n                {\n                    \"name\": \"channels\",\n                    \"value\": 1\n                }\n            ]\n        },\n        {\n            \"name\": \"agc2\",\n            \"algorithm\": \"agc\",\n            \"location\": \"\",\n            \"id\": \"044500\",\n            \"property_settings\": [\n                {\n                    \"name\": \"sample_rate\",\n                    \"value\": 48000\n                },\n                {\n                    \"name\": \"frame_size\",\n                    \"value\": 256\n                },\n                {\n                    \"name\": \"channels\",\n                    \"value\": 1\n                }\n            ]\n        },\n        {\n            \"name\": \"gain1\",\n            \"algorithm\": \"gain\",\n            \"location\": \"\",\n            \"id\": \"025927\",\n            \"property_settings\": [\n                {\n                    \"name\": \"sample_rate\",\n                    \"value\": 48000\n                },\n                {\n                    \"name\": \"frame_size\",\n                    \"value\": 256\n                },\n                {\n                    \"name\": \"channels\",\n                    \"value\": 1\n                }\n            ]\n        },\n        {\n            \"name\": \"gain2\",\n            \"algorithm\": \"gain\",\n            \"location\": \"\",\n            \"id\": \"032059\",\n            \"property_settings\": [\n                {\n                    \"name\": \"sample_rate\",\n                    \"value\": 48000\n                },\n                {\n                    \"name\": \"frame_size\",\n                    \"value\": 256\n                },\n                {\n                    \"name\": \"channels\",\n                    \"value\": 1\n                }\n            ]\n        },\n        {\n            \"name\": \"delay2\",\n            \"algorithm\": \"delay\",\n            \"location\": \"\",\n            \"id\": \"023567\",\n            \"property_settings\": [\n                {\n                    \"name\": \"sample_rate\",\n                    \"value\": 48000\n                },\n                {\n                    \"name\": \"frame_size\",\n                    \"value\": 256\n                },\n                {\n                    \"name\": \"channels\",\n                    \"value\": 1\n                }\n            ]\n        },\n        {\n            \"name\": \"limiter1\",\n            \"algorithm\": \"limiter\",\n            \"location\": \"\",\n            \"id\": \"012195\",\n            \"property_settings\": [\n                {\n                    \"name\": \"sample_rate\",\n                    \"value\": 48000\n                },\n                {\n                    \"name\": \"frame_size\",\n                    \"value\": 256\n                },\n                {\n                    \"name\": \"channels\",\n                    \"value\": 1\n                }\n            ]\n        },\n        {\n            \"name\": \"limiter2\",\n            \"algorithm\": \"limiter\",\n            \"location\": \"\",\n            \"id\": \"064899\",\n            \"property_settings\": [\n                {\n                    \"name\": \"sample_rate\",\n                    \"value\": 48000\n                },\n                {\n                    \"name\": \"frame_size\",\n                    \"value\": 256\n                },\n                {\n                    \"name\": \"channels\",\n                    \"value\": 1\n                }\n            ]\n        },\n        {\n            \"name\": \"tone_eq1\",\n            \"algorithm\": \"tone_control\",\n            \"location\": \"\",\n            \"id\": \"048560\",\n            \"property_settings\": [\n                {\n                    \"name\": \"sample_rate\",\n                    \"value\": 48000\n                },\n                {\n                    \"name\": \"frame_size\",\n                    \"value\": 256\n                },\n                {\n                    \"name\": \"channels\",\n                    \"value\": 1\n                }\n            ]\n        },\n        {\n            \"name\": \"tone_eq2\",\n            \"algorithm\": \"tone_control\",\n            \"location\": \"\",\n            \"id\": \"013564\",\n            \"property_settings\": [\n                {\n                    \"name\": \"sample_rate\",\n                    \"value\": 48000\n                },\n                {\n                    \"name\": \"frame_size\",\n                    \"value\": 256\n                },\n                {\n                    \"name\": \"channels\",\n                    \"value\": 1\n                }\n            ]\n        },\n        {\n            \"name\": \"vpeq1\",\n            \"algorithm\": \"peq\",\n            \"location\": \"\",\n            \"id\": \"037890\",\n            \"property_settings\": [\n                {\n                    \"name\": \"sample_rate\",\n                    \"value\": 48000\n                },\n                {\n                    \"name\": \"frame_size\",\n                    \"value\": 256\n                },\n                {\n                    \"name\": \"channels\",\n                    \"value\": 1\n                },\n                {\n                    \"name\": \"bands\",\n                    \"value\": 9\n                }\n            ]\n        },\n        {\n            \"name\": \"vpeq2\",\n            \"algorithm\": \"peq\",\n            \"location\": \"\",\n            \"id\": \"019408\",\n            \"property_settings\": [\n                {\n                    \"name\": \"sample_rate\",\n                    \"value\": 48000\n                },\n                {\n                    \"name\": \"frame_size\",\n                    \"value\": 256\n                },\n                {\n                    \"name\": \"channels\",\n                    \"value\": 1\n                },\n                {\n                    \"name\": \"bands\",\n                    \"value\": 9\n                }\n            ]\n        },\n        {\n            \"name\": \"matrix1\",\n            \"algorithm\": \"matrix_mixer\",\n            \"location\": \"\",\n            \"id\": \"051137\",\n            \"property_settings\": [\n                {\n                    \"name\": \"sample_rate\",\n                    \"value\": 48000\n                },\n                {\n                    \"name\": \"frame_size\",\n                    \"value\": 256\n                }\n            ],\n            \"terminal_channels\": [\n                {\n                    \"name\": \"in\",\n                    \"channels\": 2\n                },\n                {\n                    \"name\": \"out\",\n                    \"channels\": 2\n                }\n            ]\n        }\n    ],\n    \"block_connections\": [\n        {\n            \"source_block\": \"023964\",\n            \"output_terminal\": \"out\",\n            \"output_channel\": 1,\n            \"destination_block\": \"020045\",\n            \"input_terminal\": \"in\",\n            \"input_channel\": 1\n        },\n        {\n            \"source_block\": \"031899\",\n            \"output_terminal\": \"out\",\n            \"output_channel\": 1,\n            \"destination_block\": \"044500\",\n            \"input_terminal\": \"in\",\n            \"input_channel\": 1\n        },\n        {\n            \"source_block\": \"013564\",\n            \"output_terminal\": \"out\",\n            \"output_channel\": 1,\n            \"destination_block\": \"051137\",\n            \"input_terminal\": \"in\",\n            \"input_channel\": 2\n        },\n        {\n            \"source_block\": \"048560\",\n            \"output_terminal\": \"out\",\n            \"output_channel\": 1,\n            \"destination_block\": \"051137\",\n            \"input_terminal\": \"in\",\n            \"input_channel\": 1\n        },\n        {\n            \"source_block\": \"037890\",\n            \"output_terminal\": \"out\",\n            \"output_channel\": 1,\n            \"destination_block\": \"012195\",\n            \"input_terminal\": \"in\",\n            \"input_channel\": 1\n        },\n        {\n            \"source_block\": \"037890\",\n            \"output_terminal\": \"out\",\n            \"output_channel\": 1,\n            \"destination_block\": \"012195\",\n            \"input_terminal\": \"peak_in\",\n            \"input_channel\": 1\n        },\n        {\n            \"source_block\": \"019408\",\n            \"output_terminal\": \"out\",\n            \"output_channel\": 1,\n            \"destination_block\": \"064899\",\n            \"input_terminal\": \"in\",\n            \"input_channel\": 1\n        },\n        {\n            \"source_block\": \"019408\",\n            \"output_terminal\": \"out\",\n            \"output_channel\": 1,\n            \"destination_block\": \"064899\",\n            \"input_terminal\": \"peak_in\",\n            \"input_channel\": 1\n        },\n        {\n            \"source_block\": \"025927\",\n            \"output_terminal\": \"out\",\n            \"output_channel\": 1,\n            \"destination_block\": \"037890\",\n            \"input_terminal\": \"in\",\n            \"input_channel\": 1\n        },\n        {\n            \"source_block\": \"032059\",\n            \"output_terminal\": \"out\",\n            \"output_channel\": 1,\n            \"destination_block\": \"019408\",\n            \"input_terminal\": \"in\",\n            \"input_channel\": 1\n        },\n        {\n            \"source_block\": \"013848\",\n            \"output_terminal\": \"out\",\n            \"output_channel\": 1,\n            \"destination_block\": \"030641\",\n            \"input_terminal\": \"in\",\n            \"input_channel\": 1\n        },\n        {\n            \"source_block\": \"023567\",\n            \"output_terminal\": \"out\",\n            \"output_channel\": 1,\n            \"destination_block\": \"036149\",\n            \"input_terminal\": \"in\",\n            \"input_channel\": 1\n        },\n        {\n            \"source_block\": \"051137\",\n            \"output_terminal\": \"out\",\n            \"output_channel\": 1,\n            \"destination_block\": \"025927\",\n            \"input_terminal\": \"in\",\n            \"input_channel\": 1\n        },\n        {\n            \"source_block\": \"051137\",\n            \"output_terminal\": \"out\",\n            \"output_channel\": 2,\n            \"destination_block\": \"032059\",\n            \"input_terminal\": \"in\",\n            \"input_channel\": 1\n        },\n        {\n            \"source_block\": \"044500\",\n            \"output_terminal\": \"out\",\n            \"output_channel\": 1,\n            \"destination_block\": \"013564\",\n            \"input_terminal\": \"in\",\n            \"input_channel\": 1\n        },\n        {\n            \"source_block\": \"020045\",\n            \"output_terminal\": \"out\",\n            \"output_channel\": 1,\n            \"destination_block\": \"048560\",\n            \"input_terminal\": \"in\",\n            \"input_channel\": 1\n        },\n        {\n            \"source_block\": \"064899\",\n            \"output_terminal\": \"out\",\n            \"output_channel\": 1,\n            \"destination_block\": \"023567\",\n            \"input_terminal\": \"in\",\n            \"input_channel\": 1\n        },\n        {\n            \"source_block\": \"012195\",\n            \"output_terminal\": \"out\",\n            \"output_channel\": 1,\n            \"destination_block\": \"013848\",\n            \"input_terminal\": \"in\",\n            \"input_channel\": 1\n        }\n    ],\n    \"user_setting\": {\n        \"max_devices\": [\n            {\n                \"device_type\": \"fusion_box\",\n                \"value\": 1\n            }\n        ],\n        \"device_capacity\": 90,\n        \"max_solve_time\": 60,\n        \"max_device_hop_count\": 10,\n        \"max_network_latency\": 50,\n        \"cost_option\": 1\n    }\n}",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Update Value",
+          "seq": 5,
+          "request": {
+            "url": "{{api_url}}/updateValue",
+            "method": "PATCH",
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/json",
+                "enabled": true
+              }
+            ],
+            "params": [
+              {
+                "name": "key",
+                "value": "settings",
+                "type": "query",
+                "enabled": false
+              }
+            ],
+            "body": {
+              "mode": "json",
+              "json": "{\n  \"value\": {\n    \"audio\": {\n      \"tone_eq1\": {\n        \"frequencies\": [\n          1,\n          2,\n          3\n        ]\n      }\n    }\n  }\n}",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "folder",
+      "name": "DRO",
+      "items": [
+        {
+          "type": "http",
+          "name": "Process",
+          "seq": 1,
+          "request": {
+            "url": "{{api_url}}/dro/process",
+            "method": "POST",
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/json",
+                "enabled": true
+              }
+            ],
+            "params": [],
+            "body": {
+              "mode": "json",
+              "json": "{\n    \"request_id\": \"cf7d80c4-1961-4a48-ae73-e574ebdaca24\",\n    \"property_settings\": [\n        {\n            \"name\": \"sample_rate\",\n            \"value\": 48000\n        },\n        {\n            \"name\": \"frame_size\",\n            \"value\": 32\n        }\n    ],\n    \"blocks\": [\n        {\n            \"name\": \"in1\",\n            \"algorithm\": \"jack_in\",\n            \"location\": \"\",\n            \"id\": \"023964\",\n            \"property_settings\": [\n                {\n                    \"name\": \"sample_rate\",\n                    \"value\": 48000\n                },\n                {\n                    \"name\": \"frame_size\",\n                    \"value\": 32\n                }\n            ],\n            \"terminal_channels\": [\n                {\n                    \"name\": \"out\",\n                    \"channels\": 1\n                }\n            ]\n        },\n        {\n            \"name\": \"in2\",\n            \"algorithm\": \"jack_in\",\n            \"location\": \"\",\n            \"id\": \"031899\",\n            \"property_settings\": [\n                {\n                    \"name\": \"sample_rate\",\n                    \"value\": 48000\n                },\n                {\n                    \"name\": \"frame_size\",\n                    \"value\": 32\n                }\n            ],\n            \"terminal_channels\": [\n                {\n                    \"name\": \"out\",\n                    \"channels\": 1\n                }\n            ]\n        },\n        {\n            \"name\": \"out2\",\n            \"algorithm\": \"jack_out\",\n            \"location\": \"\",\n            \"id\": \"036149\",\n            \"property_settings\": [\n                {\n                    \"name\": \"sample_rate\",\n                    \"value\": 48000\n                },\n                {\n                    \"name\": \"frame_size\",\n                    \"value\": 32\n                }\n            ],\n            \"terminal_channels\": [\n                {\n                    \"name\": \"in\",\n                    \"channels\": 1\n                }\n            ]\n        },\n        {\n            \"name\": \"out1\",\n            \"algorithm\": \"jack_out\",\n            \"location\": \"\",\n            \"id\": \"030641\",\n            \"property_settings\": [\n                {\n                    \"name\": \"sample_rate\",\n                    \"value\": 48000\n                },\n                {\n                    \"name\": \"frame_size\",\n                    \"value\": 32\n                }\n            ],\n            \"terminal_channels\": [\n                {\n                    \"name\": \"in\",\n                    \"channels\": 1\n                }\n            ]\n        },\n        {\n            \"name\": \"delay1\",\n            \"algorithm\": \"delay\",\n            \"location\": \"\",\n            \"id\": \"013848\",\n            \"property_settings\": [\n                {\n                    \"name\": \"sample_rate\",\n                    \"value\": 48000\n                },\n                {\n                    \"name\": \"frame_size\",\n                    \"value\": 32\n                },\n                {\n                    \"name\": \"channels\",\n                    \"value\": 1\n                }\n            ]\n        },\n        {\n            \"name\": \"vpeq1\",\n            \"algorithm\": \"peq\",\n            \"location\": \"\",\n            \"id\": \"020213\",\n            \"property_settings\": [\n                {\n                    \"name\": \"sample_rate\",\n                    \"value\": 48000\n                },\n                {\n                    \"name\": \"frame_size\",\n                    \"value\": 32\n                },\n                {\n                    \"name\": \"channels\",\n                    \"value\": 1\n                },\n                {\n                    \"name\": \"bands\",\n                    \"value\": 3\n                }\n            ]\n        },\n        {\n            \"name\": \"vpeq2\",\n            \"algorithm\": \"peq\",\n            \"location\": \"\",\n            \"id\": \"042218\",\n            \"property_settings\": [\n                {\n                    \"name\": \"sample_rate\",\n                    \"value\": 48000\n                },\n                {\n                    \"name\": \"frame_size\",\n                    \"value\": 32\n                },\n                {\n                    \"name\": \"channels\",\n                    \"value\": 1\n                },\n                {\n                    \"name\": \"bands\",\n                    \"value\": 3\n                }\n            ]\n        },\n        {\n            \"name\": \"agc1\",\n            \"algorithm\": \"agc\",\n            \"location\": \"\",\n            \"id\": \"020045\",\n            \"property_settings\": [\n                {\n                    \"name\": \"sample_rate\",\n                    \"value\": 48000\n                },\n                {\n                    \"name\": \"frame_size\",\n                    \"value\": 32\n                },\n                {\n                    \"name\": \"channels\",\n                    \"value\": 1\n                }\n            ]\n        },\n        {\n            \"name\": \"agc2\",\n            \"algorithm\": \"agc\",\n            \"location\": \"\",\n            \"id\": \"044500\",\n            \"property_settings\": [\n                {\n                    \"name\": \"sample_rate\",\n                    \"value\": 48000\n                },\n                {\n                    \"name\": \"frame_size\",\n                    \"value\": 32\n                },\n                {\n                    \"name\": \"channels\",\n                    \"value\": 1\n                }\n            ]\n        },\n        {\n            \"name\": \"gain1\",\n            \"algorithm\": \"gain\",\n            \"location\": \"\",\n            \"id\": \"025927\",\n            \"property_settings\": [\n                {\n                    \"name\": \"sample_rate\",\n                    \"value\": 48000\n                },\n                {\n                    \"name\": \"frame_size\",\n                    \"value\": 32\n                },\n                {\n                    \"name\": \"channels\",\n                    \"value\": 1\n                }\n            ]\n        },\n        {\n            \"name\": \"gain2\",\n            \"algorithm\": \"gain\",\n            \"location\": \"\",\n            \"id\": \"032059\",\n            \"property_settings\": [\n                {\n                    \"name\": \"sample_rate\",\n                    \"value\": 48000\n                },\n                {\n                    \"name\": \"frame_size\",\n                    \"value\": 32\n                },\n                {\n                    \"name\": \"channels\",\n                    \"value\": 1\n                }\n            ]\n        },\n        {\n            \"name\": \"delay2\",\n            \"algorithm\": \"delay\",\n            \"location\": \"\",\n            \"id\": \"023567\",\n            \"property_settings\": [\n                {\n                    \"name\": \"sample_rate\",\n                    \"value\": 48000\n                },\n                {\n                    \"name\": \"frame_size\",\n                    \"value\": 32\n                },\n                {\n                    \"name\": \"channels\",\n                    \"value\": 1\n                }\n            ]\n        },\n        {\n            \"name\": \"limiter1\",\n            \"algorithm\": \"limiter\",\n            \"location\": \"\",\n            \"id\": \"012195\",\n            \"property_settings\": [\n                {\n                    \"name\": \"sample_rate\",\n                    \"value\": 48000\n                },\n                {\n                    \"name\": \"frame_size\",\n                    \"value\": 32\n                },\n                {\n                    \"name\": \"channels\",\n                    \"value\": 1\n                }\n            ]\n        },\n        {\n            \"name\": \"limiter2\",\n            \"algorithm\": \"limiter\",\n            \"location\": \"\",\n            \"id\": \"064899\",\n            \"property_settings\": [\n                {\n                    \"name\": \"sample_rate\",\n                    \"value\": 48000\n                },\n                {\n                    \"name\": \"frame_size\",\n                    \"value\": 32\n                },\n                {\n                    \"name\": \"channels\",\n                    \"value\": 1\n                }\n            ]\n        },\n        {\n            \"name\": \"ducker1\",\n            \"algorithm\": \"ducker\",\n            \"location\": \"\",\n            \"id\": \"054199\",\n            \"property_settings\": [\n                {\n                    \"name\": \"sample_rate\",\n                    \"value\": 48000\n                },\n                {\n                    \"name\": \"frame_size\",\n                    \"value\": 32\n                },\n                {\n                    \"name\": \"channels\",\n                    \"value\": 1\n                }\n            ]\n        }\n    ],\n    \"block_connections\": [\n        {\n            \"source_block\": \"023964\",\n            \"output_terminal\": \"out\",\n            \"output_channel\": 1,\n            \"destination_block\": \"020045\",\n            \"input_terminal\": \"in\",\n            \"input_channel\": 1\n        },\n        {\n            \"source_block\": \"031899\",\n            \"output_terminal\": \"out\",\n            \"output_channel\": 1,\n            \"destination_block\": \"044500\",\n            \"input_terminal\": \"in\",\n            \"input_channel\": 1\n        },\n        {\n            \"source_block\": \"020213\",\n            \"output_terminal\": \"out\",\n            \"output_channel\": 1,\n            \"destination_block\": \"054199\",\n            \"input_terminal\": \"in\",\n            \"input_channel\": 1\n        },\n        {\n            \"source_block\": \"042218\",\n            \"output_terminal\": \"out\",\n            \"output_channel\": 1,\n            \"destination_block\": \"054199\",\n            \"input_terminal\": \"sidechain_in\",\n            \"input_channel\": 1\n        },\n        {\n            \"source_block\": \"042218\",\n            \"output_terminal\": \"out\",\n            \"output_channel\": 1,\n            \"destination_block\": \"032059\",\n            \"input_terminal\": \"in\",\n            \"input_channel\": 1\n        },\n        {\n            \"source_block\": \"032059\",\n            \"output_terminal\": \"out\",\n            \"output_channel\": 1,\n            \"destination_block\": \"064899\",\n            \"input_terminal\": \"in\",\n            \"input_channel\": 1\n        },\n        {\n            \"source_block\": \"032059\",\n            \"output_terminal\": \"out\",\n            \"output_channel\": 1,\n            \"destination_block\": \"064899\",\n            \"input_terminal\": \"peak_in\",\n            \"input_channel\": 1\n        },\n        {\n            \"source_block\": \"025927\",\n            \"output_terminal\": \"out\",\n            \"output_channel\": 1,\n            \"destination_block\": \"012195\",\n            \"input_terminal\": \"in\",\n            \"input_channel\": 1\n        },\n        {\n            \"source_block\": \"025927\",\n            \"output_terminal\": \"out\",\n            \"output_channel\": 1,\n            \"destination_block\": \"012195\",\n            \"input_terminal\": \"peak_in\",\n            \"input_channel\": 1\n        },\n        {\n            \"source_block\": \"023567\",\n            \"output_terminal\": \"out\",\n            \"output_channel\": 1,\n            \"destination_block\": \"036149\",\n            \"input_terminal\": \"in\",\n            \"input_channel\": 1\n        },\n        {\n            \"source_block\": \"013848\",\n            \"output_terminal\": \"out\",\n            \"output_channel\": 1,\n            \"destination_block\": \"030641\",\n            \"input_terminal\": \"in\",\n            \"input_channel\": 1\n        },\n        {\n            \"source_block\": \"054199\",\n            \"output_terminal\": \"out\",\n            \"output_channel\": 1,\n            \"destination_block\": \"025927\",\n            \"input_terminal\": \"in\",\n            \"input_channel\": 1\n        },\n        {\n            \"source_block\": \"044500\",\n            \"output_terminal\": \"out\",\n            \"output_channel\": 1,\n            \"destination_block\": \"042218\",\n            \"input_terminal\": \"in\",\n            \"input_channel\": 1\n        },\n        {\n            \"source_block\": \"020045\",\n            \"output_terminal\": \"out\",\n            \"output_channel\": 1,\n            \"destination_block\": \"020213\",\n            \"input_terminal\": \"in\",\n            \"input_channel\": 1\n        },\n        {\n            \"source_block\": \"064899\",\n            \"output_terminal\": \"out\",\n            \"output_channel\": 1,\n            \"destination_block\": \"023567\",\n            \"input_terminal\": \"in\",\n            \"input_channel\": 1\n        },\n        {\n            \"source_block\": \"012195\",\n            \"output_terminal\": \"out\",\n            \"output_channel\": 1,\n            \"destination_block\": \"013848\",\n            \"input_terminal\": \"in\",\n            \"input_channel\": 1\n        }\n    ],\n    \"user_setting\": {\n        \"max_devices\": [\n            {\n                \"device_type\": \"fusion_box\",\n                \"value\": 1\n            }\n        ],\n        \"device_capacity\": 90,\n        \"max_solve_time\": 60,\n        \"max_device_hop_count\": 10,\n        \"max_network_latency\": 50,\n        \"cost_option\": 1\n    }\n}",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "folder",
+      "name": "Binaries",
+      "items": [
+        {
+          "type": "http",
+          "name": "Rollback Version",
+          "seq": 1,
+          "request": {
+            "url": "{{api_url}}/rollbackVersion?index=-1",
+            "method": "POST",
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/json",
+                "enabled": true
+              }
+            ],
+            "params": [
+              {
+                "name": "index",
+                "value": "-1",
+                "type": "query",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "json",
+              "json": "",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Update Version",
+          "seq": 2,
+          "request": {
+            "url": "{{api_url}}/updateVersion",
+            "method": "POST",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "multipartForm",
+              "formUrlEncoded": [],
+              "multipartForm": [
+                {
+                  "type": "file",
+                  "name": "binary",
+                  "value": [
+                    "/Users/gragan/inprogress/bose/fusion-server/build/fusion-server_linux_arm64"
+                  ],
+                  "enabled": true
+                },
+                {
+                  "type": "text",
+                  "name": "checksum",
+                  "value": "f6c38b795d725eaeeaefdc880f689dbe4d86811e055ed626cd0b7240d9130dd5",
+                  "enabled": true
+                }
+              ],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Upload Audio File",
+          "seq": 3,
+          "request": {
+            "url": "{{api_url}}/uploadAudio",
+            "method": "POST",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "multipartForm",
+              "formUrlEncoded": [],
+              "multipartForm": [
+                {
+                  "type": "file",
+                  "name": "binary",
+                  "value": [
+                    "/Users/gragan/inprogress/semitone/PatternPro/vmpc-juce/editables/JUCE/extras/AudioPluginHost/Builds/Android/app/src/main/assets/cello.wav"
+                  ],
+                  "enabled": true
+                }
+              ],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "folder",
+      "name": "Snapshots",
+      "items": [
+        {
+          "type": "http",
+          "name": "List",
+          "seq": 3,
+          "request": {
+            "url": "{{api_url}}/snapshots",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Delete",
+          "seq": 2,
+          "request": {
+            "url": "{{api_url}}/snapshots/delete?name=test_snapshot_delete",
+            "method": "DELETE",
+            "headers": [],
+            "params": [
+              {
+                "name": "name",
+                "value": "test_snapshot_delete",
+                "type": "query",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Create",
+          "seq": 1,
+          "request": {
+            "url": "{{api_url}}/snapshots/create?name=TestSnapshot",
+            "method": "POST",
+            "headers": [],
+            "params": [
+              {
+                "name": "name",
+                "value": "TestSnapshot",
+                "type": "query",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Activate",
+          "seq": 4,
+          "request": {
+            "url": "{{api_url}}/snapshots/activate?name=default",
+            "method": "PUT",
+            "headers": [],
+            "params": [
+              {
+                "name": "name",
+                "value": "default",
+                "type": "query",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Metadata",
+          "seq": 5,
+          "request": {
+            "url": "{{api_url}}/snapshots/metadata",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Snapshot",
+          "seq": 8,
+          "request": {
+            "url": "{{api_url}}/snapshots/snapshot?name=default",
+            "method": "GET",
+            "headers": [],
+            "params": [
+              {
+                "name": "name",
+                "value": "default",
+                "type": "query",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Export",
+          "seq": 6,
+          "request": {
+            "url": "{{api_url}}/snapshots/export",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Import",
+          "seq": 7,
+          "request": {
+            "url": "{{api_url}}/snapshots/import",
+            "method": "POST",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "json",
+              "json": "{\n}",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "folder",
+      "name": "Timers",
+      "items": [
+        {
+          "type": "http",
+          "name": "Add Task",
+          "seq": 2,
+          "request": {
+            "url": "{{api_url}}/tasks/add",
+            "method": "POST",
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/json",
+                "enabled": true
+              }
+            ],
+            "params": [],
+            "body": {
+              "mode": "json",
+              "json": "{\n  \"id\": \"test\",\n  \"cron_expr\": \"*/5 * * * *\",\n  \"description\": \"bleep\"\n}",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Get Tasks History",
+          "seq": 3,
+          "request": {
+            "url": "{{api_url}}/tasks/history",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Get Tasks",
+          "seq": 1,
+          "request": {
+            "url": "{{api_url}}/tasks",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Remove Task",
+          "seq": 5,
+          "request": {
+            "url": "{{api_url}}/tasks/remove?id=test",
+            "method": "DELETE",
+            "headers": [],
+            "params": [
+              {
+                "name": "id",
+                "value": "test",
+                "type": "query",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Update Task",
+          "seq": 4,
+          "request": {
+            "url": "{{api_url}}/tasks/update?id=test",
+            "method": "PUT",
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/json",
+                "enabled": true
+              }
+            ],
+            "params": [
+              {
+                "name": "id",
+                "value": "test",
+                "type": "query",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "json",
+              "json": "{\n  \"cron_expr\": \"*/5 * * * *\",\n  \"description\": \"updated\"\n}",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "folder",
       "name": "Metrics",
-      "seq": 7,
-      "request": {
-        "url": "{{metrics_url}}/metrics",
-        "method": "GET",
-        "headers": [],
-        "params": [],
-        "body": {
-          "mode": "none",
-          "formUrlEncoded": [],
-          "multipartForm": []
-        },
-        "script": {},
-        "vars": {},
-        "assertions": [],
-        "tests": "",
-        "docs": "",
-        "auth": {
-          "mode": "none"
-        }
-      }
-    },
-    {
-      "type": "http",
-      "name": "Rollback",
-      "seq": 11,
-      "request": {
-        "url": "{{api_url}}/rollbackBinary?index=-3",
-        "method": "POST",
-        "headers": [
-          {
-            "name": "Content-Type",
-            "value": "application/json",
-            "enabled": true
+      "items": [
+        {
+          "type": "http",
+          "name": "Cluster Status",
+          "seq": 2,
+          "request": {
+            "url": "{{metrics_url}}/cluster/status",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
           }
-        ],
-        "params": [
-          {
-            "name": "index",
-            "value": "-3",
-            "type": "query",
-            "enabled": true
-          }
-        ],
-        "body": {
-          "mode": "json",
-          "json": "",
-          "formUrlEncoded": [],
-          "multipartForm": []
         },
-        "script": {},
-        "vars": {},
-        "assertions": [],
-        "tests": "",
-        "docs": "",
-        "auth": {
-          "mode": "none"
-        }
-      }
-    },
-    {
-      "type": "http",
-      "name": "Set Value",
-      "seq": 3,
-      "request": {
-        "url": "{{api_url}}/setValue",
-        "method": "POST",
-        "headers": [
-          {
-            "name": "Content-Type",
-            "value": "application/json",
-            "enabled": true
+        {
+          "type": "http",
+          "name": "Endpoints",
+          "seq": 3,
+          "request": {
+            "url": "{{api_url}}/endpoints",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
           }
-        ],
-        "params": [],
-        "body": {
-          "mode": "json",
-          "json": "{\n  \"settings\": {\n    \"audio\": {\n      \"tone_eq1\" : {\n        \n      }\n    }\n  }\n}\n",
-          "formUrlEncoded": [],
-          "multipartForm": []
         },
-        "script": {},
-        "vars": {},
-        "assertions": [],
-        "tests": "",
-        "docs": "",
-        "auth": {
-          "mode": "none"
-        }
-      }
-    },
-    {
-      "type": "http",
-      "name": "Update Value",
-      "seq": 4,
-      "request": {
-        "url": "{{api_url}}/updateValue",
-        "method": "PATCH",
-        "headers": [
-          {
-            "name": "Content-Type",
-            "value": "application/json",
-            "enabled": true
+        {
+          "type": "http",
+          "name": "Metrics",
+          "seq": 1,
+          "request": {
+            "url": "{{metrics_url}}/metrics",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
           }
-        ],
-        "params": [],
-        "body": {
-          "mode": "json",
-          "json": "{\n  \"settings\": {\n    \"audio\": {\n      \"tone_eq1\": {\n        \"bleep\": \"bleep\",\n        \"high_gain\": 8,\n        \"low_gain\": 10\n      },\n      \"modifiers\": [       \n        6.674e-11,\n        0.866,\n        10.49\n      ]\n    }\n  }\n}",
-          "formUrlEncoded": [],
-          "multipartForm": []
-        },
-        "script": {},
-        "vars": {},
-        "assertions": [],
-        "tests": "",
-        "docs": "",
-        "auth": {
-          "mode": "none"
         }
-      }
+      ]
     }
   ],
-  "activeEnvironmentUid": "Xbpjubxk0J1jt0cl6OUyS",
+  "activeEnvironmentUid": "RMIUhpnNw7djiTbp0TrYH",
   "environments": [
     {
       "variables": [
@@ -367,6 +966,8 @@
     "ignore": [
       "node_modules",
       ".git"
-    ]
+    ],
+    "size": 0.03175544738769531,
+    "filesCount": 24
   }
 }

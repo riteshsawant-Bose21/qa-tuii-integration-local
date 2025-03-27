@@ -4,15 +4,35 @@ set -euo pipefail
 # Build the fusion-server binary and optionally a release package.
 #
 # Usage:
-# $ ./build-fusion-server [-p]
-#   Arguments:
-#   --package    [optional] Build a release package with required config files, etc.
+#   ./build-fusion-server [--target <target>] [--package]
+#     --target        Specify the target operating system (default: linux)
+#     --package   Build a release package with required config files, etc.
 
-# Define variables
+# Default values
 BINARY_NAME="fusion-server"
 ARCH="${ARCH:-arm64}"
-OS="linux"
-EXPECTED_BINARY="${BINARY_NAME}_${OS}_${ARCH}"
+TARGET="linux"
+PACKAGE=false
+
+# Process command-line arguments
+while [[ "$#" -gt 0 ]]; do
+    case $1 in
+        --target)
+            TARGET="$2"
+            shift 2
+            ;;
+        --package|-p)
+            PACKAGE=true
+            shift
+            ;;
+        *)
+            echo "Unknown parameter: $1"
+            exit 1
+            ;;
+    esac
+done
+
+EXPECTED_BINARY="${BINARY_NAME}_${TARGET}_${ARCH}"
 
 # Clean up old binary if it exists
 if [ -f "$BINARY_NAME" ]; then
@@ -21,8 +41,8 @@ if [ -f "$BINARY_NAME" ]; then
 fi
 
 # Build the binary
-echo "Building ${BINARY_NAME} for ${OS}_${ARCH}..."
-make "build-${OS}-${ARCH}"
+echo "Building ${BINARY_NAME} for ${TARGET}_${ARCH}..."
+make "build-${TARGET}-${ARCH}"
 
 # Check if the build produced the expected binary
 if [ ! -f "build/$EXPECTED_BINARY" ]; then
@@ -32,32 +52,33 @@ fi
 
 # Rename the binary
 echo "Linking binary to expected name..."
-pushd ./build
+pushd ./build > /dev/null
 ln -sf "$EXPECTED_BINARY" "$BINARY_NAME"
-popd
+popd > /dev/null
 
-flag=${1:-}
-
-if [ "$flag" = '--package' ]; then
+if [ "$PACKAGE" = true ]; then
     # Make a "release package" with the binary, config files and version info.
-    # Build servers will define VERSION in the environment, but set a default for local builds.
     VERSION=${VERSION:-LOCAL}
-    # Get the commit-id
     commit_id=$(git rev-parse HEAD)
     full_version=$VERSION
+
+    # Jenkins will set a 'branchName' environment variable, but for local builds we need to get it.
+    BRANCH=${branchName:-}
+    if [ -z "$BRANCH" ]; then
+        BRANCH=$(git rev-parse --abbrev-ref HEAD)
+    fi
 
     cat << EOF_VERSION > build/fusion-server.info
 APP="fusion-server"
 VERSION="$VERSION"
-BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+BRANCH="$BRANCH"
 COMMIT_ID="$commit_id"
 COMMIT_DATE="$(TZ=UTC0 git --no-pager log -1 --pretty='format:%cd' --date='format-local:%Y-%m-%dT%H:%M:%S+00:00')"
 BUILD_DATE="$(date -u -Iseconds)"
 EOF_VERSION
     
     tar -czhf "build/fusion-server_${full_version}.tar.gz" scripts/*.service scripts/generate_cloud_config.sh \
-              build/$BINARY_NAME build/fusion-server.info
-    # Cleanup temp files
+              build/$BINARY_NAME build/fusion-server.info scripts/fusion-server-start.sh
     rm build/fusion-server.info
 fi
 

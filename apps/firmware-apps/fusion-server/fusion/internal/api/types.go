@@ -1,25 +1,82 @@
 package api
 
-import "time"
+import (
+	"encoding/json"
+	"time"
 
-// DataUpdate represents a data update in the system
+	"github.com/hashicorp/memberlist"
+)
+
+// ConfigUpdate represents a data update in the system
 type ConfigUpdate struct {
-	Data    map[string]interface{} `json:"data"`
-	Version int64                  `json:"version"`
-	NodeID  string                 `json:"node_id"`
-	Time    time.Time              `json:"timestamp"`
+	Data    map[string]any `json:"data"`
+	Version int64          `json:"version"`
+	Time    time.Time      `json:"timestamp"`
 	Clear   bool
 }
 
-// VolumeUpdate represents a volume change update
-type VolumeUpdate struct {
-	Channel int     `json:"channel"`
-	Volume  float64 `json:"volume"`
+// Endpoints contains the REST API endpoint information
+type Endpoints struct {
+	API       string   `json:"api"`
+	Telemetry []string `json:"telemetry"`
+	Metrics   string   `json:"metrics"`
+}
+
+// SnapshotMetadata holds metadata information from the database.
+type SnapshotMetadata struct {
+	ActiveSnapshot string    `json:"active_snapshot"`
+	Timestamp      time.Time `json:"timestamp"`
+	DBHash         string    `json:"hash"`
+	Valid          bool      `json:"valid"`
+}
+
+// SnapshotMemberMetadata tie a member to its snapshot metadata.
+type SnapshotMemberMetadata struct {
+	Member   *memberlist.Node
+	Metadata SnapshotMetadata
+}
+
+// SnapshotUpdate represents a snapshot update operation broadcast across the cluster.
+type SnapshotUpdate struct {
+	Name      string         `json:"name"`
+	Data      map[string]any `json:"data,omitempty"`
+	Timestamp time.Time      `json:"timestamp"`
+}
+
+// RawState represents raw state data element
+type RawState struct {
+	State map[string]*StateEntry `json:"state"`
 }
 
 // StateEntry represents a single entry in the state
 type StateEntry struct {
-	Data      interface{} `json:"data"`
-	Version   int64       `json:"version"`
-	Timestamp time.Time   `json:"timestamp"`
+	Data      any       `json:"data"`
+	Version   int64     `json:"version"`
+	Timestamp time.Time `json:"timestamp"`
+}
+
+type VersionMessage struct {
+	Type    string          `json:"type"`
+	Payload json.RawMessage `json:"payload"`
+}
+
+// NotifyOp is a custom type representing notification message operations.
+type NotifyOp string
+
+const (
+	NotifyOpConfigUpdate  NotifyOp = "config_update"
+	NotifyOpSnapActivate  NotifyOp = "snapshot_activate"
+	NotifyOpSnapCreate    NotifyOp = "snapshot_create"
+	NotifyOpSnapDelete    NotifyOp = "snapshot_delete"
+	NotifyOpSnapImport    NotifyOp = "snapshot_import"
+	NotifyOpVersionUpdate NotifyOp = "version_update"
+)
+
+// NotifyMessage holds information about a cross-node message
+type NotifyMessage struct {
+	Operation      NotifyOp
+	Node           string
+	ConfigUpdate   *ConfigUpdate
+	SnapshotUpdate *SnapshotUpdate
+	VersionMessage *VersionMessage
 }

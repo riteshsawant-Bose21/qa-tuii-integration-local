@@ -3,6 +3,7 @@ package network
 import (
 	"encoding/json"
 	"fmt"
+	"fusion/internal/api"
 	"fusion/internal/logging"
 	"fusion/internal/server"
 	"net"
@@ -114,7 +115,7 @@ func (s *UDPServer) handleMessage(data []byte, addr *net.UDPAddr) {
 	s.sendResponse(addr, response)
 }
 
-func (s *UDPServer) sendResponse(addr *net.UDPAddr, response interface{}) {
+func (s *UDPServer) sendResponse(addr *net.UDPAddr, response any) {
 	data, err := json.Marshal(response)
 	if err != nil {
 		logging.GetLogger().Error("Error marshaling response: %v", err)
@@ -127,27 +128,30 @@ func (s *UDPServer) sendResponse(addr *net.UDPAddr, response interface{}) {
 	}
 }
 
-func (s *UDPServer) BroadcastUpdate(update map[string]interface{}) error {
-	data, err := json.Marshal(update)
-	if err != nil {
-		return fmt.Errorf("failed to marshal update: %v", err)
-	}
+func (s *UDPServer) BroadcastUpdate(message api.NotifyMessage) error {
 
-	s.clientsMux.RLock()
-	deadClients := make([]string, 0)
-
-	for addrStr, clientAddr := range s.clients {
-		logging.GetLogger().Debug("Sending update to %s: %s", addrStr, string(data))
-		_, err = s.conn.WriteToUDP(data, clientAddr)
+	if message.Operation == api.NotifyOpConfigUpdate {
+		data, err := json.Marshal(message.ConfigUpdate.Data)
 		if err != nil {
-			logging.GetLogger().Error("Failed to send update to %s: %v", addrStr, err)
-			deadClients = append(deadClients, addrStr)
+			return fmt.Errorf("failed to marshal update: %v", err)
 		}
-	}
-	s.clientsMux.RUnlock()
 
-	for _, addr := range deadClients {
-		s.removeClient(addr)
+		s.clientsMux.RLock()
+		deadClients := make([]string, 0)
+
+		for addrStr, clientAddr := range s.clients {
+			logging.GetLogger().Debug("Sending update to %s: %s", addrStr, string(data))
+			_, err = s.conn.WriteToUDP(data, clientAddr)
+			if err != nil {
+				logging.GetLogger().Error("Failed to send update to %s: %v", addrStr, err)
+				deadClients = append(deadClients, addrStr)
+			}
+		}
+		s.clientsMux.RUnlock()
+
+		for _, addr := range deadClients {
+			s.removeClient(addr)
+		}
 	}
 
 	return nil

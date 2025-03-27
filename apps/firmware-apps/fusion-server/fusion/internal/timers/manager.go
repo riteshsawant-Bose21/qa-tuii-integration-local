@@ -9,15 +9,14 @@ import (
 	"sync"
 	"time"
 
+	"fusion/internal/api"
 	"fusion/internal/logging"
 
 	"github.com/robfig/cron/v3"
 )
 
 const (
-	contentType     = "Content-Type"
-	jsonContentType = "application/json"
-	maxHistory      = 100
+	MaxHistory = 100
 )
 
 // TimerTask represents a task with a unique ID, a cron expression, and a function to execute.
@@ -89,8 +88,6 @@ func (tm *TimerManager) AddTask(id, cronExpr, description string, taskFunc func(
 	}
 	tm.taskFuncs[id] = wrappedTaskFunc
 
-	logger.Info("Task '%s' added with cron expression '%s'", id, cronExpr)
-
 	return tm.saveTasks()
 }
 
@@ -123,8 +120,6 @@ func (tm *TimerManager) UpdateTask(id, cronExpr, description string, taskFunc fu
 	task.EntryID = entryID
 	tm.taskFuncs[id] = wrappedTaskFunc
 
-	logger.Info("Task '%s' updated with new cron expression '%s'", id, cronExpr)
-
 	return tm.saveTasks()
 }
 
@@ -144,8 +139,6 @@ func (tm *TimerManager) RemoveTask(id string) error {
 	tm.c.Remove(task.EntryID)
 	delete(tm.tasks, id)
 	delete(tm.taskFuncs, id)
-
-	logger.Info("Task '%s' removed successfully", id)
 
 	return tm.saveTasks()
 }
@@ -170,18 +163,17 @@ func (tm *TimerManager) wrapTask(id string, taskFunc func()) func() {
 	return func() {
 		defer func() {
 			if r := recover(); r != nil {
-				tm.recordExecution(id, "failed", fmt.Sprintf("Panic: %v", r))
+				tm.RecordExecution(id, "failed", fmt.Sprintf("Panic: %v", r))
 				logger.Error("Task '%s' failed with panic: %v", id, r)
 			}
 		}()
 		taskFunc()
-		tm.recordExecution(id, "success", "Task executed successfully")
-		logger.Info("Task '%s' executed successfully", id)
+		tm.RecordExecution(id, "success", "Task executed successfully")
 	}
 }
 
-// recordExecution records a task execution log entry with rotation.
-func (tm *TimerManager) recordExecution(taskID, status, description string) {
+// RecordExecution records a task execution log entry with rotation.
+func (tm *TimerManager) RecordExecution(taskID, status, description string) {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
 
@@ -193,8 +185,8 @@ func (tm *TimerManager) recordExecution(taskID, status, description string) {
 	}
 
 	tm.executionHistory = append(tm.executionHistory, record)
-	if len(tm.executionHistory) > maxHistory {
-		tm.executionHistory = tm.executionHistory[len(tm.executionHistory)-maxHistory:]
+	if len(tm.executionHistory) > MaxHistory {
+		tm.executionHistory = tm.executionHistory[len(tm.executionHistory)-MaxHistory:]
 	}
 
 	_ = tm.saveHistory()
@@ -319,7 +311,7 @@ func (tm *TimerManager) ListTasksHandler(w http.ResponseWriter, r *http.Request)
 	}
 	tm.mu.Unlock()
 
-	w.Header().Set(contentType, jsonContentType)
+	w.Header().Set(api.ContentType, api.JsonContentType)
 	json.NewEncoder(w).Encode(tasks)
 }
 
@@ -434,6 +426,6 @@ func (tm *TimerManager) ExecutionHistoryHandler(w http.ResponseWriter, r *http.R
 	history := tm.executionHistory
 	tm.mu.Unlock()
 
-	w.Header().Set(contentType, jsonContentType)
+	w.Header().Set(api.ContentType, api.JsonContentType)
 	json.NewEncoder(w).Encode(history)
 }

@@ -17,7 +17,7 @@ func NewAnalogControllerReceiver(handler *server.Handler, listenAddr string) (*A
 	}, nil
 }
 
-func (r *AnalogControllerReceiver) GetDeviceStates() map[string]interface{} {
+func (r *AnalogControllerReceiver) GetDeviceStates() map[string]any {
 	return r.manager.GetDeviceStates()
 }
 

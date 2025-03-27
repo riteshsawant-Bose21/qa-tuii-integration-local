@@ -468,11 +468,11 @@ class _MetricsDashboardState extends State<MetricsDashboard> {
                 return Container(
                   decoration: BoxDecoration(
                     color: member.stateColor
-                        .withOpacity(0.9), // Slightly transparent
+                        .withValues(alpha: 0.9), // Slightly transparent
                     borderRadius: BorderRadius.circular(8),
                     boxShadow: [
                       BoxShadow(
-                        color: member.stateColor.withOpacity(0.3),
+                        color: member.stateColor.withValues(alpha: 0.3),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),

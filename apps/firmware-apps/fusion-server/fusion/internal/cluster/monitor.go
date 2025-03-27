@@ -43,8 +43,8 @@ func MonitorClusterState(list *memberlist.Memberlist) {
 	}()
 }
 
-// GetClusterMembers returns the current list of cluster members
-func GetClusterMembers(list *memberlist.Memberlist) []ClusterMember {
+// getClusterMembers returns the current list of cluster members
+func getClusterMembers(list *memberlist.Memberlist) []ClusterMember {
 	members := list.Members()
 	result := make([]ClusterMember, len(members))
 
@@ -100,7 +100,7 @@ type ClusterInfo struct {
 // GetClusterInfo returns detailed information about the cluster
 func GetClusterInfo(list *memberlist.Memberlist) ClusterInfo {
 	members := list.Members()
-	clusterMembers := GetClusterMembers(list)
+	clusterMembers := getClusterMembers(list)
 
 	aliveCount := 0
 	for _, member := range members {

@@ -18,8 +18,8 @@ type WebSocketMessage struct {
 
 // WebSocketResponse represents a websocket response
 type WebSocketResponse struct {
-	Type    string      `json:"type"`
-	Status  string      `json:"status,omitempty"`
-	Message string      `json:"message,omitempty"`
-	Data    interface{} `json:"data,omitempty"`
+	Type    string `json:"type"`
+	Status  string `json:"status,omitempty"`
+	Message string `json:"message,omitempty"`
+	Data    any    `json:"data,omitempty"`
 }

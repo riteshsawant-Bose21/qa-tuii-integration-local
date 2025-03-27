@@ -307,14 +307,14 @@ func parseQueryResponse(data []byte) (*Device, error) {
 	r := bytes.NewReader(data[8 : len(data)-hashSize]) // Skip header and hash
 
 	// Read hardware ID
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		if err := binary.Read(r, binary.LittleEndian, &device.HardwareID[i]); err != nil {
 			return nil, fmt.Errorf("failed to read hardware ID: %w", err)
 		}
 	}
 
 	// Read hardware ID
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		if err := binary.Read(r, binary.LittleEndian, &device.HardwareID[i]); err != nil {
 			return device, fmt.Errorf("failed to read hardware ID: %w", err)
 		}
@@ -423,7 +423,7 @@ func parseQuery2Response(data []byte) (*Device, error) {
 
 	// Read hardware ID
 	r := bytes.NewReader(payload[2:])
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		if err := binary.Read(r, binary.LittleEndian, &device.HardwareID[i]); err != nil {
 			return device, fmt.Errorf("failed to read hardware ID: %w", err)
 		}

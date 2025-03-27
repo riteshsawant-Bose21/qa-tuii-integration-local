@@ -3,8 +3,11 @@
 set -eu
 
 # Fusion server configuration and startup script
+fusion_server_start_path=/usr/local/bin/fusion-server-start.sh
 fusion_server_service_path=/etc/systemd/system/fusion-server.service
-fusion_server_setup_path=/usr/local/bin/setup-fusion.sh
+
+# haproxy confi
+haproxy_conf_data_path=/usr/local/bin/haproxy_conf_data.sh
 
 # Keepalived configuration
 keepalived_service_path=/etc/systemd/system/keepalived.service
@@ -27,7 +30,7 @@ vrrp_instance VI_1 {
   advert_int 1
   authentication {
     auth_type PASS
-    auth_pass fusion
+    auth_pass fusion 
   }
   virtual_ipaddress {
     $VIRTUAL_IP/24
@@ -96,7 +99,13 @@ packages:
   - keepalived
   - libjsoncpp25
   - net-tools
+  - wget
 write_files:
+  - path: $fusion_server_start_path
+    permissions: '0644'
+    owner: root:root
+    content: |
+$(indent_content "$scripts_dir/fusion-server-start.sh")
   - path: $fusion_server_service_path
     permissions: '0644'
     owner: root:root
@@ -122,11 +131,10 @@ $(indent_content "$scripts_dir/haproxy.service")
     owner: root:root
     content: |
 $(indent_content 'haproxy_conf_data')
-  - path: $fusion_server_setup_path
+  - path: $haproxy_conf_data_path
     permissions: '0755'
     owner: root:root
     content: |
-$(indent_content "$scripts_dir/setup-fusion.sh")
 EOF
 }
 

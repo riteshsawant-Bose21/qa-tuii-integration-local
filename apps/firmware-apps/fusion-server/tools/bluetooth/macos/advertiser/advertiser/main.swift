@@ -10,8 +10,8 @@ class BluetoothAdvertiser: NSObject, CBPeripheralManagerDelegate {
   private let advertisedName = "Bose Fusion Mini"
 
   override init() {
-    self.serviceUUID = CBUUID(string: "FFE0")
-    self.characteristicUUID = CBUUID(string: "FFE1")
+    self.serviceUUID = CBUUID(string: "B053")
+    self.characteristicUUID = CBUUID(string: "AD10")
     super.init()
     peripheralManager = CBPeripheralManager(delegate: self, queue: nil)
   }
