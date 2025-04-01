@@ -7,7 +7,6 @@ import (
 	"fusion/internal/version"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/memberlist"
 )
@@ -93,17 +92,16 @@ func (h *Handler) HandleHTTPPatch(value map[string]any) (any, error) {
 }
 
 func (h *Handler) HandleClearAllData() error {
-	configUpdate := api.ConfigUpdate{
-		Data:    map[string]any{},
-		Version: time.Now().UnixNano(),
-		Time:    time.Now().UTC(),
-		Clear:   true,
+	configUpdate, err := api.NewConfigUpdate(map[string]any{})
+	if err != nil {
+		return err
 	}
+	configUpdate.Clear = true
 
 	message := api.NotifyMessage{
 		Operation:    api.NotifyOpConfigUpdate,
 		Node:         h.stateManager.node,
-		ConfigUpdate: &configUpdate,
+		ConfigUpdate: configUpdate,
 	}
 
 	if err := h.broadcastUpdate(message); err != nil {
@@ -139,17 +137,15 @@ func (h *Handler) GetServerInfo() (map[string]any, error) {
 
 func (h *Handler) handleConfigUpdate(data map[string]any) error {
 
-	configUpdate := api.ConfigUpdate{
-		Data:    data,
-		Version: time.Now().UnixNano(),
-		Time:    time.Now().UTC(),
-		Clear:   false,
+	configUpdate, err := api.NewConfigUpdate(data)
+	if err != nil {
+		return err
 	}
 
 	message := api.NotifyMessage{
 		Operation:    api.NotifyOpConfigUpdate,
 		Node:         h.stateManager.node,
-		ConfigUpdate: &configUpdate,
+		ConfigUpdate: configUpdate,
 	}
 
 	return h.broadcastUpdate(message)

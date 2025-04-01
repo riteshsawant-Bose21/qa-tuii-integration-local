@@ -16,16 +16,19 @@ const (
 	databaseName = "fusion_test.db"
 )
 
-// TestMarkDirtyConcurrent checks for potential race conditions by calling MarkDirty concurrently.
-// (Run this test with `go test -race`.)
-func TestMarkDirtyConcurrent(t *testing.T) {
+func init() {
 	logging.InitLogger(logging.LogConfig{
-		NodeName:    "PersistenceTest",
+		NodeName:    "persistence_test",
 		LogDir:      "/tmp/persistence_test",
 		MaxFileSize: 100,
 		MaxFiles:    5,
 		LogLevel:    logging.INFO,
 	})
+}
+
+// TestMarkDirtyConcurrent checks for potential race conditions by calling MarkDirty concurrently.
+// (Run this test with `go test -race`.)
+func TestMarkDirtyConcurrent(t *testing.T) {
 
 	// Create a temporary directory and file for our test state.
 	tmpDir := t.TempDir()

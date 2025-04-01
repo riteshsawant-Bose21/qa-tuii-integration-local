@@ -23,18 +23,20 @@ const (
 	snapshotSyncTime          = 5
 )
 
-// TestActiveSnapshot tests the snapshot functionality.
-// It verifies that saving a snapshot and activating it via the active snapshot pointer
-// causes LoadActiveSnapshot() to load the snapshot's state.
-func TestActiveSnapshot(t *testing.T) {
-
+func init() {
 	logging.InitLogger(logging.LogConfig{
-		NodeName:    "SnapshotTest",
+		NodeName:    "snapshot_test",
 		LogDir:      "/tmp/snapshot_test",
 		MaxFileSize: 100,
 		MaxFiles:    5,
 		LogLevel:    logging.INFO,
 	})
+}
+
+// TestActiveSnapshot tests the snapshot functionality.
+// It verifies that saving a snapshot and activating it via the active snapshot pointer
+// causes LoadActiveSnapshot() to load the snapshot's state.
+func TestActiveSnapshot(t *testing.T) {
 
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, snapshotDatabaseName)
@@ -111,14 +113,6 @@ func TestActiveSnapshot(t *testing.T) {
 // TestLoadActiveSnapshotNonExistent verifies that when the state file does not exist,
 // LoadActiveSnapshot logs an info message and returns nil (allowing the service to start with an empty state).
 func TestLoadActiveSnapshotNonExistent(t *testing.T) {
-
-	logging.InitLogger(logging.LogConfig{
-		NodeName:    "TestLoadActiveSnapshotNonExistent",
-		LogDir:      "/tmp/persistence_test",
-		MaxFileSize: 100,
-		MaxFiles:    5,
-		LogLevel:    logging.INFO,
-	})
 
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "nonexistent.db")
@@ -285,14 +279,6 @@ func TestSnapshotActivate(t *testing.T) {
 }
 
 func TestSnapshotDelete(t *testing.T) {
-
-	logging.InitLogger(logging.LogConfig{
-		NodeName:    "TestSnapshotDelete",
-		LogDir:      "/tmp/snapshot_test",
-		MaxFileSize: 100,
-		MaxFiles:    5,
-		LogLevel:    logging.INFO,
-	})
 
 	snapshotName := "test_snapshot_delete"
 	// Create Snapshot

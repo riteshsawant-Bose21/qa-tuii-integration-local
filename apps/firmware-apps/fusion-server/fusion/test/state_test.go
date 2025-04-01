@@ -11,6 +11,18 @@ import (
 	"fusion/internal/server"
 )
 
+func init() {
+
+	logging.InitLogger(logging.LogConfig{
+		NodeName:    "state_test",
+		LogDir:      "/tmp/state_test",
+		MaxFileSize: 100,
+		MaxFiles:    5,
+		LogLevel:    logging.INFO,
+	})
+
+}
+
 func TestSetAndGetSimpleValue(t *testing.T) {
 	sm := server.NewStateManager("node-1")
 	value := "hello world"
@@ -81,14 +93,6 @@ func TestApplyUpdateAndGetNestedValues(t *testing.T) {
 }
 
 func TestGetInvalidKey(t *testing.T) {
-
-	logging.InitLogger(logging.LogConfig{
-		NodeName:    "StateTest",
-		LogDir:      "/tmp/state_test",
-		MaxFileSize: 100,
-		MaxFiles:    5,
-		LogLevel:    logging.INFO,
-	})
 
 	sm := server.NewStateManager("node-1")
 	// No data has been set yet.
@@ -485,5 +489,77 @@ func TestTransformState(t *testing.T) {
 	}
 	if transformed["b"] != "foo" {
 		t.Errorf("Expected key 'b' to be 'foo', got %v", transformed["b"])
+	}
+}
+
+func TestApplyStaleUpdatePropagation(t *testing.T) {
+	sm := server.NewStateManager("node-1")
+
+	// Apply a "fresh" update with a higher version.
+	freshUpdate := api.ConfigUpdate{
+		Data: map[string]any{
+			"y": "freshValue",
+		},
+		Version: 1000,
+		Time:    time.Now().UTC(),
+	}
+	if err := sm.ApplyUpdate(freshUpdate); err != nil {
+		t.Fatalf("ApplyUpdate failed: %v", err)
+	}
+
+	// Simulate an offline node sending an update with an older version.
+	staleUpdate := api.ConfigUpdate{
+		Data: map[string]any{
+			"y": "staleValue",
+		},
+		Version: 500, // older version than 1000
+		Time:    time.Now().UTC(),
+	}
+	if err := sm.ApplyUpdate(staleUpdate); err != nil {
+		t.Fatalf("ApplyUpdate failed: %v", err)
+	}
+
+	// Verify that the key "y" still holds the fresh value.
+	val, ok := sm.Get("y")
+	if !ok {
+		t.Fatalf("Expected key 'y' to exist")
+	}
+	if val != "freshValue" {
+		t.Errorf("Expected key 'y' to remain 'freshValue', got %v", val)
+	}
+}
+
+func TestMergeRemoteStateWithLowerVersion(t *testing.T) {
+	sm := server.NewStateManager("node-1")
+
+	// Apply a local update with a high version.
+	localUpdate := api.ConfigUpdate{
+		Data: map[string]any{
+			"x": "local",
+		},
+		Version: 5000,
+		Time:    time.Now().UTC(),
+	}
+	if err := sm.ApplyUpdate(localUpdate); err != nil {
+		t.Fatalf("ApplyUpdate failed: %v", err)
+	}
+
+	// Prepare remote state with a lower version for the same key.
+	remoteState := map[string]*api.StateEntry{
+		"x": {
+			Data:      "stale",
+			Version:   4000, // lower version than local state
+			Timestamp: time.Now().UTC(),
+		},
+	}
+	sm.MergeRemoteState(remoteState, "node-2")
+
+	// Verify that the local state remains unchanged.
+	val, ok := sm.Get("x")
+	if !ok {
+		t.Fatalf("Expected key 'x' to exist")
+	}
+	if val != "local" {
+		t.Errorf("Expected key 'x' to remain 'local' after merging stale remote state, got %v", val)
 	}
 }

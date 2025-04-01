@@ -13,7 +13,9 @@ function show_help() {
     echo "  --snapshot    Run only snapshot tests"     
     echo "  --state       Run only state manager tests"     
     echo "  --timers      Run only timer tests"     
+    echo "  --udp         Run only UDP tests"     
     echo "  --updater     Run only updater tests"     
+    echo "  --websocket   Run only websocket tests"     
     echo "  --vip         VIP address and port (default: 192.168.64.100:8080)"
     exit 1
 }
@@ -63,8 +65,16 @@ while [[ $# -gt 0 ]]; do
             test_type="timers"
             shift
             ;;
+        --udp)
+            test_type="udp"
+            shift
+            ;;
         --updater)
             test_type="updater"
+            shift
+            ;;
+        --websocket)
+            test_type="websocket"
             shift
             ;;
         --vip)
@@ -112,7 +122,13 @@ case "$test_type" in
     "timers")
         go test -v --race ./timers_test.go
         ;;
+    "udp")
+        go test -v --race ./udp_test.go
+        ;;
     "updater")
         go test -v --race ./updater_test.go
+        ;;
+    "websocket")
+        go test -v --race ./websocket_test.go
         ;;
 esac

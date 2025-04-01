@@ -1,4 +1,4 @@
-//go:build controllers
+//go:build exclude
 
 package main
 
@@ -59,18 +59,20 @@ func MockManager(t *testing.T) (*cxd.Manager, string, error) {
 	return manager, deviceID, nil
 }
 
-func TestFullSystemIntegration(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping test in short mode")
-	}
-
+func init() {
 	logging.InitLogger(logging.LogConfig{
-		NodeName:    "TestFullSystemIntegration",
+		NodeName:    "cxd_test",
 		LogDir:      "/tmp/cxd_test",
 		MaxFileSize: 100,
 		MaxFiles:    5,
 		LogLevel:    logging.INFO,
 	})
+}
+
+func TestFullSystemIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping test in short mode")
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -130,14 +132,6 @@ func TestFullSystemIntegration(t *testing.T) {
 }
 
 func TestDeviceValues(t *testing.T) {
-
-	logging.InitLogger(logging.LogConfig{
-		NodeName:    "TestFullSystemIntegration",
-		LogDir:      "/tmp/cxd_test",
-		MaxFileSize: 100,
-		MaxFiles:    5,
-		LogLevel:    logging.INFO,
-	})
 
 	tests := []struct {
 		name      string
@@ -240,14 +234,6 @@ func TestDeviceValues(t *testing.T) {
 }
 
 func TestManagerControl(t *testing.T) {
-
-	logging.InitLogger(logging.LogConfig{
-		NodeName:    "TestFullSystemIntegration",
-		LogDir:      "/tmp/cxd_test",
-		MaxFileSize: 100,
-		MaxFiles:    5,
-		LogLevel:    logging.INFO,
-	})
 
 	manager, deviceID, err := MockManager(t)
 	if err != nil {

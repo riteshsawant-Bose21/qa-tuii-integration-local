@@ -164,13 +164,27 @@ func (sm *StateManager) ApplyUpdate(update api.ConfigUpdate) error {
 		return nil
 	}
 
-	for key, value := range update.Data {
+	for key, rawValue := range update.Data {
+		var incomingVersion int64
 		var newValue any
-		if valueMap, ok := value.(map[string]any); ok {
-			existingValue, exists := sm.state[key]
-			if exists {
-				existingData, isMap := existingValue.Data.(map[string]any)
-				if isMap {
+
+		if valueMap, ok := rawValue.(map[string]any); ok {
+			// Extract per-key version if available
+			if v, ok := valueMap["version"].(int64); ok {
+				incomingVersion = v
+			} else {
+				// Fallback
+				incomingVersion = update.Version
+			}
+
+			// Check existing state for merge possibility
+			if existingEntry, exists := sm.state[key]; exists {
+
+				if incomingVersion <= existingEntry.Version {
+					continue
+				}
+
+				if existingData, ok := existingEntry.Data.(map[string]any); ok {
 					newValue = mergeMaps(existingData, valueMap)
 				} else {
 					newValue = valueMap
@@ -179,17 +193,25 @@ func (sm *StateManager) ApplyUpdate(update api.ConfigUpdate) error {
 				newValue = valueMap
 			}
 		} else {
-			newValue = value
+			incomingVersion = update.Version
+			newValue = rawValue
+		}
+
+		// Apply update if the incoming version is newer
+		if existingEntry, exists := sm.state[key]; exists {
+			if incomingVersion <= existingEntry.Version {
+				continue
+			}
 		}
 
 		sm.state[key] = &api.StateEntry{
 			Data:      newValue,
-			Version:   update.Version,
+			Version:   incomingVersion,
 			Timestamp: update.Time,
 		}
 
-		if update.Version > sm.version {
-			sm.version = update.Version
+		if incomingVersion > sm.version {
+			sm.version = incomingVersion
 		}
 		sm.notifySubscribers()
 	}
@@ -355,12 +377,12 @@ func ValidateSnapshots(list *memberlist.Memberlist) {
 		snapshots = append(snapshots, api.SnapshotMemberMetadata{Member: member, Metadata: metadata})
 	}
 
-	// Check for consistency by comparing DBHash values.
+	// Check for consistency by comparing Hash values.
 	consistent := true
 	if len(snapshots) > 0 {
-		firstHash := snapshots[0].Metadata.DBHash
+		firstHash := snapshots[0].Metadata.Hash
 		for _, ms := range snapshots[1:] {
-			if ms.Metadata.DBHash != firstHash {
+			if ms.Metadata.Hash != firstHash {
 				consistent = false
 				break
 			}
@@ -393,13 +415,13 @@ func rectifySnapshots(snapshots []api.SnapshotMemberMetadata) {
 
 	// Propagate the most current snapshot to all nodes with outdated data.
 	for _, ms := range snapshots {
-		if ms.Metadata.DBHash != mostCurrent.Metadata.DBHash {
+		if ms.Metadata.Hash != mostCurrent.Metadata.Hash {
 			importURL := fmt.Sprintf("http://%s%s/snapshots/import", ms.Member.Addr.String(), api.HTTPPort)
 			// Prepare payload with all necessary snapshot data.
 			payload, err := json.Marshal(map[string]interface{}{
 				"active_snapshot": mostCurrent.Metadata.ActiveSnapshot,
 				"timestamp":       mostCurrent.Metadata.Timestamp,
-				"hash":            mostCurrent.Metadata.DBHash,
+				"hash":            mostCurrent.Metadata.Hash,
 				"valid":           mostCurrent.Metadata.Valid,
 			})
 			if err != nil {

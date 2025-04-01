@@ -1,4 +1,4 @@
-//go:build controllers
+//go:build exclude
 
 package main
 

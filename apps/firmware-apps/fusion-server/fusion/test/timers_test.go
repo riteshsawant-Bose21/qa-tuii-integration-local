@@ -19,15 +19,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestTimerManager(t *testing.T) {
-
+func init() {
 	logging.InitLogger(logging.LogConfig{
-		NodeName:    "TimeManager",
-		LogDir:      "/tmp/test_timer_manager_test",
+		NodeName:    "timers_test",
+		LogDir:      "/tmp/timers_test",
 		MaxFileSize: 100,
 		MaxFiles:    5,
 		LogLevel:    logging.INFO,
 	})
+}
+
+func TestTimerManager(t *testing.T) {
 
 	logger := logging.GetLogger()
 	defer logger.Close()
@@ -79,14 +81,6 @@ func TestTimerManager(t *testing.T) {
 
 func TestExecutionHistoryRotation(t *testing.T) {
 
-	logging.InitLogger(logging.LogConfig{
-		NodeName:    "TimeManager",
-		LogDir:      "/tmp/test_timer_manager_test",
-		MaxFileSize: 100,
-		MaxFiles:    5,
-		LogLevel:    logging.INFO,
-	})
-
 	logger := logging.GetLogger()
 	defer logger.Close()
 
@@ -130,14 +124,6 @@ func TestExecutionHistoryRotation(t *testing.T) {
 }
 
 func TestTimerManagerEndpoints(t *testing.T) {
-
-	logging.InitLogger(logging.LogConfig{
-		NodeName:    "TimeManager",
-		LogDir:      "/tmp/test_timer_manager_test",
-		MaxFileSize: 100,
-		MaxFiles:    5,
-		LogLevel:    logging.INFO,
-	})
 
 	logger := logging.GetLogger()
 	defer logger.Close()
@@ -360,14 +346,6 @@ func TestTimersEndpointErrorCases(t *testing.T) {
 
 func TestTimerTasksPersistence(t *testing.T) {
 
-	logging.InitLogger(logging.LogConfig{
-		NodeName:    "TimeManager",
-		LogDir:      "/tmp/test_timer_manager_test",
-		MaxFileSize: 100,
-		MaxFiles:    5,
-		LogLevel:    logging.INFO,
-	})
-
 	logger := logging.GetLogger()
 	defer logger.Close()
 
@@ -410,14 +388,6 @@ func TestTimerTasksPersistence(t *testing.T) {
 }
 
 func TestTimerHistoryPersistence(t *testing.T) {
-
-	logging.InitLogger(logging.LogConfig{
-		NodeName:    "TimeManager",
-		LogDir:      "/tmp/test_timer_manager_test",
-		MaxFileSize: 100,
-		MaxFiles:    5,
-		LogLevel:    logging.INFO,
-	})
 
 	logging.SetGlobalLogger(logging.NewDummyLogger())
 

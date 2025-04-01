@@ -301,7 +301,7 @@ func (p *Persistence) DeleteSnapshot(snapshotKey string) error {
 	}
 
 	// Update the overall DB hash
-	if err := p.updateDBHash(); err != nil {
+	if err := p.updateHash(); err != nil {
 		return fmt.Errorf("to update DB hash after deleting snapshot '%s': %v", snapshotKey, err)
 	}
 
@@ -485,7 +485,7 @@ func (p *Persistence) ImportSnapshots(importData map[string]any) error {
 	}
 
 	// Update the overall database hash.
-	if err := p.updateDBHash(); err != nil {
+	if err := p.updateHash(); err != nil {
 		return fmt.Errorf("failed to update DB hash after import: %w", err)
 	}
 	return nil
@@ -595,9 +595,9 @@ func (p *Persistence) getLastSave() time.Time {
 	return p.lastSave
 }
 
-// updateDBHash recalculates the overall database hash and updates it in metadata.
-func (p *Persistence) updateDBHash() error {
-	newHash, err := p.computeDBHash()
+// updateHash recalculates the overall database hash and updates it in metadata.
+func (p *Persistence) updateHash() error {
+	newHash, err := p.computeHash()
 	if err != nil {
 		return fmt.Errorf("failed to compute DB hash: %w", err)
 	}
@@ -605,12 +605,12 @@ func (p *Persistence) updateDBHash() error {
 	if err != nil {
 		meta = api.SnapshotMetadata{}
 	}
-	meta.DBHash = newHash
+	meta.Hash = newHash
 	return p.saveMetadata(meta)
 }
 
-// computeDBHash computes a SHA-256 hash over all buckets and their key/value pairs.
-func (p *Persistence) computeDBHash() (string, error) {
+// computeHash computes a SHA-256 hash over all buckets and their key/value pairs.
+func (p *Persistence) computeHash() (string, error) {
 	hash := sha256.New()
 	err := p.db.View(func(tx *bbolt.Tx) error {
 		return tx.ForEach(func(name []byte, b *bbolt.Bucket) error {
@@ -709,7 +709,7 @@ func (p *Persistence) persistState(snapshotKey string) (*PersistentState, error)
 		return nil, fmt.Errorf("failed to save state: %w", err)
 	}
 
-	if err := p.updateDBHash(); err != nil {
+	if err := p.updateHash(); err != nil {
 		return nil, err
 	}
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"fusion/internal/logging"
 	"net"
+	"strings"
 	"syscall"
 )
 
@@ -63,10 +64,11 @@ func parseVRRPAddress(buffer []byte, length int) (string, error) {
 	// Get the virtual IP and the password from the VRRP packet.
 	virtualIP := net.IPv4(vrrpData[8], vrrpData[9], vrrpData[10], vrrpData[11]).String()
 	password := string(vrrpData[8+(vrrpData[3]*4) : 8+(vrrpData[3]*4)+8])
+	password = strings.TrimRight(password, "\x00")
 
 	// Verify this is our VRRP message
 	if password != VIPPassword {
-		return "", fmt.Errorf("wrong password")
+		return "", fmt.Errorf("wrong password: %s,%s", password, VIPPassword)
 	}
 
 	return virtualIP, nil

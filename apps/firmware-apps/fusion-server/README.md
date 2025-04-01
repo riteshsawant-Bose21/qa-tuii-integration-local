@@ -289,6 +289,10 @@ multipass exec fusion1 -- bash -c "echo '{\"action\":\"get\"}' | nc -u -w 1 -v l
 ```bash
 echo '{"action":"set","test":"hello"}' | nc -u -w 1 localhost 7947
 ```
+Outside of instance:
+```bash
+multipass exec fusion1 -- bash -c "echo '{\"action\":\"set\",\"test\":\"hello\"}' | nc -u -w 1 localhost 7947"
+```
 
 ### Set a nested value
 ```bash

@@ -1,18 +1,38 @@
 package api
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/hashicorp/memberlist"
 )
 
-// ConfigUpdate represents a data update in the system
+// DataUpdate represents a data update in the system
 type ConfigUpdate struct {
+	Hash    string         `json:"hash"`
 	Data    map[string]any `json:"data"`
 	Version int64          `json:"version"`
 	Time    time.Time      `json:"timestamp"`
 	Clear   bool
+}
+
+func NewConfigUpdate(data map[string]any) (*ConfigUpdate, error) {
+
+	hash, err := hashConfigData(data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate hash: %w", err)
+	}
+
+	return &ConfigUpdate{
+		Hash:    hash,
+		Data:    data,
+		Version: time.Now().UnixNano(),
+		Time:    time.Now().UTC(),
+		Clear:   false,
+	}, nil
 }
 
 // Endpoints contains the REST API endpoint information
@@ -26,7 +46,7 @@ type Endpoints struct {
 type SnapshotMetadata struct {
 	ActiveSnapshot string    `json:"active_snapshot"`
 	Timestamp      time.Time `json:"timestamp"`
-	DBHash         string    `json:"hash"`
+	Hash           string    `json:"hash"`
 	Valid          bool      `json:"valid"`
 }
 
@@ -79,4 +99,16 @@ type NotifyMessage struct {
 	ConfigUpdate   *ConfigUpdate
 	SnapshotUpdate *SnapshotUpdate
 	VersionMessage *VersionMessage
+}
+
+// hashConfigData generates a SHA-256 hash of the Data field of a ConfigUpdate
+func hashConfigData(data map[string]any) (string, error) {
+	// Marshal the map to JSON to ensure consistent hashing
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		return "", err
+	}
+
+	hash := sha256.Sum256(jsonData)
+	return hex.EncodeToString(hash[:]), nil
 }
