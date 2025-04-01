@@ -49,47 +49,38 @@ int nf_rx_packet(void* packet, int packet_size, const char* ifname)
     return EtherTubeRxPacket(&mgr, packet, packet_size, ifname);
 }
 
-unsigned int nf_hook_func(unsigned int hooknum, struct sk_buff *skb, const struct net_device *in, const struct net_device *out, int (*okfn)(struct sk_buff *))
+unsigned int nf_hook_func(void *priv, struct sk_buff *skb, const struct nf_hook_state *state)
 {
     int err = 0;
     struct iphdr *ip_header = NULL;
-    if (!skb)
-    {
+
+    if (!skb) {
         printk(KERN_ALERT "sock buffer null\n");
         return NF_ACCEPT;
     }
 
-    printk(KERN_INFO "nf_hook_func first message received\n");
-    
-    ip_header = (struct iphdr *)skb_network_header(skb);    //grab network header using accessor
-    if (!ip_header)
-    {
+    printk(KERN_INFO "nf_hook_func: first message received\n");
+
+    ip_header = (struct iphdr *)skb_network_header(skb); // Grab network header using accessor
+    if (!ip_header) {
         printk(KERN_ALERT "sock header null\n");
         return NF_ACCEPT;
     }
-    if (ip_header->saddr == 0x0100007f) // 127.0.0.1
-    {
-        //printk(KERN_INFO "Loopback address detected\n");
+
+    if (ip_header->saddr == htonl(INADDR_LOOPBACK)) { // 127.0.0.1
         return NF_ACCEPT;
     }
-    
 
-    ///////// DEBUG stuff is available into revision prior to 32700
-
-    if (skb_is_nonlinear(skb))
-    {
-        //printk(KERN_INFO "skb_is_nonlinear. try to linearize...\n");
+    if (skb_is_nonlinear(skb)) {
         err = skb_linearize(skb);
-        if (err < 0)
-        {
+        if (err < 0) {
             printk(KERN_WARNING "skb_linearize error %d\n", err);
-            printk(KERN_INFO "Protocol = %d, IP source addr = 0x%08x, total packet len = %d", ip_header->protocol, ip_header->saddr, ip_header->tot_len);
             return NF_ACCEPT;
         }
     }
 
-    switch (nf_rx_packet(skb_mac_header(skb), skb->len + ETH_HLEN, in->name))
-    {
+    // Call your packet processing function
+    switch (nf_rx_packet(skb_mac_header(skb), skb->len + ETH_HLEN, state->in->name)) {
         case 0:
             return NF_DROP;
         case 1:
@@ -97,6 +88,7 @@ unsigned int nf_hook_func(unsigned int hooknum, struct sk_buff *skb, const struc
         default:
             printk(KERN_ALERT "nf_rx_packet unknown return code\n");
     }
+
     return NF_ACCEPT;
 }
 
