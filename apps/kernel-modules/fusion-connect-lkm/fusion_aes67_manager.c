@@ -719,13 +719,13 @@ static int handle_get_rtp_stream_status(struct fusion_aes67_manager *mgr, struct
         printk(KERN_ERR "fusion_aes67: GetRTPStreamStatus invalid data size: %d\n", msg->data_size);
         return reply->err = -EINVAL;
     }
-    static TRTP_stream_status stream_status;
+    static struct fusion_aes67_rtp_stream_status stream_status;
     uint64_t *handle = (uint64_t *)msg->data;
     if (!get_rtp_stream_status(&mgr->rtp.rtp_streams_manager, *handle, &stream_status)) {
         return reply->err = -EIO;
     }
     reply->err = 0;
-    reply->data_size = sizeof(TRTP_stream_status);
+    reply->data_size = sizeof(struct fusion_aes67_rtp_stream_status);
     reply->data = &stream_status;
     return 0;
 }
@@ -862,20 +862,107 @@ static int handle_get_number_of_outputs(struct fusion_aes67_manager *mgr, struct
 
 static int handle_add_rtp_stream(struct fusion_aes67_manager *mgr, struct fusion_aes67_ctrl_msg *msg, struct fusion_aes67_ctrl_msg *reply) 
 {
-    if (msg->data_size != sizeof(TRTP_stream_info)) {
-        printk(KERN_ERR "fusion_aes67: Add_RTPStream invalid data size: %d\n", msg->data_size);
+    if (msg->data_size != sizeof(struct aes67_stream_config)) {
+        printk(KERN_ERR "fusion_aes67: Add_RTPStream invalid data size: %d, expected %zu\n", 
+               msg->data_size, sizeof(struct aes67_stream_config));
         return reply->err = -EINVAL;
     }
-    static uint64_t stream_handle;
-    TRTP_stream_info *info = (TRTP_stream_info *)msg->data;
-    printk(KERN_INFO "fusion_aes67: Adding RTP stream with %d channels\n", info->m_byNbOfChannels);
-    if (!add_rtp_stream(&mgr->rtp.rtp_streams_manager, info, &stream_handle)) {
+
+    struct aes67_stream_config *config = (struct aes67_stream_config *)msg->data;
+    bool restart_required = false;
+
+    // Validate basic parameters
+    if (config->sample_rate == 0 || config->channels == 0 || config->samples_per_packet == 0 || config->stream_handle == 0) {
+        printk(KERN_ERR "fusion_aes67: Invalid stream config: handle=%llu, rate=%u, channels=%u, samples=%u\n",
+               config->stream_handle, config->sample_rate, config->channels, config->samples_per_packet);
+        return reply->err = -EINVAL;
+    }
+
+    // Check for handle uniqueness
+    struct RTPStream *stream;
+    LIST_FOR_EACH_ENTRY(stream, &mgr->rtp.rtp_streams_manager.streams, list) {
+        if (stream->handle == config->stream_handle) { // Assuming RTPStream has a handle field
+            printk(KERN_ERR "fusion_aes67: Stream handle %llu already exists\n", config->stream_handle);
+            return reply->err = -EEXIST;
+        }
+    }
+
+    // Stop streams if running
+    if (mgr->state.is_started) {
+        fusion_aes67_mgr_stop(mgr);
+        restart_required = true;
+    }
+    if (mgr->state.alsa_running) {
+        fusion_aes67_mgr_stop_alsa(mgr);
+    }
+
+    printk(KERN_INFO "fusion_aes67: Adding RTP stream %llu: %s, rate=%u, format=%d, channels=%u, packet=%u, dest=%pI4:%u\n",
+           config->stream_handle, config->name, config->sample_rate, config->format, config->channels, 
+           config->samples_per_packet, &config->dest_ip, config->dest_port);
+
+    // Create RTP stream (assuming refactored RTP layer will use this)
+    struct fusion_aes67_rtp_stream_info rtp_info = {
+        .m_ui32SamplingRate = config->sample_rate,
+        .m_byWordLength = snd_pcm_format_physical_width(config->format),
+        .m_byNbOfChannels = config->channels,
+        .m_ui32MaxSamplesPerPacket = config->samples_per_packet,
+        .m_ui32DestIP = config->dest_ip,
+        .m_usDestPort = config->dest_port,
+        .m_usRTCPDestPort = config->rtcp_dest_port,
+        .m_byPayloadType = config->payload_type,
+        .m_ui32PlayOutDelay = config->playout_delay,
+        .m_bSource = config->is_source,
+        .m_ui32SSRC = (uint32_t)config->stream_handle, // Use lower 32 bits for SSRC
+        .m_bSSRCInitialized = 1,
+        .m_byTTL = 255,
+        .m_ucDSCP = 46, // EF per AES67
+    };
+    strlcpy(rtp_info.m_cName, config->name, MAX_STREAM_NAME_SIZE);
+
+    if (!add_rtp_stream(&mgr->rtp.rtp_streams_manager, &rtp_info, &config->stream_handle)) {
+        printk(KERN_ERR "fusion_aes67: Failed to add RTP stream %llu\n", config->stream_handle);
         return reply->err = -EIO;
     }
-    printk(KERN_INFO "fusion_aes67: RTP stream handle = %llu\n", stream_handle);
+
+    // Configure ALSA substream
+    if (mgr->alsa.alsa_callbacks && mgr->alsa.alsa_callbacks->set_stream_params) {
+        int ret = mgr->alsa.alsa_callbacks->set_stream_params(mgr, config->stream_handle, 
+                                                              config->sample_rate, 
+                                                              config->channels, 
+                                                              config->format);
+        if (ret < 0) {
+            printk(KERN_ERR "fusion_aes67: Failed to set ALSA stream params for %llu: %d\n", 
+                   config->stream_handle, ret);
+            remove_rtp_stream(&mgr->rtp.rtp_streams_manager, config->stream_handle);
+            return reply->err = ret;
+        }
+    }
+
+    // Update manager state
+    if (config->is_source) {
+        mgr->config.number_of_inputs += config->channels;
+    } else {
+        mgr->config.number_of_outputs += config->channels;
+    }
+    if (config->is_source) {
+        mgr->state.is_source = true;
+    } else {
+        mgr->state.is_sink = true;
+    }
+
+    // Return the same handle as confirmation
     reply->err = 0;
     reply->data_size = sizeof(uint64_t);
-    reply->data = &stream_handle;
+    reply->data = &config->stream_handle;
+
+    // Restart if needed
+    if (restart_required) {
+        fusion_aes67_mgr_start(mgr);
+    }
+    if (mgr->state.is_started) {
+        fusion_aes67_mgr_start_alsa(mgr);
+    }
+
     return 0;
 }
 

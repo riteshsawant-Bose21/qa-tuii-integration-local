@@ -84,6 +84,23 @@ struct fusion_aes67_ctrl_msg {
     pid_t pid;
 };
 
+#define MAX_STREAM_NAME_SIZE 64
+
+struct aes67_stream_config {
+    uint64_t stream_handle;         // Unique handle provided by the front end
+    uint32_t sample_rate;           // Sample rate (e.g., 44100, 48000, 96000)
+    snd_pcm_format_t format;        // Audio format (e.g., SNDRV_PCM_FORMAT_S16_LE, S24_LE)
+    uint32_t channels;              // Number of channels (1-32, per AES67)
+    uint32_t samples_per_packet;    // Samples per RTP packet (e.g., 48 for 1ms @ 48kHz)
+    uint32_t dest_ip;               // Destination IP address (from SDP c=)
+    uint16_t dest_port;             // Destination RTP port (from SDP m=)
+    uint16_t rtcp_dest_port;        // RTCP destination port (often dest_port + 1)
+    uint8_t payload_type;           // RTP payload type (e.g., 96-127, dynamic)
+    uint32_t playout_delay;         // Playout delay in samples (for sinks)
+    int8_t is_source;               // 1 = source, 0 = sink
+    char name[MAX_STREAM_NAME_SIZE]; // Optional stream name (from SDP s=)
+};
+
 // Original manager.h structs
 struct fusion_aes67_config {
     uint32_t sample_rate;

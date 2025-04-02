@@ -31,14 +31,6 @@
 
 #pragma once
 
-/*#if defined(NT_DRIVER) || defined(OSX_KEXT) || defined(__KERNEL__)
-	#define MAX_SOURCE_STREAMS	32
-	#define MAX_SINK_STREAMS	32
-#else
-	//#define MAX_SOURCE_STREAMS	64
-	#define MAX_SINK_STREAMS	32 // only used by TRTPStreamStats_SinkAheadTime
-#endif //NT_DRIVER*/
-
 #define MAX_SOURCE_STREAMS	64
 #define MAX_SINK_STREAMS	64
 

@@ -17,6 +17,7 @@
 
 #include "fusion_aes67_netfilter.h"
 #include "fusion_aes67_manager.h"
+#include "MTAL_EthUtils.h"
 
 #include <linux/spinlock.h>
 #include <linux/slab.h>
@@ -41,18 +42,58 @@
 #include <asm/div64.h>
 
 
-/* netfilter funcs */
-static struct nf_hook_ops nf_ho;
-
-int nf_rx_packet(void* packet, int packet_size, const char* ifname)
+// We return NF_ACCEPT for packets we DO NOT process, and NF_DROP for packets we DO process
+int fusion_aes67_nf_rx_packet(struct fusion_aes67_netfilter *nf, void *packet, int packet_size, const char *ifname)
 {
-    return EtherTubeRxPacket(&mgr, packet, packet_size, ifname);
+    int ret = 0;
+    unsigned long flags;
+    struct fusion_aes67_manager *mgr = container_of(nf, struct fusion_aes67_manager, netfilter);
+    TUDPPacketBase *pUDPPacketBase = (TUDPPacketBase*)pBuffer;
+
+    spin_lock_irqsave(&nf->lock, flags);
+    if (!nf->is_enabled) {
+        ret = 1;
+    }
+    spin_unlock_irqrestore(&nf->lock, flags);
+
+    if (ret == 1) {
+        return NF_ACCEPT;
+    }
+
+    if (packet == NULL) {
+        printk(KERN_INFO "rx_packet null\n");
+        return NF_ACCEPT;
+    }
+    if (packet_size <= 0) {
+        printk(KERN_INFO "rx_packet size <= 0\n");
+        return NF_ACCEPT;
+    }
+
+    if(packet_size < sizeof(TUDPPacketBase) || pUDPPacketBase->EthernetHeader.usType != MTAL_SWAP16(MTAL_ETH_PROTO_IPV4) || pUDPPacketBase->IPV4Header.byProtocol != IP_PROTO_UDP)
+    { // cannot be for us
+        if(pUDPPacketBase->EthernetHeader.usType == MTAL_SWAP16(MTAL_ETH_MAC_CONTROL) && packet_size >= sizeof(TMACControlFrame))
+        {
+            TMACControlFrame *pMACControlFrame = (TMACControlFrame*)pBuffer;
+            printk(KERN_DEBUG "receive a MAC CONTROL: could be a PAUSE packet which could mean there is a too slow device (10/100Mb) on the network\n");
+            dump_mac_ctrl_frame(pMACControlFrame);
+        }
+        return NF_ACCEPT;
+    }
+
+    // OK, it's an UDP packet
+
+    //dump_ipv4_header(&pUDPPacketBase->IPV4Header);
+    //dump_udp_header(&pUDPPacketBase->UDPHeader);
+    //printk(KERN_DEBUG "packet_size %u\n", packet_size);
+
+    return process_UDP_packet(&mgr->m_RTP_streams_manager, pUDPPacketBase, packet_size);
 }
 
 unsigned int nf_hook_func(void *priv, struct sk_buff *skb, const struct nf_hook_state *state)
 {
     int err = 0;
     struct iphdr *ip_header = NULL;
+    struct fusion_aes67_netfilter *nf = (struct fusion_aes67_netfilter *)priv;
 
     if (!skb) {
         printk(KERN_ALERT "sock buffer null\n");
@@ -80,7 +121,7 @@ unsigned int nf_hook_func(void *priv, struct sk_buff *skb, const struct nf_hook_
     }
 
     // Call your packet processing function
-    switch (nf_rx_packet(skb_mac_header(skb), skb->len + ETH_HLEN, state->in->name)) {
+    switch(fusion_aes67_nf_rx_packet(nf, skb_mac_header(skb), skb->len + ETH_HLEN, state->in->name)) {
         case 0:
             return NF_DROP;
         case 1:
@@ -100,8 +141,9 @@ int fusion_aes67_nf_init(struct fusion_aes67_manager *mgr)
 
     spin_lock_init(&mgr->netfilter.lock);
 
-    strcpy(nf->ifname_used, "eth0"); // ?
+    strcpy(mgr->netfilter.ifname_used, "eth0"); // ?
 
+    mgr->netfilter.nf_hook_struct.user = (void *)&mgr->netfilter;
     mgr->netfilter.nf_hook_struct.hook = nf_hook_func;                 //function to call when conditions below met
     mgr->netfilter.nf_hook_struct.hooknum = NF_INET_PRE_ROUTING;    //called right after packet recieved, first hook in Netfilter
     mgr->netfilter.nf_hook_struct.pf = NFPROTO_IPV4;                //IPV4 packets
@@ -156,11 +198,11 @@ int fusion_aes67_nf_get_skb_data(void **data, void *skb, unsigned int data_len)
 }
 
 int irqCheckOnce = 0;
-int fusion_aes67_nf_socket_tx_packet(void *skb, unsigned int data_len, const char *iface)
+int fusion_aes67_nf_tx_packet(void *skb, unsigned int data_len, const char *iface)
 {
     struct sk_buff *skb_ptr = (struct sk_buff*)skb;
     struct net_device *dev = dev_get_by_name(&init_net, iface);
-    int xmit_ret_code = 0;
+    int ret = 0;
 
     if (data_len == 0)
     {
@@ -183,91 +225,29 @@ int fusion_aes67_nf_socket_tx_packet(void *skb, unsigned int data_len, const cha
     }
     skb_reset_network_header(skb_ptr);
 
-//#define NO_TX
-#ifdef NO_TX
-    dev_kfree_skb(skb_ptr);
-#else
-    xmit_ret_code = dev_queue_xmit(skb_ptr);
-#endif
-    if (xmit_ret_code < 0)
+    ret = dev_queue_xmit(skb_ptr);
+    if (ret < 0)
     {
-        printk(KERN_ALERT "xmit_ret_code return err code %d \n", xmit_ret_code);
+        printk(KERN_ALERT "dev_queue_xmit return err code %d \n", ret);
         dev_kfree_skb(skb_ptr);
     }
 
-    return xmit_ret_code;
+    return ret;
 }
 
-int fusion_aes67_nf_socket_tx_buffer(void *user_data, unsigned int data_len, const char *iface)
-{
-    struct sk_buff *skb;
-    struct net_device *dev = __dev_get_by_name(&init_net, iface);
-
-    if ((skb = dev_alloc_skb(data_len)) == NULL)
-    {
-        printk(KERN_ALERT "dev_alloc_skb out of memory\n");
-        goto err;
-    }
-    else
-    {
-        unsigned long *pulData;
-        int xmit_ret_code = 0;
-
-        pulData = (unsigned long*)skb_put(skb, data_len);
-        if (!pulData)
-        {
-            printk(KERN_ALERT "skb_put pulData out of memory\n");
-            goto err;
-        }
-        memcpy(pulData, user_data, data_len);
-
-        skb->pkt_type = PACKET_OUTGOING;
-        //skb->ip_summed = CHECKSUM_NONE; // do not change anything ?
-        skb->dev = dev;
-        
-        xmit_ret_code = dev_queue_xmit(skb);
-
-        if (xmit_ret_code != 0)
-        {
-            printk(KERN_ALERT "xmit_ret_code return err code %d \n", xmit_ret_code);
-        }
-        return xmit_ret_code;
-    }
-    return -2;
-
-err:
-    if (skb)
-        dev_kfree_skb(skb);
-    return -9;
-}
-
-int fusion_aes67_nf_send_raw_packet(struct fusion_aes67_netfilter *nf, void *pBuffer, uint32_t ui32Length)
-{
-    if (socket_tx_buffer(pBuffer, ui32Length, nf->ifname_used) == 0)
-    {
-        return 1;
-    }
-    return 0;
-}
-
-uint32_t GetMaxPacketSize(struct fusion_aes67_netfilter *nf)
-{
-    return ETHERNET_STANDARD_FRAME_SIZE;
-}
-
-int acquire_tx_packet(struct fusion_aes67_netfilter *nf, void **ppHandle, void **ppvPacket, uint32_t *pPacketSize)
+int fusion_aes67_nf_create_packet(struct fusion_aes67_netfilter *nf, struct sk_buff **skb, void **ppvPacket, uint32_t *pPacketSize)
 {
 #ifdef FAKE_AQUIRE_PACKET
     *ppvPacket = shortCutPacket;
     *pPacketSize = ETHERNET_STANDARD_FRAME_SIZE;
     return 1;
 #else
-    if (get_new_skb(ppHandle, ETHERNET_STANDARD_FRAME_SIZE) < 0) {
+    if (fusion_aes67_nf_get_new_skb(skb, ETHERNET_STANDARD_FRAME_SIZE) < 0) {
         return 0;
     }
-    if (get_skb_data(ppvPacket, *ppHandle, ETHERNET_STANDARD_FRAME_SIZE) < 0) {
-        free_skb(*ppHandle);
-        *ppHandle = NULL;
+    if (fusion_aes67_nf_get_skb_data(ppvPacket, *skb, ETHERNET_STANDARD_FRAME_SIZE) < 0) {
+        free_skb(*skb);
+        *skb = NULL;
         *pPacketSize = 0;
         return 0;
     }
@@ -276,40 +256,26 @@ int acquire_tx_packet(struct fusion_aes67_netfilter *nf, void **ppHandle, void *
 #endif
 }
 
-int fusion_aes67_nf_tx_packet(struct fusion_aes67_netfilter *nf, void *pHandle, void *pPacket, uint32_t PacketSize)
-{
-    return socket_tx_packet(pHandle, PacketSize, nf->ifname_used);
-}
-
 ////////////////////////////////////////////////////////////////////////
 int fusion_aes67_nf_destroy(struct fusion_aes67_netfilter *nf)
 {
     if (nf->nf_hook_struct) {
-        nf_unregister_net_hook(&init_net, &nf->nf_hook_struct); //cleanup unregister hook
+        nf_unregister_net_hook(&init_net, &nf->nf_hook_struct);
     }
 
     return 0;
 }
 
 ////////////////////////////////////////////////////////////////////////
-int fusion_aes67_nf_start(struct fusion_aes67_netfilter *nf, const char *ifname)
+int fusion_aes67_nf_start(struct fusion_aes67_netfilter *nf)
 {
     int ret = 1;
     unsigned long flags;
-    spin_lock_irqsave(&nf->lock, flags);
 
-    if (ifname)
-    {
-        MTAL_DP_INFO("Start to interface %s\n", ifname);
-        strcpy(nf->ifname_used, ifname);
-        nf->is_enabled = true;
-    }
-    else
-    {
-        MTAL_DP_INFO("Start ifname=0\n");
-        ret = 0;
-    }
+    spin_lock_irqsave(&nf->lock, flags);
+    nf->is_enabled = true;
     spin_unlock_irqrestore(&nf->lock, flags);
+
     return ret;
 }
 
@@ -317,92 +283,11 @@ int fusion_aes67_nf_start(struct fusion_aes67_netfilter *nf, const char *ifname)
 int fusion_aes67_nf_stop(struct fusion_aes67_netfilter *nf)
 {
     unsigned long flags;
+
     spin_lock_irqsave(&nf->lock, flags);
     nf->is_enabled = false;
     spin_unlock_irqrestore(&nf->lock, flags);
-    return 1;
-}
-
-int fusion_aes67_nf_dispatch_packet(struct fusion_aes67_mgr *mgr, void *pBuffer, uint32_t packetsize)
-{
-    EDispatchResult nDispatchResult = DR_PACKET_NOT_USED;
-    TUDPPacketBase *pUDPPacketBase = (TUDPPacketBase*)pBuffer;
-
-    if(packetsize < sizeof(TUDPPacketBase) || pUDPPacketBase->EthernetHeader.usType != MTAL_SWAP16(MTAL_ETH_PROTO_IPV4) || pUDPPacketBase->IPV4Header.byProtocol != IP_PROTO_UDP)
-    { // can not be for us
-        if(pUDPPacketBase->EthernetHeader.usType == MTAL_SWAP16(MTAL_ETH_MAC_CONTROL) && packetsize >= sizeof(TMACControlFrame))
-        {
-            TMACControlFrame *pMACControlFrame = (TMACControlFrame*)pBuffer;
-            MTAL_DP("receive a MAC CONTROL: could be a PAUSE packet which could mean there is a too slow device (10/100Mb) on the network\n");
-            MTAL_DumpMACControlFrame(pMACControlFrame);
-        }
-        return DR_PACKET_NOT_USED;
-    }
-    // OK, it's an UDP packet
-
-    //MTAL_DumpIPV4Header(&pUDPPacketBase->IPV4Header);
-    //MTAL_DumpUDPHeader(&pUDPPacketBase->UDPHeader);
-    //MTAL_DP("packetsize %u\n", packetsize);
-
-    if(nDispatchResult == DR_PACKET_NOT_USED)
-    {
-        nDispatchResult = process_UDP_packet(&mgr->m_RTP_streams_manager, pUDPPacketBase, packetsize);
-    }
-    return nDispatchResult;
-}
-
-////////////////////////////////////////////////////////////////////////
-int fusion_aes67_nf_rx_packet(struct fusion_aes67_netfilter *nf, void *packet, int packet_size, const char *ifname)
-{
-    {
-        int ret = 0;
-        unsigned long flags;
-        spin_lock_irqsave(&nf->lock, flags);
-        do
-        {
-            if (!nf->is_enabled)
-            {
-                //MTAL_DP_INFO("rx_packet case 1");
-                ret = 1;
-                break;
-            }
-        }
-        while (0);
-        spin_unlock_irqrestore(&nf->lock, flags);
-        if (ret == 1)
-        {
-            return 1;
-        }
-        // roonOS provides an empty string !
-        if (strlen(ifname) != 0 && strcmp(ifname, nf->ifname_used) != 0)
-        {
-            //MTAL_DP_INFO("2: %s, %s\n", ifname, ifname_used);
-            return 1;
-        }
-        if (packet == NULL)
-        {
-            MTAL_DP_INFO("rx_packet case 3");
-            return 1;
-        }
-        if (packet_size <= 0)
-        {
-            MTAL_DP_INFO("rx_packet case 4");
-            return 1;
-        }
-    }
-
-    switch (fusion_aes67_nf_dispatch_packet(nf->mgr, packet, packet_size))
-    {
-        case DR_RTP_PACKET_USED:
-        case DR_PTP_PACKET_USED:
-            return 0; //NF_DROP;
-        case DR_PACKET_NOT_USED:
-        case DR_RTP_MIDI_PACKET_USED:
-        case DR_PACKET_ERROR:
-            return 1; //NF_ACCEPT;
-        default:
-            MTAL_DP_ERR("dispatch_packet unknown return code \n");
-    }
 
     return 1;
 }
+

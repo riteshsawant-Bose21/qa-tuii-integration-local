@@ -29,14 +29,10 @@
 *
 ****************************************************************************/
 
-#include "MTAL_TargetPlatform.h"
+#include <linux/spinlock.h>
+#include <linux/slab.h>
+#include <linux/netfilter.h>
 
-#if defined(MTAL_LINUX) && defined(MTAL_KERNEL)
-    #include <linux/spinlock.h>
-    #include <linux/slab.h>
-#endif
-
-#include "MTAL_DP.h"
 #include "MTAL_EthUtils.h"
 
 #include "RTP_streams_manager.h"
@@ -50,10 +46,10 @@
 
 
 ////////////////////////////////////////////////////////
-int init_(TRTP_streams_manager* self, rtp_audio_stream_ops* pManager, fusion_aes67_netfilter* pEth_netfilter)
+int init_(struct fusion_aes67_rtp_manager* self, struct rtp_audio_stream_ops* pManager, fusion_aes67_netfilter* pEth_netfilter)
 {
     int i;
-	MTAL_DP("CRTP_streams_manager::Init\n");
+	printk(KERN_DEBUG "CRTP_streams_manager::Init\n");
 	if (!pManager || !pEth_netfilter)
     {
         return 1;
@@ -93,7 +89,7 @@ int init_(TRTP_streams_manager* self, rtp_audio_stream_ops* pManager, fusion_aes
 	#ifdef TIMECODE_SUPPORT
 		if(FAILED(m_RTXTimeCode.Init()))
 		{
-			MTAL_DP("Failed to init RTX Timecode\n");
+			printk(KERN_DEBUG "Failed to init RTX Timecode\n");
 			return 0;
 		}
 	#endif
@@ -111,9 +107,9 @@ int init_(TRTP_streams_manager* self, rtp_audio_stream_ops* pManager, fusion_aes
 
 
 ////////////////////////////////////////////////////////
-void destroy_(TRTP_streams_manager* self)
+void destroy_(struct fusion_aes67_rtp_manager* self)
 {
-	MTAL_DP("CRTP_streams_manager::Destroy\n");
+	printk(KERN_DEBUG "CRTP_streams_manager::Destroy\n");
 
 	#ifdef UNDER_RTSS
 		m_RTPStreamsOutgoingThread.Destroy();
@@ -133,19 +129,19 @@ void destroy_(TRTP_streams_manager* self)
 ////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////
-int add_RTP_stream_(TRTP_streams_manager* self, TRTP_stream_info* pRTPStreamInfo, uint64_t* phRTPStream)
+int add_RTP_stream_(struct fusion_aes67_rtp_manager* self, struct fusion_aes67_rtp_stream_info* pRTPStreamInfo, uint64_t* phRTPStream)
 {
     int i;
-    TRTP_audio_stream_handler* pUsableRTPStreamHandler = NULL;
+    struct fusion_aes67_rtp_audio_stream_handler* pUsableRTPStreamHandler = NULL;
 
 	if(!pRTPStreamInfo || !phRTPStream)
 	{
-		MTAL_DP("CRTP_streams_manager::add_RTP_stream: invalid arguments\n");
+		printk(KERN_DEBUG "CRTP_streams_manager::add_RTP_stream: invalid arguments\n");
 		return 0;
 	}
 	if(!check_struct_version(pRTPStreamInfo))
 	{
-		MTAL_DP("CRTP_streams_manager::add_RTP_stream: wrong CRTP_stream_info class version; probably needs host or target recompilation\n");
+		printk(KERN_DEBUG "CRTP_streams_manager::add_RTP_stream: wrong CRTP_stream_info class version; probably needs host or target recompilation\n");
 		return 0;
 	}
 	if(!is_valid(pRTPStreamInfo))
@@ -175,19 +171,19 @@ int add_RTP_stream_(TRTP_streams_manager* self, TRTP_stream_info* pRTPStreamInfo
 		}
 		if (!pUsableRTPStreamHandler)
 		{
-			MTAL_DP("CRTP_streams_manager::AddRTPStream: No empty slot\n");
+			printk(KERN_DEBUG "CRTP_streams_manager::AddRTPStream: No empty slot\n");
 			break;
 		}
         if(!Create(&pUsableRTPStreamHandler->m_RTPAudioStream, pRTPStreamInfo, self->m_pManager, self->m_pEth_netfilter))
 		{
-			MTAL_DP("CRTP_streams_manager::AddRTPStream: Failed to init RTPStream\n");
+			printk(KERN_DEBUG "CRTP_streams_manager::AddRTPStream: Failed to init RTPStream\n");
 			break;
 		}
-		MTAL_DP("added source at %p", pUsableRTPStreamHandler);
+		printk(KERN_DEBUG "added source at %p", pUsableRTPStreamHandler);
 
 		if(self->m_usNumberOfRTPSourceStreams == MAX_SOURCE_STREAMS)
 		{
-            MTAL_DP("CRTP_streams_manager::AddRTPStream: error m_apRTPSourceOrderedStreams is full\n");
+            printk(KERN_DEBUG "CRTP_streams_manager::AddRTPStream: error m_apRTPSourceOrderedStreams is full\n");
 			break;
 		}
 
@@ -248,20 +244,20 @@ int add_RTP_stream_(TRTP_streams_manager* self, TRTP_stream_info* pRTPStreamInfo
 
         if (!pUsableRTPStreamHandler)
 		{
-            MTAL_DP("CRTP_streams_manager::AddRTPStream: No empty slot\n");
+            printk(KERN_DEBUG "CRTP_streams_manager::AddRTPStream: No empty slot\n");
             break;
 		}
 
         if(!Create(&pUsableRTPStreamHandler->m_RTPAudioStream, pRTPStreamInfo, self->m_pManager, self->m_pEth_netfilter))
         {
-            MTAL_DP("CRTP_streams_manager::AddRTPStream: Failed to init RTPStream\n");
+            printk(KERN_DEBUG "CRTP_streams_manager::AddRTPStream: Failed to init RTPStream\n");
             break;
 		}
-		MTAL_DP("added sink at %p", pUsableRTPStreamHandler);
+		printk(KERN_DEBUG "added sink at %p", pUsableRTPStreamHandler);
 
 		if(self->m_usNumberOfRTPSinkStreams == MAX_SINK_STREAMS)
 		{
-            MTAL_DP("CRTP_streams_manager::AddRTPStream: error m_apRTPSinkOrderedStreams is full\n");
+            printk(KERN_DEBUG "CRTP_streams_manager::AddRTPStream: error m_apRTPSinkOrderedStreams is full\n");
             break;
 		}
 
@@ -280,7 +276,7 @@ int add_RTP_stream_(TRTP_streams_manager* self, TRTP_stream_info* pRTPStreamInfo
 }
 
 ////////////////////////////////////////////////////////////////////
-int remove_RTP_stream_(TRTP_streams_manager* self, uint64_t hRTPStream)
+int remove_RTP_stream_(struct fusion_aes67_rtp_manager* self, uint64_t hRTPStream)
 {
     int ret = 0;
     unsigned short us;
@@ -294,7 +290,7 @@ int remove_RTP_stream_(TRTP_streams_manager* self, uint64_t hRTPStream)
         do {
         for(us = 0; us < self->m_usNumberOfRTPSourceStreams; us++)
         {
-            if(&self->m_apRTPSourceOrderedStreams[us]->m_RTPAudioStream == (TRTP_audio_stream*)(size_t)hRTPStream)
+            if(&self->m_apRTPSourceOrderedStreams[us]->m_RTPAudioStream == (struct fusion_aes67_rtp_audio_stream*)(size_t)hRTPStream)
             {
                 unsigned short i;
                 self->m_usNumberOfRTPSourceStreams--;
@@ -306,7 +302,7 @@ int remove_RTP_stream_(TRTP_streams_manager* self, uint64_t hRTPStream)
 
                 for (i = 0; i < MAX_SOURCE_STREAMS*2; i++)
                 {
-                    if(&self->m_apRTPSourceStreams[i].m_RTPAudioStream == (TRTP_audio_stream*)(size_t)hRTPStream)
+                    if(&self->m_apRTPSourceStreams[i].m_RTPAudioStream == (struct fusion_aes67_rtp_audio_stream*)(size_t)hRTPStream)
                     {
                         if (IsActive(&self->m_apRTPSourceStreams[i]))
                         {
@@ -314,12 +310,12 @@ int remove_RTP_stream_(TRTP_streams_manager* self, uint64_t hRTPStream)
                             ret = 1;
                             break;
                         }
-                        MTAL_DP("remove_RTP_stream ERROR: CRTP_audio_stream is not active\n");
+                        printk(KERN_DEBUG "remove_RTP_stream ERROR: CRTP_audio_stream is not active\n");
                         break;
                     }
                 }
                 if (ret == 0)
-                    MTAL_DP("remove_RTP_stream ERROR: CRTP_audio_stream not found in the sources collection\n");
+                    printk(KERN_DEBUG "remove_RTP_stream ERROR: CRTP_audio_stream not found in the sources collection\n");
                 break;
             }
         }
@@ -343,7 +339,7 @@ int remove_RTP_stream_(TRTP_streams_manager* self, uint64_t hRTPStream)
 		do {
 		for(us = 0; us < self->m_usNumberOfRTPSinkStreams; us++)
 		{
-			if(&self->m_apRTPSinkOrderedStreams[us]->m_RTPAudioStream == (TRTP_audio_stream*)(size_t)hRTPStream)
+			if(&self->m_apRTPSinkOrderedStreams[us]->m_RTPAudioStream == (struct fusion_aes67_rtp_audio_stream*)(size_t)hRTPStream)
 			{
                 unsigned short i;
 				self->m_usNumberOfRTPSinkStreams--;
@@ -355,7 +351,7 @@ int remove_RTP_stream_(TRTP_streams_manager* self, uint64_t hRTPStream)
 
 				for (i = 0; i < MAX_SINK_STREAMS*2; i++)
 				{
-					if(&self->m_apRTPSinkStreams[i].m_RTPAudioStream == (TRTP_audio_stream*)(size_t)hRTPStream)
+					if(&self->m_apRTPSinkStreams[i].m_RTPAudioStream == (struct fusion_aes67_rtp_audio_stream*)(size_t)hRTPStream)
 					{
 						if (IsActive(&self->m_apRTPSinkStreams[i]))
 						{
@@ -363,12 +359,12 @@ int remove_RTP_stream_(TRTP_streams_manager* self, uint64_t hRTPStream)
 							ret = 1;
 							break;
 						}
-						MTAL_DP("remove_RTP_stream ERROR: CRTP_audio_stream is not active\n");
+						printk(KERN_DEBUG "remove_RTP_stream ERROR: CRTP_audio_stream is not active\n");
 						break;
 					}
 				}
 				if (ret == 0)
-					MTAL_DP("remove_RTP_stream ERROR: CRTP_audio_stream not found in the sinks collection\n");
+					printk(KERN_DEBUG "remove_RTP_stream ERROR: CRTP_audio_stream not found in the sinks collection\n");
 				break;
 			}
 		}
@@ -383,7 +379,7 @@ int remove_RTP_stream_(TRTP_streams_manager* self, uint64_t hRTPStream)
 }
 
 ////////////////////////////////////////////////////////////////////
-void remove_all_RTP_streams(TRTP_streams_manager* self)
+void remove_all_RTP_streams(struct fusion_aes67_rtp_manager* self)
 {
     unsigned short us;
 	{   // SOURCE
@@ -432,10 +428,10 @@ void remove_all_RTP_streams(TRTP_streams_manager* self)
 }
 
 ////////////////////////////////////////////////////////////////////
-int update_RTP_stream_name(TRTP_streams_manager* self, const TRTP_stream_update_name* pRTP_stream_update_name)
+int update_RTP_stream_name(struct fusion_aes67_rtp_manager* self, const struct fusion_aes67_rtp_stream_update_name* pRTP_stream_update_name)
 {
     unsigned short us;
-	//MTAL_DP("update_RTP_stream_name: %s\n", pRTP_stream_update_name->m_cName);
+	//printk(KERN_DEBUG "update_RTP_stream_name: %s\n", pRTP_stream_update_name->m_cName);
 	{
         #if defined(MTAL_LINUX) && defined(MTAL_KERNEL)
             unsigned long flags;
@@ -445,7 +441,7 @@ int update_RTP_stream_name(TRTP_streams_manager* self, const TRTP_stream_update_
 		#endif
 		for(us = 0; us < self->m_usNumberOfRTPSourceStreams; us++)
 		{
-            if(&self->m_apRTPSourceOrderedStreams[us]->m_RTPAudioStream == (TRTP_audio_stream*)(size_t)pRTP_stream_update_name->m_hRTPStreamHandle)
+            if(&self->m_apRTPSourceOrderedStreams[us]->m_RTPAudioStream == (struct fusion_aes67_rtp_audio_stream*)(size_t)pRTP_stream_update_name->m_hRTPStreamHandle)
 			{
 				set_stream_name(&self->m_apRTPSourceOrderedStreams[us]->m_RTPAudioStream.m_tRTPStream.m_RTP_stream_info, pRTP_stream_update_name->m_cName);
 				return 1;
@@ -466,7 +462,7 @@ int update_RTP_stream_name(TRTP_streams_manager* self, const TRTP_stream_update_
 		#endif // UNDER_RTSS
 		for(us = 0; us < self->m_usNumberOfRTPSinkStreams; us++)
 		{
-            if(&self->m_apRTPSinkOrderedStreams[us]->m_RTPAudioStream == (TRTP_audio_stream*)(size_t)pRTP_stream_update_name->m_hRTPStreamHandle)
+            if(&self->m_apRTPSinkOrderedStreams[us]->m_RTPAudioStream == (struct fusion_aes67_rtp_audio_stream*)(size_t)pRTP_stream_update_name->m_hRTPStreamHandle)
 			{
 				set_stream_name(&self->m_apRTPSinkOrderedStreams[us]->m_RTPAudioStream.m_tRTPStream.m_RTP_stream_info, pRTP_stream_update_name->m_cName);
 				return 1;
@@ -480,7 +476,7 @@ int update_RTP_stream_name(TRTP_streams_manager* self, const TRTP_stream_update_
 }
 
 ////////////////////////////////////////////////////////////////////
-int get_RTPStream_status_(TRTP_streams_manager* self, uint64_t hRTPStream, TRTP_stream_status* pstream_status)
+int get_RTPStream_status_(struct fusion_aes67_rtp_manager* self, uint64_t hRTPStream, struct fusion_aes67_rtp_stream_status* pstream_status)
 {
 	int ret = 0;
 	unsigned short us;
@@ -497,7 +493,7 @@ int get_RTPStream_status_(TRTP_streams_manager* self, uint64_t hRTPStream, TRTP_
 		for (us = 0; us < self->m_usNumberOfRTPSourceStreams; us++)
 		{
 			//warning: cast to pointer from integer of different size [-Wint-to-pointer-cast]
-			if (&self->m_apRTPSourceOrderedStreams[us]->m_RTPAudioStream == (TRTP_audio_stream*)hRTPStream)
+			if (&self->m_apRTPSourceOrderedStreams[us]->m_RTPAudioStream == (struct fusion_aes67_rtp_audio_stream*)hRTPStream)
 			{
 				ret = get_RTPStream_status(&self->m_apRTPSourceOrderedStreams[us]->m_RTPAudioStream, pstream_status);
 				break;
@@ -523,7 +519,7 @@ int get_RTPStream_status_(TRTP_streams_manager* self, uint64_t hRTPStream, TRTP_
 		for (us = 0; us < self->m_usNumberOfRTPSinkStreams; us++)
 		{
 			//warning: cast to pointer from integer of different size [-Wint-to-pointer-cast]
-			if (&self->m_apRTPSinkOrderedStreams[us]->m_RTPAudioStream == (TRTP_audio_stream*)hRTPStream)
+			if (&self->m_apRTPSinkOrderedStreams[us]->m_RTPAudioStream == (struct fusion_aes67_rtp_audio_stream*)hRTPStream)
 			{
 				ret = get_RTPStream_status(&self->m_apRTPSinkOrderedStreams[us]->m_RTPAudioStream, pstream_status);
 				break;
@@ -540,12 +536,12 @@ int get_RTPStream_status_(TRTP_streams_manager* self, uint64_t hRTPStream, TRTP_
 	return 0;
 }
 
-uint8_t GetNumberOfSources(TRTP_streams_manager* self)
+uint8_t GetNumberOfSources(struct fusion_aes67_rtp_manager* self)
 {
 	return (uint8_t)self->m_usNumberOfRTPSourceStreams;
 }
 
-uint8_t GetNumberOfSinks(TRTP_streams_manager* self)
+uint8_t GetNumberOfSinks(struct fusion_aes67_rtp_manager* self)
 {
 	return (uint8_t)self->m_usNumberOfRTPSinkStreams;
 }
@@ -553,7 +549,7 @@ uint8_t GetNumberOfSinks(TRTP_streams_manager* self)
 
 /*
 ////////////////////////////////////////////////////////////////////
-int GetSinkStats(TRTP_streams_manager* self, uint8_t ui8StreamIdx, TRTPStreamStats* pRTPStreamStats)
+int GetSinkStats(struct fusion_aes67_rtp_manager* self, uint8_t ui8StreamIdx, TRTPStreamStats* pRTPStreamStats)
 {
     #if defined(MTAL_LINUX) && defined(MTAL_KERNEL)
         unsigned long flags;
@@ -588,7 +584,7 @@ int GetSinkStats(TRTP_streams_manager* self, uint8_t ui8StreamIdx, TRTPStreamSta
 */
 
 ////////////////////////////////////////////////////////////////////
-int GetSinkStatsFromTIC(TRTP_streams_manager* self, uint8_t ui8StreamIdx, TRTPStreamStatsFromTIC* pRTPStreamStatsFromTIC)
+int GetSinkStatsFromTIC(struct fusion_aes67_rtp_manager* self, uint8_t ui8StreamIdx, TRTPStreamStatsFromTIC* pRTPStreamStatsFromTIC)
 {
     #if defined(MTAL_LINUX) && defined(MTAL_KERNEL)
         unsigned long flags;
@@ -622,7 +618,7 @@ int GetSinkStatsFromTIC(TRTP_streams_manager* self, uint8_t ui8StreamIdx, TRTPSt
 }
 
 ////////////////////////////////////////////////////////////////////
-int GetMinSinkAheadTime(TRTP_streams_manager* self, TSinkAheadTime* pSinkAheadTime)
+int GetMinSinkAheadTime(struct fusion_aes67_rtp_manager* self, TSinkAheadTime* pSinkAheadTime)
 {
     #if defined(MTAL_LINUX) && defined(MTAL_KERNEL)
         unsigned long flags;
@@ -664,7 +660,7 @@ int GetMinSinkAheadTime(TRTP_streams_manager* self, TSinkAheadTime* pSinkAheadTi
 }
 
 ////////////////////////////////////////////////////////////////////
-int GetMinMaxSinksJitter(TRTP_streams_manager* self, TSinksJitter* pSinksJitter)
+int GetMinMaxSinksJitter(struct fusion_aes67_rtp_manager* self, TSinksJitter* pSinksJitter)
 {
     #if defined(MTAL_LINUX) && defined(MTAL_KERNEL)
         unsigned long flags;
@@ -705,7 +701,7 @@ int GetMinMaxSinksJitter(TRTP_streams_manager* self, TSinksJitter* pSinksJitter)
 }
 
 ////////////////////////////////////////////////////////////////////
-/*f10bint GetLastProcessedSinkFromTIC(TRTP_streams_manager* self, TLastProcessedRTPDeltaFromTIC* pLastProcessedRTPDeltaFromTIC)
+/*f10bint GetLastProcessedSinkFromTIC(struct fusion_aes67_rtp_manager* self, TLastProcessedRTPDeltaFromTIC* pLastProcessedRTPDeltaFromTIC)
 {
     #if defined(MTAL_LINUX) && defined(MTAL_KERNEL)
         unsigned long flags;
@@ -735,7 +731,7 @@ int GetMinMaxSinksJitter(TRTP_streams_manager* self, TSinksJitter* pSinksJitter)
 }
 
 ////////////////////////////////////////////////////////////////////
-int GetLastSentSourceFromTIC(TRTP_streams_manager* self, TLastSentRTPDeltaFromTIC* pLastSentRTPDeltaFromTIC)
+int GetLastSentSourceFromTIC(struct fusion_aes67_rtp_manager* self, TLastSentRTPDeltaFromTIC* pLastSentRTPDeltaFromTIC)
 {
     #if defined(MTAL_LINUX) && defined(MTAL_KERNEL)
         unsigned long flags;
@@ -764,38 +760,25 @@ int GetLastSentSourceFromTIC(TRTP_streams_manager* self, TLastSentRTPDeltaFromTI
 ////////////////////////////////////////////////////////////////////
 // CEtherTubeAdviseSink
 ////////////////////////////////////////////////////////////////////
-#if defined(NT_DRIVER)
-EDispatchResult process_UDP_packet(TRTP_streams_manager* self, TUDPPacketBase* pUDPPacketBase, uint32_t packetsize, int bDispatchLevel)
-#else
-EDispatchResult process_UDP_packet(TRTP_streams_manager* self, TUDPPacketBase* pUDPPacketBase, uint32_t packetsize)
-#endif // NT_DRIVER
+int process_UDP_packet(struct fusion_aes67_rtp_manager* self, TUDPPacketBase* pUDPPacketBase, uint32_t packet_size)
 {
-    bool bProceeded = false;
-    #if defined(MTAL_LINUX) && defined(MTAL_KERNEL)
-        unsigned long flags;
-    #endif
-	if(packetsize < sizeof(TRTPPacketBase))
+    bool processed = false;
+    unsigned long flags;
+
+	if(packet_size < sizeof(TRTPPacketBase))
 	{
-		//MTAL_DP("Wrong RTP packet size %u\n", packetsize);
-		return DR_PACKET_NOT_USED;
+		//printk(KERN_DEBUG "Wrong RTP packet size %u\n", packet_size);
+		return NF_ACCEPT;
 	}
 
 	// AES67 6.1 fragmented IP packet must be  ignored
-	if((MTAL_SWAP16(pUDPPacketBase->IPV4Header.usOffset) & 0x0FFF) != 0 || (MTAL_SWAP16(pUDPPacketBase->IPV4Header.usOffset) & 0x2000)) // More fragments bit
-	{
-		MTAL_DP("Fragmented packet 0x%x\n", MTAL_SWAP16(pUDPPacketBase->IPV4Header.usOffset));
-		return DR_PACKET_NOT_USED;
+	if((MTAL_SWAP16(pUDPPacketBase->IPV4Header.usOffset) & 0x0FFF) != 0 || (MTAL_SWAP16(pUDPPacketBase->IPV4Header.usOffset) & 0x2000)) {
+		printk(KERN_DEBUG "Fragmented packet 0x%x\n", MTAL_SWAP16(pUDPPacketBase->IPV4Header.usOffset));
+		return NF_ACCEPT;
 	}
 
 	// Is this UDP packet is a RTP packet that we have to use?
-
-    #if defined(NT_DRIVER)
-        self->m_csSinkRTPStreams.Lock(bDispatchLevel);
-    #elif defined(MTAL_LINUX) && defined(MTAL_KERNEL)
-        spin_lock_irqsave((spinlock_t*)self->m_csSinkRTPStreams, flags);
-    #else
-        self->m_csSinkRTPStreams.Lock(); ///$todo: split lock$
-	#endif
+    spin_lock_irqsave((spinlock_t*)self->m_csSinkRTPStreams, flags);
 	{
         unsigned short us;
         uint64_t ui64Key = ((uint64_t)pUDPPacketBase->IPV4Header.ui32DestIP) << 16 | pUDPPacketBase->UDPHeader.usDestPort;
@@ -803,42 +786,34 @@ EDispatchResult process_UDP_packet(TRTP_streams_manager* self, TUDPPacketBase* p
         {
             if(ui64Key == get_key(&self->m_apRTPSinkOrderedStreams[us]->m_RTPAudioStream.m_tRTPStream.m_RTP_stream_info))
             {
-                bProceeded |= ProcessRTPAudioPacket(&self->m_apRTPSinkOrderedStreams[us]->m_RTPAudioStream, (TRTPPacketBase*)pUDPPacketBase);
+                processed |= ProcessRTPAudioPacket(&self->m_apRTPSinkOrderedStreams[us]->m_RTPAudioStream, (TRTPPacketBase*)pUDPPacketBase);
             }
         }
     }
-    #if defined(MTAL_LINUX) && defined(MTAL_KERNEL)
-        spin_unlock_irqrestore((spinlock_t*)self->m_csSinkRTPStreams, flags);
-    #else
-        self->m_csSinkRTPStreams.Unlock();
-	#endif
-	return bProceeded ? DR_RTP_PACKET_USED : DR_PACKET_NOT_USED;
+    spin_unlock_irqrestore((spinlock_t*)self->m_csSinkRTPStreams, flags);
+
+	return processed ? NF_DROP : NF_ACCEPT;
 }
 
 //////////////////////////////////////////////////////////////
-void prepare_buffer_lives(TRTP_streams_manager* self)
+void prepare_buffer_lives(struct fusion_aes67_rtp_manager* self)
 {
     unsigned short us;
 	{   // SOURCE
         unsigned short	usNumberOfRTPSourceStreams;
-        TRTP_audio_stream_handler* apRTPSourceStreams[MAX_SOURCE_STREAMS];
+        struct fusion_aes67_rtp_audio_stream_handler* apRTPSourceStreams[MAX_SOURCE_STREAMS];
 		{
             unsigned short i;
-            #if defined(MTAL_LINUX) && defined(MTAL_KERNEL)
-                unsigned long flags;
-                spin_lock_irqsave((spinlock_t*)self->m_csSourceRTPStreams, flags);
-            #else
-                CMTAL_SingleLock nLock(&self->m_csSourceRTPStreams, 1);
-            #endif
+			unsigned long flags;
+			spin_lock_irqsave((spinlock_t*)self->m_csSourceRTPStreams, flags);
 			memcpy(apRTPSourceStreams, self->m_apRTPSourceOrderedStreams, sizeof(apRTPSourceStreams));
 			usNumberOfRTPSourceStreams = self->m_usNumberOfRTPSourceStreams;
 			for (i = 0; i < usNumberOfRTPSourceStreams; i++)
 			{
 				ReaderEnter(apRTPSourceStreams[i]);
 			}
-            #if defined(MTAL_LINUX) && defined(MTAL_KERNEL)
-                spin_unlock_irqrestore((spinlock_t*)self->m_csSourceRTPStreams, flags);
-            #endif
+
+			spin_unlock_irqrestore((spinlock_t*)self->m_csSourceRTPStreams, flags);
 		}
 		for (us = 0; us < usNumberOfRTPSourceStreams; us++)
 		{
@@ -849,19 +824,15 @@ void prepare_buffer_lives(TRTP_streams_manager* self)
 		}
 		{
             unsigned short i;
-            #if defined(MTAL_LINUX) && defined(MTAL_KERNEL)
-                unsigned long flags;
-                spin_lock_irqsave((spinlock_t*)self->m_csSourceRTPStreams, flags);
-            #else
-                CMTAL_SingleLock nLock(&self->m_csSourceRTPStreams, 1);
-            #endif
+			unsigned long flags;
+			spin_lock_irqsave((spinlock_t*)self->m_csSourceRTPStreams, flags);
+
             for (i = 0; i < usNumberOfRTPSourceStreams; i++)
             {
 				ReaderLeave(apRTPSourceStreams[i]);
             }
-            #if defined(MTAL_LINUX) && defined(MTAL_KERNEL)
-                spin_unlock_irqrestore((spinlock_t*)self->m_csSourceRTPStreams, flags);
-            #endif
+                
+			spin_unlock_irqrestore((spinlock_t*)self->m_csSourceRTPStreams, flags);
 		}
 	}
 	{
@@ -885,7 +856,7 @@ void prepare_buffer_lives(TRTP_streams_manager* self)
 }
 
 ///////////////////////////////////////////////////////////////////////////
-void frame_process_begin(TRTP_streams_manager* self)
+void frame_process_begin(struct fusion_aes67_rtp_manager* self)
 {
 	#ifdef UNDER_RTSS
 		if(self->m_RTPStreamsOutgoingThread.IsInitialized())
@@ -895,13 +866,13 @@ void frame_process_begin(TRTP_streams_manager* self)
 		else
 	#endif // UNDER_RTSS
 		{
-			//MTAL_DP("send_outgoing_packets(): called from current thread\n");
+			//printk(KERN_DEBUG "send_outgoing_packets(): called from current thread\n");
 			send_outgoing_packets(self);
 		}
 }
 
 ///////////////////////////////////////////////////////////////////////////
-void frame_process_end(TRTP_streams_manager* self)
+void frame_process_end(struct fusion_aes67_rtp_manager* self)
 {
 #ifdef UNDER_RTSS
 	if (self->m_RTPStreamsOutgoingThread.IsInitialized())
@@ -912,7 +883,7 @@ void frame_process_end(TRTP_streams_manager* self)
 }
 
 ///////////////////////////////////////////////////////////////////////////
-void send_outgoing_packets(TRTP_streams_manager* self)
+void send_outgoing_packets(struct fusion_aes67_rtp_manager* self)
 {
 	// check if the link is up
 	if(!fusion_aes67_netfilter_running(self->m_pEth_netfilter))
@@ -923,7 +894,7 @@ void send_outgoing_packets(TRTP_streams_manager* self)
     {   // SOURCE
         uint32_t ui32SourceStreamIdx;
         unsigned short usNumberOfRTPSourceStreams;
-        TRTP_audio_stream_handler* apRTPSourceStreams[MAX_SOURCE_STREAMS];
+        struct fusion_aes67_rtp_audio_stream_handler* apRTPSourceStreams[MAX_SOURCE_STREAMS];
         {
             uint32_t i;
             #if defined(MTAL_LINUX) && defined(MTAL_KERNEL)
@@ -951,7 +922,7 @@ void send_outgoing_packets(TRTP_streams_manager* self)
                 /*if (addr != apRTPSourceStreams[ui32SourceStreamIdx])
 				{
                     addr = apRTPSourceStreams[ui32SourceStreamIdx];
-                    MTAL_DP("NEW ADDR = 0x%x\n", addr);
+                    printk(KERN_DEBUG "NEW ADDR = 0x%x\n", addr);
                 }*/
 
 				#ifdef RTCP_ENABLED
@@ -1014,7 +985,7 @@ void send_outgoing_packets(TRTP_streams_manager* self)
 
 #ifdef UNDER_RTSS
 ///////////////////////////////////////////////////////////////////////////
-HRESULT	GetLiveInInfo(TRTP_streams_manager* self, DWORD dwIndexAt1FS, TRTXLiveInfo* pRTXLiveInfo) const
+HRESULT	GetLiveInInfo(struct fusion_aes67_rtp_manager* self, DWORD dwIndexAt1FS, TRTXLiveInfo* pRTXLiveInfo) const
 {
 	if(!pRTXLiveInfo)
 	{
@@ -1022,14 +993,14 @@ HRESULT	GetLiveInInfo(TRTP_streams_manager* self, DWORD dwIndexAt1FS, TRTXLiveIn
 	}
 
 	CMTAL_SingleLockEventTrace nLock(&self->m_csSinkRTPStreams, 1, RTTRACEEVENT_SINK_MUTEX, RT_TRACE_EVENT_COLOR_PINK);
-	//MTAL_DP("GetLiveInInfo(%u): m_usNumberOfRTPSinkStreams = %u\n", dwIndexAt1FS, self->m_usNumberOfRTPSinkStreams);
+	//printk(KERN_DEBUG "GetLiveInInfo(%u): m_usNumberOfRTPSinkStreams = %u\n", dwIndexAt1FS, self->m_usNumberOfRTPSinkStreams);
 	{
         unsigned short us;
 		for (us = 0; us < self->m_usNumberOfRTPSinkStreams; us++)
 		{
 			if (self->m_apRTPSinkOrderedStreams[us]->m_RTPAudioStream.GetLiveInInfo(dwIndexAt1FS, pRTXLiveInfo))
 			{
-				//MTAL_DP("GetLiveInInfo: find at %u\n", us);
+				//printk(KERN_DEBUG "GetLiveInInfo: find at %u\n", us);
 				return S_OK;
 			}
 		}
@@ -1040,7 +1011,7 @@ HRESULT	GetLiveInInfo(TRTP_streams_manager* self, DWORD dwIndexAt1FS, TRTXLiveIn
 }
 
 ///////////////////////////////////////////////////////////////////////////
-HRESULT	GetLiveOutInfo(TRTP_streams_manager* self, DWORD dwIndexAt1FS, TRTXLiveInfo* pRTXLiveInfo) const
+HRESULT	GetLiveOutInfo(struct fusion_aes67_rtp_manager* self, DWORD dwIndexAt1FS, TRTXLiveInfo* pRTXLiveInfo) const
 {
 	if(!pRTXLiveInfo)
 	{
@@ -1051,7 +1022,7 @@ HRESULT	GetLiveOutInfo(TRTP_streams_manager* self, DWORD dwIndexAt1FS, TRTXLiveI
 	memset(pRTXLiveInfo, 0, sizeof(TRTXLiveInfo));
     CMTAL_SingleLock nLock(&self->m_csSourceRTPStreams, 1);
 
-	//MTAL_DP("GetLiveOutInfo(%u): m_usNumberOfRTPSourceStreams = %u\n", dwIndexAt1FS, self->m_usNumberOfRTPSourceStreams);
+	//printk(KERN_DEBUG "GetLiveOutInfo(%u): m_usNumberOfRTPSourceStreams = %u\n", dwIndexAt1FS, self->m_usNumberOfRTPSourceStreams);
 	{
         unsigned short us;
 		for (us = 0; us < self->m_usNumberOfRTPSourceStreams; us++)
@@ -1060,7 +1031,7 @@ HRESULT	GetLiveOutInfo(TRTP_streams_manager* self, DWORD dwIndexAt1FS, TRTXLiveI
 
 			/*if (bFound)
 			{
-				MTAL_DP("[%i]: bAvailable = %d, cLiveName = %s\n", dwIndexAt1FS, pRTXLiveInfo->bAvailable, pRTXLiveInfo->cLiveName);
+				printk(KERN_DEBUG "[%i]: bAvailable = %d, cLiveName = %s\n", dwIndexAt1FS, pRTXLiveInfo->bAvailable, pRTXLiveInfo->cLiveName);
 			}*/
 		}
 	}
@@ -1087,7 +1058,7 @@ CRTPStreamsOutgoingThread::CRTPStreamsOutgoingThread(CRTP_streams_manager& RTP_s
 ////////////////////////////////////////////////////////////////////
 CRTPStreamsOutgoingThread::~CRTPStreamsOutgoingThread()
 {
-	//MTAL_DP("CRTPStreamsOutgoingThread::~CRTPStreamsOutgoingThread\n");
+	//printk(KERN_DEBUG "CRTPStreamsOutgoingThread::~CRTPStreamsOutgoingThread\n");
 	Destroy();
 }
 
@@ -1129,7 +1100,7 @@ HRESULT	CRTPStreamsOutgoingThread::WaitOnDone()
 	switch (RtWaitForMultipleObjects(2, ahEvents, 0, 2))	// timeout of 2ms
 	{
 		case WAIT_TIMEOUT:
-			MTAL_DP("CRTPStreamsOutgoingThread: WaitOnDone: TimeOUT!!!!\n");
+			printk(KERN_DEBUG "CRTPStreamsOutgoingThread: WaitOnDone: TimeOUT!!!!\n");
 			return WAIT_TIMEOUT;
 
 		case WAIT_OBJECT_0:	// Done
@@ -1144,13 +1115,13 @@ HRESULT	CRTPStreamsOutgoingThread::WaitOnDone()
 ///////////////////////////////////////////////////////////////////////////
 void CRTPStreamsOutgoingThread::ThreadEnter()
 {
-	MTAL_DP("RTPStreamsOutgoingThread ID = %d(0x%x), priority %d, on Core %d\n", GetCurrentThreadId(), GetCurrentThreadId(), RtGetThreadPriority(RtGetCurrentThread()), RtGetCurrentProcessorNumber());
+	printk(KERN_DEBUG "RTPStreamsOutgoingThread ID = %d(0x%x), priority %d, on Core %d\n", GetCurrentThreadId(), GetCurrentThreadId(), RtGetThreadPriority(RtGetCurrentThread()), RtGetCurrentProcessorNumber());
 }
 
 ///////////////////////////////////////////////////////////////////////////
 void CRTPStreamsOutgoingThread::ThreadProcess()
 {
-	//MTAL_DP("CRTPStreamsOutgoingThread::ThreadProcess()\n");
+	//printk(KERN_DEBUG "CRTPStreamsOutgoingThread::ThreadProcess()\n");
 	m_RTP_streams_manager.send_outgoing_packets();
 
 	// Must be the last line

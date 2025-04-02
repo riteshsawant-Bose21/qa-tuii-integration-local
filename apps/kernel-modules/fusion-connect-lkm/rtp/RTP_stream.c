@@ -1,33 +1,19 @@
-/****************************************************************************
-*
-*  Module Name    : RTP_stream.c
-*  Version        : 
-*
-*  Abstract       : RAVENNA/AES67 ALSA LKM
-*
-*  Written by     : van Kempen Bertrand
-*  Date           : 25/07/2010
-*  Modified by    : Baume Florian
-*  Date           : 13/01/2017
-*  Modification   : C port (source: RTP_stream.cpp)
-*  Known problems : None
-*
-* Copyright(C) 2017 Merging Technologies
-*
-* RAVENNA/AES67 ALSA LKM is free software; you can redistribute it and / or
-* modify it under the terms of the GNU General Public License
-* as published by the Free Software Foundation; either version 2
-* of the License, or (at your option) any later version.
-*
-* RAVENNA/AES67 ALSA LKM is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
-* GNU General Public License for more details.
-*
-* You should have received a copy of the GNU General Public License
-* along with RAVAENNA ALSA LKM ; if not, see <http://www.gnu.org/licenses/>.
-*
-****************************************************************************/
+/*
+ * Copyright (C) 2017 Merging Technologies
+ * Copyright (C) 2025 Bose Professional
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version 2 of the License, or (at your
+ * option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, see <http://www.gnu.org/licenses/>.
+ */
 
 #include <linux/types.h>
 #include <linux/string.h>
@@ -53,12 +39,11 @@ void get_ntp_time(uint32_t* ntp_sec, uint32_t* ntp_fsec)
 	*ntp_fsec = (uint32_t)((sysTimeIn100ns << 32) / TEN_MILLION);
 }
 
-
 ////////////////////////////////////////////////////////////////////
-int rtp_stream_init(TRTP_stream *pRTP_stream, struct fusion_aes67_netfilter *pEth_netfilter, TRTP_stream_info* pRTP_stream_info)
+int rtp_stream_init(struct fusion_aes67_rtp_stream *pRTP_stream, struct fusion_aes67_netfilter *pEth_netfilter, struct fusion_aes67_rtp_stream_info* pRTP_stream_info)
 {
 	pRTP_stream->m_pEth_netfilter = pEth_netfilter;
-	memcpy(&pRTP_stream->m_RTP_stream_info, pRTP_stream_info, sizeof(TRTP_stream_info));
+	memcpy(&pRTP_stream->m_RTP_stream_info, pRTP_stream_info, sizeof(struct fusion_aes67_rtp_stream_info));
 	dump(&pRTP_stream->m_RTP_stream_info);
 
 	// Optimization: prepare RTP out packet in advance
@@ -154,7 +139,7 @@ int rtp_stream_init(TRTP_stream *pRTP_stream, struct fusion_aes67_netfilter *pEt
             #endif
 			if (!pRTP_stream->m_pvRTCP_SourceDescription)
 			{
-				MTAL_DP("out ot memory: RTCP source description was not generated\n");
+				printk(KERN_DEBUG "out ot memory: RTCP source description was not generated\n");
 			}
 			else
 			{
@@ -163,7 +148,7 @@ int rtp_stream_init(TRTP_stream *pRTP_stream, struct fusion_aes67_netfilter *pEt
                 TRTCP_SourceDescriptionItem* pRTCP_SourceDescriptionItem;
 
 				TRTCP_SourceDescriptionHeaderBase* pRTCP_SourceDescriptionHeaderBase = (TRTCP_SourceDescriptionHeaderBase*)pRTP_stream->m_pvRTCP_SourceDescription;
-				//MTAL_DP("pRTCP_SourceDescriptionHeaderBase = %p\n", pRTCP_SourceDescriptionHeaderBase);
+				//printk(KERN_DEBUG "pRTCP_SourceDescriptionHeaderBase = %p\n", pRTCP_SourceDescriptionHeaderBase);
 				pRTCP_SourceDescriptionHeaderBase->byVersion = (2 << 6) | 1; // ver = 2, 1 source
 				pRTCP_SourceDescriptionHeaderBase->byPacketType = RTCP_PACKET_TYPE_SDES; // Source Description
 				pRTCP_SourceDescriptionHeaderBase->usLength = MTAL_SWAP16(pRTP_stream->m_ulRTCP_SourceDescriptionSize / 4 - 1); // The length of this RTCP packet in 32-bit words minus one, including the header and any padding.
@@ -198,11 +183,11 @@ int rtp_stream_init(TRTP_stream *pRTP_stream, struct fusion_aes67_netfilter *pEt
 ////////////////////////////////////////////////////////////////////
 // NOTE: MassCore implementation: Sinks are called from MassCoreNIC process; so, it is important than CRTP_audio_stream::Destroy() doesn't call the allocator.
 // see CRTP_audio_stream_handler::Cleanup()
-int rtp_stream_destroy(TRTP_stream* pRTP_stream)
+int rtp_stream_destroy(struct fusion_aes67_rtp_stream* pRTP_stream)
 {
-	//MTAL_DP("Destroy RTPStream %s %s\n", pRTP_stream->m_RTP_stream_info.m_bSource ? "Source" : "Sink", pRTP_stream->m_RTP_stream_info.m_cName);
+	//printk(KERN_DEBUG "Destroy RTPStream %s %s\n", pRTP_stream->m_RTP_stream_info.m_bSource ? "Source" : "Sink", pRTP_stream->m_RTP_stream_info.m_cName);
 
-	memset(&pRTP_stream->m_RTP_stream_info, 0, sizeof(TRTP_stream_info));
+	memset(&pRTP_stream->m_RTP_stream_info, 0, sizeof(struct fusion_aes67_rtp_stream_info));
 
 	if(pRTP_stream->m_pvRTCP_SourceDescription)
 	{
@@ -218,12 +203,12 @@ int rtp_stream_destroy(TRTP_stream* pRTP_stream)
 	return true;
 }
 
-uint64_t rtp_stream_get_key(TRTP_stream* pRTP_stream)
+uint64_t rtp_stream_get_key(struct fusion_aes67_rtp_stream* pRTP_stream)
 {
 	return get_key(&pRTP_stream->m_RTP_stream_info);
 }
 
-void rtp_stream_set_name(TRTP_stream* pRTP_stream, const char * cName)
+void rtp_stream_set_name(struct fusion_aes67_rtp_stream* pRTP_stream, const char * cName)
 {
 	set_stream_name(&pRTP_stream->m_RTP_stream_info, cName);
 }
@@ -232,47 +217,41 @@ void rtp_stream_set_name(TRTP_stream* pRTP_stream, const char * cName)
 // Optimization rules: the caller guarantees that:
 //		- the object is properly initialized
 ////////////////////////////////////////////////////////////////////
-int rtp_stream_send_RTCP_SR_Packet(TRTP_stream* pRTP_stream)
+int rtp_stream_send_RTCP_SR_Packet(struct fusion_aes67_rtp_stream* pRTP_stream)
 {
-	void* pHandle = NULL;
-	void* pvPacket = NULL;
-	uint32_t ulPacketSize = 0;
+	void* skb = NULL;
+	void* packet = NULL;
+	uint32_t packet_size = 0;
 	// Send RTCP packet to the interface
 
 	if(pRTP_stream->m_RTP_stream_info.m_usRTCPDestPort == 0)
 	{
 		return 0;
 	}
-	//MTAL_DP("SendRTCP_SR_Packet\n");
+	//printk(KERN_DEBUG "SendRTCP_SR_Packet\n");
 
-	//MTAL_RtTraceEvent(RTTRACEEVENT_RTCP_OUT, (PVOID)(RT_TRACE_EVENT_SIGNAL_START), 0);
-	if (acquire_tx_packet(pRTP_stream->m_pEth_netfilter, &pHandle, &pvPacket, &ulPacketSize) && ulPacketSize >= (sizeof(TRTCP_SR_PacketBase) + pRTP_stream->m_ulRTCP_SourceDescriptionSize))
+	if (fusion_aes67_create_tx_packet(pRTP_stream->m_pEth_netfilter, &skb, &packet, &packet_size) && packet_size >= (sizeof(TRTCP_SR_PacketBase) + pRTP_stream->m_ulRTCP_SourceDescriptionSize))
 	{
         uint32_t ntp_sec, ntp_fsec;
         uint32_t ui32PacketSize;
-        TRTCP_SR_PacketBase* pTRTCP_SR_Packet = (TRTCP_SR_PacketBase*)pvPacket;
-
-		//MTAL_RtTraceEvent(RTTRACEEVENT_RTCP_OUT, (PVOID)(RT_TRACE_EVENT_SIGNAL_STOP), 0);
+        TRTCP_SR_PacketBase* pTRTCP_SR_Packet = (TRTCP_SR_PacketBase*)packet;
 
 		// Copy the header
-		memcpy(pvPacket, &pRTP_stream->m_RTCPPacketBase, sizeof(TRTCPPacketBase));
+		memcpy(packet, &pRTP_stream->m_RTCPPacketBase, sizeof(TRTCPPacketBase));
 
 		ui32PacketSize = sizeof(TRTCP_SR_PacketBase) + pRTP_stream->m_ulRTCP_SourceDescriptionSize;
 
-		//MTAL_RtTraceEvent(RTTRACEEVENT_RTCP_OUT, (PVOID)(RT_TRACE_EVENT_SIGNAL_START | RT_TRACE_EVENT_COLOR_YELLOW), 0);
 		// Update IP's header
 		pTRTCP_SR_Packet->RTCPPacketBase.IPV4Header.usLen = MTAL_SWAP16((unsigned short)ui32PacketSize - sizeof(TEthernetHeader));
 		pTRTCP_SR_Packet->RTCPPacketBase.IPV4Header.usChecksum = 0;
 
 		// Compute IP checksum
-		pTRTCP_SR_Packet->RTCPPacketBase.IPV4Header.usChecksum = MTAL_SWAP16(MTAL_ComputeChecksum(&pTRTCP_SR_Packet->RTCPPacketBase.IPV4Header, sizeof(TIPV4Header)));
+		pTRTCP_SR_Packet->RTCPPacketBase.IPV4Header.usChecksum = MTAL_SWAP16(compute_cksum(&pTRTCP_SR_Packet->RTCPPacketBase.IPV4Header, sizeof(TIPV4Header)));
 
 		// Update UDP's header
 		pTRTCP_SR_Packet->RTCPPacketBase.UDPHeader.usLen = MTAL_SWAP16((unsigned short)ui32PacketSize - sizeof(TEthernetHeader) - sizeof(TIPV4Header));
 		pTRTCP_SR_Packet->RTCPPacketBase.UDPHeader.usCheckSum = 0;
 
-		//MTAL_RtTraceEvent(RTTRACEEVENT_RTCP_OUT, (PVOID)(RT_TRACE_EVENT_SIGNAL_STOP), 0);
-		//MTAL_RtTraceEvent(RTTRACEEVENT_RTCP_OUT, (PVOID)(RT_TRACE_EVENT_SIGNAL_START | RT_TRACE_EVENT_COLOR_PINK), 0);
 		// Update RTCP_SenderInfo
 		// Insert the NTP and RTP timestamps for the 'wallclock time':
 		get_ntp_time(&ntp_sec, &ntp_fsec);
@@ -284,9 +263,6 @@ int rtp_stream_send_RTCP_SR_Packet(TRTP_stream* pRTP_stream)
 		*/
 		//uint32_t ui32RTPTimestamp = 0;//fSink->convertToRTPTimestamp(timeNow); // RTP ts
 
-		//MTAL_RtTraceEvent(RTTRACEEVENT_RTCP_OUT, (PVOID)(RT_TRACE_EVENT_SIGNAL_STOP), 0);
-		//MTAL_RtTraceEvent(RTTRACEEVENT_RTCP_OUT, (PVOID)(RT_TRACE_EVENT_SIGNAL_START | RT_TRACE_EVENT_COLOR_ORANGE), 0);
-
 		pTRTCP_SR_Packet->RTCP_SenderInfo.ui32NTPTimestamp_MSW = MTAL_SWAP32(ntp_sec);
 		pTRTCP_SR_Packet->RTCP_SenderInfo.ui32NTPTimestamp_LSW = MTAL_SWAP32(ntp_fsec);
 		pTRTCP_SR_Packet->RTCP_SenderInfo.ui32RTPTimestamp = MTAL_SWAP32(pRTP_stream->m_ulSenderRTPTimestamp);
@@ -294,35 +270,22 @@ int rtp_stream_send_RTCP_SR_Packet(TRTP_stream* pRTP_stream)
 		pTRTCP_SR_Packet->RTCP_SenderInfo.ui32SenderPacketCount = MTAL_SWAP32(pRTP_stream->m_ulSenderPacketCount);
 
 		// copy pre-made SDES
-		if(pRTP_stream->m_pvRTCP_SourceDescription)
-		{
+		if(pRTP_stream->m_pvRTCP_SourceDescription) {
 			memcpy(((char*)pTRTCP_SR_Packet) + sizeof(TRTCP_SR_PacketBase), pRTP_stream->m_pvRTCP_SourceDescription, pRTP_stream->m_ulRTCP_SourceDescriptionSize);
 		}
 
-
-		//MTAL_RtTraceEvent(RTTRACEEVENT_RTCP_OUT, (PVOID)(RT_TRACE_EVENT_SIGNAL_STOP), 0);
-		//MTAL_RtTraceEvent(RTTRACEEVENT_RTCP_OUT, (PVOID)(RT_TRACE_EVENT_SIGNAL_START | RT_TRACE_EVENT_COLOR_TURQUOISE), 0);
-
 		// TODO Optimization: as the UDP checksum is not mandatory we could disable its computation or ask to the hardware to compute the checksum
 		// Compute UDP checksum
-		pTRTCP_SR_Packet->RTCPPacketBase.UDPHeader.usCheckSum = MTAL_SWAP16(MTAL_ComputeUDPChecksum(&pTRTCP_SR_Packet->RTCPPacketBase.UDPHeader, (unsigned short)ui32PacketSize - sizeof(TEthernetHeader)  - sizeof(TIPV4Header), (unsigned short*)&pTRTCP_SR_Packet->RTCPPacketBase.IPV4Header.ui32SrcIP, (unsigned short*)&pTRTCP_SR_Packet->RTCPPacketBase.IPV4Header.ui32DestIP));
+		pTRTCP_SR_Packet->RTCPPacketBase.UDPHeader.usCheckSum = MTAL_SWAP16(compute_udp_cksum(&pTRTCP_SR_Packet->RTCPPacketBase.UDPHeader, (unsigned short)ui32PacketSize - sizeof(TEthernetHeader)  - sizeof(TIPV4Header), (unsigned short*)&pTRTCP_SR_Packet->RTCPPacketBase.IPV4Header.ui32SrcIP, (unsigned short*)&pTRTCP_SR_Packet->RTCPPacketBase.IPV4Header.ui32DestIP));
 
-		//MTAL_RtTraceEvent(RTTRACEEVENT_RTCP_OUT, (PVOID)(RT_TRACE_EVENT_SIGNAL_STOP), 0);
-
-		//MTAL_RtTraceEvent(RTTRACEEVENT_RTCP_OUT, (PVOID)(RT_TRACE_EVENT_SIGNAL_START | RT_TRACE_EVENT_COLOR_PURPLE), 0);
-		tx_acquired_packet(pRTP_stream->m_pEth_netfilter, pHandle, pvPacket, ui32PacketSize);
-		//MTAL_RtTraceEvent(RTTRACEEVENT_RTCP_OUT, (PVOID)(RT_TRACE_EVENT_SIGNAL_STOP), 0);
-	}
-	else
-	{
-		//MTAL_RtTraceEvent(RTTRACEEVENT_RTCP_OUT, (PVOID)(RT_TRACE_EVENT_SIGNAL_STOP), 0);
+		fusion_aes67_nf_tx_packet(pRTP_stream->m_pEth_netfilter, skb, packet, ui32PacketSize);
+	} else {
 		// Cancel the transmission
-		if(pHandle)
-		{
-			tx_acquired_packet(pRTP_stream->m_pEth_netfilter, pHandle, pvPacket, 0);
+		if(skb) {
+			fusion_aes67_nf_tx_packet(skb, 0, pRTP_stream->m_pEth_netfilter->iface_name);
 		}
 
-		DEBUG_TRACE(("Error: not enough space in the packet to put the RTCP_SR packet; PacketSize = %u\n", ulPacketSize));
+		DEBUG_TRACE(("Error: not enough space in the packet to put the RTCP_SR packet; PacketSize = %u\n", packet_size));
 	}
 
 	return 1;
@@ -332,39 +295,33 @@ int rtp_stream_send_RTCP_SR_Packet(TRTP_stream* pRTP_stream)
 // Optimization rules: the caller guarantees that:
 //		- the object is properly initialized
 ////////////////////////////////////////////////////////////////////
-int rtp_stream_send_RTCP_RR_Packet(TRTP_stream* pRTP_stream)
+int rtp_stream_send_RTCP_RR_Packet(struct fusion_aes67_rtp_stream* pRTP_stream)
 {
-	void* pHandle = NULL;
-	void* pvPacket = NULL;
-	uint32_t ulPacketSize = 0;
-	// Send RTCP packet to the interface
+	void* skb = NULL;
+	void* packet = NULL;
+	uint32_t packet_size = 0;
 
-	if(pRTP_stream->m_RTP_stream_info.m_usRTCPDestPort == 0)
-	{
+	// Send RTCP packet to the interface
+	if(pRTP_stream->m_RTP_stream_info.m_usRTCPDestPort == 0) {
 		return 0;
 	}
-	//MTAL_DP("SendRTCP_RR_Packet\n");
+	//printk(KERN_DEBUG "SendRTCP_RR_Packet\n");
 
-	//MTAL_RtTraceEvent(RTTRACEEVENT_RTCP_OUT, (PVOID)(RT_TRACE_EVENT_SIGNAL_START), 0);
-	if(acquire_tx_packet(pRTP_stream->m_pEth_netfilter, &pHandle, &pvPacket, &ulPacketSize) && ulPacketSize >= sizeof(TRTCP_RR_PacketBase))
-	{
+	if (fusion_aes67_create_tx_packet(pRTP_stream->m_pEth_netfilter, &skb, &packet, &packet_size) && packet_size >= sizeof(TRTCP_RR_PacketBase)) {
         uint32_t ui32PacketSize = sizeof(TRTCP_RR_PacketBase);
         TRTCP_RR_PacketBase* pTRTCP_RR_Packet;
 
-		//MTAL_RtTraceEvent(RTTRACEEVENT_RTCP_OUT, (PVOID)(RT_TRACE_EVENT_SIGNAL_STOP), 0);
-
-		pTRTCP_RR_Packet = (TRTCP_RR_PacketBase*)pvPacket;
+		pTRTCP_RR_Packet = (TRTCP_RR_PacketBase*)packet;
 
 		// Copy the header
-		memcpy(pvPacket, &pRTP_stream->m_RTCPPacketBase, sizeof(TRTCPPacketBase));
+		memcpy(packet, &pRTP_stream->m_RTCPPacketBase, sizeof(TRTCPPacketBase));
 
-		//MTAL_RtTraceEvent(RTTRACEEVENT_RTCP_OUT, (PVOID)(RT_TRACE_EVENT_SIGNAL_START | RT_TRACE_EVENT_COLOR_YELLOW), 0);
 		// Update IP's header
 		pTRTCP_RR_Packet->RTCPPacketBase.IPV4Header.usLen = MTAL_SWAP16((unsigned short)ui32PacketSize - sizeof(TEthernetHeader));
 		pTRTCP_RR_Packet->RTCPPacketBase.IPV4Header.usChecksum = 0;
 
 		// Compute IP checksum
-		pTRTCP_RR_Packet->RTCPPacketBase.IPV4Header.usChecksum = MTAL_SWAP16(MTAL_ComputeChecksum(&pTRTCP_RR_Packet->RTCPPacketBase.IPV4Header, sizeof(TIPV4Header)));
+		pTRTCP_RR_Packet->RTCPPacketBase.IPV4Header.usChecksum = MTAL_SWAP16(compute_cksum(&pTRTCP_RR_Packet->RTCPPacketBase.IPV4Header, sizeof(TIPV4Header)));
 
 		// Update UDP's header
 		pTRTCP_RR_Packet->RTCPPacketBase.UDPHeader.usLen = MTAL_SWAP16((unsigned short)ui32PacketSize - sizeof(TEthernetHeader) - sizeof(TIPV4Header));
@@ -382,31 +339,24 @@ int rtp_stream_send_RTCP_RR_Packet(TRTP_stream* pRTP_stream)
 
 		// TODO Optimization: as the UDP checksum is not mandatory we could disable its computation or ask to the hardware to compute the checksum
 		// Compute UDP checksum
-		pTRTCP_RR_Packet->RTCPPacketBase.UDPHeader.usCheckSum	= MTAL_SWAP16(MTAL_ComputeUDPChecksum(&pTRTCP_RR_Packet->RTCPPacketBase.UDPHeader, (unsigned short)ui32PacketSize - sizeof(TEthernetHeader)  - sizeof(TIPV4Header), (unsigned short*)&pTRTCP_RR_Packet->RTCPPacketBase.IPV4Header.ui32SrcIP, (unsigned short*)&pTRTCP_RR_Packet->RTCPPacketBase.IPV4Header.ui32DestIP));
+		pTRTCP_RR_Packet->RTCPPacketBase.UDPHeader.usCheckSum	= MTAL_SWAP16(compute_udp_cksum(&pTRTCP_RR_Packet->RTCPPacketBase.UDPHeader, (unsigned short)ui32PacketSize - sizeof(TEthernetHeader)  - sizeof(TIPV4Header), (unsigned short*)&pTRTCP_RR_Packet->RTCPPacketBase.IPV4Header.ui32SrcIP, (unsigned short*)&pTRTCP_RR_Packet->RTCPPacketBase.IPV4Header.ui32DestIP));
 
-		//MTAL_RtTraceEvent(RTTRACEEVENT_RTCP_OUT, (PVOID)(RT_TRACE_EVENT_SIGNAL_STOP), 0);
-
-		//MTAL_RtTraceEvent(RTTRACEEVENT_RTCP_OUT, (PVOID)(RT_TRACE_EVENT_SIGNAL_START | RT_TRACE_EVENT_COLOR_PURPLE), 0);
-		tx_acquired_packet(pRTP_stream->m_pEth_netfilter, pHandle, pvPacket, ui32PacketSize);
-		//MTAL_RtTraceEvent(RTTRACEEVENT_RTCP_OUT, (PVOID)(RT_TRACE_EVENT_SIGNAL_STOP), 0);
-	}
-	else
-	{
-		//MTAL_RtTraceEvent(RTTRACEEVENT_RTCP_OUT, (PVOID)(RT_TRACE_EVENT_SIGNAL_STOP), 0);
+		fusion_aes67_nf_tx_packet(skb, ui32PacketSize, pRTP_stream->m_pEth_netfilter->iface_name);
+	} else {
 		// Cancel the transmission
-		if(pHandle)
+		if(skb)
 		{
-			tx_acquired_packet(pRTP_stream->m_pEth_netfilter, pHandle, pvPacket, 0);
+			fusion_aes67_nf_tx_packet(pRTP_stream->m_pEth_netfilter, skb, packet, 0);
 		}
 
-		DEBUG_TRACE(("Error: not enough space in the packet to put the RTCP_SR packet; PacketSize = %u\n", ulPacketSize));
+		DEBUG_TRACE(("Error: not enough space in the packet to put the RTCP_SR packet; PacketSize = %u\n", packet_size));
 	}
 
 	return 1;
 }
 
 ////////////////////////////////////////////////////////////////////
-int rtp_stream_send_RTCP_BYE_Packet(TRTP_stream* pRTP_stream)
+int rtp_stream_send_RTCP_BYE_Packet(struct fusion_aes67_rtp_stream* pRTP_stream)
 {
 	return 1;
 }

@@ -32,135 +32,93 @@
 
 #pragma once
 
-#if defined(NT_DRIVER) || defined(OSX_KEXT) || defined(__KERNEL__)
-#else
-	#if WIN32
-		#include <unordered_map>
-	#elif LINUX==1 || OSX==1
-		#include <boost/tr1/unordered_map.hpp>
-	#endif
-	#include <list>
-#endif //NT_DRIVER
-
 #include "../fusion_aes67_netfilter.h"
-#include "MTAL_DP.h"
 #include "RTP_audio_stream.h"
 #include "RTP_stream_info.h"
 
-#ifdef UNDER_RTSS
-	///////////////////////////////////////////////////////////////////////////
-	// CRTPStreamsOutgoingThread
-	///////////////////////////////////////////////////////////////////////////
-	class CRTP_streams_manager;
-	class CRTPStreamsOutgoingThread : public CMTAL_WorkingThread
-	{
-	public:
-		CRTPStreamsOutgoingThread(CRTP_streams_manager& RTP_streams_manager);
-		~CRTPStreamsOutgoingThread();
+struct rtp_audio_stream_ops {
+    void* user;
 
-		int Init();
-		void Destroy();
+    int (*get_mac_address)(void* self, unsigned char* addr, uint32_t length);
+    int (*acquire_transmit_packet)(void* self, void** handle, void** packet, uint32_t* packet_size);
+    int (*transmit_acquired_packet)(void* self, void* handle, void* packet, uint32_t packet_size);
 
-		HRESULT WaitOnDone();
+    uint64_t (*get_global_sac)(void* self);
+    uint64_t (*get_global_time)(void* self); // Return the time when the audio frame TIC occurred
+    void (*get_global_times)(void* self, uint64_t* global_sac, uint64_t* global_time, uint64_t* global_perf_counter);
+    uint32_t (*get_frame_size)(void* self);
 
-		// virtuals
-		void ThreadEnter();
-		void ThreadProcess();
+    void (*get_sample_format)(void* self, snd_pcm_format_t* sample_format);
+    void* (*get_live_in_jitter_buffer)(void* self, uint32_t channel_id);
+    void* (*get_live_out_jitter_buffer)(void* self, uint32_t channel_id);
+    uint32_t (*get_live_in_jitter_buffer_length)(void* self);
+    uint32_t (*get_live_out_jitter_buffer_length)(void* self);
+    uint32_t (*get_live_in_jitter_buffer_offset)(void* self, const uint64_t current_sac);
+    uint32_t (*get_live_out_jitter_buffer_offset)(void* self, const uint64_t current_sac);
 
-	protected:
-		HANDLE m_hDoneEvent;
+    int (*update_live_in_audio_data_format)(void* self, uint32_t channel_id, const char* codec);
 
-
-		CRTP_streams_manager& m_RTP_streams_manager;
-	};
-#endif //UNDER_RTSS
+    unsigned char (*get_live_in_mute_pattern)(void* self, uint32_t channel_id);
+    unsigned char (*get_live_out_mute_pattern)(void* self, uint32_t channel_id);
+};
 
 //////////////////////////////////////////////////////////////
-typedef struct {
+struct fusion_aes67_rtp_manager {
 	// CRTP_audio_streams
 	// Sources
-#ifdef UNDER_RTSS
-	CRTPStreamsOutgoingThread m_RTPStreamsOutgoingThread;
-#endif
-	// Sources are only used by RTXCore Process so we not have to use a multi-processor mutex (CMTAL_RTSSDLLMutex)
-#if defined(MTAL_LINUX) && defined(MTAL_KERNEL)
     void* m_csSourceRTPStreams;
-#else
-	mutable CMTAL_CriticalSection m_csSourceRTPStreams;
-#endif
 
     volatile unsigned short	m_usNumberOfRTPSourceStreams;
-    TRTP_audio_stream_handler m_apRTPSourceStreams[MAX_SOURCE_STREAMS*2]; // double the size because remove/add all stream, we potentially need object that are being use. We then ensure that object are able to be used
-    TRTP_audio_stream_handler* m_apRTPSourceOrderedStreams[MAX_SOURCE_STREAMS];
+    struct fusion_aes67_rtp_audio_stream_handler m_apRTPSourceStreams[MAX_SOURCE_STREAMS*2]; // double the size because remove/add all stream, we potentially need object that are being use. We then ensure that object are able to be used
+    struct fusion_aes67_rtp_audio_stream_handler* m_apRTPSourceOrderedStreams[MAX_SOURCE_STREAMS];
 
 	uint32_t m_ui32RTCPPacketCountdown;	// in [audio frame]
 
 	// Sinks
-#if defined(MTAL_LINUX) && defined(MTAL_KERNEL)
     void* m_csSinkRTPStreams;
-#else
-	mutable CMTAL_CriticalSection m_csSinkRTPStreams;
-#endif
 
 	unsigned short m_usNumberOfRTPSinkStreams;
-	TRTP_audio_stream_handler m_apRTPSinkStreams[MAX_SINK_STREAMS*2]; // double the size because remove/add all stream, we potentially need object that are being use. We then ensure that object are able to be used
-	TRTP_audio_stream_handler* m_apRTPSinkOrderedStreams[MAX_SINK_STREAMS];
+	struct fusion_aes67_rtp_audio_stream_handler m_apRTPSinkStreams[MAX_SINK_STREAMS*2]; // double the size because remove/add all stream, we potentially need object that are being use. We then ensure that object are able to be used
+	struct fusion_aes67_rtp_audio_stream_handler* m_apRTPSinkOrderedStreams[MAX_SINK_STREAMS];
 
 
 	//f10bCMTAL_PerfMonMinMax<uint32_t> m_pmmmLastProcessedRTPDeltaFromTIC;
 	//f10bCMTAL_PerfMonMinMax<uint32_t> m_pmmmLastSentRTPDeltaFromTIC;
 
 
-	rtp_audio_stream_ops* m_pManager;
-	fusion_aes67_netfilter* m_pEth_netfilter;
+	struct rtp_audio_stream_ops* m_pManager;
+	struct fusion_aes67_netfilter* m_pEth_netfilter;
 
-} TRTP_streams_manager;
+};
 
 
 //////////////////////////////////////////////////////////////
-int init_(TRTP_streams_manager* self, rtp_audio_stream_ops* pManager, fusion_aes67_netfilter* pEth_netfilter);
-void destroy_(TRTP_streams_manager* self);
+int init_(struct fusion_aes67_rtp_manager* self, rtp_audio_stream_ops* pManager, fusion_aes67_netfilter* pEth_netfilter);
+void destroy_(struct fusion_aes67_rtp_manager* self);
 
-#ifdef NT_DRIVER
-	EDispatchResult process_UDP_packet(TRTP_streams_manager* self, TUDPPacketBase* pUDPPacketBase, uint32_t packetsize, int bDispatchLevel);
-#else
-	EDispatchResult process_UDP_packet(TRTP_streams_manager* self, TUDPPacketBase* pUDPPacketBase, uint32_t packetsize);
-#endif //NT_DRIVER
+int process_UDP_packet(struct fusion_aes67_rtp_manager* self, TUDPPacketBase* pUDPPacketBase, uint32_t packetsize);
 
-int add_RTP_stream_(TRTP_streams_manager* self, TRTP_stream_info* pRTPStreamInfo, uint64_t* phRTPStream);
-int remove_RTP_stream_(TRTP_streams_manager* self, uint64_t hRTPStream);
-void remove_all_RTP_streams(TRTP_streams_manager* self);
-int update_RTP_stream_name(TRTP_streams_manager* self, const TRTP_stream_update_name* pRTP_stream_update_name);
-int get_RTPStream_status_(TRTP_streams_manager* self, uint64_t hRTPStream, TRTP_stream_status* pstream_status);
+int add_RTP_stream_(struct fusion_aes67_rtp_manager* self, struct fusion_aes67_rtp_stream_info* pRTPStreamInfo, uint64_t* phRTPStream);
+int remove_RTP_stream_(struct fusion_aes67_rtp_manager* self, uint64_t hRTPStream);
+void remove_all_RTP_streams(struct fusion_aes67_rtp_manager* self);
+int update_RTP_stream_name(struct fusion_aes67_rtp_manager* self, const struct fusion_aes67_rtp_stream_update_name* pRTP_stream_update_name);
+int get_RTPStream_status_(struct fusion_aes67_rtp_manager* self, uint64_t hRTPStream, struct fusion_aes67_rtp_stream_status* pstream_status);
 
-uint8_t GetNumberOfSources(TRTP_streams_manager* self);
-uint8_t GetNumberOfSinks(TRTP_streams_manager* self);
+uint8_t GetNumberOfSources(struct fusion_aes67_rtp_manager* self);
+uint8_t GetNumberOfSinks(struct fusion_aes67_rtp_manager* self);
 
 //int GetSinkStats(uint8_t ui8StreamIdx, TRTPStreamStats* pRTPStreamStats);
-int GetSinkStatsFromTIC(TRTP_streams_manager* self, uint8_t ui8StreamIdx, TRTPStreamStatsFromTIC* pRTPStreamStatsFromTIC);
-int GetMinSinkAheadTime(TRTP_streams_manager* self, TSinkAheadTime* pSinkAheadTime);
-int GetMinMaxSinksJitter(TRTP_streams_manager* self, TSinksJitter* pSinksJitter);
+int GetSinkStatsFromTIC(struct fusion_aes67_rtp_manager* self, uint8_t ui8StreamIdx, TRTPStreamStatsFromTIC* pRTPStreamStatsFromTIC);
+int GetMinSinkAheadTime(struct fusion_aes67_rtp_manager* self, TSinkAheadTime* pSinkAheadTime);
+int GetMinMaxSinksJitter(struct fusion_aes67_rtp_manager* self, TSinksJitter* pSinksJitter);
 
-//f10bint GetLastProcessedSinkFromTIC(TRTP_streams_manager* self, TLastProcessedRTPDeltaFromTIC* pLastProcessedRTPDeltaFromTIC);
-//f10bint GetLastSentSourceFromTIC(TRTP_streams_manager* self, TLastSentRTPDeltaFromTIC* pLastSentRTPDeltaFromTIC);
+//f10bint GetLastProcessedSinkFromTIC(struct fusion_aes67_rtp_manager* self, TLastProcessedRTPDeltaFromTIC* pLastProcessedRTPDeltaFromTIC);
+//f10bint GetLastSentSourceFromTIC(struct fusion_aes67_rtp_manager* self, TLastSentRTPDeltaFromTIC* pLastSentRTPDeltaFromTIC);
 
 // Process
 // following methods must be call by the AudioEngine thread
-void prepare_buffer_lives(TRTP_streams_manager* self);
-void frame_process_begin(TRTP_streams_manager* self);
-void frame_process_end(TRTP_streams_manager* self);
-#ifdef UNDER_RTSS
-	friend class CRTPStreamsOutgoingThread;
-#endif
-void send_outgoing_packets(TRTP_streams_manager* self);
-
-
-
-
-#ifdef UNDER_RTSS
-public:
-	HRESULT	GetLiveInInfo(TRTP_streams_manager* self, DWORD dwIndexAt1FS, TRTXLiveInfo* pRTXLiveInfo) const;
-	HRESULT	GetLiveOutInfo(TRTP_streams_manager* self, DWORD dwIndexAt1FS, TRTXLiveInfo* pRTXLiveInfo) const;
-#endif //UNDER_RTSS
-
+void prepare_buffer_lives(struct fusion_aes67_rtp_manager* self);
+void frame_process_begin(struct fusion_aes67_rtp_manager* self);
+void frame_process_end(struct fusion_aes67_rtp_manager* self);
+void send_outgoing_packets(struct fusion_aes67_rtp_manager* self);
 

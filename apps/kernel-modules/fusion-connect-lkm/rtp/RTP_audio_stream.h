@@ -1,57 +1,29 @@
-/****************************************************************************
-*
-*  Module Name    : RTP_audio_stream.h
-*  Version        : 
-*
-*  Abstract       : RAVENNA/AES67 ALSA LKM
-*
-*  Written by     : van Kempen Bertrand
-*  Date           : 25/07/2010
-*  Modified by    : Baume Florian
-*  Date           : 13/01/2017
-*  Modification   : C port (source: RTP_audio_stream.hpp)
-*  Known problems : None
-*
-* Copyright(C) 2017 Merging Technologies
-*
-* RAVENNA/AES67 ALSA LKM is free software; you can redistribute it and / or
-* modify it under the terms of the GNU General Public License
-* as published by the Free Software Foundation; either version 2
-* of the License, or (at your option) any later version.
-*
-* RAVENNA/AES67 ALSA LKM is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
-* GNU General Public License for more details.
-*
-* You should have received a copy of the GNU General Public License
-* along with RAVAENNA ALSA LKM ; if not, see <http://www.gnu.org/licenses/>.
-*
-****************************************************************************/
+/*
+ * Copyright (C) 2017 Merging Technologies
+ * Copyright (C) 2025 Bose Professional
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version 2 of the License, or (at your
+ * option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, see <http://www.gnu.org/licenses/>.
+ */
 
 #pragma once
 
 #include "MTAL_EthUtils.h"
-//#include "MTAL_Perfmon.h"
-#include "MTConvert.h"
 #include "RTP_stream.h"
-
-#if (defined(MTAL_LINUX) && defined(MTAL_KERNEL))
-    #include <linux/string.h>
-#else
-    #include <string.h>
-#endif
-
-#ifdef UNDER_RTSS
-	#include "IODevicesDefsPrivate.h"
-#endif //UNDER_RTSS
-
-#define DEBUG_CHECK 1
+#include <linux/string.h>
 
 // Init with memset to 0
-typedef struct
-{
-	TRTP_stream m_tRTPStream;
+struct fusion_aes67_rtp_audio_stream {
+	struct fusion_aes67_rtp_stream m_tRTPStream;
 
 	uint32_t m_ulLivesInDMCounter;
 	void* m_pvLivesInCircularBuffer[MAX_CHANNELS_BY_RTP_STREAM];
@@ -71,7 +43,7 @@ typedef struct
 	unsigned short m_usWrongSSRCMessageCounter;
 
 	// Stream  status
-	TRTP_stream_status m_StreamStatus; // protected by m_csSinkRTPStreams or m_csSourceRTPStreams spinlock
+	struct fusion_aes67_rtp_stream_status m_StreamStatus; // protected by m_csSinkRTPStreams or m_csSourceRTPStreams spinlock
 	uint32_t m_ui32StreamStatusResetCounter;
 	uint32_t m_ui32StreamStatusLastResetCounter;
 	// used for sink stream status
@@ -89,51 +61,50 @@ typedef struct
 	MTCONVERT_MAPPED_TO_INTERLEAVE_PROTOTYPE m_pfnMTConvertMappedToInterleave;
 	MTCONVERT_INTERLEAVE__TO_MAPPED_PROTOTYPE m_pfnMTConvertInterleaveToMapped;
 
-	rtp_audio_stream_ops* m_pManager;
+	struct rtp_audio_stream_ops* m_pManager;
 
-} TRTP_audio_stream;
+};
 
 
-int Create(TRTP_audio_stream* self, TRTP_stream_info* pRTP_stream_info, rtp_audio_stream_ops* pManager, fusion_aes67_netfilter* pEth_netfilter);
-int Destroy(TRTP_audio_stream* self);
+int Create(struct fusion_aes67_rtp_audio_stream* self, struct fusion_aes67_rtp_stream_info* pRTP_stream_info, struct rtp_audio_stream_ops* pManager, fusion_aes67_netfilter* pEth_netfilter);
+int Destroy(struct fusion_aes67_rtp_audio_stream* self);
 
-int get_RTPStream_status(TRTP_audio_stream* self, TRTP_stream_status* pstream_status);
+int get_RTPStream_status(struct fusion_aes67_rtp_audio_stream* self, struct fusion_aes67_rtp_stream_status* pstream_status);
 
 void GetStatsFromTIC(TRTPStreamStatsFromTIC* pRTPStreamStatsFromTIC);
-void GetStats_SinkAheadTime(TRTP_audio_stream* self, TSinkAheadTime* pSinkAheadTime);
-uint32_t GetStats_SinkJitter(TRTP_audio_stream* self);
+void GetStats_SinkAheadTime(struct fusion_aes67_rtp_audio_stream* self, TSinkAheadTime* pSinkAheadTime);
+uint32_t GetStats_SinkJitter(struct fusion_aes67_rtp_audio_stream* self);
 
 
-int ProcessRTPAudioPacket(TRTP_audio_stream* self, TRTPPacketBase* pRTPPacketBase);
-int SendRTPAudioPackets(TRTP_audio_stream* self);
+int ProcessRTPAudioPacket(struct fusion_aes67_rtp_audio_stream* self, TRTPPacketBase* pRTPPacketBase);
+int SendRTPAudioPackets(struct fusion_aes67_rtp_audio_stream* self);
 
-int IsLivesInMustBeMuted(TRTP_audio_stream* self);
-void PrepareBufferLives(TRTP_audio_stream* self);
+int IsLivesInMustBeMuted(struct fusion_aes67_rtp_audio_stream* self);
+void PrepareBufferLives(struct fusion_aes67_rtp_audio_stream* self);
 
-uint32_t GetNbOfLivesIn(TRTP_audio_stream* self);
-uint32_t GetNbOfLivesOut(TRTP_audio_stream* self);
+uint32_t GetNbOfLivesIn(struct fusion_aes67_rtp_audio_stream* self);
+uint32_t GetNbOfLivesOut(struct fusion_aes67_rtp_audio_stream* self);
 
 
-typedef struct
-{
-	TRTP_audio_stream m_RTPAudioStream;
+struct fusion_aes67_rtp_audio_stream_handler {
+	struct fusion_aes67_rtp_audio_stream m_RTPAudioStream;
     volatile int m_bActive;
     volatile int m_nReaderCount;
-} TRTP_audio_stream_handler;
+};
 
 
-int Init(TRTP_audio_stream_handler* self, rtp_audio_stream_ops* m_pManager, fusion_aes67_netfilter* pEth_netfilter);
+int Init(struct fusion_aes67_rtp_audio_stream_handler* self, struct rtp_audio_stream_ops* m_pManager, fusion_aes67_netfilter* pEth_netfilter);
 
-int IsFree(TRTP_audio_stream_handler* self);
-void Acquire(TRTP_audio_stream_handler* self);
-void Release(TRTP_audio_stream_handler* self);
+int IsFree(struct fusion_aes67_rtp_audio_stream_handler* self);
+void Acquire(struct fusion_aes67_rtp_audio_stream_handler* self);
+void Release(struct fusion_aes67_rtp_audio_stream_handler* self);
 
-void ReaderEnter(TRTP_audio_stream_handler* self);
-void ReaderLeave(TRTP_audio_stream_handler* self);
+void ReaderEnter(struct fusion_aes67_rtp_audio_stream_handler* self);
+void ReaderLeave(struct fusion_aes67_rtp_audio_stream_handler* self);
 
-int IsActive(TRTP_audio_stream_handler* self);
+int IsActive(struct fusion_aes67_rtp_audio_stream_handler* self);
 
-void Cleanup(TRTP_audio_stream_handler* self, int bCalledFromRelease);
+void Cleanup(struct fusion_aes67_rtp_audio_stream_handler* self, int bCalledFromRelease);
 
 
 

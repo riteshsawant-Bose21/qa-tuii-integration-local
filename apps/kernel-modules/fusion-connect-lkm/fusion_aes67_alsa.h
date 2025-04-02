@@ -23,46 +23,45 @@
 // AES67 manager calls into the ALSA driver
 struct fusion_aes67_mgr_ops
 {
-    void    *(*get_playback_buffer)(void *alsa_chip); // returns pointer to the playback (output) AES67 Ring Buffer
-    uint32_t (*get_playback_buffer_size_in_frames)(void *alsa_chip); // returns the size of the playback (output) AES67 Ring Buffer in samples (channel independent)
-    void    *(*get_capture_buffer)(void *alsa_chip); // returns pointer to the capture (input) AES67 Ring Buffer
-    uint32_t (*get_capture_buffer_size_in_frames)(void *alsa_chip); // returns the size of the capture (input) AES67 Ring Buffer in samples (channel independent)
-    void     (*lock_playback_buffer)(void *alsa_chip, unsigned long *flags);
-    void     (*unlock_playback_buffer)(void *alsa_chip, unsigned long *flags);
-    void     (*lock_capture_buffer)(void *alsa_chip, unsigned long *flags);
-    void     (*unlock_capture_buffer)(void *alsa_chip, unsigned long *flags);
-    int      (*pcm_interrupt)(void *alsa_chip, int direction); // direction: 0 for playback, 1 for capture. One interrupt per AES67 TIC
-    uint32_t (*get_capture_buffer_offset)(void *alsa_chip); // returns current offset in samples (channel independent) for AES67 Ring Buffer
-    uint32_t (*get_playback_buffer_offset)(void *alsa_chip); // returns current offset (channel independent) in samples for AES67 Ring Buffer
+    void    *(*get_playback_buffer)(void *alsa_chip, uint64_t stream_handle); // returns pointer to the playback (output) AES67 Ring Buffer for specific stream
+    uint32_t (*get_playback_buffer_size_in_frames)(void *alsa_chip, uint64_t stream_handle); // returns the size of the playback (output) AES67 Ring Buffer in samples (channel independent) for specific stream
+    void    *(*get_capture_buffer)(void *alsa_chip, uint64_t stream_handle); // returns pointer to the capture (input) AES67 Ring Buffer for specific stream
+    uint32_t (*get_capture_buffer_size_in_frames)(void *alsa_chip, uint64_t stream_handle); // returns the size of the capture (input) AES67 Ring Buffer in samples (channel independent) for specific stream
+    void     (*lock_playback_buffer)(void *alsa_chip, uint64_t stream_handle, unsigned long *flags);
+    void     (*unlock_playback_buffer)(void *alsa_chip, uint64_t stream_handle, unsigned long *flags);
+    void     (*lock_capture_buffer)(void *alsa_chip, uint64_t stream_handle, unsigned long *flags);
+    void     (*unlock_capture_buffer)(void *alsa_chip, uint64_t stream_handle, unsigned long *flags);
+    int      (*pcm_interrupt)(void *alsa_chip, int direction, uint64_t stream_handle); // direction: 0 for playback, 1 for capture. One interrupt per AES67 TIC for specific stream
+    uint32_t (*get_capture_buffer_offset)(void *alsa_chip, uint64_t stream_handle); // returns current offset in samples (channel independent) for AES67 Ring Buffer for specific stream
+    uint32_t (*get_playback_buffer_offset)(void *alsa_chip, uint64_t stream_handle); // returns current offset (channel independent) in samples for AES67 Ring Buffer for specific stream
 };
 
-// ALSA driver calls into the AES67 manager
+// ALSA driver calls into the AES67 manager (unchanged for now)
 struct fusion_aes67_alsa_ops
 {
-    int (*register_alsa_driver)(void *aes67_mgr, const struct fusion_aes67_mgr_ops *ops, void *alsa_chip);
-    int (*get_input_jitter_buffer_offset)(void *aes67_mgr, uint32_t *offset);
-    int (*get_output_jitter_buffer_offset)(void *aes67_mgr, uint32_t *offset);
-    int (*get_min_interrupts_frame_size)(void *aes67_mgr, uint32_t *framesize);
-    int (*get_max_interrupts_frame_size)(void *aes67_mgr, uint32_t *framesize);
-    int (*get_rtp_frame_size)(void *aes67_mgr, uint32_t *framesize); // General frame size
-    int (*get_rtp_frame_size_per_stream)(void *aes67_mgr, uint64_t stream_handle, uint32_t *framesize); // Stream-specific
-    int (*set_sample_rate)(void *aes67_mgr, uint32_t rate);
-    int (*get_sample_rate)(void *aes67_mgr, uint32_t *rate);
-    int (*get_jitter_buffer_sample_size)(void *aes67_mgr, uint8_t *sample_size);
-    int (*get_num_inputs)(void *aes67_mgr, uint32_t *num_channels);
-    int (*get_num_outputs)(void *aes67_mgr, uint32_t *num_channels);
-    int (*get_playout_delay)(void *aes67_mgr, snd_pcm_sframes_t *delay_in_sample);
-    int (*get_capture_delay)(void *aes67_mgr, snd_pcm_sframes_t *delay_in_sample);
-    int (*start_interrupts)(void *aes67_mgr);
-    int (*stop_interrupts)(void *aes67_mgr);
+    int (*register_alsa_driver)(void *mgr, const struct fusion_aes67_mgr_ops *ops, void *alsa_chip);
+    int (*get_input_jitter_buffer_offset)(void *mgr, uint32_t *offset);
+    int (*get_output_jitter_buffer_offset)(void *mgr, uint32_t *offset);
+    int (*get_min_interrupts_frame_size)(void *mgr, uint32_t *framesize);
+    int (*get_max_interrupts_frame_size)(void *mgr, uint32_t *framesize);
+    int (*get_rtp_frame_size)(void *mgr, uint32_t *framesize); // General frame size
+    int (*get_rtp_frame_size_per_stream)(void *mgr, uint64_t stream_handle, uint32_t *framesize); // Stream-specific
+    int (*set_sample_rate)(void *mgr, uint32_t rate);
+    int (*get_sample_rate)(void *mgr, uint32_t *rate);
+    int (*get_jitter_buffer_sample_size)(void *mgr, uint8_t *sample_size);
+    int (*get_num_inputs)(void *mgr, uint32_t *num_channels);
+    int (*get_num_outputs)(void *mgr, uint32_t *num_channels);
+    int (*get_playout_delay)(void *mgr, snd_pcm_sframes_t *delay_in_sample);
+    int (*get_capture_delay)(void *mgr, snd_pcm_sframes_t *delay_in_sample);
+    int (*start_interrupts)(void *mgr);
+    int (*stop_interrupts)(void *mgr);
     int (*assign_stream_handle)(void *mgr, int direction, uint64_t *stream_handle);
-    int (*set_stream_params)(void *mgr, uint64_t stream_handle, unsigned int rate,
-                             unsigned int channels, snd_pcm_format_t format);
+    int (*set_stream_params)(void *mgr, uint64_t stream_handle, unsigned int rate, unsigned int channels, snd_pcm_format_t format);
     void (*pcm_interrupt)(void *alsa_chip, int direction); // Called by manager to advance substreams
 };
 
-// Put ALSA driver functions which needs to be used by CPP code here:
-extern int fusion_aes67_card_init(void *aes67_mgr, struct fusion_aes67_alsa_ops *callbacks);
-extern void fusion_aes67_card_exit(void);
+// called by manager init
+int fusion_aes67_card_init(void *mgr, struct fusion_aes67_alsa_ops *callbacks);
+void fusion_aes67_card_exit(void);
 
 #endif // FUSION_AES67_H
