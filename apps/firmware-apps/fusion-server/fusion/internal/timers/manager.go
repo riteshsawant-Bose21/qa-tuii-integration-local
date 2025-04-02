@@ -11,7 +11,9 @@ import (
 
 	"fusion/internal/api"
 	"fusion/internal/logging"
+	"fusion/internal/utils"
 
+	"github.com/gorilla/mux"
 	"github.com/robfig/cron/v3"
 )
 
@@ -297,9 +299,10 @@ func (tm *TimerManager) Stop() {
 	tm.c.Stop()
 }
 
-// ListTasksHandler handles HTTP GET requests to list all tasks.
-func (tm *TimerManager) ListTasksHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
+// HandleGetTasks handles HTTP GET requests to list all tasks.
+func (tm *TimerManager) HandleGetTasks(w http.ResponseWriter, r *http.Request) {
+
+	if !utils.IsGetRequest(r) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
@@ -315,9 +318,10 @@ func (tm *TimerManager) ListTasksHandler(w http.ResponseWriter, r *http.Request)
 	json.NewEncoder(w).Encode(tasks)
 }
 
-// AddTaskHandler handles HTTP POST requests to add a new task.
-func (tm *TimerManager) AddTaskHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
+// HandleCreateTask handles HTTP POST requests to add a new task.
+func (tm *TimerManager) HandleCreateTask(w http.ResponseWriter, r *http.Request) {
+
+	if !utils.IsPostRequest(r) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
@@ -349,16 +353,23 @@ func (tm *TimerManager) AddTaskHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusCreated)
+
+	json.NewEncoder(w).Encode(map[string]string{
+		"status": "created",
+		"id":     task.ID,
+	})
 }
 
-// UpdateTaskHandler handles HTTP PUT requests to update an existing task.
-func (tm *TimerManager) UpdateTaskHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPut {
+// HandleUpdateTask handles HTTP PUT requests to update an existing task.
+func (tm *TimerManager) HandleUpdateTask(w http.ResponseWriter, r *http.Request) {
+
+	if !utils.IsPutRequest(r) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	id := r.URL.Query().Get("id")
+	vars := mux.Vars(r)
+	id := vars["id"]
 	if id == "" {
 		http.Error(w, "Task ID is required", http.StatusBadRequest)
 		return
@@ -393,14 +404,16 @@ func (tm *TimerManager) UpdateTaskHandler(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusOK)
 }
 
-// RemoveTaskHandler handles HTTP DELETE requests to remove a task by ID.
-func (tm *TimerManager) RemoveTaskHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodDelete {
+// HandleDeleteTask handles HTTP DELETE requests to remove a task by ID.
+func (tm *TimerManager) HandleDeleteTask(w http.ResponseWriter, r *http.Request) {
+
+	if !utils.IsDeleteRequest(r) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	id := r.URL.Query().Get("id")
+	vars := mux.Vars(r)
+	id := vars["id"]
 	if id == "" {
 		http.Error(w, "Task ID is required", http.StatusBadRequest)
 		return
@@ -415,9 +428,10 @@ func (tm *TimerManager) RemoveTaskHandler(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusOK)
 }
 
-// ExecutionHistoryHandler handles HTTP GET requests to retrieve the execution history.
-func (tm *TimerManager) ExecutionHistoryHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
+// HandleHistory handles HTTP GET requests to retrieve the execution history.
+func (tm *TimerManager) HandleHistory(w http.ResponseWriter, r *http.Request) {
+
+	if !utils.IsGetRequest(r) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}

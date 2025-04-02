@@ -1,7 +1,7 @@
 package main
 
 import (
-	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -17,15 +17,16 @@ import (
 	"fusion/internal/server"
 	"fusion/internal/timers"
 	"fusion/internal/version"
+
+	"github.com/gorilla/mux"
 )
 
 var (
-	nodeName    string
-	bindAddr    string
-	bindPort    int
-	metricsPort int
-	verbose     bool
-	endpoints   []string
+	nodeName  string
+	bindAddr  string
+	bindPort  int
+	verbose   bool
+	endpoints []string
 )
 
 const (
@@ -37,43 +38,56 @@ const (
 	startupWaitDelay   = 100
 )
 
-func setupHTTPRoutes(cluster *cluster.Cluster, server *server.ConfigServer, metrics *cluster.MetricsCollector, verbose bool) {
-	registerEndpoint("/", withLogging(server.HandleRoot, "root", verbose))
-	registerEndpoint("/export", withLogging(server.ExportState, "export", verbose))
-	registerEndpoint("/endpoints", withLogging(cluster.GetEndpoints, "endpoints", verbose))
-	registerEndpoint("/getValue", withLogging(server.GetValue, "getValue", verbose))
-	registerEndpoint("/setValue", withLogging(server.SetValue, "setValue", verbose))
-	registerEndpoint("/updateValue", withLogging(server.UpdateValue, "updateValue", verbose))
-	registerEndpoint("/clear", withLogging(server.ClearAllData, "clear", verbose))
-	registerEndpoint("/members", withLogging(server.GetMembers, "members", verbose))
-	registerEndpoint("/updateVersion", withLogging(server.UpdateVersion, "updateVersion", verbose))
-	registerEndpoint("/rollbackVersion", withLogging(server.RollbackVersion, "rollbackVersion", verbose))
-	registerEndpoint("/snapshots", withLogging(server.ListSnapshots, "listSnapshots", verbose))
-	registerEndpoint("/snapshots/create", withLogging(server.CreateSnapshot, "createSnapshot", verbose))
-	registerEndpoint("/snapshots/activate", withLogging(server.ActivateSnapshotHTTP, "activateSnapshot", verbose))
-	registerEndpoint("/snapshots/delete", withLogging(server.DeleteSnapshot, "deleteSnapshot", verbose))
-	registerEndpoint("/snapshots/metadata", withLogging(server.GetSnapshotMetadata, "snapshotMetadata", verbose))
-	registerEndpoint("/snapshots/snapshot", withLogging(server.GetSnapshot, "getSnapshot", verbose))
-	registerEndpoint("/snapshots/export", withLogging(server.ExportSnapshots, "exportSnapshots", verbose))
-	registerEndpoint("/snapshots/import", withLogging(server.ImportSnapshots, "importSnapshots", verbose))
-	registerEndpoint("/uploadAudio", withLogging(server.UploadAudio, "uploadAudio", verbose))
-	registerEndpoint("/ws", withWebSocketMetrics(server.HandleWebSocket, metrics, verbose))
+// registerEndpoint registers a handler and tracks the endpoint.
+func registerEndpoint(router *mux.Router, method string, pattern string, handler http.HandlerFunc) {
+	endpoints = append(endpoints, fmt.Sprintf("%s %s", method, pattern))
+	router.HandleFunc(pattern, handler).Methods(method)
 }
 
-func setupTimerRoutes(manager *timers.TimerManager, verbose bool) {
-	registerEndpoint("/tasks", withLogging(manager.ListTasksHandler, "tasks", verbose))
-	registerEndpoint("/tasks/add", withLogging(manager.AddTaskHandler, "addTask", verbose))
-	registerEndpoint("/tasks/update", withLogging(manager.UpdateTaskHandler, "updateTask", verbose))
-	registerEndpoint("/tasks/remove", withLogging(manager.RemoveTaskHandler, "removeTask", verbose))
-	registerEndpoint("/tasks/history", withLogging(manager.ExecutionHistoryHandler, "history", verbose))
+func listRegisteredEndpoints(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{"routes": endpoints})
 }
 
-func setupMetricsRoutes(metrics *cluster.MetricsCollector) *http.ServeMux {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/metrics", metrics.HandleMetrics)
-	mux.HandleFunc("/cluster/status", metrics.HandleClusterStatus)
-	mux.HandleFunc("/health", metrics.HandleHealthCheck)
-	return mux
+func setupRoutes(r *mux.Router, server *server.ConfigServer, metrics *cluster.MetricsCollector, tm *timers.TimerManager, verbose bool) {
+
+	registerEndpoint(r, "GET", "/", withLogging(server.HandleRoot, "root", verbose))
+	registerEndpoint(r, "GET", "/export", withLogging(server.ExportState, "export", verbose))
+	registerEndpoint(r, "GET", "/endpoints", listRegisteredEndpoints)
+	registerEndpoint(r, "GET", "/members", withLogging(server.GetMembers, "members", verbose))
+	registerEndpoint(r, "GET", "/version", withLogging(server.HandleVersion, "version", verbose))
+	registerEndpoint(r, "PUT", "/uploadAudio", withLogging(server.UploadAudio, "uploadAudio", verbose))
+	registerEndpoint(r, "GET", "/ws", withWebSocketMetrics(server.HandleWebSocket, metrics, verbose))
+
+	// Values
+	registerEndpoint(r, "GET", "/value", withLogging(server.GetValue, "getValue", verbose))
+	registerEndpoint(r, "POST", "/value", withLogging(server.SetValue, "setValue", verbose))
+	registerEndpoint(r, "PATCH", "/value", withLogging(server.UpdateValue, "updateValue", verbose))
+	registerEndpoint(r, "DELETE", "/value", withLogging(server.ClearAllValues, "clearAllValues", verbose))
+
+	// Snapshots
+	// NOTE: These must be added before the {name} parameter endpoints to avoid conflicts
+	registerEndpoint(r, "GET", "/snapshots/export", withLogging(server.ExportSnapshots, "exportSnapshots", verbose))
+	registerEndpoint(r, "POST", "/snapshots/import", withLogging(server.ImportSnapshots, "importSnapshots", verbose))
+	registerEndpoint(r, "GET", "/snapshots/metadata", withLogging(server.GetSnapshotMetadata, "snapshotMetadata", verbose))
+
+	registerEndpoint(r, "GET", "/snapshots", withLogging(server.ListSnapshots, "listSnapshots", verbose))
+	registerEndpoint(r, "POST", "/snapshots/{name}", withLogging(server.CreateSnapshot, "createSnapshot", verbose))
+	registerEndpoint(r, "GET", "/snapshots/{name}", withLogging(server.GetSnapshot, "getSnapshot", verbose))
+	registerEndpoint(r, "DELETE", "/snapshots/{name}", withLogging(server.DeleteSnapshot, "deleteSnapshot", verbose))
+	registerEndpoint(r, "POST", "/snapshots/{name}/activate", withLogging(server.ActivateSnapshot, "activateSnapshot", verbose))
+
+	// Timers
+	registerEndpoint(r, "GET", "/tasks", withLogging(tm.HandleGetTasks, "getTasks", verbose))
+	registerEndpoint(r, "POST", "/tasks", withLogging(tm.HandleCreateTask, "createTask", verbose))
+	registerEndpoint(r, "PUT", "/tasks/{id}", withLogging(tm.HandleUpdateTask, "updateTask", verbose))
+	registerEndpoint(r, "DELETE", "/tasks/{id}", withLogging(tm.HandleDeleteTask, "deleteTask", verbose))
+	registerEndpoint(r, "GET", "/tasks/history", withLogging(tm.HandleHistory, "history", verbose))
+
+	// Metrics
+	registerEndpoint(r, "GET", "/cluster/status", withLogging(metrics.HandleClusterStatus, "clusterStatus", verbose))
+	registerEndpoint(r, "GET", "/health", withLogging(metrics.HandleHealthCheck, "health", verbose))
+	registerEndpoint(r, "GET", "/metrics", withLogging(metrics.HandleMetrics, "metrics", verbose))
 }
 
 // Middleware to log HTTP requests
@@ -110,7 +124,6 @@ func parseFlags() {
 	flag.StringVar(&nodeName, "name", "", "Node name")
 	flag.StringVar(&bindAddr, "addr", "0.0.0.0", "Bind address")
 	flag.IntVar(&bindPort, "port", 7946, "Bind port")
-	flag.IntVar(&metricsPort, "metrics-port", 9090, "Metrics server port")
 	flag.BoolVar(&verbose, "verbose", false, "Verbose output")
 
 	flag.Parse()
@@ -210,24 +223,6 @@ func initTimerManager() *timers.TimerManager {
 	return timerManager
 }
 
-// startMetricsServer starts the metrics HTTP server.
-func startMetricsServer(port int, metrics *cluster.MetricsCollector) *http.Server {
-	metricsServer := &http.Server{
-		Addr:    fmt.Sprintf(":%d", port),
-		Handler: setupMetricsRoutes(metrics),
-	}
-
-	go func() {
-		logger := logging.GetLogger()
-		logger.Info("Starting metrics server on :%d", port)
-		if err := metricsServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Fatal("Metrics server failed: %v", err)
-		}
-	}()
-
-	return metricsServer
-}
-
 // initBLEServer initializes the Bluetooth server.
 func initBLEServer() *network.BLEServer {
 
@@ -254,21 +249,15 @@ func initUDPServer(port string, handler *server.Handler) *network.UDPServer {
 }
 
 // startAPIServer starts the main HTTP API server
-func startAPIServer(port string, wg *sync.WaitGroup) {
+func startAPIServer(router *mux.Router, port string, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	logger := logging.GetLogger()
 	logger.Info("Starting API server on %s", port)
 
-	if err := http.ListenAndServe(port, nil); err != nil {
+	if err := http.ListenAndServe(port, router); err != nil {
 		logger.Fatal("API server failed: %v", err)
 	}
-}
-
-// registerEndpoint registers a handler and tracks the endpoint.
-func registerEndpoint(pattern string, handlerFunc http.HandlerFunc) {
-	endpoints = append(endpoints, pattern)
-	http.HandleFunc(pattern, handlerFunc)
 }
 
 func main() {
@@ -281,22 +270,14 @@ func main() {
 	initDataPaths()
 
 	stateManager := initStateManager(nodeName)
-
 	persistence := initPersistence(fusionDatabasePath, stateManager)
-
 	updater := server.NewUpdater()
-
 	cluster := cluster.NewCluster(nodeName, bindAddr, bindPort, stateManager, persistence, updater, verbose)
 
 	stateManager.StartStateVerification(cluster.Memberlist)
 
 	timerManager := initTimerManager()
 	defer timerManager.Stop()
-
-	metricsCollector := cluster.NewMetricsCollector()
-
-	metricsServer := startMetricsServer(metricsPort, metricsCollector)
-	defer metricsServer.Shutdown(context.Background())
 
 	connectionHandler := server.NewHandler(cluster.Memberlist, stateManager, persistence, updater)
 
@@ -308,17 +289,18 @@ func main() {
 
 	configServer := server.NewConfigServer(nodeName, connectionHandler, cluster.Memberlist)
 
-	setupHTTPRoutes(cluster, configServer, metricsCollector, verbose)
-	setupTimerRoutes(timerManager, verbose)
+	router := mux.NewRouter()
+	metricsCollector := cluster.NewMetricsCollector()
+	setupRoutes(router, configServer, metricsCollector, timerManager, verbose)
 
 	connectionHandler.SetEndpoints(endpoints)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	go startAPIServer(api.HTTPPort, &wg)
+	go startAPIServer(router, api.HTTPPort, &wg)
 
-	// Wait a small amount of time for startAPIServer to come up before printing info
+	// Wait for the API server to come up before printing info
 	time.Sleep(startupWaitDelay * time.Millisecond)
 	logger.Info("%s is ALIVE and RUNNING", nodeName)
 	logger.Info("Version: %s Commit: %s Build Time: %s", version.Version, version.Commit, version.BuildTime)

@@ -39,7 +39,6 @@ func NewConfigUpdate(data map[string]any) (*ConfigUpdate, error) {
 type Endpoints struct {
 	API       string   `json:"api"`
 	Telemetry []string `json:"telemetry"`
-	Metrics   string   `json:"metrics"`
 }
 
 // SnapshotMetadata holds metadata information from the database.

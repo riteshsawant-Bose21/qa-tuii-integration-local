@@ -14,7 +14,9 @@ import (
 
 	"fusion/internal/api"
 	"fusion/internal/logging"
+	"fusion/internal/utils"
 
+	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 	"github.com/hashicorp/memberlist"
 )
@@ -76,8 +78,9 @@ func (s *ConfigServer) BroadcastUpdate(message api.NotifyMessage) error {
 
 // GetValue handles HTTP GET requests to retrieve a configuration value based on a "key" query parameter.
 func (s *ConfigServer) GetValue(w http.ResponseWriter, r *http.Request) {
-	// Check if the request method is GET.
-	if !s.IsGetRequest(w, r) {
+
+	if !utils.IsGetRequest(r) {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -103,8 +106,9 @@ func (s *ConfigServer) GetValue(w http.ResponseWriter, r *http.Request) {
 // SetValue handles HTTP POST requests to set a configuration value.
 // It expects a JSON body containing the update data.
 func (s *ConfigServer) SetValue(w http.ResponseWriter, r *http.Request) {
-	// Check if the request method is POST.
-	if !s.IsPostRequest(w, r) {
+
+	if !utils.IsPostRequest(r) {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -138,8 +142,9 @@ func (s *ConfigServer) SetValue(w http.ResponseWriter, r *http.Request) {
 // UpdateValue handles HTTP PATCH requests to update a configuration value.
 // It supports partial updates based on the provided key query parameter or the entire JSON body.
 func (s *ConfigServer) UpdateValue(w http.ResponseWriter, r *http.Request) {
-	// Check if the request method is PATCH.
-	if !s.IsPatchRequest(w, r) {
+
+	if !utils.IsPatchRequest(r) {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -208,8 +213,9 @@ func (s *ConfigServer) UpdateValue(w http.ResponseWriter, r *http.Request) {
 
 // ExportState handles HTTP GET requests to export the entire configuration state.
 func (s *ConfigServer) ExportState(w http.ResponseWriter, r *http.Request) {
-	// Check if the request method is GET.
-	if !s.IsGetRequest(w, r) {
+
+	if !utils.IsGetRequest(r) {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -315,28 +321,26 @@ func (s *ConfigServer) HandleRoot(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(info)
 }
 
-// UpdateVersion handles HTTP POST requests to update the server version.
-// It delegates the version update handling to the handler.
-func (s *ConfigServer) UpdateVersion(w http.ResponseWriter, r *http.Request) {
-	if !s.IsPostRequest(w, r) {
-		return
-	}
-	s.handler.HandleVersionUpdate(w, r)
-}
+// HandleVersion handles HTTP requests.
+// It delegates the version handling to the handler.
+func (s *ConfigServer) HandleVersion(w http.ResponseWriter, r *http.Request) {
 
-// RollbackVersion handles HTTP POST requests to roll back the server version.
-// It delegates the version rollback handling to the handler.
-func (s *ConfigServer) RollbackVersion(w http.ResponseWriter, r *http.Request) {
-	if !s.IsPostRequest(w, r) {
+	if utils.IsPostRequest(r) {
+		s.handler.HandleVersionUpdate(w, r)
 		return
 	}
-	s.handler.HandleVersionRollback(w, r)
+
+	if utils.IsPostRequest(r) {
+		s.handler.HandleVersionRollback(w, r)
+		return
+	}
 }
 
 // UploadAudio handles HTTP POST requests for audio file uploads.
 // It delegates the audio upload handling to the handler.
 func (s *ConfigServer) UploadAudio(w http.ResponseWriter, r *http.Request) {
-	if !s.IsPostRequest(w, r) {
+	if !utils.IsPostRequest(r) {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 	s.handler.HandleAudioUpload(w, r)
@@ -344,7 +348,8 @@ func (s *ConfigServer) UploadAudio(w http.ResponseWriter, r *http.Request) {
 
 // ListSnapshots handles HTTP GET requests to list available snapshots.
 func (s *ConfigServer) ListSnapshots(w http.ResponseWriter, r *http.Request) {
-	if !s.IsGetRequest(w, r) {
+	if !utils.IsGetRequest(r) {
+		http.Error(w, "Invalid request type", http.StatusInternalServerError)
 		return
 	}
 
@@ -360,33 +365,26 @@ func (s *ConfigServer) ListSnapshots(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]any{"snapshots": snapshots})
 }
 
-// ActivateSnapshotHTTP handles HTTP PUT requests to activate a specific snapshot.
+// ActivateSnapshot handles HTTP PUT requests to activate a specific snapshot.
 // It expects a query parameter "name" specifying the snapshot to activate.
-func (s *ConfigServer) ActivateSnapshotHTTP(w http.ResponseWriter, r *http.Request) {
-	// Ensure the HTTP method is PUT.
-	if r.Method != http.MethodPut {
+func (s *ConfigServer) ActivateSnapshot(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Retrieve the snapshot name from query parameters.
-	snapshotName, err := getSingleQueryParam(r, "name")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+	vars := mux.Vars(r)
+	snapshotName := vars["name"]
 	if snapshotName == "" {
 		http.Error(w, "Snapshot name is required", http.StatusBadRequest)
 		return
 	}
 
-	// Activate the snapshot using the handler.
 	if err := s.handler.HandleActivateSnapshot(snapshotName); err != nil {
 		http.Error(w, fmt.Sprintf("Error activating snapshot: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	// Write the JSON response confirming activation.
 	w.Header().Set(api.ContentType, api.JsonContentType)
 	json.NewEncoder(w).Encode(map[string]string{
 		"status":   "snapshot activated",
@@ -395,30 +393,24 @@ func (s *ConfigServer) ActivateSnapshotHTTP(w http.ResponseWriter, r *http.Reque
 }
 
 // CreateSnapshot handles HTTP POST requests to create a new snapshot.
-// It expects a query parameter "name" specifying the snapshot name.
 func (s *ConfigServer) CreateSnapshot(w http.ResponseWriter, r *http.Request) {
-	if !s.IsPostRequest(w, r) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Retrieve the snapshot name.
-	snapshotName, err := getSingleQueryParam(r, "name")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+	vars := mux.Vars(r)
+	snapshotName := vars["name"]
 	if snapshotName == "" {
 		http.Error(w, "Snapshot name is required", http.StatusBadRequest)
 		return
 	}
 
-	// Prevent creation of a default snapshot.
 	if snapshotName == defaultSnapshotKey {
 		http.Error(w, "default snapshot cannot be created", http.StatusBadRequest)
 		return
 	}
 
-	// Check if the snapshot already exists.
 	exists, err := s.handler.HandleSnapshotExists(snapshotName)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error checking snapshot existence: %v", err), http.StatusInternalServerError)
@@ -429,13 +421,11 @@ func (s *ConfigServer) CreateSnapshot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create the snapshot.
 	if err := s.handler.HandleCreateSnapshot(snapshotName); err != nil {
 		http.Error(w, fmt.Sprintf("Error creating snapshot: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	// Write the JSON response confirming creation.
 	w.Header().Set(api.ContentType, api.JsonContentType)
 	json.NewEncoder(w).Encode(map[string]string{
 		"status":   "snapshot created",
@@ -446,36 +436,27 @@ func (s *ConfigServer) CreateSnapshot(w http.ResponseWriter, r *http.Request) {
 // DeleteSnapshot handles HTTP DELETE requests to remove an existing snapshot.
 // It expects a query parameter "name" specifying the snapshot to delete.
 func (s *ConfigServer) DeleteSnapshot(w http.ResponseWriter, r *http.Request) {
-	// Ensure the HTTP method is DELETE.
 	if r.Method != http.MethodDelete {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Retrieve the snapshot name.
-	snapshotName, err := getSingleQueryParam(r, "name")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+	vars := mux.Vars(r)
+	snapshotName := vars["name"]
 	if snapshotName == "" {
 		http.Error(w, "Snapshot name is required", http.StatusBadRequest)
 		return
 	}
-
-	// Prevent deletion of the default snapshot.
 	if snapshotName == defaultSnapshotKey {
 		http.Error(w, "default snapshot cannot be deleted", http.StatusBadRequest)
 		return
 	}
 
-	// Delete the snapshot using the handler.
 	if err := s.handler.HandleDeleteSnapshot(snapshotName); err != nil {
 		http.Error(w, fmt.Sprintf("Error deleting snapshot: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	// Write the JSON response confirming deletion.
 	w.Header().Set(api.ContentType, api.JsonContentType)
 	json.NewEncoder(w).Encode(map[string]string{
 		"status":   "snapshot deleted",
@@ -485,7 +466,8 @@ func (s *ConfigServer) DeleteSnapshot(w http.ResponseWriter, r *http.Request) {
 
 // GetSnapshotMetadata handles HTTP GET requests to retrieve metadata about snapshots.
 func (s *ConfigServer) GetSnapshotMetadata(w http.ResponseWriter, r *http.Request) {
-	if !s.IsGetRequest(w, r) {
+	if !utils.IsGetRequest(r) {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -502,38 +484,33 @@ func (s *ConfigServer) GetSnapshotMetadata(w http.ResponseWriter, r *http.Reques
 }
 
 // GetSnapshot handles HTTP GET requests to retrieve a specific snapshot.
-// It expects a query parameter "name" for the snapshot identifier.
 func (s *ConfigServer) GetSnapshot(w http.ResponseWriter, r *http.Request) {
-	if !s.IsGetRequest(w, r) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Retrieve the snapshot name.
-	snapshotName, err := getSingleQueryParam(r, "name")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+	vars := mux.Vars(r)
+	snapshotName := vars["name"]
 	if snapshotName == "" {
 		http.Error(w, "Snapshot name is required", http.StatusBadRequest)
 		return
 	}
 
-	// Retrieve the snapshot from the handler.
 	snapshot, err := s.handler.HandleGetSnapshot(snapshotName)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error getting snapshot: %v", err), http.StatusNotFound)
 		return
 	}
 
-	// Write the JSON response with the snapshot data.
 	w.Header().Set(api.ContentType, api.JsonContentType)
 	json.NewEncoder(w).Encode(snapshot)
 }
 
 // ExportSnapshots handles HTTP GET requests to export all snapshots.
 func (s *ConfigServer) ExportSnapshots(w http.ResponseWriter, r *http.Request) {
-	if !s.IsGetRequest(w, r) {
+	if !utils.IsGetRequest(r) {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -552,7 +529,8 @@ func (s *ConfigServer) ExportSnapshots(w http.ResponseWriter, r *http.Request) {
 // ImportSnapshots handles HTTP POST requests to import snapshots.
 // It expects a JSON body containing the snapshots data.
 func (s *ConfigServer) ImportSnapshots(w http.ResponseWriter, r *http.Request) {
-	if !s.IsPostRequest(w, r) {
+	if !utils.IsPostRequest(r) {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -580,39 +558,10 @@ func (s *ConfigServer) ImportSnapshots(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// IsGetRequest checks if the HTTP request method is GET.
-// If not, it responds with a "Method not allowed" error.
-func (s *ConfigServer) IsGetRequest(w http.ResponseWriter, r *http.Request) bool {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return false
-	}
-	return true
-}
+// ClearAllValues handles HTTP DELETE requests to clear all configuration data.
+func (s *ConfigServer) ClearAllValues(w http.ResponseWriter, r *http.Request) {
 
-// IsPostRequest checks if the HTTP request method is POST.
-// If not, it responds with a "Method not allowed" error.
-func (s *ConfigServer) IsPostRequest(w http.ResponseWriter, r *http.Request) bool {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return false
-	}
-	return true
-}
-
-// IsPatchRequest checks if the HTTP request method is PATCH.
-// If not, it responds with a "Method not allowed" error.
-func (s *ConfigServer) IsPatchRequest(w http.ResponseWriter, r *http.Request) bool {
-	if r.Method != http.MethodPatch {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return false
-	}
-	return true
-}
-
-// ClearAllData handles HTTP DELETE requests to clear all configuration data.
-func (s *ConfigServer) ClearAllData(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodDelete {
+	if !utils.IsDeleteRequest(r) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
@@ -633,7 +582,8 @@ func (s *ConfigServer) ClearAllData(w http.ResponseWriter, r *http.Request) {
 
 // GetMembers handles HTTP GET requests to list all cluster members.
 func (s *ConfigServer) GetMembers(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
+
+	if !utils.IsGetRequest(r) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}

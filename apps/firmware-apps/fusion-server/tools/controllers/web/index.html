@@ -14,7 +14,7 @@
     async function testApi() {
       const resultElement = document.getElementById('result');
       try {
-        const response = await fetch('http://192.168.64.100:9090/metrics', {
+        const response = await fetch('http://192.168.64.100:8080/metrics', {
           headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json'

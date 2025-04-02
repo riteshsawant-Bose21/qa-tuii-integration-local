@@ -55,7 +55,8 @@ func NewCluster(nodeName string, bindAddr string, bindPort int, stateManager *se
 
 func (c *Cluster) GetEndpoints(w http.ResponseWriter, r *http.Request) {
 
-	if !utils.IsGetRequest(w, r) {
+	if !utils.IsGetRequest(r) {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -68,7 +69,6 @@ func (c *Cluster) GetEndpoints(w http.ResponseWriter, r *http.Request) {
 	endpoints := api.Endpoints{
 		API:       c.vip + api.HTTPPort,
 		Telemetry: addressesWithPort,
-		Metrics:   c.vip + api.MetricsPort,
 	}
 
 	w.Header().Set(api.ContentType, api.JsonContentType)

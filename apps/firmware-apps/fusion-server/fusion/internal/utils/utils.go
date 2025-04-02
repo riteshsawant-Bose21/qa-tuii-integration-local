@@ -2,26 +2,22 @@ package utils
 
 import "net/http"
 
-func IsGetRequest(w http.ResponseWriter, r *http.Request) bool {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return false
-	}
-	return true
+func IsDeleteRequest(r *http.Request) bool {
+	return r.Method == http.MethodDelete
 }
 
-func IsPostRequest(w http.ResponseWriter, r *http.Request) bool {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return false
-	}
-	return true
+func IsGetRequest(r *http.Request) bool {
+	return r.Method == http.MethodGet
 }
 
-func IsPatchRequest(w http.ResponseWriter, r *http.Request) bool {
-	if r.Method != http.MethodPatch {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return false
-	}
-	return true
+func IsPatchRequest(r *http.Request) bool {
+	return r.Method == http.MethodPatch
+}
+
+func IsPostRequest(r *http.Request) bool {
+	return r.Method == http.MethodPost
+}
+
+func IsPutRequest(r *http.Request) bool {
+	return r.Method == http.MethodPut
 }

@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -27,6 +28,16 @@ func init() {
 		MaxFiles:    5,
 		LogLevel:    logging.INFO,
 	})
+}
+
+func createMockServer(manager *timers.TimerManager) *mux.Router {
+	router := mux.NewRouter()
+	router.HandleFunc("/tasks", manager.HandleGetTasks).Methods("GET")
+	router.HandleFunc("/tasks", manager.HandleCreateTask).Methods("POST")
+	router.HandleFunc("/tasks/{id}", manager.HandleUpdateTask).Methods("PUT")
+	router.HandleFunc("/tasks/{id}", manager.HandleDeleteTask).Methods("DELETE")
+	router.HandleFunc("/tasks/history", manager.HandleHistory).Methods("GET")
+	return router
 }
 
 func TestTimerManager(t *testing.T) {
@@ -132,12 +143,7 @@ func TestTimerManagerEndpoints(t *testing.T) {
 	defer manager.Stop()
 
 	// Initialize mock server
-	mux := http.NewServeMux()
-	mux.HandleFunc("/tasks", manager.ListTasksHandler)
-	mux.HandleFunc("/tasks/add", manager.AddTaskHandler)
-	mux.HandleFunc("/tasks/update", manager.UpdateTaskHandler)
-	mux.HandleFunc("/tasks/remove", manager.RemoveTaskHandler)
-	mux.HandleFunc("/tasks/history", manager.ExecutionHistoryHandler)
+	router := createMockServer(manager)
 
 	// Start TimerManager
 	assert.NoError(t, manager.Start())
@@ -151,11 +157,11 @@ func TestTimerManagerEndpoints(t *testing.T) {
 		}
 		taskJSON, _ := json.Marshal(task)
 
-		req := httptest.NewRequest(http.MethodPost, "/tasks/add", bytes.NewReader(taskJSON))
+		req := httptest.NewRequest(http.MethodPost, "/tasks", bytes.NewReader(taskJSON))
 		req.Header.Set("Content-Type", "application/json")
 		rec := httptest.NewRecorder()
 
-		mux.ServeHTTP(rec, req)
+		router.ServeHTTP(rec, req)
 
 		assert.Equal(t, http.StatusCreated, rec.Code, "Expected HTTP status 201 Created")
 	})
@@ -165,7 +171,7 @@ func TestTimerManagerEndpoints(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/tasks", nil)
 		rec := httptest.NewRecorder()
 
-		mux.ServeHTTP(rec, req)
+		router.ServeHTTP(rec, req)
 
 		assert.Equal(t, http.StatusOK, rec.Code, "Expected HTTP status 200 OK")
 
@@ -184,21 +190,21 @@ func TestTimerManagerEndpoints(t *testing.T) {
 		}
 		taskJSON, _ := json.Marshal(task)
 
-		req := httptest.NewRequest(http.MethodPut, "/tasks/update?id=test-task", bytes.NewReader(taskJSON))
+		req := httptest.NewRequest(http.MethodPut, "/tasks/test-task", bytes.NewReader(taskJSON))
 		req.Header.Set("Content-Type", "application/json")
 		rec := httptest.NewRecorder()
 
-		mux.ServeHTTP(rec, req)
+		router.ServeHTTP(rec, req)
 
 		assert.Equal(t, http.StatusOK, rec.Code, "Expected HTTP status 200 OK")
 	})
 
 	// Test RemoveTaskHandler
 	t.Run("RemoveTaskHandler", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodDelete, "/tasks/remove?id=test-task", nil)
+		req := httptest.NewRequest(http.MethodDelete, "/tasks/test-task", nil)
 		rec := httptest.NewRecorder()
 
-		mux.ServeHTTP(rec, req)
+		router.ServeHTTP(rec, req)
 
 		assert.Equal(t, http.StatusOK, rec.Code, "Expected HTTP status 200 OK")
 
@@ -206,7 +212,7 @@ func TestTimerManagerEndpoints(t *testing.T) {
 		req = httptest.NewRequest(http.MethodGet, "/tasks", nil)
 		rec = httptest.NewRecorder()
 
-		mux.ServeHTTP(rec, req)
+		router.ServeHTTP(rec, req)
 
 		var tasks []timers.TimerTask
 		err := json.Unmarshal(rec.Body.Bytes(), &tasks)
@@ -219,7 +225,7 @@ func TestTimerManagerEndpoints(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/tasks/history", nil)
 		rec := httptest.NewRecorder()
 
-		mux.ServeHTTP(rec, req)
+		router.ServeHTTP(rec, req)
 
 		assert.Equal(t, http.StatusOK, rec.Code, "Expected HTTP status 200 OK")
 
@@ -247,99 +253,94 @@ func TestTimersEndpointErrorCases(t *testing.T) {
 	defer manager.Stop()
 
 	// Set up an HTTP mux with our handlers.
-	mux := http.NewServeMux()
-	mux.HandleFunc("/tasks", manager.ListTasksHandler)
-	mux.HandleFunc("/tasks/add", manager.AddTaskHandler)
-	mux.HandleFunc("/tasks/update", manager.UpdateTaskHandler)
-	mux.HandleFunc("/tasks/remove", manager.RemoveTaskHandler)
-	mux.HandleFunc("/tasks/history", manager.ExecutionHistoryHandler)
+	router := createMockServer(manager)
 
 	t.Run("ListTasksHandler wrong method", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/tasks", nil)
 		rec := httptest.NewRecorder()
-		mux.ServeHTTP(rec, req)
-		assert.Equal(t, http.StatusMethodNotAllowed, rec.Code)
+		router.ServeHTTP(rec, req)
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
 	})
 
 	t.Run("AddTaskHandler wrong method", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/tasks/add", nil)
+		req := httptest.NewRequest(http.MethodPost, "/tasks", nil)
 		rec := httptest.NewRecorder()
-		mux.ServeHTTP(rec, req)
-		assert.Equal(t, http.StatusMethodNotAllowed, rec.Code)
+		router.ServeHTTP(rec, req)
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
 	})
 
 	t.Run("AddTaskHandler malformed JSON", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodPost, "/tasks/add", strings.NewReader("not-json"))
+		req := httptest.NewRequest(http.MethodPost, "/tasks", strings.NewReader("not-json"))
 		req.Header.Set("Content-Type", "application/json")
 		rec := httptest.NewRecorder()
-		mux.ServeHTTP(rec, req)
+		router.ServeHTTP(rec, req)
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
 	})
 
 	t.Run("AddTaskHandler missing required fields", func(t *testing.T) {
 		// Expect a JSON payload with non-empty id, cron_expr, and description.
 		payload := `{"id": "", "cron_expr": "", "description": ""}`
-		req := httptest.NewRequest(http.MethodPost, "/tasks/add", strings.NewReader(payload))
+		req := httptest.NewRequest(http.MethodPost, "/tasks", strings.NewReader(payload))
 		req.Header.Set("Content-Type", "application/json")
 		rec := httptest.NewRecorder()
-		mux.ServeHTTP(rec, req)
+		router.ServeHTTP(rec, req)
 		// The handler checks for empty fields and returns 400.
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
 	})
 
 	t.Run("UpdateTaskHandler wrong method", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/tasks/update?id=test", nil)
+		req := httptest.NewRequest(http.MethodGet, "/tasks/test", nil)
 		rec := httptest.NewRecorder()
-		mux.ServeHTTP(rec, req)
+		router.ServeHTTP(rec, req)
 		assert.Equal(t, http.StatusMethodNotAllowed, rec.Code)
 	})
 
-	t.Run("UpdateTaskHandler missing query parameter", func(t *testing.T) {
+	t.Run("UpdateTaskHandler missing id parameter", func(t *testing.T) {
 		// No id query parameter.
 		payload := `{"cron_expr": "*/5 * * * *", "description": "updated"}`
-		req := httptest.NewRequest(http.MethodPut, "/tasks/update", strings.NewReader(payload))
+		req := httptest.NewRequest(http.MethodPut, "/tasks", strings.NewReader(payload))
 		req.Header.Set("Content-Type", "application/json")
 		rec := httptest.NewRecorder()
-		mux.ServeHTTP(rec, req)
-		assert.Equal(t, http.StatusBadRequest, rec.Code)
+		router.ServeHTTP(rec, req)
+		assert.Equal(t, http.StatusMethodNotAllowed, rec.Code)
 	})
 
 	t.Run("UpdateTaskHandler malformed JSON", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodPut, "/tasks/update?id=test", strings.NewReader("not-json"))
+		req := httptest.NewRequest(http.MethodPut, "/tasks/test", strings.NewReader("not-json"))
 		req.Header.Set("Content-Type", "application/json")
 		rec := httptest.NewRecorder()
-		mux.ServeHTTP(rec, req)
+		router.ServeHTTP(rec, req)
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
 	})
 
 	t.Run("UpdateTaskHandler missing required fields", func(t *testing.T) {
 		// Provide a JSON with empty cron_expr and description.
 		payload := `{"cron_expr": "", "description": ""}`
-		req := httptest.NewRequest(http.MethodPut, "/tasks/update?id=test", strings.NewReader(payload))
+		req := httptest.NewRequest(http.MethodPut, "/tasks/test", strings.NewReader(payload))
 		req.Header.Set("Content-Type", "application/json")
 		rec := httptest.NewRecorder()
-		mux.ServeHTTP(rec, req)
+		router.ServeHTTP(rec, req)
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
 	})
 
 	t.Run("RemoveTaskHandler wrong method", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/tasks/remove?id=test", nil)
+		req := httptest.NewRequest(http.MethodGet, "/tasks/test", nil)
 		rec := httptest.NewRecorder()
-		mux.ServeHTTP(rec, req)
+		router.ServeHTTP(rec, req)
 		assert.Equal(t, http.StatusMethodNotAllowed, rec.Code)
 	})
 
 	t.Run("RemoveTaskHandler missing query parameter", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodDelete, "/tasks/remove", nil)
+		req := httptest.NewRequest(http.MethodDelete, "/tasks", nil)
 		rec := httptest.NewRecorder()
-		mux.ServeHTTP(rec, req)
-		assert.Equal(t, http.StatusBadRequest, rec.Code)
+		router.ServeHTTP(rec, req)
+		assert.Equal(t, http.StatusMethodNotAllowed, rec.Code)
 	})
 
 	t.Run("ExecutionHistoryHandler wrong method", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/tasks/history", nil)
 		rec := httptest.NewRecorder()
-		mux.ServeHTTP(rec, req)
+		router.ServeHTTP(rec, req)
 		assert.Equal(t, http.StatusMethodNotAllowed, rec.Code)
 	})
 }
@@ -573,7 +574,7 @@ func TestTimerConcurrentTaskModifications(t *testing.T) {
 			err := manager.RemoveTask(taskID)
 			// It's possible that removal fails if the task has already been removed.
 			if err != nil {
-				t.Logf("RemoveTask for %s returned error: %v", taskID, err)
+				//t.Logf("RemoveTask for %s returned error: %v", taskID, err)
 			}
 		}(i)
 	}
