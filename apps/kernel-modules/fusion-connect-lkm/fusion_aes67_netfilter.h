@@ -17,10 +17,13 @@
 
 #pragma once
 
-int fusion_aes67_nf_init(struct fusion_aes67_netfilter* self, struct TManager* pManager);
-int fusion_aes67_nf_start(struct fusion_aes67_netfilter* self, const char *ifname);
-int fusion_aes67_nf_stop(struct fusion_aes67_netfilter* self);
-int fusion_aes67_nf_destroy(struct fusion_aes67_netfilter* self);
+#include "fusion_aes67_manager.h"
+
+int fusion_aes67_nf_init(struct fusion_aes67_manager* mgr);
+int fusion_aes67_nf_destroy(struct fusion_aes67_netfilter* nf);
+
+int fusion_aes67_nf_start(struct fusion_aes67_netfilter* nf, const char *ifname);
+int fusion_aes67_nf_stop(struct fusion_aes67_netfilter* nf);
 
 int fusion_aes67_nf_get_mac_addr(unsigned char *addr, const char *iface_name);
 
@@ -28,7 +31,7 @@ int fusion_aes67_nf_get_new_skb(void **skb, unsigned int data_len);
 int fusion_aes67_nf_free_skb(void* skb);
 int fusion_aes67_nf_get_skb_data(void **data, void *skb, unsigned int data_len);
 
-int fusion_aes67_nf_create_packet(struct fusion_aes67_netfilter* self, void** pHandle, void** ppvPacket, uint32_t* pPacketSize);
+int fusion_aes67_nf_create_packet(struct fusion_aes67_netfilter* nf, void** pHandle, void** ppvPacket, uint32_t* pPacketSize);
 int fusion_aes67_nf_tx_packet(void* skb, unsigned int data_len, const char* iface);
 
-int fusion_aes67_nf_rx_packet(struct fusion_aes67_netfilter* self, void* packet, int packet_size, const char* ifname);
+int fusion_aes67_nf_rx_packet(struct fusion_aes67_netfilter* nf, void* packet, int packet_size, const char* ifname);

@@ -17,7 +17,7 @@
 
 #pragma once
 
-#include "MTAL_EthUtils.h"
+#include "network_utils.h"
 #include "../fusion_aes67_manager.h"
 #include "RTP_stream_info.h"
 #include "RTP_stream_defs.h"

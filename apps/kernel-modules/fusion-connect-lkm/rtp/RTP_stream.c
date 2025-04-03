@@ -40,9 +40,9 @@ void get_ntp_time(uint32_t* ntp_sec, uint32_t* ntp_fsec)
 }
 
 ////////////////////////////////////////////////////////////////////
-int rtp_stream_init(struct fusion_aes67_rtp_stream *pRTP_stream, struct fusion_aes67_netfilter *pEth_netfilter, struct fusion_aes67_rtp_stream_info* pRTP_stream_info)
+int rtp_stream_init(struct fusion_aes67_rtp_stream *pRTP_stream, struct fusion_aes67_netfilter *nf, struct fusion_aes67_rtp_stream_info* pRTP_stream_info)
 {
-	pRTP_stream->m_pEth_netfilter = pEth_netfilter;
+	pRTP_stream->m_pEth_netfilter = nf;
 	memcpy(&pRTP_stream->m_RTP_stream_info, pRTP_stream_info, sizeof(struct fusion_aes67_rtp_stream_info));
 	dump(&pRTP_stream->m_RTP_stream_info);
 
@@ -53,7 +53,7 @@ int rtp_stream_init(struct fusion_aes67_rtp_stream *pRTP_stream, struct fusion_a
 		// Fill m_RTPPacketBaseOutgoing
 		/////////////////////////////////////////////
 		// Fill Ethernet's Header
-		get_mac_addr(pRTP_stream->m_RTPPacketBaseOutgoing.EthernetHeader.bySrc, 6);
+		fusion_aes67_nf_get_mac_addr(pRTP_stream->m_RTPPacketBaseOutgoing.EthernetHeader.bySrc, nf->iface_name);
 		get_dest_MAC_addr(pRTP_stream_info, pRTP_stream->m_RTPPacketBaseOutgoing.EthernetHeader.byDest);
 		pRTP_stream->m_RTPPacketBaseOutgoing.EthernetHeader.usType	 = MTAL_SWAP16(MTAL_ETH_PROTO_IPV4);
 
@@ -85,7 +85,7 @@ int rtp_stream_init(struct fusion_aes67_rtp_stream *pRTP_stream, struct fusion_a
 	{
 		uint32_t ui32DestIP = pRTP_stream_info->m_ui32DestIP;
 		// Fill Ethernet's Header
-		get_mac_addr(pRTP_stream->m_RTCPPacketBase.EthernetHeader.bySrc, 6);
+		fusion_aes67_nf_get_mac_addr(pRTP_stream->m_RTPPacketBaseOutgoing.EthernetHeader.bySrc, nf->iface_name);
 		get_dest_MAC_addr(pRTP_stream_info, pRTP_stream->m_RTCPPacketBase.EthernetHeader.byDest);
 		pRTP_stream->m_RTCPPacketBase.EthernetHeader.usType	= MTAL_SWAP16(MTAL_ETH_PROTO_IPV4);
 

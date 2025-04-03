@@ -41,7 +41,7 @@
 
 #include "RTP_stream_info.h"
 #include "MTAL_DP.h"
-#include "MTAL_EthUtils.h"
+#include "network_utils.h"
 
 
 ////////////////////////////////////////////////////////////////////

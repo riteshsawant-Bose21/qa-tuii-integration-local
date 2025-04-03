@@ -33,7 +33,7 @@
 #include <linux/slab.h>
 #include <linux/netfilter.h>
 
-#include "MTAL_EthUtils.h"
+#include "network_utils.h"
 
 #include "RTP_streams_manager.h"
 

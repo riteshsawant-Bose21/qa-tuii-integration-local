@@ -18,7 +18,7 @@
 #pragma once
 
 #include<linux/string.h>
-#include "MTAL_EthUtils.h"
+#include "network_utils.h"
 
 #define MAX_STREAM_NAME_SIZE	64
 #define MAX_CODEC_NAME_SIZE		10

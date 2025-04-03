@@ -15,7 +15,7 @@
  * this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "MTAL_EthUtils.h"
+#include "network_utils.h"
 
 #include <linux/string.h> // memcpy
 #include <stdlib.h> // malloc

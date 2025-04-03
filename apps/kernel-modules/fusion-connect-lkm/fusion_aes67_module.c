@@ -30,8 +30,8 @@ static struct fusion_aes67_manager mgr;
 
 static int __init fusion_aes67_init(void)
 {
-    mgr.gpio_pin = gpio_pin; // Pass module param to mgr
-    mgr.timing_mode = (gpio_pin >= 0) ? TIMING_GPIO_INTERRUPT : TIMING_HRTIMER;
+    mgr.ptp.gpio_pin = gpio_pin; // Pass module param to mgr
+    mgr.ptp.ptp_timing_mode = (gpio_pin >= 0) ? TIMING_GPIO_INTERRUPT : TIMING_HRTIMER;
     
     return fusion_aes67_mgr_init(&mgr);
 }

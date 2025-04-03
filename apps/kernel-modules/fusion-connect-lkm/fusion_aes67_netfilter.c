@@ -16,8 +16,7 @@
  */
 
 #include "fusion_aes67_netfilter.h"
-#include "fusion_aes67_manager.h"
-#include "MTAL_EthUtils.h"
+#include "network_utils.h"
 
 #include <linux/spinlock.h>
 #include <linux/slab.h>

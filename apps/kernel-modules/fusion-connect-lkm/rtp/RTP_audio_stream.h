@@ -17,7 +17,7 @@
 
 #pragma once
 
-#include "MTAL_EthUtils.h"
+#include "network_utils.h"
 #include "RTP_stream.h"
 #include <linux/string.h>
 
