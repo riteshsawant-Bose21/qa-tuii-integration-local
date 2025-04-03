@@ -252,6 +252,38 @@ static enum hrtimer_restart audio_frame_process(struct hrtimer *timer)
     return HRTIMER_RESTART;
 }
 
+static enum hrtimer_restart audio_frame_tic_hrtimer(struct hrtimer *timer) {
+    struct fusion_aes67_manager *mgr = container_of(timer, struct fusion_aes67_manager, audio_timer);
+    static uint64_t last_check = 0;
+    static int64_t baseline_drift_ns = 0;
+    static bool first_check = true;
+
+    audio_frame_process(mgr);
+    ktime_t interval = ns_to_ktime((mgr->config.frame_size * 1000000000ULL) / mgr->config.sample_rate);
+
+    if (ktime_to_ns(ktime_get()) - last_check > 1000000000ULL) {
+        struct timespec phc_ts, mono_ts;
+        clock_gettime(mgr->phc_clockid, &phc_ts);
+        clock_gettime(CLOCK_MONOTONIC, &mono_ts);
+        int64_t drift_ns = (phc_ts.tv_sec * 1000000000LL + phc_ts.tv_nsec) -
+                          (mono_ts.tv_sec * 1000000000LL + mono_ts.tv_nsec);
+
+        if (first_check || llabs(drift_ns - baseline_drift_ns) > 1000000000LL) {  // >1 s jump
+            baseline_drift_ns = drift_ns;  // Reset on first run or PHC resync
+            first_check = false;
+        } else {
+            int64_t relative_drift_ns = drift_ns - baseline_drift_ns;
+            if (llabs(relative_drift_ns) > 5000) {  // >5 µs
+                interval = ktime_add_ns(interval, relative_drift_ns / 100);
+            }
+        }
+        last_check = ktime_to_ns(ktime_get());
+    }
+
+    hrtimer_forward_now(timer, interval);
+    return HRTIMER_RESTART;
+}
+
 /* Manager Functions */
 static int fusion_aes67_state_init(struct fusion_aes67_manager *mgr) 
 {
@@ -295,7 +327,7 @@ static int fusion_aes67_ptp_init(struct fusion_aes67_manager *mgr)
         mgr->ptp.phc_clockid = get_phc_clockid();
         if (mgr->ptp.phc_clockid < 0) return -EINVAL;
         hrtimer_init(&mgr->ptp.audio_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
-        mgr->ptp.audio_timer.function = audio_frame_process;
+        mgr->ptp.audio_timer.function = audio_frame_tic_hrtimer;
         mgr->ptp.gpio_irq = -1;
         mgr->ptp.gpio_pin = -1;
     }
