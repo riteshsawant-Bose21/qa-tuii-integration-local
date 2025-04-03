@@ -1,20 +1,3 @@
-/*
- * Copyright (C) 2017 Merging Technologies
- * Copyright (C) 2025 Bose Professional
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License as published by the
- * Free Software Foundation; either version 2 of the License, or (at your
- * option) any later version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
- * more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, see <http://www.gnu.org/licenses/>.
- */
-
 #include <linux/errno.h>
 #include <linux/delay.h>
 #include <linux/slab.h>
@@ -211,9 +194,8 @@ static clockid_t get_phc_clockid(void) {
     return clkid;
 }
 
-static enum hrtimer_restart audio_frame_process(struct hrtimer *timer)
+static void audio_frame_process(struct fusion_aes67_manager *mgr)
 {
-    struct fusion_aes67_manager *mgr = container_of(timer, struct fusion_aes67_manager, ptp.audio_timer);
     struct timespec phc_ts;
     uint64_t current_phc_ns;
 
@@ -247,41 +229,49 @@ static enum hrtimer_restart audio_frame_process(struct hrtimer *timer)
             }
         }
     }
-
-    hrtimer_forward_now(timer, ns_to_ktime(100000));
-    return HRTIMER_RESTART;
 }
 
-static enum hrtimer_restart audio_frame_tic_hrtimer(struct hrtimer *timer) {
-    struct fusion_aes67_manager *mgr = container_of(timer, struct fusion_aes67_manager, audio_timer);
+static enum hrtimer_restart audio_frame_tic_hrtimer(struct hrtimer *timer)
+{
+    struct fusion_aes67_manager *mgr = container_of(timer, struct fusion_aes67_manager, ptp.audio_timer);
     static uint64_t last_check = 0;
     static int64_t baseline_drift_ns = 0;
     static bool first_check = true;
 
     audio_frame_process(mgr);
-    ktime_t interval = ns_to_ktime((mgr->config.frame_size * 1000000000ULL) / mgr->config.sample_rate);
 
-    if (ktime_to_ns(ktime_get()) - last_check > 1000000000ULL) {
+    // Discipline HRTimer every 1s to align with PTP clock
+    ktime_t base_interval = ns_to_ktime(100000); // 100µs base tick
+    if (ktime_to_ns(ktime_get()) - last_check > 1000000000ULL) { // 1s check
         struct timespec phc_ts, mono_ts;
-        clock_gettime(mgr->phc_clockid, &phc_ts);
+        clock_gettime(mgr->ptp.phc_clockid, &phc_ts);
         clock_gettime(CLOCK_MONOTONIC, &mono_ts);
         int64_t drift_ns = (phc_ts.tv_sec * 1000000000LL + phc_ts.tv_nsec) -
                           (mono_ts.tv_sec * 1000000000LL + mono_ts.tv_nsec);
 
-        if (first_check || llabs(drift_ns - baseline_drift_ns) > 1000000000LL) {  // >1 s jump
-            baseline_drift_ns = drift_ns;  // Reset on first run or PHC resync
+        if (first_check || llabs(drift_ns - baseline_drift_ns) > 1000000000LL) { // >1s jump
+            baseline_drift_ns = drift_ns; // Reset baseline
             first_check = false;
         } else {
             int64_t relative_drift_ns = drift_ns - baseline_drift_ns;
-            if (llabs(relative_drift_ns) > 5000) {  // >5 µs
-                interval = ktime_add_ns(interval, relative_drift_ns / 100);
+            if (llabs(relative_drift_ns) > 5000) { // >5µs drift
+                // Adjust interval by distributing drift over next 1s (10,000 ticks)
+                int64_t adjustment_per_tick = relative_drift_ns / 10000;
+                base_interval = ktime_add_ns(base_interval, adjustment_per_tick);
             }
         }
         last_check = ktime_to_ns(ktime_get());
     }
 
-    hrtimer_forward_now(timer, interval);
+    hrtimer_forward_now(timer, base_interval);
     return HRTIMER_RESTART;
+}
+
+static irqreturn_t audio_frame_tic_gpio(int irq, void *dev_id)
+{
+    struct fusion_aes67_manager *mgr = dev_id;
+    audio_frame_process(mgr);
+    return IRQ_HANDLED;
 }
 
 /* Manager Functions */
@@ -289,7 +279,7 @@ static int fusion_aes67_state_init(struct fusion_aes67_manager *mgr)
 {
     mgr->state.is_started = false;
     mgr->state.ptp_synchronized = false;
-    mgr->state.playout_delay = 0; // Initialize added fields
+    mgr->state.playout_delay = 0;
     mgr->state.capture_delay = 0;
     INIT_LIST_HEAD(&mgr->ptp.stream_timings);
     return 0;
@@ -313,19 +303,47 @@ static int fusion_aes67_alsa_init(struct fusion_aes67_manager *mgr)
 static int fusion_aes67_ptp_init(struct fusion_aes67_manager *mgr) 
 {
     int err = 0;
+    mgr->ptp.phc_clockid = get_phc_clockid();
+    if (mgr->ptp.phc_clockid < 0) {
+        printk(KERN_ERR "fusion_aes67: Failed to get PHC clock ID\n");
+        return -EINVAL;
+    }
+
     if (mgr->ptp.ptp_timing_mode == TIMING_GPIO_INTERRUPT) {
         if (mgr->ptp.gpio_pin < 0) {
             printk(KERN_ERR "fusion_aes67: Invalid GPIO pin number: %d\n", mgr->ptp.gpio_pin);
             return -EINVAL;
         }
-        if ((err = init_gpio_interrupt(mgr)) < 0) { // Assuming this exists from context
-            printk(KERN_ERR "fusion_aes67: Failed to initialize GPIO interrupt: %d\n", err);
+        if (!gpio_is_valid(mgr->ptp.gpio_pin)) {
+            printk(KERN_ERR "fusion_aes67: GPIO pin %d is invalid\n", mgr->ptp.gpio_pin);
+            return -EINVAL;
+        }
+        err = gpio_request(mgr->ptp.gpio_pin, "aes67_ptp_interrupt");
+        if (err < 0) {
+            printk(KERN_ERR "fusion_aes67: Failed to request GPIO pin %d: %d\n", mgr->ptp.gpio_pin, err);
             return err;
         }
+        err = gpio_direction_input(mgr->ptp.gpio_pin);
+        if (err < 0) {
+            printk(KERN_ERR "fusion_aes67: Failed to set GPIO pin %d as input: %d\n", mgr->ptp.gpio_pin, err);
+            gpio_free(mgr->ptp.gpio_pin);
+            return err;
+        }
+        mgr->ptp.gpio_irq = gpio_to_irq(mgr->ptp.gpio_pin);
+        if (mgr->ptp.gpio_irq < 0) {
+            printk(KERN_ERR "fusion_aes67: Failed to get IRQ for GPIO pin %d: %d\n", mgr->ptp.gpio_pin, mgr->ptp.gpio_irq);
+            gpio_free(mgr->ptp.gpio_pin);
+            return mgr->ptp.gpio_irq;
+        }
+        err = request_irq(mgr->ptp.gpio_irq, audio_frame_tic_gpio, IRQF_TRIGGER_RISING, "aes67_ptp_interrupt", mgr);
+        if (err < 0) {
+            printk(KERN_ERR "fusion_aes67: Failed to request IRQ %d: %d\n", mgr->ptp.gpio_irq, err);
+            gpio_free(mgr->ptp.gpio_pin);
+            return err;
+        }
+        disable_irq(mgr->ptp.gpio_irq); // Start disabled, enable in mgr_start
     } else {
         mgr->ptp.ptp_timing_mode = TIMING_HRTIMER;
-        mgr->ptp.phc_clockid = get_phc_clockid();
-        if (mgr->ptp.phc_clockid < 0) return -EINVAL;
         hrtimer_init(&mgr->ptp.audio_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
         mgr->ptp.audio_timer.function = audio_frame_tic_hrtimer;
         mgr->ptp.gpio_irq = -1;
@@ -522,7 +540,6 @@ static int handle_add_rtp_stream(struct fusion_aes67_manager *mgr, struct fusion
         return reply->err = -EIO;
     }
 
-    // Create ALSA PCM device with correct buffer size
     if (mgr->alsa.mgr_callbacks && mgr->alsa.mgr_callbacks->open_substream) {
         int ret = mgr->alsa.mgr_callbacks->open_substream(mgr->alsa.alsa_chip, config->stream_handle,
                                                           config->is_source ? SNDRV_PCM_STREAM_CAPTURE : SNDRV_PCM_STREAM_PLAYBACK,
@@ -534,7 +551,6 @@ static int handle_add_rtp_stream(struct fusion_aes67_manager *mgr, struct fusion
         }
     }
 
-    // Set stream parameters (rate only, buffer already sized)
     if (mgr->alsa.mgr_callbacks && mgr->alsa.mgr_callbacks->set_stream_params) {
         int ret = mgr->alsa.mgr_callbacks->set_stream_params(mgr->alsa.alsa_chip, config->stream_handle,
                                                              config->sample_rate, config->channels, config->format);
@@ -680,7 +696,7 @@ static int handle_get_rtp_stream_status(struct fusion_aes67_manager *mgr, struct
 static int handle_set_playout_delay(struct fusion_aes67_manager *mgr, struct fusion_aes67_ctrl_msg *msg, struct fusion_aes67_ctrl_msg *reply) 
 {
     if (msg->data_size != sizeof(int32_t)) return reply->err = -EINVAL;
-    int32_t *delay = (int32_t *)msg->data;
+    int32_t *delay = (uint32_t *)msg->data;
     mgr->state.playout_delay = *delay;
     return reply->err = 0;
 }
@@ -688,7 +704,7 @@ static int handle_set_playout_delay(struct fusion_aes67_manager *mgr, struct fus
 static int handle_set_capture_delay(struct fusion_aes67_manager *mgr, struct fusion_aes67_ctrl_msg *msg, struct fusion_aes67_ctrl_msg *reply) 
 {
     if (msg->data_size != sizeof(int32_t)) return reply->err = -EINVAL;
-    int32_t *delay = (int32_t *)msg->data;
+    int32_t *delay = (uint32_t *)msg->data;
     mgr->state.capture_delay = *delay;
     return reply->err = 0;
 }
