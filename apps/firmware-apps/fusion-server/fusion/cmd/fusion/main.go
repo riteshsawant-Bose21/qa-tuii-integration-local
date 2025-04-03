@@ -49,64 +49,52 @@ func listRegisteredEndpoints(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]any{"routes": endpoints})
 }
 
-func setupRoutes(r *mux.Router, server *server.ConfigServer, metrics *cluster.MetricsCollector, tm *timers.TimerManager, verbose bool) {
-
-	registerEndpoint(r, "GET", "/", withLogging(server.HandleRoot, "root", verbose))
-	registerEndpoint(r, "GET", "/export", withLogging(server.ExportState, "export", verbose))
-	registerEndpoint(r, "GET", "/endpoints", listRegisteredEndpoints)
-	registerEndpoint(r, "GET", "/members", withLogging(server.GetMembers, "members", verbose))
-	registerEndpoint(r, "GET", "/version", withLogging(server.HandleVersion, "version", verbose))
-	registerEndpoint(r, "PUT", "/uploadAudio", withLogging(server.UploadAudio, "uploadAudio", verbose))
-	registerEndpoint(r, "GET", "/ws", withWebSocketMetrics(server.HandleWebSocket, metrics, verbose))
-
-	// Values
-	registerEndpoint(r, "GET", "/value", withLogging(server.GetValue, "getValue", verbose))
-	registerEndpoint(r, "POST", "/value", withLogging(server.SetValue, "setValue", verbose))
-	registerEndpoint(r, "PATCH", "/value", withLogging(server.UpdateValue, "updateValue", verbose))
-	registerEndpoint(r, "DELETE", "/value", withLogging(server.ClearAllValues, "clearAllValues", verbose))
-
-	// Snapshots
-	// NOTE: These must be added before the {name} parameter endpoints to avoid conflicts
-	registerEndpoint(r, "GET", "/snapshots/export", withLogging(server.ExportSnapshots, "exportSnapshots", verbose))
-	registerEndpoint(r, "POST", "/snapshots/import", withLogging(server.ImportSnapshots, "importSnapshots", verbose))
-	registerEndpoint(r, "GET", "/snapshots/metadata", withLogging(server.GetSnapshotMetadata, "snapshotMetadata", verbose))
-
-	registerEndpoint(r, "GET", "/snapshots", withLogging(server.ListSnapshots, "listSnapshots", verbose))
-	registerEndpoint(r, "POST", "/snapshots/{name}", withLogging(server.CreateSnapshot, "createSnapshot", verbose))
-	registerEndpoint(r, "GET", "/snapshots/{name}", withLogging(server.GetSnapshot, "getSnapshot", verbose))
-	registerEndpoint(r, "DELETE", "/snapshots/{name}", withLogging(server.DeleteSnapshot, "deleteSnapshot", verbose))
-	registerEndpoint(r, "POST", "/snapshots/{name}/activate", withLogging(server.ActivateSnapshot, "activateSnapshot", verbose))
-
-	// Timers
-	registerEndpoint(r, "GET", "/tasks", withLogging(tm.HandleGetTasks, "getTasks", verbose))
-	registerEndpoint(r, "POST", "/tasks", withLogging(tm.HandleCreateTask, "createTask", verbose))
-	registerEndpoint(r, "PUT", "/tasks/{id}", withLogging(tm.HandleUpdateTask, "updateTask", verbose))
-	registerEndpoint(r, "DELETE", "/tasks/{id}", withLogging(tm.HandleDeleteTask, "deleteTask", verbose))
-	registerEndpoint(r, "GET", "/tasks/history", withLogging(tm.HandleHistory, "history", verbose))
-
-	// Metrics
-	registerEndpoint(r, "GET", "/cluster/status", withLogging(metrics.HandleClusterStatus, "clusterStatus", verbose))
-	registerEndpoint(r, "GET", "/health", withLogging(metrics.HandleHealthCheck, "health", verbose))
-	registerEndpoint(r, "GET", "/metrics", withLogging(metrics.HandleMetrics, "metrics", verbose))
+type statusRecorder struct {
+	http.ResponseWriter
+	status int
 }
 
-// Middleware to log HTTP requests
-func withLogging(handler http.HandlerFunc, endpoint string, verbose bool) http.HandlerFunc {
+func (rec *statusRecorder) WriteHeader(code int) {
+	rec.status = code
+	rec.ResponseWriter.WriteHeader(code)
+}
 
-	if verbose {
-		return func(w http.ResponseWriter, r *http.Request) {
-			start := time.Now()
-			handler(w, r)
-			duration := time.Since(start)
-			logging.GetLogger().Debug("[HTTP] %s %s %s Duration: %v", r.Method, r.URL.Path, endpoint, duration)
-		}
-	} else {
-		return handler
+// loggingMiddleware logs HTTP requests in verbose mode
+func loggingMiddleware() mux.MiddlewareFunc {
+	logger := logging.GetLogger()
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if verbose {
+				rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
+				start := time.Now()
+				next.ServeHTTP(rec, r)
+				duration := time.Since(start)
+				logger.Debug("%s %s %d Duration: %v", r.Method, r.RequestURI, rec.status, duration)
+			} else {
+				next.ServeHTTP(w, r)
+			}
+		})
+	}
+}
+
+// recoveryMiddleware avoids crashing the server and logs unexpected issues
+func recoveryMiddleware() mux.MiddlewareFunc {
+	logger := logging.GetLogger()
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			defer func() {
+				if err := recover(); err != nil {
+					logger.Error("Panic recovered: %v", err)
+					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				}
+			}()
+			next.ServeHTTP(w, r)
+		})
 	}
 }
 
 // Middleware for WebSocket connections
-func withWebSocketMetrics(handler http.HandlerFunc, metrics *cluster.MetricsCollector, verbose bool) http.HandlerFunc {
+func withWebSocketMetrics(handler http.HandlerFunc, metrics *cluster.MetricsCollector) http.HandlerFunc {
 	if verbose {
 		return func(w http.ResponseWriter, r *http.Request) {
 			metrics.UpdateWSCount(1)
@@ -116,6 +104,47 @@ func withWebSocketMetrics(handler http.HandlerFunc, metrics *cluster.MetricsColl
 	} else {
 		return handler
 	}
+}
+
+func setupRoutes(r *mux.Router, server *server.ConfigServer, metrics *cluster.MetricsCollector, tm *timers.TimerManager, verbose bool) {
+
+	registerEndpoint(r, "GET", "/", server.HandleRoot)
+	registerEndpoint(r, "GET", "/export", server.ExportState)
+	registerEndpoint(r, "GET", "/endpoints", listRegisteredEndpoints)
+	registerEndpoint(r, "GET", "/members", server.GetMembers)
+	registerEndpoint(r, "GET", "/version", server.HandleVersion)
+	registerEndpoint(r, "PUT", "/uploadAudio", server.UploadAudio)
+	registerEndpoint(r, "GET", "/ws", withWebSocketMetrics(server.HandleWebSocket, metrics))
+
+	// Values
+	registerEndpoint(r, "GET", "/value", server.GetValue)
+	registerEndpoint(r, "POST", "/value", server.SetValue)
+	registerEndpoint(r, "PATCH", "/value", server.UpdateValue)
+	registerEndpoint(r, "DELETE", "/value", server.ClearAllValues)
+
+	// Snapshots
+	// NOTE: These must be added before the {name} parameter endpoints to avoid conflicts
+	registerEndpoint(r, "GET", "/snapshots/export", server.ExportSnapshots)
+	registerEndpoint(r, "POST", "/snapshots/import", server.ImportSnapshots)
+	registerEndpoint(r, "GET", "/snapshots/metadata", server.GetSnapshotMetadata)
+
+	registerEndpoint(r, "GET", "/snapshots", server.ListSnapshots)
+	registerEndpoint(r, "POST", "/snapshots/{name}", server.CreateSnapshot)
+	registerEndpoint(r, "GET", "/snapshots/{name}", server.GetSnapshot)
+	registerEndpoint(r, "DELETE", "/snapshots/{name}", server.DeleteSnapshot)
+	registerEndpoint(r, "POST", "/snapshots/{name}/activate", server.ActivateSnapshot)
+
+	// Timers
+	registerEndpoint(r, "GET", "/tasks", tm.HandleGetTasks)
+	registerEndpoint(r, "POST", "/tasks", tm.HandleCreateTask)
+	registerEndpoint(r, "PUT", "/tasks/{id}", tm.HandleUpdateTask)
+	registerEndpoint(r, "DELETE", "/tasks/{id}", tm.HandleDeleteTask)
+	registerEndpoint(r, "GET", "/tasks/history", tm.HandleHistory)
+
+	// Metrics
+	registerEndpoint(r, "GET", "/cluster/status", metrics.HandleClusterStatus)
+	registerEndpoint(r, "GET", "/health", metrics.HandleHealthCheck)
+	registerEndpoint(r, "GET", "/metrics", metrics.HandleMetrics)
 }
 
 // parseFlags parses and validates command-line flags.
@@ -169,7 +198,7 @@ func initPersistence(configPath string, stateManager *server.StateManager) *serv
 
 	err = persistence.LoadActiveSnapshot()
 	if err != nil {
-		logger.Fatal("Failed to to load initial state: %v", err)
+		logger.Fatal("Failed to to load active snapshot: %v", err)
 	}
 
 	return persistence
@@ -282,7 +311,9 @@ func main() {
 	connectionHandler := server.NewHandler(cluster.Memberlist, stateManager, persistence, updater)
 
 	bleServer := initBLEServer()
-	defer bleServer.Stop()
+	if bleServer != nil {
+		defer bleServer.Stop()
+	}
 
 	udpServer := initUDPServer(api.UDPPort, connectionHandler)
 	defer udpServer.Stop()
@@ -290,6 +321,9 @@ func main() {
 	configServer := server.NewConfigServer(nodeName, connectionHandler, cluster.Memberlist)
 
 	router := mux.NewRouter()
+	router.Use(loggingMiddleware())
+	router.Use(recoveryMiddleware())
+
 	metricsCollector := cluster.NewMetricsCollector()
 	setupRoutes(router, configServer, metricsCollector, timerManager, verbose)
 
