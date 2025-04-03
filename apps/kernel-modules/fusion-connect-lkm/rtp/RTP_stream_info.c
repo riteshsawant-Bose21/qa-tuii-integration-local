@@ -29,20 +29,10 @@
 *
 ****************************************************************************/
 
-#include "MTAL_TargetPlatform.h"
-
-#if (defined(MTAL_LINUX) && defined(MTAL_KERNEL))
-    #define new NEW
-    #include <linux/string.h>
-    #undef new
-#else
-    #include <string.h>
-#endif
+#include <linux/string.h>
 
 #include "RTP_stream_info.h"
-#include "MTAL_DP.h"
 #include "network_utils.h"
-
 
 ////////////////////////////////////////////////////////////////////
 int check_struct_version(struct fusion_aes67_rtp_stream_info* rtp_stream_info)
@@ -59,7 +49,7 @@ uint64_t make_key(unsigned char byNICId, uint32_t ui32DestIP, unsigned short usD
 ////////////////////////////////////////////////////////////////////
 uint64_t get_key(struct fusion_aes67_rtp_stream_info* rtp_stream_info)
 {
-	return make_key((unsigned char)rtp_stream_info->m_uiIfPortId, MTAL_SWAP32(rtp_stream_info->m_ui32DestIP), MTAL_SWAP16(rtp_stream_info->m_usDestPort));
+	return make_key((unsigned char)rtp_stream_info->m_uiIfPortId, swab32(rtp_stream_info->m_ui32DestIP), swab16(rtp_stream_info->m_usDestPort));
 }
 
 ////////////////////////////////////////////////////////////////////

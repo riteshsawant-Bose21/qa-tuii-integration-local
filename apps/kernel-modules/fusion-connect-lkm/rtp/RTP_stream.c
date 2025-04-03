@@ -55,27 +55,27 @@ int rtp_stream_init(struct fusion_aes67_rtp_stream *pRTP_stream, struct fusion_a
 		// Fill Ethernet's Header
 		fusion_aes67_nf_get_mac_addr(pRTP_stream->m_RTPPacketBaseOutgoing.EthernetHeader.bySrc, nf->iface_name);
 		get_dest_MAC_addr(pRTP_stream_info, pRTP_stream->m_RTPPacketBaseOutgoing.EthernetHeader.byDest);
-		pRTP_stream->m_RTPPacketBaseOutgoing.EthernetHeader.usType	 = MTAL_SWAP16(MTAL_ETH_PROTO_IPV4);
+		pRTP_stream->m_RTPPacketBaseOutgoing.EthernetHeader.usType	 = swab16(ETH_P_IP);
 
 		// Fill IP's Header
 		pRTP_stream->m_RTPPacketBaseOutgoing.IPV4Header.ucVersion_HeaderLen = 0x45;
 		pRTP_stream->m_RTPPacketBaseOutgoing.IPV4Header.ucTOS = pRTP_stream_info->m_ucDSCP << 2; // ECN = 0
-		pRTP_stream->m_RTPPacketBaseOutgoing.IPV4Header.ui32SrcIP = MTAL_SWAP32(pRTP_stream_info->m_ui32SrcIP);
-		pRTP_stream->m_RTPPacketBaseOutgoing.IPV4Header.ui32DestIP = MTAL_SWAP32(pRTP_stream_info->m_ui32DestIP);
+		pRTP_stream->m_RTPPacketBaseOutgoing.IPV4Header.ui32SrcIP = swab32(pRTP_stream_info->m_ui32SrcIP);
+		pRTP_stream->m_RTPPacketBaseOutgoing.IPV4Header.ui32DestIP = swab32(pRTP_stream_info->m_ui32DestIP);
 		pRTP_stream->m_RTPPacketBaseOutgoing.IPV4Header.usId = 0;
 		pRTP_stream->m_RTPPacketBaseOutgoing.IPV4Header.usOffset = 0;
 		pRTP_stream->m_RTPPacketBaseOutgoing.IPV4Header.byTTL = 15;
 		pRTP_stream->m_RTPPacketBaseOutgoing.IPV4Header.usChecksum = 0;
-		pRTP_stream->m_RTPPacketBaseOutgoing.IPV4Header.byProtocol = IP_PROTO_UDP;
+		pRTP_stream->m_RTPPacketBaseOutgoing.IPV4Header.byProtocol = IPPROTO_UDP;
 
 		// Fill UDP
-		pRTP_stream->m_RTPPacketBaseOutgoing.UDPHeader.usSrcPort = MTAL_SWAP16(pRTP_stream_info->m_usSrcPort);
-		pRTP_stream->m_RTPPacketBaseOutgoing.UDPHeader.usDestPort = MTAL_SWAP16(pRTP_stream_info->m_usDestPort);
+		pRTP_stream->m_RTPPacketBaseOutgoing.UDPHeader.usSrcPort = swab16(pRTP_stream_info->m_usSrcPort);
+		pRTP_stream->m_RTPPacketBaseOutgoing.UDPHeader.usDestPort = swab16(pRTP_stream_info->m_usDestPort);
 
 		// Fill RTP's Header
 		pRTP_stream->m_RTPPacketBaseOutgoing.RTPHeader.byVersion = 0x80; // Ver = 2; Padding = 0; extension = 0; CC = 0
 		pRTP_stream->m_RTPPacketBaseOutgoing.RTPHeader.byPayloadType = pRTP_stream_info->m_byPayloadType | 0x00;	// Marker = 0 + Payload Type
-		pRTP_stream->m_RTPPacketBaseOutgoing.RTPHeader.ui32SSRC = MTAL_SWAP32(pRTP_stream_info->m_ui32SSRC);
+		pRTP_stream->m_RTPPacketBaseOutgoing.RTPHeader.ui32SSRC = swab32(pRTP_stream_info->m_ui32SSRC);
 	}
 
 
@@ -87,22 +87,22 @@ int rtp_stream_init(struct fusion_aes67_rtp_stream *pRTP_stream, struct fusion_a
 		// Fill Ethernet's Header
 		fusion_aes67_nf_get_mac_addr(pRTP_stream->m_RTPPacketBaseOutgoing.EthernetHeader.bySrc, nf->iface_name);
 		get_dest_MAC_addr(pRTP_stream_info, pRTP_stream->m_RTCPPacketBase.EthernetHeader.byDest);
-		pRTP_stream->m_RTCPPacketBase.EthernetHeader.usType	= MTAL_SWAP16(MTAL_ETH_PROTO_IPV4);
+		pRTP_stream->m_RTCPPacketBase.EthernetHeader.usType	= swab16(ETH_P_IP);
 
 		// Fill IP's Header
 		pRTP_stream->m_RTCPPacketBase.IPV4Header.ucVersion_HeaderLen = 0x45;
 		pRTP_stream->m_RTCPPacketBase.IPV4Header.ucTOS = 0x00;
-		pRTP_stream->m_RTCPPacketBase.IPV4Header.ui32SrcIP = MTAL_SWAP32(pRTP_stream_info->m_ui32RTCPSrcIP);
-		pRTP_stream->m_RTCPPacketBase.IPV4Header.ui32DestIP = MTAL_SWAP32(ui32DestIP);
+		pRTP_stream->m_RTCPPacketBase.IPV4Header.ui32SrcIP = swab32(pRTP_stream_info->m_ui32RTCPSrcIP);
+		pRTP_stream->m_RTCPPacketBase.IPV4Header.ui32DestIP = swab32(ui32DestIP);
 		pRTP_stream->m_RTCPPacketBase.IPV4Header.usId = 0;
 		pRTP_stream->m_RTCPPacketBase.IPV4Header.usOffset = 0;
 		pRTP_stream->m_RTCPPacketBase.IPV4Header.byTTL = 15;
 		pRTP_stream->m_RTCPPacketBase.IPV4Header.usChecksum = 0;
-		pRTP_stream->m_RTCPPacketBase.IPV4Header.byProtocol = IP_PROTO_UDP;
+		pRTP_stream->m_RTCPPacketBase.IPV4Header.byProtocol = IPPROTO_UDP;
 
 		// Fill UDP
-		pRTP_stream->m_RTCPPacketBase.UDPHeader.usSrcPort = MTAL_SWAP16(pRTP_stream_info->m_usRTCPSrcPort);
-		pRTP_stream->m_RTCPPacketBase.UDPHeader.usDestPort = MTAL_SWAP16(pRTP_stream_info->m_usRTCPDestPort);
+		pRTP_stream->m_RTCPPacketBase.UDPHeader.usSrcPort = swab16(pRTP_stream_info->m_usRTCPSrcPort);
+		pRTP_stream->m_RTCPPacketBase.UDPHeader.usDestPort = swab16(pRTP_stream_info->m_usRTCPDestPort);
 
 		// Fill RTP's Header
 
@@ -114,8 +114,8 @@ int rtp_stream_init(struct fusion_aes67_rtp_stream *pRTP_stream, struct fusion_a
 
 			pRTP_stream->m_RTCPPacketBase.RTCPHeader.byVersion = 0x80; // Ver = 2; Padding = 0; Source Count = 0
 			pRTP_stream->m_RTCPPacketBase.RTCPHeader.byPacketType = RTCP_PACKET_TYPE_SR;
-			pRTP_stream->m_RTCPPacketBase.RTCPHeader.ui32SSRC = MTAL_SWAP32(pRTP_stream_info->m_ui32SSRC);
-			pRTP_stream->m_RTCPPacketBase.RTCPHeader.usLength = MTAL_SWAP16((sizeof(TRTCPHeader) + sizeof(TRTCP_SenderInfo)) / 4 - 1);  // The length of this RTCP packet in 32-bit words minus one, including the header and any padding.
+			pRTP_stream->m_RTCPPacketBase.RTCPHeader.ui32SSRC = swab32(pRTP_stream_info->m_ui32SSRC);
+			pRTP_stream->m_RTCPPacketBase.RTCPHeader.usLength = swab16((sizeof(TRTCPHeader) + sizeof(TRTCP_SenderInfo)) / 4 - 1);  // The length of this RTCP packet in 32-bit words minus one, including the header and any padding.
 
 
 			// make SDES
@@ -151,7 +151,7 @@ int rtp_stream_init(struct fusion_aes67_rtp_stream *pRTP_stream, struct fusion_a
 				//printk(KERN_DEBUG "pRTCP_SourceDescriptionHeaderBase = %p\n", pRTCP_SourceDescriptionHeaderBase);
 				pRTCP_SourceDescriptionHeaderBase->byVersion = (2 << 6) | 1; // ver = 2, 1 source
 				pRTCP_SourceDescriptionHeaderBase->byPacketType = RTCP_PACKET_TYPE_SDES; // Source Description
-				pRTCP_SourceDescriptionHeaderBase->usLength = MTAL_SWAP16(pRTP_stream->m_ulRTCP_SourceDescriptionSize / 4 - 1); // The length of this RTCP packet in 32-bit words minus one, including the header and any padding.
+				pRTCP_SourceDescriptionHeaderBase->usLength = swab16(pRTP_stream->m_ulRTCP_SourceDescriptionSize / 4 - 1); // The length of this RTCP packet in 32-bit words minus one, including the header and any padding.
 
 				// add chunk 1
 				pRTCP_SourceDescriptionChunk = (TRTCP_SourceDescriptionChunk*)(pRTCP_SourceDescriptionHeaderBase + 1);
@@ -172,8 +172,8 @@ int rtp_stream_init(struct fusion_aes67_rtp_stream *pRTP_stream, struct fusion_a
 		{
 			pRTP_stream->m_RTCPPacketBase.RTCPHeader.byVersion = 0x81; // Ver = 2; Padding = 0; Source Count = 0
 			pRTP_stream->m_RTCPPacketBase.RTCPHeader.byPacketType = RTCP_PACKET_TYPE_RR;
-			pRTP_stream->m_RTCPPacketBase.RTCPHeader.ui32SSRC = MTAL_SWAP32(pRTP_stream_info->m_ui32SSRC);
-			pRTP_stream->m_RTCPPacketBase.RTCPHeader.usLength = MTAL_SWAP16(7);	// 7 * 32bits
+			pRTP_stream->m_RTCPPacketBase.RTCPHeader.ui32SSRC = swab32(pRTP_stream_info->m_ui32SSRC);
+			pRTP_stream->m_RTCPPacketBase.RTCPHeader.usLength = swab16(7);	// 7 * 32bits
 		}
 	}
 
@@ -242,14 +242,14 @@ int rtp_stream_send_RTCP_SR_Packet(struct fusion_aes67_rtp_stream* pRTP_stream)
 		ui32PacketSize = sizeof(TRTCP_SR_PacketBase) + pRTP_stream->m_ulRTCP_SourceDescriptionSize;
 
 		// Update IP's header
-		pTRTCP_SR_Packet->RTCPPacketBase.IPV4Header.usLen = MTAL_SWAP16((unsigned short)ui32PacketSize - sizeof(TEthernetHeader));
+		pTRTCP_SR_Packet->RTCPPacketBase.IPV4Header.usLen = swab16((unsigned short)ui32PacketSize - sizeof(TEthernetHeader));
 		pTRTCP_SR_Packet->RTCPPacketBase.IPV4Header.usChecksum = 0;
 
 		// Compute IP checksum
-		pTRTCP_SR_Packet->RTCPPacketBase.IPV4Header.usChecksum = MTAL_SWAP16(compute_cksum(&pTRTCP_SR_Packet->RTCPPacketBase.IPV4Header, sizeof(TIPV4Header)));
+		pTRTCP_SR_Packet->RTCPPacketBase.IPV4Header.usChecksum = swab16(compute_cksum(&pTRTCP_SR_Packet->RTCPPacketBase.IPV4Header, sizeof(TIPV4Header)));
 
 		// Update UDP's header
-		pTRTCP_SR_Packet->RTCPPacketBase.UDPHeader.usLen = MTAL_SWAP16((unsigned short)ui32PacketSize - sizeof(TEthernetHeader) - sizeof(TIPV4Header));
+		pTRTCP_SR_Packet->RTCPPacketBase.UDPHeader.usLen = swab16((unsigned short)ui32PacketSize - sizeof(TEthernetHeader) - sizeof(TIPV4Header));
 		pTRTCP_SR_Packet->RTCPPacketBase.UDPHeader.usCheckSum = 0;
 
 		// Update RTCP_SenderInfo
@@ -263,11 +263,11 @@ int rtp_stream_send_RTCP_SR_Packet(struct fusion_aes67_rtp_stream* pRTP_stream)
 		*/
 		//uint32_t ui32RTPTimestamp = 0;//fSink->convertToRTPTimestamp(timeNow); // RTP ts
 
-		pTRTCP_SR_Packet->RTCP_SenderInfo.ui32NTPTimestamp_MSW = MTAL_SWAP32(ntp_sec);
-		pTRTCP_SR_Packet->RTCP_SenderInfo.ui32NTPTimestamp_LSW = MTAL_SWAP32(ntp_fsec);
-		pTRTCP_SR_Packet->RTCP_SenderInfo.ui32RTPTimestamp = MTAL_SWAP32(pRTP_stream->m_ulSenderRTPTimestamp);
-		pTRTCP_SR_Packet->RTCP_SenderInfo.ui32SenderOctetCount = MTAL_SWAP32(pRTP_stream->m_ulSenderOctetCount);
-		pTRTCP_SR_Packet->RTCP_SenderInfo.ui32SenderPacketCount = MTAL_SWAP32(pRTP_stream->m_ulSenderPacketCount);
+		pTRTCP_SR_Packet->RTCP_SenderInfo.ui32NTPTimestamp_MSW = swab32(ntp_sec);
+		pTRTCP_SR_Packet->RTCP_SenderInfo.ui32NTPTimestamp_LSW = swab32(ntp_fsec);
+		pTRTCP_SR_Packet->RTCP_SenderInfo.ui32RTPTimestamp = swab32(pRTP_stream->m_ulSenderRTPTimestamp);
+		pTRTCP_SR_Packet->RTCP_SenderInfo.ui32SenderOctetCount = swab32(pRTP_stream->m_ulSenderOctetCount);
+		pTRTCP_SR_Packet->RTCP_SenderInfo.ui32SenderPacketCount = swab32(pRTP_stream->m_ulSenderPacketCount);
 
 		// copy pre-made SDES
 		if(pRTP_stream->m_pvRTCP_SourceDescription) {
@@ -276,7 +276,7 @@ int rtp_stream_send_RTCP_SR_Packet(struct fusion_aes67_rtp_stream* pRTP_stream)
 
 		// TODO Optimization: as the UDP checksum is not mandatory we could disable its computation or ask to the hardware to compute the checksum
 		// Compute UDP checksum
-		pTRTCP_SR_Packet->RTCPPacketBase.UDPHeader.usCheckSum = MTAL_SWAP16(compute_udp_cksum(&pTRTCP_SR_Packet->RTCPPacketBase.UDPHeader, (unsigned short)ui32PacketSize - sizeof(TEthernetHeader)  - sizeof(TIPV4Header), (unsigned short*)&pTRTCP_SR_Packet->RTCPPacketBase.IPV4Header.ui32SrcIP, (unsigned short*)&pTRTCP_SR_Packet->RTCPPacketBase.IPV4Header.ui32DestIP));
+		pTRTCP_SR_Packet->RTCPPacketBase.UDPHeader.usCheckSum = swab16(compute_udp_cksum(&pTRTCP_SR_Packet->RTCPPacketBase.UDPHeader, (unsigned short)ui32PacketSize - sizeof(TEthernetHeader)  - sizeof(TIPV4Header), (unsigned short*)&pTRTCP_SR_Packet->RTCPPacketBase.IPV4Header.ui32SrcIP, (unsigned short*)&pTRTCP_SR_Packet->RTCPPacketBase.IPV4Header.ui32DestIP));
 
 		fusion_aes67_nf_tx_packet(pRTP_stream->m_pEth_netfilter, skb, packet, ui32PacketSize);
 	} else {
@@ -317,29 +317,29 @@ int rtp_stream_send_RTCP_RR_Packet(struct fusion_aes67_rtp_stream* pRTP_stream)
 		memcpy(packet, &pRTP_stream->m_RTCPPacketBase, sizeof(TRTCPPacketBase));
 
 		// Update IP's header
-		pTRTCP_RR_Packet->RTCPPacketBase.IPV4Header.usLen = MTAL_SWAP16((unsigned short)ui32PacketSize - sizeof(TEthernetHeader));
+		pTRTCP_RR_Packet->RTCPPacketBase.IPV4Header.usLen = swab16((unsigned short)ui32PacketSize - sizeof(TEthernetHeader));
 		pTRTCP_RR_Packet->RTCPPacketBase.IPV4Header.usChecksum = 0;
 
 		// Compute IP checksum
-		pTRTCP_RR_Packet->RTCPPacketBase.IPV4Header.usChecksum = MTAL_SWAP16(compute_cksum(&pTRTCP_RR_Packet->RTCPPacketBase.IPV4Header, sizeof(TIPV4Header)));
+		pTRTCP_RR_Packet->RTCPPacketBase.IPV4Header.usChecksum = swab16(compute_cksum(&pTRTCP_RR_Packet->RTCPPacketBase.IPV4Header, sizeof(TIPV4Header)));
 
 		// Update UDP's header
-		pTRTCP_RR_Packet->RTCPPacketBase.UDPHeader.usLen = MTAL_SWAP16((unsigned short)ui32PacketSize - sizeof(TEthernetHeader) - sizeof(TIPV4Header));
+		pTRTCP_RR_Packet->RTCPPacketBase.UDPHeader.usLen = swab16((unsigned short)ui32PacketSize - sizeof(TEthernetHeader) - sizeof(TIPV4Header));
 		pTRTCP_RR_Packet->RTCPPacketBase.UDPHeader.usCheckSum = 0;
 
 		// Update RTCP_ReportBlock
-		pTRTCP_RR_Packet->RTCP_ReportBlock.ui32SSRC = MTAL_SWAP32(pRTP_stream->m_RTP_stream_info.m_ui32SSRC);		// Source SSRC
-		pTRTCP_RR_Packet->RTCP_ReportBlock.byFractionLost = MTAL_SWAP32(0);
+		pTRTCP_RR_Packet->RTCP_ReportBlock.ui32SSRC = swab32(pRTP_stream->m_RTP_stream_info.m_ui32SSRC);		// Source SSRC
+		pTRTCP_RR_Packet->RTCP_ReportBlock.byFractionLost = swab32(0);
 		memset(pTRTCP_RR_Packet->RTCP_ReportBlock.byAccumNbOfPacketsLost, 0, 3);		// 24bits
-		pTRTCP_RR_Packet->RTCP_ReportBlock.ui32SequenceNumberCyclesCount = MTAL_SWAP32(0);
-		pTRTCP_RR_Packet->RTCP_ReportBlock.ui32HighestSequenceNumberReceived = MTAL_SWAP32(0);
-		pTRTCP_RR_Packet->RTCP_ReportBlock.ui32InterarrivalJitter = MTAL_SWAP32(0);
-		pTRTCP_RR_Packet->RTCP_ReportBlock.ui32LastSRTimestamp = MTAL_SWAP32(0);
-		pTRTCP_RR_Packet->RTCP_ReportBlock.ui32DelaySinceLastSRTimestamp = MTAL_SWAP32(0);
+		pTRTCP_RR_Packet->RTCP_ReportBlock.ui32SequenceNumberCyclesCount = swab32(0);
+		pTRTCP_RR_Packet->RTCP_ReportBlock.ui32HighestSequenceNumberReceived = swab32(0);
+		pTRTCP_RR_Packet->RTCP_ReportBlock.ui32InterarrivalJitter = swab32(0);
+		pTRTCP_RR_Packet->RTCP_ReportBlock.ui32LastSRTimestamp = swab32(0);
+		pTRTCP_RR_Packet->RTCP_ReportBlock.ui32DelaySinceLastSRTimestamp = swab32(0);
 
 		// TODO Optimization: as the UDP checksum is not mandatory we could disable its computation or ask to the hardware to compute the checksum
 		// Compute UDP checksum
-		pTRTCP_RR_Packet->RTCPPacketBase.UDPHeader.usCheckSum	= MTAL_SWAP16(compute_udp_cksum(&pTRTCP_RR_Packet->RTCPPacketBase.UDPHeader, (unsigned short)ui32PacketSize - sizeof(TEthernetHeader)  - sizeof(TIPV4Header), (unsigned short*)&pTRTCP_RR_Packet->RTCPPacketBase.IPV4Header.ui32SrcIP, (unsigned short*)&pTRTCP_RR_Packet->RTCPPacketBase.IPV4Header.ui32DestIP));
+		pTRTCP_RR_Packet->RTCPPacketBase.UDPHeader.usCheckSum	= swab16(compute_udp_cksum(&pTRTCP_RR_Packet->RTCPPacketBase.UDPHeader, (unsigned short)ui32PacketSize - sizeof(TEthernetHeader)  - sizeof(TIPV4Header), (unsigned short*)&pTRTCP_RR_Packet->RTCPPacketBase.IPV4Header.ui32SrcIP, (unsigned short*)&pTRTCP_RR_Packet->RTCPPacketBase.IPV4Header.ui32DestIP));
 
 		fusion_aes67_nf_tx_packet(skb, ui32PacketSize, pRTP_stream->m_pEth_netfilter->iface_name);
 	} else {

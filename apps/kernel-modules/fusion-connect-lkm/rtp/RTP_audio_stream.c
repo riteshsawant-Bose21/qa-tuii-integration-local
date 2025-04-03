@@ -422,13 +422,13 @@ int ProcessRTPAudioPacket(struct fusion_aes67_rtp_audio_stream* self, TRTPPacket
 		return S_0;
 	}
 
-	if(MTAL_SWAP32(pRTPPacketBase->IPV4Header.ui32DestIP) != pRTP_stream_info->m_ui32DestIP || MTAL_SWAP16(pRTPPacketBase->UDPHeader.usDestPort) != pRTP_stream_info->m_usDestPort)
+	if(swab32(pRTPPacketBase->IPV4Header.ui32DestIP) != pRTP_stream_info->m_ui32DestIP || swab16(pRTPPacketBase->UDPHeader.usDestPort) != pRTP_stream_info->m_usDestPort)
 	{	// This RTP packet is not for this stream
 		//printk(KERN_DEBUG "This RTP packet is not for this stream Dest IP ");
-		//dump_ip_addr(MTAL_SWAP32(pRTPPacketBase->IPV4Header.ui32DestIP), 0);
+		//dump_ip_addr(swab32(pRTPPacketBase->IPV4Header.ui32DestIP), 0);
 		//printk(KERN_DEBUG " != ");
 		//dump_ip_addr(pRTP_stream_info->m_ui32DestIP, 0);
-		//printk(KERN_DEBUG " Dest Port %d != %d\n", MTAL_SWAP16(pRTPPacketBase->UDPHeader.usDestPort), pRTP_stream_info->m_usDestPort);
+		//printk(KERN_DEBUG " Dest Port %d != %d\n", swab16(pRTPPacketBase->UDPHeader.usDestPort), pRTP_stream_info->m_usDestPort);
 		return S_0;
 	}*/
 
@@ -459,10 +459,10 @@ int ProcessRTPAudioPacket(struct fusion_aes67_rtp_audio_stream* self, TRTPPacket
 	if(!pRTP_stream_info->m_bSSRCInitialized)
 	{
 		dump_ip_addr(pRTP_stream_info->m_ui32DestIP, 0);
-		printk(KERN_DEBUG " %s: SSRC = 0x%x\n", pRTP_stream_info->m_cName, MTAL_SWAP32(pRTPPacketBase->RTPHeader.ui32SSRC));
-		set_SSRC(pRTP_stream_info, MTAL_SWAP32(pRTPPacketBase->RTPHeader.ui32SSRC));
+		printk(KERN_DEBUG " %s: SSRC = 0x%x\n", pRTP_stream_info->m_cName, swab32(pRTPPacketBase->RTPHeader.ui32SSRC));
+		set_SSRC(pRTP_stream_info, swab32(pRTPPacketBase->RTPHeader.ui32SSRC));
 	}
-	else if(pRTP_stream_info->m_ui32SSRC != MTAL_SWAP32(pRTPPacketBase->RTPHeader.ui32SSRC)
+	else if(pRTP_stream_info->m_ui32SSRC != swab32(pRTPPacketBase->RTPHeader.ui32SSRC)
 #ifdef QSC_HACK
 		&& pRTP_stream_info->m_usSrcPort == 0 // disabled if QSC
 #endif
@@ -475,24 +475,24 @@ int ProcessRTPAudioPacket(struct fusion_aes67_rtp_audio_stream* self, TRTPPacket
 		{
 			self->m_usWrongSSRCMessageCounter++;
 			dump_ip_addr(pRTP_stream_info->m_ui32DestIP, 0);
-			printk(KERN_DEBUG " %s: RTP packet with wrong SSRC. Attended: 0x%x received: 0x%x\n", pRTP_stream_info->m_cName, pRTP_stream_info->m_ui32SSRC, MTAL_SWAP32(pRTPPacketBase->RTPHeader.ui32SSRC));
+			printk(KERN_DEBUG " %s: RTP packet with wrong SSRC. Attended: 0x%x received: 0x%x\n", pRTP_stream_info->m_cName, pRTP_stream_info->m_ui32SSRC, swab32(pRTPPacketBase->RTPHeader.ui32SSRC));
 		}
 		return 0;
 	}
 
 	// Sequence number check
-	if((unsigned short)(self->m_tRTPStream.m_usIncomingSeqNum + 1) != MTAL_SWAP16(pRTPPacketBase->RTPHeader.usSeqNum))
+	if((unsigned short)(self->m_tRTPStream.m_usIncomingSeqNum + 1) != swab16(pRTPPacketBase->RTPHeader.usSeqNum))
 	{
 		self->m_ui32WrongRTPSeqIdCounter++;
 
 		dump_ip_addr(pRTP_stream_info->m_ui32DestIP, 0);
-		printk(KERN_DEBUG " RTP packet with wrong SeqNum = %d should be %d\n", MTAL_SWAP16(pRTPPacketBase->RTPHeader.usSeqNum), self->m_tRTPStream.m_usIncomingSeqNum + 1);
+		printk(KERN_DEBUG " RTP packet with wrong SeqNum = %d should be %d\n", swab16(pRTPPacketBase->RTPHeader.usSeqNum), self->m_tRTPStream.m_usIncomingSeqNum + 1);
 	}
-	self->m_tRTPStream.m_usIncomingSeqNum = MTAL_SWAP16(pRTPPacketBase->RTPHeader.usSeqNum);
+	self->m_tRTPStream.m_usIncomingSeqNum = swab16(pRTPPacketBase->RTPHeader.usSeqNum);
 
 	// RTP Payload data
 	pui8RTPPayloadData = (uint8_t*)pRTPPacketBase + sizeof(TRTPPacketBase);
-	ui32RTPPayloadLength = MTAL_SWAP16(pRTPPacketBase->UDPHeader.usLen) - sizeof(TUDPHeader) - sizeof(TRTPHeader);
+	ui32RTPPayloadLength = swab16(pRTPPacketBase->UDPHeader.usLen) - sizeof(TUDPHeader) - sizeof(TRTPHeader);
 
 	///////////////////////////////////////////////////////////////
 	// Compute CSRC + Extension length
@@ -501,7 +501,7 @@ int ProcessRTPAudioPacket(struct fusion_aes67_rtp_audio_stream* self, TRTPPacket
 	// Extension
 	if(RTP_IS_EXTENSION(pRTPPacketBase->RTPHeader.byVersion))
 	{
-		uint16_t ui16ExtensionLenth = MTAL_SWAP16(*(uint16_t*)(pui8RTPPayloadData + 2)); // in 32 bits
+		uint16_t ui16ExtensionLenth = swab16(*(uint16_t*)(pui8RTPPayloadData + 2)); // in 32 bits
 		ui32CSRC_ExtensionLength += 4 + ui16ExtensionLenth * 4; // jump extension header and extension data
 	}
 	// Jump optional CSRC and RTP extension
@@ -516,7 +516,7 @@ int ProcessRTPAudioPacket(struct fusion_aes67_rtp_audio_stream* self, TRTPPacket
 		return 0;
 	}
 
-	ui32RTPTimeStamp = MTAL_SWAP32(pRTPPacketBase->RTPHeader.ui32Timestamp);
+	ui32RTPTimeStamp = swab32(pRTPPacketBase->RTPHeader.ui32Timestamp);
 	ui32RTPTimeStamp -= pRTP_stream_info->m_ui32RTPTimestampOffset;
 
 	// Time stamp check
@@ -594,7 +594,7 @@ int ProcessRTPAudioPacket(struct fusion_aes67_rtp_audio_stream* self, TRTPPacket
 				int16_t* pi16RTPAudioBuffer = (__int16*)pbyRTPAudioBuffer;
 				for(uint32_t ui32 = 0; ui32 < ui32NbOfSamplesInThisPacket; ui32++)
 				{
-					pi16RTPAudioBuffer[ui32 * 2] = MTAL_SWAP16(ui32 * 128);
+					pi16RTPAudioBuffer[ui32 * 2] = swab16(ui32 * 128);
 				}
 				break;
 			}
@@ -771,19 +771,19 @@ int SendRTPAudioPackets(struct fusion_aes67_rtp_audio_stream* self)
 			}
 
 			// Update IP's header
-			pTRTPPacket->IPV4Header.usLen = MTAL_SWAP16((unsigned short)ui32PacketSize - sizeof(TEthernetHeader));
+			pTRTPPacket->IPV4Header.usLen = swab16((unsigned short)ui32PacketSize - sizeof(TEthernetHeader));
 			pTRTPPacket->IPV4Header.usChecksum	= 0;
 
 			// Compute IP checksum
-			pTRTPPacket->IPV4Header.usChecksum = MTAL_SWAP16(compute_cksum(&pTRTPPacket->IPV4Header, sizeof(TIPV4Header)));
+			pTRTPPacket->IPV4Header.usChecksum = swab16(compute_cksum(&pTRTPPacket->IPV4Header, sizeof(TIPV4Header)));
 
 			// Update UDP's header
-			pTRTPPacket->UDPHeader.usLen = MTAL_SWAP16((unsigned short)ui32PacketSize - sizeof(TEthernetHeader) - sizeof(TIPV4Header));
+			pTRTPPacket->UDPHeader.usLen = swab16((unsigned short)ui32PacketSize - sizeof(TEthernetHeader) - sizeof(TIPV4Header));
 			pTRTPPacket->UDPHeader.usCheckSum = 0;
 
 			// Update RTP's header
-			pTRTPPacket->RTPHeader.ui32Timestamp = MTAL_SWAP32((uint32_t)(ui64CurrentSAC + pRTP_stream_info->m_ui32RTPTimestampOffset));
-			pTRTPPacket->RTPHeader.usSeqNum = MTAL_SWAP16(self->m_tRTPStream.m_usOutgoingSeqNum);
+			pTRTPPacket->RTPHeader.ui32Timestamp = swab32((uint32_t)(ui64CurrentSAC + pRTP_stream_info->m_ui32RTPTimestampOffset));
+			pTRTPPacket->RTPHeader.usSeqNum = swab16(self->m_tRTPStream.m_usOutgoingSeqNum);
 			self->m_tRTPStream.m_usOutgoingSeqNum++;
 
 			// RTCP SR
@@ -797,14 +797,14 @@ int SendRTPAudioPackets(struct fusion_aes67_rtp_audio_stream* self)
 			// Optimization: as the UDP checksum is not mandatory we disable its computation
 			// TODO: ask to the hardware to compute the checksum
 			// Compute UDP checksum
-			//pTRTPPacket->UDPHeader.usCheckSum	= MTAL_SWAP16(compute_udp_cksum(&pTRTPPacket->UDPHeader, (unsigned short)ui32PacketSize - sizeof(TEthernetHeader)  - sizeof(TIPV4Header), (unsigned short*)&pTRTPPacket->IPV4Header.ui32SrcIP, (unsigned short*)&pTRTPPacket->IPV4Header.ui32DestIP));
+			//pTRTPPacket->UDPHeader.usCheckSum	= swab16(compute_udp_cksum(&pTRTPPacket->UDPHeader, (unsigned short)ui32PacketSize - sizeof(TEthernetHeader)  - sizeof(TIPV4Header), (unsigned short*)&pTRTPPacket->IPV4Header.ui32SrcIP, (unsigned short*)&pTRTPPacket->IPV4Header.ui32DestIP));
 
 			fusion_aes67_nf_tx_packet(nf, skb, packet, ui32PacketSize);
 
 			#ifdef DEBUG_CHECK
-				if(MTAL_SWAP32(pTRTPPacket->RTPHeader.ui32Timestamp) != self->m_tRTPStream.m_ui32LastRTPSAC + self->m_tRTPStream.m_ui32LastRTPLengthInSamples)
+				if(swab32(pTRTPPacket->RTPHeader.ui32Timestamp) != self->m_tRTPStream.m_ui32LastRTPSAC + self->m_tRTPStream.m_ui32LastRTPLengthInSamples)
 				{
-					//printk(KERN_DEBUG "This RTP Ouput packet is not contiguous with the previous one SAC = %d should be %d, last size was: %d\n", MTAL_SWAP32(pTRTPPacket->RTPHeader.ui32Timestamp), self->m_tRTPStream.m_ui32LastRTPSAC + self->m_tRTPStream.m_ui32LastRTPLengthInSamples, ui32NbOfSamplesInThisPacket);
+					//printk(KERN_DEBUG "This RTP Ouput packet is not contiguous with the previous one SAC = %d should be %d, last size was: %d\n", swab32(pTRTPPacket->RTPHeader.ui32Timestamp), self->m_tRTPStream.m_ui32LastRTPSAC + self->m_tRTPStream.m_ui32LastRTPLengthInSamples, ui32NbOfSamplesInThisPacket);
 				}
 				self->m_tRTPStream.m_ui32LastRTPSAC = (uint32_t)(ui64CurrentSAC);
 				self->m_tRTPStream.m_ui32LastRTPLengthInSamples = ui32NbOfSamplesInThisPacket;
