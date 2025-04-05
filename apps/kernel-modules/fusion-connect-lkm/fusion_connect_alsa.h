@@ -15,13 +15,11 @@
  * this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef FUSION_AES67_H
-#define FUSION_AES67_H
+#pragma once
 
 #include <sound/asound.h>
 
-// AES67 manager calls into the ALSA driver
-struct fusion_aes67_mgr_ops {
+struct fusion_cn_mgr_ops {
     void *(*get_playback_buffer)(void *alsa_chip, uint64_t stream_handle);
     uint32_t (*get_playback_buffer_size_in_frames)(void *alsa_chip, uint64_t stream_handle);
     void *(*get_capture_buffer)(void *alsa_chip, uint64_t stream_handle);
@@ -33,14 +31,15 @@ struct fusion_aes67_mgr_ops {
     int (*pcm_interrupt)(void *alsa_chip, int direction, uint64_t stream_handle);
     uint32_t (*get_capture_buffer_offset)(void *alsa_chip, uint64_t stream_handle);
     uint32_t (*get_playback_buffer_offset)(void *alsa_chip, uint64_t stream_handle);
-    int (*set_stream_params)(void *alsa_chip, uint64_t stream_handle, unsigned int rate, unsigned int channels, snd_pcm_format_t format);
-    int (*open_substream)(void *alsa_chip, uint64_t stream_handle, int direction);
-    int (*remove_substream)(void *alsa_chip, uint64_t stream_handle); // New callback
+    int (*set_stream_params)(void *alsa_chip, uint64_t stream_handle, unsigned int rate,
+                            unsigned int channels, snd_pcm_format_t format);
+    int (*open_substream)(void *alsa_chip, uint64_t stream_handle, int direction,
+                        unsigned int channels, snd_pcm_format_t format);
+    int (*remove_substream)(void *alsa_chip, uint64_t stream_handle);
 };
 
-// ALSA driver calls into the AES67 manager
-struct fusion_aes67_alsa_ops {
-    int (*register_alsa_driver)(void *mgr, const struct fusion_aes67_mgr_ops *ops, void *alsa_chip);
+struct fusion_cn_alsa_ops {
+    int (*register_alsa_driver)(void *mgr, const struct fusion_cn_mgr_ops *ops, void *alsa_chip);
     int (*get_input_jitter_buffer_offset)(void *mgr, uint64_t stream_handle, uint32_t *offset);
     int (*get_output_jitter_buffer_offset)(void *mgr, uint64_t stream_handle, uint32_t *offset);
     int (*get_rtp_frame_size_per_stream)(void *mgr, uint64_t stream_handle, uint32_t *framesize);
@@ -51,7 +50,5 @@ struct fusion_aes67_alsa_ops {
     int (*stop_interrupts)(void *mgr, uint64_t stream_handle);
 };
 
-int fusion_aes67_card_init(void *mgr, struct fusion_aes67_alsa_ops *callbacks);
-void fusion_aes67_card_exit(void);
-
-#endif // FUSION_AES67_H
+int fusion_cn_card_init(void *mgr, const struct fusion_cn_alsa_ops *callbacks);
+void fusion_cn_card_exit(void);
