@@ -1,38 +1,41 @@
 /*
- * Copyright (C) 2017 Merging Technologies
- * Copyright (C) 2025 Bose Professional
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License as published by the
- * Free Software Foundation; either version 2 of the License, or (at your
- * option) any later version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
- * more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, see <http://www.gnu.org/licenses/>.
- */
+* Copyright (C) 2017 Merging Technologies
+* Copyright (C) 2025 Bose Professional
+* This program is free software; you can redistribute it and/or modify it
+* under the terms of the GNU General Public License as published by the
+* Free Software Foundation; either version 2 of the License, or (at your
+* option) any later version.
+*
+* This program is distributed in the hope that it will be useful, but WITHOUT
+* ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+* FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+* more details.
+*
+* You should have received a copy of the GNU General Public License along with
+* this program; if not, see <http://www.gnu.org/licenses/>.
+*/
 
 #include <linux/skbuff.h>
-#include <linux/netfilter.h>
 #include <linux/netfilter_ipv4.h>
 #include <linux/netdevice.h>
+#include <linux/ip.h>
 #include "fusion_connect_netfilter.h"
-#include "fusion_connect_network.h"
+#include "fusion_connect_rtp.h"
 
-static unsigned int nf_hook_func(void *priv, struct sk_buff *skb, const struct nf_hook_state *state)
+static unsigned int nf_hook_func(void *rtp_mgr, struct sk_buff *skb, const struct nf_hook_state *state)
 {
-    struct fusion_cn_netfilter *nf = priv;
-    struct iphdr *ip_header = iph_hdr(skb);
-    struct fusion_cn_manager *mgr = container_of(nf, struct fusion_cn_manager, netfilter);
+    struct fusion_cn_rtp_manager *mgr = rtp_mgr;
+    struct iphdr *ip_header;
+    struct fusion_cn_rtp_packet *packet;
+    int ret;
+
+    ip_header = ip_hdr(skb);
 
     if (!skb || !ip_header || ip_header->saddr == htonl(INADDR_LOOPBACK)) {
         return NF_ACCEPT;
     }
 
-    if (strcmp(state->in->name, nf->iface_name) != 0) {
+    if (strcmp(state->in->name, mgr->nf->iface_name) != 0) {
         return NF_ACCEPT;
     }
 
@@ -41,14 +44,19 @@ static unsigned int nf_hook_func(void *priv, struct sk_buff *skb, const struct n
         return NF_ACCEPT;
     }
 
-    struct fusion_cn_rtp_packet *packet = (void *)skb_mac_header(skb);
-    int ret = fusion_cn_rtp_process_packet(&mgr->rtp, packet, skb->len + ETH_HLEN);
+    packet = (void *)skb_mac_header(skb);
+    ret = fusion_cn_rtp_process_packet(mgr, packet, skb->len + ETH_HLEN);
     return ret == NF_DROP ? NF_DROP : NF_ACCEPT;
 }
 
-int fusion_cn_nf_init(struct fusion_cn_netfilter *nf)
+int fusion_cn_nf_init(void *rtp_mgr)
 {
-    struct net_device *dev = dev_get_by_name(&init_net, nf->iface_name);
+    struct fusion_cn_rtp_manager *rtp = rtp_mgr;
+    struct fusion_cn_netfilter *nf = rtp->nf;
+    struct net_device *dev;
+    int err;
+
+    dev = dev_get_by_name(&init_net, nf->iface_name);
     if (!dev) {
         pr_err("fusion_cn: Interface %s not found\n", nf->iface_name);
         return -ENODEV;
@@ -63,7 +71,7 @@ int fusion_cn_nf_init(struct fusion_cn_netfilter *nf)
     nf->nf_hook_struct.priority = NF_IP_PRI_FIRST;
     nf->nf_hook_struct.priv = nf;
 
-    int err = nf_register_net_hook(&init_net, &nf->nf_hook_struct);
+    err = nf_register_net_hook(&init_net, &nf->nf_hook_struct);
     if (err) {
         pr_err("fusion_cn: nf_register_net_hook failed: %d\n", err);
     }
@@ -76,7 +84,7 @@ void fusion_cn_nf_destroy(struct fusion_cn_netfilter *nf)
 }
 
 int fusion_cn_nf_create_packet(struct fusion_cn_netfilter *nf, struct sk_buff **skb,
-                                void **data, uint32_t *data_size)
+                            void **data, uint32_t *data_size)
 {
     *skb = alloc_skb(*data_size, GFP_ATOMIC);
     if (!*skb) {
@@ -97,9 +105,10 @@ int fusion_cn_nf_create_packet(struct fusion_cn_netfilter *nf, struct sk_buff **
 
 int fusion_cn_nf_tx_packet(struct fusion_cn_netfilter *nf, struct sk_buff *skb, uint32_t data_size)
 {
-    struct net_device *dev = dev_get_by_name(&init_net, nf->iface_name);
+    struct net_device *dev;
     int ret;
 
+    dev = dev_get_by_name(&init_net, nf->iface_name);
     if (!dev) {
         pr_err("fusion_cn: Interface %s not found\n", nf->iface_name);
         kfree_skb(skb);

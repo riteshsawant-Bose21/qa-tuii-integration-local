@@ -3,13 +3,22 @@
 * ... GPL boilerplate ...
 */
 
+#include <linux/fcntl.h>
+#include <linux/unistd.h>
+#include <linux/fs.h>
 #include <linux/module.h>
-#include <linux/hrtimer.h>
 #include <linux/gpio.h>
 #include <linux/interrupt.h>
+#include <linux/time.h>
+#include <linux/ktime.h>
+#include <linux/math64.h>
 #include <linux/netlink.h>
 #include <net/netlink.h>
 #include "fusion_connect_manager.h"
+
+#ifndef abs64
+#define abs64(x) ((x) >= 0 ? (x) : -(x))
+#endif
 
 static void fusion_cn_mute_buffers(struct fusion_cn_manager *mgr)
 {
@@ -30,10 +39,10 @@ static void fusion_cn_mute_buffers(struct fusion_cn_manager *mgr)
 
             if (buffer && buffer_length) {
                 unsigned long sub_flags;
-                void (*lock)(struct fusion_cn_chip *, uint64_t, unsigned long *) =
+                void (*lock)(void *, uint64_t, unsigned long *) =
                     stream->info.is_source ? mgr->alsa.mgr_callbacks->lock_capture_buffer :
                                             mgr->alsa.mgr_callbacks->lock_playback_buffer;
-                void (*unlock)(struct fusion_cn_chip *, uint64_t, unsigned long *) =
+                void (*unlock)(void *, uint64_t, unsigned long *) =
                     stream->info.is_source ? mgr->alsa.mgr_callbacks->unlock_capture_buffer :
                                             mgr->alsa.mgr_callbacks->unlock_playback_buffer;
 
@@ -44,6 +53,60 @@ static void fusion_cn_mute_buffers(struct fusion_cn_manager *mgr)
         }
     }
     spin_unlock_irqrestore(&mgr->rtp.lock, flags);
+}
+
+static int fusion_cn_mute_stream_buffer(struct fusion_cn_manager *mgr, uint64_t stream_handle)
+{
+    struct fusion_cn_rtp_stream *stream;
+    unsigned long flags;
+    int bucket;
+
+    /* Compute the bucket using the same hash function as fusion_cn_rtp_get_stream */
+    bucket = hash_64(stream_handle, FUSION_CN_RTP_HASH_BITS);
+
+    /* Lock the RTP manager to safely access the stream list */
+    spin_lock_irqsave(&mgr->rtp.lock, flags);
+
+    /* Search for the stream in the computed bucket */
+    hlist_for_each_entry(stream, &mgr->rtp.streams[bucket], hnode) {
+        if (stream->handle == stream_handle) {
+            /* Found the stream, proceed with muting */
+            uint32_t buffer_length = stream->info.is_source ?
+                mgr->alsa.mgr_callbacks->get_capture_buffer_size_in_frames(mgr->alsa.alsa_chip, stream->handle) :
+                mgr->alsa.mgr_callbacks->get_playback_buffer_size_in_frames(mgr->alsa.alsa_chip, stream->handle);
+            int32_t *buffer = stream->info.is_source ?
+                mgr->alsa.mgr_callbacks->get_capture_buffer(mgr->alsa.alsa_chip, stream->handle) :
+                mgr->alsa.mgr_callbacks->get_playback_buffer(mgr->alsa.alsa_chip, stream->handle);
+
+            if (buffer && buffer_length) {
+                unsigned long sub_flags;
+                void (*lock)(void *, uint64_t, unsigned long *) =
+                    stream->info.is_source ? mgr->alsa.mgr_callbacks->lock_capture_buffer :
+                                            mgr->alsa.mgr_callbacks->lock_playback_buffer;
+                void (*unlock)(void *, uint64_t, unsigned long *) =
+                    stream->info.is_source ? mgr->alsa.mgr_callbacks->unlock_capture_buffer :
+                                            mgr->alsa.mgr_callbacks->unlock_playback_buffer;
+
+                lock(mgr->alsa.alsa_chip, stream->handle, &sub_flags);
+                memset(buffer, 0, buffer_length * stream->info.channels * 4);
+                unlock(mgr->alsa.alsa_chip, stream->handle, &sub_flags);
+            }
+
+            spin_unlock_irqrestore(&mgr->rtp.lock, flags);
+
+            if (!buffer || !buffer_length) {
+                printk(KERN_WARNING "fusion_cn: No buffer to mute for stream %llu\n", stream_handle);
+                return -EINVAL;
+            }
+
+            return 0;
+        }
+    }
+
+    /* Stream not found */
+    spin_unlock_irqrestore(&mgr->rtp.lock, flags);
+    printk(KERN_ERR "fusion_cn: Stream %llu not found for muting\n", stream_handle);
+    return -ENOENT;
 }
 
 /* ALSA Callbacks */
@@ -75,8 +138,10 @@ static int alsa_ops_get_output_jitter_buffer_offset(void *mgr, uint64_t stream_h
 static int alsa_ops_get_rtp_frame_size(void *mgr, uint64_t stream_handle, uint32_t *framesize)
 {
     struct fusion_cn_manager *mgr_ptr = mgr;
+    struct fusion_cn_rtp_stream *stream;
+
     if (!framesize) return -EINVAL;
-    struct fusion_cn_rtp_stream *stream = fusion_cn_rtp_get_stream(&mgr_ptr->rtp, stream_handle);
+    stream = fusion_cn_rtp_get_stream(&mgr_ptr->rtp, stream_handle);
     if (!stream) return -ENOENT;
     *framesize = stream->info.samples_per_packet;
     kref_put(&stream->ref, fusion_cn_rtp_stream_release);
@@ -86,8 +151,10 @@ static int alsa_ops_get_rtp_frame_size(void *mgr, uint64_t stream_handle, uint32
 static int alsa_ops_get_jitter_buffer_sample_size(void *mgr, uint64_t stream_handle, uint8_t *sample_size)
 {
     struct fusion_cn_manager *mgr_ptr = mgr;
+    struct fusion_cn_rtp_stream *stream;
+
     if (!sample_size) return -EINVAL;
-    struct fusion_cn_rtp_stream *stream = fusion_cn_rtp_get_stream(&mgr_ptr->rtp, stream_handle);
+    stream = fusion_cn_rtp_get_stream(&mgr_ptr->rtp, stream_handle);
     if (!stream) return -ENOENT;
     *sample_size = snd_pcm_format_width(stream->info.format) / 8; /* Dynamic from SDP */
     kref_put(&stream->ref, fusion_cn_rtp_stream_release);
@@ -113,9 +180,11 @@ static int alsa_ops_get_capture_delay(void *mgr, snd_pcm_sframes_t *delay_in_sam
 static int alsa_ops_start_interrupts(void *mgr, uint64_t stream_handle)
 {
     struct fusion_cn_manager *mgr_ptr = mgr;
-    struct fusion_cn_rtp_stream *stream = fusion_cn_rtp_get_stream(&mgr_ptr->rtp, stream_handle);
-    if (!stream) return -ENOENT;
+    struct fusion_cn_rtp_stream *stream;
     unsigned long flags;
+
+    stream = fusion_cn_rtp_get_stream(&mgr_ptr->rtp, stream_handle);
+    if (!stream) return -ENOENT;
     spin_lock_irqsave(&mgr_ptr->rtp.lock, flags);
     stream->is_running = true;
     spin_unlock_irqrestore(&mgr_ptr->rtp.lock, flags);
@@ -126,9 +195,11 @@ static int alsa_ops_start_interrupts(void *mgr, uint64_t stream_handle)
 static int alsa_ops_stop_interrupts(void *mgr, uint64_t stream_handle)
 {
     struct fusion_cn_manager *mgr_ptr = mgr;
-    struct fusion_cn_rtp_stream *stream = fusion_cn_rtp_get_stream(&mgr_ptr->rtp, stream_handle);
-    if (!stream) return -ENOENT;
+    struct fusion_cn_rtp_stream *stream;
     unsigned long flags;
+
+    stream = fusion_cn_rtp_get_stream(&mgr_ptr->rtp, stream_handle);
+    if (!stream) return -ENOENT;
     spin_lock_irqsave(&mgr_ptr->rtp.lock, flags);
     stream->is_running = false;
     spin_unlock_irqrestore(&mgr_ptr->rtp.lock, flags);
@@ -136,7 +207,18 @@ static int alsa_ops_stop_interrupts(void *mgr, uint64_t stream_handle)
     return 0;
 }
 
-const struct fusion_cn_alsa_ops fusion_cn_alsa_callbacks = {
+static int alsa_ops_set_stream_params(void *mgr, uint64_t stream_handle, unsigned int rate,
+                                      unsigned int channels, snd_pcm_format_t format)
+{
+    struct fusion_cn_manager *mgr_ptr = mgr;
+    if (!mgr_ptr->alsa.mgr_callbacks || !mgr_ptr->alsa.mgr_callbacks->set_stream_params) {
+        return -ENOTSUPP;
+    }
+    return mgr_ptr->alsa.mgr_callbacks->set_stream_params(mgr_ptr->alsa.alsa_chip, stream_handle,
+                                                          rate, channels, format);
+}
+
+const struct fusion_cn_alsa_ops fusion_cn_alsa_ops = {
     .register_alsa_driver = alsa_ops_attach_alsa_driver,
     .get_input_jitter_buffer_offset = alsa_ops_get_input_jitter_buffer_offset,
     .get_output_jitter_buffer_offset = alsa_ops_get_output_jitter_buffer_offset,
@@ -145,72 +227,81 @@ const struct fusion_cn_alsa_ops fusion_cn_alsa_callbacks = {
     .get_playout_delay = alsa_ops_get_playout_delay,
     .get_capture_delay = alsa_ops_get_capture_delay,
     .start_interrupts = alsa_ops_start_interrupts,
-    .stop_interrupts = alsa_ops_stop_interrupts
+    .stop_interrupts = alsa_ops_stop_interrupts,
+    .set_stream_params = alsa_ops_set_stream_params,
 };
 
 /* RTP Callbacks */
-static uint64_t fusion_cn_rtp_get_sac(void *user, uint64_t handle)
+static uint64_t fusion_cn_rtp_get_sac(void *cn_mgr, uint64_t handle)
 {
-    struct fusion_cn_manager *mgr = user;
-    struct timespec ts;
-    clock_gettime(mgr->ptp.phc_clockid, &ts);
+    struct timespec64 ts;
+    ktime_get_ts64(&ts);
     return (uint64_t)(ts.tv_sec * 1000000000ULL + ts.tv_nsec); /* PHC ns */
 }
 
-static void *fusion_cn_rtp_get_buffer(void *user, uint64_t handle, uint32_t channel_id, bool is_source)
+static void *fusion_cn_rtp_get_buffer(void *cn_mgr, uint64_t handle, uint32_t channel_id, bool is_source)
 {
-    struct fusion_cn_manager *mgr = user;
+    struct fusion_cn_manager *mgr = cn_mgr;
     int32_t *buffer = is_source ? mgr->alsa.mgr_callbacks->get_capture_buffer(mgr->alsa.alsa_chip, handle) :
                                 mgr->alsa.mgr_callbacks->get_playback_buffer(mgr->alsa.alsa_chip, handle);
     if (!buffer) return NULL;
-    return buffer + channel_id * snd_pcm_format_width(SND_PCM_FORMAT_S32_LE) / 8; /* Adjust if format varies */
+    return buffer + channel_id * snd_pcm_format_width(SNDRV_PCM_FORMAT_S32_LE) / 8; /* Adjust if format varies */
 }
 
-static uint32_t fusion_cn_rtp_get_buffer_length(void *user, uint64_t handle, bool is_source)
+static uint32_t fusion_cn_rtp_get_buffer_length(void *cn_mgr, uint64_t handle, bool is_source)
 {
-    struct fusion_cn_manager *mgr = user;
+    struct fusion_cn_manager *mgr = cn_mgr;
     return is_source ? mgr->alsa.mgr_callbacks->get_capture_buffer_size_in_frames(mgr->alsa.alsa_chip, handle) :
                     mgr->alsa.mgr_callbacks->get_playback_buffer_size_in_frames(mgr->alsa.alsa_chip, handle);
 }
 
-static uint32_t fusion_cn_rtp_get_buffer_offset(void *user, uint64_t handle, uint64_t sac, bool is_source)
+static uint32_t fusion_cn_rtp_get_buffer_offset(void *cn_mgr, uint64_t handle, uint64_t sac, bool is_source)
 {
-    struct fusion_cn_manager *mgr = user;
+    struct fusion_cn_manager *mgr = cn_mgr;
     return is_source ? mgr->alsa.mgr_callbacks->get_capture_buffer_offset(mgr->alsa.alsa_chip, handle) :
                     mgr->alsa.mgr_callbacks->get_playback_buffer_offset(mgr->alsa.alsa_chip, handle);
 }
 
-static uint32_t fusion_cn_rtp_get_frame_size(void *user, uint64_t handle)
+static uint32_t fusion_cn_rtp_get_frame_size(void *cn_mgr, uint64_t handle)
 {
-    struct fusion_cn_manager *mgr = user;
-    struct fusion_cn_rtp_stream *stream = fusion_cn_rtp_get_stream(&mgr->rtp, handle);
+    struct fusion_cn_manager *mgr = cn_mgr;
+    struct fusion_cn_rtp_stream *stream;
+    uint32_t size;
+
+    stream = fusion_cn_rtp_get_stream(&mgr->rtp, handle);
     if (!stream) return 0;
-    uint32_t size = stream->info.samples_per_packet;
+    size = stream->info.samples_per_packet;
     kref_put(&stream->ref, fusion_cn_rtp_stream_release);
     return size;
 }
 
+
 /* Timing Functions */
 static clockid_t get_phc_clockid(void)
 {
-    int fd = open("/dev/ptp0", O_RDONLY);
-    if (fd < 0) return CLOCK_INVALID; /* Kernel define */
-    clockid_t clkid = ((~(clockid_t)(fd) << 3) | 3);
-    close(fd);
+    struct file *file;
+    clockid_t clkid;
+
+    file = filp_open("/dev/ptp0", O_RDONLY, 0);
+    if (IS_ERR(file)) return -1; /* Invalid clock ID */
+    clkid = ((~(clockid_t)(PTR_ERR(file)) << 3) | 3);
+    filp_close(file, NULL);
     return clkid;
 }
 
 static void audio_frame_process(struct fusion_cn_manager *mgr)
 {
-    struct timespec phc_ts;
-    clock_gettime(mgr->ptp.phc_clockid, &phc_ts);
-    uint64_t current_phc_ns = phc_ts.tv_sec * 1000000000ULL + phc_ts.tv_nsec;
-
-    fusion_cn_rtp_prepare_buffers(&mgr->rtp);
-
+    struct timespec64 phc_ts;
+    uint64_t current_phc_ns;
     struct fusion_cn_rtp_stream *stream;
     unsigned long flags;
     int i;
+
+    ktime_get_ts64(&phc_ts);
+    current_phc_ns = phc_ts.tv_sec * 1000000000ULL + phc_ts.tv_nsec;
+
+    fusion_cn_rtp_prepare_buffers(&mgr->rtp);
+
     spin_lock_irqsave(&mgr->rtp.lock, flags);
     for (i = 0; i < FUSION_CN_RTP_HASH_BITS; i++) {
         hlist_for_each_entry(stream, &mgr->rtp.streams[i], hnode) {
@@ -218,14 +309,14 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
 
             if (current_phc_ns >= stream->next_action_time) {
                 if (stream->info.is_source) {
-                    mgr->alsa.mgr_callbacks->pcm_interrupt(mgr->alsa.alsa_chip, 0, stream->handle);
+                    mgr->alsa.mgr_callbacks->pcm_interrupt(mgr->alsa.alsa_chip, SNDRV_PCM_STREAM_CAPTURE, stream->handle);
                     fusion_cn_rtp_send_packets(&mgr->rtp, stream, current_phc_ns);
                     stream->next_action_time = stream->last_sac + (stream->info.samples_per_packet * 1000000000ULL / stream->info.sample_rate);
                 } else {
                     uint64_t playout_ts = stream->last_sac + (stream->info.playout_delay ? stream->info.playout_delay : mgr->state.playout_delay);
                     uint64_t current_samples = (current_phc_ns * stream->info.sample_rate) / 1000000000ULL;
                     if (current_samples >= playout_ts) {
-                        mgr->alsa.mgr_callbacks->pcm_interrupt(mgr->alsa.alsa_chip, 1, stream->handle);
+                        mgr->alsa.mgr_callbacks->pcm_interrupt(mgr->alsa.alsa_chip, SNDRV_PCM_STREAM_PLAYBACK, stream->handle);
                         stream->next_action_time += stream->info.samples_per_packet * 1000000000ULL / stream->info.sample_rate;
                     }
                 }
@@ -241,25 +332,30 @@ static enum hrtimer_restart audio_frame_tic_hrtimer(struct hrtimer *timer)
     static uint64_t last_check;
     static int64_t baseline_drift_ns;
     static bool first_check = true;
+    ktime_t base_interval;
+    uint64_t now_ns;
+    struct timespec64 phc_ts, mono_ts;
+    int64_t drift_ns;
+    int64_t relative_drift_ns;
+    int64_t adjustment_per_tick;
 
     audio_frame_process(mgr);
 
-    ktime_t base_interval = ns_to_ktime(100000); /* 100µs */
-    uint64_t now_ns = ktime_to_ns(ktime_get());
+    base_interval = ns_to_ktime(100000); /* 100µs */
+    now_ns = ktime_to_ns(ktime_get());
     if (now_ns - last_check > NSEC_PER_SEC) { /* 1s check */
-        struct timespec phc_ts, mono_ts;
-        clock_gettime(mgr->ptp.phc_clockid, &phc_ts);
-        clock_gettime(CLOCK_MONOTONIC, &mono_ts);
-        int64_t drift_ns = (phc_ts.tv_sec * NSEC_PER_SEC + phc_ts.tv_nsec) -
-                        (mono_ts.tv_sec * NSEC_PER_SEC + mono_ts.tv_nsec);
+        ktime_get_ts64(&phc_ts);
+        ktime_get_raw_ts64(&mono_ts);
+        drift_ns = (phc_ts.tv_sec * NSEC_PER_SEC + phc_ts.tv_nsec) -
+                   (mono_ts.tv_sec * NSEC_PER_SEC + mono_ts.tv_nsec);
 
-        if (first_check || llabs(drift_ns - baseline_drift_ns) > NSEC_PER_SEC) {
+        if (first_check || abs64(drift_ns - baseline_drift_ns) > NSEC_PER_SEC) {
             baseline_drift_ns = drift_ns;
             first_check = false;
         } else {
-            int64_t relative_drift_ns = drift_ns - baseline_drift_ns;
-            if (llabs(relative_drift_ns) > 5000) { /* 5µs */
-                int64_t adjustment_per_tick = relative_drift_ns / 10000;
+            relative_drift_ns = drift_ns - baseline_drift_ns;
+            if (abs64(relative_drift_ns) > 5000) { /* 5µs */
+                adjustment_per_tick = relative_drift_ns / 10000;
                 base_interval = ktime_add_ns(base_interval, adjustment_per_tick);
             }
         }
@@ -287,31 +383,26 @@ static int fusion_cn_state_init(struct fusion_cn_manager *mgr)
     return 0;
 }
 
-static int fusion_cn_rtp_init(struct fusion_cn_manager *mgr)
-{
-    struct fusion_cn_rtp_ops ops = {
-        .get_sac = fusion_cn_rtp_get_sac,
-        .get_buffer = fusion_cn_rtp_get_buffer,
-        .get_buffer_length = fusion_cn_rtp_get_buffer_length,
-        .get_buffer_offset = fusion_cn_rtp_get_buffer_offset,
-        .get_frame_size = fusion_cn_rtp_get_frame_size,
-        .user = mgr
-    };
-    return fusion_cn_rtp_init(&mgr->rtp, &mgr->netfilter, &ops, mgr);
-}
+static struct fusion_cn_rtp_ops rtp_ops = {
+    .get_sac = fusion_cn_rtp_get_sac,
+    .get_buffer = fusion_cn_rtp_get_buffer,
+    .get_buffer_length = fusion_cn_rtp_get_buffer_length,
+    .get_buffer_offset = fusion_cn_rtp_get_buffer_offset,
+    .get_frame_size = fusion_cn_rtp_get_frame_size,
+};
 
 static int fusion_cn_alsa_init(struct fusion_cn_manager *mgr)
 {
     mgr->alsa.alsa_chip = NULL;
     mgr->alsa.mgr_callbacks = NULL;
-    mgr->alsa.alsa_callbacks = &fusion_cn_alsa_callbacks;
-    return fusion_cn_card_init(mgr, &fusion_cn_alsa_callbacks);
+    mgr->alsa.alsa_callbacks = &fusion_cn_alsa_ops;
+    return fusion_cn_alsa_init_(mgr, &fusion_cn_alsa_ops);
 }
 
 static int fusion_cn_ptp_init(struct fusion_cn_manager *mgr)
 {
     mgr->ptp.phc_clockid = get_phc_clockid();
-    if (mgr->ptp.phc_clockid == CLOCK_INVALID) {
+    if (mgr->ptp.phc_clockid == -1) {
         printk(KERN_ERR "fusion_cn: Failed to get PHC clock ID\n");
         return -EINVAL;
     }
@@ -353,6 +444,9 @@ static int fusion_cn_ptp_init(struct fusion_cn_manager *mgr)
     return 0;
 }
 
+// proto for nl_init
+static void fusion_cn_nl_recv_msg(struct sk_buff *);
+
 static int fusion_cn_nl_init(struct fusion_cn_manager *mgr)
 {
     struct netlink_kernel_cfg cfg = { .input = fusion_cn_nl_recv_msg };
@@ -362,7 +456,7 @@ static int fusion_cn_nl_init(struct fusion_cn_manager *mgr)
         printk(KERN_ERR "fusion_cn: Failed to create netlink socket\n");
         return -ENOMEM;
     }
-    mgr->netlink.nl_sock->sk_private_data = mgr;
+    mgr->netlink.nl_sock->sk_user_data = mgr;
     return 0;
 }
 
@@ -379,8 +473,8 @@ int fusion_cn_mgr_init(struct fusion_cn_manager *mgr)
     if (!mgr) return -EINVAL;
 
     if ((err = fusion_cn_state_init(mgr)) < 0) return err;
-    if ((err = fusion_cn_nf_init(&mgr->netfilter)) < 0) return err;
-    if ((err = fusion_cn_rtp_init(mgr)) < 0) goto err_nf;
+    if ((err = fusion_cn_nf_init(&mgr->rtp)) < 0) return err;
+    if ((err = fusion_cn_rtp_init(&mgr->rtp, &mgr->netfilter, &rtp_ops, mgr)) < 0) goto err_nf;    
     if ((err = fusion_cn_alsa_init(mgr)) < 0) goto err_rtp;
     if ((err = fusion_cn_nl_init(mgr)) < 0) goto err_alsa;
     if ((err = fusion_cn_ptp_init(mgr)) < 0) goto err_nl;
@@ -462,32 +556,50 @@ static int handle_stop(struct fusion_cn_manager *mgr, struct fusion_cn_ctrl_msg 
 }
 
 static int handle_start_io(struct fusion_cn_manager *mgr, struct fusion_cn_ctrl_msg *msg,
-                        struct fusion_cn_ctrl_msg *reply)
+                           struct fusion_cn_ctrl_msg *reply)
 {
+    uint64_t stream_handle;
+
     if (msg->data_size != sizeof(uint64_t)) return reply->err = -EINVAL;
-    uint64_t stream_handle = *(uint64_t *)msg->data;
+    stream_handle = *(uint64_t *)msg->data;
     printk(KERN_INFO "fusion_cn: Starting IO for stream %llu\n", stream_handle);
+
+    /* Mute all buffers before starting I/O to prevent pops */
+    fusion_cn_mute_buffers(mgr);
+
     reply->err = alsa_ops_start_interrupts(mgr, stream_handle);
     return 0;
 }
 
 static int handle_stop_io(struct fusion_cn_manager *mgr, struct fusion_cn_ctrl_msg *msg,
-                        struct fusion_cn_ctrl_msg *reply)
+                          struct fusion_cn_ctrl_msg *reply)
 {
+    uint64_t stream_handle;
+
     if (msg->data_size != sizeof(uint64_t)) return reply->err = -EINVAL;
-    uint64_t stream_handle = *(uint64_t *)msg->data;
+    stream_handle = *(uint64_t *)msg->data;
     printk(KERN_INFO "fusion_cn: Stopping IO for stream %llu\n", stream_handle);
+
+    /* Mute all buffers before stopping I/O to prevent pops */
+    fusion_cn_mute_buffers(mgr);
+
     reply->err = alsa_ops_stop_interrupts(mgr, stream_handle);
     return 0;
 }
 
 static int handle_add_rtp_stream(struct fusion_cn_manager *mgr, struct fusion_cn_ctrl_msg *msg,
-                                struct fusion_cn_ctrl_msg *reply)
+                                 struct fusion_cn_ctrl_msg *reply)
 {
+    struct fusion_cn_stream_config *config;
+    bool restart_required;
+    struct fusion_cn_rtp_stream_info rtp_info;
+    uint64_t handle;
+    int ret;
+
     if (msg->data_size != sizeof(struct fusion_cn_stream_config)) return reply->err = -EINVAL;
 
-    struct fusion_cn_stream_config *config = (struct fusion_cn_stream_config *)msg->data;
-    bool restart_required = mgr->state.is_started;
+    config = (struct fusion_cn_stream_config *)msg->data;
+    restart_required = mgr->state.is_started;
 
     if (config->sample_rate == 0 || config->channels == 0 || config->samples_per_packet == 0 ||
         config->stream_handle == 0) {
@@ -496,22 +608,19 @@ static int handle_add_rtp_stream(struct fusion_cn_manager *mgr, struct fusion_cn
 
     if (restart_required) fusion_cn_mgr_stop(mgr);
 
-    struct fusion_cn_rtp_stream_info rtp_info = {
-        .sample_rate = config->sample_rate,
-        .format = config->format,
-        .channels = config->channels,
-        .samples_per_packet = config->samples_per_packet,
-        .dest_ip = config->dest_ip,
-        .dest_port = config->dest_port,
-        .rtcp_dest_port = config->rtcp_dest_port,
-        .payload_type = config->payload_type,
-        .playout_delay = config->playout_delay,
-        .is_source = config->is_source,
-    };
+    rtp_info.sample_rate = config->sample_rate;
+    rtp_info.format = config->format;
+    rtp_info.channels = config->channels;
+    rtp_info.samples_per_packet = config->samples_per_packet;
+    rtp_info.dest_ip = config->dest_ip;
+    rtp_info.dest_port = config->dest_port;
+    rtp_info.rtcp_dest_port = config->rtcp_dest_port;
+    rtp_info.payload_type = config->payload_type;
+    rtp_info.playout_delay = config->playout_delay;
+    rtp_info.is_source = config->is_source;
     strscpy(rtp_info.name, config->name, MAX_STREAM_NAME_SIZE); /* Safer than strlcpy */
 
-    uint64_t handle;
-    int ret = fusion_cn_rtp_add_stream(&mgr->rtp, &rtp_info, &handle);
+    ret = fusion_cn_rtp_add_stream(&mgr->rtp, &rtp_info, &handle);
     if (ret < 0) {
         if (restart_required) fusion_cn_mgr_start(mgr);
         return reply->err = ret;
@@ -553,12 +662,16 @@ static int handle_add_rtp_stream(struct fusion_cn_manager *mgr, struct fusion_cn
 static int handle_remove_rtp_stream(struct fusion_cn_manager *mgr, struct fusion_cn_ctrl_msg *msg,
                                     struct fusion_cn_ctrl_msg *reply)
 {
+    uint64_t handle;
+    bool restart_required;
+    int ret;
+
     if (msg->data_size != sizeof(uint64_t)) return reply->err = -EINVAL;
-    uint64_t handle = *(uint64_t *)msg->data;
-    bool restart_required = mgr->state.is_started;
+    handle = *(uint64_t *)msg->data;
+    restart_required = mgr->state.is_started;
 
     if (restart_required) fusion_cn_mgr_stop(mgr);
-    int ret = fusion_cn_rtp_remove_stream(&mgr->rtp, handle);
+    ret = fusion_cn_rtp_remove_stream(&mgr->rtp, handle);
     if (ret < 0) {
         if (restart_required) fusion_cn_mgr_start(mgr);
         return reply->err = ret;
@@ -579,37 +692,49 @@ static int handle_remove_rtp_stream(struct fusion_cn_manager *mgr, struct fusion
 static int handle_update_rtp_stream(struct fusion_cn_manager *mgr, struct fusion_cn_ctrl_msg *msg,
                                     struct fusion_cn_ctrl_msg *reply)
 {
-    if (msg->data_size != sizeof(struct fusion_cn_stream_config)) return reply->err = -EINVAL;
-    struct fusion_cn_stream_config *config = (struct fusion_cn_stream_config *)msg->data;
-    bool restart_required = mgr->state.is_started;
+    struct fusion_cn_stream_config *config;
+    bool restart_required;
+    struct fusion_cn_rtp_stream *stream;
+    struct fusion_cn_rtp_stream_info rtp_info;
+    unsigned long flags;
+    int ret;
 
-    struct fusion_cn_rtp_stream *stream = fusion_cn_rtp_get_stream(&mgr->rtp, config->stream_handle);
+    if (msg->data_size != sizeof(struct fusion_cn_stream_config)) return reply->err = -EINVAL;
+    config = (struct fusion_cn_stream_config *)msg->data;
+    restart_required = mgr->state.is_started;
+
+    stream = fusion_cn_rtp_get_stream(&mgr->rtp, config->stream_handle);
     if (!stream) return reply->err = -ENOENT;
 
     if (restart_required) fusion_cn_mgr_stop(mgr);
 
-    struct fusion_cn_rtp_stream_info rtp_info = {
-        .sample_rate = config->sample_rate,
-        .format = config->format,
-        .channels = config->channels,
-        .samples_per_packet = config->samples_per_packet,
-        .dest_ip = config->dest_ip,
-        .dest_port = config->dest_port,
-        .rtcp_dest_port = config->rtcp_dest_port,
-        .payload_type = config->payload_type,
-        .playout_delay = config->playout_delay,
-        .is_source = config->is_source,
-    };
+    /* Mute the specific stream’s buffer before updating to prevent audio artifacts */
+    ret = fusion_cn_mute_stream_buffer(mgr, config->stream_handle);
+    if (ret < 0) {
+        printk(KERN_WARNING "fusion_cn: Failed to mute stream %llu during update: %d\n",
+               config->stream_handle, ret);
+        /* Proceed with the update despite the failure to mute */
+    }
+
+    rtp_info.sample_rate = config->sample_rate;
+    rtp_info.format = config->format;
+    rtp_info.channels = config->channels;
+    rtp_info.samples_per_packet = config->samples_per_packet;
+    rtp_info.dest_ip = config->dest_ip;
+    rtp_info.dest_port = config->dest_port;
+    rtp_info.rtcp_dest_port = config->rtcp_dest_port;
+    rtp_info.payload_type = config->payload_type;
+    rtp_info.playout_delay = config->playout_delay;
+    rtp_info.is_source = config->is_source;
     strscpy(rtp_info.name, config->name, MAX_STREAM_NAME_SIZE);
 
-    unsigned long flags;
     spin_lock_irqsave(&mgr->rtp.lock, flags);
     stream->info = rtp_info; /* Update in-place */
     spin_unlock_irqrestore(&mgr->rtp.lock, flags);
 
     if (mgr->alsa.mgr_callbacks && mgr->alsa.mgr_callbacks->set_stream_params) {
-        int ret = mgr->alsa.mgr_callbacks->set_stream_params(mgr->alsa.alsa_chip, config->stream_handle,
-                                                            config->sample_rate, config->channels, config->format);
+        ret = mgr->alsa.mgr_callbacks->set_stream_params(mgr->alsa.alsa_chip, config->stream_handle,
+                                                        config->sample_rate, config->channels, config->format);
         if (ret < 0) {
             if (restart_required) fusion_cn_mgr_start(mgr);
             kref_put(&stream->ref, fusion_cn_rtp_stream_release);
@@ -626,29 +751,13 @@ static int handle_update_rtp_stream(struct fusion_cn_manager *mgr, struct fusion
     return 0;
 }
 
-static int handle_get_rtp_stream_status(struct fusion_cn_manager *mgr, struct fusion_cn_ctrl_msg *msg,
-                                        struct fusion_cn_ctrl_msg *reply)
-{
-    if (msg->data_size != sizeof(uint64_t)) return reply->err = -EINVAL;
-    uint64_t handle = *(uint64_t *)msg->data;
-    struct fusion_cn_rtp_stream *stream = fusion_cn_rtp_get_stream(&mgr->rtp, handle);
-    if (!stream) return reply->err = -ENOENT;
-
-    /* Placeholder: Add status logic if needed */
-    struct fusion_cn_rtp_stream_status status = { .flags = stream->is_running ? 1 : 0 };
-    reply->err = 0;
-    reply->data_size = sizeof(status);
-    reply->data = kmemdup(&status, sizeof(status), GFP_KERNEL);
-    if (!reply->data) reply->err = -ENOMEM;
-    kref_put(&stream->ref, fusion_cn_rtp_stream_release);
-    return 0;
-}
-
 static int handle_set_playout_delay(struct fusion_cn_manager *mgr, struct fusion_cn_ctrl_msg *msg,
                                     struct fusion_cn_ctrl_msg *reply)
 {
+    int32_t delay;
+
     if (msg->data_size != sizeof(int32_t)) return reply->err = -EINVAL;
-    int32_t delay = *(int32_t *)msg->data;
+    delay = *(int32_t *)msg->data;
     mgr->state.playout_delay = delay;
     return reply->err = 0;
 }
@@ -656,8 +765,10 @@ static int handle_set_playout_delay(struct fusion_cn_manager *mgr, struct fusion
 static int handle_set_capture_delay(struct fusion_cn_manager *mgr, struct fusion_cn_ctrl_msg *msg,
                                     struct fusion_cn_ctrl_msg *reply)
 {
+    int32_t delay;
+
     if (msg->data_size != sizeof(int32_t)) return reply->err = -EINVAL;
-    int32_t delay = *(int32_t *)msg->data;
+    delay = *(int32_t *)msg->data;
     mgr->state.capture_delay = delay;
     return reply->err = 0;
 }
@@ -670,29 +781,12 @@ static const struct message_handler_entry message_handlers[] = {
     { FUSION_CN_CTRL_CMD_ADD_RTP_STREAM, handle_add_rtp_stream },
     { FUSION_CN_CTRL_CMD_REMOVE_RTP_STREAM, handle_remove_rtp_stream },
     { FUSION_CN_CTRL_CMD_UPDATE_RTP_STREAM, handle_update_rtp_stream },
-    { FUSION_CN_CTRL_CMD_GET_RTP_STREAM_STATUS, handle_get_rtp_stream_status },
     { FUSION_CN_CTRL_CMD_SET_PLAYOUT_DELAY, handle_set_playout_delay },
     { FUSION_CN_CTRL_CMD_SET_CAPTURE_DELAY, handle_set_capture_delay },
     { 0, NULL }
 };
 
 /* Netlink Functions */
-static void fusion_cn_nl_recv_msg(struct sk_buff *skb)
-{
-    struct fusion_cn_manager *mgr = nl_sk(skb->sk)->sk_private_data;
-    struct nlmsghdr *nlh = nlmsg_hdr(skb);
-    struct fusion_cn_ctrl_msg msg_rcv;
-
-    if (nlh->nlmsg_len < NLMSG_HDRLEN + sizeof(msg_rcv)) {
-        printk(KERN_ERR "fusion_cn: Netlink message too short\n");
-        return;
-    }
-
-    memcpy(&msg_rcv, nlmsg_data(nlh), sizeof(msg_rcv));
-    msg_rcv.pid = nlh->nlmsg_pid;
-    fusion_cn_process_nl_msg(mgr, &msg_rcv);
-}
-
 static void fusion_cn_nl_send_msg(struct fusion_cn_manager *mgr, struct fusion_cn_ctrl_msg *reply)
 {
     struct sk_buff *skb;
@@ -736,9 +830,11 @@ static void fusion_cn_process_nl_msg(struct fusion_cn_manager *mgr, struct fusio
         .data = NULL,
         .pid = msg_rcv ? msg_rcv->pid : 0
     };
+    const struct message_handler_entry *entry;
+
     if (!mgr || !msg_rcv) return;
 
-    const struct message_handler_entry *entry = message_handlers;
+    entry = message_handlers;
     while (entry->cmd) {
         if (entry->cmd == msg_rcv->cmd) {
             entry->handler(mgr, msg_rcv, &msg_reply);
@@ -747,4 +843,23 @@ static void fusion_cn_process_nl_msg(struct fusion_cn_manager *mgr, struct fusio
         entry++;
     }
     fusion_cn_nl_send_msg(mgr, &msg_reply);
+}
+
+static void fusion_cn_nl_recv_msg(struct sk_buff *skb)
+{
+    struct fusion_cn_manager *mgr = skb->sk->sk_user_data;
+    struct nlmsghdr *nlh;
+    struct fusion_cn_ctrl_msg msg_rcv;
+
+    if (!mgr) return;
+
+    nlh = nlmsg_hdr(skb);
+    if (nlh->nlmsg_len < NLMSG_HDRLEN + sizeof(msg_rcv)) {
+        printk(KERN_ERR "fusion_cn: Netlink message too short\n");
+        return;
+    }
+
+    memcpy(&msg_rcv, nlmsg_data(nlh), sizeof(msg_rcv));
+    msg_rcv.pid = nlh->nlmsg_pid;
+    fusion_cn_process_nl_msg(mgr, &msg_rcv);
 }

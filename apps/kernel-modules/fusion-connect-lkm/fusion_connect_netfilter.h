@@ -17,16 +17,17 @@
 
 #pragma once
 
-#include "fusion_connect_manager.h"
+#include <linux/netfilter.h>
 
 struct fusion_cn_netfilter {
+    volatile bool is_enabled;
     spinlock_t lock;
     struct nf_hook_ops nf_hook_struct;
-    char iface_name[IFNAMSIZ];
+    char iface_name[16];
 };
 
 /* Init/Destroy */
-int fusion_cn_nf_init(struct fusion_cn_netfilter *nf);
+int fusion_cn_nf_init(void *rtp);
 void fusion_cn_nf_destroy(struct fusion_cn_netfilter *nf);
 
 /* Packet Ops */

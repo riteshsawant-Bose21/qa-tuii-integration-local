@@ -31,12 +31,13 @@
  
  static int __init fusion_cn_init(void)
  {
-    strscpy(mgr.netfilter.iface_name, eth_iface, IFNAMSIZ);
-    mgr.ptp.gpio_pin = gpio_pin;
-    mgr.ptp.ptp_timing_mode = (gpio_pin >= 0) ? TIMING_GPIO_INTERRUPT : TIMING_HRTIMER;
-    int ret = fusion_cn_mgr_init(&mgr);
-    if (ret) pr_err("fusion_cn: Module init failed: %d\n", ret);
-    return ret;
+   int ret;
+   strscpy(mgr.netfilter.iface_name, eth_iface, IFNAMSIZ);
+   mgr.ptp.gpio_pin = gpio_pin;
+   mgr.ptp.ptp_timing_mode = (gpio_pin >= 0) ? TIMING_GPIO_INTERRUPT : TIMING_HRTIMER;
+   ret = fusion_cn_mgr_init(&mgr);
+   if (ret) pr_err("fusion_cn: Module init failed: %d\n", ret);
+   return ret;
  }
  
  static void __exit fusion_cn_exit(void)

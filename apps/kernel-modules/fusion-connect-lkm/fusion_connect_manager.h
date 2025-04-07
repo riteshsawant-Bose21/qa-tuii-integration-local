@@ -24,6 +24,7 @@
 #include <sound/pcm.h>
 #include "fusion_connect_alsa.h"
 #include "fusion_connect_rtp.h"
+#include "fusion_connect_netfilter.h"
 
 enum ptp_timing_mode {
     TIMING_HRTIMER,
@@ -31,16 +32,16 @@ enum ptp_timing_mode {
 };
 
 enum fusion_cn_ctrl_cmd {
-    FUSION_CN_CTRL_CMD_start,
-    FUSION_CN_CTRL_CMD_stop,
-    FUSION_CN_CTRL_CMD_start_io,
-    FUSION_CN_CTRL_CMD_stop_io,
-    FUSION_CN_CTRL_CMD_add_rtp_stream,
-    FUSION_CN_CTRL_CMD_remove_rtp_stream,
-    FUSION_CN_CTRL_CMD_update_rtp_stream,
-    FUSION_CN_CTRL_CMD_get_rtp_stream_status,
-    FUSION_CN_CTRL_CMD_set_playout_delay,
-    FUSION_CN_CTRL_CMD_set_capture_delay,
+    FUSION_CN_CTRL_CMD_START = 1,
+    FUSION_CN_CTRL_CMD_STOP,
+    FUSION_CN_CTRL_CMD_START_IO,
+    FUSION_CN_CTRL_CMD_STOP_IO,
+    FUSION_CN_CTRL_CMD_ADD_RTP_STREAM,
+    FUSION_CN_CTRL_CMD_REMOVE_RTP_STREAM,
+    FUSION_CN_CTRL_CMD_UPDATE_RTP_STREAM,
+    FUSION_CN_CTRL_CMD_GET_RTP_STREAM_STATUS,
+    FUSION_CN_CTRL_CMD_SET_PLAYOUT_DELAY,
+    FUSION_CN_CTRL_CMD_SET_CAPTURE_DELAY,
 };
 
 #define MAX_STREAM_NAME_SIZE 64
@@ -82,13 +83,6 @@ struct fusion_cn_ptp {
     int gpio_pin;
 };
 
-struct fusion_cn_netfilter {
-    volatile bool is_enabled;
-    spinlock_t lock;
-    struct nf_hook_ops nf_hook_struct;
-    char iface_name[16];
-};
-
 struct fusion_cn_netlink {
     struct sock *nl_sock;
     int nl_family;
@@ -121,6 +115,6 @@ void fusion_cn_mgr_destroy(struct fusion_cn_manager *mgr);
 bool fusion_cn_mgr_start(struct fusion_cn_manager *mgr);
 bool fusion_cn_mgr_stop(struct fusion_cn_manager *mgr);
 
-extern const struct fusion_cn_alsa_ops fusion_cn_alsa_callbacks;
+extern const struct fusion_cn_alsa_ops fusion_cn_alsa_ops;
 
 #endif // FUSION_CN_MANAGER_H

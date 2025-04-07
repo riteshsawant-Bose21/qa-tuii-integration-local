@@ -12,6 +12,7 @@
 #include <linux/ip.h>
 #include <linux/udp.h>
 #include <linux/swab.h>
+#include <sound/asound.h>
 #include "fusion_connect_netfilter.h"
 
 #define FUSION_CN_RTP_MAX_STREAMS 64
@@ -54,11 +55,11 @@ struct fusion_cn_rtp_stream_info {
 };
 
 struct fusion_cn_rtp_ops {
-    uint64_t (*get_sac)(void *user, uint64_t handle);
-    void *(*get_buffer)(void *user, uint64_t handle, uint32_t channel_id, bool is_source);
-    uint32_t (*get_buffer_length)(void *user, uint64_t handle, bool is_source);
-    uint32_t (*get_buffer_offset)(void *user, uint64_t handle, uint64_t sac, bool is_source);
-    uint32_t (*get_frame_size)(void *user, uint64_t handle);
+    uint64_t (*get_sac)(void *cn_mgr, uint64_t handle);
+    void *(*get_buffer)(void *cn_mgr, uint64_t handle, uint32_t channel_id, bool is_source);
+    uint32_t (*get_buffer_length)(void *cn_mgr, uint64_t handle, bool is_source);
+    uint32_t (*get_buffer_offset)(void *cn_mgr, uint64_t handle, uint64_t sac, bool is_source);
+    uint32_t (*get_frame_size)(void *cn_mgr, uint64_t handle);
 };
 
 struct fusion_cn_rtp_header {
@@ -129,22 +130,23 @@ struct fusion_cn_rtp_manager {
     spinlock_t lock;
     struct fusion_cn_netfilter *nf;
     struct fusion_cn_rtp_ops *ops;
-    void *ops_user;
+    void *cn_mgr;
 };
 
 /* Function prototypes */
-int fusion_cn_rtp_init(struct fusion_cn_rtp_manager *mgr, struct fusion_cn_netfilter *nf,
-                        struct fusion_cn_rtp_ops *ops, void *ops_user);
-void fusion_cn_rtp_destroy(struct fusion_cn_rtp_manager *mgr);
-int fusion_cn_rtp_add_stream(struct fusion_cn_rtp_manager *mgr,
+int fusion_cn_rtp_init(struct fusion_cn_rtp_manager *rtp_mgr, struct fusion_cn_netfilter *nf,
+                        struct fusion_cn_rtp_ops *ops, void *cn_mgr);
+void fusion_cn_rtp_destroy(struct fusion_cn_rtp_manager *rtp_mgr);
+int fusion_cn_rtp_add_stream(struct fusion_cn_rtp_manager *rtp_mgr,
                                 struct fusion_cn_rtp_stream_info *info, uint64_t *handle);
-int fusion_cn_rtp_remove_stream(struct fusion_cn_rtp_manager *mgr, uint64_t handle);
-int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *mgr,
+int fusion_cn_rtp_remove_stream(struct fusion_cn_rtp_manager *rtp_mgr, uint64_t handle);
+int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr,
                                     struct fusion_cn_rtp_packet *packet, uint32_t size);
-void fusion_cn_rtp_prepare_buffers(struct fusion_cn_rtp_manager *mgr);
-void fusion_cn_rtp_send_packets(struct fusion_cn_rtp_manager *mgr,
+void fusion_cn_rtp_prepare_buffers(struct fusion_cn_rtp_manager *rtp_mgr);
+void fusion_cn_rtp_send_packets(struct fusion_cn_rtp_manager *rtp_mgr,
                                 struct fusion_cn_rtp_stream *stream, uint64_t current_sac);
-struct fusion_cn_rtp_stream *fusion_cn_rtp_get_stream(struct fusion_cn_rtp_manager *mgr, uint64_t handle);
+struct fusion_cn_rtp_stream *fusion_cn_rtp_get_stream(struct fusion_cn_rtp_manager *rtp_mgr, uint64_t handle);
+void fusion_cn_rtp_stream_release(struct kref *kref);
 
 /* Checksum helpers */
 uint16_t fusion_cn_rtp_compute_cksum(const void *data, uint16_t len);

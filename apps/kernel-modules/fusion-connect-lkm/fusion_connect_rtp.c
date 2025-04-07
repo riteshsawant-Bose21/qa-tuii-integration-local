@@ -42,34 +42,34 @@ static void fusion_cn_rtp_stream_release(struct kref *ref)
 	kfree(stream);
 }
 
-int fusion_cn_rtp_init(struct fusion_cn_rtp_manager *mgr, struct fusion_cn_netfilter *nf,
-						struct fusion_cn_rtp_ops *ops, void *ops_user)
+int fusion_cn_rtp_init(struct fusion_cn_rtp_manager *rtp_mgr, struct fusion_cn_netfilter *nf,
+						struct fusion_cn_rtp_ops *ops, void *cn_mgr)
 {
 	int i;
-	mgr->nf = nf;
-	mgr->ops = ops;
-	mgr->ops_user = ops_user;
-	spin_lock_init(&mgr->lock);
+	rtp_mgr->nf = nf;
+	rtp_mgr->ops = ops;
+	rtp_mgr->cn_mgr = cn_mgr;
+	spin_lock_init(&rtp_mgr->lock);
 	for (i = 0; i < FUSION_CN_RTP_HASH_BITS; i++) {
-		INIT_HLIST_HEAD(&mgr->streams[i]);
+		INIT_HLIST_HEAD(&rtp_mgr->streams[i]);
 	}
 	return 0;
 }
 
-void fusion_cn_rtp_destroy(struct fusion_cn_rtp_manager *mgr)
+void fusion_cn_rtp_destroy(struct fusion_cn_rtp_manager *rtp_mgr)
 {
 	int i;
 	unsigned long flags;
-	spin_lock_irqsave(&mgr->lock, flags);
+	spin_lock_irqsave(&rtp_mgr->lock, flags);
 	for (i = 0; i < FUSION_CN_RTP_HASH_BITS; i++) {
 		struct fusion_cn_rtp_stream *stream;
 		struct hlist_node *tmp;
-		hlist_for_each_entry_safe(stream, tmp, &mgr->streams[i], hnode) {
+		hlist_for_each_entry_safe(stream, tmp, &rtp_mgr->streams[i], hnode) {
 			hlist_del(&stream->hnode);
 			kref_put(&stream->ref, fusion_cn_rtp_stream_release);
 		}
 	}
-	spin_unlock_irqrestore(&mgr->lock, flags);
+	spin_unlock_irqrestore(&rtp_mgr->lock, flags);
 }
 
 bool fusion_cn_rtp_is_ip_mcast(uint32_t ip)
@@ -89,7 +89,7 @@ void fusion_cn_rtp_set_multicast_mac(uint32_t ip, uint8_t mac[ETH_ALEN])
     mac[5] = ip_host & 0xFF;
 }
 
-int fusion_cn_rtp_add_stream(struct fusion_cn_rtp_manager *mgr,
+int fusion_cn_rtp_add_stream(struct fusion_cn_rtp_manager *rtp_mgr,
 								struct fusion_cn_rtp_stream_info *info, uint64_t *handle)
 {
 	struct fusion_cn_rtp_stream *stream;
@@ -121,54 +121,54 @@ int fusion_cn_rtp_add_stream(struct fusion_cn_rtp_manager *mgr,
 	stream->rtp_packet_base.rtp.version = 0x80; /* Version 2, no padding/extension */
 	stream->rtp_packet_base.rtp.payload_type = info->payload_type;
 
-	spin_lock_irqsave(&mgr->lock, flags);
-	hlist_add_head(&stream->hnode, &mgr->streams[HASH_KEY(stream->handle)]);
-	spin_unlock_irqrestore(&mgr->lock, flags);
+	spin_lock_irqsave(&rtp_mgr->lock, flags);
+	hlist_add_head(&stream->hnode, &rtp_mgr->streams[HASH_KEY(stream->handle)]);
+	spin_unlock_irqrestore(&rtp_mgr->lock, flags);
 
 	*handle = stream->handle;
 	return 0;
 }
 
-int fusion_cn_rtp_remove_stream(struct fusion_cn_rtp_manager *mgr, uint64_t handle)
+int fusion_cn_rtp_remove_stream(struct fusion_cn_rtp_manager *rtp_mgr, uint64_t handle)
 {
 	struct fusion_cn_rtp_stream *stream;
 	unsigned long flags;
 	bool found = false;
 
-	spin_lock_irqsave(&mgr->lock, flags);
-	hlist_for_each_entry(stream, &mgr->streams[HASH_KEY(handle)], hnode) {
+	spin_lock_irqsave(&rtp_mgr->lock, flags);
+	hlist_for_each_entry(stream, &rtp_mgr->streams[HASH_KEY(handle)], hnode) {
 		if (stream->handle == handle) {
 			hlist_del(&stream->hnode);
 			found = true;
 			break;
 		}
 	}
-	spin_unlock_irqrestore(&mgr->lock, flags);
+	spin_unlock_irqrestore(&rtp_mgr->lock, flags);
 
 	if (!found) return -ENOENT;
 	kref_put(&stream->ref, fusion_cn_rtp_stream_release);
 	return 0;
 }
 
-struct fusion_cn_rtp_stream *fusion_cn_rtp_get_stream(struct fusion_cn_rtp_manager *mgr, uint64_t handle)
+struct fusion_cn_rtp_stream *fusion_cn_rtp_get_stream(struct fusion_cn_rtp_manager *rtp_mgr, uint64_t handle)
 {
     struct fusion_cn_rtp_stream *stream;
     unsigned long flags;
     int bucket = hash_64(handle, FUSION_CN_RTP_HASH_BITS);
 
-    spin_lock_irqsave(&mgr->lock, flags);
-    hlist_for_each_entry(stream, &mgr->streams[bucket], hnode) {
+    spin_lock_irqsave(&rtp_mgr->lock, flags);
+    hlist_for_each_entry(stream, &rtp_mgr->streams[bucket], hnode) {
         if (stream->handle == handle) {
             kref_get(&stream->ref); /* Increment refcount */
-            spin_unlock_irqrestore(&mgr->lock, flags);
+            spin_unlock_irqrestore(&rtp_mgr->lock, flags);
             return stream;
         }
     }
-    spin_unlock_irqrestore(&mgr->lock, flags);
+    spin_unlock_irqrestore(&rtp_mgr->lock, flags);
     return NULL;
 }
 
-int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *mgr,
+int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr,
 									struct fusion_cn_rtp_packet *packet, uint32_t size)
 {
 	struct fusion_cn_rtp_stream *stream;
@@ -181,8 +181,8 @@ int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *mgr,
 		return NF_ACCEPT; /* Too small or fragmented */
 	}
 
-	spin_lock_irqsave(&mgr->lock, flags);
-	hlist_for_each_entry(stream, &mgr->streams[HASH_KEY(key)], hnode) {
+	spin_lock_irqsave(&rtp_mgr->lock, flags);
+	hlist_for_each_entry(stream, &rtp_mgr->streams[HASH_KEY(key)], hnode) {
 		if (!stream->info.is_source && stream->info.dest_ip == packet->ip.daddr &&
 			stream->info.dest_port == packet->udp.dest) {
 			if (packet->rtp.payload_type != stream->info.payload_type ||
@@ -195,55 +195,55 @@ int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *mgr,
 			samples = payload_len / (stream->info.channels * snd_pcm_format_width(stream->info.format) / 8);
 			if (!samples) continue;
 
-			offset = mgr->ops->get_buffer_offset(mgr->ops_user, stream->handle,
+			offset = rtp_mgr->ops->get_buffer_offset(rtp_mgr->cn_mgr, stream->handle,
 												swab32(packet->rtp.timestamp) + stream->info.playout_delay, false);
-			len1 = min(mgr->ops->get_buffer_length(mgr->ops_user, stream->handle, false) - offset, samples);
+			len1 = min(rtp_mgr->ops->get_buffer_length(rtp_mgr->cn_mgr, stream->handle, false) - offset, samples);
 			len2 = samples - len1;
 
 			for (int i = 0; i < stream->info.channels; i++) {
-				void *buf = mgr->ops->get_buffer(mgr->ops_user, stream->handle, i, false);
+				void *buf = rtp_mgr->ops->get_buffer(rtp_mgr->cn_mgr, stream->handle, i, false);
 				if (len1) memcpy(buf + offset * stream->info.format_width / 8, payload + i * len1, len1);
 				if (len2) memcpy(buf, payload + i * len2, len2);
 			}
 
 			stream->last_sac = swab32(packet->rtp.timestamp); /* Update on receive */
 
-			spin_unlock_irqrestore(&mgr->lock, flags);
+			spin_unlock_irqrestore(&rtp_mgr->lock, flags);
 			return NF_DROP;
 		}
 	}
-	spin_unlock_irqrestore(&mgr->lock, flags);
+	spin_unlock_irqrestore(&rtp_mgr->lock, flags);
 	return NF_ACCEPT;
 }
 
-void fusion_cn_rtp_prepare_buffers(struct fusion_cn_rtp_manager *mgr)
+void fusion_cn_rtp_prepare_buffers(struct fusion_cn_rtp_manager *rtp_mgr)
 {
 	struct fusion_cn_rtp_stream *stream;
 	unsigned long flags;
 	int i;
 
-	spin_lock_irqsave(&mgr->lock, flags);
+	spin_lock_irqsave(&rtp_mgr->lock, flags);
 	for (i = 0; i < FUSION_CN_RTP_HASH_BITS; i++) {
-		hlist_for_each_entry(stream, &mgr->streams[i], hnode) {
+		hlist_for_each_entry(stream, &rtp_mgr->streams[i], hnode) {
 			kref_get(&stream->ref);
 			if (!stream->info.is_source) {
-				uint64_t sac = mgr->ops->get_sac(mgr->ops_user, stream->handle);
-				if (stream->last_sac + mgr->ops->get_frame_size(mgr->ops_user, stream->handle) > sac) {
-					uint32_t offset = mgr->ops->get_buffer_offset(mgr->ops_user, stream->handle, sac, false);
+				uint64_t sac = rtp_mgr->ops->get_sac(rtp_mgr->cn_mgr, stream->handle);
+				if (stream->last_sac + rtp_mgr->ops->get_frame_size(rtp_mgr->cn_mgr, stream->handle) > sac) {
+					uint32_t offset = rtp_mgr->ops->get_buffer_offset(rtp_mgr->cn_mgr, stream->handle, sac, false);
 					for (int j = 0; j < stream->info.channels; j++) {
-						void *buf = mgr->ops->get_buffer(mgr->ops_user, stream->handle, j, false);
+						void *buf = rtp_mgr->ops->get_buffer(rtp_mgr->cn_mgr, stream->handle, j, false);
 						memset(buf + offset * stream->info.format_width / 8, 0,
-							mgr->ops->get_frame_size(mgr->ops_user, stream->handle) * stream->info.format_width / 8);
+							rtp_mgr->ops->get_frame_size(rtp_mgr->cn_mgr, stream->handle) * stream->info.format_width / 8);
 					}
 				}
 			}
 			kref_put(&stream->ref, fusion_cn_rtp_stream_release);
 		}
 	}
-	spin_unlock_irqrestore(&mgr->lock, flags);
+	spin_unlock_irqrestore(&rtp_mgr->lock, flags);
 }
 
-void fusion_cn_rtp_send_packet(struct fusion_cn_rtp_manager *mgr, struct fusion_cn_rtp_stream *stream, uint64_t current_sac)
+void fusion_cn_rtp_send_packet(struct fusion_cn_rtp_manager *rtp_mgr, struct fusion_cn_rtp_stream *stream, uint64_t current_sac)
 {
     if (!stream->info.is_source) return; /* Only sources send */
 
@@ -253,7 +253,7 @@ void fusion_cn_rtp_send_packet(struct fusion_cn_rtp_manager *mgr, struct fusion_
                     stream->info.samples_per_packet * stream->info.channels *
                     snd_pcm_format_width(stream->info.format) / 8;
 
-    if (fusion_cn_nf_create_packet(mgr->nf, &skb, &packet, &size) &&
+    if (fusion_cn_nf_create_packet(rtp_mgr->nf, &skb, &packet, &size) &&
         size >= sizeof(struct fusion_cn_rtp_packet)) {
         struct fusion_cn_rtp_packet *rtp = packet;
         memcpy(rtp, &stream->rtp_packet_base, sizeof(*rtp));
@@ -269,15 +269,15 @@ void fusion_cn_rtp_send_packet(struct fusion_cn_rtp_manager *mgr, struct fusion_
         rtp->rtp.timestamp = swab32(current_sac);
 
         uint8_t *payload = (uint8_t *)packet + sizeof(*rtp);
-        uint32_t offset = mgr->ops->get_buffer_offset(mgr->ops_user, stream->handle, current_sac, true);
+        uint32_t offset = rtp_mgr->ops->get_buffer_offset(rtp_mgr->cn_mgr, stream->handle, current_sac, true);
         for (int j = 0; j < stream->info.channels; j++) {
-            void *buf = mgr->ops->get_buffer(mgr->ops_user, stream->handle, j, true);
+            void *buf = rtp_mgr->ops->get_buffer(rtp_mgr->cn_mgr, stream->handle, j, true);
             memcpy(payload + j * stream->info.samples_per_packet * stream->info.format_width / 8,
                    buf + offset * stream->info.format_width / 8,
                    stream->info.samples_per_packet * stream->info.format_width / 8);
         }
 
-        int ret = fusion_cn_nf_tx_packet(mgr->nf, skb, packet, size);
+        int ret = fusion_cn_nf_tx_packet(rtp_mgr->nf, skb, packet, size);
         if (ret < 0) printk(KERN_ERR "fusion_cn_rtp: TX failed: %d\n", ret);
         stream->last_sac = current_sac;
     } else {
