@@ -44,6 +44,10 @@ def configure(conf):
     if conf.env.is_cross_compile:
         conf.load(conf.env.platform, tooldir='wafconf')
 
+    # GCC 14.2.0 in Yocto 5.1.1 "styhead" was giving c++20 warnings about
+    # templated ctor/dtor even when we have -std=c++17. So disable the warning.
+    conf.env.append_value('CXXFLAGS', ['-Wno-error=template-id-cdtor'])
+
     conf.env.append_value('CXXFLAGS', ['-std=c++17'])
     conf.env.append_value('CXXFLAGS', ['-Wall', '-Wextra', '-Werror'])
     conf.env.append_value('CXXFLAGS', ['-Ofast'])
@@ -81,3 +85,4 @@ def build(bld):
                 source=bld.path.ant_glob(['src/*.cpp', 'src/*.c']),
                 use=['common-include'],
                 lib=['jack', 'fmt', 'sndfile', 'boost_program_options', 'jsoncpp'])
+
