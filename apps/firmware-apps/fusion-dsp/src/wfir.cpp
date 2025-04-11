@@ -12,7 +12,7 @@ namespace filter {
 
 void _WFirFilter::process(float *out, const float *in)
 {
-    float32x4_t sum_vec, coeff_vec, apf_out_vec;
+    float32x4_t sum_vec, coeff_vec, apf_out_vec{ 0.0f, 0.0f, 0.0f, 0.0f };
     float *state_trav_ptr;
     const float *coeff_trav_ptr;
     float last_apf_out;

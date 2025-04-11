@@ -58,9 +58,13 @@ def configure(conf):
 
     print('Checking compiler flags...')
     if compiler_has_flag(conf, '-Wtemplate-id-cdtor'):
-        # GCC 14.2.0 was giving c++20 warnings about templated ctor/dtor even
-        # when we have -std=c++17. So disable the warning.
-        conf.env.append_value('CXXFLAGS', ['-Wno-error=template-id-cdtor'])
+        # GCC 14 gives a warning for templated ctor/dtor that are not valid in
+        # C++20. We have -std=c++17. So disable the warning. With -Werror
+        # compilation would fail.
+        conf.env.append_value('CXXFLAGS', ['-Wno-template-id-cdtor'])
+
+    if compiler_has_flag(conf, '-Wcalloc-transposed-args'):
+        conf.env.append_value('CXXFLAGS', '-Wno-calloc-transposed-args')
 
     conf.env.append_value('CXXFLAGS', ['-std=c++17'])
     conf.env.append_value('CXXFLAGS', ['-Wall', '-Wextra', '-Werror'])

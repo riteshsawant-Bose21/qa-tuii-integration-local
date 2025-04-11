@@ -1,7 +1,5 @@
 # Make a tar.gz package of a build.
-# Usage: python3 package.py [--info-only]
-# Args:
-#   --info-only - Only generate fusion-dsp.info, don't create a tarball.
+# Usage: python3 package.py [--info-only] [--build-dir=<build-dir>]
 
 import tarfile
 import subprocess
@@ -9,24 +7,37 @@ import datetime
 import os
 import sys
 
-TAG = "[package.py]"
-APP_PATH = 'build/fusion_dsp'
-INFO_PATH = 'build/fusion-dsp.info'
+from argparse import ArgumentParser
 
-def create_info_file(version):
+TAG = "[package.py]"
+
+# Getting version from the Jenkins environment, if not set default to LOCAL version
+VERSION = os.getenv('VERSION', 'LOCAL')
+
+parser = ArgumentParser()
+parser.add_argument('-d', '--build-dir', default='./build')
+parser.add_argument('-i', '--info-only', action='store_true')
+args = parser.parse_args(sys.argv[1:])
+
+BUILD_DIR = os.path.abspath(args.build_dir)
+APP_PATH = os.path.join(BUILD_DIR, 'fusion_dsp')
+INFO_PATH = os.path.join(BUILD_DIR, 'fusion-dsp.info')
+
+
+def create_info_file():
     git_hash = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('ascii').strip()
     git_branch = os.getenv('branch', 'HEAD')
     commit_ts = int(subprocess.check_output(['git', 'show', '-s', '--format=%ct', 'HEAD']).decode('ascii').strip())
     build_ts = os.path.getmtime(APP_PATH)
 
     # Get the commit date and build date in UTC.
-    git_date = datetime.datetime.fromtimestamp(commit_ts, tz=datetime.timezone.utc).isoformat() 
+    git_date = datetime.datetime.fromtimestamp(commit_ts, tz=datetime.timezone.utc).isoformat()
     build_date = datetime.datetime.fromtimestamp(build_ts, tz=datetime.timezone.utc).isoformat('T', 'seconds')
 
     # Write the fusion-dsp.info file.
     with open(INFO_PATH, "w") as info_file:
         info_file.write(f'APP="fusion-dsp"\n')
-        info_file.write(f'VERSION="{version}"\n')
+        info_file.write(f'VERSION="{VERSION}"\n')
         info_file.write(f'BRANCH="{git_branch}"\n')
         info_file.write(f'COMMIT_ID="{git_hash}"\n')
         info_file.write(f'COMMIT_DATE="{git_date}"\n')
@@ -34,7 +45,7 @@ def create_info_file(version):
     
     print(TAG, f'Created: {INFO_PATH}')
 
-def create_tarball(version):
+def create_tarball():
     # Add the files needed to install in the target image.
     required_files = [
         INFO_PATH,
@@ -48,7 +59,7 @@ def create_tarball(version):
 
     print(TAG, 'Creating build package...')
 
-    TAR_PATH = f'build/fusion-dsp_{version}.tar.gz'
+    TAR_PATH = os.path.join(BUILD_DIR, f'fusion-dsp_{VERSION}.tar.gz')
     with tarfile.open(TAR_PATH, 'w:gz') as tar:
         for f in required_files:
             print(TAG, f'  add {f}')
@@ -57,16 +68,13 @@ def create_tarball(version):
     print(TAG, f'Created: {TAR_PATH}')
 
 if __name__ == '__main__':
-    info_only = False
-    if len(sys.argv) > 1 and sys.argv[1] == '--info-only':
-        info_only = True
+    # Change directory to the path this script is in so Git commands work in Yocto.
+    script_path = os.path.abspath(__file__)
+    os.chdir(os.path.dirname(script_path))
 
-    # Getting version from the Jenkins environment, if not set default to LOCAL version
-    version = os.getenv('VERSION', 'LOCAL')
-
-    create_info_file(version)
-    if not info_only:
-        create_tarball(version)
+    create_info_file()
+    if not args.info_only:
+        create_tarball()
 
         # Clean up temporary files.
         os.remove(INFO_PATH)
