@@ -60,7 +60,7 @@ def configure(conf):
     if compiler_has_flag(conf, '-Wtemplate-id-cdtor'):
         # GCC 14.2.0 was giving c++20 warnings about templated ctor/dtor even
         # when we have -std=c++17. So disable the warning.
-        conf.env.append_value('CXXFLAGS', ['-Wno-error=template-id-cdtor'])
+        conf.env.append_value('CXXFLAGS', ['-Wno-template-id-cdtor'])
 
     conf.env.append_value('CXXFLAGS', ['-std=c++17'])
     conf.env.append_value('CXXFLAGS', ['-Wall', '-Wextra', '-Werror'])
