@@ -12,6 +12,18 @@ def options(opt):
     opt.add_option('--platform', type=str, default=sys.platform,
                    help='Target platform for cross-compiling')
 
+
+def compiler_has_flag(conf, flag):
+    conf.start_msg(f'  {flag}')
+    try:
+        conf.check_cxx(cxxflags=[flag], mandatory=True)
+        conf.end_msg('yes')
+        return True
+    except conf.errors.ConfigurationError:
+        conf.end_msg('no')
+        return False
+
+
 def detect_platform(conf):
     platforms = [
         # FLAG          name       strings                is-cross-compile
@@ -43,6 +55,12 @@ def configure(conf):
 
     if conf.env.is_cross_compile:
         conf.load(conf.env.platform, tooldir='wafconf')
+
+    print('Checking compiler flags...')
+    if compiler_has_flag(conf, '-Wtemplate-id-cdtor'):
+        # GCC 14.2.0 was giving c++20 warnings about templated ctor/dtor even
+        # when we have -std=c++17. So disable the warning.
+        conf.env.append_value('CXXFLAGS', ['-Wno-template-id-cdtor'])
 
     conf.env.append_value('CXXFLAGS', ['-std=c++17'])
     conf.env.append_value('CXXFLAGS', ['-Wall', '-Wextra', '-Werror'])
@@ -81,3 +99,4 @@ def build(bld):
                 source=bld.path.ant_glob(['src/*.cpp', 'src/*.c']),
                 use=['common-include'],
                 lib=['jack', 'fmt', 'sndfile', 'boost_program_options', 'jsoncpp'])
+
