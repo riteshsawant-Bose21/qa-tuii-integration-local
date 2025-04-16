@@ -99,7 +99,7 @@ func (s *ConfigServer) GetValue(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Write the JSON response.
-	w.Header().Set(api.ContentType, api.JsonContentType)
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	json.NewEncoder(w).Encode(response)
 }
 
@@ -135,7 +135,7 @@ func (s *ConfigServer) SetValue(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Write the JSON response.
-	w.Header().Set(api.ContentType, api.JsonContentType)
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	json.NewEncoder(w).Encode(response)
 }
 
@@ -171,7 +171,7 @@ func (s *ConfigServer) UpdateValue(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve the full current configuration state.
-	configData := TransformState(s.handler.stateManager.GetFullState())
+	configData := TransformState(s.handler.stateManager.GetFullState().State)
 
 	// Create a deep copy of configData to preserve the original configuration.
 	originalConfig, err := deepCopy(configData)
@@ -205,7 +205,7 @@ func (s *ConfigServer) UpdateValue(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Write the JSON response.
-	w.Header().Set(api.ContentType, api.JsonContentType)
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		http.Error(w, fmt.Sprintf("Error encoding response: %v", err), http.StatusInternalServerError)
 	}
@@ -223,12 +223,38 @@ func (s *ConfigServer) ExportState(w http.ResponseWriter, r *http.Request) {
 	state := map[string]any{"state": s.handler.stateManager.GetFullState()}
 
 	// Write the JSON response.
-	w.Header().Set(api.ContentType, api.JsonContentType)
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	encoder := json.NewEncoder(w)
 	if err := encoder.Encode(state); err != nil {
 		logging.GetLogger().Error("Export state failed: %v", err)
 		http.Error(w, "Error exporting state", http.StatusInternalServerError)
 	}
+}
+
+// ImportState handles HTTP POST requests to import configuration state.
+func (s *ConfigServer) ImportState(w http.ResponseWriter, r *http.Request) {
+	if !utils.IsPostRequest(r) {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Read the request body.
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error reading request body: %v", err), http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+
+	// Unmarshal the JSON data into a map.
+	var data map[string]*api.StateEntry
+	err = json.Unmarshal(body, &data)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("error unmarshaling json: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	s.handler.stateManager.SetState(data)
 }
 
 // HandleWebSocket upgrades an HTTP connection to a WebSocket connection, sets up ping handlers,
@@ -317,7 +343,7 @@ func (s *ConfigServer) HandleRoot(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Write the JSON response.
-	w.Header().Set(api.ContentType, api.JsonContentType)
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	json.NewEncoder(w).Encode(info)
 }
 
@@ -361,7 +387,7 @@ func (s *ConfigServer) ListSnapshots(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Write the JSON response with the snapshots.
-	w.Header().Set(api.ContentType, api.JsonContentType)
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	json.NewEncoder(w).Encode(map[string]any{"snapshots": snapshots})
 }
 
@@ -385,7 +411,7 @@ func (s *ConfigServer) ActivateSnapshot(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	w.Header().Set(api.ContentType, api.JsonContentType)
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	json.NewEncoder(w).Encode(map[string]string{
 		"status":   "snapshot activated",
 		"snapshot": snapshotName,
@@ -426,7 +452,7 @@ func (s *ConfigServer) CreateSnapshot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set(api.ContentType, api.JsonContentType)
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	json.NewEncoder(w).Encode(map[string]string{
 		"status":   "snapshot created",
 		"snapshot": snapshotName,
@@ -457,29 +483,29 @@ func (s *ConfigServer) DeleteSnapshot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set(api.ContentType, api.JsonContentType)
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	json.NewEncoder(w).Encode(map[string]string{
 		"status":   "snapshot deleted",
 		"snapshot": snapshotName,
 	})
 }
 
-// GetSnapshotMetadata handles HTTP GET requests to retrieve metadata about snapshots.
-func (s *ConfigServer) GetSnapshotMetadata(w http.ResponseWriter, r *http.Request) {
+// GetDatabaseMetadata handles HTTP GET requests to retrieve fusion database metadata.
+func (s *ConfigServer) GetDatabaseMetadata(w http.ResponseWriter, r *http.Request) {
 	if !utils.IsGetRequest(r) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	// Retrieve metadata from the handler.
-	metadata, err := s.handler.HandleGetSnapshotMetadata()
+	metadata, err := s.handler.HandleGetDatabaseMetadata()
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error getting snapshot metadata: %v", err), http.StatusInternalServerError)
 		return
 	}
 
 	// Write the JSON response with metadata.
-	w.Header().Set(api.ContentType, api.JsonContentType)
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	json.NewEncoder(w).Encode(map[string]any{"metadata": metadata})
 }
 
@@ -503,32 +529,32 @@ func (s *ConfigServer) GetSnapshot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set(api.ContentType, api.JsonContentType)
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	json.NewEncoder(w).Encode(snapshot)
 }
 
-// ExportSnapshots handles HTTP GET requests to export all snapshots.
-func (s *ConfigServer) ExportSnapshots(w http.ResponseWriter, r *http.Request) {
+// ExportData handles HTTP GET requests to export all data.
+func (s *ConfigServer) ExportData(w http.ResponseWriter, r *http.Request) {
 	if !utils.IsGetRequest(r) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Retrieve snapshots from the handler.
-	snapshots, err := s.handler.HandleExportSnapshots()
+	// Retrieve data from the handler.
+	data, err := s.handler.HandleExportData()
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Error exporting snapshots: %v", err), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("Error exporting data: %v", err), http.StatusInternalServerError)
 		return
 	}
 
 	// Write the JSON response with the snapshots.
-	w.Header().Set(api.ContentType, api.JsonContentType)
-	json.NewEncoder(w).Encode(snapshots)
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
+	json.NewEncoder(w).Encode(data)
 }
 
-// ImportSnapshots handles HTTP POST requests to import snapshots.
-// It expects a JSON body containing the snapshots data.
-func (s *ConfigServer) ImportSnapshots(w http.ResponseWriter, r *http.Request) {
+// ImportData handles HTTP POST requests to import data.
+// It expects a JSON body containing the data.
+func (s *ConfigServer) ImportData(w http.ResponseWriter, r *http.Request) {
 	if !utils.IsPostRequest(r) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -550,8 +576,8 @@ func (s *ConfigServer) ImportSnapshots(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Import the snapshots using the handler.
-	err = s.handler.HandleImportSnapshots(data)
+	// Import the data using the handler.
+	err = s.handler.HandleImportData(data)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error importing snapshots: %v", err), http.StatusInternalServerError)
 		return
@@ -573,7 +599,7 @@ func (s *ConfigServer) ClearAllValues(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Write the JSON response confirming the operation.
-	w.Header().Set(api.ContentType, api.JsonContentType)
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	json.NewEncoder(w).Encode(map[string]any{
 		"status":  "success",
 		"message": "All data cleared successfully",
@@ -589,8 +615,8 @@ func (s *ConfigServer) GetMembers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve the list of members from the handler's member list.
-	members := s.handler.list.Members()
-	w.Header().Set(api.ContentType, api.JsonContentType)
+	members := s.handler.memberlist.Members()
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	if err := json.NewEncoder(w).Encode(members); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

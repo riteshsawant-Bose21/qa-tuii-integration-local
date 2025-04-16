@@ -49,12 +49,6 @@ func (h *Handler) broadcastUpdate(message api.NotifyMessage) error {
 			return fmt.Errorf("error deleting snapshot: %v", err)
 		}
 
-	case api.NotifyOpSnapImport:
-		// Import snapshots from provided data.
-		if err := h.persistence.ImportSnapshots(message.SnapshotUpdate.Data); err != nil {
-			return fmt.Errorf("error importing snapshots: %v", err)
-		}
-
 	case api.NotifyOpVersionUpdate:
 		// Perform a version update triggered remotely.
 		if err := h.updater.PerformRemoteUpdate(*message.VersionMessage); err != nil {
@@ -66,7 +60,7 @@ func (h *Handler) broadcastUpdate(message api.NotifyMessage) error {
 	}
 
 	// Broadcast the message to other nodes if this is the origin node.
-	if message.Node == h.list.LocalNode().Name {
+	if message.Node == h.memberlist.LocalNode().Name {
 		data, err := json.Marshal(message)
 		if err != nil {
 			return fmt.Errorf("failed to marshal update: %w", err)
@@ -87,11 +81,11 @@ func (h *Handler) broadcastUpdate(message api.NotifyMessage) error {
 // broadcastToNodes sends the given JSON message to all cluster members except the local node.
 func (h *Handler) broadcastToNodes(messageData []byte) {
 	logger := logging.GetLogger()
-	for _, node := range h.list.Members() {
-		if node.Name == h.list.LocalNode().Name {
+	for _, node := range h.memberlist.Members() {
+		if node.Name == h.memberlist.LocalNode().Name {
 			continue
 		}
-		if err := h.list.SendReliable(node, messageData); err != nil {
+		if err := h.memberlist.SendReliable(node, messageData); err != nil {
 			logger.Error("Failed to send message to node %s: %v", node.Name, err)
 		}
 	}

@@ -30,6 +30,32 @@
     },
     {
       "type": "http",
+      "name": "Metadata",
+      "filename": "Metadata.bru",
+      "seq": 3,
+      "request": {
+        "url": "{{api_url}}/metadata",
+        "method": "GET",
+        "headers": [],
+        "params": [],
+        "body": {
+          "mode": "none",
+          "formUrlEncoded": [],
+          "multipartForm": [],
+          "file": []
+        },
+        "script": {},
+        "vars": {},
+        "assertions": [],
+        "tests": "",
+        "docs": "",
+        "auth": {
+          "mode": "none"
+        }
+      }
+    },
+    {
+      "type": "http",
       "name": "Root",
       "filename": "Root.bru",
       "seq": 1,
@@ -53,6 +79,171 @@
           "mode": "none"
         }
       }
+    },
+    {
+      "type": "folder",
+      "name": "Snapshots",
+      "filename": "Snapshots",
+      "items": [
+        {
+          "type": "http",
+          "name": "Activate",
+          "filename": "Activate.bru",
+          "seq": 5,
+          "request": {
+            "url": "{{api_url}}/snapshots/:name/activate",
+            "method": "POST",
+            "headers": [],
+            "params": [
+              {
+                "name": "name",
+                "value": "default",
+                "type": "path",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Create",
+          "filename": "Create.bru",
+          "seq": 1,
+          "request": {
+            "url": "{{api_url}}/snapshots/:name",
+            "method": "POST",
+            "headers": [],
+            "params": [
+              {
+                "name": "name",
+                "value": "TestSnapshot",
+                "type": "path",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Delete",
+          "filename": "Delete.bru",
+          "seq": 3,
+          "request": {
+            "url": "{{api_url}}/snapshots/:name",
+            "method": "DELETE",
+            "headers": [],
+            "params": [
+              {
+                "name": "name",
+                "value": "TestSnapshot",
+                "type": "path",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "List",
+          "filename": "List.bru",
+          "seq": 4,
+          "request": {
+            "url": "{{api_url}}/snapshots",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Snapshot",
+          "filename": "Snapshot.bru",
+          "seq": 2,
+          "request": {
+            "url": "{{api_url}}/snapshots/:name",
+            "method": "GET",
+            "headers": [],
+            "params": [
+              {
+                "name": "name",
+                "value": "default",
+                "type": "path",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        }
+      ]
     },
     {
       "type": "folder",
@@ -179,415 +370,6 @@
     },
     {
       "type": "folder",
-      "name": "Timers",
-      "filename": "Timers",
-      "items": [
-        {
-          "type": "http",
-          "name": "Add Task",
-          "filename": "Add Task.bru",
-          "seq": 2,
-          "request": {
-            "url": "{{api_url}}/tasks",
-            "method": "POST",
-            "headers": [
-              {
-                "name": "Content-Type",
-                "value": "application/json",
-                "enabled": true
-              }
-            ],
-            "params": [],
-            "body": {
-              "mode": "json",
-              "json": "{\n  \"id\": \"test10\",\n  \"cron_expr\": \"*/5 * * * *\",\n  \"description\": \"bleep\"\n}",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        },
-        {
-          "type": "http",
-          "name": "Get Tasks History",
-          "filename": "Get Tasks History.bru",
-          "seq": 3,
-          "request": {
-            "url": "{{api_url}}/tasks/history",
-            "method": "GET",
-            "headers": [],
-            "params": [],
-            "body": {
-              "mode": "none",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        },
-        {
-          "type": "http",
-          "name": "Get Tasks",
-          "filename": "Get Tasks.bru",
-          "seq": 1,
-          "request": {
-            "url": "{{api_url}}/tasks",
-            "method": "GET",
-            "headers": [],
-            "params": [],
-            "body": {
-              "mode": "none",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        },
-        {
-          "type": "http",
-          "name": "Remove Task",
-          "filename": "Remove Task.bru",
-          "seq": 5,
-          "request": {
-            "url": "{{api_url}}/tasks/:id",
-            "method": "DELETE",
-            "headers": [],
-            "params": [
-              {
-                "name": "id",
-                "value": "test",
-                "type": "path",
-                "enabled": true
-              }
-            ],
-            "body": {
-              "mode": "none",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        },
-        {
-          "type": "http",
-          "name": "Update Task",
-          "filename": "Update Task.bru",
-          "seq": 4,
-          "request": {
-            "url": "{{api_url}}/tasks/:id",
-            "method": "PUT",
-            "headers": [
-              {
-                "name": "Content-Type",
-                "value": "application/json",
-                "enabled": true
-              }
-            ],
-            "params": [
-              {
-                "name": "id",
-                "value": "test",
-                "type": "path",
-                "enabled": true
-              }
-            ],
-            "body": {
-              "mode": "json",
-              "json": "{\n  \"cron_expr\": \"*/5 * * * *\",\n  \"description\": \"updated\"\n}",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        }
-      ]
-    },
-    {
-      "type": "folder",
-      "name": "Snapshots",
-      "filename": "Snapshots",
-      "items": [
-        {
-          "type": "http",
-          "name": "Activate",
-          "filename": "Activate.bru",
-          "seq": 5,
-          "request": {
-            "url": "{{api_url}}/snapshots/:name/activate",
-            "method": "POST",
-            "headers": [],
-            "params": [
-              {
-                "name": "name",
-                "value": "default",
-                "type": "path",
-                "enabled": true
-              }
-            ],
-            "body": {
-              "mode": "none",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        },
-        {
-          "type": "http",
-          "name": "Create",
-          "filename": "Create.bru",
-          "seq": 1,
-          "request": {
-            "url": "{{api_url}}/snapshots/:name",
-            "method": "POST",
-            "headers": [],
-            "params": [
-              {
-                "name": "name",
-                "value": "TestSnapshot",
-                "type": "path",
-                "enabled": true
-              }
-            ],
-            "body": {
-              "mode": "none",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        },
-        {
-          "type": "http",
-          "name": "Delete",
-          "filename": "Delete.bru",
-          "seq": 3,
-          "request": {
-            "url": "{{api_url}}/snapshots/:name",
-            "method": "DELETE",
-            "headers": [],
-            "params": [
-              {
-                "name": "name",
-                "value": "TestSnapshot",
-                "type": "path",
-                "enabled": true
-              }
-            ],
-            "body": {
-              "mode": "none",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        },
-        {
-          "type": "http",
-          "name": "Export",
-          "filename": "Export.bru",
-          "seq": 7,
-          "request": {
-            "url": "{{api_url}}/snapshots/export",
-            "method": "GET",
-            "headers": [],
-            "params": [],
-            "body": {
-              "mode": "none",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        },
-        {
-          "type": "http",
-          "name": "Import",
-          "filename": "Import.bru",
-          "seq": 8,
-          "request": {
-            "url": "{{api_url}}/snapshots/import",
-            "method": "POST",
-            "headers": [],
-            "params": [],
-            "body": {
-              "mode": "json",
-              "json": "{\n  \"fusion\": {\n    \"default\": {\n      \"checksum\": \"44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a\",\n      \"state\": {},\n      \"timestamp\": \"2025-04-02T02:01:40.956957393Z\",\n      \"version\": 0\n    },\n    \"import\": {\n      \"checksum\": \"44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a\",\n      \"state\": {},\n      \"timestamp\": \"2025-04-02T02:01:40.698466995Z\",\n      \"version\": 0\n    },\n    \"test_snapshot_1743559324558429000\": {\n      \"checksum\": \"44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a\",\n      \"state\": {},\n      \"timestamp\": \"2025-04-02T02:01:40.613758751Z\",\n      \"version\": 0\n    },\n    \"test_snapshot_1743559324618534000\": {\n      \"checksum\": \"44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a\",\n      \"state\": {},\n      \"timestamp\": \"2025-04-02T02:01:40.656419061Z\",\n      \"version\": 0\n    }\n  },\n  \"snapshot_metadata\": {\n    \"metadata\": {\n      \"active_snapshot\": \"\",\n      \"hash\": \"7a0ae79badcfb0d752f9775724087f42b5810cbad403800068e4fc763df2d43c\",\n      \"timestamp\": \"2025-04-02T02:01:40.956957393Z\",\n      \"valid\": false\n    }\n  }\n}",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        },
-        {
-          "type": "http",
-          "name": "List",
-          "filename": "List.bru",
-          "seq": 4,
-          "request": {
-            "url": "{{api_url}}/snapshots",
-            "method": "GET",
-            "headers": [],
-            "params": [],
-            "body": {
-              "mode": "none",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        },
-        {
-          "type": "http",
-          "name": "Metadata",
-          "filename": "Metadata.bru",
-          "seq": 6,
-          "request": {
-            "url": "{{api_url}}/snapshots/metadata",
-            "method": "GET",
-            "headers": [],
-            "params": [],
-            "body": {
-              "mode": "none",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        },
-        {
-          "type": "http",
-          "name": "Snapshot",
-          "filename": "Snapshot.bru",
-          "seq": 2,
-          "request": {
-            "url": "{{api_url}}/snapshots/:name",
-            "method": "GET",
-            "headers": [],
-            "params": [
-              {
-                "name": "name",
-                "value": "default",
-                "type": "path",
-                "enabled": true
-              }
-            ],
-            "body": {
-              "mode": "none",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        }
-      ]
-    },
-    {
-      "type": "folder",
       "name": "Config",
       "filename": "Config",
       "items": [
@@ -599,32 +381,6 @@
           "request": {
             "url": "{{api_url}}/value",
             "method": "DELETE",
-            "headers": [],
-            "params": [],
-            "body": {
-              "mode": "none",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        },
-        {
-          "type": "http",
-          "name": "Export Raw Data",
-          "filename": "Export Raw Data.bru",
-          "seq": 6,
-          "request": {
-            "url": "{{api_url}}/export",
-            "method": "GET",
             "headers": [],
             "params": [],
             "body": {
@@ -673,7 +429,7 @@
           "type": "http",
           "name": "Get Value From Node",
           "filename": "Get Value From Node.bru",
-          "seq": 7,
+          "seq": 6,
           "request": {
             "url": "192.168.64.4:8080/value?key=audio.tone_eq1",
             "method": "GET",
@@ -819,6 +575,242 @@
     },
     {
       "type": "folder",
+      "name": "Tasks",
+      "filename": "Tasks",
+      "root": {
+        "meta": {
+          "name": "Tasks"
+        }
+      },
+      "items": [
+        {
+          "type": "http",
+          "name": "Clear History",
+          "filename": "Clear History.bru",
+          "seq": 8,
+          "request": {
+            "url": "{{api_url}}/tasks/history",
+            "method": "DELETE",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Create",
+          "filename": "Create.bru",
+          "seq": 3,
+          "request": {
+            "url": "{{api_url}}/tasks",
+            "method": "POST",
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/json",
+                "enabled": true
+              }
+            ],
+            "params": [],
+            "body": {
+              "mode": "json",
+              "json": "{\n  \"id\": \"test10\",\n  \"cron_expr\": \"*/5 * * * *\",\n  \"description\": \"bleep\",\n  \"snapshot_id\" : \"test_snapshot\"\n}",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Delete",
+          "filename": "Delete.bru",
+          "seq": 5,
+          "request": {
+            "url": "{{api_url}}/tasks/:id",
+            "method": "DELETE",
+            "headers": [],
+            "params": [
+              {
+                "name": "id",
+                "value": "",
+                "type": "path",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Get History",
+          "filename": "Get History.bru",
+          "seq": 7,
+          "request": {
+            "url": "{{api_url}}/tasks/history",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Get",
+          "filename": "Get.bru",
+          "seq": 2,
+          "request": {
+            "url": "{{api_url}}/tasks/:id",
+            "method": "GET",
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/json",
+                "enabled": true
+              }
+            ],
+            "params": [
+              {
+                "name": "id",
+                "value": "test10",
+                "type": "path",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "json",
+              "json": "{\n  \"cron_expr\": \"*/5 * * * *\",\n  \"description\": \"updated\"\n}",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "List All",
+          "filename": "List All.bru",
+          "seq": 1,
+          "request": {
+            "url": "{{api_url}}/tasks",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Update",
+          "filename": "Update.bru",
+          "seq": 4,
+          "request": {
+            "url": "{{api_url}}/tasks/:id",
+            "method": "PUT",
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/json",
+                "enabled": true
+              }
+            ],
+            "params": [
+              {
+                "name": "id",
+                "value": "test10",
+                "type": "path",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "json",
+              "json": "{\n  \"cron_expr\": \"*/5 * * * *\",\n  \"description\": \"updated\"\n}",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "folder",
       "name": "Metrics",
       "filename": "Metrics",
       "items": [
@@ -901,9 +893,128 @@
           }
         }
       ]
+    },
+    {
+      "type": "folder",
+      "name": "Internal",
+      "filename": "Internal",
+      "root": {
+        "docs": "Internal endpoints are used by fusion-server for synchronization tasks. They sshould not be used by external clients.",
+        "meta": {
+          "name": "Internal"
+        }
+      },
+      "items": [
+        {
+          "type": "http",
+          "name": "Export Data",
+          "filename": "Export Data.bru",
+          "seq": 1,
+          "request": {
+            "url": "{{admin_url}}/exportData",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Import Data",
+          "filename": "Import Data.bru",
+          "seq": 2,
+          "request": {
+            "url": "{{admin_url}}/importData",
+            "method": "POST",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "json",
+              "json": "{\n  \"fusion\": {\n    \"default\": {\n      \"checksum\": \"44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a\",\n      \"state\": {},\n      \"timestamp\": \"2025-04-02T02:01:40.956957393Z\",\n      \"version\": 0\n    },\n    \"import\": {\n      \"checksum\": \"44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a\",\n      \"state\": {},\n      \"timestamp\": \"2025-04-02T02:01:40.698466995Z\",\n      \"version\": 0\n    },\n    \"test_snapshot_1743559324558429000\": {\n      \"checksum\": \"44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a\",\n      \"state\": {},\n      \"timestamp\": \"2025-04-02T02:01:40.613758751Z\",\n      \"version\": 0\n    },\n    \"test_snapshot_1743559324618534000\": {\n      \"checksum\": \"44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a\",\n      \"state\": {},\n      \"timestamp\": \"2025-04-02T02:01:40.656419061Z\",\n      \"version\": 0\n    }\n  },\n  \"snapshot_metadata\": {\n    \"metadata\": {\n      \"active_snapshot\": \"\",\n      \"hash\": \"7a0ae79badcfb0d752f9775724087f42b5810cbad403800068e4fc763df2d43c\",\n      \"timestamp\": \"2025-04-02T02:01:40.956957393Z\",\n      \"valid\": false\n    }\n  },\n  \"tasks\": {\n    \"froggy\": {\n      \"EntryID\": 1,\n      \"cron_expr\": \"*/5 * * * *\",\n      \"description\": \"bleep\",\n      \"id\": \"test10\"\n    }\n  }\n}",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Export State",
+          "filename": "Export State.bru",
+          "seq": 3,
+          "request": {
+            "url": "{{admin_url}}/exportState",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Import State",
+          "filename": "Import State.bru",
+          "seq": 4,
+          "request": {
+            "url": "{{admin_url}}/importState",
+            "method": "POST",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "json",
+              "json": "{\n  \"state\": {\n    \"State\": {},\n    \"Checksum\": \"44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a\"\n  }\n}",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        }
+      ]
     }
   ],
-  "activeEnvironmentUid": "l5lNbivfmv4vaHx6rMsqB",
+  "activeEnvironmentUid": "uS5AUtUvj6nBaTHqfRUuJ",
   "environments": [
     {
       "variables": [
@@ -917,6 +1028,13 @@
         {
           "name": "metrics_url",
           "value": "192.168.64.100:8080",
+          "enabled": true,
+          "secret": false,
+          "type": "text"
+        },
+        {
+          "name": "admin_url",
+          "value": "192.168.64.100:9090",
           "enabled": true,
           "secret": false,
           "type": "text"
@@ -939,6 +1057,13 @@
           "enabled": true,
           "secret": false,
           "type": "text"
+        },
+        {
+          "name": "admin_url",
+          "value": "http://localhost:9090",
+          "enabled": true,
+          "secret": false,
+          "type": "text"
         }
       ],
       "name": "local"
@@ -950,6 +1075,7 @@
         "mode": "none"
       }
     },
+    "docs": "# Fusion Server API Documentation\n\n## Overview\n\n- **Dev Base URL:** `http://192.168.64.100:8080`\n- **Local Base URL:** `http://localhost:8080`\n- **Auth:** None required\n\n---\n\n## 🌱 Root\n\n### `GET /`\nReturns basic server info. Used to check server status.\n\n---\n\n## 👥 Members\n\n### `GET /members`\nRetrieves the list of active cluster members.\n\n---\n\n## 📦 Binaries\n\n### `POST /rollbackVersion?index=-1`\nRollback the server binary to a previous version.\n\n**Query Parameters:**\n- `index`: integer (e.g. `-1` for latest rollback)\n\n---\n\n### `POST /updateVersion`\nUploads a new server binary.\n\n**Multipart Form Data:**\n- `binary` (file): Required\n- `checksum` (text): SHA256 checksum of the file\n\n---\n\n### `POST /uploadAudio`\nUploads an audio file.\n\n**Multipart Form Data:**\n- `binary` (file): Required audio file\n\n---\n\n## ⏱️ Timers\n\n### `GET /tasks`\nList all scheduled tasks.\n\n---\n\n### `POST /tasks`\nAdd a new scheduled task.\n\n**JSON Body:**\n```json\n{\n  \"id\": \"task_id\",\n  \"cron_expr\": \"*/5 * * * *\",\n  \"description\": \"Task description\"\n}\n",
     "meta": {
       "name": "Fusion Server"
     }
@@ -962,7 +1088,7 @@
       "node_modules",
       ".git"
     ],
-    "size": 0.03625965118408203,
-    "filesCount": 31
+    "size": 0.007732391357421875,
+    "filesCount": 34
   }
 }

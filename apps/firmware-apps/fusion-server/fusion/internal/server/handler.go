@@ -13,22 +13,26 @@ import (
 
 // Handler is the common handler for both UDP and HTTP servers.
 type Handler struct {
-	stateManager *StateManager
-	persistence  *Persistence
-	list         *memberlist.Memberlist
 	broadcasters []Broadcaster
+	memberlist   *memberlist.Memberlist
+	persistence  *Persistence
+	stateManager *StateManager
 	updater      *Updater
 	endpoints    []string
 }
 
-func NewHandler(list *memberlist.Memberlist, stateManager *StateManager,
-	persistence *Persistence, updater *Updater) *Handler {
-	return &Handler{
-		stateManager: stateManager,
+func NewHandler(memberlist *memberlist.Memberlist, persistence *Persistence, stateManager *StateManager,
+	taskManager *TaskManager, updater *Updater) *Handler {
+	handler := &Handler{
+		memberlist:   memberlist,
 		persistence:  persistence,
-		list:         list,
+		stateManager: stateManager,
 		updater:      updater,
 	}
+
+	taskManager.handler = handler
+
+	return handler
 }
 
 func (h *Handler) SetEndpoints(endpoints []string) {
@@ -36,7 +40,7 @@ func (h *Handler) SetEndpoints(endpoints []string) {
 }
 
 func (h *Handler) GetInitialState() (WebSocketResponse, error) {
-	data := TransformState(h.stateManager.GetFullState())
+	data := TransformState(h.stateManager.GetFullState().State)
 	return WebSocketResponse{
 		Type: "initial_state",
 		Data: data,
@@ -58,7 +62,7 @@ func (h *Handler) HandleHTTPGet(key string) (any, error) {
 		}, nil
 	}
 
-	state := TransformState(h.stateManager.GetFullState())
+	state := TransformState(h.stateManager.GetFullState().State)
 	return state, nil
 }
 
@@ -79,7 +83,7 @@ func (h *Handler) HandleHTTPSet(update map[string]any) (any, error) {
 
 // HandleHTTPPatch updates only the specified fields.
 func (h *Handler) HandleHTTPPatch(value map[string]any) (any, error) {
-	existingData := TransformState(h.stateManager.GetFullState())
+	existingData := TransformState(h.stateManager.GetFullState().State)
 	if err := applyPatch(existingData, value); err != nil {
 		return nil, fmt.Errorf("failed to apply patch: %w", err)
 	}
@@ -119,9 +123,9 @@ func (h *Handler) GetServerInfo() (map[string]any, error) {
 		"name":       "Fusion Server",
 		"version":    version.Version,
 		"commit":     version.Commit,
-		"build_time": version.BuildTime, "node_id": h.list.LocalNode().Name,
+		"build_time": version.BuildTime, "node_id": h.memberlist.LocalNode().Name,
 		"endpoints":          h.endpoints,
-		"cluster_size":       len(h.list.Members()),
+		"cluster_size":       len(h.memberlist.Members()),
 		"update_in_progress": h.updater.currentUpdate != nil,
 	}
 
@@ -133,6 +137,19 @@ func (h *Handler) GetServerInfo() (map[string]any, error) {
 		}
 	}
 	return info, nil
+}
+
+// HandleImportData imports a batch of data
+func (h *Handler) HandleImportData(data map[string]any) error {
+	if err := h.persistence.ImportData(data); err != nil {
+		return fmt.Errorf("failed to import data: %w", err)
+	}
+	return nil
+}
+
+// HandleExportData exports all data
+func (h *Handler) HandleExportData() (any, error) {
+	return h.persistence.ExportData()
 }
 
 func (h *Handler) handleConfigUpdate(data map[string]any) error {

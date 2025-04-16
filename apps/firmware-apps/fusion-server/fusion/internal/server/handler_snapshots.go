@@ -28,7 +28,7 @@ func (h *Handler) HandleCreateSnapshot(name string) error {
 		return fmt.Errorf("failed to create snapshot: %w", err)
 	}
 
-	data := TransformState(h.stateManager.GetFullState())
+	data := TransformState(h.stateManager.GetFullState().State)
 	if err := h.handleSnapshotOperation(h.stateManager.node, name, api.NotifyOpSnapCreate, data); err != nil {
 		return fmt.Errorf("failed to handle snapshot create: %w", err)
 	}
@@ -46,37 +46,19 @@ func (h *Handler) HandleDeleteSnapshot(name string) error {
 	return nil
 }
 
-// HandleImportSnapshots imports a batch of snapshots and broadcasts the import operation to the cluster.
-func (h *Handler) HandleImportSnapshots(data map[string]any) error {
-	if err := h.persistence.ImportSnapshots(data); err != nil {
-		return fmt.Errorf("failed to import snapshot: %w", err)
-	}
-
-	if err := h.handleSnapshotOperation(h.stateManager.node, defaultBucketName, api.NotifyOpSnapImport, data); err != nil {
-		return fmt.Errorf("failed to handle snapshot import: %w", err)
-	}
-
-	return nil
-}
-
 // HandleSnapshotExists checks if a snapshot with the given name exists.
 func (h *Handler) HandleSnapshotExists(name string) (bool, error) {
 	return h.persistence.SnapshotExists(name)
 }
 
-// HandleGetSnapshotMetadata retrieves metadata for all stored snapshots.
-func (h *Handler) HandleGetSnapshotMetadata() (api.SnapshotMetadata, error) {
-	return h.persistence.GetSnapshotMetadata()
+// HandleGetDatabaseMetadata retrieves metadata for the fusion database.
+func (h *Handler) HandleGetDatabaseMetadata() (api.DatabaseMetadata, error) {
+	return h.persistence.GetDatabaseMetadata()
 }
 
 // HandleGetSnapshot returns the full snapshot data for the specified name.
 func (h *Handler) HandleGetSnapshot(name string) (any, error) {
 	return h.persistence.GetSnapshot(name)
-}
-
-// HandleExportSnapshots exports all current snapshots.
-func (h *Handler) HandleExportSnapshots() (any, error) {
-	return h.persistence.ExportSnapshots()
 }
 
 // handleSnapshotOperation constructs a snapshot update message and broadcasts it to the cluster.

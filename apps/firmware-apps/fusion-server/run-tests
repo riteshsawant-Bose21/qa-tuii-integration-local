@@ -12,7 +12,7 @@ function show_help() {
     echo "  --short       Run short versions of all tests"     
     echo "  --snapshot    Run only snapshot tests"     
     echo "  --state       Run only state manager tests"     
-    echo "  --timers      Run only timer tests"     
+    echo "  --tasks       Run only tasks tests"     
     echo "  --udp         Run only UDP tests"     
     echo "  --updater     Run only updater tests"     
     echo "  --websocket   Run only websocket tests"     
@@ -61,8 +61,8 @@ while [[ $# -gt 0 ]]; do
             test_type="state"
             shift
             ;;
-        --timers)
-            test_type="timers"
+        --tasks)
+            test_type="tasks"
             shift
             ;;
         --udp)
@@ -119,8 +119,8 @@ case "$test_type" in
     "state")
         go test -v --race ./state_test.go
         ;;
-    "timers")
-        go test -v --race ./timers_test.go
+    "tasks")
+        go test -v --race ./tasks_test.go
         ;;
     "udp")
         go test -v --race ./udp_test.go

@@ -9,16 +9,18 @@ import (
 
 type ClusterDelegate struct {
 	nodeID       string
-	stateManager *server.StateManager
 	persistence  *server.Persistence
+	stateManager *server.StateManager
+	taskManager  *server.TaskManager
 	updater      *server.Updater
 }
 
-func NewClusterDelegate(nodeID string, stateManager *server.StateManager, persistence *server.Persistence, updater *server.Updater) *ClusterDelegate {
+func NewClusterDelegate(nodeID string, persistence *server.Persistence, stateManager *server.StateManager, taskManager *server.TaskManager, updater *server.Updater) *ClusterDelegate {
 	return &ClusterDelegate{
 		nodeID:       nodeID,
-		stateManager: stateManager,
 		persistence:  persistence,
+		stateManager: stateManager,
+		taskManager:  taskManager,
 		updater:      updater,
 	}
 }
@@ -79,9 +81,19 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 			logger.Error("Error deleting snapshot: %v", err)
 		}
 
-	case api.NotifyOpSnapImport:
-		if err := d.persistence.ImportSnapshots(message.SnapshotUpdate.Data); err != nil {
-			logger.Error("Error deleting snapshot: %v", err)
+	case api.NotifyOpTaskCreate:
+		if err := d.taskManager.AddTask(message.Task, func() {}); err != nil {
+			logger.Error("Error creating task: %v", err)
+		}
+
+	case api.NotifyOpTaskDelete:
+		if err := d.taskManager.RemoveTask(message.Task.ID); err != nil {
+			logger.Error("Error deleting task: %v", err)
+		}
+
+	case api.NotifyOpTaskUpdate:
+		if err := d.taskManager.RemoveTask(message.Task.ID); err != nil {
+			logger.Error("Error deleting task: %v", err)
 		}
 
 	case api.NotifyOpVersionUpdate:
@@ -111,7 +123,7 @@ func (d *ClusterDelegate) LocalState(join bool) []byte {
 	}{
 		Version: d.stateManager.GetVersion(),
 		NodeID:  d.nodeID,
-		State:   state,
+		State:   state.State,
 	}
 
 	data, err := json.Marshal(snapshot)
@@ -121,7 +133,7 @@ func (d *ClusterDelegate) LocalState(join bool) []byte {
 	}
 
 	logger.Debug("Providing local state with %d entries (version: %d)",
-		len(state), snapshot.Version)
+		len(state.State), snapshot.Version)
 
 	return data
 }
@@ -147,7 +159,7 @@ func (d *ClusterDelegate) MergeRemoteState(buf []byte, join bool) {
 
 	logger.Debug("Merging remote state from node %s with %d entries (version: %d)",
 		snapshot.NodeID, len(snapshot.State), snapshot.Version)
-	d.stateManager.MergeRemoteState(snapshot.State, snapshot.NodeID)
+	d.stateManager.MergeRemoteState(snapshot.State)
 
 	d.persistence.MarkDirty()
 }

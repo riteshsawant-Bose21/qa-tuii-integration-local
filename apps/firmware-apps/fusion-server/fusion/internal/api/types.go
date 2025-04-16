@@ -8,9 +8,18 @@ import (
 	"time"
 
 	"github.com/hashicorp/memberlist"
+	"github.com/robfig/cron/v3"
 )
 
-// DataUpdate represents a data update in the system
+// AppConfig represents application configuration data
+type AppConfig struct {
+	NodeName string
+	BindAddr string
+	BindPort int
+	Verbose  bool
+}
+
+// ConfigUpdate represents a data update in the system
 type ConfigUpdate struct {
 	Hash    string         `json:"hash"`
 	Data    map[string]any `json:"data"`
@@ -19,6 +28,7 @@ type ConfigUpdate struct {
 	Clear   bool
 }
 
+// NewConfigUpdate returns a configured ConfigUpdate
 func NewConfigUpdate(data map[string]any) (*ConfigUpdate, error) {
 
 	hash, err := hashConfigData(data)
@@ -41,18 +51,18 @@ type Endpoints struct {
 	Telemetry []string `json:"telemetry"`
 }
 
-// SnapshotMetadata holds metadata information from the database.
-type SnapshotMetadata struct {
-	ActiveSnapshot string    `json:"active_snapshot"`
+// DatabaseMetadata holds metadata information from the database.
+type DatabaseMetadata struct {
 	Timestamp      time.Time `json:"timestamp"`
+	ActiveSnapshot string    `json:"active_snapshot"`
 	Hash           string    `json:"hash"`
 	Valid          bool      `json:"valid"`
 }
 
-// SnapshotMemberMetadata tie a member to its snapshot metadata.
-type SnapshotMemberMetadata struct {
+// MemberMetadata associates a member to its database metadata.
+type MemberMetadata struct {
 	Member   *memberlist.Node
-	Metadata SnapshotMetadata
+	Metadata DatabaseMetadata
 }
 
 // SnapshotUpdate represents a snapshot update operation broadcast across the cluster.
@@ -60,6 +70,15 @@ type SnapshotUpdate struct {
 	Name      string         `json:"name"`
 	Data      map[string]any `json:"data,omitempty"`
 	Timestamp time.Time      `json:"timestamp"`
+}
+
+// Task represents a task with a unique ID, a cron expression, and a function to execute.
+type Task struct {
+	ID          string `json:"id"`
+	CronExpr    string `json:"cron_expr"`
+	Description string `json:"description"`
+	EntryID     cron.EntryID
+	SnapshotID  string `json:"snapshot_id"`
 }
 
 // RawState represents raw state data element
@@ -87,7 +106,9 @@ const (
 	NotifyOpSnapActivate  NotifyOp = "snapshot_activate"
 	NotifyOpSnapCreate    NotifyOp = "snapshot_create"
 	NotifyOpSnapDelete    NotifyOp = "snapshot_delete"
-	NotifyOpSnapImport    NotifyOp = "snapshot_import"
+	NotifyOpTaskCreate    NotifyOp = "task_create"
+	NotifyOpTaskDelete    NotifyOp = "task_delete"
+	NotifyOpTaskUpdate    NotifyOp = "task_update"
 	NotifyOpVersionUpdate NotifyOp = "version_update"
 )
 
@@ -97,6 +118,7 @@ type NotifyMessage struct {
 	Node           string
 	ConfigUpdate   *ConfigUpdate
 	SnapshotUpdate *SnapshotUpdate
+	Task           *Task
 	VersionMessage *VersionMessage
 }
 

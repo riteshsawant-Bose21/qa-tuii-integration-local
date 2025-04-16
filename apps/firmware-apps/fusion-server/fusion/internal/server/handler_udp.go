@@ -18,7 +18,7 @@ func (h *Handler) HandleUDPMessage(data []byte) (any, error) {
 
 	switch msg.Action {
 	case "get":
-		fullState := h.stateManager.GetFullState()
+		fullState := h.stateManager.GetFullState().State
 		transformed := TransformState(fullState)
 		return map[string]any{
 			"status": "success",

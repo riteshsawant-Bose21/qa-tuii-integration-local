@@ -68,7 +68,7 @@ func TestMarkDirtyConcurrent(t *testing.T) {
 		t.Errorf("ValidateState failed: %v", err)
 	}
 
-	// Optionally, check that the state file exists.
+	// Check that the state file exists.
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		t.Errorf("Expected state file %s to exist", configPath)
 	}
@@ -111,25 +111,21 @@ func TestChecksumCalculation(t *testing.T) {
 
 	sm.SetState(state)
 
-	cp, err := server.NewPersistence("dummy", sm, false)
+	_, err := server.NewPersistence("dummy", sm, false)
 	if err != nil {
 		t.Fatalf("Failed to initialize persistence: %v", err)
 	}
 
 	// Get the full state.
 	fullState := sm.GetFullState()
-	checksum1, err := cp.CalculateChecksum(fullState)
-	if err != nil {
-		t.Fatalf("CalculateChecksum returned error: %v", err)
-	}
 
 	// Serialize the same state and calculate again.
-	checksum2, err := cp.CalculateChecksum(fullState)
+	checksum, err := server.CalculateChecksum(fullState.State)
 	if err != nil {
 		t.Fatalf("CalculateChecksum returned error: %v", err)
 	}
 
-	if checksum1 != checksum2 {
-		t.Errorf("Expected same checksum for identical state, got %s and %s", checksum1, checksum2)
+	if fullState.Checksum != checksum {
+		t.Errorf("Expected same checksum for identical state, got %s and %s", fullState.Checksum, checksum)
 	}
 }

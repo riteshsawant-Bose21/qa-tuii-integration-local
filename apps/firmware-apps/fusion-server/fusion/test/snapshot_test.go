@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"fusion/internal/api"
 	"fusion/internal/logging"
 	"io"
 	"net/http"
@@ -17,8 +18,8 @@ const (
 	snapshotDefaultBucketName = "fusion"
 	snapshotDatabaseName      = "fusion_test.db"
 	snapServerAddr            = "http://192.168.64.100:8080"
+	snapAdminServerAddr       = "http://192.168.64.100:9090"
 	snapServerPort            = ":8080"
-	snapContentType           = "application/json"
 	snapshotSyncTime          = 5
 )
 
@@ -35,7 +36,7 @@ func init() {
 func TestSnapshotCreateAndList(t *testing.T) {
 	snapshotName := fmt.Sprintf("test_snapshot_%d", time.Now().UnixNano())
 	createURL := fmt.Sprintf("%s/snapshots/%s", snapServerAddr, snapshotName)
-	resp, err := http.Post(createURL, snapContentType, nil)
+	resp, err := http.Post(createURL, api.JsonMIMEType, nil)
 	if err != nil {
 		t.Fatalf("Failed to create snapshot: %v", err)
 	}
@@ -65,7 +66,7 @@ func TestSnapshotCreateAndList(t *testing.T) {
 func TestSnapshotActivateAndDelete(t *testing.T) {
 	snapshotName := fmt.Sprintf("test_snapshot_%d", time.Now().UnixNano())
 	createURL := fmt.Sprintf("%s/snapshots/%s", snapServerAddr, snapshotName)
-	resp, err := http.Post(createURL, snapContentType, nil)
+	resp, err := http.Post(createURL, api.JsonMIMEType, nil)
 	if err != nil {
 		t.Fatalf("Failed to create snapshot: %v", err)
 	}
@@ -99,7 +100,7 @@ func TestSnapshotActivateAndDelete(t *testing.T) {
 
 func TestSnapshotInvalidCreate(t *testing.T) {
 	createURL := fmt.Sprintf("%s/snapshots/", snapServerAddr) // invalid path
-	resp, err := http.Post(createURL, snapContentType, nil)
+	resp, err := http.Post(createURL, api.JsonMIMEType, nil)
 	if err != nil {
 		t.Fatalf("Failed to create snapshot with empty name: %v", err)
 	}
@@ -112,12 +113,12 @@ func TestSnapshotInvalidCreate(t *testing.T) {
 func TestSnapshotDuplicateCreate(t *testing.T) {
 	snapshotName := fmt.Sprintf("test_snapshot_%d", time.Now().UnixNano())
 	createURL := fmt.Sprintf("%s/snapshots/%s", snapServerAddr, snapshotName)
-	resp, err := http.Post(createURL, snapContentType, nil)
+	resp, err := http.Post(createURL, api.JsonMIMEType, nil)
 	if err != nil {
 		t.Fatalf("Create request failed: %v", err)
 	}
 	resp.Body.Close()
-	resp, err = http.Post(createURL, snapContentType, nil)
+	resp, err = http.Post(createURL, api.JsonMIMEType, nil)
 	if err != nil {
 		t.Fatalf("Duplicate create request failed: %v", err)
 	}
@@ -145,7 +146,7 @@ func TestSnapshotActivateNonExistent(t *testing.T) {
 func TestSnapshotPropagation(t *testing.T) {
 	snapshotName := fmt.Sprintf("test_snapshot_propagation_%d", time.Now().UnixNano())
 	createURL := fmt.Sprintf("%s/snapshots/%s", snapServerAddr, snapshotName)
-	resp, err := http.Post(createURL, snapContentType, nil)
+	resp, err := http.Post(createURL, api.JsonMIMEType, nil)
 	if err != nil {
 		t.Fatalf("Failed to create snapshot: %v", err)
 	}
@@ -177,8 +178,8 @@ func TestSnapshotPropagation(t *testing.T) {
 	}
 }
 
-func TestSnapshotFullDump(t *testing.T) {
-	exportURL := fmt.Sprintf("%s/snapshots/export", snapServerAddr)
+func TestSnapshotExport(t *testing.T) {
+	exportURL := fmt.Sprintf("%s/exportData", snapAdminServerAddr)
 	resp, err := http.Get(exportURL)
 	if err != nil {
 		t.Fatalf("Failed to get full export: %v", err)
@@ -192,16 +193,13 @@ func TestSnapshotFullDump(t *testing.T) {
 	if err := json.NewDecoder(resp.Body).Decode(&export); err != nil {
 		t.Fatalf("Failed to decode export: %v", err)
 	}
-	if _, ok := export["snapshot_metadata"]; !ok {
-		t.Error("Missing 'snapshot_metadata' in export")
-	}
 	if _, ok := export[snapshotDefaultBucketName]; !ok {
 		t.Errorf("Missing '%s' in export", snapshotDefaultBucketName)
 	}
 }
 
-func TestSnapshotImport(t *testing.T) {
-	exportURL := fmt.Sprintf("%s/snapshots/export", snapServerAddr)
+func TestSnapshotExportImport(t *testing.T) {
+	exportURL := fmt.Sprintf("%s/exportData", snapAdminServerAddr)
 	resp, err := http.Get(exportURL)
 	if err != nil {
 		t.Fatalf("Failed to export snapshots: %v", err)
@@ -226,8 +224,8 @@ func TestSnapshotImport(t *testing.T) {
 	newState, _ := json.Marshal(state)
 	export[snapshotDefaultBucketName] = newState
 	modified, _ := json.Marshal(export)
-	importURL := fmt.Sprintf("%s/snapshots/import", snapServerAddr)
-	resp, err = http.Post(importURL, snapContentType, bytes.NewReader(modified))
+	importURL := fmt.Sprintf("%s/importData", snapAdminServerAddr)
+	resp, err = http.Post(importURL, api.JsonMIMEType, bytes.NewReader(modified))
 	if err != nil {
 		t.Fatalf("Failed to import snapshot: %v", err)
 	}

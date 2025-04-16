@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"fusion/internal/api"
 	"io"
 	"net/http"
 	"os"
@@ -18,9 +19,8 @@ import (
 )
 
 const (
-	serverAddr      = "http://192.168.64.100:8080"
-	jsonContentType = "application/json"
-	testTimeout     = 5 * time.Second
+	serverAddr  = "http://192.168.64.100:8080"
+	testTimeout = 5 * time.Second
 )
 
 // ClusterConfig holds the test configuration for the cluster
@@ -330,7 +330,7 @@ func TestSetValue(t *testing.T) {
 			}
 
 			resp, err := http.Post(fmt.Sprintf("%s/value", serverAddr),
-				jsonContentType,
+				api.JsonMIMEType,
 				bytes.NewBuffer(jsonData))
 			if err != nil {
 				t.Fatalf("Failed to send request: %v", err)
@@ -366,7 +366,7 @@ func TestGetValue(t *testing.T) {
 	}
 	jsonData, _ := json.Marshal(testData)
 	_, err := http.Post(fmt.Sprintf("%s/value", serverAddr),
-		jsonContentType,
+		api.JsonMIMEType,
 		bytes.NewBuffer(jsonData))
 	if err != nil {
 		t.Fatalf("Failed to set test data: %v", err)
@@ -446,7 +446,7 @@ func TestUpdateValue(t *testing.T) {
 	}
 
 	resp, err := http.Post(fmt.Sprintf("%s/value", serverAddr),
-		jsonContentType,
+		api.JsonMIMEType,
 		bytes.NewBuffer(jsonData))
 	if err != nil {
 		t.Fatalf("Failed to set initial value: %v", err)
@@ -485,7 +485,7 @@ func TestUpdateValue(t *testing.T) {
 	}
 
 	resp, err = http.Post(fmt.Sprintf("%s/value", serverAddr),
-		jsonContentType,
+		api.JsonMIMEType,
 		bytes.NewBuffer(jsonData))
 	if err != nil {
 		t.Fatalf("Failed to update value: %v", err)
@@ -533,7 +533,7 @@ func TestSetAndUpdateValues(t *testing.T) {
 		t.Fatalf("Failed to marshal initial value: %v", err)
 	}
 
-	resp, err := http.Post(fmt.Sprintf("%s/value", serverAddr), "application/json", bytes.NewBuffer(jsonData))
+	resp, err := http.Post(fmt.Sprintf("%s/value", serverAddr), api.JsonMIMEType, bytes.NewBuffer(jsonData))
 	if err != nil {
 		t.Fatalf("Failed to set initial value: %v", err)
 	}
@@ -589,7 +589,7 @@ func TestSetAndUpdateValues(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create PATCH request: %v", err)
 	}
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(api.ContentType, api.JsonMIMEType)
 	client := &http.Client{}
 	resp, err = client.Do(req)
 	if err != nil {
@@ -649,7 +649,7 @@ func TestPatchArrayElement(t *testing.T) {
 	}
 
 	// Send initial configuration
-	resp, err := http.Post(fmt.Sprintf("%s/value", serverAddr), "application/json", bytes.NewBuffer(jsonData))
+	resp, err := http.Post(fmt.Sprintf("%s/value", serverAddr), api.JsonMIMEType, bytes.NewBuffer(jsonData))
 	if err != nil {
 		t.Fatalf("Failed to set initial configuration: %v", err)
 	}
@@ -673,7 +673,7 @@ func TestPatchArrayElement(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create PATCH request for updating array element: %v", err)
 	}
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(api.ContentType, api.JsonMIMEType)
 	client := &http.Client{}
 	resp, err = client.Do(req)
 	if err != nil {
@@ -716,7 +716,7 @@ func TestPatchArrayElement(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create PATCH request for inserting array element: %v", err)
 	}
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(api.ContentType, api.JsonMIMEType)
 	resp, err = client.Do(req)
 	if err != nil {
 		t.Fatalf("Failed to insert array element: %v", err)
@@ -761,7 +761,7 @@ func TestPatchDiffOutput(t *testing.T) {
 		t.Fatalf("Failed to marshal initial configuration: %v", err)
 	}
 
-	resp, err := http.Post(fmt.Sprintf("%s/value", serverAddr), "application/json", bytes.NewBuffer(jsonData))
+	resp, err := http.Post(fmt.Sprintf("%s/value", serverAddr), api.JsonMIMEType, bytes.NewBuffer(jsonData))
 	if err != nil {
 		t.Fatalf("Failed to set initial configuration: %v", err)
 	}
@@ -786,7 +786,7 @@ func TestPatchDiffOutput(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create PATCH request for updating array element: %v", err)
 	}
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(api.ContentType, api.JsonMIMEType)
 	client := &http.Client{}
 	resp, err = client.Do(req)
 	if err != nil {
@@ -1118,7 +1118,7 @@ func TestPatchOutOfBounds(t *testing.T) {
 		t.Fatalf("Failed to marshal initial configuration: %v", err)
 	}
 
-	resp, err := http.Post(fmt.Sprintf("%s/value", serverAddr), jsonContentType, bytes.NewBuffer(jsonData))
+	resp, err := http.Post(fmt.Sprintf("%s/value", serverAddr), api.JsonMIMEType, bytes.NewBuffer(jsonData))
 	if err != nil {
 		t.Fatalf("Failed to set initial configuration: %v", err)
 	}
@@ -1141,7 +1141,7 @@ func TestPatchOutOfBounds(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create PATCH request for out-of-bound update: %v", err)
 	}
-	req.Header.Set("Content-Type", jsonContentType)
+	req.Header.Set(api.ContentType, api.JsonMIMEType)
 	client := &http.Client{}
 	resp, err = client.Do(req)
 	if err != nil {
@@ -1199,7 +1199,7 @@ func TestPatchRemoveArrayElement(t *testing.T) {
 		t.Fatalf("Failed to marshal initial configuration: %v", err)
 	}
 
-	resp, err := http.Post(fmt.Sprintf("%s/value", serverAddr), jsonContentType, bytes.NewBuffer(jsonData))
+	resp, err := http.Post(fmt.Sprintf("%s/value", serverAddr), api.JsonMIMEType, bytes.NewBuffer(jsonData))
 	if err != nil {
 		t.Fatalf("Failed to set initial configuration: %v", err)
 	}
@@ -1222,7 +1222,7 @@ func TestPatchRemoveArrayElement(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create PATCH request for removing array element: %v", err)
 	}
-	req.Header.Set("Content-Type", jsonContentType)
+	req.Header.Set(api.ContentType, api.JsonMIMEType)
 	client := &http.Client{}
 	resp, err = client.Do(req)
 	if err != nil {
@@ -1301,7 +1301,7 @@ func setValueOnNode(node clusterNode, key string, value any) error {
 	}
 
 	resp, err := http.Post(fmt.Sprintf("%s/value", node.address),
-		jsonContentType, bytes.NewBuffer(jsonData))
+		api.JsonMIMEType, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return fmt.Errorf("failed to send request: %v", err)
 	}
