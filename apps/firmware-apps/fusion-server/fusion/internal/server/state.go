@@ -288,7 +288,7 @@ func (sm *StateManager) validateState(list *memberlist.Memberlist) {
 			continue
 		}
 
-		url := fmt.Sprintf("http://%s%s/exportState", member.Addr.String(), api.HTTPPort)
+		url := fmt.Sprintf("http://%s%s/exportState", member.Addr.String(), api.AdminPort)
 		resp, err := http.Get(url)
 		if err != nil {
 			logger.Warn("Failed to get state from %s: %v", member.Name, err)
@@ -302,13 +302,13 @@ func (sm *StateManager) validateState(list *memberlist.Memberlist) {
 			continue
 		}
 
-		var remoteState api.RawState
+		var remoteState VersionedState
 		if err := json.Unmarshal(body, &remoteState); err != nil {
 			logger.Warn("Failed to unmarshal JSON from %s: %v. Raw JSON: %s", member.Name, err, string(body))
 			continue
 		}
 
-		if !reflect.DeepEqual(localState, remoteState.State) {
+		if !reflect.DeepEqual(localState, remoteState) {
 			logger.Warn("[STATE] Inconsistent state detected with node %s", member.Name)
 			consistent = false
 		}
@@ -413,7 +413,7 @@ func (sm *StateManager) validateData(list *memberlist.Memberlist) {
 	logger.Info("Most current data found on member %s with timestamp %v",
 		mostCurrent.Member.Name, mostCurrent.Metadata.Timestamp)
 
-	exportURL := fmt.Sprintf("http://%s%s%s", mostCurrent.Member.Addr.String(), "/exportState", api.HTTPPort)
+	exportURL := fmt.Sprintf("http://%s%s%s", mostCurrent.Member.Addr.String(), "/exportState", api.AdminPort)
 
 	resp, err := http.Get(exportURL)
 	if err != nil {
@@ -442,7 +442,7 @@ func (sm *StateManager) validateData(list *memberlist.Memberlist) {
 func syncData(memberMetadata []api.MemberMetadata, currentHash string, data []byte) {
 	for _, ms := range memberMetadata {
 		if ms.Metadata.Hash != currentHash {
-			importURL := fmt.Sprintf("http://%s%s%s", ms.Member.Addr.String(), "/importData", api.HTTPPort)
+			importURL := fmt.Sprintf("http://%s%s%s", ms.Member.Addr.String(), "/importData", api.AdminPort)
 			if !importData(importURL, data) {
 				return
 			}

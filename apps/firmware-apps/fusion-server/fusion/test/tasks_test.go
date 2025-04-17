@@ -14,7 +14,10 @@ import (
 )
 
 // liveServerURL points to your running server.
-const liveServerURL = "http://192.168.64.100:8080"
+const (
+	liveServerURL = "http://192.168.64.100:8080"
+	snapshotID    = "test-snapshot"
+)
 
 // clearTasks retrieves all tasks from the live server and deletes each one.
 // This ensures tests run against a clean slate.
@@ -44,7 +47,7 @@ func TestTaskManagerEndpoints(t *testing.T) {
 		task := api.Task{
 			ID:          "test-task",
 			CronExpr:    "*/5 * * * *",
-			SnapshotID:  "test-snapshot",
+			SnapshotID:  snapshotID,
 			Description: "Test task description",
 		}
 		taskJSON, err := json.Marshal(task)
@@ -76,7 +79,7 @@ func TestTaskManagerEndpoints(t *testing.T) {
 		task := api.Task{
 			ID:          "test-task",
 			CronExpr:    "*/10 * * * *",
-			SnapshotID:  "test-snapshot",
+			SnapshotID:  snapshotID,
 			Description: "Updated task description",
 		}
 		taskJSON, err := json.Marshal(task)

@@ -40,7 +40,7 @@ func TestMarkDirtyConcurrent(t *testing.T) {
 	}
 
 	// Create the persistence object.
-	cp, err := server.NewPersistence(configPath, sm, true)
+	cp, err := server.NewPersistence(configPath, sm)
 	if err != nil {
 		t.Fatalf("Failed to initialize persistence: %v", err)
 	}
@@ -79,11 +79,11 @@ func TestValidateStateFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, databaseName)
 
-	sm := server.NewStateManager("testnode")
+	sm := server.NewStateManager("test_manager")
 	if err := sm.Set("key", "value"); err != nil {
 		t.Fatalf("Failed to set state: %v", err)
 	}
-	cp, err := server.NewPersistence(configPath, sm, false)
+	cp, err := server.NewPersistence(configPath, sm)
 	if err != nil {
 		t.Fatalf("Failed to initialize persistence: %v", err)
 	}
@@ -101,7 +101,8 @@ func TestValidateStateFile(t *testing.T) {
 // TestChecksumCalculation verifies that the checksum calculated on the state
 // remains consistent when the same state is used.
 func TestChecksumCalculation(t *testing.T) {
-	sm := server.NewStateManager("testnode")
+
+	sm := server.NewStateManager("test_manager")
 
 	// Set a known state.
 	state := map[string]*api.StateEntry{
@@ -111,7 +112,7 @@ func TestChecksumCalculation(t *testing.T) {
 
 	sm.SetState(state)
 
-	_, err := server.NewPersistence("dummy", sm, false)
+	_, err := server.NewPersistence("dummy", sm)
 	if err != nil {
 		t.Fatalf("Failed to initialize persistence: %v", err)
 	}

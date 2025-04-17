@@ -19,7 +19,8 @@ import (
 )
 
 const (
-	MaxHistory = 100
+	HistoryPath = "history.json"
+	MaxHistory  = 100
 )
 
 // ExecutionRecord represents a log entry for a task execution.
@@ -32,7 +33,8 @@ type ExecutionRecord struct {
 
 // TaskManager manages tasks and provides execution history with rotation.
 type TaskManager struct {
-	handler          *Handler
+	node             string
+	persistence      *Persistence
 	cron             *cron.Cron
 	tasks            map[string]*api.Task
 	taskFuncs        map[string]func()
@@ -43,13 +45,15 @@ type TaskManager struct {
 }
 
 // NewTaskManager initializes and returns a new TaskManager with persistence.
-func NewTaskManager(historyPath string) *TaskManager {
+func NewTaskManager(config *api.AppConfig, persistence *Persistence) *TaskManager {
 	return &TaskManager{
+		node:             config.NodeName,
+		persistence:      persistence,
 		cron:             cron.New(),
 		tasks:            make(map[string]*api.Task),
 		taskFuncs:        make(map[string]func()),
 		executionHistory: make([]ExecutionRecord, 0),
-		historyFilePath:  historyPath,
+		historyFilePath:  HistoryPath,
 	}
 }
 
@@ -140,22 +144,6 @@ func (tm *TaskManager) ListTasks() []api.Task {
 	return taskList
 }
 
-// wrapTask wraps a task function to track execution history and handle panics.
-func (tm *TaskManager) wrapTask(id string, taskFunc func()) func() {
-	logger := logging.GetLogger()
-
-	return func() {
-		defer func() {
-			if r := recover(); r != nil {
-				tm.RecordExecution(id, "failed", fmt.Sprintf("Panic: %v", r))
-				logger.Error("Task '%s' failed with panic: %v", id, r)
-			}
-		}()
-		taskFunc()
-		tm.RecordExecution(id, "success", "Task executed successfully")
-	}
-}
-
 // RecordExecution records a task execution log entry with rotation.
 func (tm *TaskManager) RecordExecution(taskID, status, description string) {
 	tm.mu.Lock()
@@ -174,58 +162,6 @@ func (tm *TaskManager) RecordExecution(taskID, status, description string) {
 	}
 
 	_ = tm.saveHistory()
-}
-
-// saveTasks saves the current tasks
-func (tm *TaskManager) saveTasks() error {
-	return tm.handler.persistence.SaveTasks(tm.tasks)
-}
-
-// loadTasks loads tasks from the persistence file and schedules them.
-func (tm *TaskManager) loadTasks() error {
-	tm.mu.Lock()
-	defer tm.mu.Unlock()
-
-	tasks, err := tm.handler.persistence.LoadTasks()
-	if err != nil {
-		return err
-	}
-
-	tm.tasks = tasks
-
-	return nil
-}
-
-// saveHistory saves the execution history to a file.
-func (tm *TaskManager) saveHistory() error {
-	data, err := json.MarshalIndent(tm.executionHistory, "", "  ")
-	if err != nil {
-		return err
-	}
-
-	return os.WriteFile(tm.historyFilePath, data, 0644)
-}
-
-// loadHistory loads the execution history from a file.
-func (tm *TaskManager) loadHistory() error {
-	tm.mu.Lock()
-	defer tm.mu.Unlock()
-
-	data, err := os.ReadFile(tm.historyFilePath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			tm.executionHistory = make([]ExecutionRecord, 0)
-			return nil
-		}
-		return err
-	}
-
-	if len(data) == 0 {
-		tm.executionHistory = make([]ExecutionRecord, 0)
-		return nil
-	}
-
-	return json.Unmarshal(data, &tm.executionHistory)
 }
 
 // GetExecutionHistory retrieves the execution history.
@@ -316,7 +252,7 @@ func (tm *TaskManager) HandleCreateTask(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	exists, err := tm.handler.persistence.TaskExists(task)
+	exists, err := tm.persistence.TaskExists(task)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error checking task existence: %v", err), http.StatusInternalServerError)
 		return
@@ -356,7 +292,7 @@ func (tm *TaskManager) HandleGetTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var task api.Task
-	err := tm.handler.persistence.db.View(func(tx *bbolt.Tx) error {
+	err := tm.persistence.db.View(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte(tasksBucketName))
 		if b == nil {
 			return fmt.Errorf("tasks bucket not found")
@@ -474,11 +410,81 @@ func (tm *TaskManager) HandleClearHistory(w http.ResponseWriter, r *http.Request
 func (tm *TaskManager) taskActivateSnapshotFunc(name string) func() {
 	return func() {
 		logger := logging.GetLogger()
-		logger.Debug("Starting snapshot apply task for '%s'", name)
-		if err := tm.handler.HandleActivateSnapshot(name); err != nil {
+		logger.Debug("Activating snapshot %s on %s", name, name)
+
+		// Activate the snapshot only on the instance
+		if err := tm.persistence.ActivateSnapshot(name); err != nil {
 			logger.Error("Snapshot apply task for '%s' failed: %v", name, err)
 		} else {
 			logger.Debug("Snapshot '%s' activated successfully via task", name)
 		}
 	}
+}
+
+// wrapTask wraps a task function to track execution history and handle panics.
+func (tm *TaskManager) wrapTask(id string, taskFunc func()) func() {
+	logger := logging.GetLogger()
+
+	return func() {
+		defer func() {
+			if r := recover(); r != nil {
+				tm.RecordExecution(id, "failed", fmt.Sprintf("Panic: %v", r))
+				logger.Error("Task '%s' failed with panic: %v", id, r)
+			}
+		}()
+		taskFunc()
+		tm.RecordExecution(id, "success", "Task executed successfully")
+	}
+}
+
+// saveTasks saves the current tasks
+func (tm *TaskManager) saveTasks() error {
+	return tm.persistence.SaveTasks(tm.tasks)
+}
+
+// loadTasks loads tasks from the persistence file and schedules them.
+func (tm *TaskManager) loadTasks() error {
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
+
+	tasks, err := tm.persistence.LoadTasks()
+	if err != nil {
+		return err
+	}
+
+	tm.tasks = tasks
+
+	return nil
+}
+
+// saveHistory saves the execution history to a file.
+func (tm *TaskManager) saveHistory() error {
+	data, err := json.MarshalIndent(tm.executionHistory, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(tm.historyFilePath, data, 0644)
+}
+
+// loadHistory loads the execution history from a file.
+func (tm *TaskManager) loadHistory() error {
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
+
+	data, err := os.ReadFile(tm.historyFilePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			tm.executionHistory = make([]ExecutionRecord, 0)
+			return nil
+		}
+		return err
+	}
+
+	if len(data) == 0 {
+		tm.executionHistory = make([]ExecutionRecord, 0)
+		return nil
+	}
+
+	return json.Unmarshal(data, &tm.executionHistory)
 }

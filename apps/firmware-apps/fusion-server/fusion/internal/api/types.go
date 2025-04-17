@@ -81,11 +81,6 @@ type Task struct {
 	SnapshotID  string `json:"snapshot_id"`
 }
 
-// RawState represents raw state data element
-type RawState struct {
-	State map[string]*StateEntry `json:"state"`
-}
-
 // StateEntry represents a single entry in the state
 type StateEntry struct {
 	Data      any       `json:"data"`

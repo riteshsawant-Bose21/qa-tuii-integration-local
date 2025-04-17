@@ -21,18 +21,13 @@ type Handler struct {
 	endpoints    []string
 }
 
-func NewHandler(memberlist *memberlist.Memberlist, persistence *Persistence, stateManager *StateManager,
-	taskManager *TaskManager, updater *Updater) *Handler {
-	handler := &Handler{
+func NewHandler(memberlist *memberlist.Memberlist, persistence *Persistence, stateManager *StateManager, updater *Updater) *Handler {
+	return &Handler{
 		memberlist:   memberlist,
 		persistence:  persistence,
 		stateManager: stateManager,
 		updater:      updater,
 	}
-
-	taskManager.handler = handler
-
-	return handler
 }
 
 func (h *Handler) SetEndpoints(endpoints []string) {

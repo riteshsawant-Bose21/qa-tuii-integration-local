@@ -34,14 +34,13 @@ type Persistence struct {
 	dbPath       string
 	stateManager *StateManager
 	db           *bbolt.DB
-	verbose      bool
 	mutex        sync.RWMutex
 	lastSave     time.Time
 	saveDebounce time.Duration
 }
 
 // NewPersistence opens the database and returns a new persistence instance.
-func NewPersistence(dbPath string, stateManager *StateManager, verbose bool) (*Persistence, error) {
+func NewPersistence(dbPath string, stateManager *StateManager) (*Persistence, error) {
 	db, err := bbolt.Open(dbPath, 0600, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
@@ -50,7 +49,6 @@ func NewPersistence(dbPath string, stateManager *StateManager, verbose bool) (*P
 		dbPath:       dbPath,
 		stateManager: stateManager,
 		db:           db,
-		verbose:      verbose,
 		saveDebounce: 100 * time.Millisecond,
 	}
 
@@ -130,10 +128,8 @@ func (p *Persistence) SaveState() error {
 		return fmt.Errorf("failed to update metadata: %w", err)
 	}
 
-	if p.verbose {
-		logging.GetLogger().Debug("State saved (version: %d, checksum: %s) under snapshot '%s'",
-			ps.Version, ps.Checksum, snapshotKey)
-	}
+	logging.GetLogger().Debug("State saved (version: %d, checksum: %s) under snapshot '%s'",
+		ps.Version, ps.Checksum, snapshotKey)
 
 	return nil
 }

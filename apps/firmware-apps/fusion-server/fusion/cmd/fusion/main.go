@@ -64,13 +64,13 @@ func (app *App) Close() {
 func NewApp(config *api.AppConfig) *App {
 	logger := initLogging(config)
 	stateManager := initStateManager(config.NodeName)
-	persistence := initPersistence(config, fusionDatabasePath, stateManager)
-	taskManager := initTaskManager()
+	persistence := initPersistence(fusionDatabasePath, stateManager)
+	taskManager := initTaskManager(config, persistence)
 	updater := server.NewUpdater()
 
 	delegate := cluster.NewClusterDelegate(config.NodeName, persistence, stateManager, taskManager, updater)
 	memberlist := cluster.CreateMemberlist(config, delegate)
-	connectionHandler := server.NewHandler(memberlist, persistence, stateManager, taskManager, updater)
+	connectionHandler := server.NewHandler(memberlist, persistence, stateManager, updater)
 	clusterInstance := cluster.NewCluster(config, delegate, memberlist)
 	bleServer := initBLEServer()
 	udpServer := initUDPServer(api.UDPPort, connectionHandler)
@@ -266,11 +266,11 @@ func initLogging(config *api.AppConfig) *logging.Logger {
 }
 
 // initPersistence initializes the persistence layer.
-func initPersistence(config *api.AppConfig, dataPath string, stateManager *server.StateManager) *server.Persistence {
+func initPersistence(dataPath string, stateManager *server.StateManager) *server.Persistence {
 
 	logger := logging.GetLogger()
 
-	persistence, err := server.NewPersistence(dataPath, stateManager, config.Verbose)
+	persistence, err := server.NewPersistence(dataPath, stateManager)
 	if err != nil {
 		logger.Fatal("Failed to initialize persistence: %v", err)
 	}
@@ -284,8 +284,8 @@ func initPersistence(config *api.AppConfig, dataPath string, stateManager *serve
 }
 
 // initStateManager initializes the state manager.
-func initStateManager(nodeName string) *server.StateManager {
-	return server.NewStateManager(nodeName)
+func initStateManager(node string) *server.StateManager {
+	return server.NewStateManager(node)
 }
 
 func initDataPaths() {
@@ -323,8 +323,12 @@ func initDataPaths() {
 }
 
 // initTaskManager initializes the timer manager.
-func initTaskManager() *server.TaskManager {
-	return server.NewTaskManager("history.json")
+func initTaskManager(config *api.AppConfig, persistence *server.Persistence) *server.TaskManager {
+	taskManager := server.NewTaskManager(config, persistence)
+	if err := taskManager.Start(); err != nil {
+		logging.GetLogger().Fatal("Failed to start TaskManager: %v", err)
+	}
+	return taskManager
 }
 
 // initBLEServer initializes the Bluetooth server.

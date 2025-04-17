@@ -220,7 +220,7 @@ func (s *ConfigServer) ExportState(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve the full state from the state manager.
-	state := map[string]any{"state": s.handler.stateManager.GetFullState()}
+	state := s.handler.stateManager.GetFullState()
 
 	// Write the JSON response.
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
@@ -247,14 +247,14 @@ func (s *ConfigServer) ImportState(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	// Unmarshal the JSON data into a map.
-	var data map[string]*api.StateEntry
-	err = json.Unmarshal(body, &data)
+	var state VersionedState
+	err = json.Unmarshal(body, &state)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("error unmarshaling json: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	s.handler.stateManager.SetState(data)
+	s.handler.stateManager.SetState(state.State)
 }
 
 // HandleWebSocket upgrades an HTTP connection to a WebSocket connection, sets up ping handlers,

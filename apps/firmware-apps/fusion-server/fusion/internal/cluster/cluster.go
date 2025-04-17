@@ -121,14 +121,6 @@ func (c *Cluster) startVRRPListener() error {
 				logger.Info("%s[%s] joined memberlist with VIP: %s", c.nodeName, c.bindAddr, c.vip)
 			}
 		}
-
-		// Start the task manager if we are the holder of the VIP
-		if addr, isVip := c.isLocalVIP(vip); isVip {
-			if err := c.delegate.taskManager.Start(); err != nil {
-				logging.GetLogger().Fatal("Error starting TaskManager: %v", err)
-			}
-			logger.Info("TaskManager running on: %s", addr.String())
-		}
 	})
 
 	if err != nil {

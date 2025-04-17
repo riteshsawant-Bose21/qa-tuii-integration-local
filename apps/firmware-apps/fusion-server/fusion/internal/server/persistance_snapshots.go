@@ -20,29 +20,20 @@ func (p *Persistence) CreateSnapshot(snapshotKey string) error {
 		return err
 	}
 
-	if p.verbose {
-		logging.GetLogger().Debug("Snapshot '%s' saved (version: %d, checksum: %s)",
-			snapshotKey, ps.Version, ps.Checksum[:8])
-	}
+	logging.GetLogger().Debug("Snapshot '%s' saved (version: %d, checksum: %s)",
+		snapshotKey, ps.Version, ps.Checksum[:8])
+
 	return nil
 }
 
 // ActivateSnapshot restores the state from the given snapshot key and updates metadata.
 func (p *Persistence) ActivateSnapshot(snapshotKey string) error {
-	var ps PersistentState
-	err := p.db.View(func(tx *bbolt.Tx) error {
-		b := tx.Bucket([]byte(snapshotsBucketName))
-		if b == nil {
-			return fmt.Errorf("state bucket not found")
-		}
-		data := b.Get([]byte(snapshotKey))
-		if data == nil {
-			return fmt.Errorf("snapshot '%s' not found", snapshotKey)
-		}
-		return json.Unmarshal(data, &ps)
-	})
+	ps, err := p.readSnapshot(snapshotKey)
 	if err != nil {
 		return err
+	}
+	if ps == nil {
+		return fmt.Errorf("snapshot %s does not exist", snapshotKey)
 	}
 
 	meta, err := p.loadMetadata()
@@ -61,9 +52,7 @@ func (p *Persistence) ActivateSnapshot(snapshotKey string) error {
 		}
 	}
 
-	if p.verbose {
-		logging.GetLogger().Info("Activated snapshot '%s' (version: %d)", snapshotKey, ps.Version)
-	}
+	logging.GetLogger().Debug("Activated snapshot '%s' (version: %d)", snapshotKey, ps.Version)
 
 	p.mutex.Lock()
 	p.lastSave = time.Now().UTC()
@@ -132,21 +121,20 @@ func (p *Persistence) ListSnapshots() ([]string, error) {
 }
 
 // SnapshotExists checks if a snapshot with the given name exists.
-func (p *Persistence) SnapshotExists(name string) (bool, error) {
+func (p *Persistence) SnapshotExists(snapshotKey string) (bool, error) {
 	p.mutex.RLock()
 	defer p.mutex.RUnlock()
 
-	var exists bool
-	err := p.db.View(func(tx *bbolt.Tx) error {
-		b := tx.Bucket([]byte(snapshotsBucketName))
-		if b == nil {
-			exists = false
-			return nil
-		}
-		exists = b.Get([]byte(name)) != nil
-		return nil
-	})
-	return exists, err
+	ps, err := p.readSnapshot(snapshotKey)
+	if err != nil {
+		return false, err
+	}
+
+	if ps == nil {
+		return false, nil
+	}
+
+	return true, err
 }
 
 // GetDatabaseMetadata retrieves the database metadata.
@@ -162,40 +150,21 @@ func (p *Persistence) GetDatabaseMetadata() (api.DatabaseMetadata, error) {
 }
 
 // GetSnapshot retrieves the snapshot data.
-func (p *Persistence) GetSnapshot(name string) (any, error) {
-	exists, err := p.SnapshotExists(name)
-	if err != nil {
-		return nil, fmt.Errorf("error checking snapshot existence: %w", err)
-	}
-	if !exists {
-		return nil, fmt.Errorf("snapshot does not exist")
-	}
+func (p *Persistence) GetSnapshot(snapshotKey string) (any, error) {
 
 	p.mutex.RLock()
 	defer p.mutex.RUnlock()
 
-	var data []byte
-	err = p.db.View(func(tx *bbolt.Tx) error {
-		b := tx.Bucket([]byte(snapshotsBucketName))
-		if b == nil {
-			return fmt.Errorf("state bucket not found")
-		}
-		data = b.Get([]byte(name))
-		if data == nil {
-			return fmt.Errorf("snapshot '%s' not found", name)
-		}
-		return nil
-	})
+	ps, err := p.readSnapshot(snapshotKey)
 	if err != nil {
 		return nil, err
 	}
 
-	// Unmarshal the raw JSON data into an any
-	var result any
-	if err := json.Unmarshal(data, &result); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal snapshot data: %w", err)
+	if ps == nil {
+		return nil, fmt.Errorf("snapshot %s does not exist", snapshotKey)
 	}
-	return result, nil
+
+	return ps, nil
 }
 
 // LoadActiveSnapshot ensures default buckets exist, loads the active snapshot, and activates it.
@@ -207,7 +176,7 @@ func (p *Persistence) LoadActiveSnapshot() error {
 	}
 
 	if err := p.ActivateSnapshot(snapshotName); err != nil {
-		return fmt.Errorf("failed to activate snapshot: %w", err)
+		return fmt.Errorf("failed to activate snapshot %s: %w", snapshotName, err)
 	}
 
 	logging.GetLogger().Debug("Activated initial snapshot: %s", snapshotName)
@@ -221,4 +190,34 @@ func (p *Persistence) getActiveSnapshotKey() (string, error) {
 		return defaultSnapshotKey, nil
 	}
 	return meta.ActiveSnapshot, nil
+}
+
+// readSnapshot reads the snapshots from the database.
+func (p *Persistence) readSnapshot(snapshotKey string) (*PersistentState, error) {
+
+	var ps PersistentState
+	exists := true
+
+	err := p.db.View(func(tx *bbolt.Tx) error {
+		b := tx.Bucket([]byte(snapshotsBucketName))
+		if b == nil {
+			return fmt.Errorf("bucket '%s' not found", snapshotsBucketName)
+		}
+		data := b.Get([]byte(snapshotKey))
+		if data == nil {
+			exists = false
+			return nil
+		}
+		return json.Unmarshal(data, &ps)
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if !exists {
+		return nil, nil
+	}
+
+	return &ps, nil
 }
