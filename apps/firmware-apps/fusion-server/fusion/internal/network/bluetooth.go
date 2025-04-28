@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"fusion/internal/api"
 	"fusion/internal/logging"
 	"io"
 	"net/http"
@@ -18,10 +19,9 @@ import (
 )
 
 const (
-	advertiserName  = "Fusion Mini"
-	jsonContentType = "application/json"
-	maxChunkSize    = 100
-	errUnexpected   = 0x80
+	advertiserName = "Fusion Mini"
+	maxChunkSize   = 100
+	errUnexpected  = 0x80
 )
 
 // BluetoothHTTPRequest represents the structure of incoming HTTP-like messages.
@@ -56,7 +56,7 @@ func performHTTPRequest(req BluetoothHTTPRequest) (BluetoothHTTPResponse, error)
 		httpResp, err = client.Get(req.URL)
 	case "POST":
 		bodyBytes, _ := json.Marshal(req.Body)
-		httpResp, err = client.Post(req.URL, jsonContentType, bytes.NewBuffer(bodyBytes))
+		httpResp, err = client.Post(req.URL, api.JsonMIMEType, bytes.NewBuffer(bodyBytes))
 	default:
 		return BluetoothHTTPResponse{
 			Type: "error",

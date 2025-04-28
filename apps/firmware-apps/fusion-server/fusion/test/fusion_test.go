@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"fusion/internal/api"
 	"io"
 	"net/http"
 	"os"
@@ -18,9 +19,8 @@ import (
 )
 
 const (
-	serverAddr      = "http://192.168.64.100:8080"
-	jsonContentType = "application/json"
-	testTimeout     = 5 * time.Second
+	serverAddr  = "http://192.168.64.100:8080"
+	testTimeout = 5 * time.Second
 )
 
 // ClusterConfig holds the test configuration for the cluster
@@ -329,8 +329,8 @@ func TestSetValue(t *testing.T) {
 				t.Fatalf("Failed to marshal payload: %v", err)
 			}
 
-			resp, err := http.Post(fmt.Sprintf("%s/setValue", serverAddr),
-				jsonContentType,
+			resp, err := http.Post(fmt.Sprintf("%s/value", serverAddr),
+				api.JsonMIMEType,
 				bytes.NewBuffer(jsonData))
 			if err != nil {
 				t.Fatalf("Failed to send request: %v", err)
@@ -338,7 +338,7 @@ func TestSetValue(t *testing.T) {
 			defer resp.Body.Close()
 
 			if resp.StatusCode != tt.wantStatus {
-				t.Errorf("SetValue returned wrong status code: got %v want %v",
+				t.Errorf("Value returned wrong status code: got %v want %v",
 					resp.StatusCode, tt.wantStatus)
 			}
 
@@ -365,8 +365,8 @@ func TestGetValue(t *testing.T) {
 		"test_key": "test_value",
 	}
 	jsonData, _ := json.Marshal(testData)
-	_, err := http.Post(fmt.Sprintf("%s/setValue", serverAddr),
-		jsonContentType,
+	_, err := http.Post(fmt.Sprintf("%s/value", serverAddr),
+		api.JsonMIMEType,
 		bytes.NewBuffer(jsonData))
 	if err != nil {
 		t.Fatalf("Failed to set test data: %v", err)
@@ -400,7 +400,7 @@ func TestGetValue(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			url := fmt.Sprintf("%s/getValue", serverAddr)
+			url := fmt.Sprintf("%s/value", serverAddr)
 			if tt.key != "" {
 				url += fmt.Sprintf("?key=%s", tt.key)
 			}
@@ -412,7 +412,7 @@ func TestGetValue(t *testing.T) {
 			defer resp.Body.Close()
 
 			if resp.StatusCode != tt.wantStatus {
-				t.Errorf("GetValue returned wrong status code: got %v want %v",
+				t.Errorf("Value returned wrong status code: got %v want %v",
 					resp.StatusCode, tt.wantStatus)
 			}
 
@@ -445,8 +445,8 @@ func TestUpdateValue(t *testing.T) {
 		t.Fatalf("Failed to marshal initial value: %v", err)
 	}
 
-	resp, err := http.Post(fmt.Sprintf("%s/setValue", serverAddr),
-		jsonContentType,
+	resp, err := http.Post(fmt.Sprintf("%s/value", serverAddr),
+		api.JsonMIMEType,
 		bytes.NewBuffer(jsonData))
 	if err != nil {
 		t.Fatalf("Failed to set initial value: %v", err)
@@ -454,7 +454,7 @@ func TestUpdateValue(t *testing.T) {
 	resp.Body.Close()
 
 	// Verify initial value was set
-	getValue, err := http.Get(fmt.Sprintf("%s/getValue?key=update_test_key", serverAddr))
+	getValue, err := http.Get(fmt.Sprintf("%s/value?key=update_test_key", serverAddr))
 	if err != nil {
 		t.Fatalf("Failed to get initial value: %v", err)
 	}
@@ -484,8 +484,8 @@ func TestUpdateValue(t *testing.T) {
 		t.Fatalf("Failed to marshal updated value: %v", err)
 	}
 
-	resp, err = http.Post(fmt.Sprintf("%s/setValue", serverAddr),
-		jsonContentType,
+	resp, err = http.Post(fmt.Sprintf("%s/value", serverAddr),
+		api.JsonMIMEType,
 		bytes.NewBuffer(jsonData))
 	if err != nil {
 		t.Fatalf("Failed to update value: %v", err)
@@ -493,7 +493,7 @@ func TestUpdateValue(t *testing.T) {
 	resp.Body.Close()
 
 	// Verify the update
-	getValue, err = http.Get(fmt.Sprintf("%s/getValue?key=update_test_key", serverAddr))
+	getValue, err = http.Get(fmt.Sprintf("%s/value?key=update_test_key", serverAddr))
 	if err != nil {
 		t.Fatalf("Failed to get updated value: %v", err)
 	}
@@ -533,7 +533,7 @@ func TestSetAndUpdateValues(t *testing.T) {
 		t.Fatalf("Failed to marshal initial value: %v", err)
 	}
 
-	resp, err := http.Post(fmt.Sprintf("%s/setValue", serverAddr), "application/json", bytes.NewBuffer(jsonData))
+	resp, err := http.Post(fmt.Sprintf("%s/value", serverAddr), api.JsonMIMEType, bytes.NewBuffer(jsonData))
 	if err != nil {
 		t.Fatalf("Failed to set initial value: %v", err)
 	}
@@ -545,7 +545,7 @@ func TestSetAndUpdateValues(t *testing.T) {
 	}
 
 	// Verify the initial value
-	getValue, err := http.Get(fmt.Sprintf("%s/getValue?key=settings.audio.tone_eq1", serverAddr))
+	getValue, err := http.Get(fmt.Sprintf("%s/value?key=settings.audio.tone_eq1", serverAddr))
 	if err != nil {
 		t.Fatalf("Failed to get initial value: %v", err)
 	}
@@ -585,11 +585,11 @@ func TestSetAndUpdateValues(t *testing.T) {
 		t.Fatalf("Failed to marshal updated value: %v", err)
 	}
 
-	req, err := http.NewRequest("PATCH", fmt.Sprintf("%s/updateValue", serverAddr), bytes.NewBuffer(jsonData))
+	req, err := http.NewRequest("PATCH", fmt.Sprintf("%s/value", serverAddr), bytes.NewBuffer(jsonData))
 	if err != nil {
 		t.Fatalf("Failed to create PATCH request: %v", err)
 	}
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(api.ContentType, api.JsonMIMEType)
 	client := &http.Client{}
 	resp, err = client.Do(req)
 	if err != nil {
@@ -603,7 +603,7 @@ func TestSetAndUpdateValues(t *testing.T) {
 	}
 
 	// Verify the update
-	getValue, err = http.Get(fmt.Sprintf("%s/getValue?key=settings.audio.tone_eq1", serverAddr))
+	getValue, err = http.Get(fmt.Sprintf("%s/value?key=settings.audio.tone_eq1", serverAddr))
 	if err != nil {
 		t.Fatalf("Failed to get updated value: %v", err)
 	}
@@ -649,7 +649,7 @@ func TestPatchArrayElement(t *testing.T) {
 	}
 
 	// Send initial configuration
-	resp, err := http.Post(fmt.Sprintf("%s/setValue", serverAddr), "application/json", bytes.NewBuffer(jsonData))
+	resp, err := http.Post(fmt.Sprintf("%s/value", serverAddr), api.JsonMIMEType, bytes.NewBuffer(jsonData))
 	if err != nil {
 		t.Fatalf("Failed to set initial configuration: %v", err)
 	}
@@ -669,11 +669,11 @@ func TestPatchArrayElement(t *testing.T) {
 		t.Fatalf("Failed to marshal update data: %v", err)
 	}
 
-	req, err := http.NewRequest("PATCH", fmt.Sprintf("%s/updateValue?key=settings.audio.tone_eq1.frequencies[1]", serverAddr), bytes.NewBuffer(jsonUpdate))
+	req, err := http.NewRequest("PATCH", fmt.Sprintf("%s/value?key=settings.audio.tone_eq1.frequencies[1]", serverAddr), bytes.NewBuffer(jsonUpdate))
 	if err != nil {
 		t.Fatalf("Failed to create PATCH request for updating array element: %v", err)
 	}
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(api.ContentType, api.JsonMIMEType)
 	client := &http.Client{}
 	resp, err = client.Do(req)
 	if err != nil {
@@ -682,7 +682,7 @@ func TestPatchArrayElement(t *testing.T) {
 	defer resp.Body.Close()
 
 	// Verify update to array element
-	getValue, err := http.Get(fmt.Sprintf("%s/getValue?key=settings.audio.tone_eq1.frequencies", serverAddr))
+	getValue, err := http.Get(fmt.Sprintf("%s/value?key=settings.audio.tone_eq1.frequencies", serverAddr))
 	if err != nil {
 		t.Fatalf("Failed to get updated array: %v", err)
 	}
@@ -712,11 +712,11 @@ func TestPatchArrayElement(t *testing.T) {
 		t.Fatalf("Failed to marshal insert data: %v", err)
 	}
 
-	req, err = http.NewRequest("PATCH", fmt.Sprintf("%s/updateValue?key=settings.audio.tone_eq1.frequencies[3]", serverAddr), bytes.NewBuffer(jsonInsert))
+	req, err = http.NewRequest("PATCH", fmt.Sprintf("%s/value?key=settings.audio.tone_eq1.frequencies[3]", serverAddr), bytes.NewBuffer(jsonInsert))
 	if err != nil {
 		t.Fatalf("Failed to create PATCH request for inserting array element: %v", err)
 	}
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(api.ContentType, api.JsonMIMEType)
 	resp, err = client.Do(req)
 	if err != nil {
 		t.Fatalf("Failed to insert array element: %v", err)
@@ -724,7 +724,7 @@ func TestPatchArrayElement(t *testing.T) {
 	defer resp.Body.Close()
 
 	// Verify new insertion in `frequencies`
-	getValue, err = http.Get(fmt.Sprintf("%s/getValue?key=settings.audio.tone_eq1.frequencies", serverAddr))
+	getValue, err = http.Get(fmt.Sprintf("%s/value?key=settings.audio.tone_eq1.frequencies", serverAddr))
 	if err != nil {
 		t.Fatalf("Failed to get inserted array element: %v", err)
 	}
@@ -755,13 +755,13 @@ func TestPatchDiffOutput(t *testing.T) {
 		},
 	}
 
-	// Marshal and send the initial configuration using the /setValue endpoint.
+	// Marshal and send the initial configuration using the /value endpoint.
 	jsonData, err := json.Marshal(initialConfig)
 	if err != nil {
 		t.Fatalf("Failed to marshal initial configuration: %v", err)
 	}
 
-	resp, err := http.Post(fmt.Sprintf("%s/setValue", serverAddr), "application/json", bytes.NewBuffer(jsonData))
+	resp, err := http.Post(fmt.Sprintf("%s/value", serverAddr), api.JsonMIMEType, bytes.NewBuffer(jsonData))
 	if err != nil {
 		t.Fatalf("Failed to set initial configuration: %v", err)
 	}
@@ -781,12 +781,12 @@ func TestPatchDiffOutput(t *testing.T) {
 	}
 
 	// Use the query key to update the array element.
-	patchURL := fmt.Sprintf("%s/updateValue?key=settings.audio.tone_eq1.frequencies[1]", serverAddr)
+	patchURL := fmt.Sprintf("%s/value?key=settings.audio.tone_eq1.frequencies[1]", serverAddr)
 	req, err := http.NewRequest("PATCH", patchURL, bytes.NewBuffer(jsonUpdate))
 	if err != nil {
 		t.Fatalf("Failed to create PATCH request for updating array element: %v", err)
 	}
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(api.ContentType, api.JsonMIMEType)
 	client := &http.Client{}
 	resp, err = client.Do(req)
 	if err != nil {
@@ -824,8 +824,8 @@ func TestPatchDiffOutput(t *testing.T) {
 		t.Errorf("Unexpected diff for frequencies update.\nExpected: %+v\nGot:      %+v", expectedDiff, patchResp.Updates)
 	}
 
-	// Verify the frequencies array update via the /getValue endpoint.
-	getURL := fmt.Sprintf("%s/getValue?key=settings.audio.tone_eq1.frequencies", serverAddr)
+	// Verify the frequencies array update via the /value endpoint.
+	getURL := fmt.Sprintf("%s/value?key=settings.audio.tone_eq1.frequencies", serverAddr)
 	resp, err = http.Get(getURL)
 	if err != nil {
 		t.Fatalf("Failed to get updated frequencies array: %v", err)
@@ -1118,7 +1118,7 @@ func TestPatchOutOfBounds(t *testing.T) {
 		t.Fatalf("Failed to marshal initial configuration: %v", err)
 	}
 
-	resp, err := http.Post(fmt.Sprintf("%s/setValue", serverAddr), jsonContentType, bytes.NewBuffer(jsonData))
+	resp, err := http.Post(fmt.Sprintf("%s/value", serverAddr), api.JsonMIMEType, bytes.NewBuffer(jsonData))
 	if err != nil {
 		t.Fatalf("Failed to set initial configuration: %v", err)
 	}
@@ -1137,11 +1137,11 @@ func TestPatchOutOfBounds(t *testing.T) {
 		t.Fatalf("Failed to marshal update data: %v", err)
 	}
 
-	req, err := http.NewRequest("PATCH", fmt.Sprintf("%s/updateValue?key=settings.audio.tone_eq1.frequencies[5]", serverAddr), bytes.NewBuffer(jsonUpdate))
+	req, err := http.NewRequest("PATCH", fmt.Sprintf("%s/value?key=settings.audio.tone_eq1.frequencies[5]", serverAddr), bytes.NewBuffer(jsonUpdate))
 	if err != nil {
 		t.Fatalf("Failed to create PATCH request for out-of-bound update: %v", err)
 	}
-	req.Header.Set("Content-Type", jsonContentType)
+	req.Header.Set(api.ContentType, api.JsonMIMEType)
 	client := &http.Client{}
 	resp, err = client.Do(req)
 	if err != nil {
@@ -1155,7 +1155,7 @@ func TestPatchOutOfBounds(t *testing.T) {
 	}
 
 	// Verify that the array is expanded.
-	getValue, err := http.Get(fmt.Sprintf("%s/getValue?key=settings.audio.tone_eq1.frequencies", serverAddr))
+	getValue, err := http.Get(fmt.Sprintf("%s/value?key=settings.audio.tone_eq1.frequencies", serverAddr))
 	if err != nil {
 		t.Fatalf("Failed to get updated array: %v", err)
 	}
@@ -1199,7 +1199,7 @@ func TestPatchRemoveArrayElement(t *testing.T) {
 		t.Fatalf("Failed to marshal initial configuration: %v", err)
 	}
 
-	resp, err := http.Post(fmt.Sprintf("%s/setValue", serverAddr), jsonContentType, bytes.NewBuffer(jsonData))
+	resp, err := http.Post(fmt.Sprintf("%s/value", serverAddr), api.JsonMIMEType, bytes.NewBuffer(jsonData))
 	if err != nil {
 		t.Fatalf("Failed to set initial configuration: %v", err)
 	}
@@ -1218,11 +1218,11 @@ func TestPatchRemoveArrayElement(t *testing.T) {
 		t.Fatalf("Failed to marshal removal data: %v", err)
 	}
 
-	req, err := http.NewRequest("PATCH", fmt.Sprintf("%s/updateValue?key=settings.audio.tone_eq1.frequencies[1]", serverAddr), bytes.NewBuffer(jsonRemove))
+	req, err := http.NewRequest("PATCH", fmt.Sprintf("%s/value?key=settings.audio.tone_eq1.frequencies[1]", serverAddr), bytes.NewBuffer(jsonRemove))
 	if err != nil {
 		t.Fatalf("Failed to create PATCH request for removing array element: %v", err)
 	}
-	req.Header.Set("Content-Type", jsonContentType)
+	req.Header.Set(api.ContentType, api.JsonMIMEType)
 	client := &http.Client{}
 	resp, err = client.Do(req)
 	if err != nil {
@@ -1235,7 +1235,7 @@ func TestPatchRemoveArrayElement(t *testing.T) {
 	}
 
 	// Verify that the element at index 1 has been set to null.
-	getValue, err := http.Get(fmt.Sprintf("%s/getValue?key=settings.audio.tone_eq1.frequencies", serverAddr))
+	getValue, err := http.Get(fmt.Sprintf("%s/value?key=settings.audio.tone_eq1.frequencies", serverAddr))
 	if err != nil {
 		t.Fatalf("Failed to get updated array: %v", err)
 	}
@@ -1263,7 +1263,7 @@ func TestPatchRemoveArrayElement(t *testing.T) {
 // TestClearEndpoint verifies that data is cleared on all nodes
 func TestClearEndpoint(t *testing.T) {
 
-	req, err := http.NewRequest("DELETE", fmt.Sprintf("%s/clear", serverAddr), nil)
+	req, err := http.NewRequest("DELETE", fmt.Sprintf("%s/value", serverAddr), nil)
 	if err != nil {
 		t.Fatalf("Failed to create DELETE request: %v", err)
 	}
@@ -1281,7 +1281,7 @@ func TestClearEndpoint(t *testing.T) {
 	}
 
 	// Verify the update
-	getValue, err := http.Get(fmt.Sprintf("%s/getValue", serverAddr))
+	getValue, err := http.Get(fmt.Sprintf("%s/value", serverAddr))
 	if err != nil {
 		t.Fatalf("Failed to get updated value: %v", err)
 	}
@@ -1300,8 +1300,8 @@ func setValueOnNode(node clusterNode, key string, value any) error {
 		return fmt.Errorf("failed to marshal payload: %v", err)
 	}
 
-	resp, err := http.Post(fmt.Sprintf("%s/setValue", node.address),
-		jsonContentType, bytes.NewBuffer(jsonData))
+	resp, err := http.Post(fmt.Sprintf("%s/value", node.address),
+		api.JsonMIMEType, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return fmt.Errorf("failed to send request: %v", err)
 	}
@@ -1314,7 +1314,7 @@ func setValueOnNode(node clusterNode, key string, value any) error {
 }
 
 func getValueFromNode(node clusterNode, key string) (any, bool, error) {
-	resp, err := http.Get(fmt.Sprintf("%s/getValue?key=%s", node.address, key))
+	resp, err := http.Get(fmt.Sprintf("%s/value?key=%s", node.address, key))
 	if err != nil {
 		return nil, false, fmt.Errorf("request failed: %v", err)
 	}
@@ -1337,7 +1337,7 @@ func getValueFromNode(node clusterNode, key string) (any, bool, error) {
 }
 
 func getFullStateFromNode(node clusterNode) (map[string]any, error) {
-	resp, err := http.Get(fmt.Sprintf("%s/getValue", node.address))
+	resp, err := http.Get(fmt.Sprintf("%s/value", node.address))
 	if err != nil {
 		return nil, fmt.Errorf("request failed: %v", err)
 	}

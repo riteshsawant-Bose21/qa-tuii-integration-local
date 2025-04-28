@@ -1,39 +1,68 @@
 package api
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/hashicorp/memberlist"
+	"github.com/robfig/cron/v3"
 )
+
+// AppConfig represents application configuration data
+type AppConfig struct {
+	NodeName string
+	BindAddr string
+	BindPort int
+	Verbose  bool
+}
 
 // ConfigUpdate represents a data update in the system
 type ConfigUpdate struct {
+	Hash    string         `json:"hash"`
 	Data    map[string]any `json:"data"`
 	Version int64          `json:"version"`
 	Time    time.Time      `json:"timestamp"`
 	Clear   bool
 }
 
+// NewConfigUpdate returns a configured ConfigUpdate
+func NewConfigUpdate(data map[string]any) (*ConfigUpdate, error) {
+
+	hash, err := hashConfigData(data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate hash: %w", err)
+	}
+
+	return &ConfigUpdate{
+		Hash:    hash,
+		Data:    data,
+		Version: time.Now().UnixNano(),
+		Time:    time.Now().UTC(),
+		Clear:   false,
+	}, nil
+}
+
 // Endpoints contains the REST API endpoint information
 type Endpoints struct {
 	API       string   `json:"api"`
 	Telemetry []string `json:"telemetry"`
-	Metrics   string   `json:"metrics"`
 }
 
-// SnapshotMetadata holds metadata information from the database.
-type SnapshotMetadata struct {
-	ActiveSnapshot string    `json:"active_snapshot"`
+// DatabaseMetadata holds metadata information from the database.
+type DatabaseMetadata struct {
 	Timestamp      time.Time `json:"timestamp"`
-	DBHash         string    `json:"hash"`
+	ActiveSnapshot string    `json:"active_snapshot"`
+	Hash           string    `json:"hash"`
 	Valid          bool      `json:"valid"`
 }
 
-// SnapshotMemberMetadata tie a member to its snapshot metadata.
-type SnapshotMemberMetadata struct {
+// MemberMetadata associates a member to its database metadata.
+type MemberMetadata struct {
 	Member   *memberlist.Node
-	Metadata SnapshotMetadata
+	Metadata DatabaseMetadata
 }
 
 // SnapshotUpdate represents a snapshot update operation broadcast across the cluster.
@@ -43,9 +72,13 @@ type SnapshotUpdate struct {
 	Timestamp time.Time      `json:"timestamp"`
 }
 
-// RawState represents raw state data element
-type RawState struct {
-	State map[string]*StateEntry `json:"state"`
+// Task represents a task with a unique ID, a cron expression, and a function to execute.
+type Task struct {
+	ID          string `json:"id"`
+	CronExpr    string `json:"cron_expr"`
+	Description string `json:"description"`
+	EntryID     cron.EntryID
+	SnapshotID  string `json:"snapshot_id"`
 }
 
 // StateEntry represents a single entry in the state
@@ -68,7 +101,9 @@ const (
 	NotifyOpSnapActivate  NotifyOp = "snapshot_activate"
 	NotifyOpSnapCreate    NotifyOp = "snapshot_create"
 	NotifyOpSnapDelete    NotifyOp = "snapshot_delete"
-	NotifyOpSnapImport    NotifyOp = "snapshot_import"
+	NotifyOpTaskCreate    NotifyOp = "task_create"
+	NotifyOpTaskDelete    NotifyOp = "task_delete"
+	NotifyOpTaskUpdate    NotifyOp = "task_update"
 	NotifyOpVersionUpdate NotifyOp = "version_update"
 )
 
@@ -78,5 +113,18 @@ type NotifyMessage struct {
 	Node           string
 	ConfigUpdate   *ConfigUpdate
 	SnapshotUpdate *SnapshotUpdate
+	Task           *Task
 	VersionMessage *VersionMessage
+}
+
+// hashConfigData generates a SHA-256 hash of the Data field of a ConfigUpdate
+func hashConfigData(data map[string]any) (string, error) {
+	// Marshal the map to JSON to ensure consistent hashing
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		return "", err
+	}
+
+	hash := sha256.Sum256(jsonData)
+	return hex.EncodeToString(hash[:]), nil
 }

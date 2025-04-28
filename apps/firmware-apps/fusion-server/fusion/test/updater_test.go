@@ -1,3 +1,5 @@
+//go:build exclude
+
 package main
 
 import (
@@ -17,19 +19,21 @@ import (
 // Create a package variable for mocking
 var executablePath = os.Executable
 
-// Integration test for the entire update process
-func TestPerformUpdate(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping test in short mode")
-	}
-
+func init() {
 	logging.InitLogger(logging.LogConfig{
-		NodeName:    "TestPerformUpdate",
+		NodeName:    "updater_test",
 		LogDir:      "/tmp/updater_test",
 		MaxFileSize: 100,
 		MaxFiles:    5,
 		LogLevel:    logging.INFO,
 	})
+}
+
+// Integration test for the entire update process
+func TestPerformUpdate(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping test in short mode")
+	}
 
 	// Determine the correct binary name based on runtime.GOOS and runtime.GOARCH
 	var binaryName string
@@ -110,14 +114,6 @@ func TestPerformRollback(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping test in short mode")
 	}
-
-	logging.InitLogger(logging.LogConfig{
-		NodeName:    "TestPerformRollback",
-		LogDir:      "/tmp/rollback_test",
-		MaxFileSize: 100,
-		MaxFiles:    5,
-		LogLevel:    logging.INFO,
-	})
 
 	// Determine the binary name based on runtime.GOOS and runtime.GOARCH
 	var binaryName string

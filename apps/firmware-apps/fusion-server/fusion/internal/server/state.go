@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"fusion/internal/api"
@@ -21,24 +22,34 @@ const (
 	checkInterval = 30
 )
 
+// VersionedState represents a version of instance state
+type VersionedState struct {
+	State    map[string]*api.StateEntry
+	Checksum string
+}
+
+// NewVersionedState creates and initializes a new VersionedState
+func NewVersionedState() *VersionedState {
+	return &VersionedState{
+		State: make(map[string]*api.StateEntry),
+	}
+}
+
 // StateManager manages a synchronized in-memory application state across distributed nodes.
-// It supports subscriptions, versioning, and nested key access.
+// It supports versioning, and nested key access.
 type StateManager struct {
 	sync.RWMutex
-	state       map[string]*api.StateEntry
-	version     int64
-	node        string
-	subscribers []chan struct{}
+	state   VersionedState
+	node    string
+	version int64
 }
 
 // NewStateManager creates and initializes a new StateManager for the given node.
 func NewStateManager(node string) *StateManager {
-	stateManager := &StateManager{
-		state:       make(map[string]*api.StateEntry),
-		node:        node,
-		subscribers: make([]chan struct{}, 0),
+	return &StateManager{
+		state: *NewVersionedState(),
+		node:  node,
 	}
-	return stateManager
 }
 
 // GetVersion returns the current version of the state.
@@ -61,7 +72,7 @@ func (sm *StateManager) Get(key string) (any, bool) {
 	defer sm.RUnlock()
 
 	parts := strings.Split(key, ".")
-	var current any = TransformState(sm.state)
+	var current any = TransformState(sm.state.State)
 	logger := logging.GetLogger()
 
 	for _, part := range parts {
@@ -148,15 +159,14 @@ func (sm *StateManager) Set(key string, value any) error {
 	})
 }
 
-// ApplyUpdate applies a configuration update to the internal state and notifies subscribers.
+// ApplyUpdate applies a configuration update to the internal state.
 func (sm *StateManager) ApplyUpdate(update api.ConfigUpdate) error {
 	sm.Lock()
 	defer sm.Unlock()
 
 	if update.Clear {
-		sm.state = make(map[string]*api.StateEntry)
+		sm.state = *NewVersionedState()
 		sm.version = update.Version
-		sm.notifySubscribers()
 		return nil
 	}
 
@@ -164,13 +174,27 @@ func (sm *StateManager) ApplyUpdate(update api.ConfigUpdate) error {
 		return nil
 	}
 
-	for key, value := range update.Data {
+	for key, rawValue := range update.Data {
+		var incomingVersion int64
 		var newValue any
-		if valueMap, ok := value.(map[string]any); ok {
-			existingValue, exists := sm.state[key]
-			if exists {
-				existingData, isMap := existingValue.Data.(map[string]any)
-				if isMap {
+
+		if valueMap, ok := rawValue.(map[string]any); ok {
+			// Extract per-key version if available
+			if v, ok := valueMap["version"].(int64); ok {
+				incomingVersion = v
+			} else {
+				// Fallback
+				incomingVersion = update.Version
+			}
+
+			// Check existing state for merge possibility
+			if existingEntry, exists := sm.state.State[key]; exists {
+
+				if incomingVersion <= existingEntry.Version {
+					continue
+				}
+
+				if existingData, ok := existingEntry.Data.(map[string]any); ok {
 					newValue = mergeMaps(existingData, valueMap)
 				} else {
 					newValue = valueMap
@@ -179,94 +203,83 @@ func (sm *StateManager) ApplyUpdate(update api.ConfigUpdate) error {
 				newValue = valueMap
 			}
 		} else {
-			newValue = value
+			incomingVersion = update.Version
+			newValue = rawValue
 		}
 
-		sm.state[key] = &api.StateEntry{
+		// Apply update if the incoming version is newer
+		if existingEntry, exists := sm.state.State[key]; exists {
+			if incomingVersion <= existingEntry.Version {
+				continue
+			}
+		}
+
+		sm.state.State[key] = &api.StateEntry{
 			Data:      newValue,
-			Version:   update.Version,
+			Version:   incomingVersion,
 			Timestamp: update.Time,
 		}
 
-		if update.Version > sm.version {
-			sm.version = update.Version
+		if incomingVersion > sm.version {
+			sm.version = incomingVersion
 		}
-		sm.notifySubscribers()
+
+		checksum, err := CalculateChecksum(sm.state.State)
+		if err != nil {
+			logging.GetLogger().Error("Failed to calculate checksum: %v", err)
+		}
+		sm.state.Checksum = checksum
+
 	}
 	return nil
 }
 
-// GetFullState returns a deep copy of the internal state including version and timestamp metadata.
-func (sm *StateManager) GetFullState() map[string]*api.StateEntry {
+// GetFullState returns the internal state
+func (sm *StateManager) GetFullState() VersionedState {
 	sm.RLock()
 	defer sm.RUnlock()
-	stateCopy := make(map[string]*api.StateEntry, len(sm.state))
-	for k, v := range sm.state {
-		entryCopy := api.StateEntry{
-			Data:      v.Data,
-			Version:   v.Version,
-			Timestamp: v.Timestamp,
-		}
-		stateCopy[k] = &entryCopy
-	}
-	return stateCopy
-}
-
-// Subscribe registers a new listener to be notified when the state changes.
-// Returns a buffered channel that will receive a signal on update.
-func (sm *StateManager) Subscribe() chan struct{} {
-	sm.Lock()
-	defer sm.Unlock()
-	ch := make(chan struct{}, 1)
-	sm.subscribers = append(sm.subscribers, ch)
-	return ch
-}
-
-// notifySubscribers sends update signals to all subscribed channels.
-func (sm *StateManager) notifySubscribers() {
-	for _, ch := range sm.subscribers {
-		select {
-		case ch <- struct{}{}:
-		default:
-		}
-	}
+	return sm.state
 }
 
 // MergeRemoteState integrates a remote state into the local state if the remote version is newer.
-func (sm *StateManager) MergeRemoteState(remoteState map[string]*api.StateEntry, sourceNodeID string) {
+func (sm *StateManager) MergeRemoteState(remoteState map[string]*api.StateEntry) {
 	sm.Lock()
 	defer sm.Unlock()
 	for key, remoteEntry := range remoteState {
-		localEntry, exists := sm.state[key]
+		localEntry, exists := sm.state.State[key]
 		if !exists || remoteEntry.Version > localEntry.Version {
-			sm.state[key] = remoteEntry
+			sm.state.State[key] = remoteEntry
 			if remoteEntry.Version > sm.version {
 				sm.version = remoteEntry.Version
 			}
 		}
 	}
-	sm.notifySubscribers()
-}
 
-// GetState returns the internal state map without making a copy.
-func (sm *StateManager) GetState() map[string]*api.StateEntry {
-	return sm.state
+	checksum, err := CalculateChecksum(sm.state.State)
+	if err != nil {
+		logging.GetLogger().Error("Failed to calculate checksum: %v", err)
+	}
+	sm.state.Checksum = checksum
 }
 
 // SetState replaces the entire state map and updates the version timestamp.
 func (sm *StateManager) SetState(state map[string]*api.StateEntry) {
 	sm.RLock()
 	defer sm.RUnlock()
-	sm.state = state
+	sm.state.State = state
+	checksum, err := CalculateChecksum(state)
+	if err != nil {
+		logging.GetLogger().Error("Failed to calculate checksum: %v", err)
+	}
+	sm.state.Checksum = checksum
 	sm.version = time.Now().UnixNano()
-	sm.notifySubscribers()
 }
 
-// validateMemberState fetches and compares state from other cluster members
+// validateState fetches and compares state from other cluster members
 // to check consistency. Logs any inconsistencies found.
-func (sm *StateManager) validateMemberState(list *memberlist.Memberlist) {
+func (sm *StateManager) validateState(list *memberlist.Memberlist) {
 	logger := logging.GetLogger()
-	localState := sm.GetState()
+	localState := sm.GetFullState()
 	consistent := true
 	members := list.Members()
 
@@ -275,7 +288,7 @@ func (sm *StateManager) validateMemberState(list *memberlist.Memberlist) {
 			continue
 		}
 
-		url := fmt.Sprintf("http://%s%s/export", member.Addr.String(), api.HTTPPort)
+		url := fmt.Sprintf("http://%s%s/exportState", member.Addr.String(), api.AdminPort)
 		resp, err := http.Get(url)
 		if err != nil {
 			logger.Warn("Failed to get state from %s: %v", member.Name, err)
@@ -289,50 +302,70 @@ func (sm *StateManager) validateMemberState(list *memberlist.Memberlist) {
 			continue
 		}
 
-		var remoteState api.RawState
+		var remoteState VersionedState
 		if err := json.Unmarshal(body, &remoteState); err != nil {
 			logger.Warn("Failed to unmarshal JSON from %s: %v. Raw JSON: %s", member.Name, err, string(body))
 			continue
 		}
 
-		if !reflect.DeepEqual(localState, remoteState.State) {
+		if !reflect.DeepEqual(localState, remoteState) {
 			logger.Warn("[STATE] Inconsistent state detected with node %s", member.Name)
 			consistent = false
 		}
 	}
 
 	if consistent {
-		logger.Info("[STATE] State consistent across cluster")
+		logger.Debug("[STATE] Consistent across cluster")
+		return
 	}
+
 }
 
-// StartStateVerification starts periodic state verification
-func (sm *StateManager) StartStateVerification(list *memberlist.Memberlist) {
+// StartVerification starts periodic state verification
+func (sm *StateManager) StartVerification(list *memberlist.Memberlist) {
 	go func() {
-
 		for {
-			sm.validateMemberState(list)
-			ValidateSnapshots(list)
+			sm.validateState(list)
+			sm.validateData(list)
 			time.Sleep(checkInterval * time.Second)
 		}
-
 	}()
 }
 
-// ValidateSnapshots checks if all nodes in the cluster have consistent snapshot metadata and resolves any mismatches.
-func ValidateSnapshots(list *memberlist.Memberlist) {
+// TransformState removes metadata and returns a simplified map of key-value data from the state.
+func TransformState(state map[string]*api.StateEntry) map[string]any {
+	result := make(map[string]any)
+	for key, entry := range state {
+		result[key] = entry.Data
+	}
+	return result
+}
+
+// CalculateChecksum returns a SHA-256 hash of the provided state.
+func CalculateChecksum(state map[string]*api.StateEntry) (string, error) {
+	data, err := json.Marshal(state)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal state for checksum: %w", err)
+	}
+	hash := sha256.Sum256(data)
+	return fmt.Sprintf("%x", hash), nil
+}
+
+func (sm *StateManager) getMemberData(list *memberlist.Memberlist) []api.MemberMetadata {
+
 	logger := logging.GetLogger()
+
 	members := list.Members()
 
-	var snapshots []api.SnapshotMemberMetadata
+	var memberMetadata []api.MemberMetadata
 
-	// Collect metadata for all alive members.
+	// Collect metadata for all alive members
 	for _, member := range members {
 		if member.State != memberlist.StateAlive {
 			continue
 		}
 
-		url := fmt.Sprintf("http://%s%s/snapshots/metadata", member.Addr.String(), api.HTTPPort)
+		url := fmt.Sprintf("http://%s%s/metadata", member.Addr.String(), api.HTTPPort)
 		resp, err := http.Get(url)
 		if err != nil {
 			logger.Warn("Failed to get metadata from %s: %v", member.Name, err)
@@ -346,85 +379,102 @@ func ValidateSnapshots(list *memberlist.Memberlist) {
 			continue
 		}
 
-		var metadata api.SnapshotMetadata
+		var metadata api.DatabaseMetadata
 		if err := json.Unmarshal(body, &metadata); err != nil {
 			logger.Warn("Failed to unmarshal JSON from %s: %v. Raw JSON: %s", member.Name, err, string(body))
 			continue
 		}
 
-		snapshots = append(snapshots, api.SnapshotMemberMetadata{Member: member, Metadata: metadata})
+		memberMetadata = append(memberMetadata, api.MemberMetadata{Member: member, Metadata: metadata})
 	}
 
-	// Check for consistency by comparing DBHash values.
-	consistent := true
-	if len(snapshots) > 0 {
-		firstHash := snapshots[0].Metadata.DBHash
-		for _, ms := range snapshots[1:] {
-			if ms.Metadata.DBHash != firstHash {
-				consistent = false
-				break
-			}
-		}
-	}
+	return memberMetadata
+}
 
-	if consistent {
-		logger.Info("[SNAPSHOTS] Snapshots consistent across cluster")
+// validateData resolves any mismatches in node data across cluster
+func (sm *StateManager) validateData(list *memberlist.Memberlist) {
+
+	logger := logging.GetLogger()
+
+	memberMetadata := sm.getMemberData(list)
+
+	if hashIsConsistent(memberMetadata) {
+		logger.Debug("[DATA] Consistent across cluster")
 		return
 	}
 
-	logger.Warn("[SNAPSHOTS] Inconsistent Snapshot detected")
-
-	rectifySnapshots(snapshots)
-}
-
-// rectifySnapshots resolves snapshot inconsistencies by pushing the most current snapshot to all outdated nodes.
-func rectifySnapshots(snapshots []api.SnapshotMemberMetadata) {
-	logger := logging.GetLogger()
-
-	// Determine the snapshot with the most recent timestamp.
-	mostCurrent := snapshots[0]
-	for _, ms := range snapshots[1:] {
+	// Determine the node with the most recent timestamp.
+	mostCurrent := memberMetadata[0]
+	for _, ms := range memberMetadata[1:] {
 		if ms.Metadata.Timestamp.After(mostCurrent.Metadata.Timestamp) {
 			mostCurrent = ms
 		}
 	}
-	logger.Info("Most current snapshot found on member %s with timestamp %v",
+	logger.Info("Most current data found on member %s with timestamp %v",
 		mostCurrent.Member.Name, mostCurrent.Metadata.Timestamp)
 
-	// Propagate the most current snapshot to all nodes with outdated data.
-	for _, ms := range snapshots {
-		if ms.Metadata.DBHash != mostCurrent.Metadata.DBHash {
-			importURL := fmt.Sprintf("http://%s%s/snapshots/import", ms.Member.Addr.String(), api.HTTPPort)
-			// Prepare payload with all necessary snapshot data.
-			payload, err := json.Marshal(map[string]interface{}{
-				"active_snapshot": mostCurrent.Metadata.ActiveSnapshot,
-				"timestamp":       mostCurrent.Metadata.Timestamp,
-				"hash":            mostCurrent.Metadata.DBHash,
-				"valid":           mostCurrent.Metadata.Valid,
-			})
-			if err != nil {
-				logger.Warn("Failed to marshal payload for %s: %v", ms.Member.Name, err)
-				continue
-			}
+	exportURL := fmt.Sprintf("http://%s%s%s", mostCurrent.Member.Addr.String(), "/exportState", api.AdminPort)
 
-			resp, err := http.Post(importURL, "application/json", bytes.NewBuffer(payload))
-			if err != nil {
-				logger.Warn("Failed to import snapshot on %s: %v", ms.Member.Name, err)
-				continue
+	resp, err := http.Get(exportURL)
+	if err != nil {
+		logger.Error("Failed to export data from %s: %v", mostCurrent.Member.Name, err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		logger.Error("Export returned %d: %s", resp.StatusCode, string(body))
+		return
+	}
+
+	payload, err := json.Marshal(resp.Body)
+	if err != nil {
+		logger.Error("Failed to marshal payload: %v", err)
+		return
+	}
+
+	syncData(memberMetadata, mostCurrent.Metadata.Hash, payload)
+	logger.Info("Successfully synced data")
+}
+
+// syncData propagate the data to all nodes with outdated data
+func syncData(memberMetadata []api.MemberMetadata, currentHash string, data []byte) {
+	for _, ms := range memberMetadata {
+		if ms.Metadata.Hash != currentHash {
+			importURL := fmt.Sprintf("http://%s%s%s", ms.Member.Addr.String(), "/importData", api.AdminPort)
+			if !importData(importURL, data) {
+				return
 			}
-			resp.Body.Close()
-			logger.Info("Successfully synced snapshot on %s", ms.Member.Name)
 		}
 	}
 }
 
-// TransformState removes metadata and returns a simplified map of key-value data from the state.
-func TransformState(state map[string]*api.StateEntry) map[string]any {
-	result := make(map[string]any)
-	for key, entry := range state {
-		result[key] = entry.Data
+func importData(endpoint string, data []byte) bool {
+
+	logger := logging.GetLogger()
+
+	resp, err := http.Post(endpoint, api.JsonMIMEType, bytes.NewBuffer(data))
+	if err != nil {
+		logger.Error("Failed to import data on %s: %v", endpoint, err)
+		return false
 	}
-	return result
+	resp.Body.Close()
+
+	return true
+}
+
+// hashIsConsistent checks if hash is consistent across all members
+func hashIsConsistent(metadata []api.MemberMetadata) bool {
+	if len(metadata) > 0 {
+		firstHash := metadata[0].Metadata.Hash
+		for _, ms := range metadata[1:] {
+			if ms.Metadata.Hash != firstHash {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 // mergeMaps recursively merges two maps.

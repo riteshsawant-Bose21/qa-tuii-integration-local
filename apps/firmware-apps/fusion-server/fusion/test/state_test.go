@@ -11,8 +11,29 @@ import (
 	"fusion/internal/server"
 )
 
+func init() {
+
+	logging.InitLogger(logging.LogConfig{
+		NodeName:    "state_test",
+		LogDir:      "/tmp/state_test",
+		MaxFileSize: 100,
+		MaxFiles:    5,
+		LogLevel:    logging.INFO,
+	})
+
+}
+
+func createStateConfig() *api.AppConfig {
+	return &api.AppConfig{
+		NodeName: "test_manager",
+		BindAddr: "http://192.168.64.100",
+		BindPort: 8080,
+		Verbose:  false,
+	}
+}
+
 func TestSetAndGetSimpleValue(t *testing.T) {
-	sm := server.NewStateManager("node-1")
+	sm := server.NewStateManager("test_manager")
 	value := "hello world"
 	if err := sm.Set("greeting", value); err != nil {
 		t.Fatalf("Set failed: %v", err)
@@ -28,7 +49,7 @@ func TestSetAndGetSimpleValue(t *testing.T) {
 }
 
 func TestApplyUpdateAndGetNestedValues(t *testing.T) {
-	sm := server.NewStateManager("node-1")
+	sm := server.NewStateManager("test_manager")
 
 	// Create nested data with an array.
 	update := api.ConfigUpdate{
@@ -81,48 +102,15 @@ func TestApplyUpdateAndGetNestedValues(t *testing.T) {
 }
 
 func TestGetInvalidKey(t *testing.T) {
-
-	logging.InitLogger(logging.LogConfig{
-		NodeName:    "StateTest",
-		LogDir:      "/tmp/state_test",
-		MaxFileSize: 100,
-		MaxFiles:    5,
-		LogLevel:    logging.INFO,
-	})
-
-	sm := server.NewStateManager("node-1")
+	sm := server.NewStateManager("test_manager")
 	// No data has been set yet.
 	if _, ok := sm.Get("nonexistent.key"); ok {
 		t.Errorf("Expected key 'nonexistent.key' to be not found")
 	}
 }
 
-func TestSubscribeNotification(t *testing.T) {
-	sm := server.NewStateManager("node-1")
-	sub := sm.Subscribe()
-
-	// Apply an update.
-	update := api.ConfigUpdate{
-		Data: map[string]any{
-			"foo": "bar",
-		},
-		Version: time.Now().UnixNano(),
-		Time:    time.Now().UTC(),
-	}
-	if err := sm.ApplyUpdate(update); err != nil {
-		t.Fatalf("ApplyUpdate failed: %v", err)
-	}
-
-	select {
-	case <-sub:
-		// Received notification.
-	case <-time.After(100 * time.Millisecond):
-		t.Errorf("Expected subscriber to be notified")
-	}
-}
-
 func TestMergeRemoteState(t *testing.T) {
-	sm := server.NewStateManager("node-1")
+	sm := server.NewStateManager("test_manager")
 
 	// Local state: key "a" with version 100.
 	if err := sm.ApplyUpdate(api.ConfigUpdate{
@@ -149,7 +137,7 @@ func TestMergeRemoteState(t *testing.T) {
 		},
 	}
 
-	sm.MergeRemoteState(remoteState, "remote-node")
+	sm.MergeRemoteState(remoteState)
 
 	// Check that key "a" was updated.
 	val, ok := sm.Get("a")
@@ -170,34 +158,8 @@ func TestMergeRemoteState(t *testing.T) {
 	}
 }
 
-func TestSetStateAndGetFullState(t *testing.T) {
-	sm := server.NewStateManager("node-1")
-
-	// Prepare a new state.
-	newState := map[string]*api.StateEntry{
-		"alpha": {
-			Data:      "beta",
-			Version:   111,
-			Timestamp: time.Now().UTC(),
-		},
-	}
-	sm.SetState(newState)
-
-	fullState := sm.GetFullState()
-	if !reflect.DeepEqual(fullState, newState) {
-		t.Errorf("GetFullState did not return the expected state.\nGot: %v\nWant: %v", fullState, newState)
-	}
-
-	// Modify the copy and ensure the original state is not affected.
-	fullState["alpha"].Data = "changed"
-	origState := sm.GetFullState()
-	if origState["alpha"].Data == "changed" {
-		t.Errorf("Original state was modified through the copy")
-	}
-}
-
 func TestNestedMergeMapsViaApplyUpdate(t *testing.T) {
-	sm := server.NewStateManager("node-1")
+	sm := server.NewStateManager("test_manager")
 
 	// First update: add a nested map.
 	update1 := api.ConfigUpdate{
@@ -240,7 +202,7 @@ func TestNestedMergeMapsViaApplyUpdate(t *testing.T) {
 }
 
 func TestArrayIndexErrors(t *testing.T) {
-	sm := server.NewStateManager("node-1")
+	sm := server.NewStateManager("test_manager")
 	// Set state with an array.
 	update := api.ConfigUpdate{
 		Data: map[string]any{
@@ -275,7 +237,7 @@ func TestArrayIndexErrors(t *testing.T) {
 }
 
 func TestArraySliceEdgeCases(t *testing.T) {
-	sm := server.NewStateManager("node-1")
+	sm := server.NewStateManager("test_manager")
 	// Set state with an array.
 	update := api.ConfigUpdate{
 		Data: map[string]any{
@@ -317,43 +279,9 @@ func TestArraySliceEdgeCases(t *testing.T) {
 	}
 }
 
-func TestMultipleSubscribers(t *testing.T) {
-	sm := server.NewStateManager("node-1")
-	sub1 := sm.Subscribe()
-	sub2 := sm.Subscribe()
-
-	update := api.ConfigUpdate{
-		Data: map[string]any{
-			"key": "value",
-		},
-		Version: 500,
-		Time:    time.Now().UTC(),
-	}
-	if err := sm.ApplyUpdate(update); err != nil {
-		t.Fatalf("ApplyUpdate failed: %v", err)
-	}
-
-	// Check that both subscribers receive a notification.
-	received := 0
-	// Attempt to read from both channels.
-	for range 2 {
-		select {
-		case <-sub1:
-			received++
-		case <-sub2:
-			received++
-		case <-time.After(100 * time.Millisecond):
-			// Timeout: break out if no notification.
-		}
-	}
-	if received == 0 {
-		t.Errorf("Expected at least one notification from subscribers")
-	}
-}
-
-// Additional helper: test retrieval using a complex path for nested arrays.
+// Test retrieval using a complex path for nested arrays.
 func TestGetWithComplexPath(t *testing.T) {
-	sm := server.NewStateManager("node-1")
+	sm := server.NewStateManager("test_manager")
 
 	// Prepare a complex nested structure.
 	update := api.ConfigUpdate{
@@ -403,7 +331,7 @@ func TestGetWithComplexPath(t *testing.T) {
 }
 
 func TestApplyUpdateWithClearFlag(t *testing.T) {
-	sm := server.NewStateManager("node-1")
+	sm := server.NewStateManager("test_manager")
 	// First, apply a normal update.
 	update := api.ConfigUpdate{
 		Data: map[string]any{
@@ -432,13 +360,13 @@ func TestApplyUpdateWithClearFlag(t *testing.T) {
 	if _, ok := sm.Get("key"); ok {
 		t.Errorf("Expected key to be cleared")
 	}
-	if full := sm.GetFullState(); len(full) != 0 {
+	if full := sm.GetFullState().State; len(full) != 0 {
 		t.Errorf("Expected state to be empty after clear, got %v", full)
 	}
 }
 
 func TestMergeRemoteStateWithEqualVersion(t *testing.T) {
-	sm := server.NewStateManager("node-1")
+	sm := server.NewStateManager("test_manager")
 	// Set local state with a given version.
 	localUpdate := api.ConfigUpdate{
 		Data: map[string]any{
@@ -458,7 +386,7 @@ func TestMergeRemoteStateWithEqualVersion(t *testing.T) {
 			Timestamp: time.Now().UTC(),
 		},
 	}
-	sm.MergeRemoteState(remoteState, "node-2")
+	sm.MergeRemoteState(remoteState)
 	// Verify that the state remains unchanged.
 	val, ok := sm.Get("x")
 	if !ok {
@@ -485,5 +413,77 @@ func TestTransformState(t *testing.T) {
 	}
 	if transformed["b"] != "foo" {
 		t.Errorf("Expected key 'b' to be 'foo', got %v", transformed["b"])
+	}
+}
+
+func TestApplyStaleUpdatePropagation(t *testing.T) {
+	sm := server.NewStateManager("test_manager")
+
+	// Apply a "fresh" update with a higher version.
+	freshUpdate := api.ConfigUpdate{
+		Data: map[string]any{
+			"y": "freshValue",
+		},
+		Version: 1000,
+		Time:    time.Now().UTC(),
+	}
+	if err := sm.ApplyUpdate(freshUpdate); err != nil {
+		t.Fatalf("ApplyUpdate failed: %v", err)
+	}
+
+	// Simulate an offline node sending an update with an older version.
+	staleUpdate := api.ConfigUpdate{
+		Data: map[string]any{
+			"y": "staleValue",
+		},
+		Version: 500, // older version than 1000
+		Time:    time.Now().UTC(),
+	}
+	if err := sm.ApplyUpdate(staleUpdate); err != nil {
+		t.Fatalf("ApplyUpdate failed: %v", err)
+	}
+
+	// Verify that the key "y" still holds the fresh value.
+	val, ok := sm.Get("y")
+	if !ok {
+		t.Fatalf("Expected key 'y' to exist")
+	}
+	if val != "freshValue" {
+		t.Errorf("Expected key 'y' to remain 'freshValue', got %v", val)
+	}
+}
+
+func TestMergeRemoteStateWithLowerVersion(t *testing.T) {
+	sm := server.NewStateManager("test_manager")
+
+	// Apply a local update with a high version.
+	localUpdate := api.ConfigUpdate{
+		Data: map[string]any{
+			"x": "local",
+		},
+		Version: 5000,
+		Time:    time.Now().UTC(),
+	}
+	if err := sm.ApplyUpdate(localUpdate); err != nil {
+		t.Fatalf("ApplyUpdate failed: %v", err)
+	}
+
+	// Prepare remote state with a lower version for the same key.
+	remoteState := map[string]*api.StateEntry{
+		"x": {
+			Data:      "stale",
+			Version:   4000, // lower version than local state
+			Timestamp: time.Now().UTC(),
+		},
+	}
+	sm.MergeRemoteState(remoteState)
+
+	// Verify that the local state remains unchanged.
+	val, ok := sm.Get("x")
+	if !ok {
+		t.Fatalf("Expected key 'x' to exist")
+	}
+	if val != "local" {
+		t.Errorf("Expected key 'x' to remain 'local' after merging stale remote state, got %v", val)
 	}
 }

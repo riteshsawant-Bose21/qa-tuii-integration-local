@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/logging"
-	"fusion/internal/server"
 	"io"
 	"log"
 	"net/http"
@@ -30,22 +29,19 @@ const (
 )
 
 // CreateMemberlist creates and configures a new memberlist instance
-func CreateMemberlist(nodeName, bindAddr string, bindPort int,
-	stateManager *server.StateManager, persistence *server.Persistence, updater *server.Updater, verbose bool) (*memberlist.Memberlist, error) {
+func CreateMemberlist(appConfig *api.AppConfig, delegate *ClusterDelegate) *memberlist.Memberlist {
 	config := memberlist.DefaultLANConfig()
-	config.Name = nodeName
-	config.BindAddr = bindAddr
-	config.BindPort = bindPort
+	config.Name = appConfig.NodeName
+	config.BindAddr = appConfig.BindAddr
+	config.BindPort = appConfig.BindPort
 
-	if verbose {
-		config.Logger = log.New(os.Stdout, fmt.Sprintf("[MEMBERLIST-%s] ", nodeName), log.LstdFlags)
+	if appConfig.Verbose {
+		config.Logger = log.New(os.Stdout, fmt.Sprintf("[MEMBERLIST-%s] ", appConfig.NodeName), log.LstdFlags)
 	} else {
 		config.Logger = log.New(io.Discard, "", 0)
 	}
 
-	delegate := NewClusterDelegate(nodeName, stateManager, persistence, updater)
 	config.Delegate = delegate
-
 	config.TCPTimeout = tcpTimeout * time.Second
 	config.DisableTcpPings = false
 	config.ProbeInterval = probeInterval * time.Second
@@ -55,15 +51,15 @@ func CreateMemberlist(nodeName, bindAddr string, bindPort int,
 
 	list, err := memberlist.Create(config)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create memberlist: %v", err)
+		logging.GetLogger().Fatal("Failed to create memberlist: %v", err)
 	}
 
-	if verbose {
+	if appConfig.Verbose {
 		MonitorClusterState(list)
 		StartHealthCheck(list)
 	}
 
-	return list, nil
+	return list
 }
 
 // JoinMemberlist adds the node to the memberlist

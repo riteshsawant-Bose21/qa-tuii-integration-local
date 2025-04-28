@@ -11,6 +11,7 @@ import (
 
 	"fusion/internal/api"
 	"fusion/internal/network"
+	"fusion/internal/server"
 
 	"github.com/hashicorp/memberlist"
 )
@@ -21,7 +22,7 @@ const (
 
 // StateManagerInterface defines the interface for state management
 type StateManagerInterface interface {
-	GetFullState() map[string]*api.StateEntry
+	GetFullState() server.VersionedState
 }
 
 // MetricsCollector handles system-wide metric collection
@@ -87,7 +88,7 @@ type NodeHealth struct {
 func (c *Cluster) NewMetricsCollector() *MetricsCollector {
 	mc := &MetricsCollector{
 		list:           c.Memberlist,
-		stateManager:   c.StateManager,
+		stateManager:   c.delegate.stateManager,
 		haproxyMetrics: network.NewHAProxyMetrics(haproxySocketPath, network.HAProxyConfigPath),
 	}
 
@@ -105,7 +106,7 @@ func (mc *MetricsCollector) collect() {
 		var mem runtime.MemStats
 		runtime.ReadMemStats(&mem)
 
-		state := mc.stateManager.GetFullState()
+		state := mc.stateManager.GetFullState().State
 		stateSummary := make(map[string]string)
 		valueTypes := make(map[string]int)
 
@@ -158,7 +159,7 @@ func (mc *MetricsCollector) HandleMetrics(w http.ResponseWriter, r *http.Request
 	mc.mutex.RLock()
 	defer mc.mutex.RUnlock()
 
-	w.Header().Set(api.ContentType, api.JsonContentType)
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	json.NewEncoder(w).Encode(mc.metrics)
 }
 
@@ -166,7 +167,7 @@ func (mc *MetricsCollector) HandleClusterStatus(w http.ResponseWriter, r *http.R
 	mc.mutex.RLock()
 	defer mc.mutex.RUnlock()
 
-	w.Header().Set(api.ContentType, api.JsonContentType)
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	json.NewEncoder(w).Encode(mc.clusterInfo)
 }
 
@@ -182,7 +183,7 @@ func (mc *MetricsCollector) HandleHealthCheck(w http.ResponseWriter, r *http.Req
 		w.WriteHeader(http.StatusServiceUnavailable)
 	}
 
-	w.Header().Set(api.ContentType, api.JsonContentType)
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	json.NewEncoder(w).Encode(map[string]any{
 		"status":         status,
 		"node_health":    health,

@@ -2,7 +2,6 @@ package logging
 
 import (
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -123,27 +122,6 @@ func (l *Logger) Close() {
 
 	if l.logFile != nil {
 		l.logFile.Close()
-	}
-}
-
-// NewDummyLogger returns a logger used for testing to avoid panics
-func NewDummyLogger() *Logger {
-	return &Logger{
-		// A dummy configuration; these values won’t really be used.
-		config: LogConfig{
-			NodeName:    "dummy",
-			LogDir:      "",
-			MaxFileSize: 1,
-			MaxFiles:    1,
-			LogLevel:    DEBUG,
-		},
-		// Use io.Discard so nothing is actually written.
-		logger:     log.New(io.Discard, "", 0),
-		fileLogger: log.New(io.Discard, "", 0),
-		// Create a channel, but mark the logger as closed so it never sends.
-		msgChan:     make(chan string, 1000),
-		initialized: true,
-		closed:      true,
 	}
 }
 

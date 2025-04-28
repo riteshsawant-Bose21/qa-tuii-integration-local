@@ -17,9 +17,9 @@ class ApiService {
   static String get baseUrl {
     if (kIsWeb) {
       // For web, we'll use the full URL directly
-      return 'http://192.168.64.100:9090';
+      return 'http://192.168.64.100:8080';
     }
-    return 'http://192.168.64.100:9090';
+    return 'http://192.168.64.100:8080';
   }
 
   static Future<Map<String, dynamic>> fetchMetrics() async {

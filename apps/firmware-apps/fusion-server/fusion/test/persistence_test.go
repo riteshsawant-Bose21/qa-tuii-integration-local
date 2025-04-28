@@ -16,16 +16,19 @@ const (
 	databaseName = "fusion_test.db"
 )
 
-// TestMarkDirtyConcurrent checks for potential race conditions by calling MarkDirty concurrently.
-// (Run this test with `go test -race`.)
-func TestMarkDirtyConcurrent(t *testing.T) {
+func init() {
 	logging.InitLogger(logging.LogConfig{
-		NodeName:    "PersistenceTest",
+		NodeName:    "persistence_test",
 		LogDir:      "/tmp/persistence_test",
 		MaxFileSize: 100,
 		MaxFiles:    5,
 		LogLevel:    logging.INFO,
 	})
+}
+
+// TestMarkDirtyConcurrent checks for potential race conditions by calling MarkDirty concurrently.
+// (Run this test with `go test -race`.)
+func TestMarkDirtyConcurrent(t *testing.T) {
 
 	// Create a temporary directory and file for our test state.
 	tmpDir := t.TempDir()
@@ -37,7 +40,7 @@ func TestMarkDirtyConcurrent(t *testing.T) {
 	}
 
 	// Create the persistence object.
-	cp, err := server.NewPersistence(configPath, sm, true)
+	cp, err := server.NewPersistence(configPath, sm)
 	if err != nil {
 		t.Fatalf("Failed to initialize persistence: %v", err)
 	}
@@ -65,7 +68,7 @@ func TestMarkDirtyConcurrent(t *testing.T) {
 		t.Errorf("ValidateState failed: %v", err)
 	}
 
-	// Optionally, check that the state file exists.
+	// Check that the state file exists.
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		t.Errorf("Expected state file %s to exist", configPath)
 	}
@@ -76,11 +79,11 @@ func TestValidateStateFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, databaseName)
 
-	sm := server.NewStateManager("testnode")
+	sm := server.NewStateManager("test_manager")
 	if err := sm.Set("key", "value"); err != nil {
 		t.Fatalf("Failed to set state: %v", err)
 	}
-	cp, err := server.NewPersistence(configPath, sm, false)
+	cp, err := server.NewPersistence(configPath, sm)
 	if err != nil {
 		t.Fatalf("Failed to initialize persistence: %v", err)
 	}
@@ -98,7 +101,8 @@ func TestValidateStateFile(t *testing.T) {
 // TestChecksumCalculation verifies that the checksum calculated on the state
 // remains consistent when the same state is used.
 func TestChecksumCalculation(t *testing.T) {
-	sm := server.NewStateManager("testnode")
+
+	sm := server.NewStateManager("test_manager")
 
 	// Set a known state.
 	state := map[string]*api.StateEntry{
@@ -108,25 +112,21 @@ func TestChecksumCalculation(t *testing.T) {
 
 	sm.SetState(state)
 
-	cp, err := server.NewPersistence("dummy", sm, false)
+	_, err := server.NewPersistence("dummy", sm)
 	if err != nil {
 		t.Fatalf("Failed to initialize persistence: %v", err)
 	}
 
 	// Get the full state.
 	fullState := sm.GetFullState()
-	checksum1, err := cp.CalculateChecksum(fullState)
-	if err != nil {
-		t.Fatalf("CalculateChecksum returned error: %v", err)
-	}
 
 	// Serialize the same state and calculate again.
-	checksum2, err := cp.CalculateChecksum(fullState)
+	checksum, err := server.CalculateChecksum(fullState.State)
 	if err != nil {
 		t.Fatalf("CalculateChecksum returned error: %v", err)
 	}
 
-	if checksum1 != checksum2 {
-		t.Errorf("Expected same checksum for identical state, got %s and %s", checksum1, checksum2)
+	if fullState.Checksum != checksum {
+		t.Errorf("Expected same checksum for identical state, got %s and %s", fullState.Checksum, checksum)
 	}
 }

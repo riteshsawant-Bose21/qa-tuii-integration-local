@@ -289,6 +289,10 @@ multipass exec fusion1 -- bash -c "echo '{\"action\":\"get\"}' | nc -u -w 1 -v l
 ```bash
 echo '{"action":"set","test":"hello"}' | nc -u -w 1 localhost 7947
 ```
+Outside of instance:
+```bash
+multipass exec fusion1 -- bash -c "echo '{\"action\":\"set\",\"test\":\"hello\"}' | nc -u -w 1 localhost 7947"
+```
 
 ### Set a nested value
 ```bash
@@ -513,7 +517,7 @@ brew install bruno
 ## Monitoring
 
 **Metrics Server**
-   - Available on configurable port (default: 9090)
+   - Available on port (default: 8080)
    - Endpoints:
      - `/metrics` - Complete system metrics
      - `/cluster/status` - Detailed cluster information
@@ -527,7 +531,7 @@ brew install bruno
 
 #### Get Complete System Metrics
 ```bash
-curl http://192.168.64.100:9090/metrics
+curl http://192.168.64.100:8080/metrics
 ```
 Response includes:
 - Timestamp
@@ -540,7 +544,7 @@ Response includes:
 
 #### Check Cluster Status
 ```bash
-curl http://192.168.64.100:9090/cluster/status
+curl http://192.168.64.100:8080/cluster/status
 ```
 Response includes:
 - Member count
@@ -584,17 +588,17 @@ Response includes:
 
 1. **Check all metrics**
 ```bash
-curl -s http://192.168.64.100:9090/metrics | jq
+curl -s http://192.168.64.100:8080/metrics | jq
 ```
 
 2. **Track cluster membership**
 ```bash
-watch -n 1 'curl -s http://192.168.64.100:9090/cluster/status | jq .members'
+watch -n 1 'curl -s http://192.168.64.100:8080/cluster/status | jq .members'
 ```
 
 3. **System resource usage**
 ```bash
-curl -s http://192.168.64.100:9090/metrics | jq 'select(.cpu_usage, .memory_usage, .goroutines)'
+curl -s http://192.168.64.100:8080/metrics | jq 'select(.cpu_usage, .memory_usage, .goroutines)'
 ```
 
 ### Diagram

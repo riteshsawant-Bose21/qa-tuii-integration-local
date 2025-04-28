@@ -4,6 +4,7 @@ go 1.23.1
 
 require (
 	github.com/go-ble/ble v0.0.0-20240122180141-8c5522f54333
+	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/websocket v1.5.3
 	github.com/hashicorp/memberlist v0.5.1
 	github.com/robfig/cron/v3 v3.0.1

@@ -74,8 +74,6 @@ func (h *Handler) HandleVersionUpdate(w http.ResponseWriter, r *http.Request) {
 			logger.Error("Update failed: %v", err)
 		}
 	}()
-
-	w.WriteHeader(http.StatusOK)
 }
 
 // HandleVersionRollback processes a rollback request using the provided index,
@@ -118,8 +116,6 @@ func (h *Handler) HandleVersionRollback(w http.ResponseWriter, r *http.Request) 
 			logger.Error("Rollback failed: %v", err)
 		}
 	}()
-
-	w.WriteHeader(http.StatusOK)
 }
 
 // InitiateVersionUpdate prepares a version update message with binary metadata
@@ -133,7 +129,7 @@ func (h *Handler) InitiateVersionUpdate(newBinaryPath string) error {
 
 	update := BinaryUpdate{
 		BinaryHeader: BinaryHeader{
-			NodeID: h.list.LocalNode().Name,
+			NodeID: h.memberlist.LocalNode().Name,
 			Time:   time.Now().UTC(),
 		},
 		BinaryHash: hash,
@@ -158,8 +154,8 @@ func (h *Handler) InitiateVersionUpdate(newBinaryPath string) error {
 	h.broadcastToNodes(messageData)
 
 	// Stream the binary to each node.
-	for _, node := range h.list.Members() {
-		if node.Name == h.list.LocalNode().Name {
+	for _, node := range h.memberlist.Members() {
+		if node.Name == h.memberlist.LocalNode().Name {
 			continue
 		}
 		if err := h.streamBinaryToNode(node, newBinaryPath); err != nil {
@@ -175,7 +171,7 @@ func (h *Handler) InitiateBinaryRollback(currentBinaryPath string, index int) er
 
 	rollback := BinaryRollback{
 		BinaryHeader: BinaryHeader{
-			NodeID: h.list.LocalNode().Name,
+			NodeID: h.memberlist.LocalNode().Name,
 			Time:   time.Now().UTC(),
 		},
 		BinaryPath: currentBinaryPath,
@@ -241,14 +237,13 @@ func (h *Handler) HandleAudioUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	existingData := TransformState(h.stateManager.GetFullState())
+	existingData := TransformState(h.stateManager.GetFullState().State)
 	addAudioFilesToConfig(destDir, existingData)
 	if err := h.handleConfigUpdate(existingData); err != nil {
 		logger.Error("Failed to handle audio config update: %v", err)
 		http.Error(w, "Server error", http.StatusInternalServerError)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
 }
 
 // getBinaryMetadata calculates the SHA-256 hash and size of the specified binary file.
@@ -310,7 +305,7 @@ func (h *Handler) streamBinaryToNode(node *memberlist.Node, binaryPath string) e
 			return fmt.Errorf("failed to marshal message: %w", err)
 		}
 
-		if err := h.list.SendReliable(node, messageData); err != nil {
+		if err := h.memberlist.SendReliable(node, messageData); err != nil {
 			return fmt.Errorf("failed to send chunk message: %w", err)
 		}
 	}
@@ -333,7 +328,7 @@ func (h *Handler) streamBinaryToNode(node *memberlist.Node, binaryPath string) e
 	if err != nil {
 		return fmt.Errorf("failed to marshal final message: %w", err)
 	}
-	if err := h.list.SendReliable(node, messageData); err != nil {
+	if err := h.memberlist.SendReliable(node, messageData); err != nil {
 		return fmt.Errorf("failed to send final chunk message: %w", err)
 	}
 

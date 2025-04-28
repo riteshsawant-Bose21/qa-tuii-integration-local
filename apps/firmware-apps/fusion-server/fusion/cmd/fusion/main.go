@@ -1,7 +1,7 @@
 package main
 
 import (
-	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -15,17 +15,14 @@ import (
 	"fusion/internal/logging"
 	"fusion/internal/network"
 	"fusion/internal/server"
-	"fusion/internal/timers"
 	"fusion/internal/version"
+
+	"github.com/gorilla/mux"
+	"github.com/hashicorp/memberlist"
 )
 
 var (
-	nodeName    string
-	bindAddr    string
-	bindPort    int
-	metricsPort int
-	verbose     bool
-	endpoints   []string
+	endpoints []string
 )
 
 const (
@@ -37,63 +34,162 @@ const (
 	startupWaitDelay   = 100
 )
 
-func setupHTTPRoutes(cluster *cluster.Cluster, server *server.ConfigServer, metrics *cluster.MetricsCollector, verbose bool) {
-	registerEndpoint("/", withLogging(server.HandleRoot, "root", verbose))
-	registerEndpoint("/export", withLogging(server.ExportState, "export", verbose))
-	registerEndpoint("/endpoints", withLogging(cluster.GetEndpoints, "endpoints", verbose))
-	registerEndpoint("/getValue", withLogging(server.GetValue, "getValue", verbose))
-	registerEndpoint("/setValue", withLogging(server.SetValue, "setValue", verbose))
-	registerEndpoint("/updateValue", withLogging(server.UpdateValue, "updateValue", verbose))
-	registerEndpoint("/clear", withLogging(server.ClearAllData, "clear", verbose))
-	registerEndpoint("/members", withLogging(server.GetMembers, "members", verbose))
-	registerEndpoint("/updateVersion", withLogging(server.UpdateVersion, "updateVersion", verbose))
-	registerEndpoint("/rollbackVersion", withLogging(server.RollbackVersion, "rollbackVersion", verbose))
-	registerEndpoint("/snapshots", withLogging(server.ListSnapshots, "listSnapshots", verbose))
-	registerEndpoint("/snapshots/create", withLogging(server.CreateSnapshot, "createSnapshot", verbose))
-	registerEndpoint("/snapshots/activate", withLogging(server.ActivateSnapshotHTTP, "activateSnapshot", verbose))
-	registerEndpoint("/snapshots/delete", withLogging(server.DeleteSnapshot, "deleteSnapshot", verbose))
-	registerEndpoint("/snapshots/metadata", withLogging(server.GetSnapshotMetadata, "snapshotMetadata", verbose))
-	registerEndpoint("/snapshots/snapshot", withLogging(server.GetSnapshot, "getSnapshot", verbose))
-	registerEndpoint("/snapshots/export", withLogging(server.ExportSnapshots, "exportSnapshots", verbose))
-	registerEndpoint("/snapshots/import", withLogging(server.ImportSnapshots, "importSnapshots", verbose))
-	registerEndpoint("/uploadAudio", withLogging(server.UploadAudio, "uploadAudio", verbose))
-	registerEndpoint("/ws", withWebSocketMetrics(server.HandleWebSocket, metrics, verbose))
+type App struct {
+	Logger            *logging.Logger
+	StateManager      *server.StateManager
+	Persistence       *server.Persistence
+	TaskManager       *server.TaskManager
+	Updater           *server.Updater
+	Memberlist        *memberlist.Memberlist
+	ConnectionHandler *server.Handler
+	Cluster           *cluster.Cluster
+	Server            *server.ConfigServer
+	BLEServer         *network.BLEServer
+	UDPServer         *network.UDPServer
+	MetricsCollector  *cluster.MetricsCollector
 }
 
-func setupTimerRoutes(manager *timers.TimerManager, verbose bool) {
-	registerEndpoint("/tasks", withLogging(manager.ListTasksHandler, "tasks", verbose))
-	registerEndpoint("/tasks/add", withLogging(manager.AddTaskHandler, "addTask", verbose))
-	registerEndpoint("/tasks/update", withLogging(manager.UpdateTaskHandler, "updateTask", verbose))
-	registerEndpoint("/tasks/remove", withLogging(manager.RemoveTaskHandler, "removeTask", verbose))
-	registerEndpoint("/tasks/history", withLogging(manager.ExecutionHistoryHandler, "history", verbose))
+// Close shuts down all components gracefully.
+func (app *App) Close() {
+	defer app.Logger.Close()
+	defer app.TaskManager.Stop()
+	if app.BLEServer != nil {
+		defer app.BLEServer.Stop()
+	}
+	defer app.UDPServer.Stop()
+	defer app.Logger.Close()
 }
 
-func setupMetricsRoutes(metrics *cluster.MetricsCollector) *http.ServeMux {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/metrics", metrics.HandleMetrics)
-	mux.HandleFunc("/cluster/status", metrics.HandleClusterStatus)
-	mux.HandleFunc("/health", metrics.HandleHealthCheck)
-	return mux
+// NewApp is a factory function to set up the application
+func NewApp(config *api.AppConfig) *App {
+	logger := initLogging(config)
+	stateManager := initStateManager(config.NodeName)
+	persistence := initPersistence(fusionDatabasePath, stateManager)
+	taskManager := initTaskManager(config, persistence)
+	updater := server.NewUpdater()
+
+	delegate := cluster.NewClusterDelegate(config.NodeName, persistence, stateManager, taskManager, updater)
+	memberlist := cluster.CreateMemberlist(config, delegate)
+	connectionHandler := server.NewHandler(memberlist, persistence, stateManager, updater)
+	clusterInstance := cluster.NewCluster(config, delegate, memberlist)
+	bleServer := initBLEServer()
+	udpServer := initUDPServer(api.UDPPort, connectionHandler)
+	configServer := server.NewConfigServer(config.NodeName, connectionHandler, memberlist)
+	metricsCollector := clusterInstance.NewMetricsCollector()
+
+	initDataPaths()
+
+	return &App{
+		Logger:            logger,
+		StateManager:      stateManager,
+		Persistence:       persistence,
+		TaskManager:       taskManager,
+		Updater:           updater,
+		Memberlist:        memberlist,
+		ConnectionHandler: connectionHandler,
+		Cluster:           clusterInstance,
+		Server:            configServer,
+		BLEServer:         bleServer,
+		UDPServer:         udpServer,
+		MetricsCollector:  metricsCollector,
+	}
 }
 
-// Middleware to log HTTP requests
-func withLogging(handler http.HandlerFunc, endpoint string, verbose bool) http.HandlerFunc {
+// parseFlags parses and validates command-line flags.
+func parseFlags() *api.AppConfig {
+	versionFlag := flag.Bool("version", false, "Show version information")
+	nodeName := flag.String("name", "", "Node name")
+	bindAddr := flag.String("addr", "0.0.0.0", "Bind address")
+	bindPort := flag.Int("port", 7946, "Bind port")
+	verbose := flag.Bool("verbose", false, "Verbose output")
+	flag.Parse()
 
-	if verbose {
-		return func(w http.ResponseWriter, r *http.Request) {
-			start := time.Now()
-			handler(w, r)
-			duration := time.Since(start)
-			logging.GetLogger().Debug("[HTTP] %s %s %s Duration: %v", r.Method, r.URL.Path, endpoint, duration)
-		}
-	} else {
-		return handler
+	if *versionFlag {
+		log.Printf("Version: %s\nCommit: %s\nBuild Time: %s\n", version.Version, version.Commit, version.BuildTime)
+		os.Exit(0)
+	}
+
+	if *nodeName == "" {
+		log.Fatal("Node name is required")
+	}
+
+	return &api.AppConfig{
+		NodeName: *nodeName,
+		BindAddr: *bindAddr,
+		BindPort: *bindPort,
+		Verbose:  *verbose,
+	}
+}
+
+// registerEndpoint registers a handler and tracks the endpoint.
+func registerEndpoint(router *mux.Router, method string, pattern string, handler http.HandlerFunc, public bool) {
+	if public {
+		endpoints = append(endpoints, fmt.Sprintf("%s %s", method, pattern))
+	}
+	router.HandleFunc(pattern, handler).Methods(method)
+}
+
+// registerEndpoint registers a handler and tracks the endpoint.
+func registerPrivateEndpoint(router *mux.Router, method string, pattern string, handler http.HandlerFunc) {
+	registerEndpoint(router, method, pattern, handler, false)
+}
+
+func registerPublicEndpoint(router *mux.Router, method string, pattern string, handler http.HandlerFunc) {
+	registerEndpoint(router, method, pattern, handler, true)
+}
+
+func listRegisteredEndpoints(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
+	json.NewEncoder(w).Encode(map[string]any{"routes": endpoints})
+}
+
+type statusRecorder struct {
+	http.ResponseWriter
+	status int
+}
+
+func (rec *statusRecorder) WriteHeader(code int) {
+	rec.status = code
+	rec.ResponseWriter.WriteHeader(code)
+}
+
+// loggingMiddleware logs HTTP requests in verbose mode
+func loggingMiddleware(config *api.AppConfig) mux.MiddlewareFunc {
+	logger := logging.GetLogger()
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if config.Verbose {
+				rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
+				start := time.Now()
+				next.ServeHTTP(rec, r)
+				duration := time.Since(start)
+				logger.Debug("%s %s %d Duration: %v", r.Method, r.RequestURI, rec.status, duration)
+			} else {
+				next.ServeHTTP(w, r)
+			}
+		})
+	}
+}
+
+// recoveryMiddleware avoids crashing the server and logs unexpected issues
+func recoveryMiddleware() mux.MiddlewareFunc {
+	logger := logging.GetLogger()
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			defer func() {
+				if err := recover(); err != nil {
+					logger.Error("Panic recovered: %v", err)
+					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				}
+			}()
+			next.ServeHTTP(w, r)
+		})
 	}
 }
 
 // Middleware for WebSocket connections
-func withWebSocketMetrics(handler http.HandlerFunc, metrics *cluster.MetricsCollector, verbose bool) http.HandlerFunc {
-	if verbose {
+func withWebSocketMetrics(config *api.AppConfig, handler http.HandlerFunc, metrics *cluster.MetricsCollector) http.HandlerFunc {
+	if config.Verbose {
 		return func(w http.ResponseWriter, r *http.Request) {
 			metrics.UpdateWSCount(1)
 			handler(w, r)
@@ -104,38 +200,63 @@ func withWebSocketMetrics(handler http.HandlerFunc, metrics *cluster.MetricsColl
 	}
 }
 
-// parseFlags parses and validates command-line flags.
-func parseFlags() {
-	versionFlag := flag.Bool("version", false, "Show version information")
-	flag.StringVar(&nodeName, "name", "", "Node name")
-	flag.StringVar(&bindAddr, "addr", "0.0.0.0", "Bind address")
-	flag.IntVar(&bindPort, "port", 7946, "Bind port")
-	flag.IntVar(&metricsPort, "metrics-port", 9090, "Metrics server port")
-	flag.BoolVar(&verbose, "verbose", false, "Verbose output")
+func setupPublicRoutes(config *api.AppConfig, r *mux.Router, app *App) {
 
-	flag.Parse()
+	registerPublicEndpoint(r, "GET", "/", app.Server.HandleRoot)
+	registerPublicEndpoint(r, "GET", "/endpoints", listRegisteredEndpoints)
+	registerPublicEndpoint(r, "GET", "/members", app.Server.GetMembers)
+	registerPublicEndpoint(r, "GET", "/metadata", app.Server.GetDatabaseMetadata)
+	registerPublicEndpoint(r, "GET", "/version", app.Server.HandleVersion)
+	registerPublicEndpoint(r, "PUT", "/uploadAudio", app.Server.UploadAudio)
+	registerPublicEndpoint(r, "GET", "/ws", withWebSocketMetrics(config, app.Server.HandleWebSocket, app.MetricsCollector))
 
-	if *versionFlag {
-		log.Printf("Version: %s\nCommit: %s\nBuild Time: %s\n", version.Version, version.Commit, version.BuildTime)
-		os.Exit(0)
-	}
+	// Values
+	registerPublicEndpoint(r, "GET", "/value", app.Server.GetValue)
+	registerPublicEndpoint(r, "POST", "/value", app.Server.SetValue)
+	registerPublicEndpoint(r, "PATCH", "/value", app.Server.UpdateValue)
+	registerPublicEndpoint(r, "DELETE", "/value", app.Server.ClearAllValues)
 
-	if nodeName == "" {
-		// We can't use Logging as it requires the node name to initalize.
-		log.Fatal("Node name is required")
-	}
+	// Snapshots
+	// NOTE: These must be added before the {name} parameter endpoints to avoid conflicts
+	registerPublicEndpoint(r, "GET", "/snapshots", app.Server.ListSnapshots)
+	registerPublicEndpoint(r, "POST", "/snapshots/{name}", app.Server.CreateSnapshot)
+	registerPublicEndpoint(r, "GET", "/snapshots/{name}", app.Server.GetSnapshot)
+	registerPublicEndpoint(r, "DELETE", "/snapshots/{name}", app.Server.DeleteSnapshot)
+	registerPublicEndpoint(r, "POST", "/snapshots/{name}/activate", app.Server.ActivateSnapshot)
+
+	// Tasks
+	// NOTE: These must be added before the {id} parameter endpoints to avoid conflicts
+	registerPublicEndpoint(r, "GET", "/tasks/history", app.TaskManager.HandleGetHistory)
+	registerPublicEndpoint(r, "DELETE", "/tasks/history", app.TaskManager.HandleClearHistory)
+	registerPublicEndpoint(r, "GET", "/tasks", app.TaskManager.HandleGetTasks)
+	registerPublicEndpoint(r, "POST", "/tasks", app.TaskManager.HandleCreateTask)
+	registerPublicEndpoint(r, "GET", "/tasks/{id}", app.TaskManager.HandleGetTask)
+	registerPublicEndpoint(r, "PUT", "/tasks/{id}", app.TaskManager.HandleUpdateTask)
+	registerPublicEndpoint(r, "DELETE", "/tasks/{id}", app.TaskManager.HandleDeleteTask)
+
+	// Metrics
+	registerPublicEndpoint(r, "GET", "/cluster/status", app.MetricsCollector.HandleClusterStatus)
+	registerPublicEndpoint(r, "GET", "/health", app.MetricsCollector.HandleHealthCheck)
+	registerPublicEndpoint(r, "GET", "/metrics", app.MetricsCollector.HandleMetrics)
+}
+
+func setupPrivateRoutes(r *mux.Router, app *App) {
+	registerPrivateEndpoint(r, "GET", "/exportData", app.Server.ExportData)
+	registerPrivateEndpoint(r, "POST", "/importData", app.Server.ImportData)
+	registerPrivateEndpoint(r, "GET", "/exportState", app.Server.ExportState)
+	registerPrivateEndpoint(r, "POST", "/importState", app.Server.ImportState)
 }
 
 // initLogging initializes the logging system.
-func initLogging(nodeName string, verbose bool) *logging.Logger {
+func initLogging(config *api.AppConfig) *logging.Logger {
 
 	logLevel := logging.INFO
-	if verbose {
+	if config.Verbose {
 		logLevel = logging.DEBUG
 	}
 
 	logging.InitLogger(logging.LogConfig{
-		NodeName:    nodeName,
+		NodeName:    config.NodeName,
 		LogDir:      "/var/log/fusion",
 		MaxFileSize: 100,
 		MaxFiles:    5,
@@ -145,26 +266,26 @@ func initLogging(nodeName string, verbose bool) *logging.Logger {
 }
 
 // initPersistence initializes the persistence layer.
-func initPersistence(configPath string, stateManager *server.StateManager) *server.Persistence {
+func initPersistence(dataPath string, stateManager *server.StateManager) *server.Persistence {
 
 	logger := logging.GetLogger()
 
-	persistence, err := server.NewPersistence(configPath, stateManager, verbose)
+	persistence, err := server.NewPersistence(dataPath, stateManager)
 	if err != nil {
 		logger.Fatal("Failed to initialize persistence: %v", err)
 	}
 
 	err = persistence.LoadActiveSnapshot()
 	if err != nil {
-		logger.Fatal("Failed to to load initial state: %v", err)
+		logger.Fatal("Failed to to load active snapshot: %v", err)
 	}
 
 	return persistence
 }
 
 // initStateManager initializes the state manager.
-func initStateManager(nodeName string) *server.StateManager {
-	return server.NewStateManager(nodeName)
+func initStateManager(node string) *server.StateManager {
+	return server.NewStateManager(node)
 }
 
 func initDataPaths() {
@@ -201,31 +322,13 @@ func initDataPaths() {
 	}
 }
 
-// initTimerManager initializes the timer manager.
-func initTimerManager() *timers.TimerManager {
-	timerManager := timers.NewTimerManager("tasks.json", "history.json")
-	if err := timerManager.Start(); err != nil {
-		logging.GetLogger().Fatal("Error starting TimerManager: %v", err)
+// initTaskManager initializes the timer manager.
+func initTaskManager(config *api.AppConfig, persistence *server.Persistence) *server.TaskManager {
+	taskManager := server.NewTaskManager(config, persistence)
+	if err := taskManager.Start(); err != nil {
+		logging.GetLogger().Fatal("Failed to start TaskManager: %v", err)
 	}
-	return timerManager
-}
-
-// startMetricsServer starts the metrics HTTP server.
-func startMetricsServer(port int, metrics *cluster.MetricsCollector) *http.Server {
-	metricsServer := &http.Server{
-		Addr:    fmt.Sprintf(":%d", port),
-		Handler: setupMetricsRoutes(metrics),
-	}
-
-	go func() {
-		logger := logging.GetLogger()
-		logger.Info("Starting metrics server on :%d", port)
-		if err := metricsServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Fatal("Metrics server failed: %v", err)
-		}
-	}()
-
-	return metricsServer
+	return taskManager
 }
 
 // initBLEServer initializes the Bluetooth server.
@@ -254,74 +357,53 @@ func initUDPServer(port string, handler *server.Handler) *network.UDPServer {
 }
 
 // startAPIServer starts the main HTTP API server
-func startAPIServer(port string, wg *sync.WaitGroup) {
+func startAPIServer(router *mux.Router, port string, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	logger := logging.GetLogger()
 	logger.Info("Starting API server on %s", port)
 
-	if err := http.ListenAndServe(port, nil); err != nil {
+	if err := http.ListenAndServe(port, router); err != nil {
 		logger.Fatal("API server failed: %v", err)
 	}
 }
 
-// registerEndpoint registers a handler and tracks the endpoint.
-func registerEndpoint(pattern string, handlerFunc http.HandlerFunc) {
-	endpoints = append(endpoints, pattern)
-	http.HandleFunc(pattern, handlerFunc)
-}
-
 func main() {
 
-	parseFlags()
+	config := parseFlags()
 
-	logger := initLogging(nodeName, verbose)
-	defer logger.Close()
+	app := NewApp(config)
+	defer app.Close()
 
-	initDataPaths()
+	// Setup the public routes available on port 8080
+	publicRouter := mux.NewRouter()
+	publicRouter.Use(loggingMiddleware(config))
+	publicRouter.Use(recoveryMiddleware())
 
-	stateManager := initStateManager(nodeName)
+	setupPublicRoutes(config, publicRouter, app)
 
-	persistence := initPersistence(fusionDatabasePath, stateManager)
+	// Setup the private routes available on port 9090
+	privateRouter := mux.NewRouter()
+	privateRouter.Use(loggingMiddleware(config))
+	privateRouter.Use(recoveryMiddleware())
+	setupPrivateRoutes(privateRouter, app)
 
-	updater := server.NewUpdater()
+	app.ConnectionHandler.SetEndpoints(endpoints)
 
-	cluster := cluster.NewCluster(nodeName, bindAddr, bindPort, stateManager, persistence, updater, verbose)
-
-	stateManager.StartStateVerification(cluster.Memberlist)
-
-	timerManager := initTimerManager()
-	defer timerManager.Stop()
-
-	metricsCollector := cluster.NewMetricsCollector()
-
-	metricsServer := startMetricsServer(metricsPort, metricsCollector)
-	defer metricsServer.Shutdown(context.Background())
-
-	connectionHandler := server.NewHandler(cluster.Memberlist, stateManager, persistence, updater)
-
-	bleServer := initBLEServer()
-	defer bleServer.Stop()
-
-	udpServer := initUDPServer(api.UDPPort, connectionHandler)
-	defer udpServer.Stop()
-
-	configServer := server.NewConfigServer(nodeName, connectionHandler, cluster.Memberlist)
-
-	setupHTTPRoutes(cluster, configServer, metricsCollector, verbose)
-	setupTimerRoutes(timerManager, verbose)
-
-	connectionHandler.SetEndpoints(endpoints)
+	app.StateManager.StartVerification(app.Memberlist)
 
 	var wg sync.WaitGroup
-	wg.Add(1)
 
-	go startAPIServer(api.HTTPPort, &wg)
+	// Add two items to the wait group for the public and private routers
+	wg.Add(2)
 
-	// Wait a small amount of time for startAPIServer to come up before printing info
+	go startAPIServer(publicRouter, api.HTTPPort, &wg)
+	go startAPIServer(privateRouter, api.AdminPort, &wg)
+
+	// Wait for the API server to come up before printing info
 	time.Sleep(startupWaitDelay * time.Millisecond)
-	logger.Info("%s is ALIVE and RUNNING", nodeName)
-	logger.Info("Version: %s Commit: %s Build Time: %s", version.Version, version.Commit, version.BuildTime)
+	app.Logger.Info("%s is ALIVE and RUNNING", config.NodeName)
+	app.Logger.Info("Version: %s Commit: %s Build Time: %s", version.Version, version.Commit, version.BuildTime)
 
 	wg.Wait()
 }
