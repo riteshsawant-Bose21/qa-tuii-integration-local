@@ -1,6 +1,6 @@
-# TimerManager
+# TaskManager
 
-`TimerManager` manages and schedules tasks using cron expressions. 
+`TaskManager` manages and schedules tasks using cron expressions. 
 It provides a flexible and persistent system for executing scheduled tasks, 
 with features for task management, execution history, and HTTP endpoints for interaction.
 
@@ -54,23 +54,9 @@ for _, record := range history {
 }
 ```
 
-### HTTP Handlers
-
-Expose task management and history functionality via HTTP:
-
-```go
-http.HandleFunc("/tasks", tm.ListTasksHandler)
-http.HandleFunc("/tasks/add", tm.AddTaskHandler)
-http.HandleFunc("/tasks/update", tm.UpdateTaskHandler)
-http.HandleFunc("/tasks/remove", tm.RemoveTaskHandler)
-http.HandleFunc("/tasks/history", tm.ExecutionHistoryHandler)
-
-log.Fatal(http.ListenAndServe(":8080", nil))
-```
-
 ### Cron Expressions
 
-`TimerManager` uses the [robfig/cron](https://github.com/robfig/cron) library for scheduling. 
+`TaskManager` uses the [robfig/cron](https://github.com/robfig/cron) library for scheduling. 
 Refer to its documentation for details on supported cron expressions.
 
 ```
@@ -113,7 +99,7 @@ Refer to its documentation for details on supported cron expressions.
 
 ### Persistence
 
-- Task data is saved to the file specified during `TimerManager` initialization.
+- Task data is saved to the file specified during `TaskManager` initialization.
 - Execution history is maintained in a separate file.
 
 
@@ -122,10 +108,12 @@ Refer to its documentation for details on supported cron expressions.
 | Endpoint                  | Method | Description              |
 |---------------------------|--------|--------------------------|
 | `/tasks`                  | GET    | List all tasks.          |
-| `/tasks/add`              | POST   | Add a new task.          |
-| `/tasks/update?id=<id>`   | PUT    | Update an existing task. |
-| `/tasks/remove?id=<id>`   | DELETE | Remove a task by ID.     |
+| `/tasks`                  | POST   | Add a new task.          |
+| `/tasks/:id`              | GET    | Get task.          |
+| `/tasks/:id`              | PUT    | Update an existing task. |
+| `/tasks/:id`              | DELETE | Remove a task by ID.     |
 | `/tasks/history`          | GET    | View execution history.  |
+| `/tasks/history`          | DELETE | Clear execution history. |
 
 ### Example Requests
 
@@ -133,35 +121,42 @@ Refer to its documentation for details on supported cron expressions.
 ```bash
 curl -X POST -H "Content-Type: application/json" \
     -d '{"id":"task1","cron_expr":"@hourly","description":"Sample task"}' \
-    http://localhost:8080/tasks/add
+    http://localhost:8080/tasks
 ```
 
 #### Run every hour
 ```
 curl -X PUT -H "Content-Type: application/json" \
      -d '{"cron_expr":"@hourly","description":"Runs every hour"}' \
-     http://localhost:8080/tasks/update?id=task2
+     http://localhost:8080/tasks/task2
 ```
 
 #### Run every day at 3:30 PM
 ```
 curl -X PUT -H "Content-Type: application/json" \
      -d '{"cron_expr":"30 15 * * *","description":"Runs at 3:30 PM daily"}' \
-     http://localhost:8080/tasks/update?id=task3
+     http://localhost:8080/tasks/task3
 ```
 
 #### Run every Monday at 8 AM
 ```
 curl -X PUT -H "Content-Type: application/json" \
      -d '{"cron_expr":"0 8 * * 1","description":"Runs every Monday at 8 AM"}' \
-     http://localhost:8080/tasks/update?id=task4
+     http://localhost:8080/tasks/task4
+```
+
+#### Run every M-W-F at 12 PM
+```
+curl -X PUT -H "Content-Type: application/json" \
+     -d '{"cron_expr":"0 12 * * 1,3,5","description":"Runs every Monday, Wednesday, and Friday at 12 PM"}' \
+     http://localhost:8080/tasks/task5
 ```
 
 #### Run every 10 minutes
 ```
 curl -X PUT -H "Content-Type: application/json" \
      -d '{"cron_expr":"*/10 * * * *","description":"Runs every 10 minutes"}' \
-     http://localhost:8080/tasks/update?id=task5
+     http://localhost:8080/tasks/task5
 ```
 
 #### List Tasks
@@ -173,12 +168,12 @@ curl -X GET http://localhost:8080/tasks
 ```bash
 curl -X PUT -H "Content-Type: application/json" \
     -d '{"cron_expr":"@every 30m","description":"Updated task"}' \
-    http://localhost:8080/tasks/update?id=task1
+    http://localhost:8080/tasks/task1
 ```
 
 #### Remove a Task
 ```bash
-curl -X DELETE http://localhost:8080/tasks/remove?id=task1
+curl -X DELETE http://localhost:8080/tasks/task1
 ```
 
 #### Get Execution History
@@ -186,3 +181,7 @@ curl -X DELETE http://localhost:8080/tasks/remove?id=task1
 curl -X GET http://localhost:8080/tasks/history
 ```
 
+#### Clear Execution History
+```bash
+curl -X DELETE http://localhost:8080/tasks/history
+```

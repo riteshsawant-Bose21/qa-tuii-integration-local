@@ -233,6 +233,8 @@ func setupPublicRoutes(config *api.AppConfig, r *mux.Router, app *App) {
 	registerPublicEndpoint(r, "GET", "/tasks/{id}", app.TaskManager.HandleGetTask)
 	registerPublicEndpoint(r, "PUT", "/tasks/{id}", app.TaskManager.HandleUpdateTask)
 	registerPublicEndpoint(r, "DELETE", "/tasks/{id}", app.TaskManager.HandleDeleteTask)
+	registerPublicEndpoint(r, "POST", "/tasks/{id}/enable", app.TaskManager.HandleEnableTask)
+	registerPublicEndpoint(r, "POST", "/tasks/{id}/disable", app.TaskManager.HandleDisableTask)
 
 	// Metrics
 	registerPublicEndpoint(r, "GET", "/cluster/status", app.MetricsCollector.HandleClusterStatus)

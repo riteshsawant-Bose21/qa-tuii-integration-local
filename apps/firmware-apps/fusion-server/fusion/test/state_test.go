@@ -23,15 +23,6 @@ func init() {
 
 }
 
-func createStateConfig() *api.AppConfig {
-	return &api.AppConfig{
-		NodeName: "test_manager",
-		BindAddr: "http://192.168.64.100",
-		BindPort: 8080,
-		Verbose:  false,
-	}
-}
-
 func TestSetAndGetSimpleValue(t *testing.T) {
 	sm := server.NewStateManager("test_manager")
 	value := "hello world"
