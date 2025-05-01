@@ -72,13 +72,14 @@ type SnapshotUpdate struct {
 	Timestamp time.Time      `json:"timestamp"`
 }
 
-// Task represents a task with a unique ID, a cron expression, and a function to execute.
+// Task represents a task
 type Task struct {
 	ID          string `json:"id"`
-	CronExpr    string `json:"cron_expr"`
 	Description string `json:"description"`
-	EntryID     cron.EntryID
 	SnapshotID  string `json:"snapshot_id"`
+	CronExpr    string `json:"cron_expr"`
+	Enabled     bool   `json:"active"`
+	CronEntryID cron.EntryID
 }
 
 // StateEntry represents a single entry in the state

@@ -69,7 +69,34 @@ func (p *Persistence) SaveTasks(tasks map[string]*api.Task) error {
 	return nil
 }
 
-// TaskExists checks if a task exists alread.
+// DeleteTask removes the task
+func (p *Persistence) DeleteTask(taskID string) error {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
+	// Perform deletion in a single atomic transaction.
+	err := p.db.Update(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket([]byte(tasksBucketName))
+		if bucket == nil {
+			return fmt.Errorf("bucket '%s' not found", tasksBucketName)
+		}
+		if err := bucket.Delete([]byte(taskID)); err != nil {
+			return fmt.Errorf("failed to delete task '%s': %w", taskID, err)
+		}
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("failed to delete task '%s': %w", taskID, err)
+	}
+
+	// Update the database hash
+	if err := p.updateHash(); err != nil {
+		return fmt.Errorf("to update hash after deleting task '%s': %v", taskID, err)
+	}
+	return nil
+}
+
+// TaskExists checks if a task exists already.
 func (p *Persistence) TaskExists(task api.Task) (bool, error) {
 	p.mutex.RLock()
 	defer p.mutex.RUnlock()
@@ -79,7 +106,7 @@ func (p *Persistence) TaskExists(task api.Task) (bool, error) {
 		b := tx.Bucket([]byte(tasksBucketName))
 		if b == nil {
 			exists = false
-			return nil
+			return fmt.Errorf("tasks bucket not found")
 		}
 		exists = b.Get([]byte(task.ID)) != nil
 		return nil
@@ -111,4 +138,32 @@ func (p *Persistence) ImportTasks(importData map[string]any) error {
 		return fmt.Errorf("failed to update DB hash after import: %w", err)
 	}
 	return nil
+}
+
+// GetTaskIDsBySnapshot returns the IDs of all tasks associated with snapshotID
+func (p *Persistence) GetTaskIDsBySnapshot(snapshotID string) ([]string, error) {
+	var taskIDs []string
+
+	err := p.db.View(func(tx *bbolt.Tx) error {
+		b := tx.Bucket([]byte(tasksBucketName))
+		if b == nil {
+			return fmt.Errorf("bucket %q not found", tasksBucketName)
+		}
+
+		return b.ForEach(func(k, v []byte) error {
+			var t api.Task
+			if err := json.Unmarshal(v, &t); err != nil {
+				return fmt.Errorf("invalid task data for key %q: %w", k, err)
+			}
+			if t.SnapshotID == snapshotID {
+				taskIDs = append(taskIDs, string(k))
+			}
+			return nil
+		})
+	})
+
+	if err != nil {
+		return nil, err
+	}
+	return taskIDs, nil
 }

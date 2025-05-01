@@ -74,10 +74,6 @@ func (p *Persistence) DeleteSnapshot(snapshotKey string) error {
 		if err := bucket.Delete([]byte(snapshotKey)); err != nil {
 			return fmt.Errorf("failed to delete snapshot '%s': %w", snapshotKey, err)
 		}
-		// Verify deletion in the same transaction.
-		if bucket.Get([]byte(snapshotKey)) != nil {
-			return fmt.Errorf("snapshot '%s' still exists after deletion", snapshotKey)
-		}
 		return nil
 	})
 	if err != nil {
@@ -93,7 +89,17 @@ func (p *Persistence) DeleteSnapshot(snapshotKey string) error {
 		}
 	}
 
-	// Update the overall DB hash
+	// Remove tasks associated with the snapshot
+	tasks, err := p.GetTaskIDsBySnapshot(snapshotKey)
+	if err != nil {
+		return err
+	}
+
+	for _, taskID := range tasks {
+		p.DeleteTask(taskID)
+	}
+
+	// Update the database hash
 	if err := p.updateHash(); err != nil {
 		return fmt.Errorf("to update DB hash after deleting snapshot '%s': %v", snapshotKey, err)
 	}

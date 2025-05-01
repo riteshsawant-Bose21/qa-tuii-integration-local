@@ -41,7 +41,7 @@ type TaskManager struct {
 	executionHistory []ExecutionRecord
 	mu               sync.Mutex
 	historyFilePath  string
-	Running          bool
+	running          bool
 }
 
 // NewTaskManager initializes and returns a new TaskManager with persistence.
@@ -70,7 +70,7 @@ func (tm *TaskManager) AddTask(task *api.Task, taskFunc func()) error {
 	}
 
 	// Wrap the taskFunc to track execution history
-	trackedTaskFunc := tm.wrapTask(task.ID, taskFunc)
+	trackedTaskFunc := tm.wrapTask(task, taskFunc)
 
 	entryID, err := tm.cron.AddFunc(task.CronExpr, trackedTaskFunc)
 	if err != nil {
@@ -78,7 +78,7 @@ func (tm *TaskManager) AddTask(task *api.Task, taskFunc func()) error {
 		return err
 	}
 
-	task.EntryID = entryID
+	task.CronEntryID = entryID
 	tm.tasks[task.ID] = task
 	tm.taskFuncs[task.ID] = trackedTaskFunc
 
@@ -97,17 +97,18 @@ func (tm *TaskManager) UpdateTask(task *api.Task, taskFunc func()) error {
 		return fmt.Errorf("no task found with ID '%s'", task.ID)
 	}
 
-	tm.cron.Remove(task.EntryID)
+	tm.cron.Remove(task.CronEntryID)
 
 	// Wrap the new taskFunc to track execution history
-	trackedTaskFunc := tm.wrapTask(task.ID, taskFunc)
+	trackedTaskFunc := tm.wrapTask(task, taskFunc)
 
 	entryID, err := tm.cron.AddFunc(task.CronExpr, trackedTaskFunc)
 	if err != nil {
 		logger.Error("Failed to update task '%s': %v", task.ID, err)
 		return err
 	}
-	task.EntryID = entryID
+	task.Enabled = true
+	task.CronEntryID = entryID
 	tm.tasks[task.ID] = task
 	tm.taskFuncs[task.ID] = trackedTaskFunc
 
@@ -124,7 +125,7 @@ func (tm *TaskManager) RemoveTask(id string) error {
 		return fmt.Errorf("no task found with ID '%s'", id)
 	}
 
-	tm.cron.Remove(task.EntryID)
+	tm.cron.Remove(task.CronEntryID)
 	delete(tm.tasks, id)
 	delete(tm.taskFuncs, id)
 
@@ -145,15 +146,15 @@ func (tm *TaskManager) ListTasks() []api.Task {
 }
 
 // RecordExecution records a task execution log entry with rotation.
-func (tm *TaskManager) RecordExecution(taskID, status, description string) {
+func (tm *TaskManager) RecordExecution(task *api.Task, status string) {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
 
 	record := ExecutionRecord{
-		TaskID:      taskID,
+		TaskID:      task.ID,
 		Timestamp:   time.Now(),
 		Status:      status,
-		Description: description,
+		Description: task.Description,
 	}
 
 	tm.executionHistory = append(tm.executionHistory, record)
@@ -185,7 +186,7 @@ func (tm *TaskManager) Start() error {
 
 	tm.cron.Start()
 
-	tm.Running = true
+	tm.running = true
 
 	return nil
 }
@@ -204,7 +205,7 @@ func (tm *TaskManager) Stop() {
 		}
 	}
 
-	tm.Running = false
+	tm.running = false
 }
 
 // HandleGetTasks handles HTTP GET requests to list all tasks.
@@ -284,27 +285,15 @@ func (tm *TaskManager) HandleGetTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vars := mux.Vars(r)
-	id := vars["id"]
-	if id == "" {
-		http.Error(w, "Task ID is required", http.StatusBadRequest)
+	id, err := extractTaskID(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	var task api.Task
-	err := tm.persistence.db.View(func(tx *bbolt.Tx) error {
-		b := tx.Bucket([]byte(tasksBucketName))
-		if b == nil {
-			return fmt.Errorf("tasks bucket not found")
-		}
-		data := b.Get([]byte(id))
-		if data == nil {
-			return fmt.Errorf("task '%s' not found", id)
-		}
-		return json.Unmarshal(data, &task)
-	})
+	task, err := tm.fetchTask(id)
 	if err != nil {
-		http.Error(w, "Task not found", http.StatusNotFound)
+		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 
@@ -320,10 +309,9 @@ func (tm *TaskManager) HandleUpdateTask(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	vars := mux.Vars(r)
-	id := vars["id"]
-	if id == "" {
-		http.Error(w, "Task ID is required", http.StatusBadRequest)
+	id, err := extractTaskID(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -346,10 +334,7 @@ func (tm *TaskManager) HandleUpdateTask(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	err = tm.UpdateTask(&task, func() {
-		fmt.Printf("Task '%s' updated and executed\n", id)
-	})
-	if err != nil {
+	if err = tm.UpdateTask(&task, tm.taskActivateSnapshotFunc(task.SnapshotID)); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -363,14 +348,13 @@ func (tm *TaskManager) HandleDeleteTask(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	vars := mux.Vars(r)
-	id := vars["id"]
-	if id == "" {
-		http.Error(w, "Task ID is required", http.StatusBadRequest)
+	id, err := extractTaskID(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	err := tm.RemoveTask(id)
+	err = tm.RemoveTask(id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -406,6 +390,75 @@ func (tm *TaskManager) HandleClearHistory(w http.ResponseWriter, r *http.Request
 	tm.mu.Unlock()
 }
 
+// HandleEnableTask handles HTTP POST requests to enable a task
+func (tm *TaskManager) HandleEnableTask(w http.ResponseWriter, r *http.Request) {
+
+	if !utils.IsPostRequest(r) {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	_, err := extractTaskID(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error reading request body: %v", err), http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+
+	var task api.Task
+	if err := json.Unmarshal(body, &task); err != nil {
+		http.Error(w, fmt.Sprintf("Invalid JSON format: %v", err), http.StatusBadRequest)
+		return
+	}
+	exists, err := tm.persistence.SnapshotExists(task.SnapshotID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error checking snapshot existence: %v", err), http.StatusInternalServerError)
+		return
+	}
+	if exists {
+		http.Error(w, "Snapshot already exists", http.StatusConflict)
+		return
+	}
+
+	if err = tm.UpdateTask(&task, tm.taskActivateSnapshotFunc(task.SnapshotID)); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+}
+
+// HandleEnableTask handles HTTP POST requests to enable a task
+func (tm *TaskManager) HandleDisableTask(w http.ResponseWriter, r *http.Request) {
+
+	if !utils.IsPostRequest(r) {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	id, err := extractTaskID(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	task, err := tm.fetchTask(id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	tm.cron.Remove(task.CronEntryID)
+	task.CronEntryID = 0
+	task.Enabled = false
+
+	tm.saveTasks()
+}
+
 // taskActivateSnapshotFunc creates a task function that applies a snapshot.
 func (tm *TaskManager) taskActivateSnapshotFunc(name string) func() {
 	return func() {
@@ -415,6 +468,7 @@ func (tm *TaskManager) taskActivateSnapshotFunc(name string) func() {
 		// Activate the snapshot only on the instance
 		if err := tm.persistence.ActivateSnapshot(name); err != nil {
 			logger.Error("Snapshot apply task for '%s' failed: %v", name, err)
+
 		} else {
 			logger.Debug("Snapshot '%s' activated successfully via task", name)
 		}
@@ -422,18 +476,18 @@ func (tm *TaskManager) taskActivateSnapshotFunc(name string) func() {
 }
 
 // wrapTask wraps a task function to track execution history and handle panics.
-func (tm *TaskManager) wrapTask(id string, taskFunc func()) func() {
+func (tm *TaskManager) wrapTask(task *api.Task, taskFunc func()) func() {
 	logger := logging.GetLogger()
 
 	return func() {
 		defer func() {
 			if r := recover(); r != nil {
-				tm.RecordExecution(id, "failed", fmt.Sprintf("Panic: %v", r))
-				logger.Error("Task '%s' failed with panic: %v", id, r)
+				tm.RecordExecution(task, "failed")
+				logger.Error("Task '%s' failed with panic: %v", task.ID, r)
 			}
 		}()
 		taskFunc()
-		tm.RecordExecution(id, "success", "Task executed successfully")
+		tm.RecordExecution(task, "success")
 	}
 }
 
@@ -487,4 +541,33 @@ func (tm *TaskManager) loadHistory() error {
 	}
 
 	return json.Unmarshal(data, &tm.executionHistory)
+}
+
+// extractTaskID pulls the “id” var from mux and returns a proper error if it’s missing.
+func extractTaskID(r *http.Request) (string, error) {
+	id := mux.Vars(r)["id"]
+	if id == "" {
+		return "", fmt.Errorf("task ID is required")
+	}
+	return id, nil
+}
+
+// fetchTask loads a task by ID from the boltdb and returns it (or an error).
+func (tm *TaskManager) fetchTask(id string) (*api.Task, error) {
+	var task api.Task
+	err := tm.persistence.db.View(func(tx *bbolt.Tx) error {
+		b := tx.Bucket([]byte(tasksBucketName))
+		if b == nil {
+			return fmt.Errorf("tasks bucket not found")
+		}
+		data := b.Get([]byte(id))
+		if data == nil {
+			return fmt.Errorf("task '%s' not found", id)
+		}
+		return json.Unmarshal(data, &task)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &task, nil
 }
