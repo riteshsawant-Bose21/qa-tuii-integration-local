@@ -458,6 +458,7 @@ You can use jq to further filter the json returned by the script like this:
    ```
 3. **systemd status**
 ```bash
+multipass exec fusion1 -- systemctl status chrony
 multipass exec fusion1 -- systemctl status haproxy
 multipass exec fusion1 -- systemctl status keepalived
 multipass exec fusion1 -- systemctl status fusion-server
@@ -472,7 +473,11 @@ multipass exec fusion1 -- systemctl status fusion-server
    - Check node connectivity
    - Verify gossip protocol communication
    - Monitor state version numbers
-
+   - Check chrony status
+    ```bash
+    multipass exec fusion1 -- chronyc tracking
+    ```
+    
 6. **Load Balancer Issues**
    - Check HAProxy configuration
    - Verify backend metrics

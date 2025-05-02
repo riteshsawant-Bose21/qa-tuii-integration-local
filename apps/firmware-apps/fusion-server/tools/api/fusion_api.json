@@ -82,6 +82,248 @@
     },
     {
       "type": "folder",
+      "name": "Internal",
+      "filename": "Internal",
+      "root": {
+        "docs": "Internal endpoints are used by fusion-server for synchronization tasks. They sshould not be used by external clients.",
+        "meta": {
+          "name": "Internal"
+        }
+      },
+      "items": [
+        {
+          "type": "http",
+          "name": "Export Data",
+          "filename": "Export Data.bru",
+          "seq": 1,
+          "request": {
+            "url": "{{admin_url}}/exportData",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Export State",
+          "filename": "Export State.bru",
+          "seq": 3,
+          "request": {
+            "url": "{{admin_url}}/exportState",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Import Data",
+          "filename": "Import Data.bru",
+          "seq": 2,
+          "request": {
+            "url": "{{admin_url}}/importData",
+            "method": "POST",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "json",
+              "json": "{\n  \"fusion\": {\n    \"default\": {\n      \"checksum\": \"44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a\",\n      \"state\": {},\n      \"timestamp\": \"2025-04-02T02:01:40.956957393Z\",\n      \"version\": 0\n    },\n    \"import\": {\n      \"checksum\": \"44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a\",\n      \"state\": {},\n      \"timestamp\": \"2025-04-02T02:01:40.698466995Z\",\n      \"version\": 0\n    },\n    \"test_snapshot_1743559324558429000\": {\n      \"checksum\": \"44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a\",\n      \"state\": {},\n      \"timestamp\": \"2025-04-02T02:01:40.613758751Z\",\n      \"version\": 0\n    },\n    \"test_snapshot_1743559324618534000\": {\n      \"checksum\": \"44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a\",\n      \"state\": {},\n      \"timestamp\": \"2025-04-02T02:01:40.656419061Z\",\n      \"version\": 0\n    }\n  },\n  \"snapshot_metadata\": {\n    \"metadata\": {\n      \"active_snapshot\": \"\",\n      \"hash\": \"7a0ae79badcfb0d752f9775724087f42b5810cbad403800068e4fc763df2d43c\",\n      \"timestamp\": \"2025-04-02T02:01:40.956957393Z\",\n      \"valid\": false\n    }\n  },\n  \"tasks\": {\n    \"froggy\": {\n      \"EntryID\": 1,\n      \"cron_expr\": \"*/5 * * * *\",\n      \"description\": \"bleep\",\n      \"id\": \"test10\"\n    }\n  }\n}",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Import State",
+          "filename": "Import State.bru",
+          "seq": 4,
+          "request": {
+            "url": "{{admin_url}}/importState",
+            "method": "POST",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "json",
+              "json": "{\n    \"State\": {},\n    \"Checksum\": \"44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a\"\n}",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "folder",
+      "name": "Binaries",
+      "filename": "Binaries",
+      "items": [
+        {
+          "type": "http",
+          "name": "Rollback Version",
+          "filename": "Rollback Version.bru",
+          "seq": 1,
+          "request": {
+            "url": "{{api_url}}/rollbackVersion?index=-1",
+            "method": "POST",
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/json",
+                "enabled": true
+              }
+            ],
+            "params": [
+              {
+                "name": "index",
+                "value": "-1",
+                "type": "query",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "json",
+              "json": "",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Update Version",
+          "filename": "Update Version.bru",
+          "seq": 2,
+          "request": {
+            "url": "{{api_url}}/updateVersion",
+            "method": "POST",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "multipartForm",
+              "formUrlEncoded": [],
+              "multipartForm": [
+                {
+                  "type": "file",
+                  "name": "binary",
+                  "value": [
+                    "/Users/gragan/inprogress/bose/fusion-server/build/fusion-server_linux_arm64"
+                  ],
+                  "enabled": true
+                },
+                {
+                  "type": "text",
+                  "name": "checksum",
+                  "value": "f6c38b795d725eaeeaefdc880f689dbe4d86811e055ed626cd0b7240d9130dd5",
+                  "enabled": true
+                }
+              ],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Upload Audio File",
+          "filename": "Upload Audio File.bru",
+          "seq": 3,
+          "request": {
+            "url": "{{api_url}}/uploadAudio",
+            "method": "POST",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "multipartForm",
+              "formUrlEncoded": [],
+              "multipartForm": [
+                {
+                  "type": "file",
+                  "name": "binary",
+                  "value": [
+                    "/Users/gragan/inprogress/semitone/PatternPro/vmpc-juce/editables/JUCE/extras/AudioPluginHost/Builds/Android/app/src/main/assets/cello.wav"
+                  ],
+                  "enabled": true
+                }
+              ],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "folder",
       "name": "Snapshots",
       "filename": "Snapshots",
       "items": [
@@ -247,35 +489,26 @@
     },
     {
       "type": "folder",
-      "name": "Binaries",
-      "filename": "Binaries",
+      "name": "Tasks",
+      "filename": "Tasks",
+      "root": {
+        "meta": {
+          "name": "Tasks"
+        }
+      },
       "items": [
         {
           "type": "http",
-          "name": "Rollback Version",
-          "filename": "Rollback Version.bru",
-          "seq": 1,
+          "name": "Clear History",
+          "filename": "Clear History.bru",
+          "seq": 8,
           "request": {
-            "url": "{{api_url}}/rollbackVersion?index=-1",
-            "method": "POST",
-            "headers": [
-              {
-                "name": "Content-Type",
-                "value": "application/json",
-                "enabled": true
-              }
-            ],
-            "params": [
-              {
-                "name": "index",
-                "value": "-1",
-                "type": "query",
-                "enabled": true
-              }
-            ],
+            "url": "{{api_url}}/tasks/history",
+            "method": "DELETE",
+            "headers": [],
+            "params": [],
             "body": {
-              "mode": "json",
-              "json": "",
+              "mode": "none",
               "formUrlEncoded": [],
               "multipartForm": [],
               "file": []
@@ -292,33 +525,25 @@
         },
         {
           "type": "http",
-          "name": "Update Version",
-          "filename": "Update Version.bru",
-          "seq": 2,
+          "name": "Create",
+          "filename": "Create.bru",
+          "seq": 3,
           "request": {
-            "url": "{{api_url}}/updateVersion",
+            "url": "{{api_url}}/tasks",
             "method": "POST",
-            "headers": [],
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/json",
+                "enabled": true
+              }
+            ],
             "params": [],
             "body": {
-              "mode": "multipartForm",
+              "mode": "json",
+              "json": "{\n  \"id\": \"test10\",\n  \"cron_expr\": \"*/5 * * * *\",\n  \"description\": \"bleep\",\n  \"snapshot_id\" : \"test_snapshot\"\n}",
               "formUrlEncoded": [],
-              "multipartForm": [
-                {
-                  "type": "file",
-                  "name": "binary",
-                  "value": [
-                    "/Users/gragan/inprogress/bose/fusion-server/build/fusion-server_linux_arm64"
-                  ],
-                  "enabled": true
-                },
-                {
-                  "type": "text",
-                  "name": "checksum",
-                  "value": "f6c38b795d725eaeeaefdc880f689dbe4d86811e055ed626cd0b7240d9130dd5",
-                  "enabled": true
-                }
-              ],
+              "multipartForm": [],
               "file": []
             },
             "script": {},
@@ -333,27 +558,157 @@
         },
         {
           "type": "http",
-          "name": "Upload Audio File",
-          "filename": "Upload Audio File.bru",
-          "seq": 3,
+          "name": "Delete",
+          "filename": "Delete.bru",
+          "seq": 5,
           "request": {
-            "url": "{{api_url}}/uploadAudio",
-            "method": "POST",
+            "url": "{{api_url}}/tasks/:id",
+            "method": "DELETE",
+            "headers": [],
+            "params": [
+              {
+                "name": "id",
+                "value": "",
+                "type": "path",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Get History",
+          "filename": "Get History.bru",
+          "seq": 7,
+          "request": {
+            "url": "{{api_url}}/tasks/history",
+            "method": "GET",
             "headers": [],
             "params": [],
             "body": {
-              "mode": "multipartForm",
+              "mode": "none",
               "formUrlEncoded": [],
-              "multipartForm": [
-                {
-                  "type": "file",
-                  "name": "binary",
-                  "value": [
-                    "/Users/gragan/inprogress/semitone/PatternPro/vmpc-juce/editables/JUCE/extras/AudioPluginHost/Builds/Android/app/src/main/assets/cello.wav"
-                  ],
-                  "enabled": true
-                }
-              ],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "List All",
+          "filename": "List All.bru",
+          "seq": 1,
+          "request": {
+            "url": "{{api_url}}/tasks",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Get",
+          "filename": "Get.bru",
+          "seq": 2,
+          "request": {
+            "url": "{{api_url}}/tasks/:id",
+            "method": "GET",
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/json",
+                "enabled": true
+              }
+            ],
+            "params": [
+              {
+                "name": "id",
+                "value": "test10",
+                "type": "path",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "json",
+              "json": "{\n  \"cron_expr\": \"*/5 * * * *\",\n  \"description\": \"updated\"\n}",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Update",
+          "filename": "Update.bru",
+          "seq": 4,
+          "request": {
+            "url": "{{api_url}}/tasks/:id",
+            "method": "PUT",
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/json",
+                "enabled": true
+              }
+            ],
+            "params": [
+              {
+                "name": "id",
+                "value": "test10",
+                "type": "path",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "json",
+              "json": "{\n  \"cron_expr\": \"*/5 * * * *\",\n  \"description\": \"updated\"\n}",
+              "formUrlEncoded": [],
+              "multipartForm": [],
               "file": []
             },
             "script": {},
@@ -556,243 +911,7 @@
             ],
             "body": {
               "mode": "json",
-              "json": "{\n    \"audio\": {\n      \"tone_eq1\": {\n        \"frequencies\": [\n          1,\n          2,\n          3\n        ]\n      }\n  }\n}",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        }
-      ]
-    },
-    {
-      "type": "folder",
-      "name": "Tasks",
-      "filename": "Tasks",
-      "root": {
-        "meta": {
-          "name": "Tasks"
-        }
-      },
-      "items": [
-        {
-          "type": "http",
-          "name": "Clear History",
-          "filename": "Clear History.bru",
-          "seq": 8,
-          "request": {
-            "url": "{{api_url}}/tasks/history",
-            "method": "DELETE",
-            "headers": [],
-            "params": [],
-            "body": {
-              "mode": "none",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        },
-        {
-          "type": "http",
-          "name": "Create",
-          "filename": "Create.bru",
-          "seq": 3,
-          "request": {
-            "url": "{{api_url}}/tasks",
-            "method": "POST",
-            "headers": [
-              {
-                "name": "Content-Type",
-                "value": "application/json",
-                "enabled": true
-              }
-            ],
-            "params": [],
-            "body": {
-              "mode": "json",
-              "json": "{\n  \"id\": \"test10\",\n  \"cron_expr\": \"*/5 * * * *\",\n  \"description\": \"bleep\",\n  \"snapshot_id\" : \"test_snapshot\"\n}",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        },
-        {
-          "type": "http",
-          "name": "Delete",
-          "filename": "Delete.bru",
-          "seq": 5,
-          "request": {
-            "url": "{{api_url}}/tasks/:id",
-            "method": "DELETE",
-            "headers": [],
-            "params": [
-              {
-                "name": "id",
-                "value": "",
-                "type": "path",
-                "enabled": true
-              }
-            ],
-            "body": {
-              "mode": "none",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        },
-        {
-          "type": "http",
-          "name": "Get History",
-          "filename": "Get History.bru",
-          "seq": 7,
-          "request": {
-            "url": "{{api_url}}/tasks/history",
-            "method": "GET",
-            "headers": [],
-            "params": [],
-            "body": {
-              "mode": "none",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        },
-        {
-          "type": "http",
-          "name": "Get",
-          "filename": "Get.bru",
-          "seq": 2,
-          "request": {
-            "url": "{{api_url}}/tasks/:id",
-            "method": "GET",
-            "headers": [
-              {
-                "name": "Content-Type",
-                "value": "application/json",
-                "enabled": true
-              }
-            ],
-            "params": [
-              {
-                "name": "id",
-                "value": "test10",
-                "type": "path",
-                "enabled": true
-              }
-            ],
-            "body": {
-              "mode": "json",
-              "json": "{\n  \"cron_expr\": \"*/5 * * * *\",\n  \"description\": \"updated\"\n}",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        },
-        {
-          "type": "http",
-          "name": "List All",
-          "filename": "List All.bru",
-          "seq": 1,
-          "request": {
-            "url": "{{api_url}}/tasks",
-            "method": "GET",
-            "headers": [],
-            "params": [],
-            "body": {
-              "mode": "none",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        },
-        {
-          "type": "http",
-          "name": "Update",
-          "filename": "Update.bru",
-          "seq": 4,
-          "request": {
-            "url": "{{api_url}}/tasks/:id",
-            "method": "PUT",
-            "headers": [
-              {
-                "name": "Content-Type",
-                "value": "application/json",
-                "enabled": true
-              }
-            ],
-            "params": [
-              {
-                "name": "id",
-                "value": "test10",
-                "type": "path",
-                "enabled": true
-              }
-            ],
-            "body": {
-              "mode": "json",
-              "json": "{\n  \"cron_expr\": \"*/5 * * * *\",\n  \"description\": \"updated\"\n}",
+              "json": "{\n  \"destination_block\": \"12345\"\n}",
               "formUrlEncoded": [],
               "multipartForm": [],
               "file": []
@@ -891,112 +1010,71 @@
               "mode": "none"
             }
           }
-        }
-      ]
-    },
-    {
-      "type": "folder",
-      "name": "Internal",
-      "filename": "Internal",
-      "root": {
-        "docs": "Internal endpoints are used by fusion-server for synchronization tasks. They sshould not be used by external clients.",
-        "meta": {
-          "name": "Internal"
-        }
-      },
-      "items": [
-        {
-          "type": "http",
-          "name": "Export Data",
-          "filename": "Export Data.bru",
-          "seq": 1,
-          "request": {
-            "url": "{{admin_url}}/exportData",
-            "method": "GET",
-            "headers": [],
-            "params": [],
-            "body": {
-              "mode": "none",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
         },
         {
           "type": "http",
-          "name": "Import Data",
-          "filename": "Import Data.bru",
-          "seq": 2,
-          "request": {
-            "url": "{{admin_url}}/importData",
-            "method": "POST",
-            "headers": [],
-            "params": [],
-            "body": {
-              "mode": "json",
-              "json": "{\n  \"fusion\": {\n    \"default\": {\n      \"checksum\": \"44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a\",\n      \"state\": {},\n      \"timestamp\": \"2025-04-02T02:01:40.956957393Z\",\n      \"version\": 0\n    },\n    \"import\": {\n      \"checksum\": \"44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a\",\n      \"state\": {},\n      \"timestamp\": \"2025-04-02T02:01:40.698466995Z\",\n      \"version\": 0\n    },\n    \"test_snapshot_1743559324558429000\": {\n      \"checksum\": \"44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a\",\n      \"state\": {},\n      \"timestamp\": \"2025-04-02T02:01:40.613758751Z\",\n      \"version\": 0\n    },\n    \"test_snapshot_1743559324618534000\": {\n      \"checksum\": \"44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a\",\n      \"state\": {},\n      \"timestamp\": \"2025-04-02T02:01:40.656419061Z\",\n      \"version\": 0\n    }\n  },\n  \"snapshot_metadata\": {\n    \"metadata\": {\n      \"active_snapshot\": \"\",\n      \"hash\": \"7a0ae79badcfb0d752f9775724087f42b5810cbad403800068e4fc763df2d43c\",\n      \"timestamp\": \"2025-04-02T02:01:40.956957393Z\",\n      \"valid\": false\n    }\n  },\n  \"tasks\": {\n    \"froggy\": {\n      \"EntryID\": 1,\n      \"cron_expr\": \"*/5 * * * *\",\n      \"description\": \"bleep\",\n      \"id\": \"test10\"\n    }\n  }\n}",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        },
-        {
-          "type": "http",
-          "name": "Export State",
-          "filename": "Export State.bru",
-          "seq": 3,
-          "request": {
-            "url": "{{admin_url}}/exportState",
-            "method": "GET",
-            "headers": [],
-            "params": [],
-            "body": {
-              "mode": "none",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        },
-        {
-          "type": "http",
-          "name": "Import State",
-          "filename": "Import State.bru",
+          "name": "Cluster Latency",
+          "filename": "Cluster Latency.bru",
           "seq": 4,
           "request": {
-            "url": "{{admin_url}}/importState",
-            "method": "POST",
+            "url": "{{metrics_url}}/cluster/latency",
+            "method": "GET",
             "headers": [],
             "params": [],
             "body": {
-              "mode": "json",
-              "json": "{\n  \"state\": {\n    \"State\": {},\n    \"Checksum\": \"44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a\"\n  }\n}",
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Cluster Latency Averages",
+          "filename": "Cluster Latency Averages.bru",
+          "seq": 5,
+          "request": {
+            "url": "{{metrics_url}}/cluster/latency/averages",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Cluster NTP Skew",
+          "filename": "Cluster NTP Skew.bru",
+          "seq": 6,
+          "request": {
+            "url": "{{metrics_url}}/cluster/ntp-skew",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
               "formUrlEncoded": [],
               "multipartForm": [],
               "file": []
@@ -1014,7 +1092,7 @@
       ]
     }
   ],
-  "activeEnvironmentUid": "uS5AUtUvj6nBaTHqfRUuJ",
+  "activeEnvironmentUid": "703o850fCAaPyBh7Lwgul",
   "environments": [
     {
       "variables": [
@@ -1088,7 +1166,7 @@
       "node_modules",
       ".git"
     ],
-    "size": 0.007732391357421875,
-    "filesCount": 34
+    "size": 0.008111953735351562,
+    "filesCount": 36
   }
 }

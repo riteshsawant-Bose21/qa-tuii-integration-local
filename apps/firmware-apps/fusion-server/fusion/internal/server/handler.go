@@ -97,11 +97,9 @@ func (h *Handler) HandleClearAllData() error {
 	}
 	configUpdate.Clear = true
 
-	message := api.NotifyMessage{
-		Operation:    api.NotifyOpConfigUpdate,
-		Node:         h.stateManager.node,
-		ConfigUpdate: configUpdate,
-	}
+	message := api.NewNotifyMessage(api.NotifyOpConfigUpdate, h.stateManager.node,
+		api.WithConfigUpdate(configUpdate),
+	)
 
 	if err := h.broadcastUpdate(message); err != nil {
 		return fmt.Errorf("failed to clear all data: %w", err)
@@ -154,11 +152,9 @@ func (h *Handler) handleConfigUpdate(data map[string]any) error {
 		return err
 	}
 
-	message := api.NotifyMessage{
-		Operation:    api.NotifyOpConfigUpdate,
-		Node:         h.stateManager.node,
-		ConfigUpdate: configUpdate,
-	}
+	message := api.NewNotifyMessage(api.NotifyOpConfigUpdate, h.stateManager.node,
+		api.WithConfigUpdate(configUpdate),
+	)
 
 	return h.broadcastUpdate(message)
 }

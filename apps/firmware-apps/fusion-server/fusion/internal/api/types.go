@@ -116,6 +116,45 @@ type NotifyMessage struct {
 	SnapshotUpdate *SnapshotUpdate
 	Task           *Task
 	VersionMessage *VersionMessage
+	SentAt         time.Time
+}
+
+func NewNotifyMessage(op NotifyOp, node string, opts ...func(*NotifyMessage)) *NotifyMessage {
+	msg := &NotifyMessage{
+		Operation: op,
+		Node:      node,
+		SentAt:    time.Now().UTC(),
+	}
+
+	for _, opt := range opts {
+		opt(msg)
+	}
+
+	return msg
+}
+
+func WithConfigUpdate(cfg *ConfigUpdate) func(*NotifyMessage) {
+	return func(m *NotifyMessage) {
+		m.ConfigUpdate = cfg
+	}
+}
+
+func WithSnapshotUpdate(snap *SnapshotUpdate) func(*NotifyMessage) {
+	return func(m *NotifyMessage) {
+		m.SnapshotUpdate = snap
+	}
+}
+
+func WithTask(task *Task) func(*NotifyMessage) {
+	return func(m *NotifyMessage) {
+		m.Task = task
+	}
+}
+
+func WithVersionMessage(ver *VersionMessage) func(*NotifyMessage) {
+	return func(m *NotifyMessage) {
+		m.VersionMessage = ver
+	}
 }
 
 // hashConfigData generates a SHA-256 hash of the Data field of a ConfigUpdate

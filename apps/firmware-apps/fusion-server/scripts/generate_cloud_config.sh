@@ -95,6 +95,7 @@ generate_config() {
 package_update: true
 package_upgrade: true
 packages:
+  - chrony
   - haproxy
   - keepalived
   - libjsoncpp25

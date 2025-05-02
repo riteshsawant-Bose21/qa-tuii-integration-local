@@ -43,6 +43,7 @@ type App struct {
 	Memberlist        *memberlist.Memberlist
 	ConnectionHandler *server.Handler
 	Cluster           *cluster.Cluster
+	Delegate          *cluster.ClusterDelegate
 	Server            *server.ConfigServer
 	BLEServer         *network.BLEServer
 	UDPServer         *network.UDPServer
@@ -62,7 +63,11 @@ func (app *App) Close() {
 
 // NewApp is a factory function to set up the application
 func NewApp(config *api.AppConfig) *App {
+
 	logger := initLogging(config)
+
+	initDataPaths()
+
 	stateManager := initStateManager(config.NodeName)
 	persistence := initPersistence(fusionDatabasePath, stateManager)
 	taskManager := initTaskManager(config, persistence)
@@ -77,8 +82,6 @@ func NewApp(config *api.AppConfig) *App {
 	configServer := server.NewConfigServer(config.NodeName, connectionHandler, memberlist)
 	metricsCollector := clusterInstance.NewMetricsCollector()
 
-	initDataPaths()
-
 	return &App{
 		Logger:            logger,
 		StateManager:      stateManager,
@@ -88,6 +91,7 @@ func NewApp(config *api.AppConfig) *App {
 		Memberlist:        memberlist,
 		ConnectionHandler: connectionHandler,
 		Cluster:           clusterInstance,
+		Delegate:          delegate,
 		Server:            configServer,
 		BLEServer:         bleServer,
 		UDPServer:         udpServer,
@@ -237,6 +241,9 @@ func setupPublicRoutes(config *api.AppConfig, r *mux.Router, app *App) {
 	registerPublicEndpoint(r, "POST", "/tasks/{id}/disable", app.TaskManager.HandleDisableTask)
 
 	// Metrics
+	registerPublicEndpoint(r, "GET", "/cluster/latency", app.Cluster.HandleGetLatencies)
+	registerPublicEndpoint(r, "GET", "/cluster/latency/averages", app.Cluster.HandleGetLatencyAverages)
+	registerPublicEndpoint(r, "GET", "/cluster/ntp-skew", app.Cluster.HandleGetNTPSkew)
 	registerPublicEndpoint(r, "GET", "/cluster/status", app.MetricsCollector.HandleClusterStatus)
 	registerPublicEndpoint(r, "GET", "/health", app.MetricsCollector.HandleHealthCheck)
 	registerPublicEndpoint(r, "GET", "/metrics", app.MetricsCollector.HandleMetrics)
