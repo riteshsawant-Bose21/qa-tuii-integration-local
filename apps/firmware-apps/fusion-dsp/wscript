@@ -86,14 +86,25 @@ def configure(conf):
 def build(bld):
     bld(export_includes=['./external/doctest', './include'], name='common-include')
 
+    excludes = []
+    libs = ['jack', 'fmt', 'sndfile', 'boost_program_options', 'onnxruntime', 'jsoncpp', 'samplerate']
+
+    if bld.env['IS_MACOS']:
+        excludes.append('src/alsa.cpp')
+    else:
+        libs.append('asound')
+
     bld.program(target='fusion_dsp',
-                source=bld.path.ant_glob(['src/*.cpp', 'src/*.c']),
+                source=bld.path.ant_glob(['src/*.cpp', 'src/*.c'],
+                                         excl=excludes),
                 use=['common-include'],
-                lib=['jack', 'fmt', 'sndfile', 'boost_program_options', 'onnxruntime', 'jsoncpp'])
+                lib=libs)
+
+    excludes.append('src/fusion_dsp.cpp')
 
     bld.program(target='test_dsp',
                 source=bld.path.ant_glob(['src/*.cpp', 'src/*.c', 'test/*.cpp'],
-                                         excl=['src/fusion_dsp.cpp']),
+                                         excl=excludes),
                 use=['common-include'],
-                lib=['jack', 'fmt', 'sndfile', 'boost_program_options', 'onnxruntime'])
+                lib=libs)
 
