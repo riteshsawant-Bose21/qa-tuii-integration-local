@@ -19,7 +19,7 @@ func (h *Handler) AddBroadcasters(broadcasters ...Broadcaster) {
 
 // broadcastUpdate processes an incoming NotifyMessage by applying configuration or snapshot updates,
 // performing version changes, and then broadcasting the message to other nodes and local clients if needed.
-func (h *Handler) broadcastUpdate(message api.NotifyMessage) error {
+func (h *Handler) broadcastUpdate(message *api.NotifyMessage) error {
 	logger := logging.GetLogger()
 
 	switch message.Operation {

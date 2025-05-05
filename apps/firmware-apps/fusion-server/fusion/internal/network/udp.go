@@ -128,7 +128,7 @@ func (s *UDPServer) sendResponse(addr *net.UDPAddr, response any) {
 	}
 }
 
-func (s *UDPServer) BroadcastUpdate(message api.NotifyMessage) error {
+func (s *UDPServer) BroadcastUpdate(message *api.NotifyMessage) error {
 
 	if message.Operation == api.NotifyOpConfigUpdate {
 		data, err := json.Marshal(message.ConfigUpdate.Data)

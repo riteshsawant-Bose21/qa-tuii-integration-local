@@ -11,6 +11,7 @@ KILL_BASE_NAME="fusion"
 NUM_INSTANCES=""
 JOIN_ADDRESS=""
 KILL_MODE=false
+RESYNC_TIME=false
 # HOST_OS_ARCH and TARGET_BINARY_ARCH are set in check_platform_arch
 # These will use 'arm64' or 'amd64' (not x86-64)
 HOST_OS_ARCH=""
@@ -132,7 +133,7 @@ show_instance_status() {
         multipass exec "$instance_name" -- networkctl status
         
         print_step "Service Status"
-        for service in fusion-server keepalived haproxy; do
+        for service in fusion-server keepalived haproxy chrony; do
             echo
             printf "${CYAN}=== %s ===${NC}\n" "$service"
             multipass exec "$instance_name" -- systemctl status "$service" --no-pager || true
@@ -142,10 +143,10 @@ show_instance_status() {
         multipass exec "$instance_name" -- ip addr show
 
         print_step "Process Status"
-        multipass exec "$instance_name" -- ps aux | grep -E 'fusion-server|keepalived|haproxy' || true
+        multipass exec "$instance_name" -- ps aux | grep -E 'fusion-server|keepalived|haproxy|chrony' || true
     else
         print_header "Basic Status: $instance_name"
-        for service in fusion-server keepalived haproxy; do
+        for service in fusion-server keepalived haproxy chrony; do
             status=$(multipass exec "$instance_name" -- systemctl is-active "$service" || echo "inactive")
             if [ "$status" = "active" ]; then
                 print_success "$service is running"
@@ -531,6 +532,34 @@ host_setup() {
     print_substep "Using HOST_BBOLT_DIR=$HOST_BBOLT_DIR"
 }
 
+resync_time_all_instances() {
+    print_header "Resyncing Time on All Instances"
+
+    local instances=()
+    while IFS=, read -r name state ipv4 release; do
+        if [[ "$name" == "Name" ]]; then
+            continue  # skip header line
+        fi
+        if [[ "$name" =~ ^"$BASE_NAME" ]]; then
+            instances+=("$name")
+        fi
+    done < <(multipass list --format csv)
+
+    if [ ${#instances[@]} -eq 0 ]; then
+        print_warning "No instances found with base name: $BASE_NAME"
+        return
+    fi
+
+    for instance in "${instances[@]}"; do
+        print_step "Running chronyc makestep on $instance..."
+        if multipass exec "$instance" -- sudo chronyc makestep </dev/null; then
+            print_success "Time resynced on $instance"
+        else
+            print_error "Failed to resync time on $instance"
+        fi
+    done
+}
+
 # Parse command line arguments
 VERBOSE=''
 while [[ $# -gt 0 ]]; do
@@ -552,6 +581,10 @@ while [[ $# -gt 0 ]]; do
             else
                 echo "Using default base name: fusion."
             fi
+            shift
+            ;;
+        --resync-time)
+            RESYNC_TIME=true
             shift
             ;;
         --verbose)
@@ -607,6 +640,11 @@ if [ "$KILL_MODE" = true ]; then
     print_step "Purging deleted instances..."
     multipass purge
     print_success "Successfully removed ${#instances[@]} instance(s)"
+    exit 0
+fi
+
+if [ "$RESYNC_TIME" = true ]; then
+    resync_time_all_instances
     exit 0
 fi
 

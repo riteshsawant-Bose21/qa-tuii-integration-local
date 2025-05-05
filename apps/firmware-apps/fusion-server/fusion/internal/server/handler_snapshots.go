@@ -63,10 +63,9 @@ func (h *Handler) HandleGetSnapshot(name string) (any, error) {
 
 // handleSnapshotOperation constructs a snapshot update message and broadcasts it to the cluster.
 func (h *Handler) handleSnapshotOperation(node string, name string, update api.NotifyOp, data map[string]any) error {
-	message := api.NotifyMessage{
-		Operation:      update,
-		Node:           node,
-		SnapshotUpdate: &api.SnapshotUpdate{Name: name, Data: data, Timestamp: time.Now().UTC()},
-	}
-	return h.broadcastUpdate(message)
+
+	msg := api.NewNotifyMessage(update, node,
+		api.WithSnapshotUpdate(&api.SnapshotUpdate{Name: name, Data: data, Timestamp: time.Now().UTC()}),
+	)
+	return h.broadcastUpdate(msg)
 }

@@ -62,7 +62,7 @@ func NewConfigServer(node string, handler *Handler, clusterList *memberlist.Memb
 
 // BroadcastUpdate sends a notification message to all connected WebSocket clients.
 // It acquires a read lock on the clients list to ensure thread-safe access.
-func (s *ConfigServer) BroadcastUpdate(message api.NotifyMessage) error {
+func (s *ConfigServer) BroadcastUpdate(message *api.NotifyMessage) error {
 	s.wsLock.RLock()
 	defer s.wsLock.RUnlock()
 

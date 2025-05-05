@@ -5,7 +5,23 @@ import (
 	"fusion/internal/api"
 	"fusion/internal/logging"
 	"fusion/internal/server"
+	"math"
+	"sync"
+	"time"
 )
+
+const (
+	latencyPruneTime  = 5
+	maxLatencyCount   = 1000
+	skewPruneInterval = 1
+	skewPruneAge      = 10
+	skewTime          = 500
+)
+
+type skewEntry struct {
+	Skew     time.Duration
+	Detected time.Time
+}
 
 type ClusterDelegate struct {
 	nodeID       string
@@ -13,16 +29,25 @@ type ClusterDelegate struct {
 	stateManager *server.StateManager
 	taskManager  *server.TaskManager
 	updater      *server.Updater
+	latencies    *LatencyStore
+	mu           sync.RWMutex
+	timeSkews    map[string]skewEntry
 }
 
 func NewClusterDelegate(nodeID string, persistence *server.Persistence, stateManager *server.StateManager, taskManager *server.TaskManager, updater *server.Updater) *ClusterDelegate {
-	return &ClusterDelegate{
+	delegate := &ClusterDelegate{
 		nodeID:       nodeID,
 		persistence:  persistence,
 		stateManager: stateManager,
 		taskManager:  taskManager,
 		updater:      updater,
+		latencies:    NewLatencyStore(maxLatencyCount, latencyPruneTime*time.Minute),
+		timeSkews:    make(map[string]skewEntry),
 	}
+
+	delegate.startSkewPruner()
+
+	return delegate
 }
 
 func (d *ClusterDelegate) NodeMeta(limit int) []byte {
@@ -57,7 +82,38 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 		return
 	}
 
-	// Check which message type was unmarshaled.
+	now := time.Now().UTC()
+
+	if !message.SentAt.IsZero() {
+
+		// Detect clock skew
+		if message.SentAt.After(now.Add(skewTime * time.Millisecond)) {
+
+			skew := message.SentAt.Sub(now)
+			d.mu.Lock()
+			d.timeSkews[message.Node] = skewEntry{
+				Skew:     skew,
+				Detected: now,
+			}
+			d.mu.Unlock()
+
+			logger.Warn("Clock skew detected: message from %s is %v ahead", message.Node, skew)
+		}
+
+		// Calculate latency, clamped to zero
+		latency := max(now.Sub(message.SentAt), 0)
+		latencyMs := float64(latency.Nanoseconds()) / 1e6
+		latencyMs = math.Round(latencyMs*100) / 100
+
+		d.latencies.Add(SyncLatency{
+			Sender:    message.Node,
+			Receiver:  d.nodeID,
+			Operation: string(message.Operation),
+			Latency:   latencyMs,
+			Timestamp: time.Now(),
+		})
+	}
+
 	switch message.Operation {
 
 	case api.NotifyOpConfigUpdate:
@@ -162,4 +218,26 @@ func (d *ClusterDelegate) MergeRemoteState(buf []byte, join bool) {
 	d.stateManager.MergeRemoteState(snapshot.State)
 
 	d.persistence.MarkDirty()
+}
+
+func (d *ClusterDelegate) startSkewPruner() {
+
+	interval := skewPruneInterval * time.Minute
+	maxAge := skewPruneAge * time.Minute
+
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+
+		for range ticker.C {
+			now := time.Now()
+			d.mu.Lock()
+			for node, entry := range d.timeSkews {
+				if now.Sub(entry.Detected) > maxAge {
+					delete(d.timeSkews, node)
+				}
+			}
+			d.mu.Unlock()
+		}
+	}()
 }

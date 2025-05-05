@@ -19,18 +19,20 @@ import (
 )
 
 const (
-	probeInterval    = 5
-	probeTimeout     = 2
-	pushPullInterval = 30
-	retryInterval    = 2
+	gossipInterval   = 100 * time.Millisecond
+	probeInterval    = 5 * time.Second
+	probeTimeout     = 2 * time.Second
+	pushPullInterval = 30 * time.Second
+	retryInterval    = 2 * time.Second
 	retryTimes       = 5
 	suspicionMult    = 3
-	tcpTimeout       = 10
+	tcpTimeout       = 10 * time.Second
 )
 
 // CreateMemberlist creates and configures a new memberlist instance
 func CreateMemberlist(appConfig *api.AppConfig, delegate *ClusterDelegate) *memberlist.Memberlist {
 	config := memberlist.DefaultLANConfig()
+	config.GossipInterval = gossipInterval
 	config.Name = appConfig.NodeName
 	config.BindAddr = appConfig.BindAddr
 	config.BindPort = appConfig.BindPort
@@ -42,12 +44,12 @@ func CreateMemberlist(appConfig *api.AppConfig, delegate *ClusterDelegate) *memb
 	}
 
 	config.Delegate = delegate
-	config.TCPTimeout = tcpTimeout * time.Second
+	config.TCPTimeout = tcpTimeout
 	config.DisableTcpPings = false
-	config.ProbeInterval = probeInterval * time.Second
+	config.ProbeInterval = probeInterval
 	config.ProbeTimeout = probeTimeout * time.Second
 	config.SuspicionMult = suspicionMult
-	config.PushPullInterval = pushPullInterval * time.Second
+	config.PushPullInterval = pushPullInterval
 
 	list, err := memberlist.Create(config)
 	if err != nil {
@@ -86,7 +88,7 @@ func (c *Cluster) JoinMemberlist() error {
 
 		logger.Warn("[MEMBERLIST-%s] Join attempt %d failed: %v", c.nodeName, retries+1, err)
 
-		time.Sleep(retryInterval * time.Second)
+		time.Sleep(retryInterval)
 	}
 
 	return fmt.Errorf("failed to join cluster after retries: %v", err)

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/logging"
+	"os"
 	"sync"
 	"time"
 
@@ -43,20 +44,29 @@ type Persistence struct {
 func NewPersistence(dbPath string, stateManager *StateManager) (*Persistence, error) {
 	db, err := bbolt.Open(dbPath, 0600, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open database: %w", err)
+		logger := logging.GetLogger()
+		logger.Warn("Failed to open database at %s: %v. Attempting to recreate.", dbPath, err)
+		_ = os.Remove(dbPath)
+		db, err = bbolt.Open(dbPath, 0600, nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to open or recreate database: %w", err)
+		}
+		logger.Debug("Successfully recreated new database at %s", dbPath)
+
 	}
-	persistance := &Persistence{
+
+	persistence := &Persistence{
 		dbPath:       dbPath,
 		stateManager: stateManager,
 		db:           db,
 		saveDebounce: 100 * time.Millisecond,
 	}
 
-	if err := persistance.createDefaultBuckets(); err != nil {
+	if err := persistence.createDefaultBuckets(); err != nil {
 		return nil, err
 	}
 
-	return persistance, nil
+	return persistence, nil
 }
 
 // Close safely closes the database.
