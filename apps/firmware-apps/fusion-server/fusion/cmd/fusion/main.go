@@ -14,6 +14,7 @@ import (
 	"fusion/internal/cluster"
 	"fusion/internal/logging"
 	"fusion/internal/network"
+	"fusion/internal/routes"
 	"fusion/internal/server"
 	"fusion/internal/version"
 
@@ -133,13 +134,40 @@ func registerEndpoint(router *mux.Router, method string, pattern string, handler
 	router.HandleFunc(pattern, handler).Methods(method)
 }
 
-// registerEndpoint registers a handler and tracks the endpoint.
 func registerPrivateEndpoint(router *mux.Router, method string, pattern string, handler http.HandlerFunc) {
 	registerEndpoint(router, method, pattern, handler, false)
 }
 
+func registerPrivateGET(router *mux.Router, pattern string, handler http.HandlerFunc) {
+	registerPrivateEndpoint(router, "GET", pattern, handler)
+}
+
+func registerPrivatePOST(router *mux.Router, pattern string, handler http.HandlerFunc) {
+	registerPrivateEndpoint(router, "POST", pattern, handler)
+}
+
 func registerPublicEndpoint(router *mux.Router, method string, pattern string, handler http.HandlerFunc) {
 	registerEndpoint(router, method, pattern, handler, true)
+}
+
+func registerPublicDELETE(router *mux.Router, pattern string, handler http.HandlerFunc) {
+	registerPublicEndpoint(router, "DELETE", pattern, handler)
+}
+
+func registerPublicGET(router *mux.Router, pattern string, handler http.HandlerFunc) {
+	registerPublicEndpoint(router, "GET", pattern, handler)
+}
+
+func registerPublicPATCH(router *mux.Router, pattern string, handler http.HandlerFunc) {
+	registerPublicEndpoint(router, "PATCH", pattern, handler)
+}
+
+func registerPublicPOST(router *mux.Router, pattern string, handler http.HandlerFunc) {
+	registerPublicEndpoint(router, "POST", pattern, handler)
+}
+
+func registerPublicPUT(router *mux.Router, pattern string, handler http.HandlerFunc) {
+	registerPublicEndpoint(router, "PUT", pattern, handler)
 }
 
 func listRegisteredEndpoints(w http.ResponseWriter, r *http.Request) {
@@ -206,54 +234,66 @@ func withWebSocketMetrics(config *api.AppConfig, handler http.HandlerFunc, metri
 
 func setupPublicRoutes(config *api.AppConfig, r *mux.Router, app *App) {
 
-	registerPublicEndpoint(r, "GET", "/", app.Server.HandleRoot)
-	registerPublicEndpoint(r, "GET", "/endpoints", listRegisteredEndpoints)
-	registerPublicEndpoint(r, "GET", "/members", app.Server.GetMembers)
-	registerPublicEndpoint(r, "GET", "/metadata", app.Server.GetDatabaseMetadata)
-	registerPublicEndpoint(r, "GET", "/version", app.Server.HandleVersion)
-	registerPublicEndpoint(r, "PUT", "/uploadAudio", app.Server.UploadAudio)
-	registerPublicEndpoint(r, "GET", "/ws", withWebSocketMetrics(config, app.Server.HandleWebSocket, app.MetricsCollector))
+	registerPublicGET(r, routes.RootEndpoint, app.Server.HandleRoot)
+	registerPublicGET(r, routes.EndpointsEndpoint, listRegisteredEndpoints)
+	registerPublicGET(r, routes.MembersEndpoint, app.Server.GetMembers)
+	registerPublicGET(r, routes.MetadataEndpoint, app.Server.GetDatabaseMetadata)
+	registerPublicGET(r, routes.VersionEndpoint, app.Server.HandleVersion)
+	registerPublicPUT(r, routes.UploadAudioEndpoint, app.Server.UploadAudio)
+	registerPublicGET(r, routes.WebsocketEndpoint, withWebSocketMetrics(config, app.Server.HandleWebSocket, app.MetricsCollector))
 
 	// Values
-	registerPublicEndpoint(r, "GET", "/value", app.Server.GetValue)
-	registerPublicEndpoint(r, "POST", "/value", app.Server.SetValue)
-	registerPublicEndpoint(r, "PATCH", "/value", app.Server.UpdateValue)
-	registerPublicEndpoint(r, "DELETE", "/value", app.Server.ClearAllValues)
+	registerPublicGET(r, routes.ValueEndpoint, app.Server.GetValue)
+	registerPublicPOST(r, routes.ValueEndpoint, app.Server.SetValue)
+	registerPublicPATCH(r, routes.ValueEndpoint, app.Server.UpdateValue)
+	registerPublicDELETE(r, routes.ValueEndpoint, app.Server.ClearAllValues)
 
 	// Snapshots
 	// NOTE: These must be added before the {name} parameter endpoints to avoid conflicts
-	registerPublicEndpoint(r, "GET", "/snapshots", app.Server.ListSnapshots)
-	registerPublicEndpoint(r, "POST", "/snapshots/{name}", app.Server.CreateSnapshot)
-	registerPublicEndpoint(r, "GET", "/snapshots/{name}", app.Server.GetSnapshot)
-	registerPublicEndpoint(r, "DELETE", "/snapshots/{name}", app.Server.DeleteSnapshot)
-	registerPublicEndpoint(r, "POST", "/snapshots/{name}/activate", app.Server.ActivateSnapshot)
+	registerPublicGET(r, routes.SnapshotsEndpoint, app.Server.ListSnapshots)
+	registerPublicPOST(r, routes.SnapshotsNameEndpoint, app.Server.CreateSnapshot)
+	registerPublicGET(r, routes.SnapshotsNameEndpoint, app.Server.GetSnapshot)
+	registerPublicDELETE(r, routes.SnapshotsNameEndpoint, app.Server.DeleteSnapshot)
+	registerPublicPOST(r, routes.SnapshotsNameActivateEndpoint, app.Server.ActivateSnapshot)
 
 	// Tasks
 	// NOTE: These must be added before the {id} parameter endpoints to avoid conflicts
-	registerPublicEndpoint(r, "GET", "/tasks/history", app.TaskManager.HandleGetHistory)
-	registerPublicEndpoint(r, "DELETE", "/tasks/history", app.TaskManager.HandleClearHistory)
-	registerPublicEndpoint(r, "GET", "/tasks", app.TaskManager.HandleGetTasks)
-	registerPublicEndpoint(r, "POST", "/tasks", app.TaskManager.HandleCreateTask)
-	registerPublicEndpoint(r, "GET", "/tasks/{id}", app.TaskManager.HandleGetTask)
-	registerPublicEndpoint(r, "PUT", "/tasks/{id}", app.TaskManager.HandleUpdateTask)
-	registerPublicEndpoint(r, "DELETE", "/tasks/{id}", app.TaskManager.HandleDeleteTask)
-	registerPublicEndpoint(r, "POST", "/tasks/{id}/enable", app.TaskManager.HandleEnableTask)
-	registerPublicEndpoint(r, "POST", "/tasks/{id}/disable", app.TaskManager.HandleDisableTask)
+	registerPublicGET(r, routes.TasksHistoryEndpoint, app.TaskManager.HandleGetHistory)
+	registerPublicDELETE(r, routes.TasksHistoryEndpoint, app.TaskManager.HandleClearHistory)
+	registerPublicGET(r, routes.TasksEndpoint, app.TaskManager.HandleGetTasks)
+	registerPublicPOST(r, routes.TasksEndpoint, app.TaskManager.HandleCreateTask)
+	registerPublicGET(r, routes.TasksIdEndpoint, app.TaskManager.HandleGetTask)
+	registerPublicPUT(r, routes.TasksIdEndpoint, app.TaskManager.HandleUpdateTask)
+	registerPublicDELETE(r, routes.TasksIdEndpoint, app.TaskManager.HandleDeleteTask)
+	registerPublicPOST(r, routes.TasksIdEnableEndpoint, app.TaskManager.HandleEnableTask)
+	registerPublicPOST(r, routes.TasksIdDisableEndpoint, app.TaskManager.HandleDisableTask)
+
+	// Cluster
+	registerPublicGET(r, routes.ClusterLatencyNetworkEndpoint, app.Cluster.HandleGetNetworkLatency)
+	registerPublicGET(r, routes.ClusterLatencyNetworkFailuresEndpoint, app.Cluster.HandleGetNetworkFailures)
+	registerPublicGET(r, routes.ClusterLatencyStatusEndpoint, app.Cluster.HandleGetLatencyStatus)
+	registerPublicGET(r, routes.ClusterLatencySyncEndpoint, app.Cluster.HandleGetSyncLatency)
+	registerPublicGET(r, routes.ClusterLatencySyncAveragesEndpoint, app.Cluster.HandleGetSyncLatencyAverages)
+	registerPublicGET(r, routes.ClusterNTPSkewEndpoint, app.Cluster.HandleGetNTPSkew)
+	registerPublicGET(r, routes.ClusterStatusEndpoint, app.MetricsCollector.HandleClusterStatus)
+
+	// Health
+	registerPublicGET(r, routes.HealthEndpoint, app.MetricsCollector.HandleHealthCheck)
 
 	// Metrics
-	registerPublicEndpoint(r, "GET", "/cluster/latency", app.Cluster.HandleGetLatencies)
-	registerPublicEndpoint(r, "GET", "/cluster/latency/averages", app.Cluster.HandleGetLatencyAverages)
-	registerPublicEndpoint(r, "GET", "/cluster/ntp-skew", app.Cluster.HandleGetNTPSkew)
-	registerPublicEndpoint(r, "GET", "/cluster/status", app.MetricsCollector.HandleClusterStatus)
-	registerPublicEndpoint(r, "GET", "/health", app.MetricsCollector.HandleHealthCheck)
-	registerPublicEndpoint(r, "GET", "/metrics", app.MetricsCollector.HandleMetrics)
+	registerPublicGET(r, routes.MetricsEndpoint, app.MetricsCollector.HandleMetrics)
 }
 
 func setupPrivateRoutes(r *mux.Router, app *App) {
-	registerPrivateEndpoint(r, "GET", "/exportData", app.Server.ExportData)
-	registerPrivateEndpoint(r, "POST", "/importData", app.Server.ImportData)
-	registerPrivateEndpoint(r, "GET", "/exportState", app.Server.ExportState)
-	registerPrivateEndpoint(r, "POST", "/importState", app.Server.ImportState)
+	registerPrivateGET(r, routes.ExportDataEndport, app.Server.ExportData)
+	registerPrivatePOST(r, routes.ImportDataEndport, app.Server.ImportData)
+	registerPrivateGET(r, routes.ExportStateEndport, app.Server.ExportState)
+	registerPrivatePOST(r, routes.ImportStateEndport, app.Server.ImportState)
+	registerPrivateGET(r, routes.ClusterLatencyNetworkLocalEndpoint, app.Cluster.HandleGetNetworkLatencyLocal)
+	registerPrivateGET(r, routes.ClusterLatencySyncLocalEndpoint, app.Cluster.HandleGetSyncLatencyLocal)
+	registerPrivateGET(r, routes.ClusterLatencySyncAveragesLocalEndpoint, app.Cluster.HandleGetSyncLatencyAveragesLocal)
+	registerPrivateGET(r, routes.ClusterLatencyNetworkFailuresLocalEndpoint, app.Cluster.HandleGetNetworkFailuresLocal)
+	registerPrivateGET(r, routes.ClusterLatencyStatusLocalEndpoint, app.Cluster.HandleGetLatencyStatusLocal)
 }
 
 // initLogging initializes the logging system.
@@ -354,7 +394,8 @@ func initBLEServer() *network.BLEServer {
 // initUDPServer initializes the UDP server.
 func initUDPServer(port string, handler *server.Handler) *network.UDPServer {
 
-	udpServer, err := network.NewUDPServer(port, handler)
+	udpPort := fmt.Sprintf(":%s", port)
+	udpServer, err := network.NewUDPServer(udpPort, handler)
 	if err != nil {
 		logger := logging.GetLogger()
 		logger.Fatal("Failed to create UDP server: %v", err)
@@ -369,10 +410,12 @@ func initUDPServer(port string, handler *server.Handler) *network.UDPServer {
 func startAPIServer(router *mux.Router, port string, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	logger := logging.GetLogger()
-	logger.Info("Starting API server on %s", port)
+	apiPort := fmt.Sprintf(":%s", port)
 
-	if err := http.ListenAndServe(port, router); err != nil {
+	logger := logging.GetLogger()
+	logger.Info("Starting API server on %s", apiPort)
+
+	if err := http.ListenAndServe(apiPort, router); err != nil {
 		logger.Fatal("API server failed: %v", err)
 	}
 }

@@ -11,38 +11,74 @@ import (
 )
 
 const (
-	latencyPruneTime  = 5
+	latencyPruneTime  = 5 * time.Minute
 	maxLatencyCount   = 1000
-	skewPruneInterval = 1
-	skewPruneAge      = 10
-	skewTime          = 500
+	skewPruneInterval = 1 * time.Minute
+	skewPruneAge      = 10 * time.Minute
+	skewTime          = 500 * time.Millisecond
 )
 
-type skewEntry struct {
+type SkewEntry struct {
 	Skew     time.Duration
 	Detected time.Time
 }
 
+// SkewEntry holds time skew values
+type SkewStore struct {
+	mu        sync.RWMutex
+	timeSkews map[string]*SkewEntry
+}
+
+func NewSkewStore() *SkewStore {
+	return &SkewStore{
+		timeSkews: make(map[string]*SkewEntry),
+	}
+}
+
+// Add inserts a new record and updates rolling stats.
+func (s *SkewStore) Add(node string, skew time.Duration, detected time.Time) {
+	s.mu.Lock()
+	s.timeSkews[node] = &SkewEntry{
+		Skew:     skew,
+		Detected: detected,
+	}
+	s.mu.Unlock()
+}
+
+func (s *SkewStore) Prune(ticker *time.Ticker, maxAge time.Duration) {
+	for range ticker.C {
+		now := time.Now()
+		s.mu.Lock()
+		for node, entry := range s.timeSkews {
+			if now.Sub(entry.Detected) > maxAge {
+				delete(s.timeSkews, node)
+			}
+		}
+		s.mu.Unlock()
+	}
+}
+
 type ClusterDelegate struct {
-	nodeID       string
-	persistence  *server.Persistence
-	stateManager *server.StateManager
-	taskManager  *server.TaskManager
-	updater      *server.Updater
-	latencies    *LatencyStore
-	mu           sync.RWMutex
-	timeSkews    map[string]skewEntry
+	nodeID           string
+	persistence      *server.Persistence
+	stateManager     *server.StateManager
+	taskManager      *server.TaskManager
+	updater          *server.Updater
+	networkLatencies *NetworkLatencyStore
+	syncLatencies    *SyncLatencyStore
+	skewStore        *SkewStore
 }
 
 func NewClusterDelegate(nodeID string, persistence *server.Persistence, stateManager *server.StateManager, taskManager *server.TaskManager, updater *server.Updater) *ClusterDelegate {
 	delegate := &ClusterDelegate{
-		nodeID:       nodeID,
-		persistence:  persistence,
-		stateManager: stateManager,
-		taskManager:  taskManager,
-		updater:      updater,
-		latencies:    NewLatencyStore(maxLatencyCount, latencyPruneTime*time.Minute),
-		timeSkews:    make(map[string]skewEntry),
+		nodeID:           nodeID,
+		persistence:      persistence,
+		stateManager:     stateManager,
+		taskManager:      taskManager,
+		updater:          updater,
+		networkLatencies: NewNetworkLatencyStore(maxLatencyCount, latencyPruneTime),
+		syncLatencies:    NewSyncLatencyStore(maxLatencyCount, latencyPruneTime),
+		skewStore:        NewSkewStore(),
 	}
 
 	delegate.startSkewPruner()
@@ -87,16 +123,9 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 	if !message.SentAt.IsZero() {
 
 		// Detect clock skew
-		if message.SentAt.After(now.Add(skewTime * time.Millisecond)) {
-
+		if message.SentAt.After(now.Add(skewTime)) {
 			skew := message.SentAt.Sub(now)
-			d.mu.Lock()
-			d.timeSkews[message.Node] = skewEntry{
-				Skew:     skew,
-				Detected: now,
-			}
-			d.mu.Unlock()
-
+			d.skewStore.Add(message.Node, skew, now)
 			logger.Warn("Clock skew detected: message from %s is %v ahead", message.Node, skew)
 		}
 
@@ -105,7 +134,7 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 		latencyMs := float64(latency.Nanoseconds()) / 1e6
 		latencyMs = math.Round(latencyMs*100) / 100
 
-		d.latencies.Add(SyncLatency{
+		d.syncLatencies.Add(SyncLatency{
 			Sender:    message.Node,
 			Receiver:  d.nodeID,
 			Operation: string(message.Operation),
@@ -222,22 +251,9 @@ func (d *ClusterDelegate) MergeRemoteState(buf []byte, join bool) {
 
 func (d *ClusterDelegate) startSkewPruner() {
 
-	interval := skewPruneInterval * time.Minute
-	maxAge := skewPruneAge * time.Minute
-
 	go func() {
-		ticker := time.NewTicker(interval)
+		ticker := time.NewTicker(skewPruneInterval)
 		defer ticker.Stop()
-
-		for range ticker.C {
-			now := time.Now()
-			d.mu.Lock()
-			for node, entry := range d.timeSkews {
-				if now.Sub(entry.Detected) > maxAge {
-					delete(d.timeSkews, node)
-				}
-			}
-			d.mu.Unlock()
-		}
+		d.skewStore.Prune(ticker, skewPruneAge)
 	}()
 }

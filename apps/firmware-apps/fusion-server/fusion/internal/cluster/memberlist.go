@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/logging"
+	"fusion/internal/routes"
 	"io"
 	"log"
 	"net/http"
@@ -112,12 +113,12 @@ func (c *Cluster) IsMember() (bool, error) {
 // GetLiveNodeAddresses a list of live node addresses
 func (c *Cluster) GetLiveNodeAddresses() ([]string, error) {
 
-	url := fmt.Sprintf("http://%s%s/members", c.vip, api.HTTPPort)
+	url := fmt.Sprintf("http://%s:%s%s", c.vip, api.HTTPPort, routes.MembersEndpoint)
 	resp, err := http.Get(url)
 	if err != nil {
 		if errors.Is(err, syscall.ECONNREFUSED) {
 			// Handle connection refused specifically.
-			// The assumption is the the VIP server in not running yet, as the
+			// The assumption is that the VIP server in not running yet, as the
 			// caller is the first server to come up.
 			return []string{}, nil
 		} else {

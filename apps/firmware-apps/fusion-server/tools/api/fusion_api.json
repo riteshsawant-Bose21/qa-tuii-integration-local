@@ -95,7 +95,7 @@
           "type": "http",
           "name": "Export Data",
           "filename": "Export Data.bru",
-          "seq": 1,
+          "seq": 5,
           "request": {
             "url": "{{admin_url}}/exportData",
             "method": "GET",
@@ -121,7 +121,7 @@
           "type": "http",
           "name": "Export State",
           "filename": "Export State.bru",
-          "seq": 3,
+          "seq": 4,
           "request": {
             "url": "{{admin_url}}/exportState",
             "method": "GET",
@@ -147,7 +147,7 @@
           "type": "http",
           "name": "Import Data",
           "filename": "Import Data.bru",
-          "seq": 2,
+          "seq": 7,
           "request": {
             "url": "{{admin_url}}/importData",
             "method": "POST",
@@ -174,7 +174,7 @@
           "type": "http",
           "name": "Import State",
           "filename": "Import State.bru",
-          "seq": 4,
+          "seq": 6,
           "request": {
             "url": "{{admin_url}}/importState",
             "method": "POST",
@@ -183,6 +183,84 @@
             "body": {
               "mode": "json",
               "json": "{\n    \"State\": {},\n    \"Checksum\": \"44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a\"\n}",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Cluster Network Latency Local",
+          "filename": "Cluster Network Latency Local.bru",
+          "seq": 1,
+          "request": {
+            "url": "{{metrics_url}}/cluster/latency/network/local",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Cluster Sync Latency Local",
+          "filename": "Cluster Sync Latency Local.bru",
+          "seq": 3,
+          "request": {
+            "url": "{{admin_url}}/cluster/latency/sync/local",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Cluster Sync Latency Averages Local",
+          "filename": "Cluster Sync Latency Averages Local.bru",
+          "seq": 2,
+          "request": {
+            "url": "{{admin_url}}/cluster/latency/sync/averages/local",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
               "formUrlEncoded": [],
               "multipartForm": [],
               "file": []
@@ -937,7 +1015,7 @@
           "type": "http",
           "name": "Cluster Status",
           "filename": "Cluster Status.bru",
-          "seq": 2,
+          "seq": 3,
           "request": {
             "url": "{{metrics_url}}/cluster/status",
             "method": "GET",
@@ -963,7 +1041,7 @@
           "type": "http",
           "name": "Endpoints",
           "filename": "Endpoints.bru",
-          "seq": 3,
+          "seq": 2,
           "request": {
             "url": "{{api_url}}/endpoints",
             "method": "GET",
@@ -1013,11 +1091,11 @@
         },
         {
           "type": "http",
-          "name": "Cluster Latency",
-          "filename": "Cluster Latency.bru",
-          "seq": 4,
+          "name": "Cluster Sync Latency",
+          "filename": "Cluster Sync Latency.bru",
+          "seq": 5,
           "request": {
-            "url": "{{metrics_url}}/cluster/latency",
+            "url": "{{metrics_url}}/cluster/latency/sync",
             "method": "GET",
             "headers": [],
             "params": [],
@@ -1039,11 +1117,11 @@
         },
         {
           "type": "http",
-          "name": "Cluster Latency Averages",
-          "filename": "Cluster Latency Averages.bru",
-          "seq": 5,
+          "name": "Cluster Sync Latency Averages",
+          "filename": "Cluster Sync Latency Averages.bru",
+          "seq": 6,
           "request": {
-            "url": "{{metrics_url}}/cluster/latency/averages",
+            "url": "{{metrics_url}}/cluster/latency/sync/averages",
             "method": "GET",
             "headers": [],
             "params": [],
@@ -1067,9 +1145,35 @@
           "type": "http",
           "name": "Cluster NTP Skew",
           "filename": "Cluster NTP Skew.bru",
-          "seq": 6,
+          "seq": 7,
           "request": {
             "url": "{{metrics_url}}/cluster/ntp-skew",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Cluster Network Latency",
+          "filename": "Cluster Network Latency.bru",
+          "seq": 4,
+          "request": {
+            "url": "{{metrics_url}}/cluster/latency/network",
             "method": "GET",
             "headers": [],
             "params": [],

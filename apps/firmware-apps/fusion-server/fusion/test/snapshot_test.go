@@ -19,7 +19,7 @@ const (
 	snapshotDatabaseName      = "fusion_test.db"
 	snapServerAddr            = "http://192.168.64.100:8080"
 	snapAdminServerAddr       = "http://192.168.64.100:9090"
-	snapServerPort            = ":8080"
+	snapServerPort            = "8080"
 	snapshotSyncTime          = 5
 )
 
@@ -307,7 +307,7 @@ func getLiveNodeAddresses() ([]string, error) {
 	}
 	var nodes []string
 	for _, m := range members {
-		nodes = append(nodes, fmt.Sprintf("http://%s%s", m.Addr, snapServerPort))
+		nodes = append(nodes, fmt.Sprintf("http://%s:%s", m.Addr, snapServerPort))
 	}
 	return nodes, nil
 }

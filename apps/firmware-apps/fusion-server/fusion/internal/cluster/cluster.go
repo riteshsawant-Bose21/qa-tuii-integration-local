@@ -61,6 +61,8 @@ func NewCluster(appConfig *api.AppConfig, delegate *ClusterDelegate, memberlist 
 		}
 	}
 
+	go cluster.startNetworkLatencyProbes()
+
 	return cluster
 }
 
