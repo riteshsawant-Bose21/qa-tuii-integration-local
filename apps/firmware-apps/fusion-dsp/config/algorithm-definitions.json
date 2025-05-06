@@ -2,6 +2,88 @@
     "version": "0.1.1",
     "algorithms": [
         {
+            "name": "alsa_in",
+            "properties": [
+                {
+                    "name": "device_name",
+                    "value_type": "string",
+                    "default_value": "",
+                    "maximum_length": 256
+                },
+                {
+                    "name": "period_size",
+                    "value_type": "integer",
+                    "default_value": 32,
+                    "minimum_value": 1,
+                    "maximum_value": 8192
+                }
+            ],
+            "terminals": [
+                {
+                    "name": "out",
+                    "signal_type": "audio",
+                    "direction": "output",
+                    "minimum_channels": 1,
+                    "maximum_channels": 128
+                }
+            ],
+            "parameters": [
+                {
+                    "name": "out_gain",
+                    "value_type": "float",
+                    "dimensions": ["out"],
+                    "default_value": 0.0,
+                    "minimum_value": -60.0,
+                    "maximum_value": 24.0
+                },
+                {
+                    "name": "out_mute",
+                    "value_type": "bool",
+                    "dimensions": ["out"],
+                    "default_value": false
+                }
+            ],
+            "telemetry": [
+                {
+                    "name": "out_meter",
+                    "dimensions": ["out"],
+                    "value_type": "float",
+                    "default_value": -60.0,
+                    "minimum_value": -60.0,
+                    "maximum_value": 24.0,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
+                }
+            ]
+        },
+        {
+            "name": "alsa_out",
+            "properties": [
+                {
+                    "name": "device_name",
+                    "value_type": "string",
+                    "default_value": "",
+                    "maximum_length": 256
+                },
+                {
+                    "name": "period_size",
+                    "value_type": "integer",
+                    "default_value": 32,
+                    "minimum_value": 1,
+                    "maximum_value": 8192
+                }
+            ],
+            "terminals": [
+                {
+                    "name": "in",
+                    "signal_type": "audio",
+                    "direction": "input",
+                    "minimum_channels": 1,
+                    "maximum_channels": 128
+                }
+            ]
+        },
+        {
             "name": "agc",
             "properties": [
                 {
