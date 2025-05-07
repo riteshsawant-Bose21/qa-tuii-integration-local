@@ -47,9 +47,9 @@ def create_info_file():
 
 def create_tarball():
     # Add the files needed to install in the target image.
-    required_files = [
-        INFO_PATH,
-        APP_PATH,
+    build_files = [INFO_PATH, APP_PATH]
+
+    config_files = [
         'config/algorithm-definitions.json',
         'config/configuration.json',
         'config/prototype1_demo.json',
@@ -61,8 +61,16 @@ def create_tarball():
 
     TAR_PATH = os.path.join(BUILD_DIR, f'fusion-dsp_{VERSION}.tar.gz')
     with tarfile.open(TAR_PATH, 'w:gz') as tar:
-        for f in required_files:
-            print(TAG, f'  add {f}')
+        for f in build_files:
+            # Handle `build_files` specially, because the --build-dir argument
+            # can vary widely between local and Jenkins builds. This will
+            # simplify handling in Yocto.
+            arcName =  os.path.join('build', os.path.basename(f))
+            print(TAG, f'  add {f} as {arcName}')
+            tar.add(f, arcname=arcName)
+
+        for f in config_files:
+            print(TAG, f'  add {f} as {arcName}')
             tar.add(f)
 
     print(TAG, f'Created: {TAR_PATH}')
