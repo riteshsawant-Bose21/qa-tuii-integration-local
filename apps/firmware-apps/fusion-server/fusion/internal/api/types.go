@@ -45,12 +45,6 @@ func NewConfigUpdate(data map[string]any) (*ConfigUpdate, error) {
 	}, nil
 }
 
-// Endpoints contains the REST API endpoint information
-type Endpoints struct {
-	API       string   `json:"api"`
-	Telemetry []string `json:"telemetry"`
-}
-
 // DatabaseMetadata holds metadata information from the database.
 type DatabaseMetadata struct {
 	Timestamp      time.Time `json:"timestamp"`

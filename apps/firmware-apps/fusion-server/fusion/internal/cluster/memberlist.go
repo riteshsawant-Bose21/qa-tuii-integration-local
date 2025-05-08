@@ -57,11 +57,6 @@ func CreateMemberlist(appConfig *api.AppConfig, delegate *ClusterDelegate) *memb
 		logging.GetLogger().Fatal("Failed to create memberlist: %v", err)
 	}
 
-	if appConfig.Verbose {
-		MonitorClusterState(list)
-		StartHealthCheck(list)
-	}
-
 	return list
 }
 

@@ -13,11 +13,16 @@ import (
 	"sort"
 	"sync"
 	"time"
+
+	"github.com/go-ping/ping"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
 const (
 	dialTimeout          = 1 * time.Second
 	httpTimeout          = 2 * time.Second
+	latencyPruneTime     = 5 * time.Minute
 	rttThreshold         = 50.0
 	syncLatencyThreshold = 100.0
 	tickerTime           = 10 * time.Second
@@ -57,11 +62,13 @@ type NetworkLatency struct {
 
 // NetworkLatencyStore stores historical network latency measurements.
 type NetworkLatencyStore struct {
-	mu         sync.RWMutex
-	records    []NetworkLatency
-	failures   map[string]*failureStats
-	maxRecords int
-	maxAge     time.Duration
+	mu                    sync.RWMutex
+	records               []NetworkLatency
+	failures              map[string]*failureStats
+	maxRecords            int
+	maxAge                time.Duration
+	networkRTTHist        *prometheus.HistogramVec
+	networkFailureCounter *prometheus.CounterVec
 }
 
 // NewNetworkLatencyStore creates a NetworkLatencyStore that keeps at most
@@ -72,7 +79,17 @@ func NewNetworkLatencyStore(maxRecords int, maxAge time.Duration) *NetworkLatenc
 		failures:   make(map[string]*failureStats),
 		maxRecords: maxRecords,
 		maxAge:     maxAge,
+		networkRTTHist: promauto.NewHistogramVec(prometheus.HistogramOpts{
+			Name:    "fusion_network_rtt_ms",
+			Help:    "Round-trip times (ms) to peers",
+			Buckets: prometheus.ExponentialBuckets(1, 2, 10), // 1ms to ~512ms
+		}, []string{"target"}),
+		networkFailureCounter: promauto.NewCounterVec(prometheus.CounterOpts{
+			Name: "fusion_network_failures_total",
+			Help: "Number of network probe failures",
+		}, []string{"target"}),
 	}
+
 	go s.cleanupLoop()
 	return s
 }
@@ -173,11 +190,12 @@ type rollingStats struct {
 
 // SyncLatencyStore stores sync latency metrics and rolling aggregates.
 type SyncLatencyStore struct {
-	mu         sync.RWMutex
-	records    []SyncLatency
-	maxRecords int
-	maxAge     time.Duration
-	aggregated map[aggregatedKey]*rollingStats
+	mu          sync.RWMutex
+	records     []SyncLatency
+	maxRecords  int
+	maxAge      time.Duration
+	aggregated  map[aggregatedKey]*rollingStats
+	latencyHist *prometheus.HistogramVec
 }
 
 // NewSyncLatencyStore initializes a new SyncLatencyStore with given limits.
@@ -187,6 +205,11 @@ func NewSyncLatencyStore(maxRecords int, maxAge time.Duration) *SyncLatencyStore
 		maxRecords: maxRecords,
 		maxAge:     maxAge,
 		aggregated: make(map[aggregatedKey]*rollingStats),
+		latencyHist: promauto.NewHistogramVec(prometheus.HistogramOpts{
+			Name:    "fusion_sync_latency_ms",
+			Help:    "Synchronization latency (ms) by operation",
+			Buckets: prometheus.LinearBuckets(10, 10, 10), // 10–110ms
+		}, []string{"operation"}),
 	}
 	go s.cleanupLoop()
 	return s
@@ -209,6 +232,8 @@ func (s *SyncLatencyStore) Add(record SyncLatency) {
 	stats.TotalLatency += record.Latency
 	stats.Count++
 	stats.LastUpdated = time.Now()
+
+	s.latencyHist.WithLabelValues(record.Operation).Observe(record.Latency)
 }
 
 // pruneLocked removes old sync latency records and stale aggregates.
@@ -287,7 +312,7 @@ func (c *Cluster) HandleGetNetworkLatency(w http.ResponseWriter, r *http.Request
 // HandleGetNetworkLatency returns network latencies for the calling instance.
 func (c *Cluster) HandleGetNetworkLatencyLocal(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(c.delegate.networkLatencies.GetAll())
+	json.NewEncoder(w).Encode(c.networkLatencies.GetAll())
 }
 
 // HandleGetSyncLatency returns all sync latencies across the cluster.
@@ -331,7 +356,7 @@ func (c *Cluster) HandleGetNetworkFailures(w http.ResponseWriter, r *http.Reques
 // HandleGetNetworkFailuresLocal gets local failures only
 func (c *Cluster) HandleGetNetworkFailuresLocal(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(c.delegate.networkLatencies.GetFailures())
+	json.NewEncoder(w).Encode(c.networkLatencies.GetFailures())
 }
 
 // HandleGetLatencyStatus gets latency status
@@ -350,7 +375,7 @@ func (c *Cluster) fetchAllNetworkFailures() []map[string]failureStats {
 	return fetchAll(
 		c,
 		func() []map[string]failureStats {
-			return []map[string]failureStats{c.delegate.networkLatencies.GetFailures()}
+			return []map[string]failureStats{c.networkLatencies.GetFailures()}
 		},
 		routes.ClusterLatencyNetworkFailuresLocalEndpoint,
 	)
@@ -395,7 +420,7 @@ func (c *Cluster) getLocalLatencyStatus() []NodeLatencyStatus {
 	status := NodeLatencyStatus{Node: self}
 
 	// Use last RTT to each peer
-	latencies := c.delegate.networkLatencies.GetAll()
+	latencies := c.networkLatencies.GetAll()
 	for _, rec := range latencies {
 		if rec.Source == self {
 			if rec.RTT > status.RTT {
@@ -406,7 +431,7 @@ func (c *Cluster) getLocalLatencyStatus() []NodeLatencyStatus {
 	status.HighRTT = status.RTT > rttThreshold
 
 	// Failures
-	failures := c.delegate.networkLatencies.GetFailures()
+	failures := c.networkLatencies.GetFailures()
 	if f, ok := failures[self]; ok {
 		status.FailureCount = f.Count
 	}
@@ -477,7 +502,7 @@ func fetchAndDecode[T any](
 func (c *Cluster) fetchAllNetworkLatencies() []NetworkLatency {
 	return fetchAll(
 		c,
-		c.delegate.networkLatencies.GetAll,
+		c.networkLatencies.GetAll,
 		routes.ClusterLatencyNetworkLocalEndpoint,
 	)
 }
@@ -509,15 +534,25 @@ func (s *SyncLatencyStore) cleanupLoop() {
 	}
 }
 
-// measureRTT performs a TCP dial to the target and returns the round-trip time in ms.
 func measureRTT(target string) (float64, error) {
-	start := time.Now()
-	conn, err := net.DialTimeout("tcp", target, tcpTimeout)
+	host, _, err := net.SplitHostPort(target)
+	if err != nil {
+		return 0, fmt.Errorf("invalid target format: %v", err)
+	}
+
+	pinger, err := ping.NewPinger(host)
 	if err != nil {
 		return 0, err
 	}
-	_ = conn.Close()
-	return float64(time.Since(start).Milliseconds()), nil
+	pinger.Count = 3
+	pinger.Timeout = time.Second
+	pinger.SetPrivileged(true)
+
+	if err := pinger.Run(); err != nil {
+		return 0, err
+	}
+	stats := pinger.Statistics()
+	return stats.AvgRtt.Seconds() * 1000, nil
 }
 
 func (c *Cluster) startNetworkLatencyProbes() {
@@ -546,11 +581,13 @@ func (c *Cluster) startNetworkLatencyProbes() {
 				rtt, err := measureRTT(target)
 				if err != nil {
 					logger.Error("RTT error to %s: %v", target, err)
-					c.delegate.networkLatencies.RecordFailure(ip)
+					c.networkLatencies.networkFailureCounter.WithLabelValues(ip).Inc()
+					c.networkLatencies.RecordFailure(ip)
 					continue
 				}
 
-				c.delegate.networkLatencies.Add(NetworkLatency{
+				c.networkLatencies.networkRTTHist.WithLabelValues(ip).Observe(rtt)
+				c.networkLatencies.Add(NetworkLatency{
 					Source:    selfHost,
 					Target:    ip,
 					RTT:       rtt,

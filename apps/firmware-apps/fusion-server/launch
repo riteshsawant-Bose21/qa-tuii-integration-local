@@ -39,11 +39,12 @@ declare -r ARROW='→'
 # Function to display usage
 usage() {
     echo "Usage: $0 [--name base_name] [--instances number_of_instances] [--kill [base_name]]"
-    echo "  --name      : Base name for instances (default: fusion)"
-    echo "  --instances : Number of instances to create (default: 1)"
-    echo "  --kill      : Delete and purge all instances with the specified base name"
-    echo "               Can be followed by base name or used with --name"
-    echo "  --verbose   : Show detailed status output during setup and verification"
+    echo "  --name          : Base name for instances (default: fusion)"
+    echo "  --instances     : Number of instances to create (default: 1)"
+    echo "  --kill          : Delete and purge all instances with the specified base name"
+    echo "                    Can be followed by base name or used with --name"
+    echo " --resync-time    : Synchronize time between all instances"
+    echo "  --verbose       : Show detailed status output during setup and verification"
     exit 1
 }
 
@@ -329,7 +330,7 @@ launch_instance() {
     
     # Create and launch instance
     print_step "Creating multipass instance..."
-    if ! multipass launch --name "$instance_name" --cloud-init "$cloud_init_file" --memory 2G --cpus 2; then
+    if ! multipass launch --name "$instance_name" --network en0 --cloud-init "$cloud_init_file" --memory 2G --cpus 2; then
         print_error "Failed to launch instance $instance_name"
         return 1
     fi

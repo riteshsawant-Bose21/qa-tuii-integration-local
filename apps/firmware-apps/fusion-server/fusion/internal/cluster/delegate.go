@@ -11,7 +11,6 @@ import (
 )
 
 const (
-	latencyPruneTime  = 5 * time.Minute
 	maxLatencyCount   = 1000
 	skewPruneInterval = 1 * time.Minute
 	skewPruneAge      = 10 * time.Minute
@@ -59,26 +58,24 @@ func (s *SkewStore) Prune(ticker *time.Ticker, maxAge time.Duration) {
 }
 
 type ClusterDelegate struct {
-	nodeID           string
-	persistence      *server.Persistence
-	stateManager     *server.StateManager
-	taskManager      *server.TaskManager
-	updater          *server.Updater
-	networkLatencies *NetworkLatencyStore
-	syncLatencies    *SyncLatencyStore
-	skewStore        *SkewStore
+	nodeID        string
+	persistence   *server.Persistence
+	stateManager  *server.StateManager
+	taskManager   *server.TaskManager
+	updater       *server.Updater
+	syncLatencies *SyncLatencyStore
+	skewStore     *SkewStore
 }
 
 func NewClusterDelegate(nodeID string, persistence *server.Persistence, stateManager *server.StateManager, taskManager *server.TaskManager, updater *server.Updater) *ClusterDelegate {
 	delegate := &ClusterDelegate{
-		nodeID:           nodeID,
-		persistence:      persistence,
-		stateManager:     stateManager,
-		taskManager:      taskManager,
-		updater:          updater,
-		networkLatencies: NewNetworkLatencyStore(maxLatencyCount, latencyPruneTime),
-		syncLatencies:    NewSyncLatencyStore(maxLatencyCount, latencyPruneTime),
-		skewStore:        NewSkewStore(),
+		nodeID:        nodeID,
+		persistence:   persistence,
+		stateManager:  stateManager,
+		taskManager:   taskManager,
+		updater:       updater,
+		syncLatencies: NewSyncLatencyStore(maxLatencyCount, latencyPruneTime),
+		skewStore:     NewSkewStore(),
 	}
 
 	delegate.startSkewPruner()

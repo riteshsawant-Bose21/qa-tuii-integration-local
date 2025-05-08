@@ -533,6 +533,26 @@ brew install bruno
      - Network connectivity
      - Process health
 
+**Prometheus**
+```bash
+brew install prometheus
+/opt/homebrew/bin/prometheus --config.file=tools/prometheus/prometheus.yml
+```
+Access UI at: http://localhost:9090
+
+**Grafana**
+```bash
+brew install grafana
+/opt/homebrew/bin/grafana server --homepath /opt/homebrew/share/grafana
+```
+Access UI at: http://localhost:3000
+Default credentials: admin / admin
+
+**Loki**
+```bash
+brew install loki
+/opt/homebrew/bin/loki -config.file=--config.file=tools/loki/loki-config.yaml
+```
 
 #### Get Complete System Metrics
 ```bash

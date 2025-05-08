@@ -48,18 +48,16 @@ type App struct {
 	Server            *server.ConfigServer
 	BLEServer         *network.BLEServer
 	UDPServer         *network.UDPServer
-	MetricsCollector  *cluster.MetricsCollector
 }
 
 // Close shuts down all components gracefully.
 func (app *App) Close() {
-	defer app.Logger.Close()
-	defer app.TaskManager.Stop()
+	app.TaskManager.Stop()
 	if app.BLEServer != nil {
-		defer app.BLEServer.Stop()
+		app.BLEServer.Stop()
 	}
-	defer app.UDPServer.Stop()
-	defer app.Logger.Close()
+	app.UDPServer.Stop()
+	app.Logger.Close()
 }
 
 // NewApp is a factory function to set up the application
@@ -81,7 +79,6 @@ func NewApp(config *api.AppConfig) *App {
 	bleServer := initBLEServer()
 	udpServer := initUDPServer(api.UDPPort, connectionHandler)
 	configServer := server.NewConfigServer(config.NodeName, connectionHandler, memberlist)
-	metricsCollector := clusterInstance.NewMetricsCollector()
 
 	return &App{
 		Logger:            logger,
@@ -96,7 +93,6 @@ func NewApp(config *api.AppConfig) *App {
 		Server:            configServer,
 		BLEServer:         bleServer,
 		UDPServer:         udpServer,
-		MetricsCollector:  metricsCollector,
 	}
 }
 
@@ -240,7 +236,7 @@ func setupPublicRoutes(config *api.AppConfig, r *mux.Router, app *App) {
 	registerPublicGET(r, routes.MetadataEndpoint, app.Server.GetDatabaseMetadata)
 	registerPublicGET(r, routes.VersionEndpoint, app.Server.HandleVersion)
 	registerPublicPUT(r, routes.UploadAudioEndpoint, app.Server.UploadAudio)
-	registerPublicGET(r, routes.WebsocketEndpoint, withWebSocketMetrics(config, app.Server.HandleWebSocket, app.MetricsCollector))
+	registerPublicGET(r, routes.WebsocketEndpoint, withWebSocketMetrics(config, app.Server.HandleWebSocket, app.Cluster.Metrics))
 
 	// Values
 	registerPublicGET(r, routes.ValueEndpoint, app.Server.GetValue)
@@ -275,13 +271,13 @@ func setupPublicRoutes(config *api.AppConfig, r *mux.Router, app *App) {
 	registerPublicGET(r, routes.ClusterLatencySyncEndpoint, app.Cluster.HandleGetSyncLatency)
 	registerPublicGET(r, routes.ClusterLatencySyncAveragesEndpoint, app.Cluster.HandleGetSyncLatencyAverages)
 	registerPublicGET(r, routes.ClusterNTPSkewEndpoint, app.Cluster.HandleGetNTPSkew)
-	registerPublicGET(r, routes.ClusterStatusEndpoint, app.MetricsCollector.HandleClusterStatus)
+	registerPublicGET(r, routes.ClusterStatusEndpoint, app.Cluster.Metrics.HandleClusterStatus)
 
 	// Health
-	registerPublicGET(r, routes.HealthEndpoint, app.MetricsCollector.HandleHealthCheck)
+	registerPublicGET(r, routes.HealthEndpoint, app.Cluster.Metrics.HandleHealthCheck)
 
 	// Metrics
-	registerPublicGET(r, routes.MetricsEndpoint, app.MetricsCollector.HandleMetrics)
+	registerPublicGET(r, routes.MetricsEndpoint, app.Cluster.Metrics.HandleMetrics)
 }
 
 func setupPrivateRoutes(r *mux.Router, app *App) {
@@ -310,6 +306,7 @@ func initLogging(config *api.AppConfig) *logging.Logger {
 		MaxFileSize: 100,
 		MaxFiles:    5,
 		LogLevel:    logLevel,
+		//LokiEndpoint: "http://192.168.64.1:3100",
 	})
 	return logging.GetLogger()
 }

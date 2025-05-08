@@ -1,8 +1,11 @@
 package logging
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 	"sync"
@@ -28,11 +31,12 @@ var LogLevelStrings = map[LogLevel]string{
 }
 
 type LogConfig struct {
-	NodeName    string
-	LogDir      string
-	MaxFileSize int64
-	MaxFiles    int
-	LogLevel    LogLevel
+	NodeName     string
+	LogDir       string
+	MaxFileSize  int64
+	MaxFiles     int
+	LogLevel     LogLevel
+	LokiEndpoint string
 }
 
 type Logger struct {
@@ -217,6 +221,10 @@ func (l *Logger) log(level LogLevel, format string, args ...any) {
 	message := fmt.Sprintf(format, args...)
 	logMessage := fmt.Sprintf("[%s] [%s] %s", l.config.NodeName, levelStr, message)
 
+	if l.config.LokiEndpoint != "" {
+		go sendToLoki(l.config.LokiEndpoint, l.config.NodeName, levelStr, message)
+	}
+
 	l.mu.RLock()
 	closed := l.closed
 	l.mu.RUnlock()
@@ -256,4 +264,26 @@ func (l *Logger) log(level LogLevel, format string, args ...any) {
 			l.mu.RUnlock()
 		}
 	}()
+}
+
+func sendToLoki(endpoint, node, level, msg string) {
+	payload := map[string]any{
+		"streams": []map[string]any{
+			{
+				"labels": fmt.Sprintf(`{job="fusion",node="%s",level="%s"}`, node, level),
+				"entries": []map[string]string{
+					{
+						"ts":   fmt.Sprintf("%d", time.Now().UnixNano()),
+						"line": msg,
+					},
+				},
+			},
+		},
+	}
+
+	data, _ := json.Marshal(payload)
+	_, err := http.Post(endpoint+"/loki/api/v1/push", "application/json", bytes.NewReader(data))
+	if err != nil {
+		GetLogger().Error("Error sending to loki: %v", err)
+	}
 }

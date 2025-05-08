@@ -227,6 +227,7 @@ func (hm *HAProxyMetrics) fetchStats() (HAProxyStats, error) {
 	return stats, nil
 }
 
+// parseProxyStats uses keys are extracted from the HAProxy show stat CSV output from the stats socket
 func parseProxyStats(values map[string]string) Stats {
 	return Stats{
 		Name:            values["svname"],
