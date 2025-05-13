@@ -100,6 +100,7 @@ packages:
   - keepalived
   - libjsoncpp25
   - net-tools
+  - ntpdate
   - wget
 write_files:
   - path: $fusion_server_start_path

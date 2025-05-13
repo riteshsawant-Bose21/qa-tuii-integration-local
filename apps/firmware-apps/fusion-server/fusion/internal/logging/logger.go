@@ -267,13 +267,16 @@ func (l *Logger) log(level LogLevel, format string, args ...any) {
 }
 
 func sendToLoki(endpoint, node, level, msg string) {
-	payload := map[string]any{
-		"streams": []map[string]any{
+	//timestamp := time.Now().UTC().Format(time.RFC3339Nano)
+	timestamp := time.Now().UTC().Format("2006-01-02T15:04:05.000000000Z")
+
+	payload := map[string]interface{}{
+		"streams": []map[string]interface{}{
 			{
 				"labels": fmt.Sprintf(`{job="fusion",node="%s",level="%s"}`, node, level),
 				"entries": []map[string]string{
 					{
-						"ts":   fmt.Sprintf("%d", time.Now().UnixNano()),
+						"ts":   timestamp,
 						"line": msg,
 					},
 				},
@@ -281,9 +284,25 @@ func sendToLoki(endpoint, node, level, msg string) {
 		},
 	}
 
-	data, _ := json.Marshal(payload)
-	_, err := http.Post(endpoint+"/loki/api/v1/push", "application/json", bytes.NewReader(data))
+	data, err := json.Marshal(payload)
 	if err != nil {
-		GetLogger().Error("Error sending to loki: %v", err)
+		//fmt.Printf("Failed to marshal: %v\n", err)
+		return
+	}
+
+	//fmt.Printf(">>> Loki Payload:\n%s\n", string(data)) // DEBUG: print the payload
+
+	resp, err := http.Post(endpoint+"/loki/api/v1/push", "application/json", bytes.NewReader(data))
+	if err != nil {
+		//fmt.Printf("HTTP error: %v\n", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent {
+		//body, _ := io.ReadAll(resp.Body)
+		//fmt.Printf("Loki returned status %d: %s\n", resp.StatusCode, string(body))
+	} else {
+		//fmt.Println("✅ Log successfully sent to Loki")
 	}
 }

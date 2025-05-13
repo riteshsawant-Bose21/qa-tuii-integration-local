@@ -308,6 +308,10 @@ setup_instance() {
         return 1
     fi
     
+    print_step "Synchronizing time..."    
+    multipass exec "$instance_name" -- sudo chronyc makestep || true
+    multipass exec "$instance_name" -- sudo ntpdate pool.ntp.org || true
+
     [ "$VERBOSE" = true ] && show_instance_status "$instance_name"
     
     return 0
