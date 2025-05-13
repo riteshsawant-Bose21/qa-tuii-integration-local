@@ -20,6 +20,8 @@
 
 #include <linux/kernel.h>
 #include <linux/hrtimer.h>
+#include <linux/ptp_clock_kernel.h>
+#include <linux/ptp_clock.h>
 #include <linux/list.h>
 #include <sound/pcm.h>
 #include "fusion_connect_alsa.h"
@@ -32,41 +34,18 @@ enum ptp_timing_mode {
 };
 
 enum fusion_cn_ctrl_cmd {
-    FUSION_CN_CTRL_CMD_START = 1,
-    FUSION_CN_CTRL_CMD_STOP,
-    FUSION_CN_CTRL_CMD_START_IO,
-    FUSION_CN_CTRL_CMD_STOP_IO,
-    FUSION_CN_CTRL_CMD_ADD_RTP_STREAM,
-    FUSION_CN_CTRL_CMD_REMOVE_RTP_STREAM,
-    FUSION_CN_CTRL_CMD_UPDATE_RTP_STREAM,
-    FUSION_CN_CTRL_CMD_GET_RTP_STREAM_STATUS,
-    FUSION_CN_CTRL_CMD_SET_PLAYOUT_DELAY,
-    FUSION_CN_CTRL_CMD_SET_CAPTURE_DELAY,
-};
-
-#define MAX_STREAM_NAME_SIZE 64
-
-// data struct for add rtp stream API call
-struct fusion_cn_stream_config {
-    uint64_t stream_handle;
-    uint32_t sample_rate;
-    snd_pcm_format_t format;
-    uint32_t channels;
-    uint32_t samples_per_packet;
-    uint32_t dest_ip; /* swab32'd */
-uint16_t dest_port; /* swab16'd */
-uint16_t rtcp_dest_port; /* swab16'd */
-    uint8_t payload_type;
-    uint32_t playout_delay;
-    int8_t is_source;
-    char name[MAX_STREAM_NAME_SIZE];
+    FUSION_CN_CTRL_CMD_NONE = 0,
+    FUSION_CN_CTRL_CMD_START_MANAGER,
+    FUSION_CN_CTRL_CMD_STOP_MANAGER,
+    FUSION_CN_CTRL_CMD_ADD_STREAM,
+    FUSION_CN_CTRL_CMD_REMOVE_STREAM,
+    FUSION_CN_CTRL_CMD_SET_PLAYOUT_DELAY
 };
 
 struct fusion_cn_state {
     bool is_started;
-    bool ptp_synchronized; // Set by userspace
-    int32_t playout_delay; // Added missing field
-    int32_t capture_delay; // Added missing field
+    bool ptp_synchronized;
+    int32_t playout_delay;
 };
 
 struct fusion_cn_alsa {
@@ -78,7 +57,8 @@ struct fusion_cn_alsa {
 struct fusion_cn_ptp {
     enum ptp_timing_mode ptp_timing_mode;
     struct hrtimer audio_timer;
-    clockid_t phc_clockid;
+    struct file *phc_file;
+    uint64_t base_tick_phc_ns;
     int gpio_irq;
     int gpio_pin;
 };
@@ -95,6 +75,7 @@ struct fusion_cn_manager {
     struct fusion_cn_ptp ptp;
     struct fusion_cn_netfilter netfilter;
     struct fusion_cn_netlink netlink;
+    struct platform_device *pdev;
 };
 
 struct fusion_cn_ctrl_msg {
@@ -112,8 +93,6 @@ struct message_handler_entry {
 
 int fusion_cn_mgr_init(struct fusion_cn_manager *mgr);
 void fusion_cn_mgr_destroy(struct fusion_cn_manager *mgr);
-bool fusion_cn_mgr_start(struct fusion_cn_manager *mgr);
-bool fusion_cn_mgr_stop(struct fusion_cn_manager *mgr);
 
 extern const struct fusion_cn_alsa_ops fusion_cn_alsa_ops;
 

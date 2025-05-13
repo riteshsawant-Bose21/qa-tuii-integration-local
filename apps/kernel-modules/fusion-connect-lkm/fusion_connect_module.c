@@ -26,6 +26,10 @@
  static char *eth_iface = "eth0";
  module_param(eth_iface, charp, 0444);
  MODULE_PARM_DESC(eth_iface, "Ethernet interface for CONNECT traffic (default: eth0)");
+
+ static bool internal_loopback = true;
+ module_param(internal_loopback, bool, 0444);
+ MODULE_PARM_DESC(internal_loopback, "Turn on internal loopback (default: true)");
  
  static struct fusion_cn_manager mgr;
  
@@ -34,9 +38,12 @@
    int ret;
    strscpy(mgr.netfilter.iface_name, eth_iface, IFNAMSIZ);
    mgr.ptp.gpio_pin = gpio_pin;
+   mgr.rtp.internal_loopback = internal_loopback;
    mgr.ptp.ptp_timing_mode = (gpio_pin >= 0) ? TIMING_GPIO_INTERRUPT : TIMING_HRTIMER;
+
    ret = fusion_cn_mgr_init(&mgr);
-   if (ret) pr_err("fusion_cn: Module init failed: %d\n", ret);
+   if (ret) printk(KERN_ERR"fusion_cn: Module init failed: %d\n", ret);
+   
    return ret;
  }
  
@@ -50,5 +57,5 @@
  
  MODULE_LICENSE("GPL v2");
  MODULE_AUTHOR("Bose Professional");
- MODULE_DESCRIPTION("Bose Professional CONNECT driver");
+ MODULE_DESCRIPTION("Bose Professional Fusion CONNECT driver");
  MODULE_VERSION("0.1");

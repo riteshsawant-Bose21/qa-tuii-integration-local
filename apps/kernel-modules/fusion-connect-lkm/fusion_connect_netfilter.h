@@ -27,9 +27,9 @@ struct fusion_cn_netfilter {
 };
 
 /* Init/Destroy */
-int fusion_cn_nf_init(void *rtp);
+int fusion_cn_nf_init(void *rtp_mgr);
 void fusion_cn_nf_destroy(struct fusion_cn_netfilter *nf);
 
 /* Packet Ops */
 int fusion_cn_nf_create_packet(struct fusion_cn_netfilter *nf, struct sk_buff **skb, void **data, uint32_t *data_size);
-int fusion_cn_nf_tx_packet(struct fusion_cn_netfilter *nf, struct sk_buff *skb, uint32_t data_size);
+int fusion_cn_nf_tx_packet(void *rtp_mgr, struct sk_buff *skb, uint32_t data_size);
