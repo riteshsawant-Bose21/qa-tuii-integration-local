@@ -19,25 +19,25 @@
 #define BOUNDARY_INTERVAL_NS   1000000
 
 /* ALSA Callbacks */
-static int alsa_ops_attach_alsa_driver(void *mgr, const struct fusion_cn_mgr_ops *ops, void *alsa_chip)
+static int alsa_ops_attach_alsa_driver(void *cn_mgr, const struct fusion_cn_mgr_ops *ops, void *alsa_chip)
 {
-    struct fusion_cn_manager *mgr_ptr = mgr;
+    struct fusion_cn_manager *mgr = cn_mgr;
     if (!ops || !alsa_chip) return -EINVAL;
-    mgr_ptr->alsa.alsa_chip = alsa_chip;
-    mgr_ptr->alsa.mgr_callbacks = ops;
+    mgr->alsa.alsa_chip = alsa_chip;
+    mgr->alsa.mgr_callbacks = ops;
     return 0;
 }
 
-static int alsa_ops_get_rtp_frame_size(void *mgr, uint64_t stream_handle, uint32_t *framesize)
+static int alsa_ops_get_rtp_frame_size(void *cn_mgr, uint64_t stream_handle, uint32_t *framesize)
 {
-    struct fusion_cn_manager *mgr_ptr = mgr;
+    struct fusion_cn_manager *mgr = cn_mgr;
     struct fusion_cn_rtp_stream *stream;
 
     if (!framesize) {
         printk(KERN_ERR "fusion_cn: get_rtp_frame_size: NULL framesize pointer\n");
         return -EINVAL;
     }
-    stream = fusion_cn_rtp_get_stream(&mgr_ptr->rtp, stream_handle);
+    stream = fusion_cn_rtp_get_stream(&mgr->rtp, stream_handle);
     if (!stream) {
         printk(KERN_ERR "fusion_cn: get_rtp_frame_size: Stream %llu not found in RTP manager\n", stream_handle);
         return -ENOENT;
@@ -47,30 +47,30 @@ static int alsa_ops_get_rtp_frame_size(void *mgr, uint64_t stream_handle, uint32
     return 0;
 }
 
-static int alsa_ops_start_interrupts(void *mgr, uint64_t stream_handle)
+static int alsa_ops_start_interrupts(void *cn_mgr, uint64_t stream_handle)
 {
-    struct fusion_cn_manager *mgr_ptr = mgr;
+    struct fusion_cn_manager *mgr = cn_mgr;
 
-    if (!mgr_ptr || !mgr_ptr->rtp.cn_mgr) {
+    if (!mgr || !mgr->rtp.cn_mgr) {
         printk(KERN_ERR "fusion_cn: start_interrupts: Invalid manager or uninitialized RTP for stream %llu\n", stream_handle);
         return -EINVAL;
     }
 
-    printk(KERN_DEBUG "fusion_cn: start_interrupts: Starting stream %llu, rtp_mgr=%p\n", stream_handle, &mgr_ptr->rtp);
-    return fusion_cn_rtp_set_stream_running(&mgr_ptr->rtp, stream_handle, true);
+    printk(KERN_DEBUG "fusion_cn: start_interrupts: Starting stream %llu\n", stream_handle);
+    return fusion_cn_rtp_set_stream_running(&mgr->rtp, stream_handle, true);
 }
 
-static int alsa_ops_stop_interrupts(void *mgr, uint64_t stream_handle)
+static int alsa_ops_stop_interrupts(void *cn_mgr, uint64_t stream_handle)
 {
-    struct fusion_cn_manager *mgr_ptr = mgr;
+    struct fusion_cn_manager *mgr = cn_mgr;
 
-    if (!mgr_ptr || !mgr_ptr->rtp.cn_mgr) {
+    if (!mgr || !mgr->rtp.cn_mgr) {
         printk(KERN_ERR "fusion_cn: stop_interrupts: Invalid manager or uninitialized RTP for stream %llu\n", stream_handle);
         return -EINVAL;
     }
 
-    printk(KERN_DEBUG "fusion_cn: stop_interrupts: Stopping stream %llu, rtp_mgr=%p\n", stream_handle, &mgr_ptr->rtp);
-    return fusion_cn_rtp_set_stream_running(&mgr_ptr->rtp, stream_handle, false);
+    printk(KERN_DEBUG "fusion_cn: stop_interrupts: Stopping stream %llu\n", stream_handle);
+    return fusion_cn_rtp_set_stream_running(&mgr->rtp, stream_handle, false);
 }
 
 const struct fusion_cn_alsa_ops fusion_cn_alsa_ops = {
@@ -125,6 +125,7 @@ static uint32_t fusion_cn_rtp_get_avail_frames(void *cn_mgr, uint64_t handle)
 
 static void audio_frame_process(struct fusion_cn_manager *mgr)
 {
+    static int jitter_window = 10000;
     uint64_t current_phc_ns;
     struct fusion_cn_rtp_stream *stream;
     struct handle_node *handle_node, *tmp;
@@ -138,8 +139,6 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
         return;
     }
 
-    printk(KERN_DEBUG "fusion_cn: audio_frame_process: current_phc_ns=%llu\n", current_phc_ns);
-
     read_lock_irqsave(&mgr->rtp.lock, flags);
     list_for_each_entry_safe(handle_node, tmp, &mgr->rtp.active_streams, node) {
         handle = handle_node->handle;
@@ -151,26 +150,23 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
             }
 
             if (stream->info.is_source) {
-                if (current_phc_ns >= stream->next_action_time) {
+                if (stream->next_action_time != 0 && current_phc_ns >= stream->next_action_time - jitter_window) {
                     fusion_cn_rtp_send_packet(&mgr->rtp, stream);
                     mgr->alsa.mgr_callbacks->pcm_interrupt(mgr->alsa.alsa_chip, SNDRV_PCM_STREAM_PLAYBACK, stream->info.stream_handle);
 
-                    printk(KERN_DEBUG "fusion_cn: audio_frame_process: Source stream %llu, next_action_time=%llu\n",
-                        stream->info.stream_handle, stream->next_action_time);
+                    printk(KERN_DEBUG "fusion_cn: audio_frame_process: Source stream %llu, current_phc=%llu, next_action_time=%llu\n",
+                        stream->info.stream_handle, current_phc_ns, stream->next_action_time);
             
-                    // Increment next_action_time by packet duration (e.g., 1 ms for 48 samples at 48 kHz)
-                    if (stream->next_action_time == 0) {
-                        // Align to the next 1 ms boundary
-                        uint64_t interval = (stream->info.frames_per_packet * NSEC_PER_SEC) / stream->info.sample_rate;
-                        stream->next_action_time = current_phc_ns - (current_phc_ns % interval) + interval;
-                    }
-                    stream->next_action_time += (stream->info.frames_per_packet * NSEC_PER_SEC) / stream->info.sample_rate;
+                    stream->next_action_time += stream->packet_time;
+                } else if (stream->next_action_time == 0) {
+                    // Align to the next 1 ms boundary
+                    stream->next_action_time = current_phc_ns - (current_phc_ns % stream->packet_time) + stream->packet_time;
                 }
             } else {
                 current_slot = stream->playback_index % FUSION_CN_RTP_BUFFER_FRAMES;
-                if (stream->next_action_times[current_slot] != 0 && current_phc_ns >= stream->next_action_times[current_slot]) {
-                    printk(KERN_DEBUG "fusion_cn: audio_frame_process: Sink stream %llu, next_action_time=%llu\n",
-                        stream->info.stream_handle, stream->next_action_times[current_slot]);
+                if (stream->next_action_times[current_slot] != 0 && current_phc_ns >= stream->next_action_times[current_slot] - jitter_window) {
+                    printk(KERN_DEBUG "fusion_cn: audio_frame_process: Sink stream %llu, current_phc=%llu, next_action_time=%llu\n",
+                        stream->info.stream_handle, current_phc_ns, stream->next_action_times[current_slot]);
                     // Trigger pcm_interrupt to advance hw_ptr and signal user-space
                     mgr->alsa.mgr_callbacks->pcm_interrupt(mgr->alsa.alsa_chip, SNDRV_PCM_STREAM_CAPTURE, stream->info.stream_handle);
                     stream->playback_index++;
@@ -185,69 +181,10 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
 static enum hrtimer_restart audio_frame_tick_hrtimer(struct hrtimer *timer)
 {
     struct fusion_cn_manager *mgr = container_of(timer, struct fusion_cn_manager, ptp.audio_timer);
-    static uint64_t last_check;
-    static int64_t baseline_drift_ns;
-    static bool first_check = true;
-    static uint64_t tick_count = 0;
-    ktime_t base_interval;
-    uint64_t now_ns;
-    uint64_t phc_ns;
-    struct timespec64 mono_ts;
-    int64_t drift_ns;
-    int64_t relative_drift_ns;
-    int64_t adjustment_per_tick = 0;
 
     audio_frame_process(mgr);
 
-    base_interval = ns_to_ktime(TIMER_BASE_INTERVAL_NS);
-    now_ns = ktime_to_ns(ktime_get());
-
-    // Align every third tick to 1 ms boundary
-    if (tick_count % 3 == 0) {
-        phc_ns = fusion_cn_rtp_get_phc_ns();
-        if (phc_ns != 0) {
-            uint64_t boundary = phc_ns - (phc_ns % BOUNDARY_INTERVAL_NS) + BOUNDARY_INTERVAL_NS;
-            int64_t adjust = boundary - (now_ns + 3 * TIMER_BASE_INTERVAL_NS);
-            if (adjust > -10000 && adjust < 10000) { // Limit to ±10 µs
-                adjustment_per_tick += adjust / 3; // Spread over 3 ticks
-                printk(KERN_DEBUG "fusion_cn: audio_frame_tick_hrtimer: Boundary adjustment=%lld ns\n", adjust);
-            }
-        }
-    }
-
-    // Drift correction every 100 ms
-    if (now_ns - last_check > 100000000ULL) {
-        phc_ns = fusion_cn_rtp_get_phc_ns();
-        if (phc_ns == 0) {
-            printk(KERN_ERR "fusion_cn: audio_frame_tick_hrtimer: Failed to get PHC time\n");
-            last_check = now_ns;
-            hrtimer_forward_now(timer, base_interval);
-            return HRTIMER_RESTART;
-        }
-
-        ktime_get_raw_ts64(&mono_ts);
-        drift_ns = phc_ns - (mono_ts.tv_sec * NSEC_PER_SEC + mono_ts.tv_nsec);
-
-        if (first_check || abs64(drift_ns - baseline_drift_ns) > NSEC_PER_SEC) {
-            baseline_drift_ns = drift_ns;
-            first_check = false;
-        } else {
-            relative_drift_ns = drift_ns - baseline_drift_ns;
-            if (abs64(relative_drift_ns) > 1000) {
-                adjustment_per_tick += relative_drift_ns / 1000;
-                printk(KERN_DEBUG "fusion_cn: audio_frame_tick_hrtimer: Drift correction=%lld ns\n", relative_drift_ns);
-            }
-        }
-        last_check = now_ns;
-    }
-
-    // Apply combined adjustment
-    if (adjustment_per_tick != 0) {
-        base_interval = ktime_add_ns(base_interval, adjustment_per_tick);
-    }
-
-    hrtimer_forward_now(timer, base_interval);
-    tick_count++;
+    hrtimer_forward_now(timer, ns_to_ktime(TIMER_BASE_INTERVAL_NS));
     return HRTIMER_RESTART;
 }
 
@@ -312,7 +249,7 @@ static int fusion_cn_ptp_init(struct fusion_cn_manager *mgr)
         disable_irq(mgr->ptp.gpio_irq);
     } else {
         mgr->ptp.ptp_timing_mode = TIMING_HRTIMER;
-        hrtimer_init(&mgr->ptp.audio_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+        hrtimer_init(&mgr->ptp.audio_timer, CLOCK_REALTIME, HRTIMER_MODE_REL);
         mgr->ptp.audio_timer.function = audio_frame_tick_hrtimer;
         mgr->ptp.gpio_irq = -1;
         mgr->ptp.gpio_pin = -1;

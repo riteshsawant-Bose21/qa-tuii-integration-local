@@ -286,6 +286,8 @@ int fusion_cn_rtp_add_stream(struct fusion_cn_rtp_manager *rtp_mgr, struct fusio
     for (int i = 0; i < FUSION_CN_RTP_BUFFER_FRAMES; i++) {
         stream->next_action_times[i] = 0;  /* Initialize to 0 (not scheduled) */
     }
+    stream->packet_time = (info->frames_per_packet * NSEC_PER_SEC) / info->sample_rate;
+    stream->ns_per_sample = NSEC_PER_SEC / (uint64_t)info->sample_rate;
 
     write_lock_irqsave(&rtp_mgr->lock, flags);
     handle_node->handle = info->stream_handle;
@@ -299,8 +301,6 @@ int fusion_cn_rtp_add_stream(struct fusion_cn_rtp_manager *rtp_mgr, struct fusio
         map->dest_port = info->dest_port;
         map->stream_handle = info->stream_handle;
         hlist_add_head(&map->hnode, &rtp_mgr->packet_maps[PACKET_MAP_KEY(info->dest_ip, info->dest_port)]);
-        printk(KERN_DEBUG "fusion_cn_rtp: add_stream: Added packet_map entry dest_ip=0x%08x, dest_port=0x%04x, handle=%llu\n",
-               map->dest_ip, ntohs(map->dest_port), map->stream_handle);
     }
 
     write_unlock_irqrestore(&rtp_mgr->lock, flags);
@@ -383,6 +383,7 @@ int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr,
     struct fusion_cn_rtp_stream *stream;
     struct fusion_cn_packet_map *map;
     uint32_t payload_len, len1, len2, frames;
+
     uint8_t *payload;
     void *buf;
     unsigned long flags;
@@ -393,6 +394,7 @@ int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr,
     uint32_t buf_offset;
     uint64_t current_phc_ns, current_sac, global_sac, reconstructed_phc_ns;
     uint32_t rtp_timestamp;
+    int sample_physical_width_bits;
 
     if (!packet) {
         printk(KERN_ERR "fusion_cn_rtp: process_packet: Invalid packet pointer\n");
@@ -420,6 +422,8 @@ int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr,
                 read_unlock_irqrestore(&rtp_mgr->lock, flags);
                 return NF_DROP;
             }
+            
+            sample_physical_width_bits = snd_pcm_format_physical_width(stream->info.format);
 
             packet_ssrc = swab32(packet->rtp.ssrc);
             if (stream->ssrc == 0 || packet_ssrc != stream->ssrc) {
@@ -431,7 +435,7 @@ int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr,
 
             payload_len = swab16(packet->udp.len) - sizeof(struct udphdr) - sizeof(struct fusion_cn_rtp_header);
             payload = (uint8_t *)packet + sizeof(*packet);
-            frames = payload_len / (stream->info.channels * snd_pcm_format_width(stream->info.format) / 8);
+            frames = payload_len / (stream->info.channels * sample_physical_width_bits / 8);
             if (!frames) {
                 printk(KERN_WARNING "fusion_cn_rtp: process_packet: Zero length frame detected !");
                 spin_unlock(&stream->lock);
@@ -450,8 +454,8 @@ int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr,
                     if (gap_buf) {
                         printk(KERN_WARNING "fusion_cn_rtp: process_packet: Gap detected in stream %llu, seq_num=%u, gap_slot=%u\n",
                                stream->info.stream_handle, i, gap_slot);
-                        memset(gap_buf + gap_offset * stream->info.channels * snd_pcm_format_width(stream->info.format) / 8,
-                               0, stream->info.frames_per_packet * stream->info.channels * snd_pcm_format_width(stream->info.format) / 8);
+                        memset(gap_buf + gap_offset * stream->info.channels * sample_physical_width_bits / 8,
+                               0, stream->info.frames_per_packet * stream->info.channels * sample_physical_width_bits / 8);
                         stream->next_action_times[gap_slot] = 0;
                     }
                 }
@@ -469,17 +473,17 @@ int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr,
             len2 = frames - len1;
 
             if (len1) {
-                memcpy(buf + buf_offset * stream->info.channels * snd_pcm_format_width(stream->info.format) / 8, 
-                       payload, len1 * stream->info.channels * snd_pcm_format_width(stream->info.format) / 8);
+                memcpy(buf + buf_offset * stream->info.channels * sample_physical_width_bits / 8, 
+                       payload, len1 * stream->info.channels * sample_physical_width_bits / 8);
             }
             if (len2) { // TODO unsure of why this copies to the beginning of the buffer
-                memcpy(buf, payload + len1 * stream->info.channels * snd_pcm_format_width(stream->info.format) / 8,
-                       len2 * stream->info.channels * snd_pcm_format_width(stream->info.format) / 8);
+                memcpy(buf, payload + len1 * stream->info.channels * sample_physical_width_bits / 8,
+                       len2 * stream->info.channels * sample_physical_width_bits / 8);
             }
 
             rtp_timestamp = swab32(packet->rtp.timestamp);
             current_phc_ns = rtp_mgr->ops->get_phc_ns();
-            current_sac = current_phc_ns / (NSEC_PER_SEC / stream->info.sample_rate);
+            current_sac = current_phc_ns / stream->ns_per_sample;
 
             global_sac = (current_sac & 0xFFFFFFFF00000000ULL) | rtp_timestamp;
             
@@ -490,7 +494,7 @@ int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr,
             }
             
             // Avoid overflow in reconstructed_phc_ns calculation
-            reconstructed_phc_ns = global_sac * (NSEC_PER_SEC / stream->info.sample_rate);
+            reconstructed_phc_ns = global_sac * stream->ns_per_sample;
 
             stream->next_action_times[write_slot] = reconstructed_phc_ns + stream->info.playout_delay;
             stream->current_seq_num = seq_num;
@@ -518,7 +522,6 @@ void fusion_cn_rtp_send_packet(struct fusion_cn_rtp_manager *rtp_mgr, struct fus
     uint8_t *payload;
     uint32_t offset;
     int ret;
-    int sample_width_bits;
     int sample_physical_width_bits;
     uint32_t avail_frames;
     static bool was_underflow = false;
@@ -526,15 +529,14 @@ void fusion_cn_rtp_send_packet(struct fusion_cn_rtp_manager *rtp_mgr, struct fus
 
     if (!stream->info.is_source) return;
 
-    sample_width_bits = snd_pcm_format_width(stream->info.format);
     sample_physical_width_bits = snd_pcm_format_physical_width(stream->info.format);
-    if (sample_width_bits <= 0 || sample_physical_width_bits <= 0) {
+    if (sample_physical_width_bits <= 0) {
         printk(KERN_ERR "fusion_cn_rtp: Invalid sample format %d\n", stream->info.format);
         return;
     }
 
     size = sizeof(struct fusion_cn_rtp_packet) +
-           stream->info.frames_per_packet * stream->info.channels * sample_width_bits / 8;
+           stream->info.frames_per_packet * stream->info.channels * sample_physical_width_bits / 8;
 
     avail_frames = rtp_mgr->ops->get_avail_frames(rtp_mgr->cn_mgr, stream->info.stream_handle);
     offset = rtp_mgr->ops->get_buffer_offset(rtp_mgr->cn_mgr, stream->info.stream_handle);
@@ -571,7 +573,7 @@ void fusion_cn_rtp_send_packet(struct fusion_cn_rtp_manager *rtp_mgr, struct fus
         skb->protocol = htons(ETH_P_IP);
 
         // Calculate RTP timestamp using absolute next_action_time (in sample units)
-        global_sac = stream->next_action_time / (NSEC_PER_SEC / (uint64_t)stream->info.sample_rate);
+        global_sac = stream->next_action_time / stream->ns_per_sample;
         rtp->rtp.timestamp = swab32((uint32_t)global_sac);
         rtp->rtp.seq_num = swab16(stream->outgoing_seq_num++);
 
@@ -580,11 +582,11 @@ void fusion_cn_rtp_send_packet(struct fusion_cn_rtp_manager *rtp_mgr, struct fus
 
         payload = (uint8_t *)packet + sizeof(*rtp);
         if (avail_frames < stream->info.frames_per_packet) {
-            memset(payload, 0, stream->info.frames_per_packet * stream->info.channels * sample_width_bits / 8);
+            memset(payload, 0, stream->info.frames_per_packet * stream->info.channels * sample_physical_width_bits / 8);
         } else {
             void *buf = rtp_mgr->ops->get_buffer(rtp_mgr->cn_mgr, stream->info.stream_handle);
             memcpy(payload, buf + offset * stream->info.channels * sample_physical_width_bits / 8,
-                   stream->info.frames_per_packet * stream->info.channels * sample_width_bits / 8);
+                   stream->info.frames_per_packet * stream->info.channels * sample_physical_width_bits / 8);
         }
 
         ret = fusion_cn_nf_tx_packet(rtp_mgr, skb, size);

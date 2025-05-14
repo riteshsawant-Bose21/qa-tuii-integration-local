@@ -74,6 +74,8 @@ struct fusion_cn_rtp_stream {
     uint64_t next_action_time;
     uint64_t next_action_times[FUSION_CN_RTP_BUFFER_FRAMES]; /* Playback times per slot */
     uint32_t playback_index;                      /* Current playback position (for scheduling pcm_interrupt) */
+    uint64_t packet_time;
+    uint64_t ns_per_sample;
 };
 
 struct handle_node {
