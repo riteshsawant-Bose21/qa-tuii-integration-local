@@ -1,4 +1,4 @@
-# Makefile for Fusion Connect kernel modules
+# Makefile for Fusion Sound Card and Codec kernel modules
 
 # Module names
 obj-m += fusion_sound_card.o
@@ -9,6 +9,9 @@ EXTRA_CFLAGS := -I$(KDIR)
 # Default target
 all:
 	$(MAKE) -C $(KDIR) M=$(PWD) ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE) modules
+	
+modules_install:
+	$(MAKE) -C $(KDIR) M=$(PWD) ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE) modules_install
 
 # Clean target
 clean:
