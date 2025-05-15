@@ -21,6 +21,8 @@
 #include <net/arp.h>
 #include "fusion_connect_rtp.h"
 
+#define TIMER_BASE_INTERVAL_NS 333333
+
 #define HASH_KEY(handle) hash_64(handle, FUSION_CN_RTP_HASH_BITS)
 #define PACKET_MAP_KEY(ip, port) hash_64(((uint64_t)(ip) << 16) | (port), FUSION_CN_RTP_HASH_BITS)
 
@@ -392,7 +394,7 @@ int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr,
     uint16_t seq_num;
     uint32_t write_slot;
     uint32_t buf_offset;
-    uint64_t current_phc_ns, current_sac, global_sac, reconstructed_phc_ns, expected_phc_ns;
+    uint64_t current_phc_ns, current_sac, global_sac, ns_from_ms_boundary, reconstructed_phc_ns;
     uint32_t rtp_timestamp;
     int sample_physical_width_bits;
 
@@ -496,13 +498,21 @@ int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr,
             
             // Avoid overflow in reconstructed_phc_ns calculation
             reconstructed_phc_ns = global_sac * stream->ns_per_sample;
-            expected_phc_ns = reconstructed_phc_ns - (reconstructed_phc_ns % stream->packet_time) + stream->packet_time;
+            ns_from_ms_boundary = reconstructed_phc_ns % NSEC_PER_MSEC;
 
-            stream->next_action_times[write_slot] = expected_phc_ns + stream->info.playout_delay;
+            if (ns_from_ms_boundary < TIMER_BASE_INTERVAL_NS) {
+                reconstructed_phc_ns = reconstructed_phc_ns - ns_from_ms_boundary + TIMER_BASE_INTERVAL_NS;
+            } else if (ns_from_ms_boundary < 2 * TIMER_BASE_INTERVAL_NS) {
+                reconstructed_phc_ns = reconstructed_phc_ns - ns_from_ms_boundary + 2 * TIMER_BASE_INTERVAL_NS;
+            } else  {
+                reconstructed_phc_ns += NSEC_PER_MSEC - ns_from_ms_boundary;
+            }
+
+            stream->next_action_times[write_slot] = reconstructed_phc_ns + stream->info.playout_delay;
             stream->current_seq_num = seq_num;
 
-            printk(KERN_DEBUG "fusion_cn_rtp: process_packet: Stream %llu, next_action_time=%llu, reconstructed_phc=%llu, expected_phc=%llu\n",
-                stream->info.stream_handle, stream->next_action_times[write_slot], reconstructed_phc_ns, expected_phc_ns);
+            printk(KERN_DEBUG "fusion_cn_rtp: process_packet: Stream %llu, packet_time=%llu, next_action_time=%llu, reconstructed_phc=%llu\n",
+                stream->info.stream_handle, stream->packet_time, stream->next_action_times[write_slot], reconstructed_phc_ns);
 
             spin_unlock(&stream->lock);
             read_unlock_irqrestore(&rtp_mgr->lock, flags);

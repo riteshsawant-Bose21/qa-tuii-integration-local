@@ -66,11 +66,11 @@ static struct snd_pcm_hardware fusion_cn_pcm_hw = {
     .rate_max = 96000,
     .channels_min = 1,
     .channels_max = FUSION_CN_NUM_CHANNELS_MAX,
-    .buffer_bytes_max = 768 * FUSION_CN_NUM_CHANNELS_MAX * 4,
+    .buffer_bytes_max = 3072 * FUSION_CN_NUM_CHANNELS_MAX * 4, /* 64 periods * 48 frames */
     .period_bytes_min = 6 * 2, /* 0.125ms at 48kHz, L16 */
     .period_bytes_max = 192 * FUSION_CN_NUM_CHANNELS_MAX * 4,
     .periods_min = 2,
-    .periods_max = 16
+    .periods_max = 64
 };
 
 static const unsigned int supported_rates[] = { 44100, 48000, 96000 };
@@ -681,7 +681,7 @@ static int fusion_cn_pcm_open(struct snd_pcm_substream *substream)
     }
 
     err = snd_pcm_hw_constraint_minmax(runtime, SNDRV_PCM_HW_PARAM_BUFFER_SIZE, 
-                                       stream->rtp_frame_size * 2, stream->rtp_frame_size * 16);
+                                       stream->rtp_frame_size * 2, stream->rtp_frame_size * 64);
     if (err < 0) {
         stream->substream = NULL;
         read_unlock_irqrestore(&chip->lock, flags);
