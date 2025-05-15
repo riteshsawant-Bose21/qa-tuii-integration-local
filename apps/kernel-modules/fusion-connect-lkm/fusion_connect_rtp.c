@@ -392,7 +392,7 @@ int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr,
     uint16_t seq_num;
     uint32_t write_slot;
     uint32_t buf_offset;
-    uint64_t current_phc_ns, current_sac, global_sac, reconstructed_phc_ns;
+    uint64_t current_phc_ns, current_sac, global_sac, reconstructed_phc_ns, expected_phc_ns;
     uint32_t rtp_timestamp;
     int sample_physical_width_bits;
 
@@ -487,6 +487,7 @@ int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr,
 
             global_sac = (current_sac & 0xFFFFFFFF00000000ULL) | rtp_timestamp;
             
+            // TODO: This is probably not ideal (from mr)
             if (rtp_timestamp < 0x3FFFFFFFU && (uint32_t)current_sac >= 0xC0000000U) {
                 global_sac += (1ULL << 32);
             } else if ((uint32_t)current_sac < 0x3FFFFFFFU && rtp_timestamp >= 0xC0000000U) {
@@ -495,12 +496,13 @@ int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr,
             
             // Avoid overflow in reconstructed_phc_ns calculation
             reconstructed_phc_ns = global_sac * stream->ns_per_sample;
+            expected_phc_ns = reconstructed_phc_ns - (reconstructed_phc_ns % stream->packet_time) + stream->packet_time;
 
-            stream->next_action_times[write_slot] = reconstructed_phc_ns + stream->info.playout_delay;
+            stream->next_action_times[write_slot] = expected_phc_ns + stream->info.playout_delay;
             stream->current_seq_num = seq_num;
 
-            printk(KERN_DEBUG "fusion_cn_rtp: process_packet: Stream %llu, next_action_time=%llu, reconstructed_phc=%llu\n",
-                stream->info.stream_handle, stream->next_action_times[write_slot], reconstructed_phc_ns);
+            printk(KERN_DEBUG "fusion_cn_rtp: process_packet: Stream %llu, next_action_time=%llu, reconstructed_phc=%llu, expected_phc=%llu\n",
+                stream->info.stream_handle, stream->next_action_times[write_slot], reconstructed_phc_ns, expected_phc_ns);
 
             spin_unlock(&stream->lock);
             read_unlock_irqrestore(&rtp_mgr->lock, flags);
@@ -513,7 +515,7 @@ int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr,
 }
 
 
-void fusion_cn_rtp_send_packet(struct fusion_cn_rtp_manager *rtp_mgr, struct fusion_cn_rtp_stream *stream)
+__always_inline void fusion_cn_rtp_send_packet(struct fusion_cn_rtp_manager *rtp_mgr, struct fusion_cn_rtp_stream *stream)
 {
     struct sk_buff *skb = NULL;
     void *packet;
@@ -590,7 +592,7 @@ void fusion_cn_rtp_send_packet(struct fusion_cn_rtp_manager *rtp_mgr, struct fus
         }
 
         ret = fusion_cn_nf_tx_packet(rtp_mgr, skb, size);
-        if (ret < 0) printk(KERN_ERR "fusion_cn_rtp: TX failed: %d\n", ret);
+        if (ret < 0) printk(KERN_DEBUG "fusion_cn_rtp: TX failed: %d\n", ret);
     } else {
         printk(KERN_ERR "fusion_cn_rtp: Failed to create packet; size %u/%lu\n", size, sizeof(struct fusion_cn_rtp_packet));
     }

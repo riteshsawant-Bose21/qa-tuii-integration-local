@@ -60,7 +60,7 @@ struct fusion_cn_chip {
 static struct snd_pcm_hardware fusion_cn_pcm_hw = {
     .info = SNDRV_PCM_INFO_MMAP | SNDRV_PCM_INFO_INTERLEAVED |
             SNDRV_PCM_INFO_BLOCK_TRANSFER | SNDRV_PCM_INFO_MMAP_VALID,
-    .formats = SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S24_LE | SNDRV_PCM_FMTBIT_FLOAT_LE ,
+    .formats = SNDRV_PCM_FMTBIT_S16_BE | SNDRV_PCM_FMTBIT_S24_3BE | SNDRV_PCM_FMTBIT_FLOAT_BE,
     .rates = SNDRV_PCM_RATE_44100 | SNDRV_PCM_RATE_48000 | SNDRV_PCM_RATE_96000,
     .rate_min = 44100,
     .rate_max = 96000,
@@ -264,7 +264,7 @@ static uint32_t fusion_cn_get_stream_buffer_offset(void *rawchip, uint64_t strea
     return offset;
 }
 
-static int fusion_cn_pcm_interrupt(void *rawchip, int direction, uint64_t stream_handle)
+__always_inline static int fusion_cn_pcm_interrupt(void *rawchip, int direction, uint64_t stream_handle)
 {
     struct fusion_cn_chip *chip = rawchip;
     unsigned long flags;
@@ -806,7 +806,7 @@ static struct snd_pcm_ops fusion_cn_pcm_ops = {
     .copy_user = fusion_cn_pcm_copy_user,
     .fill_silence = fusion_cn_pcm_silence,
 #endif
-    .ack = fusion_cn_pcm_ack,
+    .ack = fusion_cn_pcm_ack
 };
 
 static int fusion_cn_open_substream(void *rawchip, uint64_t stream_handle, int direction,
@@ -840,9 +840,9 @@ static int fusion_cn_open_substream(void *rawchip, uint64_t stream_handle, int d
     printk(KERN_INFO "fusion_cn: open_substream: stream %llu, format=%d, channels=%u, rate=%u, frames_per_packet=%u\n",
            stream_handle, format, channels, rate, frames_per_packet);
 
-    if (format != SNDRV_PCM_FORMAT_S16_LE && 
-        format != SNDRV_PCM_FORMAT_S24_LE && 
-        format != SNDRV_PCM_FORMAT_FLOAT_LE) {
+    if (format != SNDRV_PCM_FORMAT_S16_BE && 
+        format != SNDRV_PCM_FORMAT_S24_3BE && 
+        format != SNDRV_PCM_FORMAT_FLOAT_BE) {
         printk(KERN_ERR "fusion_cn: open_substream: Stream %llu invalid format %d\n", stream_handle, format);
         return -EINVAL;
     }
@@ -896,8 +896,8 @@ static int fusion_cn_open_substream(void *rawchip, uint64_t stream_handle, int d
     stream->stream_index = stream_index;
     stream->pcm = pcm; /* Store PCM device */
 
-    printk(KERN_INFO "fusion_cn: open_substream: Allocated stream %llu at %p, refcount=%d, device=%d\n",
-           stream_handle, stream, kref_read(&stream->ref), stream_index);
+    printk(KERN_INFO "fusion_cn: open_substream: Allocated stream %llu, refcount=%d, device=%d\n",
+           stream_handle, kref_read(&stream->ref), stream_index);
 
     if (rate != 44100 && rate != 48000 && rate != 96000) {
         printk(KERN_ERR "fusion_cn: open_substream: Stream %llu rate %u invalid\n", stream_handle, rate);
@@ -912,8 +912,9 @@ static int fusion_cn_open_substream(void *rawchip, uint64_t stream_handle, int d
 
     packet_time_us = ((uint64_t)frames_per_packet * 1000000) / rate;
     is_96khz = rate == 96000;
-    is_32b = (format == SNDRV_PCM_FORMAT_FLOAT_LE || 
-              format == SNDRV_PCM_FORMAT_S24_LE);
+    // TODO: 24b
+    is_32b = (format == SNDRV_PCM_FORMAT_FLOAT_BE || 
+              format == SNDRV_PCM_FORMAT_S24_3BE);
 
     if (packet_time_us <= 125) {
         if (is_96khz) max_channels = is_32b ? 40 : 60;

@@ -164,12 +164,13 @@ int fusion_cn_nf_tx_packet(void *rtp_mgr, struct sk_buff *skb, uint32_t data_siz
     // Non-loopback: Send via network
     dev = dev_get_by_name(&init_net, nf->iface_name);
     if (!dev) {
-        printk(KERN_ERR "fusion_cn: Interface %s not found\n", nf->iface_name);
+        printk(KERN_ERR "fusion_cn: tx_packet: Interface %s not found\n", nf->iface_name);
         kfree_skb(skb);
         return -ENODEV;
     }
 
     if (data_size == 0) {
+        printk(KERN_ERR "fusion_cn: tx_packet: Empty data\n");
         dev_put(dev);
         kfree_skb(skb);
         return -EINVAL;

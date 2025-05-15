@@ -16,7 +16,6 @@
 #endif
 
 #define TIMER_BASE_INTERVAL_NS 333333
-#define BOUNDARY_INTERVAL_NS   1000000
 
 /* ALSA Callbacks */
 static int alsa_ops_attach_alsa_driver(void *cn_mgr, const struct fusion_cn_mgr_ops *ops, void *alsa_chip)
@@ -83,11 +82,7 @@ const struct fusion_cn_alsa_ops fusion_cn_alsa_ops = {
 /* RTP Callbacks */
 static uint64_t fusion_cn_rtp_get_phc_ns(void)
 {
-    struct timespec64 ts;
-
-    // Use system clock disciplined by phc2sys
-    ktime_get_real_ts64(&ts);
-    return (uint64_t)(ts.tv_sec * NSEC_PER_SEC + ts.tv_nsec);
+    return ktime_get_real_ns();
 }
 
 static void *fusion_cn_rtp_get_buffer(void *cn_mgr, uint64_t handle)
@@ -123,21 +118,14 @@ static uint32_t fusion_cn_rtp_get_avail_frames(void *cn_mgr, uint64_t handle)
     return size;
 }
 
-static void audio_frame_process(struct fusion_cn_manager *mgr)
+static void audio_frame_process(struct fusion_cn_manager *mgr, uint64_t current_phc_ns)
 {
     static int jitter_window = 10000;
-    uint64_t current_phc_ns;
     struct fusion_cn_rtp_stream *stream;
     struct handle_node *handle_node, *tmp;
     uint64_t handle;
     unsigned long flags;
     uint32_t current_slot;
-
-    current_phc_ns = fusion_cn_rtp_get_phc_ns();
-    if (current_phc_ns == 0) {
-        printk(KERN_ERR "fusion_cn: audio_frame_process: Failed to get PHC time\n");
-        return;
-    }
 
     read_lock_irqsave(&mgr->rtp.lock, flags);
     list_for_each_entry_safe(handle_node, tmp, &mgr->rtp.active_streams, node) {
@@ -150,17 +138,21 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
             }
 
             if (stream->info.is_source) {
-                if (stream->next_action_time != 0 && current_phc_ns >= stream->next_action_time - jitter_window) {
+                if (stream->next_action_time == 0) {
+                    // Align to the next tick
+                    stream->next_action_time = mgr->ptp.hrtimer_next_tick_ns;
+                } else if (mgr->ptp.hrtimer_next_tick_ns >= stream->next_action_time - jitter_window) {
                     fusion_cn_rtp_send_packet(&mgr->rtp, stream);
                     mgr->alsa.mgr_callbacks->pcm_interrupt(mgr->alsa.alsa_chip, SNDRV_PCM_STREAM_PLAYBACK, stream->info.stream_handle);
 
                     printk(KERN_DEBUG "fusion_cn: audio_frame_process: Source stream %llu, current_phc=%llu, next_action_time=%llu\n",
                         stream->info.stream_handle, current_phc_ns, stream->next_action_time);
             
-                    stream->next_action_time += stream->packet_time;
-                } else if (stream->next_action_time == 0) {
-                    // Align to the next 1 ms boundary
-                    stream->next_action_time = current_phc_ns - (current_phc_ns % stream->packet_time) + stream->packet_time;
+                    if (stream->packet_time == TIMER_BASE_INTERVAL_NS) {
+                        stream->next_action_time = mgr->ptp.hrtimer_next_tick_ns;
+                    } else {
+                        stream->next_action_time += stream->packet_time;
+                    }
                 }
             } else {
                 current_slot = stream->playback_index % FUSION_CN_RTP_BUFFER_FRAMES;
@@ -182,16 +174,24 @@ static enum hrtimer_restart audio_frame_tick_hrtimer(struct hrtimer *timer)
 {
     struct fusion_cn_manager *mgr = container_of(timer, struct fusion_cn_manager, ptp.audio_timer);
 
-    audio_frame_process(mgr);
+    audio_frame_process(mgr, fusion_cn_rtp_get_phc_ns());
 
-    hrtimer_forward_now(timer, ns_to_ktime(TIMER_BASE_INTERVAL_NS));
+    hrtimer_start(timer, ns_to_ktime(mgr->ptp.hrtimer_next_tick_ns), HRTIMER_MODE_ABS);
+
+    mgr->ptp.hrtimer_next_tick_ns += TIMER_BASE_INTERVAL_NS;
+    // after 3 ticks, square the tick with the ms
+    if (++mgr->ptp.tick_count % 3 == 0) {
+        mgr->ptp.tick_count = 0;
+        mgr->ptp.hrtimer_next_tick_ns += 1;
+    }
+
     return HRTIMER_RESTART;
 }
 
 static irqreturn_t audio_frame_tick_gpio(int irq, void *dev_id)
 {
     struct fusion_cn_manager *mgr = dev_id;
-    audio_frame_process(mgr);
+    audio_frame_process(mgr, fusion_cn_rtp_get_phc_ns());
     return IRQ_HANDLED;
 }
 
@@ -249,7 +249,7 @@ static int fusion_cn_ptp_init(struct fusion_cn_manager *mgr)
         disable_irq(mgr->ptp.gpio_irq);
     } else {
         mgr->ptp.ptp_timing_mode = TIMING_HRTIMER;
-        hrtimer_init(&mgr->ptp.audio_timer, CLOCK_REALTIME, HRTIMER_MODE_REL);
+        hrtimer_init(&mgr->ptp.audio_timer, CLOCK_REALTIME, HRTIMER_MODE_ABS);
         mgr->ptp.audio_timer.function = audio_frame_tick_hrtimer;
         mgr->ptp.gpio_irq = -1;
         mgr->ptp.gpio_pin = -1;
@@ -342,8 +342,7 @@ bool fusion_cn_mgr_start(struct fusion_cn_manager *mgr)
 
     if (mgr->ptp.ptp_timing_mode == TIMING_HRTIMER) {
         uint64_t current_phc_ns;
-        uint64_t offset_to_next_boundary;
-        ktime_t initial_delay;
+        uint64_t first_tick;
 
         // Get current PHC time
         current_phc_ns = fusion_cn_rtp_get_phc_ns();
@@ -352,14 +351,15 @@ bool fusion_cn_mgr_start(struct fusion_cn_manager *mgr)
             return false;
         }
 
-        // Compute offset to the next tick boundary (333,333 ns)
-        offset_to_next_boundary = TIMER_BASE_INTERVAL_NS - (current_phc_ns % TIMER_BASE_INTERVAL_NS);
-        initial_delay = ns_to_ktime(offset_to_next_boundary);
+        // Align to the next 1 ms boundary
+        first_tick = current_phc_ns - (current_phc_ns % NSEC_PER_MSEC) + NSEC_PER_MSEC;
 
-        // Start hrtimer with initial delay to align with boundary
-        hrtimer_start(&mgr->ptp.audio_timer, initial_delay, HRTIMER_MODE_REL);
-        printk(KERN_INFO "fusion_cn: mgr_start: Aligned hrtimer to PHC boundary, initial delay=%llu ns\n",
-               offset_to_next_boundary);
+        // Start hrtimer first tick to the next 1 ms boundary
+        hrtimer_start(&mgr->ptp.audio_timer, ns_to_ktime(first_tick), HRTIMER_MODE_ABS);
+        mgr->ptp.hrtimer_next_tick_ns = first_tick + TIMER_BASE_INTERVAL_NS;
+        mgr->ptp.tick_count = 1; // start from 1 bc next tick
+        printk(KERN_INFO "fusion_cn: mgr_start: Aligned hrtimer to PHC boundary, current_phc=%llu, first_tick=%llu ns\n",
+               current_phc_ns, first_tick);
     } else if (mgr->ptp.ptp_timing_mode == TIMING_GPIO_INTERRUPT && mgr->ptp.gpio_irq >= 0) {
         enable_irq(mgr->ptp.gpio_irq);
     } else {
@@ -456,7 +456,6 @@ static int handle_add_stream(struct fusion_cn_manager *mgr, struct fusion_cn_ctr
         read_unlock_irqrestore(&mgr->rtp.lock, flags);
     }
 
-    printk(KERN_INFO "fusion_cn: handle_add_stream: Calling fusion_cn_rtp_add_stream with handle %llu\n", config->stream_handle);
     ret = fusion_cn_rtp_add_stream(&mgr->rtp, config, &handle);
     if (ret < 0) {
         printk(KERN_ERR "fusion_cn: handle_add_stream: fusion_cn_rtp_add_stream failed: %d\n", ret);
@@ -472,7 +471,6 @@ static int handle_add_stream(struct fusion_cn_manager *mgr, struct fusion_cn_ctr
 
     /* for rtp source we have alsa playback and vice versa */
     direction = config->is_source ? SNDRV_PCM_STREAM_PLAYBACK : SNDRV_PCM_STREAM_CAPTURE;
-    printk(KERN_INFO "fusion_cn: handle_add_stream: Calling open_substream\n");
     ret = mgr->alsa.mgr_callbacks->open_substream(mgr->alsa.alsa_chip, handle, direction,
                                                   config->channels, config->sample_rate, config->format);
     if (ret < 0) {

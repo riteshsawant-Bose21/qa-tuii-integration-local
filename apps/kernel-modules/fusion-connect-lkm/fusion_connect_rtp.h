@@ -35,7 +35,7 @@ struct fusion_cn_stream_config {
     uint8_t payload_type;
     uint32_t playout_delay;
     uint8_t is_source;
-    char name[64];
+    uint8_t is_fusion_connect;
 } __attribute__((packed));
 
 struct fusion_cn_rtp_ops {

@@ -55,8 +55,8 @@ struct fusion_cn_alsa {
 struct fusion_cn_ptp {
     enum ptp_timing_mode ptp_timing_mode;
     struct hrtimer audio_timer;
-    struct file *phc_file;
-    uint64_t base_tick_phc_ns;
+    uint64_t hrtimer_next_tick_ns;
+    uint8_t tick_count;
     int gpio_irq;
     int gpio_pin;
 };
