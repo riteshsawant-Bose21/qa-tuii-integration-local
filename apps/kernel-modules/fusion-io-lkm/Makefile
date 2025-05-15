@@ -11,6 +11,9 @@ fusion_io-y := fusion_io_device.o \
 # Default target
 all:
 	$(MAKE) -C $(KDIR) M=$(PWD) ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE) modules
+	
+modules_install:
+	$(MAKE) -C $(KDIR) M=$(PWD) ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE) modules_install
 
 # Clean target
 clean:
