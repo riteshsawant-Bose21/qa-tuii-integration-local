@@ -102,6 +102,7 @@ func parseFlags() *api.AppConfig {
 	nodeName := flag.String("name", "", "Node name")
 	bindAddr := flag.String("addr", "0.0.0.0", "Bind address")
 	bindPort := flag.Int("port", 7946, "Bind port")
+	local := flag.Bool("local", false, "Local mode")
 	verbose := flag.Bool("verbose", false, "Verbose output")
 	flag.Parse()
 
@@ -118,6 +119,7 @@ func parseFlags() *api.AppConfig {
 		NodeName: *nodeName,
 		BindAddr: *bindAddr,
 		BindPort: *bindPort,
+		Local:    *local,
 		Verbose:  *verbose,
 	}
 }

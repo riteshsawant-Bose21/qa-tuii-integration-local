@@ -149,7 +149,7 @@ Make targets:
 
 **Run binary built for local machine**
 ```bash
-./build/fusion-server_darwin_arm64 --name fusion1
+./build/fusion-server_darwin_arm64 --name fusion1 --local
 ```
 
 NOTE: Local builds don't support haproxy, keepalived or memberlist. You can ignore log output about issues related to this.

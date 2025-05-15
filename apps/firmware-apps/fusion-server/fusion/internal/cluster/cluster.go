@@ -58,8 +58,6 @@ type Cluster struct {
 
 func NewCluster(appConfig *api.AppConfig, delegate *ClusterDelegate, memberlist *memberlist.Memberlist) *Cluster {
 
-	logger := logging.GetLogger()
-
 	cluster := &Cluster{
 		nodeName:         appConfig.NodeName,
 		bindAddr:         appConfig.BindAddr,
@@ -71,23 +69,27 @@ func NewCluster(appConfig *api.AppConfig, delegate *ClusterDelegate, memberlist 
 		networkLatencies: NewNetworkLatencyStore(maxLatencyCount, latencyPruneTime),
 	}
 
-	if err := cluster.startVRRPListener(); err != nil {
-		logger.Fatal("Failed to start VRRP listener: %v", err)
-	}
+	if !appConfig.Local {
+		logger := logging.GetLogger()
 
-	vips, err := cluster.getVIPFromConfig()
-	if err != nil {
-		logger.Fatal("Failed to get VIP: %v", err)
-	}
+		if err := cluster.startVRRPListener(); err != nil {
+			logger.Fatal("Failed to start VRRP listener: %v", err)
+		}
 
-	for _, vip := range vips {
-		if _, isVip := cluster.isLocalVIP(vip); isVip {
-			if err := cluster.delegate.taskManager.Start(); err != nil {
-				logger.Fatal("Failed to start TaskManger: %v", err)
-			} else {
-				logger.Info("TaskManager running on: %s", appConfig.NodeName)
+		vips, err := cluster.getVIPFromConfig()
+		if err != nil {
+			logger.Fatal("Failed to get VIP: %v", err)
+		}
+
+		for _, vip := range vips {
+			if _, isVip := cluster.isLocalVIP(vip); isVip {
+				if err := cluster.delegate.taskManager.Start(); err != nil {
+					logger.Fatal("Failed to start TaskManger: %v", err)
+				} else {
+					logger.Info("TaskManager running on: %s", appConfig.NodeName)
+				}
+				break
 			}
-			break
 		}
 	}
 

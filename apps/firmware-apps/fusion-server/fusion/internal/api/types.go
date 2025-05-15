@@ -16,6 +16,7 @@ type AppConfig struct {
 	NodeName string
 	BindAddr string
 	BindPort int
+	Local    bool
 	Verbose  bool
 }
 
