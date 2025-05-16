@@ -78,7 +78,7 @@ static int configure_i2c_mux_adapters(struct platform_device *pdev)
         return -ENOMEM;
 
     for (int i = 0; i < num_adapters; ++i) {
-        ret = i2c_mux_add_adapter(bd->muxc, 0, i, 0);
+        ret = i2c_mux_add_adapter(bd->muxc, 0, i);
         if (ret < 0) {
             dev_err(&pdev->dev, "Failed to add mux adapter for channel %d\n", i);
             return ret;
@@ -1120,7 +1120,7 @@ static struct endpoint *new_default_endpoint(enum endpoint_type ep_type)
     return NULL;
 }
 
-static int fusion_io_remove(struct platform_device *pdev)
+static void fusion_io_remove(struct platform_device *pdev)
 {
     struct base_device *bd = bd_drvdata->fusion_device;
     struct endpoint *ep;
@@ -1129,7 +1129,7 @@ static int fusion_io_remove(struct platform_device *pdev)
     int i, j;
 
     if (bd == NULL) {
-        return 0;
+        return;
     }
 
     // clear base device endpoint i2c clients
@@ -1181,8 +1181,6 @@ static int fusion_io_remove(struct platform_device *pdev)
     }
 
     fusion_io_remove_sysfs_base(pdev);
-
-    return 0;
 }
 
 static int fusion_io_probe(struct platform_device *pdev)

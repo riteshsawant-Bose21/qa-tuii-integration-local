@@ -827,7 +827,7 @@ int fusion_io_create_sysfs_base(struct platform_device *pdev)
 
     int ret;
 
-    fusion_io_class = class_create(THIS_MODULE, "bosepro");
+    fusion_io_class = class_create("bosepro");
     if (IS_ERR(fusion_io_class)) {
         dev_err(&pdev->dev, "Failed to create fusion io class\n");
         return PTR_ERR(fusion_io_class);
