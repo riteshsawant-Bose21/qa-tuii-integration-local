@@ -20,6 +20,7 @@ const (
 	fusionBucketName    = "fusion"
 	metadataKey         = "metadata"
 	tasksBucketName     = "tasks"
+	deviceBucketName    = "device"
 )
 
 // PersistentState represents the saved state structure.
@@ -309,11 +310,19 @@ func (p *Persistence) createDefaultBuckets() error {
 
 	return p.db.Update(func(tx *bbolt.Tx) error {
 
-		_, err := tx.CreateBucketIfNotExists([]byte(tasksBucketName))
+		// Device
+		_, err := tx.CreateBucketIfNotExists([]byte(deviceBucketName))
+		if err != nil {
+			return fmt.Errorf("failed to create bucket '%s': %w", deviceBucketName, err)
+		}
+
+		// Tasks
+		_, err = tx.CreateBucketIfNotExists([]byte(tasksBucketName))
 		if err != nil {
 			return fmt.Errorf("failed to create bucket '%s': %w", tasksBucketName, err)
 		}
 
+		// Snapshots
 		fusionBucket, err := tx.CreateBucketIfNotExists([]byte(snapshotsBucketName))
 		if err != nil {
 			return fmt.Errorf("failed to create bucket '%s': %w", snapshotsBucketName, err)

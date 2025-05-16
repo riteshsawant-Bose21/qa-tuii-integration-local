@@ -623,6 +623,54 @@ func (s *ConfigServer) GetMembers(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// HandeSetupDeviceName set the device name
+func (s *ConfigServer) HandeSetupDeviceName(w http.ResponseWriter, r *http.Request) {
+
+	if !utils.IsPostRequest(r) {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Read the request body.
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error reading request body: %v", err), http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+
+	// Unmarshal the JSON data
+	var state api.UpdateDeviceName
+	err = json.Unmarshal(body, &state)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("error unmarshaling json: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// This name is user-facing and •maybe• has no impact on the internal function
+	// of the server, except as a lookup between logical device name and user-facing name.
+
+	// We do have a local database. That database is a boltdb JSON database that is used currently to
+	// store the global config state and metadata about that current state.
+	// We should consider storing device specific configuation data that we want to persist across
+	// launches in the database in a bucket specific to the device.
+	// Look at persistance.saveMetadata for an example of how we would write this info to the database
+	// We will need load, save, update functions for device-specific info
+
+	// This name needs to fullfill a few requirements:
+	//  ° Unique across network?
+	//  ° Correlated to the actual device hardware and/or DRO unique ID
+	//  ° Stored local to device and loaded on demand
+	//  ° We will a way to get the info for each device. Consider using a private HTTP
+	//    endpoint similar to get HandleGetNetworkLatencyLocal. This will be registered as a private
+	//    endpoint and make no calls to other nodes.
+
+	// Do this:  Have a public endpoint: GetDeviceNames()
+	// In that public endpoint, iterate through the memberlist nodes. If we are the local node,
+	// just call the function that access the database directly, otherwise make a http call on the ADMIN port (9090)
+	// to the GetDeviceNameLocal()
+}
+
 // getSingleQueryParam retrieves the value of a query parameter if it exists exactly once.
 // It returns an empty string if the parameter is missing and an error if it appears multiple times
 // or contains invalid characters.

@@ -29,6 +29,12 @@ type ConfigUpdate struct {
 	Clear   bool
 }
 
+// UpdateDeviceName represents the name of a device
+type UpdateDeviceName struct {
+	IPAddress    string
+	ProposedName string
+}
+
 // NewConfigUpdate returns a configured ConfigUpdate
 func NewConfigUpdate(data map[string]any) (*ConfigUpdate, error) {
 

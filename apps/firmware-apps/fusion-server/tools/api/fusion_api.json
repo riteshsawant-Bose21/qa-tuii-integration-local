@@ -93,9 +93,139 @@
       "items": [
         {
           "type": "http",
+          "name": "Cluster Latency Status",
+          "filename": "Cluster Latency Status.bru",
+          "seq": 2,
+          "request": {
+            "url": "{{admin_url}}/cluster/latency/status/local",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Cluster Network Failures Local",
+          "filename": "Cluster Network Failures Local.bru",
+          "seq": 4,
+          "request": {
+            "url": "{{admin_url}}/cluster/latency/network/failures/local",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Cluster Network Latency Local",
+          "filename": "Cluster Network Latency Local.bru",
+          "seq": 1,
+          "request": {
+            "url": "{{admin_url}}/cluster/latency/network/local",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Cluster Sync Latency Averages Local",
+          "filename": "Cluster Sync Latency Averages Local.bru",
+          "seq": 3,
+          "request": {
+            "url": "{{admin_url}}/cluster/latency/sync/averages/local",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Cluster Sync Latency Local",
+          "filename": "Cluster Sync Latency Local.bru",
+          "seq": 5,
+          "request": {
+            "url": "{{admin_url}}/cluster/latency/sync/local",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
           "name": "Export Data",
           "filename": "Export Data.bru",
-          "seq": 5,
+          "seq": 7,
           "request": {
             "url": "{{admin_url}}/exportData",
             "method": "GET",
@@ -121,7 +251,7 @@
           "type": "http",
           "name": "Export State",
           "filename": "Export State.bru",
-          "seq": 4,
+          "seq": 6,
           "request": {
             "url": "{{admin_url}}/exportState",
             "method": "GET",
@@ -147,7 +277,7 @@
           "type": "http",
           "name": "Import Data",
           "filename": "Import Data.bru",
-          "seq": 7,
+          "seq": 9,
           "request": {
             "url": "{{admin_url}}/importData",
             "method": "POST",
@@ -174,7 +304,7 @@
           "type": "http",
           "name": "Import State",
           "filename": "Import State.bru",
-          "seq": 6,
+          "seq": 8,
           "request": {
             "url": "{{admin_url}}/importState",
             "method": "POST",
@@ -196,118 +326,26 @@
               "mode": "none"
             }
           }
-        },
-        {
-          "type": "http",
-          "name": "Cluster Network Latency Local",
-          "filename": "Cluster Network Latency Local.bru",
-          "seq": 1,
-          "request": {
-            "url": "{{metrics_url}}/cluster/latency/network/local",
-            "method": "GET",
-            "headers": [],
-            "params": [],
-            "body": {
-              "mode": "none",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        },
-        {
-          "type": "http",
-          "name": "Cluster Sync Latency Local",
-          "filename": "Cluster Sync Latency Local.bru",
-          "seq": 3,
-          "request": {
-            "url": "{{admin_url}}/cluster/latency/sync/local",
-            "method": "GET",
-            "headers": [],
-            "params": [],
-            "body": {
-              "mode": "none",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        },
-        {
-          "type": "http",
-          "name": "Cluster Sync Latency Averages Local",
-          "filename": "Cluster Sync Latency Averages Local.bru",
-          "seq": 2,
-          "request": {
-            "url": "{{admin_url}}/cluster/latency/sync/averages/local",
-            "method": "GET",
-            "headers": [],
-            "params": [],
-            "body": {
-              "mode": "none",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
         }
       ]
     },
     {
       "type": "folder",
-      "name": "Binaries",
-      "filename": "Binaries",
+      "name": "Metrics",
+      "filename": "Metrics",
       "items": [
         {
           "type": "http",
-          "name": "Rollback Version",
-          "filename": "Rollback Version.bru",
-          "seq": 1,
+          "name": "Cluster Latency Status",
+          "filename": "Cluster Latency Status.bru",
+          "seq": 4,
           "request": {
-            "url": "{{api_url}}/rollbackVersion?index=-1",
-            "method": "POST",
-            "headers": [
-              {
-                "name": "Content-Type",
-                "value": "application/json",
-                "enabled": true
-              }
-            ],
-            "params": [
-              {
-                "name": "index",
-                "value": "-1",
-                "type": "query",
-                "enabled": true
-              }
-            ],
+            "url": "{{metrics_url}}/cluster/latency/status",
+            "method": "GET",
+            "headers": [],
+            "params": [],
             "body": {
-              "mode": "json",
-              "json": "",
+              "mode": "none",
               "formUrlEncoded": [],
               "multipartForm": [],
               "file": []
@@ -324,33 +362,18 @@
         },
         {
           "type": "http",
-          "name": "Update Version",
-          "filename": "Update Version.bru",
-          "seq": 2,
+          "name": "Cluster NTP Skew",
+          "filename": "Cluster NTP Skew.bru",
+          "seq": 9,
           "request": {
-            "url": "{{api_url}}/updateVersion",
-            "method": "POST",
+            "url": "{{metrics_url}}/cluster/ntp-skew",
+            "method": "GET",
             "headers": [],
             "params": [],
             "body": {
-              "mode": "multipartForm",
+              "mode": "none",
               "formUrlEncoded": [],
-              "multipartForm": [
-                {
-                  "type": "file",
-                  "name": "binary",
-                  "value": [
-                    "/Users/gragan/inprogress/bose/fusion-server/build/fusion-server_linux_arm64"
-                  ],
-                  "enabled": true
-                },
-                {
-                  "type": "text",
-                  "name": "checksum",
-                  "value": "f6c38b795d725eaeeaefdc880f689dbe4d86811e055ed626cd0b7240d9130dd5",
-                  "enabled": true
-                }
-              ],
+              "multipartForm": [],
               "file": []
             },
             "script": {},
@@ -365,27 +388,174 @@
         },
         {
           "type": "http",
-          "name": "Upload Audio File",
-          "filename": "Upload Audio File.bru",
-          "seq": 3,
+          "name": "Cluster Network Failures",
+          "filename": "Cluster Network Failures.bru",
+          "seq": 7,
           "request": {
-            "url": "{{api_url}}/uploadAudio",
-            "method": "POST",
+            "url": "{{metrics_url}}/cluster/latency/network/failures",
+            "method": "GET",
             "headers": [],
             "params": [],
             "body": {
-              "mode": "multipartForm",
+              "mode": "none",
               "formUrlEncoded": [],
-              "multipartForm": [
-                {
-                  "type": "file",
-                  "name": "binary",
-                  "value": [
-                    "/Users/gragan/inprogress/semitone/PatternPro/vmpc-juce/editables/JUCE/extras/AudioPluginHost/Builds/Android/app/src/main/assets/cello.wav"
-                  ],
-                  "enabled": true
-                }
-              ],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Cluster Network Latency",
+          "filename": "Cluster Network Latency.bru",
+          "seq": 5,
+          "request": {
+            "url": "{{metrics_url}}/cluster/latency/network",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Cluster Status",
+          "filename": "Cluster Status.bru",
+          "seq": 3,
+          "request": {
+            "url": "{{metrics_url}}/cluster/status",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Cluster Sync Latency Averages",
+          "filename": "Cluster Sync Latency Averages.bru",
+          "seq": 6,
+          "request": {
+            "url": "{{metrics_url}}/cluster/latency/sync/averages",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Cluster Sync Latency",
+          "filename": "Cluster Sync Latency.bru",
+          "seq": 8,
+          "request": {
+            "url": "{{metrics_url}}/cluster/latency/sync",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Endpoints",
+          "filename": "Endpoints.bru",
+          "seq": 2,
+          "request": {
+            "url": "{{api_url}}/endpoints",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Metrics",
+          "filename": "Metrics.bru",
+          "seq": 1,
+          "request": {
+            "url": "{{metrics_url}}/metrics",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
               "file": []
             },
             "script": {},
@@ -695,32 +865,6 @@
         },
         {
           "type": "http",
-          "name": "List All",
-          "filename": "List All.bru",
-          "seq": 1,
-          "request": {
-            "url": "{{api_url}}/tasks",
-            "method": "GET",
-            "headers": [],
-            "params": [],
-            "body": {
-              "mode": "none",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        },
-        {
-          "type": "http",
           "name": "Get",
           "filename": "Get.bru",
           "seq": 2,
@@ -745,6 +889,32 @@
             "body": {
               "mode": "json",
               "json": "{\n  \"cron_expr\": \"*/5 * * * *\",\n  \"description\": \"updated\"\n}",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "List All",
+          "filename": "List All.bru",
+          "seq": 1,
+          "request": {
+            "url": "{{api_url}}/tasks",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
               "formUrlEncoded": [],
               "multipartForm": [],
               "file": []
@@ -787,6 +957,457 @@
               "json": "{\n  \"cron_expr\": \"*/5 * * * *\",\n  \"description\": \"updated\"\n}",
               "formUrlEncoded": [],
               "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "folder",
+      "name": "PAVA",
+      "filename": "PAVA",
+      "root": {
+        "meta": {
+          "name": "PAVA"
+        }
+      },
+      "items": [
+        {
+          "type": "http",
+          "name": "Cancel active alarms",
+          "filename": "Cancel active alarms.bru",
+          "seq": 8,
+          "request": {
+            "url": "{{baseUrl}}/api/v1/pava/cancel",
+            "method": "POST",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "json",
+              "json": "{\n  \"zones\": []\n}",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Delete an audio message",
+          "filename": "Delete an audio message.bru",
+          "seq": 4,
+          "request": {
+            "url": "{{baseUrl}}/api/v1/pava/messages/:message_id",
+            "method": "DELETE",
+            "headers": [],
+            "params": [
+              {
+                "name": "message_id",
+                "value": "",
+                "type": "path",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Get overall system status",
+          "filename": "Get overall system status.bru",
+          "seq": 7,
+          "request": {
+            "url": "{{baseUrl}}/api/v1/pava/status",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Get status of a specific zone",
+          "filename": "Get status of a specific zone.bru",
+          "seq": 6,
+          "request": {
+            "url": "{{baseUrl}}/api/v1/pava/zones/:zone_id/status",
+            "method": "GET",
+            "headers": [],
+            "params": [
+              {
+                "name": "zone_id",
+                "value": "",
+                "type": "path",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "List available audio messages",
+          "filename": "List available audio messages.bru",
+          "seq": 1,
+          "request": {
+            "url": "{{baseUrl}}/api/v1/pava/messages",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "List scheduled messages",
+          "filename": "List scheduled messages.bru",
+          "seq": 9,
+          "request": {
+            "url": "{{baseUrl}}/api/v1/pava/schedule",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "List zones",
+          "filename": "List zones.bru",
+          "seq": 5,
+          "request": {
+            "url": "{{baseUrl}}/api/v1/pava/zones",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Schedule a message",
+          "filename": "Schedule a message.bru",
+          "seq": 10,
+          "request": {
+            "url": "{{baseUrl}}/api/v1/pava/schedule",
+            "method": "POST",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "json",
+              "json": "{\n  \"message_id\": \"\",\n  \"zones\": [],\n  \"start_time\": \"\",\n  \"priority\": \"\"\n}",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "System diagnostics",
+          "filename": "System diagnostics.bru",
+          "seq": 11,
+          "request": {
+            "url": "{{baseUrl}}/api/v1/pava/diagnostics",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Trigger a pre-recorded message",
+          "filename": "Trigger a pre-recorded message.bru",
+          "seq": 2,
+          "request": {
+            "url": "{{baseUrl}}/api/v1/pava/trigger",
+            "method": "POST",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "json",
+              "json": "{\n  \"message_id\": \"\",\n  \"zones\": [],\n  \"priority\": \"\"\n}",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Upload an audio message",
+          "filename": "Upload an audio message.bru",
+          "seq": 3,
+          "request": {
+            "url": "{{baseUrl}}/api/v1/pava/messages",
+            "method": "POST",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "multipartForm",
+              "formUrlEncoded": [],
+              "multipartForm": [
+                {
+                  "type": "text",
+                  "name": "file",
+                  "value": "",
+                  "enabled": true
+                },
+                {
+                  "type": "text",
+                  "name": "id",
+                  "value": "",
+                  "enabled": true
+                }
+              ],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "folder",
+      "name": "Binaries",
+      "filename": "Binaries",
+      "items": [
+        {
+          "type": "http",
+          "name": "Rollback Version",
+          "filename": "Rollback Version.bru",
+          "seq": 1,
+          "request": {
+            "url": "{{api_url}}/rollbackVersion?index=-1",
+            "method": "POST",
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/json",
+                "enabled": true
+              }
+            ],
+            "params": [
+              {
+                "name": "index",
+                "value": "-1",
+                "type": "query",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "json",
+              "json": "",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Update Version",
+          "filename": "Update Version.bru",
+          "seq": 2,
+          "request": {
+            "url": "{{api_url}}/updateVersion",
+            "method": "POST",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "multipartForm",
+              "formUrlEncoded": [],
+              "multipartForm": [
+                {
+                  "type": "file",
+                  "name": "binary",
+                  "value": [
+                    "/Users/gragan/inprogress/bose/fusion-server/build/fusion-server_linux_arm64"
+                  ],
+                  "enabled": true
+                },
+                {
+                  "type": "text",
+                  "name": "checksum",
+                  "value": "f6c38b795d725eaeeaefdc880f689dbe4d86811e055ed626cd0b7240d9130dd5",
+                  "enabled": true
+                }
+              ],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Upload Audio File",
+          "filename": "Upload Audio File.bru",
+          "seq": 3,
+          "request": {
+            "url": "{{api_url}}/uploadAudio",
+            "method": "POST",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "multipartForm",
+              "formUrlEncoded": [],
+              "multipartForm": [
+                {
+                  "type": "file",
+                  "name": "binary",
+                  "value": [
+                    "/Users/gragan/inprogress/semitone/PatternPro/vmpc-juce/editables/JUCE/extras/AudioPluginHost/Builds/Android/app/src/main/assets/cello.wav"
+                  ],
+                  "enabled": true
+                }
+              ],
               "file": []
             },
             "script": {},
@@ -1005,198 +1626,9 @@
           }
         }
       ]
-    },
-    {
-      "type": "folder",
-      "name": "Metrics",
-      "filename": "Metrics",
-      "items": [
-        {
-          "type": "http",
-          "name": "Cluster Status",
-          "filename": "Cluster Status.bru",
-          "seq": 3,
-          "request": {
-            "url": "{{metrics_url}}/cluster/status",
-            "method": "GET",
-            "headers": [],
-            "params": [],
-            "body": {
-              "mode": "none",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        },
-        {
-          "type": "http",
-          "name": "Endpoints",
-          "filename": "Endpoints.bru",
-          "seq": 2,
-          "request": {
-            "url": "{{api_url}}/endpoints",
-            "method": "GET",
-            "headers": [],
-            "params": [],
-            "body": {
-              "mode": "none",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        },
-        {
-          "type": "http",
-          "name": "Metrics",
-          "filename": "Metrics.bru",
-          "seq": 1,
-          "request": {
-            "url": "{{metrics_url}}/metrics",
-            "method": "GET",
-            "headers": [],
-            "params": [],
-            "body": {
-              "mode": "none",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        },
-        {
-          "type": "http",
-          "name": "Cluster Sync Latency",
-          "filename": "Cluster Sync Latency.bru",
-          "seq": 5,
-          "request": {
-            "url": "{{metrics_url}}/cluster/latency/sync",
-            "method": "GET",
-            "headers": [],
-            "params": [],
-            "body": {
-              "mode": "none",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        },
-        {
-          "type": "http",
-          "name": "Cluster Sync Latency Averages",
-          "filename": "Cluster Sync Latency Averages.bru",
-          "seq": 6,
-          "request": {
-            "url": "{{metrics_url}}/cluster/latency/sync/averages",
-            "method": "GET",
-            "headers": [],
-            "params": [],
-            "body": {
-              "mode": "none",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        },
-        {
-          "type": "http",
-          "name": "Cluster NTP Skew",
-          "filename": "Cluster NTP Skew.bru",
-          "seq": 7,
-          "request": {
-            "url": "{{metrics_url}}/cluster/ntp-skew",
-            "method": "GET",
-            "headers": [],
-            "params": [],
-            "body": {
-              "mode": "none",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        },
-        {
-          "type": "http",
-          "name": "Cluster Network Latency",
-          "filename": "Cluster Network Latency.bru",
-          "seq": 4,
-          "request": {
-            "url": "{{metrics_url}}/cluster/latency/network",
-            "method": "GET",
-            "headers": [],
-            "params": [],
-            "body": {
-              "mode": "none",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        }
-      ]
     }
   ],
-  "activeEnvironmentUid": "703o850fCAaPyBh7Lwgul",
+  "activeEnvironmentUid": "87Pj29dNeIrQQhtquA4Rv",
   "environments": [
     {
       "variables": [
@@ -1270,7 +1702,7 @@
       "node_modules",
       ".git"
     ],
-    "size": 0.008111953735351562,
-    "filesCount": 36
+    "size": 0.009688377380371094,
+    "filesCount": 47
   }
 }

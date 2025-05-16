@@ -1,5 +1,18 @@
 package routes
 
+import (
+	"encoding/json"
+	"fmt"
+	"fusion/internal/api"
+	"net/http"
+
+	"github.com/gorilla/mux"
+)
+
+var (
+	Endpoints []string
+)
+
 const (
 	RootEndpoint        = "/"
 	EndpointsEndpoint   = "/endpoints"
@@ -38,8 +51,59 @@ const (
 
 	MetricsEndpoint = "/metrics"
 
+	SetupDeviceName = "/device/setup"
+
 	ExportDataEndport  = "/exportData"
 	ImportDataEndport  = "/importData"
 	ExportStateEndport = "/exportState"
 	ImportStateEndport = "/importState"
 )
+
+func RegisterPrivateEndpoint(router *mux.Router, method string, pattern string, handler http.HandlerFunc) {
+	RegisterEndpoint(router, method, pattern, handler, false)
+}
+
+func RegisterPrivateGET(router *mux.Router, pattern string, handler http.HandlerFunc) {
+	RegisterPrivateEndpoint(router, "GET", pattern, handler)
+}
+
+func RegisterPrivatePOST(router *mux.Router, pattern string, handler http.HandlerFunc) {
+	RegisterPrivateEndpoint(router, "POST", pattern, handler)
+}
+
+func RegisterPublicEndpoint(router *mux.Router, method string, pattern string, handler http.HandlerFunc) {
+	RegisterEndpoint(router, method, pattern, handler, true)
+}
+
+func RegisterPublicDELETE(router *mux.Router, pattern string, handler http.HandlerFunc) {
+	RegisterPublicEndpoint(router, "DELETE", pattern, handler)
+}
+
+func RegisterPublicGET(router *mux.Router, pattern string, handler http.HandlerFunc) {
+	RegisterPublicEndpoint(router, "GET", pattern, handler)
+}
+
+func RegisterPublicPATCH(router *mux.Router, pattern string, handler http.HandlerFunc) {
+	RegisterPublicEndpoint(router, "PATCH", pattern, handler)
+}
+
+func RegisterPublicPOST(router *mux.Router, pattern string, handler http.HandlerFunc) {
+	RegisterPublicEndpoint(router, "POST", pattern, handler)
+}
+
+func RegisterPublicPUT(router *mux.Router, pattern string, handler http.HandlerFunc) {
+	RegisterPublicEndpoint(router, "PUT", pattern, handler)
+}
+
+// RegisterEndpoint registers a handler and tracks the endpoint.
+func RegisterEndpoint(router *mux.Router, method string, pattern string, handler http.HandlerFunc, public bool) {
+	if public {
+		Endpoints = append(Endpoints, fmt.Sprintf("%s %s", method, pattern))
+	}
+	router.HandleFunc(pattern, handler).Methods(method)
+}
+
+func ListRegisteredEndpoints(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
+	json.NewEncoder(w).Encode(map[string]any{"routes": Endpoints})
+}
