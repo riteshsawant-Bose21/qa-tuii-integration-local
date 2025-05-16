@@ -46,7 +46,7 @@ struct fusion_sound_card_priv {
 static int fusion_sound_card_hw_params(struct snd_pcm_substream *substream,
                                        struct snd_pcm_hw_params *params)
 {
-    struct snd_soc_pcm_runtime *rtd = asoc_substream_to_rtd(substream);
+    struct snd_soc_pcm_runtime *rtd = snd_soc_substream_to_rtd(substream);
     struct fusion_sound_card_priv *priv = snd_soc_card_get_drvdata(rtd->card);
     struct cpu_priv *cpu_priv = &priv->cpu_priv;
     struct device *dev = rtd->card->dev;
@@ -64,7 +64,7 @@ static int fusion_sound_card_hw_params(struct snd_pcm_substream *substream,
     dev_info(dev, "slots = %d, slot_width = %d\n", slots, slot_width);
 
     /* Configure sysclk separately for each IO card */
-    ret = snd_soc_dai_set_sysclk(asoc_rtd_to_cpu(rtd, 0), 
+    ret = snd_soc_dai_set_sysclk(snd_soc_rtd_to_cpu(rtd, 0), 
                                  cpu_priv->sysclk_id[tx],
                                  cpu_priv->sysclk_freq[tx],
                                  cpu_priv->sysclk_dir[tx]);
@@ -74,7 +74,7 @@ static int fusion_sound_card_hw_params(struct snd_pcm_substream *substream,
     }
 
     /* Set TDM slot configuration */
-    ret = snd_soc_dai_set_tdm_slot(asoc_rtd_to_cpu(rtd, 0), 
+    ret = snd_soc_dai_set_tdm_slot(snd_soc_rtd_to_cpu(rtd, 0), 
                                    BIT(slots) - 1, BIT(slots) - 1, 
                                    slots, slot_width);
     if (ret && ret != -ENOTSUPP) {
@@ -257,12 +257,10 @@ error:
     return ret;
 }
 
-static int fusion_sound_card_remove(struct platform_device *pdev)
+static void fusion_sound_card_remove(struct platform_device *pdev)
 {
     // auto unregister because of devm?
     dev_info(&pdev->dev, "Removing fusion sound card.\n");
-    
-    return 0;
 }
 
 static const struct of_device_id fusion_sound_card_of_match[] = {
