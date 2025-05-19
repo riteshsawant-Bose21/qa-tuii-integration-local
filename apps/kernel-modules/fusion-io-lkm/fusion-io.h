@@ -16,7 +16,7 @@
 #define MAX_STRING          32
 #define MAX_I2C_ADDRS       8
 
-#define I2C_ADAPTER 2
+#define I2C_ADAPTER 1
 
 
 /* I2C */

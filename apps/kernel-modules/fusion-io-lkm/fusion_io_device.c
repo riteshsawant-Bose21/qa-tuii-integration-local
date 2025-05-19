@@ -1210,56 +1210,59 @@ static int fusion_io_probe(struct platform_device *pdev)
     }
 
     // First, find secure eeprom. This is the only IC we have to discover from scratch
-    for (i = EP_TYPE_SEC_EEPROM_START; i < EP_TYPE_SEC_EEPROM_END; ++i) {
-        ep = new_default_endpoint(i);
-        if (ep == NULL) {
-            // only possible due to failed zalloc or memcpy
-            dev_err(&pdev->dev, "Couldn't get default endpoint for type %d\n", i);
-            return -ENOMEM;
-        }
+    // for (i = EP_TYPE_SEC_EEPROM_START; i < EP_TYPE_SEC_EEPROM_END; ++i) {
+    //     ep = new_default_endpoint(i);
+    //     if (ep == NULL) {
+    //         // only possible due to failed zalloc or memcpy
+    //         dev_err(&pdev->dev, "Couldn't get default endpoint for type %d\n", i);
+    //         return -ENOMEM;
+    //     }
 
-        i2c_client = endpoint_get_i2c_client(pdev, ep, i2c_adapter);
+    //     i2c_client = endpoint_get_i2c_client(pdev, ep, i2c_adapter);
 
-        if (i2c_client) {
-            break;
-        }
+    //     if (i2c_client) {
+    //         break;
+    //     }
 
-        kfree(ep);
-    }
+    //     kfree(ep);
+    // }
 
-    if (i2c_client) {
-        ep->i2c_client = i2c_client;
+    // if (i2c_client) {
+    //     ep->i2c_client = i2c_client;
  
-        // TODO: configure secure eeprom first time, then use?
-        ret = configure_i2c_endpoint(pdev, ep);
-        if (ret) {
-            dev_err(&pdev->dev, "Error configuring endpoint %s\n", ep->name);
-            goto error;
-        }
+    //     // TODO: configure secure eeprom first time, then use?
+    //     ret = configure_i2c_endpoint(pdev, ep);
+    //     if (ret) {
+    //         dev_err(&pdev->dev, "Error configuring endpoint %s\n", ep->name);
+    //         goto error;
+    //     }
         
-        // Here we can pull device data from secure eeprom.
-        i = i2c_smbus_read_i2c_block_data(i2c_client, 
-                                          ep->cmds[EP_CMD_EEPROM_RD_DATA].i2c_cmds[0].reg_addr, 
-                                          sizeof(data), 
-                                          (char *)&data);
+    //     // Here we can pull device data from secure eeprom.
+    //     i = i2c_smbus_read_i2c_block_data(i2c_client, 
+    //                                       ep->cmds[EP_CMD_EEPROM_RD_DATA].i2c_cmds[0].reg_addr, 
+    //                                       sizeof(data), 
+    //                                       (char *)&data);
 
-        if (i < 0) {
-            dev_err(&pdev->dev, "Bad I2C read of %s\n", ep->name);
-            goto error;
-        }
-    } else {
-        // TODO this is really an error! For var proto it's not
-        // dev_err(&pdev->dev, "Error getting i2c client for secure eeprom\n");
-        dev_info(&pdev->dev, "No secure eeprom found on mainboard\n");
+    //     if (i < 0) {
+    //         dev_err(&pdev->dev, "Bad I2C read of %s\n", ep->name);
+    //         goto error;
+    //     }
+    // } else {
+    //     // TODO this is really an error! For var proto it's not
+    //     // dev_err(&pdev->dev, "Error getting i2c client for secure eeprom\n");
+    //     dev_info(&pdev->dev, "No secure eeprom found on mainboard\n");
 
-        // Again, for var proto only
-        ep = NULL;
-        // just need device type so we can find it in the default configs
-        data.type = BD_TYPE_FUSION_VAR_PROTO;
+    //     // Again, for var proto only
+    //     ep = NULL;
+    //     // just need device type so we can find it in the default configs
+    //     data.type = BD_TYPE_FUSION_VAR_PROTO;
 
-        // ret = -ENODEV;
-        // goto error;
-    }
+    //     // ret = -ENODEV;
+    //     // goto error;
+    // }
+
+    ep = NULL;
+    data.type = BD_TYPE_FUSION_PROTO1;
     
     // set up the base_device
     bd = new_default_base_device(pdev, data.type);
@@ -1289,25 +1292,25 @@ static int fusion_io_probe(struct platform_device *pdev)
     // IDEA: maybe we can have patches for HW revisions? apply here
 
     // Now look for data eeprom. I'm thinking we don't end up usng it :)
-    if (bd->data_eeprom != NULL) {
-        ep = bd->data_eeprom;
-        i2c_client = endpoint_get_i2c_client(pdev, ep, bd->i2c_adapter);
+    // if (bd->data_eeprom != NULL) {
+    //     ep = bd->data_eeprom;
+    //     i2c_client = endpoint_get_i2c_client(pdev, ep, bd->i2c_adapter);
 
-        if (i2c_client) {
-            ep->i2c_client = i2c_client;
+    //     if (i2c_client) {
+    //         ep->i2c_client = i2c_client;
 
-            ret = configure_i2c_endpoint(pdev, ep);
-            if (ret) {
-                goto error;
-            }
-        } else {
-            dev_err(&pdev->dev, "Error getting i2c client for %s\n", ep->name);
-            ret = -ENODEV;
-            goto error;
-        }
-    } else {
-        dev_info(&pdev->dev, "No data eeprom on mainboard\n");
-    }
+    //         ret = configure_i2c_endpoint(pdev, ep);
+    //         if (ret) {
+    //             goto error;
+    //         }
+    //     } else {
+    //         dev_err(&pdev->dev, "Error getting i2c client for %s\n", ep->name);
+    //         ret = -ENODEV;
+    //         goto error;
+    //     }
+    // } else {
+    //     dev_info(&pdev->dev, "No data eeprom on mainboard\n");
+    // }
     
 
     // i2c switch

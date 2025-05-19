@@ -1,6 +1,7 @@
 *.vscode*
 Module.symvers
 modules.order
+*.d
 *.o
 *.ko
 *.mod*
