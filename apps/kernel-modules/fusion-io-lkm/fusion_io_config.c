@@ -679,13 +679,12 @@ const struct base_device bd_fusion_proto1 = {
             .num_cmds = 1,
             .cmds = (struct endpoint_cmd[]) {
                 {
-                    .name         = "cmd_set_i2c_out",
+                    .name         = "cmd_discover",
                     .type         = EP_CMD_TYPE_I2CSW_SET_PORT,
+                    .num_i2c_cmds = 1,
                     .i2c_cmds = (struct i2c_reg_data[]) {
                         {
-                            .reg_addr  = 0xff,
-                            .op_size   = I2C_REG_DATA_OP_8BIT,
-                            .data_mask = 0x04
+                            .reg_addr  = I2C_REG_DATA_ADDR_NONE
                         }
                     }
                 }
