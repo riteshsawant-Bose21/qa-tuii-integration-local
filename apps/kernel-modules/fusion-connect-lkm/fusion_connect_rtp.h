@@ -18,9 +18,6 @@
 #define FUSION_CN_RTP_MAX_STREAMS 64
 #define FUSION_CN_RTP_MAX_CHANNELS 64
 #define FUSION_CN_RTP_HASH_BITS 6
-#define FUSION_CN_RTP_BUFFER_FRAMES 8
-
-#define MAX_STREAM_NAME_SIZE 64
 
 struct fusion_cn_stream_config {
     uint64_t stream_handle;
@@ -41,7 +38,7 @@ struct fusion_cn_stream_config {
 struct fusion_cn_rtp_ops {
     uint64_t (*get_phc_ns)(void);
     void *(*get_buffer)(void *cn_mgr, uint64_t handle);
-    uint32_t (*get_buffer_length)(void *cn_mgr, uint64_t handle);
+    uint32_t (*get_buffer_size_in_frames)(void *cn_mgr, uint64_t handle);
     uint32_t (*get_buffer_offset)(void *cn_mgr, uint64_t handle);
     uint32_t (*get_avail_frames)(void *cn_mgr, uint64_t handle);
 };
@@ -72,8 +69,8 @@ struct fusion_cn_rtp_stream {
     uint16_t outgoing_seq_num;
     uint16_t current_seq_num;
     uint64_t next_action_time;
-    uint64_t next_action_times[FUSION_CN_RTP_BUFFER_FRAMES]; /* Playback times per slot */
-    uint32_t playback_index;                      /* Current playback position (for scheduling pcm_interrupt) */
+    uint64_t *next_action_times;
+    uint32_t playback_index; 
     uint64_t packet_time;
     uint64_t ns_per_sample;
 };
@@ -87,20 +84,30 @@ struct handle_node {
 // map from dest_ip and dest_port to stream_handle for incoming packets
 struct fusion_cn_packet_map {
     struct hlist_node hnode;
+    uint32_t source_ip;
     uint32_t dest_ip;
-    uint16_t dest_port;
+    uint16_t source_port;
     uint64_t stream_handle;
+};
+
+struct active_stream_handles {
+    struct list_head fn_sink;
+    struct list_head fn_source;
+    struct list_head aes67_sink;
+    struct list_head aes67_source;
 };
 
 struct fusion_cn_rtp_manager {
     struct hlist_head streams[1 << FUSION_CN_RTP_HASH_BITS];
-    struct hlist_head packet_maps[1 << FUSION_CN_RTP_HASH_BITS];
+    struct hlist_head mc_packet_maps[1 << FUSION_CN_RTP_HASH_BITS]; // multicast packet map, mapped by dest ip
+    struct hlist_head uc_packet_maps[1 << FUSION_CN_RTP_HASH_BITS]; // unicast packet map, mapped by source ip and port
     rwlock_t lock;
     struct fusion_cn_netfilter *nf;
     struct fusion_cn_rtp_ops *ops;
     void *cn_mgr;
-    struct list_head active_streams;
+    struct active_stream_handles active_stream_handles;
     bool internal_loopback;
+    bool debug;
 };
 
 /* Function prototypes */

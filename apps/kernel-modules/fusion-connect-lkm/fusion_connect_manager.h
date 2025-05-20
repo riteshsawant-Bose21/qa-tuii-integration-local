@@ -55,6 +55,7 @@ struct fusion_cn_alsa {
 struct fusion_cn_ptp {
     enum ptp_timing_mode ptp_timing_mode;
     struct hrtimer audio_timer;
+    uint64_t hrtimer_last_tick_ns;
     uint64_t hrtimer_next_tick_ns;
     uint8_t tick_count;
     int gpio_irq;
@@ -74,6 +75,7 @@ struct fusion_cn_manager {
     struct fusion_cn_netfilter netfilter;
     struct fusion_cn_netlink netlink;
     struct platform_device *pdev;
+    bool debug;
 };
 
 struct fusion_cn_ctrl_msg {

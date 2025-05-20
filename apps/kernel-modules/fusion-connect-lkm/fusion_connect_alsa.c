@@ -33,7 +33,7 @@ struct fusion_cn_substream {
     struct snd_pcm *pcm;
     uint64_t stream_handle;
     snd_pcm_format_t format;
-    uint32_t stride;
+    uint32_t sample_width;
     uint32_t rate;
     uint32_t channels;
     uint32_t buffer_pos;
@@ -126,9 +126,9 @@ static int fusion_cn_pcm_hw_params(struct snd_pcm_substream *substream, struct s
         return err;
     }
 
-    runtime->buffer_size = buffer_bytes / (stream->stride * stream->channels);
+    runtime->buffer_size = buffer_bytes / (stream->sample_width * stream->channels);
     runtime->period_size = period_size;
-    runtime->periods = buffer_bytes / (period_size * stream->stride * stream->channels);
+    runtime->periods = buffer_bytes / (period_size * stream->sample_width * stream->channels);
 
     err = snd_pcm_lib_alloc_vmalloc_buffer(substream, buffer_bytes);
     if (err < 0) {
@@ -275,7 +275,7 @@ __always_inline static int fusion_cn_pcm_interrupt(void *rawchip, int direction,
     stream = fusion_cn_find_substream(chip, stream_handle);
     if (!stream || !stream->substream || stream->substream->stream != direction) {
         read_unlock_irqrestore(&chip->lock, flags);
-        printk(KERN_DEBUG "fusion_cn: Invalid stream for handle %llu, direction %d\n", stream_handle, direction);
+        printk(KERN_WARNING "fusion_cn: Invalid stream for handle %llu, direction %d\n", stream_handle, direction);
         return -EINVAL;
     }
     kref_get(&stream->ref);
@@ -283,7 +283,7 @@ __always_inline static int fusion_cn_pcm_interrupt(void *rawchip, int direction,
 
     spin_lock_irq(&stream->lock);
 
-    bytes_per_frame = stream->channels * stream->stride;
+    bytes_per_frame = stream->channels * stream->sample_width;
     if (stream->substream->runtime->access == SNDRV_PCM_ACCESS_MMAP_INTERLEAVED ||
         stream->substream->runtime->access == SNDRV_PCM_ACCESS_MMAP_NONINTERLEAVED ||
         stream->substream->runtime->access == SNDRV_PCM_ACCESS_MMAP_COMPLEX) {
@@ -314,7 +314,7 @@ static void fusion_cn_pcm_playback_ack_transfer(struct snd_pcm_substream *substr
                                                struct snd_pcm_indirect *rec, size_t bytes)
 {
     struct fusion_cn_substream *stream = substream->runtime->private_data;
-    unsigned int bytes_per_frame = stream->channels * stream->stride;
+    unsigned int bytes_per_frame = stream->channels * stream->sample_width;
     snd_pcm_uframes_t frames = bytes / bytes_per_frame;
     unsigned char *dst = substream->runtime->dma_area + stream->buffer_pos * bytes_per_frame;
     unsigned char *src = substream->runtime->dma_area + rec->sw_data;
@@ -334,7 +334,7 @@ static void fusion_cn_pcm_capture_ack_transfer(struct snd_pcm_substream *substre
                                               struct snd_pcm_indirect *rec, size_t bytes)
 {
     struct fusion_cn_substream *stream = substream->runtime->private_data;
-    unsigned int bytes_per_frame = stream->channels * stream->stride;
+    unsigned int bytes_per_frame = stream->channels * stream->sample_width;
     snd_pcm_uframes_t frames = bytes / bytes_per_frame;
     unsigned char *src = substream->runtime->dma_area + stream->buffer_pos * bytes_per_frame;
     unsigned char *dst = substream->runtime->dma_area + rec->sw_data;
@@ -452,7 +452,7 @@ static int fusion_cn_pcm_silence(struct snd_pcm_substream *substream,
 {
     struct fusion_cn_substream *stream = substream->runtime->private_data;
     struct snd_pcm_runtime *runtime = substream->runtime;
-    size_t buffer_size_per_channel = runtime->buffer_size * stream->stride;
+    size_t buffer_size_per_channel = runtime->buffer_size * stream->sample_width;
     const unsigned char *silence = snd_pcm_format_silence_64(runtime->format);
     unsigned char *dma_area = runtime->dma_area;
 
@@ -467,19 +467,19 @@ static int fusion_cn_pcm_silence(struct snd_pcm_substream *substream,
 
     if (channel == -1) {
         for (int ch = 0; ch < stream->channels; ch++) {
-            unsigned char *channel_buf = dma_area + ch * buffer_size_per_channel + pos * stream->stride;
+            unsigned char *channel_buf = dma_area + ch * buffer_size_per_channel + pos * stream->sample_width;
             for (snd_pcm_uframes_t i = 0; i < count; i++) {
-                memcpy(channel_buf + i * stream->stride, silence, stream->stride);
+                memcpy(channel_buf + i * stream->sample_width, silence, stream->sample_width);
             }
         }
     } else {
-        unsigned char *channel_buf = dma_area + channel * buffer_size_per_channel + pos * stream->stride;
+        unsigned char *channel_buf = dma_area + channel * buffer_size_per_channel + pos * stream->sample_width;
         if (channel >= stream->channels) {
             spin_unlock_irq(&stream->lock);
             return -EINVAL;
         }
         for (snd_pcm_uframes_t i = 0; i < count; i++) {
-            memcpy(channel_buf + i * stream->stride, silence, stream->stride);
+            memcpy(channel_buf + i * stream->sample_width, silence, stream->sample_width);
         }
     }
 
@@ -507,14 +507,14 @@ static int fusion_cn_remove_substream(void *rawchip, uint64_t stream_handle)
 
     stream = fusion_cn_find_substream(chip, stream_handle);
     if (!stream) {
-        printk(KERN_DEBUG "fusion_cn: remove_substream: Stream %llu not found\n", stream_handle);
+        printk(KERN_WARNING "fusion_cn: remove_substream: Stream %llu not found\n", stream_handle);
         return -ENOENT;
     }
 
     /* Stop PCM to set DISCONNECTED state */
     if (stream->substream) {
         snd_pcm_stop(stream->substream, SNDRV_PCM_STATE_DISCONNECTED);
-        printk(KERN_DEBUG "fusion_cn: remove_substream: Stopped PCM for stream %llu\n", stream_handle);
+        printk(KERN_INFO "fusion_cn: remove_substream: Stopped PCM for stream %llu\n", stream_handle);
     }
 
     write_lock_irqsave(&chip->lock, flags);
@@ -591,9 +591,9 @@ static int fusion_cn_mute_stream_buffers(void *rawchip, uint64_t stream_handle)
     }
 
     spin_lock_irqsave(&stream->lock, flags);
-    printk(KERN_DEBUG "fusion_cn: mute_stream_buffers: Zeroing buffer for stream %llu, size=%lu\n",
-           stream_handle, runtime->buffer_size * stream->channels * stream->stride);
-    memset(runtime->dma_area, 0, runtime->buffer_size * stream->channels * stream->stride);
+    printk(KERN_INFO "fusion_cn: mute_stream_buffers: Zeroing buffer for stream %llu, size=%lu\n",
+           stream_handle, runtime->buffer_size * stream->channels * stream->sample_width);
+    memset(runtime->dma_area, 0, runtime->buffer_size * stream->channels * stream->sample_width);
     spin_unlock_irqrestore(&stream->lock, flags);
 
     read_unlock(&chip->lock);
@@ -633,13 +633,13 @@ static int fusion_cn_pcm_open(struct snd_pcm_substream *substream)
     stream = fusion_cn_find_substream(chip, stream_handle);
     if (!stream) {
         read_unlock_irqrestore(&chip->lock, flags);
-        printk(KERN_DEBUG "fusion_cn: pcm_open: Stream %llu not found\n", stream_handle);
+        printk(KERN_WARNING "fusion_cn: pcm_open: Stream %llu not found\n", stream_handle);
         return -ENOENT;
     }
 
     if (stream->substream) {
         read_unlock_irqrestore(&chip->lock, flags);
-        printk(KERN_DEBUG "fusion_cn: pcm_open: Stream %llu already open\n", stream_handle);
+        printk(KERN_WARNING "fusion_cn: pcm_open: Stream %llu already open\n", stream_handle);
         kref_put(&stream->ref, fusion_cn_substream_release);
         return -EBUSY;
     }
@@ -726,7 +726,7 @@ static int fusion_cn_pcm_prepare(struct snd_pcm_substream *substream)
     stream->pcm_indirect.hw_buffer_size = snd_pcm_lib_buffer_bytes(substream);
     stream->pcm_indirect.sw_buffer_size = snd_pcm_lib_buffer_bytes(substream);
     atomic_set(&stream->dma_offset, 0);
-    memset(runtime->dma_area, 0, runtime->buffer_size * stream->channels * stream->stride);
+    memset(runtime->dma_area, 0, runtime->buffer_size * stream->channels * stream->sample_width);
     spin_unlock_irq(&stream->lock);
 
     return 0;
@@ -770,7 +770,7 @@ static int fusion_cn_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
                     stream->stream_handle, err);
             return err;
         }
-        printk(KERN_DEBUG "fusion_cn: pcm_trigger: Stream %llu started\n", stream->stream_handle);
+        printk(KERN_INFO "fusion_cn: pcm_trigger: Stream %llu started\n", stream->stream_handle);
         return 0;
     case SNDRV_PCM_TRIGGER_STOP:
     case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
@@ -781,7 +781,7 @@ static int fusion_cn_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
                     stream->stream_handle, err);
             return err;
         }
-        printk(KERN_DEBUG "fusion_cn: pcm_trigger: Stream %llu stopped\n",
+        printk(KERN_INFO "fusion_cn: pcm_trigger: Stream %llu stopped\n",
                 stream->stream_handle);
         return 0;
     default:
@@ -820,10 +820,11 @@ static int fusion_cn_open_substream(void *rawchip, uint64_t stream_handle, int d
     uint32_t frames_per_packet;
     int bucket;
     struct fusion_cn_substream *stream;
-    uint64_t packet_time_us;
+    uint64_t packet_time_ns;
     int max_channels;
     bool is_96khz;
     bool is_32b;
+    bool is_24b;
     int stream_index;
 
     if (!chip->fusion_cn_mgr) {
@@ -863,11 +864,8 @@ static int fusion_cn_open_substream(void *rawchip, uint64_t stream_handle, int d
                       direction == SNDRV_PCM_STREAM_PLAYBACK ? 1 : 0,
                       direction == SNDRV_PCM_STREAM_CAPTURE ? 1 : 0, &pcm);
     if (err < 0) {
-        write_lock_irqsave(&chip->lock, flags);
-        clear_bit(stream_index, chip->stream_indices);
-        write_unlock_irqrestore(&chip->lock, flags);
         printk(KERN_ERR "fusion_cn: open_substream: snd_pcm_new failed for stream %llu, device=%d, err=%d\n", stream_handle, stream_index, err);
-        return err;
+        goto clr_idx;
     }
 
     pcm->private_data = chip;
@@ -877,19 +875,15 @@ static int fusion_cn_open_substream(void *rawchip, uint64_t stream_handle, int d
 
     stream = kzalloc(sizeof(*stream), GFP_KERNEL);
     if (!stream) {
-        snd_device_disconnect(chip->card, pcm);
-        snd_device_free(chip->card, pcm);
-        write_lock_irqsave(&chip->lock, flags);
-        clear_bit(stream_index, chip->stream_indices);
-        write_unlock_irqrestore(&chip->lock, flags);
         printk(KERN_ERR "fusion_cn: open_substream: kzalloc failed for stream %llu\n", stream_handle);
-        return -ENOMEM;
+        err = -ENOMEM;
+        goto dev_free;
     }
 
     spin_lock_init(&stream->lock);
     kref_init(&stream->ref);
     stream->stream_handle = stream_handle;
-    stream->stride = snd_pcm_format_physical_width(format) >> 3;
+    stream->sample_width = snd_pcm_format_physical_width(format) >> 3;
     stream->channels = channels;
     stream->rate = rate;
     stream->format = format;
@@ -901,61 +895,54 @@ static int fusion_cn_open_substream(void *rawchip, uint64_t stream_handle, int d
 
     if (rate != 44100 && rate != 48000 && rate != 96000) {
         printk(KERN_ERR "fusion_cn: open_substream: Stream %llu rate %u invalid\n", stream_handle, rate);
-        kfree(stream);
-        snd_device_disconnect(chip->card, pcm);
-        snd_device_free(chip->card, pcm);
-        write_lock_irqsave(&chip->lock, flags);
-        clear_bit(stream_index, chip->stream_indices);
-        write_unlock_irqrestore(&chip->lock, flags);
-        return -EINVAL;
+        err = -EINVAL;
+        goto stream_free;
     }
 
-    packet_time_us = ((uint64_t)frames_per_packet * 1000000) / rate;
+    packet_time_ns = ((uint64_t)frames_per_packet * NSEC_PER_SEC) / rate;
     is_96khz = rate == 96000;
-    // TODO: 24b
-    is_32b = (format == SNDRV_PCM_FORMAT_FLOAT_BE || 
-              format == SNDRV_PCM_FORMAT_S24_3BE);
+    is_32b = (format == SNDRV_PCM_FORMAT_FLOAT_BE);
+    is_24b = (format == SNDRV_PCM_FORMAT_S24_3BE);
 
-    if (packet_time_us <= 125) {
-        if (is_96khz) max_channels = is_32b ? 40 : 60;
-        else max_channels = is_32b ? 80 : 120;
-    } else if (packet_time_us <= 250) {
-        if (is_96khz) max_channels = is_32b ? 20 : 30;
-        else max_channels = is_32b ? 40 : 60;
-    } else if (packet_time_us <= 333) {
-        if (is_96khz) max_channels = is_32b ? 15 : 22;
-        else max_channels = is_32b ? 30 : 45;
-    } else if (packet_time_us <= 1000) {
-        if (is_96khz) max_channels = is_32b ? 5 : 7;
-        else max_channels = is_32b ? 10 : 15;
+    if (packet_time_ns <= 125000) {
+        if (is_96khz) max_channels = is_32b ? 30 : 
+                                     is_24b ? 40 : 60;
+        else max_channels = is_32b ? 60 : 
+                            is_24b ? 80 : 120;
+    } else if (packet_time_ns <= 250000) {
+        if (is_96khz) max_channels = is_32b ? 15 : 
+                                     is_24b ? 20 : 30;
+        else max_channels = is_32b ? 30 : 
+                            is_24b ? 40 : 60;
+    } else if (packet_time_ns <= 333333) {
+        if (is_96khz) max_channels = is_32b ? 11 : 
+                                     is_24b ? 15 : 22;
+        else max_channels = is_32b ? 22 : 
+                            is_24b ? 30 : 45;
+    } else if (packet_time_ns <= 1000000) {
+        if (is_96khz) max_channels = is_32b ? 3 : 
+                                     is_24b ? 5 : 7;
+        else max_channels = is_32b ? 7 : 
+                            is_24b ? 10 : 15;          
     } else {
-        if (is_96khz) max_channels = 1;
-        else max_channels = is_32b ? 2 : 3;
+        if (is_96khz) max_channels = is_32b ? 0 : 1;
+        else max_channels = is_32b ? 1 : 
+                            is_24b ? 2 : 3;
     }
 
-    if (channels > max_channels) {
-        printk(KERN_ERR "fusion_cn: open_substream: Stream %llu exceeds max channels (%d) for %uHz, %s, %lluus\n",
-               stream_handle, max_channels, rate, is_32b ? "L24 or float" : "L16", packet_time_us);
-        kfree(stream);
-        snd_device_disconnect(chip->card, pcm);
-        snd_device_free(chip->card, pcm);
-        write_lock_irqsave(&chip->lock, flags);
-        clear_bit(stream_index, chip->stream_indices);
-        write_unlock_irqrestore(&chip->lock, flags);
-        return -EINVAL;
+    if (channels == 0 || channels > max_channels) {
+        printk(KERN_ERR "fusion_cn: open_substream: Stream %llu bad # channels (%d) for rate=%u, format=%s\n",
+               stream_handle, channels, rate, snd_pcm_format_name(format));
+        err = -EINVAL;
+        goto stream_free;
     }
 
     read_lock_irqsave(&chip->lock, flags);
     if (fusion_cn_find_substream(chip, stream_handle)) {
         read_unlock_irqrestore(&chip->lock, flags);
-        kfree(stream);
-        snd_device_disconnect(chip->card, pcm);
-        snd_device_free(chip->card, pcm);
-        write_lock_irqsave(&chip->lock, flags);
-        clear_bit(stream_index, chip->stream_indices);
-        write_unlock_irqrestore(&chip->lock, flags);
-        printk(KERN_DEBUG "fusion_cn: open_substream: Stream %llu already exists\n", stream_handle);
-        return -EEXIST;
+        printk(KERN_WARNING "fusion_cn: open_substream: Stream %llu already exists\n", stream_handle);
+        err = -EEXIST;
+        goto stream_free;
     }
     read_unlock_irqrestore(&chip->lock, flags);
 
@@ -966,36 +953,34 @@ static int fusion_cn_open_substream(void *rawchip, uint64_t stream_handle, int d
 
     err = chip->alsa_ops->get_rtp_frame_size(chip->fusion_cn_mgr, stream_handle, &stream->rtp_frame_size);
     if (err < 0) {
-        write_lock_irqsave(&chip->lock, flags);
-        hlist_del(&stream->hnode);
-        write_unlock_irqrestore(&chip->lock, flags);
-        snd_device_disconnect(chip->card, pcm);
-        snd_device_free(chip->card, pcm);
-        kfree(stream);
-        write_lock_irqsave(&chip->lock, flags);
-        clear_bit(stream_index, chip->stream_indices);
-        write_unlock_irqrestore(&chip->lock, flags);
         printk(KERN_ERR "fusion_cn: open_substream: get_rtp_frame_size failed for stream %llu, err=%d\n", stream_handle, err);
-        return err;
+        goto clr_hnode;
     }
 
     err = snd_device_register(chip->card, pcm);
     if (err < 0) {
-        write_lock_irqsave(&chip->lock, flags);
-        hlist_del(&stream->hnode);
-        write_unlock_irqrestore(&chip->lock, flags);
-        kfree(stream);
-        snd_device_disconnect(chip->card, pcm);
-        snd_device_free(chip->card, pcm);
-        write_lock_irqsave(&chip->lock, flags);
-        clear_bit(stream_index, chip->stream_indices);
-        write_unlock_irqrestore(&chip->lock, flags);
         printk(KERN_ERR "fusion_cn: open_substream: snd_device_register failed for stream %llu, device=%d, err=%d\n", stream_handle, stream_index, err);
-        return err;
+        goto clr_hnode;
     }
 
     printk(KERN_INFO "fusion_cn: open_substream: Successfully created substream for stream %llu\n", stream_handle);
     return 0;
+
+clr_hnode:
+    write_lock_irqsave(&chip->lock, flags);
+    hlist_del(&stream->hnode);
+    write_unlock_irqrestore(&chip->lock, flags);
+stream_free:
+    kfree(stream);
+dev_free:
+    snd_device_disconnect(chip->card, pcm);
+    snd_device_free(chip->card, pcm);
+clr_idx:
+    write_lock_irqsave(&chip->lock, flags);
+    clear_bit(stream_index, chip->stream_indices);
+    write_unlock_irqrestore(&chip->lock, flags);
+
+    return err;
 }
 
 static struct fusion_cn_mgr_ops mgr_ops = {
@@ -1071,30 +1056,32 @@ int fusion_cn_chip_remove(struct platform_device *pdev)
         return 0;
     }
 
-    /* Stop any active PCM streams */
-    if (chip->alsa_ops && chip->alsa_ops->stop_interrupts) {
-        write_lock_irqsave(&chip->lock, flags);
-        for (i = 0; i < 1 << FUSION_CN_ALSA_HASH_BITS; i++) {
-            hlist_for_each_entry(stream, &chip->streams[i], hnode) {
-                chip->alsa_ops->stop_interrupts(chip, stream->stream_handle);
-            }
-        }
-        write_unlock_irqrestore(&chip->lock, flags);
-    }
-
-    /* Clean up substreams */
+    /* Stop and disconnect all PCM substreams */
     write_lock_irqsave(&chip->lock, flags);
     for (i = 0; i < 1 << FUSION_CN_ALSA_HASH_BITS; i++) {
         hlist_for_each_entry_safe(stream, tmp, &chip->streams[i], hnode) {
+            if (chip->alsa_ops && chip->alsa_ops->stop_interrupts) {
+                chip->alsa_ops->stop_interrupts(chip, stream->stream_handle);
+            }
+            if (stream->substream) {
+                snd_pcm_stop(stream->substream, SNDRV_PCM_STATE_DISCONNECTED);
+                stream->substream = NULL;
+            }
+            if (stream->pcm) {
+                snd_device_disconnect(chip->card, stream->pcm);
+                snd_device_free(chip->card, stream->pcm);
+                stream->pcm = NULL;
+            }
             hlist_del(&stream->hnode);
             kref_put(&stream->ref, fusion_cn_substream_release);
         }
     }
     write_unlock_irqrestore(&chip->lock, flags);
 
-    /* Disconnect and free the card */
+    /* Disconnect and free the sound card */
     snd_card_disconnect(card);
     snd_card_free(card);
+
     platform_set_drvdata(pdev, NULL);
     dev_info(&pdev->dev, "FusionConnect card removed\n");
     return 0;

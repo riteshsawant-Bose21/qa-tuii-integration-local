@@ -1,5 +1,6 @@
-#include <linux/fcntl.h>
+#include <linux/types.h>
 #include <linux/unistd.h>
+#include <linux/fcntl.h>
 #include <linux/fs.h>
 #include <linux/module.h>
 #include <linux/gpio.h>
@@ -55,7 +56,8 @@ static int alsa_ops_start_interrupts(void *cn_mgr, uint64_t stream_handle)
         return -EINVAL;
     }
 
-    printk(KERN_DEBUG "fusion_cn: start_interrupts: Starting stream %llu\n", stream_handle);
+    if (mgr->debug) printk(KERN_DEBUG "fusion_cn: start_interrupts: Starting stream %llu\n", stream_handle);
+
     return fusion_cn_rtp_set_stream_running(&mgr->rtp, stream_handle, true);
 }
 
@@ -68,7 +70,7 @@ static int alsa_ops_stop_interrupts(void *cn_mgr, uint64_t stream_handle)
         return -EINVAL;
     }
 
-    printk(KERN_DEBUG "fusion_cn: stop_interrupts: Stopping stream %llu\n", stream_handle);
+    if (mgr->debug) printk(KERN_DEBUG "fusion_cn: stop_interrupts: Stopping stream %llu\n", stream_handle);
     return fusion_cn_rtp_set_stream_running(&mgr->rtp, stream_handle, false);
 }
 
@@ -93,7 +95,7 @@ static void *fusion_cn_rtp_get_buffer(void *cn_mgr, uint64_t handle)
     return buffer;
 }
 
-static uint32_t fusion_cn_rtp_get_buffer_length(void *cn_mgr, uint64_t handle)
+static uint32_t fusion_cn_rtp_get_buffer_size_in_frames(void *cn_mgr, uint64_t handle)
 {
     struct fusion_cn_manager *mgr = cn_mgr;
     return mgr->alsa.mgr_callbacks->get_stream_buffer_size_in_frames(mgr->alsa.alsa_chip, handle);
@@ -118,55 +120,155 @@ static uint32_t fusion_cn_rtp_get_avail_frames(void *cn_mgr, uint64_t handle)
     return size;
 }
 
-static void audio_frame_process(struct fusion_cn_manager *mgr, uint64_t current_phc_ns)
+static void process_active_streams(struct fusion_cn_manager *mgr) 
 {
-    static int jitter_window = 10000;
     struct fusion_cn_rtp_stream *stream;
     struct handle_node *handle_node, *tmp;
-    uint64_t handle;
-    unsigned long flags;
     uint32_t current_slot;
+    uint64_t handle;
 
-    read_lock_irqsave(&mgr->rtp.lock, flags);
-    list_for_each_entry_safe(handle_node, tmp, &mgr->rtp.active_streams, node) {
+    if (!mgr->state.ptp_synchronized) {
+        return;
+    }
+
+    list_for_each_entry_safe(handle_node, tmp, &mgr->rtp.active_stream_handles.fn_sink, node) {
         handle = handle_node->handle;
         hlist_for_each_entry(stream, &mgr->rtp.streams[hash_64(handle, FUSION_CN_RTP_HASH_BITS)], hnode) {
             spin_lock(&stream->lock);
-            if (!atomic_read(&stream->is_running) || !mgr->state.ptp_synchronized) {
+            if (!atomic_read(&stream->is_running)) {
                 spin_unlock(&stream->lock);
                 continue;
             }
 
-            if (stream->info.is_source) {
-                if (stream->next_action_time == 0) {
-                    // Align to the next tick
-                    stream->next_action_time = mgr->ptp.hrtimer_next_tick_ns;
-                } else if (mgr->ptp.hrtimer_next_tick_ns >= stream->next_action_time - jitter_window) {
-                    fusion_cn_rtp_send_packet(&mgr->rtp, stream);
-                    mgr->alsa.mgr_callbacks->pcm_interrupt(mgr->alsa.alsa_chip, SNDRV_PCM_STREAM_PLAYBACK, stream->info.stream_handle);
+            if (stream->info.is_source || !stream->info.is_fusion_connect) {
+                continue;
+            }
 
-                    printk(KERN_DEBUG "fusion_cn: audio_frame_process: Source stream %llu, current_phc=%llu, next_action_time=%llu\n",
-                        stream->info.stream_handle, current_phc_ns, stream->next_action_time);
+            current_slot = stream->playback_index % (fusion_cn_rtp_get_buffer_size_in_frames(mgr, handle) / stream->info.frames_per_packet);
+            // There could be multiple frames to play back for streams with packet times smaller than the timer tick
+            while (stream->next_action_times[current_slot] != 0 && stream->next_action_times[current_slot] <= mgr->ptp.hrtimer_last_tick_ns) {
+                if (mgr->debug) printk(KERN_DEBUG "fusion_cn: audio_frame_process: Sink stream %llu, slot=%u, next_tick=%llu, next_action_time=%llu\n",
+                    handle, current_slot, mgr->ptp.hrtimer_last_tick_ns, stream->next_action_times[current_slot]);
+                    
+                mgr->alsa.mgr_callbacks->pcm_interrupt(mgr->alsa.alsa_chip, SNDRV_PCM_STREAM_CAPTURE, handle);
+                stream->next_action_times[current_slot] = 0;
+                current_slot = ++stream->playback_index % (fusion_cn_rtp_get_buffer_size_in_frames(mgr, handle) / stream->info.frames_per_packet);
+            }
+
+            spin_unlock(&stream->lock);
+        }
+    }
+    list_for_each_entry_safe(handle_node, tmp, &mgr->rtp.active_stream_handles.fn_source, node) {
+        handle = handle_node->handle;
+        hlist_for_each_entry(stream, &mgr->rtp.streams[hash_64(handle, FUSION_CN_RTP_HASH_BITS)], hnode) {
+            spin_lock(&stream->lock);
+            if (!atomic_read(&stream->is_running)) {
+                spin_unlock(&stream->lock);
+                continue;
+            }
+
+            if (!stream->info.is_source || !stream->info.is_fusion_connect) {
+                continue;
+            }
+
+            if (stream->next_action_time == 0) {
+                // Align to the next tick
+                stream->next_action_time = mgr->ptp.hrtimer_last_tick_ns;
+            } else {
+                // account for packet times smaller than timer tick--regularly will have to spit a couple packets out
+                while (stream->next_action_time <= mgr->ptp.hrtimer_last_tick_ns) {
+                    fusion_cn_rtp_send_packet(&mgr->rtp, stream);
+                    mgr->alsa.mgr_callbacks->pcm_interrupt(mgr->alsa.alsa_chip, SNDRV_PCM_STREAM_PLAYBACK, handle);
+
+                    if (mgr->debug) printk(KERN_DEBUG "fusion_cn: audio_frame_process: Source stream %llu, next_tick=%llu, next_action_time=%llu\n",
+                        handle, mgr->ptp.hrtimer_last_tick_ns, stream->next_action_time);
             
+                    // 4, 1, & 1/3 ms will be dead on the timer ticks
+                    // anything less that 1/3 will be off grid
                     if (stream->packet_time == TIMER_BASE_INTERVAL_NS) {
                         stream->next_action_time = mgr->ptp.hrtimer_next_tick_ns;
                     } else {
                         stream->next_action_time += stream->packet_time;
                     }
                 }
-            } else {
-                current_slot = stream->playback_index % FUSION_CN_RTP_BUFFER_FRAMES;
-                if (stream->next_action_times[current_slot] != 0 && current_phc_ns >= stream->next_action_times[current_slot] - jitter_window) {
-                    printk(KERN_DEBUG "fusion_cn: audio_frame_process: Sink stream %llu, current_phc=%llu, next_action_time=%llu\n",
-                        stream->info.stream_handle, current_phc_ns, stream->next_action_times[current_slot]);
-                    // Trigger pcm_interrupt to advance hw_ptr and signal user-space
-                    mgr->alsa.mgr_callbacks->pcm_interrupt(mgr->alsa.alsa_chip, SNDRV_PCM_STREAM_CAPTURE, stream->info.stream_handle);
-                    stream->playback_index++;
-                }
             }
+            
             spin_unlock(&stream->lock);
         }
     }
+    list_for_each_entry_safe(handle_node, tmp, &mgr->rtp.active_stream_handles.aes67_sink, node) {
+        handle = handle_node->handle;
+        hlist_for_each_entry(stream, &mgr->rtp.streams[hash_64(handle, FUSION_CN_RTP_HASH_BITS)], hnode) {
+            spin_lock(&stream->lock);
+            if (!atomic_read(&stream->is_running)) {
+                spin_unlock(&stream->lock);
+                continue;
+            }
+
+            if (stream->info.is_source || stream->info.is_fusion_connect) {
+                continue;
+            }
+
+            current_slot = stream->playback_index % (fusion_cn_rtp_get_buffer_size_in_frames(mgr, handle) / stream->info.frames_per_packet);
+            // There could be multiple frames to play back for streams with packet times smaller than the timer tick
+            while (stream->next_action_times[current_slot] != 0 && stream->next_action_times[current_slot] <= mgr->ptp.hrtimer_last_tick_ns) {
+                if (mgr->debug) printk(KERN_DEBUG "fusion_cn: audio_frame_process: Sink stream %llu, slot=%u, next_tick=%llu, next_action_time=%llu\n",
+                    handle, current_slot, mgr->ptp.hrtimer_last_tick_ns, stream->next_action_times[current_slot]);
+                    
+                mgr->alsa.mgr_callbacks->pcm_interrupt(mgr->alsa.alsa_chip, SNDRV_PCM_STREAM_CAPTURE, handle);
+                stream->next_action_times[current_slot] = 0;
+                current_slot = ++stream->playback_index % (fusion_cn_rtp_get_buffer_size_in_frames(mgr, handle) / stream->info.frames_per_packet);
+            }
+            
+            spin_unlock(&stream->lock);
+        }
+    }
+    list_for_each_entry_safe(handle_node, tmp, &mgr->rtp.active_stream_handles.aes67_source, node) {
+        handle = handle_node->handle;
+        hlist_for_each_entry(stream, &mgr->rtp.streams[hash_64(handle, FUSION_CN_RTP_HASH_BITS)], hnode) {
+            spin_lock(&stream->lock);
+            if (!atomic_read(&stream->is_running)) {
+                spin_unlock(&stream->lock);
+                continue;
+            }
+
+            if (!stream->info.is_source || stream->info.is_fusion_connect) {
+                continue;
+            }
+
+            if (stream->next_action_time == 0) {
+                // Align to the next tick
+                stream->next_action_time = mgr->ptp.hrtimer_last_tick_ns;
+            } else {
+                // account for packet times smaller than timer tick--regularly will have to spit a couple packets out
+                while (stream->next_action_time <= mgr->ptp.hrtimer_last_tick_ns) {
+                    fusion_cn_rtp_send_packet(&mgr->rtp, stream);
+                    mgr->alsa.mgr_callbacks->pcm_interrupt(mgr->alsa.alsa_chip, SNDRV_PCM_STREAM_PLAYBACK, handle);
+
+                    if (mgr->debug) printk(KERN_DEBUG "fusion_cn: audio_frame_process: Source stream %llu, next_tick=%llu, next_action_time=%llu\n",
+                        handle, mgr->ptp.hrtimer_last_tick_ns, stream->next_action_time);
+            
+                    // 4, 1, & 1/3 ms will be dead on the timer ticks
+                    // anything less that 1/3 will be off grid
+                    if (stream->packet_time == TIMER_BASE_INTERVAL_NS) {
+                        stream->next_action_time = mgr->ptp.hrtimer_next_tick_ns;
+                    } else {
+                        stream->next_action_time += stream->packet_time;
+                    }
+                }
+            }
+
+            spin_unlock(&stream->lock);
+        }
+    }
+}
+
+static void audio_frame_process(struct fusion_cn_manager *mgr)
+{
+    unsigned long flags;
+
+    read_lock_irqsave(&mgr->rtp.lock, flags);
+    process_active_streams(mgr);
     read_unlock_irqrestore(&mgr->rtp.lock, flags);
 }
 
@@ -174,9 +276,7 @@ static enum hrtimer_restart audio_frame_tick_hrtimer(struct hrtimer *timer)
 {
     struct fusion_cn_manager *mgr = container_of(timer, struct fusion_cn_manager, ptp.audio_timer);
 
-    audio_frame_process(mgr, fusion_cn_rtp_get_phc_ns());
-
-    hrtimer_start(timer, ns_to_ktime(mgr->ptp.hrtimer_next_tick_ns), HRTIMER_MODE_ABS);
+    mgr->ptp.hrtimer_last_tick_ns = mgr->ptp.hrtimer_next_tick_ns;
 
     mgr->ptp.hrtimer_next_tick_ns += TIMER_BASE_INTERVAL_NS;
     // after 3 ticks, square the tick with the ms
@@ -185,13 +285,17 @@ static enum hrtimer_restart audio_frame_tick_hrtimer(struct hrtimer *timer)
         mgr->ptp.hrtimer_next_tick_ns += 1;
     }
 
+    audio_frame_process(mgr);
+
+    hrtimer_start(timer, ns_to_ktime(mgr->ptp.hrtimer_next_tick_ns), HRTIMER_MODE_ABS);
+
     return HRTIMER_RESTART;
 }
 
 static irqreturn_t audio_frame_tick_gpio(int irq, void *dev_id)
 {
     struct fusion_cn_manager *mgr = dev_id;
-    audio_frame_process(mgr, fusion_cn_rtp_get_phc_ns());
+    audio_frame_process(mgr);
     return IRQ_HANDLED;
 }
 
@@ -206,7 +310,7 @@ static int fusion_cn_state_init(struct fusion_cn_manager *mgr)
 static struct fusion_cn_rtp_ops rtp_ops = {
     .get_phc_ns = fusion_cn_rtp_get_phc_ns,
     .get_buffer = fusion_cn_rtp_get_buffer,
-    .get_buffer_length = fusion_cn_rtp_get_buffer_length,
+    .get_buffer_size_in_frames = fusion_cn_rtp_get_buffer_size_in_frames,
     .get_buffer_offset = fusion_cn_rtp_get_buffer_offset,
     .get_avail_frames = fusion_cn_rtp_get_avail_frames
 };
@@ -312,8 +416,8 @@ void fusion_cn_mgr_destroy(struct fusion_cn_manager *mgr)
     /* Stop netlink communication first to prevent new commands */
     fusion_cn_nl_destroy(mgr);
 
-    /* Stop RTP streams, which might be using ALSA buffers */
-    fusion_cn_rtp_destroy(&mgr->rtp);
+    /* Unregister netfilter hook to stop packet processing */
+    fusion_cn_nf_destroy(&mgr->netfilter);
 
     /* Stop PTP timing to prevent further audio frame processing */
     if (mgr->ptp.ptp_timing_mode == TIMING_HRTIMER) {
@@ -323,8 +427,8 @@ void fusion_cn_mgr_destroy(struct fusion_cn_manager *mgr)
         if (gpio_is_valid(mgr->ptp.gpio_pin)) gpio_free(mgr->ptp.gpio_pin);
     }
 
-    /* Unregister netfilter hook to stop packet processing */
-    fusion_cn_nf_destroy(&mgr->netfilter);
+    /* Stop RTP streams, which might be using ALSA buffers */
+    fusion_cn_rtp_destroy(&mgr->rtp);
 
     /* Finally, clean up the ALSA card */
     fusion_cn_alsa_destroy();
@@ -356,8 +460,8 @@ bool fusion_cn_mgr_start(struct fusion_cn_manager *mgr)
 
         // Start hrtimer first tick to the next 1 ms boundary
         hrtimer_start(&mgr->ptp.audio_timer, ns_to_ktime(first_tick), HRTIMER_MODE_ABS);
-        mgr->ptp.hrtimer_next_tick_ns = first_tick + TIMER_BASE_INTERVAL_NS;
-        mgr->ptp.tick_count = 1; // start from 1 bc next tick
+        mgr->ptp.hrtimer_next_tick_ns = first_tick;
+        mgr->ptp.tick_count = 0; // start from 1 bc next tick
         printk(KERN_INFO "fusion_cn: mgr_start: Aligned hrtimer to PHC boundary, current_phc=%llu, first_tick=%llu ns\n",
                current_phc_ns, first_tick);
     } else if (mgr->ptp.ptp_timing_mode == TIMING_GPIO_INTERRUPT && mgr->ptp.gpio_irq >= 0) {
@@ -496,11 +600,14 @@ static int handle_remove_rtp_stream(struct fusion_cn_manager *mgr, struct fusion
 {
     uint64_t handle;
     int ret;
+    unsigned int flags;
 
     if (msg->data_size != sizeof(uint64_t)) return reply->err = -EINVAL;
     handle = *(uint64_t *)msg->data;
 
+    write_lock_irqsave(&mgr->rtp.lock, flags);
     ret = fusion_cn_rtp_remove_stream(&mgr->rtp, handle);
+    write_unlock_irqrestore(&mgr->rtp.lock, flags);
     if (ret < 0) {
         return reply->err = ret;
     }
