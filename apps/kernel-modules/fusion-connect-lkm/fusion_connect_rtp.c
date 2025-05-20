@@ -309,7 +309,6 @@ int fusion_cn_rtp_add_stream(struct fusion_cn_rtp_manager *rtp_mgr, struct fusio
     }
 
     stream->next_action_time = 0;
-    stream->playback_index = 0;
     stream->packet_time = (info->frames_per_packet * NSEC_PER_SEC) / info->sample_rate;
     stream->ns_per_sample = NSEC_PER_SEC / (uint64_t)info->sample_rate;
 
@@ -528,6 +527,10 @@ int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr,
             write_slot = seq_num % (frames_in_buf / stream->info.frames_per_packet);
             buf_offset = write_slot * stream->info.frames_per_packet;
 
+            if (stream->playback_index == (frames_in_buf / stream->info.frames_per_packet)) {
+                stream->playback_index = write_slot;
+            }
+
             if (stream->current_seq_num != 0 && seq_num != stream->current_seq_num + 1) {
                 for (int i = stream->current_seq_num + 1; i < seq_num; i++) {
                     uint32_t gap_slot = i % (frames_in_buf / stream->info.frames_per_packet);
@@ -717,10 +720,10 @@ int fusion_cn_rtp_set_stream_running(struct fusion_cn_rtp_manager *rtp_mgr, uint
     }
 
     if (running) {
+        uint32_t frames_in_buf = rtp_mgr->ops->get_buffer_size_in_frames(rtp_mgr->cn_mgr, handle);
         // for sinks only. allocate this before we set the stream running
         // but it needs to happen after alsa device is opened and has set the buffer frames
         if (!stream->info.is_source) {
-            uint32_t frames_in_buf = rtp_mgr->ops->get_buffer_size_in_frames(rtp_mgr->cn_mgr, handle);
             if (stream->next_action_times) {
                 kfree(stream->next_action_times);
             } 
@@ -729,7 +732,7 @@ int fusion_cn_rtp_set_stream_running(struct fusion_cn_rtp_manager *rtp_mgr, uint
             memset(stream->next_action_times, 0, sizeof(uint64_t) * (frames_in_buf / stream->info.frames_per_packet));
             printk(KERN_INFO "fusion_cn_rtp: alloc %u slots in next_action_times", frames_in_buf / stream->info.frames_per_packet);
         }
-        stream->playback_index = 0;
+        stream->playback_index = (frames_in_buf / stream->info.frames_per_packet); // set to a invalid value i can check for on first process_packet
         stream->next_action_time = 0;
         stream->current_seq_num = 0;
     }
