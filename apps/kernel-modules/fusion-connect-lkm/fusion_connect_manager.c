@@ -600,7 +600,7 @@ static int handle_remove_rtp_stream(struct fusion_cn_manager *mgr, struct fusion
 {
     uint64_t handle;
     int ret;
-    unsigned int flags;
+    unsigned long flags;
 
     if (msg->data_size != sizeof(uint64_t)) return reply->err = -EINVAL;
     handle = *(uint64_t *)msg->data;
