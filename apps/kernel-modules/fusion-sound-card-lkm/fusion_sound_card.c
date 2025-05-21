@@ -202,7 +202,7 @@ static int fusion_sound_card_probe(struct platform_device *pdev)
         goto error;
     }
 
-    sai_clk = clk_get(&cpu_pdev->dev, "mclk0");
+    sai_clk = clk_get(&cpu_pdev->dev, "mclk1");
     if (IS_ERR(sai_clk)) {
         dev_err(&pdev->dev, "Failed to get sai_clk: %ld\n", PTR_ERR(sai_clk));
         ret = PTR_ERR(sai_clk);
