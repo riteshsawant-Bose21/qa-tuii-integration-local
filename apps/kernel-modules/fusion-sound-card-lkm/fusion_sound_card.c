@@ -159,8 +159,8 @@ static int fusion_sound_card_probe(struct platform_device *pdev)
     priv->card.dapm_widgets = NULL;
 	priv->card.num_dapm_widgets = 0;
 
-	priv->cpu_priv.sysclk_dir[tx] = SND_SOC_CLOCK_OUT;
-	priv->cpu_priv.sysclk_dir[rx] = SND_SOC_CLOCK_OUT;
+	priv->cpu_priv.sysclk_dir[tx] = SND_SOC_CLOCK_IN;
+	priv->cpu_priv.sysclk_dir[rx] = SND_SOC_CLOCK_IN;
     priv->cpu_priv.sysclk_id[tx] = FSL_SAI_CLK_MAST1;
     priv->cpu_priv.sysclk_id[rx] = FSL_SAI_CLK_MAST1;
     
