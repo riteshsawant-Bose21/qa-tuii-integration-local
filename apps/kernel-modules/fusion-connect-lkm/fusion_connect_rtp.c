@@ -570,9 +570,8 @@ int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr,
             current_phc_ns = rtp_mgr->ops->get_phc_ns();
             current_sac = current_phc_ns / stream->ns_per_sample;
 
-            global_sac = (current_sac & 0xFFFFFFFF00000000ULL) | rtp_timestamp;
+            global_sac = ((current_sac & 0xFFFFFFFF00000000ULL) | rtp_timestamp) - stream->info.timestamp_offset;
             
-            // TODO: This is probably not ideal (from mr)
             if (rtp_timestamp < 0x3FFFFFFFU && (uint32_t)current_sac >= 0xC0000000U) {
                 global_sac += (1ULL << 32);
             } else if ((uint32_t)current_sac < 0x3FFFFFFFU && rtp_timestamp >= 0xC0000000U) {
@@ -582,13 +581,14 @@ int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr,
             // Avoid overflow in reconstructed_phc_ns calculation
             reconstructed_phc_ns = global_sac * stream->ns_per_sample;
             ns_from_ms_boundary = reconstructed_phc_ns % NSEC_PER_MSEC;
+            reconstructed_phc_ns -= ns_from_ms_boundary;
 
-            if (ns_from_ms_boundary < TIMER_BASE_INTERVAL_NS) {
-                reconstructed_phc_ns = reconstructed_phc_ns - ns_from_ms_boundary + TIMER_BASE_INTERVAL_NS;
-            } else if (ns_from_ms_boundary < 2 * TIMER_BASE_INTERVAL_NS) {
-                reconstructed_phc_ns = reconstructed_phc_ns - ns_from_ms_boundary + 2 * TIMER_BASE_INTERVAL_NS;
+            if (ns_from_ms_boundary <= TIMER_BASE_INTERVAL_NS) {
+                reconstructed_phc_ns += TIMER_BASE_INTERVAL_NS;
+            } else if (ns_from_ms_boundary <= 2 * TIMER_BASE_INTERVAL_NS) {
+                reconstructed_phc_ns += 2 * TIMER_BASE_INTERVAL_NS;
             } else  {
-                reconstructed_phc_ns += NSEC_PER_MSEC - ns_from_ms_boundary;
+                reconstructed_phc_ns += NSEC_PER_MSEC;
             }
 
             stream->next_action_times[write_slot] = reconstructed_phc_ns + stream->info.playout_delay;
@@ -619,7 +619,6 @@ __always_inline void fusion_cn_rtp_send_packet(struct fusion_cn_rtp_manager *rtp
     int ret;
     int sample_physical_width_bits;
     uint32_t avail_frames;
-    static bool was_underflow = false;
     uint64_t global_sac;
 
     if (!stream->info.is_source) return;
@@ -635,19 +634,6 @@ __always_inline void fusion_cn_rtp_send_packet(struct fusion_cn_rtp_manager *rtp
 
     avail_frames = rtp_mgr->ops->get_avail_frames(rtp_mgr->cn_mgr, stream->info.stream_handle);
     offset = rtp_mgr->ops->get_buffer_offset(rtp_mgr->cn_mgr, stream->info.stream_handle);
-    if (avail_frames < stream->info.frames_per_packet) {
-        if (!was_underflow) {
-            printk(KERN_WARNING "fusion_cn_rtp: send_packet: Underflow for stream %llu, avail=%u, required=%u\n",
-                   stream->info.stream_handle, avail_frames, stream->info.frames_per_packet);
-            was_underflow = true;
-        }
-    } else {
-        if (was_underflow) {
-            printk(KERN_INFO "fusion_cn_rtp: send_packet: Recovered from underflow for stream %llu, avail=%u\n",
-                   stream->info.stream_handle, avail_frames);
-            was_underflow = false;
-        }
-    }
 
     if (!fusion_cn_nf_create_packet(rtp_mgr->nf, &skb, &packet, &size) && size >= sizeof(struct fusion_cn_rtp_packet)) {
         rtp = packet;
@@ -669,13 +655,14 @@ __always_inline void fusion_cn_rtp_send_packet(struct fusion_cn_rtp_manager *rtp
 
         // Calculate RTP timestamp using absolute next_action_time (in sample units)
         global_sac = stream->next_action_time / stream->ns_per_sample;
-        rtp->rtp.timestamp = swab32((uint32_t)global_sac);
+        rtp->rtp.timestamp = swab32((uint32_t)(global_sac + stream->info.timestamp_offset));
         rtp->rtp.seq_num = swab16(stream->outgoing_seq_num++);
 
         if (rtp_mgr->debug) printk(KERN_DEBUG "fusion_cn_rtp: send_packet: Sending packet, stream %llu, next_action_time=%llu\n",
                stream->info.stream_handle, stream->next_action_time);
 
         payload = (uint8_t *)packet + sizeof(*rtp);
+        // if we don't have enough audio, write out silence
         if (avail_frames < stream->info.frames_per_packet) {
             memset(payload, 0, stream->info.frames_per_packet * stream->info.channels * sample_physical_width_bits / 8);
         } else {

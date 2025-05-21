@@ -31,6 +31,7 @@ struct fusion_cn_stream_config {
     uint32_t source_ip;
     uint8_t payload_type;
     uint32_t playout_delay;
+    uint32_t timestamp_offset;
     uint8_t is_source;
     uint8_t is_fusion_connect;
 } __attribute__((packed));
