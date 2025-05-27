@@ -225,7 +225,7 @@ static int fusion_sound_card_probe(struct platform_device *pdev)
         }
     }
     
-    priv->dai_link.dai_fmt |= SND_SOC_DAIFMT_CBC_CFC | SND_SOC_DAIFMT_NB_NF;
+    priv->dai_link.dai_fmt |= SND_SOC_DAIFMT_CBP_CFP | SND_SOC_DAIFMT_NB_NF;
     
     priv->dai_link.cpus->of_node = cpu_np;
     priv->dai_link.codecs->of_node = codec_np;
