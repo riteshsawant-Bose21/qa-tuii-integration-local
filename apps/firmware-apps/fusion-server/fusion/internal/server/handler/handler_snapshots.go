@@ -1,4 +1,4 @@
-package server
+package handler
 
 import (
 	"fmt"
@@ -16,7 +16,7 @@ func (h *Handler) HandleActivateSnapshot(name string) error {
 	if err := h.persistence.ActivateSnapshot(name); err != nil {
 		return fmt.Errorf("failed to activate snapshot: %w", err)
 	}
-	if err := h.handleSnapshotOperation(h.stateManager.node, name, api.NotifyOpSnapActivate, nil); err != nil {
+	if err := h.handleSnapshotOperation(h.StateManager.GetNode(), name, api.NotifyOpSnapActivate, nil); err != nil {
 		return fmt.Errorf("failed to handle snapshot activate: %w", err)
 	}
 	return nil
@@ -28,8 +28,8 @@ func (h *Handler) HandleCreateSnapshot(name string) error {
 		return fmt.Errorf("failed to create snapshot: %w", err)
 	}
 
-	data := TransformState(h.stateManager.GetFullState().State)
-	if err := h.handleSnapshotOperation(h.stateManager.node, name, api.NotifyOpSnapCreate, data); err != nil {
+	data := h.StateManager.GetStateMap()
+	if err := h.handleSnapshotOperation(h.StateManager.GetNode(), name, api.NotifyOpSnapCreate, data); err != nil {
 		return fmt.Errorf("failed to handle snapshot create: %w", err)
 	}
 	return nil
@@ -40,7 +40,7 @@ func (h *Handler) HandleDeleteSnapshot(name string) error {
 	if err := h.persistence.DeleteSnapshot(name); err != nil {
 		return fmt.Errorf("failed to delete snapshot: %w", err)
 	}
-	if err := h.handleSnapshotOperation(h.stateManager.node, name, api.NotifyOpSnapDelete, nil); err != nil {
+	if err := h.handleSnapshotOperation(h.StateManager.GetNode(), name, api.NotifyOpSnapDelete, nil); err != nil {
 		return fmt.Errorf("failed to handle snapshot delete: %w", err)
 	}
 	return nil

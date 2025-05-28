@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"fusion/internal/logging"
 	"fusion/internal/server"
+	"fusion/internal/server/handler"
 	"io"
 	"os"
 	"os/exec"
@@ -267,7 +268,7 @@ func getRealPath(path string) (string, error) {
 	return path, nil
 }
 
-func createBackup(currentBinaryPath string, updater *server.Updater) (string, error) {
+func createBackup(currentBinaryPath string, updater *handler.Updater) (string, error) {
 	// Get the real path if it's a symlink
 	realBinaryPath, err := getRealPath(currentBinaryPath)
 	if err != nil {

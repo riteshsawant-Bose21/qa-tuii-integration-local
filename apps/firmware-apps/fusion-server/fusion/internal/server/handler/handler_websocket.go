@@ -1,9 +1,23 @@
-package server
+package handler
 
 import (
 	"encoding/json"
 	"fmt"
 )
+
+// WebSocketMessage represents an incoming websocket message
+type WebSocketMessage struct {
+	Type string          `json:"type"`
+	Data json.RawMessage `json:"data,omitempty"`
+}
+
+// WebSocketResponse represents a websocket response
+type WebSocketResponse struct {
+	Type    string `json:"type"`
+	Status  string `json:"status,omitempty"`
+	Message string `json:"message,omitempty"`
+	Data    any    `json:"data,omitempty"`
+}
 
 func (h *Handler) HandleWebSocketMessage(data []byte) (*WebSocketResponse, error) {
 	var msg WebSocketMessage

@@ -1,16 +1,14 @@
-package server
+package handler
 
 import (
 	"bytes"
 	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/logging"
 	"io"
-	"mime/multipart"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -26,23 +24,6 @@ const (
 	compareBufferSize = 64 * 1024 // 64KB chunks
 	MaxBackups        = 3
 )
-
-type BinaryHeader struct {
-	NodeID string    // Source node ID
-	Time   time.Time // Timestamp of the update
-}
-
-type BinaryRollback struct {
-	BinaryHeader
-	BinaryPath string // Path to current binary
-	Index      int    // Rollback index
-}
-
-type BinaryUpdate struct {
-	BinaryHeader
-	BinaryHash string // SHA256 of the binary for verification
-	BinarySize int64  // Size of the binary for pre-allocation
-}
 
 type Updater struct {
 	updateMutex      sync.Mutex
@@ -337,17 +318,6 @@ func (u *Updater) VerifyBackup(originalPath, backupPath string) error {
 	}
 
 	return nil
-}
-
-func VerifyChecksum(file multipart.File, expectedChecksum string) bool {
-
-	hash := sha256.New()
-	if _, err := io.Copy(hash, file); err != nil {
-		return false
-	}
-
-	actualChecksum := hex.EncodeToString(hash.Sum(nil))
-	return actualChecksum == expectedChecksum
 }
 
 func (u *Updater) findBackups(binaryPath string) ([]struct {

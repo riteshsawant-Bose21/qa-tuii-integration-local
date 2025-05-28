@@ -1,16 +1,17 @@
-package server
+package handler
 
 import (
 	"fmt"
 	"slices"
 	"sync"
+	"time"
 )
 
 const (
-	VersionRollback = "binary_rollback"
-	VersionUpdate   = "binary_update"
 	UpdateChunk     = "binary_chunk"
 	UpdateMetadata  = "binary_metadata"
+	VersionRollback = "binary_rollback"
+	VersionUpdate   = "binary_update"
 )
 
 type BinaryAssembler struct {
@@ -24,6 +25,23 @@ type BinaryChunk struct {
 	Data   []byte `json:"data"`   // The actual chunk of binary data
 	Offset int64  `json:"offset"` // Position in the file for reassembly
 	Final  bool   `json:"final"`  // Indicates if this is the last chunk
+}
+
+type BinaryHeader struct {
+	NodeID string    // Source node ID
+	Time   time.Time // Timestamp of the update
+}
+
+type BinaryRollback struct {
+	BinaryHeader
+	BinaryPath string // Path to current binary
+	Index      int    // Rollback index
+}
+
+type BinaryUpdate struct {
+	BinaryHeader
+	BinaryHash string // SHA256 of the binary for verification
+	BinarySize int64  // Size of the binary for pre-allocation
 }
 
 func IsValidBinaryUpdateType(updateType string) bool {

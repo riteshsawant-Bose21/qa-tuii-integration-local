@@ -10,4 +10,6 @@ const (
 
 	ContentType  = "Content-Type"
 	JsonMIMEType = "application/json"
+
+	AudioFilesLocation = "/var/lib/fusion/audio"
 )

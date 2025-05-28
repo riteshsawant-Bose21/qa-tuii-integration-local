@@ -1,4 +1,4 @@
-package server
+package persistence
 
 import (
 	"crypto/sha256"
@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/logging"
+	"fusion/internal/utils"
 	"os"
 	"sync"
 	"time"
@@ -15,12 +16,12 @@ import (
 )
 
 const (
-	snapshotsBucketName = "snapshots"
-	defaultSnapshotKey  = "default"
+	deviceBucketName    = "device"
 	fusionBucketName    = "fusion"
 	metadataKey         = "metadata"
-	tasksBucketName     = "tasks"
-	deviceBucketName    = "device"
+	snapshotsBucketName = "snapshots"
+	DefaultSnapshotKey  = "default"
+	TasksBucketName     = "tasks"
 )
 
 // PersistentState represents the saved state structure.
@@ -71,6 +72,11 @@ func NewPersistence(dbPath string, stateManager *StateManager) (*Persistence, er
 }
 
 // Close safely closes the database.
+func (p *Persistence) GetDB() *bbolt.DB {
+	return p.db
+}
+
+// Close safely closes the database.
 func (p *Persistence) Close() {
 	p.db.Close()
 }
@@ -117,7 +123,7 @@ func (p *Persistence) SaveState() error {
 
 	snapshotKey, err := p.getActiveSnapshotKey()
 	if err != nil || snapshotKey == "" {
-		snapshotKey = defaultSnapshotKey
+		snapshotKey = DefaultSnapshotKey
 	}
 
 	ps, err := p.persistState(snapshotKey)
@@ -162,7 +168,7 @@ func (p *Persistence) ValidateState() error {
 	defer p.mutex.RUnlock()
 
 	state := p.stateManager.GetFullState()
-	calculatedChecksum, err := CalculateChecksum(state.State)
+	calculatedChecksum, err := utils.CalculateChecksum(state.State)
 	if err != nil {
 		return fmt.Errorf("failed to calculate checksum: %w", err)
 	}
@@ -230,7 +236,7 @@ func (p *Persistence) ImportData(importData map[string]any) error {
 	}
 
 	// Get the tasks from the import
-	tasksData, ok := importData[tasksBucketName]
+	tasksData, ok := importData[TasksBucketName]
 	if ok {
 		// Assert tasksData is a map[string]any.
 		tasks, ok := tasksData.(map[string]any)
@@ -238,7 +244,7 @@ func (p *Persistence) ImportData(importData map[string]any) error {
 			return fmt.Errorf("tasks data is not in the expected format")
 		}
 
-		if err := p.replaceBucketData(tasksBucketName, tasks); err != nil {
+		if err := p.replaceBucketData(TasksBucketName, tasks); err != nil {
 			return err
 		}
 
@@ -317,9 +323,9 @@ func (p *Persistence) createDefaultBuckets() error {
 		}
 
 		// Tasks
-		_, err = tx.CreateBucketIfNotExists([]byte(tasksBucketName))
+		_, err = tx.CreateBucketIfNotExists([]byte(TasksBucketName))
 		if err != nil {
-			return fmt.Errorf("failed to create bucket '%s': %w", tasksBucketName, err)
+			return fmt.Errorf("failed to create bucket '%s': %w", TasksBucketName, err)
 		}
 
 		// Snapshots
@@ -328,7 +334,7 @@ func (p *Persistence) createDefaultBuckets() error {
 			return fmt.Errorf("failed to create bucket '%s': %w", snapshotsBucketName, err)
 		}
 
-		if fusionBucket.Get([]byte(defaultSnapshotKey)) == nil {
+		if fusionBucket.Get([]byte(DefaultSnapshotKey)) == nil {
 			state := p.stateManager.GetFullState()
 			ps := PersistentState{
 				Version:   p.stateManager.GetVersion(),
@@ -340,7 +346,7 @@ func (p *Persistence) createDefaultBuckets() error {
 			if err != nil {
 				return fmt.Errorf("failed to marshal default snapshot: %w", err)
 			}
-			if err := fusionBucket.Put([]byte(defaultSnapshotKey), data); err != nil {
+			if err := fusionBucket.Put([]byte(DefaultSnapshotKey), data); err != nil {
 				return fmt.Errorf("failed to save default snapshot: %w", err)
 			}
 		}
@@ -388,7 +394,7 @@ func (p *Persistence) replaceBucketData(bucketName string, data map[string]any) 
 	// Replace the entire bucket in an atomic transaction.
 	err := p.db.Update(func(tx *bbolt.Tx) error {
 
-		bucket := tx.Bucket([]byte(tasksBucketName))
+		bucket := tx.Bucket([]byte(TasksBucketName))
 		if bucket == nil {
 			return fmt.Errorf("%s bucket not found", bucketName)
 		}

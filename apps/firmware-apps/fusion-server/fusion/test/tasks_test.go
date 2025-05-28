@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fusion/internal/api"
 	"fusion/internal/routes"
-	"fusion/internal/server"
+	"fusion/internal/tasks"
 	"net/http"
 	"strings"
 	"testing"
@@ -48,9 +48,11 @@ func TestTaskManagerEndpoints(t *testing.T) {
 		task := api.Task{
 			ID:          "test-task",
 			CronExpr:    "*/5 * * * *",
-			SnapshotID:  snapshotID,
 			Description: "Test task description",
+			Type:        api.TaskTypeSnapshot,
+			Params:      map[string]string{"snapshot_id": "001"},
 		}
+
 		taskJSON, err := json.Marshal(task)
 		require.NoError(t, err)
 
@@ -66,7 +68,7 @@ func TestTaskManagerEndpoints(t *testing.T) {
 		require.NoError(t, err)
 		defer resp.Body.Close()
 
-		assert.Equal(t, http.StatusOK, resp.StatusCode, "Expected HTTP status 200 OK")
+		assert.Equal(t, http.StatusOK, resp.StatusCode, "Expected HTTP status 200")
 
 		var tasks []api.Task
 		err = json.NewDecoder(resp.Body).Decode(&tasks)
@@ -80,8 +82,9 @@ func TestTaskManagerEndpoints(t *testing.T) {
 		task := api.Task{
 			ID:          "test-task",
 			CronExpr:    "*/10 * * * *",
-			SnapshotID:  snapshotID,
 			Description: "Updated task description",
+			Type:        api.TaskTypeSnapshot,
+			Params:      map[string]string{"snapshot_id": "001"},
 		}
 		taskJSON, err := json.Marshal(task)
 		require.NoError(t, err)
@@ -94,7 +97,7 @@ func TestTaskManagerEndpoints(t *testing.T) {
 		require.NoError(t, err)
 		defer resp.Body.Close()
 
-		assert.Equal(t, http.StatusOK, resp.StatusCode, "Expected HTTP status 200 OK")
+		assert.Equal(t, http.StatusOK, resp.StatusCode, "Expected HTTP status 200")
 	})
 
 	t.Run("RemoveTaskHandler", func(t *testing.T) {
@@ -105,7 +108,7 @@ func TestTaskManagerEndpoints(t *testing.T) {
 		require.NoError(t, err)
 		defer resp.Body.Close()
 
-		assert.Equal(t, http.StatusOK, resp.StatusCode, "Expected HTTP status 200 OK")
+		assert.Equal(t, http.StatusNoContent, resp.StatusCode, "Expected HTTP status 204")
 
 		// Verify the task is removed by fetching the task list.
 		resp, err = http.Get(liveServerURL + routes.TasksEndpoint)
@@ -125,9 +128,9 @@ func TestTaskManagerEndpoints(t *testing.T) {
 		require.NoError(t, err)
 		defer resp.Body.Close()
 
-		assert.Equal(t, http.StatusOK, resp.StatusCode, "Expected HTTP status 200 OK")
+		assert.Equal(t, http.StatusOK, resp.StatusCode, "Expected HTTP status 200")
 
-		var history []server.ExecutionRecord
+		var history []tasks.ExecutionRecord
 		err = json.NewDecoder(resp.Body).Decode(&history)
 		require.NoError(t, err, "Expected valid JSON for execution history")
 		// Optionally, add more assertions based on the expected state.

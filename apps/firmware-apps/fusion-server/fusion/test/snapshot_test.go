@@ -41,7 +41,7 @@ func TestSnapshotCreateAndList(t *testing.T) {
 		t.Fatalf("Failed to create snapshot: %v", err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusNoContent {
 		body, _ := io.ReadAll(resp.Body)
 		t.Fatalf("Create snapshot returned %d: %s", resp.StatusCode, string(body))
 	}
@@ -72,7 +72,7 @@ func TestSnapshotActivateAndDelete(t *testing.T) {
 	}
 	resp.Body.Close()
 
-	activateURL := fmt.Sprintf("%s/snapshots/%s/activate", snapServerAddr, snapshotName)
+	activateURL := fmt.Sprintf("%s/snapshots/activate/%s", snapServerAddr, snapshotName)
 	req, _ := http.NewRequest(http.MethodPost, activateURL, nil)
 	client := &http.Client{}
 	resp, err = client.Do(req)
@@ -80,7 +80,7 @@ func TestSnapshotActivateAndDelete(t *testing.T) {
 		t.Fatalf("Failed to activate snapshot: %v", err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusNoContent {
 		body, _ := io.ReadAll(resp.Body)
 		t.Fatalf("Activate snapshot returned %d: %s", resp.StatusCode, string(body))
 	}
@@ -92,7 +92,7 @@ func TestSnapshotActivateAndDelete(t *testing.T) {
 		t.Fatalf("Failed to delete snapshot: %v", err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusNoContent {
 		body, _ := io.ReadAll(resp.Body)
 		t.Fatalf("Delete snapshot returned %d: %s", resp.StatusCode, string(body))
 	}
@@ -179,7 +179,7 @@ func TestSnapshotPropagation(t *testing.T) {
 }
 
 func TestSnapshotExport(t *testing.T) {
-	exportURL := fmt.Sprintf("%s/exportData", snapAdminServerAddr)
+	exportURL := fmt.Sprintf("%s/data", snapAdminServerAddr)
 	resp, err := http.Get(exportURL)
 	if err != nil {
 		t.Fatalf("Failed to get full export: %v", err)
@@ -199,7 +199,7 @@ func TestSnapshotExport(t *testing.T) {
 }
 
 func TestSnapshotExportImport(t *testing.T) {
-	exportURL := fmt.Sprintf("%s/exportData", snapAdminServerAddr)
+	exportURL := fmt.Sprintf("%s/data", snapAdminServerAddr)
 	resp, err := http.Get(exportURL)
 	if err != nil {
 		t.Fatalf("Failed to export snapshots: %v", err)
@@ -224,7 +224,7 @@ func TestSnapshotExportImport(t *testing.T) {
 	newState, _ := json.Marshal(state)
 	export[snapshotDefaultBucketName] = newState
 	modified, _ := json.Marshal(export)
-	importURL := fmt.Sprintf("%s/importData", snapAdminServerAddr)
+	importURL := fmt.Sprintf("%s/data", snapAdminServerAddr)
 	resp, err = http.Post(importURL, api.JsonMIMEType, bytes.NewReader(modified))
 	if err != nil {
 		t.Fatalf("Failed to import snapshot: %v", err)
@@ -293,7 +293,7 @@ func snapshotRemovedOnAllNodes(t *testing.T, name string) bool {
 }
 
 func getLiveNodeAddresses() ([]string, error) {
-	resp, err := http.Get(fmt.Sprintf("%s/members", snapServerAddr))
+	resp, err := http.Get(fmt.Sprintf("%s/cluster/members", snapServerAddr))
 	if err != nil {
 		return nil, err
 	}

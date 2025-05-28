@@ -1,4 +1,4 @@
-package server
+package handler
 
 import (
 	"crypto/sha256"
@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/logging"
+	"fusion/internal/utils"
 	"io"
 	"log"
 	"net/http"
@@ -15,6 +16,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/gorilla/mux"
 	"github.com/hashicorp/memberlist"
 )
 
@@ -36,7 +38,7 @@ func (h *Handler) HandleVersionUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 	defer updateFile.Close()
 
-	if !VerifyChecksum(updateFile, r.FormValue("checksum")) {
+	if !utils.VerifyChecksum(updateFile, r.FormValue("checksum")) {
 		logger.Error("Invalid checksum")
 		http.Error(w, "Invalid checksum", http.StatusBadRequest)
 		return
@@ -63,7 +65,7 @@ func (h *Handler) HandleVersionUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.InitiateVersionUpdate(tempPath); err != nil {
+	if err := h.initiateVersionUpdate(tempPath); err != nil {
 		logger.Error("Failed to initiate cluster update: %v", err)
 		http.Error(w, "Server error", http.StatusInternalServerError)
 		return
@@ -74,6 +76,8 @@ func (h *Handler) HandleVersionUpdate(w http.ResponseWriter, r *http.Request) {
 			logger.Error("Update failed: %v", err)
 		}
 	}()
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // HandleVersionRollback processes a rollback request using the provided index,
@@ -96,7 +100,7 @@ func (h *Handler) HandleVersionRollback(w http.ResponseWriter, r *http.Request) 
 
 	if !h.updater.IsValidRollbackIndex(index) {
 		logger.Error("Rollback index out of range: %d", index)
-		http.Error(w, fmt.Sprintf("Rollback index must be between -%d and -1, got: %d", MaxBackups, index), http.StatusBadRequest)
+		http.Error(w, "Rollback index out of range", http.StatusBadRequest)
 		return
 	}
 
@@ -107,7 +111,7 @@ func (h *Handler) HandleVersionRollback(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if err := h.InitiateBinaryRollback(currentBinaryPath, index); err != nil {
+	if err := h.initiateBinaryRollback(currentBinaryPath, index); err != nil {
 		logger.Error("Failed to initiate cluster rollback: %v", err)
 	}
 
@@ -116,11 +120,13 @@ func (h *Handler) HandleVersionRollback(w http.ResponseWriter, r *http.Request) 
 			logger.Error("Rollback failed: %v", err)
 		}
 	}()
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
-// InitiateVersionUpdate prepares a version update message with binary metadata
+// initiateVersionUpdate prepares a version update message with binary metadata
 // and streams the binary to all other nodes in the cluster.
-func (h *Handler) InitiateVersionUpdate(newBinaryPath string) error {
+func (h *Handler) initiateVersionUpdate(newBinaryPath string) error {
 	logger := logging.GetLogger()
 	hash, size, err := getBinaryMetadata(newBinaryPath)
 	if err != nil {
@@ -129,7 +135,7 @@ func (h *Handler) InitiateVersionUpdate(newBinaryPath string) error {
 
 	update := BinaryUpdate{
 		BinaryHeader: BinaryHeader{
-			NodeID: h.memberlist.LocalNode().Name,
+			NodeID: h.Memberlist.LocalNode().Name,
 			Time:   time.Now().UTC(),
 		},
 		BinaryHash: hash,
@@ -154,8 +160,8 @@ func (h *Handler) InitiateVersionUpdate(newBinaryPath string) error {
 	h.broadcastToNodes(messageData)
 
 	// Stream the binary to each node.
-	for _, node := range h.memberlist.Members() {
-		if node.Name == h.memberlist.LocalNode().Name {
+	for _, node := range h.Memberlist.Members() {
+		if node.Name == h.Memberlist.LocalNode().Name {
 			continue
 		}
 		if err := h.streamBinaryToNode(node, newBinaryPath); err != nil {
@@ -165,13 +171,13 @@ func (h *Handler) InitiateVersionUpdate(newBinaryPath string) error {
 	return nil
 }
 
-// InitiateBinaryRollback prepares a rollback message and broadcasts it to the cluster
+// initiateBinaryRollback prepares a rollback message and broadcasts it to the cluster
 // to trigger a coordinated rollback to a previous binary version.
-func (h *Handler) InitiateBinaryRollback(currentBinaryPath string, index int) error {
+func (h *Handler) initiateBinaryRollback(currentBinaryPath string, index int) error {
 
 	rollback := BinaryRollback{
 		BinaryHeader: BinaryHeader{
-			NodeID: h.memberlist.LocalNode().Name,
+			NodeID: h.Memberlist.LocalNode().Name,
 			Time:   time.Now().UTC(),
 		},
 		BinaryPath: currentBinaryPath,
@@ -197,8 +203,7 @@ func (h *Handler) InitiateBinaryRollback(currentBinaryPath string, index int) er
 	return nil
 }
 
-// HandleAudioUpload handles the upload of an audio file, saving it to a fixed location,
-// updating the internal configuration to include it, and applying that configuration.
+// HandleAudioUpload handles the upload of an audio file
 func (h *Handler) HandleAudioUpload(w http.ResponseWriter, r *http.Request) {
 	logger := logging.GetLogger()
 	if err := r.ParseMultipartForm(32 << 20); err != nil {
@@ -215,7 +220,7 @@ func (h *Handler) HandleAudioUpload(w http.ResponseWriter, r *http.Request) {
 	}
 	defer audioFile.Close()
 
-	destDir := "/var/lib/fusion/audio"
+	destDir := api.AudioFilesLocation
 	destPath := filepath.Join(destDir, header.Filename)
 	if err := os.MkdirAll(destDir, 0755); err != nil {
 		logger.Error("Error creating destination directory: %v", err)
@@ -237,13 +242,48 @@ func (h *Handler) HandleAudioUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	existingData := TransformState(h.stateManager.GetFullState().State)
+	existingData := h.StateManager.GetStateMap()
 	addAudioFilesToConfig(destDir, existingData)
 	if err := h.handleConfigUpdate(existingData); err != nil {
 		logger.Error("Failed to handle audio config update: %v", err)
 		http.Error(w, "Server error", http.StatusInternalServerError)
 		return
 	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// HandleAudioRemove handles deletion of a previously‐uploaded audio file.
+func (h *Handler) HandleAudioRemove(w http.ResponseWriter, r *http.Request) {
+	logger := logging.GetLogger()
+
+	name, err := extractName(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	destPath := filepath.Join(api.AudioFilesLocation, name)
+
+	if err := os.Remove(destPath); err != nil {
+		logger.Error("Error removing file %q: %v", destPath, err)
+		if os.IsNotExist(err) {
+			http.Error(w, "File not found", http.StatusNotFound)
+		} else {
+			http.Error(w, "Server error", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	existingData := h.StateManager.GetStateMap()
+	addAudioFilesToConfig(api.AudioFilesLocation, existingData)
+	if err := h.handleConfigUpdate(existingData); err != nil {
+		logger.Error("Failed to handle audio config update: %v", err)
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // getBinaryMetadata calculates the SHA-256 hash and size of the specified binary file.
@@ -305,7 +345,7 @@ func (h *Handler) streamBinaryToNode(node *memberlist.Node, binaryPath string) e
 			return fmt.Errorf("failed to marshal message: %w", err)
 		}
 
-		if err := h.memberlist.SendReliable(node, messageData); err != nil {
+		if err := h.Memberlist.SendReliable(node, messageData); err != nil {
 			return fmt.Errorf("failed to send chunk message: %w", err)
 		}
 	}
@@ -328,7 +368,7 @@ func (h *Handler) streamBinaryToNode(node *memberlist.Node, binaryPath string) e
 	if err != nil {
 		return fmt.Errorf("failed to marshal final message: %w", err)
 	}
-	if err := h.memberlist.SendReliable(node, messageData); err != nil {
+	if err := h.Memberlist.SendReliable(node, messageData); err != nil {
 		return fmt.Errorf("failed to send final chunk message: %w", err)
 	}
 
@@ -353,4 +393,13 @@ func addAudioFilesToConfig(audioDir string, existingData map[string]any) {
 		"location": audioDir,
 		"files":    fileNames,
 	}
+}
+
+// extractName pulls the “name” var from mux and returns a proper error if it’s missing.
+func extractName(r *http.Request) (string, error) {
+	name := mux.Vars(r)["name"]
+	if name == "" {
+		return "", fmt.Errorf("name is required")
+	}
+	return filepath.Base(name), nil
 }

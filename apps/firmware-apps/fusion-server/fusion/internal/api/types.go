@@ -1,10 +1,9 @@
 package api
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"fusion/internal/utils"
 	"time"
 
 	"github.com/hashicorp/memberlist"
@@ -38,7 +37,7 @@ type UpdateDeviceName struct {
 // NewConfigUpdate returns a configured ConfigUpdate
 func NewConfigUpdate(data map[string]any) (*ConfigUpdate, error) {
 
-	hash, err := hashConfigData(data)
+	hash, err := utils.CalculateChecksum(data)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate hash: %w", err)
 	}
@@ -73,14 +72,22 @@ type SnapshotUpdate struct {
 	Timestamp time.Time      `json:"timestamp"`
 }
 
+type TaskType string
+
+const (
+	TaskTypeSnapshot      TaskType = "snapshot"
+	TaskTypeAudioPlayback TaskType = "audio_playback"
+)
+
 // Task represents a task
 type Task struct {
-	ID          string `json:"id"`
-	Description string `json:"description"`
-	SnapshotID  string `json:"snapshot_id"`
-	CronExpr    string `json:"cron_expr"`
-	Enabled     bool   `json:"active"`
-	CronEntryID cron.EntryID
+	ID          string            `json:"id"`
+	Description string            `json:"description"`
+	CronExpr    string            `json:"cron_expr"`
+	Enabled     bool              `json:"active"`
+	Type        TaskType          `json:"type"`
+	Params      map[string]string `json:"params"`
+	CronEntryID cron.EntryID      `json:"-"`
 }
 
 // StateEntry represents a single entry in the state
@@ -156,16 +163,4 @@ func WithVersionMessage(ver *VersionMessage) func(*NotifyMessage) {
 	return func(m *NotifyMessage) {
 		m.VersionMessage = ver
 	}
-}
-
-// hashConfigData generates a SHA-256 hash of the Data field of a ConfigUpdate
-func hashConfigData(data map[string]any) (string, error) {
-	// Marshal the map to JSON to ensure consistent hashing
-	jsonData, err := json.Marshal(data)
-	if err != nil {
-		return "", err
-	}
-
-	hash := sha256.Sum256(jsonData)
-	return hex.EncodeToString(hash[:]), nil
 }

@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fusion/internal/api"
 	"fusion/internal/logging"
-	"fusion/internal/server"
+	"fusion/internal/persistence"
+	"fusion/internal/server/handler"
+	"fusion/internal/tasks"
 	"math"
 	"sync"
 	"time"
@@ -59,15 +61,15 @@ func (s *SkewStore) Prune(ticker *time.Ticker, maxAge time.Duration) {
 
 type ClusterDelegate struct {
 	nodeID        string
-	persistence   *server.Persistence
-	stateManager  *server.StateManager
-	taskManager   *server.TaskManager
-	updater       *server.Updater
+	persistence   *persistence.Persistence
+	stateManager  *persistence.StateManager
+	taskManager   *tasks.TaskManager
+	updater       *handler.Updater
 	syncLatencies *SyncLatencyStore
 	skewStore     *SkewStore
 }
 
-func NewClusterDelegate(nodeID string, persistence *server.Persistence, stateManager *server.StateManager, taskManager *server.TaskManager, updater *server.Updater) *ClusterDelegate {
+func NewClusterDelegate(nodeID string, persistence *persistence.Persistence, stateManager *persistence.StateManager, taskManager *tasks.TaskManager, updater *handler.Updater) *ClusterDelegate {
 	delegate := &ClusterDelegate{
 		nodeID:        nodeID,
 		persistence:   persistence,
@@ -164,7 +166,7 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 		}
 
 	case api.NotifyOpTaskCreate:
-		if err := d.taskManager.AddTask(message.Task, func() {}); err != nil {
+		if err := d.taskManager.AddTask(message.Task); err != nil {
 			logger.Error("Error creating task: %v", err)
 		}
 

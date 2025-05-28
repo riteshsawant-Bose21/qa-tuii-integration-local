@@ -6,6 +6,7 @@ import (
 	"fusion/internal/api"
 	"fusion/internal/logging"
 	"fusion/internal/server"
+	"fusion/internal/server/handler"
 	"net"
 	"sync"
 	"time"
@@ -14,14 +15,14 @@ import (
 type UDPServer struct {
 	addr       string
 	conn       *net.UDPConn
-	handler    *server.Handler
+	handler    *handler.Handler
 	stopChan   chan struct{}
 	wg         sync.WaitGroup
 	clients    map[string]*net.UDPAddr
 	clientsMux sync.RWMutex
 }
 
-func NewUDPServer(addr string, handler *server.Handler) (*UDPServer, error) {
+func NewUDPServer(addr string, handler *handler.Handler) (*UDPServer, error) {
 	udpAddr, err := net.ResolveUDPAddr("udp", addr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve address: %v", err)

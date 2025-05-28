@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"fusion/internal/logging"
-	"fusion/internal/server"
+	"fusion/internal/server/handler"
 	"net"
 	"sync"
 	"time"
@@ -21,7 +21,7 @@ type AnalogControllerConnection struct {
 
 // AnalogControllerManager handles connections from CxA devices and manages their state
 type AnalogControllerManager struct {
-	handler    *server.Handler
+	handler    *handler.Handler
 	devices    map[string]*AnalogControllerConnection
 	deviceLock sync.RWMutex
 	listener   net.Listener
@@ -55,7 +55,7 @@ func detectControllerType(values []uint32) ControllerType {
 	return CC1
 }
 
-func NewAnalogControllerManager(handler *server.Handler, listenAddr string) (*AnalogControllerManager, error) {
+func NewAnalogControllerManager(handler *handler.Handler, listenAddr string) (*AnalogControllerManager, error) {
 	listener, err := net.Listen("tcp", listenAddr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start device listener: %v", err)

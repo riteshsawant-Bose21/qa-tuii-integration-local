@@ -14,49 +14,75 @@ var (
 )
 
 const (
-	RootEndpoint        = "/"
-	EndpointsEndpoint   = "/endpoints"
-	MembersEndpoint     = "/members"
-	MetadataEndpoint    = "/metadata"
-	VersionEndpoint     = "/version"
-	UploadAudioEndpoint = "/uploadAudio"
-	WebsocketEndpoint   = "/ws"
+	//
+	// Public
+	//
 
-	ValueEndpoint = "/value"
+	AudioEndpoint = "/audio"
 
-	SnapshotsEndpoint             = "/snapshots"
-	SnapshotsNameEndpoint         = "/snapshots/{name}"
-	SnapshotsNameActivateEndpoint = "/snapshots/{name}/activate"
+	ClusterEndpoint                            = "/cluster"
+	ClusterLatencyEndpoint                     = ClusterEndpoint + "/latency"
+	ClusterLatencyNetworkEndpoint              = ClusterLatencyEndpoint + "/network"
+	ClusterLatencyNetworkLocalEndpoint         = ClusterLatencyNetworkEndpoint + "/local"
+	ClusterLatencyNetworkFailuresEndpoint      = ClusterLatencyNetworkEndpoint + "/failures"
+	ClusterLatencyNetworkFailuresLocalEndpoint = ClusterLatencyNetworkEndpoint + "/failures/local"
+	ClusterLatencyStatusEndpoint               = ClusterLatencyEndpoint + "/status"
+	ClusterLatencyStatusLocalEndpoint          = ClusterLatencyStatusEndpoint + "/local"
+	ClusterLatencySyncEndpoint                 = ClusterLatencyEndpoint + "/sync"
+	ClusterLatencySyncLocalEndpoint            = ClusterLatencySyncEndpoint + "/local"
+	ClusterLatencySyncAveragesEndpoint         = ClusterLatencySyncEndpoint + "/averages"
+	ClusterLatencySyncAveragesLocalEndpoint    = ClusterLatencySyncEndpoint + "/averages/local"
+	ClusterMembersEndpoint                     = ClusterEndpoint + "/members"
+	ClusterNTPSkewEndpoint                     = ClusterEndpoint + "/ntp-skew"
+	ClusterStatusEndpoint                      = ClusterEndpoint + "/status"
 
-	TasksEndpoint          = "/tasks"
-	TasksHistoryEndpoint   = "/tasks/history"
-	TasksIdEndpoint        = "/tasks/{id}"
-	TasksIdDisableEndpoint = "/tasks/{id}/enable"
-	TasksIdEnableEndpoint  = "/tasks/{id}/enable"
-
-	ClusterLatencyNetworkEndpoint              = "/cluster/latency/network"
-	ClusterLatencyNetworkLocalEndpoint         = "/cluster/latency/network/local"
-	ClusterLatencyNetworkFailuresEndpoint      = "/cluster/latency/network/failures"
-	ClusterLatencyNetworkFailuresLocalEndpoint = "/cluster/latency/network/failures/local"
-	ClusterLatencyStatusEndpoint               = "/cluster/latency/status"
-	ClusterLatencyStatusLocalEndpoint          = "/cluster/latency/status/local"
-	ClusterLatencySyncEndpoint                 = "/cluster/latency/sync"
-	ClusterLatencySyncLocalEndpoint            = "/cluster/latency/sync/local"
-	ClusterLatencySyncAveragesEndpoint         = "/cluster/latency/sync/averages"
-	ClusterLatencySyncAveragesLocalEndpoint    = "/cluster/latency/sync/averages/local"
-	ClusterNTPSkewEndpoint                     = "/cluster/ntp-skew"
-	ClusterStatusEndpoint                      = "/cluster/status"
+	EndpointsEndpoint = "/endpoints"
 
 	HealthEndpoint = "/health"
 
+	MetadataEndpoint = "/metadata"
+
 	MetricsEndpoint = "/metrics"
+
+	PAVAEndpoint               = "/pava"
+	PAVAAlarmsEndpoint         = PAVAEndpoint + "/alarms"
+	PAVAAudioEndpoint          = PAVAEndpoint + "/audio"
+	PAVAAudioDeleteEndpoint    = PAVAAudioEndpoint + "/{name}"
+	PAVADiagnosticsEndpoint    = PAVAEndpoint + "/diagnostics"
+	PAVAMessagesEndpoint       = PAVAEndpoint + "/messages"
+	PAVAMessageTriggerEndpoint = PAVAMessagesEndpoint + "/trigger/{name}"
+	PAVAStatusEndpoint         = PAVAEndpoint + "/status"
+	PAVAZonesEndpoint          = PAVAEndpoint + "/zones"
+	PAVAZoneStatusEndpoint     = PAVAZonesEndpoint + "/status/{name}"
+
+	RootEndpoint = "/"
 
 	SetupDeviceName = "/device/setup"
 
-	ExportDataEndport  = "/exportData"
-	ImportDataEndport  = "/importData"
-	ExportStateEndport = "/exportState"
-	ImportStateEndport = "/importState"
+	SnapshotsEndpoint         = "/snapshots"
+	SnapshotsNameEndpoint     = SnapshotsEndpoint + "/{name}"
+	SnapshotsActivateEndpoint = SnapshotsEndpoint + "/activate/{name}"
+
+	TasksEndpoint          = "/tasks"
+	TasksHistoryEndpoint   = TasksEndpoint + "/history"
+	TasksIdEndpoint        = TasksEndpoint + "/{id}"
+	TasksIdDisableEndpoint = TasksIdEndpoint + "/enable"
+	TasksIdEnableEndpoint  = TasksIdEndpoint + "/enable"
+
+	ValueEndpoint = "/value"
+
+	VersionEndpoint         = "/version"
+	VersionUpdateEndpoint   = VersionEndpoint + "/update"
+	VersionRollbackEndpoint = VersionEndpoint + "/rollback"
+
+	WebsocketEndpoint = "/ws"
+
+	//
+	// Private
+	//
+
+	DataEndport  = "/data"
+	StateEndport = "/state"
 )
 
 func RegisterPrivateEndpoint(router *mux.Router, method string, pattern string, handler http.HandlerFunc) {

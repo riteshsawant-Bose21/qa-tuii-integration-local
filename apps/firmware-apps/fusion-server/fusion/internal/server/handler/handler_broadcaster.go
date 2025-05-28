@@ -1,4 +1,4 @@
-package server
+package handler
 
 import (
 	"encoding/json"
@@ -26,7 +26,7 @@ func (h *Handler) broadcastUpdate(message *api.NotifyMessage) error {
 
 	case api.NotifyOpConfigUpdate:
 		// Apply the configuration update and mark state as dirty for persistence.
-		if err := h.stateManager.ApplyUpdate(*message.ConfigUpdate); err != nil {
+		if err := h.StateManager.ApplyUpdate(*message.ConfigUpdate); err != nil {
 			return fmt.Errorf("failed to apply update: %w", err)
 		}
 		h.persistence.MarkDirty()
@@ -60,7 +60,7 @@ func (h *Handler) broadcastUpdate(message *api.NotifyMessage) error {
 	}
 
 	// Broadcast the message to other nodes if this is the origin node.
-	if message.Node == h.memberlist.LocalNode().Name {
+	if message.Node == h.Memberlist.LocalNode().Name {
 		data, err := json.Marshal(message)
 		if err != nil {
 			return fmt.Errorf("failed to marshal update: %w", err)
@@ -81,11 +81,11 @@ func (h *Handler) broadcastUpdate(message *api.NotifyMessage) error {
 // broadcastToNodes sends the given JSON message to all cluster members except the local node.
 func (h *Handler) broadcastToNodes(messageData []byte) {
 	logger := logging.GetLogger()
-	for _, node := range h.memberlist.Members() {
-		if node.Name == h.memberlist.LocalNode().Name {
+	for _, node := range h.Memberlist.Members() {
+		if node.Name == h.Memberlist.LocalNode().Name {
 			continue
 		}
-		if err := h.memberlist.SendReliable(node, messageData); err != nil {
+		if err := h.Memberlist.SendReliable(node, messageData); err != nil {
 			logger.Error("Failed to send message to node %s: %v", node.Name, err)
 		}
 	}

@@ -9,7 +9,8 @@ import (
 
 	"fusion/internal/api"
 	"fusion/internal/logging"
-	"fusion/internal/server"
+	"fusion/internal/persistence"
+	"fusion/internal/utils"
 )
 
 const (
@@ -34,13 +35,13 @@ func TestMarkDirtyConcurrent(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, databaseName)
 
-	sm := server.NewStateManager("test_manager")
+	sm := persistence.NewStateManager("test_manager")
 	if err := sm.Set("testKey", "testValue"); err != nil {
 		t.Fatalf("Failed to set initial state: %v", err)
 	}
 
 	// Create the persistence object.
-	cp, err := server.NewPersistence(configPath, sm)
+	cp, err := persistence.NewPersistence(configPath, sm)
 	if err != nil {
 		t.Fatalf("Failed to initialize persistence: %v", err)
 	}
@@ -79,11 +80,11 @@ func TestValidateStateFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, databaseName)
 
-	sm := server.NewStateManager("test_manager")
+	sm := persistence.NewStateManager("test_manager")
 	if err := sm.Set("key", "value"); err != nil {
 		t.Fatalf("Failed to set state: %v", err)
 	}
-	cp, err := server.NewPersistence(configPath, sm)
+	cp, err := persistence.NewPersistence(configPath, sm)
 	if err != nil {
 		t.Fatalf("Failed to initialize persistence: %v", err)
 	}
@@ -102,7 +103,7 @@ func TestValidateStateFile(t *testing.T) {
 // remains consistent when the same state is used.
 func TestChecksumCalculation(t *testing.T) {
 
-	sm := server.NewStateManager("test_manager")
+	sm := persistence.NewStateManager("test_manager")
 
 	// Set a known state.
 	state := map[string]*api.StateEntry{
@@ -112,7 +113,7 @@ func TestChecksumCalculation(t *testing.T) {
 
 	sm.SetState(state)
 
-	_, err := server.NewPersistence("dummy", sm)
+	_, err := persistence.NewPersistence("dummy", sm)
 	if err != nil {
 		t.Fatalf("Failed to initialize persistence: %v", err)
 	}
@@ -121,7 +122,7 @@ func TestChecksumCalculation(t *testing.T) {
 	fullState := sm.GetFullState()
 
 	// Serialize the same state and calculate again.
-	checksum, err := server.CalculateChecksum(fullState.State)
+	checksum, err := utils.CalculateChecksum(fullState.State)
 	if err != nil {
 		t.Fatalf("CalculateChecksum returned error: %v", err)
 	}

@@ -6,8 +6,11 @@ import (
 	"fusion/internal/cluster"
 	"fusion/internal/logging"
 	"fusion/internal/network"
+	"fusion/internal/persistence"
 	"fusion/internal/routes"
 	"fusion/internal/server"
+	"fusion/internal/server/handler"
+	"fusion/internal/tasks"
 	"fusion/internal/version"
 	"net/http"
 	"os"
@@ -28,14 +31,14 @@ const (
 
 type App struct {
 	Logger            *logging.Logger
-	StateManager      *server.StateManager
-	Persistence       *server.Persistence
-	TaskManager       *server.TaskManager
-	Updater           *server.Updater
-	ConnectionHandler *server.Handler
+	StateManager      *persistence.StateManager
+	Persistence       *persistence.Persistence
+	TaskManager       *tasks.TaskManager
+	Updater           *handler.Updater
+	ConnectionHandler *handler.Handler
 	Cluster           *cluster.Cluster
 	Delegate          *cluster.ClusterDelegate
-	Server            *server.ConfigServer
+	Server            *server.FusionServer
 	BLEServer         *network.BLEServer
 	UDPServer         *network.UDPServer
 	config            *api.AppConfig
@@ -53,22 +56,22 @@ func NewApp(config *api.AppConfig) *App {
 	stateManager := initStateManager(config.NodeName)
 	persistence := initPersistence(fusionDatabasePath, stateManager)
 	taskManager := initTaskManager(config, persistence)
-	updater := server.NewUpdater()
+	updater := handler.NewUpdater()
 
 	delegate := cluster.NewClusterDelegate(config.NodeName, persistence, stateManager, taskManager, updater)
 	memberlist := cluster.CreateMemberlist(config, delegate)
-	connectionHandler := server.NewHandler(memberlist, persistence, stateManager, updater)
+	connectionHandler := handler.NewHandler(memberlist, persistence, stateManager, updater)
 	clusterInstance := cluster.NewCluster(config, delegate, memberlist)
 	bleServer := initBLEServer()
 	udpServer := initUDPServer(api.UDPPort, connectionHandler)
-	configServer := server.NewConfigServer(config.NodeName, connectionHandler, memberlist)
+	fusionServer := server.NewFusionServer(config.NodeName, connectionHandler, memberlist)
 
-	// Setup the public routes available on port 8080
+	// Setup the public routes
 	publicRouter := mux.NewRouter()
 	publicRouter.Use(loggingMiddleware(config))
 	publicRouter.Use(recoveryMiddleware())
 
-	// Setup the private routes available on port 9090
+	// Setup the private routes
 	privateRouter := mux.NewRouter()
 	privateRouter.Use(loggingMiddleware(config))
 	privateRouter.Use(recoveryMiddleware())
@@ -82,7 +85,7 @@ func NewApp(config *api.AppConfig) *App {
 		ConnectionHandler: connectionHandler,
 		Cluster:           clusterInstance,
 		Delegate:          delegate,
-		Server:            configServer,
+		Server:            fusionServer,
 		BLEServer:         bleServer,
 		UDPServer:         udpServer,
 		config:            config,
@@ -111,19 +114,48 @@ func (app *App) Close() {
 
 func (app *App) setupPublicRoutes() {
 
-	routes.RegisterPublicGET(app.publicRouter, routes.RootEndpoint, app.Server.HandleRoot)
-	routes.RegisterPublicGET(app.publicRouter, routes.EndpointsEndpoint, routes.ListRegisteredEndpoints)
-	routes.RegisterPublicGET(app.publicRouter, routes.MembersEndpoint, app.Server.GetMembers)
-	routes.RegisterPublicGET(app.publicRouter, routes.MetadataEndpoint, app.Server.GetDatabaseMetadata)
-	routes.RegisterPublicGET(app.publicRouter, routes.VersionEndpoint, app.Server.HandleVersion)
-	routes.RegisterPublicPUT(app.publicRouter, routes.UploadAudioEndpoint, app.Server.UploadAudio)
-	routes.RegisterPublicGET(app.publicRouter, routes.WebsocketEndpoint, withWebSocketMetrics(app.config, app.Server.HandleWebSocket, app.Cluster.Metrics))
+	// Cluster
+	routes.RegisterPublicGET(app.publicRouter, routes.ClusterLatencyNetworkEndpoint, app.Cluster.HandleGetNetworkLatency)
+	routes.RegisterPublicGET(app.publicRouter, routes.ClusterLatencyNetworkFailuresEndpoint, app.Cluster.HandleGetNetworkFailures)
+	routes.RegisterPublicGET(app.publicRouter, routes.ClusterLatencyStatusEndpoint, app.Cluster.HandleGetLatencyStatus)
+	routes.RegisterPublicGET(app.publicRouter, routes.ClusterLatencySyncEndpoint, app.Cluster.HandleGetSyncLatency)
+	routes.RegisterPublicGET(app.publicRouter, routes.ClusterLatencySyncAveragesEndpoint, app.Cluster.HandleGetSyncLatencyAverages)
+	routes.RegisterPublicGET(app.publicRouter, routes.ClusterMembersEndpoint, app.Server.GetMembers)
+	routes.RegisterPublicGET(app.publicRouter, routes.ClusterNTPSkewEndpoint, app.Cluster.HandleGetNTPSkew)
+	routes.RegisterPublicGET(app.publicRouter, routes.ClusterStatusEndpoint, app.Cluster.Metrics.HandleClusterStatus)
 
-	// Values
-	routes.RegisterPublicGET(app.publicRouter, routes.ValueEndpoint, app.Server.GetValue)
-	routes.RegisterPublicPOST(app.publicRouter, routes.ValueEndpoint, app.Server.SetValue)
-	routes.RegisterPublicPATCH(app.publicRouter, routes.ValueEndpoint, app.Server.UpdateValue)
-	routes.RegisterPublicDELETE(app.publicRouter, routes.ValueEndpoint, app.Server.ClearAllValues)
+	// Endpoints
+	routes.RegisterPublicGET(app.publicRouter, routes.EndpointsEndpoint, routes.ListRegisteredEndpoints)
+
+	// Health
+	routes.RegisterPublicGET(app.publicRouter, routes.HealthEndpoint, app.Cluster.Metrics.HandleHealthCheck)
+
+	// Metadata
+	routes.RegisterPublicGET(app.publicRouter, routes.MetadataEndpoint, app.Server.GetDatabaseMetadata)
+
+	// Metrics
+	routes.RegisterPublicGET(app.publicRouter, routes.MetricsEndpoint, app.Cluster.Metrics.HandleMetrics)
+
+	/*
+		// PAVA
+		routes.RegisterPublicPUT(app.publicRouter, routes.PAVAAudioEndpoint, app.Server.HandleUploadMessage)
+		routes.RegisterPublicDELETE(app.publicRouter, routes.PAVAAudioDeleteEndpoint, app.Server.HandleDeleteMessage)
+		routes.RegisterPublicGET(app.publicRouter, routes.PAVAMessagesEndpoint, app.Server.HandleListMessages)
+		routes.RegisterPublicPUT(app.publicRouter, routes.PAVAMessageTriggerEndpoint, app.TaskManager.HandleTriggerMessage)
+		routes.RegisterPublicGET(app.publicRouter, routes.PAVAZonesEndpoint, app.Server.HandleListZones)
+		routes.RegisterPublicGET(app.publicRouter, routes.PAVAZoneStatusEndpoint, app.Server.HandleGetZoneStatus)
+		routes.RegisterPublicGET(app.publicRouter, routes.PAVADiagnosticsEndpoint, app.Server.HandleGetSystemDiagnostics)
+		routes.RegisterPublicGET(app.publicRouter, routes.PAVAStatusEndpoint, app.Server.HandleGetSystemStatus)
+		routes.RegisterPublicPUT(app.publicRouter, routes.PAVAAlarmsEndpoint, app.Server.HandleCancelAlarms)
+		routes.RegisterPublicGET(app.publicRouter, routes.PAVAMessagesEndpoint, app.Server.HandleListScheduledMessages)
+		routes.RegisterPublicPOST(app.publicRouter, routes.PAVAMessagesEndpoint, app.Server.HandleScheduleMessage)
+	*/
+
+	// Root
+	routes.RegisterPublicGET(app.publicRouter, routes.RootEndpoint, app.Server.HandleRoot)
+
+	// Setup
+	routes.RegisterPublicPOST(app.publicRouter, routes.SetupDeviceName, app.Server.HandeSetupDeviceName)
 
 	// Snapshots
 	// NOTE: These must be added before the {name} parameter endpoints to avoid conflicts
@@ -131,44 +163,40 @@ func (app *App) setupPublicRoutes() {
 	routes.RegisterPublicPOST(app.publicRouter, routes.SnapshotsNameEndpoint, app.Server.CreateSnapshot)
 	routes.RegisterPublicGET(app.publicRouter, routes.SnapshotsNameEndpoint, app.Server.GetSnapshot)
 	routes.RegisterPublicDELETE(app.publicRouter, routes.SnapshotsNameEndpoint, app.Server.DeleteSnapshot)
-	routes.RegisterPublicPOST(app.publicRouter, routes.SnapshotsNameActivateEndpoint, app.Server.ActivateSnapshot)
+	routes.RegisterPublicPOST(app.publicRouter, routes.SnapshotsActivateEndpoint, app.Server.ActivateSnapshot)
 
 	// Tasks
 	// NOTE: These must be added before the {id} parameter endpoints to avoid conflicts
 	routes.RegisterPublicGET(app.publicRouter, routes.TasksHistoryEndpoint, app.TaskManager.HandleGetHistory)
 	routes.RegisterPublicDELETE(app.publicRouter, routes.TasksHistoryEndpoint, app.TaskManager.HandleClearHistory)
 	routes.RegisterPublicGET(app.publicRouter, routes.TasksEndpoint, app.TaskManager.HandleGetTasks)
-	routes.RegisterPublicPOST(app.publicRouter, routes.TasksEndpoint, app.TaskManager.HandleCreateTask)
+	routes.RegisterPublicPOST(app.publicRouter, routes.TasksEndpoint, app.TaskManager.HandleCreateApplySnapshotTask)
 	routes.RegisterPublicGET(app.publicRouter, routes.TasksIdEndpoint, app.TaskManager.HandleGetTask)
-	routes.RegisterPublicPUT(app.publicRouter, routes.TasksIdEndpoint, app.TaskManager.HandleUpdateTask)
+	routes.RegisterPublicPUT(app.publicRouter, routes.TasksIdEndpoint, app.TaskManager.HandleUpdateApplySnapshotTask)
 	routes.RegisterPublicDELETE(app.publicRouter, routes.TasksIdEndpoint, app.TaskManager.HandleDeleteTask)
 	routes.RegisterPublicPOST(app.publicRouter, routes.TasksIdEnableEndpoint, app.TaskManager.HandleEnableTask)
 	routes.RegisterPublicPOST(app.publicRouter, routes.TasksIdDisableEndpoint, app.TaskManager.HandleDisableTask)
 
-	// Cluster
-	routes.RegisterPublicGET(app.publicRouter, routes.ClusterLatencyNetworkEndpoint, app.Cluster.HandleGetNetworkLatency)
-	routes.RegisterPublicGET(app.publicRouter, routes.ClusterLatencyNetworkFailuresEndpoint, app.Cluster.HandleGetNetworkFailures)
-	routes.RegisterPublicGET(app.publicRouter, routes.ClusterLatencyStatusEndpoint, app.Cluster.HandleGetLatencyStatus)
-	routes.RegisterPublicGET(app.publicRouter, routes.ClusterLatencySyncEndpoint, app.Cluster.HandleGetSyncLatency)
-	routes.RegisterPublicGET(app.publicRouter, routes.ClusterLatencySyncAveragesEndpoint, app.Cluster.HandleGetSyncLatencyAverages)
-	routes.RegisterPublicGET(app.publicRouter, routes.ClusterNTPSkewEndpoint, app.Cluster.HandleGetNTPSkew)
-	routes.RegisterPublicGET(app.publicRouter, routes.ClusterStatusEndpoint, app.Cluster.Metrics.HandleClusterStatus)
+	// Values
+	routes.RegisterPublicGET(app.publicRouter, routes.ValueEndpoint, app.Server.GetValue)
+	routes.RegisterPublicPOST(app.publicRouter, routes.ValueEndpoint, app.Server.SetValue)
+	routes.RegisterPublicPATCH(app.publicRouter, routes.ValueEndpoint, app.Server.UpdateValue)
+	routes.RegisterPublicDELETE(app.publicRouter, routes.ValueEndpoint, app.Server.ClearAllValues)
 
-	// Health
-	routes.RegisterPublicGET(app.publicRouter, routes.HealthEndpoint, app.Cluster.Metrics.HandleHealthCheck)
+	// WebSocket
+	routes.RegisterPublicGET(app.publicRouter, routes.WebsocketEndpoint, withWebSocketMetrics(app.config, app.Server.HandleWebSocket, app.Cluster.Metrics))
 
-	// Metrics
-	routes.RegisterPublicGET(app.publicRouter, routes.MetricsEndpoint, app.Cluster.Metrics.HandleMetrics)
-
-	// Setup
-	routes.RegisterPublicPOST(app.publicRouter, routes.SetupDeviceName, app.Server.HandeSetupDeviceName)
+	// Versioning
+	routes.RegisterPublicGET(app.publicRouter, routes.VersionEndpoint, app.Server.GetVersion)
+	routes.RegisterPublicPOST(app.publicRouter, routes.VersionUpdateEndpoint, app.Server.UpdateVersion)
+	routes.RegisterPublicPUT(app.publicRouter, routes.VersionRollbackEndpoint, app.Server.RollbackVersion)
 }
 
 func (app *App) setupPrivateRoutes() {
-	routes.RegisterPrivateGET(app.privateRouter, routes.ExportDataEndport, app.Server.ExportData)
-	routes.RegisterPrivatePOST(app.privateRouter, routes.ImportDataEndport, app.Server.ImportData)
-	routes.RegisterPrivateGET(app.privateRouter, routes.ExportStateEndport, app.Server.ExportState)
-	routes.RegisterPrivatePOST(app.privateRouter, routes.ImportStateEndport, app.Server.ImportState)
+	routes.RegisterPrivateGET(app.privateRouter, routes.DataEndport, app.Server.ExportData)
+	routes.RegisterPrivatePOST(app.privateRouter, routes.DataEndport, app.Server.ImportData)
+	routes.RegisterPrivateGET(app.privateRouter, routes.StateEndport, app.Server.ExportState)
+	routes.RegisterPrivatePOST(app.privateRouter, routes.StateEndport, app.Server.ImportState)
 	routes.RegisterPrivateGET(app.privateRouter, routes.ClusterLatencyNetworkLocalEndpoint, app.Cluster.HandleGetNetworkLatencyLocal)
 	routes.RegisterPrivateGET(app.privateRouter, routes.ClusterLatencySyncLocalEndpoint, app.Cluster.HandleGetSyncLatencyLocal)
 	routes.RegisterPrivateGET(app.privateRouter, routes.ClusterLatencySyncAveragesLocalEndpoint, app.Cluster.HandleGetSyncLatencyAveragesLocal)
@@ -243,11 +271,11 @@ func initDataPaths() {
 }
 
 // initPersistence initializes the persistence layer.
-func initPersistence(dataPath string, stateManager *server.StateManager) *server.Persistence {
+func initPersistence(dataPath string, stateManager *persistence.StateManager) *persistence.Persistence {
 
 	logger := logging.GetLogger()
 
-	persistence, err := server.NewPersistence(dataPath, stateManager)
+	persistence, err := persistence.NewPersistence(dataPath, stateManager)
 	if err != nil {
 		logger.Fatal("Failed to initialize persistence: %v", err)
 	}
@@ -261,13 +289,13 @@ func initPersistence(dataPath string, stateManager *server.StateManager) *server
 }
 
 // initStateManager initializes the state manager.
-func initStateManager(node string) *server.StateManager {
-	return server.NewStateManager(node)
+func initStateManager(node string) *persistence.StateManager {
+	return persistence.NewStateManager(node)
 }
 
 // initTaskManager initializes the timer manager.
-func initTaskManager(config *api.AppConfig, persistence *server.Persistence) *server.TaskManager {
-	taskManager := server.NewTaskManager(config, persistence)
+func initTaskManager(config *api.AppConfig, persistence *persistence.Persistence) *tasks.TaskManager {
+	taskManager := tasks.NewTaskManager(config, persistence)
 	if err := taskManager.Start(); err != nil {
 		logging.GetLogger().Fatal("Failed to start TaskManager: %v", err)
 	}
@@ -286,7 +314,7 @@ func initBLEServer() *network.BLEServer {
 }
 
 // initUDPServer initializes the UDP server.
-func initUDPServer(port string, handler *server.Handler) *network.UDPServer {
+func initUDPServer(port string, handler *handler.Handler) *network.UDPServer {
 
 	udpPort := fmt.Sprintf(":%s", port)
 	udpServer, err := network.NewUDPServer(udpPort, handler)

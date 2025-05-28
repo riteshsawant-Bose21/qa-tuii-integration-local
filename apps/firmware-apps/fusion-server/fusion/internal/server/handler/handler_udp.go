@@ -1,4 +1,4 @@
-package server
+package handler
 
 import (
 	"encoding/json"
@@ -18,11 +18,10 @@ func (h *Handler) HandleUDPMessage(data []byte) (any, error) {
 
 	switch msg.Action {
 	case "get":
-		fullState := h.stateManager.GetFullState().State
-		transformed := TransformState(fullState)
+		data := h.StateManager.GetStateMap()
 		return map[string]any{
 			"status": "success",
-			"data":   transformed,
+			"data":   data,
 		}, nil
 
 	case "set":

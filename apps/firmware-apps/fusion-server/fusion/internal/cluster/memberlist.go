@@ -108,7 +108,7 @@ func (c *Cluster) IsMember() (bool, error) {
 // GetLiveNodeAddresses a list of live node addresses
 func (c *Cluster) GetLiveNodeAddresses() ([]string, error) {
 
-	url := fmt.Sprintf("http://%s:%s%s", c.vip, api.HTTPPort, routes.MembersEndpoint)
+	url := fmt.Sprintf("http://%s:%s%s", c.vip, api.HTTPPort, routes.ClusterMembersEndpoint)
 	resp, err := http.Get(url)
 	if err != nil {
 		if errors.Is(err, syscall.ECONNREFUSED) {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"path/filepath"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -14,6 +15,8 @@ import (
 
 	"fusion/internal/api"
 	"fusion/internal/logging"
+	"fusion/internal/persistence"
+	"fusion/internal/server/handler"
 	"fusion/internal/utils"
 
 	"github.com/gorilla/mux"
@@ -28,20 +31,20 @@ const (
 	wsPongTime   = 60
 )
 
-// ConfigServer handles HTTP and WebSocket connections to manage configuration state.
-type ConfigServer struct {
+// FusionServer handles networks connections to manage Fusion state.
+type FusionServer struct {
 	node        string
-	handler     *Handler
+	handler     *handler.Handler
 	wsClients   map[*websocket.Conn]bool
 	wsLock      sync.RWMutex
 	upgrader    websocket.Upgrader
 	clusterList *memberlist.Memberlist
 }
 
-// NewConfigServer creates and initializes a new configuration server with the provided node name,
+// NewFusionServer creates and initializes a new configuration server with the provided node name,
 // handler and cluster member list. It also sets up a WebSocket upgrader with custom options.
-func NewConfigServer(node string, handler *Handler, clusterList *memberlist.Memberlist) *ConfigServer {
-	server := &ConfigServer{
+func NewFusionServer(node string, handler *handler.Handler, clusterList *memberlist.Memberlist) *FusionServer {
+	server := &FusionServer{
 		node:      node,
 		handler:   handler,
 		wsClients: make(map[*websocket.Conn]bool),
@@ -62,7 +65,7 @@ func NewConfigServer(node string, handler *Handler, clusterList *memberlist.Memb
 
 // BroadcastUpdate sends a notification message to all connected WebSocket clients.
 // It acquires a read lock on the clients list to ensure thread-safe access.
-func (s *ConfigServer) BroadcastUpdate(message *api.NotifyMessage) error {
+func (s *FusionServer) BroadcastUpdate(message *api.NotifyMessage) error {
 	s.wsLock.RLock()
 	defer s.wsLock.RUnlock()
 
@@ -77,10 +80,9 @@ func (s *ConfigServer) BroadcastUpdate(message *api.NotifyMessage) error {
 }
 
 // GetValue handles HTTP GET requests to retrieve a configuration value based on a "key" query parameter.
-func (s *ConfigServer) GetValue(w http.ResponseWriter, r *http.Request) {
+func (s *FusionServer) GetValue(w http.ResponseWriter, r *http.Request) {
 
-	if !utils.IsGetRequest(r) {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	if !utils.RequireGet(w, r) {
 		return
 	}
 
@@ -105,10 +107,9 @@ func (s *ConfigServer) GetValue(w http.ResponseWriter, r *http.Request) {
 
 // SetValue handles HTTP POST requests to set a configuration value.
 // It expects a JSON body containing the update data.
-func (s *ConfigServer) SetValue(w http.ResponseWriter, r *http.Request) {
+func (s *FusionServer) SetValue(w http.ResponseWriter, r *http.Request) {
 
-	if !utils.IsPostRequest(r) {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	if !utils.RequirePost(w, r) {
 		return
 	}
 
@@ -141,10 +142,9 @@ func (s *ConfigServer) SetValue(w http.ResponseWriter, r *http.Request) {
 
 // UpdateValue handles HTTP PATCH requests to update a configuration value.
 // It supports partial updates based on the provided key query parameter or the entire JSON body.
-func (s *ConfigServer) UpdateValue(w http.ResponseWriter, r *http.Request) {
+func (s *FusionServer) UpdateValue(w http.ResponseWriter, r *http.Request) {
 
-	if !utils.IsPatchRequest(r) {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	if !utils.RequirePatch(w, r) {
 		return
 	}
 
@@ -171,7 +171,7 @@ func (s *ConfigServer) UpdateValue(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve the full current configuration state.
-	configData := TransformState(s.handler.stateManager.GetFullState().State)
+	configData := s.handler.StateManager.GetStateMap()
 
 	// Create a deep copy of configData to preserve the original configuration.
 	originalConfig, err := deepCopy(configData)
@@ -183,7 +183,7 @@ func (s *ConfigServer) UpdateValue(w http.ResponseWriter, r *http.Request) {
 	var updatedData any
 	if key != "" {
 		// If a key is provided, update the nested value.
-		setNestedValue(configData, key, update["value"])
+		utils.SetNestedValue(configData, key, update["value"])
 		updatedData, err = s.handler.HandleHTTPPatch(configData)
 	} else {
 		// If no key is provided, treat the entire body as the update map.
@@ -212,15 +212,14 @@ func (s *ConfigServer) UpdateValue(w http.ResponseWriter, r *http.Request) {
 }
 
 // ExportState handles HTTP GET requests to export the entire configuration state.
-func (s *ConfigServer) ExportState(w http.ResponseWriter, r *http.Request) {
+func (s *FusionServer) ExportState(w http.ResponseWriter, r *http.Request) {
 
-	if !utils.IsGetRequest(r) {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	if !utils.RequireGet(w, r) {
 		return
 	}
 
 	// Retrieve the full state from the state manager.
-	state := s.handler.stateManager.GetFullState()
+	state := s.handler.StateManager.GetFullState()
 
 	// Write the JSON response.
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
@@ -232,9 +231,8 @@ func (s *ConfigServer) ExportState(w http.ResponseWriter, r *http.Request) {
 }
 
 // ImportState handles HTTP POST requests to import configuration state.
-func (s *ConfigServer) ImportState(w http.ResponseWriter, r *http.Request) {
-	if !utils.IsPostRequest(r) {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+func (s *FusionServer) ImportState(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequirePost(w, r) {
 		return
 	}
 
@@ -247,19 +245,19 @@ func (s *ConfigServer) ImportState(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	// Unmarshal the JSON data into a map.
-	var state VersionedState
+	var state persistence.VersionedState
 	err = json.Unmarshal(body, &state)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("error unmarshaling json: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	s.handler.stateManager.SetState(state.State)
+	s.handler.StateManager.SetState(state.State)
 }
 
 // HandleWebSocket upgrades an HTTP connection to a WebSocket connection, sets up ping handlers,
 // sends an initial state to the client, and listens for incoming messages.
-func (s *ConfigServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
+func (s *FusionServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	// Upgrade the HTTP connection to a WebSocket connection.
 	conn, err := s.upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -328,7 +326,7 @@ func (s *ConfigServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleRoot handles requests to the root URL ("/") and returns server information.
-func (s *ConfigServer) HandleRoot(w http.ResponseWriter, r *http.Request) {
+func (s *FusionServer) HandleRoot(w http.ResponseWriter, r *http.Request) {
 	// Only serve the root path.
 	if r.URL.Path != "/" {
 		http.NotFound(w, r)
@@ -347,35 +345,43 @@ func (s *ConfigServer) HandleRoot(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(info)
 }
 
-// HandleVersion handles HTTP requests.
-// It delegates the version handling to the handler.
-func (s *ConfigServer) HandleVersion(w http.ResponseWriter, r *http.Request) {
-
-	if utils.IsPostRequest(r) {
-		s.handler.HandleVersionUpdate(w, r)
-		return
-	}
-
-	if utils.IsPostRequest(r) {
-		s.handler.HandleVersionRollback(w, r)
+// GetVersion handles version HTTP requests.
+func (s *FusionServer) GetVersion(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireGet(w, r) {
 		return
 	}
 }
 
+// UpdateVersion handles update version HTTP requests.
+func (s *FusionServer) UpdateVersion(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequirePost(w, r) {
+		return
+	}
+
+	s.handler.HandleVersionRollback(w, r)
+}
+
+// RollbackVersion handles version rollback HTTP requests.
+func (s *FusionServer) RollbackVersion(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequirePost(w, r) {
+		return
+	}
+
+	s.handler.HandleVersionRollback(w, r)
+}
+
 // UploadAudio handles HTTP POST requests for audio file uploads.
 // It delegates the audio upload handling to the handler.
-func (s *ConfigServer) UploadAudio(w http.ResponseWriter, r *http.Request) {
-	if !utils.IsPostRequest(r) {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+func (s *FusionServer) UploadAudio(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequirePost(w, r) {
 		return
 	}
 	s.handler.HandleAudioUpload(w, r)
 }
 
 // ListSnapshots handles HTTP GET requests to list available snapshots.
-func (s *ConfigServer) ListSnapshots(w http.ResponseWriter, r *http.Request) {
-	if !utils.IsGetRequest(r) {
-		http.Error(w, "Invalid request type", http.StatusInternalServerError)
+func (s *FusionServer) ListSnapshots(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireGet(w, r) {
 		return
 	}
 
@@ -393,16 +399,15 @@ func (s *ConfigServer) ListSnapshots(w http.ResponseWriter, r *http.Request) {
 
 // ActivateSnapshot handles HTTP PUT requests to activate a specific snapshot.
 // It expects a query parameter "name" specifying the snapshot to activate.
-func (s *ConfigServer) ActivateSnapshot(w http.ResponseWriter, r *http.Request) {
+func (s *FusionServer) ActivateSnapshot(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	vars := mux.Vars(r)
-	snapshotName := vars["name"]
-	if snapshotName == "" {
-		http.Error(w, "Snapshot name is required", http.StatusBadRequest)
+	snapshotName, err := extractName(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -411,28 +416,23 @@ func (s *ConfigServer) ActivateSnapshot(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(map[string]string{
-		"status":   "snapshot activated",
-		"snapshot": snapshotName,
-	})
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // CreateSnapshot handles HTTP POST requests to create a new snapshot.
-func (s *ConfigServer) CreateSnapshot(w http.ResponseWriter, r *http.Request) {
+func (s *FusionServer) CreateSnapshot(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	vars := mux.Vars(r)
-	snapshotName := vars["name"]
-	if snapshotName == "" {
-		http.Error(w, "Snapshot name is required", http.StatusBadRequest)
+	snapshotName, err := extractName(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	if snapshotName == defaultSnapshotKey {
+	if snapshotName == persistence.DefaultSnapshotKey {
 		http.Error(w, "default snapshot cannot be created", http.StatusBadRequest)
 		return
 	}
@@ -452,28 +452,24 @@ func (s *ConfigServer) CreateSnapshot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(map[string]string{
-		"status":   "snapshot created",
-		"snapshot": snapshotName,
-	})
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // DeleteSnapshot handles HTTP DELETE requests to remove an existing snapshot.
 // It expects a query parameter "name" specifying the snapshot to delete.
-func (s *ConfigServer) DeleteSnapshot(w http.ResponseWriter, r *http.Request) {
+func (s *FusionServer) DeleteSnapshot(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodDelete {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	vars := mux.Vars(r)
-	snapshotName := vars["name"]
-	if snapshotName == "" {
-		http.Error(w, "Snapshot name is required", http.StatusBadRequest)
+	snapshotName, err := extractName(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if snapshotName == defaultSnapshotKey {
+
+	if snapshotName == persistence.DefaultSnapshotKey {
 		http.Error(w, "default snapshot cannot be deleted", http.StatusBadRequest)
 		return
 	}
@@ -483,17 +479,12 @@ func (s *ConfigServer) DeleteSnapshot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(map[string]string{
-		"status":   "snapshot deleted",
-		"snapshot": snapshotName,
-	})
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // GetDatabaseMetadata handles HTTP GET requests to retrieve fusion database metadata.
-func (s *ConfigServer) GetDatabaseMetadata(w http.ResponseWriter, r *http.Request) {
-	if !utils.IsGetRequest(r) {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+func (s *FusionServer) GetDatabaseMetadata(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireGet(w, r) {
 		return
 	}
 
@@ -510,16 +501,15 @@ func (s *ConfigServer) GetDatabaseMetadata(w http.ResponseWriter, r *http.Reques
 }
 
 // GetSnapshot handles HTTP GET requests to retrieve a specific snapshot.
-func (s *ConfigServer) GetSnapshot(w http.ResponseWriter, r *http.Request) {
+func (s *FusionServer) GetSnapshot(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	vars := mux.Vars(r)
-	snapshotName := vars["name"]
-	if snapshotName == "" {
-		http.Error(w, "Snapshot name is required", http.StatusBadRequest)
+	snapshotName, err := extractName(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -534,9 +524,8 @@ func (s *ConfigServer) GetSnapshot(w http.ResponseWriter, r *http.Request) {
 }
 
 // ExportData handles HTTP GET requests to export all data.
-func (s *ConfigServer) ExportData(w http.ResponseWriter, r *http.Request) {
-	if !utils.IsGetRequest(r) {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+func (s *FusionServer) ExportData(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireGet(w, r) {
 		return
 	}
 
@@ -554,9 +543,8 @@ func (s *ConfigServer) ExportData(w http.ResponseWriter, r *http.Request) {
 
 // ImportData handles HTTP POST requests to import data.
 // It expects a JSON body containing the data.
-func (s *ConfigServer) ImportData(w http.ResponseWriter, r *http.Request) {
-	if !utils.IsPostRequest(r) {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+func (s *FusionServer) ImportData(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequirePost(w, r) {
 		return
 	}
 
@@ -585,10 +573,9 @@ func (s *ConfigServer) ImportData(w http.ResponseWriter, r *http.Request) {
 }
 
 // ClearAllValues handles HTTP DELETE requests to clear all configuration data.
-func (s *ConfigServer) ClearAllValues(w http.ResponseWriter, r *http.Request) {
+func (s *FusionServer) ClearAllValues(w http.ResponseWriter, r *http.Request) {
 
-	if !utils.IsDeleteRequest(r) {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	if !utils.RequireDelete(w, r) {
 		return
 	}
 
@@ -598,24 +585,17 @@ func (s *ConfigServer) ClearAllValues(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Write the JSON response confirming the operation.
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(map[string]any{
-		"status":  "success",
-		"message": "All data cleared successfully",
-	})
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // GetMembers handles HTTP GET requests to list all cluster members.
-func (s *ConfigServer) GetMembers(w http.ResponseWriter, r *http.Request) {
-
-	if !utils.IsGetRequest(r) {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+func (s *FusionServer) GetMembers(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireGet(w, r) {
 		return
 	}
 
 	// Retrieve the list of members from the handler's member list.
-	members := s.handler.memberlist.Members()
+	members := s.handler.Memberlist.Members()
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	if err := json.NewEncoder(w).Encode(members); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -624,10 +604,8 @@ func (s *ConfigServer) GetMembers(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandeSetupDeviceName set the device name
-func (s *ConfigServer) HandeSetupDeviceName(w http.ResponseWriter, r *http.Request) {
-
-	if !utils.IsPostRequest(r) {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+func (s *FusionServer) HandeSetupDeviceName(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequirePost(w, r) {
 		return
 	}
 
@@ -669,6 +647,70 @@ func (s *ConfigServer) HandeSetupDeviceName(w http.ResponseWriter, r *http.Reque
 	// In that public endpoint, iterate through the memberlist nodes. If we are the local node,
 	// just call the function that access the database directly, otherwise make a http call on the ADMIN port (9090)
 	// to the GetDeviceNameLocal()
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *FusionServer) HandleListMessages(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireGet(w, r) {
+		return
+	}
+}
+
+func (s *FusionServer) HandleUploadMessage(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequirePost(w, r) {
+		return
+	}
+	s.handler.HandleAudioUpload(w, r)
+}
+
+func (s *FusionServer) HandleDeleteMessage(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireDelete(w, r) {
+		return
+	}
+	s.handler.HandleAudioRemove(w, r)
+}
+
+func (s *FusionServer) HandleListZones(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireGet(w, r) {
+		return
+	}
+}
+
+func (s *FusionServer) HandleGetZoneStatus(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireGet(w, r) {
+		return
+	}
+}
+
+func (s *FusionServer) HandleGetSystemDiagnostics(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireGet(w, r) {
+		return
+	}
+}
+
+func (s *FusionServer) HandleGetSystemStatus(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireGet(w, r) {
+		return
+	}
+}
+
+func (s *FusionServer) HandleListScheduledMessages(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireGet(w, r) {
+		return
+	}
+}
+
+func (s *FusionServer) HandleScheduleMessage(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequirePost(w, r) {
+		return
+	}
+}
+
+func (s *FusionServer) HandleCancelAlarms(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequirePut(w, r) {
+		return
+	}
 }
 
 // getSingleQueryParam retrieves the value of a query parameter if it exists exactly once.
@@ -783,7 +825,7 @@ func calculateSliceDiff(oldSlice, newSlice []any) any {
 
 // handleWebSocketMessage processes a message received over the WebSocket connection.
 // It delegates the message handling to the handler and sends the response back to the client.
-func (s *ConfigServer) handleWebSocketMessage(conn *websocket.Conn, data []byte) {
+func (s *FusionServer) handleWebSocketMessage(conn *websocket.Conn, data []byte) {
 	response, err := s.handler.HandleWebSocketMessage(data)
 	if err != nil {
 		if err := conn.WriteJSON(map[string]any{
@@ -798,4 +840,13 @@ func (s *ConfigServer) handleWebSocketMessage(conn *websocket.Conn, data []byte)
 	if err := conn.WriteJSON(response); err != nil {
 		logging.GetLogger().Error("Error sending response: %v", err)
 	}
+}
+
+// extractName pulls the “name” var from mux and returns a proper error if it’s missing.
+func extractName(r *http.Request) (string, error) {
+	name := mux.Vars(r)["name"]
+	if name == "" {
+		return "", fmt.Errorf("name is required")
+	}
+	return filepath.Base(name), nil
 }

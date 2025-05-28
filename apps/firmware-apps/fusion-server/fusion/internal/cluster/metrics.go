@@ -13,7 +13,7 @@ import (
 
 	"fusion/internal/api"
 	"fusion/internal/network"
-	"fusion/internal/server"
+	"fusion/internal/persistence"
 
 	"github.com/hashicorp/memberlist"
 	"github.com/prometheus/client_golang/prometheus"
@@ -26,15 +26,10 @@ const (
 	haproxySocketPath = "/var/run/haproxy.sock"
 )
 
-// StateManagerInterface defines the interface for state management
-type StateManagerInterface interface {
-	GetFullState() server.VersionedState
-}
-
 // MetricsCollector handles system-wide metric collection
 type MetricsCollector struct {
 	list              *memberlist.Memberlist
-	stateManager      StateManagerInterface
+	stateManager      persistence.StateManagerInterface
 	mutex             sync.RWMutex
 	metrics           SystemMetrics
 	wsConnCount       int
@@ -97,7 +92,7 @@ type NodeHealth struct {
 	HealthCheckCount int64     `json:"health_check_count"`
 }
 
-func NewMetricsCollector(memberlist *memberlist.Memberlist, stateManager *server.StateManager) *MetricsCollector {
+func NewMetricsCollector(memberlist *memberlist.Memberlist, stateManager *persistence.StateManager) *MetricsCollector {
 	mc := &MetricsCollector{
 		list:           memberlist,
 		stateManager:   stateManager,

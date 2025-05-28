@@ -1,13 +1,13 @@
-package server
+package persistence
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/logging"
 	"fusion/internal/routes"
+	"fusion/internal/utils"
 	"io"
 	"net/http"
 	"reflect"
@@ -22,6 +22,11 @@ import (
 const (
 	checkInterval = 30
 )
+
+// StateManagerInterface defines the interface for state management
+type StateManagerInterface interface {
+	GetFullState() VersionedState
+}
 
 // VersionedState represents a version of instance state
 type VersionedState struct {
@@ -53,6 +58,11 @@ func NewStateManager(node string) *StateManager {
 	}
 }
 
+// GetNode returns the node name
+func (sm *StateManager) GetNode() string {
+	return sm.node
+}
+
 // GetVersion returns the current version of the state.
 func (sm *StateManager) GetVersion() int64 {
 	sm.RLock()
@@ -73,7 +83,7 @@ func (sm *StateManager) Get(key string) (any, bool) {
 	defer sm.RUnlock()
 
 	parts := strings.Split(key, ".")
-	var current any = TransformState(sm.state.State)
+	var current any = sm.GetStateMap()
 	logger := logging.GetLogger()
 
 	for _, part := range parts {
@@ -225,7 +235,7 @@ func (sm *StateManager) ApplyUpdate(update api.ConfigUpdate) error {
 			sm.version = incomingVersion
 		}
 
-		checksum, err := CalculateChecksum(sm.state.State)
+		checksum, err := utils.CalculateChecksum(sm.state.State)
 		if err != nil {
 			logging.GetLogger().Error("Failed to calculate checksum: %v", err)
 		}
@@ -242,6 +252,18 @@ func (sm *StateManager) GetFullState() VersionedState {
 	return sm.state
 }
 
+// GetStateMap removes metadata and returns a simplified map of key-value data from the state.
+func (sm *StateManager) GetStateMap() map[string]any {
+
+	result := make(map[string]any)
+
+	state := sm.GetFullState().State
+	for key, entry := range state {
+		result[key] = entry.Data
+	}
+	return result
+}
+
 // MergeRemoteState integrates a remote state into the local state if the remote version is newer.
 func (sm *StateManager) MergeRemoteState(remoteState map[string]*api.StateEntry) {
 	sm.Lock()
@@ -256,7 +278,7 @@ func (sm *StateManager) MergeRemoteState(remoteState map[string]*api.StateEntry)
 		}
 	}
 
-	checksum, err := CalculateChecksum(sm.state.State)
+	checksum, err := utils.CalculateChecksum(sm.state.State)
 	if err != nil {
 		logging.GetLogger().Error("Failed to calculate checksum: %v", err)
 	}
@@ -268,7 +290,7 @@ func (sm *StateManager) SetState(state map[string]*api.StateEntry) {
 	sm.RLock()
 	defer sm.RUnlock()
 	sm.state.State = state
-	checksum, err := CalculateChecksum(state)
+	checksum, err := utils.CalculateChecksum(state)
 	if err != nil {
 		logging.GetLogger().Error("Failed to calculate checksum: %v", err)
 	}
@@ -289,7 +311,7 @@ func (sm *StateManager) validateState(list *memberlist.Memberlist) {
 			continue
 		}
 
-		url := fmt.Sprintf("http://%s:%s%s", member.Addr.String(), api.AdminPort, routes.ExportStateEndport)
+		url := fmt.Sprintf("http://%s:%s%s", member.Addr.String(), api.AdminPort, routes.StateEndport)
 		resp, err := http.Get(url)
 		if err != nil {
 			logger.Warn("Failed to get state from %s: %v", member.Name, err)
@@ -331,25 +353,6 @@ func (sm *StateManager) StartVerification(list *memberlist.Memberlist) {
 			time.Sleep(checkInterval * time.Second)
 		}
 	}()
-}
-
-// TransformState removes metadata and returns a simplified map of key-value data from the state.
-func TransformState(state map[string]*api.StateEntry) map[string]any {
-	result := make(map[string]any)
-	for key, entry := range state {
-		result[key] = entry.Data
-	}
-	return result
-}
-
-// CalculateChecksum returns a SHA-256 hash of the provided state.
-func CalculateChecksum(state map[string]*api.StateEntry) (string, error) {
-	data, err := json.Marshal(state)
-	if err != nil {
-		return "", fmt.Errorf("failed to marshal state for checksum: %w", err)
-	}
-	hash := sha256.Sum256(data)
-	return fmt.Sprintf("%x", hash), nil
 }
 
 func (sm *StateManager) getMemberData(list *memberlist.Memberlist) []api.MemberMetadata {
@@ -414,7 +417,7 @@ func (sm *StateManager) validateData(list *memberlist.Memberlist) {
 	logger.Info("Most current data found on member %s with timestamp %v",
 		mostCurrent.Member.Name, mostCurrent.Metadata.Timestamp)
 
-	exportURL := fmt.Sprintf("http://%s:%s%s", mostCurrent.Member.Addr.String(), api.AdminPort, routes.ExportStateEndport)
+	exportURL := fmt.Sprintf("http://%s:%s%s", mostCurrent.Member.Addr.String(), api.AdminPort, routes.StateEndport)
 
 	resp, err := http.Get(exportURL)
 	if err != nil {
@@ -443,7 +446,7 @@ func (sm *StateManager) validateData(list *memberlist.Memberlist) {
 func syncData(memberMetadata []api.MemberMetadata, currentHash string, data []byte) {
 	for _, ms := range memberMetadata {
 		if ms.Metadata.Hash != currentHash {
-			importURL := fmt.Sprintf("http://%s:%s%s", ms.Member.Addr.String(), api.AdminPort, routes.ImportDataEndport)
+			importURL := fmt.Sprintf("http://%s:%s%s", ms.Member.Addr.String(), api.AdminPort, routes.DataEndport)
 			if !importData(importURL, data) {
 				return
 			}

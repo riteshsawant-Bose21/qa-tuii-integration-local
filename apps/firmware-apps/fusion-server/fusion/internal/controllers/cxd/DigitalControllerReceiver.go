@@ -3,7 +3,7 @@ package cxd
 import (
 	"fmt"
 	"fusion/internal/logging"
-	"fusion/internal/server"
+	"fusion/internal/server/handler"
 	"strconv"
 	"strings"
 )
@@ -13,7 +13,7 @@ type DigitalControllerReceiver struct {
 	logger  *logging.Logger
 }
 
-func NewDigitalControllerReceiver(handler *server.Handler, listenAddr string) (*DigitalControllerReceiver, error) {
+func NewDigitalControllerReceiver(handler *handler.Handler, listenAddr string) (*DigitalControllerReceiver, error) {
 	logger := logging.GetLogger()
 	logger.Debug("Creating new DigitalControllerReceiver with listenAddr: %s", listenAddr)
 

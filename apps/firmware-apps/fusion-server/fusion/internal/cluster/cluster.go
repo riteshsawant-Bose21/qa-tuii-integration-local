@@ -246,7 +246,7 @@ func (c *Cluster) startStateMonitor() {
 					status = "UNKNOWN"
 				}
 
-				logger.Info("[CLUSTER] - Node: %s, Address: %s:%d, Status: %s",
+				logger.Info("[CLUSTER] Node: %s, Address: %s:%d, Status: %s",
 					member.Name,
 					member.Addr.String(),
 					member.Port,

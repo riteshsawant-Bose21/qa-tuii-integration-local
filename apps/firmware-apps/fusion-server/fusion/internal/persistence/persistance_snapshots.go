@@ -1,4 +1,4 @@
-package server
+package persistence
 
 import (
 	"encoding/json"
@@ -193,12 +193,12 @@ func (p *Persistence) LoadActiveSnapshot() error {
 func (p *Persistence) getActiveSnapshotKey() (string, error) {
 	meta, err := p.loadMetadata()
 	if err != nil || meta.ActiveSnapshot == "" {
-		return defaultSnapshotKey, nil
+		return DefaultSnapshotKey, nil
 	}
 	return meta.ActiveSnapshot, nil
 }
 
-// readSnapshot reads the snapshots from the database.
+// readSnapshot reads the snapshot from the database.
 func (p *Persistence) readSnapshot(snapshotKey string) (*PersistentState, error) {
 
 	var ps PersistentState
