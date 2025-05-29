@@ -9,6 +9,7 @@
 #include <linux/types.h>
 #include <linux/gpio.h>
 #include <linux/i2c.h>
+#include <linux/irq.h>
 #include <linux/i2c-mux.h>
 #include <linux/mutex.h>
 
@@ -512,7 +513,7 @@ enum base_device_type {
     BD_TYPE_FIXED_IO_START     = BD_TYPE_NONE + 1,
     BD_TYPE_FUSION_MINI_4x6    = BD_TYPE_FIXED_IO_START,
     BD_TYPE_FUSION_VAR_PROTO,
-    BD_TYPE_FUSION_PROTO1,
+    BD_TYPE_FUSION_C0,
     BD_TYPE_FIXED_IO_END,
 
     BD_TYPE_SLOT_IO_START      = BD_TYPE_FIXED_IO_END + 1,

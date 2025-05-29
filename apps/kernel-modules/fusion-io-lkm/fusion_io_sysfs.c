@@ -44,9 +44,16 @@ static ssize_t fusion_io_phys_gpio_store(struct device *dev,
 }
 
 // need x_show_gpio for all io expanders x
-int tca9535_show_gpio(struct endpoint *tca9535)
+static int tca9535_show_gpio(struct endpoint *tca9535)
 {
 	int value;
+
+	if (!tca9535) {
+		printk(KERN_ERR "tca9535_show_gpio: null arg\n");
+	}
+	if (!tca9535->i2c_client) {
+		printk(KERN_ERR "tca9535_show_gpio: null i2c_client\n");
+	}
 
 	value = i2c_smbus_read_word_data(tca9535->i2c_client,
 					 TCA9535_REG_OUTPUT_PORT0);
@@ -57,7 +64,7 @@ int tca9535_show_gpio(struct endpoint *tca9535)
 	return (int)__swab16((u16)value);
 }
 
-int tcal6408_show_gpio(struct endpoint *tcal6408)
+static int tcal6408_show_gpio(struct endpoint *tcal6408)
 {
 	int value;
 
@@ -67,7 +74,7 @@ int tcal6408_show_gpio(struct endpoint *tcal6408)
 	return value;
 }
 
-int ads7128_show_gpio(struct endpoint *ads7128, u8 pin_num, bool *is_adc)
+static int ads7128_show_gpio(struct endpoint *ads7128, u8 pin_num, bool *is_adc)
 {
     int value;
     struct endpoint_gpio *gpio = &ads7128->gpios[pin_num]; // Index 1-7 matches pin_num
@@ -116,7 +123,11 @@ static ssize_t fusion_io_virt_gpio_show(struct device *dev,
 		// otherwise we're on the gpio control device, e.g. ADC
 	} else {
 		mask |= 1UL << (ep_gpio->num - 1);
-		ep = ep_gpio->linked_gpio->parent_endpoint;
+		if (ep_gpio->linked_gpio) {
+			ep = ep_gpio->linked_gpio->parent_endpoint;
+		} else {
+			ep = ep_gpio->parent_endpoint;
+		}
 	}
 
 	// read the gpio states
@@ -166,7 +177,7 @@ static ssize_t fusion_io_virt_gpio_show(struct device *dev,
 }
 
 // need x_store_gpio for all io expanders x
-int tca9535_store_gpio(struct endpoint *tca9535, u16 new_value, u16 mask)
+static int tca9535_store_gpio(struct endpoint *tca9535, u16 new_value, u16 mask)
 {
 	int ret;
 	u16 old_value;
@@ -199,7 +210,7 @@ int tca9535_store_gpio(struct endpoint *tca9535, u16 new_value, u16 mask)
 	return ret;
 }
 
-int tcal6408_store_gpio(struct endpoint *tcal6408, u8 new_value, u8 mask)
+static int tcal6408_store_gpio(struct endpoint *tcal6408, u8 new_value, u8 mask)
 {
 	int ret;
 	u8 old_value;
@@ -231,7 +242,7 @@ int tcal6408_store_gpio(struct endpoint *tcal6408, u8 new_value, u8 mask)
 	return ret;
 }
 
-int ads7128_store_gpio(struct endpoint *ads7128, u8 new_value, u8 mask)
+static int ads7128_store_gpio(struct endpoint *ads7128, u8 new_value, u8 mask)
 {
     int ret;
     u8 old_value, channel;
@@ -263,8 +274,7 @@ static ssize_t fusion_io_virt_gpio_store(struct device *dev,
 					 struct device_attribute *attr,
 					 const char *buf, size_t count)
 {
-	struct endpoint_gpio *ep_gpio =
-		container_of(attr, struct endpoint_gpio, dev_attr);
+	struct endpoint_gpio *ep_gpio = container_of(attr, struct endpoint_gpio, dev_attr);
 	struct endpoint *ep;
 
 	int num_bits;
@@ -284,7 +294,8 @@ static ssize_t fusion_io_virt_gpio_store(struct device *dev,
 		struct endpoint_gpio *agg_gpio;
 
 		if (ep_gpio->num_aggregate_gpios == 0 || ep_gpio->aggregate_gpios == NULL) {
-			dev_err(dev, "exported ep_gpio %s has aggregate_id %d but no aggregate_gpios!\n", ep_gpio->name, ep_gpio->aggregate_id);
+			dev_err(dev, "exported ep_gpio %s has aggregate_id %d but no aggregate_gpios!\n", ep_gpio->name, 
+																							  ep_gpio->aggregate_id);
 			return -EINVAL;
 		}
 
@@ -301,7 +312,11 @@ static ssize_t fusion_io_virt_gpio_store(struct device *dev,
 	} else {
 		mask |= 1UL << (ep_gpio->num - 1);
 
-		ep = ep_gpio->linked_gpio->parent_endpoint;
+		if (ep_gpio->linked_gpio) {
+			ep = ep_gpio->linked_gpio->parent_endpoint;
+		} else {
+			ep = ep_gpio->parent_endpoint;
+		}
 
 		num_bits = 1;
 	}
@@ -554,12 +569,6 @@ static int fusion_io_create_sysfs_gpio(struct device *parent_dev,
             ep_gpio->dev_attr.store = fusion_io_phys_gpio_store;
             break;
         case EP_GPIO_TYPE_VIRT:
-            // check that the gpio has a linked gpio
-            if (ep_gpio->linked_gpio == NULL && ep_gpio->aggregate_gpios == NULL) {
-                dev_err(parent_dev, "Virtual gpio %s does not have linked/aggregate gpio(s).\n", ep_gpio->name);
-                return -EINVAL;
-            }
-
             ep_gpio->dev_attr.show  = fusion_io_virt_gpio_show;
             ep_gpio->dev_attr.store = fusion_io_virt_gpio_store;
             break;
@@ -681,19 +690,20 @@ static int fusion_io_create_sysfs_cmd(struct device *parent_dev, struct endpoint
     if (!ep_cmd->dev_attr.attr.name)
         return -ENOMEM;
 
-    /* Permissions: read/write by owner */
-    ep_cmd->dev_attr.attr.mode = 0664;
-
     switch(ep_cmd->parent_endpoint->type) {
         case EP_TYPE_ADC_ADS7128:
 			switch(ep_cmd->type) {
 				case EP_CMD_TYPE_ADC_GET_IRQS:
+					/* read only */
+    				ep_cmd->dev_attr.attr.mode = 0444;
 					ep_cmd->dev_attr.show  = fusion_io_cmd_reg_show;
 					ep_cmd->dev_attr.store = NULL;
 					break;
 				case EP_CMD_TYPE_ADC_CFG_ANA_PINS:
 				case EP_CMD_TYPE_ADC_CFG_GPI_PINS:
 				case EP_CMD_TYPE_ADC_CFG_GPO_PINS:
+					/* write only */
+    				ep_cmd->dev_attr.attr.mode = 0222;
 					ep_cmd->dev_attr.show  = NULL;
             		ep_cmd->dev_attr.store = ads7128_cmd_config_pins_store;
 					break;
@@ -804,7 +814,7 @@ static const struct attribute_group endpoint_group = {
     .attrs = endpoint_attrs,
 };
 
-void fusion_io_remove_parent_device(void)
+static void fusion_io_remove_parent_device(void)
 {
     if (fusion_io_parent_dev) {
         device_unregister(fusion_io_parent_dev);
@@ -882,9 +892,9 @@ int fusion_io_create_sysfs_base(struct platform_device *pdev)
             continue;
         }
 
-        endpoint_dev = device_create(fusion_io_class, fusion_io_parent_dev, MKDEV(0, 0), NULL, "endpoint%d", i);
+        endpoint_dev = device_create(fusion_io_class, fusion_io_parent_dev, MKDEV(0, 0), NULL, "%s", ep->name);
         if (IS_ERR(endpoint_dev)) {
-            dev_err(&pdev->dev, "Failed to create endpoint device %d\n", i);
+            dev_err(&pdev->dev, "Failed to create endpoint device %s\n", ep->name);
             ret = PTR_ERR(endpoint_dev);
             return ret;
         }
@@ -894,7 +904,7 @@ int fusion_io_create_sysfs_base(struct platform_device *pdev)
 
         ret = sysfs_create_group(&endpoint_dev->kobj, &endpoint_group);
         if (ret) {
-            dev_err(&pdev->dev, "Failed to create sysfs group for endpoint %d\n", i);
+            dev_err(&pdev->dev, "Failed to create sysfs group for endpoint %s\n", ep->name);
             return ret;
         }
 
@@ -902,7 +912,7 @@ int fusion_io_create_sysfs_base(struct platform_device *pdev)
             ep_gpio = &ep->gpios[j];
             
 			if (!ep_gpio->valid) {
-                dev_info(&pdev->dev, "Invalid base GPIO %s in create_sysfs\n", ep_gpio->name);
+                dev_info(&pdev->dev, "Invalid GPIO %s:%s in create_sysfs_base\n", ep->name, ep_gpio->name);
                 continue;
             } else if (ep_gpio->export == EP_GPIO_NO_EXPORT) {
                 continue;
@@ -910,11 +920,11 @@ int fusion_io_create_sysfs_base(struct platform_device *pdev)
 
             ret = fusion_io_create_sysfs_gpio(endpoint_dev, ep_gpio);
             if (ret) {
-                dev_err(endpoint_dev, "Failed to create sysfs for GPIO %s\n", ep_gpio->name);
+                dev_err(endpoint_dev, "Failed to create sysfs for GPIO %s:%s\n", ep->name, ep_gpio->name);
                 return ret;
             }
 
-			dev_info(&pdev->dev, "Sysfs entry created for GPIO %s\n", ep_gpio->name);
+			dev_info(&pdev->dev, "Sysfs entry created for GPIO %s:%s\n", ep->name, ep_gpio->name);
         }
 
 		for (int j = 0; j < ep->num_cmds; ++j) {
@@ -1046,7 +1056,6 @@ void fusion_io_remove_sysfs_io_card(struct platform_device *pdev, struct io_card
 		}
 	}
 
-
     if (ic->sysfs_dev != NULL) {
         sysfs_remove_group(&ic->sysfs_dev->kobj, &io_card_group);
         if (ic->num_inputs > 0)
@@ -1057,7 +1066,7 @@ void fusion_io_remove_sysfs_io_card(struct platform_device *pdev, struct io_card
         ic->sysfs_dev = NULL;
     }
 
-    dev_info(&pdev->dev, "Sysfs entries removed for IO card %s in slot %d\n", ic->data.model, ic->slot);
+    dev_info(&pdev->dev, "Sysfs entries removed for IO card %s\n", ic->data.model);
 }
 
 int fusion_io_create_sysfs_io_card(struct platform_device *pdev, struct io_card *ic)
@@ -1069,7 +1078,7 @@ int fusion_io_create_sysfs_io_card(struct platform_device *pdev, struct io_card 
 
     int ret;
 
-    dev = device_create(fusion_io_class, fusion_io_parent_dev, MKDEV(0, 0), NULL, "io_card%d", ic->slot);
+    dev = device_create(fusion_io_class, fusion_io_parent_dev, MKDEV(0, 0), NULL, "%s", ic->data.model);
     if (IS_ERR(dev)) {
         return PTR_ERR(dev);
 	}
@@ -1100,6 +1109,23 @@ int fusion_io_create_sysfs_io_card(struct platform_device *pdev, struct io_card 
 		}
     }
 
+	for (int i = 0; i < ic->num_gpios; ++i) {
+        ep_gpio = &ic->gpios[i];
+
+        if (!ep_gpio->valid) {
+            dev_info(&pdev->dev, "Invalid GPIO %s:%s in create_sysfs_io_card\n", ic->data.model, ep_gpio->name);
+            continue;
+        } else if (ep_gpio->export == EP_GPIO_NO_EXPORT) {
+            continue;
+        }
+
+        ret = fusion_io_create_sysfs_gpio(dev, ep_gpio);
+        if (ret) {
+            dev_err(dev, "Failed to create sysfs for GPIO %s:%s\n", ic->data.model, ep_gpio->name);
+            return ret;
+        }
+    }
+
 	ic->endpoint_sysfs_devs = devm_kzalloc(&pdev->dev, sizeof(struct device *) * ic->num_eps, GFP_KERNEL);
 
     for (int i = 0; i < ic->num_eps; ++i) {
@@ -1109,9 +1135,9 @@ int fusion_io_create_sysfs_io_card(struct platform_device *pdev, struct io_card 
             continue;
         }
 
-        endpoint_dev = device_create(fusion_io_class, dev, MKDEV(0, 0), NULL, "endpoint%d", i);
+        endpoint_dev = device_create(fusion_io_class, dev, MKDEV(0, 0), NULL, "%s", ep->name);
         if (IS_ERR(endpoint_dev)) {
-            dev_err(dev, "Failed to create endpoint device %d\n", i);
+            dev_err(dev, "Failed to create endpoint device %s\n", ep->name);
             ret = PTR_ERR(endpoint_dev);
             return ret;
         }
@@ -1121,7 +1147,7 @@ int fusion_io_create_sysfs_io_card(struct platform_device *pdev, struct io_card 
 
         ret = sysfs_create_group(&endpoint_dev->kobj, &endpoint_group);
         if (ret) {
-            dev_err(dev, "Failed to create sysfs group for endpoint %d\n", i);
+            dev_err(dev, "Failed to create sysfs group for endpoint %s\n", ep->name);
             return ret;
         }
 
@@ -1129,7 +1155,7 @@ int fusion_io_create_sysfs_io_card(struct platform_device *pdev, struct io_card 
             ep_gpio = &ep->gpios[j];
             
 			if (!ep_gpio->valid) {
-                dev_info(endpoint_dev, "Invalid base GPIO %s in create_sysfs\n", ep_gpio->name);
+                dev_info(endpoint_dev, "Invalid GPIO %s:%s:%s in create_sysfs_io_card\n", ic->data.model, ep->name, ep_gpio->name);
                 continue;
             } else if (ep_gpio->export == EP_GPIO_NO_EXPORT) {
                 continue;
@@ -1137,7 +1163,7 @@ int fusion_io_create_sysfs_io_card(struct platform_device *pdev, struct io_card 
 
             ret = fusion_io_create_sysfs_gpio(endpoint_dev, ep_gpio);
             if (ret) {
-                dev_err(endpoint_dev, "Failed to create sysfs for GPIO %s\n", ep_gpio->name);
+                dev_err(endpoint_dev, "Failed to create sysfs for GPIO %s:%s:%s\n", ic->data.model, ep->name, ep_gpio->name);
                 return ret;
             }
         }
@@ -1163,6 +1189,6 @@ int fusion_io_create_sysfs_io_card(struct platform_device *pdev, struct io_card 
         }
     }
 
-    dev_info(&pdev->dev, "Sysfs entries created for IO card in slot %d\n", ic->slot);
+    dev_info(&pdev->dev, "Sysfs entries created for IO card %s\n", ic->data.model);
     return 0;
 }
