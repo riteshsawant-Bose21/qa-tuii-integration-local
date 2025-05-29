@@ -1507,7 +1507,7 @@ const struct base_device bd_fusion_c0 = {
             },
             .slot = 2,
             .i2c_sw_channel = 3,
-            .num_gpios = 6,
+            .num_gpios = 7,
             .gpios = (struct endpoint_gpio[]) {
                 {
                     .name = "gpio_gpio_int",
@@ -1557,6 +1557,15 @@ const struct base_device bd_fusion_c0 = {
                     .type = EP_GPIO_TYPE_VIRT,
                     .export = EP_GPIO_EXPORT,
                     .aggregate_id = 4,
+                    .ioexp_id = 4,
+                    .dir = EP_GPIO_DIR_O,
+                    .default_val = EP_GPIO_VAL_LO
+                },
+                {
+                    .name = "gpio_ctrl0_gpio4",
+                    .type = EP_GPIO_TYPE_VIRT,
+                    .export = EP_GPIO_EXPORT,
+                    .aggregate_id = 5,
                     .ioexp_id = 4,
                     .dir = EP_GPIO_DIR_O,
                     .default_val = EP_GPIO_VAL_LO
@@ -1695,7 +1704,7 @@ const struct base_device bd_fusion_c0 = {
                                 {
                                     .reg_addr = TCA9535_REG_OUTPUT_PORT0,
                                     .op_size = I2C_REG_DATA_OP_16BIT,
-                                    .data_mask = 0x0010  // 15v_psw high
+                                    .data_mask = 0x0000
                                 },
                                 {
                                     .reg_addr = TCA9535_REG_CONFIGURATION0,

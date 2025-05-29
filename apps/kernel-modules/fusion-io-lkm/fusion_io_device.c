@@ -427,22 +427,22 @@ static int configure_gpio_interrupt(struct platform_device *pdev, struct endpoin
 {
     int ret;
 
-    // Convert the GPIO descriptor to an IRQ number
     ep_gpio->irq_num = gpiod_to_irq(ep_gpio->desc);
     if (ep_gpio->irq_num < 0) {
         dev_err(&pdev->dev, "Failed to get IRQ number for GPIO %d\n", ep_gpio->num);
         return -EINVAL;
     }
 
-    // Register the interrupt handler
-    ret = request_irq(ep_gpio->irq_num, gpio_irq_handler, ep_gpio->trigger_type, ep_gpio->name, (void *)ep_gpio);
+    // Use threaded IRQ, no hard IRQ handler (NULL), only threaded handler
+    ret = request_threaded_irq(ep_gpio->irq_num, NULL, gpio_irq_handler,
+                               ep_gpio->trigger_type | IRQF_ONESHOT,
+                               ep_gpio->name, (void *)ep_gpio);
     if (ret) {
-        dev_err(&pdev->dev, "Failed to request IRQ for GPIO %d\n", ep_gpio->num);
+        dev_err(&pdev->dev, "Failed to request threaded IRQ for GPIO %d\n", ep_gpio->num);
         return ret;
     }
 
-    dev_info(&pdev->dev, "Configured GPIO %d as interrupt with IRQ number %d\n", ep_gpio->num, ep_gpio->irq_num);
-
+    dev_info(&pdev->dev, "Configured GPIO %d as threaded interrupt with IRQ number %d\n", ep_gpio->num, ep_gpio->irq_num);
     return 0;
 }
 

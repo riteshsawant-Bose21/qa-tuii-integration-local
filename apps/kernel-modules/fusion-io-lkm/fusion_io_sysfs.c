@@ -61,7 +61,7 @@ static int tca9535_show_gpio(struct endpoint *tca9535)
 		return value;
 	}
 
-	return (int)__swab16((u16)value);
+	return (int)value;
 }
 
 static int tcal6408_show_gpio(struct endpoint *tcal6408)
@@ -187,7 +187,7 @@ static int tca9535_store_gpio(struct endpoint *tca9535, u16 new_value, u16 mask)
 	if (ret < 0)
 		return ret;
 
-	old_value = __swab16((u16)ret);
+	old_value = (u16)ret;
 	old_value &= ~mask;
 
 	for (int i = 0; i < 16; ++i) {
@@ -202,7 +202,6 @@ static int tca9535_store_gpio(struct endpoint *tca9535, u16 new_value, u16 mask)
 	}
 
 	new_value |= old_value;
-	new_value = __swab16(new_value);
 
 	ret = i2c_smbus_write_word_data(tca9535->i2c_client,
 					TCA9535_REG_OUTPUT_PORT0, new_value);
