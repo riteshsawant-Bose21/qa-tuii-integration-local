@@ -44,7 +44,7 @@ static ssize_t fusion_io_phys_gpio_store(struct device *dev,
 }
 
 // need x_show_gpio for all io expanders x
-int tca9535_show_gpio(struct endpoint *tca9535)
+static int tca9535_show_gpio(struct endpoint *tca9535)
 {
 	int value;
 
@@ -54,10 +54,10 @@ int tca9535_show_gpio(struct endpoint *tca9535)
 		return value;
 	}
 
-	return (int)__swab16((u16)value);
+	return (int)value;
 }
 
-int tcal6408_show_gpio(struct endpoint *tcal6408)
+static int tcal6408_show_gpio(struct endpoint *tcal6408)
 {
 	int value;
 
@@ -67,17 +67,37 @@ int tcal6408_show_gpio(struct endpoint *tcal6408)
 	return value;
 }
 
-int ads7128_show_gpio(struct endpoint *ads7128, u8 pin_num, bool *is_adc)
+static int ads7128_show_gpio(struct endpoint *ads7128, u8 pin_num, bool *is_adc)
 {
     int value;
     struct endpoint_gpio *gpio = &ads7128->gpios[pin_num]; // Index 1-7 matches pin_num
+    struct i2c_client *client = ads7128->i2c_client;
+	struct i2c_msg msgs[2];
+    u8 rd_opcode_buf[2];
+    u8 rd_data_buf[1];
+	int ret;
 
-    value = i2c_smbus_read_byte_data(ads7128->i2c_client, ADS7128_REG_PIN_CFG);
-    if (value < 0) {
-		return value;
-	}
+    rd_opcode_buf[0] = ADS7128_OPCODE_READ_REG;
+    msgs[0].addr = client->addr;
+    msgs[0].flags = I2C_SMBUS_WRITE;
+    msgs[0].len = 2;
+    msgs[0].buf = rd_opcode_buf;
 
-    *is_adc = (value & (1U << (pin_num - 1))) != 0;
+    rd_data_buf[0] = ADS7128_OPCODE_READ_REG;
+    msgs[1].addr = client->addr;
+    msgs[1].flags = I2C_SMBUS_READ;
+    msgs[1].len = 1;
+    msgs[1].buf = rd_data_buf;
+
+    // Read alert status for ADC interrupts
+    rd_opcode_buf[1] = ADS7128_REG_PIN_CFG;
+    ret = __i2c_transfer(client->adapter, msgs, 2);
+    if (ret < 0) {
+        printk(KERN_ERR "ads7128_configure: failed read EVENT_FLAG\n");
+        return ret;
+    }
+
+    *is_adc = (*rd_data_buf & (1U << (pin_num - 1))) != 0;
 
     value = gpio->value; // Directly use cached value
 
@@ -94,7 +114,7 @@ static ssize_t fusion_io_virt_gpio_show(struct device *dev,
 	bool adc_value = false;
 
 	int value = 0;
-	u16 mask = 0x0000;
+	u16 mask = 0;
 
 	// create a bitmask for the bits we care about
 	// if we have aggregate gpios, we're on an endpoint
@@ -115,8 +135,12 @@ static ssize_t fusion_io_virt_gpio_show(struct device *dev,
 		ep = agg_gpio->parent_endpoint;
 		// otherwise we're on the gpio control device, e.g. ADC
 	} else {
-		mask |= 1UL << (ep_gpio->num - 1);
-		ep = ep_gpio->linked_gpio->parent_endpoint;
+		mask |= 1U << (ep_gpio->num - 1);
+		if (ep_gpio->linked_gpio) {
+			ep = ep_gpio->linked_gpio->parent_endpoint;
+		} else {
+			ep = ep_gpio->parent_endpoint;
+		}
 	}
 
 	// read the gpio states
@@ -166,7 +190,7 @@ static ssize_t fusion_io_virt_gpio_show(struct device *dev,
 }
 
 // need x_store_gpio for all io expanders x
-int tca9535_store_gpio(struct endpoint *tca9535, u16 new_value, u16 mask)
+static int tca9535_store_gpio(struct endpoint *tca9535, u16 new_value, u16 mask)
 {
 	int ret;
 	u16 old_value;
@@ -176,7 +200,7 @@ int tca9535_store_gpio(struct endpoint *tca9535, u16 new_value, u16 mask)
 	if (ret < 0)
 		return ret;
 
-	old_value = __swab16((u16)ret);
+	old_value = (u16)ret;
 	old_value &= ~mask;
 
 	for (int i = 0; i < 16; ++i) {
@@ -191,7 +215,6 @@ int tca9535_store_gpio(struct endpoint *tca9535, u16 new_value, u16 mask)
 	}
 
 	new_value |= old_value;
-	new_value = __swab16(new_value);
 
 	ret = i2c_smbus_write_word_data(tca9535->i2c_client,
 					TCA9535_REG_OUTPUT_PORT0, new_value);
@@ -199,7 +222,7 @@ int tca9535_store_gpio(struct endpoint *tca9535, u16 new_value, u16 mask)
 	return ret;
 }
 
-int tcal6408_store_gpio(struct endpoint *tcal6408, u8 new_value, u8 mask)
+static int tcal6408_store_gpio(struct endpoint *tcal6408, u8 new_value, u8 mask)
 {
 	int ret;
 	u8 old_value;
@@ -231,15 +254,42 @@ int tcal6408_store_gpio(struct endpoint *tcal6408, u8 new_value, u8 mask)
 	return ret;
 }
 
-int ads7128_store_gpio(struct endpoint *ads7128, u8 new_value, u8 mask)
+static int ads7128_store_gpio(struct endpoint *ads7128, u8 new_value, u8 mask)
 {
-    int ret;
+	struct i2c_client *client = ads7128->i2c_client;
+	struct i2c_msg wr_msg;
+    struct i2c_msg rd_msgs[2];
+    u8 wr_buf[3];
+    u8 rd_opcode_buf[2];
+    u8 rd_data_buf[1];
     u8 old_value, channel;
+	int ret;
+
+    wr_buf[0] = ADS7128_OPCODE_WRITE_REG;
+    wr_msg.addr = client->addr;
+    wr_msg.flags = I2C_SMBUS_WRITE;
+    wr_msg.len = 3;
+    wr_msg.buf = wr_buf;
+
+    rd_opcode_buf[0] = ADS7128_OPCODE_READ_REG;
+    rd_msgs[0].addr = client->addr;
+    rd_msgs[0].flags = I2C_SMBUS_WRITE;
+    rd_msgs[0].len = 2;
+    rd_msgs[0].buf = rd_opcode_buf;
+
+    rd_msgs[1].addr = client->addr;
+    rd_msgs[1].flags = I2C_SMBUS_READ;
+    rd_msgs[1].len = 1;
+    rd_msgs[1].buf = rd_data_buf;
 
     // Read current GPO_VALUE from hardware
-    ret = i2c_smbus_read_byte_data(ads7128->i2c_client, ADS7128_REG_GPO_VALUE);
-    if (ret < 0) return ret;
-    old_value = (u8)ret;
+    rd_opcode_buf[1] = ADS7128_REG_GPO_VALUE;
+    ret = __i2c_transfer(client->adapter, rd_msgs, 2);
+    if (ret < 0) {
+        printk(KERN_ERR "ads7128_store_gpio: failed read GPO_VALUE\n");
+        return ret;
+    }
+    old_value = *rd_data_buf;
 
     // Update the single bit specified by mask
     if (new_value) {
@@ -249,8 +299,13 @@ int ads7128_store_gpio(struct endpoint *ads7128, u8 new_value, u8 mask)
     }
 
     // Write back to hardware
-    ret = i2c_smbus_write_byte_data(ads7128->i2c_client, ADS7128_REG_GPO_VALUE, old_value);
-    if (ret < 0) return ret;
+    wr_buf[1] = ADS7128_REG_GPO_VALUE;
+	wr_buf[2] = __swab16(old_value);
+	ret = __i2c_transfer(client->adapter, &wr_msg, 1);
+	if (ret < 0) {
+		printk(KERN_ERR "ads7128_store_gpio: failed write GPO_VALUE\n");
+		return ret;
+	}
 
     // Update the cached value for the specific GPIO
     channel = __ffs(mask); // Find the bit position (0-7)
@@ -263,8 +318,7 @@ static ssize_t fusion_io_virt_gpio_store(struct device *dev,
 					 struct device_attribute *attr,
 					 const char *buf, size_t count)
 {
-	struct endpoint_gpio *ep_gpio =
-		container_of(attr, struct endpoint_gpio, dev_attr);
+	struct endpoint_gpio *ep_gpio = container_of(attr, struct endpoint_gpio, dev_attr);
 	struct endpoint *ep;
 
 	int num_bits;
@@ -284,7 +338,8 @@ static ssize_t fusion_io_virt_gpio_store(struct device *dev,
 		struct endpoint_gpio *agg_gpio;
 
 		if (ep_gpio->num_aggregate_gpios == 0 || ep_gpio->aggregate_gpios == NULL) {
-			dev_err(dev, "exported ep_gpio %s has aggregate_id %d but no aggregate_gpios!\n", ep_gpio->name, ep_gpio->aggregate_id);
+			dev_err(dev, "exported ep_gpio %s has aggregate_id %d but no aggregate_gpios!\n", ep_gpio->name, 
+																							  ep_gpio->aggregate_id);
 			return -EINVAL;
 		}
 
@@ -301,7 +356,11 @@ static ssize_t fusion_io_virt_gpio_store(struct device *dev,
 	} else {
 		mask |= 1UL << (ep_gpio->num - 1);
 
-		ep = ep_gpio->linked_gpio->parent_endpoint;
+		if (ep_gpio->linked_gpio) {
+			ep = ep_gpio->linked_gpio->parent_endpoint;
+		} else {
+			ep = ep_gpio->parent_endpoint;
+		}
 
 		num_bits = 1;
 	}
@@ -339,200 +398,60 @@ static ssize_t fusion_io_virt_gpio_store(struct device *dev,
 }
 
 /* command */
-static ssize_t fusion_io_cmd_reg_show(struct device *dev, struct device_attribute *attr, char *buf)
+static ssize_t ads7128_cmd_regop(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
-	struct endpoint_cmd *ep_cmd = container_of(attr, struct endpoint_cmd, dev_attr);
-	struct endpoint *ep = dev_get_drvdata(dev);
-	struct i2c_client *client = ep->i2c_client;
-	int value;
-	u16 data;
+    struct endpoint_cmd *ep_cmd = container_of(attr, struct endpoint_cmd, dev_attr);
+    struct endpoint *ep = dev_get_drvdata(dev);
+    struct i2c_client *client = ep->i2c_client;
+    unsigned int reg_addr, value;
+    u8 wr_buf[3];
+    u8 rd_opcode_buf[2];
+    u8 rd_data_buf[1];
+    struct i2c_msg wr_msg = {
+        .addr = client->addr,
+        .flags = 0,
+        .buf = wr_buf,
+        .len = 3
+    };
+    struct i2c_msg rd_msgs[2] = {
+        { .addr = client->addr, .flags = 0, .buf = rd_opcode_buf, .len = 2 },
+        { .addr = client->addr, .flags = I2C_M_RD, .buf = rd_data_buf, .len = 1 }
+    };
+    int ret;
 
-	if (!client) {
-		return -ENODEV;
-	}
+    if (!client)
+        return -ENODEV;
 
-	if (ep_cmd->i2c_cmds[0].reg_addr == I2C_REG_DATA_ADDR_NONE) {
-		if (ep_cmd->i2c_cmds[0].op_size == I2C_REG_DATA_OP_8BIT) {
-			value = i2c_smbus_read_byte(client);
-			if (value < 0) {
-				return value;
-			}
+    // Parse input: "<reg_addr> <value>" for write, "<reg_addr>" for read
+    if (sscanf(buf, "%x %x", &reg_addr, &value) == 2) {
+        // Write operation
+        wr_buf[0] = ADS7128_OPCODE_WRITE_REG; // Opcode 0x08
+        wr_buf[1] = reg_addr;
+        wr_buf[2] = value;
+        ret = __i2c_transfer(client->adapter, &wr_msg, 1);
+        if (ret < 0)
+            return ret;
+        ep_cmd->i2c_cmds[0].data_mask = value; // Store for show
+    } else if (sscanf(buf, "%x", &reg_addr) == 1) {
+        // Read operation
+        rd_opcode_buf[0] = ADS7128_OPCODE_READ_REG; // Opcode 0x10
+        rd_opcode_buf[1] = reg_addr;
+        ret = __i2c_transfer(client->adapter, rd_msgs, 2);
+        if (ret < 0)
+            return ret;
+        ep_cmd->i2c_cmds[0].data_mask = rd_data_buf[0]; // Store for show
+		printk(KERN_INFO "0x%02x\n", rd_data_buf[0]);
+    } else {
+        return -EINVAL; // Invalid format
+    }
 
-			data = (u8)value;
-		} else {
-			return -EINVAL;
-		}
-	} else {
-		if (ep_cmd->i2c_cmds[0].op_size == I2C_REG_DATA_OP_8BIT) {
-			value = i2c_smbus_read_byte_data(client, ep_cmd->i2c_cmds[0].reg_addr);
-			if (value < 0) {
-				return value;
-			}
-
-			data = (u8)value;
-		} else if (ep_cmd->i2c_cmds[0].op_size == I2C_REG_DATA_OP_16BIT) {
-			value = i2c_smbus_read_word_data(client, ep_cmd->i2c_cmds[0].reg_addr);
-			if (value < 0) {
-				return value;
-			}
-
-			data = __swab16((u16)value);
-		} else {
-			return -EINVAL;
-		}
-	}
-
-	return scnprintf(buf, PAGE_SIZE, "%04x\n", data);
+    return count;
 }
 
-static ssize_t fusion_io_cmd_bool_show(struct device *dev, struct device_attribute *attr, char *buf)
+static ssize_t ads7128_cmd_regop_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
-	struct endpoint_cmd *ep_cmd = container_of(attr, struct endpoint_cmd, dev_attr);
-	struct endpoint *ep = dev_get_drvdata(dev);
-	struct i2c_client *client = ep->i2c_client;
-	int value;
-	u16 data;
-
-	if (!client) {
-		return -ENODEV;
-	}
-
-	if (ep_cmd->i2c_cmds[0].reg_addr == I2C_REG_DATA_ADDR_NONE) {
-		if (ep_cmd->i2c_cmds[0].op_size == I2C_REG_DATA_OP_8BIT) {
-			value = i2c_smbus_read_byte(client);
-			if (value < 0) {
-				return value;
-			}
-
-			data = (u8)value;
-		} else {
-			return -EINVAL;
-		}
-	} else {
-		if (ep_cmd->i2c_cmds[0].op_size == I2C_REG_DATA_OP_8BIT) {
-			value = i2c_smbus_read_byte_data(
-				client, ep_cmd->i2c_cmds[0].reg_addr);
-			if (value < 0) {
-				return value;
-			}
-
-			data = (u8)value;
-		} else if (ep_cmd->i2c_cmds[0].op_size ==
-			   I2C_REG_DATA_OP_16BIT) {
-			value = i2c_smbus_read_word_data(
-				client, ep_cmd->i2c_cmds[0].reg_addr);
-			if (value < 0) {
-				return value;
-			}
-
-			data = __swab16((u16)value);
-		} else {
-			return -EINVAL;
-		}
-	}
-
-	data &= ep_cmd->i2c_cmds[0].data_mask;
-
-	return scnprintf(buf, PAGE_SIZE, "%u\n", !!data);
-}
-
-static ssize_t fusion_io_cmd_bool_store(struct device *dev,
-					struct device_attribute *attr,
-					const char *buf, size_t count)
-{
-	struct endpoint_cmd *ep_cmd =
-		container_of(attr, struct endpoint_cmd, dev_attr);
-	struct endpoint *ep = dev_get_drvdata(dev);
-	struct i2c_client *client = ep->i2c_client;
-
-	u8 og_val;
-	u16 data_mask;
-	unsigned long on_off;
-	int ret;
-
-	if (!client)
-		return -ENODEV;
-
-	ret = kstrtoul(buf, 0, &on_off);
-	if (ret)
-		return ret;
-
-	// Suppose each state is in ep_cmd->i2c_cmds[on_off], so we need at least 2 entries
-	if (on_off > 1) {
-		dev_warn(dev, "Invalid bool state: %lu\n", on_off);
-		return -EINVAL;
-	}
-
-	// Now pick the i2c_reg_data for this state
-	for (int i = 0; i < ep_cmd->num_i2c_cmds; ++i) {
-		struct i2c_reg_data *rd = &ep_cmd->i2c_cmds[i];
-
-		data_mask = on_off ? rd->data_mask : ~rd->data_mask;
-
-		if (rd->op_size == I2C_REG_DATA_OP_8BIT) {
-			ret = i2c_smbus_read_byte_data(client, rd->reg_addr);
-			if (ret < 0) {
-				return ret;
-			}
-
-			og_val = (u8)ret;
-			data_mask = on_off ? (u8)data_mask | og_val :
-					     (u8)data_mask & og_val;
-			ret = i2c_smbus_write_byte_data(client, rd->reg_addr,
-							(u8)data_mask);
-		} else if (rd->op_size == I2C_REG_DATA_OP_16BIT) {
-			ret = i2c_smbus_read_word_data(client, rd->reg_addr);
-			if (ret < 0)
-				return ret;
-
-			og_val = __swab16((u16)ret);
-			data_mask = on_off ? data_mask | og_val :
-					     data_mask & og_val;
-			ret = i2c_smbus_write_word_data(client, rd->reg_addr,
-							__swab16(data_mask));
-		} else {
-			dev_err(dev, "Unknown op_size: %d\n", rd->op_size);
-			return -EINVAL;
-		}
-	}
-
-	if (ret < 0)
-		return ret;
-
-	return count;
-}
-
-static ssize_t fusion_io_cmd_reg_store(struct device *dev,
-				       struct device_attribute *attr,
-				       const char *buf, size_t count)
-{
-	struct endpoint_cmd *ep_cmd =
-		container_of(attr, struct endpoint_cmd, dev_attr);
-	struct endpoint *ep = dev_get_drvdata(dev);
-	struct i2c_client *client = ep->i2c_client;
-	int ret;
-
-	if (!client)
-		return -ENODEV;
-
-	for (int i = 0; i < ep_cmd->num_i2c_cmds; ++i) {
-		struct i2c_reg_data *rd = &ep_cmd->i2c_cmds[i];
-
-		if (rd->op_size == I2C_REG_DATA_OP_8BIT) {
-			ret = i2c_smbus_write_byte_data(client, rd->reg_addr,
-							(u8)rd->data_mask);
-		} else if (rd->op_size == I2C_REG_DATA_OP_16BIT) {
-			ret = i2c_smbus_write_word_data(
-				client, rd->reg_addr, __swab16(rd->data_mask));
-		} else {
-			dev_err(dev, "Unknown op_size: %d\n", rd->op_size);
-			return -EINVAL;
-		}
-		if (ret < 0)
-			return ret;
-	}
-
-	return count;
+    struct endpoint_cmd *ep_cmd = container_of(attr, struct endpoint_cmd, dev_attr);
+    return scnprintf(buf, PAGE_SIZE, "0x%02x\n", ep_cmd->i2c_cmds[0].data_mask);
 }
 
 static int fusion_io_create_sysfs_gpio(struct device *parent_dev,
@@ -554,12 +473,6 @@ static int fusion_io_create_sysfs_gpio(struct device *parent_dev,
             ep_gpio->dev_attr.store = fusion_io_phys_gpio_store;
             break;
         case EP_GPIO_TYPE_VIRT:
-            // check that the gpio has a linked gpio
-            if (ep_gpio->linked_gpio == NULL && ep_gpio->aggregate_gpios == NULL) {
-                dev_err(parent_dev, "Virtual gpio %s does not have linked/aggregate gpio(s).\n", ep_gpio->name);
-                return -EINVAL;
-            }
-
             ep_gpio->dev_attr.show  = fusion_io_virt_gpio_show;
             ep_gpio->dev_attr.store = fusion_io_virt_gpio_store;
             break;
@@ -607,72 +520,6 @@ static void fusion_io_remove_sysfs_gpios(struct device *endpoint_dev, struct end
     }
 }
 
-static ssize_t ads7128_cmd_config_pins_store(struct device *dev, struct device_attribute *attr,
-                                             const char *buf, size_t count)
-{
-    struct endpoint_cmd *ep_cmd = container_of(attr, struct endpoint_cmd, dev_attr);
-    struct endpoint *ep = dev_get_drvdata(dev);
-    struct i2c_client *client = ep->i2c_client;
-    unsigned long bitmap;
-    int ret, channel;
-
-    if (!client) return -ENODEV;
-
-    ret = kstrtoul(buf, 0, &bitmap);
-    if (ret) return ret;
-    if (bitmap > 0xFF) return -EINVAL; // 8-bit max
-
-    if (strcmp(ep_cmd->name, "configure_analog_pins") == 0) {
-        // Set PIN_CFG to configure pins as analog
-        ret = i2c_smbus_write_byte_data(client, ADS7128_REG_PIN_CFG, (u8)bitmap);
-        if (ret < 0) return ret;
-
-        // Ensure ADC is enabled (optional redundancy if cmd_config ran)
-        ret = i2c_smbus_read_byte_data(client, ADS7128_REG_GENERAL_CFG);
-        if (ret < 0) return ret;
-        u8 gen_cfg = (u8)ret;
-        if (!(gen_cfg & 0x01)) { // CNVST bit
-            gen_cfg |= 0x01;
-            ret = i2c_smbus_write_byte_data(client, ADS7128_REG_GENERAL_CFG, gen_cfg);
-            if (ret < 0) return ret;
-        }
-
-        // Update gpio->dir for analog pins
-        for (channel = 0; channel < 8; channel++) {
-            if (bitmap & (1 << channel)) {
-                ep->gpios[channel + 1].dir = EP_GPIO_DIR_I; // Analog input
-            }
-        }
-    } else {
-        // Read current GPIO_CFG
-        ret = i2c_smbus_read_byte_data(client, ADS7128_REG_GPIO_CFG);
-        if (ret < 0) return ret;
-        u8 gpio_cfg = (u8)ret;
-
-        if (strcmp(ep_cmd->name, "configure_gpo_pins") == 0) {
-            gpio_cfg |= (u8)bitmap; // Set bits to 1 for GPO
-            ret = i2c_smbus_write_byte_data(client, ADS7128_REG_GPIO_CFG, gpio_cfg);
-            if (ret < 0) return ret;
-            for (channel = 0; channel < 8; channel++) {
-                if (bitmap & (1 << channel)) {
-                    ep->gpios[channel + 1].dir = EP_GPIO_DIR_O;
-                }
-            }
-        } else if (strcmp(ep_cmd->name, "configure_gpi_pins") == 0) {
-            gpio_cfg &= ~(u8)bitmap; // Clear bits to 0 for GPI
-            ret = i2c_smbus_write_byte_data(client, ADS7128_REG_GPIO_CFG, gpio_cfg);
-            if (ret < 0) return ret;
-            for (channel = 0; channel < 8; channel++) {
-                if (bitmap & (1 << channel)) {
-                    ep->gpios[channel + 1].dir = EP_GPIO_DIR_I;
-                }
-            }
-        }
-    }
-
-    return count;
-}
-
 static int fusion_io_create_sysfs_cmd(struct device *parent_dev, struct endpoint_cmd *ep_cmd)
 {
     int ret;
@@ -681,21 +528,14 @@ static int fusion_io_create_sysfs_cmd(struct device *parent_dev, struct endpoint
     if (!ep_cmd->dev_attr.attr.name)
         return -ENOMEM;
 
-    /* Permissions: read/write by owner */
-    ep_cmd->dev_attr.attr.mode = 0664;
-
     switch(ep_cmd->parent_endpoint->type) {
         case EP_TYPE_ADC_ADS7128:
 			switch(ep_cmd->type) {
-				case EP_CMD_TYPE_ADC_GET_IRQS:
-					ep_cmd->dev_attr.show  = fusion_io_cmd_reg_show;
-					ep_cmd->dev_attr.store = NULL;
-					break;
-				case EP_CMD_TYPE_ADC_CFG_ANA_PINS:
-				case EP_CMD_TYPE_ADC_CFG_GPI_PINS:
-				case EP_CMD_TYPE_ADC_CFG_GPO_PINS:
-					ep_cmd->dev_attr.show  = NULL;
-            		ep_cmd->dev_attr.store = ads7128_cmd_config_pins_store;
+				case EP_CMD_TYPE_ADC_REGOP:
+					/* write only */
+    				ep_cmd->dev_attr.attr.mode = 0666;
+					ep_cmd->dev_attr.show  = ads7128_cmd_regop_show;
+					ep_cmd->dev_attr.store = ads7128_cmd_regop;
 					break;
 				default:
 					return -EINVAL;
@@ -804,7 +644,7 @@ static const struct attribute_group endpoint_group = {
     .attrs = endpoint_attrs,
 };
 
-void fusion_io_remove_parent_device(void)
+static void fusion_io_remove_parent_device(void)
 {
     if (fusion_io_parent_dev) {
         device_unregister(fusion_io_parent_dev);
@@ -882,9 +722,9 @@ int fusion_io_create_sysfs_base(struct platform_device *pdev)
             continue;
         }
 
-        endpoint_dev = device_create(fusion_io_class, fusion_io_parent_dev, MKDEV(0, 0), NULL, "endpoint%d", i);
+        endpoint_dev = device_create(fusion_io_class, fusion_io_parent_dev, MKDEV(0, 0), NULL, "%s", ep->name);
         if (IS_ERR(endpoint_dev)) {
-            dev_err(&pdev->dev, "Failed to create endpoint device %d\n", i);
+            dev_err(&pdev->dev, "Failed to create endpoint device %s\n", ep->name);
             ret = PTR_ERR(endpoint_dev);
             return ret;
         }
@@ -894,7 +734,7 @@ int fusion_io_create_sysfs_base(struct platform_device *pdev)
 
         ret = sysfs_create_group(&endpoint_dev->kobj, &endpoint_group);
         if (ret) {
-            dev_err(&pdev->dev, "Failed to create sysfs group for endpoint %d\n", i);
+            dev_err(&pdev->dev, "Failed to create sysfs group for endpoint %s\n", ep->name);
             return ret;
         }
 
@@ -902,7 +742,7 @@ int fusion_io_create_sysfs_base(struct platform_device *pdev)
             ep_gpio = &ep->gpios[j];
             
 			if (!ep_gpio->valid) {
-                dev_info(&pdev->dev, "Invalid base GPIO %s in create_sysfs\n", ep_gpio->name);
+                dev_info(&pdev->dev, "Invalid GPIO %s:%s in create_sysfs_base\n", ep->name, ep_gpio->name);
                 continue;
             } else if (ep_gpio->export == EP_GPIO_NO_EXPORT) {
                 continue;
@@ -910,11 +750,11 @@ int fusion_io_create_sysfs_base(struct platform_device *pdev)
 
             ret = fusion_io_create_sysfs_gpio(endpoint_dev, ep_gpio);
             if (ret) {
-                dev_err(endpoint_dev, "Failed to create sysfs for GPIO %s\n", ep_gpio->name);
+                dev_err(endpoint_dev, "Failed to create sysfs for GPIO %s:%s\n", ep->name, ep_gpio->name);
                 return ret;
             }
 
-			dev_info(&pdev->dev, "Sysfs entry created for GPIO %s\n", ep_gpio->name);
+			dev_info(&pdev->dev, "Sysfs entry created for GPIO %s:%s\n", ep->name, ep_gpio->name);
         }
 
 		for (int j = 0; j < ep->num_cmds; ++j) {
@@ -1046,7 +886,6 @@ void fusion_io_remove_sysfs_io_card(struct platform_device *pdev, struct io_card
 		}
 	}
 
-
     if (ic->sysfs_dev != NULL) {
         sysfs_remove_group(&ic->sysfs_dev->kobj, &io_card_group);
         if (ic->num_inputs > 0)
@@ -1057,7 +896,7 @@ void fusion_io_remove_sysfs_io_card(struct platform_device *pdev, struct io_card
         ic->sysfs_dev = NULL;
     }
 
-    dev_info(&pdev->dev, "Sysfs entries removed for IO card %s in slot %d\n", ic->data.model, ic->slot);
+    dev_info(&pdev->dev, "Sysfs entries removed for IO card %s\n", ic->data.model);
 }
 
 int fusion_io_create_sysfs_io_card(struct platform_device *pdev, struct io_card *ic)
@@ -1069,7 +908,7 @@ int fusion_io_create_sysfs_io_card(struct platform_device *pdev, struct io_card 
 
     int ret;
 
-    dev = device_create(fusion_io_class, fusion_io_parent_dev, MKDEV(0, 0), NULL, "io_card%d", ic->slot);
+    dev = device_create(fusion_io_class, fusion_io_parent_dev, MKDEV(0, 0), NULL, "%s", ic->data.model);
     if (IS_ERR(dev)) {
         return PTR_ERR(dev);
 	}
@@ -1100,6 +939,23 @@ int fusion_io_create_sysfs_io_card(struct platform_device *pdev, struct io_card 
 		}
     }
 
+	for (int i = 0; i < ic->num_gpios; ++i) {
+        ep_gpio = &ic->gpios[i];
+
+        if (!ep_gpio->valid) {
+            dev_info(&pdev->dev, "Invalid GPIO %s:%s in create_sysfs_io_card\n", ic->data.model, ep_gpio->name);
+            continue;
+        } else if (ep_gpio->export == EP_GPIO_NO_EXPORT) {
+            continue;
+        }
+
+        ret = fusion_io_create_sysfs_gpio(dev, ep_gpio);
+        if (ret) {
+            dev_err(dev, "Failed to create sysfs for GPIO %s:%s\n", ic->data.model, ep_gpio->name);
+            return ret;
+        }
+    }
+
 	ic->endpoint_sysfs_devs = devm_kzalloc(&pdev->dev, sizeof(struct device *) * ic->num_eps, GFP_KERNEL);
 
     for (int i = 0; i < ic->num_eps; ++i) {
@@ -1109,9 +965,9 @@ int fusion_io_create_sysfs_io_card(struct platform_device *pdev, struct io_card 
             continue;
         }
 
-        endpoint_dev = device_create(fusion_io_class, dev, MKDEV(0, 0), NULL, "endpoint%d", i);
+        endpoint_dev = device_create(fusion_io_class, dev, MKDEV(0, 0), NULL, "%s", ep->name);
         if (IS_ERR(endpoint_dev)) {
-            dev_err(dev, "Failed to create endpoint device %d\n", i);
+            dev_err(dev, "Failed to create endpoint device %s\n", ep->name);
             ret = PTR_ERR(endpoint_dev);
             return ret;
         }
@@ -1121,7 +977,7 @@ int fusion_io_create_sysfs_io_card(struct platform_device *pdev, struct io_card 
 
         ret = sysfs_create_group(&endpoint_dev->kobj, &endpoint_group);
         if (ret) {
-            dev_err(dev, "Failed to create sysfs group for endpoint %d\n", i);
+            dev_err(dev, "Failed to create sysfs group for endpoint %s\n", ep->name);
             return ret;
         }
 
@@ -1129,7 +985,7 @@ int fusion_io_create_sysfs_io_card(struct platform_device *pdev, struct io_card 
             ep_gpio = &ep->gpios[j];
             
 			if (!ep_gpio->valid) {
-                dev_info(endpoint_dev, "Invalid base GPIO %s in create_sysfs\n", ep_gpio->name);
+                dev_info(endpoint_dev, "Invalid GPIO %s:%s:%s in create_sysfs_io_card\n", ic->data.model, ep->name, ep_gpio->name);
                 continue;
             } else if (ep_gpio->export == EP_GPIO_NO_EXPORT) {
                 continue;
@@ -1137,7 +993,7 @@ int fusion_io_create_sysfs_io_card(struct platform_device *pdev, struct io_card 
 
             ret = fusion_io_create_sysfs_gpio(endpoint_dev, ep_gpio);
             if (ret) {
-                dev_err(endpoint_dev, "Failed to create sysfs for GPIO %s\n", ep_gpio->name);
+                dev_err(endpoint_dev, "Failed to create sysfs for GPIO %s:%s:%s\n", ic->data.model, ep->name, ep_gpio->name);
                 return ret;
             }
         }
@@ -1163,6 +1019,6 @@ int fusion_io_create_sysfs_io_card(struct platform_device *pdev, struct io_card 
         }
     }
 
-    dev_info(&pdev->dev, "Sysfs entries created for IO card in slot %d\n", ic->slot);
+    dev_info(&pdev->dev, "Sysfs entries created for IO card %s\n", ic->data.model);
     return 0;
 }
