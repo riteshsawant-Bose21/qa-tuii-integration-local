@@ -71,6 +71,56 @@ public:
 
 
 private:
+    typedef struct {
+        snd_pcm_format_t format;
+        int bytes_per_sample;
+        void (*convert_read)(const uint8_t *src, float *dst,
+                             int channels, int samples);
+        void (*convert_write)(const float *src, uint8_t *dst,
+                              int channels, int samples);
+    } AlsaFormat;
+
+    static void convert_read_float_le(const uint8_t *src, float *dst,
+                                      int channels, int samples);
+    static void convert_write_float_le(const float *src, uint8_t *dst,
+                                       int channels, int samples);
+    static void convert_read_float_be(const uint8_t *src, float *dst,
+                                      int channels, int samples);
+    static void convert_write_float_be(const float *src, uint8_t *dst,
+                                       int channels, int samples);
+    static void convert_read_s32_le(const uint8_t *src, float *dst,
+                                    int channels, int samples);
+    static void convert_write_s32_le(const float *src, uint8_t *dst,
+                                     int channels, int samples);
+    static void convert_read_s32_be(const uint8_t *src, float *dst,
+                                    int channels, int samples);
+    static void convert_write_s32_be(const float *src, uint8_t *dst,
+                                     int channels, int samples);
+    static void convert_read_s24_le(const uint8_t *src, float *dst,
+                                    int channels, int samples);
+    static void convert_write_s24_le(const float *src, uint8_t *dst,
+                                     int channels, int samples);
+    static void convert_read_s24_be(const uint8_t *src, float *dst,
+                                    int channels, int samples);
+    static void convert_write_s24_be(const float *src, uint8_t *dst,
+                                     int channels, int samples);
+    static void convert_read_s24_3le(const uint8_t *src, float *dst,
+                                     int channels, int samples);
+    static void convert_write_s24_3le(const float *src, uint8_t *dst,
+                                      int channels, int samples);
+    static void convert_read_s24_3be(const uint8_t *src, float *dst,
+                                     int channels, int samples);
+    static void convert_write_s24_3be(const float *src, uint8_t *dst,
+                                      int channels, int samples);
+    static void convert_read_s16_le(const uint8_t *src, float *dst,
+                                    int channels, int samples);
+    static void convert_write_s16_le(const float *src, uint8_t *dst,
+                                     int channels, int samples);
+    static void convert_read_s16_be(const uint8_t *src, float *dst,
+                                    int channels, int samples);
+    static void convert_write_s16_be(const float *src, uint8_t *dst,
+                                     int channels, int samples);
+
     snd_pcm_t *alsa;
     int channels;
     int_fast32_t sample_rate;
@@ -78,12 +128,31 @@ private:
     int max_transfer_size;
     snd_pcm_hw_params_t *hw_params;
     snd_pcm_sw_params_t *sw_params;
-    bosepro::DspTempMemory<int32_t []> sample_buffer;
+    bosepro::DspTempMemory<uint8_t []> sample_buffer;
+    static std::vector<AlsaFormat> alsa_formats;
+
+    void (*convert_read)(const uint8_t *src, float *dst,
+                         int channels, int samples) = nullptr;
+    void (*convert_write)(const float *src, uint8_t *dst,
+                          int channels, int samples) = nullptr;
 
     void set_hw_params();
     void set_sw_params();
 };
 
+std::vector<AlsaDevice::AlsaFormat> AlsaDevice::alsa_formats = {
+        {SND_PCM_FORMAT_FLOAT_LE, 4, convert_read_float_le, convert_write_float_le},
+        {SND_PCM_FORMAT_FLOAT_BE, 4, convert_read_float_be, convert_write_float_be},
+        {SND_PCM_FORMAT_S32_LE, 4, convert_read_s32_le, convert_write_s32_le},
+        {SND_PCM_FORMAT_S32_BE, 4, convert_read_s32_be, convert_write_s32_be},
+        {SND_PCM_FORMAT_S24_LE, 4, convert_read_s24_le, convert_write_s24_le},
+        {SND_PCM_FORMAT_S24_BE, 4, convert_read_s24_be, convert_write_s24_be},
+        {SND_PCM_FORMAT_S24_3LE, 3, convert_read_s24_3le, convert_write_s24_3le},
+        {SND_PCM_FORMAT_S24_3BE, 3, convert_read_s24_3be, convert_write_s24_3be},
+        {SND_PCM_FORMAT_S16_LE, 2, convert_read_s16_le, convert_write_s16_le},
+        {SND_PCM_FORMAT_S16_BE, 2, convert_read_s16_be, convert_write_s16_be},
+        // Add more formats as needed
+};
 
 class AlsaIn : public bosepro::Algorithm {
 public:
@@ -147,7 +216,7 @@ AlsaDevice::AlsaDevice(const std::string &device_name, int channels,
     int error = snd_pcm_open(&alsa, device_name.c_str(),
                              is_input ? SND_PCM_STREAM_CAPTURE
                                       : SND_PCM_STREAM_PLAYBACK,
-                             0);
+                             SND_PCM_NONBLOCK);
 
     if (error < 0)
     {
@@ -158,8 +227,6 @@ AlsaDevice::AlsaDevice(const std::string &device_name, int channels,
 
     set_hw_params();
     set_sw_params();
-
-    sample_buffer.resize(channels * max_transfer_size);
 
     error = snd_pcm_prepare(alsa);
     if (error < 0)
@@ -271,10 +338,7 @@ int AlsaDevice::read(float *buffer, int samples)
                 res);
     }
 
-    for (int i = 0; i < samples * channels; i++)
-    {
-        buffer[i] = (float)sample_buffer[i] / 2147483648.0f;
-    }
+    convert_read(sample_buffer.get(), buffer, channels, samples);
 
     return res;
 }
@@ -289,10 +353,7 @@ void AlsaDevice::write(const float *buffer, int samples)
         return;
     }
 
-    for (int i = 0; i < samples * channels; i++)
-    {
-        sample_buffer[i] = (int32_t)(buffer[i] * 2147483648.0f);
-    }
+    convert_write(buffer, sample_buffer.get(), channels, samples);
 
     int res = snd_pcm_writei(alsa, sample_buffer.get(), samples);
 
@@ -330,14 +391,25 @@ void AlsaDevice::set_hw_params()
     }
 
     // Choose between float, s32, s24, s16, etc.
-    error = snd_pcm_hw_params_set_format(alsa, hw_params,
-            SND_PCM_FORMAT_S32_LE);
-    if (error < 0)
+    for (auto &format : alsa_formats)
     {
-        SPDLOG_ERROR("Failed to set ALSA format: {}",
-                snd_strerror(error));
-        throw std::runtime_error("Failed to set ALSA format: "
-                + std::string(snd_strerror(error)));
+        error = snd_pcm_hw_params_set_format(alsa, hw_params, format.format);
+        if (error == 0)
+        {
+            SPDLOG_DEBUG("Using ALSA format: {}",
+                         snd_pcm_format_name(format.format));
+
+            sample_buffer.resize(channels * max_transfer_size
+                                 * format.bytes_per_sample);
+            convert_read = format.convert_read;
+            convert_write = format.convert_write;
+            break;
+        }
+    }
+
+    if (convert_read == nullptr)
+    {
+        SPDLOG_ERROR("Failed to find ALSA format.");
     }
 
     // `snd_pcm_hw_params_set_subformat()` can set up to use 20 or 24 bits
@@ -357,6 +429,8 @@ void AlsaDevice::set_hw_params()
     error = snd_pcm_hw_params_set_rate(alsa, hw_params, sample_rate, 0);
     if (error < 0)
     {
+        SPDLOG_ERROR("Failed to set ALSA sample rate: {}",
+                     snd_strerror(error));
         throw std::runtime_error("Failed to set ALSA sample rate: "
                 + std::string(snd_strerror(error)));
     }
@@ -384,14 +458,18 @@ void AlsaDevice::set_hw_params()
     error = snd_pcm_hw_params_set_period_size(alsa, hw_params, period_size, 0);
     if (error < 0)
     {
+        SPDLOG_ERROR("Failed to set ALSA period size: {}",
+                     snd_strerror(error));
         throw std::runtime_error("Failed to set ALSA period size: "
                 + std::string(snd_strerror(error)));
     }
 
     // Set the number of periods in the buffer.
-    error = snd_pcm_hw_params_set_periods(alsa, hw_params, 8, 0);
+    error = snd_pcm_hw_params_set_periods(alsa, hw_params, 64, 0);
     if (error < 0)
     {
+        SPDLOG_ERROR("Failed to set ALSA number of periods: {}",
+                     snd_strerror(error));
         throw std::runtime_error("Failed to set ALSA number of periods: "
                 + std::string(snd_strerror(error)));
     }
@@ -406,6 +484,8 @@ void AlsaDevice::set_hw_params()
     error = snd_pcm_hw_params(alsa, hw_params);
     if (error < 0)
     {
+        SPDLOG_ERROR("Failed to set ALSA hardware parameters: {}",
+                     snd_strerror(error));
         throw std::runtime_error("Failed to set ALSA hardware parameters: "
                 + std::string(snd_strerror(error)));
     }
@@ -421,6 +501,8 @@ void AlsaDevice::set_sw_params()
     error = snd_pcm_sw_params_current(alsa, sw_params);
     if (error < 0)
     {
+        SPDLOG_ERROR("Failed to get ALSA software parameters: {}",
+                     snd_strerror(error));
         throw std::runtime_error("Failed to get software parameters: "
                 + std::string(snd_strerror(error)));
     }
@@ -434,9 +516,11 @@ void AlsaDevice::set_sw_params()
 
     // Set the minimum available before considered ready to read/write,
     // usually must be a power of two periods.
-    error = snd_pcm_sw_params_set_avail_min(alsa, sw_params, 2 * period_size);
+    error = snd_pcm_sw_params_set_avail_min(alsa, sw_params, 12 * period_size);
     if (error < 0)
     {
+        SPDLOG_ERROR("Failed to set ALSA avail min: {}",
+                     snd_strerror(error));
         throw std::runtime_error("Failed to set avail min: "
                 + std::string(snd_strerror(error)));
     }
@@ -450,6 +534,8 @@ void AlsaDevice::set_sw_params()
     error = snd_pcm_sw_params_set_start_threshold(alsa, sw_params, period_size);
     if (error < 0)
     {
+        SPDLOG_ERROR("Failed to set ALSA start threshold: {}",
+                     snd_strerror(error));
         throw std::runtime_error("Failed to set start threshold: "
                 + std::string(snd_strerror(error)));
     }
@@ -460,6 +546,8 @@ void AlsaDevice::set_sw_params()
     error = snd_pcm_sw_params_set_stop_threshold(alsa, sw_params, -1);
     if (error < 0)
     {
+        SPDLOG_ERROR("Failed to set ALSA stop threshold: {}",
+                     snd_strerror(error));
         throw std::runtime_error("Failed to set stop threshold: "
                 + std::string(snd_strerror(error)));
     }
@@ -476,8 +564,327 @@ void AlsaDevice::set_sw_params()
     error = snd_pcm_sw_params(alsa, sw_params);
     if (error < 0)
     {
+        SPDLOG_ERROR("Failed to set ALSA software parameters: {}",
+                     snd_strerror(error));
         throw std::runtime_error("Failed to set software parameters: "
                 + std::string(snd_strerror(error)));
+    }
+}
+
+
+void AlsaDevice::convert_read_float_le(const uint8_t *src, float *dst,
+                                       int channels, int samples)
+{
+    const float *src32 = reinterpret_cast<const float *>(src);
+
+    for (int i = 0; i < samples * channels; i++)
+    {
+        dst[i] = src32[i];
+    }
+}
+
+
+void AlsaDevice::convert_write_float_le(const float *src, uint8_t *dst,
+                                        int channels, int samples)
+{
+    float *dst32 = reinterpret_cast<float *>(dst);
+
+    for (int i = 0; i < samples * channels; i++)
+    {
+        dst32[i] = src[i];
+    }
+}
+
+
+void AlsaDevice::convert_read_float_be(const uint8_t *src, float *dst,
+                                       int channels, int samples)
+{
+    union {
+        float f;
+        uint8_t b[4];
+    } src32;
+
+    for (int i = 0; i < samples * channels; i++)
+    {
+        src32.b[0] = src[i * 4 + 3];
+        src32.b[1] = src[i * 4 + 2];
+        src32.b[2] = src[i * 4 + 1];
+        src32.b[3] = src[i * 4 + 0];
+        dst[i] = src32.f;
+    }
+}
+
+
+void AlsaDevice::convert_write_float_be(const float *src, uint8_t *dst,
+                                        int channels, int samples)
+{
+    union {
+        float f;
+        uint8_t b[4];
+    } dst32;
+
+    for (int i = 0; i < samples * channels; i++)
+    {
+        dst32.f = src[i];
+        dst[i * 4 + 3] = dst32.b[0];
+        dst[i * 4 + 2] = dst32.b[1];
+        dst[i * 4 + 1] = dst32.b[2];
+        dst[i * 4 + 0] = dst32.b[3];
+    }
+}
+
+
+void AlsaDevice::convert_read_s32_le(const uint8_t *src, float *dst,
+                                     int channels, int samples)
+{
+    const int32_t *src32 = reinterpret_cast<const int32_t *>(src);
+
+    for (int i = 0; i < samples * channels; i++)
+    {
+        dst[i] = static_cast<float>(src32[i]) / 2147483648.0f;
+    }
+}
+
+
+void AlsaDevice::convert_write_s32_le(const float *src, uint8_t *dst,
+                                      int channels, int samples)
+{
+    int32_t *dst32 = reinterpret_cast<int32_t *>(dst);
+
+    for (int i = 0; i < samples * channels; i++)
+    {
+        dst32[i] = static_cast<int32_t>(src[i] * 2147483648.0f);
+    }
+}
+
+
+void AlsaDevice::convert_read_s32_be(const uint8_t *src, float *dst,
+                                     int channels, int samples)
+{
+    union {
+        int32_t i;
+        uint8_t b[4];
+    } src32;
+
+    for (int i = 0; i < samples * channels; i++)
+    {
+        src32.b[0] = src[i * 4 + 3];
+        src32.b[1] = src[i * 4 + 2];
+        src32.b[2] = src[i * 4 + 1];
+        src32.b[3] = src[i * 4 + 0];
+        dst[i] = static_cast<float>(src32.i) / 2147483648.0f;
+    }
+}
+
+
+void AlsaDevice::convert_write_s32_be(const float *src, uint8_t *dst,
+                                      int channels, int samples)
+{
+    union {
+        int32_t i;
+        uint8_t b[4];
+    } dst32;
+
+    for (int i = 0; i < samples * channels; i++)
+    {
+        dst32.i = static_cast<int32_t>(src[i] * 2147483648.0f);
+        dst[i * 4 + 3] = dst32.b[0];
+        dst[i * 4 + 2] = dst32.b[1];
+        dst[i * 4 + 1] = dst32.b[2];
+        dst[i * 4 + 0] = dst32.b[3];
+    }
+}
+
+
+void AlsaDevice::convert_read_s24_le(const uint8_t *src, float *dst,
+                                     int channels, int samples)
+{
+    const int32_t *src32 = reinterpret_cast<const int32_t *>(src);
+
+    for (int i = 0; i < samples * channels; i++)
+    {
+        dst[i] = static_cast<float>(src32[i]) / 8388608.0f;
+    }
+}
+
+
+void AlsaDevice::convert_write_s24_le(const float *src, uint8_t *dst,
+                                      int channels, int samples)
+{
+    int32_t *dst32 = reinterpret_cast<int32_t *>(dst);
+
+    for (int i = 0; i < samples * channels; i++)
+    {
+        dst32[i] = static_cast<int32_t>(src[i] * 8388608.0f);
+    }
+}
+
+
+void AlsaDevice::convert_read_s24_be(const uint8_t *src, float *dst,
+                                     int channels, int samples)
+{
+    union {
+        int32_t i;
+        uint8_t b[4];
+    } src32;
+
+    for (int i = 0; i < samples * channels; i++)
+    {
+        src32.b[0] = src[i * 4 + 3];
+        src32.b[1] = src[i * 4 + 2];
+        src32.b[2] = src[i * 4 + 1];
+        src32.b[3] = src[i * 4 + 0];
+        dst[i] = static_cast<float>(src32.i) / 8388608.0f;
+    }
+}
+
+
+void AlsaDevice::convert_write_s24_be(const float *src, uint8_t *dst,
+                                      int channels, int samples)
+{
+    union {
+        int32_t i;
+        uint8_t b[4];
+    } dst32;
+
+    for (int i = 0; i < samples * channels; i++)
+    {
+        dst32.i = static_cast<int32_t>(src[i] * 8388608.0f);
+        dst[i * 4 + 3] = dst32.b[0];
+        dst[i * 4 + 2] = dst32.b[1];
+        dst[i * 4 + 1] = dst32.b[2];
+        dst[i * 4 + 0] = dst32.b[3];
+    }
+}
+
+
+void AlsaDevice::convert_read_s24_3le(const uint8_t *src, float *dst,
+                                      int channels, int samples)
+{
+    union {
+        int32_t i;
+        uint8_t b[4];
+    } src32;
+
+    for (int i = 0; i < samples * channels; i++)
+    {
+        src32.b[0] = src[i * 3 + 0];
+        src32.b[1] = src[i * 3 + 1];
+        src32.b[2] = src[i * 3 + 2];
+        src32.b[3] = 0;
+        dst[i] = static_cast<float>(src32.i) / 2147483648.0f;
+    }
+}
+
+
+void AlsaDevice::convert_write_s24_3le(const float *src, uint8_t *dst,
+                                       int channels, int samples)
+{
+    union {
+        int32_t i;
+        uint8_t b[4];
+    } dst32;
+
+    for (int i = 0; i < samples * channels; i++)
+    {
+        dst32.i = static_cast<int32_t>(src[i] * 2147483648.0f);
+        dst[i * 3 + 2] = dst32.b[3];
+        dst[i * 3 + 1] = dst32.b[2];
+        dst[i * 3 + 0] = dst32.b[1];
+    }
+}
+
+
+void AlsaDevice::convert_read_s24_3be(const uint8_t *src, float *dst,
+                                      int channels, int samples)
+{
+    union {
+        int32_t i;
+        uint8_t b[4];
+    } src32;
+
+    for (int i = 0; i < samples * channels; i++)
+    {
+        src32.b[0] = 0;
+        src32.b[1] = src[i * 3 + 2];
+        src32.b[2] = src[i * 3 + 1];
+        src32.b[3] = src[i * 3 + 0];
+        dst[i] = static_cast<float>(src32.i) / 2147483648.0f;
+    }
+}
+
+
+void AlsaDevice::convert_write_s24_3be(const float *src, uint8_t *dst,
+                                       int channels, int samples)
+{
+    union {
+        int32_t i;
+        uint8_t b[4];
+    } dst32;
+
+    for (int i = 0; i < samples * channels; i++)
+    {
+        dst32.i = static_cast<int32_t>(src[i] * 2147483648.0f);
+        dst[i * 3 + 2] = dst32.b[1];
+        dst[i * 3 + 1] = dst32.b[2];
+        dst[i * 3 + 0] = dst32.b[3];
+    }
+}
+
+
+void AlsaDevice::convert_read_s16_le(const uint8_t *src, float *dst,
+                                     int channels, int samples)
+{
+    const int16_t *src16 = reinterpret_cast<const int16_t *>(src);
+
+    for (int i = 0; i < samples * channels; i++)
+    {
+        dst[i] = static_cast<float>(src16[i]) / 32768.0f;
+    }
+}
+
+
+void AlsaDevice::convert_write_s16_le(const float *src, uint8_t *dst,
+                                      int channels, int samples)
+{
+    int16_t *dst16 = reinterpret_cast<int16_t *>(dst);
+
+    for (int i = 0; i < samples * channels; i++)
+    {
+        dst16[i] = static_cast<int16_t>(src[i] * 32768.0f);
+    }
+}
+
+
+void AlsaDevice::convert_read_s16_be(const uint8_t *src, float *dst,
+                                     int channels, int samples)
+{
+    union {
+        int16_t i;
+        uint8_t b[2];
+    } src16;
+
+    for (int i = 0; i < samples * channels; i++)
+    {
+        src16.b[0] = src[i * 2 + 1];
+        src16.b[1] = src[i * 2 + 0];
+        dst[i] = static_cast<float>(src16.i) / 32768.0f;
+    }
+}
+
+void AlsaDevice::convert_write_s16_be(const float *src, uint8_t *dst,
+                                      int channels, int samples)
+{
+    union {
+        int16_t i;
+        uint8_t b[2];
+    } dst16;
+
+    for (int i = 0; i < samples * channels; i++)
+    {
+        dst16.i = static_cast<int16_t>(src[i] * 32768.0f);
+        dst[i * 2 + 1] = dst16.b[0];
+        dst[i * 2 + 0] = dst16.b[1];
     }
 }
 
@@ -497,9 +904,9 @@ AlsaIn::AlsaIn(const bosepro::BlockConfiguration &configuration)
 
     read_samples = get_frame_size() + 1;
 
-    min_depth = 2 * period_size;
-    max_depth = 6 * period_size;
-    target_depth = 4 * period_size;
+    min_depth = 12 * period_size;
+    max_depth = 36 * period_size;
+    target_depth = 24 * period_size;
 
     // The JND for pitch is about 0.6% (or about 10 cents).  We can limit the
     // ratio to be smaller than this to avoid pitch artifacts, while still
@@ -526,14 +933,14 @@ void AlsaIn::process()
     // Perhaps we want to do packet loss concealment here
     if (depth > max_depth)
     {
-        SPDLOG_WARN("Buffer depth too high: {}", depth);
+        SPDLOG_WARN("Buffer depth too high: {} {}", depth, max_depth);
         depth = device->adjust_buffer_depth(target_depth - depth);
 
         servo->reset();
     }
     else if (depth < min_depth)
     {
-        SPDLOG_WARN("Buffer depth too low: {}", depth);
+        SPDLOG_WARN("Buffer depth too low: {} {}", depth, min_depth);
         depth = device->adjust_buffer_depth(target_depth - depth);
 
         servo->reset();
@@ -586,9 +993,9 @@ AlsaOut::AlsaOut(const bosepro::BlockConfiguration &configuration)
 
     max_write_samples = get_frame_size() + 1;
 
-    min_depth = 2 * period_size;
-    max_depth = 6 * period_size;
-    target_depth = 4 * period_size;
+    min_depth = 12 * period_size;
+    max_depth = 36 * period_size;
+    target_depth = 24 * period_size;
 
     // The JND for pitch is about 0.6% (or about 10 cents).  We can limit the
     // ratio to be smaller than this to avoid pitch artifacts, while still
@@ -609,21 +1016,34 @@ AlsaOut::AlsaOut(const bosepro::BlockConfiguration &configuration)
 void AlsaOut::process()
 {
     // Measure the current buffer depth
-    int depth = device->get_buffer_depth();
+    int depth = 64 * 48 - device->get_buffer_depth();
 
     // Handle the cases where the buffer depth is way too high or low
     // Perhaps we want to do packet loss concealment here
     if (depth > max_depth)
     {
-        SPDLOG_WARN("Buffer depth too high: {}", depth);
+        SPDLOG_WARN("Buffer depth too high: {} {}", depth, max_depth);
+
         depth = device->adjust_buffer_depth(target_depth - depth);
 
         servo->reset();
     }
     else if (depth < min_depth)
     {
-        SPDLOG_WARN("Buffer depth too low: {}", depth);
-        depth = device->adjust_buffer_depth(target_depth - depth);
+        SPDLOG_WARN("Buffer depth too low: {} {}", depth, min_depth);
+        int fill_amount = target_depth - depth;
+
+        while (fill_amount > 0)
+        {
+
+            memset(asrc_out_buf.get(), 0,
+                   max_write_samples * channels * sizeof(float));
+
+            device->write(asrc_out_buf.get(),
+                          std::min(fill_amount, max_write_samples));
+
+            fill_amount -= max_write_samples;
+        }
 
         servo->reset();
     }
