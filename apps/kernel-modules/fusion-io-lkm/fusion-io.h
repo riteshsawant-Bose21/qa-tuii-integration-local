@@ -116,10 +116,7 @@ enum endpoint_cmd_cmd {
     EP_CMD_EEPROM_RD_DATA   = 1,
 
     /* ADS7128-specific commands */
-    EP_CMD_ADS7128_GET_EVENT_FLAGS = 1,
-    EP_CMD_ADS7128_CFG_ANALOG_PINS,
-    EP_CMD_ADS7128_CFG_GPO_PINS,
-    EP_CMD_ADS7128_CFG_GPI_PINS
+    EP_CMD_ADS7128_REGOP = 1
 };
 
 enum endpoint_cmd_type {
@@ -133,10 +130,7 @@ enum endpoint_cmd_type {
     EP_CMD_TYPE_I2CSW_SET_PORT,
 
     /* adc */
-    EP_CMD_TYPE_ADC_GET_IRQS,
-    EP_CMD_TYPE_ADC_CFG_ANA_PINS,
-    EP_CMD_TYPE_ADC_CFG_GPO_PINS,
-    EP_CMD_TYPE_ADC_CFG_GPI_PINS
+    EP_CMD_TYPE_ADC_REGOP
 };
 
 enum endpoint_cmd_export {
@@ -257,6 +251,11 @@ enum ak4137_regs {
 };
 
 enum ads7128_regs {
+/* ADS7128 requires opcodes before reg address */
+#define ADS7128_OPCODE_READ_REG  0x10
+#define ADS7128_OPCODE_WRITE_REG 0x08
+#define ADS7128_OPCODE_SET_BIT   0x18
+#define ADS7128_OPCODE_CLR_BIT   0x20
     /* 0x00 - 0x0F */
     ADS7128_REG_SYSTEM_STATUS        = 0x00, /* [reset = 0x81] */
     ADS7128_REG_GENERAL_CFG          = 0x01, /* [reset = 0x00] */
@@ -432,6 +431,7 @@ struct endpoint {
     struct endpoint_cmd     *cmds;
 
     int                     (*ep_handle_irq)(struct endpoint_gpio *);
+    int                     (*ep_configure)(struct i2c_client *, struct endpoint_cmd *);
     
     struct base_device      *parent_base_device;
     struct io_card          *parent_io_card;
@@ -583,6 +583,8 @@ extern const struct base_device    bd_fusion_proto1;
 extern const enum base_device_type default_bd_types[];
 extern const struct base_device    *default_bds[];
 
+// x_configure callbacks defined in fusion_io_device.c
+int ads7128_configure(struct i2c_client *, struct endpoint_cmd *);
 
 // x_handle_irq callbacks defined in fusion_io_device.c
 int tca9544_handle_irq(struct endpoint_gpio *);

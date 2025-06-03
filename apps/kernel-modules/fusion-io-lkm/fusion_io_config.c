@@ -721,6 +721,7 @@ const struct base_device bd_fusion_c0 = {
                     .type = EP_GPIO_TYPE_VIRT,
                     .export = EP_GPIO_NO_EXPORT,
                     .num = 3,
+                    .aggregate_id = 7,
                     .is_irq = true,
                     .trigger_type = IRQ_TYPE_EDGE_FALLING,
                     .dir = EP_GPIO_DIR_I
@@ -852,11 +853,6 @@ const struct base_device bd_fusion_c0 = {
                     .num_i2c_cmds = 7,
                     .i2c_cmds = (struct i2c_reg_data[]) {
                         {
-                            .reg_addr = TCAL6408_REG_CONFIGURATION,
-                            .op_size = I2C_REG_DATA_OP_8BIT,
-                            .data_mask = 0xff
-                        },
-                        {
                             .reg_addr = TCAL6408_REG_POLARITY_INV,
                             .op_size = I2C_REG_DATA_OP_8BIT,
                             .data_mask = 0x00
@@ -885,6 +881,11 @@ const struct base_device bd_fusion_c0 = {
                             .reg_addr = TCAL6408_REG_OUTPUT_PORT_CFG_REG,
                             .op_size = I2C_REG_DATA_OP_8BIT,
                             .data_mask = 0x00  // push-pull
+                        },
+                        {
+                            .reg_addr = TCAL6408_REG_OUTPUT_PORT,
+                            .op_size = I2C_REG_DATA_OP_8BIT,
+                            .data_mask = 0xff
                         }
                     }
                 }
@@ -905,13 +906,13 @@ const struct base_device bd_fusion_c0 = {
             .num_inputs = 6,
             .num_outputs = 4,
             .i2c_sw_channel = 1,
-            .num_gpios = 3,
+            .num_gpios = 2,
             .gpios = (struct endpoint_gpio[]) {
                 {
                     .name = "gpio_ana_int",
                     .type = EP_GPIO_TYPE_VIRT,
                     .export = EP_GPIO_NO_EXPORT,
-                    .aggregate_id = 5,
+                    .aggregate_id = 6,
                     .is_irq = true,
                     .trigger_type = IRQ_TYPE_EDGE_FALLING,
                     .dir = EP_GPIO_DIR_O
@@ -941,7 +942,7 @@ const struct base_device bd_fusion_c0 = {
                             .type = EP_GPIO_TYPE_VIRT,
                             .export = EP_GPIO_NO_EXPORT,
                             .ioexp_id = 2,
-                            .aggregate_id = 5,
+                            .aggregate_id = 6,
                             .is_irq = true,
                             .trigger_type = IRQ_TYPE_EDGE_FALLING,
                             .dir = EP_GPIO_DIR_O
@@ -1140,6 +1141,16 @@ const struct base_device bd_fusion_c0 = {
                     .num_gpios = 7,
                     .gpios = (struct endpoint_gpio[]) {
                         {
+                            .name = "gpio_ana_int",
+                            .type = EP_GPIO_TYPE_VIRT,
+                            .export = EP_GPIO_NO_EXPORT,
+                            .ioexp_id = 3,
+                            .aggregate_id = 6,
+                            .is_irq = true,
+                            .trigger_type = IRQ_TYPE_EDGE_FALLING,
+                            .dir = EP_GPIO_DIR_O
+                        },
+                        {
                             .name = "gpio_php_en_ch3",
                             .type = EP_GPIO_TYPE_VIRT,
                             .export = EP_GPIO_NO_EXPORT,
@@ -1192,16 +1203,6 @@ const struct base_device bd_fusion_c0 = {
                             .ioexp_id = 3,
                             .dir = EP_GPIO_DIR_O,
                             .default_val = EP_GPIO_VAL_LO
-                        },
-                        {
-                            .name = "gpio_ana_int",
-                            .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_NO_EXPORT,
-                            .ioexp_id = 3,
-                            .aggregate_id = 5,
-                            .is_irq = true,
-                            .trigger_type = IRQ_TYPE_EDGE_FALLING,
-                            .dir = EP_GPIO_DIR_O
                         }
                     },
                     .num_cmds = 1,
@@ -1514,6 +1515,7 @@ const struct base_device bd_fusion_c0 = {
                     .type = EP_GPIO_TYPE_VIRT,
                     .export = EP_GPIO_NO_EXPORT,
                     .is_irq = true,
+                    .aggregate_id = 7,
                     .trigger_type = IRQ_TYPE_EDGE_FALLING,
                     .dir = EP_GPIO_DIR_O
                 },
@@ -1588,6 +1590,7 @@ const struct base_device bd_fusion_c0 = {
                             .type = EP_GPIO_TYPE_VIRT,
                             .export = EP_GPIO_NO_EXPORT,
                             .is_irq = true,
+                            .aggregate_id = 7,
                             .ioexp_id = 4,
                             .trigger_type = IRQ_TYPE_EDGE_FALLING,
                             .dir = EP_GPIO_DIR_O
@@ -1704,12 +1707,12 @@ const struct base_device bd_fusion_c0 = {
                                 {
                                     .reg_addr = TCA9535_REG_OUTPUT_PORT0,
                                     .op_size = I2C_REG_DATA_OP_16BIT,
-                                    .data_mask = 0x0000
+                                    .data_mask = 0x03ff
                                 },
                                 {
                                     .reg_addr = TCA9535_REG_CONFIGURATION0,
                                     .op_size = I2C_REG_DATA_OP_16BIT,
-                                    .data_mask = 0x0000  // all outputs
+                                    .data_mask = 0xfc00  // all outputs
                                 }
                             }
                         }
@@ -1722,6 +1725,7 @@ const struct base_device bd_fusion_c0 = {
                     .has_i2c = true,
                     .addr_list = (unsigned short[]) { 0x14, I2C_CLIENT_END },
                     .ep_handle_irq = ads7128_handle_irq,
+                    .ep_configure  = ads7128_configure,
                     .num_gpios = 7,
                     .gpios = (struct endpoint_gpio[]) {
                         {
@@ -1729,6 +1733,7 @@ const struct base_device bd_fusion_c0 = {
                             .type = EP_GPIO_TYPE_VIRT,
                             .export = EP_GPIO_NO_EXPORT,
                             .is_irq = true,
+                            .aggregate_id = 7,
                             .trigger_type = IRQ_TYPE_EDGE_FALLING,
                             .dir = EP_GPIO_DIR_O
                         },
@@ -1783,55 +1788,21 @@ const struct base_device bd_fusion_c0 = {
                             .export = EP_CMD_NO_EXPORT,
                             .num_i2c_cmds = 13,
                             .i2c_cmds = (struct i2c_reg_data[]) {
-                                { .reg_addr = ADS7128_REG_OPMODE_CFG, .op_size = I2C_REG_DATA_OP_8BIT, .data_mask = 0x06 }, // Autonomous mode
-                                { .reg_addr = ADS7128_REG_GPIO_CFG, .op_size = I2C_REG_DATA_OP_8BIT, .data_mask = 0xE0 },   // Channels 0-4 inputs, 5-7 outputs
-                                { .reg_addr = ADS7128_REG_GPI_VALUE, .op_size = I2C_REG_DATA_OP_8BIT, .data_mask = 0x1F },  // Enable GPIO inputs for 0-4
-                                { .reg_addr = ADS7128_REG_EVENT_FLAG, .op_size = I2C_REG_DATA_OP_8BIT, .data_mask = 0x1F }, // Enable GPIO interrupt monitoring
-                                { .reg_addr = ADS7128_REG_EVENT_RGN, .op_size = I2C_REG_DATA_OP_8BIT, .data_mask = 0x00 },  // Disable debouncing
-                                { .reg_addr = ADS7128_REG_EVENT_HIGH_FLAG, .op_size = I2C_REG_DATA_OP_8BIT, .data_mask = 0x1F }, // Both edges for GPIO
-                                { .reg_addr = ADS7128_REG_OSR_CFG, .op_size = I2C_REG_DATA_OP_8BIT, .data_mask = 0x01 },    // Low-power oscillator
-                                { .reg_addr = ADS7128_REG_DATA_CFG, .op_size = I2C_REG_DATA_OP_8BIT, .data_mask = 0x12 },   // 18 cycles per conversion
-                                { .reg_addr = ADS7128_REG_GENERAL_CFG, .op_size = I2C_REG_DATA_OP_8BIT, .data_mask = 0x01 }, // Enable internal oscillator
-                                { .reg_addr = ADS7128_REG_ALERT_CH_SEL, .op_size = I2C_REG_DATA_OP_8BIT, .data_mask = 0x1F }, // Enable alerts for 0-4
-                                { .reg_addr = ADS7128_REG_ALERT_MAP, .op_size = I2C_REG_DATA_OP_8BIT, .data_mask = 0x1F },   // Enable DWC for 0-4
-                                { .reg_addr = ADS7128_REG_AUTO_SEQ_CH_SEL, .op_size = I2C_REG_DATA_OP_8BIT, .data_mask = 0x1F }, // Add all chs by default
-                                { .reg_addr = ADS7128_REG_SEQUENCE_CFG, .op_size = I2C_REG_DATA_OP_8BIT, .data_mask = 0x01 }  // Start sequence
+                                { .reg_addr = ADS7128_REG_OSR_CFG, .op_size = I2C_REG_DATA_OP_8BIT, .data_mask = 0x03 },         // OSR 8 samples
+                                { .reg_addr = ADS7128_REG_OPMODE_CFG, .op_size = I2C_REG_DATA_OP_8BIT, .data_mask = 0x3d },      // CONV_MODE autonomous, OSC_SEL lp, CLK_DIV 3072us
+                                { .reg_addr = ADS7128_REG_AUTO_SEQ_CH_SEL, .op_size = I2C_REG_DATA_OP_8BIT, .data_mask = 0x3F }, // AUTO_SEQ_CHSEL all used 
+                                { .reg_addr = ADS7128_REG_GENERAL_CFG, .op_size = I2C_REG_DATA_OP_8BIT, .data_mask = 0x14 },     // DWC_EN, CH_RST
+                                { .reg_addr = ADS7128_REG_SEQUENCE_CFG, .op_size = I2C_REG_DATA_OP_8BIT, .data_mask = 0x11 },    // SEQ_MODE auto, SEQ_START
+                                { .reg_addr = ADS7128_REG_GENERAL_CFG, .op_size = I2C_REG_DATA_OP_8BIT, .data_mask = 0x08 }      // CONVST
                             }
                         },
-                        [EP_CMD_ADS7128_GET_EVENT_FLAGS] = {
-                            .name = "cmd_read_event_flags",
-                            .type = EP_CMD_TYPE_ADC_GET_IRQS,
-                            .export = EP_CMD_NO_EXPORT,
-                            .num_i2c_cmds = 1,
-                            .i2c_cmds = (struct i2c_reg_data[]) {
-                                { .reg_addr = ADS7128_REG_EVENT_FLAG, .op_size = I2C_REG_DATA_OP_8BIT, .data_mask = 0x1F } // Event flags for 0-4
-                            }
-                        },
-                        [EP_CMD_ADS7128_CFG_ANALOG_PINS] = {
-                            .name = "cmd_cfg_analog_pins",
-                            .type = EP_CMD_TYPE_ADC_CFG_ANA_PINS,
+                        [EP_CMD_ADS7128_REGOP] = {
+                            .name = "cmd_regop",
+                            .type = EP_CMD_TYPE_ADC_REGOP,
                             .export = EP_CMD_EXPORT,
                             .num_i2c_cmds = 1,
                             .i2c_cmds = (struct i2c_reg_data[]) {
-                                { .reg_addr = ADS7128_REG_PIN_CFG, .op_size = I2C_REG_DATA_OP_8BIT, .data_mask = 0x00 } // Default, overwritten by sysfs
-                            }
-                        },
-                        [EP_CMD_ADS7128_CFG_GPO_PINS] = {
-                            .name = "cmd_cfg_gpo_pins",
-                            .type = EP_CMD_TYPE_ADC_CFG_GPO_PINS,
-                            .export = EP_CMD_EXPORT,
-                            .num_i2c_cmds = 1,
-                            .i2c_cmds = (struct i2c_reg_data[]) {
-                                { .reg_addr = ADS7128_REG_GPIO_CFG, .op_size = I2C_REG_DATA_OP_8BIT, .data_mask = 0x00 } // Default, overwritten
-                            }
-                        },
-                        [EP_CMD_ADS7128_CFG_GPI_PINS] = {
-                            .name = "cmd_cfg_gpi_pins",
-                            .type = EP_CMD_TYPE_ADC_CFG_GPI_PINS,
-                            .export = EP_CMD_EXPORT,
-                            .num_i2c_cmds = 1,
-                            .i2c_cmds = (struct i2c_reg_data[]) {
-                                { .reg_addr = ADS7128_REG_GPIO_CFG, .op_size = I2C_REG_DATA_OP_8BIT, .data_mask = 0x00 } // Default, overwritten
+                                { .reg_addr = ADS7128_REG_EVENT_FLAG, .op_size = I2C_REG_DATA_OP_8BIT, .data_mask = 0x00 } // dummy
                             }
                         }
                     }
