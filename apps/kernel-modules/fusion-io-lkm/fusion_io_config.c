@@ -1786,14 +1786,20 @@ const struct base_device bd_fusion_c0 = {
                             .name = "cmd_config",
                             .type = EP_CMD_TYPE_CFG,
                             .export = EP_CMD_NO_EXPORT,
-                            .num_i2c_cmds = 13,
+                            .num_i2c_cmds = 12,
                             .i2c_cmds = (struct i2c_reg_data[]) {
-                                { .reg_addr = ADS7128_REG_OSR_CFG, .op_size = I2C_REG_DATA_OP_8BIT, .data_mask = 0x03 },         // OSR 8 samples
+                                { .reg_addr = ADS7128_REG_AUTO_SEQ_CH_SEL, .op_size = I2C_REG_DATA_OP_8BIT, .data_mask = 0x3F }, // AUTO_SEQ_CHSEL 0-5
+                                { .reg_addr = ADS7128_REG_SEQUENCE_CFG, .op_size = I2C_REG_DATA_OP_8BIT, .data_mask = 0x01 },    // SEQ_MODE auto
+                                { .reg_addr = ADS7128_REG_HIGH_TH_CH0, .op_size = I2C_REG_DATA_OP_8BIT, .data_mask = 0x01 },
+                                { .reg_addr = ADS7128_REG_HIGH_TH_CH1, .op_size = I2C_REG_DATA_OP_8BIT, .data_mask = 0x01 },
+                                { .reg_addr = ADS7128_REG_HIGH_TH_CH2, .op_size = I2C_REG_DATA_OP_8BIT, .data_mask = 0x01 },
+                                { .reg_addr = ADS7128_REG_HIGH_TH_CH3, .op_size = I2C_REG_DATA_OP_8BIT, .data_mask = 0x01 },
+                                { .reg_addr = ADS7128_REG_HIGH_TH_CH4, .op_size = I2C_REG_DATA_OP_8BIT, .data_mask = 0x01 },
+                                { .reg_addr = ADS7128_REG_ALERT_CH_SEL, .op_size = I2C_REG_DATA_OP_8BIT, .data_mask = 0x3f },    // alerts on all chs
                                 { .reg_addr = ADS7128_REG_OPMODE_CFG, .op_size = I2C_REG_DATA_OP_8BIT, .data_mask = 0x3d },      // CONV_MODE autonomous, OSC_SEL lp, CLK_DIV 3072us
-                                { .reg_addr = ADS7128_REG_AUTO_SEQ_CH_SEL, .op_size = I2C_REG_DATA_OP_8BIT, .data_mask = 0x3F }, // AUTO_SEQ_CHSEL all used 
-                                { .reg_addr = ADS7128_REG_GENERAL_CFG, .op_size = I2C_REG_DATA_OP_8BIT, .data_mask = 0x14 },     // DWC_EN, CH_RST
-                                { .reg_addr = ADS7128_REG_SEQUENCE_CFG, .op_size = I2C_REG_DATA_OP_8BIT, .data_mask = 0x11 },    // SEQ_MODE auto, SEQ_START
-                                { .reg_addr = ADS7128_REG_GENERAL_CFG, .op_size = I2C_REG_DATA_OP_8BIT, .data_mask = 0x08 }      // CONVST
+                                { .reg_addr = ADS7128_REG_OSR_CFG, .op_size = I2C_REG_DATA_OP_8BIT, .data_mask = 0x03 },         // OSR 8 samples
+                                { .reg_addr = ADS7128_REG_GENERAL_CFG, .op_size = I2C_REG_DATA_OP_8BIT, .data_mask = 0x10 },     // DWC_EN
+                                { .reg_addr = ADS7128_REG_SEQUENCE_CFG, .op_size = I2C_REG_DATA_OP_8BIT, .data_mask = 0x10 }     // SEQ_START     
                             }
                         },
                         [EP_CMD_ADS7128_REGOP] = {
