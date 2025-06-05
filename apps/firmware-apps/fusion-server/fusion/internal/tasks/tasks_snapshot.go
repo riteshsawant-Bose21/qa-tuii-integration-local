@@ -10,8 +10,8 @@ import (
 	"net/http"
 )
 
-// HandleCreateApplySnapshotTask handles HTTP POST requests to add a new snapshot task.
-func (tm *TaskManager) HandleCreateApplySnapshotTask(w http.ResponseWriter, r *http.Request) {
+// CreateApplySnapshotTask handles HTTP POST requests to add a new snapshot task.
+func (tm *TaskManager) CreateApplySnapshotTask(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequirePost(w, r) {
 		return
 	}
@@ -67,10 +67,10 @@ func (tm *TaskManager) HandleCreateApplySnapshotTask(w http.ResponseWriter, r *h
 	})
 }
 
-// HandleUpdateApplySnapshotTask handles HTTP PUT requests to update an existing task.
-func (tm *TaskManager) HandleUpdateApplySnapshotTask(w http.ResponseWriter, r *http.Request) {
+// UpdateApplySnapshotTask handles HTTP POST requests to update an existing task.
+func (tm *TaskManager) UpdateApplySnapshotTask(w http.ResponseWriter, r *http.Request) {
 
-	if !utils.RequirePut(w, r) {
+	if !utils.RequirePost(w, r) {
 		return
 	}
 

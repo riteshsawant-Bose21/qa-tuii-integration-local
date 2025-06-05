@@ -1275,7 +1275,7 @@ func TestClearEndpoint(t *testing.T) {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusNoContent {
 		body, _ := io.ReadAll(resp.Body)
 		t.Fatalf("Unexpected status code: %d, response: %s", resp.StatusCode, string(body))
 	}

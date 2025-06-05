@@ -36,6 +36,16 @@ const (
 	ClusterNTPSkewEndpoint                     = ClusterEndpoint + "/ntp-skew"
 	ClusterStatusEndpoint                      = ClusterEndpoint + "/status"
 
+	DeviceEndpoint          = "/device"
+	DeviceReloadEndpoint    = DeviceEndpoint + "/reload"
+	DeviceReloadVIPEndpoint = DeviceReloadEndpoint + "/vip"
+	DeviceIDEndpoint        = DeviceEndpoint + "/{id}"
+
+	DevicesEndpoint       = "/devices"
+	DevicesIDEndpoint     = DevicesEndpoint + "/{id}"
+	DevicesVIPEndpoint    = DevicesEndpoint + "/vip"
+	DevicesSetVIPEndpoint = DevicesVIPEndpoint + "/{vip}"
+
 	EndpointsEndpoint = "/endpoints"
 
 	HealthEndpoint = "/health"
@@ -56,8 +66,6 @@ const (
 	PAVAZoneStatusEndpoint     = PAVAZonesEndpoint + "/status/{name}"
 
 	RootEndpoint = "/"
-
-	SetupDeviceName = "/device/setup"
 
 	SnapshotsEndpoint         = "/snapshots"
 	SnapshotsNameEndpoint     = SnapshotsEndpoint + "/{name}"
@@ -81,8 +89,8 @@ const (
 	// Private
 	//
 
-	DataEndport  = "/data"
-	StateEndport = "/state"
+	DataEndpoint  = "/data"
+	StateEndpoint = "/state"
 )
 
 func RegisterPrivateEndpoint(router *mux.Router, method string, pattern string, handler http.HandlerFunc) {
@@ -91,6 +99,10 @@ func RegisterPrivateEndpoint(router *mux.Router, method string, pattern string, 
 
 func RegisterPrivateGET(router *mux.Router, pattern string, handler http.HandlerFunc) {
 	RegisterPrivateEndpoint(router, "GET", pattern, handler)
+}
+
+func RegisterPrivatePATCH(router *mux.Router, pattern string, handler http.HandlerFunc) {
+	RegisterPrivateEndpoint(router, "PATCH", pattern, handler)
 }
 
 func RegisterPrivatePOST(router *mux.Router, pattern string, handler http.HandlerFunc) {

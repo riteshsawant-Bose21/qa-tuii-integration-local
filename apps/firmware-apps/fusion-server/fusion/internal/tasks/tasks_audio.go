@@ -1,13 +1,12 @@
 package tasks
 
 import (
-	"fmt"
 	"fusion/internal/api"
+	"fusion/internal/logging"
 	"fusion/internal/utils"
 	"net/http"
+	"os"
 	"path/filepath"
-
-	"github.com/gorilla/mux"
 )
 
 // HandleTriggerMessage handles triggering the playback of an audio message
@@ -17,7 +16,7 @@ func (tm *TaskManager) HandleTriggerMessage(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	name, err := extractName(r)
+	name, err := utils.ExtractName(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -43,6 +42,10 @@ func (tm *TaskManager) HandleTriggerMessage(w http.ResponseWriter, r *http.Reque
 // returns a func that plays the given file
 func (tm *TaskManager) taskPlayAudioFunc(path string) func() {
 	return func() {
+		_, err := os.Stat(path)
+		if err != nil {
+			logging.GetLogger().Error("Failed to stat audio file: %v", err)
+		}
 		// if err := tm.audioPlayer.Play(path); err != nil {
 		//   tm.RecordExecution(&api.Task{ID: /*…*/}, "failed")
 		//   logging.GetLogger().Error("playback failed: %v", err)
@@ -50,13 +53,4 @@ func (tm *TaskManager) taskPlayAudioFunc(path string) func() {
 		//   tm.RecordExecution(&api.Task{/*…*/}, "success")
 		// }
 	}
-}
-
-// extractName pulls the “name” var from mux and returns a proper error if it’s missing.
-func extractName(r *http.Request) (string, error) {
-	name := mux.Vars(r)["name"]
-	if name == "" {
-		return "", fmt.Errorf("name is required")
-	}
-	return filepath.Base(name), nil
 }

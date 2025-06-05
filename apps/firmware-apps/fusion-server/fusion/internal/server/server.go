@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"path/filepath"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -19,16 +18,15 @@ import (
 	"fusion/internal/server/handler"
 	"fusion/internal/utils"
 
-	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 	"github.com/hashicorp/memberlist"
 )
 
 const (
 	wsBufferSize = 1024
-	wsTimeout    = 10
 	wsPingTime   = 30
 	wsPongTime   = 60
+	wsTimeout    = 10
 )
 
 // FusionServer handles networks connections to manage Fusion state.
@@ -105,7 +103,7 @@ func (s *FusionServer) GetValue(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-// SetValue handles HTTP POST requests to set a configuration value.
+// SetValue handles HTTP PUT requests to set a configuration value.
 // It expects a JSON body containing the update data.
 func (s *FusionServer) SetValue(w http.ResponseWriter, r *http.Request) {
 
@@ -354,7 +352,7 @@ func (s *FusionServer) GetVersion(w http.ResponseWriter, r *http.Request) {
 
 // UpdateVersion handles update version HTTP requests.
 func (s *FusionServer) UpdateVersion(w http.ResponseWriter, r *http.Request) {
-	if !utils.RequirePost(w, r) {
+	if !utils.RequirePut(w, r) {
 		return
 	}
 
@@ -397,7 +395,7 @@ func (s *FusionServer) ListSnapshots(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]any{"snapshots": snapshots})
 }
 
-// ActivateSnapshot handles HTTP PUT requests to activate a specific snapshot.
+// ActivateSnapshot handles HTTP POST requests to activate a specific snapshot.
 // It expects a query parameter "name" specifying the snapshot to activate.
 func (s *FusionServer) ActivateSnapshot(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -405,7 +403,7 @@ func (s *FusionServer) ActivateSnapshot(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	snapshotName, err := extractName(r)
+	snapshotName, err := utils.ExtractName(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -426,14 +424,14 @@ func (s *FusionServer) CreateSnapshot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	snapshotName, err := extractName(r)
+	snapshotName, err := utils.ExtractName(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	if snapshotName == persistence.DefaultSnapshotKey {
-		http.Error(w, "default snapshot cannot be created", http.StatusBadRequest)
+	if s.handler.IsDefaultSnapshot(snapshotName) {
+		http.Error(w, "default snapshot cannot be overwritten", http.StatusBadRequest)
 		return
 	}
 
@@ -463,13 +461,13 @@ func (s *FusionServer) DeleteSnapshot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	snapshotName, err := extractName(r)
+	snapshotName, err := utils.ExtractName(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	if snapshotName == persistence.DefaultSnapshotKey {
+	if s.handler.IsDefaultSnapshot(snapshotName) {
 		http.Error(w, "default snapshot cannot be deleted", http.StatusBadRequest)
 		return
 	}
@@ -507,7 +505,7 @@ func (s *FusionServer) GetSnapshot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	snapshotName, err := extractName(r)
+	snapshotName, err := utils.ExtractName(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -603,111 +601,63 @@ func (s *FusionServer) GetMembers(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// HandeSetupDeviceName set the device name
-func (s *FusionServer) HandeSetupDeviceName(w http.ResponseWriter, r *http.Request) {
-	if !utils.RequirePost(w, r) {
-		return
-	}
-
-	// Read the request body.
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Error reading request body: %v", err), http.StatusBadRequest)
-		return
-	}
-	defer r.Body.Close()
-
-	// Unmarshal the JSON data
-	var state api.UpdateDeviceName
-	err = json.Unmarshal(body, &state)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("error unmarshaling json: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	// This name is user-facing and •maybe• has no impact on the internal function
-	// of the server, except as a lookup between logical device name and user-facing name.
-
-	// We do have a local database. That database is a boltdb JSON database that is used currently to
-	// store the global config state and metadata about that current state.
-	// We should consider storing device specific configuation data that we want to persist across
-	// launches in the database in a bucket specific to the device.
-	// Look at persistance.saveMetadata for an example of how we would write this info to the database
-	// We will need load, save, update functions for device-specific info
-
-	// This name needs to fullfill a few requirements:
-	//  ° Unique across network?
-	//  ° Correlated to the actual device hardware and/or DRO unique ID
-	//  ° Stored local to device and loaded on demand
-	//  ° We will a way to get the info for each device. Consider using a private HTTP
-	//    endpoint similar to get HandleGetNetworkLatencyLocal. This will be registered as a private
-	//    endpoint and make no calls to other nodes.
-
-	// Do this:  Have a public endpoint: GetDeviceNames()
-	// In that public endpoint, iterate through the memberlist nodes. If we are the local node,
-	// just call the function that access the database directly, otherwise make a http call on the ADMIN port (9090)
-	// to the GetDeviceNameLocal()
-
-	w.WriteHeader(http.StatusNoContent)
-}
-
-func (s *FusionServer) HandleListMessages(w http.ResponseWriter, r *http.Request) {
+func (s *FusionServer) ListMessages(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequireGet(w, r) {
 		return
 	}
 }
 
-func (s *FusionServer) HandleUploadMessage(w http.ResponseWriter, r *http.Request) {
+func (s *FusionServer) UploadMessage(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequirePost(w, r) {
 		return
 	}
 	s.handler.HandleAudioUpload(w, r)
 }
 
-func (s *FusionServer) HandleDeleteMessage(w http.ResponseWriter, r *http.Request) {
+func (s *FusionServer) DeleteMessage(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequireDelete(w, r) {
 		return
 	}
 	s.handler.HandleAudioRemove(w, r)
 }
 
-func (s *FusionServer) HandleListZones(w http.ResponseWriter, r *http.Request) {
+func (s *FusionServer) ListZones(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequireGet(w, r) {
 		return
 	}
 }
 
-func (s *FusionServer) HandleGetZoneStatus(w http.ResponseWriter, r *http.Request) {
+func (s *FusionServer) GetZoneStatus(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequireGet(w, r) {
 		return
 	}
 }
 
-func (s *FusionServer) HandleGetSystemDiagnostics(w http.ResponseWriter, r *http.Request) {
+func (s *FusionServer) GetSystemDiagnostics(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequireGet(w, r) {
 		return
 	}
 }
 
-func (s *FusionServer) HandleGetSystemStatus(w http.ResponseWriter, r *http.Request) {
+func (s *FusionServer) GetSystemStatus(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequireGet(w, r) {
 		return
 	}
 }
 
-func (s *FusionServer) HandleListScheduledMessages(w http.ResponseWriter, r *http.Request) {
+func (s *FusionServer) ListScheduledMessages(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequireGet(w, r) {
 		return
 	}
 }
 
-func (s *FusionServer) HandleScheduleMessage(w http.ResponseWriter, r *http.Request) {
+func (s *FusionServer) ScheduleMessage(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequirePost(w, r) {
 		return
 	}
 }
 
-func (s *FusionServer) HandleCancelAlarms(w http.ResponseWriter, r *http.Request) {
+func (s *FusionServer) CancelAlarms(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequirePut(w, r) {
 		return
 	}
@@ -840,13 +790,4 @@ func (s *FusionServer) handleWebSocketMessage(conn *websocket.Conn, data []byte)
 	if err := conn.WriteJSON(response); err != nil {
 		logging.GetLogger().Error("Error sending response: %v", err)
 	}
-}
-
-// extractName pulls the “name” var from mux and returns a proper error if it’s missing.
-func extractName(r *http.Request) (string, error) {
-	name := mux.Vars(r)["name"]
-	if name == "" {
-		return "", fmt.Errorf("name is required")
-	}
-	return filepath.Base(name), nil
 }

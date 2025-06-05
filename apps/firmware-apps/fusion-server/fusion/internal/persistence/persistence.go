@@ -16,21 +16,17 @@ import (
 )
 
 const (
-	deviceBucketName    = "device"
-	fusionBucketName    = "fusion"
-	metadataKey         = "metadata"
-	snapshotsBucketName = "snapshots"
-	DefaultSnapshotKey  = "default"
-	TasksBucketName     = "tasks"
-)
+	bucketDevice       = "device"
+	bucketFusion       = "fusion"
+	bucketSnapshots    = "snapshots"
+	bucketTasks        = "tasks"
+	keyDefaultSnapshot = "default"
+	keyDeviceInfo      = "info"
+	keyMetadata        = "metadata"
 
-// PersistentState represents the saved state structure.
-type PersistentState struct {
-	Version   int64                      `json:"version"`
-	Timestamp time.Time                  `json:"timestamp"`
-	Checksum  string                     `json:"checksum"`
-	State     map[string]*api.StateEntry `json:"state"`
-}
+	debounceTime = 100 * time.Millisecond
+	permPrivate  = 0600
+)
 
 // Persistence handles state persistence and metadata management.
 type Persistence struct {
@@ -44,12 +40,12 @@ type Persistence struct {
 
 // NewPersistence opens the database and returns a new persistence instance.
 func NewPersistence(dbPath string, stateManager *StateManager) (*Persistence, error) {
-	db, err := bbolt.Open(dbPath, 0600, nil)
+	db, err := bbolt.Open(dbPath, permPrivate, nil)
 	if err != nil {
 		logger := logging.GetLogger()
 		logger.Warn("Failed to open database at %s: %v. Attempting to recreate.", dbPath, err)
 		_ = os.Remove(dbPath)
-		db, err = bbolt.Open(dbPath, 0600, nil)
+		db, err = bbolt.Open(dbPath, permPrivate, nil)
 		if err != nil {
 			return nil, fmt.Errorf("failed to open or recreate database: %w", err)
 		}
@@ -61,10 +57,10 @@ func NewPersistence(dbPath string, stateManager *StateManager) (*Persistence, er
 		dbPath:       dbPath,
 		stateManager: stateManager,
 		db:           db,
-		saveDebounce: 100 * time.Millisecond,
+		saveDebounce: debounceTime,
 	}
 
-	if err := persistence.createDefaultBuckets(); err != nil {
+	if err := persistence.initializeDatabase(); err != nil {
 		return nil, err
 	}
 
@@ -72,48 +68,19 @@ func NewPersistence(dbPath string, stateManager *StateManager) (*Persistence, er
 }
 
 // Close safely closes the database.
-func (p *Persistence) GetDB() *bbolt.DB {
-	return p.db
-}
-
-// Close safely closes the database.
 func (p *Persistence) Close() {
 	p.db.Close()
 }
 
-// saveMetadata saves the api.DatabaseMetadata into the metadata bucket.
-func (p *Persistence) saveMetadata(meta api.DatabaseMetadata) error {
-	data, err := json.Marshal(meta)
-	if err != nil {
-		return fmt.Errorf("failed to marshal metadata: %w", err)
+// MarkDirty triggers a state save with debounce logic.
+func (p *Persistence) MarkDirty() {
+	if time.Since(p.getLastSave()) < p.saveDebounce {
+		time.Sleep(p.saveDebounce)
 	}
-	return p.db.Update(func(tx *bbolt.Tx) error {
-		metaBucket := tx.Bucket([]byte(fusionBucketName))
-		if metaBucket == nil {
-			return fmt.Errorf("metadata bucket not found")
-		}
-		return metaBucket.Put([]byte(metadataKey), data)
-	})
-}
 
-// loadMetadata retrieves and unmarshals the api.DatabaseMetadata from the database.
-func (p *Persistence) loadMetadata() (api.DatabaseMetadata, error) {
-	var meta api.DatabaseMetadata
-	err := p.db.View(func(tx *bbolt.Tx) error {
-		metaBucket := tx.Bucket([]byte(fusionBucketName))
-		if metaBucket == nil {
-			return fmt.Errorf("metadata bucket not found")
-		}
-		data := metaBucket.Get([]byte(metadataKey))
-		if data == nil {
-			return fmt.Errorf("metadata not found")
-		}
-		return json.Unmarshal(data, &meta)
-	})
-	if err != nil {
-		return api.DatabaseMetadata{}, err
+	if err := p.SaveState(); err != nil {
+		logging.GetLogger().Error("Failed to persist state: %v", err)
 	}
-	return meta, nil
 }
 
 // SaveState persists the current state using the active snapshot key.
@@ -123,7 +90,7 @@ func (p *Persistence) SaveState() error {
 
 	snapshotKey, err := p.getActiveSnapshotKey()
 	if err != nil || snapshotKey == "" {
-		snapshotKey = DefaultSnapshotKey
+		snapshotKey = keyDefaultSnapshot
 	}
 
 	ps, err := p.persistState(snapshotKey)
@@ -136,7 +103,7 @@ func (p *Persistence) SaveState() error {
 
 	meta, err := p.loadMetadata()
 	if err != nil {
-		meta = api.DatabaseMetadata{}
+		return fmt.Errorf("failed to load metadata: %w", err)
 	}
 	meta.Timestamp = ps.Timestamp
 	meta.Valid = len(ps.State) > 0
@@ -149,17 +116,6 @@ func (p *Persistence) SaveState() error {
 		ps.Version, ps.Checksum, snapshotKey)
 
 	return nil
-}
-
-// MarkDirty triggers a state save with debounce logic.
-func (p *Persistence) MarkDirty() {
-	if time.Since(p.getLastSave()) < p.saveDebounce {
-		time.Sleep(p.saveDebounce)
-	}
-
-	if err := p.SaveState(); err != nil {
-		logging.GetLogger().Error("Failed to persist state: %v", err)
-	}
 }
 
 // ValidateState checks that the persistant state exists has a valid checksum.
@@ -220,7 +176,7 @@ func (p *Persistence) ImportData(importData map[string]any) error {
 	update := false
 
 	// Get the snapshots from the import
-	snapshotsData, ok := importData[snapshotsBucketName]
+	snapshotsData, ok := importData[bucketSnapshots]
 	if ok {
 		// Assert snapshotsData is a map[string]any.
 		snapshots, ok := snapshotsData.(map[string]any)
@@ -228,7 +184,7 @@ func (p *Persistence) ImportData(importData map[string]any) error {
 			return fmt.Errorf("snapshots data is not in the expected format")
 		}
 
-		if err := p.replaceBucketData(snapshotsBucketName, snapshots); err != nil {
+		if err := p.replaceBucketData(bucketSnapshots, snapshots); err != nil {
 			return err
 		}
 
@@ -236,7 +192,7 @@ func (p *Persistence) ImportData(importData map[string]any) error {
 	}
 
 	// Get the tasks from the import
-	tasksData, ok := importData[TasksBucketName]
+	tasksData, ok := importData[bucketTasks]
 	if ok {
 		// Assert tasksData is a map[string]any.
 		tasks, ok := tasksData.(map[string]any)
@@ -244,7 +200,7 @@ func (p *Persistence) ImportData(importData map[string]any) error {
 			return fmt.Errorf("tasks data is not in the expected format")
 		}
 
-		if err := p.replaceBucketData(TasksBucketName, tasks); err != nil {
+		if err := p.replaceBucketData(bucketTasks, tasks); err != nil {
 			return err
 		}
 
@@ -263,6 +219,76 @@ func (p *Persistence) ImportData(importData map[string]any) error {
 	return nil
 }
 
+// persistState saves the current state under the given snapshot key.
+// Note that it does not update lastSave; the caller should update lastSave as needed.
+func (p *Persistence) persistState(snapshotKey string) (*PersistentState, error) {
+	state := p.stateManager.GetFullState()
+
+	ps := &PersistentState{
+		Version:   p.stateManager.GetVersion(),
+		Timestamp: time.Now().UTC(),
+		Checksum:  state.Checksum,
+		State:     state.State,
+	}
+
+	data, err := json.Marshal(ps)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal state: %w", err)
+	}
+
+	err = p.db.Update(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket([]byte(bucketSnapshots))
+		if bucket == nil {
+			return fmt.Errorf("snapshots bucket not found")
+		}
+		return bucket.Put([]byte(snapshotKey), data)
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to save state: %w", err)
+	}
+
+	if err := p.updateHash(); err != nil {
+		return nil, err
+	}
+
+	return ps, nil
+}
+
+// loadMetadata retrieves and unmarshals the api.DatabaseMetadata from the database.
+func (p *Persistence) loadMetadata() (*api.DatabaseMetadata, error) {
+	var meta api.DatabaseMetadata
+	err := p.db.View(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket([]byte(bucketFusion))
+		if bucket == nil {
+			return fmt.Errorf("metadata bucket not found")
+		}
+		data := bucket.Get([]byte(keyMetadata))
+		if data == nil {
+			return fmt.Errorf("metadata not found")
+		}
+		return json.Unmarshal(data, &meta)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &meta, nil
+}
+
+// saveMetadata saves the api.DatabaseMetadata into the metadata bucket.
+func (p *Persistence) saveMetadata(meta *api.DatabaseMetadata) error {
+	data, err := json.Marshal(meta)
+	if err != nil {
+		return fmt.Errorf("failed to marshal metadata: %w", err)
+	}
+	return p.db.Update(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket([]byte(bucketFusion))
+		if bucket == nil {
+			return fmt.Errorf("metadata bucket not found")
+		}
+		return bucket.Put([]byte(keyMetadata), data)
+	})
+}
+
 // getLastSave returns the last save time.
 func (p *Persistence) getLastSave() time.Time {
 	p.mutex.RLock()
@@ -278,7 +304,7 @@ func (p *Persistence) updateHash() error {
 	}
 	meta, err := p.loadMetadata()
 	if err != nil {
-		meta = api.DatabaseMetadata{}
+		return fmt.Errorf("failed to load metadata: %w", err)
 	}
 	meta.Hash = newHash
 	return p.saveMetadata(meta)
@@ -304,89 +330,44 @@ func (p *Persistence) computeHash() (string, error) {
 	return hex.EncodeToString(hash.Sum(nil)), nil
 }
 
-// createDefaultBuckets ensures that the metadata and default state buckets exist.
-// If a default snapshot is not present, it is created.
-func (p *Persistence) createDefaultBuckets() error {
-	if err := p.db.Update(func(tx *bbolt.Tx) error {
-		_, err := tx.CreateBucketIfNotExists([]byte(fusionBucketName))
-		return err
-	}); err != nil {
-		return fmt.Errorf("failed to create metadata bucket: %w", err)
+func createBucketIfNotExists(tx *bbolt.Tx, bucket string) error {
+	_, err := tx.CreateBucketIfNotExists([]byte(bucket))
+	if err != nil {
+		return fmt.Errorf("failed to create bucket '%s': %w", bucket, err)
 	}
+	return nil
+}
 
+func (p *Persistence) initializeDatabase() error {
 	return p.db.Update(func(tx *bbolt.Tx) error {
-
-		// Device
-		_, err := tx.CreateBucketIfNotExists([]byte(deviceBucketName))
-		if err != nil {
-			return fmt.Errorf("failed to create bucket '%s': %w", deviceBucketName, err)
+		if err := createBucketIfNotExists(tx, bucketFusion); err != nil {
+			return err
+		}
+		if err := createBucketIfNotExists(tx, bucketDevice); err != nil {
+			return err
+		}
+		if err := createBucketIfNotExists(tx, bucketTasks); err != nil {
+			return err
+		}
+		if err := createBucketIfNotExists(tx, bucketSnapshots); err != nil {
+			return err
 		}
 
-		// Tasks
-		_, err = tx.CreateBucketIfNotExists([]byte(TasksBucketName))
-		if err != nil {
-			return fmt.Errorf("failed to create bucket '%s': %w", TasksBucketName, err)
+		fusionBucket := tx.Bucket([]byte(bucketFusion))
+		if fusionBucket.Get([]byte(keyDefaultSnapshot)) != nil {
+			return nil
 		}
 
-		// Snapshots
-		fusionBucket, err := tx.CreateBucketIfNotExists([]byte(snapshotsBucketName))
-		if err != nil {
-			return fmt.Errorf("failed to create bucket '%s': %w", snapshotsBucketName, err)
+		snapshotsBucket := tx.Bucket([]byte(bucketSnapshots))
+		if err := p.initializeDefaultSnapshot(snapshotsBucket); err != nil {
+			return err
 		}
 
-		if fusionBucket.Get([]byte(DefaultSnapshotKey)) == nil {
-			state := p.stateManager.GetFullState()
-			ps := PersistentState{
-				Version:   p.stateManager.GetVersion(),
-				Timestamp: time.Now().UTC(),
-				Checksum:  state.Checksum,
-				State:     state.State,
-			}
-			data, err := json.Marshal(ps)
-			if err != nil {
-				return fmt.Errorf("failed to marshal default snapshot: %w", err)
-			}
-			if err := fusionBucket.Put([]byte(DefaultSnapshotKey), data); err != nil {
-				return fmt.Errorf("failed to save default snapshot: %w", err)
-			}
+		if err := p.initializeMetadata(fusionBucket); err != nil {
+			return err
 		}
 		return nil
 	})
-}
-
-// persistState saves the current state under the given snapshot key.
-// Note that it does not update lastSave; the caller should update lastSave as needed.
-func (p *Persistence) persistState(snapshotKey string) (*PersistentState, error) {
-	state := p.stateManager.GetFullState()
-
-	ps := &PersistentState{
-		Version:   p.stateManager.GetVersion(),
-		Timestamp: time.Now().UTC(),
-		Checksum:  state.Checksum,
-		State:     state.State,
-	}
-
-	data, err := json.Marshal(ps)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal state: %w", err)
-	}
-
-	err = p.db.Update(func(tx *bbolt.Tx) error {
-		bucket := tx.Bucket([]byte(snapshotsBucketName))
-		if bucket == nil {
-			return fmt.Errorf("snapshots bucket not found")
-		}
-		return bucket.Put([]byte(snapshotKey), data)
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to save state: %w", err)
-	}
-
-	if err := p.updateHash(); err != nil {
-		return nil, err
-	}
-
-	return ps, nil
 }
 
 func (p *Persistence) replaceBucketData(bucketName string, data map[string]any) error {
@@ -394,7 +375,7 @@ func (p *Persistence) replaceBucketData(bucketName string, data map[string]any) 
 	// Replace the entire bucket in an atomic transaction.
 	err := p.db.Update(func(tx *bbolt.Tx) error {
 
-		bucket := tx.Bucket([]byte(TasksBucketName))
+		bucket := tx.Bucket([]byte(bucketTasks))
 		if bucket == nil {
 			return fmt.Errorf("%s bucket not found", bucketName)
 		}
@@ -429,4 +410,50 @@ func (p *Persistence) replaceBucketData(bucketName string, data map[string]any) 
 	})
 
 	return err
+}
+
+func (p *Persistence) initializeDefaultSnapshot(bucket *bbolt.Bucket) error {
+
+	state := p.stateManager.GetFullState()
+
+	ps := PersistentState{
+		Version:   p.stateManager.GetVersion(),
+		Timestamp: time.Now().UTC(),
+		Checksum:  state.Checksum,
+		State:     state.State,
+	}
+	data, err := json.Marshal(ps)
+	if err != nil {
+		return fmt.Errorf("failed to marshal default snapshot: %w", err)
+	}
+	if err := bucket.Put([]byte(keyDefaultSnapshot), data); err != nil {
+		return fmt.Errorf("failed to save default snapshot: %w", err)
+	}
+	return nil
+}
+
+func (p *Persistence) initializeMetadata(bucket *bbolt.Bucket) error {
+
+	newHash, err := p.computeHash()
+	if err != nil {
+		return fmt.Errorf("failed to compute DB hash: %w", err)
+	}
+
+	meta := &api.DatabaseMetadata{
+		Timestamp:      time.Now().UTC(),
+		ActiveSnapshot: keyDefaultSnapshot,
+		Hash:           newHash,
+		Valid:          true,
+	}
+
+	data, err := json.Marshal(meta)
+	if err != nil {
+		return fmt.Errorf("failed to marshal metadata: %w", err)
+	}
+
+	if err := bucket.Put([]byte(keyMetadata), data); err != nil {
+		return fmt.Errorf("failed to save metadata: %w", err)
+	}
+
+	return nil
 }

@@ -10,8 +10,11 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/gorilla/mux"
 )
 
 // FileExists returns true if the given path exists and is not a directory.
@@ -370,4 +373,24 @@ func isMap(v any) bool {
 func isArray(v any) bool {
 	_, ok := v.([]any)
 	return ok
+}
+
+// ExtractValue pulls the named value from mux
+func ExtractValue(r *http.Request, value string) (string, error) {
+	name := mux.Vars(r)[value]
+	if name == "" {
+		return "", fmt.Errorf("%s is required", value)
+	}
+	return filepath.Base(name), nil
+}
+
+// ExtractId pulls the "id" var from mux and returns an error if it’s missing.
+func ExtractId(r *http.Request) (string, error) {
+	return ExtractValue(r, "id")
+}
+
+// ExtractName pulls the “name” var from mux and returns aan error if it’s missing.
+func ExtractName(r *http.Request) (string, error) {
+	return ExtractValue(r, "name")
+
 }

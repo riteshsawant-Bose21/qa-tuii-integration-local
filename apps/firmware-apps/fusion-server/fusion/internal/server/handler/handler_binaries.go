@@ -16,7 +16,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gorilla/mux"
 	"github.com/hashicorp/memberlist"
 )
 
@@ -257,7 +256,7 @@ func (h *Handler) HandleAudioUpload(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleAudioRemove(w http.ResponseWriter, r *http.Request) {
 	logger := logging.GetLogger()
 
-	name, err := extractName(r)
+	name, err := utils.ExtractName(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -393,13 +392,4 @@ func addAudioFilesToConfig(audioDir string, existingData map[string]any) {
 		"location": audioDir,
 		"files":    fileNames,
 	}
-}
-
-// extractName pulls the “name” var from mux and returns a proper error if it’s missing.
-func extractName(r *http.Request) (string, error) {
-	name := mux.Vars(r)["name"]
-	if name == "" {
-		return "", fmt.Errorf("name is required")
-	}
-	return filepath.Base(name), nil
 }

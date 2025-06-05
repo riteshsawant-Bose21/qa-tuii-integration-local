@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/logging"
+	"fusion/internal/persistence"
 	"fusion/internal/routes"
 	"io"
 	"log"
@@ -79,6 +80,7 @@ func (c *Cluster) JoinMemberlist() error {
 		n, err := c.Memberlist.Join(joinAddrs)
 		if err == nil {
 			logger.Info("[MEMBERLIST-%s] Successfully joined cluster with %d nodes", c.nodeName, n)
+			c.updateDeviceInfo()
 			return nil
 		}
 
@@ -90,8 +92,8 @@ func (c *Cluster) JoinMemberlist() error {
 	return fmt.Errorf("failed to join cluster after retries: %v", err)
 }
 
-// IsMember returns true if the address is part of the memberlist
-func (c *Cluster) IsMember() (bool, error) {
+// isMember returns true if the address is a member of the memberlist
+func (c *Cluster) isMember() (bool, error) {
 
 	liveAddrs, err := c.GetLiveNodeAddresses()
 	if err != nil {
@@ -156,4 +158,28 @@ func (c *Cluster) getJoinAddresses(bindAddr string) ([]string, error) {
 	}
 
 	return filteredAddrs, nil
+}
+
+// updateDeviceInfo updates the persisted device info
+func (c *Cluster) updateDeviceInfo() {
+
+	var info persistence.DeviceInfo
+	savedInfo, err := c.delegate.persistence.GetDeviceInfo()
+	if err == nil {
+		info = *savedInfo
+	}
+
+	info.Address = c.bindAddr
+	if info.Id == "" {
+		info.Id = c.nodeName + "_instance"
+	}
+
+	if info.Name == "" {
+		info.Name = c.nodeName
+	}
+
+	if err := c.delegate.persistence.SetDeviceInfo(&info); err != nil {
+		logging.GetLogger().Error("Unable to update device info: %v", err)
+		return
+	}
 }

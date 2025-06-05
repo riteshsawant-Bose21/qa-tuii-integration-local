@@ -1,6 +1,6 @@
 # Fusion Server
 
-Fusion Server is a distributed configuration management system with high availability features, built using Go. It provides real-time configuration synchronization across multiple nodes with support for load balancing and failover.
+Fusion Server is a distributed configuration management system with high availability features, built using Go. It provides configuration synchronization across multiple nodes with support for load balancing and failover.
 
 ## Features
 
@@ -323,7 +323,7 @@ multipass exec fusion1 -- bash -c "echo '{
 A new fusion-server binary can be pushed and propogated across all running instances.
   
 There are endpoints for updating the binary and rolling back a binary.
-  - `POST /updateVersion` - Post a new binary to replace the running fusion-server instance.
+  - `PUT /updateVersion` - Post a new binary to replace the running fusion-server instance.
   - `POST /rollbackVersion` - Rollback a binary a certain number of previous updates.
 
 

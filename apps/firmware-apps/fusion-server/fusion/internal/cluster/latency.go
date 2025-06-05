@@ -6,6 +6,7 @@ import (
 	"fusion/internal/api"
 	"fusion/internal/logging"
 	"fusion/internal/routes"
+	"fusion/internal/utils"
 	"io"
 	"math"
 	"net"
@@ -13,6 +14,8 @@ import (
 	"sort"
 	"sync"
 	"time"
+
+	"slices"
 
 	"github.com/go-ping/ping"
 	"github.com/prometheus/client_golang/prometheus"
@@ -107,7 +110,7 @@ func (s *NetworkLatencyStore) Add(record NetworkLatency) {
 func (s *NetworkLatencyStore) GetAll() []NetworkLatency {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return append([]NetworkLatency(nil), s.records...)
+	return slices.Clone(s.records)
 }
 
 // pruneLocked must be called with the write‐lock held. It drops
@@ -263,7 +266,7 @@ func (s *SyncLatencyStore) pruneLocked() {
 func (s *SyncLatencyStore) GetAll() []SyncLatency {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return append([]SyncLatency(nil), s.records...)
+	return slices.Clone(s.records)
 }
 
 // AggregatedLatency holds average latency stats for a sender/operation.
@@ -303,76 +306,103 @@ func (s *SyncLatencyStore) GetAverages() []AggregatedLatency {
 	return out
 }
 
-// HandleGetNetworkLatency returns all network latencies across the cluster.
-func (c *Cluster) HandleGetNetworkLatency(w http.ResponseWriter, r *http.Request) {
+// GetNetworkLatency returns all network latencies across the cluster.
+func (c *Cluster) GetNetworkLatency(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	json.NewEncoder(w).Encode(c.fetchAllNetworkLatencies())
 }
 
-// HandleGetNetworkLatency returns network latencies for the calling instance.
-func (c *Cluster) HandleGetNetworkLatencyLocal(w http.ResponseWriter, r *http.Request) {
+// GetNetworkLatency returns network latencies for the calling instance.
+func (c *Cluster) GetNetworkLatencyLocal(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireGet(w, r) {
+		return
+	}
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	json.NewEncoder(w).Encode(c.networkLatencies.GetAll())
 }
 
-// HandleGetSyncLatency returns all sync latencies across the cluster.
-func (c *Cluster) HandleGetSyncLatency(w http.ResponseWriter, r *http.Request) {
+// GetSyncLatency returns all sync latencies across the cluster.
+func (c *Cluster) GetSyncLatency(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireGet(w, r) {
+		return
+	}
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	json.NewEncoder(w).Encode(c.fetchAllSyncLatencies())
 }
 
-// HandleGetSyncLatencyLocal returns all sync latencies for the calling instance.
-func (c *Cluster) HandleGetSyncLatencyLocal(w http.ResponseWriter, r *http.Request) {
+// GetSyncLatencyLocal returns all sync latencies for the calling instance.
+func (c *Cluster) GetSyncLatencyLocal(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireGet(w, r) {
+		return
+	}
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	json.NewEncoder(w).Encode(c.delegate.syncLatencies.GetAll())
 }
 
-// HandleGetSyncLatencyAverages returns aggregated sync latency statistics.
-func (c *Cluster) HandleGetSyncLatencyAverages(w http.ResponseWriter, r *http.Request) {
+// GetSyncLatencyAverages returns aggregated sync latency statistics.
+func (c *Cluster) GetSyncLatencyAverages(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	json.NewEncoder(w).Encode(c.fetchAllSyncLatencyAverages())
 }
 
-// HandleGetSyncLatencyAverages returns aggregated sync latency statistics for the calling instance.
-func (c *Cluster) HandleGetSyncLatencyAveragesLocal(w http.ResponseWriter, r *http.Request) {
+// GetSyncLatencyAverages returns aggregated sync latency statistics for the calling instance.
+func (c *Cluster) GetSyncLatencyAveragesLocal(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireGet(w, r) {
+		return
+	}
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	json.NewEncoder(w).Encode(c.delegate.syncLatencies.GetAverages())
 }
 
-// HandleGetNTPSkew returns recorded NTP time skews from the skew store.
-func (c *Cluster) HandleGetNTPSkew(w http.ResponseWriter, r *http.Request) {
+// GetNTPSkew returns recorded NTP time skews from the skew store.
+func (c *Cluster) GetNTPSkew(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireGet(w, r) {
+		return
+	}
 	c.delegate.skewStore.mu.RLock()
 	defer c.delegate.skewStore.mu.RUnlock()
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	json.NewEncoder(w).Encode(c.delegate.skewStore.timeSkews)
 }
 
-// HandleGetNetworkFailures returns overall failure counts across the cluster
-func (c *Cluster) HandleGetNetworkFailures(w http.ResponseWriter, r *http.Request) {
+// GetNetworkFailures returns overall failure counts across the cluster
+func (c *Cluster) GetNetworkFailures(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireGet(w, r) {
+		return
+	}
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	json.NewEncoder(w).Encode(c.fetchAllNetworkFailures())
 }
 
-// HandleGetNetworkFailuresLocal gets local failures only
-func (c *Cluster) HandleGetNetworkFailuresLocal(w http.ResponseWriter, r *http.Request) {
+// GetNetworkFailuresLocal gets local failures only
+func (c *Cluster) GetNetworkFailuresLocal(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireGet(w, r) {
+		return
+	}
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	json.NewEncoder(w).Encode(c.networkLatencies.GetFailures())
 }
 
-// HandleGetLatencyStatus gets latency status
-func (c *Cluster) HandleGetLatencyStatus(w http.ResponseWriter, r *http.Request) {
+// GetLatencyStatus gets latency status
+func (c *Cluster) GetLatencyStatus(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireGet(w, r) {
+		return
+	}
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	json.NewEncoder(w).Encode(c.fetchAllLatencyStatus())
 }
 
-// HandleGetLatencyStatus gets local latency status
-func (c *Cluster) HandleGetLatencyStatusLocal(w http.ResponseWriter, r *http.Request) {
+// GetLatencyStatus gets local latency status
+func (c *Cluster) GetLatencyStatusLocal(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireGet(w, r) {
+		return
+	}
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	json.NewEncoder(w).Encode(c.getLocalLatencyStatus())
 }
 
 func (c *Cluster) fetchAllNetworkFailures() []map[string]failureStats {
-	return fetchAll(
+	return fetchAllFromAdmin(
 		c,
 		func() []map[string]failureStats {
 			return []map[string]failureStats{c.networkLatencies.GetFailures()}
@@ -382,7 +412,7 @@ func (c *Cluster) fetchAllNetworkFailures() []map[string]failureStats {
 }
 
 func (c *Cluster) fetchAllLatencyStatus() []NodeLatencyStatus {
-	return fetchAll(
+	return fetchAllFromAdmin(
 		c,
 		c.getLocalLatencyStatus,
 		routes.ClusterLatencyStatusLocalEndpoint,
@@ -396,22 +426,6 @@ func (c *Cluster) getNodeAdminAddresses() []string {
 		addrs = append(addrs, net.JoinHostPort(host, api.AdminPort))
 	}
 	return addrs
-}
-
-func (c *Cluster) getLocalEndpointResponse(addr, endpoint string) (response *http.Response, err error) {
-
-	url := fmt.Sprintf("http://%s%s", addr, endpoint)
-	resp, err := httpClient.Get(url)
-	if err != nil {
-		return nil, err
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		resp.Body.Close()
-		return nil, fmt.Errorf("unexpected status %d", resp.StatusCode)
-	}
-
-	return resp, nil
 }
 
 func (c *Cluster) getLocalLatencyStatus() []NodeLatencyStatus {
@@ -455,52 +469,8 @@ func decodeSlice(body io.ReadCloser, v any) error {
 	return json.NewDecoder(body).Decode(v)
 }
 
-func (c *Cluster) hostIsLocal(addr string) bool {
-	host, _, _ := net.SplitHostPort(addr)
-	return host == c.Memberlist.LocalNode().Addr.String()
-}
-
-// fetchAll is a package-level generic function.
-func fetchAll[T any](
-	c *Cluster,
-	localFn func() []T,
-	endpoint string,
-) []T {
-	var all []T
-	logger := logging.GetLogger()
-
-	for _, addr := range c.getNodeAdminAddresses() {
-		if c.hostIsLocal(addr) {
-			all = append(all, localFn()...)
-			continue
-		}
-		var remote []T
-		if err := fetchAndDecode(c, addr, endpoint, &remote); err != nil {
-			url := fmt.Sprintf("http://%s%s", addr, endpoint)
-			logger.Error("GET %s failed: %v", url, err)
-			continue
-		}
-		all = append(all, remote...)
-	}
-	return all
-}
-
-// fetchAndDecode is also a generic package-level function.
-// It reuses your getLocalEndpointResponse + decodeSlice logic.
-func fetchAndDecode[T any](
-	c *Cluster,
-	addr, endpoint string,
-	dest *[]T,
-) error {
-	resp, err := c.getLocalEndpointResponse(addr, endpoint)
-	if err != nil {
-		return err
-	}
-	return decodeSlice(resp.Body, dest)
-}
-
 func (c *Cluster) fetchAllNetworkLatencies() []NetworkLatency {
-	return fetchAll(
+	return fetchAllFromAdmin(
 		c,
 		c.networkLatencies.GetAll,
 		routes.ClusterLatencyNetworkLocalEndpoint,
@@ -508,7 +478,7 @@ func (c *Cluster) fetchAllNetworkLatencies() []NetworkLatency {
 }
 
 func (c *Cluster) fetchAllSyncLatencies() []SyncLatency {
-	return fetchAll(
+	return fetchAllFromAdmin(
 		c,
 		c.delegate.syncLatencies.GetAll,
 		routes.ClusterLatencySyncLocalEndpoint,
@@ -516,7 +486,7 @@ func (c *Cluster) fetchAllSyncLatencies() []SyncLatency {
 }
 
 func (c *Cluster) fetchAllSyncLatencyAverages() []AggregatedLatency {
-	return fetchAll(
+	return fetchAllFromAdmin(
 		c,
 		c.delegate.syncLatencies.GetAverages,
 		routes.ClusterLatencySyncAveragesLocalEndpoint,

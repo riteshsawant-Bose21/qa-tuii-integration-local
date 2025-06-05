@@ -13,10 +13,10 @@ import (
 // Handler is the container for server implimentations.
 type Handler struct {
 	broadcasters []Broadcaster
-	persistence  *persistence.Persistence
 	updater      *Updater
 	endpoints    []string
 	Memberlist   *memberlist.Memberlist
+	persistence  *persistence.Persistence
 	StateManager *persistence.StateManager
 }
 

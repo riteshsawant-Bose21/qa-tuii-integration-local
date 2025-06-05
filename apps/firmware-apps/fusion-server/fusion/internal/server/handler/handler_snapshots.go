@@ -52,13 +52,18 @@ func (h *Handler) HandleSnapshotExists(name string) (bool, error) {
 }
 
 // HandleGetDatabaseMetadata retrieves metadata for the fusion database.
-func (h *Handler) HandleGetDatabaseMetadata() (api.DatabaseMetadata, error) {
+func (h *Handler) HandleGetDatabaseMetadata() (*api.DatabaseMetadata, error) {
 	return h.persistence.GetDatabaseMetadata()
 }
 
 // HandleGetSnapshot returns the full snapshot data for the specified name.
 func (h *Handler) HandleGetSnapshot(name string) (any, error) {
 	return h.persistence.GetSnapshot(name)
+}
+
+// HandleIsDefaultSnapshot returns true is the name is the default snapshot
+func (h *Handler) IsDefaultSnapshot(name string) bool {
+	return h.persistence.IsDefaultSnapshot(name)
 }
 
 // handleSnapshotOperation constructs a snapshot update message and broadcasts it to the cluster.

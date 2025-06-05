@@ -112,96 +112,140 @@ func (app *App) Close() {
 	app.Logger.Close()
 }
 
+func (app *App) registerPublicDELETE(route string, handler http.HandlerFunc) {
+	routes.RegisterPublicDELETE(app.publicRouter, route, handler)
+}
+
+func (app *App) registerPublicGET(route string, handler http.HandlerFunc) {
+	routes.RegisterPublicGET(app.publicRouter, route, handler)
+}
+
+func (app *App) registerPublicPATCH(route string, handler http.HandlerFunc) {
+	routes.RegisterPublicPATCH(app.publicRouter, route, handler)
+}
+
+func (app *App) registerPublicPOST(route string, handler http.HandlerFunc) {
+	routes.RegisterPublicPOST(app.publicRouter, route, handler)
+}
+
+func (app *App) registerPublicPUT(route string, handler http.HandlerFunc) {
+	routes.RegisterPublicPUT(app.publicRouter, route, handler)
+}
+
+func (app *App) registerPrivateGET(route string, handler http.HandlerFunc) {
+	routes.RegisterPrivateGET(app.privateRouter, route, handler)
+}
+
+func (app *App) registerPrivatePATCH(route string, handler http.HandlerFunc) {
+	routes.RegisterPrivatePATCH(app.privateRouter, route, handler)
+}
+
+func (app *App) registerPrivatePOST(route string, handler http.HandlerFunc) {
+	routes.RegisterPrivatePOST(app.privateRouter, route, handler)
+}
+
 func (app *App) setupPublicRoutes() {
 
 	// Cluster
-	routes.RegisterPublicGET(app.publicRouter, routes.ClusterLatencyNetworkEndpoint, app.Cluster.HandleGetNetworkLatency)
-	routes.RegisterPublicGET(app.publicRouter, routes.ClusterLatencyNetworkFailuresEndpoint, app.Cluster.HandleGetNetworkFailures)
-	routes.RegisterPublicGET(app.publicRouter, routes.ClusterLatencyStatusEndpoint, app.Cluster.HandleGetLatencyStatus)
-	routes.RegisterPublicGET(app.publicRouter, routes.ClusterLatencySyncEndpoint, app.Cluster.HandleGetSyncLatency)
-	routes.RegisterPublicGET(app.publicRouter, routes.ClusterLatencySyncAveragesEndpoint, app.Cluster.HandleGetSyncLatencyAverages)
-	routes.RegisterPublicGET(app.publicRouter, routes.ClusterMembersEndpoint, app.Server.GetMembers)
-	routes.RegisterPublicGET(app.publicRouter, routes.ClusterNTPSkewEndpoint, app.Cluster.HandleGetNTPSkew)
-	routes.RegisterPublicGET(app.publicRouter, routes.ClusterStatusEndpoint, app.Cluster.Metrics.HandleClusterStatus)
+	app.registerPublicGET(routes.ClusterLatencyNetworkEndpoint, app.Cluster.GetNetworkLatency)
+	app.registerPublicGET(routes.ClusterLatencyNetworkFailuresEndpoint, app.Cluster.GetNetworkFailures)
+	app.registerPublicGET(routes.ClusterLatencyStatusEndpoint, app.Cluster.GetLatencyStatus)
+	app.registerPublicGET(routes.ClusterLatencySyncEndpoint, app.Cluster.GetSyncLatency)
+	app.registerPublicGET(routes.ClusterLatencySyncAveragesEndpoint, app.Cluster.GetSyncLatencyAverages)
+	app.registerPublicGET(routes.ClusterMembersEndpoint, app.Server.GetMembers)
+	app.registerPublicGET(routes.ClusterNTPSkewEndpoint, app.Cluster.GetNTPSkew)
+	app.registerPublicGET(routes.ClusterStatusEndpoint, app.Cluster.Metrics.GetClusterStatus)
+
+	// Device
+	app.registerPublicGET(routes.DevicesEndpoint, app.Cluster.GetDevicesInfo)
+	app.registerPublicPATCH(routes.DevicesIDEndpoint, app.Cluster.UpdateDeviceInfo)
+	app.registerPublicGET(routes.DevicesVIPEndpoint, app.Cluster.GetVIP)
+	app.registerPublicPOST(routes.DevicesSetVIPEndpoint, app.Cluster.SetVIP)
+	app.registerPublicPOST(routes.DeviceReloadVIPEndpoint, app.Cluster.ReloadVIP)
 
 	// Endpoints
-	routes.RegisterPublicGET(app.publicRouter, routes.EndpointsEndpoint, routes.ListRegisteredEndpoints)
+	app.registerPublicGET(routes.EndpointsEndpoint, routes.ListRegisteredEndpoints)
 
 	// Health
-	routes.RegisterPublicGET(app.publicRouter, routes.HealthEndpoint, app.Cluster.Metrics.HandleHealthCheck)
+	app.registerPublicGET(routes.HealthEndpoint, app.Cluster.Metrics.GetHealthCheck)
 
 	// Metadata
-	routes.RegisterPublicGET(app.publicRouter, routes.MetadataEndpoint, app.Server.GetDatabaseMetadata)
+	app.registerPublicGET(routes.MetadataEndpoint, app.Server.GetDatabaseMetadata)
 
 	// Metrics
-	routes.RegisterPublicGET(app.publicRouter, routes.MetricsEndpoint, app.Cluster.Metrics.HandleMetrics)
+	app.registerPublicGET(routes.MetricsEndpoint, app.Cluster.Metrics.GetMetrics)
 
 	/*
 		// PAVA
-		routes.RegisterPublicPUT(app.publicRouter, routes.PAVAAudioEndpoint, app.Server.HandleUploadMessage)
-		routes.RegisterPublicDELETE(app.publicRouter, routes.PAVAAudioDeleteEndpoint, app.Server.HandleDeleteMessage)
-		routes.RegisterPublicGET(app.publicRouter, routes.PAVAMessagesEndpoint, app.Server.HandleListMessages)
-		routes.RegisterPublicPUT(app.publicRouter, routes.PAVAMessageTriggerEndpoint, app.TaskManager.HandleTriggerMessage)
-		routes.RegisterPublicGET(app.publicRouter, routes.PAVAZonesEndpoint, app.Server.HandleListZones)
-		routes.RegisterPublicGET(app.publicRouter, routes.PAVAZoneStatusEndpoint, app.Server.HandleGetZoneStatus)
-		routes.RegisterPublicGET(app.publicRouter, routes.PAVADiagnosticsEndpoint, app.Server.HandleGetSystemDiagnostics)
-		routes.RegisterPublicGET(app.publicRouter, routes.PAVAStatusEndpoint, app.Server.HandleGetSystemStatus)
-		routes.RegisterPublicPUT(app.publicRouter, routes.PAVAAlarmsEndpoint, app.Server.HandleCancelAlarms)
-		routes.RegisterPublicGET(app.publicRouter, routes.PAVAMessagesEndpoint, app.Server.HandleListScheduledMessages)
-		routes.RegisterPublicPOST(app.publicRouter, routes.PAVAMessagesEndpoint, app.Server.HandleScheduleMessage)
+		app.registerPublicPUT(routes.PAVAAudioEndpoint, app.Server.UploadMessage)
+		app.registerPublicDELETE(routes.PAVAAudioDeleteEndpoint, app.Server.DeleteMessage)
+		app.registerPublicGET(routes.PAVAMessagesEndpoint, app.Server.ListMessages)
+		app.registerPublicPUT(routes.PAVAMessageTriggerEndpoint, app.TaskManager.TriggerMessage)
+		app.registerPublicGET(routes.PAVAZonesEndpoint, app.Server.ListZones)
+		app.registerPublicGET(routes.PAVAZoneStatusEndpoint, app.Server.GetZoneStatus)
+		app.registerPublicGET(routes.PAVADiagnosticsEndpoint, app.Server.GetSystemDiagnostics)
+		app.registerPublicGET(routes.PAVAStatusEndpoint, app.Server.GetSystemStatus)
+		app.registerPublicPUT(routes.PAVAAlarmsEndpoint, app.Server.CancelAlarms)
+		app.registerPublicGET(routes.PAVAMessagesEndpoint, app.Server.ListScheduledMessages)
+		app.registerPublicPOST(routes.PAVAMessagesEndpoint, app.Server.ScheduleMessage)
 	*/
 
 	// Root
-	routes.RegisterPublicGET(app.publicRouter, routes.RootEndpoint, app.Server.HandleRoot)
-
-	// Setup
-	routes.RegisterPublicPOST(app.publicRouter, routes.SetupDeviceName, app.Server.HandeSetupDeviceName)
+	app.registerPublicGET(routes.RootEndpoint, app.Server.HandleRoot)
 
 	// Snapshots
 	// NOTE: These must be added before the {name} parameter endpoints to avoid conflicts
-	routes.RegisterPublicGET(app.publicRouter, routes.SnapshotsEndpoint, app.Server.ListSnapshots)
-	routes.RegisterPublicPOST(app.publicRouter, routes.SnapshotsNameEndpoint, app.Server.CreateSnapshot)
-	routes.RegisterPublicGET(app.publicRouter, routes.SnapshotsNameEndpoint, app.Server.GetSnapshot)
-	routes.RegisterPublicDELETE(app.publicRouter, routes.SnapshotsNameEndpoint, app.Server.DeleteSnapshot)
-	routes.RegisterPublicPOST(app.publicRouter, routes.SnapshotsActivateEndpoint, app.Server.ActivateSnapshot)
+	app.registerPublicGET(routes.SnapshotsEndpoint, app.Server.ListSnapshots)
+	app.registerPublicPOST(routes.SnapshotsNameEndpoint, app.Server.CreateSnapshot)
+	app.registerPublicGET(routes.SnapshotsNameEndpoint, app.Server.GetSnapshot)
+	app.registerPublicDELETE(routes.SnapshotsNameEndpoint, app.Server.DeleteSnapshot)
+	app.registerPublicPOST(routes.SnapshotsActivateEndpoint, app.Server.ActivateSnapshot)
 
 	// Tasks
 	// NOTE: These must be added before the {id} parameter endpoints to avoid conflicts
-	routes.RegisterPublicGET(app.publicRouter, routes.TasksHistoryEndpoint, app.TaskManager.HandleGetHistory)
-	routes.RegisterPublicDELETE(app.publicRouter, routes.TasksHistoryEndpoint, app.TaskManager.HandleClearHistory)
-	routes.RegisterPublicGET(app.publicRouter, routes.TasksEndpoint, app.TaskManager.HandleGetTasks)
-	routes.RegisterPublicPOST(app.publicRouter, routes.TasksEndpoint, app.TaskManager.HandleCreateApplySnapshotTask)
-	routes.RegisterPublicGET(app.publicRouter, routes.TasksIdEndpoint, app.TaskManager.HandleGetTask)
-	routes.RegisterPublicPUT(app.publicRouter, routes.TasksIdEndpoint, app.TaskManager.HandleUpdateApplySnapshotTask)
-	routes.RegisterPublicDELETE(app.publicRouter, routes.TasksIdEndpoint, app.TaskManager.HandleDeleteTask)
-	routes.RegisterPublicPOST(app.publicRouter, routes.TasksIdEnableEndpoint, app.TaskManager.HandleEnableTask)
-	routes.RegisterPublicPOST(app.publicRouter, routes.TasksIdDisableEndpoint, app.TaskManager.HandleDisableTask)
+	app.registerPublicGET(routes.TasksHistoryEndpoint, app.TaskManager.GetHistory)
+	app.registerPublicDELETE(routes.TasksHistoryEndpoint, app.TaskManager.ClearHistory)
+	app.registerPublicGET(routes.TasksEndpoint, app.TaskManager.GetTasks)
+	app.registerPublicPOST(routes.TasksEndpoint, app.TaskManager.CreateApplySnapshotTask)
+	app.registerPublicGET(routes.TasksIdEndpoint, app.TaskManager.GetTask)
+	app.registerPublicPOST(routes.TasksIdEndpoint, app.TaskManager.UpdateApplySnapshotTask)
+	app.registerPublicDELETE(routes.TasksIdEndpoint, app.TaskManager.DeleteTask)
+	app.registerPublicPOST(routes.TasksIdEnableEndpoint, app.TaskManager.EnableTask)
+	app.registerPublicPOST(routes.TasksIdDisableEndpoint, app.TaskManager.DisableTask)
 
 	// Values
-	routes.RegisterPublicGET(app.publicRouter, routes.ValueEndpoint, app.Server.GetValue)
-	routes.RegisterPublicPOST(app.publicRouter, routes.ValueEndpoint, app.Server.SetValue)
-	routes.RegisterPublicPATCH(app.publicRouter, routes.ValueEndpoint, app.Server.UpdateValue)
-	routes.RegisterPublicDELETE(app.publicRouter, routes.ValueEndpoint, app.Server.ClearAllValues)
-
-	// WebSocket
-	routes.RegisterPublicGET(app.publicRouter, routes.WebsocketEndpoint, withWebSocketMetrics(app.config, app.Server.HandleWebSocket, app.Cluster.Metrics))
+	app.registerPublicGET(routes.ValueEndpoint, app.Server.GetValue)
+	app.registerPublicPOST(routes.ValueEndpoint, app.Server.SetValue)
+	app.registerPublicPATCH(routes.ValueEndpoint, app.Server.UpdateValue)
+	app.registerPublicDELETE(routes.ValueEndpoint, app.Server.ClearAllValues)
 
 	// Versioning
-	routes.RegisterPublicGET(app.publicRouter, routes.VersionEndpoint, app.Server.GetVersion)
-	routes.RegisterPublicPOST(app.publicRouter, routes.VersionUpdateEndpoint, app.Server.UpdateVersion)
-	routes.RegisterPublicPUT(app.publicRouter, routes.VersionRollbackEndpoint, app.Server.RollbackVersion)
+	app.registerPublicGET(routes.VersionEndpoint, app.Server.GetVersion)
+	app.registerPublicPOST(routes.VersionRollbackEndpoint, app.Server.RollbackVersion)
+	app.registerPublicPOST(routes.VersionUpdateEndpoint, app.Server.UpdateVersion)
+
+	// WebSocket
+	app.registerPublicGET(routes.WebsocketEndpoint, withWebSocketMetrics(app.config, app.Server.HandleWebSocket, app.Cluster.Metrics))
 }
 
 func (app *App) setupPrivateRoutes() {
-	routes.RegisterPrivateGET(app.privateRouter, routes.DataEndport, app.Server.ExportData)
-	routes.RegisterPrivatePOST(app.privateRouter, routes.DataEndport, app.Server.ImportData)
-	routes.RegisterPrivateGET(app.privateRouter, routes.StateEndport, app.Server.ExportState)
-	routes.RegisterPrivatePOST(app.privateRouter, routes.StateEndport, app.Server.ImportState)
-	routes.RegisterPrivateGET(app.privateRouter, routes.ClusterLatencyNetworkLocalEndpoint, app.Cluster.HandleGetNetworkLatencyLocal)
-	routes.RegisterPrivateGET(app.privateRouter, routes.ClusterLatencySyncLocalEndpoint, app.Cluster.HandleGetSyncLatencyLocal)
-	routes.RegisterPrivateGET(app.privateRouter, routes.ClusterLatencySyncAveragesLocalEndpoint, app.Cluster.HandleGetSyncLatencyAveragesLocal)
-	routes.RegisterPrivateGET(app.privateRouter, routes.ClusterLatencyNetworkFailuresLocalEndpoint, app.Cluster.HandleGetNetworkFailuresLocal)
-	routes.RegisterPrivateGET(app.privateRouter, routes.ClusterLatencyStatusLocalEndpoint, app.Cluster.HandleGetLatencyStatusLocal)
+	app.registerPrivateGET(routes.ClusterLatencyNetworkLocalEndpoint, app.Cluster.GetNetworkLatencyLocal)
+	app.registerPrivateGET(routes.ClusterLatencySyncLocalEndpoint, app.Cluster.GetSyncLatencyLocal)
+	app.registerPrivateGET(routes.ClusterLatencySyncAveragesLocalEndpoint, app.Cluster.GetSyncLatencyAveragesLocal)
+	app.registerPrivateGET(routes.ClusterLatencyNetworkFailuresLocalEndpoint, app.Cluster.GetNetworkFailuresLocal)
+	app.registerPrivateGET(routes.ClusterLatencyStatusLocalEndpoint, app.Cluster.GetLatencyStatusLocal)
+
+	app.registerPrivateGET(routes.DeviceEndpoint, app.Cluster.GetDeviceInfo)
+	app.registerPrivatePOST(routes.DeviceEndpoint, app.Cluster.SetDeviceInfo)
+	app.registerPrivatePATCH(routes.DeviceEndpoint, app.Cluster.UpdateDeviceInfoLocal)
+	app.registerPrivatePOST(routes.DevicesSetVIPEndpoint, app.Cluster.UpdateVIPLocal)
+	app.registerPrivatePOST(routes.DeviceReloadVIPEndpoint, app.Cluster.ReloadVIPLocal)
+
+	app.registerPrivateGET(routes.DataEndpoint, app.Server.ExportData)
+	app.registerPrivatePOST(routes.DataEndpoint, app.Server.ImportData)
+
+	app.registerPrivateGET(routes.StateEndpoint, app.Server.ExportState)
+	app.registerPrivatePOST(routes.StateEndpoint, app.Server.ImportState)
 }
 
 // startAPIServer starts the main HTTP API server

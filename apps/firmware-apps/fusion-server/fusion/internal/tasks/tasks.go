@@ -15,7 +15,6 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/robfig/cron/v3"
-	"go.etcd.io/bbolt"
 )
 
 const (
@@ -220,8 +219,8 @@ func (tm *TaskManager) Stop() {
 	tm.running = false
 }
 
-// HandleGetTasks handles HTTP GET requests to list all tasks.
-func (tm *TaskManager) HandleGetTasks(w http.ResponseWriter, r *http.Request) {
+// GetTasks handles HTTP GET requests to list all tasks.
+func (tm *TaskManager) GetTasks(w http.ResponseWriter, r *http.Request) {
 
 	if !utils.RequireGet(w, r) {
 		return
@@ -238,8 +237,8 @@ func (tm *TaskManager) HandleGetTasks(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(tasks)
 }
 
-// HandleGetTask handles HTTP GET requests to get a single task
-func (tm *TaskManager) HandleGetTask(w http.ResponseWriter, r *http.Request) {
+// GetTask handles HTTP GET requests to get a single task
+func (tm *TaskManager) GetTask(w http.ResponseWriter, r *http.Request) {
 
 	if !utils.RequireGet(w, r) {
 		return
@@ -251,7 +250,7 @@ func (tm *TaskManager) HandleGetTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	task, err := tm.fetchTask(id)
+	task, err := tm.getTask(id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
@@ -261,8 +260,8 @@ func (tm *TaskManager) HandleGetTask(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(task)
 }
 
-// HandleDeleteTask handles HTTP DELETE requests to remove a task by ID.
-func (tm *TaskManager) HandleDeleteTask(w http.ResponseWriter, r *http.Request) {
+// DeleteTask handles HTTP DELETE requests to remove a task by ID.
+func (tm *TaskManager) DeleteTask(w http.ResponseWriter, r *http.Request) {
 
 	if !utils.RequireDelete(w, r) {
 		return
@@ -283,8 +282,8 @@ func (tm *TaskManager) HandleDeleteTask(w http.ResponseWriter, r *http.Request) 
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// HandleGetHistory handles HTTP GET requests to retrieve the execution history.
-func (tm *TaskManager) HandleGetHistory(w http.ResponseWriter, r *http.Request) {
+// GetHistory handles HTTP GET requests to retrieve the execution history.
+func (tm *TaskManager) GetHistory(w http.ResponseWriter, r *http.Request) {
 
 	if !utils.RequireGet(w, r) {
 		return
@@ -298,8 +297,8 @@ func (tm *TaskManager) HandleGetHistory(w http.ResponseWriter, r *http.Request) 
 	json.NewEncoder(w).Encode(history)
 }
 
-// HandleClearHistory handles HTTP DELETE requests to clear the execution history.
-func (tm *TaskManager) HandleClearHistory(w http.ResponseWriter, r *http.Request) {
+// ClearHistory handles HTTP DELETE requests to clear the execution history.
+func (tm *TaskManager) ClearHistory(w http.ResponseWriter, r *http.Request) {
 
 	if !utils.RequireDelete(w, r) {
 		return
@@ -312,8 +311,8 @@ func (tm *TaskManager) HandleClearHistory(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// HandleEnableTask handles HTTP POST requests to enable a task
-func (tm *TaskManager) HandleEnableTask(w http.ResponseWriter, r *http.Request) {
+// EnableTask handles HTTP POST requests to enable a task
+func (tm *TaskManager) EnableTask(w http.ResponseWriter, r *http.Request) {
 
 	if !utils.RequirePost(w, r) {
 		return
@@ -325,7 +324,7 @@ func (tm *TaskManager) HandleEnableTask(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	task, err := tm.fetchTask(id)
+	task, err := tm.getTask(id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
@@ -352,8 +351,8 @@ func (tm *TaskManager) HandleEnableTask(w http.ResponseWriter, r *http.Request) 
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// HandleEnableTask handles HTTP POST requests to enable a task
-func (tm *TaskManager) HandleDisableTask(w http.ResponseWriter, r *http.Request) {
+// DisableTask handles HTTP POST requests to disable a task
+func (tm *TaskManager) DisableTask(w http.ResponseWriter, r *http.Request) {
 
 	if !utils.RequirePost(w, r) {
 		return
@@ -365,7 +364,7 @@ func (tm *TaskManager) HandleDisableTask(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	task, err := tm.fetchTask(id)
+	task, err := tm.getTask(id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
@@ -458,21 +457,11 @@ func extractTaskID(r *http.Request) (string, error) {
 }
 
 // fetchTask loads a task by ID from the boltdb and returns it (or an error).
-func (tm *TaskManager) fetchTask(id string) (*api.Task, error) {
-	var task api.Task
-	err := tm.persistence.GetDB().View(func(tx *bbolt.Tx) error {
-		b := tx.Bucket([]byte(persistence.TasksBucketName))
-		if b == nil {
-			return fmt.Errorf("tasks bucket not found")
-		}
-		data := b.Get([]byte(id))
-		if data == nil {
-			return fmt.Errorf("task '%s' not found", id)
-		}
-		return json.Unmarshal(data, &task)
-	})
+func (tm *TaskManager) getTask(id string) (*api.Task, error) {
+
+	task, err := tm.persistence.GetTask(id)
 	if err != nil {
 		return nil, err
 	}
-	return &task, nil
+	return task, nil
 }

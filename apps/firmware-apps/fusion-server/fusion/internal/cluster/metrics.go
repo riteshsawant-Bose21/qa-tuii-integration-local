@@ -212,7 +212,7 @@ func (mc *MetricsCollector) collect() {
 	}
 }
 
-func (mc *MetricsCollector) HandleMetrics(w http.ResponseWriter, r *http.Request) {
+func (mc *MetricsCollector) GetMetrics(w http.ResponseWriter, r *http.Request) {
 
 	promhttp.Handler().ServeHTTP(w, r)
 
@@ -223,7 +223,7 @@ func (mc *MetricsCollector) HandleMetrics(w http.ResponseWriter, r *http.Request
 	// json.NewEncoder(w).Encode(mc.metrics)
 }
 
-func (mc *MetricsCollector) HandleClusterStatus(w http.ResponseWriter, r *http.Request) {
+func (mc *MetricsCollector) GetClusterStatus(w http.ResponseWriter, r *http.Request) {
 	mc.mutex.RLock()
 	defer mc.mutex.RUnlock()
 
@@ -231,7 +231,7 @@ func (mc *MetricsCollector) HandleClusterStatus(w http.ResponseWriter, r *http.R
 	json.NewEncoder(w).Encode(mc.clusterInfo)
 }
 
-func (mc *MetricsCollector) HandleHealthCheck(w http.ResponseWriter, r *http.Request) {
+func (mc *MetricsCollector) GetHealthCheck(w http.ResponseWriter, r *http.Request) {
 	mc.mutex.RLock()
 	health := mc.metrics.NodeHealth
 	clusterHealth := mc.clusterInfo.ClusterHealth

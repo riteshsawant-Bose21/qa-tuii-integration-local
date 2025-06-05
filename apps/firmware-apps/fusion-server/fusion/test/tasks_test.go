@@ -89,7 +89,7 @@ func TestTaskManagerEndpoints(t *testing.T) {
 		taskJSON, err := json.Marshal(task)
 		require.NoError(t, err)
 
-		req, err := http.NewRequest(http.MethodPut, liveServerURL+routes.TasksEndpoint+"/test-task", bytes.NewReader(taskJSON))
+		req, err := http.NewRequest(http.MethodPost, liveServerURL+routes.TasksEndpoint+"/test-task", bytes.NewReader(taskJSON))
 		require.NoError(t, err)
 		req.Header.Set(api.ContentType, api.JsonMIMEType)
 
@@ -203,7 +203,7 @@ func TestTasksEndpointErrorCases(t *testing.T) {
 	})
 
 	t.Run("UpdateTaskHandler malformed JSON", func(t *testing.T) {
-		req, err := http.NewRequest(http.MethodPut, liveServerURL+routes.TasksEndpoint+"/test", strings.NewReader("not-json"))
+		req, err := http.NewRequest(http.MethodPost, liveServerURL+routes.TasksEndpoint+"/test", strings.NewReader("not-json"))
 		require.NoError(t, err)
 		req.Header.Set(api.ContentType, api.JsonMIMEType)
 		resp, err := http.DefaultClient.Do(req)
@@ -215,7 +215,7 @@ func TestTasksEndpointErrorCases(t *testing.T) {
 
 	t.Run("UpdateTaskHandler missing required fields", func(t *testing.T) {
 		payload := `{"cron_expr": "", "description": ""}`
-		req, err := http.NewRequest(http.MethodPut, liveServerURL+routes.TasksEndpoint+"/test", strings.NewReader(payload))
+		req, err := http.NewRequest(http.MethodPost, liveServerURL+routes.TasksEndpoint+"/test", strings.NewReader(payload))
 		require.NoError(t, err)
 		req.Header.Set(api.ContentType, api.JsonMIMEType)
 		resp, err := http.DefaultClient.Do(req)
@@ -246,7 +246,7 @@ func TestTasksEndpointErrorCases(t *testing.T) {
 	})
 
 	t.Run("ExecutionHistoryHandler wrong method", func(t *testing.T) {
-		req, err := http.NewRequest(http.MethodPost, liveServerURL+routes.TasksHistoryEndpoint, nil)
+		req, err := http.NewRequest(http.MethodPut, liveServerURL+routes.TasksHistoryEndpoint, nil)
 		require.NoError(t, err)
 		resp, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
