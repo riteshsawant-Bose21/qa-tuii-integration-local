@@ -165,7 +165,7 @@ Local builds are good for developing the various server components without deali
 ### Set a single value
 This will set a single value.
 ```bash
-curl -X POST http://192.168.64.100:8080/setValue \
+curl -X POST http://192.168.64.100:8080/value \
   -H "Content-Type: application/json" \
   -d '{"key": "value"}'
 ```
@@ -174,7 +174,7 @@ curl -X POST http://192.168.64.100:8080/setValue \
 This will set multiple nested values. This call will not merge
 any existing values, so use caution.
 ```bash
-curl -X POST http://192.168.64.100:8080/setValue \
+curl -X POST http://192.168.64.100:8080/value \
   -H "Content-Type: application/json" \
   -d '{
     "volume" : {
@@ -189,7 +189,7 @@ curl -X POST http://192.168.64.100:8080/setValue \
 This will update multiple nested values. Existing values will be merged.
 If a value is set to null, it will be removed.
 ```bash
-curl -X POST http://192.168.64.100:8080/updateValue  \
+curl -X PATCH http://192.168.64.100:8080/value  \
   -H "Content-Type: application/json" \
   -d '{
     "settings": {
@@ -220,7 +220,7 @@ Result:
 
 ### Get a specific value
 ```bash
-curl "http://192.168.64.100:8080/getValue?key"
+curl "http://192.168.64.100:8080/value?key=current"
 ```
 
 Response if value exists:
@@ -245,17 +245,12 @@ Response if value does not exist:
 
 ### Get all configuration values
 ```bash
-curl http://192.168.64.100:8080/getValue
+curl http://192.168.64.100:8080/value
 ```
 
-### Download current configuration state
+### Download and save current configuration with specific filename
 ```bash
-curl -O http://192.168.64.100:8080/download
-```
-
-### Download and save with specific filename
-```bash
-curl http://192.168.64.100:8080/download > backup_config.json
+curl http://192.168.64.100:8080/value > backup_config.json
 ```
 
 ## Websockets
@@ -334,7 +329,7 @@ shasum -a 256 build/fusion-server_linux_arm64
 curl -X POST \
   -F "binary=@your_server_binary" \
   -F "checksum=8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92" \
-  http://localhost:8080/updateVersion
+  http://localhost:8080/version
 ```
 
 The checksum of the new binary can be calculated as part of the curl command.
@@ -613,7 +608,7 @@ Response includes:
 
 1. **Check all metrics**
 ```bash
-curl -s http://192.168.64.100:8080/metrics | jq
+curl -s http://192.168.64.100:8080/metrics
 ```
 
 2. **Track cluster membership**
