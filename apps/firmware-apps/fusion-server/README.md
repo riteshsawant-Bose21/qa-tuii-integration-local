@@ -47,7 +47,7 @@ Fusion Server is a distributed configuration management system with high availab
    - Default configuration includes:
      - HTTP mode
      - Round-robin load balancing
-     - Health checks on /getValue endpoint
+     - Health checks on /value endpoint
      - Configurable timeouts and connection limits
 
    **Keepalived Configuration**
@@ -158,8 +158,8 @@ Local builds are good for developing the various server components without deali
 ### API Endpoints
 
 **Configuration Management**
-   - `POST /setValue` - Set a configuration value
-   - `GET /getValue` - Retrieve configuration value(s)
+   - `POST /value` - Set a configuration value
+   - `GET /value` - Retrieve configuration value(s)
    - `GET /ws` - WebSocket endpoint for real-time updates
 
 ### Set a single value
