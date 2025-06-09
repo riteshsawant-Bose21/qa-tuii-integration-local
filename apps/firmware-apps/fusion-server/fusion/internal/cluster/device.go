@@ -1,6 +1,7 @@
 package cluster
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -13,7 +14,14 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
+)
+
+const (
+	localConf    = "keepalived.conf"
+	serverPrefix = "fusion"
 )
 
 func (c *Cluster) GetDevicesInfo(w http.ResponseWriter, r *http.Request) {
@@ -177,13 +185,18 @@ func (c *Cluster) GetVIP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
+	if c.config.Local {
+		c.getVIPInLocalConfig(w)
+		return
+	}
 
 	vips, err := c.getVIPFromConfig()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
 
 	for _, vip := range vips {
 		if isVip := c.isLocalVIP(vip); isVip {
@@ -218,7 +231,7 @@ func (c *Cluster) SetVIP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := validateVIP(vip); err != nil {
-		http.Error(w, "invalid VIP format", http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -235,10 +248,12 @@ func (c *Cluster) SetVIP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Reload keepalived after updating all the nodes
-	if err := postGenericToAdmin(c, routes.DeviceReloadVIPEndpoint, c.reloadVIP); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+	if !c.config.Local {
+		// Reload keepalived after updating all the nodes
+		if err := postGenericToAdmin(c, routes.DeviceReloadVIPEndpoint, c.reloadVIP); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 
 	w.WriteHeader(http.StatusNoContent)
@@ -328,6 +343,7 @@ func validateVIP(vip string) error {
 	if _, _, err := net.ParseCIDR(vip); err == nil {
 		return nil
 	}
+
 	// If that fails, try parsing as plain IP
 	if ip := net.ParseIP(vip); ip != nil {
 		return nil
@@ -402,4 +418,148 @@ func validateNoDuplication(
 	}
 
 	return nil
+}
+
+func (c *Cluster) setVIPInConfig(newVIP string) error {
+
+	if c.config.Local {
+		return setVIPInLocalConfig(newVIP)
+	}
+
+	f, err := os.Open(c.configPath)
+	if err != nil {
+		return fmt.Errorf("unable to read config file: %w", err)
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+	var outLines []string
+
+	inVIPBlock := false
+	var indent string
+	foundBlock := false
+
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		if !inVIPBlock {
+			// Look for the 'virtual_ipaddress {' line (ignoring leading whitespace)
+			trim := strings.TrimSpace(line)
+			if trim == "virtual_ipaddress {" {
+				foundBlock = true
+				inVIPBlock = true
+
+				// Capture whatever indentation was before "virtual_ipaddress"
+				idx := strings.Index(line, "virtual_ipaddress")
+				if idx >= 0 {
+					indent = line[:idx]
+				}
+
+				// Emit the opening line with the same indent
+				outLines = append(outLines, indent+"virtual_ipaddress {")
+
+				// Emit the new VIP on the next line, indented two spaces further
+				outLines = append(outLines, indent+"  "+newVIP)
+				continue
+			}
+
+			// Copy all other lines unchanged
+			outLines = append(outLines, line)
+		} else {
+			// We are inside the old VIP block: skip until we see the closing "}"
+			trim := strings.TrimSpace(line)
+			if trim == "}" {
+				// Emit the closing brace at the same indent as the opening
+				outLines = append(outLines, indent+"}")
+				inVIPBlock = false
+			}
+			// Otherwise, just skip the line
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return fmt.Errorf("error scanning config file: %w", err)
+	}
+
+	if !foundBlock {
+		return fmt.Errorf("no virtual_ipaddress block found")
+	}
+
+	// Write the modified content back to disk
+	outFile, err := os.Create(c.configPath)
+	if err != nil {
+		return fmt.Errorf("unable to open config for writing: %w", err)
+	}
+	defer outFile.Close()
+
+	writer := bufio.NewWriter(outFile)
+	for _, l := range outLines {
+		_, _ = writer.WriteString(l + "\n")
+	}
+	if err := writer.Flush(); err != nil {
+		return fmt.Errorf("error writing updated config: %w", err)
+	}
+
+	return nil
+}
+
+// setVIPInLocalConfig is for use in "local" development mode only
+func setVIPInLocalConfig(newVIP string) error {
+	cfgDir, err := os.UserConfigDir()
+	if err != nil {
+		return fmt.Errorf("cannot determine user config directory: %w", err)
+	}
+
+	dir := filepath.Join(cfgDir, serverPrefix)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return fmt.Errorf("cannot create local config directory: %w", err)
+	}
+
+	// 3) write the single‐line file
+	path := filepath.Join(dir, localConf)
+	data := []byte(newVIP + "\n")
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		return fmt.Errorf("cannot write local VIP file: %w", err)
+	}
+
+	return nil
+}
+
+// getVIPInLocalConfig is for use in "local" development mode only
+func (c *Cluster) getVIPInLocalConfig(w http.ResponseWriter) {
+
+	cfgDir, err := os.UserConfigDir()
+	if err != nil {
+		http.Error(w, fmt.Sprintf("cannot find user config dir: %v", err),
+			http.StatusInternalServerError)
+		return
+	}
+	localPath := filepath.Join(cfgDir, serverPrefix, localConf)
+
+	f, err := os.Open(localPath)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("cannot open local config: %v", err),
+			http.StatusNotFound)
+		return
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+	if !scanner.Scan() {
+		http.Error(w, "local config is empty", http.StatusNotFound)
+		return
+	}
+
+	vip := strings.TrimSpace(scanner.Text())
+	if err := scanner.Err(); err != nil {
+		http.Error(w, fmt.Sprintf("error reading local config: %v", err),
+			http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
+	json.NewEncoder(w).Encode(map[string]string{
+		"local": vip,
+		"vip":   vip,
+	})
 }

@@ -1,7 +1,6 @@
 package cluster
 
 import (
-	"bufio"
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/logging"
@@ -52,6 +51,7 @@ type Cluster struct {
 	bindAddr         string
 	bindPort         int
 	delegate         *ClusterDelegate
+	config           *api.AppConfig
 	Memberlist       *memberlist.Memberlist
 	vip              string
 	vipLock          sync.RWMutex
@@ -67,13 +67,14 @@ func NewCluster(appConfig *api.AppConfig, delegate *ClusterDelegate, memberlist 
 		bindAddr:         appConfig.BindAddr,
 		bindPort:         appConfig.BindPort,
 		delegate:         delegate,
+		config:           appConfig,
 		Memberlist:       memberlist,
 		configPath:       "/etc/keepalived/keepalived.conf",
 		Metrics:          NewMetricsCollector(memberlist, delegate.stateManager),
 		networkLatencies: NewNetworkLatencyStore(maxLatencyCount, latencyPruneTime),
 	}
 
-	if !appConfig.Local {
+	if !cluster.config.Local {
 		logger := logging.GetLogger()
 
 		if err := cluster.startVRRPListener(); err != nil {
@@ -289,85 +290,6 @@ func (c *Cluster) getVIPFromConfig() ([]string, error) {
 	return vips, nil
 }
 
-func (c *Cluster) setVIPInConfig(newVIP string) error {
-
-	f, err := os.Open(c.configPath)
-	if err != nil {
-		return fmt.Errorf("unable to read config file: %w", err)
-	}
-	defer f.Close()
-
-	scanner := bufio.NewScanner(f)
-	var outLines []string
-
-	inVIPBlock := false
-	var indent string
-	foundBlock := false
-
-	for scanner.Scan() {
-		line := scanner.Text()
-
-		if !inVIPBlock {
-			// Look for the 'virtual_ipaddress {' line (ignoring leading whitespace)
-			trim := strings.TrimSpace(line)
-			if trim == "virtual_ipaddress {" {
-				foundBlock = true
-				inVIPBlock = true
-
-				// Capture whatever indentation was before "virtual_ipaddress"
-				idx := strings.Index(line, "virtual_ipaddress")
-				if idx >= 0 {
-					indent = line[:idx]
-				}
-
-				// Emit the opening line with the same indent
-				outLines = append(outLines, indent+"virtual_ipaddress {")
-
-				// Emit the new VIP on the next line, indented two spaces further
-				outLines = append(outLines, indent+"  "+newVIP)
-				continue
-			}
-
-			// Copy all other lines unchanged
-			outLines = append(outLines, line)
-		} else {
-			// We are inside the old VIP block: skip until we see the closing "}"
-			trim := strings.TrimSpace(line)
-			if trim == "}" {
-				// Emit the closing brace at the same indent as the opening
-				outLines = append(outLines, indent+"}")
-				inVIPBlock = false
-			}
-			// Otherwise, just skip the line
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		return fmt.Errorf("error scanning config file: %w", err)
-	}
-
-	if !foundBlock {
-		return fmt.Errorf("no virtual_ipaddress block found")
-	}
-
-	// Write the modified content back to disk
-	outFile, err := os.Create(c.configPath)
-	if err != nil {
-		return fmt.Errorf("unable to open config for writing: %w", err)
-	}
-	defer outFile.Close()
-
-	writer := bufio.NewWriter(outFile)
-	for _, l := range outLines {
-		_, _ = writer.WriteString(l + "\n")
-	}
-	if err := writer.Flush(); err != nil {
-		return fmt.Errorf("error writing updated config: %w", err)
-	}
-
-	return nil
-}
-
 // restartKeepalived reloads the keepalived process
 func (c *Cluster) restartKeepalived() error {
 	return exec.Command("systemctl", "reload", "keepalived").Run()
@@ -380,8 +302,8 @@ func (c *Cluster) startStateMonitor() {
 			members := c.Memberlist.Members()
 			logger := logging.GetLogger()
 
-			logger.Info("[CLUSTER] Current cluster state:")
-			logger.Info("[CLUSTER] Total members: %d", len(members))
+			logger.Debug("[CLUSTER] Current cluster state:")
+			logger.Debug("[CLUSTER] Total members: %d", len(members))
 
 			for _, member := range members {
 				status := "ALIVE"
@@ -396,7 +318,7 @@ func (c *Cluster) startStateMonitor() {
 					status = "UNKNOWN"
 				}
 
-				logger.Info("[CLUSTER] Node: %s, Address: %s:%d, Status: %s",
+				logger.Debug("[CLUSTER] Node: %s, Address: %s:%d, Status: %s",
 					member.Name,
 					member.Addr.String(),
 					member.Port,
