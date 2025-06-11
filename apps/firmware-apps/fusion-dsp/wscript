@@ -61,10 +61,12 @@ def configure(conf):
         # GCC 14 gives a warning for templated ctor/dtor that are not valid in
         # C++20. We have -std=c++17. So disable the warning. With -Werror
         # compilation would fail.
-        conf.env.append_value('CXXFLAGS', ['-Wno-template-id-cdtor'])
+        if not conf.env['IS_MACOS']:
+            conf.env.append_value('CXXFLAGS', ['-Wno-template-id-cdtor'])
 
     if compiler_has_flag(conf, '-Wcalloc-transposed-args'):
-        conf.env.append_value('CXXFLAGS', '-Wno-calloc-transposed-args')
+        if not conf.env['IS_MACOS']:
+            conf.env.append_value('CXXFLAGS', '-Wno-calloc-transposed-args')
 
     conf.env.append_value('CXXFLAGS', ['-std=c++17'])
     conf.env.append_value('CXXFLAGS', ['-Wall', '-Wextra', '-Werror'])

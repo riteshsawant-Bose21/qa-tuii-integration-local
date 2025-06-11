@@ -76,7 +76,7 @@ int main(int argc, char *argv[])
     sigaction(SIGINT, &sa, nullptr);
     sigaction(SIGTERM, &sa, nullptr);
 
-
+    bool no_telemetry = false;
     OptionCounter verbosity;
     OptionCounter quietness;
 
@@ -96,6 +96,8 @@ int main(int argc, char *argv[])
         ("telemetry-messages,m", boost::program_options::value<std::string>()->default_value(config_path + "/telemetry-messages.json"), "telemetry commands file")
         ("telemetry-configuration,p", boost::program_options::value<std::string>()->default_value(config_path + "/telemetry-configuration.json"), "telemetry configuration file")
         ("serverip,s", boost::program_options::value<std::string>(), "IP address of fusion-server")
+        ("no-telemetry,n", boost::program_options::bool_switch(&no_telemetry), "disable telemetry")
+        ("device-id,i", boost::program_options::value<std::string>()->default_value(""), "device ID to use")
         ("verbose,v", boost::program_options::value(&verbosity)->zero_tokens(), "make logs more verbose")
         ("quiet,q", boost::program_options::value(&quietness)->zero_tokens(), "make logs more quiet")
         ("help,h", "print this message and exit")
@@ -139,7 +141,6 @@ int main(int argc, char *argv[])
     bosepro::Profile::set_cpu_mips(1800.0);
 
     bosepro::Configuration configuration(vm["configuration"].as<std::string>());
-    bosepro::TelemetryConfiguration telem_configuration(vm["telemetry-configuration"].as<std::string>());
     bosepro::Definition definitions(vm["definitions"].as<std::string>());
     bosepro::Session session(configuration.get_session(), definitions);
 
@@ -191,7 +192,7 @@ int main(int argc, char *argv[])
         std::vector<std::string> target_paths;
 
         // Path for the static configuration
-        target_paths.push_back("dsp_static_config");
+        target_paths.push_back("devices[*]");
         // Path for dynamic parameter setttings with vector indices
         target_paths.push_back("settings.audio.*.*[*]");
         // Path for dynamic parameter setttings
@@ -202,6 +203,11 @@ int main(int argc, char *argv[])
             SPDLOG_INFO("server ip {}", vm["serverip"].as<std::string>());
             client = new UDPValueMonitor(vm["serverip"].as<std::string>(), 7947,
                                          target_paths, handle_update);
+
+            if (vm.count("device-id"))
+            {
+                client->setDeviceID(vm["device-id"].as<std::string>());
+            }
         }
 
         // if we boot up on empty config, no need to start up telemetry
@@ -212,10 +218,12 @@ int main(int argc, char *argv[])
 
         while(g_running)
         {
-            if (!telemetry_monitor.is_running())
+            if (!telemetry_monitor.is_running() && !no_telemetry)
             {
                 if (session.is_ready())
                 {
+                    bosepro::TelemetryConfiguration telem_configuration(vm["telemetry-configuration"].as<std::string>());
+
                     telemetry_monitor.initialize(vm["telemetry-messages"].as<std::string>(),
                                      telem_configuration.get_socket_path(),
                                      configuration.get_session().has_name()

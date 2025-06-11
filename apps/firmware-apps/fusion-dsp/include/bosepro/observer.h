@@ -603,7 +603,8 @@ public:
                   void (*updateHandler)(const std::string &),
                   bool verbose = false)
       : targetPaths_(targetPaths), updateHandler_(updateHandler),
-        verbose_(verbose), jsonMonitor_(Json::objectValue, verbose) {
+        verbose_(verbose), jsonMonitor_(Json::objectValue, verbose),
+        device_id("") {
     const int sockfd = udpSocket_.get();
 
     // Set up the server address.
@@ -683,6 +684,17 @@ public:
     return -1;
   }
 
+  /**
+   * @brief Sets the device ID for filtering updates.
+   *
+   * This ID is used to filter updates for specific devices in the JSON data.
+   *
+   * @param id The device ID to set.
+   */
+  void setDeviceID(const std::string &id) {
+    device_id = id;
+  }
+
 private:
   // Logging helper.
   void log(const std::string &message) const {
@@ -735,12 +747,12 @@ private:
       message = "{ \"target\": \"session\", \"name\": \"create_periodic_task\", \"value\": \"/tmp/fw_config.json\" }";
       updateHandler_(message);
     }
-    else if (path_parts[0].key == "dsp_static_config") {
+    else if (path_parts[0].key == "devices" && new_val["id"] == device_id ) {
       message = "{ \"target\": \"session\", \"name\": \"destroy_all_audio_tasks\" }";
       updateHandler_(message);
 
       std::ofstream dsp_config("/tmp/dsp_config.json");
-      dsp_config << new_val;
+      dsp_config << new_val["dsp_static_config"];
       dsp_config.close();
 
       message = "{ \"target\": \"session\", \"name\": \"create_audio_task\", \"value\": \"/tmp/dsp_config.json\" }";
@@ -912,5 +924,6 @@ private:
   bool verbose_;
   JsonMonitor jsonMonitor_;
   sockaddr_in serverAddr_;
+  std::string device_id;
   bool receivedInitialState_{false};
 };
