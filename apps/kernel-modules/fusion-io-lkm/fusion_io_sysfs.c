@@ -464,15 +464,20 @@ static int fusion_io_create_sysfs_gpio(struct device *parent_dev,
         return -ENOMEM;
     }
 
-    /* Permissions: read/write by owner */
-    ep_gpio->dev_attr.attr.mode = 0664;
-
     switch(ep_gpio->type) {
         case EP_GPIO_TYPE_PHYS:
-            ep_gpio->dev_attr.show  = fusion_io_phys_gpio_show;
-            ep_gpio->dev_attr.store = fusion_io_phys_gpio_store;
+            if (ep_gpio->dir == EP_GPIO_DIR_O) {
+                ep_gpio->dev_attr.attr.mode = 0664;
+                ep_gpio->dev_attr.show  = fusion_io_phys_gpio_show; 
+                ep_gpio->dev_attr.store = fusion_io_phys_gpio_store;
+            } else {
+                ep_gpio->dev_attr.attr.mode = 0444;
+                ep_gpio->dev_attr.show  = fusion_io_phys_gpio_show;
+                ep_gpio->dev_attr.store = NULL;
+            }
             break;
         case EP_GPIO_TYPE_VIRT:
+        ep_gpio->dev_attr.attr.mode = 0664;
             ep_gpio->dev_attr.show  = fusion_io_virt_gpio_show;
             ep_gpio->dev_attr.store = fusion_io_virt_gpio_store;
             break;
@@ -532,8 +537,7 @@ static int fusion_io_create_sysfs_cmd(struct device *parent_dev, struct endpoint
         case EP_TYPE_ADC_ADS7128:
 			switch(ep_cmd->type) {
 				case EP_CMD_TYPE_ADC_REGOP:
-					/* write only */
-    				ep_cmd->dev_attr.attr.mode = 0666;
+    				ep_cmd->dev_attr.attr.mode = 0664;
 					ep_cmd->dev_attr.show  = ads7128_cmd_regop_show;
 					ep_cmd->dev_attr.store = ads7128_cmd_regop;
 					break;
@@ -673,7 +677,7 @@ int fusion_io_create_sysfs_base(struct platform_device *pdev)
         return PTR_ERR(fusion_io_class);
     }
 
-    fusion_io_parent_dev = device_create(fusion_io_class, NULL, MKDEV(0, 0), NULL, "fusion-io");
+    fusion_io_parent_dev = device_create(fusion_io_class, NULL, MKDEV(0, 0), NULL, bd->data.model);
     if (IS_ERR(fusion_io_parent_dev)) {
         dev_err(&pdev->dev, "Failed to create sysfs parent device\n");
         ret = PTR_ERR(fusion_io_parent_dev);

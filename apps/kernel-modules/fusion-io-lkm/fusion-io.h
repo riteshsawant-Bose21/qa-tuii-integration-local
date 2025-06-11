@@ -22,8 +22,7 @@
 
 /* I2C */
 enum i2c_reg_data_op_size {
-    I2C_REG_DATA_OP_NONE = 0,
-    I2C_REG_DATA_OP_8BIT,
+    I2C_REG_DATA_OP_8BIT = 0,
     I2C_REG_DATA_OP_16BIT
 };
 
