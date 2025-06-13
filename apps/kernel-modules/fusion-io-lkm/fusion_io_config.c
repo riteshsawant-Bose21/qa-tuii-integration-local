@@ -255,19 +255,19 @@ const struct base_device bd_fusion_c0 = {
             .dir = EP_GPIO_DIR_I
         },
         {
-            .name = "gpio_pwr_good",
-            .type = EP_GPIO_TYPE_PHYS,
-            .export = EP_GPIO_EXPORT,
-            .num = 52,
-            .dir = EP_GPIO_DIR_I
-        },
-        {
             .name = "gpio_gpio2_16",
             .type = EP_GPIO_TYPE_PHYS,
             .export = EP_GPIO_EXPORT,
             .num = 48,
             .dir = EP_GPIO_DIR_O,
             .default_val = EP_GPIO_VAL_LO
+        },
+        {
+            .name = "gpio_pwr_goodn",
+            .type = EP_GPIO_TYPE_PHYS,
+            .export = EP_GPIO_EXPORT,
+            .num = 52,
+            .dir = EP_GPIO_DIR_I
         }
     },
     .sec_eeprom = (struct endpoint[]) {

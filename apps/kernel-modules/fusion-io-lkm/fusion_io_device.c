@@ -134,6 +134,8 @@ static int configure_i2c_endpoint(struct platform_device *pdev, struct endpoint 
                                                                             data->reg_addr, data->data_mask, client->addr);
                 return ret;
             }
+
+            fsleep(10);
         }
     }
     
@@ -162,6 +164,8 @@ int ads7128_configure(struct i2c_client *client, struct endpoint_cmd *cmd)
             printk(KERN_ERR "ads7128_configure: failed transfer %i\n", i);
             return ret;
         }
+
+        fsleep(10);
     }
 
     return 0;
@@ -266,14 +270,13 @@ int tca9544_handle_irq(struct endpoint_gpio *ep_gpio)
         return ret;
     }
 
-    printk(KERN_INFO "tca9544_handle_irq: buf=0x%02x\n", *buf);
-
     // last 4 bits are irq mask
     irq_mask = *buf >> 4;
 
     for (int i = 0; i < 4; ++i) {
         if (irq_mask >> i & 1) {
             if (tca9544->gpios[i + 1].linked_gpio == NULL) {
+                printk(KERN_WARNING "tca9544_handle_irq: for irq_mask=0x%02x bit %d is missing linked gpio\n", irq_mask, i);
                 continue;
             }
 
