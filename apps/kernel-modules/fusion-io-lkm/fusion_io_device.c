@@ -164,8 +164,6 @@ int ads7128_configure(struct i2c_client *client, struct endpoint_cmd *cmd)
             printk(KERN_ERR "ads7128_configure: failed transfer %i\n", i);
             return ret;
         }
-
-        fsleep(10);
     }
 
     return 0;
@@ -234,12 +232,12 @@ static int handle_irq(struct endpoint_gpio *ep_gpio)
     int ret = -1;
   
     if (ep_gpio->parent_endpoint) {
-        printk(KERN_INFO "handle_irq: calling ep_handle_irq for %s\n", ep_gpio->name);
+        printk(KERN_INFO "handle_irq: calling ep_handle_irq for gpio %s\n", ep_gpio->name);
         ret = ep_gpio->parent_endpoint->ep_handle_irq(ep_gpio);
     } else if (ep_gpio->parent_io_card) {
         for (int i = 0; i < ep_gpio->num_aggregate_gpios; ++i) {
             aggregate_gpio = ep_gpio->aggregate_gpios[i];
-
+            printk(KERN_INFO "handle_irq: calling ep_handle_irq for agg_gpio %s\n", ep_gpio->name);
             ret = aggregate_gpio->parent_endpoint->ep_handle_irq(aggregate_gpio);
             if (ret == 0) {
                 break;
@@ -272,13 +270,14 @@ int tca9544_handle_irq(struct endpoint_gpio *ep_gpio)
 
     // last 4 bits are irq mask
     irq_mask = *buf >> 4;
-
     for (int i = 0; i < 4; ++i) {
         if (irq_mask >> i & 1) {
             if (tca9544->gpios[i + 1].linked_gpio == NULL) {
-                printk(KERN_WARNING "tca9544_handle_irq: for irq_mask=0x%02x bit %d is missing linked gpio\n", irq_mask, i);
+                printk(KERN_WARNING "tca9544_handle_irq: null linked gpio %s\n", tca9544->gpios[i + 1].name);
                 continue;
             }
+
+            printk(KERN_WARNING "tca9544_handle_irq: calling handle_irq on gpio %s\n", tca9544->gpios[i + 1].linked_gpio->name);
 
             // on i2c switches, gpios[0] is always the interrupt out to device
             handle_irq(tca9544->gpios[i + 1].linked_gpio);
@@ -475,24 +474,26 @@ int ads7128_handle_irq(struct endpoint_gpio *ep_gpio)
         gpio = &ads7128->gpios[channel + 1];
 
         // Check ADC interrupt
-        if (pin_cfg & (1 << channel)) { // ADC input check
+        if (!(pin_cfg & (1 << channel))) { // ADC input check
+            rd_opcode_buf[0] = ADS7128_OPCODE_READ_CONTIGUOUS_REG;
             rd_msgs[1].len = 2;
-            rd_opcode_buf[0] = ADS7128_REG_RECENT_CH0_LSB + channel * 2;
+            rd_opcode_buf[1] = ADS7128_REG_RECENT_CH0_LSB + channel * 2;
             ret = __i2c_transfer(client->adapter, rd_msgs, 2);
             if (ret < 0) {
                 printk(KERN_ERR "ads7128_handle_irq: failed read RECENT_CH0_LSB + %d\n", channel * 2);
                 continue;
             }
 
-            adc_value = (u16)*rd_data_buf; // 12-bit value (i think its 16bit...)
+            adc_value = *(u16 *)rd_data_buf; // 12-bit value (i think its 16bit...)
             gpio->value = adc_value;   // Store ADC value
 
+            printk(KERN_INFO "ads7128_handle_irq: adc_value=0x%04x\n", adc_value);
+
             // Update thresholds (±32)
-            new_high = adc_value + 0x0020;
+            new_high = adc_value > 0xffdf ? 0xffff : adc_value + 0x0020 ;
             new_low = adc_value < 0x0020 ? 0 : adc_value - 0x0020;
 
-            if (new_high > 0x0fff) {
-                new_high = 0x0fff;
+            if (new_high == 0xffff) {
                 new_low = new_high - 0x0040;
             }
             if (new_low == 0) {
@@ -503,14 +504,14 @@ int ads7128_handle_irq(struct endpoint_gpio *ep_gpio)
 
             // Use word writes for high and low thresholds
             wr_buf[1] = ADS7128_REG_HIGH_TH_CH0 + channel * 4;
-            wr_buf[2] = (u8)(new_high >> 4); // lower 4 bits are in HYSTERESIS_CHx reg
+            wr_buf[2] = (u8)(new_high >> 8); // lower 4 bits are in HYSTERESIS_CHx reg
             ret = __i2c_transfer(client->adapter, &wr_msg, 1);
             if (ret < 0) {
                 printk(KERN_ERR "ads7128_handle_irq: failed write HIGH_TH_CH0 + %d\n", channel * 4);
                 continue;
             }
             wr_buf[1] = ADS7128_REG_LOW_TH_CH0 + channel * 4;
-            wr_buf[2] = (u8)(new_low >> 4); // lower 4 bits are in HYSTERESIS_CHx reg
+            wr_buf[2] = (u8)(new_low >> 8); // lower 4 bits are in HYSTERESIS_CHx reg
             ret = __i2c_transfer(client->adapter, &wr_msg, 1);
             if (ret < 0) {
                 printk(KERN_ERR "ads7128_handle_irq: failed write LOW_TH_CH0 + %d\n", channel * 4);
@@ -767,102 +768,128 @@ static void configure_io_card_references(struct platform_device *pdev, struct io
 // - - this is because the irq comes from a physical gpio, and we need to 
 //     figure out what endpoint gpio it came from
 // refer to "levels" described in comment for "link_gpio()"
-static int set_linked_or_aggregate_gpio(struct platform_device *pdev, struct endpoint_gpio *og_ep_gpio, int num_gpios, struct endpoint_gpio *ep_gpios) 
+static int set_linked_or_aggregate_gpio(struct platform_device *pdev, struct endpoint_gpio *ep_gpio, int num_gpios, struct endpoint_gpio *parent_gpios) 
 {
-    struct endpoint_gpio *ep_gpio;
+    struct endpoint_gpio *parent_gpio;
     
     int i, j;
 
     for (i = 0; i < num_gpios; ++i) {
-        ep_gpio = &ep_gpios[i];
+        parent_gpio = &parent_gpios[i];
 
-        if (!strcmp(ep_gpio->name, og_ep_gpio->name)) {
-            if (og_ep_gpio->is_irq == false) {
-                if (og_ep_gpio->aggregate_id != 0) {
+        if (!strcmp(parent_gpio->name, ep_gpio->name)) {
+            if (ep_gpio->is_irq == false) {
+                if (ep_gpio->aggregate_id != 0) {
                     // first, count how many gpios are aggregated
                     j = i;
-                    while (og_ep_gpio->aggregate_id == ep_gpio->aggregate_id) {
-                        ep_gpio = &ep_gpios[j++];
-                        if (j >= num_gpios) {
+                    while (ep_gpio->aggregate_id == parent_gpio->aggregate_id) {
+                        parent_gpio = &parent_gpios[j++];
+                        if (j > num_gpios) {
                             break;
                         }
                     }
 
                     // allocate the memory for thos gpios
-                    og_ep_gpio->aggregate_gpios = devm_kzalloc(&pdev->dev, sizeof(struct ep_gpio *) * (j - i - 1), GFP_KERNEL);
-                    if (og_ep_gpio->aggregate_gpios == NULL) {
+                    ep_gpio->aggregate_gpios = devm_kzalloc(&pdev->dev, sizeof(struct ep_gpio *) * (j - i - 1), GFP_KERNEL);
+                    if (ep_gpio->aggregate_gpios == NULL) {
                         dev_err(&pdev->dev, "ENOMEM from aggregate gpio alloc in link_gpio!");
                         return -ENOMEM;
                     }
 
                     // reset the agg gpio and counter
-                    ep_gpio = &ep_gpios[i];
+                    parent_gpio = &parent_gpios[i];
                     j = 0;
 
                     // now assign them
-                    while (og_ep_gpio->aggregate_id == ep_gpio->aggregate_id) {
-                        og_ep_gpio->num = ep_gpio->num;
-                        og_ep_gpio->aggregate_gpios[j++] = ep_gpio;
+                    while (ep_gpio->aggregate_id == parent_gpio->aggregate_id) {
+                        ep_gpio->num = parent_gpio->num;
+                        ep_gpio->aggregate_gpios[j++] = parent_gpio;
 
-                        dev_info(&pdev->dev, "Linking aggregate GPIO %s to GPIO %s\n", ep_gpio->name, og_ep_gpio->name);
+                        dev_info(&pdev->dev, "Linking aggregate GPIO %s:%s to GPIO %s:%s\n", ep_gpio->parent_io_card ?
+                                                                                            ep_gpio->parent_io_card->data.model :
+                                                                                            ep_gpio->parent_endpoint->name,
+                                                                                            ep_gpio->name,
+                                                                                            parent_gpio->parent_io_card ? 
+                                                                                            parent_gpio->parent_io_card->data.model : 
+                                                                                            parent_gpio->parent_endpoint->name,
+                                                                                            parent_gpio->name);
 
                         if (++i >= num_gpios) {
                             break;
                         }
-                        ep_gpio = &ep_gpios[i];
+                        parent_gpio = &parent_gpios[i];
                     }
 
-                    og_ep_gpio->num_aggregate_gpios = j; 
+                    ep_gpio->num_aggregate_gpios = j; 
 
-                    dev_info(&pdev->dev, "Successfully linked (%d) aggregate GPIOs to GPIO %s\n", j, og_ep_gpio->name);
+                    dev_info(&pdev->dev, "Successfully linked (%d) aggregate GPIOs to %s:%s\n", j, ep_gpio->parent_io_card ? 
+                                                                                                    ep_gpio->parent_io_card->data.model : 
+                                                                                                    ep_gpio->parent_endpoint->name,
+                                                                                                    ep_gpio->name);
                     return 0;
                 } else {
-                    og_ep_gpio->linked_gpio = ep_gpio;
-                    og_ep_gpio->num = ep_gpio->num;
+                    ep_gpio->linked_gpio = parent_gpio;
+                    ep_gpio->num = parent_gpio->num;
 
-                    dev_info(&pdev->dev, "Successfully linked GPIO %s to GPIO %s\n", ep_gpio->name, og_ep_gpio->name);
+                    dev_info(&pdev->dev, "Successfully linked %s:%s to %s:%s\n", ep_gpio->parent_io_card ? 
+                                                                                ep_gpio->parent_io_card->data.model : 
+                                                                                ep_gpio->parent_endpoint->name,
+                                                                                ep_gpio->name, parent_gpio->parent_io_card ?
+                                                                                parent_gpio->parent_io_card->data.model :
+                                                                                parent_gpio->parent_endpoint->name,
+                                                                                parent_gpio->name);
                     return 0;
                 }
-            } else if (og_ep_gpio->is_irq == true) {
-                if (ep_gpio->aggregate_id != 0) {
+            } else if (ep_gpio->is_irq == true) {
+                // process of adding aggregate gpios only works off of endpoint irqs
+                // ic irqs have aggregate_id too, but they must be phys_gpios pointed to by bd gpios
+                if (parent_gpio->aggregate_id != 0 && ep_gpio->parent_endpoint) {
                     int size = 1;
                     // if there are no aggregate gpios yet, kzalloc this one
-                    if (ep_gpio->aggregate_gpios == NULL) {
+                    if (parent_gpio->aggregate_gpios == NULL) {
                         // first allocate the list of pointers
-                        ep_gpio->aggregate_gpios = devm_kzalloc(&pdev->dev, sizeof(struct ep_gpio *), GFP_KERNEL);
-                        if (ep_gpio->aggregate_gpios == NULL) {
+                        parent_gpio->aggregate_gpios = devm_kzalloc(&pdev->dev, sizeof(struct ep_gpio *), GFP_KERNEL);
+                        if (parent_gpio->aggregate_gpios == NULL) {
                             dev_err(&pdev->dev, "ENOMEM from aggregate irq gpio array alloc in link_gpio!");
                             return -ENOMEM;
                         }
 
-                        ep_gpio->num_aggregate_gpios = 1;
+                        parent_gpio->num_aggregate_gpios = 1;
                     } else {
                         // get the existing pointer array size
-                        size = ep_gpio->num_aggregate_gpios;
+                        size = parent_gpio->num_aggregate_gpios;
 
                         // resize the pointer array
-                        ep_gpio->aggregate_gpios = devm_krealloc(&pdev->dev, og_ep_gpio->aggregate_gpios, sizeof(struct ep_gpio *) * (size + 1), GFP_KERNEL);
-                        if (ep_gpio->aggregate_gpios == NULL) {
+                        parent_gpio->aggregate_gpios = devm_krealloc(&pdev->dev, ep_gpio->aggregate_gpios, sizeof(struct ep_gpio *) * (size + 1), GFP_KERNEL);
+                        if (parent_gpio->aggregate_gpios == NULL) {
                             dev_err(&pdev->dev, "ENOMEM from aggregate irq gpio realloc in link_gpio!");
                             return -ENOMEM;
                         }
 
-                        ep_gpio->num_aggregate_gpios += 1;
+                        parent_gpio->num_aggregate_gpios += 1;
                     }
                     
-                    ep_gpio->aggregate_gpios[size - 1] = og_ep_gpio;
+                    parent_gpio->aggregate_gpios[size - 1] = ep_gpio;
 
-                    dev_info(&pdev->dev, "Successfully linked aggregate GPIO %s to GPIO %s\n", og_ep_gpio->name, ep_gpio->name);
+                    dev_info(&pdev->dev, "Successfully linked aggregate irq %s:%s to %s:%s\n", parent_gpio->parent_io_card ? 
+                                                                                                parent_gpio->parent_io_card->data.model : 
+                                                                                                parent_gpio->parent_endpoint->name,
+                                                                                                parent_gpio->name, ep_gpio->parent_io_card ?
+                                                                                                ep_gpio->parent_io_card->data.model :
+                                                                                                ep_gpio->parent_endpoint->name,
+                                                                                                ep_gpio->name);
                     return 0;
+                
                 } else {
-                    // if ep_gpio already is linked, go ahead and skip the endpoint
-                    if (ep_gpio->linked_gpio != NULL) {
-                        break;
-                    }
+                    parent_gpio->linked_gpio = ep_gpio;
 
-                    ep_gpio->linked_gpio = og_ep_gpio;
-
-                    dev_info(&pdev->dev, "Successfully linked irq GPIO %s to GPIO %s\n", og_ep_gpio->name, ep_gpio->name);
+                    dev_info(&pdev->dev, "Successfully linked irq %s:%s to %s:%s\n", parent_gpio->parent_io_card ? 
+                                                                                    parent_gpio->parent_io_card->data.model : 
+                                                                                    parent_gpio->parent_endpoint->name,
+                                                                                    parent_gpio->name, ep_gpio->parent_io_card ?
+                                                                                    ep_gpio->parent_io_card->data.model :
+                                                                                    ep_gpio->parent_endpoint->name,
+                                                                                    ep_gpio->name);
                     return 0;
                 }
             }
@@ -879,7 +906,7 @@ static int set_linked_or_aggregate_gpio(struct platform_device *pdev, struct end
 // 4. for aggregate gpios (links in aggregate_gpios):
 // 4a. exportable non-irq aggregated GPIOs link down to multiple io expander pins
 // 4b. aggregated irq GPIOs are aggregated on an io_card gpio which links up to multiple endpoint gpios; physical gpio links up to the aggregated io_card gpio
-// 5. when linking, only search levels below the gpio to be linked:
+// 5. when linking, only search levels below the gpio to be linked, except search everything for io_card endpoints:
 //
 // "levels":
 // - base_device gpios
@@ -894,123 +921,122 @@ static int set_linked_or_aggregate_gpio(struct platform_device *pdev, struct end
 // Example 3 - if the gpio to be linked is an io_card endpoint gpio, search everything
 // 
 // NOTE: before link_gpio is called on any GPIO, ALL LOWER LEVEL GPIO's parent relationships MUST be populated by "configure_x_references()"
-static void link_gpio(struct platform_device *pdev, struct endpoint_gpio *og_ep_gpio) 
+static void link_gpio(struct platform_device *pdev, struct endpoint_gpio *ep_gpio) 
 {
     struct base_device *bd = bd_drvdata->fusion_device;
-    struct io_card *og_ic;
-    struct endpoint *og_ep;
+    struct io_card *parent_ic;
+    struct endpoint *parent_ep;
     struct endpoint *ep;
 
     int ret;
     int i;
 
     // irqs are never exported to sysfs
-    if (og_ep_gpio->is_irq == false && og_ep_gpio->export == EP_GPIO_NO_EXPORT) {
+    if (ep_gpio->is_irq == false && ep_gpio->export == EP_GPIO_NO_EXPORT) {
         return;
     }
     
-    if (og_ep_gpio->type == EP_GPIO_TYPE_VIRT) {
+    if (ep_gpio->type == EP_GPIO_TYPE_VIRT) {
         // first get parent ep and ic links
-        if (og_ep_gpio->parent_endpoint) {
-            og_ep = og_ep_gpio->parent_endpoint;
+        if (ep_gpio->parent_endpoint) {
+            parent_ep = ep_gpio->parent_endpoint;
 
             // we never export GPIOs on io expanders (and therefore never add a linked_gpio), but irq's on io expanders get linked
-            if (og_ep->ioexp_id > 0 && og_ep_gpio->is_irq == false) {
+            if (parent_ep->ioexp_id > 0 && ep_gpio->is_irq == false) {
                 return;
             }
 
-            if (og_ep->parent_io_card) {
-                og_ic = og_ep->parent_io_card;
+            if (parent_ep->parent_io_card) {
+                parent_ic = parent_ep->parent_io_card;
             } else  {
-                og_ic = NULL;
+                parent_ic = NULL;
             }
-        } else if (og_ep_gpio->parent_io_card) {
-            og_ic = og_ep_gpio->parent_io_card;
-            og_ep = NULL;
-        } else if (og_ep_gpio->parent_base_device) {
+        } else if (ep_gpio->parent_io_card) {
+            parent_ic = ep_gpio->parent_io_card;
+            parent_ep = NULL;
+        } else if (ep_gpio->parent_base_device) {
             // nothing to do -- irq links get set when we find the higher level irq later
             return;
         }
 
-        if (og_ic) {
-            // only if gpio is on io_card endpoint do we search any io_card gpios
-            if (og_ep) {
-                ret = set_linked_or_aggregate_gpio(pdev, og_ep_gpio, og_ic->num_gpios, og_ic->gpios);
+        // if gpio is on an ic endpoint, search the ic AND ic endpoint gpios
+        // if gpio is just on ic, and is aggregate, we need to search up into endpoints
+        if (parent_ic && (parent_ep || ep_gpio->aggregate_id != 0) && !ep_gpio->is_irq) {
+            // search ic gpios
+            if (parent_ep) {
+                ret = set_linked_or_aggregate_gpio(pdev, ep_gpio, parent_ic->num_gpios, parent_ic->gpios);
                 if (!ret) {
                     return;
                 }
             }
 
             // now search the ic endpoint gpios
-            for (i = 0; i < og_ic->num_eps; ++i) {
-                ep = &og_ic->endpoints[i];
+            for (i = 0; i < parent_ic->num_eps; ++i) {
+                ep = &parent_ic->endpoints[i];
 
                 // if gpio is on an endpoint, don't search that endpoint's gpios
-                if (og_ep) {
-                    if (!strcmp(og_ep->name, ep->name)) {
-                        continue;
-                    }
+                if (parent_ep && !strcmp(parent_ep->name, ep->name)) {
+                    continue;
                 }
 
-                ret = set_linked_or_aggregate_gpio(pdev, og_ep_gpio, ep->num_gpios, ep->gpios);
+                ret = set_linked_or_aggregate_gpio(pdev, ep_gpio, ep->num_gpios, ep->gpios);
                 if (!ret) {
                     return;
                 }
             }
         } 
 
-        // No match on IC or gpio is not on an IC
-        // check base device pwr io expander
-        if (bd->pwr_io_exp != NULL) {
-            ep = bd->pwr_io_exp;
-            // if gpio is on the pwr_io_exp, don't search it.
-            if (!og_ep || (og_ep && strcmp(og_ep->name, ep->name))) {
-                ret = set_linked_or_aggregate_gpio(pdev, og_ep_gpio, ep->num_gpios, ep->gpios);
-                if (!ret) {
-                    return;
-                }
-            }
-        }
-
-        // check base device i2c sw
-        if (bd->i2c_sw != NULL) {
-            ep = bd->i2c_sw;
-            // if gpio is on the i2c sw, don't search it.
-            if (!og_ep || (og_ep && strcmp(og_ep->name, ep->name))) {
-                ret = set_linked_or_aggregate_gpio(pdev, og_ep_gpio, ep->num_gpios, ep->gpios);
-                if (!ret) {
-                    return;
-                }
-            }
-        }
-        
-        // possible a base device endpoint is an io expander or switch...
+        // If we haven't found link, check base device gpios
         for (i = 0; i < bd->num_eps; ++i) {
             ep = &bd->endpoints[i];
-
-            // if gpio is on an endpoint, don't search that endpoint's gpios
-            if (og_ep) {
-                if (!strcmp(og_ep->name, ep->name)) {
-                    continue;
-                }
+            // don't check if it's the same endpoint ep_gpio is on
+            if (parent_ep && !strcmp(parent_ep->name, ep->name)) {
+                continue;
             }
 
-            ret = set_linked_or_aggregate_gpio(pdev, og_ep_gpio, ep->num_gpios, ep->gpios);
+            ret = set_linked_or_aggregate_gpio(pdev, ep_gpio, ep->num_gpios, ep->gpios);
             if (!ret) {
                 return;
             }
         }
-    } else if (og_ep_gpio->type == EP_GPIO_TYPE_PHYS) {
+        if (bd->pwr_io_exp != NULL) {
+            ep = bd->pwr_io_exp;
+            // don't check if it's the same endpoint ep_gpio is on
+            if (!(parent_ep && !strcmp(parent_ep->name, ep->name))) {
+                ret = set_linked_or_aggregate_gpio(pdev, ep_gpio, ep->num_gpios, ep->gpios);
+                if (!ret) {
+                    return;
+                }
+            }
+        }
+        if (bd->i2c_sw != NULL) {
+            ep = bd->i2c_sw;
+            // don't check if it's the same endpoint ep_gpio is on
+            if (!(parent_ep && !strcmp(parent_ep->name, ep->name))) {
+                ret = set_linked_or_aggregate_gpio(pdev, ep_gpio, ep->num_gpios, ep->gpios);
+                if (!ret) {
+                    return;
+                }
+            }
+        }
+    } else if (ep_gpio->type == EP_GPIO_TYPE_PHYS) {
         // physical gpios just need a base_device match
         for (i = 0; i < bd->num_gpios; ++i) {
-            if (!strcmp(og_ep_gpio->name, bd->gpios[i].name)) {
-                if (og_ep_gpio->is_irq == false) {
-                    dev_info(&pdev->dev, "Successfully linked phys GPIO %s to %s", og_ep_gpio->name, bd->gpios[i].name);
-                    og_ep_gpio->linked_gpio = &bd->gpios[i];
-                } else {
-                    dev_info(&pdev->dev, "Successfully linked phys GPIO irq %s to %s", bd->gpios[i].name, og_ep_gpio->name);
-                    bd->gpios[i].linked_gpio = og_ep_gpio;
-                    og_ep_gpio->linked_gpio = &bd->gpios[i];
+            if (!strcmp(ep_gpio->name, bd->gpios[i].name)) {
+                if (ep_gpio->is_irq == false) {
+                    dev_info(&pdev->dev, "Successfully linked phys GPIO %s:%s to %s:%s", ep_gpio->parent_io_card ?
+                                                                                        ep_gpio->parent_io_card->data.model :
+                                                                                        ep_gpio->parent_endpoint->name,
+                                                                                        ep_gpio->name, 
+                                                                                        bd->data.model, bd->gpios[i].name);
+                    ep_gpio->linked_gpio = &bd->gpios[i];
+                } else if (ep_gpio->is_irq == true) {
+                    dev_info(&pdev->dev, "Successfully linked phys GPIO irq %s:%s to %s:%s", bd->data.model, bd->gpios[i].name,
+                                                                                            ep_gpio->parent_io_card ?
+                                                                                            ep_gpio->parent_io_card->data.model :
+                                                                                            ep_gpio->parent_endpoint->name,
+                                                                                            ep_gpio->name);
+                    bd->gpios[i].linked_gpio = ep_gpio;
                 }
 
                 return;
@@ -1018,7 +1044,12 @@ static void link_gpio(struct platform_device *pdev, struct endpoint_gpio *og_ep_
         }
     }
 
-    dev_info(&pdev->dev, "Reached end of link_gpio for GPIO %s", og_ep_gpio->name);
+    dev_info(&pdev->dev, "link_gpio: no link for GPIO %s:%s", ep_gpio->parent_io_card ?
+                                                                ep_gpio->parent_io_card->data.model :
+                                                                ep_gpio->parent_endpoint ?
+                                                                ep_gpio->parent_endpoint->name :
+                                                                ep_gpio->parent_base_device->data.model,
+                                                                ep_gpio->name);
 }
 
 static int configure_base_device_gpios(struct platform_device *pdev)
@@ -1090,7 +1121,7 @@ static int configure_base_device_gpios(struct platform_device *pdev)
 
             dev_info(&pdev->dev, "Configuring base device gpio %s:%s", ep->name, ep_gpio->name);
 
-            if (ep_gpio->type == EP_GPIO_TYPE_PHYS) {
+            if (ep_gpio->type == EP_GPIO_TYPE_PHYS && !ep_gpio->is_irq) {
                 ep_gpio->desc = ep_gpio->linked_gpio->desc;
                 if (!ep_gpio->desc) {
                     dev_err(&pdev->dev, "GPIO desc is NULL for %s\n", ep_gpio->name);
@@ -1114,7 +1145,7 @@ static int configure_base_device_gpios(struct platform_device *pdev)
 
             dev_info(&pdev->dev, "Configuring base device gpio %s:%s", ep->name, ep_gpio->name);
 
-            if (ep_gpio->type == EP_GPIO_TYPE_PHYS) {
+            if (ep_gpio->type == EP_GPIO_TYPE_PHYS && !ep_gpio->is_irq) {
                 ep_gpio->desc = ep_gpio->linked_gpio->desc;
                 if (!ep_gpio->desc) {
                     dev_err(&pdev->dev, "GPIO desc is NULL for %s\n", ep_gpio->name);
@@ -1138,7 +1169,7 @@ static int configure_base_device_gpios(struct platform_device *pdev)
 
             dev_info(&pdev->dev, "Configuring base device gpio %s:%s", ep->name, ep_gpio->name);
 
-            if (ep_gpio->type == EP_GPIO_TYPE_PHYS) {
+            if (ep_gpio->type == EP_GPIO_TYPE_PHYS && !ep_gpio->is_irq) {
                 ep_gpio->desc = ep_gpio->linked_gpio->desc;
                 if (!ep_gpio->desc) {
                     dev_err(&pdev->dev, "GPIO desc is NULL for %s\n", ep_gpio->name);
@@ -1170,7 +1201,7 @@ static int configure_base_device_gpios(struct platform_device *pdev)
                 continue;
             }
 
-            if (ep_gpio->type == EP_GPIO_TYPE_PHYS) {
+            if (ep_gpio->type == EP_GPIO_TYPE_PHYS && !ep_gpio->is_irq) {
                 ep_gpio->desc = ep_gpio->linked_gpio->desc;
                 if (!ep_gpio->desc) {
                     dev_err(&pdev->dev, "GPIO desc is NULL for %s\n", ep_gpio->name);
@@ -1206,7 +1237,7 @@ static int configure_base_device_gpios(struct platform_device *pdev)
                 }
             }
 
-            if (ep_gpio->type == EP_GPIO_TYPE_PHYS) {
+            if (ep_gpio->type == EP_GPIO_TYPE_PHYS && !ep_gpio->is_irq) {
                 ep_gpio->desc = ep_gpio->linked_gpio->desc;
                 if (!ep_gpio->desc) {
                     dev_err(&pdev->dev, "GPIO desc is NULL for %s\n", ep_gpio->name);
@@ -1237,13 +1268,6 @@ static int configure_io_card_gpios(struct platform_device *pdev, struct io_card 
         ep_gpio = &ic->gpios[i];
 
         link_gpio(pdev, ep_gpio);
-
-        if (ep_gpio->ioexp_id > 0) {
-            if (!ep_gpio->linked_gpio && !ep_gpio->aggregate_gpios) {
-                dev_err(&pdev->dev, "GPIO %s:%s is missing a link to an IO Expander GPIO\n", ic->data.model, ep_gpio->name);
-                continue;
-            }
-        }
 
         if (ep_gpio->type == EP_GPIO_TYPE_PHYS) {
             ep_gpio->desc = ep_gpio->linked_gpio->desc;

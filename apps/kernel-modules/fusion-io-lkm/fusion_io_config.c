@@ -424,7 +424,6 @@ const struct base_device bd_fusion_c0 = {
                     .type = EP_GPIO_TYPE_VIRT,
                     .export = EP_GPIO_NO_EXPORT,
                     .num = 3,
-                    .aggregate_id = 7,
                     .is_irq = true,
                     .trigger_type = IRQ_TYPE_EDGE_FALLING,
                     .dir = EP_GPIO_DIR_I
@@ -1444,7 +1443,7 @@ const struct base_device bd_fusion_c0 = {
                             .name = "cmd_config",
                             .type = EP_CMD_TYPE_CFG,
                             .export = EP_CMD_NO_EXPORT,
-                            .num_i2c_cmds = 12,
+                            .num_i2c_cmds = 13,
                             .i2c_cmds = (struct i2c_reg_data[]) {
                                 { .reg_addr = ADS7128_REG_SYSTEM_STATUS,   .data_mask = 0x01 }, // clear BOR
                                 { .reg_addr = ADS7128_REG_AUTO_SEQ_CH_SEL, .data_mask = 0x3F }, // AUTO_SEQ_CHSEL 0-5

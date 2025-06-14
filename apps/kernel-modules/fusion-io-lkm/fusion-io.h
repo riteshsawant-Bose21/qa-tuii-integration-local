@@ -255,6 +255,7 @@ enum ads7128_regs {
 #define ADS7128_OPCODE_WRITE_REG 0x08
 #define ADS7128_OPCODE_SET_BIT   0x18
 #define ADS7128_OPCODE_CLR_BIT   0x20
+#define ADS7128_OPCODE_READ_CONTIGUOUS_REG  0x30
     /* 0x00 - 0x0F */
     ADS7128_REG_SYSTEM_STATUS        = 0x00, /* [reset = 0x81] */
     ADS7128_REG_GENERAL_CFG          = 0x01, /* [reset = 0x00] */
