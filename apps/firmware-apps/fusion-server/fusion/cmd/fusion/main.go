@@ -13,11 +13,11 @@ import (
 // parseFlags parses and validates command-line flags.
 func parseFlags() *api.AppConfig {
 	versionFlag := flag.Bool("version", false, "Show version information")
-	nodeName := flag.String("name", "", "Node name")
-	bindAddr := flag.String("addr", "0.0.0.0", "Bind address")
-	bindPort := flag.Int("port", 7946, "Bind port")
-	local := flag.Bool("local", false, "Local mode")
-	verbose := flag.Bool("verbose", false, "Verbose output")
+	nodeName := flag.String("name", "", "Node name (must be unique in cluster)")
+	bindAddr := flag.String("bind-addr", "0.0.0.0", "Bind address for cluster communication")
+	bindPort := flag.Int("bind-port", 7946, "Bind port for cluster communication (default 7946)")
+	local := flag.Bool("local", false, "Run in local-only mode (no clustering)")
+	verbose := flag.Bool("verbose", false, "Enable verbose logging")
 	flag.Parse()
 
 	if *versionFlag {

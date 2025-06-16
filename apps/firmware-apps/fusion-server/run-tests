@@ -10,6 +10,7 @@ function show_help() {
     echo "  --fusion      Run only fusion tests"     
     echo "  --logger      Run only logger tests"     
     echo "  --persistence Run only persistence tests"     
+    echo "  --sap         Run only SAP tests"     
     echo "  --short       Run short versions of all tests"     
     echo "  --snapshot    Run only snapshot tests"     
     echo "  --state       Run only state manager tests"     
@@ -54,6 +55,11 @@ while [[ $# -gt 0 ]]; do
             test_type="persistence"
             shift
             ;;
+        --sap)
+            test_type="sap"
+            shift
+            ;;
+
         --short)
             test_type="short"
             shift
@@ -118,6 +124,9 @@ case "$test_type" in
     "persistence")
         go test -v --race ./persistence_test.go
         ;;
+    "sap")
+        go test -v --race ./sap_test.go
+        ;;        
     "short")
         go test -v --race  -short -tags='!exclude' ./... -args --auto --vip "$vip"
         ;;

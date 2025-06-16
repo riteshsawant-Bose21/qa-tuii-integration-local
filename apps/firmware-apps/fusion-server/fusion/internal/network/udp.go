@@ -3,108 +3,81 @@ package network
 import (
 	"encoding/json"
 	"fmt"
+	"net"
+	"sync"
+	"time"
+
 	"fusion/internal/api"
 	"fusion/internal/logging"
 	"fusion/internal/server"
 	"fusion/internal/server/handler"
-	"net"
-	"sync"
-	"time"
 )
 
 type UDPServer struct {
-	addr       string
-	conn       *net.UDPConn
-	handler    *handler.Handler
-	stopChan   chan struct{}
-	wg         sync.WaitGroup
+	*Listener
 	clients    map[string]*net.UDPAddr
 	clientsMux sync.RWMutex
+	handler    *handler.Handler
 }
 
 func NewUDPServer(addr string, handler *handler.Handler) (*UDPServer, error) {
-	udpAddr, err := net.ResolveUDPAddr("udp", addr)
+	conn, err := ResolveListenUDP(addr)
 	if err != nil {
-		return nil, fmt.Errorf("failed to resolve address: %v", err)
+		return nil, err
+	}
+	logging.GetLogger().Info("UDP listening on %s", addr)
+
+	srv := &UDPServer{
+		clients: make(map[string]*net.UDPAddr),
+		handler: handler,
 	}
 
-	conn, err := net.ListenUDP("udp", udpAddr)
+	srv.Listener = NewListener(
+		conn,
+		defaultBufferSize,
+		time.Second,
+		srv.packetHandler,
+	)
+
+	srv.Start()
+	return srv, nil
+}
+
+func (s *UDPServer) BroadcastUpdate(msg *api.NotifyMessage) error {
+	if msg.Operation != api.NotifyOpConfigUpdate {
+		return nil
+	}
+	data, err := json.Marshal(msg.ConfigUpdate.Data)
 	if err != nil {
-		return nil, fmt.Errorf("failed to listen: %v", err)
+		return fmt.Errorf("marshal update: %w", err)
 	}
 
-	logging.GetLogger().Info("UDP server listening on %s", addr)
-
-	return &UDPServer{
-		addr:     addr,
-		conn:     conn,
-		handler:  handler,
-		stopChan: make(chan struct{}),
-		clients:  make(map[string]*net.UDPAddr),
-	}, nil
-}
-
-func (s *UDPServer) Start() {
-	s.wg.Add(1)
-	go s.listen()
-}
-
-func (s *UDPServer) Stop() {
-	close(s.stopChan)
-	s.conn.Close()
-	s.wg.Wait()
-
-	s.clientsMux.Lock()
-	s.clients = make(map[string]*net.UDPAddr)
-	s.clientsMux.Unlock()
-}
-
-func (s *UDPServer) listen() {
-	defer s.wg.Done()
-	buffer := make([]byte, 65535)
-
-	for {
-		select {
-		case <-s.stopChan:
-			return
-		default:
-			s.conn.SetReadDeadline(time.Now().Add(1 * time.Second))
-			n, addr, err := s.conn.ReadFromUDP(buffer)
-
-			if err != nil {
-				if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
-					continue
-				}
-
-				select {
-				case <-s.stopChan:
-					return
-				default:
-					logging.GetLogger().Error("Error reading UDP from %v: %v", addr, err)
-					if addr != nil {
-						s.removeClient(addr.String())
-					}
-					continue
-				}
-			}
-
-			go s.handleMessage(buffer[:n], addr)
+	var dead []string
+	s.clientsMux.RLock()
+	for k, addr := range s.clients {
+		_, err := s.conn.WriteToUDP(data, addr)
+		if err != nil {
+			logging.GetLogger().Error("broadcast to %s failed: %v", k, err)
+			dead = append(dead, k)
 		}
 	}
+	s.clientsMux.RUnlock()
+
+	for _, k := range dead {
+		s.clientsMux.Lock()
+		delete(s.clients, k)
+		s.clientsMux.Unlock()
+	}
+	return nil
 }
 
-func (s *UDPServer) removeClient(addr string) {
-	s.clientsMux.Lock()
-	delete(s.clients, addr)
-	s.clientsMux.Unlock()
-}
+func (s *UDPServer) packetHandler(data []byte, addr *net.UDPAddr) {
 
-func (s *UDPServer) handleMessage(data []byte, addr *net.UDPAddr) {
 	s.clientsMux.Lock()
 	s.clients[addr.String()] = addr
 	s.clientsMux.Unlock()
 
-	response, err := s.handler.HandleUDPMessage(data)
+	resp, err := s.handler.HandleUDPMessage(data)
 	if err != nil {
 		s.sendResponse(addr, server.UDPResponse{
 			Status:  "error",
@@ -112,53 +85,19 @@ func (s *UDPServer) handleMessage(data []byte, addr *net.UDPAddr) {
 		})
 		return
 	}
-
-	s.sendResponse(addr, response)
+	s.sendResponse(addr, resp)
 }
 
-func (s *UDPServer) sendResponse(addr *net.UDPAddr, response any) {
-	data, err := json.Marshal(response)
+func (s *UDPServer) sendResponse(addr *net.UDPAddr, v any) {
+	b, err := json.Marshal(v)
 	if err != nil {
-		logging.GetLogger().Error("Error marshaling response: %v", err)
+		logging.GetLogger().Error("marshal error: %v", err)
 		return
 	}
-
-	if _, err := s.conn.WriteToUDP(data, addr); err != nil {
-		logging.GetLogger().Error("Error sending response: %v", err)
-		s.removeClient(addr.String())
+	if _, err := s.conn.WriteToUDP(b, addr); err != nil {
+		logging.GetLogger().Error("write error: %v", err)
+		s.clientsMux.Lock()
+		delete(s.clients, addr.String())
+		s.clientsMux.Unlock()
 	}
-}
-
-func (s *UDPServer) BroadcastUpdate(message *api.NotifyMessage) error {
-
-	if message.Operation == api.NotifyOpConfigUpdate {
-		data, err := json.Marshal(message.ConfigUpdate.Data)
-		if err != nil {
-			return fmt.Errorf("failed to marshal update: %v", err)
-		}
-
-		s.clientsMux.RLock()
-		deadClients := make([]string, 0)
-
-		for addrStr, clientAddr := range s.clients {
-			logging.GetLogger().Debug("Sending update to %s: %s", addrStr, string(data))
-			_, err = s.conn.WriteToUDP(data, clientAddr)
-			if err != nil {
-				logging.GetLogger().Error("Failed to send update to %s: %v", addrStr, err)
-				deadClients = append(deadClients, addrStr)
-			}
-		}
-		s.clientsMux.RUnlock()
-
-		for _, addr := range deadClients {
-			s.removeClient(addr)
-		}
-	}
-
-	return nil
-}
-
-func (s *UDPServer) Close() error {
-	s.Stop()
-	return nil
 }

@@ -8,6 +8,7 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/websocket v1.5.3
 	github.com/hashicorp/memberlist v0.5.1
+	github.com/pion/sdp/v3 v3.0.13
 	github.com/prometheus/client_golang v1.22.0
 	github.com/robfig/cron/v3 v3.0.1
 	go.etcd.io/bbolt v1.4.0
@@ -23,6 +24,7 @@ require (
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
 	github.com/mgutz/logxi v0.0.0-20161027140823-aebf8a7d67ab // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
+	github.com/pion/randutil v0.1.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.62.0 // indirect
@@ -53,6 +55,6 @@ require (
 	github.com/hashicorp/golang-lru v1.0.2 // indirect
 	github.com/miekg/dns v1.1.62 // indirect
 	github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529 // indirect
-	golang.org/x/net v0.34.0 // indirect
+	golang.org/x/net v0.34.0
 	golang.org/x/sys v0.30.0 // indirect
 )

@@ -13,7 +13,6 @@ import (
 	"fusion/internal/persistence"
 	"fusion/internal/utils"
 
-	"github.com/gorilla/mux"
 	"github.com/robfig/cron/v3"
 )
 
@@ -244,7 +243,7 @@ func (tm *TaskManager) GetTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := extractTaskID(r)
+	id, err := utils.ExtractId(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -267,7 +266,7 @@ func (tm *TaskManager) DeleteTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := extractTaskID(r)
+	id, err := utils.ExtractId(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -318,7 +317,7 @@ func (tm *TaskManager) EnableTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := extractTaskID(r)
+	id, err := utils.ExtractId(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -358,7 +357,7 @@ func (tm *TaskManager) DisableTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := extractTaskID(r)
+	id, err := utils.ExtractId(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -445,15 +444,6 @@ func (tm *TaskManager) loadHistory() error {
 	}
 
 	return json.Unmarshal(data, &tm.executionHistory)
-}
-
-// extractTaskID pulls the “id” var from mux and returns a proper error if it’s missing.
-func extractTaskID(r *http.Request) (string, error) {
-	id := mux.Vars(r)["id"]
-	if id == "" {
-		return "", fmt.Errorf("task ID is required")
-	}
-	return id, nil
 }
 
 // fetchTask loads a task by ID from the boltdb and returns it (or an error).

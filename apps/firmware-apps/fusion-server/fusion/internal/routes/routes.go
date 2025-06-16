@@ -67,6 +67,9 @@ const (
 
 	RootEndpoint = "/"
 
+	SessionsEndpoint   = "/sessions"
+	SessionsIdEndpoint = SessionsEndpoint + "/{id}"
+
 	SnapshotsEndpoint         = "/snapshots"
 	SnapshotsNameEndpoint     = SnapshotsEndpoint + "/{name}"
 	SnapshotsActivateEndpoint = SnapshotsEndpoint + "/activate/{name}"

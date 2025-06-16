@@ -203,10 +203,11 @@ func (s *FusionServer) UpdateValue(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Write the JSON response.
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		http.Error(w, fmt.Sprintf("Error encoding response: %v", err), http.StatusInternalServerError)
+		return
 	}
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
 }
 
 // ExportState handles HTTP GET requests to export the entire configuration state.
@@ -220,12 +221,14 @@ func (s *FusionServer) ExportState(w http.ResponseWriter, r *http.Request) {
 	state := s.handler.StateManager.GetFullState()
 
 	// Write the JSON response.
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	encoder := json.NewEncoder(w)
 	if err := encoder.Encode(state); err != nil {
 		logging.GetLogger().Error("Export state failed: %v", err)
 		http.Error(w, "Error exporting state", http.StatusInternalServerError)
+		return
 	}
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
+
 }
 
 // ImportState handles HTTP POST requests to import configuration state.
@@ -594,11 +597,11 @@ func (s *FusionServer) GetMembers(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve the list of members from the handler's member list.
 	members := s.handler.Memberlist.Members()
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	if err := json.NewEncoder(w).Encode(members); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
 }
 
 func (s *FusionServer) ListMessages(w http.ResponseWriter, r *http.Request) {
@@ -661,6 +664,48 @@ func (s *FusionServer) CancelAlarms(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequirePut(w, r) {
 		return
 	}
+}
+
+// GetSessions handles HTTP GET requests to get SAP sessions
+func (s *FusionServer) GetSessions(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireGet(w, r) {
+		return
+	}
+
+	sessions := s.handler.HandleListSessions()
+
+	err := json.NewEncoder(w).Encode(map[string]any{"sessions": sessions})
+	if err != nil {
+		logging.GetLogger().Error("Failed to encode JSON: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
+}
+
+// GetSession handles HTTP GET requests to get a SAP session by identifier
+func (s *FusionServer) GetSession(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireGet(w, r) {
+		return
+	}
+
+	id, err := utils.ExtractId(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	session := s.handler.HandleGetSession(id)
+	if session == nil {
+		http.Error(w, fmt.Sprintf("Session %s not found.", id), http.StatusNotFound)
+		return
+	}
+
+	if err := json.NewEncoder(w).Encode(session); err != nil {
+		logging.GetLogger().Error("Failed to encode JSON: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
 }
 
 // getSingleQueryParam retrieves the value of a query parameter if it exists exactly once.

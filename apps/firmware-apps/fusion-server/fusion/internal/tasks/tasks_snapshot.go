@@ -74,7 +74,7 @@ func (tm *TaskManager) UpdateApplySnapshotTask(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	id, err := extractTaskID(r)
+	id, err := utils.ExtractId(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

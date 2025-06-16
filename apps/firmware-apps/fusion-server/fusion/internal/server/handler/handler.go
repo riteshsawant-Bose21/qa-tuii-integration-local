@@ -18,6 +18,7 @@ type Handler struct {
 	Memberlist   *memberlist.Memberlist
 	persistence  *persistence.Persistence
 	StateManager *persistence.StateManager
+	sessions     map[string]*SAPSession
 }
 
 func NewHandler(memberlist *memberlist.Memberlist, persistence *persistence.Persistence, stateManager *persistence.StateManager, updater *Updater) *Handler {
@@ -26,6 +27,7 @@ func NewHandler(memberlist *memberlist.Memberlist, persistence *persistence.Pers
 		persistence:  persistence,
 		StateManager: stateManager,
 		updater:      updater,
+		sessions:     make(map[string]*SAPSession),
 	}
 }
 

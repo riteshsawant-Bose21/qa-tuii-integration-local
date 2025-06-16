@@ -40,6 +40,7 @@ type App struct {
 	Delegate          *cluster.ClusterDelegate
 	Server            *server.FusionServer
 	BLEServer         *network.BLEServer
+	SAPServer         *network.SAPServer
 	UDPServer         *network.UDPServer
 	config            *api.AppConfig
 	publicRouter      *mux.Router
@@ -63,6 +64,7 @@ func NewApp(config *api.AppConfig) *App {
 	connectionHandler := handler.NewHandler(memberlist, persistence, stateManager, updater)
 	clusterInstance := cluster.NewCluster(config, delegate, memberlist)
 	bleServer := initBLEServer()
+	sapServer := initSAPServer(api.SAPPort, connectionHandler)
 	udpServer := initUDPServer(api.UDPPort, connectionHandler)
 	fusionServer := server.NewFusionServer(config.NodeName, connectionHandler, memberlist)
 
@@ -87,6 +89,7 @@ func NewApp(config *api.AppConfig) *App {
 		Delegate:          delegate,
 		Server:            fusionServer,
 		BLEServer:         bleServer,
+		SAPServer:         sapServer,
 		UDPServer:         udpServer,
 		config:            config,
 		publicRouter:      publicRouter,
@@ -128,9 +131,9 @@ func (app *App) registerPublicPOST(route string, handler http.HandlerFunc) {
 	routes.RegisterPublicPOST(app.publicRouter, route, handler)
 }
 
-func (app *App) registerPublicPUT(route string, handler http.HandlerFunc) {
-	routes.RegisterPublicPUT(app.publicRouter, route, handler)
-}
+// func (app *App) registerPublicPUT(route string, handler http.HandlerFunc) {
+// 	routes.RegisterPublicPUT(app.publicRouter, route, handler)
+// }
 
 func (app *App) registerPrivateGET(route string, handler http.HandlerFunc) {
 	routes.RegisterPrivateGET(app.privateRouter, route, handler)
@@ -192,6 +195,10 @@ func (app *App) setupPublicRoutes() {
 
 	// Root
 	app.registerPublicGET(routes.RootEndpoint, app.Server.HandleRoot)
+
+	// Sessions
+	app.registerPublicGET(routes.SessionsEndpoint, app.Server.GetSessions)
+	app.registerPublicGET(routes.SessionsIdEndpoint, app.Server.GetSession)
 
 	// Snapshots
 	// NOTE: These must be added before the {name} parameter endpoints to avoid conflicts
@@ -355,6 +362,24 @@ func initBLEServer() *network.BLEServer {
 		return nil
 	}
 	return bleServer
+}
+
+// initSAPServer initializes the SAP server.
+func initSAPServer(port string, handler *handler.Handler) *network.SAPServer {
+
+	// Use the address specified in RFC 2947 (https://datatracker.ietf.org/doc/html/rfc2974)
+	// Will we be using multiple and/or different addresses?
+	groups := []string{"224.2.127.254"}
+
+	sapServer, err := network.NewSAPServer(groups, port, handler)
+	if err != nil {
+		logger := logging.GetLogger()
+		logger.Fatal("Failed to create SAP server: %v", err)
+	}
+
+	handler.AddBroadcaster(sapServer)
+	sapServer.Start()
+	return sapServer
 }
 
 // initUDPServer initializes the UDP server.
