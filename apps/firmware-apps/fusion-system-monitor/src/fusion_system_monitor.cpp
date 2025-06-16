@@ -71,13 +71,7 @@ int main(int argc, char *argv[])
     OptionCounter verbosity;
     OptionCounter quietness;
 
-    // Note: on actual devices CONFIG_PATH will be set appropriately. And shared configuration 
-    // like telemetry-configuration.json will have symlinks to the "real" file.
-    std::string config_path = "config"; // Default config path for local testing, etc.
-    auto envConfigPath = getenv("CONFIG_PATH");
-    if (envConfigPath) {
-        config_path = envConfigPath;
-    }
+    std::string config_path = "/etc/fusion/system-monitor";
 
     boost::program_options::options_description desc("Allowed options");
     desc.add_options()
