@@ -111,7 +111,7 @@ def build(bld):
     bld(export_includes=['./external/doctest', './include'], name='common-include')
 
     excludes = []
-    libs = ['jack', 'fmt', 'sndfile', 'boost_program_options', 'onnxruntime', 'jsoncpp', 'samplerate']
+    libs = ['jack', 'fmt', 'sndfile', 'boost_program_options', 'onnxruntime', 'jsoncpp', 'samplerate', 'curl']
 
     if bld.env['IS_MACOS']:
         excludes.append('src/alsa.cpp')
