@@ -190,7 +190,7 @@ func GetClusterConfig() (*ClusterConfig, error) {
 
 		port := *portFlag
 		for i, node := range nodes {
-			addr := fmt.Sprintf("http://%s:%s", node.IPAddr, port)
+			addr := fmt.Sprintf("%s%s:%s", api.Protocol, node.IPAddr, port)
 			cfg.nodes = append(cfg.nodes, clusterNode{
 				address: addr,
 				nodeID:  fmt.Sprintf("node%d", i+1),
@@ -202,7 +202,7 @@ func GetClusterConfig() (*ClusterConfig, error) {
 			// Extract the subnet from the first node's IP
 			parts := strings.Split(nodes[0].IPAddr, ".")
 			if len(parts) == 4 {
-				cfg.vip = fmt.Sprintf("http://%s.%s.%s.100:%s", parts[0], parts[1], parts[2], port)
+				cfg.vip = fmt.Sprintf("%s%s.%s.%s.100:%s", api.Protocol, parts[0], parts[1], parts[2], port)
 			}
 		}
 	}

@@ -20,7 +20,6 @@ import (
 const (
 	checkInterval   = 30 * time.Second
 	monitorInterval = 10 * time.Second
-	protocol        = "http://"
 )
 
 // ClusterInfo provides information about the cluster
@@ -140,7 +139,7 @@ func (c *Cluster) getClusterIPs() []string {
 func (c *Cluster) listenerUpdated(vip string) {
 
 	logger := logging.GetLogger()
-	logger.Info("New VIP detected: %s", vip)
+	logger.Debug("New VIP detected: %s", vip)
 
 	c.vipLock.Lock()
 	c.vip = vip
@@ -152,13 +151,13 @@ func (c *Cluster) listenerUpdated(vip string) {
 	}
 
 	if member {
-		logger.Info("%s already a member", c.nodeName)
+		logger.Debug("%s already a member", c.nodeName)
 	} else {
 		err = c.JoinMemberlist()
 		if err != nil {
-			logger.Error("Unable to rejoin memberlist: %v", err)
+			logger.Error("Unable to join memberlist: %v", err)
 		} else {
-			logger.Info("%s[%s] joined memberlist with VIP: %s", c.nodeName, c.bindAddr, c.vip)
+			logger.Info("%s [%s] joined memberlist with VIP: %s", c.nodeName, c.bindAddr, c.vip)
 		}
 	}
 }
@@ -518,5 +517,5 @@ func (c *Cluster) hostIsLocal(addr string) bool {
 
 // getLocalURL that generates a local URL
 func getLocalURL(addr, endpoint string) string {
-	return fmt.Sprintf("%s%s%s", protocol, addr, endpoint)
+	return fmt.Sprintf("%s%s%s", api.Protocol, addr, endpoint)
 }

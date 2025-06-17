@@ -79,9 +79,10 @@ func (c *Cluster) JoinMemberlist() error {
 
 	for retries := range retryTimes {
 
-		n, err := c.Memberlist.Join(joinAddrs)
+		_, err := c.Memberlist.Join(joinAddrs)
 		if err == nil {
-			logger.Info("[MEMBERLIST-%s] Successfully joined cluster with %d nodes", c.nodeName, n)
+			members := c.Memberlist.Members()
+			logger.Info("[MEMBERLIST-%s] Successfully joined cluster with %d nodes", c.nodeName, len(members))
 			c.updateDeviceInfo()
 
 			if c.config.Verbose {
@@ -118,7 +119,7 @@ func (c *Cluster) isMember() (bool, error) {
 // GetLiveNodeAddresses a list of live node addresses
 func (c *Cluster) GetLiveNodeAddresses() ([]string, error) {
 
-	url := fmt.Sprintf("http://%s:%s%s", c.vip, api.HTTPPort, routes.ClusterMembersEndpoint)
+	url := fmt.Sprintf("%s%s:%s%s", api.Protocol, c.vip, api.HTTPPort, routes.ClusterMembersEndpoint)
 	resp, err := http.Get(url)
 	if err != nil {
 		if errors.Is(err, syscall.ECONNREFUSED) {

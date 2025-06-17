@@ -1,17 +1,30 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net"
-	"os/exec"
+	"net/http"
 	"strings"
 	"testing"
 	"time"
+
+	sdp "github.com/pion/sdp/v3"
 )
 
 const (
-	sapInstance2Name = "fusion2"
+	sapInstance2Name  = "fusion2"
+	sapTestServerAddr = "http://192.168.64.100:8080"
 )
+
+type SessionWrapper struct {
+	Sessions map[string]struct {
+		ID          string                  `json:"id"`
+		Origin      string                  `json:"origin"`
+		Timestamp   string                  `json:"timestamp"` // or time.Time if parsed
+		Description *sdp.SessionDescription `json:"description"`
+	} `json:"sessions"`
+}
 
 func TestMultipassSAPPropagation(t *testing.T) {
 	// Build an 8-byte SAP header:
@@ -54,34 +67,32 @@ func TestMultipassSAPPropagation(t *testing.T) {
 	// Give it a moment to propagate
 	time.Sleep(500 * time.Millisecond)
 
-	// Grep second instance logs for the session name
-	out, err := checkSAPOnInstance(t, "HELLO_SAP_TEST")
+	resp, err := http.Get(fmt.Sprintf("%s/sessions", sapTestServerAddr))
 	if err != nil {
-		t.Fatalf("failed to grep on %s: %v\noutput: %s",
-			sapInstance2Name, err, out)
+		t.Fatalf("Failed to get SAP session: %v", err)
 	}
 
-	if !strings.Contains(out, "HELLO_SAP_TEST") {
-		t.Fatalf("expected session-name %q in logs, but got: %s",
-			"HELLO_SAP_TEST", out)
+	var wrapper SessionWrapper
+	if err := json.NewDecoder(resp.Body).Decode(&wrapper); err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
 	}
-}
+	resp.Body.Close()
 
-// runSAPCommandOnInstance executes a bash command on a given instance using multipass exec.
-func runSAPCommandOnInstance(t *testing.T, instance, command string) (string, error) {
-	t.Helper()
-	args := []string{"exec", instance, "--", "bash", "-c", command}
-	cmd := exec.Command("multipass", args...)
-	output, err := cmd.CombinedOutput()
-	return string(output), err
-}
+	var descriptions []*sdp.SessionDescription
+	for _, session := range wrapper.Sessions {
+		if session.Description != nil {
+			descriptions = append(descriptions, session.Description)
+		}
+	}
 
-// checkSAPOnInstance greps for the payload (or whatever marker your handler writes) on instance2.
-func checkSAPOnInstance(t *testing.T, marker string) (string, error) {
-	t.Helper()
-	grepCmd := fmt.Sprintf(
-		`journalctl -u fusion-server --no-pager | grep '%s' || true`,
-		marker,
-	)
-	return runSAPCommandOnInstance(t, sapInstance2Name, grepCmd)
+	if len(descriptions) < 1 {
+		t.Fatalf("Expected at least one session")
+	}
+
+	description := descriptions[0]
+
+	if description.SessionName != "HELLO_SAP_TEST" {
+		t.Fatalf("Expected session-name %q in logs, but got: %s",
+			"HELLO_SAP_TEST", description.SessionName)
+	}
 }
