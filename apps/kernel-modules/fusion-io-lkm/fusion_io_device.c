@@ -331,6 +331,7 @@ int tcal6408_handle_irq(struct endpoint_gpio *ep_gpio)
     return 0;
 }
 
+// TODO verify
 int tca9535_handle_irq(struct endpoint_gpio *ep_gpio)
 {
     struct endpoint *tca9535 = ep_gpio->parent_endpoint;
@@ -393,7 +394,6 @@ int ep9512t_handle_irq(struct endpoint_gpio *ep_gpio)
     return 0;
 }
 
-// TODO: verify
 int ads7128_handle_irq(struct endpoint_gpio *ep_gpio)
 {
     struct endpoint *ads7128 = ep_gpio->parent_endpoint;
@@ -443,17 +443,6 @@ int ads7128_handle_irq(struct endpoint_gpio *ep_gpio)
         return 0;
     }
 
-    // Read GPIO value for input interrupts
-    rd_opcode_buf[1] = ADS7128_REG_GPI_VALUE;
-    ret = __i2c_transfer(client->adapter, rd_msgs, 2);
-    if (ret < 0) {
-        printk(KERN_ERR "ads7128_handle_irq: failed read GPI_VALUE\n");
-        return ret;
-    }
-    gpi_value = *rd_data_buf;
-
-    printk(KERN_INFO "ads7128_handle_irq: gpi_value=0x%02x\n", gpi_value);
-
     // Read PIN_CFG once for ADC checks
     rd_opcode_buf[1] = ADS7128_REG_PIN_CFG;
     ret = __i2c_transfer(client->adapter, rd_msgs, 2);
@@ -474,7 +463,8 @@ int ads7128_handle_irq(struct endpoint_gpio *ep_gpio)
         gpio = &ads7128->gpios[channel + 1];
 
         // Check ADC interrupt
-        if (!(pin_cfg & (1 << channel))) { // ADC input check
+        if (!(pin_cfg & (1 << channel))) {
+            // analog input
             rd_opcode_buf[0] = ADS7128_OPCODE_READ_CONTIGUOUS_REG;
             rd_msgs[1].len = 2;
             rd_opcode_buf[1] = ADS7128_REG_RECENT_CH0_LSB + channel * 2;
@@ -518,7 +508,17 @@ int ads7128_handle_irq(struct endpoint_gpio *ep_gpio)
                 continue;
             }
         } else {
-            // TODO gpi mode
+            // TODO gpi
+            // Read GPIO value for input interrupts
+            rd_opcode_buf[1] = ADS7128_REG_GPI_VALUE;
+            ret = __i2c_transfer(client->adapter, rd_msgs, 2);
+            if (ret < 0) {
+                printk(KERN_ERR "ads7128_handle_irq: failed read GPI_VALUE\n");
+                return ret;
+            }
+            gpi_value = *rd_data_buf;
+
+            printk(KERN_INFO "ads7128_handle_irq: gpi_value=0x%02x\n", gpi_value);
         }
 
         // clear event flag bits
