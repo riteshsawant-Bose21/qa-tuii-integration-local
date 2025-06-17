@@ -53,13 +53,13 @@ build/fusion-server_darwin_arm64
 Launch the binary in local mode:
 
 ```bash
-./build/fusion-server_darwin_arm64 --name fusion1 --local
+./build/fusion-server_darwin_arm64 --local
 ```
 
 ### Example Output
 
 ```bash
-./build/fusion-server_darwin_arm64 --name fusion1 --local
+./build/fusion-server_darwin_arm64 --local
 [fusion1] [INFO] [CLUSTER] Total members: 1
 [fusion1] [INFO] [CLUSTER] Current cluster state:
 [fusion1] [INFO] [CLUSTER] Node: fusion1, Address: 10.0.0.157:7946, Status: ALIVE

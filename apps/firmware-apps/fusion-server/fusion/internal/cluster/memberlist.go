@@ -38,6 +38,8 @@ func CreateMemberlist(appConfig *api.AppConfig, delegate *ClusterDelegate) *memb
 	config.Name = appConfig.NodeName
 	config.BindAddr = appConfig.BindAddr
 	config.BindPort = appConfig.BindPort
+	config.AdvertiseAddr = appConfig.BindAddr
+	config.AdvertisePort = appConfig.BindPort
 
 	if appConfig.Verbose {
 		config.Logger = log.New(os.Stdout, fmt.Sprintf("[MEMBERLIST-%s] ", appConfig.NodeName), log.LstdFlags)
@@ -81,6 +83,12 @@ func (c *Cluster) JoinMemberlist() error {
 		if err == nil {
 			logger.Info("[MEMBERLIST-%s] Successfully joined cluster with %d nodes", c.nodeName, n)
 			c.updateDeviceInfo()
+
+			if c.config.Verbose {
+				for _, member := range c.Memberlist.Members() {
+					logger.Debug("[MEMBERLIST-%s] %s (%s)\n", c.nodeName, member.Name, member.Addr)
+				}
+			}
 			return nil
 		}
 

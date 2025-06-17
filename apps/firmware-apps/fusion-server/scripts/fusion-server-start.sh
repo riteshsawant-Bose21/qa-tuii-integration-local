@@ -48,4 +48,4 @@ fi
 
 echo "Starting fusion-server on IP: $IP_ADDR"
 
-exec /usr/local/bin/fusion-server -name "$(hostname)" -bind-addr "$IP_ADDR"
+exec /usr/local/bin/fusion-server -bind-addr "$IP_ADDR"

@@ -2,18 +2,26 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
+	"math/rand"
 	"os"
+	"strconv"
+	"time"
 
 	"fusion/internal/api"
 	"fusion/internal/app"
 	"fusion/internal/version"
 )
 
+const (
+	baseName   = "fusion"
+	numberBase = 36
+)
+
 // parseFlags parses and validates command-line flags.
 func parseFlags() *api.AppConfig {
 	versionFlag := flag.Bool("version", false, "Show version information")
-	nodeName := flag.String("name", "", "Node name (must be unique in cluster)")
 	bindAddr := flag.String("bind-addr", "0.0.0.0", "Bind address for cluster communication")
 	bindPort := flag.Int("bind-port", 7946, "Bind port for cluster communication (default 7946)")
 	local := flag.Bool("local", false, "Run in local-only mode (no clustering)")
@@ -25,17 +33,20 @@ func parseFlags() *api.AppConfig {
 		os.Exit(0)
 	}
 
-	if *nodeName == "" {
-		log.Fatal("Node name is required")
-	}
-
 	return &api.AppConfig{
-		NodeName: *nodeName,
+		NodeName: createUniqueNodeName(baseName),
 		BindAddr: *bindAddr,
 		BindPort: *bindPort,
 		Local:    *local,
 		Verbose:  *verbose,
 	}
+}
+
+// createUniqueNodeName creates a unique name using current time and a random number
+func createUniqueNodeName(baseName string) string {
+	timeStamp := strconv.FormatInt(time.Now().UnixNano(), numberBase)
+	suffix := strconv.FormatInt(rand.Int63n(1e6), numberBase)
+	return fmt.Sprintf("%s_%s_%s", baseName, timeStamp, suffix)
 }
 
 func main() {
