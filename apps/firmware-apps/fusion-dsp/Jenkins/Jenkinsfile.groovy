@@ -7,7 +7,7 @@ import groovy.json.JsonOutput
 def VERSION = ''
 def JobCleanup = new JenkinsJobCleanup()
 
-NEXUS_TARGET = "Fusion-DSP/%s/%s"
+NEXUS_TARGET = "pro-fusion-local/Fusion-DSP/%s/%s"
 
 pipeline {
 	agent { label 'pro-fusion-variscite-container' }
@@ -18,6 +18,7 @@ pipeline {
 	}
 	environment {
 		NEXUS_URL = '10.100.109.38:8081'
+		NEXUS_HTTPS_URL = 'https://nexus.dev.prod.bosepro.internal:8445/repository'
 		CREDENTIALS_ID = 'jenkins-artifact-deployer'
 	    	buildDir="${env.WORKSPACE}"
 		buildNumber="${env.BUILD_NUMBER}"
@@ -110,6 +111,7 @@ pipeline {
 							githubNotify( "Build-Fusion-DSP", "Stage: Build Fusion-DSP Application ...", "PENDING" )
 							sh """
 						        python3 package.py
+						        ls -ltr build/
 							"""
 						}
 					}
@@ -119,25 +121,34 @@ pipeline {
 					steps {
     					script {
 						dir( 'build/' ) {
-                                			EMBEDDED_PATH_PART=env.CHANGE_BRANCH ?: env.BRANCH_NAME
-    						    	def artifacts = []
+                            EMBEDDED_PATH_PART=env.CHANGE_BRANCH ?: env.BRANCH_NAME
+    						  //  	def artifacts = []
 							def filesToUpload = findFiles(glob: 'fusion-dsp_*.tar.gz')
-							filesToUpload.each { file ->
-                                    				artifacts.add([artifactId: file.name.substring(0, file.name.lastIndexOf('_')), file: file.path, type: 'tar.gz'])
-							}
-    						    	def targetPath = String.format(NEXUS_TARGET, env.BuildType, EMBEDDED_PATH_PART)
-							nexusArtifactUploader(
-			                                    nexusVersion: 'nexus3',
-			                                    protocol: 'http',
-			                                    nexusUrl: "${NEXUS_URL}",
-			                                    repository: "pro-fusion-local/${targetPath}",
-			                                    version: "${env.VERSION}",
-			                                    groupId: "",
-			                                    credentialsId: "${CREDENTIALS_ID}",
-			                                    artifacts: artifacts
-			                                )
-    					    	}						
-    					    }
+				// 			filesToUpload.each { file ->
+    //                                 				artifacts.add([artifactId: file.name.substring(0, file.name.lastIndexOf('_')), file: file.path, type: 'tar.gz'])
+				// 			}
+    						def targetPath = String.format(NEXUS_TARGET, env.BuildType, EMBEDDED_PATH_PART)
+				// 			nexusArtifactUploader(
+			 //                                   nexusVersion: 'nexus3',
+			 //                                   protocol: 'http',
+			 //                                   nexusUrl: "${NEXUS_URL}",
+			 //                                   repository: "pro-fusion-local/Continuous",
+			 //                                   version: "${env.VERSION}",
+			 //                                   groupId: "",
+			 //                                   credentialsId: "${CREDENTIALS_ID}",
+			 //                                   artifacts: artifacts
+			 //                               )
+			                withCredentials([usernamePassword(credentialsId: 'jenkins-artifact-deployer', passwordVariable: 'PASSWORD', usernameVariable: 'USERNAME')]) {
+	                            filesToUpload.each { file ->
+				                    sh """
+				                        set -e
+				                        curl --ssl-no-revoke -f -u $USERNAME:$PASSWORD -T "${file.path}" "${NEXUS_HTTPS_URL}/${targetPath}/${file.name}"
+				                    """
+									println("Upload succeeded: ${NEXUS_HTTPS_URL}/${targetPath}/${file.name}")
+				                }
+				            }
+    					  }						
+    					}
 					}
 				}
 			}
