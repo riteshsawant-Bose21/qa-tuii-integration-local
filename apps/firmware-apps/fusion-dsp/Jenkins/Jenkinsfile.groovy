@@ -10,7 +10,7 @@ def JobCleanup = new JenkinsJobCleanup()
 NEXUS_TARGET = "Fusion-DSP/%s/%s"
 
 pipeline {
-	agent { label 'pro-fusion-container' }
+	agent { label 'pro-fusion-variscite-container' }
 	
 	options {
 		timeout(time: 2, unit: 'HOURS')
