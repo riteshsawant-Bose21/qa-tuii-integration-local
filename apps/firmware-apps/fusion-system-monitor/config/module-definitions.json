@@ -70,12 +70,17 @@
             "name": "fusion_connect_client",
             "parameters": [
                 {
-                    "name": "create_stream",
+                    "name": "aes67_streams",
                     "value_type": "string",
                     "default_value": ""
                 },
                 {
-                    "name": "remove_stream",
+                    "name": "device_connections",
+                    "value_type": "string",
+                    "default_value": ""
+                },
+                {
+                    "name": "sessions",
                     "value_type": "string",
                     "default_value": ""
                 }

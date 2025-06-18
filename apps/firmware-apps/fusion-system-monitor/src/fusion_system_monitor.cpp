@@ -147,8 +147,10 @@ int main(int argc, char *argv[])
 
     std::vector<std::string> target_paths;
 
-    // Path for the static configuration
-    target_paths.push_back("fw_static_config");
+    // Paths for networked audio streams
+    target_paths.push_back("aes67_streams[*]");
+    target_paths.push_back("device_connections[*]");
+    target_paths.push_back("sdps[*]");
     // Path for dynamic parameter setttings with vector indices
     target_paths.push_back("settings.fw.*.*[*]");
     // Path for dynamic parameter setttings

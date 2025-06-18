@@ -497,15 +497,10 @@ private:
         updateHandler_(message);
       }
     }
-    else if (path_parts[0].key == "fw_static_config") {
-      message = "{ \"target\": \"session\", \"name\": \"destroy_all_periodic_tasks\" }";
-      updateHandler_(message);
-
-      std::ofstream fw_config("/tmp/fw_config.json");
-      fw_config << new_val;
-      fw_config.close();
-
-      message = "{ \"target\": \"session\", \"name\": \"create_periodic_task\", \"value\": \"/tmp/fw_config.json\" }";
+    else if (path_parts[0].key == "aes67_streams" ||
+             path_parts[0].key == "device_connections" ||
+             path_parts[0].key == "sessions") {
+      message = "{ \"target\": \"fusion_connect_client\", \"name\": \"" + path_parts[0].key + "\", \"value\": \"" + new_val.asString() + "\" }";
       updateHandler_(message);
     }
     else if (path_parts[0].key == "dsp_static_config") {
