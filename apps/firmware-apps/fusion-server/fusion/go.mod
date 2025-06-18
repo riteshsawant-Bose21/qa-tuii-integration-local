@@ -3,6 +3,7 @@ module fusion
 go 1.23.1
 
 require (
+	github.com/gibson042/canonicaljson-go v1.0.3
 	github.com/go-ble/ble v0.0.0-20240122180141-8c5522f54333
 	github.com/go-ping/ping v1.2.0
 	github.com/gorilla/mux v1.8.1

@@ -10,7 +10,6 @@ import (
 	"fusion/internal/utils"
 	"io"
 	"net/http"
-	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -21,6 +20,7 @@ import (
 
 const (
 	checkInterval = 30
+	httpTimeout   = 5 * time.Second
 )
 
 // StateManagerInterface defines the interface for state management
@@ -45,16 +45,20 @@ func NewVersionedState() *VersionedState {
 // It supports versioning, and nested key access.
 type StateManager struct {
 	sync.RWMutex
-	state   VersionedState
-	node    string
-	version int64
+	state      VersionedState
+	node       string
+	version    int64
+	httpClient *http.Client
+	verbose    bool
 }
 
 // NewStateManager creates and initializes a new StateManager for the given node.
-func NewStateManager(node string) *StateManager {
+func NewStateManager(config *api.AppConfig) *StateManager {
 	return &StateManager{
-		state: *NewVersionedState(),
-		node:  node,
+		state:      *NewVersionedState(),
+		node:       config.NodeName,
+		verbose:    config.Verbose,
+		httpClient: &http.Client{Timeout: httpTimeout},
 	}
 }
 
@@ -79,12 +83,12 @@ func (sm *StateManager) GetVersion() int64 {
 //
 // Returns the found value and a boolean indicating if the key was found.
 func (sm *StateManager) Get(key string) (any, bool) {
-	sm.RLock()
-	defer sm.RUnlock()
+
+	logger := logging.GetLogger()
+
+	var current any = sm.GetStateMap()
 
 	parts := strings.Split(key, ".")
-	var current any = sm.GetStateMap()
-	logger := logging.GetLogger()
 
 	for _, part := range parts {
 		if strings.Contains(part, "[") && strings.Contains(part, "]") {
@@ -175,9 +179,17 @@ func (sm *StateManager) ApplyUpdate(update api.ConfigUpdate) error {
 	sm.Lock()
 	defer sm.Unlock()
 
+	// Handle clear‐state flag
 	if update.Clear {
 		sm.state = *NewVersionedState()
 		sm.version = update.Version
+		// Recalculate checksum for the empty map
+		checksum, err := utils.CalculateChecksum(sm.state.State)
+		if err != nil {
+			logging.GetLogger().Error("Failed to calculate checksum: %v", err)
+			return err
+		}
+		sm.state.Checksum = checksum
 		return nil
 	}
 
@@ -185,26 +197,30 @@ func (sm *StateManager) ApplyUpdate(update api.ConfigUpdate) error {
 		return nil
 	}
 
+	// Track whether any key was added or updated
+	dirty := false
+
 	for key, rawValue := range update.Data {
 		var incomingVersion int64
 		var newValue any
 
+		// Determine incomingVersion & newValue
 		if valueMap, ok := rawValue.(map[string]any); ok {
-			// Extract per-key version if available
-			if v, ok := valueMap["version"].(int64); ok {
+			// per‐key version
+			switch v := valueMap["version"].(type) {
+			case int64:
 				incomingVersion = v
-			} else {
-				// Fallback
+			case float64:
+				incomingVersion = int64(v)
+			default:
 				incomingVersion = update.Version
 			}
 
-			// Check existing state for merge possibility
+			// merge vs overwrite
 			if existingEntry, exists := sm.state.State[key]; exists {
-
 				if incomingVersion <= existingEntry.Version {
 					continue
 				}
-
 				if existingData, ok := existingEntry.Data.(map[string]any); ok {
 					newValue = mergeMaps(existingData, valueMap)
 				} else {
@@ -218,30 +234,35 @@ func (sm *StateManager) ApplyUpdate(update api.ConfigUpdate) error {
 			newValue = rawValue
 		}
 
-		// Apply update if the incoming version is newer
+		// Skip stale
 		if existingEntry, exists := sm.state.State[key]; exists {
 			if incomingVersion <= existingEntry.Version {
 				continue
 			}
 		}
 
+		// Apply the change
 		sm.state.State[key] = &api.StateEntry{
 			Data:      newValue,
 			Version:   incomingVersion,
 			Timestamp: update.Time,
 		}
-
 		if incomingVersion > sm.version {
 			sm.version = incomingVersion
 		}
+		dirty = true
+	}
 
+	// Only recalc checksum once
+	if dirty {
 		checksum, err := utils.CalculateChecksum(sm.state.State)
 		if err != nil {
 			logging.GetLogger().Error("Failed to calculate checksum: %v", err)
+		} else {
+			sm.state.Checksum = checksum
 		}
-		sm.state.Checksum = checksum
-
 	}
+
 	return nil
 }
 
@@ -253,6 +274,7 @@ func (sm *StateManager) GetFullState() VersionedState {
 }
 
 // GetStateMap removes metadata and returns a simplified map of key-value data from the state.
+// Callers must not mutate the returned value.
 func (sm *StateManager) GetStateMap() map[string]any {
 
 	result := make(map[string]any)
@@ -287,8 +309,8 @@ func (sm *StateManager) MergeRemoteState(remoteState map[string]*api.StateEntry)
 
 // SetState replaces the entire state map and updates the version timestamp.
 func (sm *StateManager) SetState(state map[string]*api.StateEntry) {
-	sm.RLock()
-	defer sm.RUnlock()
+	sm.Lock()
+	defer sm.Unlock()
 	sm.state.State = state
 	checksum, err := utils.CalculateChecksum(state)
 	if err != nil {
@@ -312,14 +334,19 @@ func (sm *StateManager) validateState(list *memberlist.Memberlist) {
 		}
 
 		url := buildInternalURL(member.Addr.String(), api.AdminPort, routes.StateEndpoint)
-		resp, err := http.Get(url)
+		resp, err := sm.httpClient.Get(url)
 		if err != nil {
 			logger.Warn("Failed to get state from %s: %v", member.Name, err)
 			continue
 		}
 
+		defer resp.Body.Close()
+		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			logger.Warn("Unexpected status %d", resp.StatusCode)
+			continue
+		}
+
 		body, err := io.ReadAll(resp.Body)
-		resp.Body.Close()
 		if err != nil {
 			logger.Warn("Error reading response body from %s: %v", member.Name, err)
 			continue
@@ -331,8 +358,11 @@ func (sm *StateManager) validateState(list *memberlist.Memberlist) {
 			continue
 		}
 
-		if !reflect.DeepEqual(localState, remoteState) {
+		if localState.Checksum != remoteState.Checksum {
 			logger.Warn("[STATE] Inconsistent state detected with node %s", member.Name)
+			logger.Debug("[STATE] Local checksum:  %s", localState.Checksum)
+			logger.Debug("[STATE] Remote checksum: %s", remoteState.Checksum)
+
 			consistent = false
 		}
 	}
@@ -355,6 +385,7 @@ func (sm *StateManager) StartVerification(list *memberlist.Memberlist) {
 	}()
 }
 
+// getMemberData return MemberMetadata for all members of the memberlist cluster.
 func (sm *StateManager) getMemberData(list *memberlist.Memberlist) []api.MemberMetadata {
 
 	logger := logging.GetLogger()
@@ -370,14 +401,19 @@ func (sm *StateManager) getMemberData(list *memberlist.Memberlist) []api.MemberM
 		}
 
 		url := buildInternalURL(member.Addr.String(), api.HTTPPort, routes.MetadataEndpoint)
-		resp, err := http.Get(url)
+		resp, err := sm.httpClient.Get(url)
 		if err != nil {
 			logger.Warn("Failed to get metadata from %s: %v", member.Name, err)
 			continue
 		}
 
+		defer resp.Body.Close()
+		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			logger.Warn("Unexpected status %d", resp.StatusCode)
+			continue
+		}
+
 		body, err := io.ReadAll(resp.Body)
-		resp.Body.Close()
 		if err != nil {
 			logger.Warn("Error reading response body from %s: %v", member.Name, err)
 			continue
@@ -419,7 +455,7 @@ func (sm *StateManager) validateData(list *memberlist.Memberlist) {
 
 	exportURL := buildInternalURL(mostCurrent.Member.Addr.String(), api.AdminPort, routes.StateEndpoint)
 
-	resp, err := http.Get(exportURL)
+	resp, err := sm.httpClient.Get(exportURL)
 	if err != nil {
 		logger.Error("Failed to export data from %s: %v", mostCurrent.Member.Name, err)
 		return
@@ -432,40 +468,42 @@ func (sm *StateManager) validateData(list *memberlist.Memberlist) {
 		return
 	}
 
-	payload, err := json.Marshal(resp.Body)
+	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		logger.Error("Failed to marshal payload: %v", err)
+		logger.Error("Failed to read body: %v", err)
 		return
 	}
 
-	syncData(memberMetadata, mostCurrent.Metadata.Hash, payload)
+	sm.syncData(memberMetadata, mostCurrent.Metadata.Hash, data)
 	logger.Info("Successfully synced data")
 }
 
 // syncData propagate the data to all nodes with outdated data
-func syncData(memberMetadata []api.MemberMetadata, currentHash string, data []byte) {
+func (sm *StateManager) syncData(memberMetadata []api.MemberMetadata, currentHash string, data []byte) {
+
 	for _, ms := range memberMetadata {
 		if ms.Metadata.Hash != currentHash {
 			importURL := buildInternalURL(ms.Member.Addr.String(), api.AdminPort, routes.DataEndpoint)
-			if !importData(importURL, data) {
-				return
-			}
+			sm.importData(importURL, data)
 		}
 	}
 }
 
-func importData(endpoint string, data []byte) bool {
+// importData imports data into the state at the endpoint
+func (sm *StateManager) importData(endpoint string, data []byte) {
 
 	logger := logging.GetLogger()
 
-	resp, err := http.Post(endpoint, api.JsonMIMEType, bytes.NewBuffer(data))
+	resp, err := sm.httpClient.Post(endpoint, api.JsonMIMEType, bytes.NewBuffer(data))
 	if err != nil {
 		logger.Error("Failed to import data on %s: %v", endpoint, err)
-		return false
+		return
 	}
-	resp.Body.Close()
 
-	return true
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		logger.Error("Unexpected status code on: %s %d", endpoint, resp.StatusCode)
+	}
 }
 
 // hashIsConsistent checks if hash is consistent across all members

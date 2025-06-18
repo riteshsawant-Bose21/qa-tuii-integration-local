@@ -54,7 +54,7 @@ func NewApp(config *api.AppConfig) *App {
 
 	initDataPaths()
 
-	stateManager := initStateManager(config.NodeName)
+	stateManager := initStateManager(config)
 	persistence := initPersistence(fusionDatabasePath, stateManager)
 	taskManager := initTaskManager(config, persistence)
 	updater := handler.NewUpdater()
@@ -340,8 +340,8 @@ func initPersistence(dataPath string, stateManager *persistence.StateManager) *p
 }
 
 // initStateManager initializes the state manager.
-func initStateManager(node string) *persistence.StateManager {
-	return persistence.NewStateManager(node)
+func initStateManager(config *api.AppConfig) *persistence.StateManager {
+	return persistence.NewStateManager(config)
 }
 
 // initTaskManager initializes the timer manager.

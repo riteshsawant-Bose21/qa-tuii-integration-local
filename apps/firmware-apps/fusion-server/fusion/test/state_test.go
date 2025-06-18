@@ -11,6 +11,11 @@ import (
 	"fusion/internal/persistence"
 )
 
+var stateConfig = api.AppConfig{
+	NodeName: "test_manager",
+	Verbose:  false,
+}
+
 func init() {
 
 	logging.InitLogger(logging.LogConfig{
@@ -24,7 +29,7 @@ func init() {
 }
 
 func TestSetAndGetSimpleValue(t *testing.T) {
-	sm := persistence.NewStateManager("test_manager")
+	sm := persistence.NewStateManager(&stateConfig)
 	value := "hello world"
 	if err := sm.Set("greeting", value); err != nil {
 		t.Fatalf("Set failed: %v", err)
@@ -40,7 +45,7 @@ func TestSetAndGetSimpleValue(t *testing.T) {
 }
 
 func TestApplyUpdateAndGetNestedValues(t *testing.T) {
-	sm := persistence.NewStateManager("test_manager")
+	sm := persistence.NewStateManager(&stateConfig)
 
 	// Create nested data with an array.
 	update := api.ConfigUpdate{
@@ -93,7 +98,7 @@ func TestApplyUpdateAndGetNestedValues(t *testing.T) {
 }
 
 func TestGetInvalidKey(t *testing.T) {
-	sm := persistence.NewStateManager("test_manager")
+	sm := persistence.NewStateManager(&stateConfig)
 	// No data has been set yet.
 	if _, ok := sm.Get("nonexistent.key"); ok {
 		t.Errorf("Expected key 'nonexistent.key' to be not found")
@@ -101,7 +106,7 @@ func TestGetInvalidKey(t *testing.T) {
 }
 
 func TestMergeRemoteState(t *testing.T) {
-	sm := persistence.NewStateManager("test_manager")
+	sm := persistence.NewStateManager(&stateConfig)
 
 	// Local state: key "a" with version 100.
 	if err := sm.ApplyUpdate(api.ConfigUpdate{
@@ -150,7 +155,7 @@ func TestMergeRemoteState(t *testing.T) {
 }
 
 func TestNestedMergeMapsViaApplyUpdate(t *testing.T) {
-	sm := persistence.NewStateManager("test_manager")
+	sm := persistence.NewStateManager(&stateConfig)
 
 	// First update: add a nested map.
 	update1 := api.ConfigUpdate{
@@ -193,7 +198,7 @@ func TestNestedMergeMapsViaApplyUpdate(t *testing.T) {
 }
 
 func TestArrayIndexErrors(t *testing.T) {
-	sm := persistence.NewStateManager("test_manager")
+	sm := persistence.NewStateManager(&stateConfig)
 	// Set state with an array.
 	update := api.ConfigUpdate{
 		Data: map[string]any{
@@ -228,7 +233,7 @@ func TestArrayIndexErrors(t *testing.T) {
 }
 
 func TestArraySliceEdgeCases(t *testing.T) {
-	sm := persistence.NewStateManager("test_manager")
+	sm := persistence.NewStateManager(&stateConfig)
 	// Set state with an array.
 	update := api.ConfigUpdate{
 		Data: map[string]any{
@@ -272,7 +277,7 @@ func TestArraySliceEdgeCases(t *testing.T) {
 
 // Test retrieval using a complex path for nested arrays.
 func TestGetWithComplexPath(t *testing.T) {
-	sm := persistence.NewStateManager("test_manager")
+	sm := persistence.NewStateManager(&stateConfig)
 
 	// Prepare a complex nested structure.
 	update := api.ConfigUpdate{
@@ -322,7 +327,7 @@ func TestGetWithComplexPath(t *testing.T) {
 }
 
 func TestApplyUpdateWithClearFlag(t *testing.T) {
-	sm := persistence.NewStateManager("test_manager")
+	sm := persistence.NewStateManager(&stateConfig)
 	// First, apply a normal update.
 	update := api.ConfigUpdate{
 		Data: map[string]any{
@@ -357,7 +362,7 @@ func TestApplyUpdateWithClearFlag(t *testing.T) {
 }
 
 func TestMergeRemoteStateWithEqualVersion(t *testing.T) {
-	sm := persistence.NewStateManager("test_manager")
+	sm := persistence.NewStateManager(&stateConfig)
 	// Set local state with a given version.
 	localUpdate := api.ConfigUpdate{
 		Data: map[string]any{
@@ -389,7 +394,7 @@ func TestMergeRemoteStateWithEqualVersion(t *testing.T) {
 }
 
 func TestApplyStaleUpdatePropagation(t *testing.T) {
-	sm := persistence.NewStateManager("test_manager")
+	sm := persistence.NewStateManager(&stateConfig)
 
 	// Apply a "fresh" update with a higher version.
 	freshUpdate := api.ConfigUpdate{
@@ -426,7 +431,7 @@ func TestApplyStaleUpdatePropagation(t *testing.T) {
 }
 
 func TestMergeRemoteStateWithLowerVersion(t *testing.T) {
-	sm := persistence.NewStateManager("test_manager")
+	sm := persistence.NewStateManager(&stateConfig)
 
 	// Apply a local update with a high version.
 	localUpdate := api.ConfigUpdate{
