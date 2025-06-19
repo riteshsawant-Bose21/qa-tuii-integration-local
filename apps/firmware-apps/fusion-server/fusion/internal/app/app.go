@@ -64,7 +64,7 @@ func NewApp(config *api.AppConfig) *App {
 	connectionHandler := handler.NewHandler(memberlist, persistence, stateManager, updater)
 	clusterInstance := cluster.NewCluster(config, delegate, memberlist)
 	bleServer := initBLEServer()
-	sapServer := initSAPServer(api.SAPPort, connectionHandler)
+	sapServer := initSAPServer(config, api.SAPPort, connectionHandler)
 	udpServer := initUDPServer(api.UDPPort, connectionHandler)
 	fusionServer := server.NewFusionServer(config.NodeName, connectionHandler, memberlist)
 
@@ -364,11 +364,15 @@ func initBLEServer() *network.BLEServer {
 	return bleServer
 }
 
-// initSAPServer initializes the SAP server.
-func initSAPServer(port string, handler *handler.Handler) *network.SAPServer {
+// initSAPServer initializes the SAP server
+// See RFC 2947 (https://datatracker.ietf.org/doc/html/rfc2974)
+func initSAPServer(config *api.AppConfig, port string, handler *handler.Handler) *network.SAPServer {
 
-	// Use the address specified in RFC 2947 (https://datatracker.ietf.org/doc/html/rfc2974)
-	// Will we be using multiple and/or different addresses?
+	if config.Local {
+		logging.GetLogger().Warn("SAP Server not available in local mode")
+		return nil
+	}
+
 	groups := []string{"224.2.127.254", "239.255.255.255"}
 
 	sapServer, err := network.NewSAPServer(groups, port, handler)

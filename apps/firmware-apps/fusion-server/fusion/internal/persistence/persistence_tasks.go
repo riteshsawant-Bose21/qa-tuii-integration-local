@@ -11,9 +11,6 @@ import (
 // LoadMetadata retrieves and unmarshals the api.SnapshotMetadata from the database.
 func (p *Persistence) LoadTasks() (map[string]*api.Task, error) {
 
-	p.mutex.RLock()
-	defer p.mutex.RUnlock()
-
 	tasks := make(map[string]*api.Task)
 
 	err := p.db.View(func(tx *bbolt.Tx) error {
@@ -71,8 +68,6 @@ func (p *Persistence) SaveTasks(tasks map[string]*api.Task) error {
 
 // DeleteTask removes the task
 func (p *Persistence) DeleteTask(taskID string) error {
-	p.mutex.Lock()
-	defer p.mutex.Unlock()
 
 	// Perform deletion in a single atomic transaction.
 	err := p.db.Update(func(tx *bbolt.Tx) error {
@@ -98,8 +93,6 @@ func (p *Persistence) DeleteTask(taskID string) error {
 
 // TaskExists checks if a task exists already.
 func (p *Persistence) TaskExists(task *api.Task) (bool, error) {
-	p.mutex.RLock()
-	defer p.mutex.RUnlock()
 
 	var exists bool
 	err := p.db.View(func(tx *bbolt.Tx) error {

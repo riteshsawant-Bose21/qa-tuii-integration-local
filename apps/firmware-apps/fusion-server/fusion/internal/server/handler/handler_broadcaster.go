@@ -78,14 +78,14 @@ func (h *Handler) broadcastUpdate(message *api.NotifyMessage) error {
 	return nil
 }
 
-// broadcastToNodes sends the given JSON message to all cluster members except the local node.
-func (h *Handler) broadcastToNodes(messageData []byte) {
+// broadcastToNodes sends the given message to all cluster members except the local node.
+func (h *Handler) broadcastToNodes(message []byte) {
 	logger := logging.GetLogger()
 	for _, node := range h.Memberlist.Members() {
 		if node.Name == h.Memberlist.LocalNode().Name {
 			continue
 		}
-		if err := h.Memberlist.SendReliable(node, messageData); err != nil {
+		if err := h.Memberlist.SendReliable(node, message); err != nil {
 			logger.Error("Failed to send message to node %s: %v", node.Name, err)
 		}
 	}

@@ -64,17 +64,24 @@ func (h *Handler) HandleHTTPGet(key string) (any, error) {
 
 // HandleHTTPSet replaces the entire configuration state with the new data.
 func (h *Handler) HandleHTTPSet(update map[string]any) (any, error) {
-	// Clear all existing data before applying the update.
-	h.HandleClearAllData()
 
-	if err := h.handleConfigUpdate(update); err != nil {
-		return nil, fmt.Errorf("failed to handle update: %w", err)
+	// Build one update that clears and then applies the data
+	cu, err := h.StateManager.NewConfigUpdate(update)
+	if err != nil {
+		return nil, err
 	}
+	cu.Clear = true
 
-	return map[string]any{
-		"status":  "success",
-		"updates": update,
-	}, nil
+	msg := api.NewNotifyMessage(
+		api.NotifyOpConfigUpdate,
+		h.Memberlist.LocalNode().Name,
+		api.WithConfigUpdate(cu),
+	)
+
+	if err := h.broadcastUpdate(msg); err != nil {
+		return nil, fmt.Errorf("failed to set state: %w", err)
+	}
+	return map[string]any{"status": "success", "updates": update}, nil
 }
 
 // HandleHTTPPatch updates only the specified fields.
@@ -92,7 +99,7 @@ func (h *Handler) HandleHTTPPatch(value map[string]any) (any, error) {
 }
 
 func (h *Handler) HandleClearAllData() error {
-	configUpdate, err := api.NewConfigUpdate(map[string]any{})
+	configUpdate, err := h.StateManager.NewConfigUpdate(map[string]any{})
 	if err != nil {
 		return err
 	}
@@ -148,7 +155,7 @@ func (h *Handler) HandleExportData() (any, error) {
 
 func (h *Handler) handleConfigUpdate(data map[string]any) error {
 
-	configUpdate, err := api.NewConfigUpdate(data)
+	configUpdate, err := h.StateManager.NewConfigUpdate(data)
 	if err != nil {
 		return err
 	}

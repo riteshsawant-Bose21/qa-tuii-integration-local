@@ -135,7 +135,7 @@ func (c *Cluster) UpdateDeviceInfo(w http.ResponseWriter, r *http.Request) {
 		}
 		req.Header.Set(api.ContentType, api.JsonMIMEType)
 
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := httpClient.Do(req)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("PATCH request failed: %v", err), http.StatusBadGateway)
 			return
@@ -143,7 +143,8 @@ func (c *Cluster) UpdateDeviceInfo(w http.ResponseWriter, r *http.Request) {
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusNoContent {
-			body, _ := io.ReadAll(resp.Body)
+			body, err := io.ReadAll(resp.Body)
+			logging.GetLogger().Error("Remote patch to %s failed with body=%s %v", url, body, err)
 			http.Error(w, fmt.Sprintf("PATCH failed: %s", string(body)), resp.StatusCode)
 			return
 		}

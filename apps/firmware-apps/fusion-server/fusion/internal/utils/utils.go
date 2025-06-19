@@ -3,7 +3,6 @@ package utils
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"fusion/internal/logging"
 	"io"
@@ -128,60 +127,18 @@ func ApplyPatch(data map[string]any, changes map[string]any) error {
 }
 
 // CalculateChecksum returns a SHA-256 hash of JSON data.
-// canonicaljson is used to ensure deterministic ordering.
 func CalculateChecksum(v any) (string, error) {
+
+	// canonicaljson is used to ensure deterministic ordering
 	b, err := canonicaljson.Marshal(v)
 	if err != nil {
 		return "", fmt.Errorf("canonical marshal failed: %w", err)
 	}
-
-	// Unmarshal to generic map
-	var generic any
-	if err := json.Unmarshal(b, &generic); err != nil {
-		return "", fmt.Errorf("json unmarshal failed: %w", err)
-	}
-
-	// Strip the volatile fields recursively
-	cleaned := stripFieldsRecursive(generic)
-
-	// Marshal the cleaned JSON again
-	finalJSON, err := canonicaljson.Marshal(cleaned)
-	if err != nil {
-		return "", fmt.Errorf("canonical re-marshal failed: %w", err)
-	}
-
-	sum := sha256.Sum256(finalJSON)
+	sum := sha256.Sum256(b)
 	return hex.EncodeToString(sum[:]), nil
 }
 
-// fieldsToStrip removes values the will interfere with checksum calculation
-var fieldsToStrip = map[string]bool{
-	"timestamp": true,
-	"version":   true,
-	"Checksum":  true, // avoid recursive self-inclusion
-}
-
-func stripFieldsRecursive(v any) any {
-	switch val := v.(type) {
-	case map[string]any:
-		newMap := make(map[string]any)
-		for k, v2 := range val {
-			if fieldsToStrip[strings.ToLower(k)] {
-				continue
-			}
-			newMap[k] = stripFieldsRecursive(v2)
-		}
-		return newMap
-	case []any:
-		for i, v2 := range val {
-			val[i] = stripFieldsRecursive(v2)
-		}
-		return val
-	default:
-		return v
-	}
-}
-
+// VerifyChecksum validates the checksum.
 func VerifyChecksum(file multipart.File, expectedChecksum string) bool {
 
 	hash := sha256.New()

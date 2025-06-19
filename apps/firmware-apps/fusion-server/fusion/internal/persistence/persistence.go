@@ -86,50 +86,56 @@ func (p *Persistence) MarkDirty() {
 // SaveState persists the current state using the active snapshot key.
 func (p *Persistence) SaveState() error {
 	p.mutex.Lock()
-	defer p.mutex.Unlock()
+	snapshotKey := p.getActiveSnapshotKey()
+	p.mutex.Unlock()
 
-	snapshotKey, err := p.getActiveSnapshotKey()
-	if err != nil || snapshotKey == "" {
-		snapshotKey = keyDefaultSnapshot
-	}
-
+	// No need to lock here. BoltDB serializes writes.
 	ps, err := p.persistState(snapshotKey)
 	if err != nil {
 		return err
 	}
 
-	// Update lastSave after persistState returns.
+	p.mutex.Lock()
 	p.lastSave = time.Now().UTC()
+	p.mutex.Unlock()
 
-	meta, err := p.loadMetadata()
+	metadata, err := p.loadMetadata()
 	if err != nil {
 		return fmt.Errorf("failed to load metadata: %w", err)
 	}
-	meta.Timestamp = ps.Timestamp
-	meta.Valid = len(ps.State) > 0
+	metadata.Version = ps.Version
+	metadata.Valid = len(ps.State) > 0
 
-	if err := p.saveMetadata(meta); err != nil {
+	if err := p.saveMetadata(metadata); err != nil {
 		return fmt.Errorf("failed to update metadata: %w", err)
 	}
 
-	logging.GetLogger().Debug("State saved (version: %d, checksum: %s) under snapshot '%s'",
+	logging.GetLogger().Debug("State saved (version: %v, checksum: %s) under snapshot '%s'",
 		ps.Version, ps.Checksum, snapshotKey)
 
 	return nil
 }
 
-// ValidateState checks that the persistant state exists has a valid checksum.
+// ValidateState checks that the persistant state has a valid checksum.
 func (p *Persistence) ValidateState() error {
-	p.mutex.RLock()
-	defer p.mutex.RUnlock()
 
-	state := p.stateManager.GetFullState()
-	calculatedChecksum, err := utils.CalculateChecksum(state.State)
+	// Grab an immutable snapshot of the data only
+	payload := p.stateManager.GetStateMap()
+
+	// Recompute checksum over that payload
+	calculated, err := utils.CalculateChecksum(payload)
 	if err != nil {
 		return fmt.Errorf("failed to calculate checksum: %w", err)
 	}
-	if calculatedChecksum != state.Checksum {
-		return fmt.Errorf("checksum mismatch: state: %s calculated %s", state.Checksum, calculatedChecksum)
+
+	// Now grab the expected checksum from the VersionedState
+	expected := p.stateManager.GetFullState().Checksum
+
+	if calculated != expected {
+		return fmt.Errorf(
+			"checksum mismatch: expected %s, calculated %s",
+			expected, calculated,
+		)
 	}
 	return nil
 }
@@ -172,6 +178,9 @@ func (p *Persistence) ExportData() (any, error) {
 
 // Import imports data into the database
 func (p *Persistence) ImportData(importData map[string]any) error {
+
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
 
 	update := false
 
@@ -256,7 +265,7 @@ func (p *Persistence) persistState(snapshotKey string) (*PersistentState, error)
 
 // loadMetadata retrieves and unmarshals the api.DatabaseMetadata from the database.
 func (p *Persistence) loadMetadata() (*api.DatabaseMetadata, error) {
-	var meta api.DatabaseMetadata
+	var metadata api.DatabaseMetadata
 	err := p.db.View(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket([]byte(bucketFusion))
 		if bucket == nil {
@@ -266,12 +275,12 @@ func (p *Persistence) loadMetadata() (*api.DatabaseMetadata, error) {
 		if data == nil {
 			return fmt.Errorf("metadata not found")
 		}
-		return json.Unmarshal(data, &meta)
+		return json.Unmarshal(data, &metadata)
 	})
 	if err != nil {
 		return nil, err
 	}
-	return &meta, nil
+	return &metadata, nil
 }
 
 // saveMetadata saves the api.DatabaseMetadata into the metadata bucket.
@@ -302,12 +311,12 @@ func (p *Persistence) updateHash() error {
 	if err != nil {
 		return fmt.Errorf("failed to compute DB hash: %w", err)
 	}
-	meta, err := p.loadMetadata()
+	metadata, err := p.loadMetadata()
 	if err != nil {
 		return fmt.Errorf("failed to load metadata: %w", err)
 	}
-	meta.Hash = newHash
-	return p.saveMetadata(meta)
+	metadata.Hash = newHash
+	return p.saveMetadata(metadata)
 }
 
 // computeHash computes a SHA-256 hash over all buckets and their key/value pairs.
@@ -375,7 +384,7 @@ func (p *Persistence) replaceBucketData(bucketName string, data map[string]any) 
 	// Replace the entire bucket in an atomic transaction.
 	err := p.db.Update(func(tx *bbolt.Tx) error {
 
-		bucket := tx.Bucket([]byte(bucketTasks))
+		bucket := tx.Bucket([]byte(bucketName))
 		if bucket == nil {
 			return fmt.Errorf("%s bucket not found", bucketName)
 		}
@@ -440,7 +449,6 @@ func (p *Persistence) initializeMetadata(bucket *bbolt.Bucket) error {
 	}
 
 	meta := &api.DatabaseMetadata{
-		Timestamp:      time.Now().UTC(),
 		ActiveSnapshot: keyDefaultSnapshot,
 		Hash:           newHash,
 		Valid:          true,

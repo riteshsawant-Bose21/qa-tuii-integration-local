@@ -24,7 +24,7 @@ type SkewEntry struct {
 	Detected time.Time
 }
 
-// SkewEntry holds time skew values
+// SkewStore holds time skew values detected from incoming messages
 type SkewStore struct {
 	mu        sync.RWMutex
 	timeSkews map[string]*SkewEntry
@@ -86,30 +86,39 @@ func NewClusterDelegate(nodeID string, persistence *persistence.Persistence, sta
 }
 
 func (d *ClusterDelegate) NodeMeta(limit int) []byte {
+
+	version := d.stateManager.GetVersion()
+
 	meta := struct {
-		NodeID  string `json:"node_id"`
-		Version int64  `json:"version"`
+		NodeID  string      `json:"node_id"`
+		Version api.Version `json:"version"`
 	}{
 		NodeID:  d.nodeID,
-		Version: d.stateManager.GetVersion(),
+		Version: version,
 	}
+
 	data, err := json.Marshal(meta)
 	if err != nil {
 		logging.GetLogger().Error("Error marshaling metadata: %v", err)
-		return []byte{}
+		return nil
 	}
+
 	if len(data) > limit {
-		return data[:limit]
+		logging.GetLogger().Warn("NodeMeta (%d bytes) exceeds limit (%d), dropping metadata", len(data), limit)
+		return nil
 	}
+
 	return data
 }
 
 func (d *ClusterDelegate) NotifyMsg(msg []byte) {
-	if len(msg) == 0 {
-		return
-	}
 
 	logger := logging.GetLogger()
+
+	if len(msg) == 0 {
+		logger.Warn("Received empty message")
+		return
+	}
 
 	var message api.NotifyMessage
 	if err := json.Unmarshal(msg, &message); err != nil {
@@ -176,8 +185,8 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 		}
 
 	case api.NotifyOpTaskUpdate:
-		if err := d.taskManager.RemoveTask(message.Task.ID); err != nil {
-			logger.Error("Error deleting task: %v", err)
+		if err := d.taskManager.UpdateTaskFromCluster(message.Task); err != nil {
+			logger.Error("Error updating task: %v", err)
 		}
 
 	case api.NotifyOpVersionUpdate:
@@ -186,7 +195,7 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 		}
 
 	default:
-		logger.Error("Unknown message type")
+		logger.Error("Unknown message type: %q", message.Operation)
 	}
 }
 
@@ -201,7 +210,7 @@ func (d *ClusterDelegate) LocalState(join bool) []byte {
 
 	state := d.stateManager.GetFullState()
 	snapshot := struct {
-		Version int64                      `json:"version"`
+		Version api.Version                `json:"version"`
 		NodeID  string                     `json:"node_id"`
 		State   map[string]*api.StateEntry `json:"state"`
 	}{
@@ -216,7 +225,7 @@ func (d *ClusterDelegate) LocalState(join bool) []byte {
 		return nil
 	}
 
-	logger.Debug("Providing local state with %d entries (version: %d)",
+	logger.Debug("Providing local state with %d entries (version: %v)",
 		len(state.State), snapshot.Version)
 
 	return data
@@ -230,18 +239,13 @@ func (d *ClusterDelegate) MergeRemoteState(buf []byte, join bool) {
 	logger := logging.GetLogger()
 	logger.Debug("MergeRemoteState called (join=%v, size=%d)", join, len(buf))
 
-	var snapshot struct {
-		Version int64                      `json:"version"`
-		NodeID  string                     `json:"node_id"`
-		State   map[string]*api.StateEntry `json:"state"`
-	}
-
+	var snapshot api.RemoteStateSnapshot
 	if err := json.Unmarshal(buf, &snapshot); err != nil {
 		logger.Error("Error unmarshaling remote state: %v", err)
 		return
 	}
 
-	logger.Debug("Merging remote state from node %s with %d entries (version: %d)",
+	logger.Debug("Merging remote state from node %s with %d entries (version: %v)",
 		snapshot.NodeID, len(snapshot.State), snapshot.Version)
 	d.stateManager.MergeRemoteState(snapshot.State)
 
