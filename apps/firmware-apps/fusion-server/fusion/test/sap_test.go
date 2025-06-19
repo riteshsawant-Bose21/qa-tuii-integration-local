@@ -13,7 +13,6 @@ import (
 )
 
 const (
-	sapInstance2Name  = "fusion2"
 	sapTestServerAddr = "http://192.168.64.100:8080"
 )
 
@@ -39,7 +38,7 @@ func TestMultipassSAPPropagation(t *testing.T) {
 		0x00, 0x00, 0x00, 0x00, // origin = 0.0.0.0
 	}
 
-	// Build a minimal SDP payload with CRLF line endings:
+	// Build a minimal SDP payload with CRLF line endings
 	sdpLines := []string{
 		"v=0",
 		"o=- 123456 1 IN IP4 0.0.0.0",

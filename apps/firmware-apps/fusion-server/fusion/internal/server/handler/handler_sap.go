@@ -24,7 +24,10 @@ const (
 	versionMask     VARTEC = 0xE0   // V: Version bits (bits 5–7)
 
 	minPacketLength = 8
+	sessionInterval = 30 * time.Second
+	sessionTimeout  = 10
 	sessionsKey     = "sessions"
+	smoothingFactor = 0.5
 )
 
 // SAPMessage represents a decoded SAP announcement.
@@ -40,6 +43,7 @@ type SAPSession struct {
 	ID          string                  `json:"id"`
 	OriginIP    string                  `json:"origin"`
 	Timestamp   time.Time               `json:"timestamp"`
+	Interval    time.Duration           `json:"-"`
 	Description *sdp.SessionDescription `json:"description"`
 	Deletion    bool                    `json:"-"`
 	Version     int                     `json:"-"`
@@ -103,7 +107,7 @@ func (h *Handler) HandleSAPMessage(data []byte) error {
 	re := regexp.MustCompile(`\r\n|\r|\n`)
 	raw = re.ReplaceAllString(raw, "\r\n")
 
-	// ensure trailing CRLF
+	// Ensure trailing CRLF
 	if !strings.HasSuffix(raw, "\r\n") {
 		raw += "\r\n"
 	}
@@ -141,4 +145,46 @@ func (h *Handler) HandleListSessions() map[string]*SAPSession {
 // HandleGetSession returns the session based on session identifier.
 func (h *Handler) HandleGetSession(id string) *SAPSession {
 	return h.sessions[id]
+}
+
+// StartSAPSessionPruner runs a go routine to remove expires sessions.
+func (h *Handler) StartSAPSessionPruner() {
+	ticker := time.NewTicker(5 * time.Minute)
+	go func() {
+		for range ticker.C {
+			h.pruneExpiredSAPSessions()
+		}
+	}()
+}
+
+// pruneExpiredSAPSessions removes sessions that have timed out.
+func (h *Handler) pruneExpiredSAPSessions() {
+
+	logger := logging.GetLogger()
+
+	now := time.Now()
+	changed := false
+
+	for key, session := range h.sessions {
+		interval := session.Interval
+		if interval < time.Second {
+			interval = sessionInterval
+		}
+
+		timeout := max(interval*sessionTimeout, time.Hour)
+
+		if now.Sub(session.Timestamp) > timeout {
+			logger.Info("Expiring stale SAP session %s after %v inactivity", key, now.Sub(session.Timestamp))
+			delete(h.sessions, key)
+			changed = true
+		}
+	}
+
+	if changed && h.StateManager.GetNode() == h.Memberlist.LocalNode().Name {
+		state := h.StateManager.GetStateMap()
+		state[sessionsKey] = h.sessions
+		if err := h.handleConfigUpdate(state); err != nil {
+			logger.Error("Failed to update state after SAP cleanup: %v", err)
+		}
+	}
 }

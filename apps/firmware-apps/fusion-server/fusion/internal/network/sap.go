@@ -26,6 +26,8 @@ func NewSAPServer(groups []string, port string, handler *handler.Handler) (*SAPS
 	}
 	logging.GetLogger().Info("SAP listening on %s (groups: %v)", port, groups)
 
+	handler.StartSAPSessionPruner()
+
 	var sap *SAPServer
 	sap = &SAPServer{
 		Listener: NewListener(
