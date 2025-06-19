@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
+	"regexp"
 	"strings"
 	"time"
 
@@ -73,34 +74,49 @@ func (h *Handler) HandleSAPMessage(data []byte) error {
 	if isDelete {
 		logger.Debug("Deleting network session %s.", sessionKey)
 		delete(h.sessions, sessionKey)
-	} else {
-
-		// New or updated session
-		logger.Debug("Adding/updating network session %s.", sessionKey)
-		session := &SAPSession{
-			ID:        sessionKey,
-			OriginIP:  originIP,
-			Timestamp: time.Now(),
-			Deletion:  false,
-			Version:   version,
-		}
-
-		// Normalize SDP line endings: Pion requires CRLF per RFC 4566
-		raw := msg.StringPayload
-		if !strings.Contains(raw, "\r\n") {
-			raw = strings.ReplaceAll(raw, "\n", "\r\n")
-		}
-
-		// Parse SDP into pion's SessionDescription
-		var sessionDesc sdp.SessionDescription
-		if err := sessionDesc.Unmarshal([]byte(raw)); err != nil {
-			logger.Warn("Failed to parse SDP for session %s: %v", sessionKey, err)
-		} else {
-			session.Description = &sessionDesc
-		}
-
-		h.sessions[sessionKey] = session
+		return nil
 	}
+
+	// New or updated session
+	logger.Debug("Adding/updating network session %s.", sessionKey)
+	session := &SAPSession{
+		ID:        sessionKey,
+		OriginIP:  originIP,
+		Timestamp: time.Now(),
+		Deletion:  false,
+		Version:   version,
+	}
+
+	// Normalize SDP line endings: Pion requires CRLF per RFC 4566
+	raw := msg.StringPayload
+
+	// First line of the SDP payload is the MIME type
+	// dropping everything before the first "v=" line
+	pos := strings.Index(raw, "v=")
+	if pos < 0 {
+		logger.Warn("No v= line found in incoming SDP – full payload was: %q", raw)
+		return nil
+	}
+
+	// Normalize SDP line endings: Pion requires CRLF per RFC 4566
+	raw = raw[pos:]
+	re := regexp.MustCompile(`\r\n|\r|\n`)
+	raw = re.ReplaceAllString(raw, "\r\n")
+
+	// ensure trailing CRLF
+	if !strings.HasSuffix(raw, "\r\n") {
+		raw += "\r\n"
+	}
+
+	// Parse SDP into pion's SessionDescription
+	var sessionDesc sdp.SessionDescription
+	if err := sessionDesc.Unmarshal([]byte(raw)); err != nil {
+		logger.Warn("Failed to parse SDP for session %s: %v", sessionKey, err)
+	} else {
+		session.Description = &sessionDesc
+	}
+
+	h.sessions[sessionKey] = session
 
 	if h.StateManager.GetNode() == h.Memberlist.LocalNode().Name {
 		// Update the configuration state only on the primary node.

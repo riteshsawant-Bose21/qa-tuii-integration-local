@@ -369,7 +369,7 @@ func initSAPServer(port string, handler *handler.Handler) *network.SAPServer {
 
 	// Use the address specified in RFC 2947 (https://datatracker.ietf.org/doc/html/rfc2974)
 	// Will we be using multiple and/or different addresses?
-	groups := []string{"224.2.127.254"}
+	groups := []string{"224.2.127.254", "239.255.255.255"}
 
 	sapServer, err := network.NewSAPServer(groups, port, handler)
 	if err != nil {
