@@ -3,6 +3,7 @@
 #include "servo.h"
 
 #include <bosepro/algorithm.h>
+#include <bosepro/audio_task.h>
 #include <bosepro/dspmemory.h>
 
 #include <alsa/asoundlib.h>
@@ -70,6 +71,10 @@ public:
     void write(const float *buffer, int samples);
 
 
+    /// Called by the deferred_open_Ttask to open the ALSA device if it is not
+    /// immediately available when the block is initialized.
+    static void deferred_open(void *obj);
+
 private:
     typedef struct {
         snd_pcm_format_t format;
@@ -130,12 +135,18 @@ private:
     snd_pcm_sw_params_t *sw_params;
     bosepro::DspTempMemory<uint8_t []> sample_buffer;
     static std::vector<AlsaFormat> alsa_formats;
+    std::string device_name;
+    bool is_input;
+    bool is_open = false;
+    bosepro::AudioSubtask deferred_open_task;
 
     void (*convert_read)(const uint8_t *src, float *dst,
                          int channels, int samples) = nullptr;
     void (*convert_write)(const float *src, uint8_t *dst,
                           int channels, int samples) = nullptr;
 
+    void open_device();
+    void close_device();
     void set_hw_params();
     void set_sw_params();
 };
@@ -211,7 +222,23 @@ AlsaDevice::AlsaDevice(const std::string &device_name, int channels,
                        int max_transfer_size, bool is_input)
     : alsa(nullptr), channels(channels), sample_rate(sample_rate),
       period_size(period_size), max_transfer_size(max_transfer_size),
-      hw_params(nullptr), sw_params(nullptr)
+      hw_params(nullptr), sw_params(nullptr), device_name(device_name),
+      is_input(is_input),
+      deferred_open_task(deferred_open, this, sample_rate, 500 * period_size,
+                         period_size)
+{
+    sample_buffer.resize(channels * max_transfer_size * sizeof(float));
+    open_device();
+}
+
+
+AlsaDevice::~AlsaDevice()
+{
+    close_device();
+}
+
+
+void AlsaDevice::open_device()
 {
     int error = snd_pcm_open(&alsa, device_name.c_str(),
                              is_input ? SND_PCM_STREAM_CAPTURE
@@ -220,9 +247,8 @@ AlsaDevice::AlsaDevice(const std::string &device_name, int channels,
 
     if (error < 0)
     {
-        SPDLOG_ERROR("Failed to open ALSA device: {}", snd_strerror(error));
-        throw std::runtime_error("Failed to open ALSA device: "
-                + std::string(snd_strerror(error)));
+        SPDLOG_DEBUG("Failed to open ALSA device: {}", snd_strerror(error));
+        return;
     }
 
     set_hw_params();
@@ -231,13 +257,15 @@ AlsaDevice::AlsaDevice(const std::string &device_name, int channels,
     error = snd_pcm_prepare(alsa);
     if (error < 0)
     {
-        throw std::runtime_error("Failed to prepare ALSA device: "
-                + std::string(snd_strerror(error)));
+        SPDLOG_ERROR("Failed to prepare ALSA device: {}", snd_strerror(error));
     }
+
+    SPDLOG_DEBUG("Opened ALSA device: {}", device_name);
+    is_open = true;
 }
 
 
-AlsaDevice::~AlsaDevice()
+void AlsaDevice::close_device()
 {
     if (alsa != nullptr)
     {
@@ -253,11 +281,25 @@ AlsaDevice::~AlsaDevice()
     {
         snd_pcm_sw_params_free(sw_params);
     }
+
+    is_open = false;
+}
+
+
+void AlsaDevice::deferred_open(void *obj)
+{
+    AlsaDevice *device = static_cast<AlsaDevice *>(obj);
+    device->open_device();
 }
 
 
 int AlsaDevice::get_buffer_depth()
 {
+    if (!is_open)
+    {
+        return -1;
+    }
+
     int depth = snd_pcm_avail(alsa);
 
     if (depth < 0)
@@ -273,6 +315,11 @@ int AlsaDevice::get_buffer_depth()
 
 int AlsaDevice::adjust_buffer_depth(int samples)
 {
+    if (!is_open)
+    {
+        return 0;
+    }
+
     SPDLOG_TRACE("Adjusting ALSA buffer depth by {} samples", samples);
 
     if (samples < 0)
@@ -316,6 +363,13 @@ int AlsaDevice::adjust_buffer_depth(int samples)
 
 int AlsaDevice::read(float *buffer, int samples)
 {
+    if (!is_open)
+    {
+        deferred_open_task.tick();
+        std::memset(buffer, 0, samples * channels * sizeof(float));
+        return samples;
+    }
+
     if (samples > max_transfer_size)
     {
         SPDLOG_ERROR("Requested read size {} exceeds maximum {}",
@@ -346,6 +400,12 @@ int AlsaDevice::read(float *buffer, int samples)
 
 void AlsaDevice::write(const float *buffer, int samples)
 {
+    if (!is_open)
+    {
+        deferred_open_task.tick();
+        return;
+    }
+
     if (samples > max_transfer_size)
     {
         SPDLOG_ERROR("Requested write size {} exceeds maximum {}",
@@ -377,8 +437,8 @@ void AlsaDevice::set_hw_params()
     error = snd_pcm_hw_params_any(alsa, hw_params);
     if (error < 0)
     {
-        throw std::runtime_error("Failed to get ALSA hardware parameters: "
-                + std::string(snd_strerror(error)));
+        SPDLOG_ERROR("Failed to get ALSA hardware parameters: {}",
+                     snd_strerror(error));
     }
 
     // Choose between non-/interleaved and read/write vs. mmap.
@@ -386,8 +446,8 @@ void AlsaDevice::set_hw_params()
             SND_PCM_ACCESS_RW_INTERLEAVED);
     if (error < 0)
     {
-        throw std::runtime_error("Failed to set ALSA access type: "
-                + std::string(snd_strerror(error)));
+        SPDLOG_ERROR("Failed to set ALSA access type: {}",
+                    snd_strerror(error));
     }
 
     // Choose between float, s32, s24, s16, etc.
@@ -399,8 +459,6 @@ void AlsaDevice::set_hw_params()
             SPDLOG_DEBUG("Using ALSA format: {}",
                          snd_pcm_format_name(format.format));
 
-            sample_buffer.resize(channels * max_transfer_size
-                                 * format.bytes_per_sample);
             convert_read = format.convert_read;
             convert_write = format.convert_write;
             break;
@@ -421,8 +479,6 @@ void AlsaDevice::set_hw_params()
     {
         SPDLOG_ERROR("Failed to set ALSA channels: {}",
                 snd_strerror(error));
-        throw std::runtime_error("Failed to set ALSA channels: "
-                + std::string(snd_strerror(error)));
     }
 
     // Set the exact sample rate to use.
@@ -431,8 +487,6 @@ void AlsaDevice::set_hw_params()
     {
         SPDLOG_ERROR("Failed to set ALSA sample rate: {}",
                      snd_strerror(error));
-        throw std::runtime_error("Failed to set ALSA sample rate: "
-                + std::string(snd_strerror(error)));
     }
 
     // `snd_pcm_hw_params_set_rate_resample()` can disable resampling
@@ -460,8 +514,6 @@ void AlsaDevice::set_hw_params()
     {
         SPDLOG_ERROR("Failed to set ALSA period size: {}",
                      snd_strerror(error));
-        throw std::runtime_error("Failed to set ALSA period size: "
-                + std::string(snd_strerror(error)));
     }
 
     // Set the number of periods in the buffer.
@@ -470,8 +522,6 @@ void AlsaDevice::set_hw_params()
     {
         SPDLOG_ERROR("Failed to set ALSA number of periods: {}",
                      snd_strerror(error));
-        throw std::runtime_error("Failed to set ALSA number of periods: "
-                + std::string(snd_strerror(error)));
     }
 
     // `snd_pcm_hw_params_set_buffer_time()` is redundant given we have set
@@ -486,8 +536,6 @@ void AlsaDevice::set_hw_params()
     {
         SPDLOG_ERROR("Failed to set ALSA hardware parameters: {}",
                      snd_strerror(error));
-        throw std::runtime_error("Failed to set ALSA hardware parameters: "
-                + std::string(snd_strerror(error)));
     }
 }
 
@@ -503,8 +551,6 @@ void AlsaDevice::set_sw_params()
     {
         SPDLOG_ERROR("Failed to get ALSA software parameters: {}",
                      snd_strerror(error));
-        throw std::runtime_error("Failed to get software parameters: "
-                + std::string(snd_strerror(error)));
     }
 
     // `snd_pcm_sw_params_set_tstamp_mode()` turns timestamps on or off.
@@ -521,8 +567,6 @@ void AlsaDevice::set_sw_params()
     {
         SPDLOG_ERROR("Failed to set ALSA avail min: {}",
                      snd_strerror(error));
-        throw std::runtime_error("Failed to set avail min: "
-                + std::string(snd_strerror(error)));
     }
 
     // `snd_pcm_sw_params_set_period_event()` sets a poll/select wakeup
@@ -536,8 +580,6 @@ void AlsaDevice::set_sw_params()
     {
         SPDLOG_ERROR("Failed to set ALSA start threshold: {}",
                      snd_strerror(error));
-        throw std::runtime_error("Failed to set start threshold: "
-                + std::string(snd_strerror(error)));
     }
 
     // Set the threshold above which we enter xrun state.  The -1 setting
@@ -548,8 +590,6 @@ void AlsaDevice::set_sw_params()
     {
         SPDLOG_ERROR("Failed to set ALSA stop threshold: {}",
                      snd_strerror(error));
-        throw std::runtime_error("Failed to set stop threshold: "
-                + std::string(snd_strerror(error)));
     }
 
     // `snd_pcm_sw_params_set_silence_thershold()` when the playback buffer
@@ -566,8 +606,6 @@ void AlsaDevice::set_sw_params()
     {
         SPDLOG_ERROR("Failed to set ALSA software parameters: {}",
                      snd_strerror(error));
-        throw std::runtime_error("Failed to set software parameters: "
-                + std::string(snd_strerror(error)));
     }
 }
 
@@ -929,18 +967,24 @@ void AlsaIn::process()
     // Measure the current buffer depth
     int depth = device->get_buffer_depth();
 
+    if (depth <= 0)
+    {
+        // Pretend everything is operating nominally if the device isn't open
+        depth = target_depth;
+    }
+
     // Handle the cases where the buffer depth is way too high or low
     // Perhaps we want to do packet loss concealment here
     if (depth > max_depth)
     {
-        SPDLOG_WARN("Buffer depth too high: {} {}", depth, max_depth);
+        SPDLOG_DEBUG("Buffer depth too high: {} {}", depth, max_depth);
         depth = device->adjust_buffer_depth(target_depth - depth);
 
         servo->reset();
     }
     else if (depth < min_depth)
     {
-        SPDLOG_WARN("Buffer depth too low: {} {}", depth, min_depth);
+        SPDLOG_DEBUG("Buffer depth too low: {} {}", depth, min_depth);
         depth = device->adjust_buffer_depth(target_depth - depth);
 
         servo->reset();
@@ -1017,6 +1061,12 @@ void AlsaOut::process()
 {
     // Measure the current buffer depth
     int depth = 64 * 48 - device->get_buffer_depth();
+
+    if (depth > 64 * 48)
+    {
+        // Pretend everything is operating nominally if the device isn't open
+        depth = target_depth;
+    }
 
     // Handle the cases where the buffer depth is way too high or low
     // Perhaps we want to do packet loss concealment here
