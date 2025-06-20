@@ -3,6 +3,7 @@
 #include <cctype>
 #include <chrono>
 #include <cstring>
+#include <curl/curl.h>
 #include <fcntl.h>
 #include <functional>
 #include <fstream>
@@ -714,6 +715,13 @@ private:
     return ss.str();
   }
 
+  static size_t curlWriteCallback(void *contents, size_t size,
+                                 size_t nmemb, std::string *userp) {
+    size_t totalSize = size * nmemb;
+    userp->append(static_cast<char *>(contents), totalSize);
+    return totalSize;
+  }
+
   /**
    * @brief Handles a monitored value change.
    */
@@ -747,16 +755,49 @@ private:
       message = "{ \"target\": \"session\", \"name\": \"create_periodic_task\", \"value\": \"/tmp/fw_config.json\" }";
       updateHandler_(message);
     }
-    else if (path_parts[0].key == "devices" && new_val["id"] == device_id ) {
-      message = "{ \"target\": \"session\", \"name\": \"destroy_all_audio_tasks\" }";
-      updateHandler_(message);
+    else if (path_parts[0].key == "devices") {
+      CURL *curl = curl_easy_init();
+      CURLcode res;
+      std::string response;
 
-      std::ofstream dsp_config("/tmp/dsp_config.json");
-      dsp_config << new_val["dsp_static_config"];
-      dsp_config.close();
+      if (curl) {
+        curl_easy_setopt(curl, CURLOPT_URL, "http://localhost:9090/device");
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlWriteCallback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
+        res = curl_easy_perform(curl);
+        if (res != CURLE_OK && verbose_) {
+          log("Failed to retrieve device id: " + std::string(curl_easy_strerror(res)));
+        }
+        else {
+          Json::CharReaderBuilder readerBuilder;
+          Json::Value jsonResponse;
+          std::istringstream iss(response);
+          std::string errs;
 
-      message = "{ \"target\": \"session\", \"name\": \"create_audio_task\", \"value\": \"/tmp/dsp_config.json\" }";
-      updateHandler_(message);
+          if (!Json::parseFromStream(readerBuilder, iss, &jsonResponse, &errs)) {
+            log("Failed to parse device response: " + response);
+          } else {
+            device_id = jsonResponse["id"].asString();
+            if (verbose_) {
+              log("Device ID set to: " + device_id);
+            }
+          }
+        }
+        curl_easy_cleanup(curl);
+      }
+
+      if (new_val["id"] == device_id)
+      {
+        message = "{ \"target\": \"session\", \"name\": \"destroy_all_audio_tasks\" }";
+        updateHandler_(message);
+
+        std::ofstream dsp_config("/tmp/dsp_config.json");
+        dsp_config << new_val["dsp_static_config"];
+        dsp_config.close();
+
+        message = "{ \"target\": \"session\", \"name\": \"create_audio_task\", \"value\": \"/tmp/dsp_config.json\" }";
+        updateHandler_(message);
+      }
     }
   }
 
