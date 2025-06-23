@@ -230,6 +230,33 @@ public:
     }
 
 
+    /// Get the maximum value for the interface (for Property, Parameter,
+    /// and Telemetry interfaces).  The maximum value must exist for this
+    /// definition.
+    ///
+    /// @param  value  The maximum value for the interface.
+    /// @param  maximum_name  The name of the property or terminal that
+    ///                       determines the maximum value for the interface.
+    template <typename T>
+    void get_maximum_value(T &value, std::string &maximum_name) const
+    {
+        if (try_member_value<T>("maximum_value", value))
+        {
+            SPDLOG_DEBUG("Got maximum value from definition: {}.", value);
+            maximum_name = "";
+        }
+        else if (try_member_value<std::string>("maximum_value", maximum_name))
+        {
+            SPDLOG_DEBUG("Got maximum value from definition: {}.",
+                         maximum_name);
+        }
+        else
+        {
+            SPDLOG_CRITICAL("Failed to get maximum value from definition.");
+        }
+    }
+
+
     /// Test whether the interface has a maximum length.
     ///
     /// @return  True if the interface has a maximum length, false otherwise.
