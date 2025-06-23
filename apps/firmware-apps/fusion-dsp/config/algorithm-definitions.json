@@ -1,5 +1,5 @@
 {
-    "version": "0.1.1",
+    "version": "0.1.2",
     "algorithms": [
         {
             "name": "alsa_in",
@@ -525,7 +525,7 @@
                     "value_type": "integer",
                     "default_value": 0,
                     "minimum_value": 0,
-                    "maximum_value": 4800
+                    "maximum_value": "max_delay"
                 },
                 {
                     "name": "channel_bypass",
@@ -1677,6 +1677,59 @@
                 {
                     "name": "out_meter",
                     "dimensions": ["channels"],
+                    "value_type": "float",
+                    "default_value": -60.0,
+                    "minimum_value": -60.0,
+                    "maximum_value": 0.0,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
+                }
+            ]
+        },
+        {
+            "name": "source_selector",
+            "terminals": [
+                {
+                    "name": "in",
+                    "signal_type": "audio",
+                    "direction": "input",
+                    "minimum_channels": 1,
+                    "maximum_channels": 32
+                },
+                {
+                    "name": "out",
+                    "signal_type": "audio",
+                    "direction": "output",
+                    "channels": 1
+                }
+            ],
+            "parameters": [
+                {
+                    "name": "input",
+                    "value_type": "integer",
+                    "default_value": 1,
+                    "minimum_value": 1,
+                    "maximum_value": "in"
+                },
+                {
+                    "name": "out_gain",
+                    "dimensions": [1],
+                    "value_type": "float",
+                    "default_value": 0.0,
+                    "minimum_value": -60.0,
+                    "maximum_value": 12.0
+                },
+                {
+                    "name": "out_mute",
+                    "dimensions": [1],
+                    "value_type": "bool",
+                    "default_value": false
+                }
+            ],
+            "telemetry": [
+                {
+                    "name": "out_meter",
+                    "dimensions": [1],
                     "value_type": "float",
                     "default_value": -60.0,
                     "minimum_value": -60.0,
