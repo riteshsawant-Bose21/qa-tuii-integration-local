@@ -18,7 +18,6 @@ import (
 )
 
 const (
-	checkInterval   = 30 * time.Second
 	monitorInterval = 10 * time.Second
 )
 
@@ -172,15 +171,14 @@ func (c *Cluster) startVRRPListener() error {
 
 // isLocalVIP compares the VIP (which might be in CIDR format) to the IPs on local interfaces.
 func (c *Cluster) isLocalVIP(vip string) bool {
-
-	// Try to parse the vip as CIDR and use just the IP portion.
-	expectedIP, _, err := net.ParseCIDR(vip)
-	if err != nil {
-		// If not in CIDR, assume vip is a plain IP address.
-		expectedIP = net.ParseIP(vip)
-		if expectedIP == nil {
+	expectedIP := net.ParseIP(vip)
+	if expectedIP == nil {
+		// Try to parse as CIDR and extract the IP
+		ip, _, err := net.ParseCIDR(vip)
+		if err != nil {
 			return false
 		}
+		expectedIP = ip
 	}
 
 	addrs, err := net.InterfaceAddrs()
@@ -207,13 +205,13 @@ func (c *Cluster) isLocalVIP(vip string) bool {
 //
 // If vip isn’t present on any interface, it returns (nil, nil, false).
 func (c *Cluster) getLocalForVIP(vip string) (net.Addr, net.Addr, bool) {
-
-	expectedIP, _, err := net.ParseCIDR(vip)
-	if err != nil {
-		expectedIP = net.ParseIP(vip)
-		if expectedIP == nil {
+	expectedIP := net.ParseIP(vip)
+	if expectedIP == nil {
+		ip, _, err := net.ParseCIDR(vip)
+		if err != nil {
 			return nil, nil, false
 		}
+		expectedIP = ip
 	}
 
 	addrs, err := net.InterfaceAddrs()
@@ -225,24 +223,16 @@ func (c *Cluster) getLocalForVIP(vip string) (net.Addr, net.Addr, bool) {
 	var internalAddr net.Addr
 
 	for _, addr := range addrs {
-		// We only care about IPNet (not loopback). Cast to *net.IPNet to get the IP out.
 		if ipnet, ok := addr.(*net.IPNet); ok {
-			// skip loopback entirely
 			if ipnet.IP.IsLoopback() {
 				continue
 			}
 
-			// Only consider IPv4 here
 			if ip4 := ipnet.IP.To4(); ip4 != nil {
-				// If this IP matches the expected VIP, record vipAddr
 				if ip4.Equal(expectedIP) {
 					vipAddr = &net.IPAddr{IP: ip4}
-
-					// Keep looking, as we still want to find a non-VIP internal IP
 					continue
 				}
-
-				// If we haven’t yet set internalAddr, treat this as a candidate
 				if internalAddr == nil {
 					internalAddr = &net.IPAddr{IP: ip4}
 				}
@@ -254,7 +244,6 @@ func (c *Cluster) getLocalForVIP(vip string) (net.Addr, net.Addr, bool) {
 		return nil, nil, false
 	}
 
-	// Return whatever non-loopback IPv4 we found
 	return internalAddr, vipAddr, true
 }
 
@@ -511,11 +500,16 @@ func getLocalEndpointResponse(addr, endpoint string) (response *http.Response, e
 
 // hostIsLocal checks if the address is the local memberlist node
 func (c *Cluster) hostIsLocal(addr string) bool {
-	host, _, _ := net.SplitHostPort(addr)
+	host, _, err := net.SplitHostPort(addr)
+	if err != nil {
+		logging.GetLogger().Error("Error splitting host port: %v", err)
+
+		return false
+	}
 	return host == c.Memberlist.LocalNode().Addr.String()
 }
 
-// getLocalURL that generates a local URL
+// getLocalURL builds a full API URL to the endpoint
 func getLocalURL(addr, endpoint string) string {
 	return fmt.Sprintf("%s%s%s", api.Protocol, addr, endpoint)
 }

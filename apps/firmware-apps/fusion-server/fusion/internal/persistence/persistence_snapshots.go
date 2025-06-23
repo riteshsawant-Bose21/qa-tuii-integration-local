@@ -12,15 +12,13 @@ import (
 
 // CreateSnapshot saves the current state under a custom snapshot key.
 func (p *Persistence) CreateSnapshot(snapshotKey string) error {
-	p.mutex.Lock()
-	defer p.mutex.Unlock()
 
 	ps, err := p.persistState(snapshotKey)
 	if err != nil {
 		return err
 	}
 
-	logging.GetLogger().Debug("Snapshot '%s' saved (version: %d, checksum: %s)",
+	logging.GetLogger().Debug("Snapshot '%s' saved (version: %v, checksum: %s)",
 		snapshotKey, ps.Version, ps.Checksum[:8])
 
 	return nil
@@ -36,12 +34,12 @@ func (p *Persistence) ActivateSnapshot(snapshotKey string) error {
 		return fmt.Errorf("snapshot %s does not exist", snapshotKey)
 	}
 
-	meta, err := p.loadMetadata()
+	metadata, err := p.loadMetadata()
 	if err != nil {
 		return fmt.Errorf("failed to load snapshot metadata: %w", err)
 	}
-	meta.ActiveSnapshot = snapshotKey
-	if err := p.saveMetadata(meta); err != nil {
+	metadata.ActiveSnapshot = snapshotKey
+	if err := p.saveMetadata(metadata); err != nil {
 		return fmt.Errorf("failed to update active snapshot metadata: %w", err)
 	}
 
@@ -52,7 +50,7 @@ func (p *Persistence) ActivateSnapshot(snapshotKey string) error {
 		}
 	}
 
-	logging.GetLogger().Debug("Activated snapshot '%s' (version: %d)", snapshotKey, ps.Version)
+	logging.GetLogger().Debug("Activated snapshot '%s' (version: %v)", snapshotKey, ps.Version)
 
 	p.mutex.Lock()
 	p.lastSave = time.Now().UTC()
@@ -62,8 +60,6 @@ func (p *Persistence) ActivateSnapshot(snapshotKey string) error {
 
 // DeleteSnapshot removes the snapshot and clears the active pointer if it was active.
 func (p *Persistence) DeleteSnapshot(snapshotKey string) error {
-	p.mutex.Lock()
-	defer p.mutex.Unlock()
 
 	// Perform deletion in a single atomic transaction.
 	err := p.db.Update(func(tx *bbolt.Tx) error {
@@ -81,10 +77,10 @@ func (p *Persistence) DeleteSnapshot(snapshotKey string) error {
 	}
 
 	// If the deleted snapshot was active, clear it from metadata.
-	meta, err := p.loadMetadata()
-	if err == nil && meta.ActiveSnapshot == snapshotKey {
-		meta.ActiveSnapshot = ""
-		if err := p.saveMetadata(meta); err != nil {
+	metadata, err := p.loadMetadata()
+	if err == nil && metadata.ActiveSnapshot == snapshotKey {
+		metadata.ActiveSnapshot = ""
+		if err := p.saveMetadata(metadata); err != nil {
 			return fmt.Errorf("failed to update metadata after deleting active snapshot: %w", err)
 		}
 	}
@@ -96,7 +92,9 @@ func (p *Persistence) DeleteSnapshot(snapshotKey string) error {
 	}
 
 	for _, taskID := range tasks {
-		p.DeleteTask(taskID)
+		if err := p.DeleteTask(taskID); err != nil {
+			return fmt.Errorf("failed to delete task %s: %w", taskID, err)
+		}
 	}
 
 	// Update the database hash
@@ -109,8 +107,6 @@ func (p *Persistence) DeleteSnapshot(snapshotKey string) error {
 
 // ListSnapshots returns a list of all snapshot keys.
 func (p *Persistence) ListSnapshots() ([]string, error) {
-	p.mutex.RLock()
-	defer p.mutex.RUnlock()
 
 	var snapshots []string
 	err := p.db.View(func(tx *bbolt.Tx) error {
@@ -128,38 +124,39 @@ func (p *Persistence) ListSnapshots() ([]string, error) {
 
 // SnapshotExists checks if a snapshot with the given name exists.
 func (p *Persistence) SnapshotExists(snapshotKey string) (bool, error) {
-	p.mutex.RLock()
-	defer p.mutex.RUnlock()
+	var exists bool
 
-	ps, err := p.readSnapshot(snapshotKey)
+	err := p.db.View(func(tx *bbolt.Tx) error {
+		b := tx.Bucket([]byte(bucketSnapshots))
+		if b == nil {
+			// No snapshots bucket means no snapshots at all
+			exists = false
+			return nil
+		}
+		// If Get returns non-nil, the key exists
+		exists = b.Get([]byte(snapshotKey)) != nil
+		return nil
+	})
+
 	if err != nil {
 		return false, err
 	}
 
-	if ps == nil {
-		return false, nil
-	}
-
-	return true, err
+	return exists, nil
 }
 
 // GetDatabaseMetadata retrieves the database metadata.
 func (p *Persistence) GetDatabaseMetadata() (*api.DatabaseMetadata, error) {
-	p.mutex.RLock()
-	defer p.mutex.RUnlock()
 
-	meta, err := p.loadMetadata()
+	metadata, err := p.loadMetadata()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get database metadata: %w", err)
 	}
-	return meta, nil
+	return metadata, nil
 }
 
 // GetSnapshot retrieves the snapshot data.
 func (p *Persistence) GetSnapshot(snapshotKey string) (any, error) {
-
-	p.mutex.RLock()
-	defer p.mutex.RUnlock()
 
 	ps, err := p.readSnapshot(snapshotKey)
 	if err != nil {
@@ -176,10 +173,7 @@ func (p *Persistence) GetSnapshot(snapshotKey string) (any, error) {
 // LoadActiveSnapshot ensures default buckets exist, loads the active snapshot, and activates it.
 func (p *Persistence) LoadActiveSnapshot() error {
 
-	snapshotName, err := p.getActiveSnapshotKey()
-	if err != nil {
-		return fmt.Errorf("failed to load active snapshot key: %w", err)
-	}
+	snapshotName := p.getActiveSnapshotKey()
 
 	if err := p.ActivateSnapshot(snapshotName); err != nil {
 		return fmt.Errorf("failed to activate snapshot %s: %w", snapshotName, err)
@@ -195,12 +189,13 @@ func (p *Persistence) IsDefaultSnapshot(snapshot string) bool {
 }
 
 // getActiveSnapshotKey retrieves the active snapshot key from metadata.
-func (p *Persistence) getActiveSnapshotKey() (string, error) {
-	meta, err := p.loadMetadata()
-	if err != nil || meta.ActiveSnapshot == "" {
-		return keyDefaultSnapshot, nil
+// If none is present, the default key is returned.
+func (p *Persistence) getActiveSnapshotKey() string {
+	metadata, err := p.loadMetadata()
+	if err != nil || metadata.ActiveSnapshot == "" {
+		return keyDefaultSnapshot
 	}
-	return meta.ActiveSnapshot, nil
+	return metadata.ActiveSnapshot
 }
 
 // readSnapshot reads the snapshot from the database.

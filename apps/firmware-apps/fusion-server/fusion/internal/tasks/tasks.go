@@ -122,6 +122,14 @@ func (tm *TaskManager) UpdateTask(task *api.Task, taskFunc func()) error {
 	return tm.saveTasks()
 }
 
+func (tm *TaskManager) UpdateTaskFromCluster(task *api.Task) error {
+	taskFunc, err := tm.makeTaskFunc(task)
+	if err != nil {
+		return fmt.Errorf("unable to generate task func: %w", err)
+	}
+	return tm.UpdateTask(task, taskFunc)
+}
+
 // RemoveTask removes a task by its ID.
 func (tm *TaskManager) RemoveTask(id string) error {
 	tm.mu.Lock()
@@ -454,4 +462,25 @@ func (tm *TaskManager) getTask(id string) (*api.Task, error) {
 		return nil, err
 	}
 	return task, nil
+}
+
+func (tm *TaskManager) makeTaskFunc(task *api.Task) (func(), error) {
+	switch task.Type {
+	case api.TaskTypeSnapshot:
+		snapshotID, ok := task.Params["snapshot_id"]
+		if !ok {
+			return nil, fmt.Errorf("missing 'snapshot' param for snapshot task")
+		}
+		return tm.taskActivateSnapshotFunc(snapshotID), nil
+
+	case api.TaskTypeAudioPlayback:
+		streamID, ok := task.Params["stream"]
+		if !ok {
+			return nil, fmt.Errorf("missing 'stream' param for audio task")
+		}
+		return tm.taskPlayAudioFunc(streamID), nil
+
+	default:
+		return nil, fmt.Errorf("unsupported task type: %s", task.Type)
+	}
 }

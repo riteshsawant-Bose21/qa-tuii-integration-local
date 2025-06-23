@@ -4,7 +4,6 @@ import (
 	"reflect"
 	"strconv"
 	"testing"
-	"time"
 
 	"fusion/internal/api"
 	"fusion/internal/logging"
@@ -17,7 +16,6 @@ var stateConfig = api.AppConfig{
 }
 
 func init() {
-
 	logging.InitLogger(logging.LogConfig{
 		NodeName:    "state_test",
 		LogDir:      "/tmp/state_test",
@@ -25,7 +23,6 @@ func init() {
 		MaxFiles:    5,
 		LogLevel:    logging.INFO,
 	})
-
 }
 
 func TestSetAndGetSimpleValue(t *testing.T) {
@@ -47,7 +44,6 @@ func TestSetAndGetSimpleValue(t *testing.T) {
 func TestApplyUpdateAndGetNestedValues(t *testing.T) {
 	sm := persistence.NewStateManager(&stateConfig)
 
-	// Create nested data with an array.
 	update := api.ConfigUpdate{
 		Data: map[string]any{
 			"settings": map[string]any{
@@ -56,40 +52,39 @@ func TestApplyUpdateAndGetNestedValues(t *testing.T) {
 				},
 			},
 		},
-		Version: time.Now().UnixNano(),
-		Time:    time.Now().UTC(),
+		Version: api.Version{Counter: 1, NodeID: stateConfig.NodeName},
 	}
+
 	if err := sm.ApplyUpdate(update); err != nil {
 		t.Fatalf("ApplyUpdate failed: %v", err)
 	}
 
-	// Test getting a nested map value.
+	// nested map
 	val, ok := sm.Get("settings.audio")
 	if !ok {
-		t.Fatalf("Failed to get nested key 'settings.audio'")
+		t.Fatalf("Failed to get 'settings.audio'")
 	}
-	_, ok = val.(map[string]any)
-	if !ok {
-		t.Fatalf("Expected a map for 'settings.audio', got %T", val)
+	if _, ok := val.(map[string]any); !ok {
+		t.Fatalf("Expected map at 'settings.audio', got %T", val)
 	}
 
-	// Test getting an array element using an index.
+	// array index
 	val, ok = sm.Get("settings.audio.modifiers[1]")
 	if !ok {
-		t.Fatalf("Failed to get array index 'settings.audio.modifiers[1]'")
+		t.Fatalf("Failed to get 'modifiers[1]'")
 	}
 	if val != "treble" {
 		t.Errorf("Expected 'treble', got %v", val)
 	}
 
-	// Test getting a slice of the array.
+	// array slice
 	val, ok = sm.Get("settings.audio.modifiers[0:2]")
 	if !ok {
-		t.Fatalf("Failed to get array slice 'settings.audio.modifiers[0:2]'")
+		t.Fatalf("Failed to get 'modifiers[0:2]'")
 	}
 	slice, ok := val.([]any)
 	if !ok {
-		t.Fatalf("Expected slice type, got %T", val)
+		t.Fatalf("Expected []any, got %T", val)
 	}
 	expected := []any{"bass", "treble"}
 	if !reflect.DeepEqual(slice, expected) {
@@ -99,227 +94,164 @@ func TestApplyUpdateAndGetNestedValues(t *testing.T) {
 
 func TestGetInvalidKey(t *testing.T) {
 	sm := persistence.NewStateManager(&stateConfig)
-	// No data has been set yet.
 	if _, ok := sm.Get("nonexistent.key"); ok {
-		t.Errorf("Expected key 'nonexistent.key' to be not found")
+		t.Errorf("Expected 'nonexistent.key' to be missing")
 	}
 }
 
 func TestMergeRemoteState(t *testing.T) {
 	sm := persistence.NewStateManager(&stateConfig)
 
-	// Local state: key "a" with version 100.
-	if err := sm.ApplyUpdate(api.ConfigUpdate{
-		Data: map[string]any{
-			"a": "local",
-		},
-		Version: 100,
-		Time:    time.Now().UTC(),
-	}); err != nil {
-		t.Fatalf("ApplyUpdate failed: %v", err)
+	// use Set() for a simple local value
+	if err := sm.Set("a", "local"); err != nil {
+		t.Fatalf("Set failed: %v", err)
 	}
 
-	// Remote state: key "a" with higher version and key "b".
+	// remote has higher version → should overwrite
 	remoteState := map[string]*api.StateEntry{
 		"a": {
-			Data:      "remote",
-			Version:   200,
-			Timestamp: time.Now().UTC(),
+			Data:    "remote",
+			Version: api.Version{Counter: 200, NodeID: "other"},
 		},
 		"b": {
-			Data:      "new remote",
-			Version:   200,
-			Timestamp: time.Now().UTC(),
+			Data:    "new remote",
+			Version: api.Version{Counter: 200, NodeID: "other"},
 		},
 	}
 
 	sm.MergeRemoteState(remoteState)
 
-	// Check that key "a" was updated.
-	val, ok := sm.Get("a")
-	if !ok {
-		t.Fatalf("Key 'a' not found after merge")
+	v, ok := sm.Get("a")
+	if !ok || v != "remote" {
+		t.Errorf("Expected 'a'→'remote', got %v (exists=%v)", v, ok)
 	}
-	if val != "remote" {
-		t.Errorf("Expected 'remote' for key 'a', got %v", val)
-	}
-
-	// Check that key "b" exists.
-	val, ok = sm.Get("b")
-	if !ok {
-		t.Fatalf("Key 'b' not found after merge")
-	}
-	if val != "new remote" {
-		t.Errorf("Expected 'new remote' for key 'b', got %v", val)
+	v, ok = sm.Get("b")
+	if !ok || v != "new remote" {
+		t.Errorf("Expected 'b'→'new remote', got %v (exists=%v)", v, ok)
 	}
 }
 
 func TestNestedMergeMapsViaApplyUpdate(t *testing.T) {
 	sm := persistence.NewStateManager(&stateConfig)
 
-	// First update: add a nested map.
-	update1 := api.ConfigUpdate{
-		Data: map[string]any{
-			"config": map[string]any{
-				"param1": "value1",
-				"param2": "value2",
-			},
-		},
-		Version: 100,
-		Time:    time.Now().UTC(),
+	// first make config.param1 & param2
+	u1 := api.ConfigUpdate{
+		Data: map[string]any{"config": map[string]any{
+			"param1": "value1", "param2": "value2",
+		}},
+		Version: api.Version{Counter: 100, NodeID: stateConfig.NodeName},
 	}
-	if err := sm.ApplyUpdate(update1); err != nil {
-		t.Fatalf("ApplyUpdate failed: %v", err)
+	if err := sm.ApplyUpdate(u1); err != nil {
+		t.Fatalf("ApplyUpdate u1 failed: %v", err)
 	}
 
-	// Second update: update only param2.
-	update2 := api.ConfigUpdate{
-		Data: map[string]any{
-			"config": map[string]any{
-				"param2": "updated",
-			},
-		},
-		Version: 200,
-		Time:    time.Now().UTC(),
+	// then only overwrite param2
+	u2 := api.ConfigUpdate{
+		Data: map[string]any{"config": map[string]any{
+			"param2": "updated",
+		}},
+		Version: api.Version{Counter: 200, NodeID: stateConfig.NodeName},
 	}
-	if err := sm.ApplyUpdate(update2); err != nil {
-		t.Fatalf("ApplyUpdate failed: %v", err)
+	if err := sm.ApplyUpdate(u2); err != nil {
+		t.Fatalf("ApplyUpdate u2 failed: %v", err)
 	}
 
-	// Check that param1 remains and param2 is updated.
-	val, ok := sm.Get("config.param1")
-	if !ok || val != "value1" {
-		t.Errorf("Expected config.param1 to be 'value1', got %v", val)
+	v, _ := sm.Get("config.param1")
+	if v != "value1" {
+		t.Errorf("Expected config.param1='value1', got %v", v)
 	}
-	val, ok = sm.Get("config.param2")
-	if !ok || val != "updated" {
-		t.Errorf("Expected config.param2 to be 'updated', got %v", val)
+	v, _ = sm.Get("config.param2")
+	if v != "updated" {
+		t.Errorf("Expected config.param2='updated', got %v", v)
 	}
 }
 
 func TestArrayIndexErrors(t *testing.T) {
 	sm := persistence.NewStateManager(&stateConfig)
-	// Set state with an array.
-	update := api.ConfigUpdate{
-		Data: map[string]any{
-			"numbers": []any{1, 2, 3},
-		},
-		Version: 300,
-		Time:    time.Now().UTC(),
+
+	u := api.ConfigUpdate{
+		Data:    map[string]any{"numbers": []any{1, 2, 3}},
+		Version: api.Version{Counter: 300, NodeID: stateConfig.NodeName},
 	}
-	if err := sm.ApplyUpdate(update); err != nil {
+	if err := sm.ApplyUpdate(u); err != nil {
 		t.Fatalf("ApplyUpdate failed: %v", err)
 	}
 
-	// Test invalid index (out-of-bounds)
 	if _, ok := sm.Get("numbers[5]"); ok {
-		t.Errorf("Expected numbers[5] to be invalid")
+		t.Error("Expected out-of-bounds index to be invalid")
 	}
-
-	// Test invalid slice (end index too high)
 	if _, ok := sm.Get("numbers[0:5]"); ok {
-		t.Errorf("Expected numbers[0:5] to be invalid")
+		t.Error("Expected slice end>len to be invalid")
 	}
-
-	// Test non-numeric index.
 	if _, ok := sm.Get("numbers[abc]"); ok {
-		t.Errorf("Expected numbers[abc] to be invalid")
+		t.Error("Expected non-numeric index to be invalid")
 	}
-
-	// Test slice with non-numeric values.
 	if _, ok := sm.Get("numbers[a:b]"); ok {
-		t.Errorf("Expected numbers[a:b] to be invalid")
+		t.Error("Expected non-numeric slice to be invalid")
 	}
 }
 
 func TestArraySliceEdgeCases(t *testing.T) {
 	sm := persistence.NewStateManager(&stateConfig)
-	// Set state with an array.
-	update := api.ConfigUpdate{
-		Data: map[string]any{
-			"letters": []any{"a", "b", "c", "d"},
-		},
-		Version: 400,
-		Time:    time.Now().UTC(),
+
+	u := api.ConfigUpdate{
+		Data:    map[string]any{"letters": []any{"a", "b", "c", "d"}},
+		Version: api.Version{Counter: 400, NodeID: stateConfig.NodeName},
 	}
-	if err := sm.ApplyUpdate(update); err != nil {
+	if err := sm.ApplyUpdate(u); err != nil {
 		t.Fatalf("ApplyUpdate failed: %v", err)
 	}
 
-	// Test slice with omitted start (e.g. [:2])
-	val, ok := sm.Get("letters[:2]")
+	v, ok := sm.Get("letters[:2]")
 	if !ok {
-		t.Fatalf("Failed to get slice letters[:2]")
+		t.Fatal("Expected letters[:2] to succeed")
 	}
-	slice, ok := val.([]any)
-	if !ok {
-		t.Fatalf("Expected a slice, got %T", val)
-	}
-	expected := []any{"a", "b"}
-	if !reflect.DeepEqual(slice, expected) {
-		t.Errorf("Expected %v, got %v", expected, slice)
+	s1, _ := v.([]any)
+	if !reflect.DeepEqual(s1, []any{"a", "b"}) {
+		t.Errorf("letters[:2] → %v", s1)
 	}
 
-	// Test slice with omitted end (e.g. [2:])
-	val, ok = sm.Get("letters[2:]")
+	v, ok = sm.Get("letters[2:]")
 	if !ok {
-		t.Fatalf("Failed to get slice letters[2:]")
+		t.Fatal("Expected letters[2:] to succeed")
 	}
-	slice, ok = val.([]any)
-	if !ok {
-		t.Fatalf("Expected a slice, got %T", val)
-	}
-	expected = []any{"c", "d"}
-	if !reflect.DeepEqual(slice, expected) {
-		t.Errorf("Expected %v, got %v", expected, slice)
+	s2, _ := v.([]any)
+	if !reflect.DeepEqual(s2, []any{"c", "d"}) {
+		t.Errorf("letters[2:] → %v", s2)
 	}
 }
 
-// Test retrieval using a complex path for nested arrays.
 func TestGetWithComplexPath(t *testing.T) {
 	sm := persistence.NewStateManager(&stateConfig)
 
-	// Prepare a complex nested structure.
-	update := api.ConfigUpdate{
-		Data: map[string]any{
-			"outer": map[string]any{
-				"inner": []any{
-					map[string]any{
-						"name":  "first",
-						"score": 10,
-					},
-					map[string]any{
-						"name":  "second",
-						"score": 20,
-					},
-				},
-			},
-		},
-		Version: 600,
-		Time:    time.Now().UTC(),
+	u := api.ConfigUpdate{
+		Data: map[string]any{"outer": map[string]any{"inner": []any{
+			map[string]any{"name": "first", "score": 10},
+			map[string]any{"name": "second", "score": 20},
+		}}},
+		Version: api.Version{Counter: 600, NodeID: stateConfig.NodeName},
 	}
-	if err := sm.ApplyUpdate(update); err != nil {
+	if err := sm.ApplyUpdate(u); err != nil {
 		t.Fatalf("ApplyUpdate failed: %v", err)
 	}
 
-	// Retrieve the "score" of the second element.
 	val, ok := sm.Get("outer.inner[1].score")
 	if !ok {
-		t.Fatalf("Failed to retrieve outer.inner[1].score")
+		t.Fatal("Failed to retrieve outer.inner[1].score")
 	}
-	// Depending on how numbers are stored, they might be float64.
 	switch v := val.(type) {
 	case float64:
 		if v != 20 {
-			t.Errorf("Expected score 20, got %v", v)
+			t.Errorf("Expected 20, got %v", v)
 		}
 	case int:
 		if v != 20 {
-			t.Errorf("Expected score 20, got %v", v)
+			t.Errorf("Expected 20, got %v", v)
 		}
 	case string:
-		if num, err := strconv.Atoi(v); err != nil || num != 20 {
-			t.Errorf("Expected score 20, got %v", v)
+		i, err := strconv.Atoi(v)
+		if err != nil || i != 20 {
+			t.Errorf("Expected 20, got %v", v)
 		}
 	default:
 		t.Errorf("Unexpected type %T for score", v)
@@ -328,139 +260,107 @@ func TestGetWithComplexPath(t *testing.T) {
 
 func TestApplyUpdateWithClearFlag(t *testing.T) {
 	sm := persistence.NewStateManager(&stateConfig)
-	// First, apply a normal update.
-	update := api.ConfigUpdate{
-		Data: map[string]any{
-			"key": "value",
-		},
-		Version: 1000,
-		Time:    time.Now().UTC(),
+
+	// use Set() for the initial data
+	if err := sm.Set("key", "value"); err != nil {
+		t.Fatalf("Set failed: %v", err)
 	}
-	if err := sm.ApplyUpdate(update); err != nil {
-		t.Fatalf("ApplyUpdate failed: %v", err)
-	}
-	if val, ok := sm.Get("key"); !ok || val != "value" {
-		t.Fatalf("Expected key to be set")
+	if v, ok := sm.Get("key"); !ok || v != "value" {
+		t.Fatal("Expected key to be set")
 	}
 
-	// Now, apply an update with the Clear flag.
-	clearUpdate := api.ConfigUpdate{
+	clear := api.ConfigUpdate{
 		Data:    map[string]any{"irrelevant": "data"},
-		Version: 2000,
-		Time:    time.Now().UTC(),
+		Version: api.Version{Counter: 2000, NodeID: stateConfig.NodeName},
 		Clear:   true,
 	}
-	if err := sm.ApplyUpdate(clearUpdate); err != nil {
-		t.Fatalf("ApplyUpdate with Clear failed: %v", err)
+	if err := sm.ApplyUpdate(clear); err != nil {
+		t.Fatalf("ApplyUpdate(Clear) failed: %v", err)
 	}
+
+	// After the atomic clear and apply, "key" should be gone
 	if _, ok := sm.Get("key"); ok {
-		t.Errorf("Expected key to be cleared")
+		t.Error("Expected original key to be cleared")
 	}
-	if full := sm.GetFullState().State; len(full) != 0 {
-		t.Errorf("Expected state to be empty after clear, got %v", full)
+
+	// Only "irrelevant":"data" should remain
+	v, ok := sm.Get("irrelevant")
+	if !ok || v != "data" {
+		t.Errorf("Expected only irrelevant:data, got %v", sm.GetFullState().State)
 	}
 }
 
 func TestMergeRemoteStateWithEqualVersion(t *testing.T) {
 	sm := persistence.NewStateManager(&stateConfig)
-	// Set local state with a given version.
-	localUpdate := api.ConfigUpdate{
-		Data: map[string]any{
-			"x": "local",
-		},
-		Version: 5000,
-		Time:    time.Now().UTC(),
+
+	u := api.ConfigUpdate{
+		Data:    map[string]any{"x": "local"},
+		Version: api.Version{Counter: 5000, NodeID: stateConfig.NodeName},
 	}
-	if err := sm.ApplyUpdate(localUpdate); err != nil {
+	if err := sm.ApplyUpdate(u); err != nil {
 		t.Fatalf("ApplyUpdate failed: %v", err)
 	}
-	// Prepare remote state with an equal version.
-	remoteState := map[string]*api.StateEntry{
+
+	remote := map[string]*api.StateEntry{
 		"x": {
-			Data:      "remote",
-			Version:   5000, // equal version: should not overwrite.
-			Timestamp: time.Now().UTC(),
+			Data:    "remote",
+			Version: api.Version{Counter: 5000, NodeID: stateConfig.NodeName}, // same counter & NodeID
 		},
 	}
-	sm.MergeRemoteState(remoteState)
-	// Verify that the state remains unchanged.
-	val, ok := sm.Get("x")
-	if !ok {
-		t.Fatalf("Expected key 'x' to exist")
-	}
-	if val != "local" {
-		t.Errorf("Expected state not to update for equal version, got %v", val)
+	sm.MergeRemoteState(remote)
+
+	v, _ := sm.Get("x")
+	if v != "local" {
+		t.Errorf("Expected equal‐version merge to skip, got %v", v)
 	}
 }
 
 func TestApplyStaleUpdatePropagation(t *testing.T) {
 	sm := persistence.NewStateManager(&stateConfig)
 
-	// Apply a "fresh" update with a higher version.
-	freshUpdate := api.ConfigUpdate{
-		Data: map[string]any{
-			"y": "freshValue",
-		},
-		Version: 1000,
-		Time:    time.Now().UTC(),
+	fresh := api.ConfigUpdate{
+		Data:    map[string]any{"y": "freshValue"},
+		Version: api.Version{Counter: 1000, NodeID: stateConfig.NodeName},
 	}
-	if err := sm.ApplyUpdate(freshUpdate); err != nil {
-		t.Fatalf("ApplyUpdate failed: %v", err)
+	if err := sm.ApplyUpdate(fresh); err != nil {
+		t.Fatalf("ApplyUpdate(fresh) failed: %v", err)
 	}
 
-	// Simulate an offline node sending an update with an older version.
-	staleUpdate := api.ConfigUpdate{
-		Data: map[string]any{
-			"y": "staleValue",
-		},
-		Version: 500, // older version than 1000
-		Time:    time.Now().UTC(),
+	stale := api.ConfigUpdate{
+		Data:    map[string]any{"y": "staleValue"},
+		Version: api.Version{Counter: 500, NodeID: stateConfig.NodeName},
 	}
-	if err := sm.ApplyUpdate(staleUpdate); err != nil {
-		t.Fatalf("ApplyUpdate failed: %v", err)
+	if err := sm.ApplyUpdate(stale); err != nil {
+		t.Fatalf("ApplyUpdate(stale) failed: %v", err)
 	}
 
-	// Verify that the key "y" still holds the fresh value.
-	val, ok := sm.Get("y")
-	if !ok {
-		t.Fatalf("Expected key 'y' to exist")
-	}
-	if val != "freshValue" {
-		t.Errorf("Expected key 'y' to remain 'freshValue', got %v", val)
+	v, _ := sm.Get("y")
+	if v != "freshValue" {
+		t.Errorf("Expected stale update to be ignored, got %v", v)
 	}
 }
 
 func TestMergeRemoteStateWithLowerVersion(t *testing.T) {
 	sm := persistence.NewStateManager(&stateConfig)
 
-	// Apply a local update with a high version.
-	localUpdate := api.ConfigUpdate{
-		Data: map[string]any{
-			"x": "local",
-		},
-		Version: 5000,
-		Time:    time.Now().UTC(),
+	u := api.ConfigUpdate{
+		Data:    map[string]any{"x": "local"},
+		Version: api.Version{Counter: 5000, NodeID: stateConfig.NodeName},
 	}
-	if err := sm.ApplyUpdate(localUpdate); err != nil {
+	if err := sm.ApplyUpdate(u); err != nil {
 		t.Fatalf("ApplyUpdate failed: %v", err)
 	}
 
-	// Prepare remote state with a lower version for the same key.
-	remoteState := map[string]*api.StateEntry{
+	remote := map[string]*api.StateEntry{
 		"x": {
-			Data:      "stale",
-			Version:   4000, // lower version than local state
-			Timestamp: time.Now().UTC(),
+			Data:    "stale",
+			Version: api.Version{Counter: 4000, NodeID: "other"},
 		},
 	}
-	sm.MergeRemoteState(remoteState)
+	sm.MergeRemoteState(remote)
 
-	// Verify that the local state remains unchanged.
-	val, ok := sm.Get("x")
-	if !ok {
-		t.Fatalf("Expected key 'x' to exist")
-	}
-	if val != "local" {
-		t.Errorf("Expected key 'x' to remain 'local' after merging stale remote state, got %v", val)
+	v, _ := sm.Get("x")
+	if v != "local" {
+		t.Errorf("Expected lower‐version remote to be ignored, got %v", v)
 	}
 }

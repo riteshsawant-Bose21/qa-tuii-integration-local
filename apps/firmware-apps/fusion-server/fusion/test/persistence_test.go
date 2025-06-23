@@ -127,7 +127,7 @@ func TestChecksumCalculation(t *testing.T) {
 	fullState := sm.GetFullState()
 
 	// Serialize the same state and calculate again.
-	checksum, err := utils.CalculateChecksum(fullState.State)
+	checksum, err := utils.CalculateChecksum(sm.GetStateMap())
 	if err != nil {
 		t.Fatalf("CalculateChecksum returned error: %v", err)
 	}

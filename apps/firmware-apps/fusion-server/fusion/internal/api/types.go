@@ -2,8 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
-	"fusion/internal/utils"
 	"time"
 
 	"github.com/hashicorp/memberlist"
@@ -19,38 +17,35 @@ type AppConfig struct {
 	Verbose  bool
 }
 
+// Version encodes a Lamport counter plus the origin node's ID.
+// https://en.wikipedia.org/wiki/Lamport_timestamp
+type Version struct {
+	Counter int64  `json:"counter"`
+	NodeID  string `json:"node_id"`
+}
+
+// Compare returns true if v is less than the other.
+func (v Version) Less(other Version) bool {
+	if v.Counter != other.Counter {
+		return v.Counter < other.Counter
+	}
+	return v.NodeID < other.NodeID
+}
+
 // ConfigUpdate represents a data update in the system
 type ConfigUpdate struct {
 	Hash    string         `json:"hash"`
 	Data    map[string]any `json:"data"`
-	Version int64          `json:"version"`
-	Time    time.Time      `json:"timestamp"`
-	Clear   bool
-}
-
-// NewConfigUpdate returns a configured ConfigUpdate
-func NewConfigUpdate(data map[string]any) (*ConfigUpdate, error) {
-
-	hash, err := utils.CalculateChecksum(data)
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate hash: %w", err)
-	}
-
-	return &ConfigUpdate{
-		Hash:    hash,
-		Data:    data,
-		Version: time.Now().UnixNano(),
-		Time:    time.Now().UTC(),
-		Clear:   false,
-	}, nil
+	Version Version        `json:"version"`
+	Clear   bool           `json:"clear,omitempty"`
 }
 
 // DatabaseMetadata holds metadata information from the database.
 type DatabaseMetadata struct {
-	Timestamp      time.Time `json:"timestamp"`
-	ActiveSnapshot string    `json:"active_snapshot"`
-	Hash           string    `json:"hash"`
-	Valid          bool      `json:"valid"`
+	Version        Version `json:"version"`
+	ActiveSnapshot string  `json:"active_snapshot"`
+	Hash           string  `json:"hash"`
+	Valid          bool    `json:"valid"`
 }
 
 // MemberMetadata associates a member to its database metadata.
@@ -84,11 +79,17 @@ type Task struct {
 	CronEntryID cron.EntryID      `json:"-"`
 }
 
+// RemoteStateSnapshot is what we send/receive during anti-entropy.
+type RemoteStateSnapshot struct {
+	Version Version                `json:"version"`
+	NodeID  string                 `json:"node_id"`
+	State   map[string]*StateEntry `json:"state"`
+}
+
 // StateEntry represents a single entry in the state
 type StateEntry struct {
-	Data      any       `json:"data"`
-	Version   int64     `json:"version"`
-	Timestamp time.Time `json:"timestamp"`
+	Data    any     `json:"data"`
+	Version Version `json:"version"`
 }
 
 type VersionMessage struct {

@@ -77,7 +77,7 @@ func (c *Cluster) JoinMemberlist() error {
 
 	logger := logging.GetLogger()
 
-	for retries := range retryTimes {
+	for attempt := range retryTimes {
 
 		_, err := c.Memberlist.Join(joinAddrs)
 		if err == nil {
@@ -93,12 +93,12 @@ func (c *Cluster) JoinMemberlist() error {
 			return nil
 		}
 
-		logger.Warn("[MEMBERLIST-%s] Join attempt %d failed: %v", c.nodeName, retries+1, err)
+		logger.Warn("[MEMBERLIST-%s] Join attempt %d failed: %v", c.nodeName, attempt+1, err)
 
 		time.Sleep(retryInterval)
 	}
 
-	return fmt.Errorf("failed to join cluster after retries: %v", err)
+	return fmt.Errorf("failed to join cluster after retries: %d: %v", retryTimes, err)
 }
 
 // isMember returns true if the address is a member of the memberlist
@@ -109,27 +109,20 @@ func (c *Cluster) isMember() (bool, error) {
 		return false, err
 	}
 
-	if slices.Contains(liveAddrs, c.bindAddr) {
-		return true, nil
-	}
-
-	return false, nil
+	return slices.Contains(liveAddrs, c.bindAddr), nil
 }
 
-// GetLiveNodeAddresses a list of live node addresses
+// GetLiveNodeAddresses returns a list of live node addresses from the VIP
 func (c *Cluster) GetLiveNodeAddresses() ([]string, error) {
 
 	url := fmt.Sprintf("%s%s:%s%s", api.Protocol, c.vip, api.HTTPPort, routes.ClusterMembersEndpoint)
 	resp, err := http.Get(url)
 	if err != nil {
 		if errors.Is(err, syscall.ECONNREFUSED) {
-			// Handle connection refused specifically.
-			// The assumption is that the VIP server in not running yet, as the
-			// caller is the first server to come up.
+			// Connection refused likely means the VIP is not up yet (e.g., this node is first to start).
 			return []string{}, nil
-		} else {
-			return nil, fmt.Errorf("unable to get members from VIP %s: %w", url, err)
 		}
+		return nil, fmt.Errorf("unable to get members from VIP %s: %w", url, err)
 	}
 
 	defer resp.Body.Close()
@@ -137,6 +130,12 @@ func (c *Cluster) GetLiveNodeAddresses() ([]string, error) {
 	var members []*memberlist.Node
 	if err := json.NewDecoder(resp.Body).Decode(&members); err != nil {
 		return nil, fmt.Errorf("failed to decode members: %w", err)
+	}
+
+	if c.config.Verbose {
+		for _, m := range members {
+			logging.GetLogger().Debug("[MEMBERLIST] Found node: %s (%s), state=%v", m.Name, m.Addr.String(), m.State)
+		}
 	}
 
 	// Only append nodes that are alive

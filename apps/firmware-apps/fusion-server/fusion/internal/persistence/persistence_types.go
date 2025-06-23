@@ -22,7 +22,7 @@ type DevicePatch struct {
 
 // PersistentState represents the saved state structure.
 type PersistentState struct {
-	Version   int64                      `json:"version"`
+	Version   api.Version                `json:"version"`
 	Timestamp time.Time                  `json:"timestamp"`
 	Checksum  string                     `json:"checksum"`
 	State     map[string]*api.StateEntry `json:"state"`

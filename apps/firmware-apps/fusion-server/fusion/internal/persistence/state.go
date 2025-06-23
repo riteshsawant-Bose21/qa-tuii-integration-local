@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	checkInterval = 30
+	checkInterval = 30 * time.Second
 	httpTimeout   = 5 * time.Second
 )
 
@@ -46,8 +46,7 @@ func NewVersionedState() *VersionedState {
 type StateManager struct {
 	sync.RWMutex
 	state      VersionedState
-	node       string
-	version    int64
+	version    api.Version
 	httpClient *http.Client
 	verbose    bool
 }
@@ -56,19 +55,39 @@ type StateManager struct {
 func NewStateManager(config *api.AppConfig) *StateManager {
 	return &StateManager{
 		state:      *NewVersionedState(),
-		node:       config.NodeName,
+		version:    api.Version{Counter: 0, NodeID: config.NodeName},
 		verbose:    config.Verbose,
 		httpClient: &http.Client{Timeout: httpTimeout},
 	}
 }
 
+// NewConfigUpdate returns a configured ConfigUpdate
+func (sm *StateManager) NewConfigUpdate(data map[string]any) (*api.ConfigUpdate, error) {
+
+	hash, err := utils.CalculateChecksum(data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate hash: %w", err)
+	}
+
+	sm.Lock()
+	sm.version.Counter = sm.version.Counter + 1
+	sm.Unlock()
+
+	return &api.ConfigUpdate{
+		Hash:    hash,
+		Data:    data,
+		Version: sm.version,
+		Clear:   false,
+	}, nil
+}
+
 // GetNode returns the node name
 func (sm *StateManager) GetNode() string {
-	return sm.node
+	return sm.version.NodeID
 }
 
 // GetVersion returns the current version of the state.
-func (sm *StateManager) GetVersion() int64 {
+func (sm *StateManager) GetVersion() api.Version {
 	sm.RLock()
 	defer sm.RUnlock()
 	return sm.version
@@ -164,106 +183,122 @@ func (sm *StateManager) Get(key string) (any, bool) {
 
 // Set updates a key in the state with the given value and applies the update.
 func (sm *StateManager) Set(key string, value any) error {
-	data := map[string]any{
-		key: value,
+
+	data := map[string]any{key: value}
+	hash, err := utils.CalculateChecksum(data)
+	if err != nil {
+		return fmt.Errorf("failed to generate hash: %w", err)
 	}
-	return sm.ApplyUpdate(api.ConfigUpdate{
+
+	sm.Lock()
+	sm.version.Counter++
+	update := api.ConfigUpdate{
+		Hash:    hash,
 		Data:    data,
-		Version: time.Now().UnixNano(),
-		Time:    time.Now().UTC(),
-	})
+		Version: sm.version,
+		Clear:   false,
+	}
+
+	dirty, err := sm.applyWhileLocked(update)
+	if err != nil {
+		sm.Unlock()
+		return err
+	}
+	sm.Unlock()
+
+	if dirty {
+		sm.updateChecksum()
+	}
+
+	return nil
 }
 
 // ApplyUpdate applies a configuration update to the internal state.
 func (sm *StateManager) ApplyUpdate(update api.ConfigUpdate) error {
 	sm.Lock()
-	defer sm.Unlock()
-
-	// Handle clear‐state flag
-	if update.Clear {
-		sm.state = *NewVersionedState()
-		sm.version = update.Version
-		// Recalculate checksum for the empty map
-		checksum, err := utils.CalculateChecksum(sm.state.State)
-		if err != nil {
-			logging.GetLogger().Error("Failed to calculate checksum: %v", err)
-			return err
-		}
-		sm.state.Checksum = checksum
-		return nil
+	dirty, err := sm.applyWhileLocked(update)
+	if err != nil {
+		sm.Unlock()
+		return err
 	}
+	sm.Unlock()
 
-	if len(update.Data) == 0 {
-		return nil
-	}
-
-	// Track whether any key was added or updated
-	dirty := false
-
-	for key, rawValue := range update.Data {
-		var incomingVersion int64
-		var newValue any
-
-		// Determine incomingVersion & newValue
-		if valueMap, ok := rawValue.(map[string]any); ok {
-			// per‐key version
-			switch v := valueMap["version"].(type) {
-			case int64:
-				incomingVersion = v
-			case float64:
-				incomingVersion = int64(v)
-			default:
-				incomingVersion = update.Version
-			}
-
-			// merge vs overwrite
-			if existingEntry, exists := sm.state.State[key]; exists {
-				if incomingVersion <= existingEntry.Version {
-					continue
-				}
-				if existingData, ok := existingEntry.Data.(map[string]any); ok {
-					newValue = mergeMaps(existingData, valueMap)
-				} else {
-					newValue = valueMap
-				}
-			} else {
-				newValue = valueMap
-			}
-		} else {
-			incomingVersion = update.Version
-			newValue = rawValue
-		}
-
-		// Skip stale
-		if existingEntry, exists := sm.state.State[key]; exists {
-			if incomingVersion <= existingEntry.Version {
-				continue
-			}
-		}
-
-		// Apply the change
-		sm.state.State[key] = &api.StateEntry{
-			Data:      newValue,
-			Version:   incomingVersion,
-			Timestamp: update.Time,
-		}
-		if incomingVersion > sm.version {
-			sm.version = incomingVersion
-		}
-		dirty = true
-	}
-
-	// Only recalc checksum once
 	if dirty {
-		checksum, err := utils.CalculateChecksum(sm.state.State)
-		if err != nil {
-			logging.GetLogger().Error("Failed to calculate checksum: %v", err)
-		} else {
-			sm.state.Checksum = checksum
-		}
+		sm.updateChecksum()
 	}
 
 	return nil
+}
+
+// updateChecksum updates the checksum. Do not lock here.
+func (sm *StateManager) updateChecksum() {
+	payload := sm.GetStateMap()
+	if sum, err := utils.CalculateChecksum(payload); err != nil {
+		logging.GetLogger().Error("failed to calculate checksum: %v", err)
+	} else {
+		sm.Lock()
+		sm.state.Checksum = sum
+		sm.Unlock()
+	}
+}
+
+// applyLocked applies a configuration update to the internal state,
+// performing a Lamport version check and merging nested maps when needed.
+func (sm *StateManager) applyWhileLocked(update api.ConfigUpdate) (bool, error) {
+
+	logger := logging.GetLogger()
+
+	dirty := false
+
+	if update.Clear {
+		sm.state = *NewVersionedState()
+		sm.version.Counter++
+		dirty = true
+	}
+
+	// Bail out if there is nothing left to
+	if !update.Clear && len(update.Data) == 0 {
+		return dirty, nil
+	}
+
+	for key, rawValue := range update.Data {
+		localEntry, exists := sm.state.State[key]
+
+		// Skip if local version is newer or equal
+		if exists && !localEntry.Version.Less(update.Version) {
+			logger.Info("Skipping: Local is newer or equal")
+			continue
+		}
+
+		// Determine new data: merge maps or overwrite
+		var newData any
+		if incomingMap, ok := rawValue.(map[string]any); ok {
+			if exists {
+				if existingMap, ok2 := localEntry.Data.(map[string]any); ok2 {
+					newData = mergeMaps(existingMap, incomingMap)
+				} else {
+					newData = incomingMap
+				}
+			} else {
+				newData = incomingMap
+			}
+		} else {
+			newData = rawValue
+		}
+
+		sm.state.State[key] = &api.StateEntry{
+			Data:    newData,
+			Version: update.Version,
+		}
+
+		if sm.version.Less(update.Version) {
+			sm.version = update.Version
+		}
+
+		dirty = true
+	}
+
+	return dirty, nil
 }
 
 // GetFullState returns the internal state
@@ -288,36 +323,34 @@ func (sm *StateManager) GetStateMap() map[string]any {
 
 // MergeRemoteState integrates a remote state into the local state if the remote version is newer.
 func (sm *StateManager) MergeRemoteState(remoteState map[string]*api.StateEntry) {
+
 	sm.Lock()
-	defer sm.Unlock()
 	for key, remoteEntry := range remoteState {
 		localEntry, exists := sm.state.State[key]
-		if !exists || remoteEntry.Version > localEntry.Version {
+
+		// if we don’t have it yet, or the remote version is newer...
+		if !exists || localEntry.Version.Less(remoteEntry.Version) {
 			sm.state.State[key] = remoteEntry
-			if remoteEntry.Version > sm.version {
+
+			// bump our “highest‐seen” version if this remote one is newer
+			if sm.version.Less(remoteEntry.Version) {
 				sm.version = remoteEntry.Version
 			}
 		}
 	}
+	sm.Unlock()
 
-	checksum, err := utils.CalculateChecksum(sm.state.State)
-	if err != nil {
-		logging.GetLogger().Error("Failed to calculate checksum: %v", err)
-	}
-	sm.state.Checksum = checksum
+	sm.updateChecksum()
 }
 
-// SetState replaces the entire state map and updates the version timestamp.
+// SetState replaces the entire state map and advances the version.
 func (sm *StateManager) SetState(state map[string]*api.StateEntry) {
 	sm.Lock()
-	defer sm.Unlock()
 	sm.state.State = state
-	checksum, err := utils.CalculateChecksum(state)
-	if err != nil {
-		logging.GetLogger().Error("Failed to calculate checksum: %v", err)
-	}
-	sm.state.Checksum = checksum
-	sm.version = time.Now().UnixNano()
+	sm.version.Counter++
+	sm.Unlock()
+
+	sm.updateChecksum()
 }
 
 // validateState fetches and compares state from other cluster members
@@ -340,13 +373,13 @@ func (sm *StateManager) validateState(list *memberlist.Memberlist) {
 			continue
 		}
 
-		defer resp.Body.Close()
 		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 			logger.Warn("Unexpected status %d", resp.StatusCode)
 			continue
 		}
 
 		body, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
 		if err != nil {
 			logger.Warn("Error reading response body from %s: %v", member.Name, err)
 			continue
@@ -360,15 +393,19 @@ func (sm *StateManager) validateState(list *memberlist.Memberlist) {
 
 		if localState.Checksum != remoteState.Checksum {
 			logger.Warn("[STATE] Inconsistent state detected with node %s", member.Name)
-			logger.Debug("[STATE] Local checksum:  %s", localState.Checksum)
-			logger.Debug("[STATE] Remote checksum: %s", remoteState.Checksum)
+			if sm.verbose {
+				logger.Debug("[STATE] Local checksum:  %s", localState.Checksum)
+				logger.Debug("[STATE] Remote checksum: %s", remoteState.Checksum)
+			}
 
 			consistent = false
 		}
 	}
 
 	if consistent {
-		logger.Debug("[STATE] Consistent across cluster")
+		if sm.verbose {
+			logger.Debug("[STATE] Consistent across cluster")
+		}
 		return
 	}
 
@@ -380,7 +417,7 @@ func (sm *StateManager) StartVerification(list *memberlist.Memberlist) {
 		for {
 			sm.validateState(list)
 			sm.validateData(list)
-			time.Sleep(checkInterval * time.Second)
+			time.Sleep(checkInterval)
 		}
 	}()
 }
@@ -407,13 +444,13 @@ func (sm *StateManager) getMemberData(list *memberlist.Memberlist) []api.MemberM
 			continue
 		}
 
-		defer resp.Body.Close()
 		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 			logger.Warn("Unexpected status %d", resp.StatusCode)
 			continue
 		}
 
 		body, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
 		if err != nil {
 			logger.Warn("Error reading response body from %s: %v", member.Name, err)
 			continue
@@ -432,28 +469,46 @@ func (sm *StateManager) getMemberData(list *memberlist.Memberlist) []api.MemberM
 }
 
 // validateData resolves any mismatches in node data across cluster
+// validateData resolves any mismatches in node data across cluster
+// by picking the member with the highest Lamport Version.
 func (sm *StateManager) validateData(list *memberlist.Memberlist) {
-
 	logger := logging.GetLogger()
 
 	memberMetadata := sm.getMemberData(list)
-
-	if hashIsConsistent(memberMetadata) {
-		logger.Debug("[DATA] Consistent across cluster")
+	if len(memberMetadata) == 0 {
+		if sm.verbose {
+			logger.Debug("[DATA] Empty member data")
+		}
 		return
 	}
 
-	// Determine the node with the most recent timestamp.
+	if hashIsConsistent(memberMetadata) {
+		if sm.verbose {
+			logger.Debug("[DATA] Consistent across cluster")
+		}
+		return
+	}
+
+	// Pick the member whose metadata.Version is greatest.
+	// (Version is your Lamport counter + node‐ID tie breaker.)
 	mostCurrent := memberMetadata[0]
 	for _, ms := range memberMetadata[1:] {
-		if ms.Metadata.Timestamp.After(mostCurrent.Metadata.Timestamp) {
+		if mostCurrent.Metadata.Version.Less(ms.Metadata.Version) {
 			mostCurrent = ms
 		}
 	}
-	logger.Info("Most current data found on member %s with timestamp %v",
-		mostCurrent.Member.Name, mostCurrent.Metadata.Timestamp)
 
-	exportURL := buildInternalURL(mostCurrent.Member.Addr.String(), api.AdminPort, routes.StateEndpoint)
+	logger.Info(
+		"Most current data found on member %s with version %v",
+		mostCurrent.Member.Name,
+		mostCurrent.Metadata.Version,
+	)
+
+	exportURL := buildInternalURL(
+		mostCurrent.Member.Addr.String(),
+		api.AdminPort,
+		routes.StateEndpoint,
+	)
 
 	resp, err := sm.httpClient.Get(exportURL)
 	if err != nil {
@@ -463,8 +518,8 @@ func (sm *StateManager) validateData(list *memberlist.Memberlist) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		logger.Error("Export returned %d: %s", resp.StatusCode, string(body))
+		body, err := io.ReadAll(resp.Body)
+		logger.Error("Export returned %v with body %s", err, string(body))
 		return
 	}
 
