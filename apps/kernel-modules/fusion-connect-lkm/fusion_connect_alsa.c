@@ -49,6 +49,7 @@ struct fusion_cn_substream {
 };
 
 struct fusion_cn_chip {
+    uint64_t stream_handle;
     void *fusion_cn_mgr;
     const struct fusion_cn_alsa_ops *alsa_ops;
     rwlock_t lock; /* Changed from spinlock_t to rwlock_t */
@@ -624,10 +625,7 @@ static int fusion_cn_pcm_open(struct snd_pcm_substream *substream)
     struct fusion_cn_substream *stream;
     int err;
 
-    if (sscanf(substream->pcm->name, "FC_%llu", &stream_handle) != 1) {
-        printk(KERN_ERR "fusion_cn: pcm_open: Invalid PCM name %s\n", substream->pcm->name);
-        return -EINVAL;
-    }
+    stream_handle = chip->stream_handle;
 
     read_lock_irqsave(&chip->lock, flags);
     stream = fusion_cn_find_substream(chip, stream_handle);
@@ -809,13 +807,13 @@ static struct snd_pcm_ops fusion_cn_pcm_ops = {
     .ack = fusion_cn_pcm_ack
 };
 
-static int fusion_cn_open_substream(void *rawchip, uint64_t stream_handle, int direction,
-                                    unsigned int channels, uint32_t rate, snd_pcm_format_t format)
+static int fusion_cn_open_substream(void *rawchip, uint64_t stream_handle, int direction, bool is_fusion_connect,
+                                    uint16_t src_port, unsigned int channels, uint32_t rate, snd_pcm_format_t format)
 {
     struct fusion_cn_chip *chip = rawchip;
     unsigned long flags;
     struct snd_pcm *pcm;
-    char name[64];
+    char name[32];
     int err;
     uint32_t frames_per_packet;
     int bucket;
@@ -848,7 +846,9 @@ static int fusion_cn_open_substream(void *rawchip, uint64_t stream_handle, int d
         return -EINVAL;
     }
 
-    snprintf(name, sizeof(name), "FC_%llu", stream_handle);
+    snprintf(name, sizeof(name), "%s_%s_%llu", is_fusion_connect ? "FC" : "AES67",
+                                               direction ? "TX" : "RX",
+                                               is_fusion_connect ? src_port : stream_handle);
 
     write_lock_irqsave(&chip->lock, flags);
     stream_index = find_first_zero_bit(chip->stream_indices, FUSION_CN_MAX_STREAMS);
@@ -882,6 +882,7 @@ static int fusion_cn_open_substream(void *rawchip, uint64_t stream_handle, int d
 
     spin_lock_init(&stream->lock);
     kref_init(&stream->ref);
+    chip->stream_handle = stream_handle;
     stream->stream_handle = stream_handle;
     stream->sample_width = snd_pcm_format_physical_width(format) >> 3;
     stream->channels = channels;

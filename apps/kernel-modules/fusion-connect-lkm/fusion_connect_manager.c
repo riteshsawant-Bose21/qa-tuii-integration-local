@@ -576,8 +576,8 @@ static int handle_add_stream(struct fusion_cn_manager *mgr, struct fusion_cn_ctr
 
     /* for rtp source we have alsa playback and vice versa */
     direction = config->is_source ? SNDRV_PCM_STREAM_PLAYBACK : SNDRV_PCM_STREAM_CAPTURE;
-    ret = mgr->alsa.mgr_callbacks->open_substream(mgr->alsa.alsa_chip, handle, direction,
-                                                  config->channels, config->sample_rate, config->format);
+    ret = mgr->alsa.mgr_callbacks->open_substream(mgr->alsa.alsa_chip, handle, direction, config->is_fusion_connect,
+                                                  config->source_port, config->channels, config->sample_rate, config->format);
     if (ret < 0) {
         fusion_cn_rtp_remove_stream(&mgr->rtp, handle);
         printk(KERN_ERR "fusion_cn: handle_add_stream: open_substream failed: %d\n", ret);

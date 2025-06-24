@@ -31,8 +31,8 @@ struct fusion_cn_mgr_ops {
     void (*lock_buffer)(void *alsa_chip, uint64_t stream_handle, unsigned long *flags);
     void (*unlock_buffer)(void *alsa_chip, uint64_t stream_handle, unsigned long *flags);
     int (*pcm_interrupt)(void *alsa_chip, int direction, uint64_t stream_handle);
-    int (*open_substream)(void *alsa_chip, uint64_t stream_handle, int direction,
-                          unsigned int channels, uint32_t rate, snd_pcm_format_t format);
+    int (*open_substream)(void *alsa_chip, uint64_t stream_handle, int direction, bool is_fusion_connect,
+                          uint16_t src_port, unsigned int channels, uint32_t rate, snd_pcm_format_t format);
     int (*remove_substream)(void *alsa_chip, uint64_t stream_handle);
     uint32_t (*get_stream_available_frames)(void *alsa_chip, uint64_t stream_handle);
     int (*mute_stream_buffers)(void *alsa_chip, uint64_t stream_handle);
