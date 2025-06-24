@@ -846,9 +846,9 @@ static int fusion_cn_open_substream(void *rawchip, uint64_t stream_handle, int d
         return -EINVAL;
     }
 
-    snprintf(name, sizeof(name), "%s_%s_%llu", is_fusion_connect ? "FC" : "AES67",
-                                               direction ? "TX" : "RX",
-                                               is_fusion_connect ? src_port : stream_handle);
+    snprintf(name, sizeof(name), "%s%s%llu", is_fusion_connect ? "FC_" : "AES67_",
+                                             is_fusion_connect ? direction ? "TX_" : "RX_" : "",
+                                             is_fusion_connect ? src_port : stream_handle);
 
     write_lock_irqsave(&chip->lock, flags);
     stream_index = find_first_zero_bit(chip->stream_indices, FUSION_CN_MAX_STREAMS);
