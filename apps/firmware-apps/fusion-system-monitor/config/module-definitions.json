@@ -70,17 +70,7 @@
             "name": "fusion_connect_client",
             "parameters": [
                 {
-                    "name": "aes67_streams",
-                    "value_type": "string",
-                    "default_value": ""
-                },
-                {
-                    "name": "device_connections",
-                    "value_type": "string",
-                    "default_value": ""
-                },
-                {
-                    "name": "sessions",
+                    "name": "audio_streams_update",
                     "value_type": "string",
                     "default_value": ""
                 }

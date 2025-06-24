@@ -80,4 +80,4 @@ def build(bld):
     bld.program(target='fusion_system_monitor',
                 source=bld.path.ant_glob(['src/*.cpp', 'src/*.c']),
                 use=['common-include'],
-                lib=['jack', 'fmt', 'sndfile', 'boost_program_options', 'jsoncpp'])
+                lib=['jack', 'fmt', 'sndfile', 'boost_program_options', 'jsoncpp', 'curl'])

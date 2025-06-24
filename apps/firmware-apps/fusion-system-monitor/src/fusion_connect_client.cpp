@@ -10,6 +10,8 @@
 #include <unistd.h>
 #include <vector>
 #include <map>
+#include <curl/curl.h>
+#include <json/json.h>
 
 namespace {
 
@@ -46,15 +48,41 @@ struct fusion_cn_stream_config {
     uint8_t is_fusion_connect;
 } __attribute__((packed));
 
+// Helper function to convert uint32_t IP to string
+std::string ipToString(uint32_t ip) {
+    struct in_addr addr;
+    addr.s_addr = ip;
+    return std::string(inet_ntoa(addr));
+}
+
+// Function to dump fusion_cn_stream_config struct
+void dumpFusionCnStreamConfig(const fusion_cn_stream_config& config) {
+    std::cout << "Fusion CN Stream Config Dump:" << std::endl;
+    std::cout << "  Stream Handle: " << config.stream_handle << std::endl;
+    std::cout << "  Sample Rate: " << config.sample_rate << " Hz" << std::endl;
+    std::cout << "  Format: " << config.format << std::endl;
+    std::cout << "  Channels: " << static_cast<int>(config.channels) << std::endl;
+    std::cout << "  Frames per Packet: " << config.frames_per_packet << std::endl;
+    std::cout << "  Dest IP: " << ipToString(config.dest_ip) << std::endl;
+    std::cout << "  Dest Port: " << config.dest_port << std::endl;
+    std::cout << "  Source Port: " << config.source_port << std::endl;
+    std::cout << "  Source IP: " << ipToString(config.source_ip) << std::endl;
+    std::cout << "  Payload Type: " << static_cast<int>(config.payload_type) << std::endl;
+    std::cout << "  Playout Delay: " << config.playout_delay << std::endl;
+    std::cout << "  Timestamp Offset: " << config.timestamp_offset << std::endl;
+    std::cout << "  Is Source: " << (config.is_source ? "true" : "false") << std::endl;
+    std::cout << "  Is Fusion Connect: " << (config.is_fusion_connect ? "true" : "false") << std::endl;
+}
+
 class NetlinkClient {
 private:
-    int sock_fd;
+    int socket_fd;
     struct sockaddr_nl src_addr, dst_addr;
 
 public:
-    NetlinkClient() : sock_fd(-1) {
-        sock_fd = socket(AF_NETLINK, SOCK_RAW, NETLINK_USERSOCK);
-        if (sock_fd < 0) {
+    NetlinkClient() : socket_fd(-1) {
+        socket_fd = socket(AF_NETLINK, SOCK_RAW, NETLINK_USERSOCK);
+        if (socket_fd < 0) {
             SPDLOG_ERROR("Failed to create netlink socket: {}", strerror(errno));
             return;
         }
@@ -62,10 +90,10 @@ public:
         memset(&src_addr, 0, sizeof(src_addr));
         src_addr.nl_family = AF_NETLINK;
         src_addr.nl_pid = getpid();
-        if (bind(sock_fd, (struct sockaddr*)&src_addr, sizeof(src_addr)) < 0) {
+        if (bind(socket_fd, (struct sockaddr*)&src_addr, sizeof(src_addr)) < 0) {
             SPDLOG_ERROR("Failed to bind netlink socket: {}", strerror(errno));
-            close(sock_fd);
-            sock_fd = -1;
+            close(socket_fd);
+            socket_fd = -1;
             return;
         }
 
@@ -76,12 +104,12 @@ public:
     }
 
     ~NetlinkClient() {
-        if (sock_fd >= 0) {
-            close(sock_fd);
+        if (socket_fd >= 0) {
+            close(socket_fd);
         }
     }
 
-    bool is_valid() const { return sock_fd >= 0; }
+    bool is_valid() const { return socket_fd >= 0; }
 
     bool send_message(uint32_t cmd, void* data, uint32_t data_size, struct fusion_cn_ctrl_msg* reply) {
         struct nlmsghdr nlh;
@@ -115,7 +143,7 @@ public:
         netlink_msg.msg_iov = iov;
         netlink_msg.msg_iovlen = 2;
 
-        if (sendmsg(sock_fd, &netlink_msg, 0) < 0) {
+        if (sendmsg(socket_fd, &netlink_msg, 0) < 0) {
             SPDLOG_ERROR("Failed to send netlink message: {}", strerror(errno));
             return false;
         }
@@ -125,7 +153,7 @@ public:
         netlink_msg.msg_iov = &iov_reply;
         netlink_msg.msg_iovlen = 1;
 
-        ssize_t len = recvmsg(sock_fd, &netlink_msg, 0);
+        ssize_t len = recvmsg(socket_fd, &netlink_msg, 0);
         if (len < 0) {
             SPDLOG_ERROR("Failed to receive netlink response: {}", strerror(errno));
             return false;
@@ -151,24 +179,103 @@ public:
     }
 };
 
-int32_t pcm_format_str_to_int(const std::string& str) {
-    if (str == "L16") return 3;
-    if (str == "L24") return 33;
-    SPDLOG_ERROR("Invalid PCM format: {}", str);
-    return 33; // Default to L24
+// Callback for curl to write response data
+size_t curl_write_callback(void* contents, size_t size, size_t nmemb, std::string* output) {
+    size_t total_size = size * nmemb;
+    output->append((char*)contents, total_size);
+    return total_size;
 }
 
-// Placeholder for curl-based device ID retrieval
-std::string get_device_id() {
-    // TODO: Implement curl command to fetch device ID
-    return "Fusion-Var";
+// Fetch device name and system IP via curl
+std::string get_device_name(std::string& system_ip) {
+    CURL* curl = curl_easy_init();
+    if (!curl) {
+        SPDLOG_ERROR("Failed to initialize curl");
+        system_ip = "192.168.2.1";
+        return "Fusion-Var";
+    }
+
+    std::string response;
+    curl_easy_setopt(curl, CURLOPT_URL, "http://192.168.2.100:9090/device");
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_callback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
+
+    CURLcode res = curl_easy_perform(curl);
+    if (res != CURLE_OK) {
+        SPDLOG_ERROR("curl request failed: {}", curl_easy_strerror(res));
+        curl_easy_cleanup(curl);
+        system_ip = "192.168.2.1";
+        return "Fusion-Var";
+    }
+
+    curl_easy_cleanup(curl);
+
+    // Parse JSON response
+    Json::Value root;
+    Json::Reader reader;
+    if (!reader.parse(response, root)) {
+        SPDLOG_ERROR("Failed to parse device response JSON: {}", response);
+        system_ip = "192.168.2.1";
+        return "Fusion-Var";
+    }
+
+    if (!root.isMember("name") || !root["name"].isString()) {
+        SPDLOG_ERROR("Missing or invalid name in device response");
+        system_ip = "192.168.2.1";
+        return "Fusion-Var";
+    }
+    std::string device_name = root["name"].asString();
+
+    if (!root.isMember("address") || !root["address"].isString()) {
+        SPDLOG_ERROR("Missing or invalid address in device response");
+        system_ip = "192.168.2.1";
+        return device_name;
+    }
+    system_ip = root["address"].asString();
+
+    return device_name;
 }
 
-// Placeholder for curl-based IP query
-std::string query_device_ip(const std::string& device_id) {
-    // TODO: Implement curl command to query IP for device_id
-    (void)device_id; // Suppress unused parameter warning
-    return "192.168.2.100";
+// Query IP address for a device UID via curl
+std::string query_device_ip(const std::string& device_uid) {
+    CURL* curl = curl_easy_init();
+    if (!curl) {
+        SPDLOG_ERROR("Failed to initialize curl for device IP query");
+        return "192.168.2.1";
+    }
+
+    std::string response;
+    curl_easy_setopt(curl, CURLOPT_URL, "http://192.168.2.100:8080/devices");
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_callback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
+
+    CURLcode res = curl_easy_perform(curl);
+    if (res != CURLE_OK) {
+        SPDLOG_ERROR("curl request failed for device IP query: {}", curl_easy_strerror(res));
+        curl_easy_cleanup(curl);
+        return "192.168.2.1";
+    }
+
+    curl_easy_cleanup(curl);
+
+    // Parse JSON array
+    Json::Value root;
+    Json::Reader reader;
+    if (!reader.parse(response, root) || !root.isArray()) {
+        SPDLOG_ERROR("Failed to parse devices response JSON or not an array: {}", response);
+        return "192.168.2.1";
+    }
+
+    for (const auto& device : root) {
+        if (device.isMember("name") && device["name"].isString() &&
+            device["name"].asString() == device_uid &&
+            device.isMember("address") && device["address"].isString()) {
+            return device["address"].asString();
+        }
+    }
+
+    SPDLOG_ERROR("Device UID {} not found in devices response", device_uid);
+    return "192.168.2.1";
 }
 
 class FusionConnectClient : public bosepro::Module {
@@ -176,25 +283,19 @@ public:
     FusionConnectClient(const bosepro::BlockConfiguration &configuration);
     virtual ~FusionConnectClient() = default;
 
-    virtual void process() {}
+    virtual void process();
 
 private:
     NetlinkClient client;
-    std::string device_id;
+    std::string device_name;
     std::string system_ip;
-    std::map<uint64_t, std::string> aes67_descriptions; // Map stream_handle to description
+    std::map<std::string, fusion_cn_stream_config> aes67_stream_map; // Map stream_handle string to config
+    std::vector<fusion_cn_stream_config> fusion_connect_stream_configs;
 
-    std::vector<struct fusion_cn_stream_config> aes67_stream_configs;
-    std::vector<struct fusion_cn_stream_config> fusion_connect_stream_configs;
+    std::string audio_streams_update; // String input for JSON parsing
 
-    std::string aes67_stream;
-    std::string fusion_connect_stream;
-    std::string sdp;
-
-    void create_stream(struct fusion_cn_stream_config& config);
-    void aes67_func();
-    void fusion_connect_func();
-    void sdp_func();
+    void create_stream(fusion_cn_stream_config& config);
+    void audio_streams_update_func();
 
     MODULE_DECLARE(FusionConnectClient);
 };
@@ -203,8 +304,8 @@ MODULE_REGISTER(FusionConnectClient, "fusion_connect_client");
 
 FusionConnectClient::FusionConnectClient(const bosepro::BlockConfiguration &configuration)
     : bosepro::Module(configuration) {
-    device_id = get_device_id();
-    system_ip = query_device_ip(device_id);
+    system_ip = "192.168.2.1"; // Default
+    device_name = get_device_name(system_ip);
 
     if (!client.is_valid()) {
         SPDLOG_ERROR("Failed to initialize netlink client");
@@ -223,21 +324,20 @@ FusionConnectClient::FusionConnectClient(const bosepro::BlockConfiguration &conf
         free(reply.data);
     }
 
-    assign_parameter("aes67_streams", &aes67_stream, 
-                     POST_FUNCTION_SCALAR(aes67_func));
-    assign_parameter("device_connections", &fusion_connect_stream, 
-                     POST_FUNCTION_SCALAR(fusion_connect_func));
-    assign_parameter("sessions", &sdp, 
-                     POST_FUNCTION_SCALAR(sdp_func));
+    assign_parameter("audio_streams_update", &audio_streams_update, 
+                     POST_FUNCTION_SCALAR(audio_streams_update_func));
 }
 
-void FusionConnectClient::create_stream(struct fusion_cn_stream_config& config) {
+void FusionConnectClient::create_stream(fusion_cn_stream_config& config) {
     struct fusion_cn_ctrl_msg reply = {0, 0, 0, nullptr, 0};
+
+    dumpFusionCnStreamConfig(config);
+
     if (client.send_message(FUSION_CN_CTRL_CMD_ADD_STREAM, &config, sizeof(config), &reply)) {
         if (reply.err == 0 && reply.data_size == sizeof(uint64_t) && reply.data) {
             uint64_t new_handle = *(uint64_t*)reply.data;
             config.stream_handle = new_handle;
-            SPDLOG_DEBUG("Add RTP Stream: Success, new handle={}", new_handle);
+            SPDLOG_DEBUG("Add RTP Stream: Success, new_handle={}", new_handle);
         } else {
             SPDLOG_ERROR("Add RTP Stream: Failed, err={}", reply.err);
         }
@@ -249,449 +349,184 @@ void FusionConnectClient::create_stream(struct fusion_cn_stream_config& config) 
     }
 }
 
-void FusionConnectClient::aes67_func() {
-    std::map<std::string, std::string> fields;
-    std::istringstream iss(aes67_stream);
-    std::string token;
-    while (std::getline(iss, token, ',')) {
-        size_t pos = token.find('=');
-        if (pos == std::string::npos) continue;
-        fields[token.substr(0, pos)] = token.substr(pos + 1);
+void FusionConnectClient::audio_streams_update_func() {
+    if (audio_streams_update.empty()) {
+        SPDLOG_DEBUG("audio_streams_update is empty, exiting");
+        return; // Silently exit if input is empty
     }
 
-    auto it = fields.find("source_device");
-    std::string source_device = it != fields.end() ? it->second : "";
-    it = fields.find("destination_device");
-    std::string destination_device = it != fields.end() ? it->second : "";
-    if (source_device != device_id && destination_device != device_id) {
-        SPDLOG_DEBUG("Stream not relevant to device {}", device_id);
+    SPDLOG_DEBUG("Received audio_streams_update: {}", audio_streams_update);
+
+    // Parse JSON string
+    Json::Value root;
+    Json::Reader reader;
+    if (!reader.parse(audio_streams_update, root)) {
+        SPDLOG_ERROR("Failed to parse audio_streams_update JSON: {}", audio_streams_update);
         return;
     }
 
-    it = fields.find("multicast_destination_ip");
-    if (it == fields.end()) {
-        SPDLOG_ERROR("Missing multicast_destination_ip");
-        return;
-    }
-    uint32_t dest_ip = inet_addr(it->second.c_str());
-    if (dest_ip == INADDR_NONE) {
-        SPDLOG_ERROR("Invalid multicast_destination_ip: {}", it->second);
-        return;
-    }
-
-    it = fields.find("channels");
-    if (it == fields.end()) {
-        SPDLOG_ERROR("Missing channels");
-        return;
-    }
-    uint8_t channels;
-    try {
-        unsigned int ch = std::stoul(it->second);
-        channels = (ch >= 1 && ch <= 64) ? ch : 0;
-    } catch (const std::exception& e) {
-        SPDLOG_ERROR("Invalid channels: {}", e.what());
-        return;
-    }
-    if (channels == 0) {
-        SPDLOG_ERROR("Channels out of range: {}", it->second);
+    // Parse top-level fields
+    std::string source_device_uid = root.isMember("source_device_uid") && root["source_device_uid"].isString()
+        ? root["source_device_uid"].asString() : "";
+    std::string dest_device_uid = root.isMember("dest_device_uid") && root["dest_device_uid"].isString()
+        ? root["dest_device_uid"].asString() : "";
+    SPDLOG_DEBUG("Parsed source_device_uid: {}, dest_device_uid: {}, device_name: {}", source_device_uid, dest_device_uid, device_name);
+    if (source_device_uid != device_name && dest_device_uid != device_name) {
+        SPDLOG_DEBUG("Stream not relevant to device {}", device_name);
         return;
     }
 
-    it = fields.find("description");
-    std::string description = it != fields.end() ? it->second : "";
-    it = fields.find("direction");
-    std::string direction = it != fields.end() ? it->second : "";
-    if (direction != "TX" && direction != "RX") {
-        SPDLOG_ERROR("Invalid direction: {}", direction);
+    // Parse properties
+    if (!root.isMember("properties") || !root["properties"].isObject()) {
+        SPDLOG_ERROR("Missing or invalid properties object");
+        return;
+    }
+    const Json::Value& properties = root["properties"];
+
+    // Validate required properties
+    bool is_fusion_connect = false;
+    if (properties.isMember("is_fusion_connect") && properties["is_fusion_connect"].isBool()) {
+        is_fusion_connect = properties["is_fusion_connect"].asBool();
+    } else {
+        SPDLOG_ERROR("Missing or invalid is_fusion_connect in properties");
         return;
     }
 
-    // Match stream
-    auto stream_it = aes67_stream_configs.end();
-    for (auto it = aes67_stream_configs.begin(); it != aes67_stream_configs.end(); ++it) {
-        auto desc_it = aes67_descriptions.find(it->stream_handle);
-        if (desc_it != aes67_descriptions.end() && desc_it->second == description &&
-            it->dest_ip == dest_ip && it->channels == channels) {
-            stream_it = it;
-            break;
+    bool is_source = false;
+    if (properties.isMember("is_source") && properties["is_source"].isBool()) {
+        is_source = properties["is_source"].asBool();
+    } else {
+        SPDLOG_ERROR("Missing or invalid is_source in properties");
+        return;
+    }
+
+    fusion_cn_stream_config config = {};
+    config.is_source = is_source;
+    config.is_fusion_connect = is_fusion_connect;
+
+    if (is_fusion_connect) {
+        // Fusion Connect stream
+        if (properties.isMember("channels") && properties["channels"].isInt()) {
+            unsigned int ch = properties["channels"].asInt();
+            config.channels = (ch >= 1 && ch <= 64) ? ch : 1;
+        } else {
+            config.channels = 1; // Demo default
         }
-    }
 
-    struct fusion_cn_stream_config config;
-    if (stream_it != aes67_stream_configs.end()) {
-        config = *stream_it;
-    } else {
-        config = {};
-        config.dest_ip = dest_ip;
-        config.channels = channels;
-        config.is_source = (direction == "TX");
-        config.is_fusion_connect = 0;
-        aes67_stream_configs.push_back(config);
-        stream_it = aes67_stream_configs.end() - 1;
-    }
+        if (!properties.isMember("source_port") || !properties["source_port"].isInt()) {
+            SPDLOG_ERROR("Missing or invalid source_port for Fusion Connect stream");
+            return;
+        }
+        unsigned int port = properties["source_port"].asInt();
+        config.source_port = (port >= 49152 && port <= 65535) ? port : 0;
+        if (config.source_port == 0) {
+            SPDLOG_ERROR("Source port out of range: {}", port);
+            return;
+        }
 
-    // Store description
-    aes67_descriptions[config.stream_handle] = description;
-
-    // Defer creation until SDP provides remaining fields
-    SPDLOG_DEBUG("Added/Updated AES67 stream config, awaiting SDP");
-}
-
-void FusionConnectClient::fusion_connect_func() {
-    std::map<std::string, std::string> fields;
-    std::istringstream iss(fusion_connect_stream);
-    std::string token;
-    while (std::getline(iss, token, ',')) {
-        size_t pos = token.find('=');
-        if (pos == std::string::npos) continue;
-        fields[token.substr(0, pos)] = token.substr(pos + 1);
-    }
-
-    auto it = fields.find("source_device");
-    std::string source_device = it != fields.end() ? it->second : "";
-    it = fields.find("destination_device");
-    std::string destination_device = it != fields.end() ? it->second : "";
-    if (source_device != device_id && destination_device != device_id) {
-        SPDLOG_DEBUG("Stream not relevant to device {}", device_id);
-        return;
-    }
-
-    it = fields.find("source_port");
-    if (it == fields.end()) {
-        SPDLOG_ERROR("Missing source_port");
-        return;
-    }
-    uint16_t source_port;
-    try {
-        unsigned int port = std::stoul(it->second);
-        source_port = (port >= 49152 && port <= 65535) ? port : 0;
-    } catch (const std::exception& e) {
-        SPDLOG_ERROR("Invalid source_port: {}", e.what());
-        return;
-    }
-    if (source_port == 0) {
-        SPDLOG_ERROR("Source port out of range: {}", it->second);
-        return;
-    }
-
-    it = fields.find("channels");
-    if (it == fields.end()) {
-        SPDLOG_ERROR("Missing channels");
-        return;
-    }
-    uint8_t channels;
-    try {
-        unsigned int ch = std::stoul(it->second);
-        channels = (ch >= 1 && ch <= 64) ? ch : 0;
-    } catch (const std::exception& e) {
-        SPDLOG_ERROR("Invalid channels: {}", e.what());
-        return;
-    }
-    if (channels == 0) {
-        SPDLOG_ERROR("Channels out of range: {}", it->second);
-        return;
-    }
-
-    std::string dest_ip_str = destination_device.empty() ? "" : query_device_ip(destination_device);
-    if (dest_ip_str.empty()) {
-        SPDLOG_ERROR("Failed to query dest_ip for device {}", destination_device);
-        return;
-    }
-    uint32_t dest_ip = inet_addr(dest_ip_str.c_str());
-    if (dest_ip == INADDR_NONE) {
-        SPDLOG_ERROR("Invalid dest_ip: {}", dest_ip_str);
-        return;
-    }
-
-    // Match stream
-    auto stream_it = std::find_if(fusion_connect_stream_configs.begin(), fusion_connect_stream_configs.end(),
-        [&](const auto& cfg) {
-            return cfg.source_port == source_port && cfg.channels == channels;
-        });
-
-    struct fusion_cn_stream_config config;
-    if (stream_it != fusion_connect_stream_configs.end()) {
-        config = *stream_it;
-    } else {
-        config = {};
-        config.stream_handle = 0;
+        // Apply Fusion Connect defaults
         config.sample_rate = 48000;
         config.format = 15; // FLOAT_BE
-        config.channels = channels;
         config.frames_per_packet = 16;
-        config.dest_ip = dest_ip;
         config.dest_port = 5004;
-        config.source_port = source_port;
-        config.source_ip = inet_addr(system_ip.c_str());
         config.payload_type = 96;
         config.playout_delay = 2000000;
         config.timestamp_offset = 0;
-        config.is_source = (source_device == device_id);
-        config.is_fusion_connect = 1;
-    }
 
-    create_stream(config);
-    if (config.stream_handle != 0) {
-        if (stream_it == fusion_connect_stream_configs.end()) {
-            fusion_connect_stream_configs.push_back(config);
+        // Set IPs
+        if (is_source) {
+            config.source_ip = inet_addr(system_ip.c_str());
+            config.dest_ip = inet_addr(query_device_ip(dest_device_uid).c_str());
         } else {
-            *stream_it = config;
+            config.source_ip = inet_addr(query_device_ip(source_device_uid).c_str());
+            config.dest_ip = inet_addr(system_ip.c_str());
+        }
+        if (config.source_ip == INADDR_NONE || config.dest_ip == INADDR_NONE) {
+            SPDLOG_ERROR("Invalid IP address for Fusion Connect stream");
+            return;
+        }
+
+        // Match stream
+        auto stream_it = std::find_if(fusion_connect_stream_configs.begin(), fusion_connect_stream_configs.end(),
+            [&](const auto& cfg) {
+                return cfg.source_port == config.source_port && cfg.channels == config.channels;
+            });
+
+        if (stream_it != fusion_connect_stream_configs.end()) {
+            config = *stream_it;
+            config.is_source = is_source;
+            config.is_fusion_connect = is_fusion_connect;
+        }
+
+        create_stream(config);
+        if (config.stream_handle != 0) {
+            if (stream_it == fusion_connect_stream_configs.end()) {
+                fusion_connect_stream_configs.push_back(config);
+            } else {
+                *stream_it = config;
+            }
+        }
+    } else {
+        // AES67 stream
+        if (!properties.isMember("stream_handle")) {
+            SPDLOG_ERROR("Missing stream_handle for AES67 stream");
+            return;
+        }
+        std::string stream_handle_str = properties["stream_handle"].asString();
+
+        SPDLOG_INFO("stream_handle={}", properties["stream_handle"].asUInt64());
+
+        if (!properties.isMember("dest_ip") || !properties["dest_ip"].isString()) {
+            SPDLOG_ERROR("Missing or invalid dest_ip for AES67 stream");
+            return;
+        }
+        config.dest_ip = inet_addr(properties["dest_ip"].asString().c_str());
+        if (config.dest_ip == INADDR_NONE) {
+            SPDLOG_ERROR("Invalid dest_ip: {}", properties["dest_ip"].asString());
+            return;
+        }
+
+        if (is_source && (!properties.isMember("source_port") || !properties["source_port"].isInt())) {
+            SPDLOG_ERROR("Missing or invalid source_port for AES67 stream");
+            return;
+        }
+
+        config.stream_handle = properties["stream_handle"].asUInt64();
+        config.channels = 1; // Demo default
+        config.dest_port = 5004; // Demo default
+        if (is_source) { 
+            config.source_port = properties["source_port"].isInt();
+        } else {
+            config.source_port = 49152;
+        }
+        config.sample_rate = 48000; // Demo default
+        config.format = 33; // S24_3BE (demo default)
+        config.frames_per_packet = 48; // Demo default
+        config.payload_type = 97; // Demo default
+        config.playout_delay = 2000000; // Demo default
+        config.timestamp_offset = 0; // Demo default
+        config.source_ip = inet_addr(system_ip.c_str());
+        config.is_source = is_source;
+        config.is_fusion_connect = is_fusion_connect;
+
+        // Match stream using the string key from JSON
+        auto stream_it = aes67_stream_map.find(stream_handle_str);
+        if (stream_it != aes67_stream_map.end()) {
+            // Existing stream: use the stored config, including its uint64_t stream_handle
+            config = stream_it->second;
+            config.dest_ip = inet_addr(properties["dest_ip"].asString().c_str());
+            config.is_source = is_source;
+        }
+
+        create_stream(config);
+        if (config.stream_handle != 0) {
+            aes67_stream_map[stream_handle_str] = config;
         }
     }
 }
 
-void FusionConnectClient::sdp_func() {
-    std::istringstream iss(sdp);
-    std::string line;
-    std::map<std::string, std::string> sdp_fields;
-    std::string session_name;
-
-    while (std::getline(iss, line)) {
-        if (line.empty()) continue;
-        size_t pos = line.find('=');
-        if (pos == std::string::npos) continue;
-        std::string key = line.substr(0, pos);
-        std::string value = line.substr(pos + 1);
-
-        if (key == "s") {
-            session_name = value;
-        } else if (key == "o") {
-            size_t ip_pos = value.rfind(' ');
-            if (ip_pos != std::string::npos) {
-                sdp_fields["source_ip"] = value.substr(ip_pos + 1);
-            }
-        } else if (key == "c") {
-            size_t ip_pos = value.find("IP4 ");
-            if (ip_pos != std::string::npos) {
-                std::string ip = value.substr(ip_pos + 4);
-                size_t slash_pos = ip.find('/');
-                if (slash_pos != std::string::npos) {
-                    ip = ip.substr(0, slash_pos);
-                }
-                sdp_fields["dest_ip"] = ip;
-            }
-        } else if (key == "m") {
-            size_t port_pos = value.find(' ');
-            if (port_pos != std::string::npos) {
-                sdp_fields["port"] = value.substr(port_pos + 1, value.find(' ', port_pos + 1) - port_pos - 1);
-                size_t pt_pos = value.rfind(' ');
-                if (pt_pos != std::string::npos) {
-                    sdp_fields["payload_type"] = value.substr(pt_pos + 1);
-                }
-            }
-        } else if (key == "a") {
-            if (value.find("rtpmap:") == 0) {
-                size_t space_pos = value.find(' ');
-                if (space_pos != std::string::npos) {
-                    std::string rtpmap = value.substr(space_pos + 1);
-                    size_t slash1 = rtpmap.find('/');
-                    size_t slash2 = rtpmap.rfind('/');
-                    if (slash1 != std::string::npos && slash2 != std::string::npos && slash1 != slash2) {
-                        sdp_fields["format"] = rtpmap.substr(0, slash1);
-                        sdp_fields["sample_rate"] = rtpmap.substr(slash1 + 1, slash2 - slash1 - 1);
-                        sdp_fields["channels"] = rtpmap.substr(slash2 + 1);
-                    }
-                }
-            } else if (value.find("ptime:") == 0) {
-                sdp_fields["ptime"] = value.substr(6);
-            } else if (value.find("mediaclk:direct=") == 0) {
-                sdp_fields["timestamp_offset"] = value.substr(16);
-            } else if (value == "recvonly") {
-                sdp_fields["direction"] = "RX";
-            } else if (value == "sendonly") {
-                sdp_fields["direction"] = "TX";
-            }
-        }
-    }
-
-    // Verify stream relevance
-    bool is_relevant = false;
-    if (session_name == device_id) {
-        is_relevant = true;
-    } else {
-        auto it = sdp_fields.find("source_ip");
-        std::string source_ip = it != sdp_fields.end() ? it->second : "";
-        it = sdp_fields.find("dest_ip");
-        std::string dest_ip = it != sdp_fields.end() ? it->second : "";
-        if (source_ip == system_ip || dest_ip == system_ip) {
-            it = sdp_fields.find("port");
-            std::string port = it != sdp_fields.end() ? it->second : "";
-            if (source_ip == system_ip && !port.empty()) {
-                try {
-                    unsigned int p = std::stoul(port);
-                    if (p >= 49152 && p <= 65535) {
-                        is_relevant = true;
-                    }
-                } catch (const std::exception& e) {}
-            } else if (dest_ip == system_ip) {
-                is_relevant = true; // Sink streams use port 5004
-            }
-        }
-    }
-    if (!is_relevant) {
-        SPDLOG_DEBUG("SDP not relevant to device {}", device_id);
-        return;
-    }
-
-    // Validate required fields
-    auto it = sdp_fields.find("dest_ip");
-    if (it == sdp_fields.end()) {
-        SPDLOG_ERROR("Missing dest_ip in SDP");
-        return;
-    }
-    uint32_t dest_ip = inet_addr(it->second.c_str());
-    if (dest_ip == INADDR_NONE) {
-        SPDLOG_ERROR("Invalid dest_ip: {}", it->second);
-        return;
-    }
-
-    it = sdp_fields.find("port");
-    if (it == sdp_fields.end()) {
-        SPDLOG_ERROR("Missing port in SDP");
-        return;
-    }
-    uint16_t dest_port;
-    try {
-        dest_port = std::stoul(it->second);
-    } catch (const std::exception& e) {
-        SPDLOG_ERROR("Invalid port: {}", e.what());
-        return;
-    }
-
-    it = sdp_fields.find("payload_type");
-    if (it == sdp_fields.end()) {
-        SPDLOG_ERROR("Missing payload_type in SDP");
-        return;
-    }
-    uint8_t payload_type;
-    try {
-        unsigned int pt = std::stoul(it->second);
-        payload_type = (pt >= 96 && pt <= 127) ? pt : 0;
-    } catch (const std::exception& e) {
-        SPDLOG_ERROR("Invalid payload_type: {}", e.what());
-        return;
-    }
-    if (payload_type == 0) {
-        SPDLOG_ERROR("Payload type out of range: {}", it->second);
-        return;
-    }
-
-    it = sdp_fields.find("sample_rate");
-    if (it == sdp_fields.end()) {
-        SPDLOG_ERROR("Missing sample_rate in SDP");
-        return;
-    }
-    uint32_t sample_rate;
-    try {
-        sample_rate = std::stoul(it->second);
-    } catch (const std::exception& e) {
-        SPDLOG_ERROR("Invalid sample_rate: {}", e.what());
-        return;
-    }
-
-    it = sdp_fields.find("channels");
-    if (it == sdp_fields.end()) {
-        SPDLOG_ERROR("Missing channels in SDP");
-        return;
-    }
-    uint8_t channels;
-    try {
-        unsigned int ch = std::stoul(it->second);
-        channels = (ch >= 1 && ch <= 64) ? ch : 0;
-    } catch (const std::exception& e) {
-        SPDLOG_ERROR("Invalid channels: {}", e.what());
-        return;
-    }
-    if (channels == 0) {
-        SPDLOG_ERROR("Channels out of range: {}", it->second);
-        return;
-    }
-
-    it = sdp_fields.find("format");
-    if (it == sdp_fields.end()) {
-        SPDLOG_ERROR("Missing format in SDP");
-        return;
-    }
-    int32_t format = pcm_format_str_to_int(it->second);
-
-    it = sdp_fields.find("ptime");
-    if (it == sdp_fields.end()) {
-        SPDLOG_ERROR("Missing ptime in SDP");
-        return;
-    }
-    float ptime;
-    try {
-        ptime = std::stof(it->second);
-    } catch (const std::exception& e) {
-        SPDLOG_ERROR("Invalid ptime: {}", e.what());
-        return;
-    }
-    uint32_t frames_per_packet = static_cast<uint32_t>(ptime * sample_rate / 1000);
-    std::vector<uint32_t> valid_frames = {6, 12, 16, 48, 192};
-    if (std::find(valid_frames.begin(), valid_frames.end(), frames_per_packet) == valid_frames.end()) {
-        SPDLOG_ERROR("Invalid frames_per_packet: {}", frames_per_packet);
-        return;
-    }
-
-    it = sdp_fields.find("timestamp_offset");
-    uint32_t timestamp_offset = 0;
-    if (it != sdp_fields.end()) {
-        try {
-            timestamp_offset = std::stoul(it->second);
-        } catch (const std::exception& e) {
-            SPDLOG_ERROR("Invalid timestamp_offset: {}", e.what());
-            return;
-        }
-    }
-
-    it = sdp_fields.find("direction");
-    std::string direction = it != sdp_fields.end() ? it->second : "RX";
-    if (direction != "TX" && direction != "RX") {
-        SPDLOG_ERROR("Invalid direction: {}", direction);
-        return;
-    }
-
-    // Match stream
-    auto stream_it = std::find_if(aes67_stream_configs.begin(), aes67_stream_configs.end(),
-        [&](const auto& cfg) {
-            return cfg.dest_ip == dest_ip && cfg.dest_port == dest_port && cfg.channels == channels;
-        });
-
-    struct fusion_cn_stream_config config;
-    if (stream_it != aes67_stream_configs.end()) {
-        config = *stream_it;
-    } else {
-        config = {};
-        config.stream_handle = 0;
-    }
-
-    config.sample_rate = sample_rate;
-    config.format = format;
-    config.channels = channels;
-    config.frames_per_packet = frames_per_packet;
-    config.dest_ip = dest_ip;
-    config.dest_port = dest_port;
-    config.source_port = (direction == "TX") ? 49152 : dest_port;
-    config.source_ip = inet_addr(system_ip.c_str());
-    config.payload_type = payload_type;
-    config.playout_delay = 2000000;
-    config.timestamp_offset = timestamp_offset;
-    config.is_source = (direction == "TX");
-    config.is_fusion_connect = 0;
-
-    create_stream(config);
-    if (config.stream_handle != 0) {
-        if (stream_it == aes67_stream_configs.end()) {
-            aes67_stream_configs.push_back(config);
-        } else {
-            *stream_it = config;
-        }
-        // Update description if available
-        auto desc_it = sdp_fields.find("description");
-        if (desc_it != sdp_fields.end()) {
-            aes67_descriptions[config.stream_handle] = desc_it->second;
-        }
-    }
+void FusionConnectClient::process() {
+    // will do sap announcements
 }
 
 } // namespace

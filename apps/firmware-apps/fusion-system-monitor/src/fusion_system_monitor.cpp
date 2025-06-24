@@ -147,14 +147,11 @@ int main(int argc, char *argv[])
 
     std::vector<std::string> target_paths;
 
-    // Paths for networked audio streams
-    target_paths.push_back("aes67_streams[*]");
-    target_paths.push_back("device_connections[*]");
-    target_paths.push_back("sdps[*]");
-    // Path for dynamic parameter setttings with vector indices
-    target_paths.push_back("settings.fw.*.*[*]");
+    // Path for networked audio streams
+    target_paths.push_back("audio_streams[*]");
     // Path for dynamic parameter setttings
     target_paths.push_back("settings.fw.*.*");
+    target_paths.push_back("settings.fw.*.*[*]");
 
     if (vm.count("serverip"))
     {
