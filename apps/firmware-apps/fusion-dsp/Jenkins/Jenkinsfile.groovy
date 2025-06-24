@@ -142,7 +142,7 @@ pipeline {
 	                            filesToUpload.each { file ->
 				                    sh """
 				                        set -e
-				                        curl --ssl-no-revoke -f -u $USERNAME:$PASSWORD -T "${file.path}" "${NEXUS_HTTPS_URL}/${targetPath}/${file.name}"
+				                        curl --ssl-no-revoke -f -u $USERNAME:$PASSWORD -T "${file.path}" "${NEXUS_HTTPS_URL}/${targetPath}/fusion-dsp/$VERSION//${file.name}"
 				                    """
 									println("Upload succeeded: ${NEXUS_HTTPS_URL}/${targetPath}/${file.name}")
 				                }
