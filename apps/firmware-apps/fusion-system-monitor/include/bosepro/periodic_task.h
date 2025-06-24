@@ -34,7 +34,7 @@ public:
         }
 
         SPDLOG_DEBUG("Periodic task {} has period {}ms", configuration.get_name(), period_ms);
-        period_ns = period_ms == 0 ? 0 : period_ms * 1'000'000; // Convert ms to nanoseconds
+        period_ns = period_ms == 0 ? 0 : static_cast<uint64_t>(period_ms) * 1'000'000ULL; // Convert ms to nanoseconds
 
         // Create all of the blocks in the task.
         for (auto &b : configuration.get_blocks()) {
@@ -124,7 +124,7 @@ private:
 
     int_fast32_t cpu_affinity; // CPU affinity for the task
     uint32_t period_ms;    // Period in milliseconds
-    uint32_t period_ns;    // Period in nanoseconds
+    uint64_t period_ns;    // Period in nanoseconds
     std::atomic<bool> stop_flag;
 
     std::thread task_thread;       // Periodic task thread

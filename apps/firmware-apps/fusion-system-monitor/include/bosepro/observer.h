@@ -497,16 +497,27 @@ private:
         updateHandler_(message);
       }
     }
-    else if (path_parts[0].key == "fw_static_config") {
-      message = "{ \"target\": \"session\", \"name\": \"destroy_all_periodic_tasks\" }";
-      updateHandler_(message);
+    else if (path_parts[0].key == "audio_streams") {
+        // Create the message as a Json::Value object
+        Json::Value message_json;
+        message_json["target"] = "fusion_connect_client";
+        message_json["name"] = "audio_streams_update";
 
-      std::ofstream fw_config("/tmp/fw_config.json");
-      fw_config << new_val;
-      fw_config.close();
+        // Serialize new_val to a string and remove the trailing newline
+        Json::FastWriter writer;
+        std::string value_str = writer.write(new_val);
+        if (!value_str.empty() && value_str.back() == '\n') {
+            value_str.pop_back(); // Remove trailing newline
+        }
+        message_json["value"] = value_str;
 
-      message = "{ \"target\": \"session\", \"name\": \"create_periodic_task\", \"value\": \"/tmp/fw_config.json\" }";
-      updateHandler_(message);
+        // Convert the message to a string
+        std::string message = writer.write(message_json);
+        if (!message.empty() && message.back() == '\n') {
+            message.pop_back(); // Remove trailing newline from message
+        }
+
+        updateHandler_(message);
     }
     else if (path_parts[0].key == "dsp_static_config") {
       message = "{ \"target\": \"session\", \"name\": \"destroy_all_audio_tasks\" }";
