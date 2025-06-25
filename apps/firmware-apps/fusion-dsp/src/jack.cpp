@@ -51,6 +51,12 @@ void JackPort::connect(JackClient *client, const std::string &connection_name,
         SPDLOG_ERROR("Unable to connect port {} {}.",
                      get_name(), connection_name);
     }
+    else if (err == 0)
+    {
+        SPDLOG_DEBUG("Connected port {} to {}.",
+                     is_input ? connection_name : get_name(),
+                     is_input ? get_name() : connection_name);
+    }
 }
 
 
@@ -267,12 +273,19 @@ JackClient *Jack::get_client(const std::string &name)
 
 void Jack::connect_port(int_fast32_t channel, const std::string &connection)
 {
-    port_connections[channel] = connection;
-    make_port_connection(channel);
+    if (port_connections[channel].count(connection) > 0)
+    {
+        SPDLOG_DEBUG("Port {} already connected to {}", channel, connection);
+        return;
+    }
+
+    port_connections[channel].insert(connection);
+
+    make_port_connections(channel);
 }
 
 
-void Jack::make_port_connection(int channel)
+void Jack::make_port_connections(int channel)
 {
     if (port_connections[channel].empty())
     {
@@ -280,7 +293,10 @@ void Jack::make_port_connection(int channel)
     }
     else
     {
-        ports[channel].connect(client, port_connections[channel], is_input);
+        for (const auto &connection : port_connections[channel])
+        {
+            ports[channel].connect(client, connection, is_input);
+        }
     }
 }
 
@@ -289,7 +305,7 @@ void Jack::connect_all()
 {
     for (int channel = 0; channel < channels; channel++)
     {
-        make_port_connection(channel);
+        make_port_connections(channel);
     }
 }
 
