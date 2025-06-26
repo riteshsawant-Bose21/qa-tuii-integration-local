@@ -149,6 +149,7 @@ private:
     void close_device();
     void set_hw_params();
     void set_sw_params();
+    int get_device_number(const std::string &name);
 };
 
 std::vector<AlsaDevice::AlsaFormat> AlsaDevice::alsa_formats = {
@@ -240,7 +241,18 @@ AlsaDevice::~AlsaDevice()
 
 void AlsaDevice::open_device()
 {
-    int error = snd_pcm_open(&alsa, device_name.c_str(),
+    int device_number = get_device_number(device_name);
+
+    if (device_number < 0)
+    {
+        SPDLOG_DEBUG("ALSA device {} not found", device_name);
+        return;
+    }
+
+    std::string full_device_name = "hw:FusionConnect,"
+        + std::to_string(device_number);
+
+    int error = snd_pcm_open(&alsa, full_device_name.c_str(),
                              is_input ? SND_PCM_STREAM_CAPTURE
                                       : SND_PCM_STREAM_PLAYBACK,
                              SND_PCM_NONBLOCK);
@@ -607,6 +619,47 @@ void AlsaDevice::set_sw_params()
         SPDLOG_ERROR("Failed to set ALSA software parameters: {}",
                      snd_strerror(error));
     }
+}
+
+
+int AlsaDevice::get_device_number(const std::string &name)
+{
+    snd_ctl_t *ctl;
+
+    if (snd_ctl_open(&ctl, "hw:FusionConnect", 0) < 0)
+    {
+        SPDLOG_DEBUG("Failed to open ALSA control device");
+        return -1;
+    }
+
+    int device = -1;
+
+    while (snd_ctl_pcm_next_device(ctl, &device) >= 0 && device >= 0)
+    {
+        snd_pcm_info_t *info;
+        snd_pcm_info_alloca(&info);
+        snd_pcm_info_set_device(info, device);
+        snd_pcm_info_set_subdevice(info, 0);
+        snd_pcm_info_set_stream(info, is_input ? SND_PCM_STREAM_CAPTURE
+                : SND_PCM_STREAM_PLAYBACK);
+
+        if (snd_ctl_pcm_info(ctl, info) < 0)
+        {
+            SPDLOG_DEBUG("Failed to get ALSA PCM info for device {}", device);
+            continue;
+        }
+
+        if (snd_pcm_info_get_name(info) == name)
+        {
+            SPDLOG_DEBUG("Found ALSA device: {} {}",
+                    snd_pcm_info_get_name(info), device);
+            snd_ctl_close(ctl);
+            return device;
+        }
+    }
+
+    snd_ctl_close(ctl);
+    return -1;
 }
 
 
