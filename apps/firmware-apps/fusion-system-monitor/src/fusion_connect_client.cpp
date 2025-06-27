@@ -496,6 +496,11 @@ void FusionConnectClient::audio_streams_update_func() {
             continue;
         }
 
+        if (!stream.isMember("source_device_uid") && !stream.isMember("dest_device_uid")) {
+            SPDLOG_ERROR("Missing device_uid in stream");
+            continue;
+        }
+
         std::string source_device_uid = stream.isMember("source_device_uid") && stream["source_device_uid"].isString()
             ? stream["source_device_uid"].asString() : "";
         std::string dest_device_uid = stream.isMember("dest_device_uid") && stream["dest_device_uid"].isString()
@@ -646,12 +651,8 @@ void FusionConnectClient::audio_streams_update_func() {
 
             config.channels = ch;
             config.dest_port = 5004;
-            if (is_source) {
-                unsigned int port = properties["source_port"].asInt();
-                config.source_port = (port >= 49152 && port <= 65535) ? port : 49152;
-            } else {
-                config.source_port = config.dest_port;
-            }
+            unsigned int port = properties["source_port"].asInt();
+            config.source_port = (port >= 49152 && port <= 65535) ? port : 49152;
             config.sample_rate = 48000;
             config.format = 33; // S24_3BE
             config.frames_per_packet = 48;
