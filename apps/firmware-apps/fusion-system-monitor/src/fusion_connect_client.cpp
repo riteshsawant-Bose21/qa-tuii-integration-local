@@ -624,6 +624,16 @@ void FusionConnectClient::audio_streams_update_func() {
             }
             std::string stream_name = "AES67_" + properties["stream_name"].asString();
 
+            if (!properties.isMember("channels") || !properties["channels"].isInt()) {
+                SPDLOG_ERROR("Missing or invalid channels for Fusion Connect stream");
+                continue;
+            }
+            unsigned int ch = properties["channels"].asInt();
+            if (ch < 1 || ch > 64) {
+                SPDLOG_ERROR("Channels out of range: {}", ch);
+                continue;
+            }
+
             if (!properties.isMember("dest_ip") || !properties["dest_ip"].isString()) {
                 SPDLOG_ERROR("Missing or invalid dest_ip for AES67 stream");
                 continue;
@@ -643,7 +653,7 @@ void FusionConnectClient::audio_streams_update_func() {
                 continue;
             }
 
-            config.channels = 1;
+            config.channels = ch;
             config.dest_port = 5004;
             if (is_source) {
                 unsigned int port = properties["source_port"].asInt();
