@@ -27,6 +27,7 @@ enum fusion_cn_ctrl_cmd {
     FUSION_CN_CTRL_CMD_NONE = 0,
     FUSION_CN_CTRL_CMD_START_MANAGER,
     FUSION_CN_CTRL_CMD_STOP_MANAGER,
+    FUSION_CN_CTRL_CMD_SET_PTP_SYNC,
     FUSION_CN_CTRL_CMD_ADD_STREAM,
     FUSION_CN_CTRL_CMD_REMOVE_STREAM
 };
@@ -326,6 +327,8 @@ public:
 
 private:
     NetlinkClient client;
+    uint8_t ptp_synchronized;
+    bool mgr_started;
     std::string device_id;
     std::string system_ip;
     std::map<std::string, fusion_cn_stream_config> aes67_stream_map;
@@ -345,7 +348,7 @@ private:
 MODULE_REGISTER(FusionConnectClient, "fusion_connect_client");
 
 FusionConnectClient::FusionConnectClient(const bosepro::BlockConfiguration &configuration)
-    : bosepro::Module(configuration), network_interface("eth0") {
+    : bosepro::Module(configuration), ptp_synchronized(0), mgr_started(false), network_interface("eth0") {
     system_ip = getSystemIP();
     if (system_ip.empty()) {
         SPDLOG_ERROR("Failed to initialize: No valid system IP found");
@@ -362,18 +365,6 @@ FusionConnectClient::FusionConnectClient(const bosepro::BlockConfiguration &conf
     if (!client.is_valid()) {
         SPDLOG_ERROR("Failed to initialize netlink client");
         return;
-    }
-
-    struct fusion_cn_ctrl_msg reply = { .cmd = 0, .err = 0, .data_size = 0, .data = nullptr, .pid = 0 };
-    if (client.send_message(FUSION_CN_CTRL_CMD_START_MANAGER, nullptr, 0, &reply)) {
-        if (reply.err != 0) {
-            SPDLOG_ERROR("Failed to start manager, err={}", reply.err);
-        }
-    } else {
-        SPDLOG_ERROR("Failed to send start manager command");
-    }
-    if (reply.data) {
-        free(reply.data);
     }
 
     assign_parameter("audio_streams_update", &audio_streams_update, 
@@ -505,6 +496,11 @@ void FusionConnectClient::audio_streams_update_func() {
             continue;
         }
 
+        if (!stream.isMember("source_device_uid") && !stream.isMember("dest_device_uid")) {
+            SPDLOG_ERROR("Missing device_uid in stream");
+            continue;
+        }
+
         std::string source_device_uid = stream.isMember("source_device_uid") && stream["source_device_uid"].isString()
             ? stream["source_device_uid"].asString() : "";
         std::string dest_device_uid = stream.isMember("dest_device_uid") && stream["dest_device_uid"].isString()
@@ -625,7 +621,7 @@ void FusionConnectClient::audio_streams_update_func() {
             std::string stream_name = "AES67_" + properties["stream_name"].asString();
 
             if (!properties.isMember("channels") || !properties["channels"].isInt()) {
-                SPDLOG_ERROR("Missing or invalid channels for Fusion Connect stream");
+                SPDLOG_ERROR("Missing or invalid channels for AES67 stream");
                 continue;
             }
             unsigned int ch = properties["channels"].asInt();
@@ -655,12 +651,8 @@ void FusionConnectClient::audio_streams_update_func() {
 
             config.channels = ch;
             config.dest_port = 5004;
-            if (is_source) {
-                unsigned int port = properties["source_port"].asInt();
-                config.source_port = (port >= 49152 && port <= 65535) ? port : 49152;
-            } else {
-                config.source_port = config.dest_port;
-            }
+            unsigned int port = properties["source_port"].asInt();
+            config.source_port = (port >= 49152 && port <= 65535) ? port : 49152;
             config.sample_rate = 48000;
             config.format = 33; // S24_3BE
             config.frames_per_packet = 48;
@@ -719,8 +711,51 @@ void FusionConnectClient::audio_streams_update_func() {
     }
 }
 
+enum mgr_start_errno {
+    MGR_START_OK = 0,
+    MGR_START_ERRNO_RUNNING,
+    MGR_START_ERRNO_PTP,
+    MGR_START_ERRNO_MODE
+};
+
 void FusionConnectClient::process() {
+    // TODO Query ptp4l sync status. 
+    // for now, just set 
+    if (!ptp_synchronized) {
+        uint8_t sync = 1;
+        struct fusion_cn_ctrl_msg reply = { .cmd = 0, .err = 0, .data_size = 0, .data = nullptr, .pid = 0 };
+        if (client.send_message(FUSION_CN_CTRL_CMD_SET_PTP_SYNC, &sync, sizeof(sync), &reply)) {
+            if (reply.err != 0) {
+                SPDLOG_ERROR("Failed to set ptp sync, err={}", reply.err);
+            } else {
+                ptp_synchronized = 1;
+            }
+        } else {
+            SPDLOG_DEBUG("Failed to send set ptp sync command (likely no driver)");
+        }
+        if (reply.data) {
+            free(reply.data);
+        }
+    } else if (!mgr_started) {
+        struct fusion_cn_ctrl_msg reply = { .cmd = 0, .err = 0, .data_size = 0, .data = nullptr, .pid = 0 };
+        if (client.send_message(FUSION_CN_CTRL_CMD_START_MANAGER, nullptr, 0, &reply)) {
+            if (reply.err == -MGR_START_ERRNO_RUNNING) {
+                mgr_started = true;
+            } else if (reply.err == -MGR_START_ERRNO_PTP) {
+                SPDLOG_DEBUG("PTP not yet sync'd");
+            } else if (reply.err == MGR_START_OK) {
+                mgr_started = true;
+            }
+        } else {
+            SPDLOG_DEBUG("Failed to send start manager command (likely no driver)");
+        }
+        if (reply.data) {
+            free(reply.data);
+        }
+    }
+
     // will do sap announcements
+    // need to count seconds (period time of this thread)
 }
 
 } // namespace
