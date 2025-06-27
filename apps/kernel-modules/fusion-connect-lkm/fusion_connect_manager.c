@@ -1,3 +1,19 @@
+/*
+ * Copyright (C) 2025 Bose Professional
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version 2 of the License, or (at your
+ * option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include <linux/types.h>
 #include <linux/unistd.h>
 #include <linux/fcntl.h>
@@ -87,27 +103,27 @@ static uint64_t fusion_cn_rtp_get_phc_ns(void)
     return ktime_get_real_ns();
 }
 
-static void *fusion_cn_rtp_get_buffer(void *cn_mgr, uint64_t handle)
+static void *fusion_cn_rtp_ops_get_buffer(void *cn_mgr, char *stream_name)
 {
     struct fusion_cn_manager *mgr = cn_mgr;
-    int32_t *buffer = mgr->alsa.mgr_callbacks->get_stream_buffer(mgr->alsa.alsa_chip, handle);
+    int32_t *buffer = mgr->alsa.mgr_callbacks->get_stream_buffer(mgr->alsa.alsa_chip, stream_name);
     if (!buffer) return NULL;
     return buffer;
 }
 
-static uint32_t fusion_cn_rtp_get_buffer_size_in_frames(void *cn_mgr, uint64_t handle)
+static uint32_t fusion_cn_rtp_ops_get_buffer_size_in_frames(void *cn_mgr, char *stream_name)
 {
     struct fusion_cn_manager *mgr = cn_mgr;
-    return mgr->alsa.mgr_callbacks->get_stream_buffer_size_in_frames(mgr->alsa.alsa_chip, handle);
+    return mgr->alsa.mgr_callbacks->get_stream_buffer_size_in_frames(mgr->alsa.alsa_chip, stream_name);
 }
 
-static uint32_t fusion_cn_rtp_get_buffer_offset(void *cn_mgr, uint64_t handle)
+static uint32_t fusion_cn_rtp_ops_get_buffer_offset(void *cn_mgr, char *stream_name)
 {
     struct fusion_cn_manager *mgr = cn_mgr;
-    return mgr->alsa.mgr_callbacks->get_stream_buffer_offset(mgr->alsa.alsa_chip, handle);
+    return mgr->alsa.mgr_callbacks->get_stream_buffer_offset(mgr->alsa.alsa_chip, stream_name);
 }
 
-static uint32_t fusion_cn_rtp_get_avail_frames(void *cn_mgr, uint64_t handle)
+static uint32_t fusion_cn_rtp_ops_get_avail_frames(void *cn_mgr, uint64_t handle, char *stream_name)
 {
     struct fusion_cn_manager *mgr = cn_mgr;
     struct fusion_cn_rtp_stream *stream;
@@ -115,7 +131,7 @@ static uint32_t fusion_cn_rtp_get_avail_frames(void *cn_mgr, uint64_t handle)
 
     stream = fusion_cn_rtp_get_stream(&mgr->rtp, handle);
     if (!stream) return 0;
-    size = mgr->alsa.mgr_callbacks->get_stream_available_frames(mgr->alsa.alsa_chip, handle);
+    size = mgr->alsa.mgr_callbacks->get_stream_available_frames(mgr->alsa.alsa_chip, stream_name);
     kref_put(&stream->ref, fusion_cn_rtp_stream_release);
     return size;
 }
@@ -148,9 +164,9 @@ static void process_active_streams(struct fusion_cn_manager *mgr)
                 if (mgr->debug) printk(KERN_DEBUG "fusion_cn: audio_frame_process: FC sink stream %llu, next_tick=%llu, next_action_time=%llu\n",
                     handle, mgr->ptp.hrtimer_last_tick_ns, stream->next_action_times[stream->playback_index]);
                     
-                mgr->alsa.mgr_callbacks->pcm_interrupt(mgr->alsa.alsa_chip, SNDRV_PCM_STREAM_CAPTURE, handle);
+                mgr->alsa.mgr_callbacks->pcm_interrupt(mgr->alsa.alsa_chip, SNDRV_PCM_STREAM_CAPTURE, stream->info.stream_name);
                 stream->next_action_times[stream->playback_index] = 0;
-                if (++stream->playback_index == (fusion_cn_rtp_get_buffer_size_in_frames(mgr, handle) / stream->info.frames_per_packet)) {
+                if (++stream->playback_index == (fusion_cn_rtp_ops_get_buffer_size_in_frames(mgr, stream->info.stream_name) / stream->info.frames_per_packet)) {
                     stream->playback_index = 0;
                 }
             }
@@ -178,7 +194,7 @@ static void process_active_streams(struct fusion_cn_manager *mgr)
                 // account for packet times smaller than timer tick--regularly will have to spit a couple packets out
                 while (stream->next_action_time <= mgr->ptp.hrtimer_last_tick_ns) {
                     fusion_cn_rtp_send_packet(&mgr->rtp, stream);
-                    mgr->alsa.mgr_callbacks->pcm_interrupt(mgr->alsa.alsa_chip, SNDRV_PCM_STREAM_PLAYBACK, handle);
+                    mgr->alsa.mgr_callbacks->pcm_interrupt(mgr->alsa.alsa_chip, SNDRV_PCM_STREAM_PLAYBACK, stream->info.stream_name);
 
                     if (mgr->debug) printk(KERN_DEBUG "fusion_cn: audio_frame_process: FC source stream %llu, next_tick=%llu, next_action_time=%llu\n",
                         handle, mgr->ptp.hrtimer_last_tick_ns, stream->next_action_time);
@@ -214,9 +230,9 @@ static void process_active_streams(struct fusion_cn_manager *mgr)
                 if (mgr->debug) printk(KERN_DEBUG "fusion_cn: audio_frame_process: AES67 sink stream %llu, next_tick=%llu, next_action_time=%llu\n",
                     handle, mgr->ptp.hrtimer_last_tick_ns, stream->next_action_times[stream->playback_index]);
                     
-                mgr->alsa.mgr_callbacks->pcm_interrupt(mgr->alsa.alsa_chip, SNDRV_PCM_STREAM_CAPTURE, handle);
+                mgr->alsa.mgr_callbacks->pcm_interrupt(mgr->alsa.alsa_chip, SNDRV_PCM_STREAM_CAPTURE, stream->info.stream_name);
                 stream->next_action_times[stream->playback_index] = 0;
-                if (++stream->playback_index == (fusion_cn_rtp_get_buffer_size_in_frames(mgr, handle) / stream->info.frames_per_packet)) {
+                if (++stream->playback_index == (fusion_cn_rtp_ops_get_buffer_size_in_frames(mgr, stream->info.stream_name) / stream->info.frames_per_packet)) {
                     stream->playback_index = 0;
                 }
             }
@@ -244,7 +260,7 @@ static void process_active_streams(struct fusion_cn_manager *mgr)
                 // account for packet times smaller than timer tick--regularly will have to spit a couple packets out
                 while (stream->next_action_time <= mgr->ptp.hrtimer_last_tick_ns) {
                     fusion_cn_rtp_send_packet(&mgr->rtp, stream);
-                    mgr->alsa.mgr_callbacks->pcm_interrupt(mgr->alsa.alsa_chip, SNDRV_PCM_STREAM_PLAYBACK, handle);
+                    mgr->alsa.mgr_callbacks->pcm_interrupt(mgr->alsa.alsa_chip, SNDRV_PCM_STREAM_PLAYBACK, stream->info.stream_name);
 
                     if (mgr->debug) printk(KERN_DEBUG "fusion_cn: audio_frame_process: AES67 source stream %llu, next_tick=%llu, next_action_time=%llu\n",
                         handle, mgr->ptp.hrtimer_last_tick_ns, stream->next_action_time);
@@ -310,10 +326,10 @@ static int fusion_cn_state_init(struct fusion_cn_manager *mgr)
 
 static struct fusion_cn_rtp_ops rtp_ops = {
     .get_phc_ns = fusion_cn_rtp_get_phc_ns,
-    .get_buffer = fusion_cn_rtp_get_buffer,
-    .get_buffer_size_in_frames = fusion_cn_rtp_get_buffer_size_in_frames,
-    .get_buffer_offset = fusion_cn_rtp_get_buffer_offset,
-    .get_avail_frames = fusion_cn_rtp_get_avail_frames
+    .get_buffer = fusion_cn_rtp_ops_get_buffer,
+    .get_buffer_size_in_frames = fusion_cn_rtp_ops_get_buffer_size_in_frames,
+    .get_buffer_offset = fusion_cn_rtp_ops_get_buffer_offset,
+    .get_avail_frames = fusion_cn_rtp_ops_get_avail_frames
 };
 
 static int fusion_cn_alsa_init(struct fusion_cn_manager *mgr)
@@ -576,7 +592,7 @@ static int handle_add_stream(struct fusion_cn_manager *mgr, struct fusion_cn_ctr
 
     /* for rtp source we have alsa playback and vice versa */
     direction = config->is_source ? SNDRV_PCM_STREAM_PLAYBACK : SNDRV_PCM_STREAM_CAPTURE;
-    ret = mgr->alsa.mgr_callbacks->open_substream(mgr->alsa.alsa_chip, handle, direction, config->is_fusion_connect,
+    ret = mgr->alsa.mgr_callbacks->open_substream(mgr->alsa.alsa_chip, handle, config->stream_name, direction, config->is_fusion_connect,
                                                   config->source_port, config->channels, config->sample_rate, config->format);
     if (ret < 0) {
         fusion_cn_rtp_remove_stream(&mgr->rtp, handle);
@@ -592,7 +608,7 @@ static int handle_add_stream(struct fusion_cn_manager *mgr, struct fusion_cn_ctr
         reply->err = -ENOMEM;
     }
 
-    printk(KERN_INFO "fusion_cn: handle_add_stream: Success, handle=%llu\n", handle);
+    printk(KERN_INFO "fusion_cn: handle_add_stream: Success, name=%s\n", config->stream_name);
     return 0;
 }
 
@@ -602,9 +618,12 @@ static int handle_remove_rtp_stream(struct fusion_cn_manager *mgr, struct fusion
     uint64_t handle;
     int ret;
     unsigned long flags;
+    struct fusion_cn_rtp_stream *stream;
 
     if (msg->data_size != sizeof(uint64_t)) return reply->err = -EINVAL;
     handle = *(uint64_t *)msg->data;
+
+    stream = fusion_cn_rtp_get_stream(&mgr->rtp, handle);
 
     write_lock_irqsave(&mgr->rtp.lock, flags);
     ret = fusion_cn_rtp_remove_stream(&mgr->rtp, handle);
@@ -613,11 +632,9 @@ static int handle_remove_rtp_stream(struct fusion_cn_manager *mgr, struct fusion
         return reply->err = ret;
     }
 
-    if (mgr->alsa.mgr_callbacks && mgr->alsa.mgr_callbacks->remove_substream) {
-        ret = mgr->alsa.mgr_callbacks->remove_substream(mgr->alsa.alsa_chip, handle);
-        if (ret < 0) {
-            return reply->err = ret;
-        }
+    ret = mgr->alsa.mgr_callbacks->remove_substream(mgr->alsa.alsa_chip, stream->info.stream_name);
+    if (ret < 0) {
+        return reply->err = ret;
     }
 
     return reply->err = 0;

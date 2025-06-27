@@ -1,7 +1,18 @@
 /*
-* Copyright (C) 2025 Bose Professional
-* ... GPL boilerplate ...
-*/
+ * Copyright (C) 2025 Bose Professional
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version 2 of the License, or (at your
+ * option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, see <http://www.gnu.org/licenses/>.
+ */
 
 #pragma once
 
@@ -18,9 +29,11 @@
 #define FUSION_CN_RTP_MAX_STREAMS 64
 #define FUSION_CN_RTP_MAX_CHANNELS 64
 #define FUSION_CN_RTP_HASH_BITS 6
+#define FUSION_CN_NAME_MAX 32
 
 struct fusion_cn_stream_config {
     uint64_t stream_handle;
+    char stream_name[FUSION_CN_NAME_MAX];
     uint32_t sample_rate;
     snd_pcm_format_t format;
     uint8_t channels;
@@ -38,10 +51,10 @@ struct fusion_cn_stream_config {
 
 struct fusion_cn_rtp_ops {
     uint64_t (*get_phc_ns)(void);
-    void *(*get_buffer)(void *cn_mgr, uint64_t handle);
-    uint32_t (*get_buffer_size_in_frames)(void *cn_mgr, uint64_t handle);
-    uint32_t (*get_buffer_offset)(void *cn_mgr, uint64_t handle);
-    uint32_t (*get_avail_frames)(void *cn_mgr, uint64_t handle);
+    void *(*get_buffer)(void *cn_mgr, char *name);
+    uint32_t (*get_buffer_size_in_frames)(void *cn_mgr, char *name);
+    uint32_t (*get_buffer_offset)(void *cn_mgr, char *name);
+    uint32_t (*get_avail_frames)(void *cn_mgr, uint64_t handle, char *name);
 };
 
 struct fusion_cn_rtp_header {

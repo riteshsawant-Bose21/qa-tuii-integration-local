@@ -1,18 +1,18 @@
 /*
-* Copyright (C) 2025 Bose Professional
-* This program is free software; you can redistribute it and/or modify it
-* under the terms of the GNU General Public License as published by the
-* Free Software Foundation; either version 2 of the License, or (at your
-* option) any later version.
-*
-* This program is distributed in the hope that it will be useful, but WITHOUT
-* ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-* FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
-* more details.
-*
-* You should have received a copy of the GNU General Public License along with
-* this program; if not, see <http://www.gnu.org/licenses/>.
-*/
+ * Copyright (C) 2025 Bose Professional
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version 2 of the License, or (at your
+ * option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, see <http://www.gnu.org/licenses/>.
+ */
 
 #include <linux/slab.h>
 #include <linux/random.h>
@@ -234,8 +234,8 @@ int fusion_cn_rtp_add_stream(struct fusion_cn_rtp_manager *rtp_mgr, struct fusio
     dest_port_host = ntohs(info->dest_port);
     source_port_host = ntohs(info->source_port);
 
-    printk(KERN_INFO "fusion_cn_rtp: add_stream: sample_rate=%u, channels=%u, dest_ip=0x%08x, source_ip=0x%08x, dest_port=%u, source_port=%u, is_source=%d, is_fusion_connect=%d\n",
-           info->sample_rate, info->channels, info->dest_ip, info->source_ip, dest_port_host, source_port_host, info->is_source, info->is_fusion_connect);
+    printk(KERN_INFO "fusion_cn_rtp: add_stream %s: sample_rate=%u, channels=%u, dest_ip=0x%08x, source_ip=0x%08x, dest_port=%u, source_port=%u, is_source=%d, is_fusion_connect=%d\n",
+           info->stream_name, info->sample_rate, info->channels, info->dest_ip, info->source_ip, dest_port_host, source_port_host, info->is_source, info->is_fusion_connect);
 
     if (!info->stream_handle || !info->sample_rate || !info->channels ||
         !info->dest_ip || !info->source_ip || !dest_port_host || !source_port_host) {
@@ -523,7 +523,7 @@ int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr,
             }
 
             seq_num = swab16(packet->rtp.seq_num);
-            frames_in_buf = rtp_mgr->ops->get_buffer_size_in_frames(rtp_mgr->cn_mgr, stream->info.stream_handle);
+            frames_in_buf = rtp_mgr->ops->get_buffer_size_in_frames(rtp_mgr->cn_mgr, stream->info.stream_name);
             write_slot = seq_num % (frames_in_buf / stream->info.frames_per_packet);
             buf_offset = write_slot * stream->info.frames_per_packet;
 
@@ -535,7 +535,7 @@ int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr,
                 for (int i = stream->current_seq_num + 1; i < seq_num; i++) {
                     uint32_t gap_slot = i % (frames_in_buf / stream->info.frames_per_packet);
                     uint32_t gap_offset = gap_slot * stream->info.frames_per_packet;
-                    void *gap_buf = rtp_mgr->ops->get_buffer(rtp_mgr->cn_mgr, stream->info.stream_handle);
+                    void *gap_buf = rtp_mgr->ops->get_buffer(rtp_mgr->cn_mgr, stream->info.stream_name);
                     if (gap_buf) {
                         printk(KERN_WARNING "fusion_cn_rtp: process_packet: Gap detected in stream %llu, seq_num=%u, gap_slot=%u\n",
                                stream->info.stream_handle, i, gap_slot);
@@ -546,7 +546,7 @@ int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr,
                 }
             }
 
-            buf = rtp_mgr->ops->get_buffer(rtp_mgr->cn_mgr, stream->info.stream_handle);
+            buf = rtp_mgr->ops->get_buffer(rtp_mgr->cn_mgr, stream->info.stream_name);
             if (!buf) {
                 printk(KERN_WARNING "fusion_cn_rtp: process_packet: Invalid Buffer !");
                 spin_unlock(&stream->lock);
@@ -632,8 +632,8 @@ __always_inline void fusion_cn_rtp_send_packet(struct fusion_cn_rtp_manager *rtp
     size = sizeof(struct fusion_cn_rtp_packet) +
            stream->info.frames_per_packet * stream->info.channels * sample_physical_width_bits / 8;
 
-    avail_frames = rtp_mgr->ops->get_avail_frames(rtp_mgr->cn_mgr, stream->info.stream_handle);
-    offset = rtp_mgr->ops->get_buffer_offset(rtp_mgr->cn_mgr, stream->info.stream_handle);
+    avail_frames = rtp_mgr->ops->get_avail_frames(rtp_mgr->cn_mgr, stream->info.stream_handle, stream->info.stream_name);
+    offset = rtp_mgr->ops->get_buffer_offset(rtp_mgr->cn_mgr, stream->info.stream_name);
 
     if (!fusion_cn_nf_create_packet(rtp_mgr->nf, &skb, &packet, &size) && size >= sizeof(struct fusion_cn_rtp_packet)) {
         rtp = packet;
@@ -663,10 +663,11 @@ __always_inline void fusion_cn_rtp_send_packet(struct fusion_cn_rtp_manager *rtp
 
         payload = (uint8_t *)packet + sizeof(*rtp);
         // if we don't have enough audio, write out silence
+        // TODO remove avail frames stuff...
         if (avail_frames < stream->info.frames_per_packet) {
             memset(payload, 0, stream->info.frames_per_packet * stream->info.channels * sample_physical_width_bits / 8);
         } else {
-            void *buf = rtp_mgr->ops->get_buffer(rtp_mgr->cn_mgr, stream->info.stream_handle);
+            void *buf = rtp_mgr->ops->get_buffer(rtp_mgr->cn_mgr, stream->info.stream_name);
             memcpy(payload, buf + offset * stream->info.channels * sample_physical_width_bits / 8,
                    stream->info.frames_per_packet * stream->info.channels * sample_physical_width_bits / 8);
         }
@@ -707,7 +708,7 @@ int fusion_cn_rtp_set_stream_running(struct fusion_cn_rtp_manager *rtp_mgr, uint
     }
 
     if (running) {
-        uint32_t frames_in_buf = rtp_mgr->ops->get_buffer_size_in_frames(rtp_mgr->cn_mgr, handle);
+        uint32_t frames_in_buf = rtp_mgr->ops->get_buffer_size_in_frames(rtp_mgr->cn_mgr, stream->info.stream_name);
         // for sinks only. allocate this before we set the stream running
         // but it needs to happen after alsa device is opened and has set the buffer frames
         if (!stream->info.is_source) {

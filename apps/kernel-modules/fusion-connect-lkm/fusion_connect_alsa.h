@@ -1,5 +1,4 @@
 /*
- * Copyright (C) 2017 Merging Technologies
  * Copyright (C) 2025 Bose Professional
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -22,20 +21,21 @@
 #define FUSION_CN_NUM_CHANNELS_MAX 120
 #define FUSION_CN_DEFAULT_BUFFER_FRAMES 512
 #define FUSION_CN_MAX_STREAMS 64
-#define FUSION_CN_ALSA_HASH_BITS 6 /* 64 buckets, matches RTP */
+#define FUSION_CN_ALSA_HASH_BITS 4
+#define FUSION_CN_NAME_MAX 32
 
 struct fusion_cn_mgr_ops {
-    void *(*get_stream_buffer)(void *alsa_chip, uint64_t stream_handle);
-    uint32_t (*get_stream_buffer_size_in_frames)(void *alsa_chip, uint64_t stream_handle);
-    uint32_t (*get_stream_buffer_offset)(void *alsa_chip, uint64_t stream_handle);
-    void (*lock_buffer)(void *alsa_chip, uint64_t stream_handle, unsigned long *flags);
-    void (*unlock_buffer)(void *alsa_chip, uint64_t stream_handle, unsigned long *flags);
-    int (*pcm_interrupt)(void *alsa_chip, int direction, uint64_t stream_handle);
-    int (*open_substream)(void *alsa_chip, uint64_t stream_handle, int direction, bool is_fusion_connect,
+    void *(*get_stream_buffer)(void *alsa_chip, const char *stream_name);
+    uint32_t (*get_stream_buffer_size_in_frames)(void *alsa_chip, const char *stream_name);
+    uint32_t (*get_stream_buffer_offset)(void *alsa_chip, const char *stream_name);
+    void (*lock_buffer)(void *alsa_chip, const char *stream_name, unsigned long *flags);   // unused
+    void (*unlock_buffer)(void *alsa_chip, const char *stream_name, unsigned long *flags); // unused
+    int (*pcm_interrupt)(void *alsa_chip, int direction, const char *stream_name);
+    int (*open_substream)(void *alsa_chip, uint64_t stream_handle, const char *stream_name, int direction, bool is_fusion_connect, 
                           uint16_t src_port, unsigned int channels, uint32_t rate, snd_pcm_format_t format);
-    int (*remove_substream)(void *alsa_chip, uint64_t stream_handle);
-    uint32_t (*get_stream_available_frames)(void *alsa_chip, uint64_t stream_handle);
-    int (*mute_stream_buffers)(void *alsa_chip, uint64_t stream_handle);
+    int (*remove_substream)(void *alsa_chip, const char *stream_name);
+    uint32_t (*get_stream_available_frames)(void *alsa_chip, const char *stream_name); // used but not important
+    int (*mute_stream_buffers)(void *alsa_chip, const char *stream_name);
 };
 
 struct fusion_cn_alsa_ops {
