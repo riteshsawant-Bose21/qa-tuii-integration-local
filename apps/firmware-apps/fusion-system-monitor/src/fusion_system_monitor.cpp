@@ -148,7 +148,7 @@ int main(int argc, char *argv[])
     std::vector<std::string> target_paths;
 
     // Path for networked audio streams
-    target_paths.push_back("audio_streams[*]");
+    target_paths.push_back("audio_streams");
     // Path for dynamic parameter setttings
     target_paths.push_back("settings.fw.*.*");
     target_paths.push_back("settings.fw.*.*[*]");
