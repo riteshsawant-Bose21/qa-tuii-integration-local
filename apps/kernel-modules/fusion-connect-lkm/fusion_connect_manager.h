@@ -36,13 +36,14 @@ enum fusion_cn_ctrl_cmd {
     FUSION_CN_CTRL_CMD_NONE = 0,
     FUSION_CN_CTRL_CMD_START_MANAGER,
     FUSION_CN_CTRL_CMD_STOP_MANAGER,
+    FUSION_CN_CTRL_CMD_SET_PTP_SYNC,
     FUSION_CN_CTRL_CMD_ADD_STREAM,
     FUSION_CN_CTRL_CMD_REMOVE_STREAM
 };
 
 struct fusion_cn_state {
     bool is_started;
-    bool ptp_synchronized;
+    atomic_t ptp_synchronized;
 };
 
 struct fusion_cn_alsa {

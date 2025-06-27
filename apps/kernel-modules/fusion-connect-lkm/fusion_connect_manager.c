@@ -142,7 +142,7 @@ static void process_active_streams(struct fusion_cn_manager *mgr)
     struct handle_node *handle_node, *tmp;
     uint64_t handle;
 
-    if (!mgr->state.ptp_synchronized) {
+    if (!atomic_read(&mgr->state.ptp_synchronized)) {
         return;
     }
 
@@ -320,7 +320,7 @@ static irqreturn_t audio_frame_tick_gpio(int irq, void *dev_id)
 static int fusion_cn_state_init(struct fusion_cn_manager *mgr)
 {
     mgr->state.is_started = false;
-    mgr->state.ptp_synchronized = false;
+    atomic_set(&mgr->state.ptp_synchronized, false);
     return 0;
 }
 
@@ -454,11 +454,22 @@ void fusion_cn_mgr_destroy(struct fusion_cn_manager *mgr)
     memset(&mgr->rtp, 0, sizeof(mgr->rtp));
 }
 
-bool fusion_cn_mgr_start(struct fusion_cn_manager *mgr)
+enum mgr_start_errno {
+    MGR_START_OK = 0,
+    MGR_START_ERRNO_RUNNING,
+    MGR_START_ERRNO_PTP,
+    MGR_START_ERRNO_MODE
+};
+
+int fusion_cn_mgr_start(struct fusion_cn_manager *mgr)
 {
-    if (!mgr || mgr->state.is_started) {
-        printk(KERN_ERR "fusion_cn: bad mgr ptr or mgr already started\n");
-        return false;
+    if (mgr->state.is_started) {
+        printk(KERN_INFO "fusion_cn: mgr already started\n");
+        return -MGR_START_ERRNO_RUNNING;
+    }
+    if (!atomic_read(&mgr->state.ptp_synchronized)) {
+        printk(KERN_ERR "fusion_cn: ptp not sync'd\n");
+        return -MGR_START_ERRNO_PTP;
     }
 
     if (mgr->ptp.ptp_timing_mode == TIMING_HRTIMER) {
@@ -469,7 +480,7 @@ bool fusion_cn_mgr_start(struct fusion_cn_manager *mgr)
         current_phc_ns = fusion_cn_rtp_get_phc_ns();
         if (current_phc_ns == 0) {
             printk(KERN_ERR "fusion_cn: mgr_start: Failed to get PHC time\n");
-            return false;
+            return -MGR_START_ERRNO_PTP;
         }
 
         // Align to the next 1 ms boundary
@@ -485,15 +496,13 @@ bool fusion_cn_mgr_start(struct fusion_cn_manager *mgr)
         enable_irq(mgr->ptp.gpio_irq);
     } else {
         printk(KERN_ERR "fusion_cn: Invalid timing mode or GPIO not configured\n");
-        return false;
+        return -MGR_START_ERRNO_MODE;
     }
 
     mgr->netfilter.is_enabled = true;
     mgr->state.is_started = true;
-    mgr->state.ptp_synchronized = true; /* Enable audio_frame_process */
-    printk(KERN_INFO "fusion_cn: mgr_start: Started manager, ptp_synchronized=%d\n",
-           mgr->state.ptp_synchronized);
-    return true;
+    printk(KERN_INFO "fusion_cn: mgr_start: Started manager\n");
+    return MGR_START_OK;
 }
 
 bool fusion_cn_mgr_stop(struct fusion_cn_manager *mgr)
@@ -514,7 +523,7 @@ static int handle_start(struct fusion_cn_manager *mgr, struct fusion_cn_ctrl_msg
                         struct fusion_cn_ctrl_msg *reply)
 {
     printk(KERN_INFO "fusion_cn: Starting manager\n");
-    reply->err = fusion_cn_mgr_start(mgr) ? 0 : -EIO;
+    reply->err = fusion_cn_mgr_start(mgr);
     return 0;
 }
 
@@ -523,6 +532,22 @@ static int handle_stop(struct fusion_cn_manager *mgr, struct fusion_cn_ctrl_msg 
 {
     printk(KERN_INFO "fusion_cn: Stopping manager\n");
     reply->err = fusion_cn_mgr_stop(mgr) ? 0 : -EIO;
+    return 0;
+}
+
+static int handle_set_ptp_sync(struct fusion_cn_manager *mgr, struct fusion_cn_ctrl_msg *msg,
+                    struct fusion_cn_ctrl_msg *reply)
+{
+    uint8_t ptp_sync;
+
+    if (msg->data_size != sizeof(uint8_t)) return reply->err = -EINVAL;
+    ptp_sync = *(uint8_t *)msg->data;
+
+    printk(KERN_INFO "fusion_cn: Setting ptp sync=%s\n", ptp_sync ? "true" : "false");
+    atomic_set(&mgr->state.ptp_synchronized, ptp_sync);
+
+    reply->err = 0;
+
     return 0;
 }
 
@@ -643,6 +668,7 @@ static int handle_remove_rtp_stream(struct fusion_cn_manager *mgr, struct fusion
 static const struct message_handler_entry message_handlers[] = {
     { FUSION_CN_CTRL_CMD_START_MANAGER, handle_start },
     { FUSION_CN_CTRL_CMD_STOP_MANAGER, handle_stop },
+    { FUSION_CN_CTRL_CMD_SET_PTP_SYNC, handle_set_ptp_sync },
     { FUSION_CN_CTRL_CMD_ADD_STREAM, handle_add_stream },
     { FUSION_CN_CTRL_CMD_REMOVE_STREAM, handle_remove_rtp_stream },
     { 0, NULL }
