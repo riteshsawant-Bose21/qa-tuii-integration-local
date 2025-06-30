@@ -70,15 +70,7 @@ int fusion_cn_nf_init(void *rtp_mgr)
 {
     struct fusion_cn_rtp_manager *rtp = rtp_mgr;
     struct fusion_cn_netfilter *nf = rtp->nf;
-    struct net_device *dev;
     int err;
-
-    dev = dev_get_by_name(&init_net, nf->iface_name);
-    if (!dev) {
-        printk(KERN_ERR"fusion_cn: Interface %s not found\n", nf->iface_name);
-        return -ENODEV;
-    }
-    dev_put(dev);
 
     spin_lock_init(&nf->lock);
 

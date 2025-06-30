@@ -230,6 +230,14 @@ int fusion_cn_rtp_add_stream(struct fusion_cn_rtp_manager *rtp_mgr, struct fusio
     uint16_t dest_port_host;
     uint16_t source_port_host;
     int err;
+    struct net_device *dev;
+
+    dev = dev_get_by_name(&init_net, rtp_mgr->nf->iface_name);
+    if (!dev) {
+        printk(KERN_ERR"fusion_cn: Interface %s not found\n", rtp_mgr->nf->iface_name);
+        return -ENODEV;
+    }
+    dev_put(dev);
 
     dest_port_host = ntohs(info->dest_port);
     source_port_host = ntohs(info->source_port);
