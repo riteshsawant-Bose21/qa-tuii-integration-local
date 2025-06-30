@@ -29,7 +29,7 @@ func init() {
 		LogDir:      "/tmp/snapshot_test",
 		MaxFileSize: 100,
 		MaxFiles:    5,
-		LogLevel:    logging.INFO,
+		LogLevel:    logging.ERROR,
 	})
 }
 

@@ -266,7 +266,7 @@ func (sm *StateManager) applyWhileLocked(update api.ConfigUpdate) (bool, error) 
 
 		// Skip if local version is newer or equal
 		if exists && !localEntry.Version.Less(update.Version) {
-			logger.Info("Skipping: Local is newer or equal")
+			logger.Debug("Skipping: Local is newer or equal")
 			continue
 		}
 
@@ -469,8 +469,7 @@ func (sm *StateManager) getMemberData(list *memberlist.Memberlist) []api.MemberM
 }
 
 // validateData resolves any mismatches in node data across cluster
-// validateData resolves any mismatches in node data across cluster
-// by picking the member with the highest Lamport Version.
+// by picking the member with the highest Lamport version.
 func (sm *StateManager) validateData(list *memberlist.Memberlist) {
 	logger := logging.GetLogger()
 

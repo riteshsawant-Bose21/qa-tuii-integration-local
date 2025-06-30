@@ -251,7 +251,7 @@ func NewBLEServer(serviceUUID string, characterUUID string) (*BLEServer, error) 
 				delay := 50 * time.Millisecond
 				maxAttempts := 10
 				sent := false
-				for attempt := 0; attempt < maxAttempts; attempt++ {
+				for range maxAttempts {
 					if _, err := n.Write(data); err != nil {
 						//logger.Debug("Failed to send notification: %v", err)
 						time.Sleep(delay)

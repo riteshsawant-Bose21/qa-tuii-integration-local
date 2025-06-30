@@ -173,7 +173,7 @@ func (p *Persistence) GetTaskIDsBySnapshot(snapshotID string) ([]string, error) 
 			if t.Type != api.TaskTypeSnapshot {
 				return nil
 			}
-			if id, ok := t.Params["snapshot_id"]; ok && id == snapshotID {
+			if id, ok := t.Params[api.SnapshotIDKey]; ok && id == snapshotID {
 				taskIDs = append(taskIDs, string(k))
 			}
 			return nil

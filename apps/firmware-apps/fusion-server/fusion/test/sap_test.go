@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -61,7 +62,6 @@ func TestMultipassSAPPropagation(t *testing.T) {
 	if _, err := conn.Write(msg); err != nil {
 		t.Fatalf("send SAP packet: %v", err)
 	}
-	t.Log("Sent full SAP+SDP announcement")
 
 	// Give it a moment to propagate
 	time.Sleep(500 * time.Millisecond)
@@ -94,4 +94,70 @@ func TestMultipassSAPPropagation(t *testing.T) {
 		t.Fatalf("Expected session-name %q in logs, but got: %s",
 			"HELLO_SAP_TEST", description.SessionName)
 	}
+}
+
+func TestMultipassSAPIntegration_Race(t *testing.T) {
+	const (
+		multicastAddr = "224.2.127.254:9875"
+		httpAddr      = sapTestServerAddr + "/sessions"
+		numWriters    = 500
+		numReaders    = 100
+		duration      = 2 * time.Second
+	)
+
+	// Prepare one SAP+SDP packet
+	hdr := make([]byte, 8)
+	hdr[0] = 0x20
+	rawSDP := "v=0\r\no=- 0 0 IN IP4 0.0.0.0\r\ns=FUSION_SAP_RACE_TEST\r\n"
+	packet := append(hdr, []byte(rawSDP)...)
+
+	conn, err := net.Dial("udp", multicastAddr)
+	if err != nil {
+		t.Fatalf("dial multicast: %v", err)
+	}
+
+	// Bump the UDP send buffer to avoid ENOBUFS
+	if udpConn, ok := conn.(*net.UDPConn); ok {
+		if err := udpConn.SetWriteBuffer(4 * 1024 * 1024); err != nil {
+			t.Logf("warning: SetWriteBuffer: %v", err)
+		}
+	}
+
+	defer conn.Close()
+
+	stop := time.Now().Add(duration)
+	var wg sync.WaitGroup
+
+	// continually write packets
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for time.Now().Before(stop) {
+			if _, err := conn.Write(packet); err != nil {
+				// ignore local ENOBUFS, just throttle
+				if strings.Contains(err.Error(), "no buffer space available") {
+					time.Sleep(time.Millisecond)
+					continue
+				}
+				t.Errorf("write error: %v", err)
+			}
+		}
+	}()
+
+	// continually read sessions
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		client := http.Client{}
+		for time.Now().Before(stop) {
+			resp, err := client.Get(httpAddr)
+			if err != nil {
+				t.Errorf("GET error: %v", err)
+				continue
+			}
+			resp.Body.Close()
+		}
+	}()
+
+	wg.Wait()
 }

@@ -11,4 +11,6 @@ const (
 	Protocol     = "http://"
 
 	AudioFilesLocation = "/var/lib/fusion/audio"
+
+	SnapshotIDKey = "snapshot_id"
 )

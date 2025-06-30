@@ -176,7 +176,7 @@ func (p *Persistence) LoadActiveSnapshot() error {
 	snapshotName := p.getActiveSnapshotKey()
 
 	if err := p.ActivateSnapshot(snapshotName); err != nil {
-		return fmt.Errorf("failed to activate snapshot %s: %w", snapshotName, err)
+		return err
 	}
 
 	logging.GetLogger().Debug("Activated initial snapshot: %s", snapshotName)

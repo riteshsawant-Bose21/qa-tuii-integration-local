@@ -31,7 +31,7 @@ func (h *Handler) HandleWebSocketMessage(data []byte) (*WebSocketResponse, error
 		if err := json.Unmarshal(msg.Data, &updateData); err != nil {
 			return nil, fmt.Errorf("invalid update in WebSocket message: %w", err)
 		}
-		if err := h.handleConfigUpdate(updateData); err != nil {
+		if err := h.handleConfigUpdate(updateData, false); err != nil {
 			return nil, fmt.Errorf("failed to handle update: %w", err)
 		}
 		return &WebSocketResponse{

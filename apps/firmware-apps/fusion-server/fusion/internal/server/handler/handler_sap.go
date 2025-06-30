@@ -20,7 +20,7 @@ const (
 	compressionMask VARTEC = 1 << 0 // C: Compression bit (bit 0)
 	authMask        VARTEC = 1 << 1 // A: Authentication bit (bit 1)
 	reservedMask    VARTEC = 1 << 2 // R: Reserved bit (bit 2)
-	deleteMask      VARTEC = 1 << 4 // T (sometimes called D): Deletion bit (bit 4)
+	deleteMask      VARTEC = 1 << 4 // T: Deletion bit (bit 4)
 	versionMask     VARTEC = 0xE0   // V: Version bits (bits 5–7)
 
 	minPacketLength = 8
@@ -48,6 +48,8 @@ type SAPSession struct {
 	Deletion    bool                    `json:"-"`
 	Version     int                     `json:"-"`
 }
+
+var eolRe = regexp.MustCompile(`\r\n|\r|\n`)
 
 // HandleSAPMessage decodes a raw SAP packet, updates the session store, and parses SDP.
 func (h *Handler) HandleSAPMessage(data []byte) error {
@@ -77,7 +79,9 @@ func (h *Handler) HandleSAPMessage(data []byte) error {
 	sessionKey := fmt.Sprintf("%s:%d", originIP, msg.MsgIdHash)
 	if isDelete {
 		logger.Debug("Deleting network session %s.", sessionKey)
+		h.sessionsLock.Lock()
 		delete(h.sessions, sessionKey)
+		h.sessionsLock.Unlock()
 		return nil
 	}
 
@@ -91,7 +95,7 @@ func (h *Handler) HandleSAPMessage(data []byte) error {
 		Version:   version,
 	}
 
-	// Normalize SDP line endings: Pion requires CRLF per RFC 4566
+	// Normalize SDP payload
 	raw := msg.StringPayload
 
 	// First line of the SDP payload is the MIME type
@@ -104,8 +108,7 @@ func (h *Handler) HandleSAPMessage(data []byte) error {
 
 	// Normalize SDP line endings: Pion requires CRLF per RFC 4566
 	raw = raw[pos:]
-	re := regexp.MustCompile(`\r\n|\r|\n`)
-	raw = re.ReplaceAllString(raw, "\r\n")
+	raw = eolRe.ReplaceAllString(raw, "\r\n")
 
 	// Ensure trailing CRLF
 	if !strings.HasSuffix(raw, "\r\n") {
@@ -120,34 +123,30 @@ func (h *Handler) HandleSAPMessage(data []byte) error {
 		session.Description = &sessionDesc
 	}
 
+	// Store session under lock
+	h.sessionsLock.Lock()
 	h.sessions[sessionKey] = session
-
-	if h.StateManager.GetNode() == h.Memberlist.LocalNode().Name {
-		// Update the configuration state only on the primary node.
-		// All nodes are going to receive the SAP multicast messages.
-		// We only need the primary to set the state. It will naturally
-		// propogate across all nodes.
-		state := h.StateManager.GetStateMap()
-		state[sessionsKey] = h.sessions
-		if err := h.handleConfigUpdate(state); err != nil {
-			return fmt.Errorf("failed to handle update SAP session data: %w", err)
-		}
-	}
+	h.sessionsLock.Unlock()
 
 	return nil
 }
 
-// HandleListSessions returns the current session map.
+// HandleListSessions returns the current session map safely.
 func (h *Handler) HandleListSessions() map[string]*SAPSession {
+	h.sessionsLock.RLock()
+	defer h.sessionsLock.RUnlock()
 	return h.sessions
 }
 
 // HandleGetSession returns the session based on session identifier.
 func (h *Handler) HandleGetSession(id string) *SAPSession {
-	return h.sessions[id]
+	h.sessionsLock.RLock()
+	s := h.sessions[id]
+	h.sessionsLock.RUnlock()
+	return s
 }
 
-// StartSAPSessionPruner runs a go routine to remove expires sessions.
+// StartSAPSessionPruner runs a goroutine to remove expired sessions.
 func (h *Handler) StartSAPSessionPruner() {
 	ticker := time.NewTicker(5 * time.Minute)
 	go func() {
@@ -159,18 +158,17 @@ func (h *Handler) StartSAPSessionPruner() {
 
 // pruneExpiredSAPSessions removes sessions that have timed out.
 func (h *Handler) pruneExpiredSAPSessions() {
-
 	logger := logging.GetLogger()
-
 	now := time.Now()
 	changed := false
 
+	// Lock for iteration and deletion
+	h.sessionsLock.Lock()
 	for key, session := range h.sessions {
 		interval := session.Interval
 		if interval < time.Second {
 			interval = sessionInterval
 		}
-
 		timeout := max(interval*sessionTimeout, time.Hour)
 
 		if now.Sub(session.Timestamp) > timeout {
@@ -179,12 +177,32 @@ func (h *Handler) pruneExpiredSAPSessions() {
 			changed = true
 		}
 	}
+	h.sessionsLock.Unlock()
 
-	if changed && h.StateManager.GetNode() == h.Memberlist.LocalNode().Name {
-		state := h.StateManager.GetStateMap()
-		state[sessionsKey] = h.sessions
-		if err := h.handleConfigUpdate(state); err != nil {
+	if changed {
+		if err := h.updateStateMap(); err != nil {
 			logger.Error("Failed to update state after SAP cleanup: %v", err)
 		}
 	}
+}
+
+// updateStateMap update the global state only if the node is primary
+func (h *Handler) updateStateMap() error {
+
+	if h.StateManager.GetNode() == h.Memberlist.LocalNode().Name {
+		// All nodes are going to receive the SAP multicast messages.
+		// We only need the primary to set the state. It will naturally
+		// propogate across all nodes.
+		// Prevent any concurrent write while we build and marshal state
+		h.sessionsLock.RLock()
+		defer h.sessionsLock.RUnlock()
+
+		state := h.StateManager.GetStateMap()
+		state[sessionsKey] = h.sessions
+		if err := h.handleConfigUpdate(state, false); err != nil {
+			return fmt.Errorf("failed to handle update SAP session data: %w", err)
+		}
+	}
+
+	return nil
 }

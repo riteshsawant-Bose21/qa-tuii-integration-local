@@ -89,7 +89,7 @@ func NewCluster(appConfig *api.AppConfig, delegate *ClusterDelegate, memberlist 
 				if err := cluster.delegate.taskManager.Start(); err != nil {
 					logger.Fatal("Failed to start TaskManger: %v", err)
 				} else {
-					logger.Info("TaskManager running on: %s", appConfig.NodeName)
+					logger.Info("TaskManager running on %s", appConfig.NodeName)
 				}
 				break
 			}
@@ -152,8 +152,7 @@ func (c *Cluster) listenerUpdated(vip string) {
 	if member {
 		logger.Debug("%s already a member", c.nodeName)
 	} else {
-		err = c.JoinMemberlist()
-		if err != nil {
+		if err = c.JoinMemberlist(); err != nil {
 			logger.Error("Unable to join memberlist: %v", err)
 		} else {
 			logger.Info("%s [%s] joined memberlist with VIP: %s", c.nodeName, c.bindAddr, c.vip)
@@ -162,8 +161,7 @@ func (c *Cluster) listenerUpdated(vip string) {
 }
 
 func (c *Cluster) startVRRPListener() error {
-	err := network.StartVRRPListener(c.listenerUpdated)
-	if err != nil {
+	if err := network.StartVRRPListener(c.listenerUpdated); err != nil {
 		return fmt.Errorf("unable to start keepalived listener: %v", err)
 	}
 	return nil

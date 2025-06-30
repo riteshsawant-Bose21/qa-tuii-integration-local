@@ -30,7 +30,7 @@ func (h *Handler) HandleUDPMessage(data []byte) (any, error) {
 			return nil, fmt.Errorf("invalid JSON: %w", err)
 		}
 		delete(update, "action")
-		if err := h.handleConfigUpdate(update); err != nil {
+		if err := h.handleConfigUpdate(update, false); err != nil {
 			return nil, fmt.Errorf("failed to handle update: %w", err)
 		}
 		return map[string]any{

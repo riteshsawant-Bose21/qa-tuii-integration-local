@@ -57,7 +57,7 @@ func NewTaskManager(config *api.AppConfig, persistence *persistence.Persistence)
 
 	tm.actionFactories = map[api.TaskType]func(*api.Task) func(){
 		api.TaskTypeSnapshot: func(t *api.Task) func() {
-			snapID := t.Params["snapshot_id"]
+			snapID := t.Params[api.SnapshotIDKey]
 			return tm.wrapTask(t, tm.taskActivateSnapshotFunc(snapID))
 		},
 		api.TaskTypeAudioPlayback: func(t *api.Task) func() {
@@ -339,7 +339,7 @@ func (tm *TaskManager) EnableTask(w http.ResponseWriter, r *http.Request) {
 
 	if task.Type == api.TaskTypeSnapshot {
 
-		snapshotID, ok := task.Params["snapshot_id"]
+		snapshotID, ok := task.Params[api.SnapshotIDKey]
 		if !ok || snapshotID == "" {
 			http.Error(w, "params.snapshot_id is required for snapshot tasks", http.StatusBadRequest)
 			return
@@ -467,7 +467,7 @@ func (tm *TaskManager) getTask(id string) (*api.Task, error) {
 func (tm *TaskManager) makeTaskFunc(task *api.Task) (func(), error) {
 	switch task.Type {
 	case api.TaskTypeSnapshot:
-		snapshotID, ok := task.Params["snapshot_id"]
+		snapshotID, ok := task.Params[api.SnapshotIDKey]
 		if !ok {
 			return nil, fmt.Errorf("missing 'snapshot' param for snapshot task")
 		}

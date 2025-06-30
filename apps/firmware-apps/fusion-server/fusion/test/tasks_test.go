@@ -49,7 +49,7 @@ func TestTaskManagerEndpoints(t *testing.T) {
 			CronExpr:    "*/5 * * * *",
 			Description: "Test task description",
 			Type:        api.TaskTypeSnapshot,
-			Params:      map[string]string{"snapshot_id": "001"},
+			Params:      map[string]string{api.SnapshotIDKey: "001"},
 		}
 
 		taskJSON, err := json.Marshal(task)
@@ -59,7 +59,7 @@ func TestTaskManagerEndpoints(t *testing.T) {
 		require.NoError(t, err)
 		defer resp.Body.Close()
 
-		assert.Equal(t, http.StatusCreated, resp.StatusCode, "Expected HTTP status 201 Created")
+		assert.Equal(t, http.StatusCreated, resp.StatusCode, "Expected HTTP 201 Created")
 	})
 
 	t.Run("ListTasksHandler", func(t *testing.T) {
@@ -67,7 +67,7 @@ func TestTaskManagerEndpoints(t *testing.T) {
 		require.NoError(t, err)
 		defer resp.Body.Close()
 
-		assert.Equal(t, http.StatusOK, resp.StatusCode, "Expected HTTP status 200")
+		assert.Equal(t, http.StatusOK, resp.StatusCode, "Expected HTTP 200")
 
 		var tasks []api.Task
 		err = json.NewDecoder(resp.Body).Decode(&tasks)
@@ -83,7 +83,7 @@ func TestTaskManagerEndpoints(t *testing.T) {
 			CronExpr:    "*/10 * * * *",
 			Description: "Updated task description",
 			Type:        api.TaskTypeSnapshot,
-			Params:      map[string]string{"snapshot_id": "001"},
+			Params:      map[string]string{api.SnapshotIDKey: "001"},
 		}
 		taskJSON, err := json.Marshal(task)
 		require.NoError(t, err)
@@ -96,7 +96,7 @@ func TestTaskManagerEndpoints(t *testing.T) {
 		require.NoError(t, err)
 		defer resp.Body.Close()
 
-		assert.Equal(t, http.StatusOK, resp.StatusCode, "Expected HTTP status 200")
+		assert.Equal(t, http.StatusOK, resp.StatusCode, "Expected HTTP 200")
 	})
 
 	t.Run("RemoveTaskHandler", func(t *testing.T) {
@@ -107,7 +107,7 @@ func TestTaskManagerEndpoints(t *testing.T) {
 		require.NoError(t, err)
 		defer resp.Body.Close()
 
-		assert.Equal(t, http.StatusNoContent, resp.StatusCode, "Expected HTTP status 204")
+		assert.Equal(t, http.StatusNoContent, resp.StatusCode, "Expected HTTP 204")
 
 		// Verify the task is removed by fetching the task list.
 		resp, err = http.Get(tasksServerURL + routes.TasksEndpoint)
@@ -127,7 +127,7 @@ func TestTaskManagerEndpoints(t *testing.T) {
 		require.NoError(t, err)
 		defer resp.Body.Close()
 
-		assert.Equal(t, http.StatusOK, resp.StatusCode, "Expected HTTP status 200")
+		assert.Equal(t, http.StatusOK, resp.StatusCode, "Expected HTTP 200")
 
 		var history []tasks.ExecutionRecord
 		err = json.NewDecoder(resp.Body).Decode(&history)

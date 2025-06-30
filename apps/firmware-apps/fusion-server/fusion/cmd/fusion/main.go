@@ -6,11 +6,13 @@ import (
 	"log"
 	"math/rand"
 	"os"
+	"runtime/debug"
 	"strconv"
 	"time"
 
 	"fusion/internal/api"
 	"fusion/internal/app"
+	"fusion/internal/logging"
 	"fusion/internal/version"
 )
 
@@ -50,6 +52,13 @@ func createUniqueNodeName(baseName string) string {
 }
 
 func main() {
+
+	defer func() {
+		// Log panics with a stack trace and exit
+		if r := recover(); r != nil {
+			logging.GetLogger().Fatal("PANIC: %v\n%s", r, debug.Stack())
+		}
+	}()
 
 	config := parseFlags()
 

@@ -35,7 +35,6 @@ func TestMultipassGet(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Multipass get command failed: %v, output: %s", err, out)
 	}
-	t.Logf("Multipass get output: %s", out)
 }
 
 // TestMultipassSet runs the "set" command inside the default instance.
@@ -45,7 +44,6 @@ func TestMultipassSet(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Multipass set command failed: %v, output: %s", err, out)
 	}
-	t.Logf("Multipass set output: %s", out)
 }
 
 // TestMultipassSetAndGet sets a value and then verifies it with a get command on the default instance.
@@ -56,7 +54,6 @@ func TestMultipassSetAndGet(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Multipass set command failed: %v, output: %s", err, setOut)
 	}
-	t.Logf("Multipass set output: %s", setOut)
 
 	// Retrieve the value from instance1.
 	getCommand := fmt.Sprintf(`echo '{"action":"get"}' | nc -u -w 1 -v localhost %s`, instancePort)
@@ -64,7 +61,6 @@ func TestMultipassSetAndGet(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Multipass get command failed: %v, output: %s", err, getOut)
 	}
-	t.Logf("Multipass get output: %s", getOut)
 
 	// Verify that the returned output contains the expected test value.
 	if !strings.Contains(getOut, "hello") {
@@ -80,7 +76,6 @@ func TestMultipassPropagation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Multipass set command on %s failed: %v, output: %s", instance1Name, err, setOut)
 	}
-	t.Logf("Multipass set output on %s: %s", instance1Name, setOut)
 
 	// Retrieve the value from instance2.
 	getCommand := fmt.Sprintf(`echo '{"action":"get"}' | nc -u -w 1 -v localhost %s`, instancePort)
@@ -88,7 +83,6 @@ func TestMultipassPropagation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Multipass get command on %s failed: %v, output: %s", instance2Name, err, getOut)
 	}
-	t.Logf("Multipass get output on %s: %s", instance2Name, getOut)
 
 	// Verify that the returned output from instance2 contains the expected test value.
 	if !strings.Contains(getOut, "hello") {

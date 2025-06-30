@@ -40,9 +40,11 @@ type Persistence struct {
 
 // NewPersistence opens the database and returns a new persistence instance.
 func NewPersistence(dbPath string, stateManager *StateManager) (*Persistence, error) {
+
+	logger := logging.GetLogger()
+
 	db, err := bbolt.Open(dbPath, permPrivate, nil)
 	if err != nil {
-		logger := logging.GetLogger()
 		logger.Warn("Failed to open database at %s: %v. Attempting to recreate.", dbPath, err)
 		_ = os.Remove(dbPath)
 		db, err = bbolt.Open(dbPath, permPrivate, nil)
@@ -50,7 +52,6 @@ func NewPersistence(dbPath string, stateManager *StateManager) (*Persistence, er
 			return nil, fmt.Errorf("failed to open or recreate database: %w", err)
 		}
 		logger.Debug("Successfully recreated new database at %s", dbPath)
-
 	}
 
 	persistence := &Persistence{
@@ -348,33 +349,34 @@ func createBucketIfNotExists(tx *bbolt.Tx, bucket string) error {
 }
 
 func (p *Persistence) initializeDatabase() error {
-	return p.db.Update(func(tx *bbolt.Tx) error {
-		if err := createBucketIfNotExists(tx, bucketFusion); err != nil {
-			return err
-		}
-		if err := createBucketIfNotExists(tx, bucketDevice); err != nil {
-			return err
-		}
-		if err := createBucketIfNotExists(tx, bucketTasks); err != nil {
-			return err
-		}
-		if err := createBucketIfNotExists(tx, bucketSnapshots); err != nil {
-			return err
-		}
 
-		fusionBucket := tx.Bucket([]byte(bucketFusion))
-		if fusionBucket.Get([]byte(keyDefaultSnapshot)) != nil {
+	return p.db.Update(func(tx *bbolt.Tx) error {
+		// Bail out if buckets exist
+		if tx.Bucket([]byte(bucketFusion)) != nil &&
+			tx.Bucket([]byte(bucketDevice)) != nil &&
+			tx.Bucket([]byte(bucketTasks)) != nil &&
+			tx.Bucket([]byte(bucketSnapshots)) != nil {
 			return nil
 		}
 
+		// Otherwise create any missing buckets
+		for _, bucket := range []string{bucketFusion, bucketDevice, bucketTasks, bucketSnapshots} {
+			if err := createBucketIfNotExists(tx, bucket); err != nil {
+				return err
+			}
+		}
+
+		// We have a new database. Set up the default data.
 		snapshotsBucket := tx.Bucket([]byte(bucketSnapshots))
 		if err := p.initializeDefaultSnapshot(snapshotsBucket); err != nil {
 			return err
 		}
 
+		fusionBucket := tx.Bucket([]byte(bucketFusion))
 		if err := p.initializeMetadata(fusionBucket); err != nil {
 			return err
 		}
+
 		return nil
 	})
 }

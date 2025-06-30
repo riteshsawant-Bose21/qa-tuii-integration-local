@@ -18,16 +18,21 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/hashicorp/memberlist"
 )
 
 const (
-	bleCharacterUUID   = "AD10"
-	bleServiceUUID     = "B053"
-	fusionDataPath     = "/var/lib/fusion"
-	fusionDatabaseName = "fusion.db"
-	fusionDatabasePath = fusionDataPath + "/" + fusionDatabaseName
-	startupWaitDelay   = 100
+	bleCharacterUUID       = "AD10"
+	bleServiceUUID         = "B053"
+	clusterLeaveTime       = 5 * time.Second
+	fusionDataPath         = "/var/lib/fusion"
+	fusionDatabaseName     = "fusion.db"
+	fusionDatabasePath     = fusionDataPath + "/" + fusionDatabaseName
+	networkMonitorInterval = 5 * time.Second
+	startupWaitDelay       = 100
 )
+
+var SAPGroups = []string{"224.2.127.254", "239.255.255.255"}
 
 type App struct {
 	Logger            *logging.Logger
@@ -42,6 +47,8 @@ type App struct {
 	BLEServer         *network.BLEServer
 	SAPServer         *network.SAPServer
 	UDPServer         *network.UDPServer
+	memberlist        *memberlist.Memberlist
+	monitor           *network.Monitor
 	config            *api.AppConfig
 	publicRouter      *mux.Router
 	privateRouter     *mux.Router
@@ -91,16 +98,11 @@ func NewApp(config *api.AppConfig) *App {
 		BLEServer:         bleServer,
 		SAPServer:         sapServer,
 		UDPServer:         udpServer,
+		memberlist:        memberlist,
 		config:            config,
 		publicRouter:      publicRouter,
 		privateRouter:     privateRouter,
 	}
-
-	app.setupPublicRoutes()
-	app.setupPrivateRoutes()
-
-	app.ConnectionHandler.SetEndpoints(routes.Endpoints)
-	app.StateManager.StartVerification(memberlist)
 
 	return app
 }
@@ -255,14 +257,40 @@ func (app *App) setupPrivateRoutes() {
 	app.registerPrivatePOST(routes.StateEndpoint, app.Server.ImportState)
 }
 
+func (app *App) startNetworkMonitor() {
+
+	logger := logging.GetLogger()
+	logger.Info("Network monitor is active")
+
+	app.monitor = network.NewMonitor(networkMonitorInterval, func(oldIP, newIP string) {
+		logger.Info("IP changed from %s to %s — rejoining cluster", oldIP, newIP)
+
+		// Leave old cluster
+		app.memberlist.Leave(clusterLeaveTime)
+		app.memberlist.Shutdown()
+
+		// Recreate and join with new IP
+		app.config.BindAddr = newIP
+		app.memberlist = cluster.CreateMemberlist(app.config, app.Delegate)
+	})
+}
+
 // startAPIServer starts the main HTTP API server
 func startAPIServer(router *mux.Router, port string, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	apiPort := fmt.Sprintf(":%s", port)
 
+	var serverType = "unknown"
+	switch port {
+	case api.AdminPort:
+		serverType = "admin"
+	case api.HTTPPort:
+		serverType = "public"
+	}
+
 	logger := logging.GetLogger()
-	logger.Info("Starting API server on %s", apiPort)
+	logger.Info("Starting %s API server on %s", serverType, apiPort)
 
 	if err := http.ListenAndServe(apiPort, router); err != nil {
 		logger.Fatal("API server failed: %v", err)
@@ -270,6 +298,11 @@ func startAPIServer(router *mux.Router, port string, wg *sync.WaitGroup) {
 }
 
 func (app *App) Start() {
+
+	app.setupPublicRoutes()
+	app.setupPrivateRoutes()
+	app.ConnectionHandler.SetEndpoints(routes.Endpoints)
+	app.startNetworkMonitor()
 
 	var wg sync.WaitGroup
 
@@ -282,7 +315,11 @@ func (app *App) Start() {
 	// Wait for the API server to come up before printing info
 	time.Sleep(startupWaitDelay * time.Millisecond)
 	app.Logger.Info("%s is ALIVE and RUNNING", app.config.NodeName)
-	app.Logger.Info("Version: %s Commit: %s Build Time: %s", version.Version, version.Commit, version.BuildTime)
+	app.Logger.Info("     Version: %s", version.Version)
+	app.Logger.Info("     Commit: %s", version.Commit)
+	app.Logger.Info("     Build Time: %s", version.BuildTime)
+
+	app.StateManager.StartVerification(app.memberlist)
 
 	wg.Wait()
 }
@@ -373,9 +410,7 @@ func initSAPServer(config *api.AppConfig, port string, handler *handler.Handler)
 		return nil
 	}
 
-	groups := []string{"224.2.127.254", "239.255.255.255"}
-
-	sapServer, err := network.NewSAPServer(groups, port, handler)
+	sapServer, err := network.NewSAPServer(SAPGroups, port, handler)
 	if err != nil {
 		logger := logging.GetLogger()
 		logger.Fatal("Failed to create SAP server: %v", err)

@@ -82,18 +82,18 @@ func (c *Cluster) JoinMemberlist() error {
 		_, err := c.Memberlist.Join(joinAddrs)
 		if err == nil {
 			members := c.Memberlist.Members()
-			logger.Info("[MEMBERLIST-%s] Successfully joined cluster with %d nodes", c.nodeName, len(members))
+			logger.Info("[MEMBERLIST] Successfully joined cluster of size %d", len(members))
 			c.updateDeviceInfo()
 
 			if c.config.Verbose {
 				for _, member := range c.Memberlist.Members() {
-					logger.Debug("[MEMBERLIST-%s] %s (%s)\n", c.nodeName, member.Name, member.Addr)
+					logger.Debug("[MEMBERLIST] %s (%s)\n", member.Name, member.Addr)
 				}
 			}
 			return nil
 		}
 
-		logger.Warn("[MEMBERLIST-%s] Join attempt %d failed: %v", c.nodeName, attempt+1, err)
+		logger.Warn("[MEMBERLIST] Join attempt %d failed: %v", attempt+1, err)
 
 		time.Sleep(retryInterval)
 	}

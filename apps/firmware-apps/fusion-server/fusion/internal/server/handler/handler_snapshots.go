@@ -14,10 +14,10 @@ func (h *Handler) HandleListSnapshots() ([]string, error) {
 // HandleActivateSnapshot activates the specified snapshot and broadcasts the change to the cluster.
 func (h *Handler) HandleActivateSnapshot(name string) error {
 	if err := h.persistence.ActivateSnapshot(name); err != nil {
-		return fmt.Errorf("failed to activate snapshot: %w", err)
+		return err
 	}
 	if err := h.handleSnapshotOperation(h.StateManager.GetNode(), name, api.NotifyOpSnapActivate, nil); err != nil {
-		return fmt.Errorf("failed to handle snapshot activate: %w", err)
+		return err
 	}
 	return nil
 }

@@ -28,7 +28,7 @@ func init() {
 		LogDir:      "/tmp/persistence_test",
 		MaxFileSize: 100,
 		MaxFiles:    5,
-		LogLevel:    logging.INFO,
+		LogLevel:    logging.ERROR,
 	})
 }
 
@@ -118,10 +118,13 @@ func TestChecksumCalculation(t *testing.T) {
 
 	sm.SetState(state)
 
-	_, err := persistence.NewPersistence("dummy", sm)
+	filename := "dummy"
+
+	_, err := persistence.NewPersistence(filename, sm)
 	if err != nil {
 		t.Fatalf("Failed to initialize persistence: %v", err)
 	}
+	defer os.Remove(filename)
 
 	// Get the full state.
 	fullState := sm.GetFullState()

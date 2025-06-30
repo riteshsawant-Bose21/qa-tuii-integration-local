@@ -20,11 +20,14 @@ func NewSAPServer(groups []string, port string, handler *handler.Handler) (*SAPS
 	if err != nil {
 		return nil, err
 	}
+
 	if err := JoinMulticastGroups(conn, groups, port); err != nil {
 		conn.Close()
 		return nil, err
 	}
-	logging.GetLogger().Info("SAP listening on %s (groups: %v)", port, groups)
+
+	logger := logging.GetLogger()
+	logger.Info("SAP listening on :%s (groups: %v)", port, groups)
 
 	handler.StartSAPSessionPruner()
 
@@ -36,7 +39,7 @@ func NewSAPServer(groups []string, port string, handler *handler.Handler) (*SAPS
 			time.Second,
 			func(data []byte, _ *net.UDPAddr) {
 				if err := sap.handler.HandleSAPMessage(data); err != nil {
-					logging.GetLogger().Error("Error handling sap message: %v", err)
+					logger.Error("Error handling sap message: %v", err)
 				}
 			},
 		),
@@ -44,6 +47,7 @@ func NewSAPServer(groups []string, port string, handler *handler.Handler) (*SAPS
 	}
 
 	sap.Start()
+
 	return sap, nil
 }
 

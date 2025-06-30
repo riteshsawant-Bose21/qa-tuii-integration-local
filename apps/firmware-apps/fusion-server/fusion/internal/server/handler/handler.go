@@ -6,6 +6,7 @@ import (
 	"fusion/internal/persistence"
 	"fusion/internal/utils"
 	"fusion/internal/version"
+	"sync"
 
 	"github.com/hashicorp/memberlist"
 )
@@ -19,6 +20,7 @@ type Handler struct {
 	persistence  *persistence.Persistence
 	StateManager *persistence.StateManager
 	sessions     map[string]*SAPSession
+	sessionsLock sync.RWMutex
 }
 
 func NewHandler(memberlist *memberlist.Memberlist, persistence *persistence.Persistence, stateManager *persistence.StateManager, updater *Updater) *Handler {
@@ -65,33 +67,21 @@ func (h *Handler) HandleHTTPGet(key string) (any, error) {
 // HandleHTTPSet replaces the entire configuration state with the new data.
 func (h *Handler) HandleHTTPSet(update map[string]any) (any, error) {
 
-	// Build one update that clears and then applies the data
-	cu, err := h.StateManager.NewConfigUpdate(update)
-	if err != nil {
+	if err := h.handleConfigUpdate(update, true); err != nil {
 		return nil, err
 	}
-	cu.Clear = true
 
-	msg := api.NewNotifyMessage(
-		api.NotifyOpConfigUpdate,
-		h.Memberlist.LocalNode().Name,
-		api.WithConfigUpdate(cu),
-	)
-
-	if err := h.broadcastUpdate(msg); err != nil {
-		return nil, fmt.Errorf("failed to set state: %w", err)
-	}
 	return map[string]any{"status": "success", "updates": update}, nil
 }
 
 // HandleHTTPPatch updates only the specified fields.
-func (h *Handler) HandleHTTPPatch(value map[string]any) (any, error) {
+func (h *Handler) HandleHTTPPatch(update map[string]any) (any, error) {
 	existingData := h.StateManager.GetStateMap()
-	if err := utils.ApplyPatch(existingData, value); err != nil {
+	if err := utils.ApplyPatch(existingData, update); err != nil {
 		return nil, fmt.Errorf("failed to apply patch: %w", err)
 	}
 
-	if err := h.handleConfigUpdate(existingData); err != nil {
+	if err := h.handleConfigUpdate(existingData, false); err != nil {
 		return nil, fmt.Errorf("failed to handle update after patch: %w", err)
 	}
 
@@ -99,23 +89,11 @@ func (h *Handler) HandleHTTPPatch(value map[string]any) (any, error) {
 }
 
 func (h *Handler) HandleClearAllData() error {
-	configUpdate, err := h.StateManager.NewConfigUpdate(map[string]any{})
-	if err != nil {
+
+	if err := h.handleConfigUpdate(map[string]any{}, true); err != nil {
 		return err
 	}
-	configUpdate.Clear = true
 
-	message := api.NewNotifyMessage(api.NotifyOpConfigUpdate, h.StateManager.GetNode(),
-		api.WithConfigUpdate(configUpdate),
-	)
-
-	if err := h.broadcastUpdate(message); err != nil {
-		return fmt.Errorf("failed to clear all data: %w", err)
-	}
-
-	if err := h.persistence.SaveState(); err != nil {
-		return fmt.Errorf("failed to persist cleared state: %w", err)
-	}
 	return nil
 }
 
@@ -153,14 +131,17 @@ func (h *Handler) HandleExportData() (any, error) {
 	return h.persistence.ExportData()
 }
 
-func (h *Handler) handleConfigUpdate(data map[string]any) error {
+func (h *Handler) handleConfigUpdate(data map[string]any, clear bool) error {
 
 	configUpdate, err := h.StateManager.NewConfigUpdate(data)
 	if err != nil {
 		return err
 	}
+	configUpdate.Clear = clear
 
-	message := api.NewNotifyMessage(api.NotifyOpConfigUpdate, h.StateManager.GetNode(),
+	message := api.NewNotifyMessage(
+		api.NotifyOpConfigUpdate,
+		h.Memberlist.LocalNode().Name,
 		api.WithConfigUpdate(configUpdate),
 	)
 

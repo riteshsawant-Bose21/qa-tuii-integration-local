@@ -158,6 +158,18 @@ show_instance_status() {
     fi
 }
 
+system_checks() {
+
+    print_step "System checks"
+
+    # Note: `check_platform_arch` sets HOST_OS_ARCH and TARGET_BINARY_ARCH
+    if ! check_platform_arch; then
+        exit 1
+    fi
+
+    check_ip_forwarding
+}
+
 verify_instance() {
     local instance_name="$1"
     local max_retries=30
@@ -215,10 +227,7 @@ setup_instance() {
     local instance_number="$2"
     
     print_header "Setting Up Instance: $instance_name"
-    
-    print_step "Initializing instance..."
-    sleep 10
-    
+        
     print_step "Copying fusion-server binary..."
     if ! multipass transfer "$HOST_BUILD_DIR/fusion-server" "$instance_name":/tmp/; then
         print_error "Failed to copy fusion-server binary"
@@ -277,25 +286,23 @@ setup_instance() {
         for service in fusion-server keepalived haproxy; do
             print_substep "Starting $service..."
             
-            # Enable service (without starting)
+            # Enable service without starting
             if ! multipass exec "$instance_name" -- sudo systemctl enable "$service" </dev/null; then
                 print_error "Failed to enable $service"
                 services_started=false
                 break
             fi
             
-            # Start service separately
+            # Start service
             if ! multipass exec "$instance_name" -- sudo systemctl start "$service" </dev/null; then
                 print_error "Failed to start $service"
-                multipass exec "$instance_name" -- sudo systemctl status "$service"
                 services_started=false
                 break
             fi
             
-            # Verify service is actually running
+            # Verify service is running
             if ! multipass exec "$instance_name" -- sudo systemctl is-active --quiet "$service" </dev/null; then
-                print_error "$service failed to start properly"
-                multipass exec "$instance_name" -- sudo systemctl status "$service"
+                print_error "$service on $instance_name failed to start properly"
                 services_started=false
                 break
             fi
@@ -703,16 +710,7 @@ if [ -z "$NUM_INSTANCES" ]; then
     done
 fi
 
-print_step "System checks"
-
-# Note: `check_platform_arch` sets HOST_OS_ARCH and TARGET_BINARY_ARCH
-if ! check_platform_arch; then
-    exit 1
-fi
-
-# Check IP forwarding before proceeding
-check_ip_forwarding
-
+system_checks
 host_setup
 
 # Set up trap but don't exit on errors

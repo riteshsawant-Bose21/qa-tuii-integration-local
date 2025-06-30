@@ -66,7 +66,7 @@ for instance in $instances; do
         
         systemctl stop fusion-server
         
-        truncate -s 0 /var/lib/fusion/fusion.db 2>/dev/null
+        rm -f /var/lib/fusion/fusion.db
                 
         systemctl start fusion-server
         

@@ -46,6 +46,6 @@ if [ -z "$IP_ADDR" ]; then
     exit 1
 fi
 
-echo "Starting fusion-server on IP: $IP_ADDR"
+echo "Starting fusion-server on $IP_ADDR"
 
 exec /usr/local/bin/fusion-server -bind-addr "$IP_ADDR"

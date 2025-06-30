@@ -243,7 +243,7 @@ func (h *Handler) HandleAudioUpload(w http.ResponseWriter, r *http.Request) {
 
 	existingData := h.StateManager.GetStateMap()
 	addAudioFilesToConfig(destDir, existingData)
-	if err := h.handleConfigUpdate(existingData); err != nil {
+	if err := h.handleConfigUpdate(existingData, false); err != nil {
 		logger.Error("Failed to handle audio config update: %v", err)
 		http.Error(w, "Server error", http.StatusInternalServerError)
 		return
@@ -276,7 +276,7 @@ func (h *Handler) HandleAudioRemove(w http.ResponseWriter, r *http.Request) {
 
 	existingData := h.StateManager.GetStateMap()
 	addAudioFilesToConfig(api.AudioFilesLocation, existingData)
-	if err := h.handleConfigUpdate(existingData); err != nil {
+	if err := h.handleConfigUpdate(existingData, false); err != nil {
 		logger.Error("Failed to handle audio config update: %v", err)
 		http.Error(w, "Server error", http.StatusInternalServerError)
 		return

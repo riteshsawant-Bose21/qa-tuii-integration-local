@@ -36,8 +36,8 @@ func (tm *TaskManager) CreateApplySnapshotTask(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	// Must have params["snapshot_id"]
-	snapID, ok := task.Params["snapshot_id"]
+	// Must have params[api.SnapshotIDKey]
+	snapID, ok := task.Params[api.SnapshotIDKey]
 	if !ok || snapID == "" {
 		http.Error(w, "params.snapshot_id is required for snapshot tasks", http.StatusBadRequest)
 		return
@@ -105,8 +105,8 @@ func (tm *TaskManager) UpdateApplySnapshotTask(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	// Must have params["snapshot_id"]
-	snapshotID, ok := task.Params["snapshot_id"]
+	// Must have params[api.SnapshotIDKey]
+	snapshotID, ok := task.Params[api.SnapshotIDKey]
 	if !ok || snapshotID == "" {
 		http.Error(w, "params.snapshot_id is required for snapshot tasks", http.StatusBadRequest)
 		return

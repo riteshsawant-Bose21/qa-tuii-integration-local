@@ -250,18 +250,6 @@ func (c *WifiCommunicator) handleMessage(conn net.Conn) {
 	}
 }
 
-// Helper functions
-func getLocalIP() (string, error) {
-	conn, err := net.Dial("udp", "8.8.8.8:80")
-	if err != nil {
-		return "", err
-	}
-	defer conn.Close()
-
-	localAddr := conn.LocalAddr().(*net.UDPAddr)
-	return localAddr.IP.String(), nil
-}
-
 func isTimeout(err error) bool {
 	if netErr, ok := err.(net.Error); ok {
 		return netErr.Timeout()
