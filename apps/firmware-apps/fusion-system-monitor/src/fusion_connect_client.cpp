@@ -66,7 +66,7 @@ std::string ipToString(uint32_t ip) {
 }
 
 // Function to dump fusion_cn_stream_config struct
-void dumpFusionCnStreamConfig(const fusion_cn_stream_config& config) {
+void dump_fusion_cn_stream_config(const fusion_cn_stream_config& config) {
     std::cout << "Fusion CN Stream Config Dump:" << std::endl;
     std::cout << "  Stream Handle: " << config.stream_handle << std::endl;
     std::cout << "  Stream Name: " << config.stream_name << std::endl;
@@ -103,7 +103,7 @@ int addattr_l(struct nlmsghdr *n, size_t maxlen, int type, const void *data, siz
 }
 
 // Helper function to get system IP address
-std::string getSystemIP() {
+std::string get_system_ip() {
     struct ifaddrs *ifaddr, *ifa;
     char addr_str[INET_ADDRSTRLEN] = {0};
 
@@ -348,19 +348,12 @@ private:
 MODULE_REGISTER(FusionConnectClient, "fusion_connect_client");
 
 FusionConnectClient::FusionConnectClient(const bosepro::BlockConfiguration &configuration)
-    : bosepro::Module(configuration), ptp_synchronized(0), mgr_started(false), network_interface("eth0") {
-    system_ip = getSystemIP();
+    : bosepro::Module(configuration), ptp_synchronized(0), mgr_started(false), device_id(""), network_interface("eth0") {
+    system_ip = get_system_ip();
     if (system_ip.empty()) {
         SPDLOG_ERROR("Failed to initialize: No valid system IP found");
         return;
     }
-
-    device_id = get_device_id(system_ip);
-    if (device_id.empty()) {
-        SPDLOG_ERROR("Failed to initialize: Could not retrieve device id");
-        return;
-    }
-    SPDLOG_DEBUG("Initialized device_id: {}, system_ip: {}", device_id, system_ip);
 
     if (!client.is_valid()) {
         SPDLOG_ERROR("Failed to initialize netlink client");
@@ -374,7 +367,7 @@ FusionConnectClient::FusionConnectClient(const bosepro::BlockConfiguration &conf
 int FusionConnectClient::create_stream(fusion_cn_stream_config& config) {
     struct fusion_cn_ctrl_msg reply = { .cmd = 0, .err = 0, .data_size = 0, .data = nullptr, .pid = 0 };
 
-    dumpFusionCnStreamConfig(config);
+    dump_fusion_cn_stream_config(config);
 
     config.stream_handle = 0;
     if (!client.send_message(FUSION_CN_CTRL_CMD_ADD_STREAM, &config, sizeof(config), &reply)) {
@@ -480,6 +473,16 @@ void FusionConnectClient::audio_streams_update_func() {
     }
 
     SPDLOG_DEBUG("Received audio_streams_update: {}", audio_streams_update);
+
+    if (device_id.empty()) {
+        device_id = get_device_id(system_ip);
+        if (!device_id.empty()) {
+            SPDLOG_INFO("Initialized device_id: {}, system_ip: {}", device_id, system_ip);
+        } else {
+            SPDLOG_ERROR("Failed to get device_id after audio_streams update!");
+            return;
+        }
+    }
 
     Json::Value root;
     Json::Reader reader;
@@ -718,9 +721,7 @@ enum mgr_start_errno {
     MGR_START_ERRNO_MODE
 };
 
-void FusionConnectClient::process() {
-    // TODO Query ptp4l sync status. 
-    // for now, just set 
+void FusionConnectClient::process() {  
     if (!ptp_synchronized) {
         uint8_t sync = 1;
         struct fusion_cn_ctrl_msg reply = { .cmd = 0, .err = 0, .data_size = 0, .data = nullptr, .pid = 0 };
