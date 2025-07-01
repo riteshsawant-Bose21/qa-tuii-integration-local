@@ -80,18 +80,14 @@ static inline unsigned int hash_name(const char *name)
 static struct fusion_cn_substream *fusion_cn_find_substream(struct fusion_cn_chip *chip, const char *stream_name)
 {
     struct fusion_cn_substream *stream;
-    unsigned long flags;
     unsigned int bucket = hash_name(stream_name);
 
-    read_lock_irqsave(&chip->lock, flags);
     hlist_for_each_entry(stream, &chip->streams[bucket], hnode) {
         if (strcmp(stream->stream_name, stream_name) == 0) {
             kref_get(&stream->ref);
-            read_unlock_irqrestore(&chip->lock, flags);
             return stream;
         }
     }
-    read_unlock_irqrestore(&chip->lock, flags);
     return NULL;
 }
 

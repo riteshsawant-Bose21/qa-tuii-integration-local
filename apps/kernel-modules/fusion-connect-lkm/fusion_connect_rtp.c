@@ -227,8 +227,6 @@ int fusion_cn_rtp_add_stream(struct fusion_cn_rtp_manager *rtp_mgr, struct fusio
     struct handle_node *handle_node;
     struct fusion_cn_packet_map *map = NULL;  // Only allocate for sink streams
     unsigned long flags;
-    uint16_t dest_port_host;
-    uint16_t source_port_host;
     int err;
     struct net_device *dev;
 
@@ -239,14 +237,11 @@ int fusion_cn_rtp_add_stream(struct fusion_cn_rtp_manager *rtp_mgr, struct fusio
     }
     dev_put(dev);
 
-    dest_port_host = ntohs(info->dest_port);
-    source_port_host = ntohs(info->source_port);
-
     printk(KERN_INFO "fusion_cn_rtp: add_stream %s: sample_rate=%u, channels=%u, dest_ip=0x%08x, source_ip=0x%08x, dest_port=%u, source_port=%u, is_source=%d, is_fusion_connect=%d\n",
-           info->stream_name, info->sample_rate, info->channels, info->dest_ip, info->source_ip, dest_port_host, source_port_host, info->is_source, info->is_fusion_connect);
+           info->stream_name, info->sample_rate, info->channels, info->dest_ip, info->source_ip, info->dest_port, info->source_port, info->is_source, info->is_fusion_connect);
 
     if (!info->stream_handle || !info->sample_rate || !info->channels ||
-        !info->dest_ip || !info->source_ip || !dest_port_host || !source_port_host) {
+        !info->dest_ip || !info->source_ip || !info->dest_port || !info->source_port) {
         printk(KERN_ERR "fusion_cn_rtp: Invalid stream parameters\n");
         return -EINVAL;
     }
@@ -304,14 +299,16 @@ int fusion_cn_rtp_add_stream(struct fusion_cn_rtp_manager *rtp_mgr, struct fusio
         }
     }
 
-    stream->rtp_packet_base.udp.source = info->source_port;
-    stream->rtp_packet_base.udp.dest = info->dest_port;
+    stream->rtp_packet_base.udp.source = htons(info->source_port);
+    stream->rtp_packet_base.udp.dest = htons(info->dest_port);
     stream->rtp_packet_base.rtp.version = 0x80;
     stream->rtp_packet_base.rtp.payload_type = info->payload_type;
 
     if (info->is_source) {
         get_random_bytes(&stream->ssrc, sizeof(stream->ssrc));
         stream->rtp_packet_base.rtp.ssrc = swab32(stream->ssrc);
+        get_random_bytes(&stream->outgoing_seq_num, sizeof(stream->outgoing_seq_num));
+        stream->rtp_packet_base.rtp.seq_num = swab16(stream->outgoing_seq_num);
     } else {
         stream->ssrc = 0;
     }

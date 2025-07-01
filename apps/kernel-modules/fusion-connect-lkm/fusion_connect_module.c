@@ -26,9 +26,9 @@ static char *eth_iface = "eth0";
 module_param(eth_iface, charp, 0444);
 MODULE_PARM_DESC(eth_iface, "Ethernet interface for CONNECT traffic (default: eth0)");
 
-static bool internal_loopback = true;
+static bool internal_loopback = false;
 module_param(internal_loopback, bool, 0444);
-MODULE_PARM_DESC(internal_loopback, "Turn on internal loopback (default: true)");
+MODULE_PARM_DESC(internal_loopback, "Turn on internal loopback (default: false)");
 
 static bool debug = false;
 module_param(debug, bool, 0444);
