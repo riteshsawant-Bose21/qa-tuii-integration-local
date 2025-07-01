@@ -570,9 +570,20 @@ void FusionConnectClient::audio_streams_update_func() {
                 config.is_source = true;
                 snprintf(config.stream_name, sizeof(config.stream_name), "FC_TX_%u", config.source_port);
                 config.source_ip = inet_addr(system_ip.c_str());
-                config.dest_ip = inet_addr(query_device_ip(dest_device_uid, system_ip).c_str());
+                int retry = 0;
+                config.dest_ip = INADDR_NONE;
+                while (config.dest_ip == INADDR_NONE) {
+                    if (retry++ >= 100) {
+                        SPDLOG_ERROR("Failed to find {}'s connected sink stream in devices", config.stream_name);
+                        break;
+                    }
+
+                    config.dest_ip = inet_addr(query_device_ip(dest_device_uid, system_ip).c_str());
+
+                    usleep(500000);
+                }
                 if (config.source_ip == INADDR_NONE || config.dest_ip == INADDR_NONE) {
-                    SPDLOG_ERROR("Invalid IP address for Fusion Connect source stream");
+                    SPDLOG_ERROR("Invalid IP address for {}", config.stream_name);
                 } else {
                     auto stream_it = std::find_if(fusion_connect_stream_configs.begin(), fusion_connect_stream_configs.end(),
                         [&](const auto& cfg) {
@@ -594,10 +605,21 @@ void FusionConnectClient::audio_streams_update_func() {
             if (create_sink) {
                 config.is_source = false;
                 snprintf(config.stream_name, sizeof(config.stream_name), "FC_RX_%u", config.source_port);
-                config.source_ip = inet_addr(query_device_ip(source_device_uid, system_ip).c_str());
+                int retry = 0;
+                config.source_ip = INADDR_NONE;
+                while (config.source_ip == INADDR_NONE) {
+                    if (retry++ >= 100) {
+                        SPDLOG_ERROR("Failed to find {}'s connected source stream in devices", config.stream_name);
+                        break;
+                    }
+
+                    config.source_ip = inet_addr(query_device_ip(source_device_uid, system_ip).c_str());
+
+                    usleep(500000);
+                }
                 config.dest_ip = inet_addr(system_ip.c_str());
                 if (config.source_ip == INADDR_NONE || config.dest_ip == INADDR_NONE) {
-                    SPDLOG_ERROR("Invalid IP address for Fusion Connect sink stream");
+                    SPDLOG_ERROR("Invalid IP address for {}", config.stream_name);
                 } else {
                     auto stream_it = std::find_if(fusion_connect_stream_configs.begin(), fusion_connect_stream_configs.end(),
                         [&](const auto& cfg) {
