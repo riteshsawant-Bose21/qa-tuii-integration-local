@@ -866,8 +866,7 @@ static struct snd_pcm_ops fusion_cn_pcm_ops = {
 };
 
 static int fusion_cn_open_substream(void *alsa_chip, uint64_t stream_handle, const char *stream_name,
-                                    int direction, bool is_fusion_connect, 
-                                    uint16_t src_port, unsigned int channels, uint32_t rate, snd_pcm_format_t format)
+                                    int direction, unsigned int channels, uint32_t rate, snd_pcm_format_t format)
 {
     struct fusion_cn_chip *chip = alsa_chip;
     unsigned long flags;

@@ -42,7 +42,7 @@ enum fusion_cn_ctrl_cmd {
 };
 
 struct fusion_cn_state {
-    bool is_started;
+    atomic_t is_started;
     atomic_t ptp_synchronized;
 };
 

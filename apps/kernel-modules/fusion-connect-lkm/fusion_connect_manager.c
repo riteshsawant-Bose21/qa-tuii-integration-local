@@ -142,7 +142,7 @@ static void process_active_streams(struct fusion_cn_manager *mgr)
     struct handle_node *handle_node, *tmp;
     uint64_t handle;
 
-    if (!atomic_read(&mgr->state.ptp_synchronized)) {
+    if (!atomic_read(&mgr->state.ptp_synchronized) || !atomic_read(&mgr->state.is_started)) {
         return;
     }
 
@@ -319,7 +319,7 @@ static irqreturn_t audio_frame_tick_gpio(int irq, void *dev_id)
 /* Manager Functions */
 static int fusion_cn_state_init(struct fusion_cn_manager *mgr)
 {
-    mgr->state.is_started = false;
+    atomic_set(&mgr->state.is_started, false);
     atomic_set(&mgr->state.ptp_synchronized, false);
     return 0;
 }
@@ -463,7 +463,7 @@ enum mgr_start_errno {
 
 int fusion_cn_mgr_start(struct fusion_cn_manager *mgr)
 {
-    if (mgr->state.is_started) {
+    if (atomic_read(&mgr->state.is_started)) {
         printk(KERN_INFO "fusion_cn: mgr already started\n");
         return -MGR_START_ERRNO_RUNNING;
     }
@@ -500,21 +500,21 @@ int fusion_cn_mgr_start(struct fusion_cn_manager *mgr)
     }
 
     mgr->netfilter.is_enabled = true;
-    mgr->state.is_started = true;
+    atomic_set(&mgr->state.is_started, true);
     printk(KERN_INFO "fusion_cn: mgr_start: Started manager\n");
     return MGR_START_OK;
 }
 
 bool fusion_cn_mgr_stop(struct fusion_cn_manager *mgr)
 {
-    if (!mgr || !mgr->state.is_started) return false;
+    if (!mgr || !atomic_read(&mgr->state.is_started)) return false;
     if (mgr->ptp.ptp_timing_mode == TIMING_HRTIMER) {
         hrtimer_cancel(&mgr->ptp.audio_timer);
     } else if (mgr->ptp.ptp_timing_mode == TIMING_GPIO_INTERRUPT && mgr->ptp.gpio_irq >= 0) {
         disable_irq(mgr->ptp.gpio_irq);
     }
     mgr->netfilter.is_enabled = false;
-    mgr->state.is_started = false;
+    atomic_set(&mgr->state.is_started, true);
     return true;
 }
 
@@ -617,8 +617,8 @@ static int handle_add_stream(struct fusion_cn_manager *mgr, struct fusion_cn_ctr
 
     /* for rtp source we have alsa playback and vice versa */
     direction = config->is_source ? SNDRV_PCM_STREAM_PLAYBACK : SNDRV_PCM_STREAM_CAPTURE;
-    ret = mgr->alsa.mgr_callbacks->open_substream(mgr->alsa.alsa_chip, handle, config->stream_name, direction, config->is_fusion_connect,
-                                                  config->source_port, config->channels, config->sample_rate, config->format);
+    ret = mgr->alsa.mgr_callbacks->open_substream(mgr->alsa.alsa_chip, handle, config->stream_name, direction,
+                                                  config->channels, config->sample_rate, config->format);
     if (ret < 0) {
         fusion_cn_rtp_remove_stream(&mgr->rtp, handle);
         printk(KERN_ERR "fusion_cn: handle_add_stream: open_substream failed: %d\n", ret);
