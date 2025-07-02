@@ -56,11 +56,6 @@ static unsigned int nf_hook_func(void *priv, struct sk_buff *skb, const struct n
     rtp_header = (uint8_t *)packet + ETH_HLEN + (ip_header->ihl * 4) + sizeof(struct udphdr);
     if (*rtp_header != 0x80) {
         return NF_ACCEPT;
-    } else {
-        if (ip_header->saddr == ip_header->daddr) {
-            printk(KERN_INFO "fusion_cn: nf_hook_func: Loopback packet detected: src_ip=0x%08x, dst_ip=0x%08x\n",
-                    ip_header->saddr, ip_header->daddr);
-        }
     }
 
     return fusion_cn_rtp_process_packet(rtp_mgr, packet);

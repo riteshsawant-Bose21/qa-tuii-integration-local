@@ -331,6 +331,7 @@ int fusion_cn_rtp_add_stream(struct fusion_cn_rtp_manager *rtp_mgr, struct fusio
         if (fusion_cn_rtp_is_ip_mcast(map->dest_ip)) {
             hlist_add_head(&map->hnode, &rtp_mgr->mc_packet_maps[PACKET_MAP_KEY_MC(map->dest_ip)]);
         } else {
+            printk(KERN_INFO "Adding stream %llu with sip %u sport %u", map->stream_handle, map->source_ip, map->source_port);
             hlist_add_head(&map->hnode, &rtp_mgr->uc_packet_maps[PACKET_MAP_KEY_UC(map->source_ip, map->source_port)]);
         }
         if (info->is_fusion_connect) {
@@ -486,8 +487,9 @@ int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr,
             }
         }
     } else {
-        hlist_for_each_entry(map, &rtp_mgr->uc_packet_maps[PACKET_MAP_KEY_UC(packet->ip.saddr, packet->udp.source)], hnode) {
-            if (map->source_ip == packet->ip.saddr && map->source_port == packet->udp.source) {
+        int source_port = ntohs(packet->udp.source);
+        hlist_for_each_entry(map, &rtp_mgr->uc_packet_maps[PACKET_MAP_KEY_UC(packet->ip.saddr, source_port)], hnode) {
+            if (map->source_ip == packet->ip.saddr && map->source_port == source_port) {
                 handle = map->stream_handle;
                 break;
             }
