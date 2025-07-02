@@ -5,6 +5,7 @@ import (
 	"fusion/internal/api"
 	"fusion/internal/logging"
 	"fusion/internal/persistence"
+	"fusion/internal/pubsub"
 	"fusion/internal/server/handler"
 	"fusion/internal/tasks"
 	"math"
@@ -46,6 +47,7 @@ func (s *SkewStore) Add(node string, skew time.Duration, detected time.Time) {
 	s.mu.Unlock()
 }
 
+// Prune remomves stale records from the store.
 func (s *SkewStore) Prune(ticker *time.Ticker, maxAge time.Duration) {
 	for range ticker.C {
 		now := time.Now()
@@ -67,15 +69,22 @@ type ClusterDelegate struct {
 	updater       *handler.Updater
 	syncLatencies *SyncLatencyStore
 	skewStore     *SkewStore
+	hub           *pubsub.Hub
 }
 
-func NewClusterDelegate(nodeID string, persistence *persistence.Persistence, stateManager *persistence.StateManager, taskManager *tasks.TaskManager, updater *handler.Updater) *ClusterDelegate {
+func NewClusterDelegate(
+	nodeID string, persistence *persistence.Persistence,
+	stateManager *persistence.StateManager,
+	taskManager *tasks.TaskManager,
+	updater *handler.Updater,
+	hub *pubsub.Hub) *ClusterDelegate {
 	delegate := &ClusterDelegate{
 		nodeID:        nodeID,
 		persistence:   persistence,
 		stateManager:  stateManager,
 		taskManager:   taskManager,
 		updater:       updater,
+		hub:           hub,
 		syncLatencies: NewSyncLatencyStore(maxLatencyCount, latencyPruneTime),
 		skewStore:     NewSkewStore(),
 	}
@@ -158,6 +167,7 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 			logger.Error("Error applying update: %v", err)
 			return
 		}
+		d.hub.Broadcast(&message)
 
 	case api.NotifyOpSnapActivate:
 		if err := d.persistence.ActivateSnapshot(message.SnapshotUpdate.Name); err != nil {

@@ -125,6 +125,12 @@ func (c *Cluster) GetInfo() ClusterInfo {
 	}
 }
 
+func (c *Cluster) SetMemberlist(memberlist *memberlist.Memberlist) {
+	c.Memberlist = memberlist
+	c.JoinMemberlist()
+	c.Metrics.SetMemberlist(memberlist)
+}
+
 // getClusterIPs retrieves the list of IP addresses of all nodes in the cluster
 func (c *Cluster) getClusterIPs() []string {
 	var ips []string

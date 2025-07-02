@@ -7,20 +7,9 @@ import (
 	"fusion/internal/logging"
 )
 
-// AddBroadcaster registers a single Broadcaster to the handler's broadcaster list.
-func (h *Handler) AddBroadcaster(broadcaster Broadcaster) {
-	h.broadcasters = append(h.broadcasters, broadcaster)
-}
-
-// AddBroadcasters registers multiple Broadcasters to the handler's broadcaster list.
-func (h *Handler) AddBroadcasters(broadcasters ...Broadcaster) {
-	h.broadcasters = append(h.broadcasters, broadcasters...)
-}
-
 // broadcastUpdate processes an incoming NotifyMessage by applying configuration or snapshot updates,
 // performing version changes, and then broadcasting the message to other nodes and local clients if needed.
 func (h *Handler) broadcastUpdate(message *api.NotifyMessage) error {
-	logger := logging.GetLogger()
 
 	switch message.Operation {
 
@@ -60,7 +49,7 @@ func (h *Handler) broadcastUpdate(message *api.NotifyMessage) error {
 	}
 
 	// Broadcast the message to other nodes if this is the origin node.
-	if message.Node == h.Memberlist.LocalNode().Name {
+	if message.Node == h.memberlist.LocalNode().Name {
 		data, err := json.Marshal(message)
 		if err != nil {
 			return fmt.Errorf("failed to marshal update: %w", err)
@@ -68,12 +57,7 @@ func (h *Handler) broadcastUpdate(message *api.NotifyMessage) error {
 		h.broadcastToNodes(data)
 	}
 
-	// Broadcast the message to local clients.
-	for _, broadcaster := range h.broadcasters {
-		if err := broadcaster.BroadcastUpdate(message); err != nil {
-			logger.Error("Failed to broadcast update to local clients: %v", err)
-		}
-	}
+	h.hub.Broadcast(message)
 
 	return nil
 }
@@ -81,11 +65,11 @@ func (h *Handler) broadcastUpdate(message *api.NotifyMessage) error {
 // broadcastToNodes sends the given message to all cluster members except the local node.
 func (h *Handler) broadcastToNodes(message []byte) {
 	logger := logging.GetLogger()
-	for _, node := range h.Memberlist.Members() {
-		if node.Name == h.Memberlist.LocalNode().Name {
+	for _, node := range h.memberlist.Members() {
+		if node.Name == h.memberlist.LocalNode().Name {
 			continue
 		}
-		if err := h.Memberlist.SendReliable(node, message); err != nil {
+		if err := h.memberlist.SendReliable(node, message); err != nil {
 			logger.Error("Failed to send message to node %s: %v", node.Name, err)
 		}
 	}

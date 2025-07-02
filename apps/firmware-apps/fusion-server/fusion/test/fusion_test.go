@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"fusion/internal/api"
 	"io"
+	"maps"
 	"net/http"
 	"os"
 	"os/exec"
@@ -21,7 +22,7 @@ import (
 // clusterNode represents a node in the test cluster
 type clusterNode struct {
 	address string
-	nodeID  string
+	name    string
 }
 
 // ClusterConfig holds the test configuration for the cluster
@@ -36,7 +37,7 @@ func (c *ClusterConfig) String() string {
 	b.WriteString(fmt.Sprintf("VIP: %s\n", c.vip))
 	b.WriteString("Nodes:\n")
 	for i, node := range c.nodes {
-		b.WriteString(fmt.Sprintf("  %d: %s (ID: %s)\n", i+1, node.address, node.nodeID))
+		b.WriteString(fmt.Sprintf("  %d: %s (ID: %s)\n", i+1, node.address, node.name))
 	}
 	return b.String()
 }
@@ -50,6 +51,8 @@ type MultipassNode struct {
 }
 
 const (
+	clusterTimout = 10 * time.Second
+	instancePort  = "7947"
 	requiredNodes = 3 // Number of nodes required for cluster tests
 	serverAddr    = "http://192.168.64.100:8080"
 	testTimeout   = 5 * time.Second
@@ -1110,14 +1113,227 @@ func TestClearEndpoint(t *testing.T) {
 
 }
 
+// TestUDPGet runs the "get" command inside the default instance.
+func TestUDPGet(t *testing.T) {
+	command := fmt.Sprintf(`echo '{"action":"get"}' | nc -u -w 1 -v localhost %s`, instancePort)
+	out, err := runMultipassCommand(t, command)
+	if err != nil {
+		t.Fatalf("Multipass get command failed: %v, output: %s", err, out)
+	}
+}
+
+// TestUDPSet runs the "set" command inside the default instance.
+func TestUDPSet(t *testing.T) {
+	command := fmt.Sprintf(`echo '{"action":"set","test":"hello"}' | nc -u -w 1 localhost %s`, instancePort)
+	out, err := runMultipassCommand(t, command)
+	if err != nil {
+		t.Fatalf("Multipass set command failed: %v, output: %s", err, out)
+	}
+}
+
+// TestUDPSetAndGet sets a value and then verifies it with a get command on the default instance.
+func TestUDPSetAndGet(t *testing.T) {
+	// Set the value on instance1.
+	setCommand := fmt.Sprintf(`echo '{"action":"set","test":"hello"}' | nc -u -w 1 localhost %s`, instancePort)
+	setOut, err := runMultipassCommand(t, setCommand)
+	if err != nil {
+		t.Fatalf("Multipass set command failed: %v, output: %s", err, setOut)
+	}
+
+	// Retrieve the value from instance1.
+	getCommand := fmt.Sprintf(`echo '{"action":"get"}' | nc -u -w 1 -v localhost %s`, instancePort)
+	getOut, err := runMultipassCommand(t, getCommand)
+	if err != nil {
+		t.Fatalf("Multipass get command failed: %v, output: %s", err, getOut)
+	}
+
+	// Verify that the returned output contains the expected test value.
+	if !strings.Contains(getOut, "hello") {
+		t.Fatalf("Expected get output to contain 'hello', got: %s", getOut)
+	}
+}
+
+// TestUDPPropagation sets a value on instance1 and verifies that it propagates to instance2.
+func TestUDPPropagation(t *testing.T) {
+	// Build commands once
+	setCmd := fmt.Sprintf(`echo '{"action":"set","test":"hello"}' | nc -u -w 1 localhost %s`, instancePort)
+	getCmd := fmt.Sprintf(`echo '{"action":"get"}' | nc -u -w 1 -v localhost %s`, instancePort)
+
+	// Set on the "master" node
+	name := clusterConfig.nodes[0].name
+	if out, err := runMultipassCommandOnInstance(t, name, setCmd); err != nil {
+		t.Fatalf("set on %s failed: %v (output: %q)", name, err, out)
+	}
+
+	// Verify on each of the other nodes
+	for _, node := range clusterConfig.nodes[1:] {
+		out, err := runMultipassCommandOnInstance(t, node.name, getCmd)
+		if err != nil {
+			t.Errorf("get on %s failed: %v (output: %q)", node, err, out)
+			continue
+		}
+		if !strings.Contains(out, "hello") {
+			t.Errorf("expected 'hello' on %s, got %q", node, out)
+		}
+	}
+}
+
+type UDPResult struct {
+	Data   map[string]any `json:"data"`
+	Status string         `json:"status"`
+}
+
+// TestHTTPSetAndVerifyViaUDP POSTs to /value and then does a UDP "get"
+// to verify the entire state is returned over UDP.
+func TestHTTPSetAndVerifyViaUDP(t *testing.T) {
+	// Define the payload
+	payload := map[string]any{
+		"alpha": "one",
+		"beta":  2,
+		"gamma": []string{"x", "y", "z"},
+	}
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("Failed to marshal payload: %v", err)
+	}
+
+	// POST it to the HTTP endpoint
+	resp, err := http.Post(fmt.Sprintf("%s/value", serverAddr),
+		api.JsonMIMEType, bytes.NewBuffer(jsonData))
+	if err != nil {
+		t.Fatalf("HTTP POST failed: %v", err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("HTTP POST returned status %d", resp.StatusCode)
+	}
+
+	deadline := time.Now().Add(5 * time.Second)
+	var raw string
+	var errRun error
+
+	for i := 0; time.Now().Before(deadline); i++ {
+		// note the "2>&1" so we capture nc's stderr (where -v prints)
+		cmd := fmt.Sprintf(
+			`(echo '{"action":"get"}' | nc -u -vv -w1 localhost %s) 2>&1 || true`,
+			instancePort,
+		)
+
+		var resp string
+		resp, errRun = runMultipassCommand(t, cmd)
+		raw = strings.TrimSpace(resp)
+
+		//t.Logf("iter %02d, nc err: %v, raw UDP payload: %q", i, errRun, raw)
+
+		if raw != "" {
+			var result UDPResult
+			if err := json.Unmarshal([]byte(raw), &result); err == nil {
+				// check status
+				if result.Status != "success" {
+					t.Logf("  status != success: %q", result.Status)
+				} else {
+					ok := true
+					for key, want := range payload {
+						got, exists := result.Data[key]
+						if !exists || fmt.Sprintf("%v", got) != fmt.Sprintf("%v", want) {
+							t.Logf("  key %q: got %v want %v", key, got, want)
+							ok = false
+							break
+						}
+					}
+					if ok {
+						break
+					}
+				}
+			} else {
+				t.Logf("  json unmarshal into envelope failed: %v", err)
+			}
+		}
+
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	if raw == "" {
+		t.Fatalf("timed out waiting for UDP state; last raw payload: %q, last err: %v", raw, errRun)
+	}
+}
+
+func TestUDPSetAndVerifyViaHTTP(t *testing.T) {
+
+	payload := map[string]any{
+		"alpha": "one",
+		"beta":  2,
+		"gamma": []string{"x", "y", "z"},
+	}
+
+	udpPacket := make(map[string]any, len(payload)+1)
+	udpPacket["action"] = "set"
+	maps.Copy(udpPacket, payload)
+	udpData, err := json.Marshal(udpPacket)
+	if err != nil {
+		t.Fatalf("Failed to marshal UDP packet: %v", err)
+	}
+
+	cmd := fmt.Sprintf(
+		`(echo '%s' | nc -u -w1 localhost %s)`,
+		string(udpData),
+		instancePort,
+	)
+	if _, err := runMultipassCommand(t, cmd); err != nil {
+		t.Fatalf("UDP set failed: %v", err)
+	}
+
+	deadline := time.Now().Add(5 * time.Second)
+	var lastErr error
+
+	for time.Now().Before(deadline) {
+		resp, err := http.Get(fmt.Sprintf("%s/value", serverAddr))
+		if err != nil {
+			lastErr = err
+			time.Sleep(100 * time.Millisecond)
+			continue
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			lastErr = fmt.Errorf("unexpected status: %d", resp.StatusCode)
+			time.Sleep(100 * time.Millisecond)
+			continue
+		}
+
+		var result map[string]any
+		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+			lastErr = err
+			time.Sleep(100 * time.Millisecond)
+			continue
+		}
+
+		// Verify every key matches
+		ok := true
+		for key, want := range payload {
+			got, exists := result[key]
+			if !exists || fmt.Sprintf("%v", got) != fmt.Sprintf("%v", want) {
+				lastErr = fmt.Errorf("key %q: got %v want %v", key, got, want)
+				ok = false
+				break
+			}
+		}
+		if ok {
+			return
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	t.Fatalf("timed out waiting for HTTP /value; last error: %v", lastErr)
+}
+
 // verifyClusterHealth checks if the required number of nodes are running and healthy
 func verifyClusterHealth(t *testing.T, nodes []clusterNode) bool {
 	t.Helper()
 
-	timeout := 10 * time.Second
 	t.Logf("Verifying cluster health across %d nodes...", len(nodes))
 
-	deadline := time.Now().Add(timeout)
+	deadline := time.Now().Add(clusterTimout)
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 
@@ -1138,7 +1354,7 @@ func verifyClusterHealth(t *testing.T, nodes []clusterNode) bool {
 		t.Logf("Still waiting for cluster health... %v remaining", time.Until(deadline).Round(time.Second))
 	}
 
-	t.Errorf("Cluster health check failed after %v", timeout)
+	t.Errorf("Cluster health check failed after %v", clusterTimout)
 	return false
 }
 
@@ -1315,11 +1531,11 @@ func getClusterConfig() (*ClusterConfig, error) {
 		})
 
 		port := *portFlag
-		for i, node := range nodes {
+		for _, node := range nodes {
 			addr := fmt.Sprintf("%s%s:%s", api.Protocol, node.IPAddr, port)
 			cfg.nodes = append(cfg.nodes, clusterNode{
 				address: addr,
-				nodeID:  fmt.Sprintf("node%d", i+1),
+				name:    node.Name,
 			})
 		}
 
@@ -1363,7 +1579,7 @@ func getClusterConfig() (*ClusterConfig, error) {
 
 				cfg.nodes = append(cfg.nodes, clusterNode{
 					address: addr,
-					nodeID:  fmt.Sprintf("node%d", i+1),
+					name:    fmt.Sprintf("node%d", i+1),
 				})
 			}
 		}
@@ -1491,4 +1707,20 @@ func valueEquals(v1, v2 any) bool {
 		return false
 	}
 	return bytes.Equal(j1, j2)
+}
+
+// runMultipassCommand executes a bash command on the default instance using multipass exec.
+func runMultipassCommand(t *testing.T, command string) (string, error) {
+	t.Helper()
+	name := clusterConfig.nodes[0].name
+	return runMultipassCommandOnInstance(t, name, command)
+}
+
+// runMultipassCommandOnInstance executes a bash command on a given instance using multipass exec.
+func runMultipassCommandOnInstance(t *testing.T, instance, command string) (string, error) {
+	t.Helper()
+	args := []string{"exec", instance, "--", "bash", "-c", command}
+	cmd := exec.Command("multipass", args...)
+	output, err := cmd.CombinedOutput()
+	return string(output), err
 }

@@ -7,6 +7,7 @@ import (
 	"fusion/internal/logging"
 	"fusion/internal/network"
 	"fusion/internal/persistence"
+	"fusion/internal/pubsub"
 	"fusion/internal/routes"
 	"fusion/internal/server"
 	"fusion/internal/server/handler"
@@ -14,6 +15,7 @@ import (
 	"fusion/internal/version"
 	"net/http"
 	"os"
+	"runtime/debug"
 	"sync"
 	"time"
 
@@ -65,15 +67,16 @@ func NewApp(config *api.AppConfig) *App {
 	persistence := initPersistence(fusionDatabasePath, stateManager)
 	taskManager := initTaskManager(config, persistence)
 	updater := handler.NewUpdater()
+	hub := pubsub.NewHub()
 
-	delegate := cluster.NewClusterDelegate(config.NodeName, persistence, stateManager, taskManager, updater)
+	delegate := cluster.NewClusterDelegate(config.NodeName, persistence, stateManager, taskManager, updater, hub)
 	memberlist := cluster.CreateMemberlist(config, delegate)
-	connectionHandler := handler.NewHandler(memberlist, persistence, stateManager, updater)
+	connectionHandler := handler.NewHandler(memberlist, persistence, stateManager, updater, hub)
 	clusterInstance := cluster.NewCluster(config, delegate, memberlist)
 	bleServer := initBLEServer()
-	sapServer := initSAPServer(config, api.SAPPort, connectionHandler)
-	udpServer := initUDPServer(api.UDPPort, connectionHandler)
-	fusionServer := server.NewFusionServer(config.NodeName, connectionHandler, memberlist)
+	sapServer := initSAPServer(config, api.SAPPort, connectionHandler, hub)
+	udpServer := initUDPServer(api.UDPPort, connectionHandler, hub)
+	fusionServer := server.NewFusionServer(config.NodeName, connectionHandler, hub)
 
 	// Setup the public routes
 	publicRouter := mux.NewRouter()
@@ -263,16 +266,28 @@ func (app *App) startNetworkMonitor() {
 	logger.Info("Network monitor is active")
 
 	app.monitor = network.NewMonitor(networkMonitorInterval, func(oldIP, newIP string) {
-		logger.Info("IP changed from %s to %s — rejoining cluster", oldIP, newIP)
-
-		// Leave old cluster
-		app.memberlist.Leave(clusterLeaveTime)
-		app.memberlist.Shutdown()
-
-		// Recreate and join with new IP
-		app.config.BindAddr = newIP
-		app.memberlist = cluster.CreateMemberlist(app.config, app.Delegate)
+		logger.Debug("IP changed from %s to %s.", oldIP, newIP)
+		app.leaveCluster()
+		app.joinCluster(newIP)
 	})
+
+	app.monitor.Start()
+}
+
+// leaveCluster leaves the cluster
+func (app *App) leaveCluster() {
+	app.memberlist.Leave(clusterLeaveTime)
+	app.memberlist.Shutdown()
+}
+
+// joinCluster recreates the cluster and join it
+func (app *App) joinCluster(ip string) {
+	app.config.BindAddr = ip
+	memberlist := cluster.CreateMemberlist(app.config, app.Delegate)
+	app.memberlist = memberlist
+	app.ConnectionHandler.SetMemberlist(memberlist)
+	app.Cluster.SetMemberlist(memberlist)
+	app.StateManager.SetMemberlist(memberlist)
 }
 
 // startAPIServer starts the main HTTP API server
@@ -302,7 +317,9 @@ func (app *App) Start() {
 	app.setupPublicRoutes()
 	app.setupPrivateRoutes()
 	app.ConnectionHandler.SetEndpoints(routes.Endpoints)
+
 	app.startNetworkMonitor()
+	defer app.monitor.Stop()
 
 	var wg sync.WaitGroup
 
@@ -319,7 +336,7 @@ func (app *App) Start() {
 	app.Logger.Info("     Commit: %s", version.Commit)
 	app.Logger.Info("     Build Time: %s", version.BuildTime)
 
-	app.StateManager.StartVerification(app.memberlist)
+	app.StateManager.Start(app.memberlist)
 
 	wg.Wait()
 }
@@ -403,7 +420,7 @@ func initBLEServer() *network.BLEServer {
 
 // initSAPServer initializes the SAP server
 // See RFC 2947 (https://datatracker.ietf.org/doc/html/rfc2974)
-func initSAPServer(config *api.AppConfig, port string, handler *handler.Handler) *network.SAPServer {
+func initSAPServer(config *api.AppConfig, port string, handler *handler.Handler, hub *pubsub.Hub) *network.SAPServer {
 
 	if config.Local {
 		logging.GetLogger().Warn("SAP Server not available in local mode")
@@ -416,13 +433,13 @@ func initSAPServer(config *api.AppConfig, port string, handler *handler.Handler)
 		logger.Fatal("Failed to create SAP server: %v", err)
 	}
 
-	handler.AddBroadcaster(sapServer)
+	hub.Register(sapServer)
 	sapServer.Start()
 	return sapServer
 }
 
 // initUDPServer initializes the UDP server.
-func initUDPServer(port string, handler *handler.Handler) *network.UDPServer {
+func initUDPServer(port string, handler *handler.Handler, hub *pubsub.Hub) *network.UDPServer {
 
 	udpPort := fmt.Sprintf(":%s", port)
 	udpServer, err := network.NewUDPServer(udpPort, handler)
@@ -431,7 +448,7 @@ func initUDPServer(port string, handler *handler.Handler) *network.UDPServer {
 		logger.Fatal("Failed to create UDP server: %v", err)
 	}
 
-	handler.AddBroadcaster(udpServer)
+	hub.Register(udpServer)
 	udpServer.Start()
 	return udpServer
 }
@@ -475,7 +492,7 @@ func recoveryMiddleware() mux.MiddlewareFunc {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			defer func() {
 				if err := recover(); err != nil {
-					logger.Error("Panic recovered: %v", err)
+					logger.Error("Panic recovered: %v\n%s", r, debug.Stack())
 					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				}
 			}()

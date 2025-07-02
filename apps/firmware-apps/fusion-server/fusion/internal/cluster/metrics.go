@@ -28,7 +28,7 @@ const (
 
 // MetricsCollector handles system-wide metric collection
 type MetricsCollector struct {
-	list              *memberlist.Memberlist
+	memberlist        *memberlist.Memberlist
 	stateManager      persistence.StateManagerInterface
 	mutex             sync.RWMutex
 	metrics           SystemMetrics
@@ -94,7 +94,7 @@ type NodeHealth struct {
 
 func NewMetricsCollector(memberlist *memberlist.Memberlist, stateManager *persistence.StateManager) *MetricsCollector {
 	mc := &MetricsCollector{
-		list:           memberlist,
+		memberlist:     memberlist,
 		stateManager:   stateManager,
 		haproxyMetrics: network.NewHAProxyMetrics(haproxySocketPath, network.HAProxyConfigPath),
 
@@ -131,6 +131,10 @@ func NewMetricsCollector(memberlist *memberlist.Memberlist, stateManager *persis
 	go mc.monitorCluster()
 
 	return mc
+}
+
+func (mc *MetricsCollector) SetMemberlist(memberlist *memberlist.Memberlist) {
+	mc.memberlist = memberlist
 }
 
 func (mc *MetricsCollector) collect() {
@@ -178,7 +182,7 @@ func (mc *MetricsCollector) collect() {
 			MemoryUsage:      int64(mem.Alloc),
 			Goroutines:       gs,
 			HAProxyStatus:    mc.checkHAProxy(),
-			BackendNodes:     len(mc.list.Members()),
+			BackendNodes:     len(mc.memberlist.Members()),
 
 			HAProxy: struct {
 				Status        string                   `json:"status"`
@@ -264,7 +268,7 @@ func (mc *MetricsCollector) monitorCluster() {
 
 	for range ticker.C {
 		mc.mutex.Lock()
-		members := mc.list.Members()
+		members := mc.memberlist.Members()
 		clusterMembers := make([]ClusterMember, len(members))
 		aliveCount := 0
 		suspectCount := 0
@@ -293,7 +297,7 @@ func (mc *MetricsCollector) monitorCluster() {
 		mc.clusterInfo = ClusterInfo{
 			MemberCount:    len(members),
 			AliveCount:     aliveCount,
-			LocalNode:      mc.list.LocalNode().Name,
+			LocalNode:      mc.memberlist.LocalNode().Name,
 			Members:        clusterMembers,
 			LastUpdateTime: time.Now().UTC(),
 			SuspectNodes:   suspectCount,

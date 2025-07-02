@@ -134,7 +134,7 @@ func (h *Handler) initiateVersionUpdate(newBinaryPath string) error {
 
 	update := BinaryUpdate{
 		BinaryHeader: BinaryHeader{
-			NodeID: h.Memberlist.LocalNode().Name,
+			NodeID: h.memberlist.LocalNode().Name,
 			Time:   time.Now().UTC(),
 		},
 		BinaryHash: hash,
@@ -159,8 +159,8 @@ func (h *Handler) initiateVersionUpdate(newBinaryPath string) error {
 	h.broadcastToNodes(messageData)
 
 	// Stream the binary to each node.
-	for _, node := range h.Memberlist.Members() {
-		if node.Name == h.Memberlist.LocalNode().Name {
+	for _, node := range h.memberlist.Members() {
+		if node.Name == h.memberlist.LocalNode().Name {
 			continue
 		}
 		if err := h.streamBinaryToNode(node, newBinaryPath); err != nil {
@@ -176,7 +176,7 @@ func (h *Handler) initiateBinaryRollback(currentBinaryPath string, index int) er
 
 	rollback := BinaryRollback{
 		BinaryHeader: BinaryHeader{
-			NodeID: h.Memberlist.LocalNode().Name,
+			NodeID: h.memberlist.LocalNode().Name,
 			Time:   time.Now().UTC(),
 		},
 		BinaryPath: currentBinaryPath,
@@ -344,7 +344,7 @@ func (h *Handler) streamBinaryToNode(node *memberlist.Node, binaryPath string) e
 			return fmt.Errorf("failed to marshal message: %w", err)
 		}
 
-		if err := h.Memberlist.SendReliable(node, messageData); err != nil {
+		if err := h.memberlist.SendReliable(node, messageData); err != nil {
 			return fmt.Errorf("failed to send chunk message: %w", err)
 		}
 	}
@@ -367,7 +367,7 @@ func (h *Handler) streamBinaryToNode(node *memberlist.Node, binaryPath string) e
 	if err != nil {
 		return fmt.Errorf("failed to marshal final message: %w", err)
 	}
-	if err := h.Memberlist.SendReliable(node, messageData); err != nil {
+	if err := h.memberlist.SendReliable(node, messageData); err != nil {
 		return fmt.Errorf("failed to send final chunk message: %w", err)
 	}
 

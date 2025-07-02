@@ -48,6 +48,7 @@ type StateManager struct {
 	state      VersionedState
 	version    api.Version
 	httpClient *http.Client
+	memberlist *memberlist.Memberlist
 	verbose    bool
 }
 
@@ -56,8 +57,8 @@ func NewStateManager(config *api.AppConfig) *StateManager {
 	return &StateManager{
 		state:      *NewVersionedState(),
 		version:    api.Version{Counter: 0, NodeID: config.NodeName},
-		verbose:    config.Verbose,
 		httpClient: &http.Client{Timeout: httpTimeout},
+		verbose:    config.Verbose,
 	}
 }
 
@@ -81,9 +82,27 @@ func (sm *StateManager) NewConfigUpdate(data map[string]any) (*api.ConfigUpdate,
 	}, nil
 }
 
+// Start starts periodic state verification
+func (sm *StateManager) Start(memberlist *memberlist.Memberlist) {
+
+	sm.memberlist = memberlist
+
+	go func() {
+		for {
+			sm.validateState()
+			sm.validateData()
+			time.Sleep(checkInterval)
+		}
+	}()
+}
+
 // GetNode returns the node name
 func (sm *StateManager) GetNode() string {
 	return sm.version.NodeID
+}
+
+func (sm *StateManager) SetMemberlist(memberlist *memberlist.Memberlist) {
+	sm.memberlist = memberlist
 }
 
 // GetVersion returns the current version of the state.
@@ -355,14 +374,15 @@ func (sm *StateManager) SetState(state map[string]*api.StateEntry) {
 
 // validateState fetches and compares state from other cluster members
 // to check consistency. Logs any inconsistencies found.
-func (sm *StateManager) validateState(list *memberlist.Memberlist) {
+func (sm *StateManager) validateState() {
 	logger := logging.GetLogger()
 	localState := sm.GetFullState()
 	consistent := true
-	members := list.Members()
+	members := sm.memberlist.Members()
+	localName := sm.memberlist.LocalNode().Name
 
 	for _, member := range members {
-		if member.State != memberlist.StateAlive || member.Name == list.LocalNode().Name {
+		if member.State != memberlist.StateAlive || member.Name == localName {
 			continue
 		}
 
@@ -411,23 +431,12 @@ func (sm *StateManager) validateState(list *memberlist.Memberlist) {
 
 }
 
-// StartVerification starts periodic state verification
-func (sm *StateManager) StartVerification(list *memberlist.Memberlist) {
-	go func() {
-		for {
-			sm.validateState(list)
-			sm.validateData(list)
-			time.Sleep(checkInterval)
-		}
-	}()
-}
-
 // getMemberData return MemberMetadata for all members of the memberlist cluster.
-func (sm *StateManager) getMemberData(list *memberlist.Memberlist) []api.MemberMetadata {
+func (sm *StateManager) getMemberData() []api.MemberMetadata {
 
 	logger := logging.GetLogger()
 
-	members := list.Members()
+	members := sm.memberlist.Members()
 
 	var memberMetadata []api.MemberMetadata
 
@@ -470,10 +479,10 @@ func (sm *StateManager) getMemberData(list *memberlist.Memberlist) []api.MemberM
 
 // validateData resolves any mismatches in node data across cluster
 // by picking the member with the highest Lamport version.
-func (sm *StateManager) validateData(list *memberlist.Memberlist) {
+func (sm *StateManager) validateData() {
 	logger := logging.GetLogger()
 
-	memberMetadata := sm.getMemberData(list)
+	memberMetadata := sm.getMemberData()
 	if len(memberMetadata) == 0 {
 		if sm.verbose {
 			logger.Debug("[DATA] Empty member data")

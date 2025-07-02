@@ -265,9 +265,9 @@ websocat ws://192.168.64.100:8080/ws
 websocat -v ws://192.168.64.100:8080/ws
 ```
 
-## Unix Domain Sockets
-Unix Domain Sockets are used to communicate between server instances. The
-socket is not public and can only be accessed within the internal network.
+## Unix Domain Sockets (UDP)
+Unix Domain Sockets are used to communicate between server instances. 
+The socket can only be accessed within the internal network.
 
 ### Get all values
 From with server instance:
@@ -303,14 +303,16 @@ echo '{
 
 ### Set a value outside of instance
 ```bash
-multipass exec fusion1 -- bash -c "echo '{
+multipass exec fusion1 -- bash -c 'cat <<EOF | nc -u -w1 127.0.0.1 7947
+{
   "action": "set",
   "audio": {
     "settings": {
       "volume": 0.6
     }
   }
-}' | nc -u -w1 127.0.0.1 7947"
+}
+EOF'
 ```
 
 ## Updates

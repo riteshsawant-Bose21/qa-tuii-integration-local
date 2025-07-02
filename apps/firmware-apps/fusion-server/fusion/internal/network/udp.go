@@ -44,6 +44,7 @@ func NewUDPServer(addr string, handler *handler.Handler) (*UDPServer, error) {
 }
 
 func (s *UDPServer) BroadcastUpdate(msg *api.NotifyMessage) error {
+
 	if msg.Operation != api.NotifyOpConfigUpdate {
 		return nil
 	}
@@ -52,12 +53,17 @@ func (s *UDPServer) BroadcastUpdate(msg *api.NotifyMessage) error {
 		return fmt.Errorf("marshal update: %w", err)
 	}
 
+	logger := logging.GetLogger()
+
 	var dead []string
 	s.clientsMux.RLock()
 	for k, addr := range s.clients {
+
+		logging.GetLogger().Info("--------------->>> UDP BroadcastUpdate - WriteToUDP- ")
+
 		_, err := s.conn.WriteToUDP(data, addr)
 		if err != nil {
-			logging.GetLogger().Error("broadcast to %s failed: %v", k, err)
+			logger.Error("broadcast to %s failed: %v", k, err)
 			dead = append(dead, k)
 		}
 	}

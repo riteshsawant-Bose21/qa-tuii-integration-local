@@ -189,7 +189,7 @@ func (h *Handler) pruneExpiredSAPSessions() {
 // updateStateMap update the global state only if the node is primary
 func (h *Handler) updateStateMap() error {
 
-	if h.StateManager.GetNode() == h.Memberlist.LocalNode().Name {
+	if h.StateManager.GetNode() == h.memberlist.LocalNode().Name {
 		// All nodes are going to receive the SAP multicast messages.
 		// We only need the primary to set the state. It will naturally
 		// propogate across all nodes.

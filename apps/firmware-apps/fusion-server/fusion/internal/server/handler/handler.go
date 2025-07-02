@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/persistence"
+	"fusion/internal/pubsub"
 	"fusion/internal/utils"
 	"fusion/internal/version"
 	"sync"
@@ -13,28 +14,38 @@ import (
 
 // Handler is the container for server implimentations.
 type Handler struct {
-	broadcasters []Broadcaster
-	updater      *Updater
-	endpoints    []string
-	Memberlist   *memberlist.Memberlist
+	memberlist   *memberlist.Memberlist
 	persistence  *persistence.Persistence
 	StateManager *persistence.StateManager
+	updater      *Updater
+	hub          *pubsub.Hub
+	endpoints    []string
 	sessions     map[string]*SAPSession
 	sessionsLock sync.RWMutex
 }
 
-func NewHandler(memberlist *memberlist.Memberlist, persistence *persistence.Persistence, stateManager *persistence.StateManager, updater *Updater) *Handler {
+func NewHandler(
+	memberlist *memberlist.Memberlist,
+	persistence *persistence.Persistence,
+	stateManager *persistence.StateManager,
+	updater *Updater,
+	hub *pubsub.Hub) *Handler {
 	return &Handler{
-		Memberlist:   memberlist,
+		memberlist:   memberlist,
 		persistence:  persistence,
 		StateManager: stateManager,
 		updater:      updater,
+		hub:          hub,
 		sessions:     make(map[string]*SAPSession),
 	}
 }
 
 func (h *Handler) SetEndpoints(endpoints []string) {
 	h.endpoints = endpoints
+}
+
+func (h *Handler) SetMemberlist(memberlist *memberlist.Memberlist) {
+	h.memberlist = memberlist
 }
 
 func (h *Handler) GetInitialState() (WebSocketResponse, error) {
@@ -97,14 +108,18 @@ func (h *Handler) HandleClearAllData() error {
 	return nil
 }
 
+func (h *Handler) GetMembers() []*memberlist.Node {
+	return h.memberlist.Members()
+}
+
 func (h *Handler) GetServerInfo() (map[string]any, error) {
 	info := map[string]any{
 		"name":       "Fusion Server",
 		"version":    version.Version,
 		"commit":     version.Commit,
-		"build_time": version.BuildTime, "node_id": h.Memberlist.LocalNode().Name,
+		"build_time": version.BuildTime, "node_id": h.memberlist.LocalNode().Name,
 		"endpoints":          h.endpoints,
-		"cluster_size":       len(h.Memberlist.Members()),
+		"cluster_size":       len(h.memberlist.Members()),
 		"update_in_progress": h.updater.currentUpdate != nil,
 	}
 
@@ -141,7 +156,7 @@ func (h *Handler) handleConfigUpdate(data map[string]any, clear bool) error {
 
 	message := api.NewNotifyMessage(
 		api.NotifyOpConfigUpdate,
-		h.Memberlist.LocalNode().Name,
+		h.memberlist.LocalNode().Name,
 		api.WithConfigUpdate(configUpdate),
 	)
 

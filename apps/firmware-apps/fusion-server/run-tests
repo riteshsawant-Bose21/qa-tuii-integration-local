@@ -15,7 +15,6 @@ function show_help() {
     echo "  --snapshot    Run only snapshot tests"     
     echo "  --state       Run only state manager tests"     
     echo "  --tasks       Run only tasks tests"     
-    echo "  --udp         Run only UDP tests"     
     echo "  --updater     Run only updater tests"     
     echo "  --websocket   Run only websocket tests"     
     echo "  --vip         VIP address and port (default: 192.168.64.100:8080)"
@@ -76,10 +75,6 @@ while [[ $# -gt 0 ]]; do
             test_type="tasks"
             shift
             ;;
-        --udp)
-            test_type="udp"
-            shift
-            ;;
         --updater)
             test_type="updater"
             shift
@@ -138,9 +133,6 @@ case "$test_type" in
         ;;
     "tasks")
         go test -v --race ./tasks_test.go
-        ;;
-    "udp")
-        go test -v --race ./udp_test.go
         ;;
     "updater")
         go test -v --race ./updater_test.go

@@ -26,6 +26,9 @@ func NewMonitor(interval time.Duration, cb ChangeCallback) *Monitor {
 }
 
 func (m *Monitor) Start() error {
+
+	logger := logging.GetLogger()
+
 	ip, err := getLocalIP()
 	if err != nil {
 		return err
@@ -34,8 +37,6 @@ func (m *Monitor) Start() error {
 
 	m.wg.Add(1)
 	go func() {
-
-		logger := logging.GetLogger()
 
 		defer m.wg.Done()
 		ticker := time.NewTicker(m.interval)
@@ -51,7 +52,7 @@ func (m *Monitor) Start() error {
 				}
 
 				if current != m.lastIP {
-					logger.Debug("[ipwatcher] IP change detected: %s -> %s", m.lastIP, current)
+					logger.Debug("[NETWORK] IP change detected: %s -> %s", m.lastIP, current)
 					m.onChange(m.lastIP, current)
 					m.lastIP = current
 				}

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"runtime/debug"
 	"sync"
 	"time"
 
@@ -394,7 +395,7 @@ func (tm *TaskManager) wrapTask(task *api.Task, taskFunc func()) func() {
 		defer func() {
 			if r := recover(); r != nil {
 				tm.RecordExecution(task, "failed")
-				logger.Error("Task '%s' failed with panic: %v", task.ID, r)
+				logger.Error("Task '%s' failed with panic: %v\n%s", task.ID, r, debug.Stack())
 			}
 		}()
 		taskFunc()

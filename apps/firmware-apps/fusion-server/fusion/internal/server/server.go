@@ -15,11 +15,11 @@ import (
 	"fusion/internal/api"
 	"fusion/internal/logging"
 	"fusion/internal/persistence"
+	"fusion/internal/pubsub"
 	"fusion/internal/server/handler"
 	"fusion/internal/utils"
 
 	"github.com/gorilla/websocket"
-	"github.com/hashicorp/memberlist"
 )
 
 const (
@@ -31,17 +31,16 @@ const (
 
 // FusionServer handles networks connections to manage Fusion state.
 type FusionServer struct {
-	node        string
-	handler     *handler.Handler
-	wsClients   map[*websocket.Conn]bool
-	wsLock      sync.RWMutex
-	upgrader    websocket.Upgrader
-	clusterList *memberlist.Memberlist
+	node      string
+	handler   *handler.Handler
+	wsClients map[*websocket.Conn]bool
+	wsLock    sync.RWMutex
+	upgrader  websocket.Upgrader
 }
 
 // NewFusionServer creates and initializes a new configuration server with the provided node name,
 // handler and cluster member list. It also sets up a WebSocket upgrader with custom options.
-func NewFusionServer(node string, handler *handler.Handler, clusterList *memberlist.Memberlist) *FusionServer {
+func NewFusionServer(node string, handler *handler.Handler, hub *pubsub.Hub) *FusionServer {
 	server := &FusionServer{
 		node:      node,
 		handler:   handler,
@@ -55,9 +54,8 @@ func NewFusionServer(node string, handler *handler.Handler, clusterList *memberl
 			ReadBufferSize:    wsBufferSize,
 			WriteBufferSize:   wsBufferSize,
 		},
-		clusterList: clusterList,
 	}
-	handler.AddBroadcaster(server)
+	hub.Register(server)
 	return server
 }
 
@@ -596,7 +594,7 @@ func (s *FusionServer) GetMembers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve the list of members from the handler's member list.
-	members := s.handler.Memberlist.Members()
+	members := s.handler.GetMembers()
 	if err := json.NewEncoder(w).Encode(members); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
