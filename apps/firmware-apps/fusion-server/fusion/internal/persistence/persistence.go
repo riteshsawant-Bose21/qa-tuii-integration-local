@@ -9,7 +9,9 @@ import (
 	"fusion/internal/logging"
 	"fusion/internal/utils"
 	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 	"time"
 
 	"go.etcd.io/bbolt"
@@ -64,6 +66,14 @@ func NewPersistence(dbPath string, stateManager *StateManager) (*Persistence, er
 	if err := persistence.initializeDatabase(); err != nil {
 		return nil, err
 	}
+
+	// Save state on shutdown
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-c
+		persistence.SaveState()
+	}()
 
 	return persistence, nil
 }
