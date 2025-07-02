@@ -319,29 +319,6 @@ static int fusion_cn_pcm_interrupt(void *alsa_chip, int direction, const char *s
     return 0;
 }
 
-static uint32_t fusion_cn_get_stream_available_frames(void *alsa_chip, const char *stream_name)
-{
-    struct fusion_cn_chip *chip = alsa_chip;
-    unsigned long flags;
-    struct fusion_cn_substream *stream;
-    snd_pcm_sframes_t avail;
-
-    read_lock_irqsave(&chip->lock, flags);
-    stream = fusion_cn_find_substream(chip, stream_name);
-    if (!stream || !stream->substream) {
-        read_unlock_irqrestore(&chip->lock, flags);
-        printk(KERN_ERR "fusion_cn: get_stream_available_frames: Stream %s not found or no substream\n", stream_name);
-        return 0;
-    }
-    kref_get(&stream->ref);
-    spin_lock_irqsave(&stream->lock, flags);
-    avail = snd_pcm_playback_hw_avail(stream->substream->runtime);
-    spin_unlock_irqrestore(&stream->lock, flags);
-    read_unlock_irqrestore(&chip->lock, flags);
-    kref_put(&stream->ref, fusion_cn_substream_release);
-    return (uint32_t)avail;
-}
-
 static int fusion_cn_mute_stream_buffers(void *alsa_chip, const char *stream_name)
 {
     struct fusion_cn_chip *chip = alsa_chip;
@@ -377,6 +354,35 @@ static int fusion_cn_mute_stream_buffers(void *alsa_chip, const char *stream_nam
     spin_unlock_irqrestore(&stream->lock, flags);
     read_unlock_irqrestore(&chip->lock, flags);
     kref_put(&stream->ref, fusion_cn_substream_release);
+    return 0;
+}
+
+static int fusion_cn_set_buffer_pos(void *alsa_chip, uint32_t write_slot, const char *stream_name) {
+    struct fusion_cn_chip *chip = alsa_chip;
+    unsigned long flags;
+    struct fusion_cn_substream *stream;
+
+    read_lock_irqsave(&chip->lock, flags);
+    stream = fusion_cn_find_substream(chip, stream_name);
+    if (!stream || !stream->substream) {
+        read_unlock_irqrestore(&chip->lock, flags);
+        printk(KERN_WARNING "fusion_cn: set_buffer_pos: Invalid stream %s\n", stream_name);
+        return -EINVAL;
+    }
+    kref_get(&stream->ref);
+    read_unlock_irqrestore(&chip->lock, flags);
+
+    spin_lock_irq(&stream->lock);
+
+    stream->buffer_pos = write_slot * stream->rtp_frame_size;
+    stream->substream->runtime->status->hw_ptr = stream->buffer_pos;
+    stream->substream->runtime->control->appl_ptr = stream->buffer_pos;
+
+    spin_unlock_irq(&stream->lock);
+
+    kref_put(&stream->ref, fusion_cn_substream_release);
+
+    printk(KERN_INFO "fusion_cn: set_buffer_pos: stream %s pointers set to %lu\n", stream->stream_name, stream->buffer_pos);
     return 0;
 }
 
@@ -1041,8 +1047,8 @@ static struct fusion_cn_mgr_ops mgr_ops = {
     .pcm_interrupt = fusion_cn_pcm_interrupt,
     .open_substream = fusion_cn_open_substream,
     .remove_substream = fusion_cn_remove_substream,
-    .get_stream_available_frames = fusion_cn_get_stream_available_frames,
-    .mute_stream_buffers = fusion_cn_mute_stream_buffers
+    .mute_stream_buffers = fusion_cn_mute_stream_buffers,
+    .set_buffer_pos = fusion_cn_set_buffer_pos
 };
 
 static int fusion_cn_chip_probe(struct platform_device *pdev)

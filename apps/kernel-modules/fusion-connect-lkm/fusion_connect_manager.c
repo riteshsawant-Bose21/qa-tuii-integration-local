@@ -123,17 +123,10 @@ static uint32_t fusion_cn_rtp_ops_get_buffer_offset(void *cn_mgr, char *stream_n
     return mgr->alsa.mgr_callbacks->get_stream_buffer_offset(mgr->alsa.alsa_chip, stream_name);
 }
 
-static uint32_t fusion_cn_rtp_ops_get_avail_frames(void *cn_mgr, uint64_t handle, char *stream_name)
+int fusion_cn_rtp_ops_set_buffer_pos(void *cn_mgr, uint32_t write_slot, char *stream_name)
 {
     struct fusion_cn_manager *mgr = cn_mgr;
-    struct fusion_cn_rtp_stream *stream;
-    uint32_t size;
-
-    stream = fusion_cn_rtp_get_stream(&mgr->rtp, handle);
-    if (!stream) return 0;
-    size = mgr->alsa.mgr_callbacks->get_stream_available_frames(mgr->alsa.alsa_chip, stream_name);
-    kref_put(&stream->ref, fusion_cn_rtp_stream_release);
-    return size;
+    return mgr->alsa.mgr_callbacks->set_buffer_pos(mgr->alsa.alsa_chip, write_slot, stream_name);
 }
 
 static void process_active_streams(struct fusion_cn_manager *mgr) 
@@ -329,7 +322,7 @@ static struct fusion_cn_rtp_ops rtp_ops = {
     .get_buffer = fusion_cn_rtp_ops_get_buffer,
     .get_buffer_size_in_frames = fusion_cn_rtp_ops_get_buffer_size_in_frames,
     .get_buffer_offset = fusion_cn_rtp_ops_get_buffer_offset,
-    .get_avail_frames = fusion_cn_rtp_ops_get_avail_frames
+    .set_buffer_pos = fusion_cn_rtp_ops_set_buffer_pos
 };
 
 static int fusion_cn_alsa_init(struct fusion_cn_manager *mgr)

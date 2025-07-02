@@ -51,10 +51,10 @@ struct fusion_cn_stream_config {
 
 struct fusion_cn_rtp_ops {
     uint64_t (*get_phc_ns)(void);
-    void *(*get_buffer)(void *cn_mgr, char *name);
+    void     *(*get_buffer)(void *cn_mgr, char *name);
     uint32_t (*get_buffer_size_in_frames)(void *cn_mgr, char *name);
     uint32_t (*get_buffer_offset)(void *cn_mgr, char *name);
-    uint32_t (*get_avail_frames)(void *cn_mgr, uint64_t handle, char *name);
+    int      (*set_buffer_pos)(void *cn_mgr, uint32_t write_slot, char *name);
 };
 
 struct fusion_cn_rtp_header {

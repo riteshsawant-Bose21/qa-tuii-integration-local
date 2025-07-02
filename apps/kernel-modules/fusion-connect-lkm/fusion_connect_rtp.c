@@ -536,6 +536,9 @@ int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr,
 
             if (stream->playback_index == (frames_in_buf / stream->info.frames_per_packet)) {
                 stream->playback_index = write_slot;
+                if (rtp_mgr->ops->set_buffer_pos(rtp_mgr->cn_mgr, write_slot, stream->info.stream_name)) {
+                    printk(KERN_WARNING "fusion_cn_rtp: process_packet: set_buffer_pos failed!");
+                }
             }
 
             if (stream->current_seq_num != 0 && seq_num != stream->current_seq_num + 1) {
@@ -621,11 +624,9 @@ __always_inline void fusion_cn_rtp_send_packet(struct fusion_cn_rtp_manager *rtp
     void *packet;
     uint32_t size;
     struct fusion_cn_rtp_packet *rtp;
-    uint8_t *payload;
     uint32_t offset;
     int ret;
     int sample_physical_width_bits;
-    uint32_t avail_frames;
     uint64_t global_sac;
 
     if (!stream->info.is_source) return;
@@ -639,7 +640,6 @@ __always_inline void fusion_cn_rtp_send_packet(struct fusion_cn_rtp_manager *rtp
     size = sizeof(struct fusion_cn_rtp_packet) +
            stream->info.frames_per_packet * stream->info.channels * sample_physical_width_bits / 8;
 
-    avail_frames = rtp_mgr->ops->get_avail_frames(rtp_mgr->cn_mgr, stream->info.stream_handle, stream->info.stream_name);
     offset = rtp_mgr->ops->get_buffer_offset(rtp_mgr->cn_mgr, stream->info.stream_name);
 
     if (!fusion_cn_nf_create_packet(rtp_mgr->nf, &skb, &packet, &size) && size >= sizeof(struct fusion_cn_rtp_packet)) {
@@ -668,15 +668,12 @@ __always_inline void fusion_cn_rtp_send_packet(struct fusion_cn_rtp_manager *rtp
         if (rtp_mgr->debug) printk(KERN_DEBUG "fusion_cn_rtp: send_packet: Sending packet, stream %llu, next_action_time=%llu\n",
                stream->info.stream_handle, stream->next_action_time);
 
-        payload = (uint8_t *)packet + sizeof(*rtp);
-        // if we don't have enough audio, write out silence
-        // TODO remove avail frames stuff...
-        if (avail_frames < stream->info.frames_per_packet) {
-            memset(payload, 0, stream->info.frames_per_packet * stream->info.channels * sample_physical_width_bits / 8);
-        } else {
+        {
+            uint8_t *payload = (uint8_t *)packet + sizeof(*rtp);
             void *buf = rtp_mgr->ops->get_buffer(rtp_mgr->cn_mgr, stream->info.stream_name);
+
             memcpy(payload, buf + offset * stream->info.channels * sample_physical_width_bits / 8,
-                   stream->info.frames_per_packet * stream->info.channels * sample_physical_width_bits / 8);
+                    stream->info.frames_per_packet * stream->info.channels * sample_physical_width_bits / 8);
         }
 
         ret = fusion_cn_nf_tx_packet(rtp_mgr, skb, size);

@@ -34,8 +34,8 @@ struct fusion_cn_mgr_ops {
     int (*open_substream)(void *alsa_chip, uint64_t stream_handle, const char *stream_name, int direction, 
                           unsigned int channels, uint32_t rate, snd_pcm_format_t format);
     int (*remove_substream)(void *alsa_chip, const char *stream_name);
-    uint32_t (*get_stream_available_frames)(void *alsa_chip, const char *stream_name); // used but not important
     int (*mute_stream_buffers)(void *alsa_chip, const char *stream_name);
+    int (*set_buffer_pos)(void *alsa_chip, uint32_t write_slot, const char *stream_name);
 };
 
 struct fusion_cn_alsa_ops {
