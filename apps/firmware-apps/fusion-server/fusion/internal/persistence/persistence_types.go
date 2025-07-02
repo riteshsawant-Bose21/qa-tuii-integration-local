@@ -7,17 +7,19 @@ import (
 
 // DeviceInfo represents device configuration data.
 type DeviceInfo struct {
-	Address  string `json:"address"`
-	Id       string `json:"id"`
-	Location string `json:"location"`
-	Name     string `json:"name"`
+	Address     string `json:"address"`
+	Id          string `json:"id"`
+	Location    string `json:"location"`
+	Name        string `json:"name"`
+	XYTECloudID string `json:"xyte_cloud_id"`
 }
 
 // DevicePatch represents patchable device configuration data.
 type DevicePatch struct {
-	Id       *string `json:"id,omitempty"`
-	Location *string `json:"location,omitempty"`
-	Name     *string `json:"name,omitempty"`
+	Id          *string `json:"id,omitempty"`
+	Location    *string `json:"location,omitempty"`
+	Name        *string `json:"name,omitempty"`
+	XYTECloudID *string `json:"xyte_cloud_id,omitempty"`
 }
 
 // PersistentState represents the saved state structure.
