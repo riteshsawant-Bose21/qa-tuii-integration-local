@@ -331,8 +331,9 @@ private:
     bool mgr_started;
     std::string device_id;
     std::string system_ip;
+    std::map<std::string, fusion_cn_stream_config> fusion_connect_stream_map;
     std::map<std::string, fusion_cn_stream_config> aes67_stream_map;
-    std::vector<fusion_cn_stream_config> fusion_connect_stream_configs;
+    std::map<std::string, bool> pending_streams;
     std::string network_interface;
 
     std::string audio_streams_update;
@@ -584,20 +585,10 @@ void FusionConnectClient::audio_streams_update_func() {
                 }
                 if (config.source_ip == INADDR_NONE || config.dest_ip == INADDR_NONE) {
                     SPDLOG_ERROR("Invalid IP address for {}", config.stream_name);
-                } else {
-                    auto stream_it = std::find_if(fusion_connect_stream_configs.begin(), fusion_connect_stream_configs.end(),
-                        [&](const auto& cfg) {
-                            return cfg.source_port == config.source_port && cfg.channels == config.channels && cfg.is_source;
-                        });
-
-                    if (stream_it == fusion_connect_stream_configs.end()) {
-                        if (create_stream(config) == 0) {
-                            fusion_connect_stream_configs.push_back(config);
-                            SPDLOG_DEBUG("Created Fusion Connect source stream");
-                        } else {
-                            SPDLOG_ERROR("Failed to create Fusion Connect source stream");
-                        }
-                    }
+                } else if (fusion_connect_stream_map.find(config.stream_name) == fusion_connect_stream_map.end()) {
+                    fusion_connect_stream_map[config.stream_name] = config;
+                    pending_streams[config.stream_name] = false;
+                    SPDLOG_DEBUG("Added Fusion Connect source stream {} to pending", config.stream_name);
                     json_stream_names.insert(config.stream_name);
                 }
             }
@@ -620,20 +611,10 @@ void FusionConnectClient::audio_streams_update_func() {
                 config.dest_ip = inet_addr(system_ip.c_str());
                 if (config.source_ip == INADDR_NONE || config.dest_ip == INADDR_NONE) {
                     SPDLOG_ERROR("Invalid IP address for {}", config.stream_name);
-                } else {
-                    auto stream_it = std::find_if(fusion_connect_stream_configs.begin(), fusion_connect_stream_configs.end(),
-                        [&](const auto& cfg) {
-                            return cfg.source_port == config.source_port && cfg.channels == config.channels && !cfg.is_source;
-                        });
-
-                    if (stream_it == fusion_connect_stream_configs.end()) {
-                        if (create_stream(config) == 0) {
-                            fusion_connect_stream_configs.push_back(config);
-                            SPDLOG_DEBUG("Created Fusion Connect sink stream");
-                        } else {
-                            SPDLOG_ERROR("Failed to create Fusion Connect sink stream");
-                        }
-                    }
+                } else if (fusion_connect_stream_map.find(config.stream_name) == fusion_connect_stream_map.end()) {
+                    fusion_connect_stream_map[config.stream_name] = config;
+                    pending_streams[config.stream_name] = false;
+                    SPDLOG_DEBUG("Added Fusion Connect sink stream {} to pending", config.stream_name);
                     json_stream_names.insert(config.stream_name);
                 }
             }
@@ -689,31 +670,27 @@ void FusionConnectClient::audio_streams_update_func() {
             config.is_fusion_connect = is_fusion_connect;
 
             if (aes67_stream_map.find(stream_name) == aes67_stream_map.end()) {
-                if (create_stream(config) == 0) {
-                    if (!is_source) {
-                        join_multicast_group(config.dest_ip);
-                    }
-                    aes67_stream_map[stream_name] = config;
-                    SPDLOG_DEBUG("Created AES67 {} stream with name {}", is_source ? "source" : "sink", stream_name);
-                } else {
-                    SPDLOG_ERROR("Failed to create AES67 {} stream with name {}", is_source ? "source" : "sink", stream_name);
-                }
+                aes67_stream_map[stream_name] = config;
+                pending_streams[stream_name] = false;
+                SPDLOG_DEBUG("Added AES67 {} stream {} to pending", is_source ? "source" : "sink", stream_name);
             }
             json_stream_names.insert(stream_name);
         }
     }
 
     // Remove missing Fusion Connect streams
-    auto fc_it = fusion_connect_stream_configs.begin();
-    while (fc_it != fusion_connect_stream_configs.end()) {
-        if (json_stream_names.find(fc_it->stream_name) == json_stream_names.end()) {
-            if (remove_stream(fc_it->stream_handle) == 0) {
-                SPDLOG_DEBUG("Removed Fusion Connect stream with name {}", fc_it->stream_name);
-                fc_it = fusion_connect_stream_configs.erase(fc_it);
-            } else {
-                SPDLOG_ERROR("Failed to remove Fusion Connect stream with name {}", fc_it->stream_name);
-                ++fc_it;
+    auto fc_it = fusion_connect_stream_map.begin();
+    while (fc_it != fusion_connect_stream_map.end()) {
+        if (json_stream_names.find(fc_it->first) == json_stream_names.end()) {
+            if (pending_streams[fc_it->first]) {
+                if (remove_stream(fc_it->second.stream_handle) == 0) {
+                    SPDLOG_DEBUG("Removed Fusion Connect stream with name {}", fc_it->first);
+                } else {
+                    SPDLOG_ERROR("Failed to remove Fusion Connect stream with name {}", fc_it->first);
+                }
             }
+            pending_streams.erase(fc_it->first);
+            fc_it = fusion_connect_stream_map.erase(fc_it);
         } else {
             ++fc_it;
         }
@@ -723,13 +700,15 @@ void FusionConnectClient::audio_streams_update_func() {
     auto aes67_it = aes67_stream_map.begin();
     while (aes67_it != aes67_stream_map.end()) {
         if (json_stream_names.find(aes67_it->first) == json_stream_names.end()) {
-            if (remove_stream(aes67_it->second.stream_handle) == 0) {
-                SPDLOG_DEBUG("Removed AES67 stream with name {}", aes67_it->first);
-                aes67_it = aes67_stream_map.erase(aes67_it);
-            } else {
-                SPDLOG_ERROR("Failed to remove AES67 stream with name {}", aes67_it->first);
-                ++aes67_it;
+            if (pending_streams[aes67_it->first]) {
+                if (remove_stream(aes67_it->second.stream_handle) == 0) {
+                    SPDLOG_DEBUG("Removed AES67 stream with name {}", aes67_it->first);
+                } else {
+                    SPDLOG_ERROR("Failed to remove AES67 stream with name {}", aes67_it->first);
+                }
             }
+            pending_streams.erase(aes67_it->first);
+            aes67_it = aes67_stream_map.erase(aes67_it);
         } else {
             ++aes67_it;
         }
@@ -748,10 +727,10 @@ void FusionConnectClient::process() {
         uint8_t sync = 1;
         struct fusion_cn_ctrl_msg reply = { .cmd = 0, .err = 0, .data_size = 0, .data = nullptr, .pid = 0 };
         if (client.send_message(FUSION_CN_CTRL_CMD_SET_PTP_SYNC, &sync, sizeof(sync), &reply)) {
-            if (reply.err != 0) {
-                SPDLOG_ERROR("Failed to set ptp sync, err={}", reply.err);
-            } else {
+            if (reply.err == 0) {
                 ptp_synchronized = 1;
+            } else {
+                SPDLOG_ERROR("Failed to set ptp sync, err={}", reply.err);
             }
         } else {
             SPDLOG_DEBUG("Failed to send set ptp sync command (likely no driver)");
@@ -759,7 +738,8 @@ void FusionConnectClient::process() {
         if (reply.data) {
             free(reply.data);
         }
-    } else if (!mgr_started) {
+    } 
+    if (ptp_synchronized && !mgr_started) {
         struct fusion_cn_ctrl_msg reply = { .cmd = 0, .err = 0, .data_size = 0, .data = nullptr, .pid = 0 };
         if (client.send_message(FUSION_CN_CTRL_CMD_START_MANAGER, nullptr, 0, &reply)) {
             if (reply.err == -MGR_START_ERRNO_RUNNING) {
@@ -777,8 +757,36 @@ void FusionConnectClient::process() {
         }
     }
 
+    if (ptp_synchronized && mgr_started) {
+        for (auto& pair : fusion_connect_stream_map) {
+            if (!pending_streams[pair.first]) {
+                if (create_stream(pair.second) == 0) {
+                    pending_streams[pair.first] = true;
+                    SPDLOG_DEBUG("Created Fusion Connect stream {} in process loop", pair.first);
+                    if (!pair.second.is_source) {
+                        join_multicast_group(pair.second.dest_ip);
+                    }
+                } else {
+                    SPDLOG_ERROR("Failed to create Fusion Connect stream {} in process loop, will retry", pair.first);
+                }
+            }
+        }
+        for (auto& pair : aes67_stream_map) {
+            if (!pending_streams[pair.first]) {
+                if (create_stream(pair.second) == 0) {
+                    pending_streams[pair.first] = true;
+                    SPDLOG_DEBUG("Created AES67 stream {} in process loop", pair.first);
+                    if (!pair.second.is_source) {
+                        join_multicast_group(pair.second.dest_ip);
+                    }
+                } else {
+                    SPDLOG_ERROR("Failed to create AES67 stream {} in process loop, will retry", pair.first);
+                }
+            }
+        }
+    }
+
     // will do sap announcements
-    // need to count seconds (period time of this thread)
 }
 
 } // namespace
