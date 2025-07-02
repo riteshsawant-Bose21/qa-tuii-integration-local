@@ -197,7 +197,7 @@ void Agc::process()
             g_step *= -1.0f;
         }
 
-        if (std::abs(target - g) < (g_step / get_frame_size()))
+        if (std::abs(target - g) < (g_step * get_frame_size()))
         {
             g = target;
             g_step = 0.0f;
