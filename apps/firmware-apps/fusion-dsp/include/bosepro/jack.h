@@ -249,9 +249,9 @@ private:
     JackClient *client;
 
     bool is_input;
-    bosepro::DspParamMemory<std::string[]> port_connections;
+    bosepro::DspParamMemory<std::set<std::string>[]> port_connections;
 
-    void make_port_connection(int channel);
+    void make_port_connections(int channel);
 };
 
 

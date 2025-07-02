@@ -7,7 +7,7 @@ import groovy.json.JsonOutput
 def VERSION = ''
 def JobCleanup = new JenkinsJobCleanup()
 
-NEXUS_TARGET = "pro-fusion-local/Fusion-DSP/%s/%s"
+NEXUS_TARGET = "pro-fusion-local/Fusion-DSP/%s/%s/fusion-dsp/%s"
 
 pipeline {
 	agent { label 'pro-fusion-variscite-container' }
@@ -127,7 +127,7 @@ pipeline {
 				// 			filesToUpload.each { file ->
     //                                 				artifacts.add([artifactId: file.name.substring(0, file.name.lastIndexOf('_')), file: file.path, type: 'tar.gz'])
 				// 			}
-    						def targetPath = String.format(NEXUS_TARGET, env.BuildType, EMBEDDED_PATH_PART)
+    						def targetPath = String.format(NEXUS_TARGET, env.BuildType, EMBEDDED_PATH_PART, env.VERSION)
 				// 			nexusArtifactUploader(
 			 //                                   nexusVersion: 'nexus3',
 			 //                                   protocol: 'http',
