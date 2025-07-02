@@ -1,5 +1,5 @@
 {
-    "version": "0.1.2",
+    "version": "0.1.3",
     "algorithms": [
         {
             "name": "alsa_in",
@@ -198,7 +198,7 @@
                 {
                     "name": "bypass",
                     "value_type": "bool",
-                    "default_value": true
+                    "default_value": false
                 }
             ],
             "telemetry": [
