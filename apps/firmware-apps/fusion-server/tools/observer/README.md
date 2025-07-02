@@ -10,6 +10,7 @@ multipass launch -n arm-builder -c 2 -m 4G -d 10G --cloud-init - << EOF
 #cloud-config
 packages:
  - build-essential
+ - g++
  - g++-aarch64-linux-gnu
  - libjsoncpp-dev
 EOF

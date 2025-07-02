@@ -12,10 +12,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"slices"
 	"syscall"
 	"time"
-
-	"slices"
 
 	"github.com/hashicorp/memberlist"
 )
@@ -66,39 +65,44 @@ func CreateMemberlist(appConfig *api.AppConfig, delegate *ClusterDelegate) *memb
 // JoinMemberlist adds the node to the memberlist
 func (c *Cluster) JoinMemberlist() error {
 
+	// Determine other members to join
 	joinAddrs, err := c.getJoinAddresses(c.bindAddr)
 	if err != nil {
-		return err
+		return fmt.Errorf("getJoinAddresses: %w", err)
 	}
 
 	if len(joinAddrs) == 0 {
+		// This is the first node in the cluster
 		return nil
 	}
 
 	logger := logging.GetLogger()
+	var lastErr error
 
 	for attempt := range retryTimes {
-
+		// Try to join the cluster
 		_, err := c.Memberlist.Join(joinAddrs)
 		if err == nil {
 			members := c.Memberlist.Members()
 			logger.Info("[MEMBERLIST] Successfully joined cluster of size %d", len(members))
+
 			c.updateDeviceInfo()
 
 			if c.config.Verbose {
-				for _, member := range c.Memberlist.Members() {
+				for _, member := range members {
 					logger.Debug("[MEMBERLIST] %s (%s)\n", member.Name, member.Addr)
 				}
 			}
 			return nil
 		}
 
-		logger.Warn("[MEMBERLIST] Join attempt %d failed: %v", attempt+1, err)
-
+		lastErr = err
+		logger.Warn("[MEMBERLIST] Join attempt %d/%d failed: %v",
+			attempt+1, retryTimes, err)
 		time.Sleep(retryInterval)
 	}
 
-	return fmt.Errorf("failed to join cluster after retries: %d: %v", retryTimes, err)
+	return fmt.Errorf("failed to join cluster after %d attempts: %w", retryTimes, lastErr)
 }
 
 // isMember returns true if the address is a member of the memberlist
@@ -124,17 +128,24 @@ func (c *Cluster) GetLiveNodeAddresses() ([]string, error) {
 		}
 		return nil, fmt.Errorf("unable to get members from VIP %s: %w", url, err)
 	}
-
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		// Assume the admin API isn't ready yet.
+		return []string{}, nil
+	}
+
+	logger := logging.GetLogger()
 
 	var members []*memberlist.Node
 	if err := json.NewDecoder(resp.Body).Decode(&members); err != nil {
-		return nil, fmt.Errorf("failed to decode members: %w", err)
+		logger.Warn("GetLiveNodeAddresses: invalid JSON from %s: %v", url, err)
+		return []string{}, nil
 	}
 
 	if c.config.Verbose {
 		for _, m := range members {
-			logging.GetLogger().Debug("[MEMBERLIST] Found node: %s (%s), state=%v", m.Name, m.Addr.String(), m.State)
+			logger.Debug("[MEMBERLIST] Found node: %s (%s), state=%v", m.Name, m.Addr.String(), m.State)
 		}
 	}
 

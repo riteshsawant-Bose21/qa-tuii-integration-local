@@ -207,6 +207,8 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 	default:
 		logger.Error("Unknown message type: %q", message.Operation)
 	}
+
+	d.persistence.MarkDirty()
 }
 
 func (d *ClusterDelegate) GetBroadcasts(overhead, limit int) [][]byte {

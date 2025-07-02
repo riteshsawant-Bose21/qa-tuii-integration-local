@@ -63,7 +63,7 @@ func StartVRRPListener(onUpdate func(string)) error {
 					onUpdate(vip)
 				}
 			} else {
-				logger.Error("VRRP parse error: %v", err)
+				logger.Debug("VRRP listener: %v", err)
 			}
 		}
 	}()

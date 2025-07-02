@@ -20,7 +20,6 @@ import (
 )
 
 const (
-	localConf    = "keepalived.conf"
 	serverPrefix = "fusion"
 )
 
@@ -331,6 +330,12 @@ func (c *Cluster) reloadVIP() error {
 		return err
 	}
 
+	// After reload, attempt to join the gossip ring so cluster size grows
+	logger := logging.GetLogger()
+	if err := c.JoinMemberlist(); err != nil {
+		logger.Error("JoinMemberlist after reloadVIP: %v", err)
+	}
+
 	logging.GetLogger().Debug("Reloaded VIP")
 
 	return nil
@@ -520,8 +525,7 @@ func setVIPInLocalConfig(newVIP string) error {
 		return fmt.Errorf("cannot create local config directory: %w", err)
 	}
 
-	// 3) write the single‐line file
-	path := filepath.Join(dir, localConf)
+	path := filepath.Join(dir, ConfFile)
 	data := []byte(newVIP + "\n")
 	if err := os.WriteFile(path, data, 0o644); err != nil {
 		return fmt.Errorf("cannot write local VIP file: %w", err)
@@ -539,7 +543,7 @@ func (c *Cluster) getVIPInLocalConfig(w http.ResponseWriter) {
 			http.StatusInternalServerError)
 		return
 	}
-	localPath := filepath.Join(cfgDir, serverPrefix, localConf)
+	localPath := filepath.Join(cfgDir, serverPrefix, ConfFile)
 
 	f, err := os.Open(localPath)
 	if err != nil {

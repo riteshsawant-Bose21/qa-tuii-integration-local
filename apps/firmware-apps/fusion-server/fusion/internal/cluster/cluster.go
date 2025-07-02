@@ -18,6 +18,8 @@ import (
 )
 
 const (
+	ConfFile        = "keepalived.conf"
+	configPath      = "/etc/keepalived/" + ConfFile
 	monitorInterval = 10 * time.Second
 )
 
@@ -67,7 +69,7 @@ func NewCluster(appConfig *api.AppConfig, delegate *ClusterDelegate, memberlist 
 		delegate:         delegate,
 		config:           appConfig,
 		Memberlist:       memberlist,
-		configPath:       "/etc/keepalived/keepalived.conf",
+		configPath:       configPath,
 		Metrics:          NewMetricsCollector(memberlist, delegate.stateManager),
 		networkLatencies: NewNetworkLatencyStore(maxLatencyCount, latencyPruneTime),
 	}
@@ -75,24 +77,32 @@ func NewCluster(appConfig *api.AppConfig, delegate *ClusterDelegate, memberlist 
 	if !cluster.config.Local {
 		logger := logging.GetLogger()
 
-		if err := cluster.startVRRPListener(); err != nil {
-			logger.Fatal("Failed to start VRRP listener: %v", err)
-		}
+		if vips, err := cluster.getVIPFromConfig(); err != nil {
+			logger.Fatal("getVIPFromConfig: %v", err)
+		} else {
+			for _, vip := range vips {
+				if cluster.isLocalVIP(vip) {
 
-		vips, err := cluster.getVIPFromConfig()
-		if err != nil {
-			logger.Fatal("Failed to get VIP: %v", err)
-		}
+					cluster.vipLock.Lock()
+					cluster.vip = vip
+					cluster.vipLock.Unlock()
 
-		for _, vip := range vips {
-			if isVip := cluster.isLocalVIP(vip); isVip {
-				if err := cluster.delegate.taskManager.Start(); err != nil {
-					logger.Fatal("Failed to start TaskManger: %v", err)
-				} else {
-					logger.Info("TaskManager running on %s", appConfig.NodeName)
+					// Start the TaskManager
+					if err := cluster.delegate.taskManager.Start(); err != nil {
+						logger.Fatal("TaskManager.Start: %v", err)
+					}
+					logger.Info("TaskManager running on %s", cluster.nodeName)
+					break
 				}
-				break
 			}
+		}
+
+		if err := cluster.startVRRPListener(); err != nil {
+			logger.Fatal("startVRRPListener: %v", err)
+		}
+
+		if err := cluster.JoinMemberlist(); err != nil {
+			logger.Error("initial JoinMemberlist: %v", err)
 		}
 	}
 
@@ -144,24 +154,51 @@ func (c *Cluster) getClusterIPs() []string {
 func (c *Cluster) listenerUpdated(vip string) {
 
 	logger := logging.GetLogger()
-	logger.Debug("New VIP detected: %s", vip)
 
+	// Serialize the rewrite/reload sequence
 	c.vipLock.Lock()
+	if vip == "" || vip == c.vip {
+		c.vipLock.Unlock()
+		return
+	}
+	old := c.vip
 	c.vip = vip
-	c.vipLock.Unlock()
 
-	member, err := c.isMember()
-	if err != nil {
-		logger.Error("Unable to determine membership: %v", err)
+	if old != "" && old != vip && !c.isLocalVIP(vip) {
+		logger.Debug("Lost VIP %s → %s", old, vip)
+		c.delegate.taskManager.Stop()
 	}
 
-	if member {
-		logger.Debug("%s already a member", c.nodeName)
-	} else {
-		if err = c.JoinMemberlist(); err != nil {
-			logger.Error("Unable to join memberlist: %v", err)
+	if err := c.updateVIP(vip); err != nil {
+		logger.Error("updateVIP(%q): %v", vip, err)
+		c.vipLock.Unlock()
+		return
+	}
+
+	if err := c.reloadVIP(); err != nil {
+		logger.Error("reloadVIP: %v", err)
+		c.vipLock.Unlock()
+		return
+	}
+	c.vipLock.Unlock()
+
+	logger.Debug("New VIP detected: %q → %q", old, vip)
+
+	if c.isLocalVIP(vip) {
+		if member, err := c.isMember(); err != nil {
+			logger.Error("isMember: %v", err)
+		} else if !member {
+			if err := c.JoinMemberlist(); err != nil {
+				logger.Error("JoinMemberlist: %v", err)
+			} else {
+				logger.Debug("Joined memberlist with VIP %s", vip)
+			}
+		}
+
+		if err := c.delegate.taskManager.Start(); err != nil {
+			logger.Error("TaskManager start: %v", err)
 		} else {
-			logger.Info("%s [%s] joined memberlist with VIP: %s", c.nodeName, c.bindAddr, c.vip)
+			logger.Debug("TaskManager running on %s", c.nodeName)
 		}
 	}
 }

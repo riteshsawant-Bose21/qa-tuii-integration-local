@@ -1087,11 +1087,10 @@ func TestStateConsistency(t *testing.T) {
 // TestClearEndpoint verifies that data is cleared on all nodes
 func TestClearEndpoint(t *testing.T) {
 
-	req, err := http.NewRequest("DELETE", fmt.Sprintf("%s/value", serverAddr), nil)
+	req, err := http.NewRequest("DELETE", fmt.Sprintf("%s/value", clusterConfig.vip), nil)
 	if err != nil {
 		t.Fatalf("Failed to create DELETE request: %v", err)
 	}
-
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -1104,13 +1103,29 @@ func TestClearEndpoint(t *testing.T) {
 		t.Fatalf("Unexpected status code: %d, response: %s", resp.StatusCode, string(body))
 	}
 
-	// Verify the update
-	getValue, err := http.Get(fmt.Sprintf("%s/value", serverAddr))
-	if err != nil {
-		t.Fatalf("Failed to get updated value: %v", err)
-	}
-	defer getValue.Body.Close()
+	// Verify on every node that /value returns an empty map
+	for _, node := range append(clusterConfig.nodes, clusterNode{address: clusterConfig.vip}) {
+		t.Run("Clear on "+node.address, func(t *testing.T) {
+			getResp, err := http.Get(fmt.Sprintf("%s/value", node.address))
+			if err != nil {
+				t.Fatalf("GET after clear failed on %s: %v", node.address, err)
+			}
+			defer getResp.Body.Close()
 
+			if getResp.StatusCode != http.StatusOK {
+				t.Errorf("Expected 200 OK from %s, got %d", node.address, getResp.StatusCode)
+				return
+			}
+
+			var data map[string]any
+			if err := json.NewDecoder(getResp.Body).Decode(&data); err != nil {
+				t.Fatalf("Failed to decode GET response from %s: %v", node.address, err)
+			}
+			if len(data) != 0 {
+				t.Errorf("Data was not cleared on %s: got %v", node.address, data)
+			}
+		})
+	}
 }
 
 // TestUDPGet runs the "get" command inside the default instance.

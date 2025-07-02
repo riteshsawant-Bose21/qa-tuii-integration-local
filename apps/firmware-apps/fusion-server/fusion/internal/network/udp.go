@@ -58,9 +58,6 @@ func (s *UDPServer) BroadcastUpdate(msg *api.NotifyMessage) error {
 	var dead []string
 	s.clientsMux.RLock()
 	for k, addr := range s.clients {
-
-		logging.GetLogger().Info("--------------->>> UDP BroadcastUpdate - WriteToUDP- ")
-
 		_, err := s.conn.WriteToUDP(data, addr)
 		if err != nil {
 			logger.Error("broadcast to %s failed: %v", k, err)
