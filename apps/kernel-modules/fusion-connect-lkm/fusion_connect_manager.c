@@ -183,22 +183,21 @@ static void process_active_streams(struct fusion_cn_manager *mgr)
             if (stream->next_action_time == 0) {
                 // Align to the next tick
                 stream->next_action_time = mgr->ptp.hrtimer_last_tick_ns;
-            } else {
-                // account for packet times smaller than timer tick--regularly will have to spit a couple packets out
-                while (stream->next_action_time <= mgr->ptp.hrtimer_last_tick_ns) {
-                    fusion_cn_rtp_send_packet(&mgr->rtp, stream);
-                    mgr->alsa.mgr_callbacks->pcm_interrupt(mgr->alsa.alsa_chip, SNDRV_PCM_STREAM_PLAYBACK, stream->info.stream_name);
+            }
+            // account for packet times smaller than timer tick--regularly will have to spit a couple packets out
+            while (stream->next_action_time <= mgr->ptp.hrtimer_last_tick_ns) {
+                fusion_cn_rtp_send_packet(&mgr->rtp, stream);
+                mgr->alsa.mgr_callbacks->pcm_interrupt(mgr->alsa.alsa_chip, SNDRV_PCM_STREAM_PLAYBACK, stream->info.stream_name);
 
-                    if (mgr->debug) printk(KERN_DEBUG "fusion_cn: audio_frame_process: FC source stream %llu, next_tick=%llu, next_action_time=%llu\n",
-                        handle, mgr->ptp.hrtimer_last_tick_ns, stream->next_action_time);
-            
-                    // 4, 1, & 1/3 ms will be dead on the timer ticks
-                    // anything less that 1/3 will be off grid
-                    if (stream->packet_time == TIMER_BASE_INTERVAL_NS) {
-                        stream->next_action_time = mgr->ptp.hrtimer_next_tick_ns;
-                    } else {
-                        stream->next_action_time += stream->packet_time;
-                    }
+                if (mgr->debug) printk(KERN_DEBUG "fusion_cn: audio_frame_process: FC source stream %llu, next_tick=%llu, next_action_time=%llu\n",
+                    handle, mgr->ptp.hrtimer_last_tick_ns, stream->next_action_time);
+        
+                // 4, 1, & 1/3 ms will be dead on the timer ticks
+                // anything less that 1/3 will be off grid
+                if (stream->packet_time == TIMER_BASE_INTERVAL_NS) {
+                    stream->next_action_time = mgr->ptp.hrtimer_next_tick_ns;
+                } else {
+                    stream->next_action_time += stream->packet_time;
                 }
             }
             
@@ -249,22 +248,21 @@ static void process_active_streams(struct fusion_cn_manager *mgr)
             if (stream->next_action_time == 0) {
                 // Align to the next tick
                 stream->next_action_time = mgr->ptp.hrtimer_last_tick_ns;
-            } else {
-                // account for packet times smaller than timer tick--regularly will have to spit a couple packets out
-                while (stream->next_action_time <= mgr->ptp.hrtimer_last_tick_ns) {
-                    fusion_cn_rtp_send_packet(&mgr->rtp, stream);
-                    mgr->alsa.mgr_callbacks->pcm_interrupt(mgr->alsa.alsa_chip, SNDRV_PCM_STREAM_PLAYBACK, stream->info.stream_name);
+            } 
+            // account for packet times smaller than timer tick--regularly will have to spit a couple packets out
+            while (stream->next_action_time <= mgr->ptp.hrtimer_last_tick_ns) {
+                fusion_cn_rtp_send_packet(&mgr->rtp, stream);
+                mgr->alsa.mgr_callbacks->pcm_interrupt(mgr->alsa.alsa_chip, SNDRV_PCM_STREAM_PLAYBACK, stream->info.stream_name);
 
-                    if (mgr->debug) printk(KERN_DEBUG "fusion_cn: audio_frame_process: AES67 source stream %llu, next_tick=%llu, next_action_time=%llu\n",
-                        handle, mgr->ptp.hrtimer_last_tick_ns, stream->next_action_time);
-            
-                    // 4, 1, & 1/3 ms will be dead on the timer ticks
-                    // anything less that 1/3 will be off grid
-                    if (stream->packet_time == TIMER_BASE_INTERVAL_NS) {
-                        stream->next_action_time = mgr->ptp.hrtimer_next_tick_ns;
-                    } else {
-                        stream->next_action_time += stream->packet_time;
-                    }
+                if (mgr->debug) printk(KERN_DEBUG "fusion_cn: audio_frame_process: AES67 source stream %llu, next_tick=%llu, next_action_time=%llu\n",
+                    handle, mgr->ptp.hrtimer_last_tick_ns, stream->next_action_time);
+        
+                // 4, 1, & 1/3 ms will be dead on the timer ticks
+                // anything less that 1/3 will be off grid
+                if (stream->packet_time == TIMER_BASE_INTERVAL_NS) {
+                    stream->next_action_time = mgr->ptp.hrtimer_next_tick_ns;
+                } else {
+                    stream->next_action_time += stream->packet_time;
                 }
             }
 

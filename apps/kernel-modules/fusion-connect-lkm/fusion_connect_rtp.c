@@ -576,6 +576,7 @@ int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr,
                        len2 * stream->info.channels * sample_physical_width_bits / 8);
             }
 
+            // TODO: fix with new math from send packet
             rtp_timestamp = swab32(packet->rtp.timestamp);
             current_phc_ns = rtp_mgr->ops->get_phc_ns();
             current_sac = current_phc_ns / stream->ns_per_sample;
@@ -659,14 +660,15 @@ __always_inline void fusion_cn_rtp_send_packet(struct fusion_cn_rtp_manager *rtp
         // Set the network header to point to the IP header (after Ethernet header)
         skb_set_network_header(skb, ETH_HLEN);
         skb->protocol = htons(ETH_P_IP);
-
+        
         // Calculate RTP timestamp using absolute next_action_time (in sample units)
-        global_sac = stream->next_action_time / stream->ns_per_sample;
+        // TODO: only works for 48k
+        global_sac = (((stream->next_action_time >> 2) * 3) / 15625);
         rtp->rtp.timestamp = swab32((uint32_t)(global_sac + stream->info.timestamp_offset));
         rtp->rtp.seq_num = swab16(stream->outgoing_seq_num++);
 
-        if (rtp_mgr->debug) printk(KERN_DEBUG "fusion_cn_rtp: send_packet: Sending packet, stream %llu, next_action_time=%llu\n",
-               stream->info.stream_handle, stream->next_action_time);
+        if (rtp_mgr->debug) printk(KERN_DEBUG "fusion_cn_rtp: send_packet: Sending packet, stream %llu, next_action_time=%llu, phc=%llu, timestamp=%u\n",
+               stream->info.stream_handle, stream->next_action_time, rtp_mgr->ops->get_phc_ns(), (uint32_t)global_sac);
 
         {
             uint8_t *payload = (uint8_t *)packet + sizeof(*rtp);
