@@ -563,7 +563,7 @@ void FusionConnectClient::audio_streams_update_func() {
             config.frames_per_packet = 48;
             config.dest_port = 5004;
             config.payload_type = 96;
-            config.playout_delay = 2000000;
+            config.playout_delay = 1000000;
             config.timestamp_offset = 0;
             config.is_fusion_connect = true;
 
@@ -642,11 +642,6 @@ void FusionConnectClient::audio_streams_update_func() {
             }
             bool is_source = properties.isMember("is_source") && properties["is_source"].isBool() ? properties["is_source"].asBool() : false;
 
-            if (is_source && (!properties.isMember("source_port") || !properties["source_port"].isInt())) {
-                SPDLOG_ERROR("Missing or invalid source_port for AES67 source stream");
-                continue;
-            }
-
             strncpy(config.stream_name, stream_name.c_str(), sizeof(config.stream_name) - 1);
             config.stream_name[sizeof(config.stream_name) - 1] = '\0';
             config.dest_ip = inet_addr(properties["dest_ip"].asString().c_str());
@@ -657,17 +652,31 @@ void FusionConnectClient::audio_streams_update_func() {
 
             config.channels = ch;
             config.dest_port = 5004;
-            unsigned int port = properties["source_port"].asInt();
-            config.source_port = (port >= 49152 && port <= 65535) ? port : 49152;
+            config.source_port = 49152;
             config.sample_rate = 48000;
             config.format = 33; // S24_3BE
             config.frames_per_packet = 48;
-            config.payload_type = 97;
-            config.playout_delay = 2000000;
+            config.payload_type = 96;
+            config.playout_delay = 0;
             config.timestamp_offset = 0;
             config.source_ip = inet_addr(system_ip.c_str());
             config.is_source = is_source;
             config.is_fusion_connect = is_fusion_connect;
+
+            if (properties.isMember("source_port")) {
+                config.source_port = properties["source_port"].asUInt();
+            }
+
+            if (properties.isMember("payload_type")) {
+                config.payload_type = properties["payload_type"].asUInt();
+                if (config.payload_type < 96 || config.payload_type > 127) {
+                    config.payload_type = 96;
+                }
+            }
+
+            if (properties.isMember("timestamp_offset")) {
+                config.timestamp_offset = properties["timestamp_offset"].asUInt();
+            }
 
             if (aes67_stream_map.find(stream_name) == aes67_stream_map.end()) {
                 aes67_stream_map[stream_name] = config;
