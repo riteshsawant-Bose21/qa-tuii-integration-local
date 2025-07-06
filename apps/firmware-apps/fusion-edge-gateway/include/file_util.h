@@ -9,6 +9,9 @@
 #include <sys/stat.h>
 #include <vector>
 #include <fstream>
+#include <sys/statvfs.h>
+#include <thread>
+#include <chrono>
 
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
@@ -96,3 +99,10 @@ std::string escapeJsonCharacters(const std::string &strBase);
  * runSystemCommand - Run a system command and return the result.
  */
 int runSystemCommand(const std::string &cmd);
+
+std::string get_serial_id();
+int getRAMUsedPercent();
+int getSystemLoadPercent();
+int getDiskUsagePercent(const std::string& path = "/");
+int getCpuUsagePercent();
+int getCPUTemperature();

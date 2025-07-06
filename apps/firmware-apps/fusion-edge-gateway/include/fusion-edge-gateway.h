@@ -46,7 +46,7 @@ private:
     string hardwareKey = "a4dfe376-81a9-44bf-b3bd-f7c6c3c2dc67"; // Hardware Key
     int regRetry = 5; // Retry interval for registration in seconds
     string firmwareVersion = "1.0.0"; // Firmware Version
-    string serialId = "my-serial-id"; // Serial ID
+    string serialId = get_serial_id(); // Serial ID
     string deviceName = "Fusion-Test-Device"; // Device Name
     string log_config_path = "/mnt/cfg/log.cfg";
     string xyte_devices_path = "/mnt/cfg/xyte-devices.json"; // Path to the device info file

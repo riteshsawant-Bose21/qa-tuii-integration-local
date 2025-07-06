@@ -153,3 +153,99 @@ int runSystemCommand(const std::string &cmd)
     return 0;
 }
 
+std::string get_serial_id()
+{
+    std::ifstream file("/sys/firmware/devicetree/base/serial-number", std::ios::in | std::ios::binary);
+    if (!file) {
+        spdlog::error("Error: Cannot open serial-number file.");
+        return "SERIAL_ID_NOT_SET";
+    }
+
+    std::string serial;
+    std::getline(file, serial, '\0');  // Read until null terminator
+    return serial.empty() ? "SERIAL_ID_NOT_SET" : serial;
+}
+
+int getRAMUsedPercent()
+{
+    std::ifstream meminfo("/proc/meminfo");
+    std::string line;
+    long totalMem = 0, freeMem = 0, buffers = 0, cached = 0;
+
+    while (std::getline(meminfo, line)) {
+        std::istringstream iss(line);
+        std::string key;
+        long value;
+        std::string unit;
+        iss >> key >> value >> unit;
+
+        if (key == "MemTotal:") totalMem = value;
+        else if (key == "MemFree:") freeMem = value;
+        else if (key == "Buffers:") buffers = value;
+        else if (key == "Cached:") cached = value;
+
+        if (totalMem && freeMem && buffers && cached) break;
+    }
+
+    long usedMem = totalMem - freeMem - buffers - cached;
+    return (int)((usedMem * 100) / totalMem);
+}
+
+int getSystemLoadPercent()
+{
+    std::ifstream loadavg("/proc/loadavg");
+    float load1min = 0;
+    loadavg >> load1min;
+
+    int cores = std::thread::hardware_concurrency();
+    if (cores == 0) cores = 1;
+
+    return (int)((load1min / cores) * 100);
+}
+
+int getDiskUsagePercent(const std::string& path)
+{
+    struct statvfs stat;
+    if (statvfs(path.c_str(), &stat) != 0) return -1;
+
+    unsigned long long total = stat.f_blocks * stat.f_frsize;
+    unsigned long long free = stat.f_bfree * stat.f_frsize;
+    unsigned long long used = total - free;
+
+    return (int)((used * 100) / total);
+}
+
+int getCpuUsagePercent()
+{
+    auto readCpuStat = []() -> std::vector<unsigned long long> {
+        std::ifstream file("/proc/stat");
+        std::string cpu;
+        unsigned long long user, nice, system, idle, iowait, irq, softirq, steal;
+        file >> cpu >> user >> nice >> system >> idle >> iowait >> irq >> softirq >> steal;
+        return {user, nice, system, idle, iowait, irq, softirq, steal};
+    };
+
+    auto prev = readCpuStat();
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    auto curr = readCpuStat();
+
+    unsigned long long prevIdle = prev[3] + prev[4];
+    unsigned long long currIdle = curr[3] + curr[4];
+
+    unsigned long long prevTotal = std::accumulate(prev.begin(), prev.end(), 0ULL);
+    unsigned long long currTotal = std::accumulate(curr.begin(), curr.end(), 0ULL);
+
+    unsigned long long totald = currTotal - prevTotal;
+    unsigned long long idled = currIdle - prevIdle;
+
+    return (int)(((totald - idled) * 100) / totald);
+}
+
+int getCPUTemperature()
+{
+    std::ifstream file("/sys/class/thermal/thermal_zone0/temp");
+    int tempMilliC = 0;
+    file >> tempMilliC;
+    return tempMilliC / 1000; // Convert to °C
+}
+

@@ -33,7 +33,7 @@ int FusionEdgeGateway::registerDevice() {
     string cloudId = makeCloudId(partner_id);
 
     json reg_json = {
-        {"hardware_key", hardwareKey},// Physical devices (self/parent) use hardware keys. 
+        {"hardware_key", hardwareKey},
         {"cloud_id", cloudId},
         {"firmware_version", firmwareVersion},
         {"sn", serialId},
@@ -270,12 +270,6 @@ int FusionEdgeGateway::run() {
     // Create the WebClient after logging is configured.
     wc = std::make_unique<WebClient>();
 
-    // update certificate path for connection
-    if(wc->SetCertificateChain(ca_cert_path) != WEB_CLIENT_OK){
-        spdlog::critical("Exit now, WebClient setup failed: {}", "certs");
-        return 1;
-    }
-
     waitForServer();
 
     if(fileExists(xyte_devices_path)) {
@@ -308,10 +302,13 @@ int FusionEdgeGateway::run() {
         }
 
         json telemetryJson;
-        telemetryJson["status"] = "online"; // Example telemetry data
-        telemetryJson["telemetries"] = {
-            {"ram_used", 25}, // Example telemetry data
-            {"system_load", 75} // Example telemetry data
+        telemetryJson["status"] = "online";
+        telemetryJson["telemetries"] = json{
+            {"ram_used", getRAMUsedPercent()},
+            {"disk_used", getDiskUsagePercent()},
+            {"cpu_temp", getCPUTemperature()},
+            {"system_load", getSystemLoadPercent()},
+            {"cpu_usage", getCpuUsagePercent()},
         };
 
         if (sendTelemetry(telemetryJson) != 0) {
