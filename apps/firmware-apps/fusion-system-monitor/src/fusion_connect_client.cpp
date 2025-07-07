@@ -1,5 +1,6 @@
 #include <bosepro/module.h>
 #include <bosepro/periodic_task.h>
+#include <bosepro/sap_announcer.h>
 #include <cstdint>
 #include <string>
 #include <sstream>
@@ -30,6 +31,13 @@ enum fusion_cn_ctrl_cmd {
     FUSION_CN_CTRL_CMD_SET_PTP_SYNC,
     FUSION_CN_CTRL_CMD_ADD_STREAM,
     FUSION_CN_CTRL_CMD_REMOVE_STREAM
+};
+
+enum mgr_start_errno {
+    MGR_START_OK = 0,
+    MGR_START_ERRNO_RUNNING,
+    MGR_START_ERRNO_PTP,
+    MGR_START_ERRNO_MODE
 };
 
 struct fusion_cn_ctrl_msg {
@@ -67,22 +75,22 @@ std::string ipToString(uint32_t ip) {
 
 // Function to dump fusion_cn_stream_config struct
 void dump_fusion_cn_stream_config(const fusion_cn_stream_config& config) {
-    std::cout << "Fusion CN Stream Config Dump:" << std::endl;
-    std::cout << "  Stream Handle: " << config.stream_handle << std::endl;
-    std::cout << "  Stream Name: " << config.stream_name << std::endl;
-    std::cout << "  Sample Rate: " << config.sample_rate << " Hz" << std::endl;
-    std::cout << "  Format: " << config.format << std::endl;
-    std::cout << "  Channels: " << static_cast<int>(config.channels) << std::endl;
-    std::cout << "  Frames per Packet: " << config.frames_per_packet << std::endl;
-    std::cout << "  Dest IP: " << ipToString(config.dest_ip) << std::endl;
-    std::cout << "  Dest Port: " << config.dest_port << std::endl;
-    std::cout << "  Source Port: " << config.source_port << std::endl;
-    std::cout << "  Source IP: " << ipToString(config.source_ip) << std::endl;
-    std::cout << "  Payload Type: " << static_cast<int>(config.payload_type) << std::endl;
-    std::cout << "  Playout Delay: " << config.playout_delay << std::endl;
-    std::cout << "  Timestamp Offset: " << config.timestamp_offset << std::endl;
-    std::cout << "  Is Source: " << (config.is_source ? "true" : "false") << std::endl;
-    std::cout << "  Is Fusion Connect: " << (config.is_fusion_connect ? "true" : "false") << std::endl;
+    SPDLOG_INFO("Fusion CN Stream Config Dump:");
+    SPDLOG_INFO("  Stream Handle: {}", config.stream_handle);
+    SPDLOG_INFO("  Stream Name: {}", config.stream_name);
+    SPDLOG_INFO("  Sample Rate: {} Hz", config.sample_rate);
+    SPDLOG_INFO("  Format: {}", config.format);
+    SPDLOG_INFO("  Channels: {}", static_cast<int>(config.channels));
+    SPDLOG_INFO("  Frames per Packet: {}", config.frames_per_packet);
+    SPDLOG_INFO("  Dest IP: {}", ipToString(config.dest_ip));
+    SPDLOG_INFO("  Dest Port: {}", config.dest_port);
+    SPDLOG_INFO("  Source Port: {}", config.source_port);
+    SPDLOG_INFO("  Source IP: {}", ipToString(config.source_ip));
+    SPDLOG_INFO("  Payload Type: {}", static_cast<int>(config.payload_type));
+    SPDLOG_INFO("  Playout Delay: {}", config.playout_delay);
+    SPDLOG_INFO("  Timestamp Offset: {}", config.timestamp_offset);
+    SPDLOG_INFO("  Is Source: {}", config.is_source ? "true" : "false");
+    SPDLOG_INFO("  Is Fusion Connect: {}", config.is_fusion_connect ? "true" : "false");
 }
 
 // Helper function to add Netlink attributes
@@ -335,6 +343,8 @@ private:
     std::map<std::string, fusion_cn_stream_config> aes67_stream_map;
     std::map<std::string, bool> pending_streams;
     std::string network_interface;
+    SAPAnnouncer sap_announcer;
+    uint32_t announce_counter;
 
     std::string audio_streams_update;
 
@@ -349,7 +359,8 @@ private:
 MODULE_REGISTER(FusionConnectClient, "fusion_connect_client");
 
 FusionConnectClient::FusionConnectClient(const bosepro::BlockConfiguration &configuration)
-    : bosepro::Module(configuration), ptp_synchronized(0), mgr_started(false), device_id(""), network_interface("eth0") {
+    : bosepro::Module(configuration), ptp_synchronized(0), mgr_started(false), device_id(""),
+      network_interface("eth0"), sap_announcer(get_system_ip()), announce_counter(0) {
     system_ip = get_system_ip();
     if (system_ip.empty()) {
         SPDLOG_ERROR("Failed to initialize: No valid system IP found");
@@ -376,7 +387,7 @@ int FusionConnectClient::create_stream(fusion_cn_stream_config& config) {
         return -1;
     }
 
-    if (reply.err != 0) {
+    if (reply.err != 0 && reply.err != -EEXIST) {
         SPDLOG_ERROR("Add RTP Stream: Failed for stream_name={}, err={}", config.stream_name, reply.err);
         return reply.err;
     }
@@ -388,7 +399,9 @@ int FusionConnectClient::create_stream(fusion_cn_stream_config& config) {
     }
 
     config.stream_handle = *(uint64_t*)reply.data;
-    SPDLOG_DEBUG("Add RTP Stream: Success for stream_name={}, new_handle={}", config.stream_name, static_cast<uint64_t>(config.stream_handle));
+    SPDLOG_DEBUG("Add RTP Stream: Success for stream_name={}, new_handle={} {}", 
+                 config.stream_name, static_cast<uint64_t>(config.stream_handle), 
+                 reply.err == -EEXIST ? "(already exists)" : "");
 
     if (reply.data) {
         free(reply.data);
@@ -563,7 +576,7 @@ void FusionConnectClient::audio_streams_update_func() {
             config.frames_per_packet = 48;
             config.dest_port = 5004;
             config.payload_type = 96;
-            config.playout_delay = 2000000;
+            config.playout_delay = 1000000;
             config.timestamp_offset = 0;
             config.is_fusion_connect = true;
 
@@ -642,11 +655,6 @@ void FusionConnectClient::audio_streams_update_func() {
             }
             bool is_source = properties.isMember("is_source") && properties["is_source"].isBool() ? properties["is_source"].asBool() : false;
 
-            if (is_source && (!properties.isMember("source_port") || !properties["source_port"].isInt())) {
-                SPDLOG_ERROR("Missing or invalid source_port for AES67 source stream");
-                continue;
-            }
-
             strncpy(config.stream_name, stream_name.c_str(), sizeof(config.stream_name) - 1);
             config.stream_name[sizeof(config.stream_name) - 1] = '\0';
             config.dest_ip = inet_addr(properties["dest_ip"].asString().c_str());
@@ -657,17 +665,31 @@ void FusionConnectClient::audio_streams_update_func() {
 
             config.channels = ch;
             config.dest_port = 5004;
-            unsigned int port = properties["source_port"].asInt();
-            config.source_port = (port >= 49152 && port <= 65535) ? port : 49152;
+            config.source_port = 49152;
             config.sample_rate = 48000;
             config.format = 33; // S24_3BE
             config.frames_per_packet = 48;
-            config.payload_type = 97;
-            config.playout_delay = 2000000;
+            config.payload_type = 96;
+            config.playout_delay = 0;
             config.timestamp_offset = 0;
             config.source_ip = inet_addr(system_ip.c_str());
             config.is_source = is_source;
             config.is_fusion_connect = is_fusion_connect;
+
+            if (properties.isMember("source_port")) {
+                config.source_port = properties["source_port"].asUInt();
+            }
+
+            if (properties.isMember("payload_type")) {
+                config.payload_type = properties["payload_type"].asUInt();
+                if (config.payload_type < 96 || config.payload_type > 127) {
+                    config.payload_type = 96;
+                }
+            }
+
+            if (properties.isMember("timestamp_offset")) {
+                config.timestamp_offset = properties["timestamp_offset"].asUInt();
+            }
 
             if (aes67_stream_map.find(stream_name) == aes67_stream_map.end()) {
                 aes67_stream_map[stream_name] = config;
@@ -701,6 +723,9 @@ void FusionConnectClient::audio_streams_update_func() {
     while (aes67_it != aes67_stream_map.end()) {
         if (json_stream_names.find(aes67_it->first) == json_stream_names.end()) {
             if (pending_streams[aes67_it->first]) {
+                if (aes67_it->second.is_source) {
+                    sap_announcer.removeAnnouncement(aes67_it->first);
+                }
                 if (remove_stream(aes67_it->second.stream_handle) == 0) {
                     SPDLOG_DEBUG("Removed AES67 stream with name {}", aes67_it->first);
                 } else {
@@ -714,13 +739,6 @@ void FusionConnectClient::audio_streams_update_func() {
         }
     }
 }
-
-enum mgr_start_errno {
-    MGR_START_OK = 0,
-    MGR_START_ERRNO_RUNNING,
-    MGR_START_ERRNO_PTP,
-    MGR_START_ERRNO_MODE
-};
 
 void FusionConnectClient::process() {  
     if (!ptp_synchronized) {
@@ -778,6 +796,10 @@ void FusionConnectClient::process() {
                     SPDLOG_DEBUG("Created AES67 stream {} in process loop", pair.first);
                     if (!pair.second.is_source) {
                         join_multicast_group(pair.second.dest_ip);
+                    } else {
+                        sap_announcer.addAnnouncement(pair.first, pair.second.dest_ip, pair.second.channels,
+                                                     pair.second.sample_rate, pair.second.format, pair.second.source_port,
+                                                     pair.second.payload_type, pair.second.stream_handle);
                     }
                 } else {
                     SPDLOG_ERROR("Failed to create AES67 stream {} in process loop, will retry", pair.first);
@@ -786,7 +808,21 @@ void FusionConnectClient::process() {
         }
     }
 
-    // will do sap announcements
+    // SAP announcements every 30 seconds
+    if (announce_counter++ % 30 == 0) {
+        sap_announcer.announceAll();
+    }
+    // Handle deletion packets
+    std::vector<std::string> to_delete;
+    for (const auto& pair : sap_announcer.getAnnouncements()) {
+        if (pair.second.is_deleted && pair.second.num_delete_pending > 0) {
+            sap_announcer.sendAnnouncement(pair.second);
+            to_delete.push_back(pair.first);
+        }
+    }
+    for (const auto& stream_name : to_delete) {
+        sap_announcer.handleDeletion(stream_name);
+    }
 }
 
 } // namespace
