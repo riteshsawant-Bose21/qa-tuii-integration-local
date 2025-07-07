@@ -12,6 +12,7 @@
 #include <sys/statvfs.h>
 #include <thread>
 #include <chrono>
+#include <errno.h>
 
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>

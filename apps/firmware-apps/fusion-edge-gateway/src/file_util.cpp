@@ -1,11 +1,10 @@
 #include "file_util.h"
 
-
 int readFile(const std::string &fileName, std::string &getsFirstLine) {
   std::ifstream fd(fileName);
 
   if (!fd) {
-    spdlog::error("[readFile] '{}' not found", fileName);
+    spdlog::error("[readFile] Cannot open '{}' for reading", fileName);
     return -1;
   }
 
@@ -19,11 +18,15 @@ int writeFile(const std::string &fileName, const std::string &writeData){
   std::ofstream fd(fileName, std::ofstream::trunc);
 
   if (!fd) {
-    spdlog::error("[writeFile] '{}' not found", fileName);
+    spdlog::error("[writeFile] Cannot open '{}' for writing", fileName);
     return -1;
   }
 
-  fd << writeData.c_str();
+  fd << writeData;
+  if (!fd) {
+    SPDLOG_ERROR("[writeFile] Failed to write to '{}'", fileName);
+    return -1;
+  }
   fd.close();
   return 0;
 }
@@ -32,11 +35,15 @@ int appendFile(const std::string &fileName, const std::string &writeData){
   std::ofstream fd(fileName, std::ios::app);
 
   if (!fd) {
-    spdlog::error("[appendFile] '{}' not found", fileName);
+    spdlog::error("[appendFile] Cannot open '{}' for appending", fileName);
     return -1;
   }
 
-  fd << writeData.c_str();
+  fd << writeData;
+  if (!fd) {
+    SPDLOG_ERROR("[appendFile] Failed to write to '{}'", fileName);
+    return -1;
+  }
   fd.close();
   return 0;
 }
@@ -45,12 +52,12 @@ int deleteFile(const std::string &fileName) {
   if (std::remove(fileName.c_str()) != 0) {
     if (errno == ENOENT)
     {
-      spdlog::debug("File has been already deleted: {}", fileName);
+      SPDLOG_DEBUG("File has been already deleted: {}", fileName);
       return 0;
     }
     else
     {
-      spdlog::error("Error deleting file {}: {}", fileName, std::strerror(errno));
+      SPDLOG_ERROR("Error deleting file {}: {}", fileName, std::strerror(errno));
       return -1;
     }
   }
@@ -71,7 +78,7 @@ int createFile(const std::string &filePath)
     return 0;
   }
   else {
-    spdlog::error("Unable to create file: {}", filePath);
+    SPDLOG_ERROR("Unable to create file: {}", filePath);
     return -1;
   }
 }
@@ -147,7 +154,7 @@ int runSystemCommand(const std::string &cmd)
 {
     int result = system(cmd.c_str());
     if(result !=0) {
-      spdlog::error("Command ({}) failed with error code : {}", cmd, result);
+      SPDLOG_ERROR("Command ({}) failed with error code : {}", cmd, result);
       return 1;
     }
     return 0;
@@ -157,7 +164,7 @@ std::string get_serial_id()
 {
     std::ifstream file("/sys/firmware/devicetree/base/serial-number", std::ios::in | std::ios::binary);
     if (!file) {
-        spdlog::error("Error: Cannot open serial-number file.");
+        SPDLOG_ERROR("Error: Cannot open serial-number file.");
         return "SERIAL_ID_NOT_SET";
     }
 
@@ -170,7 +177,7 @@ int getRAMUsedPercent()
 {
     std::ifstream meminfo("/proc/meminfo");
     std::string line;
-    long totalMem = 0, freeMem = 0, buffers = 0, cached = 0;
+    long totalMem = 0, availableMem = -1;
 
     while (std::getline(meminfo, line)) {
         std::istringstream iss(line);
@@ -180,14 +187,12 @@ int getRAMUsedPercent()
         iss >> key >> value >> unit;
 
         if (key == "MemTotal:") totalMem = value;
-        else if (key == "MemFree:") freeMem = value;
-        else if (key == "Buffers:") buffers = value;
-        else if (key == "Cached:") cached = value;
-
-        if (totalMem && freeMem && buffers && cached) break;
+        else if (key == "MemAvailable:") availableMem = value;
     }
 
-    long usedMem = totalMem - freeMem - buffers - cached;
+    if (totalMem <= 0 || availableMem < 0) return -1;
+
+    long usedMem = totalMem - availableMem;
     return (int)((usedMem * 100) / totalMem);
 }
 
