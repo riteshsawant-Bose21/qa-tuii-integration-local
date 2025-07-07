@@ -14,7 +14,7 @@ struct SAPAnnouncement {
     uint8_t channels;
     uint32_t sample_rate;
     int32_t format; // Matches fusion_cn_stream_config
-    uint16_t source_port;
+    uint16_t sink_port;
     uint8_t payload_type;
     uint64_t stream_handle; // For SDP session ID
     bool is_deleted;
@@ -115,7 +115,6 @@ private:
 
 public:
     SAPAnnouncer(const std::string& sys_ip) : system_ip(sys_ip), sock_fd(-1) {
-        spdlog::set_level(spdlog::level::debug); // Enable debug logging
         ptp_clock_id = getPTPClockID();
         sock_fd = socket(AF_INET, SOCK_DGRAM, 0);
         if (sock_fd < 0) {
@@ -137,14 +136,14 @@ public:
     }
 
     inline void addAnnouncement(const std::string& stream_name, uint32_t multicast_ip, uint8_t channels,
-                               uint32_t sample_rate, int32_t format, uint16_t source_port,
+                               uint32_t sample_rate, int32_t format, uint16_t sink_port,
                                uint8_t payload_type, uint64_t stream_handle) {
         if (announcements.find(stream_name) != announcements.end()) {
             SPDLOG_ERROR("SAP stream '{}' already exists", stream_name);
             return;
         }
         SAPAnnouncement ann = {
-            stream_name, multicast_ip, channels, sample_rate, format, source_port,
+            stream_name, multicast_ip, channels, sample_rate, format, sink_port,
             payload_type, stream_handle, false, 2
         };
         announcements[stream_name] = ann;
@@ -194,7 +193,7 @@ public:
                  "a=mediaclk:direct=0\r\n",
                  ann.stream_handle, ann.stream_handle, system_ip.c_str(),
                  name.c_str(), ipToString(ann.multicast_ip).c_str(),
-                 ann.source_port, ann.payload_type,
+                 ann.sink_port, ann.payload_type,
                  (unsigned int)ann.channels, channels_str.c_str(),
                  ann.payload_type, ann.sample_rate, (unsigned int)ann.channels,
                  ptp_clock_id.c_str());

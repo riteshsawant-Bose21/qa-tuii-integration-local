@@ -798,7 +798,7 @@ void FusionConnectClient::process() {
                         join_multicast_group(pair.second.dest_ip);
                     } else {
                         sap_announcer.addAnnouncement(pair.first, pair.second.dest_ip, pair.second.channels,
-                                                     pair.second.sample_rate, pair.second.format, pair.second.source_port,
+                                                     pair.second.sample_rate, pair.second.format, pair.second.dest_port,
                                                      pair.second.payload_type, pair.second.stream_handle);
                     }
                 } else {
