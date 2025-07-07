@@ -576,10 +576,11 @@ int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr,
                        len2 * stream->info.channels * sample_physical_width_bits / 8);
             }
 
-            // TODO: fix with new math from send packet
             rtp_timestamp = swab32(packet->rtp.timestamp);
             current_phc_ns = rtp_mgr->ops->get_phc_ns();
-            current_sac = current_phc_ns / stream->ns_per_sample;
+            // TODO: only works for 48k
+            // sac = (phc * sample_rate) / NSEC_PER_SEC 
+            current_sac = (((current_phc_ns >> 2) * 3) / 15625);
 
             global_sac = ((current_sac & 0xFFFFFFFF00000000ULL) | rtp_timestamp) - stream->info.timestamp_offset;
             
@@ -590,7 +591,9 @@ int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr,
             }
             
             // Avoid overflow in reconstructed_phc_ns calculation
-            reconstructed_phc_ns = global_sac * stream->ns_per_sample;
+            // TODO: only works for 48k
+            // phc = (sac * NSEC_PER_SEC) / sample_rate
+            reconstructed_phc_ns = (global_sac * 62500) / 3;
             ns_from_ms_boundary = reconstructed_phc_ns % NSEC_PER_MSEC;
             reconstructed_phc_ns -= ns_from_ms_boundary;
 
