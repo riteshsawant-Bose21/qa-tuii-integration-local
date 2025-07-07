@@ -391,6 +391,10 @@ func (c *Cluster) applyPatch(patch *persistence.DevicePatch, info *persistence.D
 	if patch.XYTECloudID != nil {
 		info.XYTECloudID = *patch.XYTECloudID
 	}
+
+	if patch.IsClaimed != nil {
+		info.IsClaimed = *patch.IsClaimed
+	}
 }
 
 // validateNoDuplication returns an error if any of the non‐nil fields in patch
