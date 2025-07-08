@@ -254,3 +254,38 @@ int getCPUTemperature()
     return tempMilliC / 1000; // Convert to °C
 }
 
+uint64_t getNetworkRxBytes()
+{
+    std::ifstream file("/sys/class/net/eth0/statistics/rx_bytes");
+    uint64_t rxBytes = 0;
+    file >> rxBytes;
+    return rxBytes;
+}
+
+uint64_t getNetworkTxBytes()
+{
+    std::ifstream file("/sys/class/net/eth0/statistics/tx_bytes");
+    uint64_t txBytes = 0;
+    file >> txBytes;
+    return txBytes;
+}
+
+void getNetworkRates(double &rx_kbps, double &tx_kbps)
+{
+    uint64_t curr_rx = getNetworkRxBytes();
+    uint64_t curr_tx = getNetworkTxBytes();
+    auto now = std::chrono::steady_clock::now();
+    double elapsed = std::chrono::duration<double>(now - last_sample_time).count();
+
+    if (elapsed > 0.0) {
+        rx_kbps = (curr_rx - prev_rx_bytes) / elapsed / 1024.0;
+        tx_kbps = (curr_tx - prev_tx_bytes) / elapsed / 1024.0;
+    } else {
+        rx_kbps = tx_kbps = 0.0;
+    }
+
+    prev_rx_bytes = curr_rx;
+    prev_tx_bytes = curr_tx;
+    last_sample_time = now;
+}
+

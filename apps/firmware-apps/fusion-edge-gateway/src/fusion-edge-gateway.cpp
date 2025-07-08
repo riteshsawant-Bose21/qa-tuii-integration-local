@@ -301,6 +301,8 @@ void FusionEdgeGateway::sendXyteUpdateToFusionServer() {
 
 int FusionEdgeGateway::run() {
     // Initialize logging
+    auto logger = spdlog::basic_logger_mt("file_logger", "fusion-edge-gateway.log");
+    spdlog::set_default_logger(logger);
     spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%^%l%$] [%s:%#] %v");
     spdlog::set_level(spdlog::level::debug);
     SPDLOG_INFO("Fusion Edge Gateway starting...");
@@ -308,7 +310,7 @@ int FusionEdgeGateway::run() {
     // Create the WebClient after logging is configured.
     wc = std::make_unique<WebClient>();
 
-    wc->SetCertificateChain("/path/to/certificate.pem");
+    wc->SetCertificateChain(ca_cert_path);
 
     waitForServer();
 
@@ -346,6 +348,8 @@ int FusionEdgeGateway::run() {
             }
         }
 
+        getNetworkRates(rx_kbps, tx_kbps);
+
         json telemetryJson;
         telemetryJson["status"] = "online";
         telemetryJson["telemetries"] = json{
@@ -354,6 +358,8 @@ int FusionEdgeGateway::run() {
             {"cpu_temp", getCPUTemperature()},
             {"system_load", getSystemLoadPercent()},
             {"cpu_usage", getCpuUsagePercent()},
+            {"net_rx", rx_kbps},
+            {"net_tx", tx_kbps},
         };
 
         if (sendTelemetry(telemetryJson) != 0) {

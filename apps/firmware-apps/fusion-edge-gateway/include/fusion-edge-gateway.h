@@ -10,6 +10,7 @@
 #include "curl/curl.h"
 #include "json.hpp"
 #include "spdlog/spdlog.h"
+#include "spdlog/sinks/basic_file_sink.h"
 #include "cloud_id.h"
 #include "webclient.h"
 #include "file_util.h"
@@ -59,4 +60,5 @@ private:
     bool serverIsClaimedValue; // Claim status from the server to update live status
     string localServerUrl = "http://localhost:8080"; // Local server URL for device info
     string fusionDeviceInfoUrl = localServerUrl + "/devices"; // Fusion server info URL
+    double rx_kbps = 0.0, tx_kbps = 0.0;
 };
