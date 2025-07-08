@@ -307,6 +307,8 @@ static int fusion_cn_pcm_interrupt(void *alsa_chip, int direction, const char *s
             stream->buffer_pos -= stream->substream->runtime->buffer_size;
     }
 
+    printk(KERN_DEBUG "fusion_cn: pcm_interrupt: stream %s, buffer_ps=%d, interrupts_per_period=%d\n", stream_name, stream->buffer_pos, stream->interrupts_per_period);
+
     stream->interrupt_idx++;
     if (stream->interrupt_idx >= stream->interrupts_per_period) {
         stream->interrupt_idx = 0;
@@ -382,7 +384,7 @@ static int fusion_cn_set_buffer_pos(void *alsa_chip, uint32_t write_slot, const 
 
     kref_put(&stream->ref, fusion_cn_substream_release);
 
-    printk(KERN_INFO "fusion_cn: set_buffer_pos: stream %s pointers set to %lu\n", stream->stream_name, stream->buffer_pos);
+    printk(KERN_INFO "fusion_cn: set_buffer_pos: stream %s pointers set to %u\n", stream->stream_name, stream->buffer_pos);
     return 0;
 }
 
@@ -1086,7 +1088,6 @@ static int fusion_cn_chip_probe(struct platform_device *pdev)
     }
 
     platform_set_drvdata(pdev, chip);
-    dev_info(&pdev->dev, "FusionConnect card registered\n");
     return 0;
 }
 

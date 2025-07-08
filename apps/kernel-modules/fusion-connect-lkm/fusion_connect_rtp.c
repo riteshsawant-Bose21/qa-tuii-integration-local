@@ -331,7 +331,6 @@ int fusion_cn_rtp_add_stream(struct fusion_cn_rtp_manager *rtp_mgr, struct fusio
         if (fusion_cn_rtp_is_ip_mcast(map->dest_ip)) {
             hlist_add_head(&map->hnode, &rtp_mgr->mc_packet_maps[PACKET_MAP_KEY_MC(map->dest_ip)]);
         } else {
-            printk(KERN_INFO "Adding stream %llu with sip %u sport %u", map->stream_handle, map->source_ip, map->source_port);
             hlist_add_head(&map->hnode, &rtp_mgr->uc_packet_maps[PACKET_MAP_KEY_UC(map->source_ip, map->source_port)]);
         }
         if (info->is_fusion_connect) {
@@ -524,7 +523,7 @@ int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr,
             payload = (uint8_t *)packet + sizeof(*packet);
             frames = payload_len / (stream->info.channels * sample_physical_width_bits / 8);
             if (!frames) {
-                printk(KERN_WARNING "fusion_cn_rtp: process_packet: Zero length frame detected !");
+                printk(KERN_WARNING "fusion_cn_rtp: process_packet: Zero length frame detected!");
                 spin_unlock(&stream->lock);
                 continue;
             }
@@ -727,7 +726,7 @@ int fusion_cn_rtp_set_stream_running(struct fusion_cn_rtp_manager *rtp_mgr, uint
             
             stream->next_action_times = kzalloc(sizeof(uint64_t) * (frames_in_buf / stream->info.frames_per_packet), GFP_KERNEL);
             memset(stream->next_action_times, 0, sizeof(uint64_t) * (frames_in_buf / stream->info.frames_per_packet));
-            printk(KERN_INFO "fusion_cn_rtp: alloc %u slots in next_action_times", frames_in_buf / stream->info.frames_per_packet);
+            printk(KERN_DEBUG "fusion_cn_rtp: alloc %u slots in next_action_times", frames_in_buf / stream->info.frames_per_packet);
         }
         stream->playback_index = (frames_in_buf / stream->info.frames_per_packet); // set to a invalid value i can check for on first process_packet
         stream->next_action_time = 0;

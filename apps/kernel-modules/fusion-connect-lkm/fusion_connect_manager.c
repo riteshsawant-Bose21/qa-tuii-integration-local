@@ -154,8 +154,8 @@ static void process_active_streams(struct fusion_cn_manager *mgr)
 
             // There could be multiple frames to play back for streams with packet times smaller than the timer tick
             while (stream->next_action_times[stream->playback_index] != 0 && stream->next_action_times[stream->playback_index] <= mgr->ptp.hrtimer_last_tick_ns) {
-                if (mgr->debug) printk(KERN_DEBUG "fusion_cn: audio_frame_process: FC sink stream %llu, next_tick=%llu, next_action_time=%llu\n",
-                    handle, mgr->ptp.hrtimer_last_tick_ns, stream->next_action_times[stream->playback_index]);
+                if (mgr->debug) printk(KERN_DEBUG "fusion_cn: audio_frame_process: FC sink stream %llu, next_tick=%llu, next_action_time=%llu, playback_index=%u\n",
+                    handle, mgr->ptp.hrtimer_last_tick_ns, stream->next_action_times[stream->playback_index], stream->playback_index);
                     
                 mgr->alsa.mgr_callbacks->pcm_interrupt(mgr->alsa.alsa_chip, SNDRV_PCM_STREAM_CAPTURE, stream->info.stream_name);
                 stream->next_action_times[stream->playback_index] = 0;
@@ -219,8 +219,8 @@ static void process_active_streams(struct fusion_cn_manager *mgr)
 
             // There could be multiple frames to play back for streams with packet times smaller than the timer tick
             while (stream->next_action_times[stream->playback_index] != 0 && stream->next_action_times[stream->playback_index] <= mgr->ptp.hrtimer_last_tick_ns) {
-                if (mgr->debug) printk(KERN_DEBUG "fusion_cn: audio_frame_process: AES67 sink stream %llu, next_tick=%llu, next_action_time=%llu\n",
-                    handle, mgr->ptp.hrtimer_last_tick_ns, stream->next_action_times[stream->playback_index]);
+                if (mgr->debug) printk(KERN_DEBUG "fusion_cn: audio_frame_process: AES67 sink stream %llu, next_tick=%llu, next_action_time=%llu, playback_index=%u\n",
+                    handle, mgr->ptp.hrtimer_last_tick_ns, stream->next_action_times[stream->playback_index], stream->playback_index);
                     
                 mgr->alsa.mgr_callbacks->pcm_interrupt(mgr->alsa.alsa_chip, SNDRV_PCM_STREAM_CAPTURE, stream->info.stream_name);
                 stream->next_action_times[stream->playback_index] = 0;
@@ -366,7 +366,7 @@ static int fusion_cn_ptp_init(struct fusion_cn_manager *mgr)
         mgr->ptp.gpio_irq = -1;
         mgr->ptp.gpio_pin = -1;
     }
-    printk(KERN_INFO "fusion_cn: Initialized with %s timing\n",
+    printk(KERN_DEBUG "fusion_cn: Initialized with %s timing\n",
            mgr->ptp.ptp_timing_mode == TIMING_HRTIMER ? "hrtimer" : "GPIO interrupt");
     return 0;
 }
@@ -455,7 +455,7 @@ enum mgr_start_errno {
 int fusion_cn_mgr_start(struct fusion_cn_manager *mgr)
 {
     if (atomic_read(&mgr->state.is_started)) {
-        printk(KERN_INFO "fusion_cn: mgr already started\n");
+        printk(KERN_DEBUG "fusion_cn: mgr already started\n");
         return -MGR_START_ERRNO_RUNNING;
     }
     if (!atomic_read(&mgr->state.ptp_synchronized)) {
@@ -481,7 +481,7 @@ int fusion_cn_mgr_start(struct fusion_cn_manager *mgr)
         hrtimer_start(&mgr->ptp.audio_timer, ns_to_ktime(first_tick), HRTIMER_MODE_ABS);
         mgr->ptp.hrtimer_next_tick_ns = first_tick;
         mgr->ptp.tick_count = 0; // start from 1 bc next tick
-        printk(KERN_INFO "fusion_cn: mgr_start: Aligned hrtimer to PHC boundary, current_phc=%llu, first_tick=%llu ns\n",
+        printk(KERN_DEBUG "fusion_cn: mgr_start: Aligned hrtimer to PHC boundary, current_phc=%llu, first_tick=%llu ns\n",
                current_phc_ns, first_tick);
     } else if (mgr->ptp.ptp_timing_mode == TIMING_GPIO_INTERRUPT && mgr->ptp.gpio_irq >= 0) {
         enable_irq(mgr->ptp.gpio_irq);
@@ -506,6 +506,7 @@ bool fusion_cn_mgr_stop(struct fusion_cn_manager *mgr)
     }
     mgr->netfilter.is_enabled = false;
     atomic_set(&mgr->state.is_started, true);
+    printk(KERN_INFO "fusion_cn: mgr_start: Stopped manager\n");
     return true;
 }
 
@@ -513,7 +514,6 @@ bool fusion_cn_mgr_stop(struct fusion_cn_manager *mgr)
 static int handle_start(struct fusion_cn_manager *mgr, struct fusion_cn_ctrl_msg *msg,
                         struct fusion_cn_ctrl_msg *reply)
 {
-    printk(KERN_INFO "fusion_cn: Starting manager\n");
     reply->err = fusion_cn_mgr_start(mgr);
     return 0;
 }
@@ -521,7 +521,6 @@ static int handle_start(struct fusion_cn_manager *mgr, struct fusion_cn_ctrl_msg
 static int handle_stop(struct fusion_cn_manager *mgr, struct fusion_cn_ctrl_msg *msg,
                     struct fusion_cn_ctrl_msg *reply)
 {
-    printk(KERN_INFO "fusion_cn: Stopping manager\n");
     reply->err = fusion_cn_mgr_stop(mgr) ? 0 : -EIO;
     return 0;
 }
