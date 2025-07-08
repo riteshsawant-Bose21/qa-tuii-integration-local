@@ -7,6 +7,7 @@
 #include <cstdio>
 #include <regex>
 #include <spdlog/spdlog.h>
+#include <chrono>
 
 struct SAPAnnouncement {
     std::string stream_name;
@@ -27,6 +28,18 @@ private:
     std::string ptp_clock_id;
     int sock_fd;
     std::map<std::string, SAPAnnouncement> announcements;
+
+    static uint64_t getNtpTimestamp()
+    {
+        using namespace std::chrono;
+
+        auto now = system_clock::now();
+        auto duration = now.time_since_epoch();
+        uint64_t seconds = duration_cast<std::chrono::seconds>(duration).count();
+        uint64_t fraction = ((duration_cast<std::chrono::nanoseconds>(duration).count() % 1'000'000'000ULL) * (1ULL << 32)) / 1'000'000'000ULL;
+
+        return ((seconds + 2208988800ULL) << 32) | (fraction & 0xFFFFFFFF);
+    }
 
     static std::string getPTPClockID() {
         FILE* fp = popen("/usr/sbin/pmc -u -b 0 -f /etc/linuxptp/ptp4l.conf 'GET TIME_STATUS_NP'", "r");
@@ -178,9 +191,10 @@ public:
             if (i < ann.channels) channels_str += ",";
         }
         char sdp_buf[512];
+        uint32_t ntp_ts = getNtpTimestamp() >> 32;
         snprintf(sdp_buf, sizeof(sdp_buf),
                  "v=0\r\n"
-                 "o=- %lu %lu IN IP4 %s\r\n"
+                 "o=- %u %u IN IP4 %s\r\n"
                  "s=%s\r\n"
                  "c=IN IP4 %s/32\r\n"
                  "t=0 0\r\n"
@@ -191,7 +205,7 @@ public:
                  "a=ptime:1\r\n"
                  "a=ts-refclk:ptp=IEEE1588-2008:%s:0\r\n"
                  "a=mediaclk:direct=0\r\n",
-                 ann.stream_handle, ann.stream_handle, system_ip.c_str(),
+                 ntp_ts, ntp_ts, system_ip.c_str(),
                  name.c_str(), ipToString(ann.multicast_ip).c_str(),
                  ann.sink_port, ann.payload_type,
                  (unsigned int)ann.channels, channels_str.c_str(),
