@@ -241,6 +241,7 @@ AlsaDevice::~AlsaDevice()
 
 void AlsaDevice::open_device()
 {
+    SPDLOG_DEBUG("Getting device number for: {}", device_name);
     int device_number = get_device_number(device_name);
 
     if (device_number < 0)
@@ -252,6 +253,7 @@ void AlsaDevice::open_device()
     std::string full_device_name = "hw:FusionConnect,"
         + std::to_string(device_number);
 
+    SPDLOG_DEBUG("Opening: {}", full_device_name);
     int error = snd_pcm_open(&alsa, full_device_name.c_str(),
                              is_input ? SND_PCM_STREAM_CAPTURE
                                       : SND_PCM_STREAM_PLAYBACK,
@@ -263,6 +265,7 @@ void AlsaDevice::open_device()
         return;
     }
 
+    SPDLOG_DEBUG("Setting HW/SW params: {}", device_name);
     set_hw_params();
     set_sw_params();
 
@@ -648,8 +651,10 @@ int AlsaDevice::get_device_number(const std::string &name)
 
     int device = -1;
 
+    SPDLOG_DEBUG("checking device numbers for: {}", name);
     while (snd_ctl_pcm_next_device(ctl, &device) >= 0 && device >= 0)
     {
+        SPDLOG_DEBUG("checking device number {} for: {}", device, name);
         snd_pcm_info_t *info;
         snd_pcm_info_alloca(&info);
         snd_pcm_info_set_device(info, device);
@@ -657,12 +662,14 @@ int AlsaDevice::get_device_number(const std::string &name)
         snd_pcm_info_set_stream(info, is_input ? SND_PCM_STREAM_CAPTURE
                 : SND_PCM_STREAM_PLAYBACK);
 
+        SPDLOG_DEBUG("getting pcm info for: {}", device);
         if (snd_ctl_pcm_info(ctl, info) < 0)
         {
             SPDLOG_DEBUG("Failed to get ALSA PCM info for device {}", device);
             continue;
         }
 
+        SPDLOG_DEBUG("getting pcm info name for: {}", device);
         if (snd_pcm_info_get_name(info) == name)
         {
             SPDLOG_DEBUG("Found ALSA device: {} {}",
@@ -672,7 +679,9 @@ int AlsaDevice::get_device_number(const std::string &name)
         }
     }
 
+    SPDLOG_DEBUG("closing control");
     snd_ctl_close(ctl);
+    SPDLOG_DEBUG("didn't find device {}", name);
     return -1;
 }
 
