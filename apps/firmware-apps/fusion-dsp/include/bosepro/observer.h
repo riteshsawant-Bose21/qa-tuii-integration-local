@@ -13,6 +13,7 @@
 #include <mutex>
 #include <netinet/in.h>
 #include <poll.h>
+#include <spdlog/spdlog.h>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -156,34 +157,28 @@ inline std::vector<PatternComponent> parsePattern(const std::string &pattern) {
  *
  * @param root The root JSON value to traverse.
  * @param pathParts A vector of PathComponent specifying the path.
- * @param verbose If true, prints error messages.
  * @return The JSON value at the given path or Json::nullValue if not found.
  */
 inline Json::Value
 getJsonValueAtPath(const Json::Value &root,
-                   const std::vector<PathComponent> &pathParts,
-                   bool verbose = false) {
+                   const std::vector<PathComponent> &pathParts) {
   const Json::Value *current = &root;
   for (const auto &part : pathParts) {
     if (part.isArrayAccess) {
       if (!current->isArray()) {
-        if (verbose)
-          std::cout << "Expected an array but found non-array at index: "
-                    << part.arrayIndex << std::endl;
+        SPDLOG_DEBUG("Expected an array but found non-array at index: {}",
+                     part.arrayIndex);
         return Json::nullValue;
       }
       if (part.arrayIndex >= static_cast<int>(current->size())) {
-        if (verbose)
-          std::cout << "Array index " << part.arrayIndex
-                    << " is out of bounds (size: " << current->size() << ")"
-                    << std::endl;
+        SPDLOG_DEBUG("Array index {} is out of bounds (size: {})",
+                     part.arrayIndex, current->size());
         return Json::nullValue;
       }
       current = &((*current)[part.arrayIndex]);
     } else {
       if (!current->isObject() || !current->isMember(part.key)) {
-        if (verbose)
-          std::cout << "Key not found in object: " << part.key << std::endl;
+        SPDLOG_DEBUG("Key '{}' not found in object", part.key);
         return Json::nullValue;
       }
       current = &((*current)[part.key]);
@@ -246,11 +241,9 @@ public:
   /**
    * @brief Constructs a JsonMonitor with an optional initial JSON state.
    * @param initial_data The initial JSON state (default is an empty object).
-   * @param verbose If true, enables verbose logging.
    */
-  JsonMonitor(Json::Value initial_data = Json::objectValue,
-              bool verbose = false)
-      : data_(initial_data), verbose_(verbose) {}
+  JsonMonitor(Json::Value initial_data = Json::objectValue)
+      : data_(initial_data) {}
 
   /**
    * @brief Register a callback to be notified when a concrete path is updated.
@@ -357,6 +350,7 @@ public:
       parts.push_back(PathComponent(key));
     }
 
+#if 0
     if (verbose_) {
       std::cout << "Parsed concrete path: ";
       for (const auto &p : parts) {
@@ -367,6 +361,7 @@ public:
       }
       std::cout << std::endl;
     }
+#endif
     return parts;
   }
 
@@ -383,18 +378,14 @@ public:
                             const Json::Value &new_state) {
     std::lock_guard<std::mutex> lock(state_mutex_);
 
-    if (verbose_) {
-      log("Received update for path: " + path);
-    }
+    SPDLOG_DEBUG("Received update for path: {}", path);
 
     Json::Value oldData = data_;
     updateInternalState(path, new_state);
     Json::Value newData = data_;
 
     if (oldData == newData) {
-      if (verbose_) {
-        log("No change detected for path: " + path);
-      }
+      SPDLOG_DEBUG("No change detected for path: {}", path);
       return;
     }
 
@@ -404,8 +395,7 @@ public:
     // Notify exact-match watchers.
     const auto it = watchers_.find(path);
     if (it != watchers_.end()) {
-      if (verbose_)
-        log("Triggering exact watchers for: " + path);
+      SPDLOG_DEBUG("Triggering exact watchers for: {}", path);
       for (const auto &callback : it->second)
         callback(path, oldValue, newValue);
     }
@@ -415,6 +405,7 @@ public:
       const auto &tokens = getParsedPattern(subscription);
       std::vector<PathComponent> splitP = splitPath(path);
       if (patternMatchesPath(tokens, splitP)) {
+        SPDLOG_DEBUG("Triggering pattern watchers for: {}", path);
         for (const auto &callback : callbacks)
           callback(path, oldValue, newValue);
       }
@@ -422,9 +413,7 @@ public:
 
     // Notify root watchers.
     for (const auto &callback : root_watchers_) {
-      if (verbose_) {
-        log("Triggering root watchers for: " + path);
-      }
+      SPDLOG_DEBUG("Triggering root watchers for: {}", path);
       callback(path, oldValue, newValue);
     }
   }
@@ -449,18 +438,8 @@ public:
     return parsedPatternCache_[pattern];
   }
 
-  /**
-   * @brief Enable or disable verbose logging.
-   * @param verbose Set to true to enable detailed logging.
-   */
-  void setVerbose(bool verbose) { verbose_ = verbose; }
 
 private:
-  // Helper for logging.
-  void log(const std::string &message) const {
-    std::cout << "[JsonMonitor] " << message << std::endl;
-  }
-
   /**
    * @brief Updates the internal JSON state at a given path.
    *
@@ -525,12 +504,11 @@ private:
     if (path.empty())
       return state;
     std::vector<PathComponent> parts = splitPath(path);
-    return getJsonValueAtPath(state, parts, verbose_);
+    return getJsonValueAtPath(state, parts);
   }
 
   mutable std::mutex state_mutex_;
   Json::Value data_;
-  bool verbose_;
   std::unordered_map<std::string, std::vector<ChangeCallback>> watchers_;
   std::unordered_map<std::string, std::vector<ChangeCallback>>
       pattern_watchers_;
@@ -596,16 +574,13 @@ public:
    * @param serverIP The server's IP address.
    * @param port The server's port number.
    * @param targetPaths A vector of JSON paths or patterns to monitor.
-   * @param verbose If true, enables verbose logging.
    * @throws std::runtime_error on socket or binding errors.
    */
   UDPValueMonitor(const std::string &serverIP, int port,
                   const std::vector<std::string> &targetPaths,
-                  void (*updateHandler)(const std::string &),
-                  bool verbose = false)
+                  void (*updateHandler)(const std::string &))
       : targetPaths_(targetPaths), updateHandler_(updateHandler),
-        verbose_(verbose), jsonMonitor_(Json::objectValue, verbose),
-        device_id("") {
+        jsonMonitor_(Json::objectValue), device_id(""), fixed_device_id(false) {
     const int sockfd = udpSocket_.get();
 
     // Set up the server address.
@@ -694,14 +669,10 @@ public:
    */
   void setDeviceID(const std::string &id) {
     device_id = id;
+    fixed_device_id = true;
   }
 
 private:
-  // Logging helper.
-  void log(const std::string &message) const {
-    std::cout << "[UDPValueMonitor] " << message << std::endl;
-  }
-
   /**
    * @brief Returns the current timestamp as a string (HH:MM:SS).
    */
@@ -756,34 +727,36 @@ private:
       updateHandler_(message);
     }
     else if (path_parts[0].key == "devices") {
-      CURL *curl = curl_easy_init();
-      CURLcode res;
-      std::string response;
+      SPDLOG_DEBUG("Processing devices {} {}", fixed_device_id, device_id);
+      if (!fixed_device_id) {
+        CURL *curl = curl_easy_init();
+        CURLcode res;
+        std::string response;
 
-      if (curl) {
-        curl_easy_setopt(curl, CURLOPT_URL, "http://localhost:9090/device");
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlWriteCallback);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
-        res = curl_easy_perform(curl);
-        if (res != CURLE_OK && verbose_) {
-          log("Failed to retrieve device id: " + std::string(curl_easy_strerror(res)));
-        }
-        else {
-          Json::CharReaderBuilder readerBuilder;
-          Json::Value jsonResponse;
-          std::istringstream iss(response);
-          std::string errs;
+        if (curl) {
+          curl_easy_setopt(curl, CURLOPT_URL, "http://localhost:9090/device");
+          curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlWriteCallback);
+          curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
+          res = curl_easy_perform(curl);
+          if (res != CURLE_OK) {
+            SPDLOG_WARN("Failed to retrieve device id: {}",
+                        curl_easy_strerror(res));
+          }
+          else {
+            Json::CharReaderBuilder readerBuilder;
+            Json::Value jsonResponse;
+            std::istringstream iss(response);
+            std::string errs;
 
-          if (!Json::parseFromStream(readerBuilder, iss, &jsonResponse, &errs)) {
-            log("Failed to parse device response: " + response);
-          } else {
-            device_id = jsonResponse["id"].asString();
-            if (verbose_) {
-              log("Device ID set to: " + device_id);
+            if (!Json::parseFromStream(readerBuilder, iss, &jsonResponse, &errs)) {
+              SPDLOG_WARN("Failed to parse device response: {}", errs);
+            } else {
+              device_id = jsonResponse["id"].asString();
+              SPDLOG_DEBUG("Device ID set to: {}", device_id);
             }
           }
+          curl_easy_cleanup(curl);
         }
-        curl_easy_cleanup(curl);
       }
 
       if (new_val["id"] == device_id)
@@ -812,9 +785,9 @@ private:
     ssize_t sent = sendto(udpSocket_.get(), jsonStr.c_str(), jsonStr.length(),
                           0, reinterpret_cast<const sockaddr *>(&serverAddr),
                           sizeof(serverAddr));
-    if (sent < 0 && verbose_) {
-      log("Failed to send initial state request: " +
-          std::string(strerror(errno)));
+    if (sent < 0) {
+      SPDLOG_WARN("Failed to send initial state request: {}",
+                  std::string(strerror(errno)));
     }
     receivedInitialState_ = false;
   }
@@ -824,7 +797,7 @@ private:
    */
   Json::Value getValueAtPath(const Json::Value &root,
                              const std::vector<PathComponent> &pathParts) {
-    return getJsonValueAtPath(root, pathParts, verbose_);
+    return getJsonValueAtPath(root, pathParts);
   }
 
   /**
@@ -874,8 +847,7 @@ private:
    * @brief Processes an incoming JSON update message.
    */
   void handleUpdateMessage(const Json::Value &update) {
-    if (verbose_)
-      log("Processing incoming JSON update: " + update.toStyledString());
+    SPDLOG_TRACE("Received update: {}", update.toStyledString());
 
     for (const auto &path : targetPaths_) {
       if (path.find('*') != std::string::npos) {
@@ -886,11 +858,10 @@ private:
         auto path_parts = jsonMonitor_.splitPath(path);
         Json::Value value = getValueAtPath(update, path_parts);
         if (!value.isNull()) {
-          if (verbose_)
-            log("Detected value at " + path + ": " + value.toStyledString());
+          SPDLOG_DEBUG("Detected value at {}: {}", path, value.toStyledString());
           jsonMonitor_.handleExternalUpdate(path, value);
-        } else if (verbose_) {
-          log("No matching value found for path: " + path);
+        } else {
+          SPDLOG_DEBUG("No value found at path: {}", path);
         }
       }
     }
@@ -932,8 +903,7 @@ private:
           continue;
         }
         buffer[received] = '\0';
-        if (verbose_)
-          log("Received data: " + std::string(buffer));
+        SPDLOG_TRACE("Received data: {}", buffer);
 
         Json::Value response;
         Json::CharReaderBuilder readerBuilder;
@@ -941,17 +911,15 @@ private:
         std::string errs;
         if (Json::parseFromStream(readerBuilder, iss, &response, &errs)) {
           if (response.isMember("status") && response.isMember("data")) {
-            if (verbose_)
-              log("Processing initial state response");
+            SPDLOG_DEBUG("Received initial state response.");
             receivedInitialState_ = true;
             handleUpdateMessage(response["data"]);
           } else {
-            if (verbose_)
-              log("Processing update message");
+            SPDLOG_DEBUG("Processing update message.");
             handleUpdateMessage(response);
           }
-        } else if (verbose_) {
-          std::cerr << "Failed to parse JSON: " << errs << std::endl;
+        } else {
+          SPDLOG_DEBUG("Failed to parse JSON: {}", errs);
         }
       }
     }
@@ -962,9 +930,9 @@ private:
   std::thread receiveThread_;
   std::vector<std::string> targetPaths_;
   void (*updateHandler_)(const std::string &);
-  bool verbose_;
   JsonMonitor jsonMonitor_;
   sockaddr_in serverAddr_;
   std::string device_id;
+  bool fixed_device_id;
   bool receivedInitialState_{false};
 };

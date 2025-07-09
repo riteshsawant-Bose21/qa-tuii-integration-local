@@ -393,6 +393,14 @@ int AlsaDevice::read(float *buffer, int samples)
 
     if (res < 0)
     {
+        if (res == -EBADFD)
+        {
+            SPDLOG_INFO("ALSA device is gone, closing");
+            close_device();
+            std::memset(buffer, 0, samples * channels * sizeof(float));
+            return samples;
+        }
+
         SPDLOG_ERROR("Failed to read from ALSA device: {}",
                 snd_strerror(res));
         return 0;
@@ -431,6 +439,12 @@ void AlsaDevice::write(const float *buffer, int samples)
 
     if (res < 0)
     {
+        if (res == -EBADFD)
+        {
+            SPDLOG_INFO("ALSA device is gone, closing");
+            close_device();
+        }
+
         SPDLOG_ERROR("Failed to write to ALSA device: {}", snd_strerror(res));
     }
     else if (res != samples)
@@ -444,7 +458,7 @@ void AlsaDevice::set_hw_params()
 {
     int error;
 
-    snd_pcm_hw_params_alloca(&hw_params);
+    snd_pcm_hw_params_malloc(&hw_params);
 
     error = snd_pcm_hw_params_any(alsa, hw_params);
     if (error < 0)
@@ -556,7 +570,7 @@ void AlsaDevice::set_sw_params()
 {
     int error;
 
-    snd_pcm_sw_params_alloca(&sw_params);
+    snd_pcm_sw_params_malloc(&sw_params);
 
     error = snd_pcm_sw_params_current(alsa, sw_params);
     if (error < 0)
