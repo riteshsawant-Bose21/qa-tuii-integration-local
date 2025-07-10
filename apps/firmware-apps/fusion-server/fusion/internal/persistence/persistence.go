@@ -9,9 +9,7 @@ import (
 	"fusion/internal/logging"
 	"fusion/internal/utils"
 	"os"
-	"os/signal"
 	"sync"
-	"syscall"
 	"time"
 
 	"go.etcd.io/bbolt"

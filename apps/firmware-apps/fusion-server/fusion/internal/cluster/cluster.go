@@ -543,9 +543,13 @@ func getLocalEndpointResponse(addr, endpoint string) (response *http.Response, e
 func (c *Cluster) hostIsLocal(addr string) bool {
 	host, _, err := net.SplitHostPort(addr)
 	if err != nil {
-		logging.GetLogger().Error("Error splitting host port: %v", err)
-
-		return false
+		if addrErr, ok := err.(*net.AddrError); ok &&
+			strings.Contains(addrErr.Err, "missing port in address") {
+			host = addr
+		} else {
+			logging.GetLogger().Error("Error splitting host and port for address %q: %v", addr, err)
+			return false
+		}
 	}
 	return host == c.Memberlist.LocalNode().Addr.String()
 }

@@ -93,7 +93,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-sh scripts/clear-config.sh
+sh scripts/multipass/clear-config.sh
 
 cd fusion/test || exit 1
 
