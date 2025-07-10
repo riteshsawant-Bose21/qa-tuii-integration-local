@@ -301,7 +301,7 @@ void FusionEdgeGateway::sendXyteUpdateToFusionServer() {
 
 int FusionEdgeGateway::run() {
     // Initialize logging
-    auto logger = spdlog::basic_logger_mt("file_logger", "fusion-edge-gateway.log");
+    auto logger = spdlog::stdout_color_mt("console_logger");
     spdlog::set_default_logger(logger);
     spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%^%l%$] [%s:%#] %v");
     spdlog::set_level(spdlog::level::debug);
