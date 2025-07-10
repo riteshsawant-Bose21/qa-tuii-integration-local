@@ -79,6 +79,7 @@ struct fusion_cn_rtp_stream {
     struct fusion_cn_stream_config info;
     struct fusion_cn_rtp_packet rtp_packet_base;
     atomic_t is_running;
+    uint32_t frames_in_buf;
     uint32_t ssrc;
     uint16_t outgoing_seq_num;
     uint16_t current_seq_num;

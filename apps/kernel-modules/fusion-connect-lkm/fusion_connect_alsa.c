@@ -184,7 +184,6 @@ static void *fusion_cn_get_stream_buffer(void *alsa_chip, const char *stream_nam
         printk(KERN_ERR "fusion_cn: get_stream_buffer: Stream %s not found\n", stream_name);
         return NULL;
     }
-    kref_get(&stream->ref);
     buf = stream->substream ? stream->substream->runtime->dma_area : NULL;
     read_unlock_irqrestore(&chip->lock, flags);
     kref_put(&stream->ref, fusion_cn_substream_release);
@@ -205,51 +204,10 @@ static uint32_t fusion_cn_get_stream_buffer_size_in_frames(void *alsa_chip, cons
         printk(KERN_ERR "fusion_cn: get_stream_buffer_size: Stream %s not found\n", stream_name);
         return 0;
     }
-    kref_get(&stream->ref);
     size = stream->substream ? stream->substream->runtime->buffer_size : 0;
     read_unlock_irqrestore(&chip->lock, flags);
     kref_put(&stream->ref, fusion_cn_substream_release);
     return size;
-}
-
-static void fusion_cn_stream_buffer_lock(void *alsa_chip, const char *stream_name, unsigned long *flags)
-{
-    struct fusion_cn_chip *chip = alsa_chip;
-    struct fusion_cn_substream *stream;
-
-    read_lock_irqsave(&chip->lock, *flags);
-    stream = fusion_cn_find_substream(chip, stream_name);
-    if (stream) {
-        kref_get(&stream->ref);
-    }
-    read_unlock_irqrestore(&chip->lock, *flags);
-
-    if (stream) {
-        spin_lock(&stream->lock);
-        kref_put(&stream->ref, fusion_cn_substream_release);
-    } else {
-        printk(KERN_ERR "fusion_cn: stream_buffer_lock: Stream %s not found\n", stream_name);
-    }
-}
-
-static void fusion_cn_stream_buffer_unlock(void *alsa_chip, const char *stream_name, unsigned long *flags)
-{
-    struct fusion_cn_chip *chip = alsa_chip;
-    struct fusion_cn_substream *stream;
-
-    read_lock_irqsave(&chip->lock, *flags);
-    stream = fusion_cn_find_substream(chip, stream_name);
-    if (stream) {
-        kref_get(&stream->ref);
-    }
-    read_unlock_irqrestore(&chip->lock, *flags);
-
-    if (stream) {
-        spin_unlock(&stream->lock);
-        kref_put(&stream->ref, fusion_cn_substream_release);
-    } else {
-        printk(KERN_ERR "fusion_cn: stream_buffer_unlock: Stream %s not found\n", stream_name);
-    }
 }
 
 static uint32_t fusion_cn_get_stream_buffer_offset(void *alsa_chip, const char *stream_name)
@@ -266,7 +224,6 @@ static uint32_t fusion_cn_get_stream_buffer_offset(void *alsa_chip, const char *
         printk(KERN_ERR "fusion_cn: get_stream_buffer_offset: Stream %s not found\n", stream_name);
         return 0;
     }
-    kref_get(&stream->ref);
     offset = stream->buffer_pos;
     read_unlock_irqrestore(&chip->lock, flags);
     kref_put(&stream->ref, fusion_cn_substream_release);
@@ -282,12 +239,16 @@ static int fusion_cn_pcm_interrupt(void *alsa_chip, int direction, const char *s
 
     read_lock_irqsave(&chip->lock, flags);
     stream = fusion_cn_find_substream(chip, stream_name);
-    if (!stream || !stream->substream || stream->substream->stream != direction) {
+    if (!stream) {
         read_unlock_irqrestore(&chip->lock, flags);
-        printk(KERN_WARNING "fusion_cn: pcm_interrupt: Invalid stream %s, direction %d\n", stream_name, direction);
+        printk(KERN_WARNING "fusion_cn: pcm_interrupt: coudln't find stream %s\n", stream_name);
+        return -EINVAL;
+    } else if (!stream->substream || stream->substream->stream != direction) {
+        read_unlock_irqrestore(&chip->lock, flags);
+        kref_put(&stream->ref, fusion_cn_substream_release);
+        printk(KERN_WARNING "fusion_cn: pcm_interrupt: Invalid substream for stream %s, direction %d\n", stream_name, direction);
         return -EINVAL;
     }
-    kref_get(&stream->ref);
     read_unlock_irqrestore(&chip->lock, flags);
 
     spin_lock_irq(&stream->lock);
@@ -307,7 +268,7 @@ static int fusion_cn_pcm_interrupt(void *alsa_chip, int direction, const char *s
             stream->buffer_pos -= stream->substream->runtime->buffer_size;
     }
 
-    printk(KERN_DEBUG "fusion_cn: pcm_interrupt: stream %s, buffer_ps=%d, interrupts_per_period=%d\n", stream_name, stream->buffer_pos, stream->interrupts_per_period);
+    //printk(KERN_DEBUG "fusion_cn: pcm_interrupt: stream %s, buffer_pos=%d\n", stream_name, stream->buffer_pos);
 
     stream->interrupt_idx++;
     if (stream->interrupt_idx >= stream->interrupts_per_period) {
@@ -335,7 +296,6 @@ static int fusion_cn_mute_stream_buffers(void *alsa_chip, const char *stream_nam
         printk(KERN_ERR "fusion_cn: mute_stream_buffers: Stream %s not found\n", stream_name);
         return -ENOENT;
     }
-    kref_get(&stream->ref);
     if (!stream->substream) {
         read_unlock_irqrestore(&chip->lock, flags);
         kref_put(&stream->ref, fusion_cn_substream_release);
@@ -371,7 +331,6 @@ static int fusion_cn_set_buffer_pos(void *alsa_chip, uint32_t write_slot, const 
         printk(KERN_WARNING "fusion_cn: set_buffer_pos: Invalid stream %s\n", stream_name);
         return -EINVAL;
     }
-    kref_get(&stream->ref);
     read_unlock_irqrestore(&chip->lock, flags);
 
     spin_lock_irq(&stream->lock);
@@ -586,7 +545,6 @@ static int fusion_cn_remove_substream(void *alsa_chip, const char *stream_name)
         printk(KERN_WARNING "fusion_cn: remove_substream: Stream %s not found\n", stream_name);
         return -ENOENT;
     }
-    kref_get(&stream->ref);
     read_unlock_irqrestore(&chip->lock, flags);
 
     if (stream->substream) {
@@ -599,23 +557,15 @@ static int fusion_cn_remove_substream(void *alsa_chip, const char *stream_name)
     clear_bit(stream->stream_index, chip->stream_indices);
     write_unlock_irqrestore(&chip->lock, flags);
 
-    if (stream->pcm) {
-        printk(KERN_INFO "fusion_cn: remove_substream: Disconnecting PCM for stream %s, device=%d\n",
-               stream_name, stream->stream_index);
-        snd_device_disconnect(chip->card, stream->pcm);
-        snd_device_free(chip->card, stream->pcm);
-        stream->pcm = NULL;
-    }
-
     if (stream->substream) {
         printk(KERN_INFO "fusion_cn: remove_substream: Clearing substream for stream %s\n", stream_name);
         stream->substream = NULL;
     }
 
     kref_put(&stream->ref, fusion_cn_substream_release);
+    kref_put(&stream->ref, fusion_cn_substream_release); // call fusion_cn_substream_release
     printk(KERN_INFO "fusion_cn: remove_substream: Stream %s removed, freed device=%d\n",
            stream_name, stream->stream_index);
-    kref_put(&stream->ref, fusion_cn_substream_release);
     return 0;
 }
 
@@ -1044,8 +994,6 @@ static struct fusion_cn_mgr_ops mgr_ops = {
     .get_stream_buffer = fusion_cn_get_stream_buffer,
     .get_stream_buffer_size_in_frames = fusion_cn_get_stream_buffer_size_in_frames,
     .get_stream_buffer_offset = fusion_cn_get_stream_buffer_offset,
-    .lock_buffer = fusion_cn_stream_buffer_lock,
-    .unlock_buffer = fusion_cn_stream_buffer_unlock,
     .pcm_interrupt = fusion_cn_pcm_interrupt,
     .open_substream = fusion_cn_open_substream,
     .remove_substream = fusion_cn_remove_substream,

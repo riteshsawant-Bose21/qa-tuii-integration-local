@@ -28,8 +28,6 @@ struct fusion_cn_mgr_ops {
     void *(*get_stream_buffer)(void *alsa_chip, const char *stream_name);
     uint32_t (*get_stream_buffer_size_in_frames)(void *alsa_chip, const char *stream_name);
     uint32_t (*get_stream_buffer_offset)(void *alsa_chip, const char *stream_name);
-    void (*lock_buffer)(void *alsa_chip, const char *stream_name, unsigned long *flags);   // unused
-    void (*unlock_buffer)(void *alsa_chip, const char *stream_name, unsigned long *flags); // unused
     int (*pcm_interrupt)(void *alsa_chip, int direction, const char *stream_name);
     int (*open_substream)(void *alsa_chip, uint64_t stream_handle, const char *stream_name, int direction, 
                           unsigned int channels, uint32_t rate, snd_pcm_format_t format);
