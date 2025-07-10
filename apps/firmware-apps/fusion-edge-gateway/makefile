@@ -12,20 +12,14 @@ OBJECTS := $(patsubst $(SRC_DIR)/%.cpp, $(BUILD_DIR)/%.o, $(SOURCES))
 
 INCLUDES := -I$(INCLUDE_DIR) $(foreach dir,$(EXTERNAL_INCLUDE_DIRS),-I$(dir))
 
-# Detect if SDK environment is sourced
-ifdef SDKTARGETSYSROOT
-    SYSROOT := $(SDKTARGETSYSROOT)
-    CROSS_COMPILE ?= $(CROSS_COMPILE)
-    CXX := $(CROSS_COMPILE)g++
-    CC := $(CROSS_COMPILE)gcc
-    OBJCOPY := $(CROSS_COMPILE)objcopy
-    STRIP := $(CROSS_COMPILE)strip
-    CXXFLAGS += --sysroot="$(SYSROOT)" -I"$(SYSROOT)/usr/include"
-    LDFLAGS += --sysroot="$(SYSROOT)" -L"$(SYSROOT)/usr/lib" -lcurl
-else
-    OBJCOPY := objcopy
-    STRIP := strip
-endif
+SYSROOT := $(SDKTARGETSYSROOT)
+CROSS_COMPILE ?= $(CROSS_COMPILE)
+CXX := $(CROSS_COMPILE)g++
+CC := $(CROSS_COMPILE)gcc
+OBJCOPY := $(CROSS_COMPILE)objcopy
+STRIP := $(CROSS_COMPILE)strip
+CXXFLAGS += --sysroot="$(SYSROOT)" -I"$(SYSROOT)/usr/include"
+LDFLAGS += --sysroot="$(SYSROOT)" -L"$(SYSROOT)/usr/lib" -lcurl
 
 all: $(TARGET)
 
