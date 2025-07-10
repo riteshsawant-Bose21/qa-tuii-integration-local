@@ -17,19 +17,19 @@ class WebClient{
     // The destructor of a WebClient implementation should handle any library shutdown.
     virtual ~WebClient();
 
-    /** SetCertificateChain; Update certificate path
-      * Parameters:
-      * - path - path to the certificate
-      * return int ErrorCode WEB_CLIENT_OK or WEB_CLIENT_ERROR_*
-      */
-    int SetCertificateChain(const string &path);
-
     /** CheckServer; check if server is reachable
      * Parameters:
      * - url - server url to check reachability
      * return int ErrorCode WEB_CLIENT_OK or WEB_CLIENT_ERROR_*
      */
     int CheckServer(const string &url);
+
+    /** SetCertificateChain; set the CA certificate chain to use for HTTPS requests
+     * Parameters:
+     * - path - Path to the CA certificate bundle
+     * return int ErrorCode WEB_CLIENT_OK or WEB_CLIENT_ERROR_*
+     */
+    int SetCertificateChain(const string &path);
 
     int curlCleanup();
 
@@ -63,5 +63,10 @@ class WebClient{
     **/
     int initRequest(const string &url, const string &authKey, const string &contentType, const string &contentEncoding, string *getsResponse);
 
+    bool performRequest(long &httpCode, std::string *response, const std::string &method);
+
     time_t caCheckTime;
+    // CURL internal state
+    void *curl;
+    struct curl_slist *headers;
 };

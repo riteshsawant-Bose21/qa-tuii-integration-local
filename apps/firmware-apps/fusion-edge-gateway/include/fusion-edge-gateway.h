@@ -10,6 +10,7 @@
 #include "curl/curl.h"
 #include "json.hpp"
 #include "spdlog/spdlog.h"
+#include "spdlog/sinks/basic_file_sink.h"
 #include "cloud_id.h"
 #include "webclient.h"
 #include "file_util.h"
@@ -20,10 +21,12 @@ using std::endl;
 using json = nlohmann::json;
 
 struct Device{
-    string xyteId; // Unique ID for the device
-    string accessKey; // Access key for the device
-    string hubUrl; // URL of the hub for the device
-    string cloudId; // Cloud ID for the device
+    string deviceId; // Unique ID for fusion device from fusion server
+    string xyteId; // Unique ID for the device from XYTE after registration
+    string accessKey; // Access key for the device to communicate with XYTE
+    string hubUrl; // URL of the hub for the devices to communicate with XYTE
+    string cloudId; // Unique ID for the device to send to the cloud
+    bool claimed = false; // Status of the device claim in XYTE
 }; // Global device object
 
 class FusionEdgeGateway {
@@ -37,10 +40,13 @@ private:
     int sendTelemetry();
     void processDeviceCommand(const string hub_url);
     int sendTelemetry(json telJson);
+    void sendXyteUpdateToFusionServer();
+    void getDeviceInfoFromFusionServer();
 
     std::unique_ptr<WebClient> wc;
     Device device;
-    string ca_cert_path = "/mnt/cfg/cert/cacert.pem"; // Path to the CA certificate bundle
+    const char* home = std::getenv("HOME");
+    string ca_cert_path = "/etc/ssl/certs/ca-certificates.crt"; // Path to the CA certificate bundle
     string reg_url = "https://entry.xyte.io/v1/devices"; // Registration URL
     string partner_id = "5bPj"; // Partner ID
     string hardwareKey = "a4dfe376-81a9-44bf-b3bd-f7c6c3c2dc67"; // Hardware Key
@@ -48,7 +54,11 @@ private:
     string firmwareVersion = "1.0.0"; // Firmware Version
     string serialId = get_serial_id(); // Serial ID
     string deviceName = "Fusion-Test-Device"; // Device Name
-    string log_config_path = "/mnt/cfg/log.cfg";
-    string xyte_devices_path = "/mnt/cfg/xyte-devices.json"; // Path to the device info file
-    string tel_delay_seconds = "10"; // Delay for telemetry in seconds
+    std::string xyte_devices_path = home ? std::string(home) + "/xyte-devices.json" : "/tmp/xyte-devices.json"; // Path to the xyte device info file
+    int tel_delay_seconds = 10; // Delay for telemetry in seconds
+    string serverCloudIdValue; // Cloud ID value from the server to update live status
+    bool serverIsClaimedValue; // Claim status from the server to update live status
+    string localServerUrl = "http://localhost:8080"; // Local server URL for device info
+    string fusionDeviceInfoUrl = localServerUrl + "/devices"; // Fusion server info URL
+    double rx_kbps = 0.0, tx_kbps = 0.0;
 };

@@ -12,6 +12,7 @@
 #include <sys/statvfs.h>
 #include <thread>
 #include <chrono>
+#include <errno.h>
 
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
@@ -106,3 +107,9 @@ int getSystemLoadPercent();
 int getDiskUsagePercent(const std::string& path = "/");
 int getCpuUsagePercent();
 int getCPUTemperature();
+static uint64_t prev_rx_bytes = 0;
+static uint64_t prev_tx_bytes = 0;
+static auto last_sample_time = std::chrono::steady_clock::now();
+uint64_t getNetworkRxBytes();
+uint64_t getNetworkTxBytes();
+void getNetworkRates(double &rx_kbps, double &tx_kbps);
