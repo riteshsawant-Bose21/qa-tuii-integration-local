@@ -16,6 +16,11 @@
 
 #pragma once
 
+#include <linux/hashtable.h>
+#include <linux/version.h>
+#include <linux/spinlock.h>
+#include <linux/hash.h>
+#include <sound/core.h>
 #include <sound/asound.h>
 
 #define FUSION_CN_NUM_CHANNELS_MAX 120
@@ -24,24 +29,31 @@
 #define FUSION_CN_ALSA_HASH_BITS 4
 #define FUSION_CN_NAME_MAX 32
 
-struct fusion_cn_mgr_ops {
-    void *(*get_stream_buffer)(void *alsa_chip, const char *stream_name);
-    uint32_t (*get_stream_buffer_size_in_frames)(void *alsa_chip, const char *stream_name);
-    uint32_t (*get_stream_buffer_offset)(void *alsa_chip, const char *stream_name);
-    int (*pcm_interrupt)(void *alsa_chip, int direction, const char *stream_name);
-    int (*open_substream)(void *alsa_chip, uint64_t stream_handle, const char *stream_name, int direction, 
-                          unsigned int channels, uint32_t rate, snd_pcm_format_t format);
-    int (*remove_substream)(void *alsa_chip, const char *stream_name);
-    int (*mute_stream_buffers)(void *alsa_chip, const char *stream_name);
-    int (*set_buffer_pos)(void *alsa_chip, uint32_t write_slot, const char *stream_name);
+struct fusion_cn_chip {
+    void *fusion_cn_mgr;
+    const struct fusion_cn_alsa_ops *alsa_ops;
+    rwlock_t lock;
+    struct hlist_head streams[1 << FUSION_CN_ALSA_HASH_BITS];
+    struct snd_card *card;
+    bool debug;
+    DECLARE_BITMAP(stream_indices, FUSION_CN_MAX_STREAMS);
 };
 
 struct fusion_cn_alsa_ops {
-    int (*register_alsa_driver)(void *mgr, const struct fusion_cn_mgr_ops *ops, void *alsa_chip);
+    int (*register_alsa_driver)(void *mgr, struct fusion_cn_chip *alsa_chip);
     int (*get_rtp_frame_size)(void *mgr, uint64_t stream_handle, uint32_t *framesize);
     int (*start_interrupts)(void *mgr, uint64_t stream_handle);
     int (*stop_interrupts)(void *mgr, uint64_t stream_handle);
 };
 
-int fusion_cn_alsa_init_(void *mgr, const struct fusion_cn_alsa_ops *callbacks);
+void *fusion_cn_alsa_get_stream_buffer(struct fusion_cn_chip *alsa_chip, const char *stream_name);
+uint32_t fusion_cn_alsa_get_stream_buffer_size_in_frames(struct fusion_cn_chip *alsa_chip, const char *stream_name);
+uint32_t fusion_cn_alsa_get_stream_buffer_offset(struct fusion_cn_chip *alsa_chip, const char *stream_name);
+int fusion_cn_alsa_pcm_interrupt(struct fusion_cn_chip *alsa_chip, int direction, const char *stream_name);
+int fusion_cn_alsa_open_substream(struct fusion_cn_chip *alsa_chip, uint64_t stream_handle, const char *stream_name,
+                                    int direction, unsigned int channels, uint32_t rate, snd_pcm_format_t format);
+int fusion_cn_alsa_remove_substream(struct fusion_cn_chip *alsa_chip, const char *stream_name);
+int fusion_cn_alsa_mute_stream_buffers(struct fusion_cn_chip *alsa_chip, const char *stream_name);
+int fusion_cn_alsa_set_buffer_pos(struct fusion_cn_chip *alsa_chip, uint32_t write_slot, const char *stream_name);
+int fusion_cn_alsa_driver_init(void *mgr, const struct fusion_cn_alsa_ops *callbacks);
 void fusion_cn_alsa_destroy(void);
