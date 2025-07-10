@@ -8,11 +8,23 @@ A lightweight UDP-based JSON value monitor that supports nested object paths and
 ```bash
 multipass launch -n arm-builder -c 2 -m 4G -d 10G --cloud-init - << EOF
 #cloud-config
+package_update: true
+package_upgrade: false
 packages:
- - build-essential
  - g++
- - g++-aarch64-linux-gnu
+ - build-essential
  - libjsoncpp-dev
+ - libspdlog-dev
+ - libcurl4-openssl-dev
+ - libboost-dev
+ - libboost-program-options-dev
+ - libjack-jackd2-dev
+ - libsndfile1-dev
+
+runcmd:
+ - which g++
+ - g++ --version
+ - ld --version
 EOF
 ```
 

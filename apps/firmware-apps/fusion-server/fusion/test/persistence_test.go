@@ -17,7 +17,7 @@ const (
 	databaseName = "fusion_test.db"
 )
 
-var persisteConfig = api.AppConfig{
+var persistConfig = api.AppConfig{
 	NodeName: "test_manager",
 	Verbose:  false,
 }
@@ -40,7 +40,7 @@ func TestMarkDirtyConcurrent(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, databaseName)
 
-	sm := persistence.NewStateManager(&persisteConfig)
+	sm := persistence.NewStateManager(&persistConfig)
 	if err := sm.Set("testKey", "testValue"); err != nil {
 		t.Fatalf("Failed to set initial state: %v", err)
 	}
@@ -85,7 +85,7 @@ func TestValidateStateFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, databaseName)
 
-	sm := persistence.NewStateManager(&persisteConfig)
+	sm := persistence.NewStateManager(&persistConfig)
 	if err := sm.Set("key", "value"); err != nil {
 		t.Fatalf("Failed to set state: %v", err)
 	}
@@ -108,7 +108,7 @@ func TestValidateStateFile(t *testing.T) {
 // remains consistent when the same state is used.
 func TestChecksumCalculation(t *testing.T) {
 
-	sm := persistence.NewStateManager(&persisteConfig)
+	sm := persistence.NewStateManager(&persistConfig)
 
 	// Set a known state.
 	state := map[string]*api.StateEntry{

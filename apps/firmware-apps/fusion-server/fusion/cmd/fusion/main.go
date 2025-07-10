@@ -1,13 +1,16 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
 	"math/rand"
 	"os"
+	"os/signal"
 	"runtime/debug"
 	"strconv"
+	"syscall"
 	"time"
 
 	"fusion/internal/api"
@@ -52,9 +55,7 @@ func createUniqueNodeName(baseName string) string {
 }
 
 func main() {
-
 	defer func() {
-		// Log panics with a stack trace and exit
 		if r := recover(); r != nil {
 			logging.GetLogger().Fatal("PANIC: %v\n%s", r, debug.Stack())
 		}
@@ -64,5 +65,28 @@ func main() {
 
 	app := app.NewApp(config)
 	defer app.Close()
-	app.Start()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Listen for SIGINT/SIGTERM
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+	done := make(chan struct{})
+
+	go func() {
+		app.Start(ctx)
+		close(done)
+	}()
+
+	logger := logging.GetLogger()
+
+	select {
+	case <-sigs:
+		logger.Info("Shutdown signal received")
+		app.Close()
+	case <-done:
+		logger.Info("Exited normally")
+	}
 }

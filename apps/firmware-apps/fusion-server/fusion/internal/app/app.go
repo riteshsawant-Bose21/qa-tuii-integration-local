@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/cluster"
@@ -117,6 +118,7 @@ func (app *App) Close() {
 		app.BLEServer.Stop()
 	}
 	app.UDPServer.Stop()
+	app.Persistence.Close()
 	app.Logger.Close()
 }
 
@@ -291,12 +293,12 @@ func (app *App) joinCluster(ip string) {
 }
 
 // startAPIServer starts the main HTTP API server
-func startAPIServer(router *mux.Router, port string, wg *sync.WaitGroup) {
+func startAPIServer(router *mux.Router, port string, ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	apiPort := fmt.Sprintf(":%s", port)
 
-	var serverType = "unknown"
+	serverType := "unknown"
 	switch port {
 	case api.AdminPort:
 		serverType = "admin"
@@ -307,12 +309,35 @@ func startAPIServer(router *mux.Router, port string, wg *sync.WaitGroup) {
 	logger := logging.GetLogger()
 	logger.Info("Starting %s API server on %s", serverType, apiPort)
 
-	if err := http.ListenAndServe(apiPort, router); err != nil {
-		logger.Fatal("API server failed: %v", err)
+	srv := &http.Server{
+		Addr:    apiPort,
+		Handler: router,
+	}
+
+	// Run the server in a goroutine
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Error("API server (%s) failed: %v", serverType, err)
+		}
+	}()
+
+	// Wait for shutdown signal
+	<-ctx.Done()
+
+	logger.Info("Shutting down %s API server...", serverType)
+
+	// Shutdown the server with a timeout
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		logger.Error("Error shutting down %s server: %v", serverType, err)
+	} else {
+		logger.Debug("%s server shut down cleanly", serverType)
 	}
 }
 
-func (app *App) Start() {
+func (app *App) Start(ctx context.Context) {
 
 	app.setupPublicRoutes()
 	app.setupPrivateRoutes()
@@ -326,8 +351,8 @@ func (app *App) Start() {
 	// Add two items to the wait group for the public and private routers
 	wg.Add(2)
 
-	go startAPIServer(app.publicRouter, api.HTTPPort, &wg)
-	go startAPIServer(app.privateRouter, api.AdminPort, &wg)
+	go startAPIServer(app.publicRouter, api.HTTPPort, ctx, &wg)
+	go startAPIServer(app.privateRouter, api.AdminPort, ctx, &wg)
 
 	// Wait for the API server to come up before printing info
 	time.Sleep(startupWaitDelay * time.Millisecond)

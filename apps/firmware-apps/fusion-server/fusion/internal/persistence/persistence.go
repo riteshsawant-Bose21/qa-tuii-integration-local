@@ -66,20 +66,12 @@ func NewPersistence(dbPath string, stateManager *StateManager) (*Persistence, er
 	if err := persistence.initializeDatabase(); err != nil {
 		return nil, err
 	}
-
-	// Save state on shutdown
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
-	go func() {
-		<-c
-		persistence.SaveState()
-	}()
-
 	return persistence, nil
 }
 
 // Close safely closes the database.
 func (p *Persistence) Close() {
+	p.SaveState()
 	p.db.Close()
 }
 
