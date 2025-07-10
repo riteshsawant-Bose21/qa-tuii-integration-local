@@ -128,7 +128,6 @@ private:
 
 public:
     SAPAnnouncer(const std::string& sys_ip) : system_ip(sys_ip), sock_fd(-1) {
-        ptp_clock_id = getPTPClockID();
         sock_fd = socket(AF_INET, SOCK_DGRAM, 0);
         if (sock_fd < 0) {
             SPDLOG_ERROR("Failed to create SAP socket: {}", strerror(errno));
@@ -175,6 +174,7 @@ public:
     }
 
     inline void sendAnnouncement(const SAPAnnouncement& ann) {
+        ptp_clock_id = getPTPClockID();
         if (ptp_clock_id.empty()) {
             SPDLOG_ERROR("Skipping SAP for '{}': No PTP clock ID", ann.stream_name);
             return;
