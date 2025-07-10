@@ -12,6 +12,9 @@ OBJECTS := $(patsubst $(SRC_DIR)/%.cpp, $(BUILD_DIR)/%.o, $(SOURCES))
 
 INCLUDES := -I$(INCLUDE_DIR) $(foreach dir,$(EXTERNAL_INCLUDE_DIRS),-I$(dir))
 
+CURL_CFLAGS := $(shell pkg-config --cflags libcurl)
+CURL_LIBS := $(shell pkg-config --libs libcurl)
+
 # Detect if SDK environment is sourced
 ifdef SDKTARGETSYSROOT
     SYSROOT := $(SDKTARGETSYSROOT)
@@ -20,8 +23,9 @@ ifdef SDKTARGETSYSROOT
     CC := $(CROSS_COMPILE)gcc
     OBJCOPY := $(CROSS_COMPILE)objcopy
     STRIP := $(CROSS_COMPILE)strip
-    CXXFLAGS += --sysroot="$(SYSROOT)" -I"$(SYSROOT)/usr/include"
-    LDFLAGS += --sysroot="$(SYSROOT)" -L"$(SYSROOT)/usr/lib" -lcurl
+    CXXFLAGS += --sysroot="$(SYSROOT)" -I"$(SYSROOT)/usr/include" \
+				$(CURL_CFLAGS) -I"$(SYSROOT)/usr/include/c++/v1"
+    LDFLAGS += --sysroot="$(SYSROOT)" -L"$(SYSROOT)/usr/lib" -lcurl $(CURL_LIBS)
 else
     OBJCOPY := objcopy
     STRIP := strip
