@@ -12,13 +12,6 @@ OBJECTS := $(patsubst $(SRC_DIR)/%.cpp, $(BUILD_DIR)/%.o, $(SOURCES))
 
 INCLUDES := -I$(INCLUDE_DIR) $(foreach dir,$(EXTERNAL_INCLUDE_DIRS),-I$(dir))
 
-CURL_CFLAGS := $(shell pkg-config --cflags libcurl)
-CURL_LIBS := $(shell pkg-config --libs libcurl)
-
-ifeq ($(CURL_LIBS),)
-    CURL_LIBS := -lcurl
-endif
-
 # Detect if SDK environment is sourced
 ifdef SDKTARGETSYSROOT
     SYSROOT := $(SDKTARGETSYSROOT)
@@ -27,9 +20,8 @@ ifdef SDKTARGETSYSROOT
     CC := $(CROSS_COMPILE)gcc
     OBJCOPY := $(CROSS_COMPILE)objcopy
     STRIP := $(CROSS_COMPILE)strip
-    CXXFLAGS += --sysroot="$(SYSROOT)" -I"$(SYSROOT)/usr/include" \
-				$(CURL_CFLAGS) -I"$(SYSROOT)/usr/include/c++/v1"
-    LDFLAGS += --sysroot="$(SYSROOT)" -L"$(SYSROOT)/usr/lib" $(CURL_LIBS)
+    CXXFLAGS += --sysroot="$(SYSROOT)" -I"$(SYSROOT)/usr/include"
+    LDFLAGS += --sysroot="$(SYSROOT)" -L"$(SYSROOT)/usr/lib" -lcurl
 else
     OBJCOPY := objcopy
     STRIP := strip
@@ -47,9 +39,9 @@ $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 
 release: clean
-	$(MAKE) -j$(PARALLEL_MAKE) CXXFLAGS="$(CXXFLAGS) -g -O2 \
-		-DNDEBUG -DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG" \
-		LDFLAGS="$(LDFLAGS)" all
+	$(MAKE) -j$(PARALLEL_MAKE) all \
+		CXXFLAGS='$(CXXFLAGS) -g -O2 -DNDEBUG -DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG' \
+		LDFLAGS='$(LDFLAGS)'
 	@echo "→ Extracting debug info to $(DEBUG_FILE)"
 	$(OBJCOPY) --only-keep-debug $(TARGET) $(DEBUG_FILE)
 	@echo "→ Stripping binary to reduce size"
@@ -57,7 +49,7 @@ release: clean
 	$(OBJCOPY) --add-gnu-debuglink=$(DEBUG_FILE) $(TARGET)
 
 local: clean
-	$(MAKE) -j$(shell nproc) CXX=g++ CXXFLAGS="-Wall -Wextra -O2 --std=c++17 -g -DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG" LDFLAGS="-lcurl" EXE_EXT="" all
+	$(MAKE) -j$(PARALLEL_MAKE) CXX=g++ CXXFLAGS="-Wall -Wextra -O2 --std=c++17 -g -DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG" LDFLAGS="-lcurl" EXE_EXT="" all
 
 clean:
 	rm -rf $(BUILD_DIR)
