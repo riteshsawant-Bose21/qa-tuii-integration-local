@@ -19,6 +19,8 @@
 #include <set>
 #include <fstream>
 #include <json/json.h>
+#include <sys/ioctl.h>
+#include <linux/ptp_clock.h>
 
 namespace {
 
@@ -67,7 +69,7 @@ struct fusion_cn_stream_config {
 } __attribute__((packed));
 
 // Helper function to convert uint32_t IP to string
-std::string ipToString(uint32_t ip) {
+std::string ip_to_string(uint32_t ip) {
     struct in_addr addr;
     addr.s_addr = ip;
     return std::string(inet_ntoa(addr));
@@ -82,10 +84,10 @@ void dump_fusion_cn_stream_config(const fusion_cn_stream_config& config) {
     SPDLOG_INFO("  Format: {}", config.format);
     SPDLOG_INFO("  Channels: {}", static_cast<int>(config.channels));
     SPDLOG_INFO("  Frames per Packet: {}", config.frames_per_packet);
-    SPDLOG_INFO("  Dest IP: {}", ipToString(config.dest_ip));
+    SPDLOG_INFO("  Dest IP: {}", ip_to_string(config.dest_ip));
     SPDLOG_INFO("  Dest Port: {}", config.dest_port);
     SPDLOG_INFO("  Source Port: {}", config.source_port);
-    SPDLOG_INFO("  Source IP: {}", ipToString(config.source_ip));
+    SPDLOG_INFO("  Source IP: {}", ip_to_string(config.source_ip));
     SPDLOG_INFO("  Payload Type: {}", static_cast<int>(config.payload_type));
     SPDLOG_INFO("  Playout Delay: {}", config.playout_delay);
     SPDLOG_INFO("  Timestamp Offset: {}", config.timestamp_offset);
@@ -141,6 +143,39 @@ std::string get_system_ip() {
     SPDLOG_ERROR("No valid IPv4 address found on non-loopback interfaces");
     return "";
 }
+
+// bool is_ptp_sync_good(const std::string& ptpDevice = "/dev/ptp0", int64_t thresholdNs = 5000) {
+//     // Open PHC device
+//     int fd = open(ptpDevice.c_str(), O_RDWR);
+//     if (fd < 0) {
+//         return false; // Failed to open device
+//     }
+
+//     // Prepare PTP_SYS_OFFSET request
+//     struct ptp_sys_offset offset = {};
+//     offset.n_samples = 5; // Number of samples for averaging
+
+//     // Query offset between PHC and system clock
+//     if (ioctl(fd, PTP_SYS_OFFSET, &offset) < 0) {
+//         close(fd);
+//         return false; // Ioctl failed
+//     }
+
+//     close(fd);
+
+//     // Calculate average offset in nanoseconds
+//     int64_t totalOffsetNs = 0;
+//     for (unsigned int i = 0; i < offset.n_samples; ++i) {
+//         // ts[3*i] = system time, ts[3*i+1] = PHC time, ts[3*i+2] = system time
+//         int64_t sysNs = offset.ts[3 * i].sec * 1000000000LL + offset.ts[3 * i].nsec;
+//         int64_t phcNs = offset.ts[3 * i + 1].sec * 1000000000LL + offset.ts[3 * i + 1].nsec;
+//         totalOffsetNs += phcNs - sysNs;
+//     }
+//     int64_t avgOffsetNs = totalOffsetNs / offset.n_samples;
+
+//     // Check if absolute offset is within threshold
+//     return std::abs(avgOffsetNs) <= thresholdNs;
+// }
 
 class NetlinkClient {
 private:
@@ -468,7 +503,7 @@ void FusionConnectClient::join_multicast_group(uint32_t multicast_ip) {
         return;
     }
 
-    SPDLOG_DEBUG("Joining multicast group {} on interface {}", ipToString(multicast_ip), network_interface);
+    SPDLOG_DEBUG("Joining multicast group {} on interface {}", ip_to_string(multicast_ip), network_interface);
 
     if (sendto(sock, &req, req.n.nlmsg_len, 0, (struct sockaddr*)&nladdr, sizeof(nladdr)) < 0) {
         SPDLOG_ERROR("Failed to send netlink message for IGMP join: {}", strerror(errno));
@@ -477,7 +512,7 @@ void FusionConnectClient::join_multicast_group(uint32_t multicast_ip) {
     }
 
     close(sock);
-    SPDLOG_INFO("Successfully joined multicast group {} on interface {}", ipToString(multicast_ip), network_interface);
+    SPDLOG_INFO("Successfully joined multicast group {} on interface {}", ip_to_string(multicast_ip), network_interface);
 }
 
 void FusionConnectClient::audio_streams_update_func() {
@@ -740,7 +775,7 @@ void FusionConnectClient::audio_streams_update_func() {
     }
 }
 
-void FusionConnectClient::process() {  
+void FusionConnectClient::process() { 
     if (!ptp_synchronized) {
         uint8_t sync = 1;
         struct fusion_cn_ctrl_msg reply = { .cmd = 0, .err = 0, .data_size = 0, .data = nullptr, .pid = 0 };
@@ -809,20 +844,20 @@ void FusionConnectClient::process() {
     }
 
     // SAP announcements every 30 seconds
-    if (announce_counter++ % 30 == 0) {
-        sap_announcer.announceAll();
-    }
-    // Handle deletion packets
-    std::vector<std::string> to_delete;
-    for (const auto& pair : sap_announcer.getAnnouncements()) {
-        if (pair.second.is_deleted && pair.second.num_delete_pending > 0) {
-            sap_announcer.sendAnnouncement(pair.second);
-            to_delete.push_back(pair.first);
-        }
-    }
-    for (const auto& stream_name : to_delete) {
-        sap_announcer.handleDeletion(stream_name);
-    }
+    // if (announce_counter++ % 30 == 0) {
+    //     sap_announcer.announceAll();
+    // }
+    // // Handle deletion packets
+    // std::vector<std::string> to_delete;
+    // for (const auto& pair : sap_announcer.getAnnouncements()) {
+    //     if (pair.second.is_deleted && pair.second.num_delete_pending > 0) {
+    //         sap_announcer.sendAnnouncement(pair.second);
+    //         to_delete.push_back(pair.first);
+    //     }
+    // }
+    // for (const auto& stream_name : to_delete) {
+    //     sap_announcer.handleDeletion(stream_name);
+    // }
 }
 
 } // namespace
