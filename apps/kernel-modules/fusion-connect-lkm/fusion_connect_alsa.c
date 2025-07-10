@@ -160,13 +160,8 @@ static struct platform_device *g_pdev;
 static void fusion_cn_substream_release(struct kref *kref)
 {
     struct fusion_cn_substream *stream = container_of(kref, struct fusion_cn_substream, ref);
-    if (stream->pcm) {
-        printk(KERN_INFO "fusion_cn: substream_release: Freeing PCM for stream %s, device=%d\n",
-               stream->stream_name, stream->stream_index);
-        snd_device_disconnect(stream->substream->pcm->card, stream->pcm);
-        snd_device_free(stream->substream->pcm->card, stream->pcm);
-        stream->pcm = NULL;
-    }
+    printk(KERN_INFO "fusion_cn: substream_release: Freeing stream %s, device=%d\n",
+            stream->stream_name, stream->stream_index);
     kfree(stream);
 }
 
@@ -547,20 +542,23 @@ static int fusion_cn_remove_substream(void *alsa_chip, const char *stream_name)
     }
     read_unlock_irqrestore(&chip->lock, flags);
 
+    if (stream->pcm) {
+        printk(KERN_INFO "fusion_cn: remove_substream: Disconnecting PCM for stream %s, device=%d\n",
+               stream_name, stream->stream_index);
+        snd_device_disconnect(chip->card, stream->pcm);
+        snd_device_free(chip->card, stream->pcm);
+        stream->pcm = NULL;
+    }
+
     if (stream->substream) {
-        snd_pcm_stop(stream->substream, SNDRV_PCM_STATE_DISCONNECTED);
-        printk(KERN_INFO "fusion_cn: remove_substream: Stopped PCM for stream %s\n", stream_name);
+        printk(KERN_INFO "fusion_cn: remove_substream: Clearing substream for stream %s\n", stream_name);
+        stream->substream = NULL;
     }
 
     write_lock_irqsave(&chip->lock, flags);
     hlist_del(&stream->hnode);
     clear_bit(stream->stream_index, chip->stream_indices);
     write_unlock_irqrestore(&chip->lock, flags);
-
-    if (stream->substream) {
-        printk(KERN_INFO "fusion_cn: remove_substream: Clearing substream for stream %s\n", stream_name);
-        stream->substream = NULL;
-    }
 
     kref_put(&stream->ref, fusion_cn_substream_release);
     kref_put(&stream->ref, fusion_cn_substream_release); // call fusion_cn_substream_release

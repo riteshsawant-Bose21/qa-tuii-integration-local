@@ -92,6 +92,8 @@ void fusion_cn_rtp_stream_release(struct kref *ref)
 {
     struct fusion_cn_rtp_stream *stream = container_of(ref, struct fusion_cn_rtp_stream, ref);
     if (stream->next_action_times) {
+        printk(KERN_INFO "fusion_cn: rtp_stream_release: Freeing next_action_times for stream %s\n",
+               stream->info.stream_name);
         kfree(stream->next_action_times);
     }
     kfree(stream);
