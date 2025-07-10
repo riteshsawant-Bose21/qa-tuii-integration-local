@@ -7,10 +7,10 @@
 #include <thread>
 #include <chrono>
 
-#include "curl/curl.h"
+#include <curl/curl.h>
 #include "json.hpp"
 #include "spdlog/spdlog.h"
-#include "spdlog/sinks/basic_file_sink.h"
+#include "spdlog/sinks/stdout_color_sinks.h"
 #include "cloud_id.h"
 #include "webclient.h"
 #include "file_util.h"
@@ -54,7 +54,7 @@ private:
     string firmwareVersion = "1.0.0"; // Firmware Version
     string serialId = get_serial_id(); // Serial ID
     string deviceName = "Fusion-Test-Device"; // Device Name
-    std::string xyte_devices_path = home ? std::string(home) + "/xyte-devices.json" : "/tmp/xyte-devices.json"; // Path to the xyte device info file
+    std::string xyte_devices_path = "/etc/fusion/xyte-devices.json"; // Path to the xyte device info file
     int tel_delay_seconds = 10; // Delay for telemetry in seconds
     string serverCloudIdValue; // Cloud ID value from the server to update live status
     bool serverIsClaimedValue; // Claim status from the server to update live status

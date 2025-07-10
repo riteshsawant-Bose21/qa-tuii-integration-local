@@ -1,9 +1,5 @@
 #include "webclient.h"
 
-#include <time.h>
-#include "curl/curl.h"
-#include "spdlog/spdlog.h"
-
 using std::string;
 using std::ifstream;
 using std::stringstream;
