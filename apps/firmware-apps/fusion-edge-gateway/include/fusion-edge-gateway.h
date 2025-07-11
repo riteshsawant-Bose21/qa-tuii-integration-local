@@ -9,8 +9,7 @@
 
 #include <curl/curl.h>
 #include "json.hpp"
-#include "spdlog/spdlog.h"
-#include "spdlog/sinks/stdout_color_sinks.h"
+#include <spdlog/spdlog.h>
 #include "cloud_id.h"
 #include "webclient.h"
 #include "file_util.h"
