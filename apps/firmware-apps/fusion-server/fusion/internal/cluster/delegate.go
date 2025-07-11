@@ -167,6 +167,7 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 			logger.Error("Error applying update: %v", err)
 			return
 		}
+		d.persistence.MarkDirty()
 		d.hub.Broadcast(&message)
 
 	case api.NotifyOpSnapActivate:
