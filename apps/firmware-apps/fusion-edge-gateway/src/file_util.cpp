@@ -4,7 +4,7 @@ int readFile(const std::string &fileName, std::string &getsFirstLine) {
   std::ifstream fd(fileName);
 
   if (!fd) {
-    spdlog::error("[readFile] Cannot open '{}' for reading", fileName);
+    SPDLOG_ERROR("[readFile] Cannot open '{}' for reading", fileName);
     return -1;
   }
 
@@ -18,7 +18,7 @@ int writeFile(const std::string &fileName, const std::string &writeData){
   std::ofstream fd(fileName, std::ofstream::trunc);
 
   if (!fd) {
-    spdlog::error("[writeFile] Cannot open '{}' for writing", fileName);
+    SPDLOG_ERROR("[writeFile] Cannot open '{}' for writing", fileName);
     return -1;
   }
 
@@ -35,7 +35,7 @@ int appendFile(const std::string &fileName, const std::string &writeData){
   std::ofstream fd(fileName, std::ios::app);
 
   if (!fd) {
-    spdlog::error("[appendFile] Cannot open '{}' for appending", fileName);
+    SPDLOG_ERROR("[appendFile] Cannot open '{}' for appending", fileName);
     return -1;
   }
 
