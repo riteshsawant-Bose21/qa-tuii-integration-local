@@ -15,12 +15,13 @@ import (
 	"time"
 
 	"github.com/go-ble/ble"
-	"github.com/go-ble/ble/examples/lib/dev"
+	"github.com/go-ble/ble/linux"
 )
 
 const (
 	advertiserName = "Fusion Mini"
 	bleRetryTime   = 5
+	deviceName     = "Fusion Mini"
 	maxChunkSize   = 100
 	errUnexpected  = 0x80
 )
@@ -157,13 +158,16 @@ type BLEServer struct {
 func NewBLEServer(serviceUUID string, characterUUID string) (*BLEServer, error) {
 	logger := logging.GetLogger()
 
-	// Initialize the default BLE device.
-	d, err := dev.DefaultDevice()
+	// Create BLE device for hci0
+	d, err := linux.NewDeviceWithName(deviceName, ble.OptDeviceID(0))
 	if err != nil {
 		return nil, err
 	}
+
+	// Set it as the default
 	ble.SetDefaultDevice(d)
 
+	// Create cancelable context
 	ctx, cancel := context.WithCancel(context.Background())
 	server := &BLEServer{
 		ctx:    ctx,
