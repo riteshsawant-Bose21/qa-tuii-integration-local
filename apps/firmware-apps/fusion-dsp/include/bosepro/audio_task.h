@@ -171,10 +171,7 @@ public:
             ticks = 1;
         }
 
-        if (ticks >= period)
-        {
-            pthread_cond_signal(&ticks_cond);
-        }
+        pthread_cond_signal(&ticks_cond);
 
         pthread_mutex_unlock(&ticks_mutex);
     }
