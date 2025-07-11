@@ -21,6 +21,7 @@ import (
 const (
 	advertiserName = "Fusion Mini"
 	bleRetryTime   = 5
+	deviceName     = "Fusion Mini"
 	maxChunkSize   = 100
 	errUnexpected  = 0x80
 )
@@ -158,7 +159,7 @@ func NewBLEServer(serviceUUID string, characterUUID string) (*BLEServer, error) 
 	logger := logging.GetLogger()
 
 	// Create BLE device for hci0
-	d, err := linux.NewDevice(ble.OptDeviceID(0))
+	d, err := linux.NewDeviceWithName(deviceName, ble.OptDeviceID(0))
 	if err != nil {
 		return nil, err
 	}
