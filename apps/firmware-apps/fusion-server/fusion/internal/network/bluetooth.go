@@ -20,6 +20,7 @@ import (
 
 const (
 	advertiserName = "Fusion Mini"
+	bleRetryTime   = 5
 	maxChunkSize   = 100
 	errUnexpected  = 0x80
 )
@@ -279,8 +280,17 @@ func NewBLEServer(serviceUUID string, characterUUID string) (*BLEServer, error) 
 	server.wg.Add(1)
 	go func() {
 		defer server.wg.Done()
-		if err := ble.AdvertiseNameAndServices(ctx, advertiserName, svc.UUID); err != nil {
-			logger.Error("Error advertising BLE service: %v", err)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+				err := ble.AdvertiseNameAndServices(ctx, advertiserName, svc.UUID)
+				if err != nil {
+					logger.Error("BLE advertising failed: %v. Retrying in %d seconds", err, bleRetryTime)
+					time.Sleep(bleRetryTime * time.Second)
+				}
+			}
 		}
 	}()
 

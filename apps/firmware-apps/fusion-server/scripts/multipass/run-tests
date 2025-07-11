@@ -141,3 +141,6 @@ case "$test_type" in
         go test -v --race ./websocket_test.go
         ;;
 esac
+
+cd ../../ || exit 1
+sh scripts/multipass/clear-config.sh

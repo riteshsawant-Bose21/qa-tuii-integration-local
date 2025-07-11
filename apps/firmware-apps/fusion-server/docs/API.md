@@ -108,7 +108,7 @@ The response will be a JSON array, where each element contains the device's addr
         "name": "fusion3"
       },
       {
-        "address": "",
+        "address": "192.168.64.6",
         "id": "test-device",
         "location": "RoomB",
         "name": "RenamedDevice"
