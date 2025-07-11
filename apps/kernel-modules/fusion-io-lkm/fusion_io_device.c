@@ -135,6 +135,10 @@ static int configure_i2c_endpoint(struct platform_device *pdev, struct endpoint 
                                                                             data->reg_addr, data->data_mask, client->addr);
                 return ret;
             }
+            else{
+              //  dev_info(&pdev->dev, "Wrote register 0x%04x with data 0x%04x to I2C device at 0x%02x\n",
+                                                                           // data->reg_addr, data->data_mask, client->addr);
+            }
         }
     }
     

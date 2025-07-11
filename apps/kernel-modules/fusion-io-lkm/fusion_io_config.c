@@ -1440,7 +1440,7 @@ const struct base_device bd_fusion_c0 = {
                 {
                     .name = "ep-hdmi-ep9512t",
                     .type = EP_TYPE_HDMI_EP9512T,
-                    .export = EP_EXPORT,
+                    .export = EP_NO_EXPORT,
                     .has_i2c = true,
                     .addr_list = (unsigned short[]) { 0x3c, I2C_CLIENT_END },
                     .ep_handle_irq = ep9512t_handle_irq,
@@ -1482,12 +1482,15 @@ const struct base_device bd_fusion_c0 = {
                                 {
                                     .reg_addr  = EP9512T_REG_GENERAL_CTRL, // 0x10
                                     .op_size   = I2C_REG_DATA_OP_8BIT,
-                                    .data_mask = 0x21                  // ARC EN = 1, Audio_Path = 1, others 0
+                                    // ARC_EN = 1, Audio_Path = 1, others 0
+                                    // This is the default setting for EP9512T      
+                                    .data_mask = 0x21                
                                 },
                                 {
                                     .reg_addr  = EP9512T_REG_TX_CTRL,    // 0x11
                                     .op_size   = I2C_REG_DATA_OP_8BIT,
                                     .data_mask = 0x00                  // All zero, clear all bits
+                                    
                                 },
                                 {
                                     .reg_addr  = EP9512T_REG_AUDIO_CFG,  // 0x12
