@@ -1481,10 +1481,8 @@ const struct base_device bd_fusion_c0 = {
                             .i2c_cmds = (struct i2c_reg_data[]) {
                                 {
                                     .reg_addr  = EP9512T_REG_GENERAL_CTRL, // 0x10
-                                    .op_size   = I2C_REG_DATA_OP_8BIT,
-                                    // ARC_EN = 1, Audio_Path = 1, others 0
-                                    // This is the default setting for EP9512T      
-                                    .data_mask = 0x21                
+                                    .op_size   = I2C_REG_DATA_OP_8BIT,    
+                                    .data_mask = 0x21                // ARC_EN = 1, Audio_Path = 1, others 0
                                 },
                                 {
                                     .reg_addr  = EP9512T_REG_TX_CTRL,    // 0x11
