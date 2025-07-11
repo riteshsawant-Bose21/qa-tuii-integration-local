@@ -1202,7 +1202,7 @@ const struct base_device bd_fusion_c0 = {
                             .num = 6,
                             .ioexp_id = 3,
                             .dir = EP_GPIO_DIR_O,
-                            .default_val = EP_GPIO_VAL_LO
+                            .default_val = EP_GPIO_VAL_HI
                         }
                     },
                     .num_cmds = 1,
@@ -1216,7 +1216,7 @@ const struct base_device bd_fusion_c0 = {
                                 {
                                     .reg_addr = TCA9535_REG_OUTPUT_PORT0,
                                     .op_size = I2C_REG_DATA_OP_16BIT,
-                                    .data_mask = 0x0010  // 15v_psw high
+                                    .data_mask = 0x0030  // 15v_psw & dac_mute high
                                 },
                                 {
                                     .reg_addr = TCA9535_REG_CONFIGURATION0,
