@@ -1636,15 +1636,17 @@ static int fusion_io_probe(struct platform_device *pdev)
                 ep->i2c_client = endpoint_get_i2c_client(pdev, ep, i2c_adapter);
 
                 if(ep->i2c_client == NULL) {
-                    dev_info(&pdev->dev, "Failed to set i2c client...");
-                    ret = -ENODEV;
-                    goto error;
+                    dev_warn(&pdev->dev, "Failed to set I2C client for endpoint %s. Skipping.\n", ep->name);
+
+                    continue; //  Try next endpoint instead of aborting the whole thing
                 }
 
                 // configure i2c device
                 ret = configure_i2c_endpoint(pdev, ep);
                 if (ret) {
-                    goto error;
+                    
+                    dev_warn(&pdev->dev, "Failed to configure I2C endpoint %s. Skipping.\n", ep->name);
+                    continue; // Skip this endpoint but keep the rest alive
                 }
 
                 dev_info(&pdev->dev, "Successfully registered endpoint %s!\n", ep->name);
