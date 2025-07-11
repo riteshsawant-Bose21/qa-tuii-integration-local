@@ -1150,7 +1150,7 @@ void AlsaOut::process()
     {
         SPDLOG_WARN("Buffer depth too high: {} {}", depth, max_depth);
 
-        depth = device->adjust_buffer_depth(target_depth - depth);
+        depth = device->adjust_buffer_depth(depth - target_depth);
 
         servo->reset();
     }
