@@ -7,6 +7,7 @@
 #include <bosepro/dspmemory.h>
 
 #include <alsa/asoundlib.h>
+#include <pthread.h>
 #include <samplerate.h>
 #include <spdlog/spdlog.h>
 
@@ -139,6 +140,7 @@ private:
     bool is_input;
     bool is_open = false;
     bosepro::AudioSubtask deferred_open_task;
+    static pthread_mutex_t open_mutex;
 
     void (*convert_read)(const uint8_t *src, float *dst,
                          int channels, int samples) = nullptr;
@@ -165,6 +167,8 @@ std::vector<AlsaDevice::AlsaFormat> AlsaDevice::alsa_formats = {
         {SND_PCM_FORMAT_S16_BE, 2, convert_read_s16_be, convert_write_s16_be},
         // Add more formats as needed
 };
+
+pthread_mutex_t AlsaDevice::open_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 class AlsaIn : public bosepro::Algorithm {
 public:
@@ -241,12 +245,14 @@ AlsaDevice::~AlsaDevice()
 
 void AlsaDevice::open_device()
 {
+    pthread_mutex_lock(&open_mutex);
     SPDLOG_DEBUG("Getting device number for: {}", device_name);
     int device_number = get_device_number(device_name);
 
     if (device_number < 0)
     {
         SPDLOG_DEBUG("ALSA device {} not found", device_name);
+        pthread_mutex_unlock(&open_mutex);
         return;
     }
 
@@ -262,6 +268,7 @@ void AlsaDevice::open_device()
     if (error < 0)
     {
         SPDLOG_DEBUG("Failed to open ALSA device: {}", snd_strerror(error));
+        pthread_mutex_unlock(&open_mutex);
         return;
     }
 
@@ -277,6 +284,7 @@ void AlsaDevice::open_device()
 
     SPDLOG_DEBUG("Opened ALSA device: {}", device_name);
     is_open = true;
+    pthread_mutex_unlock(&open_mutex);
 }
 
 
