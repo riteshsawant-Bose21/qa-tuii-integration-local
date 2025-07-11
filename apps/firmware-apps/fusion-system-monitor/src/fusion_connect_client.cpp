@@ -144,38 +144,38 @@ std::string get_system_ip() {
     return "";
 }
 
-// bool is_ptp_sync_good(const std::string& ptpDevice = "/dev/ptp0", int64_t thresholdNs = 5000) {
-//     // Open PHC device
-//     int fd = open(ptpDevice.c_str(), O_RDWR);
-//     if (fd < 0) {
-//         return false; // Failed to open device
-//     }
+bool is_ptp_sync_good(const std::string& ptpDevice = "/dev/ptp0", int64_t thresholdNs = 5000) {
+    // Open PHC device
+    int fd = open(ptpDevice.c_str(), O_RDWR);
+    if (fd < 0) {
+        return false; // Failed to open device
+    }
 
-//     // Prepare PTP_SYS_OFFSET request
-//     struct ptp_sys_offset offset = {};
-//     offset.n_samples = 5; // Number of samples for averaging
+    // Prepare PTP_SYS_OFFSET request
+    struct ptp_sys_offset offset = {};
+    offset.n_samples = 5; // Number of samples for averaging
 
-//     // Query offset between PHC and system clock
-//     if (ioctl(fd, PTP_SYS_OFFSET, &offset) < 0) {
-//         close(fd);
-//         return false; // Ioctl failed
-//     }
+    // Query offset between PHC and system clock
+    if (ioctl(fd, PTP_SYS_OFFSET, &offset) < 0) {
+        close(fd);
+        return false; // Ioctl failed
+    }
 
-//     close(fd);
+    close(fd);
 
-//     // Calculate average offset in nanoseconds
-//     int64_t totalOffsetNs = 0;
-//     for (unsigned int i = 0; i < offset.n_samples; ++i) {
-//         // ts[3*i] = system time, ts[3*i+1] = PHC time, ts[3*i+2] = system time
-//         int64_t sysNs = offset.ts[3 * i].sec * 1000000000LL + offset.ts[3 * i].nsec;
-//         int64_t phcNs = offset.ts[3 * i + 1].sec * 1000000000LL + offset.ts[3 * i + 1].nsec;
-//         totalOffsetNs += phcNs - sysNs;
-//     }
-//     int64_t avgOffsetNs = totalOffsetNs / offset.n_samples;
+    // Calculate average offset in nanoseconds
+    int64_t totalOffsetNs = 0;
+    for (unsigned int i = 0; i < offset.n_samples; ++i) {
+        // ts[3*i] = system time, ts[3*i+1] = PHC time, ts[3*i+2] = system time
+        int64_t sysNs = offset.ts[3 * i].sec * 1000000000LL + offset.ts[3 * i].nsec;
+        int64_t phcNs = offset.ts[3 * i + 1].sec * 1000000000LL + offset.ts[3 * i + 1].nsec;
+        totalOffsetNs += phcNs - sysNs;
+    }
+    int64_t avgOffsetNs = totalOffsetNs / offset.n_samples;
 
-//     // Check if absolute offset is within threshold
-//     return std::abs(avgOffsetNs) <= thresholdNs;
-// }
+    // Check if absolute offset is within threshold
+    return std::abs(avgOffsetNs) <= thresholdNs;
+}
 
 class NetlinkClient {
 private:
@@ -776,20 +776,24 @@ void FusionConnectClient::audio_streams_update_func() {
 }
 
 void FusionConnectClient::process() { 
-    if (!ptp_synchronized) {
-        uint8_t sync = 1;
-        struct fusion_cn_ctrl_msg reply = { .cmd = 0, .err = 0, .data_size = 0, .data = nullptr, .pid = 0 };
-        if (client.send_message(FUSION_CN_CTRL_CMD_SET_PTP_SYNC, &sync, sizeof(sync), &reply)) {
-            if (reply.err == 0) {
-                ptp_synchronized = 1;
+    if (is_ptp_sync_good()) {
+        if (!ptp_synchronized) {
+            uint8_t sync = 1;
+            struct fusion_cn_ctrl_msg reply = { .cmd = 0, .err = 0, .data_size = 0, .data = nullptr, .pid = 0 };
+            if (client.send_message(FUSION_CN_CTRL_CMD_SET_PTP_SYNC, &sync, sizeof(sync), &reply)) {
+                if (reply.err == 0) {
+                    ptp_synchronized = 1;
+                } else {
+                    SPDLOG_ERROR("Failed to set ptp sync, err={}", reply.err);
+                }
             } else {
-                SPDLOG_ERROR("Failed to set ptp sync, err={}", reply.err);
+                SPDLOG_DEBUG("Failed to send set ptp sync command (likely no driver)");
+            }
+            if (reply.data) {
+                free(reply.data);
             }
         } else {
-            SPDLOG_DEBUG("Failed to send set ptp sync command (likely no driver)");
-        }
-        if (reply.data) {
-            free(reply.data);
+            // TODO sync got bad...
         }
     } 
     if (ptp_synchronized && !mgr_started) {
@@ -844,20 +848,20 @@ void FusionConnectClient::process() {
     }
 
     // SAP announcements every 30 seconds
-    // if (announce_counter++ % 30 == 0) {
-    //     sap_announcer.announceAll();
-    // }
-    // // Handle deletion packets
-    // std::vector<std::string> to_delete;
-    // for (const auto& pair : sap_announcer.getAnnouncements()) {
-    //     if (pair.second.is_deleted && pair.second.num_delete_pending > 0) {
-    //         sap_announcer.sendAnnouncement(pair.second);
-    //         to_delete.push_back(pair.first);
-    //     }
-    // }
-    // for (const auto& stream_name : to_delete) {
-    //     sap_announcer.handleDeletion(stream_name);
-    // }
+    if (announce_counter++ % 30 == 0) {
+        sap_announcer.announceAll();
+    }
+    // Handle deletion packets
+    std::vector<std::string> to_delete;
+    for (const auto& pair : sap_announcer.getAnnouncements()) {
+        if (pair.second.is_deleted && pair.second.num_delete_pending > 0) {
+            sap_announcer.sendAnnouncement(pair.second);
+            to_delete.push_back(pair.first);
+        }
+    }
+    for (const auto& stream_name : to_delete) {
+        sap_announcer.handleDeletion(stream_name);
+    }
 }
 
 } // namespace
