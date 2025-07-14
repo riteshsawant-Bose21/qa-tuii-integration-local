@@ -144,38 +144,38 @@ std::string get_system_ip() {
     return "";
 }
 
-bool is_ptp_sync_good(const std::string& ptpDevice = "/dev/ptp0", int64_t thresholdNs = 5000) {
-    // Open PHC device
-    int fd = open(ptpDevice.c_str(), O_RDWR);
-    if (fd < 0) {
-        return false; // Failed to open device
-    }
+// bool is_ptp_sync_good(const std::string& ptpDevice = "/dev/ptp0", int64_t thresholdNs = 5000) {
+//     // Open PHC device
+//     int fd = open(ptpDevice.c_str(), O_RDWR);
+//     if (fd < 0) {
+//         return false; // Failed to open device
+//     }
 
-    // Prepare PTP_SYS_OFFSET request
-    struct ptp_sys_offset offset = {};
-    offset.n_samples = 5; // Number of samples for averaging
+//     // Prepare PTP_SYS_OFFSET request
+//     struct ptp_sys_offset offset = {};
+//     offset.n_samples = 5; // Number of samples for averaging
 
-    // Query offset between PHC and system clock
-    if (ioctl(fd, PTP_SYS_OFFSET, &offset) < 0) {
-        close(fd);
-        return false; // Ioctl failed
-    }
+//     // Query offset between PHC and system clock
+//     if (ioctl(fd, PTP_SYS_OFFSET, &offset) < 0) {
+//         close(fd);
+//         return false; // Ioctl failed
+//     }
 
-    close(fd);
+//     close(fd);
 
-    // Calculate average offset in nanoseconds
-    int64_t totalOffsetNs = 0;
-    for (unsigned int i = 0; i < offset.n_samples; ++i) {
-        // ts[3*i] = system time, ts[3*i+1] = PHC time, ts[3*i+2] = system time
-        int64_t sysNs = offset.ts[3 * i].sec * 1000000000LL + offset.ts[3 * i].nsec;
-        int64_t phcNs = offset.ts[3 * i + 1].sec * 1000000000LL + offset.ts[3 * i + 1].nsec;
-        totalOffsetNs += phcNs - sysNs;
-    }
-    int64_t avgOffsetNs = totalOffsetNs / offset.n_samples;
+//     // Calculate average offset in nanoseconds
+//     int64_t totalOffsetNs = 0;
+//     for (unsigned int i = 0; i < offset.n_samples; ++i) {
+//         // ts[3*i] = system time, ts[3*i+1] = PHC time, ts[3*i+2] = system time
+//         int64_t sysNs = offset.ts[3 * i].sec * 1000000000LL + offset.ts[3 * i].nsec;
+//         int64_t phcNs = offset.ts[3 * i + 1].sec * 1000000000LL + offset.ts[3 * i + 1].nsec;
+//         totalOffsetNs += phcNs - sysNs;
+//     }
+//     int64_t avgOffsetNs = totalOffsetNs / offset.n_samples;
 
-    // Check if absolute offset is within threshold
-    return std::abs(avgOffsetNs) <= thresholdNs;
-}
+//     // Check if absolute offset is within threshold
+//     return std::abs(avgOffsetNs) <= thresholdNs;
+// }
 
 class NetlinkClient {
 private:
@@ -776,7 +776,7 @@ void FusionConnectClient::audio_streams_update_func() {
 }
 
 void FusionConnectClient::process() { 
-    if (is_ptp_sync_good()) {
+    // if (is_ptp_sync_good()) {
         if (!ptp_synchronized) {
             uint8_t sync = 1;
             struct fusion_cn_ctrl_msg reply = { .cmd = 0, .err = 0, .data_size = 0, .data = nullptr, .pid = 0 };
@@ -795,7 +795,7 @@ void FusionConnectClient::process() {
         } else {
             // TODO sync got bad...
         }
-    } 
+    // } 
     if (ptp_synchronized && !mgr_started) {
         struct fusion_cn_ctrl_msg reply = { .cmd = 0, .err = 0, .data_size = 0, .data = nullptr, .pid = 0 };
         if (client.send_message(FUSION_CN_CTRL_CMD_START_MANAGER, nullptr, 0, &reply)) {
