@@ -776,22 +776,26 @@ void FusionConnectClient::audio_streams_update_func() {
 }
 
 void FusionConnectClient::process() { 
-    if (!ptp_synchronized) {
-        uint8_t sync = 1;
-        struct fusion_cn_ctrl_msg reply = { .cmd = 0, .err = 0, .data_size = 0, .data = nullptr, .pid = 0 };
-        if (client.send_message(FUSION_CN_CTRL_CMD_SET_PTP_SYNC, &sync, sizeof(sync), &reply)) {
-            if (reply.err == 0) {
-                ptp_synchronized = 1;
+    // if (is_ptp_sync_good()) {
+        if (!ptp_synchronized) {
+            uint8_t sync = 1;
+            struct fusion_cn_ctrl_msg reply = { .cmd = 0, .err = 0, .data_size = 0, .data = nullptr, .pid = 0 };
+            if (client.send_message(FUSION_CN_CTRL_CMD_SET_PTP_SYNC, &sync, sizeof(sync), &reply)) {
+                if (reply.err == 0) {
+                    ptp_synchronized = 1;
+                } else {
+                    SPDLOG_ERROR("Failed to set ptp sync, err={}", reply.err);
+                }
             } else {
-                SPDLOG_ERROR("Failed to set ptp sync, err={}", reply.err);
+                SPDLOG_DEBUG("Failed to send set ptp sync command (likely no driver)");
+            }
+            if (reply.data) {
+                free(reply.data);
             }
         } else {
-            SPDLOG_DEBUG("Failed to send set ptp sync command (likely no driver)");
+            // TODO sync got bad...
         }
-        if (reply.data) {
-            free(reply.data);
-        }
-    } 
+    // } 
     if (ptp_synchronized && !mgr_started) {
         struct fusion_cn_ctrl_msg reply = { .cmd = 0, .err = 0, .data_size = 0, .data = nullptr, .pid = 0 };
         if (client.send_message(FUSION_CN_CTRL_CMD_START_MANAGER, nullptr, 0, &reply)) {
@@ -844,20 +848,20 @@ void FusionConnectClient::process() {
     }
 
     // SAP announcements every 30 seconds
-    // if (announce_counter++ % 30 == 0) {
-    //     sap_announcer.announceAll();
-    // }
-    // // Handle deletion packets
-    // std::vector<std::string> to_delete;
-    // for (const auto& pair : sap_announcer.getAnnouncements()) {
-    //     if (pair.second.is_deleted && pair.second.num_delete_pending > 0) {
-    //         sap_announcer.sendAnnouncement(pair.second);
-    //         to_delete.push_back(pair.first);
-    //     }
-    // }
-    // for (const auto& stream_name : to_delete) {
-    //     sap_announcer.handleDeletion(stream_name);
-    // }
+    if (announce_counter++ % 30 == 0) {
+        sap_announcer.announceAll();
+    }
+    // Handle deletion packets
+    std::vector<std::string> to_delete;
+    for (const auto& pair : sap_announcer.getAnnouncements()) {
+        if (pair.second.is_deleted && pair.second.num_delete_pending > 0) {
+            sap_announcer.sendAnnouncement(pair.second);
+            to_delete.push_back(pair.first);
+        }
+    }
+    for (const auto& stream_name : to_delete) {
+        sap_announcer.handleDeletion(stream_name);
+    }
 }
 
 } // namespace
