@@ -55,14 +55,6 @@ public:
 
         period = frame_size / base_frame_size;
 
-        err = pthread_create(&thread, NULL, run, this);
-
-        if (err != 0)
-        {
-            SPDLOG_CRITICAL("pthread_create() failed: {}", strerror(err));
-        }
-
-
         err = pthread_mutexattr_init(&attr);
 
         if (err != 0)
@@ -94,6 +86,13 @@ public:
         if (err != 0)
         {
             SPDLOG_CRITICAL("pthread_cond_init() failed: {}", strerror(err));
+        }
+
+        err = pthread_create(&thread, NULL, run, this);
+
+        if (err != 0)
+        {
+            SPDLOG_CRITICAL("pthread_create() failed: {}", strerror(err));
         }
 
         profile.set_period((double)frame_size / sample_rate);
@@ -171,7 +170,10 @@ public:
             ticks = 1;
         }
 
-        pthread_cond_signal(&ticks_cond);
+        if (ticks >= period)
+        {
+            pthread_cond_signal(&ticks_cond);
+        }
 
         pthread_mutex_unlock(&ticks_mutex);
     }
