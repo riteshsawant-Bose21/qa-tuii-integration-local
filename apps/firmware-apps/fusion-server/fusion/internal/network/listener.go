@@ -1,6 +1,7 @@
 package network
 
 import (
+	"errors"
 	"net"
 	"sync"
 	"time"
@@ -53,9 +54,17 @@ func (l *Listener) Start() {
 				l.conn.SetReadDeadline(time.Now().Add(l.Timeout))
 				n, addr, err := l.conn.ReadFromUDP(buf)
 				if err != nil {
+					// Retry on timeout
 					if ne, ok := err.(net.Error); ok && ne.Timeout() {
 						continue
 					}
+
+					// Shutting down; exit quietly.
+					if errors.Is(err, net.ErrClosed) ||
+						err.Error() == "use of closed network connection" {
+						return
+					}
+
 					logging.GetLogger().Error("read error from %v: %v", addr, err)
 					continue
 				}

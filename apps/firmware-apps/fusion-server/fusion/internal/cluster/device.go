@@ -249,11 +249,13 @@ func (c *Cluster) SetVIP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !c.config.Local {
-		// Reload keepalived after updating all the nodes
-		if err := postGenericToAdmin(c, routes.DeviceReloadVIPEndpoint, c.reloadVIP); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+		go func() {
+			// Reload keepalived outside of request after updating all the nodes
+			if err := postGenericToAdmin(c, routes.DeviceReloadVIPEndpoint, c.reloadVIP); err != nil {
+				// Log the error — don't respond to client because it's async
+				logging.GetLogger().Error("Failed to reload VIP: %v", err)
+			}
+		}()
 	}
 
 	w.WriteHeader(http.StatusNoContent)
@@ -285,10 +287,13 @@ func (c *Cluster) ReloadVIP(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	if err := postGenericToAdmin(c, routes.DeviceReloadVIPEndpoint, c.reloadVIP); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	go func() {
+		// Reload keepalived outside of request after updating all the nodes
+		if err := postGenericToAdmin(c, routes.DeviceReloadVIPEndpoint, c.reloadVIP); err != nil {
+			// Log the error. Don't respond to client because it's async
+			logging.GetLogger().Error("Failed to reload VIP: %v", err)
+		}
+	}()
 
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -330,13 +335,14 @@ func (c *Cluster) reloadVIP() error {
 		return err
 	}
 
-	// After reload, attempt to join the gossip ring so cluster size grows
 	logger := logging.GetLogger()
+
+	// After reload, attempt to join the gossip ring so cluster size grows
 	if err := c.JoinMemberlist(); err != nil {
 		logger.Error("JoinMemberlist after reloadVIP: %v", err)
 	}
 
-	logging.GetLogger().Debug("Reloaded VIP")
+	logger.Debug("Reloaded VIP")
 
 	return nil
 }

@@ -51,7 +51,7 @@ if [ ! -f "build/$EXPECTED_BINARY" ]; then
 fi
 
 # Rename the binary
-echo "Linking binary to expected name..."
+echo "Creating binary symlink to $BINARY_NAME"
 pushd ./build > /dev/null
 ln -sf "$EXPECTED_BINARY" "$BINARY_NAME"
 popd > /dev/null

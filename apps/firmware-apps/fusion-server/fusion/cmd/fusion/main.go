@@ -85,7 +85,6 @@ func main() {
 	select {
 	case <-sigs:
 		logger.Info("Shutdown signal received")
-		app.Close()
 	case <-done:
 		logger.Info("Exited normally")
 	}

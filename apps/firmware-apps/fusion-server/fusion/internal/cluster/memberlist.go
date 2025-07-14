@@ -1,6 +1,7 @@
 package cluster
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -26,6 +27,8 @@ const (
 	pushPullInterval = 30 * time.Second
 	retryInterval    = 2 * time.Second
 	retryTimes       = 5
+	serialPath       = "/sys/firmware/devicetree/base/serial-number"
+	serialUnknown    = "Unknown"
 	suspicionMult    = 3
 	tcpTimeout       = 10 * time.Second
 )
@@ -195,6 +198,16 @@ func (c *Cluster) updateDeviceInfo() {
 
 	if info.Name == "" {
 		info.Name = c.nodeName
+	}
+
+	if info.SerialNumber == "" {
+		data, err := os.ReadFile(serialPath)
+		if err != nil {
+			logging.GetLogger().Warn("%s not found.", serialPath)
+			info.SerialNumber = serialUnknown
+		} else {
+			info.SerialNumber = string(bytes.TrimRight(data, "\x00\n"))
+		}
 	}
 
 	if err := c.delegate.persistence.SetDeviceInfo(&info); err != nil {
