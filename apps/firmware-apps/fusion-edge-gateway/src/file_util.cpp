@@ -162,15 +162,15 @@ int runSystemCommand(const std::string &cmd)
 
 std::string get_serial_id()
 {
-    std::ifstream file("/sys/firmware/devicetree/base/serial-number", std::ios::in | std::ios::binary);
-    if (!file) {
-        SPDLOG_ERROR("Error: Cannot open serial-number file.");
-        return "SERIAL_ID_NOT_SET";
+    std::string serial_id;
+    std::ifstream file("/sys/class/net/eth0/address");
+    if (file.is_open()) {
+        std::getline(file, serial_id);
+        file.close();
     }
-
-    std::string serial;
-    std::getline(file, serial, '\0');  // Read until null terminator
-    return serial.empty() ? "SERIAL_ID_NOT_SET" : serial;
+    // Remove colons from the MAC address
+    serial_id.erase(std::remove(serial_id.begin(), serial_id.end(), ':'), serial_id.end());
+    return "fusion-" + serial_id;
 }
 
 int getRAMUsedPercent()
