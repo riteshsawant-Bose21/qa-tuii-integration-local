@@ -4,6 +4,8 @@
 #include <time.h>
 #include <curl/curl.h>
 #include <spdlog/spdlog.h>
+#include <sstream>
+#include <fstream>
 
 using std::string;
 
@@ -53,7 +55,9 @@ class WebClient{
       * return int ErrorCode WEB_CLIENT_OK or WEB_CLIENT_ERROR_*
       */
     int GetRequest(const string &url, const string &accessKey, string *getsResponse);
-    
+
+    int SendFile(const string &url, const string &accessKey, const string &filePath, string *getsResponse);
+
   private:
     /** 
      * initRequest; create header if needed while sending data to xyte

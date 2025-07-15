@@ -13,6 +13,11 @@
 #include <thread>
 #include <chrono>
 #include <errno.h>
+#include <ifaddrs.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <cstring>
 
 #include "nlohmann/json.hpp"
 #include <spdlog/spdlog.h>
@@ -113,3 +118,9 @@ static auto last_sample_time = std::chrono::steady_clock::now();
 uint64_t getNetworkRxBytes();
 uint64_t getNetworkTxBytes();
 void getNetworkRates(double &rx_kbps, double &tx_kbps);
+std::string getLocalIPAddress();
+void checkDelayElapsed(time_t &endTime, const int delay_seconds);
+int createLogs(std::string &output);
+int tarFiles(const std::string &sourceFolder, const std::string &sourceFile, const std::string &destPath);
+int gZipFile(const std::string &destPath);
+int unZipFiles(const std::string &sourcePath, const std::string &destFolder);
