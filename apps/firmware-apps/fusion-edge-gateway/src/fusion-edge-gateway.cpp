@@ -293,7 +293,7 @@ void FusionEdgeGateway::getDeviceInfoFromFusionServer() {
         if (j.is_array()) {
             for (const auto& item : j) {
                 string serverSerialIdValue = item.value("serial_number", "");
-                string serverIpAddressValue = item.value("ip_address", "");
+                string serverIpAddressValue = item.value("address", "");
                 string serverDeviceName = item.value("name", "");
                 if(serverSerialIdValue == serialId || serverIpAddressValue == device.ipAddress) {
                     device.deviceName = serverDeviceName;
