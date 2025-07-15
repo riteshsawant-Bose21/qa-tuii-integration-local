@@ -298,7 +298,7 @@ void FusionEdgeGateway::getDeviceInfoFromFusionServer() {
                 string serverSerialIdValue = item.value("serial_number", "");
                 string serverIpAddressValue = item.value("address", "");
                 string serverDeviceName = item.value("name", "");
-                if(serverSerialIdValue == serialId || serverIpAddressValue == device.ipAddress) {
+                if(serverIpAddressValue == device.ipAddress) {
                     device.deviceName = serverDeviceName;
                     device.droId = item.value("id", "");
                     serverCloudIdValue = item.value("xyte_cloud_id", "");
