@@ -270,7 +270,8 @@ uint64_t getNetworkTxBytes()
     return txBytes;
 }
 
-
+static uint64_t prev_rx_bytes = 0;
+static uint64_t prev_tx_bytes = 0;
 void getNetworkRates(double &rx_kbps, double &tx_kbps)
 {
     uint64_t curr_rx = getNetworkRxBytes();
