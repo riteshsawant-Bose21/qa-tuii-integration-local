@@ -20,7 +20,7 @@ using std::endl;
 using json = nlohmann::json;
 
 struct Device{
-    string deviceId; // Unique ID for fusion device from fusion server
+    string droId; // Unique ID for fusion device from fusion server
     string xyteId; // Unique ID for the device from XYTE after registration
     string accessKey; // Access key for the device to communicate with XYTE
     string hubUrl; // URL of the hub for the devices to communicate with XYTE

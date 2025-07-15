@@ -175,6 +175,9 @@ int FusionEdgeGateway::sendFile(string &output1, const string &mimeType) {
   string uploadURL = device.hubUrl + "/v1/devices/" + device.xyteId + "/dumps/" + mimeType + "/" + output1;
   string fileUploadPath = "/tmp/"+ output1;
 
+  SPDLOG_DEBUG("File Upload URL: {}", uploadURL);
+  SPDLOG_DEBUG("File Upload Path: {}", fileUploadPath);
+
   auto ret = wc->SendFile(uploadURL, device.accessKey, fileUploadPath, &cmd_cb_buf);
   if(ret == WEB_CLIENT_OK) {
     SPDLOG_DEBUG("Received data: {}", cmd_cb_buf);
@@ -270,7 +273,7 @@ void FusionEdgeGateway::processDeviceCommand(){
     cmd_json["message"] = commandResponse.c_str();
     cmd_json["id"] = cmdId.c_str();
     cmdUpdStr = cmd_json.dump();
-    result = wc->SendRequest(getCmdURL, device.accessKey, cmdUpdStr, &cmd_cb_buf, "POST");//update command status to done
+    result = wc->SendRequest(getCmdURL, device.accessKey, cmdUpdStr, &cmd_cb_buf, "POST");//update command status
 }
 
 bool FusionEdgeGateway::waitForServer() {
@@ -297,6 +300,7 @@ void FusionEdgeGateway::getDeviceInfoFromFusionServer() {
                 string serverDeviceName = item.value("name", "");
                 if(serverSerialIdValue == serialId || serverIpAddressValue == device.ipAddress) {
                     device.deviceName = serverDeviceName;
+                    device.droId = item.value("id", "");
                     serverCloudIdValue = item.value("xyte_cloud_id", "");
                     serverIsClaimedValue = item.value("is_claimed", false);
 
@@ -323,7 +327,7 @@ void FusionEdgeGateway::sendXyteUpdateToFusionServer() {
         {"xyte_cloud_id", device.cloudId}
     };
 
-    string updateDeviceInfoUrl = fusionDeviceInfoUrl + "/" + serialId;
+    string updateDeviceInfoUrl = fusionDeviceInfoUrl + "/" + device.droId;
     string response;
 
     SPDLOG_DEBUG("xyte_data: {}", xyteInfoJson.dump());
@@ -346,7 +350,7 @@ int FusionEdgeGateway::run() {
     // Create the WebClient after logging is configured.
     wc = std::make_unique<WebClient>();
 
-    wc->SetCertificateChain(ca_cert_path);
+    //wc->SetCertificateChain(ca_cert_path);
 
     waitForServer();
 
