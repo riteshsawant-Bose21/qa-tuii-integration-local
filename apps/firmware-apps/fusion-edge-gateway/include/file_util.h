@@ -106,6 +106,7 @@ std::string escapeJsonCharacters(const std::string &strBase);
  */
 int runSystemCommand(const std::string &cmd);
 
+std::string getMacAddress();
 std::string get_serial_id();
 int getRAMUsedPercent();
 int getSystemLoadPercent();

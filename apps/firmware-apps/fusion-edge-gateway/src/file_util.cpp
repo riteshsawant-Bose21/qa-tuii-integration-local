@@ -160,17 +160,30 @@ int runSystemCommand(const std::string &cmd)
     return 0;
 }
 
+std::string getMacAddress()
+{
+  std::string mac_address;
+  std::ifstream file("/sys/class/net/eth0/address");
+  if (file.is_open()) {
+      std::getline(file, mac_address);
+      file.close();
+  }
+  // Remove colons from the MAC address
+  mac_address.erase(std::remove(mac_address.begin(), mac_address.end(), ':'), mac_address.end());
+  return mac_address;
+}
+
 std::string get_serial_id()
 {
-    std::string serial_id;
-    std::ifstream file("/sys/class/net/eth0/address");
-    if (file.is_open()) {
-        std::getline(file, serial_id);
-        file.close();
+    std::ifstream file("/sys/firmware/devicetree/base/serial-number", std::ios::in | std::ios::binary);
+    if (!file) {
+        SPDLOG_ERROR("Error: Cannot open serial-number file.");
+        return "SERIAL_ID_NOT_SET";
     }
-    // Remove colons from the MAC address
-    serial_id.erase(std::remove(serial_id.begin(), serial_id.end(), ':'), serial_id.end());
-    return "fusion-" + serial_id;
+
+    std::string serial;
+    std::getline(file, serial, '\0');  // Read until null terminator
+    return serial.empty() ? "fusion-" + getMacAddress() : serial;
 }
 
 int getRAMUsedPercent()
