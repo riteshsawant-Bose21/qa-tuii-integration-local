@@ -160,6 +160,19 @@ int runSystemCommand(const std::string &cmd)
     return 0;
 }
 
+std::string getMacAddress()
+{
+  std::string mac_address;
+  std::ifstream file("/sys/class/net/eth0/address");
+  if (file.is_open()) {
+      std::getline(file, mac_address);
+      file.close();
+  }
+  // Remove colons from the MAC address
+  mac_address.erase(std::remove(mac_address.begin(), mac_address.end(), ':'), mac_address.end());
+  return mac_address;
+}
+
 std::string get_serial_id()
 {
     std::ifstream file("/sys/firmware/devicetree/base/serial-number", std::ios::in | std::ios::binary);
@@ -170,7 +183,7 @@ std::string get_serial_id()
 
     std::string serial;
     std::getline(file, serial, '\0');  // Read until null terminator
-    return serial.empty() ? "SERIAL_ID_NOT_SET" : serial;
+    return serial.empty() ? "fusion-" + getMacAddress() : serial;
 }
 
 int getRAMUsedPercent()
@@ -270,6 +283,8 @@ uint64_t getNetworkTxBytes()
     return txBytes;
 }
 
+static uint64_t prev_rx_bytes = 0;
+static uint64_t prev_tx_bytes = 0;
 void getNetworkRates(double &rx_kbps, double &tx_kbps)
 {
     uint64_t curr_rx = getNetworkRxBytes();
@@ -289,3 +304,64 @@ void getNetworkRates(double &rx_kbps, double &tx_kbps)
     last_sample_time = now;
 }
 
+std::string getLocalIPAddress() {
+    struct ifaddrs* ifaddr = nullptr;
+    struct ifaddrs* ifa = nullptr;
+    void* tmpAddrPtr = nullptr;
+
+    std::string ip;
+
+    if (getifaddrs(&ifaddr) == -1)
+        return "";
+
+    for (ifa = ifaddr; ifa != nullptr; ifa = ifa->ifa_next) {
+        if (!ifa->ifa_addr)
+            continue;
+
+        if (ifa->ifa_addr->sa_family == AF_INET) {
+            tmpAddrPtr = &((struct sockaddr_in*)ifa->ifa_addr)->sin_addr;
+            char addressBuffer[INET_ADDRSTRLEN];
+            inet_ntop(AF_INET, tmpAddrPtr, addressBuffer, INET_ADDRSTRLEN);
+
+            if (std::string(ifa->ifa_name) != "lo") {
+                ip = addressBuffer;
+                break;
+            }
+        }
+    }
+
+    freeifaddrs(ifaddr);
+    return ip;
+}
+
+void checkDelayElapsed(time_t &endTime, const int delay_seconds)
+{
+  bool delayElapsed = false;
+  time_t elapsedTime = time(nullptr) - endTime;
+  if (elapsedTime > delay_seconds) {
+    SPDLOG_INFO("Telemetry delay elapsed: {} seconds, delay: {} seconds, endTime: {}", elapsedTime, delay_seconds, endTime);
+    delayElapsed = true;
+  }
+  if (!delayElapsed) {
+    sleep(delay_seconds - elapsedTime);
+  }
+}
+
+int createLogs(std::string &output){
+  runSystemCommand("journalctl --no-pager > /tmp/journal.log");
+  std::string destName = getDateTimeString() + "-log.tar";
+  std::string destPath = "/tmp/" + destName;
+  output = destName + ".gz";
+  std::string sourceFolder = "/tmp";
+  std::string sourceFiles = "journal.log /var/log/messages";
+
+  if(tarFiles(sourceFolder, sourceFiles, destPath) != 0){
+      SPDLOG_ERROR("Error creating tar files");
+      return -1;
+  }
+  else if(gZipFile(destPath) != 0){
+      SPDLOG_ERROR("Error compressing files");
+      return -1;
+  }
+  return 0;
+}

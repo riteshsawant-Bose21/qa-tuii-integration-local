@@ -35,7 +35,7 @@ int FusionEdgeGateway::registerDevice() {
         {"cloud_id", cloudId},
         {"firmware_version", firmwareVersion},
         {"sn", serialId},
-        {"name", deviceName}
+        {"name", device.deviceName}
     };
 
     string reg_str = reg_json.dump();
@@ -155,7 +155,7 @@ int FusionEdgeGateway::sendTelemetry(json telJson)
         }
 
         if(isCommandRcvd){
-            processDeviceCommand(hub_url);
+            processDeviceCommand();
         }
     }
     else if (ret != WEB_CLIENT_OK) {
@@ -170,9 +170,27 @@ int FusionEdgeGateway::sendTelemetry(json telJson)
     return ret;
 }
 
-void FusionEdgeGateway::processDeviceCommand(const string hub_url){
+int FusionEdgeGateway::sendFile(string &output1, const string &mimeType) {
+  string cmd_cb_buf;
+  string uploadURL = device.hubUrl + "/v1/devices/" + device.xyteId + "/dumps/" + mimeType + "/" + output1;
+  string fileUploadPath = "/tmp/"+ output1;
+
+  SPDLOG_DEBUG("File Upload URL: {}", uploadURL);
+  SPDLOG_DEBUG("File Upload Path: {}", fileUploadPath);
+
+  auto ret = wc->SendFile(uploadURL, device.accessKey, fileUploadPath, &cmd_cb_buf);
+  if(ret == WEB_CLIENT_OK) {
+    SPDLOG_DEBUG("Received data: {}", cmd_cb_buf);
+  }
+  else{
+    SPDLOG_ERROR("Uploading file failed: {}", cmd_cb_buf);
+  }
+  return ret;
+}
+
+void FusionEdgeGateway::processDeviceCommand(){
     int result;
-    string getCmdURL = hub_url + "/v1/devices/" + device.xyteId + "/command";
+    string getCmdURL = device.hubUrl + "/v1/devices/" + device.xyteId + "/command";
     string cmd_cb_buf;
     string output1;
     string mimeType;
@@ -230,6 +248,20 @@ void FusionEdgeGateway::processDeviceCommand(const string hub_url){
             }
         }
     }
+    else if (commandName == "dump") {
+        mimeType = "application%2Fgzip";
+        if(createLogs(output1) != 0){
+            commandResponse = "Error creating the logs";
+            retCode = 1;
+        }
+        else {
+            retCode = 0;
+        }
+        if(sendFile(output1, mimeType) != WEB_CLIENT_OK){
+            retCode = 1;
+            commandResponse = "Error uploading files";
+        }
+    }
 
     if(retCode != 0) {
         SPDLOG_ERROR("command failed: {}", commandName);
@@ -241,7 +273,7 @@ void FusionEdgeGateway::processDeviceCommand(const string hub_url){
     cmd_json["message"] = commandResponse.c_str();
     cmd_json["id"] = cmdId.c_str();
     cmdUpdStr = cmd_json.dump();
-    result = wc->SendRequest(getCmdURL, device.accessKey, cmdUpdStr, &cmd_cb_buf, "POST");//update command status to done
+    result = wc->SendRequest(getCmdURL, device.accessKey, cmdUpdStr, &cmd_cb_buf, "POST");//update command status
 }
 
 bool FusionEdgeGateway::waitForServer() {
@@ -253,28 +285,39 @@ bool FusionEdgeGateway::waitForServer() {
 }
 
 void FusionEdgeGateway::getDeviceInfoFromFusionServer() {
-    string deviceIdResponse;
+    string devicesInfo;
 
     SPDLOG_DEBUG("Get devices URL: {}", fusionDeviceInfoUrl);
 
-    int ret = wc->GetRequest(fusionDeviceInfoUrl, "", &deviceIdResponse);
+    int ret = wc->GetRequest(fusionDeviceInfoUrl, "", &devicesInfo);
 
     if (ret == WEB_CLIENT_OK) {
-        nlohmann::json j = nlohmann::json::parse(deviceIdResponse);
+        nlohmann::json j = nlohmann::json::parse(devicesInfo);
         if (j.is_array()) {
             for (const auto& item : j) {
-                std::string name = item.value("name", "");
-                device.deviceId = item.value("id", "");
-                serverCloudIdValue = item.value("xyte_cloud_id", "");
-                serverIsClaimedValue = item.value("is_claimed", false);
+                string serverSerialIdValue = item.value("serial_number", "");
+                string serverIpAddressValue = item.value("address", "");
+                string serverDeviceName = item.value("name", "");
+                if(serverIpAddressValue == device.ipAddress) {
+                    device.deviceName = serverDeviceName;
+                    device.droId = item.value("id", "");
+                    serverCloudIdValue = item.value("xyte_cloud_id", "");
+                    serverIsClaimedValue = item.value("is_claimed", false);
 
-                SPDLOG_DEBUG("Device: name={}, id={}, cloudId={}, claimed={}", name, device.deviceId, serverCloudIdValue, serverIsClaimedValue);
+                    SPDLOG_DEBUG("This device: name={}, serial number={}, IP Address={}, cloudId={}, claimed={}", device.deviceName, serverSerialIdValue, serverIpAddressValue, serverCloudIdValue, serverIsClaimedValue);
+                }
+                else{
+                    SPDLOG_DEBUG("Other Devices in the network: name={}, serial number={}, IP Address={}", serverDeviceName, serverSerialIdValue, serverIpAddressValue);
+                }
+            }
+            if(device.deviceName.empty()) {
+                SPDLOG_ERROR("Device with serial ID {} not found in Fusion Server, retry next time...", serialId);
             }
         } else {
-            SPDLOG_ERROR("Failed to parse device ID response: {}", deviceIdResponse);
+            SPDLOG_ERROR("Failed to parse device response: {}", devicesInfo);
         }
     } else {
-        SPDLOG_ERROR("Failed to get Device ID from Fusion Server");
+        SPDLOG_ERROR("Failed to get Device Name from Fusion Server");
     }
 }
 
@@ -284,7 +327,7 @@ void FusionEdgeGateway::sendXyteUpdateToFusionServer() {
         {"xyte_cloud_id", device.cloudId}
     };
 
-    string updateDeviceInfoUrl = fusionDeviceInfoUrl + "/" + device.deviceId;
+    string updateDeviceInfoUrl = fusionDeviceInfoUrl + "/" + device.droId;
     string response;
 
     SPDLOG_DEBUG("xyte_data: {}", xyteInfoJson.dump());
@@ -307,9 +350,11 @@ int FusionEdgeGateway::run() {
     // Create the WebClient after logging is configured.
     wc = std::make_unique<WebClient>();
 
-    wc->SetCertificateChain(ca_cert_path);
+    //wc->SetCertificateChain(ca_cert_path);
 
     waitForServer();
+
+    device.ipAddress = getLocalIPAddress();
 
     if(fileExists(xyte_devices_path)) {
         SPDLOG_INFO("Device already registered, loading device info...");
@@ -337,6 +382,8 @@ int FusionEdgeGateway::run() {
 
     while(1){
 
+        getDeviceInfoFromFusionServer();
+
         if (! fileExists(xyte_devices_path)) {
             SPDLOG_INFO("xyte-devices.json not found, registering device...");
             while(registerDevice() != 0){
@@ -359,17 +406,17 @@ int FusionEdgeGateway::run() {
             {"net_tx", tx_kbps},
         };
 
+        checkDelayElapsed(endTime, tel_delay_seconds);
+
         if (sendTelemetry(telemetryJson) != 0) {
             SPDLOG_ERROR("Send Telemetry Failed. Retry in {} seconds", tel_delay_seconds);
         }
 
-        getDeviceInfoFromFusionServer();
-
-        if(! device.deviceId.empty() && (serverIsClaimedValue != device.claimed || serverCloudIdValue != device.cloudId)) {
+        if(! device.deviceName.empty() && (serverIsClaimedValue != device.claimed || serverCloudIdValue != device.cloudId)) {
             sendXyteUpdateToFusionServer();
         }
 
-        std::this_thread::sleep_for(std::chrono::seconds(tel_delay_seconds));
+        endTime = time(nullptr);
     }
 
     return 0;

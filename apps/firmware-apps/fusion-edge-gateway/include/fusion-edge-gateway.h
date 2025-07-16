@@ -20,12 +20,14 @@ using std::endl;
 using json = nlohmann::json;
 
 struct Device{
-    string deviceId; // Unique ID for fusion device from fusion server
+    string droId; // Unique ID for fusion device from fusion server
     string xyteId; // Unique ID for the device from XYTE after registration
     string accessKey; // Access key for the device to communicate with XYTE
     string hubUrl; // URL of the hub for the devices to communicate with XYTE
     string cloudId; // Unique ID for the device to send to the cloud
     bool claimed = false; // Status of the device claim in XYTE
+    string deviceName; // Name of the device
+    string ipAddress; // Local IP address of the device
 }; // Global device object
 
 class FusionEdgeGateway {
@@ -36,15 +38,14 @@ private:
     void addDeviceInfo(const Device& device);
     int registerDevice();
     bool waitForServer();
-    int sendTelemetry();
-    void processDeviceCommand(const string hub_url);
+    void processDeviceCommand();
     int sendTelemetry(json telJson);
     void sendXyteUpdateToFusionServer();
     void getDeviceInfoFromFusionServer();
+    int sendFile(string &output1, const string &mimeType);
 
     std::unique_ptr<WebClient> wc;
     Device device;
-    const char* home = std::getenv("HOME");
     string ca_cert_path = "/etc/ssl/certs/ca-certificates.crt"; // Path to the CA certificate bundle
     string reg_url = "https://entry.xyte.io/v1/devices"; // Registration URL
     string partner_id = "5bPj"; // Partner ID
@@ -52,7 +53,6 @@ private:
     int regRetry = 5; // Retry interval for registration in seconds
     string firmwareVersion = "1.0.0"; // Firmware Version
     string serialId = get_serial_id(); // Serial ID
-    string deviceName = "Fusion-Test-Device"; // Device Name
     std::string xyte_devices_path = "/etc/fusion/xyte-devices.json"; // Path to the xyte device info file
     int tel_delay_seconds = 10; // Delay for telemetry in seconds
     string serverCloudIdValue; // Cloud ID value from the server to update live status
@@ -60,4 +60,5 @@ private:
     string localServerUrl = "http://localhost:8080"; // Local server URL for device info
     string fusionDeviceInfoUrl = localServerUrl + "/devices"; // Fusion server info URL
     double rx_kbps = 0.0, tx_kbps = 0.0;
+    time_t endTime = 0;
 };

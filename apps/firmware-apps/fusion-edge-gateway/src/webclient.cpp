@@ -251,3 +251,48 @@ int WebClient::GetRequest(const string &url, const string &accessKey, string *ge
     SPDLOG_DEBUG("Received data: {}", *getsResponse);
     return WEB_CLIENT_OK;
 }
+
+int WebClient::SendFile(const string &url, const string &accessKey, const string &filePath, string *getsResponse)
+{
+    CURLcode result;
+    long httpCode = 0;
+    string data;
+    stringstream ss;
+
+    ifstream file(filePath.c_str(), std::ios_base::in | std::ios_base::binary);
+
+    ss << file.rdbuf();
+    data = ss.str();
+
+    string contentType = "content-type: application/octet-stream";
+    string contentEncoding = "content-encoding: gzip";
+    initRequest(url, accessKey, contentType, contentEncoding, getsResponse);
+
+    curl_easy_setopt(curl, CURLOPT_POST, 1L);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data.c_str());
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)data.size());
+
+    // Don't have the library fail on error, we want to get the reponse body
+    // which may contain a message like: {"error": "Device already registered"}
+    curl_easy_setopt(curl, CURLOPT_FAILONERROR, 0L);
+
+    if (getsResponse) {
+        getsResponse->clear(); // Clear before appending in curl_cb
+    }
+
+    SPDLOG_DEBUG("Sending data to Xyte...");
+
+    result = curl_easy_perform(curl);
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
+
+    if (result == CURLE_OK && isHttpSuccess(httpCode)) {
+        return WEB_CLIENT_OK;
+    }
+    else {
+        SPDLOG_ERROR("SendFile failed: (HTTP:{}) {}", httpCode, curl_easy_strerror(result));
+        if (getsResponse) {
+            SPDLOG_ERROR("\tSendFile, server response: {}", *getsResponse);
+        }
+        return WEB_CLIENT_ERROR_SEND;
+    }
+}

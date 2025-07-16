@@ -13,6 +13,11 @@
 #include <thread>
 #include <chrono>
 #include <errno.h>
+#include <ifaddrs.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <cstring>
 
 #include "nlohmann/json.hpp"
 #include <spdlog/spdlog.h>
@@ -101,15 +106,20 @@ std::string escapeJsonCharacters(const std::string &strBase);
  */
 int runSystemCommand(const std::string &cmd);
 
+std::string getMacAddress();
 std::string get_serial_id();
 int getRAMUsedPercent();
 int getSystemLoadPercent();
 int getDiskUsagePercent(const std::string& path = "/");
 int getCpuUsagePercent();
 int getCPUTemperature();
-static uint64_t prev_rx_bytes = 0;
-static uint64_t prev_tx_bytes = 0;
 static auto last_sample_time = std::chrono::steady_clock::now();
 uint64_t getNetworkRxBytes();
 uint64_t getNetworkTxBytes();
 void getNetworkRates(double &rx_kbps, double &tx_kbps);
+std::string getLocalIPAddress();
+void checkDelayElapsed(time_t &endTime, const int delay_seconds);
+int createLogs(std::string &output);
+int tarFiles(const std::string &sourceFolder, const std::string &sourceFile, const std::string &destPath);
+int gZipFile(const std::string &destPath);
+int unZipFiles(const std::string &sourcePath, const std::string &destFolder);
