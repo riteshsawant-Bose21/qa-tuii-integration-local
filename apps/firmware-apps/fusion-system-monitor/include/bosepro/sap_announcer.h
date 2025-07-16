@@ -20,6 +20,7 @@ struct SAPAnnouncement {
     uint64_t stream_handle; // For SDP session ID
     bool is_deleted;
     uint32_t num_delete_pending;
+    uint32_t ntp_ts;
 };
 
 class SAPAnnouncer {
@@ -156,7 +157,7 @@ public:
         }
         SAPAnnouncement ann = {
             stream_name, multicast_ip, channels, sample_rate, format, sink_port,
-            payload_type, stream_handle, false, 2
+            payload_type, stream_handle, false, 2, (uint32_t)(getNtpTimestamp() >> 32)
         };
         announcements[stream_name] = ann;
         SPDLOG_INFO("Added announcement for '{}'", stream_name);
@@ -191,7 +192,6 @@ public:
             if (i < ann.channels) channels_str += ",";
         }
         char sdp_buf[512];
-        uint32_t ntp_ts = getNtpTimestamp() >> 32;
         snprintf(sdp_buf, sizeof(sdp_buf),
                  "v=0\r\n"
                  "o=- %u %u IN IP4 %s\r\n"
@@ -205,7 +205,7 @@ public:
                  "a=ptime:1\r\n"
                  "a=ts-refclk:ptp=IEEE1588-2008:%s:0\r\n"
                  "a=mediaclk:direct=0\r\n",
-                 ntp_ts, ntp_ts, system_ip.c_str(),
+                 ann.ntp_ts, ann.ntp_ts + 16, system_ip.c_str(),
                  name.c_str(), ipToString(ann.multicast_ip).c_str(),
                  ann.sink_port, ann.payload_type,
                  (unsigned int)ann.channels, channels_str.c_str(),
