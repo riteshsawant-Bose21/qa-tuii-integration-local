@@ -92,25 +92,34 @@ Device information can be retrieved using a `GET` call to:
 
     /devices
 
-The response will be a JSON array, where each element contains the device's address, ID, location, and name:
+The response will be a JSON array, where each element contains the device's address, ID, location, name, xyte_cloud_id, is_claimed from xyte_cloud,serial_number of Board :
 
     [
       {
         "address": "192.168.64.4",
         "id": "fusion2_instance",
         "location": "",
-        "name": "fusion2"
+        "name": "fusion2",
+        "xyte_cloud_id": "",
+        "is_claimed": false,
+        "serial_number": "Unknown"
       },
       {
         "address": "192.168.64.5",
         "id": "fusion3_instance",
         "location": "",
-        "name": "fusion3"
+        "name": "fusion3",
+        "xyte_cloud_id": "",
+        "is_claimed": false,
+        "serial_number": "Unknown"
       },
       {
         "address": "192.168.64.6",
         "id": "test-device",
         "location": "RoomB",
-        "name": "RenamedDevice"
+        "name": "RenamedDevice",
+        "xyte_cloud_id": "",
+        "is_claimed": false,
+        "serial_number": "Unknown"
       }
     ]
