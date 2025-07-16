@@ -102,7 +102,7 @@ The response will be a JSON array, where each element contains the device's addr
         "name": "fusion2",
         "xyte_cloud_id": "",
         "is_claimed": false,
-        "serial_number": "Unknown"
+        "serial_number": "Serial Number of Device"
       },
       {
         "address": "192.168.64.5",
@@ -111,7 +111,7 @@ The response will be a JSON array, where each element contains the device's addr
         "name": "fusion3",
         "xyte_cloud_id": "",
         "is_claimed": false,
-        "serial_number": "Unknown"
+        "serial_number": "Serial Number of Device"
       },
       {
         "address": "192.168.64.6",
@@ -120,6 +120,6 @@ The response will be a JSON array, where each element contains the device's addr
         "name": "RenamedDevice",
         "xyte_cloud_id": "",
         "is_claimed": false,
-        "serial_number": "Unknown"
+        "serial_number": "Serial Number of Device"
       }
     ]
