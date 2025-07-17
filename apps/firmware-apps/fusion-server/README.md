@@ -98,18 +98,18 @@ git clone git@github.com:BoseProfessional/fusion-services.git
 ## Usage
 ### Launch a single server instance using multipass
 ```bash
-./launch
+./scripts/multipass/launch
 ```
 
 **Create multiple instances with default named "fusion"**
 ```bash
-./launch --instances 3
+./scripts/multipass/launch --instances 3
 ```
 
 ### Stopping instances
 **Stop instances with default name**
 ```bash
-./launch --kill
+./scripts/multipass/launch --kill
 ```
 
 **Stop multiple instances with prefix**
@@ -346,7 +346,7 @@ curl -X POST \
 
 1. **Create a new instance**
 ```bash
-./launch
+./scripts/multipass/launch
 ```
 
 2. **List instances**
@@ -387,7 +387,7 @@ For a three-node cluster setup:
 
 ```bash
 # Create instances
-./launch --instances 3
+./scripts/multipass/launch --instances 3
 
 # Get IP addresses
 multipass list
@@ -498,11 +498,11 @@ multipass exec fusion1 -- systemctl status fusion-server
 
 **Launch multiple instance**
 ```bash
-./launch --instances 3
+./scripts/multipass/launch --instances 3
 ```
 **Build and run test**
 ```bash
-./run-tests
+./scripts/multipass/run-tests
 ```
 **Bruno**
 
@@ -548,7 +548,7 @@ Default credentials: admin / admin
 **Loki**
 ```bash
 brew install loki
-/opt/homebrew/bin/loki -config.file=--config.file=tools/loki/loki-config.yaml
+/opt/homebrew/bin/loki --config.file=tools/loki/loki-config.yaml
 ```
 
 #### Get Complete System Metrics
