@@ -34,6 +34,7 @@ func parseFlags() *api.AppConfig {
 	flag.Parse()
 
 	if *versionFlag {
+		// This must be a log.Printf. The server logger is not running yet.
 		log.Printf("Version: %s\nCommit: %s\nBuild Time: %s\n", version.Version, version.Commit, version.BuildTime)
 		os.Exit(0)
 	}

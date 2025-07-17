@@ -15,10 +15,14 @@ require (
 	go.etcd.io/bbolt v1.4.0
 )
 
+replace github.com/go-ble/ble => ../third-party/go-ble
+
 require (
+	github.com/JuulLabs-OSS/cbgo v0.0.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/hashicorp/go-msgpack/v2 v2.1.2 // indirect
+	github.com/konsorten/go-windows-terminal-sequences v1.0.1 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
@@ -29,6 +33,8 @@ require (
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.62.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
+	github.com/raff/goble v0.0.0-20190909174656-72afc67d6a99 // indirect
+	github.com/sirupsen/logrus v1.5.0 // indirect
 	golang.org/x/mod v0.22.0 // indirect
 	golang.org/x/sync v0.10.0 // indirect
 	golang.org/x/tools v0.29.0 // indirect

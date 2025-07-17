@@ -9,7 +9,6 @@ import (
 	"fusion/internal/logging"
 	"fusion/internal/utils"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -379,7 +378,7 @@ func (h *Handler) streamBinaryToNode(node *memberlist.Node, binaryPath string) e
 func addAudioFilesToConfig(audioDir string, existingData map[string]any) {
 	entries, err := os.ReadDir(audioDir)
 	if err != nil {
-		log.Printf("Error reading directory %s: %v", audioDir, err)
+		logging.GetLogger().Error("Error reading directory %s: %v", audioDir, err)
 		return
 	}
 	var fileNames []string

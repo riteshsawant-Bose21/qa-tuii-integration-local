@@ -168,10 +168,10 @@ func (app *App) setupPublicRoutes() {
 
 	// Device
 	app.registerPublicGET(routes.DevicesEndpoint, app.Cluster.GetDevicesInfo)
-	app.registerPublicPATCH(routes.DevicesIDEndpoint, app.Cluster.UpdateDeviceInfo)
 	app.registerPublicGET(routes.DevicesVIPEndpoint, app.Cluster.GetVIP)
 	app.registerPublicPOST(routes.DevicesSetVIPEndpoint, app.Cluster.SetVIP)
 	app.registerPublicPOST(routes.DeviceReloadVIPEndpoint, app.Cluster.ReloadVIP)
+	app.registerPublicPATCH(routes.DevicesIDEndpoint, app.Cluster.UpdateDeviceInfo)
 
 	// Endpoints
 	app.registerPublicGET(routes.EndpointsEndpoint, routes.ListRegisteredEndpoints)

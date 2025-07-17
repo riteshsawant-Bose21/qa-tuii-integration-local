@@ -505,7 +505,7 @@ func postGenericToAdmin(
 		if c.hostIsLocal(addr) {
 			// If this is the local address, invoke localFn() directly:
 			if err := localFn(); err != nil {
-				return fmt.Errorf("local update failed: %w", err)
+				return fmt.Errorf("local function failed: %w", err)
 			}
 			continue
 		}
