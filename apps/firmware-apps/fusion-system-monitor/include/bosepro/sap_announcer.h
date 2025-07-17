@@ -214,16 +214,18 @@ public:
         sdp = sdp_buf;
 
         // Build SAP header
-        uint8_t sap_header[8] = {0};
+        std::string payload_type = "application/sdp";
+        struct in_addr origin_ip;
+        uint8_t sap_header[8 + payload_type.size() + 1] = {0};
         sap_header[0] = 0x20; // Version=1, IPv4
         if (ann.is_deleted) sap_header[0] |= 0x04; // Deletion flag
         sap_header[1] = 0x00; // No auth
         uint16_t msgID = hashString(ann.stream_name);
         sap_header[2] = (msgID >> 8) & 0xFF;
         sap_header[3] = msgID & 0xFF;
-        struct in_addr origin_ip;
         inet_pton(AF_INET, system_ip.c_str(), &origin_ip);
         memcpy(&sap_header[4], &origin_ip, sizeof(origin_ip));
+        memcpy(&sap_header[8], payload_type.c_str(), payload_type.size() + 1);
 
         // Combine and send
         std::string packet(reinterpret_cast<char*>(sap_header), sizeof(sap_header));
