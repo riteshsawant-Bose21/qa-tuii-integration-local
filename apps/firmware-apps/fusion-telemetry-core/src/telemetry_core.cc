@@ -442,7 +442,29 @@ int main(int argc, char* argv[])
         if (poll_ret < 0)
         {
             //Report Error
-            SPDLOG_ERROR("Received external signal");
+            perror("Caught unexpected Signal");
+            SPDLOG_ERROR("Received external signal: {}", poll_timeout.tv_nsec);
+
+            // Compute remaining time before next meter_update_message
+            {
+                long rem_time =  (get_realtime_ns() - start_tstamp_ns);
+
+                // This case is when telemetry-core is blocked by other
+                // process for extended periods. This condition should not
+                // occur when system is funtioning correctly.
+                if (rem_time > calibrated_period_ns)
+                {
+                    poll_timeout.tv_nsec = 0;
+                }
+                else
+                {
+                    poll_timeout.tv_nsec -= rem_time;
+                }
+
+                if (poll_timeout.tv_nsec < 0)
+                    poll_timeout.tv_nsec = 0;
+            }
+            SPDLOG_ERROR("Received external signal: {}", poll_timeout.tv_nsec);
         }
         else if (poll_ret == 0)
         {
@@ -488,10 +510,24 @@ int main(int argc, char* argv[])
             }
 
             // Compute remaining time before next meter_update_message
-            poll_timeout.tv_nsec -= (get_realtime_ns() - start_tstamp_ns);
+            {
+                long rem_time =  (get_realtime_ns() - start_tstamp_ns);
 
-            if (poll_timeout.tv_nsec < 0)
-                poll_timeout.tv_nsec = 0;
+                // This case is when telemetry-core is blocked by other
+                // process for extended periods. This condition should not
+                // occur when system is funtioning correctly.
+                if (rem_time > calibrated_period_ns)
+                {
+                    poll_timeout.tv_nsec = 0;
+                }
+                else
+                {
+                    poll_timeout.tv_nsec -= rem_time;
+                }
+
+                if (poll_timeout.tv_nsec < 0)
+                    poll_timeout.tv_nsec = 0;
+            }
         }
 
         telmMgr->cleanup_dead_endpoints();
