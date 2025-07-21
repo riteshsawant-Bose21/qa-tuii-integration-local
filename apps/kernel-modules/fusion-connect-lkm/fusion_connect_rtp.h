@@ -51,10 +51,10 @@ struct fusion_cn_stream_config {
 
 struct fusion_cn_rtp_ops {
     uint64_t (*get_phc_ns)(void);
-    void     *(*get_buffer)(void *cn_mgr, char *name);
-    uint32_t (*get_buffer_size_in_frames)(void *cn_mgr, char *name);
-    uint32_t (*get_buffer_offset)(void *cn_mgr, char *name);
-    int      (*set_buffer_pos)(void *cn_mgr, uint32_t write_slot, char *name);
+    void    *(*get_buffer)(void *cn_mgr, void *alsa_stream);
+    uint32_t (*get_buffer_size_in_frames)(void *cn_mgr, void *alsa_stream);
+    uint32_t (*get_buffer_offset)(void *cn_mgr, void *alsa_stream);
+    int      (*set_buffer_pos)(void *cn_mgr, uint32_t write_slot, void *alsa_stream);
 };
 
 struct fusion_cn_rtp_header {
@@ -99,17 +99,11 @@ struct handle_node {
 // map from dest_ip and dest_port to stream_handle for incoming packets
 struct fusion_cn_packet_map {
     struct hlist_node hnode;
+    void *alsa_stream;
     uint32_t source_ip;
     uint32_t dest_ip;
     uint16_t source_port;
     uint64_t stream_handle;
-};
-
-struct active_stream_handles {
-    struct list_head fn_sink;
-    struct list_head fn_source;
-    struct list_head aes67_sink;
-    struct list_head aes67_source;
 };
 
 struct fusion_cn_rtp_manager {
@@ -120,7 +114,6 @@ struct fusion_cn_rtp_manager {
     struct fusion_cn_netfilter *nf;
     struct fusion_cn_rtp_ops *ops;
     void *cn_mgr;
-    struct active_stream_handles active_stream_handles;
     bool internal_loopback;
     bool debug;
 };
@@ -129,12 +122,11 @@ struct fusion_cn_rtp_manager {
 int fusion_cn_rtp_init(struct fusion_cn_rtp_manager *rtp_mgr, struct fusion_cn_netfilter *nf,
                     struct fusion_cn_rtp_ops *ops, void *cn_mgr);
 void fusion_cn_rtp_destroy(struct fusion_cn_rtp_manager *rtp_mgr);
-int fusion_cn_rtp_add_stream(struct fusion_cn_rtp_manager *rtp_mgr, struct fusion_cn_stream_config *info, uint64_t *handle);
-int fusion_cn_rtp_remove_stream(struct fusion_cn_rtp_manager *rtp_mgr, uint64_t handle);
-int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr,
-                                struct fusion_cn_rtp_packet *packet);
-void fusion_cn_rtp_send_packet(struct fusion_cn_rtp_manager *rtp_mgr,
-                            struct fusion_cn_rtp_stream *stream);
+int fusion_cn_rtp_add_stream(struct fusion_cn_rtp_manager *rtp_mgr, struct fusion_cn_stream_config *info,
+                             void *alsa_stream, struct fusion_cn_rtp_stream **rtp_stream);
+int fusion_cn_rtp_remove_stream(struct fusion_cn_rtp_manager *rtp_mgr, struct fusion_cn_rtp_stream *stream);
+int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr, struct fusion_cn_rtp_packet *packet);
+void fusion_cn_rtp_send_packet(struct fusion_cn_rtp_manager *rtp_mgr, struct fusion_cn_rtp_stream *stream, void *alsa_stream);
 struct fusion_cn_rtp_stream *fusion_cn_rtp_get_stream(struct fusion_cn_rtp_manager *rtp_mgr, uint64_t handle);
 void fusion_cn_rtp_stream_release(struct kref *kref);
-int fusion_cn_rtp_set_stream_running(struct fusion_cn_rtp_manager *rtp_mgr, uint64_t handle, bool running);
+int fusion_cn_rtp_set_stream_running(struct fusion_cn_rtp_manager *rtp_mgr, uint64_t handle, bool running, void *alsa_stream);

@@ -18,29 +18,9 @@
 #include <linux/slab.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
-#include <sound/pcm-indirect.h>
 #include "fusion_connect_alsa.h"
 
-struct fusion_cn_substream {
-    struct snd_pcm_substream *substream;
-    struct snd_pcm *pcm;
-    uint64_t stream_handle;
-    char stream_name[FUSION_CN_NAME_MAX];
-    snd_pcm_format_t format;
-    uint32_t sample_width;
-    uint32_t rate;
-    uint32_t channels;
-    uint32_t buffer_pos;
-    uint32_t rtp_frame_size;
-    uint32_t interrupts_per_period;
-    uint32_t interrupt_idx;
-    struct snd_pcm_indirect pcm_indirect;
-    atomic_t dma_offset;
-    spinlock_t lock;
-    struct hlist_node hnode;
-    struct kref ref;
-    uint16_t stream_index;
-};
+static struct platform_device *g_pdev;
 
 static const unsigned int supported_rates[] = { 44100, 48000, 96000 };
 static const struct snd_pcm_hw_constraint_list constraints_rates = {
@@ -63,8 +43,9 @@ static inline unsigned int hash_name(const char *name)
     return hash % (1 << FUSION_CN_ALSA_HASH_BITS);
 }
 
-static struct fusion_cn_substream *fusion_cn_find_substream(struct fusion_cn_chip *chip, const char *stream_name)
+struct fusion_cn_substream *fusion_cn_find_substream(const char *stream_name)
 {
+    struct fusion_cn_chip *chip = platform_get_drvdata(g_pdev);
     struct fusion_cn_substream *stream;
     unsigned int bucket = hash_name(stream_name);
 
@@ -141,9 +122,7 @@ static int fusion_cn_pcm_hw_params(struct snd_pcm_substream *substream, struct s
     return 0;
 }
 
-static struct platform_device *g_pdev;
-
-static void fusion_cn_alsa_substream_release(struct kref *kref)
+void fusion_cn_alsa_substream_release(struct kref *kref)
 {
     struct fusion_cn_substream *stream = container_of(kref, struct fusion_cn_substream, ref);
     if (stream->pcm && stream->pcm->card) {
@@ -159,95 +138,17 @@ static void fusion_cn_alsa_substream_release(struct kref *kref)
     kfree(stream);
 }
 
-void *fusion_cn_alsa_get_stream_buffer(struct fusion_cn_chip *alsa_chip, const char *stream_name)
+int fusion_cn_alsa_pcm_interrupt(struct fusion_cn_chip *alsa_chip, struct fusion_cn_substream *stream)
 {
     struct fusion_cn_chip *chip = alsa_chip;
-    unsigned long flags;
-    struct fusion_cn_substream *stream;
-    void *buf;
-
-    read_lock_irqsave(&chip->lock, flags);
-    stream = fusion_cn_find_substream(chip, stream_name);
-    if (!stream) {
-        read_unlock_irqrestore(&chip->lock, flags);
-        printk(KERN_ERR "fusion_cn_alsa: get_stream_buffer: Stream %s not found\n", stream_name);
-        return NULL;
-    }
-    buf = stream->substream ? stream->substream->runtime->dma_area : NULL;
-    read_unlock_irqrestore(&chip->lock, flags);
-    kref_put(&stream->ref, fusion_cn_alsa_substream_release);
-    return buf;
-}
-
-uint32_t fusion_cn_alsa_get_stream_buffer_size_in_frames(struct fusion_cn_chip *alsa_chip, const char *stream_name)
-{
-    struct fusion_cn_chip *chip = alsa_chip;
-    unsigned long flags;
-    struct fusion_cn_substream *stream;
-    uint32_t size;
-
-    read_lock_irqsave(&chip->lock, flags);
-    stream = fusion_cn_find_substream(chip, stream_name);
-    if (!stream) {
-        read_unlock_irqrestore(&chip->lock, flags);
-        printk(KERN_ERR "fusion_cn_alsa: get_stream_buffer_size: Stream %s not found\n", stream_name);
-        return 0;
-    }
-    size = stream->substream ? stream->substream->runtime->buffer_size : 0;
-    read_unlock_irqrestore(&chip->lock, flags);
-    kref_put(&stream->ref, fusion_cn_alsa_substream_release);
-    return size;
-}
-
-uint32_t fusion_cn_alsa_get_stream_buffer_offset(struct fusion_cn_chip *alsa_chip, const char *stream_name)
-{
-    struct fusion_cn_chip *chip = alsa_chip;
-    unsigned long flags;
-    struct fusion_cn_substream *stream;
-    uint32_t offset;
-
-    read_lock_irqsave(&chip->lock, flags);
-    stream = fusion_cn_find_substream(chip, stream_name);
-    if (!stream) {
-        read_unlock_irqrestore(&chip->lock, flags);
-        printk(KERN_ERR "fusion_cn_alsa: get_stream_buffer_offset: Stream %s not found\n", stream_name);
-        return 0;
-    }
-    offset = stream->buffer_pos;
-    read_unlock_irqrestore(&chip->lock, flags);
-    kref_put(&stream->ref, fusion_cn_alsa_substream_release);
-    return offset;
-}
-
-int fusion_cn_alsa_pcm_interrupt(struct fusion_cn_chip *alsa_chip, int direction, const char *stream_name)
-{
-    struct fusion_cn_chip *chip = alsa_chip;
-    unsigned long flags;
-    struct fusion_cn_substream *stream;
-    uint32_t bytes_per_frame;
-
-    read_lock_irqsave(&chip->lock, flags);
-    stream = fusion_cn_find_substream(chip, stream_name);
-    if (!stream) {
-        read_unlock_irqrestore(&chip->lock, flags);
-        printk(KERN_WARNING "fusion_cn_alsa: pcm_interrupt: coudln't find stream %s\n", stream_name);
-        return -EINVAL;
-    } else if (!stream->substream || stream->substream->stream != direction) {
-        read_unlock_irqrestore(&chip->lock, flags);
-        kref_put(&stream->ref, fusion_cn_alsa_substream_release);
-        printk(KERN_WARNING "fusion_cn_alsa: pcm_interrupt: Invalid substream for stream %s, direction %d\n", stream_name, direction);
-        return -EINVAL;
-    }
-    read_unlock_irqrestore(&chip->lock, flags);
 
     spin_lock_irq(&stream->lock);
 
-    bytes_per_frame = stream->channels * stream->sample_width;
     if (stream->substream->runtime->access == SNDRV_PCM_ACCESS_MMAP_INTERLEAVED ||
         stream->substream->runtime->access == SNDRV_PCM_ACCESS_MMAP_NONINTERLEAVED ||
         stream->substream->runtime->access == SNDRV_PCM_ACCESS_MMAP_COMPLEX) {
         unsigned int pos = atomic_read(&stream->dma_offset);
-        pos += stream->rtp_frame_size * bytes_per_frame;
+        pos += stream->rtp_frame_size * stream->channels * stream->sample_width;
         if (pos >= stream->pcm_indirect.hw_buffer_size)
             pos -= stream->pcm_indirect.hw_buffer_size;
         atomic_set(&stream->dma_offset, pos);
@@ -257,7 +158,7 @@ int fusion_cn_alsa_pcm_interrupt(struct fusion_cn_chip *alsa_chip, int direction
             stream->buffer_pos -= stream->substream->runtime->buffer_size;
     }
 
-    if (chip->debug) printk(KERN_DEBUG "fusion_cn_alsa: pcm_interrupt: stream %s, buffer_pos=%d\n", stream_name, stream->buffer_pos);
+    if (chip->debug) printk(KERN_DEBUG "fusion_cn_alsa: pcm_interrupt: stream %s, buffer_pos=%d\n", stream->stream_name, stream->buffer_pos);
 
     stream->interrupt_idx++;
     if (stream->interrupt_idx >= stream->interrupts_per_period) {
@@ -267,7 +168,6 @@ int fusion_cn_alsa_pcm_interrupt(struct fusion_cn_chip *alsa_chip, int direction
 
     spin_unlock_irq(&stream->lock);
 
-    kref_put(&stream->ref, fusion_cn_alsa_substream_release);
     return 0;
 }
 
@@ -279,7 +179,7 @@ int fusion_cn_alsa_mute_stream_buffers(struct fusion_cn_chip *alsa_chip, const c
     unsigned long flags;
 
     read_lock_irqsave(&chip->lock, flags);
-    stream = fusion_cn_find_substream(chip, stream_name);
+    stream = fusion_cn_find_substream(stream_name);
     if (!stream) {
         read_unlock_irqrestore(&chip->lock, flags);
         printk(KERN_ERR "fusion_cn_alsa: mute_stream_buffers: Stream %s not found\n", stream_name);
@@ -315,7 +215,7 @@ int fusion_cn_alsa_set_buffer_pos(struct fusion_cn_chip *alsa_chip, uint32_t wri
     struct fusion_cn_substream *stream;
 
     read_lock_irqsave(&chip->lock, flags);
-    stream = fusion_cn_find_substream(chip, stream_name);
+    stream = fusion_cn_find_substream(stream_name);
     if (!stream || !stream->substream) {
         read_unlock_irqrestore(&chip->lock, flags);
         printk(KERN_WARNING "fusion_cn_alsa: set_buffer_pos: Invalid stream %s\n", stream_name);
@@ -525,27 +425,18 @@ static int fusion_cn_pcm_fill_silence(struct snd_pcm_substream *substream,
 }
 #endif
 
-int fusion_cn_alsa_remove_substream(struct fusion_cn_chip *alsa_chip, const char *stream_name)
+int fusion_cn_alsa_remove_substream(struct fusion_cn_substream *stream)
 {
-    struct fusion_cn_chip *chip = alsa_chip;
+    struct fusion_cn_chip *chip = platform_get_drvdata(g_pdev);
     unsigned long flags;
-    struct fusion_cn_substream *stream;
     int stream_index;
 
-    read_lock_irqsave(&chip->lock, flags);
-    stream = fusion_cn_find_substream(chip, stream_name);
-    if (!stream) {
-        read_unlock_irqrestore(&chip->lock, flags);
-        printk(KERN_WARNING "fusion_cn_alsa: remove_substream: Stream %s not found\n", stream_name);
-        return -ENOENT;
-    }
     stream_index = stream->stream_index; // Save for printk
-    read_unlock_irqrestore(&chip->lock, flags);
 
     // Stop PCM to ensure no ALSA operations
     if (stream->substream) {
         snd_pcm_stop(stream->substream, SNDRV_PCM_STATE_DISCONNECTED);
-        printk(KERN_INFO "fusion_cn_alsa: remove_substream: Stopped PCM for stream %s\n", stream_name);
+        printk(KERN_INFO "fusion_cn_alsa: remove_substream: Stopped PCM for stream %s\n", stream->stream_name);
     }
 
     // Remove from hash list
@@ -558,7 +449,7 @@ int fusion_cn_alsa_remove_substream(struct fusion_cn_chip *alsa_chip, const char
     kref_put(&stream->ref, fusion_cn_alsa_substream_release);
     kref_put(&stream->ref, fusion_cn_alsa_substream_release);
     printk(KERN_INFO "fusion_cn_alsa: remove_substream: Stream %s removed, freed device=%d\n",
-           stream_name, stream_index);
+           stream->stream_name, stream_index);
     return 0;
 }
 
@@ -575,7 +466,7 @@ static int fusion_cn_pcm_open(struct snd_pcm_substream *substream)
     strscpy(stream_name, substream->pcm->name, sizeof(stream_name));
 
     read_lock_irqsave(&chip->lock, flags);
-    stream = fusion_cn_find_substream(chip, stream_name);
+    stream = fusion_cn_find_substream(stream_name);
     if (!stream) {
         read_unlock_irqrestore(&chip->lock, flags);
         printk(KERN_WARNING "fusion_cn_alsa: pcm_open: Stream %s not found\n", stream_name);
@@ -590,14 +481,6 @@ static int fusion_cn_pcm_open(struct snd_pcm_substream *substream)
     }
 
     stream->substream = substream;
-    err = chip->alsa_ops->get_rtp_frame_size(chip->fusion_cn_mgr, stream->stream_handle, &stream->rtp_frame_size);
-    if (err < 0) {
-        stream->substream = NULL;
-        read_unlock_irqrestore(&chip->lock, flags);
-        kref_put(&stream->ref, fusion_cn_alsa_substream_release);
-        printk(KERN_ERR "fusion_cn_alsa: pcm_open: get_rtp_frame_size failed for stream %s, err=%d\n", stream_name, err);
-        return err;
-    }
 
     hw.info = SNDRV_PCM_INFO_MMAP | SNDRV_PCM_INFO_INTERLEAVED |
               SNDRV_PCM_INFO_BLOCK_TRANSFER | SNDRV_PCM_INFO_MMAP_VALID;
@@ -757,7 +640,7 @@ static int fusion_cn_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
     case SNDRV_PCM_TRIGGER_START:
     case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
     case SNDRV_PCM_TRIGGER_RESUME:
-        err = chip->alsa_ops->start_interrupts(chip->fusion_cn_mgr, stream->stream_handle);
+        err = chip->alsa_ops->start_interrupts(chip->fusion_cn_mgr, stream->stream_handle, stream);
         if (err < 0) {
             printk(KERN_ERR "fusion_cn_alsa: pcm_trigger: start_interrupts failed for stream %s, err=%d\n",
                    stream->stream_name, err);
@@ -817,13 +700,13 @@ static struct snd_pcm_ops fusion_cn_pcm_ops = {
 };
 
 int fusion_cn_alsa_open_substream(struct fusion_cn_chip *alsa_chip, uint64_t stream_handle, const char *stream_name,
-                                    int direction, unsigned int channels, uint32_t rate, snd_pcm_format_t format)
+                                    int direction, unsigned int channels, uint32_t rate, snd_pcm_format_t format, 
+                                    uint32_t frames_per_packet, struct fusion_cn_substream **alsa_substream)
 {
     struct fusion_cn_chip *chip = alsa_chip;
     unsigned long flags;
     struct snd_pcm *pcm;
     int err;
-    uint32_t frames_per_packet;
     int bucket;
     struct fusion_cn_substream *stream;
     uint64_t packet_time_ns;
@@ -836,12 +719,6 @@ int fusion_cn_alsa_open_substream(struct fusion_cn_chip *alsa_chip, uint64_t str
     if (!chip->fusion_cn_mgr) {
         printk(KERN_ERR "fusion_cn_alsa: open_substream: fusion_cn_mgr is NULL for stream %s\n", stream_name);
         return -EINVAL;
-    }
-
-    err = chip->alsa_ops->get_rtp_frame_size(chip->fusion_cn_mgr, stream_handle, &frames_per_packet);
-    if (err < 0) {
-        printk(KERN_ERR "fusion_cn_alsa: open_substream: Initial get_rtp_frame_size failed for stream %s, err=%d\n", stream_name, err);
-        return err;
     }
 
     if (format != SNDRV_PCM_FORMAT_S16_BE && 
@@ -939,7 +816,7 @@ int fusion_cn_alsa_open_substream(struct fusion_cn_chip *alsa_chip, uint64_t str
     }
 
     read_lock_irqsave(&chip->lock, flags);
-    if (fusion_cn_find_substream(chip, stream_name)) {
+    if (fusion_cn_find_substream(stream_name)) {
         read_unlock_irqrestore(&chip->lock, flags);
         printk(KERN_WARNING "fusion_cn_alsa: open_substream: Stream %s already exists\n", stream_name);
         err = -EEXIST;
@@ -961,6 +838,8 @@ int fusion_cn_alsa_open_substream(struct fusion_cn_chip *alsa_chip, uint64_t str
     printk(KERN_INFO "fusion_cn_alsa: open_substream: Successfully created substream for stream %s, device=%d, format=%d, channels=%u, rate=%u, frames_per_packet=%u\n", 
                                                                                       stream_name, stream_index, format, 
                                                                                       channels, rate, frames_per_packet);
+    
+    *alsa_substream = stream;
     return 0;
 
 clr_hnode:

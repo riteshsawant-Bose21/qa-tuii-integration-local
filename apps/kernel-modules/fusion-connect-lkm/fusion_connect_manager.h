@@ -14,8 +14,7 @@
  * this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef FUSION_CN_MANAGER_H
-#define FUSION_CN_MANAGER_H
+#pragma once
 
 #include <linux/kernel.h>
 #include <linux/hrtimer.h>
@@ -67,6 +66,19 @@ struct fusion_cn_netlink {
     int nl_family;
 };
 
+struct stream_node {
+    struct list_head node;
+    struct fusion_cn_rtp_stream *rtp_stream;
+    struct fusion_cn_substream *alsa_stream;
+};
+
+struct active_streams {
+    struct list_head fn_sink;
+    struct list_head fn_source;
+    struct list_head aes67_sink;
+    struct list_head aes67_source;
+};
+
 struct fusion_cn_manager {
     struct fusion_cn_state state;
     struct fusion_cn_alsa alsa;
@@ -75,6 +87,7 @@ struct fusion_cn_manager {
     struct fusion_cn_netfilter netfilter;
     struct fusion_cn_netlink netlink;
     struct platform_device *pdev;
+    struct active_streams active_streams;
     bool debug;
 };
 
@@ -95,5 +108,3 @@ int fusion_cn_mgr_init(struct fusion_cn_manager *mgr);
 void fusion_cn_mgr_destroy(struct fusion_cn_manager *mgr);
 
 extern const struct fusion_cn_alsa_ops fusion_cn_alsa_ops;
-
-#endif // FUSION_CN_MANAGER_H
