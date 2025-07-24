@@ -17,9 +17,6 @@
 #define tx 1
 
 struct cpu_priv {
-	unsigned long sysclk_freq[2];
-	u32 sysclk_dir[2];
-	u32 sysclk_id[2];
 	u32 slots;
 	u32 slot_width;
 };
@@ -62,16 +59,6 @@ static int fusion_sound_card_hw_params(struct snd_pcm_substream *substream,
     dev_info(dev, "sample_rate = %d, sample_format = %d, channels = %d\n", 
              priv->sample_rate, priv->sample_format, channels);
     dev_info(dev, "slots = %d, slot_width = %d\n", slots, slot_width);
-
-    /* Configure sysclk separately for each IO card */
-    ret = snd_soc_dai_set_sysclk(snd_soc_rtd_to_cpu(rtd, 0), 
-                                 cpu_priv->sysclk_id[tx],
-                                 cpu_priv->sysclk_freq[tx],
-                                 cpu_priv->sysclk_dir[tx]);
-    if (ret && ret != -ENOTSUPP) {
-        dev_err(dev, "failed to set sysclk for IO cards\n");
-        return ret;
-    }
 
     /* Set TDM slot configuration */
     ret = snd_soc_dai_set_tdm_slot(snd_soc_rtd_to_cpu(rtd, 0), 
@@ -126,7 +113,6 @@ static int fusion_sound_card_probe(struct platform_device *pdev)
     struct device_node *cpu_np, *codec_np;
     struct platform_device *cpu_pdev;
     const char *format;
-    struct clk *sai_clk;
     int ret;
     u32 slots, slot_width;
 
@@ -158,11 +144,6 @@ static int fusion_sound_card_probe(struct platform_device *pdev)
     priv->card.num_dapm_routes = 0;
     priv->card.dapm_widgets = NULL;
 	priv->card.num_dapm_widgets = 0;
-
-	priv->cpu_priv.sysclk_dir[tx] = SND_SOC_CLOCK_IN;
-	priv->cpu_priv.sysclk_dir[rx] = SND_SOC_CLOCK_IN;
-    priv->cpu_priv.sysclk_id[tx] = FSL_SAI_CLK_MAST1;
-    priv->cpu_priv.sysclk_id[rx] = FSL_SAI_CLK_MAST1;
     
     if (!of_property_read_u32(np, "slots", &slots)) {
         priv->cpu_priv.slots = slots;
@@ -201,27 +182,16 @@ static int fusion_sound_card_probe(struct platform_device *pdev)
         ret = -EINVAL;
         goto error;
     }
-
-    sai_clk = clk_get(&cpu_pdev->dev, "mclk1");
-    if (IS_ERR(sai_clk)) {
-        dev_err(&pdev->dev, "Failed to get sai_clk: %ld\n", PTR_ERR(sai_clk));
-        ret = PTR_ERR(sai_clk);
-        goto error;
-    }
-
-    priv->cpu_priv.sysclk_freq[tx] = clk_get_rate(sai_clk);
-    priv->cpu_priv.sysclk_freq[rx] = clk_get_rate(sai_clk);
-    clk_put(sai_clk);
     
     if (of_property_read_string(np, "format", &format)) {
-        dev_warn(&pdev->dev, "IO Cards: Missing 'format' property, using default 'i2s'.\n");
-        priv->dai_link.dai_fmt = SND_SOC_DAIFMT_I2S;
+        dev_warn(&pdev->dev, "Missing 'format' property, using default 'i2s'.\n");
+        priv->dai_link.dai_fmt = SND_SOC_DAIFMT_LEFT_J;
     } else {
         if (!strcmp(format, "i2s"))
-            priv->dai_link.dai_fmt = SND_SOC_DAIFMT_I2S;
+            priv->dai_link.dai_fmt = SND_SOC_DAIFMT_LEFT_J;
         else {
-            dev_warn(&pdev->dev, "IO Cards: Unsupported format '%s', using 'i2s'.\n", format);
-            priv->dai_link.dai_fmt = SND_SOC_DAIFMT_I2S;
+            dev_warn(&pdev->dev, "Unsupported format '%s', using 'i2s'.\n", format);
+            priv->dai_link.dai_fmt = SND_SOC_DAIFMT_LEFT_J;
         }
     }
     

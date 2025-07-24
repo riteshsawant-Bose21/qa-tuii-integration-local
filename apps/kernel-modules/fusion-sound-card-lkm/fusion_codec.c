@@ -77,23 +77,17 @@ static int fusion_codec_probe(struct platform_device *pdev)
         .name = "fusion-codec",
         .playback = {
             .stream_name = "Fusion Playback",
-            .channels_min = 1,
+            .channels_min = priv->tdm_slots * priv->rxtx_pins,
             .channels_max = priv->tdm_slots * priv->rxtx_pins,
-            .rates = SNDRV_PCM_RATE_8000_192000,
-            .formats = SNDRV_PCM_FMTBIT_S16_LE |
-                       SNDRV_PCM_FMTBIT_S24_LE |
-                       SNDRV_PCM_FMTBIT_S32_LE |
-                       SNDRV_PCM_FMTBIT_S24_3LE,
+            .rates = SNDRV_PCM_RATE_48000,
+            .formats = SNDRV_PCM_FMTBIT_S24_LE
         },
         .capture = {
             .stream_name = "Fusion Capture",
-            .channels_min = 1,
+            .channels_min = priv->tdm_slots * priv->rxtx_pins,
             .channels_max = priv->tdm_slots * priv->rxtx_pins,
-            .rates = SNDRV_PCM_RATE_8000_192000,
-            .formats = SNDRV_PCM_FMTBIT_S16_LE |
-                       SNDRV_PCM_FMTBIT_S24_LE |
-                       SNDRV_PCM_FMTBIT_S32_LE |
-                       SNDRV_PCM_FMTBIT_S24_3LE,
+            .rates = SNDRV_PCM_RATE_48000,
+            .formats = SNDRV_PCM_FMTBIT_S24_LE
         },
         .ops = &fusion_codec_dai_ops,
     };
@@ -133,5 +127,5 @@ static struct platform_driver fusion_codec_driver = {
 module_platform_driver(fusion_codec_driver);
 
 MODULE_AUTHOR("Nathan Mark");
-MODULE_DESCRIPTION("Fusion Dummy Codec Driver");
+MODULE_DESCRIPTION("Fusion Codec Driver");
 MODULE_LICENSE("GPL");
