@@ -12,3 +12,6 @@ waf3-*-*/
 # Lockfile
 .lock-waf_*_build
 wafconf/__pycache__
+
+# Python virtual environments
+venv/

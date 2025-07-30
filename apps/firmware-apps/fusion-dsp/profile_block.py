@@ -4,6 +4,7 @@ import itertools
 import pickle
 import sys
 import os
+import platform
 from sklearn.linear_model import LinearRegression
 from subprocess import run
 
@@ -45,10 +46,12 @@ def profile(config_name):
         )
         f.close()
         
-        env = {'DYLD_LIBRARY_PATH' : 'libs/onnxruntime-osx-universal2-1.17.0/lib/:'}
+        if platform.system() == 'Darwin':
+            env = {'DYLD_LIBRARY_PATH' : 'libs/onnxruntime-osx-universal2-1.17.0/lib/:'}
+        else:
+            env = {'LD_LIBRARY_PATH' : 'libs/onnxruntime-linux-x64-1.17.0/lib/:'}
         run(['./build/fusion_dsp','-c', 'tmp.json'],
-            # If running on MacOS and having trouble with dylib, uncomment this.
-            # env=env
+            env=env
             )
         df = pd.read_csv('timings.csv')
         for feature, formula in feature_dict.items():
@@ -58,7 +61,8 @@ def profile(config_name):
 
     result_df = pd.concat(frames, axis=0, ignore_index=True)
     if current_config.get('csv_dump'):
-        result_df.to_csv(current_config['csv_dump'])
+        os.makedirs('profiling_results', exist_ok=True)
+        result_df.to_csv(f"profiling_results/{current_config['csv_dump']}")
     block = current_config.get(
             'block',
             config_name
@@ -74,7 +78,6 @@ def profile(config_name):
     ys = filtered_df[[block]]
 
     model = LinearRegression().fit(Xs, ys)
-
     print(model.coef_)
     print(model.intercept_)
     print(model.score(Xs, ys))
@@ -181,9 +184,11 @@ def dict_to_iter(d):
 
 
 if __name__ == '__main__':
+    os.makedirs('profiling_results', exist_ok=True)
+    
     if len(sys.argv) == 1:
         results = {}
-        f_model_readable = open('results.txt', 'w')
+        f_model_readable = open('profiling_results/results.txt', 'w')
         for config in configurations.keys():
             print(f'Running profiling configuration: {config}')
             model = results[config] = profile(config)
@@ -192,14 +197,14 @@ if __name__ == '__main__':
                 configurations[config].get('format_string', default_format_string).format(*model.intercept_, *model.coef_[0])
                 + '\n'
             )
-        f_model_pickle = open('results.pkl', 'wb')
+        f_model_pickle = open('profiling_results/results.pkl', 'wb')
         pickle.dump(results, f_model_pickle)
         f_model_pickle.close()
         
     else:
         config = sys.argv[1]
-        f_model_pickle = open(f'results_{config}.pkl', 'wb')
-        f_model_readable = open(f'results_{config}.txt', 'w')
+        f_model_pickle = open(f'profiling_results/results_{config}.pkl', 'wb')
+        f_model_readable = open(f'profiling_results/results_{config}.txt', 'w')
         model = profile(config)
         pickle.dump(model, f_model_pickle)
         f_model_readable.write(
