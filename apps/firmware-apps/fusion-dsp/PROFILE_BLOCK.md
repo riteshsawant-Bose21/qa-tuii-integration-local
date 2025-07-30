@@ -1,4 +1,4 @@
-# profile_block.py DSP Performance Profiler
+# profile_block.py Fusion-DSP Performance Profiler
 
 ## Overview
 
@@ -17,24 +17,59 @@ This tool profiles the performance of various DSP algorithms on Fusion by measur
 
 ## Installation
 
-1. Ensure ONNX Runtime libraries are in the correct location:
-   - Linux: `libs/onnxruntime-linux-x64-1.17.0/lib/`
-   - macOS: `libs/onnxruntime-osx-universal2-1.17.0/lib/`
-
-2. Create a venv
+1. Create a venv
     ```bash
     python3 -m venv venv
     ```
 
-3. Activate venv and install Python dependencies:
+2. Activate venv and install Python dependencies:
    ```bash
    source venv/bin/activate
    pip install pandas jinja2 scikit-learn
    ```
 
+## Setup
+
+### For Remote Execution (Fusion binary on Variscite board)
+
+3. Network Setup
+   -  Ensure board and host machine are on the same network
+   - update board_ip in script (default: 192.168.1.7)
+   - Copy test WAV files to board: `scp *.wav root@[board-ip]:/home/root/` (.wav files TBA)
+   - Disable board services (run only once):
+   ``` bash
+      ssh root@[board-ip]
+      systemctl disable fusion-system-monitor fusion-telemetry-core fusion-dsp fusion-server jackd
+   ```
+
+### Running on host machine
+
+3. Ensure ONNX Runtime libraries are in the correct location:
+   - Linux: `libs/onnxruntime-linux-x64-1.17.0/lib/`
+   - macOS: `libs/onnxruntime-osx-universal2-1.17.0/lib/`
+
 4. Ensure `fusion_dsp` binary is compiled and located at `./build/fusion_dsp`
 
 ## Usage
+
+### Choose platform
+
+```bash
+python3 profile_block.py --local
+```
+
+This will:
+- Run profiling locally with host machine's compute
+
+
+```bash
+python3 profile_block.py --remote
+# or leave blank (remote is default)
+python3 profile_block.py
+```
+
+This will:
+- Run profiling remotely on connected board and send results back to host machine.
 
 ### Profile All Algorithms
 ```bash
@@ -134,8 +169,8 @@ Each algorithm configuration in the script can specify:
 - Add 'block' specification to algorithm configuration
 - Check that the block name matches what's in the timing CSV
 
-## OS 
+## Operating Systems
 
-Automatically detects the OS and sets appropriate library paths:
+In local mode, automatically detects the OS and sets appropriate library paths:
 - Linux: Uses `LD_LIBRARY_PATH`
 - macOS: Uses `DYLD_LIBRARY_PATH`
