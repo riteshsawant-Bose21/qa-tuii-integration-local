@@ -78,8 +78,8 @@ python3 profile_block.py
 
 This will:
 - Profile all configured algorithms
-- Generate `results.pkl` (machine-readable model data)
-- Generate `results.txt` (human-readable performance formulas)
+- Generate `results.pkl` (machine-readable model data) in `/profiling_results`
+- Generate `results.txt` (human-readable performance formulas) in `/profiling_results`
 
 ### Profile Specific Algorithm
 ```bash
@@ -88,7 +88,7 @@ python3 profile_block.py matrix_mixer
 
 This will:
 - Profile only the specified algorithm
-- Generate `results_matrix_mixer.pkl` and `results_matrix_mixer.txt`
+- Generate `results_matrix_mixer.pkl` and `results_matrix_mixer.txt` in `/profiling_results`
 
 ## Supported Algorithms
 
