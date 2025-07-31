@@ -12,7 +12,6 @@ This tool profiles the performance of various DSP algorithms on Fusion by measur
   - jinja2
   - scikit-learn
   - pickle
-- ONNX Runtime libraries (platform-specific)
 - Compiled `fusion_dsp` binary
 
 ## Installation
@@ -43,10 +42,6 @@ This tool profiles the performance of various DSP algorithms on Fusion by measur
    ```
 
 ### Running on host machine
-
-3. Ensure ONNX Runtime libraries are in the correct location:
-   - Linux: `libs/onnxruntime-linux-x64-1.17.0/lib/`
-   - macOS: `libs/onnxruntime-osx-universal2-1.17.0/lib/`
 
 4. Ensure `fusion_dsp` binary is compiled and located at `./build/fusion_dsp`
 
@@ -151,10 +146,6 @@ Each algorithm configuration in the script can specify:
 7. Saves models and formulas
 
 ## Troubleshooting
-
-### "libonnxruntime.so.1.17.0: cannot open shared object file"
-- Check that ONNX Runtime libraries are in the specified directory
-- Check that the OS detection is working correctly
 
 ### "Parameter setting index out of range"
 - Check template files for hardcoded parameter indices
