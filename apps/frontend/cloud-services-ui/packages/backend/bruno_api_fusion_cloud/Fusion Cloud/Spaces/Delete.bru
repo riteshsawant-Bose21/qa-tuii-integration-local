@@ -1,0 +1,19 @@
+meta {
+  name: Delete
+  type: http
+  seq: 4
+}
+
+delete {
+  url: {{SERVER}}/api/v1/spaces/:id
+  body: none
+  auth: none
+}
+
+params:path {
+  id: 45466
+}
+
+headers {
+  Authorization: Bearer {{JWT}}
+}

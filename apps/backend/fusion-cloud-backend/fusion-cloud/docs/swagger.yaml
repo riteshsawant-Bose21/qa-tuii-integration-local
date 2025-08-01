@@ -1,0 +1,896 @@
+basePath: /api/v1
+definitions:
+  model.ClaimDeviceRequest:
+    properties:
+      cloud_id:
+        type: string
+      mac:
+        type: string
+      name:
+        type: string
+      sn:
+        type: string
+      space_id:
+        type: integer
+    type: object
+  model.ProjectRequest:
+    properties:
+      description:
+        type: string
+      metadata:
+        description: JSON string for additional project data
+        type: string
+      name:
+        type: string
+    required:
+    - name
+    type: object
+  model.RefreshTokenRequest:
+    properties:
+      refresh_token:
+        type: string
+    required:
+    - refresh_token
+    type: object
+  model.SpaceRequest:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+      parent_id:
+        type: string
+    type: object
+  model.UserLogin:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  model.UserMetaData:
+    properties:
+      address:
+        properties:
+          addressLine1:
+            type: string
+          addressLine2:
+            type: string
+          city:
+            type: string
+          country:
+            type: string
+          state:
+            type: string
+          timezone:
+            type: string
+          zipCode:
+            type: string
+        type: object
+      currency:
+        type: string
+      language:
+        type: string
+      location:
+        type: string
+      measurementUnit:
+        type: string
+      notifications:
+        properties:
+          productUpdates:
+            type: boolean
+          projectActivity:
+            type: boolean
+          trainingAndResources:
+            type: boolean
+        type: object
+      personalInfo:
+        description: |-
+          xyteApiKey is used to store the API key for the XYTE service
+          It is not exposed in the API response and is stored securely.
+        properties:
+          jobTitle:
+            type: string
+          name:
+            type: string
+          organization:
+            type: string
+          phone:
+            type: string
+        type: object
+      security:
+        properties:
+          enableEmailNotifications:
+            type: boolean
+          enableSMSNotifications:
+            type: boolean
+          isTwoFactorEnabled:
+            type: boolean
+          password:
+            type: string
+          username:
+            type: string
+        type: object
+      xyte_api_key:
+        type: string
+    required:
+    - xyte_api_key
+    type: object
+  model.UserRegistration:
+    properties:
+      email:
+        type: string
+      password:
+        minLength: 8
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  model.UserResponse:
+    properties:
+      created_at:
+        description: MetaData is returned in the response, but sensitive fields like
+          API keys are not included
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      metadata:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  utils.APIResponse:
+    properties:
+      data: {}
+      message:
+        type: string
+      status:
+        type: string
+    type: object
+host: localhost:8020
+info:
+  contact: {}
+  description: Fusion Cloud API provides a RESTful interface for managing projects,
+    users, and authentication.
+  title: Fusion Cloud API
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Login a user with email and password
+      parameters:
+      - description: User login details
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/model.UserLogin'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+      summary: Login a user
+      tags:
+      - auth
+  /auth/refresh-token:
+    post:
+      consumes:
+      - application/json
+      description: Refresh the user's authentication token using a valid refresh token
+      parameters:
+      - description: Refresh token request
+        in: body
+        name: refreshToken
+        required: true
+        schema:
+          $ref: '#/definitions/model.RefreshTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+      summary: Refresh user token
+      tags:
+      - auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Register a new user with email and password
+      parameters:
+      - description: User registration details
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/model.UserRegistration'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+      summary: Register a new user
+      tags:
+      - auth
+  /devices:
+    get:
+      description: Get all devices
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: get a device
+      tags:
+      - device
+  /devices/claim:
+    post:
+      consumes:
+      - application/json
+      description: Claim a device by its ID
+      parameters:
+      - description: Device details
+        in: body
+        name: device
+        required: true
+        schema:
+          $ref: '#/definitions/model.ClaimDeviceRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: claim a device
+      tags:
+      - device
+  /devices/histories:
+    get:
+      description: Get Device Histories by various filters
+      parameters:
+      - description: Device ID
+        in: query
+        name: device_id
+        required: true
+        type: string
+      - description: Device status
+        in: query
+        name: status
+        type: string
+      - description: From time (ISO8601 or timestamp)
+        in: query
+        name: from
+        type: string
+      - description: To time (ISO8601 or timestamp)
+        in: query
+        name: to
+        type: string
+      - description: Space ID
+        in: query
+        name: space_id
+        type: string
+      - description: Device name
+        in: query
+        name: name
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Get Device Histories
+      tags:
+      - device
+  /file-preview/{fileId}:
+    get:
+      description: Downloads a file using file ID
+      parameters:
+      - description: File ID
+        in: path
+        name: fileId
+        required: true
+        type: string
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+      summary: Get a file
+      tags:
+      - file
+  /files/{fileId}:
+    get:
+      description: Downloads a file using file ID
+      parameters:
+      - description: File ID
+        in: path
+        name: fileId
+        required: true
+        type: string
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+      summary: Get a file
+      tags:
+      - file
+  /files/upload:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Uploads a file and returns the file ID
+      parameters:
+      - description: File to upload
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+      summary: Upload a file
+      tags:
+      - file
+  /organization:
+    get:
+      description: Fetch all organization available to the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: get Organization details
+      tags:
+      - organization
+  /products:
+    get:
+      description: Fetch all products available to the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: List all products
+      tags:
+      - product
+  /products/filtered:
+    get:
+      description: Fetch products whose name matches predefined keyword filters
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: List filtered products
+      tags:
+      - product
+  /projects:
+    get:
+      description: Fetch all projects for the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: List all projects
+      tags:
+      - project
+    post:
+      consumes:
+      - application/json
+      description: Create a new project for the authenticated user
+      parameters:
+      - description: Project details
+        in: body
+        name: project
+        required: true
+        schema:
+          $ref: '#/definitions/model.ProjectRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new project
+      tags:
+      - project
+  /projects/{id}:
+    delete:
+      description: Delete a project by its ID for the authenticated user
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a project
+      tags:
+      - project
+    get:
+      description: Fetch a project by its ID for the authenticated user
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a project by ID
+      tags:
+      - project
+    put:
+      consumes:
+      - application/json
+      description: Update an existing project for the authenticated user
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Project details
+        in: body
+        name: project
+        required: true
+        schema:
+          $ref: '#/definitions/model.ProjectRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a project
+      tags:
+      - project
+  /spaces:
+    get:
+      consumes:
+      - application/json
+      description: Get All Space
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Get All Space
+      tags:
+      - space
+    post:
+      consumes:
+      - application/json
+      description: Create a new space for the authenticated user
+      parameters:
+      - description: Space details
+        in: body
+        name: space
+        required: true
+        schema:
+          $ref: '#/definitions/model.SpaceRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new space
+      tags:
+      - space
+    put:
+      consumes:
+      - application/json
+      description: Update an existing space for the authenticated user
+      parameters:
+      - description: Space details
+        in: body
+        name: space
+        required: true
+        schema:
+          $ref: '#/definitions/model.SpaceRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a space
+      tags:
+      - space
+  /spaces/{id}:
+    delete:
+      description: Delete a space by its ID for the authenticated user
+      parameters:
+      - description: Space ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a space
+      tags:
+      - space
+  /users/me:
+    get:
+      description: Fetch the profile of the currently authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.UserResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Get current user profile
+      tags:
+      - user
+  /users/metadata:
+    post:
+      consumes:
+      - application/json
+      description: Update the metadata of the currently authenticated user
+      parameters:
+      - description: User metadata
+        in: body
+        name: metadata
+        required: true
+        schema:
+          $ref: '#/definitions/model.UserMetaData'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.UserResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Post current user profile metadata
+      tags:
+      - user
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer {your token}" to authenticate.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

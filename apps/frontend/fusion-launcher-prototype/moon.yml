@@ -1,0 +1,20 @@
+language: "flutter"
+
+tasks:
+  build:
+    command: "flutter"
+    args: ["build", "apk"]
+    options:
+      cache: true
+
+  test:
+    command: "flutter"
+    args: ["test"]
+
+  analyze:
+    command: "flutter"
+    args: ["analyze"]
+
+  format:
+    command: "flutter"
+    args: ["format", "."]

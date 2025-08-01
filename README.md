@@ -1,6 +1,6 @@
 # Fusion Apps Monorepo
 
-This is a Moon-powered monorepo that contains both frontend and backend applications, configured with a unified toolchain consisting of:
+This is a Moon-powered fusion-monorepo that contains both frontend, backend & embedded applications, configured with a unified toolchain consisting of:
 
 - **Node.js** + **Yarn (Berry)** for frontend and tooling
 - **Go** for backend services
