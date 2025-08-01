@@ -7,6 +7,19 @@ projects:
   - 'apps/backend/fusion-cloud-backend/fusion-cloud'
   - 'apps/frontend/cloud-services-ui'
   - 'apps/frontend/fusion-launcher-prototype'
+  - 'apps/embedded_apps/*'
+
 vcs:
   manager: 'git'
   defaultBranch: 'main'
+
+codeowners:
+  syncOnRun: true
+  globalPaths:
+    '*': ['@']
+    'apps/backend/': ['@frontend-team']
+    'apps/frontend/': ['@backend-team']
+    'apps/embedded_apps/': ['@embedded-team']
+    '/.github/': ['@devops']
+    '/.moon/': ['@devops']
+  orderBy: 'project-name'
