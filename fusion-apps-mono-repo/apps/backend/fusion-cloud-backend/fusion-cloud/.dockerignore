@@ -1,0 +1,24 @@
+# Binaries
+main
+*.exe
+
+# Output dirs
+bin/
+build/
+
+# Git
+.git
+.gitignore
+
+# Local dev
+.env
+.vscode
+.idea
+*.log
+
+# OS
+.DS_Store
+
+# DB or temp files
+db/*.db
+tmp/

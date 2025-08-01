@@ -1,0 +1,28 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fusion-cloud-api
+    ports:
+      - "${PORT}:${PORT}"
+    env_file:
+      - .env
+    volumes:
+      - ./db/app.db:/app/db/app.db
+      - ./db/migrations:/app/db/migrations
+    command: ["sh", "-c", "./main"]
+    depends_on:
+      - migrator
+
+  migrator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fusion-cloud-migrator
+    env_file:
+      - .env
+    volumes:
+      - ./db/app.db:/app/db/app.db
+      - ./db/migrations:/app/db/migrations
+    command: ["sh", "-c", "./main-migrate up"]

@@ -1,0 +1,15 @@
+node:
+  version: '23.0.0'
+  packageManager: 'yarn'
+  yarn:
+    version: '4.9.1'
+  # If you're looking to reduce the migration effort to moon tasks, 
+  # you can configure moon to inherit package.json scripts, and internally convert them 
+  # to moon tasks
+  # inferTasksFromScripts: true
+
+unstable_go:
+  version: '1.24.3'
+  tidyOnChange: true
+  workspaces: false
+

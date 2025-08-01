@@ -1,0 +1,26 @@
+{
+  "name": "cloud-services-ui",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "packages/*"
+  ],
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "scripts": {
+    "start-customer": "yarn workspace customer run start",
+    "start-partner": "yarn workspace partner run start",
+    "start-backend": "yarn workspace backend run start",
+    "build": "yarn workspaces foreach --all --topological run build",
+    "lint": "eslint . --ext .ts,.tsx",
+    "lint-fix": "eslint . --ext .ts,.tsx --fix",
+    "format": "prettier --write ."
+  },
+  "main": "index.js",
+  "license": "MIT",
+  "packageManager": "yarn@4.9.1"
+}
