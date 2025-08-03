@@ -1,3 +1,7 @@
+# https://moonrepo.dev/docs/config/toolchain#proto
+proto:
+  version: '0.51.4'
+
 node:
   version: '23.0.0'
   packageManager: 'yarn'
@@ -8,8 +12,17 @@ node:
   # to moon tasks
   # inferTasksFromScripts: true
 
+# https://moonrepo.dev/docs/config/toolchain#go
 unstable_go:
   version: '1.24.3'
   tidyOnChange: true
   workspaces: false
+
+# https://moonrepo.dev/docs/config/toolchain#typescript
+typescript:
+  routeOutDirToCache: true
+  includeSharedTypes: false
+  createMissingConfig: false
+  includeProjectReferenceSources: false
+  syncProjectReferences: false
 
