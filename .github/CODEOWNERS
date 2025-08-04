@@ -2,7 +2,6 @@
 # https://moonrepo.dev/docs/guides/codeowners
 
 # (workspace)
-* @
 apps/frontend/fusion-launcher-prototype @PrithvirajShetty-BoseProfessional @MaheshGouda-BoseProfessional
 apps/frontend/cloud-services-ui @SujithDevadas-BoseProfessional
 apps/backend/fusion-cloud-backend @SujithDevadas-BoseProfessional @rahil-BoseProfessional

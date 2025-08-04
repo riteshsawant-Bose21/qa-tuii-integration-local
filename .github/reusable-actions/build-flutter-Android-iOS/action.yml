@@ -1,0 +1,19 @@
+name: "Build Apps"
+description: "Build Fusion Monorepo Apps"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Flutter Android build
+      shell: bash
+      working-directory: apps/frontend/fusion-launcher-prototype
+      run: |
+        flutter pub get
+        moon run fusion-launcher-prototype:build-apk
+
+    - name: Flutter iOS build
+      shell: bash
+      working-directory: apps/frontend/fusion-launcher-prototype
+      run: |
+        flutter pub get
+        moon run fusion-launcher-prototype:build-iOSs

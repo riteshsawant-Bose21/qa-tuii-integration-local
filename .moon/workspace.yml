@@ -12,14 +12,4 @@ projects:
 vcs:
   manager: 'git'
   defaultBranch: 'main'
-
-codeowners:
-  syncOnRun: true
-  globalPaths:
-    '*': ['@']
-    'apps/backend/': ['@frontend-team']
-    'apps/frontend/': ['@backend-team']
-    'apps/embedded_apps/': ['@embedded-team']
-    '/.github/': ['@devops']
-    '/.moon/': ['@devops']
-  orderBy: 'project-name'
+  

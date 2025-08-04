@@ -14,18 +14,33 @@ permissions:
   contents: write
 
 jobs:
-  buildSetup:
+  buildChecks:
     runs-on: android-mac-build-agent
 
     steps:
       - name: Clone project
         uses: actions/checkout@v4
 
-  devCI:
-    needs: buildSetup
-    if: github.ref == 'refs/heads/main'
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            all:
+              - "./*" # Any file at the root directory
+              - "./.github/**"
+              - "./apps/**"
+            fusionLauncher:
+              - "./apps/frontend/fusion-launcher-prototype/**"
+            cloudServicesUI:
+              - "./apps/frontend/cloud-services-ui/**"
+            cloudServicesBackend:
+              - "./apps/backend/fusion-cloud-backend/**"
+
+  flutter-Android-iOS-Build:
+    needs: buildChecks
+    if: needs.buildChecks.outputs.fusionLauncher == 'true' && github.ref == 'refs/heads/main'
     concurrency:
-      group: devCI
+      group: flutter-Android-iOS-Build
     runs-on: android-mac-build-agent
     timeout-minutes: 30
 
@@ -40,4 +55,4 @@ jobs:
         uses: ./.github/reusable-actions/setup-toolchain
 
       - name: Build Apps
-        uses: ./.github/reusable-actions/build-apps
+        uses: ./.github/reusable-actions/build-flutter-Android-iOS
