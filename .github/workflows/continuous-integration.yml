@@ -1,7 +1,7 @@
 name: Flutter Monorepo Build
 
 on:
-  workflow_dispatch:  # <-- Manual trigger
+  workflow_dispatch:  
 
 jobs:
   build:
@@ -12,10 +12,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Set up Toolchain
-      - name: Set up Flutter
-        run: |
-          proto install
+      # Set up Proto Tool
+      - name: Set up proto
+        uses: moonrepo/setup-proto@v1
+
+      # Install Toolchain
+      - name: Run proto install
+        run: proto install
 
       # Flutter pub cache
       - name: Cache Flutter dependencies
