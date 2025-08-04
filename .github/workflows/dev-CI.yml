@@ -21,12 +21,6 @@ jobs:
       - name: Clone project
         uses: actions/checkout@v4
 
-      # This action sets up the toolchain for the monorepo
-      # It installs the necessary dependencies and prepares the environment
-      # for building and testing the monorepo packages.
-      - name: Setup Monorepo Toolchain
-        uses: ./.github/reusable-actions/setup-toolchain
-
   devCI:
     needs: buildSetup
     if: github.ref == 'refs/heads/main'
@@ -38,6 +32,12 @@ jobs:
     steps:
       - name: Clone project
         uses: actions/checkout@v4
+
+      # This action sets up the toolchain for the monorepo
+      # It installs the necessary dependencies and prepares the environment
+      # for building and testing the monorepo packages.
+      - name: Setup Monorepo Toolchain
+        uses: ./.github/reusable-actions/setup-toolchain
 
       - name: Build Apps
         uses: ./.github/reusable-actions/build-apps
