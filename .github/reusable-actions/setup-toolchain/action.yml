@@ -10,10 +10,12 @@ runs:
 
     # Install Moon via Proto
     - name: Install moon
+      shell: bash
       run: proto install moon
 
     # Install Toolchain
     - name: Run proto install
+      shell: bash
       run: proto install
 
     # Flutter pub cache
