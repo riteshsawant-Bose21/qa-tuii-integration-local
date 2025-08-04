@@ -1,7 +1,7 @@
 language: "flutter"
 
 tasks:
-  build:
+  build-apk:
     command: "flutter"
     args: ["build", "apk"]
     options:
