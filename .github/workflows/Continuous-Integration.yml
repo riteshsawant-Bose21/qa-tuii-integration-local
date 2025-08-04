@@ -16,6 +16,11 @@ permissions:
 jobs:
   buildChecks:
     runs-on: android-mac-build-agent
+    outputs:
+      all: ${{ steps.filter.outputs.all }}
+      fusionLauncher: ${{ steps.filter.outputs.fusionLauncher }}
+      cloudServicesUI: ${{ steps.filter.outputs.cloudServicesUI }}
+      cloudServicesBackend: ${{ steps.filter.outputs.cloudServicesBackend }}
 
     steps:
       - name: Clone project
