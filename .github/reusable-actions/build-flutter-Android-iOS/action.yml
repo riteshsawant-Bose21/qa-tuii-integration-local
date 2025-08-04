@@ -16,4 +16,4 @@ runs:
       working-directory: apps/frontend/fusion-launcher-prototype
       run: |
         flutter pub get
-        moon run fusion-launcher-prototype:build-iOSs
+        moon run fusion-launcher-prototype:build-iOS
