@@ -13,9 +13,6 @@
 
 #include <sound/soc/fsl/fsl_sai.h>
 
-#define rx 0
-#define tx 1
-
 struct cpu_priv {
 	u32 slots;
 	u32 slot_width;
@@ -55,17 +52,26 @@ static int fusion_sound_card_hw_params(struct snd_pcm_substream *substream,
     priv->sample_rate = params_rate(params);
     priv->sample_format = params_format(params);
 
-    dev_info(dev, "Setting HW params for IO Cards\n");
+    dev_info(dev, "Setting HW params\n");
     dev_info(dev, "sample_rate = %d, sample_format = %d, channels = %d\n", 
              priv->sample_rate, priv->sample_format, channels);
     dev_info(dev, "slots = %d, slot_width = %d\n", slots, slot_width);
+
+    ret = snd_soc_dai_set_sysclk(snd_soc_rtd_to_cpu(rtd, 0), 
+                                 FSL_SAI_CLK_MAST1,
+                                 12288000,
+                                 SND_SOC_CLOCK_IN);
+    if (ret && ret != -ENOTSUPP) {
+        dev_err(dev, "failed to set sysclk for IO cards\n");
+        return ret;
+    }
 
     /* Set TDM slot configuration */
     ret = snd_soc_dai_set_tdm_slot(snd_soc_rtd_to_cpu(rtd, 0), 
                                    BIT(slots) - 1, BIT(slots) - 1, 
                                    slots, slot_width);
     if (ret && ret != -ENOTSUPP) {
-        dev_err(dev, "Failed to set TDM slot for IO cards: %d\n", ret);
+        dev_err(dev, "Failed to set TDM slot: %d\n", ret);
         return ret;
     }
 
@@ -90,18 +96,18 @@ static const struct snd_soc_ops fusion_sound_card_ops = {
     .startup = fusion_sound_card_startup,
 };
 
-SND_SOC_DAILINK_DEFS(iocards,
+SND_SOC_DAILINK_DEFS(analog,
 	DAILINK_COMP_ARRAY(COMP_EMPTY()),
 	DAILINK_COMP_ARRAY(COMP_EMPTY()),
 	DAILINK_COMP_ARRAY(COMP_EMPTY()));
 	
 static struct snd_soc_dai_link fusion_sound_card_dai[] = {
 	{
-		.name = "iocards",
-		.stream_name = "iocards-stream",
+		.name = "analog",
+		.stream_name = "analog-stream",
 		.ops = &fusion_sound_card_ops,
 		.ignore_pmdown_time = 1,
-		SND_SOC_DAILINK_REG(iocards),
+		SND_SOC_DAILINK_REG(analog),
 	},
 };
 
