@@ -3,8 +3,8 @@
 
 # (workspace)
 * @
-apps/backend/ @frontend-team
-apps/frontend/ @backend-team
-apps/embedded_apps/ @embedded-team
-/.github/ @devops
-/.moon/ @devops
+apps/frontend/fusion-launcher-prototype @PrithvirajShetty-BoseProfessional @MaheshGouda-BoseProfessional
+apps/frontend/cloud-services-ui @SujithDevadas-BoseProfessional
+apps/backend/fusion-cloud-backend @SujithDevadas-BoseProfessional @rahil-BoseProfessional
+/.github/ @Amol-Kirtane-Boseprofessional
+/.moon/ @Amol-Kirtane-Boseprofessional
