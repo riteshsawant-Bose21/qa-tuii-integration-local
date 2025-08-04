@@ -1,0 +1,37 @@
+name: "Build Apps"
+description: "Build Fusion Monorepo Apps"
+
+runs:
+  using: "composite"
+  steps:
+
+    - uses: dorny/paths-filter@v3
+      id: filter
+      with:
+        filters: |
+          all:
+            - "./*" # Any file at the root directory
+            - "./.github/**"
+            - "./apps/**"
+          fusionLauncher:
+            - "./apps/frontend/fusion-launcher-prototype/**"
+          cloudServicesUI:
+            - "./apps/frontend/cloud-services-ui/**"
+          cloudServicesBackend:
+            - "./apps/backend/fusion-cloud-backend/**"
+
+    - name: Flutter Android build
+      if: steps.filter.outputs.fusionLauncher == 'true'
+      shell: bash
+      working-directory: apps/frontend/fusion-launcher-prototype
+      run: |
+        flutter pub get
+        moon run fusion-launcher-prototype:build-apk
+
+    - name: Flutter iOS build
+      if: steps.filter.outputs.fusionLauncher == 'true'
+      shell: bash
+      working-directory: apps/frontend/fusion-launcher-prototype
+      run: |
+        flutter pub get
+        moon run fusion-launcher-prototype:build-iOS

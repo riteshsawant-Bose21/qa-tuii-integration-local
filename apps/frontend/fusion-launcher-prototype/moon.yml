@@ -7,6 +7,12 @@ tasks:
     options:
       cache: true
 
+  build-iOS:
+    command: "flutter"
+    args: ["build", "ipa"]
+    options:
+      cache: true
+
   test:
     command: "flutter"
     args: ["test"]

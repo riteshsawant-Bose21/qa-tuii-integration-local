@@ -1,0 +1,43 @@
+name: Fusion-Monorepo-Dev-CI
+
+# Only run on commits, not when tags added
+on:
+  push:
+    tags-ignore:
+      - '**'
+    branches:
+      - '**'
+  workflow_dispatch:  # Allow manual triggering of the workflow
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  buildSetup:
+    runs-on: android-mac-build-agent
+
+    steps:
+      - name: Clone project
+        uses: actions/checkout@v4
+
+      # This action sets up the toolchain for the monorepo
+      # It installs the necessary dependencies and prepares the environment
+      # for building and testing the monorepo packages.
+      - name: Setup Monorepo Toolchain
+        uses: ./.github/reusable-actions/setup-toolchain
+
+  devCI:
+    needs: buildSetup
+    if: github.ref == 'refs/heads/main'
+    concurrency:
+      group: devCI
+    runs-on: android-mac-build-agent
+    timeout-minutes: 30
+
+    steps:
+      - name: Clone project
+        uses: actions/checkout@v4
+
+      - name: Build Apps
+        uses: ./.github/reusable-actions/build-apps
