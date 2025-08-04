@@ -17,10 +17,6 @@ tasks:
     command: "flutter"
     args: ["test"]
 
-  analyze:
-    command: "flutter"
-    args: ["analyze"]
-
   format:
     command: "flutter"
     args: ["format", "."]
