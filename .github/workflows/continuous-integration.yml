@@ -16,6 +16,10 @@ jobs:
       - name: Set up proto
         uses: moonrepo/setup-proto@v1
 
+      # Install Moon via Proto
+      - name: Install moon
+        run: proto install moon
+
       # Install Toolchain
       - name: Run proto install
         run: proto install
