@@ -15,10 +15,10 @@ runs:
     #   shell: bash
     #   run: proto install moon
 
-    # Install Toolchain
-    - name: Run proto install
-      shell: bash
-      run: proto install
+    # # Install Toolchain
+    # - name: Run proto install
+    #   shell: bash
+    #   run: proto install
 
     - name: Add custom tool to path
       shell: bash
