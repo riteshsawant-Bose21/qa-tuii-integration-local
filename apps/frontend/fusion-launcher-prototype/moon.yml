@@ -13,7 +13,7 @@ tasks:
     options:
       cache: true
 
-  unit-tests:
+  unit-test:
     command: "flutter"
     args: ["test"]
 

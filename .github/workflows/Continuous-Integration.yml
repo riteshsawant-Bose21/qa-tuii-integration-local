@@ -100,8 +100,6 @@ jobs:
       # for building and testing the monorepo packages.
       - name: Setup Monorepo Toolchain
         uses: ./.github/reusable-actions/setup-toolchain
-        with:
-          cwd: "apps/backend/fusion-cloud-backend/fusion-cloud"
 
       - name: Build Apps
         uses: ./.github/reusable-actions/build-cloud-web-backend

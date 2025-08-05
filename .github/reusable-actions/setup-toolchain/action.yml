@@ -1,10 +1,5 @@
 name: "Setup Toolchain"
 description: "Setup the Monorepo build toolchain"
-inputs:
-  cwd:
-    description: "Working directory"
-    required: false
-    default: "."
 
 runs:
   using: "composite"
@@ -22,7 +17,6 @@ runs:
 
     # Install Toolchain
     - name: Run proto install
-      working-directory: ${{ inputs.cwd }}
       shell: bash
       run: proto install
 
