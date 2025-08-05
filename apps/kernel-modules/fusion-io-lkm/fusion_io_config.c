@@ -5,266 +5,8 @@
 
 #include "fusion-io.h"
 
-
-// Default endpoints
-const struct endpoint ep_aud_adc_taa5242 = {
-    .type = EP_TYPE_AUD_ADC_TAA5242,
-    .name = "aud-adc-taa5242",
-    .addr_list = (unsigned short[]) { I2C_CLIENT_END },
-    .num_gpios = 0,
-    .gpios = NULL,  // No GPIOs, so explicitly NULL
-    .num_cmds = 0,
-    .cmds = NULL    // No commands, so explicitly NULL
-};
-
-const struct endpoint ep_aud_dac_tad5242 = {
-    .type = EP_TYPE_AUD_DAC_TAD5242,
-    .name = "aud-dac-tad5242",
-    .addr_list = (unsigned short[]) { I2C_CLIENT_END },
-    .num_gpios = 0,
-    .gpios = NULL,
-    .num_cmds = 0,
-    .cmds = NULL
-};
-
-const struct endpoint ep_src_ak4137 = {
-    .type = EP_TYPE_SRC_AK4137,
-    .name = "src-ak4137",
-    .addr_list = (unsigned short[]) { I2C_CLIENT_END },
-    .num_gpios = 1,
-    .gpios = (struct endpoint_gpio[]) {
-        {
-            .name = "gpio_reset",
-            .dir = EP_GPIO_DIR_O,
-            .default_val = EP_GPIO_VAL_HI
-        }
-    },
-    .num_cmds = 0,
-    .cmds = NULL
-};
-
-const struct endpoint ep_hdmi_ep9512t = {
-    .type = EP_TYPE_HDMI_EP9512T,
-    .name = "hdmi-ep9512t",
-    .addr_list = (unsigned short[]) { 0x3c, I2C_CLIENT_END },
-    .num_gpios = 2,
-    .gpios = (struct endpoint_gpio[]) {
-        {
-            .name = "gpio_reset",
-            .dir = EP_GPIO_DIR_O,
-            .default_val = EP_GPIO_VAL_HI
-        },
-        {
-            .name = "gpio_int",
-            .is_irq = true,
-            .trigger_type = IRQ_TYPE_EDGE_FALLING,
-            .dir = EP_GPIO_DIR_I
-        }
-    },
-    .num_cmds = 0,
-    .cmds = NULL
-};
-
-const struct endpoint ep_ioexp_tca9535 = {
-    .type = EP_TYPE_IOEXP_TCA9535,
-    .name = "ioexp-tca9535",
-    .addr_list = (unsigned short[]) { 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, I2C_CLIENT_END },
-    .num_gpios = 17,
-    .gpios = (struct endpoint_gpio[]) {
-        {
-            .name = "gpio_p00",
-            .num = 0xff,
-            .dir = EP_GPIO_DIR_I,
-            .default_val = EP_GPIO_VAL_LO
-        },
-        {
-            .name = "gpio_p01",
-            .num = 0xff,
-            .dir = EP_GPIO_DIR_I,
-            .default_val = EP_GPIO_VAL_LO
-        },
-        {
-            .name = "gpio_p02",
-            .num = 0xff,
-            .dir = EP_GPIO_DIR_I,
-            .default_val = EP_GPIO_VAL_LO
-        },
-        {
-            .name = "gpio_p03",
-            .num = 0xff,
-            .dir = EP_GPIO_DIR_I,
-            .default_val = EP_GPIO_VAL_LO
-        },
-        {
-            .name = "gpio_p04",
-            .num = 0xff,
-            .dir = EP_GPIO_DIR_I,
-            .default_val = EP_GPIO_VAL_LO
-        },
-        {
-            .name = "gpio_p05",
-            .num = 0xff,
-            .dir = EP_GPIO_DIR_I,
-            .default_val = EP_GPIO_VAL_LO
-        },
-        {
-            .name = "gpio_p06",
-            .num = 0xff,
-            .dir = EP_GPIO_DIR_I,
-            .default_val = EP_GPIO_VAL_LO
-        },
-        {
-            .name = "gpio_p07",
-            .num = 0xff,
-            .dir = EP_GPIO_DIR_I,
-            .default_val = EP_GPIO_VAL_LO
-        },
-        {
-            .name = "gpio_p10",
-            .num = 0xff,
-            .dir = EP_GPIO_DIR_I,
-            .default_val = EP_GPIO_VAL_LO
-        },
-        {
-            .name = "gpio_p11",
-            .num = 0xff,
-            .dir = EP_GPIO_DIR_I,
-            .default_val = EP_GPIO_VAL_LO
-        },
-        {
-            .name = "gpio_p12",
-            .num = 0xff,
-            .dir = EP_GPIO_DIR_I,
-            .default_val = EP_GPIO_VAL_LO
-        },
-        {
-            .name = "gpio_p13",
-            .num = 0xff,
-            .dir = EP_GPIO_DIR_I,
-            .default_val = EP_GPIO_VAL_LO
-        },
-        {
-            .name = "gpio_p14",
-            .num = 0xff,
-            .dir = EP_GPIO_DIR_I,
-            .default_val = EP_GPIO_VAL_LO
-        },
-        {
-            .name = "gpio_p15",
-            .num = 0xff,
-            .dir = EP_GPIO_DIR_I,
-            .default_val = EP_GPIO_VAL_LO
-        },
-        {
-            .name = "gpio_p16",
-            .num = 0xff,
-            .dir = EP_GPIO_DIR_I,
-            .default_val = EP_GPIO_VAL_LO
-        },
-        {
-            .name = "gpio_p17",
-            .num = 0xff,
-            .dir = EP_GPIO_DIR_I,
-            .default_val = EP_GPIO_VAL_LO
-        },
-        {
-            .name = "gpio_int",
-            .num = 0xff,
-            .is_irq = true,
-            .trigger_type = IRQ_TYPE_EDGE_FALLING,
-            .dir = EP_GPIO_DIR_I
-        }
-    },
-    .num_cmds = 0,
-    .cmds = NULL
-};
-
-const struct endpoint ep_ioexp_tcal6408 = {
-    .type = EP_TYPE_IOEXP_TCAL6408,
-    .name = "ioexp-tcal6408",
-    .addr_list = (unsigned short[]) { 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, I2C_CLIENT_END },
-    .num_gpios = 9,
-    .gpios = (struct endpoint_gpio[]) {
-        {
-            .name = "gpio_p0",
-            .num = 0xff,
-            .dir = EP_GPIO_DIR_I,
-            .default_val = EP_GPIO_VAL_LO
-        },
-        {
-            .name = "gpio_p1",
-            .num = 0xff,
-            .dir = EP_GPIO_DIR_I,
-            .default_val = EP_GPIO_VAL_LO
-        },
-        {
-            .name = "gpio_p2",
-            .num = 0xff,
-            .dir = EP_GPIO_DIR_I,
-            .default_val = EP_GPIO_VAL_LO
-        },
-        {
-            .name = "gpio_p3",
-            .num = 0xff,
-            .dir = EP_GPIO_DIR_I,
-            .default_val = EP_GPIO_VAL_LO
-        },
-        {
-            .name = "gpio_p4",
-            .num = 0xff,
-            .dir = EP_GPIO_DIR_I,
-            .default_val = EP_GPIO_VAL_LO
-        },
-        {
-            .name = "gpio_p5",
-            .num = 0xff,
-            .dir = EP_GPIO_DIR_I,
-            .default_val = EP_GPIO_VAL_LO
-        },
-        {
-            .name = "gpio_p6",
-            .num = 0xff,
-            .dir = EP_GPIO_DIR_I,
-            .default_val = EP_GPIO_VAL_LO
-        },
-        {
-            .name = "gpio_p7",
-            .num = 0xff,
-            .dir = EP_GPIO_DIR_I,
-            .default_val = EP_GPIO_VAL_LO
-        },
-        {
-            .name = "gpio_int",
-            .num = 0xff,
-            .is_irq = true,
-            .trigger_type = IRQ_TYPE_EDGE_FALLING,
-            .dir = EP_GPIO_DIR_I
-        }
-    },
-    .num_cmds = 0,
-    .cmds = NULL
-};
-
-const struct endpoint ep_adc_ads7128 = {
-    .type = EP_TYPE_ADC_ADS7128,
-    .name = "adc-ads7128",
-    .addr_list = (unsigned short[]) { 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, I2C_CLIENT_END },
-    .num_gpios = 1,
-    .gpios = (struct endpoint_gpio[]) {
-        {
-            .name = "gpio_int",
-            .num = 0xff,
-            .is_irq = true,
-            .trigger_type = IRQ_TYPE_EDGE_FALLING,
-            .dir = EP_GPIO_DIR_I
-        }
-    },
-    .num_cmds = 0,
-    .cmds = NULL
-};
-
 const struct endpoint ep_sec_eeprom_sha104 = {
-    .name = "eeprom-sha104",
+    .name = "eeprom_sha104",
     .type = EP_TYPE_SEC_EEPROM_SHA104,
     .export = EP_EXPORT,
     .has_i2c = true,
@@ -317,7 +59,7 @@ const struct endpoint ep_sec_eeprom_sha104 = {
 
 const struct endpoint ep_eeprom_m24c32 = {
     .type = EP_TYPE_EEPROM_M24C32,
-    .name = "eeprom-m24c02",  // Note: Name mismatch with type, should be "eeprom-m24c32"?
+    .name = "eeprom_m24c02",  // Note: Name mismatch with type, should be "eeprom_m24c32"?
     .addr_list = (unsigned short[]) { 0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, I2C_CLIENT_END },
     .num_gpios = 1,
     .gpios = (struct endpoint_gpio[]) {
@@ -326,52 +68,6 @@ const struct endpoint ep_eeprom_m24c32 = {
             .num = 0xff,
             .dir = EP_GPIO_DIR_O,
             .default_val = EP_GPIO_VAL_HI
-        }
-    },
-    .num_cmds = 0,
-    .cmds = NULL
-};
-
-const struct endpoint ep_i2csw_tca9544 = {
-    .type = EP_TYPE_I2CSW_TCA9544,
-    .name = "i2csw-tca9544",
-    .addr_list = (unsigned short[]) { 0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, I2C_CLIENT_END },
-    .num_gpios = 5,
-    .gpios = (struct endpoint_gpio[]) {
-        {
-            .name = "gpio_int",
-            .num = 0xff,
-            .is_irq = true,
-            .trigger_type = IRQ_TYPE_EDGE_FALLING,
-            .dir = EP_GPIO_DIR_I
-        },
-        {
-            .name = "gpio_int0",
-            .num = 0xff,
-            .is_irq = true,
-            .trigger_type = IRQ_TYPE_EDGE_FALLING,
-            .dir = EP_GPIO_DIR_I
-        },
-        {
-            .name = "gpio_int1",
-            .num = 0xff,
-            .is_irq = true,
-            .trigger_type = IRQ_TYPE_EDGE_FALLING,
-            .dir = EP_GPIO_DIR_I
-        },
-        {
-            .name = "gpio_int2",
-            .num = 0xff,
-            .is_irq = true,
-            .trigger_type = IRQ_TYPE_EDGE_FALLING,
-            .dir = EP_GPIO_DIR_I
-        },
-        {
-            .name = "gpio_int3",
-            .num = 0xff,
-            .is_irq = true,
-            .trigger_type = IRQ_TYPE_EDGE_FALLING,
-            .dir = EP_GPIO_DIR_I
         }
     },
     .num_cmds = 0,
@@ -393,16 +89,16 @@ const enum endpoint_type default_ep_types[] = {
 };
 
 const struct endpoint *default_eps[] = {
-    &ep_aud_adc_taa5242,
-    &ep_aud_dac_tad5242,
-    &ep_src_ak4137,
-    &ep_hdmi_ep9512t,
-    &ep_ioexp_tca9535,
-    &ep_ioexp_tcal6408,
-    &ep_adc_ads7128,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
     &ep_sec_eeprom_sha104,
     &ep_eeprom_m24c32,
-    &ep_i2csw_tca9544
+    NULL
 };
 
 // Default IO cards
@@ -435,7 +131,7 @@ const struct base_device bd_empty = {
 
 const struct base_device bd_fusion_var_proto = {
     .data = {
-        .model = "fusion-var_proto1",
+        .model = "fusion_var_proto1",
         .type = BD_TYPE_FUSION_VAR_PROTO,
         .ver_maj = EEPROM_DATA_VER_MAJ,
         .ver_min = EEPROM_DATA_VER_MIN
@@ -463,7 +159,7 @@ const struct base_device bd_fusion_var_proto = {
     .io_cards = (struct io_card[]) {
         {
             .data = {
-                .model = "ana_block",
+                .model = "block_ana",
                 .type = IC_TYPE_AN_IN_OUT,
                 .ver_maj = EEPROM_DATA_VER_MAJ,
                 .ver_min = EEPROM_DATA_VER_MIN
@@ -515,7 +211,7 @@ const struct base_device bd_fusion_var_proto = {
 
 const struct base_device bd_fusion_c0 = {
     .data = {
-        .model = "fusion-c0",
+        .model = "fusion_c0",
         .sn = "tbd",
         .type = BD_TYPE_FUSION_C0
     },
@@ -565,11 +261,18 @@ const struct base_device bd_fusion_c0 = {
             .num = 48,
             .dir = EP_GPIO_DIR_O,
             .default_val = EP_GPIO_VAL_LO
+        },
+        {
+            .name = "gpio_pwr_goodn",
+            .type = EP_GPIO_TYPE_PHYS,
+            .export = EP_GPIO_EXPORT,
+            .num = 52,
+            .dir = EP_GPIO_DIR_I
         }
     },
     .sec_eeprom = (struct endpoint[]) {
         {
-            .name = "ep-eeprom-sha104",
+            .name = "ep_eeprom_sha104",
             .type = EP_TYPE_SEC_EEPROM_SHA104,
             .export = EP_EXPORT,
             .has_i2c = true,
@@ -622,7 +325,7 @@ const struct base_device bd_fusion_c0 = {
     },
     .data_eeprom = (struct endpoint[]) {
         {
-            .name = "ep-eeprom-m24c02",
+            .name = "ep_eeprom_m24c02",
             .type = EP_TYPE_EEPROM_M24C32,
             .export = EP_EXPORT,
             .has_i2c = true,
@@ -682,7 +385,7 @@ const struct base_device bd_fusion_c0 = {
     },
     .i2c_sw = (struct endpoint[]) {
         {
-            .name = "ep-i2csw-tca9544",
+            .name = "ep_i2csw_tca9544",
             .type = EP_TYPE_I2CSW_TCA9544,
             .export = EP_NO_EXPORT,
             .has_i2c = true,
@@ -721,7 +424,6 @@ const struct base_device bd_fusion_c0 = {
                     .type = EP_GPIO_TYPE_VIRT,
                     .export = EP_GPIO_NO_EXPORT,
                     .num = 3,
-                    .aggregate_id = 7,
                     .is_irq = true,
                     .trigger_type = IRQ_TYPE_EDGE_FALLING,
                     .dir = EP_GPIO_DIR_I
@@ -739,13 +441,12 @@ const struct base_device bd_fusion_c0 = {
             .num_cmds = 1,
             .cmds = (struct endpoint_cmd[]) {
                 {
-                    .name         = "cmd_discover",
-                    .type         = EP_CMD_TYPE_I2CSW_SET_PORT,
+                    .name = "cmd_config",
+                    .type = EP_CMD_TYPE_CFG,
+                    .export = EP_CMD_NO_EXPORT,
                     .num_i2c_cmds = 1,
                     .i2c_cmds = (struct i2c_reg_data[]) {
-                        {
-                            .reg_addr  = I2C_REG_DATA_ADDR_NONE
-                        }
+                        { .reg_addr = I2C_REG_DATA_ADDR_NONE }
                     }
                 }
             }
@@ -754,7 +455,7 @@ const struct base_device bd_fusion_c0 = {
     .pwr_io_exp = (struct endpoint[]) {
         {
             .type = EP_TYPE_IOEXP_TCAL6408,
-            .name = "ep-ioexp-tcal6408",
+            .name = "ep_ioexp_tcal6408",
             .export = EP_NO_EXPORT,
             .has_i2c = true,
             .ioexp_id = 1,
@@ -852,41 +553,13 @@ const struct base_device bd_fusion_c0 = {
                     .export = EP_CMD_NO_EXPORT,
                     .num_i2c_cmds = 7,
                     .i2c_cmds = (struct i2c_reg_data[]) {
-                        {
-                            .reg_addr = TCAL6408_REG_POLARITY_INV,
-                            .op_size = I2C_REG_DATA_OP_8BIT,
-                            .data_mask = 0x00
-                        },
-                        {
-                            .reg_addr = TCAL6408_REG_CONFIGURATION,
-                            .op_size = I2C_REG_DATA_OP_8BIT,
-                            .data_mask = 0x00  // all output
-                        },
-                        {
-                            .reg_addr = TCAL6408_REG_OUTPUT_DR_STR0,
-                            .op_size = I2C_REG_DATA_OP_8BIT,
-                            .data_mask = 0xff  // full strength
-                        },
-                        {
-                            .reg_addr = TCAL6408_REG_OUTPUT_DR_STR1,
-                            .op_size = I2C_REG_DATA_OP_8BIT,
-                            .data_mask = 0xff  // full strength
-                        },
-                        {
-                            .reg_addr = TCAL6408_REG_INT_MASK_REG,
-                            .op_size = I2C_REG_DATA_OP_8BIT,
-                            .data_mask = 0xff  // all disabled
-                        },
-                        {
-                            .reg_addr = TCAL6408_REG_OUTPUT_PORT_CFG_REG,
-                            .op_size = I2C_REG_DATA_OP_8BIT,
-                            .data_mask = 0x00  // push-pull
-                        },
-                        {
-                            .reg_addr = TCAL6408_REG_OUTPUT_PORT,
-                            .op_size = I2C_REG_DATA_OP_8BIT,
-                            .data_mask = 0xff
-                        }
+                        { .reg_addr = TCAL6408_REG_POLARITY_INV,        .data_mask = 0x00 },
+                        { .reg_addr = TCAL6408_REG_CONFIGURATION,       .data_mask = 0x00 }, // all output
+                        { .reg_addr = TCAL6408_REG_OUTPUT_DR_STR0,      .data_mask = 0xff }, // full strength
+                        { .reg_addr = TCAL6408_REG_OUTPUT_DR_STR1,      .data_mask = 0xff }, // full strength
+                        { .reg_addr = TCAL6408_REG_INT_MASK_REG,        .data_mask = 0xff }, // all disabled
+                        { .reg_addr = TCAL6408_REG_OUTPUT_PORT_CFG_REG, .data_mask = 0x00 }, // push-pull
+                        { .reg_addr = TCAL6408_REG_OUTPUT_PORT,         .data_mask = 0xff }
                     }
                 }
             }
@@ -928,7 +601,7 @@ const struct base_device bd_fusion_c0 = {
             .num_eps = 7,
             .endpoints = (struct endpoint[]) {
                 {
-                    .name = "ep-ioexp-tca9535-0",
+                    .name = "ep_ioexp_tca9535-0",
                     .type = EP_TYPE_IOEXP_TCA9535,
                     .export = EP_NO_EXPORT,
                     .has_i2c = true,
@@ -1131,7 +804,7 @@ const struct base_device bd_fusion_c0 = {
                     }
                 },
                 {
-                    .name = "ep-ioexp-tca9535-1",
+                    .name = "ep_ioexp_tca9535-1",
                     .type = EP_TYPE_IOEXP_TCA9535,
                     .export = EP_NO_EXPORT,
                     .has_i2c = true,
@@ -1228,7 +901,7 @@ const struct base_device bd_fusion_c0 = {
                     }
                 },
                 {
-                    .name = "ep-aud-in-chs-12",
+                    .name = "ep_aud_in_chs-12",
                     .type = EP_TYPE_AUD_ADC_TAA5242,
                     .export = EP_EXPORT,
                     .has_i2c = false,
@@ -1239,7 +912,7 @@ const struct base_device bd_fusion_c0 = {
                     .cmds = NULL
                 },
                 {
-                    .name = "ep-aud-in-chs-34",
+                    .name = "ep_aud_in_chs-34",
                     .type = EP_TYPE_AUD_ADC_TAA5242,
                     .export = EP_EXPORT,
                     .has_i2c = false,
@@ -1283,7 +956,7 @@ const struct base_device bd_fusion_c0 = {
                     .cmds = NULL
                 },
                 {
-                    .name = "ep-aud-in-chs-56",
+                    .name = "ep_aud_in_chs-56",
                     .type = EP_TYPE_AUD_ADC_TAA5242,
                     .export = EP_EXPORT,
                     .has_i2c = false,
@@ -1329,7 +1002,7 @@ const struct base_device bd_fusion_c0 = {
                     .cmds = NULL
                 },
                 {
-                    .name = "ep-aud-out-chs-12",
+                    .name = "ep_aud_out_chs-12",
                     .type = EP_TYPE_AUD_DAC_TAD5242,
                     .export = EP_EXPORT,
                     .has_i2c = false,
@@ -1348,7 +1021,7 @@ const struct base_device bd_fusion_c0 = {
                     .cmds = NULL
                 },
                 {
-                    .name = "ep-aud-out-chs-34",
+                    .name = "ep_aud_out_chs-34",
                     .type = EP_TYPE_AUD_DAC_TAD5242,
                     .export = EP_EXPORT,
                     .has_i2c = false,
@@ -1405,7 +1078,7 @@ const struct base_device bd_fusion_c0 = {
             .num_eps = 2,
             .endpoints = (struct endpoint[]) {
                 {
-                    .name = "ep-src-ak4137",
+                    .name = "ep_src_ak4137",
                     .type = EP_TYPE_SRC_AK4137,
                     .export = EP_EXPORT,
                     .has_i2c = true,
@@ -1428,17 +1101,13 @@ const struct base_device bd_fusion_c0 = {
                             .export = EP_CMD_NO_EXPORT,
                             .num_i2c_cmds = 1,
                             .i2c_cmds = (struct i2c_reg_data[]) {
-                                {
-                                    .reg_addr = AK4137_REG_PCM_CONT0,
-                                    .op_size = I2C_REG_DATA_OP_8BIT,
-                                    .data_mask = 0x16
-                                }
+                                { .reg_addr = AK4137_REG_PCM_CONT0, .data_mask = 0x16 }
                             }
                         }
                     }
                 },
                 {
-                    .name = "ep-hdmi-ep9512t",
+                    .name = "ep_hdmi_ep9512t",
                     .type = EP_TYPE_HDMI_EP9512T,
                     .export = EP_NO_EXPORT,
                     .has_i2c = false,
@@ -1479,21 +1148,9 @@ const struct base_device bd_fusion_c0 = {
                             .export = EP_CMD_NO_EXPORT,
                             .num_i2c_cmds = 3,
                             .i2c_cmds = (struct i2c_reg_data[]) {
-                                {
-                                    .reg_addr  = EP9512T_REG_GENERAL_CTRL, // 0x10
-                                    .op_size   = I2C_REG_DATA_OP_8BIT,
-                                    .data_mask = 0x40                  // Power = 0, Audio_Path = 1, others 0
-                                },
-                                {
-                                    .reg_addr  = EP9512T_REG_TX_CTRL,    // 0x11
-                                    .op_size   = I2C_REG_DATA_OP_8BIT,
-                                    .data_mask = 0xE0                  // TX_ON = 1, TX_HDMI = 1, TX_5V = 1, A_MUTE = 0
-                                },
-                                {
-                                    .reg_addr  = EP9512T_REG_AUDIO_CFG,  // 0x12
-                                    .op_size   = I2C_REG_DATA_OP_8BIT,
-                                    .data_mask = 0x41                  // ARC_DIS = 1, A_IN = 01 (I2S), LAYOUT = 0, N_PCM = 0
-                                }
+                                { .reg_addr  = EP9512T_REG_GENERAL_CTRL, .data_mask = 0x40 }, // Power = 0, Audio_Path = 1, others 0
+                                { .reg_addr  = EP9512T_REG_TX_CTRL,      .data_mask = 0xE0 }, // TX_ON = 1, TX_HDMI = 1, TX_5V = 1, A_MUTE = 0
+                                { .reg_addr  = EP9512T_REG_AUDIO_CFG,    .data_mask = 0x41 }  // ARC_DIS = 1, A_IN = 01 (I2S), LAYOUT = 0, N_PCM = 0
                             }
                         }
                     }
@@ -1576,7 +1233,7 @@ const struct base_device bd_fusion_c0 = {
             .num_eps = 2,
             .endpoints = (struct endpoint[]) {
                 {
-                    .name = "ep-ioexp-tca9535-2",
+                    .name = "ep_ioexp_tca9535-2",
                     .type = EP_TYPE_IOEXP_TCA9535,
                     .export = EP_NO_EXPORT,
                     .has_i2c = true,
@@ -1719,7 +1376,7 @@ const struct base_device bd_fusion_c0 = {
                     }
                 },
                 {
-                    .name = "ep-adc-ads7128",
+                    .name = "ep_adc_ads7128",
                     .type = EP_TYPE_ADC_ADS7128,
                     .export = EP_EXPORT,
                     .has_i2c = true,
@@ -1788,12 +1445,19 @@ const struct base_device bd_fusion_c0 = {
                             .export = EP_CMD_NO_EXPORT,
                             .num_i2c_cmds = 13,
                             .i2c_cmds = (struct i2c_reg_data[]) {
-                                { .reg_addr = ADS7128_REG_OSR_CFG, .op_size = I2C_REG_DATA_OP_8BIT, .data_mask = 0x03 },         // OSR 8 samples
-                                { .reg_addr = ADS7128_REG_OPMODE_CFG, .op_size = I2C_REG_DATA_OP_8BIT, .data_mask = 0x3d },      // CONV_MODE autonomous, OSC_SEL lp, CLK_DIV 3072us
-                                { .reg_addr = ADS7128_REG_AUTO_SEQ_CH_SEL, .op_size = I2C_REG_DATA_OP_8BIT, .data_mask = 0x3F }, // AUTO_SEQ_CHSEL all used 
-                                { .reg_addr = ADS7128_REG_GENERAL_CFG, .op_size = I2C_REG_DATA_OP_8BIT, .data_mask = 0x14 },     // DWC_EN, CH_RST
-                                { .reg_addr = ADS7128_REG_SEQUENCE_CFG, .op_size = I2C_REG_DATA_OP_8BIT, .data_mask = 0x11 },    // SEQ_MODE auto, SEQ_START
-                                { .reg_addr = ADS7128_REG_GENERAL_CFG, .op_size = I2C_REG_DATA_OP_8BIT, .data_mask = 0x08 }      // CONVST
+                                { .reg_addr = ADS7128_REG_SYSTEM_STATUS,   .data_mask = 0x01 }, // clear BOR
+                                { .reg_addr = ADS7128_REG_AUTO_SEQ_CH_SEL, .data_mask = 0x3F }, // AUTO_SEQ_CHSEL 0-5
+                                { .reg_addr = ADS7128_REG_SEQUENCE_CFG,    .data_mask = 0x01 }, // SEQ_MODE auto
+                                { .reg_addr = ADS7128_REG_HIGH_TH_CH0,     .data_mask = 0x01 }, // DWC high thresholds
+                                { .reg_addr = ADS7128_REG_HIGH_TH_CH1,     .data_mask = 0x01 },
+                                { .reg_addr = ADS7128_REG_HIGH_TH_CH2,     .data_mask = 0x01 },
+                                { .reg_addr = ADS7128_REG_HIGH_TH_CH3,     .data_mask = 0x01 },
+                                { .reg_addr = ADS7128_REG_HIGH_TH_CH4,     .data_mask = 0x01 },
+                                { .reg_addr = ADS7128_REG_ALERT_CH_SEL,    .data_mask = 0x3f }, // alerts on all chs
+                                { .reg_addr = ADS7128_REG_OPMODE_CFG,      .data_mask = 0x3d }, // CONV_MODE autonomous, OSC_SEL lp, CLK_DIV 3072us
+                                { .reg_addr = ADS7128_REG_OSR_CFG,         .data_mask = 0x03 }, // OSR 8 samples
+                                { .reg_addr = ADS7128_REG_GENERAL_CFG,     .data_mask = 0x30 }, // STAT_EN, DWC_EN
+                                { .reg_addr = ADS7128_REG_SEQUENCE_CFG,    .data_mask = 0x11 }  // SEQ_START 
                             }
                         },
                         [EP_CMD_ADS7128_REGOP] = {
@@ -1802,7 +1466,7 @@ const struct base_device bd_fusion_c0 = {
                             .export = EP_CMD_EXPORT,
                             .num_i2c_cmds = 1,
                             .i2c_cmds = (struct i2c_reg_data[]) {
-                                { .reg_addr = ADS7128_REG_EVENT_FLAG, .op_size = I2C_REG_DATA_OP_8BIT, .data_mask = 0x00 } // dummy
+                                { .reg_addr = I2C_REG_DATA_ADDR_NONE }
                             }
                         }
                     }
