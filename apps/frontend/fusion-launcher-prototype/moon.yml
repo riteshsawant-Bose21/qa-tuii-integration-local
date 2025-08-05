@@ -9,7 +9,7 @@ tasks:
 
   build-iOS:
     command: "flutter"
-    args: ["build", "ipa"]
+    args: ["build", "ipa", "--export-options-plist=./iOS/AS-info.plist"]
     options:
       cache: true
 

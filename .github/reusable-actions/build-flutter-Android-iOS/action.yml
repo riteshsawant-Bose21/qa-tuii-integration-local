@@ -17,3 +17,17 @@ runs:
       run: |
         flutter pub get
         moon run fusion-launcher-prototype:build-iOS
+
+    # - name: Upload apk artifact to Nexus
+    #   shell: bash
+    #   working-directory: apps/frontend/fusion-launcher-prototype/build/app/outputs/flutter-apk/app-release.apk
+    #   run: |
+    #     flutter pub get
+    #     moon run fusion-launcher-prototype:build-iOS
+
+    # - name: Upload iOS build to Nexus
+    #   shell: bash
+    #   working-directory: apps/frontend/fusion-launcher-prototype
+    #   run: |
+    #     flutter pub get
+    #     moon run fusion-launcher-prototype:build-iOS
