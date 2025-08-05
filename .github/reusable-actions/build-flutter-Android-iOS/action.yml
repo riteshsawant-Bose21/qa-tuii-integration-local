@@ -15,7 +15,7 @@ runs:
       shell: bash
       working-directory: apps/frontend/fusion-launcher-prototype/build/app/outputs/flutter-apk
       run: |
-        curl --ssl-no-revoke -f -u Jenkins_AT:${{secrets.NEXUS_PASSWORD}} -T aap-release.apk https://nexus.dev.prod.bosepro.internal:8445/repository/pro-fusion-local/Fusion-Frontend/Continuous/flutter-apk/aap-release.apk
+        curl --ssl-no-revoke -f -u Jenkins_AT:test123 -T aap-release.apk https://nexus.dev.prod.bosepro.internal:8445/repository/pro-fusion-local/Fusion-Frontend/Continuous/flutter-apk/aap-release.apk
 
     - name: Flutter iOS build
       shell: bash
@@ -28,4 +28,4 @@ runs:
       shell: bash
       working-directory: apps/frontend/fusion-launcher-prototype/build/ios/ipa
       run: |
-        curl --ssl-no-revoke -f -u Jenkins_AT:${{secrets.NEXUS_PASSWORD}} -T fusion_design_tool_prototype.ipa https://nexus.dev.prod.bosepro.internal:8445/repository/pro-fusion-local/Fusion-Frontend/Continuous/flutter-iOS/fusion_design_tool_prototype.ipa
+        curl --ssl-no-revoke -f -u Jenkins_AT:test123 -T fusion_design_tool_prototype.ipa https://nexus.dev.prod.bosepro.internal:8445/repository/pro-fusion-local/Fusion-Frontend/Continuous/flutter-iOS/fusion_design_tool_prototype.ipa
