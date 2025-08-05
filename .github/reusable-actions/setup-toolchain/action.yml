@@ -10,15 +10,15 @@ runs:
       with:
         version: '0.51.4'
 
-    # # Install Moon via Proto
-    # - name: Install moon
-    #   shell: bash
-    #   run: proto install moon
+    # Install Moon via Proto
+    - name: Install moon
+      shell: bash
+      run: proto install moon
 
-    # # Install Toolchain
-    # - name: Run proto install
-    #   shell: bash
-    #   run: proto install
+    # Install Toolchain
+    - name: Run proto install
+      shell: bash
+      run: proto install
 
     - name: Add custom tool to path
       shell: bash
