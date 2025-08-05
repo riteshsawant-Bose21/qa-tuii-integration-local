@@ -87,10 +87,14 @@ def profile(config_name, remote=True):
             continue 
     
     result_df = pd.concat(frames, axis=0, ignore_index=True)
+    if remote:
+        print("Copying out.wav from board...")
+        os.system(f'scp root@{board_ip}:/home/root/out.wav ./out.wav')
     
     if current_config.get('csv_dump'):
         os.makedirs('profiling_results', exist_ok=True)
         result_df.to_csv(f"profiling_results/{current_config['csv_dump']}")
+
     block = current_config.get(
             'block',
             config_name
