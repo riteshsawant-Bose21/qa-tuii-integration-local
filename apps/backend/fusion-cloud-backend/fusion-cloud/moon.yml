@@ -9,3 +9,7 @@ tasks:
   get-mod:
     command: "go"
     args: ["get", "all"]
+
+  build:
+    command: "go"
+    args: ["build", "-o", "fusion-web-services", "cmd/server/main.go"]

@@ -1,5 +1,5 @@
-name: "Build Apps"
-description: "Build Fusion Monorepo Apps"
+name: "Build Flutter Android and iOS App"
+description: "Build Flutter Android and iOS App"
 
 runs:
   using: "composite"

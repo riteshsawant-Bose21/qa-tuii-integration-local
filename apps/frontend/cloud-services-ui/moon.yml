@@ -27,7 +27,3 @@ tasks:
   format:
     command: "prettier"
     args: ["--write", "."]
-  
-  yarn-install:
-    command: "yarn"
-    args: ["workspaces", "foreach", "--all", "--topological", "run", "install"]

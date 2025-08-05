@@ -1,0 +1,11 @@
+name: "Build Cloud Services Backend"
+description: "Build Cloud Services Backend"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Cloud Services Backend
+      shell: bash
+      working-directory: apps/backend/fusion-cloud-backend/fusion-cloud
+      run: |
+        moon run fusion-cloud:build
