@@ -8,12 +8,12 @@ runs:
     - name: Set up proto
       uses: moonrepo/setup-proto@v1
       with:
-        version: '0.51.1'
+        version: '0.51.4'
 
-    # Install Moon via Proto
-    - name: Install moon
-      shell: bash
-      run: proto install moon
+    # # Install Moon via Proto
+    # - name: Install moon
+    #   shell: bash
+    #   run: proto install moon
 
     # Install Toolchain
     - name: Run proto install
