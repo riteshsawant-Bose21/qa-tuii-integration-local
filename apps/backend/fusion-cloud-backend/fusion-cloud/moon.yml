@@ -6,7 +6,7 @@ tasks:
     command: "go"
     args: ["run", "cmd/server/main.go"]
   
-  go-get:
+  go-mod:
     command: "go"
     args: ["get", "all"]
 
