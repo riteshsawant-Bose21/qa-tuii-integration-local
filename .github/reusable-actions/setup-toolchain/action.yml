@@ -7,6 +7,8 @@ runs:
     # Set up Proto Tool
     - name: Set up proto
       uses: moonrepo/setup-proto@v1
+      with:
+        version: '0.51.4'
 
     # Install Moon via Proto
     - name: Install moon

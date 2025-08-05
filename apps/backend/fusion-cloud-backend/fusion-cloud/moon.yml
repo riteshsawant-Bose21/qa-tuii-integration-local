@@ -2,7 +2,7 @@
 # go run cmd/server/main.go
 # docker-compose up --build
 tasks:
-  run-server:
+  run:
     command: "go"
     args: ["run", "cmd/server/main.go"]
   
