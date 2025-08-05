@@ -99,6 +99,7 @@ jobs:
       # It installs the necessary dependencies and prepares the environment
       # for building and testing the monorepo packages.
       - name: Setup Monorepo Toolchain
+        working-directory: apps/backend/fusion-cloud-backend/fusion-cloud
         uses: ./.github/reusable-actions/setup-toolchain
 
       - name: Build Apps
