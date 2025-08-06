@@ -20,7 +20,7 @@ tasks:
     command: "eslint"
     args: [".", "--ext", ".ts,.tsx"]
 
-  lint-fixes:
+  lint-fix:
     command: "eslint"
     args: [".", "--ext", ".ts,.tsx", "--fix"]
 
