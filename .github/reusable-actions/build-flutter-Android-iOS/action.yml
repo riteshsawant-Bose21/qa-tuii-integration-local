@@ -4,21 +4,20 @@ description: "Build Flutter Android and iOS App"
 runs:
   using: "composite"
   steps:
+    - name: Read package version
+      id: get_version
+      uses: RCSandberg/dart-flutter-read-package-version-action@v2
+      with:
+        path: apps/frontend/fusion-launcher-prototype/pubspec.yaml
+
     - name: Flutter Android build
       shell: bash
       working-directory: apps/frontend/fusion-launcher-prototype
       run: |
         flutter pub get
         moon run fusion-launcher-prototype:build-apk
-        ls
-        pwd
-        curl -k --ssl-no-revoke -f -u github-actions-uploader:test123 -T ./build/app/outputs/flutter-apk/aap-release.apk https://nexus.dev.prod.bosepro.internal:8445/repository/pro-fusion-local/Fusion-Frontend/Continuous/flutter-apk/aap-release.apk
-
-    # # - name: Upload apk artifact to Nexus
-    #   shell: bash
-    #   working-directory: apps/frontend/fusion-launcher-prototype/build/app/outputs/flutter-apk
-    #   run: |
-    #     curl --ssl-no-revoke -f -u Jenkins_AT:test123 -T aap-release.apk https://nexus.dev.prod.bosepro.internal:8445/repository/pro-fusion-local/Fusion-Frontend/Continuous/flutter-apk/aap-release.apk
+        VERSION="${{ steps.get_version.outputs.version }}-$(git rev-parse --short HEAD)"
+        curl -k --ssl-no-revoke -f -u github-actions-uploader:test123 -T build/app/outputs/apk/release/aap-release.apk https://nexus.dev.prod.bosepro.internal:8445/repository/pro-fusion-local/Fusion-Frontend/Continuous/flutter-apk/$VERSION/aap-release-$VERSION.apk
 
     - name: Flutter iOS build
       shell: bash
@@ -26,12 +25,5 @@ runs:
       run: |
         flutter pub get
         moon run fusion-launcher-prototype:build-iOS
-        ls
-        pwd
-        curl -k --ssl-no-revoke -f -u github-actions-uploader:test123 -T ./build/ios/ipa/fusion_design_tool_prototype.ipa https://nexus.dev.prod.bosepro.internal:8445/repository/pro-fusion-local/Fusion-Frontend/Continuous/flutter-iOS/fusion_design_tool_prototype.ipa
-
-    # - name: Upload iOS build to Nexus
-    #   shell: bash
-    #   working-directory: apps/frontend/fusion-launcher-prototype/build/ios/ipa
-    #   run: |
-    #     curl --ssl-no-revoke -f -u Jenkins_AT:test123 -T fusion_design_tool_prototype.ipa https://nexus.dev.prod.bosepro.internal:8445/repository/pro-fusion-local/Fusion-Frontend/Continuous/flutter-iOS/fusion_design_tool_prototype.ipa
+        VERSION="${{ steps.get_version.outputs.version }}-$(git rev-parse --short HEAD)"
+        curl -k --ssl-no-revoke -f -u github-actions-uploader:test123 -T build/ios/ipa/fusion_design_tool_prototype.ipa https://nexus.dev.prod.bosepro.internal:8445/repository/pro-fusion-local/Fusion-Frontend/Continuous/flutter-iOS/$VERSION/fusion_design_tool_prototype-$VERSION.ipa
