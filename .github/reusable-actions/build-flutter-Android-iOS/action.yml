@@ -17,7 +17,7 @@ runs:
         flutter pub get
         moon run fusion-launcher-prototype:build-apk
         VERSION="${{ steps.get_version.outputs.version }}-$(git rev-parse --short HEAD)"
-        curl -k --ssl-no-revoke -f -u github-actions-uploader:test123 -T build/app/outputs/apk/release/aap-release.apk https://nexus.dev.prod.bosepro.internal:8445/repository/pro-fusion-local/Fusion-Frontend/Continuous/flutter-apk/$VERSION/aap-release-$VERSION.apk
+        curl -k --ssl-no-revoke -f -u github-actions-uploader:test123 -T ./build/app/outputs/flutter-apk/app-release.apk https://nexus.dev.prod.bosepro.internal:8445/repository/pro-fusion-local/Fusion-Frontend/Continuous/flutter-apk/$VERSION/aap-release-$VERSION.apk
 
     - name: Flutter iOS build
       shell: bash
@@ -26,4 +26,4 @@ runs:
         flutter pub get
         moon run fusion-launcher-prototype:build-iOS
         VERSION="${{ steps.get_version.outputs.version }}-$(git rev-parse --short HEAD)"
-        curl -k --ssl-no-revoke -f -u github-actions-uploader:test123 -T build/ios/ipa/fusion_design_tool_prototype.ipa https://nexus.dev.prod.bosepro.internal:8445/repository/pro-fusion-local/Fusion-Frontend/Continuous/flutter-iOS/$VERSION/fusion_design_tool_prototype-$VERSION.ipa
+        curl -k --ssl-no-revoke -f -u github-actions-uploader:test123 -T ./build/ios/ipa/fusion_design_tool_prototype.ipa https://nexus.dev.prod.bosepro.internal:8445/repository/pro-fusion-local/Fusion-Frontend/Continuous/flutter-iOS/$VERSION/fusion_design_tool_prototype-$VERSION.ipa
