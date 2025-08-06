@@ -10,7 +10,9 @@ runs:
       run: |
         flutter pub get
         moon run fusion-launcher-prototype:build-apk
-        curl --ssl-no-revoke -f -u Jenkins_AT:test123 -T ./build/app/outputs/flutter-apk/aap-release.apk https://nexus.dev.prod.bosepro.internal:8445/repository/pro-fusion-local/Fusion-Frontend/Continuous/flutter-apk/aap-release.apk
+        ls
+        pwd
+        curl -k --ssl-no-revoke -f -u github-actions-uploader:test123 -T ./build/app/outputs/flutter-apk/aap-release.apk https://nexus.dev.prod.bosepro.internal:8445/repository/pro-fusion-local/Fusion-Frontend/Continuous/flutter-apk/aap-release.apk
 
     # # - name: Upload apk artifact to Nexus
     #   shell: bash
@@ -24,7 +26,9 @@ runs:
       run: |
         flutter pub get
         moon run fusion-launcher-prototype:build-iOS
-        curl --ssl-no-revoke -f -u Jenkins_AT:test123 -T ./build/ios/ipa/fusion_design_tool_prototype.ipa https://nexus.dev.prod.bosepro.internal:8445/repository/pro-fusion-local/Fusion-Frontend/Continuous/flutter-iOS/fusion_design_tool_prototype.ipa
+        ls
+        pwd
+        curl -k --ssl-no-revoke -f -u github-actions-uploader:test123 -T ./build/ios/ipa/fusion_design_tool_prototype.ipa https://nexus.dev.prod.bosepro.internal:8445/repository/pro-fusion-local/Fusion-Frontend/Continuous/flutter-iOS/fusion_design_tool_prototype.ipa
 
     # - name: Upload iOS build to Nexus
     #   shell: bash
