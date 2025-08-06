@@ -103,13 +103,21 @@ def profile(config_name, remote=True):
             'block',
             config_name
         )
-    low_quantile = result_df.quantile(0.99)[block]
-    high_quantile = result_df.quantile(0.9999)[block]
-    filtered_df = result_df[
-        (result_df[block] > low_quantile) &
-        (result_df[block] < high_quantile)
-    ]
-    
+    filtered_df = []
+    for ch in sorted(result_df["channels"].unique()):
+        ch_df = result_df[result_df["channels"] == ch]
+        low_quantile = ch_df.quantile(0.99)[block]
+        high_quantile = ch_df.quantile(0.9999)[block]
+        filtered_ch = ch_df[
+            (ch_df[block] >= low_quantile) &
+            (ch_df[block] <= high_quantile)
+        ]
+        filtered_df.append(filtered_ch)
+        print(f"Channels: {ch}, Low quantile: {low_quantile}, High quantile: {high_quantile}")
+        print(f"Total points: {len(ch_df)}, Points after filtering: {len(filtered_ch)} ({len(filtered_ch)/len(ch_df)*100:.1f}%)")
+
+    filtered_df = pd.concat(filtered_df, ignore_index=True)
+
     Xs = filtered_df[list(feature_dict.keys())]
     ys = filtered_df[[block]]
 
@@ -141,7 +149,7 @@ def profile(config_name, remote=True):
     plt.savefig(f'profiling_results/{config_name}_regression_plot.png', dpi=300, bbox_inches='tight')
     print(f"Plot saved to: profiling_results/{config_name}_regression_plot.png")
     plt.close()
-
+    print("SUMMARY STATS")
     print(f"Low quantile (percentile): {low_quantile}")
     print(f"High quantile (percentile): {high_quantile}") 
     print(f"Total points before filtering: {len(result_df)}")
@@ -150,9 +158,6 @@ def profile(config_name, remote=True):
     
     return model
     
-
-
-
 configurations = {
     'agc' : {
         'path' : 'profile_simple_block.json.jinja',
