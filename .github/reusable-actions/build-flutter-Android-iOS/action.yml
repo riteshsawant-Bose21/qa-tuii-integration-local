@@ -10,20 +10,21 @@ runs:
       with:
         path: apps/frontend/fusion-launcher-prototype/pubspec.yaml
 
-    - name: Flutter Android build
-      shell: bash
-      working-directory: apps/frontend/fusion-launcher-prototype
-      run: |
-        flutter pub get
-        moon run fusion-launcher-prototype:build-apk
-        VERSION="${{ steps.get_version.outputs.version }}-$(git rev-parse --short HEAD)"
-        curl -k --ssl-no-revoke -f -u github-actions-uploader:test123 -T ./build/app/outputs/flutter-apk/app-release.apk https://nexus.dev.prod.bosepro.internal:8445/repository/pro-fusion-local/Fusion-Frontend/Continuous/flutter-apk/$VERSION/aap-release-$VERSION.apk
+    # - name: Flutter Android build
+    #   shell: bash
+    #   working-directory: apps/frontend/fusion-launcher-prototype
+    #   run: |
+    #     flutter pub get
+    #     moon run fusion-launcher-prototype:build-apk
+    #     VERSION="${{ steps.get_version.outputs.version }}-$(git rev-parse --short HEAD)"
+    #     curl -k --ssl-no-revoke -f -u github-actions-uploader:test123 -T ./build/app/outputs/flutter-apk/app-release.apk https://nexus.dev.prod.bosepro.internal:8445/repository/pro-fusion-local/Fusion-Frontend/Continuous/flutter-apk/$VERSION/aap-release-$VERSION.apk
 
     - name: Flutter iOS build
       shell: bash
       working-directory: apps/frontend/fusion-launcher-prototype
       run: |
         flutter pub get
+        security unlock-keychain -p "Sun@micro2."" /Users/devops/Library/Keychains/login.keychain-db
         moon run fusion-launcher-prototype:build-iOS
         VERSION="${{ steps.get_version.outputs.version }}-$(git rev-parse --short HEAD)"
         curl -k --ssl-no-revoke -f -u github-actions-uploader:test123 -T ./build/ios/ipa/fusion_design_tool_prototype.ipa https://nexus.dev.prod.bosepro.internal:8445/repository/pro-fusion-local/Fusion-Frontend/Continuous/flutter-iOS/$VERSION/fusion_design_tool_prototype-$VERSION.ipa
