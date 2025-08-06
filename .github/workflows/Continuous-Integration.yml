@@ -53,9 +53,6 @@ jobs:
       - name: Clone project
         uses: actions/checkout@v4
 
-      # This action sets up the toolchain for the monorepo
-      # It installs the necessary dependencies and prepares the environment
-      # for building and testing the monorepo packages.
       - name: Setup Monorepo Toolchain
         uses: ./.github/reusable-actions/setup-toolchain
 
@@ -67,16 +64,13 @@ jobs:
     if: needs.buildChecks.outputs.cloudServicesUI == 'true' && github.ref == 'refs/heads/main'
     concurrency:
       group: cloud-servicesUI-build
-    runs-on: ubuntu-agent
+    runs-on: android-mac-build-agent
     timeout-minutes: 30
 
     steps:
       - name: Clone project
         uses: actions/checkout@v4
 
-      # This action sets up the toolchain for the monorepo
-      # It installs the necessary dependencies and prepares the environment
-      # for building and testing the monorepo packages.
       - name: Setup Monorepo Toolchain
         uses: ./.github/reusable-actions/setup-toolchain
 
@@ -95,9 +89,6 @@ jobs:
       - name: Clone project
         uses: actions/checkout@v4
 
-      # This action sets up the toolchain for the monorepo
-      # It installs the necessary dependencies and prepares the environment
-      # for building and testing the monorepo packages.
       - name: Setup Monorepo Toolchain
         uses: ./.github/reusable-actions/setup-toolchain
 
