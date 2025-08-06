@@ -6,6 +6,6 @@ runs:
   steps:
     - name: Cloud Services UI build
       shell: bash
-      working-directory: apps/frontend/cloud-services-ui
+      working-directory: apps/frontend/react-apps
       run: |
         moon run cloud-services-ui:build

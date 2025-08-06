@@ -6,7 +6,7 @@ runs:
   steps:
     - name: Read version from version.txt
       id: read_version
-      working-directory: apps/backend/fusion-cloud-backend/fusion-cloud
+      working-directory: apps/cloud-backend/fusion-cloud
       shell: bash
       run: |
         VERSION=$(cat version.txt)
@@ -14,8 +14,8 @@ runs:
 
     - name: Cloud Services Backend
       shell: bash
-      working-directory: apps/backend/fusion-cloud-backend/fusion-cloud
+      working-directory: apps/cloud-backend/fusion-cloud
       run: |
         moon run fusion-cloud:build
         VERSION="${{ steps.read_version.outputs.version }}-$(git rev-parse --short HEAD)"
-        curl -k --ssl-no-revoke -f -u github-actions-uploader:test123 -T ./fusion-web-services https://nexus.dev.prod.bosepro.internal:8445/repository/pro-fusion-local/Fusion-Cloud-Backend/Continuous/$VERSION/fusion-web-services
+        curl -k --ssl-no-revoke -f -u github-actions-uploader:test123 -T ./fusion-web-services https://nexus.dev.prod.bosepro.internal:8445/repository/pro-fusion-local/Fusion-Cloud-Backend/Continuous/$VERSION/fusion-web-services-$VERSION

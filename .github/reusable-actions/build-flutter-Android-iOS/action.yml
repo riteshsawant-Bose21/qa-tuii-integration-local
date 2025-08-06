@@ -8,11 +8,11 @@ runs:
       id: get_version
       uses: RCSandberg/dart-flutter-read-package-version-action@v2
       with:
-        path: apps/frontend/fusion-launcher-prototype/pubspec.yaml
+        path: apps/frontend/flutter-apps/pubspec.yaml
 
     - name: Flutter Android build
       shell: bash
-      working-directory: apps/frontend/fusion-launcher-prototype
+      working-directory: apps/frontend/flutter-apps
       run: |
         flutter pub get
         moon run fusion-launcher-prototype:build-apk
@@ -21,7 +21,7 @@ runs:
 
     - name: Flutter iOS build
       shell: bash
-      working-directory: apps/frontend/fusion-launcher-prototype
+      working-directory: apps/frontend/flutter-apps
       run: |
         flutter pub get
         security unlock-keychain -p "Sun@micro2." /Users/devops/Library/Keychains/login.keychain-db

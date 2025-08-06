@@ -4,9 +4,9 @@ $schema: './cache/schemas/workspace.json'
 # extends: './shared/workspace.yml'
 
 projects:
-  - 'apps/backend/fusion-cloud-backend/fusion-cloud'
-  - 'apps/frontend/cloud-services-ui'
-  - 'apps/frontend/fusion-launcher-prototype'
+  - 'apps/cloud-backend/fusion-cloud'
+  - 'apps/frontend/flutter-apps'
+  - 'apps/frontend/react-apps'
   - 'apps/embedded_apps/*'
 
 vcs:
