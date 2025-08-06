@@ -34,16 +34,31 @@ This tool profiles the performance of various DSP algorithms on Fusion by measur
 3. Network Setup
    -  Ensure board and host machine are on the same network
    - update board_ip in script (default: 192.168.1.7)
-   - Copy test WAV files to board: `scp *.wav root@[board-ip]:/home/root/` (.wav files TBA)
+   - Copy test WAV files to board: `scp *.wav root@[board-ip]:/home/root/` 
    - Disable board services (run only once):
    ``` bash
       ssh root@[board-ip]
       systemctl disable fusion-system-monitor fusion-telemetry-core fusion-dsp fusion-server jackd
    ```
+4. WAV files
+
+Have these in the root project directory for local testing, or copy them to the board you are testing with. 
+
+#### `in.wav`
+* Tone based music simulation with noise and amplitude jumps. Designed to trigger most algorithms, including heuristic-based implementations.
+
+#### `in_10.wav`
+* 10 tracks consisting of both tones and noise.
+
+#### `in_ducker_2.wav`
+* Real wide-range music track with speech sidechain
+
+#### `in_feedback.wav`
+* Feedback simulation with high frequency sounds and sweeps, designed to trigger the feedback_suppression algorithm.
 
 ### Running on host machine
 
-4. Ensure `fusion_dsp` binary is compiled and located at `./build/fusion_dsp`
+5. Ensure `fusion_dsp` binary is compiled and located at `./build/fusion_dsp`
 
 ## Usage
 
