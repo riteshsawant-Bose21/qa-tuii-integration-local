@@ -6,6 +6,10 @@ import sys
 import os
 import platform
 import subprocess
+import numpy as np
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 from sklearn.linear_model import LinearRegression
 from subprocess import run
 
@@ -105,17 +109,48 @@ def profile(config_name, remote=True):
         (result_df[block] > low_quantile) &
         (result_df[block] < high_quantile)
     ]
-
+    
     Xs = filtered_df[list(feature_dict.keys())]
     ys = filtered_df[[block]]
 
     model = LinearRegression().fit(Xs, ys)
-    print(model.coef_)
-    print(model.intercept_)
-    print(model.score(Xs, ys))
+    print(f"Coefficients: {model.coef_}")
+    print(f"Intercept:{model.intercept_}")
+    print(f"R^2 Score: {model.score(Xs, ys)}")
+    
+    feature_names = list(feature_dict.keys())
+    plt.figure(figsize=(10, 6))
+    x_data = Xs.iloc[:, 0]
+    y_data = ys.iloc[:, 0]
+    plt.scatter(x_data, y_data, alpha=0.7, s=50, label='Data Points')
+    
+    x_range = np.linspace(x_data.min(), x_data.max(), 100)
+    
+    x_range_df = pd.DataFrame({feature_names[0]: x_range})
+    y_pred_line = model.predict(x_range_df)
+    plt.plot(x_range, y_pred_line, 'r-', linewidth=2, 
+            label=f'Linear fit: y = {model.intercept_} + {model.coef_}x')
+    
+    plt.xlabel(feature_names[0])
+    plt.ylabel(f'{block} (timing)')
+    plt.title(f'{config_name}: {block} vs {feature_names[0]}')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    
+    os.makedirs('profiling_results', exist_ok=True)
+    plt.savefig(f'profiling_results/{config_name}_regression_plot.png', dpi=300, bbox_inches='tight')
+    print(f"Plot saved to: profiling_results/{config_name}_regression_plot.png")
+    plt.close()
 
+    print(f"Low quantile (percentile): {low_quantile}")
+    print(f"High quantile (percentile): {high_quantile}") 
+    print(f"Total points before filtering: {len(result_df)}")
+    print(f"Points after filtering: {len(filtered_df)}")
+    print(f"Percentage kept: {len(filtered_df)/len(result_df)*100:.1f}%")
+    
     return model
     
+
 
 
 configurations = {
@@ -128,11 +163,13 @@ configurations = {
         'path' : 'profile_compressor.json.jinja'
     },
     'ducker' : {
-        'path' : 'profile_ducker.json.jinja'
+        'path' : 'profile_ducker.json.jinja',
+        'wav_input' : 'in_ducker_2.wav'
     },
     'feedback_suppression' : {
         'path' : 'profile_simple_block.json.jinja',
-        'algorithm' : 'feedback_suppression'
+        'algorithm' : 'feedback_suppression',
+        'wav_input': 'in_feedback.wav'
     },
     'gain' : {
         'path' : 'profile_simple_block.json.jinja',
@@ -158,14 +195,13 @@ configurations = {
             # 'num_outputs' : lambda x: x['num_outputs'],
             'num_crosspoints' : lambda x: x['num_inputs']*x['num_outputs']
         },
-        'wav_input' : 'MD24_10.wav',
         'csv_dump' : 'matrix_mixer_timings.csv',
         'format_string' : 'T = {0} + {1}*num_inputs*num_outputs'
     },
     'passthrough' : {
         'path' : 'profile_passthrough.json.jinja',
         'block' : 'task1',
-        'wav_input' : 'in_10_tracks.wav'
+        'wav_input' : 'in_10.wav'
     },
     'peq' : {
         'path' : 'profile_peq.json.jinja',
@@ -178,7 +214,6 @@ configurations = {
             # 'channels': lambda x: x['channels'],
             'bandchannels': lambda x: x['bands']*x['channels']
         },
-        'wav_input' : 'MD24_10.wav',
         'csv_dump' : 'peq_tmp.csv',
         'format_string' : 'T = {0} + {1}*bands*channels'
     },
@@ -188,12 +223,12 @@ configurations = {
     'wav_read' : {
         'path' : 'profile_passthrough.json.jinja',
         'block' : 'task1',
-        'wav_input' : 'in_10_tracks.wav'
+        'wav_input' : 'in_10.wav'
     },
     'wav_write' : {
         'path' : 'profile_passthrough.json.jinja',
         'block' : 'task1',
-        'wav_input' : 'in_10_tracks.wav'
+        'wav_input' : 'in_10.wav'
     }
 }
 default_parameters = {
