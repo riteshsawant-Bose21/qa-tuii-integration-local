@@ -79,7 +79,7 @@ jobs:
 
   cloud-web-backend-build:
     needs: buildChecks
-    if: needs.buildChecks.outputs.cloudServicesBackend == 'true' && github.ref == 'refs/heads/develop'
+    if: needs.buildChecks.outputs.cloudServicesBackend == 'true' && github.ref == 'refs/heads/feature/add-fusion-server-project'
     concurrency:
       group: cloud-web-backend-build
     runs-on: ubuntu-agent
