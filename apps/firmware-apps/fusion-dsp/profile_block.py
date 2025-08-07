@@ -83,12 +83,14 @@ def profile(config_name, remote=True):
             frames.append(df)
         try:
             df = pd.read_csv('timings.csv')
+            
             for feature, formula in feature_dict.items():
                 df[feature] = formula(param_dict)
+            
             frames.append(df)
         except Exception as e:
             print(f"Error reading timings.csv: {e}")
-            continue 
+            continue
     
     result_df = pd.concat(frames, axis=0, ignore_index=True)
     print(result_df.columns.tolist())
@@ -106,17 +108,33 @@ def profile(config_name, remote=True):
             config_name
         )
     filtered_df = []
-    for ch in sorted(result_df["channels"].unique()):
-        ch_df = result_df[result_df["channels"] == ch]
-        low_quantile = ch_df.quantile(0.999)[block]
-        high_quantile = ch_df.quantile(0.9999)[block]
-        filtered_ch = ch_df[
-            (ch_df[block] >= low_quantile) &
-            (ch_df[block] <= high_quantile)
+    if 'channels' in result_df.columns:
+        filter_column = 'channels'
+    elif 'num_inputs' in result_df.columns:
+        filter_column = 'num_inputs'
+    else:
+        filter_column = None
+    if filter_column:
+        for group_value in sorted(result_df[filter_column].unique()):
+            ch_df = result_df[result_df[filter_column] == group_value]
+            low_quantile = ch_df.quantile(0.999)[block]
+            high_quantile = ch_df.quantile(0.9999)[block]
+            filtered_ch = ch_df[
+                (ch_df[block] >= low_quantile) &
+                (ch_df[block] <= high_quantile)
+            ]
+            filtered_df.append(filtered_ch)
+            print(f"Channels: {group_value}, Low quantile: {low_quantile}, High quantile: {high_quantile}")
+            print(f"Total points: {len(ch_df)}, Points after filtering: {len(filtered_ch)} ({len(filtered_ch)/len(ch_df)*100:.1f}%)")
+    else:
+        low_quantile = result_df.quantile(0.999)[block]
+        high_quantile = result_df.quantile(0.9999)[block]
+        filtered_df = result_df[
+            (result_df[block] >= low_quantile) &
+            (result_df[block] <= high_quantile)
         ]
-        filtered_df.append(filtered_ch)
-        print(f"Channels: {ch}, Low quantile: {low_quantile}, High quantile: {high_quantile}")
-        print(f"Total points: {len(ch_df)}, Points after filtering: {len(filtered_ch)} ({len(filtered_ch)/len(ch_df)*100:.1f}%)")
+        print(f"No grouping column found, using overall quantiles: {low_quantile}, {high_quantile}")
+        print(f"Total points before filtering: {len(result_df)}, Points after filtering: {len(filtered_df)} ({len(filtered_df)/len(result_df)*100:.1f}%)")
 
     filtered_df = pd.concat(filtered_df, ignore_index=True)
 
@@ -302,9 +320,6 @@ def dict_to_iter(d):
         lambda t: dict(zip(d.keys(), t)),
         p
     )
-    
-
-
 
 if __name__ == '__main__':
     import argparse
