@@ -39,3 +39,7 @@ runs:
         SONAR_TOKEN: ${{ inputs.flutter_apps_sonar_token }}
       with:
         projectBaseDir: 'apps/frontend/flutter-apps'
+        args: >
+          -Dsonar.c.file.suffixes=-
+          -Dsonar.cpp.file.suffixes=-
+          -Dsonar.objc.file.suffixes=-
