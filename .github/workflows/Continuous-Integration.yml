@@ -58,6 +58,8 @@ jobs:
 
       - name: Build Apps
         uses: ./.github/reusable-actions/build-flutter-Android-iOS
+        with:
+          flutter_apps_sonar_token: ${{ secrets.FLUTTER_APPS_SONAR_TOKEN }}
 
   cloud-servicesUI-build:
     needs: buildChecks
@@ -94,3 +96,5 @@ jobs:
 
       - name: Build Apps
         uses: ./.github/reusable-actions/build-cloud-web-backend
+        with:
+          cloud_backend_sonar_token: ${{ secrets.CLOUD_BACKEND_SONAR_TOKEN }}

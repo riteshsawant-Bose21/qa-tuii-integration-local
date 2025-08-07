@@ -1,5 +1,9 @@
 name: "Build Cloud Services Backend"
 description: "Build Cloud Services Backend"
+inputs:
+  cloud_backend_sonar_token:
+    description: 'SonarQube server token'
+    required: true
 
 runs:
   using: "composite"
@@ -23,6 +27,6 @@ runs:
     - name: SonarQube Scan
       uses: SonarSource/sonarqube-scan-action@v5
       env:
-        SONAR_TOKEN: 82af3d683562ec86ada007cc1997cd7d0deb4a71
+        SONAR_TOKEN: ${{ inputs.cloud_backend_sonar_token }}
       with:
         projectBaseDir: 'apps/cloud-backend/fusion-cloud'
