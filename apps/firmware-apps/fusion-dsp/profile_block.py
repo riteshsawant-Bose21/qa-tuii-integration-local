@@ -1,5 +1,5 @@
 import pandas as pd
-import jinja2 as j
+import jinja2 as jinja2
 import itertools
 import pickle
 import sys
@@ -23,8 +23,8 @@ def profile(config_name, remote=True):
                                 If False, runs locally on detected OS (assumed to be Linux or macOS).
     """
     board_ip = "192.168.1.7" # Change this to your board's IP address; only for remote=True (default)
-    loader = j.FileSystemLoader("./config/profiling")
-    env = j.Environment(loader=loader, autoescape=j.select_autoescape())
+    loader = jinja2.FileSystemLoader("./config/profiling")
+    env = jinja2.Environment(loader=loader, autoescape=jinja2.select_autoescape())
     current_config = configurations[config_name]
     template = env.get_template(current_config['path'])
     
@@ -91,6 +91,8 @@ def profile(config_name, remote=True):
             continue 
     
     result_df = pd.concat(frames, axis=0, ignore_index=True)
+    print(result_df.columns.tolist())
+    print(result_df.head())
     if remote:
         print("Copying out.wav from board...")
         os.system(f'scp root@{board_ip}:/home/root/out.wav ./out.wav')
@@ -106,7 +108,7 @@ def profile(config_name, remote=True):
     filtered_df = []
     for ch in sorted(result_df["channels"].unique()):
         ch_df = result_df[result_df["channels"] == ch]
-        low_quantile = ch_df.quantile(0.99)[block]
+        low_quantile = ch_df.quantile(0.999)[block]
         high_quantile = ch_df.quantile(0.9999)[block]
         filtered_ch = ch_df[
             (ch_df[block] >= low_quantile) &
@@ -127,28 +129,77 @@ def profile(config_name, remote=True):
     print(f"R^2 Score: {model.score(Xs, ys)}")
     
     feature_names = list(feature_dict.keys())
-    plt.figure(figsize=(10, 6))
-    x_data = Xs.iloc[:, 0]
-    y_data = ys.iloc[:, 0]
-    plt.scatter(x_data, y_data, alpha=0.7, s=50, label='Data Points')
-    
-    x_range = np.linspace(x_data.min(), x_data.max(), 100)
-    
-    x_range_df = pd.DataFrame({feature_names[0]: x_range})
-    y_pred_line = model.predict(x_range_df)
-    plt.plot(x_range, y_pred_line, 'r-', linewidth=2, 
-            label=f'Linear fit: y = {model.intercept_} + {model.coef_}x')
-    
-    plt.xlabel(feature_names[0])
-    plt.ylabel(f'{block} (timing)')
-    plt.title(f'{config_name}: {block} vs {feature_names[0]}')
-    plt.legend()
-    plt.grid(True, alpha=0.3)
-    
-    os.makedirs('profiling_results', exist_ok=True)
-    plt.savefig(f'profiling_results/{config_name}_regression_plot.png', dpi=300, bbox_inches='tight')
-    print(f"Plot saved to: profiling_results/{config_name}_regression_plot.png")
-    plt.close()
+    print(f"Feature names: {feature_names} - {len(feature_names)} features")
+    if len(feature_names) == 1:
+        plt.figure(figsize=(10, 6))
+        x_data = Xs.iloc[:, 0]
+        y_data = ys.iloc[:, 0]
+        plt.scatter(x_data, y_data, alpha=0.7, s=50, label='Data Points')
+        
+        x_range = np.linspace(x_data.min(), x_data.max(), 100)
+        
+        x_range_df = pd.DataFrame({feature_names[0]: x_range})
+        y_pred_line = model.predict(x_range_df)
+        plt.plot(x_range, y_pred_line, 'r-', linewidth=2, 
+                label=f'Linear fit: y = {model.intercept_} + {model.coef_}x')
+        
+        plt.xlabel(feature_names[0])
+        plt.ylabel(f'{block} (timing)')
+        plt.title(f'{config_name}: {block} vs {feature_names[0]}')
+        plt.legend()
+        plt.grid(True, alpha=0.3)
+        
+        os.makedirs('profiling_results', exist_ok=True)
+        plt.savefig(f'profiling_results/{config_name}_regression_plot.png', dpi=300, bbox_inches='tight')
+        print(f"Plot saved to: profiling_results/{config_name}_regression_plot.png")
+        plt.close()
+        
+    else:
+        num_features = len(feature_names)
+        fig, axes = plt.subplots(1, num_features, figsize=(6*num_features, 5))
+        
+        if num_features == 2:
+            axes = [axes[0], axes[1]]
+        
+        for i, feature in enumerate(feature_names):
+            x_data = Xs.iloc[:, i]
+            y_data = ys.iloc[:, 0]
+
+            axes[i].scatter(x_data, y_data, alpha=0.7, s=50, label='Data Points')
+            
+            x_range = np.linspace(x_data.min(), x_data.max(), 100)
+
+            x_range_df = pd.DataFrame()
+
+            for j, feat in enumerate(feature_names):
+                x_range_df[feat] = [Xs.iloc[:, j].median()] * len(x_range)
+
+            x_range_df[feature] = x_range
+            y_pred_line = model.predict(x_range_df)
+
+            coeff = model.coef_[0][i]
+            axes[i].plot(x_range, y_pred_line, 'r-', linewidth=2,
+                            label=f'Partial fit: {coeff:.2e}')
+            axes[i].set_xlabel(feature)
+            axes[i].set_ylabel(f'{block} (timing)')
+            axes[i].set_title(f'{config_name}: {block} vs {feature}')
+            axes[i].legend()
+            axes[i].grid(True, alpha=0.3)
+            
+        fig.suptitle(f'{config_name}: {block} vs Features', fontsize=16)
+        plt.tight_layout()
+        os.makedirs('profiling_results', exist_ok=True)
+        plt.savefig(f'profiling_results/{config_name}_regression_plots.png', dpi=300, bbox_inches='tight')
+        print(f"Plot saved to: profiling_results/{config_name}_regression_plots.png")
+        plt.close()
+        
+        equation_parts = [f"{model.intercept_[0]:.2e}"]
+        for i, feature in enumerate(feature_names):
+            coeff = model.coef_[0][i]
+            equation_parts.append(f"{coeff:.2e}*{feature}")
+        full_equation = " + ".join(equation_parts)
+        print(f"Full equation: y = {full_equation}")
+            
     print("SUMMARY STATS")
     print(f"Low quantile (percentile): {low_quantile}")
     print(f"High quantile (percentile): {high_quantile}") 
@@ -196,8 +247,8 @@ configurations = {
             'num_outputs' : range(1, 60, 4)
         },
         'features' : {
-            # 'num_inputs' : lambda x: x['num_inputs'],
-            # 'num_outputs' : lambda x: x['num_outputs'],
+            'num_inputs' : lambda x: x['num_inputs'],
+            'num_outputs' : lambda x: x['num_outputs'],
             'num_crosspoints' : lambda x: x['num_inputs']*x['num_outputs']
         },
         'csv_dump' : 'matrix_mixer_timings.csv',
@@ -215,8 +266,8 @@ configurations = {
             'channels': range(1, 10)
         },
         'features': {
-            # 'bands': lambda x: x['bands'],
-            # 'channels': lambda x: x['channels'],
+            'bands': lambda x: x['bands'],
+            'channels': lambda x: x['channels'],
             'bandchannels': lambda x: x['bands']*x['channels']
         },
         'csv_dump' : 'peq_tmp.csv',
