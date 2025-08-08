@@ -22,6 +22,13 @@ runs:
         VERSION=$(cat version.txt)
         echo "version=$VERSION" >> $GITHUB_OUTPUT
 
+    - name: SonarQube Scan
+      uses: SonarSource/sonarqube-scan-action@v5
+      env:
+        SONAR_TOKEN: ${{ inputs.cloud_backend_sonar_token }}
+      with:
+        projectBaseDir: 'apps/cloud-backend/fusion-cloud'
+
     - name: Cloud Services Backend
       shell: bash
       working-directory: apps/cloud-backend/fusion-cloud
@@ -30,9 +37,3 @@ runs:
         VERSION="${{ steps.read_version.outputs.version }}-$(git rev-parse --short HEAD)"
         curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T ./fusion-web-services ${{ inputs.nexus_url }}/Fusion-Cloud-Backend/Continuous/$VERSION/fusion-web-services-$VERSION
 
-    - name: SonarQube Scan
-      uses: SonarSource/sonarqube-scan-action@v5
-      env:
-        SONAR_TOKEN: ${{ inputs.cloud_backend_sonar_token }}
-      with:
-        projectBaseDir: 'apps/cloud-backend/fusion-cloud'
