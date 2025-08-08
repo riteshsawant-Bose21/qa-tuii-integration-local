@@ -7,6 +7,9 @@ inputs:
   nexus_password:
     description: 'Nexus repository password'
     required: true
+  nexus_url:
+    description: 'Nexus repository URL'
+    required: true
 
 runs:
   using: "composite"
@@ -25,7 +28,7 @@ runs:
       run: |
         moon run fusion-cloud:build
         VERSION="${{ steps.read_version.outputs.version }}-$(git rev-parse --short HEAD)"
-        curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T ./fusion-web-services https://nexus.dev.prod.bosepro.internal:8445/repository/pro-fusion-local/Fusion-Cloud-Backend/Continuous/$VERSION/fusion-web-services-$VERSION
+        curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T ./fusion-web-services ${{ inputs.nexus_url }}/Fusion-Cloud-Backend/Continuous/$VERSION/fusion-web-services-$VERSION
 
     - name: SonarQube Scan
       uses: SonarSource/sonarqube-scan-action@v5

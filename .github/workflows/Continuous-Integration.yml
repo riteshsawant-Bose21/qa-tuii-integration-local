@@ -61,6 +61,7 @@ jobs:
         with:
           flutter_apps_sonar_token: ${{ secrets.FLUTTER_APPS_SONAR_TOKEN }}
           nexus_password: ${{ secrets.NEXUS_PASSWORD }}
+          nexus_url: ${{ secrets.NEXUS_BASE_URL }}
           keychain_password: ${{ secrets.KEYCHAIN_PASSWORD }}
 
   cloud-servicesUI-build:
@@ -100,4 +101,5 @@ jobs:
         uses: ./.github/reusable-actions/build-cloud-web-backend
         with:
           cloud_backend_sonar_token: ${{ secrets.CLOUD_BACKEND_SONAR_TOKEN }}
-          nexus_password: ${{ secrets.NEXUS_PASSWORD }}          
+          nexus_password: ${{ secrets.NEXUS_PASSWORD }}
+          nexus_url: ${{ secrets.NEXUS_BASE_URL }}         
