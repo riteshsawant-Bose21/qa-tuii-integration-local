@@ -154,7 +154,11 @@ Make targets:
 
 NOTE: Local builds don't support haproxy, keepalived or memberlist. You can ignore log output about issues related to this.
 Local builds are good for developing the various server components without dealing with instance management.
- 
+
+**Build and Deploy Fusion-server binary to a device**
+```bash
+./scripts/remote_scripts/deploy-fusion-server-to-device.sh root@192.168.1.3
+```
 ### API Endpoints
 
 **Configuration Management**
