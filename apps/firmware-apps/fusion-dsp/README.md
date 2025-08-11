@@ -65,7 +65,8 @@ To install on Debian-based Linux:
 sudo apt update
 sudo apt install jackd libjack-jackd2-dev libboost-dev libspdlog-dev \
     libsndfile1 libsndfile1-dev libsamplerate0 libsamplerate0-dev \
-    libjson-cpp-dev
+    libjsoncpp-dev libboost-program-options-dev
+sudo ln -s /usr/include/jsoncpp/json/ /usr/include/json
 ~~~
 
 Doctest was a dependency, but it is now imported as a submodule and doesn't
