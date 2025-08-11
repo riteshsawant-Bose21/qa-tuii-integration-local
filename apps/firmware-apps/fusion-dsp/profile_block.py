@@ -129,10 +129,10 @@ def profile(config_name, remote=True):
     else:
         low_quantile = result_df.quantile(0.999)[block]
         high_quantile = result_df.quantile(0.9999)[block]
-        filtered_df = result_df[
+        filtered_df = [result_df[
             (result_df[block] >= low_quantile) &
             (result_df[block] <= high_quantile)
-        ]
+        ]]
         print(f"No grouping column found, using overall quantiles: {low_quantile}, {high_quantile}")
         print(f"Total points before filtering: {len(result_df)}, Points after filtering: {len(filtered_df)} ({len(filtered_df)/len(result_df)*100:.1f}%)")
 
@@ -295,18 +295,30 @@ configurations = {
         'path' : 'profile_tone.json.jinja'
     },
     'wav_read' : {
-        'path' : 'profile_passthrough.json.jinja',
-        'block' : 'task1',
-        'wav_input' : 'in_10.wav'
+        'path' : 'profile_wav_io.json.jinja',
+        'block' : 'wav_read',
+        'wav_input' : 'in.wav',
+        'parameters' : {},
+        'features' : {
+            'constant' : lambda x: 1
+        },
+        'csv_dump' : 'wav_read_timings.csv',
+        'format_string' : 'T = {0}'
     },
     'wav_write' : {
-        'path' : 'profile_passthrough.json.jinja',
-        'block' : 'task1',
-        'wav_input' : 'in_10.wav'
+        'path' : 'profile_wav_io.json.jinja',
+        'block' : 'wav_write',
+        'wav_input' : 'in.wav',
+        'parameters' : {},
+        'features' : {
+            'constant' : lambda x: 1
+        },
+        'csv_dump' : 'wav_write_timings.csv',
+        'format_string' : 'T = {0}'
     }
 }
 default_parameters = {
-    'channels' : range(1,10,3)
+    'channels' : range(1,17, 3)
 }
 default_features = {
     'channels': lambda x: x['channels']
