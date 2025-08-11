@@ -261,8 +261,8 @@ configurations = {
     'matrix_mixer' : {
         'path' : 'profile_matrix_mixer.json.jinja',
         'parameters' : {
-            'num_inputs' : range(1, 60, 5),
-            'num_outputs' : range(1, 60, 4)
+            'num_inputs' : range(1, 60, 10),
+            'num_outputs' : range(1, 33, 5)
         },
         'features' : {
             'num_inputs' : lambda x: x['num_inputs'],
