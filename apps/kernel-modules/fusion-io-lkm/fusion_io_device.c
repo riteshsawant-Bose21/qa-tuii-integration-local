@@ -210,7 +210,7 @@ static struct i2c_client *endpoint_get_i2c_client(struct platform_device *pdev, 
                 continue;
             }
         
-            dev_info(&pdev->dev, "Discovered endpoint %s at I2C address 0x%x\n", 
+            dev_dbg(&pdev->dev, "Discovered endpoint %s at I2C address 0x%x\n", 
                     i2c_info.type, client->addr);
 
             return client;
@@ -219,7 +219,7 @@ static struct i2c_client *endpoint_get_i2c_client(struct platform_device *pdev, 
         }
     }
 
-    dev_info(&pdev->dev, "Failed to discover endpoint %s\n", ep->name);
+    dev_err(&pdev->dev, "Failed to discover endpoint %s\n", ep->name);
     return NULL;
 }
 
@@ -617,7 +617,7 @@ static int configure_gpio_interrupt(struct platform_device *pdev, struct endpoin
         return ret;
     }
 
-    dev_info(&pdev->dev, "Configured GPIO %s num %d as interrupt with IRQ number %d\n", ep_gpio->name, ep_gpio->num, ep_gpio->irq_num);
+    dev_dbg(&pdev->dev, "Configured GPIO %s num %d as interrupt with IRQ number %d\n", ep_gpio->name, ep_gpio->num, ep_gpio->irq_num);
     return 0;
 }
 
@@ -805,7 +805,7 @@ static int set_linked_or_aggregate_gpio(struct platform_device *pdev, struct end
                         ep_gpio->num = parent_gpio->num;
                         ep_gpio->aggregate_gpios[j++] = parent_gpio;
 
-                        dev_info(&pdev->dev, "Linking aggregate GPIO %s:%s to GPIO %s:%s\n", ep_gpio->parent_io_card ?
+                        dev_dbg(&pdev->dev, "Linking aggregate GPIO %s:%s to GPIO %s:%s\n", ep_gpio->parent_io_card ?
                                                                                             ep_gpio->parent_io_card->data.model :
                                                                                             ep_gpio->parent_endpoint->name,
                                                                                             ep_gpio->name,
@@ -822,7 +822,7 @@ static int set_linked_or_aggregate_gpio(struct platform_device *pdev, struct end
 
                     ep_gpio->num_aggregate_gpios = j; 
 
-                    dev_info(&pdev->dev, "Successfully linked (%d) aggregate GPIOs to %s:%s\n", j, ep_gpio->parent_io_card ? 
+                    dev_dbg(&pdev->dev, "Successfully linked (%d) aggregate GPIOs to %s:%s\n", j, ep_gpio->parent_io_card ? 
                                                                                                     ep_gpio->parent_io_card->data.model : 
                                                                                                     ep_gpio->parent_endpoint->name,
                                                                                                     ep_gpio->name);
@@ -831,7 +831,7 @@ static int set_linked_or_aggregate_gpio(struct platform_device *pdev, struct end
                     ep_gpio->linked_gpio = parent_gpio;
                     ep_gpio->num = parent_gpio->num;
 
-                    dev_info(&pdev->dev, "Successfully linked %s:%s to %s:%s\n", ep_gpio->parent_io_card ? 
+                    dev_dbg(&pdev->dev, "Successfully linked %s:%s to %s:%s\n", ep_gpio->parent_io_card ? 
                                                                                 ep_gpio->parent_io_card->data.model : 
                                                                                 ep_gpio->parent_endpoint->name,
                                                                                 ep_gpio->name, parent_gpio->parent_io_card ?
@@ -871,7 +871,7 @@ static int set_linked_or_aggregate_gpio(struct platform_device *pdev, struct end
                     
                     parent_gpio->aggregate_gpios[size - 1] = ep_gpio;
 
-                    dev_info(&pdev->dev, "Successfully linked aggregate irq %s:%s to %s:%s\n", parent_gpio->parent_io_card ? 
+                    dev_dbg(&pdev->dev, "Successfully linked aggregate irq %s:%s to %s:%s\n", parent_gpio->parent_io_card ? 
                                                                                                 parent_gpio->parent_io_card->data.model : 
                                                                                                 parent_gpio->parent_endpoint->name,
                                                                                                 parent_gpio->name, ep_gpio->parent_io_card ?
@@ -883,7 +883,7 @@ static int set_linked_or_aggregate_gpio(struct platform_device *pdev, struct end
                 } else {
                     parent_gpio->linked_gpio = ep_gpio;
 
-                    dev_info(&pdev->dev, "Successfully linked irq %s:%s to %s:%s\n", parent_gpio->parent_io_card ? 
+                    dev_dbg(&pdev->dev, "Successfully linked irq %s:%s to %s:%s\n", parent_gpio->parent_io_card ? 
                                                                                     parent_gpio->parent_io_card->data.model : 
                                                                                     parent_gpio->parent_endpoint->name,
                                                                                     parent_gpio->name, ep_gpio->parent_io_card ?
@@ -1024,14 +1024,14 @@ static void link_gpio(struct platform_device *pdev, struct endpoint_gpio *ep_gpi
         for (i = 0; i < bd->num_gpios; ++i) {
             if (!strcmp(ep_gpio->name, bd->gpios[i].name)) {
                 if (ep_gpio->is_irq == false) {
-                    dev_info(&pdev->dev, "Successfully linked phys GPIO %s:%s to %s:%s", ep_gpio->parent_io_card ?
+                    dev_dbg(&pdev->dev, "Successfully linked phys GPIO %s:%s to %s:%s", ep_gpio->parent_io_card ?
                                                                                         ep_gpio->parent_io_card->data.model :
                                                                                         ep_gpio->parent_endpoint->name,
                                                                                         ep_gpio->name, 
                                                                                         bd->data.model, bd->gpios[i].name);
                     ep_gpio->linked_gpio = &bd->gpios[i];
                 } else if (ep_gpio->is_irq == true) {
-                    dev_info(&pdev->dev, "Successfully linked phys GPIO irq %s:%s to %s:%s", bd->data.model, bd->gpios[i].name,
+                    dev_dbg(&pdev->dev, "Successfully linked phys GPIO irq %s:%s to %s:%s", bd->data.model, bd->gpios[i].name,
                                                                                             ep_gpio->parent_io_card ?
                                                                                             ep_gpio->parent_io_card->data.model :
                                                                                             ep_gpio->parent_endpoint->name,
@@ -1044,7 +1044,7 @@ static void link_gpio(struct platform_device *pdev, struct endpoint_gpio *ep_gpi
         }
     }
 
-    dev_info(&pdev->dev, "link_gpio: no link for GPIO %s:%s", ep_gpio->parent_io_card ?
+    dev_dbg(&pdev->dev, "link_gpio: no link for GPIO %s:%s", ep_gpio->parent_io_card ?
                                                                 ep_gpio->parent_io_card->data.model :
                                                                 ep_gpio->parent_endpoint ?
                                                                 ep_gpio->parent_endpoint->name :
@@ -1119,7 +1119,7 @@ static int configure_base_device_gpios(struct platform_device *pdev)
             // link gpio before we check the links
             link_gpio(pdev, ep_gpio);
 
-            dev_info(&pdev->dev, "Configuring base device gpio %s:%s", ep->name, ep_gpio->name);
+            dev_dbg(&pdev->dev, "Configuring base device gpio %s:%s", ep->name, ep_gpio->name);
 
             if (ep_gpio->type == EP_GPIO_TYPE_PHYS && !ep_gpio->is_irq) {
                 ep_gpio->desc = ep_gpio->linked_gpio->desc;
@@ -1129,7 +1129,7 @@ static int configure_base_device_gpios(struct platform_device *pdev)
                 }
             }
 
-            dev_info(&pdev->dev, "Configured base device GPIO %s:%s\n", ep->name, ep_gpio->name);
+            dev_dbg(&pdev->dev, "Configured base device GPIO %s:%s\n", ep->name, ep_gpio->name);
             
             ep_gpio->valid = true;
         }
@@ -1143,7 +1143,7 @@ static int configure_base_device_gpios(struct platform_device *pdev)
             // link gpio before we check the links
             link_gpio(pdev, ep_gpio);
 
-            dev_info(&pdev->dev, "Configuring base device gpio %s:%s", ep->name, ep_gpio->name);
+            dev_dbg(&pdev->dev, "Configuring base device gpio %s:%s", ep->name, ep_gpio->name);
 
             if (ep_gpio->type == EP_GPIO_TYPE_PHYS && !ep_gpio->is_irq) {
                 ep_gpio->desc = ep_gpio->linked_gpio->desc;
@@ -1153,7 +1153,7 @@ static int configure_base_device_gpios(struct platform_device *pdev)
                 }
             }
 
-            dev_info(&pdev->dev, "Configured base device GPIO %s:%s\n", ep->name, ep_gpio->name);
+            dev_dbg(&pdev->dev, "Configured base device GPIO %s:%s\n", ep->name, ep_gpio->name);
             
             ep_gpio->valid = true;
         }
@@ -1167,7 +1167,7 @@ static int configure_base_device_gpios(struct platform_device *pdev)
             // link gpio before we check the links
             link_gpio(pdev, ep_gpio);
 
-            dev_info(&pdev->dev, "Configuring base device gpio %s:%s", ep->name, ep_gpio->name);
+            dev_dbg(&pdev->dev, "Configuring base device gpio %s:%s", ep->name, ep_gpio->name);
 
             if (ep_gpio->type == EP_GPIO_TYPE_PHYS && !ep_gpio->is_irq) {
                 ep_gpio->desc = ep_gpio->linked_gpio->desc;
@@ -1177,7 +1177,7 @@ static int configure_base_device_gpios(struct platform_device *pdev)
                 }
             }
 
-            dev_info(&pdev->dev, "Configured base device GPIO %s:%s\n", ep->name, ep_gpio->name);
+            dev_dbg(&pdev->dev, "Configured base device GPIO %s:%s\n", ep->name, ep_gpio->name);
             
             ep_gpio->valid = true;
         }
@@ -1191,7 +1191,7 @@ static int configure_base_device_gpios(struct platform_device *pdev)
             // link gpio before we check the links
             link_gpio(pdev, ep_gpio);
 
-            dev_info(&pdev->dev, "Configuring base device gpio %s:%s", ep->name, ep_gpio->name);
+            dev_dbg(&pdev->dev, "Configuring base device gpio %s:%s", ep->name, ep_gpio->name);
 
             if (ep_gpio->ioexp_id != ep->ioexp_id) {
                 dev_err(&pdev->dev, "GPIO %s:%s doesn't have matching ioexp_id (%d/%d)\n", ep->name, 
@@ -1209,7 +1209,7 @@ static int configure_base_device_gpios(struct platform_device *pdev)
                 }
             }
 
-            dev_info(&pdev->dev, "Configured base device GPIO %s:%s\n", ep->name, ep_gpio->name);
+            dev_dbg(&pdev->dev, "Configured base device GPIO %s:%s\n", ep->name, ep_gpio->name);
             
             ep_gpio->valid = true;
         }
@@ -1225,7 +1225,7 @@ static int configure_base_device_gpios(struct platform_device *pdev)
             // link gpio before we check the links
             link_gpio(pdev, ep_gpio);
 
-            dev_info(&pdev->dev, "Configuring base device gpio %s:%s", ep->name, ep_gpio->name);
+            dev_dbg(&pdev->dev, "Configuring base device gpio %s:%s", ep->name, ep_gpio->name);
 
             if (ep->type >= EP_TYPE_IOEXP_START && ep->type < EP_TYPE_IOEXP_END) {
                 if (ep_gpio->ioexp_id != ep->ioexp_id) {
@@ -1245,7 +1245,7 @@ static int configure_base_device_gpios(struct platform_device *pdev)
                 }
             }
 
-            dev_info(&pdev->dev, "Configured GPIO %s:%s\n", ep->name, ep_gpio->name);
+            dev_dbg(&pdev->dev, "Configured GPIO %s:%s\n", ep->name, ep_gpio->name);
             
             ep_gpio->valid = true;
         }
@@ -1279,7 +1279,7 @@ static int configure_io_card_gpios(struct platform_device *pdev, struct io_card 
 
         ep_gpio->valid = true;
 
-        dev_info(&pdev->dev, "Successfully configured GPIO %s:%s\n", ic->data.model, ep_gpio->name);
+        dev_dbg(&pdev->dev, "Successfully configured GPIO %s:%s\n", ic->data.model, ep_gpio->name);
     }
 
     // io_card endpoint gpios
@@ -1319,7 +1319,7 @@ static int configure_io_card_gpios(struct platform_device *pdev, struct io_card 
 
             ep_gpio->valid = true;
 
-            dev_info(&pdev->dev, "Successfully configured GPIO %s:%s:%s\n", ic->data.model, ep->name, ep_gpio->name);
+            dev_dbg(&pdev->dev, "Successfully configured GPIO %s:%s:%s\n", ic->data.model, ep->name, ep_gpio->name);
         }
     }
     
@@ -1544,7 +1544,7 @@ static int fusion_io_probe(struct platform_device *pdev)
     } else {
         // TODO this is really an error! For var proto it's not
         // dev_err(&pdev->dev, "Error getting i2c client for secure eeprom\n");
-        dev_info(&pdev->dev, "No secure eeprom found on mainboard\n");
+        dev_dbg(&pdev->dev, "No secure eeprom found on mainboard\n");
 
         // ret = -ENODEV;
         // goto error;
@@ -1598,7 +1598,7 @@ static int fusion_io_probe(struct platform_device *pdev)
             goto error;
         }
     } else {
-        dev_info(&pdev->dev, "No data eeprom found on mainboard\n");
+        dev_dbg(&pdev->dev, "No data eeprom found on mainboard\n");
     }
     
 
@@ -1626,7 +1626,7 @@ static int fusion_io_probe(struct platform_device *pdev)
             goto error;
         }
     } else {
-        dev_info(&pdev->dev, "No i2c switch on mainboard\n");
+        dev_dbg(&pdev->dev, "No i2c switch on mainboard\n");
     }
 
     // next find pwr ctrl io expander
@@ -1647,7 +1647,7 @@ static int fusion_io_probe(struct platform_device *pdev)
             goto error;
         }
     } else {
-        dev_info(&pdev->dev, "No power io expander on mainboard\n");
+        dev_dbg(&pdev->dev, "No power io expander on mainboard\n");
     }
 
     // now configure other base device endpoints
@@ -1658,13 +1658,13 @@ static int fusion_io_probe(struct platform_device *pdev)
             continue;
         }
 
-        dev_info(&pdev->dev, "Setting i2c client for base device endpoint %s...\n", ep->name);
+        dev_dbg(&pdev->dev, "Setting i2c client for base device endpoint %s...\n", ep->name);
 
         // set up the i2c_client
         ep->i2c_client = endpoint_get_i2c_client(pdev, ep, bd->i2c_adapter);
 
         if (ep->i2c_client == NULL) {
-            dev_info(&pdev->dev, "Failed to set i2c client...");
+            dev_dbg(&pdev->dev, "Failed to set i2c client...");
             ret = -ENODEV;
             goto error;
         }
@@ -1676,7 +1676,7 @@ static int fusion_io_probe(struct platform_device *pdev)
             goto error;
         }
             
-        dev_info(&pdev->dev, "Successfully registered endpoint %s!\n", ep->name);
+        dev_dbg(&pdev->dev, "Successfully registered endpoint %s!\n", ep->name);
         break;
     }
 
@@ -1703,7 +1703,7 @@ static int fusion_io_probe(struct platform_device *pdev)
     // otherwise, we scan the known HW
     if (bd->has_slot_io == false) {
         /* We are a fixed IO device */
-        dev_info(&pdev->dev, "Base device is fixed IO\n");
+        dev_dbg(&pdev->dev, "Base device is fixed IO\n");
 
         // for all the io blocks on the device
         for (i = 0; i < bd->num_ics; ++i) {
@@ -1720,7 +1720,7 @@ static int fusion_io_probe(struct platform_device *pdev)
                     continue;
                 }
 
-                dev_info(&pdev->dev, "Setting i2c client for block %s endpoint %s...\n", 
+                dev_dbg(&pdev->dev, "Setting i2c client for block %s endpoint %s...\n", 
                                       ic->data.model, ep->name);
 
                 // set up the i2c_client
@@ -1732,7 +1732,7 @@ static int fusion_io_probe(struct platform_device *pdev)
                 ep->i2c_client = endpoint_get_i2c_client(pdev, ep, i2c_adapter);
 
                 if(ep->i2c_client == NULL) {
-                    dev_info(&pdev->dev, "Failed to set i2c client...");
+                    dev_err(&pdev->dev, "Failed to set i2c client...");
                     ret = -ENODEV;
                     goto error;
                 }
@@ -1743,7 +1743,7 @@ static int fusion_io_probe(struct platform_device *pdev)
                     goto error;
                 }
 
-                dev_info(&pdev->dev, "Successfully registered endpoint %s!\n", ep->name);
+                dev_dbg(&pdev->dev, "Successfully registered endpoint %s!\n", ep->name);
             }
 
             // configure GPIOs
@@ -1758,7 +1758,7 @@ static int fusion_io_probe(struct platform_device *pdev)
                 goto error;
             }
 
-            dev_info(&pdev->dev, "Successfully registered IO card %d model %s!\n", i, ic->data.model);
+            dev_dbg(&pdev->dev, "Successfully registered IO card %d model %s!\n", i, ic->data.model);
         }
     } else if (bd->has_slot_io == true) { /* we are a slot IO device */
         // go through all slots
@@ -1788,7 +1788,7 @@ static int fusion_io_probe(struct platform_device *pdev)
                 i2c_client = endpoint_get_i2c_client(pdev, ep, i2c_adapter);
                 
                 if (i2c_client) {
-                    dev_info(&pdev->dev, "Found %s on io-card model %s, slot %d\n", 
+                    dev_dbg(&pdev->dev, "Found %s on io-card model %s, slot %d\n", 
                                                                     ep->name, 
                                                                     ic->data.model, 
                                                                     ic->slot);
@@ -1800,7 +1800,7 @@ static int fusion_io_probe(struct platform_device *pdev)
 
             // if it's not there, assume no IO card in this slot
             if (i2c_client == NULL) {
-                dev_info(&pdev->dev, "No IO card found on slot %d\n", i);
+                dev_dbg(&pdev->dev, "No IO card found on slot %d\n", i);
                 ep = NULL;
                 continue;
             }
@@ -1853,7 +1853,7 @@ static int fusion_io_probe(struct platform_device *pdev)
                     continue;
                 }
 
-                dev_info(&pdev->dev, "Setting i2c client for card slot %d block %s endpoint %s...\n", 
+                dev_dbg(&pdev->dev, "Setting i2c client for card slot %d block %s endpoint %s...\n", 
                                                                 ic->slot, ic->data.model, ep->name);
 
                 // set up the i2c_client
@@ -1866,7 +1866,7 @@ static int fusion_io_probe(struct platform_device *pdev)
                 ep->i2c_client = endpoint_get_i2c_client(pdev, ep, i2c_adapter);
 
                 if(ep->i2c_client == NULL) {
-                    dev_info(&pdev->dev, "Failed to set i2c client...");
+                    dev_err(&pdev->dev, "Failed to set i2c client...");
                     ret = -ENODEV;
                     goto error;
                 }
@@ -1879,7 +1879,7 @@ static int fusion_io_probe(struct platform_device *pdev)
                     goto error;
                 }
 
-                dev_info(&pdev->dev, "Successfully registered endpoint %s!\n", ep->name);
+                dev_dbg(&pdev->dev, "Successfully registered endpoint %s!\n", ep->name);
             }
 
             // set up parent references

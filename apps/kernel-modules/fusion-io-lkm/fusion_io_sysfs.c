@@ -704,7 +704,7 @@ int fusion_io_create_sysfs_base(struct platform_device *pdev)
         ep_gpio = &bd->gpios[i];
 
         if (!ep_gpio->valid) {
-            dev_info(&pdev->dev, "Invalid base GPIO %s in create_sysfs_base\n", ep_gpio->name);
+            dev_dbg(&pdev->dev, "Invalid base GPIO %s in create_sysfs_base\n", ep_gpio->name);
             continue;
         } else if (ep_gpio->export == EP_GPIO_NO_EXPORT) {
             continue;
@@ -746,7 +746,7 @@ int fusion_io_create_sysfs_base(struct platform_device *pdev)
             ep_gpio = &ep->gpios[j];
             
 			if (!ep_gpio->valid) {
-                dev_info(&pdev->dev, "Invalid GPIO %s:%s in create_sysfs_base\n", ep->name, ep_gpio->name);
+                dev_dbg(&pdev->dev, "Invalid GPIO %s:%s in create_sysfs_base\n", ep->name, ep_gpio->name);
                 continue;
             } else if (ep_gpio->export == EP_GPIO_NO_EXPORT) {
                 continue;
@@ -758,7 +758,7 @@ int fusion_io_create_sysfs_base(struct platform_device *pdev)
                 return ret;
             }
 
-			dev_info(&pdev->dev, "Sysfs entry created for GPIO %s:%s\n", ep->name, ep_gpio->name);
+			dev_dbg(&pdev->dev, "Sysfs entry created for GPIO %s:%s\n", ep->name, ep_gpio->name);
         }
 
 		for (int j = 0; j < ep->num_cmds; ++j) {
@@ -947,7 +947,7 @@ int fusion_io_create_sysfs_io_card(struct platform_device *pdev, struct io_card 
         ep_gpio = &ic->gpios[i];
 
         if (!ep_gpio->valid) {
-            dev_info(&pdev->dev, "Invalid GPIO %s:%s in create_sysfs_io_card\n", ic->data.model, ep_gpio->name);
+            dev_dbg(&pdev->dev, "Invalid GPIO %s:%s in create_sysfs_io_card\n", ic->data.model, ep_gpio->name);
             continue;
         } else if (ep_gpio->export == EP_GPIO_NO_EXPORT) {
             continue;
@@ -989,7 +989,7 @@ int fusion_io_create_sysfs_io_card(struct platform_device *pdev, struct io_card 
             ep_gpio = &ep->gpios[j];
             
 			if (!ep_gpio->valid) {
-                dev_info(endpoint_dev, "Invalid GPIO %s:%s:%s in create_sysfs_io_card\n", ic->data.model, ep->name, ep_gpio->name);
+                dev_dbg(endpoint_dev, "Invalid GPIO %s:%s:%s in create_sysfs_io_card\n", ic->data.model, ep->name, ep_gpio->name);
                 continue;
             } else if (ep_gpio->export == EP_GPIO_NO_EXPORT) {
                 continue;
