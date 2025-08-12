@@ -52,14 +52,21 @@ static int fusion_sound_card_hw_params(struct snd_pcm_substream *substream,
     priv->sample_rate = params_rate(params);
     priv->sample_format = params_format(params);
 
-    dev_info(dev, "Setting HW params\n");
-    dev_info(dev, "sample_rate = %d, sample_format = %d, channels = %d\n", 
+    dev_dbg(dev, "Setting HW params:\n");
+    dev_dbg(dev, "sample_rate = %d, sample_format = %d, channels = %d\n", 
              priv->sample_rate, priv->sample_format, channels);
-    dev_info(dev, "slots = %d, slot_width = %d\n", slots, slot_width);
+    dev_dbg(dev, "slots = %d, slot_width = %d\n", slots, slot_width);
+
+    ret = snd_soc_dai_set_fmt(snd_soc_rtd_to_cpu(rtd, 0), 
+                              snd_soc_daifmt_clock_provider_flipped(rtd->dai_link->dai_fmt));
+    if (ret) {
+        dev_err(rtd->card->dev, "Failed to set SAI format: %d\n", ret);
+        return ret;
+    }
 
     ret = snd_soc_dai_set_sysclk(snd_soc_rtd_to_cpu(rtd, 0), 
                                  FSL_SAI_CLK_MAST1,
-                                 12288000,
+                                 24576000,
                                  SND_SOC_CLOCK_IN);
     if (ret && ret != -ENOTSUPP) {
         dev_err(dev, "failed to set sysclk for IO cards\n");
@@ -190,18 +197,18 @@ static int fusion_sound_card_probe(struct platform_device *pdev)
     }
     
     if (of_property_read_string(np, "format", &format)) {
-        dev_warn(&pdev->dev, "Missing 'format' property, using default 'i2s'.\n");
+        dev_warn(&pdev->dev, "Missing 'format' property, using default 'left_j'.\n");
         priv->dai_link.dai_fmt = SND_SOC_DAIFMT_LEFT_J;
     } else {
-        if (!strcmp(format, "i2s"))
+        if (!strcmp(format, "left_j"))
             priv->dai_link.dai_fmt = SND_SOC_DAIFMT_LEFT_J;
         else {
-            dev_warn(&pdev->dev, "Unsupported format '%s', using 'i2s'.\n", format);
+            dev_warn(&pdev->dev, "Unsupported format '%s', using 'left_j'.\n", format);
             priv->dai_link.dai_fmt = SND_SOC_DAIFMT_LEFT_J;
         }
     }
     
-    priv->dai_link.dai_fmt |= SND_SOC_DAIFMT_CBP_CFP | SND_SOC_DAIFMT_NB_NF;
+    priv->dai_link.dai_fmt |= SND_SOC_DAIFMT_CBP_CFP | SND_SOC_DAIFMT_IB_NF;
     
     priv->dai_link.cpus->of_node = cpu_np;
     priv->dai_link.codecs->of_node = codec_np;

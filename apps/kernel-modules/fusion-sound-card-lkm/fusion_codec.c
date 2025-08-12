@@ -12,9 +12,6 @@
 
 #define CODEC_DRIVER_NAME "fusion-codec"
 
-#define MAX_IO_CARDS  4
-#define MAX_TDM_SLOTS 8
-
 struct fusion_codec_priv {
     u32 rxtx_pins;
     u32 tdm_slots;
