@@ -84,7 +84,7 @@ jobs:
 
   cloud-web-backend-build:
     needs: buildChecks
-    if: needs.buildChecks.outputs.cloudServicesBackend == 'true' && github.ref == 'refs/heads/feature/**'
+    if: needs.buildChecks.outputs.cloudServicesBackend == 'true' && github.ref == 'refs/heads/feature/add-fusion-dsp-project'
     concurrency:
       group: cloud-web-backend-build
     runs-on: ubuntu-agent
@@ -106,7 +106,7 @@ jobs:
 
   fusion-dsp-build:
     needs: buildChecks
-    if: needs.buildChecks.outputs.cloudServicesBackend == 'true' && github.ref == 'refs/heads/feature/**'
+    if: needs.buildChecks.outputs.cloudServicesBackend == 'true' && github.ref == 'refs/heads/feature/add-fusion-dsp-project'
     concurrency:
       group: fusion-dsp-build
     runs-on: ubuntu-agent
