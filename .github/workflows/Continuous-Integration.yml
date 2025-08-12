@@ -102,4 +102,27 @@ jobs:
         with:
           cloud_backend_sonar_token: ${{ secrets.CLOUD_BACKEND_SONAR_TOKEN }}
           nexus_password: ${{ secrets.NEXUS_PASSWORD }}
-          nexus_url: ${{ secrets.NEXUS_BASE_URL }}         
+          nexus_url: ${{ secrets.NEXUS_BASE_URL }}     
+
+  fusion-dsp-build:
+    needs: buildChecks
+    if: needs.buildChecks.outputs.cloudServicesBackend == 'true' && github.ref == 'refs/heads/develop'
+    concurrency:
+      group: fusion-dsp-build
+    runs-on: ubuntu-agent
+    timeout-minutes: 30
+
+    steps:
+      - name: Clone project
+        uses: actions/checkout@v4
+
+      - name: Build Apps
+        uses: ./.github/reusable-actions/build-fusion-dsp
+        with:
+          flutter_apps_sonar_token: ${{ secrets.FLUTTER_APPS_SONAR_TOKEN }}
+          nexus_password: ${{ secrets.NEXUS_PASSWORD }}
+          nexus_url: ${{ secrets.NEXUS_BASE_URL }}
+          keychain_password: ${{ secrets.KEYCHAIN_PASSWORD }}
+          jenkins_user_name: ${{ secrets.JENKINS_USER_NAME }}
+          jenkins_user_token: ${{ secrets.JENKINS_TOKEN }}
+          jenkins_url: ${{ secrets.JENKINS_URL }}

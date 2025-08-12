@@ -1,0 +1,112 @@
+{
+    "session": {
+        "property_settings": [
+            { "name": "frame_size", "value": 32},
+            { "name": "sample_rate", "value": 48000 }
+        ]
+    },
+    "audio_tasks": [
+        {
+            "name": "task1",
+            "property_settings": [
+                { "name": "is_jack_client", "value": false },
+                { "name": "frame_size", "value": 32},
+                { "name": "sample_rate", "value": 48000 },
+                { "name": "timing_log_file", "value": "{{ output_file }}" },
+                { "name": "profile_blocks", "value" : true }
+
+            ],
+            "blocks": [
+                {
+                    "name": "infile",
+                    "algorithm": "wav_read",
+                    "property_settings": [
+                        { "name": "frame_size", "value": 32},
+                        { "name": "sample_rate", "value": 48000 },
+                        { "name": "filename", "value": "in.wav" }
+                    ],
+                    "terminal_channels": [
+                        { "name": "out", "channels": 1 }
+                    ]
+                },
+                {
+                    "name": "gate",
+                    "algorithm": "gate",
+                    "property_settings": [
+                        { "name": "channels", "value": {{ channels }} },
+                        { "name": "frame_size", "value": 32 },
+                        { "name": "sample_rate", "value": 48000 }
+                    ]
+                },
+                {
+                    "name": "outfile",
+                    "algorithm": "wav_write",
+                    "property_settings": [
+                        { "name": "frame_size", "value": 32 },
+                        { "name": "sample_rate", "value": 48000 }
+                    ],
+                    "terminal_channels": [
+                        { "name": "in", "channels": {{ channels }} }
+                    ]
+                }
+            ],
+            "block_connections": [
+                {% for channel in range(1,channels+1)%}
+
+                  {
+                    "source_block": "infile",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "gate",
+                    "input_terminal": "in",
+                    "input_channel": {{ channel }}
+                },
+                {
+                    "source_block": "gate",
+                    "output_terminal": "out",
+                    "output_channel": {{ channel }},
+                    "destination_block": "outfile",
+                    "input_terminal": "in",
+                    "input_channel": {{ channel }}
+                },
+                {% endfor %}
+                {
+                    "source_block": "infile",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "gate",
+                    "input_terminal": "sidechain_in",
+                    "input_channel": 1
+                }
+
+            ]
+        }
+    ],
+    "parameter_settings": [
+        {
+            "target": "gate",
+            "name": "threshold",
+            "value": -15.0
+        },
+        {
+            "target": "gate",
+            "name": "range",
+            "value": -60.0
+        },
+        {
+            "target": "gate",
+            "name": "attack",
+            "value": 0.5
+        },
+        {
+            "target": "gate",
+            "name": "decay",
+            "value": 10.0
+        },
+        {
+            "target": "gate",
+            "name": "hold",
+            "value": 100.0
+        }
+    ]
+}
