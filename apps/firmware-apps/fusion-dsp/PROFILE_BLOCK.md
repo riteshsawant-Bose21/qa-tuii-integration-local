@@ -156,9 +156,9 @@ Each algorithm configuration in the script can specify:
 2. Tests multiple parameter combinations
 3. Runs fusion_dsp with each configuration
 4. Reads timing data from CSV output
-5. Removes outliers (top 0.01% and bottom 1%)
+5. Removes outliers (Keeps values in range 99.9 - 99.99% to measure the worse case)
 6. Uses linear regression to model performance
-7. Saves models and formulas
+7. Plots and saves models and formulas
 
 ## Troubleshooting
 
