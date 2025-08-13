@@ -23,12 +23,10 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Trigger jenkins job
-      uses: joshlk/jenkins-githubaction@master
-      with:
-        url: ${{ inputs.jenkins_url }}
-        job_name: Fusion/Fusion-DSP/Build-Fusion-DSP
-        username: ${{ inputs.jenkins_user_name }}
-        api_token: ${{ inputs.jenkins_user_token }}
-        timeout: "1000"
-       
+    - name: Build with Waf
+      shell: bash
+      working-directory: apps/firmware-apps/fusion-dsp
+      run: |
+        source /home/ec2-user/fusion-mini-SDK/armv8a-fusion-mini-toolchain-6.12-styhead.sh
+        python3 ./waf configure --platform=varmini
+        python3 ./waf build
