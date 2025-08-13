@@ -23,15 +23,12 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Build
-      runs-on: ubuntu-latest
-      steps:
-        - name: Trigger jenkins job
-          uses: joshlk/jenkins-githubaction@master
-          with:
-            url: ${{ inputs.jenkins_url }}
-            job_name: Fusion/Fusion-DSP/Build-Fusion-DSP
-            username: ${{ inputs.jenkins_user_name }}
-            api_token: ${{ inputs.jenkins_user_token }}
-            timeout: "1000"
+    - name: Trigger jenkins job
+      uses: joshlk/jenkins-githubaction@master
+      with:
+        url: ${{ inputs.jenkins_url }}
+        job_name: Fusion/Fusion-DSP/Build-Fusion-DSP
+        username: ${{ inputs.jenkins_user_name }}
+        api_token: ${{ inputs.jenkins_user_token }}
+        timeout: "1000"
        
