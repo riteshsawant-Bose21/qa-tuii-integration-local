@@ -99,13 +99,13 @@ def configure(conf):
             # global namespace is deprecated. Please use <boost/bind/bind.hpp> + using namespace boost::placeholders, 
             # or define BOOST_BIND_GLOBAL_PLACEHOLDERS to retain the current behavior.’
             conf.env.append_value('CXXFLAGS', '-DBOOST_BIND_GLOBAL_PLACEHOLDERS')
-            conf.env.append_value('INCLUDES', ['/usr/include'])
             onnx_path = conf.path.abspath() + '/libs/onnxruntime-linux-x64-1.17.0'
         else:
             onnx_path = conf.path.abspath() + '/libs/onnxruntime-linux-aarch64-1.17.0'
 
     # add onnxruntime library
     conf.env.append_value('INCLUDES', [onnx_path+'/include'])
+    conf.env.append_value('INCLUDES', ['/usr/include'])
     conf.env.append_value('LIBPATH', [onnx_path+'/lib'])
 
 def build(bld):
