@@ -28,4 +28,5 @@ runs:
       working-directory: apps/firmware-apps/fusion-server
       run: |
         chmod +x ./build-fusion-server
+        which go
         ./build-fusion-server --package
