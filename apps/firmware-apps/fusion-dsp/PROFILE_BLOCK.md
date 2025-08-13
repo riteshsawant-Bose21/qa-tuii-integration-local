@@ -130,7 +130,7 @@ peq : T = 890 + 23.7*bands*channels
 ```
 
 Where:
-- T = execution time in nanoseconds
+- T = execution time in seconds
 - First number = base overhead (intercept)
 - Second number = per-unit cost (slope)
 
