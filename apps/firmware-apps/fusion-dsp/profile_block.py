@@ -1,3 +1,4 @@
+import re
 import pandas as pd
 import jinja2 as jinja2
 import itertools
@@ -12,6 +13,31 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from sklearn.linear_model import LinearRegression
 from subprocess import run
+
+def check_remote_diskspace(board_ip):
+    """
+    Check the available disk space on the remote Variscite board.
+
+    Args:
+        board_ip (str): The IP address of the Variscite board.
+    """
+    result = subprocess.run(
+        ['ssh', f'root@{board_ip}', 'df', '-h', '/home/root'],
+        capture_output=True,
+        text=True
+    )
+    print(f'Disk space on {board_ip}:')
+    print(result.stdout)
+    
+    print('Cleaning up previous files...')
+    cleanup_result = subprocess.run(['ssh', f'root@{board_ip}', 'rm', '-f', '/home/root/tmp.json', '/home/root/timings.csv', '/home/root/out.wav'], 
+                   capture_output=True, text=True)
+
+    if cleanup_result.returncode == 0:
+        print('Cleanup successful.')
+    else:
+        print('Cleanup failed:')
+        print(cleanup_result.stderr)
 
 def profile(config_name, remote=True):
     """
@@ -36,6 +62,7 @@ def profile(config_name, remote=True):
 
     for param_dict in params_iter:
         if remote:
+            check_remote_diskspace(board_ip)
             config_content = template.render(
                 output_file='/home/root/timings.csv',
                 wav_input=current_config.get('wav_input','in.wav'),
@@ -77,6 +104,8 @@ def profile(config_name, remote=True):
                             print(f"Captured analysis MIPS: avg={numbers[2]}")
             
             os.system(f'scp root@{board_ip}:/home/root/timings.csv ./timings.csv')
+            print(f'Cleanup after remote execution')
+            os.system(f'ssh root@{board_ip} "rm -f /home/root/tmp.json /home/root/timings.csv"')
         else:
             config_content = template.render(
                 output_file='timings.csv',
