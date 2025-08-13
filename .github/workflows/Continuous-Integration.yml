@@ -115,6 +115,8 @@ jobs:
     steps:
       - name: Clone project
         uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
 
       - name: Build Apps
         uses: ./.github/reusable-actions/build-fusion-dsp
