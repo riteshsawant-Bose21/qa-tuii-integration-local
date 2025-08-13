@@ -105,7 +105,6 @@ def configure(conf):
 
     # add onnxruntime library
     conf.env.append_value('INCLUDES', [onnx_path+'/include'])
-    conf.env.append_value('INCLUDES', ['/usr/include'])
     conf.env.append_value('LIBPATH', [onnx_path+'/lib'])
 
 def build(bld):
