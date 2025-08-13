@@ -1,0 +1,31 @@
+name: "Build Fusion Server App"
+description: "Build Fusion Server App"
+inputs:
+  flutter_apps_sonar_token:
+    description: 'SonarQube server token'
+    required: true
+  nexus_password:
+    description: 'Nexus repository password'
+    required: true
+  jenkins_user_name:
+    description: 'Jenkins username for authentication'
+    required: true
+  jenkins_user_token:
+    description: 'Jenkins token for authentication'
+    required: true
+  jenkins_url:
+    description: 'Nexus repository URL'
+    required: true
+  nexus_url:
+    description: 'Nexus repository URL'
+    required: true
+        
+runs:
+  using: "composite"
+  steps:
+    - name: Build Fusion Server
+      shell: bash
+      working-directory: apps/firmware-apps/fusion-server
+      run: |
+        chmod +x ./build-fusion-server
+        ./build-fusion-server --package

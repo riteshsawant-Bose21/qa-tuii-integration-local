@@ -128,3 +128,26 @@ jobs:
           jenkins_user_name: ${{ secrets.JENKINS_USER_NAME }}
           jenkins_user_token: ${{ secrets.JENKINS_TOKEN }}
           jenkins_url: ${{ secrets.JENKINS_URL }}
+
+  fusion-fusion-server:
+    needs: buildChecks
+    if: needs.buildChecks.outputs.cloudServicesBackend == 'true' && github.ref == 'refs/heads/feature/add-fusion-dsp-project'
+    concurrency:
+      group: fusion-fusion-server
+    runs-on: ubuntu-agent
+    timeout-minutes: 30
+
+    steps:
+      - name: Clone project
+        uses: actions/checkout@v4
+
+      - name: Build Fusion Server
+        uses: ./.github/reusable-actions/build-fusion-server
+        with:
+          flutter_apps_sonar_token: ${{ secrets.FLUTTER_APPS_SONAR_TOKEN }}
+          nexus_password: ${{ secrets.NEXUS_PASSWORD }}
+          nexus_url: ${{ secrets.NEXUS_BASE_URL }}
+          keychain_password: ${{ secrets.KEYCHAIN_PASSWORD }}
+          jenkins_user_name: ${{ secrets.JENKINS_USER_NAME }}
+          jenkins_user_token: ${{ secrets.JENKINS_TOKEN }}
+          jenkins_url: ${{ secrets.JENKINS_URL }}

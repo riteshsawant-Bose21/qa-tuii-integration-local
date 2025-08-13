@@ -1,0 +1,105 @@
+{
+    "title": "Fusion Server Metrics",
+    "timezone": "browser",
+    "panels": [
+        {
+            "type": "timeseries",
+            "title": "CPU Usage (%)",
+            "targets": [
+                {
+                    "expr": "fusion_process_cpu_percent",
+                    "legendFormat": "CPU",
+                    "interval": ""
+                }
+            ]
+        },
+        {
+            "type": "timeseries",
+            "title": "Memory Usage (bytes)",
+            "targets": [
+                {
+                    "expr": "fusion_process_memory_bytes",
+                    "legendFormat": "Memory",
+                    "interval": ""
+                }
+            ]
+        },
+        {
+            "type": "timeseries",
+            "title": "Goroutines",
+            "targets": [
+                {
+                    "expr": "fusion_go_goroutines",
+                    "legendFormat": "Goroutines",
+                    "interval": ""
+                }
+            ]
+        },
+        {
+            "type": "timeseries",
+            "title": "WebSocket Clients",
+            "targets": [
+                {
+                    "expr": "fusion_websocket_clients",
+                    "legendFormat": "Clients",
+                    "interval": ""
+                }
+            ]
+        },
+        {
+            "type": "timeseries",
+            "title": "HAProxy Current Connections",
+            "targets": [
+                {
+                    "expr": "fusion_haproxy_current_connections",
+                    "legendFormat": "Connections",
+                    "interval": ""
+                }
+            ]
+        },
+        {
+            "type": "timeseries",
+            "title": "HTTP Request Rate (per second)",
+            "targets": [
+                {
+                    "expr": "rate(fusion_http_requests_total[1m])",
+                    "legendFormat": "HTTP RPS",
+                    "interval": ""
+                }
+            ]
+        },
+        {
+            "type": "heatmap",
+            "title": "Network RTT Histogram (ms)",
+            "targets": [
+                {
+                    "expr": "fusion_network_rtt_ms_bucket",
+                    "legendFormat": "{{target}}",
+                    "interval": ""
+                }
+            ],
+            "tooltip": {
+                "show": true,
+                "showHistogram": true
+            }
+        },
+        {
+            "type": "heatmap",
+            "title": "Sync Latency Histogram (ms)",
+            "targets": [
+                {
+                    "expr": "fusion_sync_latency_ms_bucket",
+                    "legendFormat": "{{operation}}",
+                    "interval": ""
+                }
+            ],
+            "tooltip": {
+                "show": true,
+                "showHistogram": true
+            }
+        }
+    ],
+    "schemaVersion": 35,
+    "version": 1,
+    "refresh": "15s"
+}

@@ -1,0 +1,26 @@
+package cxa
+
+import "fusion/internal/server/handler"
+
+type AnalogControllerReceiver struct {
+	manager *AnalogControllerManager
+}
+
+func NewAnalogControllerReceiver(handler *handler.Handler, listenAddr string) (*AnalogControllerReceiver, error) {
+	manager, err := NewAnalogControllerManager(handler, listenAddr)
+	if err != nil {
+		return nil, err
+	}
+
+	return &AnalogControllerReceiver{
+		manager: manager,
+	}, nil
+}
+
+func (r *AnalogControllerReceiver) GetDeviceStates() map[string]any {
+	return r.manager.GetDeviceStates()
+}
+
+func (r *AnalogControllerReceiver) Close() {
+	r.manager.Close()
+}
