@@ -29,6 +29,7 @@ def profile(config_name, remote=True):
     template = env.get_template(current_config['path'])
     
     frames = []
+    analysis_mips_data = []
 
     params_iter = dict_to_iter(current_config.get('parameters', default_parameters))
     feature_dict = current_config.get('features', default_features)
@@ -47,14 +48,33 @@ def profile(config_name, remote=True):
             
             print(f'REMOTE: Running with parameters: {param_dict}')
             os.system(f'scp tmp.json root@{board_ip}:/home/root/tmp.json')
+            
+            if config_name == 'feedback_suppression':
+                fusion_cmd = '/usr/local/bin/fusion_dsp -v -d /etc/fusion/dsp/algorithm-definitions.json -c /home/root/tmp.json 2>&1'
+            else:
+                fusion_cmd = '/usr/local/bin/fusion_dsp -d /etc/fusion/dsp/algorithm-definitions.json -c /home/root/tmp.json'
         
             result = subprocess.run([
-                'ssh', f'root@{board_ip}', '/usr/local/bin/fusion_dsp -d /etc/fusion/dsp/algorithm-definitions.json -c /home/root/tmp.json',
+                'ssh', f'root@{board_ip}', fusion_cmd
             ], capture_output=True, text=True)
 
             print(f'fusion_dsp output: {result.stdout}')
             if result.stderr:
                 print(f'fusion_dsp error: {result.stderr}')
+            
+            if config_name == 'feedback_suppression':
+                for line in result.stdout.split('\n'):
+                    if 'AudioTask 0 MIPS:' in line:
+                        parts = line.split('MIPS:')[1].strip()
+                        numbers = parts.replace(' first,', '').replace(' max,', '').replace(' avg.', '').split()
+                        if len(numbers) >= 3:
+                            analysis_mips_data.append({
+                                'channels': param_dict['channels'],
+                                'analysis_first': float(numbers[0]),
+                                'analysis_max': float(numbers[1]),
+                                'analysis_avg': float(numbers[2])
+                            })
+                            print(f"Captured analysis MIPS: avg={numbers[2]}")
             
             os.system(f'scp root@{board_ip}:/home/root/timings.csv ./timings.csv')
         else:
@@ -76,16 +96,13 @@ def profile(config_name, remote=True):
             run(['./build/fusion_dsp','-c', 'tmp.json'],
                 env=env
                 )
-            df = pd.read_csv('timings.csv')
-            for feature, formula in feature_dict.items():
-                df[feature] = formula(param_dict)
             
-            frames.append(df)
         try:
             df = pd.read_csv('timings.csv')
             
             for feature, formula in feature_dict.items():
-                df[feature] = formula(param_dict)
+                if feature != 'analysis_avg':
+                    df[feature] = formula(param_dict)
             
             frames.append(df)
         except Exception as e:
@@ -93,8 +110,17 @@ def profile(config_name, remote=True):
             continue
     
     result_df = pd.concat(frames, axis=0, ignore_index=True)
+    
+    if config_name == 'feedback_suppression':
+
+        if analysis_mips_data:
+            for mips_entry in analysis_mips_data:
+                ch = mips_entry['channels']
+                result_df.loc[result_df['channels'] == ch, 'analysis_avg'] = mips_entry['analysis_avg']
+
     print(result_df.columns.tolist())
     print(result_df.head())
+    
     if remote:
         print("Copying out.wav from board...")
         os.system(f'scp root@{board_ip}:/home/root/out.wav ./out.wav')
@@ -134,7 +160,7 @@ def profile(config_name, remote=True):
             (result_df[block] <= high_quantile)
         ]]
         print(f"No grouping column found, using overall quantiles: {low_quantile}, {high_quantile}")
-        print(f"Total points before filtering: {len(result_df)}, Points after filtering: {len(filtered_df)} ({len(filtered_df)/len(result_df)*100:.1f}%)")
+        print(f"Total points before filtering: {len(result_df)}, Points after filtering: {len(filtered_df[0])} ({len(filtered_df[0])/len(result_df)*100:.1f}%)")
 
     filtered_df = pd.concat(filtered_df, ignore_index=True)
 
@@ -159,7 +185,7 @@ def profile(config_name, remote=True):
         x_range_df = pd.DataFrame({feature_names[0]: x_range})
         y_pred_line = model.predict(x_range_df)
         plt.plot(x_range, y_pred_line, 'r-', linewidth=2, 
-                label=f'Linear fit: y = {model.intercept_} + {model.coef_}x')
+                label=f'Linear fit: y = {model.intercept_[0]:.2e} + {model.coef_[0][0]:.2e}x')
         
         plt.xlabel(feature_names[0])
         plt.ylabel(f'{block} (timing)')
@@ -176,7 +202,9 @@ def profile(config_name, remote=True):
         num_features = len(feature_names)
         fig, axes = plt.subplots(1, num_features, figsize=(6*num_features, 5))
         
-        if num_features == 2:
+        if num_features == 1:
+            axes = [axes]
+        elif num_features == 2:
             axes = [axes[0], axes[1]]
         
         for i, feature in enumerate(feature_names):
@@ -243,7 +271,14 @@ configurations = {
     'feedback_suppression' : {
         'path' : 'profile_simple_block.json.jinja',
         'algorithm' : 'feedback_suppression',
-        'wav_input': 'in_feedback.wav'
+        'wav_input': 'in_feedback.wav',
+        'features': {
+            'channels': lambda x: x['channels'],
+            'analysis_avg': lambda x: 0
+        },
+        'block': 'feedback_suppression', 
+        'csv_dump': 'feedback_suppression.csv',
+        'format_string': 'T = {0} + {1}*channels'
     },
     'gain' : {
         'path' : 'profile_simple_block.json.jinja',
