@@ -1,6 +1,8 @@
 # moon.yml for the cloud-services-ui application
 # go run cmd/server/main.go
 # docker-compose up --build
+language: go
+
 tasks:
   run-server:
     command: "go"

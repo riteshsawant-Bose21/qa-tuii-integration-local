@@ -27,6 +27,4 @@ runs:
       shell: bash
       working-directory: apps/firmware-apps/fusion-dsp
       run: |
-        source /home/ec2-user/fusion-mini-build-cache/bose/fusion/yocto-sdk/environment-setup-cortexa53-crypto-poky-linux
-        python3 ./waf configure --platform=varmini
-        python3 ./waf build
+        moon run fusion-dsp:build-dsp

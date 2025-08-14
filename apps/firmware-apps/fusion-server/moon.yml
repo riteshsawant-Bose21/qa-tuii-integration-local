@@ -1,6 +1,12 @@
 # moon.yml for the cloud-services-ui application
 # go run cmd/server/main.go
 # docker-compose up --build
+project:
+  name: 'Fusion Server'
+  description: 'Go based FUsion server application'
+
+language: go
+
 tasks:
   run-server:
     command: "go"

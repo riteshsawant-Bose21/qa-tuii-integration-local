@@ -1,5 +1,9 @@
 language: "flutter"
 
+dependsOn:
+  - fusion-dsp
+  - fusion-server
+
 tasks:
   build-apk:
     command: "flutter"

@@ -1,4 +1,7 @@
 # moon.yml for the cloud-services-ui application
+dependsOn:
+  - 'fusion-cloud'
+
 tasks:
   start-customer:
     command: "yarn"

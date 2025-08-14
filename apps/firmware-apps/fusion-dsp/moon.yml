@@ -1,15 +1,20 @@
-# moon.yml for the cloud-services-ui application
-# go run cmd/server/main.go
-# docker-compose up --build
+project:
+  name: 'Fusion DSP'
+  description: 'Fsion DSP application'
+
 tasks:
   build-dsp:
     command: "python3"
     args: ["./waf", "build"]
+    deps:
+      - waf-configure
   
-  go-get:
-    command: "go"
-    args: ["get", "all"]
+  waf-configure:
+    command: "python3"
+    args: ["./waf", "configure", "--platform=varmini"]
+    deps:
+      - setup-cross-compile-toolchain
 
-  build:
-    command: "go"
-    args: ["build", "-o", "fusion-web-services", "cmd/server/main.go"]
+  setup-cross-compile-toolchain:
+    command: "source"
+    args: ["/home/ec2-user/fusion-mini-build-cache/bose/fusion/yocto-sdk/environment-setup-cortexa53-crypto-poky-linux"]
