@@ -1,4 +1,3 @@
-Monorepo build
 Fusion DSP
 ==========
 
