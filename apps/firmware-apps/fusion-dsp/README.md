@@ -1,4 +1,4 @@
-Fusion DSP-Monorepo
+Fusion DSP
 ==========
 
 Building

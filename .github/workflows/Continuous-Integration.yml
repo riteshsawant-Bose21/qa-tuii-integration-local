@@ -20,7 +20,7 @@ jobs:
       all: ${{ steps.filter.outputs.all }}
       fusionLauncher: ${{ steps.filter.outputs.fusionLauncher }}
       cloudServicesUI: ${{ steps.filter.outputs.cloudServicesUI }}
-      # cloudServicesBackend: ${{ steps.filter.outputs.cloudServicesBackend }}
+      cloudServicesBackend: ${{ steps.filter.outputs.cloudServicesBackend }}
       fusionDSP: ${{ steps.filter.outputs.fusionDSP }}
       fusionServer: ${{ steps.filter.outputs.fusionServer }}
     
@@ -34,6 +34,7 @@ jobs:
       - uses: dorny/paths-filter@v3
         id: filter
         with:
+          initial-fetch-depth: ''
           filters: |
             all:
               - "./*" # Any file at the root directory
@@ -43,8 +44,8 @@ jobs:
               - "./apps/frontend/flutter-apps/**"
             cloudServicesUI:
               - "./apps/frontend/react-apps/**"
-            # cloudServicesBackend:
-            #   - "./apps/cloud-backend/fusion-cloud/**"
+            cloudServicesBackend:
+              - "./apps/cloud-backend/fusion-cloud/**"
             fusionDSP:
               - "./apps/firmware_apps/fusion-dsp/**"
             fusionServer:
@@ -91,31 +92,31 @@ jobs:
       - name: Build Apps
         uses: ./.github/reusable-actions/build-cloud-servicesUI
 
-  # cloud-web-backend-build:
-  #   needs: buildChecks
-  #   if: needs.buildChecks.outputs.cloudServicesBackend == 'true' && github.ref == 'refs/heads/feature/add-fusion-dsp-project'
-  #   concurrency:
-  #     group: cloud-web-backend-build
-  #   runs-on: ubuntu-agent
-  #   timeout-minutes: 30
+  cloud-web-backend-build:
+    needs: buildChecks
+    if: needs.buildChecks.outputs.cloudServicesBackend == 'true' && github.ref == 'refs/heads/feature/add-fusion-dsp-project'
+    concurrency:
+      group: cloud-web-backend-build
+    runs-on: ubuntu-agent
+    timeout-minutes: 30
 
-  #   steps:
-  #     - name: Clone project
-  #       uses: actions/checkout@v4
+    steps:
+      - name: Clone project
+        uses: actions/checkout@v4
 
-  #     - name: Setup Monorepo Toolchain
-  #       uses: ./.github/reusable-actions/setup-toolchain
+      - name: Setup Monorepo Toolchain
+        uses: ./.github/reusable-actions/setup-toolchain
 
-  #     - name: Build Apps
-  #       uses: ./.github/reusable-actions/build-cloud-web-backend
-  #       with:
-  #         cloud_backend_sonar_token: ${{ secrets.CLOUD_BACKEND_SONAR_TOKEN }}
-  #         nexus_password: ${{ secrets.NEXUS_PASSWORD }}
-  #         nexus_url: ${{ secrets.NEXUS_BASE_URL }}     
+      - name: Build Apps
+        uses: ./.github/reusable-actions/build-cloud-web-backend
+        with:
+          cloud_backend_sonar_token: ${{ secrets.CLOUD_BACKEND_SONAR_TOKEN }}
+          nexus_password: ${{ secrets.NEXUS_PASSWORD }}
+          nexus_url: ${{ secrets.NEXUS_BASE_URL }}     
 
   fusion-dsp-build:
     needs: buildChecks
-    if: needs.buildChecks.outputs.all == 'true' && github.ref == 'refs/heads/feature/add-fusion-dsp-project'
+    if: needs.buildChecks.outputs.fusionDSP == 'true' && github.ref == 'refs/heads/feature/add-fusion-dsp-project'
     concurrency:
       group: fusion-dsp-build
     runs-on: ubuntu-agent
