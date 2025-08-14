@@ -1,0 +1,146 @@
+#!/bin/bash
+
+function show_help() {
+    echo "Usage: ./run_tests.sh [--all|--controllers|--fusion] [--vip IP:PORT]"
+    echo "Options:"
+    echo "  --all         Run all tests (default)"
+    echo "  --bluetooth   Run only bluetooth tests"
+    echo "  --cluster     Run only cluster tests"
+    echo "  --controllers Run only controller tests"
+    echo "  --fusion      Run only fusion tests"     
+    echo "  --logger      Run only logger tests"     
+    echo "  --persistence Run only persistence tests"     
+    echo "  --sap         Run only SAP tests"     
+    echo "  --short       Run short versions of all tests"     
+    echo "  --snapshot    Run only snapshot tests"     
+    echo "  --state       Run only state manager tests"     
+    echo "  --tasks       Run only tasks tests"     
+    echo "  --updater     Run only updater tests"     
+    echo "  --websocket   Run only websocket tests"     
+    echo "  --vip         VIP address and port (default: 192.168.64.100:8080)"
+    exit 1
+}
+
+test_type="short"
+vip="192.168.64.100:8080"
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --all)
+            test_type="all"
+            shift
+            ;;
+        --bluetooth)
+            test_type="bluetooth"
+            shift
+            ;;
+        --cluster)
+            test_type="cluster"
+            shift
+            ;;
+        --controllers)
+            test_type="controllers"
+            shift
+            ;;
+        --fusion)
+            test_type="fusion"
+            shift
+            ;;
+        --logger)
+            test_type="logger"
+            shift
+            ;;
+        --persistence)
+            test_type="persistence"
+            shift
+            ;;
+        --sap)
+            test_type="sap"
+            shift
+            ;;
+
+        --short)
+            test_type="short"
+            shift
+            ;;
+        --snapshot)
+            test_type="snapshot"
+            shift
+            ;;
+        --state)
+            test_type="state"
+            shift
+            ;;
+        --tasks)
+            test_type="tasks"
+            shift
+            ;;
+        --updater)
+            test_type="updater"
+            shift
+            ;;
+        --websocket)
+            test_type="websocket"
+            shift
+            ;;
+        --vip)
+            vip="$2"
+            shift 2
+            ;;
+        *)
+            show_help
+            ;;
+    esac
+done
+
+sh scripts/multipass/clear-config.sh
+
+cd fusion/test || exit 1
+
+case "$test_type" in
+    "all")
+        go test -v --race ./... -args --auto --vip "$vip"
+        ;;
+    "bluetooth")
+        go test -v --race ./bluetooth_test.go
+        ;;
+    "cluster")
+        go test -v --race ./cluster_test.go
+        ;;
+    "controllers")
+        go test -v --race ./cxa_test.go ./cxd_test.go
+        ;;
+    "fusion")
+        go test -v --race ./fusion_test.go -args --auto --vip "$vip"
+        ;;
+    "logger")
+        go test -v --race ./logger_test.go
+        ;;
+    "persistence")
+        go test -v --race ./persistence_test.go
+        ;;
+    "sap")
+        go test -v --race ./sap_test.go
+        ;;        
+    "short")
+        go test -v --race  -short -tags='!exclude' ./... -args --auto --vip "$vip"
+        ;;
+    "snapshot")
+        go test -v --race ./snapshot_test.go
+        ;;
+    "state")
+        go test -v --race ./state_test.go
+        ;;
+    "tasks")
+        go test -v --race ./tasks_test.go
+        ;;
+    "updater")
+        go test -v --race ./updater_test.go
+        ;;
+    "websocket")
+        go test -v --race ./websocket_test.go
+        ;;
+esac
+
+cd ../../ || exit 1
+sh scripts/multipass/clear-config.sh

@@ -21,14 +21,20 @@ jobs:
       fusionLauncher: ${{ steps.filter.outputs.fusionLauncher }}
       cloudServicesUI: ${{ steps.filter.outputs.cloudServicesUI }}
       cloudServicesBackend: ${{ steps.filter.outputs.cloudServicesBackend }}
+      fusionDSP: ${{ steps.filter.outputs.fusionDSP }}
+      fusionServer: ${{ steps.filter.outputs.fusionServer }}
+    
 
     steps:
       - name: Clone project
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: dorny/paths-filter@v3
         id: filter
         with:
+          initial-fetch-depth: ''
           filters: |
             all:
               - "./*" # Any file at the root directory
@@ -40,6 +46,10 @@ jobs:
               - "./apps/frontend/react-apps/**"
             cloudServicesBackend:
               - "./apps/cloud-backend/fusion-cloud/**"
+            fusionDSP:
+              - "./apps/firmware_apps/fusion-dsp/**"
+            fusionServer:
+              - "./apps/firmware_apps/fusion-server/**"
 
   flutter-android-iOS-build:
     needs: buildChecks
@@ -84,7 +94,7 @@ jobs:
 
   cloud-web-backend-build:
     needs: buildChecks
-    if: needs.buildChecks.outputs.cloudServicesBackend == 'true' && github.ref == 'refs/heads/develop'
+    if: needs.buildChecks.outputs.cloudServicesBackend == 'true' && github.ref == 'refs/heads/feature/add-fusion-dsp-project'
     concurrency:
       group: cloud-web-backend-build
     runs-on: ubuntu-agent
@@ -102,4 +112,55 @@ jobs:
         with:
           cloud_backend_sonar_token: ${{ secrets.CLOUD_BACKEND_SONAR_TOKEN }}
           nexus_password: ${{ secrets.NEXUS_PASSWORD }}
-          nexus_url: ${{ secrets.NEXUS_BASE_URL }}         
+          nexus_url: ${{ secrets.NEXUS_BASE_URL }}     
+
+  fusion-dsp-build:
+    needs: buildChecks
+    if: needs.buildChecks.outputs.fusionDSP == 'true' && github.ref == 'refs/heads/feature/add-fusion-dsp-project'
+    concurrency:
+      group: fusion-dsp-build
+    runs-on: ubuntu-agent
+    timeout-minutes: 30
+
+    steps:
+      - name: Clone project
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Build Apps
+        uses: ./.github/reusable-actions/build-fusion-dsp
+        with:
+          flutter_apps_sonar_token: ${{ secrets.FLUTTER_APPS_SONAR_TOKEN }}
+          nexus_password: ${{ secrets.NEXUS_PASSWORD }}
+          nexus_url: ${{ secrets.NEXUS_BASE_URL }}
+          keychain_password: ${{ secrets.KEYCHAIN_PASSWORD }}
+          jenkins_user_name: ${{ secrets.JENKINS_USER_NAME }}
+          jenkins_user_token: ${{ secrets.JENKINS_TOKEN }}
+          jenkins_url: ${{ secrets.JENKINS_URL }}
+
+  fusion-server-build:
+    needs: buildChecks
+    if: needs.buildChecks.outputs.fusionServer == 'true' && github.ref == 'refs/heads/feature/add-fusion-dsp-project'
+    concurrency:
+      group: fusion-server-build
+    runs-on: ubuntu-agent
+    timeout-minutes: 30
+
+    steps:
+      - name: Clone project
+        uses: actions/checkout@v4
+
+      - name: Setup Monorepo Toolchain
+        uses: ./.github/reusable-actions/setup-toolchain
+
+      - name: Build Fusion Server
+        uses: ./.github/reusable-actions/build-fusion-server
+        with:
+          flutter_apps_sonar_token: ${{ secrets.FLUTTER_APPS_SONAR_TOKEN }}
+          nexus_password: ${{ secrets.NEXUS_PASSWORD }}
+          nexus_url: ${{ secrets.NEXUS_BASE_URL }}
+          keychain_password: ${{ secrets.KEYCHAIN_PASSWORD }}
+          jenkins_user_name: ${{ secrets.JENKINS_USER_NAME }}
+          jenkins_user_token: ${{ secrets.JENKINS_TOKEN }}
+          jenkins_url: ${{ secrets.JENKINS_URL }}

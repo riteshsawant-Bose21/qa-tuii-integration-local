@@ -7,7 +7,8 @@ projects:
   - 'apps/cloud-backend/fusion-cloud'
   - 'apps/frontend/flutter-apps'
   - 'apps/frontend/react-apps'
-  - 'apps/embedded_apps/*'
+  - 'apps/firmware_apps/fusion-dsp'
+  - 'apps/firmware_apps/fusion-server'
 
 vcs:
   manager: 'git'

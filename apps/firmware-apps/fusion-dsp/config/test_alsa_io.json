@@ -1,0 +1,213 @@
+{
+    "session": {
+        "name": "fusion_dsp",
+        "property_settings": [
+            {
+                "name": "sample_rate",
+                "value": 48000
+            },
+            {
+                "name": "frame_size",
+                "value": 256
+            }
+        ]
+    },
+    "audio_tasks": [
+        {
+            "name": "task1",
+            "property_settings": [
+                {
+                    "name": "sample_rate",
+                    "value": 48000
+                },
+                {
+                    "name": "frame_size",
+                    "value": 256
+                }
+            ],
+            "blocks": [
+                {
+                    "name": "alsa_in",
+                    "algorithm": "alsa_in",
+                    "property_settings": [
+                        {
+                            "name": "sample_rate",
+                            "value": 48000
+                        },
+                        {
+                            "name": "frame_size",
+                            "value": 256
+                        },
+                        {
+                            "name": "device_name",
+                            "value": "hw:1,1"
+                        },
+                        {
+                            "name": "period_size",
+                            "value": 48
+                        }
+                    ],
+                    "terminal_channels": [
+                        {
+                            "name": "out",
+                            "channels": 2
+                        }
+                    ]
+                },
+                {
+                    "name": "jack_out",
+                    "algorithm": "jack_out",
+                    "property_settings": [
+                        {
+                            "name": "sample_rate",
+                            "value": 48000
+                        },
+                        {
+                            "name": "frame_size",
+                            "value": 256
+                        }
+                    ],
+                    "terminal_channels": [
+                        {
+                            "name": "in",
+                            "channels": 2
+                        }
+                    ]
+                }
+            ],
+            "block_connections": [
+                {
+                    "source_block": "alsa_in",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "jack_out",
+                    "input_terminal": "in",
+                    "input_channel": 1
+                },
+                {
+                    "source_block": "alsa_in",
+                    "output_terminal": "out",
+                    "output_channel": 2,
+                    "destination_block": "jack_out",
+                    "input_terminal": "in",
+                    "input_channel": 2
+                }
+            ]
+        },
+        {
+            "name": "task2",
+            "property_settings": [
+                {
+                    "name": "sample_rate",
+                    "value": 48000
+                },
+                {
+                    "name": "frame_size",
+                    "value": 256
+                }
+            ],
+            "blocks": [
+                {
+                    "name": "jack_in",
+                    "algorithm": "jack_in",
+                    "property_settings": [
+                        {
+                            "name": "sample_rate",
+                            "value": 48000
+                        },
+                        {
+                            "name": "frame_size",
+                            "value": 256
+                        }
+                    ],
+                    "terminal_channels": [
+                        {
+                            "name": "out",
+                            "channels": 2
+                        }
+                    ]
+                },
+                {
+                    "name": "alsa_out",
+                    "algorithm": "alsa_out",
+                    "property_settings": [
+                        {
+                            "name": "sample_rate",
+                            "value": 48000
+                        },
+                        {
+                            "name": "frame_size",
+                            "value": 256
+                        },
+                        {
+                            "name": "device_name",
+                            "value": "hw:1,0"
+                        },
+                        {
+                            "name": "period_size",
+                            "value": 48
+                        }
+                    ],
+                    "terminal_channels": [
+                        {
+                            "name": "in",
+                            "channels": 2
+                        }
+                    ]
+                }
+            ],
+            "block_connections": [
+                {
+                    "source_block": "jack_in",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "alsa_out",
+                    "input_terminal": "in",
+                    "input_channel": 1
+                },
+                {
+                    "source_block": "jack_in",
+                    "output_terminal": "out",
+                    "output_channel": 2,
+                    "destination_block": "alsa_out",
+                    "input_terminal": "in",
+                    "input_channel": 2
+                }
+            ]
+        }
+    ],
+    "task_connections": [
+        {
+            "source_task": "task1",
+            "output_block": "jack_out",
+            "output_channel": 1,
+            "destination_task": "system",
+            "input_block": "playback",
+            "input_channel": 1
+        },
+        {
+            "source_task": "task1",
+            "output_block": "jack_out",
+            "output_channel": 2,
+            "destination_task": "system",
+            "input_block": "playback",
+            "input_channel": 2
+        },
+        {
+            "source_task": "system",
+            "output_block": "capture",
+            "output_channel": 1,
+            "destination_task": "task2",
+            "input_block": "jack_in",
+            "input_channel": 1
+        },
+        {
+            "source_task": "system",
+            "output_block": "capture",
+            "output_channel": 2,
+            "destination_task": "task2",
+            "input_block": "jack_in",
+            "input_channel": 2
+        }
+    ]
+}

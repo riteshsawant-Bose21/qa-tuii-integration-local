@@ -1,0 +1,17 @@
+# Fusion keepalived service file
+[Unit]
+Description=Keepalived VRRP Framework
+After=network.target
+Requires=network.target
+
+[Service]
+Type=notify
+NotifyAccess=all
+KillMode=process
+EnvironmentFile=-/etc/default/keepalived
+ExecStart=/usr/sbin/keepalived --dont-fork $DAEMON_ARGS
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

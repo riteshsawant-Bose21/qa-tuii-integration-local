@@ -1,0 +1,17 @@
+#!/bin/bash
+
+# Capture all original arguments passed to QEMU
+args=("$@")
+
+# Append macOS-compatible bridged networking using vmnet
+args+=(
+  -netdev vmnet-bridged,id=net0,ifname=en0
+  -device virtio-net-pci,netdev=net0
+)
+
+# Path to the real QEMU binary
+REAL_QEMU="$(dirname "$0")/qemu-system-aarch64.real"
+
+# Execute it without embedded quotes
+"$REAL_QEMU" "${args[@]}"
+exit $?

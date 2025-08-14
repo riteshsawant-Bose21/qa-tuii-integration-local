@@ -1,0 +1,32 @@
+name: "Build Fusion DSP App"
+description: "Build Fusion DSP App"
+inputs:
+  flutter_apps_sonar_token:
+    description: 'SonarQube server token'
+    required: true
+  nexus_password:
+    description: 'Nexus repository password'
+    required: true
+  jenkins_user_name:
+    description: 'Jenkins username for authentication'
+    required: true
+  jenkins_user_token:
+    description: 'Jenkins token for authentication'
+    required: true
+  jenkins_url:
+    description: 'Nexus repository URL'
+    required: true
+  nexus_url:
+    description: 'Nexus repository URL'
+    required: true
+        
+runs:
+  using: "composite"
+  steps:
+    - name: Build with Waf
+      shell: bash
+      working-directory: apps/firmware-apps/fusion-dsp
+      run: |
+        source /home/ec2-user/fusion-mini-build-cache/bose/fusion/yocto-sdk/environment-setup-cortexa53-crypto-poky-linux
+        python3 ./waf configure --platform=varmini
+        python3 ./waf build
