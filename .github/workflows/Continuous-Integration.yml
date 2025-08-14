@@ -115,7 +115,7 @@ jobs:
 
   fusion-dsp-build:
     needs: buildChecks
-    if: needs.buildChecks.outputs.fusionDSP == 'true' && github.ref == 'refs/heads/feature/add-fusion-dsp-project'
+    if: needs.buildChecks.outputs.all == 'true' && github.ref == 'refs/heads/feature/add-fusion-dsp-project'
     concurrency:
       group: fusion-dsp-build
     runs-on: ubuntu-agent
