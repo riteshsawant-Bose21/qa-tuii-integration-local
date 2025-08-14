@@ -76,7 +76,7 @@ jobs:
 
   cloud-servicesUI-build:
     needs: buildChecks
-    if: needs.buildChecks.outputs.cloudServicesUI == 'true' && github.ref == 'refs/heads/main'
+    if: needs.buildChecks.outputs.all == 'true'
     concurrency:
       group: cloud-servicesUI-build
     runs-on: android-mac-build-agent
