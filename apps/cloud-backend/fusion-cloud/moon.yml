@@ -1,0 +1,15 @@
+# moon.yml for the cloud-services-ui application
+# go run cmd/server/main.go
+# docker-compose up --build
+tasks:
+  run-server:
+    command: "go"
+    args: ["run", "cmd/server/main.go"]
+  
+  go-get:
+    command: "go"
+    args: ["get", "all"]
+
+  build:
+    command: "go"
+    args: ["build", "-o", "fusion-web-services", "cmd/server/main.go"]
