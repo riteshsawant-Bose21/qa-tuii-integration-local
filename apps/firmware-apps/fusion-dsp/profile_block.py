@@ -14,6 +14,27 @@ import matplotlib.pyplot as plt
 from sklearn.linear_model import LinearRegression
 from subprocess import run
 
+processor_speed_mhz = 1800.0
+sample_rate = 48000  
+frame_size = 256
+
+def convert_mips_to_time(mips_value, processor_speed_mhz=processor_speed_mhz,
+                         sample_rate=sample_rate, frame_size=frame_size):
+    """
+    Convert MIPS value to time in milliseconds.
+    
+    Args:
+        mips_value (float): MIPS value to convert.
+        processor_speed_mhz (float): Processor speed in MHz.
+        sample_rate (int): Sample rate in Hz.
+        frame_size (int): Frame size in samples.
+        
+    Returns:
+        float: Time in seconds.
+    """
+    execution_time = mips_value * frame_size / (processor_speed_mhz * sample_rate)
+    return execution_time
+
 def check_remote_diskspace(board_ip):
     """
     Check the available disk space on the remote Variscite board.
@@ -94,14 +115,17 @@ def profile(config_name, remote=True):
                     if 'AudioTask 0 MIPS:' in line:
                         parts = line.split('MIPS:')[1].strip()
                         numbers = parts.replace(' first,', '').replace(' max,', '').replace(' avg.', '').split()
-                        if len(numbers) >= 3:
-                            analysis_mips_data.append({
-                                'channels': param_dict['channels'],
-                                'analysis_first': float(numbers[0]),
-                                'analysis_max': float(numbers[1]),
-                                'analysis_avg': float(numbers[2])
-                            })
-                            print(f"Captured analysis MIPS: avg={numbers[2]}")
+                        mips_avg = float(numbers[2])
+                        analysis_thread_time = convert_mips_to_time(mips_value=mips_avg)
+                        analysis_mips_data.append({
+                            'channels': param_dict['channels'],
+                            'analysis_first': float(numbers[0]),
+                            'analysis_max': float(numbers[1]),
+                            'analysis_avg': mips_avg,
+                            'analysis_time': analysis_thread_time
+                        })
+                        print(f"Captured analysis MIPS: avg={mips_avg}")
+                        print(f"Converted to analysis thread time: {analysis_thread_time} seconds")
             
             os.system(f'scp root@{board_ip}:/home/root/timings.csv ./timings.csv')
             print(f'Cleanup after remote execution')
@@ -303,7 +327,6 @@ configurations = {
         'wav_input': 'in_feedback.wav',
         'features': {
             'channels': lambda x: x['channels'],
-            'analysis_avg': lambda x: 0
         },
         'block': 'feedback_suppression', 
         'csv_dump': 'feedback_suppression.csv',
