@@ -111,30 +111,30 @@ jobs:
           nexus_password: ${{ secrets.NEXUS_PASSWORD }}
           nexus_url: ${{ secrets.NEXUS_BASE_URL }}     
 
-  # fusion-dsp-build:
-  #   needs: buildChecks
-  #   if: needs.buildChecks.outputs.fusionDSP == 'true' && github.ref == 'refs/heads/feature/add-fusion-dsp-project'
-  #   concurrency:
-  #     group: fusion-dsp-build
-  #   runs-on: ubuntu-agent
-  #   timeout-minutes: 30
+  fusion-dsp-build:
+    needs: buildChecks
+    if: needs.buildChecks.outputs.fusionDSP == 'true' && github.ref == 'refs/heads/feature/add-fusion-dsp-project'
+    concurrency:
+      group: fusion-dsp-build
+    runs-on: ubuntu-agent
+    timeout-minutes: 30
 
-  #   steps:
-  #     - name: Clone project
-  #       uses: actions/checkout@v4
-  #       with:
-  #         submodules: true
+    steps:
+      - name: Clone project
+        uses: actions/checkout@v4
+        with:
+          submodules: true
 
-  #     - name: Build Apps
-  #       uses: ./.github/reusable-actions/build-fusion-dsp
-  #       with:
-  #         flutter_apps_sonar_token: ${{ secrets.FLUTTER_APPS_SONAR_TOKEN }}
-  #         nexus_password: ${{ secrets.NEXUS_PASSWORD }}
-  #         nexus_url: ${{ secrets.NEXUS_BASE_URL }}
-  #         keychain_password: ${{ secrets.KEYCHAIN_PASSWORD }}
-  #         jenkins_user_name: ${{ secrets.JENKINS_USER_NAME }}
-  #         jenkins_user_token: ${{ secrets.JENKINS_TOKEN }}
-  #         jenkins_url: ${{ secrets.JENKINS_URL }}
+      - name: Build Apps
+        uses: ./.github/reusable-actions/build-fusion-dsp
+        with:
+          flutter_apps_sonar_token: ${{ secrets.FLUTTER_APPS_SONAR_TOKEN }}
+          nexus_password: ${{ secrets.NEXUS_PASSWORD }}
+          nexus_url: ${{ secrets.NEXUS_BASE_URL }}
+          keychain_password: ${{ secrets.KEYCHAIN_PASSWORD }}
+          jenkins_user_name: ${{ secrets.JENKINS_USER_NAME }}
+          jenkins_user_token: ${{ secrets.JENKINS_TOKEN }}
+          jenkins_url: ${{ secrets.JENKINS_URL }}
 
   fusion-server-build:
     needs: buildChecks
