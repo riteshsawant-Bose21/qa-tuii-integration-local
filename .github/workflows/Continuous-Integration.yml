@@ -21,6 +21,9 @@ jobs:
       fusionLauncher: ${{ steps.filter.outputs.fusionLauncher }}
       cloudServicesUI: ${{ steps.filter.outputs.cloudServicesUI }}
       cloudServicesBackend: ${{ steps.filter.outputs.cloudServicesBackend }}
+      fusionDSP: ${{ steps.filter.outputs.fusionDSP }}
+      fusionServer: ${{ steps.filter.outputs.fusionServer }}
+    
 
     steps:
       - name: Clone project
@@ -40,6 +43,10 @@ jobs:
               - "./apps/frontend/react-apps/**"
             cloudServicesBackend:
               - "./apps/cloud-backend/fusion-cloud/**"
+            fusionDSP:
+              - "./apps/firmware_apps/fusion-dsp/**"
+            fusionServer:
+              - "./apps/firmware_apps/fusion-server/**"
 
   flutter-android-iOS-build:
     needs: buildChecks
@@ -106,7 +113,7 @@ jobs:
 
   # fusion-dsp-build:
   #   needs: buildChecks
-  #   if: needs.buildChecks.outputs.cloudServicesBackend == 'true' && github.ref == 'refs/heads/feature/add-fusion-dsp-project'
+  #   if: needs.buildChecks.outputs.fusionDSP == 'true' && github.ref == 'refs/heads/feature/add-fusion-dsp-project'
   #   concurrency:
   #     group: fusion-dsp-build
   #   runs-on: ubuntu-agent
@@ -129,11 +136,11 @@ jobs:
   #         jenkins_user_token: ${{ secrets.JENKINS_TOKEN }}
   #         jenkins_url: ${{ secrets.JENKINS_URL }}
 
-  fusion-fusion-server:
+  fusion-server-build:
     needs: buildChecks
-    if: needs.buildChecks.outputs.cloudServicesBackend == 'true' && github.ref == 'refs/heads/feature/add-fusion-dsp-project'
+    if: needs.buildChecks.outputs.fusionServer == 'true' && github.ref == 'refs/heads/feature/add-fusion-dsp-project'
     concurrency:
-      group: fusion-fusion-server
+      group: fusion-server-build
     runs-on: ubuntu-agent
     timeout-minutes: 30
 
