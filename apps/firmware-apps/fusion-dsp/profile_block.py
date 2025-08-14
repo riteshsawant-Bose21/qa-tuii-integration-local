@@ -1,4 +1,3 @@
-import re
 import pandas as pd
 import jinja2 as jinja2
 import itertools
@@ -15,11 +14,10 @@ from sklearn.linear_model import LinearRegression
 from subprocess import run
 
 processor_speed_mhz = 1800.0
-sample_rate = 48000  
-frame_size = 256
+sample_rate = 48000
 
 def convert_mips_to_time(mips_value, processor_speed_mhz=processor_speed_mhz,
-                         sample_rate=sample_rate, frame_size=frame_size):
+                         sample_rate=sample_rate, frame_size=32):
     """
     Convert MIPS value to time in milliseconds.
     
@@ -37,7 +35,7 @@ def convert_mips_to_time(mips_value, processor_speed_mhz=processor_speed_mhz,
 
 def check_remote_diskspace(board_ip):
     """
-    Check the available disk space on the remote Variscite board.
+    Check the available disk space on the remote Variscite board and clean.
 
     Args:
         board_ip (str): The IP address of the Variscite board.
@@ -165,11 +163,28 @@ def profile(config_name, remote=True):
     result_df = pd.concat(frames, axis=0, ignore_index=True)
     
     if config_name == 'feedback_suppression':
-
         if analysis_mips_data:
             for mips_entry in analysis_mips_data:
                 ch = mips_entry['channels']
-                result_df.loc[result_df['channels'] == ch, 'analysis_avg'] = mips_entry['analysis_avg']
+                mask = result_df['channels'] == ch
+                
+                # DEBUG: Store original value
+                original_main = result_df.loc[mask, block].mean()
+                
+                result_df.loc[mask, 'analysis_avg'] = mips_entry['analysis_avg']
+                result_df.loc[mask, 'analysis_time'] = mips_entry['analysis_time']
+                
+                result_df.loc[mask, block] = (
+                    result_df.loc[mask, block] + mips_entry['analysis_time']
+                )
+                
+                # DEBUG: Print what happened
+                new_total = result_df.loc[mask, block].mean()
+                print(f"Channel {ch}:")
+                print(f"  Original main thread: {original_main:.2e}")
+                print(f"  Analysis thread: {mips_entry['analysis_time']:.2e}")
+                print(f"  New total: {new_total:.2e}")
+                print(f"  Expected: {original_main + mips_entry['analysis_time']:.2e}")
 
     print(result_df.columns.tolist())
     print(result_df.head())
@@ -362,7 +377,6 @@ configurations = {
     'passthrough' : {
         'path' : 'profile_passthrough.json.jinja',
         'block' : 'task1',
-        'wav_input' : 'in_10.wav'
     },
     'peq' : {
         'path' : 'profile_peq.json.jinja',
@@ -387,7 +401,7 @@ configurations = {
         'wav_input' : 'in.wav',
         'parameters' : {},
         'features' : {
-            'constant' : lambda x: 1
+            'channels' : lambda x: 1
         },
         'csv_dump' : 'wav_read_timings.csv',
         'format_string' : 'T = {0}'
@@ -398,7 +412,7 @@ configurations = {
         'wav_input' : 'in.wav',
         'parameters' : {},
         'features' : {
-            'constant' : lambda x: 1
+            'channels' : lambda x: 1
         },
         'csv_dump' : 'wav_write_timings.csv',
         'format_string' : 'T = {0}'
