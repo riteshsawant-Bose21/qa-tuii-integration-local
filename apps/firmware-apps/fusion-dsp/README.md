@@ -22,7 +22,7 @@ python3 waf build
 To clean up the build, simply remove the `build/` directory and its contents.
 
 
-### Building for the Variscite i.MX 8M Mini Development Board in Monorepo
+### Building for the Variscite i.MX 8M Mini Development Board
 
 To build for the Variscite board, you need to have the Variscite SDK and
 cross-compiler installed (built with Yocto).  Once it's installed, you
