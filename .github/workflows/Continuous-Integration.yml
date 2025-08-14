@@ -47,13 +47,13 @@ jobs:
             cloudServicesBackend:
               - "./apps/cloud-backend/fusion-cloud/**"
             fusionDSP:
-              - "./apps/firmware_apps/fusion-dsp/**"
+              - "./apps/firmware-apps/fusion-dsp/**"
             fusionServer:
-              - "./apps/firmware_apps/fusion-server/**"
+              - "./apps/firmware-apps/fusion-server/**"
 
   flutter-android-iOS-build:
     needs: buildChecks
-    if: needs.buildChecks.outputs.fusionLauncher == 'true' && github.ref == 'refs/heads/develop'
+    if: needs.buildChecks.outputs.fusionLauncher == 'true'
     concurrency:
       group: flutter-android-iOS-build
     runs-on: android-mac-build-agent
@@ -76,7 +76,7 @@ jobs:
 
   cloud-servicesUI-build:
     needs: buildChecks
-    if: needs.buildChecks.outputs.cloudServicesUI == 'true' && github.ref == 'refs/heads/main'
+    if: needs.buildChecks.outputs.cloudServicesUI == 'true'
     concurrency:
       group: cloud-servicesUI-build
     runs-on: android-mac-build-agent
@@ -94,7 +94,7 @@ jobs:
 
   cloud-web-backend-build:
     needs: buildChecks
-    if: needs.buildChecks.outputs.cloudServicesBackend == 'true' && github.ref == 'refs/heads/feature/add-fusion-dsp-project'
+    if: needs.buildChecks.outputs.cloudServicesBackend == 'true'
     concurrency:
       group: cloud-web-backend-build
     runs-on: ubuntu-agent
@@ -116,7 +116,7 @@ jobs:
 
   fusion-dsp-build:
     needs: buildChecks
-    if: needs.buildChecks.outputs.fusionDSP == 'true' && github.ref == 'refs/heads/feature/add-fusion-dsp-project'
+    if: needs.buildChecks.outputs.fusionDSP == 'true'
     concurrency:
       group: fusion-dsp-build
     runs-on: ubuntu-agent
@@ -141,7 +141,7 @@ jobs:
 
   fusion-server-build:
     needs: buildChecks
-    if: needs.buildChecks.outputs.fusionServer == 'true' && github.ref == 'refs/heads/feature/add-fusion-dsp-project'
+    if: needs.buildChecks.outputs.fusionServer == 'true'
     concurrency:
       group: fusion-server-build
     runs-on: ubuntu-agent
