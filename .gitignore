@@ -3,3 +3,7 @@
 .moon/cache
 .moon/docker
 **/.DS_Store
+
+# react-apps
+node_modules
+dist

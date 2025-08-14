@@ -1,29 +1,83 @@
-# moon.yml for the cloud-services-ui application
+project:
+  name: "react-apps"
+  description: "React applications workspace"
+
 tasks:
-  start-customer:
-    command: "yarn"
-    args: ["workspace", "customer", "run", "start"]
+  # Individual app development tasks
+  start-landing-page:
+    command: "cd landing-page && yarn dev"
 
-  start-partner:
-    command: "yarn"
-    args: ["workspace", "partner", "run", "start"]
+  start-web-dashboard:
+    command: "cd web-dashboard && yarn dev"
 
-  start-backend:
-    command: "yarn"
-    args: ["workspace", "backend", "run", "start"]
+  # Individual app build tasks
+  build-landing-page:
+    command: "cd landing-page && yarn build"
 
-  build:
-    command: "yarn"
-    args: ["workspaces", "foreach", "--all", "--topological", "run", "build"]
+  build-web-dashboard:
+    command: "cd web-dashboard && yarn build"
 
-  lint:
-    command: "eslint"
-    args: [".", "--ext", ".ts,.tsx"]
+  # Batch build
+  build-all:
+    deps:
+      - "build-landing-page"
+      - "build-web-dashboard"
 
-  lint-fix:
-    command: "eslint"
-    args: [".", "--ext", ".ts,.tsx", "--fix"]
+  # Individual app linting
+  lint-landing-page:
+    command: "cd landing-page && yarn lint"
 
-  format:
-    command: "prettier"
-    args: ["--write", "."]
+  lint-web-dashboard:
+    command: "cd web-dashboard && yarn lint"
+
+  # Batch linting
+  lint-all:
+    deps:
+      - "lint-landing-page"
+      - "lint-web-dashboard"
+
+  # Individual app formatting
+  format-landing-page:
+    command: "cd landing-page && yarn format"
+    args:
+      - "--ignore-path"
+      - ".prettierignore"
+
+  format-web-dashboard:
+    command: "cd web-dashboard && yarn format"
+    args:
+      - "--ignore-path"
+      - ".prettierignore"
+
+  # Batch formatting
+  format-all:
+    deps:
+      - "format-landing-page"
+      - "format-web-dashboard"
+
+  # Individual app formatting check
+  format-check-landing-page:
+    command: "cd landing-page && yarn format-check"
+    args:
+      - "--check"
+      - "--ignore-path"
+      - ".prettierignore"
+
+  format-check-web-dashboard:
+    command: "cd web-dashboard && yarn format-check"
+    args:
+      - "--check"
+      - "--ignore-path"
+      - ".prettierignore"
+
+  # Batch formatting check
+  format-check-all:
+    deps:
+      - "format-check-landing-page"
+      - "format-check-web-dashboard"
+
+  # Validate lint and format
+  validate-all:
+    deps:
+      - "lint-all"
+      - "format-check-all"
