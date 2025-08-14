@@ -2,9 +2,9 @@
 # go run cmd/server/main.go
 # docker-compose up --build
 tasks:
-  run-server:
-    command: "go"
-    args: ["run", "cmd/server/main.go"]
+  build-dsp:
+    command: "python3"
+    args: ["./waf", "build"]
   
   go-get-mod:
     command: "go"
