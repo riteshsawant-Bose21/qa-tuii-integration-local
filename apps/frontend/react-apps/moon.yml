@@ -6,29 +6,48 @@ tasks:
   # Individual app development tasks
   start-landing-page:
     command: "cd landing-page && yarn dev"
+    deps:
+      - "install-landing-page"
 
   start-web-dashboard:
     command: "cd web-dashboard && yarn dev"
-
-  # Individual app build tasks
-  build-landing-page:
-    command: "cd landing-page && yarn build"
-
-  build-web-dashboard:
-    command: "cd web-dashboard && yarn build"
-
-  # Batch build
-  build-all:
     deps:
-      - "build-landing-page"
-      - "build-web-dashboard"
+      - "install-web-dashboard"
+
+  # Install dependencies
+  install-landing-page:
+    command: "cd landing-page && yarn install"
+    inputs:
+      - "landing-page/package.json"
+      - "landing-page/yarn.lock"
+
+  install-web-dashboard:
+    command: "cd web-dashboard && yarn install"
+    inputs:
+      - "web-dashboard/package.json"
+      - "web-dashboard/yarn.lock"
+
+  # Install all
+  install-all:
+    deps:
+      - "install-landing-page"
+      - "install-web-dashboard"
+
+  # Setup task to ensure everything is ready
+  setup:
+    deps:
+      - "install-all"
 
   # Individual app linting
   lint-landing-page:
     command: "cd landing-page && yarn lint"
+    deps:
+      - "install-landing-page"
 
   lint-web-dashboard:
     command: "cd web-dashboard && yarn lint"
+    deps:
+      - "install-web-dashboard"
 
   # Batch linting
   lint-all:
@@ -39,12 +58,16 @@ tasks:
   # Individual app formatting
   format-landing-page:
     command: "cd landing-page && yarn format"
+    deps:
+      - "install-landing-page"
     args:
       - "--ignore-path"
       - ".prettierignore"
 
   format-web-dashboard:
     command: "cd web-dashboard && yarn format"
+    deps:
+      - "install-web-dashboard"
     args:
       - "--ignore-path"
       - ".prettierignore"
@@ -58,6 +81,8 @@ tasks:
   # Individual app formatting check
   format-check-landing-page:
     command: "cd landing-page && yarn format-check"
+    deps:
+      - "install-landing-page"
     args:
       - "--check"
       - "--ignore-path"
@@ -65,6 +90,8 @@ tasks:
 
   format-check-web-dashboard:
     command: "cd web-dashboard && yarn format-check"
+    deps:
+      - "install-web-dashboard"
     args:
       - "--check"
       - "--ignore-path"
@@ -81,3 +108,21 @@ tasks:
     deps:
       - "lint-all"
       - "format-check-all"
+
+  # Individual app build tasks
+  build-landing-page:
+    command: "cd landing-page && yarn build"
+    deps:
+      - "install-landing-page"
+
+  build-web-dashboard:
+    command: "cd web-dashboard && yarn build"
+    deps:
+      - "install-web-dashboard"
+
+  # Batch build
+  build-all:
+    deps:
+      - "validate-all"
+      - "build-landing-page"
+      - "build-web-dashboard"
