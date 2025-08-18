@@ -7,7 +7,6 @@ tasks:
     command: |
       "python3 ./waf build"
     deps:
-      - setup-cross-compile-toolchain
       - waf-configure
 
   build-dsp:
