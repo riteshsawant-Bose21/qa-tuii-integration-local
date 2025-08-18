@@ -12,8 +12,6 @@ tasks:
   waf-configure:
     command: "python3"
     args: ["./waf", "configure", "--platform=varmini"]
-    deps:
-      - setup-cross-compile-toolchain
 
   setup-cross-compile-toolchain:
     command: "source"
