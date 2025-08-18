@@ -8,14 +8,12 @@ project:
 language: go
 
 tasks:
-  run-server:
-    command: "go"
-    args: ["run", "cmd/server/main.go"]
-  
-  go-get:
-    command: "go"
-    args: ["get", "all"]
-
   build:
-    command: "go"
-    args: ["build", "-o", "fusion-web-services", "cmd/server/main.go"]
+    command: "./build-fusion-server"
+    args: ["--package"]
+    deps:
+      - ready-script
+
+  ready-script:
+    command: "chmod"
+    args: ["+x", "build-fusion-server"]
