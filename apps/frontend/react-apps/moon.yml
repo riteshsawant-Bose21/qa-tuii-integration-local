@@ -1,32 +1,10 @@
-# moon.yml for the cloud-services-ui application
-dependsOn:
-  - 'fusion-cloud'
+project:
+  name: "react-apps"
+  description: "React applications workspace"
 
 tasks:
-  start-customer:
-    command: "yarn"
-    args: ["workspace", "customer", "run", "start"]
-
-  start-partner:
-    command: "yarn"
-    args: ["workspace", "partner", "run", "start"]
-
-  start-backend:
-    command: "yarn"
-    args: ["workspace", "backend", "run", "start"]
-
-  build:
-    command: "yarn"
-    args: ["workspaces", "foreach", "--all", "--topological", "run", "build"]
-
-  lint:
-    command: "eslint"
-    args: [".", "--ext", ".ts,.tsx"]
-
-  lint-fix:
-    command: "eslint"
-    args: [".", "--ext", ".ts,.tsx", "--fix"]
-
-  format:
-    command: "prettier"
-    args: ["--write", "."]
+  # Batch build
+  build-all:
+    deps:
+      - "landing-page:build"
+      - "web-dashboard:build"
