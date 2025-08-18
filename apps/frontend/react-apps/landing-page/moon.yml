@@ -1,0 +1,37 @@
+project:
+  name: "landing-page"
+  description: "Landing page application"
+
+tasks:
+  install:
+    command: "yarn"
+    args:
+      - "install"
+
+  start:
+    command: "vite"
+    deps:
+      - "install"
+
+  lint:
+    command: "eslint"
+    args: [".", "--ext", ".js,.jsx,.ts,.tsx"]
+
+  format:
+    command: "prettier"
+    args: ["--write", "."]
+
+  format-check:
+    command: "prettier"
+    args: ["--check", "."]
+
+  typescript:
+    command: "tsc"
+    args: ["-b"]
+
+  build:
+    command: "vite"
+    args: ["build"]
+    deps:
+      - "lint"
+      - "format-check"
