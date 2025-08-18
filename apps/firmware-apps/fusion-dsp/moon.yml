@@ -4,10 +4,13 @@ project:
 
 tasks:
   build:
-    command: |
-      "python3 ./waf build"
+    command: "./moon-build.sh"
     deps:
-      - waf-configure
+      - ready-script
+
+  ready-script:
+    command: "chmod"
+    args: ["+x", "moon-build.sh"]
 
   build-dsp:
     command: "python3"

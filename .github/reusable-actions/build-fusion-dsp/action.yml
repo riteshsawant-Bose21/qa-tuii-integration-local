@@ -27,5 +27,4 @@ runs:
       shell: bash
       working-directory: apps/firmware-apps/fusion-dsp
       run: |
-        moon run fusion-dsp:setup-cross-compile-toolchain
         moon run fusion-dsp:build
