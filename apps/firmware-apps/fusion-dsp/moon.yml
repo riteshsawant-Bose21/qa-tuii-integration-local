@@ -1,6 +1,6 @@
 project:
   name: 'Fusion DSP'
-  description: 'Fsion DSP application'
+  description: 'Fsion DSP application moon tasks'
 
 tasks:
   build-dsp:
