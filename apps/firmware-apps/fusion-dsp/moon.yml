@@ -5,10 +5,10 @@ project:
 tasks:
   build:
     command: |
-      "python3 ./waf configure --platform=varmini"
       "python3 ./waf build"
     deps:
       - setup-cross-compile-toolchain
+      - waf-configure
 
   build-dsp:
     command: "python3"
