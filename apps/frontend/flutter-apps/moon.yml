@@ -1,21 +1,21 @@
 language: "flutter"
 
-dependsOn:
-  - fusion-dsp
-  - fusion-server
-
 tasks:
   build-apk:
     command: "flutter"
     args: ["build", "apk"]
     options:
       cache: true
+    deps:
+      - 'fusion-server:build'
 
   build-iOS:
     command: "flutter"
     args: ["build", "ipa", "--export-options-plist=./iOS/AS-info.plist"]
     options:
       cache: true
+    deps:
+      - 'fusion-server:build'
 
   unit-tests:
     command: "flutter"

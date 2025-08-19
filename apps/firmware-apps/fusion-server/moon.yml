@@ -12,7 +12,8 @@ tasks:
     command: "./build-fusion-server"
     args: ["--package"]
     deps:
-      - ready-script
+      - 'ready-script'
+      - 'fusion-dsp:dsp-package'
 
   ready-script:
     command: "chmod"
