@@ -6,4 +6,4 @@ sversion=$(printf "%d.%d.%d" $VERSION_MAJOR $VERSION_MINOR $VERSION_PATCH)
 version=$(printf "%d.%d.%d-%d+%s" $VERSION_MAJOR $VERSION_MINOR $VERSION_PATCH $buildNumber $gitHashShort)
 versionAWS=$(printf "%d.%d.%d-%d-%s" $VERSION_MAJOR $VERSION_MINOR $VERSION_PATCH $buildNumber $gitHashShort)
 
-echo $version
+echo $sversion
