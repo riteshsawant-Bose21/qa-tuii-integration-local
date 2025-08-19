@@ -1,8 +1,9 @@
 project:
   name: 'Fusion DSP'
-  description: 'Fsion DSP application moon tasks'
+  description: 'Fusion DSP application moon tasks'
 
 tasks:
+
   dsp-package:
     command: "python3"
     args: ["package.py"]

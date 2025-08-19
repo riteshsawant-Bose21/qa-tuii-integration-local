@@ -51,68 +51,68 @@ jobs:
             fusionServer:
               - "./apps/firmware-apps/fusion-server/**"
 
-  # flutter-android-iOS-build:
-  #   needs: buildChecks
-  #   if: needs.buildChecks.outputs.fusionLauncher == 'true'
-  #   concurrency:
-  #     group: flutter-android-iOS-build
-  #   runs-on: android-mac-build-agent
-  #   timeout-minutes: 30
+  flutter-android-iOS-build:
+    needs: buildChecks
+    if: needs.buildChecks.outputs.fusionLauncher == 'true' || needs.buildChecks.outputs.fusionServer == 'true'
+    concurrency:
+      group: flutter-android-iOS-build
+    runs-on: android-mac-build-agent
+    timeout-minutes: 30
 
-  #   steps:
-  #     - name: Clone project
-  #       uses: actions/checkout@v4
+    steps:
+      - name: Clone project
+        uses: actions/checkout@v4
 
-  #     - name: Setup Monorepo Toolchain
-  #       uses: ./.github/reusable-actions/setup-toolchain
+      - name: Setup Monorepo Toolchain
+        uses: ./.github/reusable-actions/setup-toolchain
 
-  #     - name: Build Apps
-  #       uses: ./.github/reusable-actions/build-flutter-Android-iOS
-  #       with:
-  #         flutter_apps_sonar_token: ${{ secrets.FLUTTER_APPS_SONAR_TOKEN }}
-  #         nexus_password: ${{ secrets.NEXUS_PASSWORD }}
-  #         nexus_url: ${{ secrets.NEXUS_BASE_URL }}
-  #         keychain_password: ${{ secrets.KEYCHAIN_PASSWORD }}
+      - name: Build Apps
+        uses: ./.github/reusable-actions/build-flutter-Android-iOS
+        with:
+          flutter_apps_sonar_token: ${{ secrets.FLUTTER_APPS_SONAR_TOKEN }}
+          nexus_password: ${{ secrets.NEXUS_PASSWORD }}
+          nexus_url: ${{ secrets.NEXUS_BASE_URL }}
+          keychain_password: ${{ secrets.KEYCHAIN_PASSWORD }}
 
-  # cloud-servicesUI-build:
-  #   needs: buildChecks
-  #   if: needs.buildChecks.outputs.cloudServicesUI == 'true'
-  #   concurrency:
-  #     group: cloud-servicesUI-build
-  #   runs-on: android-mac-build-agent
-  #   timeout-minutes: 30
+  cloud-servicesUI-build:
+    needs: buildChecks
+    if: needs.buildChecks.outputs.cloudServicesUI == 'true' || needs.buildChecks.outputs.cloudServicesBackend == 'true'
+    concurrency:
+      group: cloud-servicesUI-build
+    runs-on: android-mac-build-agent
+    timeout-minutes: 30
 
-  #   steps:
-  #     - name: Clone project
-  #       uses: actions/checkout@v4
+    steps:
+      - name: Clone project
+        uses: actions/checkout@v4
 
-  #     - name: Setup Monorepo Toolchain
-  #       uses: ./.github/reusable-actions/setup-toolchain
+      - name: Setup Monorepo Toolchain
+        uses: ./.github/reusable-actions/setup-toolchain
 
-  #     - name: Build Apps
-  #       uses: ./.github/reusable-actions/build-cloud-servicesUI
+      - name: Build Apps
+        uses: ./.github/reusable-actions/build-cloud-servicesUI
 
-  # cloud-web-backend-build:
-  #   needs: buildChecks
-  #   if: needs.buildChecks.outputs.cloudServicesBackend == 'true'
-  #   concurrency:
-  #     group: cloud-web-backend-build
-  #   runs-on: ubuntu-agent
-  #   timeout-minutes: 30
+  cloud-web-backend-build:
+    needs: buildChecks
+    if: needs.buildChecks.outputs.cloudServicesBackend == 'true'
+    concurrency:
+      group: cloud-web-backend-build
+    runs-on: ubuntu-agent
+    timeout-minutes: 30
 
-  #   steps:
-  #     - name: Clone project
-  #       uses: actions/checkout@v4
+    steps:
+      - name: Clone project
+        uses: actions/checkout@v4
 
-  #     - name: Setup Monorepo Toolchain
-  #       uses: ./.github/reusable-actions/setup-toolchain
+      - name: Setup Monorepo Toolchain
+        uses: ./.github/reusable-actions/setup-toolchain
 
-  #     - name: Build Apps
-  #       uses: ./.github/reusable-actions/build-cloud-web-backend
-  #       with:
-  #         cloud_backend_sonar_token: ${{ secrets.CLOUD_BACKEND_SONAR_TOKEN }}
-  #         nexus_password: ${{ secrets.NEXUS_PASSWORD }}
-  #         nexus_url: ${{ secrets.NEXUS_BASE_URL }}     
+      - name: Build Apps
+        uses: ./.github/reusable-actions/build-cloud-web-backend
+        with:
+          cloud_backend_sonar_token: ${{ secrets.CLOUD_BACKEND_SONAR_TOKEN }}
+          nexus_password: ${{ secrets.NEXUS_PASSWORD }}
+          nexus_url: ${{ secrets.NEXUS_BASE_URL }}     
 
   fusion-dsp-build:
     needs: buildChecks
@@ -142,28 +142,28 @@ jobs:
           jenkins_user_token: ${{ secrets.JENKINS_TOKEN }}
           jenkins_url: ${{ secrets.JENKINS_URL }}
 
-  # fusion-server-build:
-  #   needs: buildChecks
-  #   if: needs.buildChecks.outputs.fusionServer == 'true'
-  #   concurrency:
-  #     group: fusion-server-build
-  #   runs-on: ubuntu-agent
-  #   timeout-minutes: 30
+  fusion-server-build:
+    needs: buildChecks
+    if: needs.buildChecks.outputs.fusionServer == 'true' || needs.buildChecks.outputs.fusionDSP == 'true'
+    concurrency:
+      group: fusion-server-build
+    runs-on: ubuntu-agent
+    timeout-minutes: 30
 
-  #   steps:
-  #     - name: Clone project
-  #       uses: actions/checkout@v4
+    steps:
+      - name: Clone project
+        uses: actions/checkout@v4
 
-  #     - name: Setup Monorepo Toolchain
-  #       uses: ./.github/reusable-actions/setup-toolchain
+      - name: Setup Monorepo Toolchain
+        uses: ./.github/reusable-actions/setup-toolchain
 
-  #     - name: Build Fusion Server
-  #       uses: ./.github/reusable-actions/build-fusion-server
-  #       with:
-  #         flutter_apps_sonar_token: ${{ secrets.FLUTTER_APPS_SONAR_TOKEN }}
-  #         nexus_password: ${{ secrets.NEXUS_PASSWORD }}
-  #         nexus_url: ${{ secrets.NEXUS_BASE_URL }}
-  #         keychain_password: ${{ secrets.KEYCHAIN_PASSWORD }}
-  #         jenkins_user_name: ${{ secrets.JENKINS_USER_NAME }}
-  #         jenkins_user_token: ${{ secrets.JENKINS_TOKEN }}
-  #         jenkins_url: ${{ secrets.JENKINS_URL }}
+      - name: Build Fusion Server
+        uses: ./.github/reusable-actions/build-fusion-server
+        with:
+          flutter_apps_sonar_token: ${{ secrets.FLUTTER_APPS_SONAR_TOKEN }}
+          nexus_password: ${{ secrets.NEXUS_PASSWORD }}
+          nexus_url: ${{ secrets.NEXUS_BASE_URL }}
+          keychain_password: ${{ secrets.KEYCHAIN_PASSWORD }}
+          jenkins_user_name: ${{ secrets.JENKINS_USER_NAME }}
+          jenkins_user_token: ${{ secrets.JENKINS_TOKEN }}
+          jenkins_url: ${{ secrets.JENKINS_URL }}
