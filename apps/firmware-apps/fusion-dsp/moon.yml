@@ -3,6 +3,12 @@ project:
   description: 'Fsion DSP application moon tasks'
 
 tasks:
+  dsp-package:
+    command: "python3"
+    args: ["package.py"]
+    deps:
+      - build
+
   build:
     command: "./moon-build.sh"
     deps:
@@ -10,18 +16,4 @@ tasks:
 
   ready-script:
     command: "chmod"
-    args: ["+x", "moon-build.sh"]
-
-  build-dsp:
-    command: "python3"
-    args: ["./waf", "build"]
-    deps:
-      - waf-configure
-  
-  waf-configure:
-    command: "python3"
-    args: ["./waf", "configure", "--platform=varmini"]
-
-  setup-cross-compile-toolchain:
-    command: "source"
-    args: ["/home/ec2-user/fusion-mini-build-cache/bose/fusion/yocto-sdk/environment-setup-cortexa53-crypto-poky-linux"]
+    args: ["+x", "moon-build.sh", "Jenkins/SetVersionProperty.sh"]

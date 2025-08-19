@@ -42,7 +42,7 @@ runs:
       run: |
         flutter pub get
         moon run flutter-apps:build-apk
-        VERSION="${{ steps.get_version.outputs.version }}-$(git rev-parse --short HEAD)"
+        VERSION="${{ steps.get_version.outputs.version }}-${GITHUB_RUN_NUMBER}-$(git rev-parse --short HEAD)"
         curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T ./build/app/outputs/flutter-apk/app-release.apk ${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/$VERSION/flutter-apk/aap-release-$VERSION.apk
 
     - name: Flutter iOS build
@@ -52,6 +52,6 @@ runs:
         flutter pub get
         security unlock-keychain -p "${{ inputs.keychain_password }}" /Users/devops/Library/Keychains/login.keychain-db
         moon run flutter-apps:build-iOS
-        VERSION="${{ steps.get_version.outputs.version }}-$(git rev-parse --short HEAD)"
+        VERSION="${{ steps.get_version.outputs.version }}-${GITHUB_RUN_NUMBER}-$(git rev-parse --short HEAD)"
         curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T ./build/ios/ipa/fusion_design_tool_prototype.ipa ${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/$VERSION/flutter-iOS/fusion_design_tool_prototype-$VERSION.ipa
         
