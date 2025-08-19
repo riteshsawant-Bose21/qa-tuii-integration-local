@@ -18,6 +18,7 @@
 #include <linux/slab.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
+#include <sound/memalloc.h>
 #include "fusion_connect_alsa.h"
 
 static struct platform_device *g_pdev;
@@ -103,15 +104,7 @@ static int fusion_cn_pcm_hw_params(struct snd_pcm_substream *substream, struct s
     runtime->period_size = period_size;
     runtime->periods = buffer_bytes / (period_size * stream->sample_width * stream->channels);
 
-    err = snd_pcm_lib_alloc_vmalloc_buffer(substream, buffer_bytes);
-    if (err < 0) {
-        printk(KERN_ERR "fusion_cn_alsa: hw_params: Failed to allocate buffer for stream %s, size=%u, err=%d\n",
-               stream->stream_name, buffer_bytes, err);
-        spin_unlock_irq(&stream->lock);
-        return err;
-    }
-
-    printk(KERN_INFO "fusion_cn_alsa: hw_params: Allocated buffer_size=%lu frames, period_size=%lu, periods=%u for stream %s\n",
+    printk(KERN_INFO "fusion_cn_alsa: hw_params: TO allocate buffer_size=%lu frames, period_size=%lu, periods=%u for stream %s\n",
            runtime->buffer_size, runtime->period_size, runtime->periods, stream->stream_name);
 
     stream->pcm_indirect.hw_buffer_size = buffer_bytes;
@@ -168,72 +161,6 @@ int fusion_cn_alsa_pcm_interrupt(struct fusion_cn_chip *alsa_chip, struct fusion
 
     spin_unlock_irq(&stream->lock);
 
-    return 0;
-}
-
-int fusion_cn_alsa_mute_stream_buffers(struct fusion_cn_chip *alsa_chip, const char *stream_name)
-{
-    struct fusion_cn_chip *chip = alsa_chip;
-    struct fusion_cn_substream *stream;
-    struct snd_pcm_runtime *runtime;
-    unsigned long flags;
-
-    read_lock_irqsave(&chip->lock, flags);
-    stream = fusion_cn_find_substream(stream_name);
-    if (!stream) {
-        read_unlock_irqrestore(&chip->lock, flags);
-        printk(KERN_ERR "fusion_cn_alsa: mute_stream_buffers: Stream %s not found\n", stream_name);
-        return -ENOENT;
-    }
-    if (!stream->substream) {
-        read_unlock_irqrestore(&chip->lock, flags);
-        kref_put(&stream->ref, fusion_cn_alsa_substream_release);
-        printk(KERN_ERR "fusion_cn_alsa: mute_stream_buffers: No substream for stream %s\n", stream_name);
-        return -EINVAL;
-    }
-    runtime = stream->substream->runtime;
-    if (!runtime->dma_area) {
-        read_unlock_irqrestore(&chip->lock, flags);
-        kref_put(&stream->ref, fusion_cn_alsa_substream_release);
-        printk(KERN_ERR "fusion_cn_alsa: mute_stream_buffers: dma_area is NULL for stream %s\n", stream_name);
-        return -EINVAL;
-    }
-    spin_lock_irqsave(&stream->lock, flags);
-    printk(KERN_INFO "fusion_cn_alsa: mute_stream_buffers: Zeroing buffer for stream %s, size=%lu\n",
-           stream_name, runtime->buffer_size * stream->channels * stream->sample_width);
-    memset(runtime->dma_area, 0, runtime->buffer_size * stream->channels * stream->sample_width);
-    spin_unlock_irqrestore(&stream->lock, flags);
-    read_unlock_irqrestore(&chip->lock, flags);
-    kref_put(&stream->ref, fusion_cn_alsa_substream_release);
-    return 0;
-}
-
-int fusion_cn_alsa_set_buffer_pos(struct fusion_cn_chip *alsa_chip, uint32_t write_slot, const char *stream_name) 
-{
-    struct fusion_cn_chip *chip = alsa_chip;
-    unsigned long flags;
-    struct fusion_cn_substream *stream;
-
-    read_lock_irqsave(&chip->lock, flags);
-    stream = fusion_cn_find_substream(stream_name);
-    if (!stream || !stream->substream) {
-        read_unlock_irqrestore(&chip->lock, flags);
-        printk(KERN_WARNING "fusion_cn_alsa: set_buffer_pos: Invalid stream %s\n", stream_name);
-        return -EINVAL;
-    }
-    read_unlock_irqrestore(&chip->lock, flags);
-
-    spin_lock_irq(&stream->lock);
-
-    stream->buffer_pos = write_slot * stream->rtp_frame_size;
-    stream->substream->runtime->status->hw_ptr = stream->buffer_pos;
-    stream->substream->runtime->control->appl_ptr = stream->buffer_pos;
-
-    spin_unlock_irq(&stream->lock);
-
-    kref_put(&stream->ref, fusion_cn_alsa_substream_release);
-
-    printk(KERN_INFO "fusion_cn_alsa: set_buffer_pos: stream %s pointers set to %u\n", stream->stream_name, stream->buffer_pos);
     return 0;
 }
 
@@ -302,47 +229,15 @@ static int fusion_cn_pcm_ack(struct snd_pcm_substream *substream)
     }
 }
 
-/* kernels < 6.6 */
-#if LINUX_VERSION_CODE < KERNEL_VERSION(6,6,0)
-static int fusion_cn_pcm_copy_user(struct snd_pcm_substream *substream,
-                                   int channel, unsigned long pos,
-                                   void __user *buf, unsigned long count)
-{
-    struct snd_pcm_runtime *rt = substream->runtime;
-    struct fusion_cn_substream *stream = substream->runtime->private_data;
-
-    spin_lock_irq(&stream->lock);
-
-    if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-        if (copy_from_user(rt->dma_area + pos, buf, count)) {
-            spin_unlock_irq(&stream->lock);
-            printk(KERN_ERR "fusion_cn_alsa: pcm_copy_user: Failed to copy from user for stream %s\n",
-                   stream->stream_name);
-            return -EFAULT;
-        }
-    } else {
-        if (copy_to_user(buf, rt->dma_area + pos, count)) {
-            spin_unlock_irq(&stream->lock);
-            printk(KERN_ERR "fusion_cn_alsa: pcm_copy_user: Failed to copy to user for stream %s\n",
-                   stream->stream_name);
-            return -EFAULT;
-        }
-    }
-
-    spin_unlock_irq(&stream->lock);
-
-    return count;
-}
-#else
-/* kernels ≥ 6.6 */
-static ssize_t fusion_cn_pcm_copy_iter(struct snd_pcm_substream *substream,
+static int fusion_cn_pcm_copy(struct snd_pcm_substream *substream,
                                        int channel,
                                        unsigned long pos,
                                        struct iov_iter *iter,
                                        unsigned long count)
 {
-    struct snd_pcm_runtime *rt = substream->runtime;
+    struct fusion_cn_chip *chip = snd_pcm_substream_chip(substream);
     struct fusion_cn_substream *stream = substream->runtime->private_data;
+    struct snd_pcm_runtime *rt = substream->runtime;
     unsigned long bpf = (rt->frame_bits >> 3) * rt->channels;
     unsigned long offset = pos * bpf;
     void *dma_ptr = rt->dma_area + offset;
@@ -370,7 +265,6 @@ static ssize_t fusion_cn_pcm_copy_iter(struct snd_pcm_substream *substream,
            stream->stream_name, substream->stream, pos, count);
     return count;
 }
-#endif
 
 static int fusion_cn_pcm_silence(struct snd_pcm_substream *substream,
                                 int channel, snd_pcm_uframes_t pos,
@@ -564,6 +458,17 @@ static int fusion_cn_pcm_open(struct snd_pcm_substream *substream)
         return err;
     }
 
+    err = snd_pcm_set_managed_buffer(substream,
+                                     SNDRV_DMA_TYPE_VMALLOC, /* or DEV/SG if you switch later */
+                                     NULL,                   /* private data for allocator */
+                                     snd_pcm_lib_buffer_bytes(substream), /* desired size */
+                                     8 * 1024 * 1024);       /* max: your upper bound */
+    if (err < 0)
+    {
+        pr_err("fusion_cn_alsa: set_managed_buffer failed (%d)\n", err);
+        return err;
+    }
+
     read_unlock_irqrestore(&chip->lock, flags);
     printk(KERN_INFO "fusion_cn_alsa: pcm_open: Opened stream %s\n", stream_name);
     return 0;
@@ -668,17 +573,7 @@ static int fusion_cn_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 
 static int fusion_cn_pcm_hw_free(struct snd_pcm_substream *substream)
 {
-    struct fusion_cn_substream *stream = substream->runtime->private_data;
-    int err = 0;
-
-    spin_lock_irq(&stream->lock);
-    if (substream->runtime->access == SNDRV_PCM_ACCESS_MMAP_INTERLEAVED ||
-        substream->runtime->access == SNDRV_PCM_ACCESS_MMAP_NONINTERLEAVED ||
-        substream->runtime->access == SNDRV_PCM_ACCESS_MMAP_COMPLEX) {
-        err = snd_pcm_lib_free_vmalloc_buffer(substream);
-    }
-    spin_unlock_irq(&stream->lock);
-    return err;
+    return 0;
 }
 
 static struct snd_pcm_ops fusion_cn_pcm_ops = {
@@ -689,13 +584,8 @@ static struct snd_pcm_ops fusion_cn_pcm_ops = {
     .prepare = fusion_cn_pcm_prepare,
     .trigger = fusion_cn_pcm_trigger,
     .pointer = fusion_cn_pcm_pointer,
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,6,0)
-    .copy_iter = fusion_cn_pcm_copy_iter,
+    .copy = fusion_cn_pcm_copy,
     .fill_silence = fusion_cn_pcm_fill_silence,
-#else
-    .copy_user = fusion_cn_pcm_copy_user,
-    .fill_silence = fusion_cn_pcm_silence,
-#endif
     .ack = fusion_cn_pcm_ack
 };
 
