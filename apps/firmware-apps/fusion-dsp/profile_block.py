@@ -151,6 +151,9 @@ def profile(config_name, remote=True):
         try:
             df = pd.read_csv('timings.csv')
             
+            for param_name, param_value in param_dict.items():
+                df[param_name] = param_value
+            
             for feature, formula in feature_dict.items():
                 if feature != 'analysis_avg':
                     df[feature] = formula(param_dict)
@@ -162,13 +165,35 @@ def profile(config_name, remote=True):
     
     result_df = pd.concat(frames, axis=0, ignore_index=True)
     
+    block = current_config.get(
+            'block',
+            config_name
+        )
+    # force any type errors (caused by disk space) to NaN 
+    numeric_columns = [block, 'task1', 'matrix_mixer', 'outfile']
+    for i in range(1, 58):
+        col_name = f'infile{i}'
+        if col_name in result_df.columns:
+            numeric_columns.append(col_name)
+
+    for col in numeric_columns:
+        if col in result_df.columns:
+            before = len(result_df)
+            result_df[col] = pd.to_numeric(result_df[col], errors='coerce')
+            after = result_df[col].notna().sum()
+            if before != after:
+                print(f"WARNING: {col} had {before - after} non-numeric values")
+
+    result_df = result_df.dropna(subset=[block])
+    print(f"Rows after cleaning mixed data types: {len(result_df)}") 
+
     if config_name == 'feedback_suppression':
         if analysis_mips_data:
             for mips_entry in analysis_mips_data:
                 ch = mips_entry['channels']
                 mask = result_df['channels'] == ch
                 
-                # DEBUG: Store original value
+                # DEBUG:
                 original_main = result_df.loc[mask, block].mean()
                 
                 result_df.loc[mask, 'analysis_avg'] = mips_entry['analysis_avg']
@@ -178,7 +203,7 @@ def profile(config_name, remote=True):
                     result_df.loc[mask, block] + mips_entry['analysis_time']
                 )
                 
-                # DEBUG: Print what happened
+                # DEBUG: 
                 new_total = result_df.loc[mask, block].mean()
                 print(f"Channel {ch}:")
                 print(f"  Original main thread: {original_main:.2e}")
@@ -192,45 +217,92 @@ def profile(config_name, remote=True):
     if remote:
         print("Copying out.wav from board...")
         os.system(f'scp root@{board_ip}:/home/root/out.wav ./out.wav')
+        print("Cleaning up out.wav file...")
+        os.system(f'ssh root@{board_ip} "rm -f /home/root/out.wav"')
     
     if current_config.get('csv_dump'):
         os.makedirs('profiling_results', exist_ok=True)
         result_df.to_csv(f"profiling_results/{current_config['csv_dump']}")
 
-    block = current_config.get(
-            'block',
-            config_name
-        )
+    # Identify all parameter columns
+    params_dict = current_config.get('parameters', default_parameters)
+    param_columns = list(params_dict.keys())
+    
+    existing_param_cols = [col for col in param_columns if col in result_df.columns]
+    
     filtered_df = []
-    if 'channels' in result_df.columns:
-        filter_column = 'channels'
-    elif 'num_inputs' in result_df.columns:
-        filter_column = 'num_inputs'
-    else:
-        filter_column = None
-    if filter_column:
-        for group_value in sorted(result_df[filter_column].unique()):
-            ch_df = result_df[result_df[filter_column] == group_value]
-            low_quantile = ch_df.quantile(0.999)[block]
-            high_quantile = ch_df.quantile(0.9999)[block]
-            filtered_ch = ch_df[
-                (ch_df[block] >= low_quantile) &
-                (ch_df[block] <= high_quantile)
-            ]
-            filtered_df.append(filtered_ch)
-            print(f"Channels: {group_value}, Low quantile: {low_quantile}, High quantile: {high_quantile}")
-            print(f"Total points: {len(ch_df)}, Points after filtering: {len(filtered_ch)} ({len(filtered_ch)/len(ch_df)*100:.1f}%)")
-    else:
+    
+    if len(existing_param_cols) == 0:
+        print("No parameter columns found, using overall quantiles")
         low_quantile = result_df.quantile(0.999)[block]
         high_quantile = result_df.quantile(0.9999)[block]
         filtered_df = [result_df[
             (result_df[block] >= low_quantile) &
             (result_df[block] <= high_quantile)
         ]]
-        print(f"No grouping column found, using overall quantiles: {low_quantile}, {high_quantile}")
+        print(f"Low quantile: {low_quantile}, High quantile: {high_quantile}")
         print(f"Total points before filtering: {len(result_df)}, Points after filtering: {len(filtered_df[0])} ({len(filtered_df[0])/len(result_df)*100:.1f}%)")
-
-    filtered_df = pd.concat(filtered_df, ignore_index=True)
+    
+    elif len(existing_param_cols) == 1:
+        filter_column = existing_param_cols[0]
+        print(f"Filtering by single parameter: {filter_column}")
+        
+        for group_value in sorted(result_df[filter_column].unique()):
+            ch_df = result_df[result_df[filter_column] == group_value]
+            ch_df[block] = pd.to_numeric(ch_df[block], errors='coerce')
+            ch_df = ch_df.dropna(subset=[block])
+            
+            try:
+                low_quantile = ch_df.quantile(0.999)[block]
+                high_quantile = ch_df.quantile(0.9999)[block]
+                filtered_ch = ch_df[
+                    (ch_df[block] >= low_quantile) &
+                    (ch_df[block] <= high_quantile)
+                ]
+                filtered_df.append(filtered_ch)
+                print(f"{filter_column}={group_value}: Low={low_quantile:.2e}, High={high_quantile:.2e}")
+                print(f"  Points: {len(ch_df)} → {len(filtered_ch)} ({len(filtered_ch)/len(ch_df)*100:.1f}%)")
+            except Exception as e:
+                print(f"Error processing {filter_column}={group_value}: {e}")
+                continue
+    
+    else:
+            print(f"Filtering by parameter combinations: {existing_param_cols}")
+            param_combinations = result_df[existing_param_cols].drop_duplicates()
+            
+            for idx, row in param_combinations.iterrows():
+                mask = pd.Series([True] * len(result_df))
+                param_str = []
+                for col in existing_param_cols:
+                    mask = mask & (result_df[col] == row[col])
+                    param_str.append(f"{col}={row[col]}")
+                
+                combo_df = result_df[mask].copy()
+                combo_df[block] = pd.to_numeric(combo_df[block], errors='coerce')
+                combo_df = combo_df.dropna(subset=[block])
+                
+                if len(combo_df) > 0:
+                    try:
+                        low_quantile = combo_df.quantile(0.999)[block]
+                        high_quantile = combo_df.quantile(0.9999)[block]
+                        filtered_combo = combo_df[
+                            (combo_df[block] >= low_quantile) &
+                            (combo_df[block] <= high_quantile)
+                        ]
+                        filtered_df.append(filtered_combo)
+                        print(f"{', '.join(param_str)}: Low={low_quantile:.2e}, High={high_quantile:.2e}")
+                        print(f"  Points: {len(combo_df)} → {len(filtered_combo)} ({len(filtered_combo)/len(combo_df)*100:.1f}%)")
+                    except Exception as e:
+                        print(f"Error processing combination {', '.join(param_str)}: {e}")
+                        continue
+    
+    # Concatenate all filtered groups
+    if len(filtered_df) > 0:
+        filtered_df = pd.concat(filtered_df, ignore_index=True)
+    else:
+        print("WARNING: No data passed filtering!")
+        filtered_df = pd.DataFrame()
+        return None
 
     Xs = filtered_df[list(feature_dict.keys())]
     ys = filtered_df[[block]]
@@ -267,56 +339,163 @@ def profile(config_name, remote=True):
         plt.close()
         
     else:
-        num_features = len(feature_names)
-        fig, axes = plt.subplots(1, num_features, figsize=(6*num_features, 5))
-        
-        if num_features == 1:
-            axes = [axes]
-        elif num_features == 2:
-            axes = [axes[0], axes[1]]
-        
-        for i, feature in enumerate(feature_names):
-            x_data = Xs.iloc[:, i]
-            y_data = ys.iloc[:, 0]
-
-            axes[i].scatter(x_data, y_data, alpha=0.7, s=50, label='Data Points')
+            # for multiple features - plots with fixed parameters where configured
+            num_features = len(feature_names)
+            fig, axes = plt.subplots(1, num_features, figsize=(6*num_features, 5))
             
-            x_range = np.linspace(x_data.min(), x_data.max(), 100)
-
-            x_range_df = pd.DataFrame()
-
-            for j, feat in enumerate(feature_names):
-                x_range_df[feat] = [Xs.iloc[:, j].median()] * len(x_range)
-
-            x_range_df[feature] = x_range
-            y_pred_line = model.predict(x_range_df)
-
-            coeff = model.coef_[0][i]
-            axes[i].plot(x_range, y_pred_line, 'r-', linewidth=2,
-                            label=f'Partial fit: {coeff:.2e}')
-            axes[i].set_xlabel(feature)
-            axes[i].set_ylabel(f'{block} (timing)')
-            axes[i].set_title(f'{config_name}: {block} vs {feature}')
-            axes[i].legend()
-            axes[i].grid(True, alpha=0.3)
+            if num_features == 1:
+                axes = [axes]
             
-        fig.suptitle(f'{config_name}: {block} vs Features', fontsize=16)
-        plt.tight_layout()
-        os.makedirs('profiling_results', exist_ok=True)
-        plt.savefig(f'profiling_results/{config_name}_regression_plots.png', dpi=300, bbox_inches='tight')
-        print(f"Plot saved to: profiling_results/{config_name}_regression_plots.png")
-        plt.close()
-        
-        equation_parts = [f"{model.intercept_[0]:.2e}"]
-        for i, feature in enumerate(feature_names):
-            coeff = model.coef_[0][i]
-            equation_parts.append(f"{coeff:.2e}*{feature}")
-        full_equation = " + ".join(equation_parts)
-        print(f"Full equation: y = {full_equation}")
+            fixed_values = current_config.get('fixed_values', {})
+            
+            for i, feature in enumerate(feature_names):
+                ax = axes[i]
+                
+                # if this is a product feature (bandchannels or num_crosspoints) so we use all the datapoints
+                is_product_feature = feature in ['bandchannels', 'num_crosspoints']
+                
+                if is_product_feature:
+                    x_data = Xs.iloc[:, i]
+                    y_data = ys.iloc[:, 0]
+                    ax.scatter(x_data, y_data, alpha=0.5, s=30, label='All data points')
+                    
+                    x_range = np.linspace(x_data.min(), x_data.max(), 100)
+                    x_range_df = pd.DataFrame(index=range(len(x_range)))  
+                    for j, feat in enumerate(feature_names):
+                        if feat == feature:
+                            x_range_df[feat] = x_range
+                        else:
+                            median_val = Xs.iloc[:, j].median()
+                            if pd.isna(median_val):
+                                print(f"WARNING: Median for {feat} is NaN, using mean instead")
+                                median_val = Xs.iloc[:, j].mean()
+                                if pd.isna(median_val):
+                                    print(f"ERROR: Both median and mean for {feat} are NaN, using 0")
+                                    median_val = 0
+                            x_range_df[feat] = median_val
+                    
+                    y_pred_line = model.predict(x_range_df)
+                    coeff = model.coef_[0][i]
+                    ax.plot(x_range, y_pred_line, 'r-', linewidth=2,
+                           label=f'Coefficient: {coeff:.2e}')
+                    ax.set_title(f'{config_name}: {block} vs {feature}')
+                    
+                else:
+                    # For individual features, check if should fix other parameters
+                    if feature in fixed_values:
+                        fix_info = fixed_values[feature]
+                        other_param = fix_info['fix_for']
+                        fixed_value = fix_info['value']
+                        
+                        if other_param in filtered_df.columns:
+                            mask = filtered_df[other_param] == fixed_value
+                            filtered_indices = filtered_df[mask].index
+                            
+                            x_data_filtered = Xs.loc[Xs.index.isin(filtered_indices), feature]
+                            y_data_filtered = ys.loc[ys.index.isin(filtered_indices)].iloc[:, 0]
+                            
+                            if len(x_data_filtered) == 0:
+                                # Fall back to showing all data 
+                                x_data = Xs.iloc[:, i]
+                                y_data = ys.iloc[:, 0]
+                                ax.scatter(x_data, y_data, alpha=0.7, s=50, label='All data points')
+                                ax.set_title(f'{config_name}: {block} vs {feature}\n(No data for {other_param}={fixed_value})')
+                            else:
+                                ax.scatter(x_data_filtered, y_data_filtered, alpha=0.7, s=50, 
+                                         label=f'Data points ({other_param}={fixed_value})')
+                                
+                                # create regression line for this subset
+                                x_range = np.linspace(x_data_filtered.min(), x_data_filtered.max(), 100)
+                                
+                                x_range_df = pd.DataFrame(index=range(len(x_range)))  
+                                for j, feat in enumerate(feature_names):
+                                    if feat == feature:
+                                        x_range_df[feat] = x_range
+                                    elif feat == other_param:
+                                        x_range_df[feat] = fixed_value
+                                    elif feat in ['bandchannels', 'num_crosspoints']:
+                                        if config_name == 'peq' and feat == 'bandchannels':
+                                            if feature == 'bands':
+                                                x_range_df[feat] = x_range * fixed_value  # bands * fixed_channels
+                                            else:  # feature == 'channels'
+                                                x_range_df[feat] = fixed_value * x_range  # fixed_bands * channels
+                                        elif config_name == 'matrix_mixer' and feat == 'num_crosspoints':
+                                            if feature == 'num_inputs':
+                                                x_range_df[feat] = x_range * fixed_value  # inputs * fixed_outputs
+                                            else:  # feature == 'num_outputs'
+                                                x_range_df[feat] = fixed_value * x_range  # fixed_inputs * outputs
+                                        else:
+                                            # fallback
+                                            x_range_df[feat] = Xs[feat].median()
+                                    else:
+                                        filtered_subset = Xs.loc[Xs.index.isin(filtered_indices), feat]
+                                        median_val = filtered_subset.median()
+                                        if pd.isna(median_val):
+                                            median_val = filtered_subset.mean()
+                                            if pd.isna(median_val):
+                                                median_val = Xs[feat].median()
+                                        x_range_df[feat] = median_val
+                                
+                                y_pred_line = model.predict(x_range_df)
+                                coeff = model.coef_[0][i]
+                                ax.plot(x_range, y_pred_line, 'r-', linewidth=2,
+                                       label=f'Coefficient: {coeff:.2e}')
+                                
+                                ax.set_title(f'{config_name}: {block} vs {feature}\n(with {other_param}={fixed_value})')
+                        else:
+                            # Fallback
+                            x_data = Xs.iloc[:, i]
+                            y_data = ys.iloc[:, 0]
+                            ax.scatter(x_data, y_data, alpha=0.7, s=50, label='Data Points')
+                            ax.set_title(f'{config_name}: {block} vs {feature}')
+                    else:
+                        # No fixed value config, use original behavior
+                        x_data = Xs.iloc[:, i]
+                        y_data = ys.iloc[:, 0]
+                        ax.scatter(x_data, y_data, alpha=0.7, s=50, label='Data Points')
+                        
+                        # regression line logic with NaN checking
+                        x_range = np.linspace(x_data.min(), x_data.max(), 100)
+                        x_range_df = pd.DataFrame(index=range(len(x_range))) 
+                        for j, feat in enumerate(feature_names):
+                            if j == i:  
+                                x_range_df[feat] = x_range
+                            else:
+                                median_val = Xs.iloc[:, j].median()
+                                if pd.isna(median_val):
+                                    print(f"WARNING: Median for {feat} is NaN, using mean instead")
+                                    median_val = Xs.iloc[:, j].mean()
+                                    if pd.isna(median_val):
+                                        print(f"ERROR: Both median and mean for {feat} are NaN, using 0")
+                                        median_val = 0
+                                x_range_df[feat] = median_val
+                        
+                        y_pred_line = model.predict(x_range_df)
+                        coeff = model.coef_[0][i]
+                        ax.plot(x_range, y_pred_line, 'r-', linewidth=2,
+                               label=f'Partial fit: {coeff:.2e}')
+                        ax.set_title(f'{config_name}: {block} vs {feature}')
+                
+                ax.set_xlabel(feature)
+                ax.set_ylabel(f'{block} (timing)')
+                ax.legend()
+                ax.grid(True, alpha=0.3)
+            
+            fig.suptitle(f'{config_name}: {block} vs Features', fontsize=16)
+            plt.tight_layout()
+            os.makedirs('profiling_results', exist_ok=True)
+            plt.savefig(f'profiling_results/{config_name}_regression_plots.png', dpi=300, bbox_inches='tight')
+            print(f"Plot saved to: profiling_results/{config_name}_regression_plots.png")
+            plt.close()
+            
+            equation_parts = [f"{model.intercept_[0]:.2e}"]
+            for i, feature in enumerate(feature_names):
+                coeff = model.coef_[0][i]
+                equation_parts.append(f"{coeff:.2e}*{feature}")
+            full_equation = " + ".join(equation_parts)
+            print(f"Full equation: y = {full_equation}")
             
     print("SUMMARY STATS")
-    print(f"Low quantile (percentile): {low_quantile}")
-    print(f"High quantile (percentile): {high_quantile}") 
     print(f"Total points before filtering: {len(result_df)}")
     print(f"Points after filtering: {len(filtered_df)}")
     print(f"Percentage kept: {len(filtered_df)/len(result_df)*100:.1f}%")
@@ -363,13 +542,17 @@ configurations = {
     'matrix_mixer' : {
         'path' : 'profile_matrix_mixer.json.jinja',
         'parameters' : {
-            'num_inputs' : range(1, 60, 10),
-            'num_outputs' : range(1, 33, 5)
+            'num_inputs' : range(1, 60, 8),
+            'num_outputs' : range(1, 33, 6)
         },
         'features' : {
             'num_inputs' : lambda x: x['num_inputs'],
             'num_outputs' : lambda x: x['num_outputs'],
             'num_crosspoints' : lambda x: x['num_inputs']*x['num_outputs']
+        },
+        'fixed_values': { # These must be values already included in feature parameters.
+            'num_inputs' : { 'fix_for': 'num_outputs', 'value' : 19 }, # When varying num_inputs, fix num_outputs at 19
+            'num_outputs' : { 'fix_for': 'num_inputs', 'value' : 33 } # When varying num_outputs, fix num_inputs at 33
         },
         'csv_dump' : 'matrix_mixer_timings.csv',
         'format_string' : 'T = {0} + {1}*num_inputs*num_outputs'
@@ -382,12 +565,16 @@ configurations = {
         'path' : 'profile_peq.json.jinja',
         'parameters': {
             'bands': range(5, 38, 4),
-            'channels': range(1, 10)
+            'channels': range(1, 17, 3)
         },
         'features': {
             'bands': lambda x: x['bands'],
             'channels': lambda x: x['channels'],
             'bandchannels': lambda x: x['bands']*x['channels']
+        },
+        'fixed_values': { # These must be values already included in feature parameters.
+            'bands' : { 'fix_for': 'channels', 'value' : 7 }, # When varying bands, fix channels at 5
+            'channels' : { 'fix_for': 'bands', 'value' : 21 } # When varying channels, fix bands at 21
         },
         'csv_dump' : 'peq_tmp.csv',
         'format_string' : 'T = {0} + {1}*bands*channels'
@@ -425,7 +612,6 @@ default_features = {
     'channels': lambda x: x['channels']
 }
 default_format_string ='T = {0} + {1}*channels'
-
 
 def dict_to_iter(d):
     p = itertools.product(*d.values())
