@@ -1,22 +1,12 @@
-language: "flutter"
+project:
+  name: "flutter-apps"
+  description: "Flutter applications workspace"
 
 tasks:
-  build-apk:
-    command: "flutter"
-    args: ["build", "apk"]
-    options:
-      cache: true
+  # Batch build
+  build-all:
+    deps:
+      - "fusion-launcher:build-apk"
+      - "fusion-launcher:build-ios"
+      - "fusion-launcher:build-macos"
 
-  build-iOS:
-    command: "flutter"
-    args: ["build", "ipa", "--export-options-plist=./iOS/AS-info.plist"]
-    options:
-      cache: true
-
-  unit-tests:
-    command: "flutter"
-    args: ["test"]
-
-  format:
-    command: "flutter"
-    args: ["format", "."]
