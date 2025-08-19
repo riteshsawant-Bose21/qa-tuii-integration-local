@@ -277,8 +277,6 @@ int tca9544_handle_irq(struct endpoint_gpio *ep_gpio)
                 continue;
             }
 
-            printk(KERN_WARNING "tca9544_handle_irq: calling handle_irq on gpio %s\n", tca9544->gpios[i + 1].linked_gpio->name);
-
             // on i2c switches, gpios[0] is always the interrupt out to device
             handle_irq(tca9544->gpios[i + 1].linked_gpio);
         }
@@ -1106,7 +1104,7 @@ static int configure_base_device_gpios(struct platform_device *pdev)
             }
         }
 
-        dev_info(&pdev->dev, "Configured base device GPIO %s\n", ep_gpio->name);
+        dev_dbg(&pdev->dev, "Configured base device GPIO %s\n", ep_gpio->name);
         
         ep_gpio->valid = true;
     }
@@ -1576,7 +1574,7 @@ static int fusion_io_probe(struct platform_device *pdev)
         ep = NULL;
     }
 
-    dev_info(&pdev->dev, "Found config -- Model: %s, SN: %s, type: %d", bd->data.model, bd->data.sn, bd->data.type);
+    dev_info(&pdev->dev, "Found config -- Model: %s, SN: %s", bd->data.model, bd->data.sn);
 
     // IDEA: maybe we can have patches for HW revisions? apply here
 
@@ -1758,7 +1756,7 @@ static int fusion_io_probe(struct platform_device *pdev)
                 goto error;
             }
 
-            dev_dbg(&pdev->dev, "Successfully registered IO card %d model %s!\n", i, ic->data.model);
+            dev_info(&pdev->dev, "Successfully registered IO card %d model %s!\n", i, ic->data.model);
         }
     } else if (bd->has_slot_io == true) { /* we are a slot IO device */
         // go through all slots

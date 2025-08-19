@@ -1023,6 +1023,6 @@ int fusion_io_create_sysfs_io_card(struct platform_device *pdev, struct io_card 
         }
     }
 
-    dev_info(&pdev->dev, "Sysfs entries created for IO card %s\n", ic->data.model);
+    dev_dbg(&pdev->dev, "Sysfs entries created for IO card %s\n", ic->data.model);
     return 0;
 }
