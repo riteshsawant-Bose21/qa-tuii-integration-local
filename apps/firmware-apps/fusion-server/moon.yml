@@ -13,7 +13,6 @@ tasks:
     args: ["--package"]
     deps:
       - 'ready-script'
-      - 'fusion-dsp:dsp-package'
 
   ready-script:
     command: "chmod"
