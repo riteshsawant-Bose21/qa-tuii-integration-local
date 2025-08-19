@@ -16,4 +16,4 @@ tasks:
 
   ready-script:
     command: "chmod"
-    args: ["+x", "build-fusion-server"]
+    args: ["+x", "build-fusion-server", "Jenkins/SetVersionProperty.sh"] 

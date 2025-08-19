@@ -1,4 +1,5 @@
 cd $buildDir
+VersionFile='../src/VERSION'
 VERSION_MAJOR=$(grep MAJOR $VersionFile | cut -d' ' -f 3)
 VERSION_MINOR=$(grep MINOR $VersionFile | cut -d' ' -f 3)
 VERSION_PATCH=$(grep PATCH $VersionFile | cut -d' ' -f 3)

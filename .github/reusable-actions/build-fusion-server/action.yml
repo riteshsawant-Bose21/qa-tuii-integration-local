@@ -28,3 +28,5 @@ runs:
       working-directory: apps/firmware-apps/fusion-server
       run: |
         moon run fusion-server:build
+        VERSION="$(./Jenkins/SetVersionProperty.sh)-${GITHUB_RUN_NUMBER}+$(git rev-parse --short HEAD)"
+        curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T ./build/fusion-server_*.tar.gz ${{ inputs.nexus_url }}/Fusion-DSP/Continuous/${GITHUB_REF_NAME}/fusion-server/$VERSION/fusion-server_$VERSION.tar.gz
