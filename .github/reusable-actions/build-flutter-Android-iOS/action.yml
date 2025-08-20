@@ -38,7 +38,7 @@ runs:
 
     - name: Flutter Apps build
       shell: bash
-      working-directory: apps/frontend/flutter-apps
+      working-directory: apps/frontend/flutter-apps/fusion-launcher
       run: |
         flutter pub get
         moon run flutter-apps:build-all
