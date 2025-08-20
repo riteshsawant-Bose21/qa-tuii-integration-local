@@ -1,0 +1,5 @@
+framework module MaceAPI {
+  umbrella header "MACE.h"
+  export *
+  module * { export * }
+}

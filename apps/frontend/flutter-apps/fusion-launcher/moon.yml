@@ -1,0 +1,50 @@
+project:
+  name: "fusion-launcher"
+  description: "Fusion launcher"
+
+tasks:
+  analyze:
+    command: "flutter"
+    args: ["analyze", "--fatal-warnings", "--fatal-infos"]
+    options:
+      cache: false
+
+  build-apk:
+    command: "flutter"
+    args: ["build", "apk"]
+    deps:
+#      - "analyze"
+#      - "unit-tests"
+    options:
+      cache: false
+
+  build-ios:
+    command: "flutter"
+    args: ["build", "ipa"]
+    deps:
+#      - "analyze"
+#      - "unit-tests"
+    options:
+      cache: false
+
+  build-macos:
+    command: "flutter"
+    args: ["build", "macos"]
+    deps:
+#      - "analyze"
+#      - "unit-tests"
+    options:
+      cache: false
+
+#  unit-tests:
+#    command: "flutter"
+#    args: ["test"]
+#    options:
+#      cache: false
+
+  format:
+    command: "dart"
+    args: ["format", "."]
+    options:
+      cache: false
+
