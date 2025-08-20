@@ -21,7 +21,7 @@ runs:
       id: get_version
       uses: RCSandberg/dart-flutter-read-package-version-action@v2
       with:
-        path: apps/frontend/flutter-apps/pubspec.yaml
+        path: apps/frontend/flutter-apps/fusion-launcher/pubspec.yaml
 
     # - name: SonarQube Scan
     #   uses: SonarSource/sonarqube-scan-action@v5
