@@ -351,7 +351,7 @@ def profile(config_name, remote=True):
             for i, feature in enumerate(feature_names):
                 ax = axes[i]
                 
-                # if this is a product feature (bandchannels or num_crosspoints) so we use all the datapoints
+                # if this is a product feature (bandchannels or num_crosspoints) we use all the datapoints
                 is_product_feature = feature in ['bandchannels', 'num_crosspoints']
                 
                 if is_product_feature:
@@ -377,77 +377,106 @@ def profile(config_name, remote=True):
                     y_pred_line = model.predict(x_range_df)
                     coeff = model.coef_[0][i]
                     ax.plot(x_range, y_pred_line, 'r-', linewidth=2,
-                           label=f'Coefficient: {coeff:.2e}')
+                        label=f'Slope: {coeff:.2e}')
                     ax.set_title(f'{config_name}: {block} vs {feature}')
                     
                 else:
-                    # For individual features, check if should fix other parameters
                     if feature in fixed_values:
                         fix_info = fixed_values[feature]
                         other_param = fix_info['fix_for']
-                        fixed_value = fix_info['value']
                         
-                        if other_param in filtered_df.columns:
-                            mask = filtered_df[other_param] == fixed_value
-                            filtered_indices = filtered_df[mask].index
+                        if 'values' in fix_info:
+                            fixed_vals = fix_info['values']
+                            colors = ['blue', 'orange', 'green', 'red', 'purple'][:len(fixed_vals)]
                             
-                            x_data_filtered = Xs.loc[Xs.index.isin(filtered_indices), feature]
-                            y_data_filtered = ys.loc[ys.index.isin(filtered_indices)].iloc[:, 0]
+                            for fixed_val, color in zip(fixed_vals, colors):
+                                mask = filtered_df[other_param] == fixed_val
+                                if mask.sum() == 0:
+                                    continue
+                                    
+                                subset_df = filtered_df[mask]
+                                x_subset = subset_df[feature].values
+                                y_subset = subset_df[block].values
+                                
+                                ax.scatter(x_subset, y_subset, alpha=0.5, s=30, color=color,
+                                        label=f'{other_param}={fixed_val}')
+                                
+                                if len(x_subset) > 1:
+                                    X_fit = x_subset.reshape(-1, 1)
+                                    model_subset = LinearRegression().fit(X_fit, y_subset)
+                                    
+                                    x_line = np.linspace(x_subset.min(), x_subset.max(), 100)
+                                    y_line = model_subset.predict(x_line.reshape(-1, 1))
+                                    
+                                    ax.plot(x_line, y_line, color=color, linewidth=2,
+                                        label=f'slope={model_subset.coef_[0]:.2e}')
                             
-                            if len(x_data_filtered) == 0:
-                                # Fall back to showing all data 
+                            ax.set_title(f'{config_name}: {block} vs {feature}')
+                            
+                        else:
+                            fixed_value = fix_info['value']
+                            
+                            if other_param in filtered_df.columns:
+                                mask = filtered_df[other_param] == fixed_value
+                                filtered_indices = filtered_df[mask].index
+                                
+                                x_data_filtered = Xs.loc[Xs.index.isin(filtered_indices), feature]
+                                y_data_filtered = ys.loc[ys.index.isin(filtered_indices)].iloc[:, 0]
+                                
+                                if len(x_data_filtered) == 0:
+                                    # Fall back to showing all data 
+                                    x_data = Xs.iloc[:, i]
+                                    y_data = ys.iloc[:, 0]
+                                    ax.scatter(x_data, y_data, alpha=0.7, s=50, label='All data points')
+                                    ax.set_title(f'{config_name}: {block} vs {feature}\n(No data for {other_param}={fixed_value})')
+                                else:
+                                    ax.scatter(x_data_filtered, y_data_filtered, alpha=0.7, s=50, 
+                                            label=f'Data points ({other_param}={fixed_value})')
+                                    
+                                    # create regression line for this subset
+                                    x_range = np.linspace(x_data_filtered.min(), x_data_filtered.max(), 100)
+                                    
+                                    x_range_df = pd.DataFrame(index=range(len(x_range)))  
+                                    for j, feat in enumerate(feature_names):
+                                        if feat == feature:
+                                            x_range_df[feat] = x_range
+                                        elif feat == other_param:
+                                            x_range_df[feat] = fixed_value
+                                        elif feat in ['bandchannels', 'num_crosspoints']:
+                                            if config_name == 'peq' and feat == 'bandchannels':
+                                                if feature == 'bands':
+                                                    x_range_df[feat] = x_range * fixed_value  # bands * fixed_channels
+                                                else:  # feature == 'channels'
+                                                    x_range_df[feat] = fixed_value * x_range  # fixed_bands * channels
+                                            elif config_name == 'matrix_mixer' and feat == 'num_crosspoints':
+                                                if feature == 'num_inputs':
+                                                    x_range_df[feat] = x_range * fixed_value  # inputs * fixed_outputs
+                                                else:  # feature == 'num_outputs'
+                                                    x_range_df[feat] = fixed_value * x_range  # fixed_inputs * outputs
+                                            else:
+                                                # fallback
+                                                x_range_df[feat] = Xs[feat].median()
+                                        else:
+                                            filtered_subset = Xs.loc[Xs.index.isin(filtered_indices), feat]
+                                            median_val = filtered_subset.median()
+                                            if pd.isna(median_val):
+                                                median_val = filtered_subset.mean()
+                                                if pd.isna(median_val):
+                                                    median_val = Xs[feat].median()
+                                            x_range_df[feat] = median_val
+                                    
+                                    y_pred_line = model.predict(x_range_df)
+                                    coeff = model.coef_[0][i]
+                                    ax.plot(x_range, y_pred_line, 'r-', linewidth=2,
+                                        label=f'Slope: {coeff:.2e}')
+                                    
+                                    ax.set_title(f'{config_name}: {block} vs {feature}\n(with {other_param}={fixed_value})')
+                            else:
+                                # Fallback
                                 x_data = Xs.iloc[:, i]
                                 y_data = ys.iloc[:, 0]
-                                ax.scatter(x_data, y_data, alpha=0.7, s=50, label='All data points')
-                                ax.set_title(f'{config_name}: {block} vs {feature}\n(No data for {other_param}={fixed_value})')
-                            else:
-                                ax.scatter(x_data_filtered, y_data_filtered, alpha=0.7, s=50, 
-                                         label=f'Data points ({other_param}={fixed_value})')
-                                
-                                # create regression line for this subset
-                                x_range = np.linspace(x_data_filtered.min(), x_data_filtered.max(), 100)
-                                
-                                x_range_df = pd.DataFrame(index=range(len(x_range)))  
-                                for j, feat in enumerate(feature_names):
-                                    if feat == feature:
-                                        x_range_df[feat] = x_range
-                                    elif feat == other_param:
-                                        x_range_df[feat] = fixed_value
-                                    elif feat in ['bandchannels', 'num_crosspoints']:
-                                        if config_name == 'peq' and feat == 'bandchannels':
-                                            if feature == 'bands':
-                                                x_range_df[feat] = x_range * fixed_value  # bands * fixed_channels
-                                            else:  # feature == 'channels'
-                                                x_range_df[feat] = fixed_value * x_range  # fixed_bands * channels
-                                        elif config_name == 'matrix_mixer' and feat == 'num_crosspoints':
-                                            if feature == 'num_inputs':
-                                                x_range_df[feat] = x_range * fixed_value  # inputs * fixed_outputs
-                                            else:  # feature == 'num_outputs'
-                                                x_range_df[feat] = fixed_value * x_range  # fixed_inputs * outputs
-                                        else:
-                                            # fallback
-                                            x_range_df[feat] = Xs[feat].median()
-                                    else:
-                                        filtered_subset = Xs.loc[Xs.index.isin(filtered_indices), feat]
-                                        median_val = filtered_subset.median()
-                                        if pd.isna(median_val):
-                                            median_val = filtered_subset.mean()
-                                            if pd.isna(median_val):
-                                                median_val = Xs[feat].median()
-                                        x_range_df[feat] = median_val
-                                
-                                y_pred_line = model.predict(x_range_df)
-                                coeff = model.coef_[0][i]
-                                ax.plot(x_range, y_pred_line, 'r-', linewidth=2,
-                                       label=f'Coefficient: {coeff:.2e}')
-                                
-                                ax.set_title(f'{config_name}: {block} vs {feature}\n(with {other_param}={fixed_value})')
-                        else:
-                            # Fallback
-                            x_data = Xs.iloc[:, i]
-                            y_data = ys.iloc[:, 0]
-                            ax.scatter(x_data, y_data, alpha=0.7, s=50, label='Data Points')
-                            ax.set_title(f'{config_name}: {block} vs {feature}')
+                                ax.scatter(x_data, y_data, alpha=0.7, s=50, label='Data Points')
+                                ax.set_title(f'{config_name}: {block} vs {feature}')
                     else:
                         # No fixed value config, use original behavior
                         x_data = Xs.iloc[:, i]
@@ -473,7 +502,7 @@ def profile(config_name, remote=True):
                         y_pred_line = model.predict(x_range_df)
                         coeff = model.coef_[0][i]
                         ax.plot(x_range, y_pred_line, 'r-', linewidth=2,
-                               label=f'Partial fit: {coeff:.2e}')
+                            label=f'Partial fit: {coeff:.2e}')
                         ax.set_title(f'{config_name}: {block} vs {feature}')
                 
                 ax.set_xlabel(feature)
@@ -494,7 +523,7 @@ def profile(config_name, remote=True):
                 equation_parts.append(f"{coeff:.2e}*{feature}")
             full_equation = " + ".join(equation_parts)
             print(f"Full equation: y = {full_equation}")
-            
+                
     print("SUMMARY STATS")
     print(f"Total points before filtering: {len(result_df)}")
     print(f"Points after filtering: {len(filtered_df)}")
@@ -551,11 +580,11 @@ configurations = {
             'num_crosspoints' : lambda x: x['num_inputs']*x['num_outputs']
         },
         'fixed_values': { # These must be values already included in feature parameters.
-            'num_inputs' : { 'fix_for': 'num_outputs', 'value' : 19 }, # When varying num_inputs, fix num_outputs at 19
-            'num_outputs' : { 'fix_for': 'num_inputs', 'value' : 33 } # When varying num_outputs, fix num_inputs at 33
+            'num_inputs' : { 'fix_for' : 'num_outputs', 'values' : [1, 19, 31] }, # Multiple fixed **num_outputs** values when varying num_inputs
+            'num_outputs' : { 'fix_for' : 'num_inputs', 'values' : [1, 33, 57] } # Multiple fixed **num_inputs** values when varying num_outputs
         },
         'csv_dump' : 'matrix_mixer_timings.csv',
-        'format_string' : 'T = {0} + {1}*num_inputs*num_outputs'
+        'format_string' : 'T = {0} + {1}*num_inputs + {2}*num_outputs + {3}*num_crosspoints'
     },
     'passthrough' : {
         'path' : 'profile_passthrough.json.jinja',
@@ -573,11 +602,11 @@ configurations = {
             'bandchannels': lambda x: x['bands']*x['channels']
         },
         'fixed_values': { # These must be values already included in feature parameters.
-            'bands' : { 'fix_for': 'channels', 'value' : 7 }, # When varying bands, fix channels at 5
-            'channels' : { 'fix_for': 'bands', 'value' : 21 } # When varying channels, fix bands at 21
+            'bands': { 'fix_for': 'channels', 'values': [1, 7, 16] },      # Multiple fixed **channel** values when varying bands
+            'channels': { 'fix_for': 'bands', 'values': [5, 21, 37] }   # Multiple fixed **band** values when varying channels
         },
         'csv_dump' : 'peq_tmp.csv',
-        'format_string' : 'T = {0} + {1}*bands*channels'
+        'format_string' : 'T = {0} + {1}*bands + {2}*channels + {3}*bandchannels'
     },
     'tone' : {
         'path' : 'profile_tone.json.jinja'
