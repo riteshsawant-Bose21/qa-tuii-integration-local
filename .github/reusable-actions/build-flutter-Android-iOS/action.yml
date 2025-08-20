@@ -23,35 +23,35 @@ runs:
       with:
         path: apps/frontend/flutter-apps/pubspec.yaml
 
-    - name: SonarQube Scan
-      uses: SonarSource/sonarqube-scan-action@v5
-      env:
-        SONAR_TOKEN: ${{ inputs.flutter_apps_sonar_token }}
-      with:
-        projectBaseDir: 'apps/frontend/flutter-apps'
-        args: >
-          -Dsonar.c.file.suffixes=-
-          -Dsonar.cpp.file.suffixes=-
-          -Dsonar.objc.file.suffixes=-
-          -Dsonar.exclusions=build/**
-          -Dsonar.inclusions=lib/**,android/**,ios/**
+    # - name: SonarQube Scan
+    #   uses: SonarSource/sonarqube-scan-action@v5
+    #   env:
+    #     SONAR_TOKEN: ${{ inputs.flutter_apps_sonar_token }}
+    #   with:
+    #     projectBaseDir: 'apps/frontend/flutter-apps'
+    #     args: >
+    #       -Dsonar.c.file.suffixes=-
+    #       -Dsonar.cpp.file.suffixes=-
+    #       -Dsonar.objc.file.suffixes=-
+    #       -Dsonar.exclusions=build/**
+    #       -Dsonar.inclusions=lib/**,android/**,ios/**
 
-    - name: Flutter Android build
+    - name: Flutter Apps build
       shell: bash
       working-directory: apps/frontend/flutter-apps
       run: |
         flutter pub get
-        moon run flutter-apps:build-apk
+        moon run flutter-apps:build-all
         VERSION="${{ steps.get_version.outputs.version }}-$(git rev-parse --short HEAD)"
-        curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T ./build/app/outputs/flutter-apk/app-release.apk ${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/$VERSION/flutter-apk/aap-release-$VERSION.apk
+    #     curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T ./build/app/outputs/flutter-apk/app-release.apk ${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/$VERSION/flutter-apk/aap-release-$VERSION.apk
 
-    - name: Flutter iOS build
-      shell: bash
-      working-directory: apps/frontend/flutter-apps
-      run: |
-        flutter pub get
-        security unlock-keychain -p "${{ inputs.keychain_password }}" /Users/devops/Library/Keychains/login.keychain-db
-        moon run flutter-apps:build-iOS
-        VERSION="${{ steps.get_version.outputs.version }}-$(git rev-parse --short HEAD)"
-        curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T ./build/ios/ipa/fusion_design_tool_prototype.ipa ${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/$VERSION/flutter-iOS/fusion_design_tool_prototype-$VERSION.ipa
+    # - name: Flutter iOS build
+    #   shell: bash
+    #   working-directory: apps/frontend/flutter-apps
+    #   run: |
+    #     flutter pub get
+    #     security unlock-keychain -p "${{ inputs.keychain_password }}" /Users/devops/Library/Keychains/login.keychain-db
+    #     moon run flutter-apps:build-iOS
+    #     VERSION="${{ steps.get_version.outputs.version }}-$(git rev-parse --short HEAD)"
+    #     curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T ./build/ios/ipa/fusion_design_tool_prototype.ipa ${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/$VERSION/flutter-iOS/fusion_design_tool_prototype-$VERSION.ipa
         
