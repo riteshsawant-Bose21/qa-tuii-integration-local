@@ -79,7 +79,7 @@ jobs:
     if: needs.buildChecks.outputs.cloudServicesUI == 'true' || needs.buildChecks.outputs.cloudServicesBackend == 'true'
     concurrency:
       group: cloud-servicesUI-build
-    runs-on: android-mac-build-agent
+    runs-on: ubuntu-agent
     timeout-minutes: 30
 
     steps:

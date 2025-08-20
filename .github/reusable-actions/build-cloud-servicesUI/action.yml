@@ -8,4 +8,4 @@ runs:
       shell: bash
       working-directory: apps/frontend/react-apps
       run: |
-        moon run react-apps:build-all
+        moon run react-apps:build

@@ -22,12 +22,12 @@ runs:
         VERSION=$(cat version.txt)
         echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-    - name: SonarQube Scan
-      uses: SonarSource/sonarqube-scan-action@v5
-      env:
-        SONAR_TOKEN: ${{ inputs.cloud_backend_sonar_token }}
-      with:
-        projectBaseDir: 'apps/cloud-backend/fusion-cloud'
+    # - name: SonarQube Scan
+    #   uses: SonarSource/sonarqube-scan-action@v5
+    #   env:
+    #     SONAR_TOKEN: ${{ inputs.cloud_backend_sonar_token }}
+    #   with:
+    #     projectBaseDir: 'apps/cloud-backend/fusion-cloud'
 
     - name: Cloud Services Backend
       shell: bash

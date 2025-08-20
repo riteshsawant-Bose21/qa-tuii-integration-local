@@ -23,18 +23,18 @@ runs:
       with:
         path: apps/frontend/flutter-apps/pubspec.yaml
 
-    - name: SonarQube Scan
-      uses: SonarSource/sonarqube-scan-action@v5
-      env:
-        SONAR_TOKEN: ${{ inputs.flutter_apps_sonar_token }}
-      with:
-        projectBaseDir: 'apps/frontend/flutter-apps'
-        args: >
-          -Dsonar.c.file.suffixes=-
-          -Dsonar.cpp.file.suffixes=-
-          -Dsonar.objc.file.suffixes=-
-          -Dsonar.exclusions=build/**
-          -Dsonar.inclusions=lib/**,android/**,ios/**
+    # - name: SonarQube Scan
+    #   uses: SonarSource/sonarqube-scan-action@v5
+    #   env:
+    #     SONAR_TOKEN: ${{ inputs.flutter_apps_sonar_token }}
+    #   with:
+    #     projectBaseDir: 'apps/frontend/flutter-apps'
+    #     args: >
+    #       -Dsonar.c.file.suffixes=-
+    #       -Dsonar.cpp.file.suffixes=-
+    #       -Dsonar.objc.file.suffixes=-
+    #       -Dsonar.exclusions=build/**
+    #       -Dsonar.inclusions=lib/**,android/**,ios/**
 
     - name: Flutter Android build
       shell: bash

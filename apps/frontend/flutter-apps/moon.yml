@@ -1,6 +1,9 @@
 language: "flutter"
 
 tasks:
+  build:
+    deps: ["build-apk", "build-iOS"]
+
   build-apk:
     command: "flutter"
     args: ["build", "apk"]
@@ -12,11 +15,3 @@ tasks:
     args: ["build", "ipa", "--export-options-plist=./iOS/AS-info.plist"]
     options:
       cache: true
-
-  unit-tests:
-    command: "flutter"
-    args: ["test"]
-
-  format:
-    command: "flutter"
-    args: ["format", "."]

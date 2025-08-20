@@ -4,13 +4,13 @@ project:
 
 tasks:
 
-  dsp-package:
+  build:
     command: "python3"
     args: ["package.py"]
     deps:
-      - build
+      - create-binary
 
-  build:
+  create-binary:
     command: "./moon-build.sh"
     deps:
       - ready-script
