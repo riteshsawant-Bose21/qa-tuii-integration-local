@@ -972,7 +972,7 @@ const struct base_device bd_fusion_c0 = {
             },
             .slot = 1,
             .i2c_sw_channel = 2,
-            .num_gpios = 3,
+            .num_gpios = 4,
             .gpios = (struct endpoint_gpio[]) {
                 {
                     .name = "gpio_hdmi_psw",
@@ -994,6 +994,13 @@ const struct base_device bd_fusion_c0 = {
                     .export = EP_GPIO_EXPORT,
                     .ioexp_id = 1,
                     .dir = EP_GPIO_DIR_I
+                },
+                {
+                    .name = "gpio_a_mute_out",
+                    .type = EP_GPIO_TYPE_PHYS,
+                    .export = EP_GPIO_EXPORT,
+                    //.is_irq = true,
+                    .dir = EP_GPIO_DIR_O
                 }
             },
             .num_eps = 2,
@@ -1025,7 +1032,7 @@ const struct base_device bd_fusion_c0 = {
                                 {
                                     .reg_addr = AK4137_REG_PCM_CONT0,
                                     .op_size = I2C_REG_DATA_OP_8BIT,
-                                    .data_mask = 0x13   //32 or 16bit, I2S justified
+                                    .data_mask = 0x16   // MSB justified TDM
                                 }
                             }
                         }
@@ -1034,13 +1041,14 @@ const struct base_device bd_fusion_c0 = {
                 {
                     .name = "ep_hdmi_ep9512t",
                     .type = EP_TYPE_HDMI_EP9512T,
-                    .export = EP_NO_EXPORT,
+                    .export = EP_EXPORT,
                     .has_i2c = true,
                     .addr_list = (unsigned short[]) { 0x3c, I2C_CLIENT_END },
                     .ep_handle_irq = ep9512t_handle_irq,
                     .num_gpios = 3,
                     .gpios = (struct endpoint_gpio[]) {
                         {
+                            // not sure exactly, but export for reading
                             .name = "gpio_a_mute_out",
                             .type = EP_GPIO_TYPE_PHYS,
                             .export = EP_GPIO_EXPORT,
@@ -1060,9 +1068,7 @@ const struct base_device bd_fusion_c0 = {
                             .type = EP_GPIO_TYPE_VIRT,
                             .export = EP_GPIO_EXPORT,
                             .ioexp_id = 1,
-                            .is_irq = false,
-                            .dir = EP_GPIO_DIR_I,
-                            .default_val = EP_GPIO_VAL_HI
+                            .dir = EP_GPIO_DIR_I
                         }
                     },
                     .num_cmds = 1,
@@ -1082,7 +1088,6 @@ const struct base_device bd_fusion_c0 = {
                                     .reg_addr  = EP9512T_REG_TX_CTRL,    // 0x11
                                     .op_size   = I2C_REG_DATA_OP_8BIT,
                                     .data_mask = 0x00                  // All zero, clear all bits
-                                    
                                 },
                                 {
                                     .reg_addr  = EP9512T_REG_AUDIO_CFG,  // 0x12
