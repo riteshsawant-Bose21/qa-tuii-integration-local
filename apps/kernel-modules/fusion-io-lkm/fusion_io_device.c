@@ -234,12 +234,12 @@ static int handle_irq(struct endpoint_gpio *ep_gpio)
     int ret = -1;
   
     if (ep_gpio->parent_endpoint) {
-        printk(KERN_INFO "handle_irq: calling ep_handle_irq for gpio %s\n", ep_gpio->name);
+        printk(KERN_DEBUG "handle_irq: calling ep_handle_irq for gpio %s\n", ep_gpio->name);
         ret = ep_gpio->parent_endpoint->ep_handle_irq(ep_gpio);
     } else if (ep_gpio->parent_io_card) {
         for (int i = 0; i < ep_gpio->num_aggregate_gpios; ++i) {
             aggregate_gpio = ep_gpio->aggregate_gpios[i];
-            printk(KERN_INFO "handle_irq: calling ep_handle_irq for agg_gpio %s\n", ep_gpio->name);
+            printk(KERN_DEBUG "handle_irq: calling ep_handle_irq for agg_gpio %s\n", ep_gpio->name);
             ret = aggregate_gpio->parent_endpoint->ep_handle_irq(aggregate_gpio);
             if (ret == 0) {
                 break;
@@ -313,7 +313,7 @@ int tcal6408_handle_irq(struct endpoint_gpio *ep_gpio)
         return ret;
     }
 
-    printk(KERN_INFO "tcal6408_handle_irq: rd_buf=0x%02x\n", *rd_buf);
+    printk(KERN_DEBUG "tcal6408_handle_irq: rd_buf=0x%02x\n", *rd_buf);
 
     irq_mask = *rd_buf;
 
@@ -436,7 +436,7 @@ int ads7128_handle_irq(struct endpoint_gpio *ep_gpio)
     }
     event_mask = *rd_data_buf;
 
-    printk(KERN_INFO "ads7128_handle_irq: event_mask=0x%02x\n", event_mask);
+    printk(KERN_DEBUG "ads7128_handle_irq: event_mask=0x%02x\n", event_mask);
 
     // nothing to do?
     if (!event_mask) {
@@ -452,7 +452,7 @@ int ads7128_handle_irq(struct endpoint_gpio *ep_gpio)
     }
     pin_cfg = *rd_data_buf;
 
-    printk(KERN_INFO "ads7128_handle_irq: pin_cfg=0x%02x\n", pin_cfg);
+    printk(KERN_DEBUG "ads7128_handle_irq: pin_cfg=0x%02x\n", pin_cfg);
 
     // Process interrupts for all channels in the mask
     for (channel = 0; channel < 8; channel++) {
@@ -477,7 +477,7 @@ int ads7128_handle_irq(struct endpoint_gpio *ep_gpio)
             adc_value = *(u16 *)rd_data_buf; // 12-bit value (i think its 16bit...)
             gpio->value = adc_value;   // Store ADC value
 
-            printk(KERN_INFO "ads7128_handle_irq: adc_value=0x%04x\n", adc_value);
+            printk(KERN_DEBUG "ads7128_handle_irq: adc_value=0x%04x\n", adc_value);
 
             // Update thresholds (±32)
             new_high = adc_value > 0xffdf ? 0xffff : adc_value + 0x0020 ;
@@ -490,7 +490,7 @@ int ads7128_handle_irq(struct endpoint_gpio *ep_gpio)
                 new_high = 0x0040;
             }
 
-            printk(KERN_INFO "ads7128_handle_irq: new_high=0x%04x, new_low=0x%04x\n", new_high, new_low);
+            printk(KERN_DEBUG "ads7128_handle_irq: new_high=0x%04x, new_low=0x%04x\n", new_high, new_low);
 
             // Use word writes for high and low thresholds
             wr_buf[1] = ADS7128_REG_HIGH_TH_CH0 + channel * 4;
@@ -518,7 +518,7 @@ int ads7128_handle_irq(struct endpoint_gpio *ep_gpio)
             }
             gpi_value = *rd_data_buf;
 
-            printk(KERN_INFO "ads7128_handle_irq: gpi_value=0x%02x\n", gpi_value);
+            printk(KERN_DEBUG "ads7128_handle_irq: gpi_value=0x%02x\n", gpi_value);
         }
 
         // clear event flag bits
@@ -557,7 +557,7 @@ static void handle_irq_work(struct work_struct *work)
     int ret;
 
     // Debug context
-    printk(KERN_INFO "handle_irq_work: gpio %s\n", irq_gpio->name);
+    printk(KERN_DEBUG "handle_irq_work: gpio %s\n", irq_gpio->name);
 
     ret = handle_irq(irq_gpio);
     if (ret)
@@ -960,8 +960,8 @@ static void link_gpio(struct platform_device *pdev, struct endpoint_gpio *ep_gpi
         }
 
         // if gpio is on an ic endpoint, search the ic AND ic endpoint gpios
-        // if gpio is just on ic, and is aggregate, we need to search up into endpoints
-        if (parent_ic && (parent_ep || ep_gpio->aggregate_id != 0) && !ep_gpio->is_irq) {
+        // if gpio is just on ic, we need to search up into endpoints
+        if (parent_ic && !ep_gpio->is_irq) {
             // search ic gpios
             if (parent_ep) {
                 ret = set_linked_or_aggregate_gpio(pdev, ep_gpio, parent_ic->num_gpios, parent_ic->gpios);
@@ -1044,7 +1044,7 @@ static void link_gpio(struct platform_device *pdev, struct endpoint_gpio *ep_gpi
         }
     }
 
-    dev_dbg(&pdev->dev, "link_gpio: no link for GPIO %s:%s", ep_gpio->parent_io_card ?
+    dev_warn(&pdev->dev, "link_gpio: no link for GPIO %s:%s", ep_gpio->parent_io_card ?
                                                                 ep_gpio->parent_io_card->data.model :
                                                                 ep_gpio->parent_endpoint ?
                                                                 ep_gpio->parent_endpoint->name :
@@ -1760,14 +1760,14 @@ static int fusion_io_probe(struct platform_device *pdev)
                 goto error;
             }
 
-            dev_info(&pdev->dev, "Successfully registered IO card %d model %s!\n", i, ic->data.model);
+            dev_info(&pdev->dev, "Successfully registered IO block %s!\n", ic->data.model);
         }
     } else if (bd->has_slot_io == true) { /* we are a slot IO device */
         // go through all slots
         for (i = 0; i < bd->num_ics; ++i) {
             ic = &bd->io_cards[i];
 
-            if (ic->data.type != IC_TYPE_UNKNOWN) {
+            if (ic->data.type != IC_TYPE_NONE) {
                 continue;
             }
 

@@ -454,13 +454,10 @@ struct eeprom_data {
 enum io_card_type {
     /* NONE--terminator */
     IC_TYPE_NONE       = 0,
-    
-    /* UNKNOWN--un-discovered io card slot */
-    IC_TYPE_UNKNOWN,
 
     /* audio */
     // analog
-    IC_TYPE_AN_START   = IC_TYPE_UNKNOWN + 1,
+    IC_TYPE_AN_START   = IC_TYPE_NONE + 1,
     IC_TYPE_AN_IN      = IC_TYPE_AN_START,
     IC_TYPE_AN_OUT,
     IC_TYPE_AN_IN_OUT,
@@ -512,7 +509,6 @@ enum base_device_type {
 
     BD_TYPE_FIXED_IO_START     = BD_TYPE_NONE + 1,
     BD_TYPE_FUSION_MINI_4x6    = BD_TYPE_FIXED_IO_START,
-    BD_TYPE_FUSION_VAR_PROTO,
     BD_TYPE_FUSION_C0,
     BD_TYPE_FIXED_IO_END,
 
@@ -543,6 +539,7 @@ struct base_device {
     struct io_card          *io_cards;
 };
 
+// Driver data
 struct fusion_io_base_drvdata {
     struct base_device *fusion_device;
 
@@ -554,37 +551,19 @@ struct fusion_io_base_drvdata {
 
 
 // defined in fusion_io_config.c
-extern const struct endpoint_gpio ep_gpio_empty;
-extern const struct endpoint_cmd  ep_cmd_empty;
-extern const struct i2c_reg_data  i2c_reg_data_empty;
-
-extern const struct endpoint      ep_empty;
-extern const struct endpoint      ep_aud_adc_taa5242;
-extern const struct endpoint      ep_aud_dac_tad5242;
-extern const struct endpoint      ep_src_ak4137;
-extern const struct endpoint      ep_hdmi_ep9512t;
-extern const struct endpoint      ep_ioexp_tca9535;
-extern const struct endpoint      ep_ioexp_tcal6408;
-extern const struct endpoint      ep_adc_ads7128;
-extern const struct endpoint      ep_sec_eeprom_sha104;
-extern const struct endpoint      ep_eeprom_m24c32;
-extern const struct endpoint      ep_i2csw_tca9544;
 extern const enum endpoint_type   default_ep_types[];
 extern const struct endpoint      *default_eps[];
 
-extern const struct io_card       ic_empty;
-extern const struct io_card       ic_unknown;
 extern const enum io_card_type    default_ic_types[];
 extern const struct io_card       *default_ics[];
 
-extern const struct base_device    bd_empty;
-extern const struct base_device    bd_fusion_var_proto;
-extern const struct base_device    bd_fusion_proto1;
 extern const enum base_device_type default_bd_types[];
 extern const struct base_device    *default_bds[];
 
+
 // x_configure callbacks defined in fusion_io_device.c
 int ads7128_configure(struct i2c_client *, struct endpoint_cmd *);
+
 
 // x_handle_irq callbacks defined in fusion_io_device.c
 int tca9544_handle_irq(struct endpoint_gpio *);

@@ -477,7 +477,7 @@ static int fusion_io_create_sysfs_gpio(struct device *parent_dev,
             }
             break;
         case EP_GPIO_TYPE_VIRT:
-        ep_gpio->dev_attr.attr.mode = 0664;
+            ep_gpio->dev_attr.attr.mode = 0664;
             ep_gpio->dev_attr.show  = fusion_io_virt_gpio_show;
             ep_gpio->dev_attr.store = fusion_io_virt_gpio_store;
             break;
@@ -782,7 +782,7 @@ int fusion_io_create_sysfs_base(struct platform_device *pdev)
         }
     }
 
-    dev_info(&pdev->dev, "Sysfs entries created for base device\n");
+    dev_dbg(&pdev->dev, "Sysfs entries created for base device\n");
     return 0;
 }
 
@@ -955,7 +955,7 @@ int fusion_io_create_sysfs_io_card(struct platform_device *pdev, struct io_card 
 
         ret = fusion_io_create_sysfs_gpio(dev, ep_gpio);
         if (ret) {
-            dev_err(dev, "Failed to create sysfs for GPIO %s:%s\n", ic->data.model, ep_gpio->name);
+            dev_warn(dev, "Failed to create sysfs for GPIO %s:%s\n", ic->data.model, ep_gpio->name);
             return ret;
         }
     }
