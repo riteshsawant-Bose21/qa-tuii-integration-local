@@ -43,7 +43,7 @@ runs:
         flutter pub get
         moon run flutter-apps:build-all
         VERSION="${{ steps.get_version.outputs.version }}-$(git rev-parse --short HEAD)"
-        curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T ./build/app/outputs/flutter-apk/Fusion\ Launcher.apk ${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/$VERSION/flutter-apk/Fusion-Launcher-$VERSION.apk
+        curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T ./build/app/outputs/flutter-apk/app-release.apk ${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/$VERSION/flutter-apk/Fusion-Launcher-$VERSION.apk
         curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T ./build/ios/ipa/Fusion\ Launcher.ipa ${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/$VERSION/flutter-iOS/Fusion-Launcher-$VERSION.ipa
         curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T ./build/macos/Build/Products/Release/Fusion\ Launcher.app ${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/$VERSION/flutter-macOS/Fusion-Launcher-$VERSION.app
         echi "Builds uploaded to Nexus successfully!"
