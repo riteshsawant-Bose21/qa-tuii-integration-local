@@ -1,5 +1,5 @@
-name: "Build Flutter Android and iOS App"
-description: "Build Flutter Android and iOS App"
+name: "Build Flutter Android, macOS and iOS App"
+description: "Build Flutter Android, macOS and iOS App"
 inputs:
   flutter_apps_sonar_token:
     description: 'SonarQube server token'
@@ -36,22 +36,17 @@ runs:
     #       -Dsonar.exclusions=build/**
     #       -Dsonar.inclusions=lib/**,android/**,ios/**
 
-    - name: Flutter Apps build
+    - name: Flutter Android, macOS and iOS Apps build
       shell: bash
       working-directory: apps/frontend/flutter-apps/fusion-launcher
       run: |
         flutter pub get
         moon run flutter-apps:build-all
         VERSION="${{ steps.get_version.outputs.version }}-$(git rev-parse --short HEAD)"
-    #     curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T ./build/app/outputs/flutter-apk/app-release.apk ${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/$VERSION/flutter-apk/aap-release-$VERSION.apk
-
-    # - name: Flutter iOS build
-    #   shell: bash
-    #   working-directory: apps/frontend/flutter-apps
-    #   run: |
-    #     flutter pub get
-    #     security unlock-keychain -p "${{ inputs.keychain_password }}" /Users/devops/Library/Keychains/login.keychain-db
-    #     moon run flutter-apps:build-iOS
-    #     VERSION="${{ steps.get_version.outputs.version }}-$(git rev-parse --short HEAD)"
-    #     curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T ./build/ios/ipa/fusion_design_tool_prototype.ipa ${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/$VERSION/flutter-iOS/fusion_design_tool_prototype-$VERSION.ipa
-        
+        curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T ./build/app/outputs/flutter-apk/Fusion\ Launcher.apk ${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/$VERSION/flutter-apk/Fusion-Launcher-$VERSION.apk
+        curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T ./build/ios/ipa/Fusion\ Launcher.ipa ${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/$VERSION/flutter-iOS/Fusion-Launcher-$VERSION.ipa
+        curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T ./build/macos/Build/Products/Release/Fusion\ Launcher.app ${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/$VERSION/flutter-macOS/Fusion-Launcher-$VERSION.app
+        echi "Builds uploaded to Nexus successfully!"
+        echo "flutter-apk: ${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/$VERSION/flutter-apk/Fusion-Launcher-$VERSION.apk"
+        echo "flutter-iOS: ${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/$VERSION/flutter-iOS/Fusion-Launcher-$VERSION.ipa"
+        echo "flutter-macOS: ${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/$VERSION/flutter-macOS/Fusion-Launcher-$VERSION.app" 
