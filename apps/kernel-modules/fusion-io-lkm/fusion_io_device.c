@@ -134,8 +134,10 @@ static int configure_i2c_endpoint(struct platform_device *pdev, struct endpoint 
                                                                             data->reg_addr, data->data_mask, client->addr);
                 return ret;
             }
-
-            fsleep(10);
+            else{
+              //  dev_info(&pdev->dev, "Wrote register 0x%04x with data 0x%04x to I2C device at 0x%02x\n",
+                                                                           // data->reg_addr, data->data_mask, client->addr);
+            }
         }
     }
     
@@ -826,6 +828,10 @@ static int set_linked_or_aggregate_gpio(struct platform_device *pdev, struct end
                                                                                                     ep_gpio->name);
                     return 0;
                 } else {
+                    // link only with the io expander gpio
+                    if (!parent_gpio->parent_endpoint || parent_gpio->parent_endpoint->ioexp_id != ep_gpio->ioexp_id) {                                                
+                        return -1;
+                    }
                     ep_gpio->linked_gpio = parent_gpio;
                     ep_gpio->num = parent_gpio->num;
 
@@ -898,25 +904,11 @@ static int set_linked_or_aggregate_gpio(struct platform_device *pdev, struct end
 }
 
 // Rules for linking GPIOs
-// 1. exportable non-irq GPIOs link down to an io expander pin (higher level -> lower level)
-// 2. irq GPIOs link up from the physical irq pin to their sources (lower level -> higher level)
-// 3. gpios that are linked to do not need to link back 
-// 4. for aggregate gpios (links in aggregate_gpios):
-// 4a. exportable non-irq aggregated GPIOs link down to multiple io expander pins
-// 4b. aggregated irq GPIOs are aggregated on an io_card gpio which links up to multiple endpoint gpios; physical gpio links up to the aggregated io_card gpio
-// 5. when linking, only search levels below the gpio to be linked, except search everything for io_card endpoints:
-//
-// "levels":
-// - base_device gpios
-// - - base_device endpoints
-// - - - base_device endpoint gpios
-// - - io_card gpios
-// - - - io_card endpoints
-// - - - - io_card endpoint gpios
-//
-// Example 1 - if the gpio to be linked is a base_device gpio, there are no lower levels, so do nothing
-// Example 2 - if the gpio to be linked is an io_card gpio, the lower levels to search are base_device gpios and base_device endpoint gpios
-// Example 3 - if the gpio to be linked is an io_card endpoint gpio, search everything
+// 1. exportable non-irq GPIOs link directly to the io expander pin
+// 2. irq GPIOs link up from the physical irq pin to their sources
+// 3. for aggregate gpios (links in aggregate_gpios):
+// 3a. an exportable non-irq aggregated GPIO links to multiple io expander pins
+// 3b. aggregated irq GPIOs are aggregated on an io_card gpio which links up to multiple endpoint gpios; physical gpio links up to the aggregated io_card gpio
 // 
 // NOTE: before link_gpio is called on any GPIO, ALL LOWER LEVEL GPIO's parent relationships MUST be populated by "configure_x_references()"
 static void link_gpio(struct platform_device *pdev, struct endpoint_gpio *ep_gpio) 
@@ -930,6 +922,7 @@ static void link_gpio(struct platform_device *pdev, struct endpoint_gpio *ep_gpi
     int i;
 
     // irqs are never exported to sysfs
+    // bail if non-irq is not set for export
     if (ep_gpio->is_irq == false && ep_gpio->export == EP_GPIO_NO_EXPORT) {
         return;
     }
@@ -957,18 +950,10 @@ static void link_gpio(struct platform_device *pdev, struct endpoint_gpio *ep_gpi
             return;
         }
 
-        // if gpio is on an ic endpoint, search the ic AND ic endpoint gpios
-        // if gpio is just on ic, we need to search up into endpoints
+        // just for non-irq IC gpios
+        // Never need to search ic gpios. Only want to link to io expander gpio
         if (parent_ic && !ep_gpio->is_irq) {
-            // search ic gpios
-            if (parent_ep) {
-                ret = set_linked_or_aggregate_gpio(pdev, ep_gpio, parent_ic->num_gpios, parent_ic->gpios);
-                if (!ret) {
-                    return;
-                }
-            }
-
-            // now search the ic endpoint gpios
+            // search the ic endpoint gpios
             for (i = 0; i < parent_ic->num_eps; ++i) {
                 ep = &parent_ic->endpoints[i];
 
@@ -1042,7 +1027,7 @@ static void link_gpio(struct platform_device *pdev, struct endpoint_gpio *ep_gpi
         }
     }
 
-    dev_warn(&pdev->dev, "link_gpio: no link for GPIO %s:%s", ep_gpio->parent_io_card ?
+    dev_dbg(&pdev->dev, "link_gpio: no link for GPIO %s:%s", ep_gpio->parent_io_card ?
                                                                 ep_gpio->parent_io_card->data.model :
                                                                 ep_gpio->parent_endpoint ?
                                                                 ep_gpio->parent_endpoint->name :
@@ -1598,7 +1583,6 @@ static int fusion_io_probe(struct platform_device *pdev)
     } else {
         dev_dbg(&pdev->dev, "No data eeprom found on mainboard\n");
     }
-    
 
     // i2c switch
     if (bd->i2c_sw != NULL) {
@@ -1738,7 +1722,9 @@ static int fusion_io_probe(struct platform_device *pdev)
                 // configure i2c device
                 ret = configure_i2c_endpoint(pdev, ep);
                 if (ret) {
-                    goto error;
+                    
+                    dev_warn(&pdev->dev, "Failed to configure I2C endpoint %s. Skipping.\n", ep->name);
+                    continue; // Skip this endpoint but keep the rest alive
                 }
 
                 dev_dbg(&pdev->dev, "Successfully registered endpoint %s!\n", ep->name);
