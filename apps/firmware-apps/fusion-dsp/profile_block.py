@@ -11,7 +11,6 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from sklearn.linear_model import LinearRegression
-from subprocess import run
 
 processor_speed_mhz = 1800.0
 sample_rate = 48000
@@ -79,7 +78,13 @@ def profile(config_name, remote=True):
     params_iter = dict_to_iter(current_config.get('parameters', default_parameters))
     feature_dict = current_config.get('features', default_features)
 
+    param_counter = 0
+    
+    matrix_mixer_csv_files = []
+    
     for param_dict in params_iter:
+        param_counter += 1
+        
         if remote:
             check_remote_diskspace(board_ip)
             config_content = template.render(
@@ -125,7 +130,16 @@ def profile(config_name, remote=True):
                         print(f"Captured analysis MIPS: avg={mips_avg}")
                         print(f"Converted to analysis thread time: {analysis_thread_time} seconds")
             
-            os.system(f'scp root@{board_ip}:/home/root/timings.csv ./timings.csv')
+            if config_name == 'matrix_mixer':
+                local_csv_name = f'timings_mm_{param_dict["num_inputs"]}_{param_dict["num_outputs"]}.csv'
+                scp_cmd = f'scp root@{board_ip}:/home/root/timings.csv ./{local_csv_name}'
+                print(f"Copying to unique file: {local_csv_name}")
+                os.system(scp_cmd)
+                matrix_mixer_csv_files.append(local_csv_name)
+            else:
+                os.system(f'scp root@{board_ip}:/home/root/timings.csv ./timings.csv')
+                local_csv_name = 'timings.csv'
+            
             print(f'Cleanup after remote execution')
             os.system(f'ssh root@{board_ip} "rm -f /home/root/tmp.json /home/root/timings.csv"')
         else:
@@ -144,12 +158,29 @@ def profile(config_name, remote=True):
                 env = {'DYLD_LIBRARY_PATH' : 'libs/onnxruntime-osx-universal2-1.17.0/lib/:'}
             else:
                 env = {'LD_LIBRARY_PATH' : 'libs/onnxruntime-linux-x64-1.17.0/lib/:'}
-            run(['./build/fusion_dsp','-c', 'tmp.json'],
-                env=env
-                )
+            subprocess.run(['./build/fusion_dsp','-c', 'tmp.json'], env=env)
+            
+            if config_name == 'matrix_mixer':
+                local_csv_name = f'timings_mm_{param_dict["num_inputs"]}_{param_dict["num_outputs"]}.csv'
+                if os.path.exists('timings.csv'):
+                    os.rename('timings.csv', local_csv_name)
+                    matrix_mixer_csv_files.append(local_csv_name)
+                else:
+                    print(f"Warning: timings.csv not found for local run")
+            else:
+                local_csv_name = 'timings.csv'
             
         try:
-            df = pd.read_csv('timings.csv')
+            df = pd.read_csv(local_csv_name)
+            print(f"Read {len(df)} rows from {local_csv_name}")
+            
+            # For matrix_mixer, drop irrelevant infile columns before adding params
+            if config_name == 'matrix_mixer' and 'num_inputs' in param_dict:
+                num_inputs = param_dict['num_inputs']
+                cols_to_drop = [f'infile{i}' for i in range(num_inputs + 1, 58) if f'infile{i}' in df.columns]
+                if cols_to_drop:
+                    df = df.drop(columns=cols_to_drop)
+                    print(f"  Dropped {len(cols_to_drop)} irrelevant infile columns (keeping infile1-infile{num_inputs})")
             
             for param_name, param_value in param_dict.items():
                 df[param_name] = param_value
@@ -159,9 +190,26 @@ def profile(config_name, remote=True):
                     df[feature] = formula(param_dict)
             
             frames.append(df)
+            
+            # clean up temporary matrix_mixer CSV files immediately
+            if config_name == 'matrix_mixer' and os.path.exists(local_csv_name):
+                os.remove(local_csv_name)
+                print(f"Removed temporary file: {local_csv_name}")
+                
         except Exception as e:
-            print(f"Error reading timings.csv: {e}")
+            print(f"Error reading {local_csv_name}: {e}")
             continue
+    
+    if config_name == 'matrix_mixer':
+        print(f"\n{'='*60}")
+        print(f"MATRIX MIXER DATA COLLECTION SUMMARY")
+        print(f"{'='*60}")
+        print(f"Parameter combinations processed: {param_counter}")
+        print(f"DataFrames collected: {len(frames)}")
+        if frames:
+            total_rows = sum(len(f) for f in frames)
+            print(f"Total rows before concatenation: {total_rows}")
+        print(f"{'='*60}\n")
     
     result_df = pd.concat(frames, axis=0, ignore_index=True)
     
@@ -169,22 +217,21 @@ def profile(config_name, remote=True):
             'block',
             config_name
         )
-    # force any type errors (caused by disk space) to NaN 
-    numeric_columns = [block, 'task1', 'matrix_mixer', 'outfile']
-    for i in range(1, 58):
-        col_name = f'infile{i}'
-        if col_name in result_df.columns:
-            numeric_columns.append(col_name)
+    
+    if config_name == 'matrix_mixer':
+        actual_columns = result_df.columns.tolist()
+        numeric_columns = [block, 'task1', 'matrix_mixer', 'outfile']
+        
+        for col in actual_columns:
+            if col.startswith('infile') and col not in numeric_columns:
+                numeric_columns.append(col)
+    else:
+        numeric_columns = [block, 'task1', 'matrix_mixer', 'outfile']
+        for i in range(1, 58):
+            col_name = f'infile{i}'
+            if col_name in result_df.columns:
+                numeric_columns.append(col_name)
 
-    for col in numeric_columns:
-        if col in result_df.columns:
-            before = len(result_df)
-            result_df[col] = pd.to_numeric(result_df[col], errors='coerce')
-            after = result_df[col].notna().sum()
-            if before != after:
-                print(f"WARNING: {col} had {before - after} non-numeric values")
-
-    result_df = result_df.dropna(subset=[block])
     print(f"Rows after cleaning mixed data types: {len(result_df)}") 
 
     if config_name == 'feedback_suppression':
@@ -193,7 +240,6 @@ def profile(config_name, remote=True):
                 ch = mips_entry['channels']
                 mask = result_df['channels'] == ch
                 
-                # DEBUG:
                 original_main = result_df.loc[mask, block].mean()
                 
                 result_df.loc[mask, 'analysis_avg'] = mips_entry['analysis_avg']
@@ -203,7 +249,6 @@ def profile(config_name, remote=True):
                     result_df.loc[mask, block] + mips_entry['analysis_time']
                 )
                 
-                # DEBUG: 
                 new_total = result_df.loc[mask, block].mean()
                 print(f"Channel {ch}:")
                 print(f"  Original main thread: {original_main:.2e}")
