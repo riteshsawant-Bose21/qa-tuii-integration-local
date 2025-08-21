@@ -108,12 +108,6 @@ const struct io_card ic_empty = {
     }
 };
 
-const struct io_card ic_unknown = {
-    .data = {
-        .type = IC_TYPE_UNKNOWN
-    }
-};
-
 const enum io_card_type default_ic_types[] = {
     IC_TYPE_NONE
 };
@@ -126,86 +120,6 @@ const struct io_card *default_ics[] = {
 const struct base_device bd_empty = {
     .data = {
         .type = BD_TYPE_NONE
-    }
-};
-
-const struct base_device bd_fusion_var_proto = {
-    .data = {
-        .model = "fusion_var_proto1",
-        .type = BD_TYPE_FUSION_VAR_PROTO,
-        .ver_maj = EEPROM_DATA_VER_MAJ,
-        .ver_min = EEPROM_DATA_VER_MIN
-    },
-    .has_slot_io = false,
-    .num_gpios = 1,
-    .gpios = (struct endpoint_gpio[]) {
-        {
-            .name = "gpio_phantom_pwr",
-            .num = 6,
-            .type = EP_GPIO_TYPE_PHYS,
-            .export = EP_GPIO_NO_EXPORT,
-            .dir = EP_GPIO_DIR_O,
-            .default_val = EP_GPIO_VAL_LO,
-            .valid = false
-        }
-    },
-    .num_eps = 0,
-    .endpoints = NULL,
-    .sec_eeprom = NULL,
-    .data_eeprom = NULL,
-    .i2c_sw = NULL,
-    .pwr_io_exp = NULL,
-    .num_ics = 1,
-    .io_cards = (struct io_card[]) {
-        {
-            .data = {
-                .model = "block_ana",
-                .type = IC_TYPE_AN_IN_OUT,
-                .ver_maj = EEPROM_DATA_VER_MAJ,
-                .ver_min = EEPROM_DATA_VER_MIN
-            },
-            .slot = 0,
-            .num_inputs = 1,
-            .num_outputs = 1,
-            .num_gpios = 0,
-            .gpios = NULL,
-            .num_eps = 1,
-            .endpoints = (struct endpoint[]) {
-                {
-                    .name = "aud_cod_wm8904",
-                    .type = EP_TYPE_AUD_COD_WM8904,
-                    .export = EP_EXPORT,
-                    .has_i2c = true,
-                    .addr_list = (unsigned short[]) { 0x1a, I2C_CLIENT_END },
-                    .num_gpios = 1,
-                    .gpios = (struct endpoint_gpio[]) {
-                        {
-                            .name = "gpio_phantom_pwr",
-                            .type = EP_GPIO_TYPE_PHYS,
-                            .export = EP_GPIO_EXPORT,
-                            .dir = EP_GPIO_DIR_I,
-                            .valid = true
-                        }
-                    },
-                    .num_cmds = 1,
-                    .cmds = (struct endpoint_cmd[]) {
-                        {
-                            .name = "cmd_config",
-                            .type = EP_CMD_TYPE_CFG,
-                            .export = EP_CMD_NO_EXPORT,
-                            .num_i2c_cmds = 1,
-                            .i2c_cmds = (struct i2c_reg_data[]) {
-                                {
-                                    .reg_addr = 0x00,
-                                    .op_size  = I2C_REG_DATA_OP_16BIT,
-                                    .data_mask = 0xff
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
     }
 };
 
@@ -559,7 +473,7 @@ const struct base_device bd_fusion_c0 = {
                         { .reg_addr = TCAL6408_REG_OUTPUT_DR_STR1,      .data_mask = 0xff }, // full strength
                         { .reg_addr = TCAL6408_REG_INT_MASK_REG,        .data_mask = 0xff }, // all disabled
                         { .reg_addr = TCAL6408_REG_OUTPUT_PORT_CFG_REG, .data_mask = 0x00 }, // push-pull
-                        { .reg_addr = TCAL6408_REG_OUTPUT_PORT,         .data_mask = 0xff }
+                        { .reg_addr = TCAL6408_REG_OUTPUT_PORT,         .data_mask = 0xff }  // All on
                     }
                 }
             }
@@ -579,7 +493,7 @@ const struct base_device bd_fusion_c0 = {
             .num_inputs = 6,
             .num_outputs = 4,
             .i2c_sw_channel = 1,
-            .num_gpios = 2,
+            .num_gpios = 3,
             .gpios = (struct endpoint_gpio[]) {
                 {
                     .name = "gpio_ana_int",
@@ -595,6 +509,13 @@ const struct base_device bd_fusion_c0 = {
                     .type = EP_GPIO_TYPE_VIRT,
                     .export = EP_GPIO_EXPORT,
                     .ioexp_id = 1,
+                    .dir = EP_GPIO_DIR_I
+                },
+                {
+                    .name = "gpio_ana_15v_psw",
+                    .type = EP_GPIO_TYPE_VIRT,
+                    .export = EP_GPIO_EXPORT,
+                    .ioexp_id = 3,
                     .dir = EP_GPIO_DIR_I
                 }
             },
@@ -889,7 +810,7 @@ const struct base_device bd_fusion_c0 = {
                                 {
                                     .reg_addr = TCA9535_REG_OUTPUT_PORT0,
                                     .op_size = I2C_REG_DATA_OP_16BIT,
-                                    .data_mask = 0x0030  // 15v_psw & dac_mute high
+                                    .data_mask = 0x0030 // 15v_psw and dac_mute  
                                 },
                                 {
                                     .reg_addr = TCA9535_REG_CONFIGURATION0,
@@ -1514,12 +1435,10 @@ const struct base_device bd_fusion_c0 = {
 };
 
 const enum base_device_type default_bd_types[] = {
-    BD_TYPE_FUSION_VAR_PROTO,
     BD_TYPE_FUSION_C0,
     BD_TYPE_NONE
 };
 
 const struct base_device *default_bds[] = {
-    &bd_fusion_var_proto,
     &bd_fusion_c0
 };
