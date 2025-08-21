@@ -47,9 +47,6 @@ Have these in the root project directory for local testing, or copy them to the 
 #### `in.wav`
 * Tone based music simulation with noise and amplitude jumps. Designed to trigger most algorithms, including heuristic-based implementations.
 
-#### `in_10.wav`
-* 10 tracks consisting of both tones and noise.
-
 #### `in_ducker_2.wav`
 * Real wide-range music track with speech sidechain
 
@@ -90,6 +87,7 @@ This will:
 - Profile all configured algorithms
 - Generate `results.pkl` (machine-readable model data) in `/profiling_results`
 - Generate `results.txt` (human-readable performance formulas) in `/profiling_results`
+- Generate `algorithm_regression_plots.png` (plotted graph of timings vs feature datapoints and regression line)
 
 ### Profile Specific Algorithm
 ```bash
@@ -98,7 +96,7 @@ python3 profile_block.py matrix_mixer
 
 This will:
 - Profile only the specified algorithm
-- Generate `results_matrix_mixer.pkl` and `results_matrix_mixer.txt` in `/profiling_results`
+- Generate `results_matrix_mixer.pkl`, `results_matrix_mixer.txt` and `matrix_mixer_regression_plots.png` in `/profiling_results`
 
 ## Supported Algorithms
 
@@ -111,7 +109,6 @@ This will:
 - **graphic_eq** - Graphic equalizer
 - **limiter** - Peak limiter
 - **matrix_mixer** - Input/output routing matrix
-- **passthrough** - No processing (baseline)
 - **peq** - Parametric equalizer
 - **tone** - Tone control
 - **wav_read** - WAV file reading
@@ -155,10 +152,53 @@ Each algorithm configuration in the script can specify:
 1. Generates JSON configuration files using Jinja2 templates
 2. Tests multiple parameter combinations
 3. Runs fusion_dsp with each configuration
+4. Cleans up files before and after runs to free diskspace
 4. Reads timing data from CSV output
 5. Removes outliers (Keeps values in range 99.9 - 99.99% to measure the worse case)
 6. Uses linear regression to model performance
-7. Plots and saves models and formulas
+7. Plots and saves models, formulas, and final audio output (`out.wav`)
+
+## Special Cases
+
+### Feedback Suppression
+Feedback suppression runs on two separate threads: Main thread + Frequency Analysis thread.
+
+This script takes into account both threads in plotting and regression formulas. Timings from the Frequency Analysis thread are parsed from running fusion-dsp in 'verbose' (`-v`) mode.
+
+### PEQ & Matrix Mixer
+Both PEQ and Matrix Mixer have multi-feature regression models. 
+```bash
+# PEQ
+'features': {
+    'bands': lambda x: x['bands'],              # Linear term
+    'channels': lambda x: x['channels'],        # Linear term
+    'bandchannels': lambda x: x['bands']*x['channels']  # Interaction term
+}
+
+# Matrix Mixer
+'features': {
+    'num_inputs': lambda x: x['num_inputs'],              # Linear term
+    'num_outputs': lambda x: x['num_outputs'],        # Linear term
+    'num_crosspoints': lambda x: x['num_inputs']*x['num_outputs']  # Interaction term
+}
+```
+#### Generated Plots:
+After successful profiling, three plots are automatically generated:
+
+**Individual Feature Plot A**: Shows timing vs. first feature (e.g., bands) with the second feature held at various fixed values (e.g., channels = 1, 4, 8, 16). Each fixed value is represented by a different color.
+
+**Individual Feature Plot B**: Shows timing vs. second feature (e.g., channels) with the first feature held at various fixed values (e.g., bands = 2, 4, 8). Each fixed value is represented by a different color.
+
+**Interaction Feature Analysis**: Plots timing vs. the interaction term (e.g., bands × channels) with color-coded points indicating which individual feature dominates:
+
+* Red: First feature is larger (e.g., bands > channels)
+* Blue: Second feature is larger (e.g., channels > bands)
+* Green: Features are equal (e.g., bands = channels)
+
+This color-coding helps identify whether the relative magnitude of the interacting features affects performance characteristics, revealing optimization patterns in the component behavior. Specific details are also outputted in result files (e.g., `results_peq_remote.txt`) below the regression formula.
+
+### Wav Read & Wav Write
+Plots will only include timing for 1 channel input, with no regression line.
 
 ## Troubleshooting
 
