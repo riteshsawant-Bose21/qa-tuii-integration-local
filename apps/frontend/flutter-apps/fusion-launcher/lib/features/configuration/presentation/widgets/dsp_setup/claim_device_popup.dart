@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
-import 'package:fusion_launcher/core/utils/shared_preference_handler.dart';
 import 'package:fusion_lib/fusion_utils/app_settings.dart';
+import 'package:fusion_lib/fusion_utils/shared_preference_handler.dart';
 import 'package:pretty_qr_code/pretty_qr_code.dart';
 
 import '../../../../../core/utils/broadcast_controllers.dart';
@@ -43,7 +43,7 @@ class _QRClaimPopupState extends State<QRClaimPopup> {
   @override
   void initState() {
     claimUrl =
-        "http://${FusionPreferences().cloudWebUrl}/claim/${widget.deviceIdToClaim}?token=${serviceLocator<SharedPreferencesHandler>().getString(SharedPreferenceKeys.accessToken)}";
+        "http://${serviceLocator<FusionPreferences>().cloudWebUrl}/claim/${widget.deviceIdToClaim}?token=${serviceLocator<SharedPreferencesHandler>().getString(SharedPreferenceKeys.accessToken)}";
     super.initState();
   }
 

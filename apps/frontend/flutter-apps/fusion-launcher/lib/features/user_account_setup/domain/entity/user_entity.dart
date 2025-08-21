@@ -1,4 +1,4 @@
-import '../../data/models/user_dto.dart';
+import 'package:fusion_lib/models/fusion_auth/user_dto.dart';
 
 /// Domain entity representing a user
 class UserEntity {

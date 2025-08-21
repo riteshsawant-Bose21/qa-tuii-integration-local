@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_lib/di/service_locator.dart';
 import 'package:fusion_lib/models/response_callback.dart';
 
 import '../fusion_networking/network/fusion_network_client.dart';
 import '../models/fusion_device/fusion_device.dart';
 
 class TelemetryData {
+  TelemetryData();
+
   static const List<String> testTelemetryAddresses = <String>[
     // "ws://192.168.0.123:5566",
     // "ws://192.168.0.126:5566",
@@ -28,9 +29,9 @@ class TelemetryData {
 
   static List<String> telemetryAddresses = <String>[];
 
-  Future<void> initializeTelemetryAddresses() async {
+  Future<void> initializeTelemetryAddresses(FusionNetworkClient fusionNetworkClient) async {
     try {
-      final ResponseCallback<dynamic> responseCallback = await fusionLibLocator<FusionNetworkClient>().get(api: FusionApiEndpoint.fusionDevice);
+      final ResponseCallback<dynamic> responseCallback = await fusionNetworkClient.get(api: FusionApiEndpoint.fusionDevice);
 
       if (responseCallback.success && responseCallback.data != null) {
         final List<FusionDevice> fusionDevices = (responseCallback.data as List<dynamic>)

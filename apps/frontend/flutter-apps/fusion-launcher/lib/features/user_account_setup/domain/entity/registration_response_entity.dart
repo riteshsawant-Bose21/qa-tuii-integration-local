@@ -1,5 +1,4 @@
-
-import '../../data/models/registration_response_dto.dart';
+import 'package:fusion_lib/models/fusion_auth/registration_response_dto.dart';
 
 /// Domain entity for registration response
 class RegistrationResponseEntity {

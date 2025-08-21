@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/models/fusion_device.dart';
 import 'package:fusion_launcher/core/utils/broadcast_controllers.dart';
-import 'package:fusion_launcher/core/utils/shared_preference_handler.dart';
 import 'package:fusion_lib/fusion_networking/network/fusion_network_client.dart';
+import 'package:fusion_lib/fusion_utils/shared_preference_handler.dart';
 import 'package:fusion_lib/models/response_callback.dart';
 import 'package:uuid/uuid.dart';
 

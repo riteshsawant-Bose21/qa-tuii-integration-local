@@ -1,7 +1,5 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../di/service_locator.dart';
-
 /// Singleton class for managing key-value storage using `SharedPreferences`.
 ///
 /// Provides methods to set, get, and remove values of different types.
@@ -19,11 +17,8 @@ class SharedPreferencesHandler {
 
   SharedPreferencesHandler._(this._prefs);
 
-  static SharedPreferencesHandler getInstance() {
-    if (_instance == null) {
-      final SharedPreferences prefs = fusionLibLocator<SharedPreferences>();
-      _instance = SharedPreferencesHandler._(prefs);
-    }
+  static SharedPreferencesHandler getInstance(SharedPreferences prefs) {
+    _instance ??= SharedPreferencesHandler._(prefs);
     return _instance!;
   }
 

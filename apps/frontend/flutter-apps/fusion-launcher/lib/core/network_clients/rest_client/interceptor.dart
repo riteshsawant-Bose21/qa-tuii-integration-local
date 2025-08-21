@@ -1,10 +1,10 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
-import 'package:fusion_launcher/core/utils/shared_preference_handler.dart';
-import 'package:fusion_launcher/features/user_account_setup/data/models/login_response_dto.dart';
 import 'package:fusion_lib/fusion_networking/network/fusion_network_client.dart';
 import 'package:fusion_lib/fusion_networking/network/rest_client/dio_client.dart';
+import 'package:fusion_lib/fusion_utils/shared_preference_handler.dart';
+import 'package:fusion_lib/models/fusion_auth/login_response_dto.dart';
 import 'package:fusion_lib/models/response_callback.dart';
 
 import '../../utils/fusion_utils.dart';

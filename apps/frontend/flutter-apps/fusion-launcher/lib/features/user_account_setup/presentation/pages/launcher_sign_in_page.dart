@@ -251,9 +251,9 @@ class _LauncherSignInPageState extends State<LauncherSignInPage> {
   //Dialog with 3 text fields for 3 different  Ip address endpoint setting
   void _showSettingsDialog(BuildContext context) {
     // Controllers for the text fields
-    final TextEditingController droAddressController = TextEditingController(text: FusionPreferences().droServerUrl);
-    final TextEditingController backendUrlController = TextEditingController(text: FusionPreferences().fusionCloudBackendUrl);
-    final TextEditingController cloudWebUrlController = TextEditingController(text: FusionPreferences().cloudWebUrl);
+    final TextEditingController droAddressController = TextEditingController(text: serviceLocator<FusionPreferences>().droServerUrl);
+    final TextEditingController backendUrlController = TextEditingController(text: serviceLocator<FusionPreferences>().fusionCloudBackendUrl);
+    final TextEditingController cloudWebUrlController = TextEditingController(text: serviceLocator<FusionPreferences>().cloudWebUrl);
 
     showDialog(
       context: context,
@@ -330,7 +330,7 @@ class _LauncherSignInPageState extends State<LauncherSignInPage> {
                             onPressed: () {
                               // validate ip address and update project
                               final String ip = droAddressController.text.trim();
-                              FusionPreferences().setDroServerUrl(ip);
+                              serviceLocator<FusionPreferences>().setDroServerUrl(ip);
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text('DRO IP updated to $ip'),
@@ -395,7 +395,7 @@ class _LauncherSignInPageState extends State<LauncherSignInPage> {
                           height: 28,
                           child: ElevatedButton(
                             onPressed: () {
-                              FusionPreferences().setFusionCloudBackendUrl(backendUrlController.text);
+                              serviceLocator<FusionPreferences>().setFusionCloudBackendUrl(backendUrlController.text);
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.grey.shade800,
@@ -454,7 +454,7 @@ class _LauncherSignInPageState extends State<LauncherSignInPage> {
                           height: 28,
                           child: ElevatedButton(
                             onPressed: () {
-                              FusionPreferences().setCloudWebUrl(cloudWebUrlController.text);
+                              serviceLocator<FusionPreferences>().setCloudWebUrl(cloudWebUrlController.text);
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.grey.shade800,

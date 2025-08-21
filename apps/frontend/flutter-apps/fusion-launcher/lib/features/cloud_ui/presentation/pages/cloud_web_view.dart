@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/core/utils/broadcast_controllers.dart';
 import 'package:fusion_lib/fusion_utils/app_settings.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -46,7 +47,7 @@ class _FusionCloudWebViewState extends State<FusionCloudWebView> {
     //build initial URL for the web view
 
     final String redirectLink = cloudRedirectUrl.trim().isNotEmpty ? cloudRedirectUrl : widget.pageToRedirect ?? "";
-    webUiUrl = "http://${FusionPreferences().cloudWebUrl}/$redirectLink";
+    webUiUrl = "http://${serviceLocator<FusionPreferences>().cloudWebUrl}/$redirectLink";
     cloudRedirectUrl = "";
 
     debugPrint("Web UI URL: $webUiUrl");

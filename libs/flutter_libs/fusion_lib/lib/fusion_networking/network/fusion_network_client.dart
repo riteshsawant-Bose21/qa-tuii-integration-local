@@ -3,7 +3,6 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:fusion_lib/di/service_locator.dart';
 import 'package:fusion_lib/fusion_logger/logger.dart';
 import 'package:fusion_lib/fusion_networking/network/rest_client/dio_client.dart';
 import 'package:fusion_lib/models/response_callback.dart';
@@ -17,6 +16,11 @@ enum ServerUpdateType { forceUpdate, metadata, localValue }
 
 class FusionNetworkClient {
   final DioClient httpClient;
+  final SharedPreferencesHandler sharedPreferencesHandler;
+  final TelemetryData telemetryData;
+  final FusionPreferences fusionPreferences;
+
+  FusionNetworkClient({required this.httpClient, required this.sharedPreferencesHandler, required this.telemetryData, required this.fusionPreferences});
 
   ZSocket? subscriberSocket;
   final ZContext _context = ZContext();
@@ -33,8 +37,8 @@ class FusionNetworkClient {
       }
       return _accessToken;
     } else {
-      final String? storedAccessToken = fusionLibLocator<SharedPreferencesHandler>().getString(SharedPreferenceKeys.accessToken);
-      final String? expiryTime = fusionLibLocator<SharedPreferencesHandler>().getString(SharedPreferenceKeys.expiry);
+      final String? storedAccessToken = sharedPreferencesHandler.getString(SharedPreferenceKeys.accessToken);
+      final String? expiryTime = sharedPreferencesHandler.getString(SharedPreferenceKeys.expiry);
       if (storedAccessToken != null && expiryTime != null) {
         final DateTime dateTime = DateTime.parse(expiryTime);
         if (DateTime.now().isAfter(dateTime)) {
@@ -58,7 +62,7 @@ class FusionNetworkClient {
       }
       return _refreshToken;
     } else {
-      final String? storedRefreshToken = fusionLibLocator<SharedPreferencesHandler>().getString(SharedPreferenceKeys.refreshToken);
+      final String? storedRefreshToken = sharedPreferencesHandler.getString(SharedPreferenceKeys.refreshToken);
       if (storedRefreshToken != null) {
         _refreshToken = storedRefreshToken;
         return _refreshToken;
@@ -67,18 +71,16 @@ class FusionNetworkClient {
     return null;
   }
 
-  FusionNetworkClient({required this.httpClient});
-
   String geApiUrl(FusionApiEndpoint api, {String? baseUrlToOverride}) {
     if (baseUrlToOverride != null) {
       return "http://$baseUrlToOverride${api.path}";
     }
     if (api.type == FusionApiType.droServer) {
-      return "http://${FusionPreferences().droServerUrl}${api.path}";
+      return "http://${fusionPreferences.droServerUrl}${api.path}";
     } else if (api.type == FusionApiType.fusionServer) {
-      return "http://${FusionPreferences().virtualIp}:8080${api.path}";
+      return "http://${fusionPreferences.virtualIp}:8080${api.path}";
     } else if (api.type == FusionApiType.backendServer) {
-      return "http://${FusionPreferences().fusionCloudBackendUrl}/api/v1${api.path}";
+      return "http://${fusionPreferences.fusionCloudBackendUrl}/api/v1${api.path}";
     } else {
       throw Exception("Invalid API type: ${api.type}");
     }
@@ -87,7 +89,7 @@ class FusionNetworkClient {
   // return token fro shared preferences only if FusionApiEndpoint api == FusionApiType.backendServer
   String? getAccessTokenForApi(FusionApiEndpoint api) {
     if (api.type == FusionApiType.backendServer) {
-      final String? storedAccessToken = fusionLibLocator<SharedPreferencesHandler>().getString(SharedPreferenceKeys.accessToken);
+      final String? storedAccessToken = sharedPreferencesHandler.getString(SharedPreferenceKeys.accessToken);
       return storedAccessToken;
     }
     return null;
@@ -312,7 +314,7 @@ class FusionNetworkClient {
 
   Future<ResponseCallback<T>> connect<T>() async {
     try {
-      await fusionLibLocator<TelemetryData>().initializeTelemetryAddresses();
+      await telemetryData.initializeTelemetryAddresses(this);
       subscriberSocket = _context.createSocket(SocketType.sub);
       for (String url in TelemetryData.telemetryAddresses) {
         subscriberSocket!.connect(url);

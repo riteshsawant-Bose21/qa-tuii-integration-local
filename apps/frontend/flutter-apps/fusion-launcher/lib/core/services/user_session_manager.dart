@@ -4,7 +4,7 @@ import 'dart:developer';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/core/services/project_list_manager.dart';
 import 'package:fusion_launcher/core/services/user_profile_manager.dart';
-import 'package:fusion_launcher/core/utils/shared_preference_handler.dart';
+import 'package:fusion_lib/fusion_utils/shared_preference_handler.dart';
 
 import '../../features/user_account_setup/domain/entity/login_response_entity.dart';
 

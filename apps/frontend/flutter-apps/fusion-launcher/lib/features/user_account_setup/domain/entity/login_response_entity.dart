@@ -1,6 +1,5 @@
 import 'package:fusion_launcher/features/user_account_setup/domain/entity/user_entity.dart';
-
-import '../../data/models/login_response_dto.dart';
+import 'package:fusion_lib/models/fusion_auth/login_response_dto.dart';
 
 /// Entity classes for domain layer
 class LoginResponseEntity {

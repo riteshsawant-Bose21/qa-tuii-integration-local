@@ -231,7 +231,8 @@ class FusionAppTheme {
       ),
 
       /// Input field styling with soft grey background and custom borders
-      inputDecorationTheme: InputDecorationTheme(
+      // todo: uncomment if needed
+      /*inputDecorationTheme: InputDecorationTheme(
         labelStyle: TextStyle(fontSize: 13, fontWeight: FontWeight.w400, color: lightColorScheme.textFieldLabelColor),
         hintStyle: TextStyle(fontSize: 13, fontWeight: FontWeight.w300, color: lightColorScheme.textFieldLabelColor),
         filled: true,
@@ -249,7 +250,7 @@ class FusionAppTheme {
           borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(color: lightColorScheme.primaryColor, width: 2),
         ),
-      ),
+      ),*/
     );
   }
 
