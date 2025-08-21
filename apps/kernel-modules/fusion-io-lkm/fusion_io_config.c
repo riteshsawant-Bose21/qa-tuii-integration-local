@@ -1022,7 +1022,7 @@ const struct base_device bd_fusion_c0 = {
                             .export = EP_CMD_NO_EXPORT,
                             .num_i2c_cmds = 1,
                             .i2c_cmds = (struct i2c_reg_data[]) {
-                                { .reg_addr = AK4137_REG_PCM_CONT0, .data_mask = 0x16 }
+                                { .reg_addr = AK4137_REG_PCM_CONT0, .data_mask = 0x13 }
                             }
                         }
                     }
