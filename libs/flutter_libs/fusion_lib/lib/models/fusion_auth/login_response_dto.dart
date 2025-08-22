@@ -1,5 +1,6 @@
 // login_response.dart
-import 'package:fusion_launcher/features/user_account_setup/data/models/user_dto.dart';
+
+import 'package:fusion_lib/models/fusion_auth/user_dto.dart';
 
 /// DTO classes
 class LoginResponseDto {
@@ -8,12 +9,7 @@ class LoginResponseDto {
   final int expiresIn;
   final UserDto user;
 
-  LoginResponseDto({
-    required this.accessToken,
-    required this.refreshToken,
-    required this.expiresIn,
-    required this.user,
-  });
+  LoginResponseDto({required this.accessToken, required this.refreshToken, required this.expiresIn, required this.user});
 
   factory LoginResponseDto.fromJson(Map<String, dynamic> json) {
     return LoginResponseDto(
@@ -25,11 +21,6 @@ class LoginResponseDto {
   }
 
   Map<String, dynamic> toJson() {
-    return <String, dynamic>{
-      'access_token': accessToken,
-      'refresh_token': refreshToken,
-      'expiresIn': expiresIn,
-      'user': user.toJson(),
-    };
+    return <String, dynamic>{'access_token': accessToken, 'refresh_token': refreshToken, 'expiresIn': expiresIn, 'user': user.toJson()};
   }
 }

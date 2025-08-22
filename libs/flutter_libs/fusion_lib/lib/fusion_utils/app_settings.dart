@@ -2,20 +2,13 @@
 
 import 'dart:convert';
 
-import 'package:fusion_lib/di/service_locator.dart';
 import 'package:fusion_lib/fusion_utils/shared_preference_handler.dart';
 
 class FusionPreferences {
-  /// Create a Singleton class instance
-  static final FusionPreferences _instance = FusionPreferences._internal();
+  final SharedPreferencesHandler sharedPreferencesHandler;
 
-  /// internal constructor to prevent external instantiation of the class
-  FusionPreferences._internal();
-
-  /// Factory constructor to return the singleton instance
-  factory FusionPreferences() {
+  FusionPreferences({required this.sharedPreferencesHandler}) {
     fromPreferences();
-    return _instance;
   }
 
   static String _droServerUrl = '';
@@ -70,11 +63,11 @@ class FusionPreferences {
       'cloudWebUrl': _cloudWebUrl,
     };
 
-    await fusionLibLocator<SharedPreferencesHandler>().setString(SharedPreferenceKeys.appSettings, jsonEncode(settings));
+    await sharedPreferencesHandler.setString(SharedPreferenceKeys.appSettings, jsonEncode(settings));
   }
 
-  static void fromPreferences() {
-    final String? settingsJson = fusionLibLocator<SharedPreferencesHandler>().getString(SharedPreferenceKeys.appSettings);
+  void fromPreferences() {
+    final String? settingsJson = sharedPreferencesHandler.getString(SharedPreferenceKeys.appSettings);
     if (settingsJson != null) {
       final Map<String, dynamic> settings = jsonDecode(settingsJson);
       _droServerUrl = settings['droServerUrl'] ?? '';

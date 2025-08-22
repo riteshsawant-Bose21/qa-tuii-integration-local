@@ -4,11 +4,11 @@ import 'package:fusion_launcher/core/services/user_profile_manager.dart';
 import 'package:fusion_launcher/features/dashboard/presentation/widgets/profile_account_secutity_tab.dart';
 import 'package:fusion_launcher/features/dashboard/presentation/widgets/profile_contact_location_tab.dart';
 import 'package:fusion_launcher/features/dashboard/presentation/widgets/profile_preferences_tab.dart';
+import 'package:fusion_lib/fusion_utils/shared_preference_handler.dart';
 import 'package:fusion_lib/models/response_callback.dart';
 
 import '../../../../core/service_locator.dart';
 import '../../../../core/utils/fusion_utils.dart';
-import '../../../../core/utils/shared_preference_handler.dart';
 
 class ProfileTabContent extends StatefulWidget {
   const ProfileTabContent({super.key});

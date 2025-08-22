@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/theme/app_theme.dart';
+import 'package:fusion_lib/fusion_utils/shared_preference_handler.dart';
 
 import '../../../../core/models/project_list_model.dart';
 import '../../../../core/router/routes.dart';
@@ -10,7 +11,6 @@ import '../../../../core/services/project_list_manager.dart';
 import '../../../../core/services/project_manager.dart';
 import '../../../../core/utils/fusion_utils.dart';
 import '../../../../core/utils/helper.dart';
-import '../../../../core/utils/shared_preference_handler.dart';
 
 class HomeTabContent extends StatefulWidget {
   const HomeTabContent({super.key});

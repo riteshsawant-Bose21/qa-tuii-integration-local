@@ -1,6 +1,7 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:fusion_launcher/core/models/location_entity.dart';
+import 'package:fusion_lib/fusion_utils/shared_preference_handler.dart';
 
 import '../../../../core/models/algorithm/property_settings.dart';
 import '../../../../core/models/floor_entity.dart';
@@ -15,7 +16,6 @@ import '../../../../core/models/source_entity.dart';
 import '../../../../core/models/speaker_entity.dart';
 import '../../../../core/models/zone_entity.dart';
 import '../../../../core/services/project_list_manager.dart';
-import '../../../../core/utils/shared_preference_handler.dart';
 import '../../../dashboard/domain/usecases/delete_project_usecase.dart';
 import '../../domain/usecases/load_project_usecases.dart';
 import '../../domain/usecases/save_image_to_project_usecase.dart';

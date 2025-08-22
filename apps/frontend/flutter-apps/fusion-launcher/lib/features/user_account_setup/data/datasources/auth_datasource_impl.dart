@@ -1,33 +1,26 @@
 import 'dart:developer';
 
 import 'package:fusion_launcher/core/service_locator.dart';
-import 'package:fusion_launcher/core/utils/shared_preference_handler.dart';
-import 'package:fusion_launcher/features/user_account_setup/data/models/login_response_dto.dart';
-import 'package:fusion_launcher/features/user_account_setup/data/models/registration_response_dto.dart';
 import 'package:fusion_launcher/features/user_account_setup/domain/entity/login_response_entity.dart';
 import 'package:fusion_launcher/features/user_account_setup/domain/entity/registration_response_entity.dart';
-import 'package:fusion_lib/fusion_networking/network/fusion_network_client.dart';
+import 'package:fusion_lib/fusion_auth/fusion_auth.dart';
+import 'package:fusion_lib/fusion_utils/shared_preference_handler.dart';
+import 'package:fusion_lib/models/fusion_auth/login_response_dto.dart';
+import 'package:fusion_lib/models/fusion_auth/refresh_token_response_dto.dart';
+import 'package:fusion_lib/models/fusion_auth/registration_response_dto.dart';
 import 'package:fusion_lib/models/response_callback.dart';
 
-import '../models/refresh_token_response_dto.dart';
 import 'auth_datasource.dart';
 
 class AuthDataSourceImpl implements AuthDataSource {
-  final FusionNetworkClient _fusionNetworkClient;
-
-  AuthDataSourceImpl(this._fusionNetworkClient);
+  final FusionAuth fusionAuth;
+  AuthDataSourceImpl({required this.fusionAuth});
 
   @override
   Future<ResponseCallback<LoginResponseEntity>> signInWithEmailAndPassword({required String email, required String password}) async {
     try {
-      final ResponseCallback<LoginResponseDto> responseCallback = await _fusionNetworkClient.post(
-        api: FusionApiEndpoint.login,
-        data: <String, String>{
-          'email': email,
-          'password': password,
-        },
-        fromJson: LoginResponseDto.fromJson,
-      );
+      /// Using FusionAuth for login
+      final ResponseCallback<LoginResponseDto> responseCallback = await fusionAuth.signIn(email: email, password: password);
 
       log("responseCallback.message======${responseCallback.message}");
 
@@ -54,14 +47,8 @@ class AuthDataSourceImpl implements AuthDataSource {
   @override
   Future<ResponseCallback<RegistrationResponseEntity>> signUpWithEmailAndPassword({required String email, required String password}) async {
     try {
-      final ResponseCallback<RegistrationResponseDto> responseCallback = await _fusionNetworkClient.post(
-        api: FusionApiEndpoint.register,
-        data: <String, String>{
-          'email': email,
-          'password': password,
-        },
-        fromJson: RegistrationResponseDto.fromJson,
-      );
+      /// Using FusionAuth for registration
+      final ResponseCallback<RegistrationResponseDto> responseCallback = await fusionAuth.signUp(email: email, password: password);
       if (responseCallback.success) {
         return ResponseCallback<RegistrationResponseEntity>(
           success: true,
@@ -90,13 +77,8 @@ class AuthDataSourceImpl implements AuthDataSource {
   @override
   Future<ResponseCallback<void>> refreshToken() async {
     try {
-      final ResponseCallback<RefreshTokenResponseDto> responseCallback = await _fusionNetworkClient.post(
-        api: FusionApiEndpoint.register,
-        data: <String, String>{
-          "refreshToken": serviceLocator<FusionNetworkClient>().refreshToken ?? "",
-        },
-        fromJson: RefreshTokenResponseDto.fromJson,
-      );
+      /// Using FusionAuth for refreshing token
+      final ResponseCallback<RefreshTokenResponseDto> responseCallback = await fusionAuth.refreshToken();
 
       if (responseCallback.success) {
         serviceLocator<SharedPreferencesHandler>().setString(SharedPreferenceKeys.accessToken, responseCallback.data!.accessToken);
