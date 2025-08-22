@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-
-import '../../../../../core/models/source_entity.dart';
+import 'package:fusion_lib/models/fusion_models.dart';
 
 class MultiselectDropdown extends StatefulWidget {
   final List<Source> allSources;
@@ -12,8 +11,6 @@ class MultiselectDropdown extends StatefulWidget {
 }
 
 class _MultiselectDropdownState extends State<MultiselectDropdown> {
-
-
   final List<Source> _selectedItems = <Source>[];
   final TextEditingController _searchController = TextEditingController();
   final Map<Source, double> _selectedItemsWithValues = <Source, double>{};

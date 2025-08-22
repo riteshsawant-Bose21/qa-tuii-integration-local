@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/api_data/api_data.dart';
+import 'package:fusion_lib/fusion_algorithms/amplifier_matching/amp_matching_types.dart';
+import 'package:fusion_lib/fusion_algorithms/amplifier_matching/amplifier_matcher.dart';
+import 'package:fusion_lib/fusion_algorithms/shared/speaker_database.dart';
 import 'package:fusion_lib/fusion_widgets/buttons/fusion_gradient_button.dart';
 import 'package:fusion_lib/fusion_widgets/form_fields/fusion_text_form_field.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_gradient_text.dart';
-import 'package:fusion_lib/fusion_algorithms/amplifier_matching/amplifier_matcher.dart';
-import 'package:fusion_lib/fusion_algorithms/amplifier_matching/amp_matching_types.dart';
-import 'package:fusion_lib/fusion_algorithms/shared/speaker_types.dart';
-import 'package:fusion_lib/fusion_algorithms/shared/speaker_database.dart';
 
 /// Input model for circuit configuration
 class CircuitInput {
@@ -26,7 +26,7 @@ class CircuitInput {
 
   Circuit? toCircuit() {
     if (selectedModel == null || selectedModel!.isEmpty) return null;
-    
+
     final int speakerCount = int.tryParse(speakerCountController.text) ?? 1;
     final double tapWatts = double.tryParse(tapWattsController.text) ?? 0.0;
     final double offsetDb = double.tryParse(offsetDbController.text) ?? 0.0;
@@ -106,7 +106,7 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
 
       // Perform amplifier matching
       final AmpMatchingResult result = await AmplifierMatcher.matchAmplifiers(validCircuits, speakerDatabase);
-      
+
       setState(() {
         matchingResult = result;
       });
@@ -199,13 +199,14 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
 
                   // Calculate button
                   Center(
-                    child: isLoading
-                        ? const CircularProgressIndicator()
-                        : FusionGradientButton(
-                            label: 'Calculate Amplifier Matching',
-                            onTap: _calculateAmplifierMatching,
-                            gradient: const LinearGradient(colors: <Color>[Colors.orange, Colors.red]),
-                          ),
+                    child:
+                        isLoading
+                            ? const CircularProgressIndicator()
+                            : FusionGradientButton(
+                              label: 'Calculate Amplifier Matching',
+                              onTap: _calculateAmplifierMatching,
+                              gradient: const LinearGradient(colors: <Color>[Colors.orange, Colors.red]),
+                            ),
                   ),
                 ],
               ),
@@ -276,18 +277,19 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
             // Speaker model selection
             DropdownButtonFormField<String>(
               value: circuit.selectedModel,
-              items: availableSpeakerModels.map((String model) {
-                return DropdownMenuItem<String>(
-                  value: model,
-                  child: Text(model),
-                );
-              }).toList(),
+              items:
+                  availableSpeakerModels.map((String model) {
+                    return DropdownMenuItem<String>(
+                      value: model,
+                      child: Text(model),
+                    );
+                  }).toList(),
               onChanged: (String? value) {
                 setState(() {
                   circuit.selectedModel = value;
                   // Auto-populate tap watts based on speaker model
                   if (value != null && speakerDatabase.containsKey(value)) {
-                    final Speaker spec = speakerDatabase[value]!;
+                    final SpeakerModel spec = speakerDatabase[value]!;
                     if (spec.hiZTaps.isNotEmpty) {
                       circuit.tapWattsController.text = spec.hiZTaps[1].toString();
                     }
@@ -369,9 +371,7 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
             ),
 
             // Show available tap settings for selected speaker
-            if (circuit.selectedModel != null && 
-                speakerDatabase.containsKey(circuit.selectedModel) && 
-                circuit.mode == 'hi-z') ...<Widget>[
+            if (circuit.selectedModel != null && speakerDatabase.containsKey(circuit.selectedModel) && circuit.mode == 'hi-z') ...<Widget>[
               const SizedBox(height: 8),
               Text(
                 'Available Taps: ${speakerDatabase[circuit.selectedModel]!.hiZTaps.map((double t) => '${t}W').join(', ')}',
@@ -580,10 +580,10 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
               ),
             ),
             const SizedBox(height: 8),
-              const Text(
-                'Assigned Circuits:',
-                style: TextStyle(fontWeight: FontWeight.w500),
-              ),
+            const Text(
+              'Assigned Circuits:',
+              style: TextStyle(fontWeight: FontWeight.w500),
+            ),
             const SizedBox(height: 4),
             ...assignment.circuits.map((Circuit circuit) {
               return Padding(

@@ -1,0 +1,774 @@
+import 'dart:math' as math;
+import 'dart:math';
+import 'dart:ui' as ui;
+
+import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:fusion_lib/models/project_entities/zone_entity.dart';
+
+import '../di/service_locator.dart';
+import '../fusion_utils/image_loader_service.dart';
+import '../models/project_entities/floor_plan_entity.dart';
+import '../models/project_entities/hardware_component_entity.dart';
+import '../models/project_entities/listening_area_entity.dart';
+import 'floor_canvas_controller.dart';
+import 'floor_canvas_painter.dart';
+
+class FloorCanvas extends StatefulWidget {
+  final double gridSize;
+
+  // external state
+  final List<HardwareComponent> hardwareComponents;
+  final List<Zone> zones;
+  final List<ListeningArea> listeningAreas;
+  final FloorPlanEntity floorPlanEntity;
+  final double splMin;
+  final double splMax;
+
+  final FloorCanvasController controller;
+
+  // mutation callbacks
+  final ValueChanged<FloorPlanEntity> onFloorPlanUpdated;
+  final ValueChanged<ListeningArea> onAddListeningArea;
+  final ValueChanged<ListeningArea> onUpdateListeningArea;
+  final ValueChanged<ListeningArea> onTapListeningArea;
+  final ValueChanged<HardwareComponent> onUpdateHardwareComponent;
+  final ValueChanged<Offset> onViewportCenterUpdated;
+  final ValueChanged<dynamic> onComponentTransformed;
+  final ValueChanged<double> onCanvasZoomChanged;
+  final ValueChanged<Offset> onCanvasPanChanged;
+  final ValueChanged<String?> onSelectedListeningAreaIdChanged;
+  final ValueChanged<String?> onSelectedHardwareComponentIdChanged;
+  final Function onSelectedFloorPlanIdChanged;
+
+  const FloorCanvas({
+    super.key,
+    this.gridSize = 100,
+    required this.hardwareComponents,
+    required this.listeningAreas,
+    required this.controller,
+    required this.onFloorPlanUpdated,
+    required this.onAddListeningArea,
+    required this.onUpdateListeningArea,
+    required this.onUpdateHardwareComponent,
+    required this.onViewportCenterUpdated,
+    required this.onComponentTransformed,
+    required this.floorPlanEntity,
+    required this.onCanvasZoomChanged,
+    required this.onCanvasPanChanged,
+    required this.onSelectedListeningAreaIdChanged,
+    required this.onSelectedHardwareComponentIdChanged,
+    required this.onSelectedFloorPlanIdChanged,
+    required this.onTapListeningArea,
+    required this.zones,
+    required this.splMin,
+    required this.splMax,
+  });
+
+  @override
+  FloorCanvasState createState() => FloorCanvasState();
+}
+
+class FloorCanvasState extends State<FloorCanvas> {
+  double _zoomScale = 1.0;
+  Offset _panOffset = Offset.zero;
+  double _baseZoom = 1.0;
+  Offset _basePan = Offset.zero;
+
+  static const double minZoom = 0.05, maxZoom = 5.0;
+
+  bool showSpl = false;
+
+  bool _isPanning = false;
+  bool _isDrawing = false;
+  final List<Offset> _current = <Offset>[];
+
+  bool _isListeningAreaVertexDragging = false;
+  bool _isListeningAreaDragging = false;
+  int? _dragIndex;
+  int? _dragVertexIndex;
+  Offset? _dragStartWorld;
+  List<Offset>? _dragOriginal;
+  int? _highlightIndex;
+
+  FloorPlanEntity? _tempFloorPlan;
+
+  bool _isImageVertexDrag = false;
+  int? _dragImageCorner;
+  Offset? _dragImageOpposite;
+  late double _imageOrigDiag;
+  double? _planOrigW;
+  double? _planOrigH;
+  bool _isImageSelected = false;
+  bool _isImageDragging = false;
+  bool _isScaling = false;
+  Offset? _imageDragStart;
+  ui.Image? _floorPlanImage;
+  Offset? _planOrigPosition;
+
+  int? _selectedHardwareComponent;
+  bool _isHardwareComponentDragging = false;
+  bool _isHardwareComponentRotating = false;
+  late Offset _hardwareComponentDragStart;
+  Offset? _hardwareComponentOrigPos;
+
+  Offset? _hoverWorldPos;
+  late Offset _lastOffset;
+  late Offset _panStart;
+  Offset _initialFocal = Offset.zero;
+
+  Size _viewportSize = Size.zero;
+  final Map<String, ui.Image> _hardwareImages = <String, ui.Image>{};
+
+  @override
+  void initState() {
+    super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      widget.onViewportCenterUpdated(getViewportCenter());
+    });
+
+    _loadAllHardwareImages();
+
+    // _setUpCanvas();
+
+    _loadPlanImage();
+
+    widget.controller.bind(
+      toggleDraw: () {
+        setState(() {
+          _isDrawing = !_isDrawing;
+          _current.clear();
+          _highlightIndex = null;
+          _selectedHardwareComponent = null;
+        });
+      },
+      toggleSpl: () => setState(() => showSpl = !showSpl),
+      fitToView: () => _fitToViewport(),
+      deselectAll: () => _deselectAll(),
+      loadFloorPlanImage: () => _loadPlanImage(),
+      updateView: () => setState(() {}),
+      setSelectedHardwareComponent: (HardwareComponent hardwareComponent) {
+        final int idx = widget.hardwareComponents.indexWhere((HardwareComponent sp) => sp.id == hardwareComponent.id);
+        if (idx != -1) {
+          setState(() {
+            _selectedHardwareComponent = idx;
+            _isHardwareComponentDragging = false;
+            _isHardwareComponentRotating = false;
+          });
+        }
+      },
+      setHardwareComponentListeningAreaId: (HardwareComponent hardwareComponent) => _updateHardwareComponentListeningAreaId(hardwareComponent),
+    );
+  }
+
+  @override
+  void didUpdateWidget(covariant FloorCanvas oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // if (widget.floorPlanEntity.id != oldWidget.floorPlanEntity.id) {
+    //   _zoomScale = widget.floorPlanEntity.canvasZoom;
+    //   _panOffset = widget.floorPlanEntity.canvasPan;
+    // }
+    if (oldWidget.floorPlanEntity.id != widget.floorPlanEntity.id || oldWidget.floorPlanEntity.imagePath != widget.floorPlanEntity.imagePath) {
+      setState(() {
+        _floorPlanImage = null;
+        _loadPlanImage();
+      });
+    }
+    _loadAllHardwareImages();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (BuildContext ctx, BoxConstraints constraints) {
+        _viewportSize = constraints.biggest;
+        return Stack(
+          children: <Widget>[
+            GestureDetector(
+              onScaleStart: _handleScaleStart,
+              onScaleUpdate: _handleScaleUpdate,
+              onScaleEnd: _handleScaleEnd,
+              child: Listener(
+                onPointerSignal: _handleScrollWheelZoom,
+                onPointerDown: _handleDown,
+                onPointerMove: _handleMove,
+                onPointerUp: _handleUp,
+                onPointerHover: _handleHover,
+                child: CustomPaint(
+                  size: Size.infinite,
+                  painter: FloorCanvasPainter(
+                    gridSize: widget.gridSize,
+                    zoomScale: _zoomScale,
+                    panOffset: _panOffset,
+                    listeningAreas: widget.listeningAreas,
+                    zones: widget.zones,
+                    current: _current,
+                    previewPoint: _isDrawing && _current.isNotEmpty ? _hoverWorldPos : null,
+                    highlightedIndex: _highlightIndex,
+                    floorPlanImageSelected: _isImageSelected || _isImageVertexDrag,
+                    hardwareComponents: widget.hardwareComponents,
+                    selectedHardwareComponentIndex: _selectedHardwareComponent,
+                    showSpl: showSpl,
+                    floorPlanEntity: _tempFloorPlan ?? widget.floorPlanEntity,
+                    floorPlanImage: _floorPlanImage,
+                    hardwareImages: _hardwareImages,
+                    listeningAreaSelectionActive: widget.controller.isListeningAreaSelectionActive.value,
+                    currentlySelectingZone: widget.controller.currentlySelectingZone,
+                    selectedListeningAreaIds: widget.controller.selectedListeningAreas.map((ListeningArea s) => s.id).toList(),
+                    splMax: widget.splMax,
+                    splMin: widget.splMin,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _loadAllHardwareImages() {
+    final ImageLoaderService loader = fusionLibLocator<ImageLoaderService>();
+    for (final HardwareComponent comp in widget.hardwareComponents) {
+      final String path = comp.assetImagePath;
+      if (!_hardwareImages.containsKey(path)) {
+        loader.loadImage(path).then((ui.Image img) {
+          setState(() {
+            _hardwareImages[path] = img;
+          });
+        });
+      }
+    }
+  }
+
+  void _setUpCanvas() {
+    final double zoomScaleP = widget.floorPlanEntity.canvasZoom;
+    final Offset panOffsetP = widget.floorPlanEntity.canvasPan;
+
+    if (zoomScaleP == 1.0 && panOffsetP == Offset.zero) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _fitToViewport();
+      });
+    } else {
+      setState(() {
+        _zoomScale = zoomScaleP;
+        _panOffset = panOffsetP;
+      });
+      widget.onViewportCenterUpdated(getViewportCenter());
+    }
+  }
+
+  Future<void> _loadPlanImage() async {
+    final String imagePath = widget.floorPlanEntity.imagePath;
+    if (imagePath.isNotEmpty) {
+      final ui.Image img = await fusionLibLocator<ImageLoaderService>().loadImage(imagePath);
+      if (!mounted) return;
+      setState(() {
+        _floorPlanImage = img;
+        _fitToViewport();
+      });
+    }
+  }
+
+  List<Offset> get _computedCorners {
+    final ui.Offset p = widget.floorPlanEntity.position;
+    final double h = widget.floorPlanEntity.size.height;
+    if (_floorPlanImage == null) {
+      // fallback to stored size if no image
+      final double w = widget.floorPlanEntity.size.width;
+      return <ui.Offset>[p, p + Offset(w, 0), p + Offset(w, h), p + Offset(0, h)];
+    }
+    final double ar = _floorPlanImage!.width / _floorPlanImage!.height;
+    final double w = h * ar;
+    return <ui.Offset>[p, p + Offset(w, 0), p + Offset(w, h), p + Offset(0, h)];
+  }
+
+  void _deselectAll() {
+    setState(() {
+      _selectedHardwareComponent = null;
+      _isHardwareComponentDragging = false;
+      _isHardwareComponentRotating = false;
+      _isListeningAreaVertexDragging = false;
+      _isListeningAreaDragging = false;
+      _dragIndex = null;
+      _dragVertexIndex = null;
+      _highlightIndex = null;
+    });
+  }
+
+  void _stopListeningAreaSelection() {
+    widget.controller.cancelListeningAreaSelection();
+    setState(() {
+      _highlightIndex = null;
+    });
+  }
+
+  void _handleScaleStart(ScaleStartDetails details) {
+    if (details.pointerCount < 2) {
+      _isScaling = false;
+      return;
+    }
+    _isScaling = true;
+    _baseZoom = _zoomScale;
+    _basePan = _panOffset;
+    _initialFocal = details.localFocalPoint;
+  }
+
+  void _handleScaleUpdate(ScaleUpdateDetails details) {
+    if (details.pointerCount < 2) {
+      _isScaling = false;
+      return;
+    }
+
+    final Offset focalPoint = details.localFocalPoint;
+
+    final double newZoom = (_baseZoom * details.scale).clamp(minZoom, maxZoom);
+    final double zoomFactor = newZoom / _baseZoom;
+
+    final Offset newPan = (_basePan - _initialFocal) * zoomFactor + focalPoint;
+
+    setState(() {
+      _zoomScale = newZoom;
+      _panOffset = newPan;
+    });
+
+    widget.onViewportCenterUpdated(getViewportCenter());
+    widget.onCanvasZoomChanged(_zoomScale);
+    widget.onCanvasPanChanged(_panOffset);
+  }
+
+  void _handleScaleEnd(ScaleEndDetails details) {
+    _isScaling = false;
+  }
+
+  void _handleScrollWheelZoom(PointerSignalEvent p) {
+    if (p is PointerScrollEvent) {
+      final double d = p.scrollDelta.dy;
+      final Offset f = p.localPosition;
+      setState(() {
+        final double prop = _zoomScale * (1 - d * 0.001);
+        final double c = prop.clamp(minZoom, maxZoom);
+        final double zf = c / _zoomScale;
+        _panOffset = (_panOffset - f) * zf + f;
+        _zoomScale = c;
+        widget.onViewportCenterUpdated(getViewportCenter());
+      });
+      widget.onCanvasZoomChanged(_zoomScale);
+      widget.onCanvasPanChanged(_panOffset);
+    }
+  }
+
+  void _handleDown(PointerDownEvent e) {
+    if (_isScaling) return;
+    if (e.kind != PointerDeviceKind.mouse && e.kind != PointerDeviceKind.touch) {
+      return;
+    }
+
+    final Offset worldPos = (e.localPosition - _panOffset) / _zoomScale;
+
+    // PAN
+    if (e.buttons == kMiddleMouseButton) {
+      _isPanning = true;
+      _panStart = e.localPosition;
+      _lastOffset = _panOffset;
+      return;
+    }
+
+    // deselect everything
+    _deselectAll();
+
+    // SPEAKER hit‐test
+    if (e.buttons == kPrimaryMouseButton) {
+      for (int i = widget.hardwareComponents.length - 1; i >= 0; i--) {
+        final HardwareComponent sp = widget.hardwareComponents[i];
+        // simplest circular hit‐test:
+        final double hitRadius = widget.gridSize * 0.3;
+        if ((worldPos - sp.pos).distance < hitRadius) {
+          _stopListeningAreaSelection();
+          widget.onSelectedHardwareComponentIdChanged(sp.id);
+          setState(() {
+            _selectedHardwareComponent = i;
+            _isHardwareComponentDragging = true;
+            _hardwareComponentDragStart = worldPos;
+            _hardwareComponentOrigPos = sp.pos;
+          });
+          return;
+        }
+      }
+    }
+
+    // DRAW
+    if (_isDrawing) {
+      if (e.buttons == kPrimaryMouseButton) {
+        if (_current.isNotEmpty && (worldPos - _current.first).distance < 10.0 / _zoomScale) {
+          final ListeningArea newS = ListeningArea(name: "Area ${widget.listeningAreas.length + 1}", vertices: List<Offset>.of(_current));
+          widget.onAddListeningArea(newS);
+          setState(() {
+            _current.clear();
+            _isDrawing = false;
+            widget.controller.isDrawing.value = _isDrawing;
+            _highlightIndex = widget.listeningAreas.length - 1;
+          });
+        } else {
+          setState(() => _current.add(worldPos));
+        }
+      } else if (e.buttons == kSecondaryMouseButton) {
+        setState(() {
+          _current.clear();
+          _isDrawing = false;
+          widget.controller.isDrawing.value = _isDrawing;
+        });
+      }
+      return;
+    }
+
+    // Listening area select mode
+
+    // if (widget.controller.autoPlaceCompleter != null) {
+    //   for (final ListeningArea s in widget.listeningAreas) {
+    //     final List<ui.Offset> p = s.vertices;
+    //     final ui.Path poly = Path()..addPolygon(p, true);
+    //     if (poly.contains(worldPos)) {
+    //       final List<ui.Offset> points = s.getSpeakerPoints(
+    //         spacing: 250.0,
+    //         tolerance: 25.0,
+    //       );
+    //       widget.controller.completeAutoPlace(points);
+    //       return;
+    //     }
+    //   }
+    //   widget.controller.completeAutoPlace(null);
+    //   return;
+    // }
+
+    // Listening area selection mode
+    if (widget.controller.isListeningAreaSelectionActive.value) {
+      if (e.buttons == kPrimaryMouseButton) {
+        for (int i = 0; i < widget.listeningAreas.length; i++) {
+          final ListeningArea area = widget.listeningAreas[i];
+          final List<ui.Offset> p = area.vertices;
+          final ui.Path poly = Path()..addPolygon(p, true);
+          if (poly.contains(worldPos)) {
+            // Add/remove area from selection
+            widget.controller.selectListeningArea(area);
+
+            // Update highlight for visual feedback
+            setState(() {
+              _highlightIndex = i;
+            });
+            return;
+          }
+        }
+
+        // If clicked outside any area, stop selection
+        _stopListeningAreaSelection();
+      }
+      _deselectAll();
+      return; // Don't process other interactions during selection
+    }
+
+    // POLY‐VERTEX DRAG
+    if (e.buttons == kPrimaryMouseButton) {
+      for (int i = widget.listeningAreas.length - 1; i >= 0; i--) {
+        final List<ui.Offset> poly = widget.listeningAreas[i].vertices;
+        for (int j = 0; j < poly.length; j++) {
+          if ((worldPos - poly[j]).distance < 10.0 / _zoomScale) {
+            widget.onSelectedListeningAreaIdChanged(widget.listeningAreas[i].id);
+            setState(() {
+              _isListeningAreaVertexDragging = true;
+              _dragIndex = i;
+              _dragVertexIndex = j;
+              _highlightIndex = i;
+            });
+            return;
+          }
+        }
+      }
+    }
+
+    // POLY DRAG
+    if (e.buttons == kPrimaryMouseButton) {
+      for (int i = widget.listeningAreas.length - 1; i >= 0; i--) {
+        final List<ui.Offset> poly = widget.listeningAreas[i].vertices;
+        final ui.Path path = Path()..addPolygon(poly, true);
+        if (path.contains(worldPos)) {
+          widget.onSelectedListeningAreaIdChanged(widget.listeningAreas[i].id);
+          setState(() {
+            _isListeningAreaDragging = true;
+            _dragIndex = i;
+            _dragStartWorld = worldPos;
+            _dragOriginal = List<Offset>.of(poly);
+            _highlightIndex = i;
+          });
+          return;
+        }
+      }
+    }
+
+    // 1) Vertex‐grab (resize) hit‐test
+    final List<ui.Offset> corners = _computedCorners;
+    if (e.buttons == kPrimaryMouseButton) {
+      for (int i = 0; i < 4; i++) {
+        if ((worldPos - corners[i]).distance < 15.0 / _zoomScale) {
+          widget.onSelectedFloorPlanIdChanged();
+          setState(() {
+            _isImageVertexDrag = true;
+            _isImageSelected = true;
+            _dragImageCorner = i;
+            _dragImageOpposite = corners[(i + 2) % 4];
+            final double dx = _dragImageOpposite!.dx - corners[i].dx;
+            final double dy = _dragImageOpposite!.dy - corners[i].dy;
+            _imageOrigDiag = sqrt(dx * dx + dy * dy);
+            _planOrigW = dx.abs();
+            _planOrigH = dy.abs();
+          });
+          return;
+        }
+      }
+    }
+
+    // 2) Full‐image drag hit‐test
+    if (e.buttons == kPrimaryMouseButton) {
+      final ui.Rect rect = Rect.fromLTWH(
+        widget.floorPlanEntity.position.dx,
+        widget.floorPlanEntity.position.dy,
+        widget.floorPlanEntity.size.width,
+        widget.floorPlanEntity.size.height,
+      );
+      if (rect.contains(worldPos)) {
+        widget.onSelectedFloorPlanIdChanged();
+        setState(() {
+          _isImageDragging = true;
+          _isImageSelected = true;
+          _imageDragStart = worldPos;
+          _planOrigPosition = widget.floorPlanEntity.position;
+          _tempFloorPlan = widget.floorPlanEntity;
+        });
+        return;
+      }
+    }
+
+    // 3) Simple select/deselect
+    if (e.buttons == kPrimaryMouseButton) {
+      final ui.Rect rect = Rect.fromLTWH(
+        widget.floorPlanEntity.position.dx,
+        widget.floorPlanEntity.position.dy,
+        widget.floorPlanEntity.size.width,
+        widget.floorPlanEntity.size.height,
+      );
+      setState(() {
+        _isImageSelected = rect.contains(worldPos);
+        _isImageVertexDrag = false;
+      });
+      return;
+    }
+  }
+
+  void _handleMove(PointerMoveEvent e) {
+    if (_isScaling) return;
+    if (e.kind != PointerDeviceKind.mouse && e.kind != PointerDeviceKind.touch) {
+      return;
+    }
+
+    final Offset worldPos = (e.localPosition - _panOffset) / _zoomScale;
+
+    // speaker rotate
+    // if (_isHardwareComponentRotating && _selectedHardwareComponent != null) {
+    //   final HardwareComponent sp = widget.hardwareComponents[_selectedHardwareComponent!];
+    //   if (sp is! CanvasSpeaker) return;
+    //   final double angle = atan2(worldPos.dy - sp.pos.dy, worldPos.dx - sp.pos.dx);
+    //   setState(() => sp.rotation = (_speakerOrigRotation! + (angle - _rotateStartAngle)) % (2 * pi));
+    //   widget.onUpdateSpeaker(sp);
+    //   return;
+    // }
+
+    // hardware component drag
+    if (_isHardwareComponentDragging && _selectedHardwareComponent != null) {
+      final HardwareComponent hardwareComponent = widget.hardwareComponents[_selectedHardwareComponent!];
+      final ui.Offset delta = worldPos - _hardwareComponentDragStart;
+      setState(() => hardwareComponent.pos = _hardwareComponentOrigPos! + delta);
+      widget.onUpdateHardwareComponent(hardwareComponent);
+      return;
+    }
+
+    // pan
+    if (_isPanning) {
+      setState(() {
+        _panOffset = _lastOffset + (e.localPosition - _panStart);
+        widget.onViewportCenterUpdated(getViewportCenter());
+      });
+      return;
+    }
+
+    // poly-vertex drag
+    if (_isListeningAreaVertexDragging && _dragIndex != null && _dragVertexIndex != null) {
+      final ListeningArea cs = widget.listeningAreas[_dragIndex!];
+      cs.vertices[_dragVertexIndex!] = worldPos;
+      widget.onUpdateListeningArea(cs);
+      return;
+    }
+
+    // poly drag
+    if (_isListeningAreaDragging && _dragIndex != null && _dragOriginal != null) {
+      final ui.Offset delta = worldPos - _dragStartWorld!;
+      final ListeningArea cs = widget.listeningAreas[_dragIndex!];
+      final ListeningArea updated = cs.copyWith(vertices: _dragOriginal!.map((ui.Offset pt) => pt + delta).toList());
+      widget.onUpdateListeningArea(updated);
+      return;
+    }
+
+    // ─── Floor-plan resize ─────────────────────────────────────────────────────
+    if (_isImageVertexDrag && _dragImageCorner != null && _dragImageOpposite != null) {
+      // 1) Compute diagonal scaling just like before
+      final Offset opp = _dragImageOpposite!;
+      final Offset v = worldPos - opp;
+      final double diag = v.distance;
+      final double sf = diag / _imageOrigDiag;
+      final double newW = _planOrigW! * sf;
+      final double newH = _planOrigH! * sf;
+
+      // 2) Determine new top-left corner and size
+      //    (we assume the user drags one corner away from ‘opp’)
+      final Offset newCorner = opp + Offset(v.dx.sign * newW, v.dy.sign * newH);
+      final double minX = math.min(newCorner.dx, opp.dx);
+      final double minY = math.min(newCorner.dy, opp.dy);
+      final Size newSize = Size((newCorner.dx - opp.dx).abs(), (newCorner.dy - opp.dy).abs());
+
+      // 3) Build an updated FloorPlanEntity
+      final FloorPlanEntity updated = widget.floorPlanEntity.copyWith(position: Offset(minX, minY), size: newSize);
+
+      // 4) Tell the parent/store about it
+      widget.onFloorPlanUpdated(updated);
+
+      return;
+    }
+
+    // ─── Full-image drag ─────────────────────────────────────────────────────────
+    if (_isImageDragging && _imageDragStart != null) {
+      final ui.Offset worldPos = (e.localPosition - _panOffset) / _zoomScale;
+      final ui.Offset delta = worldPos - _imageDragStart!;
+
+      setState(() {
+        _tempFloorPlan = _tempFloorPlan!.copyWith(position: _planOrigPosition! + delta);
+      });
+      return;
+    }
+  }
+
+  void _handleUp(PointerUpEvent e) {
+    if (_isScaling) return;
+    if (e.kind != PointerDeviceKind.mouse) return;
+
+    if (_isHardwareComponentRotating) {
+      setState(() {
+        _isHardwareComponentRotating = false;
+        widget.onComponentTransformed(widget.hardwareComponents[_selectedHardwareComponent!]);
+      });
+    }
+    if (_isHardwareComponentDragging) {
+      setState(() {
+        _isHardwareComponentDragging = false;
+        _updateHardwareComponentListeningAreaId(widget.hardwareComponents[_selectedHardwareComponent!]);
+        widget.onComponentTransformed(widget.hardwareComponents[_selectedHardwareComponent!]);
+      });
+    }
+    if (_isListeningAreaVertexDragging) {
+      setState(() {
+        _isListeningAreaVertexDragging = false;
+        widget.onComponentTransformed(widget.listeningAreas[_dragIndex!]);
+      });
+    }
+    if (_isListeningAreaDragging) {
+      final ListeningArea cs = widget.listeningAreas[_dragIndex!];
+      setState(() {
+        _isListeningAreaDragging = false;
+        widget.onTapListeningArea(cs);
+        widget.onComponentTransformed(cs);
+      });
+    }
+    if (_isPanning && e.buttons == 0) {
+      setState(() => _isPanning = false);
+    }
+    if (_isImageVertexDrag) {
+      setState(() => _isImageVertexDrag = false);
+    }
+
+    if (_isImageDragging) {
+      widget.onFloorPlanUpdated(_tempFloorPlan!);
+      setState(() {
+        _isImageDragging = false;
+        _imageDragStart = null;
+        _planOrigPosition = null;
+        _tempFloorPlan = null;
+      });
+    }
+  }
+
+  void _handleHover(PointerHoverEvent e) {
+    setState(() => _hoverWorldPos = (e.localPosition - _panOffset) / _zoomScale);
+  }
+
+  void _fitToViewport() {
+    final List<Offset> all = <Offset>[for (ListeningArea s in widget.listeningAreas) ...s.vertices, ..._computedCorners];
+    if (all.isEmpty) return;
+    final Iterable<double> xs = all.map((ui.Offset p) => p.dx), ys = all.map((ui.Offset p) => p.dy);
+    final double minX = xs.reduce(min), maxX = xs.reduce(max);
+    final double minY = ys.reduce(min), maxY = ys.reduce(max);
+    final double w = maxX - minX, h = maxY - minY;
+    if (w == 0 || h == 0) return;
+    const double pad = 20.0;
+    final double availW = _viewportSize.width - 2 * pad;
+    final double availH = _viewportSize.height - 2 * pad;
+    if (availW <= 0 || availH <= 0) return;
+    final double sX = availW / w, sY = availH / h;
+    final double tar = (sX < sY ? sX : sY).clamp(minZoom, maxZoom);
+    final double mX = (_viewportSize.width - w * tar) / 2;
+    final double mY = (_viewportSize.height - h * tar) / 2;
+    setState(() {
+      _zoomScale = tar;
+      _panOffset = Offset(mX - minX * tar, mY - minY * tar);
+      widget.onViewportCenterUpdated(getViewportCenter());
+    });
+    // widget.onCanvasZoomChanged(_zoomScale);
+    // widget.onCanvasPanChanged(_panOffset);
+  }
+
+  Offset getViewportCenter() {
+    final Offset screenCenter = Offset(_viewportSize.width / 2, _viewportSize.height / 2);
+    final Offset worldCenter = (screenCenter - _panOffset) / _zoomScale;
+    return worldCenter;
+  }
+
+  void _updateHardwareComponentListeningAreaId(HardwareComponent hardwareComponent) {
+    // Find the listening area at the component’s position (if any)
+    final ListeningArea? hit = _findListeningAreaAt(hardwareComponent.pos);
+
+    // Determine the new listeningAreaId (use empty string when none)
+    final String newListeningAreaId = hit?.id ?? '';
+
+    // Find the first zone that contains this listeningAreaId
+    String newZoneId = '';
+    for (final Zone zone in widget.zones) {
+      if (zone.listeningAreasIds.contains(newListeningAreaId)) {
+        newZoneId = zone.id;
+        break;
+      }
+    }
+
+    final HardwareComponent updated = hardwareComponent.copyWith(
+      locationEntity: hardwareComponent.locationEntity.copyWith(listeningAreaId: newListeningAreaId, zoneId: newZoneId),
+    );
+
+    widget.onUpdateHardwareComponent(updated);
+  }
+
+  ListeningArea? _findListeningAreaAt(Offset worldPos) {
+    for (final ListeningArea area in widget.listeningAreas) {
+      final Path poly = Path()..addPolygon(area.vertices, true);
+      if (poly.contains(worldPos)) return area;
+    }
+    return null;
+  }
+}

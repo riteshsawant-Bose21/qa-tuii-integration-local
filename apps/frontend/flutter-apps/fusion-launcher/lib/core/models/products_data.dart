@@ -1,7 +1,6 @@
-import 'package:fusion_launcher/core/models/source_entity.dart';
-import 'package:fusion_launcher/core/models/speaker_entity.dart';
-
 // Abstract base class for all device components
+import 'package:fusion_lib/models/fusion_models.dart';
+
 abstract class DeviceComponent {
   final String id;
   final String assetPath;

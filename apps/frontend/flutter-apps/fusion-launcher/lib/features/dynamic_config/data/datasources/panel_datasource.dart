@@ -1,4 +1,5 @@
-import '../../../../core/models/processing_block_entity.dart';
+import 'package:fusion_lib/models/fusion_models.dart';
+
 import '../../domain/entities/audio_widget_entity.dart';
 import '../../domain/entities/audio_widget_value.dart';
 import '../../domain/entities/panel_entity.dart';

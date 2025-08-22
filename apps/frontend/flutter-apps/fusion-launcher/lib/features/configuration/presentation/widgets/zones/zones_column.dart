@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/models/mix_entity.dart';
-import 'package:fusion_launcher/core/models/speaker_entity.dart';
+import 'package:fusion_lib/models/fusion_models.dart';
 
 import '../../../../../core/models/floor_entity.dart';
-import '../../../../../core/models/source_entity.dart';
-import '../../../../../core/models/zone_entity.dart';
 import 'zone_widget.dart';
 
 class ZonesColumn extends StatefulWidget {

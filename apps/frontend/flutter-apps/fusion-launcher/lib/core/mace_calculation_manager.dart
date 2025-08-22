@@ -1,10 +1,9 @@
 import 'dart:async';
 import 'dart:ui';
 
+import 'package:fusion_lib/models/fusion_models.dart';
+
 import 'mace_engine_provider.dart';
-import 'models/hardware_component_entity.dart';
-import 'models/listening_area_entity.dart';
-import 'models/speaker_entity.dart';
 
 class SPLCalculation {
   final ListeningArea surface;

@@ -2,15 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/constants/spl_calculation_data.dart';
 import 'package:fusion_launcher/core/models/amplifer.dart';
 import 'package:fusion_launcher/core/models/fusion_device.dart';
-import 'package:fusion_launcher/core/models/speaker_entity.dart';
+import 'package:fusion_lib/models/fusion_models.dart';
 import 'package:uuid/uuid.dart';
 
 import 'floor_entity.dart';
-import 'generic_hardware_component_entity.dart';
-import 'hardware_component_entity.dart';
 import 'mix_entity.dart';
-import 'source_entity.dart';
-import 'zone_entity.dart';
 
 class ProjectEntity {
   final String id;

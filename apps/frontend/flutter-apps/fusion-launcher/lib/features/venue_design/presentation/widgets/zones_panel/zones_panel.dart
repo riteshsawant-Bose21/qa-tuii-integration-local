@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/models/floor_entity.dart';
-import 'package:fusion_launcher/core/models/listening_area_entity.dart';
-import 'package:fusion_launcher/core/models/zone_entity.dart';
+import 'package:fusion_lib/models/fusion_models.dart';
 
 import 'zone_panel_item_widget.dart';
 

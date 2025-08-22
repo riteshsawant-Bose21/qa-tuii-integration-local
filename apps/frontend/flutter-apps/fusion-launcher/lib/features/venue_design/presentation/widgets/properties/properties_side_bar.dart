@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/models/fusion_models.dart';
 
 import '../../../../../core/models/floor_entity.dart';
-import '../../../../../core/models/hardware_component_entity.dart';
-import '../../../../../core/models/listening_area_entity.dart';
 import 'floor_properties.dart';
 import 'hardware_properties.dart';
 import 'surface_properties.dart';

@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/core/models/listening_area_entity.dart';
-import 'package:fusion_launcher/core/models/location_entity.dart';
 import 'package:fusion_launcher/core/services/project_manager.dart';
+import 'package:fusion_lib/models/fusion_models.dart';
 
 import '../../../../../core/models/floor_entity.dart';
-import '../../../../../core/models/floor_plan_entity.dart';
 import '../../../../../core/models/project_entity.dart';
 import '../../../../../core/service_locator.dart';
 

@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/core/models/location_entity.dart';
 import 'package:fusion_launcher/core/models/products_data.dart';
+import 'package:fusion_lib/models/fusion_models.dart';
 
 import '../../../../../core/constants.dart';
 import '../../../../../core/models/floor_entity.dart';
-import '../../../../../core/models/source_entity.dart';
 import 'source_widget.dart';
 
 class SourceOptions {

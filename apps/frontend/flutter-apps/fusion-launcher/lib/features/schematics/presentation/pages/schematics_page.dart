@@ -1,16 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/models/amplifer.dart';
 import 'package:fusion_launcher/core/models/fusion_device.dart';
-import 'package:fusion_launcher/core/models/generic_hardware_component_entity.dart';
 import 'package:fusion_launcher/features/schematics/presentation/widgets/cost_calcuator_widget.dart';
+import 'package:fusion_lib/models/fusion_models.dart';
 
-import '../../../../core/models/hardware_component_entity.dart';
-import '../../../../core/models/location_entity.dart';
 import '../../../../core/models/products_data.dart';
 import '../../../../core/models/project_entity.dart';
-import '../../../../core/models/source_entity.dart';
-import '../../../../core/models/speaker_entity.dart';
-import '../../../../core/models/zone_entity.dart';
 import '../../../../core/service_locator.dart';
 import '../../../../core/services/project_manager.dart';
 import '../../../../core/widgets/horizontal_resizable_container.dart';

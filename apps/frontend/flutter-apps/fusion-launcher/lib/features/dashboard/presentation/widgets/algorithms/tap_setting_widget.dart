@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_algorithms/fusion_algorithms.dart';
 import 'package:fusion_lib/fusion_widgets/buttons/fusion_gradient_button.dart';
 import 'package:fusion_lib/fusion_widgets/form_fields/fusion_text_form_field.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_gradient_text.dart';
-import 'package:fusion_lib/fusion_algorithms/fusion_algorithms.dart';
 
 class SpeakerInput {
   String? selectedModel;
@@ -27,7 +27,7 @@ class _TapSettingWidgetState extends State<TapSettingWidget> {
   final List<SpeakerInput> speakers = <SpeakerInput>[
     SpeakerInput(),
   ];
-  
+
   // Circuit configuration
   String circuitType = 'hi-z';
   final TextEditingController voltageController = TextEditingController(text: '100');
@@ -55,7 +55,7 @@ class _TapSettingWidgetState extends State<TapSettingWidget> {
             fontWeight: FontWeight.bold,
           ),
           const SizedBox(height: 20),
-          
+
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16.0),
@@ -96,16 +96,16 @@ class _TapSettingWidgetState extends State<TapSettingWidget> {
               ],
             ),
           ),
-          
+
           const SizedBox(height: 20),
-          
+
           // Circuit Configuration
           const Text(
             'Circuit Configuration',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
-          
+
           Row(
             children: <Widget>[
               Expanded(
@@ -151,20 +151,20 @@ class _TapSettingWidgetState extends State<TapSettingWidget> {
               ),
             ],
           ),
-          
+
           const SizedBox(height: 20),
-          
+
           // Speaker Input Forms
           const Text(
             'Speaker Configuration',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
-          
+
           ...speakers.asMap().entries.map((MapEntry<int, SpeakerInput> entry) {
             final int index = entry.key;
             final SpeakerInput input = entry.value;
-            
+
             return Card(
               margin: const EdgeInsets.only(bottom: 16.0),
               child: Padding(
@@ -187,7 +187,7 @@ class _TapSettingWidgetState extends State<TapSettingWidget> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    
+
                     Row(
                       children: <Widget>[
                         Expanded(
@@ -203,13 +203,14 @@ class _TapSettingWidgetState extends State<TapSettingWidget> {
                                   border: OutlineInputBorder(),
                                   contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                 ),
-                                items: speakerDatabase.keys.map((String model) {
-                                  final Speaker speaker = speakerDatabase[model]!;
-                                  return DropdownMenuItem<String>(
-                                    value: model,
-                                    child: Text('$model (${speaker.mountingType}, ${speaker.maxSpl}dB)'),
-                                  );
-                                }).toList(),
+                                items:
+                                    speakerDatabase.keys.map((String model) {
+                                      final SpeakerModel speaker = speakerDatabase[model]!;
+                                      return DropdownMenuItem<String>(
+                                        value: model,
+                                        child: Text('$model (${speaker.mountingType}, ${speaker.maxSpl}dB)'),
+                                      );
+                                    }).toList(),
                                 onChanged: (String? newValue) {
                                   setState(() {
                                     input.selectedModel = newValue;
@@ -223,7 +224,7 @@ class _TapSettingWidgetState extends State<TapSettingWidget> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    
+
                     Row(
                       children: <Widget>[
                         Expanded(
@@ -252,9 +253,9 @@ class _TapSettingWidgetState extends State<TapSettingWidget> {
               ),
             );
           }),
-          
+
           const SizedBox(height: 16),
-          
+
           Row(
             children: <Widget>[
               Expanded(
@@ -279,9 +280,9 @@ class _TapSettingWidgetState extends State<TapSettingWidget> {
               ),
             ],
           ),
-          
+
           const SizedBox(height: 20),
-          
+
           if (tapResult != null) _buildTapResults(),
         ],
       ),
@@ -320,7 +321,7 @@ class _TapSettingWidgetState extends State<TapSettingWidget> {
             ],
           ),
           const SizedBox(height: 16),
-          
+
           for (int i = 0; i < tapResult!.results.length; i++)
             Card(
               margin: const EdgeInsets.only(bottom: 12.0),
@@ -364,17 +365,13 @@ class _TapSettingWidgetState extends State<TapSettingWidget> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
                           decoration: BoxDecoration(
-                            color: tapResult!.results[i].powerWatts > 0 
-                              ? Colors.green.withValues(alpha: 0.2) 
-                              : Colors.red.withValues(alpha: 0.2),
+                            color: tapResult!.results[i].powerWatts > 0 ? Colors.green.withValues(alpha: 0.2) : Colors.red.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(16.0),
                           ),
                           child: Text(
-                            tapResult!.results[i].powerWatts > 0 
-                              ? '${tapResult!.results[i].powerWatts.toStringAsFixed(1)}W'
-                              : 'N/A',
+                            tapResult!.results[i].powerWatts > 0 ? '${tapResult!.results[i].powerWatts.toStringAsFixed(1)}W' : 'N/A',
                             style: TextStyle(
-                              fontSize: 12, 
+                              fontSize: 12,
                               fontWeight: FontWeight.bold,
                               color: tapResult!.results[i].powerWatts > 0 ? Colors.green : Colors.red,
                             ),
@@ -382,9 +379,9 @@ class _TapSettingWidgetState extends State<TapSettingWidget> {
                         ),
                       ],
                     ),
-                    
+
                     const SizedBox(height: 12),
-                    
+
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(12.0),
@@ -428,34 +425,28 @@ class _TapSettingWidgetState extends State<TapSettingWidget> {
                         ],
                       ),
                     ),
-                    
+
                     const SizedBox(height: 12),
-                    
+
                     // Explanation for the tap setting
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(8.0),
                       decoration: BoxDecoration(
-                        color: tapResult!.results[i].powerWatts > 0 
-                          ? Colors.blue.withValues(alpha: 0.1) 
-                          : Colors.red.withValues(alpha: 0.1),
+                        color: tapResult!.results[i].powerWatts > 0 ? Colors.blue.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(6.0),
                         border: Border.all(
-                          color: tapResult!.results[i].powerWatts > 0 
-                            ? Colors.blue.withValues(alpha: 0.3) 
-                            : Colors.red.withValues(alpha: 0.3),
+                          color: tapResult!.results[i].powerWatts > 0 ? Colors.blue.withValues(alpha: 0.3) : Colors.red.withValues(alpha: 0.3),
                         ),
                       ),
                       child: Text(
                         tapResult!.results[i].powerWatts > 0
-                          ? '💡 Recommended tap setting based on speaker height and distance calculations'
-                          : '⚠️ No suitable tap found - speaker may not be in database or parameters invalid',
+                            ? '💡 Recommended tap setting based on speaker height and distance calculations'
+                            : '⚠️ No suitable tap found - speaker may not be in database or parameters invalid',
                         style: TextStyle(
-                          fontSize: 12, 
+                          fontSize: 12,
                           fontStyle: FontStyle.italic,
-                          color: tapResult!.results[i].powerWatts > 0 
-                            ? Colors.blue[700] 
-                            : Colors.red[700],
+                          color: tapResult!.results[i].powerWatts > 0 ? Colors.blue[700] : Colors.red[700],
                         ),
                       ),
                     ),
@@ -463,7 +454,7 @@ class _TapSettingWidgetState extends State<TapSettingWidget> {
                 ),
               ),
             ),
-            
+
           const SizedBox(height: 16),
           Container(
             width: double.infinity,
@@ -533,7 +524,7 @@ class _TapSettingWidgetState extends State<TapSettingWidget> {
         );
         return;
       }
-      
+
       // Validate circuit type early
       if (circuitType.toLowerCase() == 'lo-z') {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -547,29 +538,29 @@ class _TapSettingWidgetState extends State<TapSettingWidget> {
         );
         return;
       }
-      
+
       final List<SpeakerTapInput> inputs = <SpeakerTapInput>[];
       final int voltage = int.parse(voltageController.text);
-      
+
       for (final SpeakerInput input in speakers) {
-        if (input.selectedModel == null ||
-            input.speakerHeightController.text.isEmpty ||
-            input.listenerHeightController.text.isEmpty) {
+        if (input.selectedModel == null || input.speakerHeightController.text.isEmpty || input.listenerHeightController.text.isEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Please fill in all speaker fields')),
           );
           return;
         }
-        
-        inputs.add(SpeakerTapInput(
-          model: input.selectedModel!,
-          speakerHeight: double.parse(input.speakerHeightController.text),
-          listenerHeight: double.parse(input.listenerHeightController.text),
-          voltage: voltage,
-          circuitType: circuitType, // Pass the circuit type to the algorithm
-        ));
+
+        inputs.add(
+          SpeakerTapInput(
+            model: input.selectedModel!,
+            speakerHeight: double.parse(input.speakerHeightController.text),
+            listenerHeight: double.parse(input.listenerHeightController.text),
+            voltage: voltage,
+            circuitType: circuitType, // Pass the circuit type to the algorithm
+          ),
+        );
       }
-      
+
       final TapCalculationResult result = recommendTapsForSpeakers(inputs);
       setState(() {
         tapResult = result;

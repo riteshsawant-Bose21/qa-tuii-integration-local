@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/models/fusion_models.dart';
 
 import '../../../../../core/models/floor_entity.dart';
-import '../../../../../core/models/listening_area_entity.dart';
 
 class SurfaceProperties extends StatefulWidget {
   final Floor floorEntity;
