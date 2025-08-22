@@ -256,9 +256,6 @@ def profile(config_name, remote=True):
                 print(f"  New total: {new_total:.2e}")
                 print(f"  Expected: {original_main + mips_entry['analysis_time']:.2e}")
 
-    print(result_df.columns.tolist())
-    print(result_df.head())
-    
     if remote:
         print("Copying out.wav from board...")
         os.system(f'scp root@{board_ip}:/home/root/out.wav ./out.wav')
@@ -369,14 +366,17 @@ def profile(config_name, remote=True):
         
         x_range_df = pd.DataFrame({feature_names[0]: x_range})
         y_pred_line = model.predict(x_range_df)
+        r2_score = model.score(Xs, ys)
         plt.plot(x_range, y_pred_line, 'r-', linewidth=2, 
-                label=f'Linear fit: y = {model.intercept_[0]:.2e} + {model.coef_[0][0]:.2e}x')
+                label=f'Linear fit (R² = {r2_score:.3f})\ny = {model.intercept_[0]:.2e} + {model.coef_[0][0]:.2e}x')
         
         plt.xlabel(feature_names[0])
         plt.ylabel(f'{block} (timing)')
         plt.title(f'{config_name}: {block} vs {feature_names[0]}')
         plt.legend()
         plt.grid(True, alpha=0.3)
+        plt.gca().yaxis.set_major_formatter(matplotlib.ticker.ScalarFormatter(useMathText=True))
+        plt.gca().ticklabel_format(style='sci', axis='y', scilimits=(0,0))
         
         os.makedirs('profiling_results', exist_ok=True)
         plt.savefig(f'profiling_results/{config_name}_regression_plot.png', dpi=300, bbox_inches='tight')
@@ -399,10 +399,157 @@ def profile(config_name, remote=True):
                 # if this is a product feature (bandchannels or num_crosspoints) we use all the datapoints
                 is_product_feature = feature in ['bandchannels', 'num_crosspoints']
                 
-                if is_product_feature:
-                    x_data = Xs.iloc[:, i]
-                    y_data = ys.iloc[:, 0]
-                    ax.scatter(x_data, y_data, alpha=0.5, s=30, label='All data points')
+                x_data = Xs.iloc[:, i]
+                y_data = ys.iloc[:, 0]
+                X = x_data.values.reshape(-1, 1)
+                y = y_data.values.reshape(-1, 1)
+                model_feature = LinearRegression().fit(X, y)
+                r2 = model_feature.score(X, y)
+                
+                if not is_product_feature:
+                    if not hasattr(profile, 'regression_formulas'):
+                        profile.regression_formulas = []
+                    profile.regression_formulas.append({
+                        'feature': feature,
+                        'fixed_param': None,
+                        'fixed_value': None,
+                        'intercept': model_feature.intercept_[0],
+                        'coefficient': model_feature.coef_[0][0],
+                        'r2': r2
+                    })
+                
+                if not is_product_feature and feature in fixed_values:
+                    fix_info = fixed_values[feature]
+                    fix_for = fix_info['fix_for']
+                    fixed_vals = fix_info['values']
+                    
+                    for fixed_val in fixed_vals:
+                        mask = filtered_df[fix_for] == fixed_val
+                        x_subset = Xs[mask].iloc[:, i]
+                        y_subset = ys[mask].iloc[:, 0]
+                        
+                        if len(x_subset) > 1:  
+                            X = x_subset.values.reshape(-1, 1)
+                            y = y_subset.values.reshape(-1, 1)
+                            model_fixed = LinearRegression().fit(X, y)
+                            r2_fixed = model_fixed.score(X, y)
+                            
+                            if not hasattr(profile, 'regression_formulas'):
+                                profile.regression_formulas = []
+                            profile.regression_formulas.append({
+                                'feature': feature,
+                                'fixed_param': fix_for,
+                                'fixed_value': fixed_val,
+                                'intercept': model_fixed.intercept_[0],
+                                'coefficient': model_fixed.coef_[0][0],
+                                'r2': r2_fixed
+                            })
+                            
+                            ax.scatter(x_subset, y_subset, alpha=0.5, label=f'{fix_for}={fixed_val}')
+                            x_range = np.linspace(x_subset.min(), x_subset.max(), 100)
+                            y_pred = model_fixed.predict(x_range.reshape(-1, 1))
+                            ax.plot(x_range, y_pred, '--', linewidth=1)
+                            
+                x_data = Xs.iloc[:, i]
+                y_data = ys.iloc[:, 0]
+                X = x_data.values.reshape(-1, 1)
+                y = y_data.values.reshape(-1, 1)
+                model_feature = LinearRegression().fit(X, y)
+                r2 = model_feature.score(X, y)
+                
+                if not hasattr(profile, 'regression_formulas'):
+                    profile.regression_formulas = []
+                if not hasattr(profile, 'regression_formulas'):
+                    profile.regression_formulas = []
+                profile.regression_formulas.append({
+                    'feature': feature,
+                    'fixed_param': None,
+                    'fixed_value': None,
+                    'intercept': model_feature.intercept_[0],
+                    'coefficient': model_feature.coef_[0][0],
+                    'r2': r2
+                })
+                
+            else:
+                if feature in fixed_values:
+                    fix_info = fixed_values[feature]
+                    fix_for = fix_info['fix_for']
+                    fixed_vals = fix_info['values']
+                    
+                    for fixed_val in fixed_vals:
+                        mask = filtered_df[fix_for] == fixed_val
+                        x_data = Xs[mask].iloc[:, i]
+                        y_data = ys[mask].iloc[:, 0]
+                        
+                        if len(x_data) > 1:
+                            X = x_data.values.reshape(-1, 1)
+                            y = y_data.values.reshape(-1, 1)
+                            model_feature = LinearRegression().fit(X, y)
+                            r2 = model_feature.score(X, y)
+                            
+                            # store regression formula for this fixed value case
+                            if not hasattr(profile, 'regression_formulas'):
+                                profile.regression_formulas = []
+                            profile.regression_formulas.append({
+                                'feature': feature,
+                                'fixed_param': fix_for,
+                                'fixed_value': fixed_val,
+                                'intercept': model_feature.intercept_[0],
+                                'coefficient': model_feature.coef_[0][0],
+                                'r2': r2
+                            })
+                    if not hasattr(profile, 'regression_formulas'):
+                        profile.regression_formulas = []
+                    profile.regression_formulas.append({
+                        'feature': feature,
+                        'fixed_param': None,
+                        'fixed_value': None,
+                        'intercept': model_feature.intercept_[0],
+                        'coefficient': model_feature.coef_[0][0],
+                        'r2': r2
+                    })
+                    
+                    colors = []
+                    stats_data = []
+                    
+                    if config_name == 'peq' and feature == 'bandchannels':
+                        for idx in range(len(x_data)):
+                            bands = filtered_df.iloc[idx]['bands']
+                            channels = filtered_df.iloc[idx]['channels']
+                            timing = y_data.iloc[idx]
+                            if bands > channels:
+                                colors.append('blue')
+                                stats_data.append(f"bands > channels: {bands} × {channels} = {bands*channels} bandchannels, timing = {timing:.2e}")
+                            elif channels > bands:
+                                colors.append('red')
+                                stats_data.append(f"channels > bands: {bands} × {channels} = {bands*channels} bandchannels, timing = {timing:.2e}")
+                            else:
+                                colors.append('green')
+                                stats_data.append(f"bands = channels: {bands} × {channels} = {bands*channels} bandchannels, timing = {timing:.2e}")
+                    
+                    elif config_name == 'matrix_mixer' and feature == 'num_crosspoints':
+                        for idx in range(len(x_data)):
+                            inputs = filtered_df.iloc[idx]['num_inputs']
+                            outputs = filtered_df.iloc[idx]['num_outputs']
+                            timing = y_data.iloc[idx]
+                            if inputs > outputs:
+                                colors.append('blue')
+                                stats_data.append(f"inputs > outputs: {inputs} × {outputs} = {inputs*outputs} crosspoints, timing = {timing:.2e}")
+                            elif outputs > inputs:
+                                colors.append('red')
+                                stats_data.append(f"outputs > inputs: {inputs} × {outputs} = {inputs*outputs} crosspoints, timing = {timing:.2e}")
+                            else:
+                                colors.append('green')
+                                stats_data.append(f"inputs = outputs: {inputs} × {outputs} = {inputs*outputs} crosspoints, timing = {timing:.2e}")
+                    else:
+                        colors = ['gray'] * len(x_data)
+                    
+                    if stats_data:
+                        if not hasattr(profile, 'dimension_stats'):
+                            profile.dimension_stats = []
+                        profile.dimension_stats.extend(stats_data)
+                    
+                    ax.scatter(x_data, y_data, alpha=0.5, s=30, c=colors, label='Data points')
                     
                     x_range = np.linspace(x_data.min(), x_data.max(), 100)
                     x_range_df = pd.DataFrame(index=range(len(x_range)))  
@@ -421,20 +568,24 @@ def profile(config_name, remote=True):
                     
                     y_pred_line = model.predict(x_range_df)
                     coeff = model.coef_[0][i]
+                    r2_score = model.score(Xs, ys)
                     ax.plot(x_range, y_pred_line, 'r-', linewidth=2,
-                        label=f'Slope: {coeff:.2e}')
+                        label=f'R² = {r2_score:.3f}')
                     ax.set_title(f'{config_name}: {block} vs {feature}')
+                    ax.yaxis.set_major_formatter(matplotlib.ticker.ScalarFormatter(useMathText=True))
+                    ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
                     
                 else:
                     if feature in fixed_values:
                         fix_info = fixed_values[feature]
+                        fixed_vals = fix_info['values']
                         other_param = fix_info['fix_for']
                         
                         if 'values' in fix_info:
                             fixed_vals = fix_info['values']
                             colors = ['blue', 'orange', 'green', 'red', 'purple'][:len(fixed_vals)]
                             
-                            for fixed_val, color in zip(fixed_vals, colors):
+                            for idx, (fixed_val, color) in enumerate(zip(fixed_vals, colors)):  # Need idx defined!
                                 mask = filtered_df[other_param] == fixed_val
                                 if mask.sum() == 0:
                                     continue
@@ -442,7 +593,6 @@ def profile(config_name, remote=True):
                                 subset_df = filtered_df[mask]
                                 x_subset = subset_df[feature].values
                                 y_subset = subset_df[block].values
-                                
                                 ax.scatter(x_subset, y_subset, alpha=0.5, s=30, color=color,
                                         label=f'{other_param}={fixed_val}')
                                 
@@ -453,11 +603,7 @@ def profile(config_name, remote=True):
                                     x_line = np.linspace(x_subset.min(), x_subset.max(), 100)
                                     y_line = model_subset.predict(x_line.reshape(-1, 1))
                                     
-                                    ax.plot(x_line, y_line, color=color, linewidth=2,
-                                        label=f'slope={model_subset.coef_[0]:.2e}')
-                            
-                            ax.set_title(f'{config_name}: {block} vs {feature}')
-                            
+                                    ax.plot(x_line, y_line, color=color, linewidth=2)
                         else:
                             fixed_value = fix_info['value']
                             
@@ -512,10 +658,24 @@ def profile(config_name, remote=True):
                                     
                                     y_pred_line = model.predict(x_range_df)
                                     coeff = model.coef_[0][i]
+                                    r2_score = model.score(Xs, ys)
+                                    if not hasattr(profile, 'regression_formulas'):
+                                        profile.regression_formulas = []
+                                    profile.regression_formulas.append({
+                                        'feature': feature,
+                                        'fixed_param': fix_for if 'fix_for' in locals() else None,
+                                        'fixed_value': fixed_value,
+                                        'coefficient': coeff,
+                                        'intercept': model.intercept_[0],
+                                        'r2': r2_score
+                                    })
+
                                     ax.plot(x_range, y_pred_line, 'r-', linewidth=2,
-                                        label=f'Slope: {coeff:.2e}')
-                                    
-                                    ax.set_title(f'{config_name}: {block} vs {feature}\n(with {other_param}={fixed_value})')
+                                        label=f'R² = {r2_score:.3f}')
+
+                                    ax.set_title(f'{config_name}: {block} vs {feature}\n(with {fix_for if 'fix_for' in locals() else 'param'}={fixed_value})')
+                                    ax.yaxis.set_major_formatter(matplotlib.ticker.ScalarFormatter(useMathText=True))
+                                    ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
                             else:
                                 # Fallback
                                 x_data = Xs.iloc[:, i]
@@ -543,21 +703,47 @@ def profile(config_name, remote=True):
                                         print(f"ERROR: Both median and mean for {feat} are NaN, using 0")
                                         median_val = 0
                                 x_range_df[feat] = median_val
-                        
-                        y_pred_line = model.predict(x_range_df)
+                                
                         coeff = model.coef_[0][i]
+                        r2_score = model.score(Xs, ys)
+                        if not hasattr(profile, 'regression_formulas'):
+                            profile.regression_formulas = []
+                        profile.regression_formulas.append({
+                            'feature': feature,
+                            'fixed_param': None,
+                            'fixed_value': None,
+                            'coefficient': coeff,
+                            'intercept': model.intercept_[0],
+                            'r2': r2_score
+                        })
+
+                        ax.yaxis.set_major_formatter(matplotlib.ticker.ScalarFormatter(useMathText=True))
+                        ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
+
+                        y_pred_line = model.predict(x_range_df)
                         ax.plot(x_range, y_pred_line, 'r-', linewidth=2,
-                            label=f'Partial fit: {coeff:.2e}')
+                            label=f'Partial fit (R² = {r2_score:.3f})\nCoeff: {coeff:.2e}')
                         ax.set_title(f'{config_name}: {block} vs {feature}')
                 
                 ax.set_xlabel(feature)
                 ax.set_ylabel(f'{block} (timing)')
-                ax.legend()
+                
+                # skip legend for bands/channels in PEQ and num_inputs/num_outputs in matrix_mixer
+                skip_legend = False
+                if config_name == 'peq' and feature in ['bands', 'channels']:
+                    skip_legend = True
+                elif config_name == 'matrix_mixer' and feature in ['num_inputs', 'num_outputs']:
+                    skip_legend = True
+                
+                if not skip_legend:
+                    ax.legend(loc='upper left')
+                
                 ax.grid(True, alpha=0.3)
-            
-            fig.suptitle(f'{config_name}: {block} vs Features', fontsize=16)
-            plt.tight_layout()
-            os.makedirs('profiling_results', exist_ok=True)
+                ax.yaxis.set_major_formatter(matplotlib.ticker.ScalarFormatter(useMathText=True))
+                ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
+    
+            if not os.path.exists('profiling_results'):
+                os.makedirs('profiling_results', exist_ok=True)
             plt.savefig(f'profiling_results/{config_name}_regression_plots.png', dpi=300, bbox_inches='tight')
             print(f"Plot saved to: profiling_results/{config_name}_regression_plots.png")
             plt.close()
@@ -575,7 +761,7 @@ def profile(config_name, remote=True):
     print(f"Percentage kept: {len(filtered_df)/len(result_df)*100:.1f}%")
     
     return model
-    
+
 configurations = {
     'agc' : {
         'path' : 'profile_simple_block.json.jinja',
@@ -726,11 +912,40 @@ if __name__ == '__main__':
             print(f'Running profiling configuration: {config}')
             model = results[config] = profile(config, remote=remote)
             if model:
-                f_model_readable.write(
-                    f'{config} : ' +
-                    configurations[config].get('format_string', default_format_string).format(*model.intercept_, *model.coef_[0])
-                    + '\n'
+                f_model_readable.write("Main Regression Formula:\n")
+                f_model_readable.write("=" * 50 + "\n")
+                main_formula = configurations[config].get('format_string', default_format_string).format(
+                    *model.intercept_, *model.coef_[0]
                 )
+                f_model_readable.write(main_formula + "\n\n")
+
+                if hasattr(profile, 'regression_formulas'):
+                    feature_formulas = {}
+                    for formula in profile.regression_formulas:
+                        if formula['feature'] not in feature_formulas:
+                            feature_formulas[formula['feature']] = []
+                        feature_formulas[formula['feature']].append(formula)
+                    
+                    for feature, formulas in feature_formulas.items():
+                        f_model_readable.write(f"\n{feature.upper()} Regression Formulas:\n")
+                        f_model_readable.write("=" * 50 + "\n")
+
+                        for formula in sorted(formulas, key=lambda x: (x.get('fixed_value') is None, x.get('fixed_value') or 0)):
+                            if formula.get('fixed_param') is None:
+                                continue
+                            fixed_param = formula.get('fixed_param')
+                            fixed_value = formula.get('fixed_value')
+                            f_model_readable.write(
+                                f"{fixed_param} = {fixed_value}:\n"
+                                f"T = {formula['intercept']:.2e} + {formula['coefficient']:.2e}*{feature}"
+                                f" (R² = {formula['r2']:.3f})\n"
+                            )
+                        f_model_readable.write("\n")
+                    
+                    profile.regression_formulas = []
+                
+                if hasattr(profile, 'dimension_stats'):
+                    profile.dimension_stats = []
         
         f_model_pickle = open(f'profiling_results/results{suffix}.pkl', 'wb')
         pickle.dump(results, f_model_pickle)
@@ -746,8 +961,69 @@ if __name__ == '__main__':
         model = profile(config, remote=remote)
         if model:
             pickle.dump(model, f_model_pickle)
+            
+            f_model_readable.write("Main Regression Formula:\n")
+            f_model_readable.write("=" * 50 + "\n")
             f_model_readable.write(
                 configurations[config].get('format_string', default_format_string).format(*model.intercept_, *model.coef_[0])
+                + "\n\n"
             )
+            
+            if hasattr(profile, 'regression_formulas'):
+                feature_formulas = {}
+                for formula in profile.regression_formulas:
+                    if formula['feature'] not in feature_formulas:
+                        feature_formulas[formula['feature']] = []
+                    feature_formulas[formula['feature']].append(formula)
+                
+                for feature, formulas in feature_formulas.items():
+                    f_model_readable.write(f"\n{feature.upper()} Regression Formulas:\n")
+                    f_model_readable.write("=" * 50 + "\n")
+
+                    for formula in sorted(formulas, key=lambda x: (x.get('fixed_value') is None, x.get('fixed_value') or 0)):
+                        if formula.get('fixed_param') is None:
+                            continue
+                        fixed_param = formula.get('fixed_param')
+                        fixed_value = formula.get('fixed_value')
+                        f_model_readable.write(
+                            f"{fixed_param} = {fixed_value}:\n"
+                            f"T = {formula['intercept']:.2e} + {formula['coefficient']:.2e}*{feature}"
+                            f" (R² = {formula['r2']:.3f})\n"
+                        )
+                    f_model_readable.write("\n")
+                
+                profile.regression_formulas = []
+            
+            if hasattr(profile, 'dimension_stats'):
+                unique_stats = {}
+                
+                for stat in profile.dimension_stats:
+                    if config == 'peq':
+                        parts = stat.split('×')
+                        bands = float(parts[0].split()[-1])
+                        channels = float(parts[1].split()[0])
+                        product = bands * channels
+                    elif config == 'matrix_mixer':
+                        parts = stat.split('×')
+                        inputs = float(parts[0].split()[-1])
+                        outputs = float(parts[1].split()[0])
+                        product = inputs * outputs
+                    else:
+                        product = 0
+                        
+                    timing = float(stat[stat.rindex("timing = ")+9:].strip())
+                    
+                    key = stat[:stat.rindex("timing = ")]
+                    if key in unique_stats:
+                        unique_stats[key]['timings'].append(timing)
+                        unique_stats[key]['product'] = product
+                    else:
+                        unique_stats[key] = {'timings': [timing], 'product': product}
+                
+                final_stats = []
+                for key, data in unique_stats.items():
+                    avg_timing = sum(data['timings']) / len(data['timings'])
+                    final_stats.append((data['product'], f"{key}timing = {avg_timing:.2e}"))
+                
         f_model_pickle.close()
         f_model_readable.close()
