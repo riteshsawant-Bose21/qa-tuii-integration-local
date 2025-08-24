@@ -1,5 +1,4 @@
 /// Circuiting algorithm types
-/// Ported from Go fusion-algo circuiting package
 
 class InputSpeaker {
   final String model;

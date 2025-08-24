@@ -1,8 +1,4 @@
 /// Automatic Circuiting Algorithm
-/// Ported from Go fusion-algo circuiting package
-/// 
-/// This library groups speakers by area and model, calculates impedance,
-/// and applies the hi-z/lo-z rules to assign optimal circuit configurations.
 
 import 'dart:developer' as developer;
 import 'circuiting_types.dart';

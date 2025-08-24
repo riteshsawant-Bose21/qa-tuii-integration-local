@@ -1,5 +1,4 @@
 /// Tap setting calculation helper functions
-/// Ported from Go fusion-algo tapsetting package
 
 import 'dart:math' as math;
 import 'dart:developer' as developer;
