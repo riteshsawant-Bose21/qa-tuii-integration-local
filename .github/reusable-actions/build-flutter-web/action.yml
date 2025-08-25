@@ -38,10 +38,12 @@ runs:
     #       -Dsonar.exclusions=build/**
     #       -Dsonar.inclusions=lib/**,android/**,ios/**
 
-    - name: Flutter Android, macOS and iOS Apps build
+    - name: Flutter Web App build
       shell: bash
       working-directory: apps/frontend/flutter-apps/fusion-launcher
       run: |
+        curl -sSf https://moonrepo.dev/install.sh | bash
+        echo "$HOME/.proto/shims" >> $GITHUB_PATH
         flutter pub get
         moon run flutter-apps:build-web
         cd build/web
