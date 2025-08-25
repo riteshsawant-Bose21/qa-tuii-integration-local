@@ -102,7 +102,7 @@ class ProductsSidebarState extends State<ProductsSidebar> {
       items: widget.sources,
       onTap: (SourceData d) {
         widget.onSourceSelected?.call(
-          Source(name: d.name, pos: Offset.zero, assetImagePath: d.assetPath, locationEntity: LocationEntity(), type: d.type, sku: d.id, price: d.price),
+          Source(name: d.name, pos: Offset.zero, assetImagePath: d.assetPath, locationEntity: LocationModel(), type: d.type, sku: d.id, price: d.price),
         );
       },
       imageExtractor: (SourceData d) => d.assetPath,
@@ -120,7 +120,7 @@ class ProductsSidebarState extends State<ProductsSidebar> {
             pos: Offset.zero,
             type: GenericHardwareComponentType.controller,
             assetImagePath: d.assetPath,
-            locationEntity: LocationEntity(),
+            locationEntity: LocationModel(),
             price: d.price,
           ),
         );
@@ -140,7 +140,7 @@ class ProductsSidebarState extends State<ProductsSidebar> {
             pos: Offset.zero,
             type: GenericHardwareComponentType.rack,
             assetImagePath: d.assetPath,
-            locationEntity: LocationEntity(),
+            locationEntity: LocationModel(),
             price: d.price,
           ),
         );

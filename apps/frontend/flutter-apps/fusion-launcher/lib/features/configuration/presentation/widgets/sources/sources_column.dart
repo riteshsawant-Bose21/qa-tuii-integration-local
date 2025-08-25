@@ -3,7 +3,6 @@ import 'package:fusion_launcher/core/models/products_data.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
 
 import '../../../../../core/constants.dart';
-import '../../../../../core/models/floor_entity.dart';
 import 'source_widget.dart';
 
 class SourceOptions {
@@ -19,8 +18,8 @@ class SourcesColumn extends StatefulWidget {
   final void Function(Source) onSourceChanged;
   final void Function(Source) onSourceDeleted;
   final void Function(Source) onSourceAdded;
-  final void Function(Floor) onFloorUpdated;
-  final void Function(Floor) onFloorAdded;
+  final void Function(FloorModel) onFloorUpdated;
+  final void Function(FloorModel) onFloorAdded;
   final bool isControlMode;
 
   const SourcesColumn({
@@ -110,7 +109,7 @@ class _SourcesColumnState extends State<SourcesColumn> {
                   pos: null,
                   type: selectedBlock.type,
                   assetImagePath: selectedBlock.assetPath,
-                  locationEntity: LocationEntity(),
+                  locationEntity: LocationModel(),
                   sku: selectedBlock.id,
                   price: selectedBlock.price,
                 );
@@ -171,10 +170,10 @@ class _SourcesColumnState extends State<SourcesColumn> {
             isControlMode: widget.isControlMode,
             onSourceChanged: (Source s) => _updateSource(s),
             onDelete: () => _deleteSource(widget.sources[i]),
-            onFloorUpdated: (Floor floorEntity) {
+            onFloorUpdated: (FloorModel floorEntity) {
               widget.onFloorUpdated(floorEntity);
             },
-            onFloorAdded: (Floor newFloor) {
+            onFloorAdded: (FloorModel newFloor) {
               widget.onFloorAdded(newFloor);
             },
           ),

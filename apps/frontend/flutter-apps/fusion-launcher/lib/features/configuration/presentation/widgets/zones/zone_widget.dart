@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
 
 import '../../../../../core/constants.dart';
-import '../../../../../core/models/floor_entity.dart';
-import '../../../../../core/models/mix_entity.dart';
 import '../../../../../core/models/products_data.dart';
 import '../../../../../core/service_locator.dart';
 import '../../../../../core/services/project_manager.dart';
@@ -24,7 +22,7 @@ class OutputOptions {
 
 class ZoneWidget extends StatefulWidget {
   final Zone zone;
-  final List<Mix> availableMixes;
+  final List<SourceSet> availableMixes;
   final List<Speaker> zoneSpeakers;
   final List<Source> sources;
   final void Function(Zone) onZoneUpdated;
@@ -33,8 +31,8 @@ class ZoneWidget extends StatefulWidget {
   final Function(Speaker speakers) onSpeakerUpdated;
   final Function(Speaker speakers) onSpeakerDeleted;
   final Function(Speaker speakers) onSpeakerAdded;
-  final Function(Floor) onFloorUpdated;
-  final Function(Floor) onFloorAdded;
+  final Function(FloorModel) onFloorUpdated;
+  final Function(FloorModel) onFloorAdded;
   final bool isControlMode;
 
   const ZoneWidget({
@@ -64,17 +62,17 @@ class ZoneWidgetState extends State<ZoneWidget> {
   int? selectedMixIndex;
 
   Future<void> pickMixes(Zone zone) async {
-    final List<Mix>? picked = await showDialog<List<Mix>>(
+    final List<SourceSet>? picked = await showDialog<List<SourceSet>>(
       context: context,
       builder:
           (_) => MultiMixPickerDialog(
             title: 'Select Mixes',
             devices: widget.availableMixes,
-            initiallySelected: widget.availableMixes.where((Mix m) => zone.mixIds.contains(m.id)).toList(),
+            initiallySelected: widget.availableMixes.where((SourceSet m) => zone.mixIds.contains(m.id)).toList(),
           ),
     );
     if (picked != null) {
-      final List<String> updatedMixIds = picked.map((Mix m) => m.id).toList();
+      final List<String> updatedMixIds = picked.map((SourceSet m) => m.id).toList();
       widget.onZoneUpdated(zone.copyWith(mixIds: updatedMixIds));
     }
   }
@@ -258,8 +256,8 @@ class ZoneWidgetState extends State<ZoneWidget> {
                             widget.zone.mixIds.asMap().entries.map((MapEntry<int, String> sourceId) {
                               final String d = sourceId.value;
                               final int deviceIndex = sourceId.key;
-                              final Mix mix = widget.availableMixes.firstWhere(
-                                (Mix s) => s.id == d,
+                              final SourceSet mix = widget.availableMixes.firstWhere(
+                                (SourceSet s) => s.id == d,
                               );
                               return InkWell(
                                 onTap: () async {
@@ -342,19 +340,19 @@ class ZoneWidgetState extends State<ZoneWidget> {
             ProcessingBlockView(
               processingType: ProcessingType.zone,
               selectedBlocks: widget.zone.processingBlocks,
-              onBlocksUpdated: (List<ProcessingBlockEntity> chain) {
+              onBlocksUpdated: (List<ProcessingBlockModel> chain) {
                 widget.onZoneUpdated(widget.zone.copyWith(processingBlocks: chain));
               },
               isControlMode: widget.isControlMode,
               onBlockRemoved: (int index) {
-                final List<ProcessingBlockEntity> updatedBlocks = List<ProcessingBlockEntity>.from(
+                final List<ProcessingBlockModel> updatedBlocks = List<ProcessingBlockModel>.from(
                   widget.zone.processingBlocks,
                 );
                 updatedBlocks.removeAt(index);
                 widget.onZoneUpdated(widget.zone.copyWith(processingBlocks: updatedBlocks));
               },
-              onBlockSelected: (ProcessingBlockEntity block) {
-                final List<ProcessingBlockEntity> updatedBlocks = List<ProcessingBlockEntity>.from(
+              onBlockSelected: (ProcessingBlockModel block) {
+                final List<ProcessingBlockModel> updatedBlocks = List<ProcessingBlockModel>.from(
                   widget.zone.processingBlocks,
                 );
                 updatedBlocks.add(block);
@@ -380,12 +378,12 @@ class ZoneWidgetState extends State<ZoneWidget> {
                           type: speakerData.type,
                           assetImagePath: speakerData.assetPath,
                           speakerSKU: speakerData.sku,
-                          locationEntity: LocationEntity(
+                          locationEntity: LocationModel(
                             zoneId: widget.zone.id,
                           ),
                           pos: const Offset(0, 0),
                           gain: 0.0,
-                          blocks: <ProcessingBlockEntity>[],
+                          blocks: <ProcessingBlockModel>[],
                           price: speakerData.price,
                         );
                         widget.onSpeakerAdded(newSpeaker);
@@ -451,10 +449,10 @@ class ZoneWidgetState extends State<ZoneWidget> {
                         onDelete: () {
                           widget.onSpeakerDeleted(speaker);
                         },
-                        onFloorUpdated: (Floor updatedFloor) {
+                        onFloorUpdated: (FloorModel updatedFloor) {
                           widget.onFloorUpdated(updatedFloor);
                         },
-                        onFloorAdded: (Floor newFloor) {
+                        onFloorAdded: (FloorModel newFloor) {
                           widget.onFloorAdded(newFloor);
                         },
                       ),

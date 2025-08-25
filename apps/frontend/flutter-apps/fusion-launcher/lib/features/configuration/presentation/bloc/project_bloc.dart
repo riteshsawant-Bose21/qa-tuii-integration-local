@@ -1,11 +1,8 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:fusion_lib/models/fusion_models.dart';
 import 'package:fusion_lib/fusion_utils/shared_preference_handler.dart';
+import 'package:fusion_lib/models/fusion_models.dart';
 
-import '../../../../core/models/floor_entity.dart';
-import '../../../../core/models/mix_entity.dart';
-import '../../../../core/models/project_entity.dart';
 import '../../../../core/models/project_metadata_model.dart';
 import '../../../../core/services/project_list_manager.dart';
 import '../../../dashboard/domain/usecases/delete_project_usecase.dart';
@@ -68,7 +65,7 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
   Future<void> _onLoadProject(LoadProject event, Emitter<ProjectState> emit) async {
     emit(ProjectLoading());
     try {
-      final ProjectEntity project = await loadProjectUseCase(event.projectName);
+      final ProjectData project = await loadProjectUseCase(event.projectName);
       emit(ProjectLoaded(project: project));
     } catch (e) {
       emit(ProjectError('Failed to load project: $e'));
@@ -108,7 +105,7 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
           return;
         }
 
-        final ProjectEntity updatedProject = currentState.project.copyWith(projectName: event.newName);
+        final ProjectData updatedProject = currentState.project.copyWith(projectName: event.newName);
 
         if (isAdmin) {
           final ProjectMetadataModel metaData = ProjectMetadataModel(
@@ -139,7 +136,7 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
   void _onSetCloudId(SetCloudId event, Emitter<ProjectState> emit) {
     if (state is ProjectLoaded) {
       final ProjectLoaded currentState = state as ProjectLoaded;
-      final ProjectEntity updatedProject = currentState.project.copyWith(cloudId: event.cloudId);
+      final ProjectData updatedProject = currentState.project.copyWith(cloudId: event.cloudId);
       emit(currentState.copyWith(project: updatedProject));
     }
   }
@@ -199,8 +196,8 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
   void _onAddFloor(AddFloor event, Emitter<ProjectState> emit) {
     if (state is ProjectLoaded) {
       final ProjectLoaded currentState = state as ProjectLoaded;
-      final List<Floor> updatedFloors = List<Floor>.from(currentState.project.floors)..add(event.floor);
-      final ProjectEntity updatedProject = currentState.project.copyWith(floors: updatedFloors);
+      final List<FloorModel> updatedFloors = List<FloorModel>.from(currentState.project.floors)..add(event.floor);
+      final ProjectData updatedProject = currentState.project.copyWith(floors: updatedFloors);
       emit(currentState.copyWith(project: updatedProject));
     }
   }
@@ -208,11 +205,11 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
   void _onUpdateFloor(UpdateFloor event, Emitter<ProjectState> emit) {
     if (state is ProjectLoaded) {
       final ProjectLoaded currentState = state as ProjectLoaded;
-      final List<Floor> updatedFloors = List<Floor>.from(currentState.project.floors);
-      final int index = updatedFloors.indexWhere((Floor f) => f.id == event.floor.id);
+      final List<FloorModel> updatedFloors = List<FloorModel>.from(currentState.project.floors);
+      final int index = updatedFloors.indexWhere((FloorModel f) => f.id == event.floor.id);
       if (index != -1) {
         updatedFloors[index] = event.floor;
-        final ProjectEntity updatedProject = currentState.project.copyWith(floors: updatedFloors);
+        final ProjectData updatedProject = currentState.project.copyWith(floors: updatedFloors);
         emit(currentState.copyWith(project: updatedProject));
       }
     }
@@ -221,19 +218,19 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
   void _onRemoveFloor(RemoveFloor event, Emitter<ProjectState> emit) {
     if (state is ProjectLoaded) {
       final ProjectLoaded currentState = state as ProjectLoaded;
-      final List<Floor> updatedFloors = List<Floor>.from(currentState.project.floors);
-      final int floorIndex = updatedFloors.indexWhere((Floor f) => f.id == event.floorId);
+      final List<FloorModel> updatedFloors = List<FloorModel>.from(currentState.project.floors);
+      final int floorIndex = updatedFloors.indexWhere((FloorModel f) => f.id == event.floorId);
 
       if (floorIndex != -1) {
-        final Floor floorToRemove = updatedFloors[floorIndex];
+        final FloorModel floorToRemove = updatedFloors[floorIndex];
         updatedFloors.removeAt(floorIndex);
 
         // Add default floor if empty
         if (updatedFloors.isEmpty) {
           updatedFloors.add(
-            Floor(
+            FloorModel(
               name: 'Floor 1',
-              floorPlan: FloorPlanEntity.defaultFloorPlan,
+              floorPlan: FloorPlanModel.defaultFloorPlan,
             ),
           );
         }
@@ -242,11 +239,11 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
         final Set<String> areaIds = floorToRemove.listeningAreas.map((ListeningArea a) => a.id).toSet();
         final List<HardwareComponent> updatedHardwareComponents =
             currentState.project.hardwareComponents.where((HardwareComponent hw) {
-              final LocationEntity loc = hw.locationEntity;
+              final LocationModel loc = hw.locationEntity;
               return !((loc.listeningAreaId != null && areaIds.contains(loc.listeningAreaId)) || (loc.floorId == floorToRemove.id));
             }).toList();
 
-        final ProjectEntity updatedProject = currentState.project.copyWith(
+        final ProjectData updatedProject = currentState.project.copyWith(
           floors: updatedFloors,
           hardwareComponents: updatedHardwareComponents,
           currentFloorIndex: currentState.project.currentFloorIndex.clamp(0, updatedFloors.length - 1),
@@ -266,7 +263,7 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
     if (state is ProjectLoaded) {
       final ProjectLoaded currentState = state as ProjectLoaded;
       if (event.index >= 0 && event.index < currentState.project.floors.length) {
-        final ProjectEntity updatedProject = currentState.project.copyWith(currentFloorIndex: event.index);
+        final ProjectData updatedProject = currentState.project.copyWith(currentFloorIndex: event.index);
         emit(
           currentState.copyWith(
             project: updatedProject,
@@ -286,7 +283,7 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
       // Add default gain processing block
       final HardwareComponent componentToAdd = event.component;
       if (componentToAdd is Source || componentToAdd is Speaker) {
-        final ProcessingBlockEntity gainBlock = ProcessingBlockEntity(
+        final ProcessingBlockModel gainBlock = ProcessingBlockModel(
           id: 'gain${DateTime.now().millisecondsSinceEpoch}',
           name: 'Gain',
           algorithmId: "gain",
@@ -301,7 +298,7 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
       }
 
       final List<HardwareComponent> updatedComponents = List<HardwareComponent>.from(currentState.project.hardwareComponents)..add(componentToAdd);
-      final ProjectEntity updatedProject = currentState.project.copyWith(hardwareComponents: updatedComponents);
+      final ProjectData updatedProject = currentState.project.copyWith(hardwareComponents: updatedComponents);
       emit(currentState.copyWith(project: updatedProject));
     }
   }
@@ -313,7 +310,7 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
       final int index = updatedComponents.indexWhere((HardwareComponent c) => c.id == event.component.id);
       if (index != -1) {
         updatedComponents[index] = event.component;
-        final ProjectEntity updatedProject = currentState.project.copyWith(hardwareComponents: updatedComponents);
+        final ProjectData updatedProject = currentState.project.copyWith(hardwareComponents: updatedComponents);
         emit(currentState.copyWith(project: updatedProject));
       }
     }
@@ -326,8 +323,8 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
           currentState.project.hardwareComponents.where((HardwareComponent c) => c.id != event.componentId).toList();
 
       // Remove component from mixes if it's a source
-      final List<Mix> updatedMixes =
-          currentState.project.mixes.map((Mix mix) {
+      final List<SourceSet> updatedMixes =
+          currentState.project.mixes.map((SourceSet mix) {
             if (mix.sourceIds.contains(event.componentId)) {
               return mix.copyWith(
                 sourceIds: List<String>.from(mix.sourceIds)..remove(event.componentId),
@@ -336,7 +333,7 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
             return mix;
           }).toList();
 
-      final ProjectEntity updatedProject = currentState.project.copyWith(
+      final ProjectData updatedProject = currentState.project.copyWith(
         hardwareComponents: updatedComponents,
         mixes: updatedMixes,
       );
@@ -353,16 +350,16 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
   void _onAddListeningArea(AddListeningArea event, Emitter<ProjectState> emit) {
     if (state is ProjectLoaded) {
       final ProjectLoaded currentState = state as ProjectLoaded;
-      final Floor currentFloor = currentState.project.currentFloor;
+      final FloorModel currentFloor = currentState.project.currentFloor;
       final List<ListeningArea> updatedListeningAreas = List<ListeningArea>.from(currentFloor.listeningAreas)..add(event.listeningArea);
 
-      final Floor updatedFloor = currentFloor.copyWith(listeningAreas: updatedListeningAreas);
-      final List<Floor> updatedFloors = List<Floor>.from(currentState.project.floors);
-      final int floorIndex = updatedFloors.indexWhere((Floor f) => f.id == currentFloor.id);
+      final FloorModel updatedFloor = currentFloor.copyWith(listeningAreas: updatedListeningAreas);
+      final List<FloorModel> updatedFloors = List<FloorModel>.from(currentState.project.floors);
+      final int floorIndex = updatedFloors.indexWhere((FloorModel f) => f.id == currentFloor.id);
 
       if (floorIndex != -1) {
         updatedFloors[floorIndex] = updatedFloor;
-        final ProjectEntity updatedProject = currentState.project.copyWith(floors: updatedFloors);
+        final ProjectData updatedProject = currentState.project.copyWith(floors: updatedFloors);
         emit(currentState.copyWith(project: updatedProject));
       }
     }
@@ -371,19 +368,19 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
   void _onUpdateListeningArea(UpdateListeningArea event, Emitter<ProjectState> emit) {
     if (state is ProjectLoaded) {
       final ProjectLoaded currentState = state as ProjectLoaded;
-      final Floor currentFloor = currentState.project.currentFloor;
+      final FloorModel currentFloor = currentState.project.currentFloor;
       final List<ListeningArea> updatedListeningAreas = List<ListeningArea>.from(currentFloor.listeningAreas);
       final int index = updatedListeningAreas.indexWhere((ListeningArea la) => la.id == event.listeningArea.id);
 
       if (index != -1) {
         updatedListeningAreas[index] = event.listeningArea;
-        final Floor updatedFloor = currentFloor.copyWith(listeningAreas: updatedListeningAreas);
-        final List<Floor> updatedFloors = List<Floor>.from(currentState.project.floors);
-        final int floorIndex = updatedFloors.indexWhere((Floor f) => f.id == currentFloor.id);
+        final FloorModel updatedFloor = currentFloor.copyWith(listeningAreas: updatedListeningAreas);
+        final List<FloorModel> updatedFloors = List<FloorModel>.from(currentState.project.floors);
+        final int floorIndex = updatedFloors.indexWhere((FloorModel f) => f.id == currentFloor.id);
 
         if (floorIndex != -1) {
           updatedFloors[floorIndex] = updatedFloor;
-          final ProjectEntity updatedProject = currentState.project.copyWith(floors: updatedFloors);
+          final ProjectData updatedProject = currentState.project.copyWith(floors: updatedFloors);
           emit(currentState.copyWith(project: updatedProject));
         }
       }
@@ -393,7 +390,7 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
   void _onRemoveListeningArea(RemoveListeningArea event, Emitter<ProjectState> emit) {
     if (state is ProjectLoaded) {
       final ProjectLoaded currentState = state as ProjectLoaded;
-      final Floor currentFloor = currentState.project.currentFloor;
+      final FloorModel currentFloor = currentState.project.currentFloor;
 
       // Remove listening area from floor
       final List<ListeningArea> updatedListeningAreas = currentFloor.listeningAreas.where((ListeningArea la) => la.id != event.listeningAreaId).toList();
@@ -409,13 +406,13 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
             return hw;
           }).toList();
 
-      final Floor updatedFloor = currentFloor.copyWith(listeningAreas: updatedListeningAreas);
-      final List<Floor> updatedFloors = List<Floor>.from(currentState.project.floors);
-      final int floorIndex = updatedFloors.indexWhere((Floor f) => f.id == currentFloor.id);
+      final FloorModel updatedFloor = currentFloor.copyWith(listeningAreas: updatedListeningAreas);
+      final List<FloorModel> updatedFloors = List<FloorModel>.from(currentState.project.floors);
+      final int floorIndex = updatedFloors.indexWhere((FloorModel f) => f.id == currentFloor.id);
 
       if (floorIndex != -1) {
         updatedFloors[floorIndex] = updatedFloor;
-        final ProjectEntity updatedProject = currentState.project.copyWith(
+        final ProjectData updatedProject = currentState.project.copyWith(
           floors: updatedFloors,
           hardwareComponents: updatedHardwareComponents,
         );
@@ -434,7 +431,7 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
       final ProjectLoaded currentState = state as ProjectLoaded;
 
       // Add default gain processing block
-      final ProcessingBlockEntity gainBlock = ProcessingBlockEntity(
+      final ProcessingBlockModel gainBlock = ProcessingBlockModel(
         id: 'gain${DateTime.now().millisecondsSinceEpoch}',
         name: 'Gain',
         algorithmId: "gain",
@@ -442,8 +439,8 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
       );
       event.mix.processingBlocks.add(gainBlock);
 
-      final List<Mix> updatedMixes = List<Mix>.from(currentState.project.mixes)..add(event.mix);
-      final ProjectEntity updatedProject = currentState.project.copyWith(mixes: updatedMixes);
+      final List<SourceSet> updatedMixes = List<SourceSet>.from(currentState.project.mixes)..add(event.mix);
+      final ProjectData updatedProject = currentState.project.copyWith(mixes: updatedMixes);
       emit(currentState.copyWith(project: updatedProject));
     }
   }
@@ -451,11 +448,11 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
   void _onUpdateMix(UpdateMix event, Emitter<ProjectState> emit) {
     if (state is ProjectLoaded) {
       final ProjectLoaded currentState = state as ProjectLoaded;
-      final List<Mix> updatedMixes = List<Mix>.from(currentState.project.mixes);
-      final int index = updatedMixes.indexWhere((Mix m) => m.id == event.mix.id);
+      final List<SourceSet> updatedMixes = List<SourceSet>.from(currentState.project.mixes);
+      final int index = updatedMixes.indexWhere((SourceSet m) => m.id == event.mix.id);
       if (index != -1) {
         updatedMixes[index] = event.mix;
-        final ProjectEntity updatedProject = currentState.project.copyWith(mixes: updatedMixes);
+        final ProjectData updatedProject = currentState.project.copyWith(mixes: updatedMixes);
         emit(currentState.copyWith(project: updatedProject));
       }
     }
@@ -464,7 +461,7 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
   void _onRemoveMix(RemoveMix event, Emitter<ProjectState> emit) {
     if (state is ProjectLoaded) {
       final ProjectLoaded currentState = state as ProjectLoaded;
-      final List<Mix> updatedMixes = currentState.project.mixes.where((Mix m) => m.id != event.mixId).toList();
+      final List<SourceSet> updatedMixes = currentState.project.mixes.where((SourceSet m) => m.id != event.mixId).toList();
 
       // Remove mix mapping from zones
       final List<Zone> updatedZones =
@@ -476,7 +473,7 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
             return zone;
           }).toList();
 
-      final ProjectEntity updatedProject = currentState.project.copyWith(
+      final ProjectData updatedProject = currentState.project.copyWith(
         mixes: updatedMixes,
         zones: updatedZones,
       );
@@ -489,7 +486,7 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
       final ProjectLoaded currentState = state as ProjectLoaded;
 
       // Add default gain processing block
-      final ProcessingBlockEntity gainBlock = ProcessingBlockEntity(
+      final ProcessingBlockModel gainBlock = ProcessingBlockModel(
         id: 'gain${DateTime.now().millisecondsSinceEpoch}',
         name: 'Gain',
         algorithmId: "gain",
@@ -498,7 +495,7 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
       event.zone.processingBlocks.add(gainBlock);
 
       final List<Zone> updatedZones = List<Zone>.from(currentState.project.zones)..add(event.zone);
-      final ProjectEntity updatedProject = currentState.project.copyWith(zones: updatedZones);
+      final ProjectData updatedProject = currentState.project.copyWith(zones: updatedZones);
       emit(currentState.copyWith(project: updatedProject));
     }
   }
@@ -510,7 +507,7 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
       final int index = updatedZones.indexWhere((Zone z) => z.id == event.zone.id);
       if (index != -1) {
         updatedZones[index] = event.zone;
-        final ProjectEntity updatedProject = currentState.project.copyWith(zones: updatedZones);
+        final ProjectData updatedProject = currentState.project.copyWith(zones: updatedZones);
         emit(currentState.copyWith(project: updatedProject));
       }
     }
@@ -532,7 +529,7 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
             return hw;
           }).toList();
 
-      final ProjectEntity updatedProject = currentState.project.copyWith(
+      final ProjectData updatedProject = currentState.project.copyWith(
         zones: updatedZones,
         hardwareComponents: updatedHardwareComponents,
       );

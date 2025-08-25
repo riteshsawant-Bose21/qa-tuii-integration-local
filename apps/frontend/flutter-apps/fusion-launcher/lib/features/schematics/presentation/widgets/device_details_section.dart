@@ -9,9 +9,6 @@ class DevicesCatalogWidget extends StatefulWidget {
   final List<ControllerData> controllers;
   final List<RackData> racks;
 
-
-
-
   const DevicesCatalogWidget({
     super.key,
     this.speakers = SpeakerData.demoSpeakers,
@@ -266,12 +263,7 @@ class _DevicesCatalogWidgetState extends State<DevicesCatalogWidget> {
                 const SizedBox(width: 8),
                 Text(
                   title,
-                  style: const TextStyle(
-                    fontSize: fsRegular,
-                    color: primaryText,
-                    fontWeight: FontWeight.w600,
-                      overflow: TextOverflow.ellipsis
-                  ),
+                  style: const TextStyle(fontSize: fsRegular, color: primaryText, fontWeight: FontWeight.w600, overflow: TextOverflow.ellipsis),
                 ),
               ],
             ),
@@ -287,12 +279,7 @@ class _DevicesCatalogWidgetState extends State<DevicesCatalogWidget> {
                 ),
                 child: Text(
                   components.length.toString(),
-                  style: const TextStyle(
-                    fontSize: fsSmall,
-                    color: accentColor,
-                    fontWeight: FontWeight.w600,
-                      overflow: TextOverflow.ellipsis
-                  ),
+                  style: const TextStyle(fontSize: fsSmall, color: accentColor, fontWeight: FontWeight.w600, overflow: TextOverflow.ellipsis),
                 ),
               ),
               const SizedBox(width: 8),
@@ -383,12 +370,10 @@ class _DevicesCatalogWidgetState extends State<DevicesCatalogWidget> {
                     fontSize: fsSmall,
                     color: primaryText,
                   ),
-                    overflow: TextOverflow.ellipsis
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
-
-
           ],
         ),
       ),

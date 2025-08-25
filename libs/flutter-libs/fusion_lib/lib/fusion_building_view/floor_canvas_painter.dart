@@ -2,13 +2,13 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_utils/color_utils.dart';
-import 'package:fusion_lib/models/project_entities/zone_entity.dart';
+import 'package:fusion_lib/models/project_entities/zone_model.dart';
 
 import '../api_data/speakers/speaker_types.dart';
 import '../fusion_acoustic_calculation_engine/spl_calculation_data.dart';
-import '../models/project_entities/floor_plan_entity.dart';
-import '../models/project_entities/hardware_component_entity.dart';
-import '../models/project_entities/listening_area_entity.dart';
+import '../models/project_entities/floor_plan_model.dart';
+import '../models/project_entities/hardware_component_model.dart';
+import '../models/project_entities/listening_area_model.dart';
 
 class FloorCanvasPainter extends CustomPainter {
   static const List<Color> legendColors = <Color>[
@@ -37,7 +37,7 @@ class FloorCanvasPainter extends CustomPainter {
 
   final List<ListeningArea> listeningAreas;
   final List<HardwareComponent> hardwareComponents;
-  final FloorPlanEntity floorPlanEntity;
+  final FloorPlanModel floorPlanEntity;
   final ui.Image? floorPlanImage;
   Map<String, ui.Image> hardwareImages;
   final bool listeningAreaSelectionActive;

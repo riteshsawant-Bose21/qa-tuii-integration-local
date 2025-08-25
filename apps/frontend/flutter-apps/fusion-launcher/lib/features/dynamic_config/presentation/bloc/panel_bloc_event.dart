@@ -7,7 +7,7 @@ import '../../domain/entities/panel_entity.dart';
 abstract class PanelBlocEvent {}
 
 class InitializePanel extends PanelBlocEvent {
-  final ProcessingBlockEntity processingBloc;
+  final ProcessingBlockModel processingBloc;
   InitializePanel(this.processingBloc);
 }
 

@@ -3,9 +3,9 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:fusion_lib/fusion_utils/shared_preference_handler.dart';
+import 'package:fusion_lib/models/project_entities/project_data.dart';
 import 'package:path_provider/path_provider.dart';
 
-import '../../../../core/models/project_entity.dart';
 import 'project_local_datasource.dart';
 
 class ProjectLocalDataSourceImpl implements ProjectLocalDataSource {
@@ -14,21 +14,21 @@ class ProjectLocalDataSourceImpl implements ProjectLocalDataSource {
   ProjectLocalDataSourceImpl({required this.prefs});
 
   @override
-  Future<void> saveProject(ProjectEntity project) async {
+  Future<void> saveProject(ProjectData project) async {
     final File file = await _localFile(project.name);
     final String jsonStr = jsonEncode(project.toJson());
     await file.writeAsString(jsonStr);
   }
 
   @override
-  Future<ProjectEntity> loadProject(String projectName) async {
+  Future<ProjectData> loadProject(String projectName) async {
     final File file = await _localFile(projectName);
     if (!await file.exists()) {
       throw Exception('Project file not found');
     }
     final String jsonStr = await file.readAsString();
     final Map<String, dynamic> map = jsonDecode(jsonStr) as Map<String, dynamic>;
-    return ProjectEntity.fromJson(map);
+    return ProjectData.fromJson(map);
   }
 
   @override

@@ -1,8 +1,8 @@
 import 'dart:ui';
 
-import 'hardware_component_entity.dart';
-import 'location_entity.dart';
-import 'processing_block_entity.dart';
+import 'hardware_component_model.dart';
+import 'location_model.dart';
+import 'processing_block_model.dart';
 
 enum OutputType { analogOutput, aes67output }
 
@@ -10,7 +10,7 @@ class Speaker extends HardwareComponent {
   double rotation;
   double gain;
   OutputType type;
-  List<ProcessingBlockEntity> blocks;
+  List<ProcessingBlockModel> blocks;
   String? ipAddress; // Optional field for AES67 output type
   String speakerSKU;
   final List<int> portNumbers;
@@ -25,14 +25,14 @@ class Speaker extends HardwareComponent {
     this.rotation = 0.0,
     required this.gain,
     required super.assetImagePath,
-    List<ProcessingBlockEntity>? blocks,
+    List<ProcessingBlockModel>? blocks,
     required this.type,
     this.ipAddress,
     List<int>? portNumbers,
     this.fusionDeviceId,
     required super.price,
     String? hardwareName,
-  }) : blocks = blocks ?? <ProcessingBlockEntity>[],
+  }) : blocks = blocks ?? <ProcessingBlockModel>[],
        portNumbers = portNumbers ?? <int>[],
        super(hardwareName: hardwareName ?? name);
 
@@ -44,10 +44,10 @@ class Speaker extends HardwareComponent {
     double? rotation,
     double? gain,
     String? assetImagePath,
-    List<ProcessingBlockEntity>? blocks,
+    List<ProcessingBlockModel>? blocks,
     OutputType? type,
     String? listeningAreaId,
-    LocationEntity? locationEntity,
+    LocationModel? locationEntity,
     String? ipAddress,
     String? speakerSKU,
     List<int>? portNumbers,
@@ -118,7 +118,7 @@ class Speaker extends HardwareComponent {
       'rotation': rotation,
       'gain': gain,
       'assetImagePath': assetImagePath,
-      'blocks': blocks.map((ProcessingBlockEntity block) => block.toJson()).toList(),
+      'blocks': blocks.map((ProcessingBlockModel block) => block.toJson()).toList(),
       'componentType': 'speaker',
       'type': type.name,
       'locationEntity': locationEntity.toJson(),
@@ -139,9 +139,9 @@ class Speaker extends HardwareComponent {
       rotation: (json['rotation'] as num).toDouble(),
       gain: (json['gain'] as num).toDouble(),
       assetImagePath: json['assetImagePath'] as String,
-      blocks: (json['blocks'] as List<dynamic>?)?.map((dynamic e) => ProcessingBlockEntity.fromJson(e as Map<String, dynamic>)).toList(),
+      blocks: (json['blocks'] as List<dynamic>?)?.map((dynamic e) => ProcessingBlockModel.fromJson(e as Map<String, dynamic>)).toList(),
       type: OutputType.values.firstWhere((OutputType e) => e.name == json['type'], orElse: () => OutputType.analogOutput),
-      locationEntity: LocationEntity.fromJson(json['locationEntity'] as Map<String, dynamic>),
+      locationEntity: LocationModel.fromJson(json['locationEntity'] as Map<String, dynamic>),
       ipAddress: json['ipAddress'] as String?,
       speakerSKU: json['speakerSKU'] as String,
       portNumbers: (json['portNumbers'] as List<dynamic>?)?.map((dynamic e) => e as int).toList() ?? <int>[],

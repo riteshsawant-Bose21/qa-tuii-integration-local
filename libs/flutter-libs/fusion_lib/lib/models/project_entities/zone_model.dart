@@ -1,11 +1,11 @@
 import 'dart:math';
 
-import 'processing_block_entity.dart';
+import 'processing_block_model.dart';
 
 class Zone {
   final String id;
   final String name;
-  final List<ProcessingBlockEntity> processingBlocks;
+  final List<ProcessingBlockModel> processingBlocks;
   final int selectedMixIndex;
   final List<String> listeningAreasIds;
   final List<String> mixIds;
@@ -15,14 +15,14 @@ class Zone {
     String? id,
     required this.name,
     List<String>? listeningAreaIds,
-    List<ProcessingBlockEntity>? processingBlocks,
+    List<ProcessingBlockModel>? processingBlocks,
     List<String>? nonLocalSpeakerIds,
     List<String>? mixIds,
     String? zoneColor,
     this.selectedMixIndex = 0,
   }) : id = id ?? getShortId(),
        listeningAreasIds = listeningAreaIds ?? <String>[],
-       processingBlocks = processingBlocks ?? <ProcessingBlockEntity>[],
+       processingBlocks = processingBlocks ?? <ProcessingBlockModel>[],
        zoneColor = zoneColor ?? getRandomColor(),
        mixIds = mixIds ?? <String>[];
 
@@ -54,7 +54,7 @@ class Zone {
     String? id,
     String? name,
     List<String>? listeningAreaIds,
-    List<ProcessingBlockEntity>? processingBlocks,
+    List<ProcessingBlockModel>? processingBlocks,
     int? selectedMixIndex,
     List<String>? mixIds,
     String? zoneColor,
@@ -74,7 +74,7 @@ class Zone {
     'id': id,
     'name': name,
     'listeningAreasId': listeningAreasIds,
-    'processingBlocks': processingBlocks.map((ProcessingBlockEntity pb) => pb.toJson()).toList(),
+    'processingBlocks': processingBlocks.map((ProcessingBlockModel pb) => pb.toJson()).toList(),
     'selectedMixIndex': selectedMixIndex,
     'mixes': mixIds,
     'zoneColor': zoneColor,
@@ -84,7 +84,7 @@ class Zone {
     id: json['id'] as String,
     name: json['name'] as String,
     listeningAreaIds: List<String>.from(json['listeningAreasId'] as List<dynamic>),
-    processingBlocks: (json['processingBlocks'] as List<dynamic>).map((dynamic e) => ProcessingBlockEntity.fromJson(e as Map<String, dynamic>)).toList(),
+    processingBlocks: (json['processingBlocks'] as List<dynamic>).map((dynamic e) => ProcessingBlockModel.fromJson(e as Map<String, dynamic>)).toList(),
     selectedMixIndex: json['selectedMixIndex'] as int? ?? 0,
     mixIds: List<String>.from(json['mixes'] as List<dynamic>),
     zoneColor: json['zoneColor'] as String? ?? getRandomColor(),

@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/core/models/amplifer.dart';
-import 'package:fusion_launcher/core/models/fusion_device.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
 
-import '../../../core/models/project_entity.dart';
 import '../../../core/service_locator.dart';
 import '../../../core/services/project_manager.dart';
 
@@ -200,9 +197,9 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: backgroundColor,
-      body: ValueListenableBuilder<ProjectEntity>(
+      body: ValueListenableBuilder<ProjectData>(
         valueListenable: projectManager,
-        builder: (BuildContext context, ProjectEntity data, _) {
+        builder: (BuildContext context, ProjectData data, _) {
           speakers = data.hardwareComponents.whereType<Speaker>().toList();
           sources = data.hardwareComponents.whereType<Source>().toList();
           controllers =

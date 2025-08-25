@@ -183,19 +183,19 @@ class _DevicePropertiesWidgetState extends State<DevicePropertiesWidget> {
             processingType: ProcessingType.input,
             selectedBlocks: widget.device.blocks,
             isControlMode: false,
-            onBlockSelected: (ProcessingBlockEntity selected) {
-              final List<ProcessingBlockEntity> updatedBlocks = List<ProcessingBlockEntity>.from(widget.device.blocks);
+            onBlockSelected: (ProcessingBlockModel selected) {
+              final List<ProcessingBlockModel> updatedBlocks = List<ProcessingBlockModel>.from(widget.device.blocks);
               updatedBlocks.add(selected);
               final Source updatedDevice = widget.device.copyWith(blocks: updatedBlocks);
               widget.onDeviceUpdated(updatedDevice);
             },
             onBlockRemoved: (int index) {
-              final List<ProcessingBlockEntity> updatedBlocks = List<ProcessingBlockEntity>.from(widget.device.blocks);
+              final List<ProcessingBlockModel> updatedBlocks = List<ProcessingBlockModel>.from(widget.device.blocks);
               updatedBlocks.removeAt(index);
               final Source updatedDevice = widget.device.copyWith(blocks: updatedBlocks);
               widget.onDeviceUpdated(updatedDevice);
             },
-            onBlocksUpdated: (List<ProcessingBlockEntity> updatedBlocksList) {
+            onBlocksUpdated: (List<ProcessingBlockModel> updatedBlocksList) {
               final Source updatedDevice = widget.device.copyWith(blocks: updatedBlocksList);
               widget.onDeviceUpdated(updatedDevice);
             },

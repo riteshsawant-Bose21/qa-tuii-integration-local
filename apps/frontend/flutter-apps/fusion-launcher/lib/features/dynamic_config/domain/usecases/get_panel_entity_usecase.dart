@@ -7,7 +7,7 @@ import '../repositories/panel_repository.dart';
 class GetPanelEntityUseCase {
   final PanelRepository repository = serviceLocator<PanelRepository>();
 
-  Future<PanelEntity> call(ProcessingBlockEntity processingBloc) async {
+  Future<PanelEntity> call(ProcessingBlockModel processingBloc) async {
     return await repository.getPanelEntity(processingBloc);
   }
 }

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/core/models/floor_entity.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
 
 import 'zone_panel_item_widget.dart';
@@ -11,7 +10,7 @@ class ZonesPanel extends StatefulWidget {
   final void Function(Zone) onZoneAdded;
   final void Function(Zone) onRequestListeningAreaSelection;
   final List<ListeningArea> Function(String) getZoneListeningAreas;
-  final Floor Function(String) getListeningAreaFloor;
+  final FloorModel Function(String) getListeningAreaFloor;
   final VoidCallback? onCancelSelection;
   final Function(String) onAreaRemovedFromZone;
 

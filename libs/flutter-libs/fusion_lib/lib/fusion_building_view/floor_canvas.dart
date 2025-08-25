@@ -5,13 +5,13 @@ import 'dart:ui' as ui;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:fusion_lib/models/project_entities/zone_entity.dart';
+import 'package:fusion_lib/models/project_entities/zone_model.dart';
 
 import '../di/service_locator.dart';
 import '../fusion_utils/image_loader_service.dart';
-import '../models/project_entities/floor_plan_entity.dart';
-import '../models/project_entities/hardware_component_entity.dart';
-import '../models/project_entities/listening_area_entity.dart';
+import '../models/project_entities/floor_plan_model.dart';
+import '../models/project_entities/hardware_component_model.dart';
+import '../models/project_entities/listening_area_model.dart';
 import 'floor_canvas_controller.dart';
 import 'floor_canvas_painter.dart';
 
@@ -22,14 +22,14 @@ class FloorCanvas extends StatefulWidget {
   final List<HardwareComponent> hardwareComponents;
   final List<Zone> zones;
   final List<ListeningArea> listeningAreas;
-  final FloorPlanEntity floorPlanEntity;
+  final FloorPlanModel floorPlanEntity;
   final double splMin;
   final double splMax;
 
   final FloorCanvasController controller;
 
   // mutation callbacks
-  final ValueChanged<FloorPlanEntity> onFloorPlanUpdated;
+  final ValueChanged<FloorPlanModel> onFloorPlanUpdated;
   final ValueChanged<ListeningArea> onAddListeningArea;
   final ValueChanged<ListeningArea> onUpdateListeningArea;
   final ValueChanged<ListeningArea> onTapListeningArea;
@@ -92,7 +92,7 @@ class FloorCanvasState extends State<FloorCanvas> {
   List<Offset>? _dragOriginal;
   int? _highlightIndex;
 
-  FloorPlanEntity? _tempFloorPlan;
+  FloorPlanModel? _tempFloorPlan;
 
   bool _isImageVertexDrag = false;
   int? _dragImageCorner;
@@ -637,7 +637,7 @@ class FloorCanvasState extends State<FloorCanvas> {
       final Size newSize = Size((newCorner.dx - opp.dx).abs(), (newCorner.dy - opp.dy).abs());
 
       // 3) Build an updated FloorPlanEntity
-      final FloorPlanEntity updated = widget.floorPlanEntity.copyWith(position: Offset(minX, minY), size: newSize);
+      final FloorPlanModel updated = widget.floorPlanEntity.copyWith(position: Offset(minX, minY), size: newSize);
 
       // 4) Tell the parent/store about it
       widget.onFloorPlanUpdated(updated);

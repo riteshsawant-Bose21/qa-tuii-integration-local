@@ -12,7 +12,7 @@ class ProjectInitial extends ProjectState {}
 class ProjectLoading extends ProjectState {}
 
 class ProjectLoaded extends ProjectState {
-  final ProjectEntity project;
+  final ProjectData project;
   final String? selectedFloorPlanId;
   final String? selectedListeningAreaId;
   final String? selectedHardwareComponentId;
@@ -25,7 +25,7 @@ class ProjectLoaded extends ProjectState {
   });
 
   ProjectLoaded copyWith({
-    ProjectEntity? project,
+    ProjectData? project,
     String? selectedFloorPlanId,
     String? selectedListeningAreaId,
     String? selectedHardwareComponentId,

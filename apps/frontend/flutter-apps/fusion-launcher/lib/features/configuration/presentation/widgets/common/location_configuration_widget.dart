@@ -2,16 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/services/project_manager.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
 
-import '../../../../../core/models/floor_entity.dart';
-import '../../../../../core/models/project_entity.dart';
 import '../../../../../core/service_locator.dart';
 
 /// Call this function from anywhere in your app to show the "Configure Device" dialog.
-Future<LocationEntity?> showConfigureDeviceDialog(
+Future<LocationModel?> showConfigureDeviceDialog(
   BuildContext context,
-  LocationEntity locationEntity,
-  Function(Floor) onNewFloorCreated,
-  Function(Floor) onFloorUpdated,
+  LocationModel locationEntity,
+  Function(FloorModel) onNewFloorCreated,
+  Function(FloorModel) onFloorUpdated,
 ) async {
   String? selectedFloorId = locationEntity.floorId;
   String? selectedListeningAreaId = locationEntity.listeningAreaId;
@@ -20,17 +18,17 @@ Future<LocationEntity?> showConfigureDeviceDialog(
 
   final ProjectManager projectManager = serviceLocator<ProjectManager>();
 
-  final LocationEntity? result = await showDialog<LocationEntity?>(
+  final LocationModel? result = await showDialog<LocationModel?>(
     context: context,
     barrierDismissible: false,
     builder: (BuildContext ctx) {
       final double width = 400;
       final bool isSmallScreen = MediaQuery.of(context).size.width < 700;
 
-      return ValueListenableBuilder<ProjectEntity>(
+      return ValueListenableBuilder<ProjectData>(
         valueListenable: projectManager,
-        builder: (BuildContext context, ProjectEntity data, _) {
-          final List<Floor> floors = data.floors;
+        builder: (BuildContext context, ProjectData data, _) {
+          final List<FloorModel> floors = data.floors;
 
           return StatefulBuilder(
             builder: (BuildContext context, StateSetter setState) {
@@ -160,7 +158,7 @@ Future<LocationEntity?> showConfigureDeviceDialog(
                                 ),
                               ),
 
-                              for (final Floor floor in floors) ...<Widget>[
+                              for (final FloorModel floor in floors) ...<Widget>[
                                 Container(
                                   margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 8),
                                   decoration: BoxDecoration(
@@ -190,7 +188,7 @@ Future<LocationEntity?> showConfigureDeviceDialog(
                                           color: Colors.black,
                                         ),
                                         onChanged: (String val) {
-                                          final Floor updatedFloor = floor.copyWith(name: val);
+                                          final FloorModel updatedFloor = floor.copyWith(name: val);
                                           onFloorUpdated(updatedFloor);
                                         },
                                       ),
@@ -232,7 +230,7 @@ Future<LocationEntity?> showConfigureDeviceDialog(
                                                   onChanged: (String val) {
                                                     // Update the ListeningArea name in the parent widget
                                                     final ListeningArea updatedArea = listeningArea.copyWith(name: val);
-                                                    final Floor updatedFloor = floor.copyWith(
+                                                    final FloorModel updatedFloor = floor.copyWith(
                                                       listeningAreas: List<ListeningArea>.from(floor.listeningAreas)..[index] = updatedArea,
                                                     );
                                                     onFloorUpdated(updatedFloor);
@@ -274,7 +272,7 @@ Future<LocationEntity?> showConfigureDeviceDialog(
                                             );
 
                                             // Add the new ListeningArea to the current FloorEntity using copy with
-                                            final Floor updatedFloor = floor.copyWith(
+                                            final FloorModel updatedFloor = floor.copyWith(
                                               listeningAreas: List<ListeningArea>.from(floor.listeningAreas)..add(newListeningArea),
                                             );
                                             // Update the floors list in the parent widget
@@ -315,10 +313,10 @@ Future<LocationEntity?> showConfigureDeviceDialog(
                               InkWell(
                                 onTap: () {
                                   //Create a new FloorEntity
-                                  final Floor newFloor = Floor(
+                                  final FloorModel newFloor = FloorModel(
                                     name: 'Floor ${floors.length + 1}',
                                     listeningAreas: <ListeningArea>[],
-                                    floorPlan: FloorPlanEntity.defaultFloorPlan,
+                                    floorPlan: FloorPlanModel.defaultFloorPlan,
                                   );
                                   onNewFloorCreated(newFloor);
                                 },
@@ -347,14 +345,14 @@ Future<LocationEntity?> showConfigureDeviceDialog(
                               // LocationConfigurationTab(
                               //   floors: floors,
                               //   selectedListeningAreaId: selectedListeningAreaId,
-                              //   onLocationSelected: (LocationEntity location) {
+                              //   onLocationSelected: (LocationModel location) {
                               //     setState(() {
                               //       selectedFloorId = location.floorId;
                               //       selectedListeningAreaId = location.listeningAreaId;
                               //       isLocationSelected = location.floorId != null || location.listeningAreaId != null;
                               //     });
                               //   },
-                              //   onFloorUpdated: (List<FloorEntity> updatedFloors, LocationEntity newLocation) {
+                              //   onFloorUpdated: (List<FloorEntity> updatedFloors, LocationModel newLocation) {
                               //     setState(() {
                               //       floors = updatedFloors;
                               //       selectedFloorId = newLocation.floorId;
@@ -460,10 +458,10 @@ Widget _buildSectionHeader(BuildContext context, String title, IconData icon, St
 }
 
 class LocationConfigurationTab extends StatefulWidget {
-  final List<Floor> floors;
+  final List<FloorModel> floors;
   final String? selectedListeningAreaId;
-  final Function(LocationEntity) onLocationSelected;
-  final Function(List<Floor>, LocationEntity) onFloorUpdated;
+  final Function(LocationModel) onLocationSelected;
+  final Function(List<FloorModel>, LocationModel) onFloorUpdated;
 
   const LocationConfigurationTab({
     super.key,
@@ -495,7 +493,7 @@ class _LocationConfigurationTabState extends State<LocationConfigurationTab> wit
   final TextEditingController roomController = TextEditingController();
   final TextEditingController floorController = TextEditingController();
 
-  Floor? selectedFloor;
+  FloorModel? selectedFloor;
 
   @override
   Widget build(BuildContext context) {
@@ -519,7 +517,7 @@ class _LocationConfigurationTabState extends State<LocationConfigurationTab> wit
               children: <Widget>[
                 Column(
                   children: <Widget>[
-                    for (final Floor floor in widget.floors) ...<Widget>[
+                    for (final FloorModel floor in widget.floors) ...<Widget>[
                       Container(
                         margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 8),
                         decoration: BoxDecoration(
@@ -577,7 +575,7 @@ class _LocationConfigurationTabState extends State<LocationConfigurationTab> wit
                                       activeColor: Theme.of(context).primaryColor,
                                       onChanged: (String? val) {
                                         setState(() {
-                                          final LocationEntity location = LocationEntity(
+                                          final LocationModel location = LocationModel(
                                             floorId: floor.id,
                                             listeningAreaId: val,
                                           );
@@ -598,14 +596,14 @@ class _LocationConfigurationTabState extends State<LocationConfigurationTab> wit
 
                 NewFloorRoomEntry(
                   existingFloors: widget.floors,
-                  onFloorUpdated: (List<Floor> updatedFloors, LocationEntity newLocation) {
+                  onFloorUpdated: (List<FloorModel> updatedFloors, LocationModel newLocation) {
                     setState(() {
                       widget.onFloorUpdated(updatedFloors, newLocation);
                     });
                   },
                   floorController: floorController,
                   roomController: roomController,
-                  updateSelectedFloor: (Floor? value) {
+                  updateSelectedFloor: (FloorModel? value) {
                     setState(() {
                       selectedFloor = value;
                     });
@@ -622,13 +620,13 @@ class _LocationConfigurationTabState extends State<LocationConfigurationTab> wit
 }
 
 class NewFloorRoomEntry extends StatefulWidget {
-  final List<Floor> existingFloors;
-  final Function(List<Floor>, LocationEntity) onFloorUpdated;
+  final List<FloorModel> existingFloors;
+  final Function(List<FloorModel>, LocationModel) onFloorUpdated;
   final TextEditingController floorController;
 
   final TextEditingController roomController;
-  final Floor? selectedFloor;
-  final Function(Floor?) updateSelectedFloor;
+  final FloorModel? selectedFloor;
+  final Function(FloorModel?) updateSelectedFloor;
 
   const NewFloorRoomEntry({
     super.key,
@@ -647,7 +645,7 @@ class NewFloorRoomEntry extends StatefulWidget {
 class _NewFloorRoomEntryState extends State<NewFloorRoomEntry> {
   bool _isCreatingNewFloor = false;
 
-  void _addNewListeningArea(Floor floor) {
+  void _addNewListeningArea(FloorModel floor) {
     final String area = widget.roomController.text.trim();
     if (area.isNotEmpty) {
       final ListeningArea newListeningArea = ListeningArea(
@@ -657,18 +655,18 @@ class _NewFloorRoomEntryState extends State<NewFloorRoomEntry> {
       );
 
       floor.listeningAreas.add(newListeningArea);
-      widget.onFloorUpdated(widget.existingFloors, LocationEntity(floorId: floor.id, listeningAreaId: newListeningArea.id));
+      widget.onFloorUpdated(widget.existingFloors, LocationModel(floorId: floor.id, listeningAreaId: newListeningArea.id));
     }
   }
 
   void _submit() {
     if ((widget.selectedFloor != null || widget.floorController.text.trim().isNotEmpty) && widget.roomController.text.trim().isNotEmpty) {
-      final Floor floorEntity =
+      final FloorModel floorEntity =
           widget.selectedFloor ??
-          Floor(
+          FloorModel(
             name: widget.floorController.text,
             listeningAreas: <ListeningArea>[],
-            floorPlan: FloorPlanEntity.defaultFloorPlan,
+            floorPlan: FloorPlanModel.defaultFloorPlan,
           );
 
       _addNewListeningArea(floorEntity);
@@ -718,19 +716,19 @@ class _NewFloorRoomEntryState extends State<NewFloorRoomEntry> {
             Row(
               children: <Widget>[
                 Expanded(
-                  child: DropdownButtonFormField<Floor>(
+                  child: DropdownButtonFormField<FloorModel>(
                     value: widget.selectedFloor,
                     decoration: const InputDecoration(labelText: 'Select Floor'),
                     items:
                         widget.existingFloors
                             .map(
-                              (Floor floor) => DropdownMenuItem<Floor>(
+                              (FloorModel floor) => DropdownMenuItem<FloorModel>(
                                 value: floor,
                                 child: Text(floor.name),
                               ),
                             )
                             .toList(),
-                    onChanged: (Floor? value) {
+                    onChanged: (FloorModel? value) {
                       setState(() {
                         widget.updateSelectedFloor(value);
                       });

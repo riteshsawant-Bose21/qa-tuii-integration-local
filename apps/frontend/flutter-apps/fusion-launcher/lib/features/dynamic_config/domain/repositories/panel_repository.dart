@@ -21,5 +21,5 @@ abstract class PanelRepository {
 
   Future<bool> resetFusion();
 
-  Future<PanelEntity> getPanelEntity(ProcessingBlockEntity processingBloc);
+  Future<PanelEntity> getPanelEntity(ProcessingBlockModel processingBloc);
 }

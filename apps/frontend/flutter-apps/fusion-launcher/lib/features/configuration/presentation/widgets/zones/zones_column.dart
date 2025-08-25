@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/core/models/mix_entity.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
 
-import '../../../../../core/models/floor_entity.dart';
 import 'zone_widget.dart';
 
 class ZonesColumn extends StatefulWidget {
   final List<Zone> zones;
-  final List<Mix> sourceSets;
+  final List<SourceSet> sourceSets;
   final List<Speaker> allSpeakers;
   final List<Source> sources;
   final void Function(Zone) onZoneUpdated;
@@ -16,8 +14,8 @@ class ZonesColumn extends StatefulWidget {
   final Function(Speaker) onSpeakerUpdated;
   final Function(Speaker) onSpeakerDeleted;
   final Function(Speaker) onSpeakerAdded;
-  final Function(Floor) onFloorUpdated;
-  final Function(Floor) onFloorAdded;
+  final Function(FloorModel) onFloorUpdated;
+  final Function(FloorModel) onFloorAdded;
   final bool isControlMode;
 
   const ZonesColumn({
@@ -149,10 +147,10 @@ class _ZonesColumnState extends State<ZonesColumn> {
                 onSpeakerAdded: (Speaker speaker) {
                   widget.onSpeakerAdded(speaker);
                 },
-                onFloorUpdated: (Floor updatedFloor) {
+                onFloorUpdated: (FloorModel updatedFloor) {
                   widget.onFloorUpdated(updatedFloor);
                 },
-                onFloorAdded: (Floor newFloor) {
+                onFloorAdded: (FloorModel newFloor) {
                   widget.onFloorAdded(newFloor);
                 },
               ),

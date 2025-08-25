@@ -71,7 +71,7 @@ class ClearAllSelections extends ProjectEvent {}
 
 // Floor Events
 class AddFloor extends ProjectEvent {
-  final Floor floor;
+  final FloorModel floor;
 
   const AddFloor(this.floor);
 
@@ -80,7 +80,7 @@ class AddFloor extends ProjectEvent {
 }
 
 class UpdateFloor extends ProjectEvent {
-  final Floor floor;
+  final FloorModel floor;
 
   const UpdateFloor(this.floor);
 
@@ -164,7 +164,7 @@ class RemoveListeningArea extends ProjectEvent {
 
 // Mix Events
 class AddMix extends ProjectEvent {
-  final Mix mix;
+  final SourceSet mix;
 
   const AddMix(this.mix);
 
@@ -173,7 +173,7 @@ class AddMix extends ProjectEvent {
 }
 
 class UpdateMix extends ProjectEvent {
-  final Mix mix;
+  final SourceSet mix;
 
   const UpdateMix(this.mix);
 

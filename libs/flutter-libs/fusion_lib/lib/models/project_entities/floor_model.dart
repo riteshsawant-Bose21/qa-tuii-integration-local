@@ -1,22 +1,18 @@
 import 'package:fusion_lib/models/fusion_models.dart';
 import 'package:uuid/uuid.dart';
 
-class Floor {
+class FloorModel {
   final String id;
   final String name;
-  FloorPlanEntity floorPlan;
+  FloorPlanModel floorPlan;
   final List<ListeningArea> listeningAreas;
 
-  Floor({
-    String? id,
-    required this.name,
-    required this.floorPlan,
-    List<ListeningArea>? listeningAreas,
-  }) : id = id ?? const Uuid().v4(),
-       listeningAreas = listeningAreas ?? <ListeningArea>[];
+  FloorModel({String? id, required this.name, required this.floorPlan, List<ListeningArea>? listeningAreas})
+    : id = id ?? const Uuid().v4(),
+      listeningAreas = listeningAreas ?? <ListeningArea>[];
 
-  Floor copyWith({String? id, String? name, FloorPlanEntity? floorPlan, List<ListeningArea>? listeningAreas}) {
-    return Floor(
+  FloorModel copyWith({String? id, String? name, FloorPlanModel? floorPlan, List<ListeningArea>? listeningAreas}) {
+    return FloorModel(
       id: id ?? this.id,
       name: name ?? this.name,
       floorPlan: floorPlan ?? this.floorPlan,
@@ -31,20 +27,15 @@ class Floor {
     'listeningAreas': listeningAreas.map((ListeningArea s) => s.toJson()).toList(),
   };
 
-  factory Floor.fromJson(Map<String, dynamic> json) {
+  factory FloorModel.fromJson(Map<String, dynamic> json) {
     // 1) Floor plan
     final Map<String, dynamic> fpMap = json['floorPlan'] as Map<String, dynamic>;
-    final FloorPlanEntity fp = FloorPlanEntity.fromJson(fpMap);
+    final FloorPlanModel fp = FloorPlanModel.fromJson(fpMap);
 
     // 2) Listening Areas
     final List<dynamic> rawListeningAreas = json['listeningAreas'] as List<dynamic>? ?? <dynamic>[];
     final List<ListeningArea> listeningAreas = rawListeningAreas.map((dynamic e) => ListeningArea.fromJson(e as Map<String, dynamic>)).toList();
 
-    return Floor(
-      id: json['id'] as String?,
-      name: json['name'] as String,
-      floorPlan: fp,
-      listeningAreas: listeningAreas,
-    );
+    return FloorModel(id: json['id'] as String?, name: json['name'] as String, floorPlan: fp, listeningAreas: listeningAreas);
   }
 }

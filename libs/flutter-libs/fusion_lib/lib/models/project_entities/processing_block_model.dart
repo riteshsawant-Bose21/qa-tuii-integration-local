@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../algorithm/property_settings.dart';
 
-class ProcessingBlockEntity {
+class ProcessingBlockModel {
   /// Input processing blocks
   /// "agc","gate","compressor","ducker", "tone_control","peq","gain"
   ///
@@ -15,14 +15,14 @@ class ProcessingBlockEntity {
   /// Output processing blocks
   /// "peq", "gain", "delay", "limiter"
 
-  static final List<ProcessingBlockEntity> inputBlocks = <ProcessingBlockEntity>[
-    ProcessingBlockEntity(
+  static final List<ProcessingBlockModel> inputBlocks = <ProcessingBlockModel>[
+    ProcessingBlockModel(
       id: 'gain',
       name: 'Gain',
       algorithmId: "gain",
       properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
     ),
-    ProcessingBlockEntity(
+    ProcessingBlockModel(
       id: 'peq',
       name: 'PEQ',
       algorithmId: "peq",
@@ -31,31 +31,31 @@ class ProcessingBlockEntity {
         PropertySetting(name: 'bands', value: 1),
       ],
     ),
-    ProcessingBlockEntity(
+    ProcessingBlockModel(
       id: 'compressor',
       name: 'Compressor',
       algorithmId: "compressor",
       properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
     ),
-    ProcessingBlockEntity(
+    ProcessingBlockModel(
       id: 'ducker',
       name: 'Ducker',
       algorithmId: "ducker",
       properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
     ),
-    ProcessingBlockEntity(
+    ProcessingBlockModel(
       id: 'agc',
       name: 'AGC',
       algorithmId: "agc",
       properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
     ),
-    ProcessingBlockEntity(
+    ProcessingBlockModel(
       id: 'gate',
       name: 'Gate',
       algorithmId: "gate",
       properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
     ),
-    ProcessingBlockEntity(
+    ProcessingBlockModel(
       id: 'tone_control',
       name: 'Tone Control',
       algorithmId: "tone_control",
@@ -63,26 +63,26 @@ class ProcessingBlockEntity {
     ),
   ];
 
-  static final List<ProcessingBlockEntity> zoneBlocks = <ProcessingBlockEntity>[
-    ProcessingBlockEntity(
+  static final List<ProcessingBlockModel> zoneBlocks = <ProcessingBlockModel>[
+    ProcessingBlockModel(
       id: 'gate',
       name: 'Gate',
       algorithmId: "gate",
       properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
     ),
-    ProcessingBlockEntity(
+    ProcessingBlockModel(
       id: 'compressor',
       name: 'Compressor',
       algorithmId: "compressor",
       properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
     ),
-    ProcessingBlockEntity(
+    ProcessingBlockModel(
       id: 'tone_control',
       name: 'Tone Control',
       algorithmId: "tone_control",
       properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
     ),
-    ProcessingBlockEntity(
+    ProcessingBlockModel(
       id: 'graphic_eq',
       name: 'Graphic EQ',
       algorithmId: "graphic_eq",
@@ -97,7 +97,7 @@ class ProcessingBlockEntity {
     //     PropertySetting(name: 'channels', value: 1),
     //   ],
     // ),
-    ProcessingBlockEntity(
+    ProcessingBlockModel(
       id: 'peq',
       name: 'PEQ',
       algorithmId: "peq",
@@ -106,7 +106,7 @@ class ProcessingBlockEntity {
         PropertySetting(name: 'bands', value: 1),
       ],
     ),
-    ProcessingBlockEntity(
+    ProcessingBlockModel(
       id: 'delay',
       name: 'Delay',
       algorithmId: "delay",
@@ -115,7 +115,7 @@ class ProcessingBlockEntity {
         PropertySetting(name: 'max_delay', value: 4800),
       ],
     ),
-    ProcessingBlockEntity(
+    ProcessingBlockModel(
       id: 'gain',
       name: 'Gain',
       algorithmId: "gain",
@@ -123,38 +123,38 @@ class ProcessingBlockEntity {
     ),
   ];
 
-  static final List<ProcessingBlockEntity> mixBlocks = <ProcessingBlockEntity>[
-    ProcessingBlockEntity(
+  static final List<ProcessingBlockModel> mixBlocks = <ProcessingBlockModel>[
+    ProcessingBlockModel(
       id: 'agc',
       name: 'AGC',
       algorithmId: "agc",
       properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
     ),
-    ProcessingBlockEntity(
+    ProcessingBlockModel(
       id: 'gate',
       name: 'Gate',
       algorithmId: "gate",
       properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
     ),
-    ProcessingBlockEntity(
+    ProcessingBlockModel(
       id: 'compressor',
       name: 'Compressor',
       algorithmId: "compressor",
       properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
     ),
-    ProcessingBlockEntity(
+    ProcessingBlockModel(
       id: 'ducker',
       name: 'Ducker',
       algorithmId: "ducker",
       properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
     ),
-    ProcessingBlockEntity(
+    ProcessingBlockModel(
       id: 'tone_control',
       name: 'Tone Control',
       algorithmId: "tone_control",
       properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
     ),
-    ProcessingBlockEntity(
+    ProcessingBlockModel(
       id: 'peq',
       name: 'PEQ',
       algorithmId: "peq",
@@ -163,7 +163,7 @@ class ProcessingBlockEntity {
         PropertySetting(name: 'bands', value: 1),
       ],
     ),
-    ProcessingBlockEntity(
+    ProcessingBlockModel(
       id: 'gain',
       name: 'Gain',
       algorithmId: "gain",
@@ -171,8 +171,8 @@ class ProcessingBlockEntity {
     ),
   ];
 
-  static final List<ProcessingBlockEntity> outputBlocks = <ProcessingBlockEntity>[
-    ProcessingBlockEntity(
+  static final List<ProcessingBlockModel> outputBlocks = <ProcessingBlockModel>[
+    ProcessingBlockModel(
       id: 'peq',
       name: 'PEQ',
       algorithmId: "peq",
@@ -181,13 +181,13 @@ class ProcessingBlockEntity {
         PropertySetting(name: 'bands', value: 1),
       ],
     ),
-    ProcessingBlockEntity(
+    ProcessingBlockModel(
       id: 'gain',
       name: 'Gain',
       algorithmId: "gain",
       properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
     ),
-    ProcessingBlockEntity(
+    ProcessingBlockModel(
       id: 'delay',
       name: 'Delay',
       algorithmId: "delay",
@@ -196,7 +196,7 @@ class ProcessingBlockEntity {
         PropertySetting(name: 'max_delay', value: 4800),
       ],
     ),
-    ProcessingBlockEntity(
+    ProcessingBlockModel(
       id: 'limiter',
       name: 'Limiter',
       algorithmId: "limiter",
@@ -212,7 +212,7 @@ class ProcessingBlockEntity {
   final String algorithmId;
   List<PropertySetting> properties;
 
-  ProcessingBlockEntity({required this.name, required this.id, required this.algorithmId, List<PropertySetting>? properties})
+  ProcessingBlockModel({required this.name, required this.id, required this.algorithmId, List<PropertySetting>? properties})
     : properties = properties ?? <PropertySetting>[];
 
   IconData get icon {
@@ -220,7 +220,7 @@ class ProcessingBlockEntity {
   }
 
   copyWith({String? name, String? id, String? algorithmId, List<PropertySetting>? properties}) {
-    return ProcessingBlockEntity(
+    return ProcessingBlockModel(
       name: name ?? this.name,
       id: id ?? this.id,
       algorithmId: algorithmId ?? this.algorithmId,
@@ -228,8 +228,8 @@ class ProcessingBlockEntity {
     );
   }
 
-  factory ProcessingBlockEntity.fromJson(Map<String, dynamic> json) {
-    return ProcessingBlockEntity(
+  factory ProcessingBlockModel.fromJson(Map<String, dynamic> json) {
+    return ProcessingBlockModel(
       name: json['name'] as String,
       id: json['id'] as String,
       algorithmId: json['algorithmId'] as String,

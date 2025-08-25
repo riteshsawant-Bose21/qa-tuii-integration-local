@@ -7,8 +7,8 @@ import 'package:fusion_launcher/core/utils/broadcast_controllers.dart';
 import 'package:fusion_launcher/features/bill_of_materials/presentation/bill_of_materials_page.dart';
 import 'package:fusion_launcher/features/cloud_ui/presentation/pages/cloud_web_view.dart';
 import 'package:fusion_lib/fusion_utils/shared_preference_handler.dart';
+import 'package:fusion_lib/models/fusion_models.dart';
 
-import '../../../core/models/project_entity.dart';
 import '../../../core/service_locator.dart';
 import '../../../core/utils/fusion_utils.dart';
 import '../../../core/widgets/clean_widgets.dart';
@@ -85,9 +85,9 @@ class _ProjectPageState extends State<ProjectPage> with SingleTickerProviderStat
             child: Column(
               children: <Widget>[
                 // Project name section
-                ValueListenableBuilder<ProjectEntity>(
+                ValueListenableBuilder<ProjectData>(
                   valueListenable: projectManager,
-                  builder: (BuildContext context, ProjectEntity data, _) {
+                  builder: (BuildContext context, ProjectData data, _) {
                     _projectNameController.text = data.projectName;
                     return Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,

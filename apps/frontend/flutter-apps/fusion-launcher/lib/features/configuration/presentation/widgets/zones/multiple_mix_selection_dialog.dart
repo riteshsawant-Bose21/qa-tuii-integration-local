@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
 
-import '../../../../../core/models/floor_entity.dart';
-import '../../../../../core/models/mix_entity.dart';
 import '../../../../../core/service_locator.dart';
 import '../../../../../core/services/project_manager.dart';
 
 /// Multi‐selection device picker dialog (unchanged)
 class MultiMixPickerDialog extends StatefulWidget {
   final String title;
-  final List<Mix> devices;
-  final List<Mix> initiallySelected;
+  final List<SourceSet> devices;
+  final List<SourceSet> initiallySelected;
 
   const MultiMixPickerDialog({
     super.key,
@@ -24,7 +22,7 @@ class MultiMixPickerDialog extends StatefulWidget {
 }
 
 class MultiMixPickerDialogState extends State<MultiMixPickerDialog> {
-  late final Set<Mix> _selected;
+  late final Set<SourceSet> _selected;
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
@@ -40,9 +38,9 @@ class MultiMixPickerDialogState extends State<MultiMixPickerDialog> {
     super.dispose();
   }
 
-  List<Mix> get _filteredDevices {
+  List<SourceSet> get _filteredDevices {
     if (_searchQuery.isEmpty) return widget.devices;
-    return widget.devices.where((Mix device) {
+    return widget.devices.where((SourceSet device) {
       return device.name.toLowerCase().contains(_searchQuery.toLowerCase());
     }).toList();
   }
@@ -136,7 +134,7 @@ class MultiMixPickerDialogState extends State<MultiMixPickerDialog> {
                       : ListView.builder(
                         itemCount: _filteredDevices.length,
                         itemBuilder: (BuildContext context, int index) {
-                          final Mix mix = _filteredDevices[index];
+                          final SourceSet mix = _filteredDevices[index];
                           final bool isSelected = _selected.contains(mix);
 
                           return Card(
@@ -267,15 +265,15 @@ class MultiMixPickerDialogState extends State<MultiMixPickerDialog> {
     );
   }
 
-  String getLocation(LocationEntity location) {
+  String getLocation(LocationModel location) {
     if (location.floorId != null && location.listeningAreaId != null) {
-      final Floor floor = serviceLocator<ProjectManager>().value.floors.firstWhere((Floor floor) => floor.id == location.floorId);
+      final FloorModel floor = serviceLocator<ProjectManager>().value.floors.firstWhere((FloorModel floor) => floor.id == location.floorId);
 
       final ListeningArea area = floor.listeningAreas.firstWhere((ListeningArea area) => area.id == location.listeningAreaId);
 
       return "${floor.name}/${area.name}"; // Display floor and listening area names
     } else if (location.floorId != null) {
-      final Floor floor = serviceLocator<ProjectManager>().value.floors.firstWhere((Floor floor) => floor.id == location.floorId);
+      final FloorModel floor = serviceLocator<ProjectManager>().value.floors.firstWhere((FloorModel floor) => floor.id == location.floorId);
       return floor.name; // Display floor number
     } else if (location.listeningAreaId != null) {
       return "Listening Area ${location.listeningAreaId}"; // Display listening area number

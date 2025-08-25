@@ -13,9 +13,7 @@ import 'package:fusion_lib/models/fusion_models.dart';
 
 import '../../../../core/mace_calculation_manager.dart';
 import '../../../../core/mace_engine_provider.dart';
-import '../../../../core/models/floor_entity.dart';
 import '../../../../core/models/products_data.dart';
-import '../../../../core/models/project_entity.dart';
 import '../../../../core/services/project_manager.dart';
 import '../../../../core/widgets/clean_widgets.dart';
 import '../../../../core/widgets/spl_range_slider.dart';
@@ -193,7 +191,7 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
                           rotation: 0.0,
                           assetImagePath: speakerData.assetPath,
                           type: speakerData.type,
-                          locationEntity: LocationEntity(
+                          locationEntity: LocationModel(
                             floorId: projectManager.currentFloor.id,
                           ),
                           price: speakerData.price,
@@ -208,7 +206,7 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
                       onProductSelected: (GenericHardwareComponent product) {
                         product = product.copyWith(
                           pos: viewPortCenter,
-                          locationEntity: LocationEntity(
+                          locationEntity: LocationModel(
                             floorId: projectManager.currentFloor.id,
                           ),
                         );
@@ -225,7 +223,7 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
                       onSourceSelected: (Source source) {
                         source = source.copyWith(
                           pos: viewPortCenter,
-                          locationEntity: LocationEntity(
+                          locationEntity: LocationModel(
                             floorId: projectManager.currentFloor.id,
                           ),
                         );
@@ -253,7 +251,7 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
                             rotation: 0.0,
                             assetImagePath: speakerData.assetPath,
                             type: speakerData.type,
-                            locationEntity: LocationEntity(
+                            locationEntity: LocationModel(
                               floorId: projectManager.currentFloor.id,
                             ),
                             price: speakerData.price,
@@ -293,10 +291,10 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
                             borderRadius: const BorderRadius.vertical(
                               bottom: Radius.circular(6),
                             ),
-                            child: ValueListenableBuilder<ProjectEntity>(
+                            child: ValueListenableBuilder<ProjectData>(
                               valueListenable: projectManager,
-                              builder: (_, ProjectEntity project, __) {
-                                final Floor floor = project.currentFloor;
+                              builder: (_, ProjectData project, __) {
+                                final FloorModel floor = project.currentFloor;
                                 if (projectManager.isFloorEmpty(floor.id)) {
                                   return _buildEmptyFloorWidget();
                                 }
@@ -327,7 +325,7 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
                                     projectManager.saveProject();
                                   },
                                   onUpdateListeningArea: projectManager.updateListeningArea,
-                                  onFloorPlanUpdated: (FloorPlanEntity updatedPlan) {
+                                  onFloorPlanUpdated: (FloorPlanModel updatedPlan) {
                                     projectManager.updateFloorPlan(updatedPlan);
                                   },
                                   onViewportCenterUpdated: (ui.Offset center) {
@@ -539,9 +537,9 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
                           ),
                         ),
                       ),
-                      child: ValueListenableBuilder<ProjectEntity>(
+                      child: ValueListenableBuilder<ProjectData>(
                         valueListenable: projectManager,
-                        builder: (_, ProjectEntity project, __) {
+                        builder: (_, ProjectData project, __) {
                           return Row(
                             children: <Widget>[
                               // Clean Floors TabBar
@@ -571,7 +569,7 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
                                     controller: _tabController,
                                     isScrollable: true,
                                     tabAlignment: TabAlignment.start,
-                                    tabs: projectManager.value.floors.map((Floor f) => Tab(text: f.name)).toList(),
+                                    tabs: projectManager.value.floors.map((FloorModel f) => Tab(text: f.name)).toList(),
                                   ),
                                 ),
                               ),
@@ -630,9 +628,9 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
             Container(
               width: 240,
               margin: const EdgeInsets.all(12),
-              child: ValueListenableBuilder<ProjectEntity>(
+              child: ValueListenableBuilder<ProjectData>(
                 valueListenable: projectManager,
-                builder: (_, ProjectEntity project, __) {
+                builder: (_, ProjectData project, __) {
                   return SingleChildScrollView(
                     child: Column(
                       children: <Widget>[
@@ -674,12 +672,12 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
                                     floor: projectManager.selectedFloorPlan,
                                     hardwareComponent: projectManager.selectedHardwareComponent,
                                     surface: projectManager.selectedListeningArea,
-                                    onFloorChanged: (Floor floorEntity) {
+                                    onFloorChanged: (FloorModel floorEntity) {
                                       projectManager.updateFloor(floorEntity);
                                       calculateSPL();
                                       projectManager.saveProject();
                                     },
-                                    onFloorDelete: (Floor floorEntity) {
+                                    onFloorDelete: (FloorModel floorEntity) {
                                       projectManager.removeFloor(
                                         floorEntity.id,
                                       );
@@ -798,7 +796,7 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
                                           }
                                         }
 
-                                        //update all the hardware entities that are using this zone and update their LocationEntity zone id
+                                        //update all the hardware entities that are using this zone and update their LocationModel zone id
                                         final List<HardwareComponent> componentsInSelectedArea =
                                             projectManager.value.hardwareComponents
                                                 .where(
@@ -968,9 +966,9 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
               ElevatedButton(
                 onPressed: () {
                   if (newName?.trim().isNotEmpty ?? false) {
-                    final FloorPlanEntity plan = FloorPlanEntity.defaultFloorPlan;
+                    final FloorPlanModel plan = FloorPlanModel.defaultFloorPlan;
                     projectManager.addFloor(
-                      Floor(name: newName!.trim(), floorPlan: plan),
+                      FloorModel(name: newName!.trim(), floorPlan: plan),
                     );
                     projectManager.saveProject();
                     Navigator.pop(ctx);
@@ -1221,7 +1219,7 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
         print('Scale: ${calibrationData.pixelsPerUnit.toStringAsFixed(2)} pixels per ${calibrationData.unit.symbol}');
 
         const double canvasPixelsPerMeter = 100.0;
-        final Floor floor = projectManager.value.currentFloor;
+        final FloorModel floor = projectManager.value.currentFloor;
 
         final double widthInUnits = image.width * calibrationData.unitsPerPixel;
         final double heightInUnits = image.height * calibrationData.unitsPerPixel;

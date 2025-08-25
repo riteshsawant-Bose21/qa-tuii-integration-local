@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/core/models/fusion_device.dart';
+import 'package:fusion_lib/models/fusion_models.dart';
 
 import '../../../../../core/constants.dart';
 import '../common/vip_configuration.dart';

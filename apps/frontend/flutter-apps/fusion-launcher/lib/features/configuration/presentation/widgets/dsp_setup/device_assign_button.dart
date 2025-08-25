@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/core/models/fusion_device.dart';
 import 'package:fusion_launcher/core/utils/fusion_utils.dart';
 import 'package:fusion_lib/fusion_networking/network/fusion_network_client.dart';
+import 'package:fusion_lib/models/fusion_device/fusion_device.dart';
 import 'package:fusion_lib/models/response_callback.dart';
 
 import '../../../../../core/constants.dart';

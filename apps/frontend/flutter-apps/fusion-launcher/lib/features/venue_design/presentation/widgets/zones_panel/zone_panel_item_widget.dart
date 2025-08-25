@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/core/models/floor_entity.dart';
 import 'package:fusion_launcher/core/utils/fusion_utils.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
 
@@ -8,7 +7,7 @@ import '../../../../../core/widgets/color_selector_popup.dart';
 
 class ZonePanelWidget extends StatefulWidget {
   final Zone zone;
-  final Floor Function(String) getListeningAreaFloor;
+  final FloorModel Function(String) getListeningAreaFloor;
   final void Function(Zone) onZoneChanged;
   final VoidCallback onDelete;
   final void Function(Zone) onAddListeningAreas;
@@ -146,7 +145,7 @@ class ZonePanelWidgetState extends State<ZonePanelWidget> {
                       Column(
                         children:
                             widget.zoneListeningAreas.map((ListeningArea area) {
-                              final Floor areaFloor = widget.getListeningAreaFloor(area.id);
+                              final FloorModel areaFloor = widget.getListeningAreaFloor(area.id);
                               return Padding(
                                 padding: const EdgeInsets.only(bottom: 6),
                                 child: Container(

@@ -1,22 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/core/constants/spl_calculation_data.dart';
-import 'package:fusion_launcher/core/models/amplifer.dart';
-import 'package:fusion_launcher/core/models/fusion_device.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
 import 'package:uuid/uuid.dart';
 
-import 'floor_entity.dart';
-import 'mix_entity.dart';
+import '../../fusion_acoustic_calculation_engine/spl_calculation_data.dart';
 
-class ProjectEntity {
+class ProjectData {
   final String id;
   final String cloudId;
   final String name;
   final String projectName;
   final List<Color> colors;
-  final List<Floor> floors;
+  final List<FloorModel> floors;
   final List<Zone> zones;
-  final List<Mix> mixes;
+  final List<SourceSet> mixes;
   final List<HardwareComponent> hardwareComponents;
   final List<FusionDevice> fusionDevices;
   final List<FusionDevice> suggestedFusionDevices;
@@ -31,16 +27,16 @@ class ProjectEntity {
   final double maxSPL;
   bool isInControlMode;
 
-  ProjectEntity({
+  ProjectData({
     String? id,
     String? cloudId,
     required this.name,
     required this.metaData,
     String? projectName,
     List<Color>? colors,
-    List<Floor>? floors,
+    List<FloorModel>? floors,
     List<Zone>? zones,
-    List<Mix>? mixes,
+    List<SourceSet>? mixes,
     this.currentFloorIndex = 0,
     List<HardwareComponent>? hardwareComponents,
     List<FusionDevice>? fusionDevices,
@@ -55,27 +51,27 @@ class ProjectEntity {
     this.isInControlMode = false,
   }) : id = id ?? const Uuid().v4(),
        cloudId = cloudId ?? const Uuid().v4(),
-       floors = floors ?? <Floor>[],
+       floors = floors ?? <FloorModel>[],
        colors = colors ?? <Color>[Colors.green, Colors.greenAccent],
        zones = zones ?? <Zone>[],
        hardwareComponents = hardwareComponents ?? <HardwareComponent>[],
-       mixes = mixes ?? <Mix>[],
+       mixes = mixes ?? <SourceSet>[],
        amplifiers = amplifiers ?? <Amplifier>[],
        fusionDevices = fusionDevices ?? <FusionDevice>[],
        projectName = projectName ?? name,
        suggestedFusionDevices = suggestedFusionDevices ?? <FusionDevice>[];
 
-  Floor get currentFloor => floors[currentFloorIndex];
+  FloorModel get currentFloor => floors[currentFloorIndex];
 
-  ProjectEntity copyWith({
+  ProjectData copyWith({
     String? id,
     String? cloudId,
     String? name,
     String? projectName,
-    List<Floor>? floors,
+    List<FloorModel>? floors,
     int? currentFloorIndex,
     List<Zone>? zones,
-    List<Mix>? mixes,
+    List<SourceSet>? mixes,
     List<HardwareComponent>? hardwareComponents,
     List<FusionDevice>? fusionDevices,
     String? virtualIP,
@@ -90,7 +86,7 @@ class ProjectEntity {
     List<FusionDevice>? suggestedFusionDevices,
     bool? isInControlMode,
   }) {
-    return ProjectEntity(
+    return ProjectData(
       id: id ?? this.id,
       cloudId: cloudId ?? this.cloudId,
       name: name ?? this.name,
@@ -122,20 +118,19 @@ class ProjectEntity {
       'name': name,
       'projectName': projectName,
       'metaData': metaData,
-      'floors': floors.map((Floor floor) => floor.toJson()).toList(),
+      'floors': floors.map((FloorModel floor) => floor.toJson()).toList(),
       'currentFloorIndex': currentFloorIndex,
       'zones': zones.map((Zone zone) => zone.toJson()).toList(),
-      'mixes': mixes.map((Mix mix) => mix.toJson()).toList(),
-      'hardwareComponents':
-          hardwareComponents.map((HardwareComponent c) {
-            if (c is Source) {
-              return c.toJson();
-            } else if (c is Speaker) {
-              return c.toJson();
-            } else {
-              return (c as GenericHardwareComponent).toJson();
-            }
-          }).toList(),
+      'mixes': mixes.map((SourceSet mix) => mix.toJson()).toList(),
+      'hardwareComponents': hardwareComponents.map((HardwareComponent c) {
+        if (c is Source) {
+          return c.toJson();
+        } else if (c is Speaker) {
+          return c.toJson();
+        } else {
+          return (c as GenericHardwareComponent).toJson();
+        }
+      }).toList(),
       'fusionDevices': fusionDevices.map((FusionDevice device) => device.toJson()).toList(),
       'suggestedFusionDevices': suggestedFusionDevices.map((FusionDevice device) => device.toJson()).toList(),
       'amplifiers': amplifiers.map((Amplifier device) => device.toJson()).toList(),
@@ -150,28 +145,27 @@ class ProjectEntity {
     };
   }
 
-  static ProjectEntity fromJson(Map<String, dynamic> json) {
-    return ProjectEntity(
+  static ProjectData fromJson(Map<String, dynamic> json) {
+    return ProjectData(
       id: json['id'] as String?,
       cloudId: json['cloudId'] as String?,
       name: json['name'] as String,
       projectName: json['projectName'] as String? ?? json['name'] as String,
       metaData: json['metaData'] as String,
-      floors: (json['floors'] as List<dynamic>).map((dynamic e) => Floor.fromJson(e as Map<String, dynamic>)).toList(),
+      floors: (json['floors'] as List<dynamic>).map((dynamic e) => FloorModel.fromJson(e as Map<String, dynamic>)).toList(),
       currentFloorIndex: json['currentFloorIndex'] as int? ?? 0,
       zones: (json['zones'] as List<dynamic>).map((dynamic e) => Zone.fromJson(e as Map<String, dynamic>)).toList(),
-      mixes: (json['mixes'] as List<dynamic>).map((dynamic e) => Mix.fromJson(e as Map<String, dynamic>)).toList(),
-      hardwareComponents:
-          (json['hardwareComponents'] as List<dynamic>).map<HardwareComponent>((dynamic e) {
-            final Map<String, dynamic> m = e as Map<String, dynamic>;
-            if (m.containsKey('componentType') && m['componentType'] == 'source') {
-              return Source.fromJson(m);
-            } else if (m.containsKey('componentType') && m['componentType'] == 'speaker') {
-              return Speaker.fromJson(m);
-            } else {
-              return GenericHardwareComponent.fromJson(m);
-            }
-          }).toList(),
+      mixes: (json['mixes'] as List<dynamic>).map((dynamic e) => SourceSet.fromJson(e as Map<String, dynamic>)).toList(),
+      hardwareComponents: (json['hardwareComponents'] as List<dynamic>).map<HardwareComponent>((dynamic e) {
+        final Map<String, dynamic> m = e as Map<String, dynamic>;
+        if (m.containsKey('componentType') && m['componentType'] == 'source') {
+          return Source.fromJson(m);
+        } else if (m.containsKey('componentType') && m['componentType'] == 'speaker') {
+          return Speaker.fromJson(m);
+        } else {
+          return GenericHardwareComponent.fromJson(m);
+        }
+      }).toList(),
       fusionDevices: (json['fusionDevices'] as List<dynamic>?)?.map((dynamic e) => FusionDevice.fromJson(e as Map<String, dynamic>)).toList(),
       suggestedFusionDevices:
           (json['suggestedFusionDevices'] as List<dynamic>?)?.map((dynamic e) => FusionDevice.fromJson(e as Map<String, dynamic>)).toList() ?? <FusionDevice>[],
