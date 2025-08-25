@@ -19,9 +19,11 @@ runs:
   steps:
     - name: Read package version
       id: get_version
-      uses: RCSandberg/dart-flutter-read-package-version-action@v2
-      with:
-        path: apps/frontend/flutter-apps/fusion-launcher/pubspec.yaml
+      shell: bash
+      run: |
+        VERSION=$(grep '^version:' apps/frontend/flutter-apps/fusion-launcher/pubspec.yaml | awk '{print $2}')
+        echo "Found version: $VERSION"
+        echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
     # - name: SonarQube Scan
     #   uses: SonarSource/sonarqube-scan-action@v5
