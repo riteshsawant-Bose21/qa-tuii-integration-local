@@ -1,7 +1,8 @@
-import '../../../../core/models/processing_block_entity.dart';
+import 'package:fusion_lib/models/fusion_models.dart';
+
+import '../entities/audio_widget_entity.dart';
 import '../entities/audio_widget_value.dart';
 import '../entities/panel_entity.dart';
-import '../entities/audio_widget_entity.dart';
 
 abstract class PanelRepository {
   Future<void> initializePanelServices();

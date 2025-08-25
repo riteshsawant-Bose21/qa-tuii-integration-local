@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/models/floor_entity.dart';
 import 'package:fusion_launcher/core/models/fusion_device.dart';
-import 'package:fusion_launcher/core/models/listening_area_entity.dart';
-import 'package:fusion_launcher/core/models/location_entity.dart';
-import 'package:fusion_launcher/core/models/processing_block_entity.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/core/services/project_manager.dart';
+import 'package:fusion_lib/models/fusion_models.dart';
 
 import '../../../../../core/constants.dart';
-import '../../../../../core/models/source_entity.dart';
 import '../common/location_configuration_widget.dart';
 import '../common/processing_block_view.dart';
 import 'aes_input_field.dart';

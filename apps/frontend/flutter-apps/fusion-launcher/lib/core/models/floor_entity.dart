@@ -1,7 +1,5 @@
+import 'package:fusion_lib/models/fusion_models.dart';
 import 'package:uuid/uuid.dart';
-
-import 'floor_plan_entity.dart';
-import 'listening_area_entity.dart';
 
 class Floor {
   final String id;

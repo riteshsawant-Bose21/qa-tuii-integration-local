@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/api_data/api_data.dart';
+import 'package:fusion_lib/fusion_algorithms/amplifier_matching/amplifier_matching.dart';
+import 'package:fusion_lib/fusion_algorithms/shared/speaker_database.dart';
 import 'package:fusion_lib/fusion_widgets/buttons/fusion_gradient_button.dart';
 import 'package:fusion_lib/fusion_widgets/form_fields/fusion_text_form_field.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_gradient_text.dart';
-import 'package:fusion_lib/fusion_algorithms/amplifier_matching/amplifier_matching.dart';
-import 'package:fusion_lib/api_data/speakers/speakers.dart';
-import '../../../../../core/services/circuit_data_service.dart';
 
+import '../../../../../core/services/circuit_data_service.dart';
 
 /// Input model for circuit configuration
 class CircuitInput {
@@ -26,7 +27,7 @@ class CircuitInput {
 
   Circuit? toCircuit() {
     if (selectedModel == null || selectedModel!.isEmpty) return null;
-    
+
     final int speakerCount = int.tryParse(speakerCountController.text) ?? 1;
     final double tapWatts = double.tryParse(tapWattsController.text) ?? 0.0;
     final double offsetDb = double.tryParse(offsetDbController.text) ?? 0.0;
@@ -108,7 +109,7 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
 
       // Perform amplifier matching
       final AmpMatchingResult result = await matchAmplifiers(validCircuits, SpeakerCatalog.database);
-      
+
       setState(() {
         matchingResult = result;
       });
@@ -153,7 +154,7 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
 
       // Convert and import circuiting data
       final List<Circuit> importedCircuits = _circuitDataService.convertToCircuits(SpeakerCatalog.database);
-      
+
       for (final Circuit circuit in importedCircuits) {
         final CircuitInput circuitInput = CircuitInput(circuit.circuitId);
         circuitInput.selectedModel = circuit.model;
@@ -161,7 +162,7 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
         circuitInput.tapWattsController.text = circuit.tapWatts.toString();
         circuitInput.offsetDbController.text = circuit.outputOffsetDb.toString();
         circuitInput.mode = circuit.mode;
-        
+
         circuits.add(circuitInput);
       }
 
@@ -209,15 +210,9 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(16.0),
                 decoration: BoxDecoration(
-                  color: _circuitDataService.hasCircuitingData 
-                    ? Colors.green.withValues(alpha: 0.1) 
-                    : Colors.grey.withValues(alpha: 0.1),
+                  color: _circuitDataService.hasCircuitingData ? Colors.green.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12.0),
-                  border: Border.all(
-                    color: _circuitDataService.hasCircuitingData 
-                      ? Colors.green.withValues(alpha: 0.3)
-                      : Colors.grey.withValues(alpha: 0.3)
-                  ),
+                  border: Border.all(color: _circuitDataService.hasCircuitingData ? Colors.green.withValues(alpha: 0.3) : Colors.grey.withValues(alpha: 0.3)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -238,9 +233,9 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      _circuitDataService.hasCircuitingData 
-                        ? _circuitDataService.circuitingSummary
-                        : 'No circuiting data available. Run the circuiting algorithm first to import circuit configurations.',
+                      _circuitDataService.hasCircuitingData
+                          ? _circuitDataService.circuitingSummary
+                          : 'No circuiting data available. Run the circuiting algorithm first to import circuit configurations.',
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.grey[600],
@@ -333,13 +328,14 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
 
                   // Calculate button
                   Center(
-                    child: isLoading
-                        ? const CircularProgressIndicator()
-                        : FusionGradientButton(
-                            label: 'Calculate Amplifier Matching',
-                            onTap: _calculateAmplifierMatching,
-                            gradient: const LinearGradient(colors: <Color>[Colors.orange, Colors.red]),
-                          ),
+                    child:
+                        isLoading
+                            ? const CircularProgressIndicator()
+                            : FusionGradientButton(
+                              label: 'Calculate Amplifier Matching',
+                              onTap: _calculateAmplifierMatching,
+                              gradient: const LinearGradient(colors: <Color>[Colors.orange, Colors.red]),
+                            ),
                   ),
                 ],
               ),
@@ -410,18 +406,19 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
             // Speaker model selection
             DropdownButtonFormField<String>(
               value: circuit.selectedModel,
-              items: availableSpeakerModels.map((String model) {
-                return DropdownMenuItem<String>(
-                  value: model,
-                  child: Text(model),
-                );
-              }).toList(),
+              items:
+                  availableSpeakerModels.map((String model) {
+                    return DropdownMenuItem<String>(
+                      value: model,
+                      child: Text(model),
+                    );
+                  }).toList(),
               onChanged: (String? value) {
                 setState(() {
                   circuit.selectedModel = value;
                   // Auto-populate tap watts based on speaker model
-                  if (value != null && SpeakerCatalog.database.containsKey(value)) {
-                    final Speaker spec = SpeakerCatalog.database[value]!;
+                  if (value != null && speakerDatabase.containsKey(value)) {
+                    final SpeakerModel spec = speakerDatabase[value]!;
                     if (spec.hiZTaps.isNotEmpty) {
                       circuit.tapWattsController.text = spec.hiZTaps[1].toString();
                     }
@@ -503,9 +500,7 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
             ),
 
             // Show available tap settings for selected speaker
-            if (circuit.selectedModel != null && 
-                SpeakerCatalog.database.containsKey(circuit.selectedModel) && 
-                circuit.mode == 'hi-z') ...<Widget>[
+            if (circuit.selectedModel != null && SpeakerCatalog.database.containsKey(circuit.selectedModel) && circuit.mode == 'hi-z') ...<Widget>[
               const SizedBox(height: 8),
               Text(
                 'Available Taps: ${SpeakerCatalog.database[circuit.selectedModel]!.hiZTaps.map((double t) => '${t}W').join(', ')}',
@@ -584,13 +579,15 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
                       ],
                     ),
                     const SizedBox(height: 8),
-                    ...result.errors.map((String error) => Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Text(
-                        '• $error',
-                        style: TextStyle(color: Colors.red[700]),
+                    ...result.errors.map(
+                      (String error) => Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Text(
+                          '• $error',
+                          style: TextStyle(color: Colors.red[700]),
+                        ),
                       ),
-                    )),
+                    ),
                   ],
                 ),
               ),
@@ -623,13 +620,15 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
                       ],
                     ),
                     const SizedBox(height: 8),
-                    ...result.warnings.map((String warning) => Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Text(
-                        '• $warning',
-                        style: TextStyle(color: Colors.orange[700]),
+                    ...result.warnings.map(
+                      (String warning) => Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Text(
+                          '• $warning',
+                          style: TextStyle(color: Colors.orange[700]),
+                        ),
                       ),
-                    )),
+                    ),
                   ],
                 ),
               ),
@@ -792,10 +791,10 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
               ),
             ),
             const SizedBox(height: 8),
-              const Text(
-                'Assigned Circuits:',
-                style: TextStyle(fontWeight: FontWeight.w500),
-              ),
+            const Text(
+              'Assigned Circuits:',
+              style: TextStyle(fontWeight: FontWeight.w500),
+            ),
             const SizedBox(height: 4),
             ...assignment.circuits.map((Circuit circuit) {
               return Padding(

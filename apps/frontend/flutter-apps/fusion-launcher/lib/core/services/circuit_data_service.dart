@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
-import 'package:fusion_lib/fusion_algorithms/fusion_algorithms.dart';
 import 'package:fusion_lib/fusion_algorithms/amplifier_matching/amp_matching_types.dart';
+import 'package:fusion_lib/fusion_algorithms/fusion_algorithms.dart';
 
 /// Service to share circuit data between CircuitingWidget and AmplifierMatchingWidget
 class CircuitDataService extends ChangeNotifier {
@@ -35,17 +35,17 @@ class CircuitDataService extends ChangeNotifier {
   }
 
   /// Convert CircuitAssignment to Circuit for amplifier matching
-  /// 
+  ///
   /// Note: Since CircuitAssignment doesn't contain speaker count directly,
   /// we'll need to derive it from the speaker database and circuit power
-  List<Circuit> convertToCircuits(Map<String, Speaker> speakerDatabase) {
+  List<Circuit> convertToCircuits(Map<String, SpeakerModel> speakerDatabase) {
     if (_circuitingResults == null) return <Circuit>[];
 
     final List<Circuit> circuits = <Circuit>[];
-    
+
     for (final CircuitAssignment assignment in _circuitingResults!) {
       // Get speaker specs from database
-      final Speaker? speaker = speakerDatabase[assignment.model];
+      final SpeakerModel? speaker = speakerDatabase[assignment.model];
       if (speaker == null) continue;
 
       // Calculate speaker count based on total power and tap watts
@@ -55,14 +55,16 @@ class CircuitDataService extends ChangeNotifier {
         speakerCount = speakerCount.clamp(1, 20); // Reasonable bounds
       }
 
-      circuits.add(Circuit(
-        circuitId: assignment.circuitId,
-        model: assignment.model,
-        mode: assignment.mode,
-        speakerCount: speakerCount,
-        tapWatts: assignment.tapWatts ?? 0.0,
-        outputOffsetDb: 0.0, // Default, can be adjusted by user
-      ));
+      circuits.add(
+        Circuit(
+          circuitId: assignment.circuitId,
+          model: assignment.model,
+          mode: assignment.mode,
+          speakerCount: speakerCount,
+          tapWatts: assignment.tapWatts ?? 0.0,
+          outputOffsetDb: 0.0, // Default, can be adjusted by user
+        ),
+      );
     }
 
     return circuits;
@@ -71,11 +73,11 @@ class CircuitDataService extends ChangeNotifier {
   /// Get a summary of the circuiting results for display
   String get circuitingSummary {
     if (!hasCircuitingData) return 'No circuiting data available';
-    
+
     final int totalCircuits = _circuitingResults!.length;
     final Set<String> uniqueAreas = _circuitingResults!.map((CircuitAssignment c) => c.area).toSet();
     final Set<String> uniqueModels = _circuitingResults!.map((CircuitAssignment c) => c.model).toSet();
-    
+
     return '$totalCircuits circuits across ${uniqueAreas.length} areas using ${uniqueModels.length} speaker models';
   }
 }

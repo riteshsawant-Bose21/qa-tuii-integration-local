@@ -1,4 +1,4 @@
-import 'package:fusion_launcher/core/models/processing_block_entity.dart';
+import 'package:fusion_lib/models/fusion_models.dart';
 
 import '../../../../core/service_locator.dart';
 import '../entities/panel_entity.dart';

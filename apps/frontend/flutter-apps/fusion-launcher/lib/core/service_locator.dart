@@ -20,6 +20,7 @@ import 'package:fusion_lib/fusion_auth/fusion_auth_impl.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_networking/network/fusion_network_client.dart';
 import 'package:fusion_lib/fusion_networking/network/rest_client/dio_client.dart';
+import 'package:fusion_lib/models/fusion_models.dart';
 import 'package:get_it/get_it.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -45,7 +46,6 @@ import '../features/dynamic_config/domain/usecases/send_widget_data_usecase.dart
 import '../features/dynamic_config/presentation/bloc/panel_bloc.dart';
 import 'constants/algorithms_data.dart';
 import 'models/floor_entity.dart';
-import 'models/floor_plan_entity.dart';
 import 'models/project_entity.dart';
 import 'models/user_profile_model.dart';
 

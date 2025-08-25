@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/models/fusion_models.dart';
 
 import '../../../../../core/models/mix_entity.dart';
-import '../../../../../core/models/source_entity.dart';
 import 'mix_widget.dart';
 
 class MixColumn extends StatefulWidget {

@@ -1,20 +1,12 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:fusion_launcher/core/models/location_entity.dart';
+import 'package:fusion_lib/models/fusion_models.dart';
 import 'package:fusion_lib/fusion_utils/shared_preference_handler.dart';
 
-import '../../../../core/models/algorithm/property_settings.dart';
 import '../../../../core/models/floor_entity.dart';
-import '../../../../core/models/floor_plan_entity.dart';
-import '../../../../core/models/hardware_component_entity.dart';
-import '../../../../core/models/listening_area_entity.dart';
 import '../../../../core/models/mix_entity.dart';
-import '../../../../core/models/processing_block_entity.dart';
 import '../../../../core/models/project_entity.dart';
 import '../../../../core/models/project_metadata_model.dart';
-import '../../../../core/models/source_entity.dart';
-import '../../../../core/models/speaker_entity.dart';
-import '../../../../core/models/zone_entity.dart';
 import '../../../../core/services/project_list_manager.dart';
 import '../../../dashboard/domain/usecases/delete_project_usecase.dart';
 import '../../domain/usecases/load_project_usecases.dart';

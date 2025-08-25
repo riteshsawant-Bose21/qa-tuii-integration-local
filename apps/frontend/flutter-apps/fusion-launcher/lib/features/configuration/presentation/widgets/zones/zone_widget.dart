@@ -1,14 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/core/models/location_entity.dart';
-import 'package:fusion_launcher/core/models/processing_block_entity.dart';
+import 'package:fusion_lib/models/fusion_models.dart';
 
 import '../../../../../core/constants.dart';
 import '../../../../../core/models/floor_entity.dart';
 import '../../../../../core/models/mix_entity.dart';
 import '../../../../../core/models/products_data.dart';
-import '../../../../../core/models/source_entity.dart';
-import '../../../../../core/models/speaker_entity.dart';
-import '../../../../../core/models/zone_entity.dart';
 import '../../../../../core/service_locator.dart';
 import '../../../../../core/services/project_manager.dart';
 import '../../../../dynamic_config/data/datasources/panel_datasource.dart';

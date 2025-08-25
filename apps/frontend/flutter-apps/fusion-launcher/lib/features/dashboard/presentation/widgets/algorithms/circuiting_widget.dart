@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_algorithms/fusion_algorithms.dart';
 import 'package:fusion_lib/fusion_widgets/buttons/fusion_gradient_button.dart';
 import 'package:fusion_lib/fusion_widgets/form_fields/fusion_text_form_field.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_gradient_text.dart';
@@ -55,7 +56,7 @@ class _CircuitingWidgetState extends State<CircuitingWidget> {
             fontWeight: FontWeight.bold,
           ),
           const SizedBox(height: 20),
-          
+
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16.0),
@@ -96,9 +97,9 @@ class _CircuitingWidgetState extends State<CircuitingWidget> {
               ],
             ),
           ),
-          
+
           const SizedBox(height: 20),
-          
+
           FusionTextFormField(
             title: 'Max Amplifier Power (W)',
             hintText: 'Enter maximum amplifier power',
@@ -106,20 +107,20 @@ class _CircuitingWidgetState extends State<CircuitingWidget> {
             keyboardType: TextInputType.number,
             isRequired: true,
           ),
-          
+
           const SizedBox(height: 20),
-          
+
           // Speaker Input Forms
           const Text(
             'Speaker Configuration',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
-          
+
           ...speakers.asMap().entries.map((MapEntry<int, SpeakerInputForCircuiting> entry) {
             final int index = entry.key;
             final SpeakerInputForCircuiting input = entry.value;
-            
+
             return Card(
               margin: const EdgeInsets.only(bottom: 16.0),
               child: Padding(
@@ -142,7 +143,7 @@ class _CircuitingWidgetState extends State<CircuitingWidget> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    
+
                     Row(
                       children: <Widget>[
                         Expanded(
@@ -158,13 +159,14 @@ class _CircuitingWidgetState extends State<CircuitingWidget> {
                                   border: OutlineInputBorder(),
                                   contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                 ),
-                                items: speakerDatabase.keys.map((String model) {
-                                  final Speaker speaker = speakerDatabase[model]!;
-                                  return DropdownMenuItem<String>(
-                                    value: model,
-                                    child: Text('$model (${speaker.mountingType}, ${speaker.maxSpl}dB)'),
-                                  );
-                                }).toList(),
+                                items:
+                                    speakerDatabase.keys.map((String model) {
+                                      final SpeakerModel speaker = speakerDatabase[model]!;
+                                      return DropdownMenuItem<String>(
+                                        value: model,
+                                        child: Text('$model (${speaker.mountingType}, ${speaker.maxSpl}dB)'),
+                                      );
+                                    }).toList(),
                                 onChanged: (String? newValue) {
                                   setState(() {
                                     input.selectedModel = newValue;
@@ -188,7 +190,7 @@ class _CircuitingWidgetState extends State<CircuitingWidget> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    
+
                     Row(
                       children: <Widget>[
                         Expanded(
@@ -232,9 +234,9 @@ class _CircuitingWidgetState extends State<CircuitingWidget> {
               ),
             );
           }),
-          
+
           const SizedBox(height: 16),
-          
+
           Row(
             children: <Widget>[
               Expanded(
@@ -259,9 +261,9 @@ class _CircuitingWidgetState extends State<CircuitingWidget> {
               ),
             ],
           ),
-          
+
           const SizedBox(height: 20),
-          
+
           if (circuitResult != null) _buildCircuitingResults(),
         ],
       ),
@@ -300,7 +302,7 @@ class _CircuitingWidgetState extends State<CircuitingWidget> {
             ],
           ),
           const SizedBox(height: 16),
-          
+
           for (int i = 0; i < circuitResult!.length; i++)
             Card(
               margin: const EdgeInsets.only(bottom: 12.0),
@@ -344,15 +346,13 @@ class _CircuitingWidgetState extends State<CircuitingWidget> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
                           decoration: BoxDecoration(
-                            color: circuitResult![i].mode == 'lo-z' 
-                              ? Colors.blue.withValues(alpha: 0.2) 
-                              : Colors.orange.withValues(alpha: 0.2),
+                            color: circuitResult![i].mode == 'lo-z' ? Colors.blue.withValues(alpha: 0.2) : Colors.orange.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(16.0),
                           ),
                           child: Text(
                             circuitResult![i].mode.toUpperCase(),
                             style: TextStyle(
-                              fontSize: 12, 
+                              fontSize: 12,
                               fontWeight: FontWeight.bold,
                               color: circuitResult![i].mode == 'lo-z' ? Colors.blue : Colors.orange,
                             ),
@@ -360,9 +360,9 @@ class _CircuitingWidgetState extends State<CircuitingWidget> {
                         ),
                       ],
                     ),
-                    
+
                     const SizedBox(height: 16),
-                    
+
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(12.0),
@@ -420,30 +420,26 @@ class _CircuitingWidgetState extends State<CircuitingWidget> {
                         ],
                       ),
                     ),
-                    
+
                     const SizedBox(height: 12),
-                    
+
                     // Circuit mode explanation
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(8.0),
                       decoration: BoxDecoration(
-                        color: circuitResult![i].mode == 'lo-z' 
-                          ? Colors.blue.withValues(alpha: 0.1) 
-                          : Colors.orange.withValues(alpha: 0.1),
+                        color: circuitResult![i].mode == 'lo-z' ? Colors.blue.withValues(alpha: 0.1) : Colors.orange.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(6.0),
                         border: Border.all(
-                          color: circuitResult![i].mode == 'lo-z' 
-                            ? Colors.blue.withValues(alpha: 0.3) 
-                            : Colors.orange.withValues(alpha: 0.3),
+                          color: circuitResult![i].mode == 'lo-z' ? Colors.blue.withValues(alpha: 0.3) : Colors.orange.withValues(alpha: 0.3),
                         ),
                       ),
                       child: Text(
                         circuitResult![i].mode == 'lo-z'
-                          ? '💡 Lo-Z circuit: Impedance ≥ 4Ω, suitable for direct amplifier connection'
-                          : '💡 Hi-Z circuit: Impedance < 4Ω, using distributed voltage line',
+                            ? '💡 Lo-Z circuit: Impedance ≥ 4Ω, suitable for direct amplifier connection'
+                            : '💡 Hi-Z circuit: Impedance < 4Ω, using distributed voltage line',
                         style: TextStyle(
-                          fontSize: 12, 
+                          fontSize: 12,
                           fontStyle: FontStyle.italic,
                           color: circuitResult![i].mode == 'lo-z' ? Colors.blue[700] : Colors.orange[700],
                         ),
@@ -482,30 +478,30 @@ class _CircuitingWidgetState extends State<CircuitingWidget> {
 
       final double maxPower = double.parse(maxAmpPowerController.text);
       final List<InputSpeaker> inputSpeakers = <InputSpeaker>[];
-      
+
       for (final SpeakerInputForCircuiting input in speakers) {
-        if (input.selectedModel == null ||
-            input.quantityController.text.isEmpty ||
-            input.areaController.text.isEmpty) {
+        if (input.selectedModel == null || input.quantityController.text.isEmpty || input.areaController.text.isEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Please fill in all speaker fields')),
           );
           return;
         }
-        
-        inputSpeakers.add(InputSpeaker(
-          model: input.selectedModel!,
-          quantity: int.parse(input.quantityController.text),
-          area: input.areaController.text,
-          tapSetting: input.tapSetting,
-        ));
+
+        inputSpeakers.add(
+          InputSpeaker(
+            model: input.selectedModel!,
+            quantity: int.parse(input.quantityController.text),
+            area: input.areaController.text,
+            tapSetting: input.tapSetting,
+          ),
+        );
       }
-      
+
       final List<CircuitAssignment> result = automaticCircuiting(inputSpeakers, maxPower);
       setState(() {
         circuitResult = result;
       });
-      
+
       // Share results with other widgets through the service
       if (result.isNotEmpty) {
         _circuitDataService.updateCircuitingResults(result, maxPower);

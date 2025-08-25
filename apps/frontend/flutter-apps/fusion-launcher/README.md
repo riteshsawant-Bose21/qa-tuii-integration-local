@@ -1,4 +1,3 @@
-# Fusion Launcher Prototype
+# Fusion Launcher
 
-Prototype for Fusion Launcher, built with Flutter.
-Uses the Bose Mechanical Acoustical Calculation Engine for SPL calculations.
+Built with Flutter. Uses the Bose Mechanical Acoustical Calculation Engine for SPL calculations.

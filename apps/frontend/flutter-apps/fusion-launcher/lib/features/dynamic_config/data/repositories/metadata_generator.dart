@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/core/models/processing_block_entity.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
+import 'package:fusion_lib/models/fusion_models.dart';
 
 import '../../../../core/models/algorithm/algorithm_metadata.dart';
-import '../../../../core/models/algorithm/property_settings.dart';
 import '../../domain/entities/audio_widget_entity.dart';
 import '../../domain/entities/audio_widget_value.dart';
 import '../../domain/entities/panel_entity.dart';

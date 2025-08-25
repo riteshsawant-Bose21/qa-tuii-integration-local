@@ -1,6 +1,6 @@
 import 'dart:math';
 
-import 'processing_block_entity.dart';
+import 'package:fusion_lib/models/fusion_models.dart';
 
 class Mix {
   final String id;
@@ -24,7 +24,6 @@ class Mix {
   static String getShortId() {
     return '${DateTime.now().millisecondsSinceEpoch}-${Random().nextInt(1000)}';
   }
-
 
   Mix copyWith({
     String? id,

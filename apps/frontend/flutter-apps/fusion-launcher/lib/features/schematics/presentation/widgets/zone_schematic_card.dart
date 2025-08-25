@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/core/models/hardware_component_entity.dart';
 import 'package:fusion_launcher/core/models/products_data.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/core/services/project_manager.dart';
 import 'package:fusion_launcher/core/theme/app_theme.dart';
+import 'package:fusion_lib/models/fusion_models.dart';
 
-import '../../../../core/models/generic_hardware_component_entity.dart';
-import '../../../../core/models/speaker_entity.dart';
-import '../../../../core/models/zone_entity.dart';
 import '../../../../core/utils/fusion_utils.dart';
 import 'hardware_list_card.dart';
 

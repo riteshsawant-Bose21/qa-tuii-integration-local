@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/core/models/source_entity.dart';
+import 'package:fusion_lib/models/fusion_models.dart';
 
-import '../../../../core/models/generic_hardware_component_entity.dart';
-import '../../../../core/models/location_entity.dart';
 import '../../../../core/models/products_data.dart';
 
 class ProductsSidebar extends StatefulWidget {
