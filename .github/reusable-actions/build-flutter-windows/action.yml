@@ -1,0 +1,53 @@
+name: "Build Flutter Windows App"
+description: "Build Flutter Windows App"
+inputs:
+  flutter_apps_sonar_token:
+    description: 'SonarQube server token'
+    required: true
+  nexus_password:
+    description: 'Nexus repository password'
+    required: true
+  keychain_password:
+    description: 'Keychain password for iOS build'
+    required: true
+  nexus_url:
+    description: 'Nexus repository URL'
+    required: true
+        
+runs:
+  using: "composite"
+  steps:
+    - name: Read package version
+      id: get_version
+      uses: RCSandberg/dart-flutter-read-package-version-action@v2
+      with:
+        path: apps/frontend/flutter-apps/fusion-launcher/pubspec.yaml
+
+    # - name: SonarQube Scan
+    #   uses: SonarSource/sonarqube-scan-action@v5
+    #   env:
+    #     SONAR_TOKEN: ${{ inputs.flutter_apps_sonar_token }}
+    #   with:
+    #     projectBaseDir: 'apps/frontend/flutter-apps'
+    #     args: >
+    #       -Dsonar.c.file.suffixes=-
+    #       -Dsonar.cpp.file.suffixes=-
+    #       -Dsonar.objc.file.suffixes=-
+    #       -Dsonar.exclusions=build/**
+    #       -Dsonar.inclusions=lib/**,android/**,ios/**
+
+    - name: Flutter Windows
+      shell: pwsh
+      working-directory: apps/frontend/flutter-apps/fusion-launcher
+      run: |
+        flutter pub get
+        moon run flutter-apps:build-win
+        $version = "${{ steps.get_version.outputs.version }}-$(git rev-parse --short HEAD)"
+        Write-Output "VERSION: $version"
+
+        $buildPath = "./build/windows/x64/runner/Release/fusion_design_tool_prototype.exe"s
+        $nexusUrl = "${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/$version/flutter-windows/Fusion-Launcher-$version.exe"
+        $username = "github-actions-uploader"
+        $password = "${{ inputs.nexus_password }}"
+
+        curl -k --ssl-no-revoke -f -u "$username`:$password" -T $apkPath $nexusUrl
