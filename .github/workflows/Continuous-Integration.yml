@@ -86,9 +86,6 @@ jobs:
       - name: Clone project
         uses: actions/checkout@v4
 
-      # - name: Setup Monorepo Toolchain
-      #   uses: ./.github/reusable-actions/setup-toolchain
-
       - name: Build Apps
         uses: ./.github/reusable-actions/build-flutter-windows
         with:
@@ -108,9 +105,6 @@ jobs:
     steps:
       - name: Clone project
         uses: actions/checkout@v4
-
-      - name: Setup Monorepo Toolchain
-        uses: ./.github/reusable-actions/setup-toolchain
 
       - name: Build Apps
         uses: ./.github/reusable-actions/build-flutter-web
