@@ -3,6 +3,7 @@ import 'package:fusion_lib/fusion_widgets/buttons/fusion_gradient_button.dart';
 import 'package:fusion_lib/fusion_widgets/form_fields/fusion_text_form_field.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_gradient_text.dart';
 import 'package:fusion_lib/fusion_algorithms/fusion_algorithms.dart';
+import '../../../../../core/services/circuit_data_service.dart';
 
 class SpeakerInputForCircuiting {
   String? selectedModel;
@@ -29,6 +30,7 @@ class _CircuitingWidgetState extends State<CircuitingWidget> {
   final List<SpeakerInputForCircuiting> speakers = <SpeakerInputForCircuiting>[
     SpeakerInputForCircuiting(),
   ];
+  final CircuitDataService _circuitDataService = CircuitDataService();
 
   @override
   void dispose() {
@@ -503,6 +505,18 @@ class _CircuitingWidgetState extends State<CircuitingWidget> {
       setState(() {
         circuitResult = result;
       });
+      
+      // Share results with other widgets through the service
+      if (result.isNotEmpty) {
+        _circuitDataService.updateCircuitingResults(result, maxPower);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Circuit results shared! Available for amplifier matching.'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: ${e.toString()}')),

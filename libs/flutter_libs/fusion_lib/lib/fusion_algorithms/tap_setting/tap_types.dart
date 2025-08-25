@@ -1,5 +1,4 @@
 /// Tap setting calculation types and data structures
-/// Ported from Go fusion-algo tapsetting package
 
 /// Result of tap calculation for a single speaker
 class TapResult {

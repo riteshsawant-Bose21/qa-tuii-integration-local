@@ -1,5 +1,4 @@
 /// Tap Setting Calculation Algorithm
-/// Ported from Go fusion-algo tapsetting package
 /// 
 /// This library calculates recommended tap settings for Hi-Z speakers
 /// to achieve balanced sound levels across multiple speaker locations.

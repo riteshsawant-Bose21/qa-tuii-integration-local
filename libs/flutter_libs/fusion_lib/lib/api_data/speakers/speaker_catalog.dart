@@ -6,14 +6,8 @@
 
 import 'speaker_types.dart';
 
-/// Comprehensive speaker database with all specifications
-/// 
-/// In production, this data would be fetched from an API endpoint
-/// such as GET /api/v1/speakers or similar product catalog service
+
 class SpeakerCatalog {
-  /// All available speakers in the catalog
-  /// 
-  /// TODO: Replace with API call to product catalog service
   static const Map<String, Speaker> database = {
     'DM2C-LP': Speaker(
       model: 'DM2C-LP',
@@ -59,7 +53,7 @@ class SpeakerCatalog {
     ),
     'DM3SE': Speaker(
       model: 'DM3SE',
-      maxSpl: 101,
+      maxSpl: 99,
       mountingType: 'surface',
       outdoorRated: true,
       isSubwoofer: false,
@@ -80,8 +74,8 @@ class SpeakerCatalog {
       nominalOhms: 8,
       hasHiZ: true,
       hiZTaps: [50],
-      taps70V: [6, 12, 25, 50],
-      taps100V: [12, 25, 50],
+      taps70V: [3, 6, 12, 25, 50],
+      taps100V: [6, 12, 25, 50],
       longTermRms: 60,
       ppk: 120,
     ),
@@ -94,38 +88,38 @@ class SpeakerCatalog {
       nominalOhms: 8,
       hasHiZ: true,
       hiZTaps: [50],
-      taps70V: [6, 12, 25, 50],
-      taps100V: [12, 25, 50],
+      taps70V: [3, 6, 12, 25, 50],
+      taps100V: [6, 12, 25, 50],
       longTermRms: 60,
       ppk: 120,
     ),
     'DM5SE': Speaker(
       model: 'DM5SE',
-      maxSpl: 107,
+      maxSpl: 105,
       mountingType: 'surface',
       outdoorRated: true,
       isSubwoofer: false,
       nominalOhms: 8,
       hasHiZ: true,
       hiZTaps: [50],
-      taps70V: [6, 12, 25, 50],
-      taps100V: [12, 25, 50],
+      taps70V: [3, 6, 12, 25, 50],
+      taps100V: [6, 12, 25, 50],
       longTermRms: 60,
       ppk: 120,
     ),
     'DM6C': Speaker(
       model: 'DM6C',
-      maxSpl: 109,
+      maxSpl: 110,
       mountingType: 'ceiling',
       outdoorRated: false,
       isSubwoofer: false,
       nominalOhms: 8,
       hasHiZ: true,
-      hiZTaps: [100],
-      taps70V: [12, 25, 50, 100],
-      taps100V: [25, 50, 100],
-      longTermRms: 120,
-      ppk: 240,
+      hiZTaps: [80],
+      taps70V: [2.5, 5, 10, 20, 40, 80],
+      taps100V: [5, 10, 20, 40, 80],
+      longTermRms: 125,
+      ppk: 250,
     ),
     'DM6PE': Speaker(
       model: 'DM6PE',
@@ -135,53 +129,53 @@ class SpeakerCatalog {
       isSubwoofer: false,
       nominalOhms: 8,
       hasHiZ: true,
-      hiZTaps: [100],
-      taps70V: [12, 25, 50, 100],
-      taps100V: [25, 50, 100],
-      longTermRms: 120,
-      ppk: 240,
+      hiZTaps: [80],
+      taps70V: [2.5, 5, 10, 20, 40, 80],
+      taps100V: [5, 10, 20, 40, 80],
+      longTermRms: 125,
+      ppk: 250,
     ),
     'DM6SE': Speaker(
       model: 'DM6SE',
-      maxSpl: 111,
+      maxSpl: 110,
       mountingType: 'surface',
       outdoorRated: true,
       isSubwoofer: false,
       nominalOhms: 8,
       hasHiZ: true,
-      hiZTaps: [100],
-      taps70V: [12, 25, 50, 100],
-      taps100V: [25, 50, 100],
-      longTermRms: 120,
-      ppk: 240,
+      hiZTaps: [80],
+      taps70V: [2.5, 5, 10, 20, 40, 80],
+      taps100V: [5, 10, 20, 40, 80],
+      longTermRms: 125,
+      ppk: 250,
     ),
     'DM8C': Speaker(
       model: 'DM8C',
-      maxSpl: 113,
+      maxSpl: 111,
       mountingType: 'ceiling',
       outdoorRated: false,
       isSubwoofer: false,
       nominalOhms: 8,
       hasHiZ: true,
-      hiZTaps: [150],
-      taps70V: [18, 37, 75, 150],
-      taps100V: [37, 75, 150],
-      longTermRms: 200,
-      ppk: 400,
+      hiZTaps: [80],
+      taps70V: [2.5, 5, 10, 20, 40, 80],
+      taps100V: [5, 10, 20, 40, 80],
+      longTermRms: 150,
+      ppk: 300,
     ),
     'DM8SE': Speaker(
       model: 'DM8SE',
-      maxSpl: 115,
+      maxSpl: 113,
       mountingType: 'surface',
       outdoorRated: true,
       isSubwoofer: false,
       nominalOhms: 8,
       hasHiZ: true,
-      hiZTaps: [150],
-      taps70V: [18, 37, 75, 150],
-      taps100V: [37, 75, 150],
-      longTermRms: 200,
-      ppk: 400,
+      hiZTaps: [80],
+      taps70V: [2.5, 5, 10, 20, 40, 80],
+      taps100V: [5, 10, 20, 40, 80],
+      longTermRms: 150,
+      ppk: 300,
     ),
   };
 
@@ -228,34 +222,5 @@ class SpeakerCatalog {
   /// Get speaker count in catalog
   static int get speakerCount => database.length;
 
-  /// Future API integration method
-  /// 
-  /// This method would replace the static database above
-  /// Example: 
-  /// ```dart
-  /// final speakers = await SpeakerCatalog.fetchFromApi();
-  /// ```
-  static Future<Map<String, Speaker>> fetchFromApi({
-    String? apiEndpoint,
-    Map<String, String>? headers,
-  }) async {
-    // TODO: Implement actual API call
-    // Example implementation:
-    // 
-    // final response = await http.get(
-    //   Uri.parse(apiEndpoint ?? 'https://api.bose.com/v1/speakers'),
-    //   headers: headers ?? {'Content-Type': 'application/json'},
-    // );
-    // 
-    // if (response.statusCode == 200) {
-    //   final data = jsonDecode(response.body) as Map<String, dynamic>;
-    //   return data.map((key, value) => MapEntry(key, Speaker.fromJson(value)));
-    // }
-    // 
-    // throw Exception('Failed to fetch speakers: ${response.statusCode}');
-    
-    // For now, return the static database
-    await Future.delayed(const Duration(milliseconds: 100)); // Simulate API delay
-    return database;
-  }
+
 }

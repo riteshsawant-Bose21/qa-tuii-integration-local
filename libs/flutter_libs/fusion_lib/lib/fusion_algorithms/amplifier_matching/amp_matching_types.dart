@@ -3,7 +3,8 @@
 /// This file defines all the data types and structures needed for the
 /// advanced amplifier matching algorithm with power sharing optimization.
 
-import '../../api_data/amplifiers/amplifiers.dart';
+import '../../api_data/amplifiers/amplifier_types.dart' show AmpModel;
+
 
 /// Circuit information with power requirements and configuration
 class Circuit {
@@ -85,6 +86,8 @@ class AmpMatchingResult {
   final int totalChannelsUsed;
   final int totalChannelsAvailable;
   final String optimizationNotes;
+  final List<String> warnings;
+  final List<String> errors;
 
   const AmpMatchingResult({
     required this.assignments,
@@ -93,11 +96,16 @@ class AmpMatchingResult {
     required this.totalChannelsUsed,
     required this.totalChannelsAvailable,
     this.optimizationNotes = '',
+    this.warnings = const [],
+    this.errors = const [],
   });
 
   double get powerEfficiency => totalPowerRequirement / totalSystemCapacity;
   double get channelEfficiency => totalChannelsUsed / totalChannelsAvailable;
   int get amplifierCount => assignments.length;
+  
+  bool get hasErrors => errors.isNotEmpty;
+  bool get hasWarnings => warnings.isNotEmpty;
 
   Map<String, dynamic> toJson() => {
     'assignments': assignments.map((a) => a.toJson()).toList(),
@@ -109,6 +117,8 @@ class AmpMatchingResult {
     'channel_efficiency': channelEfficiency,
     'amplifier_count': amplifierCount,
     'optimization_notes': optimizationNotes,
+    'warnings': warnings,
+    'errors': errors,
   };
 
   factory AmpMatchingResult.fromJson(Map<String, dynamic> json) => AmpMatchingResult(
@@ -120,6 +130,8 @@ class AmpMatchingResult {
     totalChannelsUsed: json['total_channels_used'] ?? 0,
     totalChannelsAvailable: json['total_channels_available'] ?? 0,
     optimizationNotes: json['optimization_notes'] ?? '',
+    warnings: (json['warnings'] as List<dynamic>? ?? []).cast<String>(),
+    errors: (json['errors'] as List<dynamic>? ?? []).cast<String>(),
   );
 }
 

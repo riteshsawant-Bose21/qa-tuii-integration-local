@@ -1,586 +1,897 @@
-/// Amplifier Matching Algorithm - Dart Implementation
-/// 
-/// This is a complete port of the 12-step amplifier matching algorithm
-/// from the Go implementation, including all power sharing optimization
-/// features and smart channel allocation strategies.
-
 import 'dart:math' as math;
 import '../../api_data/speakers/speakers.dart';
-import '../../api_data/amplifiers/amplifiers.dart';
+import '../../api_data/amplifiers/amplifier_catalog.dart';
 import 'amp_matching_types.dart';
+import '../../api_data/amplifiers/amplifier_types.dart' hide Circuit;
+import 'amplifier_matching_logger.dart';
+import 'amplifier_matching_error_handler.dart';
 
-/// Exception thrown when amplifier matching fails
-class AmpMatchingException implements Exception {
-  final String message;
-  const AmpMatchingException(this.message);
-  
-  @override
-  String toString() => 'AmpMatchingException: $message';
+/// Internal circuit calculation with computed power and errors
+class _CircuitCalc {
+  final Circuit base;
+  double ppkTotal = 0.0;
+  double offsetDb = 0.0;
+  final List<String> errors = [];
+
+  _CircuitCalc(this.base);
 }
 
-/// Main Amplifier Matching Algorithm Implementation
+/// Internal assignment structure for optimization
+class _InternalAssign {
+  AmpModel amp;
+  List<_CircuitCalc> loads;
+
+  _InternalAssign({required this.amp, required this.loads});
+}
+
+/// Final assignment result
+class Assignment {
+  final AmpModel amp;
+  final List<Circuit> loads;
+
+  const Assignment({required this.amp, required this.loads});
+
+  Map<String, dynamic> toJson() => {
+    'amp': amp.toJson(),
+    'loads': loads.map((l) => l.toJson()).toList(),
+  };
+}
+
+
+/// Enhanced Amplifier Matching Algorithm with Comprehensive Logging and Error Handling
+/// 
+/// This implementation follows the 12-step algorithm specification:
+/// 1. Determine Circuit Types and Calculate Total Power
+/// 2. Apply Output Offsets
+/// 3. Sort Circuits by Power Requirements
+/// 4. Choose Amplifier Using Tier Rule
+/// 5. Apply Channel Allocation Strategy
+/// 6. Run Simplified Power Sharing Calculator
+/// 7. Identify Channels with Positive Net Power Sharing
+/// 8. Optimize Circuit Allocation
+/// 9. Update Power Sharing Information
+/// 10. Remove Empty Amplifier Assignments
+/// 11. Final Tier Rule Validation
+/// 12. SKU Reduction
+
 class AmplifierMatcher {
-  /// Matches circuits to amplifiers using the 12-step algorithm with power sharing optimization
+  static int _optimizationIterations = 0;
+  static int _circuitMovesPerformed = 0;
+
+  /// Main entry point: matches amplifiers to circuits with comprehensive logging
   /// 
-  /// [circuits] - List of audio circuits to be matched
-  /// [speakerDatabase] - Database of speaker specifications
+  /// [input] - List of audio circuits to be matched
+  /// [speakers] - Database of speaker specifications  
+  /// [amps] - List of available amplifier models
   /// 
-  /// Returns [AmpMatchingResult] with optimized amplifier assignments
+  /// Returns [List<Assignment>] with optimized amplifier assignments
+  static List<Assignment> matchAmps(
+    List<Circuit> input,
+    Map<String, Speaker> speakers,
+    List<AmpModel> amps,
+  ) {
+    final stopwatch = Stopwatch()..start();
+    _optimizationIterations = 0;
+    _circuitMovesPerformed = 0;
+    
+    try {
+      // STEP 0: Comprehensive Input Validation
+      AmpMatchingLogger.logInitialization(
+        circuitCount: input.length,
+        speakerModels: speakers.length,
+        amplifierModels: amps.length,
+      );
+      
+      _validateInputs(input, speakers, amps);
+      
+      // STEP 1: Build internal circuit calculations
+      final calcs = <_CircuitCalc>[];
+      for (final circuit in input) {
+        final cc = _CircuitCalc(circuit);
+        cc.offsetDb = circuit.outputOffsetDb;
+        calcs.add(cc);
+      }
+
+      // STEP 1 & 2: Compute circuit power and apply offsets
+      _computeAllCircuitPowers(calcs, speakers);
+
+      // STEP 3: Sort circuits by power requirements (descending)
+      calcs.sort((a, b) => b.ppkTotal.compareTo(a.ppkTotal));
+      _logSortedCircuits(calcs);
+
+      // STEP 4 & 5: Initial assignment using tier rule + channel allocation
+      final initial = _initialAssignWithLogging(calcs);
+
+      // STEP 6-9: Power-sharing optimization
+      final optimized = _powerShareOptimizeWithLogging(initial);
+
+      // STEP 10: Remove empty assignments
+      final cleaned = _removeEmptyAssignments(optimized);
+
+      // STEP 11 & 12: Down-tier pass and final validation
+      final finalAssigns = _downTierPassWithLogging(cleaned);
+
+      stopwatch.stop();
+      
+      // Log performance metrics
+      AmpMatchingLogger.logPerformanceMetrics(
+        executionTime: stopwatch.elapsed,
+        iterationsPerformed: _optimizationIterations,
+        movesPerformed: _circuitMovesPerformed,
+      );
+
+      // Convert to outward Assignment type (with original circuits)
+      return finalAssigns.map((a) => Assignment(
+        amp: a.amp,
+        loads: a.loads.map((l) => l.base).toList(),
+      )).toList();
+      
+    } on Exception catch (e) {
+      AmpMatchingLogger.logError('ALGORITHM_EXECUTION', 'Algorithm failed', e);
+      final wrappedException = AmpMatchingErrorHandler.wrapException(
+        e, 
+        'ALGORITHM_EXECUTION',
+        {
+          'input_circuits': input.length,
+          'execution_time_ms': stopwatch.elapsedMilliseconds,
+        },
+      );
+      throw wrappedException;
+    }
+  }
+  
+  /// Comprehensive input validation with detailed error reporting
+  static void _validateInputs(List<Circuit> circuits, Map<String, Speaker> speakers, List<AmpModel> amps) {
+    // Validate circuits
+    final circuitValidation = AmpMatchingErrorHandler.validateCircuits(circuits);
+    if (circuitValidation.hasErrors) {
+      throw InvalidCircuitException('Circuit validation failed: ${circuitValidation.errors.join('; ')}');
+    }
+    
+    // Validate speaker database
+    final speakerValidation = AmpMatchingErrorHandler.validateSpeakerDatabase(speakers, circuits);
+    if (speakerValidation.hasErrors) {
+      throw InvalidCircuitException('Speaker database validation failed: ${speakerValidation.errors.join('; ')}');
+    }
+    
+    // Validate amplifier catalog
+    final ampValidation = AmpMatchingErrorHandler.validateAmplifierCatalog(amps);
+    if (ampValidation.hasErrors) {
+      throw CatalogException('Amplifier catalog validation failed: ${ampValidation.errors.join('; ')}');
+    }
+  }
+
+  /// STEP 1 & 2: Compute circuit power with comprehensive logging and error handling
+  static void _computeAllCircuitPowers(List<_CircuitCalc> calcs, Map<String, Speaker> speakerDatabase) {
+    for (final c in calcs) {
+      try {
+        _computeCircuitPpkWithLogging(c, speakerDatabase);
+      } on Exception catch (e) {
+        AmpMatchingLogger.logError(
+          'CIRCUIT_POWER_CALCULATION', 
+          'Failed to calculate power for circuit ${c.base.circuitId}',
+          e,
+        );
+        rethrow;
+      }
+    }
+  }
+
+  /// Enhanced circuit power calculation with detailed logging
+  static void _computeCircuitPpkWithLogging(_CircuitCalc c, Map<String, Speaker> speakerDatabase) {
+    final circuit = c.base;
+    
+    // Validate circuit has model
+    if (circuit.model.isEmpty) {
+      throw InvalidCircuitException(
+        'Circuit ${circuit.circuitId} missing speaker model',
+        context: {'circuit_id': circuit.circuitId},
+      );
+    }
+    
+    // Lookup speaker in database
+    final spec = speakerDatabase[circuit.model];
+    if (spec == null) {
+      throw InvalidCircuitException(
+        'Speaker model "${circuit.model}" not found in database',
+        context: {'circuit_id': circuit.circuitId, 'model': circuit.model},
+      );
+    }
+    
+    // Validate speaker count
+    if (circuit.speakerCount <= 0) {
+      throw InvalidCircuitException(
+        'Invalid speaker count ${circuit.speakerCount} for circuit ${circuit.circuitId}',
+        context: {'circuit_id': circuit.circuitId, 'speaker_count': circuit.speakerCount},
+      );
+    }
+
+    // Calculate power based on mode
+    final mode = circuit.mode.toLowerCase().replaceAll('_', '-');
+    double powerRms = 0.0;
+    double impedanceTotal = 0.0;
+    bool impedanceValid = true;
+    String circuitType = '';
+    
+    switch (mode) {
+      case 'hi-z':
+      case 'hiz':
+      case 'high-z':
+      case 'highz':
+        circuitType = 'Hi-Z';
+        final tap = _determineHiZTap(circuit, spec);
+        powerRms = circuit.speakerCount * tap;
+        c.ppkTotal = powerRms * 2.0; // Convert RMS to peak
+        impedanceTotal = double.infinity; // Hi-Z doesn't have impedance issues
+        
+        AmpMatchingLogger.logCircuitAnalysis(
+          circuit,
+          circuitType: circuitType,
+          powerRms: powerRms,
+          powerPeak: c.ppkTotal,
+          impedanceTotal: impedanceTotal,
+          impedanceValid: impedanceValid,
+          notes: 'Hi-Z calculation: ${circuit.speakerCount} speakers × ${tap}W tap × 2 (RMS to peak) = ${c.ppkTotal.toStringAsFixed(1)}W',
+        );
+        break;
+        
+      case 'lo-z':
+      case 'loz':
+      case 'low-z':
+      case 'lowz':
+        circuitType = 'Lo-Z';
+        c.ppkTotal = circuit.speakerCount * spec.ppk;
+        powerRms = c.ppkTotal / 2.0; // Peak to RMS estimate
+        
+        // Impedance validation for parallel speakers
+        impedanceTotal = _calculateParallelImpedance(spec.nominalOhms, circuit.speakerCount);
+        impedanceValid = impedanceTotal >= 4.0;
+        
+        if (!impedanceValid) {
+          try {
+            AmpMatchingErrorHandler.validateImpedance(circuit, impedanceTotal, spec);
+          } on ImpedanceMismatchException catch (e) {
+            c.errors.add(e.message);
+            AmpMatchingLogger.logError('IMPEDANCE_VALIDATION', e.message);
+          }
+        }
+        
+        AmpMatchingLogger.logCircuitAnalysis(
+          circuit,
+          circuitType: circuitType,
+          powerRms: powerRms,
+          powerPeak: c.ppkTotal,
+          impedanceTotal: impedanceTotal,
+          impedanceValid: impedanceValid,
+          notes: 'Lo-Z calculation: ${circuit.speakerCount} speakers × ${spec.ppk}W peak = ${c.ppkTotal.toStringAsFixed(1)}W, Parallel impedance = ${impedanceTotal.toStringAsFixed(2)}Ω',
+        );
+        break;
+        
+      default:
+        throw InvalidCircuitException(
+          'Unknown circuit mode "${circuit.mode}" for circuit ${circuit.circuitId}',
+          context: {'circuit_id': circuit.circuitId, 'mode': circuit.mode},
+        );
+    }
+
+    // STEP 2: Apply output offset if present
+    if (circuit.outputOffsetDb > 0) {
+      final originalPower = c.ppkTotal;
+      final reductionFactor = math.pow(10.0, -circuit.outputOffsetDb / 10.0).toDouble();
+      c.ppkTotal *= reductionFactor;
+      c.offsetDb = circuit.outputOffsetDb;
+      
+      AmpMatchingLogger.logOffsetApplication(
+        circuit.circuitId,
+        originalPower: originalPower,
+        offsetDb: circuit.outputOffsetDb,
+        reducedPower: c.ppkTotal,
+        reductionFactor: reductionFactor,
+      );
+    }
+    
+    // Final validation of calculated power
+    AmpMatchingErrorHandler.validateCircuitPower(circuit, c.ppkTotal, spec);
+  }
+  
+  /// Determine appropriate hi-z tap for circuit
+  static double _determineHiZTap(Circuit circuit, Speaker spec) {
+    if (circuit.tapWatts > 0) {
+      // Use specified tap watts if provided
+      if (spec.hiZTaps.isNotEmpty && !spec.hiZTaps.contains(circuit.tapWatts)) {
+        throw InvalidCircuitException(
+          'Specified tap ${circuit.tapWatts}W not available for speaker ${circuit.model}',
+          context: {
+            'circuit_id': circuit.circuitId,
+            'requested_tap': circuit.tapWatts,
+            'available_taps': spec.hiZTaps,
+          },
+        );
+      }
+      return circuit.tapWatts;
+    }
+    
+    // Use first available tap if none specified
+    if (spec.hiZTaps.isEmpty) {
+      throw InvalidCircuitException(
+        'Hi-Z circuit ${circuit.circuitId} lacks tap specification and speaker ${circuit.model} has no available taps',
+        context: {'circuit_id': circuit.circuitId, 'speaker_model': circuit.model},
+      );
+    }
+    
+    return spec.hiZTaps[0];
+  }
+  
+  /// Calculate parallel impedance for multiple speakers
+  static double _calculateParallelImpedance(double nominalOhms, int speakerCount) {
+    if (nominalOhms <= 0 || speakerCount <= 0) {
+      return 0.0;
+    }
+    return nominalOhms / speakerCount;
+  }
+  
+  /// Log sorted circuits after power calculation
+  static void _logSortedCircuits(List<_CircuitCalc> sorted) {
+    final circuitsWithPower = sorted.map((calc) => CircuitWithPower(
+      circuit: calc.base,
+      requiredPpk: calc.ppkTotal,
+    )).toList();
+    
+    AmpMatchingLogger.logCircuitSorting(circuitsWithPower);
+  }
+
+  /// STEP 4 & 5: Initial assignment with comprehensive logging
+  static List<_InternalAssign> _initialAssignWithLogging(List<_CircuitCalc> sorted) {
+    AmpMatchingLogger.logInitialization(
+      circuitCount: sorted.length,
+      speakerModels: 0, // Will be updated in actual implementation
+      amplifierModels: AmpCatalog.models.length,
+    );
+    
+    return _initialAssign(sorted);
+  }
+  
+  /// STEP 6-9: Power sharing optimization with logging
+  static List<_InternalAssign> _powerShareOptimizeWithLogging(List<_InternalAssign> assigns) {
+    _optimizationIterations++;
+    
+    // Log initial power sharing analysis
+    for (int i = 0; i < assigns.length; i++) {
+      final assign = assigns[i];
+      final channelLoads = List<double>.filled(assign.amp.channels, 0.0);
+      double usedPower = 0.0;
+      
+      for (int j = 0; j < assign.loads.length; j++) {
+        channelLoads[j] = assign.loads[j].ppkTotal;
+        usedPower += assign.loads[j].ppkTotal;
+      }
+      
+      final totalCapacity = assign.amp.peakPerChannel * assign.amp.channels;
+      final netSharing = totalCapacity - usedPower;
+      
+      AmpMatchingLogger.logPowerSharingAnalysis(
+        ampIndex: i,
+        amp: assign.amp,
+        usedChannels: assign.loads.length,
+        totalCapacity: totalCapacity,
+        usedPower: usedPower,
+        netSharing: netSharing,
+        channelLoads: channelLoads,
+      );
+    }
+    
+    return _powerShareOptimize(assigns);
+  }
+  
+  /// STEP 10: Remove empty assignments
+  static List<_InternalAssign> _removeEmptyAssignments(List<_InternalAssign> assigns) {
+    final result = <_InternalAssign>[];
+    
+    for (final assign in assigns) {
+      if (assign.loads.isEmpty) {
+        AmpMatchingLogger.logAmplifierRemoval(
+          assign.amp, 
+          'No circuits assigned after optimization',
+        );
+      } else {
+        result.add(assign);
+      }
+    }
+    
+    return result;
+  }
+  
+  /// STEP 11 & 12: Down-tier pass with logging and validation
+  static List<_InternalAssign> _downTierPassWithLogging(List<_InternalAssign> assigns) {
+    final result = <_InternalAssign>[];
+    
+    for (final assign in assigns) {
+      // Find maximum power requirement for tier validation
+      double maxLoad = 0.0;
+      for (final load in assign.loads) {
+        if (load.ppkTotal > maxLoad) {
+          maxLoad = load.ppkTotal;
+        }
+      }
+      
+      // Validate current tier
+      final passesRule = assign.amp.peakPerChannel >= maxLoad;
+      AmpMatchingLogger.logTierValidation(
+        amp: assign.amp,
+        maxCircuitPower: maxLoad,
+        passesRule: passesRule,
+      );
+      
+      if (!passesRule) {
+        AmpMatchingLogger.logError(
+          'TIER_VALIDATION',
+          'Amplifier ${assign.amp.name} fails tier rule: max load ${maxLoad.toStringAsFixed(1)}W > capacity ${assign.amp.peakPerChannel.toStringAsFixed(0)}W',
+        );
+      }
+      
+      result.add(assign);
+    }
+    
+    return _downTierPass(result);
+  }
+
+  /// STEP 4 & 5: Initial assignment using tier rule + 4/8 packing
+  static List<_InternalAssign> _initialAssign(List<_CircuitCalc> sorted) {
+    // Prepare sorted amp catalog ascending by PeakPerChannel
+    final catalog = List<AmpModel>.from(AmpCatalog.models);
+    catalog.sort((a, b) => a.peakPerChannel.compareTo(b.peakPerChannel));
+
+    final out = <_InternalAssign>[];
+    int i = 0;
+    final n = sorted.length;
+
+    while (i < n) {
+      final remaining = n - i;
+      final blockChannels = remaining > 4 ? 8 : 4;
+      
+      // Choose amp tier based on first circuit in this block
+      final first = sorted[i];
+      var ampModel = _chooseAmpByTierRule(first.ppkTotal, catalog);
+
+      // Log tier selection
+      AmpMatchingLogger.logTierSelection(
+        circuitId: first.base.circuitId,
+        requiredPower: first.ppkTotal,
+        selectedAmp: ampModel,
+        availableTiers: catalog,
+        rationale: 'Selected for highest power circuit in block',
+      );
+
+      // Attempt to pick variant with requested channel count
+      ampModel = _pickChannelVariant(ampModel, blockChannels, catalog);
+      
+      // Log channel allocation strategy
+      AmpMatchingLogger.logChannelAllocation(
+        remainingCircuits: remaining,
+        selectedChannels: blockChannels,
+        strategy: remaining > 4 ? '8-channel optimization' : '4-channel final block',
+        selectedAmp: ampModel,
+      );
+
+      final ass = _InternalAssign(amp: ampModel, loads: []);
+      
+      // Fill up to ampModel.channels circuits
+      for (int ch = 0; ch < ampModel.channels && i < n; ch++) {
+        ass.loads.add(sorted[i]);
+        i++;
+      }
+      out.add(ass);
+    }
+    return out;
+  }
+
+  /// Choose amplifier by tier rule
+  static AmpModel _chooseAmpByTierRule(double required, List<AmpModel> catalog) {
+    if (catalog.isEmpty) {
+      throw const AmpMatchingException('empty catalog');
+    }
+    
+    // If <= smallest -> smallest
+    if (required <= catalog[0].peakPerChannel) {
+      return catalog[0];
+    }
+    
+    for (int i = 0; i < catalog.length - 1; i++) {
+      final cur = catalog[i];
+      final next = catalog[i + 1];
+      if (required > cur.peakPerChannel && required <= next.peakPerChannel) {
+        return next;
+      }
+    }
+    return catalog[catalog.length - 1];
+  }
+
+  /// Pick channel variant matching desired channels and peak
+  static AmpModel _pickChannelVariant(AmpModel base, int desiredChannels, List<AmpModel> catalog) {
+    // Try exact match: same PeakPerChannel and same Channels
+    for (final m in catalog) {
+      if (m.peakPerChannel == base.peakPerChannel && m.channels == desiredChannels) {
+        return m;
+      }
+    }
+    
+    // Otherwise pick smallest model with desiredChannels and Peak >= base.peakPerChannel
+    final cands = catalog.where((m) => m.channels == desiredChannels).toList();
+    if (cands.isEmpty) {
+      return base; // Fallback: return base (likely different channels)
+    }
+    
+    cands.sort((a, b) => a.peakPerChannel.compareTo(b.peakPerChannel));
+    for (final c in cands) {
+      if (c.peakPerChannel >= base.peakPerChannel) {
+        return c;
+      }
+    }
+    return cands[cands.length - 1];
+  }
+
+  /// STEP 6-9: Power sharing optimization with detailed logging
+  static List<_InternalAssign> _powerShareOptimize(List<_InternalAssign> assigns) {
+    if (assigns.isEmpty) {
+      return assigns;
+    }
+
+    // Run loop until no moves possible
+    while (true) {
+      bool moved = false;
+
+      // Sort target amps ascending (fill smaller amps first)
+      assigns.sort((a, b) => a.amp.peakPerChannel.compareTo(b.amp.peakPerChannel));
+
+      // For each target amp (small->big), try to find largest single load on any strictly larger amp that fits into net spare
+      for (int tIdx = 0; tIdx < assigns.length; tIdx++) {
+        final target = assigns[tIdx];
+        final perCh = target.amp.peakPerChannel;
+        final used = target.loads.length;
+        final freeCh = target.amp.channels - used;
+
+        // Compute net spare: sum(perCh - load.ppkTotal) + freeCh*perCh
+        double netSpare = 0.0;
+        for (final l in target.loads) {
+          netSpare += perCh - l.ppkTotal;
+        }
+        netSpare += freeCh * perCh;
+
+        if (netSpare <= 0 || freeCh <= 0) {
+          continue;
+        }
+
+        // Search candidate on larger amps
+        int bestSrcIdx = -1, bestLoadIdx = -1;
+        double bestLoadVal = 0;
+        
+        for (int sIdx = 0; sIdx < assigns.length; sIdx++) {
+          if (assigns[sIdx].amp.peakPerChannel <= target.amp.peakPerChannel) {
+            continue; // Only consider strictly larger amps as source
+          }
+          
+          // Iterate loads on source amp
+          for (int li = 0; li < assigns[sIdx].loads.length; li++) {
+            final load = assigns[sIdx].loads[li];
+            if (load.ppkTotal <= netSpare) {
+              // Prefer largest load that fits so we aggressively reduce higher amps
+              if (load.ppkTotal > bestLoadVal) {
+                bestLoadVal = load.ppkTotal;
+                bestSrcIdx = sIdx;
+                bestLoadIdx = li;
+              }
+            }
+          }
+        }
+
+        if (bestSrcIdx >= 0) {
+          // Move best load from src to target
+          final loadToMove = assigns[bestSrcIdx].loads[bestLoadIdx];
+          
+          // Log the circuit move
+          AmpMatchingLogger.logCircuitMove(
+            circuitId: loadToMove.base.circuitId,
+            fromAmp: assigns[bestSrcIdx].amp,
+            toAmp: target.amp,
+            circuitPower: loadToMove.ppkTotal,
+            availableSharing: netSpare,
+            reason: 'Power sharing optimization - move to lower-tier amplifier',
+          );
+          
+          target.loads.add(loadToMove);
+          _circuitMovesPerformed++;
+
+          // Remove from source
+          assigns[bestSrcIdx].loads.removeAt(bestLoadIdx);
+
+          // If source empty -> remove source amp
+          if (assigns[bestSrcIdx].loads.isEmpty) {
+            AmpMatchingLogger.logAmplifierRemoval(
+              assigns[bestSrcIdx].amp,
+              'All circuits moved to more efficient amplifiers',
+            );
+            assigns.removeAt(bestSrcIdx);
+            // Indices changed; break outer loop to restart
+            moved = true;
+            break;
+          }
+
+          moved = true;
+          // After successful move continue to attempt fill this target next iteration
+        }
+      }
+
+      if (!moved) {
+        break;
+      }
+    }
+
+    return assigns;
+  }
+
+  /// STEP 11 & 12: Down-tier pass to select smaller SKUs with logging
+  static List<_InternalAssign> _downTierPass(List<_InternalAssign> assigns) {
+    // Prepare sorted amp catalog ascending by PeakPerChannel
+    final catalog = List<AmpModel>.from(AmpCatalog.models);
+    catalog.sort((a, b) => a.peakPerChannel.compareTo(b.peakPerChannel));
+
+    final out = <_InternalAssign>[];
+    
+    for (final a in assigns) {
+      double maxLoad = 0.0;
+      for (final l in a.loads) {
+        if (l.ppkTotal > maxLoad) {
+          maxLoad = l.ppkTotal;
+        }
+      }
+      
+      // Pick smallest amp that covers maxLoad
+      var best = catalog[catalog.length - 1];
+      for (final c in catalog) {
+        if (c.peakPerChannel >= maxLoad) {
+          best = c;
+          break;
+        }
+      }
+      
+      final originalAmp = a.amp;
+      
+      // Prefer model with same channel count; if none, keep best
+      bool found = false;
+      for (final c in catalog) {
+        if (c.peakPerChannel == best.peakPerChannel && c.channels == a.amp.channels) {
+          a.amp = c;
+          found = true;
+          break;
+        }
+      }
+      
+      if (!found) {
+        // Find any with same channels and >= maxLoad
+        for (final c in catalog) {
+          if (c.channels == a.amp.channels && c.peakPerChannel >= maxLoad) {
+            a.amp = c;
+            found = true;
+            break;
+          }
+        }
+      }
+      
+      if (!found) {
+        a.amp = best;
+      }
+      
+      // Log SKU reduction if applicable
+      if (a.amp.name != originalAmp.name) {
+        final savings = originalAmp.peakPerChannel > a.amp.peakPerChannel 
+            ? 'Reduced power tier - cost optimization'
+            : 'Adjusted for channel count';
+            
+        AmpMatchingLogger.logSkuReduction(
+          originalAmp: originalAmp,
+          reducedAmp: a.amp,
+          maxLoad: maxLoad,
+          savings: savings,
+        );
+      }
+      
+      out.add(a);
+    }
+    
+    return out;
+  }
+
+
+  /// Enhanced main entry point with comprehensive logging and error handling
   static Future<AmpMatchingResult> matchAmplifiers(
     List<Circuit> circuits,
     Map<String, Speaker> speakerDatabase,
   ) async {
-    if (circuits.isEmpty) {
-      throw const AmpMatchingException('No circuits provided for matching');
-    }
-
-    // Step 1-3: Compute required Ppk for each circuit and sort
-    final computedCircuits = _computeAndSortCircuits(circuits, speakerDatabase);
+    final stopwatch = Stopwatch()..start();
     
-    // Step 4-5: Initial amplifier allocation using tier rule
-    final initialAssignments = _initialAmpAllocation(computedCircuits);
-    
-    // Step 6-12: Apply power sharing optimization
-    final optimizedAssignments = _applyPowerSharingOptimization(initialAssignments, speakerDatabase);
-    
-    // Calculate final metrics and create result
-    return _createMatchingResult(optimizedAssignments, computedCircuits);
-  }
-
-  /// Steps 1-3: Compute required peak power (Ppk) for each circuit and sort by power descending
-  static List<CircuitWithPower> _computeAndSortCircuits(
-    List<Circuit> circuits,
-    Map<String, Speaker> speakerDatabase,
-  ) {
-    final List<CircuitWithPower> computed = [];
-
-    for (final circuit in circuits) {
-      final speakerSpec = speakerDatabase[circuit.model];
-      if (speakerSpec == null) {
-        throw AmpMatchingException('Speaker model ${circuit.model} not found in database');
-      }
-
-      double ppk = 0.0;
-
-      switch (circuit.mode.toLowerCase()) {
-        case 'hi-z':
-          // High impedance calculation: Use tap watts
-          double tapWatts = circuit.tapWatts;
-          if (tapWatts == 0.0 && speakerSpec.hiZTaps.isNotEmpty) {
-            tapWatts = speakerSpec.hiZTaps.first;
-          }
-          if (circuit.speakerCount <= 0) {
-            throw AmpMatchingException('Speaker count required for circuit ${circuit.circuitId}');
-          }
-          final rmsTotal = tapWatts * circuit.speakerCount;
-          ppk = rmsTotal * 2.0; // RMS to peak conversion
-          break;
-
-        case 'lo-z':
-          // Low impedance calculation: Use speaker Ppk
-          if (circuit.speakerCount <= 0) {
-            throw AmpMatchingException('Speaker count required for circuit ${circuit.circuitId}');
-          }
-          ppk = speakerSpec.ppk * circuit.speakerCount;
-          
-          // Validate impedance
-          final totalImpedance = speakerSpec.nominalOhms / circuit.speakerCount;
-          if (totalImpedance < 4.0) {
-            throw AmpMatchingException(
-              'Circuit ${circuit.circuitId} impedance too low: ${totalImpedance.toStringAsFixed(2)} Ω'
-            );
-          }
-          break;
-
-        default:
-          throw AmpMatchingException('Unknown circuit mode: ${circuit.mode}');
-      }
-
-      // Apply output offset attenuation if specified
-      if (circuit.outputOffsetDb > 0) {
-        ppk = ppk * math.pow(10, -circuit.outputOffsetDb / 10.0);
-      }
-
-      computed.add(CircuitWithPower(circuit: circuit, requiredPpk: ppk));
-    }
-
-    // Step 2: Sort by required power (descending order)
-    computed.sort((a, b) => b.requiredPpk.compareTo(a.requiredPpk));
-
-    return computed;
-  }
-
-  /// Steps 4-5: Initial amplifier allocation using tier rule with smart channel allocation
-  static List<AmpAssignment> _initialAmpAllocation(
-    List<CircuitWithPower> computedCircuits,
-  ) {
-    final List<AmpAssignment> assignments = [];
-    AmpAssignment? currentAmp;
-    int channelsNeeded = computedCircuits.length;
-
-    for (final circuitWithPower in computedCircuits) {
-      // Choose amplifier using tier rule
-      final ampModel = _chooseAmpByTierRule(circuitWithPower.requiredPpk);
+    try {
+      // Execute the core matching algorithm
+      final assignments = matchAmps(circuits, speakerDatabase, AmpCatalog.models);
       
-      // Apply smart channel strategy for optimal allocation
-      final optimizedAmpModel = _applySmartChannelStrategy(
-        ampModel, 
-        channelsNeeded, 
-        assignments.length,
-        assignments,
-      );
-
-      // Create new amplifier assignment if needed
-      if (currentAmp == null || 
-          currentAmp.ampModel.name != optimizedAmpModel.name ||
-          currentAmp.circuits.length >= optimizedAmpModel.channels) {
-        currentAmp = AmpAssignment(
-          ampModel: optimizedAmpModel,
-          circuits: [],
+      // Convert to legacy format
+      final ampAssignments = assignments.map((assignment) {
+        return AmpAssignment(
+          ampModel: assignment.amp,
+          circuits: assignment.loads,
         );
-        assignments.add(currentAmp);
-      }
-
-      // Add circuit to current amplifier
-      final updatedCircuits = List<Circuit>.from(currentAmp.circuits)
-        ..add(circuitWithPower.circuit);
+      }).toList();
       
-      currentAmp = AmpAssignment(
-        ampModel: currentAmp.ampModel,
-        circuits: updatedCircuits,
+      // Calculate comprehensive metrics
+      final metrics = _calculateSystemMetrics(ampAssignments, circuits, speakerDatabase);
+      
+      stopwatch.stop();
+      
+      // Create final result with all validation
+      final result = AmpMatchingResult(
+        assignments: ampAssignments,
+        totalPowerRequirement: metrics['totalUsedPower']!,
+        totalSystemCapacity: metrics['totalAvailablePower']!,
+        totalChannelsUsed: metrics['usedChannels']!.toInt(),
+        totalChannelsAvailable: metrics['totalChannels']!.toInt(),
+        optimizationNotes: _generateOptimizationNotes(ampAssignments, metrics),
+        warnings: metrics['warnings'] as List<String>,
+        errors: metrics['errors'] as List<String>,
       );
       
-      assignments[assignments.length - 1] = currentAmp;
-      channelsNeeded--;
-    }
-
-    return assignments;
-  }
-
-  /// Apply smart channel allocation strategy: 4→8→4+4→8+8 pattern
-  static AmpModel _applySmartChannelStrategy(
-    AmpModel baseModel,
-    int channelsRemaining,
-    int existingAmpsCount,
-    List<AmpAssignment> existingAssignments,
-  ) {
-    int totalChannelsAllocated = 0;
-
-    // Count existing channels from actual assignments
-    for (int i = 0; i < existingAmpsCount && i < existingAssignments.length; i++) {
-      totalChannelsAllocated += existingAssignments[i].ampModel.channels;
-    }
-
-    final totalChannelsNeeded = totalChannelsAllocated + channelsRemaining;
-
-    // Apply strategy based on total channel requirements
-    if (totalChannelsNeeded <= 4) {
-      return _find4ChannelVariant(baseModel);
-    } else if (totalChannelsNeeded <= 8) {
-      return _find8ChannelVariant(baseModel);
-    } else if (totalChannelsNeeded <= 12) {
-      // 8 + 4 pattern
-      return existingAmpsCount == 0 
-          ? _find8ChannelVariant(baseModel)
-          : _find4ChannelVariant(baseModel);
-    } else {
-      // 8 + 8 pattern for 13+ channels
-      return _find8ChannelVariant(baseModel);
+      // Final result validation
+      final finalValidation = AmpMatchingErrorHandler.validateFinalResults(result, circuits);
+      if (finalValidation.hasErrors) {
+        for (final error in finalValidation.errors) {
+          AmpMatchingLogger.logError('FINAL_VALIDATION', error);
+        }
+      }
+      
+      // Log comprehensive final results
+      AmpMatchingLogger.logFinalResults(
+        assignments: ampAssignments,
+        totalPowerReq: metrics['totalUsedPower']!,
+        totalCapacity: metrics['totalAvailablePower']!,
+        powerEfficiency: result.powerEfficiency,
+        channelEfficiency: result.channelEfficiency,
+        warnings: result.warnings,
+        errors: result.errors,
+      );
+      
+      return result;
+      
+    } on Exception catch (e) {
+      stopwatch.stop();
+      AmpMatchingLogger.logError('AMPLIFIER_MATCHING', 'Matching failed after ${stopwatch.elapsedMilliseconds}ms', e);
+      rethrow;
     }
   }
-
-  /// Find 4-channel variant of the given amplifier power tier
-  static AmpModel _find4ChannelVariant(AmpModel baseModel) {
-    final variant = AmpCatalog.models.where((amp) =>
-        amp.peakPerChannel == baseModel.peakPerChannel && amp.channels == 4);
-    return variant.isNotEmpty ? variant.first : baseModel;
-  }
-
-  /// Find 8-channel variant of the given amplifier power tier
-  static AmpModel _find8ChannelVariant(AmpModel baseModel) {
-    final variant = AmpCatalog.models.where((amp) =>
-        amp.peakPerChannel == baseModel.peakPerChannel && amp.channels == 8);
-    return variant.isNotEmpty ? variant.first : baseModel;
-  }
-
-  /// Steps 6-12: Apply power sharing optimization algorithm
-  static List<AmpAssignment> _applyPowerSharingOptimization(
+  
+  /// Calculate comprehensive system metrics
+  static Map<String, dynamic> _calculateSystemMetrics(
     List<AmpAssignment> assignments,
+    List<Circuit> originalCircuits,
     Map<String, Speaker> speakerDatabase,
   ) {
-    // Step 6: Run each amplifier through simplified power sharing calculator
-    final List<PowerSharingInfo> powerSharingInfo = [];
+    double totalAvailablePower = 0.0;
+    double totalUsedPower = 0.0;
+    int totalChannels = 0;
+    int usedChannels = 0;
+    final List<String> warnings = [];
+    final List<String> errors = [];
     
-    for (int i = 0; i < assignments.length; i++) {
-      final info = _calculatePowerSharing(assignments[i], i, speakerDatabase);
-      powerSharingInfo.add(info);
-    }
-
-    // Step 7-8: Identify and optimize channel allocation using power sharing
-    final optimizedAssignments = _optimizeChannelAllocation(
-      assignments, 
-      powerSharingInfo,
-      speakerDatabase,
-    );
-
-    // Step 11-12: Final validation and SKU reduction
-    final finalAssignments = _validateAndReduceSKUs(optimizedAssignments, speakerDatabase);
-
-    return finalAssignments;
-  }
-
-  /// Calculate power sharing analysis for an amplifier
-  static PowerSharingInfo _calculatePowerSharing(
-    AmpAssignment assignment,
-    int ampIndex,
-    Map<String, Speaker> speakerDatabase,
-  ) {
-    final channelLoads = List<double>.filled(assignment.ampModel.channels, 0.0);
-
-    // Calculate actual load on each used channel
-    for (int i = 0; i < assignment.circuits.length && i < channelLoads.length; i++) {
-      final circuit = assignment.circuits[i];
-      
-      // Calculate circuit power based on mode
-      double circuitPower = 0.0;
-      
-      if (circuit.mode.toLowerCase() == 'hi-z') {
-        circuitPower = circuit.tapWatts * circuit.speakerCount * 2.0; // RMS to peak
-      } else {
-        // For lo-z, use actual speaker specification
-        final speakerSpec = speakerDatabase[circuit.model];
-        if (speakerSpec != null) {
-          circuitPower = speakerSpec.ppk * circuit.speakerCount;
-        } else {
-          // Fallback to placeholder if speaker not found
-          circuitPower = 100.0 * circuit.speakerCount;
-        }
-      }
-
-      // Apply output offset attenuation
-      if (circuit.outputOffsetDb > 0) {
-        circuitPower = circuitPower * math.pow(10, -circuit.outputOffsetDb / 10.0);
-      }
-
-      channelLoads[i] = circuitPower;
-    }
-
-    // Calculate net power sharing (available power that can be shared)
-    final symmetricalRating = assignment.ampModel.peakPerChannel;
-    final totalUsedPower = channelLoads.fold<double>(0.0, (sum, load) => sum + load);
-    final totalAvailablePower = assignment.ampModel.channels * symmetricalRating;
-    final netPowerSharing = math.max(0.0, totalAvailablePower - totalUsedPower);
-
-    return PowerSharingInfo(
-      ampIndex: ampIndex,
-      usedChannels: assignment.circuits.length,
-      netPowerSharing: netPowerSharing,
-      channelLoads: channelLoads,
-    );
-  }
-
-  /// Optimize channel allocation by redistributing circuits across amplifiers
-  static List<AmpAssignment> _optimizeChannelAllocation(
-    List<AmpAssignment> assignments,
-    List<PowerSharingInfo> powerInfo,
-    Map<String, Speaker> speakerDatabase,
-  ) {
-    // Create list of movable circuits with their power requirements
-    final List<_MovableCircuit> movableCircuits = [];
-
-    for (int ampIdx = 0; ampIdx < assignments.length; ampIdx++) {
-      final assignment = assignments[ampIdx];
-      
-      for (int circuitIdx = 0; circuitIdx < assignment.circuits.length; circuitIdx++) {
-        final circuit = assignment.circuits[circuitIdx];
-        
-        // Calculate circuit power for ranking
-        double power = 0.0;
-        if (circuit.mode.toLowerCase() == 'hi-z') {
-          power = circuit.tapWatts * circuit.speakerCount * 2.0;
-        } else {
-          // Use actual speaker spec for lo-z
-          final speakerSpec = speakerDatabase[circuit.model];
-          if (speakerSpec != null) {
-            power = speakerSpec.ppk * circuit.speakerCount;
-          } else {
-            power = 100.0 * circuit.speakerCount; // Fallback
-          }
-        }
-
-        if (circuit.outputOffsetDb > 0) {
-          power = power * math.pow(10, -circuit.outputOffsetDb / 10.0);
-        }
-
-        movableCircuits.add(_MovableCircuit(
-          circuitIndex: circuitIdx,
-          ampIndex: ampIdx,
-          power: power,
-          circuit: circuit,
-        ));
-      }
-    }
-
-    // Sort circuits by power (highest first) for optimal movement priority
-    movableCircuits.sort((a, b) => b.power.compareTo(a.power));
-
-    // Create optimized assignments starting from current state
-    final optimizedAssignments = assignments.map((a) => AmpAssignment(
-      ampModel: a.ampModel,
-      circuits: List<Circuit>.from(a.circuits),
-    )).toList();
-
-    final workingPowerInfo = powerInfo.map((info) => PowerSharingInfo(
-      ampIndex: info.ampIndex,
-      usedChannels: info.usedChannels,
-      netPowerSharing: info.netPowerSharing,
-      channelLoads: List<double>.from(info.channelLoads),
-    )).toList();
-
-    // Attempt to move circuits to optimize power usage
-    final Set<int> processedCircuits = <int>{};
-    
-    for (int i = 0; i < movableCircuits.length; i++) {
-      if (processedCircuits.contains(i)) continue;
-      
-      final movableCircuit = movableCircuits[i];
-      final currentAmpIdx = movableCircuit.ampIndex;
-      final currentAmpPower = assignments[currentAmpIdx].ampModel.peakPerChannel;
-
-      // Look for lower-power amplifier that can accommodate this circuit
-      for (int targetAmpIdx = 0; targetAmpIdx < workingPowerInfo.length; targetAmpIdx++) {
-        final targetInfo = workingPowerInfo[targetAmpIdx];
-        final targetAmpPower = assignments[targetAmpIdx].ampModel.peakPerChannel;
-
-        // Only move to lower-power amps with available capacity
-        if (targetAmpPower < currentAmpPower &&
-            targetInfo.netPowerSharing >= movableCircuit.power &&
-            optimizedAssignments[targetAmpIdx].circuits.length < 
-            assignments[targetAmpIdx].ampModel.channels) {
-
-          // Find and remove the specific circuit (not by index)
-          final circuitToMove = movableCircuit.circuit;
-          final sourceCircuits = optimizedAssignments[currentAmpIdx].circuits;
-          final initialLength = sourceCircuits.length;
-          sourceCircuits.removeWhere((c) => c.circuitId == circuitToMove.circuitId);
-          final circuitFound = sourceCircuits.length < initialLength;
-
-          if (circuitFound) {
-            // Move the circuit
-            optimizedAssignments[targetAmpIdx].circuits.add(circuitToMove);
-
-            // Update power sharing information
-            workingPowerInfo[targetAmpIdx] = PowerSharingInfo(
-              ampIndex: targetInfo.ampIndex,
-              usedChannels: targetInfo.usedChannels + 1,
-              netPowerSharing: targetInfo.netPowerSharing - movableCircuit.power,
-              channelLoads: targetInfo.channelLoads,
-            );
-
-            workingPowerInfo[currentAmpIdx] = PowerSharingInfo(
-              ampIndex: workingPowerInfo[currentAmpIdx].ampIndex,
-              usedChannels: workingPowerInfo[currentAmpIdx].usedChannels - 1,
-              netPowerSharing: workingPowerInfo[currentAmpIdx].netPowerSharing + movableCircuit.power,
-              channelLoads: workingPowerInfo[currentAmpIdx].channelLoads,
-            );
-
-            processedCircuits.add(i);
-            break; // Circuit successfully moved
-          }
-        }
-      }
-    }
-
-    return optimizedAssignments;
-  }
-
-  /// Steps 11-12: Final validation and SKU reduction
-  static List<AmpAssignment> _validateAndReduceSKUs(
-    List<AmpAssignment> assignments,
-    Map<String, Speaker> speakerDatabase,
-  ) {
-    final List<AmpAssignment> finalAssignments = [];
-
+    // Calculate power and channel metrics
     for (final assignment in assignments) {
-      // Skip empty assignments
-      if (assignment.circuits.isEmpty) {
-        continue;
-      }
-
-      // Step 11: Find maximum circuit power requirement
-      double maxCircuitPower = 0.0;
+      totalChannels += assignment.ampModel.channels;
+      usedChannels += assignment.circuits.length;
+      totalAvailablePower += assignment.ampModel.peakPerChannel * assignment.ampModel.channels;
+      
+      // Validate each circuit assignment
       for (final circuit in assignment.circuits) {
-        double power = 0.0;
+        final speaker = speakerDatabase[circuit.model];
+        if (speaker == null) {
+          errors.add('Circuit ${circuit.circuitId}: Unknown speaker model "${circuit.model}"');
+          continue;
+        }
         
-        if (circuit.mode.toLowerCase() == 'hi-z') {
-          power = circuit.tapWatts * circuit.speakerCount * 2.0;
-        } else {
-          // Use actual speaker spec for lo-z
-          final speakerSpec = speakerDatabase[circuit.model];
-          if (speakerSpec != null) {
-            power = speakerSpec.ppk * circuit.speakerCount;
-          } else {
-            power = 100.0 * circuit.speakerCount; // Fallback
+        double circuitPower = _calculateCircuitPower(circuit, speaker);
+        totalUsedPower += circuitPower;
+        
+        // Validate power requirements
+        if (circuitPower > assignment.ampModel.peakPerChannel) {
+          final channelsNeeded = (circuitPower / assignment.ampModel.peakPerChannel).ceil();
+          warnings.add('Circuit ${circuit.circuitId}: Requires ${circuitPower.toStringAsFixed(0)}W but assigned to single channel of ${assignment.ampModel.peakPerChannel.toStringAsFixed(0)}W capacity (needs $channelsNeeded channels)');
+        }
+        
+        // Validate impedance for lo-z circuits
+        if (circuit.mode.toLowerCase().contains('lo')) {
+          final totalImpedance = speaker.nominalOhms / circuit.speakerCount;
+          if (totalImpedance < 4.0) {
+            if (totalImpedance < 2.0) {
+              errors.add('Circuit ${circuit.circuitId}: Dangerous impedance ${totalImpedance.toStringAsFixed(2)}Ω - risk of amplifier damage');
+            } else {
+              warnings.add('Circuit ${circuit.circuitId}: Low impedance ${totalImpedance.toStringAsFixed(2)}Ω - monitor amplifier performance');
+            }
           }
         }
-
-        if (circuit.outputOffsetDb > 0) {
-          power = power * math.pow(10, -circuit.outputOffsetDb / 10.0);
-        }
-
-        if (power > maxCircuitPower) {
-          maxCircuitPower = power;
-        }
-      }
-
-      // Check if current amplifier satisfies tier rule
-      final currentAmp = assignment.ampModel;
-      bool validTier = _validateTierRule(currentAmp, maxCircuitPower);
-
-      // Step 12: If not valid, try to reduce to lower tier
-      AmpModel finalAmp = currentAmp;
-      if (!validTier) {
-        final reducedAmp = _findLowerTierAmp(currentAmp, maxCircuitPower);
-        if (reducedAmp != null) {
-          finalAmp = reducedAmp;
-        } else {
-          throw AmpMatchingException(
-            'Cannot find suitable amplifier tier for power requirement ${maxCircuitPower.toStringAsFixed(2)}W'
-          );
-        }
-      }
-
-      finalAssignments.add(AmpAssignment(
-        ampModel: finalAmp,
-        circuits: assignment.circuits,
-      ));
-    }
-
-    return finalAssignments;
-  }
-
-  /// Validate if amplifier satisfies tier rule for given power requirement
-  static bool _validateTierRule(AmpModel amp, double requiredPower) {
-    final sortedCatalog = AmpCatalog.sortedByPower;
-    
-    for (int i = 0; i < sortedCatalog.length; i++) {
-      final current = sortedCatalog[i];
-      if (current.name != amp.name) continue;
-
-      final double nextTierPower = (i < sortedCatalog.length - 1)
-          ? sortedCatalog[i + 1].peakPerChannel
-          : double.infinity;
-
-      // Check tier rule: nextTierPower ≥ requiredPower ≥ currentTierPower
-      return requiredPower >= current.peakPerChannel && requiredPower <= nextTierPower;
-    }
-
-    return false;
-  }
-
-  /// Find lowest suitable amplifier tier for the given power requirement
-  static AmpModel? _findLowerTierAmp(AmpModel currentAmp, double requiredPower) {
-    // Find amplifiers with same channel count as current
-    final sameChannelAmps = AmpCatalog.models
-        .where((amp) => amp.channels == currentAmp.channels)
-        .toList();
-
-    // Sort by power (ascending)
-    sameChannelAmps.sort((a, b) => a.peakPerChannel.compareTo(b.peakPerChannel));
-
-    // Find lowest power amplifier that can handle the requirement
-    for (final amp in sameChannelAmps) {
-      if (amp.peakPerChannel >= requiredPower) {
-        return amp;
       }
     }
-
-    return null; // No suitable lower tier found
-  }
-
-  /// Choose amplifier model based on tier rule from specification
-  static AmpModel _chooseAmpByTierRule(double requiredPpk) {
-    final sortedCatalog = AmpCatalog.sortedByPower;
-
-    // Find appropriate tier using spec's rule:
-    // nextTierPower ≥ requiredPower ≥ currentTierPower
-    for (int i = 0; i < sortedCatalog.length; i++) {
-      final current = sortedCatalog[i];
-      final double nextTierPower = (i < sortedCatalog.length - 1)
-          ? sortedCatalog[i + 1].peakPerChannel
-          : double.infinity;
-
-      // If required power is between current and next tier, choose next tier
-      if (requiredPpk >= current.peakPerChannel && requiredPpk < nextTierPower) {
-        return (i < sortedCatalog.length - 1) ? sortedCatalog[i + 1] : current;
-      }
-    }
-
-    // Edge cases
-    if (requiredPpk < sortedCatalog.first.peakPerChannel) {
-      return sortedCatalog.first; // Choose smallest if requirement is very low
-    }
-
-    return sortedCatalog.last; // Choose largest if requirement exceeds all
-  }
-
-  /// Create final matching result with all metrics and analysis
-  static AmpMatchingResult _createMatchingResult(
-    List<AmpAssignment> assignments,
-    List<CircuitWithPower> computedCircuits,
-  ) {
-    final totalPowerRequirement = computedCircuits
-        .fold<double>(0.0, (sum, circuit) => sum + circuit.requiredPpk);
     
-    final totalSystemCapacity = assignments
-        .fold<double>(0.0, (sum, assignment) => sum + assignment.totalCapacity);
-    
-    final totalChannelsUsed = assignments
-        .fold<int>(0, (sum, assignment) => sum + assignment.usedChannels);
-    
-    final totalChannelsAvailable = assignments
-        .fold<int>(0, (sum, assignment) => sum + assignment.totalChannels);
-
-    // Generate optimization notes
-    final StringBuffer notes = StringBuffer();
-    if (assignments.length == 1) {
-      notes.write('Single amplifier solution achieved. ');
-    }
-    
-    final powerEfficiency = totalPowerRequirement / totalSystemCapacity;
-    if (powerEfficiency > 0.8) {
-      notes.write('High power efficiency (${(powerEfficiency * 100).toStringAsFixed(1)}%). ');
+    // System-level warnings
+    final powerEfficiency = totalUsedPower / totalAvailablePower;
+    if (powerEfficiency < 0.2) {
+      warnings.add('Very low power efficiency (${(powerEfficiency * 100).toStringAsFixed(1)}%) - system is significantly oversized');
     } else if (powerEfficiency < 0.3) {
-      notes.write('Consider power sharing optimization opportunities. ');
+      warnings.add('Low power efficiency (${(powerEfficiency * 100).toStringAsFixed(1)}%) - consider using smaller amplifiers');
     }
     
-    final channelEfficiency = totalChannelsUsed / totalChannelsAvailable;
-    if (channelEfficiency > 0.75) {
-      notes.write('Good channel utilization (${(channelEfficiency * 100).toStringAsFixed(1)}%).');
+    final channelEfficiency = usedChannels / totalChannels;
+    if (channelEfficiency < 0.3) {
+      warnings.add('Very low channel efficiency (${(channelEfficiency * 100).toStringAsFixed(1)}%) - many channels unused');
+    } else if (channelEfficiency < 0.5) {
+      warnings.add('Low channel efficiency (${(channelEfficiency * 100).toStringAsFixed(1)}%) - some optimization potential remains');
     }
-
-    return AmpMatchingResult(
-      assignments: assignments,
-      totalPowerRequirement: totalPowerRequirement,
-      totalSystemCapacity: totalSystemCapacity,
-      totalChannelsUsed: totalChannelsUsed,
-      totalChannelsAvailable: totalChannelsAvailable,
-      optimizationNotes: notes.toString(),
-    );
+    
+    // Check for power sharing opportunities
+    if (assignments.length > 1) {
+      warnings.add('Multiple amplifiers required - review if power sharing or tier adjustments could reduce amplifier count');
+    }
+    
+    return {
+      'totalAvailablePower': totalAvailablePower,
+      'totalUsedPower': totalUsedPower,
+      'totalChannels': totalChannels.toDouble(),
+      'usedChannels': usedChannels.toDouble(),
+      'warnings': warnings,
+      'errors': errors,
+    };
   }
-}
-
-/// Helper class for circuit movement during optimization
-class _MovableCircuit {
-  final int circuitIndex;
-  final int ampIndex;
-  final double power;
-  final Circuit circuit;
-
-  const _MovableCircuit({
-    required this.circuitIndex,
-    required this.ampIndex,
-    required this.power,
-    required this.circuit,
-  });
+  
+  /// Calculate circuit power requirement
+  static double _calculateCircuitPower(Circuit circuit, Speaker speaker) {
+    final mode = circuit.mode.toLowerCase();
+    double power = 0.0;
+    
+    if (mode.contains('hi')) {
+      final tap = circuit.tapWatts > 0 ? circuit.tapWatts : 
+          (speaker.hiZTaps.isNotEmpty ? speaker.hiZTaps[0] : 0.0);
+      power = circuit.speakerCount * tap * 2.0; // RMS to peak conversion
+    } else {
+      power = circuit.speakerCount * speaker.ppk;
+    }
+    
+    // Apply offset if present
+    if (circuit.outputOffsetDb > 0) {
+      final reductionFactor = math.pow(10.0, -circuit.outputOffsetDb / 10.0);
+      power *= reductionFactor.toDouble();
+    }
+    
+    return power;
+  }
+  
+  /// Generate optimization notes based on results
+  static String _generateOptimizationNotes(List<AmpAssignment> assignments, Map<String, dynamic> metrics) {
+    final notes = <String>[];
+    
+    if (assignments.length == 1) {
+      notes.add('Single amplifier solution achieved through power sharing optimization');
+    } else {
+      notes.add('Multiple amplifiers required due to high power requirements or capacity constraints');
+    }
+    
+    final powerEfficiency = metrics['totalUsedPower']! / metrics['totalAvailablePower']!;
+    if (powerEfficiency > 0.7) {
+      notes.add('High power efficiency indicates well-optimized system sizing');
+    } else if (powerEfficiency > 0.5) {
+      notes.add('Good power efficiency with reasonable headroom for future expansion');
+    }
+    
+    final channelEfficiency = metrics['usedChannels']! / metrics['totalChannels']!;
+    if (channelEfficiency > 0.8) {
+      notes.add('Excellent channel utilization minimizes unused capacity');
+    }
+    
+    notes.add('Applied tier selection rule and power sharing algorithms for cost optimization');
+    
+    return notes.join('. ');
+  }
 }

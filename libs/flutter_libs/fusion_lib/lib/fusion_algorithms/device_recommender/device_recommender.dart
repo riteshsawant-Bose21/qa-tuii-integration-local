@@ -87,83 +87,218 @@ class DeviceRecommender {
     final totalAnalogOutputs = input.analogOutputs;
     final totalNetworkIO = input.networkInputs + input.networkOutputs;
 
-    // Step 1: Start with 4ch PowerSmart (as per spec)
+    // Step 1: Find optimal device(s) that can handle both analog and network I/O
+    final optimalDevice = DeviceCatalog.findOptimalDevice(
+      analogInputs: totalAnalogInputs,
+      analogOutputs: totalAnalogOutputs,
+      networkIO: totalNetworkIO,
+      preferSmaller: true,
+    );
+
+    if (optimalDevice != null) {
+      // Check for special cases based on device and user preferences
+      devices.addAll(_handleSpecialCases(optimalDevice, totalAnalogInputs, totalAnalogOutputs, input.preferWallIo, input.preferDistributed));
+      return devices;
+    }
+
+    // Step 2: Handle analog I/O requirements first
     devices.addAll(_recommendAnalogDevices(totalAnalogInputs, totalAnalogOutputs, input.preferWallIo, input.preferDistributed));
 
-    // Step 2: Handle network I/O (24 inputs/outputs per Fusion Mini)
+    // Step 3: Check if selected devices can handle network I/O, if not add more
     if (totalNetworkIO > 0) {
-      final numMinis = (totalNetworkIO / 24.0).ceil();
-      for (int i = 0; i < numMinis; i++) {
-        // Use FM6 for network I/O handling (Fusion Mini devices)
-        devices.add("FM6");
+      int providedNetworkIO = 0;
+      for (final deviceName in devices) {
+        final device = DeviceCatalog.findByName(deviceName);
+        if (device != null) {
+          providedNetworkIO += device.networkIO;
+        }
+      }
+      
+      if (providedNetworkIO < totalNetworkIO) {
+        final remainingNetworkIO = totalNetworkIO - providedNetworkIO;
+        devices.addAll(_recommendNetworkDevices(remainingNetworkIO));
       }
     }
 
     return devices;
   }
 
-  /// recommendAnalogDevices implements the core decision logic from specification
-  /// with user preference options for wall I/O vs device upgrades
-  static List<String> _recommendAnalogDevices(int inputs, int outputs, bool preferWallIO, bool preferDistributed) {
+  /// Handle special cases for device selection based on user preferences
+  static List<String> _handleSpecialCases(DeviceSpec optimalDevice, int inputs, int outputs, bool preferWallIO, bool preferDistributed) {
     final devices = <String>[];
 
-    // Start with 4ch PowerSmart
-    final powerSmart4ch = DeviceCatalog.powerSmart4ch;
-    final powerSmart8ch = DeviceCatalog.powerSmart8ch;
-
-    // Case 1: Both inputs and outputs fit in 4ch PowerSmart
-    if (inputs <= powerSmart4ch.analogInputs && outputs <= powerSmart4ch.analogOutputs) {
-      devices.add("4ch PowerSmart");
+    // Special case: At maximum capacity of largest single device, prefer distributed processing
+    if (optimalDevice.name == "8ch PowerSmart" && 
+        inputs == optimalDevice.analogInputs && 
+        outputs == optimalDevice.analogOutputs) {
+      // Find optimal distributed solution using device specs
+      final distributedDevices = _findOptimalDistributedDevices(inputs, outputs);
+      devices.addAll(distributedDevices);
       return devices;
     }
 
-    // Case 2: Either inputs or outputs exceed 4ch PowerSmart
-    // Check if both can fit in 8ch PowerSmart first
-    if (inputs <= powerSmart8ch.analogInputs && outputs <= powerSmart8ch.analogOutputs) {
-      // Special case: At maximum 8ch capacity (8 inputs, 8 outputs)
-      if (inputs == powerSmart8ch.analogInputs && outputs == powerSmart8ch.analogOutputs) {
-        // Always use distributed FM6 + FM8Y for maximum capacity
-        devices.add("FM6");
-        devices.add("FM8Y");
-        return devices;
-      }
-
-      // User preference: Wall I/O vs upgrading to 8ch PowerSmart
-      if (preferWallIO) {
-        // Prefer adding wall I/O to 4ch PowerSmart instead of upgrading
+    // Check user preference for wall I/O vs device upgrade
+    if (preferWallIO && optimalDevice.name == "8ch PowerSmart") {
+      final powerSmart4ch = DeviceCatalog.powerSmart4ch;
+      final powerSmart8ch = DeviceCatalog.powerSmart8ch;
+      // If requirements exceed 4ch PowerSmart capacity but fit in 8ch PowerSmart,
+      // user prefers Wall I/O expansion over device upgrade
+      if ((inputs > powerSmart4ch.analogInputs || outputs > powerSmart4ch.analogOutputs) &&
+          (inputs <= powerSmart8ch.analogInputs && outputs <= powerSmart8ch.analogOutputs)) {
         devices.add("4ch PowerSmart");
         devices.add("Wall I/O");
         return devices;
       }
+    }
 
-      // Default: upgrade to 8ch PowerSmart
-      devices.add("8ch PowerSmart");
+    // Use the optimal single device
+    devices.add(optimalDevice.name);
+    return devices;
+  }
+
+  /// Recommend network I/O devices based on requirements
+  static List<String> _recommendNetworkDevices(int totalNetworkIO) {
+    final devices = <String>[];
+    final fusionMiniDevices = DeviceCatalog.getFusionMiniDevices();
+    
+    // Sort by network I/O capacity (descending) to use most capable devices first
+    fusionMiniDevices.sort((a, b) => b.networkIO.compareTo(a.networkIO));
+    
+    int remainingNetworkIO = totalNetworkIO;
+    
+    for (final device in fusionMiniDevices) {
+      while (remainingNetworkIO > 0 && device.canHandleNetworkIO(remainingNetworkIO >= device.networkIO ? device.networkIO : remainingNetworkIO)) {
+        devices.add(device.name);
+        remainingNetworkIO -= device.networkIO;
+        if (remainingNetworkIO <= 0) break;
+      }
+      if (remainingNetworkIO <= 0) break;
+    }
+    
+    return devices;
+  }
+
+  /// Find optimal combination of devices for distributed processing
+  static List<String> _findOptimalDistributedDevices(int inputs, int outputs) {
+    final devices = <String>[];
+    final availableDevices = DeviceCatalog.getAllDevices();
+    
+    // Filter devices that have both inputs and outputs (for distributed processing)
+    final distributedCapableDevices = availableDevices
+        .where((device) => device.analogInputs > 0 && device.analogOutputs > 0)
+        .toList();
+    
+    // Sort by total analog I/O capacity (descending)
+    distributedCapableDevices.sort((a, b) => b.totalAnalogIO.compareTo(a.totalAnalogIO));
+    
+    int remainingInputs = inputs;
+    int remainingOutputs = outputs;
+    
+    // Try to find optimal combination
+    for (final device in distributedCapableDevices) {
+      if (remainingInputs <= 0 && remainingOutputs <= 0) break;
+      
+      // Check if this device can contribute to the solution
+      if (device.analogInputs > 0 && remainingInputs > 0) {
+        devices.add(device.name);
+        remainingInputs -= device.analogInputs;
+        remainingOutputs -= device.analogOutputs;
+      } else if (device.analogOutputs > 0 && remainingOutputs > 0) {
+        devices.add(device.name);
+        remainingInputs -= device.analogInputs;
+        remainingOutputs -= device.analogOutputs;
+      }
+    }
+    
+    // If still not enough capacity, add input-only devices
+    if (remainingInputs > 0) {
+      final inputOnlyDevices = availableDevices
+          .where((device) => device.analogInputs > 0 && device.analogOutputs == 0)
+          .toList();
+      
+      inputOnlyDevices.sort((a, b) => b.analogInputs.compareTo(a.analogInputs));
+      
+      for (final device in inputOnlyDevices) {
+        if (remainingInputs <= 0) break;
+        devices.add(device.name);
+        remainingInputs -= device.analogInputs;
+      }
+    }
+    
+    return devices;
+  }
+
+  /// Recommend analog devices using device specs instead of hardcoded logic
+  static List<String> _recommendAnalogDevices(int inputs, int outputs, bool preferWallIO, bool preferDistributed) {
+    final devices = <String>[];
+
+    // Get all devices and sort by total analog I/O capacity (ascending)
+    final availableDevices = DeviceCatalog.getAllDevices();
+    final analogCapableDevices = availableDevices
+        .where((device) => device.analogInputs > 0 || device.analogOutputs > 0)
+        .toList();
+    
+    // Sort by total analog I/O capacity (smallest first)
+    analogCapableDevices.sort((a, b) => a.totalAnalogIO.compareTo(b.totalAnalogIO));
+
+    // Case 1: Try to find a single device that can handle all requirements
+    final singleDevice = DeviceCatalog.findOptimalDevice(
+      analogInputs: inputs,
+      analogOutputs: outputs,
+      networkIO: 0,
+      preferSmaller: true,
+    );
+
+    if (singleDevice != null) {
+      // Special case: At maximum capacity of largest single device, prefer distributed processing
+      if (singleDevice.name == "8ch PowerSmart" && 
+          inputs == singleDevice.analogInputs && 
+          outputs == singleDevice.analogOutputs) {
+        // Find optimal distributed solution using device specs
+        final distributedDevices = _findOptimalDistributedDevices(inputs, outputs);
+        devices.addAll(distributedDevices);
+        return devices;
+      }
+
+      // Check user preference for wall I/O vs device upgrade
+      if (preferWallIO && singleDevice.name == "8ch PowerSmart") {
+        final powerSmart4ch = DeviceCatalog.powerSmart4ch;
+        final powerSmart8ch = DeviceCatalog.powerSmart8ch;
+        // If requirements exceed 4ch PowerSmart capacity but fit in 8ch PowerSmart,
+        // user prefers Wall I/O expansion over device upgrade
+        if ((inputs > powerSmart4ch.analogInputs || outputs > powerSmart4ch.analogOutputs) &&
+            (inputs <= powerSmart8ch.analogInputs && outputs <= powerSmart8ch.analogOutputs)) {
+          devices.add("4ch PowerSmart");
+          devices.add("Wall I/O");
+          return devices;
+        }
+      }
+
+      // Use the optimal single device
+      devices.add(singleDevice.name);
       return devices;
     }
 
-    // Case 3: Outputs exceed 4ch but inputs fit in 4ch AND outputs exceed 8ch → use 4ch + Wall I/O
-    if (inputs <= powerSmart4ch.analogInputs && outputs > powerSmart8ch.analogOutputs) {
+    // Case 2: No single device can handle all requirements
+    // Check if requirements exceed largest single device capacity
+    final largestDevice = analogCapableDevices.last; // Largest by total analog I/O
+    
+    if (inputs > largestDevice.analogInputs || outputs > largestDevice.analogOutputs) {
+      // Use distributed processing with optimal device combination
+      if (preferDistributed || (inputs > DeviceCatalog.powerSmart8ch.analogInputs || outputs > DeviceCatalog.powerSmart8ch.analogOutputs)) {
+        final distributedDevices = _findOptimalDistributedDevices(inputs, outputs);
+        devices.addAll(distributedDevices);
+        return devices;
+      }
+
+      // Fallback to PowerSmart + Wall I/O
       devices.add("4ch PowerSmart");
       devices.add("Wall I/O");
       return devices;
     }
 
-    // Case 4: Inputs exceed 4ch but outputs fit in 4ch AND inputs exceed 8ch → use 4ch + Wall I/O
-    if (outputs <= powerSmart4ch.analogOutputs && inputs > powerSmart8ch.analogInputs) {
-      devices.add("4ch PowerSmart");
-      devices.add("Wall I/O");
-      return devices;
-    }
-
-    // Case 5: Either inputs or outputs exceed 8ch PowerSmart capacity → use FM6 + FM8Y
-    if (inputs > powerSmart8ch.analogInputs || outputs > powerSmart8ch.analogOutputs) {
-      devices.add("FM6");
-      devices.add("FM8Y");
-      return devices;
-    }
-
-    // Fallback to 8ch PowerSmart for any remaining cases
-    devices.add("8ch PowerSmart");
+    // Case 3: Fallback to largest available device
+    devices.add(largestDevice.name);
     return devices;
   }
 }

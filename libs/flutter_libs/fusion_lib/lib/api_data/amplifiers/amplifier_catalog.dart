@@ -7,9 +7,6 @@
 import 'amplifier_types.dart';
 
 /// Amplifier catalog with all available PSX models
-/// 
-/// In production, this data would be fetched from an API endpoint
-/// such as GET /api/v1/amplifiers or similar product catalog service
 class AmpCatalog {
   /// All available amplifiers in the catalog
   /// 
@@ -111,12 +108,12 @@ class AmpCatalog {
     //   Uri.parse(apiEndpoint ?? 'https://api.bose.com/v1/amplifiers'),
     //   headers: headers ?? {'Content-Type': 'application/json'},
     // );
-    // 
+    
     // if (response.statusCode == 200) {
     //   final data = jsonDecode(response.body) as List<dynamic>;
     //   return data.map((json) => AmpModel.fromJson(json)).toList();
     // }
-    // 
+    
     // throw Exception('Failed to fetch amplifiers: ${response.statusCode}');
     
     // For now, return the static models
@@ -124,40 +121,4 @@ class AmpCatalog {
     return models;
   }
 
-  /// Future API integration method for filtered results
-  /// 
-  /// Example: 
-  /// ```dart
-  /// final amplifiers = await AmpCatalog.fetchFilteredFromApi(
-  ///   minPower: 1200.0,
-  ///   channels: 4,
-  /// );
-  /// ```
-  static Future<List<AmpModel>> fetchFilteredFromApi({
-    double? minPower,
-    double? maxPower,
-    int? channels,
-    String? apiEndpoint,
-    Map<String, String>? headers,
-  }) async {
-    // TODO: Implement actual API call with filters
-    // For now, filter the static models
-    await Future.delayed(const Duration(milliseconds: 100)); // Simulate API delay
-    
-    var filtered = models.asMap().values;
-    
-    if (minPower != null) {
-      filtered = filtered.where((amp) => amp.peakPerChannel >= minPower);
-    }
-    
-    if (maxPower != null) {
-      filtered = filtered.where((amp) => amp.peakPerChannel <= maxPower);
-    }
-    
-    if (channels != null) {
-      filtered = filtered.where((amp) => amp.channels == channels);
-    }
-    
-    return filtered.toList();
-  }
 }

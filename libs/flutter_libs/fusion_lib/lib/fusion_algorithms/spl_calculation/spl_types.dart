@@ -1,5 +1,4 @@
 /// SPL calculation types and data structures
-/// Ported from Go fusion-algo
 
 // Re-export speaker types from API data layer
 export '../../api_data/speakers/speaker_types.dart';
