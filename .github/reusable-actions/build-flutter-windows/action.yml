@@ -54,4 +54,4 @@ runs:
         $username = "github-actions-uploader"
         $password = "${{ inputs.nexus_password }}"
 
-        curl.exe -k --ssl-no-revoke -f -u "$username`:$password" -T $apkPath $nexusUrl
+        curl.exe -k --ssl-no-revoke -f -u "$username`:$password" -T $buildPath $nexusUrl
