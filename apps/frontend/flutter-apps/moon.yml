@@ -3,8 +3,8 @@ project:
   description: "Flutter applications workspace"
 
 tasks:
-  # Batch build
-  build-all:
+  # Mac, iOS and Android build
+  build-mac-ios-android:
     deps:
       - "fusion-launcher:build-apk"
       - "fusion-launcher:build-macos"
@@ -13,4 +13,9 @@ tasks:
   build-win:
     deps:
       - "fusion-launcher:build-windows"
+  
+  # Web build
+  build-web:
+    deps:
+      - "fusion-launcher:build-web"
 

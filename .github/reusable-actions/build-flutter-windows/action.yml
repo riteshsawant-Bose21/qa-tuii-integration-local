@@ -46,7 +46,7 @@ runs:
       run: |
         flutter pub get
         moon run flutter-apps:build-win
-        $version = "${{ steps.get_version.outputs.version }}-$(git rev-parse --short HEAD)"
+        $version = "${{ steps.get_version.outputs.version }}-$(git rev-parse --short=8 HEAD)"
         Write-Output "VERSION: $version"
 
         $buildPath = "./build/windows/x64/runner/Release/fusion_design_tool_prototype.exe"

@@ -97,6 +97,29 @@ jobs:
           nexus_url: ${{ secrets.NEXUS_BASE_URL }}
           keychain_password: ${{ secrets.KEYCHAIN_PASSWORD }}
 
+  flutter-web-build:
+    needs: buildChecks
+    if: needs.buildChecks.outputs.fusionLauncher == 'true'
+    concurrency:
+      group: flutter-web-build
+    runs-on: ubuntu-agent
+    timeout-minutes: 30
+
+    steps:
+      - name: Clone project
+        uses: actions/checkout@v4
+
+      - name: Setup Monorepo Toolchain
+        uses: ./.github/reusable-actions/setup-toolchain
+
+      - name: Build Apps
+        uses: ./.github/reusable-actions/build-flutter-web
+        with:
+          flutter_apps_sonar_token: ${{ secrets.FLUTTER_APPS_SONAR_TOKEN }}
+          nexus_password: ${{ secrets.NEXUS_PASSWORD }}
+          nexus_url: ${{ secrets.NEXUS_BASE_URL }}
+          keychain_password: ${{ secrets.KEYCHAIN_PASSWORD }}
+
   cloud-servicesUI-build:
     needs: buildChecks
     if: needs.buildChecks.outputs.cloudServicesUI == 'true'

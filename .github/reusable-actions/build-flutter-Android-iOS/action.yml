@@ -41,7 +41,7 @@ runs:
       working-directory: apps/frontend/flutter-apps/fusion-launcher
       run: |
         flutter pub get
-        moon run flutter-apps:build-all
+        moon run flutter-apps:build-mac-ios-android
         hdiutil create -srcfolder "./build/macos/Build/Products/Release/Fusion Launcher.app" -volname "Fusion Launcher app" -fs HFS+ -fsargs "-c c=64,a=16,e=16" -format UDRW ./build/macos/Build/Products/Release/Fusion_Launcher.dmg
         hdiutil convert ./build/macos/Build/Products/Release/Fusion_Launcher.dmg -format UDZO -imagekey zlib-level=9 -ov -o ./build/macos/Build/Products/Release/Fusion_Launcher_installer.dmg
         VERSION="${{ steps.get_version.outputs.version }}-$(git rev-parse --short HEAD)"
