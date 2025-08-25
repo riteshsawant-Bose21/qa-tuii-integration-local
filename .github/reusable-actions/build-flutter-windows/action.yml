@@ -49,7 +49,7 @@ runs:
         $version = "${{ steps.get_version.outputs.version }}-$(git rev-parse --short HEAD)"
         Write-Output "VERSION: $version"
 
-        $buildPath = "./build/windows/x64/runner/Release/fusion_design_tool_prototype.exe"s
+        $buildPath = "./build/windows/x64/runner/Release/fusion_design_tool_prototype.exe"
         $nexusUrl = "${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/$version/flutter-windows/Fusion-Launcher-$version.exe"
         $username = "github-actions-uploader"
         $password = "${{ inputs.nexus_password }}"
