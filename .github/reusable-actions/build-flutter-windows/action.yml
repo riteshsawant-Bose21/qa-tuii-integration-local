@@ -37,7 +37,7 @@ runs:
     #       -Dsonar.inclusions=lib/**,android/**,ios/**
 
     - name: Flutter Windows
-      shell: pwsh
+      shell: powershell
       working-directory: apps/frontend/flutter-apps/fusion-launcher
       run: |
         flutter pub get
