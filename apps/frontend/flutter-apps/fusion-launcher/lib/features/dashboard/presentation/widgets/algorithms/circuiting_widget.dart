@@ -3,7 +3,7 @@ import 'package:fusion_lib/fusion_widgets/buttons/fusion_gradient_button.dart';
 import 'package:fusion_lib/fusion_widgets/form_fields/fusion_text_form_field.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_gradient_text.dart';
 import 'package:fusion_lib/fusion_algorithms/fusion_algorithms.dart';
-import '../../../services/circuit_data_service.dart';
+import '../../../../../core/services/circuit_data_service.dart';
 
 class SpeakerInputForCircuiting {
   String? selectedModel;

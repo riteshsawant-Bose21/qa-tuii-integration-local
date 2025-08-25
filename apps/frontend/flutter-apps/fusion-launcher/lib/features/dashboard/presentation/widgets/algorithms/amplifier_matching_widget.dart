@@ -4,7 +4,7 @@ import 'package:fusion_lib/fusion_widgets/form_fields/fusion_text_form_field.dar
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_gradient_text.dart';
 import 'package:fusion_lib/fusion_algorithms/amplifier_matching/amplifier_matching.dart';
 import 'package:fusion_lib/api_data/speakers/speakers.dart';
-import '../../../services/circuit_data_service.dart';
+import '../../../../../core/services/circuit_data_service.dart';
 
 
 /// Input model for circuit configuration
