@@ -17,11 +17,11 @@ runs:
 
     # Install Toolchain
     - name: Run proto install
-      shell: powershell
+      shell: bash
       run: proto install
 
     - name: Add custom tool to path
-      shell: powershell
+      shell: bash
       run: |
         echo "$HOME/.proto/shims" >> $GITHUB_PATH
         echo "$HOME/.proto/bin" >> $GITHUB_PATH

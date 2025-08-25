@@ -17,11 +17,15 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Read package version
+    - name: Read version manually
       id: get_version
-      uses: RCSandberg/dart-flutter-read-package-version-action@v2
-      with:
-        path: apps/frontend/flutter-apps/fusion-launcher/pubspec.yaml
+      shell: powershell
+      working-directory: apps/frontend/flutter-apps/fusion-launcher
+      run: |
+        $content = Get-Content pubspec.yaml
+        $versionLine = $content | Where-Object { $_ -match '^version:' }
+        $version = $versionLine -replace '^version:\s*', '' -replace '\+.*$', ''
+        echo "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
     # - name: SonarQube Scan
     #   uses: SonarSource/sonarqube-scan-action@v5

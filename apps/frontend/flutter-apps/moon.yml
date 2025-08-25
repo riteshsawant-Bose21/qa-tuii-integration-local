@@ -7,7 +7,6 @@ tasks:
   build-all:
     deps:
       - "fusion-launcher:build-apk"
-      # - "fusion-launcher:build-ios"
       - "fusion-launcher:build-macos"
   
   # Windows build
