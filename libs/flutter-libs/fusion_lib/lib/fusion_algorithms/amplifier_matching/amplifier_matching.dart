@@ -1,85 +1,79 @@
 /// Enhanced Amplifier Matching Algorithm Module
-/// 
+///
 /// Comprehensive amplifier matching with detailed logging, error handling,
 /// and step-by-step algorithm execution following the 12-step specification.
 
 library amplifier_matching;
 
-export 'amp_matching_types.dart';
-export 'amplifier_matcher.dart';
-export 'amplifier_matching_logger.dart';
-export 'amplifier_matching_error_handler.dart';
-
 import 'dart:convert';
-import '../../api_data/speakers/speakers.dart';
+
 import '../../api_data/amplifiers/amplifier_catalog.dart';
+import '../../api_data/amplifiers/amplifier_types.dart' hide Circuit;
+import '../../api_data/speakers/speakers.dart';
 import 'amp_matching_types.dart';
 import 'amplifier_matcher.dart';
-import 'amplifier_matching_logger.dart';
 import 'amplifier_matching_error_handler.dart';
-import '../../api_data/amplifiers/amplifier_types.dart' hide Circuit;
+import 'amplifier_matching_logger.dart';
 
+export 'amp_matching_types.dart';
+export 'amplifier_matcher.dart';
+export 'amplifier_matching_error_handler.dart';
+export 'amplifier_matching_logger.dart';
 
 /// Enhanced amplifier matching with comprehensive logging and error handling
-/// 
+///
 /// [circuits] - List of circuits to match with detailed specifications
 /// [speakerDatabase] - Speaker specification database for power calculations
 /// [enableLogging] - Enable detailed step-by-step logging (default: true)
 /// [minLogLevel] - Minimum log level to display (default: debug)
-/// 
+///
 /// Returns optimized amplifier assignments with detailed metrics and validation
 Future<AmpMatchingResult> matchAmplifiers(
   List<Circuit> circuits,
-  Map<String, Speaker> speakerDatabase, {
+  Map<String, SpeakerModel> speakerDatabase, {
   bool enableLogging = true,
   LogLevel minLogLevel = LogLevel.info,
 }) async {
   // Configure logging
   AmpMatchingLogger.setLoggingEnabled(enableLogging);
   AmpMatchingLogger.setMinLogLevel(minLogLevel);
-  
+
   return AmplifierMatcher.matchAmplifiers(circuits, speakerDatabase);
 }
 
 /// Configure logging settings for amplifier matching algorithm
-/// 
+///
 /// [enabled] - Enable or disable logging
 /// [minLevel] - Minimum log level (debug, info, warning, error)
-void configureAmplifierMatchingLogging({
-  bool enabled = true,
-  LogLevel minLevel = LogLevel.info,
-}) {
+void configureAmplifierMatchingLogging({bool enabled = true, LogLevel minLevel = LogLevel.info}) {
   AmpMatchingLogger.setLoggingEnabled(enabled);
   AmpMatchingLogger.setMinLogLevel(minLevel);
 }
 
 /// Validate circuits before processing
-/// 
+///
 /// [circuits] - List of circuits to validate
-/// 
+///
 /// Returns validation result with errors and warnings
 ValidationResult validateCircuitsOnly(List<Circuit> circuits) {
   return AmpMatchingErrorHandler.validateCircuits(circuits);
 }
 
 /// Validate speaker database compatibility with circuits
-/// 
+///
 /// [speakers] - Speaker specification database
 /// [circuits] - List of circuits that reference speaker models
-/// 
+///
 /// Returns validation result with errors and warnings
-ValidationResult validateSpeakerDatabase(
-  Map<String, Speaker> speakers, 
-  List<Circuit> circuits,
-) {
+ValidationResult validateSpeakerDatabase(Map<String, SpeakerModel> speakers, List<Circuit> circuits) {
   return AmpMatchingErrorHandler.validateSpeakerDatabase(speakers, circuits);
 }
 
 /// Validate amplifier catalog for matching algorithm
-/// 
+///
 /// [amplifiers] - List of available amplifier models
-/// 
-/// Returns validation result with errors and warnings  
+///
+/// Returns validation result with errors and warnings
 ValidationResult validateAmplifierCatalog(List<AmpModel> amplifiers) {
   return AmpMatchingErrorHandler.validateAmplifierCatalog(amplifiers);
 }
@@ -123,29 +117,10 @@ Circuit createHiZCircuit({
   required double tapWatts,
   double outputOffsetDb = 0.0,
 }) {
-  return Circuit(
-    circuitId: circuitId,
-    model: speakerModel,
-    mode: 'hi-z',
-    speakerCount: speakerCount,
-    tapWatts: tapWatts,
-    outputOffsetDb: outputOffsetDb,
-  );
+  return Circuit(circuitId: circuitId, model: speakerModel, mode: 'hi-z', speakerCount: speakerCount, tapWatts: tapWatts, outputOffsetDb: outputOffsetDb);
 }
 
 /// Create a simple lo-z circuit
-Circuit createLoZCircuit({
-  required int circuitId,
-  required String speakerModel,
-  required int speakerCount,
-  double outputOffsetDb = 0.0,
-}) {
-  return Circuit(
-    circuitId: circuitId,
-    model: speakerModel,
-    mode: 'lo-z',
-    speakerCount: speakerCount,
-    outputOffsetDb: outputOffsetDb,
-  );
+Circuit createLoZCircuit({required int circuitId, required String speakerModel, required int speakerCount, double outputOffsetDb = 0.0}) {
+  return Circuit(circuitId: circuitId, model: speakerModel, mode: 'lo-z', speakerCount: speakerCount, outputOffsetDb: outputOffsetDb);
 }
-

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/api_data/api_data.dart';
-import 'package:fusion_lib/fusion_algorithms/amplifier_matching/amp_matching_types.dart';
-import 'package:fusion_lib/fusion_algorithms/amplifier_matching/amplifier_matcher.dart';
+import 'package:fusion_lib/fusion_algorithms/amplifier_matching/amplifier_matching.dart';
 import 'package:fusion_lib/fusion_algorithms/shared/speaker_database.dart';
 import 'package:fusion_lib/fusion_widgets/buttons/fusion_gradient_button.dart';
 import 'package:fusion_lib/fusion_widgets/form_fields/fusion_text_form_field.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_gradient_text.dart';
+
 import '../../../../../core/services/circuit_data_service.dart';
 
 /// Input model for circuit configuration
@@ -210,15 +210,9 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(16.0),
                 decoration: BoxDecoration(
-                  color: _circuitDataService.hasCircuitingData
-                    ? Colors.green.withValues(alpha: 0.1)
-                    : Colors.grey.withValues(alpha: 0.1),
+                  color: _circuitDataService.hasCircuitingData ? Colors.green.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12.0),
-                  border: Border.all(
-                    color: _circuitDataService.hasCircuitingData
-                      ? Colors.green.withValues(alpha: 0.3)
-                      : Colors.grey.withValues(alpha: 0.3)
-                  ),
+                  border: Border.all(color: _circuitDataService.hasCircuitingData ? Colors.green.withValues(alpha: 0.3) : Colors.grey.withValues(alpha: 0.3)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -240,8 +234,8 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
                     const SizedBox(height: 8),
                     Text(
                       _circuitDataService.hasCircuitingData
-                        ? _circuitDataService.circuitingSummary
-                        : 'No circuiting data available. Run the circuiting algorithm first to import circuit configurations.',
+                          ? _circuitDataService.circuitingSummary
+                          : 'No circuiting data available. Run the circuiting algorithm first to import circuit configurations.',
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.grey[600],
@@ -506,9 +500,7 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
             ),
 
             // Show available tap settings for selected speaker
-      if (circuit.selectedModel != null &&
-                SpeakerCatalog.database.containsKey(circuit.selectedModel) &&
-                circuit.mode == 'hi-z') ...<Widget>[
+            if (circuit.selectedModel != null && SpeakerCatalog.database.containsKey(circuit.selectedModel) && circuit.mode == 'hi-z') ...<Widget>[
               const SizedBox(height: 8),
               Text(
                 'Available Taps: ${SpeakerCatalog.database[circuit.selectedModel]!.hiZTaps.map((double t) => '${t}W').join(', ')}',
@@ -587,13 +579,15 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
                       ],
                     ),
                     const SizedBox(height: 8),
-                    ...result.errors.map((String error) => Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Text(
-                        '• $error',
-                        style: TextStyle(color: Colors.red[700]),
+                    ...result.errors.map(
+                      (String error) => Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Text(
+                          '• $error',
+                          style: TextStyle(color: Colors.red[700]),
+                        ),
                       ),
-                    )),
+                    ),
                   ],
                 ),
               ),
@@ -626,13 +620,15 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
                       ],
                     ),
                     const SizedBox(height: 8),
-                    ...result.warnings.map((String warning) => Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Text(
-                        '• $warning',
-                        style: TextStyle(color: Colors.orange[700]),
+                    ...result.warnings.map(
+                      (String warning) => Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Text(
+                          '• $warning',
+                          style: TextStyle(color: Colors.orange[700]),
+                        ),
                       ),
-                    )),
+                    ),
                   ],
                 ),
               ),
