@@ -2,10 +2,10 @@ import 'dart:convert';
 import 'dart:developer';
 
 import 'package:fusion_launcher/core/service_locator.dart';
+import 'package:fusion_lib/fusion_utils/shared_preference_handler.dart';
 import 'package:fusion_lib/models/response_callback.dart';
 
 import '../../../../core/services/project_list_manager.dart';
-import '../../../../core/utils/shared_preference_handler.dart';
 import '../entity/login_response_entity.dart';
 import '../entity/user_entity.dart';
 import '../repositories/auth_repository.dart';

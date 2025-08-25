@@ -1,37 +1,87 @@
-/// Amplifier Matching Algorithm Module
-///
-/// This module provides advanced amplifier matching capabilities with
-/// power sharing optimization for the Fusion Algorithms library.
-///
-/// Key Features:
-/// - 12-step algorithm following specification
-/// - Power sharing optimization for maximum efficiency
-/// - Smart channel allocation strategies
-/// - Complete amplifier catalog support
-/// - Comprehensive result analysis and metrics
+/// Enhanced Amplifier Matching Algorithm Module
+/// 
+/// Comprehensive amplifier matching with detailed logging, error handling,
+/// and step-by-step algorithm execution following the 12-step specification.
 
 library amplifier_matching;
 
-/// Quick access functions for common amplifier matching scenarios
-
-import 'dart:convert';
-
-import '../../api_data/amplifiers/amplifiers.dart';
-import '../../api_data/speakers/speakers.dart';
-import 'amp_matching_types.dart';
-import 'amplifier_matcher.dart';
-
 export 'amp_matching_types.dart';
 export 'amplifier_matcher.dart';
+export 'amplifier_matching_logger.dart';
+export 'amplifier_matching_error_handler.dart';
 
-/// Simple amplifier matching for basic scenarios
-///
-/// [circuits] - List of circuits to match
-/// [speakerDatabase] - Speaker specification database
-///
-/// Returns optimized amplifier assignments
-Future<AmpMatchingResult> matchAmplifiers(List<Circuit> circuits, Map<String, SpeakerModel> speakerDatabase) async {
+import 'dart:convert';
+import '../../api_data/speakers/speakers.dart';
+import '../../api_data/amplifiers/amplifier_catalog.dart';
+import 'amp_matching_types.dart';
+import 'amplifier_matcher.dart';
+import 'amplifier_matching_logger.dart';
+import 'amplifier_matching_error_handler.dart';
+import '../../api_data/amplifiers/amplifier_types.dart' hide Circuit;
+
+
+/// Enhanced amplifier matching with comprehensive logging and error handling
+/// 
+/// [circuits] - List of circuits to match with detailed specifications
+/// [speakerDatabase] - Speaker specification database for power calculations
+/// [enableLogging] - Enable detailed step-by-step logging (default: true)
+/// [minLogLevel] - Minimum log level to display (default: debug)
+/// 
+/// Returns optimized amplifier assignments with detailed metrics and validation
+Future<AmpMatchingResult> matchAmplifiers(
+  List<Circuit> circuits,
+  Map<String, Speaker> speakerDatabase, {
+  bool enableLogging = true,
+  LogLevel minLogLevel = LogLevel.info,
+}) async {
+  // Configure logging
+  AmpMatchingLogger.setLoggingEnabled(enableLogging);
+  AmpMatchingLogger.setMinLogLevel(minLogLevel);
+  
   return AmplifierMatcher.matchAmplifiers(circuits, speakerDatabase);
+}
+
+/// Configure logging settings for amplifier matching algorithm
+/// 
+/// [enabled] - Enable or disable logging
+/// [minLevel] - Minimum log level (debug, info, warning, error)
+void configureAmplifierMatchingLogging({
+  bool enabled = true,
+  LogLevel minLevel = LogLevel.info,
+}) {
+  AmpMatchingLogger.setLoggingEnabled(enabled);
+  AmpMatchingLogger.setMinLogLevel(minLevel);
+}
+
+/// Validate circuits before processing
+/// 
+/// [circuits] - List of circuits to validate
+/// 
+/// Returns validation result with errors and warnings
+ValidationResult validateCircuitsOnly(List<Circuit> circuits) {
+  return AmpMatchingErrorHandler.validateCircuits(circuits);
+}
+
+/// Validate speaker database compatibility with circuits
+/// 
+/// [speakers] - Speaker specification database
+/// [circuits] - List of circuits that reference speaker models
+/// 
+/// Returns validation result with errors and warnings
+ValidationResult validateSpeakerDatabase(
+  Map<String, Speaker> speakers, 
+  List<Circuit> circuits,
+) {
+  return AmpMatchingErrorHandler.validateSpeakerDatabase(speakers, circuits);
+}
+
+/// Validate amplifier catalog for matching algorithm
+/// 
+/// [amplifiers] - List of available amplifier models
+/// 
+/// Returns validation result with errors and warnings  
+ValidationResult validateAmplifierCatalog(List<AmpModel> amplifiers) {
+  return AmpMatchingErrorHandler.validateAmplifierCatalog(amplifiers);
 }
 
 /// Create circuit from JSON configuration
@@ -73,61 +123,29 @@ Circuit createHiZCircuit({
   required double tapWatts,
   double outputOffsetDb = 0.0,
 }) {
-  return Circuit(circuitId: circuitId, model: speakerModel, mode: 'hi-z', speakerCount: speakerCount, tapWatts: tapWatts, outputOffsetDb: outputOffsetDb);
+  return Circuit(
+    circuitId: circuitId,
+    model: speakerModel,
+    mode: 'hi-z',
+    speakerCount: speakerCount,
+    tapWatts: tapWatts,
+    outputOffsetDb: outputOffsetDb,
+  );
 }
 
 /// Create a simple lo-z circuit
-Circuit createLoZCircuit({required int circuitId, required String speakerModel, required int speakerCount, double outputOffsetDb = 0.0}) {
-  return Circuit(circuitId: circuitId, model: speakerModel, mode: 'lo-z', speakerCount: speakerCount, outputOffsetDb: outputOffsetDb);
+Circuit createLoZCircuit({
+  required int circuitId,
+  required String speakerModel,
+  required int speakerCount,
+  double outputOffsetDb = 0.0,
+}) {
+  return Circuit(
+    circuitId: circuitId,
+    model: speakerModel,
+    mode: 'lo-z',
+    speakerCount: speakerCount,
+    outputOffsetDb: outputOffsetDb,
+  );
 }
 
-/// Quick demo function showing algorithm capabilities
-Future<void> demonstrateAmplifierMatching() async {
-  print('🎵 Amplifier Matching Algorithm Demo');
-  print('===================================');
-
-  // Create sample circuits
-  final circuits = [
-    createHiZCircuit(circuitId: 1, speakerModel: 'FreeSpace_DS100F', speakerCount: 6, tapWatts: 30.0),
-    createHiZCircuit(circuitId: 2, speakerModel: 'FreeSpace_DS100F', speakerCount: 4, tapWatts: 15.0),
-    createHiZCircuit(circuitId: 3, speakerModel: 'FreeSpace_DS100F', speakerCount: 8, tapWatts: 15.0),
-    createHiZCircuit(circuitId: 4, speakerModel: 'FreeSpace_DS100F', speakerCount: 2, tapWatts: 30.0),
-  ];
-
-  // Run amplifier matching using the shared speaker database
-  try {
-    print('\n📊 Input Circuits:');
-    for (final circuit in circuits) {
-      final power = circuit.tapWatts * circuit.speakerCount * 2.0;
-      print('  • Circuit ${circuit.circuitId}: ${circuit.speakerCount}x ${circuit.model} @ ${circuit.tapWatts}W = ${power.toInt()}W');
-    }
-
-    // Run the matching algorithm
-    final result = await AmplifierMatcher.matchAmplifiers(circuits, SpeakerCatalog.getAllSpeakers());
-
-    print('\n🔧 Optimized Amplifier Solution:');
-    for (int i = 0; i < result.assignments.length; i++) {
-      final assignment = result.assignments[i];
-      print(
-        '  • ${assignment.ampModel.name}: ${assignment.circuits.length}/${assignment.ampModel.channels} channels (${(assignment.channelUtilization * 100).toStringAsFixed(1)}% utilization)',
-      );
-
-      for (final circuit in assignment.circuits) {
-        print('    - Circuit ${circuit.circuitId}: ${circuit.speakerCount}x speakers');
-      }
-    }
-
-    print('\n📈 Performance Metrics:');
-    print('  • Total Power Required: ${result.totalPowerRequirement.toInt()}W');
-    print('  • Total System Capacity: ${result.totalSystemCapacity.toInt()}W');
-    print('  • Power Efficiency: ${(result.powerEfficiency * 100).toStringAsFixed(1)}%');
-    print('  • Channel Efficiency: ${(result.channelEfficiency * 100).toStringAsFixed(1)}%');
-    print('  • Amplifiers Used: ${result.amplifierCount}');
-
-    if (result.optimizationNotes.isNotEmpty) {
-      print('  • Notes: ${result.optimizationNotes}');
-    }
-  } catch (e) {
-    print('❌ Error: $e');
-  }
-}

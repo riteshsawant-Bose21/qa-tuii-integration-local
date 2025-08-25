@@ -7,7 +7,6 @@ import 'package:fusion_launcher/core/network_clients/rest_client/interceptor.dar
 import 'package:fusion_launcher/core/services/project_list_manager.dart';
 import 'package:fusion_launcher/core/services/project_manager.dart';
 import 'package:fusion_launcher/core/services/user_profile_manager.dart';
-import 'package:fusion_launcher/core/utils/shared_preference_handler.dart';
 import 'package:fusion_launcher/features/dashboard/data/datasources/home_page_datasource.dart';
 import 'package:fusion_launcher/features/dynamic_config/domain/usecases/get_panel_entity_usecase.dart';
 import 'package:fusion_launcher/features/user_account_setup/data/datasources/auth_datasource.dart';
@@ -15,12 +14,15 @@ import 'package:fusion_launcher/features/user_account_setup/data/datasources/aut
 import 'package:fusion_launcher/features/user_account_setup/data/repositories/auth_repository_impl.dart';
 import 'package:fusion_launcher/features/user_account_setup/domain/repositories/auth_repository.dart';
 import 'package:fusion_launcher/features/user_account_setup/presentation/bloc/auth_bloc.dart';
-import 'package:fusion_lib/fusion_networking/ble/commands/fusion_commands.dart';
-import 'package:fusion_lib/fusion_networking/ble/commands/fusion_commands_impl.dart';
+import 'package:fusion_lib/di/service_locator.dart';
+import 'package:fusion_lib/fusion_auth/fusion_auth.dart';
+import 'package:fusion_lib/fusion_auth/fusion_auth_impl.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_networking/network/fusion_network_client.dart';
 import 'package:fusion_lib/fusion_networking/network/rest_client/dio_client.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
 import 'package:get_it/get_it.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../features/dashboard/data/datasources/home_page_datasource_impl.dart';
 import '../features/dashboard/data/repositories/home_page_repository_impl.dart';
@@ -54,7 +56,10 @@ Future<void> setupServiceLocator() async {
   final FusionAlgorithmsConfig fusionAlgorithmsConfig = FusionAlgorithmsConfig.fromJson(jsonMap);
   serviceLocator.registerSingleton<FusionAlgorithmsConfig>(fusionAlgorithmsConfig);
 
-  serviceLocator.registerSingleton<SharedPreferencesHandler>(SharedPreferencesHandler.getInstance());
+  final SharedPreferences prefs = await SharedPreferences.getInstance();
+  serviceLocator.registerSingleton<SharedPreferences>(prefs);
+
+  serviceLocator.registerSingleton<SharedPreferencesHandler>(SharedPreferencesHandler.getInstance(serviceLocator<SharedPreferences>()));
 
   final ProjectEntity initialProject = ProjectEntity(
     name: 'Default Project',
@@ -142,12 +147,25 @@ Future<void> setupServiceLocator() async {
     DioClient(dioInstance: Dio(), interceptors: <Interceptor>[AppInterceptors()]),
   );
 
+  //Register App Settings
+  serviceLocator.registerSingleton<FusionPreferences>(FusionPreferences(sharedPreferencesHandler: serviceLocator<SharedPreferencesHandler>()));
+
+  //register Telemetry manager
+  serviceLocator.registerLazySingleton<TelemetryData>(() => TelemetryData());
+
   serviceLocator.registerSingleton<FusionNetworkClient>(
-    FusionNetworkClient(httpClient: serviceLocator<DioClient>()),
+    FusionNetworkClient(
+      httpClient: serviceLocator<DioClient>(),
+      sharedPreferencesHandler: serviceLocator<SharedPreferencesHandler>(),
+      telemetryData: serviceLocator<TelemetryData>(),
+      fusionPreferences: serviceLocator<FusionPreferences>(),
+    ),
   );
 
+  serviceLocator.registerLazySingleton<FusionAuth>(() => FusionAuthImpl(fusionNetworkClient: serviceLocator<FusionNetworkClient>()));
+
   /// Registering the HomePageRepository and its use cases
-  serviceLocator.registerLazySingleton<AuthDataSource>(() => AuthDataSourceImpl(serviceLocator<FusionNetworkClient>()));
+  serviceLocator.registerLazySingleton<AuthDataSource>(() => AuthDataSourceImpl(fusionAuth: serviceLocator<FusionAuth>()));
   serviceLocator.registerLazySingleton<AuthRepository>(() => AuthRepositoryImpl(serviceLocator<AuthDataSource>()));
   serviceLocator.registerLazySingleton<AuthBloc>(() => AuthBloc(repository: serviceLocator<AuthRepository>()));
 
@@ -155,4 +173,7 @@ Future<void> setupServiceLocator() async {
   serviceLocator.registerLazySingleton<HomePageDatasource>(() => HomePageDatasourceImpl(serviceLocator<FusionNetworkClient>()));
   serviceLocator.registerLazySingleton<HomePageRepository>(() => HomePageRepositoryImpl(serviceLocator<HomePageDatasource>()));
   // serviceLocator.registerLazySingleton(() => CreateProjectUseCase(serviceLocator()));
+
+  // TODO: ALWAYS KEEP THIS AT THE END OF THE FILE
+  await setupFusionLib(serviceLocator);
 }

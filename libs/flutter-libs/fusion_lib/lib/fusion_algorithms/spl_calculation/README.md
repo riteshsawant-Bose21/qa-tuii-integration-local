@@ -173,16 +173,6 @@ The test includes:
 - Outdoor environment testing
 - Input validation testing
 
-## Differences from Go Version
-
-While maintaining the same core algorithm and results, the Dart version includes:
-
-1. **Immutable Data Structures**: Uses immutable classes with const constructors
-2. **JSON Serialization**: Built-in `toJson()` and `fromJson()` methods
-3. **Dart Conventions**: Follows Dart naming conventions (camelCase)
-4. **Type Safety**: Leverages Dart's null safety and strong typing
-5. **Error Handling**: Uses Dart's exception system with `ArgumentError` and `StateError`
-6. **Logging**: Uses Dart's `developer.log()` for debugging output
 
 ## Dependencies
 

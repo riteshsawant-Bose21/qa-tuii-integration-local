@@ -6,6 +6,7 @@ import 'package:fusion_lib/fusion_algorithms/shared/speaker_database.dart';
 import 'package:fusion_lib/fusion_widgets/buttons/fusion_gradient_button.dart';
 import 'package:fusion_lib/fusion_widgets/form_fields/fusion_text_form_field.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_gradient_text.dart';
+import '../../../../../core/services/circuit_data_service.dart';
 
 /// Input model for circuit configuration
 class CircuitInput {
@@ -54,8 +55,10 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
   AmpMatchingResult? matchingResult;
   bool isLoading = false;
   String? errorMessage;
+  final CircuitDataService _circuitDataService = CircuitDataService();
+  bool _useCircuitingData = false;
 
-  List<String> get availableSpeakerModels => speakerDatabase.keys.toList();
+  List<String> get availableSpeakerModels => SpeakerCatalog.database.keys.toList();
   @override
   void dispose() {
     for (final CircuitInput circuit in circuits) {
@@ -101,11 +104,11 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
       }
 
       if (validCircuits.isEmpty) {
-        throw const AmpMatchingException('Please configure at least one valid circuit');
+        throw Exception('Please configure at least one valid circuit');
       }
 
       // Perform amplifier matching
-      final AmpMatchingResult result = await AmplifierMatcher.matchAmplifiers(validCircuits, speakerDatabase);
+      final AmpMatchingResult result = await matchAmplifiers(validCircuits, SpeakerCatalog.database);
 
       setState(() {
         matchingResult = result;
@@ -127,7 +130,53 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
       circuits.add(CircuitInput(1));
       matchingResult = null;
       errorMessage = null;
+      _useCircuitingData = false;
     });
+  }
+
+  void _importCircuitingData() {
+    if (!_circuitDataService.hasCircuitingData) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No circuiting data available. Please run circuiting algorithm first.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      // Clear existing circuits
+      for (final CircuitInput circuit in circuits) {
+        circuit.dispose();
+      }
+      circuits.clear();
+
+      // Convert and import circuiting data
+      final List<Circuit> importedCircuits = _circuitDataService.convertToCircuits(SpeakerCatalog.database);
+
+      for (final Circuit circuit in importedCircuits) {
+        final CircuitInput circuitInput = CircuitInput(circuit.circuitId);
+        circuitInput.selectedModel = circuit.model;
+        circuitInput.speakerCountController.text = circuit.speakerCount.toString();
+        circuitInput.tapWattsController.text = circuit.tapWatts.toString();
+        circuitInput.offsetDbController.text = circuit.outputOffsetDb.toString();
+        circuitInput.mode = circuit.mode;
+
+        circuits.add(circuitInput);
+      }
+
+      _useCircuitingData = true;
+      matchingResult = null;
+      errorMessage = null;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Imported ${circuits.length} circuits from circuiting algorithm'),
+        backgroundColor: Colors.green,
+      ),
+    );
   }
 
   @override
@@ -150,6 +199,92 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Colors.grey[600],
             ),
+          ),
+          const SizedBox(height: 24),
+
+          // Circuit Data Import Section
+          AnimatedBuilder(
+            animation: _circuitDataService,
+            builder: (BuildContext context, Widget? child) {
+              return Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16.0),
+                decoration: BoxDecoration(
+                  color: _circuitDataService.hasCircuitingData
+                    ? Colors.green.withValues(alpha: 0.1)
+                    : Colors.grey.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12.0),
+                  border: Border.all(
+                    color: _circuitDataService.hasCircuitingData
+                      ? Colors.green.withValues(alpha: 0.3)
+                      : Colors.grey.withValues(alpha: 0.3)
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Row(
+                      children: <Widget>[
+                        Icon(
+                          _circuitDataService.hasCircuitingData ? Icons.check_circle : Icons.info,
+                          color: _circuitDataService.hasCircuitingData ? Colors.green : Colors.grey,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Import from Circuiting Algorithm',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _circuitDataService.hasCircuitingData
+                        ? _circuitDataService.circuitingSummary
+                        : 'No circuiting data available. Run the circuiting algorithm first to import circuit configurations.',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    if (_circuitDataService.hasCircuitingData) ...<Widget>[
+                      const SizedBox(height: 12),
+                      Row(
+                        children: <Widget>[
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: _importCircuitingData,
+                              icon: const Icon(Icons.download),
+                              label: const Text('Import Circuit Data'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.green,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          if (_useCircuitingData)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(16.0),
+                              ),
+                              child: const Text(
+                                'Using imported data',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.green,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              );
+            },
           ),
           const SizedBox(height: 24),
 
@@ -371,10 +506,12 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
             ),
 
             // Show available tap settings for selected speaker
-            if (circuit.selectedModel != null && speakerDatabase.containsKey(circuit.selectedModel) && circuit.mode == 'hi-z') ...<Widget>[
+      if (circuit.selectedModel != null &&
+                SpeakerCatalog.database.containsKey(circuit.selectedModel) &&
+                circuit.mode == 'hi-z') ...<Widget>[
               const SizedBox(height: 8),
               Text(
-                'Available Taps: ${speakerDatabase[circuit.selectedModel]!.hiZTaps.map((double t) => '${t}W').join(', ')}',
+                'Available Taps: ${SpeakerCatalog.database[circuit.selectedModel]!.hiZTaps.map((double t) => '${t}W').join(', ')}',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Colors.grey[600],
                   fontStyle: FontStyle.italic,
@@ -422,6 +559,84 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
               final AmpAssignment assignment = entry.value;
               return _buildAmplifierCard(assignment, index);
             }),
+
+            // Display errors if any
+            if (result.hasErrors) ...<Widget>[
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.red[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.red[200]!),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Row(
+                      children: <Widget>[
+                        Icon(Icons.error, color: Colors.red[700], size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Errors',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red[700],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    ...result.errors.map((String error) => Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        '• $error',
+                        style: TextStyle(color: Colors.red[700]),
+                      ),
+                    )),
+                  ],
+                ),
+              ),
+            ],
+
+            // Display warnings if any
+            if (result.hasWarnings) ...<Widget>[
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange[200]!),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Row(
+                      children: <Widget>[
+                        Icon(Icons.warning, color: Colors.orange[700], size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Warnings',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.orange[700],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    ...result.warnings.map((String warning) => Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        '• $warning',
+                        style: TextStyle(color: Colors.orange[700]),
+                      ),
+                    )),
+                  ],
+                ),
+              ),
+            ],
 
             // Optimization notes
             if (result.optimizationNotes.isNotEmpty) ...<Widget>[

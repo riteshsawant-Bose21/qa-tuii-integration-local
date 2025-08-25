@@ -1,5 +1,4 @@
 /// SPL calculation helper functions
-/// Ported from Go fusion-algo
 
 import 'dart:math' as math;
 import 'spl_constants.dart';

@@ -1,0 +1,21 @@
+{
+  "roots": [
+    "dartzmq"
+  ],
+  "packages": [
+    {
+      "name": "dartzmq",
+      "version": "1.0.0-dev.17",
+      "dependencies": [
+        "ffi"
+      ],
+      "devDependencies": []
+    },
+    {
+      "name": "ffi",
+      "version": "2.1.3",
+      "dependencies": []
+    }
+  ],
+  "configVersion": 1
+}

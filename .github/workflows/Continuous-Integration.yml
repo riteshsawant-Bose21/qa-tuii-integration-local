@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   buildChecks:
-    runs-on: android-mac-build-agent
+    runs-on: mac-agent-actions-runner
     outputs:
       all: ${{ steps.filter.outputs.all }}
       fusionLauncher: ${{ steps.filter.outputs.fusionLauncher }}
@@ -51,12 +51,12 @@ jobs:
             fusionServer:
               - "./apps/firmware_apps/fusion-server/**"
 
-  flutter-android-iOS-build:
+  flutter-android-iOS-macOS-build:
     needs: buildChecks
-    if: needs.buildChecks.outputs.fusionLauncher == 'true' && github.ref == 'refs/heads/develop'
+    if: needs.buildChecks.outputs.fusionLauncher == 'true'
     concurrency:
-      group: flutter-android-iOS-build
-    runs-on: android-mac-build-agent
+      group: flutter-android-iOS-macOS-build
+    runs-on: mac-agent-actions-runner
     timeout-minutes: 30
 
     steps:
@@ -76,10 +76,10 @@ jobs:
 
   cloud-servicesUI-build:
     needs: buildChecks
-    if: needs.buildChecks.outputs.all == 'true'
+    if: needs.buildChecks.outputs.cloudServicesUI == 'true'
     concurrency:
       group: cloud-servicesUI-build
-    runs-on: android-mac-build-agent
+    runs-on: ubuntu-agent
     timeout-minutes: 30
 
     steps:

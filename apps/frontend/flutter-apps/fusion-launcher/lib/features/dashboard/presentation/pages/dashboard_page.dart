@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/services/user_profile_manager.dart';
 import 'package:fusion_launcher/core/theme/app_theme.dart';
 import 'package:fusion_launcher/features/dashboard/presentation/widgets/home_tab_content.dart';
+import 'package:fusion_lib/fusion_utils/shared_preference_handler.dart';
 
 import '../../../../core/models/project_list_model.dart';
 import '../../../../core/service_locator.dart';
 import '../../../../core/services/project_list_manager.dart';
 import '../../../../core/services/project_manager.dart';
 import '../../../../core/services/user_session_manager.dart';
-import '../../../../core/utils/shared_preference_handler.dart';
 import '../widgets/community_tab_content.dart';
 import '../widgets/fusion_side_bar.dart';
 import '../widgets/profile_tab_content.dart';

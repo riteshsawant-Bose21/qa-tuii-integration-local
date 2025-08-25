@@ -1,7 +1,4 @@
 /// DSP device specifications and data types for API integration
-/// 
-/// This module contains DSP device data structures that would typically
-/// be fetched from a device specifications API in production.
 
 /// DSP device specification containing I/O capabilities
 class DeviceSpec {

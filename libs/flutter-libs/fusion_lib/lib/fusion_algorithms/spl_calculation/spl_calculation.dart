@@ -1,5 +1,4 @@
 /// SPL Calculation Algorithm
-/// Ported from Go fusion-algo
 ///
 /// This library provides Sound Pressure Level (SPL) calculations for
 /// speaker placement and selection based on mounting type, environment,

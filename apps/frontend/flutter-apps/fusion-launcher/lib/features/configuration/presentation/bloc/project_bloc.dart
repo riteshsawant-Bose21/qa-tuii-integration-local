@@ -1,13 +1,13 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
+import 'package:fusion_lib/fusion_utils/shared_preference_handler.dart';
 
 import '../../../../core/models/floor_entity.dart';
 import '../../../../core/models/mix_entity.dart';
 import '../../../../core/models/project_entity.dart';
 import '../../../../core/models/project_metadata_model.dart';
 import '../../../../core/services/project_list_manager.dart';
-import '../../../../core/utils/shared_preference_handler.dart';
 import '../../../dashboard/domain/usecases/delete_project_usecase.dart';
 import '../../domain/usecases/load_project_usecases.dart';
 import '../../domain/usecases/save_image_to_project_usecase.dart';

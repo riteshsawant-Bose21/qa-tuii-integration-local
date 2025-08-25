@@ -1,19 +1,12 @@
 /// DSP device catalog containing product specifications
 /// 
 /// This module contains the DSP device catalog that would typically be
-/// fetched from a device specifications API in production. Currently 
 /// contains hardcoded data for development and testing purposes.
 
 import 'device_types.dart';
 
 /// DSP Device catalog with all available Fusion devices
-/// 
-/// In production, this data would be fetched from an API endpoint
-/// such as GET /api/v1/devices or similar product catalog service
 class DeviceCatalog {
-  /// All available DSP devices in the catalog
-  /// 
-  /// TODO: Replace with API call to device specifications service
   static const List<DeviceSpec> devices = [
     DeviceSpec(
       name: "4ch PowerSmart", 
@@ -164,87 +157,5 @@ class DeviceCatalog {
     final networkIO = devices.map((device) => device.networkIO).toSet().toList();
     networkIO.sort();
     return networkIO;
-  }
-
-  /// Future API integration method
-  /// 
-  /// This method would replace the static devices list above
-  /// Example: 
-  /// ```dart
-  /// final devices = await DeviceCatalog.fetchFromApi();
-  /// ```
-  static Future<List<DeviceSpec>> fetchFromApi({
-    String? apiEndpoint,
-    Map<String, String>? headers,
-  }) async {
-    // TODO: Implement actual API call
-    // Example implementation:
-    // 
-    // final response = await http.get(
-    //   Uri.parse(apiEndpoint ?? 'https://api.bose.com/v1/devices'),
-    //   headers: headers ?? {'Content-Type': 'application/json'},
-    // );
-    // 
-    // if (response.statusCode == 200) {
-    //   final data = jsonDecode(response.body) as List<dynamic>;
-    //   return data.map((json) => DeviceSpec.fromJson(json)).toList();
-    // }
-    // 
-    // throw Exception('Failed to fetch devices: ${response.statusCode}');
-    
-    // For now, return the static devices
-    await Future.delayed(const Duration(milliseconds: 100)); // Simulate API delay
-    return devices;
-  }
-
-  /// Future API integration method for filtered results
-  /// 
-  /// Example: 
-  /// ```dart
-  /// final devices = await DeviceCatalog.fetchFilteredFromApi(
-  ///   minAnalogInputs: 4,
-  ///   requireNetworkIO: true,
-  /// );
-  /// ```
-  static Future<List<DeviceSpec>> fetchFilteredFromApi({
-    int? minAnalogInputs,
-    int? minAnalogOutputs,
-    int? minNetworkIO,
-    bool requireNetworkIO = false,
-    String? deviceType, // "PowerSmart" or "FM"
-    String? apiEndpoint,
-    Map<String, String>? headers,
-  }) async {
-    // TODO: Implement actual API call with filters
-    // For now, filter the static devices
-    await Future.delayed(const Duration(milliseconds: 100)); // Simulate API delay
-    
-    var filtered = devices.asMap().values;
-    
-    if (minAnalogInputs != null) {
-      filtered = filtered.where((device) => device.analogInputs >= minAnalogInputs);
-    }
-    
-    if (minAnalogOutputs != null) {
-      filtered = filtered.where((device) => device.analogOutputs >= minAnalogOutputs);
-    }
-    
-    if (minNetworkIO != null) {
-      filtered = filtered.where((device) => device.networkIO >= minNetworkIO);
-    }
-    
-    if (requireNetworkIO) {
-      filtered = filtered.where((device) => device.networkIO > 0);
-    }
-    
-    if (deviceType != null) {
-      if (deviceType == "PowerSmart") {
-        filtered = filtered.where((device) => device.name.contains("PowerSmart"));
-      } else if (deviceType == "FM") {
-        filtered = filtered.where((device) => device.name.startsWith("FM"));
-      }
-    }
-    
-    return filtered.toList();
   }
 }

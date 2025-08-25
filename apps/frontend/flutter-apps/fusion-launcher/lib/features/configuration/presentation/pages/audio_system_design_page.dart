@@ -33,10 +33,10 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
   final ScrollController _horizontalController = ScrollController();
   Map<String, List<Offset>> _centersById = <String, List<Offset>>{};
 
-  final TextEditingController _droAddressController = TextEditingController(text: FusionPreferences().droServerUrl);
+  final TextEditingController _droAddressController = TextEditingController(text: serviceLocator<FusionPreferences>().droServerUrl);
   final TextEditingController _virtualIPController = TextEditingController();
-  final TextEditingController _backendUrlController = TextEditingController(text: FusionPreferences().fusionCloudBackendUrl);
-  final TextEditingController _cloudWebUrlController = TextEditingController(text: FusionPreferences().cloudWebUrl);
+  final TextEditingController _backendUrlController = TextEditingController(text: serviceLocator<FusionPreferences>().fusionCloudBackendUrl);
+  final TextEditingController _cloudWebUrlController = TextEditingController(text: serviceLocator<FusionPreferences>().cloudWebUrl);
 
   // @override
   // void initState() {
@@ -241,7 +241,7 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
                                   onPressed: () {
                                     // validate ip address and update project
                                     final String ip = _droAddressController.text.trim();
-                                    FusionPreferences().setDroServerUrl(ip);
+                                    serviceLocator<FusionPreferences>().setDroServerUrl(ip);
                                     projectManager.notifyDataChange();
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
@@ -366,7 +366,7 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
                                 height: 28,
                                 child: ElevatedButton(
                                   onPressed: () {
-                                    FusionPreferences().setFusionCloudBackendUrl(_backendUrlController.text);
+                                    serviceLocator<FusionPreferences>().setFusionCloudBackendUrl(_backendUrlController.text);
                                   },
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.grey.shade800,
@@ -425,7 +425,7 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
                                 height: 28,
                                 child: ElevatedButton(
                                   onPressed: () {
-                                    FusionPreferences().setCloudWebUrl(_cloudWebUrlController.text);
+                                    serviceLocator<FusionPreferences>().setCloudWebUrl(_cloudWebUrlController.text);
                                   },
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.grey.shade800,

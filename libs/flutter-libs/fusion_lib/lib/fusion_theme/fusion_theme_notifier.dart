@@ -4,7 +4,7 @@ import 'app_theme.dart';
 
 class FusionThemeController {
   /// Global theme mode notifier
-  static final ValueNotifier<ThemeMode> themeModeNotifier = ValueNotifier<ThemeMode>(ThemeMode.system);
+  static final ValueNotifier<ThemeMode> themeModeNotifier = ValueNotifier<ThemeMode>(ThemeMode.light);
 
   /// Set theme mode
   static void setThemeMode(ThemeMode mode) {

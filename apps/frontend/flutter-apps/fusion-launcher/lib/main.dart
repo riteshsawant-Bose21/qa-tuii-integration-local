@@ -7,7 +7,6 @@ import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/core/services/user_session_manager.dart';
 import 'package:fusion_launcher/features/onboarding/presentation/welcome_page.dart';
 import 'package:fusion_launcher/features/user_account_setup/presentation/bloc/auth_bloc.dart';
-import 'package:fusion_lib/di/service_locator.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_theme/fusion_theme_app.dart';
 import 'package:nested/nested.dart';
@@ -22,7 +21,7 @@ Future<void> main() async {
     DeviceOrientation.landscapeRight,
     DeviceOrientation.landscapeLeft,
   ]);
-  await setupFusionLibServiceLocator();
+
   await setupServiceLocator();
 
   runApp(const MyApp());

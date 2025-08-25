@@ -13,6 +13,7 @@ import 'package:fusion_launcher/features/dashboard/domain/entities/get_projects_
 import 'package:fusion_launcher/features/dashboard/domain/entities/upload_file_entity.dart';
 import 'package:fusion_lib/fusion_networking/network/fusion_network_client.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
+import 'package:fusion_lib/fusion_utils/shared_preference_handler.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../../features/dashboard/domain/usecases/create_project_usecase.dart';
@@ -24,7 +25,6 @@ import '../../features/dashboard/domain/usecases/upload_file_usecase.dart';
 import '../models/project_entity.dart';
 import '../models/project_metadata_model.dart';
 import '../service_locator.dart';
-import '../utils/shared_preference_handler.dart';
 
 class ProjectListManager extends ValueNotifier<List<ProjectListModel>> {
   ProjectListManager() : super(<ProjectListModel>[]);
