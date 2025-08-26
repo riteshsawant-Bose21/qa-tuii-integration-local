@@ -7,3 +7,7 @@
 # react-apps
 node_modules
 dist
+
+
+# inteli j .idea
+.idea
