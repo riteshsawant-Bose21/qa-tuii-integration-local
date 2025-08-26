@@ -4,8 +4,8 @@ import 'package:fusion_lib/models/fusion_models.dart';
 import '../../../../../core/constants.dart';
 
 class ProcessingChainWidget extends StatefulWidget {
-  final List<ProcessingBlockEntity> processingBlocks;
-  final void Function(List<ProcessingBlockEntity>) onProcessingChainChanged;
+  final List<ProcessingBlockModel> processingBlocks;
+  final void Function(List<ProcessingBlockModel>) onProcessingChainChanged;
 
   const ProcessingChainWidget({
     super.key,
@@ -28,14 +28,14 @@ class _ProcessingChainWidgetState extends State<ProcessingChainWidget> {
 
   void _addBlock() {
     final int ts = DateTime.now().millisecondsSinceEpoch;
-    final ProcessingBlockEntity newBlock = ProcessingBlockEntity(
+    final ProcessingBlockModel newBlock = ProcessingBlockModel(
       id: 'block_$ts',
       name: 'Block ${widget.processingBlocks.length + 1}',
       properties: <PropertySetting>[],
       algorithmId: '',
     );
 
-    widget.onProcessingChainChanged(<ProcessingBlockEntity>[...widget.processingBlocks, newBlock]);
+    widget.onProcessingChainChanged(<ProcessingBlockModel>[...widget.processingBlocks, newBlock]);
 
     // scroll to end after frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -78,13 +78,13 @@ class _ProcessingChainWidgetState extends State<ProcessingChainWidget> {
                 for (int i = 0; i < widget.processingBlocks.length; i++) ...<Widget>[
                   ProcessingBlockWidget(
                     block: widget.processingBlocks[i],
-                    onBlockChanged: (ProcessingBlockEntity updated) {
-                      final List<ProcessingBlockEntity> blocks = <ProcessingBlockEntity>[...widget.processingBlocks];
+                    onBlockChanged: (ProcessingBlockModel updated) {
+                      final List<ProcessingBlockModel> blocks = <ProcessingBlockModel>[...widget.processingBlocks];
                       blocks[i] = updated;
                       widget.onProcessingChainChanged(blocks);
                     },
                     onDelete: () {
-                      final List<ProcessingBlockEntity> blocks = <ProcessingBlockEntity>[...widget.processingBlocks]..removeAt(i);
+                      final List<ProcessingBlockModel> blocks = <ProcessingBlockModel>[...widget.processingBlocks]..removeAt(i);
                       widget.onProcessingChainChanged(blocks);
                     },
                   ),
@@ -113,8 +113,8 @@ class _ProcessingChainWidgetState extends State<ProcessingChainWidget> {
 }
 
 class ProcessingBlockWidget extends StatelessWidget {
-  final ProcessingBlockEntity block;
-  final void Function(ProcessingBlockEntity) onBlockChanged;
+  final ProcessingBlockModel block;
+  final void Function(ProcessingBlockModel) onBlockChanged;
   final VoidCallback onDelete;
 
   const ProcessingBlockWidget({

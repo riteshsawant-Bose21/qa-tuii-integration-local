@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
 
-import '../../../../../core/models/floor_entity.dart';
 import 'floor_properties.dart';
 import 'hardware_properties.dart';
 import 'surface_properties.dart';
 
 class PropertiesSideBar extends StatefulWidget {
-  final Floor? floor;
+  final FloorModel? floor;
   final ListeningArea? surface;
   final HardwareComponent? hardwareComponent;
-  final Function(Floor floorEntity) onFloorChanged;
-  final Function(Floor floorEntity) onFloorDelete;
+  final Function(FloorModel floorEntity) onFloorChanged;
+  final Function(FloorModel floorEntity) onFloorDelete;
   final Function(HardwareComponent) onHardwareDelete;
   final Function(ListeningArea) onSurfaceDelete;
 
@@ -49,7 +48,7 @@ class _PropertiesSideBarState extends State<PropertiesSideBar> {
               SurfaceProperties(
                 canvasSurface: widget.surface!,
                 floorEntity: widget.floor!,
-                onEntityChanged: (Floor floorEntity) {
+                onEntityChanged: (FloorModel floorEntity) {
                   widget.onFloorChanged(floorEntity);
                 },
                 onSurfaceDelete: (ListeningArea canvasSurface) {
@@ -60,7 +59,7 @@ class _PropertiesSideBarState extends State<PropertiesSideBar> {
               HardwareProperties(
                 hardwareComponent: widget.hardwareComponent!,
                 floorEntity: widget.floor!,
-                onEntityChanged: (Floor floorEntity) {
+                onEntityChanged: (FloorModel floorEntity) {
                   widget.onFloorChanged(floorEntity);
                 },
                 onHardwareDelete: (HardwareComponent hardwareComponent) {
@@ -71,10 +70,10 @@ class _PropertiesSideBarState extends State<PropertiesSideBar> {
               FloorPropertiesSidebar(
                 entity: widget.floor!.floorPlan,
                 floorEntity: widget.floor!,
-                onEntityChanged: (Floor floorEntity) {
+                onEntityChanged: (FloorModel floorEntity) {
                   widget.onFloorChanged(floorEntity);
                 },
-                onFloorDelete: (Floor floorEntity) {
+                onFloorDelete: (FloorModel floorEntity) {
                   widget.onFloorDelete(floorEntity);
                 },
               ),

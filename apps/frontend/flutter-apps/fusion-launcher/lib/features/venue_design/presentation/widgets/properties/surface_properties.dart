@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
 
-import '../../../../../core/models/floor_entity.dart';
-
 class SurfaceProperties extends StatefulWidget {
-  final Floor floorEntity;
+  final FloorModel floorEntity;
   final ListeningArea canvasSurface;
-  final ValueChanged<Floor> onEntityChanged;
+  final ValueChanged<FloorModel> onEntityChanged;
   final ValueChanged<ListeningArea> onSurfaceDelete;
 
   const SurfaceProperties({
@@ -49,7 +47,7 @@ class _SurfacePropertiesState extends State<SurfaceProperties> {
     final List<ListeningArea> listeningAreas = List<ListeningArea>.from(widget.floorEntity.listeningAreas);
     final int idx = listeningAreas.indexWhere((ListeningArea s) => s.id == updated.id);
     if (idx != -1) listeningAreas[idx] = updated;
-    final Floor newFloor = widget.floorEntity.copyWith(listeningAreas: listeningAreas);
+    final FloorModel newFloor = widget.floorEntity.copyWith(listeningAreas: listeningAreas);
     widget.onEntityChanged(newFloor);
   }
 

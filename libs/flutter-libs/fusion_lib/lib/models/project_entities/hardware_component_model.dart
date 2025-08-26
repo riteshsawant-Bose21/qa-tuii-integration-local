@@ -3,7 +3,7 @@ import 'dart:ui';
 
 import 'package:uuid/uuid.dart';
 
-import 'location_entity.dart';
+import 'location_model.dart';
 
 /// Base class for any hardware component
 abstract class HardwareComponent {
@@ -11,7 +11,7 @@ abstract class HardwareComponent {
   final String name;
   Offset pos;
   final String assetImagePath;
-  final LocationEntity locationEntity;
+  final LocationModel locationEntity;
   final double price;
   final String hardwareName;
 
@@ -50,7 +50,7 @@ abstract class HardwareComponent {
     String? name,
     Offset? pos,
     String? assetImagePath,
-    LocationEntity? locationEntity,
+    LocationModel? locationEntity,
     double? price,
     String? hardwareName,
   });

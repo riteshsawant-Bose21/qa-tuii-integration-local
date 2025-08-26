@@ -2,14 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
 
 import '../../../../../core/constants.dart';
-import '../../../../../core/models/mix_entity.dart';
 import '../common/processing_block_view.dart';
 import 'multi_device_selection_dialog.dart';
 
 class MixWidget extends StatefulWidget {
-  final Mix mix;
+  final SourceSet mix;
   final List<Source> availableSources;
-  final void Function(Mix) onMixUpdated;
+  final void Function(SourceSet) onMixUpdated;
   final void Function() duplicateMix;
   final Function() onDelete;
   final bool isControlMode;
@@ -29,7 +28,7 @@ class MixWidget extends StatefulWidget {
 }
 
 class MixWidgetState extends State<MixWidget> {
-  Future<void> pickInputs(Mix mix) async {
+  Future<void> pickInputs(SourceSet mix) async {
     final List<Source>? picked = await showDialog<List<Source>>(
       context: context,
       builder:
@@ -52,7 +51,7 @@ class MixWidgetState extends State<MixWidget> {
         }
       }
 
-      final Mix updatedMix = mix.copyWith(sourceIds: selectedIds);
+      final SourceSet updatedMix = mix.copyWith(sourceIds: selectedIds);
       widget.onMixUpdated(updatedMix);
     }
   }
@@ -85,7 +84,7 @@ class MixWidgetState extends State<MixWidget> {
                   ),
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600, color: colors.onSurface, fontSize: 13),
                   onChanged: (String v) {
-                    final Mix updatedMix = widget.mix.copyWith(name: v);
+                    final SourceSet updatedMix = widget.mix.copyWith(name: v);
                     widget.onMixUpdated(updatedMix);
                   },
                 ),
@@ -257,7 +256,7 @@ class MixWidgetState extends State<MixWidget> {
                                       if (!widget.isControlMode)
                                         GestureDetector(
                                           onTap: () {
-                                            final Mix updatedMix = widget.mix.copyWith(
+                                            final SourceSet updatedMix = widget.mix.copyWith(
                                               sourceIds: List<String>.from(widget.mix.sourceIds)..removeAt(index),
                                             );
                                             widget.onMixUpdated(updatedMix);
@@ -314,7 +313,7 @@ class MixWidgetState extends State<MixWidget> {
                                                 widget.mix.sourceMixLevels,
                                               );
                                               updatedLevels[source.id] = value;
-                                              final Mix updatedMix = widget.mix.copyWith(sourceMixLevels: updatedLevels);
+                                              final SourceSet updatedMix = widget.mix.copyWith(sourceMixLevels: updatedLevels);
                                               widget.onMixUpdated(updatedMix);
                                             },
                                           ),
@@ -371,19 +370,19 @@ class MixWidgetState extends State<MixWidget> {
               processingType: ProcessingType.mix,
               selectedBlocks: widget.mix.processingBlocks,
               isControlMode: widget.isControlMode,
-              onBlocksUpdated: (List<ProcessingBlockEntity> chain) {
-                final Mix updatedMix = widget.mix.copyWith(processingBlocks: chain);
+              onBlocksUpdated: (List<ProcessingBlockModel> chain) {
+                final SourceSet updatedMix = widget.mix.copyWith(processingBlocks: chain);
                 widget.onMixUpdated(updatedMix);
               },
               onBlockRemoved: (int index) {
-                final List<ProcessingBlockEntity> updatedBlocks = List<ProcessingBlockEntity>.from(
+                final List<ProcessingBlockModel> updatedBlocks = List<ProcessingBlockModel>.from(
                   widget.mix.processingBlocks,
                 );
                 updatedBlocks.removeAt(index);
                 widget.onMixUpdated(widget.mix.copyWith(processingBlocks: updatedBlocks));
               },
-              onBlockSelected: (ProcessingBlockEntity block) {
-                final List<ProcessingBlockEntity> updatedBlocks = List<ProcessingBlockEntity>.from(
+              onBlockSelected: (ProcessingBlockModel block) {
+                final List<ProcessingBlockModel> updatedBlocks = List<ProcessingBlockModel>.from(
                   widget.mix.processingBlocks,
                 );
                 updatedBlocks.add(block);

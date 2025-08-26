@@ -1,9 +1,9 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:fusion_lib/models/project_entities/project_data.dart';
 import 'package:path_provider/path_provider.dart';
 
-import '../../../../core/models/project_entity.dart';
 import '../../../../core/models/project_metadata_model.dart';
 import '../../../../core/utils/helper.dart';
 import '../../domain/repositories/project_repository.dart';
@@ -20,7 +20,7 @@ class ProjectRepositoryImpl implements ProjectRepository {
   });
 
   @override
-  Future<void> saveProject(ProjectEntity project) async {
+  Future<void> saveProject(ProjectData project) async {
     try {
       await localDataSource.saveProject(project);
     } catch (e) {
@@ -29,7 +29,7 @@ class ProjectRepositoryImpl implements ProjectRepository {
   }
 
   @override
-  Future<ProjectEntity> loadProject(String projectName) async {
+  Future<ProjectData> loadProject(String projectName) async {
     try {
       return await localDataSource.loadProject(projectName);
     } catch (e) {
@@ -56,14 +56,14 @@ class ProjectRepositoryImpl implements ProjectRepository {
   }
 
   @override
-  Future<(bool success, String message)> uploadToCloud(ProjectEntity project) async {
+  Future<(bool success, String message)> uploadToCloud(ProjectData project) async {
     try {
       // Create zip file logic here (similar to original implementation)
       final Directory appDocDir = await getApplicationDocumentsDirectory();
       final Directory fusionDir = Directory('${appDocDir.path}/FusionProject/${project.name}');
 
       // Update project with current timestamp
-      final ProjectEntity updatedProject = project.copyWith(updatedAt: DateTime.now());
+      final ProjectData updatedProject = project.copyWith(updatedAt: DateTime.now());
       await saveProject(updatedProject);
 
       // Create zip file

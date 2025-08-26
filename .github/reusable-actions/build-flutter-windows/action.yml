@@ -1,0 +1,57 @@
+name: "Build Flutter Windows App"
+description: "Build Flutter Windows App"
+inputs:
+  flutter_apps_sonar_token:
+    description: 'SonarQube server token'
+    required: true
+  nexus_password:
+    description: 'Nexus repository password'
+    required: true
+  keychain_password:
+    description: 'Keychain password for iOS build'
+    required: true
+  nexus_url:
+    description: 'Nexus repository URL'
+    required: true
+        
+runs:
+  using: "composite"
+  steps:
+    - name: Read version manually
+      id: get_version
+      shell: powershell
+      working-directory: apps/frontend/flutter-apps/fusion-launcher
+      run: |
+        $content = Get-Content pubspec.yaml
+        $versionLine = $content | Where-Object { $_ -match '^version:' }
+        $version = $versionLine -replace '^version:\s*', '' -replace '\+.*$', ''
+        echo "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+    # - name: SonarQube Scan
+    #   uses: SonarSource/sonarqube-scan-action@v5
+    #   env:
+    #     SONAR_TOKEN: ${{ inputs.flutter_apps_sonar_token }}
+    #   with:
+    #     projectBaseDir: 'apps/frontend/flutter-apps'
+    #     args: >
+    #       -Dsonar.c.file.suffixes=-
+    #       -Dsonar.cpp.file.suffixes=-
+    #       -Dsonar.objc.file.suffixes=-
+    #       -Dsonar.exclusions=build/**
+    #       -Dsonar.inclusions=lib/**,android/**,ios/**
+
+    - name: Flutter Windows
+      shell: powershell
+      working-directory: apps/frontend/flutter-apps/fusion-launcher
+      run: |
+        flutter pub get
+        moon run flutter-apps:build-win
+        $version = "${{ steps.get_version.outputs.version }}-$(git rev-parse --short=8 HEAD)"
+        Write-Output "VERSION: $version"
+
+        $buildPath = "./build/windows/x64/runner/Release/fusion_design_tool_prototype.exe"
+        $nexusUrl = "${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/$version/flutter-windows/Fusion-Launcher-$version.exe"
+        $username = "github-actions-uploader"
+        $password = "${{ inputs.nexus_password }}"
+
+        curl.exe -k --ssl-no-revoke -f -u "$username`:$password" -T $buildPath $nexusUrl

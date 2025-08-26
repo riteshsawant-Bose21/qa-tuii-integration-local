@@ -84,7 +84,7 @@
 //       _hardwareComponentIndex[hw.id] = hw;
 //
 //       // Build location relationships
-//       final LocationEntity loc = hw.locationEntity;
+//       final LocationModel loc = hw.locationEntity;
 //       if (loc.zoneId?.isNotEmpty == true) {
 //         _hardwareComponentToZone[hw.id] = loc.zoneId!;
 //         _zoneToHardwareComponents.putIfAbsent(loc.zoneId!, () => <String>{}).add(hw.id);
@@ -411,7 +411,7 @@
 //       value.floors.add(
 //         Floor(
 //           name: 'Floor 1',
-//           floorPlan: FloorPlanEntity.defaultFloorPlan,
+//           floorPlan: FloorPlanModel.defaultFloorPlan,
 //         ),
 //       );
 //     }
@@ -449,7 +449,7 @@
 //   }
 //
 //   // ─── FloorPlan ─────────────────────────────────────────────────────────────
-//   void updateFloorPlan(FloorPlanEntity plan) {
+//   void updateFloorPlan(FloorPlanModel plan) {
 //     _floor.floorPlan = plan;
 //     notifyListeners();
 //   }
@@ -502,7 +502,7 @@
 //
 //   // ─── OPTIMIZED MIXES ──────────────────────────────────────────────────────────────
 //   void addMix(Mix mix) {
-//     final ProcessingBlockEntity gainBlock = ProcessingBlockEntity(
+//     final ProcessingBlockModel gainBlock = ProcessingBlockModel(
 //       id: 'gain${DateTime.now().millisecondsSinceEpoch}',
 //       name: 'Gain',
 //       algorithmId: "gain",
@@ -539,7 +539,7 @@
 //
 //   // ─── OPTIMIZED ZONES ──────────────────────────────────────────────────────────────
 //   void addZone(Zone zone) {
-//     final ProcessingBlockEntity gainBlock = ProcessingBlockEntity(
+//     final ProcessingBlockModel gainBlock = ProcessingBlockModel(
 //       id: 'gain${DateTime.now().millisecondsSinceEpoch}',
 //       name: 'Gain',
 //       algorithmId: "gain",
@@ -593,7 +593,7 @@
 //   // ─── OPTIMIZED HARDWARE COMPONENTS ──────────────────────────────────────────────────────────────
 //   void addHardwareComponent(HardwareComponent hardwareComponent) {
 //     if (hardwareComponent is Source || hardwareComponent is Speaker) {
-//       final ProcessingBlockEntity gainBlock = ProcessingBlockEntity(
+//       final ProcessingBlockModel gainBlock = ProcessingBlockModel(
 //         id: 'gain${DateTime.now().millisecondsSinceEpoch}',
 //         name: 'Gain',
 //         algorithmId: "gain",

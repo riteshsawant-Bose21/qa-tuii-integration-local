@@ -44,7 +44,7 @@ class PanelRepositoryImpl implements PanelRepository {
   }
 
   @override
-  Future<PanelEntity> getPanelEntity(ProcessingBlockEntity processingBloc) async {
+  Future<PanelEntity> getPanelEntity(ProcessingBlockModel processingBloc) async {
     return panelDataSource.getPanelEntity(processingBloc);
   }
 }

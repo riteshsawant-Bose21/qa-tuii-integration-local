@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/core/models/amplifer.dart';
-import 'package:fusion_launcher/core/models/fusion_device.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
 
 class CostCalculatorScreen extends StatelessWidget {

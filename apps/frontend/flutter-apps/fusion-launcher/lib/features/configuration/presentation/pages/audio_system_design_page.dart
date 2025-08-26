@@ -1,7 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/core/models/fusion_device.dart';
-import 'package:fusion_launcher/core/models/mix_entity.dart';
 import 'package:fusion_launcher/core/utils/fusion_utils.dart';
 import 'package:fusion_launcher/core/widgets/collapsible_side_panel.dart';
 import 'package:fusion_launcher/features/configuration/presentation/widgets/dsp_setup/dsp_column.dart';
@@ -10,8 +8,6 @@ import 'package:fusion_lib/fusion_utils/app_settings.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
 
 import '../../../../core/constants.dart';
-import '../../../../core/models/floor_entity.dart';
-import '../../../../core/models/project_entity.dart';
 import '../../../../core/service_locator.dart';
 import '../../../../core/services/project_manager.dart';
 import '../../../../core/utils/dro_json_mapper.dart';
@@ -62,9 +58,9 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
     return Scaffold(
       backgroundColor: AppColors.backgroundSoft,
       body: SafeArea(
-        child: ValueListenableBuilder<ProjectEntity>(
+        child: ValueListenableBuilder<ProjectData>(
           valueListenable: projectManager,
-          builder: (BuildContext context, ProjectEntity data, _) {
+          builder: (BuildContext context, ProjectData data, _) {
             _virtualIPController.text = data.virtualIP ?? '';
 
             return Row(
@@ -96,10 +92,10 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
                                       onSourceDeleted: _deleteSource,
                                       onSourceAdded: _addSource,
                                       isControlMode: data.isInControlMode,
-                                      onFloorUpdated: (Floor updatedFloor) {
+                                      onFloorUpdated: (FloorModel updatedFloor) {
                                         projectManager.updateFloor(updatedFloor);
                                       },
-                                      onFloorAdded: (Floor newFloor) {
+                                      onFloorAdded: (FloorModel newFloor) {
                                         projectManager.addFloor(newFloor);
                                       },
                                     ),
@@ -143,10 +139,10 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
                                       onSpeakerAdded: (Speaker speaker) {
                                         projectManager.addHardwareComponent(speaker);
                                       },
-                                      onFloorUpdated: (Floor updatedFloor) {
+                                      onFloorUpdated: (FloorModel updatedFloor) {
                                         projectManager.updateFloor(updatedFloor);
                                       },
-                                      onFloorAdded: (Floor newFloor) {
+                                      onFloorAdded: (FloorModel newFloor) {
                                         projectManager.addFloor(newFloor);
                                       },
                                     ),
@@ -668,17 +664,17 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
     projectManager.saveProject();
   }
 
-  void _onMixUpdated(Mix p1) {
+  void _onMixUpdated(SourceSet p1) {
     projectManager.updateMix(p1);
     projectManager.saveProject();
   }
 
-  void _onMixAdded(Mix p1) {
+  void _onMixAdded(SourceSet p1) {
     projectManager.addMix(p1);
     projectManager.saveProject();
   }
 
-  void _onMixDeleted(Mix p1) {
+  void _onMixDeleted(SourceSet p1) {
     projectManager.removeMix(p1.id);
     projectManager.saveProject();
   }

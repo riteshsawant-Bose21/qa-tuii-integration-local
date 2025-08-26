@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/core/models/floor_entity.dart';
-import 'package:fusion_launcher/core/models/fusion_device.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/core/services/project_manager.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
@@ -14,8 +12,8 @@ class SourceWidget extends StatefulWidget {
   final Source source;
   final void Function(Source) onSourceChanged;
   final VoidCallback onDelete;
-  final Function(Floor) onFloorUpdated;
-  final Function(Floor) onFloorAdded;
+  final Function(FloorModel) onFloorUpdated;
+  final Function(FloorModel) onFloorAdded;
   final bool isControlMode;
 
   const SourceWidget({
@@ -55,13 +53,13 @@ class _SourceWidgetState extends State<SourceWidget> {
                   debugPrint("Cannot configure source in control mode");
                   return;
                 }
-                final LocationEntity? location = await showConfigureDeviceDialog(
+                final LocationModel? location = await showConfigureDeviceDialog(
                   context,
                   widget.source.locationEntity,
-                  (Floor newFloor) {
+                  (FloorModel newFloor) {
                     widget.onFloorAdded(newFloor);
                   },
-                  (Floor updatedFloor) {
+                  (FloorModel updatedFloor) {
                     widget.onFloorUpdated(updatedFloor);
                   },
                 );
@@ -71,7 +69,7 @@ class _SourceWidgetState extends State<SourceWidget> {
 
                   if (location.listeningAreaId != null) {
                     final ListeningArea area = serviceLocator<ProjectManager>().value.floors
-                        .firstWhere((Floor floor) => floor.id == location.floorId)
+                        .firstWhere((FloorModel floor) => floor.id == location.floorId)
                         .listeningAreas
                         .firstWhere((ListeningArea area) => area.id == location.listeningAreaId);
 
@@ -235,23 +233,23 @@ class _SourceWidgetState extends State<SourceWidget> {
             ProcessingBlockView(
               processingType: ProcessingType.input,
               isControlMode: widget.isControlMode,
-              selectedBlocks: widget.source.blocks ?? <ProcessingBlockEntity>[],
+              selectedBlocks: widget.source.blocks ?? <ProcessingBlockModel>[],
               onBlocksUpdated:
-                  (List<ProcessingBlockEntity> chain) => widget.onSourceChanged(
+                  (List<ProcessingBlockModel> chain) => widget.onSourceChanged(
                     widget.source.copyWith(
                       blocks: chain,
                     ),
                   ),
               onBlockRemoved: (int index) {
-                final List<ProcessingBlockEntity> updatedBlocks = List<ProcessingBlockEntity>.from(
-                  widget.source.blocks ?? <ProcessingBlockEntity>[],
+                final List<ProcessingBlockModel> updatedBlocks = List<ProcessingBlockModel>.from(
+                  widget.source.blocks ?? <ProcessingBlockModel>[],
                 );
                 updatedBlocks.removeAt(index);
                 widget.onSourceChanged(widget.source.copyWith(blocks: updatedBlocks));
               },
-              onBlockSelected: (ProcessingBlockEntity block) {
-                final List<ProcessingBlockEntity> updatedBlocks = List<ProcessingBlockEntity>.from(
-                  widget.source.blocks ?? <ProcessingBlockEntity>[],
+              onBlockSelected: (ProcessingBlockModel block) {
+                final List<ProcessingBlockModel> updatedBlocks = List<ProcessingBlockModel>.from(
+                  widget.source.blocks ?? <ProcessingBlockModel>[],
                 );
                 updatedBlocks.add(block);
                 widget.onSourceChanged(widget.source.copyWith(blocks: updatedBlocks));
@@ -315,15 +313,15 @@ class _SourceWidgetState extends State<SourceWidget> {
     );
   }
 
-  String getLocation(LocationEntity location) {
+  String getLocation(LocationModel location) {
     if (location.floorId != null && location.listeningAreaId != null) {
-      final Floor floor = serviceLocator<ProjectManager>().value.floors.firstWhere((Floor floor) => floor.id == location.floorId);
+      final FloorModel floor = serviceLocator<ProjectManager>().value.floors.firstWhere((FloorModel floor) => floor.id == location.floorId);
 
       final ListeningArea area = floor.listeningAreas.firstWhere((ListeningArea area) => area.id == location.listeningAreaId);
 
       return "${floor.name}/${area.name}"; // Display floor and listening area names
     } else if (location.floorId != null) {
-      final Floor floor = serviceLocator<ProjectManager>().value.floors.firstWhere((Floor floor) => floor.id == location.floorId);
+      final FloorModel floor = serviceLocator<ProjectManager>().value.floors.firstWhere((FloorModel floor) => floor.id == location.floorId);
       return floor.name; // Display floor number
     } else if (location.listeningAreaId != null) {
       return "Listening Area ${location.listeningAreaId}"; // Display listening area number

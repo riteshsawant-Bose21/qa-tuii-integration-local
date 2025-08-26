@@ -7,6 +7,3 @@ auto-clean = true
 builtin-plugins = true
 detect-strategy = "only-prototools"
 unstable-lockfile = false
-
-[plugins]
-flutter = "github://KonstantinKai/proto-flutter-plugin"

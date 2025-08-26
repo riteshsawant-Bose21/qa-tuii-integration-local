@@ -9,10 +9,10 @@ import 'package:fusion_lib/models/fusion_models.dart';
 enum ProcessingType { input, zone, mix, output }
 
 class ProcessingBlockView extends StatefulWidget {
-  final List<ProcessingBlockEntity> selectedBlocks;
-  final Function(ProcessingBlockEntity) onBlockSelected;
+  final List<ProcessingBlockModel> selectedBlocks;
+  final Function(ProcessingBlockModel) onBlockSelected;
   final Function(int index) onBlockRemoved;
-  final Function(List<ProcessingBlockEntity>) onBlocksUpdated;
+  final Function(List<ProcessingBlockModel>) onBlocksUpdated;
   final ProcessingType processingType;
   final bool isControlMode;
 
@@ -41,23 +41,23 @@ class _ProcessingBlockViewState extends State<ProcessingBlockView> {
     if (newIndex > oldIndex) {
       newIndex -= 1;
     }
-    final ProcessingBlockEntity block = widget.selectedBlocks.removeAt(
+    final ProcessingBlockModel block = widget.selectedBlocks.removeAt(
       oldIndex,
     );
     widget.selectedBlocks.insert(newIndex, block);
     widget.onBlocksUpdated(widget.selectedBlocks);
   }
 
-  List<ProcessingBlockEntity> get _availableBlocks {
+  List<ProcessingBlockModel> get _availableBlocks {
     switch (widget.processingType) {
       case ProcessingType.input:
-        return ProcessingBlockEntity.inputBlocks;
+        return ProcessingBlockModel.inputBlocks;
       case ProcessingType.zone:
-        return ProcessingBlockEntity.zoneBlocks;
+        return ProcessingBlockModel.zoneBlocks;
       case ProcessingType.mix:
-        return ProcessingBlockEntity.mixBlocks;
+        return ProcessingBlockModel.mixBlocks;
       case ProcessingType.output:
-        return ProcessingBlockEntity.outputBlocks;
+        return ProcessingBlockModel.outputBlocks;
     }
   }
 
@@ -121,9 +121,9 @@ class _ProcessingBlockViewState extends State<ProcessingBlockView> {
                       ],
                     ),
                     if (!widget.isControlMode)
-                      PopupMenuButton<ProcessingBlockEntity>(
+                      PopupMenuButton<ProcessingBlockModel>(
                         tooltip: 'Add processing block',
-                        onSelected: (ProcessingBlockEntity selectedBlock) {
+                        onSelected: (ProcessingBlockModel selectedBlock) {
                           // Handle selection
                           // print('Selected: ${selectedBlock.name}');
 
@@ -137,9 +137,9 @@ class _ProcessingBlockViewState extends State<ProcessingBlockView> {
                         color: Colors.white,
                         itemBuilder: (BuildContext context) {
                           return _availableBlocks.map((
-                            ProcessingBlockEntity block,
+                            ProcessingBlockModel block,
                           ) {
-                            return PopupMenuItem<ProcessingBlockEntity>(
+                            return PopupMenuItem<ProcessingBlockModel>(
                               value: block,
                               child: Row(
                                 children: <Widget>[
@@ -231,10 +231,10 @@ class _ProcessingBlockViewState extends State<ProcessingBlockView> {
                           onReorder: _reorderBlocks,
                           children:
                               widget.selectedBlocks.asMap().entries.map((
-                                MapEntry<int, ProcessingBlockEntity> entry,
+                                MapEntry<int, ProcessingBlockModel> entry,
                               ) {
                                 final int index = entry.key;
-                                final ProcessingBlockEntity block = entry.value;
+                                final ProcessingBlockModel block = entry.value;
                                 final bool isLast = index == widget.selectedBlocks.length - 1;
 
                                 return Container(
@@ -307,7 +307,7 @@ class _ProcessingBlockViewState extends State<ProcessingBlockView> {
                                                         ).size.height *
                                                         0.9,
                                                     child: PanelPage(
-                                                      processingBlockEntity: block,
+                                                      processingBlockModel: block,
                                                     ),
                                                   ),
                                                 );

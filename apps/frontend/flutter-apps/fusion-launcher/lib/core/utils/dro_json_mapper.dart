@@ -1,7 +1,5 @@
 import 'dart:math';
 
-import 'package:fusion_launcher/core/models/floor_entity.dart';
-import 'package:fusion_launcher/core/models/fusion_device.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/core/services/project_manager.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
@@ -300,14 +298,14 @@ class JsonFormatConverter {
 
         final ProjectManager projectManager = serviceLocator<ProjectManager>();
         //fetch Floor name from project manager
-        floorName = projectManager.value.floors.firstWhere((Floor floor) => floor.id == floorId).name;
+        floorName = projectManager.value.floors.firstWhere((FloorModel floor) => floor.id == floorId).name;
 
         if (location['listeningAreaId'] != null && location['listeningAreaId'].toString().isNotEmpty) {
           final String areaId = location['listeningAreaId'].toString();
           final ProjectManager projectManager = serviceLocator<ProjectManager>();
           //fetch Area name from project manager floors by looping floor and mathing area id
           final ListeningArea area = projectManager.value.floors
-              .firstWhere((Floor floor) => floor.id == floorId)
+              .firstWhere((FloorModel floor) => floor.id == floorId)
               .listeningAreas
               .firstWhere(
                 (ListeningArea area) => area.id == areaId,

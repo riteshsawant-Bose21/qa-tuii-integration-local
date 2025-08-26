@@ -9,9 +9,9 @@ import '../bloc/panel_bloc_state.dart';
 import 'audio_panel_view.dart';
 
 class PanelPage extends StatefulWidget {
-  final ProcessingBlockEntity processingBlockEntity;
+  final ProcessingBlockModel processingBlockModel;
 
-  const PanelPage({super.key, required this.processingBlockEntity});
+  const PanelPage({super.key, required this.processingBlockModel});
 
   @override
   State<PanelPage> createState() => _PanelPageState();
@@ -23,7 +23,7 @@ class _PanelPageState extends State<PanelPage> {
     super.initState();
     serviceLocator<PanelBloc>().add(
       InitializePanel(
-        widget.processingBlockEntity,
+        widget.processingBlockModel,
       ),
     );
   }

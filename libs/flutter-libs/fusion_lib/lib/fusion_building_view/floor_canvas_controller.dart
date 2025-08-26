@@ -2,9 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../models/project_entities/hardware_component_entity.dart';
-import '../models/project_entities/listening_area_entity.dart';
-import '../models/project_entities/zone_entity.dart';
+import '../models/project_entities/hardware_component_model.dart';
+import '../models/project_entities/listening_area_model.dart';
+import '../models/project_entities/zone_model.dart';
 
 class FloorCanvasController {
   VoidCallback? _toggleDraw;

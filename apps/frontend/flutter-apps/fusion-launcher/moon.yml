@@ -36,6 +36,24 @@ tasks:
     options:
       cache: false
 
+  build-windows:
+    command: "flutter"
+    args: ["build", "windows"]
+    deps:
+#      - "analyze"
+#      - "unit-tests"
+    options:
+      cache: false
+
+  build-web:
+    command: "flutter"
+    args: ["build", "web"]
+    deps:
+#      - "analyze"
+#      - "unit-tests"
+    options:
+      cache: false
+
 #  unit-tests:
 #    command: "flutter"
 #    args: ["test"]

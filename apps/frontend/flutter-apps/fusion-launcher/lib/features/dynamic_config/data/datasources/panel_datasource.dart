@@ -18,7 +18,7 @@ abstract class PanelDataSource {
 
   Stream<Map<String, dynamic>> getMeterStream();
 
-  Future<PanelEntity> getPanelEntity(ProcessingBlockEntity processingBloc);
+  Future<PanelEntity> getPanelEntity(ProcessingBlockModel processingBloc);
 
   Future<void> connectMeteringStream();
 

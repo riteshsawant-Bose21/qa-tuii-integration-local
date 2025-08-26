@@ -8,7 +8,7 @@ import '../../domain/entities/audio_widget_value.dart';
 import '../../domain/entities/panel_entity.dart';
 
 PanelEntity buildPanelModelsForDesign({
-  required ProcessingBlockEntity processingBloc,
+  required ProcessingBlockModel processingBloc,
 }) {
   late final List<Algorithm> algoTypesListSchema = serviceLocator<FusionAlgorithmsConfig>().algorithms;
 

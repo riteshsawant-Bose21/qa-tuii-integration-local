@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:fusion_launcher/core/models/floor_entity.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
 
 import '../../../../../core/image_loader_service.dart';
 
 class FloorPropertiesSidebar extends StatefulWidget {
-  final FloorPlanEntity entity;
-  final Floor floorEntity;
-  final Function(Floor) onEntityChanged;
-  final Function(Floor) onFloorDelete;
+  final FloorPlanModel entity;
+  final FloorModel floorEntity;
+  final Function(FloorModel) onEntityChanged;
+  final Function(FloorModel) onFloorDelete;
 
   const FloorPropertiesSidebar({super.key, required this.entity, required this.onEntityChanged, required this.floorEntity, required this.onFloorDelete});
 
@@ -65,7 +64,7 @@ class _FloorPropertiesSidebarState extends State<FloorPropertiesSidebar> {
   }
 
   void _updateEntity() {
-    final FloorPlanEntity updatedEntity = FloorPlanEntity(
+    final FloorPlanModel updatedEntity = FloorPlanModel(
       id: widget.entity.id,
       imagePath: widget.entity.imagePath,
       position: Offset(
@@ -76,15 +75,15 @@ class _FloorPropertiesSidebarState extends State<FloorPropertiesSidebar> {
     );
 
     final String name = _nameController.text.trim();
-    final Floor floorEntity = widget.floorEntity.copyWith(name: name.isNotEmpty ? name : widget.floorEntity.name, floorPlan: updatedEntity);
+    final FloorModel floorEntity = widget.floorEntity.copyWith(name: name.isNotEmpty ? name : widget.floorEntity.name, floorPlan: updatedEntity);
 
     widget.onEntityChanged(floorEntity);
   }
 
   Future<void> _deleteFloorImageEntity() async {
     ImageLoaderService.deleteImageFile(widget.entity.imagePath);
-    final FloorPlanEntity updatedEntity = widget.entity.copyWith(imagePath: '');
-    final Floor floorEntity = widget.floorEntity.copyWith(floorPlan: updatedEntity);
+    final FloorPlanModel updatedEntity = widget.entity.copyWith(imagePath: '');
+    final FloorModel floorEntity = widget.floorEntity.copyWith(floorPlan: updatedEntity);
     widget.onEntityChanged(floorEntity);
   }
 
@@ -212,7 +211,7 @@ class _FloorPropertiesSidebarState extends State<FloorPropertiesSidebar> {
   //     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
   //     if (image != null) {
   //       final String savedPath = await _saveImageLocally(image);
-  //       final FloorPlanEntity updatedEntity = widget.entity.copyWith(imagePath: savedPath);
+  //       final FloorPlanModel updatedEntity = widget.entity.copyWith(imagePath: savedPath);
   //       final FloorEntity floorEntity = widget.floorEntity.copyWith(floorPlan: updatedEntity);
   //       widget.onEntityChanged(floorEntity);
   //       setState(() {

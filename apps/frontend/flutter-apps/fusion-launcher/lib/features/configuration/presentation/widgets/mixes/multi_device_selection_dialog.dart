@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
 
 import '../../../../../core/constants.dart';
-import '../../../../../core/models/floor_entity.dart';
 import '../../../../../core/service_locator.dart';
 import '../../../../../core/services/project_manager.dart';
 
@@ -306,15 +305,15 @@ class MultiDevicePickerDialogState extends State<MultiDevicePickerDialog> {
     );
   }
 
-  String getLocation(LocationEntity location) {
+  String getLocation(LocationModel location) {
     if (location.floorId != null && location.listeningAreaId != null) {
-      final Floor floor = serviceLocator<ProjectManager>().value.floors.firstWhere((Floor floor) => floor.id == location.floorId);
+      final FloorModel floor = serviceLocator<ProjectManager>().value.floors.firstWhere((FloorModel floor) => floor.id == location.floorId);
 
       final ListeningArea area = floor.listeningAreas.firstWhere((ListeningArea area) => area.id == location.listeningAreaId);
 
       return "${floor.name}/${area.name}"; // Display floor and listening area names
     } else if (location.floorId != null) {
-      final Floor floor = serviceLocator<ProjectManager>().value.floors.firstWhere((Floor floor) => floor.id == location.floorId);
+      final FloorModel floor = serviceLocator<ProjectManager>().value.floors.firstWhere((FloorModel floor) => floor.id == location.floorId);
       return floor.name; // Display floor number
     } else if (location.listeningAreaId != null) {
       return "Listening Area ${location.listeningAreaId}"; // Display listening area number

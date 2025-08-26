@@ -1,4 +1,5 @@
-import '../../../../core/models/project_entity.dart';
+import 'package:fusion_lib/models/project_entities/project_data.dart';
+
 import '../repositories/project_repository.dart';
 
 class SaveProjectUseCase {
@@ -6,7 +7,7 @@ class SaveProjectUseCase {
 
   SaveProjectUseCase({required this.repository});
 
-  Future<void> call(ProjectEntity project) async {
+  Future<void> call(ProjectData project) async {
     await repository.saveProject(project);
   }
 }

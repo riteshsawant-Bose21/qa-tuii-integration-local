@@ -1,7 +1,7 @@
 import 'dart:ui';
 
-import 'hardware_component_entity.dart';
-import 'location_entity.dart';
+import 'hardware_component_model.dart';
+import 'location_model.dart';
 
 enum GenericHardwareComponentType { controller, rack, other }
 
@@ -29,7 +29,7 @@ class GenericHardwareComponent extends HardwareComponent {
     Offset? pos,
     GenericHardwareComponentType? type,
     String? assetImagePath,
-    LocationEntity? locationEntity,
+    LocationModel? locationEntity,
     double? price,
     String? hardwareName,
     String? sku,
@@ -83,7 +83,7 @@ class GenericHardwareComponent extends HardwareComponent {
       pos: Offset(dx, dy),
       type: productType,
       assetImagePath: json['assetImagePath'] as String,
-      locationEntity: LocationEntity.fromJson(json['locationEntity'] as Map<String, dynamic>),
+      locationEntity: LocationModel.fromJson(json['locationEntity'] as Map<String, dynamic>),
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
       hardwareName: json['hardwareName'],
       sku: json['sku'] as String? ?? '',

@@ -1,8 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-
-import '../../../../core/models/amplifer.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 class SpeakerForAmp {
   final String name;
@@ -108,7 +107,7 @@ class AmplifierMatchingPageState extends State<AmplifierMatchingPage> {
     ),
   ];
 
-  static  final List<Amplifier> _availableAmplifiers = <Amplifier>[
+  static final List<Amplifier> _availableAmplifiers = <Amplifier>[
     Amplifier(
       name: 'PSX1204D',
       channels: 4,
@@ -1242,8 +1241,6 @@ class AmplifierMatchingPageState extends State<AmplifierMatchingPage> {
     );
   }
 }
-
-
 
 class AmplifierAssignment {
   final Amplifier amplifier;

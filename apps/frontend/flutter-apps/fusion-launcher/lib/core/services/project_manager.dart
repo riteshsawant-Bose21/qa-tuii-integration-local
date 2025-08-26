@@ -4,7 +4,6 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:fusion_launcher/core/models/fusion_device.dart';
 import 'package:fusion_launcher/core/models/project_metadata_model.dart';
 import 'package:fusion_launcher/core/services/project_list_manager.dart';
 import 'package:fusion_lib/fusion_networking/network/fusion_network_client.dart';
@@ -14,14 +13,10 @@ import 'package:path_provider/path_provider.dart';
 
 import '../../features/dashboard/data/models/upload_file_response_dto.dart';
 import '../../features/dashboard/domain/entities/create_project_entity.dart';
-import '../models/amplifer.dart';
-import '../models/floor_entity.dart';
-import '../models/mix_entity.dart';
-import '../models/project_entity.dart';
 import '../service_locator.dart';
 import '../utils/helper.dart';
 
-class ProjectManager extends ValueNotifier<ProjectEntity> {
+class ProjectManager extends ValueNotifier<ProjectData> {
   ProjectManager(super.initialProject);
 
   String? _selectedFloorPlanId;
@@ -41,9 +36,9 @@ class ProjectManager extends ValueNotifier<ProjectEntity> {
     _selectedHardwareComponentId = null;
   }
 
-  Floor get _floor => value.currentFloor;
+  FloorModel get _floor => value.currentFloor;
 
-  Floor get currentFloor => value.currentFloor;
+  FloorModel get currentFloor => value.currentFloor;
 
   String get projectId => value.id;
 
@@ -55,12 +50,12 @@ class ProjectManager extends ValueNotifier<ProjectEntity> {
 
   String? get selectedFloorPlanId => _selectedFloorPlanId;
 
-  Floor get selectedFloorPlan {
+  FloorModel get selectedFloorPlan {
     if (_selectedFloorPlanId == null) {
       return _floor; // Return the current floor if no specific floor is selected
     }
     return value.floors.firstWhere(
-      (Floor f) => f.id == _selectedFloorPlanId,
+      (FloorModel f) => f.id == _selectedFloorPlanId,
       orElse: () => _floor,
     );
   }
@@ -142,13 +137,13 @@ class ProjectManager extends ValueNotifier<ProjectEntity> {
   }
 
   // ─── Floors ────────────────────────────────────────────────────────────────
-  void addFloor(Floor floor) {
+  void addFloor(FloorModel floor) {
     value.floors.add(floor);
     notifyListeners();
   }
 
-  void updateFloor(Floor updated) {
-    final int idx = value.floors.indexWhere((Floor f) => f.id == updated.id);
+  void updateFloor(FloorModel updated) {
+    final int idx = value.floors.indexWhere((FloorModel f) => f.id == updated.id);
     if (idx == -1) return;
     value.floors[idx] = updated;
     notifyListeners();
@@ -156,16 +151,16 @@ class ProjectManager extends ValueNotifier<ProjectEntity> {
 
   void removeFloor(String floorId) {
     clearSelectedFloor();
-    final int idx = value.floors.indexWhere((Floor f) => f.id == floorId);
+    final int idx = value.floors.indexWhere((FloorModel f) => f.id == floorId);
     if (idx == -1) return;
     _deleteHardwareComponentsInFloor(value.floors.elementAt(idx));
     value.floors.removeAt(idx);
 
     if (value.floors.isEmpty) {
       value.floors.add(
-        Floor(
+        FloorModel(
           name: 'Floor 1',
-          floorPlan: FloorPlanEntity.defaultFloorPlan,
+          floorPlan: FloorPlanModel.defaultFloorPlan,
         ),
       );
     }
@@ -178,16 +173,16 @@ class ProjectManager extends ValueNotifier<ProjectEntity> {
   }
 
   bool isFloorEmpty(String floorId) {
-    final Floor floor = value.floors.firstWhere((Floor f) => f.id == floorId);
+    final FloorModel floor = value.floors.firstWhere((FloorModel f) => f.id == floorId);
     return floor.listeningAreas.isEmpty &&
         floor.floorPlan.imagePath.isEmpty &&
         value.hardwareComponents.where((HardwareComponent hw) => hw.locationEntity.floorId == floor.id).isEmpty;
   }
 
-  void _deleteHardwareComponentsInFloor(Floor floor) {
+  void _deleteHardwareComponentsInFloor(FloorModel floor) {
     final Set<String> areaIds = floor.listeningAreas.map((ListeningArea a) => a.id).toSet();
     value.hardwareComponents.removeWhere((HardwareComponent hw) {
-      final LocationEntity loc = hw.locationEntity;
+      final LocationModel loc = hw.locationEntity;
       return (loc.listeningAreaId != null && areaIds.contains(loc.listeningAreaId)) || (loc.floorId == floor.id);
     });
   }
@@ -199,7 +194,7 @@ class ProjectManager extends ValueNotifier<ProjectEntity> {
     notifyListeners();
   }
 
-  void updateFloorList(List<Floor> floors) {
+  void updateFloorList(List<FloorModel> floors) {
     value = value.copyWith(
       floors: floors,
       currentFloorIndex: value.currentFloorIndex.clamp(0, floors.length - 1),
@@ -208,7 +203,7 @@ class ProjectManager extends ValueNotifier<ProjectEntity> {
   }
 
   // ─── FloorPlan ─────────────────────────────────────────────────────────────
-  void updateFloorPlan(FloorPlanEntity plan) {
+  void updateFloorPlan(FloorPlanModel plan) {
     _floor.floorPlan = plan;
     notifyListeners();
   }
@@ -253,16 +248,16 @@ class ProjectManager extends ValueNotifier<ProjectEntity> {
     notifyListeners();
   }
 
-  Floor getFloorByListeningAreaId(String listeningAreaId) {
+  FloorModel getFloorByListeningAreaId(String listeningAreaId) {
     return value.floors.firstWhere(
-      (Floor f) => f.listeningAreas.any((ListeningArea s) => s.id == listeningAreaId),
+      (FloorModel f) => f.listeningAreas.any((ListeningArea s) => s.id == listeningAreaId),
     );
   }
 
   // ----- Mixes ---------------------------
-  void addMix(Mix mix) {
+  void addMix(SourceSet mix) {
     //Add Gain processing block to mix by default
-    final ProcessingBlockEntity gainBlock = ProcessingBlockEntity(
+    final ProcessingBlockModel gainBlock = ProcessingBlockModel(
       id: 'gain${DateTime.now().millisecondsSinceEpoch}',
       name: 'Gain',
       algorithmId: "gain",
@@ -277,15 +272,15 @@ class ProjectManager extends ValueNotifier<ProjectEntity> {
     notifyListeners();
   }
 
-  void updateMix(Mix updated) {
-    final int i = value.mixes.indexWhere((Mix m) => m.id == updated.id);
+  void updateMix(SourceSet updated) {
+    final int i = value.mixes.indexWhere((SourceSet m) => m.id == updated.id);
     if (i == -1) return;
     value.mixes[i] = updated;
     notifyListeners();
   }
 
   void removeMix(String mixId) {
-    value.mixes.removeWhere((Mix m) => m.id == mixId);
+    value.mixes.removeWhere((SourceSet m) => m.id == mixId);
 
     //remove mix mapping from zone value.zones.mixIds
     for (final Zone zone in value.zones) {
@@ -299,7 +294,7 @@ class ProjectManager extends ValueNotifier<ProjectEntity> {
   //------ Zones ---------------------------
   void addZone(Zone zone) {
     // Add Gain processing block to zone by default
-    final ProcessingBlockEntity gainBlock = ProcessingBlockEntity(
+    final ProcessingBlockModel gainBlock = ProcessingBlockModel(
       id: 'gain${DateTime.now().millisecondsSinceEpoch}',
       name: 'Gain',
       algorithmId: "gain",
@@ -346,7 +341,7 @@ class ProjectManager extends ValueNotifier<ProjectEntity> {
     // loop through all floors and get all listening areas that match the zone's listeningAreasIds
     return value.floors
         .expand(
-          (Floor f) => f.listeningAreas,
+          (FloorModel f) => f.listeningAreas,
         )
         .where(
           (ListeningArea a) => zone.listeningAreasIds.contains(a.id),
@@ -358,7 +353,7 @@ class ProjectManager extends ValueNotifier<ProjectEntity> {
   void addHardwareComponent(HardwareComponent hardwareComponent) {
     //add gain processing block to component by default
     if (hardwareComponent is Source || hardwareComponent is Speaker) {
-      final ProcessingBlockEntity gainBlock = ProcessingBlockEntity(
+      final ProcessingBlockModel gainBlock = ProcessingBlockModel(
         id: 'gain${DateTime.now().millisecondsSinceEpoch}',
         name: 'Gain',
         algorithmId: "gain",
@@ -411,7 +406,7 @@ class ProjectManager extends ValueNotifier<ProjectEntity> {
     //if Source remove componentI form all the mixes value
     value = value.copyWith(
       mixes:
-          value.mixes.map((Mix mix) {
+          value.mixes.map((SourceSet mix) {
             if (mix.sourceIds.contains(componentId)) {
               return mix.copyWith(
                 sourceIds: List<String>.from(mix.sourceIds)..remove(componentId),
@@ -425,7 +420,7 @@ class ProjectManager extends ValueNotifier<ProjectEntity> {
   }
 
   List<HardwareComponent> getHardwareComponentsInFloor(String floorId) {
-    final Floor floor = value.floors.firstWhere((Floor f) => f.id == floorId);
+    final FloorModel floor = value.floors.firstWhere((FloorModel f) => f.id == floorId);
     final Set<String> areaIds = floor.listeningAreas.map((ListeningArea a) => a.id).toSet();
     return value.hardwareComponents
         .where(
@@ -664,7 +659,7 @@ class ProjectManager extends ValueNotifier<ProjectEntity> {
       print('Loading project from file: $jsonStr');
       final Map<String, dynamic> map = jsonDecode(jsonStr);
       print("map---$map");
-      final ProjectEntity loaded = ProjectEntity.fromJson(map);
+      final ProjectData loaded = ProjectData.fromJson(map);
       super.value = loaded;
       notifyListeners();
       print('Project loaded successfully: ${loaded.name}');

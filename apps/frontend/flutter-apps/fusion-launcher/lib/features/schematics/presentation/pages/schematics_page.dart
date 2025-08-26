@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/core/models/amplifer.dart';
-import 'package:fusion_launcher/core/models/fusion_device.dart';
 import 'package:fusion_launcher/features/schematics/presentation/widgets/cost_calcuator_widget.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
 
 import '../../../../core/models/products_data.dart';
-import '../../../../core/models/project_entity.dart';
 import '../../../../core/service_locator.dart';
 import '../../../../core/services/project_manager.dart';
 import '../../../../core/widgets/horizontal_resizable_container.dart';
@@ -33,9 +30,9 @@ class SchematicsPageState extends State<SchematicsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: ValueListenableBuilder<ProjectEntity>(
+      body: ValueListenableBuilder<ProjectData>(
         valueListenable: projectManager,
-        builder: (BuildContext context, ProjectEntity data, _) {
+        builder: (BuildContext context, ProjectData data, _) {
           return Row(
             children: <Widget>[
               Expanded(
@@ -261,7 +258,7 @@ class SchematicsPageState extends State<SchematicsPage> {
             pos: const Offset(0, 0),
             assetImagePath: component.assetPath,
             type: component.type,
-            locationEntity: LocationEntity(),
+            locationEntity: LocationModel(),
             price: component.price,
             sku: component.id,
           );
@@ -297,7 +294,7 @@ class SchematicsPageState extends State<SchematicsPage> {
                       pos: null,
                       type: selectedBlock.type,
                       assetImagePath: selectedBlock.assetPath,
-                      locationEntity: LocationEntity(),
+                      locationEntity: LocationModel(),
                       sku: selectedBlock.id,
                       price: selectedBlock.price,
                     );
@@ -376,7 +373,7 @@ class SchematicsPageState extends State<SchematicsPage> {
             .map(
               (FusionDevice device) => GenericHardwareComponent(
                 id: device.id,
-                locationEntity: LocationEntity(id: device.location),
+                locationEntity: LocationModel(id: device.location),
                 name: device.name,
                 sku: device.id,
                 type: GenericHardwareComponentType.other,
@@ -443,7 +440,7 @@ class SchematicsPageState extends State<SchematicsPage> {
             .map(
               (Amplifier amplifier) => GenericHardwareComponent(
                 id: amplifier.id,
-                locationEntity: LocationEntity(id: amplifier.id),
+                locationEntity: LocationModel(id: amplifier.id),
                 name: amplifier.name,
                 sku: amplifier.id,
                 type: GenericHardwareComponentType.controller,
@@ -512,7 +509,7 @@ class SchematicsPageState extends State<SchematicsPage> {
             pos: Offset.zero,
             type: GenericHardwareComponentType.rack,
             assetImagePath: component.assetPath,
-            locationEntity: LocationEntity(),
+            locationEntity: LocationModel(),
             price: component.price,
           );
           projectManager.addHardwareComponent(genericHardwareComponent);
@@ -547,7 +544,7 @@ class SchematicsPageState extends State<SchematicsPage> {
                       pos: const Offset(0, 0),
                       type: GenericHardwareComponentType.rack,
                       assetImagePath: rackData.assetPath,
-                      locationEntity: LocationEntity(),
+                      locationEntity: LocationModel(),
                       sku: rackData.name,
                       price: rackData.price,
                     );
@@ -696,7 +693,7 @@ class SchematicsPageState extends State<SchematicsPage> {
                             rotation: 0.0,
                             assetImagePath: speakerData.assetPath,
                             type: speakerData.type,
-                            locationEntity: LocationEntity(zoneId: zone.id),
+                            locationEntity: LocationModel(zoneId: zone.id),
                             price: speakerData.price,
                           );
                           projectManager.addHardwareComponent(cs);
@@ -707,7 +704,7 @@ class SchematicsPageState extends State<SchematicsPage> {
                             pos: Offset.zero,
                             type: GenericHardwareComponentType.controller,
                             assetImagePath: controllerData.assetPath,
-                            locationEntity: LocationEntity(zoneId: zone.id),
+                            locationEntity: LocationModel(zoneId: zone.id),
                             price: controllerData.price,
                             hardwareName: controllerData.name,
                             sku: controllerData.sku,

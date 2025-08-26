@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
 
-import '../../../../../core/models/mix_entity.dart';
 import 'mix_widget.dart';
 
 class MixColumn extends StatefulWidget {
-  final List<Mix> mixes;
+  final List<SourceSet> mixes;
   final List<Source> sources;
-  final void Function(Mix) onMixUpdated;
-  final void Function(Mix) onMixDeleted;
-  final void Function(Mix) onMixAdded;
+  final void Function(SourceSet) onMixUpdated;
+  final void Function(SourceSet) onMixDeleted;
+  final void Function(SourceSet) onMixAdded;
   final bool isControlMode;
 
   const MixColumn({
@@ -110,14 +109,14 @@ class _MixColumnState extends State<MixColumn> {
               mix: widget.mixes[i],
               availableSources: widget.sources,
               isControlMode: widget.isControlMode,
-              onMixUpdated: (Mix ss) {
+              onMixUpdated: (SourceSet ss) {
                 widget.onMixUpdated(ss);
               },
               onDelete: () {
                 widget.onMixDeleted(widget.mixes[i]);
               },
               duplicateMix: () {
-                final Mix newMix = Mix(
+                final SourceSet newMix = SourceSet(
                   name: '${widget.mixes[i].name} (Copy)',
                   sourceIds: List<String>.from(widget.mixes[i].sourceIds),
                   processingBlocks: widget.mixes[i].processingBlocks,
@@ -130,7 +129,7 @@ class _MixColumnState extends State<MixColumn> {
   }
 
   void _addNewMix() {
-    final Mix newMix = Mix(
+    final SourceSet newMix = SourceSet(
       name: 'Mix ${widget.mixes.length + 1}',
     );
     widget.onMixAdded(newMix);

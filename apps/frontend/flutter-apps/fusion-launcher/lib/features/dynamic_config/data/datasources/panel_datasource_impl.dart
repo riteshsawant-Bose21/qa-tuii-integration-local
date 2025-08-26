@@ -362,7 +362,7 @@ class PanelDataSourceImpl implements PanelDataSource {
   }
 
   @override
-  Future<PanelEntity> getPanelEntity(ProcessingBlockEntity processingBloc) async {
+  Future<PanelEntity> getPanelEntity(ProcessingBlockModel processingBloc) async {
     return buildPanelModelsForDesign(processingBloc: processingBloc);
   }
 
