@@ -21,6 +21,7 @@ export 'others/fusion_custom_loader.dart';
 export 'others/fusion_dialog.dart';
 export 'others/fusion_profile_image.dart';
 export 'others/fusion_shimmer.dart';
+export 'others/fusion_image.dart';
 
 /// text views
 export 'text_views/fusion_app_text.dart';
