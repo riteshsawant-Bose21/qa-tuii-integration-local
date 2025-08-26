@@ -80,9 +80,30 @@ def profile(config_name, remote=True):
 
     param_counter = 0
     
+    # checkpointing setup:
+    checkpoint_interval = current_config.get('checkpoint_every', 10)
+    checkpoint_file = f'profiling_results/{config_name}_checkpoint.csv'
+    processed_combos = set()
+    
+    if os.path.exists(checkpoint_file):
+        existing_df = pd.read_csv(checkpoint_file)
+        frames.append(existing_df)
+
+        if config_name == 'matrix_mixer' and 'num_inputs' in existing_df.columns and 'num_outputs' in existing_df.columns:
+            processed_combos = set(zip(existing_df['num_inputs'], existing_df['num_outputs']))
+            print(f'Loaded checkpoint with {len(processed_combos)} processed parameter combinations')
+        else:
+            print(f'Loaded checkpoint with {len(existing_df)} rows')
     matrix_mixer_csv_files = []
     
     for param_dict in params_iter:
+        # skip already processed combos from checkpoint
+        if config_name == 'matrix_mixer':
+            combo_key = (param_dict['num_inputs'], param_dict['num_outputs'])
+            if combo_key in processed_combos:
+                print(f"Skipping already processed combination: {combo_key}")
+                continue
+
         param_counter += 1
         
         if remote:
@@ -190,6 +211,11 @@ def profile(config_name, remote=True):
                     df[feature] = formula(param_dict)
             
             frames.append(df)
+
+            if param_counter % checkpoint_interval == 0:
+                temp_df = pd.concat(frames, axis=0, ignore_index=True)
+                temp_df.to_csv(checkpoint_file, index=False)
+                print(f"Checkpoint saved at iteration {param_counter}")
             
             # clean up temporary matrix_mixer CSV files immediately
             if config_name == 'matrix_mixer' and os.path.exists(local_csv_name):
@@ -574,39 +600,36 @@ configurations = {
     'matrix_mixer' : {
         'path' : 'profile_matrix_mixer.json.jinja',
         'parameters' : {
-            'num_inputs' : range(1, 60, 8),
-            'num_outputs' : range(1, 33, 6)
+            'num_inputs' : range(1, 65, 1),
+            'num_outputs' : range(1, 65, 1)
         },
         'features' : {
             'num_inputs' : lambda x: x['num_inputs'],
             'num_outputs' : lambda x: x['num_outputs'],
             'num_crosspoints' : lambda x: x['num_inputs']*x['num_outputs']
         },
-        'fixed_values': { # These must be values already included in feature parameters.
-            'num_inputs' : { 'fix_for' : 'num_outputs', 'values' : [1, 19, 31] }, # Multiple fixed **num_outputs** values when varying num_inputs
-            'num_outputs' : { 'fix_for' : 'num_inputs', 'values' : [1, 33, 57] } # Multiple fixed **num_inputs** values when varying num_outputs
+        'fixed_values': {
+            'num_inputs': { 'fix_for': 'num_outputs', 'values': list(range(1, 65, 1)) },
+            'num_outputs': { 'fix_for': 'num_inputs', 'values': list(range(1, 65, 1)) }
         },
+        'checkpoint_every': 5,
         'csv_dump' : 'matrix_mixer_timings.csv',
         'format_string' : 'T = {0} + {1}*num_inputs + {2}*num_outputs + {3}*num_crosspoints'
-    },
-    'passthrough' : {
-        'path' : 'profile_passthrough.json.jinja',
-        'block' : 'task1',
     },
     'peq' : {
         'path' : 'profile_peq.json.jinja',
         'parameters': {
-            'bands': range(5, 38, 4),
-            'channels': range(1, 17, 3)
+            'bands': range(1, 41, 1),
+            'channels': range(1, 17, 1)
         },
         'features': {
             'bands': lambda x: x['bands'],
             'channels': lambda x: x['channels'],
             'bandchannels': lambda x: x['bands']*x['channels']
         },
-        'fixed_values': { # These must be values already included in feature parameters.
-            'bands': { 'fix_for': 'channels', 'values': [1, 7, 16] },      # Multiple fixed **channel** values when varying bands
-            'channels': { 'fix_for': 'bands', 'values': [5, 21, 37] }   # Multiple fixed **band** values when varying channels
+        'fixed_values': {
+            'bands': { 'fix_for': 'channels', 'values': list(range(1, 17, 1)) },
+            'channels': { 'fix_for': 'bands', 'values': list(range(1, 41, 1)) }
         },
         'csv_dump' : 'peq_tmp.csv',
         'format_string' : 'T = {0} + {1}*bands + {2}*channels + {3}*bandchannels'
