@@ -30,3 +30,5 @@ runs:
         moon run fusion-dsp:build
         VERSION="$(./Jenkins/SetVersionProperty.sh)-${GITHUB_RUN_NUMBER}+$(git rev-parse --short HEAD)"
         curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T ./build/fusion-dsp_*.tar.gz ${{ inputs.nexus_url }}/Fusion-DSP/Continuous/${GITHUB_REF_NAME}/fusion-dsp/$VERSION/fusion-dsp-$VERSION.tar.gz
+        echo "Fusion DSP build uploaded to Nexus successfully!"
+        echo "fusion-dsp: ${{ inputs.nexus_url }}/Fusion-DSP/Continuous/${GITHUB_REF_NAME}/fusion-dsp/$VERSION/fusion-dsp-$VERSION.tar.gz"
