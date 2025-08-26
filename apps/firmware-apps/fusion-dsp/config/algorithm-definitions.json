@@ -1812,7 +1812,7 @@
                     "signal_type": "audio",
                     "direction": "output",
                     "minimum_channels": 1,
-                    "maximum_channels": 32
+                    "maximum_channels": 64
                 }
             ],
             "parameters": [
@@ -1860,7 +1860,7 @@
                     "signal_type": "audio",
                     "direction": "input",
                     "minimum_channels": 1,
-                    "maximum_channels": 32
+                    "maximum_channels": 64
                 }
             ]
         }
