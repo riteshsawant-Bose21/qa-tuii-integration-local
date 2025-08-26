@@ -290,7 +290,7 @@ def profile(config_name, remote=True):
         print(f"Filtering by single parameter: {filter_column}")
         
         for group_value in sorted(result_df[filter_column].unique()):
-            ch_df = result_df[result_df[filter_column] == group_value]
+            ch_df = result_df[result_df[filter_column] == group_value].copy()
             ch_df[block] = pd.to_numeric(ch_df[block], errors='coerce')
             ch_df = ch_df.dropna(subset=[block])
             
@@ -384,376 +384,148 @@ def profile(config_name, remote=True):
         plt.close()
         
     else:
-            # for multiple features - plots with fixed parameters where configured
-            num_features = len(feature_names)
-            fig, axes = plt.subplots(1, num_features, figsize=(6*num_features, 5))
+        # for multiple features - plots with fixed parameters where configured
+        num_features = len(feature_names)
+        fig, axes = plt.subplots(1, num_features, figsize=(6*num_features, 5))
+        
+        if num_features == 1:
+            axes = [axes]
+        
+        fixed_values = current_config.get('fixed_values', {})
+        
+        for i, feature in enumerate(feature_names):
+            ax = axes[i]
             
-            if num_features == 1:
-                axes = [axes]
+            # if this is a product feature (bandchannels or num_crosspoints) we use all the datapoints
+            is_product_feature = feature in ['bandchannels', 'num_crosspoints']
             
-            fixed_values = current_config.get('fixed_values', {})
-            
-            for i, feature in enumerate(feature_names):
-                ax = axes[i]
+            if not is_product_feature and feature in fixed_values:
+                fix_info = fixed_values[feature]
+                fix_for = fix_info['fix_for']
+                fixed_vals = fix_info['values']
                 
-                # if this is a product feature (bandchannels or num_crosspoints) we use all the datapoints
-                is_product_feature = feature in ['bandchannels', 'num_crosspoints']
-                
-                x_data = Xs.iloc[:, i]
-                y_data = ys.iloc[:, 0]
-                X = x_data.values.reshape(-1, 1)
-                y = y_data.values.reshape(-1, 1)
-                model_feature = LinearRegression().fit(X, y)
-                r2 = model_feature.score(X, y)
-                
-                if not is_product_feature:
-                    if not hasattr(profile, 'regression_formulas'):
-                        profile.regression_formulas = []
-                    profile.regression_formulas.append({
-                        'feature': feature,
-                        'fixed_param': None,
-                        'fixed_value': None,
-                        'intercept': model_feature.intercept_[0],
-                        'coefficient': model_feature.coef_[0][0],
-                        'r2': r2
-                    })
-                
-                if not is_product_feature and feature in fixed_values:
-                    fix_info = fixed_values[feature]
-                    fix_for = fix_info['fix_for']
-                    fixed_vals = fix_info['values']
+                for fixed_val in fixed_vals:
+                    mask = filtered_df[fix_for] == fixed_val
+                    x_subset = Xs[mask].iloc[:, i]
+                    y_subset = ys[mask].iloc[:, 0]
                     
-                    for fixed_val in fixed_vals:
-                        mask = filtered_df[fix_for] == fixed_val
-                        x_subset = Xs[mask].iloc[:, i]
-                        y_subset = ys[mask].iloc[:, 0]
+                    if len(x_subset) > 1:  
+                        X = x_subset.values.reshape(-1, 1)
+                        y = y_subset.values.reshape(-1, 1)
+                        model_fixed = LinearRegression().fit(X, y)
+                        r2_fixed = model_fixed.score(X, y)
                         
-                        if len(x_subset) > 1:  
-                            X = x_subset.values.reshape(-1, 1)
-                            y = y_subset.values.reshape(-1, 1)
-                            model_fixed = LinearRegression().fit(X, y)
-                            r2_fixed = model_fixed.score(X, y)
-                            
-                            if not hasattr(profile, 'regression_formulas'):
-                                profile.regression_formulas = []
-                            profile.regression_formulas.append({
-                                'feature': feature,
-                                'fixed_param': fix_for,
-                                'fixed_value': fixed_val,
-                                'intercept': model_fixed.intercept_[0],
-                                'coefficient': model_fixed.coef_[0][0],
-                                'r2': r2_fixed
-                            })
-                            
-                            ax.scatter(x_subset, y_subset, alpha=0.5, label=f'{fix_for}={fixed_val}')
-                            x_range = np.linspace(x_subset.min(), x_subset.max(), 100)
-                            y_pred = model_fixed.predict(x_range.reshape(-1, 1))
-                            ax.plot(x_range, y_pred, '--', linewidth=1)
-                            
-                x_data = Xs.iloc[:, i]
-                y_data = ys.iloc[:, 0]
-                X = x_data.values.reshape(-1, 1)
-                y = y_data.values.reshape(-1, 1)
-                model_feature = LinearRegression().fit(X, y)
-                r2 = model_feature.score(X, y)
-                
-                if not hasattr(profile, 'regression_formulas'):
-                    profile.regression_formulas = []
-                if not hasattr(profile, 'regression_formulas'):
-                    profile.regression_formulas = []
-                profile.regression_formulas.append({
-                    'feature': feature,
-                    'fixed_param': None,
-                    'fixed_value': None,
-                    'intercept': model_feature.intercept_[0],
-                    'coefficient': model_feature.coef_[0][0],
-                    'r2': r2
-                })
-                
-            else:
-                if feature in fixed_values:
-                    fix_info = fixed_values[feature]
-                    fix_for = fix_info['fix_for']
-                    fixed_vals = fix_info['values']
-                    
-                    for fixed_val in fixed_vals:
-                        mask = filtered_df[fix_for] == fixed_val
-                        x_data = Xs[mask].iloc[:, i]
-                        y_data = ys[mask].iloc[:, 0]
-                        
-                        if len(x_data) > 1:
-                            X = x_data.values.reshape(-1, 1)
-                            y = y_data.values.reshape(-1, 1)
-                            model_feature = LinearRegression().fit(X, y)
-                            r2 = model_feature.score(X, y)
-                            
-                            # store regression formula for this fixed value case
-                            if not hasattr(profile, 'regression_formulas'):
-                                profile.regression_formulas = []
-                            profile.regression_formulas.append({
-                                'feature': feature,
-                                'fixed_param': fix_for,
-                                'fixed_value': fixed_val,
-                                'intercept': model_feature.intercept_[0],
-                                'coefficient': model_feature.coef_[0][0],
-                                'r2': r2
-                            })
-                    if not hasattr(profile, 'regression_formulas'):
-                        profile.regression_formulas = []
-                    profile.regression_formulas.append({
-                        'feature': feature,
-                        'fixed_param': None,
-                        'fixed_value': None,
-                        'intercept': model_feature.intercept_[0],
-                        'coefficient': model_feature.coef_[0][0],
-                        'r2': r2
-                    })
-                    
-                    colors = []
-                    stats_data = []
-                    
-                    if config_name == 'peq' and feature == 'bandchannels':
-                        for idx in range(len(x_data)):
-                            bands = filtered_df.iloc[idx]['bands']
-                            channels = filtered_df.iloc[idx]['channels']
-                            timing = y_data.iloc[idx]
-                            if bands > channels:
-                                colors.append('blue')
-                                stats_data.append(f"bands > channels: {bands} × {channels} = {bands*channels} bandchannels, timing = {timing:.2e}")
-                            elif channels > bands:
-                                colors.append('red')
-                                stats_data.append(f"channels > bands: {bands} × {channels} = {bands*channels} bandchannels, timing = {timing:.2e}")
-                            else:
-                                colors.append('green')
-                                stats_data.append(f"bands = channels: {bands} × {channels} = {bands*channels} bandchannels, timing = {timing:.2e}")
-                    
-                    elif config_name == 'matrix_mixer' and feature == 'num_crosspoints':
-                        for idx in range(len(x_data)):
-                            inputs = filtered_df.iloc[idx]['num_inputs']
-                            outputs = filtered_df.iloc[idx]['num_outputs']
-                            timing = y_data.iloc[idx]
-                            if inputs > outputs:
-                                colors.append('blue')
-                                stats_data.append(f"inputs > outputs: {inputs} × {outputs} = {inputs*outputs} crosspoints, timing = {timing:.2e}")
-                            elif outputs > inputs:
-                                colors.append('red')
-                                stats_data.append(f"outputs > inputs: {inputs} × {outputs} = {inputs*outputs} crosspoints, timing = {timing:.2e}")
-                            else:
-                                colors.append('green')
-                                stats_data.append(f"inputs = outputs: {inputs} × {outputs} = {inputs*outputs} crosspoints, timing = {timing:.2e}")
-                    else:
-                        colors = ['gray'] * len(x_data)
-                    
-                    if stats_data:
-                        if not hasattr(profile, 'dimension_stats'):
-                            profile.dimension_stats = []
-                        profile.dimension_stats.extend(stats_data)
-                    
-                    ax.scatter(x_data, y_data, alpha=0.5, s=30, c=colors, label='Data points')
-                    
-                    x_range = np.linspace(x_data.min(), x_data.max(), 100)
-                    x_range_df = pd.DataFrame(index=range(len(x_range)))  
-                    for j, feat in enumerate(feature_names):
-                        if feat == feature:
-                            x_range_df[feat] = x_range
-                        else:
-                            median_val = Xs.iloc[:, j].median()
-                            if pd.isna(median_val):
-                                print(f"WARNING: Median for {feat} is NaN, using mean instead")
-                                median_val = Xs.iloc[:, j].mean()
-                                if pd.isna(median_val):
-                                    print(f"ERROR: Both median and mean for {feat} are NaN, using 0")
-                                    median_val = 0
-                            x_range_df[feat] = median_val
-                    
-                    y_pred_line = model.predict(x_range_df)
-                    coeff = model.coef_[0][i]
-                    r2_score = model.score(Xs, ys)
-                    ax.plot(x_range, y_pred_line, 'r-', linewidth=2,
-                        label=f'R² = {r2_score:.3f}')
-                    ax.set_title(f'{config_name}: {block} vs {feature}')
-                    ax.yaxis.set_major_formatter(matplotlib.ticker.ScalarFormatter(useMathText=True))
-                    ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
-                    
-                else:
-                    if feature in fixed_values:
-                        fix_info = fixed_values[feature]
-                        fixed_vals = fix_info['values']
-                        other_param = fix_info['fix_for']
-                        
-                        if 'values' in fix_info:
-                            fixed_vals = fix_info['values']
-                            colors = ['blue', 'orange', 'green', 'red', 'purple'][:len(fixed_vals)]
-                            
-                            for idx, (fixed_val, color) in enumerate(zip(fixed_vals, colors)):  # Need idx defined!
-                                mask = filtered_df[other_param] == fixed_val
-                                if mask.sum() == 0:
-                                    continue
-                                    
-                                subset_df = filtered_df[mask]
-                                x_subset = subset_df[feature].values
-                                y_subset = subset_df[block].values
-                                ax.scatter(x_subset, y_subset, alpha=0.5, s=30, color=color,
-                                        label=f'{other_param}={fixed_val}')
-                                
-                                if len(x_subset) > 1:
-                                    X_fit = x_subset.reshape(-1, 1)
-                                    model_subset = LinearRegression().fit(X_fit, y_subset)
-                                    
-                                    x_line = np.linspace(x_subset.min(), x_subset.max(), 100)
-                                    y_line = model_subset.predict(x_line.reshape(-1, 1))
-                                    
-                                    ax.plot(x_line, y_line, color=color, linewidth=2)
-                        else:
-                            fixed_value = fix_info['value']
-                            
-                            if other_param in filtered_df.columns:
-                                mask = filtered_df[other_param] == fixed_value
-                                filtered_indices = filtered_df[mask].index
-                                
-                                x_data_filtered = Xs.loc[Xs.index.isin(filtered_indices), feature]
-                                y_data_filtered = ys.loc[ys.index.isin(filtered_indices)].iloc[:, 0]
-                                
-                                if len(x_data_filtered) == 0:
-                                    # Fall back to showing all data 
-                                    x_data = Xs.iloc[:, i]
-                                    y_data = ys.iloc[:, 0]
-                                    ax.scatter(x_data, y_data, alpha=0.7, s=50, label='All data points')
-                                    ax.set_title(f'{config_name}: {block} vs {feature}\n(No data for {other_param}={fixed_value})')
-                                else:
-                                    ax.scatter(x_data_filtered, y_data_filtered, alpha=0.7, s=50, 
-                                            label=f'Data points ({other_param}={fixed_value})')
-                                    
-                                    # create regression line for this subset
-                                    x_range = np.linspace(x_data_filtered.min(), x_data_filtered.max(), 100)
-                                    
-                                    x_range_df = pd.DataFrame(index=range(len(x_range)))  
-                                    for j, feat in enumerate(feature_names):
-                                        if feat == feature:
-                                            x_range_df[feat] = x_range
-                                        elif feat == other_param:
-                                            x_range_df[feat] = fixed_value
-                                        elif feat in ['bandchannels', 'num_crosspoints']:
-                                            if config_name == 'peq' and feat == 'bandchannels':
-                                                if feature == 'bands':
-                                                    x_range_df[feat] = x_range * fixed_value  # bands * fixed_channels
-                                                else:  # feature == 'channels'
-                                                    x_range_df[feat] = fixed_value * x_range  # fixed_bands * channels
-                                            elif config_name == 'matrix_mixer' and feat == 'num_crosspoints':
-                                                if feature == 'num_inputs':
-                                                    x_range_df[feat] = x_range * fixed_value  # inputs * fixed_outputs
-                                                else:  # feature == 'num_outputs'
-                                                    x_range_df[feat] = fixed_value * x_range  # fixed_inputs * outputs
-                                            else:
-                                                # fallback
-                                                x_range_df[feat] = Xs[feat].median()
-                                        else:
-                                            filtered_subset = Xs.loc[Xs.index.isin(filtered_indices), feat]
-                                            median_val = filtered_subset.median()
-                                            if pd.isna(median_val):
-                                                median_val = filtered_subset.mean()
-                                                if pd.isna(median_val):
-                                                    median_val = Xs[feat].median()
-                                            x_range_df[feat] = median_val
-                                    
-                                    y_pred_line = model.predict(x_range_df)
-                                    coeff = model.coef_[0][i]
-                                    r2_score = model.score(Xs, ys)
-                                    if not hasattr(profile, 'regression_formulas'):
-                                        profile.regression_formulas = []
-                                    profile.regression_formulas.append({
-                                        'feature': feature,
-                                        'fixed_param': fix_for if 'fix_for' in locals() else None,
-                                        'fixed_value': fixed_value,
-                                        'coefficient': coeff,
-                                        'intercept': model.intercept_[0],
-                                        'r2': r2_score
-                                    })
-
-                                    ax.plot(x_range, y_pred_line, 'r-', linewidth=2,
-                                        label=f'R² = {r2_score:.3f}')
-
-                                    ax.set_title(f'{config_name}: {block} vs {feature}\n(with {fix_for if 'fix_for' in locals() else 'param'}={fixed_value})')
-                                    ax.yaxis.set_major_formatter(matplotlib.ticker.ScalarFormatter(useMathText=True))
-                                    ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
-                            else:
-                                # Fallback
-                                x_data = Xs.iloc[:, i]
-                                y_data = ys.iloc[:, 0]
-                                ax.scatter(x_data, y_data, alpha=0.7, s=50, label='Data Points')
-                                ax.set_title(f'{config_name}: {block} vs {feature}')
-                    else:
-                        # No fixed value config, use original behavior
-                        x_data = Xs.iloc[:, i]
-                        y_data = ys.iloc[:, 0]
-                        ax.scatter(x_data, y_data, alpha=0.7, s=50, label='Data Points')
-                        
-                        # regression line logic with NaN checking
-                        x_range = np.linspace(x_data.min(), x_data.max(), 100)
-                        x_range_df = pd.DataFrame(index=range(len(x_range))) 
-                        for j, feat in enumerate(feature_names):
-                            if j == i:  
-                                x_range_df[feat] = x_range
-                            else:
-                                median_val = Xs.iloc[:, j].median()
-                                if pd.isna(median_val):
-                                    print(f"WARNING: Median for {feat} is NaN, using mean instead")
-                                    median_val = Xs.iloc[:, j].mean()
-                                    if pd.isna(median_val):
-                                        print(f"ERROR: Both median and mean for {feat} are NaN, using 0")
-                                        median_val = 0
-                                x_range_df[feat] = median_val
-                                
-                        coeff = model.coef_[0][i]
-                        r2_score = model.score(Xs, ys)
                         if not hasattr(profile, 'regression_formulas'):
                             profile.regression_formulas = []
                         profile.regression_formulas.append({
                             'feature': feature,
-                            'fixed_param': None,
-                            'fixed_value': None,
-                            'coefficient': coeff,
-                            'intercept': model.intercept_[0],
-                            'r2': r2_score
+                            'fixed_param': fix_for,
+                            'fixed_value': fixed_val,
+                            'intercept': model_fixed.intercept_[0],
+                            'coefficient': model_fixed.coef_[0][0],
+                            'r2': r2_fixed
                         })
-
-                        ax.yaxis.set_major_formatter(matplotlib.ticker.ScalarFormatter(useMathText=True))
-                        ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
-
-                        y_pred_line = model.predict(x_range_df)
-                        ax.plot(x_range, y_pred_line, 'r-', linewidth=2,
-                            label=f'Partial fit (R² = {r2_score:.3f})\nCoeff: {coeff:.2e}')
-                        ax.set_title(f'{config_name}: {block} vs {feature}')
+                        
+                        ax.scatter(x_subset, y_subset, alpha=0.5, label=f'{fix_for}={fixed_val}')
+                        x_range = np.linspace(x_subset.min(), x_subset.max(), 100)
+                        y_pred = model_fixed.predict(x_range.reshape(-1, 1))
+                        ax.plot(x_range, y_pred, '--', linewidth=1)
+                        
+            elif is_product_feature:
+                x_data = Xs.iloc[:, i]
+                y_data = ys.iloc[:, 0]
+                colors = []
                 
-                ax.set_xlabel(feature)
-                ax.set_ylabel(f'{block} (timing)')
+                if config_name == 'peq' and feature == 'bandchannels':
+                    for idx in range(len(x_data)):
+                        bands = filtered_df.iloc[idx]['bands']
+                        channels = filtered_df.iloc[idx]['channels']
+                        if bands > channels:
+                            colors.append('blue')
+                        elif channels > bands:
+                            colors.append('red')
+                        else:
+                            colors.append('green')
                 
-                # skip legend for bands/channels in PEQ and num_inputs/num_outputs in matrix_mixer
-                skip_legend = False
-                if config_name == 'peq' and feature in ['bands', 'channels']:
-                    skip_legend = True
-                elif config_name == 'matrix_mixer' and feature in ['num_inputs', 'num_outputs']:
-                    skip_legend = True
+                elif config_name == 'matrix_mixer' and feature == 'num_crosspoints':
+                    for idx in range(len(x_data)):
+                        inputs = filtered_df.iloc[idx]['num_inputs']
+                        outputs = filtered_df.iloc[idx]['num_outputs']
+                        if inputs > outputs:
+                            colors.append('blue')
+                        elif outputs > inputs:
+                            colors.append('red')
+                        else:
+                            colors.append('green')
+                else:
+                    colors = ['gray'] * len(x_data)
                 
-                if not skip_legend:
-                    ax.legend(loc='upper left')
+                ax.scatter(x_data, y_data, alpha=0.5, s=30, c=colors)
                 
-                ax.grid(True, alpha=0.3)
-                ax.yaxis.set_major_formatter(matplotlib.ticker.ScalarFormatter(useMathText=True))
-                ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
-    
-            if not os.path.exists('profiling_results'):
-                os.makedirs('profiling_results', exist_ok=True)
-            plt.savefig(f'profiling_results/{config_name}_regression_plots.png', dpi=300, bbox_inches='tight')
-            print(f"Plot saved to: profiling_results/{config_name}_regression_plots.png")
-            plt.close()
-            
-            equation_parts = [f"{model.intercept_[0]:.2e}"]
-            for i, feature in enumerate(feature_names):
+                x_range = np.linspace(x_data.min(), x_data.max(), 100)
+                x_range_df = pd.DataFrame(index=range(len(x_range)))  
+                for j, feat in enumerate(feature_names):
+                    if feat == feature:
+                        x_range_df[feat] = x_range
+                    else:
+                        median_val = Xs.iloc[:, j].median()
+                        if pd.isna(median_val):
+                            median_val = Xs.iloc[:, j].mean()
+                            if pd.isna(median_val):
+                                median_val = 0
+                        x_range_df[feat] = median_val
+                
+                y_pred_line = model.predict(x_range_df)
+                r2_score = model.score(Xs, ys)
+                ax.plot(x_range, y_pred_line, 'r-', linewidth=2,
+                    label=f'R² = {r2_score:.3f}')
+            else:
+                x_data = Xs.iloc[:, i]
+                y_data = ys.iloc[:, 0]
+                ax.scatter(x_data, y_data, alpha=0.7, s=50)
+                
+                # regression line
+                x_range = np.linspace(x_data.min(), x_data.max(), 100)
+                x_range_df = pd.DataFrame(index=range(len(x_range))) 
+                for j, feat in enumerate(feature_names):
+                    if j == i:  
+                        x_range_df[feat] = x_range
+                    else:
+                        median_val = Xs.iloc[:, j].median()
+                        if pd.isna(median_val):
+                            median_val = Xs.iloc[:, j].mean()
+                            if pd.isna(median_val):
+                                median_val = 0
+                        x_range_df[feat] = median_val
+                        
+                y_pred_line = model.predict(x_range_df)
                 coeff = model.coef_[0][i]
-                equation_parts.append(f"{coeff:.2e}*{feature}")
-            full_equation = " + ".join(equation_parts)
-            print(f"Full equation: y = {full_equation}")
+                r2_score = model.score(Xs, ys)
+                ax.plot(x_range, y_pred_line, 'r-', linewidth=2,
+                    label=f'Partial fit (R² = {r2_score:.3f})\nCoeff: {coeff:.2e}')
+            
+            ax.set_xlabel(feature)
+            ax.set_ylabel(f'{block} (timing)')
+            ax.set_title(f'{config_name}: {block} vs {feature}')
+            ax.grid(True, alpha=0.3)
+            
+            # force scientific notation on y-axis
+            ax.yaxis.set_major_formatter(matplotlib.ticker.ScalarFormatter(useMathText=True))
+            ax.ticklabel_format(style='scientific', axis='y', scilimits=(0,0))
+            
+        fig.suptitle(f'{config_name}: {block} vs Features', fontsize=16)
+        plt.tight_layout()
+        os.makedirs('profiling_results', exist_ok=True)
+        plt.savefig(f'profiling_results/{config_name}_regression_plots.png', dpi=300, bbox_inches='tight')
+        print(f"Plot saved to: profiling_results/{config_name}_regression_plots.png")
+        plt.close()
+        
+        equation_parts = [f"{model.intercept_[0]:.2e}"]
+        for i, feature in enumerate(feature_names):
+            coeff = model.coef_[0][i]
+            equation_parts.append(f"{coeff:.2e}*{feature}")
+        full_equation = " + ".join(equation_parts)
+        print(f"Full equation: y = {full_equation}")
                 
     print("SUMMARY STATS")
     print(f"Total points before filtering: {len(result_df)}")
@@ -912,6 +684,8 @@ if __name__ == '__main__':
             print(f'Running profiling configuration: {config}')
             model = results[config] = profile(config, remote=remote)
             if model:
+                f_model_readable.write(f"\n{'='*60}\n")
+                f_model_readable.write(f"Configuration: {config.upper()}\n")
                 f_model_readable.write("Main Regression Formula:\n")
                 f_model_readable.write("=" * 50 + "\n")
                 main_formula = configurations[config].get('format_string', default_format_string).format(
@@ -927,6 +701,9 @@ if __name__ == '__main__':
                         feature_formulas[formula['feature']].append(formula)
                     
                     for feature, formulas in feature_formulas.items():
+                        if feature in ['bandchannels', 'num_crosspoints']:
+                            continue
+                            
                         f_model_readable.write(f"\n{feature.upper()} Regression Formulas:\n")
                         f_model_readable.write("=" * 50 + "\n")
 
@@ -943,9 +720,6 @@ if __name__ == '__main__':
                         f_model_readable.write("\n")
                     
                     profile.regression_formulas = []
-                
-                if hasattr(profile, 'dimension_stats'):
-                    profile.dimension_stats = []
         
         f_model_pickle = open(f'profiling_results/results{suffix}.pkl', 'wb')
         pickle.dump(results, f_model_pickle)
@@ -962,6 +736,7 @@ if __name__ == '__main__':
         if model:
             pickle.dump(model, f_model_pickle)
             
+            f_model_readable.write(f"Configuration: {config.upper()}\n")
             f_model_readable.write("Main Regression Formula:\n")
             f_model_readable.write("=" * 50 + "\n")
             f_model_readable.write(
@@ -977,6 +752,9 @@ if __name__ == '__main__':
                     feature_formulas[formula['feature']].append(formula)
                 
                 for feature, formulas in feature_formulas.items():
+                    if feature in ['bandchannels', 'num_crosspoints']:
+                        continue
+                        
                     f_model_readable.write(f"\n{feature.upper()} Regression Formulas:\n")
                     f_model_readable.write("=" * 50 + "\n")
 
@@ -993,37 +771,6 @@ if __name__ == '__main__':
                     f_model_readable.write("\n")
                 
                 profile.regression_formulas = []
-            
-            if hasattr(profile, 'dimension_stats'):
-                unique_stats = {}
-                
-                for stat in profile.dimension_stats:
-                    if config == 'peq':
-                        parts = stat.split('×')
-                        bands = float(parts[0].split()[-1])
-                        channels = float(parts[1].split()[0])
-                        product = bands * channels
-                    elif config == 'matrix_mixer':
-                        parts = stat.split('×')
-                        inputs = float(parts[0].split()[-1])
-                        outputs = float(parts[1].split()[0])
-                        product = inputs * outputs
-                    else:
-                        product = 0
-                        
-                    timing = float(stat[stat.rindex("timing = ")+9:].strip())
-                    
-                    key = stat[:stat.rindex("timing = ")]
-                    if key in unique_stats:
-                        unique_stats[key]['timings'].append(timing)
-                        unique_stats[key]['product'] = product
-                    else:
-                        unique_stats[key] = {'timings': [timing], 'product': product}
-                
-                final_stats = []
-                for key, data in unique_stats.items():
-                    avg_timing = sum(data['timings']) / len(data['timings'])
-                    final_stats.append((data['product'], f"{key}timing = {avg_timing:.2e}"))
-                
+        
         f_model_pickle.close()
         f_model_readable.close()
