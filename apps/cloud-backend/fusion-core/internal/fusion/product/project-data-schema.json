@@ -1,0 +1,390 @@
+{
+  "speakers": [
+    {
+      "model": "DM2C-LP",
+      "id": 17723,
+      "skus": [810965],
+      "name": "PowerSpace P4150+ versatile power Loudspeaker",
+      "power_handling": {
+        "unit": "W",
+        "long_term_continuous": "4",
+        "peak": "100"
+      },
+      "sensitivity": {
+        "unit": "dB",
+        "at": [
+          {
+            "key": "1m",
+            "value": "84"
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB",
+        "at": [
+          {
+            "key": "1m",
+            "value": "100"
+          }
+        ]
+      },
+      "freq_range": {
+        "unit": "khz",
+        "low": "70",
+        "high": "20"
+      },
+      "frequency_response": {
+        "at": [
+          {
+            "key": "-3 dB",
+            "value": "70-20"
+          },
+          {
+            "key": "-10 dB",
+            "value": "60-22"
+          }
+        ]
+      },
+      "frequency_response_curve": [
+        { "frequency_hz": 20, "level_db": -10 },
+        { "frequency_hz": 50, "level_db": -3 }
+      ],
+      "nominal_impedance": {
+        "unit": "ohm",
+        "value": "8"
+      },
+      "coverage": [
+        {
+          "frequency_range_hz": "1kHz–4kHz",
+          "type": "rectangular",
+          "horizontal_deg": 145,
+          "vertical_deg": 140
+        },
+        {
+          "frequency_range_hz": "1kHz–4kHz",
+          "type": "rectangular",
+          "horizontal_deg": 130,
+          "vertical_deg": 125
+        },
+        {
+          "frequency_range_hz": "1kHz–4kHz",
+          "type": "conical",
+          "angle_deg": 140
+        }
+      ],
+      "acoustic_technology": "Dispersion Alignment system",
+      "installation": {
+        "technology": "QuickHold",
+        "accessories": "Included: tile bridges, hole template Optional: rough-in pans"
+      },
+      "certifications": "UL 1480A, UL 2043",
+      "product_codes": ["815011-0110 (black, pair)"],
+      "short_description": "",
+      "description": "",
+      "environment": "Indoor",
+      "dimensions": [
+        {
+          "unit": "mm",
+          "height": 44,
+          "width": 483,
+          "depth": 324
+        },
+        {
+          "unit": "inches",
+          "height": 1.7,
+          "width": 19.0,
+          "depth": 12.8
+        }
+      ],
+      "mount_type": "Rack",
+      "impedance": {
+        "unit": "ohms",
+        "low": "4",
+        "high": "100"
+      },
+      "impedance_curve": [
+        { "frequency_hz": 20, "impedance_ohms": 7.9 },
+        { "frequency_hz": 100, "impedance_ohms": 8.1 }
+      ],
+      "available_taps": {
+        "70v": [12.5, 25, 50, 100],
+        "100v": [12.5, 25, 50, 100]
+      },
+      "no_of_passbands": "2",
+      "images": [
+        "https://assets.boseprofessional.com/transform/56abb5b7-8d5e-42da-aa3a-80c3b28028c6/PowerSpace_P4150-_withMixing_Front_halfREs",
+        "https://assets.boseprofessional.com/m/655ce62a084cf2e9/original/PowerSpace_P4150_plus_Front-png.png",
+        "https://assets.boseprofessional.com/transform/1d3f8f65-acd9-4105-9689-c411ac99a8f6/PowerSpace_P4150-_Rear_halfREs",
+        "https://assets.boseprofessional.com/m/ff2a71171df3411/original/PowerSpace_P4150_plus_Right-Facing-png.png"
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "available_accessories": [
+        "Tile bridges",
+        "Hole template",
+        "Rough-in pans"
+      ],
+      "polar_data": "https://assets.boseprofessional.com/transform/56abb5b7-8d5e-42da-aa3a-80c3b28028c6/PowerSpace_P4150-_withMixing_Front_halfREs",
+      "bose_professional_voicing": "https://assets.boseprofessional.com/transform/56abb5b7-8d5e-42da-aa3a-80c3b28028c6/PowerSpace_P4150-_withMixing_Front_halfREs",
+      "driver_components": {
+        "full_range": {
+          "quantity": 1,
+          "size": "2.25-inch"
+        }
+      },
+      "net_weight": [
+        {
+          "unit": "kg",
+          "value": "3.5"
+        },
+        {
+          "unit": "lbs",
+          "value": "7.7"
+        }
+      ]
+    }
+  ],
+  "amplifiers": [
+    {
+      "id": 17723,
+      "model": "PowerSpace P4150+",
+      "skus": [810965],
+      "name": "PowerSpace P4150+ versatile power amplifier",
+      "power_output": {
+        "symmetrical": {
+          "rated_per_channel": {
+            "unit": "W",
+            "at": [
+              { "key": "4_ohms", "value": 500 },
+              { "key": "8_ohms", "value": 300 }
+            ]
+          },
+          "peak_per_channel": {
+            "unit": "W",
+            "at": [
+              { "key": "4_ohms", "value": 1000 },
+              { "key": "8_ohms", "value": 600 }
+            ]
+          },
+          "rated_per_channel_high_voltage": {
+            "unit": "W",
+            "at": [
+              { "key": "70v", "value": 250 },
+              { "key": "100v", "value": 200 }
+            ]
+          },
+          "peak_per_channel_high_voltage": {
+            "unit": "W",
+            "at": [
+              { "key": "70v", "value": 500 },
+              { "key": "100v", "value": 400 }
+            ]
+          }
+        },
+        "asymmetrical": {
+          "rated_per_channel": {
+            "unit": "W",
+            "at": [
+              { "key": "4_ohms", "value": 450 },
+              { "key": "8_ohms", "value": 280 }
+            ]
+          },
+          "peak_per_channel": {
+            "unit": "W",
+            "at": [
+              { "key": "4_ohms", "value": 900 },
+              { "key": "8_ohms", "value": 560 }
+            ]
+          },
+          "rated_per_channel_high_voltage": {
+            "unit": "W",
+            "at": [
+              { "key": "70v", "value": 230 },
+              { "key": "100v", "value": 180 }
+            ]
+          },
+          "peak_per_channel_high_voltage": {
+            "unit": "W",
+            "at": [
+              { "key": "70v", "value": 460 },
+              { "key": "100v", "value": 360 }
+            ]
+          }
+        }
+      },
+      "number_of_inputs_and_outputs": {
+        "analog": {
+          "inputs": 4,
+          "outputs": 4
+        },
+        "fusion_connect": {
+          "max_inputs": 8,
+          "max_outputs": 8
+        },
+        "aes67": {
+          "max_inputs": 16,
+          "max_outputs": 16
+        },
+        "dante": {
+          "max_inputs": 16,
+          "max_outputs": 16
+        }
+      },
+      "front_panel_image": "path/to/front_panel.jpg",
+      "rear_panel_image": "path/to/rear_panel.jpg",
+      "thermal_output": {
+        "unit": "BTU/hr",
+        "value": 1500
+      },
+      "current_draw": {
+        "at": [
+          { "key": "120v", "value": 5.5, "unit": "A" },
+          { "key": "230v", "value": 3.0, "unit": "A" }
+        ]
+      },
+      "rack_height": {
+        "unit": "U",
+        "value": 2
+      },
+      "safe_operating_temperature": {
+        "unit": "C",
+        "min": 0,
+        "max": 40
+      },
+      "firmware": {
+        "current_published_version": "v2.3.1",
+        "current_running_version": "v2.2.0"
+      },
+      "images": [
+        "https://assets.boseprofessional.com/transform/56abb5b7-8d5e-42da-aa3a-80c3b28028c6/PowerSpace_P4150-_withMixing_Front_halfREs",
+        "https://assets.boseprofessional.com/m/655ce62a084cf2e9/original/PowerSpace_P4150_plus_Front-png.png",
+        "https://assets.boseprofessional.com/transform/1d3f8f65-acd9-4105-9689-c411ac99a8f6/PowerSpace_P4150-_Rear_halfREs",
+        "https://assets.boseprofessional.com/m/ff2a71171df3411/original/PowerSpace_P4150_plus_Right-Facing-png.png"
+      ],
+      "colors": ["Black"],
+      "power": {
+        "unit": "W",
+        "at": [
+          { "key": "8_ohms", "value": 25 },
+          { "key": "70v", "value": 50 }
+        ]
+      },
+      "amplink": [
+        {
+          "channels": 8,
+          "connector": "RJ-45"
+        }
+      ],
+      "dante": [
+        {
+          "channels": 4,
+          "connector": "RJ-45"
+        }
+      ],
+      "dimensions": [
+        {
+          "unit": "mm",
+          "height": 44,
+          "width": 483,
+          "depth": 324
+        },
+        {
+          "unit": "inches",
+          "height": 1.7,
+          "width": 19.0,
+          "depth": 12.8
+        }
+      ],
+      "net_weight": [
+        {
+          "unit": "kg",
+          "value": "3.5"
+        },
+        {
+          "unit": "lbs",
+          "value": "7.7"
+        }
+      ],
+      "certifications": "UL 1480A, UL 2043",
+      "product_codes": ["815011-0110 (black, pair)"]
+    }
+  ],
+  "digital_signal_processors": [
+    {
+      "id": 17723,
+      "model": "PS404D",
+      "name": "PowerSpace P4150+ DSP",
+      "skus": [810965],
+      "number_of_inputs_and_outputs": {
+        "fusion_connect": {
+          "max_inputs": 8,
+          "max_outputs": 8
+        },
+        "aes67": {
+          "max_inputs": 16,
+          "max_outputs": 16
+        },
+        "dante": {
+          "max_inputs": 16,
+          "max_outputs": 16
+        }
+      },
+      "max_number_of_digital_control": 8,
+      "max_number_of_analog_control": 8,
+      "safe_operating_temperature": {
+        "unit": "C",
+        "min": 0,
+        "max": 40
+      },
+      "firmware": {
+        "current_published_version": "v2.3.1",
+        "current_running_version": "v2.2.0"
+      },
+      "images": [
+        "https://assets.boseprofessional.com/transform/56abb5b7-8d5e-42da-aa3a-80c3b28028c6/PowerSpace_P4150-_withMixing_Front_halfREs",
+        "https://assets.boseprofessional.com/m/655ce62a084cf2e9/original/PowerSpace_P4150_plus_Front-png.png",
+        "https://assets.boseprofessional.com/transform/1d3f8f65-acd9-4105-9689-c411ac99a8f6/PowerSpace_P4150-_Rear_halfREs",
+        "https://assets.boseprofessional.com/m/ff2a71171df3411/original/PowerSpace_P4150_plus_Right-Facing-png.png"
+      ],
+      "gpio_logic_ports": {
+        "inputs": 5,
+        "outputs": 5
+      },
+      "dsp_architecture": "Open architecture",
+      "acoustic_echo_cancellation": {
+        "channels": 12
+      },
+      "configuration_software": "ControlSpace Designer",
+      "supported_bose_professional_dante_endpoints": [
+        "EX-4ML",
+        "EX-8ML",
+        "EX-UH",
+        "WP-22B-D"
+      ],
+      "dimensions": {
+        "rack_space": "1RU",
+        "size": [
+          {
+            "unit": "mm",
+            "height": 44,
+            "width": 483,
+            "depth": 282
+          },
+          {
+            "unit": "inches",
+            "height": 1.7,
+            "width": 19.0,
+            "depth": 11.1
+          }
+        ]
+      },
+      "net_weight": [
+        {
+          "unit": "lbs",
+          "value": "7.7"
+        }
+      ],
+      "product_codes": ["815011-0110 (black, pair)"]
+    }
+  ]
+}
