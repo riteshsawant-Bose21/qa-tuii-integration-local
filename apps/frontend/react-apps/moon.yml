@@ -4,7 +4,7 @@ project:
 
 tasks:
   # Batch build
-  build:
+  build-all:
     deps:
       - "landing-page:build"
       - "web-dashboard:build"
