@@ -3,7 +3,7 @@ import 'package:fusion_launcher/core/theme/app_theme.dart';
 import 'package:fusion_launcher/features/venue_design/presentation/widgets/product_right_sidebar/product_query.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 
-import '../expandable_tile_widget.dart';
+import '../dockable_panel.dart';
 
 class ProductRightSidebar extends StatelessWidget {
   const ProductRightSidebar({super.key});
@@ -13,15 +13,15 @@ class ProductRightSidebar extends StatelessWidget {
     return const SingleChildScrollView(
       child: Column(
         children: <Widget>[
-          ExpandableTileWidget(
+          DockableExpandableTile(
             title: 'ATTRIBUTES',
             child: AttributesSection(),
           ),
-          ExpandableTileWidget(
+          DockableExpandableTile(
             title: 'COST CALCULATOR',
             child: CostCalculatorSection(),
           ),
-          ExpandableTileWidget(
+          DockableExpandableTile(
             title: 'PRODUCT QUERY',
             initiallyExpanded: true,
             child: ProductQuery(),
