@@ -5,12 +5,18 @@ class ExpandableTileWidget extends StatefulWidget {
   final String title;
   final Widget child;
   final bool initiallyExpanded;
+  final GestureDragStartCallback? onPanStart;
+  final GestureDragUpdateCallback? onPanUpdate;
+  final GestureDragEndCallback? onPanEnd;
 
   const ExpandableTileWidget({
     super.key,
     required this.title,
     required this.child,
     this.initiallyExpanded = false,
+    this.onPanStart,
+    this.onPanUpdate,
+    this.onPanEnd,
   });
 
   @override
@@ -81,7 +87,12 @@ class _ExpandableTileWidgetState extends State<ExpandableTileWidget> with Single
           onExpansionChanged: _handleExpansionChanged,
           iconColor: theme.colorScheme.fusionTextViewColor,
           collapsedIconColor: theme.colorScheme.fusionTextViewColor,
-          title: _SectionTitle(title: widget.title),
+          title: GestureDetector(
+            onPanStart: widget.onPanStart,
+            onPanUpdate: widget.onPanUpdate,
+            onPanEnd: widget.onPanEnd,
+            child: _SectionTitle(title: widget.title),
+          ),
           initiallyExpanded: widget.initiallyExpanded,
           children: <Widget>[widget.child],
         ),

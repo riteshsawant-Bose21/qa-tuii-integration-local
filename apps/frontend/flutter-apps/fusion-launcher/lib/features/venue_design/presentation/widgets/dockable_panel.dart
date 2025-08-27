@@ -53,6 +53,7 @@ class _DockableExpandableTileState extends State<DockableExpandableTile> {
   OverlayEntry? _floatingEntry;
   bool _isDragging = false;
   Offset _dragStartPosition = Offset.zero;
+  Offset _localDragOffset = Offset.zero; // Add this to track local offset
   static const double _dragThreshold = 10.0;
 
   @override
@@ -84,23 +85,31 @@ class _DockableExpandableTileState extends State<DockableExpandableTile> {
 
   void _insertFloating() {
     _removeFloating();
+    if (!mounted) return;
+
     _floatingEntry = OverlayEntry(
       builder: (BuildContext context) {
         return Positioned(
-          left: _floatingPosition.dx,
-          top: _floatingPosition.dy,
+          left: _floatingPosition.dx - _localDragOffset.dx,
+          top: _floatingPosition.dy - _localDragOffset.dy,
           child: Material(
             elevation: 8,
             borderRadius: BorderRadius.circular(12),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 240),
+              constraints: const BoxConstraints(
+                maxWidth: 240,
+                maxHeight: 750,
+              ),
               child: _buildFloatingTile(),
             ),
           ),
         );
       },
     );
-    Overlay.of(context).insert(_floatingEntry!);
+
+    if (mounted) {
+      Overlay.of(context).insert(_floatingEntry!);
+    }
   }
 
   void _removeFloating() {
@@ -108,7 +117,11 @@ class _DockableExpandableTileState extends State<DockableExpandableTile> {
     _floatingEntry = null;
   }
 
-  void _updateFloating() => _floatingEntry?.markNeedsBuild();
+  void _updateFloating() {
+    if (_floatingEntry != null && mounted) {
+      _floatingEntry!.markNeedsBuild();
+    }
+  }
 
   Widget _buildFloatingTile() {
     return GestureDetector(
@@ -118,7 +131,9 @@ class _DockableExpandableTileState extends State<DockableExpandableTile> {
       },
       onPanUpdate: (DragUpdateDetails details) {
         if (_isDragging) {
-          _floatingPosition += details.delta;
+          setState(() {
+            _floatingPosition += details.delta;
+          });
           _updateFloating();
         }
       },
@@ -166,19 +181,24 @@ class _DockableExpandableTileState extends State<DockableExpandableTile> {
                 ],
               ),
             ),
-            // Content area
-            Container(
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.white,
-                border: Border(
-                  bottom: BorderSide(
-                    color: Theme.of(context).colorScheme.greyLight!,
-                    width: 1,
+
+            /// Content area
+            Flexible(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.white,
+                  border: Border(
+                    bottom: BorderSide(
+                      color: Theme.of(context).colorScheme.greyLight!,
+                      width: 1,
+                    ),
                   ),
                 ),
+                padding: const EdgeInsets.all(8),
+                child: SingleChildScrollView(
+                  child: widget.child,
+                ),
               ),
-              padding: const EdgeInsets.all(8),
-              child: widget.child,
             ),
           ],
         ),
@@ -187,10 +207,14 @@ class _DockableExpandableTileState extends State<DockableExpandableTile> {
   }
 
   Widget _buildDockedTile() {
-    return GestureDetector(
+    return ExpandableTileWidget(
+      title: widget.title,
+      initiallyExpanded: _isExpanded,
+      child: widget.child,
       onPanStart: (DragStartDetails details) {
         _isDragging = false;
         _dragStartPosition = details.globalPosition;
+        _localDragOffset = details.localPosition; // Capture local offset
       },
       onPanUpdate: (DragUpdateDetails details) {
         final double dragDistance = (details.globalPosition - _dragStartPosition).distance;
@@ -201,7 +225,7 @@ class _DockableExpandableTileState extends State<DockableExpandableTile> {
         }
 
         if (_isDragging) {
-          _floatingPosition = details.globalPosition;
+          _floatingPosition += details.delta;
           _updateFloating();
         }
       },
@@ -211,11 +235,6 @@ class _DockableExpandableTileState extends State<DockableExpandableTile> {
         }
         _isDragging = false;
       },
-      child: ExpandableTileWidget(
-        title: widget.title,
-        initiallyExpanded: _isExpanded,
-        child: widget.child,
-      ),
     );
   }
 
