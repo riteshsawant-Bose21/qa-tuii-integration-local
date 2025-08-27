@@ -18,9 +18,8 @@ import '../../../../core/services/project_manager.dart';
 import '../../../../core/widgets/clean_widgets.dart';
 import '../../../../core/widgets/spl_range_slider.dart';
 import '../../../schematics/presentation/pages/amplifier_matching_page.dart';
+import '../widgets/product_right_sidebar/product_right_sidebar.dart';
 import '../widgets/products_sidebar.dart';
-import '../widgets/properties/properties_side_bar.dart';
-import '../widgets/zones_panel/zones_panel.dart';
 
 class FloorPlanProjectEditor extends StatefulWidget {
   const FloorPlanProjectEditor({super.key});
@@ -624,239 +623,25 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
               ),
             ),
 
-            // Right sidebar
+            /// Right sidebar
             Container(
               width: 240,
+              height: double.infinity,
+              decoration: BoxDecoration(
+                // color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(6),
+                // border only left
+                border: Border(
+                  left: BorderSide(
+                    color: Colors.grey.shade200,
+                  ),
+                ),
+              ),
               margin: const EdgeInsets.all(12),
               child: ValueListenableBuilder<ProjectData>(
                 valueListenable: projectManager,
                 builder: (_, ProjectData project, __) {
-                  return SingleChildScrollView(
-                    child: Column(
-                      children: <Widget>[
-                        // Properties Section
-                        Container(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: Colors.grey.shade200),
-                          ),
-                          child: Theme(
-                            data: ThemeData().copyWith(
-                              dividerColor: Colors.transparent,
-                            ),
-                            child: ExpansionTile(
-                              title: Row(
-                                children: <Widget>[
-                                  Icon(
-                                    Icons.tune,
-                                    size: 18,
-                                    color: Colors.grey.shade600,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Properties',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                      color: Colors.grey.shade700,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              initiallyExpanded: false,
-                              children: <Widget>[
-                                IntrinsicHeight(
-                                  child: PropertiesSideBar(
-                                    floor: projectManager.selectedFloorPlan,
-                                    hardwareComponent: projectManager.selectedHardwareComponent,
-                                    surface: projectManager.selectedListeningArea,
-                                    onFloorChanged: (FloorModel floorEntity) {
-                                      projectManager.updateFloor(floorEntity);
-                                      calculateSPL();
-                                      projectManager.saveProject();
-                                    },
-                                    onFloorDelete: (FloorModel floorEntity) {
-                                      projectManager.removeFloor(
-                                        floorEntity.id,
-                                      );
-                                      projectManager.saveProject();
-                                    },
-                                    onHardwareDelete: (
-                                      HardwareComponent hardwareComponent,
-                                    ) {
-                                      projectManager.removeHardwareComponent(
-                                        hardwareComponent.id,
-                                      );
-                                      calculateSPL();
-                                      projectManager.saveProject();
-                                    },
-                                    onSurfaceDelete: (ListeningArea surface) {
-                                      projectManager.removeListeningArea(
-                                        surface.id,
-                                      );
-                                      projectManager.saveProject();
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-
-                        // Zones Section
-                        Container(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: Colors.grey.shade200),
-                          ),
-                          child: Theme(
-                            data: ThemeData().copyWith(
-                              dividerColor: Colors.transparent,
-                            ),
-                            child: ExpansionTile(
-                              title: Row(
-                                children: <Widget>[
-                                  Icon(
-                                    Icons.layers,
-                                    size: 18,
-                                    color: Colors.grey.shade600,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Zones',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                      color: Colors.grey.shade700,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              initiallyExpanded: false,
-                              children: <Widget>[
-                                IntrinsicHeight(
-                                  child: ZonesPanel(
-                                    zones: projectManager.value.zones,
-                                    getZoneListeningAreas: (String zoneId) => projectManager.getListeningAreasInZone(zoneId),
-                                    getListeningAreaFloor: (String listeningAreaId) => projectManager.getFloorByListeningAreaId(listeningAreaId),
-                                    onZoneAdded: (Zone zone) {
-                                      projectManager.addZone(zone);
-                                      projectManager.saveProject();
-                                    },
-                                    onZoneUpdated: (Zone zone) {
-                                      projectManager.updateZone(zone);
-                                      projectManager.saveProject();
-                                    },
-                                    onZoneDeleted: (Zone zone) {
-                                      projectManager.removeZone(zone.id);
-                                      projectManager.saveProject();
-                                    },
-                                    onAreaRemovedFromZone: (String removedAreaId) {
-                                      //Remove the zone id from the removed areas
-                                      final List<HardwareComponent> componentsInRemovedArea =
-                                          projectManager.value.hardwareComponents
-                                              .where((HardwareComponent hc) => removedAreaId == hc.locationEntity.listeningAreaId)
-                                              .toList();
-
-                                      final List<HardwareComponent> updatedRemovedComponents =
-                                          componentsInRemovedArea
-                                              .map(
-                                                (HardwareComponent component) =>
-                                                    component.copyWith(locationEntity: component.locationEntity.copyWith(zoneId: "")),
-                                              )
-                                              .toList();
-                                      projectManager.updateHardwareList(
-                                        updatedRemovedComponents,
-                                      );
-                                      projectManager.saveProject();
-                                    },
-                                    onRequestListeningAreaSelection: (Zone zone) async {
-                                      print("Starting area selection");
-
-                                      final List<ListeningArea>? selectedAreas = await floorCanvasController.requestListeningAreaSelection(
-                                        projectManager.getListeningAreasInZone(zone.id),
-                                        zone,
-                                      );
-
-                                      if (selectedAreas != null) {
-                                        print("${selectedAreas.length} areas selected");
-
-                                        final List<String> selectedAreaIds = selectedAreas.map((ListeningArea area) => area.id).toList();
-
-                                        final List<String> removedAreaIds = zone.listeningAreasIds.where((String id) => !selectedAreaIds.contains(id)).toList();
-
-                                        // if the selectedAreaIds are in any zone, remove them from those zones
-                                        for (String selectedAreaId in selectedAreaIds) {
-                                          for (Zone z in (projectManager.value.zones.where((Zone z) => z.listeningAreasIds.contains(selectedAreaId)))) {
-                                            z.listeningAreasIds.remove(selectedAreaId);
-                                          }
-                                        }
-
-                                        //update all the hardware entities that are using this zone and update their LocationModel zone id
-                                        final List<HardwareComponent> componentsInSelectedArea =
-                                            projectManager.value.hardwareComponents
-                                                .where(
-                                                  (HardwareComponent hc) => selectedAreaIds.contains(
-                                                    hc.locationEntity.listeningAreaId,
-                                                  ),
-                                                )
-                                                .toList();
-
-                                        final List<HardwareComponent> updatedComponents =
-                                            componentsInSelectedArea
-                                                .map(
-                                                  (HardwareComponent component) => component.copyWith(
-                                                    locationEntity: component.locationEntity.copyWith(
-                                                      zoneId: zone.id,
-                                                    ),
-                                                  ),
-                                                )
-                                                .toList();
-
-                                        projectManager.updateHardwareList(
-                                          updatedComponents,
-                                        );
-
-                                        //Remove the zone id from the removed areas
-                                        final List<HardwareComponent> componentsInRemovedArea =
-                                            projectManager.value.hardwareComponents
-                                                .where(
-                                                  (HardwareComponent hc) => removedAreaIds.contains(hc.locationEntity.listeningAreaId),
-                                                )
-                                                .toList();
-
-                                        final List<HardwareComponent> updatedRemovedComponents =
-                                            componentsInRemovedArea
-                                                .map(
-                                                  (HardwareComponent component) =>
-                                                      component.copyWith(locationEntity: component.locationEntity.copyWith(zoneId: "")),
-                                                )
-                                                .toList();
-
-                                        projectManager.updateHardwareList(updatedRemovedComponents);
-
-                                        projectManager.updateZone(
-                                          zone.copyWith(
-                                            listeningAreaIds: selectedAreaIds,
-                                          ),
-                                        );
-
-                                        projectManager.saveProject();
-                                      }
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
+                  return const ProductRightSidebar();
                 },
               ),
             ),
