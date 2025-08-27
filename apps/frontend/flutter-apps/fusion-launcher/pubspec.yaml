@@ -58,7 +58,7 @@ dependencies:
   pretty_qr_code: ^3.4.0
 
   fusion_lib:
-    path:  ../../../../libs/flutter-libs/fusion_lib
+    path: ../../../../libs/flutter-libs/fusion_lib
     
   dartzmq:
     path:  ../../../../libs/flutter-libs/dartzmq
