@@ -71,7 +71,7 @@ class ProductCard extends StatelessWidget {
         children: <Widget>[
           /// Product image
           const FusionImage.asset(
-            "apps/frontend/flutter-apps/fusion-launcher/assets/images/speakers/freespace_designmax_1.png",
+            "assets/images/speakers/DM_pendant.png",
             width: 64,
             height: 64,
             fit: BoxFit.contain,

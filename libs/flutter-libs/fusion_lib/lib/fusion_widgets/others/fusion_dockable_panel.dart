@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_widgets/others/fusion_expandable_tile_widget.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
-import 'expandable_tile_widget.dart';
+import 'package:flutter/gestures.dart';
 
 /// A dockable and expandable tile widget.
 ///
@@ -14,12 +15,11 @@ import 'expandable_tile_widget.dart';
 ///   - Starts floating when dragged.
 /// - **Floating mode:**
 ///   - Draggable anywhere on screen.
-///   - Expands automatically once dropped.
 ///   - Has a close (`X`) button to re-dock (collapses on dock).
 ///
 /// ### Example:
 /// ```dart
-/// DockableExpandableTile(
+/// FusionDockablePanel(
 ///   title: "Project Settings",
 ///   initiallyExpanded: false,
 ///   child: Column(
@@ -30,23 +30,23 @@ import 'expandable_tile_widget.dart';
 ///   ),
 /// )
 /// ```
-class DockableExpandableTile extends StatefulWidget {
+class FusionDockablePanel extends StatefulWidget {
+  /// Title displayed in the header.
   final String title;
+
+  /// Content widget displayed when expanded.
   final Widget child;
+
+  /// Whether the tile starts expanded (only applies when docked).
   final bool initiallyExpanded;
 
-  const DockableExpandableTile({
-    super.key,
-    required this.title,
-    required this.child,
-    this.initiallyExpanded = false,
-  });
+  const FusionDockablePanel({super.key, required this.title, required this.child, this.initiallyExpanded = false});
 
   @override
-  State<DockableExpandableTile> createState() => _DockableExpandableTileState();
+  State<FusionDockablePanel> createState() => _FusionDockablePanelState();
 }
 
-class _DockableExpandableTileState extends State<DockableExpandableTile> {
+class _FusionDockablePanelState extends State<FusionDockablePanel> {
   bool _isExpanded = false;
   bool _isDocked = true;
   Offset _floatingPosition = Offset.zero;
@@ -61,8 +61,6 @@ class _DockableExpandableTileState extends State<DockableExpandableTile> {
     super.initState();
     _isExpanded = widget.initiallyExpanded;
   }
-
-  void _toggleExpand() => setState(() => _isExpanded = !_isExpanded);
 
   /// Undocks and expands once dropped
   void _undockAt(Offset position) {
@@ -83,6 +81,7 @@ class _DockableExpandableTileState extends State<DockableExpandableTile> {
     _removeFloating();
   }
 
+  /// Inserts the floating tile into the overlay
   void _insertFloating() {
     _removeFloating();
     if (!mounted) return;
@@ -95,13 +94,7 @@ class _DockableExpandableTileState extends State<DockableExpandableTile> {
           child: Material(
             elevation: 8,
             borderRadius: BorderRadius.circular(12),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                maxWidth: 240,
-                maxHeight: 750,
-              ),
-              child: _buildFloatingTile(),
-            ),
+            child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 240, maxHeight: 650), child: _buildFloatingTile()),
           ),
         );
       },
@@ -123,94 +116,92 @@ class _DockableExpandableTileState extends State<DockableExpandableTile> {
     }
   }
 
+  /// Builds the floating tile with custom header and close button
   Widget _buildFloatingTile() {
-    return GestureDetector(
-      onPanStart: (DragStartDetails details) {
-        _isDragging = true;
-        _dragStartPosition = details.globalPosition;
-      },
-      onPanUpdate: (DragUpdateDetails details) {
-        if (_isDragging) {
-          setState(() {
-            _floatingPosition += details.delta;
-          });
-          _updateFloating();
-        }
-      },
-      onPanEnd: (_) {
-        _isDragging = false;
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          color: Theme.of(context).colorScheme.white,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            /// Custom header with close button for floating mode
-            Container(
-              height: 32,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
+    return Container(
+      clipBehavior: Clip.hardEdge,
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), color: Theme.of(context).colorScheme.white),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          /// Custom header with close button for floating mode
+          MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: Listener(
+              onPointerDown: (PointerDownEvent event) {
+                // Only allow left mouse button or touch
+                if (event.kind == PointerDeviceKind.mouse && event.buttons != kPrimaryMouseButton) {
+                  _isDragging = false; // block drag
+                  return;
+                }
+                _isDragging = true;
+                _dragStartPosition = event.position;
+              },
+
+              onPointerUp: (_) => _isDragging = false,
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onPanUpdate: (details) {
+                  if (_isDragging) {
+                    setState(() {
+                      _floatingPosition += details.delta;
+                    });
+                    _updateFloating();
+                  }
+                },
+                onPanEnd: (_) {
+                  _isDragging = false;
+                },
+                child: Container(
+                  height: 32,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.white,
+                    border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1)),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: <Widget>[
+                      Expanded(
+                        child: FusionAppText(text: widget.title, style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 9)),
+                      ),
+                      IconButton(icon: const Icon(Icons.close, size: 16), onPressed: _dock, padding: EdgeInsets.zero, constraints: const BoxConstraints()),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          /// Content area
+          Flexible(
+            child: Container(
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.white,
-                border: Border(
-                  bottom: BorderSide(
-                    color: Theme.of(context).colorScheme.dividerColor,
-                    width: 1,
-                  ),
-                ),
+                border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1)),
               ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: <Widget>[
-                  Expanded(
-                    child: FusionAppText(
-                      text: widget.title,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontSize: 9,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close, size: 16),
-                    onPressed: _dock,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                ],
+              child: SingleChildScrollView(
+                // no pysics to allow nested scrolling
+                physics: const ClampingScrollPhysics(),
+                child: widget.child,
               ),
             ),
-
-            /// Content area
-            Flexible(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.white,
-                  border: Border(
-                    bottom: BorderSide(
-                      color: Theme.of(context).colorScheme.greyLight!,
-                      width: 1,
-                    ),
-                  ),
-                ),
-                padding: const EdgeInsets.all(8),
-                child: SingleChildScrollView(
-                  child: widget.child,
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildDockedTile() {
-    return ExpandableTileWidget(
+    return FusionExpandableTileWidget(
       title: widget.title,
       initiallyExpanded: _isExpanded,
       child: widget.child,
+      // onExpansionChanged: (bool expanded) {
+      //   setState(() {
+      //     _isExpanded = expanded;
+      //   });
+      // },
       onPanStart: (DragStartDetails details) {
         _isDragging = false;
         _dragStartPosition = details.globalPosition;
