@@ -5,8 +5,8 @@ import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 
 import 'package:fusion_lib/fusion_widgets/others/fusion_dockable_panel.dart';
 
-class SIdePanel extends StatelessWidget {
-  const SIdePanel({super.key});
+class SidePanel extends StatelessWidget {
+  const SidePanel({super.key});
 
   @override
   Widget build(BuildContext context) {

@@ -641,7 +641,7 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
               child: ValueListenableBuilder<ProjectData>(
                 valueListenable: projectManager,
                 builder: (_, ProjectData project, __) {
-                  return const SIdePanel();
+                  return const SidePanel();
                 },
               ),
             ),
