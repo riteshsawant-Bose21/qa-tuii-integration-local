@@ -50,14 +50,14 @@ class AmpModel {
 /// Assignment: one amplifier and the circuits assigned to it.
 class Assignment {
   final AmpModel amp;
-  final List<Circuit> loads;
+  final List<AmpCircuit> loads;
   // Add debug fields if needed
   Assignment({required this.amp, required this.loads});
 }
 
 /// CircuitCalc: internal wrapper for circuit calculations
 class CircuitCalc {
-  final Circuit base;
+  final AmpCircuit base;
   double ppkTotal;
   double offsetDB;
   List<String> errors;
@@ -66,8 +66,8 @@ class CircuitCalc {
       : errors = errors ?? [];
 }
 
-/// Circuit: minimal stub, expand as needed to match Go struct
-class Circuit {
+/// AmpCircuit: minimal stub for circuit data (renamed to avoid conflict with amp_matching_types.dart)
+class AmpCircuit {
   final String model;
   final int speakerCount;
   final String mode;
@@ -75,7 +75,7 @@ class Circuit {
   final double? impedance;
   final double? offsetDB;
 
-  Circuit({
+  AmpCircuit({
     required this.model,
     required this.speakerCount,
     required this.mode,

@@ -14,7 +14,7 @@ String getAllAmplifiersCatalog() {
 }
 
 /// Main entry point: match amplifiers to circuits
-List<Assignment> matchAmps(List<Circuit> input, List<AmpModel> amps) {
+List<Assignment> matchAmps(List<AmpCircuit> input, List<AmpModel> amps) {
 	if (input.isEmpty) {
 		throw Exception('No circuits provided');
 	}
