@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:fusion_lib/fusion_algorithms/amplifier_matching/amp_matching_types.dart';
+import 'package:fusion_lib/fusion_algorithms/amplifier_matching/amp_matching_types.dart' as amp_types;
 import 'package:fusion_lib/fusion_algorithms/fusion_algorithms.dart';
 
 /// Service to share circuit data between CircuitingWidget and AmplifierMatchingWidget
@@ -38,10 +38,10 @@ class CircuitDataService extends ChangeNotifier {
   ///
   /// Note: Since CircuitAssignment doesn't contain speaker count directly,
   /// we'll need to derive it from the speaker database and circuit power
-  List<Circuit> convertToCircuits(Map<String, SpeakerModel> speakerDatabase) {
-    if (_circuitingResults == null) return <Circuit>[];
+  List<amp_types.Circuit> convertToCircuits(Map<String, SpeakerModel> speakerDatabase) {
+    if (_circuitingResults == null) return <amp_types.Circuit>[];
 
-    final List<Circuit> circuits = <Circuit>[];
+    final List<amp_types.Circuit> circuits = <amp_types.Circuit>[];
 
     for (final CircuitAssignment assignment in _circuitingResults!) {
       // Get speaker specs from database
@@ -56,7 +56,7 @@ class CircuitDataService extends ChangeNotifier {
       }
 
       circuits.add(
-        Circuit(
+        amp_types.Circuit(
           circuitId: assignment.circuitId,
           model: assignment.model,
           mode: assignment.mode,
