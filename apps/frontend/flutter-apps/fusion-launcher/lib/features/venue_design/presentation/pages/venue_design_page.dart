@@ -18,8 +18,8 @@ import '../../../../core/services/project_manager.dart';
 import '../../../../core/widgets/clean_widgets.dart';
 import '../../../../core/widgets/spl_range_slider.dart';
 import '../../../schematics/presentation/pages/amplifier_matching_page.dart';
-import '../widgets/product_right_sidebar/product_right_sidebar.dart';
 import '../widgets/products_sidebar.dart';
+import '../widgets/side_panel/side_panel.dart';
 
 class FloorPlanProjectEditor extends StatefulWidget {
   const FloorPlanProjectEditor({super.key});
@@ -641,7 +641,7 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
               child: ValueListenableBuilder<ProjectData>(
                 valueListenable: projectManager,
                 builder: (_, ProjectData project, __) {
-                  return const ProductRightSidebar();
+                  return const SIdePanel();
                 },
               ),
             ),

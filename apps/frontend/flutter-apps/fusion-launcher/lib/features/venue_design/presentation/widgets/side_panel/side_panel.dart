@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/theme/app_theme.dart';
-import 'package:fusion_launcher/features/venue_design/presentation/widgets/product_right_sidebar/product_query.dart';
+import 'package:fusion_launcher/features/venue_design/presentation/widgets/side_panel/product_query.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 
 import 'package:fusion_lib/fusion_widgets/others/fusion_dockable_panel.dart';
 
-class ProductRightSidebar extends StatelessWidget {
-  const ProductRightSidebar({super.key});
+class SIdePanel extends StatelessWidget {
+  const SIdePanel({super.key});
 
   @override
   Widget build(BuildContext context) {
