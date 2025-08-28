@@ -18,6 +18,8 @@ class SpeakerModel {
   final List<double> taps100V;
   final double longTermRms; // RMS power rating for long-term use
   final double ppk; // Peak power rating
+  final String imageUrl; // URL to product image
+  final double price; // Price in USD
 
   const SpeakerModel({
     required this.model,
@@ -32,6 +34,8 @@ class SpeakerModel {
     required this.taps100V,
     required this.longTermRms,
     required this.ppk,
+    required this.imageUrl,
+    required this.price,
   });
 
   Map<String, dynamic> toJson() => {
@@ -47,6 +51,8 @@ class SpeakerModel {
     'taps_100v': taps100V,
     'long_term_rms': longTermRms,
     'ppk': ppk,
+    'image_url': imageUrl,
+    'price': price,
   };
 
   factory SpeakerModel.fromJson(Map<String, dynamic> json) => SpeakerModel(
@@ -62,6 +68,8 @@ class SpeakerModel {
     taps100V: (json['taps_100v'] as List<dynamic>?)?.cast<double>() ?? [],
     longTermRms: (json['long_term_rms'] ?? 0.0).toDouble(),
     ppk: (json['ppk'] ?? 0.0).toDouble(),
+    imageUrl: json['image_url'] ?? '',
+    price: (json['price'] ?? 0.0).toDouble(),
   );
 
   @override
