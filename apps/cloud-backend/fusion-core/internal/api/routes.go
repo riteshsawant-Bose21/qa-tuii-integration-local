@@ -13,4 +13,15 @@ func (a *API) registerRoutes() {
 		products.GET("", productHandler.GetAllProducts)
 		products.GET("/:id", productHandler.GetProductByID)
 	}
+
+	// Project routes
+	projectHandler := handler.NewProjectHandler(a.project)
+	projects := v1.Group("/projects")
+	{
+		projects.POST("", projectHandler.CreateProject)
+		projects.GET("/:id", projectHandler.GetProject)
+		projects.GET("", projectHandler.GetProjects) // Optional: List all projects
+		projects.PATCH("/:id", projectHandler.UpdateProject)
+		projects.DELETE("/:id", projectHandler.DeleteProject)
+	}
 }

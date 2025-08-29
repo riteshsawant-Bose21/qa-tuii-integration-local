@@ -12,6 +12,9 @@ import (
 	productdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product/db"
 	sql "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/sql"
 	"go.uber.org/zap"
+
+	projectdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project/db"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project"
 )
 
 func main() {
@@ -54,6 +57,12 @@ func main() {
 	}
 	logger.Info("Initialized Product DB Service.")
 
+	// Initialize Project DB Service
+	projectDBSvc := projectdb.NewService(pgs)
+	if projectDBSvc == nil {
+		logger.Fatal("Failed to initialize project service")
+	}
+
 	//Initialize Product Service
 	productSVC := product.NewService(productDBSvc)
 	if productSVC == nil {
@@ -61,9 +70,15 @@ func main() {
 	}
 	logger.Info("Initialized Product Service.")
 
+	projectSVC := project.NewService(projectDBSvc)
+	if projectSVC == nil {
+		logger.Fatal("Failed to initialize project service")
+	}
+	logger.Info("Initialized Project Service.")
+
 	engine := gin.Default()
 	// Initialize API Service
-	apiSvc, err := api.New(engine, productSVC)
+	apiSvc, err := api.New(engine, productSVC, projectSVC)
 	if err != nil {
 		logger.Fatal(fmt.Sprintf("Error while initializing API: %v", err))
 	}
