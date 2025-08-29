@@ -42,23 +42,25 @@ struct fusion_cn_chip {
 
 struct fusion_cn_substream {
     struct snd_pcm_substream *substream;
-    struct snd_pcm *pcm;
-    uint64_t stream_handle;
-    char stream_name[FUSION_CN_NAME_MAX];
-    snd_pcm_format_t format;
-    uint32_t sample_width;
-    uint32_t rate;
-    uint32_t channels;
-    uint32_t buffer_pos;
-    uint32_t rtp_frame_size;
-    uint32_t interrupts_per_period;
-    uint32_t interrupt_idx;
+    struct snd_pcm          *pcm;
+    uint64_t                stream_handle;
+    char                    stream_name[FUSION_CN_NAME_MAX];
+    snd_pcm_format_t        format;
+    uint32_t                sample_width;
+    uint32_t                rate;
+    uint32_t                channels;
+    uint32_t                buffer_pos;
+    uint32_t                rtp_frame_size;
+    uint32_t                interrupts_per_period;
+    uint32_t                interrupt_idx;
     struct snd_pcm_indirect pcm_indirect;
-    atomic_t dma_offset;
-    spinlock_t lock;
-    struct hlist_node hnode;
-    struct kref ref;
-    uint16_t stream_index;
+    atomic_t                dma_offset;
+    spinlock_t              lock;
+    struct hlist_node       hnode;
+    struct kref             ref;
+    uint16_t                stream_index;
+    atomic_t                open_count;
+    bool                    pending_free;
 };
 
 struct fusion_cn_alsa_ops {

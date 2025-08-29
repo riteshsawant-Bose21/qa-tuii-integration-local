@@ -92,10 +92,9 @@ void fusion_cn_rtp_stream_release(struct kref *ref)
 {
     struct fusion_cn_rtp_stream *stream = container_of(ref, struct fusion_cn_rtp_stream, ref);
     if (stream->next_action_times) {
-        printk(KERN_INFO "fusion_cn: rtp_stream_release: Freeing next_action_times for stream %s\n",
-               stream->info.stream_name);
         kfree(stream->next_action_times);
     }
+    printk(KERN_INFO "fusion_cn: rtp_stream_release: release stream %s\n", stream->info.stream_name);
     kfree(stream);
 }
 
@@ -572,6 +571,7 @@ __always_inline void fusion_cn_rtp_send_packet(struct fusion_cn_rtp_manager *rtp
         // Set the network header to point to the IP header (after Ethernet header)
         skb_set_network_header(skb, ETH_HLEN);
         skb->protocol = htons(ETH_P_IP);
+        skb->ip_summed = CHECKSUM_NONE;
         
         // Calculate RTP timestamp using absolute next_action_time (in sample units)
         // TODO: only works for 48k
