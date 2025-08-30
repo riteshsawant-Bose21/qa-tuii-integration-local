@@ -3,7 +3,6 @@ import 'package:equatable/equatable.dart';
 import 'package:fusion_lib/fusion_utils/shared_preference_handler.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
 
-import '../../../../core/models/project_metadata_model.dart';
 import '../../../../core/services/project_list_manager.dart';
 import '../../../dashboard/domain/usecases/delete_project_usecase.dart';
 import '../../domain/usecases/load_project_usecases.dart';

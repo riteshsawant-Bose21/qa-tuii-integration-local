@@ -1,3 +1,1 @@
-library;
-
-export 'package:fusion_lib/fusion_logger/fusion_logger.dart';
+export 'package:fusion_lib/fusion_logger/logger.dart';

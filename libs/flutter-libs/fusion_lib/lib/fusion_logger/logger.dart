@@ -176,6 +176,7 @@ class LogTag {
   static const String settings = 'SETTINGS';
   static const String exceptions = 'EXCEPTIONS';
   static const String fusion = 'FUSION';
+  static const String project = 'PROJECT';
   static const String dro = 'DRO';
   static const String dspConfig = 'DSP_CONFIG';
   static const String userConfig = 'USER_CONFIG';

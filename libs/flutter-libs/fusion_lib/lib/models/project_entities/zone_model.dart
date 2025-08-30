@@ -8,7 +8,7 @@ class Zone {
   final List<ProcessingBlockModel> processingBlocks;
   final int selectedMixIndex;
   final List<String> listeningAreasIds;
-  final List<String> mixIds;
+  final List<String> sourceSetIds;
   final String zoneColor;
 
   Zone({
@@ -24,7 +24,7 @@ class Zone {
        listeningAreasIds = listeningAreaIds ?? <String>[],
        processingBlocks = processingBlocks ?? <ProcessingBlockModel>[],
        zoneColor = zoneColor ?? getRandomColor(),
-       mixIds = mixIds ?? <String>[];
+       sourceSetIds = mixIds ?? <String>[];
 
   static String getShortId() {
     return 'zone${DateTime.now().millisecondsSinceEpoch}${Random().nextInt(1000)}';
@@ -65,7 +65,7 @@ class Zone {
       listeningAreaIds: listeningAreaIds ?? this.listeningAreasIds,
       processingBlocks: processingBlocks ?? this.processingBlocks,
       selectedMixIndex: selectedMixIndex ?? this.selectedMixIndex,
-      mixIds: mixIds ?? this.mixIds,
+      mixIds: mixIds ?? this.sourceSetIds,
       zoneColor: zoneColor ?? this.zoneColor,
     );
   }
@@ -76,7 +76,7 @@ class Zone {
     'listeningAreasId': listeningAreasIds,
     'processingBlocks': processingBlocks.map((ProcessingBlockModel pb) => pb.toJson()).toList(),
     'selectedMixIndex': selectedMixIndex,
-    'mixes': mixIds,
+    'mixes': sourceSetIds,
     'zoneColor': zoneColor,
   };
 

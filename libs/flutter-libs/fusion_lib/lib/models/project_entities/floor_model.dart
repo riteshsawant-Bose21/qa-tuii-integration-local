@@ -5,18 +5,18 @@ class FloorModel {
   final String id;
   final String name;
   FloorPlanModel floorPlan;
-  final List<ListeningArea> listeningAreas;
+  final List<String> listeningAreaIds;
 
-  FloorModel({String? id, required this.name, required this.floorPlan, List<ListeningArea>? listeningAreas})
+  FloorModel({String? id, required this.name, required this.floorPlan, List<String>? listeningAreaIds})
     : id = id ?? const Uuid().v4(),
-      listeningAreas = listeningAreas ?? <ListeningArea>[];
+      listeningAreaIds = listeningAreaIds ?? <String>[];
 
-  FloorModel copyWith({String? id, String? name, FloorPlanModel? floorPlan, List<ListeningArea>? listeningAreas}) {
+  FloorModel copyWith({String? id, String? name, FloorPlanModel? floorPlan, List<String>? listeningAreaIds}) {
     return FloorModel(
       id: id ?? this.id,
       name: name ?? this.name,
       floorPlan: floorPlan ?? this.floorPlan,
-      listeningAreas: listeningAreas ?? this.listeningAreas,
+      listeningAreaIds: listeningAreaIds ?? this.listeningAreaIds,
     );
   }
 
@@ -24,7 +24,7 @@ class FloorModel {
     'id': id,
     'name': name,
     'floorPlan': floorPlan.toJson(),
-    'listeningAreas': listeningAreas.map((ListeningArea s) => s.toJson()).toList(),
+    'listeningAreas': listeningAreaIds.map((String e) => e).toList(),
   };
 
   factory FloorModel.fromJson(Map<String, dynamic> json) {
@@ -33,9 +33,8 @@ class FloorModel {
     final FloorPlanModel fp = FloorPlanModel.fromJson(fpMap);
 
     // 2) Listening Areas
-    final List<dynamic> rawListeningAreas = json['listeningAreas'] as List<dynamic>? ?? <dynamic>[];
-    final List<ListeningArea> listeningAreas = rawListeningAreas.map((dynamic e) => ListeningArea.fromJson(e as Map<String, dynamic>)).toList();
+    final List<String> listeningAreas = (json['listeningAreas'] as List<dynamic>?)?.map((dynamic e) => e as String).toList() ?? <String>[];
 
-    return FloorModel(id: json['id'] as String?, name: json['name'] as String, floorPlan: fp, listeningAreas: listeningAreas);
+    return FloorModel(id: json['id'] as String?, name: json['name'] as String, floorPlan: fp, listeningAreaIds: listeningAreas);
   }
 }

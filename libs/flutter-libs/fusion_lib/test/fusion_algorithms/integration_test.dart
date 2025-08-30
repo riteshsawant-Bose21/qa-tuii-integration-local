@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fusion_lib/api_data/amplifiers/amplifier_catalog.dart';
+import 'package:fusion_lib/api_data/devices/devices.dart';
 import 'package:fusion_lib/fusion_algorithms/fusion_algorithms.dart';
 
 void main() {

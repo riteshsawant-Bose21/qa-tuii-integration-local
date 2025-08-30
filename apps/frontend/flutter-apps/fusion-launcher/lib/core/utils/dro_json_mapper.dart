@@ -1,9 +1,8 @@
 import 'dart:math';
 
-import 'package:fusion_launcher/core/service_locator.dart';
-import 'package:fusion_launcher/core/services/project_manager.dart';
-import 'package:fusion_lib/models/fusion_models.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
+//Todo: reimplement this class using new project manager and models
 class JsonFormatConverter {
   static Map<String, dynamic> getAudioStreamsData(
     Map<String, dynamic> droOutput,
@@ -290,31 +289,31 @@ class JsonFormatConverter {
   }
 
   static String _extractServerLocation(Map<String, dynamic> component) {
-    if (component['locationEntity'] != null) {
-      final Map<String, dynamic> location = component['locationEntity'] as Map<String, dynamic>;
-      String? floorName;
-      if (location['floorId'] != null && location['floorId'].toString().isNotEmpty) {
-        final String floorId = location['floorId'].toString();
-
-        final ProjectManager projectManager = serviceLocator<ProjectManager>();
-        //fetch Floor name from project manager
-        floorName = projectManager.value.floors.firstWhere((FloorModel floor) => floor.id == floorId).name;
-
-        if (location['listeningAreaId'] != null && location['listeningAreaId'].toString().isNotEmpty) {
-          final String areaId = location['listeningAreaId'].toString();
-          final ProjectManager projectManager = serviceLocator<ProjectManager>();
-          //fetch Area name from project manager floors by looping floor and mathing area id
-          final ListeningArea area = projectManager.value.floors
-              .firstWhere((FloorModel floor) => floor.id == floorId)
-              .listeningAreas
-              .firstWhere(
-                (ListeningArea area) => area.id == areaId,
-              );
-
-          return "$floorName/${area.name}";
-        }
-      }
-    }
+    // if (component['locationEntity'] != null) {
+    //   final Map<String, dynamic> location = component['locationEntity'] as Map<String, dynamic>;
+    //   String? floorName;
+    //   if (location['floorId'] != null && location['floorId'].toString().isNotEmpty) {
+    //     final String floorId = location['floorId'].toString();
+    //
+    //     final ProjectManager projectManager = serviceLocator<ProjectManager>();
+    //     //fetch Floor name from project manager
+    //     floorName = projectManager.value.floors.firstWhere((FloorModel floor) => floor.id == floorId).name;
+    //
+    //     if (location['listeningAreaId'] != null && location['listeningAreaId'].toString().isNotEmpty) {
+    //       final String areaId = location['listeningAreaId'].toString();
+    //       final ProjectManager projectManager = serviceLocator<ProjectManager>();
+    //       //fetch Area name from project manager floors by looping floor and mathing area id
+    //       final ListeningArea area = projectManager.value.floors
+    //           .firstWhere((FloorModel floor) => floor.id == floorId)
+    //           .listeningAreas
+    //           .firstWhere(
+    //             (ListeningArea area) => area.id == areaId,
+    //           );
+    //
+    //       return "$floorName/${area.name}";
+    //     }
+    //   }
+    // }
     return "";
   }
 

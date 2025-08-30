@@ -6,3 +6,4 @@ export 'ble/ble_connection_manager.dart';
 export 'ble/ble_helper.dart';
 export 'ble/commands/fusion_commands.dart';
 export 'ble/commands/fusion_commands_impl.dart';
+export 'network/fusion_network_client.dart';

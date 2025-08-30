@@ -2,9 +2,8 @@ import 'dart:convert';
 import 'dart:developer';
 
 import 'package:fusion_launcher/core/service_locator.dart';
-import 'package:fusion_launcher/core/services/project_list_manager.dart';
 import 'package:fusion_launcher/core/services/user_profile_manager.dart';
-import 'package:fusion_lib/fusion_utils/shared_preference_handler.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../features/user_account_setup/domain/entity/login_response_entity.dart';
 
@@ -41,7 +40,7 @@ class UserSessionManager {
   }
 
   static Future<void> logout() async {
-    serviceLocator<ProjectListManager>().deleteFusionProjectDirectory();
+    serviceLocator<ProjectManager>().deleteFusionProjectsDirectory();
     serviceLocator<UserProfileManager>().clearUserProfile();
     final SharedPreferencesHandler prefs = serviceLocator<SharedPreferencesHandler>();
     await prefs.setBool(SharedPreferenceKeys.adminLogin, false);
