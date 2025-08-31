@@ -66,12 +66,6 @@ class FusionExpandableTileWidget extends StatefulWidget {
   /// Used to complete drag operations or handle drop logic.
   final GestureDragEndCallback? onPanEnd;
 
-  /// Callback triggered when the tile's expansion state changes.
-  ///
-  /// Provides a boolean indicating whether the tile is expanded (true) or collapsed (false).
-  /// Used to sync expansion state with parent widgets.
-  final void Function(bool expanded)? onExpansionChanged;
-
   const FusionExpandableTileWidget({
     super.key,
     required this.title,
@@ -80,7 +74,6 @@ class FusionExpandableTileWidget extends StatefulWidget {
     this.onPanStart,
     this.onPanUpdate,
     this.onPanEnd,
-    this.onExpansionChanged,
   });
 
   @override
@@ -130,9 +123,6 @@ class _FusionExpandableTileWidgetState extends State<FusionExpandableTileWidget>
     } else {
       _rotationController.reverse();
     }
-
-    // Call the provided onExpansionChanged callback if available
-    widget.onExpansionChanged?.call(expanded);
   }
 
   @override
