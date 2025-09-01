@@ -87,4 +87,9 @@ extension ProjectPropertiesManager on ProjectManager {
   bool inControlMode() {
     return projectService!.inControlMode();
   }
+
+  //get all fusion devices
+  List<FusionDevice> getAllFusionDevices() {
+    return projectService!.getAllFusionDevices();
+  }
 }

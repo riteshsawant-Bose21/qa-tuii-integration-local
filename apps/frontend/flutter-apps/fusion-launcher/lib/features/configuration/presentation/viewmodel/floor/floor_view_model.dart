@@ -29,6 +29,7 @@ extension FloorViewModel on ProjectViewModel {
     try {
       final ResponseCallback<bool> responseCallback = projectManager.addFloor(floor);
       if (responseCallback.success) {
+        emitFloorUpdated();
         updateProject();
       } else {
         FusionLogger.log(tag: LogTag.project, message: "Failed to add floor: ${responseCallback.message}");
@@ -43,6 +44,7 @@ extension FloorViewModel on ProjectViewModel {
     try {
       final ResponseCallback<bool> responseCallback = projectManager.removeFloor(floorId);
       if (responseCallback.success) {
+        emitFloorUpdated();
         updateProject();
       } else {
         FusionLogger.log(tag: LogTag.project, message: "Failed to remove floor: ${responseCallback.message}");

@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/utils/fusion_utils.dart';
 import 'package:fusion_launcher/core/widgets/collapsible_side_panel.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/configuration/presentation/widgets/dsp_setup/dsp_column.dart';
 import 'package:fusion_lib/fusion_networking/network/fusion_network_client.dart';
 import 'package:fusion_lib/fusion_utils/app_settings.dart';
@@ -9,8 +11,6 @@ import 'package:fusion_lib/models/fusion_models.dart';
 
 import '../../../../core/constants.dart';
 import '../../../../core/service_locator.dart';
-import '../../../../core/services/project_manager.dart';
-import '../../../../core/utils/dro_json_mapper.dart';
 import '../../../../core/widgets/horizontal_resizable_container.dart';
 import '../widgets/mixes/connection_painter.dart';
 import '../widgets/mixes/mixes_column.dart';
@@ -25,7 +25,6 @@ class AudioSystemDesignPage extends StatefulWidget {
 }
 
 class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
-  final ProjectManager projectManager = serviceLocator<ProjectManager>();
   final ScrollController _horizontalController = ScrollController();
   Map<String, List<Offset>> _centersById = <String, List<Offset>>{};
 
@@ -58,10 +57,12 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
     return Scaffold(
       backgroundColor: AppColors.backgroundSoft,
       body: SafeArea(
-        child: ValueListenableBuilder<ProjectData>(
-          valueListenable: projectManager,
-          builder: (BuildContext context, ProjectData data, _) {
-            _virtualIPController.text = data.virtualIP ?? '';
+        child: BlocConsumer<ProjectViewModel, ProjectViewModelState>(
+          listener: (BuildContext context, ProjectViewModelState state) {
+            // TODO: implement listener
+          },
+          builder: (BuildContext context, ProjectViewModelState state) {
+            _virtualIPController.text = serviceLocator<ProjectViewModel>().virtualIP ?? '';
 
             return Row(
               children: <Widget>[
@@ -87,16 +88,16 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
                                     dragLeft: false,
                                     dragRight: true,
                                     child: SourcesColumn(
-                                      sources: data.hardwareComponents.whereType<Source>().toList(),
+                                      sources: serviceLocator<ProjectViewModel>().sources,
                                       onSourceChanged: _updateSource,
                                       onSourceDeleted: _deleteSource,
                                       onSourceAdded: _addSource,
-                                      isControlMode: data.isInControlMode,
+                                      isControlMode: serviceLocator<ProjectViewModel>().isInControlMode,
                                       onFloorUpdated: (FloorModel updatedFloor) {
-                                        projectManager.updateFloor(updatedFloor);
+                                        serviceLocator<ProjectViewModel>().updateFloor(updatedFloor);
                                       },
                                       onFloorAdded: (FloorModel newFloor) {
-                                        projectManager.addFloor(newFloor);
+                                        serviceLocator<ProjectViewModel>().addFloor(newFloor);
                                       },
                                     ),
                                   ),
@@ -107,9 +108,9 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
                                     dragLeft: false,
                                     dragRight: true,
                                     child: MixColumn(
-                                      mixes: data.mixes,
-                                      isControlMode: data.isInControlMode,
-                                      sources: data.hardwareComponents.whereType<Source>().cast<Source>().toList(),
+                                      mixes: serviceLocator<ProjectViewModel>().sourceSets,
+                                      isControlMode: serviceLocator<ProjectViewModel>().isInControlMode,
+                                      sources: serviceLocator<ProjectViewModel>().sources,
                                       onMixUpdated: _onMixUpdated,
                                       onMixAdded: _onMixAdded,
                                       onMixDeleted: _onMixDeleted,
@@ -122,28 +123,28 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
                                     dragLeft: false,
                                     dragRight: true,
                                     child: ZonesColumn(
-                                      zones: data.zones,
-                                      sourceSets: data.mixes,
-                                      isControlMode: data.isInControlMode,
-                                      allSpeakers: data.hardwareComponents.whereType<Speaker>().cast<Speaker>().toList(),
-                                      sources: data.hardwareComponents.whereType<Source>().cast<Source>().toList(),
+                                      zones: serviceLocator<ProjectViewModel>().zones,
+                                      sourceSets: serviceLocator<ProjectViewModel>().sourceSets,
+                                      isControlMode: serviceLocator<ProjectViewModel>().isInControlMode,
+                                      allSpeakers: serviceLocator<ProjectViewModel>().speakers,
+                                      sources: serviceLocator<ProjectViewModel>().sources,
                                       onZoneAdded: _addNewZone,
                                       onZoneUpdated: _updateZone,
                                       onZoneDeleted: _deleteZone,
                                       onSpeakerUpdated: (Speaker speakers) {
-                                        projectManager.updateHardwareComponent(speakers);
+                                        serviceLocator<ProjectViewModel>().updateHardware(speakers);
                                       },
                                       onSpeakerDeleted: (Speaker speaker) {
-                                        projectManager.removeHardwareComponent(speaker.id);
+                                        serviceLocator<ProjectViewModel>().removeHardware(speaker.id);
                                       },
                                       onSpeakerAdded: (Speaker speaker) {
-                                        projectManager.addHardwareComponent(speaker);
+                                        serviceLocator<ProjectViewModel>().addHardware(speaker);
                                       },
                                       onFloorUpdated: (FloorModel updatedFloor) {
-                                        projectManager.updateFloor(updatedFloor);
+                                        serviceLocator<ProjectViewModel>().updateFloor(updatedFloor);
                                       },
                                       onFloorAdded: (FloorModel newFloor) {
-                                        projectManager.addFloor(newFloor);
+                                        serviceLocator<ProjectViewModel>().addFloor(newFloor);
                                       },
                                     ),
                                   ),
@@ -155,10 +156,10 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
                                     dragLeft: false,
                                     dragRight: true,
                                     child: DspColumn(
-                                      vipAddress: data.virtualIP,
-                                      isControlMode: data.isInControlMode,
+                                      vipAddress: serviceLocator<ProjectViewModel>().virtualIP,
+                                      isControlMode: serviceLocator<ProjectViewModel>().isInControlMode,
                                       droAddress: serviceLocator<FusionPreferences>().droServerUrl,
-                                      fusionDevices: data.fusionDevices ?? <FusionDevice>[],
+                                      fusionDevices: serviceLocator<ProjectViewModel>().fusionDevices ?? <FusionDevice>[],
                                       onRequestFusionDeviceList: () {
                                         sendDataToDRO();
                                       },
@@ -238,7 +239,7 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
                                     // validate ip address and update project
                                     final String ip = _droAddressController.text.trim();
                                     serviceLocator<FusionPreferences>().setDroServerUrl(ip);
-                                    projectManager.notifyDataChange();
+                                    // serviceLocator<ProjectViewModel>().updateProject();
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
                                         content: Text('DRO IP updated to $ip'),
@@ -303,7 +304,7 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
                                 height: 28,
                                 child: ElevatedButton(
                                   onPressed: () {
-                                    projectManager.updateVip(_virtualIPController.text);
+                                    serviceLocator<ProjectViewModel>().setVirtualIP(_virtualIPController.text);
                                   },
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.grey.shade800,
@@ -510,8 +511,8 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
 
   // show a dialog with the JSON representation of the audio system data with pretty formatting
   void sendDataToDRO() async {
-    projectManager.saveProject();
-    final Map<String, dynamic> outputJson = JsonFormatConverter.convertFormat(projectManager.value.toJson(), projectManager.value.fusionDevices);
+    serviceLocator<ProjectViewModel>().saveProjectToLocal();
+    /*final Map<String, dynamic> outputJson = JsonFormatConverter.convertFormat(projectManager.value.toJson(), projectManager.value.fusionDevices);
 
     //show a loader dialog while processing
     FusionUtils.showLoader(context);
@@ -546,7 +547,7 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
 
         //For AES stream id we are appending AES prefix so remove it while comparing
         HardwareComponent device = projectManager.value.hardwareComponents.firstWhere(
-          (HardwareComponent value) => (deviceId.contains("FUSION_") ? value.id == deviceId.replaceAll("FUSION_", "") : value.id == deviceId),
+              (HardwareComponent value) => (deviceId.contains("FUSION_") ? value.id == deviceId.replaceAll("FUSION_", "") : value.id == deviceId),
         );
 
         if (device is Source) {
@@ -584,13 +585,13 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
           curve: Curves.easeOut,
         );
       });
-    }
+    }*/
   }
 
   void sendToDSP() async {
-    projectManager.saveProject();
+    serviceLocator<ProjectViewModel>().saveProjectToLocal();
 
-    //show a loader dialog while processing
+    /*    //show a loader dialog while processing
     FusionUtils.showLoader(context);
 
     final Map<String, dynamic> data = projectManager.value.droResponse!;
@@ -646,51 +647,55 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
 
     if (mounted) {
       FusionUtils.hideLoader(context);
-    }
+    }*/
   }
 
   void _deleteSource(Source source) {
-    projectManager.removeHardwareComponent(source.id);
-    projectManager.saveProject();
+    serviceLocator<ProjectViewModel>().removeHardware(source.id);
+    saveProject();
   }
 
   void _updateSource(Source source) {
-    projectManager.updateHardwareComponent(source);
-    projectManager.saveProject();
+    serviceLocator<ProjectViewModel>().updateHardware(source);
+    saveProject();
   }
 
   void _addSource(Source source) {
-    projectManager.addHardwareComponent(source);
-    projectManager.saveProject();
+    serviceLocator<ProjectViewModel>().addHardware(source);
+    saveProject();
   }
 
   void _onMixUpdated(SourceSet p1) {
-    projectManager.updateMix(p1);
-    projectManager.saveProject();
+    serviceLocator<ProjectViewModel>().updateSourceSet(p1);
+    saveProject();
   }
 
   void _onMixAdded(SourceSet p1) {
-    projectManager.addMix(p1);
-    projectManager.saveProject();
+    serviceLocator<ProjectViewModel>().addSourceSet(p1);
+    saveProject();
   }
 
   void _onMixDeleted(SourceSet p1) {
-    projectManager.removeMix(p1.id);
-    projectManager.saveProject();
+    serviceLocator<ProjectViewModel>().removeSourceSet(p1.id);
+    saveProject();
   }
 
   void _addNewZone(Zone p1) {
-    projectManager.addZone(p1);
-    projectManager.saveProject();
+    serviceLocator<ProjectViewModel>().addZone(p1);
+    saveProject();
   }
 
   void _updateZone(Zone updated) {
-    projectManager.updateZone(updated);
-    projectManager.saveProject();
+    serviceLocator<ProjectViewModel>().updateZone(updated);
+    saveProject();
   }
 
   void _deleteZone(Zone zone) {
-    projectManager.removeZone(zone.id);
-    projectManager.saveProject();
+    serviceLocator<ProjectViewModel>().removeZone(zone.id);
+    saveProject();
+  }
+
+  saveProject() {
+    serviceLocator<ProjectViewModel>().saveProjectToLocal();
   }
 }

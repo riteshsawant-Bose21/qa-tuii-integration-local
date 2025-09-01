@@ -2,10 +2,10 @@ import 'dart:convert';
 import 'dart:developer';
 
 import 'package:fusion_launcher/core/service_locator.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_utils/shared_preference_handler.dart';
 import 'package:fusion_lib/models/response_callback.dart';
 
-import '../../../../core/services/project_list_manager.dart';
 import '../entity/login_response_entity.dart';
 import '../entity/user_entity.dart';
 import '../repositories/auth_repository.dart';
@@ -43,7 +43,7 @@ class SignInUseCase {
       log("Local admin login successful (offline mode)");
 
       /// Now load project AFTER SharedPreferences are written
-      await serviceLocator<ProjectListManager>().loadProjects();
+      await serviceLocator<ProjectViewModel>().loadAllLocalProjects();
       return ResponseCallback<LoginResponseEntity>(
         success: true,
         data: fakeResponse,
@@ -63,13 +63,6 @@ class SignInUseCase {
       await prefs.setBool(SharedPreferenceKeys.adminLogin, false);
 
       /// Optional wait to ensure SharedPreferences is flushed
-
-      /// Now load project AFTER SharedPreferences are written
-      await serviceLocator<ProjectListManager>().loadProjects(
-        onLoading: (String msg) => print('[Loading] $msg'),
-        onError: (String err) => print('[Error] $err'),
-        onComplete: () => print('[Done] Project data loaded'),
-      );
     }
 
     return responseCallback;

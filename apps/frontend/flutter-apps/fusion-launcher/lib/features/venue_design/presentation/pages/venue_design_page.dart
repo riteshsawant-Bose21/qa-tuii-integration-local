@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/core/utils/fusion_utils.dart';
 import 'package:fusion_lib/fusion_building_view/floor_canvas.dart';
@@ -14,9 +15,9 @@ import 'package:fusion_lib/models/fusion_models.dart';
 import '../../../../core/mace_calculation_manager.dart';
 import '../../../../core/mace_engine_provider.dart';
 import '../../../../core/models/products_data.dart';
-import '../../../../core/services/project_manager.dart';
 import '../../../../core/widgets/clean_widgets.dart';
 import '../../../../core/widgets/spl_range_slider.dart';
+import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../../schematics/presentation/pages/amplifier_matching_page.dart';
 import '../widgets/products_sidebar.dart';
 import '../widgets/side_panel/side_panel.dart';
@@ -29,7 +30,6 @@ class FloorPlanProjectEditor extends StatefulWidget {
 }
 
 class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with TickerProviderStateMixin {
-  late final ProjectManager projectManager;
   MaceEngine? engine;
   Offset viewPortCenter = Offset.zero;
   final FloorCanvasController floorCanvasController = FloorCanvasController();
@@ -39,7 +39,6 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
   @override
   void initState() {
     super.initState();
-    projectManager = serviceLocator<ProjectManager>();
     initFloorsTabs();
     initMace();
   }
@@ -53,34 +52,34 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
   void initFloorsTabs() {
     _tabController = TabController(
       animationDuration: const Duration(milliseconds: 1), // No animation for tab changes
-      length: projectManager.value.floors.length,
+      length: serviceLocator<ProjectViewModel>().floors.length,
       vsync: this,
-      initialIndex: projectManager.value.currentFloorIndex,
+      initialIndex: serviceLocator<ProjectViewModel>().currentFloorIndex,
     );
 
     // when user taps a tab, switch floors in the manager…
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) return;
-      if (_tabController.index == projectManager.value.currentFloorIndex) return;
-      projectManager.setCurrentFloor(_tabController.index);
+      if (_tabController.index == serviceLocator<ProjectViewModel>().currentFloorIndex) return;
+      serviceLocator<ProjectViewModel>().setCurrentFloorIndex(_tabController.index);
     });
+  }
 
-    // if floors get added/removed, rebuild the TabController…
-    projectManager.addListener(() {
-      final int newLen = projectManager.value.floors.length;
-      if (_tabController.length != newLen) {
-        if (mounted) {
-          _tabController = TabController(length: newLen, vsync: this, initialIndex: projectManager.value.currentFloorIndex)..addListener(() {
-            if (!_tabController.indexIsChanging) return;
-            projectManager.setCurrentFloor(_tabController.index);
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              calculateSPL();
-            });
+  // if floors get added/removed, rebuild the TabController…
+  onFloorUpdated() {
+    final int newLen = serviceLocator<ProjectViewModel>().floors.length;
+    if (_tabController.length != newLen) {
+      if (mounted) {
+        _tabController = TabController(length: newLen, vsync: this, initialIndex: serviceLocator<ProjectViewModel>().currentFloorIndex)..addListener(() {
+          if (!_tabController.indexIsChanging) return;
+          serviceLocator<ProjectViewModel>().setCurrentFloorIndex(_tabController.index);
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            calculateSPL();
           });
-          setState(() {});
-        }
+        });
+        setState(() {});
       }
-    });
+    }
   }
 
   Future<void> initMace() async {
@@ -96,13 +95,13 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
         return;
       }
 
-      if (projectManager.currentFloor.listeningAreas.isNotEmpty) {
+      final int currentFloorIndex = serviceLocator<ProjectViewModel>().currentFloorIndex;
+      if (currentFloorIndex != -1 && serviceLocator<ProjectViewModel>().floors[currentFloorIndex].listeningAreaIds.isNotEmpty) {
+        final FloorModel currentFloor = serviceLocator<ProjectViewModel>().floors[currentFloorIndex];
         final List<Speaker> speakers = List<Speaker>.from(
-          projectManager.getSpeakersInFloor(projectManager.currentFloor.id),
+          serviceLocator<ProjectViewModel>().getHardwareForFloor(currentFloor.id).whereType<Speaker>(),
         );
-        final List<ListeningArea> surfaces = List<ListeningArea>.from(
-          projectManager.currentFloor.listeningAreas,
-        );
+        final List<ListeningArea> surfaces = serviceLocator<ProjectViewModel>().getListeningAreasForFloor(currentFloor.id);
         final List<SPLCalculation> surfaceCalculations = await SPLCalculationManager.calculateSpl(
           engine!,
           speakers,
@@ -177,6 +176,8 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
                   Expanded(
                     child: ProductsSidebar(
                       onSpeakerSelected: (SpeakerData speakerData) {
+                        final int currentFloorIndex = serviceLocator<ProjectViewModel>().currentFloorIndex;
+                        final FloorModel currentFloor = serviceLocator<ProjectViewModel>().floors[currentFloorIndex];
                         final Speaker cs = Speaker(
                           name: speakerData.name,
                           speakerSKU: speakerData.sku,
@@ -191,50 +192,51 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
                           assetImagePath: speakerData.assetPath,
                           type: speakerData.type,
                           locationEntity: LocationModel(
-                            floorId: projectManager.currentFloor.id,
+                            floorId: currentFloor.id,
                           ),
                           price: speakerData.price,
                         );
-                        projectManager.addHardwareComponent(cs);
-                        projectManager.setSelectedHardwareComponentId(cs.id);
+                        serviceLocator<ProjectViewModel>().addHardware(cs);
                         floorCanvasController.setHardwareComponentListeningAreaId(cs);
                         floorCanvasController.setSelectedHardwareComponent(cs);
                         calculateSPL();
-                        projectManager.saveProject();
+                        serviceLocator<ProjectViewModel>().saveProjectToLocal();
                       },
                       onProductSelected: (GenericHardwareComponent product) {
+                        //get current floor
+                        final int currentFloorIndex = serviceLocator<ProjectViewModel>().currentFloorIndex;
+                        final FloorModel currentFloor = serviceLocator<ProjectViewModel>().floors[currentFloorIndex];
+
                         product = product.copyWith(
                           pos: viewPortCenter,
                           locationEntity: LocationModel(
-                            floorId: projectManager.currentFloor.id,
+                            floorId: currentFloor.id,
                           ),
                         );
-                        projectManager.addHardwareComponent(product);
-                        projectManager.setSelectedHardwareComponentId(
-                          product.id,
-                        );
+                        serviceLocator<ProjectViewModel>().addHardware(product);
                         floorCanvasController.setSelectedHardwareComponent(
                           product,
                         );
                         floorCanvasController.setHardwareComponentListeningAreaId(product);
-                        projectManager.saveProject();
+                        serviceLocator<ProjectViewModel>().saveProjectToLocal();
                       },
                       onSourceSelected: (Source source) {
+                        //get current floor
+                        final int currentFloorIndex = serviceLocator<ProjectViewModel>().currentFloorIndex;
+                        final FloorModel currentFloor = serviceLocator<ProjectViewModel>().floors[currentFloorIndex];
+
                         source = source.copyWith(
                           pos: viewPortCenter,
                           locationEntity: LocationModel(
-                            floorId: projectManager.currentFloor.id,
+                            floorId: currentFloor.id,
                           ),
                         );
-                        projectManager.addHardwareComponent(source);
-                        projectManager.setSelectedHardwareComponentId(
-                          source.id,
-                        );
+                        serviceLocator<ProjectViewModel>().addHardware(source);
                         floorCanvasController.setSelectedHardwareComponent(
                           source,
                         );
                         floorCanvasController.setHardwareComponentListeningAreaId(source);
-                        projectManager.saveProject();
+                        serviceLocator<ProjectViewModel>().saveProjectToLocal();
                       },
                       onAutoPlaceRequested: (SpeakerData speakerData) async {
                         final List<ui.Offset>? points = await floorCanvasController.requestAutoPlace();
@@ -242,6 +244,10 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
                         if (points == null) return;
 
                         for (final ui.Offset pt in points) {
+                          //get current floor
+                          final int currentFloorIndex = serviceLocator<ProjectViewModel>().currentFloorIndex;
+                          final FloorModel currentFloor = serviceLocator<ProjectViewModel>().floors[currentFloorIndex];
+
                           final Speaker speaker = Speaker(
                             name: speakerData.name,
                             speakerSKU: speakerData.sku,
@@ -251,18 +257,15 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
                             assetImagePath: speakerData.assetPath,
                             type: speakerData.type,
                             locationEntity: LocationModel(
-                              floorId: projectManager.currentFloor.id,
+                              floorId: currentFloor.id,
                             ),
                             price: speakerData.price,
                           );
-                          projectManager.addHardwareComponent(speaker);
-                          projectManager.setSelectedHardwareComponentId(
-                            speaker.id,
-                          );
+                          serviceLocator<ProjectViewModel>().addHardware(speaker);
                           floorCanvasController.setHardwareComponentListeningAreaId(speaker);
                         }
                         calculateSPL();
-                        projectManager.saveProject();
+                        serviceLocator<ProjectViewModel>().saveProjectToLocal();
                       },
                     ),
                   ),
@@ -290,42 +293,49 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
                             borderRadius: const BorderRadius.vertical(
                               bottom: Radius.circular(6),
                             ),
-                            child: ValueListenableBuilder<ProjectData>(
-                              valueListenable: projectManager,
-                              builder: (_, ProjectData project, __) {
-                                final FloorModel floor = project.currentFloor;
-                                if (projectManager.isFloorEmpty(floor.id)) {
+                            child: BlocConsumer<ProjectViewModel, ProjectViewModelState>(
+                              listener: (BuildContext context, ProjectViewModelState state) {
+                                if (state is FloorsUpdated) {
+                                  onFloorUpdated();
+                                }
+                              },
+                              builder: (BuildContext context, ProjectViewModelState state) {
+                                final int currentFloorIndex = serviceLocator<ProjectViewModel>().currentFloorIndex;
+                                final FloorModel floor = serviceLocator<ProjectViewModel>().floors[currentFloorIndex];
+                                if (serviceLocator<ProjectViewModel>().floors.isEmpty) {
                                   return _buildEmptyFloorWidget();
                                 }
                                 return FloorCanvas(
                                   gridSize: 100,
                                   controller: floorCanvasController,
-                                  hardwareComponents: projectManager.getHardwareComponentsInFloor(floor.id),
-                                  listeningAreas: floor.listeningAreas,
+                                  hardwareComponents: serviceLocator<ProjectViewModel>().getHardwareForFloor(floor.id),
+                                  listeningAreas: serviceLocator<ProjectViewModel>().getListeningAreasForFloor(floor.id),
                                   floorPlanEntity: floor.floorPlan,
-                                  onUpdateHardwareComponent: projectManager.updateHardwareComponent,
-                                  zones: project.zones,
+                                  onUpdateHardwareComponent: serviceLocator<ProjectViewModel>().updateHardware,
+                                  zones: serviceLocator<ProjectViewModel>().zones,
                                   onCanvasZoomChanged: (double z) {
-                                    projectManager.updateFloorPlan(
-                                      floor.floorPlan.copyWith(canvasZoom: z),
+                                    serviceLocator<ProjectViewModel>().updateFloor(
+                                      floor.copyWith(floorPlan: floor.floorPlan.copyWith(canvasZoom: z)),
                                     );
+                                    if (floorCanvasController.isShowingSpl.value && splInitCalculated) {
+                                      calculateSPL();
+                                    }
                                   },
                                   onCanvasPanChanged: (ui.Offset p) {
-                                    projectManager.updateFloorPlan(
-                                      floor.floorPlan.copyWith(canvasPan: p),
+                                    serviceLocator<ProjectViewModel>().updateFloor(
+                                      floor.copyWith(floorPlan: floor.floorPlan.copyWith(canvasPan: p)),
                                     );
                                   },
                                   onAddListeningArea: (ListeningArea created) {
-                                    projectManager.addListeningArea(created);
+                                    serviceLocator<ProjectViewModel>().addListeningArea(created, floor.id);
                                     calculateSPL();
-                                    projectManager.setSelectedSurfaceId(
-                                      created.id,
-                                    );
-                                    projectManager.saveProject();
+                                    serviceLocator<ProjectViewModel>().saveProjectToLocal();
                                   },
-                                  onUpdateListeningArea: projectManager.updateListeningArea,
+                                  onUpdateListeningArea: serviceLocator<ProjectViewModel>().updateListeningArea,
                                   onFloorPlanUpdated: (FloorPlanModel updatedPlan) {
-                                    projectManager.updateFloorPlan(updatedPlan);
+                                    serviceLocator<ProjectViewModel>().updateFloor(
+                                      floor.copyWith(floorPlan: updatedPlan),
+                                    );
                                   },
                                   onViewportCenterUpdated: (ui.Offset center) {
                                     viewPortCenter = center;
@@ -334,22 +344,14 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
                                     if (component is Speaker || component is ListeningArea) {
                                       calculateSPL();
                                     }
-                                    projectManager.saveProject();
+                                    serviceLocator<ProjectViewModel>().saveProjectToLocal();
                                   },
                                   onTapListeningArea: (ListeningArea value) {},
-                                  onSelectedListeningAreaIdChanged: (String? value) {
-                                    projectManager.setSelectedSurfaceId(value);
-                                  },
-                                  onSelectedHardwareComponentIdChanged: (String? value) {
-                                    projectManager.setSelectedHardwareComponentId(value);
-                                  },
-                                  onSelectedFloorPlanIdChanged: () {
-                                    projectManager.setSelectedFloorPlanId(
-                                      floor.id,
-                                    );
-                                  },
-                                  splMin: project.minSPL,
-                                  splMax: project.maxSPL,
+                                  onSelectedListeningAreaIdChanged: (String? value) {},
+                                  onSelectedHardwareComponentIdChanged: (String? value) {},
+                                  onSelectedFloorPlanIdChanged: () {},
+                                  splMin: serviceLocator<ProjectViewModel>().minSPL,
+                                  splMax: serviceLocator<ProjectViewModel>().maxSPL,
                                 );
                               },
                             ),
@@ -498,22 +500,19 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
                                     child: SPLRangeSlider(
                                       width: 24,
                                       height: constraints.maxHeight,
-                                      minValue: projectManager.value.minSPL,
-                                      maxValue: projectManager.value.maxSPL,
+                                      minValue: serviceLocator<ProjectViewModel>().minSPL,
+                                      maxValue: serviceLocator<ProjectViewModel>().maxSPL,
                                       onChanged: (double min, double max) {
                                         print("SPL Range changed: ${min.round()} - ${max.round()}");
-                                        projectManager.value = projectManager.value.copyWith(
-                                          maxSPL: max,
-                                          minSPL: min,
-                                        );
+                                        serviceLocator<ProjectViewModel>().setMinSPL(min);
+                                        serviceLocator<ProjectViewModel>().setMaxSPL(max);
                                       },
                                       onChangeEnd: (double min, double max) {
                                         print("SPL Range change ended: ${min.round()} - ${max.round()}");
-                                        projectManager.value = projectManager.value.copyWith(
-                                          maxSPL: max,
-                                          minSPL: min,
-                                        );
-                                        projectManager.saveProject();
+
+                                        serviceLocator<ProjectViewModel>().setMinSPL(min);
+                                        serviceLocator<ProjectViewModel>().setMaxSPL(max);
+                                        serviceLocator<ProjectViewModel>().saveProjectToLocal();
                                       },
                                     ),
                                   );
@@ -536,9 +535,8 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
                           ),
                         ),
                       ),
-                      child: ValueListenableBuilder<ProjectData>(
-                        valueListenable: projectManager,
-                        builder: (_, ProjectData project, __) {
+                      child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+                        builder: (BuildContext context, ProjectViewModelState state) {
                           return Row(
                             children: <Widget>[
                               // Clean Floors TabBar
@@ -568,7 +566,7 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
                                     controller: _tabController,
                                     isScrollable: true,
                                     tabAlignment: TabAlignment.start,
-                                    tabs: projectManager.value.floors.map((FloorModel f) => Tab(text: f.name)).toList(),
+                                    tabs: serviceLocator<ProjectViewModel>().floors.map((FloorModel f) => Tab(text: f.name)).toList(),
                                   ),
                                 ),
                               ),
@@ -638,12 +636,7 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
                 ),
               ),
               margin: const EdgeInsets.all(12),
-              child: ValueListenableBuilder<ProjectData>(
-                valueListenable: projectManager,
-                builder: (_, ProjectData project, __) {
-                  return const SidePanel();
-                },
-              ),
+              child: const SidePanel(),
             ),
           ],
         ),
@@ -752,10 +745,10 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
                 onPressed: () {
                   if (newName?.trim().isNotEmpty ?? false) {
                     final FloorPlanModel plan = FloorPlanModel.defaultFloorPlan;
-                    projectManager.addFloor(
+                    serviceLocator<ProjectViewModel>().addFloor(
                       FloorModel(name: newName!.trim(), floorPlan: plan),
                     );
-                    projectManager.saveProject();
+                    serviceLocator<ProjectViewModel>().saveProjectToLocal();
                     Navigator.pop(ctx);
                   }
                 },
@@ -803,7 +796,7 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
           ),
     );
 
-    _tabController.animateTo(projectManager.value.floors.length - 1);
+    _tabController.animateTo(serviceLocator<ProjectViewModel>().floors.length - 1);
   }
 
   // ------------------------------- //
@@ -909,8 +902,11 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
 
   Future<void> _selectAssetFloorPlan(String assetImagePath) async {
     if (mounted) Navigator.of(context).pop();
-    final String savedImagePath = await projectManager.saveAssetImageToProject(assetImagePath);
-    _calibrateFloorPlan(savedImagePath);
+    final ResponseCallback<String?> responseCallback = await serviceLocator<ProjectViewModel>().addAssetImageToProject(assetImagePath);
+    if (responseCallback.success && responseCallback.data != null) {
+      final String savedImagePath = responseCallback.data!;
+      _calibrateFloorPlan(savedImagePath);
+    }
   }
 
   Future<void> _importFloorPlan() async {
@@ -932,10 +928,11 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
       if (result != null && result.files.single.path != null) {
         final String sourcePath = result.files.single.path!;
         final String fileName = result.files.single.name;
-
-        final String savedImagePath = await projectManager.saveImageToProject(sourcePath);
-
-        _calibrateFloorPlan(savedImagePath);
+        final ResponseCallback<String?> responseCallback = await serviceLocator<ProjectViewModel>().addImageToProject(sourcePath);
+        if (responseCallback.success && responseCallback.data != null) {
+          final String savedImagePath = responseCallback.data!;
+          _calibrateFloorPlan(savedImagePath);
+        }
 
         if (mounted) Navigator.of(context).pop();
         print('Floor plan imported successfully: $fileName');
@@ -1004,7 +1001,10 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
         print('Scale: ${calibrationData.pixelsPerUnit.toStringAsFixed(2)} pixels per ${calibrationData.unit.symbol}');
 
         const double canvasPixelsPerMeter = 100.0;
-        final FloorModel floor = projectManager.value.currentFloor;
+
+        //get current floor
+        final int floorIndex = serviceLocator<ProjectViewModel>().currentFloorIndex;
+        final FloorModel floor = serviceLocator<ProjectViewModel>().floors[floorIndex];
 
         final double widthInUnits = image.width * calibrationData.unitsPerPixel;
         final double heightInUnits = image.height * calibrationData.unitsPerPixel;
@@ -1036,16 +1036,18 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
         print('Real-world dimensions: ${widthInMeters.toStringAsFixed(2)}m x ${heightInMeters.toStringAsFixed(2)}m');
         print('Canvas dimensions: ${canvasWidthInPixels.toStringAsFixed(1)}px x ${canvasHeightInPixels.toStringAsFixed(1)}px');
 
-        projectManager.updateFloorPlan(
-          floor.floorPlan.copyWith(
-            imagePath: savedImagePath,
-            position: floor.floorPlan.imagePath.isNotEmpty ? floor.floorPlan.position : viewPortCenter,
-            size: floorPlanSize,
+        serviceLocator<ProjectViewModel>().updateFloor(
+          floor.copyWith(
+            floorPlan: floor.floorPlan.copyWith(
+              imagePath: savedImagePath,
+              position: floor.floorPlan.imagePath.isNotEmpty ? floor.floorPlan.position : viewPortCenter,
+              size: floorPlanSize,
+            ),
           ),
         );
 
         floorCanvasController.loadFloorPlanImage();
-        projectManager.saveProject();
+        serviceLocator<ProjectViewModel>().saveProjectToLocal();
       } else {
         print('Calibration cancelled by user');
       }

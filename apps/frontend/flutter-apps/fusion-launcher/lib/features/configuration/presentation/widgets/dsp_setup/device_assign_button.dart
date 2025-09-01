@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/utils/fusion_utils.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_networking/network/fusion_network_client.dart';
 import 'package:fusion_lib/models/fusion_device/fusion_device.dart';
 import 'package:fusion_lib/models/response_callback.dart';
 
 import '../../../../../core/constants.dart';
 import '../../../../../core/service_locator.dart';
-import '../../../../../core/services/project_manager.dart';
 
 class AssignDeviceButton extends StatefulWidget {
   final FusionDevice fusionDeviceToMap;
@@ -72,18 +72,19 @@ class _AssignDeviceButtonState extends State<AssignDeviceButton> {
     if (mounted) FusionUtils.hideLoader(context);
 
     if (responseCallback.success) {
-      serviceLocator<ProjectManager>().resetFusionDeviceAssignments(
-        selectedDevice.id,
-      );
-      serviceLocator<ProjectManager>().updateFusionDevice(
-        widget.fusionDeviceToMap.copyWith(
-          status: FusionDeviceSetupStatus.completed,
-          localIp: selectedDevice.localIp,
-          cloudId: selectedDevice.cloudId,
-          isClaimed: selectedDevice.isClaimed,
-        ),
-      );
-      serviceLocator<ProjectManager>().saveProject();
+      //Todo: Update this as per new logic of project manager
+      // serviceLocator<ProjectViewModel>().resetFusionDeviceAssignments(
+      //   selectedDevice.id,
+      // );
+      // serviceLocator<ProjectViewModel>().updateFusionDevice(
+      //   widget.fusionDeviceToMap.copyWith(
+      //     status: FusionDeviceSetupStatus.completed,
+      //     localIp: selectedDevice.localIp,
+      //     cloudId: selectedDevice.cloudId,
+      //     isClaimed: selectedDevice.isClaimed,
+      //   ),
+      // );
+      serviceLocator<ProjectViewModel>().saveProjectToLocal();
       // if (mounted) Navigator.pop(context);
     } else {
       debugPrint("Failed to assign device: ${responseCallback.message}");

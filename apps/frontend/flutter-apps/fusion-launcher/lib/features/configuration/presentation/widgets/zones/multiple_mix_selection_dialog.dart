@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
 
 import '../../../../../core/service_locator.dart';
-import '../../../../../core/services/project_manager.dart';
+import '../../viewmodel/project_view_model.dart';
 
 /// Multi‐selection device picker dialog (unchanged)
 class MultiMixPickerDialog extends StatefulWidget {
@@ -267,13 +267,11 @@ class MultiMixPickerDialogState extends State<MultiMixPickerDialog> {
 
   String getLocation(LocationModel location) {
     if (location.floorId != null && location.listeningAreaId != null) {
-      final FloorModel floor = serviceLocator<ProjectManager>().value.floors.firstWhere((FloorModel floor) => floor.id == location.floorId);
-
-      final ListeningArea area = floor.listeningAreas.firstWhere((ListeningArea area) => area.id == location.listeningAreaId);
-
+      final FloorModel floor = serviceLocator<ProjectViewModel>().getFloorById(location.floorId!);
+      final ListeningArea area = serviceLocator<ProjectViewModel>().getListeningArea(location.listeningAreaId!);
       return "${floor.name}/${area.name}"; // Display floor and listening area names
     } else if (location.floorId != null) {
-      final FloorModel floor = serviceLocator<ProjectManager>().value.floors.firstWhere((FloorModel floor) => floor.id == location.floorId);
+      final FloorModel floor = serviceLocator<ProjectViewModel>().getFloorById(location.floorId!);
       return floor.name; // Display floor number
     } else if (location.listeningAreaId != null) {
       return "Listening Area ${location.listeningAreaId}"; // Display listening area number

@@ -4,11 +4,11 @@ import '../project_view_model.dart';
 
 extension ListeningAreaViewModel on ProjectViewModel {
   //get ListeningArea by id
-  ListeningArea? getListeningArea(String areaId) {
+  ListeningArea getListeningArea(String areaId) {
     try {
       return projectManager.getListeningAreaById(areaId);
     } catch (e) {
-      return null;
+      throw Exception("listening area not found: $e");
     }
   }
 
@@ -64,6 +64,16 @@ extension ListeningAreaViewModel on ProjectViewModel {
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to get floor for listening area: $e");
       return null;
+    }
+  }
+
+  //get Listening Areas for Floor id
+  List<ListeningArea> getListeningAreasForFloor(String floorId) {
+    try {
+      return projectManager.getAllListeningAreaForFloor(floorId);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get listening areas for floor: $e");
+      return <ListeningArea>[];
     }
   }
 }

@@ -102,7 +102,7 @@ class ProjectService {
       "floors": floors.toJson((f) => f.toJson()),
       "listeningAreas": listeningAreas.toJson((a) => a.toJson()),
       "zones": zones.toJson((z) => z.toJson()),
-      "sourceSetes": sourceSets.toJson((m) => m.toJson()),
+      "sourceSet": sourceSets.toJson((m) => m.toJson()),
       "hardware": hardware.toJson((HardwareComponent c) {
         if (c is Source) {
           return c.toJson();
@@ -129,17 +129,17 @@ class ProjectService {
       droResponse: json["droResponse"],
       createdAt: DateTime.parse(json["createdAt"]),
       updatedAt: DateTime.parse(json["updatedAt"]),
-      metaData: json["metaData"],
+      metaData: json["metaData"] ?? "",
       minSPL: (json["minSPL"] as num).toDouble(),
       maxSPL: (json["maxSPL"] as num).toDouble(),
       isInControlMode: json["isInControlMode"] ?? false,
     );
 
-    service.floors.fromJson(json["floors"], (m) => FloorModel.fromJson(m));
-    service.listeningAreas.fromJson(json["listeningAreas"], (m) => ListeningArea.fromJson(m));
-    service.zones.fromJson(json["zones"], (m) => Zone.fromJson(m));
-    service.sourceSets.fromJson(json["sourceSet"], (m) => SourceSet.fromJson(m));
-    service.hardware.fromJson(json["hardware"], (dynamic e) {
+    service.floors.fromJsonList(json["floors"], (m) => FloorModel.fromJson(m), "id");
+    service.listeningAreas.fromJsonList(json["listeningAreas"], (m) => ListeningArea.fromJson(m), "id");
+    service.zones.fromJsonList(json["zones"], (m) => Zone.fromJson(m), "id");
+    service.sourceSets.fromJsonList(json["sourceSet"], (m) => SourceSet.fromJson(m), "id");
+    service.hardware.fromJsonList(json["hardware"], (dynamic e) {
       final Map<String, dynamic> m = e as Map<String, dynamic>;
       if (m.containsKey('componentType') && m['componentType'] == 'source') {
         return Source.fromJson(m);
@@ -148,10 +148,10 @@ class ProjectService {
       } else {
         return GenericHardwareComponent.fromJson(m);
       }
-    });
-    service.fusionDevices.fromJson(json["fusionDevices"], (m) => FusionDevice.fromJson(m));
-    service.suggestedFusionDevices.fromJson(json["suggestedFusionDevices"], (m) => FusionDevice.fromJson(m));
-    service.amplifiers.fromJson(json["amplifiers"], (m) => Amplifier.fromJson(m));
+    }, "id");
+    service.fusionDevices.fromJsonList(json["fusionDevices"], (m) => FusionDevice.fromJson(m), "id");
+    service.suggestedFusionDevices.fromJsonList(json["suggestedFusionDevices"], (m) => FusionDevice.fromJson(m), "id");
+    service.amplifiers.fromJsonList(json["amplifiers"], (m) => Amplifier.fromJson(m), "id");
 
     service.relationships.fromJson(json["relationships"]);
 

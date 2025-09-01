@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
-import 'package:fusion_launcher/core/services/project_manager.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_networking/network/fusion_network_client.dart';
 import 'package:fusion_lib/models/response_callback.dart';
 
@@ -121,7 +121,7 @@ class _IPAddressFieldState extends State<IPAddressField> {
             offset: const Offset(0, 40),
             color: AppColors.cardSoft,
             itemBuilder: (BuildContext context) {
-              if (serviceLocator<ProjectManager>().value.virtualIP == null || serviceLocator<ProjectManager>().value.virtualIP!.isEmpty) {
+              if (serviceLocator<ProjectViewModel>().virtualIP == null || serviceLocator<ProjectViewModel>().virtualIP!.isEmpty) {
                 return <PopupMenuEntry<SessionData>>[
                   PopupMenuItem<SessionData>(
                     enabled: false,

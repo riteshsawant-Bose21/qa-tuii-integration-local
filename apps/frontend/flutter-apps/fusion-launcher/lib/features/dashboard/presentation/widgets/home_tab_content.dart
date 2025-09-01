@@ -1,16 +1,14 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/theme/app_theme.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_utils/shared_preference_handler.dart';
 
-import '../../../../core/models/project_list_model.dart';
 import '../../../../core/router/routes.dart';
 import '../../../../core/service_locator.dart';
-import '../../../../core/services/project_list_manager.dart';
-import '../../../../core/services/project_manager.dart';
 import '../../../../core/utils/fusion_utils.dart';
-import '../../../../core/utils/helper.dart';
 
 class HomeTabContent extends StatefulWidget {
   const HomeTabContent({super.key});
@@ -20,9 +18,7 @@ class HomeTabContent extends StatefulWidget {
 }
 
 class _HomeTabContentState extends State<HomeTabContent> {
-  final ProjectListManager projectListManager = serviceLocator<ProjectListManager>();
   final SharedPreferencesHandler prefs = serviceLocator<SharedPreferencesHandler>();
-  final ProjectManager projectManager = serviceLocator<ProjectManager>();
   final List<Map<String, String>> cardData = <Map<String, String>>[
     <String, String>{
       'label': 'Getting Started',
@@ -68,6 +64,7 @@ class _HomeTabContentState extends State<HomeTabContent> {
       "actionUrl": "https://boseprofessional.com/company/newsroom/2025/infocomm-2025-press-release",
     },
   ];
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -251,18 +248,18 @@ class _HomeTabContentState extends State<HomeTabContent> {
                   if (prefs.getBool(SharedPreferenceKeys.adminLogin) != true)
                     TextButton.icon(
                       onPressed: () async {
-                        FusionUtils.showLoader(context);
-                        final (bool success, String message) = await projectListManager.syncProjectsFromCloud();
-                        if (context.mounted) {
-                          FusionUtils.hideLoader(context);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(message),
-                              backgroundColor: success ? Colors.green : Colors.red,
-                              duration: const Duration(seconds: 2),
-                            ),
-                          );
-                        }
+                        // FusionUtils.showLoader(context);
+                        // final (bool success, String message) = await projectListManager.syncProjectsFromCloud();
+                        // if (context.mounted) {
+                        //   FusionUtils.hideLoader(context);
+                        //   ScaffoldMessenger.of(context).showSnackBar(
+                        //     SnackBar(
+                        //       content: Text(message),
+                        //       backgroundColor: success ? Colors.green : Colors.red,
+                        //       duration: const Duration(seconds: 2),
+                        //     ),
+                        //   );
+                        // }
                       },
                       icon: const Icon(Icons.cloud_sync),
                       label: const Text(
@@ -286,10 +283,12 @@ class _HomeTabContentState extends State<HomeTabContent> {
 
   /// Build recent projects section with cards
   Widget _buildRecentProjects() {
-    return ValueListenableBuilder<List<ProjectListModel>>(
-      valueListenable: projectListManager,
-      builder: (BuildContext context, List<ProjectListModel> projects, _) {
-        if (projects.isEmpty) {
+    return BlocConsumer<ProjectViewModel, ProjectViewModelState>(
+      listener: (BuildContext context, ProjectViewModelState state) {
+        // TODO: implement listener
+      },
+      builder: (BuildContext context, ProjectViewModelState state) {
+        if (state is! ProjectLoading && !serviceLocator<ProjectViewModel>().hasProjects) {
           return const Center(
             child: SizedBox(
               width: 262,
@@ -308,17 +307,12 @@ class _HomeTabContentState extends State<HomeTabContent> {
           spacing: 32,
           runSpacing: 32,
           children: List<Widget>.generate(
-            projects.length,
+            serviceLocator<ProjectViewModel>().allProjects.length,
             (int i) {
               return GestureDetector(
                 onTap: () async {
                   FusionUtils.showLoader(context);
-                  await projectListManager.downloadAndExtractProjectZip(
-                    fileId: projects[i].metaData.fileId,
-                    projectName: projects[i].name,
-                    projectManager: projectManager,
-                    localUpdatedAt: projects[i].updatedAt,
-                  );
+                  serviceLocator<ProjectViewModel>().openProject(serviceLocator<ProjectViewModel>().allProjects[i].id);
                   if (context.mounted) {
                     FusionUtils.hideLoader(context);
                     Navigator.pushNamed(
@@ -328,19 +322,12 @@ class _HomeTabContentState extends State<HomeTabContent> {
                   }
                 },
                 child: _buildProjectCard(
-                  title: projects[i].metaData.projectName,
-                  subtitle: Helper.formatTimeAgoSimple(projects[i].updatedAt),
+                  title: serviceLocator<ProjectViewModel>().allProjects[i].projectName,
+                  subtitle: "", //Helper.formatTimeAgoSimple(projects[i].updatedAt),
                   // subtitle: 'Last updated: ${projects[i].updatedAt.toLocal().toIso8601String().substring(0, 10)}',
-                  thumbnailUrl: projects[i].metaData.thumbnailUrl,
+                  thumbnailUrl: "",
                   onDelete: () {
-                    projectListManager
-                        .deleteProject(
-                          folderName: projects[i].name,
-                          projectId: projects[i].id,
-                        )
-                        .then((_) {
-                          projectListManager.remove(projects[i].id);
-                        });
+                    serviceLocator<ProjectViewModel>().deleteProjectFromLocal(serviceLocator<ProjectViewModel>().allProjects[i].id);
                   },
                 ),
               );
@@ -510,11 +497,12 @@ class _HomeTabContentState extends State<HomeTabContent> {
                         thumbnailUrl != null && thumbnailUrl.isNotEmpty
                             ? FutureBuilder<File?>(
                               future: () async {
-                                try {
-                                  return await projectListManager.downloadThumbnailFile(fileId: thumbnailUrl);
-                                } catch (e) {
-                                  return null;
-                                }
+                                return null;
+                                // try {
+                                //   return await projectListManager.downloadThumbnailFile(fileId: thumbnailUrl);
+                                // } catch (e) {
+                                //   return null;
+                                // }
                               }(),
                               builder: (BuildContext context, AsyncSnapshot<File?> snapshot) {
                                 if (snapshot.connectionState == ConnectionState.waiting) {

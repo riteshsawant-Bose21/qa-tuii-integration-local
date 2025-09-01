@@ -7,6 +7,8 @@ final class ProjectViewModelInitial extends ProjectViewModelState {}
 
 final class ProjectLoading extends ProjectViewModelState {}
 
+final class CreatingProject extends ProjectViewModelState {}
+
 final class ProjectLoaded extends ProjectViewModelState {
   final List<ProjectData> projects;
   final ProjectData? currentProject;
@@ -18,6 +20,10 @@ final class ProjectUpdated extends ProjectViewModelState {
   final String projectId;
 
   ProjectUpdated({required this.projectId});
+}
+
+final class FloorsUpdated extends ProjectViewModelState {
+  FloorsUpdated();
 }
 
 final class ProjectError extends ProjectViewModelState {

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
-import 'package:fusion_launcher/core/services/project_manager.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
 
 class HardwareProperties extends StatefulWidget {
@@ -85,15 +85,15 @@ class _HardwarePropertiesState extends State<HardwareProperties> {
         rotation: double.tryParse(_rotationController.text) ?? 0.0,
         gain: double.tryParse(_gainController.text) ?? 0.0,
       );
-      serviceLocator<ProjectManager>().updateHardwareComponent(updatedComponent);
-      serviceLocator<ProjectManager>().saveProject();
+      serviceLocator<ProjectViewModel>().updateHardware(updatedComponent);
+      serviceLocator<ProjectViewModel>().saveProjectToLocal();
     } else {
       final HardwareComponent updatedComponent = widget.hardwareComponent.copyWith(
         name: _nameController.text,
         pos: Offset(double.tryParse(_positionXController.text) ?? 0.0, double.tryParse(_positionYController.text) ?? 0.0),
       );
-      serviceLocator<ProjectManager>().updateHardwareComponent(updatedComponent);
-      serviceLocator<ProjectManager>().saveProject();
+      serviceLocator<ProjectViewModel>().updateHardware(updatedComponent);
+      serviceLocator<ProjectViewModel>().saveProjectToLocal();
     }
   }
 

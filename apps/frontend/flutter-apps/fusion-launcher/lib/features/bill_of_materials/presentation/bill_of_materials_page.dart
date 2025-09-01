@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_properties/project_properties_view_model.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
 
 import '../../../core/service_locator.dart';
-import '../../../core/services/project_manager.dart';
+import '../../configuration/presentation/viewmodel/project_view_model.dart';
 
 class BillOfMaterialsPage extends StatefulWidget {
   const BillOfMaterialsPage({
@@ -14,7 +16,6 @@ class BillOfMaterialsPage extends StatefulWidget {
 }
 
 class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
-  final ProjectManager projectManager = serviceLocator<ProjectManager>();
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
@@ -34,6 +35,7 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
   @override
   void initState() {
     super.initState();
+    loadData();
     _searchController.addListener(() {
       setState(() {
         _searchQuery = _searchController.text;
@@ -163,7 +165,8 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
       if (aggregated.containsKey(key)) {
         final BOMItem existing = aggregated[key]!;
         aggregated[key] = BOMItem(
-          id: existing.id, // keep the first ID
+          id: existing.id,
+          // keep the first ID
           name: existing.name,
           model: existing.model,
           unitPrice: existing.unitPrice,
@@ -193,34 +196,38 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
     return _getAllItems().fold(0.0, (double sum, BOMItem item) => sum + (item.unitPrice * item.quantity));
   }
 
+  loadData() {
+    speakers = serviceLocator<ProjectViewModel>().hardwareComponents.whereType<Speaker>().toList();
+    sources = serviceLocator<ProjectViewModel>().hardwareComponents.whereType<Source>().toList();
+    controllers =
+        serviceLocator<ProjectViewModel>().hardwareComponents
+            .whereType<GenericHardwareComponent>()
+            .where((GenericHardwareComponent component) => component.type == GenericHardwareComponentType.controller)
+            .toList();
+    racks =
+        serviceLocator<ProjectViewModel>().hardwareComponents
+            .whereType<GenericHardwareComponent>()
+            .where((GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack)
+            .toList();
+    amplifiers = <Amplifier>[];
+    fusionDevices = <FusionDevice>[];
+    others =
+        serviceLocator<ProjectViewModel>().hardwareComponents
+            .where(
+              (HardwareComponent component) => component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
+            )
+            .toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: backgroundColor,
-      body: ValueListenableBuilder<ProjectData>(
-        valueListenable: projectManager,
-        builder: (BuildContext context, ProjectData data, _) {
-          speakers = data.hardwareComponents.whereType<Speaker>().toList();
-          sources = data.hardwareComponents.whereType<Source>().toList();
-          controllers =
-              data.hardwareComponents
-                  .whereType<GenericHardwareComponent>()
-                  .where((GenericHardwareComponent component) => component.type == GenericHardwareComponentType.controller)
-                  .toList();
-          racks =
-              data.hardwareComponents
-                  .whereType<GenericHardwareComponent>()
-                  .where((GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack)
-                  .toList();
-          amplifiers = data.amplifiers;
-          fusionDevices = data.suggestedFusionDevices;
-          others =
-              data.hardwareComponents
-                  .where(
-                    (HardwareComponent component) => component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
-                  )
-                  .toList();
-
+      body: BlocConsumer<ProjectViewModel, ProjectViewModelState>(
+        listener: (BuildContext context, ProjectViewModelState state) {
+          loadData();
+        },
+        builder: (BuildContext context, ProjectViewModelState state) {
           final List<BOMItem> filteredItems = _getFilteredItems();
           final double totalPrice = _getAllItems().fold(0.0, (double sum, BOMItem item) => sum + item.unitPrice * item.quantity);
           final double vatAmount = totalPrice * 0.0161; // 1.61%

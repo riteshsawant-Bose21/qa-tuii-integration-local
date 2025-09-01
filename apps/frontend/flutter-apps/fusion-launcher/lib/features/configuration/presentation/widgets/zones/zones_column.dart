@@ -134,7 +134,7 @@ class _ZonesColumnState extends State<ZonesColumn> {
                 duplicateZone: (Zone zone) {
                   final Zone newZone = Zone(
                     name: '${zone.name} (Copy)',
-                    mixIds: List<String>.from(zone.mixIds),
+                    mixIds: List<String>.from(zone.sourceSetIds),
                   );
                   widget.onZoneAdded(newZone);
                 },

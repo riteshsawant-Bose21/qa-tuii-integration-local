@@ -29,6 +29,28 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
 
   List<Color> get projectColors => projectManager.getProjectColors();
 
+  bool get isAdminLogin => projectManager.isAdminLogin();
+
+  int get currentFloorIndex => projectManager.getCurrentFloorIndex();
+
+  //get sources by filtering only class type Source  in hardwareComponent
+  List<Source> get sources {
+    return hardwareComponents.whereType<Source>().toList();
+  }
+
+  // get Speakers
+  List<Speaker> get speakers {
+    return hardwareComponents.whereType<Speaker>().toList();
+  }
+
+  //get generic hardware components
+  List<GenericHardwareComponent> get genericHardwareComponents {
+    return hardwareComponents.whereType<GenericHardwareComponent>().toList();
+  }
+
+  //get all Fusion devices
+  List<FusionDevice> get fusionDevices => projectManager.getAllFusionDevices();
+
   //set project name
   void setProjectName(String name) {
     try {
@@ -103,6 +125,17 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to set project colors: $e");
       throwError("Failed to set project colors: $e");
+    }
+  }
+
+  //update current floor index
+  void setCurrentFloorIndex(int index) {
+    try {
+      projectManager.setCurrentFloorIndex(index);
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to set current floor index: $e");
+      throwError("Failed to set current floor index: $e");
     }
   }
 }

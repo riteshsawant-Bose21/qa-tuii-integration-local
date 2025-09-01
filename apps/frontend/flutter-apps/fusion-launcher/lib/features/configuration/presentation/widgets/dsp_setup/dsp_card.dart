@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/utils/broadcast_controllers.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_networking/network/fusion_network_client.dart';
-import 'package:fusion_lib/fusion_utils/shared_preference_handler.dart';
 import 'package:fusion_lib/models/fusion_device/fusion_device.dart';
 import 'package:fusion_lib/models/response_callback.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../../../core/constants.dart';
 import '../../../../../core/service_locator.dart';
-import '../../../../../core/services/project_manager.dart';
 import '../../../../../core/utils/fusion_utils.dart';
 import 'claim_device_popup.dart';
 import 'device_assign_button.dart';
@@ -108,10 +107,11 @@ class _DSPDeviceCardState extends State<DSPDeviceCard> with SingleTickerProvider
         FusionUtils.hideLoader(context);
 
         if (responseCallback.success) {
-          serviceLocator<ProjectManager>().updateFusionDevice(
-            widget.device.copyWith(status: FusionDeviceSetupStatus.notStarted),
-          );
-          serviceLocator<ProjectManager>().saveProject();
+          //Todo: update this as per new project manager
+          // serviceLocator<ProjectViewModel>().updateFusionDevice(
+          //   widget.device.copyWith(status: FusionDeviceSetupStatus.notStarted),
+          // );
+          serviceLocator<ProjectViewModel>().saveProjectToLocal();
 
           // Show success feedback
           ScaffoldMessenger.of(context).showSnackBar(
@@ -194,8 +194,9 @@ class _DSPDeviceCardState extends State<DSPDeviceCard> with SingleTickerProvider
       return;
     }
     print("Navigating to cloud view for device: ${widget.device.name} with ID: ${widget.device.cloudId}");
-    cloudRedirectUrl =
-        "embed/projects/${serviceLocator<ProjectManager>().value.cloudId}?openDeviceDialog=true&deviceId=${widget.device.cloudId!}&token=${serviceLocator<SharedPreferencesHandler>().getString(SharedPreferenceKeys.accessToken)}";
+    //Todo: update this as per new project manager
+    // cloudRedirectUrl =
+    //     "embed/projects/${serviceLocator<ProjectViewModel>().value.cloudId}?openDeviceDialog=true&deviceId=${widget.device.cloudId!}&token=${serviceLocator<SharedPreferencesHandler>().getString(SharedPreferenceKeys.accessToken)}";
     // Navigate to cloud view
     projectTabBroadcastController.add(cloudTableIndex);
   }
