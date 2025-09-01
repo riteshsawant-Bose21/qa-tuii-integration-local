@@ -20,7 +20,7 @@ class LocalProjectManager {
   /// If the project already exists, it will be replaced.
   Future<Directory> get fusionProjectDirectory async {
     final String fusionDirPath = isAdminLogin ? kFusionProjectDirName : kFusionProjectDirName;
-    final Directory appDocDir = await getApplicationCacheDirectory();
+    final Directory appDocDir = await getApplicationDocumentsDirectory();
     final Directory fusionDir = Directory('${appDocDir.path}$fusionDirPath');
 
     if (!await fusionDir.exists()) {

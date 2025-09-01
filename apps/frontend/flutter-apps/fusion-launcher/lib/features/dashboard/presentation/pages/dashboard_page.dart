@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/services/user_profile_manager.dart';
 import 'package:fusion_launcher/core/theme/app_theme.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/dashboard/presentation/widgets/home_tab_content.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_utils/shared_preference_handler.dart';
@@ -33,6 +34,11 @@ class _HomePageState extends State<HomePage> {
     if (!isAdmin) {
       userProfileManager.getUserProfile();
     }
+    loadProjects();
+  }
+
+  loadProjects() async {
+    await serviceLocator<ProjectViewModel>().loadAllLocalProjects();
   }
 
   @override
