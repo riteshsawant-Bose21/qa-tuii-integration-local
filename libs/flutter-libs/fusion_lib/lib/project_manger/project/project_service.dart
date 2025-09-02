@@ -20,16 +20,16 @@ class ProjectService {
   final double maxSPL;
   bool isInControlMode;
 
-  final floors = FloorRepository();
-  final listeningAreas = ListeningAreaRepository();
-  final zones = ZoneRepository();
-  final sourceSets = SourceSetRepository();
-  final hardware = HardwareRepository();
-  final fusionDevices = FusionDeviceRepository();
-  final suggestedFusionDevices = FusionDeviceRepository();
-  final amplifiers = AmplifierRepository();
+  final FloorRepository floors;
+  final ListeningAreaRepository listeningAreas;
+  final ZoneRepository zones;
+  final SourceSetRepository sourceSets;
+  final HardwareRepository hardware;
+  final FusionDeviceRepository fusionDevices;
+  final FusionDeviceRepository suggestedFusionDevices;
+  final AmplifierRepository amplifiers;
 
-  final relationships = RelationshipManager();
+  final RelationshipManager relationships;
 
   ProjectService({
     required this.id,
@@ -45,12 +45,29 @@ class ProjectService {
     required this.minSPL,
     required this.maxSPL,
     this.isInControlMode = false,
-  });
+    FloorRepository? floors,
+    ListeningAreaRepository? listeningAreas,
+    ZoneRepository? zones,
+    SourceSetRepository? sourceSets,
+    HardwareRepository? hardware,
+    FusionDeviceRepository? fusionDevices,
+    FusionDeviceRepository? suggestedFusionDevices,
+    AmplifierRepository? amplifiers,
+    RelationshipManager? relationships,
+  }) : floors = floors ?? FloorRepository(),
+       listeningAreas = listeningAreas ?? ListeningAreaRepository(),
+       zones = zones ?? ZoneRepository(),
+       sourceSets = sourceSets ?? SourceSetRepository(),
+       hardware = hardware ?? HardwareRepository(),
+       fusionDevices = fusionDevices ?? FusionDeviceRepository(),
+       suggestedFusionDevices = suggestedFusionDevices ?? FusionDeviceRepository(),
+       amplifiers = amplifiers ?? AmplifierRepository(),
+       relationships = relationships ?? RelationshipManager();
 
-  //Copy with method
   ProjectService copyWith({
     String? id,
     String? name,
+    String? projectName,
     List<Color>? colors,
     String? virtualIP,
     int? currentFloorIndex,
@@ -61,12 +78,20 @@ class ProjectService {
     double? minSPL,
     double? maxSPL,
     bool? isInControlMode,
+    FloorRepository? floors,
+    ListeningAreaRepository? listeningAreas,
+    ZoneRepository? zones,
+    SourceSetRepository? sourceSets,
+    HardwareRepository? hardware,
+    FusionDeviceRepository? fusionDevices,
+    FusionDeviceRepository? suggestedFusionDevices,
+    AmplifierRepository? amplifiers,
     RelationshipManager? relationships,
   }) {
     return ProjectService(
       id: id ?? this.id,
       name: name ?? this.name,
-      projectName: name ?? this.projectName,
+      projectName: projectName ?? this.projectName,
       colors: colors ?? this.colors,
       virtualIP: virtualIP ?? this.virtualIP,
       currentFloorIndex: currentFloorIndex ?? this.currentFloorIndex,
@@ -77,6 +102,15 @@ class ProjectService {
       minSPL: minSPL ?? this.minSPL,
       maxSPL: maxSPL ?? this.maxSPL,
       isInControlMode: isInControlMode ?? this.isInControlMode,
+      floors: floors ?? this.floors,
+      listeningAreas: listeningAreas ?? this.listeningAreas,
+      zones: zones ?? this.zones,
+      sourceSets: sourceSets ?? this.sourceSets,
+      hardware: hardware ?? this.hardware,
+      fusionDevices: fusionDevices ?? this.fusionDevices,
+      suggestedFusionDevices: suggestedFusionDevices ?? this.suggestedFusionDevices,
+      amplifiers: amplifiers ?? this.amplifiers,
+      relationships: relationships ?? this.relationships,
     );
   }
 

@@ -539,7 +539,7 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
 
                                         serviceLocator<ProjectViewModel>().setMinSPL(min);
                                         serviceLocator<ProjectViewModel>().setMaxSPL(max);
-                                        serviceLocator<ProjectViewModel>().saveProjectToLocal();
+                                        // serviceLocator<ProjectViewModel>().saveProjectToLocal();
                                       },
                                     ),
                                   );
