@@ -38,6 +38,7 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
     /// Initialize items from the provided configs, but preserve existing state
     for (var config in widget.dockItemList) {
       if (!_globalDockItems.containsKey(config.id)) {
+        print("Initializing DockItem: ${config.id}=== ${config.title}");
         _globalDockItems[config.id] = DockItem(id: config.id, title: config.title, side: config.side);
         // Initialize z-index if not set
         _globalDockItems[config.id]!.zIndex ??= 0;
@@ -52,6 +53,8 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
     /// Add new items if configs changed, but preserve existing state
     for (var config in widget.dockItemList) {
       if (!_globalDockItems.containsKey(config.id)) {
+        print("update DockItem: ${config.id}=== ${config.title}");
+
         _globalDockItems[config.id] = DockItem(id: config.id, title: config.title, side: config.side);
         _globalDockItems[config.id]!.zIndex ??= 0;
       }
@@ -91,11 +94,11 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
   void _handleItemDragEnd(DockItem item, DraggableDetails details, double screenWidth) {
     setState(() {
       final dx = details.offset.dx;
-      if (widget.showLeft && dx < 120) {
+      if (widget.showLeft && dx < 240) {
         item.docked = true;
         item.expanded = false;
         item.side = "left";
-      } else if (widget.showRight && dx > screenWidth - 220) {
+      } else if (widget.showRight && dx > screenWidth - 484) {
         item.docked = true;
         item.expanded = false;
         item.side = "right";
@@ -185,7 +188,7 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
           ],
         ),
 
-        // Floating panels - render in z-index order (lowest to highest)
+        /// Floating panels - render in z-index order (lowest to highest)
         for (var item in floatingItems)
           Positioned(
             left: item.position.dx,

@@ -74,6 +74,7 @@ class SidebarPanel extends StatelessWidget {
         resizing: false,
         onClose: () {}, // No-op for feedback
         onResize: (_, __) {}, // No-op for feedback
+        highlight: false,
       ),
 
       /// make the original widget semi transparent when dragging
@@ -87,20 +88,18 @@ class SidebarPanel extends StatelessWidget {
       onDragEnd: (details) => onUndock(item, details),
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-        child: Expanded(
-          child: Container(
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.white,
-              border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1)),
-            ),
-            child: ExpansionTile(
-              minTileHeight: 24,
-              iconColor: Theme.of(context).colorScheme.fusionTextViewColor,
-              title: FusionAppText(text: item.title, style: Theme.of(context).textTheme.bodySmall),
-              initiallyExpanded: item.expanded,
-              onExpansionChanged: (val) => onExpansionChanged(item, val ?? false),
-              children: [config.widgetBuilder()],
-            ),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.white,
+            border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1)),
+          ),
+          child: ExpansionTile(
+            minTileHeight: 24,
+            iconColor: Theme.of(context).colorScheme.fusionTextViewColor,
+            title: FusionAppText(text: item.title, style: Theme.of(context).textTheme.bodySmall),
+            initiallyExpanded: item.expanded,
+            onExpansionChanged: (val) => onExpansionChanged(item, val ?? false),
+            children: [config.widgetBuilder()],
           ),
         ),
       ),

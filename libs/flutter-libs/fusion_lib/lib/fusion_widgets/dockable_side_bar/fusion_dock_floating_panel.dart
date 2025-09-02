@@ -6,14 +6,14 @@ import '../../models/fusion_dock_item.dart';
 import '../text_views/fusion_app_text.dart';
 import 'fuison_resize_handle.dart';
 
-class FusionFloatingPanel extends StatelessWidget {
+class FusionFloatingPanel extends StatefulWidget {
   final DockItem item;
   final DockItemConfig? config;
   final void Function(DraggableDetails) onDragEnd;
   final void Function(double, double) onResize;
   final void Function() onClose;
-  final void Function()? onTap; // Add tap callback
-  final void Function()? onDragStart; // Add drag start callback
+  final void Function()? onTap;
+  final void Function()? onDragStart;
 
   const FusionFloatingPanel({
     super.key,
@@ -22,27 +22,61 @@ class FusionFloatingPanel extends StatelessWidget {
     required this.onDragEnd,
     required this.onResize,
     required this.onClose,
-    this.onTap, // Add tap callback
-    this.onDragStart, // Add drag start callback
+    this.onTap,
+    this.onDragStart,
   });
+
+  @override
+  State<FusionFloatingPanel> createState() => _FusionFloatingPanelState();
+}
+
+class _FusionFloatingPanelState extends State<FusionFloatingPanel> {
+  bool highlight = false;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap, // Handle tap to bring to front
+      onTap: widget.onTap,
       child: Draggable<DockItem>(
-        data: item,
-        onDragStarted: onDragStart, // Handle drag start to bring to front
+        data: widget.item,
+        onDragStarted: widget.onDragStart,
         feedback: FloatingWidget(
-          item: item,
-          config: config,
-          onClose: onClose,
+          item: widget.item,
+          config: widget.config,
+          onClose: widget.onClose,
           resizing: false,
-          onResize: (_, __) {}, // No-op for feedback
+          onResize: (_, __) {},
+          highlight: highlight, // pass state
         ),
         childWhenDragging: Container(),
-        onDragEnd: onDragEnd,
-        child: FloatingWidget(item: item, config: config, resizing: true, onResize: onResize, onClose: onClose),
+        onDragUpdate: (details) {
+          final dx = details.globalPosition.dx;
+          final screenWidth = MediaQuery.of(context).size.width;
+
+          bool shouldHighlight = dx < 240 || dx > (screenWidth - 240);
+
+          if (shouldHighlight != highlight) {
+            print("Highlight changed: $shouldHighlight, dx: $dx, screenWidth: $screenWidth");
+            setState(() {
+              highlight = shouldHighlight;
+            });
+          }
+        },
+        onDragEnd: (details) {
+          print("Drag ended, resetting highlight");
+          setState(() {
+            highlight = false; // reset after drag
+          });
+          widget.onDragEnd(details);
+        },
+        child: FloatingWidget(
+          item: widget.item,
+          config: widget.config,
+          resizing: true,
+          onResize: widget.onResize,
+          onClose: widget.onClose,
+          highlight: highlight,
+        ),
       ),
     );
   }
@@ -54,25 +88,37 @@ class FloatingWidget extends StatelessWidget {
   final DockItemConfig? config;
   final bool resizing;
   final void Function(double, double) onResize;
+  final bool highlight;
 
-  const FloatingWidget({super.key, required this.item, required this.config, required this.resizing, required this.onResize, required this.onClose});
+  const FloatingWidget({
+    super.key,
+    required this.item,
+    required this.config,
+    required this.resizing,
+    required this.onResize,
+    required this.onClose,
+    required this.highlight,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Material(
       elevation: 2,
       borderRadius: BorderRadius.circular(6),
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOut,
         width: item.width,
         height: item.height,
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.white,
           borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: Theme.of(context).colorScheme.dividerColor),
+          // Fixed: More explicit border logic with fallback color
+          border: Border.all(color: highlight ? Colors.blue : (Theme.of(context).colorScheme.dividerColor ?? Colors.grey.shade300), width: 2),
         ),
         child: Stack(
           children: [
-            /// floating header with close button
+            // header + close button
             Container(
               height: 32,
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -91,7 +137,7 @@ class FloatingWidget extends StatelessWidget {
               ),
             ),
 
-            /// Content area
+            // Content
             Positioned(
               top: 32,
               left: 0,
