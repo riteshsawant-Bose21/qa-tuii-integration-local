@@ -77,7 +77,10 @@ struct fusion_cn_rtp_stream {
     struct kref ref;
     spinlock_t lock;
     struct fusion_cn_stream_config info;
-    struct fusion_cn_rtp_packet rtp_packet_base;
+    struct fusion_cn_rtp_packet rtp_packet_base __aligned(64);
+    struct sk_buff *skb;
+    uint32_t packet_size;
+    uint32_t ip_checksum_base;
     atomic_t is_running;
     uint32_t frames_in_buf;
     uint32_t ssrc;
@@ -88,12 +91,6 @@ struct fusion_cn_rtp_stream {
     uint32_t playback_index; 
     uint64_t packet_time;
     uint64_t ns_per_sample;
-};
-
-struct handle_node {
-    struct list_head node;
-    uint64_t handle;
-    int bucket;
 };
 
 // map from dest_ip and dest_port to stream_handle for incoming packets

@@ -88,17 +88,29 @@ void fusion_cn_nf_destroy(struct fusion_cn_netfilter *nf)
 }
 
 int fusion_cn_nf_create_packet(struct fusion_cn_netfilter *nf, struct sk_buff **skb,
-                            void **data, uint32_t *data_size)
+                               void **data, uint32_t *data_size)
 {
+    if (*skb && (*skb)->truesize >= *data_size) {
+        *data = skb_put(*skb, *data_size);
+        if (!*data) {
+            printk(KERN_ERR "fusion_cn: skb_put failed\n");
+            kfree_skb(*skb);
+            *skb = NULL;
+            return -ENOMEM;
+        }
+        return 0;
+    }
+
+    if (*skb) kfree_skb(*skb);
     *skb = alloc_skb(*data_size, GFP_ATOMIC);
     if (!*skb) {
-        printk(KERN_ERR"fusion_cn: alloc_skb failed\n");
+        printk(KERN_ERR "fusion_cn: alloc_skb failed\n");
         return -ENOMEM;
     }
 
     *data = skb_put(*skb, *data_size);
     if (!*data) {
-        printk(KERN_ERR"fusion_cn: skb_put failed\n");
+        printk(KERN_ERR "fusion_cn: skb_put failed\n");
         kfree_skb(*skb);
         *skb = NULL;
         return -ENOMEM;

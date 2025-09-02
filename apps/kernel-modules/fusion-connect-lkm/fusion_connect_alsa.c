@@ -23,13 +23,13 @@
 
 static struct platform_device *g_pdev;
 
-static const unsigned int supported_rates[] = { 44100, 48000, 96000 };
+static const unsigned int supported_rates[] = { 48000, 96000 };
 static const struct snd_pcm_hw_constraint_list constraints_rates = {
     .count = ARRAY_SIZE(supported_rates),
     .list = supported_rates,
 };
 
-static const unsigned int supported_period_sizes[] = { 6, 12, 16, 48, 192 };
+static const unsigned int supported_period_sizes[] = { 6, 12, 16, 48, 96, 192 };
 static const struct snd_pcm_hw_constraint_list constraints_period_sizes = {
     .count = ARRAY_SIZE(supported_period_sizes),
     .list = supported_period_sizes,
@@ -350,9 +350,6 @@ static int fusion_cn_pcm_open(struct snd_pcm_substream *substream)
         return -EINVAL;
     }
     switch (stream->rate) {
-    case 44100:
-        hw.rates = SNDRV_PCM_RATE_44100;
-        break;
     case 48000:
         hw.rates = SNDRV_PCM_RATE_48000;
         break;
@@ -370,9 +367,9 @@ static int fusion_cn_pcm_open(struct snd_pcm_substream *substream)
     hw.rate_max = stream->rate;
     hw.channels_min = stream->channels;
     hw.channels_max = stream->channels;
-    hw.buffer_bytes_max = 3072 * FUSION_CN_NUM_CHANNELS_MAX * 4;
-    hw.period_bytes_min = 6 * 2;
-    hw.period_bytes_max = 192 * FUSION_CN_NUM_CHANNELS_MAX * 4;
+    hw.period_bytes_min = stream->rtp_frame_size * stream->channels * stream->sample_width;
+    hw.period_bytes_max = (stream->rtp_frame_size * 4 * 4) * stream->channels * stream->sample_width;
+    hw.buffer_bytes_max = hw.period_bytes_max * 64 / 4;
     hw.periods_min = 2;
     hw.periods_max = 64;
 
@@ -635,7 +632,7 @@ int fusion_cn_alsa_open_substream(struct fusion_cn_chip *alsa_chip, uint64_t str
     stream->stream_index = stream_index;
     stream->pcm = pcm;
 
-    if (rate != 44100 && rate != 48000 && rate != 96000) {
+    if (rate != 48000 && rate != 96000) {
         printk(KERN_ERR "fusion_cn_alsa: open_substream: Stream %s rate %u invalid\n", stream_name, rate);
         err = -EINVAL;
         goto stream_free;
