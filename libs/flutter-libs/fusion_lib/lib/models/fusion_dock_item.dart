@@ -10,6 +10,7 @@ class DockItem {
   double height;
   bool expanded;
   int? zIndex;
+  int? dockedOrder;
 
   DockItem({
     required this.id,
@@ -21,5 +22,6 @@ class DockItem {
     this.height = 650,
     this.expanded = false,
     this.zIndex,
+    this.dockedOrder,
   });
 }

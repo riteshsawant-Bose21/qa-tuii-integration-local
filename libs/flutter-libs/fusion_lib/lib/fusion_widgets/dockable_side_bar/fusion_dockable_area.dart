@@ -31,6 +31,10 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
   /// Track the highest z-index for bringing items to front
   static int _highestZIndex = 0;
 
+  /// Track the order items were docked to the right side
+  static int _rightDockOrder = 0;
+  static int _leftDockOrder = 0;
+
   @override
   void initState() {
     super.initState();
@@ -98,10 +102,21 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
         item.docked = true;
         item.expanded = false;
         item.side = "left";
+        _leftDockOrder++;
+        item.dockedOrder = _leftDockOrder;
       } else if (widget.showRight && dx > screenWidth - 484) {
         item.docked = true;
         item.expanded = false;
         item.side = "right";
+        // Assign docked order for right side items
+        _rightDockOrder++;
+        item.dockedOrder = _rightDockOrder;
+
+        // Count all docked items on the right side after this change
+        final items = getItemsForTab();
+        final rightDockedItems = items.where((i) => i.docked && i.side == "right").toList();
+        print("Right docked items count: ${rightDockedItems.length}");
+        print("Item ${item.title} docked to right with order: ${item.dockedOrder}");
       } else {
         item.position = details.offset;
         item.docked = false;
@@ -169,7 +184,7 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
             if (widget.showLeft)
               FusionDockSidebar(
                 side: "left",
-                items: items.where((i) => i.docked && i.side == "left").toList(),
+                items: items.where((i) => i.docked && i.side == "left").toList()..sort((a, b) => (a.dockedOrder ?? 0).compareTo(b.dockedOrder ?? 0)),
                 itemConfigs: widget.dockItemList,
                 onItemUndock: _handleItemUndock,
                 onExpansionChanged: _handleExpansionChanged,
@@ -180,7 +195,7 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
             if (widget.showRight)
               FusionDockSidebar(
                 side: "right",
-                items: items.where((i) => i.docked && i.side == "right").toList(),
+                items: items.where((i) => i.docked && i.side == "right").toList()..sort((a, b) => (a.dockedOrder ?? 0).compareTo(b.dockedOrder ?? 0)),
                 itemConfigs: widget.dockItemList,
                 onItemUndock: _handleItemUndock,
                 onExpansionChanged: _handleExpansionChanged,
