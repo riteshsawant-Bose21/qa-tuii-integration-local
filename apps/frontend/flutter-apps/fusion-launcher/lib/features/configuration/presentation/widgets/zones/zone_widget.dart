@@ -29,8 +29,9 @@ class ZoneWidget extends StatefulWidget {
   final VoidCallback onDelete;
   final void Function(Zone) duplicateZone;
   final Function(Speaker speakers) onSpeakerUpdated;
+  final Function(Speaker, LocationModel) onSpeakerModelUpdated;
   final Function(Speaker speakers) onSpeakerDeleted;
-  final Function(Speaker speakers) onSpeakerAdded;
+  final Function(Speaker speakers, String zoneId) onSpeakerAdded;
   final Function(FloorModel) onFloorUpdated;
   final Function(FloorModel) onFloorAdded;
   final bool isControlMode;
@@ -50,6 +51,7 @@ class ZoneWidget extends StatefulWidget {
     required this.onFloorUpdated,
     required this.onFloorAdded,
     required this.isControlMode,
+    required this.onSpeakerModelUpdated,
   });
 
   @override
@@ -73,7 +75,7 @@ class ZoneWidgetState extends State<ZoneWidget> {
     );
     if (picked != null) {
       final List<String> updatedMixIds = picked.map((SourceSet m) => m.id).toList();
-      widget.onZoneUpdated(zone.copyWith(mixIds: updatedMixIds));
+      widget.onZoneUpdated(zone.copyWith(sourceSetIds: updatedMixIds));
     }
   }
 
@@ -324,7 +326,7 @@ class ZoneWidgetState extends State<ZoneWidget> {
                                           : () {
                                             final List<String> updatedMixIds = List<String>.from(widget.zone.sourceSetIds);
                                             updatedMixIds.removeAt(deviceIndex);
-                                            widget.onZoneUpdated(widget.zone.copyWith(mixIds: updatedMixIds));
+                                            widget.onZoneUpdated(widget.zone.copyWith(sourceSetIds: updatedMixIds));
                                           },
                                 ),
                               );
@@ -386,7 +388,10 @@ class ZoneWidgetState extends State<ZoneWidget> {
                           blocks: <ProcessingBlockModel>[],
                           price: speakerData.price,
                         );
-                        widget.onSpeakerAdded(newSpeaker);
+                        print(
+                          "New Speaker: location - ${newSpeaker.locationEntity.zoneId} , floor - ${newSpeaker.locationEntity.floorId}, LA - ${newSpeaker.locationEntity.listeningAreaId}",
+                        );
+                        widget.onSpeakerAdded(newSpeaker, widget.zone.id);
                       },
                       color: Colors.white,
                       itemBuilder: (BuildContext context) {
@@ -445,6 +450,9 @@ class ZoneWidgetState extends State<ZoneWidget> {
                         isControlMode: widget.isControlMode,
                         onOutputChanged: (Speaker updated) {
                           widget.onSpeakerUpdated(updated);
+                        },
+                        onSpeakerModelUpdated: (Speaker speaker, LocationModel updatedLocation) {
+                          widget.onSpeakerModelUpdated(speaker, updatedLocation);
                         },
                         onDelete: () {
                           widget.onSpeakerDeleted(speaker);

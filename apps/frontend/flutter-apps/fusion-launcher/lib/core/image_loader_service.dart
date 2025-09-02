@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -16,14 +17,10 @@ class ImageLoaderService {
 
     ui.Image image;
 
-    print('Loading image: $imagePath');
-
     if (_isAssetPath(imagePath)) {
       image = await _loadAssetImage(imagePath);
-      print('Loaded image from assets: $imagePath');
     } else {
       image = await _loadFileImage(imagePath);
-      print('Loaded image from files: $imagePath');
     }
 
     _cache[imagePath] = image;
@@ -60,12 +57,12 @@ class ImageLoaderService {
 
       if (await file.exists()) {
         await file.delete();
-        print('Deleted image file: $imagePath');
+        debugPrint('Deleted image file: $imagePath');
       } else {
-        print('Image file not found for deletion: $imagePath');
+        debugPrint('Image file not found for deletion: $imagePath');
       }
     } else {
-      print('Cannot delete asset images: $imagePath');
+      debugPrint('Cannot delete asset images: $imagePath');
     }
   }
 
@@ -120,13 +117,13 @@ class ImageLoaderService {
     try {
       return await loadImage(imagePath);
     } catch (e) {
-      print('Failed to load image: $imagePath, Error: $e');
+      debugPrint('Failed to load image: $imagePath, Error: $e');
 
       if (fallbackAssetPath != null) {
         try {
           return await loadImage(fallbackAssetPath);
         } catch (fallbackError) {
-          print('Failed to load fallback image: $fallbackAssetPath, Error: $fallbackError');
+          debugPrint('Failed to load fallback image: $fallbackAssetPath, Error: $fallbackError');
         }
       }
 
@@ -165,7 +162,7 @@ class ImageLoaderService {
 
       return size;
     } catch (e) {
-      print('Failed to get image dimensions for: $imagePath, Error: $e');
+      debugPrint('Failed to get image dimensions for: $imagePath, Error: $e');
       return null;
     }
   }

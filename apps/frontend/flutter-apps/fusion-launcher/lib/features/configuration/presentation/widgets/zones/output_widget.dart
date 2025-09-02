@@ -14,6 +14,7 @@ class OutputWidget extends StatefulWidget {
   final Function(FloorModel) onFloorUpdated;
   final Function(FloorModel) onFloorAdded;
   final bool isControlMode;
+  final Function(Speaker, LocationModel) onSpeakerModelUpdated;
 
   const OutputWidget({
     super.key,
@@ -23,6 +24,7 @@ class OutputWidget extends StatefulWidget {
     required this.onFloorUpdated,
     required this.onFloorAdded,
     required this.isControlMode,
+    required this.onSpeakerModelUpdated,
   });
 
   @override
@@ -94,7 +96,7 @@ class OutputWidgetState extends State<OutputWidget> {
                     );
                   }
 
-                  widget.onOutputChanged(widget.speaker.copyWith(locationEntity: location, pos: center));
+                  widget.onSpeakerModelUpdated(widget.speaker.copyWith(pos: center), location);
                 }
               },
               child: Padding(

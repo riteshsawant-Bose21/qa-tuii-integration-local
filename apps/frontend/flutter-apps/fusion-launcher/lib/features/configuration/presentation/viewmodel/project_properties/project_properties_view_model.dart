@@ -51,6 +51,10 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
   //get all Fusion devices
   List<FusionDevice> get fusionDevices => projectManager.getAllFusionDevices();
 
+  FloorModel get currentFloor {
+    return floors[currentFloorIndex];
+  }
+
   //set project name
   void setProjectName(String name) {
     try {
@@ -137,5 +141,35 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
       FusionLogger.log(tag: LogTag.project, message: "Failed to set current floor index: $e");
       throwError("Failed to set current floor index: $e");
     }
+  }
+
+  void setCurrentSelectedHardware(String? hardware) {
+    currentSelectedHardwareId = hardware;
+  }
+
+  void setCurrentSelectedListeningArea(String? area) {
+    currentSelectedListeningAreaId = area;
+  }
+
+  HardwareComponent? getCurrentSelectedHardware() {
+    if (currentSelectedHardwareId == null) return null;
+    try {
+      return getHardware(currentSelectedHardwareId!);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get current selected hardware: $e");
+      currentSelectedHardwareId = null;
+    }
+    return null;
+  }
+
+  ListeningArea? getCurrentSelectedListeningArea() {
+    if (currentSelectedListeningAreaId == null) return null;
+    try {
+      return getListeningArea(currentSelectedListeningAreaId!);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get current selected listening area: $e");
+      currentSelectedListeningAreaId = null;
+    }
+    return null;
   }
 }

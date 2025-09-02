@@ -56,6 +56,7 @@ class FloorCanvasController {
 
   // update hardware component's listing area id
   setHardwareComponentListeningAreaId(HardwareComponent hardwareComponent) {
+    print("called setHardwareComponentListeningAreaId for ${hardwareComponent.name}");
     _setHardwareComponentListeningAreaId?.call(hardwareComponent);
   }
 

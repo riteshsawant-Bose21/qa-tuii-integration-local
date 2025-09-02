@@ -86,4 +86,12 @@ extension HardwareManager on ProjectManager {
     }
     return hw;
   }
+
+  //update hardware location
+  void updateHardwareLocation(String hardwareId, LocationModel newLocation) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    projectService!.updateHardwareLocation(hardwareId, newLocation);
+  }
 }

@@ -20,7 +20,8 @@ import '../../../../core/widgets/spl_range_slider.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../../schematics/presentation/pages/amplifier_matching_page.dart';
 import '../widgets/products_sidebar.dart';
-import '../widgets/side_panel/side_panel.dart';
+import '../widgets/properties/properties_side_bar.dart';
+import '../widgets/zones_panel/zones_panel.dart';
 
 class FloorPlanProjectEditor extends StatefulWidget {
   const FloorPlanProjectEditor({super.key});
@@ -310,6 +311,7 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
                                   controller: floorCanvasController,
                                   hardwareComponents: serviceLocator<ProjectViewModel>().getHardwareForFloor(floor.id),
                                   listeningAreas: serviceLocator<ProjectViewModel>().getListeningAreasForFloor(floor.id),
+                                  floor: floor,
                                   floorPlanEntity: floor.floorPlan,
                                   onUpdateHardwareComponent: serviceLocator<ProjectViewModel>().updateHardware,
                                   zones: serviceLocator<ProjectViewModel>().zones,
@@ -326,8 +328,22 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
                                       floor.copyWith(floorPlan: floor.floorPlan.copyWith(canvasPan: p)),
                                     );
                                   },
-                                  onAddListeningArea: (ListeningArea created) {
+                                  moveHardware: (HardwareComponent hardware, String? newListeningAreaId, String? floorId) {
+                                    serviceLocator<ProjectViewModel>().moveHardware(hardware.id, floorId: floorId, listeningAreaId: newListeningAreaId);
+                                    serviceLocator<ProjectViewModel>().saveProjectToLocal();
+                                  },
+                                  onAddListeningArea: (ListeningArea created, List<HardwareComponent>? containedHardware) {
                                     serviceLocator<ProjectViewModel>().addListeningArea(created, floor.id);
+                                    if (containedHardware != null) {
+                                      for (final HardwareComponent hc in containedHardware) {
+                                        serviceLocator<ProjectViewModel>().moveHardware(
+                                          hc.id,
+                                          listeningAreaId: created.id,
+                                          floorId: floor.id,
+                                        );
+                                      }
+                                    }
+
                                     calculateSPL();
                                     serviceLocator<ProjectViewModel>().saveProjectToLocal();
                                   },
@@ -346,10 +362,21 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
                                     }
                                     serviceLocator<ProjectViewModel>().saveProjectToLocal();
                                   },
-                                  onTapListeningArea: (ListeningArea value) {},
-                                  onSelectedListeningAreaIdChanged: (String? value) {},
-                                  onSelectedHardwareComponentIdChanged: (String? value) {},
-                                  onSelectedFloorPlanIdChanged: () {},
+                                  onTapListeningArea: (ListeningArea value) {
+                                    // serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(value.id);
+                                  },
+                                  onSelectedListeningAreaIdChanged: (String? value) {
+                                    serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(value);
+                                    serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(null);
+                                  },
+                                  onSelectedHardwareComponentIdChanged: (String? value) {
+                                    serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(value);
+                                    serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(null);
+                                  },
+                                  onSelectedFloorPlanIdChanged: () {
+                                    serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(null);
+                                    serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(null);
+                                  },
                                   splMin: serviceLocator<ProjectViewModel>().minSPL,
                                   splMax: serviceLocator<ProjectViewModel>().maxSPL,
                                 );
@@ -503,12 +530,12 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
                                       minValue: serviceLocator<ProjectViewModel>().minSPL,
                                       maxValue: serviceLocator<ProjectViewModel>().maxSPL,
                                       onChanged: (double min, double max) {
-                                        print("SPL Range changed: ${min.round()} - ${max.round()}");
+                                        debugPrint("SPL Range changed: ${min.round()} - ${max.round()}");
                                         serviceLocator<ProjectViewModel>().setMinSPL(min);
                                         serviceLocator<ProjectViewModel>().setMaxSPL(max);
                                       },
                                       onChangeEnd: (double min, double max) {
-                                        print("SPL Range change ended: ${min.round()} - ${max.round()}");
+                                        debugPrint("SPL Range change ended: ${min.round()} - ${max.round()}");
 
                                         serviceLocator<ProjectViewModel>().setMinSPL(min);
                                         serviceLocator<ProjectViewModel>().setMaxSPL(max);
@@ -622,21 +649,200 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
             ),
 
             /// Right sidebar
+            // Container(
+            //   width: 240,
+            //   height: double.infinity,
+            //   decoration: BoxDecoration(
+            //     // color: Colors.grey.shade50,
+            //     borderRadius: BorderRadius.circular(6),
+            //     // border only left
+            //     border: Border(
+            //       left: BorderSide(
+            //         color: Colors.grey.shade200,
+            //       ),
+            //     ),
+            //   ),
+            //   margin: const EdgeInsets.all(12),
+            //   child: const SidePanel(),
+            // ),
+
+            // Right sidebar
             Container(
               width: 240,
-              height: double.infinity,
-              decoration: BoxDecoration(
-                // color: Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(6),
-                // border only left
-                border: Border(
-                  left: BorderSide(
-                    color: Colors.grey.shade200,
-                  ),
-                ),
-              ),
               margin: const EdgeInsets.all(12),
-              child: const SidePanel(),
+              child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+                builder: (BuildContext context, ProjectViewModelState state) {
+                  return SingleChildScrollView(
+                    child: Column(
+                      children: <Widget>[
+                        // Properties Section
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: Colors.grey.shade200),
+                          ),
+                          child: Theme(
+                            data: ThemeData().copyWith(
+                              dividerColor: Colors.transparent,
+                            ),
+                            child: ExpansionTile(
+                              title: Row(
+                                children: <Widget>[
+                                  Icon(
+                                    Icons.tune,
+                                    size: 18,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Properties',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.grey.shade700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              initiallyExpanded: false,
+                              children: <Widget>[
+                                IntrinsicHeight(
+                                  child: PropertiesSideBar(
+                                    floor: serviceLocator<ProjectViewModel>().currentFloor,
+                                    hardwareComponent: serviceLocator<ProjectViewModel>().getCurrentSelectedHardware(),
+                                    surface: serviceLocator<ProjectViewModel>().getCurrentSelectedListeningArea(),
+                                    onFloorChanged: (FloorModel floorEntity) {
+                                      serviceLocator<ProjectViewModel>().updateFloor(floorEntity);
+                                      calculateSPL();
+                                      serviceLocator<ProjectViewModel>().saveProjectToLocal();
+                                    },
+                                    onFloorDelete: (FloorModel floorEntity) {
+                                      serviceLocator<ProjectViewModel>().removeFloor(
+                                        floorEntity.id,
+                                      );
+                                      serviceLocator<ProjectViewModel>().saveProjectToLocal();
+                                    },
+                                    onHardwareDelete: (
+                                      HardwareComponent hardwareComponent,
+                                    ) {
+                                      serviceLocator<ProjectViewModel>().removeHardware(
+                                        hardwareComponent.id,
+                                      );
+                                      calculateSPL();
+                                      serviceLocator<ProjectViewModel>().saveProjectToLocal();
+                                    },
+                                    onSurfaceDelete: (ListeningArea surface) {
+                                      serviceLocator<ProjectViewModel>().removeListeningArea(
+                                        surface.id,
+                                      );
+                                      serviceLocator<ProjectViewModel>().saveProjectToLocal();
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                        // Zones Section
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: Colors.grey.shade200),
+                          ),
+                          child: Theme(
+                            data: ThemeData().copyWith(
+                              dividerColor: Colors.transparent,
+                            ),
+                            child: ExpansionTile(
+                              title: Row(
+                                children: <Widget>[
+                                  Icon(
+                                    Icons.layers,
+                                    size: 18,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Zones',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.grey.shade700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              initiallyExpanded: false,
+                              children: <Widget>[
+                                IntrinsicHeight(
+                                  child: ZonesPanel(
+                                    zones: serviceLocator<ProjectViewModel>().zones,
+                                    getZoneListeningAreas: (String zoneId) => serviceLocator<ProjectViewModel>().getListeningAreasForZone(zoneId),
+                                    getListeningAreaFloor:
+                                        (String listeningAreaId) => serviceLocator<ProjectViewModel>().getFloorForListeningArea(listeningAreaId)!,
+                                    onZoneAdded: (Zone zone) {
+                                      serviceLocator<ProjectViewModel>().addZone(zone);
+                                      serviceLocator<ProjectViewModel>().saveProjectToLocal();
+                                    },
+                                    onZoneUpdated: (Zone zone) {
+                                      serviceLocator<ProjectViewModel>().updateZone(zone);
+                                      serviceLocator<ProjectViewModel>().saveProjectToLocal();
+                                    },
+                                    onZoneDeleted: (Zone zone) {
+                                      serviceLocator<ProjectViewModel>().removeZone(zone.id);
+                                      serviceLocator<ProjectViewModel>().saveProjectToLocal();
+                                    },
+                                    onAreaRemovedFromZone: (String removedAreaId, String zoneId) {
+                                      serviceLocator<ProjectViewModel>().removeListeningAreaFromZone(removedAreaId, zoneId);
+                                      //Remove the zone id from the removed areas
+                                      // final List<HardwareComponent> componentsInRemovedArea =
+                                      // serviceLocator<ProjectViewModel>().hardwareComponents
+                                      //     .where((HardwareComponent hc) => removedAreaId == hc.locationEntity.listeningAreaId)
+                                      //     .toList();
+                                      //
+                                      // final List<HardwareComponent> updatedRemovedComponents =
+                                      // componentsInRemovedArea
+                                      //     .map(
+                                      //       (HardwareComponent component) =>
+                                      //       component.copyWith(locationEntity: component.locationEntity.copyWith(zoneId: "")),
+                                      // )
+                                      //     .toList();
+                                      // projectManager.updateHardwareList(
+                                      //   updatedRemovedComponents,
+                                      // );
+                                      serviceLocator<ProjectViewModel>().saveProjectToLocal();
+                                    },
+                                    onRequestListeningAreaSelection: (Zone zone) async {
+                                      final List<ListeningArea>? selectedAreas = await floorCanvasController.requestListeningAreaSelection(
+                                        serviceLocator<ProjectViewModel>().getListeningAreasForZone(zone.id),
+                                        zone,
+                                      );
+
+                                      if (selectedAreas != null && selectedAreas.isNotEmpty) {
+                                        for (ListeningArea area in selectedAreas) {
+                                          serviceLocator<ProjectViewModel>().addListeningAreaToZone(area.id, zone.id);
+                                        }
+                                        serviceLocator<ProjectViewModel>().saveProjectToLocal();
+                                      } else {
+                                        debugPrint("No areas selected");
+                                      }
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
             ),
           ],
         ),
@@ -935,7 +1141,7 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
         }
 
         if (mounted) Navigator.of(context).pop();
-        print('Floor plan imported successfully: $fileName');
+        debugPrint('Floor plan imported successfully: $fileName');
       }
     } catch (e) {
       if (!mounted) return;
@@ -943,7 +1149,7 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
         Navigator.of(context).pop();
       }
 
-      print('Error importing floor plan: $e');
+      debugPrint('Error importing floor plan: $e');
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -997,8 +1203,8 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
       );
 
       if (calibrationData != null) {
-        print('Calibration completed: $calibrationData');
-        print('Scale: ${calibrationData.pixelsPerUnit.toStringAsFixed(2)} pixels per ${calibrationData.unit.symbol}');
+        debugPrint('Calibration completed: $calibrationData');
+        debugPrint('Scale: ${calibrationData.pixelsPerUnit.toStringAsFixed(2)} pixels per ${calibrationData.unit.symbol}');
 
         const double canvasPixelsPerMeter = 100.0;
 
@@ -1033,8 +1239,8 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
         final double canvasHeightInPixels = heightInMeters * canvasPixelsPerMeter;
         final Size floorPlanSize = Size(canvasWidthInPixels, canvasHeightInPixels);
 
-        print('Real-world dimensions: ${widthInMeters.toStringAsFixed(2)}m x ${heightInMeters.toStringAsFixed(2)}m');
-        print('Canvas dimensions: ${canvasWidthInPixels.toStringAsFixed(1)}px x ${canvasHeightInPixels.toStringAsFixed(1)}px');
+        debugPrint('Real-world dimensions: ${widthInMeters.toStringAsFixed(2)}m x ${heightInMeters.toStringAsFixed(2)}m');
+        debugPrint('Canvas dimensions: ${canvasWidthInPixels.toStringAsFixed(1)}px x ${canvasHeightInPixels.toStringAsFixed(1)}px');
 
         serviceLocator<ProjectViewModel>().updateFloor(
           floor.copyWith(
@@ -1049,13 +1255,13 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
         floorCanvasController.loadFloorPlanImage();
         serviceLocator<ProjectViewModel>().saveProjectToLocal();
       } else {
-        print('Calibration cancelled by user');
+        debugPrint('Calibration cancelled by user');
       }
     } catch (e) {
       if (mounted && Navigator.of(context).canPop()) {
         Navigator.of(context).pop();
       }
-      print('Error during calibration: $e');
+      debugPrint('Error during calibration: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

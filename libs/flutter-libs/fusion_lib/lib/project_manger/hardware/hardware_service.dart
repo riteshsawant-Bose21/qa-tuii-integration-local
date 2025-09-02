@@ -173,4 +173,27 @@ extension HardwareService on ProjectService {
   HardwareComponent? getHardwareById(String hardwareId) {
     return hardware.get(hardwareId);
   }
+
+  //Update location model
+  void updateHardwareLocation(String hardwareId, LocationModel newLocation) {
+    final hw = hardware.get(hardwareId);
+    if (hw == null) throw Exception('Hardware $hardwareId not found');
+
+    if (newLocation.listeningAreaId != null || newLocation.floorId != null) {
+      // Move the hardware to the new location
+      moveHardware(hardwareId, listeningAreaId: newLocation.listeningAreaId, floorId: newLocation.floorId);
+    } else {
+      hardware.add(hw.id, hw.copyWith(locationEntity: newLocation));
+
+      if (newLocation.floorId == null && hw.locationEntity.floorId != null) {
+        relationships.unlink(RelationshipType.hardwareLocation, hw.locationEntity.floorId!, hw.id);
+      }
+      if (newLocation.zoneId == null && hw.locationEntity.zoneId != null) {
+        relationships.unlink(RelationshipType.hardwareLocation, hw.locationEntity.zoneId!, hw.id);
+      }
+      if (newLocation.listeningAreaId == null && hw.locationEntity.listeningAreaId != null) {
+        relationships.unlink(RelationshipType.hardwareLocation, hw.locationEntity.listeningAreaId!, hw.id);
+      }
+    }
+  }
 }

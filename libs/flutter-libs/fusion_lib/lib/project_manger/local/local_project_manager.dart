@@ -97,11 +97,11 @@ class LocalProjectManager {
       Map<String, dynamic> newProjectData = {
         'id': projectId,
         'name': projectDetails.name,
+        'projectName': projectDetails.name,
         'metaData': sampleMetadata.toString(),
         'colors': newColor.map((Color color) => color.value).toList(),
         'createdAt': now.toIso8601String(),
         'updatedAt': now.toIso8601String(),
-        "projectName": "",
         "floors": [
           {"id": FusionUtils.shortStringUUID(), 'name': "Floor 1", 'floorPlan': FloorPlanModel.defaultFloorPlan, 'listeningAreas': []},
         ],

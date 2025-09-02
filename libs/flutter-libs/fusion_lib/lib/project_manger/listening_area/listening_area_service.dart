@@ -1,25 +1,115 @@
 import '../../fusion_lib.dart';
 
 extension ListeningAreaService on ProjectService {
-  /// add a new Listening area
-  void addListeningAreaToFloor(ListeningArea area, String floorId) {
+  /// Add a listening area and link it to exactly one floor.
+  /// Throws if:
+  ///  - the listening area already exists in the repo, OR
+  ///  - the floor does not exist, OR
+  ///  - the listening area is already linked to a floor (prevents multi-floor).
+  void addListeningArea(ListeningArea area, String floorId, {bool overwriteIfLinked = false}) {
+    // Validate floor exists
     if (!floors.exists(floorId)) {
-      throw Exception('Floor with id $floorId does not exist');
+      throw Exception('Floor $floorId not found');
     }
+
+    // If area exists as repo entry, you may want to throw or update. We throw here.
     if (listeningAreas.exists(area.id)) {
-      throw Exception('ListeningArea with id ${area.id} already exists');
+      throw Exception('ListeningArea ${area.id} already exists in repository');
     }
+
+    // If the area is already linked to a floor (shouldn't be since we didn't store it yet),
+    // guard against external data cases (e.g., when loading pre-linked objects).
+    final existingFloor = relationships.getParent(RelationshipType.floorListening, area.id);
+
+    if (existingFloor != null) {
+      if (!overwriteIfLinked) {
+        throw Exception('ListeningArea ${area.id} is already linked to floor $existingFloor');
+      } else {
+        // unlink previous relationship (move)
+        relationships.unlink(RelationshipType.floorListening, existingFloor, area.id);
+      }
+    }
+
+    // Add to repo and create the single floor relationship
     listeningAreas.add(area.id, area);
+
+    final floor = floors.get(floorId);
+
+    if (floor != null) {
+      // remove id if present
+      floor.listeningAreaIds.add(area.id);
+    }
     relationships.link(RelationshipType.floorListening, floorId, area.id);
   }
 
-  /// remove listening area
-  void removeListeningArea(String listeningAreaId) {
+  /// Remove a listening area and keep everything consistent.
+  ///
+  /// - Reads referencing parents BEFORE removing the repo entry.
+  /// - Iterates copies of relationship sets to avoid concurrent modification issues.
+  /// - Unlinks relationships explicitly for each parent.
+  /// - Updates FloorModel.listeningAreasId, Zone.listeningAreasIds, and Hardware.locationEntity
+  ///   (handles both mutable and immutable hardware by replacing repo entries).
+  /// - Finally removes remaining relationships defensively and removes the repo item.
+  ///
+  /// Behavior:
+  /// - No-op if id doesn't exist (change to throw if you prefer).
+  void removeListeningArea(
+    String listeningAreaId, {
+    bool throwOnMissing = false,
+  }) {
+    // 0) Early checks: must exist
     if (!listeningAreas.exists(listeningAreaId)) {
-      throw Exception('ListeningArea with id $listeningAreaId does not exist');
+      if (throwOnMissing) {
+        throw Exception('ListeningArea $listeningAreaId not found');
+      }
+      return; // idempotent no-op
     }
-    listeningAreas.remove(listeningAreaId);
+
+    // 1) Capture current parents BEFORE mutating relationships or deleting repo entry
+    final floorParentId = relationships.getParent(RelationshipType.floorListening, listeningAreaId);
+
+    // copy zone parents into a list (avoid iterating underlying Set while mutating)
+    final zoneParentId = relationships.getParent(RelationshipType.zoneListening, listeningAreaId);
+
+    // copy hardware children
+    final hardwareChildren = relationships.getChildren(RelationshipType.hardwareLocation, listeningAreaId).toList();
+
+    // 2) Update the floor model (there is at most one floor per your constraint)
+    if (floorParentId != null) {
+      final floor = floors.get(floorParentId);
+      if (floor != null) {
+        // remove id if present
+        floor.listeningAreaIds.remove(listeningAreaId);
+      }
+      // unlink this relationship explicitly
+      relationships.unlink(RelationshipType.floorListening, floorParentId, listeningAreaId);
+    }
+
+    // 3) Update each zone that referenced this listening area
+    if (zoneParentId != null) {
+      final zone = zones.get(zoneParentId);
+      if (zone != null) {
+        zone.listeningAreasIds.remove(listeningAreaId);
+      }
+      // explicitly unlink in RelationshipManager
+      relationships.unlink(RelationshipType.zoneListening, zoneParentId, listeningAreaId);
+    }
+
+    // 4) Delete all the Hardware inside the listening area
+    for (final hwId in hardwareChildren) {
+      print("Removing ListeningArea $listeningAreaId from Hardware $hwId");
+      // unlink hardware relation to Listening area first
+      relationships.unlink(RelationshipType.hardwareLocation, hwId, listeningAreaId);
+
+      //Remove hardware from repository
+      removeHardware(hwId);
+    }
+
+    // 5) Defensive cleanup: remove any other relationships that mention this entity
     relationships.removeAllRelationships(listeningAreaId);
+
+    // 6) Finally remove the listening area from the repository
+    listeningAreas.remove(listeningAreaId);
   }
 
   /// update listening area

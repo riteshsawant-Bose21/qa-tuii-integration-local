@@ -12,6 +12,7 @@ import '../../../core/service_locator.dart';
 import '../../../core/utils/fusion_utils.dart';
 import '../../../core/widgets/clean_widgets.dart';
 import '../../../core/widgets/keep_alive_wrapper.dart';
+import '../../cloud_ui/presentation/pages/cloud_web_view.dart';
 import '../../configuration/presentation/pages/audio_system_design_page.dart';
 import '../../schematics/presentation/pages/schematics_page.dart';
 import '../../venue_design/presentation/pages/venue_design_page.dart';
@@ -51,7 +52,7 @@ class _ProjectPageState extends State<ProjectPage> with SingleTickerProviderStat
         _tabController.animateTo(index);
       }
     });
-    _projectNameController = TextEditingController();
+    _projectNameController = TextEditingController(text: serviceLocator<ProjectViewModel>().projectName);
   }
 
   @override
@@ -279,10 +280,10 @@ class _ProjectPageState extends State<ProjectPage> with SingleTickerProviderStat
             child: AudioSystemDesignPage(),
           ),
           // KeepAliveWrapper(
-          // FusionCloudWebView(
-          //   pageToRedirect:
-          //       "embed/projects/${projectManager.value.cloudId}?token=${serviceLocator<SharedPreferencesHandler>().getString(SharedPreferenceKeys.accessToken)}",
-          // ),
+          const FusionCloudWebView(
+            pageToRedirect: "google.com",
+            // "embed/projects/${projectManager.value.cloudId}?token=${serviceLocator<SharedPreferencesHandler>().getString(SharedPreferenceKeys.accessToken)}",
+          ),
           // ),
         ],
       ),

@@ -132,13 +132,22 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
                                       onZoneUpdated: _updateZone,
                                       onZoneDeleted: _deleteZone,
                                       onSpeakerUpdated: (Speaker speakers) {
+                                        print("Updating hardware: ${speakers.toJson()}");
                                         serviceLocator<ProjectViewModel>().updateHardware(speakers);
+                                      },
+                                      onSpeakerModelUpdated: (Speaker speaker, LocationModel locationModel) {
+                                        // Update speaker model for position and rotation changes
+                                        // serviceLocator<ProjectViewModel>().updateHardware(speaker);
+                                        print("Updating hardware location: ${speaker.toJson()} with location: ${locationModel.toJson()}");
+                                        //for location changes
+                                        serviceLocator<ProjectViewModel>().updateHardwareLocation(speaker.id, locationModel);
                                       },
                                       onSpeakerDeleted: (Speaker speaker) {
                                         serviceLocator<ProjectViewModel>().removeHardware(speaker.id);
                                       },
-                                      onSpeakerAdded: (Speaker speaker) {
+                                      onSpeakerAdded: (Speaker speaker, String zoneId) {
                                         serviceLocator<ProjectViewModel>().addHardware(speaker);
+                                        serviceLocator<ProjectViewModel>().addSpeakerToZone(speaker.id, zoneId);
                                       },
                                       onFloorUpdated: (FloorModel updatedFloor) {
                                         serviceLocator<ProjectViewModel>().updateFloor(updatedFloor);

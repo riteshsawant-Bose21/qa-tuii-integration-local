@@ -8,6 +8,7 @@ import '../../fusion_lib.dart';
 class ProjectService {
   final String id;
   final String name;
+  final String projectName;
   final List<Color> colors;
   final String? virtualIP;
   int currentFloorIndex;
@@ -33,6 +34,7 @@ class ProjectService {
   ProjectService({
     required this.id,
     required this.name,
+    required this.projectName,
     required this.colors,
     this.virtualIP,
     this.currentFloorIndex = 0,
@@ -64,6 +66,7 @@ class ProjectService {
     return ProjectService(
       id: id ?? this.id,
       name: name ?? this.name,
+      projectName: name ?? this.projectName,
       colors: colors ?? this.colors,
       virtualIP: virtualIP ?? this.virtualIP,
       currentFloorIndex: currentFloorIndex ?? this.currentFloorIndex,
@@ -89,6 +92,7 @@ class ProjectService {
     return {
       "id": id,
       "name": name,
+      "projectName": name,
       "colors": colors.map((c) => c.value).toList(),
       "virtualIP": virtualIP,
       "currentFloorIndex": currentFloorIndex,
@@ -123,6 +127,7 @@ class ProjectService {
     final service = ProjectService(
       id: json["id"],
       name: json["name"],
+      projectName: json["projectName"],
       colors: (json['colors'] as List<dynamic>?)?.map((dynamic e) => Color(int.parse(e.toString()))).toList() ?? <Color>[Colors.green, Colors.greenAccent],
       virtualIP: json["virtualIP"],
       currentFloorIndex: json["currentFloorIndex"] ?? 0,

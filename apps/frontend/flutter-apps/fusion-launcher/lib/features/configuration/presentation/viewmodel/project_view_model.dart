@@ -27,6 +27,10 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
 
   bool get hasProjects => allProjects.isNotEmpty;
 
+  /// Temp variables for various selections
+  String? currentSelectedHardwareId;
+  String? currentSelectedListeningAreaId;
+
   /// Loads all local projects and emits the appropriate state.
   Future<void> loadAllLocalProjects() async {
     emit(ProjectLoading());
@@ -108,9 +112,8 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
 
   ///Open project by Project id
   void openProject(String projectId) {
-    print("Opening project with ID: $projectId");
     final ResponseCallback<ProjectData> projectResponse = projectManager.openProjectById(projectId);
-    print("Open project response: ${projectResponse.success}, ${projectResponse.message}");
+
     if (projectResponse.success && projectResponse.data != null) {
       _currentProject = projectResponse.data;
       emit(ProjectLoaded(projects: allProjects, currentProject: projectResponse.data));
@@ -121,11 +124,7 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
 
   /// get Project json
   Map<String, dynamic> getProjectJson() {
-    if (_currentProject != null) {
-      return _currentProject!.toJson();
-    } else {
-      throw Exception("No project is currently open.");
-    }
+    return projectManager.getCurrentProjectJson();
   }
 
   /// Clears the current project selection.

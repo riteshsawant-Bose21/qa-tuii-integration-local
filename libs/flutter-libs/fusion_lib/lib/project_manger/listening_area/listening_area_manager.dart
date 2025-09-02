@@ -6,7 +6,7 @@ extension ListeningAreaManager on ProjectManager {
     if (projectService == null) {
       throw Exception('No project is currently open');
     }
-    projectService!.addListeningAreaToFloor(listeningArea, floorId);
+    projectService!.addListeningArea(listeningArea, floorId);
   }
 
   /// Update a Listening area

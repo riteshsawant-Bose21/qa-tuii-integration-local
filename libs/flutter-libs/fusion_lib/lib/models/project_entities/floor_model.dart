@@ -24,7 +24,7 @@ class FloorModel {
     'id': id,
     'name': name,
     'floorPlan': floorPlan.toJson(),
-    'listeningAreas': listeningAreaIds.map((String e) => e).toList(),
+    'listeningAreaIds': listeningAreaIds.map((String e) => e).toList(),
   };
 
   factory FloorModel.fromJson(Map<String, dynamic> json) {
@@ -33,7 +33,7 @@ class FloorModel {
     final FloorPlanModel fp = FloorPlanModel.fromJson(fpMap);
 
     // 2) Listening Areas
-    final List<String> listeningAreas = (json['listeningAreas'] as List<dynamic>?)?.map((dynamic e) => e as String).toList() ?? <String>[];
+    final List<String> listeningAreas = (json['listeningAreaIds'] as List<dynamic>?)?.map((dynamic e) => e as String).toList() ?? <String>[];
 
     return FloorModel(id: json['id'] as String?, name: json['name'] as String, floorPlan: fp, listeningAreaIds: listeningAreas);
   }

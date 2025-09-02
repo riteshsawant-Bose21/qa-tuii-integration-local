@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:fusion_lib/models/project_entities/zone_model.dart';
 
 import '../di/service_locator.dart';
+import '../fusion_lib.dart';
 import '../fusion_utils/image_loader_service.dart';
 import '../models/project_entities/floor_plan_model.dart';
 import '../models/project_entities/hardware_component_model.dart';
@@ -23,6 +24,7 @@ class FloorCanvas extends StatefulWidget {
   final List<Zone> zones;
   final List<ListeningArea> listeningAreas;
   final FloorPlanModel floorPlanEntity;
+  final FloorModel floor;
   final double splMin;
   final double splMax;
 
@@ -30,7 +32,7 @@ class FloorCanvas extends StatefulWidget {
 
   // mutation callbacks
   final ValueChanged<FloorPlanModel> onFloorPlanUpdated;
-  final ValueChanged<ListeningArea> onAddListeningArea;
+
   final ValueChanged<ListeningArea> onUpdateListeningArea;
   final ValueChanged<ListeningArea> onTapListeningArea;
   final ValueChanged<HardwareComponent> onUpdateHardwareComponent;
@@ -41,6 +43,8 @@ class FloorCanvas extends StatefulWidget {
   final ValueChanged<String?> onSelectedListeningAreaIdChanged;
   final ValueChanged<String?> onSelectedHardwareComponentIdChanged;
   final Function onSelectedFloorPlanIdChanged;
+  final Function(HardwareComponent, String? listeningAreaId, String? floorId) moveHardware;
+  final Function(ListeningArea newArea, List<HardwareComponent>? hardwaresInsideArea) onAddListeningArea;
 
   const FloorCanvas({
     super.key,
@@ -54,6 +58,7 @@ class FloorCanvas extends StatefulWidget {
     required this.onUpdateHardwareComponent,
     required this.onViewportCenterUpdated,
     required this.onComponentTransformed,
+    required this.floor,
     required this.floorPlanEntity,
     required this.onCanvasZoomChanged,
     required this.onCanvasPanChanged,
@@ -64,6 +69,7 @@ class FloorCanvas extends StatefulWidget {
     required this.zones,
     required this.splMin,
     required this.splMax,
+    required this.moveHardware,
   });
 
   @override
@@ -403,8 +409,12 @@ class FloorCanvasState extends State<FloorCanvas> {
     if (_isDrawing) {
       if (e.buttons == kPrimaryMouseButton) {
         if (_current.isNotEmpty && (worldPos - _current.first).distance < 10.0 / _zoomScale) {
-          final ListeningArea newS = ListeningArea(name: "Area ${widget.listeningAreas.length + 1}", vertices: List<Offset>.of(_current));
-          widget.onAddListeningArea(newS);
+          final ListeningArea newArea = ListeningArea(name: "Area ${widget.listeningAreas.length + 1}", vertices: List<Offset>.of(_current));
+
+          final List<HardwareComponent> hardwareForArea = _getHardwareComponentsInListeningAreas(newArea);
+
+          widget.onAddListeningArea(newArea, hardwareForArea);
+
           setState(() {
             _current.clear();
             _isDrawing = false;
@@ -668,6 +678,7 @@ class FloorCanvasState extends State<FloorCanvas> {
       });
     }
     if (_isHardwareComponentDragging) {
+      print("is dragging up $_isHardwareComponentDragging is true, calling _updateHardwareComponentListeningAreaId ");
       setState(() {
         _isHardwareComponentDragging = false;
         _updateHardwareComponentListeningAreaId(widget.hardwareComponents[_selectedHardwareComponent!]);
@@ -748,20 +759,26 @@ class FloorCanvasState extends State<FloorCanvas> {
     // Determine the new listeningAreaId (use empty string when none)
     final String newListeningAreaId = hit?.id ?? '';
 
-    // Find the first zone that contains this listeningAreaId
-    String newZoneId = '';
-    for (final Zone zone in widget.zones) {
-      if (zone.listeningAreasIds.contains(newListeningAreaId)) {
-        newZoneId = zone.id;
-        break;
-      }
-    }
+    //Old Logic
+    // // Find the first zone that contains this listeningAreaId
+    // String newZoneId = '';
+    // for (final Zone zone in widget.zones) {
+    //   if (zone.listeningAreasIds.contains(newListeningAreaId)) {
+    //     newZoneId = zone.id;
+    //     break;
+    //   }
+    // }
+    //
+    // final HardwareComponent updated = hardwareComponent.copyWith(
+    //   locationEntity: hardwareComponent.locationEntity.copyWith(listeningAreaId: newListeningAreaId, zoneId: newZoneId),
+    // );
+    //
+    // widget.onUpdateHardwareComponent(updated);
 
-    final HardwareComponent updated = hardwareComponent.copyWith(
-      locationEntity: hardwareComponent.locationEntity.copyWith(listeningAreaId: newListeningAreaId, zoneId: newZoneId),
-    );
+    print("Calling moveHardware with newListeningAreaId: $newListeningAreaId");
 
-    widget.onUpdateHardwareComponent(updated);
+    //new logic
+    widget.moveHardware(hardwareComponent, newListeningAreaId.isNotEmpty ? newListeningAreaId : null, widget.floor.id);
   }
 
   ListeningArea? _findListeningAreaAt(Offset worldPos) {
@@ -770,5 +787,29 @@ class FloorCanvasState extends State<FloorCanvas> {
       if (poly.contains(worldPos)) return area;
     }
     return null;
+  }
+
+  List<HardwareComponent> _getHardwareComponentsInListeningAreas(ListeningArea area) {
+    final result = <HardwareComponent>[];
+    for (final hw in widget.hardwareComponents) {
+      if (_isPointInsidePolygon(hw.pos, area.vertices)) {
+        result.add(hw);
+      }
+    }
+    return result;
+  }
+
+  /// Ray-casting algorithm for point-in-polygon
+  bool _isPointInsidePolygon(Offset point, List<Offset> polygon) {
+    int intersections = 0;
+    for (int i = 0; i < polygon.length; i++) {
+      final p1 = polygon[i];
+      final p2 = polygon[(i + 1) % polygon.length];
+
+      if (((p1.dy > point.dy) != (p2.dy > point.dy)) && (point.dx < (p2.dx - p1.dx) * (point.dy - p1.dy) / (p2.dy - p1.dy) + p1.dx)) {
+        intersections++;
+      }
+    }
+    return intersections.isOdd;
   }
 }

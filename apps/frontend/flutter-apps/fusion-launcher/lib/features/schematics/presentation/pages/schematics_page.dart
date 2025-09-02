@@ -615,13 +615,7 @@ class SchematicsPageState extends State<SchematicsPage> {
   }
 
   Widget _buildZonesSection() {
-    final List<HardwareComponent> speakersAndControllers =
-        serviceLocator<ProjectViewModel>().genericHardwareComponents
-            .where(
-              (HardwareComponent component) =>
-                  ((component is Speaker) || (component is GenericHardwareComponent && component.type == GenericHardwareComponentType.controller)),
-            )
-            .toList();
+    final List<HardwareComponent> speakersAndControllers = serviceLocator<ProjectViewModel>().hardwareComponents;
 
     final List<Zone> zones = serviceLocator<ProjectViewModel>().zones;
 
@@ -672,11 +666,14 @@ class SchematicsPageState extends State<SchematicsPage> {
                       child: ZoneSchematicCard(
                         zone: zone,
                         hardwareComponents:
-                            speakersAndControllers
-                                .where(
-                                  (HardwareComponent component) => component.locationEntity.zoneId == zone.id,
-                                )
-                                .toList(),
+                            speakersAndControllers.where((HardwareComponent component) {
+                              if (component is Speaker) {
+                                return component.locationEntity.zoneId == zone.id;
+                              } else if (component is GenericHardwareComponent && component.type == GenericHardwareComponentType.controller) {
+                                return component.locationEntity.zoneId == zone.id;
+                              }
+                              return false;
+                            }).toList(),
                         onSpeakerAdded: (SpeakerData speakerData) {
                           final Speaker cs = Speaker(
                             name: speakerData.name,

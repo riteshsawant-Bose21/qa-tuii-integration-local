@@ -25,6 +25,7 @@ extension ListeningAreaViewModel on ProjectViewModel {
   void addListeningArea(ListeningArea area, String floorId) {
     try {
       projectManager.addListeningArea(area, floorId);
+
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to add listening area: $e");
@@ -76,4 +77,6 @@ extension ListeningAreaViewModel on ProjectViewModel {
       return <ListeningArea>[];
     }
   }
+
+  //add
 }

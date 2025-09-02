@@ -215,10 +215,10 @@ class PanelDataSourceImpl implements PanelDataSource {
         }
       }
 
-      print("Response from server: $responseDict");
+      debugPrint("Response from server: $responseDict");
 
       if (responseDict['status'] == 'success') {
-        print("Widget data updated successfully: ${audioWidget.name}  ${audioWidget.value.toString()}");
+        debugPrint("Widget data updated successfully: ${audioWidget.name}  ${audioWidget.value.toString()}");
         return audioWidget.copyWith(value: updatedValue.value).toDomain();
 
         /// FIXME: Currently updateValue API return complete information and not just the updated part and hence things

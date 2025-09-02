@@ -257,7 +257,7 @@ class TestLibraryScreen extends StatelessWidget {
                     title: 'Email',
                     hintText: 'Enter your email',
                     isRequired: true,
-                    onChanged: (String value) => print(value),
+                    onChanged: (String value) => debugPrint(value),
                   ),
                 ),
                 _buildWidgetItem(
@@ -268,7 +268,7 @@ class TestLibraryScreen extends StatelessWidget {
                     title: 'Password',
                     hintText: 'Enter password',
                     isPassword: true,
-                    onChanged: (String value) => print(value),
+                    onChanged: (String value) => debugPrint(value),
                   ),
                 ),
                 _buildWidgetItem(
@@ -289,7 +289,7 @@ class TestLibraryScreen extends StatelessWidget {
                     options: <String>['Option 1', 'Option 2', 'Option 3'],
                     hintText: 'Choose option',
                     onChanged: (String? value) {
-                      print(value);
+                      debugPrint(value);
                     },
                   ),
                 ),
@@ -310,7 +310,7 @@ class TestLibraryScreen extends StatelessWidget {
                     title: "Enable Notifications",
                     value: true,
                     onChanged: (bool newValue) {
-                      print("Switch is now: $newValue");
+                      debugPrint("Switch is now: $newValue");
                     },
                   ),
                 ),
@@ -322,7 +322,7 @@ class TestLibraryScreen extends StatelessWidget {
                     title: "Dark Mode",
                     value: false,
                     onChanged: (bool newValue) {
-                      print("Dark Mode is now: $newValue");
+                      debugPrint("Dark Mode is now: $newValue");
                     },
                   ),
                 ),
@@ -382,7 +382,7 @@ class TestLibraryScreen extends StatelessWidget {
                       FusionThemeController.setThemeMode(
                         isLight ? ThemeMode.dark : ThemeMode.light,
                       );
-                      print('Theme toggled to ${isLight ? 'Dark' : 'Light'} mode');
+                      debugPrint('Theme toggled to ${isLight ? 'Dark' : 'Light'} mode');
                     },
                     child: const Text('Toggle Theme'),
                   ),

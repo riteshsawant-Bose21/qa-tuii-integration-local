@@ -12,8 +12,9 @@ class ZonesColumn extends StatefulWidget {
   final void Function(Zone) onZoneDeleted;
   final void Function(Zone) onZoneAdded;
   final Function(Speaker) onSpeakerUpdated;
+  final Function(Speaker, LocationModel) onSpeakerModelUpdated;
   final Function(Speaker) onSpeakerDeleted;
-  final Function(Speaker) onSpeakerAdded;
+  final Function(Speaker, String) onSpeakerAdded;
   final Function(FloorModel) onFloorUpdated;
   final Function(FloorModel) onFloorAdded;
   final bool isControlMode;
@@ -33,6 +34,7 @@ class ZonesColumn extends StatefulWidget {
     required this.onFloorUpdated,
     required this.onFloorAdded,
     required this.isControlMode,
+    required this.onSpeakerModelUpdated,
   });
 
   @override
@@ -127,6 +129,9 @@ class _ZonesColumnState extends State<ZonesColumn> {
                 onZoneUpdated: (Zone updated) {
                   widget.onZoneUpdated(updated);
                 },
+                onSpeakerModelUpdated: (Speaker speaker, LocationModel location) {
+                  widget.onSpeakerModelUpdated(speaker, location);
+                },
                 onDelete: () {
                   widget.onZoneDeleted(widget.zones[i]);
                 },
@@ -134,7 +139,7 @@ class _ZonesColumnState extends State<ZonesColumn> {
                 duplicateZone: (Zone zone) {
                   final Zone newZone = Zone(
                     name: '${zone.name} (Copy)',
-                    mixIds: List<String>.from(zone.sourceSetIds),
+                    sourceSetIds: List<String>.from(zone.sourceSetIds),
                   );
                   widget.onZoneAdded(newZone);
                 },
@@ -144,8 +149,8 @@ class _ZonesColumnState extends State<ZonesColumn> {
                 onSpeakerDeleted: (Speaker speakers) {
                   widget.onSpeakerDeleted(speakers);
                 },
-                onSpeakerAdded: (Speaker speaker) {
-                  widget.onSpeakerAdded(speaker);
+                onSpeakerAdded: (Speaker speaker, String zoneId) {
+                  widget.onSpeakerAdded(speaker, zoneId);
                 },
                 onFloorUpdated: (FloorModel updatedFloor) {
                   widget.onFloorUpdated(updatedFloor);

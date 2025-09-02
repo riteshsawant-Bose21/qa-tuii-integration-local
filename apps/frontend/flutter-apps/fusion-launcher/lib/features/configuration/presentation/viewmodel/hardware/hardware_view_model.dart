@@ -77,34 +77,23 @@ extension HardwareViewModel on ProjectViewModel {
     }
   }
 
-  //add Speaker to zone
-  void addSpeakerToZone(String hardwareId, String zoneId) {
-    try {
-      projectManager.addSpeakerToZone(hardwareId, zoneId);
-      updateProject();
-    } catch (e) {
-      FusionLogger.log(tag: LogTag.project, message: "Failed to add speaker to zone: $e");
-      throwError("Failed to add speaker to zone: $e");
-    }
-  }
-
-  //remove speaker from zone
-  void removeSpeakerFromZone(String hardwareId, String zoneId) {
-    try {
-      projectManager.removeSpeakerFromZone(hardwareId, zoneId);
-      updateProject();
-    } catch (e) {
-      FusionLogger.log(tag: LogTag.project, message: "Failed to remove speaker from zone: $e");
-      throwError("Failed to remove speaker from zone: $e");
-    }
-  }
-
   List<HardwareComponent> getSpeakersInZone(String zoneId) {
     try {
       return projectManager.getHardwareInZone(zoneId);
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to get speakers for zone: $e");
       return <HardwareComponent>[];
+    }
+  }
+
+  // Update hardware location
+  void updateHardwareLocation(String hardwareId, LocationModel newLocation) {
+    try {
+      projectManager.updateHardwareLocation(hardwareId, newLocation);
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to update hardware location: $e");
+      throwError("Failed to update hardware location: $e");
     }
   }
 }
