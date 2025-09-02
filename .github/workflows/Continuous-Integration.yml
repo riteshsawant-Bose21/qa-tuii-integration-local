@@ -47,9 +47,9 @@ jobs:
             cloudServicesBackend:
               - "./apps/cloud-backend/fusion-cloud/**"
             fusionDSP:
-              - "./apps/firmware_apps/fusion-dsp/**"
+              - "./apps/firmware-apps/fusion-dsp/**"
             fusionServer:
-              - "./apps/firmware_apps/fusion-server/**"
+              - "./apps/firmware-apps/fusion-server/**"
 
   flutter-android-iOS-macOS-build:
     needs: buildChecks
@@ -137,7 +137,7 @@ jobs:
 
   cloud-web-backend-build:
     needs: buildChecks
-    if: needs.buildChecks.outputs.cloudServicesBackend == 'true' && github.ref == 'refs/heads/feature/add-fusion-dsp-project'
+    if: needs.buildChecks.outputs.cloudServicesBackend == 'true'
     concurrency:
       group: cloud-web-backend-build
     runs-on: ubuntu-agent
@@ -159,7 +159,7 @@ jobs:
 
   fusion-dsp-build:
     needs: buildChecks
-    if: needs.buildChecks.outputs.fusionDSP == 'true' && github.ref == 'refs/heads/feature/add-fusion-dsp-project'
+    if: needs.buildChecks.outputs.fusionDSP == 'true'
     concurrency:
       group: fusion-dsp-build
     runs-on: ubuntu-agent
@@ -170,6 +170,9 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: true
+
+      - name: Setup Monorepo Toolchain
+        uses: ./.github/reusable-actions/setup-toolchain
 
       - name: Build Apps
         uses: ./.github/reusable-actions/build-fusion-dsp
@@ -184,7 +187,7 @@ jobs:
 
   fusion-server-build:
     needs: buildChecks
-    if: needs.buildChecks.outputs.fusionServer == 'true' && github.ref == 'refs/heads/feature/add-fusion-dsp-project'
+    if: needs.buildChecks.outputs.fusionServer == 'true' || needs.buildChecks.outputs.fusionDSP == 'true'
     concurrency:
       group: fusion-server-build
     runs-on: ubuntu-agent

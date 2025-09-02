@@ -1,15 +1,20 @@
-# moon.yml for the cloud-services-ui application
-# go run cmd/server/main.go
-# docker-compose up --build
+project:
+  name: 'Fusion DSP'
+  description: 'Fusion DSP application moon tasks'
+
 tasks:
-  run-server:
-    command: "go"
-    args: ["run", "cmd/server/main.go"]
-  
-  go-get-mod:
-    command: "go"
-    args: ["get", "all"]
 
   build:
-    command: "go"
-    args: ["build", "-o", "fusion-web-services", "cmd/server/main.go"]
+    command: "python3"
+    args: ["package.py"]
+    deps:
+      - create-binary
+
+  create-binary:
+    command: "./moon-build.sh"
+    deps:
+      - ready-script
+
+  ready-script:
+    command: "chmod"
+    args: ["+x", "moon-build.sh", "Jenkins/SetVersionProperty.sh"]

@@ -27,6 +27,8 @@ runs:
       shell: bash
       working-directory: apps/firmware-apps/fusion-dsp
       run: |
-        source /home/ec2-user/fusion-mini-build-cache/bose/fusion/yocto-sdk/environment-setup-cortexa53-crypto-poky-linux
-        python3 ./waf configure --platform=varmini
-        python3 ./waf build
+        moon run fusion-dsp:build
+        VERSION="$(./Jenkins/SetVersionProperty.sh)-${GITHUB_RUN_NUMBER}+$(git rev-parse --short HEAD)"
+        curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T ./build/fusion-dsp_*.tar.gz ${{ inputs.nexus_url }}/Fusion-DSP/Continuous/${GITHUB_REF_NAME}/fusion-dsp/$VERSION/fusion-dsp-$VERSION.tar.gz
+        echo "Fusion DSP build uploaded to Nexus successfully!"
+        echo "fusion-dsp: ${{ inputs.nexus_url }}/Fusion-DSP/Continuous/${GITHUB_REF_NAME}/fusion-dsp/$VERSION/fusion-dsp-$VERSION.tar.gz"

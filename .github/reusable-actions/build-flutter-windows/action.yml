@@ -46,12 +46,15 @@ runs:
       run: |
         flutter pub get
         moon run flutter-apps:build-win
-        $version = "${{ steps.get_version.outputs.version }}-$(git rev-parse --short=8 HEAD)"
+        $runNumber = $env:GITHUB_RUN_NUMBER
+        $branchName = $env:GITHUB_REF_NAME
+        $version = "${{ steps.get_version.outputs.version }}-$runNumber+$(git rev-parse --short=8 HEAD)"
         Write-Output "VERSION: $version"
 
         $buildPath = "./build/windows/x64/runner/Release/fusion_design_tool_prototype.exe"
-        $nexusUrl = "${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/$version/flutter-windows/Fusion-Launcher-$version.exe"
+        $nexusUrl = "${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/$branchName/$version/flutter-windows/Fusion-Launcher-$version.exe"
         $username = "github-actions-uploader"
         $password = "${{ inputs.nexus_password }}"
-
+        
         curl.exe -k --ssl-no-revoke -f -u "$username`:$password" -T $buildPath $nexusUrl
+        Write-Output "flutter-windows: $nexusUrl"
