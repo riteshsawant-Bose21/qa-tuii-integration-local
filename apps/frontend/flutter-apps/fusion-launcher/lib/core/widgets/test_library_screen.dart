@@ -2,16 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/appbar/fusion_app_bar.dart';
-import 'package:fusion_lib/fusion_widgets/dockable_side_bar/fusion_dock_work_area.dart';
+import 'package:fusion_lib/fusion_widgets/dockable_side_bar/fusion_dockable_area.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_profile_image.dart';
 import 'package:fusion_lib/models/dock_item_config.dart';
 
 import '../../features/projects/widget/control_design_tab_switcher.dart';
 import '../../features/venue_design/presentation/widgets/side_panel/product_query.dart';
 
-/// -----------------------------
-/// DEMO APP USING COMMON COMPONENTS
-/// -----------------------------
 class TestLibraryScreen extends StatefulWidget {
   const TestLibraryScreen({super.key});
 
@@ -23,6 +20,8 @@ class _TestLibraryScreenState extends State<TestLibraryScreen> with TickerProvid
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
+      animationDuration: Duration.zero,
+
       length: 4,
       child: Scaffold(
         appBar: FusionAppBar(
@@ -53,6 +52,7 @@ class _TestLibraryScreenState extends State<TestLibraryScreen> with TickerProvid
         ),
         body: Column(
           children: <Widget>[
+            /// Tab Bar Section
             Container(
               height: 48,
               decoration: BoxDecoration(
@@ -120,7 +120,7 @@ class _TestLibraryScreenState extends State<TestLibraryScreen> with TickerProvid
             Expanded(
               child: TabBarView(
                 children: <Widget>[
-                  FusionDockWorkspace(
+                  FusionDockableArea(
                     tabKey: "tab1",
                     showLeft: true,
                     showRight: true,
@@ -172,7 +172,7 @@ class _TestLibraryScreenState extends State<TestLibraryScreen> with TickerProvid
                       ),
                     ],
                   ),
-                  FusionDockWorkspace(
+                  FusionDockableArea(
                     tabKey: "tab2",
                     showLeft: true,
                     showRight: true,
@@ -206,7 +206,7 @@ class _TestLibraryScreenState extends State<TestLibraryScreen> with TickerProvid
                       ),
                     ],
                   ),
-                  FusionDockWorkspace(
+                  FusionDockableArea(
                     tabKey: "tab3",
                     showLeft: true,
                     showRight: false,
@@ -255,7 +255,7 @@ class _TestLibraryScreenState extends State<TestLibraryScreen> with TickerProvid
   Widget _projectNameSection() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      width: 240,
+      width: 239,
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.white,
         // border right

@@ -11,24 +11,39 @@ class FusionFloatingPanel extends StatelessWidget {
   final DockItemConfig? config;
   final void Function(DraggableDetails) onDragEnd;
   final void Function(double, double) onResize;
-  // onClose
   final void Function() onClose;
-  const FusionFloatingPanel({super.key, required this.item, required this.config, required this.onDragEnd, required this.onResize, required this.onClose});
+  final void Function()? onTap; // Add tap callback
+  final void Function()? onDragStart; // Add drag start callback
+
+  const FusionFloatingPanel({
+    super.key,
+    required this.item,
+    required this.config,
+    required this.onDragEnd,
+    required this.onResize,
+    required this.onClose,
+    this.onTap, // Add tap callback
+    this.onDragStart, // Add drag start callback
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Draggable<DockItem>(
-      data: item,
-      feedback: FloatingWidget(
-        item: item,
-        config: config,
-        onClose: onClose,
-        resizing: false,
-        onResize: (_, __) {}, // No-op for feedback
+    return GestureDetector(
+      onTap: onTap, // Handle tap to bring to front
+      child: Draggable<DockItem>(
+        data: item,
+        onDragStarted: onDragStart, // Handle drag start to bring to front
+        feedback: FloatingWidget(
+          item: item,
+          config: config,
+          onClose: onClose,
+          resizing: false,
+          onResize: (_, __) {}, // No-op for feedback
+        ),
+        childWhenDragging: Container(),
+        onDragEnd: onDragEnd,
+        child: FloatingWidget(item: item, config: config, resizing: true, onResize: onResize, onClose: onClose),
       ),
-      childWhenDragging: Container(),
-      onDragEnd: onDragEnd,
-      child: FloatingWidget(item: item, config: config, resizing: true, onResize: onResize, onClose: onClose),
     );
   }
 }
@@ -36,7 +51,6 @@ class FusionFloatingPanel extends StatelessWidget {
 class FloatingWidget extends StatelessWidget {
   final DockItem item;
   final void Function() onClose;
-
   final DockItemConfig? config;
   final bool resizing;
   final void Function(double, double) onResize;

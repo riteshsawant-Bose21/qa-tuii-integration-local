@@ -9,6 +9,7 @@ class DockItem {
   double width;
   double height;
   bool expanded;
+  int? zIndex;
 
   DockItem({
     required this.id,
@@ -19,5 +20,6 @@ class DockItem {
     this.width = 240,
     this.height = 650,
     this.expanded = false,
+    this.zIndex,
   });
 }

@@ -44,6 +44,7 @@ class FusionDockSidebar extends StatelessWidget {
         ),
       ),
       child: ListView(
+        physics: const ClampingScrollPhysics(),
         children: items.map((item) {
           final config = getConfigForItem(item.id);
           return config != null

@@ -4,14 +4,14 @@ import '../../models/fusion_dock_item.dart';
 import 'fusion_dock_floating_panel.dart';
 import 'fusion_dock_side_bar.dart';
 
-class FusionDockWorkspace extends StatefulWidget {
+class FusionDockableArea extends StatefulWidget {
   final String tabKey;
   final bool showLeft;
   final bool showRight;
   final List<DockItemConfig> dockItemList;
   final Widget mainArea;
 
-  const FusionDockWorkspace({
+  const FusionDockableArea({
     super.key,
     required this.tabKey,
     required this.showLeft,
@@ -21,12 +21,15 @@ class FusionDockWorkspace extends StatefulWidget {
   });
 
   @override
-  State<FusionDockWorkspace> createState() => _FusionDockWorkspaceState();
+  State<FusionDockableArea> createState() => _FusionDockableAreaState();
 }
 
-class _FusionDockWorkspaceState extends State<FusionDockWorkspace> {
+class _FusionDockableAreaState extends State<FusionDockableArea> {
   /// Static map to store dock items globally across all tabs
   static final Map<String, DockItem> _globalDockItems = {};
+
+  /// Track the highest z-index for bringing items to front
+  static int _highestZIndex = 0;
 
   @override
   void initState() {
@@ -36,18 +39,21 @@ class _FusionDockWorkspaceState extends State<FusionDockWorkspace> {
     for (var config in widget.dockItemList) {
       if (!_globalDockItems.containsKey(config.id)) {
         _globalDockItems[config.id] = DockItem(id: config.id, title: config.title, side: config.side);
+        // Initialize z-index if not set
+        _globalDockItems[config.id]!.zIndex ??= 0;
       }
     }
   }
 
   @override
-  void didUpdateWidget(FusionDockWorkspace oldWidget) {
+  void didUpdateWidget(FusionDockableArea oldWidget) {
     super.didUpdateWidget(oldWidget);
 
     /// Add new items if configs changed, but preserve existing state
     for (var config in widget.dockItemList) {
       if (!_globalDockItems.containsKey(config.id)) {
         _globalDockItems[config.id] = DockItem(id: config.id, title: config.title, side: config.side);
+        _globalDockItems[config.id]!.zIndex ??= 0;
       }
     }
   }
@@ -61,6 +67,24 @@ class _FusionDockWorkspaceState extends State<FusionDockWorkspace> {
   /// Get config for a specific item
   DockItemConfig? getConfigForItem(String itemId) {
     return widget.dockItemList.firstWhere((config) => config.id == itemId, orElse: () => widget.dockItemList.first);
+  }
+
+  /// Bring item to front by giving it the highest z-index
+  void _bringItemToFront(DockItem item) {
+    setState(() {
+      _highestZIndex++;
+      item.zIndex = _highestZIndex;
+    });
+  }
+
+  /// Handle item tap to bring to front
+  void _handleItemTap(DockItem item) {
+    _bringItemToFront(item);
+  }
+
+  /// Handle drag start to bring item to front
+  void _handleItemDragStart(DockItem item) {
+    _bringItemToFront(item);
   }
 
   /// Handle drag end to determine docking or floating
@@ -106,6 +130,8 @@ class _FusionDockWorkspaceState extends State<FusionDockWorkspace> {
       item.position = details.offset;
       item.expanded = true;
     });
+    // Bring to front when undocked
+    _bringItemToFront(item);
   }
 
   /// Handle expansion state change
@@ -127,6 +153,11 @@ class _FusionDockWorkspaceState extends State<FusionDockWorkspace> {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final items = getItemsForTab();
+
+    // Get floating items and sort them by z-index for proper stacking order
+    final floatingItems =
+        items.where((i) => !i.docked).where((item) => (item.side == "left" && widget.showLeft) || (item.side == "right" && widget.showRight)).toList()
+          ..sort((a, b) => (a.zIndex ?? 0).compareTo(b.zIndex ?? 0));
 
     return Stack(
       children: [
@@ -154,20 +185,23 @@ class _FusionDockWorkspaceState extends State<FusionDockWorkspace> {
           ],
         ),
 
-        // Floating panels
-        for (var item in items.where((i) => !i.docked))
-          if ((item.side == "left" && widget.showLeft) || (item.side == "right" && widget.showRight))
-            Positioned(
-              left: item.position.dx,
-              top: item.position.dy,
+        // Floating panels - render in z-index order (lowest to highest)
+        for (var item in floatingItems)
+          Positioned(
+            left: item.position.dx,
+            top: item.position.dy,
+            child: GestureDetector(
+              onTap: () => _handleItemTap(item),
               child: FusionFloatingPanel(
                 item: item,
                 config: getConfigForItem(item.id),
+                onDragStart: () => _handleItemDragStart(item),
                 onDragEnd: (details) => _handleItemDragEnd(item, details, screenWidth),
                 onClose: () => onCloseButtonPressed(item),
                 onResize: (deltaX, deltaY) => _handleItemResize(item, deltaX, deltaY),
               ),
             ),
+          ),
       ],
     );
   }
