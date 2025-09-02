@@ -115,8 +115,8 @@ class LocalProjectManager {
         "virtualIP": null,
         "currentFloorIndex": 0,
         "droResponse": null,
-        "minSPL": 0.0,
-        "maxSPL": 0.0,
+        "minSPL": 10.0,
+        "maxSPL": 120.0,
         "isInControlMode": false,
       };
 
