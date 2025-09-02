@@ -61,6 +61,7 @@ struct fusion_cn_substream {
     uint16_t                stream_index;
     atomic_t                open_count;
     bool                    pending_free;
+    atomic_t                disconnected;
 };
 
 struct fusion_cn_alsa_ops {
@@ -69,6 +70,7 @@ struct fusion_cn_alsa_ops {
     int (*stop_interrupts)(void *mgr, uint64_t stream_handle);
 };
 
+inline bool fusion_cn_alsa_stream_disconnected(struct fusion_cn_substream *s);
 int fusion_cn_alsa_pcm_interrupt(struct fusion_cn_chip *alsa_chip, struct fusion_cn_substream *alsa_stream);
 int fusion_cn_alsa_open_substream(struct fusion_cn_chip *alsa_chip, uint64_t stream_handle, 
                                   const char *stream_name, int direction, unsigned int channels, 

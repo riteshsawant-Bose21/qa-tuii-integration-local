@@ -59,6 +59,11 @@ struct fusion_cn_substream *fusion_cn_find_substream(const char *stream_name)
     return NULL;
 }
 
+inline bool fusion_cn_alsa_stream_disconnected(struct fusion_cn_substream *s)
+{
+    return atomic_read(&s->disconnected) != 0;
+}
+
 static int fusion_cn_pcm_hw_params(struct snd_pcm_substream *substream, struct snd_pcm_hw_params *params)
 {
     struct fusion_cn_substream *stream = substream->runtime->private_data;
@@ -69,6 +74,8 @@ static int fusion_cn_pcm_hw_params(struct snd_pcm_substream *substream, struct s
     unsigned int period_size = params_period_size(params);
     unsigned int buffer_bytes = params_buffer_bytes(params);
     int err;
+
+    if (fusion_cn_alsa_stream_disconnected(stream)) return -ENODEV;
 
     spin_lock_irq(&stream->lock);
     if (stream->rate != rate || stream->format != format || stream->channels != channels) {
@@ -139,6 +146,9 @@ int fusion_cn_alsa_pcm_interrupt(struct fusion_cn_chip *alsa_chip, struct fusion
     struct snd_pcm_substream *ss;
     struct snd_pcm_runtime *rt;
 
+    if (fusion_cn_alsa_stream_disconnected(stream))
+        return 0;
+
     spin_lock_irq(&stream->lock);
     ss = READ_ONCE(stream->substream);
     if (!ss) {
@@ -171,6 +181,8 @@ static int fusion_cn_pcm_copy(struct snd_pcm_substream *substream,
     struct snd_pcm_runtime *rt = substream->runtime;
     void *dst = rt->dma_area + pos;
 
+    if (fusion_cn_alsa_stream_disconnected(rt->private_data)) return -ENODEV;
+
     if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
         size_t copied = copy_from_iter(dst, bytes, iter);
         if (copied != bytes) {
@@ -194,6 +206,8 @@ static int fusion_cn_pcm_silence(struct snd_pcm_substream *substream,
     size_t buffer_size_per_channel = runtime->buffer_size * stream->sample_width;
     const unsigned char *silence = snd_pcm_format_silence_64(runtime->format);
     unsigned char *dma_area = runtime->dma_area;
+
+    if (fusion_cn_alsa_stream_disconnected(runtime->private_data)) return -ENODEV;
 
     if (substream->stream != SNDRV_PCM_STREAM_PLAYBACK) return 0;
 
@@ -226,7 +240,6 @@ static int fusion_cn_pcm_silence(struct snd_pcm_substream *substream,
     return (int)count;
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,6,0)
 static int fusion_cn_pcm_fill_silence(struct snd_pcm_substream *substream,
                                      int channel, unsigned long pos,
                                      unsigned long count)
@@ -236,48 +249,54 @@ static int fusion_cn_pcm_fill_silence(struct snd_pcm_substream *substream,
     snd_pcm_uframes_t frames = count / bytes_per_frame;
     return fusion_cn_pcm_silence(substream, channel, pos / bytes_per_frame, frames);
 }
-#endif
 
 /* Called when you want the device to disappear */
 int fusion_cn_alsa_remove_substream(struct fusion_cn_substream *stream)
 {
-    struct fusion_cn_chip *chip = platform_get_drvdata(g_pdev);
+    struct fusion_cn_chip *chip;
     unsigned long flags;
-    int stream_index;
 
-    if (!stream || !chip)
+    if (!stream)
         return -EINVAL;
 
-    stream_index = stream->stream_index;
+    chip = platform_get_drvdata(g_pdev);
 
-    /* Stop stream activity first */
-    if (stream->substream)
+    // Mark disconnected and force ALSA state change if still open
+    spin_lock_irqsave(&stream->lock, flags);
+    if (stream->substream) {
+        atomic_set(&stream->disconnected, 1);
+        // Force wake of any blocking I/O on this substream
         snd_pcm_stop(stream->substream, SNDRV_PCM_STATE_DISCONNECTED);
+        /* DO NOT clear stream->substream here; ALSA still owns it until close */
+    }
+    spin_unlock_irqrestore(&stream->lock, flags);
 
-    /* Unlink & free index under the rwlock (no sleeps here) */
-    write_lock_irqsave(&chip->lock, flags);
-    if (!hlist_unhashed(&stream->hnode))
-        hlist_del_init(&stream->hnode);
-    clear_bit(stream_index, chip->stream_indices);
-    write_unlock_irqrestore(&chip->lock, flags);
+    // unlink from hash and free device index
+    if (chip) {
+        write_lock_irqsave(&chip->lock, flags);
+        if (!hlist_unhashed(&stream->hnode))
+            hlist_del_init(&stream->hnode);
+        clear_bit(stream->stream_index, chip->stream_indices);
+        write_unlock_irqrestore(&chip->lock, flags);
+    }
 
-    /* If not open, unregister immediately; else defer to .close */
+    // If not open anymore, unregister now; otherwise defer
     if (atomic_read(&stream->open_count) == 0 && !stream->substream) {
         if (stream->pcm) {
             struct snd_card *card = stream->pcm->card;
             struct snd_pcm  *pcm  = stream->pcm;
             stream->pcm = NULL;
-            snd_device_free(card, pcm);      /* non-GPL */
+            snd_device_free(card, pcm);
         }
     } else {
         stream->pending_free = true;
     }
 
-    /* Single ownership put: DO NOT also kref_put from the caller */
+    // remove ref taken in add_substream
     kref_put(&stream->ref, fusion_cn_alsa_substream_release);
 
     pr_info("fusion_cn_alsa: remove_substream: Stream %s removed, device=%d%s\n",
-            stream->stream_name, stream_index,
+            stream->stream_name, stream->stream_index,
             stream->pending_free ? " (pending free)" : "");
     return 0;
 }
@@ -397,8 +416,8 @@ static int fusion_cn_pcm_open(struct snd_pcm_substream *substream)
 
     if (substream->dma_buffer.dev.type == SNDRV_DMA_TYPE_UNKNOWN) {
         err = snd_pcm_set_managed_buffer(substream,
-                                        SNDRV_DMA_TYPE_VMALLOC, /* or DEV/SG if you switch later */
-                                        NULL,                   /* private data for allocator */
+                                        SNDRV_DMA_TYPE_VMALLOC, 
+                                        NULL,
                                         0, 0);
         if (err < 0)
         {
@@ -430,17 +449,18 @@ static int fusion_cn_pcm_close(struct snd_pcm_substream *substream)
     spin_unlock_irqrestore(&stream->lock, flags);
 
     if (atomic_dec_and_test(&stream->open_count)) {
-        /* now fully closed; if someone asked to remove -> free the PCM now */
         if (stream->pending_free && stream->pcm) {
             struct snd_card *card = stream->pcm->card;
             struct snd_pcm  *pcm  = stream->pcm;
             stream->pcm = NULL;
-            /* No GPL-only symbol: this unregisters the PCM and removes it from aplay -l */
             snd_device_free(card, pcm);
         }
     }
 
+    atomic_set(&stream->disconnected, 0);
     kref_put(&stream->ref, fusion_cn_alsa_substream_release);
+
+    printk(KERN_INFO "fusion_cn_alsa: pcm_close: Closed stream %s\n", stream->stream_name);
 
     return 0;
 }
@@ -449,6 +469,8 @@ static int fusion_cn_pcm_prepare(struct snd_pcm_substream *substream)
 {
     struct fusion_cn_substream *stream = substream->runtime->private_data;
     struct snd_pcm_runtime *runtime = substream->runtime;
+
+    if (fusion_cn_alsa_stream_disconnected(runtime->private_data)) return -ENODEV;
 
     spin_lock_irq(&stream->lock);
     stream->interrupts_per_period = runtime->period_size / stream->rtp_frame_size;
@@ -472,6 +494,8 @@ static snd_pcm_uframes_t fusion_cn_pcm_pointer(struct snd_pcm_substream *substre
     struct snd_pcm_runtime *runtime = substream->runtime;
     snd_pcm_uframes_t offset;
 
+    if (fusion_cn_alsa_stream_disconnected(runtime->private_data)) return -ENODEV;
+
     offset = stream->buffer_pos;
     if (offset >= runtime->buffer_size) offset %= runtime->buffer_size;
 
@@ -483,6 +507,8 @@ static int fusion_cn_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
     struct fusion_cn_substream *stream = substream->runtime->private_data;
     struct fusion_cn_chip *chip = snd_pcm_substream_chip(substream);
     int err;
+
+    if (fusion_cn_alsa_stream_disconnected(stream)) return -ENODEV;
 
     switch (cmd) {
     case SNDRV_PCM_TRIGGER_START:
@@ -499,14 +525,20 @@ static int fusion_cn_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
     case SNDRV_PCM_TRIGGER_STOP:
     case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
     case SNDRV_PCM_TRIGGER_SUSPEND:
+    {
+        int err = 0;
+
         err = chip->alsa_ops->stop_interrupts(chip->fusion_cn_mgr, stream->stream_handle);
-        if (err < 0) {
+        if (err == -ENOENT) {  // stream already gone on RTP side → not an error
+            err = 0;
+        } else if (err < 0) {
             printk(KERN_ERR "fusion_cn_alsa: pcm_trigger: stop_interrupts failed for stream %s, err=%d\n",
-                   stream->stream_name, err);
+                stream->stream_name, err);
             return err;
         }
         printk(KERN_INFO "fusion_cn_alsa: pcm_trigger: Stream %s stopped\n", stream->stream_name);
         return 0;
+    }
     default:
         printk(KERN_ERR "fusion_cn_alsa: pcm_trigger: Invalid cmd %d for stream %s\n",
                cmd, stream->stream_name);
@@ -669,6 +701,7 @@ int fusion_cn_alsa_open_substream(struct fusion_cn_chip *alsa_chip, uint64_t str
 
     atomic_set(&stream->open_count, 0);
     stream->pending_free = false;
+    atomic_set(&stream->disconnected, 0);
 
     printk(KERN_INFO "fusion_cn_alsa: open_substream: Successfully created substream for stream %s, device=%d, format=%d, channels=%u, rate=%u, frames_per_packet=%u\n", 
                                                                                       stream_name, stream_index, format, 
@@ -731,7 +764,7 @@ static int fusion_cn_chip_probe(struct platform_device *pdev)
     return 0;
 }
 
-static int fusion_cn_chip_remove(struct platform_device *pdev)
+static void fusion_cn_chip_remove(struct platform_device *pdev)
 {
     struct fusion_cn_chip *chip = platform_get_drvdata(pdev);
     struct snd_card *card;
@@ -742,14 +775,14 @@ static int fusion_cn_chip_remove(struct platform_device *pdev)
 
     if (!chip) {
         dev_err(&pdev->dev, "fusion_cn_alsa: No chip found for platform device\n");
-        return 0;
+        return;
     }
 
     card = chip->card;
     if (!card) {
         dev_err(&pdev->dev, "fusion_cn_alsa: No snd_card found in chip\n");
         platform_set_drvdata(pdev, NULL);
-        return 0;
+        return;
     }
 
     /* Block new user opens early */
@@ -798,23 +831,12 @@ static int fusion_cn_chip_remove(struct platform_device *pdev)
 
     platform_set_drvdata(pdev, NULL);
     dev_info(&pdev->dev, "FusionConnect card removed\n");
-    return 0;
+    return;
 }
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,11,0)
-static void fusion_cn_chip_remove_new(struct platform_device *pdev)
-{
-    fusion_cn_chip_remove(pdev);
-}
-#endif
 
 static struct platform_driver fusion_cn_driver = {
     .probe = fusion_cn_chip_probe,
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,11,0)
-    .remove_new = fusion_cn_chip_remove_new,
-#else
-    .remove = fusion_cn_chip_remove,
-#endif
+    .remove_new = fusion_cn_chip_remove,
     .driver = {
         .name = "snd_fusion_cn"
     },

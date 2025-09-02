@@ -116,195 +116,160 @@ static uint32_t fusion_cn_rtp_ops_get_buffer_offset(void *cn_mgr, void *alsa_str
     return stream->buffer_pos;
 }
 
+/* helpers: compute how many interrupts are due, and advance state */
+static inline int rtp_compute_sink_interrupts(struct fusion_cn_rtp_stream *s, u64 now)
+{
+    int count = 0;
+    u32 max_slots;
+
+    spin_lock(&s->lock);
+    max_slots = s->frames_in_buf / s->info.frames_per_packet;
+
+    if (s->playback_index < max_slots) {
+        while (s->next_action_times[s->playback_index] != 0 &&
+               s->next_action_times[s->playback_index] <= now &&
+               abs(now - s->next_action_times[s->playback_index]) >
+                   (max_slots / 2) * s->packet_time) {
+
+            s->next_action_times[s->playback_index] = 0;
+            if (++s->playback_index >= max_slots)
+                s->playback_index = 0;
+            count++;
+        }
+    }
+    spin_unlock(&s->lock);
+    return count;
+}
+
+static inline int rtp_compute_source_interrupts(struct fusion_cn_rtp_stream *s, u64 now, u64 next_tick)
+{
+    int count = 0;
+
+    spin_lock(&s->lock);
+    if (s->next_action_time == 0)
+        s->next_action_time = now;
+
+    while (s->next_action_time <= now) {
+        if (s->packet_time == TIMER_BASE_INTERVAL_NS)
+            s->next_action_time = next_tick;
+        else
+            s->next_action_time += s->packet_time;
+        count++;
+    }
+    spin_unlock(&s->lock);
+    return count;
+}
+
 static void audio_frame_process(struct fusion_cn_manager *mgr)
 {
-    struct fusion_cn_rtp_stream *rtp_stream;
-    struct fusion_cn_substream *alsa_stream;
-    struct stream_node *stream_node, *tmp;
+    struct stream_node *node, *tmp;
     unsigned long flags;
+
     struct {
-        struct fusion_cn_rtp_stream *rtp_stream;
-        struct fusion_cn_substream *alsa_stream;
-        int interrupt_count;
-    } fn_sink_pending[32], other_pending[32];
-    int fn_sink_count = 0;
-    int other_count = 0;
-    int i, j;
-    uint32_t max_slots;
-    int count;
+        struct fusion_cn_rtp_stream *rtp;
+        struct fusion_cn_substream  *alsa;
+        int n;
+    } fn_sink[32], other[32];
+    int fn_sink_cnt = 0, other_cnt = 0;
 
-    if (!atomic_read(&mgr->state.ptp_synchronized) || !atomic_read(&mgr->state.is_started)) {
+    if (!atomic_read(&mgr->state.ptp_synchronized) ||
+        !atomic_read(&mgr->state.is_started))
         return;
-    }
 
-    // Phase 1: Process fn_sink streams (prioritized for low latency)
+    /* -------- Phase 1: FusionConnect sinks (low latency priority) -------- */
     read_lock_irqsave(&mgr->rtp.lock, flags);
-    list_for_each_entry_safe(stream_node, tmp, &mgr->active_streams.fn_sink, node) {
-        rtp_stream = stream_node->rtp_stream;
-        alsa_stream = stream_node->alsa_stream;
-        spin_lock(&rtp_stream->lock);
-        if (!atomic_read(&rtp_stream->is_running) || rtp_stream->info.is_source || !rtp_stream->info.is_fusion_connect) {
-            spin_unlock(&rtp_stream->lock);
+    list_for_each_entry_safe(node, tmp, &mgr->active_streams.fn_sink, node) {
+        struct fusion_cn_rtp_stream *r = node->rtp_stream;
+        struct fusion_cn_substream  *a = node->alsa_stream;
+
+        if (!r || !a || fusion_cn_alsa_stream_disconnected(a))
             continue;
-        }
-        max_slots = rtp_stream->frames_in_buf / rtp_stream->info.frames_per_packet;
-        count = 0;
-        if (rtp_stream->playback_index < max_slots) {
-            while (rtp_stream->next_action_times[rtp_stream->playback_index] != 0 &&
-                   rtp_stream->next_action_times[rtp_stream->playback_index] <= mgr->ptp.hrtimer_last_tick_ns &&
-                   abs(mgr->ptp.hrtimer_last_tick_ns - rtp_stream->next_action_times[rtp_stream->playback_index]) > (max_slots / 2) * rtp_stream->packet_time) {
-                if (mgr->debug) printk(KERN_DEBUG "fusion_cn: audio_frame_process: FC sink stream %s, next_tick=%llu, next_action_time=%llu, playback_index=%u\n",
-                                        rtp_stream->info.stream_name, mgr->ptp.hrtimer_last_tick_ns, rtp_stream->next_action_times[rtp_stream->playback_index], rtp_stream->playback_index);
-                count++;
-                rtp_stream->next_action_times[rtp_stream->playback_index] = 0;
-                if (++rtp_stream->playback_index >= max_slots) {
-                    rtp_stream->playback_index = 0;
+        if (!atomic_read(&r->is_running) || r->info.is_source || !r->info.is_fusion_connect)
+            continue;
+
+        /* compute due interrupts with stream->lock, still under mgr->rtp.lock */
+        {
+            int n = rtp_compute_sink_interrupts(r, mgr->ptp.hrtimer_last_tick_ns);
+            if (n > 0 && fn_sink_cnt < 32) {
+                if (!kref_get_unless_zero(&r->ref))
+                    continue;
+                if (!kref_get_unless_zero(&a->ref)) {
+                    kref_put(&r->ref, fusion_cn_rtp_stream_release);
+                    continue;
                 }
+                fn_sink[fn_sink_cnt++] = (typeof(fn_sink[0])){ .rtp = r, .alsa = a, .n = n };
             }
         }
-        if (count > 0 && fn_sink_count < 32) {
-            fn_sink_pending[fn_sink_count].rtp_stream = rtp_stream;
-            fn_sink_pending[fn_sink_count].alsa_stream = alsa_stream;
-            fn_sink_pending[fn_sink_count].interrupt_count = count;
-            kref_get(&rtp_stream->ref);
-            kref_get(&alsa_stream->ref);
-            fn_sink_count++;
-        }
-        spin_unlock(&rtp_stream->lock);
     }
     read_unlock_irqrestore(&mgr->rtp.lock, flags);
 
-    // Execute fn_sink interrupts immediately
-    for (i = 0; i < fn_sink_count; i++) {
-        rtp_stream = fn_sink_pending[i].rtp_stream;
-        alsa_stream = fn_sink_pending[i].alsa_stream;
-        count = fn_sink_pending[i].interrupt_count;
-        for (j = 0; j < count; j++) {
-            fusion_cn_alsa_pcm_interrupt(mgr->alsa.alsa_chip, alsa_stream);
-        }
-        kref_put(&rtp_stream->ref, fusion_cn_rtp_stream_release);
-        kref_put(&alsa_stream->ref, fusion_cn_alsa_substream_release);
+    /* execute */
+    for (int i = 0; i < fn_sink_cnt; i++) {
+        for (int k = 0; k < fn_sink[i].n; k++)
+            fusion_cn_alsa_pcm_interrupt(mgr->alsa.alsa_chip, fn_sink[i].alsa);
+        kref_put(&fn_sink[i].rtp->ref,  fusion_cn_rtp_stream_release);
+        kref_put(&fn_sink[i].alsa->ref, fusion_cn_alsa_substream_release);
     }
 
-    // Phase 2: Process fn_source, aes67_sink, aes67_source together
+    /* -------- Phase 2: FC sources + AES67 sinks + AES67 sources -------- */
     read_lock_irqsave(&mgr->rtp.lock, flags);
 
-    // fn_source
-    list_for_each_entry_safe(stream_node, tmp, &mgr->active_streams.fn_source, node) {
-        rtp_stream = stream_node->rtp_stream;
-        alsa_stream = stream_node->alsa_stream;
-        spin_lock(&rtp_stream->lock);
-        if (!atomic_read(&rtp_stream->is_running) || !rtp_stream->info.is_source || !rtp_stream->info.is_fusion_connect) {
-            spin_unlock(&rtp_stream->lock);
-            continue;
+    /* FC sources */
+    list_for_each_entry_safe(node, tmp, &mgr->active_streams.fn_source, node) {
+        struct fusion_cn_rtp_stream *r = node->rtp_stream;
+        struct fusion_cn_substream  *a = node->alsa_stream;
+        if (!r || !a) continue;
+        if (!atomic_read(&r->is_running) || !r->info.is_source || !r->info.is_fusion_connect) continue;
+
+        int n = rtp_compute_source_interrupts(r, mgr->ptp.hrtimer_last_tick_ns, mgr->ptp.hrtimer_next_tick_ns);
+        if (n > 0 && other_cnt < 32) {
+            if (!kref_get_unless_zero(&r->ref)) continue;
+            if (!kref_get_unless_zero(&a->ref)) { kref_put(&r->ref, fusion_cn_rtp_stream_release); continue; }
+            other[other_cnt++] = (typeof(other[0])){ .rtp = r, .alsa = a, .n = n };
         }
-        count = 0;
-        if (rtp_stream->next_action_time == 0) {
-            rtp_stream->next_action_time = mgr->ptp.hrtimer_last_tick_ns;
-        }
-        while (rtp_stream->next_action_time <= mgr->ptp.hrtimer_last_tick_ns) {
-            count++;
-            if (mgr->debug) printk(KERN_DEBUG "fusion_cn: audio_frame_process: FC source stream %s, next_tick=%llu, next_action_time=%llu\n",
-                                    rtp_stream->info.stream_name, mgr->ptp.hrtimer_last_tick_ns, rtp_stream->next_action_time);
-            if (rtp_stream->packet_time == TIMER_BASE_INTERVAL_NS) {
-                rtp_stream->next_action_time = mgr->ptp.hrtimer_next_tick_ns;
-            } else {
-                rtp_stream->next_action_time += rtp_stream->packet_time;
-            }
-        }
-        if (count > 0 && other_count < 32) {
-            other_pending[other_count].rtp_stream = rtp_stream;
-            other_pending[other_count].alsa_stream = alsa_stream;
-            other_pending[other_count].interrupt_count = count;
-            kref_get(&rtp_stream->ref);
-            kref_get(&alsa_stream->ref);
-            other_count++;
-        }
-        spin_unlock(&rtp_stream->lock);
     }
 
-    // aes67_sink
-    list_for_each_entry_safe(stream_node, tmp, &mgr->active_streams.aes67_sink, node) {
-        rtp_stream = stream_node->rtp_stream;
-        alsa_stream = stream_node->alsa_stream;
-        spin_lock(&rtp_stream->lock);
-        if (!atomic_read(&rtp_stream->is_running) || rtp_stream->info.is_source || rtp_stream->info.is_fusion_connect) {
-            spin_unlock(&rtp_stream->lock);
-            continue;
+    /* AES67 sinks */
+    list_for_each_entry_safe(node, tmp, &mgr->active_streams.aes67_sink, node) {
+        struct fusion_cn_rtp_stream *r = node->rtp_stream;
+        struct fusion_cn_substream  *a = node->alsa_stream;
+        if (!r || !a) continue;
+        if (!atomic_read(&r->is_running) || r->info.is_source || r->info.is_fusion_connect) continue;
+
+        int n = rtp_compute_sink_interrupts(r, mgr->ptp.hrtimer_last_tick_ns);
+        if (n > 0 && other_cnt < 32) {
+            if (!kref_get_unless_zero(&r->ref)) continue;
+            if (!kref_get_unless_zero(&a->ref)) { kref_put(&r->ref, fusion_cn_rtp_stream_release); continue; }
+            other[other_cnt++] = (typeof(other[0])){ .rtp = r, .alsa = a, .n = n };
         }
-        max_slots = rtp_stream->frames_in_buf / rtp_stream->info.frames_per_packet;
-        count = 0;
-        if (rtp_stream->playback_index < max_slots) {
-            while (rtp_stream->next_action_times[rtp_stream->playback_index] != 0 &&
-                   rtp_stream->next_action_times[rtp_stream->playback_index] <= mgr->ptp.hrtimer_last_tick_ns &&
-                   abs(mgr->ptp.hrtimer_last_tick_ns - rtp_stream->next_action_times[rtp_stream->playback_index]) > (max_slots / 2) * rtp_stream->packet_time) {
-                if (mgr->debug) printk(KERN_DEBUG "fusion_cn: audio_frame_process: AES67 sink stream %s, next_tick=%llu, next_action_time=%llu, playback_index=%u\n",
-                                        rtp_stream->info.stream_name, mgr->ptp.hrtimer_last_tick_ns, rtp_stream->next_action_times[rtp_stream->playback_index], rtp_stream->playback_index);
-                count++;
-                rtp_stream->next_action_times[rtp_stream->playback_index] = 0;
-                if (++rtp_stream->playback_index >= max_slots) {
-                    rtp_stream->playback_index = 0;
-                }
-            }
-        }
-        if (count > 0 && other_count < 32) {
-            other_pending[other_count].rtp_stream = rtp_stream;
-            other_pending[other_count].alsa_stream = alsa_stream;
-            other_pending[other_count].interrupt_count = count;
-            kref_get(&rtp_stream->ref);
-            kref_get(&alsa_stream->ref);
-            other_count++;
-        }
-        spin_unlock(&rtp_stream->lock);
     }
 
-    // aes67_source
-    list_for_each_entry_safe(stream_node, tmp, &mgr->active_streams.aes67_source, node) {
-        rtp_stream = stream_node->rtp_stream;
-        alsa_stream = stream_node->alsa_stream;
-        spin_lock(&rtp_stream->lock);
-        if (!atomic_read(&rtp_stream->is_running) || !rtp_stream->info.is_source || rtp_stream->info.is_fusion_connect) {
-            spin_unlock(&rtp_stream->lock);
-            continue;
+    /* AES67 sources */
+    list_for_each_entry_safe(node, tmp, &mgr->active_streams.aes67_source, node) {
+        struct fusion_cn_rtp_stream *r = node->rtp_stream;
+        struct fusion_cn_substream  *a = node->alsa_stream;
+        if (!r || !a) continue;
+        if (!atomic_read(&r->is_running) || !r->info.is_source || r->info.is_fusion_connect) continue;
+
+        int n = rtp_compute_source_interrupts(r, mgr->ptp.hrtimer_last_tick_ns, mgr->ptp.hrtimer_next_tick_ns);
+        if (n > 0 && other_cnt < 32) {
+            if (!kref_get_unless_zero(&r->ref)) continue;
+            if (!kref_get_unless_zero(&a->ref)) { kref_put(&r->ref, fusion_cn_rtp_stream_release); continue; }
+            other[other_cnt++] = (typeof(other[0])){ .rtp = r, .alsa = a, .n = n };
         }
-        count = 0;
-        if (rtp_stream->next_action_time == 0) {
-            rtp_stream->next_action_time = mgr->ptp.hrtimer_last_tick_ns;
-        }
-        while (rtp_stream->next_action_time <= mgr->ptp.hrtimer_last_tick_ns) {
-            count++;
-            if (mgr->debug) printk(KERN_DEBUG "fusion_cn: audio_frame_process: AES67 source stream %s, next_tick=%llu, next_action_time=%llu\n",
-                                    rtp_stream->info.stream_name, mgr->ptp.hrtimer_last_tick_ns, rtp_stream->next_action_time);
-            if (rtp_stream->packet_time == TIMER_BASE_INTERVAL_NS) {
-                rtp_stream->next_action_time = mgr->ptp.hrtimer_next_tick_ns;
-            } else {
-                rtp_stream->next_action_time += rtp_stream->packet_time;
-            }
-        }
-        if (count > 0 && other_count < 32) {
-            other_pending[other_count].rtp_stream = rtp_stream;
-            other_pending[other_count].alsa_stream = alsa_stream;
-            other_pending[other_count].interrupt_count = count;
-            kref_get(&rtp_stream->ref);
-            kref_get(&alsa_stream->ref);
-            other_count++;
-        }
-        spin_unlock(&rtp_stream->lock);
     }
 
     read_unlock_irqrestore(&mgr->rtp.lock, flags);
 
-    // Execute other streams' interrupts
-    for (i = 0; i < other_count; i++) {
-        rtp_stream = other_pending[i].rtp_stream;
-        alsa_stream = other_pending[i].alsa_stream;
-        count = other_pending[i].interrupt_count;
-        for (j = 0; j < count; j++) {
-            if (rtp_stream->info.is_source) fusion_cn_rtp_send_packet(&mgr->rtp, rtp_stream, alsa_stream);
-            fusion_cn_alsa_pcm_interrupt(mgr->alsa.alsa_chip, alsa_stream);
+    /* execute */
+    for (int i = 0; i < other_cnt; i++) {
+        for (int k = 0; k < other[i].n; k++) {
+            if (other[i].rtp->info.is_source)
+                fusion_cn_rtp_send_packet(&mgr->rtp, other[i].rtp, other[i].alsa);
+            fusion_cn_alsa_pcm_interrupt(mgr->alsa.alsa_chip, other[i].alsa);
         }
-        kref_put(&rtp_stream->ref, fusion_cn_rtp_stream_release);
-        kref_put(&alsa_stream->ref, fusion_cn_alsa_substream_release);
+        kref_put(&other[i].rtp->ref,  fusion_cn_rtp_stream_release);
+        kref_put(&other[i].alsa->ref, fusion_cn_alsa_substream_release);
     }
 }
 
@@ -743,6 +708,7 @@ static int handle_remove_stream(struct fusion_cn_manager *mgr,
 
     handle = *(uint64_t *)msg->data;
 
+    /* Get RTP (with ref) and copy name */
     read_lock_irqsave(&mgr->rtp.lock, flags);
     rtp_stream = fusion_cn_rtp_get_stream(&mgr->rtp, handle);
     if (!rtp_stream) {
@@ -753,23 +719,27 @@ static int handle_remove_stream(struct fusion_cn_manager *mgr,
     strscpy(stream_name, rtp_stream->info.stream_name, sizeof(stream_name));
     read_unlock_irqrestore(&mgr->rtp.lock, flags);
 
+    /* Stop stream activity (no mgr->rtp.lock held) */
     ret = alsa_ops_stop_interrupts(mgr, handle);
     if (ret < 0)
         pr_warn("fusion_cn: handle_remove_stream: stop_interrupts(%s) = %d\n",
                 stream_name, ret);
 
+    /* Unlink RTP (drops list’s ref inside) */
     write_lock_irqsave(&mgr->rtp.lock, flags);
     ret = fusion_cn_rtp_remove_stream(&mgr->rtp, rtp_stream);
     write_unlock_irqrestore(&mgr->rtp.lock, flags);
     if (ret < 0) {
+        /* Drop temp ref from _get_stream() */
         kref_put(&rtp_stream->ref, fusion_cn_rtp_stream_release);
         return (reply->err = ret);
     }
-    
-    // Drop our temporary ref from get_stream() and ref from handle_add_stream 
+
+    /* Drop temp ref from _get_stream() and the one from handle_add_stream */
     kref_put(&rtp_stream->ref, fusion_cn_rtp_stream_release);
     kref_put(&rtp_stream->ref, fusion_cn_rtp_stream_release);
 
+    /* Find ALSA (with ref) and remove */
     alsa_stream = fusion_cn_find_substream(stream_name);
     if (!alsa_stream) {
         pr_warn("fusion_cn: handle_remove_stream: alsa stream %s not found\n", stream_name);
@@ -778,17 +748,17 @@ static int handle_remove_stream(struct fusion_cn_manager *mgr,
 
     ret = fusion_cn_alsa_remove_substream(alsa_stream);
     if (ret < 0) {
+        /* Drop temp ref from find_substream() */
         kref_put(&alsa_stream->ref, fusion_cn_alsa_substream_release);
         return (reply->err = ret);
     }
 
-    // Drop our temporary ref from find_substream() and ref from handle_add_stream
+    /* Drop temp ref from find_substream() and the one from handle_add_stream */
     kref_put(&alsa_stream->ref, fusion_cn_alsa_substream_release);
     kref_put(&alsa_stream->ref, fusion_cn_alsa_substream_release);
 
     return (reply->err = 0);
 }
-
 
 static const struct message_handler_entry message_handlers[] = {
     { FUSION_CN_CTRL_CMD_START_MANAGER, handle_start },

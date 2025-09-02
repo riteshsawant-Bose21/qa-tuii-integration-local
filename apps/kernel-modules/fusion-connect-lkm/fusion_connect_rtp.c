@@ -18,7 +18,11 @@
 #include <linux/random.h>
 #include <linux/types.h>
 #include <sound/pcm.h>
+#include <linux/delay.h>
+#include <linux/byteorder/generic.h>
+#include <net/neighbour.h>
 #include <net/arp.h>
+#include <linux/etherdevice.h>
 #include "fusion_connect_rtp.h"
 
 #define TIMER_BASE_INTERVAL_NS 333333
@@ -27,7 +31,7 @@
 #define PACKET_MAP_KEY_UC(ip, port) hash_64(((uint64_t)(ip) << 16) | (port), FUSION_CN_RTP_HASH_BITS)
 #define PACKET_MAP_KEY_MC(ip) hash_64((uint64_t)(ip), FUSION_CN_RTP_HASH_BITS)
 
-uint16_t fusion_cn_rtp_compute_cksum(const void *data, uint16_t len)
+static uint16_t fusion_cn_rtp_compute_cksum(const void *data, uint16_t len)
 {
     uint32_t acc = 0;
     const uint8_t *ptr = data;
@@ -147,13 +151,13 @@ void fusion_cn_rtp_destroy(struct fusion_cn_rtp_manager *rtp_mgr)
     write_unlock_irqrestore(&rtp_mgr->lock, flags);
 }
 
-bool fusion_cn_rtp_is_ip_mcast(uint32_t ip)
+static bool fusion_cn_rtp_is_ip_mcast(uint32_t ip)
 {
     uint32_t ip_host = be32_to_cpu(ip);
     return (ip_host >= 0xE0000000 && ip_host <= 0xEFFFFFFF); /* 224.0.0.0 - 239.255.255.255 */
 }
 
-void fusion_cn_rtp_set_multicast_mac(uint32_t ip, uint8_t mac[ETH_ALEN])
+static void fusion_cn_rtp_set_multicast_mac(uint32_t ip, uint8_t mac[ETH_ALEN])
 {
     uint32_t ip_host = be32_to_cpu(ip);
     mac[0] = 0x01;
@@ -166,40 +170,52 @@ void fusion_cn_rtp_set_multicast_mac(uint32_t ip, uint8_t mac[ETH_ALEN])
 
 /* Resolve the unicast MAC address for a given IP address */
 static int fusion_cn_rtp_resolve_unicast_mac(struct fusion_cn_rtp_manager *rtp_mgr,
-                                            uint32_t dest_ip, unsigned char *mac_addr)
+                                             __be32 dest_ip_be, u8 mac[ETH_ALEN])
 {
     struct net_device *dev;
-    struct neighbour *neigh;
-    int err = -ENETUNREACH;
+    struct neighbour *n;
+    int i, err = -EAGAIN;
 
-    /* Find the output device */
+    /* iface_name must be the egress iface; you already have it */
     dev = dev_get_by_name(&init_net, rtp_mgr->nf->iface_name);
     if (!dev) {
-        printk(KERN_ERR "fusion_cn_rtp: Failed to find device %s for ARP resolution\n", rtp_mgr->nf->iface_name);
+        pr_err("fusion_cn_rtp: no dev '%s'\n", rtp_mgr->nf->iface_name);
         return -ENODEV;
     }
 
-    /* Look up the MAC address in the ARP cache */
-    neigh = neigh_lookup(&arp_tbl, &dest_ip, dev);
-    if (neigh) {
-        if (neigh->nud_state & NUD_VALID) {
-            memcpy(mac_addr, neigh->ha, ETH_ALEN);
-            err = 0;
+    /* If the dest is off-subnet you should resolve the gateway instead.
+     * If you only ever send to same-subnet peers, this is fine.
+     * (If you later need off-subnet, do a route lookup to get nexthop.) */
+    for (i = 0; i < 5; i++) {
+        n = neigh_lookup(&arp_tbl, &dest_ip_be, dev);
+        if (n) {
+            if (READ_ONCE(n->nud_state) & NUD_VALID) {
+                ether_addr_copy(mac, n->ha);
+                neigh_release(n);
+                err = 0;
+                break;
+            }
+
+            /* Not valid yet; kick resolution and wait */
+            neigh_event_send(n, NULL);
+            neigh_release(n);
         } else {
-            /* ARP entry is not valid, send an ARP request */
-            arp_send(ARPOP_REQUEST, ETH_P_ARP, dest_ip, dev, 0, NULL, dev->dev_addr, NULL);
-            err = -EAGAIN;
+            /* No entry yet; send an ARP request and wait */
+            arp_send(ARPOP_REQUEST, ETH_P_ARP, dest_ip_be, dev, 0,
+                     NULL, dev->dev_addr, NULL);
         }
-        neigh_release(neigh);
-    } else {
-        /* No ARP entry, send an ARP request */
-        arp_send(ARPOP_REQUEST, ETH_P_ARP, dest_ip, dev, 0, NULL, dev->dev_addr, NULL);
-        err = -EAGAIN;
+
+        /* Give the stack time to process ARP (ms, not us/ns). */
+        msleep(40);
     }
+
+    if (err)
+        pr_err("fusion_cn_rtp: ARP resolve %pI4 failed (%d)\n", &dest_ip_be, err);
 
     dev_put(dev);
     return err;
 }
+
 
 int fusion_cn_rtp_add_stream(struct fusion_cn_rtp_manager *rtp_mgr, struct fusion_cn_stream_config *info, 
                              void *alsa_stream, struct fusion_cn_rtp_stream **rtp_stream)
@@ -261,7 +277,7 @@ int fusion_cn_rtp_add_stream(struct fusion_cn_rtp_manager *rtp_mgr, struct fusio
         } else {
             err = fusion_cn_rtp_resolve_unicast_mac(rtp_mgr, info->source_ip, stream->rtp_packet_base.eth.h_source);
         }
-
+        
         if (err < 0) {
             printk(KERN_ERR "fusion_cn_rtp: Failed to resolve unicast MAC for IP 0x%08x: %d\n", 
                    info->is_source ? info->dest_ip : info->source_ip, err);

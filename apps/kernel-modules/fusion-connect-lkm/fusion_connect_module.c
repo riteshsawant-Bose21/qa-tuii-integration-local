@@ -22,9 +22,9 @@ static int gpio_pin = -1; /* Default to hrtimer */
 module_param(gpio_pin, int, 0444);
 MODULE_PARM_DESC(gpio_pin, "GPIO pin number for interrupt timing (default: -1 for hrtimer)");
 
-static char *eth_iface = "eth0";
+static char *eth_iface = "lan4";
 module_param(eth_iface, charp, 0444);
-MODULE_PARM_DESC(eth_iface, "Ethernet interface for CONNECT traffic (default: eth0)");
+MODULE_PARM_DESC(eth_iface, "Ethernet interface for CONNECT traffic (default: lan4)");
 
 static bool internal_loopback = false;
 module_param(internal_loopback, bool, 0444);
