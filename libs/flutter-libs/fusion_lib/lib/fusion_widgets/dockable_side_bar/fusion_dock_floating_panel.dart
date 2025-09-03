@@ -98,7 +98,7 @@ class FloatingWidget extends StatelessWidget {
               right: 0,
               bottom: resizing ? 0 : 0,
               child: SingleChildScrollView(
-                child: config?.widgetBuilder() ?? Container(alignment: Alignment.center, child: Text("${item.title} content")),
+                child: config?.dockItemWidget() ?? Container(alignment: Alignment.center, child: Text("${item.title} content")),
               ),
             ),
 

@@ -3,6 +3,7 @@ import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 import '../../models/dock_item_config.dart';
 import '../../models/fusion_dock_item.dart';
+import '../others/fusion_expandable_tile_widget.dart';
 import '../text_views/fusion_app_text.dart';
 import 'fusion_dock_floating_panel.dart';
 
@@ -51,7 +52,9 @@ class FusionDockSidebar extends StatelessWidget {
             children: items.map((item) {
               final config = getConfigForItem(item.id);
               return config != null
-                  ? SidebarPanel(item: item, config: config, onUndock: onItemUndock, onExpansionChanged: onExpansionChanged)
+                  ? config.isCollapsibleSection
+                        ? FusionExpandableTileWidget(item: item, config: config, onUndock: onItemUndock, onExpansionChanged: onExpansionChanged)
+                        : config.dockItemWidget()
                   : const SizedBox.shrink();
             }).toList(),
           ),
@@ -80,7 +83,8 @@ class SidebarPanel extends StatelessWidget {
         ),
         child: ExpansionTile(
           minTileHeight: 24,
-          iconColor: Theme.of(context).colorScheme.fusionTextViewColor,
+          iconColor: Theme.of(context).colorScheme.greyLight,
+          collapsedIconColor: Theme.of(context).colorScheme.grey,
           title: Draggable<DockItem>(
             data: item,
             feedback: FloatingWidget(
@@ -99,12 +103,14 @@ class SidebarPanel extends StatelessWidget {
                 child: FusionAppText(text: item.title, style: Theme.of(context).textTheme.bodySmall),
               ),
             ),
-            onDragEnd: (details) => onUndock(item, details),
+
+            /// Only allow undocking if config allows it
+            onDragEnd: (details) => config.alowUndock ? onUndock(item, details) : null,
             child: FusionAppText(text: item.title, style: Theme.of(context).textTheme.bodySmall),
           ),
           initiallyExpanded: item.expanded,
           onExpansionChanged: (val) => onExpansionChanged(item, val ?? false),
-          children: [config.widgetBuilder()],
+          children: [config.dockItemWidget()],
         ),
       ),
     );

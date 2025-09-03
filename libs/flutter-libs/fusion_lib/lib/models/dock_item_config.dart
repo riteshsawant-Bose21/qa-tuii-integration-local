@@ -4,7 +4,19 @@ class DockItemConfig {
   final String id;
   final String title;
   final String side;
-  final Widget Function() widgetBuilder;
+  final bool initiallyExpanded;
+  final bool alowUndock;
+  final bool isCollapsibleSection;
 
-  const DockItemConfig({required this.id, required this.title, required this.side, required this.widgetBuilder});
+  final Widget Function() dockItemWidget;
+
+  const DockItemConfig({
+    required this.id,
+    required this.title,
+    required this.side,
+    required this.dockItemWidget,
+    this.initiallyExpanded = false,
+    this.alowUndock = true,
+    this.isCollapsibleSection = true,
+  });
 }

@@ -33,7 +33,10 @@ class TestLibraryScreen extends StatelessWidget {
       length: 3,
       child: Scaffold(
         appBar: FusionAppBar(
-          title: 'Library',
+          title: FusionAppText(
+            text: "Library",
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
           themeToggleWidget: ValueListenableBuilder<ThemeMode>(
             valueListenable: FusionThemeController.themeModeNotifier,
             builder: (BuildContext context, ThemeMode themeMode, Widget? child) {

@@ -3,6 +3,11 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
+import '../../models/dock_item_config.dart';
+import '../../models/fusion_dock_item.dart';
+import '../dockable_side_bar/fusion_dock_floating_panel.dart';
+import '../text_views/fusion_app_text.dart';
+
 /// A custom expandable tile widget with drag gesture support for Fusion applications.
 ///
 /// This widget provides an expandable/collapsible tile with a title and child content.
@@ -23,57 +28,23 @@ import 'package:fusion_lib/fusion_theme/app_theme.dart';
 /// ### Example:
 /// ```dart
 /// FusionExpandableTileWidget(
-///   title: "Settings Panel",
-///   initiallyExpanded: false,
-///   onPanStart: (details) => _handleDragStart(details),
-///   onPanUpdate: (details) => _handleDragUpdate(details),
-///   onPanEnd: (details) => _handleDragEnd(details),
-///   child: Column(
-///     children: [
-///       ListTile(title: Text("Option 1")),
-///       ListTile(title: Text("Option 2")),
+///
 ///     ],
 ///   ),
 /// )
 /// ```
 class FusionExpandableTileWidget extends StatefulWidget {
-  /// The title text displayed in the tile header.
-  final String title;
-
-  /// The widget content displayed when the tile is expanded.
-  final Widget child;
-
-  /// Whether the tile should be initially expanded when first rendered.
-  ///
-  /// Defaults to `false` (collapsed state).
-  final bool initiallyExpanded;
-
-  /// Callback triggered when a pan gesture starts on the title area.
-  ///
-  /// Provides [DragStartDetails] containing the initial touch position.
-  /// Used for drag-to-dock or similar interactions.
-  final GestureDragStartCallback? onPanStart;
-
-  /// Callback triggered during pan gesture updates on the title area.
-  ///
-  /// Provides [DragUpdateDetails] with delta and position information
-  /// for continuous drag tracking and visual feedback.
-  final GestureDragUpdateCallback? onPanUpdate;
-
-  /// Callback triggered when a pan gesture ends on the title area.
-  ///
-  /// Provides [DragEndDetails] with velocity information.
-  /// Used to complete drag operations or handle drop logic.
-  final GestureDragEndCallback? onPanEnd;
+  final DockItem item;
+  final DockItemConfig config;
+  final void Function(DockItem, DraggableDetails) onUndock;
+  final void Function(DockItem, bool) onExpansionChanged;
 
   const FusionExpandableTileWidget({
     super.key,
-    required this.title,
-    required this.child,
-    this.initiallyExpanded = false,
-    this.onPanStart,
-    this.onPanUpdate,
-    this.onPanEnd,
+    required this.item,
+    required this.config,
+    required this.onUndock,
+    required this.onExpansionChanged,
   });
 
   @override
@@ -100,7 +71,7 @@ class _FusionExpandableTileWidgetState extends State<FusionExpandableTileWidget>
   void initState() {
     super.initState();
     // Initialize animation controller with initial state based on expansion
-    _rotationController = AnimationController(duration: const Duration(milliseconds: 200), vsync: this, value: widget.initiallyExpanded ? 1.0 : 0.0);
+    _rotationController = AnimationController(duration: const Duration(milliseconds: 200), vsync: this, value: widget.config.initiallyExpanded ? 1.0 : 0.0);
     // Configure rotation animation to rotate 180 degrees (0.5 turns)
     _rotationAnimation = Tween<double>(begin: 0.0, end: 0.5).animate(CurvedAnimation(parent: _rotationController, curve: Curves.easeInOut));
   }
@@ -139,24 +110,37 @@ class _FusionExpandableTileWidgetState extends State<FusionExpandableTileWidget>
         child: ExpansionTile(
           minTileHeight: 24,
           dense: true,
-          tilePadding: const EdgeInsets.only(right: 8, left: 16),
+          tilePadding: const EdgeInsets.only(right: 16, left: 16),
           trailing: _RotatingIcon(animation: _rotationAnimation, color: theme.colorScheme.fusionTextViewColor),
           onExpansionChanged: _handleExpansionChanged,
           iconColor: theme.colorScheme.fusionTextViewColor,
           collapsedIconColor: theme.colorScheme.fusionTextViewColor,
-          title: MouseRegion(
-            cursor: SystemMouseCursors.click,
-            child: GestureDetector(
-              behavior: HitTestBehavior.translucent,
-              onPanStart: widget.onPanStart,
-              onPanUpdate: widget.onPanUpdate,
-              onPanEnd: widget.onPanEnd,
-              child: _SectionTitle(title: widget.title),
+          title: Draggable<DockItem>(
+            data: widget.item,
+            feedback: FloatingWidget(
+              item: widget.item,
+              config: widget.config,
+              resizing: false,
+              onClose: () {}, // No-op for feedback
+              onResize: (_, __) {}, // No-op for feedback
             ),
+
+            /// make the original widget semi transparent when dragging
+            childWhenDragging: Opacity(
+              opacity: 0.3,
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 0, horizontal: 0),
+                child: FusionAppText(text: widget.item.title, style: Theme.of(context).textTheme.labelSmall),
+              ),
+            ),
+
+            /// Only allow undocking if config allows it
+            onDragEnd: (details) => widget.config.alowUndock ? widget.onUndock(widget.item, details) : null,
+            child: FusionAppText(text: widget.item.title, style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 11)),
           ),
 
-          initiallyExpanded: widget.initiallyExpanded,
-          children: <Widget>[widget.child],
+          initiallyExpanded: widget.config.initiallyExpanded,
+          children: <Widget>[widget.config.dockItemWidget()],
         ),
       ),
     );
@@ -190,22 +174,5 @@ class _RotatingIcon extends StatelessWidget {
         child: Icon(Icons.keyboard_arrow_down, size: 16, color: color),
       ),
     );
-  }
-}
-
-/// A styled title text widget for the expandable tile header.
-///
-/// Applies consistent text styling with Fusion theme typography
-/// and small font size appropriate for compact tile headers.
-/// The text is interactive and can receive pan gestures for drag operations.
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle({required this.title});
-
-  /// The title text to display in the tile header.
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(title, style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 9));
   }
 }

@@ -22,7 +22,6 @@ export 'others/fusion_dialog.dart';
 export 'others/fusion_profile_image.dart';
 export 'others/fusion_shimmer.dart';
 export 'others/fusion_image.dart';
-export 'others/fusion_dockable_panel.dart';
 export 'others/fusion_expandable_tile_widget.dart';
 
 /// text views

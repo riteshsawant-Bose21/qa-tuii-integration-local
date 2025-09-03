@@ -13,6 +13,7 @@ import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../schematics/presentation/pages/schematics_page.dart';
 import '../../venue_design/presentation/widgets/side_panel/product_query.dart';
 import '../widget/building/building_canvas.dart';
+import '../widget/building/side_panle_widgets/building_plan.dart';
 import '../widget/control_design_tab_switcher.dart';
 
 class ProjectWorkArea extends StatefulWidget {
@@ -204,39 +205,144 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                     dockItemList: <DockItemConfig>[
                       DockItemConfig(
                         id: "1",
-                        title: "Coverage",
+                        title: "Building Plan",
                         side: "left",
-                        widgetBuilder: () => const ProductQuery(),
+                        alowUndock: false,
+                        isCollapsibleSection: false,
+                        dockItemWidget: () => const BuildingPlan(),
+                        // () => Container(
+                        //   padding: const EdgeInsets.all(16),
+                        //   decoration: BoxDecoration(
+                        //     border: Border(
+                        //       bottom: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
+                        //     ),
+                        //   ),
+                        //   child: Column(
+                        //     crossAxisAlignment: CrossAxisAlignment.start,
+                        //     mainAxisAlignment: MainAxisAlignment.start,
+                        //     children: <Widget>[
+                        //       Row(
+                        //         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        //         crossAxisAlignment: CrossAxisAlignment.center,
+                        //         children: <Widget>[
+                        //           FusionAppText(text: "Building Plan", style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 11)),
+                        //           GestureDetector(
+                        //             onTap: () {},
+                        //             child: Icon(
+                        //               Icons.add_sharp,
+                        //               size: 14,
+                        //               color: Theme.of(context).colorScheme.fusionTextViewColor,
+                        //             ),
+                        //           ),
+                        //         ],
+                        //       ),
+                        //       const SizedBox(
+                        //         height: 10,
+                        //       ),
+                        //       Row(
+                        //         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        //         crossAxisAlignment: CrossAxisAlignment.center,
+                        //         children: <Widget>[
+                        //           Container(
+                        //             width: 18,
+                        //             height: 18,
+                        //             margin: const EdgeInsets.all(0),
+                        //             decoration: BoxDecoration(
+                        //               color: Theme.of(context).colorScheme.greyDark,
+                        //               borderRadius: BorderRadius.circular(2),
+                        //               border: Border.all(color: Theme.of(context).colorScheme.dividerColor, width: 1),
+                        //             ),
+                        //             child: FusionAppText(
+                        //               text: "FF",
+                        //               textAlign: TextAlign.center,
+                        //               style: Theme.of(
+                        //                 context,
+                        //               ).textTheme.bodyMedium?.copyWith(
+                        //                 fontSize: 9,
+                        //                 fontWeight: FontWeight.w600,
+                        //                 color: Theme.of(context).colorScheme.fusionButtonTextColor,
+                        //               ),
+                        //             ),
+                        //           ),
+                        //           const SizedBox(
+                        //             width: 12,
+                        //           ),
+                        //           Column(
+                        //             crossAxisAlignment: CrossAxisAlignment.start,
+                        //             children: <Widget>[
+                        //               FusionAppText(text: "Floor plan 1", style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 12)),
+                        //               const SizedBox(height: 1),
+                        //               FusionAppText(
+                        //                 text: "Description",
+                        //                 style: Theme.of(
+                        //                   context,
+                        //                 ).textTheme.bodyMedium?.copyWith(
+                        //                   fontSize: 10,
+                        //                   fontWeight: FontWeight.w600,
+                        //                   color: Theme.of(context).colorScheme.grey,
+                        //                 ),
+                        //               ),
+                        //             ],
+                        //           ),
+                        //           const Spacer(),
+                        //           GestureDetector(
+                        //             onTap: () {},
+                        //             child: Icon(
+                        //               Icons.keyboard_arrow_down,
+                        //               size: 14,
+                        //               color: Theme.of(context).colorScheme.fusionTextViewColor,
+                        //             ),
+                        //           ),
+                        //         ],
+                        //       ),
+                        //     ],
+                        //   ),
+                        // ),
                       ),
                       DockItemConfig(
                         id: "2",
-                        title: "Devices",
+                        title: "Coverage",
                         side: "left",
-                        widgetBuilder: () => const ProductQuery(),
+                        alowUndock: false,
+                        initiallyExpanded: true,
+                        isCollapsibleSection: true,
+                        dockItemWidget: () => const ProductQuery(),
                       ),
                       DockItemConfig(
                         id: "3",
-                        title: "ATTRIBUTES",
-                        side: "right",
-                        widgetBuilder: () => const ProductQuery(),
+                        title: "Devices",
+                        side: "left",
+                        dockItemWidget: () => const ProductQuery(),
                       ),
                       DockItemConfig(
                         id: "4",
-                        title: "COST CALCULATOR",
-                        side: "right",
-                        widgetBuilder: () => const ProductQuery(),
+                        title: "Tree View",
+                        side: "left",
+                        dockItemWidget: () => const ProductQuery(),
                       ),
                       DockItemConfig(
                         id: "5",
-                        title: "PRODUCT QUERY",
+                        title: "ATTRIBUTES",
                         side: "right",
-                        widgetBuilder: () => const ProductQuery(),
+                        dockItemWidget: () => const ProductQuery(),
                       ),
                       DockItemConfig(
                         id: "6",
+                        title: "COST CALCULATOR",
+                        side: "right",
+                        dockItemWidget: () => const ProductQuery(),
+                      ),
+                      DockItemConfig(
+                        id: "7",
+                        title: "PRODUCT QUERY",
+                        side: "right",
+                        dockItemWidget: () => const ProductQuery(),
+                      ),
+                      DockItemConfig(
+                        id: "8",
                         title: "DEVICE LIST",
                         side: "right",
-                        widgetBuilder: () => const ProductQuery(),
+                        dockItemWidget: () => const ProductQuery(),
                       ),
                     ],
                   ),
@@ -249,16 +355,16 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                     mainArea: const SchematicsPage(),
                     dockItemList: <DockItemConfig>[
                       DockItemConfig(
-                        id: "7",
+                        id: "9",
                         title: "Cost Calculator",
                         side: "right",
-                        widgetBuilder: () => const ProductQuery(),
+                        dockItemWidget: () => const ProductQuery(),
                       ),
                       DockItemConfig(
-                        id: "5",
+                        id: "7",
                         title: "PRODUCT QUERY",
                         side: "right",
-                        widgetBuilder: () => const ProductQuery(),
+                        dockItemWidget: () => const ProductQuery(),
                       ),
                     ],
                   ),

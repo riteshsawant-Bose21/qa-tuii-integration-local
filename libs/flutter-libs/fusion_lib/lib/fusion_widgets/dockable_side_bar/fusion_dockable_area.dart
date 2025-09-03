@@ -51,21 +51,6 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
     }
   }
 
-  // @override
-  // void didUpdateWidget(FusionDockableArea oldWidget) {
-  //   super.didUpdateWidget(oldWidget);
-  //
-  //   /// Add new items if configs changed, but preserve existing state
-  //   for (var config in widget.dockItemList) {
-  //     if (!_globalDockItems.containsKey(config.id)) {
-  //       print("update DockItem: ${config.id}=== ${config.title}");
-  //
-  //       _globalDockItems[config.id] = DockItem(id: config.id, title: config.title, side: config.side);
-  //       _globalDockItems[config.id]!.zIndex ??= 0;
-  //     }
-  //   }
-  // }
-
   /// Get items that belong to this tab
   List<DockItem> getItemsForTab() {
     /// Return only items that are configured for this tab
@@ -96,7 +81,7 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
   }
 
   /// Handle drag end to determine docking or floating
-  void _handleItemDragEnd(DockItem item, DraggableDetails details, double screenWidth) {
+  void _handleFloatingItemDragEnd(DockItem item, DraggableDetails details, double screenWidth) {
     setState(() {
       final dx = details.offset.dx;
       if (widget.showLeft && dx < 240) {
@@ -109,7 +94,6 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
         item.docked = true;
         item.expanded = false;
         item.side = "right";
-        // Assign docked order for right side items
         _rightDockOrder++;
         item.dockedOrder = _rightDockOrder;
       } else {
@@ -120,31 +104,31 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
     });
   }
 
-  /// Undock and reset position if widget side is right then duck to right side or else right side
-  void onCloseButtonPressed(DockItem item) {
-    setState(() {
-      if (item.side == "right" && widget.showRight) {
-        item.docked = true;
-        item.expanded = false;
-        item.side = "right";
-      } else if (item.side == "left" && widget.showLeft) {
-        item.docked = true;
-        item.expanded = false;
-        item.side = "left";
-      }
-      // Reset position
-    });
-  }
-
   /// Handle undocking from sidebar
-  void _handleItemUndock(DockItem item, DraggableDetails details) {
+  void _handleSidebarUndock(DockItem item, DraggableDetails details) {
     setState(() {
       item.docked = false;
       item.position = details.offset;
       item.expanded = true;
     });
-    // Bring to front when undocked
+
+    /// Bring to front when undocked
     _bringItemToFront(item);
+  }
+
+  /// Undock and reset position if widget side is right then duck to right side or else right side
+  void onCloseButtonPressed(DockItem item) {
+    setState(() {
+      if (item.side == "right" && widget.showRight) {
+        item.docked = true;
+        item.expanded = true;
+        item.side = "right";
+      } else if (item.side == "left" && widget.showLeft) {
+        item.docked = true;
+        item.expanded = true;
+        item.side = "left";
+      }
+    });
   }
 
   /// Handle expansion state change
@@ -167,7 +151,7 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
     final screenWidth = MediaQuery.of(context).size.width;
     final items = getItemsForTab();
 
-    // Get floating items and sort them by z-index for proper stacking order
+    /// Get floating items and sort them by z-index for proper stacking order
     final floatingItems =
         items.where((i) => !i.docked).where((item) => (item.side == "left" && widget.showLeft) || (item.side == "right" && widget.showRight)).toList()
           ..sort((a, b) => (a.zIndex ?? 0).compareTo(b.zIndex ?? 0));
@@ -176,6 +160,7 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
       children: [
         Row(
           children: [
+            /// Left Sidebar
             if (widget.showLeft)
               FusionHorizontalResizableWidget(
                 minWidth: 240,
@@ -186,13 +171,15 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
                   side: "left",
                   items: items.where((i) => i.docked && i.side == "left").toList()..sort((a, b) => (a.dockedOrder ?? 0).compareTo(b.dockedOrder ?? 0)),
                   itemConfigs: widget.dockItemList,
-                  onItemUndock: _handleItemUndock,
+                  onItemUndock: _handleSidebarUndock,
                   onExpansionChanged: _handleExpansionChanged,
                 ),
               ),
 
+            /// Main Area
             Expanded(child: widget.mainArea),
 
+            /// Right Sidebar
             if (widget.showRight)
               FusionHorizontalResizableWidget(
                 minWidth: 240,
@@ -203,7 +190,7 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
                   side: "right",
                   items: items.where((i) => i.docked && i.side == "right").toList()..sort((a, b) => (a.dockedOrder ?? 0).compareTo(b.dockedOrder ?? 0)),
                   itemConfigs: widget.dockItemList,
-                  onItemUndock: _handleItemUndock,
+                  onItemUndock: _handleSidebarUndock,
                   onExpansionChanged: _handleExpansionChanged,
                 ),
               ),
@@ -214,14 +201,14 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
         for (var item in floatingItems)
           Positioned(
             left: item.position.dx,
-            top: item.position.dy,
+            top: item.position.dy - kToolbarHeight - 48,
             child: GestureDetector(
               onTap: () => _handleItemTap(item),
               child: FusionFloatingPanel(
                 item: item,
                 config: getConfigForItem(item.id),
                 onDragStart: () => _handleItemDragStart(item),
-                onDragEnd: (details) => _handleItemDragEnd(item, details, screenWidth),
+                onDragEnd: (details) => _handleFloatingItemDragEnd(item, details, screenWidth),
                 onClose: () => onCloseButtonPressed(item),
                 onResize: (deltaX, deltaY) => _handleItemResize(item, deltaX, deltaY),
               ),
