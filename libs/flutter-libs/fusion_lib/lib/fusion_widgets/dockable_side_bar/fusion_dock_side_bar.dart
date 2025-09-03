@@ -32,26 +32,31 @@ class FusionDockSidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 240,
-      height: double.infinity,
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.white,
-        border: Border(
-          /// side == "left" show right border or left border
-          right: side == "left" ? BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1) : BorderSide.none,
-          left: side == "right" ? BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1) : BorderSide.none,
-        ),
-      ),
-      child: ListView(
-        physics: const ClampingScrollPhysics(),
-        children: items.map((item) {
-          final config = getConfigForItem(item.id);
-          return config != null
-              ? SidebarPanel(item: item, config: config, onUndock: onItemUndock, onExpansionChanged: onExpansionChanged)
-              : const SizedBox.shrink();
-        }).toList(),
-      ),
+    return DragTarget<DockItem>(
+      builder: (BuildContext context, List<DockItem?> candidateItems, List<dynamic> rejectedItems) {
+        final bool hasIncomingData = candidateItems.isNotEmpty;
+        return Container(
+          width: 240,
+          height: double.infinity,
+          decoration: BoxDecoration(
+            color: hasIncomingData ? const Color(0xFF80C7FF) : Theme.of(context).colorScheme.white,
+            border: Border(
+              /// side == "left" show right border or left border
+              right: side == "left" ? BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1) : BorderSide.none,
+              left: side == "right" ? BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1) : BorderSide.none,
+            ),
+          ),
+          child: ListView(
+            physics: const ClampingScrollPhysics(),
+            children: items.map((item) {
+              final config = getConfigForItem(item.id);
+              return config != null
+                  ? SidebarPanel(item: item, config: config, onUndock: onItemUndock, onExpansionChanged: onExpansionChanged)
+                  : const SizedBox.shrink();
+            }).toList(),
+          ),
+        );
+      },
     );
   }
 }
@@ -66,41 +71,40 @@ class SidebarPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Draggable<DockItem>(
-      data: item,
-      feedback: FloatingWidget(
-        item: item,
-        config: config,
-        resizing: false,
-        onClose: () {}, // No-op for feedback
-        onResize: (_, __) {}, // No-op for feedback
-        highlight: false,
-      ),
-
-      /// make the original widget semi transparent when dragging
-      childWhenDragging: Opacity(
-        opacity: 0.4,
-        child: ExpansionTile(
-          title: FusionAppText(text: item.title, style: Theme.of(context).textTheme.bodySmall),
-          children: [Expanded(child: config.widgetBuilder())],
+    return Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.white,
+          border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1)),
         ),
-      ),
-      onDragEnd: (details) => onUndock(item, details),
-      child: Theme(
-        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.white,
-            border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1)),
+        child: ExpansionTile(
+          minTileHeight: 24,
+          iconColor: Theme.of(context).colorScheme.fusionTextViewColor,
+          title: Draggable<DockItem>(
+            data: item,
+            feedback: FloatingWidget(
+              item: item,
+              config: config,
+              resizing: false,
+              onClose: () {}, // No-op for feedback
+              onResize: (_, __) {}, // No-op for feedback
+            ),
+
+            /// make the original widget semi transparent when dragging
+            childWhenDragging: Opacity(
+              opacity: 0.3,
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 0, horizontal: 0),
+                child: FusionAppText(text: item.title, style: Theme.of(context).textTheme.bodySmall),
+              ),
+            ),
+            onDragEnd: (details) => onUndock(item, details),
+            child: FusionAppText(text: item.title, style: Theme.of(context).textTheme.bodySmall),
           ),
-          child: ExpansionTile(
-            minTileHeight: 24,
-            iconColor: Theme.of(context).colorScheme.fusionTextViewColor,
-            title: FusionAppText(text: item.title, style: Theme.of(context).textTheme.bodySmall),
-            initiallyExpanded: item.expanded,
-            onExpansionChanged: (val) => onExpansionChanged(item, val ?? false),
-            children: [config.widgetBuilder()],
-          ),
+          initiallyExpanded: item.expanded,
+          onExpansionChanged: (val) => onExpansionChanged(item, val ?? false),
+          children: [config.widgetBuilder()],
         ),
       ),
     );

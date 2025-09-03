@@ -50,20 +50,20 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
     }
   }
 
-  @override
-  void didUpdateWidget(FusionDockableArea oldWidget) {
-    super.didUpdateWidget(oldWidget);
-
-    /// Add new items if configs changed, but preserve existing state
-    for (var config in widget.dockItemList) {
-      if (!_globalDockItems.containsKey(config.id)) {
-        print("update DockItem: ${config.id}=== ${config.title}");
-
-        _globalDockItems[config.id] = DockItem(id: config.id, title: config.title, side: config.side);
-        _globalDockItems[config.id]!.zIndex ??= 0;
-      }
-    }
-  }
+  // @override
+  // void didUpdateWidget(FusionDockableArea oldWidget) {
+  //   super.didUpdateWidget(oldWidget);
+  //
+  //   /// Add new items if configs changed, but preserve existing state
+  //   for (var config in widget.dockItemList) {
+  //     if (!_globalDockItems.containsKey(config.id)) {
+  //       print("update DockItem: ${config.id}=== ${config.title}");
+  //
+  //       _globalDockItems[config.id] = DockItem(id: config.id, title: config.title, side: config.side);
+  //       _globalDockItems[config.id]!.zIndex ??= 0;
+  //     }
+  //   }
+  // }
 
   /// Get items that belong to this tab
   List<DockItem> getItemsForTab() {
@@ -111,12 +111,6 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
         // Assign docked order for right side items
         _rightDockOrder++;
         item.dockedOrder = _rightDockOrder;
-
-        // Count all docked items on the right side after this change
-        final items = getItemsForTab();
-        final rightDockedItems = items.where((i) => i.docked && i.side == "right").toList();
-        print("Right docked items count: ${rightDockedItems.length}");
-        print("Item ${item.title} docked to right with order: ${item.dockedOrder}");
       } else {
         item.position = details.offset;
         item.docked = false;
