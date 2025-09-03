@@ -1,6 +1,5 @@
 import 'package:flutter/cupertino.dart';
 import 'package:fusion_launcher/features/onboarding/presentation/welcome_page.dart';
-import 'package:fusion_launcher/features/projects/presentation/project_page.dart';
 import 'package:fusion_launcher/features/user_account_setup/presentation/pages/launcher_sign_up_page.dart';
 
 import '../../features/dashboard/presentation/pages/dashboard_page.dart';
@@ -48,7 +47,7 @@ class Routes {
       /// Project Page
       case projectPage:
         return CupertinoPageRoute<void>(
-          builder: (BuildContext context) => const ProjectPage(),
+          builder: (BuildContext context) => const ProjectWorkArea(),
           settings: const RouteSettings(name: projectPage),
         );
 

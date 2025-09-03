@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/dock_item_config.dart';
 import '../../models/fusion_dock_item.dart';
+import '../others/fusion_horizontal_resizable_widget.dart';
 import 'fusion_dock_floating_panel.dart';
 import 'fusion_dock_side_bar.dart';
 
@@ -176,23 +177,35 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
         Row(
           children: [
             if (widget.showLeft)
-              FusionDockSidebar(
-                side: "left",
-                items: items.where((i) => i.docked && i.side == "left").toList()..sort((a, b) => (a.dockedOrder ?? 0).compareTo(b.dockedOrder ?? 0)),
-                itemConfigs: widget.dockItemList,
-                onItemUndock: _handleItemUndock,
-                onExpansionChanged: _handleExpansionChanged,
+              FusionHorizontalResizableWidget(
+                minWidth: 240,
+                maxWidth: 1000,
+                dragLeft: false,
+                dragRight: true,
+                child: FusionDockSidebar(
+                  side: "left",
+                  items: items.where((i) => i.docked && i.side == "left").toList()..sort((a, b) => (a.dockedOrder ?? 0).compareTo(b.dockedOrder ?? 0)),
+                  itemConfigs: widget.dockItemList,
+                  onItemUndock: _handleItemUndock,
+                  onExpansionChanged: _handleExpansionChanged,
+                ),
               ),
 
             Expanded(child: widget.mainArea),
 
             if (widget.showRight)
-              FusionDockSidebar(
-                side: "right",
-                items: items.where((i) => i.docked && i.side == "right").toList()..sort((a, b) => (a.dockedOrder ?? 0).compareTo(b.dockedOrder ?? 0)),
-                itemConfigs: widget.dockItemList,
-                onItemUndock: _handleItemUndock,
-                onExpansionChanged: _handleExpansionChanged,
+              FusionHorizontalResizableWidget(
+                minWidth: 240,
+                maxWidth: 1000,
+                dragLeft: true,
+                dragRight: false,
+                child: FusionDockSidebar(
+                  side: "right",
+                  items: items.where((i) => i.docked && i.side == "right").toList()..sort((a, b) => (a.dockedOrder ?? 0).compareTo(b.dockedOrder ?? 0)),
+                  itemConfigs: widget.dockItemList,
+                  onItemUndock: _handleItemUndock,
+                  onExpansionChanged: _handleExpansionChanged,
+                ),
               ),
           ],
         ),

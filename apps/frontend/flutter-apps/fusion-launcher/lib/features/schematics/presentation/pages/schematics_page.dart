@@ -88,103 +88,103 @@ class SchematicsPageState extends State<SchematicsPage> {
                 ),
               ),
 
-              Container(
-                width: 310,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border(left: BorderSide(color: Colors.grey.shade200, width: 1)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    // Header
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade50,
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
-                        border: Border(
-                          bottom: BorderSide(color: Colors.grey.shade200, width: 1),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          const SizedBox(width: 8),
-                          Icon(Icons.tune, size: 18, color: Colors.grey.shade600),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: AnimatedOpacity(
-                              duration: const Duration(milliseconds: 150),
-                              opacity: 1.0,
-                              child: Text(
-                                "Properties",
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.grey.shade700,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Body
-                    Expanded(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.all(6),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            Align(
-                              alignment: Alignment.topRight,
-                              child: SingleChildScrollView(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.start,
-                                  children: <Widget>[
-                                    CostCalculatorScreen(
-                                      speakers: serviceLocator<ProjectViewModel>().speakers,
-                                      sources: serviceLocator<ProjectViewModel>().sources,
-                                      controllers:
-                                          serviceLocator<ProjectViewModel>().genericHardwareComponents
-                                              .where((GenericHardwareComponent component) => component.type == GenericHardwareComponentType.controller)
-                                              .toList(),
-                                      racks:
-                                          serviceLocator<ProjectViewModel>().genericHardwareComponents
-                                              .where((GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack)
-                                              .toList(),
-                                      amplifiers: <Amplifier>[],
-                                      fusionDevices: <FusionDevice>[],
-                                      others:
-                                          serviceLocator<ProjectViewModel>().genericHardwareComponents
-                                              .where(
-                                                (HardwareComponent component) =>
-                                                    component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
-                                              )
-                                              .toList(),
-                                    ),
-
-                                    const SizedBox(
-                                      height: 5,
-                                    ),
-
-                                    const DevicesCatalogWidget(),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              // Container(
+              //   width: 310,
+              //   decoration: BoxDecoration(
+              //     color: Colors.white,
+              //     border: Border(left: BorderSide(color: Colors.grey.shade200, width: 1)),
+              //   ),
+              //   child: Column(
+              //     crossAxisAlignment: CrossAxisAlignment.start,
+              //     children: <Widget>[
+              //       // Header
+              //       Container(
+              //         width: double.infinity,
+              //         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+              //         decoration: BoxDecoration(
+              //           color: Colors.grey.shade50,
+              //           borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+              //           border: Border(
+              //             bottom: BorderSide(color: Colors.grey.shade200, width: 1),
+              //           ),
+              //         ),
+              //         child: Row(
+              //           mainAxisSize: MainAxisSize.min,
+              //           children: <Widget>[
+              //             const SizedBox(width: 8),
+              //             Icon(Icons.tune, size: 18, color: Colors.grey.shade600),
+              //             const SizedBox(width: 8),
+              //             Expanded(
+              //               child: AnimatedOpacity(
+              //                 duration: const Duration(milliseconds: 150),
+              //                 opacity: 1.0,
+              //                 child: Text(
+              //                   "Properties",
+              //                   style: TextStyle(
+              //                     fontSize: 14,
+              //                     fontWeight: FontWeight.w600,
+              //                     color: Colors.grey.shade700,
+              //                   ),
+              //                   overflow: TextOverflow.ellipsis,
+              //                   maxLines: 1,
+              //                 ),
+              //               ),
+              //             ),
+              //           ],
+              //         ),
+              //       ),
+              //
+              //       // Body
+              //       Expanded(
+              //         child: SingleChildScrollView(
+              //           padding: const EdgeInsets.all(6),
+              //           child: Column(
+              //             crossAxisAlignment: CrossAxisAlignment.start,
+              //             children: <Widget>[
+              //               Align(
+              //                 alignment: Alignment.topRight,
+              //                 child: SingleChildScrollView(
+              //                   child: Column(
+              //                     mainAxisAlignment: MainAxisAlignment.start,
+              //                     children: <Widget>[
+              //                       CostCalculatorScreen(
+              //                         speakers: serviceLocator<ProjectViewModel>().speakers,
+              //                         sources: serviceLocator<ProjectViewModel>().sources,
+              //                         controllers:
+              //                             serviceLocator<ProjectViewModel>().genericHardwareComponents
+              //                                 .where((GenericHardwareComponent component) => component.type == GenericHardwareComponentType.controller)
+              //                                 .toList(),
+              //                         racks:
+              //                             serviceLocator<ProjectViewModel>().genericHardwareComponents
+              //                                 .where((GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack)
+              //                                 .toList(),
+              //                         amplifiers: <Amplifier>[],
+              //                         fusionDevices: <FusionDevice>[],
+              //                         others:
+              //                             serviceLocator<ProjectViewModel>().genericHardwareComponents
+              //                                 .where(
+              //                                   (HardwareComponent component) =>
+              //                                       component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
+              //                                 )
+              //                                 .toList(),
+              //                       ),
+              //
+              //                       const SizedBox(
+              //                         height: 5,
+              //                       ),
+              //
+              //                       const DevicesCatalogWidget(),
+              //                     ],
+              //                   ),
+              //                 ),
+              //               ),
+              //             ],
+              //           ),
+              //         ),
+              //       ),
+              //     ],
+              //   ),
+              // ),
             ],
           );
         },

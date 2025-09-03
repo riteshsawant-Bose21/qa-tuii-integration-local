@@ -1,9 +1,18 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/features/bill_of_materials/presentation/bill_of_materials_page.dart';
+import 'package:fusion_launcher/features/configuration/presentation/pages/audio_system_design_page.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/models/dock_item_config.dart';
 
+import '../../../core/service_locator.dart';
+import '../../../core/utils/broadcast_controllers.dart';
+import '../../configuration/presentation/viewmodel/project_view_model.dart';
+import '../../schematics/presentation/pages/schematics_page.dart';
 import '../../venue_design/presentation/widgets/side_panel/product_query.dart';
+import '../widget/building/building_canvas.dart';
 import '../widget/control_design_tab_switcher.dart';
 
 class ProjectWorkArea extends StatefulWidget {
@@ -13,9 +22,49 @@ class ProjectWorkArea extends StatefulWidget {
   State<ProjectWorkArea> createState() => _TestLibraryScreenState();
 }
 
-class _TestLibraryScreenState extends State<ProjectWorkArea> with TickerProviderStateMixin {
+class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
+  late TabController _tabController;
+  StreamSubscription<int>? subscription;
+  late TextEditingController _projectNameController;
+  final List<Widget> _tabs = const <Widget>[
+    Tab(text: 'Building'),
+    Tab(text: 'Schematics'),
+    Tab(text: 'Budget'),
+    Tab(text: 'Configuration'),
+    Tab(text: 'Cloud'),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(
+      length: _tabs.length,
+      vsync: this,
+      animationDuration: Duration.zero,
+    );
+
+    subscription = projectTabBroadcastController.stream.listen((int index) {
+      if (index >= 0 && index < _tabController.length) {
+        _tabController.animateTo(index);
+      }
+    });
+    _projectNameController = TextEditingController(text: serviceLocator<ProjectViewModel>().projectName);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    subscription?.cancel();
+    _projectNameController.dispose();
+    super.dispose();
+  }
+
+  @override
+  bool get wantKeepAlive => true;
+
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return DefaultTabController(
       animationDuration: Duration.zero,
 
@@ -23,21 +72,53 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with TickerProvider
       child: Scaffold(
         appBar: FusionAppBar(
           backgroundColor: Colors.black87,
-          leading: const Icon(Icons.arrow_back_ios), // List icon
+          leading: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: SizedBox(
+              width: 50,
+              height: 50,
+              child: IconButton(
+                icon: const Icon(
+                  Icons.arrow_back_ios,
+                  color: Colors.white,
+                ),
+                onPressed: () {
+                  serviceLocator<ProjectViewModel>().closeProject();
+                  Navigator.of(context).pop();
+                },
+                tooltip: 'Back to projects',
+              ),
+            ),
+          ), // List icon
 
-          title: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Text(
-                "Project Name", // Replace dynamically
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Theme.of(context).colorScheme.white),
+          title: IntrinsicWidth(
+            child: TextField(
+              controller: _projectNameController,
+              textAlign: TextAlign.start,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.normal,
               ),
-              const SizedBox(width: 12),
-              const Icon(
-                Icons.close_outlined,
-                size: 18,
+              decoration: const InputDecoration(
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: EdgeInsets.zero,
+                hintText: 'Project Name',
+                suffixIcon: Icon(
+                  Icons.edit,
+                  size: 16,
+                  color: Colors.grey,
+                ),
+                suffixIconConstraints: BoxConstraints(
+                  minWidth: 0,
+                  minHeight: 0,
+                ),
               ),
-            ],
+              onSubmitted: (String value) {
+                serviceLocator<ProjectViewModel>().setProjectName(value.trim());
+              },
+            ),
           ),
 
           actions: <Widget>[
@@ -67,7 +148,7 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with TickerProvider
                       labelColor: Colors.black87,
                       unselectedLabelColor: Theme.of(context).colorScheme.grey,
                       dividerColor: Colors.transparent,
-                      // controller: _tabController,
+                      controller: _tabController,
                       isScrollable: true,
                       tabAlignment: TabAlignment.start,
                       indicatorColor: Colors.black,
@@ -82,12 +163,7 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with TickerProvider
                         fontWeight: FontWeight.w400,
                       ),
                       labelPadding: const EdgeInsets.only(left: 32),
-                      tabs: <Widget>[
-                        const Tab(text: "Building"),
-                        const Tab(text: "Schematic"),
-                        const Tab(text: "Budget"),
-                        const Tab(text: "Configuration"),
-                      ],
+                      tabs: _tabs,
                     ),
                   ),
 
@@ -116,20 +192,15 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with TickerProvider
             ),
             Expanded(
               child: TabBarView(
+                controller: _tabController,
+                physics: const NeverScrollableScrollPhysics(),
                 children: <Widget>[
+                  /// building tab with docking area
                   FusionDockableArea(
                     tabKey: "tab1",
                     showLeft: true,
                     showRight: true,
-                    mainArea: Container(
-                      color: Colors.grey.shade50,
-                      child: const Center(
-                        child: Text(
-                          "Main Area",
-                          style: TextStyle(fontSize: 24, color: Colors.black54),
-                        ),
-                      ),
-                    ),
+                    mainArea: const BuildingCanvas(),
                     dockItemList: <DockItemConfig>[
                       DockItemConfig(
                         id: "1",
@@ -169,75 +240,48 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with TickerProvider
                       ),
                     ],
                   ),
+
+                  /// schematics tab with docking area
                   FusionDockableArea(
                     tabKey: "tab2",
-                    showLeft: true,
+                    showLeft: false,
                     showRight: true,
-                    mainArea: Container(
-                      color: Colors.grey.shade50,
-                      child: const Center(
-                        child: Text(
-                          "Main Area",
-                          style: TextStyle(fontSize: 24, color: Colors.black54),
-                        ),
-                      ),
-                    ),
+                    mainArea: const SchematicsPage(),
                     dockItemList: <DockItemConfig>[
                       DockItemConfig(
-                        id: "1",
-                        title: "Bar",
-                        side: "left",
-                        widgetBuilder: () => const ProductQuery(),
-                      ),
-                      DockItemConfig(
-                        id: "4",
-                        title: "Sales",
+                        id: "7",
+                        title: "Cost Calculator",
                         side: "right",
                         widgetBuilder: () => const ProductQuery(),
                       ),
                       DockItemConfig(
                         id: "5",
-                        title: "Revenue",
+                        title: "PRODUCT QUERY",
                         side: "right",
                         widgetBuilder: () => const ProductQuery(),
                       ),
                     ],
                   ),
-                  FusionDockableArea(
+
+                  /// budget tab with docking area
+                  const FusionDockableArea(
                     tabKey: "tab3",
-                    showLeft: true,
+                    showLeft: false,
                     showRight: false,
-                    mainArea: Container(
-                      color: Colors.grey.shade50,
-                      child: const Center(
-                        child: Text(
-                          "Main Area",
-                          style: TextStyle(fontSize: 24, color: Colors.black54),
-                        ),
-                      ),
-                    ),
-                    dockItemList: <DockItemConfig>[
-                      DockItemConfig(
-                        id: "6",
-                        title: "Analytics",
-                        side: "left",
-                        widgetBuilder: () => const ProductQuery(),
-                      ),
-                      DockItemConfig(
-                        id: "7",
-                        title: "Reports",
-                        side: "left",
-                        widgetBuilder: () => const ProductQuery(),
-                      ),
-                      DockItemConfig(
-                        id: "8",
-                        title: "Dashboard",
-                        side: "left",
-                        // widgetBuilder: (bool isExpanded) => BarWidget(isExpanded: isExpanded),
-                        widgetBuilder: () => const ProductQuery(),
-                      ),
-                    ],
+                    mainArea: BillOfMaterialsPage(),
+                    dockItemList: <DockItemConfig>[],
                   ),
+
+                  /// Config tab without docking area
+                  const FusionDockableArea(
+                    tabKey: "tab4",
+                    showLeft: false,
+                    showRight: false,
+                    mainArea: AudioSystemDesignPage(),
+                    dockItemList: <DockItemConfig>[],
+                  ),
+
+                  /// Cloud tab without docking area
                   const DataTab(),
                 ],
               ),
