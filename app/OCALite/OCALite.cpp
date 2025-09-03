@@ -8,6 +8,7 @@
 //
 
 #include <HostInterfaceLite/OCA/OCF/OcfLiteHostInterface.h>
+#include <HostInterfaceLite/OCA/OCF/Logging/IOcfLiteLog.h>
 #include <HostInterfaceLite/OCA/OCP.1/Ocp1LiteHostInterface.h>
 #include <OCC/ControlDataTypes/OcaLiteStringInABlob.h>
 #include <OCC/ControlClasses/Workers/BlocksAndMatrices/OcaLiteBlock.h>
@@ -37,6 +38,9 @@ int main(int argc, const char* argv[])
         static_cast<void>(sscanf(argv[1], "%u", &connectionPort));
     }
     printf("Using connection port %d\r\n", connectionPort);
+
+    // Set log level to show INFO messages (including client connection logs)
+    ::OcfLiteLogSetLogLevel(OCA_LOG_LVL_TRACE);
 
     // Initialize the host interfaces
     bool bSuccess = ::OcfLiteHostInterfaceInitialize();
@@ -111,8 +115,6 @@ int main(int argc, const char* argv[])
             }
         }
     }
-
-    
 
     return 0;
 }

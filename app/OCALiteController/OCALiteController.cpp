@@ -9,6 +9,7 @@
 
 
 #include <HostInterfaceLite/OCA/OCF/OcfLiteHostInterface.h>
+#include <HostInterfaceLite/OCA/OCF/Logging/IOcfLiteLog.h>
 #include <HostInterfaceLite/OCA/OCP.1/Ocp1LiteHostInterface.h>
 #include <OCC/ControlClasses/Workers/BlocksAndMatrices/OcaLiteBlock.h>
 #include <OCC/ControlClasses/Managers/OcaLiteDeviceManager.h>
@@ -29,6 +30,9 @@ extern int Ocp1LiteServiceGetSocket();
 
 int main(int argc, const char* argv[])
 {
+    // Set log level to show INFO messages (including client connection logs)
+    ::OcfLiteLogSetLogLevel(OCA_LOG_LVL_TRACE);
+
     // Initialize the host interfaces
     bool bSuccess = ::OcfLiteHostInterfaceInitialize();
     bSuccess = bSuccess && ::Ocp1LiteHostInterfaceInitialize();
@@ -101,8 +105,6 @@ int main(int argc, const char* argv[])
             }
         }
     }
-
-    
 
     return 0;
 }
