@@ -78,8 +78,6 @@ struct fusion_cn_rtp_stream {
     spinlock_t lock;
     struct fusion_cn_stream_config info;
     struct fusion_cn_rtp_packet rtp_packet_base __aligned(64);
-    struct sk_buff *skb;
-    uint32_t packet_size;
     uint32_t ip_checksum_base;
     atomic_t is_running;
     uint32_t frames_in_buf;

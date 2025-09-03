@@ -53,9 +53,6 @@ void fusion_cn_rtp_stream_release(struct kref *ref)
     if (stream->next_action_times) {
         kfree(stream->next_action_times);
     }
-    if (stream->skb) {
-        kfree_skb(stream->skb);
-    }
     printk(KERN_INFO "fusion_cn_rtp: stream_release: release stream %s\n", stream->info.stream_name);
     kfree(stream);
 }
@@ -175,8 +172,10 @@ static int fusion_cn_rtp_resolve_unicast_mac(struct fusion_cn_rtp_manager *rtp_m
 }
 
 
-int fusion_cn_rtp_add_stream(struct fusion_cn_rtp_manager *rtp_mgr, struct fusion_cn_stream_config *info, 
-                             void *alsa_stream, struct fusion_cn_rtp_stream **rtp_stream)
+int fusion_cn_rtp_add_stream(struct fusion_cn_rtp_manager *rtp_mgr,
+                             struct fusion_cn_stream_config *info,
+                             void *alsa_stream,
+                             struct fusion_cn_rtp_stream **rtp_stream)
 {
     struct fusion_cn_rtp_stream *stream;
     struct fusion_cn_packet_map *map = NULL;
@@ -184,33 +183,46 @@ int fusion_cn_rtp_add_stream(struct fusion_cn_rtp_manager *rtp_mgr, struct fusio
     int err;
     struct net_device *dev;
     int sample_physical_width_bits;
+    uint32_t payload_bytes;
+    uint32_t pkt_bytes;
 
     *rtp_stream = NULL;
 
+    /* Verify interface exists and grab its MAC for eth.h_source */
     dev = dev_get_by_name(&init_net, rtp_mgr->nf->iface_name);
     if (!dev) {
-        printk(KERN_ERR"fusion_cn_rtp: add_stream: Interface %s not found\n", rtp_mgr->nf->iface_name);
+        printk(KERN_ERR "fusion_cn_rtp: add_stream: Interface %s not found\n",
+               rtp_mgr->nf->iface_name);
         return -ENODEV;
     }
-    dev_put(dev);
 
-    printk(KERN_INFO "fusion_cn_rtp: add_stream %s: sample_rate=%u, channels=%u, dest_ip=0x%08x, source_ip=0x%08x, dest_port=%u, source_port=%u, is_source=%d, is_fusion_connect=%d\n",
-           info->stream_name, info->sample_rate, info->channels, info->dest_ip, info->source_ip, info->dest_port, info->source_port, info->is_source, info->is_fusion_connect);
+    printk(KERN_INFO
+           "fusion_cn_rtp: add_stream %s: sample_rate=%u, channels=%u, "
+           "dest_ip=0x%08x, source_ip=0x%08x, dest_port=%u, source_port=%u, "
+           "is_source=%d, is_fusion_connect=%d\n",
+           info->stream_name, info->sample_rate, info->channels,
+           info->dest_ip, info->source_ip, info->dest_port, info->source_port,
+           info->is_source, info->is_fusion_connect);
 
     if (!info->stream_handle || !info->sample_rate || !info->channels ||
         !info->dest_ip || !info->source_ip || !info->dest_port || !info->source_port) {
+        dev_put(dev);
         printk(KERN_ERR "fusion_cn_rtp: add_stream: Invalid stream parameters\n");
         return -EINVAL;
     }
 
     stream = kzalloc(sizeof(*stream), GFP_KERNEL);
-    if (!stream) return -ENOMEM;
+    if (!stream) {
+        dev_put(dev);
+        return -ENOMEM;
+    }
 
-    // Only allocate packet_map for sink streams
+    /* Only allocate packet_map for sink streams (RX) */
     if (!info->is_source) {
         map = kzalloc(sizeof(*map), GFP_KERNEL);
         if (!map) {
             kfree(stream);
+            dev_put(dev);
             return -ENOMEM;
         }
     }
@@ -222,51 +234,69 @@ int fusion_cn_rtp_add_stream(struct fusion_cn_rtp_manager *rtp_mgr, struct fusio
 
     sample_physical_width_bits = snd_pcm_format_physical_width(info->format);
     if (sample_physical_width_bits <= 0) {
-        printk(KERN_ERR "fusion_cn_rtp: Invalid sample format %d\n", info->format);
         if (map) kfree(map);
         kfree(stream);
+        dev_put(dev);
+        printk(KERN_ERR "fusion_cn_rtp: Invalid sample format %d\n", info->format);
         return -EINVAL;
     }
 
-    stream->packet_size = sizeof(struct fusion_cn_rtp_packet) +
-                          info->frames_per_packet * info->channels * sample_physical_width_bits / 8;
+    /* Fixed payload size per packet for this stream */
+    payload_bytes = info->frames_per_packet * info->channels * (sample_physical_width_bits / 8);
 
+    /* Prepare invariant headers template */
     stream->rtp_packet_base.eth.h_proto = swab16(ETH_P_IP);
-    stream->rtp_packet_base.ip.version = 4;
-    stream->rtp_packet_base.ip.ihl = 5;
+    /* Set source MAC from device */
+    ether_addr_copy(stream->rtp_packet_base.eth.h_source, dev->dev_addr);
+
+    stream->rtp_packet_base.ip.version  = 4;
+    stream->rtp_packet_base.ip.ihl      = 5;
     stream->rtp_packet_base.ip.protocol = IPPROTO_UDP;
-    stream->rtp_packet_base.ip.saddr = info->source_ip;
-    stream->rtp_packet_base.ip.daddr = info->dest_ip;
-    stream->rtp_packet_base.ip.tos = 0xB8; // TODO: per stream?
-    stream->rtp_packet_base.ip.ttl = 64;
-    stream->rtp_packet_base.ip.tot_len = swab16(stream->packet_size - ETH_HLEN);
-    stream->rtp_packet_base.udp.len = swab16(stream->packet_size - ETH_HLEN - sizeof(struct iphdr));
-    stream->rtp_packet_base.udp.source = htons(info->source_port);
-    stream->rtp_packet_base.udp.dest = htons(info->dest_port);
-    stream->rtp_packet_base.rtp.version = 0x80;
+    stream->rtp_packet_base.ip.saddr    = info->source_ip;
+    stream->rtp_packet_base.ip.daddr    = info->dest_ip;
+    stream->rtp_packet_base.ip.tos      = 0xB8; /* EF; adjust per stream if needed */
+    stream->rtp_packet_base.ip.ttl      = 64;
+
+    stream->rtp_packet_base.udp.source  = htons(info->source_port);
+    stream->rtp_packet_base.udp.dest    = htons(info->dest_port);
+
+    stream->rtp_packet_base.rtp.version      = 0x80;
     stream->rtp_packet_base.rtp.payload_type = info->payload_type;
 
-    // Check if this is a loopback packet (source IP == dest IP)
-    if (info->source_ip == info->dest_ip) {
-        // For loopback, set a dummy MAC address (not used in loopback)
-        memset(stream->rtp_packet_base.eth.h_dest, 0, ETH_ALEN);
-    } else if (fusion_cn_rtp_is_ip_mcast(info->dest_ip)) {
-        fusion_cn_rtp_set_multicast_mac(info->dest_ip, stream->rtp_packet_base.eth.h_dest);
-    } else {
-        if (info->is_source) {
-            err = fusion_cn_rtp_resolve_unicast_mac(rtp_mgr, info->dest_ip, stream->rtp_packet_base.eth.h_dest);
+    /*
+     * Fill dest MAC for TX only (sources). Sinks do not transmit, so no need
+     * to resolve anything; their eth header is unused.
+     */
+    if (info->is_source) {
+        if (info->source_ip == info->dest_ip) {
+            /* Loopback: set a dummy dest MAC; not used */
+            memset(stream->rtp_packet_base.eth.h_dest, 0, ETH_ALEN);
+        } else if (fusion_cn_rtp_is_ip_mcast(info->dest_ip)) {
+            fusion_cn_rtp_set_multicast_mac(info->dest_ip,
+                                            stream->rtp_packet_base.eth.h_dest);
         } else {
-            err = fusion_cn_rtp_resolve_unicast_mac(rtp_mgr, info->source_ip, stream->rtp_packet_base.eth.h_source);
-        }
-        
-        if (err < 0) {
-            printk(KERN_ERR "fusion_cn_rtp: Failed to resolve unicast MAC for IP 0x%08x: %d\n", 
-                   info->is_source ? info->dest_ip : info->source_ip, err);
-            if (map) kfree(map);
-            kfree(stream);
-            return err;
+            err = fusion_cn_rtp_resolve_unicast_mac(rtp_mgr, info->dest_ip,
+                                                    stream->rtp_packet_base.eth.h_dest);
+            if (err < 0) {
+                printk(KERN_ERR
+                       "fusion_cn_rtp: Failed to resolve unicast MAC for IP 0x%08x: %d\n",
+                       info->dest_ip, err);
+                if (map) kfree(map);
+                kfree(stream);
+                dev_put(dev);
+                return err;
+            }
         }
     }
+
+    /*
+     * IP/UDP lengths are constant for this stream; compute once and
+     * stamp them into the template. (These include RTP header + payload.)
+     * packet_bytes = ETH + IP + UDP + RTP + payload
+     */
+    pkt_bytes = sizeof(struct fusion_cn_rtp_packet) + payload_bytes;
+    stream->rtp_packet_base.ip.tot_len = swab16(pkt_bytes - ETH_HLEN);
+    stream->rtp_packet_base.udp.len    = swab16(pkt_bytes - ETH_HLEN - sizeof(struct iphdr));
 
     if (info->is_source) {
         get_random_bytes(&stream->ssrc, sizeof(stream->ssrc));
@@ -279,35 +309,37 @@ int fusion_cn_rtp_add_stream(struct fusion_cn_rtp_manager *rtp_mgr, struct fusio
 
     stream->next_action_time = 0;
     stream->packet_time = (info->frames_per_packet * NSEC_PER_SEC) / info->sample_rate;
-    stream->ip_checksum_base = fusion_cn_rtp_compute_cksum(&stream->rtp_packet_base.ip, 
-                                sizeof(stream->rtp_packet_base.ip) - sizeof(stream->rtp_packet_base.ip.tot_len));
 
-    stream->skb = alloc_skb(stream->packet_size, GFP_KERNEL);
-    if (!stream->skb) {
-        printk(KERN_ERR "fusion_cn_rtp: Failed to allocate skb for stream %s\n", info->stream_name);
-        if (map) kfree(map);
-        kfree(stream);
-        return -ENOMEM;
-    }
+    /* Precompute checksum base over invariant IP fields (excluding tot_len) */
+    stream->ip_checksum_base =
+        fusion_cn_rtp_compute_cksum(&stream->rtp_packet_base.ip,
+                                    sizeof(stream->rtp_packet_base.ip) -
+                                    sizeof(stream->rtp_packet_base.ip.tot_len));
+
+    /* No cached skb allocated here anymore */
 
     write_lock_irqsave(&rtp_mgr->lock, flags);
-    hlist_add_head(&stream->hnode, &rtp_mgr->streams[hash_64(info->stream_handle, FUSION_CN_RTP_HASH_BITS)]);
+    hlist_add_head(&stream->hnode,
+        &rtp_mgr->streams[hash_64(info->stream_handle, FUSION_CN_RTP_HASH_BITS)]);
 
-    // Only add to packet_maps for sink streams
+    /* Packet maps only needed for sinks (RX path) */
     if (!info->is_source) {
-        map->source_ip = info->source_ip;
-        map->dest_ip = info->dest_ip;
+        map->source_ip   = info->source_ip;
+        map->dest_ip     = info->dest_ip;
         map->source_port = info->source_port;
         map->stream_handle = info->stream_handle;
         map->alsa_stream = alsa_stream;
         if (fusion_cn_rtp_is_ip_mcast(map->dest_ip)) {
-            hlist_add_head(&map->hnode, &rtp_mgr->mc_packet_maps[PACKET_MAP_KEY_MC(map->dest_ip)]);
+            hlist_add_head(&map->hnode,
+                &rtp_mgr->mc_packet_maps[PACKET_MAP_KEY_MC(map->dest_ip)]);
         } else {
-            hlist_add_head(&map->hnode, &rtp_mgr->uc_packet_maps[PACKET_MAP_KEY_UC(map->source_ip, map->source_port)]);
+            hlist_add_head(&map->hnode,
+                &rtp_mgr->uc_packet_maps[PACKET_MAP_KEY_UC(map->source_ip, map->source_port)]);
         }
     }
-
     write_unlock_irqrestore(&rtp_mgr->lock, flags);
+
+    dev_put(dev);
 
     *rtp_stream = stream;
     return 0;
@@ -533,82 +565,99 @@ __always_inline int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *r
 }
 
 
-__always_inline void fusion_cn_rtp_send_packet(struct fusion_cn_rtp_manager *rtp_mgr, struct fusion_cn_rtp_stream *stream, void *alsa_stream)
+__always_inline void fusion_cn_rtp_send_packet(struct fusion_cn_rtp_manager *rtp_mgr,
+                                               struct fusion_cn_rtp_stream  *stream,
+                                               void *alsa_stream)
 {
-    struct sk_buff *skb = stream->skb;
-    struct fusion_cn_rtp_packet *rtp;
-    uint32_t size = stream->packet_size;
-    uint32_t offset;
-    int ret;
-    int sample_physical_width_bits;
-    uint64_t global_sac;
-    uint32_t sum;
+    struct sk_buff *skb;
+    const u32 phys_bits = snd_pcm_format_physical_width(stream->info.format);
 
-    if (!stream->info.is_source) return;
+    if (!stream->info.is_source)
+        return;
 
-    sample_physical_width_bits = snd_pcm_format_physical_width(stream->info.format);
-    if (sample_physical_width_bits <= 0) {
-        printk(KERN_ERR "fusion_cn_rtp: send_packet: Invalid sample format %d\n", stream->info.format);
+    if ((int)phys_bits <= 0) {
+        printk(KERN_ERR "fusion_cn_rtp: send_packet: Invalid sample format %d\n",
+               stream->info.format);
         return;
     }
 
+    /* sizes */
+    const u32 sample_bytes = phys_bits / 8;
+    const u32 ch           = stream->info.channels;
+    const u32 frames       = stream->info.frames_per_packet;
+    const u32 payload_len  = sample_bytes * ch * frames;
+    const u32 hdr_len      = sizeof(stream->rtp_packet_base);           /* ETH+IP+UDP+RTP template */
+    const u32 total_len    = hdr_len + payload_len;                      /* matches on-wire size */
+
     spin_lock(&stream->lock);
 
-    global_sac = (((stream->next_action_time >> (stream->info.sample_rate == 48000 ? 2 : 1)) * 3) / 15625);
-
-    stream->rtp_packet_base.rtp.timestamp = swab32((uint32_t)(global_sac + stream->info.timestamp_offset));
-    stream->rtp_packet_base.rtp.seq_num = swab16(stream->outgoing_seq_num++);
-    stream->rtp_packet_base.ip.tot_len = swab16(size - ETH_HLEN);
-    stream->rtp_packet_base.udp.len = swab16(size - ETH_HLEN - sizeof(struct iphdr));
-    
-    sum = stream->ip_checksum_base + swab16(stream->rtp_packet_base.ip.tot_len);
-    sum = (sum >> 16) + (sum & 0xFFFF);
-
-    stream->rtp_packet_base.ip.check = swab16(~sum);
-    offset = rtp_mgr->ops->get_buffer_offset(rtp_mgr->cn_mgr, alsa_stream);
-
-    memcpy((uint8_t *)&stream->rtp_packet_base + sizeof(*rtp),
-           rtp_mgr->ops->get_buffer(rtp_mgr->cn_mgr, alsa_stream) + offset * stream->info.channels * sample_physical_width_bits / 8,
-           stream->info.frames_per_packet * stream->info.channels * sample_physical_width_bits / 8);
-
-    if (!skb || skb->truesize < size) {
-        if (skb) kfree_skb(skb);
-
-        skb = alloc_skb(size, GFP_ATOMIC);
-        if (!skb) {
-            printk(KERN_ERR "fusion_cn_rtp: Failed to allocate skb for stream %s\n", stream->info.stream_name);
-            stream->skb = NULL;
-            spin_unlock(&stream->lock);
-            return;
-        }
-        stream->skb = skb;
+    /* Timestamp / seq */
+    {
+        u64 global_sac = (((stream->next_action_time >>
+                           (stream->info.sample_rate == 48000 ? 2 : 1)) * 3) / 15625);
+        stream->rtp_packet_base.rtp.timestamp = swab32((u32)(global_sac + stream->info.timestamp_offset));
+        stream->rtp_packet_base.rtp.seq_num   = swab16(stream->outgoing_seq_num++);
     }
 
-    rtp = skb_put(skb, size);
-    if (!rtp) {
-        printk(KERN_ERR "fusion_cn_rtp: Failed to skb_put for stream %s\n", stream->info.stream_name);
-        kfree_skb(skb);
-        stream->skb = NULL;
+    /* IP/UDP lengths and incremental IP checksum */
+    {
+        const u32 ip_tot_len = total_len - ETH_HLEN;
+        const u32 udp_len    = total_len - ETH_HLEN - sizeof(struct iphdr);
+        u32 sum;
+
+        stream->rtp_packet_base.ip.tot_len = swab16(ip_tot_len);
+        stream->rtp_packet_base.udp.len    = swab16(udp_len);
+
+        sum = stream->ip_checksum_base + swab16(ip_tot_len);
+        sum = (sum >> 16) + (sum & 0xFFFF);
+        stream->rtp_packet_base.ip.check = swab16((u16)~sum);
+    }
+
+    /* fresh skb per packet */
+    skb = alloc_skb(total_len, GFP_ATOMIC);
+    if (unlikely(!skb)) {
+        printk(KERN_ERR "fusion_cn_rtp: alloc_skb(%u) failed for %s\n",
+               total_len, stream->info.stream_name);
         spin_unlock(&stream->lock);
         return;
     }
 
-    memcpy(rtp, &stream->rtp_packet_base, size);
+    /* grow and fill */
+    {
+        u8 *base = skb_put(skb, total_len);
+        if (unlikely(!base)) {
+            kfree_skb(skb);
+            spin_unlock(&stream->lock);
+            return;
+        }
+
+        /* headers */
+        memcpy(base, &stream->rtp_packet_base, hdr_len);
+
+        /* payload */
+        {
+            const u32 off_frames = rtp_mgr->ops->get_buffer_offset(rtp_mgr->cn_mgr, alsa_stream);
+            const u8 *src = rtp_mgr->ops->get_buffer(rtp_mgr->cn_mgr, alsa_stream)
+                           + (u64)off_frames * ch * sample_bytes;
+            memcpy(base + hdr_len, src, payload_len);
+        }
+    }
+
+    /* metadata for stack */
     skb_set_network_header(skb, ETH_HLEN);
     skb->protocol = htons(ETH_P_IP);
 
     if (rtp_mgr->debug) {
-        printk(KERN_DEBUG "fusion_cn_rtp: send_packet: Sending packet, stream %s, seq=%u, next_action_time=%llu, phc=%llu, timestamp=%u\n",
-               stream->info.stream_name, stream->outgoing_seq_num, stream->next_action_time, rtp_mgr->ops->get_phc_ns(), (uint32_t)global_sac);
+        printk(KERN_DEBUG "fusion_cn_rtp: send_packet %s seq=%u len=%u\n",
+               stream->info.stream_name, stream->outgoing_seq_num, total_len);
     }
 
     spin_unlock(&stream->lock);
 
-    ret = fusion_cn_nf_tx_packet(rtp_mgr, skb, size);
-    if (ret < 0) {
-        printk(KERN_DEBUG "fusion_cn_rtp: TX failed: %d\n", ret);
+    /* TX hands off ownership; do NOT touch skb afterwards */
+    if (fusion_cn_nf_tx_packet(rtp_mgr, skb, total_len) < 0) {
+        /* if your TX path doesn’t free on failure, free here */
         kfree_skb(skb);
-        stream->skb = NULL;
     }
 }
 
