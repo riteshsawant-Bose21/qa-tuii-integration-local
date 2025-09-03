@@ -1,11 +1,10 @@
 import 'package:flutter/cupertino.dart';
 import 'package:fusion_launcher/features/onboarding/presentation/welcome_page.dart';
-import 'package:fusion_launcher/features/projects/presentation/project_page.dart';
 import 'package:fusion_launcher/features/user_account_setup/presentation/pages/launcher_sign_up_page.dart';
 
 import '../../features/dashboard/presentation/pages/dashboard_page.dart';
+import '../../features/projects/presentation/project_work_area.dart';
 import '../../features/user_account_setup/presentation/pages/launcher_sign_in_page.dart';
-import '../widgets/test_library_screen.dart';
 
 class Routes {
   static const String launcherWelcomePage = '/launcherWelcomePage';
@@ -48,14 +47,14 @@ class Routes {
       /// Project Page
       case projectPage:
         return CupertinoPageRoute<void>(
-          builder: (BuildContext context) => const ProjectPage(),
+          builder: (BuildContext context) => const ProjectWorkArea(),
           settings: const RouteSettings(name: projectPage),
         );
 
       /// My Library Page
       case mylibraryPage:
         return CupertinoPageRoute<void>(
-          builder: (BuildContext context) => TestLibraryScreen(),
+          builder: (BuildContext context) => const ProjectWorkArea(),
           settings: const RouteSettings(name: mylibraryPage),
         );
 

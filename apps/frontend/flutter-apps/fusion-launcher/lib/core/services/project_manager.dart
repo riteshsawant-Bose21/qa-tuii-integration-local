@@ -1,10 +1,10 @@
+/*
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:fusion_launcher/core/models/project_metadata_model.dart';
 import 'package:fusion_launcher/core/services/project_list_manager.dart';
 import 'package:fusion_lib/fusion_networking/network/fusion_network_client.dart';
 import 'package:fusion_lib/fusion_utils/shared_preference_handler.dart';
@@ -949,3 +949,4 @@ class ProjectManager extends ValueNotifier<ProjectData> {
     }
   }
 }
+*/

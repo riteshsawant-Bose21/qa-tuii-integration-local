@@ -16,7 +16,7 @@ import 'package:flutter/material.dart';
 /// )
 /// ```
 class FusionAppBar extends StatelessWidget implements PreferredSizeWidget {
-  final String title;
+  final Widget title;
   final List<Widget>? actions;
   final Widget? leading;
   final Color? backgroundColor;
@@ -40,12 +40,15 @@ class FusionAppBar extends StatelessWidget implements PreferredSizeWidget {
     }
 
     return AppBar(
-      title: Text(title, style: Theme.of(context).textTheme.titleLarge),
+      // title: Text(title, style: Theme.of(context).textTheme.titleLarge),
+      title: title,
       centerTitle: centerTitle,
       backgroundColor: backgroundColor ?? Theme.of(context).appBarTheme.backgroundColor,
       elevation: 0,
       leading: leading,
+      actionsPadding: EdgeInsets.only(right: 12),
       actions: appBarActions.isNotEmpty ? appBarActions : null,
+      automaticallyImplyLeading: leading == null ? true : false,
     );
   }
 

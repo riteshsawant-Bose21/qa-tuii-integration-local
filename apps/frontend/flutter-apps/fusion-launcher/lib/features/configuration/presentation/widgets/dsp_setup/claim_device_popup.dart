@@ -49,7 +49,7 @@ class _QRClaimPopupState extends State<QRClaimPopup> {
 
   Future<void> _launchUrl(BuildContext context) async {
     cloudRedirectUrl = "claim/${widget.deviceIdToClaim}?token=${serviceLocator<SharedPreferencesHandler>().getString(SharedPreferenceKeys.accessToken)}";
-    print("Claim URL: $claimUrl");
+    debugPrint("Claim URL: $claimUrl");
     Navigator.pop(context);
     projectTabBroadcastController.add(cloudTableIndex);
   }

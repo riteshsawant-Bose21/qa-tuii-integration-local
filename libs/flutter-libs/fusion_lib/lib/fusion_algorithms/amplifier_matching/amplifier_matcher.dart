@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
 import '../../api_data/amplifiers/amplifier_catalog.dart';
-import '../../api_data/amplifiers/amplifier_types.dart' hide Circuit;
+import '../../api_data/amplifiers/amplifier_types.dart';
 import '../../api_data/speakers/speakers.dart';
 import 'amp_matching_types.dart';
 import 'amplifier_matching_error_handler.dart';

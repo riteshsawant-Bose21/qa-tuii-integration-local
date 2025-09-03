@@ -21,6 +21,11 @@ class LocationModel {
     return LocationModel(listeningAreaId: null, floorId: null, zoneId: zoneId);
   }
 
+  //clear floor and listening area
+  LocationModel clearListeningArea() {
+    return LocationModel(listeningAreaId: null, floorId: floorId, zoneId: zoneId);
+  }
+
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;

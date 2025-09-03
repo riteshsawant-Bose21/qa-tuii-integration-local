@@ -3,7 +3,7 @@
 /// Comprehensive error handling system that validates inputs, catches
 /// edge cases, and provides meaningful error messages for debugging.
 
-import '../../api_data/amplifiers/amplifier_types.dart' hide Circuit;
+import '../../api_data/amplifiers/amplifier_types.dart';
 import '../../api_data/speakers/speakers.dart';
 import 'amp_matching_types.dart';
 

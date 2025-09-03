@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_lib/fusion_logger/logger.dart';
 
@@ -68,7 +69,7 @@ class PanelBloc extends Bloc<PanelBlocEvent, PanelBlocState> {
   Future<void> _onGetAllWidgetsValueInAPanel(GetAllWidgetsValueInAPanel event, Emitter<PanelBlocState> emit) async {
     try {
       final PanelEntity panel = await getPanelDataUseCase.call(event.panel);
-      print("Panel data fetched: ${panel.listOfAudioWidgets.length} widgets");
+      debugPrint("Panel data fetched: ${panel.listOfAudioWidgets.length} widgets");
       emit(PanelLoadedState(panel));
     } catch (e) {
       emit(PanelErrorState('Failed to fetch panel data _onGetAllWidgetsValueInAPanel ${e.toString()}'));

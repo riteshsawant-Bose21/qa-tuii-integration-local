@@ -12,7 +12,7 @@ class ZonesPanel extends StatefulWidget {
   final List<ListeningArea> Function(String) getZoneListeningAreas;
   final FloorModel Function(String) getListeningAreaFloor;
   final VoidCallback? onCancelSelection;
-  final Function(String) onAreaRemovedFromZone;
+  final Function(String areaId, String zoneId) onAreaRemovedFromZone;
 
   const ZonesPanel({
     super.key,
@@ -93,7 +93,7 @@ class _ZonesPanelState extends State<ZonesPanel> {
                             onAddListeningAreas: widget.onRequestListeningAreaSelection,
                             getListeningAreaFloor: widget.getListeningAreaFloor,
                             onAreaRemovedFromZone: (String removedAreaId) {
-                              widget.onAreaRemovedFromZone(removedAreaId);
+                              widget.onAreaRemovedFromZone(removedAreaId, zone.id);
                             },
                           ),
                         )

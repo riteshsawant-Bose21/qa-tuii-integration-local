@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
 
 import '../../../../../core/constants.dart';
 import '../../../../../core/models/products_data.dart';
 import '../../../../../core/service_locator.dart';
-import '../../../../../core/services/project_manager.dart';
 import '../../../../dynamic_config/data/datasources/panel_datasource.dart';
 import '../../../../dynamic_config/domain/entities/audio_widget_entity.dart';
 import '../../../../dynamic_config/domain/entities/audio_widget_value.dart';
@@ -29,8 +29,9 @@ class ZoneWidget extends StatefulWidget {
   final VoidCallback onDelete;
   final void Function(Zone) duplicateZone;
   final Function(Speaker speakers) onSpeakerUpdated;
+  final Function(Speaker, LocationModel) onSpeakerModelUpdated;
   final Function(Speaker speakers) onSpeakerDeleted;
-  final Function(Speaker speakers) onSpeakerAdded;
+  final Function(Speaker speakers, String zoneId) onSpeakerAdded;
   final Function(FloorModel) onFloorUpdated;
   final Function(FloorModel) onFloorAdded;
   final bool isControlMode;
@@ -50,6 +51,7 @@ class ZoneWidget extends StatefulWidget {
     required this.onFloorUpdated,
     required this.onFloorAdded,
     required this.isControlMode,
+    required this.onSpeakerModelUpdated,
   });
 
   @override
@@ -68,12 +70,12 @@ class ZoneWidgetState extends State<ZoneWidget> {
           (_) => MultiMixPickerDialog(
             title: 'Select Mixes',
             devices: widget.availableMixes,
-            initiallySelected: widget.availableMixes.where((SourceSet m) => zone.mixIds.contains(m.id)).toList(),
+            initiallySelected: widget.availableMixes.where((SourceSet m) => zone.sourceSetIds.contains(m.id)).toList(),
           ),
     );
     if (picked != null) {
       final List<String> updatedMixIds = picked.map((SourceSet m) => m.id).toList();
-      widget.onZoneUpdated(zone.copyWith(mixIds: updatedMixIds));
+      widget.onZoneUpdated(zone.copyWith(sourceSetIds: updatedMixIds));
     }
   }
 
@@ -85,7 +87,7 @@ class ZoneWidgetState extends State<ZoneWidget> {
   }
 
   void fetchSelectedMixIndex() async {
-    final String? vip = serviceLocator<ProjectManager>().value.virtualIP;
+    final String? vip = serviceLocator<ProjectViewModel>().virtualIP;
     if (vip != null) {
       final dynamic value = await serviceLocator<PanelDataSource>().getCurrentValueForBlock(
         widget.zone.id,
@@ -199,7 +201,7 @@ class ZoneWidgetState extends State<ZoneWidget> {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
-                                '${widget.zone.mixIds.length}',
+                                '${widget.zone.sourceSetIds.length}',
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w500,
@@ -223,7 +225,7 @@ class ZoneWidgetState extends State<ZoneWidget> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    if (widget.zone.mixIds.isEmpty)
+                    if (widget.zone.sourceSetIds.isEmpty)
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
@@ -253,7 +255,7 @@ class ZoneWidgetState extends State<ZoneWidget> {
                         spacing: 8,
                         runSpacing: 8,
                         children:
-                            widget.zone.mixIds.asMap().entries.map((MapEntry<int, String> sourceId) {
+                            widget.zone.sourceSetIds.asMap().entries.map((MapEntry<int, String> sourceId) {
                               final String d = sourceId.value;
                               final int deviceIndex = sourceId.key;
                               final SourceSet mix = widget.availableMixes.firstWhere(
@@ -265,7 +267,7 @@ class ZoneWidgetState extends State<ZoneWidget> {
                                     return;
                                   }
 
-                                  final String? vip = serviceLocator<ProjectManager>().value.virtualIP;
+                                  final String? vip = serviceLocator<ProjectViewModel>().virtualIP;
                                   if (vip != null) {
                                     final AudioWidgetEntity audioWidgetEntity = AudioWidgetEntity(
                                       id: widget.zone.id,
@@ -278,7 +280,7 @@ class ZoneWidgetState extends State<ZoneWidget> {
                                       dimensionIndex: 0,
                                       value: AudioWidgetValue.from(0, "integer"),
                                       minValue: AudioWidgetValue.from(1, "integer"),
-                                      maxValue: AudioWidgetValue.from(widget.zone.mixIds.length, "integer"),
+                                      maxValue: AudioWidgetValue.from(widget.zone.sourceSetIds.length, "integer"),
                                     );
 
                                     final AudioWidgetValue widgetValue = AudioWidgetValue.from(deviceIndex + 1, "integer");
@@ -322,9 +324,9 @@ class ZoneWidgetState extends State<ZoneWidget> {
                                       (widget.isControlMode)
                                           ? null
                                           : () {
-                                            final List<String> updatedMixIds = List<String>.from(widget.zone.mixIds);
+                                            final List<String> updatedMixIds = List<String>.from(widget.zone.sourceSetIds);
                                             updatedMixIds.removeAt(deviceIndex);
-                                            widget.onZoneUpdated(widget.zone.copyWith(mixIds: updatedMixIds));
+                                            widget.onZoneUpdated(widget.zone.copyWith(sourceSetIds: updatedMixIds));
                                           },
                                 ),
                               );
@@ -386,7 +388,10 @@ class ZoneWidgetState extends State<ZoneWidget> {
                           blocks: <ProcessingBlockModel>[],
                           price: speakerData.price,
                         );
-                        widget.onSpeakerAdded(newSpeaker);
+                        print(
+                          "New Speaker: location - ${newSpeaker.locationEntity.zoneId} , floor - ${newSpeaker.locationEntity.floorId}, LA - ${newSpeaker.locationEntity.listeningAreaId}",
+                        );
+                        widget.onSpeakerAdded(newSpeaker, widget.zone.id);
                       },
                       color: Colors.white,
                       itemBuilder: (BuildContext context) {
@@ -445,6 +450,9 @@ class ZoneWidgetState extends State<ZoneWidget> {
                         isControlMode: widget.isControlMode,
                         onOutputChanged: (Speaker updated) {
                           widget.onSpeakerUpdated(updated);
+                        },
+                        onSpeakerModelUpdated: (Speaker speaker, LocationModel updatedLocation) {
+                          widget.onSpeakerModelUpdated(speaker, updatedLocation);
                         },
                         onDelete: () {
                           widget.onSpeakerDeleted(speaker);

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
-import 'package:fusion_launcher/core/services/project_manager.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_properties/project_properties_view_model.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 
 class ControlDesignTabSwitcher extends StatefulWidget {
   const ControlDesignTabSwitcher({super.key});
@@ -15,12 +16,12 @@ class ControlDesignTabSwitcherState extends State<ControlDesignTabSwitcher> {
   @override
   void initState() {
     super.initState();
-    selectedIndex = serviceLocator<ProjectManager>().value.isInControlMode ? 1 : 0;
+    selectedIndex = serviceLocator<ProjectViewModel>().isInControlMode ? 1 : 0;
   }
 
   @override
   void didUpdateWidget(covariant ControlDesignTabSwitcher oldWidget) {
-    selectedIndex = serviceLocator<ProjectManager>().value.isInControlMode ? 1 : 0;
+    selectedIndex = serviceLocator<ProjectViewModel>().isInControlMode ? 1 : 0;
     super.didUpdateWidget(oldWidget);
   }
 
@@ -28,12 +29,13 @@ class ControlDesignTabSwitcherState extends State<ControlDesignTabSwitcher> {
   Widget build(BuildContext context) {
     // Make width responsive to screen size
     final double screenWidth = MediaQuery.of(context).size.width;
-    final double tabWidth = screenWidth > 600 ? 250 : screenWidth * 0.8;
+    final double tabWidth = screenWidth > 600 ? 64 : 64;
     final double individualTabWidth = tabWidth / 2;
 
     return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 14),
       width: tabWidth,
-      height: 35,
+      height: 32,
       decoration: BoxDecoration(
         color: Colors.grey.shade200,
         borderRadius: BorderRadius.circular(6),
@@ -47,7 +49,7 @@ class ControlDesignTabSwitcherState extends State<ControlDesignTabSwitcher> {
             top: 2,
             child: Container(
               width: individualTabWidth - 4, // Account for padding on both sides
-              height: 31, // Fit within parent container (35 - 4 for top/bottom padding)
+              height: 28, // Fit within parent container (35 - 4 for top/bottom padding)
               decoration: BoxDecoration(
                 color: Colors.black87,
                 borderRadius: BorderRadius.circular(4),
@@ -61,31 +63,16 @@ class ControlDesignTabSwitcherState extends State<ControlDesignTabSwitcher> {
                   onTap: () {
                     setState(() {
                       selectedIndex = 0;
-                      serviceLocator<ProjectManager>().setControlMode(false); // Set to Design mode
+                      serviceLocator<ProjectViewModel>().toggleControlMode(); // Set to Design mode
                     });
                   },
                   child: SizedBox(
-                    height: 35, // Match parent height
+                    height: 32, // Match parent height
                     child: Center(
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          Icon(
-                            Icons.design_services,
-                            size: 18,
-                            color: selectedIndex == 0 ? Colors.white : Colors.grey[600],
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Design',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: selectedIndex == 0 ? Colors.white : Colors.grey[600],
-                            ),
-                          ),
-                        ],
+                      child: Icon(
+                        Icons.design_services,
+                        size: 18,
+                        color: selectedIndex == 0 ? Colors.white : Colors.grey[600],
                       ),
                     ),
                   ),
@@ -96,31 +83,16 @@ class ControlDesignTabSwitcherState extends State<ControlDesignTabSwitcher> {
                   onTap: () {
                     setState(() {
                       selectedIndex = 1;
-                      serviceLocator<ProjectManager>().setControlMode(true); // Set to Control mode
+                      serviceLocator<ProjectViewModel>().toggleControlMode(); // Set to Control mode
                     });
                   },
                   child: SizedBox(
-                    height: 35, // Match parent height
+                    height: 32, // Match parent height
                     child: Center(
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          Icon(
-                            Icons.tune,
-                            size: 18,
-                            color: selectedIndex == 1 ? Colors.white : Colors.grey[600],
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Control',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: selectedIndex == 1 ? Colors.white : Colors.grey[600],
-                            ),
-                          ),
-                        ],
+                      child: Icon(
+                        Icons.tune,
+                        size: 18,
+                        color: selectedIndex == 1 ? Colors.white : Colors.grey[600],
                       ),
                     ),
                   ),

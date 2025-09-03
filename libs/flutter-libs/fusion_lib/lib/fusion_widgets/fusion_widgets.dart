@@ -21,9 +21,16 @@ export 'others/fusion_custom_loader.dart';
 export 'others/fusion_dialog.dart';
 export 'others/fusion_profile_image.dart';
 export 'others/fusion_shimmer.dart';
+export 'others/fusion_image.dart';
+export 'others/fusion_expandable_tile_widget.dart';
 
 /// text views
 export 'text_views/fusion_app_text.dart';
 export 'text_views/fusion_currency_text.dart';
 export 'text_views/fusion_gradient_text.dart';
 export 'text_views/fusion_rich_text.dart';
+
+/// dockable panel
+export 'dockable_side_bar/fusion_dock_floating_panel.dart';
+export 'dockable_side_bar/fusion_dock_side_bar.dart';
+export 'dockable_side_bar/fusion_dockable_area.dart';

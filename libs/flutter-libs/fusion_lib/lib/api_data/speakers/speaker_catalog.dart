@@ -6,7 +6,6 @@
 
 import 'speaker_types.dart';
 
-
 class SpeakerCatalog {
   /// All available speakers in the catalog
   ///
@@ -25,6 +24,8 @@ class SpeakerCatalog {
       taps100V: [2.3, 4.5, 9],
       longTermRms: 20,
       ppk: 40,
+      imageUrl: '',
+      price: 1312.2,
     ),
     'DM3C': SpeakerModel(
       model: 'DM3C',
@@ -39,6 +40,8 @@ class SpeakerCatalog {
       taps100V: [6, 12, 25],
       longTermRms: 30,
       ppk: 60,
+      imageUrl: '',
+      price: 1312.2,
     ),
     'DM3P': SpeakerModel(
       model: 'DM3P',
@@ -53,6 +56,8 @@ class SpeakerCatalog {
       taps100V: [6, 12, 25],
       longTermRms: 30,
       ppk: 60,
+      imageUrl: '',
+      price: 1312.2,
     ),
     'DM3SE': SpeakerModel(
       model: 'DM3SE',
@@ -67,6 +72,8 @@ class SpeakerCatalog {
       taps100V: [6, 12, 25],
       longTermRms: 30,
       ppk: 60,
+      imageUrl: '',
+      price: 1312.2,
     ),
     'DM5C': SpeakerModel(
       model: 'DM5C',
@@ -81,6 +88,8 @@ class SpeakerCatalog {
       taps100V: [6, 12, 25, 50],
       longTermRms: 60,
       ppk: 120,
+      imageUrl: '',
+      price: 1312.2,
     ),
     'DM5P': SpeakerModel(
       model: 'DM5P',
@@ -95,6 +104,8 @@ class SpeakerCatalog {
       taps100V: [6, 12, 25, 50],
       longTermRms: 60,
       ppk: 120,
+      imageUrl: '',
+      price: 1312.2,
     ),
     'DM5SE': SpeakerModel(
       model: 'DM5SE',
@@ -109,6 +120,8 @@ class SpeakerCatalog {
       taps100V: [6, 12, 25, 50],
       longTermRms: 60,
       ppk: 120,
+      imageUrl: '',
+      price: 1312.2,
     ),
     'DM6C': SpeakerModel(
       model: 'DM6C',
@@ -123,6 +136,8 @@ class SpeakerCatalog {
       taps100V: [5, 10, 20, 40, 80],
       longTermRms: 125,
       ppk: 250,
+      imageUrl: '',
+      price: 1312.2,
     ),
     'DM6PE': SpeakerModel(
       model: 'DM6PE',
@@ -137,6 +152,8 @@ class SpeakerCatalog {
       taps100V: [5, 10, 20, 40, 80],
       longTermRms: 125,
       ppk: 250,
+      imageUrl: '',
+      price: 1312.2,
     ),
     'DM6SE': SpeakerModel(
       model: 'DM6SE',
@@ -151,6 +168,8 @@ class SpeakerCatalog {
       taps100V: [5, 10, 20, 40, 80],
       longTermRms: 125,
       ppk: 250,
+      imageUrl: '',
+      price: 1312.2,
     ),
     'DM8C': SpeakerModel(
       model: 'DM8C',
@@ -165,6 +184,8 @@ class SpeakerCatalog {
       taps100V: [5, 10, 20, 40, 80],
       longTermRms: 150,
       ppk: 300,
+      imageUrl: '',
+      price: 1312.2,
     ),
     'DM8SE': SpeakerModel(
       model: 'DM8SE',
@@ -179,6 +200,8 @@ class SpeakerCatalog {
       taps100V: [5, 10, 20, 40, 80],
       longTermRms: 150,
       ppk: 300,
+      imageUrl: '',
+      price: 1312.2,
     ),
   };
 
@@ -216,6 +239,4 @@ class SpeakerCatalog {
 
   /// Get speaker count in catalog
   static int get speakerCount => database.length;
-
-
 }

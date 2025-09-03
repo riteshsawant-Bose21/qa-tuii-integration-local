@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/core/services/project_manager.dart';
 import 'package:fusion_launcher/core/utils/fusion_utils.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_properties/project_properties_view_model.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_networking/ble/ble_connection_manager.dart';
 import 'package:fusion_lib/fusion_networking/ble/commands/fusion_commands.dart';
 import 'package:fusion_lib/models/response_callback.dart';
@@ -57,7 +58,7 @@ class _VipConfigurationState extends State<VipConfiguration> {
     FusionUtils.hideLoader(context);
     BleConnectionManager().disconnect();
     if (response.success) {
-      serviceLocator<ProjectManager>().updateVip(_vipController.text.trim());
+      serviceLocator<ProjectViewModel>().setVirtualIP(_vipController.text.trim());
       if (mounted) Navigator.pop(context, true);
     }
   }
