@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 import '../../fusion_lib.dart';
 
 extension ListeningAreaService on ProjectService {
@@ -95,14 +97,25 @@ extension ListeningAreaService on ProjectService {
       relationships.unlink(RelationshipType.zoneListening, zoneParentId, listeningAreaId);
     }
 
-    // 4) Delete all the Hardware inside the listening area
+    // 4) Update hardware components that referenced this listening area
     for (final hwId in hardwareChildren) {
-      print("Removing ListeningArea $listeningAreaId from Hardware $hwId");
-      // unlink hardware relation to Listening area first
+      debugPrint("Removing ListeningArea $listeningAreaId from Hardware $hwId");
+      final hw = hardware.get(hwId);
+      if (hw != null) {
+        // create a replacement HardwareComponent with cleared locationEntity
+        final newLocation = hw.locationEntity.clearListeningArea();
+
+        final newHw = hw.copyWith(
+          locationEntity: newLocation,
+        );
+        // replace in repo
+        hardware.add(newHw.id, newHw);
+      }
+      // unlink hardware relation
       relationships.unlink(RelationshipType.hardwareLocation, hwId, listeningAreaId);
 
-      //Remove hardware from repository
-      removeHardware(hwId);
+      // If need to also remove hardware entirely on delete of Listening area, uncomment:
+      // removeHardware(hwId);
     }
 
     // 5) Defensive cleanup: remove any other relationships that mention this entity
