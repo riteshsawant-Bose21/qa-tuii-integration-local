@@ -12,7 +12,13 @@
 #include <arpa/inet.h>
 #include <HostInterfaceLite/OCA/OCP.1/ZeroConf/IOcp1LiteService.h>
 #include <HostInterfaceLite/OCA/OCF/OcfLiteHostInterface.h>
-#include <avahi-compat-libdns_sd/dns_sd.h>
+
+// Platform-specific DNS-SD includes
+#ifdef __APPLE__
+    #include <dns_sd.h>
+#else
+    #include <avahi-compat-libdns_sd/dns_sd.h>
+#endif
 
 // ---- FileInfo Macro ----
 
