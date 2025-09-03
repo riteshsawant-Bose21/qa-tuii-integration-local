@@ -6,6 +6,7 @@ import sys
 import os
 import platform
 import subprocess
+import glob
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
@@ -83,21 +84,20 @@ def profile(config_name, remote=True):
     # checkpointing setup:
     checkpoint_interval = current_config.get('checkpoint_every', 10)
     checkpoint_file = f'profiling_results/{config_name}_checkpoint.csv'
+    checkpoint_params_file = f'profiling_results/{config_name}_checkpoint_params.csv'
     processed_combos = set()
     
-    if os.path.exists(checkpoint_file):
-        existing_df = pd.read_csv(checkpoint_file)
-        frames.append(existing_df)
-
-        if config_name == 'matrix_mixer' and 'num_inputs' in existing_df.columns and 'num_outputs' in existing_df.columns:
-            processed_combos = set(zip(existing_df['num_inputs'], existing_df['num_outputs']))
-            print(f'Loaded checkpoint with {len(processed_combos)} processed parameter combinations')
-        else:
-            print(f'Loaded checkpoint with {len(existing_df)} rows')
+    # Load processed combinations only 
+    if os.path.exists(checkpoint_params_file):
+        params_df = pd.read_csv(checkpoint_params_file)
+        if config_name == 'matrix_mixer' and 'num_inputs' in params_df.columns:
+            processed_combos = set(zip(params_df['num_inputs'], params_df['num_outputs']))
+            print(f'Loaded {len(processed_combos)} already processed combinations')
+    
     matrix_mixer_csv_files = []
+    completed_params = []
     
     for param_dict in params_iter:
-        # skip already processed combos from checkpoint
         if config_name == 'matrix_mixer':
             combo_key = (param_dict['num_inputs'], param_dict['num_outputs'])
             if combo_key in processed_combos:
@@ -195,13 +195,11 @@ def profile(config_name, remote=True):
             df = pd.read_csv(local_csv_name)
             print(f"Read {len(df)} rows from {local_csv_name}")
             
-            # For matrix_mixer, drop irrelevant infile columns before adding params
             if config_name == 'matrix_mixer' and 'num_inputs' in param_dict:
                 num_inputs = param_dict['num_inputs']
                 cols_to_drop = [f'infile{i}' for i in range(num_inputs + 1, 58) if f'infile{i}' in df.columns]
                 if cols_to_drop:
                     df = df.drop(columns=cols_to_drop)
-                    print(f"  Dropped {len(cols_to_drop)} irrelevant infile columns (keeping infile1-infile{num_inputs})")
             
             for param_name, param_value in param_dict.items():
                 df[param_name] = param_value
@@ -210,33 +208,66 @@ def profile(config_name, remote=True):
                 if feature != 'analysis_avg':
                     df[feature] = formula(param_dict)
             
-            frames.append(df)
 
-            if param_counter % checkpoint_interval == 0:
-                temp_df = pd.concat(frames, axis=0, ignore_index=True)
-                temp_df.to_csv(checkpoint_file, index=False)
-                print(f"Checkpoint saved at iteration {param_counter}")
             
-            # clean up temporary matrix_mixer CSV files immediately
+            # For matrix_mixer, save individual files 
+            if config_name == 'matrix_mixer':
+                individual_file = f'profiling_results/timings_mm_{param_dict["num_inputs"]}_{param_dict["num_outputs"]}_processed.csv'
+                df.to_csv(individual_file, index=False)
+                completed_params.append(param_dict)
+                
+                if param_counter % checkpoint_interval == 0:
+                    params_df = pd.DataFrame(completed_params)
+                    params_df.to_csv(checkpoint_params_file, index=False)
+                    print(f"Params checkpoint saved at iteration {param_counter}")
+            else:
+                frames.append(df)
+                
             if config_name == 'matrix_mixer' and os.path.exists(local_csv_name):
                 os.remove(local_csv_name)
-                print(f"Removed temporary file: {local_csv_name}")
                 
         except Exception as e:
             print(f"Error reading {local_csv_name}: {e}")
             continue
+        
+    if config_name == 'matrix_mixer' and completed_params:
+        params_df = pd.DataFrame(completed_params)
+        params_df.to_csv(checkpoint_params_file, index=False)
+        print(f"Final params checkpoint saved: {len(completed_params)} combinations")
     
+    # For matrix_mixer, load data in batches for processing due to memory issues
     if config_name == 'matrix_mixer':
         print(f"\n{'='*60}")
         print(f"MATRIX MIXER DATA COLLECTION SUMMARY")
         print(f"{'='*60}")
         print(f"Parameter combinations processed: {param_counter}")
-        print(f"DataFrames collected: {len(frames)}")
-        if frames:
-            total_rows = sum(len(f) for f in frames)
-            print(f"Total rows before concatenation: {total_rows}")
-        print(f"{'='*60}\n")
+        
+        processed_files = glob.glob('profiling_results/timings_mm_*_*_processed.csv')
+        
+        print(f"Found {len(processed_files)} processed files")
+        
+        batch_size = 50
+        for i in range(0, len(processed_files), batch_size):
+            batch_files = processed_files[i:i+batch_size]
+            batch_frames = []
+            for file in batch_files:
+                try:
+                    df = pd.read_csv(file)
+                    batch_frames.append(df)
+                except Exception as e:
+                    print(f"Error loading {file}: {e}")
+                    continue
+            
+            if batch_frames:
+                batch_df = pd.concat(batch_frames, ignore_index=True)
+                frames.append(batch_df)
+                print(f"Loaded batch {i//batch_size + 1}: {len(batch_df)} rows")
+                del batch_frames, batch_df  # Free memory
     
+    if not frames:
+        print("No data to process!")
+        return None
+        
     result_df = pd.concat(frames, axis=0, ignore_index=True)
     
     block = current_config.get(
@@ -557,6 +588,16 @@ def profile(config_name, remote=True):
     print(f"Total points before filtering: {len(result_df)}")
     print(f"Points after filtering: {len(filtered_df)}")
     print(f"Percentage kept: {len(filtered_df)/len(result_df)*100:.1f}%")
+    
+    
+    # clean up logic (commented out for now)
+    # if config_name == 'matrix_mixer':
+    #     for file in glob.glob('profiling_results/timings_mm_*_*_processed.csv'):
+    #         os.remove(file)
+    #     # Remove checkpoint files
+    #     if os.path.exists(checkpoint_params_file):
+    #         os.remove(checkpoint_params_file)
+    #     print("Cleaned up intermediate files after successful completion") 
     
     return model
 
