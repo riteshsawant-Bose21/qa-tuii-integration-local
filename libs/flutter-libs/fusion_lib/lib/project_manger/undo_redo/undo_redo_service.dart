@@ -6,12 +6,6 @@ extension UndoRedoService on ProjectService {
   /// -------------------
   /// Undo / Redo
   /// -------------------
-  // -----------------
-  // Undo / Redo state
-  // -----------------
-  List<Map<String, dynamic>> get _undoStack => [];
-  List<Map<String, dynamic>> get _redoStack => [];
-  int get _maxHistory => 10; // cap history to avoid unbounded memory growth
 
   bool get _isBatching => false;
 
@@ -33,12 +27,13 @@ extension UndoRedoService on ProjectService {
   }
 
   void _pushUndoSnapshot(Map<String, dynamic> snapshot) {
-    _undoStack.add(snapshot);
-    if (_undoStack.length > _maxHistory) {
-      _undoStack.removeAt(0);
+    undoStack.add(snapshot);
+    if (undoStack.length > maxHistory) {
+      undoStack.removeAt(0);
     }
+    print("Undo stack size: ${undoStack.length}");
     // clearing redo on new action
-    _redoStack.clear();
+    redoStack.clear();
   }
 
   void recordChange() {
@@ -70,17 +65,22 @@ extension UndoRedoService on ProjectService {
   }
 
   /// Undo: restore last snapshot (the project state *before* the last recorded change).
-  bool canUndo() => _undoStack.isNotEmpty;
-  bool canRedo() => _redoStack.isNotEmpty;
+  bool canUndo() => undoStack.isNotEmpty;
+  bool canRedo() => redoStack.isNotEmpty;
 
   Map<String, dynamic>? undo() {
+    print("Undo stack size before undo: ${undoStack.length}");
     if (!canUndo()) return null;
     // Save current state to redo stack
     final current = _captureSnapshot();
-    _redoStack.add(current);
+    redoStack.add(current);
+
+    print("Redo stack size after adding current: ${redoStack.length}");
 
     // Pop the previous state from undo and restore it
-    final snapshot = _undoStack.removeLast();
+    final snapshot = undoStack.removeLast();
+    print("Undo stack size after undo: ${undoStack.length}");
+    print("Snapshot restored: $snapshot");
     return snapshot;
   }
 
@@ -88,10 +88,10 @@ extension UndoRedoService on ProjectService {
     if (!canRedo()) return null;
     // Save current to undo (so undo after redo is possible)
     final current = _captureSnapshot();
-    _undoStack.add(current);
+    undoStack.add(current);
 
     // pop redo
-    final snapshot = _redoStack.removeLast();
+    final snapshot = redoStack.removeLast();
     return snapshot;
   }
 }

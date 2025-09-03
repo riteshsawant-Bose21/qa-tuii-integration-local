@@ -143,6 +143,42 @@ class _ProjectPageState extends State<ProjectPage> with SingleTickerProviderStat
                         // const Spacer(),
                         Row(
                           children: <Widget>[
+                            //undo redo buttons
+                            Padding(
+                              padding: const EdgeInsets.only(right: 12.0),
+                              child: IconButton(
+                                icon: const Icon(
+                                  Icons.undo,
+                                  color: Colors.white,
+                                ),
+                                disabledColor: Colors.grey,
+                                tooltip: 'Undo',
+                                onPressed:
+                                    serviceLocator<ProjectViewModel>().canUndo
+                                        ? () {
+                                          serviceLocator<ProjectViewModel>().undo();
+                                        }
+                                        : null,
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.only(right: 12.0),
+                              child: IconButton(
+                                icon: const Icon(
+                                  Icons.redo,
+                                  color: Colors.white,
+                                ),
+                                disabledColor: Colors.grey,
+                                tooltip: 'Redo',
+                                onPressed:
+                                    serviceLocator<ProjectViewModel>().canRedo
+                                        ? () {
+                                          serviceLocator<ProjectViewModel>().redo();
+                                        }
+                                        : null,
+                              ),
+                            ),
+
                             if (!serviceLocator<ProjectViewModel>().isAdminLogin)
                               Padding(
                                 padding: const EdgeInsets.only(right: 12.0),
@@ -154,7 +190,6 @@ class _ProjectPageState extends State<ProjectPage> with SingleTickerProviderStat
                                   tooltip: 'Sync project to cloud',
                                   onPressed: () async {
                                     FusionUtils.showLoader(context);
-
                                     await serviceLocator<ProjectViewModel>().saveProjectToLocal();
                                     if (context.mounted) {
                                       FusionUtils.hideLoader(context);

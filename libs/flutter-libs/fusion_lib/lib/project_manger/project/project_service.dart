@@ -31,6 +31,13 @@ class ProjectService {
 
   final RelationshipManager relationships;
 
+  // -----------------
+  // Undo / Redo state
+  // -----------------
+  List<Map<String, dynamic>> undoStack = [];
+  List<Map<String, dynamic>> redoStack = [];
+  int get maxHistory => 10; // cap history to avoid unbounded memory growth
+
   ProjectService({
     required this.id,
     required this.name,
@@ -88,7 +95,7 @@ class ProjectService {
     AmplifierRepository? amplifiers,
     RelationshipManager? relationships,
   }) {
-    return ProjectService(
+    ProjectService projectService = ProjectService(
       id: id ?? this.id,
       name: name ?? this.name,
       projectName: projectName ?? this.projectName,
@@ -112,6 +119,11 @@ class ProjectService {
       amplifiers: amplifiers ?? this.amplifiers,
       relationships: relationships ?? this.relationships,
     );
+
+    // Preserve undo/redo stacks
+    projectService.undoStack = List.from(undoStack);
+    projectService.redoStack = List.from(redoStack);
+    return projectService;
   }
 
   /// -------------------
