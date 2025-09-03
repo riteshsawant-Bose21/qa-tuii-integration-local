@@ -71,8 +71,8 @@ void OcfLiteLogLogMessage(UINT8 logLevel, const char* type, const char* file, UI
                         m_indent = 0;
                     }
                 }
-                if ((logLevel == OCA_LOG_LVL_ERROR) &&
-                    (m_fullLogMessage[messageLength - 2] != '\r') &&
+                // Add newline for all log messages that don't already end with one
+                if ((m_fullLogMessage[messageLength - 2] != '\r') &&
                     (m_fullLogMessage[messageLength - 2] != '\n'))
                 {
                     bAddCarrageReturn = true;
