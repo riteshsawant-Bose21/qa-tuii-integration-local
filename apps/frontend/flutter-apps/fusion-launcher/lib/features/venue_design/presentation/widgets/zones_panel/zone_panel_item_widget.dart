@@ -198,10 +198,10 @@ class ZonePanelWidgetState extends State<ZonePanelWidget> {
   }
 
   void _removeListeningArea(String areaId) {
-    final List<String> updatedAreaIds = List<String>.from(widget.zone.listeningAreasIds)..remove(areaId);
+    // final List<String> updatedAreaIds = List<String>.from(widget.zone.listeningAreasIds)..remove(areaId);
     widget.onAreaRemovedFromZone(areaId);
-    widget.onZoneChanged(
-      widget.zone.copyWith(listeningAreaIds: updatedAreaIds),
-    );
+    // widget.onZoneChanged(
+    //   widget.zone.copyWith(listeningAreaIds: updatedAreaIds),
+    // );
   }
 }

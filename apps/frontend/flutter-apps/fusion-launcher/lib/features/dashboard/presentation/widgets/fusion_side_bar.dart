@@ -1,25 +1,22 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/core/theme/app_theme.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_lib/fusion_lib.dart' hide FusionUtils;
 
-import '../../../../core/models/project_list_model.dart';
 import '../../../../core/router/routes.dart';
-import '../../../../core/services/project_list_manager.dart';
 import '../../../../core/services/user_session_manager.dart';
 import '../../../../core/utils/fusion_utils.dart';
 
 class FusionSidebar extends StatefulWidget {
   final ValueNotifier<bool> showAllProjects;
-  final ProjectListManager projectListManager;
-  final dynamic projectManager;
   final ValueChanged<String>? onTabChanged;
   final String? selectedTab;
 
   const FusionSidebar({
     super.key,
     required this.showAllProjects,
-    required this.projectListManager,
-    required this.projectManager,
     this.onTabChanged,
     this.selectedTab, // added in constructor
   });
@@ -99,7 +96,7 @@ class _FusionSidebarState extends State<FusionSidebar> {
               trailing: Icons.add_sharp,
               onTap: () => _showNewProjectDialog(context),
             ),
-            _buildProjectList(),
+            // _buildProjectList(),
           ],
         ),
       ),
@@ -158,65 +155,65 @@ class _FusionSidebarState extends State<FusionSidebar> {
     );
   }
 
-  Widget _buildProjectList() {
-    return ValueListenableBuilder<List<ProjectListModel>>(
-      valueListenable: widget.projectListManager,
-      builder: (BuildContext context, List<ProjectListModel> projects, _) {
-        return ValueListenableBuilder<bool>(
-          valueListenable: widget.showAllProjects,
-          builder: (BuildContext context, bool showAll, __) {
-            if (projects.isEmpty) {
-              return _buildNavItem(Icons.folder_outlined, 'No Projects Available', isSubItem: true);
-            }
-
-            final List<ProjectListModel> visibleProjects = showAll ? projects : projects.take(5).toList();
-
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                ...visibleProjects.map((ProjectListModel project) {
-                  return MouseRegion(
-                    cursor: SystemMouseCursors.click,
-                    child: InkWell(
-                      onTap: () async {
-                        FusionUtils.showLoader(context);
-                        await widget.projectListManager.downloadAndExtractProjectZip(
-                          fileId: project.metaData.fileId,
-                          projectName: project.name,
-                          projectManager: widget.projectManager,
-                          localUpdatedAt: project.updatedAt,
-                        );
-                        if (context.mounted) {
-                          FusionUtils.hideLoader(context);
-                          Navigator.pushNamed(context, Routes.projectPage);
-                        }
-                      },
-                      onLongPress: () async {
-                        await widget.projectListManager.deleteProject(
-                          folderName: project.name,
-                          projectId: project.id,
-                        );
-                        widget.projectListManager.remove(project.id);
-                      },
-                      child: _buildNavItem(Icons.folder_outlined, project.name, isSubItem: true),
-                    ),
-                  );
-                }),
-                if (projects.length > 5)
-                  Padding(
-                    padding: const EdgeInsets.only(left: 32.0, top: 8),
-                    child: TextButton(
-                      onPressed: () => widget.showAllProjects.value = !showAll,
-                      child: Text(showAll ? 'View Less' : 'View All'),
-                    ),
-                  ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
+  // Widget _buildProjectList() {
+  //   return ValueListenableBuilder<List<ProjectListModel>>(
+  //     valueListenable: widget.projectListManager,
+  //     builder: (BuildContext context, List<ProjectListModel> projects, _) {
+  //       return ValueListenableBuilder<bool>(
+  //         valueListenable: widget.showAllProjects,
+  //         builder: (BuildContext context, bool showAll, __) {
+  //           if (projects.isEmpty) {
+  //             return _buildNavItem(Icons.folder_outlined, 'No Projects Available', isSubItem: true);
+  //           }
+  //
+  //           final List<ProjectListModel> visibleProjects = showAll ? projects : projects.take(5).toList();
+  //
+  //           return Column(
+  //             crossAxisAlignment: CrossAxisAlignment.start,
+  //             children: <Widget>[
+  //               ...visibleProjects.map((ProjectListModel project) {
+  //                 return MouseRegion(
+  //                   cursor: SystemMouseCursors.click,
+  //                   child: InkWell(
+  //                     onTap: () async {
+  //                       FusionUtils.showLoader(context);
+  //                       await widget.projectListManager.downloadAndExtractProjectZip(
+  //                         fileId: project.metaData.fileId,
+  //                         projectName: project.name,
+  //                         projectManager: widget.projectManager,
+  //                         localUpdatedAt: project.updatedAt,
+  //                       );
+  //                       if (context.mounted) {
+  //                         FusionUtils.hideLoader(context);
+  //                         Navigator.pushNamed(context, Routes.projectPage);
+  //                       }
+  //                     },
+  //                     onLongPress: () async {
+  //                       await widget.projectListManager.deleteProject(
+  //                         folderName: project.name,
+  //                         projectId: project.id,
+  //                       );
+  //                       widget.projectListManager.remove(project.id);
+  //                     },
+  //                     child: _buildNavItem(Icons.folder_outlined, project.name, isSubItem: true),
+  //                   ),
+  //                 );
+  //               }),
+  //               if (projects.length > 5)
+  //                 Padding(
+  //                   padding: const EdgeInsets.only(left: 32.0, top: 8),
+  //                   child: TextButton(
+  //                     onPressed: () => widget.showAllProjects.value = !showAll,
+  //                     child: Text(showAll ? 'View Less' : 'View All'),
+  //                   ),
+  //                 ),
+  //             ],
+  //           );
+  //         },
+  //       );
+  //     },
+  //   );
+  // }
 
   void _logoutDialog(BuildContext context) {
     showDialog(
@@ -590,17 +587,18 @@ class _FusionSidebarState extends State<FusionSidebar> {
                 }
 
                 FusionUtils.showLoader(context);
-                final String? errorMessage = await widget.projectListManager.createNewProject(
-                  name: projectName,
-
-                  projectManager: widget.projectManager,
-                );
-                FusionUtils.hideLoader(context);
-
-                if (errorMessage != null) {
-                  projectNameErrorNotifier.value = errorMessage;
-                  return;
+                final NewProjectDetails newProject = NewProjectDetails(name: projectName);
+                final ProjectData? projectData = await serviceLocator<ProjectViewModel>().createAndSaveNewProject(newProject);
+                if (context.mounted) {
+                  FusionUtils.hideLoader(context);
                 }
+
+                serviceLocator<ProjectViewModel>().openProject(projectData!.id);
+
+                // if (errorMessage != null) {
+                //   projectNameErrorNotifier.value = errorMessage;
+                //   return;
+                // }
 
                 if (context.mounted) {
                   Navigator.of(context).pop();

@@ -271,10 +271,10 @@ class _ProfileTabContentState extends State<ProfileTabContent> with SingleTicker
                     userProfileManager.value = newProfile;
                     autoFillProfileData();
                     _showSnackBar('Profile saved successfully!', Colors.green);
-                    print("Profile saved successfully.");
+                    debugPrint("Profile saved successfully.");
                   } else {
                     _showSnackBar('Failed to save profile: ${response.message}', Colors.red);
-                    print("Failed to save profile: ${response.message}");
+                    debugPrint("Failed to save profile: ${response.message}");
                   }
                 }
               } catch (e) {
@@ -282,7 +282,7 @@ class _ProfileTabContentState extends State<ProfileTabContent> with SingleTicker
                   FusionUtils.hideLoader(context);
                 }
                 _showSnackBar('Something went wrong. Please try again.', Colors.red);
-                print("Exception during profile save: $e");
+                debugPrint("Exception during profile save: $e");
               }
             },
           ),

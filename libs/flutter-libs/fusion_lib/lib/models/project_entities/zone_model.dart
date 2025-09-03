@@ -8,7 +8,7 @@ class Zone {
   final List<ProcessingBlockModel> processingBlocks;
   final int selectedMixIndex;
   final List<String> listeningAreasIds;
-  final List<String> mixIds;
+  final List<String> sourceSetIds;
   final String zoneColor;
 
   Zone({
@@ -17,14 +17,14 @@ class Zone {
     List<String>? listeningAreaIds,
     List<ProcessingBlockModel>? processingBlocks,
     List<String>? nonLocalSpeakerIds,
-    List<String>? mixIds,
+    List<String>? sourceSetIds,
     String? zoneColor,
     this.selectedMixIndex = 0,
   }) : id = id ?? getShortId(),
        listeningAreasIds = listeningAreaIds ?? <String>[],
        processingBlocks = processingBlocks ?? <ProcessingBlockModel>[],
        zoneColor = zoneColor ?? getRandomColor(),
-       mixIds = mixIds ?? <String>[];
+       sourceSetIds = sourceSetIds ?? <String>[];
 
   static String getShortId() {
     return 'zone${DateTime.now().millisecondsSinceEpoch}${Random().nextInt(1000)}';
@@ -56,16 +56,16 @@ class Zone {
     List<String>? listeningAreaIds,
     List<ProcessingBlockModel>? processingBlocks,
     int? selectedMixIndex,
-    List<String>? mixIds,
+    List<String>? sourceSetIds,
     String? zoneColor,
   }) {
     return Zone(
       id: id ?? this.id,
       name: name ?? this.name,
-      listeningAreaIds: listeningAreaIds ?? this.listeningAreasIds,
+      listeningAreaIds: listeningAreaIds ?? listeningAreasIds,
       processingBlocks: processingBlocks ?? this.processingBlocks,
       selectedMixIndex: selectedMixIndex ?? this.selectedMixIndex,
-      mixIds: mixIds ?? this.mixIds,
+      sourceSetIds: sourceSetIds ?? this.sourceSetIds,
       zoneColor: zoneColor ?? this.zoneColor,
     );
   }
@@ -76,7 +76,7 @@ class Zone {
     'listeningAreasId': listeningAreasIds,
     'processingBlocks': processingBlocks.map((ProcessingBlockModel pb) => pb.toJson()).toList(),
     'selectedMixIndex': selectedMixIndex,
-    'mixes': mixIds,
+    'sourceSetIds': sourceSetIds,
     'zoneColor': zoneColor,
   };
 
@@ -86,7 +86,7 @@ class Zone {
     listeningAreaIds: List<String>.from(json['listeningAreasId'] as List<dynamic>),
     processingBlocks: (json['processingBlocks'] as List<dynamic>).map((dynamic e) => ProcessingBlockModel.fromJson(e as Map<String, dynamic>)).toList(),
     selectedMixIndex: json['selectedMixIndex'] as int? ?? 0,
-    mixIds: List<String>.from(json['mixes'] as List<dynamic>),
+    sourceSetIds: List<String>.from(json['sourceSetIds'] as List<dynamic>),
     zoneColor: json['zoneColor'] as String? ?? getRandomColor(),
   );
 }

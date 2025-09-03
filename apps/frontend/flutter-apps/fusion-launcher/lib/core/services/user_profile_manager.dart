@@ -13,7 +13,7 @@ class UserProfileManager extends ValueNotifier<UserProfile> {
   /// Updates the user profile with the provided [newProfile].
   Future<ResponseCallback<void>> saveUserProfile(UserProfile newProfile) async {
     try {
-      print('Saving user profile: ${newProfile.toJson()}');
+      debugPrint('Saving user profile: ${newProfile.toJson()}');
       final ResponseCallback<void> responseCallback = await serviceLocator<FusionNetworkClient>().post(
         api: FusionApiEndpoint.saveProfile,
         data: newProfile.toJson(),
@@ -25,11 +25,11 @@ class UserProfileManager extends ValueNotifier<UserProfile> {
           message: responseCallback.message,
         );
       } else {
-        print('Failed to save profile: ${responseCallback.message}');
+        debugPrint('Failed to save profile: ${responseCallback.message}');
         throw Exception('Failed to save profile: ${responseCallback.message}');
       }
     } catch (e) {
-      print('Failed to save profile: $e');
+      debugPrint('Failed to save profile: $e');
       return ResponseCallback<void>(
         success: false,
         message: 'Failed to save profile: $e',
@@ -50,16 +50,16 @@ class UserProfileManager extends ValueNotifier<UserProfile> {
         final Map<String, dynamic> metaData = userProfileDto.metadata;
 
         value = UserProfile.fromJson(metaData);
-        print('User profile retrieved successfully: ${value.toJson()}');
+        debugPrint('User profile retrieved successfully: ${value.toJson()}');
       } else if (response.success && response.data == null) {
-        print('No user profile data found.');
+        debugPrint('No user profile data found.');
       } else {
-        print('Failed to retrieve profile: ${response.message}');
+        debugPrint('Failed to retrieve profile: ${response.message}');
         // Handle the error case
         throw Exception('Failed to retrieve profile: ${response.message}');
       }
     } catch (e) {
-      print('Error retrieving profile: $e');
+      debugPrint('Error retrieving profile: $e');
     }
   }
 
@@ -96,6 +96,6 @@ class UserProfileManager extends ValueNotifier<UserProfile> {
       location: '',
     );
     value = initialUserProfile;
-    print('User profile cleared.');
+    debugPrint('User profile cleared.');
   }
 }

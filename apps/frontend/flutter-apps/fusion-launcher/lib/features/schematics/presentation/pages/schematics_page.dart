@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/schematics/presentation/widgets/cost_calcuator_widget.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
 
 import '../../../../core/models/products_data.dart';
 import '../../../../core/service_locator.dart';
-import '../../../../core/services/project_manager.dart';
 import '../../../../core/widgets/horizontal_resizable_container.dart';
 import '../widgets/device_details_section.dart';
 import '../widgets/hardware_list_card.dart';
@@ -18,7 +19,6 @@ class SchematicsPage extends StatefulWidget {
 }
 
 class SchematicsPageState extends State<SchematicsPage> {
-  final ProjectManager projectManager = serviceLocator<ProjectManager>();
   final ScrollController _horizontalController = ScrollController();
 
   @override
@@ -30,9 +30,8 @@ class SchematicsPageState extends State<SchematicsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: ValueListenableBuilder<ProjectData>(
-        valueListenable: projectManager,
-        builder: (BuildContext context, ProjectData data, _) {
+      body: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+        builder: (BuildContext context, ProjectViewModelState state) {
           return Row(
             children: <Widget>[
               Expanded(
@@ -149,22 +148,20 @@ class SchematicsPageState extends State<SchematicsPage> {
                                   mainAxisAlignment: MainAxisAlignment.start,
                                   children: <Widget>[
                                     CostCalculatorScreen(
-                                      speakers: data.hardwareComponents.whereType<Speaker>().toList(),
-                                      sources: data.hardwareComponents.whereType<Source>().toList(),
+                                      speakers: serviceLocator<ProjectViewModel>().speakers,
+                                      sources: serviceLocator<ProjectViewModel>().sources,
                                       controllers:
-                                          data.hardwareComponents
-                                              .whereType<GenericHardwareComponent>()
+                                          serviceLocator<ProjectViewModel>().genericHardwareComponents
                                               .where((GenericHardwareComponent component) => component.type == GenericHardwareComponentType.controller)
                                               .toList(),
                                       racks:
-                                          data.hardwareComponents
-                                              .whereType<GenericHardwareComponent>()
+                                          serviceLocator<ProjectViewModel>().genericHardwareComponents
                                               .where((GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack)
                                               .toList(),
-                                      amplifiers: data.amplifiers,
-                                      fusionDevices: data.suggestedFusionDevices,
+                                      amplifiers: <Amplifier>[],
+                                      fusionDevices: <FusionDevice>[],
                                       others:
-                                          data.hardwareComponents
+                                          serviceLocator<ProjectViewModel>().genericHardwareComponents
                                               .where(
                                                 (HardwareComponent component) =>
                                                     component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
@@ -247,7 +244,7 @@ class SchematicsPageState extends State<SchematicsPage> {
 
   Widget _buildSourcesSection() {
     //get sources form projectManager.hardware componets
-    final List<Source> sources = projectManager.value.hardwareComponents.whereType<Source>().toList();
+    final List<Source> sources = serviceLocator<ProjectViewModel>().sources;
 
     return DragTarget<DeviceComponent>(
       onAcceptWithDetails: (DragTargetDetails<DeviceComponent> details) {
@@ -262,7 +259,7 @@ class SchematicsPageState extends State<SchematicsPage> {
             price: component.price,
             sku: component.id,
           );
-          projectManager.addHardwareComponent(source);
+          serviceLocator<ProjectViewModel>().addHardware(source);
         }
       },
       builder: (BuildContext context, List<DeviceComponent?> candidateItems, List<dynamic> rejectedItems) {
@@ -298,7 +295,7 @@ class SchematicsPageState extends State<SchematicsPage> {
                       sku: selectedBlock.id,
                       price: selectedBlock.price,
                     );
-                    projectManager.addHardwareComponent(source);
+                    serviceLocator<ProjectViewModel>().addHardware(source);
                   },
                   color: Colors.white,
                   itemBuilder: (BuildContext context) {
@@ -351,7 +348,7 @@ class SchematicsPageState extends State<SchematicsPage> {
                             : HardwareListCard(
                               hardwareComponents: sources,
                               onDelete: (HardwareComponent component) {
-                                projectManager.removeHardwareComponent(component.id);
+                                serviceLocator<ProjectViewModel>().removeHardware(component.id);
                               },
                             ),
                   ),
@@ -366,7 +363,7 @@ class SchematicsPageState extends State<SchematicsPage> {
 
   Widget _buildProcessorsSection() {
     //get processors from projectManager.hardware components
-    final List<FusionDevice> processors = projectManager.value.suggestedFusionDevices;
+    final List<FusionDevice> processors = serviceLocator<ProjectViewModel>().fusionDevices;
 
     final List<GenericHardwareComponent> processorComponents =
         processors
@@ -433,7 +430,8 @@ class SchematicsPageState extends State<SchematicsPage> {
 
   Widget _buildAmplifiersSection() {
     //get amplifiers from projectManager.hardware components
-    final List<Amplifier> amplifiers = projectManager.value.amplifiers;
+    final List<Amplifier> amplifiers = <Amplifier>[];
+    // final List<Amplifier> amplifiers = projectManager.value.amplifiers;
 
     final List<GenericHardwareComponent> amplifierComponents =
         amplifiers
@@ -494,7 +492,7 @@ class SchematicsPageState extends State<SchematicsPage> {
 
   Widget _buildRacksSection() {
     final List<HardwareComponent> racks =
-        projectManager.value.hardwareComponents
+        serviceLocator<ProjectViewModel>().genericHardwareComponents
             .where(
               (HardwareComponent component) => component is GenericHardwareComponent && component.type == GenericHardwareComponentType.rack,
             )
@@ -512,7 +510,7 @@ class SchematicsPageState extends State<SchematicsPage> {
             locationEntity: LocationModel(),
             price: component.price,
           );
-          projectManager.addHardwareComponent(genericHardwareComponent);
+          serviceLocator<ProjectViewModel>().addHardware(genericHardwareComponent);
         }
       },
       builder: (BuildContext context, List<DeviceComponent?> candidateItems, List<dynamic> rejectedItems) {
@@ -548,7 +546,7 @@ class SchematicsPageState extends State<SchematicsPage> {
                       sku: rackData.name,
                       price: rackData.price,
                     );
-                    projectManager.addHardwareComponent(rack);
+                    serviceLocator<ProjectViewModel>().addHardware(rack);
                   },
                   color: Colors.white,
                   itemBuilder: (BuildContext context) {
@@ -603,7 +601,7 @@ class SchematicsPageState extends State<SchematicsPage> {
                               componentWidth: 80,
                               hardwareComponents: racks,
                               onDelete: (HardwareComponent component) {
-                                projectManager.removeHardwareComponent(component.id);
+                                serviceLocator<ProjectViewModel>().removeHardware(component.id);
                               },
                             ),
                   ),
@@ -617,15 +615,9 @@ class SchematicsPageState extends State<SchematicsPage> {
   }
 
   Widget _buildZonesSection() {
-    final List<HardwareComponent> speakersAndControllers =
-        projectManager.value.hardwareComponents
-            .where(
-              (HardwareComponent component) =>
-                  ((component is Speaker) || (component is GenericHardwareComponent && component.type == GenericHardwareComponentType.controller)),
-            )
-            .toList();
+    final List<HardwareComponent> speakersAndControllers = serviceLocator<ProjectViewModel>().hardwareComponents;
 
-    final List<Zone> zones = projectManager.value.zones;
+    final List<Zone> zones = serviceLocator<ProjectViewModel>().zones;
 
     return Container(
       decoration: ShapeDecoration(
@@ -641,10 +633,10 @@ class SchematicsPageState extends State<SchematicsPage> {
           _buildSectionHeader(
             'Zone(s)',
             onAddTap: () {
-              projectManager.addZone(
+              serviceLocator<ProjectViewModel>().addZone(
                 Zone(
                   id: "zone${DateTime.now().millisecondsSinceEpoch.toString()}",
-                  name: 'Zone ${projectManager.value.zones.length + 1}',
+                  name: 'Zone ${serviceLocator<ProjectViewModel>().zones.length + 1}',
                 ),
               );
             },
@@ -674,11 +666,14 @@ class SchematicsPageState extends State<SchematicsPage> {
                       child: ZoneSchematicCard(
                         zone: zone,
                         hardwareComponents:
-                            speakersAndControllers
-                                .where(
-                                  (HardwareComponent component) => component.locationEntity.zoneId == zone.id,
-                                )
-                                .toList(),
+                            speakersAndControllers.where((HardwareComponent component) {
+                              if (component is Speaker) {
+                                return component.locationEntity.zoneId == zone.id;
+                              } else if (component is GenericHardwareComponent && component.type == GenericHardwareComponentType.controller) {
+                                return component.locationEntity.zoneId == zone.id;
+                              }
+                              return false;
+                            }).toList(),
                         onSpeakerAdded: (SpeakerData speakerData) {
                           final Speaker cs = Speaker(
                             name: speakerData.name,
@@ -696,7 +691,7 @@ class SchematicsPageState extends State<SchematicsPage> {
                             locationEntity: LocationModel(zoneId: zone.id),
                             price: speakerData.price,
                           );
-                          projectManager.addHardwareComponent(cs);
+                          serviceLocator<ProjectViewModel>().addHardware(cs);
                         },
                         onControllerAdded: (ControllerData controllerData) {
                           final GenericHardwareComponent controller = GenericHardwareComponent(
@@ -710,7 +705,7 @@ class SchematicsPageState extends State<SchematicsPage> {
                             sku: controllerData.sku,
                           );
 
-                          projectManager.addHardwareComponent(controller);
+                          serviceLocator<ProjectViewModel>().addHardware(controller);
                         },
                       ),
                     ),

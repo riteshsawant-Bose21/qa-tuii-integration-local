@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/services/user_profile_manager.dart';
 import 'package:fusion_launcher/core/theme/app_theme.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/dashboard/presentation/widgets/home_tab_content.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_utils/shared_preference_handler.dart';
 
-import '../../../../core/models/project_list_model.dart';
 import '../../../../core/service_locator.dart';
-import '../../../../core/services/project_list_manager.dart';
-import '../../../../core/services/project_manager.dart';
 import '../../../../core/services/user_session_manager.dart';
 import '../widgets/community_tab_content.dart';
 import '../widgets/fusion_side_bar.dart';
@@ -25,11 +24,8 @@ class _HomePageState extends State<HomePage> {
   final ValueNotifier<String> _currentTabNotifier = ValueNotifier<String>('Home');
 
   final ValueNotifier<bool> _showAllProjects = ValueNotifier<bool>(false);
-
-  final ProjectListManager projectListManager = serviceLocator<ProjectListManager>();
   final UserProfileManager userProfileManager = serviceLocator<UserProfileManager>();
   final SharedPreferencesHandler prefs = serviceLocator<SharedPreferencesHandler>();
-  final ProjectManager projectManager = serviceLocator<ProjectManager>();
 
   @override
   void initState() {
@@ -38,6 +34,11 @@ class _HomePageState extends State<HomePage> {
     if (!isAdmin) {
       userProfileManager.getUserProfile();
     }
+    loadProjects();
+  }
+
+  loadProjects() async {
+    await serviceLocator<ProjectViewModel>().loadAllLocalProjects();
   }
 
   @override
@@ -79,8 +80,6 @@ class _HomePageState extends State<HomePage> {
                     builder:
                         (BuildContext context, String selectedTab, _) => FusionSidebar(
                           showAllProjects: _showAllProjects,
-                          projectListManager: projectListManager,
-                          projectManager: projectManager,
                           selectedTab: selectedTab, // now reactive
                           onTabChanged: (String tab) => _currentTabNotifier.value = tab,
                         ),
@@ -195,14 +194,14 @@ class _HomePageState extends State<HomePage> {
       //   break;
       case 'delete':
         {
-          final ProjectListModel? project = projectListManager.byId(projectId);
-          if (project != null) {
-            await projectListManager.deleteProject(
-              folderName: project.name,
-              projectId: project.id,
-            );
-            projectListManager.remove(project.id);
-          }
+          // final ProjectListModel? project = projectListManager.byId(projectId);
+          // if (project != null) {
+          //   await projectListManager.deleteProject(
+          //     folderName: project.name,
+          //     projectId: project.id,
+          //   );
+          //   projectListManager.remove(project.id);
+          // }
         }
         break;
       default:

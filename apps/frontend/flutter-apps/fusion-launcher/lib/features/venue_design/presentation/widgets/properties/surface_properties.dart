@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/core/service_locator.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
 
 class SurfaceProperties extends StatefulWidget {
@@ -8,12 +10,12 @@ class SurfaceProperties extends StatefulWidget {
   final ValueChanged<ListeningArea> onSurfaceDelete;
 
   const SurfaceProperties({
-    Key? key,
+    super.key,
     required this.floorEntity,
     required this.canvasSurface,
     required this.onEntityChanged,
     required this.onSurfaceDelete,
-  }) : super(key: key);
+  });
 
   @override
   _SurfacePropertiesState createState() => _SurfacePropertiesState();
@@ -44,11 +46,10 @@ class _SurfacePropertiesState extends State<SurfaceProperties> {
   }
 
   void _updateEntity(ListeningArea updated) {
-    final List<ListeningArea> listeningAreas = List<ListeningArea>.from(widget.floorEntity.listeningAreas);
+    final List<ListeningArea> listeningAreas = serviceLocator<ProjectViewModel>().getListeningAreasForFloor(widget.floorEntity.id);
     final int idx = listeningAreas.indexWhere((ListeningArea s) => s.id == updated.id);
     if (idx != -1) listeningAreas[idx] = updated;
-    final FloorModel newFloor = widget.floorEntity.copyWith(listeningAreas: listeningAreas);
-    widget.onEntityChanged(newFloor);
+    serviceLocator<ProjectViewModel>().updateListeningArea(updated);
   }
 
   void _deleteEntity() => widget.onSurfaceDelete(widget.canvasSurface);

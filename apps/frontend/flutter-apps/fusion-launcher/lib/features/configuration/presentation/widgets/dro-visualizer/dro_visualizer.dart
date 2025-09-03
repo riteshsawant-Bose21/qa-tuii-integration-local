@@ -3,7 +3,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
-import 'package:fusion_launcher/core/services/project_manager.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_networking/network/fusion_network_client.dart';
 import 'package:fusion_lib/models/response_callback.dart';
 
@@ -20,8 +20,8 @@ class DROVisualizer extends StatelessWidget {
 
   Future<Map<String, dynamic>> getDROResponse(BuildContext context) async {
     final Map<String, dynamic> outputJson = JsonFormatConverter.convertFormat(
-      serviceLocator<ProjectManager>().value.toJson(),
-      serviceLocator<ProjectManager>().value.fusionDevices,
+      serviceLocator<ProjectViewModel>().getProjectJson(),
+      serviceLocator<ProjectViewModel>().fusionDevices,
     );
 
     //show a loader dialog while processing

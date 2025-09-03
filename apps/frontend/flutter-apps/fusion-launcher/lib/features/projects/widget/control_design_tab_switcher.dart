@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
-import 'package:fusion_launcher/core/services/project_manager.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_properties/project_properties_view_model.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 
 class ControlDesignTabSwitcher extends StatefulWidget {
   const ControlDesignTabSwitcher({super.key});
@@ -15,12 +16,12 @@ class ControlDesignTabSwitcherState extends State<ControlDesignTabSwitcher> {
   @override
   void initState() {
     super.initState();
-    selectedIndex = serviceLocator<ProjectManager>().value.isInControlMode ? 1 : 0;
+    selectedIndex = serviceLocator<ProjectViewModel>().isInControlMode ? 1 : 0;
   }
 
   @override
   void didUpdateWidget(covariant ControlDesignTabSwitcher oldWidget) {
-    selectedIndex = serviceLocator<ProjectManager>().value.isInControlMode ? 1 : 0;
+    selectedIndex = serviceLocator<ProjectViewModel>().isInControlMode ? 1 : 0;
     super.didUpdateWidget(oldWidget);
   }
 
@@ -62,7 +63,7 @@ class ControlDesignTabSwitcherState extends State<ControlDesignTabSwitcher> {
                   onTap: () {
                     setState(() {
                       selectedIndex = 0;
-                      serviceLocator<ProjectManager>().setControlMode(false); // Set to Design mode
+                      serviceLocator<ProjectViewModel>().toggleControlMode(); // Set to Design mode
                     });
                   },
                   child: SizedBox(
@@ -82,7 +83,7 @@ class ControlDesignTabSwitcherState extends State<ControlDesignTabSwitcher> {
                   onTap: () {
                     setState(() {
                       selectedIndex = 1;
-                      serviceLocator<ProjectManager>().setControlMode(true); // Set to Control mode
+                      serviceLocator<ProjectViewModel>().toggleControlMode(); // Set to Control mode
                     });
                   },
                   child: SizedBox(

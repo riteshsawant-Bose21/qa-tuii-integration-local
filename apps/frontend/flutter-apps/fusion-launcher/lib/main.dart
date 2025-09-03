@@ -9,8 +9,9 @@ import 'package:fusion_launcher/features/onboarding/presentation/welcome_page.da
 import 'package:fusion_launcher/features/user_account_setup/presentation/bloc/auth_bloc.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_theme/fusion_theme_app.dart';
-import 'package:nested/nested.dart';
+import 'package:nested/nested.dart' show SingleChildWidget;
 
+import 'features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'features/dashboard/presentation/pages/dashboard_page.dart';
 import 'features/dynamic_config/presentation/bloc/panel_bloc.dart';
 
@@ -55,6 +56,9 @@ class MyApp extends StatelessWidget {
         ),
         BlocProvider<PanelBloc>(
           create: (BuildContext context) => serviceLocator<PanelBloc>(),
+        ),
+        BlocProvider<ProjectViewModel>(
+          create: (BuildContext context) => serviceLocator<ProjectViewModel>(),
         ),
       ],
       child: FusionThemeBuilder(

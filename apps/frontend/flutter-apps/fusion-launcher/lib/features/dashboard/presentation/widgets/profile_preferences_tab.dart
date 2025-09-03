@@ -55,12 +55,12 @@ class PreferencesTab extends StatelessWidget {
                 Row(
                   children: <Widget>[
                     _customCheckboxTile('Imperial', measurementUnit == 'Imperial', (bool value) {
-                      print('Imperial checkbox changed: $value');
+                      debugPrint('Imperial checkbox changed: $value');
                       onMeasurementUnitChanged('Imperial');
                     }),
                     const SizedBox(width: 24),
                     _customCheckboxTile('Metric', measurementUnit == 'Metric', (bool value) {
-                      print('Imperial checkbox changed: $value');
+                      debugPrint('Imperial checkbox changed: $value');
                       onMeasurementUnitChanged('Metric');
                     }),
                   ],

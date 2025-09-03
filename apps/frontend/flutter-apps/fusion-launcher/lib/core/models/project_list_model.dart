@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/core/models/project_metadata_model.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:uuid/uuid.dart';
 
 class ProjectListModel {

@@ -3,7 +3,7 @@ import 'package:fusion_lib/models/fusion_models.dart';
 
 import '../../../../../core/constants.dart';
 import '../../../../../core/service_locator.dart';
-import '../../../../../core/services/project_manager.dart';
+import '../../viewmodel/project_view_model.dart';
 import '../common/location_configuration_widget.dart';
 import '../common/processing_block_view.dart';
 
@@ -14,6 +14,7 @@ class OutputWidget extends StatefulWidget {
   final Function(FloorModel) onFloorUpdated;
   final Function(FloorModel) onFloorAdded;
   final bool isControlMode;
+  final Function(Speaker, LocationModel) onSpeakerModelUpdated;
 
   const OutputWidget({
     super.key,
@@ -23,6 +24,7 @@ class OutputWidget extends StatefulWidget {
     required this.onFloorUpdated,
     required this.onFloorAdded,
     required this.isControlMode,
+    required this.onSpeakerModelUpdated,
   });
 
   @override
@@ -85,10 +87,7 @@ class OutputWidgetState extends State<OutputWidget> {
                   Offset? center;
 
                   if (location.listeningAreaId != null) {
-                    final ListeningArea area = serviceLocator<ProjectManager>().value.floors
-                        .firstWhere((FloorModel floor) => floor.id == location.floorId)
-                        .listeningAreas
-                        .firstWhere((ListeningArea area) => area.id == location.listeningAreaId);
+                    final ListeningArea area = serviceLocator<ProjectViewModel>().getListeningArea(location.listeningAreaId!);
 
                     //find the center of area.vertices
                     center = Offset(
@@ -97,7 +96,7 @@ class OutputWidgetState extends State<OutputWidget> {
                     );
                   }
 
-                  widget.onOutputChanged(widget.speaker.copyWith(locationEntity: location, pos: center));
+                  widget.onSpeakerModelUpdated(widget.speaker.copyWith(pos: center), location);
                 }
               },
               child: Padding(
@@ -137,8 +136,7 @@ class OutputWidgetState extends State<OutputWidget> {
 
             Builder(
               builder: (BuildContext context) {
-                final ProjectData pm = serviceLocator<ProjectManager>().value;
-                final List<FusionDevice> devices = pm.fusionDevices;
+                final List<FusionDevice> devices = serviceLocator<ProjectViewModel>().fusionDevices;
                 FusionDevice? device;
                 try {
                   device =
@@ -353,13 +351,11 @@ class OutputWidgetState extends State<OutputWidget> {
 
   String getLocation(LocationModel location) {
     if (location.floorId != null && location.listeningAreaId != null) {
-      final FloorModel floor = serviceLocator<ProjectManager>().value.floors.firstWhere((FloorModel floor) => floor.id == location.floorId);
-
-      final ListeningArea area = floor.listeningAreas.firstWhere((ListeningArea area) => area.id == location.listeningAreaId);
-
+      final FloorModel floor = serviceLocator<ProjectViewModel>().getFloorById(location.floorId!);
+      final ListeningArea area = serviceLocator<ProjectViewModel>().getListeningArea(location.listeningAreaId!);
       return "${floor.name}/${area.name}"; // Display floor and listening area names
     } else if (location.floorId != null) {
-      final FloorModel floor = serviceLocator<ProjectManager>().value.floors.firstWhere((FloorModel floor) => floor.id == location.floorId);
+      final FloorModel floor = serviceLocator<ProjectViewModel>().getFloorById(location.floorId!);
       return floor.name; // Display floor number
     } else if (location.listeningAreaId != null) {
       return "Listening Area ${location.listeningAreaId}"; // Display listening area number

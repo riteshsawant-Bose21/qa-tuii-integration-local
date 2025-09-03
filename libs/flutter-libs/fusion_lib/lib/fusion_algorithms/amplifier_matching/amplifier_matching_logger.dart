@@ -5,7 +5,7 @@
 
 import 'dart:developer' as developer;
 import 'amp_matching_types.dart';
-import '../../api_data/amplifiers/amplifier_types.dart' hide Circuit;
+import '../../api_data/amplifiers/amplifier_types.dart';
 
 /// Log levels for different types of algorithm messages
 enum LogLevel {

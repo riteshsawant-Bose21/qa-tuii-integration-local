@@ -2,17 +2,17 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/core/services/project_manager.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/utils/broadcast_controllers.dart';
 import 'package:fusion_launcher/features/bill_of_materials/presentation/bill_of_materials_page.dart';
-import 'package:fusion_launcher/features/cloud_ui/presentation/pages/cloud_web_view.dart';
-import 'package:fusion_lib/fusion_utils/shared_preference_handler.dart';
-import 'package:fusion_lib/models/fusion_models.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_properties/project_properties_view_model.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 
 import '../../../core/service_locator.dart';
 import '../../../core/utils/fusion_utils.dart';
 import '../../../core/widgets/clean_widgets.dart';
 import '../../../core/widgets/keep_alive_wrapper.dart';
+import '../../cloud_ui/presentation/pages/cloud_web_view.dart';
 import '../../configuration/presentation/pages/audio_system_design_page.dart';
 import '../../schematics/presentation/pages/schematics_page.dart';
 import '../../venue_design/presentation/pages/venue_design_page.dart';
@@ -27,7 +27,6 @@ class ProjectPage extends StatefulWidget {
 
 class _ProjectPageState extends State<ProjectPage> with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   late TabController _tabController;
-  final ProjectManager projectManager = serviceLocator<ProjectManager>();
   StreamSubscription<int>? subscription;
   late TextEditingController _projectNameController;
 
@@ -47,18 +46,13 @@ class _ProjectPageState extends State<ProjectPage> with SingleTickerProviderStat
       vsync: this,
       animationDuration: Duration.zero,
     );
-    _tabController.addListener(() {
-      if (_tabController.index == 1) {
-        projectManager.calculateProcessorAndAmplifiers();
-      }
-    });
 
     subscription = projectTabBroadcastController.stream.listen((int index) {
       if (index >= 0 && index < _tabController.length) {
         _tabController.animateTo(index);
       }
     });
-    _projectNameController = TextEditingController();
+    _projectNameController = TextEditingController(text: serviceLocator<ProjectViewModel>().projectName);
   }
 
   @override
@@ -85,10 +79,11 @@ class _ProjectPageState extends State<ProjectPage> with SingleTickerProviderStat
             child: Column(
               children: <Widget>[
                 // Project name section
-                ValueListenableBuilder<ProjectData>(
-                  valueListenable: projectManager,
-                  builder: (BuildContext context, ProjectData data, _) {
-                    _projectNameController.text = data.projectName;
+                BlocConsumer<ProjectViewModel, ProjectViewModelState>(
+                  listener: (BuildContext context, ProjectViewModelState state) {
+                    // TODO: implement listener
+                  },
+                  builder: (BuildContext context, ProjectViewModelState state) {
                     return Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: <Widget>[
@@ -106,6 +101,7 @@ class _ProjectPageState extends State<ProjectPage> with SingleTickerProviderStat
                                     color: Colors.white,
                                   ),
                                   onPressed: () {
+                                    serviceLocator<ProjectViewModel>().closeProject();
                                     Navigator.of(context).pop();
                                   },
                                   tooltip: 'Back to projects',
@@ -137,7 +133,7 @@ class _ProjectPageState extends State<ProjectPage> with SingleTickerProviderStat
                                   ),
                                 ),
                                 onSubmitted: (String value) {
-                                  projectManager.updateProjectName(value.trim());
+                                  serviceLocator<ProjectViewModel>().setProjectName(value.trim());
                                 },
                               ),
                             ),
@@ -147,7 +143,43 @@ class _ProjectPageState extends State<ProjectPage> with SingleTickerProviderStat
                         // const Spacer(),
                         Row(
                           children: <Widget>[
-                            if (!projectManager.isAdmin)
+                            //undo redo buttons
+                            Padding(
+                              padding: const EdgeInsets.only(right: 12.0),
+                              child: IconButton(
+                                icon: const Icon(
+                                  Icons.undo,
+                                  color: Colors.white,
+                                ),
+                                disabledColor: Colors.grey,
+                                tooltip: 'Undo',
+                                onPressed:
+                                    serviceLocator<ProjectViewModel>().canUndo
+                                        ? () {
+                                          serviceLocator<ProjectViewModel>().undo();
+                                        }
+                                        : null,
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.only(right: 12.0),
+                              child: IconButton(
+                                icon: const Icon(
+                                  Icons.redo,
+                                  color: Colors.white,
+                                ),
+                                disabledColor: Colors.grey,
+                                tooltip: 'Redo',
+                                onPressed:
+                                    serviceLocator<ProjectViewModel>().canRedo
+                                        ? () {
+                                          serviceLocator<ProjectViewModel>().redo();
+                                        }
+                                        : null,
+                              ),
+                            ),
+
+                            if (!serviceLocator<ProjectViewModel>().isAdminLogin)
                               Padding(
                                 padding: const EdgeInsets.only(right: 12.0),
                                 child: IconButton(
@@ -158,17 +190,16 @@ class _ProjectPageState extends State<ProjectPage> with SingleTickerProviderStat
                                   tooltip: 'Sync project to cloud',
                                   onPressed: () async {
                                     FusionUtils.showLoader(context);
-
-                                    final (bool success, String message) = await projectManager.uploadToCloud();
+                                    await serviceLocator<ProjectViewModel>().saveProjectToLocal();
                                     if (context.mounted) {
                                       FusionUtils.hideLoader(context);
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text(message),
-                                          backgroundColor: success ? Colors.green : Colors.red,
-                                          duration: const Duration(seconds: 2),
-                                        ),
-                                      );
+                                      // ScaffoldMessenger.of(context).showSnackBar(
+                                      //   SnackBar(
+                                      //     content: Text(message),
+                                      //     backgroundColor: success ? Colors.green : Colors.red,
+                                      //     duration: const Duration(seconds: 2),
+                                      //   ),
+                                      // );
                                     }
                                   },
                                   // onLongPress: () => projectManager.deleteProject(),
@@ -183,7 +214,7 @@ class _ProjectPageState extends State<ProjectPage> with SingleTickerProviderStat
                                 ),
                                 tooltip: 'Save project',
                                 onPressed: () => _showProjectJsonDialog(context),
-                                onLongPress: () => projectManager.deleteProject(),
+                                onLongPress: () => serviceLocator<ProjectViewModel>().deleteCurrentProjectFromLocal(),
                               ),
                             ),
 
@@ -210,6 +241,7 @@ class _ProjectPageState extends State<ProjectPage> with SingleTickerProviderStat
                     );
                   },
                 ),
+
                 // TabBar section
                 Container(
                   height: 50,
@@ -283,9 +315,9 @@ class _ProjectPageState extends State<ProjectPage> with SingleTickerProviderStat
             child: AudioSystemDesignPage(),
           ),
           // KeepAliveWrapper(
-          FusionCloudWebView(
-            pageToRedirect:
-                "embed/projects/${projectManager.value.cloudId}?token=${serviceLocator<SharedPreferencesHandler>().getString(SharedPreferenceKeys.accessToken)}",
+          const FusionCloudWebView(
+            pageToRedirect: "google.com",
+            // "embed/projects/${projectManager.value.cloudId}?token=${serviceLocator<SharedPreferencesHandler>().getString(SharedPreferenceKeys.accessToken)}",
           ),
           // ),
         ],
@@ -294,10 +326,10 @@ class _ProjectPageState extends State<ProjectPage> with SingleTickerProviderStat
   }
 
   void _showProjectJsonDialog(BuildContext context) {
-    projectManager.saveProject();
+    serviceLocator<ProjectViewModel>().saveProjectToLocal();
 
     const JsonEncoder encoder = JsonEncoder.withIndent('  ');
-    final Map<String, dynamic> jsonMap = projectManager.value.toJson();
+    final Map<String, dynamic> jsonMap = serviceLocator<ProjectViewModel>().getProjectJson();
     final String prettyJson = encoder.convert(jsonMap);
 
     showDialog(

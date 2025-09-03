@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/models/products_data.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
-import 'package:fusion_launcher/core/services/project_manager.dart';
 import 'package:fusion_launcher/core/theme/app_theme.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
 
 import '../../../../core/utils/fusion_utils.dart';
+import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import 'hardware_list_card.dart';
 
 class ZoneSchematicCard extends StatelessWidget {
@@ -97,7 +97,7 @@ class ZoneSchematicCard extends StatelessWidget {
                             title: "Speakers",
                             hardwareComponents: hardwareComponents.whereType<Speaker>().toList(),
                             onDelete: (HardwareComponent component) {
-                              serviceLocator<ProjectManager>().removeHardwareComponent(component.id);
+                              serviceLocator<ProjectViewModel>().removeHardware(component.id);
                             },
                           ),
                         if (hardwareComponents.whereType<GenericHardwareComponent>().toList().isNotEmpty)
@@ -105,7 +105,7 @@ class ZoneSchematicCard extends StatelessWidget {
                             title: "Controllers",
                             hardwareComponents: hardwareComponents.whereType<GenericHardwareComponent>().toList(),
                             onDelete: (HardwareComponent component) {
-                              serviceLocator<ProjectManager>().removeHardwareComponent(component.id);
+                              serviceLocator<ProjectViewModel>().removeHardware(component.id);
                             },
                           ),
                       ],
