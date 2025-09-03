@@ -128,12 +128,13 @@ bool Ocp1LiteSocketBind(INT32 socket, UINT16 port)
     sin.sin_port = htons(port);
     sin.sin_addr.s_addr = INADDR_ANY;
 
-#ifndef __APPLE__
-    return (bind(socket, (struct sockaddr *)&sin, sizeof(sin)) == 0);
-#else
-    bind(socket, (struct sockaddr *)&sin, sizeof(sin));
+    int result = ::bind(socket, (struct sockaddr *)&sin, sizeof(sin));
+    if (result != 0)
+    {
+        OCA_LOG_ERROR_PARAMS("Socket bind failed on port %d, errorcode=%d", port, errno);
+        return false;
+    }
     return true;
-#endif
 }
 
 bool Ocp1LiteSocketListen(INT32 socket, UINT8 backlog)
