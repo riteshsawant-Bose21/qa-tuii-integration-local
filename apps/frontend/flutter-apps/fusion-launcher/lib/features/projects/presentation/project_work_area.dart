@@ -296,7 +296,7 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
   Widget _projectNameSection() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      width: 239,
+      width: 237,
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.white,
         // border right
