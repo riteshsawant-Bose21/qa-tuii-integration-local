@@ -815,7 +815,7 @@ const struct base_device bd_fusion_c0 = {
                                 {
                                     .reg_addr = TCA9535_REG_CONFIGURATION0,
                                     .op_size = I2C_REG_DATA_OP_16BIT,
-                                    .data_mask = 0x0030  // / 15v_psw & dac_mute high
+                                    .data_mask = 0x0000  // all outputs
                                 }
                             }
                         }
