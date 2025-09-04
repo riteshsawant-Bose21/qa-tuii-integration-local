@@ -1,7 +1,8 @@
 package api
 
-import "github.com/BoseProfessional/fusion-monorepo/apps/backend/fusion-cloud-backend/internal/handler"
+import "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/handler"
 
+// registerRoutes sets up the API routes.
 func (a *API) registerRoutes() {
 	v1 := a.engine.Group("/api/v1")
 

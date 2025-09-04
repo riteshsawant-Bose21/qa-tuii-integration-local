@@ -4,20 +4,21 @@ import (
 	"context"
 	"net/http"
 
-	// Remove the direct import of the api package to break the import cycle
-
-	"github.com/BoseProfessional/fusion-monorepo/apps/backend/fusion-cloud-backend/internal/fusion/product"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product"
 	"github.com/gin-gonic/gin"
 )
 
+// ProductHandler handles HTTP requests related to products.
 type ProductHandler struct {
 	product product.Product
 }
 
+// NewProductHandler creates a new ProductHandler Service.
 func NewProductHandler(productSvc product.Product) *ProductHandler {
 	return &ProductHandler{product: productSvc}
 }
 
+// GetAllProducts retrieves all products.
 func (a *ProductHandler) GetAllProducts(c *gin.Context) {
 	products, err := a.product.GetAllProducts(c.Request.Context())
 	if err != nil {
@@ -27,6 +28,7 @@ func (a *ProductHandler) GetAllProducts(c *gin.Context) {
 	c.JSON(http.StatusOK, products)
 }
 
+// GetProductByID retrieves a product by its ID.
 func (a *ProductHandler) GetProductByID(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {

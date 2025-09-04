@@ -4,15 +4,17 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/BoseProfessional/fusion-monorepo/apps/backend/fusion-cloud-backend/internal/fusion"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
 )
 
-func (p *Service) GetProductByID(ctx context.Context, id string) (*fusion.Product, error) {
+// GetProductByID retrieves a product by its ID.
+func (p *Service) GetProductByID(ctx context.Context, id string) (*fusion.ProductResponse, error) {
 	// Implement the logic to get a product by ID.
 	return p.dbService.SelectByID(ctx, id)
 }
 
-func (p *Service) GetAllProducts(ctx context.Context) (*fusion.Product, error) {
+// GetAllProducts retrieves all products.
+func (p *Service) GetAllProducts(ctx context.Context) (*fusion.ProductResponse, error) {
 	// Check who is viewing
 
 	products, err := p.dbService.SelectAll(ctx)
@@ -20,4 +22,26 @@ func (p *Service) GetAllProducts(ctx context.Context) (*fusion.Product, error) {
 		return nil, fmt.Errorf("error getting products from DB: %w", err)
 	}
 	return products, nil
+}
+
+// UpdateProducts updates the products in the database.
+func (p *Service) UpdateProducts(ctx context.Context, product *fusion.ProductFetch) error {
+
+	// if product == nil {
+	// 	return fmt.Errorf("product cannot be nil")
+	// }
+
+	// if product.Speakers != nil {
+	// 	for _, speaker := range product.Speakers {
+	// 		if speaker.ID == "" {
+	// 			return fmt.Errorf("speaker ID is required")
+	// 		}
+	// 	}
+
+	// 	err := p.dbService.Upsert(ctx, product)
+	// 	if err != nil {
+	// 		return fmt.Errorf("error inserting product into DB: %w", err)
+	// 	}
+	// }
+	return nil
 }

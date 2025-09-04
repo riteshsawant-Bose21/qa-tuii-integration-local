@@ -3,7 +3,7 @@ package product
 import (
 	"context"
 
-	"github.com/BoseProfessional/fusion-monorepo/apps/backend/fusion-cloud-backend/internal/fusion"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
 )
 
 // Service provides methods to interact with the product database.
@@ -22,13 +22,16 @@ func NewService(dbService DatabaseService) *Service {
 	}
 }
 
+// DatabaseService defines the interface for database operations related to products.
 type DatabaseService interface {
 	// Product
-	SelectByID(ctx context.Context, id string) (*fusion.Product, error)
-	SelectAll(ctx context.Context) (*fusion.Product, error)
+	SelectByID(ctx context.Context, id string) (*fusion.ProductResponse, error)
+	SelectAll(ctx context.Context) (*fusion.ProductResponse, error)
+	Upsert(ctx context.Context, product *fusion.ProductFetch) error
 }
 
+// Product defines the interface for product-related operations.
 type Product interface {
-	GetProductByID(ctx context.Context, id string) (*fusion.Product, error)
-	GetAllProducts(ctx context.Context) (*fusion.Product, error)
+	GetProductByID(ctx context.Context, id string) (*fusion.ProductResponse, error)
+	GetAllProducts(ctx context.Context) (*fusion.ProductResponse, error)
 }
