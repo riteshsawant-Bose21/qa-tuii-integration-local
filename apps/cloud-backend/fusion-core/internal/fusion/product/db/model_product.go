@@ -3,8 +3,8 @@ package db
 import (
 	"fmt"
 
-	"github.com/BoseProfessional/fusion-monorepo/apps/backend/fusion-cloud-backend/internal/fusion"
-	model "github.com/BoseProfessional/fusion-monorepo/apps/backend/fusion-cloud-backend/internal/fusion/model/models"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
+	model "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
 )
 
 var (
@@ -26,12 +26,12 @@ var (
 )
 
 // newProduct returns a new Product node from the provided Product row
-func (s *Service) newProduct(row *model.ProductSlice) (*fusion.Product, error) {
+func (s *Service) newProduct(row *model.ProductSlice) (*fusion.ProductResponse, error) {
 	if row == nil {
 		return nil, nil
 	}
 
-	var node fusion.Product
+	var node fusion.ProductResponse
 	for _, r := range *row {
 		if r == nil {
 			continue
@@ -46,7 +46,7 @@ func (s *Service) newProduct(row *model.ProductSlice) (*fusion.Product, error) {
 			if r.MetaInfo == nil {
 				return nil, fmt.Errorf("mesta info is required for speaker")
 			}
-			var meta fusion.Speaker_meta
+			var meta fusion.Speaker_meta_response
 			if err := r.MetaInfo.Unmarshal(&meta); err != nil {
 				return nil, fmt.Errorf("failed to unmarshal meta info for speaker: %w", err)
 			}
@@ -61,7 +61,7 @@ func (s *Service) newProduct(row *model.ProductSlice) (*fusion.Product, error) {
 			if r.MetaInfo == nil {
 				return nil, fmt.Errorf("meta info is required for amplifier")
 			}
-			var meta fusion.Amplifiers_meta
+			var meta fusion.Amplifier_meta_response
 			if err := r.MetaInfo.Unmarshal(&meta); err != nil {
 				return nil, fmt.Errorf("failed to unmarshal meta info for amplifier: %w", err)
 			}
