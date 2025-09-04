@@ -59,7 +59,7 @@ const struct endpoint ep_sec_eeprom_sha104 = {
 
 const struct endpoint ep_eeprom_m24c32 = {
     .type = EP_TYPE_EEPROM_M24C32,
-    .name = "eeprom_m24c02",  // Note: Name mismatch with type, should be "eeprom_m24c32"?
+    .name = "eeprom_m24c32",
     .addr_list = (unsigned short[]) { 0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, I2C_CLIENT_END },
     .num_gpios = 1,
     .gpios = (struct endpoint_gpio[]) {
@@ -239,7 +239,7 @@ const struct base_device bd_fusion_c0 = {
     },
     .data_eeprom = (struct endpoint[]) {
         {
-            .name = "ep_eeprom_m24c02",
+            .name = "ep_eeprom_m24c32",
             .type = EP_TYPE_EEPROM_M24C32,
             .export = EP_EXPORT,
             .has_i2c = true,

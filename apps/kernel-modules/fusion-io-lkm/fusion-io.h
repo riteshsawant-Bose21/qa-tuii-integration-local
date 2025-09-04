@@ -58,14 +58,6 @@ enum endpoint_gpio_val {
     EP_GPIO_VAL_HI
 };
 
-// TODO
-// preliminary gpio status bit map
-#define EP_GPIO_STATUS_TYPE_POS     0
-#define EP_GPIO_STATUS_TYPE_WIDTH   2
-#define EP_GPIO_STATUS_EXPORT_POS   EP_GPIO_STATUS_TYPE_POS + EP_GPIO_STATUS_TYPE_WIDTH
-#define EP_GPIO_STATUS_EXPORT_WIDTH 1
-#define EP_GPIO_STATUS_EXPORT_POS   EP_GPIO_STATUS_TYPE_POS + EP_GPIO_STATUS_TYPE_WIDTH
-
 // represents either
 // a. a real physical gpio
 // b. a virtual gpio either
@@ -160,10 +152,7 @@ enum endpoint_type {
     // codecs
     EP_TYPE_AUD_START         = EP_TYPE_NONE + 1,
     EP_TYPE_AUD_ADC_TAA5242   = EP_TYPE_AUD_START,
-    EP_TYPE_AUD_ADC_AK5552,
     EP_TYPE_AUD_DAC_TAD5242,
-    EP_TYPE_AUD_DAC_AK4452,
-    EP_TYPE_AUD_COD_WM8904,
     EP_TYPE_AUD_END,
 
     // SRCs
@@ -181,7 +170,6 @@ enum endpoint_type {
     EP_TYPE_IOEXP_START       = EP_TYPE_HDMI_END + 1,
     EP_TYPE_IOEXP_TCA9535     = EP_TYPE_IOEXP_START,
     EP_TYPE_IOEXP_TCAL6408,
-    EP_TYPE_IOEXP_PCA6408,
     EP_TYPE_IOEXP_END,
 
     // ADCs
@@ -203,7 +191,6 @@ enum endpoint_type {
     // I2C switch
     EP_TYPE_I2CSW_START       = EP_TYPE_EEPROM_END + 1,
     EP_TYPE_I2CSW_TCA9544     = EP_TYPE_I2CSW_START,
-    EP_TYPE_I2CSW_PCA9546,     
     EP_TYPE_I2CSW_END,
 };
 
