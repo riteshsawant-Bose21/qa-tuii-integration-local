@@ -11,7 +11,7 @@ import '../../../core/service_locator.dart';
 import '../../../core/utils/broadcast_controllers.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../schematics/presentation/pages/schematics_page.dart';
-import '../../venue_design/presentation/widgets/side_panel/product_query.dart';
+import '../widget/building/side_panle_widgets/product_query.dart';
 import '../widget/building/building_canvas.dart';
 import '../widget/building/side_panle_widgets/building_plan.dart';
 import '../widget/control_design_tab_switcher.dart';

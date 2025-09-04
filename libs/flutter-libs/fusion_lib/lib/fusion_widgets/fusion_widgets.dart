@@ -23,6 +23,8 @@ export 'others/fusion_profile_image.dart';
 export 'others/fusion_shimmer.dart';
 export 'others/fusion_image.dart';
 export 'others/fusion_expandable_tile_widget.dart';
+export 'others/fusion_drop_down.dart';
+export 'others/fusion_horizontal_resizable_widget.dart';
 
 /// text views
 export 'text_views/fusion_app_text.dart';

@@ -25,6 +25,8 @@ class _BuildingPlanState extends State<BuildingPlan> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.white,
+
         border: Border(
           bottom: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
         ),
@@ -57,9 +59,9 @@ class _BuildingPlanState extends State<BuildingPlan> {
                 selectedIndex = index;
               });
             },
-            offset: const Offset(100, 8),
+            offset: const Offset(50, 8),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(6),
               side: BorderSide(color: Theme.of(context).colorScheme.dividerColor),
             ),
             color: Theme.of(context).colorScheme.white,
