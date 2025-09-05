@@ -99,7 +99,7 @@ static int configure_i2c_endpoint(struct endpoint *ep)
 
         // some endpoints have a custom configure func
         if (ep->ep_configure != NULL) {
-            return ep->ep_configure(client, cmd);
+            return ep->ep_configure(ep, cmd);
         }
 
         // otherwise use the generic one
@@ -138,14 +138,14 @@ static int configure_i2c_endpoint(struct endpoint *ep)
 }
 
 // custom configuration callbacks (only for those who need one)
-int ads7128_configure(struct i2c_client *client, struct endpoint_cmd *cmd)
+int ads7128_configure(struct endpoint *ep, struct endpoint_cmd *cmd)
 {
     struct i2c_msg msg;
     u8 buf[3];
     int ret;
 
     buf[0] = ADS7128_OPCODE_WRITE_REG;
-    msg.addr = client->addr;
+    msg.addr = ep->i2c_client->addr;
     msg.flags = I2C_SMBUS_WRITE;
     msg.len = 3;
     msg.buf = buf;
@@ -154,7 +154,7 @@ int ads7128_configure(struct i2c_client *client, struct endpoint_cmd *cmd)
         buf[1] = cmd->i2c_cmds[i].reg_addr;
         buf[2] = cmd->i2c_cmds[i].data_mask;
 
-        ret = __i2c_transfer(client->adapter, &msg, 1);
+        ret = __i2c_transfer(ep->i2c_client->adapter, &msg, 1);
         if (ret < 0) {
             printk(KERN_ERR "ads7128_configure: failed transfer %i\n", i);
             return ret;
@@ -164,10 +164,8 @@ int ads7128_configure(struct i2c_client *client, struct endpoint_cmd *cmd)
     return 0;
 }
 
-int tca9544_configure(struct i2c_client *client, struct endpoint_cmd *cmd)
+int tca9544_configure(struct endpoint *ep, struct endpoint_cmd *cmd)
 {
-    struct endpoint *ep = container_of(client, struct endpoint, i2c_client);
-
     // configure the mux adapters
     return configure_i2c_mux_adapters(ep);
 }
@@ -986,7 +984,7 @@ static int configure_base_device_gpios(void)
                 continue;
             }
         } else {
-            ret = devm_gpio_request(ep_gpio->num, ep_gpio->name);
+            ret = devm_gpio_request(&bd_drvdata->pdev->dev, ep_gpio->num, ep_gpio->name);
             if (ret) {
                 dev_err(&bd_drvdata->pdev->dev, "Failed to request base device GPIO %s\n", ep_gpio->name);
                 continue;
@@ -1488,6 +1486,8 @@ static int fusion_io_probe(struct platform_device *pdev)
                 dev_err(&pdev->dev, "Bad I2C read of %s\n", ep->name);
                 goto error;
             }
+
+            // TODO need to set an endpoint for sec_eeprom?
 
             kfree(ep);
             ep = NULL;

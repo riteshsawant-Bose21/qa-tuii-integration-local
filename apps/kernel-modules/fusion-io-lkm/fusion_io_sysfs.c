@@ -688,7 +688,7 @@ int fusion_io_create_sysfs_base(struct platform_device *pdev)
 
     dev_set_drvdata(fusion_io_parent_dev, bd);
 
-    drvdata->sysfs_dev = fusion_io_parent_dev;
+    bd->sysfs_dev = fusion_io_parent_dev;
 
     ret = sysfs_create_group(&fusion_io_parent_dev->kobj, &base_device_group);
     if (ret) {
@@ -717,8 +717,6 @@ int fusion_io_create_sysfs_base(struct platform_device *pdev)
         }
     }
 
-	drvdata->endpoint_sysfs_devs = devm_kzalloc(&pdev->dev, sizeof(struct device *) * bd->num_eps, GFP_KERNEL);
-
     for (int i = 0; i < bd->num_eps; ++i) {
         ep = &bd->endpoints[i];
         
@@ -734,7 +732,7 @@ int fusion_io_create_sysfs_base(struct platform_device *pdev)
         }
 
         dev_set_drvdata(endpoint_dev, ep);
-        drvdata->endpoint_sysfs_devs[i] = endpoint_dev;
+        ep->sysfs_dev = endpoint_dev;
 
         ret = sysfs_create_group(&endpoint_dev->kobj, &endpoint_group);
         if (ret) {
@@ -792,21 +790,20 @@ void fusion_io_remove_sysfs_base(struct platform_device *pdev)
     struct base_device *bd = drvdata->fusion_device;
 
     for (int i = 0; i < bd->num_gpios; ++i) {
-        fusion_io_remove_sysfs_gpio(drvdata->sysfs_dev, &bd->gpios[i]);
+        fusion_io_remove_sysfs_gpio(bd->sysfs_dev, &bd->gpios[i]);
     }
 
-	if (drvdata->endpoint_sysfs_devs != NULL) {
-		for (int i = 0; i < bd->num_eps; ++i) {
-			if (drvdata->endpoint_sysfs_devs[i]) {
-				fusion_io_remove_sysfs_gpios(drvdata->endpoint_sysfs_devs[i], &bd->endpoints[i]);
-				fusion_io_remove_sysfs_cmds(drvdata->endpoint_sysfs_devs[i], &bd->endpoints[i]);
+    for (int i = 0; i < bd->num_eps; ++i) {
+        struct endpoint *ep = &bd->endpoints[i];
+        if (ep->sysfs_dev) {
+            fusion_io_remove_sysfs_gpios(ep->sysfs_dev, ep);
+            fusion_io_remove_sysfs_cmds(ep->sysfs_dev, ep);
 
-				sysfs_remove_group(&drvdata->endpoint_sysfs_devs[i]->kobj, &endpoint_group);
-				device_unregister(drvdata->endpoint_sysfs_devs[i]);
-				drvdata->endpoint_sysfs_devs[i] = NULL;
-			}
-		}
-	}
+            sysfs_remove_group(&ep->sysfs_dev->kobj, &endpoint_group);
+            device_unregister(ep->sysfs_dev);
+            ep->sysfs_dev = NULL;
+        }
+    }
 
     sysfs_remove_group(&fusion_io_parent_dev->kobj, &base_device_group);
     fusion_io_remove_parent_device();
@@ -876,19 +873,18 @@ void fusion_io_remove_sysfs_io_card(struct platform_device *pdev, struct io_card
         fusion_io_remove_sysfs_gpio(ic->sysfs_dev, &ic->gpios[i]);
     }
 
-	if (ic->endpoint_sysfs_devs != NULL) {
-		for (int i = 0; i < ic->num_eps; ++i) {
-			if (ic->endpoint_sysfs_devs[i]) {
-				/* Remove the per-GPIO attributes from that endpoint device */
-				fusion_io_remove_sysfs_gpios(ic->endpoint_sysfs_devs[i], &ic->endpoints[i]);
-				fusion_io_remove_sysfs_cmds(ic->endpoint_sysfs_devs[i], &ic->endpoints[i]);
+    for (int i = 0; i < ic->num_eps; ++i) {
+        struct endpoint *ep = &ic->endpoints[i];
+        if (ep->sysfs_dev) {
+            /* Remove the per-GPIO attributes from that endpoint device */
+            fusion_io_remove_sysfs_gpios(ep->sysfs_dev, ep);
+            fusion_io_remove_sysfs_cmds(ep->sysfs_dev, ep);
 
-				sysfs_remove_group(&ic->endpoint_sysfs_devs[i]->kobj, &endpoint_group);
-				device_unregister(ic->endpoint_sysfs_devs[i]);
-				ic->endpoint_sysfs_devs[i] = NULL;
-			}
-		}
-	}
+            sysfs_remove_group(&ep->sysfs_dev->kobj, &endpoint_group);
+            device_unregister(ep->sysfs_dev);
+            ep->sysfs_dev = NULL;
+        }
+    }
 
     if (ic->sysfs_dev != NULL) {
         sysfs_remove_group(&ic->sysfs_dev->kobj, &io_card_group);
@@ -960,8 +956,6 @@ int fusion_io_create_sysfs_io_card(struct platform_device *pdev, struct io_card 
         }
     }
 
-	ic->endpoint_sysfs_devs = devm_kzalloc(&pdev->dev, sizeof(struct device *) * ic->num_eps, GFP_KERNEL);
-
     for (int i = 0; i < ic->num_eps; ++i) {
         ep = &ic->endpoints[i];
         
@@ -977,7 +971,7 @@ int fusion_io_create_sysfs_io_card(struct platform_device *pdev, struct io_card 
         }
 
         dev_set_drvdata(endpoint_dev, ep);
-        ic->endpoint_sysfs_devs[i] = endpoint_dev;
+        ep->sysfs_dev = endpoint_dev;
 
         ret = sysfs_create_group(&endpoint_dev->kobj, &endpoint_group);
         if (ret) {

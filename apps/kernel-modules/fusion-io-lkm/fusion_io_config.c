@@ -846,9 +846,7 @@ const struct base_device bd_fusion_c0 = {
                     .num_cmds = 0,
                     .cmds = NULL
                 },
-            },
-            .sec_eeprom = NULL,
-            .data_eeprom = NULL
+            }
         },
         {
             .data = {
@@ -1331,9 +1329,7 @@ const struct base_device bd_fusion_c0 = {
                 }
             },
             .num_eps = 0,
-            .endpoints = NULL,
-            .sec_eeprom = NULL,
-            .data_eeprom = NULL
+            .endpoints = NULL
         }
     }
 };

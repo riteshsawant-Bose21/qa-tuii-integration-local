@@ -418,10 +418,12 @@ struct endpoint {
     struct endpoint_cmd     *cmds;
 
     int                     (*ep_handle_irq)(struct endpoint_gpio *);
-    int                     (*ep_configure)(struct i2c_client *, struct endpoint_cmd *);
+    int                     (*ep_configure)(struct endpoint *, struct endpoint_cmd *);
     
     struct base_device      *parent_base_device;
     struct io_card          *parent_io_card;
+
+    struct device           *sysfs_dev;
 };
 
 
@@ -485,8 +487,7 @@ struct io_card {
     size_t                  num_gpios;
     struct endpoint_gpio    *gpios;
 
-    struct device           *sysfs_dev;
-    struct device           **endpoint_sysfs_devs; 
+    struct device           *sysfs_dev; 
 };
 
 
@@ -521,7 +522,6 @@ struct base_device {
     struct io_card          *io_cards;
 
     struct device           *sysfs_dev;
-    struct device           **endpoint_sysfs_devs;
 };
 
 // Driver data
@@ -544,8 +544,8 @@ extern const struct base_device    *default_bds[];
 
 
 // x_configure callbacks defined in fusion_io_device.c
-int ads7128_configure(struct i2c_client *, struct endpoint_cmd *);
-int tca9544_configure(struct i2c_client *, struct endpoint_cmd *);
+int ads7128_configure(struct endpoint *, struct endpoint_cmd *);
+int tca9544_configure(struct endpoint *, struct endpoint_cmd *);
 
 
 // x_handle_irq callbacks defined in fusion_io_device.c
