@@ -478,7 +478,7 @@ multipass exec fusion1 -- systemctl status fusion-server
     ```bash
     multipass exec fusion1 -- chronyc tracking
     ```
-    
+
 6. **Load Balancer Issues**
    - Check HAProxy configuration
    - Verify backend metrics
@@ -497,6 +497,11 @@ multipass exec fusion1 -- systemctl status fusion-server
    
    Multipass has not yet released a version that resolves this issue on M4 Macs. In the meantime, you can install the package from this [workaround](https://github.com/canonical/multipass/issues/3842#issuecomment-2552189605).
 
+8. **list failed: cannot connect to the multipass socket**
+```bash
+sudo launchctl load -w /Library/LaunchDaemons/com.canonical.multipassd.plist
+sudo launchctl kickstart -k system/com.canonical.multipassd
+```
 
 ## Testing
 

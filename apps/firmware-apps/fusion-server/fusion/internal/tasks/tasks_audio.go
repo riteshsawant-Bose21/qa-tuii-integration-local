@@ -1,6 +1,7 @@
 package tasks
 
 import (
+	"context"
 	"fusion/internal/api"
 	"fusion/internal/logging"
 	"fusion/internal/utils"
@@ -40,11 +41,12 @@ func (tm *TaskManager) HandleTriggerMessage(w http.ResponseWriter, r *http.Reque
 }
 
 // returns a func that plays the given file
-func (tm *TaskManager) taskPlayAudioFunc(path string) func() {
-	return func() {
+func (tm *TaskManager) taskPlayAudioFunc(path string) TaskFunc {
+	return func(ctx context.Context) error {
 		_, err := os.Stat(path)
 		if err != nil {
 			logging.GetLogger().Error("Failed to stat audio file: %v", err)
+			return err
 		}
 		// if err := tm.audioPlayer.Play(path); err != nil {
 		//   tm.RecordExecution(&api.Task{ID: /*…*/}, "failed")
@@ -52,5 +54,6 @@ func (tm *TaskManager) taskPlayAudioFunc(path string) func() {
 		// } else {
 		//   tm.RecordExecution(&api.Task{/*…*/}, "success")
 		// }
+		return nil
 	}
 }

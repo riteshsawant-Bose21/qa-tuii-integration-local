@@ -1,6 +1,7 @@
 package tasks
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"fusion/internal/api"
@@ -119,18 +120,19 @@ func (tm *TaskManager) UpdateApplySnapshotTask(w http.ResponseWriter, r *http.Re
 }
 
 // taskActivateSnapshotFunc creates a task function that applies a snapshot.
-func (tm *TaskManager) taskActivateSnapshotFunc(name string) func() {
-	return func() {
+func (tm *TaskManager) taskActivateSnapshotFunc(name string) TaskFunc {
+	return func(ctx context.Context) error {
 		logger := logging.GetLogger()
 		logger.Debug("Activating snapshot %s on %s", name, name)
 
 		// Activate the snapshot only on the instance. Activation will cause
-		// the config data to be propogaged to all instances.
+		// the config data to be propogated to all instances.
 		if err := tm.persistence.ActivateSnapshot(name); err != nil {
 			logger.Error("Snapshot apply task for '%s' failed: %v", name, err)
-
+			return err
 		} else {
 			logger.Debug("Snapshot '%s' activated successfully via task", name)
 		}
+		return nil
 	}
 }
