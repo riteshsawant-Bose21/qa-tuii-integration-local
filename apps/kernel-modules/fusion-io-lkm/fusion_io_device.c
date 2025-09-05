@@ -622,7 +622,7 @@ static int configure_gpio_interrupt(struct endpoint_gpio *ep_gpio)
     return 0;
 }
 
-static void configure_base_device_references()
+static void configure_base_device_references(void)
 {
     struct base_device *bd = bd_drvdata->fusion_device;
     struct endpoint *ep;
@@ -950,7 +950,7 @@ static void link_gpio(struct endpoint_gpio *ep_gpio)
                                                                 ep_gpio->name);
 }
 
-static int configure_base_device_gpios()
+static int configure_base_device_gpios(void)
 {
     struct base_device *bd = bd_drvdata->fusion_device;
     struct endpoint *ep;
