@@ -377,7 +377,26 @@ func (c *Cluster) getLocalDeviceInfo() persistence.DeviceInfo {
 	if err != nil {
 		return persistence.DeviceInfo{}
 	}
+	info.IsPrimaryNode = c.isLocalNodePrimary()
+
 	return *info
+}
+
+func (c *Cluster) isLocalNodePrimary() bool {
+
+	vip, err := c.getVIPFromConfig()
+	if err != nil {
+		logging.GetLogger().Error("Failed to get VIP from config: %v", err)
+		return false
+	}
+
+	for _, v := range vip {
+		_, _, isLocal := c.getLocalForVIP(v)
+		if isLocal {
+			return true
+		}
+	}
+	return false
 }
 
 func (c *Cluster) applyPatch(patch *persistence.DevicePatch, info *persistence.DeviceInfo) {
