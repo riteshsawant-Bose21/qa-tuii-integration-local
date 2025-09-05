@@ -426,14 +426,14 @@ struct endpoint {
 
 
 /* eeprom data */
-#define EEPROM_DATA_VER_MAJ 0
-#define EEPROM_DATA_VER_MIN 1
-struct eeprom_data {
+#define ID_DATA_VER_MAJ 0
+#define ID_DATA_VER_MIN 1
+struct id_data {
+    u8      ver_maj;
+    u8      ver_min;
     char    model[MAX_STRING];
     char    sn[MAX_STRING];
     u8      type;
-    u8      ver_maj;
-    u8      ver_min;
 };
 
 
@@ -476,10 +476,10 @@ struct io_card {
     u8                      slot;
     u8                      i2c_sw_channel;
 
-    struct eeprom_data      data;
+    struct id_data          data;
 
     struct endpoint         *sec_eeprom;
-    struct endpoint         *data_eeprom;
+    
     size_t                  num_eps;
     struct endpoint         *endpoints;
     size_t                  num_gpios;
@@ -506,14 +506,9 @@ enum base_device_type {
 
 struct base_device {
     bool                    has_slot_io;
-    u8                      i2c_sw_current_slot;
+    bool                    has_i2c_sw;
 
-    struct eeprom_data      data;
-
-    struct endpoint         *sec_eeprom;
-    struct endpoint         *data_eeprom;
-    struct endpoint         *i2c_sw;
-    struct endpoint         *pwr_io_exp;
+    struct id_data          data;
 
     struct i2c_adapter      *i2c_adapter;
     struct i2c_mux_core     *muxc;
@@ -524,16 +519,16 @@ struct base_device {
     struct endpoint_gpio    *gpios;
     size_t                  num_ics;
     struct io_card          *io_cards;
+
+    struct device           *sysfs_dev;
+    struct device           **endpoint_sysfs_devs;
 };
 
 // Driver data
 struct fusion_io_base_drvdata {
+    struct platform_device *pdev;
     struct base_device *fusion_device;
-
     bool   ready;
-
-    struct device *sysfs_dev;  // Device pointer for the base device in sysfs
-    struct device **endpoint_sysfs_devs;  // Device pointers for the endpoints in sysfs
 };
 
 
@@ -550,6 +545,7 @@ extern const struct base_device    *default_bds[];
 
 // x_configure callbacks defined in fusion_io_device.c
 int ads7128_configure(struct i2c_client *, struct endpoint_cmd *);
+int tca9544_configure(struct i2c_client *, struct endpoint_cmd *);
 
 
 // x_handle_irq callbacks defined in fusion_io_device.c

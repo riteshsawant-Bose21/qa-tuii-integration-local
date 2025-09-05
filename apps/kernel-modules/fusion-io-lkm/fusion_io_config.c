@@ -130,6 +130,7 @@ const struct base_device bd_fusion_c0 = {
         .type = BD_TYPE_FUSION_C0
     },
     .has_slot_io = false,
+    .has_i2c_sw = true,
     .num_gpios = 5,
     .gpios = (struct endpoint_gpio[]) {
         {
@@ -184,120 +185,8 @@ const struct base_device bd_fusion_c0 = {
             .dir = EP_GPIO_DIR_I
         }
     },
-    .sec_eeprom = (struct endpoint[]) {
-        {
-            .name = "ep_eeprom_sha104",
-            .type = EP_TYPE_SEC_EEPROM_SHA104,
-            .export = EP_EXPORT,
-            .has_i2c = true,
-            .addr_list = (unsigned short[]) { 0x41, I2C_CLIENT_END },
-            .num_gpios = 0,
-            .gpios = NULL,
-            .num_cmds = 3,
-            .cmds = (struct endpoint_cmd[]) {
-                {
-                    .name = "cmd_config",
-                    .type = EP_CMD_TYPE_CFG,
-                    .export = EP_CMD_NO_EXPORT,
-                    .num_i2c_cmds = 1,
-                    .i2c_cmds = (struct i2c_reg_data[]) {
-                        {
-                            .reg_addr = 0x00,
-                            .op_size = I2C_REG_DATA_OP_16BIT,
-                            .data_mask = 0xffff
-                        }
-                    }
-                },
-                {
-                    .name = "cmd_read_all",
-                    .type = EP_CMD_TYPE_EEPROM_RD,
-                    .export = EP_CMD_EXPORT,
-                    .num_i2c_cmds = 1,
-                    .i2c_cmds = (struct i2c_reg_data[]) {
-                        {
-                            .reg_addr = 0x00,
-                            .op_size = I2C_REG_DATA_OP_16BIT,
-                            .data_mask = 0xffff
-                        }
-                    }
-                },
-                {
-                    .name = "cmd_write",
-                    .type = EP_CMD_TYPE_EEPROM_WR,
-                    .export = EP_CMD_EXPORT,
-                    .num_i2c_cmds = 1,
-                    .i2c_cmds = (struct i2c_reg_data[]) {
-                        {
-                            .reg_addr = 0x00,
-                            .op_size = I2C_REG_DATA_OP_16BIT,
-                            .data_mask = 0xffff
-                        }
-                    }
-                }
-            }
-        }
-    },
-    .data_eeprom = (struct endpoint[]) {
-        {
-            .name = "ep_eeprom_m24c32",
-            .type = EP_TYPE_EEPROM_M24C32,
-            .export = EP_EXPORT,
-            .has_i2c = true,
-            .addr_list = (unsigned short[]) { 0x50, I2C_CLIENT_END },
-            .num_gpios = 1,
-            .gpios = (struct endpoint_gpio[]) {
-                {
-                    .name = "gpio_wc",
-                    .type = EP_GPIO_TYPE_VIRT,
-                    .export = EP_GPIO_NO_EXPORT,
-                    .dir = EP_GPIO_DIR_I
-                }
-            },
-            .num_cmds = 3,
-            .cmds = (struct endpoint_cmd[]) {
-                {
-                    .name = "cmd_config",
-                    .type = EP_CMD_TYPE_CFG,
-                    .export = EP_CMD_NO_EXPORT,
-                    .num_i2c_cmds = 1,
-                    .i2c_cmds = (struct i2c_reg_data[]) {
-                        {
-                            .reg_addr = 0x00,
-                            .op_size = I2C_REG_DATA_OP_16BIT,
-                            .data_mask = 0xffff
-                        }
-                    }
-                },
-                {
-                    .name = "cmd_read_all",
-                    .type = EP_CMD_TYPE_EEPROM_RD,
-                    .export = EP_CMD_EXPORT,
-                    .num_i2c_cmds = 1,
-                    .i2c_cmds = (struct i2c_reg_data[]) {
-                        {
-                            .reg_addr = 0x00,
-                            .op_size = I2C_REG_DATA_OP_16BIT,
-                            .data_mask = 0xffff
-                        }
-                    }
-                },
-                {
-                    .name = "cmd_write",
-                    .type = EP_CMD_TYPE_EEPROM_WR,
-                    .export = EP_CMD_EXPORT,
-                    .num_i2c_cmds = 1,
-                    .i2c_cmds = (struct i2c_reg_data[]) {
-                        {
-                            .reg_addr = 0x00,
-                            .op_size = I2C_REG_DATA_OP_16BIT,
-                            .data_mask = 0xffff
-                        }
-                    }
-                }
-            }
-        }
-    },
-    .i2c_sw = (struct endpoint[]) {
+    .num_eps = 2,
+    .endpoints = (struct endpoint[]) {
         {
             .name = "ep_i2csw_tca9544",
             .type = EP_TYPE_I2CSW_TCA9544,
@@ -305,6 +194,7 @@ const struct base_device bd_fusion_c0 = {
             .has_i2c = true,
             .addr_list = (unsigned short[]) { 0x70, I2C_CLIENT_END },
             .ep_handle_irq = tca9544_handle_irq,
+            .ep_configure = tca9544_configure,
             .num_gpios = 5,
             .gpios = (struct endpoint_gpio[]) {
                 {
@@ -364,9 +254,7 @@ const struct base_device bd_fusion_c0 = {
                     }
                 }
             }
-        }
-    },
-    .pwr_io_exp = (struct endpoint[]) {
+        },
         {
             .type = EP_TYPE_IOEXP_TCAL6408,
             .name = "ep_ioexp_tcal6408",
@@ -479,8 +367,6 @@ const struct base_device bd_fusion_c0 = {
             }
         }
     },
-    .num_eps = 0,
-    .endpoints = NULL,
     .num_ics = 4,
     .io_cards = (struct io_card[]) {
         {
