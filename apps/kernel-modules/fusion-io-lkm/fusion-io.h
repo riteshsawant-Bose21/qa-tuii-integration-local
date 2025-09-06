@@ -511,9 +511,6 @@ struct base_device {
 
     struct id_data          data;
 
-    struct i2c_adapter      *i2c_adapter;
-    struct i2c_mux_core     *muxc;
-
     size_t                  num_eps;
     struct endpoint         *endpoints;
     size_t                  num_gpios;
@@ -527,8 +524,10 @@ struct base_device {
 // Driver data
 struct fusion_io_base_drvdata {
     struct platform_device *pdev;
-    struct base_device *fusion_device;
-    bool   ready;
+    struct base_device     *fusion_device;
+    struct i2c_adapter     *i2c_adapter;
+    struct i2c_mux_core    *muxc;
+    bool                   ready;
 };
 
 

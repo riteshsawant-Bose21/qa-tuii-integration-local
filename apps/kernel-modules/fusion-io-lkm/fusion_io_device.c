@@ -40,8 +40,6 @@ static int tca9544_select_chan(struct i2c_mux_core *muxc, u32 chan_id)
 // for i2c switches, we create sub-adapters for each switch channel
 static int configure_i2c_mux_adapters(struct endpoint *ep) 
 {    
-    struct base_device *bd = bd_drvdata->fusion_device;
-
     int (*select)(struct i2c_mux_core *, u32);
     
     int num_adapters = 0;
@@ -57,7 +55,7 @@ static int configure_i2c_mux_adapters(struct endpoint *ep)
             return -EINVAL;
     }
 
-    bd->muxc = i2c_mux_alloc(bd->i2c_adapter,     // parent adapter
+    bd_drvdata->muxc = i2c_mux_alloc(bd_drvdata->i2c_adapter,     // parent adapter
                              &bd_drvdata->pdev->dev,           // parent device
                              num_adapters,        // max_adapters
                              sizeof(*ep),  // size of private data
@@ -65,13 +63,13 @@ static int configure_i2c_mux_adapters(struct endpoint *ep)
                              select,
                              NULL);
 
-    if (!bd->muxc)
+    if (!bd_drvdata->muxc)
         return -ENOMEM;
 
-    bd->muxc->priv = ep;
+    bd_drvdata->muxc->priv = ep;
 
     for (int i = 0; i < num_adapters; ++i) {
-        ret = i2c_mux_add_adapter(bd->muxc, 0, i);
+        ret = i2c_mux_add_adapter(bd_drvdata->muxc, 0, i);
         if (ret < 0) {
             dev_err(&bd_drvdata->pdev->dev, "Failed to add mux adapter for channel %d\n", i);
             return ret;
@@ -1247,11 +1245,11 @@ static void fusion_io_remove(struct platform_device *pdev)
 
     cleanup_gpios();
     
-    if(bd->muxc) {
-        i2c_mux_del_adapters(bd->muxc);
+    if(bd_drvdata->muxc) {
+        i2c_mux_del_adapters(bd_drvdata->muxc);
     }
-    if(bd->i2c_adapter) {
-        i2c_put_adapter(bd->i2c_adapter);
+    if(bd_drvdata->i2c_adapter) {
+        i2c_put_adapter(bd_drvdata->i2c_adapter);
     }
 
     fusion_io_remove_sysfs_base(bd_drvdata->pdev);
@@ -1302,7 +1300,7 @@ static int fusion_io_probe(struct platform_device *pdev)
     platform_set_drvdata(pdev, bd_drvdata);
     
     strcpy(bd->data.sn, data.sn);
-    bd->i2c_adapter = i2c_adapter;
+    bd_drvdata->i2c_adapter = i2c_adapter;
     dev_info(&pdev->dev, "Found config -- Model: %s, SN: %s", bd->data.model, bd->data.sn);
 
     // TODO: maybe we can have patches for HW revisions? apply here
@@ -1318,10 +1316,10 @@ static int fusion_io_probe(struct platform_device *pdev)
         dev_dbg(&pdev->dev, "Setting i2c client for base device endpoint %s...\n", ep->name);
 
         // set up the i2c_client
-        ep->i2c_client = endpoint_get_i2c_client(ep, bd->i2c_adapter);
+        ep->i2c_client = endpoint_get_i2c_client(ep, bd_drvdata->i2c_adapter);
 
         if (ep->i2c_client == NULL) {
-            dev_dbg(&pdev->dev, "Failed to set i2c client...");
+            dev_err(&pdev->dev, "Failed to set i2c client...");
             ret = -ENODEV;
             goto error;
         }
@@ -1334,7 +1332,6 @@ static int fusion_io_probe(struct platform_device *pdev)
         }
             
         dev_dbg(&pdev->dev, "Successfully registered endpoint %s!\n", ep->name);
-        break;
     }
 
     // set up parent references
@@ -1382,9 +1379,9 @@ static int fusion_io_probe(struct platform_device *pdev)
 
                 // set up the i2c_client
                 if (bd->has_i2c_sw && ep->parent_io_card && ep->parent_io_card->i2c_sw_channel != 0) {
-                    i2c_adapter = bd->muxc->adapter[ep->parent_io_card->i2c_sw_channel - 1];
+                    i2c_adapter = bd_drvdata->muxc->adapter[ep->parent_io_card->i2c_sw_channel - 1];
                 } else {
-                    i2c_adapter = bd->i2c_adapter;
+                    i2c_adapter = bd_drvdata->i2c_adapter;
                 }
                 ep->i2c_client = endpoint_get_i2c_client(ep, i2c_adapter);
 
@@ -1440,9 +1437,9 @@ static int fusion_io_probe(struct platform_device *pdev)
                 
                 // get adapter (should always be mux adapter for slot)
                 if (bd->has_i2c_sw) {
-                    i2c_adapter = bd->muxc->adapter[i];
+                    i2c_adapter = bd_drvdata->muxc->adapter[i];
                 } else {
-                    i2c_adapter = bd->i2c_adapter;
+                    i2c_adapter = bd_drvdata->i2c_adapter;
                 }
                 i2c_client = endpoint_get_i2c_client(ep, i2c_adapter);
                 
@@ -1520,9 +1517,9 @@ static int fusion_io_probe(struct platform_device *pdev)
                 // set up the i2c_client
                 // get adapter (should always be mux adapter for slot)
                 if (bd->has_i2c_sw) {
-                    i2c_adapter = bd->muxc->adapter[i];
+                    i2c_adapter = bd_drvdata->muxc->adapter[i];
                 } else {
-                    i2c_adapter = bd->i2c_adapter;
+                    i2c_adapter = bd_drvdata->i2c_adapter;
                 }
                 ep->i2c_client = endpoint_get_i2c_client(ep, i2c_adapter);
 
