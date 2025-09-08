@@ -5,100 +5,17 @@
 
 #include "fusion-io.h"
 
-const struct endpoint ep_sec_eeprom_sha104 = {
-    .name = "eeprom_sha104",
-    .type = EP_TYPE_SEC_EEPROM_SHA104,
-    .export = EP_EXPORT,
-    .has_i2c = true,
-    .i2c_addr = 0x41,
-    .num_gpios = 0,
-    .gpios = NULL,
-    .num_cmds = 3,
-    .cmds = (struct endpoint_cmd[]) {
-        {
-            .name = "cmd_config",
-            .type = EP_CMD_TYPE_CFG,
-            .export = EP_CMD_NO_EXPORT,
-            .num_i2c_cmds = 1,
-            .i2c_cmds = (struct i2c_reg_data[]) {
-                {
-                    .reg_addr = 0x00,
-                    .op_size = I2C_REG_DATA_OP_16BIT,
-                    .data_mask = 0xffff
-                }
-            }
-        },
-        {
-            .name = "cmd_read_all",
-            .type = EP_CMD_TYPE_EEPROM_RD,
-            .export = EP_CMD_EXPORT,
-            .num_i2c_cmds = 1,
-            .i2c_cmds = (struct i2c_reg_data[]) {
-                {
-                    .reg_addr = 0x00,
-                    .op_size = I2C_REG_DATA_OP_16BIT,
-                    .data_mask = 0xffff
-                }
-            }
-        },
-        {
-            .name = "cmd_write",
-            .type = EP_CMD_TYPE_EEPROM_WR,
-            .export = EP_CMD_EXPORT,
-            .num_i2c_cmds = 1,
-            .i2c_cmds = (struct i2c_reg_data[]) {
-                {
-                    .reg_addr = 0x00,
-                    .op_size = I2C_REG_DATA_OP_16BIT,
-                    .data_mask = 0xffff
-                }
-            }
-        }
-    }
-};
 
-const struct endpoint ep_eeprom_m24c32 = {
-    .type = EP_TYPE_EEPROM_M24C32,
-    .name = "eeprom_m24c32",
-    .i2c_addr = 0x50,
-    .num_gpios = 1,
-    .gpios = (struct endpoint_gpio[]) {
-        {
-            .name = "gpio_wc"
-        }
-    },
-    .num_cmds = 0,
-    .cmds = NULL
-};
-
+// TODO
+// This stuff is for endpoint and IO card lookup
+/* IO card slot arch ONLY */
 const enum endpoint_type default_ep_types[] = {
-    EP_TYPE_AUD_ADC_TAA5242,
-    EP_TYPE_AUD_DAC_TAD5242,
-    EP_TYPE_SRC_AK4137,
-    EP_TYPE_HDMI_EP9512T,
-    EP_TYPE_IOEXP_TCA9535,
-    EP_TYPE_IOEXP_TCAL6408,
-    EP_TYPE_ADC_ADS7128,
-    EP_TYPE_SEC_EEPROM_SHA104,
-    EP_TYPE_EEPROM_M24C32,
-    EP_TYPE_I2CSW_TCA9544,
     EP_TYPE_NONE
 };
 
 const struct endpoint *default_eps[] = {
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    &ep_sec_eeprom_sha104,
-    &ep_eeprom_m24c32,
-    NULL
 };
 
-// Default IO cards
 const struct io_card ic_empty = {
     .data = {
         .type = IC_TYPE_NONE
@@ -112,6 +29,8 @@ const enum io_card_type default_ic_types[] = {
 const struct io_card *default_ics[] = {
     &ic_empty
 };
+/*    END    */
+
 
 // Default base devices
 const struct base_device bd_empty = {
@@ -180,7 +99,6 @@ const struct base_device bd_fusion_c0 = {
         {
             .name = "ep_i2csw_tca9544",
             .type = EP_TYPE_I2CSW_TCA9544,
-            .export = EP_NO_EXPORT,
             .has_i2c = true,
             .i2c_addr = 0x70,
             .ep_handle_irq = tca9544_handle_irq,
@@ -227,7 +145,6 @@ const struct base_device bd_fusion_c0 = {
                 {
                     .name = "cmd_config",
                     .type = EP_CMD_TYPE_CFG,
-                    .export = EP_CMD_NO_EXPORT,
                     .num_i2c_cmds = 1,
                     .i2c_cmds = (struct i2c_reg_data[]) {
                         { .reg_addr = I2C_REG_DATA_ADDR_NONE }
@@ -238,7 +155,6 @@ const struct base_device bd_fusion_c0 = {
         {
             .type = EP_TYPE_IOEXP_TCAL6408,
             .name = "ep_ioexp_tcal6408",
-            .export = EP_NO_EXPORT,
             .has_i2c = true,
             .ioexp_id = 1,
             .i2c_addr = 0x20,
@@ -297,7 +213,6 @@ const struct base_device bd_fusion_c0 = {
                 {
                     .name = "cmd_config",
                     .type = EP_CMD_TYPE_CFG,
-                    .export = EP_CMD_NO_EXPORT,
                     .num_i2c_cmds = 7,
                     .i2c_cmds = (struct i2c_reg_data[]) {
                         { .reg_addr = TCAL6408_REG_POLARITY_INV,        .data_mask = 0x00 },
@@ -351,7 +266,6 @@ const struct base_device bd_fusion_c0 = {
                 {
                     .name = "ep_ioexp_tca9535-0",
                     .type = EP_TYPE_IOEXP_TCA9535,
-                    .export = EP_NO_EXPORT,
                     .has_i2c = true,
                     .ioexp_id = 2,
                     .i2c_addr = 0x21,
@@ -467,7 +381,6 @@ const struct base_device bd_fusion_c0 = {
                         {
                             .name = "cmd_config",
                             .type = EP_CMD_TYPE_CFG,
-                            .export = EP_CMD_NO_EXPORT,
                             .num_i2c_cmds = 2,
                             .i2c_cmds = (struct i2c_reg_data[]) {
                                 {
@@ -487,7 +400,6 @@ const struct base_device bd_fusion_c0 = {
                 {
                     .name = "ep_ioexp_tca9535-1",
                     .type = EP_TYPE_IOEXP_TCA9535,
-                    .export = EP_NO_EXPORT,
                     .has_i2c = true,
                     .ioexp_id = 3,
                     .i2c_addr = 0x22,
@@ -537,7 +449,6 @@ const struct base_device bd_fusion_c0 = {
                         {
                             .name = "cmd_config",
                             .type = EP_CMD_TYPE_CFG,
-                            .export = EP_CMD_NO_EXPORT,
                             .num_i2c_cmds = 2,
                             .i2c_cmds = (struct i2c_reg_data[]) {
                                 {
@@ -736,7 +647,6 @@ const struct base_device bd_fusion_c0 = {
                         {
                             .name = "cmd_config",
                             .type = EP_CMD_TYPE_CFG,
-                            .export = EP_CMD_NO_EXPORT,
                             .num_i2c_cmds = 1,
                             .i2c_cmds = (struct i2c_reg_data[]) {
                                 { .reg_addr = AK4137_REG_PCM_CONT0, .data_mask = 0x13 }
@@ -778,7 +688,6 @@ const struct base_device bd_fusion_c0 = {
                         {
                             .name = "cmd_config",
                             .type = EP_CMD_TYPE_CFG,
-                            .export = EP_CMD_NO_EXPORT,
                             .num_i2c_cmds = 3,
                             .i2c_cmds = (struct i2c_reg_data[]) {
                                 {
@@ -866,7 +775,6 @@ const struct base_device bd_fusion_c0 = {
                 {
                     .name = "ep_ioexp_tca9535-2",
                     .type = EP_TYPE_IOEXP_TCA9535,
-                    .export = EP_NO_EXPORT,
                     .has_i2c = true,
                     .ioexp_id = 4,
                     .i2c_addr = 0x23,
@@ -946,7 +854,6 @@ const struct base_device bd_fusion_c0 = {
                         [EP_CMD_CONFIG] = {
                             .name = "cmd_config",
                             .type = EP_CMD_TYPE_CFG,
-                            .export = EP_CMD_NO_EXPORT,
                             .num_i2c_cmds = 2,
                             .i2c_cmds = (struct i2c_reg_data[]) {
                                 {
@@ -1022,7 +929,6 @@ const struct base_device bd_fusion_c0 = {
                         [EP_CMD_CONFIG] = {
                             .name = "cmd_config",
                             .type = EP_CMD_TYPE_CFG,
-                            .export = EP_CMD_NO_EXPORT,
                             .num_i2c_cmds = 13,
                             .i2c_cmds = (struct i2c_reg_data[]) {
                                 { .reg_addr = ADS7128_REG_SYSTEM_STATUS,   .data_mask = 0x01 }, // clear BOR

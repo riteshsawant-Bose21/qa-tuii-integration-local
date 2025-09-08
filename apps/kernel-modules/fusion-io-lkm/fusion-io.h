@@ -22,7 +22,7 @@
 
 /* I2C */
 enum i2c_reg_data_op_size {
-    I2C_REG_DATA_OP_8BIT = 0,
+    I2C_REG_DATA_OP_8BIT,
     I2C_REG_DATA_OP_16BIT
 };
 
@@ -37,24 +37,23 @@ struct i2c_reg_data {
 
 /* GPIO and commands */
 enum endpoint_gpio_type {
-    EP_GPIO_TYPE_NONE = 0,
+    EP_GPIO_TYPE_NONE,
     EP_GPIO_TYPE_VIRT,
     EP_GPIO_TYPE_PHYS,
 };
 
 enum endpoint_gpio_export {
-    EP_GPIO_NO_EXPORT = 0,
+    EP_GPIO_NO_EXPORT,
     EP_GPIO_EXPORT
 };
 
 enum endpoint_gpio_dir {
-    EP_GPIO_DIR_IO = 0,
     EP_GPIO_DIR_O,
     EP_GPIO_DIR_I,
 };
 
 enum endpoint_gpio_val {
-    EP_GPIO_VAL_LO = 0,
+    EP_GPIO_VAL_LO,
     EP_GPIO_VAL_HI
 };
 
@@ -100,25 +99,12 @@ enum endpoint_cmd_cmd {
     EP_CMD_IOEXP_GPIO_SHOW  = 1,
     EP_CMD_IOEXP_GPIO_STORE,
 
-    /* i2c switch */
-    EP_CMD_I2C_SW_WR_SLOT   = 1,
-
-    /* eeproms */
-    EP_CMD_EEPROM_RD_DATA   = 1,
-
     /* ADS7128-specific commands */
     EP_CMD_ADS7128_REGOP = 1
 };
 
 enum endpoint_cmd_type {
-    EP_CMD_TYPE_CFG = 0,
-
-    /* eeprom */
-    EP_CMD_TYPE_EEPROM_RD,
-    EP_CMD_TYPE_EEPROM_WR,
-
-    /* i2c sw*/
-    EP_CMD_TYPE_I2CSW_SET_PORT,
+    EP_CMD_TYPE_CFG         = 0,
 
     /* adc */
     EP_CMD_TYPE_ADC_REGOP
@@ -495,13 +481,11 @@ struct io_card {
 enum base_device_type {
     BD_TYPE_NONE,
 
-    BD_TYPE_FIXED_IO_START     = BD_TYPE_NONE + 1,
-    BD_TYPE_FUSION_MINI_4x6    = BD_TYPE_FIXED_IO_START,
-    BD_TYPE_FUSION_C0,
+    BD_TYPE_FIXED_IO_START = BD_TYPE_NONE + 1,
+    BD_TYPE_FUSION_C0      = BD_TYPE_FIXED_IO_START,
     BD_TYPE_FIXED_IO_END,
 
-    BD_TYPE_SLOT_IO_START      = BD_TYPE_FIXED_IO_END + 1,
-    BD_TYPE_FUSION_ULTRA_4IO   = BD_TYPE_SLOT_IO_START,
+    BD_TYPE_SLOT_IO_START  = BD_TYPE_FIXED_IO_END + 1,
     BD_TYPE_SLOT_IO_END,
 };
 

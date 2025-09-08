@@ -1157,6 +1157,7 @@ static struct io_card *new_default_io_card(enum io_card_type ic_type)
 
 // get the default endpoint for an endpoint type
 // ONLY USE FOR TEMPORARY ENDPOINTS! Returned ptr must be freed
+// TODO -- only used for lookup of EEPROMs on slot IO card arch devices!
 static struct endpoint *new_default_endpoint(enum endpoint_type ep_type) 
 {
     struct endpoint *ep;
@@ -1451,10 +1452,10 @@ static int fusion_io_probe(struct platform_device *pdev)
             // Here we can pull device data from secure eeprom. 
             // TODO!!! crypto part, data size, address, etc
             // TODO: probably need read eeprom data commands for different sec eeproms
-            ret = i2c_smbus_read_i2c_block_data(i2c_client, 
-                                                ep->cmds[EP_CMD_EEPROM_RD_DATA].i2c_cmds[0].reg_addr, 
-                                                sizeof(data), 
-                                                (char *)&data);
+            // ret = i2c_smbus_read_i2c_block_data(i2c_client, 
+            //                                     ep->cmds[EP_CMD_EEPROM_RD_DATA].i2c_cmds[0].reg_addr, 
+            //                                     sizeof(data), 
+            //                                     (char *)&data);
 
             if (ret < 0) {
                 dev_err(&pdev->dev, "Bad I2C read of %s\n", ep->name);

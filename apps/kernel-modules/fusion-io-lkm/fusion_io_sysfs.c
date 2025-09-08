@@ -545,16 +545,6 @@ static int fusion_io_create_sysfs_cmd(struct device *parent_dev, struct endpoint
 					return -EINVAL;
 			}
             break;
-		case EP_TYPE_SEC_EEPROM_SHA104:
-			switch(ep_cmd->type) {
-				case EP_CMD_TYPE_EEPROM_WR:
-					break;
-				case EP_CMD_TYPE_EEPROM_RD:
-					break;
-				default:
-					return -EINVAL;
-			}
-			break;
         default:
             return -EINVAL;
     }
