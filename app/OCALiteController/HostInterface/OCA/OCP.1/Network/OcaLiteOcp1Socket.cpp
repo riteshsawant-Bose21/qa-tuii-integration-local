@@ -135,8 +135,9 @@ bool Ocp1LiteSocketBind(INT32 socket, UINT16 port)
         OCA_LOG_ERROR_PARAMS("Socket bind failed on port %d, errorcode=%d", port, errno);
         return false;
     }
-
+  
     OCA_LOG_INFO_PARAMS("✓ Socket successfully bound to port %d", port);
+
     return true;
 }
 
