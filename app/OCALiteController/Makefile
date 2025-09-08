@@ -1,6 +1,21 @@
 # OCALiteController Makefile
 CXX := g++
-CXXFLAGS := -Wall -Wextra -std=c++11 \
+
+# Detect platform for DNS-SD support
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Darwin)
+    # macOS: Use native DNS-SD framework
+    PKG_CFLAGS :=
+    PKG_LIBS :=
+    LDFLAGS :=
+else
+    # Linux: Use Avahi compatibility layer
+    PKG_CFLAGS := $(shell pkg-config --cflags avahi-compat-libdns_sd 2>/dev/null || echo "")
+    PKG_LIBS := $(shell pkg-config --libs avahi-compat-libdns_sd 2>/dev/null || echo "-lavahi-compat-libdns_sd")
+    LDFLAGS := 
+endif
+
+CXXFLAGS := -Wall -Wextra -std=c++11 $(PKG_CFLAGS) \
 	    -DOCA_LITE_CONTROLLER \
 	    -DOCA_RUN \
     -I../../common \
@@ -28,7 +43,7 @@ TARGET := ocalitecontroller
 all: $(TARGET)
 
 $(TARGET): $(OBJECTS) $(COMMON_LIB)
-	$(CXX) $(OBJECTS) $(COMMON_LIB) -o $@ -lpthread -lc -ldns_sd
+	$(CXX) $(OBJECTS) $(COMMON_LIB) $(PKG_LIBS) -o $@ -lpthread -lc $(LDFLAGS)
 
 $(COMMON_LIB):
 	$(MAKE) -C ../../common

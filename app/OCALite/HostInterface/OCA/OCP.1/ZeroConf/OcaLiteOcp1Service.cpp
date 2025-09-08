@@ -1,4 +1,4 @@
-/*  By downloading or using this file, the user agrees to be bound by the terms of the license 
+/*  By downloading or using this file, the user agrees to be bound by the terms of the license
  *  agreement located in the LICENSE file in the root of this project
  *  as an original contracting party.
  */
@@ -12,7 +12,13 @@
 #include <arpa/inet.h>
 #include <HostInterfaceLite/OCA/OCP.1/ZeroConf/IOcp1LiteService.h>
 #include <HostInterfaceLite/OCA/OCF/OcfLiteHostInterface.h>
+
+// Platform-specific DNS-SD includes
+#ifdef __APPLE__
+#include <dns_sd.h>
+#else
 #include <avahi-compat-libdns_sd/dns_sd.h>
+#endif
 
 // ---- FileInfo Macro ----
 
@@ -31,17 +37,16 @@ static DNSServiceRef m_dnsService = NULL;
 
 /**
  * Registration reply callback. Dummy implementation.
- */ 
-static void DNSSD_API DNSServiceRegisterReply2(DNSServiceRef sdRef, DNSServiceFlags flags, DNSServiceErrorType errorCode, const char* name, const char* regtype, const char* domain, void* context)
+ */
+static void DNSSD_API DNSServiceRegisterReply2(DNSServiceRef sdRef, DNSServiceFlags flags, DNSServiceErrorType errorCode, const char *name, const char *regtype, const char *domain, void *context)
 {
 }
 
-bool Ocp1LiteServiceRegister(const std::string& name, const std::string& registrationType,
-                             UINT16 port, const std::vector<std::string>& txtRecordList, const std::string& domain)
+bool Ocp1LiteServiceRegister(const std::string &name, const std::string &registrationType,
+                             UINT16 port, const std::vector<std::string> &txtRecordList, const std::string &domain)
 {
     OCA_LOG_TRACE_PARAMS("Register(name = %s, registrationType = %s, port = %u, txtRecordList.size() = %u, domain = %s)",
-            name.c_str(), registrationType.c_str(), port, txtRecordList.size(), domain.c_str());
-
+                         name.c_str(), registrationType.c_str(), port, txtRecordList.size(), domain.c_str());
 
     DNSServiceErrorType error((NULL != m_dnsService) ? kDNSServiceErr_Invalid : kDNSServiceErr_NoError);
 
@@ -52,7 +57,7 @@ bool Ocp1LiteServiceRegister(const std::string& name, const std::string& registr
 
         if (!txtRecordList.empty())
         {
-            //Calculate the TXT record total length
+            // Calculate the TXT record total length
             std::vector<std::string>::const_iterator txtRecordIter(txtRecordList.begin());
             while (txtRecordList.end() != txtRecordIter)
             {
@@ -84,8 +89,8 @@ bool Ocp1LiteServiceRegister(const std::string& name, const std::string& registr
         if (kDNSServiceErr_NoError == error)
         {
             error = ::DNSServiceRegister(&m_dnsService, 0, 0, name.c_str(),
-                registrationType.c_str(), domain.c_str(), NULL, htons(port), static_cast<UINT16>(recordLength),
-                txtRecord, &DNSServiceRegisterReply2, NULL);
+                                         registrationType.c_str(), domain.c_str(), NULL, htons(port), static_cast<UINT16>(recordLength),
+                                         txtRecord, &DNSServiceRegisterReply2, NULL);
         }
     }
     return (kDNSServiceErr_NoError == error) ? true : false;
@@ -101,7 +106,7 @@ int Ocp1LiteServiceGetSocket()
     return socketFd;
 }
 
-void Ocp1LiteServiceRunWithFdSet(fd_set* readSet)
+void Ocp1LiteServiceRunWithFdSet(fd_set *readSet)
 {
     if (NULL != m_dnsService)
     {
@@ -123,12 +128,11 @@ void Ocp1LiteServiceRun()
     if (NULL != m_dnsService)
     {
         fd_set readFds;
-        struct timeval tv = { 0 , 0 };
+        struct timeval tv = {0, 0};
         int dnsServiceSocket(static_cast<int>(::DNSServiceRefSockFD(m_dnsService)));
 
         FD_ZERO(&readFds);
         FD_SET(dnsServiceSocket, &readFds);
-
 
         int result = ::select(0, &readFds, NULL, NULL, &tv);
         if (1 == result)
@@ -149,5 +153,4 @@ void Ocp1LiteServiceDispose(void)
         DNSServiceRefDeallocate(m_dnsService);
         m_dnsService = NULL;
     }
-
 }
