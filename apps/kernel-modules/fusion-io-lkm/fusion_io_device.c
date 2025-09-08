@@ -30,7 +30,7 @@ static int tca9544_select_chan(struct i2c_mux_core *muxc, u32 chan_id)
     msg.len = 1;
     msg.buf = buf;
 
-    ret = __i2c_transfer(ep->i2c_client->adapter, &msg, 1);
+    ret = i2c_transfer(ep->i2c_client->adapter, &msg, 1);
     if (ret < 0)
         return ret;
 
@@ -55,10 +55,10 @@ static int configure_i2c_mux_adapters(struct endpoint *ep)
             return -EINVAL;
     }
 
-    bd_drvdata->muxc = i2c_mux_alloc(bd_drvdata->i2c_adapter,     // parent adapter
-                             &bd_drvdata->pdev->dev,           // parent device
-                             num_adapters,        // max_adapters
-                             sizeof(*ep),  // size of private data
+    bd_drvdata->muxc = i2c_mux_alloc(bd_drvdata->i2c_adapter, // parent adapter
+                             &bd_drvdata->pdev->dev,          // parent device
+                             num_adapters,                    // max_adapters
+                             sizeof(*ep),                     // size of private data
                              0,
                              select,
                              NULL);
@@ -152,7 +152,7 @@ int ads7128_configure(struct endpoint *ep, struct endpoint_cmd *cmd)
         buf[1] = cmd->i2c_cmds[i].reg_addr;
         buf[2] = cmd->i2c_cmds[i].data_mask;
 
-        ret = __i2c_transfer(ep->i2c_client->adapter, &msg, 1);
+        ret = i2c_transfer(ep->i2c_client->adapter, &msg, 1);
         if (ret < 0) {
             printk(KERN_ERR "ads7128_configure: failed transfer %i\n", i);
             return ret;
@@ -257,7 +257,7 @@ int tca9544_handle_irq(struct endpoint_gpio *ep_gpio)
     msg.len = 1;
     msg.buf = buf;
 
-    ret = __i2c_transfer(client->adapter, &msg, 1);
+    ret = i2c_transfer(client->adapter, &msg, 1);
     if (ret < 0) {
         printk(KERN_ERR "tca9544_handle_irq: failed transfer\n");
         return ret;
@@ -301,7 +301,7 @@ int tcal6408_handle_irq(struct endpoint_gpio *ep_gpio)
     msgs[1].len = 1;
     msgs[1].buf = rd_buf;
 
-    ret = __i2c_transfer(client->adapter, msgs, 2);
+    ret = i2c_transfer(client->adapter, msgs, 2);
     if (ret < 0) {
         return ret;
     }
@@ -346,7 +346,7 @@ int tca9535_handle_irq(struct endpoint_gpio *ep_gpio)
     msgs[1].len = 2;
     msgs[1].buf = rd_buf;
 
-    ret = __i2c_transfer(client->adapter, msgs, 2);
+    ret = i2c_transfer(client->adapter, msgs, 2);
     if (ret < 0) {
         printk(KERN_ERR "tca9535_handle_irq: failed transfer\n");
         return ret;
@@ -422,7 +422,7 @@ int ads7128_handle_irq(struct endpoint_gpio *ep_gpio)
 
     // Read alert status for ADC interrupts
     rd_opcode_buf[1] = ADS7128_REG_EVENT_FLAG;
-    ret = __i2c_transfer(client->adapter, rd_msgs, 2);
+    ret = i2c_transfer(client->adapter, rd_msgs, 2);
     if (ret < 0) {
         printk(KERN_ERR "ads7128_handle_irq: failed read EVENT_FLAG\n");
         return ret;
@@ -438,7 +438,7 @@ int ads7128_handle_irq(struct endpoint_gpio *ep_gpio)
 
     // Read PIN_CFG once for ADC checks
     rd_opcode_buf[1] = ADS7128_REG_PIN_CFG;
-    ret = __i2c_transfer(client->adapter, rd_msgs, 2);
+    ret = i2c_transfer(client->adapter, rd_msgs, 2);
     if (ret < 0) {
         printk(KERN_ERR "ads7128_handle_irq: failed read PIN_CFG\n");
         return ret;
@@ -461,7 +461,7 @@ int ads7128_handle_irq(struct endpoint_gpio *ep_gpio)
             rd_opcode_buf[0] = ADS7128_OPCODE_READ_CONTIGUOUS_REG;
             rd_msgs[1].len = 2;
             rd_opcode_buf[1] = ADS7128_REG_RECENT_CH0_LSB + channel * 2;
-            ret = __i2c_transfer(client->adapter, rd_msgs, 2);
+            ret = i2c_transfer(client->adapter, rd_msgs, 2);
             if (ret < 0) {
                 printk(KERN_ERR "ads7128_handle_irq: failed read RECENT_CH0_LSB + %d\n", channel * 2);
                 continue;
@@ -488,14 +488,14 @@ int ads7128_handle_irq(struct endpoint_gpio *ep_gpio)
             // Use word writes for high and low thresholds
             wr_buf[1] = ADS7128_REG_HIGH_TH_CH0 + channel * 4;
             wr_buf[2] = (u8)(new_high >> 8); // lower 4 bits are in HYSTERESIS_CHx reg
-            ret = __i2c_transfer(client->adapter, &wr_msg, 1);
+            ret = i2c_transfer(client->adapter, &wr_msg, 1);
             if (ret < 0) {
                 printk(KERN_ERR "ads7128_handle_irq: failed write HIGH_TH_CH0 + %d\n", channel * 4);
                 continue;
             }
             wr_buf[1] = ADS7128_REG_LOW_TH_CH0 + channel * 4;
             wr_buf[2] = (u8)(new_low >> 8); // lower 4 bits are in HYSTERESIS_CHx reg
-            ret = __i2c_transfer(client->adapter, &wr_msg, 1);
+            ret = i2c_transfer(client->adapter, &wr_msg, 1);
             if (ret < 0) {
                 printk(KERN_ERR "ads7128_handle_irq: failed write LOW_TH_CH0 + %d\n", channel * 4);
                 continue;
@@ -504,7 +504,7 @@ int ads7128_handle_irq(struct endpoint_gpio *ep_gpio)
             // TODO gpi
             // Read GPIO value for input interrupts
             rd_opcode_buf[1] = ADS7128_REG_GPI_VALUE;
-            ret = __i2c_transfer(client->adapter, rd_msgs, 2);
+            ret = i2c_transfer(client->adapter, rd_msgs, 2);
             if (ret < 0) {
                 printk(KERN_ERR "ads7128_handle_irq: failed read GPI_VALUE\n");
                 return ret;
@@ -517,13 +517,13 @@ int ads7128_handle_irq(struct endpoint_gpio *ep_gpio)
         // clear event flag bits
         wr_buf[1] = ADS7128_REG_EVENT_HIGH_FLAG;
         wr_buf[2] = (u8)(1 << channel); // lower 4 bits are in HYSTERESIS_CHx reg
-        ret = __i2c_transfer(client->adapter, &wr_msg, 1);
+        ret = i2c_transfer(client->adapter, &wr_msg, 1);
         if (ret < 0) {
             printk(KERN_ERR "ads7128_handle_irq: failed write EVENT_HIGH_FLAG ch %d\n", channel);
             continue;
         }
         wr_buf[1] = ADS7128_REG_EVENT_LOW_FLAG;
-        ret = __i2c_transfer(client->adapter, &wr_msg, 1);
+        ret = i2c_transfer(client->adapter, &wr_msg, 1);
         if (ret < 0) {
             printk(KERN_ERR "ads7128_handle_irq: failed write EVENT_LOW_FLAG ch %d\n", channel);
             continue;
