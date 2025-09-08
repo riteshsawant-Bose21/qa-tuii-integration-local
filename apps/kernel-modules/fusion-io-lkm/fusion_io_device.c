@@ -174,48 +174,44 @@ static struct i2c_client *endpoint_get_i2c_client(struct endpoint *ep, struct i2
 {
     struct i2c_board_info i2c_info;
     struct i2c_client *client = NULL;
-
-    int i;
     int id;
 
-    for (i = 0; i < MAX_I2C_ADDRS + 1; ++i) {
-        if (ep->addr_list[i] == I2C_CLIENT_END) {
-            break;
-        } else if (ep->cmds == NULL || ep->cmds->num_i2c_cmds == 0 || ep->cmds->i2c_cmds == NULL) {
-            dev_err(&bd_drvdata->pdev->dev, "Endpoint %s is missing i2c commands\n", ep->name);
-            break;
-        }
+    if (ep->i2c_addr == 0) {
+        dev_err(&bd_drvdata->pdev->dev, "Endpoint %s is missing i2c addr\n", ep->name);
+        return NULL;
+    } else if (ep->cmds == NULL || ep->cmds->num_i2c_cmds == 0 || ep->cmds->i2c_cmds == NULL) {
+        dev_err(&bd_drvdata->pdev->dev, "Endpoint %s is missing i2c commands\n", ep->name);
+        return NULL;
+    }
 
-        memset(&i2c_info, 0, sizeof(struct i2c_board_info));
-        strscpy(i2c_info.type, ep->name, sizeof(i2c_info.type));
-        i2c_info.addr = ep->addr_list[i];
-        i2c_info.flags = 0;
+    memset(&i2c_info, 0, sizeof(struct i2c_board_info));
+    strscpy(i2c_info.type, ep->name, sizeof(i2c_info.type));
+    i2c_info.addr = ep->i2c_addr;
+    i2c_info.flags = 0;
 
-        client = i2c_new_client_device(adapter, &i2c_info);
+    client = i2c_new_client_device(adapter, &i2c_info);
 
-        // try the device to see if it exists
-        // TODO don't like this so much
-        if (!IS_ERR(client)) {
-            if (ep->cmds->i2c_cmds->reg_addr == I2C_REG_DATA_ADDR_NONE) {
-                id = i2c_smbus_read_byte(client);
-            } else {
-                id = i2c_smbus_read_byte_data(client, ep->cmds->i2c_cmds->reg_addr);
-            }
-
-            if (id < 0) {
-                dev_err(&bd_drvdata->pdev->dev, "Failed to id %s\n", ep->name);
-                i2c_unregister_device(client);
-                client = NULL;
-                continue;
-            }
-        
-            dev_dbg(&bd_drvdata->pdev->dev, "Discovered endpoint %s at I2C address 0x%x\n", 
-                    i2c_info.type, client->addr);
-
-            return client;
+    // try the device to see if it exists
+    // TODO don't like this so much
+    if (!IS_ERR(client)) {
+        if (ep->cmds->i2c_cmds->reg_addr == I2C_REG_DATA_ADDR_NONE) {
+            id = i2c_smbus_read_byte(client);
         } else {
-            dev_err(&bd_drvdata->pdev->dev, "Failed to get i2c_client for %s\n", ep->name);
+            id = i2c_smbus_read_byte_data(client, ep->cmds->i2c_cmds->reg_addr);
         }
+
+        if (id < 0) {
+            dev_err(&bd_drvdata->pdev->dev, "Failed to id %s\n", ep->name);
+            i2c_unregister_device(client);
+            return NULL;
+        }
+    
+        dev_dbg(&bd_drvdata->pdev->dev, "Discovered endpoint %s at I2C address 0x%x\n", 
+                i2c_info.type, client->addr);
+
+        return client;
+    } else {
+        dev_err(&bd_drvdata->pdev->dev, "Failed to get i2c_client for %s\n", ep->name);
     }
 
     dev_err(&bd_drvdata->pdev->dev, "Failed to discover endpoint %s\n", ep->name);
@@ -699,14 +695,14 @@ static void configure_io_card_references(struct io_card *ic)
 // - - this is because the irq comes from a physical gpio, and we need to 
 //     figure out what endpoint gpio it came from
 // refer to "levels" described in comment for "link_gpio()"
-static int set_linked_or_aggregate_gpio(struct endpoint_gpio *ep_gpio, int num_gpios, struct endpoint_gpio *parent_gpios) 
+static int set_linked_or_aggregate_gpio(struct endpoint_gpio *ep_gpio, struct endpoint *parent_ep) 
 {
     struct endpoint_gpio *parent_gpio;
     
     int i, j;
 
-    for (i = 0; i < num_gpios; ++i) {
-        parent_gpio = &parent_gpios[i];
+    for (i = 0; i < parent_ep->num_gpios; ++i) {
+        parent_gpio = &parent_ep->gpios[i];
 
         if (!strcmp(parent_gpio->name, ep_gpio->name)) {
             if (ep_gpio->is_irq == false) {
@@ -714,8 +710,8 @@ static int set_linked_or_aggregate_gpio(struct endpoint_gpio *ep_gpio, int num_g
                     // first, count how many gpios are aggregated
                     j = i;
                     while (ep_gpio->aggregate_id == parent_gpio->aggregate_id) {
-                        parent_gpio = &parent_gpios[j++];
-                        if (j > num_gpios) {
+                        parent_gpio = &parent_ep->gpios[j++];
+                        if (j > parent_ep->num_gpios) {
                             break;
                         }
                     }
@@ -728,7 +724,7 @@ static int set_linked_or_aggregate_gpio(struct endpoint_gpio *ep_gpio, int num_g
                     }
 
                     // reset the agg gpio and counter
-                    parent_gpio = &parent_gpios[i];
+                    parent_gpio = &parent_ep->gpios[i];
                     j = 0;
 
                     // now assign them
@@ -745,10 +741,10 @@ static int set_linked_or_aggregate_gpio(struct endpoint_gpio *ep_gpio, int num_g
                                                                                             parent_gpio->parent_endpoint->name,
                                                                                             parent_gpio->name);
 
-                        if (++i >= num_gpios) {
+                        if (++i >= parent_ep->num_gpios) {
                             break;
                         }
-                        parent_gpio = &parent_gpios[i];
+                        parent_gpio = &parent_ep->gpios[i];
                     }
 
                     ep_gpio->num_aggregate_gpios = j; 
@@ -759,7 +755,7 @@ static int set_linked_or_aggregate_gpio(struct endpoint_gpio *ep_gpio, int num_g
                                                                                                     ep_gpio->name);
                     return 0;
                 } else {
-                    // link only with the io expander gpio
+                    // link only with the correct io expander gpio
                     if (!parent_gpio->parent_endpoint || parent_gpio->parent_endpoint->ioexp_id != ep_gpio->ioexp_id) {                                                
                         return -1;
                     }
@@ -893,7 +889,7 @@ static void link_gpio(struct endpoint_gpio *ep_gpio)
                     continue;
                 }
 
-                ret = set_linked_or_aggregate_gpio(ep_gpio, ep->num_gpios, ep->gpios);
+                ret = set_linked_or_aggregate_gpio(ep_gpio, ep);
                 if (!ret) {
                     return;
                 }
@@ -908,7 +904,7 @@ static void link_gpio(struct endpoint_gpio *ep_gpio)
                 continue;
             }
 
-            ret = set_linked_or_aggregate_gpio(ep_gpio, ep->num_gpios, ep->gpios);
+            ret = set_linked_or_aggregate_gpio(ep_gpio, ep);
             if (!ret) {
                 return;
             }
@@ -958,7 +954,7 @@ static int configure_base_device_gpios(void)
     for (i = 0; i < bd->num_gpios; ++i) {
         ep_gpio = &bd->gpios[i];
 
-        if (ep_gpio->num == 0xff) {
+        if (ep_gpio->type != EP_GPIO_TYPE_PHYS) {
             dev_err(&bd_drvdata->pdev->dev, "Invalid base device GPIO %s\n", ep_gpio->name);
             continue;
         }
@@ -1017,16 +1013,6 @@ static int configure_base_device_gpios(void)
 
             dev_dbg(&bd_drvdata->pdev->dev, "Configuring base device gpio %s:%s", ep->name, ep_gpio->name);
 
-            if (ep->type >= EP_TYPE_IOEXP_START && ep->type < EP_TYPE_IOEXP_END) {
-                if (ep_gpio->ioexp_id != ep->ioexp_id) {
-                    dev_err(&bd_drvdata->pdev->dev, "GPIO %s:%s doesn't have matching ioexp_id (%d/%d)\n", ep->name, 
-                                                                                                ep_gpio->name, 
-                                                                                                ep_gpio->ioexp_id, 
-                                                                                                ep->ioexp_id);
-                    continue;
-                }
-            }
-
             if (ep_gpio->type == EP_GPIO_TYPE_PHYS && !ep_gpio->is_irq) {
                 ep_gpio->desc = ep_gpio->linked_gpio->desc;
                 if (!ep_gpio->desc) {
@@ -1081,16 +1067,7 @@ static int configure_io_card_gpios(struct io_card *ic)
 
             link_gpio(ep_gpio);
 
-            if (ep->type >= EP_TYPE_IOEXP_START && ep->type < EP_TYPE_IOEXP_END) {
-                if (ep_gpio->ioexp_id != ep->ioexp_id) {
-                    dev_err(&bd_drvdata->pdev->dev, "GPIO %s:%s:%s doesn't have matching ioexp_id (%d/%d)\n", ic->data.model,
-                                                                                                ep->name,
-                                                                                                ep_gpio->name,  
-                                                                                                ep_gpio->ioexp_id, 
-                                                                                                ep->ioexp_id);
-                    continue;
-                }
-            } else if (ep_gpio->ioexp_id > 0) {
+            if (ep_gpio->ioexp_id > 0) {
                 if (!ep_gpio->linked_gpio && !ep_gpio->aggregate_gpios) {
                     dev_err(&bd_drvdata->pdev->dev, "GPIO %s:%s:%s is missing a link to an IO Expander GPIO\n", ic->data.model,
                                                                                                     ep->name,

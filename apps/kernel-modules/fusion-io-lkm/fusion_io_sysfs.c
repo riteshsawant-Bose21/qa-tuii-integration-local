@@ -91,7 +91,7 @@ static int ads7128_show_gpio(struct endpoint *ads7128, u8 pin_num, bool *is_adc)
 
     // Read alert status for ADC interrupts
     rd_opcode_buf[1] = ADS7128_REG_PIN_CFG;
-    ret = __i2c_transfer(client->adapter, msgs, 2);
+    ret = i2c_transfer(client->adapter, msgs, 2);
     if (ret < 0) {
         printk(KERN_ERR "ads7128_configure: failed read EVENT_FLAG\n");
         return ret;
@@ -284,7 +284,7 @@ static int ads7128_store_gpio(struct endpoint *ads7128, u8 new_value, u8 mask)
 
     // Read current GPO_VALUE from hardware
     rd_opcode_buf[1] = ADS7128_REG_GPO_VALUE;
-    ret = __i2c_transfer(client->adapter, rd_msgs, 2);
+    ret = i2c_transfer(client->adapter, rd_msgs, 2);
     if (ret < 0) {
         printk(KERN_ERR "ads7128_store_gpio: failed read GPO_VALUE\n");
         return ret;
@@ -301,7 +301,7 @@ static int ads7128_store_gpio(struct endpoint *ads7128, u8 new_value, u8 mask)
     // Write back to hardware
     wr_buf[1] = ADS7128_REG_GPO_VALUE;
 	wr_buf[2] = __swab16(old_value);
-	ret = __i2c_transfer(client->adapter, &wr_msg, 1);
+	ret = i2c_transfer(client->adapter, &wr_msg, 1);
 	if (ret < 0) {
 		printk(KERN_ERR "ads7128_store_gpio: failed write GPO_VALUE\n");
 		return ret;
@@ -428,7 +428,7 @@ static ssize_t ads7128_cmd_regop(struct device *dev, struct device_attribute *at
         wr_buf[0] = ADS7128_OPCODE_WRITE_REG; // Opcode 0x08
         wr_buf[1] = reg_addr;
         wr_buf[2] = value;
-        ret = __i2c_transfer(client->adapter, &wr_msg, 1);
+        ret = i2c_transfer(client->adapter, &wr_msg, 1);
         if (ret < 0)
             return ret;
         ep_cmd->i2c_cmds[0].data_mask = value; // Store for show
@@ -436,7 +436,7 @@ static ssize_t ads7128_cmd_regop(struct device *dev, struct device_attribute *at
         // Read operation
         rd_opcode_buf[0] = ADS7128_OPCODE_READ_REG; // Opcode 0x10
         rd_opcode_buf[1] = reg_addr;
-        ret = __i2c_transfer(client->adapter, rd_msgs, 2);
+        ret = i2c_transfer(client->adapter, rd_msgs, 2);
         if (ret < 0)
             return ret;
         ep_cmd->i2c_cmds[0].data_mask = rd_data_buf[0]; // Store for show

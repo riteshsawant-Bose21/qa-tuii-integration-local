@@ -69,7 +69,7 @@ struct endpoint_gpio {
     enum endpoint_gpio_type     type;
     enum endpoint_gpio_export   export;
     u8                          num;
-    u8                          is_irq;
+    bool                        is_irq;
     enum endpoint_gpio_dir      dir;
     enum endpoint_gpio_val      default_val;
     unsigned int                irq_num;
@@ -405,7 +405,7 @@ struct endpoint {
     enum endpoint_export    export;
     bool                    has_i2c;
     u8                      ioexp_id;
-    unsigned short          *addr_list;  // TODO: may not need the list...
+    unsigned short          i2c_addr;
 
     u16                     in_ch_bm;
     u16                     out_ch_bm;

@@ -10,7 +10,7 @@ const struct endpoint ep_sec_eeprom_sha104 = {
     .type = EP_TYPE_SEC_EEPROM_SHA104,
     .export = EP_EXPORT,
     .has_i2c = true,
-    .addr_list = (unsigned short[]) { 0x41, I2C_CLIENT_END },
+    .i2c_addr = 0x41,
     .num_gpios = 0,
     .gpios = NULL,
     .num_cmds = 3,
@@ -60,14 +60,11 @@ const struct endpoint ep_sec_eeprom_sha104 = {
 const struct endpoint ep_eeprom_m24c32 = {
     .type = EP_TYPE_EEPROM_M24C32,
     .name = "eeprom_m24c32",
-    .addr_list = (unsigned short[]) { 0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, I2C_CLIENT_END },
+    .i2c_addr = 0x50,
     .num_gpios = 1,
     .gpios = (struct endpoint_gpio[]) {
         {
-            .name = "gpio_wc",
-            .num = 0xff,
-            .dir = EP_GPIO_DIR_O,
-            .default_val = EP_GPIO_VAL_HI
+            .name = "gpio_wc"
         }
     },
     .num_cmds = 0,
@@ -131,40 +128,33 @@ const struct base_device bd_fusion_c0 = {
     },
     .has_slot_io = false,
     .has_i2c_sw = true,
-    .num_gpios = 5,
+    .num_gpios = 6,
     .gpios = (struct endpoint_gpio[]) {
         {
             .name = "gpio_i2c4_int",
             .type = EP_GPIO_TYPE_PHYS,
-            .export = EP_GPIO_NO_EXPORT,
-            .num = 11,
             .is_irq = true,
-            .trigger_type = IRQ_TYPE_EDGE_FALLING,
-            .dir = EP_GPIO_DIR_I
+            .num = 11,
+            .trigger_type = IRQ_TYPE_EDGE_FALLING
         },
         {
             .name = "gpio_tca9544_int",
             .type = EP_GPIO_TYPE_PHYS,
-            .export = EP_GPIO_NO_EXPORT,
-            .num = 12,
             .is_irq = true,
-            .trigger_type = IRQ_TYPE_EDGE_FALLING,
-            .dir = EP_GPIO_DIR_I
+            .num = 12,
+            .trigger_type = IRQ_TYPE_EDGE_FALLING
         },
         {
             .name = "gpio_tcal6408_int",
             .type = EP_GPIO_TYPE_PHYS,
-            .export = EP_GPIO_NO_EXPORT,
+            .is_irq = true,
             .num = 13,
             .ioexp_id = 1,
-            .is_irq = true,
-            .trigger_type = IRQ_TYPE_EDGE_FALLING,
-            .dir = EP_GPIO_DIR_I
+            .trigger_type = IRQ_TYPE_EDGE_FALLING
         },
         {
             .name = "gpio_a_mute_out",
             .type = EP_GPIO_TYPE_PHYS,
-            .export = EP_GPIO_NO_EXPORT,
             .num = 47,
             //.is_irq = true,
             .dir = EP_GPIO_DIR_I
@@ -192,7 +182,7 @@ const struct base_device bd_fusion_c0 = {
             .type = EP_TYPE_I2CSW_TCA9544,
             .export = EP_NO_EXPORT,
             .has_i2c = true,
-            .addr_list = (unsigned short[]) { 0x70, I2C_CLIENT_END },
+            .i2c_addr = 0x70,
             .ep_handle_irq = tca9544_handle_irq,
             .ep_configure = tca9544_configure,
             .num_gpios = 5,
@@ -200,46 +190,36 @@ const struct base_device bd_fusion_c0 = {
                 {
                     .name = "gpio_tca9544_int",
                     .type = EP_GPIO_TYPE_PHYS,
-                    .export = EP_GPIO_NO_EXPORT,
                     .is_irq = true,
-                    .trigger_type = IRQ_TYPE_EDGE_FALLING,
-                    .dir = EP_GPIO_DIR_O
+                    .trigger_type = IRQ_TYPE_EDGE_FALLING
                 },
                 {
                     .name = "gpio_ana_int",
                     .type = EP_GPIO_TYPE_VIRT,
-                    .export = EP_GPIO_NO_EXPORT,
-                    .num = 1,
                     .is_irq = true,
-                    .trigger_type = IRQ_TYPE_EDGE_FALLING,
-                    .dir = EP_GPIO_DIR_I
+                    .num = 1,
+                    .trigger_type = IRQ_TYPE_EDGE_FALLING
                 },
                 {
                     .name = "gpio_hmcu_int",
                     .type = EP_GPIO_TYPE_VIRT,
-                    .export = EP_GPIO_NO_EXPORT,
-                    .num = 2,
                     .is_irq = true,
-                    .trigger_type = IRQ_TYPE_EDGE_FALLING,
-                    .dir = EP_GPIO_DIR_I
+                    .num = 2,
+                    .trigger_type = IRQ_TYPE_EDGE_FALLING
                 },
                 {
                     .name = "gpio_gpio_int",
                     .type = EP_GPIO_TYPE_VIRT,
-                    .export = EP_GPIO_NO_EXPORT,
-                    .num = 3,
                     .is_irq = true,
-                    .trigger_type = IRQ_TYPE_EDGE_FALLING,
-                    .dir = EP_GPIO_DIR_I
+                    .num = 3,
+                    .trigger_type = IRQ_TYPE_EDGE_FALLING
                 },
                 {
                     .name = "gpio_amp_int",
                     .type = EP_GPIO_TYPE_VIRT,
-                    .export = EP_GPIO_NO_EXPORT,
-                    .num = 4,
                     .is_irq = true,
-                    .trigger_type = IRQ_TYPE_EDGE_FALLING,
-                    .dir = EP_GPIO_DIR_I
+                    .num = 4,
+                    .trigger_type = IRQ_TYPE_EDGE_FALLING
                 }
             },
             .num_cmds = 1,
@@ -261,90 +241,55 @@ const struct base_device bd_fusion_c0 = {
             .export = EP_NO_EXPORT,
             .has_i2c = true,
             .ioexp_id = 1,
-            .addr_list = (unsigned short[]) { 0x20, I2C_CLIENT_END },
+            .i2c_addr = 0x20,
             .ep_handle_irq = tcal6408_handle_irq,
             .num_gpios = 9,
             .gpios = (struct endpoint_gpio[]) {
                 {
                     .name = "gpio_tcal6408_int",
                     .type = EP_GPIO_TYPE_PHYS,
-                    .export = EP_GPIO_NO_EXPORT,
-                    .ioexp_id = 1,
                     .is_irq = true,
-                    .trigger_type = IRQ_TYPE_EDGE_FALLING,
-                    .dir = EP_GPIO_DIR_O
+                    .trigger_type = IRQ_TYPE_EDGE_FALLING
                 },
                 {
                     .name = "gpio_ana_3v3_psw",
                     .type = EP_GPIO_TYPE_VIRT,
-                    .export = EP_GPIO_NO_EXPORT,
-                    .num = 1,
-                    .ioexp_id = 1,
-                    .dir = EP_GPIO_DIR_O,
-                    .default_val = EP_GPIO_VAL_HI
+                    .num = 1
                 },
                 {
                     .name = "gpio_gpio_psw",
                     .type = EP_GPIO_TYPE_VIRT,
-                    .export = EP_GPIO_NO_EXPORT,
-                    .num = 2,
-                    .ioexp_id = 1,
-                    .dir = EP_GPIO_DIR_O,
-                    .default_val = EP_GPIO_VAL_HI
+                    .num = 2
                 },
                 {
                     .name = "gpio_hdmi_psw",
                     .type = EP_GPIO_TYPE_VIRT,
-                    .export = EP_GPIO_NO_EXPORT,
-                    .num = 3,
-                    .ioexp_id = 1,
-                    .dir = EP_GPIO_DIR_O,
-                    .default_val = EP_GPIO_VAL_HI
+                    .num = 3
                 },
                 {
                     .name = "gpio_hdmi_5v_en",
                     .type = EP_GPIO_TYPE_VIRT,
-                    .export = EP_GPIO_NO_EXPORT,
-                    .num = 4,
-                    .ioexp_id = 1,
-                    .dir = EP_GPIO_DIR_O,
-                    .default_val = EP_GPIO_VAL_HI
+                    .num = 4
                 },
                 {
                     .name = "gpio_hdmi_reset",
                     .type = EP_GPIO_TYPE_VIRT,
-                    .export = EP_GPIO_NO_EXPORT,
-                    .num = 5,
-                    .ioexp_id = 1,
-                    .dir = EP_GPIO_DIR_O,
-                    .default_val = EP_GPIO_VAL_HI
+                    .num = 5
                 },
                 {
                     .name = "gpio_amp_stby",
                     .type = EP_GPIO_TYPE_VIRT,
-                    .export = EP_GPIO_NO_EXPORT,
-                    .num = 6,
-                    .ioexp_id = 1,
-                    .dir = EP_GPIO_DIR_O,
-                    .default_val = EP_GPIO_VAL_HI
+                    .num = 6
                 },
                 {
                     .name = "gpio_amp_reset",
                     .type = EP_GPIO_TYPE_VIRT,
-                    .export = EP_GPIO_NO_EXPORT,
-                    .num = 7,
-                    .ioexp_id = 1,
-                    .dir = EP_GPIO_DIR_O,
-                    .default_val = EP_GPIO_VAL_HI
+                    .num = 7
                 },
                 {
                     .name = "gpio_ui_reset",
                     .type = EP_GPIO_TYPE_VIRT,
-                    .export = EP_GPIO_NO_EXPORT,
-                    .num = 8,
-                    .ioexp_id = 1,
-                    .dir = EP_GPIO_DIR_O,
-                    .default_val = EP_GPIO_VAL_HI
+                    .num = 8
                 }
             },
             .num_cmds = 1,
@@ -384,25 +329,21 @@ const struct base_device bd_fusion_c0 = {
                 {
                     .name = "gpio_ana_int",
                     .type = EP_GPIO_TYPE_VIRT,
-                    .export = EP_GPIO_NO_EXPORT,
-                    .aggregate_id = 6,
                     .is_irq = true,
-                    .trigger_type = IRQ_TYPE_EDGE_FALLING,
-                    .dir = EP_GPIO_DIR_O
+                    .aggregate_id = 6,
+                    .trigger_type = IRQ_TYPE_EDGE_FALLING
                 },
                 {
                     .name = "gpio_ana_3v3_psw",
                     .type = EP_GPIO_TYPE_VIRT,
                     .export = EP_GPIO_EXPORT,
-                    .ioexp_id = 1,
-                    .dir = EP_GPIO_DIR_I
+                    .ioexp_id = 1
                 },
                 {
                     .name = "gpio_ana_15v_psw",
                     .type = EP_GPIO_TYPE_VIRT,
                     .export = EP_GPIO_EXPORT,
-                    .ioexp_id = 3,
-                    .dir = EP_GPIO_DIR_I
+                    .ioexp_id = 3
                 }
             },
             .num_eps = 7,
@@ -413,179 +354,112 @@ const struct base_device bd_fusion_c0 = {
                     .export = EP_NO_EXPORT,
                     .has_i2c = true,
                     .ioexp_id = 2,
-                    .addr_list = (unsigned short[]) { 0x21, I2C_CLIENT_END },
+                    .i2c_addr = 0x21,
                     .ep_handle_irq = tca9535_handle_irq,
                     .num_gpios = 17,
                     .gpios = (struct endpoint_gpio[]) {
                         {
                             .name = "gpio_ana_int",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_NO_EXPORT,
-                            .ioexp_id = 2,
-                            .aggregate_id = 6,
                             .is_irq = true,
-                            .trigger_type = IRQ_TYPE_EDGE_FALLING,
-                            .dir = EP_GPIO_DIR_O
+                            .aggregate_id = 6,
+                            .trigger_type = IRQ_TYPE_EDGE_FALLING
                         },
                         {
                             .name = "gpio_gain_ch3_0",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_NO_EXPORT,
                             .num = 1,
-                            .aggregate_id = 1,
-                            .ioexp_id = 2,
-                            .dir = EP_GPIO_DIR_O,
-                            .default_val = EP_GPIO_VAL_LO
+                            .aggregate_id = 1
                         },
                         {
                             .name = "gpio_gain_ch3_1",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_NO_EXPORT,
                             .num = 2,
-                            .aggregate_id = 1,
-                            .ioexp_id = 2,
-                            .dir = EP_GPIO_DIR_O,
-                            .default_val = EP_GPIO_VAL_LO
+                            .aggregate_id = 1
                         },
                         {
                             .name = "gpio_gain_ch3_2",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_NO_EXPORT,
                             .num = 3,
-                            .aggregate_id = 1,
-                            .ioexp_id = 2,
-                            .dir = EP_GPIO_DIR_O,
-                            .default_val = EP_GPIO_VAL_LO
+                            .aggregate_id = 1
                         },
                         {
                             .name = "gpio_gain_ch3_3",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_NO_EXPORT,
                             .num = 4,
-                            .aggregate_id = 1,
-                            .ioexp_id = 2,
-                            .dir = EP_GPIO_DIR_O,
-                            .default_val = EP_GPIO_VAL_LO
+                            .aggregate_id = 1
                         },
                         {
                             .name = "gpio_gain_ch4_0",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_NO_EXPORT,
                             .num = 5,
-                            .aggregate_id = 2,
-                            .ioexp_id = 2,
-                            .dir = EP_GPIO_DIR_O,
-                            .default_val = EP_GPIO_VAL_LO
+                            .aggregate_id = 2
                         },
                         {
                             .name = "gpio_gain_ch4_1",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_NO_EXPORT,
                             .num = 6,
-                            .aggregate_id = 2,
-                            .ioexp_id = 2,
-                            .dir = EP_GPIO_DIR_O,
-                            .default_val = EP_GPIO_VAL_LO
+                            .aggregate_id = 2
                         },
                         {
                             .name = "gpio_gain_ch4_2",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_NO_EXPORT,
                             .num = 7,
-                            .aggregate_id = 2,
-                            .ioexp_id = 2,
-                            .dir = EP_GPIO_DIR_O,
-                            .default_val = EP_GPIO_VAL_LO
+                            .aggregate_id = 2
                         },
                         {
                             .name = "gpio_gain_ch4_3",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_NO_EXPORT,
                             .num = 8,
-                            .aggregate_id = 2,
-                            .ioexp_id = 2,
-                            .dir = EP_GPIO_DIR_O,
-                            .default_val = EP_GPIO_VAL_LO
+                            .aggregate_id = 2
                         },
                         {
                             .name = "gpio_gain_ch5_0",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_NO_EXPORT,
                             .num = 9,
-                            .aggregate_id = 3,
-                            .ioexp_id = 2,
-                            .dir = EP_GPIO_DIR_O,
-                            .default_val = EP_GPIO_VAL_LO
+                            .aggregate_id = 3
                         },
                         {
                             .name = "gpio_gain_ch5_1",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_NO_EXPORT,
                             .num = 10,
-                            .aggregate_id = 3,
-                            .ioexp_id = 2,
-                            .dir = EP_GPIO_DIR_O,
-                            .default_val = EP_GPIO_VAL_LO
+                            .aggregate_id = 3
                         },
                         {
                             .name = "gpio_gain_ch5_2",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_NO_EXPORT,
                             .num = 11,
-                            .aggregate_id = 3,
-                            .ioexp_id = 2,
-                            .dir = EP_GPIO_DIR_O,
-                            .default_val = EP_GPIO_VAL_LO
+                            .aggregate_id = 3
                         },
                         {
                             .name = "gpio_gain_ch5_3",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_NO_EXPORT,
                             .num = 12,
-                            .aggregate_id = 3,
-                            .ioexp_id = 2,
-                            .dir = EP_GPIO_DIR_O,
-                            .default_val = EP_GPIO_VAL_LO
+                            .aggregate_id = 3
                         },
                         {
                             .name = "gpio_gain_ch6_0",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_NO_EXPORT,
                             .num = 13,
-                            .aggregate_id = 4,
-                            .ioexp_id = 2,
-                            .dir = EP_GPIO_DIR_O,
-                            .default_val = EP_GPIO_VAL_LO
+                            .aggregate_id = 4
                         },
                         {
                             .name = "gpio_gain_ch6_1",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_NO_EXPORT,
                             .num = 14,
-                            .aggregate_id = 4,
-                            .ioexp_id = 2,
-                            .dir = EP_GPIO_DIR_O,
-                            .default_val = EP_GPIO_VAL_LO
+                            .aggregate_id = 4
                         },
                         {
                             .name = "gpio_gain_ch6_2",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_NO_EXPORT,
                             .num = 15,
-                            .aggregate_id = 4,
-                            .ioexp_id = 2,
-                            .dir = EP_GPIO_DIR_O,
-                            .default_val = EP_GPIO_VAL_LO
+                            .aggregate_id = 4
                         },
                         {
                             .name = "gpio_gain_ch6_3",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_NO_EXPORT,
                             .num = 16,
-                            .aggregate_id = 4,
-                            .ioexp_id = 2,
-                            .dir = EP_GPIO_DIR_O,
-                            .default_val = EP_GPIO_VAL_LO
+                            .aggregate_id = 4
                         }
                     },
                     .num_cmds = 1,
@@ -616,73 +490,46 @@ const struct base_device bd_fusion_c0 = {
                     .export = EP_NO_EXPORT,
                     .has_i2c = true,
                     .ioexp_id = 3,
-                    .addr_list = (unsigned short[]) { 0x22, I2C_CLIENT_END },
+                    .i2c_addr = 0x22,
                     .ep_handle_irq = tca9535_handle_irq,
                     .num_gpios = 7,
                     .gpios = (struct endpoint_gpio[]) {
                         {
                             .name = "gpio_ana_int",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_NO_EXPORT,
-                            .ioexp_id = 3,
-                            .aggregate_id = 6,
                             .is_irq = true,
-                            .trigger_type = IRQ_TYPE_EDGE_FALLING,
-                            .dir = EP_GPIO_DIR_O
+                            .aggregate_id = 6,
+                            .trigger_type = IRQ_TYPE_EDGE_FALLING
                         },
                         {
                             .name = "gpio_php_en_ch3",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_NO_EXPORT,
-                            .num = 1,
-                            .ioexp_id = 3,
-                            .dir = EP_GPIO_DIR_O,
-                            .default_val = EP_GPIO_VAL_LO
+                            .num = 1
                         },
                         {
                             .name = "gpio_php_en_ch4",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_NO_EXPORT,
-                            .num = 2,
-                            .ioexp_id = 3,
-                            .dir = EP_GPIO_DIR_O,
-                            .default_val = EP_GPIO_VAL_LO
+                            .num = 2
                         },
                         {
                             .name = "gpio_php_en_ch5",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_NO_EXPORT,
-                            .num = 3,
-                            .ioexp_id = 3,
-                            .dir = EP_GPIO_DIR_O,
-                            .default_val = EP_GPIO_VAL_LO
+                            .num = 3
                         },
                         {
                             .name = "gpio_php_en_ch6",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_NO_EXPORT,
-                            .num = 4,
-                            .ioexp_id = 3,
-                            .dir = EP_GPIO_DIR_O,
-                            .default_val = EP_GPIO_VAL_LO
+                            .num = 4
                         },
                         {
                             .name = "gpio_ana_15v_psw",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_NO_EXPORT,
-                            .num = 5,
-                            .ioexp_id = 3,
-                            .dir = EP_GPIO_DIR_O,
-                            .default_val = EP_GPIO_VAL_HI
+                            .num = 5
                         },
                         {
                             .name = "gpio_dac_mute",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_NO_EXPORT,
-                            .num = 6,
-                            .ioexp_id = 3,
-                            .dir = EP_GPIO_DIR_O,
-                            .default_val = EP_GPIO_VAL_HI
+                            .num = 6
                         }
                     },
                     .num_cmds = 1,
@@ -731,32 +578,26 @@ const struct base_device bd_fusion_c0 = {
                             .type = EP_GPIO_TYPE_VIRT,
                             .export = EP_GPIO_EXPORT,
                             .aggregate_id = 1,
-                            .ioexp_id = 2,
-                            .dir = EP_GPIO_DIR_I
+                            .ioexp_id = 2
                         },
                         {
                             .name = "gpio_gain_ch4_0",
                             .type = EP_GPIO_TYPE_VIRT,
                             .export = EP_GPIO_EXPORT,
                             .aggregate_id = 2,
-                            .ioexp_id = 2,
-                            .dir = EP_GPIO_DIR_I
+                            .ioexp_id = 2
                         },
                         {
                             .name = "gpio_php_en_ch3",
                             .type = EP_GPIO_TYPE_VIRT,
                             .export = EP_GPIO_EXPORT,
-                            .ioexp_id = 3,
-                            .dir = EP_GPIO_DIR_O,
-                            .default_val = EP_GPIO_VAL_LO
+                            .ioexp_id = 3
                         },
                         {
                             .name = "gpio_php_en_ch4",
                             .type = EP_GPIO_TYPE_VIRT,
                             .export = EP_GPIO_EXPORT,
-                            .ioexp_id = 3,
-                            .dir = EP_GPIO_DIR_O,
-                            .default_val = EP_GPIO_VAL_LO
+                            .ioexp_id = 3
                         }
                     },
                     .num_cmds = 0,
@@ -775,34 +616,26 @@ const struct base_device bd_fusion_c0 = {
                             .type = EP_GPIO_TYPE_VIRT,
                             .export = EP_GPIO_EXPORT,
                             .aggregate_id = 3,
-                            .ioexp_id = 2,
-                            .dir = EP_GPIO_DIR_O,
-                            .default_val = EP_GPIO_VAL_LO
+                            .ioexp_id = 2
                         },
                         {
                             .name = "gpio_gain_ch6_0",
                             .type = EP_GPIO_TYPE_VIRT,
                             .export = EP_GPIO_EXPORT,
                             .aggregate_id = 4,
-                            .ioexp_id = 2,
-                            .dir = EP_GPIO_DIR_O,
-                            .default_val = EP_GPIO_VAL_LO
+                            .ioexp_id = 2
                         },
                         {
                             .name = "gpio_php_en_ch5",
                             .type = EP_GPIO_TYPE_VIRT,
                             .export = EP_GPIO_EXPORT,
-                            .ioexp_id = 3,
-                            .dir = EP_GPIO_DIR_O,
-                            .default_val = EP_GPIO_VAL_LO
+                            .ioexp_id = 3
                         },
                         {
                             .name = "gpio_php_en_ch6",
                             .type = EP_GPIO_TYPE_VIRT,
                             .export = EP_GPIO_EXPORT,
-                            .ioexp_id = 3,
-                            .dir = EP_GPIO_DIR_O,
-                            .default_val = EP_GPIO_VAL_LO
+                            .ioexp_id = 3
                         }
                     },
                     .num_cmds = 0,
@@ -820,8 +653,7 @@ const struct base_device bd_fusion_c0 = {
                             .name = "gpio_dac_mute",
                             .type = EP_GPIO_TYPE_VIRT,
                             .export = EP_GPIO_EXPORT,
-                            .ioexp_id = 3,
-                            .dir = EP_GPIO_DIR_I
+                            .ioexp_id = 3
                         }
                     },
                     .num_cmds = 0,
@@ -839,8 +671,7 @@ const struct base_device bd_fusion_c0 = {
                             .name = "gpio_dac_mute",
                             .type = EP_GPIO_TYPE_VIRT,
                             .export = EP_GPIO_EXPORT,
-                            .ioexp_id = 3,
-                            .dir = EP_GPIO_DIR_I
+                            .ioexp_id = 3
                         }
                     },
                     .num_cmds = 0,
@@ -862,29 +693,25 @@ const struct base_device bd_fusion_c0 = {
                     .name = "gpio_hdmi_psw",
                     .type = EP_GPIO_TYPE_VIRT,
                     .export = EP_GPIO_EXPORT,
-                    .ioexp_id = 1,
-                    .dir = EP_GPIO_DIR_I
+                    .ioexp_id = 1
                 },
                 {
                     .name = "gpio_hdmi_5v_en",
                     .type = EP_GPIO_TYPE_VIRT,
                     .export = EP_GPIO_EXPORT,
-                    .ioexp_id = 1,
-                    .dir = EP_GPIO_DIR_I
+                    .ioexp_id = 1
                 },
                 {
                     .name = "gpio_hdmi_reset",
                     .type = EP_GPIO_TYPE_VIRT,
                     .export = EP_GPIO_EXPORT,
-                    .ioexp_id = 1,
-                    .dir = EP_GPIO_DIR_I
+                    .ioexp_id = 1
                 },
                 {
                     .name = "gpio_a_mute_out",
                     .type = EP_GPIO_TYPE_PHYS,
                     .export = EP_GPIO_EXPORT,
-                    //.is_irq = true,
-                    .dir = EP_GPIO_DIR_O
+                    //.is_irq = true
                 }
             },
             .num_eps = 2,
@@ -894,15 +721,14 @@ const struct base_device bd_fusion_c0 = {
                     .type = EP_TYPE_SRC_AK4137,
                     .export = EP_EXPORT,
                     .has_i2c = true,
-                    .addr_list = (unsigned short[]) { 0x13, I2C_CLIENT_END },
+                    .i2c_addr = 0x13,
                     .num_gpios = 1,
                     .gpios = (struct endpoint_gpio[]) {
                         {
                             .name = "gpio_hdmi_reset",
                             .type = EP_GPIO_TYPE_VIRT,
                             .export = EP_GPIO_EXPORT,
-                            .ioexp_id = 1,
-                            .dir = EP_GPIO_DIR_I
+                            .ioexp_id = 1
                         }
                     },
                     .num_cmds = 1,
@@ -923,7 +749,7 @@ const struct base_device bd_fusion_c0 = {
                     .type = EP_TYPE_HDMI_EP9512T,
                     .export = EP_EXPORT,
                     .has_i2c = true,
-                    .addr_list = (unsigned short[]) { 0x3c, I2C_CLIENT_END },
+                    .i2c_addr = 0x3c,
                     .ep_handle_irq = ep9512t_handle_irq,
                     .num_gpios = 3,
                     .gpios = (struct endpoint_gpio[]) {
@@ -932,23 +758,19 @@ const struct base_device bd_fusion_c0 = {
                             .name = "gpio_a_mute_out",
                             .type = EP_GPIO_TYPE_PHYS,
                             .export = EP_GPIO_EXPORT,
-                            //.is_irq = true,
-                            .dir = EP_GPIO_DIR_O
+                            //.is_irq = true
                         },
                         {
                             .name = "gpio_hmcu_int",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_NO_EXPORT,
                             .is_irq = true,
-                            .trigger_type = IRQ_TYPE_EDGE_FALLING,
-                            .dir = EP_GPIO_DIR_O
+                            .trigger_type = IRQ_TYPE_EDGE_FALLING
                         },
                         {
                             .name = "gpio_hdmi_reset",
                             .type = EP_GPIO_TYPE_VIRT,
                             .export = EP_GPIO_EXPORT,
-                            .ioexp_id = 1,
-                            .dir = EP_GPIO_DIR_I
+                            .ioexp_id = 1
                         }
                     },
                     .num_cmds = 1,
@@ -993,64 +815,50 @@ const struct base_device bd_fusion_c0 = {
                 {
                     .name = "gpio_gpio_int",
                     .type = EP_GPIO_TYPE_VIRT,
-                    .export = EP_GPIO_NO_EXPORT,
                     .is_irq = true,
                     .aggregate_id = 7,
-                    .trigger_type = IRQ_TYPE_EDGE_FALLING,
-                    .dir = EP_GPIO_DIR_O
+                    .trigger_type = IRQ_TYPE_EDGE_FALLING
                 },
                 {
                     .name = "gpio_gpio_psw",
                     .type = EP_GPIO_TYPE_VIRT,
                     .export = EP_GPIO_EXPORT,
-                    .ioexp_id = 1,
-                    .dir = EP_GPIO_DIR_O,
-                    .default_val = EP_GPIO_VAL_LO
+                    .ioexp_id = 1
                 },
                 {
                     .name = "gpio_ctrl0_gpio0",
                     .type = EP_GPIO_TYPE_VIRT,
                     .export = EP_GPIO_EXPORT,
                     .aggregate_id = 1,
-                    .ioexp_id = 4,
-                    .dir = EP_GPIO_DIR_O,
-                    .default_val = EP_GPIO_VAL_LO
+                    .ioexp_id = 4
                 },
                 {
                     .name = "gpio_ctrl0_gpio1",
                     .type = EP_GPIO_TYPE_VIRT,
                     .export = EP_GPIO_EXPORT,
                     .aggregate_id = 2,
-                    .ioexp_id = 4,
-                    .dir = EP_GPIO_DIR_O,
-                    .default_val = EP_GPIO_VAL_LO
+                    .ioexp_id = 4
                 },
                 {
                     .name = "gpio_ctrl0_gpio2",
                     .type = EP_GPIO_TYPE_VIRT,
                     .export = EP_GPIO_EXPORT,
                     .aggregate_id = 3,
-                    .ioexp_id = 4,
-                    .dir = EP_GPIO_DIR_O,
-                    .default_val = EP_GPIO_VAL_LO
+                    .ioexp_id = 4
                 },
                 {
                     .name = "gpio_ctrl0_gpio3",
                     .type = EP_GPIO_TYPE_VIRT,
                     .export = EP_GPIO_EXPORT,
                     .aggregate_id = 4,
-                    .ioexp_id = 4,
-                    .dir = EP_GPIO_DIR_O,
-                    .default_val = EP_GPIO_VAL_LO
+                    .ioexp_id = 4
                 },
                 {
                     .name = "gpio_ctrl0_gpio4",
                     .type = EP_GPIO_TYPE_VIRT,
                     .export = EP_GPIO_EXPORT,
                     .aggregate_id = 5,
-                    .ioexp_id = 4,
-                    .dir = EP_GPIO_DIR_O,
-                    .default_val = EP_GPIO_VAL_LO
+                    .ioexp_id = 4
                 }
             },
             .num_eps = 2,
@@ -1061,119 +869,76 @@ const struct base_device bd_fusion_c0 = {
                     .export = EP_NO_EXPORT,
                     .has_i2c = true,
                     .ioexp_id = 4,
-                    .addr_list = (unsigned short[]) { 0x23, I2C_CLIENT_END },
+                    .i2c_addr = 0x23,
                     .ep_handle_irq = tca9535_handle_irq,
                     .num_gpios = 11,
                     .gpios = (struct endpoint_gpio[]) {
                         {
                             .name = "gpio_gpio_int",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_NO_EXPORT,
                             .is_irq = true,
                             .aggregate_id = 7,
-                            .ioexp_id = 4,
-                            .trigger_type = IRQ_TYPE_EDGE_FALLING,
-                            .dir = EP_GPIO_DIR_O
+                            .trigger_type = IRQ_TYPE_EDGE_FALLING
                         },
                         {
                             .name = "gpio_ctrl0_gpio0",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_NO_EXPORT,
                             .num = 1,
-                            .aggregate_id = 1,
-                            .ioexp_id = 4,
-                            .dir = EP_GPIO_DIR_O,
-                            .default_val = EP_GPIO_VAL_LO
+                            .aggregate_id = 1
                         },
                         {
                             .name = "gpio_ctrl1_gpio0",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_NO_EXPORT,
                             .num = 2,
-                            .aggregate_id = 1,
-                            .ioexp_id = 4,
-                            .dir = EP_GPIO_DIR_O,
-                            .default_val = EP_GPIO_VAL_LO
+                            .aggregate_id = 1
                         },
                         {
                             .name = "gpio_ctrl0_gpio1",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_NO_EXPORT,
                             .num = 3,
-                            .aggregate_id = 2,
-                            .ioexp_id = 4,
-                            .dir = EP_GPIO_DIR_O,
-                            .default_val = EP_GPIO_VAL_LO
+                            .aggregate_id = 2
                         },
                         {
                             .name = "gpio_ctrl1_gpio1",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_NO_EXPORT,
                             .num = 4,
-                            .aggregate_id = 2,
-                            .ioexp_id = 4,
-                            .dir = EP_GPIO_DIR_O,
-                            .default_val = EP_GPIO_VAL_LO
+                            .aggregate_id = 2
                         },
                         {
                             .name = "gpio_ctrl0_gpio2",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_NO_EXPORT,
                             .num = 5,
-                            .aggregate_id = 3,
-                            .ioexp_id = 4,
-                            .dir = EP_GPIO_DIR_O,
-                            .default_val = EP_GPIO_VAL_LO
+                            .aggregate_id = 3
                         },
                         {
                             .name = "gpio_ctrl1_gpio2",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_NO_EXPORT,
                             .num = 6,
-                            .aggregate_id = 3,
-                            .ioexp_id = 4,
-                            .dir = EP_GPIO_DIR_O,
-                            .default_val = EP_GPIO_VAL_LO
+                            .aggregate_id = 3
                         },
                         {
                             .name = "gpio_ctrl0_gpio3",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_NO_EXPORT,
                             .num = 7,
-                            .aggregate_id = 4,
-                            .ioexp_id = 4,
-                            .dir = EP_GPIO_DIR_O,
-                            .default_val = EP_GPIO_VAL_LO
+                            .aggregate_id = 4
                         },
                         {
                             .name = "gpio_ctrl1_gpio3",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_NO_EXPORT,
                             .num = 8,
-                            .aggregate_id = 4,
-                            .ioexp_id = 4,
-                            .dir = EP_GPIO_DIR_O,
-                            .default_val = EP_GPIO_VAL_LO
+                            .aggregate_id = 4
                         },
                         {
                             .name = "gpio_ctrl0_gpio4",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_NO_EXPORT,
                             .num = 9,
-                            .aggregate_id = 5,
-                            .ioexp_id = 4,
-                            .dir = EP_GPIO_DIR_O,
-                            .default_val = EP_GPIO_VAL_LO
+                            .aggregate_id = 5
                         },
                         {
                             .name = "gpio_ctrl1_gpio4",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_NO_EXPORT,
                             .num = 10,
-                            .aggregate_id = 5,
-                            .ioexp_id = 4,
-                            .dir = EP_GPIO_DIR_O,
-                            .default_val = EP_GPIO_VAL_LO
+                            .aggregate_id = 5
                         }
                     },
                     .num_cmds = 1,
@@ -1203,7 +968,7 @@ const struct base_device bd_fusion_c0 = {
                     .type = EP_TYPE_ADC_ADS7128,
                     .export = EP_EXPORT,
                     .has_i2c = true,
-                    .addr_list = (unsigned short[]) { 0x14, I2C_CLIENT_END },
+                    .i2c_addr = 0x14,
                     .ep_handle_irq = ads7128_handle_irq,
                     .ep_configure  = ads7128_configure,
                     .num_gpios = 7,
@@ -1211,53 +976,45 @@ const struct base_device bd_fusion_c0 = {
                         {
                             .name = "gpio_gpio_int",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_NO_EXPORT,
                             .is_irq = true,
                             .aggregate_id = 7,
-                            .trigger_type = IRQ_TYPE_EDGE_FALLING,
-                            .dir = EP_GPIO_DIR_O
+                            .trigger_type = IRQ_TYPE_EDGE_FALLING
                         },
                         {
                             .name = "gpio_adc_gpio0",
                             .type = EP_GPIO_TYPE_VIRT,
                             .export = EP_GPIO_EXPORT,
                             .num = 1,
-                            .dir = EP_GPIO_DIR_IO
                         },
                         {
                             .name = "gpio_adc_gpio1",
                             .type = EP_GPIO_TYPE_VIRT,
                             .export = EP_GPIO_EXPORT,
-                            .num = 2,
-                            .dir = EP_GPIO_DIR_IO
+                            .num = 2
                         },
                         {
                             .name = "gpio_adc_gpio2",
                             .type = EP_GPIO_TYPE_VIRT,
                             .export = EP_GPIO_EXPORT,
-                            .num = 3,
-                            .dir = EP_GPIO_DIR_IO
+                            .num = 3
                         },
                         {
                             .name = "gpio_adc_gpio3",
                             .type = EP_GPIO_TYPE_VIRT,
                             .export = EP_GPIO_EXPORT,
-                            .num = 4,
-                            .dir = EP_GPIO_DIR_IO
+                            .num = 4
                         },
                         {
                             .name = "gpio_adc_gpio4",
                             .type = EP_GPIO_TYPE_VIRT,
                             .export = EP_GPIO_EXPORT,
-                            .num = 5,
-                            .dir = EP_GPIO_DIR_IO
+                            .num = 5
                         },
                         {
                             .name = "gpio_adc_test",
                             .type = EP_GPIO_TYPE_VIRT,
                             .export = EP_GPIO_EXPORT,
-                            .num = 6,
-                            .dir = EP_GPIO_DIR_I
+                            .num = 6
                         }
                     },
                     .num_cmds = 2,
@@ -1309,23 +1066,19 @@ const struct base_device bd_fusion_c0 = {
                 {
                     .name = "gpio_amp_int",
                     .type = EP_GPIO_TYPE_VIRT,
-                    .export = EP_GPIO_NO_EXPORT,
-                    .dir = EP_GPIO_DIR_O,
                     .is_irq = true
                 },
                 {
                     .name = "gpio_amp_reset",
                     .type = EP_GPIO_TYPE_VIRT,
                     .export = EP_GPIO_EXPORT,
-                    .ioexp_id = 1,
-                    .dir = EP_GPIO_DIR_I
+                    .ioexp_id = 1
                 },
                 {
                     .name = "gpio_amp_stby",
                     .type = EP_GPIO_TYPE_VIRT,
                     .export = EP_GPIO_EXPORT,
-                    .ioexp_id = 1,
-                    .dir = EP_GPIO_DIR_I
+                    .ioexp_id = 1
                 }
             },
             .num_eps = 0,
