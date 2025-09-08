@@ -27,6 +27,8 @@ CXXFLAGS := -Wall -Wextra -std=c++11 $(PKG_CFLAGS) \
 
 # Source files
 SOURCES := OCALite.cpp \
+          ConcreteGainActuator.cpp \
+          ConcreteMuteActuator.cpp \
           $(shell find HostInterface -name "*.cpp")
 
 OBJECTS := $(SOURCES:.cpp=.o)
