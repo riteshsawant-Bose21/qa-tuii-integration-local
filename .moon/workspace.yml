@@ -9,6 +9,7 @@ projects:
   - 'apps/frontend/react-apps/*'
   - 'apps/firmware-apps/fusion-dsp'
   - 'apps/firmware-apps/fusion-server'
+  - 'apps/firmware-apps/fusion-system-monitor'
 
 vcs:
   manager: 'git'
