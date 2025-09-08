@@ -28,6 +28,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
+#include <arpa/inet.h>
 #endif
 
 // ---- FileInfo Macro ----
@@ -128,12 +129,16 @@ bool Ocp1LiteSocketBind(INT32 socket, UINT16 port)
     sin.sin_port = htons(port);
     sin.sin_addr.s_addr = INADDR_ANY;
 
+    OCA_LOG_INFO_PARAMS("Binding socket %d to port %d...", socket, port);
+
     int result = ::bind(socket, (struct sockaddr *)&sin, sizeof(sin));
     if (result != 0)
     {
         OCA_LOG_ERROR_PARAMS("Socket bind failed on port %d, errorcode=%d", port, errno);
         return false;
     }
+
+    OCA_LOG_INFO_PARAMS("✓ Socket successfully bound to port %d", port);
     return true;
 }
 
@@ -141,13 +146,30 @@ bool Ocp1LiteSocketListen(INT32 socket, UINT8 backlog)
 {
     assert(socket != INVALID_SOCKET);
 
-    return (listen(socket, static_cast<int>(backlog)) == 0);
+    OCA_LOG_INFO_PARAMS("Starting to listen on socket %d with backlog %d", socket, backlog);
+
+    int result = listen(socket, static_cast<int>(backlog));
+    if (result == 0)
+    {
+        OCA_LOG_INFO_PARAMS("✓ Socket %d is now listening for connections", socket);
+        return true;
+    }
+    else
+    {
+        OCA_LOG_ERROR_PARAMS("Listen failed on socket %d, errorcode=%d", socket, errno);
+        return false;
+    }
 }
 
 bool Ocp1LiteSocketAccept(INT32 socket, INT32& newsocket)
 {
     int result;
     int optionOn(1);
+    char clientIP[INET_ADDRSTRLEN];
+    UINT16 clientPort = 0;
+
+    OCA_LOG_INFO("Waiting for client connection on socket...");
+
 #ifdef _WIN32
     SOCKADDR_INET newSocketAddress;
 
@@ -171,11 +193,35 @@ bool Ocp1LiteSocketAccept(INT32 socket, INT32& newsocket)
             return false;
         }
     }
-#else 
+    else
+    {
+        // Log successful connection with client details
+        inet_ntop(AF_INET, &(newSocketAddress.Ipv4.sin_addr), clientIP, INET_ADDRSTRLEN);
+        clientPort = ntohs(newSocketAddress.Ipv4.sin_port);
+        OCA_LOG_INFO_PARAMS("✓ CLIENT CONNECTED: %s:%d on socket %d", clientIP, clientPort, newsocket);
+    }
+#else
     struct sockaddr_in socketAddr;
     int socketAddrLength = sizeof(socketAddr);
     memset(&socketAddr, 0, sizeof(socketAddr));
-    newsocket = ::accept(socket, (struct sockaddr*)&socketAddr, (socklen_t*)&socketAddrLength);
+    newsocket = ::accept(socket, (struct sockaddr *)&socketAddr, (socklen_t *)&socketAddrLength);
+
+    if (INVALID_SOCKET == newsocket)
+    {
+        INT32 error(errno);
+        if ((EINTR != error) && (ENOTSOCK != error))
+        {
+            OCA_LOG_ERROR_PARAMS("Socket error on accept, errorcode=%d", errno);
+            return false;
+        }
+    }
+    else
+    {
+        // Log successful connection with client details
+        inet_ntop(AF_INET, &(socketAddr.sin_addr), clientIP, INET_ADDRSTRLEN);
+        clientPort = ntohs(socketAddr.sin_port);
+        OCA_LOG_INFO_PARAMS("✓ CLIENT CONNECTED: %s:%d on socket %d", clientIP, clientPort, newsocket);
+    }
 #endif
     
     result = ::setsockopt(newsocket, SOL_SOCKET, SO_REUSEADDR, (char *)&optionOn, sizeof(optionOn));
@@ -317,9 +363,23 @@ bool Ocp1LiteSocketShutdown(INT32 socket)
 bool Ocp1LiteSocketClose(INT32 socket)
 {
     assert(socket != INVALID_SOCKET);
+
+    OCA_LOG_INFO_PARAMS("✗ Closing socket %d", socket);
+
 #ifdef _WIN32
-    return (closesocket(socket) == 0);
+    bool result = (closesocket(socket) == 0);
 #else
-    return (close(socket) == 0);
+    bool result = (close(socket) == 0);
 #endif
+
+    if (result)
+    {
+        OCA_LOG_INFO_PARAMS("✓ Socket %d closed successfully", socket);
+    }
+    else
+    {
+        OCA_LOG_ERROR_PARAMS("Failed to close socket %d, errorcode=%d", socket, errno);
+    }
+
+    return result;
 }
