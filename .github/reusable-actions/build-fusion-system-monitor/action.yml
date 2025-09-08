@@ -1,0 +1,34 @@
+name: "Build Fusion System Monitor App"
+description: "Build Fusion System Monitor App"
+inputs:
+  flutter_apps_sonar_token:
+    description: 'SonarQube server token'
+    required: true
+  nexus_password:
+    description: 'Nexus repository password'
+    required: true
+  jenkins_user_name:
+    description: 'Jenkins username for authentication'
+    required: true
+  jenkins_user_token:
+    description: 'Jenkins token for authentication'
+    required: true
+  jenkins_url:
+    description: 'Nexus repository URL'
+    required: true
+  nexus_url:
+    description: 'Nexus repository URL'
+    required: true
+        
+runs:
+  using: "composite"
+  steps:
+    - name: Build with Waf
+      shell: bash
+      working-directory: apps/firmware-apps/fusion-system-monitor
+      run: |
+        moon run fusion-system-monitor:build
+        ls -ltr
+        ls -ltr build/
+        VERSION="$(./Jenkins/SetVersionProperty.sh)-${GITHUB_RUN_NUMBER}+$(git rev-parse --short HEAD)"
+        

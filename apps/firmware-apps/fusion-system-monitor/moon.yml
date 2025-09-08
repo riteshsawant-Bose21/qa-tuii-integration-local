@@ -1,0 +1,20 @@
+project:
+  name: 'Fusion System Monitor'
+  description: 'Fusion System Monitor Application'
+
+tasks:
+
+  build:
+    command: "python3"
+    args: ["package.py"]
+    deps:
+      - create-binary
+
+  build:
+    command: "./moon-build.sh"
+    deps:
+      - ready-script
+
+  ready-script:
+    command: "chmod"
+    args: ["+x", "moon-build.sh", "Jenkins/SetVersionProperty.sh"]
