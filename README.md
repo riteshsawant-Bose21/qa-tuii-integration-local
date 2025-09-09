@@ -5,8 +5,19 @@ Each project resides in its own dedicated folder and is maintained, tested, and 
 
 ## Repository Structure
 
-<pre lang="text"><code> ``` / ├── apps/ │ ├── cloud-backend/ # Bose-Professional Cloud Backend Services │ ├── firmware-apps/ # Firmware Applications │ └── frontend/ # Fusion Launcher & Cloud UI Application ├── .github/ │ ├── workflows/ # GitHub Actions CI/CD workflows │ ├── reusable-actions/ # Reusable GitHub Actions │ └── CODEOWNERS # Code ownership configuration ├── .moon/ # Moon monorepo tool projects configuration └── README.md ``` </code></pre>
-
+```
+/
+├── apps/
+│   ├── cloud-backend/     # Bose-Professional Cloud Backend Services
+│   ├── firmware-apps/     # Firmware Applications
+│   └── frontend/          # Fusion Launcher & Cloud UI Application
+├── .github/
+│   ├── workflows/         # GitHub Actions CI/CD workflows
+│   ├── reusable-actions/  # Reusable GitHub Actions
+│   └── CODEOWNERS         # Code ownership configuration
+├── .moon/                 # Moon monorepo tool projects configuration
+└── README.md
+```
 ---
 
 ## Code Ownership
