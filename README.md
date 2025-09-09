@@ -15,6 +15,7 @@ Each project resides in its own dedicated folder and is maintained, tested, and 
 │   ├── workflows/         # GitHub Actions CI/CD workflows
 │   ├── reusable-actions/  # Reusable GitHub Actions
 │   └── CODEOWNERS         # Code ownership configuration
+├── libs/                  # Shared libraries across projects
 ├── .moon/                 # Moon monorepo tool projects configuration
 └── README.md
 ```
@@ -26,9 +27,9 @@ Each folder is assigned to specific teams or individuals using the `.github/CODE
 
 | Project Folder                 | Code Owners               |
 |--------------------------------|---------------------------|
-| `projects/cloud-backend`       | `@backend-team`           |
-| `projects/firmware-apps`       | `@frontend-team`          |
-| `projects/frontend`            | `@mobile-team`            |
+| `apps/cloud-backend`       | `@backend-team`           |
+| `apps/firmware-apps`       | `@frontend-team`          |
+| `apps/frontend`            | `@mobile-team`            |
 
 Code owners are automatically requested for reviews when changes are made in their respective areas.
 
