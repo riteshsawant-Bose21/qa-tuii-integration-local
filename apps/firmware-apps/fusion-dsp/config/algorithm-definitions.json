@@ -1527,12 +1527,6 @@
                     "name": "bypass",
                     "value_type": "bool",
                     "default_value": false
-                },
-                {
-                    "name": "type",
-                    "value_type": "string",
-                    "default_value": "peq",
-                    "allowed_values": ["peq", "high_shelf", "low_shelf", "hpf", "lpf", "notch"]
                 }
             ],
             "telemetry": [

@@ -171,7 +171,7 @@ static void iir_design_lpf_cs(filter::IirFilter *iir, int section,
         double b0 = a * tmp2;                      // B0'
         double b1 = 2.0f;                            // B1
         double b2 = 1.0f;                            // B2
-        double a0 = 1.0f;                            // Normalized (check this!)
+        double a0 = 1.0f;                            // Normalized
         double a1 = 2.0f * (1.0f - a) * tmp2;     // A1
         double a2 = (l - tmp1) * tmp2;             // A2
 
@@ -183,7 +183,7 @@ static void iir_design_lpf_cs(filter::IirFilter *iir, int section,
         double b0 = tx * tmp;        // B0'
         double b1 = 1.0f;            // B1
         double b2 = 0.0f;            // B2
-        double a0 = 1.0f;            // Normalized (check this!)
+        double a0 = 1.0f;            // Normalized
         double a1 = (1.0f - tx) * tmp; // A1
         double a2 = 0.0f;            // A2
         
