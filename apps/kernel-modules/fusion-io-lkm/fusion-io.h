@@ -67,28 +67,31 @@ struct endpoint_gpio {
     char                        name[MAX_STRING];
     enum endpoint_gpio_type     type;
     enum endpoint_gpio_export   export;
+
     u8                          num;
-    bool                        is_irq;
     enum endpoint_gpio_dir      dir;
     enum endpoint_gpio_val      default_val;
-    unsigned int                irq_num;
-    unsigned int                trigger_type;
-    u8                          ioexp_id;
-    u8                          aggregate_id; // if aggregate_gpio
-    bool                        valid;
 
+    bool                        is_irq;
+    unsigned int                trigger_type;
+    unsigned int                irq_num;
+
+    u8                          ioexp_id;
+    u8                          aggregate_id;
+    
+    bool                        valid;
     u16                         value;
 
-    struct endpoint_gpio    *linked_gpio;
-    size_t                  num_aggregate_gpios;
-    struct endpoint_gpio    **aggregate_gpios;
+    struct endpoint_gpio        *linked_gpio;
+    size_t                      num_aggregate_gpios;
+    struct endpoint_gpio        **aggregate_gpios;
     
-    struct gpio_desc        *desc;
-    struct device_attribute dev_attr;
+    struct gpio_desc            *desc;
+    struct device_attribute     dev_attr;
 
-    struct base_device      *parent_base_device;
-    struct io_card          *parent_io_card;
-    struct endpoint         *parent_endpoint;
+    struct base_device          *parent_base_device;
+    struct io_card              *parent_io_card;
+    struct endpoint             *parent_endpoint;
 };
 
 // also serve as index to .cmds list
@@ -378,7 +381,6 @@ struct endpoint {
     char                    name[MAX_STRING];
     enum endpoint_type      type;
     enum endpoint_export    export;
-    bool                    has_i2c;
     u8                      ioexp_id;
     unsigned short          i2c_addr;
 
@@ -450,8 +452,7 @@ enum io_card_type {
 struct io_card {
     u8                      num_inputs;
     u8                      num_outputs;
-    u8                      slot;
-    u8                      i2c_sw_channel;
+    u8                      slot;        // slot IO arch only
 
     struct id_data          data;
 
@@ -480,7 +481,6 @@ enum base_device_type {
 
 struct base_device {
     bool                    has_slot_io;
-    bool                    has_i2c_sw;
 
     struct id_data          data;
 

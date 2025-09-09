@@ -46,7 +46,6 @@ const struct base_device bd_fusion_c0 = {
         .type = BD_TYPE_FUSION_C0
     },
     .has_slot_io = false,
-    .has_i2c_sw = true,
     .num_gpios = 6,
     .gpios = (struct endpoint_gpio[]) {
         {
@@ -99,7 +98,6 @@ const struct base_device bd_fusion_c0 = {
         {
             .name = "ep_i2csw_tca9544",
             .type = EP_TYPE_I2CSW_TCA9544,
-            .has_i2c = true,
             .i2c_addr = 0x70,
             .ep_handle_irq = tca9544_handle_irq,
             .ep_configure = tca9544_configure,
@@ -155,7 +153,6 @@ const struct base_device bd_fusion_c0 = {
         {
             .type = EP_TYPE_IOEXP_TCAL6408,
             .name = "ep_ioexp_tcal6408",
-            .has_i2c = true,
             .ioexp_id = 1,
             .i2c_addr = 0x20,
             .ep_handle_irq = tcal6408_handle_irq,
@@ -237,7 +234,6 @@ const struct base_device bd_fusion_c0 = {
             },
             .num_inputs = 6,
             .num_outputs = 4,
-            .i2c_sw_channel = 1,
             .num_gpios = 3,
             .gpios = (struct endpoint_gpio[]) {
                 {
@@ -265,7 +261,6 @@ const struct base_device bd_fusion_c0 = {
                 {
                     .name = "ep_ioexp_tca9535-0",
                     .type = EP_TYPE_IOEXP_TCA9535,
-                    .has_i2c = true,
                     .ioexp_id = 2,
                     .i2c_addr = 0x21,
                     .ep_handle_irq = tca9535_handle_irq,
@@ -399,7 +394,6 @@ const struct base_device bd_fusion_c0 = {
                 {
                     .name = "ep_ioexp_tca9535-1",
                     .type = EP_TYPE_IOEXP_TCA9535,
-                    .has_i2c = true,
                     .ioexp_id = 3,
                     .i2c_addr = 0x22,
                     .ep_handle_irq = tca9535_handle_irq,
@@ -468,7 +462,6 @@ const struct base_device bd_fusion_c0 = {
                     .name = "ep_aud_in_chs-12",
                     .type = EP_TYPE_AUD_ADC_TAA5242,
                     .export = EP_EXPORT,
-                    .has_i2c = false,
                     .in_ch_bm = 0x0003,
                     .num_gpios = 0,
                     .gpios = NULL,
@@ -479,7 +472,6 @@ const struct base_device bd_fusion_c0 = {
                     .name = "ep_aud_in_chs-34",
                     .type = EP_TYPE_AUD_ADC_TAA5242,
                     .export = EP_EXPORT,
-                    .has_i2c = false,
                     .in_ch_bm = 0x000c,
                     .num_gpios = 4,
                     .gpios = (struct endpoint_gpio[]) {
@@ -517,7 +509,6 @@ const struct base_device bd_fusion_c0 = {
                     .name = "ep_aud_in_chs-56",
                     .type = EP_TYPE_AUD_ADC_TAA5242,
                     .export = EP_EXPORT,
-                    .has_i2c = false,
                     .in_ch_bm = 0x0030,
                     .num_gpios = 4,
                     .gpios = (struct endpoint_gpio[]) {
@@ -555,7 +546,6 @@ const struct base_device bd_fusion_c0 = {
                     .name = "ep_aud_out_chs-12",
                     .type = EP_TYPE_AUD_DAC_TAD5242,
                     .export = EP_EXPORT,
-                    .has_i2c = false,
                     .out_ch_bm = 0x0003,
                     .num_gpios = 1,
                     .gpios = (struct endpoint_gpio[]) {
@@ -573,7 +563,6 @@ const struct base_device bd_fusion_c0 = {
                     .name = "ep_aud_out_chs-34",
                     .type = EP_TYPE_AUD_DAC_TAD5242,
                     .export = EP_EXPORT,
-                    .has_i2c = false,
                     .out_ch_bm = 0x000c,
                     .num_gpios = 1,
                     .gpios = (struct endpoint_gpio[]) {
@@ -595,7 +584,6 @@ const struct base_device bd_fusion_c0 = {
                 .sn = "n/a",
                 .type = IC_TYPE_HDMI
             },
-            .i2c_sw_channel = 2,
             .num_gpios = 4,
             .gpios = (struct endpoint_gpio[]) {
                 {
@@ -629,7 +617,6 @@ const struct base_device bd_fusion_c0 = {
                     .name = "ep_src_ak4137",
                     .type = EP_TYPE_SRC_AK4137,
                     .export = EP_EXPORT,
-                    .has_i2c = true,
                     .i2c_addr = 0x13,
                     .num_gpios = 1,
                     .gpios = (struct endpoint_gpio[]) {
@@ -656,7 +643,6 @@ const struct base_device bd_fusion_c0 = {
                     .name = "ep_hdmi_ep9512t",
                     .type = EP_TYPE_HDMI_EP9512T,
                     .export = EP_EXPORT,
-                    .has_i2c = true,
                     .i2c_addr = 0x3c,
                     .ep_handle_irq = ep9512t_handle_irq,
                     .num_gpios = 3,
@@ -715,7 +701,6 @@ const struct base_device bd_fusion_c0 = {
                 .sn = "n/a",
                 .type = IC_TYPE_GPIO
             },
-            .i2c_sw_channel = 3,
             .num_gpios = 7,
             .gpios = (struct endpoint_gpio[]) {
                 {
@@ -772,7 +757,6 @@ const struct base_device bd_fusion_c0 = {
                 {
                     .name = "ep_ioexp_tca9535-2",
                     .type = EP_TYPE_IOEXP_TCA9535,
-                    .has_i2c = true,
                     .ioexp_id = 4,
                     .i2c_addr = 0x23,
                     .ep_handle_irq = tca9535_handle_irq,
@@ -871,7 +855,6 @@ const struct base_device bd_fusion_c0 = {
                     .name = "ep_adc_ads7128",
                     .type = EP_TYPE_ADC_ADS7128,
                     .export = EP_EXPORT,
-                    .has_i2c = true,
                     .i2c_addr = 0x14,
                     .ep_handle_irq = ads7128_handle_irq,
                     .ep_configure  = ads7128_configure,
@@ -962,7 +945,6 @@ const struct base_device bd_fusion_c0 = {
                 .sn = "n/a",
                 .type = IC_TYPE_AMP
             },
-            .i2c_sw_channel = 4,
             .num_gpios = 3,
             .gpios = (struct endpoint_gpio[]) {
                 {

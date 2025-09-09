@@ -83,7 +83,7 @@ static int configure_i2c_endpoint(struct endpoint *ep)
     int ret;
     int i;
 
-    if (ep->has_i2c && ep->i2c_client) {
+    if (ep->i2c_addr && ep->i2c_client) {
         client = ep->i2c_client;
         cmd = &ep->cmds[EP_CMD_TYPE_CFG];
         if (strcmp(cmd->name, "cmd_config")) {
@@ -164,8 +164,7 @@ int tca9544_configure(struct endpoint *ep, struct endpoint_cmd *cmd)
 }
 
 // get the i2c client for the endpoint
-// TODO: why return the client pointer? just put it in the endpoint i2c_client
-static struct i2c_client *endpoint_get_i2c_client(struct endpoint *ep, struct i2c_adapter *adapter) 
+static void endpoint_get_i2c_client(struct endpoint *ep, struct i2c_adapter *adapter) 
 {
     struct i2c_board_info i2c_info;
     struct i2c_client *client = NULL;
@@ -173,10 +172,10 @@ static struct i2c_client *endpoint_get_i2c_client(struct endpoint *ep, struct i2
 
     if (ep->i2c_addr == 0) {
         dev_err(&bd_drvdata->pdev->dev, "Endpoint %s is missing i2c addr\n", ep->name);
-        return NULL;
+        return;
     } else if (ep->cmds == NULL || ep->cmds->num_i2c_cmds == 0 || ep->cmds->i2c_cmds == NULL) {
         dev_err(&bd_drvdata->pdev->dev, "Endpoint %s is missing i2c commands\n", ep->name);
-        return NULL;
+        return;
     }
 
     memset(&i2c_info, 0, sizeof(struct i2c_board_info));
@@ -198,19 +197,20 @@ static struct i2c_client *endpoint_get_i2c_client(struct endpoint *ep, struct i2
         if (id < 0) {
             dev_err(&bd_drvdata->pdev->dev, "Failed to id %s\n", ep->name);
             i2c_unregister_device(client);
-            return NULL;
+            return;
         }
     
         dev_dbg(&bd_drvdata->pdev->dev, "Discovered endpoint %s at I2C address 0x%x\n", 
                 i2c_info.type, client->addr);
 
-        return client;
+        ep->i2c_client = client;
+        return;
     } else {
         dev_err(&bd_drvdata->pdev->dev, "Failed to get i2c_client for %s\n", ep->name);
     }
 
     dev_err(&bd_drvdata->pdev->dev, "Failed to discover endpoint %s\n", ep->name);
-    return NULL;
+    return;
 }
 
 // recursively called func to traverse through linked gpios and handle irq.
@@ -349,7 +349,7 @@ int tca9535_handle_irq(struct endpoint_gpio *ep_gpio)
 
     irq_mask = ((u16)rd_buf[1] << 8) | rd_buf[0];
 
-    // TODO account for different irq polarities
+    // TODO account for different irq trigger_type polarities
     for (int i = 0; i < 8; ++i) {
         if (irq_mask >> i & 1) {
             if (tca9535->gpios[i + 1].is_irq) {
@@ -1233,13 +1233,12 @@ static int fusion_io_probe(struct platform_device *pdev)
     struct base_device  *bd;
     struct io_card      *ic;
     struct endpoint     *ep;
-    struct i2c_client   *i2c_client;
-    struct i2c_adapter  *i2c_adapter;
     struct id_data      data;
+
+    struct i2c_adapter  *i2c_adapter;
 
     int i, j;
     int ret;
-
 
     // allocate drvdata, but we'll set it up after we know what device we are
     bd_drvdata = devm_kzalloc(&pdev->dev, sizeof(*bd_drvdata), GFP_KERNEL);
@@ -1282,14 +1281,14 @@ static int fusion_io_probe(struct platform_device *pdev)
     for (i = 0; i < bd->num_eps; ++i) {
         ep = &bd->endpoints[i];
 
-        if (!ep->has_i2c) {
+        if (!ep->i2c_addr) {
             continue;
         }
 
         dev_dbg(&pdev->dev, "Setting i2c client for base device endpoint %s...\n", ep->name);
 
         // set up the i2c_client
-        ep->i2c_client = endpoint_get_i2c_client(ep, bd_drvdata->i2c_adapter);
+        endpoint_get_i2c_client(ep, bd_drvdata->i2c_adapter);
 
         if (ep->i2c_client == NULL) {
             dev_err(&pdev->dev, "Failed to set i2c client...");
@@ -1343,7 +1342,7 @@ static int fusion_io_probe(struct platform_device *pdev)
             for (j = 0; j < ic->num_eps; ++j) {
                 ep = &ic->endpoints[j];
 
-                if (ep->has_i2c == false) {
+                if (!ep->i2c_addr) {
                     continue;
                 }
 
@@ -1351,12 +1350,12 @@ static int fusion_io_probe(struct platform_device *pdev)
                                       ic->data.model, ep->name);
 
                 // set up the i2c_client
-                if (bd->has_i2c_sw && ep->parent_io_card && ep->parent_io_card->i2c_sw_channel != 0) {
-                    i2c_adapter = bd_drvdata->muxc->adapter[ep->parent_io_card->i2c_sw_channel - 1];
+                if (bd_drvdata->muxc != NULL && ep->parent_io_card) {
+                    i2c_adapter = bd_drvdata->muxc->adapter[i];
                 } else {
                     i2c_adapter = bd_drvdata->i2c_adapter;
                 }
-                ep->i2c_client = endpoint_get_i2c_client(ep, i2c_adapter);
+                endpoint_get_i2c_client(ep, i2c_adapter);
 
                 if(ep->i2c_client == NULL) {
                     dev_err(&pdev->dev, "Failed to set i2c client...");
@@ -1409,14 +1408,14 @@ static int fusion_io_probe(struct platform_device *pdev)
                 ep->parent_io_card = ic;
                 
                 // get adapter (should always be mux adapter for slot)
-                if (bd->has_i2c_sw) {
+                if (bd_drvdata->muxc != NULL) {
                     i2c_adapter = bd_drvdata->muxc->adapter[i];
                 } else {
                     i2c_adapter = bd_drvdata->i2c_adapter;
                 }
-                i2c_client = endpoint_get_i2c_client(ep, i2c_adapter);
+                endpoint_get_i2c_client(ep, i2c_adapter);
                 
-                if (i2c_client) {
+                if (ep->i2c_client) {
                     dev_dbg(&pdev->dev, "Found %s on io-card model %s, slot %d\n", 
                                                                     ep->name, 
                                                                     ic->data.model, 
@@ -1428,13 +1427,11 @@ static int fusion_io_probe(struct platform_device *pdev)
             }
 
             // if it's not there, assume no IO card in this slot
-            if (i2c_client == NULL) {
+            if (ep == NULL || ep->i2c_client == NULL) {
                 dev_dbg(&pdev->dev, "No IO card found on slot %d\n", i);
                 ep = NULL;
                 continue;
             }
-
-            ep->i2c_client = i2c_client;
 
             ret = configure_i2c_endpoint(ep);
             if (ret) {
@@ -1472,15 +1469,12 @@ static int fusion_io_probe(struct platform_device *pdev)
 
             // set io cards slot number
             ic->slot = i;
-            if (bd->has_i2c_sw) {
-                ic->i2c_sw_channel = i + 1;
-            }
 
             // get endpoint i2c clients
             for (j = 0; j < ic->num_eps; ++j) {
                 ep = &ic->endpoints[j];
 
-                if (ep->has_i2c == false) {
+                if (!ep->i2c_addr) {
                     continue;
                 }
 
@@ -1489,12 +1483,12 @@ static int fusion_io_probe(struct platform_device *pdev)
 
                 // set up the i2c_client
                 // get adapter (should always be mux adapter for slot)
-                if (bd->has_i2c_sw) {
+                if (bd_drvdata->muxc != NULL) {
                     i2c_adapter = bd_drvdata->muxc->adapter[i];
                 } else {
                     i2c_adapter = bd_drvdata->i2c_adapter;
                 }
-                ep->i2c_client = endpoint_get_i2c_client(ep, i2c_adapter);
+                endpoint_get_i2c_client(ep, i2c_adapter);
 
                 if(ep->i2c_client == NULL) {
                     dev_err(&pdev->dev, "Failed to set i2c client...");
