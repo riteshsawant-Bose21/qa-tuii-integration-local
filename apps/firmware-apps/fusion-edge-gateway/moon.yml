@@ -1,0 +1,10 @@
+# moon.yml for the fusion-edge-gateway application
+
+project:
+  name: 'Fusion Edge Gateway'
+  description: 'Fusion Edge Gateway application'
+
+tasks:
+  build:
+    command: "make"
+    args: release 

@@ -10,6 +10,7 @@ projects:
   - 'apps/firmware-apps/fusion-dsp'
   - 'apps/firmware-apps/fusion-server'
   - 'apps/firmware-apps/fusion-system-monitor'
+  - 'apps/firmware-apps/fusion-edge-gateway'
 
 vcs:
   manager: 'git'
