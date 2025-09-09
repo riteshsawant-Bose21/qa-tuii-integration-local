@@ -91,23 +91,12 @@ struct endpoint_gpio {
     struct endpoint         *parent_endpoint;
 };
 
-
-enum endpoint_cmd_cmd {
-    EP_CMD_CONFIG           = 0,  // Universal config command
-
-    /* io expander */
-    EP_CMD_IOEXP_GPIO_SHOW  = 1,
-    EP_CMD_IOEXP_GPIO_STORE,
-
-    /* ADS7128-specific commands */
-    EP_CMD_ADS7128_REGOP = 1
-};
-
+// also serve as index to .cmds list
 enum endpoint_cmd_type {
     EP_CMD_TYPE_CFG         = 0,
 
     /* adc */
-    EP_CMD_TYPE_ADC_REGOP
+    EP_CMD_TYPE_ADC_REGOP   = 1
 };
 
 enum endpoint_cmd_export {

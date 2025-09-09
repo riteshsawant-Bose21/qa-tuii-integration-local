@@ -90,7 +90,7 @@ static int configure_i2c_endpoint(struct endpoint *ep)
 
     if (ep->has_i2c && ep->i2c_client) {
         client = ep->i2c_client;
-        cmd = &ep->cmds[EP_CMD_CONFIG];
+        cmd = &ep->cmds[EP_CMD_TYPE_CFG];
         if (strcmp(cmd->name, "cmd_config")) {
             return 0;
         }
@@ -1508,7 +1508,7 @@ static int fusion_io_probe(struct platform_device *pdev)
                 }
 
                 // do configuring of endpoint default configure command here?
-                // setup_configure_ep_cmd(&ep->cmds[EP_CMD_CONFIG]);
+                // setup_configure_ep_cmd(&ep->cmds[EP_CMD_TYPE_CFG]);
                 
                 ret = configure_i2c_endpoint(ep);
                 if (ret) {

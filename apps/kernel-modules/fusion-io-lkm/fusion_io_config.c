@@ -851,7 +851,7 @@ const struct base_device bd_fusion_c0 = {
                     },
                     .num_cmds = 1,
                     .cmds = (struct endpoint_cmd[]) {
-                        [EP_CMD_CONFIG] = {
+                        [EP_CMD_TYPE_CFG] = {
                             .name = "cmd_config",
                             .type = EP_CMD_TYPE_CFG,
                             .num_i2c_cmds = 2,
@@ -926,7 +926,7 @@ const struct base_device bd_fusion_c0 = {
                     },
                     .num_cmds = 2,
                     .cmds = (struct endpoint_cmd[]) {
-                        [EP_CMD_CONFIG] = {
+                        [EP_CMD_TYPE_CFG] = {
                             .name = "cmd_config",
                             .type = EP_CMD_TYPE_CFG,
                             .num_i2c_cmds = 13,
@@ -946,7 +946,7 @@ const struct base_device bd_fusion_c0 = {
                                 { .reg_addr = ADS7128_REG_SEQUENCE_CFG,    .data_mask = 0x11 }  // SEQ_START 
                             }
                         },
-                        [EP_CMD_ADS7128_REGOP] = {
+                        [EP_CMD_TYPE_ADC_REGOP] = {
                             .name = "cmd_regop",
                             .type = EP_CMD_TYPE_ADC_REGOP,
                             .export = EP_CMD_EXPORT,
