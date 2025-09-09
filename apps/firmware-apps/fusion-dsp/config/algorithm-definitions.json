@@ -1135,6 +1135,16 @@
             ],
             "telemetry": [
                 {
+                    "name": "in_meter",
+                    "dimensions": ["out"],
+                    "value_type": "float",
+                    "default_value": -200.0,
+                    "minimum_value": -200.0,
+                    "maximum_value": 24.0,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
+                },
+                {
                     "name": "out_meter",
                     "dimensions": ["out"],
                     "value_type": "float",
