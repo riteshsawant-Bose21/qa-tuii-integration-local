@@ -30,6 +30,3 @@ runs:
         moon run fusion-telemetry-core:build
         VERSION="$(./Jenkins/SetVersionProperty.sh)-${GITHUB_RUN_NUMBER}+$(git rev-parse --short HEAD)"
         ls -ltr
-        curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T ./telemetry_core ${{ inputs.nexus_url }}/Fusion-Telemetry-Core/Continuous/${GITHUB_REF_NAME}/fusion-telemetry-core/$VERSION/fusion-telemetry-core-$VERSION
-        echo "Fusion Telemetry Core build uploaded to Nexus successfully!"
-        echo "fusion-dsp: ${{ inputs.nexus_url }}/Fusion-Telemetry-Core/Continuous/${GITHUB_REF_NAME}/fusion-telemetry-core/$VERSION/fusion-telemetry-core-$VERSION"
