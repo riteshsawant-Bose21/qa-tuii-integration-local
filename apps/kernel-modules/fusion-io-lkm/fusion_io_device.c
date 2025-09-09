@@ -55,13 +55,8 @@ static int configure_i2c_mux_adapters(struct endpoint *ep)
             return -EINVAL;
     }
 
-    bd_drvdata->muxc = i2c_mux_alloc(bd_drvdata->i2c_adapter, // parent adapter
-                             &bd_drvdata->pdev->dev,          // parent device
-                             num_adapters,                    // max_adapters
-                             sizeof(*ep),                     // size of private data
-                             0,
-                             select,
-                             NULL);
+    bd_drvdata->muxc = i2c_mux_alloc(bd_drvdata->i2c_adapter, &bd_drvdata->pdev->dev,          
+                                     num_adapters, sizeof(*ep), 0, select, NULL);
 
     if (!bd_drvdata->muxc)
         return -ENOMEM;

@@ -142,7 +142,7 @@ const struct base_device bd_fusion_c0 = {
             },
             .num_cmds = 1,
             .cmds = (struct endpoint_cmd[]) {
-                {
+                [EP_CMD_TYPE_CFG] = {
                     .name = "cmd_config",
                     .type = EP_CMD_TYPE_CFG,
                     .num_i2c_cmds = 1,
@@ -210,7 +210,7 @@ const struct base_device bd_fusion_c0 = {
             },
             .num_cmds = 1,
             .cmds = (struct endpoint_cmd[]) {
-                {
+                [EP_CMD_TYPE_CFG] = {
                     .name = "cmd_config",
                     .type = EP_CMD_TYPE_CFG,
                     .num_i2c_cmds = 7,
@@ -235,7 +235,6 @@ const struct base_device bd_fusion_c0 = {
                 .sn = "n/a",
                 .type = IC_TYPE_AN_IN_OUT
             },
-            .slot = 0,
             .num_inputs = 6,
             .num_outputs = 4,
             .i2c_sw_channel = 1,
@@ -378,7 +377,7 @@ const struct base_device bd_fusion_c0 = {
                     },
                     .num_cmds = 1,
                     .cmds = (struct endpoint_cmd[]) {
-                        {
+                        [EP_CMD_TYPE_CFG] = {
                             .name = "cmd_config",
                             .type = EP_CMD_TYPE_CFG,
                             .num_i2c_cmds = 2,
@@ -446,7 +445,7 @@ const struct base_device bd_fusion_c0 = {
                     },
                     .num_cmds = 1,
                     .cmds = (struct endpoint_cmd[]) {
-                        {
+                        [EP_CMD_TYPE_CFG] = {
                             .name = "cmd_config",
                             .type = EP_CMD_TYPE_CFG,
                             .num_i2c_cmds = 2,
@@ -587,7 +586,7 @@ const struct base_device bd_fusion_c0 = {
                     },
                     .num_cmds = 0,
                     .cmds = NULL
-                },
+                }
             }
         },
         {
@@ -596,7 +595,6 @@ const struct base_device bd_fusion_c0 = {
                 .sn = "n/a",
                 .type = IC_TYPE_HDMI
             },
-            .slot = 1,
             .i2c_sw_channel = 2,
             .num_gpios = 4,
             .gpios = (struct endpoint_gpio[]) {
@@ -644,7 +642,7 @@ const struct base_device bd_fusion_c0 = {
                     },
                     .num_cmds = 1,
                     .cmds = (struct endpoint_cmd[]) {
-                        {
+                        [EP_CMD_TYPE_CFG] = {
                             .name = "cmd_config",
                             .type = EP_CMD_TYPE_CFG,
                             .num_i2c_cmds = 1,
@@ -685,7 +683,7 @@ const struct base_device bd_fusion_c0 = {
                     },
                     .num_cmds = 1,
                     .cmds = (struct endpoint_cmd[]) {
-                        {
+                        [EP_CMD_TYPE_CFG] = {
                             .name = "cmd_config",
                             .type = EP_CMD_TYPE_CFG,
                             .num_i2c_cmds = 3,
@@ -717,7 +715,6 @@ const struct base_device bd_fusion_c0 = {
                 .sn = "n/a",
                 .type = IC_TYPE_GPIO
             },
-            .slot = 2,
             .i2c_sw_channel = 3,
             .num_gpios = 7,
             .gpios = (struct endpoint_gpio[]) {
@@ -965,7 +962,6 @@ const struct base_device bd_fusion_c0 = {
                 .sn = "n/a",
                 .type = IC_TYPE_AMP
             },
-            .slot = 3,
             .i2c_sw_channel = 4,
             .num_gpios = 3,
             .gpios = (struct endpoint_gpio[]) {
