@@ -5,6 +5,12 @@ project:
   description: 'Fusion Edge Gateway application'
 
 tasks:
+
   build:
-    command: "make"
-    args: release 
+    command: "./moon-build.sh"
+    deps:
+      - ready-script
+
+  ready-script:
+    command: "chmod"
+    args: ["+x", "moon-build.sh", "Jenkins/SetVersionProperty.sh"]
