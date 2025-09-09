@@ -425,5 +425,6 @@ bool Ocp1LiteSocketConnect(const char *hostOrIp, UINT16 port, INT32 &newSocket)
 
     OCA_LOG_INFO_PARAMS("✓ Successfully connected to %s:%d on socket %d", hostOrIp, port, newSocket);
     return true;
+
 }
 #endif // OCA_LITE_CONTROLLER

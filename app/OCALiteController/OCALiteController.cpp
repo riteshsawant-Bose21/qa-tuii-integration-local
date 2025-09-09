@@ -132,11 +132,10 @@ bool ConnectToDevice(const OcaServiceDiscovery::DiscoveredDevice &device, ::Ocp1
 int main(int /*argc*/, const char * /*argv*/[])
 {
     OCA_LOG_INFO("=== OCA Lite Controller with Service Discovery ===");
-
-    // Set log level to show all messages including trace
+    // Set log level to show INFO messages (including client connection logs)
     ::OcfLiteLogSetLogLevel(OCA_LOG_LVL_TRACE);
 
-    // Initialize the host interfaces for controller mode
+    // Initialize the host interfaces
     bool bSuccess = ::OcfLiteHostInterfaceInitialize();
     bSuccess = bSuccess && ::Ocp1LiteHostInterfaceInitialize();
 
