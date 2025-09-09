@@ -64,43 +64,42 @@ This setup ensures fast, targeted CI runs that scale with the number of projects
 
 To add a new project to this monorepo:
 
-1. **Create Project Folder**  
-Inside the `apps/` directory, create a new folder with your project name:
-mkdir projects/<your-project-name>
+- Create Project Folder:  
+  Inside the `apps/` directory, create a new folder with your project name:
+  mkdir apps/<app-layer>/<your-project-name>
 
-2. **Initialize the Project**  
-Use your preferred tooling (e.g., `npm init`, `create-react-app`, etc.).
+- Initialize the Project:  
+  Use your preferred tooling (e.g., `npm init`, `create-react-app`, etc.).
 
-3. **Add to CI**  
-To setup CI for your project please reach out to devops@boseprofessional.com or optionally follow below steps:
+- Add to CI: 
+  To setup CI for your project please reach out to devops@boseprofessional.com or optionally follow below steps:
 
-  #Define Moon Tasks:  
-  In your project folder, create or update the `moon/project.yml` file to define tasks such as `build`, `lint`, `test`, and `typecheck`.  
-  Refer to the [sample task file](apps/frontend/flutter-apps/moon.yml) for structure and conventions.
+  - Define Moon Tasks:  
+    In your project folder, create or update the `moon/project.yml` file to define tasks such as `build`, `lint`, `test`, and `typecheck`.  
+    Refer to the [sample task file](apps/frontend/flutter-apps/moon.yml) for structure and conventions.
 
-  #Create Reusable GitHub Action (Optional):  
-  Define a `action.yml` file in your project’s `.github/` folder (e.g. `projects/<your-project>/.github/action.yml`) to encapsulate the project's CI steps. This makes it reusable by the main workflow dispatcher.
+  - Create Reusable GitHub Action (Optional):  
+    Define a `action.yml` file in your project’s `.github/` folder (e.g. `projects/<your-project>/.github/action.yml`) to encapsulate the project's CI steps. This makes it reusable by the main workflow dispatcher.
 
-  #Hook Into Main CI Workflow:  
-  The orchestrating workflow in `.github/workflows/` will automatically pick up your project if:
-  - A change is detected in the project's codebase
-  - The project has the necessary Moon tasks defined
-  - A matching reusable action is in place (if used)
+  - Hook Into Main CI Workflow:  
+    The orchestrating workflow in `.github/workflows/` will automatically pick up your project if:
+    - A change is detected in the project's codebase
+    - The project has the necessary Moon tasks defined
+    - A matching reusable action is in place (if used)
 
-  #Test Locally (Recommended):  
+- Test Locally (Recommended):  
   Run Moon tasks locally with `moon run <project>:<task>` to validate behavior before pushing.
 
 
-4. **Assign Code Owners**  
-Edit `.github/CODEOWNERS` and add the path + responsible GitHub username(s) or team(s):
-/projects/<your-project-name>/ @your-team
+- Assign Code Owners:  
+  Edit `.github/CODEOWNERS` and add the path + responsible GitHub username(s) or team(s): /projects/<your-project-name>/ @your-team
 
-5. **Update README (optional)**  
-Consider updating this README to describe the new project.
+- Update README:  
+  Consider updating this README to describe the new project.
 
 ---
 
-## 🛠 Tooling
+## Tooling
 
 This repo uses a unified and consistent developer experience powered by a combination of modern tools:
 
@@ -120,4 +119,4 @@ This repo uses a unified and consistent developer experience powered by a combin
 
 ## Questions?
 
-Reach out to the respective code owners or devops@boseprofessional.com open an issue to start a discussion.
+Reach out to the respective code owners or open an Jira issue [here](https://boseprofessional.atlassian.net/jira/software/c/projects/DEVOPS/boards/43?issueType=10009%2C10006).
