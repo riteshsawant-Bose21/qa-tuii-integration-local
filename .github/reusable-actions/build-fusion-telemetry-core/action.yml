@@ -1,5 +1,5 @@
-name: "Build Fusion Edge Gateway App"
-description: "Build Fusion Edge Gateway App"
+name: "Build Fusion Telemetry Core App"
+description: "Build Fusion Telemetry Core App"
 inputs:
   flutter_apps_sonar_token:
     description: 'SonarQube server token'
@@ -25,10 +25,11 @@ runs:
   steps:
     - name: Build with Make
       shell: bash
-      working-directory: apps/firmware-apps/fusion-edge-gateway
+      working-directory: apps/firmware-apps/fusion-telemetry-core
       run: |
-        moon run fusion-edge-gateway:build
+        moon run fusion-telemetry-core:build
         VERSION="$(./Jenkins/SetVersionProperty.sh)-${GITHUB_RUN_NUMBER}+$(git rev-parse --short HEAD)"
-        curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T ./build/fusion-edge-gateway ${{ inputs.nexus_url }}/Fusion-Edge-Gateway/Continuous/${GITHUB_REF_NAME}/fusion-edge-gateway/$VERSION/fusion-edge-gateway-$VERSION
-        echo "Fusion Edge Gateway build uploaded to Nexus successfully!"
-        echo "fusion-dsp: ${{ inputs.nexus_url }}/Fusion-Edge-Gateway/Continuous/${GITHUB_REF_NAME}/fusion-edge-gateway/$VERSION/fusion-edge-gateway-$VERSION"
+        ls -ltr
+        curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T ./telemetry_core ${{ inputs.nexus_url }}/Fusion-Telemetry-Core/Continuous/${GITHUB_REF_NAME}/fusion-telemetry-core/$VERSION/fusion-telemetry-core-$VERSION
+        echo "Fusion Telemetry Core build uploaded to Nexus successfully!"
+        echo "fusion-dsp: ${{ inputs.nexus_url }}/Fusion-Telemetry-Core/Continuous/${GITHUB_REF_NAME}/fusion-telemetry-core/$VERSION/fusion-telemetry-core-$VERSION"
