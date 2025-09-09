@@ -1,4 +1,4 @@
-/*  By downloading or using this file, the user agrees to be bound by the terms of the license 
+/*  By downloading or using this file, the user agrees to be bound by the terms of the license
  *  agreement located in the LICENSE file in the root of this project
  *  as an original contracting party.
  *
@@ -26,8 +26,8 @@
 // ---- Helper types and constants ----
 const UINT8 Ocp1LiteNetwork::SOCKETBACKLOG(10);
 
-#define OCA_INSECURE_REGISTRATION_TYPE  "_oca._tcp"
-#define OCA_LOCAL_REGISTRATION_DOMAIN   "local"
+#define OCA_INSECURE_REGISTRATION_TYPE "_oca._tcp"
+#define OCA_LOCAL_REGISTRATION_DOMAIN "local"
 
 #ifndef OCP1_MAX_NR_CONNECTIONS
 #define OCP1_MAX_NR_CONNECTIONS 4
@@ -44,12 +44,12 @@ const std::string Ocp1LiteNetwork::LOCAL_REGISTRATION_DOMAIN(OCA_LOCAL_REGISTRAT
 
 Ocp1LiteNetwork::Ocp1LiteNetwork(::OcaONo objectNumber,
                                  ::OcaBoolean lockable,
-                                 const ::OcaLiteString& role,
-                                 const ::Ocp1LiteNetworkNodeID& idAdvertised,
-                                 const ::Ocp1LiteNetworkSystemInterfaceID& systemInterfaces,
-                                 const std::vector<std::string>& txtRecords,
-                                 const ::OcaLiteString& domainName,
-                                ::OcaUint16 insecureListenPort)
+                                 const ::OcaLiteString &role,
+                                 const ::Ocp1LiteNetworkNodeID &idAdvertised,
+                                 const ::Ocp1LiteNetworkSystemInterfaceID &systemInterfaces,
+                                 const std::vector<std::string> &txtRecords,
+                                 const ::OcaLiteString &domainName,
+                                 ::OcaUint16 insecureListenPort)
     : OcaLiteNetwork(objectNumber,
                      lockable,
                      role,
@@ -70,7 +70,7 @@ Ocp1LiteNetwork::Ocp1LiteNetwork(::OcaONo objectNumber,
       m_notifiedLostConnections(),
 #ifdef OCA_TRACK_KEEPALIVE_RECEIVED
       m_receivedKeepalives(),
-#endif //OCA_TRACK_KEEPALIVE_RECEIVED
+#endif // OCA_TRACK_KEEPALIVE_RECEIVED
       m_status(OCANETWORKSTATUS_UNKNOWN),
       m_requestedInsecurePort(insecureListenPort),
       m_txtRecordList(txtRecords),
@@ -84,13 +84,14 @@ Ocp1LiteNetwork::Ocp1LiteNetwork(::OcaONo objectNumber,
       m_pMsgNtf(new ::Ocp1LiteMessageNotification),
       m_pMsgRsp(new ::Ocp1MessageResponse)
 #ifdef _DEBUG
-      ,m_bMsgCmd(false),
+      ,
+      m_bMsgCmd(false),
       m_bMsgKeepAlive(false),
       m_bMsgNtf(false),
       m_bMsgRsp(false)
 #endif
 {
-    if (idAdvertised.GetStringValue().GetLength() > static_cast< ::OcaUint16>(0))
+    if (idAdvertised.GetStringValue().GetLength() > static_cast<::OcaUint16>(0))
     {
         // Node ID is correctly passed
         m_nodeID = idAdvertised.GetStringValue();
@@ -123,9 +124,9 @@ Ocp1LiteNetwork::~Ocp1LiteNetwork()
     if (bSuccess && (OCANETWORKSTATUS_UNKNOWN == m_status))
     {
         // Data buffer
-        m_pDataBuffer = new ::OcaUint8[static_cast< size_t>(OCA_BUFFER_SIZE)];
+        m_pDataBuffer = new ::OcaUint8[static_cast<size_t>(OCA_BUFFER_SIZE)];
 
-        UINT32 interfaceIndex = static_cast< UINT32>(m_ocp1Interface.GetInterfaceIndex());
+        UINT32 interfaceIndex = static_cast<UINT32>(m_ocp1Interface.GetInterfaceIndex());
         UINT8 macAddressBuffer[MAC_ADDRESS_SIZE];
         IPParametersType ipParametersType;
         std::string ipAddress;
@@ -140,20 +141,20 @@ Ocp1LiteNetwork::~Ocp1LiteNetwork()
             (Ocp1LiteNetworkGetNetworkConfiguration(ipParametersType, ipAddress,
                                                     subnetMaskLength, defaultGateway, dnsServer, domainName, networkSpeed, isUp)))
         {
-            m_ocp1Interface = ::Ocp1LiteNetworkSystemInterfaceID(static_cast< ::OcaUint32>(interfaceIndex),
+            m_ocp1Interface = ::Ocp1LiteNetworkSystemInterfaceID(static_cast<::OcaUint32>(interfaceIndex),
                                                                  ::OcaLiteString(ipAddress.c_str()),
-                                                                 static_cast< ::OcaUint8>(subnetMaskLength),
+                                                                 static_cast<::OcaUint8>(subnetMaskLength),
                                                                  ::OcaLiteString(defaultGateway.c_str()),
                                                                  ::OcaLiteString(dnsServer.c_str()),
                                                                  ::OcaLiteString(domainName.c_str()),
-                                                                 static_cast< ::OcaBoolean>(isUp),
-                                                                 static_cast< ::OcaUint64>(networkSpeed),
-                                                                 static_cast< ::Ocp1LiteIPParametersType>(ipParametersType),
-                                                                 ::OcaLiteBlobFixedLen<MAC_ADDRESS_LENGTH>(static_cast< ::OcaUint8*>(&(macAddressBuffer[0]))));
+                                                                 static_cast<::OcaBoolean>(isUp),
+                                                                 static_cast<::OcaUint64>(networkSpeed),
+                                                                 static_cast<::Ocp1LiteIPParametersType>(ipParametersType),
+                                                                 ::OcaLiteBlobFixedLen<MAC_ADDRESS_LENGTH>(static_cast<::OcaUint8 *>(&(macAddressBuffer[0]))));
         }
         else
         {
-            bSuccess = static_cast< ::OcaBoolean>(false);
+            bSuccess = static_cast<::OcaBoolean>(false);
         }
 
         if (bSuccess)
@@ -168,7 +169,7 @@ Ocp1LiteNetwork::~Ocp1LiteNetwork()
 ::OcaLiteStatus Ocp1LiteNetwork::CreateMessageBuffer(void)
 {
     // Data buffer
-    m_pDataBuffer = new ::OcaUint8[static_cast< size_t>(OCA_BUFFER_SIZE)];
+    m_pDataBuffer = new ::OcaUint8[static_cast<size_t>(OCA_BUFFER_SIZE)];
 
     return OCASTATUS_OK;
 }
@@ -195,7 +196,7 @@ void Ocp1LiteNetwork::Teardown()
 
         if (NULL != m_pDataBuffer)
         {
-            delete [] m_pDataBuffer;
+            delete[] m_pDataBuffer;
             m_pDataBuffer = NULL;
         }
 
@@ -209,7 +210,7 @@ void Ocp1LiteNetwork::Teardown()
     OcaLiteNetwork::Teardown();
 }
 
-::OcaLiteStatus Ocp1LiteNetwork::GetStatus(::OcaLiteNetworkStatus& status) const
+::OcaLiteStatus Ocp1LiteNetwork::GetStatus(::OcaLiteNetworkStatus &status) const
 {
     status = m_status;
     return OCASTATUS_OK;
@@ -351,10 +352,10 @@ void Ocp1LiteNetwork::Teardown()
     return rc;
 }
 
-void Ocp1LiteNetwork::AddSelectables(INT32& highest,
-                                     OcfLiteSelectableSet& readSet,
-                                     OcfLiteSelectableSet& writeSet,
-                                     OcfLiteSelectableSet& exceptSet)
+void Ocp1LiteNetwork::AddSelectables(INT32 &highest,
+                                     OcfLiteSelectableSet &readSet,
+                                     OcfLiteSelectableSet &writeSet,
+                                     OcfLiteSelectableSet &exceptSet)
 {
     if (-1 != m_pTcpListenSocket)
     {
@@ -366,7 +367,7 @@ void Ocp1LiteNetwork::AddSelectables(INT32& highest,
     }
 
     OcaSocketList::iterator cIter(m_ocaSocketList.begin());
-    while(cIter != m_ocaSocketList.end())
+    while (cIter != m_ocaSocketList.end())
     {
         if (cIter->second->IsConnected())
         {
@@ -402,12 +403,11 @@ void Ocp1LiteNetwork::AddSelectables(INT32& highest,
         ++cIter;
     }
 #endif
-
 }
 
-void Ocp1LiteNetwork::HandleSelectables(const OcfLiteSelectableSet& readSet,
-                                        const OcfLiteSelectableSet& writeSet,
-                                        const OcfLiteSelectableSet& exceptSet)
+void Ocp1LiteNetwork::HandleSelectables(const OcfLiteSelectableSet &readSet,
+                                        const OcfLiteSelectableSet &writeSet,
+                                        const OcfLiteSelectableSet &exceptSet)
 {
     // Handle the controllers that want to connect via insecure link
     if ((-1 != m_pTcpListenSocket) &&
@@ -418,10 +418,10 @@ void Ocp1LiteNetwork::HandleSelectables(const OcfLiteSelectableSet& readSet,
         // First try to get a new socket connection. Keep alive timeout must be 0. The remote controller will specify
         // the keep alive timeout.
         ::OcaSessionID newSessionID(::OcaLiteCommandHandler::GetInstance().CreateSessionID());
-        ::Ocp1LiteSocketConnection* sConnection(new ::Ocp1LiteSocketConnection(*this, static_cast< ::OcaUint32>(OCA_BUFFER_SIZE)));
+        ::Ocp1LiteSocketConnection *sConnection(new ::Ocp1LiteSocketConnection(*this, static_cast<::OcaUint32>(OCA_BUFFER_SIZE)));
         if ((OCA_INVALID_SESSIONID != newSessionID) && (m_ocaSocketList.size() < OCP1_MAX_NR_CONNECTIONS))
         {
-            sConnection->SetSocketConnectionParameters(newSessionID, static_cast< ::OcaUint16>(0));
+            sConnection->SetSocketConnectionParameters(newSessionID, static_cast<::OcaUint16>(0));
 
             // Try to accept the connection
             if (Ocp1LiteSocketAccept(m_pTcpListenSocket, *(sConnection->GetSocket())))
@@ -450,7 +450,7 @@ void Ocp1LiteNetwork::HandleSelectables(const OcfLiteSelectableSet& readSet,
             }
         }
     }
-    
+
     HandleControllers(m_ocaSocketList, readSet);
 #ifdef OCA_LITE_CONTROLLER
     HandleDevices(m_ocaDeviceSocketList, readSet);
@@ -459,13 +459,13 @@ void Ocp1LiteNetwork::HandleSelectables(const OcfLiteSelectableSet& readSet,
 
 ::OcaBoolean Ocp1LiteNetwork::HasPendingMessage() const
 {
-    ::OcaBoolean result(static_cast< ::OcaBoolean>(false));
+    ::OcaBoolean result(static_cast<::OcaBoolean>(false));
     OcaSocketList::const_iterator cIter(m_ocaSocketList.begin());
-    while(cIter != m_ocaSocketList.end())
+    while (cIter != m_ocaSocketList.end())
     {
         if (cIter->second->HasPendingMessage())
         {
-            result = static_cast< ::OcaBoolean>(true);
+            result = static_cast<::OcaBoolean>(true);
             break;
         }
         ++cIter;
@@ -473,11 +473,11 @@ void Ocp1LiteNetwork::HandleSelectables(const OcfLiteSelectableSet& readSet,
     return result;
 }
 
-void Ocp1LiteNetwork::GetFirstPendingMessage(::OcaLiteMessageSessionID& messageSession, ::OcaBoolean& moreComing)
+void Ocp1LiteNetwork::GetFirstPendingMessage(::OcaLiteMessageSessionID &messageSession, ::OcaBoolean &moreComing)
 {
     messageSession.sessionID = OCA_INVALID_SESSIONID;
     messageSession.message = NULL;
-    moreComing = static_cast< ::OcaBoolean>(true);
+    moreComing = static_cast<::OcaBoolean>(true);
 
     while ((messageSession.message == NULL) && moreComing)
     {
@@ -486,7 +486,7 @@ void Ocp1LiteNetwork::GetFirstPendingMessage(::OcaLiteMessageSessionID& messageS
             ::OcaSessionID sessionId(*m_messageAvailableConnections.begin());
             static_cast<void>(m_messageAvailableConnections.erase(m_messageAvailableConnections.begin()));
 
-            ::Ocp1LiteSocketConnection* pSocketConnection(FindSocketConnection(sessionId));
+            ::Ocp1LiteSocketConnection *pSocketConnection(FindSocketConnection(sessionId));
             if (NULL != pSocketConnection)
             {
                 messageSession.message = pSocketConnection->GetFirstPendingMessage();
@@ -496,27 +496,27 @@ void Ocp1LiteNetwork::GetFirstPendingMessage(::OcaLiteMessageSessionID& messageS
                 }
             }
         }
-        else 
+        else
         {
-            moreComing = static_cast< ::OcaBoolean>(false);
+            moreComing = static_cast<::OcaBoolean>(false);
         }
     }
 }
 
-void Ocp1LiteNetwork::GetNewConnections(::OcaSessionList& sessions)
+void Ocp1LiteNetwork::GetNewConnections(::OcaSessionList &sessions)
 {
     sessions = m_newConnections;
     m_newConnections.clear();
 }
 
-void Ocp1LiteNetwork::GetConnectionsLost(::OcaSessionList& sessions)
+void Ocp1LiteNetwork::GetConnectionsLost(::OcaSessionList &sessions)
 {
     sessions = m_lostConnections;
     m_lostConnections.clear();
 }
 
 #ifdef OCA_TRACK_KEEPALIVE_RECEIVED
-void Ocp1LiteNetwork::GetReceivedKeepAlives(::OcaSessionList& sessions)
+void Ocp1LiteNetwork::GetReceivedKeepAlives(::OcaSessionList &sessions)
 {
     sessions = m_receivedKeepalives;
     m_receivedKeepalives.clear();
@@ -525,8 +525,8 @@ void Ocp1LiteNetwork::GetReceivedKeepAlives(::OcaSessionList& sessions)
 
 ::OcaLiteStatus Ocp1LiteNetwork::SendNotification(::OcaLiteNotificationDeliveryMode deliveryMode,
                                                   ::OcaSessionID sessionID,
-                                                  const ::OcaLiteNetworkAddress& networkAddress,
-                                                  const ::OcaLiteMessageNotification* message)
+                                                  const ::OcaLiteNetworkAddress &networkAddress,
+                                                  const ::OcaLiteMessageNotification *message)
 {
     ::OcaLiteStatus status(OCASTATUS_PARAMETER_ERROR);
 
@@ -541,20 +541,20 @@ void Ocp1LiteNetwork::GetReceivedKeepAlives(::OcaSessionList& sessions)
         if ((-1 != m_pUdpNotificationSendSocket) &&
             (NULL != m_pDataBuffer))
         {
-            ::Ocp1LiteNetworkAddress* ocp1NetworkAddress(::Ocp1LiteNetworkAddress::CreateFromBase(networkAddress));
+            ::Ocp1LiteNetworkAddress *ocp1NetworkAddress(::Ocp1LiteNetworkAddress::CreateFromBase(networkAddress));
 
             if (NULL != ocp1NetworkAddress)
             {
                 status = OCASTATUS_OK;
-                    
+
                 ::Ocp1LiteMessageHeader header;
                 header.WriteOcp1Parameters(message->GetMessageType(),
-                                            static_cast< ::OcaUint16>(1),
-                                            header.GetSize(m_ocp1Writer) + message->GetSize(m_ocp1Writer));
+                                           static_cast<::OcaUint16>(1),
+                                           header.GetSize(m_ocp1Writer) + message->GetSize(m_ocp1Writer));
 
-                if (header.GetMessageSize() <= static_cast< ::OcaUint32>(OCA_BUFFER_SIZE))
+                if (header.GetMessageSize() <= static_cast<::OcaUint32>(OCA_BUFFER_SIZE))
                 {
-                    ::OcaUint8* pB(m_pDataBuffer);
+                    ::OcaUint8 *pB(m_pDataBuffer);
                     m_ocp1Writer.Write(::Ocp1LiteSocketConnection::MESSAGESYNCVAL, &pB);
                     header.Marshal(&pB, m_ocp1Writer);
                     message->Marshal(&pB, m_ocp1Writer);
@@ -582,7 +582,7 @@ void Ocp1LiteNetwork::GetReceivedKeepAlives(::OcaSessionList& sessions)
 }
 
 #ifdef OCA_LITE_CONTROLLER
-::OcaLiteStatus Ocp1LiteNetwork::SendResetMessage(::OcaLiteBlobFixedLen<static_cast< ::OcaUint16>(16)> resetKey,
+::OcaLiteStatus Ocp1LiteNetwork::SendResetMessage(::OcaLiteBlobFixedLen<static_cast<::OcaUint16>(16)> resetKey,
                                                   const ::OcaLiteNetworkAddress networkAddress)
 {
     ::OcaLiteStatus status(OCASTATUS_PROCESSING_FAILED);
@@ -592,26 +592,26 @@ void Ocp1LiteNetwork::GetReceivedKeepAlives(::OcaSessionList& sessions)
         (NULL != m_pDataBuffer))
     {
 
-        ::Ocp1LiteNetworkAddress* ocp1NetworkAddress(::Ocp1LiteNetworkAddress::CreateFromBase(networkAddress));
+        ::Ocp1LiteNetworkAddress *ocp1NetworkAddress(::Ocp1LiteNetworkAddress::CreateFromBase(networkAddress));
 
         if (NULL != ocp1NetworkAddress)
         {
             // Write sentinel DEAF DADA CAFE BABE
-            ::OcaUint8* pMessage(m_pDataBuffer);
-            GetWriter().Write(static_cast< ::OcaUint16>(0xDEAF), &pMessage);
-            GetWriter().Write(static_cast< ::OcaUint16>(0xDADA), &pMessage);
-            GetWriter().Write(static_cast< ::OcaUint16>(0xCAFE), &pMessage);
-            GetWriter().Write(static_cast< ::OcaUint16>(0xBABE), &pMessage);
+            ::OcaUint8 *pMessage(m_pDataBuffer);
+            GetWriter().Write(static_cast<::OcaUint16>(0xDEAF), &pMessage);
+            GetWriter().Write(static_cast<::OcaUint16>(0xDADA), &pMessage);
+            GetWriter().Write(static_cast<::OcaUint16>(0xCAFE), &pMessage);
+            GetWriter().Write(static_cast<::OcaUint16>(0xBABE), &pMessage);
 
             // Write Key
             resetKey.Marshal(&pMessage, m_ocp1Writer);
 
             // Send message
             INT32 size(static_cast<INT32>(pMessage - m_pDataBuffer));
-            if (0 > Ocp1LiteSocketSendTo(m_pUdpNotificationSendSocket, 
-                                         m_pDataBuffer, 
-                                         size, 
-                                         ocp1NetworkAddress->GetDestHostOrIPAddress().GetString(), 
+            if (0 > Ocp1LiteSocketSendTo(m_pUdpNotificationSendSocket,
+                                         m_pDataBuffer,
+                                         size,
+                                         ocp1NetworkAddress->GetDestHostOrIPAddress().GetString(),
                                          static_cast<UINT16>(ocp1NetworkAddress->GetPort())))
             {
                 status = OCASTATUS_DEVICE_ERROR;
@@ -625,11 +625,11 @@ void Ocp1LiteNetwork::GetReceivedKeepAlives(::OcaSessionList& sessions)
 
     return status;
 }
-#endif //OCA_LITE_CONTROLLER
+#endif // OCA_LITE_CONTROLLER
 
-::OcaLiteMessageGeneral* Ocp1LiteNetwork::RetrieveMessage(::OcaLiteHeader::OcaLiteMessageType msgType)
+::OcaLiteMessageGeneral *Ocp1LiteNetwork::RetrieveMessage(::OcaLiteHeader::OcaLiteMessageType msgType)
 {
-    ::OcaLiteMessageGeneral* result(NULL);
+    ::OcaLiteMessageGeneral *result(NULL);
 
     switch (msgType)
     {
@@ -703,7 +703,7 @@ void Ocp1LiteNetwork::GetReceivedKeepAlives(::OcaSessionList& sessions)
     return result;
 }
 
-void Ocp1LiteNetwork::ReturnMessage(::OcaLiteMessageGeneral* msg)
+void Ocp1LiteNetwork::ReturnMessage(::OcaLiteMessageGeneral *msg)
 {
 #ifdef _DEBUG
     if (NULL != msg)
@@ -712,55 +712,55 @@ void Ocp1LiteNetwork::ReturnMessage(::OcaLiteMessageGeneral* msg)
         {
         case ::OcaLiteHeader::OCA_MSG_CMD:
         case ::OcaLiteHeader::OCA_MSG_CMD_RRQ:
+        {
+            if (m_bMsgCmd)
             {
-                if (m_bMsgCmd)
-                {
-                    m_bMsgCmd = false;
-                }
-                else
-                {
-                    OCA_LOG_ERROR("Returning incorrect message. Command message not in use");
-                }
+                m_bMsgCmd = false;
             }
-            break;
+            else
+            {
+                OCA_LOG_ERROR("Returning incorrect message. Command message not in use");
+            }
+        }
+        break;
         case ::OcaLiteHeader::OCA_MSG_KEEP_ALIVE:
+        {
+            if (m_bMsgKeepAlive)
             {
-                if (m_bMsgKeepAlive)
-                {
-                    m_bMsgKeepAlive = false;
-                }
-                else
-                {
-                    OCA_LOG_ERROR("Returning incorrect message. Keepalive message not in use");
-                }
+                m_bMsgKeepAlive = false;
             }
-            break;
+            else
+            {
+                OCA_LOG_ERROR("Returning incorrect message. Keepalive message not in use");
+            }
+        }
+        break;
         case ::OcaLiteHeader::OCA_MSG_NTF:
+        {
+            if (m_bMsgNtf)
             {
-                if (m_bMsgNtf)
-                {
-                    m_bMsgNtf = false;
-                }
-                else
-                {
-                    OCA_LOG_ERROR("Returning incorrect message. Notification message not in use");
-                }
+                m_bMsgNtf = false;
             }
-            break;
+            else
+            {
+                OCA_LOG_ERROR("Returning incorrect message. Notification message not in use");
+            }
+        }
+        break;
         case ::OcaLiteHeader::OCA_MSG_RSP:
+        {
+            if (m_bMsgRsp)
             {
-                if (m_bMsgRsp)
-                {
-                    m_bMsgRsp = false;
-                }
-                else
-                {
-                    OCA_LOG_ERROR("Returning incorrect message. Response message not in use");
-                }
+                m_bMsgRsp = false;
             }
-            break;
+            else
+            {
+                OCA_LOG_ERROR("Returning incorrect message. Response message not in use");
+            }
+        }
+        break;
         default:
-            assert(false);  // Should not happen
+            assert(false); // Should not happen
             break;
         }
     }
@@ -768,40 +768,54 @@ void Ocp1LiteNetwork::ReturnMessage(::OcaLiteMessageGeneral* msg)
 }
 
 #ifdef OCA_LITE_CONTROLLER
-OcaSessionID Ocp1LiteNetwork::Connect(const ::OcaLiteConnectParameters& connectParameters)
+OcaSessionID Ocp1LiteNetwork::Connect(const ::OcaLiteConnectParameters &connectParameters)
 {
+    OCA_LOG_INFO("=== Ocp1LiteNetwork::Connect called ===");
     ::OcaSessionID sessionId(OCA_INVALID_SESSIONID);
 
-    const ::Ocp1LiteConnectParameters* ocp1ConnectParameters(static_cast<const ::Ocp1LiteConnectParameters*>(&connectParameters));
+    const ::Ocp1LiteConnectParameters *ocp1ConnectParameters(static_cast<const ::Ocp1LiteConnectParameters *>(&connectParameters));
     if (NULL != ocp1ConnectParameters)
     {
+        OCA_LOG_INFO("✓ Cast to Ocp1LiteConnectParameters succeeded");
         ::OcaSessionID newSessionID(::OcaLiteCommandHandler::GetInstance().CreateSessionID());
-        ::Ocp1LiteSocketConnection* sConnection(new ::Ocp1LiteSocketConnection(*this, static_cast< ::OcaUint32>(OCA_BUFFER_SIZE)));
-        sConnection->SetSocketConnectionParameters(newSessionID, 
-                                                   ocp1ConnectParameters->GetKeepAliveTimeout(), 
+        OCA_LOG_INFO_PARAMS("✓ Created new session ID: %u", newSessionID);
+        
+        ::Ocp1LiteSocketConnection *sConnection(new ::Ocp1LiteSocketConnection(*this, static_cast<::OcaUint32>(OCA_BUFFER_SIZE)));
+        sConnection->SetSocketConnectionParameters(newSessionID,
+                                                   ocp1ConnectParameters->GetKeepAliveTimeout(),
                                                    ocp1ConnectParameters->GetbKeepAliveTimeoutInMs());
+
+        OCA_LOG_INFO_PARAMS("✓ About to call Ocp1LiteSocketConnect with %s:%d",
+                             ocp1ConnectParameters->GetHostOrIp().c_str(),
+                             ocp1ConnectParameters->GetPort());
 
         if (Ocp1LiteSocketConnect(ocp1ConnectParameters->GetHostOrIp().c_str(),
                                   ocp1ConnectParameters->GetPort(),
                                   *sConnection->GetSocket()))
         {
+            OCA_LOG_INFO("✓ Ocp1LiteSocketConnect succeeded!");
             sessionId = newSessionID;
             // Run, this forces a keep alive
             ::OcaBoolean bReceivedKeepAlive;
-            static_cast<void>(sConnection->Run(false, static_cast< ::OcaUint32>(OCA_BUFFER_SIZE), m_pDataBuffer, bReceivedKeepAlive));
+            static_cast<void>(sConnection->Run(false, static_cast<::OcaUint32>(OCA_BUFFER_SIZE), m_pDataBuffer, bReceivedKeepAlive));
             m_ocaDeviceSocketList[newSessionID] = sConnection;
             m_newConnections.push_back(newSessionID);
+            OCA_LOG_INFO_PARAMS("✓ Connection established successfully! Session ID: %u", sessionId);
         }
         else
         {
             // Connect failed, so delete the socket connection.
             delete sConnection;
 
-            OCA_LOG_WARNING("Connecting failed");
-
+            OCA_LOG_ERROR("✗ Ocp1LiteSocketConnect failed!");
         }
     }
+    else
+    {
+        OCA_LOG_ERROR("✗ Failed to cast to Ocp1LiteConnectParameters");
+    }
 
+    OCA_LOG_INFO_PARAMS("=== Ocp1LiteNetwork::Connect returning session ID: %u ===", sessionId);
     return sessionId;
 }
 
@@ -824,22 +838,22 @@ bool Ocp1LiteNetwork::Disconnect(::OcaSessionID sessionID)
 }
 #endif
 
-::OcaLiteStatus Ocp1LiteNetwork::SendOcaMessage(::OcaSessionID sessionID, const ::OcaLiteMessageGeneral& ocaMessage)
+::OcaLiteStatus Ocp1LiteNetwork::SendOcaMessage(::OcaSessionID sessionID, const ::OcaLiteMessageGeneral &ocaMessage)
 {
     ::OcaLiteStatus result(OCASTATUS_DEVICE_ERROR);
 
-    ::Ocp1LiteSocketConnection* socketConnection(FindSocketConnection(sessionID));
+    ::Ocp1LiteSocketConnection *socketConnection(FindSocketConnection(sessionID));
 
     if (NULL != socketConnection)
     {
-        result = socketConnection->SendOcaMessage(&ocaMessage, m_ocp1Writer, static_cast< ::OcaUint32>(OCA_BUFFER_SIZE), m_pDataBuffer);
+        result = socketConnection->SendOcaMessage(&ocaMessage, m_ocp1Writer, static_cast<::OcaUint32>(OCA_BUFFER_SIZE), m_pDataBuffer);
     }
     return result;
 }
 
-::Ocp1LiteSocketConnection* Ocp1LiteNetwork::FindSocketConnection(::OcaSessionID sessionID)
+::Ocp1LiteSocketConnection *Ocp1LiteNetwork::FindSocketConnection(::OcaSessionID sessionID)
 {
-    ::Ocp1LiteSocketConnection* socketConnection(NULL);
+    ::Ocp1LiteSocketConnection *socketConnection(NULL);
 
     OcaSocketList::iterator cIter(m_ocaSocketList.find(sessionID));
     if (cIter != m_ocaSocketList.end())
@@ -860,13 +874,13 @@ bool Ocp1LiteNetwork::Disconnect(::OcaSessionID sessionID)
     return socketConnection;
 }
 
-::OcaLiteStatus Ocp1LiteNetwork::SetIDAdvertisedAndTxtRecords(const::Ocp1LiteNetworkNodeID & idAdvertised, const std::vector<std::string>& txtRecords)
+::OcaLiteStatus Ocp1LiteNetwork::SetIDAdvertisedAndTxtRecords(const ::Ocp1LiteNetworkNodeID &idAdvertised, const std::vector<std::string> &txtRecords)
 {
     m_txtRecordList = txtRecords;
     return SetIdAdvertised(idAdvertised);
 }
 
-::OcaLiteStatus Ocp1LiteNetwork::GetSystemInterfacesValue(::OcaLiteList< ::OcaLiteNetworkSystemInterfaceID>& interfaces) const
+::OcaLiteStatus Ocp1LiteNetwork::GetSystemInterfacesValue(::OcaLiteList<::OcaLiteNetworkSystemInterfaceID> &interfaces) const
 {
     interfaces.Clear();
     interfaces.Add(m_ocp1Interface);
@@ -874,81 +888,81 @@ bool Ocp1LiteNetwork::Disconnect(::OcaSessionID sessionID)
     return OCASTATUS_OK;
 }
 
-::OcaLiteStatus Ocp1LiteNetwork::GetIdAdvertisedValue(::OcaLiteNetworkNodeID& nodeId) const
+::OcaLiteStatus Ocp1LiteNetwork::GetIdAdvertisedValue(::OcaLiteNetworkNodeID &nodeId) const
 {
     ::OcaLiteStatus rc(OCASTATUS_OK);
     nodeId = ::Ocp1LiteNetworkNodeID(m_nodeID);
     return rc;
 }
 
-::OcaLiteStatus Ocp1LiteNetwork::SetIdAdvertisedValue(const ::OcaLiteNetworkNodeID& nodeId)
+::OcaLiteStatus Ocp1LiteNetwork::SetIdAdvertisedValue(const ::OcaLiteNetworkNodeID &nodeId)
 {
     ::OcaLiteStatus result(OCASTATUS_PARAMETER_ERROR);
-    ::Ocp1LiteNetworkNodeID* ocp1LiteNetworkNodeID(::Ocp1LiteNetworkNodeID::CreateFromBase(nodeId));
+    ::Ocp1LiteNetworkNodeID *ocp1LiteNetworkNodeID(::Ocp1LiteNetworkNodeID::CreateFromBase(nodeId));
     if (ocp1LiteNetworkNodeID != NULL)
     {
         m_nodeID = ocp1LiteNetworkNodeID->GetStringValue();
 
         // Reregister with the new node id
-         Ocp1LiteServiceDispose();
-         
-         result = RegisterRegistrationServices();
-         if (OCASTATUS_OK != result)
-         {
+        Ocp1LiteServiceDispose();
+
+        result = RegisterRegistrationServices();
+        if (OCASTATUS_OK != result)
+        {
             Ocp1LiteServiceDispose();
-         }
+        }
         delete ocp1LiteNetworkNodeID;
     }
 
     return result;
 }
 
-void Ocp1LiteNetwork::HandleControllers(OcaSocketList& controllerList, const OcfLiteSelectableSet& readSet)
+void Ocp1LiteNetwork::HandleControllers(OcaSocketList &controllerList, const OcfLiteSelectableSet &readSet)
 {
     OcaSocketList::iterator cIter(controllerList.begin());
     while (cIter != controllerList.end())
     {
         ::OcaSessionID sessionID(cIter->first);
-        ::Ocp1LiteSocketConnection* pSocketConnection(cIter->second);
-        ::OcaBoolean dataAvailable(static_cast< ::OcaBoolean>((FD_ISSET(*(pSocketConnection->GetSocket()), &readSet)) != 0) ? true : false);
+        ::Ocp1LiteSocketConnection *pSocketConnection(cIter->second);
+        ::OcaBoolean dataAvailable(static_cast<::OcaBoolean>((FD_ISSET(*(pSocketConnection->GetSocket()), &readSet)) != 0) ? true : false);
         if (pSocketConnection->IsConnected())
         {
             ::OcaBoolean bReceivedKeepAlive;
-            switch (pSocketConnection->Run(dataAvailable, static_cast< ::OcaUint32>(OCA_BUFFER_SIZE), m_pDataBuffer, bReceivedKeepAlive))
+            switch (pSocketConnection->Run(dataAvailable, static_cast<::OcaUint32>(OCA_BUFFER_SIZE), m_pDataBuffer, bReceivedKeepAlive))
             {
-                case ::Ocp1LiteSocketConnection::NO_MESSAGE_RECEIVED:
-                    ++cIter;
-                    break;
-                case ::Ocp1LiteSocketConnection::MESSAGE_RECEIVED:
-                    {
-                        // One or more messages were received, will be read-out later
-                        m_messageAvailableConnections.push_back(sessionID);
-                        ++cIter;
-                    }
-                    break;
-                case ::Ocp1LiteSocketConnection::CONNECTION_CORRUPT:
-                case ::Ocp1LiteSocketConnection::CONNECTION_LOST:
-                    {
-                        // Add session id to list of lost connections
-                        if (m_notifiedLostConnections.end() == std::find(m_notifiedLostConnections.begin(), m_notifiedLostConnections.end(), sessionID))
-                        {
-                            assert(m_lostConnections.end() == std::find(m_lostConnections.begin(), m_lostConnections.end(), sessionID));
-                            m_lostConnections.push_back(sessionID);
-                        }
+            case ::Ocp1LiteSocketConnection::NO_MESSAGE_RECEIVED:
+                ++cIter;
+                break;
+            case ::Ocp1LiteSocketConnection::MESSAGE_RECEIVED:
+            {
+                // One or more messages were received, will be read-out later
+                m_messageAvailableConnections.push_back(sessionID);
+                ++cIter;
+            }
+            break;
+            case ::Ocp1LiteSocketConnection::CONNECTION_CORRUPT:
+            case ::Ocp1LiteSocketConnection::CONNECTION_LOST:
+            {
+                // Add session id to list of lost connections
+                if (m_notifiedLostConnections.end() == std::find(m_notifiedLostConnections.begin(), m_notifiedLostConnections.end(), sessionID))
+                {
+                    assert(m_lostConnections.end() == std::find(m_lostConnections.begin(), m_lostConnections.end(), sessionID));
+                    m_lostConnections.push_back(sessionID);
+                }
 
-                        // Shutdown the socket connection
-                        pSocketConnection->Shutdown();
+                // Shutdown the socket connection
+                pSocketConnection->Shutdown();
 
-                        delete pSocketConnection;
-                        OcaSocketList::iterator iterCopy(cIter);
-                        ++cIter;
-                        static_cast<void>(controllerList.erase(iterCopy));
-                    }
-                    break;
-                default:
-                    OCA_LOG_ERROR_PARAMS("Unknown return from Ocp1LiteSocketConnection::Run for controller %i", sessionID);
-                    assert(false);
-                    break;
+                delete pSocketConnection;
+                OcaSocketList::iterator iterCopy(cIter);
+                ++cIter;
+                static_cast<void>(controllerList.erase(iterCopy));
+            }
+            break;
+            default:
+                OCA_LOG_ERROR_PARAMS("Unknown return from Ocp1LiteSocketConnection::Run for controller %i", sessionID);
+                assert(false);
+                break;
             }
 
 #ifdef OCA_TRACK_KEEPALIVE_RECEIVED
@@ -960,7 +974,7 @@ void Ocp1LiteNetwork::HandleControllers(OcaSocketList& controllerList, const Ocf
                     m_receivedKeepalives.push_back(sessionID);
                 }
             }
-#endif //OCA_TRACK_KEEPALIVE_RECEIVED
+#endif // OCA_TRACK_KEEPALIVE_RECEIVED
         }
         else
         {
@@ -983,18 +997,18 @@ void Ocp1LiteNetwork::HandleControllers(OcaSocketList& controllerList, const Ocf
 }
 
 #ifdef OCA_LITE_CONTROLLER
-void Ocp1LiteNetwork::HandleDevices(OcaSocketList& deviceList, const OcfLiteSelectableSet& readSet)
+void Ocp1LiteNetwork::HandleDevices(OcaSocketList &deviceList, const OcfLiteSelectableSet &readSet)
 {
     OcaSocketList::iterator cIter(deviceList.begin());
     while (cIter != deviceList.end())
     {
         ::OcaSessionID sessionID(cIter->first);
-        ::Ocp1LiteSocketConnection* pSocketConnection(cIter->second);
-        ::OcaBoolean dataAvailable(static_cast< ::OcaBoolean>((FD_ISSET(*(pSocketConnection->GetSocket()), &readSet)) != 0) ? true : false);
+        ::Ocp1LiteSocketConnection *pSocketConnection(cIter->second);
+        ::OcaBoolean dataAvailable(static_cast<::OcaBoolean>((FD_ISSET(*(pSocketConnection->GetSocket()), &readSet)) != 0) ? true : false);
         if (pSocketConnection->IsConnected())
         {
             ::OcaBoolean bReceivedKeepAlive;
-            switch (pSocketConnection->Run(dataAvailable, static_cast< ::OcaUint32>(OCA_BUFFER_SIZE), m_pDataBuffer, bReceivedKeepAlive))
+            switch (pSocketConnection->Run(dataAvailable, static_cast<::OcaUint32>(OCA_BUFFER_SIZE), m_pDataBuffer, bReceivedKeepAlive))
             {
             case ::Ocp1LiteSocketConnection::NO_MESSAGE_RECEIVED:
                 ++cIter;
@@ -1039,7 +1053,7 @@ void Ocp1LiteNetwork::HandleDevices(OcaSocketList& deviceList, const OcfLiteSele
                     m_receivedKeepalives.push_back(sessionID);
                 }
             }
-#endif //OCA_TRACK_KEEPALIVE_RECEIVED
+#endif // OCA_TRACK_KEEPALIVE_RECEIVED
         }
         else
         {
@@ -1062,7 +1076,7 @@ void Ocp1LiteNetwork::HandleDevices(OcaSocketList& deviceList, const OcfLiteSele
 }
 #endif
 
-::OcaLiteStatus Ocp1LiteNetwork::FillTxtRecords(std::vector<std::string>& txtRecords) const
+::OcaLiteStatus Ocp1LiteNetwork::FillTxtRecords(std::vector<std::string> &txtRecords) const
 {
     // Make sure the data is empty
     txtRecords.clear();
@@ -1071,7 +1085,7 @@ void Ocp1LiteNetwork::HandleDevices(OcaSocketList& deviceList, const OcfLiteSele
     txtRecords.reserve(2 + m_txtRecordList.size());
 
     // Get the protocol version
-    ::OcaUint16 ocaVersion(static_cast< ::OcaUint16>(0));
+    ::OcaUint16 ocaVersion(static_cast<::OcaUint16>(0));
     ::OcaLiteStatus rc(::OcaLiteDeviceManager::GetInstance().GetOcaVersion(ocaVersion));
 
     if (OCASTATUS_OK == rc)
@@ -1098,13 +1112,12 @@ void Ocp1LiteNetwork::HandleDevices(OcaSocketList& deviceList, const OcfLiteSele
                                      INSECURE_REGISTRATION_TYPE,
                                      static_cast<UINT16>(m_requestedInsecurePort),
                                      txtRecords,
-                                     m_domainName.GetLength() > static_cast< ::OcaUint16>(0) ?
-                                         m_domainName.GetString() : m_ocp1Interface.GetDnsDomainName().GetString()))
+                                     m_domainName.GetLength() > static_cast<::OcaUint16>(0) ? m_domainName.GetString() : m_ocp1Interface.GetDnsDomainName().GetString()))
         {
             OCA_LOG_ERROR("Failed to register service");
 
             Ocp1LiteServiceDispose();
-            
+
             rc = OCASTATUS_PROCESSING_FAILED;
         }
     }

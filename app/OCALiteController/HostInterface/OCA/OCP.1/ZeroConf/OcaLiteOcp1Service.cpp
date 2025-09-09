@@ -14,7 +14,7 @@
 #include <HostInterfaceLite/OCA/OCF/OcfLiteHostInterface.h>
 
 // Platform-specific DNS-SD includes
-#ifdef __APPLE__
+#if defined(__APPLE__) || defined(FUSION)
 #include <dns_sd.h>
 #else
 #include <avahi-compat-libdns_sd/dns_sd.h>

@@ -36,3 +36,35 @@ UINT32 OcfLiteTimerGetTimerTickCount(void)
     return (UINT32)((start.tv_sec) * 1000 + start.tv_usec/1000.0);
 #endif
 }
+
+// Platform-specific implementation for getting current time
+bool OcfLiteTimerGetTimeNow(UINT64& seconds, UINT32& nanoSeconds)
+{
+#ifdef _WIN32
+    FILETIME ft;
+    GetSystemTimeAsFileTime(&ft);
+    
+    // Convert FILETIME to Unix timestamp
+    ULARGE_INTEGER ull;
+    ull.LowPart = ft.dwLowDateTime;
+    ull.HighPart = ft.dwHighDateTime;
+    
+    // FILETIME is in 100ns intervals since January 1, 1601
+    // Unix timestamp is seconds since January 1, 1970
+    // The difference is 11644473600 seconds
+    UINT64 unixTime = (ull.QuadPart / 10000000ULL) - 11644473600ULL;
+    seconds = unixTime;
+    nanoSeconds = (UINT32)((ull.QuadPart % 10000000ULL) * 100);
+    
+    return true;
+#else
+    struct timeval tv;
+    if (gettimeofday(&tv, NULL) == 0)
+    {
+        seconds = (UINT64)tv.tv_sec;
+        nanoSeconds = (UINT32)(tv.tv_usec * 1000); // Convert microseconds to nanoseconds
+        return true;
+    }
+    return false;
+#endif
+}
