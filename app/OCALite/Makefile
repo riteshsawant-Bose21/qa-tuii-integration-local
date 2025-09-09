@@ -1,22 +1,30 @@
 # OCALite Device Makefile
-CXX := g++
 BUILD_DIR := build
 
 # Detect platform for DNS-SD support
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Darwin)
+    CXX := g++
     # macOS: Use native DNS-SD framework
     PKG_CFLAGS :=
+    PKG_CDEFS  :=
     PKG_LIBS :=
     LDFLAGS :=
+else ifeq ($(ARCH),arm64)
+    PKG_LIBS   := -L ${SDK_DIR}/sysroots/cortexa53-crypto-poky-linux/usr/lib
+    PKG_CFLAGS := -I ${SDK_DIR}/sysroots/cortexa53-crypto-poky-linux/usr/include
+    PKG_CDEFS  := -DFUSION
+    LDFLAGS    := -ldns_sd
 else
-    # Linux: Use Avahi compatibility layer
-    PKG_CFLAGS := $(shell pkg-config --cflags avahi-compat-libdns_sd 2>/dev/null || echo "")
-    PKG_LIBS := $(shell pkg-config --libs avahi-compat-libdns_sd 2>/dev/null || echo "-lavahi-compat-libdns_sd")
-    LDFLAGS := 
+    CXX=g++
+    PKG_CFLAGS :=
+    PKG_LIBS :=
+    PKG_CDEFS  :=
+    LDFLAGS := -ldns_sd
 endif
 
 CXXFLAGS := -Wall -Wextra -std=c++11 $(PKG_CFLAGS) \
+	    $(PKG_CDEFS) \
 	    -DOCA_RUN \
     -I../../common \
     -I../../common/HostInterfaceLite \

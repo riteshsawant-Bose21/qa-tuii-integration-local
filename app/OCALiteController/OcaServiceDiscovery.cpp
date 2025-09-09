@@ -14,12 +14,6 @@
 #include <sys/select.h>
 #include <unistd.h>
 
-#ifdef __APPLE__
-#include <dns_sd.h>
-#else
-#include <avahi-compat-libdns_sd/dns_sd.h>
-#endif
-
 // ---- Include local include files ----
 #include "OcaServiceDiscovery.h"
 #include <HostInterfaceLite/OCA/OCF/OcfLiteHostInterface.h>
