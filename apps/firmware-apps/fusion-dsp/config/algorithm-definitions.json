@@ -1135,6 +1135,16 @@
             ],
             "telemetry": [
                 {
+                    "name": "in_meter",
+                    "dimensions": ["out"],
+                    "value_type": "float",
+                    "default_value": -200.0,
+                    "minimum_value": -200.0,
+                    "maximum_value": 24.0,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
+                },
+                {
                     "name": "out_meter",
                     "dimensions": ["out"],
                     "value_type": "float",
@@ -1483,7 +1493,7 @@
                     "value_type": "string",
                     "dimensions": ["bands"],
                     "default_value": "peq",
-                    "allowed_values": ["peq", "high_shelf", "low_shelf", "hpf", "lpf", "notch"]
+                    "allowed_values": ["peq", "high_shelf", "low_shelf", "high_pass", "low_pass", "notch"]
                 },
                 {
                     "name": "frequency",
@@ -1527,6 +1537,12 @@
                     "name": "bypass",
                     "value_type": "bool",
                     "default_value": false
+                },
+                {
+                    "name": "type",
+                    "value_type": "string",
+                    "default_value": "peq",
+                    "allowed_values": ["peq", "high_shelf", "low_shelf", "hpf", "lpf", "notch"]
                 }
             ],
             "telemetry": [
