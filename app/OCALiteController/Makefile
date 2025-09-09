@@ -51,7 +51,7 @@ TARGET := ocalitecontroller
 all: $(TARGET)
 
 $(TARGET): $(ALL_OBJECTS)
-	$(CXX) $(ALL_OBJECTS) $(PKG_LIBS) -o $@ -lpthread -lc++ $(LDFLAGS)
+	$(CXX) $(ALL_OBJECTS) $(PKG_LIBS) -o $@ -lpthread -lc $(LDFLAGS)
 
 # App source files
 $(BUILD_DIR)/%.o: %.cpp
