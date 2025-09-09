@@ -1,26 +1,33 @@
-CXX := g++
-CXXFLAGS := -Wall -Wextra -std=c++11 \
-    -I./common/HostInterfaceLite \
-    -I./common/OCALite \
-    -I./common/OCALite/OCC \
-    -I./common/OCALite/OCF \
-    -I./common/OCALite/OCP.1 \
-    -I./common
+# OCA Lite Project Root Makefile
 
-# Directories
-COMMON_DIR := common
-APP_DIR := app
+.PHONY: all device controller clean clean-device clean-controller help
 
-.PHONY: all clean OCALite OCALiteController
+help:
+	@echo "OCA Lite Build System"
+	@echo "===================="
+	@echo "Available targets:"
+	@echo "  device     - Build OCA device application"
+	@echo "  controller - Build OCA controller application"
+	@echo "  all        - Build both device and controller"
+	@echo "  clean      - Clean all build artifacts"
+	@echo "  help       - Show this help message"
 
-all: OCALite OCALiteController
+all: device controller
 
-OCALite:
-	$(MAKE) -C $(APP_DIR)/OCALite
+device:
+	@echo "Building OCA Device..."
+	$(MAKE) -C app/OCALite
 
-OCALiteController:
-	$(MAKE) -C $(APP_DIR)/OCALiteController
+controller:
+	@echo "Building OCA Controller..."
+	$(MAKE) -C app/OCALiteController
 
-clean:
-	$(MAKE) -C $(APP_DIR)/OCALite clean
-	$(MAKE) -C $(APP_DIR)/OCALiteController clean
+clean: clean-device clean-controller
+
+clean-device:
+	@echo "Cleaning OCA Device..."
+	$(MAKE) -C app/OCALite clean
+
+clean-controller:
+	@echo "Cleaning OCA Controller..."
+	$(MAKE) -C app/OCALiteController clean
