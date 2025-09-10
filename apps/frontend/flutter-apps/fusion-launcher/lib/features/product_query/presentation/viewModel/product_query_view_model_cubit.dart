@@ -40,6 +40,9 @@ class ProductQueryCubit extends Cubit<ProductQueryState> {
   }
 
   List<ProductQueryModel> _getFilteredProducts() {
+    print(
+      "all states: ${state.selectedProductType}, ${state.selectedProductTypes}, ${state.selectedMountTypes}, ${state.selectedVenueTypes}, ${state.selectedColors}, ${state.selectedCoverages}, ${state.selectedImpedances}",
+    );
     List<ProductQueryModel> products = ProductAPI.getAllProducts();
 
     if (state.selectedProductType != null) {
@@ -62,7 +65,7 @@ class ProductQueryCubit extends Cubit<ProductQueryState> {
     }
 
     if (state.selectedColors.isNotEmpty) {
-      // implement color filter once available
+      // code for filtering by colors if applicable
     }
 
     return products;
