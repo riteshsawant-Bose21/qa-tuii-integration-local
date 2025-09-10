@@ -347,17 +347,14 @@ jobs:
           # token: ${{ secrets.TARGET_REPO_TOKEN }}
           ref: devops/trigger-yocto-build  # or whichever branch you're committing to
           token: ${{ secrets.META_FUSION_REPO_TOKEN }}
-          path: meta-fusion
           fetch-depth: 0  # Fetch all history for accurate commits
           
       - name: Make changes in target repo
         run: |
-          cd fusion-monorepo/meta-fusion
           echo "Build successful on $(date)" >> build-status.txt
           git add build-status.txt
           git commit -m "CI: Build success from Fusion monorepo" || echo "No changes to commit"
 
       - name: Push commit to target repo
         run: |
-          cd fusion-monorepo/meta-fusion
           git push origin HEAD
