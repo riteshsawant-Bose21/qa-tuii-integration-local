@@ -31,6 +31,8 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
   late TabController _tabController;
   StreamSubscription<int>? subscription;
   late TextEditingController _projectNameController;
+  final FocusNode _projectNameFocusNode = FocusNode();
+
   final List<Widget> _tabs = const <Widget>[
     Tab(text: 'Building'),
     Tab(text: 'Schematics'),
@@ -83,9 +85,10 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
               width: 50,
               height: 50,
               child: IconButton(
-                icon: const Icon(
+                icon: Icon(
                   Icons.arrow_back_ios,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.white,
+                  size: 20,
                 ),
                 onPressed: () {
                   serviceLocator<ProjectViewModel>().closeProject();
@@ -95,43 +98,42 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
               ),
             ),
           ), // List icon
-
-          title: IntrinsicWidth(
-            child: TextField(
-              controller: _projectNameController,
-              textAlign: TextAlign.start,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.normal,
-              ),
-              decoration: const InputDecoration(
-                border: InputBorder.none,
-                isDense: true,
-                contentPadding: EdgeInsets.zero,
-                hintText: 'Project Name',
-                suffixIcon: Icon(
-                  Icons.edit,
-                  size: 16,
-                  color: Colors.grey,
-                ),
-                suffixIconConstraints: BoxConstraints(
-                  minWidth: 0,
-                  minHeight: 0,
-                ),
-              ),
-              onSubmitted: (String value) {
-                serviceLocator<ProjectViewModel>().setProjectName(value.trim());
-              },
-            ),
-          ),
-
+          // title: IntrinsicWidth(
+          //   child: TextField(
+          //     controller: _projectNameController,
+          //     textAlign: TextAlign.start,
+          //     style: const TextStyle(
+          //       color: Colors.white,
+          //       fontSize: 20,
+          //       fontWeight: FontWeight.normal,
+          //     ),
+          //     decoration: const InputDecoration(
+          //       border: InputBorder.none,
+          //       isDense: true,
+          //       contentPadding: EdgeInsets.zero,
+          //       hintText: 'Project Name',
+          //       suffixIcon: Icon(
+          //         Icons.edit,
+          //         size: 16,
+          //         color: Colors.grey,
+          //       ),
+          //       suffixIconConstraints: BoxConstraints(
+          //         minWidth: 0,
+          //         minHeight: 0,
+          //       ),
+          //     ),
+          //     onSubmitted: (String value) {
+          //       serviceLocator<ProjectViewModel>().setProjectName(value.trim());
+          //     },
+          //   ),
+          // ),
           actions: <Widget>[
             const FusionProfileImage(
               assetPath: "assets/images/fusion_default_icon.png",
               size: 24,
             ),
           ],
+          title: const SizedBox(),
         ),
         body: Column(
           children: <Widget>[
@@ -280,7 +282,7 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                     dockItemList: <DockItemConfig>[
                       DockItemConfig(
                         id: "1",
-                        title: "Building Plan",
+                        title: "BUILDING PLAN",
                         side: "left",
                         alowUndock: false,
                         isCollapsibleSection: false,
@@ -288,7 +290,7 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                       ),
                       DockItemConfig(
                         id: "2",
-                        title: "Coverage",
+                        title: "COVERAGE",
                         side: "left",
                         alowUndock: false,
                         initiallyExpanded: true,
@@ -296,27 +298,36 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                         dockItemWidget:
                             () => Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                              child: const Text("Coverage Content"),
+                              child: const Text(
+                                "Coverage Content",
+                                style: TextStyle(fontSize: 11),
+                              ),
                             ),
                       ),
                       DockItemConfig(
                         id: "3",
-                        title: "Devices",
+                        title: "DEVICES",
                         side: "left",
                         dockItemWidget:
                             () => Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                              child: const Text("Devices Content"),
+                              child: const Text(
+                                "Devices Content",
+                                style: TextStyle(fontSize: 11),
+                              ),
                             ),
                       ),
                       DockItemConfig(
                         id: "4",
-                        title: "Tree View",
+                        title: "TREE VIEW",
                         side: "left",
                         dockItemWidget:
                             () => Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                              child: const Text("Tree View Content"),
+                              child: const Text(
+                                "Tree View Content",
+                                style: TextStyle(fontSize: 11),
+                              ),
                             ),
                       ),
                       DockItemConfig(
@@ -326,7 +337,10 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                         dockItemWidget:
                             () => Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                              child: const Text("Attributes Content"),
+                              child: const Text(
+                                "Attributes Content",
+                                style: TextStyle(fontSize: 11),
+                              ),
                             ),
                       ),
                       DockItemConfig(
@@ -336,7 +350,10 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                         dockItemWidget:
                             () => Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                              child: const Text("Cost Calculator Content"),
+                              child: const Text(
+                                "Cost Calculator Content",
+                                style: TextStyle(fontSize: 11),
+                              ),
                             ),
                       ),
                       DockItemConfig(id: "7", title: "PRODUCT QUERY", side: "right", dockItemWidget: () => const ProductQueryView()),
@@ -362,7 +379,7 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                     dockItemList: <DockItemConfig>[
                       DockItemConfig(
                         id: "9",
-                        title: "Cost Calculator",
+                        title: "COST CALCULATOR",
                         side: "right",
                         dockItemWidget:
                             () => Container(
@@ -408,43 +425,171 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
 
   /// Project Name Section
   Widget _projectNameSection() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      width: 237,
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.white,
-        // border right
-        border: Border(
-          right: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
+    return InkWell(
+      onTap: _showEditProjectNameDropdown,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        width: 237,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.white,
+          // border right
+          border: Border(
+            right: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
+          ),
+        ),
+
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+                  builder: (BuildContext context, ProjectViewModelState state) {
+                    return FusionAppText(
+                      text: serviceLocator<ProjectViewModel>().projectName,
+                      textOverflow: TextOverflow.ellipsis,
+                      maxLine: 1,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w900),
+                    );
+                  },
+                ),
+                const SizedBox(height: 2),
+                FusionAppText(
+                  text: "File_Version",
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10, color: Theme.of(context).colorScheme.greyDark),
+                ),
+              ],
+            ),
+
+            const Icon(
+              Icons.arrow_drop_down_outlined,
+              size: 18,
+            ),
+          ],
         ),
       ),
+    );
+  }
 
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Column(
-            mainAxisAlignment: MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              FusionAppText(
-                text: "Project Name",
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 2),
-              FusionAppText(
-                text: "File_Version",
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10, color: Theme.of(context).colorScheme.greyDark),
-              ),
-            ],
-          ),
-
-          const Icon(
-            Icons.arrow_drop_down_outlined,
-            size: 18,
-          ),
-        ],
+  void _showEditProjectNameDropdown() {
+    final RenderBox button = context.findRenderObject() as RenderBox;
+    final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+    final RelativeRect position = RelativeRect.fromRect(
+      Rect.fromPoints(
+        button.localToGlobal(const Offset(-1, 0), ancestor: overlay),
+        button.localToGlobal(button.size.bottomRight(Offset.zero), ancestor: overlay),
       ),
+      Offset.zero & overlay.size,
+    );
+
+    showMenu<String>(
+      context: context,
+      position: position,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(6),
+        side: BorderSide(color: Theme.of(context).colorScheme.dividerColor),
+      ),
+      color: Theme.of(context).colorScheme.white,
+      elevation: 1,
+      constraints: const BoxConstraints(minWidth: 250, maxWidth: 300),
+      items: <PopupMenuEntry<String>>[
+        PopupMenuItem<String>(
+          enabled: false,
+          padding: EdgeInsets.zero,
+          child: StatefulBuilder(
+            builder: (BuildContext context, StateSetter setMenuState) {
+              /// Auto-focus the text field when the menu opens
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                _projectNameFocusNode.requestFocus();
+              });
+
+              return Container(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    FusionAppText(
+                      text: "Edit Project name",
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _projectNameController,
+                      focusNode: _projectNameFocusNode,
+                      autofocus: true,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.fusionTextViewColor,
+                        fontSize: 12,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'Enter floor name',
+                        hintStyle: TextStyle(
+                          color: Theme.of(context).colorScheme.grey,
+                          fontSize: 12,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(4),
+                          borderSide: BorderSide(color: Theme.of(context).colorScheme.dividerColor),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(4),
+                          borderSide: BorderSide(color: Theme.of(context).colorScheme.dividerColor),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(4),
+                          borderSide: BorderSide(color: Theme.of(context).colorScheme.fusionTextViewColor),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                        isDense: true,
+                      ),
+                      onSubmitted: (String value) {
+                        serviceLocator<ProjectViewModel>().setProjectName(value.trim());
+                        Navigator.of(context).pop();
+                      },
+                    ),
+                    const SizedBox(height: 18),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: <Widget>[
+                        FusionOutlinedButton(
+                          height: 28,
+                          width: 64,
+                          label: "Cancel",
+                          textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10),
+                          onTap: () {
+                            // _clearFields();
+                            Navigator.of(context).pop();
+                          },
+                        ),
+
+                        const SizedBox(width: 8),
+                        FusionButton(
+                          height: 28,
+                          width: 84,
+                          textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10, color: Theme.of(context).colorScheme.fusionButtonTextColor),
+
+                          label: "Edit Name",
+                          onTap: () {
+                            serviceLocator<ProjectViewModel>().setProjectName(_projectNameController.text.trim());
+                            Navigator.of(context).pop();
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
