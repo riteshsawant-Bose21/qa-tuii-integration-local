@@ -3,7 +3,6 @@ import 'package:fusion_launcher/features/projects/widget/sort_drop_down_content.
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
-import '../../../../../core/utils/app_enums.dart';
 import 'filter_drop_down_content.dart';
 
 class ProductSearchWidget extends StatelessWidget {
@@ -19,7 +18,7 @@ class ProductSearchWidget extends StatelessWidget {
     required this.selectedCoverages,
     required this.selectedImpedances,
     this.onClearSearch,
-    this.onProductTypeChanged,
+    // this.onProductTypeChanged,
     this.onSortOptionChanged,
     this.onFiltersChanged,
   });
@@ -34,7 +33,7 @@ class ProductSearchWidget extends StatelessWidget {
   final Set<String> selectedCoverages;
   final Set<String> selectedImpedances;
   final VoidCallback? onClearSearch;
-  final ValueChanged<ProductType?>? onProductTypeChanged;
+  // final ValueChanged<ProductType?>? onProductTypeChanged;
   final ValueChanged<SortOption>? onSortOptionChanged;
   final VoidCallback? onFiltersChanged;
 

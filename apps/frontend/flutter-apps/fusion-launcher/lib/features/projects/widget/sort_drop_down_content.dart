@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
-import '../../../../core/utils/app_enums.dart';
-
 class SortDropdownContent extends StatelessWidget {
   const SortDropdownContent({
     super.key,

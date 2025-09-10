@@ -17,6 +17,10 @@ class BuildingPlan extends StatefulWidget {
 class _BuildingPlanState extends State<BuildingPlan> {
   int selectedIndex = 0;
 
+  final TextEditingController _floorNameController = TextEditingController();
+  final TextEditingController _floorDescriptionController = TextEditingController();
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+
   // Sample floor plans data
   final List<Map<String, String>> floorPlans = <Map<String, String>>[
     <String, String>{"code": "FF", "name": "Floor plan 1", "description": "Description"},
@@ -49,6 +53,121 @@ class _BuildingPlanState extends State<BuildingPlan> {
     <String, String>{"code": "BF", "name": "Floor plan 4", "description": "Basement floor"},
   ];
 
+  void _createFloor() {
+    final String floorName = _floorNameController.text.trim();
+    final String floorDescription = _floorDescriptionController.text.trim();
+
+    // Here you can implement your floor creation logic
+    print('Floor Name: $floorName');
+    print('Floor Description: $floorDescription');
+
+    // Show success message
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Floor "$floorName" created successfully!'),
+        backgroundColor: Colors.green,
+      ),
+    );
+
+    Navigator.of(context).pop();
+    _clearFields();
+  }
+
+  void _clearFields() {
+    _floorNameController.clear();
+    _floorDescriptionController.clear();
+  }
+
+  void _showCreateFloorDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text(
+            'Create New Floor',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                TextFormField(
+                  controller: _floorNameController,
+                  style: TextStyle(color: Theme.of(context).colorScheme.fusionTextViewColor, fontSize: 9),
+                  decoration: InputDecoration(
+                    labelText: 'Floor Name',
+                    hintText: 'Enter floor name',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    // prefixIcon: const Icon(Icons.business),
+                  ),
+                  validator: (String? value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Please enter floor name';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _floorDescriptionController,
+                  decoration: InputDecoration(
+                    labelText: 'Floor Description',
+                    hintText: 'Enter floor description',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    // prefixIcon: const Icon(Icons.description),
+                  ),
+                  maxLines: 3,
+                  validator: (String? value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Please enter floor description';
+                    }
+                    return null;
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _clearFields();
+              },
+              child: Text(
+                'Cancel',
+                style: TextStyle(color: Colors.grey[600]),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (_formKey.currentState!.validate()) {
+                  final FloorModel model = FloorModel(
+                    name: "Floor plan ${serviceLocator<ProjectViewModel>().floors.length + 1}",
+                    floorPlan: FloorPlanModel.defaultFloorPlan,
+                  );
+                  serviceLocator<ProjectViewModel>().addFloor(model);
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.black,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Create Floor'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -71,11 +190,7 @@ class _BuildingPlanState extends State<BuildingPlan> {
               FusionAppText(text: "Building Plan", style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 11)),
               GestureDetector(
                 onTap: () {
-                  final FloorModel model = FloorModel(
-                    name: "Floor plan ${serviceLocator<ProjectViewModel>().floors.length + 1}",
-                    floorPlan: FloorPlanModel.defaultFloorPlan,
-                  );
-                  serviceLocator<ProjectViewModel>().addFloor(model);
+                  _showCreateFloorDialog();
                 },
                 child: Icon(
                   Icons.add_sharp,
