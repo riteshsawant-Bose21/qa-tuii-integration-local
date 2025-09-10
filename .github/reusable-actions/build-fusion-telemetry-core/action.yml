@@ -1,0 +1,32 @@
+name: "Build Fusion Telemetry Core App"
+description: "Build Fusion Telemetry Core App"
+inputs:
+  flutter_apps_sonar_token:
+    description: 'SonarQube server token'
+    required: true
+  nexus_password:
+    description: 'Nexus repository password'
+    required: true
+  jenkins_user_name:
+    description: 'Jenkins username for authentication'
+    required: true
+  jenkins_user_token:
+    description: 'Jenkins token for authentication'
+    required: true
+  jenkins_url:
+    description: 'Nexus repository URL'
+    required: true
+  nexus_url:
+    description: 'Nexus repository URL'
+    required: true
+        
+runs:
+  using: "composite"
+  steps:
+    - name: Build with Make
+      shell: bash
+      working-directory: apps/firmware-apps/fusion-telemetry-core
+      run: |
+        moon run fusion-telemetry-core:build
+        VERSION="$(./Jenkins/SetVersionProperty.sh)-${GITHUB_RUN_NUMBER}+$(git rev-parse --short HEAD)"
+        ls -ltr
