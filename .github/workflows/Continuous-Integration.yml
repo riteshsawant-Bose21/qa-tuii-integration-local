@@ -335,6 +335,23 @@ jobs:
         run: echo "ran=true" >> $GITHUB_OUTPUT
 
   yocto-image-build-trigger:
+    needs:
+      - buildChecks
+      - fusion-dsp-build
+      - fusion-server-build
+      - fusion-system-monitor-build
+      - fusion-edge-gateway-build
+      - fusion-telemetry-core-build
+
+    if: |
+      always() &&
+      github.ref_name == 'devops/trigger-yocto-build' && (
+        (needs.fusion-dsp-build.result == 'success' && needs.fusion-dsp-build.outputs.ran == 'true') ||
+        (needs.fusion-server-build.result == 'success' && needs.fusion-server-build.outputs.ran == 'true') ||
+        (needs.fusion-system-monitor-build.result == 'success' && needs.fusion-system-monitor-build.outputs.ran == 'true') ||
+        (needs.fusion-edge-gateway-build.result == 'success' && needs.fusion-edge-gateway-build.outputs.ran == 'true') ||
+        (needs.fusion-telemetry-core-build.result == 'success' && needs.fusion-telemetry-core-build.outputs.ran == 'true')
+      )
     concurrency:
       group: yocto-image-build-trigger
     runs-on: ubuntu-agent
@@ -343,11 +360,10 @@ jobs:
       - name: Checkout target repo
         uses: actions/checkout@v4
         with:
-          repository: BoseProfessional/meta-fusion  # replace with your target repo
-          # token: ${{ secrets.TARGET_REPO_TOKEN }}
-          ref: devops/trigger-yocto-build  # or whichever branch you're committing to
+          repository: BoseProfessional/meta-fusion
+          ref: devops/trigger-yocto-build
           token: ${{ secrets.META_FUSION_REPO_TOKEN }}
-          fetch-depth: 0  # Fetch all history for accurate commits
+          fetch-depth: 0
           
       - name: Make changes in target repo
         run: |
