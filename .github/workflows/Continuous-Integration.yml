@@ -334,13 +334,7 @@ jobs:
         id: set-output
         run: echo "ran=true" >> $GITHUB_OUTPUT
 
-  yocto-imaege-build-trigger:
-    needs:
-      - fusion-dsp-build
-      - fusion-server-build
-      - fusion-system-monitor-build
-      - fusion-edge-gateway-build
-      - fusion-telemetry-core-build
+  yocto-image-build-trigger:
     concurrency:
       group: yocto-image-build-trigger
     runs-on: ubuntu-agent
