@@ -27,12 +27,10 @@ extension UndoRedoManager on ProjectManager {
   }
 
   bool canUndo() {
-    print("canUndo: ${projectService?.canUndo()}");
     return projectService?.canUndo() ?? false;
   }
 
   bool canRedo() {
-    print("canRedo: ${projectService?.canRedo()}");
     return projectService?.canRedo() ?? false;
   }
 }

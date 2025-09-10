@@ -1,6 +1,12 @@
 enum VenueType { indoor, outdoor, hybrid }
 
-enum ProductType { processor, amplifier, speaker, controller, accessory }
+enum ProductType {
+  processor,
+  amplifier,
+  speaker,
+  controller,
+  accessory,
+}
 
 class VenueSpec {
   String name;
@@ -9,9 +15,9 @@ class VenueSpec {
   VenueSpec({this.name = '', this.type = VenueType.indoor});
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'name': name,
-        'type': type.toString().split('.').last,
-      };
+    'name': name,
+    'type': type.toString().split('.').last,
+  };
 
   VenueSpec copyWith({
     String? name,
@@ -43,13 +49,13 @@ class RoomSpec {
   });
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'name': name,
-        'ceilingHeight': ceilingHeight,
-        'roomLength': roomLength,
-        'roomBreadth': roomBreadth,
-        'inputDevices': inputDevices,
-        'speakers': speakers,
-      };
+    'name': name,
+    'ceilingHeight': ceilingHeight,
+    'roomLength': roomLength,
+    'roomBreadth': roomBreadth,
+    'inputDevices': inputDevices,
+    'speakers': speakers,
+  };
 
   RoomSpec copyWith({
     String? name,
@@ -82,10 +88,10 @@ class FloorSpec {
   }) : rooms = rooms ?? <RoomSpec>[];
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'name': name,
-        'ceilingHeight': ceilingHeight,
-        'rooms': rooms.map((RoomSpec r) => r.toJson()).toList(),
-      };
+    'name': name,
+    'ceilingHeight': ceilingHeight,
+    'rooms': rooms.map((RoomSpec r) => r.toJson()).toList(),
+  };
 
   FloorSpec copyWith({
     String? name,
@@ -114,11 +120,11 @@ class ProductSpec {
   });
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'type': type.toString().split('.').last,
-        'name': name,
-        'quantity': quantity,
-        'price': price,
-      };
+    'type': type.toString().split('.').last,
+    'name': name,
+    'quantity': quantity,
+    'price': price,
+  };
 
   ProductSpec copyWith({
     ProductType? type,
@@ -148,9 +154,9 @@ class SpecificationEntity {
     VenueSpec? venue,
     List<FloorSpec>? floors,
     List<ProductSpec>? products,
-  })  : venue = venue ?? VenueSpec(),
-        floors = floors ?? <FloorSpec>[],
-        products = products ?? <ProductSpec>[];
+  }) : venue = venue ?? VenueSpec(),
+       floors = floors ?? <FloorSpec>[],
+       products = products ?? <ProductSpec>[];
 
   SpecificationEntity copyWith({
     VenueSpec? venue,
@@ -165,10 +171,10 @@ class SpecificationEntity {
   }
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'venue': venue.toJson(),
-        'floors': floors.map((FloorSpec z) => z.toJson()).toList(),
-        'products': products.map((ProductSpec p) => p.toJson()).toList(),
-      };
+    'venue': venue.toJson(),
+    'floors': floors.map((FloorSpec z) => z.toJson()).toList(),
+    'products': products.map((ProductSpec p) => p.toJson()).toList(),
+  };
 
   clone() {
     return SpecificationEntity(
