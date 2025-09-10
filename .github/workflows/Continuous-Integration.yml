@@ -346,7 +346,7 @@ jobs:
           repository: BoseProfessional/meta-fusion  # replace with your target repo
           # token: ${{ secrets.TARGET_REPO_TOKEN }}
           ref: devops/trigger-yocto-build  # or whichever branch you're committing to
-          paths: meta-fusion
+          path: meta-fusion
           fetch-depth: 0  # Fetch all history for accurate commits
           
       - name: Make changes in target repo
