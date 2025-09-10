@@ -2,13 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 
 import '../../../../../core/service_locator.dart';
 import '../../../../configuration/presentation/viewmodel/project_view_model.dart';
 
 class BuildingPlan extends StatefulWidget {
-  const BuildingPlan({Key? key}) : super(key: key);
+  const BuildingPlan({super.key});
 
   @override
   State<BuildingPlan> createState() => _BuildingPlanState();
@@ -16,156 +15,43 @@ class BuildingPlan extends StatefulWidget {
 
 class _BuildingPlanState extends State<BuildingPlan> {
   int selectedIndex = 0;
-
   final TextEditingController _floorNameController = TextEditingController();
-  final TextEditingController _floorDescriptionController = TextEditingController();
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  final FocusNode _floorNameFocusNode = FocusNode();
 
-  // Sample floor plans data
-  final List<Map<String, String>> floorPlans = <Map<String, String>>[
-    <String, String>{"code": "FF", "name": "Floor plan 1", "description": "Description"},
-    <String, String>{"code": "SF", "name": "Floor plan 2", "description": "Second floor layout"},
-    <String, String>{"code": "TF", "name": "Floor plan 3", "description": "Third floor design"},
-    <String, String>{"code": "BF", "name": "Floor plan 4", "description": "Basement floor"},
-    <String, String>{"code": "BF", "name": "Floor plan 4", "description": "Basement floor"},
-    <String, String>{"code": "BF", "name": "Floor plan 4", "description": "Basement floor"},
-    <String, String>{"code": "BF", "name": "Floor plan 4", "description": "Basement floor"},
-    <String, String>{"code": "BF", "name": "Floor plan 4", "description": "Basement floor"},
-    <String, String>{"code": "BF", "name": "Floor plan 4", "description": "Basement floor"},
-    <String, String>{"code": "BF", "name": "Floor plan 4", "description": "Basement floor"},
-    <String, String>{"code": "BF", "name": "Floor plan 4", "description": "Basement floor"},
-    <String, String>{"code": "BF", "name": "Floor plan 4", "description": "Basement floor"},
-    <String, String>{"code": "BF", "name": "Floor plan 4", "description": "Basement floor"},
-    <String, String>{"code": "BF", "name": "Floor plan 4", "description": "Basement floor"},
-    <String, String>{"code": "BF", "name": "Floor plan 4", "description": "Basement floor"},
-    <String, String>{"code": "BF", "name": "Floor plan 4", "description": "Basement floor"},
-    <String, String>{"code": "BF", "name": "Floor plan 4", "description": "Basement floor"},
-    <String, String>{"code": "BF", "name": "Floor plan 4", "description": "Basement floor"},
-    <String, String>{"code": "BF", "name": "Floor plan 4", "description": "Basement floor"},
-    <String, String>{"code": "BF", "name": "Floor plan 4", "description": "Basement floor"},
-    <String, String>{"code": "BF", "name": "Floor plan 4", "description": "Basement floor"},
-    <String, String>{"code": "BF", "name": "Floor plan 4", "description": "Basement floor"},
-    <String, String>{"code": "BF", "name": "Floor plan 4", "description": "Basement floor"},
-    <String, String>{"code": "BF", "name": "Floor plan 4", "description": "Basement floor"},
-    <String, String>{"code": "BF", "name": "Floor plan 4", "description": "Basement floor"},
-    <String, String>{"code": "BF", "name": "Floor plan 4", "description": "Basement floor"},
-    <String, String>{"code": "BF", "name": "Floor plan 4", "description": "Basement floor"},
-    <String, String>{"code": "BF", "name": "Floor plan 4", "description": "Basement floor"},
-  ];
-
-  void _createFloor() {
-    final String floorName = _floorNameController.text.trim();
-    final String floorDescription = _floorDescriptionController.text.trim();
-
-    // Here you can implement your floor creation logic
-    print('Floor Name: $floorName');
-    print('Floor Description: $floorDescription');
-
-    // Show success message
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Floor "$floorName" created successfully!'),
-        backgroundColor: Colors.green,
-      ),
-    );
-
-    Navigator.of(context).pop();
-    _clearFields();
+  @override
+  void dispose() {
+    _floorNameController.dispose();
+    _floorNameFocusNode.dispose();
+    super.dispose();
   }
 
+  /// Clear input fields
   void _clearFields() {
     _floorNameController.clear();
-    _floorDescriptionController.clear();
   }
 
-  void _showCreateFloorDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text(
-            'Create New Floor',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          content: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                TextFormField(
-                  controller: _floorNameController,
-                  style: TextStyle(color: Theme.of(context).colorScheme.fusionTextViewColor, fontSize: 9),
-                  decoration: InputDecoration(
-                    labelText: 'Floor Name',
-                    hintText: 'Enter floor name',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    // prefixIcon: const Icon(Icons.business),
-                  ),
-                  validator: (String? value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Please enter floor name';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _floorDescriptionController,
-                  decoration: InputDecoration(
-                    labelText: 'Floor Description',
-                    hintText: 'Enter floor description',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    // prefixIcon: const Icon(Icons.description),
-                  ),
-                  maxLines: 3,
-                  validator: (String? value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Please enter floor description';
-                    }
-                    return null;
-                  },
-                ),
-              ],
-            ),
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                _clearFields();
-              },
-              child: Text(
-                'Cancel',
-                style: TextStyle(color: Colors.grey[600]),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (_formKey.currentState!.validate()) {
-                  final FloorModel model = FloorModel(
-                    name: "Floor plan ${serviceLocator<ProjectViewModel>().floors.length + 1}",
-                    floorPlan: FloorPlanModel.defaultFloorPlan,
-                  );
-                  serviceLocator<ProjectViewModel>().addFloor(model);
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.black,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Create Floor'),
-            ),
-          ],
-        );
-      },
-    );
+  /// Add a new floor to the project
+  void _addFloor() {
+    if (_floorNameController.text.trim().isNotEmpty) {
+      final FloorModel model = FloorModel(
+        name: _floorNameController.text.trim(),
+        floorPlan: FloorPlanModel.defaultFloorPlan,
+      );
+
+      /// Add floor to the project
+      final ProjectViewModel viewModel = serviceLocator<ProjectViewModel>();
+      viewModel.addFloor(model);
+
+      setState(() {
+        /// Select the newly added floor
+        selectedIndex = viewModel.floors.length - 1;
+      });
+
+      /// Ensure the current floor index is updated
+      viewModel.setCurrentFloorIndex(selectedIndex);
+
+      _clearFields();
+    }
   }
 
   @override
@@ -174,7 +60,6 @@ class _BuildingPlanState extends State<BuildingPlan> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.white,
-
         border: Border(
           bottom: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
         ),
@@ -189,9 +74,7 @@ class _BuildingPlanState extends State<BuildingPlan> {
             children: <Widget>[
               FusionAppText(text: "Building Plan", style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 11)),
               GestureDetector(
-                onTap: () {
-                  _showCreateFloorDialog();
-                },
+                onTap: _showAddFloorDropdown,
                 child: Icon(
                   Icons.add_sharp,
                   size: 14,
@@ -200,16 +83,39 @@ class _BuildingPlanState extends State<BuildingPlan> {
               ),
             ],
           ),
+
           const SizedBox(height: 10),
 
           /// PopupMenuButton for dropdown functionality
           BlocBuilder<ProjectViewModel, ProjectViewModelState>(
             builder: (BuildContext context, ProjectViewModelState state) {
+              final List<FloorModel> floors = serviceLocator<ProjectViewModel>().floors;
+
+              // Ensure selectedIndex is within bounds
+              if (selectedIndex >= floors.length) {
+                selectedIndex = floors.isNotEmpty ? floors.length - 1 : 0;
+              }
+
+              if (floors.isEmpty) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.greyLight,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: FusionAppText(
+                    text: "No floors available",
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 12),
+                  ),
+                );
+              }
+
               return PopupMenuButton<int>(
                 onSelected: (int index) {
                   setState(() {
                     selectedIndex = index;
                   });
+                  serviceLocator<ProjectViewModel>().setCurrentFloorIndex(index);
                 },
                 constraints: const BoxConstraints(maxHeight: 600, minWidth: 200),
                 padding: EdgeInsets.zero,
@@ -221,16 +127,34 @@ class _BuildingPlanState extends State<BuildingPlan> {
                 color: Theme.of(context).colorScheme.white,
                 elevation: 1,
                 itemBuilder: (BuildContext context) {
-                  return List<PopupMenuEntry<int>>.generate(serviceLocator<ProjectViewModel>().floors.length, (int index) {
-                    final bool isSelected = index == selectedIndex;
-                    serviceLocator<ProjectViewModel>().setCurrentFloorIndex(selectedIndex);
+                  /// Create ordered list with selected floor first
+                  final List<int> orderedIndices = <int>[];
+
+                  /// Add selected floor first
+                  orderedIndices.add(selectedIndex);
+
+                  /// Add all other floors
+                  for (int i = 0; i < floors.length; i++) {
+                    if (i != selectedIndex) {
+                      orderedIndices.add(i);
+                    }
+                  }
+
+                  return List<PopupMenuEntry<int>>.generate(floors.length, (int menuIndex) {
+                    final int floorIndex = orderedIndices[menuIndex];
+                    final bool isSelected = floorIndex == selectedIndex;
+                    final FloorModel floorData = floors[floorIndex];
+
                     return PopupMenuItem<int>(
-                      value: index,
+                      value: floorIndex,
                       padding: EdgeInsets.zero,
                       child: Container(
                         margin: const EdgeInsets.symmetric(horizontal: 6),
-                        color: isSelected ? Theme.of(context).colorScheme.grey : Colors.transparent,
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: isSelected ? Theme.of(context).colorScheme.grey : Colors.transparent,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                         child: Row(
                           children: <Widget>[
                             Container(
@@ -246,10 +170,10 @@ class _BuildingPlanState extends State<BuildingPlan> {
                                 ),
                               ),
                               child: FusionAppText(
-                                text: floorPlans[index]["code"]!,
+                                text: floorData.name.length >= 2 ? floorData.name.substring(0, 2).toUpperCase() : floorData.name.toUpperCase(),
                                 textAlign: TextAlign.center,
                                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  fontSize: 9,
+                                  fontSize: 8,
                                   fontWeight: FontWeight.w600,
                                   color: Theme.of(context).colorScheme.fusionButtonTextColor,
                                 ),
@@ -260,22 +184,25 @@ class _BuildingPlanState extends State<BuildingPlan> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: <Widget>[
-                                  FusionAppText(
-                                    text: serviceLocator<ProjectViewModel>().floors[index].name,
-                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.normal,
-                                      color: Theme.of(context).colorScheme.fusionTextViewColor,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 1),
-                                  FusionAppText(
-                                    text: serviceLocator<ProjectViewModel>().floors[index].name,
-                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w600,
-                                      color: Theme.of(context).colorScheme.fusionTextViewColor,
-                                    ),
+                                  Row(
+                                    children: <Widget>[
+                                      Expanded(
+                                        child: FusionAppText(
+                                          text: floorData.name,
+                                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                            fontSize: 12,
+                                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                                            color: Theme.of(context).colorScheme.fusionTextViewColor,
+                                          ),
+                                        ),
+                                      ),
+                                      if (isSelected)
+                                        Icon(
+                                          Icons.check,
+                                          size: 16,
+                                          color: Theme.of(context).colorScheme.fusionTextViewColor,
+                                        ),
+                                    ],
                                   ),
                                 ],
                               ),
@@ -300,10 +227,13 @@ class _BuildingPlanState extends State<BuildingPlan> {
                         border: Border.all(color: Theme.of(context).colorScheme.dividerColor, width: 1),
                       ),
                       child: FusionAppText(
-                        text: floorPlans[selectedIndex]["code"]!,
+                        text:
+                            floors[selectedIndex].name.length >= 2
+                                ? floors[selectedIndex].name.substring(0, 2).toUpperCase()
+                                : floors[selectedIndex].name.toUpperCase(),
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontSize: 9,
+                          fontSize: 8,
                           fontWeight: FontWeight.w600,
                           color: Theme.of(context).colorScheme.fusionButtonTextColor,
                         ),
@@ -314,15 +244,9 @@ class _BuildingPlanState extends State<BuildingPlan> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
-                          FusionAppText(text: floorPlans[selectedIndex]["name"]!, style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 12)),
-                          const SizedBox(height: 1),
                           FusionAppText(
-                            text: floorPlans[selectedIndex]["description"]!,
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: Theme.of(context).colorScheme.grey,
-                            ),
+                            text: floors[selectedIndex].name,
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 12),
                           ),
                         ],
                       ),
@@ -340,6 +264,126 @@ class _BuildingPlanState extends State<BuildingPlan> {
           ),
         ],
       ),
+    );
+  }
+
+  /// Show dropdown menu for adding a new floor
+  void _showAddFloorDropdown() {
+    final RenderBox button = context.findRenderObject() as RenderBox;
+    final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+    final RelativeRect position = RelativeRect.fromRect(
+      Rect.fromPoints(
+        button.localToGlobal(const Offset(50, 18), ancestor: overlay),
+        button.localToGlobal(button.size.bottomRight(Offset.zero), ancestor: overlay),
+      ),
+      Offset.zero & overlay.size,
+    );
+
+    showMenu<String>(
+      context: context,
+      position: position,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(6),
+        side: BorderSide(color: Theme.of(context).colorScheme.dividerColor),
+      ),
+      color: Theme.of(context).colorScheme.white,
+      elevation: 1,
+      constraints: const BoxConstraints(minWidth: 250, maxWidth: 300),
+      items: <PopupMenuEntry<String>>[
+        PopupMenuItem<String>(
+          enabled: false,
+          padding: EdgeInsets.zero,
+          child: StatefulBuilder(
+            builder: (BuildContext context, StateSetter setMenuState) {
+              /// Auto-focus the text field when the menu opens
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                _floorNameFocusNode.requestFocus();
+              });
+
+              return Container(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    FusionAppText(
+                      text: "Add New Floor",
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _floorNameController,
+                      focusNode: _floorNameFocusNode,
+                      autofocus: true,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.fusionTextViewColor,
+                        fontSize: 12,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'Enter floor name',
+                        hintStyle: TextStyle(
+                          color: Theme.of(context).colorScheme.grey,
+                          fontSize: 12,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(4),
+                          borderSide: BorderSide(color: Theme.of(context).colorScheme.dividerColor),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(4),
+                          borderSide: BorderSide(color: Theme.of(context).colorScheme.dividerColor),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(4),
+                          borderSide: BorderSide(color: Theme.of(context).colorScheme.fusionTextViewColor),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                        isDense: true,
+                      ),
+                      onSubmitted: (_) {
+                        _addFloor();
+                        Navigator.of(context).pop();
+                      },
+                    ),
+                    const SizedBox(height: 18),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: <Widget>[
+                        FusionOutlinedButton(
+                          height: 28,
+                          width: 64,
+                          label: "Cancel",
+                          textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10),
+                          onTap: () {
+                            _clearFields();
+                            Navigator.of(context).pop();
+                          },
+                        ),
+
+                        const SizedBox(width: 8),
+                        FusionButton(
+                          height: 28,
+                          width: 80,
+                          textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10, color: Theme.of(context).colorScheme.fusionButtonTextColor),
+
+                          label: "Add Floor",
+                          onTap: () {
+                            _addFloor();
+                            Navigator.of(context).pop();
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }
