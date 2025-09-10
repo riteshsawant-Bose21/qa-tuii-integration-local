@@ -31,7 +31,6 @@ extension UndoRedoService on ProjectService {
     if (undoStack.length > maxHistory) {
       undoStack.removeAt(0);
     }
-    print("Undo stack size: ${undoStack.length}");
     // clearing redo on new action
     redoStack.clear();
   }
@@ -69,18 +68,13 @@ extension UndoRedoService on ProjectService {
   bool canRedo() => redoStack.isNotEmpty;
 
   Map<String, dynamic>? undo() {
-    print("Undo stack size before undo: ${undoStack.length}");
     if (!canUndo()) return null;
     // Save current state to redo stack
     final current = _captureSnapshot();
     redoStack.add(current);
 
-    print("Redo stack size after adding current: ${redoStack.length}");
-
     // Pop the previous state from undo and restore it
     final snapshot = undoStack.removeLast();
-    print("Undo stack size after undo: ${undoStack.length}");
-    print("Snapshot restored: $snapshot");
     return snapshot;
   }
 
