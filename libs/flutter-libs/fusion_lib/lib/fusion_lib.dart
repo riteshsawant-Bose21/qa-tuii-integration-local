@@ -5,6 +5,8 @@ export 'fusion_logger/fusion_logger.dart';
 export 'fusion_networking/fusion_networking.dart';
 export 'fusion_theme/fusion_theme_app.dart';
 export 'fusion_utils/fusion_utils.dart';
+export 'fusion_utils/app_enums.dart';
 export 'fusion_widgets/fusion_widgets.dart';
 export 'models/fusion_models.dart';
 export 'project_manger/fusion_project_manager.dart';
+export 'service/fusion_services.dart';

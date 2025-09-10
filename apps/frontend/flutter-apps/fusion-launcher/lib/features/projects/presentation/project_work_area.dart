@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/bill_of_materials/presentation/bill_of_materials_page.dart';
 import 'package:fusion_launcher/features/configuration/presentation/pages/audio_system_design_page.dart';
+import 'package:fusion_launcher/features/product_query/presentation/pages/product_query.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/models/dock_item_config.dart';
@@ -11,7 +12,6 @@ import '../../../core/service_locator.dart';
 import '../../../core/utils/broadcast_controllers.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../schematics/presentation/pages/schematics_page.dart';
-import '../../venue_design/presentation/widgets/side_panel/product_query.dart';
 import '../widget/building/building_canvas.dart';
 import '../widget/building/side_panle_widgets/building_plan.dart';
 import '../widget/control_design_tab_switcher.dart';
@@ -306,44 +306,63 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                         alowUndock: false,
                         initiallyExpanded: true,
                         isCollapsibleSection: true,
-                        dockItemWidget: () => const ProductQuery(),
+                        dockItemWidget:
+                            () => Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                              child: const Text("Coverage Content"),
+                            ),
                       ),
                       DockItemConfig(
                         id: "3",
                         title: "Devices",
                         side: "left",
-                        dockItemWidget: () => const ProductQuery(),
+                        dockItemWidget:
+                            () => Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                              child: const Text("Devices Content"),
+                            ),
                       ),
                       DockItemConfig(
                         id: "4",
                         title: "Tree View",
                         side: "left",
-                        dockItemWidget: () => const ProductQuery(),
+                        dockItemWidget:
+                            () => Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                              child: const Text("Tree View Content"),
+                            ),
                       ),
                       DockItemConfig(
                         id: "5",
                         title: "ATTRIBUTES",
                         side: "right",
-                        dockItemWidget: () => const ProductQuery(),
+                        dockItemWidget:
+                            () => Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                              child: const Text("Attributes Content"),
+                            ),
                       ),
                       DockItemConfig(
                         id: "6",
                         title: "COST CALCULATOR",
                         side: "right",
-                        dockItemWidget: () => const ProductQuery(),
+                        dockItemWidget:
+                            () => Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                              child: const Text("Cost Calculator Content"),
+                            ),
                       ),
-                      DockItemConfig(
-                        id: "7",
-                        title: "PRODUCT QUERY",
-                        side: "right",
-                        dockItemWidget: () => const ProductQuery(),
-                      ),
-                      DockItemConfig(
-                        id: "8",
-                        title: "DEVICE LIST",
-                        side: "right",
-                        dockItemWidget: () => const ProductQuery(),
-                      ),
+                      DockItemConfig(id: "7", title: "PRODUCT QUERY", side: "right", dockItemWidget: () => const ProductQueryView()),
+                      // DockItemConfig(
+                      //   id: "8",
+                      //   title: "DEVICE LIST",
+                      //   side: "right",
+                      //   dockItemWidget:
+                      //       () => Container(
+                      //         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                      //         child: const Text("Device List Content"),
+                      //       ),
+                      // ),
                     ],
                   ),
 
@@ -358,14 +377,13 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                         id: "9",
                         title: "Cost Calculator",
                         side: "right",
-                        dockItemWidget: () => const ProductQuery(),
+                        dockItemWidget:
+                            () => Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                              child: const Text("Cost Calculator Content"),
+                            ),
                       ),
-                      DockItemConfig(
-                        id: "7",
-                        title: "PRODUCT QUERY",
-                        side: "right",
-                        dockItemWidget: () => const ProductQuery(),
-                      ),
+                      DockItemConfig(id: "7", title: "PRODUCT QUERY", side: "right", dockItemWidget: () => const ProductQueryView()),
                     ],
                   ),
 

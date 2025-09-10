@@ -22,3 +22,4 @@ export 'project_entities/source_set_model.dart';
 export 'project_entities/speaker_model.dart';
 export 'project_entities/zone_model.dart';
 export 'response_callback.dart';
+export 'product_query/product_query_model.dart';
