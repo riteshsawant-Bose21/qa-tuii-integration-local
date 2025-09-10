@@ -201,8 +201,10 @@ void OcaLiteBlock::RemoveObject(::OcaONo oNo)
 
         static_cast<void>(m_members.erase(oNo));
 
+#ifndef OCA_LITE_CONTROLLER
         // We are OCALite, don't expect dynamic objects in this implementation.
         assert(::OcaLiteDeviceManager::GetInstance().GetOperationalState() == ::OcaLiteDeviceManager::OCA_OPSTATE_SHUTTING_DOWN);
+#endif
     }
 }
 

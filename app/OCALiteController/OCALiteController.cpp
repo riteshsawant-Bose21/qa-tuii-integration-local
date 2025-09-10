@@ -12,6 +12,7 @@
 #include <HostInterfaceLite/OCA/OCP.1/Ocp1LiteHostInterface.h>
 #include <OCC/ControlClasses/Managers/OcaLiteNetworkManager.h>
 #include <OCC/ControlDataTypes/OcaLiteClassIdentification.h>
+#include <OCC/ControlClasses/Workers/BlocksAndMatrices/OcaLiteBlock.h>
 #include <OCF/OcaLiteCommandHandlerController.h>
 #include <OCP.1/Ocp1LiteNetwork.h>
 #include <OCP.1/Ocp1LiteNetworkSystemInterfaceID.h>
@@ -22,6 +23,9 @@
 #include <OCC/ControlDataTypes/OcaLiteBlockMember.h>
 #include <unistd.h>
 #include "OcaServiceDiscovery.h"
+#include "HostInterfaceLite/OCA/OCF/Timer/IOcfLiteTimer.h"
+#include <sys/time.h>
+#include <iostream>
 
 #ifdef OCA_RUN
 extern void Ocp1LiteServiceRun();
@@ -69,10 +73,15 @@ bool ConnectToDevice(const OcaServiceDiscovery::DiscoveredDevice &device, ::Ocp1
 
     if (sessionId != 0)
     {
+        ::OcaLiteList< ::OcaONo> networks;
+
         OCA_LOG_INFO_PARAMS("✓ Connected to %s! Session ID: %u", device.name.c_str(), sessionId);
 
         // Demonstrate basic device introspection
         ::GeneralProxy proxy(sessionId, 9001); // Using our network object number
+
+        ::OcaLiteNetworkManager::GetInstance().GetNetworks(networks);
+            OCA_LOG_INFO_PARAMS("Networks Count:%u ", networks.GetCount());
 
         // Get device managers
         ::OcaLiteList<::OcaLiteManagerDescriptor> managers;
@@ -87,10 +96,14 @@ bool ConnectToDevice(const OcaServiceDiscovery::DiscoveredDevice &device, ::Ocp1
                 OCA_LOG_INFO_PARAMS("  - Manager %u: Object #%u", i + 1, manager.GetObjectNumber());
             }
         }
+        else
+        {
+            OCA_LOG_INFO_PARAMS("FAIL --- OcaDeviceManager_GetManagers() %u ", status);
+        }
 
         // Get root block members
         ::OcaLiteList<::OcaLiteBlockMember> members;
-        status = proxy.OcaBlock_GetMembersRecursive(1, members); // Root block is typically object #1
+        status = proxy.OcaBlock_GetMembersRecursive(100, members); // Root block is typically object #1
 
         if (status == OCASTATUS_OK)
         {
@@ -104,6 +117,10 @@ bool ConnectToDevice(const OcaServiceDiscovery::DiscoveredDevice &device, ::Ocp1
             {
                 OCA_LOG_INFO_PARAMS("  ... and %u more", members.GetCount() - 5);
             }
+        }
+        else
+        {
+            OCA_LOG_INFO_PARAMS("FAIL --- OcaBlock_GetMembersRecursive() %u ", status);
         }
 
         // Keep connection open briefly
@@ -131,6 +148,9 @@ bool ConnectToDevice(const OcaServiceDiscovery::DiscoveredDevice &device, ::Ocp1
 
 int main(int /*argc*/, const char * /*argv*/[])
 {
+    // Initialize Oca Device
+    static_cast<void>(::OcaLiteBlock::GetRootBlock());
+
     OCA_LOG_INFO("=== OCA Lite Controller with Service Discovery ===");
     // Set log level to show INFO messages (including client connection logs)
     ::OcfLiteLogSetLogLevel(OCA_LOG_LVL_TRACE);
@@ -164,74 +184,77 @@ int main(int /*argc*/, const char * /*argv*/[])
             {
                 OCA_LOG_INFO("✓ Controller network initialized (no server socket)");
 
-                // Get the controller command handler
-                ::OcaLiteCommandHandlerController &controller = ::OcaLiteCommandHandlerController::GetInstance();
-                bSuccess = controller.Initialize();
-
-                if (bSuccess)
+                if (::OcaLiteBlock::GetRootBlock().AddObject(*ocp1Network))
                 {
-                    OCA_LOG_INFO("✓ Controller command handler initialized");
+                    // Get the controller command handler
+                    ::OcaLiteCommandHandlerController &controller = ::OcaLiteCommandHandlerController::GetInstance();
+                    bSuccess = controller.Initialize();
 
-                    // Start service discovery
-                    OcaServiceDiscovery discovery;
-
-                    if (discovery.StartDiscovery())
+                    if (bSuccess)
                     {
-                        OCA_LOG_INFO("✓ Service discovery started");
+                        OCA_LOG_INFO("✓ Controller command handler initialized");
 
-                        // Wait for devices to be discovered
-                        size_t deviceCount = discovery.WaitForDevices(8000); // Wait 8 seconds
+                        // Start service discovery
+                        OcaServiceDiscovery discovery;
 
-                        auto discoveredDevices = discovery.GetDiscoveredDevices();
-
-                        if (deviceCount > 0)
+                        if (discovery.StartDiscovery())
                         {
-                            DisplayDiscoveredDevices(discoveredDevices);
+                            OCA_LOG_INFO("✓ Service discovery started");
 
-                            // Connect to the first discovered device
-                            const auto &selectedDevice = discoveredDevices[0];
-                            OCA_LOG_INFO_PARAMS("Automatically selecting: %s", selectedDevice.name.c_str());
+                            // Wait for devices to be discovered
+                            size_t deviceCount = discovery.WaitForDevices(8000); // Wait 8 seconds
 
-                            if (ConnectToDevice(selectedDevice, ocp1Network))
+                            auto discoveredDevices = discovery.GetDiscoveredDevices();
+
+                            if (deviceCount > 0)
                             {
-                                OCA_LOG_INFO("✓ Service discovery and connection test successful!");
+                                DisplayDiscoveredDevices(discoveredDevices);
+
+                                // Connect to the first discovered device
+                                const auto &selectedDevice = discoveredDevices[0];
+                                OCA_LOG_INFO_PARAMS("Automatically selecting: %s", selectedDevice.name.c_str());
+
+                                if (ConnectToDevice(selectedDevice, ocp1Network))
+                                {
+                                    OCA_LOG_INFO("✓ Service discovery and connection test successful!");
+                                }
+                                else
+                                {
+                                    OCA_LOG_ERROR("✗ Connection test failed");
+                                }
                             }
                             else
                             {
-                                OCA_LOG_ERROR("✗ Connection test failed");
+                                OCA_LOG_WARNING("No OCA devices discovered on the network");
+                                OCA_LOG_INFO("Make sure:");
+                                OCA_LOG_INFO("  1. An OCA device is running and advertising _oca._tcp service");
+                                OCA_LOG_INFO("  2. The device is on the same network segment");
+                                OCA_LOG_INFO("  3. Multicast DNS is working properly");
+
+                                // Fallback to hardcoded connection for testing
+                                OCA_LOG_INFO("Falling back to hardcoded connection test...");
+                                ::Ocp1LiteConnectParameters connectParams("127.0.0.1", 65000);
+                                ::OcaSessionID sessionId = ocp1Network->Connect(connectParams);
+
+                                if (sessionId != 0)
+                                {
+                                    OCA_LOG_INFO_PARAMS("✓ Fallback connection successful! Session ID: %u", sessionId);
+                                    sleep(2);
+                                    ocp1Network->Disconnect(sessionId);
+                                    OCA_LOG_INFO("✓ Fallback connection test completed");
+                                }
+                                else
+                                {
+                                    OCA_LOG_WARNING("✗ Fallback connection also failed");
+                                }
                             }
+
+                            discovery.StopDiscovery();
                         }
                         else
                         {
-                            OCA_LOG_WARNING("No OCA devices discovered on the network");
-                            OCA_LOG_INFO("Make sure:");
-                            OCA_LOG_INFO("  1. An OCA device is running and advertising _oca._tcp service");
-                            OCA_LOG_INFO("  2. The device is on the same network segment");
-                            OCA_LOG_INFO("  3. Multicast DNS is working properly");
-
-                            // Fallback to hardcoded connection for testing
-                            OCA_LOG_INFO("Falling back to hardcoded connection test...");
-                            ::Ocp1LiteConnectParameters connectParams("127.0.0.1", 65000);
-                            ::OcaSessionID sessionId = ocp1Network->Connect(connectParams);
-
-                            if (sessionId != 0)
-                            {
-                                OCA_LOG_INFO_PARAMS("✓ Fallback connection successful! Session ID: %u", sessionId);
-                                sleep(2);
-                                ocp1Network->Disconnect(sessionId);
-                                OCA_LOG_INFO("✓ Fallback connection test completed");
-                            }
-                            else
-                            {
-                                OCA_LOG_WARNING("✗ Fallback connection also failed");
-                            }
+                            OCA_LOG_ERROR("✗ Failed to start service discovery");
                         }
-
-                        discovery.StopDiscovery();
-                    }
-                    else
-                    {
-                        OCA_LOG_ERROR("✗ Failed to start service discovery");
                     }
                 }
                 else
@@ -241,7 +264,13 @@ int main(int /*argc*/, const char * /*argv*/[])
 
                 // Properly teardown before deleting
                 ocp1Network->Teardown();
+                OCA_LOG_INFO("✓ Network Teardown completed");
+
+                ::OcaLiteBlock::GetRootBlock().RemoveObject(ocp1Network->GetObjectNumber());
+                OCA_LOG_INFO("✓ Network Object Removed from Root");
+
                 delete ocp1Network;
+                OCA_LOG_INFO("✓ Network Object deleted");
             }
             else
             {

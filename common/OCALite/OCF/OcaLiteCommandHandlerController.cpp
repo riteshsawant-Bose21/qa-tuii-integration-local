@@ -33,6 +33,8 @@
    OcaLiteCommandHandler::OcaLiteCommandHandler(),
 #ifdef _DEBUG
    m_handle(-1),
+#elif defined(FUSION)
+   m_handle(static_cast< ::OcaUint32>(::OcfLiteTimerGetTimerTickCount()) & 0xFFFFFFFF),
 #else
    m_handle(static_cast< ::OcaUint32>(::OcfLiteTimerGetTimerTickCount())),
 #endif
@@ -109,7 +111,13 @@ bool OcaLiteCommandHandlerController::Disconnect(::OcaSessionID sessionId, ::Oca
       if ((NULL != pNetwork) &&
          (pNetwork->GetObjectNumber() == networkObjectNumber))
       {
+#ifdef FUSION
+         UINT64 beginTime(::OcfLiteTimerGetTimerTickCount());
+#else
          UINT32 beginTime(::OcfLiteTimerGetTimerTickCount());
+#endif
+
+         OCA_LOG_INFO_PARAMS("✓ Network Connected (Session ID: %u)", sessionId);
 
          // Send the message
          status = pNetwork->SendOcaMessage(sessionId, msg);
@@ -142,6 +150,10 @@ bool OcaLiteCommandHandlerController::Disconnect(::OcaSessionID sessionId, ::Oca
          {
              OCA_LOG_ERROR_PARAMS("Failed to send the command. result = %d", status);
          }
+      }
+      else
+      {
+             OCA_LOG_ERROR("Failed GetNetwork");
       }
 
       m_bReceivedMessage = false;
