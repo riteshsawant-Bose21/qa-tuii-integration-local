@@ -341,7 +341,6 @@ jobs:
       - fusion-system-monitor-build
       - fusion-edge-gateway-build
       - fusion-telemetry-core-build
-    if: needs.fusion-telemetry-core-build.outputs.ran == 'true'
     concurrency:
       group: yocto-image-build-trigger
     runs-on: ubuntu-agent
