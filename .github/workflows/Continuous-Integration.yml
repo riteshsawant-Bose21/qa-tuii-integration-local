@@ -334,22 +334,18 @@ jobs:
         id: set-output
         run: echo "ran=true" >> $GITHUB_OUTPUT
 
-  commit-changes:
+  yocto-imaege-build-trigger:
     needs:
       - fusion-dsp-build
       - fusion-server-build
       - fusion-system-monitor-build
       - fusion-edge-gateway-build
       - fusion-telemetry-core-build
-    if: |
-      github.ref_name == 'devops/trigger-yocto-build' && (
-        needs.fusion-dsp-build.outputs.ran == 'true' ||
-        needs.fusion-server-build.outputs.ran == 'true' ||
-        needs.fusion-system-monitor-build.outputs.ran == 'true' ||
-        needs.fusion-edge-gateway-build.outputs.ran == 'true' ||
-        needs.fusion-telemetry-core-build.outputs.ran == 'true'
-      )
-    runs-on: ubuntu-latest
+    if: needs.fusion-telemetry-core-build.outputs.ran == 'true'
+    concurrency:
+      group: yocto-image-build-trigger
+    runs-on: ubuntu-agent
+    timeout-minutes: 30
     steps:
       - name: Checkout target repo
         uses: actions/checkout@v4
