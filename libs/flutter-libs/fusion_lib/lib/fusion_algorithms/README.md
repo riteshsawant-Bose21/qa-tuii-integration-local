@@ -182,35 +182,48 @@ print('Capacity utilization: ${recommendation.utilizationPercentage}%');
 ## ⚡ Circuiting
 
 **Module**: `circuiting/`  
-**Purpose**: Calculate speaker circuit configurations and impedance
+**Purpose**: Calculate speaker circuit configurations and impedance based on impedance rules
 
 ### Features
-- Series and parallel impedance calculations
-- Multi-speaker circuit optimization
-- Load balancing across amplifier channels
-- Circuit topology recommendations
+- Automatic grouping by area and speaker model
+- Parallel impedance calculations
+- Smart lo-z/hi-z assignment based on impedance
+- Circuit optimization without power constraints
 
 ### Usage Example
 ```dart
 import 'package:fusion_lib/fusion_algorithms/circuiting/circuiting_calculation.dart';
 
 final speakers = [
-  CircuitSpeaker(model: 'DM6C', impedance: 8.0, power: 100),
-  CircuitSpeaker(model: 'DM5C', impedance: 8.0, power: 75),
-  CircuitSpeaker(model: 'DM3C', impedance: 8.0, power: 50),
+  InputSpeaker(
+    model: 'DM6C',
+    quantity: 2,
+    area: 'Main Hall',
+    tapSetting: 'lo-z',
+  ),
+  InputSpeaker(
+    model: 'DM3C',
+    quantity: 4,
+    area: 'Conference Room',
+    tapSetting: 'hi-z',
+  ),
 ];
 
-final circuit = optimizeCircuitConfiguration(speakers);
+final assignments = automaticCircuiting(speakers);
 
-print('Total impedance: ${circuit.totalImpedance}Ω');
-print('Configuration: ${circuit.topology}');
-print('Power distribution: ${circuit.powerDistribution}');
+for (final assignment in assignments) {
+  print('Circuit ${assignment.circuitId}: ${assignment.area}');
+  print('Mode: ${assignment.mode}, Impedance: ${assignment.impedance}Ω');
+  if (assignment.mode == 'hi-z') {
+    print('Tap: ${assignment.tapWatts}W, Total: ${assignment.totalPower}W');
+  }
+}
 ```
 
 ### Key Functions
-- `optimizeCircuitConfiguration()` - Circuit topology optimization
-- `calculateSeriesImpedance()` - Series connection calculations
-- `calculateParallelImpedance()` - Parallel connection calculations
+- `automaticCircuiting()` - Primary circuiting algorithm
+- `calculateParallelImpedance()` - Parallel impedance calculations
+- `groupSpeakersByAreaModel()` - Speaker grouping logic
 
 ---
 

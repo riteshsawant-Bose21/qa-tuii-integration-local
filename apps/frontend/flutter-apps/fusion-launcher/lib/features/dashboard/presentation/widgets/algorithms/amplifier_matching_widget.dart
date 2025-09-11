@@ -53,10 +53,13 @@ class AmplifierMatchingWidget extends StatefulWidget {
 class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
   final List<CircuitInput> circuits = <CircuitInput>[CircuitInput(1)];
   AmpMatchingResult? matchingResult;
+  AmpMatchingResult? symmetricalResult;
+  AmpMatchingResult? asymmetricalResult;
   bool isLoading = false;
   String? errorMessage;
   final CircuitDataService _circuitDataService = CircuitDataService();
   bool _useCircuitingData = false;
+  PowerAllocationStrategy _selectedStrategy = PowerAllocationStrategy.asymmetrical;
 
   List<String> get availableSpeakerModels => SpeakerCatalog.database.keys.toList();
   @override
@@ -91,6 +94,8 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
       isLoading = true;
       errorMessage = null;
       matchingResult = null;
+      symmetricalResult = null;
+      asymmetricalResult = null;
     });
 
     try {
@@ -107,12 +112,50 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
         throw Exception('Please configure at least one valid circuit');
       }
 
-      // Perform amplifier matching
-      final AmpMatchingResult result = await matchAmplifiers(validCircuits, SpeakerCatalog.database);
-
-      setState(() {
-        matchingResult = result;
-      });
+      // Perform matching based on selected strategy
+      switch (_selectedStrategy) {
+        case PowerAllocationStrategy.symmetrical:
+          // Run with symmetrical strategy
+          final AmpMatchingResult result = await matchAmplifiers(
+            validCircuits, 
+            SpeakerCatalog.database,
+            strategy: PowerAllocationStrategy.symmetrical,
+          );
+          setState(() {
+            matchingResult = result;
+          });
+          break;
+          
+        case PowerAllocationStrategy.asymmetrical:
+          // Run with asymmetrical strategy
+          final AmpMatchingResult result = await matchAmplifiers(
+            validCircuits, 
+            SpeakerCatalog.database,
+            strategy: PowerAllocationStrategy.asymmetrical,
+          );
+          setState(() {
+            matchingResult = result;
+          });
+          break;
+          
+        case PowerAllocationStrategy.comparison:
+          // Run both and store results for comparison
+          final AmpMatchingResult symResult = await matchAmplifiers(
+            validCircuits, 
+            SpeakerCatalog.database,
+            strategy: PowerAllocationStrategy.symmetrical,
+          );
+          final AmpMatchingResult asymResult = await matchAmplifiers(
+            validCircuits, 
+            SpeakerCatalog.database,
+            strategy: PowerAllocationStrategy.asymmetrical,
+          );
+          setState(() {
+            symmetricalResult = symResult;
+            asymmetricalResult = asymResult;
+          });
+          break;
+      }
     } catch (e) {
       setState(() {
         errorMessage = e.toString();
@@ -129,8 +172,11 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
       circuits.clear();
       circuits.add(CircuitInput(1));
       matchingResult = null;
+      symmetricalResult = null;
+      asymmetricalResult = null;
       errorMessage = null;
       _useCircuitingData = false;
+      _selectedStrategy = PowerAllocationStrategy.asymmetrical;
     });
   }
 
@@ -168,6 +214,8 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
 
       _useCircuitingData = true;
       matchingResult = null;
+      symmetricalResult = null;
+      asymmetricalResult = null;
       errorMessage = null;
     });
 
@@ -282,6 +330,97 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
           ),
           const SizedBox(height: 24),
 
+          // Power Allocation Strategy Selection
+          Card(
+            elevation: 2,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    'Power Allocation Strategy',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Choose how to allocate power across amplifier channels',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  ...PowerAllocationStrategy.values.map((PowerAllocationStrategy strategy) {
+                    return RadioListTile<PowerAllocationStrategy>(
+                      title: Text(
+                        strategy.label,
+                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                      subtitle: Text(
+                        strategy.description,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      value: strategy,
+                      groupValue: _selectedStrategy,
+                      onChanged: (PowerAllocationStrategy? value) {
+                        setState(() {
+                          _selectedStrategy = value ?? PowerAllocationStrategy.asymmetrical;
+                          // Clear previous results when strategy changes
+                          matchingResult = null;
+                          symmetricalResult = null;
+                          asymmetricalResult = null;
+                          errorMessage = null;
+                        });
+                      },
+                      activeColor: strategy == PowerAllocationStrategy.asymmetrical 
+                          ? Colors.green 
+                          : strategy == PowerAllocationStrategy.symmetrical
+                              ? Colors.blue
+                              : Colors.purple,
+                    );
+                  }),
+
+                  // Strategy explanation
+                  Container(
+                    margin: const EdgeInsets.only(top: 12),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: _getStrategyColor().withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: _getStrategyColor().withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
+                      children: <Widget>[
+                        Icon(
+                          _getStrategyIcon(),
+                          color: _getStrategyColor(),
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _getStrategyExplanation(),
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: _getStrategyColor(),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+
           // Circuit Configuration Section
           Card(
             elevation: 2,
@@ -332,9 +471,9 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
                         isLoading
                             ? const CircularProgressIndicator()
                             : FusionGradientButton(
-                              label: 'Calculate Amplifier Matching',
+                              label: _getCalculateButtonText(),
                               onTap: _calculateAmplifierMatching,
-                              gradient: const LinearGradient(colors: <Color>[Colors.orange, Colors.red]),
+                              gradient: LinearGradient(colors: <Color>[_getStrategyColor(), _getStrategyColor().withValues(alpha: 0.7)]),
                             ),
                   ),
                 ],
@@ -368,7 +507,10 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
           ],
 
           // Results section
-          if (matchingResult != null) _buildResultsSection(matchingResult!),
+          if (matchingResult != null) 
+            _buildResultsSection(matchingResult!)
+          else if (symmetricalResult != null && asymmetricalResult != null)
+            _buildComparisonResultsSection(symmetricalResult!, asymmetricalResult!),
         ],
       ),
     );
@@ -633,45 +775,6 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
                 ),
               ),
             ],
-
-            // Optimization notes
-            if (result.optimizationNotes.isNotEmpty) ...<Widget>[
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.blue[50],
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.blue[200]!),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Icon(Icons.info, color: Colors.blue[700], size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Text(
-                            'Optimization Notes',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.blue[700],
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            result.optimizationNotes,
-                            style: TextStyle(color: Colors.blue[700]),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
           ],
         ),
       ),
@@ -813,5 +916,205 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
         ),
       ),
     );
+  }
+
+  Widget _buildComparisonResultsSection(AmpMatchingResult symmetrical, AmpMatchingResult asymmetrical) {
+    return Column(
+      children: <Widget>[
+        // Comparison Header
+        Card(
+          elevation: 3,
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  'Strategy Comparison Results',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    color: Colors.purple[700],
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                // Comparison Metrics
+                _buildComparisonMetrics(symmetrical, asymmetrical),
+              ],
+            ),
+          ),
+        ),
+        
+        const SizedBox(height: 16),
+        
+        // Side-by-side results
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Expanded(
+              child: Column(
+                children: <Widget>[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.blue[100],
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+                    ),
+                    child: Text(
+                      'Symmetrical Strategy',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue[700],
+                      ),
+                    ),
+                  ),
+                  _buildResultsSection(symmetrical),
+                ],
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                children: <Widget>[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.green[100],
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+                    ),
+                    child: Text(
+                      'Asymmetrical Strategy',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green[700],
+                      ),
+                    ),
+                  ),
+                  _buildResultsSection(asymmetrical),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildComparisonMetrics(AmpMatchingResult symmetrical, AmpMatchingResult asymmetrical) {
+    final double powerImprovement = ((asymmetrical.powerEfficiency - symmetrical.powerEfficiency) * 100);
+    final double channelImprovement = ((asymmetrical.channelEfficiency - symmetrical.channelEfficiency) * 100);
+    final int amplifierDifference = asymmetrical.amplifierCount - symmetrical.amplifierCount;
+    
+    return Row(
+      children: <Widget>[
+        Expanded(
+          child: _buildComparisonMetricCard(
+            'Power Efficiency Gain',
+            '${powerImprovement >= 0 ? '+' : ''}${powerImprovement.toStringAsFixed(1)}%',
+            Icons.trending_up,
+            powerImprovement >= 0 ? Colors.green : Colors.red,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _buildComparisonMetricCard(
+            'Channel Efficiency Gain',
+            '${channelImprovement >= 0 ? '+' : ''}${channelImprovement.toStringAsFixed(1)}%',
+            Icons.settings_input_component,
+            channelImprovement >= 0 ? Colors.green : Colors.red,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _buildComparisonMetricCard(
+            'Amplifier Difference',
+            '${amplifierDifference >= 0 ? '+' : ''}$amplifierDifference',
+            Icons.speaker,
+            amplifierDifference <= 0 ? Colors.green : Colors.orange,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildComparisonMetricCard(String label, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        children: <Widget>[
+          Icon(icon, color: color, size: 20),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              color: color,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getStrategyColor() {
+    switch (_selectedStrategy) {
+      case PowerAllocationStrategy.symmetrical:
+        return Colors.blue;
+      case PowerAllocationStrategy.asymmetrical:
+        return Colors.green;
+      case PowerAllocationStrategy.comparison:
+        return Colors.purple;
+    }
+  }
+
+  IconData _getStrategyIcon() {
+    switch (_selectedStrategy) {
+      case PowerAllocationStrategy.symmetrical:
+        return Icons.equalizer;
+      case PowerAllocationStrategy.asymmetrical:
+        return Icons.share;
+      case PowerAllocationStrategy.comparison:
+        return Icons.compare_arrows;
+    }
+  }
+
+  String _getStrategyExplanation() {
+    switch (_selectedStrategy) {
+      case PowerAllocationStrategy.symmetrical:
+        return 'Each circuit must stay within per-channel power limits. More conservative but guaranteed compatibility.';
+      case PowerAllocationStrategy.asymmetrical:
+        return 'Circuits can exceed per-channel limits if total amplifier capacity allows. More efficient power usage.';
+      case PowerAllocationStrategy.comparison:
+        return 'Compare both strategies side-by-side to see the efficiency differences and trade-offs.';
+    }
+  }
+
+  String _getCalculateButtonText() {
+    switch (_selectedStrategy) {
+      case PowerAllocationStrategy.symmetrical:
+        return 'Calculate (Symmetrical Only)';
+      case PowerAllocationStrategy.asymmetrical:
+        return 'Calculate (With Power Sharing)';
+      case PowerAllocationStrategy.comparison:
+        return 'Compare Both Strategies';
+    }
   }
 }
