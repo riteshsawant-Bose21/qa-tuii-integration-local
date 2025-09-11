@@ -1,0 +1,13 @@
+project:
+  name: "FusionOS-image"
+  description: "FusionOS-image"
+
+tasks:
+  # Mac, iOS and Android build
+  trigger-yocto-image-build:
+    deps:
+      - "fusion-dsp:build"
+      - "fusion-server:build"
+      - "fusion-system-monitor:build"
+      - "fusion-edge-gateway:build"
+      - "fusion-telemetry-core:build"
