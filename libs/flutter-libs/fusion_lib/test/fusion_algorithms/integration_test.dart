@@ -57,7 +57,7 @@ void main() {
         ),
       ];
 
-      final assignments = automaticCircuiting(speakers, 300.0);
+      final assignments = automaticCircuiting(speakers);
 
       expect(assignments, hasLength(1));
       final assignment = assignments.first;
