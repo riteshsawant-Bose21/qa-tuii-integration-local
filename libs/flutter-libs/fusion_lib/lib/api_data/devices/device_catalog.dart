@@ -12,25 +12,29 @@ class DeviceCatalog {
       name: "4ch PowerSmart", 
       analogInputs: 4, 
       analogOutputs: 4, 
-      networkIO: 0
+      networkIO: 0,
+      imageUrl: 'assets/images/bose_dsp.png'
     ),
     DeviceSpec(
       name: "8ch PowerSmart", 
       analogInputs: 8, 
       analogOutputs: 8, 
-      networkIO: 0
+      networkIO: 0,
+      imageUrl: 'assets/images/bose_dsp.png'
     ),
     DeviceSpec(
       name: "FM6", 
       analogInputs: 6, 
       analogOutputs: 0, 
-      networkIO: 24 // Fusion Mini - 6 analog inputs + network I/O (24 limit)
+      networkIO: 24, // Fusion Mini - 6 analog inputs + network I/O (24 limit)
+      imageUrl: 'assets/images/bose_dsp.png'
     ),
     DeviceSpec(
       name: "FM8Y", 
       analogInputs: 8, 
       analogOutputs: 8, 
-      networkIO: 24 // Fusion Mini - 8 analog ins/outs + network I/O (24 limit)
+      networkIO: 24, // Fusion Mini - 8 analog ins/outs + network I/O (24 limit)
+      imageUrl: 'assets/images/bose_dsp.png'
     ),
   ];
 

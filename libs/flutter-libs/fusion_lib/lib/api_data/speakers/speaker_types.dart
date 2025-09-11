@@ -20,6 +20,7 @@ class SpeakerModel {
   final double ppk; // Peak power rating
   final String imageUrl; // URL to product image
   final double price; // Price in USD
+  final String color; // Color option
 
   const SpeakerModel({
     required this.model,
@@ -36,6 +37,7 @@ class SpeakerModel {
     required this.ppk,
     required this.imageUrl,
     required this.price,
+    required this.color,
   });
 
   Map<String, dynamic> toJson() => {
@@ -53,6 +55,7 @@ class SpeakerModel {
     'ppk': ppk,
     'image_url': imageUrl,
     'price': price,
+    'color': color,
   };
 
   factory SpeakerModel.fromJson(Map<String, dynamic> json) => SpeakerModel(
@@ -70,6 +73,7 @@ class SpeakerModel {
     ppk: (json['ppk'] ?? 0.0).toDouble(),
     imageUrl: json['image_url'] ?? '',
     price: (json['price'] ?? 0.0).toDouble(),
+    color: json['color'] ?? 'black',
   );
 
   @override
