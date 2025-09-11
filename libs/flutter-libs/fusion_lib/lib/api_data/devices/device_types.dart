@@ -6,12 +6,14 @@ class DeviceSpec {
   final int analogInputs;
   final int analogOutputs;
   final int networkIO; // limit for network I/O handling
+  final String imageUrl;
 
   const DeviceSpec({
     required this.name,
     required this.analogInputs,
     required this.analogOutputs,
     required this.networkIO,
+    required this.imageUrl,
   });
 
   /// Total analog I/O capacity
@@ -33,6 +35,7 @@ class DeviceSpec {
         'analog_outputs': analogOutputs,
         'network_io': networkIO,
         'total_analog_io': totalAnalogIO,
+        'image_url': imageUrl,
       };
 
   factory DeviceSpec.fromJson(Map<String, dynamic> json) => DeviceSpec(
@@ -40,6 +43,7 @@ class DeviceSpec {
         analogInputs: json['analog_inputs'] ?? 0,
         analogOutputs: json['analog_outputs'] ?? 0,
         networkIO: json['network_io'] ?? 0,
+        imageUrl: json['image_url'] ?? '',
       );
 
   @override

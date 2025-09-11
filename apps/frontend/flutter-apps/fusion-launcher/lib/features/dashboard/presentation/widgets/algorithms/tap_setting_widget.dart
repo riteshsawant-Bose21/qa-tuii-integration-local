@@ -129,21 +129,25 @@ class _TapSettingWidgetState extends State<TapSettingWidget> {
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: TextFormField(
-                  controller: voltageController,
-                  keyboardType: TextInputType.number,
+                child: DropdownButtonFormField<String>(
+                  value: voltageController.text,
                   decoration: const InputDecoration(
                     labelText: 'Voltage (V)',
                     border: OutlineInputBorder(),
                     contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   ),
+                  items: const <DropdownMenuItem<String>>[
+                    DropdownMenuItem<String>(value: '100', child: Text('100V')),
+                    DropdownMenuItem<String>(value: '70', child: Text('70V')),
+                  ],
+                  onChanged: (String? newValue) {
+                    setState(() {
+                      voltageController.text = newValue ?? '100';
+                    });
+                  },
                   validator: (String? value) {
                     if (value == null || value.isEmpty) {
-                      return 'Please enter voltage';
-                    }
-                    final double? voltage = double.tryParse(value);
-                    if (voltage == null || voltage <= 0) {
-                      return 'Please enter a valid voltage';
+                      return 'Please select voltage';
                     }
                     return null;
                   },

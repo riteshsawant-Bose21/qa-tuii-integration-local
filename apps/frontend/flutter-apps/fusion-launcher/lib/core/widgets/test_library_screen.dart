@@ -21,6 +21,7 @@ import '../../features/dashboard/presentation/widgets/algorithms/circuiting_widg
 import '../../features/dashboard/presentation/widgets/algorithms/device_recommender_widget.dart';
 import '../../features/dashboard/presentation/widgets/algorithms/spl_calculation_widget.dart';
 import '../../features/dashboard/presentation/widgets/algorithms/tap_setting_widget.dart';
+import '../../features/dashboard/presentation/widgets/products_filter/product_filter.dart';
 
 class TestLibraryScreen extends StatelessWidget {
   // text editing controller for the email field
@@ -30,13 +31,10 @@ class TestLibraryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 3,
+      length: 4,
       child: Scaffold(
         appBar: FusionAppBar(
-          title: FusionAppText(
-            text: "Library",
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
-          ),
+          title: const Text('Library'),
           themeToggleWidget: ValueListenableBuilder<ThemeMode>(
             valueListenable: FusionThemeController.themeModeNotifier,
             builder: (BuildContext context, ThemeMode themeMode, Widget? child) {
@@ -60,6 +58,7 @@ class TestLibraryScreen extends StatelessWidget {
                 Tab(text: 'Widgets'),
                 Tab(text: 'Theme'),
                 Tab(text: 'Algorithms'),
+                Tab(text: 'Products'),
               ],
             ),
             Expanded(
@@ -68,6 +67,7 @@ class TestLibraryScreen extends StatelessWidget {
                   _buildWidgetsTab(context),
                   _buildThemeTab(context),
                   _buildAlgorithmsTab(context),
+                  _buildProductsTab(context),
                 ],
               ),
             ),
@@ -719,6 +719,20 @@ class TestLibraryScreen extends StatelessWidget {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProductsTab(BuildContext context) {
+    
+    return Container(
+      color: const Color.fromARGB(255, 255, 255, 255),
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          // Main Products Filter Widget - Give it the remaining space
+          Expanded(child: ProductFilterPage()),
         ],
       ),
     );
