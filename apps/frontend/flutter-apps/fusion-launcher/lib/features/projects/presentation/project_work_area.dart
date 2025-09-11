@@ -16,6 +16,7 @@ import '../../../core/widgets/clean_widgets.dart';
 import '../../cloud_ui/presentation/pages/cloud_web_view.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../schematics/presentation/pages/schematics_page.dart';
+import '../../schematics/presentation/widgets/cost_calcuator_widget.dart';
 import '../widget/building/building_canvas.dart';
 import '../widget/building/side_panle_widgets/building_plan.dart';
 import '../widget/control_design_tab_switcher.dart';
@@ -349,12 +350,26 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                         title: "COST CALCULATOR",
                         side: "right",
                         dockItemWidget:
-                            () => Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                              child: const Text(
-                                "Cost Calculator Content",
-                                style: TextStyle(fontSize: 11),
-                              ),
+                            () => CostCalculatorScreen(
+                              speakers: serviceLocator<ProjectViewModel>().speakers,
+                              sources: serviceLocator<ProjectViewModel>().sources,
+                              controllers:
+                                  serviceLocator<ProjectViewModel>().genericHardwareComponents
+                                      .where((GenericHardwareComponent component) => component.type == GenericHardwareComponentType.controller)
+                                      .toList(),
+                              racks:
+                                  serviceLocator<ProjectViewModel>().genericHardwareComponents
+                                      .where((GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack)
+                                      .toList(),
+                              amplifiers: <Amplifier>[],
+                              fusionDevices: <FusionDevice>[],
+                              others:
+                                  serviceLocator<ProjectViewModel>().genericHardwareComponents
+                                      .where(
+                                        (HardwareComponent component) =>
+                                            component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
+                                      )
+                                      .toList(),
                             ),
                       ),
                       DockItemConfig(id: "7", title: "PRODUCT QUERY", side: "right", dockItemWidget: () => const ProductQueryView()),
@@ -379,13 +394,30 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                     mainArea: const SchematicsPage(),
                     dockItemList: <DockItemConfig>[
                       DockItemConfig(
-                        id: "9",
+                        id: "6",
                         title: "COST CALCULATOR",
                         side: "right",
                         dockItemWidget:
-                            () => Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                              child: const Text("Cost Calculator Content"),
+                            () => CostCalculatorScreen(
+                              speakers: serviceLocator<ProjectViewModel>().speakers,
+                              sources: serviceLocator<ProjectViewModel>().sources,
+                              controllers:
+                                  serviceLocator<ProjectViewModel>().genericHardwareComponents
+                                      .where((GenericHardwareComponent component) => component.type == GenericHardwareComponentType.controller)
+                                      .toList(),
+                              racks:
+                                  serviceLocator<ProjectViewModel>().genericHardwareComponents
+                                      .where((GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack)
+                                      .toList(),
+                              amplifiers: <Amplifier>[],
+                              fusionDevices: <FusionDevice>[],
+                              others:
+                                  serviceLocator<ProjectViewModel>().genericHardwareComponents
+                                      .where(
+                                        (HardwareComponent component) =>
+                                            component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
+                                      )
+                                      .toList(),
                             ),
                       ),
                       DockItemConfig(id: "7", title: "PRODUCT QUERY", side: "right", dockItemWidget: () => const ProductQueryView()),
