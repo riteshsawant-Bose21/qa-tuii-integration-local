@@ -1,0 +1,34 @@
+name: "Build Fusion Edge Gateway App"
+description: "Build Fusion Edge Gateway App"
+inputs:
+  flutter_apps_sonar_token:
+    description: 'SonarQube server token'
+    required: true
+  nexus_password:
+    description: 'Nexus repository password'
+    required: true
+  jenkins_user_name:
+    description: 'Jenkins username for authentication'
+    required: true
+  jenkins_user_token:
+    description: 'Jenkins token for authentication'
+    required: true
+  jenkins_url:
+    description: 'Nexus repository URL'
+    required: true
+  nexus_url:
+    description: 'Nexus repository URL'
+    required: true
+        
+runs:
+  using: "composite"
+  steps:
+    - name: Build with Make
+      shell: bash
+      working-directory: apps/firmware-apps/fusion-edge-gateway
+      run: |
+        moon run fusion-edge-gateway:build
+        VERSION="$(./Jenkins/SetVersionProperty.sh)-${GITHUB_RUN_NUMBER}+$(git rev-parse --short HEAD)"
+        curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T ./build/fusion-edge-gateway ${{ inputs.nexus_url }}/Fusion-Edge-Gateway/Continuous/${GITHUB_REF_NAME}/fusion-edge-gateway/$VERSION/fusion-edge-gateway-$VERSION
+        echo "Fusion Edge Gateway build uploaded to Nexus successfully!"
+        echo "fusion-dsp: ${{ inputs.nexus_url }}/Fusion-Edge-Gateway/Continuous/${GITHUB_REF_NAME}/fusion-edge-gateway/$VERSION/fusion-edge-gateway-$VERSION"

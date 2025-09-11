@@ -3,7 +3,6 @@ import 'package:fusion_lib/fusion_algorithms/fusion_algorithms.dart';
 import 'package:fusion_lib/fusion_widgets/buttons/fusion_gradient_button.dart';
 import 'package:fusion_lib/fusion_widgets/form_fields/fusion_text_form_field.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_gradient_text.dart';
-import 'package:fusion_lib/fusion_algorithms/fusion_algorithms.dart';
 import '../../../../../core/services/circuit_data_service.dart';
 
 class SpeakerInputForCircuiting {
@@ -26,7 +25,6 @@ class CircuitingWidget extends StatefulWidget {
 }
 
 class _CircuitingWidgetState extends State<CircuitingWidget> {
-  final TextEditingController maxAmpPowerController = TextEditingController(text: '500');
   List<CircuitAssignment>? circuitResult;
   final List<SpeakerInputForCircuiting> speakers = <SpeakerInputForCircuiting>[
     SpeakerInputForCircuiting(),
@@ -35,7 +33,6 @@ class _CircuitingWidgetState extends State<CircuitingWidget> {
 
   @override
   void dispose() {
-    maxAmpPowerController.dispose();
     for (final SpeakerInputForCircuiting input in speakers) {
       input.dispose();
     }
@@ -91,21 +88,11 @@ class _CircuitingWidgetState extends State<CircuitingWidget> {
                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                 ),
                 Text(
-                  '4. Validates power limits and assigns circuits',
+                  '4. Assigns optimal circuit configurations',
                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                 ),
               ],
             ),
-          ),
-
-          const SizedBox(height: 20),
-
-          FusionTextFormField(
-            title: 'Max Amplifier Power (W)',
-            hintText: 'Enter maximum amplifier power',
-            controller: maxAmpPowerController,
-            keyboardType: TextInputType.number,
-            isRequired: true,
           ),
 
           const SizedBox(height: 20),
@@ -469,14 +456,6 @@ class _CircuitingWidgetState extends State<CircuitingWidget> {
 
   void _calculateCircuiting() {
     try {
-      if (maxAmpPowerController.text.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please enter maximum amplifier power')),
-        );
-        return;
-      }
-
-      final double maxPower = double.parse(maxAmpPowerController.text);
       final List<InputSpeaker> inputSpeakers = <InputSpeaker>[];
 
       for (final SpeakerInputForCircuiting input in speakers) {
@@ -497,14 +476,14 @@ class _CircuitingWidgetState extends State<CircuitingWidget> {
         );
       }
 
-      final List<CircuitAssignment> result = automaticCircuiting(inputSpeakers, maxPower);
+      final List<CircuitAssignment> result = automaticCircuiting(inputSpeakers);
       setState(() {
         circuitResult = result;
       });
 
       // Share results with other widgets through the service
       if (result.isNotEmpty) {
-        _circuitDataService.updateCircuitingResults(result, maxPower);
+        _circuitDataService.updateCircuitingResults(result);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Circuit results shared! Available for amplifier matching.'),

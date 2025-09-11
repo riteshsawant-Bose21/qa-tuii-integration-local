@@ -94,7 +94,9 @@ class FusionButton extends StatelessWidget {
     this.gradient,
     this.height = 55,
     this.width = 350,
-    this.borderRadius = 8,
+    this.topMargin = 0,
+    this.bottomMargin = 0,
+    this.borderRadius = 4,
     this.textStyle,
     this.horizontalPadding = 12,
     this.activeBackgroundColor,
@@ -139,29 +141,34 @@ class FusionButton extends StatelessWidget {
                   color: isActive || borderColor == Colors.transparent ? borderColor : borderColor.withValues(alpha: 0.4),
                   width: borderColor == Colors.transparent ? 0 : 1.5,
                 ),
-              ),
-              child: isLoading
-                  ? SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          Theme.of(context).colorScheme.fusionButtonTextColor,
-                        ),
-                      ),
-                    )
-                  : Row(
-                      mainAxisSize: MainAxisSize.min,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        if (showPrefixIcon && prefixIcon != null) ...[
-                          Icon(
-                            prefixIcon,
-                            size: 16,
-                            color: isActive
-                                ? foregroundColor ?? Theme.of(context).colorScheme.fusionButtonTextColor
-                                : foregroundColor?.withValues(alpha: 0.5) ?? Theme.of(context).colorScheme.fusionButtonTextColor.withValues(alpha: 0.5),
+                child: isLoading
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
+                      )
+                    : Row(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          if (showPrefixIcon && prefixIcon != null) ...[
+                            Icon(
+                              prefixIcon,
+                              size: 16,
+                              color: isActive
+                                  ? foregroundColor ?? Theme.of(context).colorScheme.fusionButtonTextColor
+                                  : foregroundColor?.withOpacity(0.5) ?? Theme.of(context).colorScheme.fusionButtonTextColor.withOpacity(0.5),
+                            ),
+                            const SizedBox(width: 8),
+                          ],
+                          Expanded(
+                            child: Text(
+                              label,
+                              textAlign: TextAlign.center,
+                              style: textStyle ?? Theme.of(context).textTheme.labelLarge?.copyWith(color: Theme.of(context).colorScheme.fusionButtonTextColor),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                           const SizedBox(width: 8),
                         ],

@@ -3,6 +3,10 @@
 This is a Moon-powered fusion-monorepo that contains both frontend, backend & firmware applications, configured with a unified toolchain for consistent developer experience.
 Each project resides in its own dedicated folder and is maintained, tested, and deployed by it's respective workflow. After all applications are successfully built and tested, a Yocto image build is triggered to integrate the latest artifacts into a complete system image.
 
+## Project Graph
+<img width="1465" height="681" alt="image" src="https://github.com/user-attachments/assets/4b9277be-be6a-4c74-bdcf-38a6bd79b964" />
+
+
 ## Repository Structure
 
 ```

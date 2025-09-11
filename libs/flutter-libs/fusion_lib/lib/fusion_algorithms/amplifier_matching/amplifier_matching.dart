@@ -16,7 +16,7 @@ import 'amplifier_matching_error_handler.dart';
 import 'amplifier_matching_logger.dart';
 
 export 'amp_matching_types.dart';
-export 'amplifier_matcher.dart';
+export 'amplifier_matcher.dart' show PowerAllocationStrategy;
 export 'amplifier_matching_error_handler.dart';
 export 'amplifier_matching_logger.dart';
 
@@ -26,6 +26,8 @@ export 'amplifier_matching_logger.dart';
 /// [speakerDatabase] - Speaker specification database for power calculations
 /// [enableLogging] - Enable detailed step-by-step logging (default: true)
 /// [minLogLevel] - Minimum log level to display (default: debug)
+/// [enablePowerSharing] - Enable asymmetrical power sharing optimization (default: true)
+/// [strategy] - Power allocation strategy (symmetrical or asymmetrical)
 ///
 /// Returns optimized amplifier assignments with detailed metrics and validation
 Future<AmpMatchingResult> matchAmplifiers(
@@ -33,12 +35,14 @@ Future<AmpMatchingResult> matchAmplifiers(
   Map<String, SpeakerModel> speakerDatabase, {
   bool enableLogging = true,
   LogLevel minLogLevel = LogLevel.info,
+  bool enablePowerSharing = true,
+  PowerAllocationStrategy strategy = PowerAllocationStrategy.symmetrical,
 }) async {
   // Configure logging
   AmpMatchingLogger.setLoggingEnabled(enableLogging);
   AmpMatchingLogger.setMinLogLevel(minLogLevel);
 
-  return AmplifierMatcher.matchAmplifiers(circuits, speakerDatabase);
+  return AmplifierMatcher.matchAmplifiers(circuits, speakerDatabase, strategy: strategy);
 }
 
 /// Configure logging settings for amplifier matching algorithm

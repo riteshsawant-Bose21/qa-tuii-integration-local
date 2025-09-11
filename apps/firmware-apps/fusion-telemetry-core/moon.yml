@@ -1,0 +1,14 @@
+project:
+  name: 'Fusion Telemetry Core'
+  description: 'Fusion Telemetry Core application'
+
+tasks:
+
+  build:
+    command: "./moon-build.sh"
+    deps:
+      - ready-script
+
+  ready-script:
+    command: "chmod"
+    args: ["+x", "moon-build.sh", "Jenkins/SetVersionProperty.sh"]

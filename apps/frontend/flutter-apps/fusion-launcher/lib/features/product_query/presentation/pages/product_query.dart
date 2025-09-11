@@ -273,7 +273,7 @@ class ProductAPI {
     try {
       final String speakersJson = fusionDevices.getSpeakers();
       final List<dynamic> speakersData = jsonDecode(speakersJson);
-      print("Speakers Data: $speakersData");
+      // print("Speakers Data: $speakersData");
       return speakersData.map((dynamic speakerData) {
         return ProductQueryModel(
           name: speakerData['model'] ?? '',
@@ -293,7 +293,7 @@ class ProductAPI {
     try {
       final String amplifiersJson = fusionDevices.getAmplifiers();
       final List<dynamic> amplifiersData = jsonDecode(amplifiersJson);
-      print("Amplifiers Data: $amplifiersData");
+      // print("Amplifiers Data: $amplifiersData");
 
       return amplifiersData.map((dynamic ampData) {
         return ProductQueryModel(
@@ -314,7 +314,7 @@ class ProductAPI {
     try {
       final String devicesJson = fusionDevices.getDevices();
       final List<dynamic> devicesData = jsonDecode(devicesJson);
-      print("Devices Data: $devicesData");
+      // print("Devices Data: $devicesData");
 
       return devicesData.map((dynamic deviceData) {
         return ProductQueryModel(
@@ -330,5 +330,3 @@ class ProductAPI {
     }
   }
 }
-
-/// Extension methods for easier use
