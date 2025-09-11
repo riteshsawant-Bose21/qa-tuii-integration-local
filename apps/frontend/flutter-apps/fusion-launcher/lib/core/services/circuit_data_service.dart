@@ -9,28 +9,22 @@ class CircuitDataService extends ChangeNotifier {
   CircuitDataService._internal();
 
   List<CircuitAssignment>? _circuitingResults;
-  double? _maxAmplifierPower;
 
   /// Get the current circuiting results
   List<CircuitAssignment>? get circuitingResults => _circuitingResults;
-
-  /// Get the max amplifier power from circuiting
-  double? get maxAmplifierPower => _maxAmplifierPower;
 
   /// Check if circuiting data is available
   bool get hasCircuitingData => _circuitingResults != null && _circuitingResults!.isNotEmpty;
 
   /// Update circuiting results from the CircuitingWidget
-  void updateCircuitingResults(List<CircuitAssignment> results, double maxPower) {
+  void updateCircuitingResults(List<CircuitAssignment> results) {
     _circuitingResults = results;
-    _maxAmplifierPower = maxPower;
     notifyListeners();
   }
 
   /// Clear circuiting data
   void clearCircuitingData() {
     _circuitingResults = null;
-    _maxAmplifierPower = null;
     notifyListeners();
   }
 

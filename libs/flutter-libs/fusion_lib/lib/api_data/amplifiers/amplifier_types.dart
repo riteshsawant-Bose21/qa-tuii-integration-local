@@ -8,11 +8,13 @@ class AmpModel {
   final String name;
   final int channels;
   final double peakPerChannel;
+  final String imageUrl;
 
   const AmpModel({
     required this.name,
     required this.channels,
     required this.peakPerChannel,
+    required this.imageUrl,
   });
 
   double get totalCapacity => channels * peakPerChannel;
@@ -22,12 +24,14 @@ class AmpModel {
     'channels': channels,
     'peak_per_channel': peakPerChannel,
     'total_capacity': totalCapacity,
+    'image_url': imageUrl,
   };
 
   factory AmpModel.fromJson(Map<String, dynamic> json) => AmpModel(
     name: json['name'] ?? '',
     channels: json['channels'] ?? 4,
     peakPerChannel: (json['peak_per_channel'] ?? 600.0).toDouble(),
+    imageUrl: json['image_url'] ?? '',
   );
 
   @override

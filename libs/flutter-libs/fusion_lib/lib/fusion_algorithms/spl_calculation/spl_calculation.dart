@@ -61,9 +61,9 @@ SplMultiMountResult calculateSpl(SplInput input) {
       developer.log('Calculated SPL loss (dB): ${splLoss.toStringAsFixed(2)}');
 
       // Calculate SPL Required for min, mid, max
-      final splReqMin = minTargetSpl + splLoss;
-      final splReqMid = midTargetSpl + splLoss;
-      final splReqMax = maxTargetSpl + splLoss;
+      final splReqMin = minTargetSpl + splLoss + 4;
+      final splReqMid = midTargetSpl + splLoss + 4;
+      final splReqMax = maxTargetSpl + splLoss + 4;
 
       developer.log(
         'SPL Required - Min: ${splReqMin.toStringAsFixed(2)}, '

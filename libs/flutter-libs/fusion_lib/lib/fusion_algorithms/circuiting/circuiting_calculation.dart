@@ -9,7 +9,6 @@ import '../shared/math_utils.dart';
 /// calculates impedance, and applies the hi-z/lo-z rules.
 /// 
 /// [speakers] - List of input speakers with model, quantity, area info
-/// [maxAmpPower] - Maximum amplifier power in watts
 /// 
 /// Returns list of circuit assignments or throws error if circuit cannot be created
 /// 
@@ -18,8 +17,7 @@ import '../shared/math_utils.dart';
 /// 2. Calculates parallel impedance for each group
 /// 3. If impedance >= 4Ω → assigns lo-z circuit
 /// 4. If impedance < 4Ω → checks for hi-z taps and assigns hi-z circuit
-/// 5. Validates total power doesn't exceed max amp power
-List<CircuitAssignment> automaticCircuiting(List<InputSpeaker> speakers, double maxAmpPower) {
+List<CircuitAssignment> automaticCircuiting(List<InputSpeaker> speakers) {
   final assignments = <CircuitAssignment>[];
   int circuitId = 1;
 
@@ -92,14 +90,6 @@ List<CircuitAssignment> automaticCircuiting(List<InputSpeaker> speakers, double 
         
         final tapMsg = '  Hi-z available. Tap=${roundToPrecision(tap, 2)}W, TotalPower=${roundToPrecision(totalPower, 2)}W';
         developer.log(tapMsg, name: 'Circuiting');
-        
-        if (totalPower > maxAmpPower) {
-          final errorMsg = '  ERROR: Circuit exceeds max amp power (${roundToPrecision(totalPower, 2)} W > ${roundToPrecision(maxAmpPower, 2)} W)';
-          developer.log(errorMsg, name: 'Circuiting');
-          throw ArgumentError(
-              'Circuit for $model in area $area exceeds max amp power '
-              '(${roundToPrecision(totalPower, 2)} W > ${roundToPrecision(maxAmpPower, 2)} W)');
-        }
         
         assignments.add(CircuitAssignment(
           area: area,

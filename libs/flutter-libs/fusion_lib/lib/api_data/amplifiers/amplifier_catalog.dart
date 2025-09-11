@@ -12,12 +12,12 @@ class AmpCatalog {
   /// 
   /// TODO: Replace with API call to amplifier specifications service
   static const List<AmpModel> models = [
-    AmpModel(name: 'PSX1204D', channels: 4, peakPerChannel: 600.0),
-    AmpModel(name: 'PSX1208D', channels: 8, peakPerChannel: 600.0),
-    AmpModel(name: 'PSX2404D', channels: 4, peakPerChannel: 1200.0),
-    AmpModel(name: 'PSX2408D', channels: 8, peakPerChannel: 1200.0),
-    AmpModel(name: 'PSX4804D', channels: 4, peakPerChannel: 2400.0),
-    AmpModel(name: 'PSX4808D', channels: 8, peakPerChannel: 2400.0),
+    AmpModel(name: 'PSX1204D', channels: 4, peakPerChannel: 600.0, imageUrl: 'assets/images/amplifier_img.webp'),
+    AmpModel(name: 'PSX1208D', channels: 8, peakPerChannel: 600.0, imageUrl: 'assets/images/amplifier_img.webp'),
+    AmpModel(name: 'PSX2404D', channels: 4, peakPerChannel: 1200.0, imageUrl: 'assets/images/amplifier_img.webp'),
+    AmpModel(name: 'PSX2408D', channels: 8, peakPerChannel: 1200.0, imageUrl: 'assets/images/amplifier_img.webp'),
+    AmpModel(name: 'PSX4804D', channels: 4, peakPerChannel: 2400.0, imageUrl: 'assets/images/amplifier_img.webp'),
+    AmpModel(name: 'PSX4808D', channels: 8, peakPerChannel: 2400.0, imageUrl: 'assets/images/amplifier_img.webp'),
   ];
 
   /// Get amplifiers sorted by power (ascending)

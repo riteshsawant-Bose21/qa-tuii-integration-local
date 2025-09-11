@@ -7,6 +7,40 @@ import 'amp_matching_types.dart';
 import 'amplifier_matching_error_handler.dart';
 import 'amplifier_matching_logger.dart';
 
+/// Power allocation strategy for amplifier selection
+enum PowerAllocationStrategy {
+  /// Symmetrical: Each circuit must fit within per-channel limits (Steps 1-5)
+  symmetrical,
+  
+  /// Asymmetrical: Total power can be shared across channels (Steps 6+)
+  asymmetrical,
+  
+  /// Comparison: Show both strategies side-by-side
+  comparison;
+  
+  String get label {
+    switch (this) {
+      case PowerAllocationStrategy.symmetrical:
+        return 'Symmetrical Only';
+      case PowerAllocationStrategy.asymmetrical:
+        return 'Asymmetrical (Power Sharing)';
+      case PowerAllocationStrategy.comparison:
+        return 'Compare Both';
+    }
+  }
+  
+  String get description {
+    switch (this) {
+      case PowerAllocationStrategy.symmetrical:
+        return 'Traditional per-channel power limits';
+      case PowerAllocationStrategy.asymmetrical:
+        return 'Advanced total capacity optimization';
+      case PowerAllocationStrategy.comparison:
+        return 'Show side-by-side comparison';
+    }
+  }
+}
+
 /// Internal circuit calculation with computed power and errors
 class _CircuitCalc {
   final Circuit base;
@@ -60,9 +94,15 @@ class AmplifierMatcher {
   /// [input] - List of audio circuits to be matched
   /// [speakers] - Database of speaker specifications
   /// [amps] - List of available amplifier models
+  /// [strategy] - Power allocation strategy (symmetrical or asymmetrical)
   ///
   /// Returns [List<Assignment>] with optimized amplifier assignments
-  static List<Assignment> matchAmps(List<Circuit> input, Map<String, SpeakerModel> speakers, List<AmpModel> amps) {
+  static List<Assignment> matchAmps(
+    List<Circuit> input, 
+    Map<String, SpeakerModel> speakers, 
+    List<AmpModel> amps,
+    {PowerAllocationStrategy strategy = PowerAllocationStrategy.symmetrical}
+  ) {
     final stopwatch = Stopwatch()..start();
     _optimizationIterations = 0;
     _circuitMovesPerformed = 0;
@@ -89,7 +129,7 @@ class AmplifierMatcher {
       _logSortedCircuits(calcs);
 
       // STEP 4 & 5: Initial assignment using tier rule + channel allocation
-      final initial = _initialAssignWithLogging(calcs);
+      final initial = _initialAssignWithLogging(calcs, strategy: strategy);
 
       // STEP 6-9: Power-sharing optimization
       final optimized = _powerShareOptimizeWithLogging(initial);
@@ -98,7 +138,7 @@ class AmplifierMatcher {
       final cleaned = _removeEmptyAssignments(optimized);
 
       // STEP 11 & 12: Down-tier pass and final validation
-      final finalAssigns = _downTierPassWithLogging(cleaned);
+      final finalAssigns = _downTierPassWithLogging(cleaned, strategy: strategy);
 
       stopwatch.stop();
 
@@ -182,6 +222,7 @@ class AmplifierMatcher {
 
     // Calculate power based on mode
     final mode = circuit.mode.toLowerCase().replaceAll('_', '-');
+    double powerPeak = 0.0;
     double powerRms = 0.0;
     double impedanceTotal = 0.0;
     bool impedanceValid = true;
@@ -194,18 +235,22 @@ class AmplifierMatcher {
       case 'highz':
         circuitType = 'Hi-Z';
         final tap = _determineHiZTap(circuit, spec);
-        powerRms = circuit.speakerCount * tap;
-        c.ppkTotal = powerRms * 2.0; // Convert RMS to peak
+        
+        // STEP 1: Hi-Z Power Calculation: Ppk_speaker_total = ∑(Loudspeaker_Ptaps) × 2
+        final tapRmsTotal = circuit.speakerCount * tap; // Sum all tap wattages (RMS)
+        powerPeak = tapRmsTotal * 2.0; // Multiply by 2 to convert from RMS to peak power
+        powerRms = tapRmsTotal; // Keep RMS for amplifier comparison
+        c.ppkTotal = powerPeak; // Store peak power as specified
         impedanceTotal = double.infinity; // Hi-Z doesn't have impedance issues
 
         AmpMatchingLogger.logCircuitAnalysis(
           circuit,
           circuitType: circuitType,
           powerRms: powerRms,
-          powerPeak: c.ppkTotal,
+          powerPeak: powerPeak,
           impedanceTotal: impedanceTotal,
           impedanceValid: impedanceValid,
-          notes: 'Hi-Z calculation: ${circuit.speakerCount} speakers × ${tap}W tap × 2 (RMS to peak) = ${c.ppkTotal.toStringAsFixed(1)}W',
+          notes: 'Hi-Z calculation: ${circuit.speakerCount} speakers × ${tap}W tap = ${tapRmsTotal}W RMS → ${powerPeak.toStringAsFixed(1)}W peak (×2)',
         );
         break;
 
@@ -214,8 +259,11 @@ class AmplifierMatcher {
       case 'low-z':
       case 'lowz':
         circuitType = 'Lo-Z';
-        c.ppkTotal = circuit.speakerCount * spec.ppk;
-        powerRms = c.ppkTotal / 2.0; // Peak to RMS estimate
+        
+        // STEP 1: Lo-Z Power Calculation: Ppk_speaker_total = ∑(Loudspeaker_Ppk)
+        powerPeak = circuit.speakerCount * spec.ppk; // Sum peak power ratings of all speakers
+        powerRms = powerPeak / 2.0; // Convert to RMS for amplifier comparison
+        c.ppkTotal = powerPeak; // Store peak power as specified
 
         // Impedance validation for parallel speakers
         impedanceTotal = _calculateParallelImpedance(spec.nominalOhms, circuit.speakerCount);
@@ -234,11 +282,10 @@ class AmplifierMatcher {
           circuit,
           circuitType: circuitType,
           powerRms: powerRms,
-          powerPeak: c.ppkTotal,
+          powerPeak: powerPeak,
           impedanceTotal: impedanceTotal,
           impedanceValid: impedanceValid,
-          notes:
-              'Lo-Z calculation: ${circuit.speakerCount} speakers × ${spec.ppk}W peak = ${c.ppkTotal.toStringAsFixed(1)}W, Parallel impedance = ${impedanceTotal.toStringAsFixed(2)}Ω',
+          notes: 'Lo-Z calculation: ${circuit.speakerCount} speakers × ${spec.ppk}W peak = ${powerPeak.toStringAsFixed(1)}W peak, Parallel impedance = ${impedanceTotal.toStringAsFixed(2)}Ω',
         );
         break;
 
@@ -309,14 +356,14 @@ class AmplifierMatcher {
   }
 
   /// STEP 4 & 5: Initial assignment with comprehensive logging
-  static List<_InternalAssign> _initialAssignWithLogging(List<_CircuitCalc> sorted) {
+  static List<_InternalAssign> _initialAssignWithLogging(List<_CircuitCalc> sorted, {PowerAllocationStrategy strategy = PowerAllocationStrategy.symmetrical}) {
     AmpMatchingLogger.logInitialization(
       circuitCount: sorted.length,
       speakerModels: 0, // Will be updated in actual implementation
       amplifierModels: AmpCatalog.models.length,
     );
 
-    return _initialAssign(sorted);
+    return _initialAssign(sorted, strategy: strategy);
   }
 
   /// STEP 6-9: Power sharing optimization with logging
@@ -367,37 +414,55 @@ class AmplifierMatcher {
   }
 
   /// STEP 11 & 12: Down-tier pass with logging and validation
-  static List<_InternalAssign> _downTierPassWithLogging(List<_InternalAssign> assigns) {
+  static List<_InternalAssign> _downTierPassWithLogging(List<_InternalAssign> assigns, {PowerAllocationStrategy strategy = PowerAllocationStrategy.symmetrical}) {
     final result = <_InternalAssign>[];
 
     for (final assign in assigns) {
       // Find maximum power requirement for tier validation
       double maxLoad = 0.0;
+      double totalLoad = 0.0;
       for (final load in assign.loads) {
         if (load.ppkTotal > maxLoad) {
           maxLoad = load.ppkTotal;
         }
+        totalLoad += load.ppkTotal;
       }
 
-      // Validate current tier
-      final passesRule = assign.amp.peakPerChannel >= maxLoad;
-      AmpMatchingLogger.logTierValidation(amp: assign.amp, maxCircuitPower: maxLoad, passesRule: passesRule);
-
-      if (!passesRule) {
-        AmpMatchingLogger.logError(
-          'TIER_VALIDATION',
-          'Amplifier ${assign.amp.name} fails tier rule: max load ${maxLoad.toStringAsFixed(1)}W > capacity ${assign.amp.peakPerChannel.toStringAsFixed(0)}W',
-        );
+      // Validate based on strategy
+      bool passesRule;
+      if (strategy == PowerAllocationStrategy.symmetrical) {
+        // Symmetrical: each circuit must fit within per-channel capacity
+        passesRule = assign.amp.peakPerChannel >= maxLoad;
+        AmpMatchingLogger.logTierValidation(amp: assign.amp, maxCircuitPower: maxLoad, passesRule: passesRule);
+        
+        if (!passesRule) {
+          AmpMatchingLogger.logError(
+            'TIER_VALIDATION',
+            'Symmetrical mode: Amplifier ${assign.amp.name} fails tier rule: max load ${maxLoad.toStringAsFixed(1)}W > capacity ${assign.amp.peakPerChannel.toStringAsFixed(0)}W per channel',
+          );
+        }
+      } else {
+        // Asymmetrical: total power must fit within total amplifier capacity
+        final totalCapacity = assign.amp.peakPerChannel * assign.amp.channels;
+        passesRule = totalCapacity >= totalLoad;
+        AmpMatchingLogger.logTierValidation(amp: assign.amp, maxCircuitPower: totalLoad, passesRule: passesRule);
+        
+        if (!passesRule) {
+          AmpMatchingLogger.logError(
+            'TIER_VALIDATION',
+            'Asymmetrical mode: Amplifier ${assign.amp.name} fails tier rule: total load ${totalLoad.toStringAsFixed(1)}W > total capacity ${totalCapacity.toStringAsFixed(0)}W',
+          );
+        }
       }
 
       result.add(assign);
     }
 
-    return _downTierPass(result);
+    return _downTierPass(result, strategy: strategy);
   }
 
   /// STEP 4 & 5: Initial assignment using tier rule + 4/8 packing
-  static List<_InternalAssign> _initialAssign(List<_CircuitCalc> sorted) {
+  static List<_InternalAssign> _initialAssign(List<_CircuitCalc> sorted, {PowerAllocationStrategy strategy = PowerAllocationStrategy.symmetrical}) {
     // Prepare sorted amp catalog ascending by PeakPerChannel
     final catalog = List<AmpModel>.from(AmpCatalog.models);
     catalog.sort((a, b) => a.peakPerChannel.compareTo(b.peakPerChannel));
@@ -410,21 +475,57 @@ class AmplifierMatcher {
       final remaining = n - i;
       final blockChannels = remaining > 4 ? 8 : 4;
 
-      // Choose amp tier based on first circuit in this block
-      final first = sorted[i];
-      var ampModel = _chooseAmpByTierRule(first.ppkTotal, catalog);
+      AmpModel ampModel;
+      
+      if (strategy == PowerAllocationStrategy.symmetrical) {
+        // Symmetrical: Choose amp tier based on first (highest power) circuit in this block
+        final first = sorted[i];
+        ampModel = _chooseAmpByTierRule(first.ppkTotal, catalog);
+        
+        // Log tier selection
+        AmpMatchingLogger.logTierSelection(
+          circuitId: first.base.circuitId,
+          requiredPower: first.ppkTotal,
+          selectedAmp: ampModel,
+          availableTiers: catalog,
+          rationale: 'Symmetrical: Selected for highest power circuit in block',
+        );
+      } else {
+        // Asymmetrical: Calculate total power needed for this block and choose by total capacity
+        double totalPowerNeeded = 0.0;
+        final blockSize = math.min(blockChannels, remaining);
+        for (int j = i; j < i + blockSize; j++) {
+          totalPowerNeeded += sorted[j].ppkTotal;
+        }
+        
+        ampModel = _chooseAmpByTierRuleAsymmetrical(totalPowerNeeded, blockChannels, catalog);
+        
+        // Log tier selection
+        AmpMatchingLogger.logTierSelection(
+          circuitId: sorted[i].base.circuitId,
+          requiredPower: totalPowerNeeded,
+          selectedAmp: ampModel,
+          availableTiers: catalog,
+          rationale: 'Asymmetrical: Selected for total power sharing across ${blockSize} circuits',
+        );
+      }
 
-      // Log tier selection
-      AmpMatchingLogger.logTierSelection(
-        circuitId: first.base.circuitId,
-        requiredPower: first.ppkTotal,
-        selectedAmp: ampModel,
-        availableTiers: catalog,
-        rationale: 'Selected for highest power circuit in block',
-      );
-
-      // Attempt to pick variant with requested channel count
-      ampModel = _pickChannelVariant(ampModel, blockChannels, catalog);
+      // Attempt to pick variant with requested channel count (but not for asymmetrical strategy)
+      if (strategy == PowerAllocationStrategy.symmetrical) {
+        ampModel = _pickChannelVariant(ampModel, blockChannels, catalog);
+      } else {
+        // For asymmetrical, we already chose based on total capacity, so only ensure channel count matches
+        if (ampModel.channels < blockChannels) {
+          // If selected amp doesn't have enough channels, find one with the right channel count but same total capacity
+          final sameTotalCapacity = catalog.where((amp) => 
+            amp.channels >= blockChannels && 
+            (amp.peakPerChannel * amp.channels) == (ampModel.peakPerChannel * ampModel.channels)
+          ).toList();
+          if (sameTotalCapacity.isNotEmpty) {
+            ampModel = sameTotalCapacity.first;
+          }
+        }
+      }
 
       // Log channel allocation strategy
       AmpMatchingLogger.logChannelAllocation(
@@ -446,25 +547,58 @@ class AmplifierMatcher {
     return out;
   }
 
-  /// Choose amplifier by tier rule
+  /// Choose amplifier by tier rule - symmetrical mode (per-channel limits)
   static AmpModel _chooseAmpByTierRule(double required, List<AmpModel> catalog) {
     if (catalog.isEmpty) {
       throw const AmpMatchingException('empty catalog');
     }
 
+    // Convert circuit peak power to RMS for comparison with amplifier RMS specs
+    // Note: catalog "peakPerChannel" values are actually RMS ratings (industry standard)
+    final requiredRms = required / 2.0; // Convert peak to RMS
+
+    // Symmetrical mode: select based on per-channel capacity
     // If <= smallest -> smallest
-    if (required <= catalog[0].peakPerChannel) {
+    if (requiredRms <= catalog[0].peakPerChannel) {
       return catalog[0];
     }
 
     for (int i = 0; i < catalog.length - 1; i++) {
       final cur = catalog[i];
       final next = catalog[i + 1];
-      if (required > cur.peakPerChannel && required <= next.peakPerChannel) {
+      if (requiredRms > cur.peakPerChannel && requiredRms <= next.peakPerChannel) {
         return next;
       }
     }
     return catalog[catalog.length - 1];
+  }
+
+  /// Choose amplifier by tier rule - asymmetrical mode (total capacity sharing)
+  static AmpModel _chooseAmpByTierRuleAsymmetrical(double totalPowerNeeded, int channelsNeeded, List<AmpModel> catalog) {
+    if (catalog.isEmpty) {
+      throw const AmpMatchingException('empty catalog');
+    }
+
+    // Convert total peak power to RMS for comparison with amplifier RMS specs
+    final totalPowerNeededRms = totalPowerNeeded / 2.0; // Convert peak to RMS
+
+    // Sort by total capacity (peakPerChannel * channels)
+    final sortedByTotal = catalog.where((amp) => amp.channels >= channelsNeeded).toList();
+    sortedByTotal.sort((a, b) => (a.peakPerChannel * a.channels).compareTo(b.peakPerChannel * b.channels));
+
+    if (sortedByTotal.isEmpty) {
+      return catalog.last; // Fallback to largest available
+    }
+
+    // Find smallest amp with sufficient total capacity
+    for (final amp in sortedByTotal) {
+      final totalCapacity = amp.peakPerChannel * amp.channels;
+      if (totalCapacity >= totalPowerNeededRms) {
+        return amp;
+      }
+    }
+    
+    return sortedByTotal.last; // Largest available if none sufficient
   }
 
   /// Pick channel variant matching desired channels and peak
@@ -588,7 +722,7 @@ class AmplifierMatcher {
   }
 
   /// STEP 11 & 12: Down-tier pass to select smaller SKUs with logging
-  static List<_InternalAssign> _downTierPass(List<_InternalAssign> assigns) {
+  static List<_InternalAssign> _downTierPass(List<_InternalAssign> assigns, {PowerAllocationStrategy strategy = PowerAllocationStrategy.symmetrical}) {
     // Prepare sorted amp catalog ascending by PeakPerChannel
     final catalog = List<AmpModel>.from(AmpCatalog.models);
     catalog.sort((a, b) => a.peakPerChannel.compareTo(b.peakPerChannel));
@@ -597,18 +731,41 @@ class AmplifierMatcher {
 
     for (final a in assigns) {
       double maxLoad = 0.0;
+      double totalLoad = 0.0;
       for (final l in a.loads) {
         if (l.ppkTotal > maxLoad) {
           maxLoad = l.ppkTotal;
         }
+        totalLoad += l.ppkTotal;
       }
 
-      // Pick smallest amp that covers maxLoad
-      var best = catalog[catalog.length - 1];
-      for (final c in catalog) {
-        if (c.peakPerChannel >= maxLoad) {
-          best = c;
-          break;
+      AmpModel best;
+      
+      if (strategy == PowerAllocationStrategy.symmetrical) {
+        // Symmetrical: Pick smallest amp that covers maxLoad per channel
+        // Convert peak power to RMS for comparison with amplifier specs
+        final maxLoadRms = maxLoad / 2.0;
+        best = catalog[catalog.length - 1];
+        for (final c in catalog) {
+          if (c.peakPerChannel >= maxLoadRms) {
+            best = c;
+            break;
+          }
+        }
+      } else {
+        // Asymmetrical: Pick smallest amp that covers totalLoad across all channels
+        // Convert peak power to RMS for comparison with amplifier specs
+        final totalLoadRms = totalLoad / 2.0;
+        final sortedByTotal = catalog.where((amp) => amp.channels >= a.loads.length).toList();
+        sortedByTotal.sort((x, y) => (x.peakPerChannel * x.channels).compareTo(y.peakPerChannel * y.channels));
+        
+        best = sortedByTotal.last; // fallback
+        for (final c in sortedByTotal) {
+          final totalCapacity = c.peakPerChannel * c.channels;
+          if (totalCapacity >= totalLoadRms) {
+            best = c;
+            break;
+          }
         }
       }
 
@@ -625,9 +782,10 @@ class AmplifierMatcher {
       }
 
       if (!found) {
-        // Find any with same channels and >= maxLoad
+        // Find any with same channels and >= maxLoad (convert peak to RMS)
+        final maxLoadRms = maxLoad / 2.0;
         for (final c in catalog) {
-          if (c.channels == a.amp.channels && c.peakPerChannel >= maxLoad) {
+          if (c.channels == a.amp.channels && c.peakPerChannel >= maxLoadRms) {
             a.amp = c;
             found = true;
             break;
@@ -653,12 +811,16 @@ class AmplifierMatcher {
   }
 
   /// Enhanced main entry point with comprehensive logging and error handling
-  static Future<AmpMatchingResult> matchAmplifiers(List<Circuit> circuits, Map<String, SpeakerModel> speakerDatabase) async {
+  static Future<AmpMatchingResult> matchAmplifiers(
+    List<Circuit> circuits, 
+    Map<String, SpeakerModel> speakerDatabase,
+    {PowerAllocationStrategy strategy = PowerAllocationStrategy.symmetrical}
+  ) async {
     final stopwatch = Stopwatch()..start();
 
     try {
       // Execute the core matching algorithm
-      final assignments = matchAmps(circuits, speakerDatabase, AmpCatalog.models);
+      final assignments = matchAmps(circuits, speakerDatabase, AmpCatalog.models, strategy: strategy);
 
       // Convert to legacy format
       final ampAssignments = assignments.map((assignment) {

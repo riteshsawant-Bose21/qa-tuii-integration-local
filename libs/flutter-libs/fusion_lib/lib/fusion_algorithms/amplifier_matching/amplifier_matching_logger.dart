@@ -329,6 +329,31 @@ class AmpMatchingLogger {
     }
   }
   
+  /// Log asymmetrical power allocation validation
+  static void logAsymmetricalValidation({
+    required AmpModel amp,
+    required double totalUsedPower,
+    required double totalCapacity,
+    required double maxCircuitPower,
+    required bool exceedsPerChannel,
+    required bool withinTotalCapacity,
+  }) {
+    final status = withinTotalCapacity ? 'VALID' : 'INVALID';
+    final asymmetricalNote = exceedsPerChannel 
+        ? 'ASYMMETRICAL: Circuit exceeds per-channel limit but within total capacity'
+        : 'SYMMETRICAL: All circuits within per-channel limits';
+    
+    _log(LogLevel.info, 'ASYMMETRICAL_VALIDATION', 
+        'Amp: ${amp.name} | $status | $asymmetricalNote', {
+      'total_used_power': totalUsedPower.toStringAsFixed(1),
+      'total_capacity': totalCapacity.toStringAsFixed(1),
+      'max_circuit_power': maxCircuitPower.toStringAsFixed(1),
+      'per_channel_limit': amp.peakPerChannel.toStringAsFixed(1),
+      'exceeds_per_channel': exceedsPerChannel,
+      'within_total_capacity': withinTotalCapacity,
+    });
+  }
+
   /// Log algorithm errors and exceptions
   static void logError(String step, String message, [Exception? exception]) {
     _log(LogLevel.error, step, message);
