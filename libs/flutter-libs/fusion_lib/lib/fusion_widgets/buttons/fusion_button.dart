@@ -39,12 +39,6 @@ class FusionButton extends StatelessWidget {
   /// Width of the button. Default is 350.
   final double width;
 
-  /// Top margin above the button.
-  final double topMargin;
-
-  /// Bottom margin below the button.
-  final double bottomMargin;
-
   /// Border radius for rounded corners.
   final double borderRadius;
 
@@ -100,8 +94,6 @@ class FusionButton extends StatelessWidget {
     this.gradient,
     this.height = 55,
     this.width = 350,
-    this.topMargin = 24,
-    this.bottomMargin = 30,
     this.borderRadius = 8,
     this.textStyle,
     this.horizontalPadding = 12,
@@ -127,68 +119,77 @@ class FusionButton extends StatelessWidget {
       enabled: isActive,
       child: ExcludeSemantics(
         excluding: true,
-        child: Container(
-          margin: EdgeInsets.only(top: topMargin, bottom: bottomMargin),
-          child: IgnorePointer(
-            ignoring: isLoading || !isActive,
-            child: InkWell(
-              onTap: onTap,
-              borderRadius: BorderRadius.circular(borderRadius),
-              child: Container(
-                height: height,
-                width: width,
-                padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  gradient: isActive ? gradient : gradient?.withOpacity(0.3),
-                  color: isActive
-                      ? (activeBackgroundColor ?? Theme.of(context).colorScheme.fusionButtonColor)
-                      : (activeBackgroundColor?.withOpacity(0.3) ?? Theme.of(context).colorScheme.fusionButtonColor).withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(borderRadius),
-                  border: Border.all(color: isActive || borderColor == Colors.transparent ? borderColor : borderColor.withOpacity(0.4)),
+        child: IgnorePointer(
+          ignoring: isLoading || !isActive,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(borderRadius),
+            child: Container(
+              height: height,
+              width: width,
+              padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                gradient: isActive ? gradient : gradient?.withOpacity(0.3),
+                color: isActive
+                    ? (activeBackgroundColor ?? Theme.of(context).colorScheme.fusionButtonColor)
+                    : (activeBackgroundColor?.withValues(alpha: 0.3) ?? Theme.of(context).colorScheme.fusionButtonColor.withValues(alpha: 0.3)),
+                borderRadius: BorderRadius.circular(borderRadius),
+                border: Border.all(
+                  color: isActive || borderColor == Colors.transparent ? borderColor : borderColor.withValues(alpha: 0.4),
+                  width: borderColor == Colors.transparent ? 0 : 1.5,
                 ),
-                child: isLoading
-                    ? const SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
-                      )
-                    : Row(
-                        mainAxisSize: MainAxisSize.min,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          if (showPrefixIcon && prefixIcon != null) ...[
-                            Icon(
-                              prefixIcon,
-                              size: 16,
-                              color: isActive
-                                  ? foregroundColor ?? Theme.of(context).colorScheme.fusionButtonTextColor
-                                  : foregroundColor?.withOpacity(0.5) ?? Theme.of(context).colorScheme.fusionButtonTextColor.withOpacity(0.5),
-                            ),
-                            const SizedBox(width: 8),
-                          ],
-                          Expanded(
-                            child: Text(
-                              label,
-                              textAlign: TextAlign.center,
-                              style: textStyle ?? Theme.of(context).textTheme.labelLarge,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          if (showSuffixIcon && suffixIcon != null) ...[
-                            const SizedBox(width: 8),
-                            Icon(
-                              suffixIcon,
-                              size: 16,
-                              color: isActive
-                                  ? foregroundColor ?? Theme.of(context).colorScheme.fusionButtonTextColor
-                                  : foregroundColor?.withOpacity(0.5) ?? Theme.of(context).colorScheme.fusionButtonTextColor,
-                            ),
-                          ],
-                        ],
-                      ),
               ),
+              child: isLoading
+                  ? SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          Theme.of(context).colorScheme.fusionButtonTextColor,
+                        ),
+                      ),
+                    )
+                  : Row(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        if (showPrefixIcon && prefixIcon != null) ...[
+                          Icon(
+                            prefixIcon,
+                            size: 16,
+                            color: isActive
+                                ? foregroundColor ?? Theme.of(context).colorScheme.fusionButtonTextColor
+                                : foregroundColor?.withValues(alpha: 0.5) ?? Theme.of(context).colorScheme.fusionButtonTextColor.withValues(alpha: 0.5),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                        Expanded(
+                          child: Text(
+                            label,
+                            textAlign: TextAlign.center,
+                            style: (textStyle ?? Theme.of(context).textTheme.labelLarge)?.copyWith(
+                              color: isActive
+                                  ? foregroundColor ?? Theme.of(context).colorScheme.fusionButtonTextColor
+                                  : foregroundColor?.withValues(alpha: 0.5) ?? Theme.of(context).colorScheme.fusionButtonTextColor.withValues(alpha: 0.5),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (showSuffixIcon && suffixIcon != null) ...[
+                          const SizedBox(width: 8),
+                          Icon(
+                            suffixIcon,
+                            size: 16,
+                            color: isActive
+                                ? foregroundColor ?? Theme.of(context).colorScheme.fusionButtonTextColor
+                                : foregroundColor?.withValues(alpha: 0.5) ?? Theme.of(context).colorScheme.fusionButtonTextColor.withValues(alpha: 0.5),
+                          ),
+                        ],
+                      ],
+                    ),
             ),
           ),
         ),

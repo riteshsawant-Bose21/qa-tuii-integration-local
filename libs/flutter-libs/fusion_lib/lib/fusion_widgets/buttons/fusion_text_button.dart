@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
-/// A customizable and reusable outlined button for the Fusion design system.
+/// A customizable and reusable text button for the Fusion design system.
 ///
-/// The [FusionOutlinedButton] supports:
+/// The [FusionTextButton] supports:
 /// - Disabled and loading states
 /// - Optional prefix and suffix icons
-/// - Customizable styling (border, colors, text)
+/// - Customizable styling (colors, text)
 /// - Accessibility labels for screen readers
 ///
 /// ### Example usage:
 /// ```dart
-/// FusionOutlinedButton(
+/// FusionTextButton(
 ///   label: 'Cancel',
 ///   onTap: () {
 ///     // Your action
@@ -29,7 +28,7 @@ import 'package:fusion_lib/fusion_theme/app_theme.dart';
 ///   ),
 /// )
 /// ```
-class FusionOutlinedButton extends StatelessWidget {
+class FusionTextButton extends StatelessWidget {
   /// Text displayed inside the button.
   final String label;
 
@@ -57,9 +56,6 @@ class FusionOutlinedButton extends StatelessWidget {
   /// Background color of the button. Default is transparent.
   final Color backgroundColor;
 
-  /// Border color when the button is active. Default is blue.
-  final Color? activeBorderColor;
-
   /// Indicates whether the button is in a loading state.
   final bool isLoading;
 
@@ -84,10 +80,10 @@ class FusionOutlinedButton extends StatelessWidget {
   /// Semantic label for screen readers.
   final String? accessLabel;
 
-  /// Creates a [FusionOutlinedButton].
+  /// Creates a [FusionTextButton].
   ///
   /// All parameters are optional except [label] and [onTap].
-  const FusionOutlinedButton({
+  const FusionTextButton({
     super.key,
     required this.label,
     required this.onTap,
@@ -98,7 +94,6 @@ class FusionOutlinedButton extends StatelessWidget {
     this.horizontalPadding = 12,
     this.foregroundColor = const Color(0xFF000000),
     this.backgroundColor = Colors.transparent,
-    this.activeBorderColor,
     this.isLoading = false,
     this.isActive = true,
     this.showPrefixIcon = false,
@@ -129,11 +124,7 @@ class FusionOutlinedButton extends StatelessWidget {
             decoration: BoxDecoration(
               color: backgroundColor,
               borderRadius: BorderRadius.circular(borderRadius),
-              border: Border.all(
-                color: isActive
-                    ? activeBorderColor ?? Theme.of(context).colorScheme.fusionOutlinedButtonColor
-                    : activeBorderColor?.withOpacity(0.5) ?? Theme.of(context).colorScheme.fusionOutlinedButtonColor.withOpacity(0.5),
-              ),
+              // No border - this is the only difference from FusionOutlinedButton
             ),
             child: isLoading
                 ? const SizedBox(
@@ -146,7 +137,7 @@ class FusionOutlinedButton extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       if (showPrefixIcon && prefixIcon != null) ...[
-                        Icon(prefixIcon, size: 16, color: isActive ? foregroundColor : foregroundColor.withOpacity(0.5)),
+                        Icon(prefixIcon, size: 16, color: isActive ? foregroundColor : foregroundColor.withValues(alpha: 0.5)),
                         const SizedBox(width: 8),
                       ],
                       Expanded(
@@ -160,7 +151,7 @@ class FusionOutlinedButton extends StatelessWidget {
                       ),
                       if (showSuffixIcon && suffixIcon != null) ...[
                         const SizedBox(width: 8),
-                        Icon(suffixIcon, size: 16, color: isActive ? foregroundColor : foregroundColor.withOpacity(0.5)),
+                        Icon(suffixIcon, size: 16, color: isActive ? foregroundColor : foregroundColor.withValues(alpha: 0.5)),
                       ],
                     ],
                   ),

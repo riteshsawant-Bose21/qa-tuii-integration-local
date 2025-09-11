@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:file_picker/file_picker.dart';
@@ -808,7 +809,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
         barrierDismissible: true,
         builder:
             (BuildContext context) => Dialog(
-              child: FloorPlanCalibration(
+              child: FloorPlanCalibrator(
                 floorPlanImage: image,
                 onCalibrationComplete: (CalibrationData data) {
                   if (mounted) {
@@ -834,8 +835,11 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
         final int floorIndex = serviceLocator<ProjectViewModel>().currentFloorIndex;
         final FloorModel floor = serviceLocator<ProjectViewModel>().floors[floorIndex];
 
-        final double widthInUnits = image.width * calibrationData.unitsPerPixel;
-        final double heightInUnits = image.height * calibrationData.unitsPerPixel;
+        // Use cropped image if available, otherwise use original
+        final ui.Image imageToUse = calibrationData.croppedImage ?? image;
+
+        final double widthInUnits = imageToUse.width * calibrationData.unitsPerPixel;
+        final double heightInUnits = imageToUse.height * calibrationData.unitsPerPixel;
 
         double widthInMeters = widthInUnits;
         double heightInMeters = heightInUnits;
@@ -864,10 +868,18 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
         debugPrint('Real-world dimensions: ${widthInMeters.toStringAsFixed(2)}m x ${heightInMeters.toStringAsFixed(2)}m');
         debugPrint('Canvas dimensions: ${canvasWidthInPixels.toStringAsFixed(1)}px x ${canvasHeightInPixels.toStringAsFixed(1)}px');
 
+        // If we have a cropped image, save it and use it instead of the original
+        String imagePathToUse = savedImagePath;
+        if (calibrationData.croppedImage != null) {
+          // Save the cropped image
+          final String croppedImagePath = await _saveCroppedImage(calibrationData.croppedImage!, savedImagePath);
+          imagePathToUse = croppedImagePath;
+        }
+
         serviceLocator<ProjectViewModel>().updateFloor(
           floor.copyWith(
             floorPlan: floor.floorPlan.copyWith(
-              imagePath: savedImagePath,
+              imagePath: imagePathToUse,
               position: floor.floorPlan.imagePath.isNotEmpty ? floor.floorPlan.position : viewPortCenter,
               size: floorPlanSize,
             ),
@@ -901,6 +913,42 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
           ),
         );
       }
+    }
+  }
+
+  Future<String> _saveCroppedImage(ui.Image croppedImage, String originalImagePath) async {
+    // Convert the cropped image to byte data
+    final ByteData? byteData = await croppedImage.toByteData(format: ui.ImageByteFormat.png);
+    if (byteData == null) throw Exception('Failed to convert cropped image to byte data.');
+
+    // Create a temporary file to save the cropped image
+    final String tempFileName = 'cropped_${DateTime.now().millisecondsSinceEpoch}.png';
+    final String tempPath = '${Directory.systemTemp.path}/$tempFileName';
+
+    // Write the byte data to the temporary file first
+    final File tempFile = File(tempPath);
+    await tempFile.writeAsBytes(byteData.buffer.asUint8List());
+
+    debugPrint('Cropped image temporarily saved to: $tempPath');
+
+    // Now use the project's image management system to properly store it
+    final ResponseCallback<String?> responseCallback = await serviceLocator<ProjectViewModel>().addImageToProject(tempPath);
+
+    // Clean up the temporary file
+    try {
+      if (await tempFile.exists()) {
+        await tempFile.delete();
+      }
+    } catch (e) {
+      debugPrint('Warning: Could not delete temporary file: $e');
+    }
+
+    if (responseCallback.success && responseCallback.data != null) {
+      final String savedCroppedImagePath = responseCallback.data!;
+      debugPrint('Cropped image properly saved to: $savedCroppedImagePath');
+      return savedCroppedImagePath;
+    } else {
+      throw Exception('Failed to save cropped image to project storage');
     }
   }
 }

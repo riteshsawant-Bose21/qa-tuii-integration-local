@@ -10,6 +10,7 @@ import 'package:fusion_lib/models/dock_item_config.dart';
 
 import '../../../core/service_locator.dart';
 import '../../../core/utils/broadcast_controllers.dart';
+import '../../../core/widgets/keep_alive_wrapper.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../schematics/presentation/pages/schematics_page.dart';
 import '../widget/building/building_canvas.dart';
@@ -197,194 +198,198 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                 physics: const NeverScrollableScrollPhysics(),
                 children: <Widget>[
                   /// building tab with docking area
-                  FusionDockableArea(
-                    tabKey: "tab1",
-                    showLeft: true,
-                    showRight: true,
-                    mainArea: const BuildingCanvas(),
-                    dockItemList: <DockItemConfig>[
-                      DockItemConfig(
-                        id: "1",
-                        title: "Building Plan",
-                        side: "left",
-                        alowUndock: false,
-                        isCollapsibleSection: false,
-                        dockItemWidget: () => const BuildingPlan(),
-                        // () => Container(
-                        //   padding: const EdgeInsets.all(16),
-                        //   decoration: BoxDecoration(
-                        //     border: Border(
-                        //       bottom: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
-                        //     ),
-                        //   ),
-                        //   child: Column(
-                        //     crossAxisAlignment: CrossAxisAlignment.start,
-                        //     mainAxisAlignment: MainAxisAlignment.start,
-                        //     children: <Widget>[
-                        //       Row(
-                        //         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        //         crossAxisAlignment: CrossAxisAlignment.center,
-                        //         children: <Widget>[
-                        //           FusionAppText(text: "Building Plan", style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 11)),
-                        //           GestureDetector(
-                        //             onTap: () {},
-                        //             child: Icon(
-                        //               Icons.add_sharp,
-                        //               size: 14,
-                        //               color: Theme.of(context).colorScheme.fusionTextViewColor,
-                        //             ),
-                        //           ),
-                        //         ],
+                  KeepAliveWrapper(
+                    child: FusionDockableArea(
+                      tabKey: "tab1",
+                      showLeft: true,
+                      showRight: true,
+                      mainArea: const BuildingCanvas(),
+                      dockItemList: <DockItemConfig>[
+                        DockItemConfig(
+                          id: "1",
+                          title: "Building Plan",
+                          side: "left",
+                          alowUndock: false,
+                          isCollapsibleSection: false,
+                          dockItemWidget: () => const BuildingPlan(),
+                          // () => Container(
+                          //   padding: const EdgeInsets.all(16),
+                          //   decoration: BoxDecoration(
+                          //     border: Border(
+                          //       bottom: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
+                          //     ),
+                          //   ),
+                          //   child: Column(
+                          //     crossAxisAlignment: CrossAxisAlignment.start,
+                          //     mainAxisAlignment: MainAxisAlignment.start,
+                          //     children: <Widget>[
+                          //       Row(
+                          //         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          //         crossAxisAlignment: CrossAxisAlignment.center,
+                          //         children: <Widget>[
+                          //           FusionAppText(text: "Building Plan", style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 11)),
+                          //           GestureDetector(
+                          //             onTap: () {},
+                          //             child: Icon(
+                          //               Icons.add_sharp,
+                          //               size: 14,
+                          //               color: Theme.of(context).colorScheme.fusionTextViewColor,
+                          //             ),
+                          //           ),
+                          //         ],
+                          //       ),
+                          //       const SizedBox(
+                          //         height: 10,
+                          //       ),
+                          //       Row(
+                          //         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          //         crossAxisAlignment: CrossAxisAlignment.center,
+                          //         children: <Widget>[
+                          //           Container(
+                          //             width: 18,
+                          //             height: 18,
+                          //             margin: const EdgeInsets.all(0),
+                          //             decoration: BoxDecoration(
+                          //               color: Theme.of(context).colorScheme.greyDark,
+                          //               borderRadius: BorderRadius.circular(2),
+                          //               border: Border.all(color: Theme.of(context).colorScheme.dividerColor, width: 1),
+                          //             ),
+                          //             child: FusionAppText(
+                          //               text: "FF",
+                          //               textAlign: TextAlign.center,
+                          //               style: Theme.of(
+                          //                 context,
+                          //               ).textTheme.bodyMedium?.copyWith(
+                          //                 fontSize: 9,
+                          //                 fontWeight: FontWeight.w600,
+                          //                 color: Theme.of(context).colorScheme.fusionButtonTextColor,
+                          //               ),
+                          //             ),
+                          //           ),
+                          //           const SizedBox(
+                          //             width: 12,
+                          //           ),
+                          //           Column(
+                          //             crossAxisAlignment: CrossAxisAlignment.start,
+                          //             children: <Widget>[
+                          //               FusionAppText(text: "Floor plan 1", style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 12)),
+                          //               const SizedBox(height: 1),
+                          //               FusionAppText(
+                          //                 text: "Description",
+                          //                 style: Theme.of(
+                          //                   context,
+                          //                 ).textTheme.bodyMedium?.copyWith(
+                          //                   fontSize: 10,
+                          //                   fontWeight: FontWeight.w600,
+                          //                   color: Theme.of(context).colorScheme.grey,
+                          //                 ),
+                          //               ),
+                          //             ],
+                          //           ),
+                          //           const Spacer(),
+                          //           GestureDetector(
+                          //             onTap: () {},
+                          //             child: Icon(
+                          //               Icons.keyboard_arrow_down,
+                          //               size: 14,
+                          //               color: Theme.of(context).colorScheme.fusionTextViewColor,
+                          //             ),
+                          //           ),
+                          //         ],
+                          //       ),
+                          //     ],
+                          //   ),
+                          // ),
+                        ),
+                        DockItemConfig(
+                          id: "2",
+                          title: "Coverage",
+                          side: "left",
+                          alowUndock: false,
+                          initiallyExpanded: true,
+                          isCollapsibleSection: true,
+                          dockItemWidget:
+                              () => Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                child: const Text("Coverage Content"),
+                              ),
+                        ),
+                        DockItemConfig(
+                          id: "3",
+                          title: "Devices",
+                          side: "left",
+                          dockItemWidget:
+                              () => Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                child: const Text("Devices Content"),
+                              ),
+                        ),
+                        DockItemConfig(
+                          id: "4",
+                          title: "Tree View",
+                          side: "left",
+                          dockItemWidget:
+                              () => Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                child: const Text("Tree View Content"),
+                              ),
+                        ),
+                        DockItemConfig(
+                          id: "5",
+                          title: "ATTRIBUTES",
+                          side: "right",
+                          dockItemWidget:
+                              () => Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                child: const Text("Attributes Content"),
+                              ),
+                        ),
+                        DockItemConfig(
+                          id: "6",
+                          title: "COST CALCULATOR",
+                          side: "right",
+                          dockItemWidget:
+                              () => Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                child: const Text("Cost Calculator Content"),
+                              ),
+                        ),
+                        DockItemConfig(id: "7", title: "PRODUCT QUERY", side: "right", dockItemWidget: () => const ProductQueryView()),
+                        // DockItemConfig(
+                        //   id: "8",
+                        //   title: "DEVICE LIST",
+                        //   side: "right",
+                        //   dockItemWidget:
+                        //       () => Container(
+                        //         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                        //         child: const Text("Device List Content"),
                         //       ),
-                        //       const SizedBox(
-                        //         height: 10,
-                        //       ),
-                        //       Row(
-                        //         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        //         crossAxisAlignment: CrossAxisAlignment.center,
-                        //         children: <Widget>[
-                        //           Container(
-                        //             width: 18,
-                        //             height: 18,
-                        //             margin: const EdgeInsets.all(0),
-                        //             decoration: BoxDecoration(
-                        //               color: Theme.of(context).colorScheme.greyDark,
-                        //               borderRadius: BorderRadius.circular(2),
-                        //               border: Border.all(color: Theme.of(context).colorScheme.dividerColor, width: 1),
-                        //             ),
-                        //             child: FusionAppText(
-                        //               text: "FF",
-                        //               textAlign: TextAlign.center,
-                        //               style: Theme.of(
-                        //                 context,
-                        //               ).textTheme.bodyMedium?.copyWith(
-                        //                 fontSize: 9,
-                        //                 fontWeight: FontWeight.w600,
-                        //                 color: Theme.of(context).colorScheme.fusionButtonTextColor,
-                        //               ),
-                        //             ),
-                        //           ),
-                        //           const SizedBox(
-                        //             width: 12,
-                        //           ),
-                        //           Column(
-                        //             crossAxisAlignment: CrossAxisAlignment.start,
-                        //             children: <Widget>[
-                        //               FusionAppText(text: "Floor plan 1", style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 12)),
-                        //               const SizedBox(height: 1),
-                        //               FusionAppText(
-                        //                 text: "Description",
-                        //                 style: Theme.of(
-                        //                   context,
-                        //                 ).textTheme.bodyMedium?.copyWith(
-                        //                   fontSize: 10,
-                        //                   fontWeight: FontWeight.w600,
-                        //                   color: Theme.of(context).colorScheme.grey,
-                        //                 ),
-                        //               ),
-                        //             ],
-                        //           ),
-                        //           const Spacer(),
-                        //           GestureDetector(
-                        //             onTap: () {},
-                        //             child: Icon(
-                        //               Icons.keyboard_arrow_down,
-                        //               size: 14,
-                        //               color: Theme.of(context).colorScheme.fusionTextViewColor,
-                        //             ),
-                        //           ),
-                        //         ],
-                        //       ),
-                        //     ],
-                        //   ),
                         // ),
-                      ),
-                      DockItemConfig(
-                        id: "2",
-                        title: "Coverage",
-                        side: "left",
-                        alowUndock: false,
-                        initiallyExpanded: true,
-                        isCollapsibleSection: true,
-                        dockItemWidget:
-                            () => Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                              child: const Text("Coverage Content"),
-                            ),
-                      ),
-                      DockItemConfig(
-                        id: "3",
-                        title: "Devices",
-                        side: "left",
-                        dockItemWidget:
-                            () => Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                              child: const Text("Devices Content"),
-                            ),
-                      ),
-                      DockItemConfig(
-                        id: "4",
-                        title: "Tree View",
-                        side: "left",
-                        dockItemWidget:
-                            () => Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                              child: const Text("Tree View Content"),
-                            ),
-                      ),
-                      DockItemConfig(
-                        id: "5",
-                        title: "ATTRIBUTES",
-                        side: "right",
-                        dockItemWidget:
-                            () => Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                              child: const Text("Attributes Content"),
-                            ),
-                      ),
-                      DockItemConfig(
-                        id: "6",
-                        title: "COST CALCULATOR",
-                        side: "right",
-                        dockItemWidget:
-                            () => Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                              child: const Text("Cost Calculator Content"),
-                            ),
-                      ),
-                      DockItemConfig(id: "7", title: "PRODUCT QUERY", side: "right", dockItemWidget: () => const ProductQueryView()),
-                      // DockItemConfig(
-                      //   id: "8",
-                      //   title: "DEVICE LIST",
-                      //   side: "right",
-                      //   dockItemWidget:
-                      //       () => Container(
-                      //         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                      //         child: const Text("Device List Content"),
-                      //       ),
-                      // ),
-                    ],
+                      ],
+                    ),
                   ),
 
                   /// schematics tab with docking area
-                  FusionDockableArea(
-                    tabKey: "tab2",
-                    showLeft: false,
-                    showRight: true,
-                    mainArea: const SchematicsPage(),
-                    dockItemList: <DockItemConfig>[
-                      DockItemConfig(
-                        id: "9",
-                        title: "Cost Calculator",
-                        side: "right",
-                        dockItemWidget:
-                            () => Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                              child: const Text("Cost Calculator Content"),
-                            ),
-                      ),
-                      DockItemConfig(id: "7", title: "PRODUCT QUERY", side: "right", dockItemWidget: () => const ProductQueryView()),
-                    ],
+                  KeepAliveWrapper(
+                    child: FusionDockableArea(
+                      tabKey: "tab2",
+                      showLeft: false,
+                      showRight: true,
+                      mainArea: const SchematicsPage(),
+                      dockItemList: <DockItemConfig>[
+                        DockItemConfig(
+                          id: "9",
+                          title: "Cost Calculator",
+                          side: "right",
+                          dockItemWidget:
+                              () => Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                child: const Text("Cost Calculator Content"),
+                              ),
+                        ),
+                        DockItemConfig(id: "7", title: "PRODUCT QUERY", side: "right", dockItemWidget: () => const ProductQueryView()),
+                      ],
+                    ),
                   ),
 
                   /// budget tab with docking area
