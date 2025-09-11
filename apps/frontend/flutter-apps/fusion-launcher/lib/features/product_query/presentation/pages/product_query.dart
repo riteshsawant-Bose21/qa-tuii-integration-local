@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import 'package:fusion_lib/api_data/fusion_devices.dart';
 
 import '../../../projects/widget/product_search_widget.dart';
 import '../viewModel/product_query_view_model_cubit.dart';
@@ -187,9 +186,6 @@ class ProductCard extends StatelessWidget {
         return 'Amplifier • ${product.specifications}';
       case ProductType.device:
         return 'Device • ${product.specifications}';
-
-      default:
-        return "";
     }
   }
 

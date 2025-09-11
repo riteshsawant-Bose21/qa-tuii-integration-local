@@ -32,6 +32,7 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
   StreamSubscription<int>? subscription;
   late TextEditingController _projectNameController;
   final FocusNode _projectNameFocusNode = FocusNode();
+  final GlobalKey _projectNameKey = GlobalKey();
 
   final List<Widget> _tabs = const <Widget>[
     Tab(text: 'Building'),
@@ -293,7 +294,7 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                         title: "COVERAGE",
                         side: "left",
                         alowUndock: false,
-                        initiallyExpanded: true,
+                        initiallyExpanded: false,
                         isCollapsibleSection: true,
                         dockItemWidget:
                             () => Container(
@@ -428,6 +429,7 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
     return InkWell(
       onTap: _showEditProjectNameDropdown,
       child: Container(
+        key: _projectNameKey,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         width: 237,
         decoration: BoxDecoration(
@@ -437,7 +439,6 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
             right: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
           ),
         ),
-
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -463,7 +464,6 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                 ),
               ],
             ),
-
             const Icon(
               Icons.arrow_drop_down_outlined,
               size: 18,
@@ -474,15 +474,17 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
     );
   }
 
+  /// Show Edit Project Name Dropdown
   void _showEditProjectNameDropdown() {
-    final RenderBox button = context.findRenderObject() as RenderBox;
+    final RenderBox button = _projectNameKey.currentContext!.findRenderObject() as RenderBox;
     final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+
     final RelativeRect position = RelativeRect.fromRect(
       Rect.fromPoints(
-        button.localToGlobal(const Offset(-1, 0), ancestor: overlay),
+        button.localToGlobal(Offset.zero, ancestor: overlay),
         button.localToGlobal(button.size.bottomRight(Offset.zero), ancestor: overlay),
       ),
-      Offset.zero & overlay.size,
+      const Offset(-100, -20) & overlay.size,
     );
 
     showMenu<String>(
@@ -494,7 +496,7 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
       ),
       color: Theme.of(context).colorScheme.white,
       elevation: 1,
-      constraints: const BoxConstraints(minWidth: 250, maxWidth: 300),
+      constraints: const BoxConstraints(minWidth: 237, maxWidth: 237), // Match container width
       items: <PopupMenuEntry<String>>[
         PopupMenuItem<String>(
           enabled: false,
@@ -507,13 +509,14 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
               });
 
               return Container(
+                width: 237, // Match the project name container width
                 padding: const EdgeInsets.all(12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
                     FusionAppText(
-                      text: "Edit Project name",
+                      text: "Edit Project Name",
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -529,7 +532,7 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                         fontSize: 12,
                       ),
                       decoration: InputDecoration(
-                        hintText: 'Enter floor name',
+                        hintText: 'Enter project name',
                         hintStyle: TextStyle(
                           color: Theme.of(context).colorScheme.grey,
                           fontSize: 12,
@@ -564,11 +567,9 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                           label: "Cancel",
                           textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10),
                           onTap: () {
-                            // _clearFields();
                             Navigator.of(context).pop();
                           },
                         ),
-
                         const SizedBox(width: 8),
                         FusionButton(
                           height: 28,
