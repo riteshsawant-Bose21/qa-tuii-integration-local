@@ -12,10 +12,8 @@ import 'package:fusion_lib/models/dock_item_config.dart';
 
 import '../../../core/service_locator.dart';
 import '../../../core/utils/broadcast_controllers.dart';
-import '../../../core/widgets/keep_alive_wrapper.dart';
 import '../../../core/widgets/clean_widgets.dart';
 import '../../cloud_ui/presentation/pages/cloud_web_view.dart';
-
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../schematics/presentation/pages/schematics_page.dart';
 import '../../schematics/presentation/widgets/cost_calcuator_widget.dart';
