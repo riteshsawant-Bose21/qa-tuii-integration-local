@@ -288,17 +288,25 @@ bool Ocp1LiteSocketConnection::HandleKeepAlive(::OcaUint32 messageSendBufferSize
     bool connectionValid(true);
     if (m_keepAliveTimeOut > static_cast< ::OcaUint32>(0))
     {
+        // Normalize initial timestamps on first invocation
+        // First keep alive is sent, mark last receive time as current time.
 #ifdef FUSION
-        if (static_cast< ::OcaUint64>(0) == m_lastMessageReceivedTime)
+        if (static_cast<::OcaUint64>(0) == m_lastMessageReceivedTime)
         {
-            // First keep alive is sent, mark last receive time as current time.
-            m_lastMessageReceivedTime = static_cast< ::OcaUint64>(::OcfLiteTimerGetTimerTickCount());
+            m_lastMessageReceivedTime = static_cast<::OcaUint64>(::OcfLiteTimerGetTimerTickCount());
+        }
+        if (static_cast<::OcaUint64>(0) == m_lastMessageSentTime)
+        {
+            m_lastMessageSentTime = static_cast<::OcaUint64>(::OcfLiteTimerGetTimerTickCount());
         }
 #else
-        if (static_cast< ::OcaUint32>(0) == m_lastMessageReceivedTime)
+        if (static_cast<::OcaUint32>(0) == m_lastMessageReceivedTime)
         {
-            // First keep alive is sent, mark last receive time as current time.
-            m_lastMessageReceivedTime = static_cast< ::OcaUint32>(::OcfLiteTimerGetTimerTickCount());
+            m_lastMessageReceivedTime = static_cast<::OcaUint32>(::OcfLiteTimerGetTimerTickCount());
+        }
+        if (static_cast<::OcaUint32>(0) == m_lastMessageSentTime)
+        {
+            m_lastMessageSentTime = static_cast<::OcaUint32>(::OcfLiteTimerGetTimerTickCount());
         }
 #endif
         UINT32 multiplier(1000);
@@ -306,25 +314,32 @@ bool Ocp1LiteSocketConnection::HandleKeepAlive(::OcaUint32 messageSendBufferSize
         {
             multiplier = 1;
         }
+        // Use widest tick representation available for arithmetic to avoid truncation.
 #ifdef FUSION
-        if (static_cast<UINT32>(OcfLiteTimerGetTimerTickCount() - static_cast<UINT64>(m_lastMessageReceivedTime)) >= static_cast<UINT32>(static_cast<UINT32>(m_keepAliveTimeOut) * multiplier * MAX_KEEPALIVE_MISSED))
+        typedef ::OcaUint64 TickType;
 #else
-        if (static_cast<UINT32>(OcfLiteTimerGetTimerTickCount() - static_cast<UINT32>(m_lastMessageReceivedTime)) >= static_cast<UINT32>(static_cast<UINT32>(m_keepAliveTimeOut) * multiplier * MAX_KEEPALIVE_MISSED))
+        typedef ::OcaUint32 TickType;
 #endif
+        const TickType now = static_cast<TickType>(::OcfLiteTimerGetTimerTickCount());
+        const TickType lastRx = static_cast<TickType>(m_lastMessageReceivedTime);
+        const TickType lastTx = static_cast<TickType>(m_lastMessageSentTime);
+
+        const TickType baseTimeout = static_cast<TickType>(m_keepAliveTimeOut) * static_cast<TickType>(multiplier);
+        const TickType receiveTimeout = baseTimeout * static_cast<TickType>(MAX_KEEPALIVE_MISSED);
+
+        const TickType elapsedSinceRx = now - lastRx; // relies on unsigned wrap semantics
+        const TickType elapsedSinceTx = now - lastTx;
+
+        if (elapsedSinceRx >= receiveTimeout)
         {
             OCA_LOG_ERROR_PARAMS("Not received any message for %i secs on session %u", static_cast<int>(m_keepAliveTimeOut) * MAX_KEEPALIVE_MISSED, m_sessionID);
             connectionValid = false;
             m_socketState = SOCKET_NOT_CONNECTED;
         }
-
-#ifdef FUSION
-        else if (static_cast<UINT32>(OcfLiteTimerGetTimerTickCount() - static_cast<UINT64>(m_lastMessageSentTime)) >= static_cast<UINT32>(m_keepAliveTimeOut) * multiplier)
-#else
-        else if (static_cast<UINT32>(OcfLiteTimerGetTimerTickCount() - static_cast<UINT32>(m_lastMessageSentTime)) >= static_cast<UINT32>(m_keepAliveTimeOut) * multiplier)
-#endif
+        else if (elapsedSinceTx >= baseTimeout)
         {
             // Send a keep alive message
-            if (OCASTATUS_PROCESSING_FAILED == SendKeepAlive(static_cast< ::OcaUint16>(m_keepAliveTimeOut), messageSendBufferSize, pMessageSendBuffer))
+            if (OCASTATUS_PROCESSING_FAILED == SendKeepAlive(static_cast<::OcaUint16>(m_keepAliveTimeOut), messageSendBufferSize, pMessageSendBuffer))
             {
                 // Only if sending really fails the connection is lost, in other cases (e.g. buffer overflow) it is not lost yet
                 connectionValid = false;
