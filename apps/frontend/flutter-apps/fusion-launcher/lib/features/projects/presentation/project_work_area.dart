@@ -19,6 +19,7 @@ import '../../schematics/presentation/pages/schematics_page.dart';
 import '../../schematics/presentation/widgets/cost_calcuator_widget.dart';
 import '../widget/building/building_canvas.dart';
 import '../widget/building/side_panle_widgets/building_plan.dart';
+import '../widget/building/side_panle_widgets/properties.dart';
 import '../widget/control_design_tab_switcher.dart';
 
 class ProjectWorkArea extends StatefulWidget {
@@ -332,19 +333,7 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                               ),
                             ),
                       ),
-                      DockItemConfig(
-                        id: "5",
-                        title: "ATTRIBUTES",
-                        side: "right",
-                        dockItemWidget:
-                            () => Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                              child: const Text(
-                                "Attributes Content",
-                                style: TextStyle(fontSize: 11),
-                              ),
-                            ),
-                      ),
+                      DockItemConfig(id: "5", title: "PROPERTIES", side: "right", dockItemWidget: () => const Properties()),
                       DockItemConfig(
                         id: "6",
                         title: "COST CALCULATOR",
