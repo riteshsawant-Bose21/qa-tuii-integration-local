@@ -77,7 +77,7 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
 
   /// Handle drag start to bring item to front
   void _handleItemDragStart(DockItem item) {
-    _bringItemToFront(item);
+    // _bringItemToFront(item);
   }
 
   /// Handle drag end to determine docking or floating
@@ -100,6 +100,7 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
         item.position = details.offset;
         item.docked = false;
         item.expanded = true;
+        _bringItemToFront(item);
       }
     });
   }

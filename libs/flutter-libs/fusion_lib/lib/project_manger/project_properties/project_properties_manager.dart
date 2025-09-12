@@ -15,7 +15,7 @@ extension ProjectPropertiesManager on ProjectManager {
 
   //set Project name
   void setProjectName(String name) {
-    projectService = projectService!.copyWith(name: name);
+    projectService = projectService!.copyWith(name: name, projectName: name);
   }
 
   //get Project colors
