@@ -224,12 +224,18 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
 
     // hit-test handles in screen space
     final handles = _handlesInScreen(r, _cropRectN);
-    const hitSize = 12.0;
+    const hitSize = 20.0; // Increased hit size for better touch detection
     final p = d.localPosition;
 
     _activeHandle = _CropHandle.none;
+
+    // Check each handle for hits, including those that may extend beyond image bounds
     for (final entry in handles.entries) {
-      if ((entry.value - p).distance <= hitSize) {
+      final handlePos = entry.value;
+      final distance = (handlePos - p).distance;
+
+      // Check if the touch is within the hit area of this handle
+      if (distance <= hitSize) {
         _activeHandle = entry.key;
         break;
       }
@@ -242,8 +248,14 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
     final r = _imageRect;
     if (r == null) return;
 
-    final n = _screenToNormalized(d.localPosition);
-    if (n == null) return;
+    // Allow pan updates even if they're outside the image bounds
+    // but clamp the resulting crop rectangle to valid ranges
+    final screenPos = d.localPosition;
+
+    // Convert screen position to normalized coordinates relative to image
+    final normalizedX = ((screenPos.dx - r.left) / r.width).clamp(0.0, 1.0);
+    final normalizedY = ((screenPos.dy - r.top) / r.height).clamp(0.0, 1.0);
+    final n = Offset(normalizedX, normalizedY);
 
     Rect newN = _cropRectN;
     // min size in normalized units (~12px on a medium canvas)
@@ -490,7 +502,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
 
     return Column(
       children: <Widget>[
-        // Toolbar row (icons on left, controls on right) — matches screenshot
+        // Toolbar row
         Container(
           height: 44,
           padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -547,7 +559,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
                   decoration: InputDecoration(
                     isDense: true,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                    hintText: '5.00',
+                    hintText: '1.00',
                     hintStyle: TextStyle(
                       color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                     ),
@@ -570,6 +582,9 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
                       ),
                     ),
                   ),
+                  onChanged: (value) {
+                    setState(() {});
+                  },
                 ),
               ),
               const SizedBox(width: 12),
@@ -630,22 +645,25 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
         // Canvas
         Expanded(
           child: Container(
-            color: Theme.of(context).colorScheme.surfaceContainerLow,
-            child: Center(
-              child: MouseRegion(
-                cursor: _mode == _ToolMode.measure ? SystemMouseCursors.precise : SystemMouseCursors.resizeUpLeftDownRight,
-                onHover: _mode == _ToolMode.measure ? _onMeasureHover : null,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTapDown: _mode == _ToolMode.measure ? _onMeasureTapDown : null,
-                  onPanUpdate: _mode == _ToolMode.measure ? _onMeasurePanUpdate : _onCropPanUpdate,
-                  onPanStart: _mode == _ToolMode.crop ? _onCropPanStart : null,
-                  onPanEnd: (d) {
-                    if (_mode == _ToolMode.crop) _onCropPanEnd(d);
-                    if (_mode == _ToolMode.measure && _isDrawing) {
-                      setState(() => _isDrawing = false);
-                    }
-                  },
+            clipBehavior: Clip.hardEdge,
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerLow,
+            ),
+            child: MouseRegion(
+              cursor: _mode == _ToolMode.measure ? SystemMouseCursors.precise : SystemMouseCursors.resizeUpLeftDownRight,
+              onHover: _mode == _ToolMode.measure ? _onMeasureHover : null,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTapDown: _mode == _ToolMode.measure ? _onMeasureTapDown : null,
+                onPanUpdate: _mode == _ToolMode.measure ? _onMeasurePanUpdate : _onCropPanUpdate,
+                onPanStart: _mode == _ToolMode.crop ? _onCropPanStart : null,
+                onPanEnd: (d) {
+                  if (_mode == _ToolMode.crop) _onCropPanEnd(d);
+                  if (_mode == _ToolMode.measure && _isDrawing) {
+                    setState(() => _isDrawing = false);
+                  }
+                },
+                child: Center(
                   child: CustomPaint(
                     painter: FloorPlanCalibrationPainter(
                       image: widget.floorPlanImage,
@@ -864,7 +882,7 @@ class FloorPlanCalibrationPainter extends CustomPainter {
           _CropHandle.left: Offset(crop.left, (crop.top + crop.bottom) / 2),
         };
 
-        const double s = 9;
+        const double s = 12;
         final Paint hp = Paint()
           ..color = Colors.white
           ..style = PaintingStyle.fill;
