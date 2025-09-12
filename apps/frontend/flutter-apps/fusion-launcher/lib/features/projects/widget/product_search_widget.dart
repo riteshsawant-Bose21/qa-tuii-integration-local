@@ -10,7 +10,7 @@ class ProductSearchWidget extends StatelessWidget {
     super.key,
     required this.searchController,
     required this.selectedProductType,
-    required this.selectedSortOption,
+    this.selectedSortOption,
     required this.selectedProductTypes,
     required this.selectedMountTypes,
     required this.selectedVenueTypes,
@@ -25,7 +25,7 @@ class ProductSearchWidget extends StatelessWidget {
 
   final TextEditingController searchController;
   final ProductType? selectedProductType;
-  final SortOption selectedSortOption;
+  final SortOption? selectedSortOption;
   final Set<ProductType> selectedProductTypes;
   final Set<String> selectedMountTypes;
   final Set<String> selectedVenueTypes;
@@ -33,8 +33,7 @@ class ProductSearchWidget extends StatelessWidget {
   final Set<String> selectedCoverages;
   final Set<String> selectedImpedances;
   final VoidCallback? onClearSearch;
-  // final ValueChanged<ProductType?>? onProductTypeChanged;
-  final ValueChanged<SortOption>? onSortOptionChanged;
+  final ValueChanged<SortOption?>? onSortOptionChanged;
   final VoidCallback? onFiltersChanged;
 
   @override
@@ -100,7 +99,7 @@ class ProductSearchWidget extends StatelessWidget {
                   dropdownBuilder:
                       (BuildContext context) => SortDropdownContent(
                         selectedSortOption: selectedSortOption,
-                        onSortOptionChanged: onSortOptionChanged ?? (SortOption option) {},
+                        onSortOptionChanged: onSortOptionChanged ?? (SortOption? option) {}, // Updated default callback
                       ),
                 ),
 

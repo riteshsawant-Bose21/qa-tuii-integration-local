@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
 
-class CostCalculatorScreen extends StatelessWidget {
+class CostCalculatorScreen extends StatefulWidget {
   final List<Speaker> speakers;
   final List<Source> sources;
   final List<HardwareComponent> controllers;
@@ -29,130 +31,86 @@ class CostCalculatorScreen extends StatelessWidget {
   static const double fsMedium = 13;
 
   @override
-  Widget build(BuildContext context) {
-    return _buildCostCalculator(context);
+  State<CostCalculatorScreen> createState() => _CostCalculatorScreenState();
+}
+
+class _CostCalculatorScreenState extends State<CostCalculatorScreen> with SingleTickerProviderStateMixin {
+  late final AnimationController _rotationController;
+  late final Animation<double> _rotationAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _rotationController = AnimationController(duration: const Duration(milliseconds: 200), vsync: this, value: 1.0);
+    _rotationAnimation = Tween<double>(begin: 0.0, end: 0.5).animate(CurvedAnimation(parent: _rotationController, curve: Curves.easeInOut));
   }
 
-  Widget _buildCostCalculator(BuildContext context) {
+  @override
+  void dispose() {
+    _rotationController.dispose();
+    super.dispose();
+  }
+
+  /// Handles expansion state changes and triggers icon rotation animation.
+  ///
+  /// Called by the [ExpansionTile] when the user taps to expand or collapse.
+  /// Animates the trailing icon to provide visual feedback.
+  ///
+  /// [expanded] - `true` if the tile is being expanded, `false` if collapsing.
+  void _handleExpansionChanged(bool expanded) {
+    if (expanded) {
+      _rotationController.forward();
+    } else {
+      _rotationController.reverse();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final int totalItems = _calculateTotalItems();
     final double totalCost = _calculateTotalCost();
 
-    return Card(
-      margin: const EdgeInsets.all(12),
-      elevation: 0,
-      color: Colors.white,
-      shape: RoundedRectangleBorder(
-        side: const BorderSide(width: 1, color: Color(0xFFD5D5D5)),
-        borderRadius: BorderRadius.circular(8),
-      ),
+    return Container(
+      padding: const EdgeInsets.only(top: 0, bottom: 16, left: 16, right: 16),
       child: Column(
         children: <Widget>[
-          Theme(
-            data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-            child: ExpansionTile(
-              initiallyExpanded: true,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              collapsedShape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              title: Container(
-                decoration: const BoxDecoration(
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(8),
-                    topRight: Radius.circular(8),
-                  ),
-                ),
-                child: const Row(
-                  children: <Widget>[
-                    Icon(
-                      Icons.calculate_outlined,
-                      color: accentColor,
-                    ),
-                    SizedBox(width: 8),
-                    Text(
-                      'COST CALCULATOR',
-                      style: TextStyle(
-                        fontSize: fsSmall,
-                        color: primaryText,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+          /// Component Sections
+          _buildHardwareSection("Loudspeakers", widget.speakers, Icons.speaker_outlined),
+          _buildHardwareSection("Sources", widget.sources, Icons.input_outlined),
+          _buildHardwareSection("Controllers", widget.controllers, Icons.settings_remote_outlined),
+          _buildHardwareSection("Racks", widget.racks, Icons.dns_outlined),
+          _buildComponentSection("Amplifiers", widget.amplifiers, Icons.graphic_eq_outlined),
+          _buildComponentSection("Fusion Devices", widget.fusionDevices, Icons.hub_outlined),
+          _buildHardwareSection("Others", widget.others, Icons.widgets_outlined),
 
-              children: <Widget>[
-                // Component Sections
-                _buildHardwareSection("Speakers", speakers, Icons.speaker_outlined),
-                _buildHardwareSection("Sources", sources, Icons.input_outlined),
-                _buildHardwareSection("Controllers", controllers, Icons.settings_remote_outlined),
-                _buildHardwareSection("Racks", racks, Icons.dns_outlined),
-                _buildComponentSection("Amplifiers", amplifiers, Icons.graphic_eq_outlined),
-                _buildComponentSection("Fusion Devices", fusionDevices, Icons.hub_outlined),
-                _buildHardwareSection("Others", others, Icons.widgets_outlined),
+          const SizedBox(
+            height: 6,
+          ),
 
-                // Total Section
-                Container(
-                  margin: const EdgeInsets.only(top: 8),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: accentColor.withOpacity(0.05),
-                    borderRadius: const BorderRadius.only(
-                      bottomLeft: Radius.circular(8),
-                      bottomRight: Radius.circular(8),
-                    ),
-                  ),
-                  child: SingleChildScrollView(
-                    child: Row(
-                      children: <Widget>[
-                        const Icon(
-                          Icons.receipt_long_outlined,
-                          size: 18,
-                          color: accentColor,
-                        ),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'Total Cost',
-                          style: TextStyle(
-                            fontSize: fsMedium,
-                            color: primaryText,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const Spacer(),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: accentColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            totalItems.toString().padLeft(2, '0'),
-                            style: const TextStyle(
-                              fontSize: fsSmall,
-                              color: accentColor,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          '\$${totalCost.toStringAsFixed(2)}',
-                          style: const TextStyle(
-                            fontSize: fsMedium,
-                            color: primaryText,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+          /// Total Section
+          Row(
+            children: <Widget>[
+              FusionAppText(
+                text: "Total Cost",
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w600,
                 ),
-              ],
-            ),
+              ),
+              const Spacer(),
+              FusionAppText(
+                text: totalItems.toString().padLeft(2, '0'),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(width: 20),
+              FusionAppText(
+                text: '\$${totalCost.toStringAsFixed(2)}',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -162,67 +120,70 @@ class CostCalculatorScreen extends StatelessWidget {
   Widget _buildComponentSection<T>(String title, List<T> items, IconData icon) {
     if (items.isEmpty) return const SizedBox.shrink();
 
-    return ExpansionTile(
-      childrenPadding: EdgeInsets.zero,
-      minTileHeight: 0,
-      collapsedBackgroundColor: Colors.transparent,
-      backgroundColor: Colors.transparent,
-      collapsedIconColor: primaryText,
-      iconColor: accentColor,
-      title: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: <Widget>[
-            // Icon(icon, size: 16, color: const Color(0xFF464545)),
-            // const SizedBox(width: 8),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: fsRegular,
-                color: primaryText,
-              ),
-            ),
-
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                items.length.toString().padLeft(2, '0'),
+    return Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        childrenPadding: EdgeInsets.zero,
+        minTileHeight: 0,
+        collapsedBackgroundColor: Colors.transparent,
+        backgroundColor: Colors.transparent,
+        collapsedIconColor: CostCalculatorScreen.primaryText,
+        iconColor: CostCalculatorScreen.accentColor,
+        title: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: <Widget>[
+              // Icon(icon, size: 16, color: const Color(0xFF464545)),
+              // const SizedBox(width: 8),
+              Text(
+                title,
                 style: const TextStyle(
-                  fontSize: fsSmall,
-                  color: primaryText,
+                  fontSize: CostCalculatorScreen.fsRegular,
+                  color: CostCalculatorScreen.primaryText,
                 ),
               ),
-            ),
 
-            Text(
-              '\$${items.totalPrice.toStringAsFixed(2)}',
-              style: const TextStyle(
-                fontSize: fsRegular,
-                color: primaryText,
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  items.length.toString().padLeft(2, '0'),
+                  style: const TextStyle(
+                    fontSize: CostCalculatorScreen.fsSmall,
+                    color: CostCalculatorScreen.primaryText,
+                  ),
+                ),
               ),
-            ),
-          ],
-        ),
-      ),
 
-      children: <Widget>[
-        Container(
-          margin: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.grey[50],
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Column(
-            children: items.map((dynamic item) => _buildItemRow(item)).toList(),
+              Text(
+                '\$${items.totalPrice.toStringAsFixed(2)}',
+                style: const TextStyle(
+                  fontSize: CostCalculatorScreen.fsRegular,
+                  color: CostCalculatorScreen.primaryText,
+                ),
+              ),
+            ],
           ),
         ),
-      ],
+
+        children: <Widget>[
+          Container(
+            margin: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              children: items.map((dynamic item) => _buildItemRow(item)).toList(),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -233,55 +194,61 @@ class CostCalculatorScreen extends StatelessWidget {
 
     return ExpansionTile(
       childrenPadding: EdgeInsets.zero,
+
       minTileHeight: 0,
 
       collapsedBackgroundColor: Colors.transparent,
       backgroundColor: Colors.transparent,
-      collapsedIconColor: primaryText,
-      iconColor: accentColor,
+      collapsedIconColor: CostCalculatorScreen.primaryText,
+      iconColor: CostCalculatorScreen.accentColor,
+      onExpansionChanged: _handleExpansionChanged,
+      tilePadding: EdgeInsets.zero,
+      showTrailingIcon: true,
       title: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: <Widget>[
-            // Icon(icon, size: 16, color: secondaryText),
-            // const SizedBox(width: 8),
-            Text(
-              title,
-              style: const TextStyle(fontSize: fsRegular, color: primaryText, overflow: TextOverflow.ellipsis),
+            _RotatingIcon(animation: _rotationAnimation, color: Theme.of(context).colorScheme.fusionButtonColor),
+            const SizedBox(
+              width: 4,
             ),
-
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                items.length.toString().padLeft(2, '0'),
-                style: const TextStyle(fontSize: fsSmall, color: primaryText, overflow: TextOverflow.ellipsis),
+            FusionAppText(
+              text: title,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                fontSize: 11,
               ),
             ),
-
-            Text(
-              '\$${items.totalPrice.toStringAsFixed(2)}',
-              style: const TextStyle(
-                fontSize: fsRegular,
-                color: primaryText,
-              ),
-            ),
-            const SizedBox(width: 8),
           ],
         ),
+      ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          FusionAppText(
+            text: items.length.toString().padLeft(2, ''),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              fontSize: 11,
+            ),
+          ),
+          const SizedBox(
+            width: 8,
+          ),
+          Container(
+            width: 70,
+            alignment: Alignment.centerRight,
+            child: FusionAppText(
+              maxLine: 1,
+              text: '\$${items.totalPrice.toStringAsFixed(2)}',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                fontSize: 11,
+              ),
+            ),
+          ),
+        ],
       ),
       children: <Widget>[
         Container(
           margin: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.grey[50],
-            borderRadius: BorderRadius.circular(8),
-          ),
           child: Column(
             children: groupedItems.entries.map((MapEntry<String, List<HardwareComponent>> entry) => _buildHardwareItemRow(entry.key, entry.value)).toList(),
           ),
@@ -301,7 +268,7 @@ class CostCalculatorScreen extends StatelessWidget {
             height: 4,
             margin: const EdgeInsets.only(top: 6, right: 8),
             decoration: BoxDecoration(
-              color: accentColor,
+              color: CostCalculatorScreen.accentColor,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -312,8 +279,8 @@ class CostCalculatorScreen extends StatelessWidget {
                 Text(
                   _getItemName(item),
                   style: const TextStyle(
-                    fontSize: fsSmall,
-                    color: primaryText,
+                    fontSize: CostCalculatorScreen.fsSmall,
+                    color: CostCalculatorScreen.primaryText,
                   ),
                 ),
               ],
@@ -323,8 +290,8 @@ class CostCalculatorScreen extends StatelessWidget {
           Text(
             '\$${_getItemPrice(item).toStringAsFixed(2)}',
             style: const TextStyle(
-              fontSize: fsSmall,
-              color: primaryText,
+              fontSize: CostCalculatorScreen.fsSmall,
+              color: CostCalculatorScreen.primaryText,
             ),
           ),
         ],
@@ -338,7 +305,7 @@ class CostCalculatorScreen extends StatelessWidget {
     final HardwareComponent sampleItem = items.first;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -347,46 +314,31 @@ class CostCalculatorScreen extends StatelessWidget {
             height: 4,
             margin: const EdgeInsets.only(top: 6, right: 8),
             decoration: BoxDecoration(
-              color: accentColor,
+              color: Theme.of(context).colorScheme.primary,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  _getItemName(sampleItem),
-                  style: const TextStyle(
-                    fontSize: fsSmall,
-                    color: primaryText,
-                  ),
-                ),
-                const SizedBox(height: 2),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              color: accentColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Text(
-              'x$quantity',
-              style: const TextStyle(
-                fontSize: fsSmall,
-                color: accentColor,
+            child: FusionAppText(
+              text: _getItemName(sampleItem),
+              maxLine: 1,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                fontSize: 11,
               ),
             ),
           ),
           const SizedBox(width: 8),
-          Text(
-            '\$${totalPrice.toStringAsFixed(2)}',
-            style: const TextStyle(
-              fontSize: fsSmall,
-              color: primaryText,
+          FusionAppText(
+            text: 'x$quantity',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              fontSize: 11,
+            ),
+          ),
+          const SizedBox(width: 18),
+          FusionAppText(
+            text: '\$${totalPrice.toStringAsFixed(2)}',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              fontSize: 11,
             ),
           ),
         ],
@@ -431,17 +383,23 @@ class CostCalculatorScreen extends StatelessWidget {
   }
 
   int _calculateTotalItems() {
-    return speakers.length + sources.length + controllers.length + racks.length + amplifiers.length + fusionDevices.length + others.length;
+    return widget.speakers.length +
+        widget.sources.length +
+        widget.controllers.length +
+        widget.racks.length +
+        widget.amplifiers.length +
+        widget.fusionDevices.length +
+        widget.others.length;
   }
 
   double _calculateTotalCost() {
-    return speakers.totalPrice +
-        sources.totalPrice +
-        controllers.totalPrice +
-        racks.totalPrice +
-        amplifiers.totalPrice +
-        fusionDevices.totalPrice +
-        others.totalPrice;
+    return widget.speakers.totalPrice +
+        widget.sources.totalPrice +
+        widget.controllers.totalPrice +
+        widget.racks.totalPrice +
+        widget.amplifiers.totalPrice +
+        widget.fusionDevices.totalPrice +
+        widget.others.totalPrice;
   }
 }
 
@@ -456,5 +414,36 @@ extension ListExtensions<T> on List<T> {
       if (item is FusionDevice) return sum + item.price;
       return sum;
     });
+  }
+}
+
+/// A rotating icon widget that animates based on expansion state.
+///
+/// Displays a downward-pointing arrow icon that rotates 180 degrees during
+/// the expand/collapse animation to provide visual feedback to users.
+/// The icon points down when collapsed and up when expanded.
+class _RotatingIcon extends StatelessWidget {
+  const _RotatingIcon({required this.animation, required this.color});
+
+  /// The animation that drives the rotation transformation.
+  ///
+  /// Should be a value between 0.0 (no rotation) and 0.5 (180 degrees).
+  final Animation<double> animation;
+
+  /// The color to apply to the icon.
+  ///
+  /// Should match the theme's text color for consistency.
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: animation,
+      builder:
+          (BuildContext context, Widget? child) => RotationTransition(
+            turns: animation,
+            child: Icon(Icons.keyboard_arrow_down, size: 16, color: color),
+          ),
+    );
   }
 }

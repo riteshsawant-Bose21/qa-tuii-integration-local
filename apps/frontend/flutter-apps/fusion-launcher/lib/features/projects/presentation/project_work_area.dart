@@ -18,6 +18,7 @@ import '../../cloud_ui/presentation/pages/cloud_web_view.dart';
 
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../schematics/presentation/pages/schematics_page.dart';
+import '../../schematics/presentation/widgets/cost_calcuator_widget.dart';
 import '../widget/building/building_canvas.dart';
 import '../widget/building/side_panle_widgets/building_plan.dart';
 import '../widget/control_design_tab_switcher.dart';
@@ -34,6 +35,7 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
   StreamSubscription<int>? subscription;
   late TextEditingController _projectNameController;
   final FocusNode _projectNameFocusNode = FocusNode();
+  final GlobalKey _projectNameKey = GlobalKey();
 
   final List<Widget> _tabs = const <Widget>[
     Tab(text: 'Building'),
@@ -272,198 +274,156 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                 physics: const NeverScrollableScrollPhysics(),
                 children: <Widget>[
                   /// building tab with docking area
-                  KeepAliveWrapper(
-                    child: FusionDockableArea(
-                      tabKey: "tab1",
-                      showLeft: true,
-                      showRight: true,
-                      mainArea: const BuildingCanvas(),
-                      dockItemList: <DockItemConfig>[
-                        DockItemConfig(
-                          id: "1",
-                          title: "Building Plan",
-                          side: "left",
-                          alowUndock: false,
-                          isCollapsibleSection: false,
-                          dockItemWidget: () => const BuildingPlan(),
-                          // () => Container(
-                          //   padding: const EdgeInsets.all(16),
-                          //   decoration: BoxDecoration(
-                          //     border: Border(
-                          //       bottom: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
-                          //     ),
-                          //   ),
-                          //   child: Column(
-                          //     crossAxisAlignment: CrossAxisAlignment.start,
-                          //     mainAxisAlignment: MainAxisAlignment.start,
-                          //     children: <Widget>[
-                          //       Row(
-                          //         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          //         crossAxisAlignment: CrossAxisAlignment.center,
-                          //         children: <Widget>[
-                          //           FusionAppText(text: "Building Plan", style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 11)),
-                          //           GestureDetector(
-                          //             onTap: () {},
-                          //             child: Icon(
-                          //               Icons.add_sharp,
-                          //               size: 14,
-                          //               color: Theme.of(context).colorScheme.fusionTextViewColor,
-                          //             ),
-                          //           ),
-                          //         ],
-                          //       ),
-                          //       const SizedBox(
-                          //         height: 10,
-                          //       ),
-                          //       Row(
-                          //         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          //         crossAxisAlignment: CrossAxisAlignment.center,
-                          //         children: <Widget>[
-                          //           Container(
-                          //             width: 18,
-                          //             height: 18,
-                          //             margin: const EdgeInsets.all(0),
-                          //             decoration: BoxDecoration(
-                          //               color: Theme.of(context).colorScheme.greyDark,
-                          //               borderRadius: BorderRadius.circular(2),
-                          //               border: Border.all(color: Theme.of(context).colorScheme.dividerColor, width: 1),
-                          //             ),
-                          //             child: FusionAppText(
-                          //               text: "FF",
-                          //               textAlign: TextAlign.center,
-                          //               style: Theme.of(
-                          //                 context,
-                          //               ).textTheme.bodyMedium?.copyWith(
-                          //                 fontSize: 9,
-                          //                 fontWeight: FontWeight.w600,
-                          //                 color: Theme.of(context).colorScheme.fusionButtonTextColor,
-                          //               ),
-                          //             ),
-                          //           ),
-                          //           const SizedBox(
-                          //             width: 12,
-                          //           ),
-                          //           Column(
-                          //             crossAxisAlignment: CrossAxisAlignment.start,
-                          //             children: <Widget>[
-                          //               FusionAppText(text: "Floor plan 1", style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 12)),
-                          //               const SizedBox(height: 1),
-                          //               FusionAppText(
-                          //                 text: "Description",
-                          //                 style: Theme.of(
-                          //                   context,
-                          //                 ).textTheme.bodyMedium?.copyWith(
-                          //                   fontSize: 10,
-                          //                   fontWeight: FontWeight.w600,
-                          //                   color: Theme.of(context).colorScheme.grey,
-                          //                 ),
-                          //               ),
-                          //             ],
-                          //           ),
-                          //           const Spacer(),
-                          //           GestureDetector(
-                          //             onTap: () {},
-                          //             child: Icon(
-                          //               Icons.keyboard_arrow_down,
-                          //               size: 14,
-                          //               color: Theme.of(context).colorScheme.fusionTextViewColor,
-                          //             ),
-                          //           ),
-                          //         ],
-                          //       ),
-                          //     ],
-                          //   ),
-                          // ),
-                        ),
-                        DockItemConfig(
-                          id: "2",
-                          title: "Coverage",
-                          side: "left",
-                          alowUndock: false,
-                          initiallyExpanded: true,
-                          isCollapsibleSection: true,
-                          dockItemWidget:
-                              () => Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                                child: const Text("Coverage Content"),
-                              ),
-                        ),
-                        DockItemConfig(
-                          id: "3",
-                          title: "Devices",
-                          side: "left",
-                          dockItemWidget:
-                              () => Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                                child: const Text("Devices Content"),
-                              ),
-                        ),
-                        DockItemConfig(
-                          id: "4",
-                          title: "Tree View",
-                          side: "left",
-                          dockItemWidget:
-                              () => Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                                child: const Text("Tree View Content"),
-                              ),
-                        ),
-                        DockItemConfig(
-                          id: "5",
-                          title: "ATTRIBUTES",
-                          side: "right",
-                          dockItemWidget:
-                              () => Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                                child: const Text("Attributes Content"),
-                              ),
-                        ),
-                        DockItemConfig(
-                          id: "6",
-                          title: "COST CALCULATOR",
-                          side: "right",
-                          dockItemWidget:
-                              () => Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                                child: const Text("Cost Calculator Content"),
-                              ),
-                        ),
-                        DockItemConfig(id: "7", title: "PRODUCT QUERY", side: "right", dockItemWidget: () => const ProductQueryView()),
-                        // DockItemConfig(
-                        //   id: "8",
-                        //   title: "DEVICE LIST",
-                        //   side: "right",
-                        //   dockItemWidget:
-                        //       () => Container(
-                        //         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                        //         child: const Text("Device List Content"),
-                        //       ),
-                        // ),
-                      ],
+                  FusionDockableArea(
+                    tabKey: "tab1",
+                    showLeft: true,
+                    showRight: true,
+                    mainArea: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+                      builder: (BuildContext context, ProjectViewModelState state) {
+                        return const BuildingCanvas();
+                      },
                     ),
+                    dockItemList: <DockItemConfig>[
+                      DockItemConfig(
+                        id: "1",
+                        title: "BUILDING PLAN",
+                        side: "left",
+                        alowUndock: false,
+                        isCollapsibleSection: false,
+                        dockItemWidget: () => const BuildingPlan(),
+                      ),
+                      DockItemConfig(
+                        id: "2",
+                        title: "COVERAGE",
+                        side: "left",
+                        alowUndock: false,
+                        initiallyExpanded: false,
+                        isCollapsibleSection: true,
+                        dockItemWidget:
+                            () => Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                              child: const Text(
+                                "Coverage Content",
+                                style: TextStyle(fontSize: 11),
+                              ),
+                            ),
+                      ),
+                      DockItemConfig(
+                        id: "3",
+                        title: "DEVICES",
+                        side: "left",
+                        dockItemWidget:
+                            () => Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                              child: const Text(
+                                "Devices Content",
+                                style: TextStyle(fontSize: 11),
+                              ),
+                            ),
+                      ),
+                      DockItemConfig(
+                        id: "4",
+                        title: "TREE VIEW",
+                        side: "left",
+                        dockItemWidget:
+                            () => Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                              child: const Text(
+                                "Tree View Content",
+                                style: TextStyle(fontSize: 11),
+                              ),
+                            ),
+                      ),
+                      DockItemConfig(
+                        id: "5",
+                        title: "ATTRIBUTES",
+                        side: "right",
+                        dockItemWidget:
+                            () => Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                              child: const Text(
+                                "Attributes Content",
+                                style: TextStyle(fontSize: 11),
+                              ),
+                            ),
+                      ),
+                      DockItemConfig(
+                        id: "6",
+                        title: "COST CALCULATOR",
+                        side: "right",
+                        dockItemWidget:
+                            () => CostCalculatorScreen(
+                              speakers: serviceLocator<ProjectViewModel>().speakers,
+                              sources: serviceLocator<ProjectViewModel>().sources,
+                              controllers:
+                                  serviceLocator<ProjectViewModel>().genericHardwareComponents
+                                      .where((GenericHardwareComponent component) => component.type == GenericHardwareComponentType.controller)
+                                      .toList(),
+                              racks:
+                                  serviceLocator<ProjectViewModel>().genericHardwareComponents
+                                      .where((GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack)
+                                      .toList(),
+                              amplifiers: <Amplifier>[],
+                              fusionDevices: <FusionDevice>[],
+                              others:
+                                  serviceLocator<ProjectViewModel>().genericHardwareComponents
+                                      .where(
+                                        (HardwareComponent component) =>
+                                            component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
+                                      )
+                                      .toList(),
+                            ),
+                      ),
+                      DockItemConfig(id: "7", title: "PRODUCT QUERY", side: "right", dockItemWidget: () => const ProductQueryView()),
+                      // DockItemConfig(
+                      //   id: "8",
+                      //   title: "DEVICE LIST",
+                      //   side: "right",
+                      //   dockItemWidget:
+                      //       () => Container(
+                      //         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                      //         child: const Text("Device List Content"),
+                      //       ),
+                      // ),
+                    ],
                   ),
 
                   /// schematics tab with docking area
-                  KeepAliveWrapper(
-                    child: FusionDockableArea(
-                      tabKey: "tab2",
-                      showLeft: false,
-                      showRight: true,
-                      mainArea: const SchematicsPage(),
-                      dockItemList: <DockItemConfig>[
-                        DockItemConfig(
-                          id: "9",
-                          title: "Cost Calculator",
-                          side: "right",
-                          dockItemWidget:
-                              () => Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                                child: const Text("Cost Calculator Content"),
-                              ),
-                        ),
-                        DockItemConfig(id: "7", title: "PRODUCT QUERY", side: "right", dockItemWidget: () => const ProductQueryView()),
-                      ],
-                    ),
+                  FusionDockableArea(
+                    tabKey: "tab2",
+                    showLeft: false,
+                    showRight: true,
+                    mainArea: const SchematicsPage(),
+                    dockItemList: <DockItemConfig>[
+                      DockItemConfig(
+                        id: "6",
+                        title: "COST CALCULATOR",
+                        side: "right",
+                        dockItemWidget:
+                            () => CostCalculatorScreen(
+                              speakers: serviceLocator<ProjectViewModel>().speakers,
+                              sources: serviceLocator<ProjectViewModel>().sources,
+                              controllers:
+                                  serviceLocator<ProjectViewModel>().genericHardwareComponents
+                                      .where((GenericHardwareComponent component) => component.type == GenericHardwareComponentType.controller)
+                                      .toList(),
+                              racks:
+                                  serviceLocator<ProjectViewModel>().genericHardwareComponents
+                                      .where((GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack)
+                                      .toList(),
+                              amplifiers: <Amplifier>[],
+                              fusionDevices: <FusionDevice>[],
+                              others:
+                                  serviceLocator<ProjectViewModel>().genericHardwareComponents
+                                      .where(
+                                        (HardwareComponent component) =>
+                                            component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
+                                      )
+                                      .toList(),
+                            ),
+                      ),
+                      DockItemConfig(id: "7", title: "PRODUCT QUERY", side: "right", dockItemWidget: () => const ProductQueryView()),
+                    ],
                   ),
 
                   /// budget tab with docking area
@@ -503,6 +463,7 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
     return InkWell(
       onTap: _showEditProjectNameDropdown,
       child: Container(
+        key: _projectNameKey,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         width: 237,
         decoration: BoxDecoration(
@@ -512,7 +473,6 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
             right: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
           ),
         ),
-
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -538,7 +498,6 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                 ),
               ],
             ),
-
             const Icon(
               Icons.arrow_drop_down_outlined,
               size: 18,
@@ -549,15 +508,17 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
     );
   }
 
+  /// Show Edit Project Name Dropdown
   void _showEditProjectNameDropdown() {
-    final RenderBox button = context.findRenderObject() as RenderBox;
+    final RenderBox button = _projectNameKey.currentContext!.findRenderObject() as RenderBox;
     final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+
     final RelativeRect position = RelativeRect.fromRect(
       Rect.fromPoints(
-        button.localToGlobal(const Offset(-1, 0), ancestor: overlay),
+        button.localToGlobal(Offset.zero, ancestor: overlay),
         button.localToGlobal(button.size.bottomRight(Offset.zero), ancestor: overlay),
       ),
-      Offset.zero & overlay.size,
+      const Offset(-100, -20) & overlay.size,
     );
 
     showMenu<String>(
@@ -569,7 +530,7 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
       ),
       color: Theme.of(context).colorScheme.white,
       elevation: 1,
-      constraints: const BoxConstraints(minWidth: 250, maxWidth: 300),
+      constraints: const BoxConstraints(minWidth: 237, maxWidth: 237), // Match container width
       items: <PopupMenuEntry<String>>[
         PopupMenuItem<String>(
           enabled: false,
@@ -582,13 +543,14 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
               });
 
               return Container(
+                width: 237, // Match the project name container width
                 padding: const EdgeInsets.all(12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
                     FusionAppText(
-                      text: "Edit Project name",
+                      text: "Edit Project Name",
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -604,7 +566,7 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                         fontSize: 12,
                       ),
                       decoration: InputDecoration(
-                        hintText: 'Enter floor name',
+                        hintText: 'Enter project name',
                         hintStyle: TextStyle(
                           color: Theme.of(context).colorScheme.grey,
                           fontSize: 12,
@@ -639,11 +601,9 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                           label: "Cancel",
                           textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10),
                           onTap: () {
-                            // _clearFields();
                             Navigator.of(context).pop();
                           },
                         ),
-
                         const SizedBox(width: 8),
                         FusionButton(
                           height: 28,

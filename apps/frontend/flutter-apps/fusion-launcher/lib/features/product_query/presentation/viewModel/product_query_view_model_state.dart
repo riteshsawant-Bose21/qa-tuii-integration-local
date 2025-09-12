@@ -8,7 +8,7 @@ class ProductQueryState {
   final List<ProductQueryModel> filteredProducts;
   final String searchQuery;
   final ProductType? selectedProductType;
-  final SortOption selectedSortOption;
+  final SortOption? selectedSortOption;
 
   final Set<ProductType> selectedProductTypes;
   final Set<String> selectedMountTypes;
@@ -38,7 +38,7 @@ class ProductQueryState {
       filteredProducts: ProductAPI.getAllProducts(),
       searchQuery: '',
       selectedProductType: null,
-      selectedSortOption: SortOption.nameAToZ,
+      selectedSortOption: null,
       selectedProductTypes: <ProductType>{},
       selectedMountTypes: <String>{},
       selectedVenueTypes: <String>{},

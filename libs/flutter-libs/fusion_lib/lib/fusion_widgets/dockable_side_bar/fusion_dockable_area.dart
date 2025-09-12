@@ -77,7 +77,7 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
 
   /// Handle drag start to bring item to front
   void _handleItemDragStart(DockItem item) {
-    _bringItemToFront(item);
+    // _bringItemToFront(item);
   }
 
   /// Handle drag end to determine docking or floating
@@ -100,6 +100,7 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
         item.position = details.offset;
         item.docked = false;
         item.expanded = true;
+        _bringItemToFront(item);
       }
     });
   }
@@ -164,7 +165,8 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
             if (widget.showLeft)
               FusionHorizontalResizableWidget(
                 minWidth: 240,
-                maxWidth: 1000,
+                // maxWidth 60% of screen width
+                maxWidth: screenWidth * 0.3,
                 dragLeft: false,
                 dragRight: true,
                 child: FusionDockSidebar(
@@ -183,7 +185,7 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
             if (widget.showRight)
               FusionHorizontalResizableWidget(
                 minWidth: 240,
-                maxWidth: 1000,
+                maxWidth: screenWidth * 0.3,
                 dragLeft: true,
                 dragRight: false,
                 child: FusionDockSidebar(
