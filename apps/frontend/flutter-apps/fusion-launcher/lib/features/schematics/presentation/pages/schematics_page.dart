@@ -5,7 +5,8 @@ import 'package:fusion_lib/models/fusion_models.dart';
 
 import '../../../../core/models/products_data.dart';
 import '../../../../core/service_locator.dart';
-import '../../../../core/widgets/horizontal_resizable_container.dart'; '../widgets/hardware_list_card.dart';
+import '../../../../core/widgets/horizontal_resizable_container.dart';
+import '../widgets/hardware_list_card.dart';
 import '../widgets/zone_schematic_card.dart';
 
 class SchematicsPage extends StatefulWidget {
