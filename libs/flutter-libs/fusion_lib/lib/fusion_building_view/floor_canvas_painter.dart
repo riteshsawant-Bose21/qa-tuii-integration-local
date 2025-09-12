@@ -228,6 +228,8 @@ class FloorCanvasPainter extends CustomPainter {
     }
   }
 
+  /// Draw all listening areas on the canvas
+
   void _drawListeningAreas(Canvas canvas) {
     for (int i = 0; i < listeningAreas.length; i++) {
       final List<ui.Offset> poly = listeningAreas[i].vertices;
@@ -256,7 +258,7 @@ class FloorCanvasPainter extends CustomPainter {
       }
 
       final ui.Paint fill = Paint()
-        ..color = zoneColor.withValues(alpha: 0.3)
+        ..color = zoneColor.withValues(alpha: 0.30)
         ..style = PaintingStyle.fill;
 
       final ui.Paint stroke = Paint()
@@ -279,16 +281,150 @@ class FloorCanvasPainter extends CustomPainter {
 
       final double vertexSize = 4.0 / zoomScale;
 
-      if (!showSpl || hardwareComponents.isEmpty) canvas.drawPath(path, selected ? fillSelected : fill);
-
+      if (!showSpl || hardwareComponents.isEmpty) {
+        canvas.drawPath(path, selected ? fillSelected : fill);
+      }
       canvas.drawPath(path, selected ? strokeSelected : stroke);
+
       for (final ui.Offset p in poly) {
         if (selected) {
           canvas.drawCircle(p, vertexSize, vertexPaint);
         }
       }
+
+      final anchor = _leftMostVertex(poly, zoomScale);
+      final label = listeningAreas[i].name ?? listeningAreas[i].name ?? 'Area ${i + 1}';
+      _drawBadgeAtLeftMostVertexAuto(
+        canvas: canvas,
+        path: path,
+        anchor: anchor,
+        label: label,
+        background: zoneColor,
+        zoomScale: zoomScale,
+      );
     }
   }
+
+  Offset _leftMostVertex(List<Offset> poly, double zoomScale) {
+    const double baseTol = 0.5; // px
+    final double tol = baseTol / zoomScale;
+    Offset best = poly.first;
+    for (final p in poly) {
+      final bool moreLeft = p.dx < best.dx - tol;
+      final bool sameXHigher = (p.dx - best.dx).abs() <= tol && p.dy < best.dy;
+      if (moreLeft || sameXHigher) best = p;
+    }
+    return best;
+  }
+
+  // Returns vertical inside span at x as Offset(top, bottom); null if no span.
+  Offset? _verticalSpanAtX({
+    required Path path,
+    required double x,
+    required Rect bounds,
+    required double stepY,
+  }) {
+    bool inside = false;
+    double? start;
+    for (double y = bounds.top + stepY; y <= bounds.bottom - stepY; y += stepY) {
+      final hit = path.contains(Offset(x, y));
+      if (hit && !inside) {
+        inside = true;
+        start = y;
+      } else if (!hit && inside) {
+        return Offset(start!, y - stepY);
+      }
+    }
+    if (inside && start != null) return Offset(start!, bounds.bottom - stepY);
+    return null;
+  }
+
+  void _drawBadgeAtLeftMostVertexAuto({
+    required Canvas canvas,
+    required Path path,
+    required Offset anchor, // left-most vertex
+    required String label,
+    required Color background,
+    required double zoomScale,
+  }) {
+    final double zs = (zoomScale <= 0.35) ? 0.35 : zoomScale;
+
+    // UI sizing (zoom-invariant)
+    final double fontSize = 12.0 / zs;
+    final double padH = 8.0 / zs;
+    final double padV = 4.0 / zs;
+    final double radius = 6.0 / zs;
+    final double margin = 6.0 / zs;
+
+    final Rect bounds = path.getBounds();
+
+    // Width capped by space to the RIGHT of the left-most vertex
+    final double maxBadgeWidth = (bounds.right - anchor.dx - 2 * margin).clamp(40.0 / zs, 220.0 / zs);
+
+    final TextPainter tp = TextPainter(
+      text: TextSpan(
+        text: label,
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: fontSize,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+      ellipsis: '…',
+    )..layout(maxWidth: maxBadgeWidth);
+
+    final Size badgeSize = Size(tp.width + padH * 2, tp.height + padV * 2);
+
+    // Left-align to the vertex, nudge inside by margin
+    double rectLeft = anchor.dx + margin;
+    // Keep inside overall bounds horizontally
+    final double maxLeft = bounds.right - margin - badgeSize.width;
+    if (rectLeft > maxLeft) rectLeft = maxLeft;
+
+    // Compute vertical span of the shape at badge center X
+    final double sampleX = rectLeft + badgeSize.width / 2;
+    final Offset? span = _verticalSpanAtX(
+      path: path,
+      x: sampleX,
+      bounds: bounds,
+      stepY: (2.0 / zs).clamp(0.5, 6.0),
+    );
+
+    // Start centered on anchor; then clamp inside the span (auto top/bottom)
+    double top = anchor.dy - badgeSize.height / 2;
+
+    if (span != null) {
+      final double minTop = span.dx + margin;
+      final double maxTop = span.dy - badgeSize.height - margin;
+
+      if (maxTop < minTop) {
+        // Span shorter than badge height: pin to span top (best effort)
+        top = minTop;
+      } else {
+        top = top.clamp(minTop, maxTop);
+      }
+    } else {
+      // Fallback to polygon bounds (rare)
+      final double minTop = bounds.top + margin;
+      final double maxTop = bounds.bottom - badgeSize.height - margin;
+      if (maxTop < minTop) {
+        top = bounds.top + (bounds.height - badgeSize.height) / 2;
+      } else {
+        top = top.clamp(minTop, maxTop);
+      }
+    }
+
+    final Rect rect = Rect.fromLTWH(rectLeft, top, badgeSize.width, badgeSize.height);
+    final RRect rrect = RRect.fromRectAndRadius(rect, Radius.circular(radius));
+
+    // Background pill + text
+    canvas.drawRRect(rrect, Paint()..color = background.withOpacity(0.92));
+    tp.paint(canvas, Offset(rect.left + padH, rect.top + padV));
+  }
+
+  /// Draw all hardware components (speakers, etc.) on the canvas
 
   void _drawHardwareComponents(Canvas canvas) {
     final double iconSize = ((gridSize / 2.5) / zoomScale).clamp(gridSize * 0.75, gridSize * 1.25);
