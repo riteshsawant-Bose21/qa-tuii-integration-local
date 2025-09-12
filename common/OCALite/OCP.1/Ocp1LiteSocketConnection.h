@@ -221,11 +221,19 @@ private:
     /** Size of the message buffers */
     ::OcaUint32                 m_messageBufferSize;
 
+#ifdef FUSION
+    /** Timestamp to indicate when the last message was sent */
+    ::OcaUint64                 m_lastMessageSentTime;
+
+    /** Timestamp to indicate when the last message was received */
+    ::OcaUint64                 m_lastMessageReceivedTime;
+#else
     /** Timestamp to indicate when the last message was sent */
     ::OcaUint32                 m_lastMessageSentTime;
 
     /** Timestamp to indicate when the last message was received */
     ::OcaUint32                 m_lastMessageReceivedTime;
+#endif
 
     /** Total number of bytes received for current message */
     ::OcaUint32                 m_totalLength;

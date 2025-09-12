@@ -41,8 +41,13 @@ Ocp1LiteSocketConnection::Ocp1LiteSocketConnection(::Ocp1LiteNetwork& network,
       m_isKeepAliveInMilliseconds(false),
       m_pMessageReceiveBuffer(new ::OcaUint8[static_cast<size_t>(bufferSize)]),
       m_messageBufferSize(bufferSize),
+#ifdef FUSION
+      m_lastMessageSentTime(static_cast< ::OcaUint64>(0)),
+      m_lastMessageReceivedTime(static_cast< ::OcaUint64>(0)),
+#else
       m_lastMessageSentTime(static_cast< ::OcaUint32>(0)),
       m_lastMessageReceivedTime(static_cast< ::OcaUint32>(0)),
+#endif
       m_totalLength(static_cast< ::OcaUint32>(0)),
       m_bytesLeft(static_cast< ::OcaUint32>(0)),
       m_keepAliveTimeOut(static_cast< ::OcaUint32>(0)),
@@ -134,7 +139,11 @@ OcaLiteMessageGeneral* Ocp1LiteSocketConnection::GetFirstPendingMessage()
     
             m_pduBytesLeft -= m_messageBytesLeft;
             m_messageBytesLeft = static_cast< ::OcaUint32>(0);
+#ifdef FUSION
+            m_lastMessageReceivedTime = static_cast< ::OcaUint64>(::OcfLiteTimerGetTimerTickCount());
+#else
             m_lastMessageReceivedTime = static_cast< ::OcaUint32>(::OcfLiteTimerGetTimerTickCount());
+#endif
             m_pduMessagesLeft--;
             if (m_pduMessagesLeft == static_cast< ::OcaUint16>(0))
             {
@@ -186,7 +195,11 @@ bool Ocp1LiteSocketConnection::HasPendingMessage() const
             INT32 sendResult(Ocp1LiteSocketSend(m_socket, pMessageSendBuffer, size));
             if (sendResult == size)
             {
+#ifdef FUSION
+                m_lastMessageSentTime = static_cast< ::OcaUint64>(OcfLiteTimerGetTimerTickCount());
+#else
                 m_lastMessageSentTime = static_cast< ::OcaUint32>(OcfLiteTimerGetTimerTickCount());
+#endif
                 result = OCASTATUS_OK;
             }
             else if (sendResult > 0)
@@ -227,8 +240,13 @@ void Ocp1LiteSocketConnection::SetSocketConnectionParameters(::OcaSessionID sess
 
     // Reset the connection handling members
     m_socketState = SOCKET_CONNECTED;    
+#ifdef FUSION
+    m_lastMessageReceivedTime = static_cast< ::OcaUint64>(0);
+    m_lastMessageSentTime = static_cast< ::OcaUint64>(0);
+#else
     m_lastMessageReceivedTime = static_cast< ::OcaUint32>(0);
     m_lastMessageSentTime = static_cast< ::OcaUint32>(0);
+#endif
     m_totalLength = static_cast< ::OcaUint32>(0);
     m_bytesLeft = static_cast< ::OcaUint32>(0);
     m_messageState = OCA_MSG_STATE_SYNC_FIND;
@@ -270,26 +288,58 @@ bool Ocp1LiteSocketConnection::HandleKeepAlive(::OcaUint32 messageSendBufferSize
     bool connectionValid(true);
     if (m_keepAliveTimeOut > static_cast< ::OcaUint32>(0))
     {
-        if (static_cast< ::OcaUint32>(0) == m_lastMessageReceivedTime)
+        // Normalize initial timestamps on first invocation
+        // First keep alive is sent, mark last receive time as current time.
+#ifdef FUSION
+        if (static_cast<::OcaUint64>(0) == m_lastMessageReceivedTime)
         {
-            // First keep alive is sent, mark last receive time as current time.
-            m_lastMessageReceivedTime = static_cast< ::OcaUint32>(::OcfLiteTimerGetTimerTickCount());
+            m_lastMessageReceivedTime = static_cast<::OcaUint64>(::OcfLiteTimerGetTimerTickCount());
         }
+        if (static_cast<::OcaUint64>(0) == m_lastMessageSentTime)
+        {
+            m_lastMessageSentTime = static_cast<::OcaUint64>(::OcfLiteTimerGetTimerTickCount());
+        }
+#else
+        if (static_cast<::OcaUint32>(0) == m_lastMessageReceivedTime)
+        {
+            m_lastMessageReceivedTime = static_cast<::OcaUint32>(::OcfLiteTimerGetTimerTickCount());
+        }
+        if (static_cast<::OcaUint32>(0) == m_lastMessageSentTime)
+        {
+            m_lastMessageSentTime = static_cast<::OcaUint32>(::OcfLiteTimerGetTimerTickCount());
+        }
+#endif
         UINT32 multiplier(1000);
         if (m_isKeepAliveInMilliseconds)
         {
             multiplier = 1;
         }
-        if ((OcfLiteTimerGetTimerTickCount() - static_cast<UINT32>(m_lastMessageReceivedTime)) >= static_cast<UINT32>(static_cast<UINT32>(m_keepAliveTimeOut) * multiplier * MAX_KEEPALIVE_MISSED))
+        // Use widest tick representation available for arithmetic to avoid truncation.
+#ifdef FUSION
+        typedef ::OcaUint64 TickType;
+#else
+        typedef ::OcaUint32 TickType;
+#endif
+        const TickType now = static_cast<TickType>(::OcfLiteTimerGetTimerTickCount());
+        const TickType lastRx = static_cast<TickType>(m_lastMessageReceivedTime);
+        const TickType lastTx = static_cast<TickType>(m_lastMessageSentTime);
+
+        const TickType baseTimeout = static_cast<TickType>(m_keepAliveTimeOut) * static_cast<TickType>(multiplier);
+        const TickType receiveTimeout = baseTimeout * static_cast<TickType>(MAX_KEEPALIVE_MISSED);
+
+        const TickType elapsedSinceRx = now - lastRx; // relies on unsigned wrap semantics
+        const TickType elapsedSinceTx = now - lastTx;
+
+        if (elapsedSinceRx >= receiveTimeout)
         {
             OCA_LOG_ERROR_PARAMS("Not received any message for %i secs on session %u", static_cast<int>(m_keepAliveTimeOut) * MAX_KEEPALIVE_MISSED, m_sessionID);
             connectionValid = false;
             m_socketState = SOCKET_NOT_CONNECTED;
         }
-        else if (OcfLiteTimerGetTimerTickCount() - static_cast<UINT32>(m_lastMessageSentTime) >= static_cast<UINT32>(m_keepAliveTimeOut) * multiplier)
+        else if (elapsedSinceTx >= baseTimeout)
         {
             // Send a keep alive message
-            if (OCASTATUS_PROCESSING_FAILED == SendKeepAlive(static_cast< ::OcaUint16>(m_keepAliveTimeOut), messageSendBufferSize, pMessageSendBuffer))
+            if (OCASTATUS_PROCESSING_FAILED == SendKeepAlive(static_cast<::OcaUint16>(m_keepAliveTimeOut), messageSendBufferSize, pMessageSendBuffer))
             {
                 // Only if sending really fails the connection is lost, in other cases (e.g. buffer overflow) it is not lost yet
                 connectionValid = false;
@@ -426,7 +476,11 @@ void Ocp1LiteSocketConnection::ReceiveFromSocket(::OcaBoolean dataAvailable, ::O
                                 m_bytesLeft -= keepAliveSize;
                                 m_pduBytesLeft -= keepAliveSize;
                                 m_messageBytesLeft = static_cast< ::OcaUint32>(0);
+#ifdef FUSION
+                                m_lastMessageReceivedTime = static_cast< ::OcaUint64>(::OcfLiteTimerGetTimerTickCount());
+#else
                                 m_lastMessageReceivedTime = static_cast< ::OcaUint32>(::OcfLiteTimerGetTimerTickCount());
+#endif
                                 m_pduMessagesLeft--;
                                 assert(static_cast< ::OcaUint16>(0) == m_pduMessagesLeft);
                                 assert(static_cast< ::OcaUint32>(0) == m_pduBytesLeft);

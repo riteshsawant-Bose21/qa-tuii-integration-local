@@ -26,16 +26,26 @@
 // ---- Helper types and constants ----
 
 // Platform-specific implementation of static method 'GetTimerTickCount' of base class
+#if defined(_WIN32)
 UINT32 OcfLiteTimerGetTimerTickCount(void)
 {
-#ifdef _WIN32
     return ::GetTickCount();
-#else
+}
+#elif defined(FUSION)
+UINT64 OcfLiteTimerGetTimerTickCount(void)
+{
     struct timeval start;
     gettimeofday(&start, NULL);
-    return (UINT32)((start.tv_sec) * 1000 + start.tv_usec/1000.0);
-#endif
+    return ((UINT64)(start.tv_sec) * 1000 + (UINT64)(start.tv_usec/1000.0));
 }
+#else
+UINT32 OcfLiteTimerGetTimerTickCount(void)
+{
+    struct timeval start;
+    gettimeofday(&start, NULL);
+    return ((UINT32)(start.tv_sec) * 1000 + (UINT32)(start.tv_usec/1000.0));
+}
+#endif
 
 // Platform-specific implementation for getting current time
 bool OcfLiteTimerGetTimeNow(UINT64& seconds, UINT32& nanoSeconds)

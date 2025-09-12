@@ -35,7 +35,7 @@ CXXFLAGS := -Wall -Wextra -std=c++11 $(PKG_CFLAGS) \
     -I../../common/OCALite/Proxy
 
 # App-specific source files (excluding AES67)
-APP_SOURCES := OCALite.cpp \
+APP_SOURCES := $(wildcard *.cpp) \
                $(shell find HostInterface -name "*.cpp" | grep -v "AES67")
 
 # Common source files (all from common directory, excluding AES67)

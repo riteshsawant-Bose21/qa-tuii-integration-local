@@ -23,6 +23,8 @@
 #include <OCP.1/Ocp1LiteUdpNetwork.h>
 #endif
 #include <OCP.1/Ocp1LiteNetworkSystemInterfaceID.h>
+#include "ConcreteGainActuator.h"
+#include "ConcreteMuteActuator.h"
 #ifdef OCA_RUN
 extern void Ocp1LiteServiceRun();
 #else
@@ -48,6 +50,64 @@ int main(int argc, const char* argv[])
 
     // Initialize Oca Device
     static_cast<void>(::OcaLiteBlock::GetRootBlock());
+
+    // Create concrete actuators for audio processing
+    printf("Creating audio processing actuators...\r\n");
+    
+    // Create input and output ports for the gain actuator
+    ::OcaLiteList< ::OcaLitePort> gainPorts;
+    ::OcaLitePortID inputPortId(OCAPORTMODE_INPUT, 1);
+    ::OcaLitePortID outputPortId(OCAPORTMODE_OUTPUT, 1);
+    ::OcaLitePort inputPort(static_cast< ::OcaONo>(4096), inputPortId, ::OcaLiteString("Audio Input"));
+    ::OcaLitePort outputPort(static_cast< ::OcaONo>(4096), outputPortId, ::OcaLiteString("Audio Output"));
+    gainPorts.Add(inputPort);
+    gainPorts.Add(outputPort);
+    
+    // Create Gain Actuator (Object Number 4096, -60dB to +20dB range)
+    ConcreteGainActuator* gainActuator = new ConcreteGainActuator(
+        static_cast< ::OcaONo>(4096),              // Object number
+        static_cast< ::OcaBoolean>(true),          // Lockable
+        ::OcaLiteString("Main Gain Control"),     // Role
+        gainPorts,                                 // Ports
+        -60.0,                                     // Min gain (dB)
+        20.0                                       // Max gain (dB)
+    );
+    
+    // Create ports for the mute actuator (can share the same port structure)
+    ::OcaLiteList< ::OcaLitePort> mutePorts;
+    ::OcaLitePortID muteInputPortId(OCAPORTMODE_INPUT, 2);
+    ::OcaLitePortID muteOutputPortId(OCAPORTMODE_OUTPUT, 2);
+    ::OcaLitePort muteInputPort(static_cast< ::OcaONo>(4097), muteInputPortId, ::OcaLiteString("Mute Input"));
+    ::OcaLitePort muteOutputPort(static_cast< ::OcaONo>(4097), muteOutputPortId, ::OcaLiteString("Mute Output"));
+    mutePorts.Add(muteInputPort);
+    mutePorts.Add(muteOutputPort);
+    
+    // Create Mute Actuator (Object Number 4097, initially unmuted)
+    ConcreteMuteActuator* muteActuator = new ConcreteMuteActuator(
+        static_cast< ::OcaONo>(4097),              // Object number
+        static_cast< ::OcaBoolean>(true),          // Lockable
+        ::OcaLiteString("Main Mute Control"),     // Role
+        mutePorts                                  // Ports
+    );
+    
+    // Add the actuators to the root block
+    if (gainActuator && ::OcaLiteBlock::GetRootBlock().AddObject(*gainActuator))
+    {
+        printf("✓ Gain actuator added to device (Object #4096)\r\n");
+    }
+    else
+    {
+        printf("✗ Failed to add gain actuator to device\r\n");
+    }
+    
+    if (muteActuator && ::OcaLiteBlock::GetRootBlock().AddObject(*muteActuator))
+    {
+        printf("✓ Mute actuator added to device (Object #4097)\r\n");
+    }
+    else
+    {
+        printf("✗ Failed to add mute actuator to device\r\n");
+    }
     bSuccess = bSuccess && static_cast<bool>(::OcaLiteNetworkManager::GetInstance().Initialize());
     bSuccess = bSuccess && static_cast<bool>(::OcaLiteSubscriptionManager::GetInstance().SetNrEvents(1/*OCA_NR_EVENTS*/));
     bSuccess = bSuccess && static_cast<bool>(::OcaLiteSubscriptionManager::GetInstance().Initialize());

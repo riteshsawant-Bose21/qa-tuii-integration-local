@@ -32,7 +32,11 @@
  * @return The number of milliseconds that have elapsed since the
  *         system was started.
  */
+#ifndef FUSION
 UINT32 OcfLiteTimerGetTimerTickCount(void);
+#else
+UINT64 OcfLiteTimerGetTimerTickCount(void);
+#endif
 
 /**
  * Retrieves the current time in seconds since 00:00 hours, Jan 1, 1970 UTC.
