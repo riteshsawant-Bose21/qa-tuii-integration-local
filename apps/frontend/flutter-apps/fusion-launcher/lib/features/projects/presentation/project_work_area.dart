@@ -333,7 +333,7 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                               ),
                             ),
                       ),
-                      DockItemConfig(id: "5", title: "ATTRIBUTES", side: "right", dockItemWidget: () => const Properties()),
+                      DockItemConfig(id: "5", title: "PROPERTIES", side: "right", dockItemWidget: () => const Properties()),
                       DockItemConfig(
                         id: "6",
                         title: "COST CALCULATOR",
