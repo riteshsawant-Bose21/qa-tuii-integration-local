@@ -165,7 +165,8 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
             if (widget.showLeft)
               FusionHorizontalResizableWidget(
                 minWidth: 240,
-                maxWidth: 1000,
+                // maxWidth 60% of screen width
+                maxWidth: screenWidth * 0.3,
                 dragLeft: false,
                 dragRight: true,
                 child: FusionDockSidebar(
@@ -184,7 +185,7 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
             if (widget.showRight)
               FusionHorizontalResizableWidget(
                 minWidth: 240,
-                maxWidth: 1000,
+                maxWidth: screenWidth * 0.3,
                 dragLeft: true,
                 dragRight: false,
                 child: FusionDockSidebar(
