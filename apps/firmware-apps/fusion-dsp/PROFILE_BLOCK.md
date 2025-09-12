@@ -42,6 +42,8 @@ This tool profiles the performance of various DSP algorithms on Fusion by measur
    ```
 4. WAV files
 
+These files can be found here: *Link* (INSERT LINK)
+
 Have these in the root project directory for local testing, or copy them to the board you are testing with. 
 
 #### `in.wav`
@@ -78,6 +80,13 @@ python3 profile_block.py
 This will:
 - Run profiling remotely on connected board and send results back to host machine.
 
+### Checkpoints
+Matrix Mixer and PEQ profile with checkpoints. Timing files will output in `profiling_results/{configname}_checkpoints/` and get accessed if profiling is interrupted then re-initialized.
+
+- Checkpoint files are automatically deleted upon profiling completion
+- If you interrupt the profiling process and change parameters for the current algorithm, you must delete the timing files in `profiling_results/{configname}_checkpoints/` including `processed_params.csv` to avoid mixed timings in results.
+- There are no checkpoints for any other DSP algorithm.
+
 ### Profile All Algorithms
 ```bash
 python3 profile_block.py
@@ -91,11 +100,12 @@ This will:
 
 ### Profile Specific Algorithm
 ```bash
-python3 profile_block.py matrix_mixer
+python3 profile_block.py matrix_mixer --ip 192.168.1.6 --clock 1500.0
 ```
 
 This will:
-- Profile only the specified algorithm
+- Profile only the specified algorithm using provided ip and clock speed (remote only)
+- `ip=192.168.1.5` and `clock=1500.0` are the default values. 
 - Generate `results_matrix_mixer.pkl`, `results_matrix_mixer.txt` and `matrix_mixer_regression_plots.png` in `/profiling_results`
 
 ## Supported Algorithms
@@ -116,7 +126,7 @@ This will:
 
 ## Output Format
 
-Output will be in the `profiling_results` directory, outputted formats are:
+Output will be in the `profiling_results/{config_name}/` directory, outputted formats are:
 
 ### Human-Readable (results.txt)
 Example:
@@ -196,6 +206,8 @@ After successful profiling, three plots are automatically generated:
 * Green: Features are equal (e.g., bands = channels)
 
 This color-coding helps identify whether the relative magnitude of the interacting features affects performance characteristics, revealing optimization patterns in the component behavior. Specific details are also outputted in result files (e.g., `results_peq_remote.txt`) below the regression formula.
+
+**Regression Formulas Per Combination**: Outputs the regression formulas for each combination of interaction terms (e.g., 4 bands x 3 channels)
 
 ### Wav Read & Wav Write
 Plots will only include timing for 1 channel input, with no regression line.

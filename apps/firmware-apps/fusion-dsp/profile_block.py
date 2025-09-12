@@ -13,10 +13,9 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from sklearn.linear_model import LinearRegression
 
-processor_speed_mhz = 1800.0
 sample_rate = 48000
 
-def convert_mips_to_time(mips_value, processor_speed_mhz=processor_speed_mhz,
+def convert_mips_to_time(mips_value, processor_speed_mhz,
                          sample_rate=sample_rate, frame_size=32):
     """
     Convert MIPS value to time in milliseconds.
@@ -58,16 +57,140 @@ def check_remote_diskspace(board_ip):
         print('Cleanup failed:')
         print(cleanup_result.stderr)
 
-def profile(config_name, remote=True):
+def get_checkpoint_dir(config_name):
+    """Get the checkpoint directory for a given config"""
+    return f'profiling_results/{config_name}_checkpoints'
+
+def get_checkpoint_params_file(config_name):
+    """Get the checkpoint params file path"""
+    checkpoint_dir = get_checkpoint_dir(config_name)
+    return f'{checkpoint_dir}/processed_params.csv'
+
+def save_processed_checkpoint(config_name, param_dict, df):
+    """Save a processed dataframe to checkpoint directory"""
+    checkpoint_dir = get_checkpoint_dir(config_name)
+    os.makedirs(checkpoint_dir, exist_ok=True)
+    
+    if config_name == 'matrix_mixer':
+        checkpoint_file = f"{checkpoint_dir}/timings_mm_{param_dict['num_inputs']}_{param_dict['num_outputs']}_processed.csv"
+    elif config_name == 'peq':
+        checkpoint_file = f"{checkpoint_dir}/timings_peq_{param_dict['bands']}_{param_dict['channels']}_processed.csv"
+    else:
+        param_str = '_'.join([f"{k}{v}" for k, v in param_dict.items()])
+        checkpoint_file = f"{checkpoint_dir}/timings_{config_name}_{param_str}_processed.csv"
+    
+    df.to_csv(checkpoint_file, index=False)
+    return checkpoint_file
+
+def load_checkpoints(config_name):
+    """Load existing checkpoints for a config"""
+    checkpoint_dir = get_checkpoint_dir(config_name)
+    params_file = get_checkpoint_params_file(config_name)
+    processed_combos = set()
+    
+    if os.path.exists(params_file):
+        params_df = pd.read_csv(params_file)
+        
+        if config_name == 'matrix_mixer' and 'num_inputs' in params_df.columns:
+            processed_combos = set(zip(params_df['num_inputs'], params_df['num_outputs']))
+        elif config_name == 'peq' and 'bands' in params_df.columns:
+            processed_combos = set(zip(params_df['bands'], params_df['channels']))
+        else:
+            param_cols = [col for col in params_df.columns if col not in ['Unnamed: 0']]
+            if param_cols:
+                processed_combos = set([tuple(row[col] for col in param_cols) 
+                                       for _, row in params_df.iterrows()])
+        
+        print(f'Loaded {len(processed_combos)} already processed combinations from checkpoint')
+    
+    return processed_combos
+
+def cleanup_checkpoints(config_name):
+    """Remove checkpoint directory after successful completion"""
+    checkpoint_dir = get_checkpoint_dir(config_name)
+    if os.path.exists(checkpoint_dir):
+        for root, dirs, files in os.walk(checkpoint_dir, topdown=False):
+            for file in files:
+                os.remove(os.path.join(root, file))
+            for dir in dirs:
+                os.rmdir(os.path.join(root, dir))
+        os.rmdir(checkpoint_dir)
+        print(f"Cleaned up checkpoint directory: {checkpoint_dir}")
+
+def run_checkpoint_analysis(config_name, suffix='local'):
+    """Run the CSV processing for configs that use checkpoints (matrix_mixer, peq, etc.)"""
+    try:
+        import process_csv
+        print("\n" + "="*60)
+        print(f"RUNNING {config_name.upper()} CHECKPOINT ANALYSIS")
+        print("="*60)
+        
+        checkpoint_dir = get_checkpoint_dir(config_name)
+        if os.path.exists(checkpoint_dir):
+            print(f"Processing from checkpoint directory: {checkpoint_dir}")
+            success = process_csv.process_files_in_batches(
+                config_name=config_name,
+                batch_size=100
+            )
+        else:
+            print("No checkpoint directory found")
+            return None
+        
+        if success:
+            model = process_csv.perform_incremental_regression(
+                config_name=config_name, 
+                calculate_all_formulas=True,
+                suffix=suffix
+            )
+            
+            process_csv.cleanup_temp_files(config_name)
+            
+            return model
+        else:
+            print("Failed to process CSV files")
+            return None
+            
+    except ImportError:
+        print("Warning: process_csv.py not found, skipping checkpoint analysis")
+        return None
+    except Exception as e:
+        print(f"Error during {config_name} analysis: {e}")
+        return None
+
+def check_missing_data(config_name, current_config):
+    """Check for missing data combinations"""
+    try:
+        import check_missing
+        
+        print("\n" + "="*60)
+        print(f"CHECKING FOR MISSING {config_name.upper()} DATA")
+        print("="*60)
+        
+        params = current_config.get('parameters', {})
+        if config_name in ['matrix_mixer', 'peq']:
+            existing, missing = check_missing.check_missing_combinations(
+                config_name, 
+                expected_params=params
+            )
+            return len(missing) == 0
+        
+    except ImportError:
+        print("Warning: check_missing.py not found, skipping missing data check")
+        return True
+    except Exception as e:
+        print(f"Error checking missing data: {e}")
+        return True
+
+def profile(config_name, remote=True, board_ip='192.168.1.6', board_clock=1500.0):
     """
     Profile a specific config locally or remotely on a Variscite board.
     
     Args:
         config_name (str): The name of the configuration to profile.
         remote (bool): If True, runs the profiling on a remote Variscite board via SSH.
-                                If False, runs locally on detected OS (assumed to be Linux or macOS).
+        board_ip (str): IP address of the remote board
+        board_clock (float): Clock speed in MHz of the remote board
     """
-    board_ip = "192.168.1.7" # Change this to your board's IP address; only for remote=True (default)
     loader = jinja2.FileSystemLoader("./config/profiling")
     env = jinja2.Environment(loader=loader, autoescape=jinja2.select_autoescape())
     current_config = configurations[config_name]
@@ -80,26 +203,23 @@ def profile(config_name, remote=True):
     feature_dict = current_config.get('features', default_features)
 
     param_counter = 0
-    
-    # checkpointing setup:
-    checkpoint_interval = current_config.get('checkpoint_every', 10)
-    checkpoint_file = f'profiling_results/{config_name}_checkpoint.csv'
-    checkpoint_params_file = f'profiling_results/{config_name}_checkpoint_params.csv'
-    processed_combos = set()
-    
-    # Load processed combinations only 
-    if os.path.exists(checkpoint_params_file):
-        params_df = pd.read_csv(checkpoint_params_file)
-        if config_name == 'matrix_mixer' and 'num_inputs' in params_df.columns:
-            processed_combos = set(zip(params_df['num_inputs'], params_df['num_outputs']))
-            print(f'Loaded {len(processed_combos)} already processed combinations')
-    
-    matrix_mixer_csv_files = []
     completed_params = []
     
+    needs_special_processing = config_name in ['matrix_mixer', 'peq']
+    
+    processed_combos = set()
+    if needs_special_processing:
+        processed_combos = load_checkpoints(config_name)
+    
     for param_dict in params_iter:
-        if config_name == 'matrix_mixer':
-            combo_key = (param_dict['num_inputs'], param_dict['num_outputs'])
+        if needs_special_processing:
+            if config_name == 'matrix_mixer':
+                combo_key = (param_dict['num_inputs'], param_dict['num_outputs'])
+            elif config_name == 'peq':
+                combo_key = (param_dict['bands'], param_dict['channels'])
+            else:
+                combo_key = tuple(param_dict.values())
+            
             if combo_key in processed_combos:
                 print(f"Skipping already processed combination: {combo_key}")
                 continue
@@ -140,7 +260,7 @@ def profile(config_name, remote=True):
                         parts = line.split('MIPS:')[1].strip()
                         numbers = parts.replace(' first,', '').replace(' max,', '').replace(' avg.', '').split()
                         mips_avg = float(numbers[2])
-                        analysis_thread_time = convert_mips_to_time(mips_value=mips_avg)
+                        analysis_thread_time = convert_mips_to_time(mips_value=mips_avg, processor_speed_mhz=board_clock)
                         analysis_mips_data.append({
                             'channels': param_dict['channels'],
                             'analysis_first': float(numbers[0]),
@@ -151,15 +271,8 @@ def profile(config_name, remote=True):
                         print(f"Captured analysis MIPS: avg={mips_avg}")
                         print(f"Converted to analysis thread time: {analysis_thread_time} seconds")
             
-            if config_name == 'matrix_mixer':
-                local_csv_name = f'timings_mm_{param_dict["num_inputs"]}_{param_dict["num_outputs"]}.csv'
-                scp_cmd = f'scp root@{board_ip}:/home/root/timings.csv ./{local_csv_name}'
-                print(f"Copying to unique file: {local_csv_name}")
-                os.system(scp_cmd)
-                matrix_mixer_csv_files.append(local_csv_name)
-            else:
-                os.system(f'scp root@{board_ip}:/home/root/timings.csv ./timings.csv')
-                local_csv_name = 'timings.csv'
+            os.system(f'scp root@{board_ip}:/home/root/timings.csv ./timings.csv')
+            local_csv_name = 'timings.csv'
             
             print(f'Cleanup after remote execution')
             os.system(f'ssh root@{board_ip} "rm -f /home/root/tmp.json /home/root/timings.csv"')
@@ -180,26 +293,11 @@ def profile(config_name, remote=True):
             else:
                 env = {'LD_LIBRARY_PATH' : 'libs/onnxruntime-linux-x64-1.17.0/lib/:'}
             subprocess.run(['./build/fusion_dsp','-c', 'tmp.json'], env=env)
-            
-            if config_name == 'matrix_mixer':
-                local_csv_name = f'timings_mm_{param_dict["num_inputs"]}_{param_dict["num_outputs"]}.csv'
-                if os.path.exists('timings.csv'):
-                    os.rename('timings.csv', local_csv_name)
-                    matrix_mixer_csv_files.append(local_csv_name)
-                else:
-                    print(f"Warning: timings.csv not found for local run")
-            else:
-                local_csv_name = 'timings.csv'
-            
+            local_csv_name = 'timings.csv'
+        
         try:
             df = pd.read_csv(local_csv_name)
             print(f"Read {len(df)} rows from {local_csv_name}")
-            
-            if config_name == 'matrix_mixer' and 'num_inputs' in param_dict:
-                num_inputs = param_dict['num_inputs']
-                cols_to_drop = [f'infile{i}' for i in range(num_inputs + 1, 58) if f'infile{i}' in df.columns]
-                if cols_to_drop:
-                    df = df.drop(columns=cols_to_drop)
             
             for param_name, param_value in param_dict.items():
                 df[param_name] = param_value
@@ -208,222 +306,195 @@ def profile(config_name, remote=True):
                 if feature != 'analysis_avg':
                     df[feature] = formula(param_dict)
             
-
-            
-            # For matrix_mixer, save individual files 
-            if config_name == 'matrix_mixer':
-                individual_file = f'profiling_results/timings_mm_{param_dict["num_inputs"]}_{param_dict["num_outputs"]}_processed.csv'
-                df.to_csv(individual_file, index=False)
-                completed_params.append(param_dict)
-                
-                if param_counter % checkpoint_interval == 0:
-                    params_df = pd.DataFrame(completed_params)
-                    params_df.to_csv(checkpoint_params_file, index=False)
-                    print(f"Params checkpoint saved at iteration {param_counter}")
+            if needs_special_processing:
+                checkpoint_file = save_processed_checkpoint(config_name, param_dict, df)
+                print(f"Checkpoint saved: {checkpoint_file}")
             else:
                 frames.append(df)
-                
-            if config_name == 'matrix_mixer' and os.path.exists(local_csv_name):
+            
+            completed_params.append(param_dict)
+            
+            if needs_special_processing and param_counter % 10 == 0:
+                checkpoint_dir = get_checkpoint_dir(config_name)
+                os.makedirs(checkpoint_dir, exist_ok=True)
+                params_file = get_checkpoint_params_file(config_name)
+                params_df = pd.DataFrame(completed_params)
+                params_df.to_csv(params_file, index=False)
+                print(f"Params checkpoint saved at iteration {param_counter}")
+            
+            if os.path.exists(local_csv_name):
                 os.remove(local_csv_name)
                 
         except Exception as e:
             print(f"Error reading {local_csv_name}: {e}")
             continue
-        
-    if config_name == 'matrix_mixer' and completed_params:
+    
+    if needs_special_processing and completed_params:
+        checkpoint_dir = get_checkpoint_dir(config_name)
+        os.makedirs(checkpoint_dir, exist_ok=True)
+        params_file = get_checkpoint_params_file(config_name)
         params_df = pd.DataFrame(completed_params)
-        params_df.to_csv(checkpoint_params_file, index=False)
+        params_df.to_csv(params_file, index=False)
         print(f"Final params checkpoint saved: {len(completed_params)} combinations")
     
-    # For matrix_mixer, load data in batches for processing due to memory issues
-    if config_name == 'matrix_mixer':
+    if needs_special_processing:
+        complete = check_missing_data(config_name, current_config)
+        if not complete:
+            print(f"WARNING: Some {config_name} combinations are missing!")
+    
+    if config_name in ['matrix_mixer', 'peq']:
         print(f"\n{'='*60}")
-        print(f"MATRIX MIXER DATA COLLECTION SUMMARY")
+        print(f"{config_name.upper()} DATA COLLECTION COMPLETE")
         print(f"{'='*60}")
         print(f"Parameter combinations processed: {param_counter}")
         
-        processed_files = glob.glob('profiling_results/timings_mm_*_*_processed.csv')
+        suffix = 'remote' if remote else 'local'
+        model = run_checkpoint_analysis(config_name, suffix)
+        
+        if model is not None:
+            cleanup_checkpoints(config_name)
+        
+        return model
+    
+    if needs_special_processing:
+        checkpoint_dir = get_checkpoint_dir(config_name)
+        processed_files = glob.glob(f'{checkpoint_dir}/timings_{config_name}_*_processed.csv')
         
         print(f"Found {len(processed_files)} processed files")
         
-        batch_size = 50
-        for i in range(0, len(processed_files), batch_size):
-            batch_files = processed_files[i:i+batch_size]
-            batch_frames = []
-            for file in batch_files:
-                try:
-                    df = pd.read_csv(file)
-                    batch_frames.append(df)
-                except Exception as e:
-                    print(f"Error loading {file}: {e}")
-                    continue
-            
-            if batch_frames:
-                batch_df = pd.concat(batch_frames, ignore_index=True)
-                frames.append(batch_df)
-                print(f"Loaded batch {i//batch_size + 1}: {len(batch_df)} rows")
-                del batch_frames, batch_df  # Free memory
+        for file in processed_files:
+            try:
+                df = pd.read_csv(file)
+                frames.append(df)
+            except Exception as e:
+                print(f"Error loading {file}: {e}")
+                continue
     
     if not frames:
         print("No data to process!")
         return None
-        
+    
     result_df = pd.concat(frames, axis=0, ignore_index=True)
     
-    block = current_config.get(
-            'block',
-            config_name
-        )
+    block = current_config.get('block', config_name)
     
-    if config_name == 'matrix_mixer':
-        actual_columns = result_df.columns.tolist()
-        numeric_columns = [block, 'task1', 'matrix_mixer', 'outfile']
-        
-        for col in actual_columns:
-            if col.startswith('infile') and col not in numeric_columns:
-                numeric_columns.append(col)
-    else:
-        numeric_columns = [block, 'task1', 'matrix_mixer', 'outfile']
-        for i in range(1, 58):
-            col_name = f'infile{i}'
-            if col_name in result_df.columns:
-                numeric_columns.append(col_name)
-
-    print(f"Rows after cleaning mixed data types: {len(result_df)}") 
-
-    if config_name == 'feedback_suppression':
-        if analysis_mips_data:
-            for mips_entry in analysis_mips_data:
-                ch = mips_entry['channels']
-                mask = result_df['channels'] == ch
-                
-                original_main = result_df.loc[mask, block].mean()
-                
-                result_df.loc[mask, 'analysis_avg'] = mips_entry['analysis_avg']
-                result_df.loc[mask, 'analysis_time'] = mips_entry['analysis_time']
-                
-                result_df.loc[mask, block] = (
-                    result_df.loc[mask, block] + mips_entry['analysis_time']
-                )
-                
-                new_total = result_df.loc[mask, block].mean()
-                print(f"Channel {ch}:")
-                print(f"  Original main thread: {original_main:.2e}")
-                print(f"  Analysis thread: {mips_entry['analysis_time']:.2e}")
-                print(f"  New total: {new_total:.2e}")
-                print(f"  Expected: {original_main + mips_entry['analysis_time']:.2e}")
-
-    if remote:
-        print("Copying out.wav from board...")
-        os.system(f'scp root@{board_ip}:/home/root/out.wav ./out.wav')
-        print("Cleaning up out.wav file...")
-        os.system(f'ssh root@{board_ip} "rm -f /home/root/out.wav"')
+    print(f"Total rows for analysis: {len(result_df)}")
+    
+    if config_name == 'feedback_suppression' and analysis_mips_data:
+        for mips_entry in analysis_mips_data:
+            ch = mips_entry['channels']
+            mask = result_df['channels'] == ch
+            
+            result_df.loc[mask, 'analysis_avg'] = mips_entry['analysis_avg']
+            result_df.loc[mask, 'analysis_time'] = mips_entry['analysis_time']
+            result_df.loc[mask, block] = (
+                result_df.loc[mask, block] + mips_entry['analysis_time']
+            )
     
     if current_config.get('csv_dump'):
-        os.makedirs('profiling_results', exist_ok=True)
-        result_df.to_csv(f"profiling_results/{current_config['csv_dump']}")
-
-    # Identify all parameter columns
+        config_dir = f'profiling_results/{config_name}'
+        os.makedirs(config_dir, exist_ok=True)
+        result_df.to_csv(f"{config_dir}/{current_config['csv_dump']}")
+    
     params_dict = current_config.get('parameters', default_parameters)
     param_columns = list(params_dict.keys())
-    
     existing_param_cols = [col for col in param_columns if col in result_df.columns]
     
     filtered_df = []
     
     if len(existing_param_cols) == 0:
-        print("No parameter columns found, using overall quantiles")
         low_quantile = result_df.quantile(0.999)[block]
         high_quantile = result_df.quantile(0.9999)[block]
         filtered_df = [result_df[
             (result_df[block] >= low_quantile) &
             (result_df[block] <= high_quantile)
         ]]
-        print(f"Low quantile: {low_quantile}, High quantile: {high_quantile}")
-        print(f"Total points before filtering: {len(result_df)}, Points after filtering: {len(filtered_df[0])} ({len(filtered_df[0])/len(result_df)*100:.1f}%)")
-    
     elif len(existing_param_cols) == 1:
         filter_column = existing_param_cols[0]
-        print(f"Filtering by single parameter: {filter_column}")
-        
         for group_value in sorted(result_df[filter_column].unique()):
             ch_df = result_df[result_df[filter_column] == group_value].copy()
             ch_df[block] = pd.to_numeric(ch_df[block], errors='coerce')
             ch_df = ch_df.dropna(subset=[block])
             
-            try:
-                low_quantile = ch_df.quantile(0.999)[block]
-                high_quantile = ch_df.quantile(0.9999)[block]
-                filtered_ch = ch_df[
-                    (ch_df[block] >= low_quantile) &
-                    (ch_df[block] <= high_quantile)
-                ]
-                filtered_df.append(filtered_ch)
-                print(f"{filter_column}={group_value}: Low={low_quantile:.2e}, High={high_quantile:.2e}")
-                print(f"  Points: {len(ch_df)} → {len(filtered_ch)} ({len(filtered_ch)/len(ch_df)*100:.1f}%)")
-            except Exception as e:
-                print(f"Error processing {filter_column}={group_value}: {e}")
-                continue
-    
+            if len(ch_df) > 0:
+                try:
+                    low_quantile = ch_df.quantile(0.999)[block]
+                    high_quantile = ch_df.quantile(0.9999)[block]
+                    filtered_ch = ch_df[
+                        (ch_df[block] >= low_quantile) &
+                        (ch_df[block] <= high_quantile)
+                    ]
+                    filtered_df.append(filtered_ch)
+                except Exception as e:
+                    print(f"Error processing {filter_column}={group_value}: {e}")
+                    continue
     else:
-            print(f"Filtering by parameter combinations: {existing_param_cols}")
-            param_combinations = result_df[existing_param_cols].drop_duplicates()
+        param_combinations = result_df[existing_param_cols].drop_duplicates()
+        for idx, row in param_combinations.iterrows():
+            mask = pd.Series([True] * len(result_df))
+            for col in existing_param_cols:
+                mask = mask & (result_df[col] == row[col])
             
-            for idx, row in param_combinations.iterrows():
-                mask = pd.Series([True] * len(result_df))
-                param_str = []
-                for col in existing_param_cols:
-                    mask = mask & (result_df[col] == row[col])
-                    param_str.append(f"{col}={row[col]}")
-                
-                combo_df = result_df[mask].copy()
-                combo_df[block] = pd.to_numeric(combo_df[block], errors='coerce')
-                combo_df = combo_df.dropna(subset=[block])
-                
-                if len(combo_df) > 0:
-                    try:
-                        low_quantile = combo_df.quantile(0.999)[block]
-                        high_quantile = combo_df.quantile(0.9999)[block]
-                        filtered_combo = combo_df[
-                            (combo_df[block] >= low_quantile) &
-                            (combo_df[block] <= high_quantile)
-                        ]
-                        filtered_df.append(filtered_combo)
-                        print(f"{', '.join(param_str)}: Low={low_quantile:.2e}, High={high_quantile:.2e}")
-                        print(f"  Points: {len(combo_df)} → {len(filtered_combo)} ({len(filtered_combo)/len(combo_df)*100:.1f}%)")
-                    except Exception as e:
-                        print(f"Error processing combination {', '.join(param_str)}: {e}")
-                        continue
+            combo_df = result_df[mask].copy()
+            combo_df[block] = pd.to_numeric(combo_df[block], errors='coerce')
+            combo_df = combo_df.dropna(subset=[block])
+            
+            if len(combo_df) > 0:
+                try:
+                    low_quantile = combo_df.quantile(0.999)[block]
+                    high_quantile = combo_df.quantile(0.9999)[block]
+                    filtered_combo = combo_df[
+                        (combo_df[block] >= low_quantile) &
+                        (combo_df[block] <= high_quantile)
+                    ]
+                    filtered_df.append(filtered_combo)
+                except Exception as e:
+                    continue
     
-    # Concatenate all filtered groups
     if len(filtered_df) > 0:
         filtered_df = pd.concat(filtered_df, ignore_index=True)
     else:
         print("WARNING: No data passed filtering!")
-        filtered_df = pd.DataFrame()
         return None
-
-    Xs = filtered_df[list(feature_dict.keys())]
-    ys = filtered_df[[block]]
-
-    model = LinearRegression().fit(Xs, ys)
-    print(f"Coefficients: {model.coef_}")
-    print(f"Intercept:{model.intercept_}")
-    print(f"R^2 Score: {model.score(Xs, ys)}")
     
     feature_names = list(feature_dict.keys())
-    print(f"Feature names: {feature_names} - {len(feature_names)} features")
+    Xs = filtered_df[feature_names]
+    ys = filtered_df[[block]]
+    
+    model = LinearRegression().fit(Xs, ys)
+    print(f"Coefficients: {model.coef_}")
+    print(f"Intercept: {model.intercept_}")
+    print(f"R^2 Score: {model.score(Xs, ys)}")
+    
+    suffix = 'remote' if remote else 'local'
+    create_regression_plots(filtered_df, model, feature_names, block, config_name, current_config, suffix)
+    
+    print("\nSUMMARY STATS")
+    print(f"Total points before filtering: {len(result_df)}")
+    print(f"Points after filtering: {len(filtered_df)}")
+    print(f"Percentage kept: {len(filtered_df)/len(result_df)*100:.1f}%")
+    
+    if needs_special_processing:
+        cleanup_checkpoints(config_name)
+    
+    return model
+
+def create_regression_plots(filtered_df, model, feature_names, block, config_name, current_config, suffix='local'):
+    """Create regression plots for the analysis"""
+    config_dir = f'profiling_results/{config_name}'
+    os.makedirs(config_dir, exist_ok=True)
+    
     if len(feature_names) == 1:
         plt.figure(figsize=(10, 6))
-        x_data = Xs.iloc[:, 0]
-        y_data = ys.iloc[:, 0]
+        x_data = filtered_df[feature_names[0]]
+        y_data = filtered_df[block]
         plt.scatter(x_data, y_data, alpha=0.7, s=50, label='Data Points')
         
         x_range = np.linspace(x_data.min(), x_data.max(), 100)
-        
         x_range_df = pd.DataFrame({feature_names[0]: x_range})
         y_pred_line = model.predict(x_range_df)
-        r2_score = model.score(Xs, ys)
+        r2_score = model.score(filtered_df[feature_names], filtered_df[[block]])
+        
         plt.plot(x_range, y_pred_line, 'r-', linewidth=2, 
                 label=f'Linear fit (R² = {r2_score:.3f})\ny = {model.intercept_[0]:.2e} + {model.coef_[0][0]:.2e}x')
         
@@ -432,16 +503,10 @@ def profile(config_name, remote=True):
         plt.title(f'{config_name}: {block} vs {feature_names[0]}')
         plt.legend()
         plt.grid(True, alpha=0.3)
-        plt.gca().yaxis.set_major_formatter(matplotlib.ticker.ScalarFormatter(useMathText=True))
-        plt.gca().ticklabel_format(style='sci', axis='y', scilimits=(0,0))
         
-        os.makedirs('profiling_results', exist_ok=True)
-        plt.savefig(f'profiling_results/{config_name}_regression_plot.png', dpi=300, bbox_inches='tight')
-        print(f"Plot saved to: profiling_results/{config_name}_regression_plot.png")
+        plt.savefig(f'{config_dir}/{config_name}_regression_plot_{suffix}.png', dpi=300, bbox_inches='tight')
         plt.close()
-        
     else:
-        # for multiple features - plots with fixed parameters where configured
         num_features = len(feature_names)
         fig, axes = plt.subplots(1, num_features, figsize=(6*num_features, 5))
         
@@ -453,7 +518,6 @@ def profile(config_name, remote=True):
         for i, feature in enumerate(feature_names):
             ax = axes[i]
             
-            # if this is a product feature (bandchannels or num_crosspoints) we use all the datapoints
             is_product_feature = feature in ['bandchannels', 'num_crosspoints']
             
             if not is_product_feature and feature in fixed_values:
@@ -461,145 +525,55 @@ def profile(config_name, remote=True):
                 fix_for = fix_info['fix_for']
                 fixed_vals = fix_info['values']
                 
-                for fixed_val in fixed_vals:
+                step = max(1, len(fixed_vals) // 10)
+                sampled_vals = fixed_vals[::step]
+                
+                for fixed_val in sampled_vals:
                     mask = filtered_df[fix_for] == fixed_val
-                    x_subset = Xs[mask].iloc[:, i]
-                    y_subset = ys[mask].iloc[:, 0]
-                    
-                    if len(x_subset) > 1:  
-                        X = x_subset.values.reshape(-1, 1)
-                        y = y_subset.values.reshape(-1, 1)
-                        model_fixed = LinearRegression().fit(X, y)
-                        r2_fixed = model_fixed.score(X, y)
-                        
-                        if not hasattr(profile, 'regression_formulas'):
-                            profile.regression_formulas = []
-                        profile.regression_formulas.append({
-                            'feature': feature,
-                            'fixed_param': fix_for,
-                            'fixed_value': fixed_val,
-                            'intercept': model_fixed.intercept_[0],
-                            'coefficient': model_fixed.coef_[0][0],
-                            'r2': r2_fixed
-                        })
+                    if mask.sum() > 1:
+                        x_subset = filtered_df[mask][feature]
+                        y_subset = filtered_df[mask][block]
                         
                         ax.scatter(x_subset, y_subset, alpha=0.5, label=f'{fix_for}={fixed_val}')
-                        x_range = np.linspace(x_subset.min(), x_subset.max(), 100)
-                        y_pred = model_fixed.predict(x_range.reshape(-1, 1))
-                        ax.plot(x_range, y_pred, '--', linewidth=1)
                         
+                        if len(x_subset.unique()) > 1:
+                            X = x_subset.values.reshape(-1, 1)
+                            y = y_subset.values
+                            model_fixed = LinearRegression().fit(X, y.reshape(-1, 1))
+                            x_range = np.linspace(x_subset.min(), x_subset.max(), 50)
+                            y_pred = model_fixed.predict(x_range.reshape(-1, 1))
+                            ax.plot(x_range, y_pred, '--', linewidth=1)
+            
             elif is_product_feature:
-                x_data = Xs.iloc[:, i]
-                y_data = ys.iloc[:, 0]
-                colors = []
+                x_data = filtered_df[feature]
+                y_data = filtered_df[block]
                 
                 if config_name == 'peq' and feature == 'bandchannels':
+                    colors = []
                     for idx in range(len(x_data)):
                         bands = filtered_df.iloc[idx]['bands']
                         channels = filtered_df.iloc[idx]['channels']
-                        if bands > channels:
-                            colors.append('blue')
-                        elif channels > bands:
-                            colors.append('red')
-                        else:
-                            colors.append('green')
-                
-                elif config_name == 'matrix_mixer' and feature == 'num_crosspoints':
-                    for idx in range(len(x_data)):
-                        inputs = filtered_df.iloc[idx]['num_inputs']
-                        outputs = filtered_df.iloc[idx]['num_outputs']
-                        if inputs > outputs:
-                            colors.append('blue')
-                        elif outputs > inputs:
-                            colors.append('red')
-                        else:
-                            colors.append('green')
+                        colors.append('blue' if bands > channels else 'red' if channels > bands else 'green')
                 else:
-                    colors = ['gray'] * len(x_data)
+                    colors = 'gray'
                 
                 ax.scatter(x_data, y_data, alpha=0.5, s=30, c=colors)
-                
-                x_range = np.linspace(x_data.min(), x_data.max(), 100)
-                x_range_df = pd.DataFrame(index=range(len(x_range)))  
-                for j, feat in enumerate(feature_names):
-                    if feat == feature:
-                        x_range_df[feat] = x_range
-                    else:
-                        median_val = Xs.iloc[:, j].median()
-                        if pd.isna(median_val):
-                            median_val = Xs.iloc[:, j].mean()
-                            if pd.isna(median_val):
-                                median_val = 0
-                        x_range_df[feat] = median_val
-                
-                y_pred_line = model.predict(x_range_df)
-                r2_score = model.score(Xs, ys)
-                ax.plot(x_range, y_pred_line, 'r-', linewidth=2,
-                    label=f'R² = {r2_score:.3f}')
             else:
-                x_data = Xs.iloc[:, i]
-                y_data = ys.iloc[:, 0]
+                x_data = filtered_df[feature]
+                y_data = filtered_df[block]
                 ax.scatter(x_data, y_data, alpha=0.7, s=50)
-                
-                # regression line
-                x_range = np.linspace(x_data.min(), x_data.max(), 100)
-                x_range_df = pd.DataFrame(index=range(len(x_range))) 
-                for j, feat in enumerate(feature_names):
-                    if j == i:  
-                        x_range_df[feat] = x_range
-                    else:
-                        median_val = Xs.iloc[:, j].median()
-                        if pd.isna(median_val):
-                            median_val = Xs.iloc[:, j].mean()
-                            if pd.isna(median_val):
-                                median_val = 0
-                        x_range_df[feat] = median_val
-                        
-                y_pred_line = model.predict(x_range_df)
-                coeff = model.coef_[0][i]
-                r2_score = model.score(Xs, ys)
-                ax.plot(x_range, y_pred_line, 'r-', linewidth=2,
-                    label=f'Partial fit (R² = {r2_score:.3f})\nCoeff: {coeff:.2e}')
             
             ax.set_xlabel(feature)
             ax.set_ylabel(f'{block} (timing)')
-            ax.set_title(f'{config_name}: {block} vs {feature}')
+            ax.set_title(f'{feature}')
             ax.grid(True, alpha=0.3)
-            
-            # force scientific notation on y-axis
             ax.yaxis.set_major_formatter(matplotlib.ticker.ScalarFormatter(useMathText=True))
             ax.ticklabel_format(style='scientific', axis='y', scilimits=(0,0))
-            
+        
         fig.suptitle(f'{config_name}: {block} vs Features', fontsize=16)
         plt.tight_layout()
-        os.makedirs('profiling_results', exist_ok=True)
-        plt.savefig(f'profiling_results/{config_name}_regression_plots.png', dpi=300, bbox_inches='tight')
-        print(f"Plot saved to: profiling_results/{config_name}_regression_plots.png")
+        plt.savefig(f'{config_dir}/{config_name}_regression_plots_{suffix}.png', dpi=300, bbox_inches='tight')
         plt.close()
-        
-        equation_parts = [f"{model.intercept_[0]:.2e}"]
-        for i, feature in enumerate(feature_names):
-            coeff = model.coef_[0][i]
-            equation_parts.append(f"{coeff:.2e}*{feature}")
-        full_equation = " + ".join(equation_parts)
-        print(f"Full equation: y = {full_equation}")
-                
-    print("SUMMARY STATS")
-    print(f"Total points before filtering: {len(result_df)}")
-    print(f"Points after filtering: {len(filtered_df)}")
-    print(f"Percentage kept: {len(filtered_df)/len(result_df)*100:.1f}%")
-    
-    
-    # clean up logic (commented out for now)
-    # if config_name == 'matrix_mixer':
-    #     for file in glob.glob('profiling_results/timings_mm_*_*_processed.csv'):
-    #         os.remove(file)
-    #     # Remove checkpoint files
-    #     if os.path.exists(checkpoint_params_file):
-    #         os.remove(checkpoint_params_file)
-    #     print("Cleaned up intermediate files after successful completion") 
-    
-    return model
 
 configurations = {
     'agc' : {
@@ -653,7 +627,6 @@ configurations = {
             'num_inputs': { 'fix_for': 'num_outputs', 'values': list(range(1, 65, 1)) },
             'num_outputs': { 'fix_for': 'num_inputs', 'values': list(range(1, 65, 1)) }
         },
-        'checkpoint_every': 5,
         'csv_dump' : 'matrix_mixer_timings.csv',
         'format_string' : 'T = {0} + {1}*num_inputs + {2}*num_outputs + {3}*num_crosspoints'
     },
@@ -701,6 +674,7 @@ configurations = {
         'format_string' : 'T = {0}'
     }
 }
+
 default_parameters = {
     'channels' : range(1,17, 3)
 }
@@ -723,6 +697,8 @@ if __name__ == '__main__':
     parser.add_argument('config', nargs='?', help='Configuration to profile (if not specified, runs all)')
     parser.add_argument('--remote', action='store_true', help='Run on remote Variscite board (default behavior)')
     parser.add_argument('--local', action='store_true', help='Run locally on the host machine')
+    parser.add_argument('--ip', type=str, default='192.168.1.5', help='IP address of remote Variscite board')
+    parser.add_argument('--clock', type=float, default=1500.0, help='Processor clock speed in MHz for remote board')
     
     args = parser.parse_args()
     
@@ -734,6 +710,12 @@ if __name__ == '__main__':
     else:
         remote = True  # default is remote
     
+    board_ip = args.ip
+    board_clock = args.clock
+    
+    if remote:
+        print(f"Using remote board at {board_ip} with clock {board_clock} MHz")
+    
     mode_str = "REMOTE BOARD" if remote else "LOCAL"
     print(f"Running in {mode_str} mode")
     
@@ -742,99 +724,69 @@ if __name__ == '__main__':
     if args.config is None:
         results = {}
         suffix = "_remote" if remote else "_local"
-        f_model_readable = open(f'profiling_results/results{suffix}.txt', 'w')
         
         for config in configurations.keys():
+            print(f'\n{"="*60}')
             print(f'Running profiling configuration: {config}')
-            model = results[config] = profile(config, remote=remote)
+            print(f'{"="*60}')
+            model = results[config] = profile(config, remote=remote, board_ip=board_ip, board_clock=board_clock)
             if model:
-                f_model_readable.write(f"\n{'='*60}\n")
-                f_model_readable.write(f"Configuration: {config.upper()}\n")
-                f_model_readable.write("Main Regression Formula:\n")
-                f_model_readable.write("=" * 50 + "\n")
-                main_formula = configurations[config].get('format_string', default_format_string).format(
-                    *model.intercept_, *model.coef_[0]
-                )
-                f_model_readable.write(main_formula + "\n\n")
+                config_dir = f'profiling_results/{config}'
+                os.makedirs(config_dir, exist_ok=True)
 
-                if hasattr(profile, 'regression_formulas'):
-                    feature_formulas = {}
-                    for formula in profile.regression_formulas:
-                        if formula['feature'] not in feature_formulas:
-                            feature_formulas[formula['feature']] = []
-                        feature_formulas[formula['feature']].append(formula)
-                    
-                    for feature, formulas in feature_formulas.items():
-                        if feature in ['bandchannels', 'num_crosspoints']:
-                            continue
-                            
-                        f_model_readable.write(f"\n{feature.upper()} Regression Formulas:\n")
-                        f_model_readable.write("=" * 50 + "\n")
+                try:
+                    with open(f'{config_dir}/results_{config}{suffix}.pkl', 'wb') as pf:
+                        pickle.dump(model, pf)
+                    print(f"Saved model pickle: {config_dir}/results_{config}{suffix}.pkl")
+                except Exception as e:
+                    print(f"Failed to save model pickle for {config}: {e}")
 
-                        for formula in sorted(formulas, key=lambda x: (x.get('fixed_value') is None, x.get('fixed_value') or 0)):
-                            if formula.get('fixed_param') is None:
-                                continue
-                            fixed_param = formula.get('fixed_param')
-                            fixed_value = formula.get('fixed_value')
-                            f_model_readable.write(
-                                f"{fixed_param} = {fixed_value}:\n"
-                                f"T = {formula['intercept']:.2e} + {formula['coefficient']:.2e}*{feature}"
-                                f" (R² = {formula['r2']:.3f})\n"
-                            )
-                        f_model_readable.write("\n")
-                    
-                    profile.regression_formulas = []
+                try:
+                    with open(f'{config_dir}/results_{config}{suffix}.txt', 'w') as f:
+                        f.write(f"\n{'='*60}\n")
+                        f.write(f"Configuration: {config.upper()}\n")
+                        f.write("Main Regression Formula:\n")
+                        f.write("=" * 50 + "\n")
+
+                        intercepts = list(np.ravel(model.intercept_)) if hasattr(model, 'intercept_') else []
+                        coefs = list(np.ravel(model.coef_)) if hasattr(model, 'coef_') else []
+                        format_values = intercepts + coefs
+
+                        try:
+                            main_formula = configurations[config].get('format_string', default_format_string).format(*format_values)
+                        except Exception as fe:
+                            main_formula = f"Could not format formula: {fe}"
+
+                        f.write(main_formula + "\n\n")
+                except Exception as e:
+                    print(f"Failed to write results txt for {config}: {e}")
         
-        f_model_pickle = open(f'profiling_results/results{suffix}.pkl', 'wb')
-        pickle.dump(results, f_model_pickle)
-        f_model_pickle.close()
-        f_model_readable.close()
+        with open(f'profiling_results/all_results{suffix}.pkl', 'wb') as f:
+            pickle.dump(results, f)
         
     else:
         config = args.config
         suffix = "_remote" if remote else "_local"
-        f_model_pickle = open(f'profiling_results/results_{config}{suffix}.pkl', 'wb')
-        f_model_readable = open(f'profiling_results/results_{config}{suffix}.txt', 'w')
         
-        model = profile(config, remote=remote)
+        print(f'\n{"="*60}')
+        print(f'Running profiling configuration: {config}')
+        print(f'{"="*60}')
+        
+        model = profile(config, remote=remote, board_ip=board_ip, board_clock=board_clock)
+        
         if model:
-            pickle.dump(model, f_model_pickle)
-            
-            f_model_readable.write(f"Configuration: {config.upper()}\n")
-            f_model_readable.write("Main Regression Formula:\n")
-            f_model_readable.write("=" * 50 + "\n")
-            f_model_readable.write(
-                configurations[config].get('format_string', default_format_string).format(*model.intercept_, *model.coef_[0])
-                + "\n\n"
-            )
-            
-            if hasattr(profile, 'regression_formulas'):
-                feature_formulas = {}
-                for formula in profile.regression_formulas:
-                    if formula['feature'] not in feature_formulas:
-                        feature_formulas[formula['feature']] = []
-                    feature_formulas[formula['feature']].append(formula)
+            if config not in ['matrix_mixer', 'peq']:
+                config_dir = f'profiling_results/{config}'
+                os.makedirs(config_dir, exist_ok=True)
                 
-                for feature, formulas in feature_formulas.items():
-                    if feature in ['bandchannels', 'num_crosspoints']:
-                        continue
-                        
-                    f_model_readable.write(f"\n{feature.upper()} Regression Formulas:\n")
-                    f_model_readable.write("=" * 50 + "\n")
-
-                    for formula in sorted(formulas, key=lambda x: (x.get('fixed_value') is None, x.get('fixed_value') or 0)):
-                        if formula.get('fixed_param') is None:
-                            continue
-                        fixed_param = formula.get('fixed_param')
-                        fixed_value = formula.get('fixed_value')
-                        f_model_readable.write(
-                            f"{fixed_param} = {fixed_value}:\n"
-                            f"T = {formula['intercept']:.2e} + {formula['coefficient']:.2e}*{feature}"
-                            f" (R² = {formula['r2']:.3f})\n"
-                        )
-                    f_model_readable.write("\n")
+                with open(f'{config_dir}/results_{config}{suffix}.pkl', 'wb') as f:
+                    pickle.dump(model, f)
                 
-                profile.regression_formulas = []
-        
-        f_model_pickle.close()
-        f_model_readable.close()
+                with open(f'{config_dir}/results_{config}{suffix}.txt', 'w') as f:
+                    f.write(f"Configuration: {config.upper()}\n")
+                    f.write("Main Regression Formula:\n")
+                    f.write("=" * 50 + "\n")
+                    f.write(
+                        configurations[config].get('format_string', default_format_string).format(*model.intercept_, *model.coef_[0])
+                        + "\n\n"
+                    )
