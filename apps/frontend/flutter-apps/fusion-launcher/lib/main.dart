@@ -64,7 +64,7 @@ class MyApp extends StatelessWidget {
       child: FusionThemeBuilder(
         builder: (BuildContext context, ThemeMode mode) {
           return MaterialApp(
-            title: 'Fusion Design Tool',
+            title: 'Fusion Launcher',
             debugShowCheckedModeBanner: false,
             theme: FusionAppTheme.lightTheme,
             darkTheme: FusionAppTheme.darkTheme,
