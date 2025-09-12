@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'package:fusion_launcher/features/schematics/presentation/widgets/cost_calcuator_widget.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
 
 import '../../../../core/models/products_data.dart';
 import '../../../../core/service_locator.dart';
 import '../../../../core/widgets/horizontal_resizable_container.dart';
-import '../widgets/device_details_section.dart';
+
 import '../widgets/hardware_list_card.dart';
 import '../widgets/zone_schematic_card.dart';
 

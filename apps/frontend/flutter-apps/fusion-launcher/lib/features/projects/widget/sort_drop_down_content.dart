@@ -5,12 +5,12 @@ import 'package:fusion_lib/fusion_theme/app_theme.dart';
 class SortDropdownContent extends StatelessWidget {
   const SortDropdownContent({
     super.key,
-    required this.selectedSortOption,
+    this.selectedSortOption,
     required this.onSortOptionChanged,
   });
 
-  final SortOption selectedSortOption;
-  final ValueChanged<SortOption> onSortOptionChanged;
+  final SortOption? selectedSortOption;
+  final ValueChanged<SortOption?> onSortOptionChanged;
 
   @override
   Widget build(BuildContext context) {

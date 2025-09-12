@@ -18,8 +18,10 @@ class ProductQueryCubit extends Cubit<ProductQueryState> {
     return super.close();
   }
 
+  /// Listener for search input changes
   void _onSearchChanged() {
     final String query = state.searchController.text;
+
     emit(
       state.copyWith(
         searchQuery: query,
@@ -28,6 +30,7 @@ class ProductQueryCubit extends Cubit<ProductQueryState> {
     );
   }
 
+  /// Perform search and return sorted results
   List<ProductQueryModel> _performSearch(String query) {
     final List<ProductQueryModel> searchBase = _getFilteredProducts();
 
@@ -39,20 +42,26 @@ class ProductQueryCubit extends Cubit<ProductQueryState> {
     return _sortProducts(searchResults);
   }
 
+  /// Apply all selected filters to the product list
   List<ProductQueryModel> _getFilteredProducts() {
     print(
       "all states: ${state.selectedProductType}, ${state.selectedProductTypes}, ${state.selectedMountTypes}, ${state.selectedVenueTypes}, ${state.selectedColors}, ${state.selectedCoverages}, ${state.selectedImpedances}",
     );
+
+    /// Start with all products
     List<ProductQueryModel> products = ProductAPI.getAllProducts();
 
+    /// Filter by product type
     if (state.selectedProductType != null) {
       products = products.where((ProductQueryModel product) => product.type == state.selectedProductType).toList();
     }
 
+    /// Filter by multiple product types
     if (state.selectedProductTypes.isNotEmpty) {
       products = products.where((ProductQueryModel product) => state.selectedProductTypes.contains(product.type)).toList();
     }
 
+    /// Filter by other attributes (mount types, venue types, colors, coverages, impedances)
     if (state.selectedMountTypes.isNotEmpty ||
         state.selectedVenueTypes.isNotEmpty ||
         state.selectedCoverages.isNotEmpty ||
@@ -64,6 +73,7 @@ class ProductQueryCubit extends Cubit<ProductQueryState> {
           }).toList();
     }
 
+    /// Example placeholder for color filtering
     if (state.selectedColors.isNotEmpty) {
       // code for filtering by colors if applicable
     }
@@ -71,10 +81,16 @@ class ProductQueryCubit extends Cubit<ProductQueryState> {
     return products;
   }
 
+  /// Sort products based on selected sort option
   List<ProductQueryModel> _sortProducts(List<ProductQueryModel> products) {
+    /// If no sort option is selected, return products as-is
+    if (state.selectedSortOption == null) {
+      return products;
+    }
+
     final List<ProductQueryModel> sortedProducts = List<ProductQueryModel>.from(products);
 
-    switch (state.selectedSortOption) {
+    switch (state.selectedSortOption!) {
       case SortOption.priceHighToLow:
         sortedProducts.sort((ProductQueryModel a, ProductQueryModel b) => b.price.compareTo(a.price));
         break;
@@ -101,7 +117,8 @@ class ProductQueryCubit extends Cubit<ProductQueryState> {
     );
   }
 
-  void onSortOptionChanged(SortOption option) {
+  void onSortOptionChanged(SortOption? option) {
+    print("Sort option changed to: $option"); // Debug log
     emit(
       state.copyWith(
         selectedSortOption: option,
