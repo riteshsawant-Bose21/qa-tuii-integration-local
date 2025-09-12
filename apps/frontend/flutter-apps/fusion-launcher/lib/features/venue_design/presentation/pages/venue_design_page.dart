@@ -1186,7 +1186,7 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
         barrierDismissible: true,
         builder:
             (BuildContext context) => Dialog(
-              child: FloorPlanCalibration(
+              child: FloorPlanCalibrator(
                 floorPlanImage: image,
                 onCalibrationComplete: (CalibrationData data) {
                   if (mounted) {

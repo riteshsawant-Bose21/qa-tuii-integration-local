@@ -40,12 +40,6 @@ class FusionGradientButton extends StatelessWidget {
   /// Width of the button. Default is 350.
   final double width;
 
-  /// Top margin above the button. Default is 24.
-  final double topMargin;
-
-  /// Bottom margin below the button. Default is 30.
-  final double bottomMargin;
-
   /// Border radius for rounded corners. Default is 8.
   final double borderRadius;
 
@@ -98,8 +92,6 @@ class FusionGradientButton extends StatelessWidget {
     required this.gradient,
     this.height = 55,
     this.width = 350,
-    this.topMargin = 24,
-    this.bottomMargin = 30,
     this.borderRadius = 8,
     this.textStyle,
     this.horizontalPadding = 12,
@@ -126,66 +118,63 @@ class FusionGradientButton extends StatelessWidget {
       enabled: isActive,
       child: ExcludeSemantics(
         excluding: true,
-        child: Container(
-          margin: EdgeInsets.only(top: topMargin, bottom: bottomMargin),
-          child: IgnorePointer(
-            ignoring: isLoading || !isActive,
-            child: InkWell(
-              onTap: onTap,
-              borderRadius: BorderRadius.circular(borderRadius),
-              child: Container(
-                height: height,
-                width: width,
-                padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  gradient: isActive ? gradient : null,
-                  color: isActive ? null : Colors.grey.shade400,
-                  borderRadius: BorderRadius.circular(borderRadius),
-                  border: Border.all(color: effectiveBorderColor),
-                ),
-                child: isLoading
-                    ? const SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
-                      )
-                    : Row(
-                        mainAxisSize: MainAxisSize.min,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          if (showPrefixIcon && prefixIcon != null) ...[
-                            Icon(
-                              prefixIcon,
-                              size: 16,
-                              color: isActive
-                                  ? foregroundColor ?? Theme.of(context).colorScheme.fusionButtonTextColor
-                                  : foregroundColor?.withOpacity(0.5) ?? Theme.of(context).colorScheme.fusionButtonTextColor.withOpacity(0.5),
-                            ),
-                            const SizedBox(width: 8),
-                          ],
-                          Expanded(
-                            child: Text(
-                              label,
-                              textAlign: TextAlign.center,
-                              style: textStyle ?? Theme.of(context).textTheme.labelLarge,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          if (showSuffixIcon && suffixIcon != null) ...[
-                            const SizedBox(width: 8),
-                            Icon(
-                              suffixIcon,
-                              size: 16,
-                              color: isActive
-                                  ? foregroundColor ?? Theme.of(context).colorScheme.fusionButtonTextColor
-                                  : foregroundColor?.withOpacity(0.5) ?? Theme.of(context).colorScheme.fusionButtonTextColor.withOpacity(0.5),
-                            ),
-                          ],
-                        ],
-                      ),
+        child: IgnorePointer(
+          ignoring: isLoading || !isActive,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(borderRadius),
+            child: Container(
+              height: height,
+              width: width,
+              padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                gradient: isActive ? gradient : null,
+                color: isActive ? null : Colors.grey.shade400,
+                borderRadius: BorderRadius.circular(borderRadius),
+                border: Border.all(color: effectiveBorderColor),
               ),
+              child: isLoading
+                  ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
+                    )
+                  : Row(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        if (showPrefixIcon && prefixIcon != null) ...[
+                          Icon(
+                            prefixIcon,
+                            size: 16,
+                            color: isActive
+                                ? foregroundColor ?? Theme.of(context).colorScheme.fusionButtonTextColor
+                                : foregroundColor?.withOpacity(0.5) ?? Theme.of(context).colorScheme.fusionButtonTextColor.withOpacity(0.5),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                        Expanded(
+                          child: Text(
+                            label,
+                            textAlign: TextAlign.center,
+                            style: textStyle ?? Theme.of(context).textTheme.labelLarge,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (showSuffixIcon && suffixIcon != null) ...[
+                          const SizedBox(width: 8),
+                          Icon(
+                            suffixIcon,
+                            size: 16,
+                            color: isActive
+                                ? foregroundColor ?? Theme.of(context).colorScheme.fusionButtonTextColor
+                                : foregroundColor?.withOpacity(0.5) ?? Theme.of(context).colorScheme.fusionButtonTextColor.withOpacity(0.5),
+                          ),
+                        ],
+                      ],
+                    ),
             ),
           ),
         ),

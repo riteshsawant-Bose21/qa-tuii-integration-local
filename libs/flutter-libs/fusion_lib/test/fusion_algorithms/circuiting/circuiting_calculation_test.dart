@@ -87,7 +87,7 @@ void main() {
         ),
       ];
 
-      final assignments = automaticCircuiting(speakers, 300.0);
+      final assignments = automaticCircuiting(speakers);
 
       expect(assignments, hasLength(1));
       final assignment = assignments.first;
@@ -107,7 +107,7 @@ void main() {
         ),
       ];
 
-      final assignments = automaticCircuiting(speakers, 500.0);
+      final assignments = automaticCircuiting(speakers);
 
       expect(assignments, hasLength(1));
       final assignment = assignments.first;
@@ -139,13 +139,13 @@ void main() {
         ),
       ];
 
-      final assignments = automaticCircuiting(speakers, 500.0);
+      final assignments = automaticCircuiting(speakers);
 
       expect(assignments, hasLength(3));
-      
+
       final areas = assignments.map((a) => a.area).toSet();
       expect(areas, containsAll(['Lobby', 'Conference Room', 'Office']));
-      
+
       // Each circuit should have a unique ID
       final circuitIds = assignments.map((a) => a.circuitId).toList();
       expect(circuitIds, hasLength(3));
@@ -174,17 +174,17 @@ void main() {
         ),
       ];
 
-      final assignments = automaticCircuiting(speakers, 400.0);
+      final assignments = automaticCircuiting(speakers);
 
       expect(assignments, hasLength(2)); // Two unique area-model combinations
-      
+
       final dm6cAssignment = assignments.firstWhere((a) => a.model == 'DM6C');
       final dm5cAssignment = assignments.firstWhere((a) => a.model == 'DM5C');
-      
+
       // DM6C should reflect combined quantity (2 + 1 = 3 speakers)
       // Three 8Ω speakers in parallel = 8/3 = 2.67Ω
       expect(dm6cAssignment.impedance, closeTo(2.67, 0.1));
-      
+
       // DM5C should have 2 speakers
       // Two 8Ω speakers in parallel = 4Ω
       expect(dm5cAssignment.impedance, equals(4.0));
@@ -200,11 +200,11 @@ void main() {
         ),
       ];
 
-      expect(() => automaticCircuiting(speakers, 300.0), throwsArgumentError);
+      expect(() => automaticCircuiting(speakers), throwsArgumentError);
     });
 
     test('should handle empty speaker list', () {
-      final assignments = automaticCircuiting([], 300.0);
+      final assignments = automaticCircuiting([]);
       expect(assignments, isEmpty);
     });
 
@@ -219,7 +219,7 @@ void main() {
       ];
 
       // Test with low max power - should fail if power exceeds limit
-      expect(() => automaticCircuiting(speakers, 50.0), throwsA(isA<ArgumentError>()));
+      expect(() => automaticCircuiting(speakers), throwsA(isA<ArgumentError>()));
     });
 
     test('should create valid circuit assignments for mixed scenarios', () {
@@ -244,10 +244,10 @@ void main() {
         ),
       ];
 
-      final assignments = automaticCircuiting(speakers, 600.0);
+      final assignments = automaticCircuiting(speakers);
 
       expect(assignments, hasLength(3));
-      
+
       for (final assignment in assignments) {
         expect(assignment.circuitId, greaterThan(0));
         expect(assignment.impedance, greaterThan(0));
@@ -277,10 +277,10 @@ void main() {
         ),
       ];
 
-      final assignments = automaticCircuiting(speakers, 400.0);
+      final assignments = automaticCircuiting(speakers);
 
       expect(assignments, hasLength(3));
-      
+
       final circuitIds = assignments.map((a) => a.circuitId).toList();
       circuitIds.sort();
       expect(circuitIds, equals([1, 2, 3]));
@@ -302,11 +302,11 @@ void main() {
         ),
       ];
 
-      final assignments = automaticCircuiting(speakers, 300.0);
+      final assignments = automaticCircuiting(speakers);
 
       // Should still process the zero quantity speaker
       expect(assignments, hasLength(2));
-      
+
       final emptyAssignment = assignments.firstWhere((a) => a.area == 'Empty Area');
       // This might cause division issues or special handling
       expect(emptyAssignment.circuitId, greaterThan(0));
