@@ -20,6 +20,7 @@ import '../../schematics/presentation/widgets/cost_calcuator_widget.dart';
 import '../widget/building/building_canvas.dart';
 import '../widget/building/side_panle_widgets/building_plan.dart';
 import '../widget/building/side_panle_widgets/properties.dart';
+import '../widget/building/side_panle_widgets/spl_panel.dart';
 import '../widget/control_design_tab_switcher.dart';
 
 class ProjectWorkArea extends StatefulWidget {
@@ -333,7 +334,12 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                               ),
                             ),
                       ),
-                      DockItemConfig(id: "5", title: "PROPERTIES", side: "right", dockItemWidget: () => const Properties()),
+                      DockItemConfig(
+                        id: "5",
+                        title: "PROPERTIES",
+                        side: "right",
+                        dockItemWidget: () => const Properties(),
+                      ),
                       DockItemConfig(
                         id: "6",
                         title: "COST CALCULATOR",
@@ -361,17 +367,23 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                                       .toList(),
                             ),
                       ),
-                      DockItemConfig(id: "7", title: "PRODUCT QUERY", side: "right", dockItemWidget: () => const ProductQueryView()),
-                      // DockItemConfig(
-                      //   id: "8",
-                      //   title: "DEVICE LIST",
-                      //   side: "right",
-                      //   dockItemWidget:
-                      //       () => Container(
-                      //         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                      //         child: const Text("Device List Content"),
-                      //       ),
-                      // ),
+                      DockItemConfig(
+                        id: "7",
+                        title: "PRODUCT QUERY",
+                        side: "right",
+                        dockItemWidget: () => const ProductQueryView(),
+                      ),
+                      DockItemConfig(
+                        id: "8",
+                        title: "SPL MAPPING",
+                        side: "right",
+                        dockItemWidget:
+                            () => SplPanel(
+                              onChanged: (SplPanelData value) {
+                                FusionLogger.log(tag: LogTag.panel, message: value.toString());
+                              },
+                            ),
+                      ),
                     ],
                   ),
 
