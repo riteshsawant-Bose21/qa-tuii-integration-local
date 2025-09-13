@@ -31,7 +31,7 @@ class FloorCanvasPainter extends CustomPainter {
   final int? selectedHardwareComponentIndex;
   final bool showSpl;
   final bool floorPlanImageSelected;
-  static final Color defaultListeningAreaColor = Colors.blueGrey;
+  static final Color defaultListeningAreaColor = ColorUtils.hexToColor("#747474");
   final double splMin;
   final double splMax;
 
@@ -201,7 +201,7 @@ class FloorCanvasPainter extends CustomPainter {
     // final double r = 8.0 / zoomScale;
 
     // outline
-    canvas.drawPath(Path()..addPolygon(corners, true), stroke);
+    // canvas.drawPath(Path()..addPolygon(corners, true), stroke);
 
     // if (floorPlanImageSelected) {
     //   for (final ui.Offset pt in corners) {
@@ -350,10 +350,10 @@ class FloorCanvasPainter extends CustomPainter {
     final double zs = (zoomScale <= 0.35) ? 0.35 : zoomScale;
 
     // UI sizing (zoom-invariant)
-    final double fontSize = 12.0 / zs;
+    final double fontSize = 11.0 / zs;
     final double padH = 8.0 / zs;
     final double padV = 4.0 / zs;
-    final double radius = 6.0 / zs;
+    final double radius = 4.0 / zs;
     final double margin = 6.0 / zs;
 
     final Rect bounds = path.getBounds();
@@ -367,7 +367,7 @@ class FloorCanvasPainter extends CustomPainter {
         style: TextStyle(
           color: Colors.white,
           fontSize: fontSize,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.normal,
         ),
       ),
       textDirection: TextDirection.ltr,
@@ -467,25 +467,48 @@ class FloorCanvasPainter extends CustomPainter {
 
   void _drawInProgressPath(Canvas canvas) {
     if (current.isEmpty) return;
-    final ui.Path path = Path()..moveTo(current.first.dx, current.first.dy);
+
     final ui.Paint strSel = Paint()
       ..color = defaultListeningAreaColor
-      ..strokeWidth = 4 / zoomScale
+      ..strokeWidth = 3 / zoomScale
       ..style = PaintingStyle.stroke;
     final ui.Paint vPaint = Paint()
       ..color = defaultListeningAreaColor
       ..style = PaintingStyle.fill;
-    final double vSize = 6.0 / zoomScale;
+    final double vSize = 4.0 / zoomScale;
+    final double dashLength = 8.0 / zoomScale;
+    final double gapLength = 4.0 / zoomScale;
 
-    for (final ui.Offset p in current.skip(1)) {
-      path.lineTo(p.dx, p.dy);
+    // Draw dotted lines between consecutive points
+    for (int i = 0; i < current.length - 1; i++) {
+      _drawDottedLine(canvas, current[i], current[i + 1], strSel, dashLength, gapLength);
     }
-    canvas.drawPath(path, strSel);
+
+    // Draw preview line to mouse position
+    if (previewPoint != null) {
+      _drawDottedLine(canvas, current.last, previewPoint!, strSel, dashLength, gapLength);
+    }
+
+    // Draw vertex circles
     for (final ui.Offset p in current) {
       canvas.drawCircle(p, vSize, vPaint);
     }
-    if (previewPoint != null) {
-      canvas.drawLine(current.last, previewPoint!, strSel);
+  }
+
+  void _drawDottedLine(Canvas canvas, Offset start, Offset end, Paint paint, double dashLength, double gapLength) {
+    final double distance = (end - start).distance;
+    final Offset direction = (end - start) / distance;
+    final double totalDashGap = dashLength + gapLength;
+
+    double currentDistance = 0;
+    while (currentDistance < distance) {
+      final Offset dashStart = start + direction * currentDistance;
+      final double remainingDistance = distance - currentDistance;
+      final double currentDashLength = dashLength > remainingDistance ? remainingDistance : dashLength;
+      final Offset dashEnd = dashStart + direction * currentDashLength;
+
+      canvas.drawLine(dashStart, dashEnd, paint);
+      currentDistance += totalDashGap;
     }
   }
 
