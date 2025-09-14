@@ -9,10 +9,12 @@ import '../../../../configuration/presentation/viewmodel/project_view_model.dart
 class FloorProperties extends StatelessWidget {
   final FloorModel selectedFloor;
 
-  const FloorProperties({
+  FloorProperties({
     super.key,
     required this.selectedFloor,
   });
+
+  final TextEditingController floorNameController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -30,6 +32,8 @@ class FloorProperties extends StatelessWidget {
       builder: (BuildContext context, Object? state) {
         final ProjectViewModel viewModel = serviceLocator<ProjectViewModel>();
 
+        floorNameController.text = selectedFloor.name;
+
         return Container(
           padding: const EdgeInsets.only(top: 0, bottom: 16, left: 16, right: 16),
           child: Column(
@@ -39,7 +43,7 @@ class FloorProperties extends StatelessWidget {
                   Expanded(
                     flex: 7,
                     child: TextFormField(
-                      initialValue: selectedFloor.name,
+                      controller: floorNameController,
                       decoration: const InputDecoration(
                         hintText: 'Floor Name',
                         border: InputBorder.none,

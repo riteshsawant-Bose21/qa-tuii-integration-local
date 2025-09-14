@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -34,138 +35,147 @@ class ListeningAreaProperties extends StatelessWidget {
 
   final TextEditingController ceilingHeightController = TextEditingController();
 
+  final TextEditingController listeningAreaController = TextEditingController();
+
   @override
   Widget build(BuildContext context) {
     final ProjectViewModel viewModel = serviceLocator<ProjectViewModel>();
-    ceilingHeightController.text = selectedListeningArea.ceilingHeight;
 
-    //prepare List<PropertyRow> rows from selectedListeningArea vertices
-    final List<PropertyRow> rows =
-        selectedListeningArea.vertices.asMap().entries.map((MapEntry<int, Offset> entry) {
-          final int index = entry.key + 1; // Start index from 1
-          final Offset vertex = entry.value;
-          return PropertyRow(
-            title: "P $index",
-            x: double.parse(vertex.dx.toStringAsFixed(2)),
-            y: double.parse(vertex.dy.toStringAsFixed(2)),
-            z: 0.0,
-          );
-        }).toList();
-    return Container(
-      padding: const EdgeInsets.only(top: 0, bottom: 16, left: 16, right: 16),
-      child: Column(
-        children: <Widget>[
-          Row(
+    return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+      builder: (BuildContext context, ProjectViewModelState state) {
+        ceilingHeightController.text = selectedListeningArea.ceilingHeight;
+        listeningAreaController.text = selectedListeningArea.name;
+
+        //prepare List<PropertyRow> rows from selectedListeningArea vertices
+        final List<PropertyRow> rows =
+            selectedListeningArea.vertices.asMap().entries.map((MapEntry<int, Offset> entry) {
+              final int index = entry.key + 1; // Start index from 1
+              final Offset vertex = entry.value;
+              return PropertyRow(
+                title: "P $index",
+                x: double.parse(vertex.dx.toStringAsFixed(2)),
+                y: double.parse(vertex.dy.toStringAsFixed(2)),
+                z: 0.0,
+              );
+            }).toList();
+
+        return Container(
+          padding: const EdgeInsets.only(top: 0, bottom: 16, left: 16, right: 16),
+          child: Column(
             children: <Widget>[
-              Expanded(
-                flex: 7,
-                child: TextFormField(
-                  initialValue: selectedListeningArea.name,
-                  decoration: const InputDecoration(
-                    hintText: 'Area Name',
-                    border: InputBorder.none,
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    flex: 7,
+                    child: TextFormField(
+                      controller: listeningAreaController,
+                      decoration: const InputDecoration(
+                        hintText: 'Area Name',
+                        border: InputBorder.none,
+                      ),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                      onFieldSubmitted: (String v) {
+                        final ListeningArea updatedLA = selectedListeningArea.copyWith(name: v);
+                        viewModel.updateListeningArea(updatedLA);
+                      },
+                    ),
                   ),
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 12,
+
+                  //small delete icon button to delete the selectedListeningArea
+                  Expanded(
+                    flex: 3,
+                    child: IconButton(
+                      icon: Icon(
+                        Icons.delete,
+                        size: 15,
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                      onPressed: () {
+                        viewModel.removeListeningArea(selectedListeningArea.id);
+                      },
+                    ),
                   ),
-                  onFieldSubmitted: (String v) {
-                    final ListeningArea updatedLA = selectedListeningArea.copyWith(name: v);
-                    viewModel.updateListeningArea(updatedLA);
-                  },
-                ),
+                ],
+              ),
+              _buildLAPropertyRow(
+                context: context,
+                label: "Zone",
+                value: viewModel.getZonesForListeningArea(selectedListeningArea.id)?.name ?? "N/A",
+                options: viewModel.zones.map((Zone zone) => zone.name).toList(),
+                onOptionSelected: (int selectedIndex) {
+                  final Zone selectedZone = viewModel.zones[selectedIndex];
+                  viewModel.addListeningAreaToZone(selectedListeningArea.id, selectedZone.id);
+                },
+              ),
+              const SizedBox(
+                height: 8,
+              ),
+              _buildLAPropertyRow(
+                context: context,
+                label: "Type",
+                value: selectedListeningArea.venuType.isNotEmpty ? selectedListeningArea.venuType : "Default Type",
+                options: venueOptions,
+                onOptionSelected: (int selectedIndex) {
+                  final String selectedType = venueOptions[selectedIndex];
+                  final ListeningArea updatedLA = selectedListeningArea.copyWith(venuType: selectedType);
+                  viewModel.updateListeningArea(updatedLA);
+                },
+              ),
+              const SizedBox(
+                height: 8,
+              ),
+              _buildLAPropertyRow(
+                context: context,
+                label: "Listening Ht",
+                value: selectedListeningArea.listeningHeight,
+                options: listeningHeightOptions,
+                onOptionSelected: (int selectedIndex) {
+                  final String selectedHeight = listeningHeightOptions[selectedIndex];
+                  final ListeningArea updatedLA = selectedListeningArea.copyWith(listeningHeight: selectedHeight);
+                  viewModel.updateListeningArea(updatedLA);
+                },
+              ),
+              const SizedBox(
+                height: 8,
+              ),
+              _buildLAPropertyRow(
+                context: context,
+                label: "SPL Range",
+                value: selectedListeningArea.splRange,
+                options: splRangeOptions,
+                onOptionSelected: (int selectedIndex) {
+                  final String selectedRange = splRangeOptions[selectedIndex];
+                  final ListeningArea updatedLA = selectedListeningArea.copyWith(splRange: selectedRange);
+                  viewModel.updateListeningArea(updatedLA);
+                },
+              ),
+              const SizedBox(
+                height: 8,
+              ),
+              _buildPropertyRowForTextField(
+                context: context,
+                label: "Ceiling Ht",
+                controller: ceilingHeightController,
+                hintText: "e.g., 10 ft",
+                onSubmit: (String newValue) {
+                  final ListeningArea updatedLA = selectedListeningArea.copyWith(ceilingHeight: newValue);
+                  viewModel.updateListeningArea(updatedLA);
+                },
+              ),
+              const SizedBox(
+                height: 8,
               ),
 
-              //small delete icon button to delete the selectedListeningArea
-              Expanded(
-                flex: 3,
-                child: IconButton(
-                  icon: Icon(
-                    Icons.delete,
-                    size: 15,
-                    color: Theme.of(context).colorScheme.error,
-                  ),
-                  onPressed: () {
-                    viewModel.removeListeningArea(selectedListeningArea.id);
-                  },
-                ),
+              PropertyListWidget(
+                rows: rows,
               ),
             ],
           ),
-          _buildLAPropertyRow(
-            context: context,
-            label: "Zone",
-            value: viewModel.getZonesForListeningArea(selectedListeningArea.id)?.name ?? "N/A",
-            options: viewModel.zones.map((Zone zone) => zone.name).toList(),
-            onOptionSelected: (int selectedIndex) {
-              final Zone selectedZone = viewModel.zones[selectedIndex];
-              viewModel.addListeningAreaToZone(selectedListeningArea.id, selectedZone.id);
-            },
-          ),
-          const SizedBox(
-            height: 8,
-          ),
-          _buildLAPropertyRow(
-            context: context,
-            label: "Type",
-            value: selectedListeningArea.venuType.isNotEmpty ? selectedListeningArea.venuType : "Default Type",
-            options: venueOptions,
-            onOptionSelected: (int selectedIndex) {
-              final String selectedType = venueOptions[selectedIndex];
-              final ListeningArea updatedLA = selectedListeningArea.copyWith(venuType: selectedType);
-              viewModel.updateListeningArea(updatedLA);
-            },
-          ),
-          const SizedBox(
-            height: 8,
-          ),
-          _buildLAPropertyRow(
-            context: context,
-            label: "Listening Ht",
-            value: selectedListeningArea.listeningHeight,
-            options: listeningHeightOptions,
-            onOptionSelected: (int selectedIndex) {
-              final String selectedHeight = listeningHeightOptions[selectedIndex];
-              final ListeningArea updatedLA = selectedListeningArea.copyWith(listeningHeight: selectedHeight);
-              viewModel.updateListeningArea(updatedLA);
-            },
-          ),
-          const SizedBox(
-            height: 8,
-          ),
-          _buildLAPropertyRow(
-            context: context,
-            label: "SPL Range",
-            value: selectedListeningArea.splRange,
-            options: splRangeOptions,
-            onOptionSelected: (int selectedIndex) {
-              final String selectedRange = splRangeOptions[selectedIndex];
-              final ListeningArea updatedLA = selectedListeningArea.copyWith(splRange: selectedRange);
-              viewModel.updateListeningArea(updatedLA);
-            },
-          ),
-          const SizedBox(
-            height: 8,
-          ),
-          _buildPropertyRowForTextField(
-            context: context,
-            label: "Ceiling Ht",
-            controller: ceilingHeightController,
-            hintText: "e.g., 10 ft",
-            onSubmit: (String newValue) {
-              final ListeningArea updatedLA = selectedListeningArea.copyWith(ceilingHeight: newValue);
-              viewModel.updateListeningArea(updatedLA);
-            },
-          ),
-          const SizedBox(
-            height: 8,
-          ),
-
-          PropertyListWidget(
-            rows: rows,
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
