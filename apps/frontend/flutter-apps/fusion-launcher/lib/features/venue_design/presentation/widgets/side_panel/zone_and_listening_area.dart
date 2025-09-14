@@ -29,6 +29,8 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
     });
   }
 
+  final GlobalKey _draggableKey = GlobalKey();
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
@@ -180,66 +182,94 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
     final bool isSelected = serviceLocator<ProjectViewModel>().isInZoneSelectionMode && serviceLocator<ProjectViewModel>().currentSelectedZoneId == zone.id;
     final bool isExpanded = _expandedZones.contains(zone.id);
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 12),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          // Zone Header (always visible)
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: () => _toggleZoneExpansion(zone.id),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: isSelected ? Colors.grey[200] : Colors.white,
-                ),
-                child: Row(
-                  children: <Widget>[
-                    _buildZoneIndicator(zone),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _buildZoneTitle(zone, isSelected),
-                    ),
+    return DragTarget<ListeningArea>(
+      onAcceptWithDetails: (DragTargetDetails<ListeningArea> details) {
+        final ListeningArea listeningArea = details.data;
+        serviceLocator<ProjectViewModel>().addListeningAreaToZone(listeningArea.id, zone.id);
+      },
+      builder: (BuildContext context, List<ListeningArea?> candidateItems, List<dynamic> rejectedItems) {
+        final bool hasIncomingData = candidateItems.isNotEmpty && candidateItems.first != null;
 
-                    InkWell(
-                      onTap: () => serviceLocator<ProjectViewModel>().enterZoneSelectionMode(zone),
-                      child: _buildAddIcon(),
-                    ),
-
-                    const SizedBox(width: 8),
-                    _buildDeleteButton(zone),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          // Expandable Listening Areas Section
-          AnimatedCrossFade(
-            duration: const Duration(milliseconds: 250),
-            crossFadeState: isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
-            firstChild: const SizedBox.shrink(),
-            secondChild: SizedBox(
-              width: double.infinity,
-
-              child: Column(
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 12),
+          child: Stack(
+            children: <Widget>[
+              Column(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  // Listening Areas or Empty Message
-                  if (listeningAreas.isNotEmpty)
-                    ...listeningAreas.map((ListeningArea area) => _buildListeningAreaItem(area, zone))
-                  else
-                    _buildNoListeningAreasMessage(),
+                  // Zone Header (always visible)
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => _toggleZoneExpansion(zone.id),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: isSelected ? Colors.grey[200] : Colors.white,
+                        ),
+                        child: Row(
+                          children: <Widget>[
+                            _buildZoneIndicator(zone),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: _buildZoneTitle(zone, isSelected),
+                            ),
+                            InkWell(
+                              onTap: () => serviceLocator<ProjectViewModel>().enterZoneSelectionMode(zone),
+                              child: _buildAddIcon(),
+                            ),
+                            const SizedBox(width: 8),
+                            _buildDeleteButton(zone),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
 
-                  const SizedBox(height: 4),
+                  // Expandable Listening Areas Section
+                  AnimatedCrossFade(
+                    duration: const Duration(milliseconds: 250),
+                    crossFadeState: isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+                    firstChild: const SizedBox.shrink(),
+                    secondChild: SizedBox(
+                      width: double.infinity,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          // Listening Areas or Empty Message
+                          if (listeningAreas.isNotEmpty)
+                            ...listeningAreas.map((ListeningArea area) => _buildListeningAreaItem(area, zone))
+                          else
+                            _buildNoListeningAreasMessage(),
+                          const SizedBox(height: 4),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ),
-            ),
+
+              // Drop overlay that covers the entire column
+              if (hasIncomingData)
+                Positioned.fill(
+                  child: Container(
+                    color: Colors.blue.withOpacity(0.3), // Semi-transparent background
+                    child: const Center(
+                      child: Text(
+                        'Drop here',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.blue,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -310,33 +340,41 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
   Widget _buildListeningAreaItem(ListeningArea area, Zone zone) {
     final bool isSelected = serviceLocator<ProjectViewModel>().currentSelectedListeningAreaId == area.id;
 
-    return Container(
-      margin: const EdgeInsets.only(left: 8),
-      decoration: BoxDecoration(
-        color: isSelected ? Colors.grey[200] : Colors.transparent,
+    return Draggable<ListeningArea>(
+      data: area,
+      dragAnchorStrategy: pointerDragAnchorStrategy,
+      feedback: DraggingListItem(
+        dragKey: _draggableKey,
+        listeningArea: area.name,
       ),
-      child: ListTile(
-        dense: true,
-
-        title: FusionAppText(
-          text: area.name,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            fontSize: 11,
-            fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
-          ),
+      child: Container(
+        margin: const EdgeInsets.only(left: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.grey[200] : Colors.transparent,
         ),
-        trailing:
-            isSelected
-                ? Container(
-                  width: 6,
-                  height: 6,
-                  decoration: const BoxDecoration(
-                    color: Colors.black87,
-                    shape: BoxShape.circle,
-                  ),
-                )
-                : null,
-        onTap: () => serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(area.id),
+        child: ListTile(
+          dense: true,
+
+          title: FusionAppText(
+            text: area.name,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              fontSize: 11,
+              fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
+            ),
+          ),
+          trailing:
+              isSelected
+                  ? Container(
+                    width: 6,
+                    height: 6,
+                    decoration: const BoxDecoration(
+                      color: Colors.black87,
+                      shape: BoxShape.circle,
+                    ),
+                  )
+                  : null,
+          onTap: () => serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(area.id),
+        ),
       ),
     );
   }
@@ -418,6 +456,44 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
           ],
         );
       },
+    );
+  }
+}
+
+class DraggingListItem extends StatelessWidget {
+  const DraggingListItem({
+    super.key,
+    required this.dragKey,
+    required this.listeningArea,
+  });
+
+  final GlobalKey dragKey;
+  final String listeningArea;
+
+  @override
+  Widget build(BuildContext context) {
+    return FractionalTranslation(
+      translation: const Offset(-0.5, -0.5),
+      child: ClipRRect(
+        key: dragKey,
+        borderRadius: BorderRadius.circular(12),
+        child: SizedBox(
+          height: 50,
+          width: 50,
+          child: Opacity(
+            opacity: 0.85,
+            child: Text(
+              listeningArea,
+              style: const TextStyle(
+                color: Colors.black87,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
