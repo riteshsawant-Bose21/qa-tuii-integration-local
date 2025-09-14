@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/bill_of_materials/presentation/bill_of_materials_page.dart';
 import 'package:fusion_launcher/features/configuration/presentation/pages/audio_system_design_page.dart';
+import 'package:fusion_launcher/features/venue_design/presentation/widgets/side_panel/devices_panel.dart';
 import 'package:fusion_launcher/features/product_query/presentation/pages/product_query.dart';
 import 'package:fusion_lib/fusion_building_view/spl_range_controller.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -18,6 +19,7 @@ import '../../cloud_ui/presentation/pages/cloud_web_view.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../schematics/presentation/pages/schematics_page.dart';
 import '../../schematics/presentation/widgets/cost_calcuator_widget.dart';
+import '../../venue_design/presentation/widgets/side_panel/coverage_panel.dart';
 import '../widget/building/building_canvas.dart';
 import '../widget/building/side_panle_widgets/building_plan.dart';
 import '../widget/building/side_panle_widgets/properties.dart';
@@ -74,6 +76,8 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
 
   @override
   bool get wantKeepAlive => true;
+
+  final ExpansibleController productsController = ExpansibleController();
 
   @override
   Widget build(BuildContext context) {
@@ -303,26 +307,18 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                         alowUndock: false,
                         initiallyExpanded: false,
                         isCollapsibleSection: true,
-                        dockItemWidget:
-                            () => Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                              child: const Text(
-                                "Coverage Content",
-                                style: TextStyle(fontSize: 11),
-                              ),
-                            ),
+                        dockItemWidget: () => const CoveragePanel(),
                       ),
                       DockItemConfig(
                         id: "3",
                         title: "DEVICES",
                         side: "left",
+                        alowUndock: false,
+                        initiallyExpanded: true,
+                        isCollapsibleSection: true,
                         dockItemWidget:
-                            () => Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                              child: const Text(
-                                "Devices Content",
-                                style: TextStyle(fontSize: 11),
-                              ),
+                            () => DevicesPanel(
+                              productsController: productsController,
                             ),
                       ),
                       DockItemConfig(
@@ -376,6 +372,7 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                         title: "PRODUCT QUERY",
                         side: "right",
                         dockItemWidget: () => const ProductQueryView(),
+                        controller: productsController,
                       ),
                       DockItemConfig(
                         id: "8",
@@ -426,7 +423,12 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                                       .toList(),
                             ),
                       ),
-                      DockItemConfig(id: "7", title: "PRODUCT QUERY", side: "right", dockItemWidget: () => const ProductQueryView()),
+                      DockItemConfig(
+                        id: "7",
+                        title: "PRODUCT QUERY",
+                        side: "right",
+                        dockItemWidget: () => const ProductQueryView(),
+                      ),
                     ],
                   ),
 
@@ -534,7 +536,8 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
       ),
       color: Theme.of(context).colorScheme.white,
       elevation: 1,
-      constraints: const BoxConstraints(minWidth: 237, maxWidth: 237), // Match container width
+      constraints: const BoxConstraints(minWidth: 237, maxWidth: 237),
+      // Match container width
       items: <PopupMenuEntry<String>>[
         PopupMenuItem<String>(
           enabled: false,

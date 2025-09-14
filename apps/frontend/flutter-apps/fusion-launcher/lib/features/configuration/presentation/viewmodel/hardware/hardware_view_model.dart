@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
@@ -94,6 +96,64 @@ extension HardwareViewModel on ProjectViewModel {
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to update hardware location: $e");
       throwError("Failed to update hardware location: $e");
+    }
+  }
+
+  void addSelectedProduct({required Offset position, String? listeningAreaId}) {
+    if (selectedProductToAdd == null) return;
+    try {
+      final HardwareComponent newHardware = fromProductQueryModel(
+        selectedProductToAdd!,
+        pos: position,
+        locationEntity: LocationModel(
+          floorId: currentFloor.id,
+          listeningAreaId: listeningAreaId,
+        ),
+      );
+      addHardware(newHardware);
+
+      // Clear selected product after adding
+      clearSelectedProduct();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to add selected product as hardware: $e");
+      clearSelectedProduct();
+    }
+  }
+
+  HardwareComponent fromProductQueryModel(
+    ProductQueryModel product, {
+    required Offset pos,
+    required LocationModel locationEntity,
+  }) {
+    switch (product.type) {
+      case ProductType.speaker:
+        return Speaker(
+          locationEntity: locationEntity,
+          name: product.name,
+          pos: pos,
+          speakerSKU: product.sku,
+          gain:
+              product.sku == "MSA12X"
+                  ? 50.0
+                  : product.sku == "CO-12 H120"
+                  ? 10.0
+                  : 0.0,
+          assetImagePath: product.image,
+          type: OutputType.analogOutput,
+          price: product.price,
+        );
+      case ProductType.amplifier:
+      case ProductType.device:
+        return GenericHardwareComponent(
+          locationEntity: locationEntity,
+          name: product.name,
+          pos: pos,
+          assetImagePath: product.image,
+          sku: product.sku,
+          price: product.price,
+          hardwareName: product.name,
+          type: GenericHardwareComponentType.other,
+        );
     }
   }
 }
