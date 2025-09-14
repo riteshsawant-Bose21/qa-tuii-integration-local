@@ -79,6 +79,7 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
   bool get wantKeepAlive => true;
 
   final ExpansibleController productsController = ExpansibleController();
+  final ExpansibleController splController = ExpansibleController();
 
   @override
   Widget build(BuildContext context) {
@@ -291,6 +292,12 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                           builder: (BuildContext context, ProjectViewModelState state) {
                             return BuildingCanvas(
                               splRangeController: _splRangeController,
+                              onSplStateChanged: (bool value) {
+                                if (value) {
+                                  productsController.collapse();
+                                  splController.expand();
+                                }
+                              },
                             );
                           },
                         ),
@@ -377,6 +384,7 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                             id: "8",
                             title: "SPL MAPPING",
                             side: "right",
+                            controller: splController,
                             dockItemWidget:
                                 () => SplPanel(
                                   controller: _splRangeController,

@@ -29,9 +29,11 @@ class BuildingCanvas extends StatefulWidget {
   const BuildingCanvas({
     super.key,
     this.splRangeController,
+    required this.onSplStateChanged,
   });
 
   final SplRangeController? splRangeController;
+  final Function(bool isShowing) onSplStateChanged;
 
   @override
   State<BuildingCanvas> createState() => _BuildingCanvasState();
@@ -461,6 +463,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                           onSplSelected: () {
                                             floorCanvasController.toggleSpl();
                                             calculateSPL();
+                                            widget.onSplStateChanged(floorCanvasController.isShowingSpl.value);
                                           },
                                           onPanSelected: () {},
                                           onMoveSelected: () {},
