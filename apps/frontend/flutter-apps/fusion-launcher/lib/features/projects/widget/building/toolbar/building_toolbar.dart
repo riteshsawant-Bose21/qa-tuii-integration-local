@@ -2,15 +2,32 @@ import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/constants/assets_constants.dart';
 
 class BuildingToolbar extends StatefulWidget {
-  const BuildingToolbar({super.key});
+  final Function() onSplSelected;
+  final Function() onPanSelected;
+  final Function() onMoveSelected;
+  final Function() onPencilSelected;
+  final Function() onEditFloorPlanSelected;
+  final Function() onTrashSelected;
+  final Function() onFitSelected;
+  final bool isSplSelected;
+
+  const BuildingToolbar({
+    super.key,
+    required this.onSplSelected,
+    required this.onPanSelected,
+    required this.onMoveSelected,
+    required this.onPencilSelected,
+    required this.onEditFloorPlanSelected,
+    required this.onTrashSelected,
+    required this.onFitSelected,
+    required this.isSplSelected,
+  });
 
   @override
   State<BuildingToolbar> createState() => _BuildingToolbarState();
 }
 
 class _BuildingToolbarState extends State<BuildingToolbar> {
-  int selectedIndex = 4; // Hand tool is selected by default
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -29,29 +46,49 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          _buildToolItem(0, assetIcon: Assets.moveIcon, "Cursor"),
-          _buildToolItem(1, assetIcon: Assets.pencilIcon, "Pen"),
-          _buildToolItem(2, assetIcon: Assets.splIcon, "Delete"),
-          _buildToolItem(3, assetIcon: Assets.tableIcon, "Delete"),
-          _buildToolItem(4, assetIcon: Assets.panIcon, "Hand"),
-          _buildToolItem(5, assetIcon: Assets.trashIcon, "Delete"),
-          _buildToolItem(6, icon: Icons.fit_screen_rounded, "Delete"),
+          _buildToolItem(assetIcon: Assets.moveIcon, "Cursor", onTap: widget.onMoveSelected, isSelected: true),
+          _buildToolItem(
+            assetIcon: Assets.pencilIcon,
+            "Pen",
+            onTap: widget.onPencilSelected,
+          ),
+          _buildToolItem(
+            assetIcon: Assets.splIcon,
+            "Spl",
+            onTap: widget.onSplSelected,
+            isSelected: widget.isSplSelected,
+          ),
+          _buildToolItem(
+            assetIcon: Assets.tableIcon,
+            "floor plan",
+            onTap: widget.onEditFloorPlanSelected,
+          ),
+          _buildToolItem(
+            assetIcon: Assets.panIcon,
+            "Hand",
+            onTap: widget.onPanSelected,
+          ),
+          _buildToolItem(
+            assetIcon: Assets.trashIcon,
+            "Delete",
+            onTap: widget.onTrashSelected,
+          ),
+          _buildToolItem(
+            icon: Icons.fit_screen_rounded,
+            "Fit to screen",
+            onTap: widget.onFitSelected,
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildToolItem(int index, String tooltip, {String? assetIcon, IconData? icon}) {
-    final bool isSelected = selectedIndex == index;
-
+  Widget _buildToolItem(String tooltip, {String? assetIcon, IconData? icon, bool isSelected = false, required Function() onTap}) {
     return Tooltip(
       message: tooltip,
       child: GestureDetector(
         onTap: () {
-          setState(() {
-            selectedIndex = index;
-          });
-          // Handle tool selection
+          onTap();
         },
         child: Container(
           margin: const EdgeInsets.symmetric(horizontal: 2.0),

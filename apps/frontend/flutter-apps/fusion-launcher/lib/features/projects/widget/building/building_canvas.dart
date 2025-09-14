@@ -389,7 +389,21 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                       );
                                     }
                                     return 1 == 1
-                                        ? const BuildingToolbar()
+                                        ? BuildingToolbar(
+                                          onSplSelected: () {
+                                            floorCanvasController.toggleSpl();
+                                            calculateSPL();
+                                          },
+                                          onPanSelected: () {},
+                                          onMoveSelected: () {},
+                                          onPencilSelected: () {},
+                                          onEditFloorPlanSelected: _showFloorPlanPicker,
+                                          onTrashSelected: () {},
+                                          onFitSelected: () {
+                                            floorCanvasController.fitToView();
+                                          },
+                                          isSplSelected: floorCanvasController.isShowingSpl.value,
+                                        )
                                         : Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: <Widget>[
