@@ -1,10 +1,11 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/core/constants/assets_constants.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/core/theme/app_theme.dart';
 import 'package:fusion_launcher/core/utils/fusion_utils.dart';
@@ -22,6 +23,7 @@ import '../../../../core/mace_engine_provider.dart';
 import '../../../../core/widgets/clean_widgets.dart';
 import '../../../../core/widgets/spl_range_slider.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
+import 'toolbar/building_toolbar.dart';
 
 class BuildingCanvas extends StatefulWidget {
   const BuildingCanvas({super.key});
@@ -103,6 +105,25 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
     }
   }
 
+  void zoneSelectionMode(Zone zone) async {
+    final List<ListeningArea>? selectedAreas = await floorCanvasController.requestListeningAreaSelection(
+      serviceLocator<ProjectViewModel>().getListeningAreasForZone(zone.id),
+      zone,
+    );
+
+    if (selectedAreas != null && selectedAreas.isNotEmpty) {
+      for (ListeningArea area in selectedAreas) {
+        serviceLocator<ProjectViewModel>().addListeningAreaToZone(area.id, zone.id);
+      }
+      serviceLocator<ProjectViewModel>().saveProjectToLocal();
+    } else {
+      debugPrint("No areas selected");
+    }
+    serviceLocator<ProjectViewModel>().setZoneSelectionMode(false);
+  }
+
+  Offset? cursorPosition;
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -137,79 +158,124 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                       if (floor.floorPlan.imagePath.isEmpty) {
                         return _buildEmptyFloorWidget();
                       }
-                      return FloorCanvas(
-                        gridSize: 100,
-                        controller: floorCanvasController,
-                        hardwareComponents: serviceLocator<ProjectViewModel>().getHardwareForFloor(floor.id),
-                        listeningAreas: serviceLocator<ProjectViewModel>().getListeningAreasForFloor(floor.id),
-                        floor: floor,
-                        floorPlanEntity: floor.floorPlan,
-                        onUpdateHardwareComponent: serviceLocator<ProjectViewModel>().updateHardware,
-                        zones: serviceLocator<ProjectViewModel>().zones,
-                        onCanvasZoomChanged: (double z) {
-                          serviceLocator<ProjectViewModel>().updateFloor(
-                            floor.copyWith(floorPlan: floor.floorPlan.copyWith(canvasZoom: z)),
-                          );
-                          if (floorCanvasController.isShowingSpl.value && splInitCalculated) {
-                            calculateSPL();
-                          }
-                        },
-                        onCanvasPanChanged: (ui.Offset p) {
-                          serviceLocator<ProjectViewModel>().updateFloor(
-                            floor.copyWith(floorPlan: floor.floorPlan.copyWith(canvasPan: p)),
-                          );
-                        },
-                        moveHardware: (HardwareComponent hardware, String? newListeningAreaId, String? floorId) {
-                          serviceLocator<ProjectViewModel>().moveHardware(hardware.id, floorId: floorId, listeningAreaId: newListeningAreaId);
-                          serviceLocator<ProjectViewModel>().saveProjectToLocal();
-                        },
-                        onAddListeningArea: (ListeningArea created, List<HardwareComponent>? containedHardware) {
-                          serviceLocator<ProjectViewModel>().addListeningArea(created, floor.id);
-                          if (containedHardware != null) {
-                            for (final HardwareComponent hc in containedHardware) {
-                              serviceLocator<ProjectViewModel>().moveHardware(
-                                hc.id,
-                                listeningAreaId: created.id,
-                                floorId: floor.id,
-                              );
-                            }
-                          }
 
-                          calculateSPL();
-                          serviceLocator<ProjectViewModel>().saveProjectToLocal();
-                        },
-                        onUpdateListeningArea: serviceLocator<ProjectViewModel>().updateListeningArea,
-                        onFloorPlanUpdated: (FloorPlanModel updatedPlan) {
-                          serviceLocator<ProjectViewModel>().updateFloor(
-                            floor.copyWith(floorPlan: updatedPlan),
-                          );
-                        },
-                        onViewportCenterUpdated: (ui.Offset center) {
-                          viewPortCenter = center;
-                        },
-                        onComponentTransformed: (dynamic component) {
-                          if (component is Speaker || component is ListeningArea) {
-                            calculateSPL();
-                          }
-                          serviceLocator<ProjectViewModel>().saveProjectToLocal();
-                        },
-                        onTapListeningArea: (ListeningArea value) {
-                          // serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(value.id);
-                        },
-                        onSelectedListeningAreaIdChanged: (String? value) {
-                          serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(value);
-                          serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(null);
-                        },
-                        onSelectedHardwareComponentIdChanged: (String? value) {
-                          serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(value);
-                          serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(null);
-                        },
-                        onSelectedFloorPlanIdChanged: () {
-                          serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(null);
-                          serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(null);
-                        },
-                        splMin: serviceLocator<ProjectViewModel>().minSPL,
-                        splMax: serviceLocator<ProjectViewModel>().maxSPL,
+                      final bool useCustomCursor = serviceLocator<ProjectViewModel>().selectedProductToAdd != null;
+                      return Stack(
+                        children: <Widget>[
+                          MouseRegion(
+                            cursor: useCustomCursor ? SystemMouseCursors.none : SystemMouseCursors.basic,
+                            onHover: (PointerHoverEvent event) {
+                              setState(() {
+                                cursorPosition = event.localPosition;
+                              });
+                            },
+                            onExit: (PointerExitEvent event) {
+                              setState(() {
+                                cursorPosition = null;
+                              });
+                            },
+                            child: FloorCanvas(
+                              gridSize: 100,
+                              controller: floorCanvasController,
+                              hardwareComponents: serviceLocator<ProjectViewModel>().getHardwareForFloor(floor.id),
+                              listeningAreas: serviceLocator<ProjectViewModel>().getListeningAreasForFloor(floor.id),
+                              floor: floor,
+                              floorPlanEntity: floor.floorPlan,
+                              onUpdateHardwareComponent: serviceLocator<ProjectViewModel>().updateHardware,
+                              zones: serviceLocator<ProjectViewModel>().zones,
+                              onCanvasZoomChanged: (double z) {
+                                serviceLocator<ProjectViewModel>().updateFloor(
+                                  floor.copyWith(floorPlan: floor.floorPlan.copyWith(canvasZoom: z)),
+                                );
+                                if (floorCanvasController.isShowingSpl.value && splInitCalculated) {
+                                  calculateSPL();
+                                }
+                              },
+                              onCanvasPanChanged: (ui.Offset p) {
+                                serviceLocator<ProjectViewModel>().updateFloor(
+                                  floor.copyWith(floorPlan: floor.floorPlan.copyWith(canvasPan: p)),
+                                );
+                              },
+                              moveHardware: (HardwareComponent hardware, String? newListeningAreaId, String? floorId) {
+                                serviceLocator<ProjectViewModel>().moveHardware(hardware.id, floorId: floorId, listeningAreaId: newListeningAreaId);
+                                // serviceLocator<ProjectViewModel>().saveProjectToLocal();
+                              },
+                              onAddListeningArea: (ListeningArea created, List<HardwareComponent>? containedHardware) {
+                                serviceLocator<ProjectViewModel>().addListeningArea(created, floor.id);
+                                if (containedHardware != null) {
+                                  for (final HardwareComponent hc in containedHardware) {
+                                    serviceLocator<ProjectViewModel>().moveHardware(
+                                      hc.id,
+                                      listeningAreaId: created.id,
+                                      floorId: floor.id,
+                                    );
+                                  }
+                                }
+
+                                calculateSPL();
+                                serviceLocator<ProjectViewModel>().saveProjectToLocal();
+                              },
+                              onUpdateListeningArea: serviceLocator<ProjectViewModel>().updateListeningArea,
+                              onFloorPlanUpdated: (FloorPlanModel updatedPlan) {
+                                serviceLocator<ProjectViewModel>().updateFloor(
+                                  floor.copyWith(floorPlan: updatedPlan),
+                                );
+                              },
+                              onViewportCenterUpdated: (ui.Offset center) {
+                                viewPortCenter = center;
+                              },
+                              onComponentTransformed: (dynamic component) {
+                                if (component is Speaker || component is ListeningArea) {
+                                  calculateSPL();
+                                }
+                                serviceLocator<ProjectViewModel>().saveProjectToLocal();
+                              },
+                              onTapListeningArea: (ListeningArea value) {
+                                // serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(value.id);
+                              },
+                              onSelectedListeningAreaIdChanged: (String? value) {
+                                serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(value);
+                                serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(null);
+                              },
+                              onSelectedHardwareComponentIdChanged: (String? value) {
+                                print("value changed: $value");
+                                serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(value);
+                                serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(null);
+                              },
+                              onSelectedFloorPlanIdChanged: () {
+                                serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(null);
+                                serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(null);
+                              },
+                              splMin: serviceLocator<ProjectViewModel>().minSPL,
+                              splMax: serviceLocator<ProjectViewModel>().maxSPL,
+                              addNewHardwareComponent: (Offset speakerPosition, String? listeningAreaId) {
+                                if (serviceLocator<ProjectViewModel>().selectedProductToAdd == null) {
+                                  debugPrint("No product selected to add");
+                                  return;
+                                }
+                                serviceLocator<ProjectViewModel>().addSelectedProduct(
+                                  position: speakerPosition,
+                                  listeningAreaId: listeningAreaId,
+                                );
+                                serviceLocator<ProjectViewModel>().saveProjectToLocal();
+                                // calculateSPL();
+                              },
+                            ),
+                          ),
+
+                          if (useCustomCursor && cursorPosition != null)
+                            Positioned(
+                              left: cursorPosition!.dx - 16,
+                              top: cursorPosition!.dy - 16,
+                              child: IgnorePointer(
+                                child: Image.asset(
+                                  Assets.dmPendent, // Your asset icon path
+                                  width: 32,
+                                  height: 32,
+                                ),
+                              ),
+                            ),
+                        ],
                       );
                     },
                   ),
@@ -218,6 +284,25 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                 // Clean floating toolbar
                 BlocConsumer<ProjectViewModel, ProjectViewModelState>(
                   listener: (BuildContext context, ProjectViewModelState state) {
+                    if (serviceLocator<ProjectViewModel>().isInListeningAreaSelectionMode) {
+                      if (!floorCanvasController.isDrawing.value) {
+                        floorCanvasController.toggleDraw();
+                      }
+                    } else if (!serviceLocator<ProjectViewModel>().isInListeningAreaSelectionMode) {
+                      if (floorCanvasController.isDrawing.value) {
+                        floorCanvasController.toggleDraw();
+                      }
+                    }
+
+                    if (state is ZoneSelectionMode && serviceLocator<ProjectViewModel>().isInZoneSelectionMode) {
+                      //Create new zone
+                      final Zone zone = Zone(
+                        name: 'Zone ${serviceLocator<ProjectViewModel>().zones.length + 1}',
+                      );
+                      serviceLocator<ProjectViewModel>().addZone(zone);
+                      zoneSelectionMode(zone);
+                    }
+
                     if (state is FloorsUpdated) {
                       onFloorUpdated();
                     }
@@ -235,28 +320,11 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                             valueListenable: floorCanvasController.isListeningAreaSelectionActive,
                             builder: (_, bool isActive, __) {
                               return Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
-                                ),
                                 decoration: BoxDecoration(
                                   color:
                                       isActive
                                           ? FusionUtils.hexToColor(floorCanvasController.currentlySelectingZone!.zoneColor).withValues(alpha: 0.75)
                                           : Colors.white,
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(
-                                    color: Colors.grey.shade300,
-                                  ),
-                                  boxShadow: <BoxShadow>[
-                                    BoxShadow(
-                                      color: Colors.grey.shade400.withValues(
-                                        alpha: 0.2,
-                                      ),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
                                 ),
                                 child: Builder(
                                   builder: (BuildContext context) {
@@ -293,57 +361,54 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                         ],
                                       );
                                     }
-                                    return Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: <Widget>[
-                                        ValueListenableBuilder<bool>(
-                                          valueListenable: floorCanvasController.isDrawing,
-                                          builder:
-                                              (_, bool isDrawing, __) => CleanToggleButton(
-                                                icon: Icons.edit,
-                                                tooltip: isDrawing ? 'Stop drawing' : 'Draw listening area',
-                                                isActive: isDrawing,
-                                                onPressed: () => floorCanvasController.toggleDraw(),
-                                              ),
-                                        ),
+                                    return 1 == 1
+                                        ? const BuildingToolbar()
+                                        : Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: <Widget>[
+                                            CleanToggleButton(
+                                              icon: Icons.edit,
+                                              tooltip:
+                                                  serviceLocator<ProjectViewModel>().isInListeningAreaSelectionMode ? 'Stop drawing' : 'Draw listening area',
+                                              isActive: serviceLocator<ProjectViewModel>().isInListeningAreaSelectionMode,
+                                              onPressed: () {
+                                                serviceLocator<ProjectViewModel>().setListeningAreaSelectionMode(
+                                                  !serviceLocator<ProjectViewModel>().isInListeningAreaSelectionMode,
+                                                );
+                                              },
+                                            ),
 
-                                        const SizedBox(width: 8),
+                                            const SizedBox(width: 8),
 
-                                        CleanToolbarButton(
-                                          icon: Icons.add_photo_alternate,
-                                          tooltip: 'Load plan',
-                                          onPressed: _showFloorPlanPicker,
-                                        ),
+                                            CleanToolbarButton(
+                                              icon: Icons.add_photo_alternate,
+                                              tooltip: 'Load plan',
+                                              onPressed: _showFloorPlanPicker,
+                                            ),
 
-                                        const SizedBox(width: 8),
+                                            const SizedBox(width: 8),
 
-                                        if (Platform.isMacOS || Platform.isIOS)
-                                          ValueListenableBuilder<bool>(
-                                            valueListenable: floorCanvasController.isShowingSpl,
-                                            builder:
-                                                (_, bool showSpl, __) => Row(
-                                                  children: <Widget>[
-                                                    CleanToggleButton(
-                                                      icon: Icons.graphic_eq,
-                                                      tooltip: showSpl ? 'Hide SPL' : 'Show SPL',
-                                                      isActive: showSpl,
-                                                      onPressed: () {
-                                                        floorCanvasController.toggleSpl();
-                                                        calculateSPL();
-                                                      },
+                                            if (Platform.isMacOS || Platform.isIOS)
+                                              ValueListenableBuilder<bool>(
+                                                valueListenable: floorCanvasController.isShowingSpl,
+                                                builder:
+                                                    (_, bool showSpl, __) => Row(
+                                                      children: <Widget>[
+                                                        CleanToggleButton(
+                                                          icon: Icons.graphic_eq,
+                                                          tooltip: showSpl ? 'Hide SPL' : 'Show SPL',
+                                                          isActive: showSpl,
+                                                          onPressed: () {
+                                                            floorCanvasController.toggleSpl();
+                                                            calculateSPL();
+                                                          },
+                                                        ),
+                                                        const SizedBox(width: 8),
+                                                      ],
                                                     ),
-                                                    const SizedBox(width: 8),
-                                                  ],
-                                                ),
-                                          ),
-
-                                        CleanToolbarButton(
-                                          icon: Icons.fit_screen,
-                                          tooltip: 'Fit to view',
-                                          onPressed: () => floorCanvasController.fitToView(),
-                                        ),
-                                      ],
-                                    );
+                                              ),
+                                          ],
+                                        );
                                   },
                                 ),
                               );
@@ -791,7 +856,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
         barrierDismissible: true,
         builder:
             (BuildContext context) => Dialog(
-              child: FloorPlanCalibrator(
+              child: FloorPlanCalibrationDialog(
                 floorPlanImage: image,
                 onCalibrationComplete: (CalibrationData data) {
                   if (mounted) {

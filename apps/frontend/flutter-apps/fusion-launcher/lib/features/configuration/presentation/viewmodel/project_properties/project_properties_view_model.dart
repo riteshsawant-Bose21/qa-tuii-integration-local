@@ -144,6 +144,7 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
   }
 
   void setCurrentSelectedHardware(String? hardware) {
+    print("Setting current selected hardware to: $hardware");
     currentSelectedHardwareId = hardware;
   }
 
@@ -171,5 +172,31 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
       currentSelectedListeningAreaId = null;
     }
     return null;
+  }
+
+  // set Listening area selection mode
+  void setListeningAreaSelectionMode(bool isInSelectionMode) {
+    isInListeningAreaSelectionMode = isInSelectionMode;
+    updateProject();
+  }
+
+  // set Zone selection mode
+  void setZoneSelectionMode(bool isInSelectionMode) {
+    if (isInSelectionMode) {
+      enterZoneSelectionMode();
+    } else {
+      isInZoneSelectionMode = isInSelectionMode;
+      updateProject();
+    }
+  }
+
+  void setSelectedProductToAdd(ProductQueryModel? product) {
+    selectedProductToAdd = product;
+    updateProject();
+  }
+
+  void clearSelectedProduct() {
+    selectedProductToAdd = null;
+    updateProject();
   }
 }

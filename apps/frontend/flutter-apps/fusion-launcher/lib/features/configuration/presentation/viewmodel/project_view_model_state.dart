@@ -31,3 +31,7 @@ final class ProjectError extends ProjectViewModelState {
 
   ProjectError({required this.message});
 }
+
+final class ZoneSelectionMode extends ProjectViewModelState {
+  ZoneSelectionMode();
+}

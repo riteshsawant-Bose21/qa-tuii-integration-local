@@ -8,12 +8,20 @@ class ListeningArea {
   final List<Offset> vertices;
   SplData? splData;
   final String name;
+  final String venuType;
+  final String listeningHeight;
+  final String ceilingHeight;
+  final String splRange;
 
   ListeningArea({
     String? id,
     required this.vertices,
     this.splData,
     this.name = '',
+    this.venuType = '',
+    this.listeningHeight = '',
+    this.ceilingHeight = '',
+    this.splRange = '',
   }) : id = id ?? const Uuid().v4();
 
   List<Offset> getFieldPointsSet({int cols = 60, int rows = 60}) {
@@ -81,12 +89,26 @@ class ListeningArea {
     return pts;
   }
 
-  ListeningArea copyWith({String? id, List<Offset>? vertices, SplData? splData, String? name, List<String>? hardwareComponentIds}) {
+  ListeningArea copyWith({
+    String? id,
+    List<Offset>? vertices,
+    SplData? splData,
+    String? name,
+    List<String>? hardwareComponentIds,
+    String? venuType,
+    String? listeningHeight,
+    String? ceilingHeight,
+    String? splRange,
+  }) {
     return ListeningArea(
       vertices: vertices ?? this.vertices,
       id: id ?? this.id,
       splData: splData ?? this.splData,
       name: name ?? this.name,
+      venuType: venuType ?? this.venuType,
+      listeningHeight: listeningHeight ?? this.listeningHeight,
+      ceilingHeight: ceilingHeight ?? this.ceilingHeight,
+      splRange: splRange ?? this.splRange,
     );
   }
 
@@ -100,6 +122,10 @@ class ListeningArea {
     'name': name,
     'vertices': vertices.map((Offset v) => <String, double>{'dx': v.dx, 'dy': v.dy}).toList(),
     'splData': null,
+    'venuType': venuType,
+    'listeningHeight': listeningHeight,
+    'ceilingHeight': ceilingHeight,
+    'splRange': splRange,
   };
 
   /// Parses back from JSON, turning the dynamic list into List<Offset>
@@ -107,20 +133,23 @@ class ListeningArea {
     // 1) get the raw list
     final List<dynamic> rawVerts = json['vertices'] as List<dynamic>;
     // 2) map each element (a Map) into an Offset
-    final List<Offset> verts =
-        rawVerts.map((dynamic e) {
-          final Map<String, dynamic> m = e as Map<String, dynamic>;
-          return Offset(
-            (m['dx'] as num).toDouble(),
-            (m['dy'] as num).toDouble(),
-          );
-        }).toList();
+    final List<Offset> verts = rawVerts.map((dynamic e) {
+      final Map<String, dynamic> m = e as Map<String, dynamic>;
+      return Offset(
+        (m['dx'] as num).toDouble(),
+        (m['dy'] as num).toDouble(),
+      );
+    }).toList();
 
     return ListeningArea(
       id: json['id'] as String?,
       vertices: verts,
       splData: null,
       name: json['name'] as String,
+      venuType: json['venuType'] as String? ?? '',
+      listeningHeight: json['listeningHeight'] as String? ?? '',
+      ceilingHeight: json['ceilingHeight'] as String? ?? '',
+      splRange: json['splRange'] as String? ?? '',
     );
   }
 
@@ -216,5 +245,6 @@ class SplData {
 
 class _Edge {
   final Offset a, b;
+
   _Edge(this.a, this.b);
 }

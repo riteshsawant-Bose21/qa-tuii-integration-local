@@ -9,7 +9,7 @@ extension HardwareManager on ProjectManager {
     if (projectService!.hardware.exists(hardware.id)) {
       throw Exception('Hardware with id ${hardware.id} already exists');
     }
-    projectService!.hardware.add(hardware.id, hardware);
+    projectService!.addHardware(hardware);
   }
 
   /// Remove Hardware
@@ -17,7 +17,7 @@ extension HardwareManager on ProjectManager {
     if (projectService == null) {
       throw Exception('No project is currently open');
     }
-    projectService!.hardware.remove(hardwareId);
+    projectService!.removeHardware(hardwareId);
   }
 
   ///Update Hardware
@@ -28,7 +28,7 @@ extension HardwareManager on ProjectManager {
     if (!projectService!.hardware.exists(hardware.id)) {
       throw Exception('Hardware with id ${hardware.id} does not exist');
     }
-    projectService!.hardware.add(hardware.id, hardware);
+    projectService!.updateHardware(hardware);
   }
 
   List<HardwareComponent> getAllHardwareComponents() {
