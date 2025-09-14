@@ -1,85 +1,101 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/core/models/products_data.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-import '../../../../../core/service_locator.dart';
 import '../../../../configuration/presentation/viewmodel/project_view_model.dart';
 
-class DevicesPanel extends StatelessWidget {
-  const DevicesPanel({super.key});
+class DevicesPanel extends StatefulWidget {
+  final ExpansibleController productsController;
+
+  const DevicesPanel({
+    super.key,
+    required this.productsController,
+  });
+
+  @override
+  State<DevicesPanel> createState() => _DevicesPanelState();
+}
+
+class _DevicesPanelState extends State<DevicesPanel> {
+  void goToDevicePlacementMode() {
+    widget.productsController.expand();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final SpeakerData speakerData = const SpeakerData(
-      assetPath: 'assets/images/speakers/DM_pendant.png',
-      name: 'DesignMax DM6PE',
-      sku: 'MSA12XOHS',
-      type: OutputType.analogOutput,
-      price: 700.0,
-    );
-    return Column(
-      children: <Widget>[
-        _buildSubItem(
-          Icons.speaker_outlined,
-          hasAddButton: true,
-          'Loudspeaker',
-          onTap: () {
-            final Speaker speaker = Speaker(
-              name: speakerData.name,
-              speakerSKU: speakerData.sku,
-              gain: 0,
-              pos: Offset.zero,
-              rotation: 0.0,
-              assetImagePath: speakerData.assetPath,
-              type: speakerData.type,
-              locationEntity: LocationModel(
-                floorId: serviceLocator<ProjectViewModel>().currentFloor.id,
+    return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+      builder: (BuildContext context, ProjectViewModelState state) {
+        return Container(
+          width: 280,
+          margin: const EdgeInsets.only(left: 10),
+          // color: Colors.grey[50],
+          child: Column(
+            children: <Widget>[
+              _buildSubItem(
+                Icons.speaker,
+                'Speaker',
+                onTap: () {
+                  goToDevicePlacementMode();
+                },
               ),
-              price: speakerData.price,
-            );
-            serviceLocator<ProjectViewModel>().addHardware(speaker);
-          },
-        ),
-        _buildSubItem(Icons.mic_outlined, 'Sources'),
-        _buildSubItem(Icons.tune_outlined, 'Controls'),
-        _buildSubItem(Icons.hub_outlined, 'Endpoints'),
-        _buildSubItem(Icons.dns_outlined, 'Racks'),
-      ],
+              _buildSubItem(
+                Icons.mic,
+                'Sources',
+                onTap: () {},
+              ),
+              _buildSubItem(
+                Icons.tune,
+                'Controllers',
+                onTap: () {},
+              ),
+              _buildSubItem(
+                Icons.hub_outlined,
+                'Endpoints',
+                onTap: () {},
+              ),
+              _buildSubItem(
+                Icons.dns_outlined,
+                'Endpoints',
+                onTap: () {},
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildSubItem(IconData icon, String title, {bool hasAddButton = false, Function()? onTap}) {
+  Widget _buildSubItem(
+    IconData icon,
+    String title, {
+    bool isSelected = false,
+    required Function() onTap,
+  }) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 2),
+      // margin: const EdgeInsets.only(bottom: 2),
+      //if selected is true change background color to light blue
+      color: isSelected ? Colors.blue[100] : Colors.transparent,
       child: ListTile(
         dense: true,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+        ),
         leading: Icon(
           icon,
-          size: 18,
-          color: Colors.grey[600],
+          size: 14,
+          color: Colors.black87,
         ),
         title: FusionAppText(
           text: title,
-          style: const TextStyle(
-            fontSize: 14,
-            color: Colors.black87,
-          ),
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 12),
         ),
-        trailing:
-            hasAddButton
-                ? Icon(
-                  Icons.add,
-                  size: 18,
-                  color: Colors.grey[400],
-                )
-                : null,
+        // trailing: const Icon(
+        //   Icons.add,
+        //   size: 14,
+        //   color: Colors.black87,
+        // ),
         onTap: () {
-          if (onTap != null) {
-            onTap();
-          }
-          // Handle item tap
-          print('Tapped on $title');
+          onTap();
         },
       ),
     );

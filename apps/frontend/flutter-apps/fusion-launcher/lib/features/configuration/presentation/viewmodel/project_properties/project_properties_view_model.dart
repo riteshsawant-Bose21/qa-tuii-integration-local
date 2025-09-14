@@ -177,6 +177,7 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
   // set Listening area selection mode
   void setListeningAreaSelectionMode(bool isInSelectionMode) {
     isInListeningAreaSelectionMode = isInSelectionMode;
+    isInZoneSelectionMode = false;
     updateProject();
   }
 

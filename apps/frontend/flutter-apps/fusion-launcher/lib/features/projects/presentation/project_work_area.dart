@@ -74,6 +74,8 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
   @override
   bool get wantKeepAlive => true;
 
+  final ExpansibleController productsController = ExpansibleController();
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -309,7 +311,10 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                         alowUndock: false,
                         initiallyExpanded: true,
                         isCollapsibleSection: true,
-                        dockItemWidget: () => const DevicesPanel(),
+                        dockItemWidget:
+                            () => DevicesPanel(
+                              productsController: productsController,
+                            ),
                       ),
                       DockItemConfig(
                         id: "4",
@@ -362,6 +367,7 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                         title: "PRODUCT QUERY",
                         side: "right",
                         dockItemWidget: () => const ProductQueryView(),
+                        controller: productsController,
                       ),
                       // DockItemConfig(
                       //   id: "8",
@@ -410,7 +416,12 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                                       .toList(),
                             ),
                       ),
-                      DockItemConfig(id: "7", title: "PRODUCT QUERY", side: "right", dockItemWidget: () => const ProductQueryView()),
+                      DockItemConfig(
+                        id: "7",
+                        title: "PRODUCT QUERY",
+                        side: "right",
+                        dockItemWidget: () => const ProductQueryView(),
+                      ),
                     ],
                   ),
 

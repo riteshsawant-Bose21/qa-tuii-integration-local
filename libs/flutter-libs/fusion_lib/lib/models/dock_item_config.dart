@@ -7,6 +7,7 @@ class DockItemConfig {
   final bool initiallyExpanded;
   final bool alowUndock;
   final bool isCollapsibleSection;
+  final ExpansibleController? controller;
 
   final Widget Function() dockItemWidget;
 
@@ -18,5 +19,6 @@ class DockItemConfig {
     this.initiallyExpanded = false,
     this.alowUndock = true,
     this.isCollapsibleSection = true,
+    this.controller,
   });
 }

@@ -5,7 +5,6 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/core/constants/assets_constants.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/core/theme/app_theme.dart';
 import 'package:fusion_launcher/core/utils/fusion_utils.dart';
@@ -124,6 +123,36 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
 
   Offset? cursorPosition;
 
+  bool isCustomCursorNeeded() {
+    return serviceLocator<ProjectViewModel>().selectedProductToAdd != null ||
+        serviceLocator<ProjectViewModel>().isInListeningAreaSelectionMode ||
+        serviceLocator<ProjectViewModel>().isInZoneSelectionMode;
+  }
+
+  Widget getCustomCursor() {
+    if (serviceLocator<ProjectViewModel>().selectedProductToAdd != null) {
+      return Image.asset(
+        serviceLocator<ProjectViewModel>().selectedProductToAdd!.image, // Your asset icon path
+        width: 32,
+        height: 32,
+      );
+    } else if (serviceLocator<ProjectViewModel>().isInListeningAreaSelectionMode) {
+      return Icon(
+        Icons.edit,
+        size: 20,
+        color: Theme.of(context).colorScheme.primary,
+      );
+    } else if (serviceLocator<ProjectViewModel>().isInZoneSelectionMode) {
+      return Icon(
+        Icons.layers,
+        size: 20,
+        color: Theme.of(context).colorScheme.primary,
+      );
+    } else {
+      return const SizedBox.shrink();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -159,7 +188,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                         return _buildEmptyFloorWidget();
                       }
 
-                      final bool useCustomCursor = serviceLocator<ProjectViewModel>().selectedProductToAdd != null;
+                      final bool useCustomCursor = isCustomCursorNeeded();
                       return Stack(
                         children: <Widget>[
                           MouseRegion(
@@ -265,14 +294,10 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
 
                           if (useCustomCursor && cursorPosition != null)
                             Positioned(
-                              left: cursorPosition!.dx - 16,
-                              top: cursorPosition!.dy - 16,
+                              left: cursorPosition!.dx - 12,
+                              top: cursorPosition!.dy - 12,
                               child: IgnorePointer(
-                                child: Image.asset(
-                                  Assets.dmPendent, // Your asset icon path
-                                  width: 32,
-                                  height: 32,
-                                ),
+                                child: getCustomCursor(),
                               ),
                             ),
                         ],
@@ -301,6 +326,8 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                       );
                       serviceLocator<ProjectViewModel>().addZone(zone);
                       zoneSelectionMode(zone);
+                    } else if (!serviceLocator<ProjectViewModel>().isInZoneSelectionMode) {
+                      floorCanvasController.cancelListeningAreaSelection();
                     }
 
                     if (state is FloorsUpdated) {
