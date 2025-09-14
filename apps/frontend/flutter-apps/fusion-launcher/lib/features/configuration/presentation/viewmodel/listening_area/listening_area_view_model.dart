@@ -78,5 +78,20 @@ extension ListeningAreaViewModel on ProjectViewModel {
     }
   }
 
+  ListeningArea? getListeningAreaForHardware(String hardwareId) {
+    try {
+      final HardwareComponent hardwareComponent = projectManager.getHardwareById(hardwareId);
+      final String? laId = hardwareComponent.locationEntity.listeningAreaId;
+      if (laId != null) {
+        return projectManager.getListeningAreaById(laId);
+      } else {
+        return null;
+      }
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get listening area for hardware: $e");
+      return null;
+    }
+  }
+
   //add
 }

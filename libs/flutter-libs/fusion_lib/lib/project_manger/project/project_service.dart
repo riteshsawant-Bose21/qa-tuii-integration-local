@@ -19,6 +19,7 @@ class ProjectService {
   final double minSPL;
   final double maxSPL;
   bool isInControlMode;
+  bool isInHardwareMode = false;
 
   final FloorRepository floors;
   final ListeningAreaRepository listeningAreas;
@@ -52,6 +53,7 @@ class ProjectService {
     required this.minSPL,
     required this.maxSPL,
     this.isInControlMode = false,
+    this.isInHardwareMode = false,
     FloorRepository? floors,
     ListeningAreaRepository? listeningAreas,
     ZoneRepository? zones,
@@ -94,6 +96,7 @@ class ProjectService {
     FusionDeviceRepository? suggestedFusionDevices,
     AmplifierRepository? amplifiers,
     RelationshipManager? relationships,
+    bool? isInHardwareMode,
   }) {
     ProjectService projectService = ProjectService(
       id: id ?? this.id,
@@ -118,6 +121,7 @@ class ProjectService {
       suggestedFusionDevices: suggestedFusionDevices ?? this.suggestedFusionDevices,
       amplifiers: amplifiers ?? this.amplifiers,
       relationships: relationships ?? this.relationships,
+      isInHardwareMode: isInHardwareMode ?? this.isInHardwareMode,
     );
 
     // Preserve undo/redo stacks
@@ -149,6 +153,7 @@ class ProjectService {
       "minSPL": minSPL,
       "maxSPL": maxSPL,
       "isInControlMode": isInControlMode,
+      "isInHardwareMode": isInHardwareMode,
       "floors": floors.toJson((f) => f.toJson()),
       "listeningAreas": listeningAreas.toJson((a) => a.toJson()),
       "zones": zones.toJson((z) => z.toJson()),
@@ -184,6 +189,7 @@ class ProjectService {
       minSPL: (json["minSPL"] as num).toDouble(),
       maxSPL: (json["maxSPL"] as num).toDouble(),
       isInControlMode: json["isInControlMode"] ?? false,
+      isInHardwareMode: json["isInHardwareMode"] ?? false,
     );
 
     service.floors.fromJsonList(json["floors"], (m) => FloorModel.fromJson(m), "id");

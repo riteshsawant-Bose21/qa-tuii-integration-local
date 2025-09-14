@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/core/constants/spl_calculation_data.dart';
+
+import '../fusion_acoustic_calculation_engine/spl_calculation_data.dart';
+import 'spl_range_controller.dart';
 
 class SPLRangeSlider extends StatefulWidget {
   final double minValue;
@@ -8,6 +10,7 @@ class SPLRangeSlider extends StatefulWidget {
   final void Function(double min, double max) onChangeEnd;
   final double width;
   final double height;
+  final SplRangeController? controller;
 
   const SPLRangeSlider({
     super.key,
@@ -17,6 +20,7 @@ class SPLRangeSlider extends StatefulWidget {
     required this.onChangeEnd,
     this.width = 60,
     this.height = 400,
+    this.controller,
   });
 
   @override
@@ -32,20 +36,64 @@ class _SPLRangeSliderState extends State<SPLRangeSlider> {
   bool _isDraggingMin = false;
   bool _isDraggingMax = false;
   bool _isDraggingRange = false;
+  bool _isUpdatingFromController = false;
 
   @override
   void initState() {
     super.initState();
-    _currentMin = widget.minValue.clamp(minSPL, maxSPL);
-    _currentMax = widget.maxValue.clamp(minSPL, maxSPL);
+
+    // Initialize from controller if available, otherwise use widget values
+    if (widget.controller != null) {
+      _currentMin = widget.controller!.lowerLimit.clamp(minSPL, maxSPL);
+      _currentMax = widget.controller!.upperLimit.clamp(minSPL, maxSPL);
+      widget.controller!.addListener(_onControllerChanged);
+    } else {
+      _currentMin = widget.minValue.clamp(minSPL, maxSPL);
+      _currentMax = widget.maxValue.clamp(minSPL, maxSPL);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.controller?.removeListener(_onControllerChanged);
+    super.dispose();
+  }
+
+  void _onControllerChanged() {
+    if (widget.controller != null && !_isUpdatingFromController) {
+      setState(() {
+        _currentMin = widget.controller!.lowerLimit.clamp(minSPL, maxSPL);
+        _currentMax = widget.controller!.upperLimit.clamp(minSPL, maxSPL);
+      });
+    }
+  }
+
+  void _updateController(double min, double max) {
+    if (widget.controller != null) {
+      _isUpdatingFromController = true;
+      widget.controller!.setRange(min, max);
+      _isUpdatingFromController = false;
+    }
   }
 
   @override
   void didUpdateWidget(covariant SPLRangeSlider old) {
     super.didUpdateWidget(old);
-    if (old.minValue != widget.minValue || old.maxValue != widget.maxValue) {
+
+    // Only update from widget values if no controller is being used
+    if (widget.controller == null && (old.minValue != widget.minValue || old.maxValue != widget.maxValue)) {
       _currentMin = widget.minValue.clamp(minSPL, maxSPL);
       _currentMax = widget.maxValue.clamp(minSPL, maxSPL);
+    }
+
+    // Handle controller changes
+    if (old.controller != widget.controller) {
+      old.controller?.removeListener(_onControllerChanged);
+      if (widget.controller != null) {
+        widget.controller!.addListener(_onControllerChanged);
+        _currentMin = widget.controller!.lowerLimit.clamp(minSPL, maxSPL);
+        _currentMax = widget.controller!.upperLimit.clamp(minSPL, maxSPL);
+      }
     }
   }
 
@@ -92,37 +140,36 @@ class _SPLRangeSliderState extends State<SPLRangeSlider> {
       width: 30,
       height: sliderHeight,
       child: Stack(
-        children:
-            splValues.map((int spl) {
-              final double normalized = ((maxSPL - spl) / (maxSPL - minSPL)).clamp(0.0, 1.0);
-              final double topPosition = normalized * (sliderHeight - labelHeight);
+        children: splValues.map((int spl) {
+          final double normalized = ((maxSPL - spl) / (maxSPL - minSPL)).clamp(0.0, 1.0);
+          final double topPosition = normalized * (sliderHeight - labelHeight);
 
-              return Positioned(
-                top: topPosition,
-                left: 0,
-                right: 0,
-                child: SizedBox(
-                  height: labelHeight,
-                  child: Center(
-                    child: Text(
-                      '$spl',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 9,
-                        fontWeight: FontWeight.bold,
-                        shadows: <Shadow>[
-                          Shadow(
-                            offset: Offset(0.5, 0.5),
-                            blurRadius: 1.0,
-                            color: Colors.black,
-                          ),
-                        ],
+          return Positioned(
+            top: topPosition,
+            left: 0,
+            right: 0,
+            child: SizedBox(
+              height: labelHeight,
+              child: Center(
+                child: Text(
+                  '$spl',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
+                    shadows: <Shadow>[
+                      Shadow(
+                        offset: Offset(0.5, 0.5),
+                        blurRadius: 1.0,
+                        color: Colors.black,
                       ),
-                    ),
+                    ],
                   ),
                 ),
-              );
-            }).toList(),
+              ),
+            ),
+          );
+        }).toList(),
       ),
     );
   }
@@ -181,6 +228,9 @@ class _SPLRangeSliderState extends State<SPLRangeSlider> {
               _currentMin = newVal.clamp(minSPL, _currentMax - 1);
             }
           });
+
+          // Update controller and notify parent
+          _updateController(_currentMin, _currentMax);
           widget.onChanged(_currentMin, _currentMax);
         },
         onPanEnd: (_) {
@@ -236,6 +286,9 @@ class _SPLRangeSliderState extends State<SPLRangeSlider> {
             _currentMin = newMin;
             _currentMax = newMax;
           });
+
+          // Update controller and notify parent
+          _updateController(_currentMin, _currentMax);
           widget.onChanged(_currentMin, _currentMax);
         }
       },

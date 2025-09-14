@@ -3,7 +3,7 @@
 /// Comprehensive amplifier matching with detailed logging, error handling,
 /// and step-by-step algorithm execution following the 12-step specification.
 
-library amplifier_matching;
+library;
 
 import 'dart:convert';
 
@@ -34,7 +34,7 @@ Future<AmpMatchingResult> matchAmplifiers(
   List<Circuit> circuits,
   Map<String, SpeakerModel> speakerDatabase, {
   bool enableLogging = true,
-  LogLevel minLogLevel = LogLevel.info,
+  AlgorithmLogLevel minLogLevel = AlgorithmLogLevel.info,
   bool enablePowerSharing = true,
   PowerAllocationStrategy strategy = PowerAllocationStrategy.symmetrical,
 }) async {
@@ -49,7 +49,7 @@ Future<AmpMatchingResult> matchAmplifiers(
 ///
 /// [enabled] - Enable or disable logging
 /// [minLevel] - Minimum log level (debug, info, warning, error)
-void configureAmplifierMatchingLogging({bool enabled = true, LogLevel minLevel = LogLevel.info}) {
+void configureAmplifierMatchingLogging({bool enabled = true, AlgorithmLogLevel minLevel = AlgorithmLogLevel.info}) {
   AmpMatchingLogger.setLoggingEnabled(enabled);
   AmpMatchingLogger.setMinLogLevel(minLevel);
 }

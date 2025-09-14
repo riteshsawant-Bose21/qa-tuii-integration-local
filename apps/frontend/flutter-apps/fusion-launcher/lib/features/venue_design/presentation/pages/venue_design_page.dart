@@ -9,6 +9,7 @@ import 'package:fusion_launcher/core/utils/fusion_utils.dart';
 import 'package:fusion_lib/fusion_building_view/floor_canvas.dart';
 import 'package:fusion_lib/fusion_building_view/floor_canvas_controller.dart';
 import 'package:fusion_lib/fusion_building_view/floor_plan_calibrator.dart';
+import 'package:fusion_lib/fusion_building_view/spl_range_slider.dart';
 import 'package:fusion_lib/fusion_utils/image_loader_service.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
 
@@ -16,7 +17,6 @@ import '../../../../core/mace_calculation_manager.dart';
 import '../../../../core/mace_engine_provider.dart';
 import '../../../../core/models/products_data.dart';
 import '../../../../core/widgets/clean_widgets.dart';
-import '../../../../core/widgets/spl_range_slider.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../../schematics/presentation/pages/amplifier_matching_page.dart';
 import '../widgets/products_sidebar.dart';
@@ -119,8 +119,26 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
     }
   }
 
+  void zoneSelectionMode(Zone zone) async {
+    final List<ListeningArea>? selectedAreas = await floorCanvasController.requestListeningAreaSelection(
+      serviceLocator<ProjectViewModel>().getListeningAreasForZone(zone.id),
+      zone,
+    );
+
+    if (selectedAreas != null && selectedAreas.isNotEmpty) {
+      for (ListeningArea area in selectedAreas) {
+        serviceLocator<ProjectViewModel>().addListeningAreaToZone(area.id, zone.id);
+      }
+      serviceLocator<ProjectViewModel>().saveProjectToLocal();
+    } else {
+      debugPrint("No areas selected");
+    }
+    serviceLocator<ProjectViewModel>().setZoneSelectionMode(false);
+  }
+
   @override
   Widget build(BuildContext context) {
+    print("Inside the build of FloorPlanProjectEditor");
     return Scaffold(
       backgroundColor: Colors.white,
 
@@ -347,6 +365,7 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
                                     calculateSPL();
                                     serviceLocator<ProjectViewModel>().saveProjectToLocal();
                                   },
+                                  addNewHardwareComponent: (Offset hardwarePosition, String? listeningAreaId) {},
                                   onUpdateListeningArea: serviceLocator<ProjectViewModel>().updateListeningArea,
                                   onFloorPlanUpdated: (FloorPlanModel updatedPlan) {
                                     serviceLocator<ProjectViewModel>().updateFloor(
@@ -670,7 +689,17 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
             Container(
               width: 240,
               margin: const EdgeInsets.all(12),
-              child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+              child: BlocConsumer<ProjectViewModel, ProjectViewModelState>(
+                listener: (BuildContext context, ProjectViewModelState state) {
+                  print("ProjectViewModelState: $state");
+                  if (serviceLocator<ProjectViewModel>().isInZoneSelectionMode) {
+                    //Create new zone
+                    final Zone zone = Zone(
+                      name: 'Zone ${serviceLocator<ProjectViewModel>().zones.length + 1}',
+                    );
+                    zoneSelectionMode(zone);
+                  }
+                },
                 builder: (BuildContext context, ProjectViewModelState state) {
                   return SingleChildScrollView(
                     child: Column(
@@ -818,19 +847,7 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
                                       serviceLocator<ProjectViewModel>().saveProjectToLocal();
                                     },
                                     onRequestListeningAreaSelection: (Zone zone) async {
-                                      final List<ListeningArea>? selectedAreas = await floorCanvasController.requestListeningAreaSelection(
-                                        serviceLocator<ProjectViewModel>().getListeningAreasForZone(zone.id),
-                                        zone,
-                                      );
-
-                                      if (selectedAreas != null && selectedAreas.isNotEmpty) {
-                                        for (ListeningArea area in selectedAreas) {
-                                          serviceLocator<ProjectViewModel>().addListeningAreaToZone(area.id, zone.id);
-                                        }
-                                        serviceLocator<ProjectViewModel>().saveProjectToLocal();
-                                      } else {
-                                        debugPrint("No areas selected");
-                                      }
+                                      zoneSelectionMode(zone);
                                     },
                                   ),
                                 ),
@@ -1186,7 +1203,7 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
         barrierDismissible: true,
         builder:
             (BuildContext context) => Dialog(
-              child: FloorPlanCalibrator(
+              child: FloorPlanCalibrationDialog(
                 floorPlanImage: image,
                 onCalibrationComplete: (CalibrationData data) {
                   if (mounted) {

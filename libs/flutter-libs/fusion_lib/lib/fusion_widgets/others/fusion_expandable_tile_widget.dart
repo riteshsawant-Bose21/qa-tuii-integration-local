@@ -38,6 +38,7 @@ class FusionExpandableTileWidget extends StatefulWidget {
   final DockItemConfig config;
   final void Function(DockItem, DraggableDetails) onUndock;
   final void Function(DockItem, bool) onExpansionChanged;
+  final ExpansibleController? controller;
 
   const FusionExpandableTileWidget({
     super.key,
@@ -45,6 +46,7 @@ class FusionExpandableTileWidget extends StatefulWidget {
     required this.config,
     required this.onUndock,
     required this.onExpansionChanged,
+    required this.controller,
   });
 
   @override
@@ -109,6 +111,7 @@ class _FusionExpandableTileWidgetState extends State<FusionExpandableTileWidget>
         ),
         child: ExpansionTile(
           minTileHeight: 24,
+          controller: widget.controller,
           dense: true,
           tilePadding: const EdgeInsets.only(right: 16, left: 16),
           trailing: _RotatingIcon(animation: _rotationAnimation, color: theme.colorScheme.fusionTextViewColor),

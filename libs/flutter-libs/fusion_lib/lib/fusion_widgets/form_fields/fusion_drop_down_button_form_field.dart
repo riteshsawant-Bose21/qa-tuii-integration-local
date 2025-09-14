@@ -79,7 +79,7 @@ class FusionDropdownButtonFormField extends StatelessWidget {
   Widget build(BuildContext context) {
     return DropdownButtonFormField<String>(
       key: key,
-      initialValue: value,
+      value: value,
       isExpanded: isExpanded, // Use the parameter value
       items: options
           .map(
