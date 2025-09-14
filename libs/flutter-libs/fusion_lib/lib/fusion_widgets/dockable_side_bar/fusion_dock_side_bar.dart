@@ -53,7 +53,13 @@ class FusionDockSidebar extends StatelessWidget {
               final config = getConfigForItem(item.id);
               return config != null
                   ? config.isCollapsibleSection
-                        ? FusionExpandableTileWidget(item: item, config: config, onUndock: onItemUndock, onExpansionChanged: onExpansionChanged)
+                        ? FusionExpandableTileWidget(
+                            item: item,
+                            config: config,
+                            onUndock: onItemUndock,
+                            onExpansionChanged: onExpansionChanged,
+                            controller: config.controller,
+                          )
                         : config.dockItemWidget()
                   : const SizedBox.shrink();
             }).toList(),
@@ -91,7 +97,8 @@ class SidebarPanel extends StatelessWidget {
               item: item,
               config: config,
               resizing: false,
-              onClose: () {}, // No-op for feedback
+              onClose: () {},
+              // No-op for feedback
               onResize: (_, __) {}, // No-op for feedback
             ),
 

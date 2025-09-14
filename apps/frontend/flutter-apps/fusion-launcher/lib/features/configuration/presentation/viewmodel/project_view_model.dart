@@ -31,6 +31,12 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
   String? currentSelectedHardwareId;
   String? currentSelectedListeningAreaId;
 
+  /// Listening area selection mode flag
+  bool isInListeningAreaSelectionMode = false;
+  bool isInZoneSelectionMode = false;
+
+  ProductQueryModel? selectedProductToAdd;
+
   /// Loads all local projects and emits the appropriate state.
   Future<void> loadAllLocalProjects() async {
     emit(ProjectLoading());
@@ -148,5 +154,12 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
 
   void throwError(String message) {
     emit(ProjectError(message: message));
+  }
+
+  void enterZoneSelectionMode() {
+    isInListeningAreaSelectionMode = false;
+    isInZoneSelectionMode = true;
+    print("Entering Zone Selection Mode");
+    emit(ZoneSelectionMode());
   }
 }

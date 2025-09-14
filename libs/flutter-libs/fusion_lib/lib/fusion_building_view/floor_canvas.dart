@@ -5,14 +5,10 @@ import 'dart:ui' as ui;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:fusion_lib/models/project_entities/zone_model.dart';
 
 import '../di/service_locator.dart';
 import '../fusion_lib.dart';
 import '../fusion_utils/image_loader_service.dart';
-import '../models/project_entities/floor_plan_model.dart';
-import '../models/project_entities/hardware_component_model.dart';
-import '../models/project_entities/listening_area_model.dart';
 import 'floor_canvas_controller.dart';
 import 'floor_canvas_painter.dart';
 
@@ -45,6 +41,7 @@ class FloorCanvas extends StatefulWidget {
   final Function onSelectedFloorPlanIdChanged;
   final Function(HardwareComponent, String? listeningAreaId, String? floorId) moveHardware;
   final Function(ListeningArea newArea, List<HardwareComponent>? hardwaresInsideArea) onAddListeningArea;
+  final Function(Offset speakerPosition, String? listeningAreaId) addNewHardwareComponent;
 
   const FloorCanvas({
     super.key,
@@ -70,6 +67,7 @@ class FloorCanvas extends StatefulWidget {
     required this.splMin,
     required this.splMax,
     required this.moveHardware,
+    required this.addNewHardwareComponent,
   });
 
   @override
@@ -158,6 +156,7 @@ class FloorCanvasState extends State<FloorCanvas> {
       setSelectedHardwareComponent: (HardwareComponent hardwareComponent) {
         final int idx = widget.hardwareComponents.indexWhere((HardwareComponent sp) => sp.id == hardwareComponent.id);
         if (idx != -1) {
+          print("setting hardware component idx $idx speaker at pos is ${widget.hardwareComponents[idx].id}");
           setState(() {
             _selectedHardwareComponent = idx;
             _isHardwareComponentDragging = false;
@@ -374,6 +373,10 @@ class FloorCanvasState extends State<FloorCanvas> {
 
     final Offset worldPos = (e.localPosition - _panOffset) / _zoomScale;
 
+    //just calls add new hardware component
+    final ListeningArea? hit = _findListeningAreaAt(worldPos);
+    widget.addNewHardwareComponent(worldPos, hit?.id);
+
     // PAN
     if (e.buttons == kMiddleMouseButton) {
       _isPanning = true;
@@ -394,6 +397,7 @@ class FloorCanvasState extends State<FloorCanvas> {
         if ((worldPos - sp.pos).distance < hitRadius) {
           _stopListeningAreaSelection();
           widget.onSelectedHardwareComponentIdChanged(sp.id);
+          print("setting speaker hit to index $i speaker at pos is ${widget.hardwareComponents[i].id}");
           setState(() {
             _selectedHardwareComponent = i;
             _isHardwareComponentDragging = true;

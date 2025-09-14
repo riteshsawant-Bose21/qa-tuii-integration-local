@@ -1,5 +1,5 @@
 /// Amplifier specifications and data types for API integration
-/// 
+///
 /// This module contains amplifier data structures that would typically
 /// be fetched from an amplifier specifications API in production.
 
@@ -40,23 +40,19 @@ class AmpModel {
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is AmpModel &&
-        other.name == name &&
-        other.channels == channels &&
-        other.peakPerChannel == peakPerChannel;
+    return other is AmpModel && other.name == name && other.channels == channels && other.peakPerChannel == peakPerChannel;
   }
 
   @override
-  int get hashCode =>
-      name.hashCode ^ channels.hashCode ^ peakPerChannel.hashCode;
+  int get hashCode => name.hashCode ^ channels.hashCode ^ peakPerChannel.hashCode;
 }
 
 /// Assignment: one amplifier and the circuits assigned to it.
-class Assignment {
+class Assignment2 {
   final AmpModel amp;
   final List<AmpCircuit> loads;
   // Add debug fields if needed
-  Assignment({required this.amp, required this.loads});
+  Assignment2({required this.amp, required this.loads});
 }
 
 /// CircuitCalc: internal wrapper for circuit calculations
@@ -66,8 +62,7 @@ class CircuitCalc {
   double offsetDB;
   List<String> errors;
 
-  CircuitCalc({required this.base, this.ppkTotal = 0, this.offsetDB = 0, List<String>? errors})
-      : errors = errors ?? [];
+  CircuitCalc({required this.base, this.ppkTotal = 0, this.offsetDB = 0, List<String>? errors}) : errors = errors ?? [];
 }
 
 /// AmpCircuit: minimal stub for circuit data (renamed to avoid conflict with amp_matching_types.dart)

@@ -4,6 +4,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
+import '../../../../core/service_locator.dart';
+import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../../projects/widget/product_search_widget.dart';
 import '../viewModel/product_query_view_model_cubit.dart';
 import '../viewModel/product_query_view_model_state.dart';
@@ -62,9 +64,15 @@ class ProductQueryView extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     itemCount: state.filteredProducts.length,
                     itemBuilder: (BuildContext context, int index) {
-                      return ProductCard(
-                        product: state.filteredProducts[index],
-                        searchQuery: state.searchQuery,
+                      final ProductQueryModel product = state.filteredProducts[index];
+                      return InkWell(
+                        onTap: () {
+                          serviceLocator<ProjectViewModel>().setSelectedProductToAdd(product);
+                        },
+                        child: ProductCard(
+                          product: product,
+                          searchQuery: state.searchQuery,
+                        ),
                       );
                     },
                   ),
@@ -271,11 +279,13 @@ class ProductAPI {
       final List<dynamic> speakersData = jsonDecode(speakersJson);
       // print("Speakers Data: $speakersData");
       return speakersData.map((dynamic speakerData) {
+        print(speakerData);
         return ProductQueryModel(
           name: speakerData['model'] ?? '',
           price: (speakerData['price'] ?? 0.0).toDouble(),
-          image: speakerData['imageUrl'] ?? '',
+          image: 'assets/images/speakers/DM_pendant.png',
           type: ProductType.speaker,
+          sku: speakerData['model'] ?? '',
           specifications: '${speakerData['maxSpl']} dB SPL • ${speakerData['mountingType']}',
         );
       }).toList();
@@ -297,6 +307,7 @@ class ProductAPI {
           price: 0.0, // Add price if available in fusion_lib amp model
           image: '', // Add image if available in fusion_lib amp model
           type: ProductType.amplifier,
+          sku: ampData['name'] ?? '',
           specifications: '${ampData['channels']}ch • ${(ampData['peakPerChannel'] ?? 0).toInt()}W per ch',
         );
       }).toList();
@@ -318,6 +329,7 @@ class ProductAPI {
           price: 0.0, // Add price if available in fusion_lib device model
           image: '', // Add image if available in fusion_lib device model
           type: ProductType.device,
+          sku: deviceData['name'] ?? '',
           specifications: '${deviceData['analogInputs']}in • ${deviceData['analogOutputs']}out • ${deviceData['networkIO']} network I/O',
         );
       }).toList();

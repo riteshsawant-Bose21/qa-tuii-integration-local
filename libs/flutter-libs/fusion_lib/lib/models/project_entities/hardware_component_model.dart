@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'dart:ui';
 
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:uuid/uuid.dart';
 
 import 'location_model.dart';
