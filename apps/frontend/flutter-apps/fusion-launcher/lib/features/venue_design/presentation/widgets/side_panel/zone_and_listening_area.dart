@@ -1,0 +1,423 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/core/service_locator.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_lib/fusion_lib.dart';
+
+class ZoneAndListeningAreaPanel extends StatefulWidget {
+  const ZoneAndListeningAreaPanel({super.key});
+
+  @override
+  ZoneAndListeningAreaPanelState createState() => ZoneAndListeningAreaPanelState();
+}
+
+class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> with TickerProviderStateMixin {
+  final Set<String> _expandedZones = <String>{};
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  void _toggleZoneExpansion(String zoneId) {
+    setState(() {
+      if (_expandedZones.contains(zoneId)) {
+        _expandedZones.remove(zoneId);
+      } else {
+        _expandedZones.add(zoneId);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+      builder: (BuildContext context, ProjectViewModelState state) {
+        return SizedBox(
+          width: 280,
+
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              // Header Section
+              _buildHeader(),
+
+              // Divider
+              Container(
+                height: 1,
+                color: Colors.grey[200],
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+              ),
+
+              // Zones List
+              _buildZonesList(),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisSize: MainAxisSize.max,
+        children: <Widget>[
+          Flexible(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Icon(
+                  Icons.layers_outlined,
+                  size: 16,
+                  color: Colors.grey[700],
+                ),
+                const SizedBox(width: 8),
+                FusionAppText(
+                  text: 'Add new zone',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                    color: Colors.black87,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          _buildAddButton(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAddButton() {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(6),
+        onTap: () => _addNewZone(),
+        child: Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: Colors.black54, width: 1),
+          ),
+          child: const Icon(
+            Icons.add,
+            size: 16,
+            color: Colors.black87,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildZonesList() {
+    final List<Zone> zones = serviceLocator<ProjectViewModel>().zones;
+
+    if (zones.isEmpty) {
+      return _buildEmptyState();
+    }
+
+    return Container(
+      constraints: const BoxConstraints(),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          const SizedBox(height: 3),
+          ...zones.map(
+            (Zone zone) => Container(
+              margin: const EdgeInsets.only(bottom: 4),
+              child: _buildZoneCard(zone),
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Container(
+      constraints: const BoxConstraints(),
+      padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(
+            Icons.layers_outlined,
+            size: 48,
+            color: Colors.grey[400],
+          ),
+          const SizedBox(height: 16),
+          FusionAppText(
+            text: 'No zones yet',
+            style: TextStyle(
+              color: Colors.grey[600],
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
+          FusionAppText(
+            text: 'Create your first zone to get started',
+            style: TextStyle(
+              color: Colors.grey[500],
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildZoneCard(Zone zone) {
+    final List<ListeningArea> listeningAreas = serviceLocator<ProjectViewModel>().getListeningAreasForZone(zone.id);
+    final bool isSelected = serviceLocator<ProjectViewModel>().isInZoneSelectionMode && serviceLocator<ProjectViewModel>().currentSelectedZoneId == zone.id;
+    final bool isExpanded = _expandedZones.contains(zone.id);
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          // Zone Header (always visible)
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () => _toggleZoneExpansion(zone.id),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: isSelected ? Colors.grey[200] : Colors.white,
+                ),
+                child: Row(
+                  children: <Widget>[
+                    _buildZoneIndicator(zone),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildZoneTitle(zone, isSelected),
+                    ),
+
+                    InkWell(
+                      onTap: () => serviceLocator<ProjectViewModel>().enterZoneSelectionMode(zone),
+                      child: _buildAddIcon(),
+                    ),
+
+                    const SizedBox(width: 8),
+                    _buildDeleteButton(zone),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // Expandable Listening Areas Section
+          AnimatedCrossFade(
+            duration: const Duration(milliseconds: 250),
+            crossFadeState: isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+            firstChild: const SizedBox.shrink(),
+            secondChild: SizedBox(
+              width: double.infinity,
+
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  // Listening Areas or Empty Message
+                  if (listeningAreas.isNotEmpty)
+                    ...listeningAreas.map((ListeningArea area) => _buildListeningAreaItem(area, zone))
+                  else
+                    _buildNoListeningAreasMessage(),
+
+                  const SizedBox(height: 4),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildZoneIndicator(Zone zone) {
+    return Container(
+      width: 4,
+      height: 24,
+      decoration: BoxDecoration(
+        color: zone.color,
+        borderRadius: BorderRadius.circular(2),
+      ),
+    );
+  }
+
+  Widget _buildZoneTitle(Zone zone, bool isSelected) {
+    return Container(
+      constraints: const BoxConstraints(),
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: FusionAppText(
+        text: zone.name,
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+          fontSize: 13,
+          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+          color: isSelected ? Colors.black87 : Colors.grey[800],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildExpandIcon(bool isExpanded) {
+    return AnimatedRotation(
+      duration: const Duration(milliseconds: 200),
+      turns: isExpanded ? 0.5 : 0.0,
+      child: Icon(
+        Icons.keyboard_arrow_down,
+        size: 18,
+        color: Colors.grey[600],
+      ),
+    );
+  }
+
+  Widget _buildAddIcon() {
+    return const Icon(
+      Icons.add,
+      size: 18,
+      color: Colors.black54,
+    );
+  }
+
+  Widget _buildDeleteButton(Zone zone) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(4),
+        onTap: () => _showDeleteConfirmation(zone),
+        child: const Padding(
+          padding: EdgeInsets.all(4),
+          child: Icon(
+            Icons.delete_outline,
+            size: 16,
+            color: Colors.black54,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildListeningAreaItem(ListeningArea area, Zone zone) {
+    final bool isSelected = serviceLocator<ProjectViewModel>().currentSelectedListeningAreaId == area.id;
+
+    return Container(
+      margin: const EdgeInsets.only(left: 8),
+      decoration: BoxDecoration(
+        color: isSelected ? Colors.grey[200] : Colors.transparent,
+      ),
+      child: ListTile(
+        dense: true,
+
+        title: FusionAppText(
+          text: area.name,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            fontSize: 11,
+            fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
+          ),
+        ),
+        trailing:
+            isSelected
+                ? Container(
+                  width: 6,
+                  height: 6,
+                  decoration: const BoxDecoration(
+                    color: Colors.black87,
+                    shape: BoxShape.circle,
+                  ),
+                )
+                : null,
+        onTap: () => serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(area.id),
+      ),
+    );
+  }
+
+  Widget _buildNoListeningAreasMessage() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: Colors.grey[200]!, width: 1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.max,
+        children: <Widget>[
+          Icon(
+            Icons.info_outline,
+            size: 14,
+            color: Colors.grey[500],
+          ),
+          const SizedBox(width: 12),
+          Flexible(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                FusionAppText(
+                  text: 'No listening areas',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                FusionAppText(
+                  text: 'Add listening areas to this zone',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: Colors.grey[500],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _addNewZone() {
+    final Zone zone = Zone(
+      name: 'Zone ${serviceLocator<ProjectViewModel>().zones.length + 1}',
+    );
+    serviceLocator<ProjectViewModel>().addZone(zone);
+  }
+
+  void _showDeleteConfirmation(Zone zone) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Delete Zone'),
+          content: Text('Are you sure you want to delete "${zone.name}"?'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                serviceLocator<ProjectViewModel>().removeZone(zone.id);
+                Navigator.of(context).pop();
+              },
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}

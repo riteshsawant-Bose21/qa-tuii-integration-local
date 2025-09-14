@@ -150,6 +150,7 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
 
   void setCurrentSelectedListeningArea(String? area) {
     currentSelectedListeningAreaId = area;
+    updateProject();
   }
 
   HardwareComponent? getCurrentSelectedHardware() {
@@ -178,17 +179,16 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
   void setListeningAreaSelectionMode(bool isInSelectionMode) {
     isInListeningAreaSelectionMode = isInSelectionMode;
     isInZoneSelectionMode = false;
+    currentSelectedZoneId = null;
     updateProject();
   }
 
   // set Zone selection mode
   void setZoneSelectionMode(bool isInSelectionMode) {
-    if (isInSelectionMode) {
-      enterZoneSelectionMode();
-    } else {
-      isInZoneSelectionMode = isInSelectionMode;
-      updateProject();
-    }
+    isInZoneSelectionMode = isInSelectionMode;
+    isInListeningAreaSelectionMode = false;
+    currentSelectedZoneId = null;
+    updateProject();
   }
 
   void setSelectedProductToAdd(ProductQueryModel? product) {
@@ -198,6 +198,11 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
 
   void clearSelectedProduct() {
     selectedProductToAdd = null;
+    updateProject();
+  }
+
+  void clearSelectedZone() {
+    currentSelectedZoneId = null;
     updateProject();
   }
 }

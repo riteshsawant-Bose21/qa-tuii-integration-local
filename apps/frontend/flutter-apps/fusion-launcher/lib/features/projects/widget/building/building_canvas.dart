@@ -124,15 +124,15 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
     } else {
       debugPrint("No areas selected");
     }
-    serviceLocator<ProjectViewModel>().setZoneSelectionMode(false);
   }
 
   Offset? cursorPosition;
 
   bool isCustomCursorNeeded() {
-    return serviceLocator<ProjectViewModel>().selectedProductToAdd != null ||
-        serviceLocator<ProjectViewModel>().isInListeningAreaSelectionMode ||
-        serviceLocator<ProjectViewModel>().isInZoneSelectionMode;
+    return serviceLocator<ProjectViewModel>().selectedProductToAdd != null;
+    // ||
+    // serviceLocator<ProjectViewModel>().isInListeningAreaSelectionMode ||
+    // serviceLocator<ProjectViewModel>().isInZoneSelectionMode;
   }
 
   Widget getCustomCursor() {
@@ -142,19 +142,21 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
         width: 32,
         height: 32,
       );
-    } else if (serviceLocator<ProjectViewModel>().isInListeningAreaSelectionMode) {
-      return Icon(
-        Icons.edit,
-        size: 20,
-        color: Theme.of(context).colorScheme.primary,
-      );
-    } else if (serviceLocator<ProjectViewModel>().isInZoneSelectionMode) {
-      return Icon(
-        Icons.layers,
-        size: 20,
-        color: Theme.of(context).colorScheme.primary,
-      );
-    } else {
+    }
+    // else if (serviceLocator<ProjectViewModel>().isInListeningAreaSelectionMode) {
+    //   return Icon(
+    //     Icons.edit,
+    //     size: 20,
+    //     color: Theme.of(context).colorScheme.primary,
+    //   );
+    // } else if (serviceLocator<ProjectViewModel>().isInZoneSelectionMode) {
+    //   return Icon(
+    //     Icons.layers,
+    //     size: 20,
+    //     color: Theme.of(context).colorScheme.primary,
+    //   );
+    // }
+    else {
       return const SizedBox.shrink();
     }
   }
@@ -315,24 +317,12 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                 // Clean floating toolbar
                 BlocConsumer<ProjectViewModel, ProjectViewModelState>(
                   listener: (BuildContext context, ProjectViewModelState state) {
-                    if (serviceLocator<ProjectViewModel>().isInListeningAreaSelectionMode) {
-                      if (!floorCanvasController.isDrawing.value) {
-                        floorCanvasController.toggleDraw();
-                      }
-                    } else if (!serviceLocator<ProjectViewModel>().isInListeningAreaSelectionMode) {
-                      if (floorCanvasController.isDrawing.value) {
-                        floorCanvasController.toggleDraw();
-                      }
-                    }
-
-                    if (state is ZoneSelectionMode && serviceLocator<ProjectViewModel>().isInZoneSelectionMode) {
+                    if (state is ZoneSelectionMode) {
                       //Create new zone
-                      final Zone zone = Zone(
-                        name: 'Zone ${serviceLocator<ProjectViewModel>().zones.length + 1}',
-                      );
-                      serviceLocator<ProjectViewModel>().addZone(zone);
+                      final Zone zone = state.zone;
                       zoneSelectionMode(zone);
-                    } else if (!serviceLocator<ProjectViewModel>().isInZoneSelectionMode) {
+                    }
+                    if (!serviceLocator<ProjectViewModel>().isInZoneSelectionMode && floorCanvasController.isListeningAreaSelectionActive.value) {
                       floorCanvasController.cancelListeningAreaSelection();
                     }
 
@@ -353,11 +343,23 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                             valueListenable: floorCanvasController.isListeningAreaSelectionActive,
                             builder: (_, bool isActive, __) {
                               return Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 8,
+                                ),
                                 decoration: BoxDecoration(
                                   color:
                                       isActive
                                           ? FusionUtils.hexToColor(floorCanvasController.currentlySelectingZone!.zoneColor).withValues(alpha: 0.75)
                                           : Colors.white,
+                                  borderRadius: BorderRadius.circular(24),
+                                  boxShadow: <BoxShadow>[
+                                    BoxShadow(
+                                      color: Colors.black.withAlpha((0.1 * 255).toInt()),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
                                 ),
                                 child: Builder(
                                   builder: (BuildContext context) {
@@ -369,7 +371,6 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                             'Select listening areas for ${floorCanvasController.currentlySelectingZone!.name}',
                                             style: TextStyle(
                                               fontSize: 14,
-                                              // color: Colors.grey.shade700,
                                               color:
                                                   ThemeData.estimateBrightnessForColor(
                                                             FusionUtils.hexToColor(floorCanvasController.currentlySelectingZone!.zoneColor),
@@ -380,82 +381,148 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                             ),
                                           ),
                                           const SizedBox(width: 16),
-                                          CleanToolbarButton(
-                                            icon: Icons.close,
-                                            tooltip: 'Cancel selection',
-                                            onPressed: () => floorCanvasController.cancelListeningAreaSelection(),
+                                          InkWell(
+                                            onTap: () {
+                                              serviceLocator<ProjectViewModel>().clearSelectedZone();
+                                              floorCanvasController.cancelListeningAreaSelection();
+                                            },
+                                            borderRadius: BorderRadius.circular(12),
+                                            child: Container(
+                                              padding: const EdgeInsets.all(5),
+                                              decoration: BoxDecoration(
+                                                border: Border.all(
+                                                  color:
+                                                      ThemeData.estimateBrightnessForColor(
+                                                                FusionUtils.hexToColor(floorCanvasController.currentlySelectingZone!.zoneColor),
+                                                              ) ==
+                                                              Brightness.light
+                                                          ? Colors.grey.shade800
+                                                          : Colors.white,
+                                                  width: 1,
+                                                ),
+                                                borderRadius: BorderRadius.circular(10),
+                                              ),
+
+                                              child: Icon(
+                                                Icons.close,
+                                                size: 16,
+                                                color:
+                                                    ThemeData.estimateBrightnessForColor(
+                                                              FusionUtils.hexToColor(floorCanvasController.currentlySelectingZone!.zoneColor),
+                                                            ) ==
+                                                            Brightness.light
+                                                        ? Colors.grey.shade800
+                                                        : Colors.white,
+                                              ),
+                                            ),
                                           ),
                                           const SizedBox(width: 12),
-                                          CleanToolbarButton(
-                                            icon: Icons.check,
-                                            tooltip: 'Confirm selection',
-                                            onPressed: () => floorCanvasController.completeListeningAreaSelection(),
+                                          InkWell(
+                                            onTap: () {
+                                              serviceLocator<ProjectViewModel>().clearSelectedZone();
+                                              floorCanvasController.completeListeningAreaSelection();
+                                            },
+                                            borderRadius: BorderRadius.circular(12),
+                                            child: Container(
+                                              padding: const EdgeInsets.all(5),
+                                              decoration: BoxDecoration(
+                                                border: Border.all(
+                                                  color:
+                                                      ThemeData.estimateBrightnessForColor(
+                                                                FusionUtils.hexToColor(floorCanvasController.currentlySelectingZone!.zoneColor),
+                                                              ) ==
+                                                              Brightness.light
+                                                          ? Colors.grey.shade800
+                                                          : Colors.white,
+                                                  width: 1,
+                                                ),
+                                                borderRadius: BorderRadius.circular(10),
+                                              ),
+                                              child: Icon(
+                                                Icons.check,
+                                                size: 16,
+                                                color:
+                                                    ThemeData.estimateBrightnessForColor(
+                                                              FusionUtils.hexToColor(floorCanvasController.currentlySelectingZone!.zoneColor),
+                                                            ) ==
+                                                            Brightness.light
+                                                        ? Colors.grey.shade800
+                                                        : Colors.white,
+                                              ),
+                                            ),
                                           ),
                                         ],
                                       );
                                     }
-                                    return 1 == 1
-                                        ? BuildingToolbar(
+                                    return ValueListenableBuilder<bool>(
+                                      valueListenable: floorCanvasController.isDrawing,
+                                      builder: (_, bool isDrawing, __) {
+                                        return BuildingToolbar(
                                           onSplSelected: () {
                                             floorCanvasController.toggleSpl();
                                             calculateSPL();
                                           },
                                           onPanSelected: () {},
                                           onMoveSelected: () {},
-                                          onPencilSelected: () {},
+                                          onPencilSelected: () {
+                                            floorCanvasController.toggleDraw();
+                                          },
                                           onEditFloorPlanSelected: _showFloorPlanPicker,
                                           onTrashSelected: () {},
                                           onFitSelected: () {
                                             floorCanvasController.fitToView();
                                           },
+                                          isPencilSelected: isDrawing,
                                           isSplSelected: floorCanvasController.isShowingSpl.value,
-                                        )
-                                        : Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: <Widget>[
-                                            CleanToggleButton(
-                                              icon: Icons.edit,
-                                              tooltip:
-                                                  serviceLocator<ProjectViewModel>().isInListeningAreaSelectionMode ? 'Stop drawing' : 'Draw listening area',
-                                              isActive: serviceLocator<ProjectViewModel>().isInListeningAreaSelectionMode,
-                                              onPressed: () {
-                                                serviceLocator<ProjectViewModel>().setListeningAreaSelectionMode(
-                                                  !serviceLocator<ProjectViewModel>().isInListeningAreaSelectionMode,
-                                                );
-                                              },
-                                            ),
-
-                                            const SizedBox(width: 8),
-
-                                            CleanToolbarButton(
-                                              icon: Icons.add_photo_alternate,
-                                              tooltip: 'Load plan',
-                                              onPressed: _showFloorPlanPicker,
-                                            ),
-
-                                            const SizedBox(width: 8),
-
-                                            if (Platform.isMacOS || Platform.isIOS)
-                                              ValueListenableBuilder<bool>(
-                                                valueListenable: floorCanvasController.isShowingSpl,
-                                                builder:
-                                                    (_, bool showSpl, __) => Row(
-                                                      children: <Widget>[
-                                                        CleanToggleButton(
-                                                          icon: Icons.graphic_eq,
-                                                          tooltip: showSpl ? 'Hide SPL' : 'Show SPL',
-                                                          isActive: showSpl,
-                                                          onPressed: () {
-                                                            floorCanvasController.toggleSpl();
-                                                            calculateSPL();
-                                                          },
-                                                        ),
-                                                        const SizedBox(width: 8),
-                                                      ],
-                                                    ),
-                                              ),
-                                          ],
                                         );
+                                      },
+                                    );
+                                    //  Row(
+                                    //   mainAxisSize: MainAxisSize.min,
+                                    //   children: <Widget>[
+                                    //     CleanToggleButton(
+                                    //       icon: Icons.edit,
+                                    //       tooltip:
+                                    //           serviceLocator<ProjectViewModel>().isInListeningAreaSelectionMode ? 'Stop drawing' : 'Draw listening area',
+                                    //       isActive: serviceLocator<ProjectViewModel>().isInListeningAreaSelectionMode,
+                                    //       onPressed: () {
+                                    //         serviceLocator<ProjectViewModel>().setListeningAreaSelectionMode(
+                                    //           !serviceLocator<ProjectViewModel>().isInListeningAreaSelectionMode,
+                                    //         );
+                                    //       },
+                                    //     ),
+                                    //
+                                    //     const SizedBox(width: 8),
+                                    //
+                                    //     CleanToolbarButton(
+                                    //       icon: Icons.add_photo_alternate,
+                                    //       tooltip: 'Load plan',
+                                    //       onPressed: _showFloorPlanPicker,
+                                    //     ),
+                                    //
+                                    //     const SizedBox(width: 8),
+                                    //
+                                    //     if (Platform.isMacOS || Platform.isIOS)
+                                    //       ValueListenableBuilder<bool>(
+                                    //         valueListenable: floorCanvasController.isShowingSpl,
+                                    //         builder:
+                                    //             (_, bool showSpl, __) => Row(
+                                    //               children: <Widget>[
+                                    //                 CleanToggleButton(
+                                    //                   icon: Icons.graphic_eq,
+                                    //                   tooltip: showSpl ? 'Hide SPL' : 'Show SPL',
+                                    //                   isActive: showSpl,
+                                    //                   onPressed: () {
+                                    //                     floorCanvasController.toggleSpl();
+                                    //                     calculateSPL();
+                                    //                   },
+                                    //                 ),
+                                    //                 const SizedBox(width: 8),
+                                    //               ],
+                                    //             ),
+                                    //       ),
+                                    //   ],
+                                    // );
                                   },
                                 ),
                               );

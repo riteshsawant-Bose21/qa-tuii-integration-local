@@ -51,6 +51,9 @@ class FusionDockSidebar extends StatelessWidget {
             physics: const ClampingScrollPhysics(),
             children: items.map((item) {
               final config = getConfigForItem(item.id);
+              if (config != null && !config.isVisible) {
+                return SizedBox.shrink();
+              }
               return config != null
                   ? config.isCollapsibleSection
                         ? FusionExpandableTileWidget(

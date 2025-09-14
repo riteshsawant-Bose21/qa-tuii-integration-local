@@ -33,5 +33,6 @@ final class ProjectError extends ProjectViewModelState {
 }
 
 final class ZoneSelectionMode extends ProjectViewModelState {
-  ZoneSelectionMode();
+  final Zone zone;
+  ZoneSelectionMode(this.zone);
 }
