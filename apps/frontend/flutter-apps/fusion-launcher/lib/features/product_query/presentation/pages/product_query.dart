@@ -299,13 +299,13 @@ class ProductAPI {
     try {
       final String amplifiersJson = fusionDevices.getAmplifiers();
       final List<dynamic> amplifiersData = jsonDecode(amplifiersJson);
-      // print("Amplifiers Data: $amplifiersData");
+      print("Amplifiers Data: $amplifiersData");
 
       return amplifiersData.map((dynamic ampData) {
         return ProductQueryModel(
           name: ampData['name'] ?? '',
           price: 0.0, // Add price if available in fusion_lib amp model
-          image: '', // Add image if available in fusion_lib amp model
+          image: ampData['image_url'] ?? '', // Add image if available in fusion_lib amp model
           type: ProductType.amplifier,
           sku: ampData['name'] ?? '',
           specifications: '${ampData['channels']}ch • ${(ampData['peakPerChannel'] ?? 0).toInt()}W per ch',
@@ -324,10 +324,11 @@ class ProductAPI {
       // print("Devices Data: $devicesData");
 
       return devicesData.map((dynamic deviceData) {
+        print("deviceData['imageUrl'] == > ${deviceData['imageUrl']}");
         return ProductQueryModel(
           name: deviceData['name'] ?? '',
           price: 0.0, // Add price if available in fusion_lib device model
-          image: '', // Add image if available in fusion_lib device model
+          image: deviceData['image_url'] ?? '', // Add image if available in fusion_lib device model
           type: ProductType.device,
           sku: deviceData['name'] ?? '',
           specifications: '${deviceData['analogInputs']}in • ${deviceData['analogOutputs']}out • ${deviceData['networkIO']} network I/O',
