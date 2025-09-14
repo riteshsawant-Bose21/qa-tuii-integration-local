@@ -17,6 +17,16 @@ class _BuildingPlanState extends State<BuildingPlan> {
   int selectedIndex = 0;
   final TextEditingController _floorNameController = TextEditingController();
   final FocusNode _floorNameFocusNode = FocusNode();
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+
+    /// Initialize selectedIndex from ProjectViewModel's current floor index
+    final ProjectViewModel viewModel = serviceLocator<ProjectViewModel>();
+    selectedIndex = viewModel.currentFloorIndex;
+  }
 
   @override
   void dispose() {
@@ -28,13 +38,30 @@ class _BuildingPlanState extends State<BuildingPlan> {
   /// Clear input fields
   void _clearFields() {
     _floorNameController.clear();
+    _errorMessage = null;
+  }
+
+  /// Check if floor name already exists
+  bool _floorNameExists(String name) {
+    final ProjectViewModel viewModel = serviceLocator<ProjectViewModel>();
+    return viewModel.floors.any((FloorModel floor) => floor.name.toLowerCase() == name.toLowerCase());
   }
 
   /// Add a new floor to the project
   void _addFloor() {
     if (_floorNameController.text.trim().isNotEmpty) {
+      final String floorName = _floorNameController.text.trim();
+
+      // Check if floor name already exists
+      if (_floorNameExists(floorName)) {
+        setState(() {
+          _errorMessage = "Floor name already exists";
+        });
+        return;
+      }
+
       final FloorModel model = FloorModel(
-        name: _floorNameController.text.trim(),
+        name: floorName,
         floorPlan: FloorPlanModel.defaultFloorPlan,
       );
 
@@ -89,11 +116,18 @@ class _BuildingPlanState extends State<BuildingPlan> {
           /// PopupMenuButton for dropdown functionality
           BlocBuilder<ProjectViewModel, ProjectViewModelState>(
             builder: (BuildContext context, ProjectViewModelState state) {
-              final List<FloorModel> floors = serviceLocator<ProjectViewModel>().floors;
+              final ProjectViewModel viewModel = serviceLocator<ProjectViewModel>();
+              final List<FloorModel> floors = viewModel.floors;
+
+              // Synchronize selectedIndex with ProjectViewModel's current floor index
+              if (selectedIndex != viewModel.currentFloorIndex) {
+                selectedIndex = viewModel.currentFloorIndex;
+              }
 
               // Ensure selectedIndex is within bounds
               if (selectedIndex >= floors.length) {
                 selectedIndex = floors.isNotEmpty ? floors.length - 1 : 0;
+                viewModel.setCurrentFloorIndex(selectedIndex);
               }
 
               if (floors.isEmpty) {
@@ -269,6 +303,8 @@ class _BuildingPlanState extends State<BuildingPlan> {
 
   /// Show dropdown menu for adding a new floor
   void _showAddFloorDropdown() {
+    _clearFields(); // Clear any previous error messages
+
     final RenderBox button = context.findRenderObject() as RenderBox;
     final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
     final RelativeRect position = RelativeRect.fromRect(
@@ -330,24 +366,45 @@ class _BuildingPlanState extends State<BuildingPlan> {
                         ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(4),
-                          borderSide: BorderSide(color: Theme.of(context).colorScheme.dividerColor),
+                          borderSide: BorderSide(color: _errorMessage != null ? Colors.red : Theme.of(context).colorScheme.dividerColor),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(4),
-                          borderSide: BorderSide(color: Theme.of(context).colorScheme.dividerColor),
+                          borderSide: BorderSide(color: _errorMessage != null ? Colors.red : Theme.of(context).colorScheme.dividerColor),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(4),
-                          borderSide: BorderSide(color: Theme.of(context).colorScheme.fusionTextViewColor),
+                          borderSide: BorderSide(color: _errorMessage != null ? Colors.red : Theme.of(context).colorScheme.fusionTextViewColor),
                         ),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                         isDense: true,
                       ),
+                      onChanged: (_) {
+                        if (_errorMessage != null) {
+                          setMenuState(() {
+                            _errorMessage = null;
+                          });
+                        }
+                      },
                       onSubmitted: (_) {
                         _addFloor();
-                        Navigator.of(context).pop();
+                        if (_errorMessage == null) {
+                          Navigator.of(context).pop();
+                        } else {
+                          setMenuState(() {});
+                        }
                       },
                     ),
+                    if (_errorMessage != null) ...<Widget>[
+                      const SizedBox(height: 4),
+                      FusionAppText(
+                        text: _errorMessage!,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontSize: 10,
+                          color: Colors.red,
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 18),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
@@ -372,7 +429,11 @@ class _BuildingPlanState extends State<BuildingPlan> {
                           label: "Add Floor",
                           onTap: () {
                             _addFloor();
-                            Navigator.of(context).pop();
+                            if (_errorMessage == null) {
+                              Navigator.of(context).pop();
+                            } else {
+                              setMenuState(() {});
+                            }
                           },
                         ),
                       ],
