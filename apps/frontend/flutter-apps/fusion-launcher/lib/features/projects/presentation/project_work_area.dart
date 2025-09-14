@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/bill_of_materials/presentation/bill_of_materials_page.dart';
 import 'package:fusion_launcher/features/configuration/presentation/pages/audio_system_design_page.dart';
 import 'package:fusion_launcher/features/product_query/presentation/pages/product_query.dart';
+import 'package:fusion_lib/fusion_building_view/spl_range_controller.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/models/dock_item_config.dart';
@@ -20,7 +21,6 @@ import '../../schematics/presentation/widgets/cost_calcuator_widget.dart';
 import '../widget/building/building_canvas.dart';
 import '../widget/building/side_panle_widgets/building_plan.dart';
 import '../widget/building/side_panle_widgets/properties.dart';
-import '../widget/building/side_panle_widgets/spl_panel.dart';
 import '../widget/control_design_tab_switcher.dart';
 
 class ProjectWorkArea extends StatefulWidget {
@@ -36,6 +36,8 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
   late TextEditingController _projectNameController;
   final FocusNode _projectNameFocusNode = FocusNode();
   final GlobalKey _projectNameKey = GlobalKey();
+
+  final SplRangeController _splRangeController = SplRangeController();
 
   final List<Widget> _tabs = const <Widget>[
     Tab(text: 'Building'),
@@ -280,7 +282,9 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                     showRight: true,
                     mainArea: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
                       builder: (BuildContext context, ProjectViewModelState state) {
-                        return const BuildingCanvas();
+                        return BuildingCanvas(
+                          splRangeController: _splRangeController,
+                        );
                       },
                     ),
                     dockItemList: <DockItemConfig>[
@@ -379,6 +383,7 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                         side: "right",
                         dockItemWidget:
                             () => SplPanel(
+                              controller: _splRangeController,
                               onChanged: (SplPanelData value) {
                                 FusionLogger.log(tag: LogTag.panel, message: value.toString());
                               },

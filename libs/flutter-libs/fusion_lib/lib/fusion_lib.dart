@@ -1,11 +1,13 @@
 export 'fusion_algorithms/fusion_algorithms.dart';
 export 'fusion_building_view/floor_canvas.dart';
+export 'fusion_building_view/spl_panel.dart';
+export 'fusion_building_view/spl_range_slider.dart';
 export 'fusion_localization/fusion_localization.dart';
 export 'fusion_logger/fusion_logger.dart';
 export 'fusion_networking/fusion_networking.dart';
 export 'fusion_theme/fusion_theme_app.dart';
-export 'fusion_utils/fusion_utils.dart';
 export 'fusion_utils/app_enums.dart';
+export 'fusion_utils/fusion_utils.dart';
 export 'fusion_widgets/fusion_widgets.dart';
 export 'models/fusion_models.dart';
 export 'project_manger/fusion_project_manager.dart';

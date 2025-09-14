@@ -1,15 +1,133 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'spl_range_controller.dart';
+
+/// Enums for SPL (Sound Pressure Level) mapping attributes panel
+/// These enums define the available options for various SPL configuration parameters
+
+/// Weighting options for SPL measurements
+enum SplWeighting {
+  aWeighted('A-Weighted'),
+  cWeighted('C-Weighted'),
+  zWeighted('Z-Weighted');
+
+  const SplWeighting(this.displayName);
+  final String displayName;
+
+  static SplWeighting fromString(String value) {
+    return values.firstWhere(
+      (SplWeighting e) => e.displayName == value,
+      orElse: () => SplWeighting.aWeighted,
+    );
+  }
+}
+
+/// Center frequency options for SPL measurements (in Hz)
+enum SplFrequency {
+  hz100('100 Hz'),
+  hz125('125 Hz'),
+  hz160('160 Hz'),
+  hz200('200 Hz'),
+  hz250('250 Hz'),
+  hz315('315 Hz'),
+  hz400('400 Hz'),
+  hz500('500 Hz'),
+  hz630('630 Hz'),
+  hz800('800 Hz'),
+  hz1000('1 kHz'),
+  hz1250('1.25 kHz'),
+  hz1600('1.6 kHz'),
+  hz2000('2 kHz'),
+  hz2500('2.5 kHz'),
+  hz3150('3.15 kHz'),
+  hz4000('4 kHz'),
+  hz5000('5 kHz'),
+  hz6300('6.3 kHz'),
+  hz8000('8 kHz'),
+  hz10000('10 kHz');
+
+  const SplFrequency(this.displayName);
+  final String displayName;
+
+  static SplFrequency fromString(String value) {
+    return values.firstWhere(
+      (SplFrequency e) => e.displayName == value,
+      orElse: () => SplFrequency.hz2000,
+    );
+  }
+
+  /// Get frequency value as integer (in Hz)
+  int get frequencyValue {
+    if (displayName.contains('kHz')) {
+      final numericPart = displayName.replaceAll(' kHz', '');
+      return (double.parse(numericPart) * 1000).round();
+    } else if (displayName.contains('Hz')) {
+      final numericPart = displayName.replaceAll(' Hz', '');
+      return int.parse(numericPart);
+    }
+    return int.parse(displayName);
+  }
+}
+
+/// Bandwidth options for SPL measurements
+enum SplBandwidth {
+  oneThirdOctave('1/3 Octave'),
+  oneOctave('1 Octave'),
+  threeOctaves('3 Octaves'),
+  broadband('Broadband');
+
+  const SplBandwidth(this.displayName);
+  final String displayName;
+
+  static SplBandwidth fromString(String value) {
+    return values.firstWhere(
+      (SplBandwidth e) => e.displayName == value,
+      orElse: () => SplBandwidth.threeOctaves,
+    );
+  }
+}
+
+/// Mapping resolution options for SPL measurements
+enum SplResolution {
+  low('Low'),
+  medium('Medium'),
+  high('High');
+
+  const SplResolution(this.displayName);
+  final String displayName;
+
+  static SplResolution fromString(String value) {
+    return values.firstWhere(
+      (SplResolution e) => e.displayName == value,
+      orElse: () => SplResolution.medium,
+    );
+  }
+}
+
+/// Extension methods to get lists of display names for dropdowns
+extension SplEnumExtensions on Object {
+  static List<String> get weightingOptions => SplWeighting.values.map((SplWeighting e) => e.displayName).toList();
+
+  static List<String> get frequencyOptions => SplFrequency.values.map((SplFrequency e) => e.displayName).toList();
+
+  static List<String> get bandwidthOptions => SplBandwidth.values.map((SplBandwidth e) => e.displayName).toList();
+
+  static List<String> get resolutionOptions => SplResolution.values.map((SplResolution e) => e.displayName).toList();
+}
+
+/// Panel widget for configuring SPL mapping attributes
 class SplPanel extends StatefulWidget {
   const SplPanel({
     super.key,
     this.initial = const SplPanelData(),
     this.onChanged,
+    this.controller,
   });
 
   final SplPanelData initial;
   final ValueChanged<SplPanelData>? onChanged;
+  final SplRangeController? controller;
 
   @override
   State<SplPanel> createState() => _SplPanelState();
@@ -17,24 +135,18 @@ class SplPanel extends StatefulWidget {
 
 class _SplPanelState extends State<SplPanel> {
   // Top selections
-  String _type = 'Direct SPL (A-Weighted)';
-  String _frequency = '2000 Hz';
+  String _weighting = 'A-Weighted';
+  String _frequency = '2 kHz';
   String _bandwidth = '3 Octaves';
   String _resolution = 'Medium';
 
-  // Direct SPL
-  bool _directExpanded = true;
-  bool _directAutoScale = false;
-  bool _directInvert = false;
-  final TextEditingController _directUpper = TextEditingController();
-  final TextEditingController _directLower = TextEditingController();
-
-  // S/N Ratio
-  bool _snrExpanded = true;
-  bool _snrAutoScale = false;
-  bool _snrInvert = false;
-  final TextEditingController _snrUpper = TextEditingController();
-  final TextEditingController _snrLower = TextEditingController();
+  // SPL Range
+  bool _splExpanded = true;
+  bool _splAutoScale = false;
+  bool _splInvert = false;
+  final TextEditingController _splUpper = TextEditingController();
+  final TextEditingController _splLower = TextEditingController();
+  bool _isUpdatingFromController = false;
 
   static final List<TextInputFormatter> _numFmt = <TextInputFormatter>[
     FilteringTextInputFormatter.allow(RegExp(r'[-]?\d*\.?\d*')),
@@ -44,49 +156,125 @@ class _SplPanelState extends State<SplPanel> {
   void initState() {
     super.initState();
     final SplPanelData i = widget.initial;
-    _type = i.type;
+    _weighting = i.weighting;
     _frequency = i.frequency;
     _bandwidth = i.bandwidth;
     _resolution = i.resolution;
 
-    _directAutoScale = i.directAutoScale;
-    _directInvert = i.directInvertColor;
-    _directUpper.text = _numOrEmpty(i.directUpperDb);
-    _directLower.text = _numOrEmpty(i.directLowerDb);
+    _splAutoScale = i.splAutoScale;
+    _splInvert = i.splInvertColor;
 
-    _snrAutoScale = i.snrAutoScale;
-    _snrInvert = i.snrInvertColor;
-    _snrUpper.text = _numOrEmpty(i.snrUpperDb);
-    _snrLower.text = _numOrEmpty(i.snrLowerDb);
-
-    for (final TextEditingController c in <TextEditingController>[_directUpper, _directLower, _snrUpper, _snrLower]) {
-      c.addListener(_emit);
+    // Initialize text fields with controller values if available, otherwise use initial data
+    if (widget.controller != null) {
+      _updateTextFieldsFromController();
+      widget.controller!.addListener(_onControllerChanged);
+    } else {
+      _splUpper.text = _numOrEmpty(i.splUpperDb);
+      _splLower.text = _numOrEmpty(i.splLowerDb);
     }
+
+    _splUpper.addListener(_onTextFieldChanged);
+    _splLower.addListener(_onTextFieldChanged);
   }
 
   @override
   void dispose() {
-    for (final TextEditingController c in <TextEditingController>[_directUpper, _directLower, _snrUpper, _snrLower]) {
-      c.dispose();
-    }
+    widget.controller?.removeListener(_onControllerChanged);
+    _splUpper.removeListener(_onTextFieldChanged);
+    _splLower.removeListener(_onTextFieldChanged);
+    _splUpper.dispose();
+    _splLower.dispose();
     super.dispose();
+  }
+
+  void _updateTextFieldsFromController() {
+    if (widget.controller != null && !_isUpdatingFromController) {
+      final String upperText = widget.controller!.upperLimit.round().toString();
+      final String lowerText = widget.controller!.lowerLimit.round().toString();
+
+      // Only update if the text has actually changed to avoid cursor issues
+      if (_splUpper.text != upperText) {
+        _splUpper.text = upperText;
+      }
+      if (_splLower.text != lowerText) {
+        _splLower.text = lowerText;
+      }
+    }
+  }
+
+  void _onControllerChanged() {
+    // Update text fields when controller values change (from slider)
+    if (!_isUpdatingFromController) {
+      _updateTextFieldsFromController();
+    }
+  }
+
+  void _onTextFieldChanged() {
+    // Update controller when text fields change (from user typing)
+    if (widget.controller != null && !_isUpdatingFromController) {
+      final double? upper = double.tryParse(_splUpper.text);
+      final double? lower = double.tryParse(_splLower.text);
+
+      if (upper != null && lower != null) {
+        // Validate SPL ranges (36-132 dB)
+        final double validatedUpper = upper.clamp(36.0, 132.0);
+        final double validatedLower = lower.clamp(36.0, 132.0);
+
+        // Ensure upper >= lower
+        final double finalLower = validatedLower;
+        final double finalUpper = validatedUpper < finalLower ? finalLower : validatedUpper;
+
+        // Only update text fields if values were actually clamped and different
+        // This prevents interrupting user typing
+        if (upper != finalUpper && !_splUpper.selection.isValid) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              _splUpper.text = finalUpper.round().toString();
+            }
+          });
+        }
+        if (lower != finalLower && !_splLower.selection.isValid) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              _splLower.text = finalLower.round().toString();
+            }
+          });
+        }
+
+        _isUpdatingFromController = true;
+        widget.controller!.setRange(finalLower, finalUpper);
+        _isUpdatingFromController = false;
+      }
+    }
+
+    _emit();
+  }
+
+  @override
+  void didUpdateWidget(covariant SplPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    // Handle controller changes
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller?.removeListener(_onControllerChanged);
+      if (widget.controller != null) {
+        widget.controller!.addListener(_onControllerChanged);
+        _updateTextFieldsFromController();
+      }
+    }
   }
 
   void _emit() {
     widget.onChanged?.call(
       SplPanelData(
-        type: _type,
+        weighting: _weighting,
         frequency: _frequency,
         bandwidth: _bandwidth,
         resolution: _resolution,
-        directAutoScale: _directAutoScale,
-        directInvertColor: _directInvert,
-        directUpperDb: double.tryParse(_directUpper.text),
-        directLowerDb: double.tryParse(_directLower.text),
-        snrAutoScale: _snrAutoScale,
-        snrInvertColor: _snrInvert,
-        snrUpperDb: double.tryParse(_snrUpper.text),
-        snrLowerDb: double.tryParse(_snrLower.text),
+        splAutoScale: _splAutoScale,
+        splInvertColor: _splInvert,
+        splUpperDb: double.tryParse(_splUpper.text),
+        splLowerDb: double.tryParse(_splLower.text),
       ),
     );
   }
@@ -119,30 +307,25 @@ class _SplPanelState extends State<SplPanel> {
         builder: (BuildContext context, BoxConstraints constraints) {
           // Two-column layout: labels auto-size, controls flex to fill remaining width
           const IntrinsicColumnWidth col0 = IntrinsicColumnWidth();
-          final FlexColumnWidth col1 = const FlexColumnWidth();
 
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 12.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                // Top selectors (Type/Frequency/Bandwidth/Resolution)
+                // Top selectors (Weighting/Frequency/Bandwidth/Resolution)
                 Table(
                   columnWidths: const <int, TableColumnWidth>{0: col0, 1: FlexColumnWidth()},
                   defaultVerticalAlignment: TableCellVerticalAlignment.middle,
                   children: <TableRow>[
                     _row(
-                      label: 'Type',
+                      label: 'Weighting',
                       labelStyle: labelStyle,
                       control: _dd(
-                        value: _type,
-                        items: const <String>[
-                          'Direct SPL (A-Weighted)',
-                          'Direct SPL (C-Weighted)',
-                          'Direct SPL (Z-Weighted)',
-                        ],
+                        value: _weighting,
+                        items: SplEnumExtensions.weightingOptions,
                         onChanged: (String? v) {
-                          setState(() => _type = v!);
+                          setState(() => _weighting = v!);
                           _emit();
                         },
                       ),
@@ -152,7 +335,7 @@ class _SplPanelState extends State<SplPanel> {
                       labelStyle: labelStyle,
                       control: _dd(
                         value: _frequency,
-                        items: const <String>['250 Hz', '500 Hz', '1000 Hz', '2000 Hz', '4000 Hz'],
+                        items: SplEnumExtensions.frequencyOptions,
                         onChanged: (String? v) {
                           setState(() => _frequency = v!);
                           _emit();
@@ -164,7 +347,7 @@ class _SplPanelState extends State<SplPanel> {
                       labelStyle: labelStyle,
                       control: _dd(
                         value: _bandwidth,
-                        items: const <String>['1/3 Octave', '1 Octave', '3 Octaves', 'Full Band'],
+                        items: SplEnumExtensions.bandwidthOptions,
                         onChanged: (String? v) {
                           setState(() => _bandwidth = v!);
                           _emit();
@@ -176,7 +359,7 @@ class _SplPanelState extends State<SplPanel> {
                       labelStyle: labelStyle,
                       control: _dd(
                         value: _resolution,
-                        items: const <String>['Low', 'Medium', 'High', 'Ultra'],
+                        items: SplEnumExtensions.resolutionOptions,
                         onChanged: (String? v) {
                           setState(() => _resolution = v!);
                           _emit();
@@ -204,19 +387,19 @@ class _SplPanelState extends State<SplPanel> {
                   ),
                 ),
 
-                // Direct SPL section
+                // SPL Range section
                 _Section(
-                  title: 'Direct SPL',
-                  initiallyExpanded: _directExpanded,
-                  onExpansionChanged: (bool v) => setState(() => _directExpanded = v),
+                  title: 'SPL Range',
+                  initiallyExpanded: _splExpanded,
+                  onExpansionChanged: (bool v) => setState(() => _splExpanded = v),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
                       _toggleRow(
                         label: 'Scale Automatically',
-                        value: _directAutoScale,
+                        value: _splAutoScale,
                         onChanged: (bool v) {
-                          setState(() => _directAutoScale = v);
+                          setState(() => _splAutoScale = v);
                           _emit();
                         },
                       ),
@@ -229,18 +412,18 @@ class _SplPanelState extends State<SplPanel> {
                             label: 'Upper Limit (dB)',
                             labelStyle: labelStyle,
                             control: _tf(
-                              controller: _directUpper,
+                              controller: _splUpper,
                               hint: 'Value',
-                              enabled: !_directAutoScale,
+                              enabled: !_splAutoScale,
                             ),
                           ),
                           _row(
                             label: 'Lower Limit (dB)',
                             labelStyle: labelStyle,
                             control: _tf(
-                              controller: _directLower,
+                              controller: _splLower,
                               hint: 'Value',
-                              enabled: !_directAutoScale,
+                              enabled: !_splAutoScale,
                             ),
                           ),
                         ],
@@ -248,72 +431,9 @@ class _SplPanelState extends State<SplPanel> {
                       const SizedBox(height: 6),
                       _toggleRow(
                         label: 'Invert Color Scale',
-                        value: _directInvert,
+                        value: _splInvert,
                         onChanged: (bool v) {
-                          setState(() => _directInvert = v);
-                          _emit();
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Light divider between sections
-                Divider(
-                  height: 1,
-                  thickness: 0.5,
-                  color: Colors.grey.shade300,
-                  indent: 0,
-                  endIndent: 0,
-                ),
-
-                // S/N Ratio section
-                _Section(
-                  title: 'S/N Ratio',
-                  initiallyExpanded: _snrExpanded,
-                  onExpansionChanged: (bool v) => setState(() => _snrExpanded = v),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      _toggleRow(
-                        label: 'Scale Automatically',
-                        value: _snrAutoScale,
-                        onChanged: (bool v) {
-                          setState(() => _snrAutoScale = v);
-                          _emit();
-                        },
-                      ),
-                      const SizedBox(height: 8),
-                      Table(
-                        columnWidths: const <int, TableColumnWidth>{0: col0, 1: FlexColumnWidth()},
-                        defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                        children: <TableRow>[
-                          _row(
-                            label: 'Upper Limit (dB)',
-                            labelStyle: labelStyle,
-                            control: _tf(
-                              controller: _snrUpper,
-                              hint: 'Value',
-                              enabled: !_snrAutoScale,
-                            ),
-                          ),
-                          _row(
-                            label: 'Lower Limit (dB)',
-                            labelStyle: labelStyle,
-                            control: _tf(
-                              controller: _snrLower,
-                              hint: 'Value',
-                              enabled: !_snrAutoScale,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      _toggleRow(
-                        label: 'Invert Color Scale',
-                        value: _snrInvert,
-                        onChanged: (bool v) {
-                          setState(() => _snrInvert = v);
+                          setState(() => _splInvert = v);
                           _emit();
                         },
                       ),
@@ -356,18 +476,17 @@ class _SplPanelState extends State<SplPanel> {
     return SizedBox(
       height: 32,
       child: DropdownButtonFormField<String>(
-        value: value,
+        initialValue: value, // Fix deprecation warning: use initialValue instead of value
         isExpanded: true,
         style: const TextStyle(fontSize: 12, color: Colors.black),
-        items:
-            items
-                .map(
-                  (String e) => DropdownMenuItem<String>(
-                    value: e,
-                    child: Text(e, style: const TextStyle(fontSize: 12)),
-                  ),
-                )
-                .toList(),
+        items: items
+            .map(
+              (String e) => DropdownMenuItem<String>(
+                value: e,
+                child: Text(e, style: const TextStyle(fontSize: 12)),
+              ),
+            )
+            .toList(),
         onChanged: onChanged,
         decoration: const InputDecoration(
           border: InputBorder.none,
@@ -425,43 +544,32 @@ class _SplPanelState extends State<SplPanel> {
 
 /// Immutable values emitted by the panel.
 class SplPanelData {
-  final String type;
+  final String weighting;
   final String frequency;
   final String bandwidth;
   final String resolution;
 
-  final bool directAutoScale;
-  final bool directInvertColor;
-  final double? directUpperDb;
-  final double? directLowerDb;
-
-  final bool snrAutoScale;
-  final bool snrInvertColor;
-  final double? snrUpperDb;
-  final double? snrLowerDb;
+  final bool splAutoScale;
+  final bool splInvertColor;
+  final double? splUpperDb;
+  final double? splLowerDb;
 
   const SplPanelData({
-    this.type = 'Direct SPL (A-Weighted)',
-    this.frequency = '2000 Hz',
+    this.weighting = 'A-Weighted',
+    this.frequency = '2 kHz',
     this.bandwidth = '3 Octaves',
     this.resolution = 'Medium',
-    this.directAutoScale = false,
-    this.directInvertColor = false,
-    this.directUpperDb,
-    this.directLowerDb,
-    this.snrAutoScale = false,
-    this.snrInvertColor = false,
-    this.snrUpperDb,
-    this.snrLowerDb,
+    this.splAutoScale = false,
+    this.splInvertColor = false,
+    this.splUpperDb,
+    this.splLowerDb,
   });
 
   @override
   String toString() =>
-      'SplPanelData(type:$type, freq:$frequency, bw:$bandwidth, res:$resolution, '
-      'directAuto:$directAutoScale, directInv:$directInvertColor, '
-      'directU:$directUpperDb, directL:$directLowerDb, '
-      'snrAuto:$snrAutoScale, snrInv:$snrInvertColor, '
-      'snrU:$snrUpperDb, snrL:$snrLowerDb)';
+      'SplPanelData(weighting:$weighting, frequency:$frequency, bandwidth:$bandwidth, resolution:$resolution, '
+      'splAuto:$splAutoScale, splInv:$splInvertColor, '
+      'splU:$splUpperDb, splL:$splLowerDb)';
 }
 
 /// Collapsible section widget for organizing content
@@ -491,7 +599,6 @@ class _Section extends StatelessWidget {
         initiallyExpanded: initiallyExpanded,
         onExpansionChanged: onExpansionChanged,
         tilePadding: EdgeInsets.zero,
-        // childrenPadding: const EdgeInsets.only(left: 4, top: 4, bottom: 4),
         title: Text(
           title,
           style: const TextStyle(

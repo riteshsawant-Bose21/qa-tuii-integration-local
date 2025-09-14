@@ -11,6 +11,8 @@ import 'package:fusion_launcher/core/utils/fusion_utils.dart';
 import 'package:fusion_lib/fusion_building_view/floor_canvas.dart';
 import 'package:fusion_lib/fusion_building_view/floor_canvas_controller.dart';
 import 'package:fusion_lib/fusion_building_view/floor_plan_calibrator.dart';
+import 'package:fusion_lib/fusion_building_view/spl_range_controller.dart';
+import 'package:fusion_lib/fusion_building_view/spl_range_slider.dart';
 import 'package:fusion_lib/fusion_utils/image_loader_service.dart';
 import 'package:fusion_lib/fusion_widgets/buttons/fusion_outlined_button.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_image.dart';
@@ -20,11 +22,15 @@ import 'package:fusion_lib/models/fusion_models.dart';
 import '../../../../core/mace_calculation_manager.dart';
 import '../../../../core/mace_engine_provider.dart';
 import '../../../../core/widgets/clean_widgets.dart';
-import '../../../../core/widgets/spl_range_slider.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 
 class BuildingCanvas extends StatefulWidget {
-  const BuildingCanvas({super.key});
+  const BuildingCanvas({
+    super.key,
+    this.splRangeController,
+  });
+
+  final SplRangeController? splRangeController;
 
   @override
   State<BuildingCanvas> createState() => _BuildingCanvasState();
@@ -369,6 +375,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                           child: SPLRangeSlider(
                             width: 24,
                             height: constraints.maxHeight,
+                            controller: widget.splRangeController,
                             minValue: serviceLocator<ProjectViewModel>().minSPL,
                             maxValue: serviceLocator<ProjectViewModel>().maxSPL,
                             onChanged: (double min, double max) {

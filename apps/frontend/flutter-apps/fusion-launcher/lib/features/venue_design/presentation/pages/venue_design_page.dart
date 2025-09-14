@@ -9,6 +9,7 @@ import 'package:fusion_launcher/core/utils/fusion_utils.dart';
 import 'package:fusion_lib/fusion_building_view/floor_canvas.dart';
 import 'package:fusion_lib/fusion_building_view/floor_canvas_controller.dart';
 import 'package:fusion_lib/fusion_building_view/floor_plan_calibrator.dart';
+import 'package:fusion_lib/fusion_building_view/spl_range_slider.dart';
 import 'package:fusion_lib/fusion_utils/image_loader_service.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
 
@@ -16,7 +17,6 @@ import '../../../../core/mace_calculation_manager.dart';
 import '../../../../core/mace_engine_provider.dart';
 import '../../../../core/models/products_data.dart';
 import '../../../../core/widgets/clean_widgets.dart';
-import '../../../../core/widgets/spl_range_slider.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../../schematics/presentation/pages/amplifier_matching_page.dart';
 import '../widgets/products_sidebar.dart';
