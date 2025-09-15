@@ -37,19 +37,19 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
   Widget build(BuildContext context) {
     return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
       builder: (BuildContext context, ProjectViewModelState state) {
-        return Container(
-          padding: const EdgeInsets.all(8.0),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8.0),
-            boxShadow: <BoxShadow>[
-              BoxShadow(
-                color: Colors.black.withAlpha((0.1 * 255).toInt()),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
+        return SizedBox(
+          // padding: const EdgeInsets.all(8.0),
+          // decoration: BoxDecoration(
+          //   color: Colors.white,
+          //   borderRadius: BorderRadius.circular(8.0),
+          //   boxShadow: <BoxShadow>[
+          //     BoxShadow(
+          //       color: Colors.black.withAlpha((0.1 * 255).toInt()),
+          //       blurRadius: 4,
+          //       offset: const Offset(0, 2),
+          //     ),
+          //   ],
+          // ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[

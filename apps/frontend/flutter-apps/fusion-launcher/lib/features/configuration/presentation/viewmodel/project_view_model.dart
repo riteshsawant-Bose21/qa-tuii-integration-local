@@ -36,6 +36,8 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
   bool isInListeningAreaSelectionMode = false;
   bool isInZoneSelectionMode = false;
 
+  int currentDeviceTypeIndex = -1;
+
   ProductQueryModel? selectedProductToAdd;
 
   /// Loads all local projects and emits the appropriate state.
@@ -161,6 +163,27 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
     isInListeningAreaSelectionMode = false;
     isInZoneSelectionMode = true;
     currentSelectedZoneId = zone.id;
+    resetDeviceTypeIndex();
     emit(ZoneSelectionMode(zone));
+  }
+
+  void enterListeningAreaSelectionMode() {
+    isInZoneSelectionMode = false;
+    isInListeningAreaSelectionMode = true;
+    currentSelectedZoneId = null;
+    resetDeviceTypeIndex();
+    emit(ListeningAreaSelectionMode());
+  }
+
+  void changeDeviceTypeIndex(int index) {
+    currentDeviceTypeIndex = index;
+    isInZoneSelectionMode = false;
+    isInListeningAreaSelectionMode = false;
+    currentSelectedZoneId = null;
+    emit(DeviceTypeIndexChanged(index));
+  }
+
+  void resetDeviceTypeIndex() {
+    currentDeviceTypeIndex = -1;
   }
 }

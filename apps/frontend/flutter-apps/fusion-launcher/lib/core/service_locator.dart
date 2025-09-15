@@ -41,6 +41,7 @@ import '../features/dynamic_config/domain/usecases/initialize_panel_usecase.dart
 import '../features/dynamic_config/domain/usecases/reset_fusion_data_usecase.dart';
 import '../features/dynamic_config/domain/usecases/send_widget_data_usecase.dart';
 import '../features/dynamic_config/presentation/bloc/panel_bloc.dart';
+import '../features/product_query/presentation/viewModel/product_query_view_model_cubit.dart';
 import 'constants/algorithms_data.dart';
 import 'models/user_profile_model.dart';
 
@@ -171,6 +172,8 @@ Future<void> setupServiceLocator() async {
   // serviceLocator.registerLazySingleton(() => CreateProjectUseCase(serviceLocator()));
 
   serviceLocator.registerLazySingleton<ProjectViewModel>(() => ProjectViewModel(serviceLocator<ProjectManager>()));
+
+  serviceLocator.registerLazySingleton<ProductQueryCubit>(() => ProductQueryCubit());
 
   // TODO: ALWAYS KEEP THIS AT THE END OF THE FILE
   await setupFusionLib(serviceLocator);

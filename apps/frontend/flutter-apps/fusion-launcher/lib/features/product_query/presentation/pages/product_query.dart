@@ -13,13 +13,25 @@ import '../viewModel/product_query_view_model_state.dart';
 class ProductQueryView extends StatelessWidget {
   const ProductQueryView({super.key});
 
+  ProductType? getCurrentProductType(int index) {
+    if (index == -1) return null;
+    if (index == 0) return ProductType.speaker;
+    if (index == 1) return ProductType.sources;
+    if (index == 2) return ProductType.device;
+    return ProductType.speaker;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return BlocProvider<ProductQueryCubit>(
-      create: (_) => ProductQueryCubit(),
+    return BlocListener<ProjectViewModel, ProjectViewModelState>(
+      listener: (BuildContext context, ProjectViewModelState state) {
+        if (state is DeviceTypeIndexChanged) {
+          serviceLocator<ProductQueryCubit>().onProductTypeChanged(getCurrentProductType(state.index));
+        }
+      },
       child: BlocBuilder<ProductQueryCubit, ProductQueryState>(
         builder: (BuildContext context, ProductQueryState state) {
-          final ProductQueryCubit cubit = context.read<ProductQueryCubit>();
+          final ProductQueryCubit cubit = serviceLocator<ProductQueryCubit>();
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -111,6 +123,7 @@ class ProductQueryView extends StatelessWidget {
 class ProductCard extends StatelessWidget {
   final ProductQueryModel product;
   final String searchQuery;
+
   const ProductCard({
     super.key,
     required this.product,
@@ -183,6 +196,8 @@ class ProductCard extends StatelessWidget {
         return "assets/images/amps/default_amp.png";
       case ProductType.device:
         return "assets/images/devices/default_device.png";
+      case ProductType.sources:
+        return "assets/images/products/mic1.png";
     }
   }
 
@@ -194,6 +209,8 @@ class ProductCard extends StatelessWidget {
         return 'Amplifier • ${product.specifications}';
       case ProductType.device:
         return 'Device • ${product.specifications}';
+      case ProductType.sources:
+        return 'Source';
     }
   }
 
@@ -269,6 +286,18 @@ class ProductAPI {
         return getAmplifierProducts();
       case ProductType.device:
         return getDeviceProducts();
+      case ProductType.sources:
+        return <ProductQueryModel>[
+          const ProductQueryModel(
+            name: 'Mic',
+            price: 123.0,
+            image: 'assets/images/products/mic1.png',
+            type: ProductType.sources,
+            sku: 'MIC123',
+            //speakerData['model'] ??
+            specifications: 'New Mic',
+          ),
+        ];
     }
   }
 
@@ -285,7 +314,8 @@ class ProductAPI {
           price: (speakerData['price'] ?? 0.0).toDouble(),
           image: 'assets/images/speakers/DM_pendant.png',
           type: ProductType.speaker,
-          sku: speakerData['model'] ?? '',
+          sku: 'MSA12XOHS',
+          //speakerData['model'] ??
           specifications: '${speakerData['maxSpl']} dB SPL • ${speakerData['mountingType']}',
         );
       }).toList();
@@ -304,8 +334,10 @@ class ProductAPI {
       return amplifiersData.map((dynamic ampData) {
         return ProductQueryModel(
           name: ampData['name'] ?? '',
-          price: 0.0, // Add price if available in fusion_lib amp model
-          image: ampData['image_url'] ?? '', // Add image if available in fusion_lib amp model
+          price: 0.0,
+          // Add price if available in fusion_lib amp model
+          image: ampData['image_url'] ?? '',
+          // Add image if available in fusion_lib amp model
           type: ProductType.amplifier,
           sku: ampData['name'] ?? '',
           specifications: '${ampData['channels']}ch • ${(ampData['peakPerChannel'] ?? 0).toInt()}W per ch',
@@ -327,8 +359,10 @@ class ProductAPI {
         print("deviceData['imageUrl'] == > ${deviceData['imageUrl']}");
         return ProductQueryModel(
           name: deviceData['name'] ?? '',
-          price: 0.0, // Add price if available in fusion_lib device model
-          image: deviceData['image_url'] ?? '', // Add image if available in fusion_lib device model
+          price: 0.0,
+          // Add price if available in fusion_lib device model
+          image: deviceData['image_url'] ?? '',
+          // Add image if available in fusion_lib device model
           type: ProductType.device,
           sku: deviceData['name'] ?? '',
           specifications: '${deviceData['analogInputs']}in • ${deviceData['analogOutputs']}out • ${deviceData['networkIO']} network I/O',

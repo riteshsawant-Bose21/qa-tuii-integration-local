@@ -16,7 +16,7 @@ class FloorCanvasPainter extends CustomPainter {
   final List<Offset> current;
   final Offset? previewPoint;
   final int? highlightedIndex;
-  final int? selectedHardwareComponentIndex;
+  final String? selectedHardwareComponentId;
   final bool showSpl;
   final bool floorPlanImageSelected;
   static final Color defaultListeningAreaColor = ColorUtils.hexToColor("#747474");
@@ -53,7 +53,7 @@ class FloorCanvasPainter extends CustomPainter {
     required this.splMin,
     this.previewPoint,
     this.highlightedIndex,
-    this.selectedHardwareComponentIndex,
+    this.selectedHardwareComponentId,
   });
 
   @override
@@ -441,7 +441,8 @@ class FloorCanvasPainter extends CustomPainter {
       }
 
       // draw selection border
-      if (i == selectedHardwareComponentIndex) {
+      if (comp.id == selectedHardwareComponentId) {
+        print("Drawing selection border for hardware component ${comp.id} at index $i ");
         canvas.drawRect(
           Rect.fromCenter(center: comp.pos, width: gridSize, height: gridSize),
           Paint()
@@ -553,7 +554,7 @@ class FloorCanvasPainter extends CustomPainter {
         old.showSpl != showSpl ||
         old.hardwareComponents != hardwareComponents ||
         old.hardwareImages != hardwareImages ||
-        old.selectedHardwareComponentIndex != selectedHardwareComponentIndex;
+        old.selectedHardwareComponentId != selectedHardwareComponentId;
   }
 }
 

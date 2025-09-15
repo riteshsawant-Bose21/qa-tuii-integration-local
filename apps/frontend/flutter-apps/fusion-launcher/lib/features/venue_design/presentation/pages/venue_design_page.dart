@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/core/utils/fusion_utils.dart';
-import 'package:fusion_lib/fusion_building_view/floor_canvas.dart';
 import 'package:fusion_lib/fusion_building_view/floor_canvas_controller.dart';
 import 'package:fusion_lib/fusion_building_view/floor_plan_calibrator.dart';
 import 'package:fusion_lib/fusion_building_view/spl_range_slider.dart';
@@ -323,81 +322,82 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
                                 if (serviceLocator<ProjectViewModel>().floors.isEmpty) {
                                   return _buildEmptyFloorWidget();
                                 }
-                                return FloorCanvas(
-                                  gridSize: 100,
-                                  controller: floorCanvasController,
-                                  hardwareComponents: serviceLocator<ProjectViewModel>().getHardwareForFloor(floor.id),
-                                  listeningAreas: serviceLocator<ProjectViewModel>().getListeningAreasForFloor(floor.id),
-                                  floor: floor,
-                                  floorPlanEntity: floor.floorPlan,
-                                  onUpdateHardwareComponent: serviceLocator<ProjectViewModel>().updateHardware,
-                                  zones: serviceLocator<ProjectViewModel>().zones,
-                                  onCanvasZoomChanged: (double z) {
-                                    serviceLocator<ProjectViewModel>().updateFloor(
-                                      floor.copyWith(floorPlan: floor.floorPlan.copyWith(canvasZoom: z)),
-                                    );
-                                    if (floorCanvasController.isShowingSpl.value && splInitCalculated) {
-                                      calculateSPL();
-                                    }
-                                  },
-                                  onCanvasPanChanged: (ui.Offset p) {
-                                    serviceLocator<ProjectViewModel>().updateFloor(
-                                      floor.copyWith(floorPlan: floor.floorPlan.copyWith(canvasPan: p)),
-                                    );
-                                  },
-                                  moveHardware: (HardwareComponent hardware, String? newListeningAreaId, String? floorId) {
-                                    serviceLocator<ProjectViewModel>().moveHardware(hardware.id, floorId: floorId, listeningAreaId: newListeningAreaId);
-                                    serviceLocator<ProjectViewModel>().saveProjectToLocal();
-                                  },
-                                  onAddListeningArea: (ListeningArea created, List<HardwareComponent>? containedHardware) {
-                                    serviceLocator<ProjectViewModel>().addListeningArea(created, floor.id);
-                                    if (containedHardware != null) {
-                                      for (final HardwareComponent hc in containedHardware) {
-                                        serviceLocator<ProjectViewModel>().moveHardware(
-                                          hc.id,
-                                          listeningAreaId: created.id,
-                                          floorId: floor.id,
-                                        );
-                                      }
-                                    }
-
-                                    calculateSPL();
-                                    serviceLocator<ProjectViewModel>().saveProjectToLocal();
-                                  },
-                                  addNewHardwareComponent: (Offset hardwarePosition, String? listeningAreaId) {},
-                                  onUpdateListeningArea: serviceLocator<ProjectViewModel>().updateListeningArea,
-                                  onFloorPlanUpdated: (FloorPlanModel updatedPlan) {
-                                    serviceLocator<ProjectViewModel>().updateFloor(
-                                      floor.copyWith(floorPlan: updatedPlan),
-                                    );
-                                  },
-                                  onViewportCenterUpdated: (ui.Offset center) {
-                                    viewPortCenter = center;
-                                  },
-                                  onComponentTransformed: (dynamic component) {
-                                    if (component is Speaker || component is ListeningArea) {
-                                      calculateSPL();
-                                    }
-                                    serviceLocator<ProjectViewModel>().saveProjectToLocal();
-                                  },
-                                  onTapListeningArea: (ListeningArea value) {
-                                    // serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(value.id);
-                                  },
-                                  onSelectedListeningAreaIdChanged: (String? value) {
-                                    serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(value);
-                                    serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(null);
-                                  },
-                                  onSelectedHardwareComponentIdChanged: (String? value) {
-                                    serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(value);
-                                    serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(null);
-                                  },
-                                  onSelectedFloorPlanIdChanged: () {
-                                    serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(null);
-                                    serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(null);
-                                  },
-                                  splMin: serviceLocator<ProjectViewModel>().minSPL,
-                                  splMax: serviceLocator<ProjectViewModel>().maxSPL,
-                                );
+                                return Container();
+                                // return FloorCanvas(
+                                //   gridSize: 100,
+                                //   controller: floorCanvasController,
+                                //   hardwareComponents: serviceLocator<ProjectViewModel>().getHardwareForFloor(floor.id),
+                                //   listeningAreas: serviceLocator<ProjectViewModel>().getListeningAreasForFloor(floor.id),
+                                //   floor: floor,
+                                //   floorPlanEntity: floor.floorPlan,
+                                //   onUpdateHardwareComponent: serviceLocator<ProjectViewModel>().updateHardware,
+                                //   zones: serviceLocator<ProjectViewModel>().zones,
+                                //   onCanvasZoomChanged: (double z) {
+                                //     serviceLocator<ProjectViewModel>().updateFloor(
+                                //       floor.copyWith(floorPlan: floor.floorPlan.copyWith(canvasZoom: z)),
+                                //     );
+                                //     if (floorCanvasController.isShowingSpl.value && splInitCalculated) {
+                                //       calculateSPL();
+                                //     }
+                                //   },
+                                //   onCanvasPanChanged: (ui.Offset p) {
+                                //     serviceLocator<ProjectViewModel>().updateFloor(
+                                //       floor.copyWith(floorPlan: floor.floorPlan.copyWith(canvasPan: p)),
+                                //     );
+                                //   },
+                                //   moveHardware: (HardwareComponent hardware, String? newListeningAreaId, String? floorId) {
+                                //     serviceLocator<ProjectViewModel>().moveHardware(hardware.id, floorId: floorId, listeningAreaId: newListeningAreaId);
+                                //     serviceLocator<ProjectViewModel>().saveProjectToLocal();
+                                //   },
+                                //   onAddListeningArea: (ListeningArea created, List<HardwareComponent>? containedHardware) {
+                                //     serviceLocator<ProjectViewModel>().addListeningArea(created, floor.id);
+                                //     if (containedHardware != null) {
+                                //       for (final HardwareComponent hc in containedHardware) {
+                                //         serviceLocator<ProjectViewModel>().moveHardware(
+                                //           hc.id,
+                                //           listeningAreaId: created.id,
+                                //           floorId: floor.id,
+                                //         );
+                                //       }
+                                //     }
+                                //
+                                //     calculateSPL();
+                                //     serviceLocator<ProjectViewModel>().saveProjectToLocal();
+                                //   },
+                                //   addNewHardwareComponent: (Offset hardwarePosition, String? listeningAreaId) {},
+                                //   onUpdateListeningArea: serviceLocator<ProjectViewModel>().updateListeningArea,
+                                //   onFloorPlanUpdated: (FloorPlanModel updatedPlan) {
+                                //     serviceLocator<ProjectViewModel>().updateFloor(
+                                //       floor.copyWith(floorPlan: updatedPlan),
+                                //     );
+                                //   },
+                                //   onViewportCenterUpdated: (ui.Offset center) {
+                                //     viewPortCenter = center;
+                                //   },
+                                //   onComponentTransformed: (dynamic component) {
+                                //     if (component is Speaker || component is ListeningArea) {
+                                //       calculateSPL();
+                                //     }
+                                //     serviceLocator<ProjectViewModel>().saveProjectToLocal();
+                                //   },
+                                //   onTapListeningArea: (ListeningArea value) {
+                                //     // serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(value.id);
+                                //   },
+                                //   onSelectedListeningAreaIdChanged: (String? value) {
+                                //     serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(value);
+                                //     serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(null);
+                                //   },
+                                //   onSelectedHardwareComponentIdChanged: (String? value) {
+                                //     serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(value);
+                                //     serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(null);
+                                //   },
+                                //   onSelectedFloorPlanIdChanged: () {
+                                //     serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(null);
+                                //     serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(null);
+                                //   },
+                                //   splMin: serviceLocator<ProjectViewModel>().minSPL,
+                                //   splMax: serviceLocator<ProjectViewModel>().maxSPL,
+                                // );
                               },
                             ),
                           ),

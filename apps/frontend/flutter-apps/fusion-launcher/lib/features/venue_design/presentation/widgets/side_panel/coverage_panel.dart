@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 class CoveragePanel extends StatefulWidget {
+  final Function(bool selected) onModeSelection;
   const CoveragePanel({
     super.key,
+    required this.onModeSelection,
   });
 
   @override
@@ -30,6 +32,10 @@ class CoveragePanelState extends State<CoveragePanel> {
                 isSelected: serviceLocator<ProjectViewModel>().isInListeningAreaSelectionMode,
                 onTap: () {
                   serviceLocator<ProjectViewModel>().setListeningAreaSelectionMode(!serviceLocator<ProjectViewModel>().isInListeningAreaSelectionMode);
+                  widget.onModeSelection(serviceLocator<ProjectViewModel>().isInListeningAreaSelectionMode);
+                },
+                onAddTap: () {
+                  serviceLocator<ProjectViewModel>().enterListeningAreaSelectionMode();
                 },
               ),
               _buildSubItem(
@@ -38,6 +44,14 @@ class CoveragePanelState extends State<CoveragePanel> {
                 isSelected: serviceLocator<ProjectViewModel>().isInZoneSelectionMode,
                 onTap: () {
                   serviceLocator<ProjectViewModel>().setZoneSelectionMode(!serviceLocator<ProjectViewModel>().isInZoneSelectionMode);
+                  widget.onModeSelection(serviceLocator<ProjectViewModel>().isInZoneSelectionMode);
+                },
+                onAddTap: () {
+                  final Zone newZone = Zone(
+                    name: 'Zone ${serviceLocator<ProjectViewModel>().zones.length + 1}',
+                  );
+                  serviceLocator<ProjectViewModel>().addZone(newZone);
+                  serviceLocator<ProjectViewModel>().enterZoneSelectionMode(newZone);
                 },
               ),
             ],
@@ -52,6 +66,7 @@ class CoveragePanelState extends State<CoveragePanel> {
     String title, {
     bool isSelected = false,
     required Function() onTap,
+    required Function() onAddTap,
   }) {
     return Container(
       // margin: const EdgeInsets.only(bottom: 2),
@@ -86,6 +101,19 @@ class CoveragePanelState extends State<CoveragePanel> {
               text: title,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 12),
             ),
+            trailing:
+                isSelected
+                    ? IconButton(
+                      onPressed: () {
+                        onAddTap();
+                      },
+                      icon: const Icon(
+                        Icons.add,
+                        size: 14,
+                        color: Colors.black87,
+                      ),
+                    )
+                    : null,
             onTap: () {
               onTap();
             },

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../configuration/presentation/viewmodel/project_view_model.dart';
@@ -34,19 +35,29 @@ class _DevicesPanelState extends State<DevicesPanel> {
               _buildSubItem(
                 Icons.speaker,
                 'Speaker',
+                isSelected: serviceLocator<ProjectViewModel>().currentDeviceTypeIndex == 0,
                 onTap: () {
                   goToDevicePlacementMode();
+                  serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(0);
                 },
               ),
               _buildSubItem(
                 Icons.mic,
                 'Sources',
-                onTap: () {},
+                isSelected: serviceLocator<ProjectViewModel>().currentDeviceTypeIndex == 1,
+                onTap: () {
+                  goToDevicePlacementMode();
+                  serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(1);
+                },
               ),
               _buildSubItem(
                 Icons.tune,
                 'Controllers',
-                onTap: () {},
+                isSelected: serviceLocator<ProjectViewModel>().currentDeviceTypeIndex == 2,
+                onTap: () {
+                  goToDevicePlacementMode();
+                  serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(2);
+                },
               ),
               _buildSubItem(
                 Icons.hub_outlined,
@@ -71,33 +82,50 @@ class _DevicesPanelState extends State<DevicesPanel> {
     bool isSelected = false,
     required Function() onTap,
   }) {
-    return Container(
-      // margin: const EdgeInsets.only(bottom: 2),
-      //if selected is true change background color to light blue
-      color: isSelected ? Colors.blue[100] : Colors.transparent,
-      child: ListTile(
-        dense: true,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
+    return Stack(
+      children: <Widget>[
+        Container(
+          // margin: const EdgeInsets.only(bottom: 2),
+          //if selected is true change background color to light blue
+          color: isSelected ? Colors.grey[100] : Colors.transparent,
+
+          child: ListTile(
+            dense: true,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+            ),
+            leading: Icon(
+              icon,
+              size: 14,
+              color: Colors.black87,
+            ),
+            title: FusionAppText(
+              text: title,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 12),
+            ),
+            // trailing: const Icon(
+            //   Icons.add,
+            //   size: 14,
+            //   color: Colors.black87,
+            // ),
+            onTap: () {
+              onTap();
+            },
+          ),
         ),
-        leading: Icon(
-          icon,
-          size: 14,
-          color: Colors.black87,
-        ),
-        title: FusionAppText(
-          text: title,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 12),
-        ),
-        // trailing: const Icon(
-        //   Icons.add,
-        //   size: 14,
-        //   color: Colors.black87,
-        // ),
-        onTap: () {
-          onTap();
-        },
-      ),
+        if (isSelected)
+          Container(
+            width: 4,
+            height: 40,
+            decoration: const BoxDecoration(
+              color: Colors.black87,
+              borderRadius: BorderRadius.only(
+                topRight: Radius.circular(4),
+                bottomRight: Radius.circular(4),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

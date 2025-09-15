@@ -180,6 +180,7 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
     isInListeningAreaSelectionMode = isInSelectionMode;
     isInZoneSelectionMode = false;
     currentSelectedZoneId = null;
+    resetDeviceTypeIndex();
     updateProject();
   }
 
@@ -188,6 +189,7 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
     isInZoneSelectionMode = isInSelectionMode;
     isInListeningAreaSelectionMode = false;
     currentSelectedZoneId = null;
+    resetDeviceTypeIndex();
     updateProject();
   }
 

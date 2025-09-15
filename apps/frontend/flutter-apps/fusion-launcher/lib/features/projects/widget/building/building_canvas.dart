@@ -277,7 +277,6 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                 serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(null);
                               },
                               onSelectedHardwareComponentIdChanged: (String? value) {
-                                print("value changed: $value");
                                 serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(value);
                                 serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(null);
                               },
@@ -324,6 +323,11 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                       final Zone zone = state.zone;
                       zoneSelectionMode(zone);
                     }
+
+                    if (state is ListeningAreaSelectionMode) {
+                      floorCanvasController.toggleDraw();
+                    }
+
                     if (!serviceLocator<ProjectViewModel>().isInZoneSelectionMode && floorCanvasController.isListeningAreaSelectionActive.value) {
                       floorCanvasController.cancelListeningAreaSelection();
                     }
@@ -480,52 +484,6 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                         );
                                       },
                                     );
-                                    //  Row(
-                                    //   mainAxisSize: MainAxisSize.min,
-                                    //   children: <Widget>[
-                                    //     CleanToggleButton(
-                                    //       icon: Icons.edit,
-                                    //       tooltip:
-                                    //           serviceLocator<ProjectViewModel>().isInListeningAreaSelectionMode ? 'Stop drawing' : 'Draw listening area',
-                                    //       isActive: serviceLocator<ProjectViewModel>().isInListeningAreaSelectionMode,
-                                    //       onPressed: () {
-                                    //         serviceLocator<ProjectViewModel>().setListeningAreaSelectionMode(
-                                    //           !serviceLocator<ProjectViewModel>().isInListeningAreaSelectionMode,
-                                    //         );
-                                    //       },
-                                    //     ),
-                                    //
-                                    //     const SizedBox(width: 8),
-                                    //
-                                    //     CleanToolbarButton(
-                                    //       icon: Icons.add_photo_alternate,
-                                    //       tooltip: 'Load plan',
-                                    //       onPressed: _showFloorPlanPicker,
-                                    //     ),
-                                    //
-                                    //     const SizedBox(width: 8),
-                                    //
-                                    //     if (Platform.isMacOS || Platform.isIOS)
-                                    //       ValueListenableBuilder<bool>(
-                                    //         valueListenable: floorCanvasController.isShowingSpl,
-                                    //         builder:
-                                    //             (_, bool showSpl, __) => Row(
-                                    //               children: <Widget>[
-                                    //                 CleanToggleButton(
-                                    //                   icon: Icons.graphic_eq,
-                                    //                   tooltip: showSpl ? 'Hide SPL' : 'Show SPL',
-                                    //                   isActive: showSpl,
-                                    //                   onPressed: () {
-                                    //                     floorCanvasController.toggleSpl();
-                                    //                     calculateSPL();
-                                    //                   },
-                                    //                 ),
-                                    //                 const SizedBox(width: 8),
-                                    //               ],
-                                    //             ),
-                                    //       ),
-                                    //   ],
-                                    // );
                                   },
                                 ),
                               );
