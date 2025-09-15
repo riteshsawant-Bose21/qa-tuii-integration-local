@@ -70,7 +70,7 @@ static int tcal6408_show_gpio(struct endpoint *tcal6408)
 static int ads7128_show_gpio(struct endpoint *ads7128, u8 pin_num, bool *is_adc)
 {
     int value;
-    struct endpoint_gpio *gpio = &ads7128->gpios[pin_num]; // Index 1-7 matches pin_num
+    struct endpoint_gpio *gpio = &ads7128->gpios[pin_num - 1]; // Data pins are first
     struct i2c_client *client = ads7128->i2c_client;
 	struct i2c_msg msgs[2];
     u8 rd_opcode_buf[2];
@@ -309,7 +309,7 @@ static int ads7128_store_gpio(struct endpoint *ads7128, u8 new_value, u8 mask)
 
     // Update the cached value for the specific GPIO
     channel = __ffs(mask); // Find the bit position (0-7)
-    ads7128->gpios[channel + 1].value = new_value & 1; // Update only this GPIO’s value
+    ads7128->gpios[channel].value = new_value & 1; // Update only this GPIO’s value
 
     return 0;
 }

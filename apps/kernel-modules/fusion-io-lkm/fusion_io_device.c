@@ -262,13 +262,12 @@ int tca9544_handle_irq(struct endpoint_gpio *ep_gpio)
     irq_mask = *buf >> 4;
     for (int i = 0; i < 4; ++i) {
         if (irq_mask >> i & 1) {
-            if (tca9544->gpios[i + 1].linked_gpio == NULL) {
-                printk(KERN_WARNING "tca9544_handle_irq: null linked gpio %s\n", tca9544->gpios[i + 1].name);
+            if (tca9544->gpios[i].linked_gpio == NULL) {
+                printk(KERN_WARNING "tca9544_handle_irq: null linked gpio %s\n", tca9544->gpios[i].name);
                 continue;
             }
 
-            // on i2c switches, gpios[0] is always the interrupt out to device
-            handle_irq(tca9544->gpios[i + 1].linked_gpio);
+            handle_irq(tca9544->gpios[i].linked_gpio);
         }
     }
 
@@ -307,12 +306,11 @@ int tcal6408_handle_irq(struct endpoint_gpio *ep_gpio)
 
     for (int i = 0; i < 8; ++i) {
         if (irq_mask >> i & 1) {
-            if (tcal6408->gpios[i + 1].linked_gpio == NULL) {
+            if (tcal6408->gpios[i].linked_gpio == NULL) {
                 continue;
             }
 
-            // on io expanders, gpios[0] is always the interrupt out to device
-            handle_irq(tcal6408->gpios[i + 1].linked_gpio);
+            handle_irq(tcal6408->gpios[i].linked_gpio);
         }
     }
 
@@ -352,11 +350,11 @@ int tca9535_handle_irq(struct endpoint_gpio *ep_gpio)
     // TODO account for different irq trigger_type polarities
     for (int i = 0; i < 8; ++i) {
         if (irq_mask >> i & 1) {
-            if (tca9535->gpios[i + 1].is_irq) {
-                if (tca9535->gpios[i + 1].linked_gpio == NULL) {
+            if (tca9535->gpios[i].is_irq) {
+                if (tca9535->gpios[i].linked_gpio == NULL) {
                     continue;
                 }
-                handle_irq(tca9535->gpios[i + 1].linked_gpio);
+                handle_irq(tca9535->gpios[i].linked_gpio);
             }
         }
     }
@@ -448,7 +446,7 @@ int ads7128_handle_irq(struct endpoint_gpio *ep_gpio)
             continue; // Skip if not in mask
         }
 
-        gpio = &ads7128->gpios[channel + 1];
+        gpio = &ads7128->gpios[channel];
 
         // Check ADC interrupt
         if (!(pin_cfg & (1 << channel))) {

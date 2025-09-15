@@ -102,12 +102,6 @@ const struct base_device bd_fusion_c0 = {
             .num_gpios = 5,
             .gpios = (struct endpoint_gpio[]) {
                 {
-                    .name = "gpio_tca9544_int",
-                    .type = EP_GPIO_TYPE_PHYS,
-                    .is_irq = true,
-                    .trigger_type = IRQ_TYPE_EDGE_FALLING
-                },
-                {
                     .name = "gpio_ana_int",
                     .type = EP_GPIO_TYPE_VIRT,
                     .is_irq = true,
@@ -134,6 +128,12 @@ const struct base_device bd_fusion_c0 = {
                     .is_irq = true,
                     .num = 4,
                     .trigger_type = IRQ_TYPE_EDGE_FALLING
+                },
+                {
+                    .name = "gpio_tca9544_int",
+                    .type = EP_GPIO_TYPE_PHYS,
+                    .is_irq = true,
+                    .trigger_type = IRQ_TYPE_EDGE_FALLING
                 }
             },
             .num_cmds = 1,
@@ -156,12 +156,6 @@ const struct base_device bd_fusion_c0 = {
             .ep_handle_irq = tcal6408_handle_irq,
             .num_gpios = 9,
             .gpios = (struct endpoint_gpio[]) {
-                {
-                    .name = "gpio_tcal6408_int",
-                    .type = EP_GPIO_TYPE_PHYS,
-                    .is_irq = true,
-                    .trigger_type = IRQ_TYPE_EDGE_FALLING
-                },
                 {
                     .name = "gpio_ana_3v3_psw",
                     .type = EP_GPIO_TYPE_VIRT,
@@ -201,6 +195,12 @@ const struct base_device bd_fusion_c0 = {
                     .name = "gpio_ui_reset",
                     .type = EP_GPIO_TYPE_VIRT,
                     .num = 8
+                },
+                {
+                    .name = "gpio_tcal6408_int",
+                    .type = EP_GPIO_TYPE_PHYS,
+                    .is_irq = true,
+                    .trigger_type = IRQ_TYPE_EDGE_FALLING
                 }
             },
             .num_cmds = 1,
@@ -264,13 +264,6 @@ const struct base_device bd_fusion_c0 = {
                     .ep_handle_irq = tca9535_handle_irq,
                     .num_gpios = 17,
                     .gpios = (struct endpoint_gpio[]) {
-                        {
-                            .name = "gpio_ana_int",
-                            .type = EP_GPIO_TYPE_VIRT,
-                            .is_irq = true,
-                            .aggregate_id = 6,
-                            .trigger_type = IRQ_TYPE_EDGE_FALLING
-                        },
                         {
                             .name = "gpio_gain_ch3_0",
                             .type = EP_GPIO_TYPE_VIRT,
@@ -366,6 +359,13 @@ const struct base_device bd_fusion_c0 = {
                             .type = EP_GPIO_TYPE_VIRT,
                             .num = 16,
                             .aggregate_id = 4
+                        },
+                        {
+                            .name = "gpio_ana_int",
+                            .type = EP_GPIO_TYPE_VIRT,
+                            .is_irq = true,
+                            .aggregate_id = 6,
+                            .trigger_type = IRQ_TYPE_EDGE_FALLING
                         }
                     },
                     .num_cmds = 1,
@@ -398,13 +398,6 @@ const struct base_device bd_fusion_c0 = {
                     .num_gpios = 7,
                     .gpios = (struct endpoint_gpio[]) {
                         {
-                            .name = "gpio_ana_int",
-                            .type = EP_GPIO_TYPE_VIRT,
-                            .is_irq = true,
-                            .aggregate_id = 6,
-                            .trigger_type = IRQ_TYPE_EDGE_FALLING
-                        },
-                        {
                             .name = "gpio_php_en_ch3",
                             .type = EP_GPIO_TYPE_VIRT,
                             .num = 1
@@ -433,6 +426,13 @@ const struct base_device bd_fusion_c0 = {
                             .name = "gpio_dac_mute",
                             .type = EP_GPIO_TYPE_VIRT,
                             .num = 6
+                        },
+                        {
+                            .name = "gpio_ana_int",
+                            .type = EP_GPIO_TYPE_VIRT,
+                            .is_irq = true,
+                            .aggregate_id = 6,
+                            .trigger_type = IRQ_TYPE_EDGE_FALLING
                         }
                     },
                     .num_cmds = 1,
@@ -761,13 +761,6 @@ const struct base_device bd_fusion_c0 = {
                     .num_gpios = 11,
                     .gpios = (struct endpoint_gpio[]) {
                         {
-                            .name = "gpio_gpio_int",
-                            .type = EP_GPIO_TYPE_VIRT,
-                            .is_irq = true,
-                            .aggregate_id = 7,
-                            .trigger_type = IRQ_TYPE_EDGE_FALLING
-                        },
-                        {
                             .name = "gpio_ctrl0_gpio0",
                             .type = EP_GPIO_TYPE_VIRT,
                             .num = 1,
@@ -826,6 +819,13 @@ const struct base_device bd_fusion_c0 = {
                             .type = EP_GPIO_TYPE_VIRT,
                             .num = 10,
                             .aggregate_id = 5
+                        },
+                        {
+                            .name = "gpio_gpio_int",
+                            .type = EP_GPIO_TYPE_VIRT,
+                            .is_irq = true,
+                            .aggregate_id = 7,
+                            .trigger_type = IRQ_TYPE_EDGE_FALLING
                         }
                     },
                     .num_cmds = 1,
@@ -858,13 +858,6 @@ const struct base_device bd_fusion_c0 = {
                     .ep_configure  = ads7128_configure,
                     .num_gpios = 7,
                     .gpios = (struct endpoint_gpio[]) {
-                        {
-                            .name = "gpio_gpio_int",
-                            .type = EP_GPIO_TYPE_VIRT,
-                            .is_irq = true,
-                            .aggregate_id = 7,
-                            .trigger_type = IRQ_TYPE_EDGE_FALLING
-                        },
                         {
                             .name = "gpio_adc_gpio0",
                             .type = EP_GPIO_TYPE_VIRT,
@@ -900,6 +893,13 @@ const struct base_device bd_fusion_c0 = {
                             .type = EP_GPIO_TYPE_VIRT,
                             .export = true,
                             .num = 6
+                        },
+                        {
+                            .name = "gpio_gpio_int",
+                            .type = EP_GPIO_TYPE_VIRT,
+                            .is_irq = true,
+                            .aggregate_id = 7,
+                            .trigger_type = IRQ_TYPE_EDGE_FALLING
                         }
                     },
                     .num_cmds = 2,
