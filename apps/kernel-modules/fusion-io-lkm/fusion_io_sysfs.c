@@ -254,66 +254,6 @@ static int tcal6408_store_gpio(struct endpoint *tcal6408, u8 new_value, u8 mask)
 	return ret;
 }
 
-static int ads7128_store_gpio(struct endpoint *ads7128, u8 new_value, u8 mask)
-{
-	struct i2c_client *client = ads7128->i2c_client;
-	struct i2c_msg wr_msg;
-    struct i2c_msg rd_msgs[2];
-    u8 wr_buf[3];
-    u8 rd_opcode_buf[2];
-    u8 rd_data_buf[1];
-    u8 old_value, channel;
-	int ret;
-
-    wr_buf[0] = ADS7128_OPCODE_WRITE_REG;
-    wr_msg.addr = client->addr;
-    wr_msg.flags = I2C_SMBUS_WRITE;
-    wr_msg.len = 3;
-    wr_msg.buf = wr_buf;
-
-    rd_opcode_buf[0] = ADS7128_OPCODE_READ_REG;
-    rd_msgs[0].addr = client->addr;
-    rd_msgs[0].flags = I2C_SMBUS_WRITE;
-    rd_msgs[0].len = 2;
-    rd_msgs[0].buf = rd_opcode_buf;
-
-    rd_msgs[1].addr = client->addr;
-    rd_msgs[1].flags = I2C_SMBUS_READ;
-    rd_msgs[1].len = 1;
-    rd_msgs[1].buf = rd_data_buf;
-
-    // Read current GPO_VALUE from hardware
-    rd_opcode_buf[1] = ADS7128_REG_GPO_VALUE;
-    ret = i2c_transfer(client->adapter, rd_msgs, 2);
-    if (ret < 0) {
-        printk(KERN_ERR "ads7128_store_gpio: failed read GPO_VALUE\n");
-        return ret;
-    }
-    old_value = *rd_data_buf;
-
-    // Update the single bit specified by mask
-    if (new_value) {
-        old_value |= mask;  // Set the bit
-    } else {
-        old_value &= ~mask; // Clear the bit
-    }
-
-    // Write back to hardware
-    wr_buf[1] = ADS7128_REG_GPO_VALUE;
-	wr_buf[2] = __swab16(old_value);
-	ret = i2c_transfer(client->adapter, &wr_msg, 1);
-	if (ret < 0) {
-		printk(KERN_ERR "ads7128_store_gpio: failed write GPO_VALUE\n");
-		return ret;
-	}
-
-    // Update the cached value for the specific GPIO
-    channel = __ffs(mask); // Find the bit position (0-7)
-    ads7128->gpios[channel].value = new_value & 1; // Update only this GPIO’s value
-
-    return 0;
-}
-
 static ssize_t fusion_io_virt_gpio_store(struct device *dev,
 					 struct device_attribute *attr,
 					 const char *buf, size_t count)
@@ -384,10 +324,7 @@ static ssize_t fusion_io_virt_gpio_store(struct device *dev,
 		}
 		break;
 	case EP_TYPE_ADC_ADS7128:
-		ret = ads7128_store_gpio(ep, new_value, mask);
-		if (ret < 0) {
-			dev_err(dev, "ads7128_store_gpio returned err %d", ret);
-		}
+		dev_warn(dev, "Control GPOs with ctl_gpiox pins\n");
 		break;
 	default:
 		dev_warn(dev, "Unknown ep type in virt_gpio_store '%d'\n", ep->type);
