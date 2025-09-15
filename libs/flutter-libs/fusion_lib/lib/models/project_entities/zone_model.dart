@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:ui';
 
 import 'processing_block_model.dart';
 
@@ -28,6 +29,10 @@ class Zone {
 
   static String getShortId() {
     return 'zone${DateTime.now().millisecondsSinceEpoch}${Random().nextInt(1000)}';
+  }
+
+  Color get color {
+    return Color(int.parse(zoneColor.substring(1, 7), radix: 16) + 0xFF000000);
   }
 
   static const List<String> zoneColors = <String>[

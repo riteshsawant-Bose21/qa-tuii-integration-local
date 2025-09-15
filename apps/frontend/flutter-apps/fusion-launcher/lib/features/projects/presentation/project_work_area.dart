@@ -20,6 +20,7 @@ import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../schematics/presentation/pages/schematics_page.dart';
 import '../../schematics/presentation/widgets/cost_calcuator_widget.dart';
 import '../../venue_design/presentation/widgets/side_panel/coverage_panel.dart';
+import '../../venue_design/presentation/widgets/side_panel/zone_and_listening_area.dart';
 import '../widget/building/building_canvas.dart';
 import '../widget/building/side_panle_widgets/building_plan.dart';
 import '../widget/building/side_panle_widgets/properties.dart';
@@ -78,6 +79,7 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
   bool get wantKeepAlive => true;
 
   final ExpansibleController productsController = ExpansibleController();
+  final ExpansibleController splController = ExpansibleController();
 
   @override
   Widget build(BuildContext context) {
@@ -280,113 +282,120 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                 physics: const NeverScrollableScrollPhysics(),
                 children: <Widget>[
                   /// building tab with docking area
-                  FusionDockableArea(
-                    tabKey: "tab1",
-                    showLeft: true,
-                    showRight: true,
-                    mainArea: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-                      builder: (BuildContext context, ProjectViewModelState state) {
-                        return BuildingCanvas(
-                          splRangeController: _splRangeController,
-                        );
-                      },
-                    ),
-                    dockItemList: <DockItemConfig>[
-                      DockItemConfig(
-                        id: "1",
-                        title: "BUILDING PLAN",
-                        side: "left",
-                        alowUndock: false,
-                        isCollapsibleSection: false,
-                        dockItemWidget: () => const BuildingPlan(),
-                      ),
-                      DockItemConfig(
-                        id: "2",
-                        title: "COVERAGE",
-                        side: "left",
-                        alowUndock: false,
-                        initiallyExpanded: false,
-                        isCollapsibleSection: true,
-                        dockItemWidget: () => const CoveragePanel(),
-                      ),
-                      DockItemConfig(
-                        id: "3",
-                        title: "DEVICES",
-                        side: "left",
-                        alowUndock: false,
-                        initiallyExpanded: true,
-                        isCollapsibleSection: true,
-                        dockItemWidget:
-                            () => DevicesPanel(
-                              productsController: productsController,
-                            ),
-                      ),
-                      DockItemConfig(
-                        id: "4",
-                        title: "TREE VIEW",
-                        side: "left",
-                        dockItemWidget:
-                            () => Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                              child: const Text(
-                                "Tree View Content",
-                                style: TextStyle(fontSize: 11),
-                              ),
-                            ),
-                      ),
-                      DockItemConfig(
-                        id: "5",
-                        title: "PROPERTIES",
-                        side: "right",
-                        dockItemWidget: () => const Properties(),
-                      ),
-                      DockItemConfig(
-                        id: "6",
-                        title: "COST CALCULATOR",
-                        side: "right",
-                        dockItemWidget:
-                            () => CostCalculatorScreen(
-                              speakers: serviceLocator<ProjectViewModel>().speakers,
-                              sources: serviceLocator<ProjectViewModel>().sources,
-                              controllers:
-                                  serviceLocator<ProjectViewModel>().genericHardwareComponents
-                                      .where((GenericHardwareComponent component) => component.type == GenericHardwareComponentType.controller)
-                                      .toList(),
-                              racks:
-                                  serviceLocator<ProjectViewModel>().genericHardwareComponents
-                                      .where((GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack)
-                                      .toList(),
-                              amplifiers: <Amplifier>[],
-                              fusionDevices: <FusionDevice>[],
-                              others:
-                                  serviceLocator<ProjectViewModel>().genericHardwareComponents
-                                      .where(
-                                        (HardwareComponent component) =>
-                                            component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
-                                      )
-                                      .toList(),
-                            ),
-                      ),
-                      DockItemConfig(
-                        id: "7",
-                        title: "PRODUCT QUERY",
-                        side: "right",
-                        dockItemWidget: () => const ProductQueryView(),
-                        controller: productsController,
-                      ),
-                      DockItemConfig(
-                        id: "8",
-                        title: "SPL MAPPING",
-                        side: "right",
-                        dockItemWidget:
-                            () => SplPanel(
-                              controller: _splRangeController,
-                              onChanged: (SplPanelData value) {
-                                FusionLogger.log(tag: LogTag.panel, message: value.toString());
+                  BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+                    builder: (BuildContext context, ProjectViewModelState state) {
+                      return FusionDockableArea(
+                        tabKey: "tab1",
+                        showLeft: true,
+                        showRight: true,
+                        mainArea: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+                          builder: (BuildContext context, ProjectViewModelState state) {
+                            return BuildingCanvas(
+                              splRangeController: _splRangeController,
+                              onSplStateChanged: (bool value) {
+                                if (value) {
+                                  productsController.collapse();
+                                  splController.expand();
+                                }
                               },
-                            ),
-                      ),
-                    ],
+                            );
+                          },
+                        ),
+                        dockItemList: <DockItemConfig>[
+                          DockItemConfig(
+                            id: "1",
+                            title: "BUILDING PLAN",
+                            side: "left",
+                            alowUndock: false,
+                            isCollapsibleSection: false,
+                            dockItemWidget: () => const BuildingPlan(),
+                          ),
+                          DockItemConfig(
+                            id: "2",
+                            title: "COVERAGE",
+                            side: "left",
+                            alowUndock: false,
+                            initiallyExpanded: false,
+                            isCollapsibleSection: true,
+                            dockItemWidget: () => const CoveragePanel(),
+                          ),
+                          DockItemConfig(
+                            id: "3",
+                            title: "Zone & Listening Areas",
+                            side: "left",
+                            initiallyExpanded: serviceLocator<ProjectViewModel>().isInZoneSelectionMode,
+                            isVisible: serviceLocator<ProjectViewModel>().isInZoneSelectionMode,
+                            dockItemWidget: () => const ZoneAndListeningAreaPanel(),
+                          ),
+                          DockItemConfig(
+                            id: "4",
+                            title: "DEVICES",
+                            side: "left",
+                            alowUndock: false,
+                            initiallyExpanded: true,
+                            isCollapsibleSection: true,
+                            dockItemWidget:
+                                () => DevicesPanel(
+                                  productsController: productsController,
+                                ),
+                          ),
+
+                          DockItemConfig(
+                            id: "5",
+                            title: "PROPERTIES",
+                            side: "right",
+                            dockItemWidget: () => const Properties(),
+                          ),
+                          DockItemConfig(
+                            id: "6",
+                            title: "COST CALCULATOR",
+                            side: "right",
+                            dockItemWidget:
+                                () => CostCalculatorScreen(
+                                  speakers: serviceLocator<ProjectViewModel>().speakers,
+                                  sources: serviceLocator<ProjectViewModel>().sources,
+                                  controllers:
+                                      serviceLocator<ProjectViewModel>().genericHardwareComponents
+                                          .where((GenericHardwareComponent component) => component.type == GenericHardwareComponentType.controller)
+                                          .toList(),
+                                  racks:
+                                      serviceLocator<ProjectViewModel>().genericHardwareComponents
+                                          .where((GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack)
+                                          .toList(),
+                                  amplifiers: <Amplifier>[],
+                                  fusionDevices: <FusionDevice>[],
+                                  others:
+                                      serviceLocator<ProjectViewModel>().genericHardwareComponents
+                                          .where(
+                                            (HardwareComponent component) =>
+                                                component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
+                                          )
+                                          .toList(),
+                                ),
+                          ),
+                          DockItemConfig(
+                            id: "7",
+                            title: "PRODUCT QUERY",
+                            side: "right",
+                            dockItemWidget: () => const ProductQueryView(),
+                            controller: productsController,
+                          ),
+                          DockItemConfig(
+                            id: "8",
+                            title: "SPL MAPPING",
+                            side: "right",
+                            controller: splController,
+                            dockItemWidget:
+                                () => SplPanel(
+                                  controller: _splRangeController,
+                                  onChanged: (SplPanelData value) {
+                                    FusionLogger.log(tag: LogTag.panel, message: value.toString());
+                                  },
+                                ),
+                          ),
+                        ],
+                      );
+                    },
                   ),
 
                   /// schematics tab with docking area

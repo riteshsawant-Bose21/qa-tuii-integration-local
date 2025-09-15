@@ -6,6 +6,7 @@ class DockItemConfig {
   final String side;
   final bool initiallyExpanded;
   final bool alowUndock;
+  final bool isVisible;
   final bool isCollapsibleSection;
   final ExpansibleController? controller;
 
@@ -20,5 +21,6 @@ class DockItemConfig {
     this.alowUndock = true,
     this.isCollapsibleSection = true,
     this.controller,
+    this.isVisible = true,
   });
 }

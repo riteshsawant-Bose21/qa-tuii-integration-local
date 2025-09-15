@@ -30,6 +30,7 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
   /// Temp variables for various selections
   String? currentSelectedHardwareId;
   String? currentSelectedListeningAreaId;
+  String? currentSelectedZoneId;
 
   /// Listening area selection mode flag
   bool isInListeningAreaSelectionMode = false;
@@ -156,10 +157,10 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
     emit(ProjectError(message: message));
   }
 
-  void enterZoneSelectionMode() {
+  void enterZoneSelectionMode(Zone zone) {
     isInListeningAreaSelectionMode = false;
     isInZoneSelectionMode = true;
-    print("Entering Zone Selection Mode");
-    emit(ZoneSelectionMode());
+    currentSelectedZoneId = zone.id;
+    emit(ZoneSelectionMode(zone));
   }
 }

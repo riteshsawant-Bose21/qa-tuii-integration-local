@@ -292,14 +292,14 @@ class FloorCanvasState extends State<FloorCanvas> {
 
   void _deselectAll() {
     setState(() {
-      _selectedHardwareComponent = null;
-      _isHardwareComponentDragging = false;
-      _isHardwareComponentRotating = false;
-      _isListeningAreaVertexDragging = false;
-      _isListeningAreaDragging = false;
-      _dragIndex = null;
-      _dragVertexIndex = null;
-      _highlightIndex = null;
+      // _selectedHardwareComponent = null;
+      // _isHardwareComponentDragging = false;
+      // _isHardwareComponentRotating = false;
+      // _isListeningAreaVertexDragging = false;
+      // _isListeningAreaDragging = false;
+      // _dragIndex = null;
+      // _dragVertexIndex = null;
+      // _highlightIndex = null;
     });
   }
 

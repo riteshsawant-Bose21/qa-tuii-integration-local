@@ -133,7 +133,6 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
     } else {
       debugPrint("No areas selected");
     }
-    serviceLocator<ProjectViewModel>().setZoneSelectionMode(false);
   }
 
   @override

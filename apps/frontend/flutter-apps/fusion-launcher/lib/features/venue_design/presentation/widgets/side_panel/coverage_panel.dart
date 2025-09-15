@@ -5,7 +5,9 @@ import 'package:fusion_launcher/features/configuration/presentation/viewmodel/pr
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 
 class CoveragePanel extends StatefulWidget {
-  const CoveragePanel({super.key});
+  const CoveragePanel({
+    super.key,
+  });
 
   @override
   CoveragePanelState createState() => CoveragePanelState();
@@ -16,9 +18,9 @@ class CoveragePanelState extends State<CoveragePanel> {
   Widget build(BuildContext context) {
     return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
       builder: (BuildContext context, ProjectViewModelState state) {
-        return Container(
+        return SizedBox(
           width: 280,
-          margin: const EdgeInsets.only(left: 10),
+
           // color: Colors.grey[50],
           child: Column(
             children: <Widget>[
@@ -54,29 +56,41 @@ class CoveragePanelState extends State<CoveragePanel> {
     return Container(
       // margin: const EdgeInsets.only(bottom: 2),
       //if selected is true change background color to light blue
-      color: isSelected ? Colors.blue[100] : Colors.transparent,
-      child: ListTile(
-        dense: true,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-        ),
-        leading: Icon(
-          icon,
-          size: 14,
-          color: Colors.black87,
-        ),
-        title: FusionAppText(
-          text: title,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 12),
-        ),
-        trailing: const Icon(
-          Icons.add,
-          size: 14,
-          color: Colors.black87,
-        ),
-        onTap: () {
-          onTap();
-        },
+      color: isSelected ? Colors.grey[200] : Colors.transparent,
+      child: Stack(
+        children: <Widget>[
+          // a black half circle on the left side of the container if selected is true
+          if (isSelected)
+            Container(
+              width: 4,
+              height: 40,
+              decoration: const BoxDecoration(
+                color: Colors.black87,
+                borderRadius: BorderRadius.only(
+                  topRight: Radius.circular(4),
+                  bottomRight: Radius.circular(4),
+                ),
+              ),
+            ),
+          ListTile(
+            dense: true,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+            ),
+            leading: Icon(
+              icon,
+              size: 14,
+              color: Colors.black87,
+            ),
+            title: FusionAppText(
+              text: title,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 12),
+            ),
+            onTap: () {
+              onTap();
+            },
+          ),
+        ],
       ),
     );
   }
