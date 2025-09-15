@@ -97,7 +97,7 @@ static int ads7128_show_gpio(struct endpoint *ads7128, u8 pin_num, bool *is_adc)
         return ret;
     }
 
-    *is_adc = (*rd_data_buf & (1U << (pin_num - 1))) != 0;
+    *is_adc = (*rd_data_buf & (1U << (pin_num - 1))) == 0;
 
     value = gpio->value; // Directly use cached value
 
