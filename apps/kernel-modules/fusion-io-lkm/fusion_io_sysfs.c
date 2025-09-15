@@ -324,7 +324,7 @@ static ssize_t fusion_io_virt_gpio_store(struct device *dev,
 		}
 		break;
 	case EP_TYPE_ADC_ADS7128:
-		dev_warn(dev, "Control GPOs with ctl_gpiox pins\n");
+		dev_warn(dev, "No ADS7128 store--control GPOs with ctl_gpiox pins\n");
 		break;
 	default:
 		dev_warn(dev, "Unknown ep type in virt_gpio_store '%d'\n", ep->type);
