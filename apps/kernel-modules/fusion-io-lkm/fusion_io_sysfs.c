@@ -97,7 +97,7 @@ static int ads7128_show_gpio(struct endpoint *ads7128, u8 pin_num, bool *is_adc)
         return ret;
     }
 
-    *is_adc = (*rd_data_buf & (1U << (pin_num - 1))) != 0;
+    *is_adc = (*rd_data_buf & (1U << (pin_num - 1))) == 0;
 
     value = gpio->value; // Directly use cached value
 
@@ -696,7 +696,7 @@ int fusion_io_create_sysfs_base(struct platform_device *pdev)
         if (!ep_gpio->valid) {
             dev_dbg(&pdev->dev, "Invalid base GPIO %s in create_sysfs_base\n", ep_gpio->name);
             continue;
-        } else if (ep_gpio->export == EP_GPIO_NO_EXPORT) {
+        } else if (ep_gpio->export == false) {
             continue;
         }
 
@@ -710,7 +710,7 @@ int fusion_io_create_sysfs_base(struct platform_device *pdev)
     for (int i = 0; i < bd->num_eps; ++i) {
         ep = &bd->endpoints[i];
         
-		if (ep->export == EP_NO_EXPORT) {
+		if (ep->export == false) {
             continue;
         }
 
@@ -736,7 +736,7 @@ int fusion_io_create_sysfs_base(struct platform_device *pdev)
 			if (!ep_gpio->valid) {
                 dev_dbg(&pdev->dev, "Invalid GPIO %s:%s in create_sysfs_base\n", ep->name, ep_gpio->name);
                 continue;
-            } else if (ep_gpio->export == EP_GPIO_NO_EXPORT) {
+            } else if (ep_gpio->export == false) {
                 continue;
             }
 
@@ -752,7 +752,7 @@ int fusion_io_create_sysfs_base(struct platform_device *pdev)
 		for (int j = 0; j < ep->num_cmds; ++j) {
             struct endpoint_cmd *ep_cmd = &ep->cmds[j];
 
-			if (ep_cmd->export == EP_CMD_NO_EXPORT) {
+			if (ep_cmd->export == false) {
                 continue;
             } else if (ep_cmd->num_i2c_cmds == 0) {
 				dev_err(endpoint_dev, "Can't create sysfs cmd for ep_cmd %s with no i2c_cmds\n", ep_cmd->name);
@@ -935,7 +935,7 @@ int fusion_io_create_sysfs_io_card(struct platform_device *pdev, struct io_card 
         if (!ep_gpio->valid) {
             dev_dbg(&pdev->dev, "Invalid GPIO %s:%s in create_sysfs_io_card\n", ic->data.model, ep_gpio->name);
             continue;
-        } else if (ep_gpio->export == EP_GPIO_NO_EXPORT) {
+        } else if (ep_gpio->export == false) {
             continue;
         }
 
@@ -949,7 +949,7 @@ int fusion_io_create_sysfs_io_card(struct platform_device *pdev, struct io_card 
     for (int i = 0; i < ic->num_eps; ++i) {
         ep = &ic->endpoints[i];
         
-		if (ep->export == EP_NO_EXPORT) {
+		if (ep->export == false) {
             continue;
         }
 
@@ -975,7 +975,7 @@ int fusion_io_create_sysfs_io_card(struct platform_device *pdev, struct io_card 
 			if (!ep_gpio->valid) {
                 dev_dbg(endpoint_dev, "Invalid GPIO %s:%s:%s in create_sysfs_io_card\n", ic->data.model, ep->name, ep_gpio->name);
                 continue;
-            } else if (ep_gpio->export == EP_GPIO_NO_EXPORT) {
+            } else if (ep_gpio->export == false) {
                 continue;
             }
 
@@ -989,7 +989,7 @@ int fusion_io_create_sysfs_io_card(struct platform_device *pdev, struct io_card 
         for (int j = 0; j < ep->num_cmds; ++j) {
             struct endpoint_cmd *ep_cmd = &ep->cmds[j];
 
-			if (ep_cmd->export == EP_CMD_NO_EXPORT) {
+			if (ep_cmd->export == false) {
                 continue;
             } else if (ep_cmd->num_i2c_cmds == 0) {
 				dev_err(endpoint_dev, "Can't create sysfs cmd for ep_cmd %s with no i2c_cmds\n", ep_cmd->name);

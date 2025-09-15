@@ -679,17 +679,7 @@ static void configure_io_card_references(struct io_card *ic)
     }    
 }
 
-// crucial piece of "link_gpio()" below
-// operates on "gpios" of either an endpoint or io_card, and determines whter the links should
-// be created in "linked_gpio" or "aggregate_gpios"
-// rules for non-irq and irq gpios are different but complementary:
-// - non-irq gpios point donw from higher levels to lower levels
-// - - this is because the high level gpio is exported and points down 
-//     to a gpio on an io expander, i2c switch, or base device physical gpio
-// - irq gpios point up from lower levels to higher levels
-// - - this is because the irq comes from a physical gpio, and we need to 
-//     figure out what endpoint gpio it came from
-// refer to "levels" described in comment for "link_gpio()"
+// crucial piece of "link_gpio()"
 static int set_linked_or_aggregate_gpio(struct endpoint_gpio *ep_gpio, struct endpoint *parent_ep) 
 {
     struct endpoint_gpio *parent_gpio;
@@ -845,7 +835,7 @@ static void link_gpio(struct endpoint_gpio *ep_gpio)
 
     // irqs are never exported to sysfs
     // bail if non-irq is not set for export
-    if (ep_gpio->is_irq == false && ep_gpio->export == EP_GPIO_NO_EXPORT) {
+    if (ep_gpio->is_irq == false && ep_gpio->export == false) {
         return;
     }
     
@@ -1237,6 +1227,7 @@ static int fusion_io_probe(struct platform_device *pdev)
 
     struct i2c_adapter  *i2c_adapter;
 
+    bool has_slot_io;
     int i, j;
     int ret;
 
@@ -1255,8 +1246,15 @@ static int fusion_io_probe(struct platform_device *pdev)
         return -ENODEV;
     }
 
+    // TODO
     // Read IMX8 ROM for this. hardcode for now
     data.type = BD_TYPE_FUSION_C0;
+
+    if (data.type >= BD_TYPE_FIXED_IO_START && data.type < BD_TYPE_FIXED_IO_END) {
+        has_slot_io = false;
+    } else {
+        has_slot_io = true;
+    }
     
     // set up the base_device
     bd = new_default_base_device(data.type);
@@ -1327,7 +1325,7 @@ static int fusion_io_probe(struct platform_device *pdev)
     //
     // if we're an IO card device, we scan for EEPROMs
     // otherwise, we scan the known HW
-    if (bd->has_slot_io == false) {
+    if (has_slot_io == false) {
         /* We are a fixed IO device */
         dev_dbg(&pdev->dev, "Base device is fixed IO\n");
 
@@ -1388,7 +1386,7 @@ static int fusion_io_probe(struct platform_device *pdev)
 
             dev_info(&pdev->dev, "Successfully registered IO block %s!\n", ic->data.model);
         }
-    } else if (bd->has_slot_io == true) { /* we are a slot IO device */
+    } else if (has_slot_io == true) { /* we are a slot IO device */
         // go through all slots
         for (i = 0; i < bd->num_ics; ++i) {
             ic = &bd->io_cards[i];

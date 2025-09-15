@@ -45,7 +45,6 @@ const struct base_device bd_fusion_c0 = {
         .sn = "tbd",
         .type = BD_TYPE_FUSION_C0
     },
-    .has_slot_io = false,
     .num_gpios = 6,
     .gpios = (struct endpoint_gpio[]) {
         {
@@ -67,7 +66,6 @@ const struct base_device bd_fusion_c0 = {
             .type = EP_GPIO_TYPE_PHYS,
             .is_irq = true,
             .num = 13,
-            .ioexp_id = 1,
             .trigger_type = IRQ_TYPE_EDGE_FALLING
         },
         {
@@ -80,7 +78,7 @@ const struct base_device bd_fusion_c0 = {
         {
             .name = "gpio_gpio2_16",
             .type = EP_GPIO_TYPE_PHYS,
-            .export = EP_GPIO_EXPORT,
+            .export = true,
             .num = 48,
             .dir = EP_GPIO_DIR_O,
             .default_val = EP_GPIO_VAL_LO
@@ -88,7 +86,7 @@ const struct base_device bd_fusion_c0 = {
         {
             .name = "gpio_pwr_goodn",
             .type = EP_GPIO_TYPE_PHYS,
-            .export = EP_GPIO_EXPORT,
+            .export = true,
             .num = 52,
             .dir = EP_GPIO_DIR_I
         }
@@ -246,13 +244,13 @@ const struct base_device bd_fusion_c0 = {
                 {
                     .name = "gpio_ana_3v3_psw",
                     .type = EP_GPIO_TYPE_VIRT,
-                    .export = EP_GPIO_EXPORT,
+                    .export = true,
                     .ioexp_id = 1
                 },
                 {
                     .name = "gpio_ana_15v_psw",
                     .type = EP_GPIO_TYPE_VIRT,
-                    .export = EP_GPIO_EXPORT,
+                    .export = true,
                     .ioexp_id = 3
                 }
             },
@@ -461,7 +459,7 @@ const struct base_device bd_fusion_c0 = {
                 {
                     .name = "ep_aud_in_chs-12",
                     .type = EP_TYPE_AUD_ADC_TAA5242,
-                    .export = EP_EXPORT,
+                    .export = true,
                     .in_ch_bm = 0x0003,
                     .num_gpios = 0,
                     .gpios = NULL,
@@ -471,34 +469,34 @@ const struct base_device bd_fusion_c0 = {
                 {
                     .name = "ep_aud_in_chs-34",
                     .type = EP_TYPE_AUD_ADC_TAA5242,
-                    .export = EP_EXPORT,
+                    .export = true,
                     .in_ch_bm = 0x000c,
                     .num_gpios = 4,
                     .gpios = (struct endpoint_gpio[]) {
                         {
                             .name = "gpio_gain_ch3_0",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_EXPORT,
+                            .export = true,
                             .aggregate_id = 1,
                             .ioexp_id = 2
                         },
                         {
                             .name = "gpio_gain_ch4_0",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_EXPORT,
+                            .export = true,
                             .aggregate_id = 2,
                             .ioexp_id = 2
                         },
                         {
                             .name = "gpio_php_en_ch3",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_EXPORT,
+                            .export = true,
                             .ioexp_id = 3
                         },
                         {
                             .name = "gpio_php_en_ch4",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_EXPORT,
+                            .export = true,
                             .ioexp_id = 3
                         }
                     },
@@ -508,34 +506,34 @@ const struct base_device bd_fusion_c0 = {
                 {
                     .name = "ep_aud_in_chs-56",
                     .type = EP_TYPE_AUD_ADC_TAA5242,
-                    .export = EP_EXPORT,
+                    .export = true,
                     .in_ch_bm = 0x0030,
                     .num_gpios = 4,
                     .gpios = (struct endpoint_gpio[]) {
                         {
                             .name = "gpio_gain_ch5_0",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_EXPORT,
+                            .export = true,
                             .aggregate_id = 3,
                             .ioexp_id = 2
                         },
                         {
                             .name = "gpio_gain_ch6_0",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_EXPORT,
+                            .export = true,
                             .aggregate_id = 4,
                             .ioexp_id = 2
                         },
                         {
                             .name = "gpio_php_en_ch5",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_EXPORT,
+                            .export = true,
                             .ioexp_id = 3
                         },
                         {
                             .name = "gpio_php_en_ch6",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_EXPORT,
+                            .export = true,
                             .ioexp_id = 3
                         }
                     },
@@ -545,14 +543,14 @@ const struct base_device bd_fusion_c0 = {
                 {
                     .name = "ep_aud_out_chs-12",
                     .type = EP_TYPE_AUD_DAC_TAD5242,
-                    .export = EP_EXPORT,
+                    .export = true,
                     .out_ch_bm = 0x0003,
                     .num_gpios = 1,
                     .gpios = (struct endpoint_gpio[]) {
                         {
                             .name = "gpio_dac_mute",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_EXPORT,
+                            .export = true,
                             .ioexp_id = 3
                         }
                     },
@@ -562,14 +560,14 @@ const struct base_device bd_fusion_c0 = {
                 {
                     .name = "ep_aud_out_chs-34",
                     .type = EP_TYPE_AUD_DAC_TAD5242,
-                    .export = EP_EXPORT,
+                    .export = true,
                     .out_ch_bm = 0x000c,
                     .num_gpios = 1,
                     .gpios = (struct endpoint_gpio[]) {
                         {
                             .name = "gpio_dac_mute",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_EXPORT,
+                            .export = true,
                             .ioexp_id = 3
                         }
                     },
@@ -589,25 +587,25 @@ const struct base_device bd_fusion_c0 = {
                 {
                     .name = "gpio_hdmi_psw",
                     .type = EP_GPIO_TYPE_VIRT,
-                    .export = EP_GPIO_EXPORT,
+                    .export = true,
                     .ioexp_id = 1
                 },
                 {
                     .name = "gpio_hdmi_5v_en",
                     .type = EP_GPIO_TYPE_VIRT,
-                    .export = EP_GPIO_EXPORT,
+                    .export = true,
                     .ioexp_id = 1
                 },
                 {
                     .name = "gpio_hdmi_reset",
                     .type = EP_GPIO_TYPE_VIRT,
-                    .export = EP_GPIO_EXPORT,
+                    .export = true,
                     .ioexp_id = 1
                 },
                 {
                     .name = "gpio_a_mute_out",
                     .type = EP_GPIO_TYPE_PHYS,
-                    .export = EP_GPIO_EXPORT,
+                    .export = true,
                     //.is_irq = true
                 }
             },
@@ -616,14 +614,14 @@ const struct base_device bd_fusion_c0 = {
                 {
                     .name = "ep_src_ak4137",
                     .type = EP_TYPE_SRC_AK4137,
-                    .export = EP_EXPORT,
+                    .export = true,
                     .i2c_addr = 0x13,
                     .num_gpios = 1,
                     .gpios = (struct endpoint_gpio[]) {
                         {
                             .name = "gpio_hdmi_reset",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_EXPORT,
+                            .export = true,
                             .ioexp_id = 1
                         }
                     },
@@ -642,7 +640,7 @@ const struct base_device bd_fusion_c0 = {
                 {
                     .name = "ep_hdmi_ep9512t",
                     .type = EP_TYPE_HDMI_EP9512T,
-                    .export = EP_EXPORT,
+                    .export = true,
                     .i2c_addr = 0x3c,
                     .ep_handle_irq = ep9512t_handle_irq,
                     .num_gpios = 3,
@@ -651,7 +649,7 @@ const struct base_device bd_fusion_c0 = {
                             // not sure exactly, but export for reading
                             .name = "gpio_a_mute_out",
                             .type = EP_GPIO_TYPE_PHYS,
-                            .export = EP_GPIO_EXPORT,
+                            .export = true,
                             //.is_irq = true
                         },
                         {
@@ -663,7 +661,7 @@ const struct base_device bd_fusion_c0 = {
                         {
                             .name = "gpio_hdmi_reset",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_EXPORT,
+                            .export = true,
                             .ioexp_id = 1
                         }
                     },
@@ -713,41 +711,41 @@ const struct base_device bd_fusion_c0 = {
                 {
                     .name = "gpio_gpio_psw",
                     .type = EP_GPIO_TYPE_VIRT,
-                    .export = EP_GPIO_EXPORT,
+                    .export = true,
                     .ioexp_id = 1
                 },
                 {
                     .name = "gpio_ctrl0_gpio0",
                     .type = EP_GPIO_TYPE_VIRT,
-                    .export = EP_GPIO_EXPORT,
+                    .export = true,
                     .aggregate_id = 1,
                     .ioexp_id = 4
                 },
                 {
                     .name = "gpio_ctrl0_gpio1",
                     .type = EP_GPIO_TYPE_VIRT,
-                    .export = EP_GPIO_EXPORT,
+                    .export = true,
                     .aggregate_id = 2,
                     .ioexp_id = 4
                 },
                 {
                     .name = "gpio_ctrl0_gpio2",
                     .type = EP_GPIO_TYPE_VIRT,
-                    .export = EP_GPIO_EXPORT,
+                    .export = true,
                     .aggregate_id = 3,
                     .ioexp_id = 4
                 },
                 {
                     .name = "gpio_ctrl0_gpio3",
                     .type = EP_GPIO_TYPE_VIRT,
-                    .export = EP_GPIO_EXPORT,
+                    .export = true,
                     .aggregate_id = 4,
                     .ioexp_id = 4
                 },
                 {
                     .name = "gpio_ctrl0_gpio4",
                     .type = EP_GPIO_TYPE_VIRT,
-                    .export = EP_GPIO_EXPORT,
+                    .export = true,
                     .aggregate_id = 5,
                     .ioexp_id = 4
                 }
@@ -854,7 +852,7 @@ const struct base_device bd_fusion_c0 = {
                 {
                     .name = "ep_adc_ads7128",
                     .type = EP_TYPE_ADC_ADS7128,
-                    .export = EP_EXPORT,
+                    .export = true,
                     .i2c_addr = 0x14,
                     .ep_handle_irq = ads7128_handle_irq,
                     .ep_configure  = ads7128_configure,
@@ -870,37 +868,37 @@ const struct base_device bd_fusion_c0 = {
                         {
                             .name = "gpio_adc_gpio0",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_EXPORT,
+                            .export = true,
                             .num = 1,
                         },
                         {
                             .name = "gpio_adc_gpio1",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_EXPORT,
+                            .export = true,
                             .num = 2
                         },
                         {
                             .name = "gpio_adc_gpio2",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_EXPORT,
+                            .export = true,
                             .num = 3
                         },
                         {
                             .name = "gpio_adc_gpio3",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_EXPORT,
+                            .export = true,
                             .num = 4
                         },
                         {
                             .name = "gpio_adc_gpio4",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_EXPORT,
+                            .export = true,
                             .num = 5
                         },
                         {
                             .name = "gpio_adc_test",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .export = EP_GPIO_EXPORT,
+                            .export = true,
                             .num = 6
                         }
                     },
@@ -929,7 +927,7 @@ const struct base_device bd_fusion_c0 = {
                         [EP_CMD_TYPE_ADC_REGOP] = {
                             .name = "cmd_regop",
                             .type = EP_CMD_TYPE_ADC_REGOP,
-                            .export = EP_CMD_EXPORT,
+                            .export = true,
                             .num_i2c_cmds = 1,
                             .i2c_cmds = (struct i2c_reg_data[]) {
                                 { .reg_addr = I2C_REG_DATA_ADDR_NONE }
@@ -955,13 +953,13 @@ const struct base_device bd_fusion_c0 = {
                 {
                     .name = "gpio_amp_reset",
                     .type = EP_GPIO_TYPE_VIRT,
-                    .export = EP_GPIO_EXPORT,
+                    .export = true,
                     .ioexp_id = 1
                 },
                 {
                     .name = "gpio_amp_stby",
                     .type = EP_GPIO_TYPE_VIRT,
-                    .export = EP_GPIO_EXPORT,
+                    .export = true,
                     .ioexp_id = 1
                 }
             },

@@ -42,11 +42,6 @@ enum endpoint_gpio_type {
     EP_GPIO_TYPE_PHYS,
 };
 
-enum endpoint_gpio_export {
-    EP_GPIO_NO_EXPORT,
-    EP_GPIO_EXPORT
-};
-
 enum endpoint_gpio_dir {
     EP_GPIO_DIR_O,
     EP_GPIO_DIR_I,
@@ -66,7 +61,7 @@ enum endpoint_gpio_val {
 struct endpoint_gpio {
     char                        name[MAX_STRING];
     enum endpoint_gpio_type     type;
-    enum endpoint_gpio_export   export;
+    bool                        export;
 
     u8                          num;
     enum endpoint_gpio_dir      dir;
@@ -102,14 +97,9 @@ enum endpoint_cmd_type {
     EP_CMD_TYPE_ADC_REGOP   = 1
 };
 
-enum endpoint_cmd_export {
-    EP_CMD_NO_EXPORT,
-    EP_CMD_EXPORT
-};
-
 struct endpoint_cmd {
     char                     name[MAX_STRING];
-    enum endpoint_cmd_export export;
+    bool                     export;
     enum endpoint_cmd_type   type;
 
     size_t                   num_i2c_cmds;
@@ -170,11 +160,6 @@ enum endpoint_type {
     EP_TYPE_I2CSW_START       = EP_TYPE_EEPROM_END + 1,
     EP_TYPE_I2CSW_TCA9544     = EP_TYPE_I2CSW_START,
     EP_TYPE_I2CSW_END,
-};
-
-enum endpoint_export {
-    EP_NO_EXPORT,
-    EP_EXPORT
 };
 
 /* IC register definitions */
@@ -380,7 +365,7 @@ enum ep9512t_regs {
 struct endpoint {
     char                    name[MAX_STRING];
     enum endpoint_type      type;
-    enum endpoint_export    export;
+    bool                    export;
     u8                      ioexp_id;
     unsigned short          i2c_addr;
 
@@ -480,8 +465,6 @@ enum base_device_type {
 };
 
 struct base_device {
-    bool                    has_slot_io;
-
     struct id_data          data;
 
     size_t                  num_eps;
