@@ -39,7 +39,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
       builder: (BuildContext context, ProjectViewModelState state) {
         return SizedBox(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               // Header Section
@@ -121,9 +121,10 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
   Widget _buildEmptyState() {
     return Container(
       constraints: const BoxConstraints(),
-      padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
           Icon(
             Icons.layers_outlined,
@@ -137,14 +138,6 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
               color: Colors.grey[600],
               fontSize: 14,
               fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 8),
-          FusionAppText(
-            text: 'Create your first zone to get started',
-            style: TextStyle(
-              color: Colors.grey[500],
-              fontSize: 12,
             ),
           ),
         ],
@@ -401,7 +394,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
   Widget _buildNoListeningAreasMessage() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.grey[100],
         borderRadius: BorderRadius.circular(6),
@@ -412,7 +405,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
         children: <Widget>[
           Icon(
             Icons.info_outline,
-            size: 14,
+            size: 12,
             color: Colors.grey[500],
           ),
           const SizedBox(width: 12),
@@ -424,17 +417,9 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                 FusionAppText(
                   text: 'No listening areas',
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 11,
                     color: Colors.grey[600],
                     fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                FusionAppText(
-                  text: 'Add listening areas to this zone',
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: Colors.grey[500],
                   ),
                 ),
               ],
