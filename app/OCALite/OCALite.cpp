@@ -1,4 +1,4 @@
-/*  By downloading or using this file, the user agrees to be bound by the terms of the license 
+/*  By downloading or using this file, the user agrees to be bound by the terms of the license
  *  agreement located in the LICENSE file in the root of this project
  *  as an original contracting party.
  *
@@ -25,14 +25,15 @@
 #include <OCP.1/Ocp1LiteNetworkSystemInterfaceID.h>
 #include "ConcreteGainActuator.h"
 #include "ConcreteMuteActuator.h"
+#include "ConcreteSwitchActuator.h"
 #ifdef OCA_RUN
 extern void Ocp1LiteServiceRun();
 #else
-extern void Ocp1LiteServiceRunWithFdSet(fd_set* readSet);
+extern void Ocp1LiteServiceRunWithFdSet(fd_set *readSet);
 extern int Ocp1LiteServiceGetSocket();
 #endif
 
-int main(int argc, const char* argv[])
+int main(int argc, const char *argv[])
 {
     unsigned int connectionPort = 65000;
     if (argc > 1)
@@ -53,43 +54,43 @@ int main(int argc, const char* argv[])
 
     // Create concrete actuators for audio processing
     printf("Creating audio processing actuators...\r\n");
-    
+
     // Create input and output ports for the gain actuator
-    ::OcaLiteList< ::OcaLitePort> gainPorts;
+    ::OcaLiteList<::OcaLitePort> gainPorts;
     ::OcaLitePortID inputPortId(OCAPORTMODE_INPUT, 1);
     ::OcaLitePortID outputPortId(OCAPORTMODE_OUTPUT, 1);
-    ::OcaLitePort inputPort(static_cast< ::OcaONo>(4096), inputPortId, ::OcaLiteString("Audio Input"));
-    ::OcaLitePort outputPort(static_cast< ::OcaONo>(4096), outputPortId, ::OcaLiteString("Audio Output"));
+    ::OcaLitePort inputPort(static_cast<::OcaONo>(4096), inputPortId, ::OcaLiteString("Audio Input"));
+    ::OcaLitePort outputPort(static_cast<::OcaONo>(4096), outputPortId, ::OcaLiteString("Audio Output"));
     gainPorts.Add(inputPort);
     gainPorts.Add(outputPort);
-    
+
     // Create Gain Actuator (Object Number 4096, -60dB to +20dB range)
-    ConcreteGainActuator* gainActuator = new ConcreteGainActuator(
-        static_cast< ::OcaONo>(4096),              // Object number
-        static_cast< ::OcaBoolean>(true),          // Lockable
-        ::OcaLiteString("Main Gain Control"),     // Role
-        gainPorts,                                 // Ports
-        -60.0,                                     // Min gain (dB)
-        20.0                                       // Max gain (dB)
+    ConcreteGainActuator *gainActuator = new ConcreteGainActuator(
+        static_cast<::OcaONo>(4096),          // Object number
+        static_cast<::OcaBoolean>(true),      // Lockable
+        ::OcaLiteString("Main Gain Control"), // Role
+        gainPorts,                            // Ports
+        -60.0,                                // Min gain (dB)
+        20.0                                  // Max gain (dB)
     );
-    
+
     // Create ports for the mute actuator (can share the same port structure)
-    ::OcaLiteList< ::OcaLitePort> mutePorts;
+    ::OcaLiteList<::OcaLitePort> mutePorts;
     ::OcaLitePortID muteInputPortId(OCAPORTMODE_INPUT, 2);
     ::OcaLitePortID muteOutputPortId(OCAPORTMODE_OUTPUT, 2);
-    ::OcaLitePort muteInputPort(static_cast< ::OcaONo>(4097), muteInputPortId, ::OcaLiteString("Mute Input"));
-    ::OcaLitePort muteOutputPort(static_cast< ::OcaONo>(4097), muteOutputPortId, ::OcaLiteString("Mute Output"));
+    ::OcaLitePort muteInputPort(static_cast<::OcaONo>(4097), muteInputPortId, ::OcaLiteString("Mute Input"));
+    ::OcaLitePort muteOutputPort(static_cast<::OcaONo>(4097), muteOutputPortId, ::OcaLiteString("Mute Output"));
     mutePorts.Add(muteInputPort);
     mutePorts.Add(muteOutputPort);
-    
+
     // Create Mute Actuator (Object Number 4097, initially unmuted)
-    ConcreteMuteActuator* muteActuator = new ConcreteMuteActuator(
-        static_cast< ::OcaONo>(4097),              // Object number
-        static_cast< ::OcaBoolean>(true),          // Lockable
-        ::OcaLiteString("Main Mute Control"),     // Role
-        mutePorts                                  // Ports
+    ConcreteMuteActuator *muteActuator = new ConcreteMuteActuator(
+        static_cast<::OcaONo>(4097),          // Object number
+        static_cast<::OcaBoolean>(true),      // Lockable
+        ::OcaLiteString("Main Mute Control"), // Role
+        mutePorts                             // Ports
     );
-    
+
     // Add the actuators to the root block
     if (gainActuator && ::OcaLiteBlock::GetRootBlock().AddObject(*gainActuator))
     {
@@ -99,7 +100,7 @@ int main(int argc, const char* argv[])
     {
         printf("✗ Failed to add gain actuator to device\r\n");
     }
-    
+
     if (muteActuator && ::OcaLiteBlock::GetRootBlock().AddObject(*muteActuator))
     {
         printf("✓ Mute actuator added to device (Object #4097)\r\n");
@@ -108,19 +109,128 @@ int main(int argc, const char* argv[])
     {
         printf("✗ Failed to add mute actuator to device\r\n");
     }
+
+    // ------------------------------------------------------------------
+    // Simple Source Select Switch creation from inline JSON (no 3rd party lib)
+    // JSON Input Example (positions 1..N contiguous):
+    // {
+    //   "sources": [
+    //     { "index": 1, "label": "source1" },
+    //     { "index": 2, "label": "source2" },
+    //     { "index": 3, "label": "source3" }
+    //   ]
+    // }
+    const char *sourcesJson = "{\n  \"sources\": [\n    { \"index\": 1, \"label\": \"source1\" },\n    { \"index\": 2, \"label\": \"source2\" },\n    { \"index\": 3, \"label\": \"source3\" }\n  ]\n}";
+
+    struct SourceEntry
+    {
+        unsigned index;
+        std::string label;
+    };
+    std::vector<SourceEntry> parsedSources;
+    {
+        const char *p = sourcesJson;
+        while ((p = strstr(p, "\"index\"")) != nullptr)
+        {
+            p = strchr(p, ':');
+            if (!p)
+                break;
+            ++p; // move past ':'
+            while (*p == ' ')
+                ++p;
+            unsigned idx = static_cast<unsigned>(strtoul(p, nullptr, 10));
+            const char *lpos = strstr(p, "\"label\"");
+            if (!lpos)
+                break;
+            lpos = strchr(lpos, ':');
+            if (!lpos)
+                break;
+            ++lpos;
+            while (*lpos == ' ')
+                ++lpos;
+            if (*lpos != '"')
+                break;
+            ++lpos;
+            std::string label;
+            while (*lpos && *lpos != '"')
+            {
+                label.push_back(*lpos);
+                ++lpos;
+            }
+            if (*lpos != '"')
+                break;
+            parsedSources.push_back({idx, label});
+            p = lpos;
+        }
+    }
+
+    if (!parsedSources.empty())
+    {
+        // Determine min/max (expect contiguous starting at 1, but tolerate gaps by computing range)
+        unsigned minPos = parsedSources.front().index;
+        unsigned maxPos = parsedSources.front().index;
+        for (const auto &s : parsedSources)
+        {
+            if (s.index < minPos)
+                minPos = s.index;
+            if (s.index > maxPos)
+                maxPos = s.index;
+        }
+
+        ::OcaLiteList<::OcaLiteString> names;
+        ::OcaLiteList<::OcaBoolean> enables;
+        // Initialize with empty names for full range then fill.
+        for (unsigned pos = minPos; pos <= maxPos; ++pos)
+        {
+            names.Add(::OcaLiteString(""));
+            enables.Add(static_cast<::OcaBoolean>(true));
+        }
+        for (const auto &s : parsedSources)
+        {
+            if (s.index >= minPos && s.index <= maxPos)
+            {
+                names[s.index - minPos] = ::OcaLiteString(s.label.c_str()); // replace
+            }
+        }
+
+        ::OcaLiteList<::OcaLitePort> switchPorts; // Optionally create ports if needed
+        // Using ONO 4098 for the switch (ensure no conflict)
+        ConcreteSwitchActuator *switchActuator = new ConcreteSwitchActuator(
+            static_cast<::OcaONo>(4098),
+            static_cast<::OcaBoolean>(true),
+            ::OcaLiteString("Source Select"),
+            switchPorts,
+            static_cast<::OcaUint16>(minPos),
+            static_cast<::OcaUint16>(maxPos),
+            names,
+            enables);
+
+        if (switchActuator && ::OcaLiteBlock::GetRootBlock().AddObject(*switchActuator))
+        {
+            printf("✓ Switch actuator added to device (Object #4098) with %u sources\r\n", names.GetCount());
+        }
+        else
+        {
+            printf("✗ Failed to add switch actuator to device\r\n");
+        }
+    }
+    else
+    {
+        printf("✗ No sources parsed for switch actuator\r\n");
+    }
     bSuccess = bSuccess && static_cast<bool>(::OcaLiteNetworkManager::GetInstance().Initialize());
-    bSuccess = bSuccess && static_cast<bool>(::OcaLiteSubscriptionManager::GetInstance().SetNrEvents(1/*OCA_NR_EVENTS*/));
+    bSuccess = bSuccess && static_cast<bool>(::OcaLiteSubscriptionManager::GetInstance().SetNrEvents(1 /*OCA_NR_EVENTS*/));
     bSuccess = bSuccess && static_cast<bool>(::OcaLiteSubscriptionManager::GetInstance().Initialize());
     bSuccess = bSuccess && static_cast<bool>(::OcaLiteDeviceManager::GetInstance().Initialize());
     bSuccess = bSuccess && static_cast<bool>(::OcaLiteFirmwareManager::GetInstance().Initialize());
 
     if (bSuccess)
     {
-        Ocp1LiteNetworkSystemInterfaceID interfaceId = ::Ocp1LiteNetworkSystemInterfaceID(static_cast< ::OcaUint32>(0));
+        Ocp1LiteNetworkSystemInterfaceID interfaceId = ::Ocp1LiteNetworkSystemInterfaceID(static_cast<::OcaUint32>(0));
         std::vector<std::string> txtRecords;
         txtRecords.push_back("modelGUID=DEADBEEFEATERS");
         ::OcaLiteString nodeId = ::OcaLiteString("OCALite@" + OcfLiteConfigureGetDeviceName());
-        ::Ocp1LiteNetwork* ocp1Network = new ::Ocp1LiteNetwork(static_cast< ::OcaONo>(9000), static_cast< ::OcaBoolean>(true), 
+        ::Ocp1LiteNetwork *ocp1Network = new ::Ocp1LiteNetwork(static_cast<::OcaONo>(9000), static_cast<::OcaBoolean>(true),
                                                                ::OcaLiteString("Ocp1LiteNetwork"), ::Ocp1LiteNetworkNodeID(nodeId),
                                                                interfaceId, txtRecords, ::OcaLiteString("local"), (OcaUint16)connectionPort);
         if (ocp1Network->Initialize())
@@ -131,8 +241,8 @@ int main(int argc, const char* argv[])
                 if (OCASTATUS_OK == rc)
                 {
                     bSuccess = bSuccess && ::OcaLiteCommandHandler::GetInstance().Initialize();
-                    ::OcaLiteDeviceManager::GetInstance().SetErrorAndOperationalState(static_cast< ::OcaBoolean>(!bSuccess), ::OcaLiteDeviceManager::OCA_OPSTATE_OPERATIONAL);
-                    ::OcaLiteDeviceManager::GetInstance().SetEnabled(static_cast< ::OcaBoolean>(bSuccess));
+                    ::OcaLiteDeviceManager::GetInstance().SetErrorAndOperationalState(static_cast<::OcaBoolean>(!bSuccess), ::OcaLiteDeviceManager::OCA_OPSTATE_OPERATIONAL);
+                    ::OcaLiteDeviceManager::GetInstance().SetEnabled(static_cast<::OcaBoolean>(bSuccess));
 
                     OCA_LOG_ERROR("Starting run loop..");
                     while (bSuccess)
@@ -161,7 +271,7 @@ int main(int argc, const char* argv[])
                             }
                         }
 
-                        timeval timeout = { bShortSelect ? 1 : 0, 0} ;
+                        timeval timeout = {bShortSelect ? 1 : 0, 0};
                         select(highestFd + 1, &readset, &writeset, &exceptset, &timeout);
 
                         ::OcaLiteCommandHandler::GetInstance().RunWithSelectSet(readset, writeset, exceptset);
