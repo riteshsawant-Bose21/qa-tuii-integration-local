@@ -1,6 +1,9 @@
 #include "ZoneConfigBuilder.h"
 #include <cstring>
 #include <cstdio>
+#include <cerrno>
+#include <limits>
+#include <cctype>
 
 // Helper trim of simple quotes/spaces
 static std::string trim(const std::string &s)
@@ -137,9 +140,30 @@ static bool parseZonesInternal(const std::string &json, std::vector<ZoneDef> &ou
                                     ++arrStart;
                                 if (skey == "index")
                                 {
-                                    unsigned idx = static_cast<unsigned>(strtoul(arrStart, nullptr, 10));
-                                    s.index = idx;
+                                    errno = 0;
+                                    char *endPtr = nullptr;
+                                    unsigned long val = std::strtoul(arrStart, &endPtr, 10);
+                                    // Validation: must consume at least one digit
+                                    if (endPtr == arrStart)
+                                    {
+                                        // No digits; treat as parse failure for this source field; bail out
+                                        return false;
+                                    }
+                                    // Range / errno check
+                                    if (errno == ERANGE || val > std::numeric_limits<unsigned>::max())
+                                    {
+                                        return false; // out of range
+                                    }
+                                    // Delimiter check: allow space, comma, newline, carriage return, tab, closing brace/array
+                                    if (!(*endPtr == ' ' || *endPtr == '\n' || *endPtr == '\r' || *endPtr == '\t' || *endPtr == ',' || *endPtr == '}' || *endPtr == ']'))
+                                    {
+                                        // Unexpected trailing character; reject
+                                        return false;
+                                    }
+                                    s.index = static_cast<unsigned>(val);
                                     haveIdx = true;
+                                    // Advance arrStart to endPtr so outer loop continues from right position
+                                    arrStart = endPtr;
                                 }
                                 else if (skey == "label")
                                 {
