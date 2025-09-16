@@ -38,7 +38,6 @@ protected:
     virtual ::OcaLiteStatus SetPositionEnabledsValue(const ::OcaLiteList<::OcaBoolean> &enableds) override;
 
 private:
-    ::OcaUint16 m_actualPosition; // Mirror of current position for demonstration
     ConcreteSwitchActuator(const ConcreteSwitchActuator &);
     ConcreteSwitchActuator &operator=(const ConcreteSwitchActuator &);
 };

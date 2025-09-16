@@ -17,8 +17,7 @@ ConcreteSwitchActuator::ConcreteSwitchActuator(::OcaONo objectNumber,
                                                ::OcaUint16 maxPosition,
                                                const ::OcaLiteList<::OcaLiteString> &positionNames,
                                                const ::OcaLiteList<::OcaBoolean> &positionEnable)
-    : ::OcaLiteSwitch(objectNumber, lockable, role, ports, minPosition, maxPosition, positionNames, positionEnable),
-      m_actualPosition(minPosition)
+    : ::OcaLiteSwitch(objectNumber, lockable, role, ports, minPosition, maxPosition, positionNames, positionEnable)
 {
     OCA_LOG_INFO("=== ConcreteSwitchActuator Created ===");
     OCA_LOG_INFO_PARAMS("Object Number: %u", objectNumber);
@@ -29,8 +28,6 @@ ConcreteSwitchActuator::ConcreteSwitchActuator(::OcaONo objectNumber,
 
 ::OcaLiteStatus ConcreteSwitchActuator::SetPositionValue(::OcaUint16 position)
 {
-    // Here you would apply the source selection to underlying audio routing.
-    m_actualPosition = position; // Mirror for potential hardware confirmation.
     OCA_LOG_INFO_PARAMS("[SWITCH] SetPositionValue -> %u", position);
     return OCASTATUS_OK;
 }
