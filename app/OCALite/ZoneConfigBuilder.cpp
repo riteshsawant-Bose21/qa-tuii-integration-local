@@ -294,8 +294,7 @@ BuiltZones BuildZonesFromJson(const std::string &json, ::OcaONo baseZoneGroupONo
             {
                 if (s.index >= minPos && s.index <= maxPos)
                 {
-                    names.RemovePosition(s.index - minPos);
-                    names.Insert(s.index - minPos, ::OcaLiteString(s.label.c_str()));
+                    names[s.index - minPos] = ::OcaLiteString(s.label.c_str());
                 }
             }
             ::OcaLiteList<::OcaLitePort> switchPorts;
