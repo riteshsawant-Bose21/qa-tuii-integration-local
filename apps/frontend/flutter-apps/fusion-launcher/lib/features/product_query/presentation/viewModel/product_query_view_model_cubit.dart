@@ -44,42 +44,132 @@ class ProductQueryCubit extends Cubit<ProductQueryState> {
 
   /// Apply all selected filters to the product list
   List<ProductQueryModel> _getFilteredProducts() {
-    print(
-      "all states: ${state.selectedProductType}, ${state.selectedProductTypes}, ${state.selectedMountTypes}, ${state.selectedVenueTypes}, ${state.selectedColors}, ${state.selectedCoverages}, ${state.selectedImpedances}",
-    );
-
     /// Start with all products
     List<ProductQueryModel> products = ProductAPI.getAllProducts();
 
-    /// Filter by product type
-    print("state.selectedProductType == > ${state.selectedProductType}");
-    if (state.selectedProductType != null) {
-      products = products.where((ProductQueryModel product) => product.type == state.selectedProductType).toList();
-    }
-
-    /// Filter by multiple product types
+    /// Filter by multiple product types from filter dropdown (priority)
     if (state.selectedProductTypes.isNotEmpty) {
       products = products.where((ProductQueryModel product) => state.selectedProductTypes.contains(product.type)).toList();
     }
+    /// Filter by single product type from main dropdown (fallback)
+    else if (state.selectedProductType != null) {
+      products = products.where((ProductQueryModel product) => product.type == state.selectedProductType).toList();
+    }
 
-    /// Filter by other attributes (mount types, venue types, colors, coverages, impedances)
-    if (state.selectedMountTypes.isNotEmpty ||
-        state.selectedVenueTypes.isNotEmpty ||
-        state.selectedCoverages.isNotEmpty ||
-        state.selectedImpedances.isNotEmpty) {
+    /// Filter by color (only for speakers)
+    if (state.selectedColors.isNotEmpty) {
       products =
           products.where((ProductQueryModel product) {
-            if (product.type != ProductType.speaker) return true;
+            // For speakers, only include if they have a matching color (case insensitive)
+            if (product.type == ProductType.speaker) {
+              if (product.color == null) {
+                return false;
+              }
+              final bool matches = state.selectedColors.any((String selectedColor) => selectedColor.toLowerCase() == product.color!.toLowerCase());
+              return matches;
+            }
+            // For non-speakers, always include them
             return true;
           }).toList();
     }
 
-    /// Example placeholder for color filtering
-    if (state.selectedColors.isNotEmpty) {
-      // code for filtering by colors if applicable
+    /// Filter by mount type (only for speakers)
+    if (state.selectedMountTypes.isNotEmpty) {
+      products =
+          products.where((ProductQueryModel product) {
+            // For speakers, only include if they have a matching mounting type (case insensitive)
+            if (product.type == ProductType.speaker) {
+              if (product.mountingType == null) {
+                return false;
+              }
+              final bool matches = state.selectedMountTypes.any((String selectedMount) => selectedMount.toLowerCase() == product.mountingType!.toLowerCase());
+              return matches;
+            }
+            // For non-speakers, always include them
+            return true;
+          }).toList();
+    }
+
+    /// Filter by venue type (only for speakers based on outdoorRated)
+    if (state.selectedVenueTypes.isNotEmpty) {
+      products =
+          products.where((ProductQueryModel product) {
+            // For speakers, filter based on outdoor rating
+            if (product.type == ProductType.speaker) {
+              if (product.outdoorRated == null) {
+                return false;
+              }
+
+              final bool matches = state.selectedVenueTypes.any((String selectedVenue) {
+                if (selectedVenue == 'Indoor') {
+                  // Indoor only matches products that are NOT outdoor rated (false)
+                  return product.outdoorRated == false;
+                } else if (selectedVenue == 'Indoor + Outdoor') {
+                  // Indoor + Outdoor matches products that ARE outdoor rated (true)
+                  return product.outdoorRated == true;
+                }
+                return false;
+              });
+
+              return matches;
+            }
+            // For non-speakers, always include them
+            return true;
+          }).toList();
+    }
+
+    /// Filter by coverage (only for speakers based on maxSpl)
+    if (state.selectedCoverages.isNotEmpty) {
+      products =
+          products.where((ProductQueryModel product) {
+            // For speakers, filter based on maxSpl coverage levels
+            if (product.type == ProductType.speaker) {
+              if (product.maxSpl == null || product.maxSpl == 0.0) {
+                return false;
+              }
+
+              final String coverageLevel = _getCoverageLevelFromMaxSpl(product.maxSpl!);
+              final bool matches = state.selectedCoverages.any((String selectedCoverage) => selectedCoverage.toLowerCase() == coverageLevel.toLowerCase());
+
+              return matches;
+            }
+            // For non-speakers, always include them
+            return true;
+          }).toList();
+    }
+
+    /// Filter by impedance (only for speakers based on nominalOhms)
+    if (state.selectedImpedances.isNotEmpty) {
+      products =
+          products.where((ProductQueryModel product) {
+            // For speakers, filter based on nominalOhms impedance levels
+            if (product.type == ProductType.speaker) {
+              if (product.nominalOhms == null || product.nominalOhms == 0.0) {
+                return false;
+              }
+
+              final String impedanceLevel = _getImpedanceLevelFromOhms(product.nominalOhms!);
+              final bool matches = state.selectedImpedances.any((String selectedImpedance) => selectedImpedance.toLowerCase() == impedanceLevel.toLowerCase());
+              return matches;
+            }
+            // For non-speakers, always include them
+            return true;
+          }).toList();
     }
 
     return products;
+  }
+
+  /// Get coverage level from maxSpl value
+  String _getCoverageLevelFromMaxSpl(double maxSpl) {
+    if (maxSpl < 100) return 'Low';
+    if (maxSpl < 110) return 'Mid';
+    return 'High';
+  }
+
+  /// Get impedance level from nominalOhms value
+  String _getImpedanceLevelFromOhms(double ohms) {
+    return ohms <= 4 ? 'Low' : 'High';
   }
 
   /// Sort products based on selected sort option
@@ -120,7 +210,6 @@ class ProductQueryCubit extends Cubit<ProductQueryState> {
   }
 
   void onSortOptionChanged(SortOption? option) {
-    print("Sort option changed to: $option"); // Debug log
     emit(
       state.copyWith(
         selectedSortOption: option,
@@ -130,8 +219,12 @@ class ProductQueryCubit extends Cubit<ProductQueryState> {
   }
 
   void onFiltersChanged() {
+    // Sync selectedProductType with selectedProductTypes when filters change
+    final ProductType? singleProductType = state.selectedProductTypes.length == 1 ? state.selectedProductTypes.first : null;
+
     emit(
       state.copyWith(
+        selectedProductType: singleProductType,
         filteredProducts: _performSearch(state.searchQuery),
       ),
     );

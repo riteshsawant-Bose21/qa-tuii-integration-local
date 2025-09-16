@@ -10,6 +10,10 @@ class ProductQueryModel {
     this.specifications = '',
     required this.sku,
     this.color,
+    this.mountingType,
+    this.outdoorRated,
+    this.maxSpl,
+    this.nominalOhms,
   });
 
   final String name;
@@ -19,4 +23,8 @@ class ProductQueryModel {
   final String sku;
   final String specifications;
   final String? color;
+  final String? mountingType;
+  final bool? outdoorRated;
+  final double? maxSpl;
+  final double? nominalOhms;
 }

@@ -16,6 +16,7 @@ class ProductQueryView extends StatelessWidget {
   ProductType? getCurrentProductType(int index) {
     if (index == -1) return null;
     if (index == 0) return ProductType.speaker;
+    if (index == 2) return ProductType.endpoints;
     if (index == 3) return ProductType.amplifier;
     if (index == 4) return ProductType.dsps;
     if (index == 5) return ProductType.controllers;
@@ -324,17 +325,17 @@ class ProductAPI {
       final List<dynamic> speakersData = jsonDecode(speakersJson);
       // print("Speakers Data: $speakersData");
       return speakersData.map((dynamic speakerData) {
-        print(speakerData);
         return ProductQueryModel(
           name: speakerData['model'] ?? '',
           price: (speakerData['price'] ?? 0.0).toDouble(),
           image: speakerData["image_url"],
           type: ProductType.speaker,
           color: speakerData["color"],
+          mountingType: speakerData["mounting_type"],
+          outdoorRated: speakerData["outdoor_rated"],
+          maxSpl: speakerData["max_spl"],
+          nominalOhms: speakerData["nominal_ohms"],
           sku: 'MSA12XOHS',
-
-          //speakerData['model'] ??
-          specifications: '${speakerData['maxSpl']} dB SPL • ${speakerData['mountingType']}',
         );
       }).toList();
     } catch (e) {
@@ -347,7 +348,6 @@ class ProductAPI {
     try {
       final String amplifiersJson = fusionDevices.getAmplifiers();
       final List<dynamic> amplifiersData = jsonDecode(amplifiersJson);
-      print("Amplifiers Data: $amplifiersData");
 
       return amplifiersData.map((dynamic ampData) {
         return ProductQueryModel(
@@ -374,14 +374,13 @@ class ProductAPI {
       // print("Devices Data: $devicesData");
 
       return devicesData.map((dynamic deviceData) {
-        print("deviceData['imageUrl'] == > ${deviceData['imageUrl']}");
         return ProductQueryModel(
           name: deviceData['name'] ?? '',
           price: 0.0,
           // Add price if available in fusion_lib device model
           image: deviceData['image_url'] ?? '',
           // Add image if available in fusion_lib device model
-          type: ProductType.controllers,
+          type: ProductType.dsps, // Fixed: should be dsps, not controllers
           sku: deviceData['name'] ?? '',
           specifications: '${deviceData['analogInputs']}in • ${deviceData['analogOutputs']}out • ${deviceData['networkIO']} network I/O',
         );
@@ -396,10 +395,8 @@ class ProductAPI {
     try {
       final String controllersJson = fusionDevices.getControllers();
       final List<dynamic> controllersData = jsonDecode(controllersJson);
-      print("Controllers Data: $controllersData");
 
       return controllersData.map((dynamic data) {
-        print("controllersData['image_url'] == > ${data['image_url']}");
         return ProductQueryModel(
           name: data['name'] ?? '',
           price: 0.0,
@@ -424,14 +421,13 @@ class ProductAPI {
       // print("Devices Data: $devicesData");
 
       return controllersData.map((dynamic deviceData) {
-        print("deviceData['imageUrl'] == > ${deviceData['imageUrl']}");
         return ProductQueryModel(
           name: deviceData['name'] ?? '',
           price: 0.0,
           // Add price if available in fusion_lib device model
           image: deviceData['image_url'] ?? '',
           // Add image if available in fusion_lib device model
-          type: ProductType.controllers,
+          type: ProductType.endpoints, // Fixed: should be endpoints, not controllers
           sku: deviceData['name'] ?? '',
           specifications: '${deviceData['analogInputs']}in • ${deviceData['analogOutputs']}out • ${deviceData['networkIO']} network I/O',
         );

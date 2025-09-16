@@ -15,3 +15,16 @@ enum SortOption {
   nameAToZ,
   nameZToA,
 }
+
+/// Coverage levels enum
+enum CoverageLevel {
+  low,
+  mid,
+  high,
+}
+
+/// Impedance levels enum
+enum ImpedanceLevel {
+  low,
+  high,
+}

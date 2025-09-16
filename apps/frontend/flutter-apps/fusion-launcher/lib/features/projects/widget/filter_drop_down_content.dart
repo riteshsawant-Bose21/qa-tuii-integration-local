@@ -121,7 +121,7 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
               _buildFilterSection(
                 title: 'Venue Type',
                 image: "assets/images/venue_type.png",
-                options: <String>['Indoor', 'Outdoor'],
+                options: <String>['Indoor', 'Indoor + Outdoor'],
                 selectedOptions: _localVenueTypes,
                 onChanged: (Set<String> selected) {
                   setState(() {
@@ -131,19 +131,20 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
                 },
               ),
 
-            /// Color Filter
-            _buildFilterSection(
-              title: 'Color',
-              image: "assets/images/color.png",
-              options: <String>['White', 'Black'],
-              selectedOptions: _localColors,
-              onChanged: (Set<String> selected) {
-                setState(() {
-                  _localColors = selected;
-                });
-                _applyFilters();
-              },
-            ),
+            /// Color Filter (only for speakers or when no specific product type is selected)
+            if (_localProductTypes.isEmpty || _localProductTypes.contains(ProductType.speaker))
+              _buildFilterSection(
+                title: 'Color',
+                image: "assets/images/color.png",
+                options: <String>['White', 'Black'],
+                selectedOptions: _localColors,
+                onChanged: (Set<String> selected) {
+                  setState(() {
+                    _localColors = selected;
+                  });
+                  _applyFilters();
+                },
+              ),
 
             /// Coverage Filter (only for speakers)
             if (_localProductTypes.isEmpty || _localProductTypes.contains(ProductType.speaker))
@@ -180,7 +181,7 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
     );
   }
 
-  /// Build individual filter section with radio buttons
+  /// Build individual filter section with radio buttons or checkboxes
   Widget _buildFilterSection({
     required String title,
     required String image,
@@ -214,9 +215,10 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
         ],
       ),
       children:
-          title == "Product Type"
+          (title == "Product Type")
               ? options.map((String option) {
                 final bool isSelected = selectedOptions.contains(option);
+                print("$title - option: $option, isSelected: $isSelected");
                 return RadioListTile<String>(
                   dense: true,
                   contentPadding: EdgeInsets.zero,
@@ -231,6 +233,7 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
                   groupValue: selectedOptions.isNotEmpty ? selectedOptions.first : null,
                   activeColor: Theme.of(context).colorScheme.greyDark,
                   onChanged: (String? value) {
+                    print("$title radio changed: $value");
                     final Set<String> newSelected = <String>{};
                     if (value != null && !isSelected) {
                       newSelected.add(value);
@@ -313,6 +316,8 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
         return ProductType.amplifier;
       case 'Controllers':
         return ProductType.controllers;
+      case 'Endpoints':
+        return ProductType.endpoints;
       case 'Sources':
         return ProductType.sources;
       case 'DSPs':
@@ -322,6 +327,7 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
     }
   }
 
+  /// Apply local filter selections to the parent widget
   void _applyFilters() {
     widget.selectedProductTypes.clear();
     widget.selectedProductTypes.addAll(_localProductTypes);
