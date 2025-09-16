@@ -4,6 +4,8 @@ import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
+import '../../../../../core/widgets/color_selector_popup.dart';
+
 class ZoneAndListeningAreaPanel extends StatefulWidget {
   const ZoneAndListeningAreaPanel({super.key});
 
@@ -274,14 +276,50 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
   }
 
   Widget _buildZoneIndicator(Zone zone) {
-    return Container(
-      width: 4,
+    return ColorSelector(
+      selectedColor: hexToColor(zone.zoneColor),
+      availableColors: Zone.zoneColors.map((String color) => hexToColor(color)).toList(),
+      onColorChanged: (Color color) {
+        serviceLocator<ProjectViewModel>().updateZone(zone.copyWith(zoneColor: colorToHex(color)));
+      },
+      width: 5,
       height: 24,
-      decoration: BoxDecoration(
-        color: zone.color,
-        borderRadius: BorderRadius.circular(2),
-      ),
+      borderRadius: 4,
     );
+    // return Container(
+    //   width: 4,
+    //   height: 24,
+    //   decoration: BoxDecoration(
+    //     color: zone.color,
+    //     borderRadius: BorderRadius.circular(2),
+    //   ),
+    // );
+  }
+
+  static Color hexToColor(String hexString) {
+    final StringBuffer buffer = StringBuffer();
+    if (hexString.startsWith('#')) hexString = hexString.substring(1);
+    if (hexString.length == 6) buffer.write('FF');
+    buffer.write(hexString);
+    return Color(int.parse(buffer.toString(), radix: 16));
+  }
+
+  static String colorToHex(Color color, {bool includeAlpha = false}) {
+    String twoHex(int v) => v.toRadixString(16).padLeft(2, '0');
+
+    final int a = (color.a * 255.0).round() & 0xff;
+    final int r = (color.r * 255.0).round() & 0xff;
+    final int g = (color.g * 255.0).round() & 0xff;
+    final int b = (color.b * 255.0).round() & 0xff;
+
+    final StringBuffer buffer = StringBuffer();
+    if (includeAlpha) buffer.write(twoHex(a));
+    buffer
+      ..write(twoHex(r))
+      ..write(twoHex(g))
+      ..write(twoHex(b));
+
+    return '#${buffer.toString().toUpperCase()}';
   }
 
   Widget _buildZoneTitle(Zone zone, bool isSelected) {

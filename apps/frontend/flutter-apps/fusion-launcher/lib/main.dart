@@ -14,6 +14,7 @@ import 'package:nested/nested.dart' show SingleChildWidget;
 import 'features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'features/dashboard/presentation/pages/dashboard_page.dart';
 import 'features/dynamic_config/presentation/bloc/panel_bloc.dart';
+import 'features/product_query/presentation/viewModel/product_query_view_model_cubit.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -59,6 +60,9 @@ class MyApp extends StatelessWidget {
         ),
         BlocProvider<ProjectViewModel>(
           create: (BuildContext context) => serviceLocator<ProjectViewModel>(),
+        ),
+        BlocProvider<ProductQueryCubit>(
+          create: (BuildContext context) => serviceLocator<ProductQueryCubit>(),
         ),
       ],
       child: FusionThemeBuilder(

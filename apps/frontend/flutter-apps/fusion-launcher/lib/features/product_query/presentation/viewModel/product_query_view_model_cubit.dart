@@ -112,7 +112,7 @@ class ProductQueryCubit extends Cubit<ProductQueryState> {
     emit(
       state.copyWith(
         selectedProductType: type,
-        filteredProducts: _performSearch(state.searchQuery),
+        filteredProducts: type != null ? ProductAPI.getProductsByType(type) : ProductAPI.getAllProducts(),
       ),
     );
   }

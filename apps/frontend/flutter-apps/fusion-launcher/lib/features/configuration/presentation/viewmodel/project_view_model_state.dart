@@ -36,3 +36,12 @@ final class ZoneSelectionMode extends ProjectViewModelState {
   final Zone zone;
   ZoneSelectionMode(this.zone);
 }
+
+final class ListeningAreaSelectionMode extends ProjectViewModelState {
+  ListeningAreaSelectionMode();
+}
+
+final class DeviceTypeIndexChanged extends ProjectViewModelState {
+  final int index;
+  DeviceTypeIndexChanged(this.index);
+}

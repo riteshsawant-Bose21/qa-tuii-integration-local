@@ -142,6 +142,17 @@ extension HardwareViewModel on ProjectViewModel {
           type: OutputType.analogOutput,
           price: product.price,
         );
+      case ProductType.sources:
+        return Source(
+          locationEntity: locationEntity,
+          name: product.name,
+          pos: pos,
+          assetImagePath: product.image,
+          sku: product.sku,
+          price: product.price,
+          hardwareName: product.name,
+          type: SourceType.analogInput,
+        );
       case ProductType.amplifier:
       case ProductType.device:
         return GenericHardwareComponent(

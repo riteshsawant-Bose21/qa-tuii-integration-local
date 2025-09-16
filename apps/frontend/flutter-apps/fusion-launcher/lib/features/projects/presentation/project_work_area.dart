@@ -80,6 +80,7 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
 
   final ExpansibleController productsController = ExpansibleController();
   final ExpansibleController splController = ExpansibleController();
+  final ExpansibleController zoneAreaController = ExpansibleController();
 
   @override
   Widget build(BuildContext context) {
@@ -296,6 +297,8 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                                 if (value) {
                                   productsController.collapse();
                                   splController.expand();
+                                } else {
+                                  splController.collapse();
                                 }
                               },
                             );
@@ -315,18 +318,18 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                             title: "COVERAGE",
                             side: "left",
                             alowUndock: false,
-                            initiallyExpanded: false,
+                            initiallyExpanded: true,
                             isCollapsibleSection: true,
-                            dockItemWidget: () => const CoveragePanel(),
+                            dockItemWidget:
+                                () => CoveragePanel(
+                                  onModeSelection: (bool value) {
+                                    if (value) {
+                                      zoneAreaController.expand();
+                                    }
+                                  },
+                                ),
                           ),
-                          DockItemConfig(
-                            id: "3",
-                            title: "Zone & Listening Areas",
-                            side: "left",
-                            initiallyExpanded: serviceLocator<ProjectViewModel>().isInZoneSelectionMode,
-                            isVisible: serviceLocator<ProjectViewModel>().isInZoneSelectionMode,
-                            dockItemWidget: () => const ZoneAndListeningAreaPanel(),
-                          ),
+
                           DockItemConfig(
                             id: "4",
                             title: "DEVICES",
@@ -372,6 +375,15 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                                           )
                                           .toList(),
                                 ),
+                          ),
+                          DockItemConfig(
+                            id: "3",
+                            title: "ZONE & LISTENING AREAS",
+                            side: "right",
+                            controller: zoneAreaController,
+                            initiallyExpanded: serviceLocator<ProjectViewModel>().isInZoneSelectionMode,
+                            // isVisible: serviceLocator<ProjectViewModel>().isInZoneSelectionMode ,
+                            dockItemWidget: () => const ZoneAndListeningAreaPanel(),
                           ),
                           DockItemConfig(
                             id: "7",

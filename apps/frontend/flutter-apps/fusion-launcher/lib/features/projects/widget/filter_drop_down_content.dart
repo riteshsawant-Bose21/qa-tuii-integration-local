@@ -267,6 +267,8 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
         return 'Amplifiers';
       case ProductType.device:
         return 'Devices';
+      case ProductType.sources:
+        return 'Sources';
     }
   }
 
@@ -278,6 +280,8 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
         return ProductType.amplifier;
       case 'Devices':
         return ProductType.device;
+      case 'Sources':
+        return ProductType.sources;
       default:
         return null;
     }

@@ -111,7 +111,7 @@ class FloorCanvasState extends State<FloorCanvas> {
   ui.Image? _floorPlanImage;
   Offset? _planOrigPosition;
 
-  int? _selectedHardwareComponent;
+  String? _selectedHardwareComponentId;
   bool _isHardwareComponentDragging = false;
   bool _isHardwareComponentRotating = false;
   late Offset _hardwareComponentDragStart;
@@ -145,7 +145,7 @@ class FloorCanvasState extends State<FloorCanvas> {
           _isDrawing = !_isDrawing;
           _current.clear();
           _highlightIndex = null;
-          _selectedHardwareComponent = null;
+          _selectedHardwareComponentId = null;
         });
       },
       toggleSpl: () => setState(() => showSpl = !showSpl),
@@ -154,15 +154,15 @@ class FloorCanvasState extends State<FloorCanvas> {
       loadFloorPlanImage: () => _loadPlanImage(),
       updateView: () => setState(() {}),
       setSelectedHardwareComponent: (HardwareComponent hardwareComponent) {
-        final int idx = widget.hardwareComponents.indexWhere((HardwareComponent sp) => sp.id == hardwareComponent.id);
-        if (idx != -1) {
-          print("setting hardware component idx $idx speaker at pos is ${widget.hardwareComponents[idx].id}");
-          setState(() {
-            _selectedHardwareComponent = idx;
-            _isHardwareComponentDragging = false;
-            _isHardwareComponentRotating = false;
-          });
-        }
+        // final int idx = widget.hardwareComponents.indexWhere((HardwareComponent sp) => sp.id == hardwareComponent.id);
+        // if (idx != -1) {
+        print("setting hardware component speaker at pos is selected is ${hardwareComponent.id}");
+        setState(() {
+          _selectedHardwareComponentId = hardwareComponent.id;
+          _isHardwareComponentDragging = false;
+          _isHardwareComponentRotating = false;
+        });
+        // }
       },
       setHardwareComponentListeningAreaId: (HardwareComponent hardwareComponent) => _updateHardwareComponentListeningAreaId(hardwareComponent),
     );
@@ -214,7 +214,7 @@ class FloorCanvasState extends State<FloorCanvas> {
                     highlightedIndex: _highlightIndex,
                     floorPlanImageSelected: _isImageSelected || _isImageVertexDrag,
                     hardwareComponents: widget.hardwareComponents,
-                    selectedHardwareComponentIndex: _selectedHardwareComponent,
+                    selectedHardwareComponentId: _selectedHardwareComponentId,
                     showSpl: showSpl,
                     floorPlanEntity: _tempFloorPlan ?? widget.floorPlanEntity,
                     floorPlanImage: _floorPlanImage,
@@ -292,14 +292,14 @@ class FloorCanvasState extends State<FloorCanvas> {
 
   void _deselectAll() {
     setState(() {
-      // _selectedHardwareComponent = null;
-      // _isHardwareComponentDragging = false;
-      // _isHardwareComponentRotating = false;
-      // _isListeningAreaVertexDragging = false;
-      // _isListeningAreaDragging = false;
-      // _dragIndex = null;
-      // _dragVertexIndex = null;
-      // _highlightIndex = null;
+      _selectedHardwareComponentId = null;
+      _isHardwareComponentDragging = false;
+      _isHardwareComponentRotating = false;
+      _isListeningAreaVertexDragging = false;
+      _isListeningAreaDragging = false;
+      _dragIndex = null;
+      _dragVertexIndex = null;
+      _highlightIndex = null;
     });
   }
 
@@ -397,9 +397,9 @@ class FloorCanvasState extends State<FloorCanvas> {
         if ((worldPos - sp.pos).distance < hitRadius) {
           _stopListeningAreaSelection();
           widget.onSelectedHardwareComponentIdChanged(sp.id);
-          print("setting speaker hit to index $i speaker at pos is ${widget.hardwareComponents[i].id}");
+          print("setting speaker hit (${worldPos.dx}, ${worldPos.dy}) to index $i speaker at pos is ${widget.hardwareComponents[i].id}, selected is ${sp.id}");
           setState(() {
-            _selectedHardwareComponent = i;
+            _selectedHardwareComponentId = sp.id;
             _isHardwareComponentDragging = true;
             _hardwareComponentDragStart = worldPos;
             _hardwareComponentOrigPos = sp.pos;
@@ -599,8 +599,8 @@ class FloorCanvasState extends State<FloorCanvas> {
     // }
 
     // hardware component drag
-    if (_isHardwareComponentDragging && _selectedHardwareComponent != null) {
-      final HardwareComponent hardwareComponent = widget.hardwareComponents[_selectedHardwareComponent!];
+    if (_isHardwareComponentDragging && _selectedHardwareComponentId != null) {
+      final HardwareComponent hardwareComponent = widget.hardwareComponents.firstWhere((HardwareComponent sp) => sp.id == _selectedHardwareComponentId);
       final ui.Offset delta = worldPos - _hardwareComponentDragStart;
       setState(() => hardwareComponent.pos = _hardwareComponentOrigPos! + delta);
       widget.onUpdateHardwareComponent(hardwareComponent);
@@ -676,17 +676,20 @@ class FloorCanvasState extends State<FloorCanvas> {
     if (e.kind != PointerDeviceKind.mouse) return;
 
     if (_isHardwareComponentRotating) {
+      final HardwareComponent hardwareComponent = widget.hardwareComponents.firstWhere((HardwareComponent sp) => sp.id == _selectedHardwareComponentId);
+
       setState(() {
         _isHardwareComponentRotating = false;
-        widget.onComponentTransformed(widget.hardwareComponents[_selectedHardwareComponent!]);
+        widget.onComponentTransformed(hardwareComponent);
       });
     }
     if (_isHardwareComponentDragging) {
       print("is dragging up $_isHardwareComponentDragging is true, calling _updateHardwareComponentListeningAreaId ");
+      final HardwareComponent hardwareComponent = widget.hardwareComponents.firstWhere((HardwareComponent sp) => sp.id == _selectedHardwareComponentId);
       setState(() {
         _isHardwareComponentDragging = false;
-        _updateHardwareComponentListeningAreaId(widget.hardwareComponents[_selectedHardwareComponent!]);
-        widget.onComponentTransformed(widget.hardwareComponents[_selectedHardwareComponent!]);
+        _updateHardwareComponentListeningAreaId(hardwareComponent);
+        widget.onComponentTransformed(hardwareComponent);
       });
     }
     if (_isListeningAreaVertexDragging) {
