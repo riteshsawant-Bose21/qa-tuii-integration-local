@@ -189,8 +189,7 @@ int main(int argc, const char *argv[])
         {
             if (s.index >= minPos && s.index <= maxPos)
             {
-                names.RemovePosition(s.index - minPos); // replace
-                names.Insert(s.index - minPos, ::OcaLiteString(s.label.c_str()));
+                names[s.index - minPos] = ::OcaLiteString(s.label.c_str()); // replace
             }
         }
 
