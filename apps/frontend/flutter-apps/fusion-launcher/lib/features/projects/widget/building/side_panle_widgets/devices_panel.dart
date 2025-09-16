@@ -56,7 +56,6 @@ class _DevicesPanelState extends State<DevicesPanel> {
     return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
       builder: (BuildContext context, ProjectViewModelState state) {
         return Container(
-          width: 280,
           margin: const EdgeInsets.only(left: 10),
           // color: Colors.grey[50],
           child: Column(

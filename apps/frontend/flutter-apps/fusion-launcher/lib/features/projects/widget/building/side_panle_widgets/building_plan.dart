@@ -332,25 +332,45 @@ class _BuildingPlanState extends State<BuildingPlan> {
 
                                   // Edit icon and delete button for selected floor
                                   if (isSelected) ...<Widget>[
-                                    IconButton(
-                                      icon: Icon(
-                                        isEditing ? Icons.check : Icons.edit,
-                                        size: 16,
-                                        color: Theme.of(context).colorScheme.fusionTextViewColor,
-                                      ),
-                                      onPressed: () {
-                                        if (isEditing) {
-                                          _saveFloorName(index);
-                                        } else {
+                                    (isEditing)
+                                        ? IconButton(
+                                          icon: Icon(
+                                            Icons.check,
+                                            size: 16,
+                                            color: Theme.of(context).colorScheme.fusionTextViewColor,
+                                          ),
+                                          onPressed: () async {
+                                            // Prevent multiple rapid taps
+                                            if (_editingFloorIndex != index) return;
+
+                                            _saveFloorName(index);
+                                          },
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(
+                                            minWidth: 24,
+                                            minHeight: 24,
+                                          ),
+                                        )
+                                        : Container(),
+                                    if (!isEditing)
+                                      IconButton(
+                                        icon: Icon(
+                                          Icons.edit,
+                                          size: 16,
+                                          color: Theme.of(context).colorScheme.fusionTextViewColor,
+                                        ),
+                                        onPressed: () {
+                                          // Prevent starting edit if already editing
+                                          if (_editingFloorIndex != null) return;
+
                                           _startEditingFloor(index, floor.name);
-                                        }
-                                      },
-                                      padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(
-                                        minWidth: 24,
-                                        minHeight: 24,
+                                        },
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(
+                                          minWidth: 24,
+                                          minHeight: 24,
+                                        ),
                                       ),
-                                    ),
                                     // Only show delete if there's more than one floor and not editing
                                     if (floors.length > 1 && !isEditing)
                                       GestureDetector(

@@ -38,8 +38,6 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
     return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
       builder: (BuildContext context, ProjectViewModelState state) {
         return SizedBox(
-          width: 280,
-
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
