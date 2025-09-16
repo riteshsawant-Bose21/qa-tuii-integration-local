@@ -93,7 +93,6 @@ static int ads7128_show_gpio(struct endpoint *ads7128, u8 pin_num, bool *is_adc)
     rd_opcode_buf[1] = ADS7128_REG_PIN_CFG;
     ret = i2c_transfer(client->adapter, msgs, 2);
     if (ret < 0) {
-        printk(KERN_ERR "ads7128_configure: failed read EVENT_FLAG\n");
         return ret;
     }
 
@@ -377,7 +376,6 @@ static ssize_t ads7128_cmd_regop(struct device *dev, struct device_attribute *at
         if (ret < 0)
             return ret;
         ep_cmd->i2c_cmds[0].data_mask = rd_data_buf[0]; // Store for show
-		printk(KERN_INFO "0x%02x\n", rd_data_buf[0]);
     } else {
         return -EINVAL; // Invalid format
     }

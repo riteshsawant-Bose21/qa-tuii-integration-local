@@ -422,8 +422,6 @@ int ads7128_handle_irq(struct endpoint_gpio *ep_gpio)
     }
     event_mask = *rd_data_buf;
 
-    printk(KERN_DEBUG "ads7128_handle_irq: event_mask=0x%02x\n", event_mask);
-
     // nothing to do?
     if (!event_mask) {
         return 0;
@@ -437,8 +435,6 @@ int ads7128_handle_irq(struct endpoint_gpio *ep_gpio)
         return ret;
     }
     pin_cfg = *rd_data_buf;
-
-    printk(KERN_DEBUG "ads7128_handle_irq: pin_cfg=0x%02x\n", pin_cfg);
 
     // Process interrupts for all channels in the mask
     for (channel = 0; channel < 8; channel++) {
@@ -463,8 +459,6 @@ int ads7128_handle_irq(struct endpoint_gpio *ep_gpio)
             adc_value = *(u16 *)rd_data_buf; // 12-bit value (i think its 16bit...)
             gpio->value = adc_value;   // Store ADC value
 
-            printk(KERN_DEBUG "ads7128_handle_irq: adc_value=0x%04x\n", adc_value);
-
             // Update thresholds (±32)
             new_high = adc_value > 0xffdf ? 0xffff : adc_value + 0x0020 ;
             new_low = adc_value < 0x0020 ? 0 : adc_value - 0x0020;
@@ -475,8 +469,6 @@ int ads7128_handle_irq(struct endpoint_gpio *ep_gpio)
             if (new_low == 0) {
                 new_high = 0x0040;
             }
-
-            printk(KERN_DEBUG "ads7128_handle_irq: new_high=0x%04x, new_low=0x%04x\n", new_high, new_low);
 
             // Use word writes for high and low thresholds
             wr_buf[1] = ADS7128_REG_HIGH_TH_CH0 + channel * 4;
@@ -503,8 +495,6 @@ int ads7128_handle_irq(struct endpoint_gpio *ep_gpio)
                 return ret;
             }
             gpi_value = *rd_data_buf;
-
-            printk(KERN_DEBUG "ads7128_handle_irq: gpi_value=0x%02x\n", gpi_value);
         }
 
         // clear event flag bits
@@ -1463,7 +1453,6 @@ static int fusion_io_probe(struct platform_device *pdev)
 
             // IDEA: maybe we can have patches for HW revisions? apply here
 
-            // set io cards slot number
             ic->slot = i;
 
             // get endpoint i2c clients
@@ -1491,9 +1480,6 @@ static int fusion_io_probe(struct platform_device *pdev)
                     ret = -ENODEV;
                     goto error;
                 }
-
-                // do configuring of endpoint default configure command here?
-                // setup_configure_ep_cmd(&ep->cmds[EP_CMD_TYPE_CFG]);
                 
                 ret = configure_i2c_endpoint(ep);
                 if (ret) {
@@ -1503,16 +1489,13 @@ static int fusion_io_probe(struct platform_device *pdev)
                 dev_dbg(&pdev->dev, "Successfully registered endpoint %s!\n", ep->name);
             }
 
-            // set up parent references
             configure_io_card_references(ic);
 
-            // configure GPIOs
             ret = configure_io_card_gpios(ic);
             if (ret) {
                 goto error;
             }
 
-            // create sysfs entries
             ret = fusion_io_create_sysfs_io_card(pdev, ic);
             if (ret) {
                 goto error;
