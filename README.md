@@ -25,17 +25,15 @@ Each project resides in its own dedicated folder and is maintained, tested, and 
 ```
 ---
 
-# Git Branch Workflow Strategy
-
 ## Branch Naming Conventions
 ```
 | Branch Name       | Purpose                                                                 |
 |-------------------|-------------------------------------------------------------------------|
-| `release`         | Production-ready code, ready for deployment                            |
-| `develop`         | Integration branch with latest tested features, leading to `release`    |
-| `feature/*`       | New features in progress (e.g., `feature-login1234`)                    |
-| `bugfix/*`        | Bug fixes during development/QA (e.g., `bugfix-navbar1213`)             |
-| `hotfix/*`        | Urgent production patches (e.g., `hotfix-login-crash1414`)              |
+| release/*         | Production-ready code, ready for deployment                             |
+| develop           | Integration branch with latest tested features, leading to `release`    |
+| feature/*         | New features in progress (e.g., `feature-login1234`)                    |
+| bugfix/*          | Bug fixes during development/QA (e.g., `bugfix-navbar1213`)             |
+| hotfix/*          | Urgent production patches (e.g., `hotfix-login-crash1414`)              |
 ```
 ---
 
@@ -57,26 +55,26 @@ Each project resides in its own dedicated folder and is maintained, tested, and 
 - **Naming convention:** `feature-<description><TICKET_NUMBER>`
 - **Source:** Branched from `develop`
 - **Purpose:** Isolated development of **new features**
-- **Builds:** ❌ **CI/CD builds are skipped unless PR to `develop` is opened**
+- **Builds:** CI/CD builds are skipped unless PR to `develop` is opened
 - **End:** Merged to `develop` via PR
 
 ### `bugfix/*`
 - **Naming convention:** `bugfix-<description><TICKET_NUMBER>`
 - **Source:** Branched from `develop`
 - **Purpose:** Fixing issues found during development or QA
-- **Builds:** ❌ **CI/CD builds are skipped unless PR to `develop` is opened**
+- **Builds:** CI/CD builds are skipped unless PR to `develop` is opened
 - **End:** Merged to `develop` via PR
 
 ### `hotfix/*`
 - **Naming convention:** `hotfix-<description><TICKET_NUMBER>`
 - **Source:** Branched from `release`
 - **Purpose:** Urgent production patches
-- **Builds:** ❌ **Builds are skipped unless PR to `release` is opened**
+- **Builds:** Builds are skipped unless PR to `release` is opened
 - **End:** Merged to `release`, then **back-merged to `develop`**
 
 ---
 
-## 🔄 CI/CD Build Rules
+## CI/CD Build Rules
 ```
 | Branch           | Build Trigger       | Condition                                     |
 |------------------|---------------------|-----------------------------------------------|
@@ -86,6 +84,7 @@ Each project resides in its own dedicated folder and is maintained, tested, and 
 | `bugfix/*`       | ❌ Skipped          | ✅ Only if PR to `develop` is opened          |
 | `hotfix/*`       | ❌ Skipped          | ✅ Only if PR to `release` is opened          |
 ```
+---
 
 ## Merge Flow Diagram
 ```
