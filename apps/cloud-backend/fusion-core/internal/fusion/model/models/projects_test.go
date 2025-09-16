@@ -568,7 +568,7 @@ func testProjectsSelect(t *testing.T) {
 }
 
 var (
-	projectDBTypes = map[string]string{`ID`: `integer`, `Name`: `character varying`, `Description`: `text`, `TempVenue`: `text`, `Metadata`: `jsonb`, `CreatedAt`: `timestamp without time zone`, `UpdatedAt`: `timestamp without time zone`}
+	projectDBTypes = map[string]string{`ID`: `uuid`, `OrganizationID`: `uuid`, `Name`: `text`, `Description`: `text`, `Venue`: `text`, `VenueType`: `text`, `Application`: `text`, `Budget`: `jsonb`, `MetaData`: `jsonb`, `ProjectFileURL`: `text`, `CreatedAt`: `timestamp with time zone`, `UpdatedAt`: `timestamp with time zone`}
 	_              = bytes.MinRead
 )
 

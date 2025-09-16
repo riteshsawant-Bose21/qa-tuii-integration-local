@@ -68,3 +68,21 @@ func (h *ProjectHandler) DeleteProject(ctx *gin.Context) {
 	}
 	ctx.JSON(204, nil)
 }
+
+// SyncProject triggers synchronization for a project by ID
+func (h *ProjectHandler) SyncProject(ctx *gin.Context) {
+	id := ctx.Param("id")
+	var req struct {
+		MetaData   map[string]interface{} `json:"meta_data"`
+		ZipFileURL string                 `json:"zip_file_url"`
+	}
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	if err := h.project.SyncProject(ctx, id, req.MetaData, req.ZipFileURL); err != nil {
+		ctx.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(200, gin.H{"message": "Project sync initiated"})
+}
