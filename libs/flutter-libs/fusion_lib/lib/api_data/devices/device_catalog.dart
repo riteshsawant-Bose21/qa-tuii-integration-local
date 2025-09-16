@@ -1,48 +1,84 @@
-/// DSP device catalog containing product specifications
+/// Device catalog containing product specifications
 /// 
-/// This module contains the DSP device catalog that would typically be
+/// This module contains the device catalog that would typically be
 /// contains hardcoded data for development and testing purposes.
 
 import 'device_types.dart';
 
-/// DSP Device catalog with all available Fusion devices
+/// Device catalog with all available Fusion devices
 class DeviceCatalog {
-  static const List<DeviceSpec> devices = [
+  /// List of DSP devices
+  static const List<DeviceSpec> dspDevices = [
     DeviceSpec(
       name: "4ch PowerSmart", 
       analogInputs: 4, 
       analogOutputs: 4, 
-      networkIO: 0,
-      imageUrl: 'assets/images/bose_dsp.png'
+      networkInputs: 4,
+      networkOutputs: 4,
+      imageUrl: 'assets/images/bose_dsp.png',
+      price: 100.0,
     ),
     DeviceSpec(
       name: "8ch PowerSmart", 
       analogInputs: 8, 
       analogOutputs: 8, 
-      networkIO: 0,
-      imageUrl: 'assets/images/bose_dsp.png'
+      networkInputs: 8,
+      networkOutputs: 8,
+      imageUrl: 'assets/images/bose_dsp.png',
+      price: 200.0,
     ),
     DeviceSpec(
       name: "FM6", 
-      analogInputs: 6, 
-      analogOutputs: 0, 
-      networkIO: 24, // Fusion Mini - 6 analog inputs + network I/O (24 limit)
-      imageUrl: 'assets/images/bose_dsp.png'
+      analogInputs: 4, 
+      analogOutputs: 4, 
+      networkInputs: 0,
+      networkOutputs: 0,
+      imageUrl: 'assets/images/bose_dsp.png',
+      price: 300.0,
     ),
     DeviceSpec(
       name: "FM8Y", 
-      analogInputs: 8, 
+      analogInputs: 4, 
       analogOutputs: 8, 
-      networkIO: 24, // Fusion Mini - 8 analog ins/outs + network I/O (24 limit)
-      imageUrl: 'assets/images/bose_dsp.png'
+      networkInputs: 8,
+      networkOutputs: 8,
+      imageUrl: 'assets/images/bose_dsp.png',
+      price: 400.0,
     ),
   ];
 
+  /// List of non-DSP devices (amplifiers, network devices, etc.)
+  static const List<DeviceSpec> otherDevices = [
+    DeviceSpec(
+      name: "FusionConnect", 
+      analogInputs: 24, 
+      analogOutputs: 24, 
+      networkInputs: 0,
+      networkOutputs: 0,
+      imageUrl: 'assets/images/bose_dsp.png',
+      price: 150.0,
+    ),
+    DeviceSpec(
+      name: "PowerPure Amplifier", 
+      analogInputs: 0, 
+      analogOutputs: 4, 
+      networkInputs: 0,
+      networkOutputs: 0,
+      imageUrl: 'assets/images/bose_dsp.png',
+      price: 200.0,
+    ),
+  ];
+
+  /// All devices combined
+  static List<DeviceSpec> get devices => [...dspDevices, ...otherDevices];
+
   /// Quick access to specific devices
-  static DeviceSpec get powerSmart4ch => devices[0];
-  static DeviceSpec get powerSmart8ch => devices[1];
-  static DeviceSpec get fm6 => devices[2];
-  static DeviceSpec get fm8y => devices[3];
+  static DeviceSpec get powerSmart4ch => dspDevices[0];
+  static DeviceSpec get powerSmart8ch => dspDevices[1];
+  static DeviceSpec get fm6 => dspDevices[2];
+  static DeviceSpec get fm8y => dspDevices[3];
+  static DeviceSpec get fusionConnect => otherDevices[0];
+  static DeviceSpec get powerPureAmplifier => otherDevices[1];
 
   /// Get all devices from the catalog
   static List<DeviceSpec> getAllDevices() => devices;
@@ -68,13 +104,13 @@ class DeviceCatalog {
 
   /// Get devices with network I/O capability
   static List<DeviceSpec> getNetworkCapableDevices() {
-    return devices.where((device) => device.networkIO > 0).toList();
+    return devices.where((device) => device.totalNetworkIO > 0).toList();
   }
 
   /// Get devices by network I/O capacity
-  static List<DeviceSpec> getByNetworkCapacity(int minNetworkIO) {
+  static List<DeviceSpec> getByNetworkCapacity({required int networkInputs, required int networkOutputs}) {
     return devices
-        .where((device) => device.canHandleNetworkIO(minNetworkIO))
+        .where((device) => device.canHandleNetworkIO(inputs: networkInputs, outputs: networkOutputs))
         .toList();
   }
 
@@ -102,7 +138,7 @@ class DeviceCatalog {
   /// Get devices sorted by network I/O capacity
   static List<DeviceSpec> getSortedByNetworkCapacity() {
     final sorted = List<DeviceSpec>.from(devices);
-    sorted.sort((a, b) => a.networkIO.compareTo(b.networkIO));
+    sorted.sort((a, b) => a.totalNetworkIO.compareTo(b.totalNetworkIO));
     return sorted;
   }
 
@@ -110,23 +146,24 @@ class DeviceCatalog {
   static DeviceSpec? findOptimalDevice({
     required int analogInputs,
     required int analogOutputs,
-    int networkIO = 0,
+    int networkInputs = 0,
+    int networkOutputs = 0,
     bool preferSmaller = true, // true = prefer smaller devices, false = prefer larger
   }) {
     final candidates = devices.where((device) =>
         device.canHandle(inputs: analogInputs, outputs: analogOutputs) &&
-        device.canHandleNetworkIO(networkIO)).toList();
+        device.canHandleNetworkIO(inputs: networkInputs, outputs: networkOutputs)).toList();
 
     if (candidates.isEmpty) return null;
 
     if (preferSmaller) {
       // Sort by total capacity (smallest first)
       candidates.sort((a, b) => 
-          (a.totalAnalogIO + a.networkIO).compareTo(b.totalAnalogIO + b.networkIO));
+          (a.totalAnalogIO + a.totalNetworkIO).compareTo(b.totalAnalogIO + b.totalNetworkIO));
     } else {
       // Sort by total capacity (largest first)
       candidates.sort((a, b) => 
-          (b.totalAnalogIO + b.networkIO).compareTo(a.totalAnalogIO + a.networkIO));
+          (b.totalAnalogIO + b.totalNetworkIO).compareTo(a.totalAnalogIO + a.totalNetworkIO));
     }
 
     return candidates.first;
@@ -156,10 +193,17 @@ class DeviceCatalog {
     return outputs;
   }
 
-  /// Get unique network I/O configurations available
-  static List<int> getUniqueNetworkIO() {
-    final networkIO = devices.map((device) => device.networkIO).toSet().toList();
-    networkIO.sort();
-    return networkIO;
+  /// Get unique network input configurations available
+  static List<int> getUniqueNetworkInputs() {
+    final networkInputs = devices.map((device) => device.networkInputs).toSet().toList();
+    networkInputs.sort();
+    return networkInputs;
+  }
+
+  /// Get unique network output configurations available
+  static List<int> getUniqueNetworkOutputs() {
+    final networkOutputs = devices.map((device) => device.networkOutputs).toSet().toList();
+    networkOutputs.sort();
+    return networkOutputs;
   }
 }

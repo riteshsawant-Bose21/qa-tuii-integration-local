@@ -3,16 +3,52 @@
 /// This module provides DSP device recommendations for the Fusion system,
 /// implementing smart device selection based on I/O requirements.
 /// 
-/// Key Features:
-/// - Automatic device selection (Mini, Wall Plate, Amps)
-/// - I/O affinity optimization (processing close to source/destination)
-/// - Minimum processor requirement analysis
-/// - Distributed vs centralized processing recommendations
-/// - Support for analog, network, and Bluetooth inputs
+/// Available Inputs & Outputs:
+/// - Analog Inputs: Microphone, Line, RCA, 3.5mm
+/// - Network Inputs: AES67, Dante
+/// - Analog Outputs: Speakers, Line outputs
+/// - Network Outputs: AES67, Dante
+/// - Wireless Inputs: Bluetooth
+/// 
+/// Device Capabilities:
+/// - 4ch PowerSmart: Analog I/O: 8 (4 inputs, 4 speaker outputs), Network: 4 inputs + 4 outputs
+/// - 8ch PowerSmart: Analog I/O: 16 (8 inputs, 8 speaker outputs), Network: 8 inputs + 8 outputs
+/// - FM6: Analog I/O: 8 (4 inputs, 4 outputs), Network I/O: 0
+/// - FM8Y: Analog I/O: 12 (4 inputs, 8 outputs), Network: 8 inputs + 8 outputs
+/// - FusionConnect: Analog I/O: 48 (24 inputs, 24 outputs)
+/// 
+/// Scaling Rules:
+/// - Always start with 4ch PowerSmart
+/// - Input Scaling: Switch to FM6 + PowerPure Amplifier for more inputs but fewer outputs, use FM8Y for network I/O
+/// - Equal Scaling: Use PowerSmart series only, scaling up as needed
+/// - Output Scaling: Use PowerSmart series only, adding units as needed
+/// 
+/// IMPORTANT: FM series (FM6, FM8Y) are ONLY used in Input Scaling. 
+/// Equal Scaling and Output Scaling must use PowerSmart series exclusively.
 
 library device_recommender;
 
+import 'dart:math' as math;
 import '../../api_data/devices/devices.dart';
+
+/// Input types enumeration
+enum InputType {
+  microphone,
+  line,
+  rca,
+  mm35, // 3.5mm
+  aes67,
+  dante,
+  bluetooth,
+}
+
+/// Output types enumeration  
+enum DeviceOutputType {
+  speakers,
+  lineOutput,
+  aes67,
+  dante,
+}
 
 /// Input requirements for device recommendation
 class RecommendInput {
@@ -21,8 +57,6 @@ class RecommendInput {
   final int networkInputs;
   final int networkOutputs;
   final int bluetoothInputs;
-  final bool preferWallIo;       // true = prefer adding wall I/O over upgrading to larger devices (e.g., 4ch + Wall I/O vs 8ch PowerSmart)
-  final bool preferDistributed;  // true = prefer distributed processing (FM6+FM8Y) over single large device (reserved for future use)
 
   const RecommendInput({
     required this.analogInputs,
@@ -30,8 +64,6 @@ class RecommendInput {
     required this.networkInputs,
     required this.networkOutputs,
     required this.bluetoothInputs,
-    this.preferWallIo = false,
-    this.preferDistributed = false,
   });
 
   /// Create from JSON
@@ -42,8 +74,6 @@ class RecommendInput {
       networkInputs: json['network_inputs'] as int? ?? 0,
       networkOutputs: json['network_outputs'] as int? ?? 0,
       bluetoothInputs: json['bluetooth_inputs'] as int? ?? 0,
-      preferWallIo: json['prefer_wall_io'] as bool? ?? false,
-      preferDistributed: json['prefer_distributed'] as bool? ?? false,
     );
   }
 
@@ -55,250 +85,201 @@ class RecommendInput {
       'network_inputs': networkInputs,
       'network_outputs': networkOutputs,
       'bluetooth_inputs': bluetoothInputs,
-      'prefer_wall_io': preferWallIo,
-      'prefer_distributed': preferDistributed,
     };
   }
 
   @override
   String toString() {
     return 'RecommendInput(analog: $analogInputs/$analogOutputs, '
-           'network: $networkInputs/$networkOutputs, bluetooth: $bluetoothInputs, '
-           'preferWallIo: $preferWallIo, preferDistributed: $preferDistributed)';
+           'network: $networkInputs/$networkOutputs, bluetooth: $bluetoothInputs)';
   }
 }
 
 /// Device Recommender Class
 /// 
-/// Implements DSP Device Recommendations (Fusion Mini, Wall Plate, Amps)
-/// Based on the specification's fundamental rules:
-/// - Provide input processing as close to input as possible, output processing close to output (I/O Affinity)
-/// - Each DSP device has enough processing power for local I/Os
-/// - Use smallest processor(s) possible
-/// - Try distributed/selective forwarding over centralized processing
-/// Note: "Mini" in the specification refers to Fusion Mini devices (FM6, FM8Y)
+/// Implements DSP Device Recommendations based on new specifications:
+/// - Always starts with 4ch PowerSmart
+/// - Implements Input Scaling, Equal Scaling, and Output Scaling rules
+/// - Handles analog, network, and wireless I/O requirements
 class DeviceRecommender {
   /// Recommend devices based on I/O requirements
   static List<String> recommendDevices(RecommendInput input) {
+    // Total inputs include analog + bluetooth
+    final totalInputs = input.analogInputs + input.bluetoothInputs;
+    final totalOutputs = input.analogOutputs;
+    final totalNetworkInputs = input.networkInputs;
+    final totalNetworkOutputs = input.networkOutputs;
+    
+    // Determine scaling pattern
+    if (totalInputs > totalOutputs) {
+      // Input Scaling: More inputs needed than outputs
+      return _inputScaling(totalInputs, totalOutputs, totalNetworkInputs, totalNetworkOutputs);
+    } else if (totalInputs == totalOutputs) {
+      // Equal Scaling: Equal inputs and outputs
+      return _equalScaling(totalInputs, totalOutputs, totalNetworkInputs, totalNetworkOutputs);
+    } else {
+      // Output Scaling: More outputs needed than inputs
+      return _outputScaling(totalInputs, totalOutputs, totalNetworkInputs, totalNetworkOutputs);
+    }
+  }
+  
+  /// Input Scaling: More inputs but fewer outputs
+  /// Switch to FM6 + PowerPure Amplifier, add more FM6 units if needed
+  static List<String> _inputScaling(int inputs, int outputs, int networkInputs, int networkOutputs) {
     final devices = <String>[];
-
-    // Total analog inputs = analog + bluetooth (as per spec)
-    final totalAnalogInputs = input.analogInputs + input.bluetoothInputs;
-    final totalAnalogOutputs = input.analogOutputs;
-    final totalNetworkIO = input.networkInputs + input.networkOutputs;
-
-    // Step 1: Find optimal device(s) that can handle both analog and network I/O
-    final optimalDevice = DeviceCatalog.findOptimalDevice(
-      analogInputs: totalAnalogInputs,
-      analogOutputs: totalAnalogOutputs,
-      networkIO: totalNetworkIO,
-      preferSmaller: true,
-    );
-
-    if (optimalDevice != null) {
-      // Check for special cases based on device and user preferences
-      devices.addAll(_handleSpecialCases(optimalDevice, totalAnalogInputs, totalAnalogOutputs, input.preferWallIo, input.preferDistributed));
+    
+    // Check if 4ch PowerSmart can handle it
+    final powerSmart4ch = DeviceCatalog.powerSmart4ch;
+    if (inputs <= powerSmart4ch.analogInputs && 
+        outputs <= powerSmart4ch.analogOutputs &&
+        networkInputs <= powerSmart4ch.networkInputs &&
+        networkOutputs <= powerSmart4ch.networkOutputs) {
+      devices.add("4ch PowerSmart");
       return devices;
     }
-
-    // Step 2: Handle analog I/O requirements first
-    devices.addAll(_recommendAnalogDevices(totalAnalogInputs, totalAnalogOutputs, input.preferWallIo, input.preferDistributed));
-
-    // Step 3: Check if selected devices can handle network I/O, if not add more
-    if (totalNetworkIO > 0) {
-      int providedNetworkIO = 0;
-      for (final deviceName in devices) {
-        final device = DeviceCatalog.findByName(deviceName);
-        if (device != null) {
-          providedNetworkIO += device.networkIO;
-        }
-      }
-      
-      if (providedNetworkIO < totalNetworkIO) {
-        final remainingNetworkIO = totalNetworkIO - providedNetworkIO;
-        devices.addAll(_recommendNetworkDevices(remainingNetworkIO));
-      }
-    }
-
-    return devices;
-  }
-
-  /// Handle special cases for device selection based on user preferences
-  static List<String> _handleSpecialCases(DeviceSpec optimalDevice, int inputs, int outputs, bool preferWallIO, bool preferDistributed) {
-    final devices = <String>[];
-
-    // Special case: At maximum capacity of largest single device, prefer distributed processing
-    if (optimalDevice.name == "8ch PowerSmart" && 
-        inputs == optimalDevice.analogInputs && 
-        outputs == optimalDevice.analogOutputs) {
-      // Find optimal distributed solution using device specs
-      final distributedDevices = _findOptimalDistributedDevices(inputs, outputs);
-      devices.addAll(distributedDevices);
-      return devices;
-    }
-
-    // Check user preference for wall I/O vs device upgrade
-    if (preferWallIO && optimalDevice.name == "8ch PowerSmart") {
-      final powerSmart4ch = DeviceCatalog.powerSmart4ch;
-      final powerSmart8ch = DeviceCatalog.powerSmart8ch;
-      // If requirements exceed 4ch PowerSmart capacity but fit in 8ch PowerSmart,
-      // user prefers Wall I/O expansion over device upgrade
-      if ((inputs > powerSmart4ch.analogInputs || outputs > powerSmart4ch.analogOutputs) &&
-          (inputs <= powerSmart8ch.analogInputs && outputs <= powerSmart8ch.analogOutputs)) {
-        devices.add("4ch PowerSmart");
-        devices.add("Wall I/O");
-        return devices;
-      }
-    }
-
-    // Use the optimal single device
-    devices.add(optimalDevice.name);
-    return devices;
-  }
-
-  /// Recommend network I/O devices based on requirements
-  static List<String> _recommendNetworkDevices(int totalNetworkIO) {
-    final devices = <String>[];
-    final fusionMiniDevices = DeviceCatalog.getFusionMiniDevices();
     
-    // Sort by network I/O capacity (descending) to use most capable devices first
-    fusionMiniDevices.sort((a, b) => b.networkIO.compareTo(a.networkIO));
-    
-    int remainingNetworkIO = totalNetworkIO;
-    
-    for (final device in fusionMiniDevices) {
-      while (remainingNetworkIO > 0 && device.canHandleNetworkIO(remainingNetworkIO >= device.networkIO ? device.networkIO : remainingNetworkIO)) {
-        devices.add(device.name);
-        remainingNetworkIO -= device.networkIO;
-        if (remainingNetworkIO <= 0) break;
-      }
-      if (remainingNetworkIO <= 0) break;
-    }
-    
-    return devices;
-  }
-
-  /// Find optimal combination of devices for distributed processing
-  static List<String> _findOptimalDistributedDevices(int inputs, int outputs) {
-    final devices = <String>[];
-    final availableDevices = DeviceCatalog.getAllDevices();
-    
-    // Filter devices that have both inputs and outputs (for distributed processing)
-    final distributedCapableDevices = availableDevices
-        .where((device) => device.analogInputs > 0 && device.analogOutputs > 0)
-        .toList();
-    
-    // Sort by total analog I/O capacity (descending)
-    distributedCapableDevices.sort((a, b) => b.totalAnalogIO.compareTo(a.totalAnalogIO));
+    // Switch to FM6 + PowerPure Amplifier pattern
+    final fm6 = DeviceCatalog.fm6;
+    final powerPure = DeviceCatalog.powerPureAmplifier;
     
     int remainingInputs = inputs;
     int remainingOutputs = outputs;
+    int remainingNetworkInputs = networkInputs;
+    int remainingNetworkOutputs = networkOutputs;
     
-    // Try to find optimal combination
-    for (final device in distributedCapableDevices) {
-      if (remainingInputs <= 0 && remainingOutputs <= 0) break;
+    // Start with FM6 + PowerPure combination
+    while (remainingInputs > 0 || remainingOutputs > 0) {
+      if (remainingInputs > 0) {
+        devices.add("FM6");
+        remainingInputs -= fm6.analogInputs;
+      }
       
-      // Check if this device can contribute to the solution
-      if (device.analogInputs > 0 && remainingInputs > 0) {
-        devices.add(device.name);
-        remainingInputs -= device.analogInputs;
-        remainingOutputs -= device.analogOutputs;
-      } else if (device.analogOutputs > 0 && remainingOutputs > 0) {
-        devices.add(device.name);
-        remainingInputs -= device.analogInputs;
-        remainingOutputs -= device.analogOutputs;
+      if (remainingOutputs > 0) {
+        devices.add("PowerPure Amplifier");
+        remainingOutputs -= powerPure.analogOutputs;
       }
     }
     
-    // If still not enough capacity, add input-only devices
-    if (remainingInputs > 0) {
-      final inputOnlyDevices = availableDevices
-          .where((device) => device.analogInputs > 0 && device.analogOutputs == 0)
-          .toList();
-      
-      inputOnlyDevices.sort((a, b) => b.analogInputs.compareTo(a.analogInputs));
-      
-      for (final device in inputOnlyDevices) {
-        if (remainingInputs <= 0) break;
-        devices.add(device.name);
-        remainingInputs -= device.analogInputs;
+    // Handle network I/O with FM8Y if needed
+    if (remainingNetworkInputs > 0 || remainingNetworkOutputs > 0) {
+      final fm8y = DeviceCatalog.fm8y;
+      while (remainingNetworkInputs > 0 || remainingNetworkOutputs > 0) {
+        devices.add("FM8Y");
+        remainingNetworkInputs -= fm8y.networkInputs;
+        remainingNetworkOutputs -= fm8y.networkOutputs;
       }
     }
     
     return devices;
   }
-
-  /// Recommend analog devices using device specs instead of hardcoded logic
-  static List<String> _recommendAnalogDevices(int inputs, int outputs, bool preferWallIO, bool preferDistributed) {
+  
+  /// Equal Scaling: Equal inputs and outputs
+  /// Start with 4ch PowerSmart, scale to 8ch, then add more units
+  /// Only use PowerSmart series (no FM series)
+  static List<String> _equalScaling(int inputs, int outputs, int networkInputs, int networkOutputs) {
     final devices = <String>[];
-
-    // Get all devices and sort by total analog I/O capacity (ascending)
-    final availableDevices = DeviceCatalog.getAllDevices();
-    final analogCapableDevices = availableDevices
-        .where((device) => device.analogInputs > 0 || device.analogOutputs > 0)
-        .toList();
     
-    // Sort by total analog I/O capacity (smallest first)
-    analogCapableDevices.sort((a, b) => a.totalAnalogIO.compareTo(b.totalAnalogIO));
-
-    // Case 1: Try to find a single device that can handle all requirements
-    final singleDevice = DeviceCatalog.findOptimalDevice(
-      analogInputs: inputs,
-      analogOutputs: outputs,
-      networkIO: 0,
-      preferSmaller: true,
-    );
-
-    if (singleDevice != null) {
-      // Special case: At maximum capacity of largest single device, prefer distributed processing
-      if (singleDevice.name == "8ch PowerSmart" && 
-          inputs == singleDevice.analogInputs && 
-          outputs == singleDevice.analogOutputs) {
-        // Find optimal distributed solution using device specs
-        final distributedDevices = _findOptimalDistributedDevices(inputs, outputs);
-        devices.addAll(distributedDevices);
-        return devices;
-      }
-
-      // Check user preference for wall I/O vs device upgrade
-      if (preferWallIO && singleDevice.name == "8ch PowerSmart") {
-        final powerSmart4ch = DeviceCatalog.powerSmart4ch;
-        final powerSmart8ch = DeviceCatalog.powerSmart8ch;
-        // If requirements exceed 4ch PowerSmart capacity but fit in 8ch PowerSmart,
-        // user prefers Wall I/O expansion over device upgrade
-        if ((inputs > powerSmart4ch.analogInputs || outputs > powerSmart4ch.analogOutputs) &&
-            (inputs <= powerSmart8ch.analogInputs && outputs <= powerSmart8ch.analogOutputs)) {
-          devices.add("4ch PowerSmart");
-          devices.add("Wall I/O");
-          return devices;
-        }
-      }
-
-      // Use the optimal single device
-      devices.add(singleDevice.name);
-      return devices;
-    }
-
-    // Case 2: No single device can handle all requirements
-    // Check if requirements exceed largest single device capacity
-    final largestDevice = analogCapableDevices.last; // Largest by total analog I/O
+    final powerSmart4ch = DeviceCatalog.powerSmart4ch;
+    final powerSmart8ch = DeviceCatalog.powerSmart8ch;
     
-    if (inputs > largestDevice.analogInputs || outputs > largestDevice.analogOutputs) {
-      // Use distributed processing with optimal device combination
-      if (preferDistributed || (inputs > DeviceCatalog.powerSmart8ch.analogInputs || outputs > DeviceCatalog.powerSmart8ch.analogOutputs)) {
-        final distributedDevices = _findOptimalDistributedDevices(inputs, outputs);
-        devices.addAll(distributedDevices);
-        return devices;
-      }
-
-      // Fallback to PowerSmart + Wall I/O
+    // Check if 4ch PowerSmart can handle it
+    if (inputs <= powerSmart4ch.analogInputs && 
+        outputs <= powerSmart4ch.analogOutputs &&
+        networkInputs <= powerSmart4ch.networkInputs &&
+        networkOutputs <= powerSmart4ch.networkOutputs) {
       devices.add("4ch PowerSmart");
-      devices.add("Wall I/O");
       return devices;
     }
-
-    // Case 3: Fallback to largest available device
-    devices.add(largestDevice.name);
+    
+    // Check if 8ch PowerSmart can handle it
+    if (inputs <= powerSmart8ch.analogInputs && 
+        outputs <= powerSmart8ch.analogOutputs &&
+        networkInputs <= powerSmart8ch.networkInputs &&
+        networkOutputs <= powerSmart8ch.networkOutputs) {
+      devices.add("8ch PowerSmart");
+      return devices;
+    }
+    
+    // Need multiple units - start with 8ch, then add more PowerSmart units as needed
+    int remainingInputs = inputs;
+    int remainingOutputs = outputs;
+    int remainingNetworkInputs = networkInputs;
+    int remainingNetworkOutputs = networkOutputs;
+    
+    // Add PowerSmart units until all requirements are met
+    while (remainingInputs > 0 || remainingOutputs > 0 || remainingNetworkInputs > 0 || remainingNetworkOutputs > 0) {
+      // Try to fit remaining requirements in a 4ch unit
+      if (remainingInputs <= powerSmart4ch.analogInputs && 
+          remainingOutputs <= powerSmart4ch.analogOutputs &&
+          remainingNetworkInputs <= powerSmart4ch.networkInputs &&
+          remainingNetworkOutputs <= powerSmart4ch.networkOutputs) {
+        devices.add("4ch PowerSmart");
+        break;
+      } else {
+        // Use 8ch PowerSmart for larger requirements
+        devices.add("8ch PowerSmart");
+        remainingInputs = math.max(0, remainingInputs - powerSmart8ch.analogInputs);
+        remainingOutputs = math.max(0, remainingOutputs - powerSmart8ch.analogOutputs);
+        remainingNetworkInputs = math.max(0, remainingNetworkInputs - powerSmart8ch.networkInputs);
+        remainingNetworkOutputs = math.max(0, remainingNetworkOutputs - powerSmart8ch.networkOutputs);
+      }
+    }
+    
+    return devices;
+  }
+  
+  /// Output Scaling: More outputs but current inputs are sufficient
+  /// Start with 4ch PowerSmart, scale to 8ch, then add more units
+  /// Only use PowerSmart series (no FM series)
+  static List<String> _outputScaling(int inputs, int outputs, int networkInputs, int networkOutputs) {
+    final devices = <String>[];
+    
+    final powerSmart4ch = DeviceCatalog.powerSmart4ch;
+    final powerSmart8ch = DeviceCatalog.powerSmart8ch;
+    
+    // Check if 4ch PowerSmart can handle it
+    if (inputs <= powerSmart4ch.analogInputs && 
+        outputs <= powerSmart4ch.analogOutputs &&
+        networkInputs <= powerSmart4ch.networkInputs &&
+        networkOutputs <= powerSmart4ch.networkOutputs) {
+      devices.add("4ch PowerSmart");
+      return devices;
+    }
+    
+    // Check if 8ch PowerSmart can handle it
+    if (inputs <= powerSmart8ch.analogInputs && 
+        outputs <= powerSmart8ch.analogOutputs &&
+        networkInputs <= powerSmart8ch.networkInputs &&
+        networkOutputs <= powerSmart8ch.networkOutputs) {
+      devices.add("8ch PowerSmart");
+      return devices;
+    }
+    
+    // Need multiple units for outputs - focus on PowerSmart series only
+    int remainingInputs = inputs;
+    int remainingOutputs = outputs;
+    int remainingNetworkInputs = networkInputs;
+    int remainingNetworkOutputs = networkOutputs;
+    
+    // Add PowerSmart units until all requirements are met
+    while (remainingOutputs > 0 || remainingInputs > 0 || remainingNetworkInputs > 0 || remainingNetworkOutputs > 0) {
+      // Try to fit remaining requirements in a 4ch unit
+      if (remainingOutputs <= powerSmart4ch.analogOutputs &&
+          remainingInputs <= powerSmart4ch.analogInputs &&
+          remainingNetworkInputs <= powerSmart4ch.networkInputs &&
+          remainingNetworkOutputs <= powerSmart4ch.networkOutputs) {
+        devices.add("4ch PowerSmart");
+        break;
+      } else {
+        // Use 8ch PowerSmart for larger requirements
+        devices.add("8ch PowerSmart");
+        remainingInputs = math.max(0, remainingInputs - powerSmart8ch.analogInputs);
+        remainingOutputs = math.max(0, remainingOutputs - powerSmart8ch.analogOutputs);
+        remainingNetworkInputs = math.max(0, remainingNetworkInputs - powerSmart8ch.networkInputs);
+        remainingNetworkOutputs = math.max(0, remainingNetworkOutputs - powerSmart8ch.networkOutputs);
+      }
+    }
+    
     return devices;
   }
 }

@@ -12,12 +12,21 @@ class AmpCatalog {
   /// 
   /// TODO: Replace with API call to amplifier specifications service
   static const List<AmpModel> models = [
-    AmpModel(name: 'PSX1204D', channels: 4, peakPerChannel: 600.0, imageUrl: 'assets/images/amplifier_img.webp'),
-    AmpModel(name: 'PSX1208D', channels: 8, peakPerChannel: 600.0, imageUrl: 'assets/images/amplifier_img.webp'),
-    AmpModel(name: 'PSX2404D', channels: 4, peakPerChannel: 1200.0, imageUrl: 'assets/images/amplifier_img.webp'),
-    AmpModel(name: 'PSX2408D', channels: 8, peakPerChannel: 1200.0, imageUrl: 'assets/images/amplifier_img.webp'),
-    AmpModel(name: 'PSX4804D', channels: 4, peakPerChannel: 2400.0, imageUrl: 'assets/images/amplifier_img.webp'),
-    AmpModel(name: 'PSX4808D', channels: 8, peakPerChannel: 2400.0, imageUrl: 'assets/images/amplifier_img.webp'),
+    // PowerPure series
+    AmpModel(series: 'PowerPure', name: 'PP-4150', channels: 4, peakPerChannel: 150.0, imageUrl: 'assets/images/amplifier_img.webp', price: 999.0),
+    AmpModel(series: 'PowerPure', name: 'PP-8300', channels: 8, peakPerChannel: 300.0, imageUrl: 'assets/images/amplifier_img.webp', price: 1499.0),
+    AmpModel(series: 'PowerPure', name: 'PP-4150', channels: 4, peakPerChannel: 1500.0, imageUrl: 'assets/images/amplifier_img.webp', price: 1999.0),
+    // PowerSmart series
+    AmpModel(series: 'PowerSmart', name: 'PSM-4150', channels: 4, peakPerChannel: 150.0, imageUrl: 'assets/images/amplifier_img.webp', price: 999.0), // 600W total
+    AmpModel(series: 'PowerSmart', name: 'PSM-4300', channels: 4, peakPerChannel: 300.0, imageUrl: 'assets/images/amplifier_img.webp', price: 1499.0), // 1200W total
+    AmpModel(series: 'PowerSmart', name: 'PSM-4600', channels: 4, peakPerChannel: 600.0, imageUrl: 'assets/images/amplifier_img.webp', price: 1999.0), // 2400W total
+    AmpModel(series: 'PowerSmart', name: 'PSM-8300', channels: 8, peakPerChannel: 300.0, imageUrl: 'assets/images/amplifier_img.webp', price: 2499.0), // 2400W total
+    AmpModel(series: 'PowerSmart', name: 'PSM-8600', channels: 8, peakPerChannel: 600.0, imageUrl: 'assets/images/amplifier_img.webp', price: 2999.0), // 4800W total
+    AmpModel(series: 'PowerSmart', name: 'PSM-41500', channels: 4, peakPerChannel: 1500.0, imageUrl: 'assets/images/amplifier_img.webp', price: 3999.0), // 6000W total
+    // PowershareX series
+    AmpModel(series: 'PowershareX', name: 'PSX1204D', channels: 4, peakPerChannel: 300.0, imageUrl: 'assets/images/amplifier_img.webp', price: 2499.0), // 1200W total
+    AmpModel(series: 'PowershareX', name: 'PSX2404D', channels: 4, peakPerChannel: 600.0, imageUrl: 'assets/images/amplifier_img.webp', price: 3499.0), // 2400W total
+    AmpModel(series: 'PowershareX', name: 'PSX4804D', channels: 4, peakPerChannel: 1200.0, imageUrl: 'assets/images/amplifier_img.webp', price: 4499.0), // 4800W total
   ];
 
   /// Get amplifiers sorted by power (ascending)

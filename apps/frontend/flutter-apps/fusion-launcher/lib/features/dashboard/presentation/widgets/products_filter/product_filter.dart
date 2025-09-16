@@ -1155,12 +1155,15 @@ class _ProductFilterPageState extends State<ProductFilterPage> {
             }
           }
           
-          // Network type filter (simplified for now)
+          // Network type filter (updated for separate network I/O)
           if (selectedNetworkTypes.isNotEmpty && 
-              product.additionalInfo.containsKey('networkIO')) {
-            final int networkIO = product.additionalInfo['networkIO'] as int;
+              product.additionalInfo.containsKey('networkInputs') &&
+              product.additionalInfo.containsKey('networkOutputs')) {
+            final int networkInputs = product.additionalInfo['networkInputs'] as int;
+            final int networkOutputs = product.additionalInfo['networkOutputs'] as int;
+            final int totalNetworkIO = networkInputs + networkOutputs;
             String networkType = '';
-            if (networkIO > 0) {
+            if (totalNetworkIO > 0) {
               networkType = 'Network I/O';
             } else {
               networkType = 'Analog Only';
@@ -1298,8 +1301,10 @@ class ProductItem {
       additionalInfo: <String, dynamic>{
         'analogInputs': device.analogInputs,
         'analogOutputs': device.analogOutputs,
-        'networkIO': device.networkIO,
+        'networkInputs': device.networkInputs,
+        'networkOutputs': device.networkOutputs,
         'totalAnalogIO': device.totalAnalogIO,
+        'totalNetworkIO': device.totalNetworkIO,
       },
     );
   }
