@@ -52,4 +52,18 @@ BuiltZones BuildZonesFromJson(const std::string &json,
                               ::OcaONo baseZoneGroupONo = static_cast<::OcaONo>(5000),
                               ::OcaONo firstZoneONo = static_cast<::OcaONo>(5001));
 
+// Refactored helper steps (exposed for testability)
+bool parseJson(const std::string &json, std::vector<ZoneDef> &zonesOut);
+
+// Create all zone-related objects (container + per-zone objects) but DO NOT link them yet.
+// Returns an empty BuiltZones (all pointers null/empty) on failure. The objects in the returned
+// BuiltZones ARE NOT yet added to any parent except the top container pointer exists.
+BuiltZones createZoneObjects(const std::vector<ZoneDef> &zones,
+                             ::OcaONo baseZoneGroupONo,
+                             ::OcaONo firstZoneONo);
+
+// Build hierarchy: add zone groups to container, actuators to their zone group. Mutates input.
+// Any failed add will delete the affected object and skip it.
+void buildHierarchy(BuiltZones &zonesModel);
+
 #endif // ZONE_CONFIG_BUILDER_H
