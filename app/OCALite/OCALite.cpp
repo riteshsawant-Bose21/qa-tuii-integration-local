@@ -26,6 +26,8 @@
 #include "ConcreteGainActuator.h"
 #include "ConcreteMuteActuator.h"
 #include "ConcreteSwitchActuator.h"
+#include "ZoneGroup.h"
+#include "ZoneConfigBuilder.h"
 #ifdef OCA_RUN
 extern void Ocp1LiteServiceRun();
 #else
@@ -52,172 +54,24 @@ int main(int argc, const char *argv[])
     // Initialize Oca Device
     static_cast<void>(::OcaLiteBlock::GetRootBlock());
 
-    // Create concrete actuators for audio processing
-    printf("Creating audio processing actuators...\r\n");
+    // Example zone JSON (will later drive dynamic creation). For now we still create actuators manually below.
+    const char *zonesJson = "{\n  \"zones\": [\n    {\n      \"id\": \"zone1757016258290241\",\n      \"name\": \"Zone 1\",\n      \"gainID\": \"gain1757016233268\",\n      \"sources\": [\n        { \"index\": 1, \"label\": \"source1\" },\n        { \"index\": 2, \"label\": \"source2\" },\n        { \"index\": 3, \"label\": \"source3\" }\n      ]\n    },\n    {\n      \"id\": \"zone173424\",\n      \"name\": \"Zone 2\",\n      \"gainID\": \"gain123423\",\n      \"sources\": [\n        { \"index\": 1, \"label\": \"source1\" },\n        { \"index\": 2, \"label\": \"source2\" },\n        { \"index\": 3, \"label\": \"source3\" }\n      ]\n    }\n  ]\n}";
 
-    // Create input and output ports for the gain actuator
-    ::OcaLiteList<::OcaLitePort> gainPorts;
-    ::OcaLitePortID inputPortId(OCAPORTMODE_INPUT, 1);
-    ::OcaLitePortID outputPortId(OCAPORTMODE_OUTPUT, 1);
-    ::OcaLitePort inputPort(static_cast<::OcaONo>(4096), inputPortId, ::OcaLiteString("Audio Input"));
-    ::OcaLitePort outputPort(static_cast<::OcaONo>(4096), outputPortId, ::OcaLiteString("Audio Output"));
-    gainPorts.Add(inputPort);
-    gainPorts.Add(outputPort);
-
-    // Create Gain Actuator (Object Number 4096, -60dB to +20dB range)
-    ConcreteGainActuator *gainActuator = new ConcreteGainActuator(
-        static_cast<::OcaONo>(4096),          // Object number
-        static_cast<::OcaBoolean>(true),      // Lockable
-        ::OcaLiteString("Main Gain Control"), // Role
-        gainPorts,                            // Ports
-        -60.0,                                // Min gain (dB)
-        20.0                                  // Max gain (dB)
-    );
-
-    // Create ports for the mute actuator (can share the same port structure)
-    ::OcaLiteList<::OcaLitePort> mutePorts;
-    ::OcaLitePortID muteInputPortId(OCAPORTMODE_INPUT, 2);
-    ::OcaLitePortID muteOutputPortId(OCAPORTMODE_OUTPUT, 2);
-    ::OcaLitePort muteInputPort(static_cast<::OcaONo>(4097), muteInputPortId, ::OcaLiteString("Mute Input"));
-    ::OcaLitePort muteOutputPort(static_cast<::OcaONo>(4097), muteOutputPortId, ::OcaLiteString("Mute Output"));
-    mutePorts.Add(muteInputPort);
-    mutePorts.Add(muteOutputPort);
-
-    // Create Mute Actuator (Object Number 4097, initially unmuted)
-    ConcreteMuteActuator *muteActuator = new ConcreteMuteActuator(
-        static_cast<::OcaONo>(4097),          // Object number
-        static_cast<::OcaBoolean>(true),      // Lockable
-        ::OcaLiteString("Main Mute Control"), // Role
-        mutePorts                             // Ports
-    );
-
-    // Add the actuators to the root block
-    if (gainActuator && ::OcaLiteBlock::GetRootBlock().AddObject(*gainActuator))
+    BuiltZones bz = BuildZonesFromJson(zonesJson);
+    if (bz.zonesContainer)
     {
-        printf("✓ Gain actuator added to device (Object #4096)\r\n");
-    }
-    else
-    {
-        printf("✗ Failed to add gain actuator to device\r\n");
-    }
-
-    if (muteActuator && ::OcaLiteBlock::GetRootBlock().AddObject(*muteActuator))
-    {
-        printf("✓ Mute actuator added to device (Object #4097)\r\n");
-    }
-    else
-    {
-        printf("✗ Failed to add mute actuator to device\r\n");
-    }
-
-    // ------------------------------------------------------------------
-    // Simple Source Select Switch creation from inline JSON (no 3rd party lib)
-    // JSON Input Example (positions 1..N contiguous):
-    // {
-    //   "sources": [
-    //     { "index": 1, "label": "source1" },
-    //     { "index": 2, "label": "source2" },
-    //     { "index": 3, "label": "source3" }
-    //   ]
-    // }
-    const char *sourcesJson = "{\n  \"sources\": [\n    { \"index\": 1, \"label\": \"source1\" },\n    { \"index\": 2, \"label\": \"source2\" },\n    { \"index\": 3, \"label\": \"source3\" }\n  ]\n}";
-
-    struct SourceEntry
-    {
-        unsigned index;
-        std::string label;
-    };
-    std::vector<SourceEntry> parsedSources;
-    {
-        const char *p = sourcesJson;
-        while ((p = strstr(p, "\"index\"")) != nullptr)
+        ZoneGroup *rootZone = bz.zonesContainer.get();
+        if (::OcaLiteBlock::GetRootBlock().AddObject(*rootZone))
         {
-            p = strchr(p, ':');
-            if (!p)
-                break;
-            ++p; // move past ':'
-            while (*p == ' ')
-                ++p;
-            unsigned idx = static_cast<unsigned>(strtoul(p, nullptr, 10));
-            const char *lpos = strstr(p, "\"label\"");
-            if (!lpos)
-                break;
-            lpos = strchr(lpos, ':');
-            if (!lpos)
-                break;
-            ++lpos;
-            while (*lpos == ' ')
-                ++lpos;
-            if (*lpos != '"')
-                break;
-            ++lpos;
-            std::string label;
-            while (*lpos && *lpos != '"')
-            {
-                label.push_back(*lpos);
-                ++lpos;
-            }
-            if (*lpos != '"')
-                break;
-            parsedSources.push_back({idx, label});
-            p = lpos;
-        }
-    }
-
-    if (!parsedSources.empty())
-    {
-        // Determine min/max (expect contiguous starting at 1, but tolerate gaps by computing range)
-        unsigned minPos = parsedSources.front().index;
-        unsigned maxPos = parsedSources.front().index;
-        for (const auto &s : parsedSources)
-        {
-            if (s.index < minPos)
-                minPos = s.index;
-            if (s.index > maxPos)
-                maxPos = s.index;
-        }
-
-        ::OcaLiteList<::OcaLiteString> names;
-        ::OcaLiteList<::OcaBoolean> enables;
-        // Initialize with empty names for full range then fill.
-        for (unsigned pos = minPos; pos <= maxPos; ++pos)
-        {
-            names.Add(::OcaLiteString(""));
-            enables.Add(static_cast<::OcaBoolean>(true));
-        }
-        for (const auto &s : parsedSources)
-        {
-            if (s.index >= minPos && s.index <= maxPos)
-            {
-                names[s.index - minPos] = ::OcaLiteString(s.label.c_str()); // replace
-            }
-        }
-
-        ::OcaLiteList<::OcaLitePort> switchPorts; // Optionally create ports if needed
-        // Using ONO 4098 for the switch (ensure no conflict)
-        ConcreteSwitchActuator *switchActuator = new ConcreteSwitchActuator(
-            static_cast<::OcaONo>(4098),
-            static_cast<::OcaBoolean>(true),
-            ::OcaLiteString("Source Select"),
-            switchPorts,
-            static_cast<::OcaUint16>(minPos),
-            static_cast<::OcaUint16>(maxPos),
-            names,
-            enables);
-
-        if (switchActuator && ::OcaLiteBlock::GetRootBlock().AddObject(*switchActuator))
-        {
-            printf("✓ Switch actuator added to device (Object #4098) with %u sources\r\n", names.GetCount());
+            printf("✓ Zones container (JSON) added (Object #5000) with %zu inner zone groups\r\n", bz.zones.size());
+            bz.zonesContainer.release();
         }
         else
         {
-            printf("✗ Failed to add switch actuator to device\r\n");
+            printf("✗ Failed to add JSON Zones container to root (possible duplicate?)\r\n");
         }
     }
-    else
-    {
-        printf("✗ No sources parsed for switch actuator\r\n");
-    }
+
     bSuccess = bSuccess && static_cast<bool>(::OcaLiteNetworkManager::GetInstance().Initialize());
     bSuccess = bSuccess && static_cast<bool>(::OcaLiteSubscriptionManager::GetInstance().SetNrEvents(1 /*OCA_NR_EVENTS*/));
     bSuccess = bSuccess && static_cast<bool>(::OcaLiteSubscriptionManager::GetInstance().Initialize());
