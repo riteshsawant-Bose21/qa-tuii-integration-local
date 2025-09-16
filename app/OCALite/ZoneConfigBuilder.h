@@ -27,13 +27,19 @@ struct ZoneDef
     std::vector<ZoneSourceDef> sources;
 };
 
+// Aggregated per-zone object bundle
+struct ZoneObjects
+{
+    ZoneGroup *group{nullptr};
+    ConcreteGainActuator *gain{nullptr};
+    ConcreteMuteActuator *mute{nullptr};
+    ConcreteSwitchActuator *sw{nullptr};
+};
+
 struct BuiltZones
 {
-    ZoneGroup *zonesContainer;                      // ONO 5000
-    std::vector<ZoneGroup *> zoneGroups;            // inner zones (e.g., ONO 5001, 5002,...)
-    std::vector<ConcreteGainActuator *> gains;      // created gain objects (ONO fixed currently)
-    std::vector<ConcreteMuteActuator *> mutes;      // created mute objects
-    std::vector<ConcreteSwitchActuator *> switches; // created switch objects
+    ZoneGroup *zonesContainer{nullptr}; // Top level container (ONO 5000)
+    std::vector<ZoneObjects> zones;     // One entry per parsed zone
 };
 
 /**

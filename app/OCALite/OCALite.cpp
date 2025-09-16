@@ -62,7 +62,7 @@ int main(int argc, const char *argv[])
     {
         if (::OcaLiteBlock::GetRootBlock().AddObject(*bz.zonesContainer))
         {
-            printf("✓ Zones container (JSON) added (Object #5000) with %zu inner zone groups\r\n", bz.zoneGroups.size());
+            printf("✓ Zones container (JSON) added (Object #5000) with %zu inner zone groups\r\n", bz.zones.size());
         }
         else
         {

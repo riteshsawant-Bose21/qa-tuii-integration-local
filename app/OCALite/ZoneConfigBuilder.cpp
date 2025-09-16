@@ -267,7 +267,7 @@ static void buildSwitchLists(const std::vector<ZoneSourceDef> &sources,
     }
 }
 
-BuiltZones createZoneObjects(const std::vector<ZoneDef> &zones,
+BuiltZones createZoneObjects(const std::vector<ZoneDef> &zoneDefs,
                              ::OcaONo baseZoneGroupONo,
                              ::OcaONo firstZoneONo)
 {
@@ -278,37 +278,42 @@ BuiltZones createZoneObjects(const std::vector<ZoneDef> &zones,
 
     ONOScheme scheme; // could be parameterized later
     ::OcaONo zoneONo = firstZoneONo;
-    for (size_t i = 0; i < zones.size(); ++i, ++zoneONo)
+    model.zones.reserve(zoneDefs.size());
+    for (size_t i = 0; i < zoneDefs.size(); ++i, ++zoneONo)
     {
-        ZoneGroup *zg = new ZoneGroup(zoneONo, static_cast<::OcaBoolean>(true), ::OcaLiteString(zones[i].name.c_str()));
-        if (!zg)
+        ZoneObjects zb;
+        zb.group = new ZoneGroup(zoneONo, static_cast<::OcaBoolean>(true), ::OcaLiteString(zoneDefs[i].name.c_str()));
+        if (!zb.group)
+        {
+            model.zones.push_back(zb);
             continue;
-        model.zoneGroups.push_back(zg); // linking deferred
+        }
 
         ::OcaONo gainONo, muteONo, switchONo;
         computeONOs(i, scheme, gainONo, muteONo, switchONo);
 
         // Gain
         ::OcaLiteList<::OcaLitePort> gainPorts;
-        if (ConcreteGainActuator *gain = new ConcreteGainActuator(gainONo, static_cast<::OcaBoolean>(true), ::OcaLiteString((zones[i].name + " Gain").c_str()), gainPorts, -60.0, 20.0))
-            model.gains.push_back(gain);
-        else
-            continue; // skip rest if allocation failed (simplistic)
+        zb.gain = new ConcreteGainActuator(gainONo, static_cast<::OcaBoolean>(true), ::OcaLiteString((zoneDefs[i].name + " Gain").c_str()), gainPorts, -60.0, 20.0);
+        if (!zb.gain)
+        {
+            model.zones.push_back(zb);
+            continue;
+        }
 
         // Mute
         ::OcaLiteList<::OcaLitePort> mutePorts;
-        if (ConcreteMuteActuator *mute = new ConcreteMuteActuator(muteONo, static_cast<::OcaBoolean>(true), ::OcaLiteString((zones[i].name + " Gain").c_str()), mutePorts))
-            model.mutes.push_back(mute);
+        zb.mute = new ConcreteMuteActuator(muteONo, static_cast<::OcaBoolean>(true), ::OcaLiteString((zoneDefs[i].name + " Mute").c_str()), mutePorts);
 
         // Switch
-        if (!zones[i].sources.empty())
+        if (!zoneDefs[i].sources.empty())
         {
             unsigned minPos = 0, maxPos = 0;
             ::OcaLiteList<::OcaLiteString> names;
             ::OcaLiteList<::OcaBoolean> enables;
-            buildSwitchLists(zones[i].sources, minPos, maxPos, names, enables);
+            buildSwitchLists(zoneDefs[i].sources, minPos, maxPos, names, enables);
             ::OcaLiteList<::OcaLitePort> switchPorts;
-            ConcreteSwitchActuator *sw = new ConcreteSwitchActuator(
+            zb.sw = new ConcreteSwitchActuator(
                 switchONo,
                 static_cast<::OcaBoolean>(true),
                 ::OcaLiteString("Source Select"),
@@ -317,9 +322,8 @@ BuiltZones createZoneObjects(const std::vector<ZoneDef> &zones,
                 static_cast<::OcaUint16>(maxPos),
                 names,
                 enables);
-            if (sw)
-                model.switches.push_back(sw);
         }
+        model.zones.push_back(zb);
     }
     return model;
 }
@@ -328,51 +332,40 @@ void buildHierarchy(BuiltZones &zonesModel)
 {
     if (!zonesModel.zonesContainer)
         return;
-    // We assume vectors are aligned by index: each zoneGroup corresponds to potentially one gain, one mute, one switch (in order of creation).
-    // We'll iterate by zoneGroup index and attach available actuators sequentially.
-    size_t gainIdx = 0, muteIdx = 0, switchIdx = 0;
-    for (size_t i = 0; i < zonesModel.zoneGroups.size(); ++i)
+    for (auto &zb : zonesModel.zones)
     {
-        ZoneGroup *zg = zonesModel.zoneGroups[i];
-        if (zg && !zonesModel.zonesContainer->AddObject(*zg))
+        if (zb.group)
         {
-            delete zg;
-            zonesModel.zoneGroups[i] = nullptr;
-            continue;
-        }
-        // Attach gain (if still available)
-        if (gainIdx < zonesModel.gains.size())
-        {
-            ConcreteGainActuator *g = zonesModel.gains[gainIdx];
-            if (!zg->AddObject(*g))
+            if (!zonesModel.zonesContainer->AddObject(*zb.group))
             {
-                delete g;
-                zonesModel.gains[gainIdx] = nullptr;
+                delete zb.group;
+                zb.group = nullptr;
+                continue;
             }
-            ++gainIdx;
-        }
-        // Attach mute
-        if (muteIdx < zonesModel.mutes.size())
-        {
-            ConcreteMuteActuator *m = zonesModel.mutes[muteIdx];
-            if (!zg->AddObject(*m))
+            if (zb.gain)
             {
-                delete m;
-                zonesModel.mutes[muteIdx] = nullptr;
+                if (!zb.group->AddObject(*zb.gain))
+                {
+                    delete zb.gain;
+                    zb.gain = nullptr;
+                }
             }
-            ++muteIdx;
-        }
-        // Attach switch (optional)
-        if (switchIdx < zonesModel.switches.size())
-        {
-            ConcreteSwitchActuator *s = zonesModel.switches[switchIdx];
-            // Switch count may be less than zones if some have no sources; only attach if not already consumed.
-            if (s && !zg->AddObject(*s))
+            if (zb.mute)
             {
-                delete s;
-                zonesModel.switches[switchIdx] = nullptr;
+                if (!zb.group->AddObject(*zb.mute))
+                {
+                    delete zb.mute;
+                    zb.mute = nullptr;
+                }
             }
-            ++switchIdx;
+            if (zb.sw)
+            {
+                if (!zb.group->AddObject(*zb.sw))
+                {
+                    delete zb.sw;
+                    zb.sw = nullptr;
+                }
+            }
         }
     }
 }
