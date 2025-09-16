@@ -108,6 +108,9 @@ class ProductSearchWidget extends StatelessWidget {
               ],
             ),
           ),
+
+          /// Active filters chips row
+          if (_hasActiveFilters()) _buildActiveFiltersChips(context),
         ],
       ),
     );
@@ -162,5 +165,213 @@ class ProductSearchWidget extends StatelessWidget {
         selectedColors.isNotEmpty ||
         selectedCoverages.isNotEmpty ||
         selectedImpedances.isNotEmpty;
+  }
+
+  /// Build active filters as chips
+  Widget _buildActiveFiltersChips(BuildContext context) {
+    final List<Widget> chips = <Widget>[];
+
+    // Product Type chips
+    for (final ProductType productType in selectedProductTypes) {
+      chips.add(
+        _buildFilterChip(
+          context: context,
+          label: _getProductTypeDisplayName(productType),
+          onRemove: () => _removeProductTypeFilter(productType),
+        ),
+      );
+    }
+
+    // Mount Type chips
+    for (final String mountType in selectedMountTypes) {
+      chips.add(
+        _buildFilterChip(
+          context: context,
+          label: 'Mount: $mountType',
+          onRemove: () => _removeMountTypeFilter(mountType),
+        ),
+      );
+    }
+
+    // Venue Type chips
+    for (final String venueType in selectedVenueTypes) {
+      chips.add(
+        _buildFilterChip(
+          context: context,
+          label: 'Venue: $venueType',
+          onRemove: () => _removeVenueTypeFilter(venueType),
+        ),
+      );
+    }
+
+    // Color chips
+    for (final String color in selectedColors) {
+      chips.add(
+        _buildFilterChip(
+          context: context,
+          label: 'Color: $color',
+          onRemove: () => _removeColorFilter(color),
+        ),
+      );
+    }
+
+    // Coverage chips
+    for (final String coverage in selectedCoverages) {
+      chips.add(
+        _buildFilterChip(
+          context: context,
+          label: 'Coverage: $coverage',
+          onRemove: () => _removeCoverageFilter(coverage),
+        ),
+      );
+    }
+
+    // Impedance chips
+    for (final String impedance in selectedImpedances) {
+      chips.add(
+        _buildFilterChip(
+          context: context,
+          label: 'Impedance: $impedance',
+          onRemove: () => _removeImpedanceFilter(impedance),
+        ),
+      );
+    }
+
+    return Container(
+      height: 40,
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              itemCount: chips.length,
+              separatorBuilder: (BuildContext context, int index) => const SizedBox(width: 8),
+              itemBuilder: (BuildContext context, int index) => chips[index],
+            ),
+          ),
+          if (chips.isNotEmpty)
+            Container(
+              padding: const EdgeInsets.only(right: 12),
+              child: TextButton(
+                onPressed: _clearAllFilters,
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: FusionAppText(
+                  text: 'Clear',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontSize: 10,
+                    color: Theme.of(context).primaryColor,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// Build individual filter chip
+  Widget _buildFilterChip({
+    required BuildContext context,
+    required String label,
+    required VoidCallback onRemove,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.greyLight,
+        borderRadius: BorderRadius.circular(3),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.greyLight,
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          FusionAppText(
+            text: label,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              fontSize: 10,
+              color: Theme.of(context).colorScheme.fusionTextViewColor,
+            ),
+          ),
+          const SizedBox(width: 4),
+          GestureDetector(
+            onTap: onRemove,
+            child: Icon(
+              Icons.close,
+              size: 12,
+              color: Theme.of(context).colorScheme.fusionTextViewColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Get product type display name
+  String _getProductTypeDisplayName(ProductType type) {
+    switch (type) {
+      case ProductType.speaker:
+        return 'Speakers';
+      case ProductType.amplifier:
+        return 'Amplifiers';
+      case ProductType.controllers:
+        return 'Controllers';
+      case ProductType.endpoints:
+        return 'Endpoints';
+      case ProductType.dsps:
+        return 'DSPs';
+      case ProductType.sources:
+        return 'Sources';
+    }
+  }
+
+  /// Remove individual filters
+  void _removeProductTypeFilter(ProductType productType) {
+    selectedProductTypes.remove(productType);
+    onFiltersChanged?.call();
+  }
+
+  void _removeMountTypeFilter(String mountType) {
+    selectedMountTypes.remove(mountType);
+    onFiltersChanged?.call();
+  }
+
+  void _removeVenueTypeFilter(String venueType) {
+    selectedVenueTypes.remove(venueType);
+    onFiltersChanged?.call();
+  }
+
+  void _removeColorFilter(String color) {
+    selectedColors.remove(color);
+    onFiltersChanged?.call();
+  }
+
+  void _removeCoverageFilter(String coverage) {
+    selectedCoverages.remove(coverage);
+    onFiltersChanged?.call();
+  }
+
+  void _removeImpedanceFilter(String impedance) {
+    selectedImpedances.remove(impedance);
+    onFiltersChanged?.call();
+  }
+
+  /// Clear all filters
+  void _clearAllFilters() {
+    selectedProductTypes.clear();
+    selectedMountTypes.clear();
+    selectedVenueTypes.clear();
+    selectedColors.clear();
+    selectedCoverages.clear();
+    selectedImpedances.clear();
+    onFiltersChanged?.call();
   }
 }

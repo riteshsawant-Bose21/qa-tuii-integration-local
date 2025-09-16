@@ -47,6 +47,9 @@ class ProductQueryCubit extends Cubit<ProductQueryState> {
     /// Start with all products
     List<ProductQueryModel> products = ProductAPI.getAllProducts();
 
+    /// Debug: Print all speaker data
+    final List<ProductQueryModel> speakers = products.where((ProductQueryModel p) => p.type == ProductType.speaker).toList();
+
     /// Filter by multiple product types from filter dropdown (priority)
     if (state.selectedProductTypes.isNotEmpty) {
       products = products.where((ProductQueryModel product) => state.selectedProductTypes.contains(product.type)).toList();
@@ -58,6 +61,7 @@ class ProductQueryCubit extends Cubit<ProductQueryState> {
 
     /// Filter by color (only for speakers)
     if (state.selectedColors.isNotEmpty) {
+      final int beforeColorFilter = products.length;
       products =
           products.where((ProductQueryModel product) {
             // For speakers, only include if they have a matching color (case insensitive)
@@ -75,6 +79,7 @@ class ProductQueryCubit extends Cubit<ProductQueryState> {
 
     /// Filter by mount type (only for speakers)
     if (state.selectedMountTypes.isNotEmpty) {
+      final int beforeMountFilter = products.length;
       products =
           products.where((ProductQueryModel product) {
             // For speakers, only include if they have a matching mounting type (case insensitive)
@@ -88,15 +93,19 @@ class ProductQueryCubit extends Cubit<ProductQueryState> {
             // For non-speakers, always include them
             return true;
           }).toList();
+      print("Mount type filter: $beforeMountFilter -> ${products.length} products");
     }
 
     /// Filter by venue type (only for speakers based on outdoorRated)
     if (state.selectedVenueTypes.isNotEmpty) {
+      print("Filtering by venue types: ${state.selectedVenueTypes}");
+      final int beforeVenueFilter = products.length;
       products =
           products.where((ProductQueryModel product) {
             // For speakers, filter based on outdoor rating
             if (product.type == ProductType.speaker) {
               if (product.outdoorRated == null) {
+                print("Speaker ${product.name} has no outdoor rating data");
                 return false;
               }
 
@@ -111,52 +120,84 @@ class ProductQueryCubit extends Cubit<ProductQueryState> {
                 return false;
               });
 
+              print("Speaker ${product.name} outdoor rated: ${product.outdoorRated}, matches: $matches");
               return matches;
             }
             // For non-speakers, always include them
             return true;
           }).toList();
+      print("Venue type filter: $beforeVenueFilter -> ${products.length} products");
     }
 
     /// Filter by coverage (only for speakers based on maxSpl)
     if (state.selectedCoverages.isNotEmpty) {
+      print("Filtering by coverages: ${state.selectedCoverages}");
+      final int beforeCoverageFilter = products.length;
+
+      // Debug: Show all speakers and their maxSpl values
+      final List<ProductQueryModel> currentSpeakers = products.where((p) => p.type == ProductType.speaker).toList();
+      print("Current speakers before coverage filter:");
+      for (final ProductQueryModel speaker in currentSpeakers) {
+        print("  ${speaker.name}: maxSpl=${speaker.maxSpl}");
+      }
+
       products =
           products.where((ProductQueryModel product) {
             // For speakers, filter based on maxSpl coverage levels
             if (product.type == ProductType.speaker) {
               if (product.maxSpl == null || product.maxSpl == 0.0) {
+                print("Speaker ${product.name} has no valid maxSpl data (${product.maxSpl})");
                 return false;
               }
 
               final String coverageLevel = _getCoverageLevelFromMaxSpl(product.maxSpl!);
               final bool matches = state.selectedCoverages.any((String selectedCoverage) => selectedCoverage.toLowerCase() == coverageLevel.toLowerCase());
 
+              print("Speaker ${product.name} maxSpl: ${product.maxSpl}, coverage: $coverageLevel, selected: ${state.selectedCoverages}, matches: $matches");
               return matches;
             }
             // For non-speakers, always include them
             return true;
           }).toList();
+      print("Coverage filter: $beforeCoverageFilter -> ${products.length} products");
     }
 
     /// Filter by impedance (only for speakers based on nominalOhms)
     if (state.selectedImpedances.isNotEmpty) {
+      print("Filtering by impedances: ${state.selectedImpedances}");
+      final int beforeImpedanceFilter = products.length;
+
+      // Debug: Show all speakers and their nominalOhms values
+      final List<ProductQueryModel> currentSpeakers = products.where((p) => p.type == ProductType.speaker).toList();
+      print("Current speakers before impedance filter:");
+      for (final ProductQueryModel speaker in currentSpeakers) {
+        print("  ${speaker.name}: nominalOhms=${speaker.nominalOhms}");
+      }
+
       products =
           products.where((ProductQueryModel product) {
             // For speakers, filter based on nominalOhms impedance levels
             if (product.type == ProductType.speaker) {
               if (product.nominalOhms == null || product.nominalOhms == 0.0) {
+                print("Speaker ${product.name} has no valid nominalOhms data (${product.nominalOhms})");
                 return false;
               }
 
               final String impedanceLevel = _getImpedanceLevelFromOhms(product.nominalOhms!);
               final bool matches = state.selectedImpedances.any((String selectedImpedance) => selectedImpedance.toLowerCase() == impedanceLevel.toLowerCase());
+
+              print(
+                "Speaker ${product.name} nominalOhms: ${product.nominalOhms}, impedance: $impedanceLevel, selected: ${state.selectedImpedances}, matches: $matches",
+              );
               return matches;
             }
             // For non-speakers, always include them
             return true;
           }).toList();
+      print("Impedance filter: $beforeImpedanceFilter -> ${products.length} products");
     }
 
+    print("Filtered products count: ${products.length}");
     return products;
   }
 
@@ -210,6 +251,7 @@ class ProductQueryCubit extends Cubit<ProductQueryState> {
   }
 
   void onSortOptionChanged(SortOption? option) {
+    print("Sort option changed to: $option"); // Debug log
     emit(
       state.copyWith(
         selectedSortOption: option,
