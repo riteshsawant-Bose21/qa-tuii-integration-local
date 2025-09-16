@@ -440,8 +440,6 @@ struct io_card {
     u8                      slot;        // slot IO arch only
 
     struct id_data          data;
-
-    struct endpoint         *sec_eeprom;
     
     size_t                  num_eps;
     struct endpoint         *endpoints;
