@@ -17,6 +17,7 @@ static std::string trim(const std::string &s)
 // Internal legacy parser implementation (now used by public parseJson wrapper)
 static bool parseZonesInternal(const std::string &json, std::vector<ZoneDef> &out)
 {
+    // TODO: add error messages for parsing errors.
     const char *p = json.c_str();
     const char *zonesKey = strstr(p, "\"zones\"");
     if (!zonesKey)
@@ -272,7 +273,7 @@ BuiltZones createZoneObjects(const std::vector<ZoneDef> &zoneDefs,
                              ::OcaONo firstZoneONo)
 {
     BuiltZones model{};
-    model.zonesContainer = new ZoneGroup(baseZoneGroupONo, static_cast<::OcaBoolean>(true), ::OcaLiteString("Zone"));
+    model.zonesContainer.reset(new ZoneGroup(baseZoneGroupONo, static_cast<::OcaBoolean>(true), ::OcaLiteString("Zone")));
     if (!model.zonesContainer)
         return model;
 
@@ -282,10 +283,10 @@ BuiltZones createZoneObjects(const std::vector<ZoneDef> &zoneDefs,
     for (size_t i = 0; i < zoneDefs.size(); ++i, ++zoneONo)
     {
         ZoneObjects zb;
-        zb.group = new ZoneGroup(zoneONo, static_cast<::OcaBoolean>(true), ::OcaLiteString(zoneDefs[i].name.c_str()));
+        zb.group.reset(new ZoneGroup(zoneONo, static_cast<::OcaBoolean>(true), ::OcaLiteString(zoneDefs[i].name.c_str())));
         if (!zb.group)
         {
-            model.zones.push_back(zb);
+            model.zones.push_back(std::move(zb));
             continue;
         }
 
@@ -294,16 +295,16 @@ BuiltZones createZoneObjects(const std::vector<ZoneDef> &zoneDefs,
 
         // Gain
         ::OcaLiteList<::OcaLitePort> gainPorts;
-        zb.gain = new ConcreteGainActuator(gainONo, static_cast<::OcaBoolean>(true), ::OcaLiteString((zoneDefs[i].name + " Gain").c_str()), gainPorts, -60.0, 20.0);
+        zb.gain.reset(new ConcreteGainActuator(gainONo, static_cast<::OcaBoolean>(true), ::OcaLiteString((zoneDefs[i].name + " Gain").c_str()), gainPorts, -60.0, 20.0));
         if (!zb.gain)
         {
-            model.zones.push_back(zb);
+            model.zones.push_back(std::move(zb));
             continue;
         }
 
         // Mute
         ::OcaLiteList<::OcaLitePort> mutePorts;
-        zb.mute = new ConcreteMuteActuator(muteONo, static_cast<::OcaBoolean>(true), ::OcaLiteString((zoneDefs[i].name + " Mute").c_str()), mutePorts);
+        zb.mute.reset(new ConcreteMuteActuator(muteONo, static_cast<::OcaBoolean>(true), ::OcaLiteString((zoneDefs[i].name + " Mute").c_str()), mutePorts));
 
         // Switch
         if (!zoneDefs[i].sources.empty())
@@ -313,7 +314,7 @@ BuiltZones createZoneObjects(const std::vector<ZoneDef> &zoneDefs,
             ::OcaLiteList<::OcaBoolean> enables;
             buildSwitchLists(zoneDefs[i].sources, minPos, maxPos, names, enables);
             ::OcaLiteList<::OcaLitePort> switchPorts;
-            zb.sw = new ConcreteSwitchActuator(
+            zb.sw.reset(new ConcreteSwitchActuator(
                 switchONo,
                 static_cast<::OcaBoolean>(true),
                 ::OcaLiteString("Source Select"),
@@ -321,9 +322,9 @@ BuiltZones createZoneObjects(const std::vector<ZoneDef> &zoneDefs,
                 static_cast<::OcaUint16>(minPos),
                 static_cast<::OcaUint16>(maxPos),
                 names,
-                enables);
+                enables));
         }
-        model.zones.push_back(zb);
+        model.zones.push_back(std::move(zb));
     }
     return model;
 }
@@ -334,39 +335,51 @@ void buildHierarchy(BuiltZones &zonesModel)
         return;
     for (auto &zb : zonesModel.zones)
     {
-        if (zb.group)
+        if (!zb.group)
+            continue;
+        ZoneGroup *groupRaw = zb.group.get();
+        if (!zonesModel.zonesContainer->AddObject(*groupRaw))
         {
-            if (!zonesModel.zonesContainer->AddObject(*zb.group))
+            zb.group.reset();
+            continue;
+        }
+
+        // Add children before releasing group (need raw pointer intact)
+        if (zb.gain)
+        {
+            if (!groupRaw->AddObject(*zb.gain))
             {
-                delete zb.group;
-                zb.group = nullptr;
-                continue;
+                zb.gain.reset();
             }
-            if (zb.gain)
+            else
             {
-                if (!zb.group->AddObject(*zb.gain))
-                {
-                    delete zb.gain;
-                    zb.gain = nullptr;
-                }
-            }
-            if (zb.mute)
-            {
-                if (!zb.group->AddObject(*zb.mute))
-                {
-                    delete zb.mute;
-                    zb.mute = nullptr;
-                }
-            }
-            if (zb.sw)
-            {
-                if (!zb.group->AddObject(*zb.sw))
-                {
-                    delete zb.sw;
-                    zb.sw = nullptr;
-                }
+                zb.gain.release();
             }
         }
+        if (zb.mute)
+        {
+            if (!groupRaw->AddObject(*zb.mute))
+            {
+                zb.mute.reset();
+            }
+            else
+            {
+                zb.mute.release();
+            }
+        }
+        if (zb.sw)
+        {
+            if (!groupRaw->AddObject(*zb.sw))
+            {
+                zb.sw.reset();
+            }
+            else
+            {
+                zb.sw.release();
+            }
+        }
+        // Release ownership of group last (OCA now owns it)
+        zb.group.release();
     }
 }
 
@@ -376,7 +389,7 @@ BuiltZones BuildZonesFromJson(const std::string &json, ::OcaONo baseZoneGroupONo
     std::vector<ZoneDef> zones;
     if (!parseJson(json, zones))
     {
-        printf("[ZoneConfig] Failed to parse any zones from JSON\n");
+        OCA_LOG_ERROR("[ZoneConfig] Failed to parse any zones from JSON\n");
         return empty;
     }
     BuiltZones model = createZoneObjects(zones, baseZoneGroupONo, firstZoneONo);

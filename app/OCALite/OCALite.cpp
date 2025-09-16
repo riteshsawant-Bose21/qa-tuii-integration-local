@@ -60,9 +60,11 @@ int main(int argc, const char *argv[])
     BuiltZones bz = BuildZonesFromJson(zonesJson);
     if (bz.zonesContainer)
     {
-        if (::OcaLiteBlock::GetRootBlock().AddObject(*bz.zonesContainer))
+        ZoneGroup *rootZone = bz.zonesContainer.get();
+        if (::OcaLiteBlock::GetRootBlock().AddObject(*rootZone))
         {
             printf("✓ Zones container (JSON) added (Object #5000) with %zu inner zone groups\r\n", bz.zones.size());
+            bz.zonesContainer.release();
         }
         else
         {

@@ -8,6 +8,7 @@
 
 #include <string>
 #include <vector>
+#include <memory>
 #include "ZoneGroup.h"
 #include "ConcreteGainActuator.h"
 #include "ConcreteMuteActuator.h"
@@ -30,16 +31,16 @@ struct ZoneDef
 // Aggregated per-zone object bundle
 struct ZoneObjects
 {
-    ZoneGroup *group{nullptr};
-    ConcreteGainActuator *gain{nullptr};
-    ConcreteMuteActuator *mute{nullptr};
-    ConcreteSwitchActuator *sw{nullptr};
+    std::unique_ptr<ZoneGroup> group;           // may be null if creation failed
+    std::unique_ptr<ConcreteGainActuator> gain; // optional
+    std::unique_ptr<ConcreteMuteActuator> mute; // optional
+    std::unique_ptr<ConcreteSwitchActuator> sw; // optional
 };
 
 struct BuiltZones
 {
-    ZoneGroup *zonesContainer{nullptr}; // Top level container (ONO 5000)
-    std::vector<ZoneObjects> zones;     // One entry per parsed zone
+    std::unique_ptr<ZoneGroup> zonesContainer; // Top level container (ONO 5000)
+    std::vector<ZoneObjects> zones;            // One entry per parsed zone
 };
 
 /**
