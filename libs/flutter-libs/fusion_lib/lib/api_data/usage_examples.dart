@@ -22,6 +22,22 @@ void main() {
   final devicesJson = fusionDevices.getDevices();
   print('DSP Devices JSON:');
   print(devicesJson);
+  print('\n');
+
+  final allDevicesJson = fusionDevices.getAllDevices();
+  print('All Devices JSON:');
+  print(allDevicesJson);
+  print('\n');
+  
+  final controllersJson = fusionDevices.getControllers();
+  print('Controllers JSON:');
+  print(controllersJson);
+  print('\n');
+
+  final allEndpointsJson = fusionDevices.getAllEndpoints();
+  print('Endpoints JSON:');
+  print(allEndpointsJson);
+  print('\n');
     
-  print('\n=== Unified Interface Success! ===');
+  print('=== Unified Interface Success! ===');
 }

@@ -476,7 +476,7 @@ class _SplPanelState extends State<SplPanel> {
     return SizedBox(
       height: 32,
       child: DropdownButtonFormField<String>(
-        initialValue: value, // Fix deprecation warning: use initialValue instead of value
+        value: value, // Fix deprecation warning: use initialValue instead of value
         isExpanded: true,
         style: const TextStyle(fontSize: 12, color: Colors.black),
         items: items
