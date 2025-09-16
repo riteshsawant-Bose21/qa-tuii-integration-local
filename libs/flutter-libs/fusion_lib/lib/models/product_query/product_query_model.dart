@@ -9,6 +9,7 @@ class ProductQueryModel {
     required this.type,
     this.specifications = '',
     required this.sku,
+    this.color,
   });
 
   final String name;
@@ -17,4 +18,5 @@ class ProductQueryModel {
   final ProductType type;
   final String sku;
   final String specifications;
+  final String? color;
 }

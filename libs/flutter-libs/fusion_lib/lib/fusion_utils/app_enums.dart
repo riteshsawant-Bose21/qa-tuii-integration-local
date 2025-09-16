@@ -2,8 +2,10 @@
 enum ProductType {
   speaker,
   amplifier,
-  device,
+  endpoints,
   sources,
+  dsps,
+  controllers,
 }
 
 /// Sort options enum

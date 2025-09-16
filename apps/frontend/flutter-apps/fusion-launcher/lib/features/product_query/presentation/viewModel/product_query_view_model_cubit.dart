@@ -52,6 +52,7 @@ class ProductQueryCubit extends Cubit<ProductQueryState> {
     List<ProductQueryModel> products = ProductAPI.getAllProducts();
 
     /// Filter by product type
+    print("state.selectedProductType == > ${state.selectedProductType}");
     if (state.selectedProductType != null) {
       products = products.where((ProductQueryModel product) => product.type == state.selectedProductType).toList();
     }
@@ -112,6 +113,7 @@ class ProductQueryCubit extends Cubit<ProductQueryState> {
     emit(
       state.copyWith(
         selectedProductType: type,
+        selectedProductTypes: type != null ? <ProductType>{type} : <ProductType>{},
         filteredProducts: type != null ? ProductAPI.getProductsByType(type) : ProductAPI.getAllProducts(),
       ),
     );
