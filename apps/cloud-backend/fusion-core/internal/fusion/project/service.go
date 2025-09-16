@@ -26,6 +26,8 @@ type DatabaseService interface {
 	GetAll(ctx context.Context) ([]*fusion.Project, error)
 	Update(ctx context.Context, id string, project *fusion.Project) error
 	Delete(ctx context.Context, id string) error
+
+	SyncProject(ctx context.Context, projectID string, metaData map[string]interface{}, zipFileURL string) error
 }
 
 type Project interface {
@@ -34,4 +36,6 @@ type Project interface {
 	GetAll(ctx context.Context) ([]*fusion.Project, error)
 	Update(ctx context.Context, id string, project *fusion.Project) error
 	Delete(ctx context.Context, id string) error
+
+	SyncProject(ctx context.Context, projectID string, metaData map[string]interface{}, zipFileURL string) error
 }

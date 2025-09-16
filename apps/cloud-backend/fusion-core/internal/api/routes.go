@@ -23,5 +23,7 @@ func (a *API) registerRoutes() {
 		projects.GET("", projectHandler.GetProjects) // Optional: List all projects
 		projects.PATCH("/:id", projectHandler.UpdateProject)
 		projects.DELETE("/:id", projectHandler.DeleteProject)
+
+		projects.POST("/:id/sync", projectHandler.SyncProject) // New route for syncing a project
 	}
 }

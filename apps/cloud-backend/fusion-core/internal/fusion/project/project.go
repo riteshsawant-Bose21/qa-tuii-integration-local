@@ -24,3 +24,7 @@ func (s *Service) Update(ctx context.Context, id string, project *fusion.Project
 func (s *Service) Delete(ctx context.Context, id string) error {
 	return s.dbService.Delete(ctx, id)
 }
+
+func (s *Service) SyncProject(ctx context.Context, projectID string, metaData map[string]interface{}, zipFileURL string) error {
+	return s.dbService.SyncProject(ctx, projectID, metaData, zipFileURL)
+}

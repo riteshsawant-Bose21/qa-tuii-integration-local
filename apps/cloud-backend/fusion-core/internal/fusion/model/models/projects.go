@@ -18,79 +18,161 @@ import (
 	"github.com/aarondl/sqlboiler/v4/queries"
 	"github.com/aarondl/sqlboiler/v4/queries/qm"
 	"github.com/aarondl/sqlboiler/v4/queries/qmhelper"
-	"github.com/aarondl/sqlboiler/v4/types"
 	"github.com/aarondl/strmangle"
 	"github.com/friendsofgo/errors"
 )
 
 // Project is an object representing the database table.
 type Project struct {
-	ID          int         `boil:"id" json:"id" toml:"id" yaml:"id"`
-	Name        string      `boil:"name" json:"name" toml:"name" yaml:"name"`
-	Description null.String `boil:"description" json:"description,omitempty" toml:"description" yaml:"description,omitempty"`
-	TempVenue   null.String `boil:"temp_venue" json:"temp_venue,omitempty" toml:"temp_venue" yaml:"temp_venue,omitempty"`
-	Metadata    types.JSON  `boil:"metadata" json:"metadata" toml:"metadata" yaml:"metadata"`
-	CreatedAt   time.Time   `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
-	UpdatedAt   time.Time   `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
+	ID             string      `boil:"id" json:"id" toml:"id" yaml:"id"`
+	OrganizationID string      `boil:"organization_id" json:"organization_id" toml:"organization_id" yaml:"organization_id"`
+	Name           string      `boil:"name" json:"name" toml:"name" yaml:"name"`
+	Description    null.String `boil:"description" json:"description,omitempty" toml:"description" yaml:"description,omitempty"`
+	Venue          null.String `boil:"venue" json:"venue,omitempty" toml:"venue" yaml:"venue,omitempty"`
+	VenueType      null.String `boil:"venue_type" json:"venue_type,omitempty" toml:"venue_type" yaml:"venue_type,omitempty"`
+	Application    null.String `boil:"application" json:"application,omitempty" toml:"application" yaml:"application,omitempty"`
+	Budget         null.JSON   `boil:"budget" json:"budget,omitempty" toml:"budget" yaml:"budget,omitempty"`
+	MetaData       null.JSON   `boil:"meta_data" json:"meta_data,omitempty" toml:"meta_data" yaml:"meta_data,omitempty"`
+	ProjectFileURL null.String `boil:"project_file_url" json:"project_file_url,omitempty" toml:"project_file_url" yaml:"project_file_url,omitempty"`
+	CreatedAt      null.Time   `boil:"created_at" json:"created_at,omitempty" toml:"created_at" yaml:"created_at,omitempty"`
+	UpdatedAt      null.Time   `boil:"updated_at" json:"updated_at,omitempty" toml:"updated_at" yaml:"updated_at,omitempty"`
 
 	R *projectR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L projectL  `boil:"-" json:"-" toml:"-" yaml:"-"`
 }
 
 var ProjectColumns = struct {
-	ID          string
-	Name        string
-	Description string
-	TempVenue   string
-	Metadata    string
-	CreatedAt   string
-	UpdatedAt   string
+	ID             string
+	OrganizationID string
+	Name           string
+	Description    string
+	Venue          string
+	VenueType      string
+	Application    string
+	Budget         string
+	MetaData       string
+	ProjectFileURL string
+	CreatedAt      string
+	UpdatedAt      string
 }{
-	ID:          "id",
-	Name:        "name",
-	Description: "description",
-	TempVenue:   "temp_venue",
-	Metadata:    "metadata",
-	CreatedAt:   "created_at",
-	UpdatedAt:   "updated_at",
+	ID:             "id",
+	OrganizationID: "organization_id",
+	Name:           "name",
+	Description:    "description",
+	Venue:          "venue",
+	VenueType:      "venue_type",
+	Application:    "application",
+	Budget:         "budget",
+	MetaData:       "meta_data",
+	ProjectFileURL: "project_file_url",
+	CreatedAt:      "created_at",
+	UpdatedAt:      "updated_at",
 }
 
 var ProjectTableColumns = struct {
-	ID          string
-	Name        string
-	Description string
-	TempVenue   string
-	Metadata    string
-	CreatedAt   string
-	UpdatedAt   string
+	ID             string
+	OrganizationID string
+	Name           string
+	Description    string
+	Venue          string
+	VenueType      string
+	Application    string
+	Budget         string
+	MetaData       string
+	ProjectFileURL string
+	CreatedAt      string
+	UpdatedAt      string
 }{
-	ID:          "projects.id",
-	Name:        "projects.name",
-	Description: "projects.description",
-	TempVenue:   "projects.temp_venue",
-	Metadata:    "projects.metadata",
-	CreatedAt:   "projects.created_at",
-	UpdatedAt:   "projects.updated_at",
+	ID:             "projects.id",
+	OrganizationID: "projects.organization_id",
+	Name:           "projects.name",
+	Description:    "projects.description",
+	Venue:          "projects.venue",
+	VenueType:      "projects.venue_type",
+	Application:    "projects.application",
+	Budget:         "projects.budget",
+	MetaData:       "projects.meta_data",
+	ProjectFileURL: "projects.project_file_url",
+	CreatedAt:      "projects.created_at",
+	UpdatedAt:      "projects.updated_at",
 }
 
 // Generated where
 
+type whereHelpernull_JSON struct{ field string }
+
+func (w whereHelpernull_JSON) EQ(x null.JSON) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, false, x)
+}
+func (w whereHelpernull_JSON) NEQ(x null.JSON) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, true, x)
+}
+func (w whereHelpernull_JSON) LT(x null.JSON) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LT, x)
+}
+func (w whereHelpernull_JSON) LTE(x null.JSON) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LTE, x)
+}
+func (w whereHelpernull_JSON) GT(x null.JSON) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GT, x)
+}
+func (w whereHelpernull_JSON) GTE(x null.JSON) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GTE, x)
+}
+
+func (w whereHelpernull_JSON) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
+func (w whereHelpernull_JSON) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
+
+type whereHelpernull_Time struct{ field string }
+
+func (w whereHelpernull_Time) EQ(x null.Time) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, false, x)
+}
+func (w whereHelpernull_Time) NEQ(x null.Time) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, true, x)
+}
+func (w whereHelpernull_Time) LT(x null.Time) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LT, x)
+}
+func (w whereHelpernull_Time) LTE(x null.Time) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LTE, x)
+}
+func (w whereHelpernull_Time) GT(x null.Time) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GT, x)
+}
+func (w whereHelpernull_Time) GTE(x null.Time) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GTE, x)
+}
+
+func (w whereHelpernull_Time) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
+func (w whereHelpernull_Time) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
+
 var ProjectWhere = struct {
-	ID          whereHelperint
-	Name        whereHelperstring
-	Description whereHelpernull_String
-	TempVenue   whereHelpernull_String
-	Metadata    whereHelpertypes_JSON
-	CreatedAt   whereHelpertime_Time
-	UpdatedAt   whereHelpertime_Time
+	ID             whereHelperstring
+	OrganizationID whereHelperstring
+	Name           whereHelperstring
+	Description    whereHelpernull_String
+	Venue          whereHelpernull_String
+	VenueType      whereHelpernull_String
+	Application    whereHelpernull_String
+	Budget         whereHelpernull_JSON
+	MetaData       whereHelpernull_JSON
+	ProjectFileURL whereHelpernull_String
+	CreatedAt      whereHelpernull_Time
+	UpdatedAt      whereHelpernull_Time
 }{
-	ID:          whereHelperint{field: "\"projects\".\"id\""},
-	Name:        whereHelperstring{field: "\"projects\".\"name\""},
-	Description: whereHelpernull_String{field: "\"projects\".\"description\""},
-	TempVenue:   whereHelpernull_String{field: "\"projects\".\"temp_venue\""},
-	Metadata:    whereHelpertypes_JSON{field: "\"projects\".\"metadata\""},
-	CreatedAt:   whereHelpertime_Time{field: "\"projects\".\"created_at\""},
-	UpdatedAt:   whereHelpertime_Time{field: "\"projects\".\"updated_at\""},
+	ID:             whereHelperstring{field: "\"projects\".\"id\""},
+	OrganizationID: whereHelperstring{field: "\"projects\".\"organization_id\""},
+	Name:           whereHelperstring{field: "\"projects\".\"name\""},
+	Description:    whereHelpernull_String{field: "\"projects\".\"description\""},
+	Venue:          whereHelpernull_String{field: "\"projects\".\"venue\""},
+	VenueType:      whereHelpernull_String{field: "\"projects\".\"venue_type\""},
+	Application:    whereHelpernull_String{field: "\"projects\".\"application\""},
+	Budget:         whereHelpernull_JSON{field: "\"projects\".\"budget\""},
+	MetaData:       whereHelpernull_JSON{field: "\"projects\".\"meta_data\""},
+	ProjectFileURL: whereHelpernull_String{field: "\"projects\".\"project_file_url\""},
+	CreatedAt:      whereHelpernull_Time{field: "\"projects\".\"created_at\""},
+	UpdatedAt:      whereHelpernull_Time{field: "\"projects\".\"updated_at\""},
 }
 
 // ProjectRels is where relationship names are stored.
@@ -110,9 +192,9 @@ func (*projectR) NewStruct() *projectR {
 type projectL struct{}
 
 var (
-	projectAllColumns            = []string{"id", "name", "description", "temp_venue", "metadata", "created_at", "updated_at"}
-	projectColumnsWithoutDefault = []string{"name"}
-	projectColumnsWithDefault    = []string{"id", "description", "temp_venue", "metadata", "created_at", "updated_at"}
+	projectAllColumns            = []string{"id", "organization_id", "name", "description", "venue", "venue_type", "application", "budget", "meta_data", "project_file_url", "created_at", "updated_at"}
+	projectColumnsWithoutDefault = []string{"organization_id", "name"}
+	projectColumnsWithDefault    = []string{"id", "description", "venue", "venue_type", "application", "budget", "meta_data", "project_file_url", "created_at", "updated_at"}
 	projectPrimaryKeyColumns     = []string{"id"}
 	projectGeneratedColumns      = []string{}
 )
@@ -435,7 +517,7 @@ func Projects(mods ...qm.QueryMod) projectQuery {
 
 // FindProject retrieves a single record by ID with an executor.
 // If selectCols is empty Find will return all columns.
-func FindProject(ctx context.Context, exec boil.ContextExecutor, iD int, selectCols ...string) (*Project, error) {
+func FindProject(ctx context.Context, exec boil.ContextExecutor, iD string, selectCols ...string) (*Project, error) {
 	projectObj := &Project{}
 
 	sel := "*"
@@ -474,11 +556,11 @@ func (o *Project) Insert(ctx context.Context, exec boil.ContextExecutor, columns
 	if !boil.TimestampsAreSkipped(ctx) {
 		currTime := time.Now().In(boil.GetLocation())
 
-		if o.CreatedAt.IsZero() {
-			o.CreatedAt = currTime
+		if queries.MustTime(o.CreatedAt).IsZero() {
+			queries.SetScanner(&o.CreatedAt, currTime)
 		}
-		if o.UpdatedAt.IsZero() {
-			o.UpdatedAt = currTime
+		if queries.MustTime(o.UpdatedAt).IsZero() {
+			queries.SetScanner(&o.UpdatedAt, currTime)
 		}
 	}
 
@@ -559,7 +641,7 @@ func (o *Project) Update(ctx context.Context, exec boil.ContextExecutor, columns
 	if !boil.TimestampsAreSkipped(ctx) {
 		currTime := time.Now().In(boil.GetLocation())
 
-		o.UpdatedAt = currTime
+		queries.SetScanner(&o.UpdatedAt, currTime)
 	}
 
 	var err error
@@ -695,10 +777,10 @@ func (o *Project) Upsert(ctx context.Context, exec boil.ContextExecutor, updateO
 	if !boil.TimestampsAreSkipped(ctx) {
 		currTime := time.Now().In(boil.GetLocation())
 
-		if o.CreatedAt.IsZero() {
-			o.CreatedAt = currTime
+		if queries.MustTime(o.CreatedAt).IsZero() {
+			queries.SetScanner(&o.CreatedAt, currTime)
 		}
-		o.UpdatedAt = currTime
+		queries.SetScanner(&o.UpdatedAt, currTime)
 	}
 
 	if err := o.doBeforeUpsertHooks(ctx, exec); err != nil {
@@ -964,7 +1046,7 @@ func (o *ProjectSlice) ReloadAll(ctx context.Context, exec boil.ContextExecutor)
 }
 
 // ProjectExists checks if the Project row exists.
-func ProjectExists(ctx context.Context, exec boil.ContextExecutor, iD int) (bool, error) {
+func ProjectExists(ctx context.Context, exec boil.ContextExecutor, iD string) (bool, error) {
 	var exists bool
 	sql := "select exists(select 1 from \"projects\" where \"id\"=$1 limit 1)"
 
