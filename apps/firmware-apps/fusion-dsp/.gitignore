@@ -1,6 +1,8 @@
 build/
 *.wav
 
+profiling_results/
+
 # For projects that use the Waf build system: https://waf.io/
 # Dot-hidden on Unix-like systems
 .vscode
@@ -12,3 +14,6 @@ waf3-*-*/
 # Lockfile
 .lock-waf_*_build
 wafconf/__pycache__
+
+# Python virtual environments
+venv/
