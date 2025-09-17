@@ -24,34 +24,27 @@ class FloorPlanCalibrationDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      insetPadding: const EdgeInsets.all(24),
-      backgroundColor: Colors.transparent,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 980, maxHeight: 720),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: <BoxShadow>[
-              BoxShadow(
-                color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.18),
-                blurRadius: 28,
-                offset: const Offset(0, 16),
-              ),
-            ],
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.18),
+            blurRadius: 28,
+            offset: const Offset(0, 16),
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: _FloorPlanShell(
-              title: title,
-              onClose: onCancel,
-              child: FloorPlanCalibrator(
-                floorPlanImage: floorPlanImage,
-                onCalibrationComplete: onCalibrationComplete,
-                onCancel: onCancel,
-              ),
-            ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: _FloorPlanShell(
+          title: title,
+          onClose: onCancel,
+          child: FloorPlanCalibrator(
+            floorPlanImage: floorPlanImage,
+            onCalibrationComplete: onCalibrationComplete,
+            onCancel: onCancel,
           ),
         ),
       ),
