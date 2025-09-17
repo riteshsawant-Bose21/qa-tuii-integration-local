@@ -2,8 +2,10 @@
 enum ProductType {
   speaker,
   amplifier,
-  device,
+  endpoints,
   sources,
+  dsps,
+  controllers,
 }
 
 /// Sort options enum
@@ -12,4 +14,17 @@ enum SortOption {
   priceLowToHigh,
   nameAToZ,
   nameZToA,
+}
+
+/// Coverage levels enum
+enum CoverageLevel {
+  low,
+  mid,
+  high,
+}
+
+/// Impedance levels enum
+enum ImpedanceLevel {
+  low,
+  high,
 }

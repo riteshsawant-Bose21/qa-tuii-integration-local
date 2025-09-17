@@ -83,7 +83,11 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
             _buildFilterSection(
               title: 'Product Type',
               image: "assets/images/coverage.png",
-              options: ProductType.values.map((ProductType type) => _getProductTypeDisplayName(type)).toList(),
+              options:
+                  ProductType.values
+                      .where((ProductType type) => type != ProductType.sources)
+                      .map((ProductType type) => _getProductTypeDisplayName(type))
+                      .toList(),
               selectedOptions: _localProductTypes.map((ProductType type) => _getProductTypeDisplayName(type)).toSet(),
               onChanged: (Set<String> selected) {
                 setState(() {
@@ -117,7 +121,7 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
               _buildFilterSection(
                 title: 'Venue Type',
                 image: "assets/images/venue_type.png",
-                options: <String>['Indoor', 'Outdoor'],
+                options: <String>['Indoor', 'Indoor + Outdoor'],
                 selectedOptions: _localVenueTypes,
                 onChanged: (Set<String> selected) {
                   setState(() {
@@ -127,19 +131,20 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
                 },
               ),
 
-            /// Color Filter
-            _buildFilterSection(
-              title: 'Color',
-              image: "assets/images/color.png",
-              options: <String>['White', 'Black'],
-              selectedOptions: _localColors,
-              onChanged: (Set<String> selected) {
-                setState(() {
-                  _localColors = selected;
-                });
-                _applyFilters();
-              },
-            ),
+            /// Color Filter (only for speakers or when no specific product type is selected)
+            if (_localProductTypes.isEmpty || _localProductTypes.contains(ProductType.speaker))
+              _buildFilterSection(
+                title: 'Color',
+                image: "assets/images/color.png",
+                options: <String>['White', 'Black'],
+                selectedOptions: _localColors,
+                onChanged: (Set<String> selected) {
+                  setState(() {
+                    _localColors = selected;
+                  });
+                  _applyFilters();
+                },
+              ),
 
             /// Coverage Filter (only for speakers)
             if (_localProductTypes.isEmpty || _localProductTypes.contains(ProductType.speaker))
@@ -176,7 +181,7 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
     );
   }
 
-  /// Build individual filter section with checkboxes
+  /// Build individual filter section with radio buttons or checkboxes
   Widget _buildFilterSection({
     required String title,
     required String image,
@@ -210,31 +215,58 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
         ],
       ),
       children:
-          options.map((String option) {
-            final bool isSelected = selectedOptions.contains(option);
-            return CheckboxListTile(
-              dense: true,
-              contentPadding: EdgeInsets.zero,
-              controlAffinity: ListTileControlAffinity.leading,
-              title: FusionAppText(
-                text: option,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontSize: 11,
-                ),
-              ),
-              value: isSelected,
-              activeColor: Theme.of(context).colorScheme.greyDark,
-              onChanged: (bool? value) {
-                final Set<String> newSelected = Set<String>.from(selectedOptions);
-                if (value == true) {
-                  newSelected.add(option);
-                } else {
-                  newSelected.remove(option);
-                }
-                onChanged(newSelected);
-              },
-            );
-          }).toList(),
+          (title == "Product Type")
+              ? options.map((String option) {
+                final bool isSelected = selectedOptions.contains(option);
+                print("$title - option: $option, isSelected: $isSelected");
+                return RadioListTile<String>(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  title: FusionAppText(
+                    text: option,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontSize: 11,
+                    ),
+                  ),
+                  value: option,
+                  groupValue: selectedOptions.isNotEmpty ? selectedOptions.first : null,
+                  activeColor: Theme.of(context).colorScheme.greyDark,
+                  onChanged: (String? value) {
+                    print("$title radio changed: $value");
+                    final Set<String> newSelected = <String>{};
+                    if (value != null && !isSelected) {
+                      newSelected.add(value);
+                    }
+                    onChanged(newSelected);
+                  },
+                );
+              }).toList()
+              : options.map((String option) {
+                final bool isSelected = selectedOptions.contains(option);
+                return CheckboxListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  title: FusionAppText(
+                    text: option,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontSize: 11,
+                    ),
+                  ),
+                  value: isSelected,
+                  activeColor: Theme.of(context).colorScheme.greyDark,
+                  onChanged: (bool? checked) {
+                    final Set<String> newSelected = Set<String>.from(selectedOptions);
+                    if (checked == true) {
+                      newSelected.add(option);
+                    } else {
+                      newSelected.remove(option);
+                    }
+                    onChanged(newSelected);
+                  },
+                );
+              }).toList(),
     );
   }
 
@@ -265,8 +297,12 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
         return 'Speakers';
       case ProductType.amplifier:
         return 'Amplifiers';
-      case ProductType.device:
-        return 'Devices';
+      case ProductType.controllers:
+        return 'Controllers';
+      case ProductType.endpoints:
+        return 'Endpoints';
+      case ProductType.dsps:
+        return 'DSPs';
       case ProductType.sources:
         return 'Sources';
     }
@@ -278,15 +314,20 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
         return ProductType.speaker;
       case 'Amplifiers':
         return ProductType.amplifier;
-      case 'Devices':
-        return ProductType.device;
+      case 'Controllers':
+        return ProductType.controllers;
+      case 'Endpoints':
+        return ProductType.endpoints;
       case 'Sources':
         return ProductType.sources;
+      case 'DSPs':
+        return ProductType.dsps;
       default:
         return null;
     }
   }
 
+  /// Apply local filter selections to the parent widget
   void _applyFilters() {
     widget.selectedProductTypes.clear();
     widget.selectedProductTypes.addAll(_localProductTypes);

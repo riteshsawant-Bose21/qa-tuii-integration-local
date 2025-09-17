@@ -16,8 +16,10 @@ class ProductQueryView extends StatelessWidget {
   ProductType? getCurrentProductType(int index) {
     if (index == -1) return null;
     if (index == 0) return ProductType.speaker;
-    if (index == 1) return ProductType.sources;
-    if (index == 2) return ProductType.device;
+    if (index == 2) return ProductType.endpoints;
+    if (index == 3) return ProductType.amplifier;
+    if (index == 4) return ProductType.dsps;
+    if (index == 5) return ProductType.controllers;
     return ProductType.speaker;
   }
 
@@ -194,10 +196,15 @@ class ProductCard extends StatelessWidget {
         return "assets/images/speakers/DM_pendant.png";
       case ProductType.amplifier:
         return "assets/images/amps/default_amp.png";
-      case ProductType.device:
+      case ProductType.dsps:
+      case ProductType.endpoints:
         return "assets/images/devices/default_device.png";
+
       case ProductType.sources:
         return "assets/images/products/mic1.png";
+
+      case ProductType.controllers:
+        return "assets/images/products/bose_dsp.png";
     }
   }
 
@@ -206,11 +213,15 @@ class ProductCard extends StatelessWidget {
       case ProductType.speaker:
         return 'Speaker';
       case ProductType.amplifier:
-        return 'Amplifier • ${product.specifications}';
-      case ProductType.device:
-        return 'Device • ${product.specifications}';
+        return 'Amplifier';
+      case ProductType.controllers:
+        return 'Controllers';
+      case ProductType.endpoints:
+        return 'Endpoint';
       case ProductType.sources:
         return 'Source';
+      case ProductType.dsps:
+        return 'DSP';
     }
   }
 
@@ -274,6 +285,8 @@ class ProductAPI {
       ...getSpeakerProducts(),
       ...getAmplifierProducts(),
       ...getDeviceProducts(),
+      ...getControllers(),
+      ...getEndpoints(),
     ];
   }
 
@@ -284,7 +297,11 @@ class ProductAPI {
         return getSpeakerProducts();
       case ProductType.amplifier:
         return getAmplifierProducts();
-      case ProductType.device:
+      case ProductType.controllers:
+        return getControllers();
+      case ProductType.endpoints:
+        return getEndpoints();
+      case ProductType.dsps:
         return getDeviceProducts();
       case ProductType.sources:
         return <ProductQueryModel>[
@@ -308,15 +325,17 @@ class ProductAPI {
       final List<dynamic> speakersData = jsonDecode(speakersJson);
       // print("Speakers Data: $speakersData");
       return speakersData.map((dynamic speakerData) {
-        print(speakerData);
         return ProductQueryModel(
           name: speakerData['model'] ?? '',
           price: (speakerData['price'] ?? 0.0).toDouble(),
-          image: 'assets/images/speakers/DM_pendant.png',
+          image: speakerData["image_url"],
           type: ProductType.speaker,
+          color: speakerData["color"],
+          mountingType: speakerData["mounting_type"],
+          outdoorRated: speakerData["outdoor_rated"],
+          maxSpl: speakerData["max_spl"],
+          nominalOhms: speakerData["nominal_ohms"],
           sku: 'MSA12XOHS',
-          //speakerData['model'] ??
-          specifications: '${speakerData['maxSpl']} dB SPL • ${speakerData['mountingType']}',
         );
       }).toList();
     } catch (e) {
@@ -329,7 +348,6 @@ class ProductAPI {
     try {
       final String amplifiersJson = fusionDevices.getAmplifiers();
       final List<dynamic> amplifiersData = jsonDecode(amplifiersJson);
-      print("Amplifiers Data: $amplifiersData");
 
       return amplifiersData.map((dynamic ampData) {
         return ProductQueryModel(
@@ -356,14 +374,60 @@ class ProductAPI {
       // print("Devices Data: $devicesData");
 
       return devicesData.map((dynamic deviceData) {
-        print("deviceData['imageUrl'] == > ${deviceData['imageUrl']}");
         return ProductQueryModel(
           name: deviceData['name'] ?? '',
           price: 0.0,
           // Add price if available in fusion_lib device model
           image: deviceData['image_url'] ?? '',
           // Add image if available in fusion_lib device model
-          type: ProductType.device,
+          type: ProductType.dsps, // Fixed: should be dsps, not controllers
+          sku: deviceData['name'] ?? '',
+          specifications: '${deviceData['analogInputs']}in • ${deviceData['analogOutputs']}out • ${deviceData['networkIO']} network I/O',
+        );
+      }).toList();
+    } catch (e) {
+      return <ProductQueryModel>[];
+    }
+  }
+
+  /// Convert controllers specs to products using fusion_lib
+  static List<ProductQueryModel> getControllers() {
+    try {
+      final String controllersJson = fusionDevices.getControllers();
+      final List<dynamic> controllersData = jsonDecode(controllersJson);
+
+      return controllersData.map((dynamic data) {
+        return ProductQueryModel(
+          name: data['name'] ?? '',
+          price: 0.0,
+          // Add price if available in fusion_lib device model
+          image: data['imageUrl'] ?? '',
+          // Add image if available in fusion_lib device model
+          type: ProductType.controllers,
+          sku: data['name'] ?? '',
+          specifications: '${data['analogInputs']}in • ${data['analogOutputs']}out • ${data['networkIO']} network I/O',
+        );
+      }).toList();
+    } catch (e) {
+      return <ProductQueryModel>[];
+    }
+  }
+
+  /// Convert controllers specs to products using fusion_lib
+  static List<ProductQueryModel> getEndpoints() {
+    try {
+      final String controllersJson = fusionDevices.getAllEndpoints();
+      final List<dynamic> controllersData = jsonDecode(controllersJson);
+      // print("Devices Data: $devicesData");
+
+      return controllersData.map((dynamic deviceData) {
+        return ProductQueryModel(
+          name: deviceData['name'] ?? '',
+          price: 0.0,
+          // Add price if available in fusion_lib device model
+          image: deviceData['image_url'] ?? '',
+          // Add image if available in fusion_lib device model
+          type: ProductType.endpoints, // Fixed: should be endpoints, not controllers
           sku: deviceData['name'] ?? '',
           specifications: '${deviceData['analogInputs']}in • ${deviceData['analogOutputs']}out • ${deviceData['networkIO']} network I/O',
         );
