@@ -35,11 +35,11 @@ class ProductQueryState {
   factory ProductQueryState.initial() {
     return ProductQueryState(
       searchController: TextEditingController(),
-      filteredProducts: ProductAPI.getSpeakerProducts(),
+      filteredProducts: ProductAPI.getAllProducts(),
       searchQuery: '',
       selectedProductType: null,
-      selectedSortOption: null,
-      selectedProductTypes: <ProductType>{ProductType.speaker},
+      selectedSortOption: SortOption.nameAToZ, // Set A-Z as default
+      selectedProductTypes: <ProductType>{},
       selectedMountTypes: <String>{},
       selectedVenueTypes: <String>{},
       selectedColors: <String>{},

@@ -1,5 +1,5 @@
 /// Controller catalog containing product specifications
-/// 
+///
 /// This module contains the controller catalog for Bose ControlPal series
 /// and other control devices.
 
@@ -10,13 +10,13 @@ class ControllerCatalog {
   static const List<ControllerSpec> controllers = [
     ControllerSpec(
       name: "ControlPal LT",
-      imageUrl: 'assets/images/control_pal.png',
+      imageUrl: 'assets/images/controllers/control_pal.png',
       description: 'Basic volume control with LED display',
       price: 199.99,
     ),
     ControllerSpec(
       name: "ControlPal Pro",
-      imageUrl: 'assets/images/control_pal_pro.png',
+      imageUrl: 'assets/images/controllers/control_pal_pro.png',
       description: 'Advanced touch controller with EQ and parameter control',
       price: 299.99,
     ),

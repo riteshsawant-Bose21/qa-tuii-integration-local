@@ -95,6 +95,8 @@ flutter:
     - assets/images/speakers/
     - assets/images/products/
     - assets/images/floor_plans/
+    - assets/images/endpoints/
+    - assets/images/controllers/
     - assets/Loudspeakers/
     - assets/images/splash/
     - assets/icons/

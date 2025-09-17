@@ -21,8 +21,6 @@ void main() {
       expect(input.networkInputs, equals(4));
       expect(input.networkOutputs, equals(8));
       expect(input.bluetoothInputs, equals(2));
-      expect(input.preferWallIo, isTrue);
-      expect(input.preferDistributed, isFalse);
     });
 
     test('should create from JSON with defaults for missing fields', () {
@@ -38,8 +36,6 @@ void main() {
       expect(input.networkInputs, equals(0));
       expect(input.networkOutputs, equals(0));
       expect(input.bluetoothInputs, equals(0));
-      expect(input.preferWallIo, isFalse);
-      expect(input.preferDistributed, isFalse);
     });
 
     test('should convert to JSON correctly', () {
@@ -49,8 +45,6 @@ void main() {
         networkInputs: 2,
         networkOutputs: 4,
         bluetoothInputs: 1,
-        preferWallIo: false,
-        preferDistributed: true,
       );
 
       final json = input.toJson();
@@ -71,8 +65,6 @@ void main() {
         networkInputs: 2,
         networkOutputs: 4,
         bluetoothInputs: 1,
-        preferWallIo: true,
-        preferDistributed: false,
       );
 
       final str = input.toString();
@@ -145,7 +137,7 @@ void main() {
 
       expect(devices, isNotEmpty);
       expect(devices.length, greaterThan(1));
-      
+
       // Should contain multiple Fusion Mini devices for network I/O
       final fm6Count = devices.where((device) => device == 'FM6').length;
       expect(fm6Count, greaterThan(1)); // Need multiple FM6 for 96 network I/O (24 each)
@@ -174,7 +166,6 @@ void main() {
         networkInputs: 0,
         networkOutputs: 0,
         bluetoothInputs: 0,
-        preferWallIo: true,
       );
 
       final inputWithoutWallIo = RecommendInput(
@@ -183,7 +174,6 @@ void main() {
         networkInputs: 0,
         networkOutputs: 0,
         bluetoothInputs: 0,
-        preferWallIo: false,
       );
 
       final devicesWithWallIo = DeviceRecommender.recommendDevices(inputWithWallIo);
@@ -191,7 +181,7 @@ void main() {
 
       expect(devicesWithWallIo, isNotEmpty);
       expect(devicesWithoutWallIo, isNotEmpty);
-      
+
       // The recommendations might differ based on wall I/O preference
       // (This depends on the actual implementation logic)
     });
@@ -203,7 +193,6 @@ void main() {
         networkInputs: 24,
         networkOutputs: 24,
         bluetoothInputs: 0,
-        preferDistributed: true,
       );
 
       final inputCentralized = RecommendInput(
@@ -212,7 +201,6 @@ void main() {
         networkInputs: 24,
         networkOutputs: 24,
         bluetoothInputs: 0,
-        preferDistributed: false,
       );
 
       final devicesDistributed = DeviceRecommender.recommendDevices(inputDistributed);
@@ -220,7 +208,7 @@ void main() {
 
       expect(devicesDistributed, isNotEmpty);
       expect(devicesCentralized, isNotEmpty);
-      
+
       // Both should contain devices, possibly different configurations
     });
 
@@ -236,7 +224,7 @@ void main() {
       final devices = DeviceRecommender.recommendDevices(input);
 
       expect(devices, isNotEmpty);
-      
+
       // Should recommend multiple FM6 devices
       final fm6Count = devices.where((device) => device == 'FM6').length;
       expect(fm6Count, greaterThanOrEqualTo(6)); // 144 total network I/O / 24 per FM6 = 6
@@ -255,12 +243,11 @@ void main() {
 
       expect(devices, isNotEmpty);
       expect(devices.length, greaterThanOrEqualTo(2)); // Should have both analog and network devices
-      
+
       // Should contain both analog-capable and network-capable devices
-      final hasAnalogDevice = devices.any((device) => 
-        device.contains('PowerSmart') || device.contains('4ch') || device.contains('8ch') || device == 'FM8Y');
+      final hasAnalogDevice = devices.any((device) => device.contains('PowerSmart') || device.contains('4ch') || device.contains('8ch') || device == 'FM8Y');
       final hasNetworkDevice = devices.any((device) => device == 'FM6');
-      
+
       expect(hasAnalogDevice, isTrue);
       expect(hasNetworkDevice, isTrue);
     });
@@ -292,7 +279,7 @@ void main() {
       );
 
       final devices = DeviceRecommender.recommendDevices(input);
-      
+
       final fm6Count = devices.where((device) => device == 'FM6').length;
       expect(fm6Count, equals(1)); // Exactly one FM6 needed
     });
@@ -307,7 +294,7 @@ void main() {
       );
 
       final devices = DeviceRecommender.recommendDevices(input);
-      
+
       final fm6Count = devices.where((device) => device == 'FM6').length;
       expect(fm6Count, equals(2)); // Need two FM6s for 25 I/O
     });
