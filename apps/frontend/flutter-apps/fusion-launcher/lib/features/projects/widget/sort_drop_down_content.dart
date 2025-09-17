@@ -66,7 +66,12 @@ class SortDropdownContent extends StatelessWidget {
 
     return InkWell(
       onTap: () {
+        print("Sort option tapped: $option, currently selected: $selectedSortOption");
+
+        // Call the callback immediately without any delay
         onSortOptionChanged(option);
+
+        // Close popup immediately
         Navigator.of(context).pop();
       },
       child: Container(
@@ -80,14 +85,23 @@ class SortDropdownContent extends StatelessWidget {
               height: 24,
             ),
             const SizedBox(width: 12),
-            FusionAppText(
-              text: title,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
+            Expanded(
+              child: FusionAppText(
+                text: title,
+                textAlign: TextAlign.start,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontSize: 11,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                  color: isSelected ? Theme.of(context).primaryColor : null,
+                ),
               ),
             ),
+            if (isSelected)
+              Icon(
+                Icons.check,
+                size: 16,
+                color: Theme.of(context).primaryColor,
+              ),
           ],
         ),
       ),

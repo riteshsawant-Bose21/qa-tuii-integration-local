@@ -9,6 +9,17 @@ import '../pages/product_query.dart';
 class ProductQueryCubit extends Cubit<ProductQueryState> {
   ProductQueryCubit() : super(ProductQueryState.initial()) {
     state.searchController.addListener(_onSearchChanged);
+    // Apply initial sort to the products on startup
+    _applyInitialSort();
+  }
+
+  /// Apply initial sort when cubit is created
+  void _applyInitialSort() {
+    emit(
+      state.copyWith(
+        filteredProducts: _performSearch(state.searchQuery),
+      ),
+    );
   }
 
   @override
@@ -251,13 +262,32 @@ class ProductQueryCubit extends Cubit<ProductQueryState> {
   }
 
   void onSortOptionChanged(SortOption? option) {
-    print("Sort option changed to: $option"); // Debug log
+    print("=== Sort Debug ===");
+    print("Sort option changing from ${state.selectedSortOption} to: $option");
+
+    // First emit the new state with the updated sort option
     emit(
       state.copyWith(
         selectedSortOption: option,
-        filteredProducts: _performSearch(state.searchQuery),
       ),
     );
+
+    // Then create sorted products using the updated state
+    final List<ProductQueryModel> newFilteredProducts = _performSearch(state.searchQuery);
+
+    print("Products before sort: ${state.filteredProducts.take(3).map((p) => p.name).toList()}");
+    print("Products after sort: ${newFilteredProducts.take(3).map((p) => p.name).toList()}");
+
+    // Emit the final state with sorted products
+    emit(
+      state.copyWith(
+        selectedSortOption: option,
+        filteredProducts: newFilteredProducts,
+      ),
+    );
+
+    print("State updated - selectedSortOption: ${state.selectedSortOption}");
+    print("=== End Sort Debug ===");
   }
 
   void onFiltersChanged() {
