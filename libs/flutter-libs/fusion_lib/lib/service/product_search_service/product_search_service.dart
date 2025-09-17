@@ -133,6 +133,8 @@ class ProductSearchService {
         return 'dsp';
       case ProductType.sources:
         return 'source';
+      case ProductType.racks:
+        return 'rack';
     }
   }
 
