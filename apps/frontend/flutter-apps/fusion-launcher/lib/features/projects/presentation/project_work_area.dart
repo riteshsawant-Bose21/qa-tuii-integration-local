@@ -188,47 +188,53 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                   ),
 
                   /// Undo Icon Section
-                  GestureDetector(
-                    onTap: () {
-                      serviceLocator<ProjectViewModel>().canUndo ? () => serviceLocator<ProjectViewModel>().undo() : null;
-                    },
-                    child: Container(
-                      width: 56,
-                      height: 48,
-                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                  Visibility(
+                    visible: false,
+                    child: GestureDetector(
+                      onTap: () {
+                        serviceLocator<ProjectViewModel>().canUndo ? () => serviceLocator<ProjectViewModel>().undo() : null;
+                      },
+                      child: Container(
+                        width: 56,
+                        height: 48,
+                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
 
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.white,
-                      ),
-                      child: const FusionImage.asset(
-                        "assets/images/return_icon.png",
-                        width: 20,
-                        height: 20,
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.white,
+                        ),
+                        child: const FusionImage.asset(
+                          "assets/images/return_icon.png",
+                          width: 20,
+                          height: 20,
+                        ),
                       ),
                     ),
                   ),
 
                   /// Redo Icon Section
-                  GestureDetector(
-                    onTap: () {
-                      serviceLocator<ProjectViewModel>().canRedo ? () => serviceLocator<ProjectViewModel>().redo() : null;
-                    },
-                    child: Container(
-                      width: 56,
-                      height: 48,
-                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                  Visibility(
+                    visible: false,
+                    child: GestureDetector(
+                      onTap: () {
+                        serviceLocator<ProjectViewModel>().canRedo ? () => serviceLocator<ProjectViewModel>().redo() : null;
+                      },
+                      child: Container(
+                        width: 56,
+                        height: 48,
+                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
 
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.white,
-                      ),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.white,
+                        ),
 
-                      child: Transform(
-                        alignment: Alignment.center,
-                        transform: Matrix4.rotationY(3.14),
-                        child: const FusionImage.asset(
-                          "assets/images/return_icon.png",
-                          width: 20,
-                          height: 20,
+                        child: Transform(
+                          alignment: Alignment.center,
+                          transform: Matrix4.rotationY(3.14),
+                          child: const FusionImage.asset(
+                            "assets/images/return_icon.png",
+                            width: 20,
+                            height: 20,
+                          ),
                         ),
                       ),
                     ),

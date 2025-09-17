@@ -39,7 +39,7 @@ class ProductQueryState {
       searchQuery: '',
       selectedProductType: null,
       selectedSortOption: SortOption.nameAToZ, // Set A-Z as default
-      selectedProductTypes: <ProductType>{},
+      selectedProductTypes: <ProductType>{}, // Empty set to show all products initially
       selectedMountTypes: <String>{},
       selectedVenueTypes: <String>{},
       selectedColors: <String>{},
