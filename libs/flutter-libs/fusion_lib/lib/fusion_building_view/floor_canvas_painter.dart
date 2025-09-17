@@ -442,7 +442,6 @@ class FloorCanvasPainter extends CustomPainter {
 
       // draw selection border
       if (comp.id == selectedHardwareComponentId) {
-        print("Drawing selection border for hardware component ${comp.id} at index $i ");
         canvas.drawRect(
           Rect.fromCenter(center: comp.pos, width: gridSize, height: gridSize),
           Paint()
