@@ -352,7 +352,7 @@ class ProductAPI {
       return amplifiersData.map((dynamic ampData) {
         return ProductQueryModel(
           name: ampData['name'] ?? '',
-          price: 0.0,
+          price: ampData['price'],
           // Add price if available in fusion_lib amp model
           image: ampData['image_url'] ?? '',
           // Add image if available in fusion_lib amp model
@@ -376,7 +376,7 @@ class ProductAPI {
       return devicesData.map((dynamic deviceData) {
         return ProductQueryModel(
           name: deviceData['name'] ?? '',
-          price: 0.0,
+          price: deviceData['price'],
           // Add price if available in fusion_lib device model
           image: deviceData['image_url'] ?? '',
           // Add image if available in fusion_lib device model
