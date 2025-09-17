@@ -34,34 +34,54 @@ class CostCalculatorScreen extends StatefulWidget {
   State<CostCalculatorScreen> createState() => _CostCalculatorScreenState();
 }
 
-class _CostCalculatorScreenState extends State<CostCalculatorScreen> with SingleTickerProviderStateMixin {
-  late final AnimationController _rotationController;
-  late final Animation<double> _rotationAnimation;
+class _CostCalculatorScreenState extends State<CostCalculatorScreen> with TickerProviderStateMixin {
+  // Individual animation controllers for each section
+  late final Map<String, AnimationController> _rotationControllers = <String, AnimationController>{};
+  late final Map<String, Animation<double>> _rotationAnimations = <String, Animation<double>>{};
+
+  // Track expansion state for each section (default to expanded)
+  final Map<String, bool> _expansionStates = <String, bool>{};
 
   @override
   void initState() {
     super.initState();
-    _rotationController = AnimationController(duration: const Duration(milliseconds: 200), vsync: this, value: 1.0);
-    _rotationAnimation = Tween<double>(begin: 0.0, end: 0.5).animate(CurvedAnimation(parent: _rotationController, curve: Curves.easeInOut));
+    _initializeAnimationControllers();
+  }
+
+  void _initializeAnimationControllers() {
+    final List<String> sections = <String>['Loudspeakers', 'Sources', 'Controllers', 'Racks', 'Others'];
+
+    for (String section in sections) {
+      // Start with expanded state (value: 1.0 means rotated/expanded)
+      _rotationControllers[section] = AnimationController(duration: const Duration(milliseconds: 200), vsync: this, value: 1.0);
+
+      _rotationAnimations[section] = Tween<double>(
+        begin: 0.0,
+        end: 0.5,
+      ).animate(CurvedAnimation(parent: _rotationControllers[section]!, curve: Curves.easeInOut));
+
+      // Set default expansion state to true (expanded)
+      _expansionStates[section] = true;
+    }
   }
 
   @override
   void dispose() {
-    _rotationController.dispose();
+    // Dispose all animation controllers
+    for (AnimationController controller in _rotationControllers.values) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
-  /// Handles expansion state changes and triggers icon rotation animation.
-  ///
-  /// Called by the [ExpansionTile] when the user taps to expand or collapse.
-  /// Animates the trailing icon to provide visual feedback.
-  ///
-  /// [expanded] - `true` if the tile is being expanded, `false` if collapsing.
-  void _handleExpansionChanged(bool expanded) {
+  /// Handles expansion state changes for a specific section
+  void _handleExpansionChanged(String section, bool expanded) {
+    _expansionStates[section] = expanded;
+
     if (expanded) {
-      _rotationController.forward();
+      _rotationControllers[section]?.forward();
     } else {
-      _rotationController.reverse();
+      _rotationControllers[section]?.reverse();
     }
   }
 
@@ -194,24 +214,21 @@ class _CostCalculatorScreenState extends State<CostCalculatorScreen> with Single
 
     return ExpansionTile(
       childrenPadding: EdgeInsets.zero,
-
       minTileHeight: 0,
-
       collapsedBackgroundColor: Colors.transparent,
       backgroundColor: Colors.transparent,
       collapsedIconColor: CostCalculatorScreen.primaryText,
       iconColor: CostCalculatorScreen.accentColor,
-      onExpansionChanged: _handleExpansionChanged,
+      onExpansionChanged: (bool expanded) => _handleExpansionChanged(title, expanded),
       tilePadding: EdgeInsets.zero,
-      showTrailingIcon: true,
+      showTrailingIcon: false, // Hide default trailing icon since we're using custom one
+      initiallyExpanded: true, // Start expanded by default
       title: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(
           children: <Widget>[
-            _RotatingIcon(animation: _rotationAnimation, color: Theme.of(context).colorScheme.fusionButtonColor),
-            const SizedBox(
-              width: 4,
-            ),
+            _RotatingIcon(animation: _rotationAnimations[title] ?? _rotationAnimations.values.first, color: Theme.of(context).colorScheme.fusionButtonColor),
+            const SizedBox(width: 4),
             FusionAppText(
               text: title,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -230,9 +247,7 @@ class _CostCalculatorScreenState extends State<CostCalculatorScreen> with Single
               fontSize: 11,
             ),
           ),
-          const SizedBox(
-            width: 8,
-          ),
+          const SizedBox(width: 8),
           Container(
             width: 70,
             alignment: Alignment.centerRight,
