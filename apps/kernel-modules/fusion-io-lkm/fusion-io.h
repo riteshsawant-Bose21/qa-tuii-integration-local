@@ -21,40 +21,34 @@
 
 
 /* I2C */
-enum i2c_reg_data_op_size {
-    I2C_REG_DATA_OP_8BIT = 0,
-    I2C_REG_DATA_OP_16BIT
+enum endpoint_cmd_msg_op_size {
+    ENDPOINT_CMD_MSG_OP_8BIT,
+    ENDPOINT_CMD_MSG_OP_16BIT
 };
 
-#define I2C_REG_DATA_ADDR_NONE 0xff
+#define ENDPOINT_CMD_MSG_ADDR_NONE 0xff
 
-struct i2c_reg_data {
-    u8                        reg_addr;
-    enum i2c_reg_data_op_size op_size;
-    u16                       data_mask;
+struct endpoint_cmd_msg {
+    u8                            reg_addr;
+    enum endpoint_cmd_msg_op_size op_size;
+    u16                           data;
 };
 
 
 /* GPIO and commands */
 enum endpoint_gpio_type {
-    EP_GPIO_TYPE_NONE = 0,
+    EP_GPIO_TYPE_NONE,
     EP_GPIO_TYPE_VIRT,
     EP_GPIO_TYPE_PHYS,
 };
 
-enum endpoint_gpio_export {
-    EP_GPIO_NO_EXPORT = 0,
-    EP_GPIO_EXPORT
-};
-
 enum endpoint_gpio_dir {
-    EP_GPIO_DIR_IO = 0,
     EP_GPIO_DIR_O,
     EP_GPIO_DIR_I,
 };
 
 enum endpoint_gpio_val {
-    EP_GPIO_VAL_LO = 0,
+    EP_GPIO_VAL_LO,
     EP_GPIO_VAL_HI
 };
 
@@ -67,75 +61,49 @@ enum endpoint_gpio_val {
 struct endpoint_gpio {
     char                        name[MAX_STRING];
     enum endpoint_gpio_type     type;
-    enum endpoint_gpio_export   export;
+    bool                        export;
+
     u8                          num;
-    u8                          is_irq;
     enum endpoint_gpio_dir      dir;
     enum endpoint_gpio_val      default_val;
-    unsigned int                irq_num;
-    unsigned int                trigger_type;
-    u8                          ioexp_id;
-    u8                          aggregate_id; // if aggregate_gpio
-    bool                        valid;
 
+    bool                        is_irq;
+    unsigned int                trigger_type;
+    unsigned int                irq_num;
+
+    u8                          ioexp_id;
+    u8                          aggregate_id;
+    
+    bool                        valid;
     u16                         value;
 
-    struct endpoint_gpio    *linked_gpio;
-    size_t                  num_aggregate_gpios;
-    struct endpoint_gpio    **aggregate_gpios;
+    struct endpoint_gpio        *linked_gpio;
+    size_t                      num_aggregate_gpios;
+    struct endpoint_gpio        **aggregate_gpios;
     
-    struct gpio_desc        *desc;
-    struct device_attribute dev_attr;
+    struct gpio_desc            *desc;
+    struct device_attribute     dev_attr;
 
-    struct base_device      *parent_base_device;
-    struct io_card          *parent_io_card;
-    struct endpoint         *parent_endpoint;
+    struct base_device          *parent_base_device;
+    struct io_card              *parent_io_card;
+    struct endpoint             *parent_endpoint;
 };
 
-
-enum endpoint_cmd_cmd {
-    EP_CMD_CONFIG           = 0,  // Universal config command
-
-    /* io expander */
-    EP_CMD_IOEXP_GPIO_SHOW  = 1,
-    EP_CMD_IOEXP_GPIO_STORE,
-
-    /* i2c switch */
-    EP_CMD_I2C_SW_WR_SLOT   = 1,
-
-    /* eeproms */
-    EP_CMD_EEPROM_RD_DATA   = 1,
-
-    /* ADS7128-specific commands */
-    EP_CMD_ADS7128_REGOP = 1
-};
-
+// also serve as index to .cmds list
 enum endpoint_cmd_type {
-    EP_CMD_TYPE_CFG = 0,
-
-    /* eeprom */
-    EP_CMD_TYPE_EEPROM_RD,
-    EP_CMD_TYPE_EEPROM_WR,
-
-    /* i2c sw*/
-    EP_CMD_TYPE_I2CSW_SET_PORT,
+    EP_CMD_TYPE_CFG         = 0,
 
     /* adc */
-    EP_CMD_TYPE_ADC_REGOP
-};
-
-enum endpoint_cmd_export {
-    EP_CMD_NO_EXPORT,
-    EP_CMD_EXPORT
+    EP_CMD_TYPE_ADC_REGOP   = 1
 };
 
 struct endpoint_cmd {
     char                     name[MAX_STRING];
-    enum endpoint_cmd_export export;
+    bool                     export;
     enum endpoint_cmd_type   type;
 
-    size_t                   num_i2c_cmds;
-    struct i2c_reg_data      *i2c_cmds;
+    size_t                   num_msgs;
+    struct endpoint_cmd_msg  *msgs;
 
     struct device_attribute  dev_attr;
 
@@ -192,11 +160,6 @@ enum endpoint_type {
     EP_TYPE_I2CSW_START       = EP_TYPE_EEPROM_END + 1,
     EP_TYPE_I2CSW_TCA9544     = EP_TYPE_I2CSW_START,
     EP_TYPE_I2CSW_END,
-};
-
-enum endpoint_export {
-    EP_NO_EXPORT,
-    EP_EXPORT
 };
 
 /* IC register definitions */
@@ -402,10 +365,9 @@ enum ep9512t_regs {
 struct endpoint {
     char                    name[MAX_STRING];
     enum endpoint_type      type;
-    enum endpoint_export    export;
-    bool                    has_i2c;
+    bool                    export;
     u8                      ioexp_id;
-    unsigned short          *addr_list;  // TODO: may not need the list...
+    unsigned short          i2c_addr;
 
     u16                     in_ch_bm;
     u16                     out_ch_bm;
@@ -418,22 +380,24 @@ struct endpoint {
     struct endpoint_cmd     *cmds;
 
     int                     (*ep_handle_irq)(struct endpoint_gpio *);
-    int                     (*ep_configure)(struct i2c_client *, struct endpoint_cmd *);
+    int                     (*ep_configure)(struct endpoint *, struct endpoint_cmd *);
     
     struct base_device      *parent_base_device;
     struct io_card          *parent_io_card;
+
+    struct device           *sysfs_dev;
 };
 
 
 /* eeprom data */
-#define EEPROM_DATA_VER_MAJ 0
-#define EEPROM_DATA_VER_MIN 1
-struct eeprom_data {
+#define ID_DATA_VER_MAJ 0
+#define ID_DATA_VER_MIN 1
+struct id_data {
+    u8      ver_maj;
+    u8      ver_min;
     char    model[MAX_STRING];
     char    sn[MAX_STRING];
     u8      type;
-    u8      ver_maj;
-    u8      ver_min;
 };
 
 
@@ -474,19 +438,15 @@ struct io_card {
     u8                      num_inputs;
     u8                      num_outputs;
     u8                      slot;
-    u8                      i2c_sw_channel;
 
-    struct eeprom_data      data;
-
-    struct endpoint         *sec_eeprom;
-    struct endpoint         *data_eeprom;
+    struct id_data          data;
+    
     size_t                  num_eps;
     struct endpoint         *endpoints;
     size_t                  num_gpios;
     struct endpoint_gpio    *gpios;
 
-    struct device           *sysfs_dev;
-    struct device           **endpoint_sysfs_devs; 
+    struct device           *sysfs_dev; 
 };
 
 
@@ -494,29 +454,16 @@ struct io_card {
 enum base_device_type {
     BD_TYPE_NONE,
 
-    BD_TYPE_FIXED_IO_START     = BD_TYPE_NONE + 1,
-    BD_TYPE_FUSION_MINI_4x6    = BD_TYPE_FIXED_IO_START,
-    BD_TYPE_FUSION_C0,
+    BD_TYPE_FIXED_IO_START = BD_TYPE_NONE + 1,
+    BD_TYPE_FUSION_C0      = BD_TYPE_FIXED_IO_START,
     BD_TYPE_FIXED_IO_END,
 
-    BD_TYPE_SLOT_IO_START      = BD_TYPE_FIXED_IO_END + 1,
-    BD_TYPE_FUSION_ULTRA_4IO   = BD_TYPE_SLOT_IO_START,
+    BD_TYPE_SLOT_IO_START  = BD_TYPE_FIXED_IO_END + 1,
     BD_TYPE_SLOT_IO_END,
 };
 
 struct base_device {
-    bool                    has_slot_io;
-    u8                      i2c_sw_current_slot;
-
-    struct eeprom_data      data;
-
-    struct endpoint         *sec_eeprom;
-    struct endpoint         *data_eeprom;
-    struct endpoint         *i2c_sw;
-    struct endpoint         *pwr_io_exp;
-
-    struct i2c_adapter      *i2c_adapter;
-    struct i2c_mux_core     *muxc;
+    struct id_data          data;
 
     size_t                  num_eps;
     struct endpoint         *endpoints;
@@ -524,16 +471,17 @@ struct base_device {
     struct endpoint_gpio    *gpios;
     size_t                  num_ics;
     struct io_card          *io_cards;
+
+    struct device           *sysfs_dev;
 };
 
 // Driver data
 struct fusion_io_base_drvdata {
-    struct base_device *fusion_device;
-
-    bool   ready;
-
-    struct device *sysfs_dev;  // Device pointer for the base device in sysfs
-    struct device **endpoint_sysfs_devs;  // Device pointers for the endpoints in sysfs
+    struct platform_device *pdev;
+    struct base_device     *fusion_device;
+    struct i2c_adapter     *i2c_adapter;
+    struct i2c_mux_core    *muxc;
+    bool                   ready;
 };
 
 
@@ -549,8 +497,9 @@ extern const struct base_device    *default_bds[];
 
 
 // x_configure callbacks defined in fusion_io_device.c
-int ads7128_configure(struct i2c_client *, struct endpoint_cmd *);
-
+int ads7128_configure(struct endpoint *, struct endpoint_cmd *);
+int tca9544_configure(struct endpoint *, struct endpoint_cmd *);
+int ep9512t_configure(struct endpoint *, struct endpoint_cmd *);
 
 // x_handle_irq callbacks defined in fusion_io_device.c
 int tca9544_handle_irq(struct endpoint_gpio *);
