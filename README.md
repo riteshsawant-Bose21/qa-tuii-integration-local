@@ -25,6 +25,79 @@ Each project resides in its own dedicated folder and is maintained, tested, and 
 ```
 ---
 
+## Branch Naming Conventions
+```
+| Branch Name       | Purpose                                                                 |
+|-------------------|-------------------------------------------------------------------------|
+| release/*         | Production-ready code, ready for deployment                             |
+| develop           | Integration branch with latest tested features, leading to `release`    |
+| feature/*         | New features in progress (e.g., `feature-login1234`)                    |
+| bugfix/*          | Bug fixes during development/QA (e.g., `bugfix-navbar1213`)             |
+| hotfix/*          | Urgent production patches (e.g., `hotfix-login-crash1414`)              |
+```
+---
+
+## Branch Roles Explained
+
+### `release`
+- **Source:** Merged from `develop` after testing is complete
+- **Purpose:** Contains code **ready for production**
+- **Triggers:** **Production builds**
+- **Restrictions:** No direct commits; only PR merges
+
+### `develop`
+- **Source:** Merged from `feature/*`, `bugfix/*`, and `hotfix/*`
+- **Purpose:** **Integration branch** — staging and testing before production
+- **Triggers:** **Staging/test builds**
+- **Status:** Always kept in a deployable state
+
+### `feature/*`
+- **Naming convention:** `feature-<description><TICKET_NUMBER>`
+- **Source:** Branched from `develop`
+- **Purpose:** Isolated development of **new features**
+- **Builds:** CI/CD builds are skipped unless PR to `develop` is opened
+- **End:** Merged to `develop` via PR
+
+### `bugfix/*`
+- **Naming convention:** `bugfix-<description><TICKET_NUMBER>`
+- **Source:** Branched from `develop`
+- **Purpose:** Fixing issues found during development or QA
+- **Builds:** CI/CD builds are skipped unless PR to `develop` is opened
+- **End:** Merged to `develop` via PR
+
+### `hotfix/*`
+- **Naming convention:** `hotfix-<description><TICKET_NUMBER>`
+- **Source:** Branched from `release`
+- **Purpose:** Urgent production patches
+- **Builds:** Builds are skipped unless PR to `release` is opened
+- **End:** Merged to `release`, then **back-merged to `develop`**
+
+---
+
+## CI/CD Build Rules
+```
+| Branch           | Build Trigger       | Condition                                     |
+|------------------|---------------------|-----------------------------------------------|
+| `release`        | ✅ Always           | Continuous deployment                         |
+| `develop`        | ✅ Always           | Continuous integration (staging environment)  |
+| `feature/*`      | ❌ Skipped          | ✅ Only if PR to `develop` is opened          |
+| `bugfix/*`       | ❌ Skipped          | ✅ Only if PR to `develop` is opened          |
+| `hotfix/*`       | ❌ Skipped          | ✅ Only if PR to `release` is opened          |
+```
+---
+
+## Merge Flow Diagram
+```
+feature/*     ──┐
+               ├──► develop ──┐
+bugfix/*      ──┘             │
+                             ├──► release ──► Production
+hotfix/*      ───────────────┘       ▲
+                                     │
+                      back-merge to develop
+```
+---
+
 ## Code Ownership
 
 Each folder is assigned to specific teams or individuals using the `.github/CODEOWNERS` file.

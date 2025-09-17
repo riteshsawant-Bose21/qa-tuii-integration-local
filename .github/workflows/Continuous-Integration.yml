@@ -3,15 +3,18 @@ name: Fusion-Monorepo-Dev-CI
 # Only run on commits, not when tags added
 on:
   push:
-    tags-ignore:
-      - '**'
     branches:
-      - '**'
-  workflow_dispatch:  # Allow manual triggering of the workflow
+      - develop
+      - release/*
+  pull_request:
+    branches:
+      - develop
+      - release/*
 
 permissions:
   actions: read
   contents: write
+  pull-requests: write
 
 jobs:
   buildChecks:
