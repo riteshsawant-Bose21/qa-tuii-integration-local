@@ -21,17 +21,17 @@
 
 
 /* I2C */
-enum i2c_reg_data_op_size {
-    I2C_REG_DATA_OP_8BIT,
-    I2C_REG_DATA_OP_16BIT
+enum endpoint_cmd_msg_op_size {
+    ENDPOINT_CMD_MSG_OP_8BIT,
+    ENDPOINT_CMD_MSG_OP_16BIT
 };
 
-#define I2C_REG_DATA_ADDR_NONE 0xff
+#define ENDPOINT_CMD_MSG_ADDR_NONE 0xff
 
-struct i2c_reg_data {
-    u8                        reg_addr;
-    enum i2c_reg_data_op_size op_size;
-    u16                       data_mask;
+struct endpoint_cmd_msg {
+    u8                            reg_addr;
+    enum endpoint_cmd_msg_op_size op_size;
+    u16                           data;
 };
 
 
@@ -102,8 +102,8 @@ struct endpoint_cmd {
     bool                     export;
     enum endpoint_cmd_type   type;
 
-    size_t                   num_i2c_cmds;
-    struct i2c_reg_data      *i2c_cmds;
+    size_t                   num_msgs;
+    struct endpoint_cmd_msg  *msgs;
 
     struct device_attribute  dev_attr;
 
@@ -437,7 +437,7 @@ enum io_card_type {
 struct io_card {
     u8                      num_inputs;
     u8                      num_outputs;
-    u8                      slot;        // slot IO arch only
+    u8                      slot;
 
     struct id_data          data;
     
@@ -499,7 +499,7 @@ extern const struct base_device    *default_bds[];
 // x_configure callbacks defined in fusion_io_device.c
 int ads7128_configure(struct endpoint *, struct endpoint_cmd *);
 int tca9544_configure(struct endpoint *, struct endpoint_cmd *);
-
+int ep9512t_configure(struct endpoint *, struct endpoint_cmd *);
 
 // x_handle_irq callbacks defined in fusion_io_device.c
 int tca9544_handle_irq(struct endpoint_gpio *);

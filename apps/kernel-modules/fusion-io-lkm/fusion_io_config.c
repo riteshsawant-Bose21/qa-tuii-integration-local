@@ -141,9 +141,9 @@ const struct base_device bd_fusion_c0 = {
                 [EP_CMD_TYPE_CFG] = {
                     .name = "cmd_config",
                     .type = EP_CMD_TYPE_CFG,
-                    .num_i2c_cmds = 1,
-                    .i2c_cmds = (struct i2c_reg_data[]) {
-                        { .reg_addr = I2C_REG_DATA_ADDR_NONE }
+                    .num_msgs = 1,
+                    .msgs = (struct endpoint_cmd_msg[]) {
+                        { .reg_addr = ENDPOINT_CMD_MSG_ADDR_NONE }
                     }
                 }
             }
@@ -208,15 +208,15 @@ const struct base_device bd_fusion_c0 = {
                 [EP_CMD_TYPE_CFG] = {
                     .name = "cmd_config",
                     .type = EP_CMD_TYPE_CFG,
-                    .num_i2c_cmds = 7,
-                    .i2c_cmds = (struct i2c_reg_data[]) {
-                        { .reg_addr = TCAL6408_REG_POLARITY_INV,        .data_mask = 0x00 },
-                        { .reg_addr = TCAL6408_REG_CONFIGURATION,       .data_mask = 0x00 }, // all output
-                        { .reg_addr = TCAL6408_REG_OUTPUT_DR_STR0,      .data_mask = 0xff }, // full strength
-                        { .reg_addr = TCAL6408_REG_OUTPUT_DR_STR1,      .data_mask = 0xff }, // full strength
-                        { .reg_addr = TCAL6408_REG_INT_MASK_REG,        .data_mask = 0xff }, // all disabled
-                        { .reg_addr = TCAL6408_REG_OUTPUT_PORT_CFG_REG, .data_mask = 0x00 }, // push-pull
-                        { .reg_addr = TCAL6408_REG_OUTPUT_PORT,         .data_mask = 0xff }  // All on
+                    .num_msgs = 7,
+                    .msgs = (struct endpoint_cmd_msg[]) {
+                        { .reg_addr = TCAL6408_REG_POLARITY_INV,        .data = 0x00 },
+                        { .reg_addr = TCAL6408_REG_CONFIGURATION,       .data = 0x00 }, // all output
+                        { .reg_addr = TCAL6408_REG_OUTPUT_DR_STR0,      .data = 0xff }, // full strength
+                        { .reg_addr = TCAL6408_REG_OUTPUT_DR_STR1,      .data = 0xff }, // full strength
+                        { .reg_addr = TCAL6408_REG_INT_MASK_REG,        .data = 0xff }, // all disabled
+                        { .reg_addr = TCAL6408_REG_OUTPUT_PORT_CFG_REG, .data = 0x00 }, // push-pull
+                        { .reg_addr = TCAL6408_REG_OUTPUT_PORT,         .data = 0xff }  // All on
                     }
                 }
             }
@@ -373,17 +373,17 @@ const struct base_device bd_fusion_c0 = {
                         [EP_CMD_TYPE_CFG] = {
                             .name = "cmd_config",
                             .type = EP_CMD_TYPE_CFG,
-                            .num_i2c_cmds = 2,
-                            .i2c_cmds = (struct i2c_reg_data[]) {
+                            .num_msgs = 2,
+                            .msgs = (struct endpoint_cmd_msg[]) {
                                 {
                                     .reg_addr = TCA9535_REG_OUTPUT_PORT0,
-                                    .op_size = I2C_REG_DATA_OP_16BIT,
-                                    .data_mask = 0x0000
+                                    .op_size = ENDPOINT_CMD_MSG_OP_16BIT,
+                                    .data = 0x0000
                                 },
                                 {
                                     .reg_addr = TCA9535_REG_CONFIGURATION0,
-                                    .op_size = I2C_REG_DATA_OP_16BIT,
-                                    .data_mask = 0x0000  // all outputs
+                                    .op_size = ENDPOINT_CMD_MSG_OP_16BIT,
+                                    .data = 0x0000  // all outputs
                                 }
                             }
                         }
@@ -440,17 +440,17 @@ const struct base_device bd_fusion_c0 = {
                         [EP_CMD_TYPE_CFG] = {
                             .name = "cmd_config",
                             .type = EP_CMD_TYPE_CFG,
-                            .num_i2c_cmds = 2,
-                            .i2c_cmds = (struct i2c_reg_data[]) {
+                            .num_msgs = 2,
+                            .msgs = (struct endpoint_cmd_msg[]) {
                                 {
                                     .reg_addr = TCA9535_REG_OUTPUT_PORT0,
-                                    .op_size = I2C_REG_DATA_OP_16BIT,
-                                    .data_mask = 0x0030 // 15v_psw and dac_mute  
+                                    .op_size = ENDPOINT_CMD_MSG_OP_16BIT,
+                                    .data = 0x0030 // 15v_psw and dac_mute  
                                 },
                                 {
                                     .reg_addr = TCA9535_REG_CONFIGURATION0,
-                                    .op_size = I2C_REG_DATA_OP_16BIT,
-                                    .data_mask = 0x0000  // all outputs
+                                    .op_size = ENDPOINT_CMD_MSG_OP_16BIT,
+                                    .data = 0x0000  // all outputs
                                 }
                             }
                         }
@@ -630,9 +630,9 @@ const struct base_device bd_fusion_c0 = {
                         [EP_CMD_TYPE_CFG] = {
                             .name = "cmd_config",
                             .type = EP_CMD_TYPE_CFG,
-                            .num_i2c_cmds = 1,
-                            .i2c_cmds = (struct i2c_reg_data[]) {
-                                { .reg_addr = AK4137_REG_PCM_CONT0, .data_mask = 0x13 }
+                            .num_msgs = 1,
+                            .msgs = (struct endpoint_cmd_msg[]) {
+                                { .reg_addr = AK4137_REG_PCM_CONT0, .data = 0x13 }
                             }
                         }
                     }
@@ -643,6 +643,7 @@ const struct base_device bd_fusion_c0 = {
                     .export = true,
                     .i2c_addr = 0x3c,
                     .ep_handle_irq = ep9512t_handle_irq,
+                    .ep_configure = ep9512t_configure,
                     .num_gpios = 3,
                     .gpios = (struct endpoint_gpio[]) {
                         {
@@ -670,22 +671,22 @@ const struct base_device bd_fusion_c0 = {
                         [EP_CMD_TYPE_CFG] = {
                             .name = "cmd_config",
                             .type = EP_CMD_TYPE_CFG,
-                            .num_i2c_cmds = 3,
-                            .i2c_cmds = (struct i2c_reg_data[]) {
+                            .num_msgs = 3,
+                            .msgs = (struct endpoint_cmd_msg[]) {
                                 {
                                     .reg_addr  = EP9512T_REG_GENERAL_CTRL, // 0x10
-                                    .op_size   = I2C_REG_DATA_OP_8BIT,    
-                                    .data_mask = 0x21                // ARC_EN = 1, Audio_Path = 1, others 0
+                                    .op_size   = ENDPOINT_CMD_MSG_OP_8BIT,    
+                                    .data = 0x21                // ARC_EN = 1, Audio_Path = 1, others 0
                                 },
                                 {
                                     .reg_addr  = EP9512T_REG_TX_CTRL,    // 0x11
-                                    .op_size   = I2C_REG_DATA_OP_8BIT,
-                                    .data_mask = 0x00                  // All zero, clear all bits
+                                    .op_size   = ENDPOINT_CMD_MSG_OP_8BIT,
+                                    .data = 0x00                  // All zero, clear all bits
                                 },
                                 {
                                     .reg_addr  = EP9512T_REG_AUDIO_CFG,  // 0x12
-                                    .op_size   = I2C_REG_DATA_OP_8BIT,
-                                    .data_mask = 0x01                  //  A_IN = 01 (I2S), others 0
+                                    .op_size   = ENDPOINT_CMD_MSG_OP_8BIT,
+                                    .data = 0x01                  //  A_IN = 01 (I2S), others 0
                                 }
                             }
                         }
@@ -833,17 +834,17 @@ const struct base_device bd_fusion_c0 = {
                         [EP_CMD_TYPE_CFG] = {
                             .name = "cmd_config",
                             .type = EP_CMD_TYPE_CFG,
-                            .num_i2c_cmds = 2,
-                            .i2c_cmds = (struct i2c_reg_data[]) {
+                            .num_msgs = 2,
+                            .msgs = (struct endpoint_cmd_msg[]) {
                                 {
                                     .reg_addr = TCA9535_REG_OUTPUT_PORT0,
-                                    .op_size = I2C_REG_DATA_OP_16BIT,
-                                    .data_mask = 0x03ff
+                                    .op_size = ENDPOINT_CMD_MSG_OP_16BIT,
+                                    .data = 0x03ff
                                 },
                                 {
                                     .reg_addr = TCA9535_REG_CONFIGURATION0,
-                                    .op_size = I2C_REG_DATA_OP_16BIT,
-                                    .data_mask = 0xfc00  // all outputs
+                                    .op_size = ENDPOINT_CMD_MSG_OP_16BIT,
+                                    .data = 0xfc00  // all outputs
                                 }
                             }
                         }
@@ -907,30 +908,30 @@ const struct base_device bd_fusion_c0 = {
                         [EP_CMD_TYPE_CFG] = {
                             .name = "cmd_config",
                             .type = EP_CMD_TYPE_CFG,
-                            .num_i2c_cmds = 13,
-                            .i2c_cmds = (struct i2c_reg_data[]) {
-                                { .reg_addr = ADS7128_REG_SYSTEM_STATUS,   .data_mask = 0x01 }, // clear BOR
-                                { .reg_addr = ADS7128_REG_AUTO_SEQ_CH_SEL, .data_mask = 0x3F }, // AUTO_SEQ_CHSEL 0-5
-                                { .reg_addr = ADS7128_REG_SEQUENCE_CFG,    .data_mask = 0x01 }, // SEQ_MODE auto
-                                { .reg_addr = ADS7128_REG_HIGH_TH_CH0,     .data_mask = 0x01 }, // DWC high thresholds
-                                { .reg_addr = ADS7128_REG_HIGH_TH_CH1,     .data_mask = 0x01 },
-                                { .reg_addr = ADS7128_REG_HIGH_TH_CH2,     .data_mask = 0x01 },
-                                { .reg_addr = ADS7128_REG_HIGH_TH_CH3,     .data_mask = 0x01 },
-                                { .reg_addr = ADS7128_REG_HIGH_TH_CH4,     .data_mask = 0x01 },
-                                { .reg_addr = ADS7128_REG_ALERT_CH_SEL,    .data_mask = 0x3f }, // alerts on all chs
-                                { .reg_addr = ADS7128_REG_OPMODE_CFG,      .data_mask = 0x3d }, // CONV_MODE autonomous, OSC_SEL lp, CLK_DIV 3072us
-                                { .reg_addr = ADS7128_REG_OSR_CFG,         .data_mask = 0x03 }, // OSR 8 samples
-                                { .reg_addr = ADS7128_REG_GENERAL_CFG,     .data_mask = 0x30 }, // STAT_EN, DWC_EN
-                                { .reg_addr = ADS7128_REG_SEQUENCE_CFG,    .data_mask = 0x11 }  // SEQ_START 
+                            .num_msgs = 13,
+                            .msgs = (struct endpoint_cmd_msg[]) {
+                                { .reg_addr = ADS7128_REG_SYSTEM_STATUS,   .data = 0x01 }, // clear BOR
+                                { .reg_addr = ADS7128_REG_AUTO_SEQ_CH_SEL, .data = 0x3F }, // AUTO_SEQ_CHSEL 0-5
+                                { .reg_addr = ADS7128_REG_SEQUENCE_CFG,    .data = 0x01 }, // SEQ_MODE auto
+                                { .reg_addr = ADS7128_REG_HIGH_TH_CH0,     .data = 0x01 }, // DWC high thresholds
+                                { .reg_addr = ADS7128_REG_HIGH_TH_CH1,     .data = 0x01 },
+                                { .reg_addr = ADS7128_REG_HIGH_TH_CH2,     .data = 0x01 },
+                                { .reg_addr = ADS7128_REG_HIGH_TH_CH3,     .data = 0x01 },
+                                { .reg_addr = ADS7128_REG_HIGH_TH_CH4,     .data = 0x01 },
+                                { .reg_addr = ADS7128_REG_ALERT_CH_SEL,    .data = 0x3f }, // alerts on all chs
+                                { .reg_addr = ADS7128_REG_OPMODE_CFG,      .data = 0x3d }, // CONV_MODE autonomous, OSC_SEL lp, CLK_DIV 3072us
+                                { .reg_addr = ADS7128_REG_OSR_CFG,         .data = 0x03 }, // OSR 8 samples
+                                { .reg_addr = ADS7128_REG_GENERAL_CFG,     .data = 0x30 }, // STAT_EN, DWC_EN
+                                { .reg_addr = ADS7128_REG_SEQUENCE_CFG,    .data = 0x11 }  // SEQ_START 
                             }
                         },
                         [EP_CMD_TYPE_ADC_REGOP] = {
                             .name = "cmd_regop",
                             .type = EP_CMD_TYPE_ADC_REGOP,
                             .export = true,
-                            .num_i2c_cmds = 1,
-                            .i2c_cmds = (struct i2c_reg_data[]) {
-                                { .reg_addr = I2C_REG_DATA_ADDR_NONE }
+                            .num_msgs = 1,
+                            .msgs = (struct endpoint_cmd_msg[]) {
+                                { .reg_addr = ENDPOINT_CMD_MSG_ADDR_NONE }
                             }
                         }
                     }

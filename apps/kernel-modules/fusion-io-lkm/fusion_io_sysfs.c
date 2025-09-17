@@ -367,7 +367,7 @@ static ssize_t ads7128_cmd_regop(struct device *dev, struct device_attribute *at
         ret = i2c_transfer(client->adapter, &wr_msg, 1);
         if (ret < 0)
             return ret;
-        ep_cmd->i2c_cmds[0].data_mask = value; // Store for show
+        ep_cmd->msgs[0].data = value; // Store for show
     } else if (sscanf(buf, "%x", &reg_addr) == 1) {
         // Read operation
         rd_opcode_buf[0] = ADS7128_OPCODE_READ_REG; // Opcode 0x10
@@ -375,7 +375,8 @@ static ssize_t ads7128_cmd_regop(struct device *dev, struct device_attribute *at
         ret = i2c_transfer(client->adapter, rd_msgs, 2);
         if (ret < 0)
             return ret;
-        ep_cmd->i2c_cmds[0].data_mask = rd_data_buf[0]; // Store for show
+        ep_cmd->msgs[0].data = rd_data_buf[0]; // Store for show
+        printk(KERN_INFO "0x%02x\n", rd_data_buf[0]);
     } else {
         return -EINVAL; // Invalid format
     }
@@ -386,7 +387,7 @@ static ssize_t ads7128_cmd_regop(struct device *dev, struct device_attribute *at
 static ssize_t ads7128_cmd_regop_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
     struct endpoint_cmd *ep_cmd = container_of(attr, struct endpoint_cmd, dev_attr);
-    return scnprintf(buf, PAGE_SIZE, "0x%02x\n", ep_cmd->i2c_cmds[0].data_mask);
+    return scnprintf(buf, PAGE_SIZE, "0x%02x\n", ep_cmd->msgs[0].data);
 }
 
 static int fusion_io_create_sysfs_gpio(struct device *parent_dev,
@@ -689,11 +690,11 @@ int fusion_io_create_sysfs_base(struct platform_device *pdev)
 
 			if (ep_cmd->export == false) {
                 continue;
-            } else if (ep_cmd->num_i2c_cmds == 0) {
-				dev_err(endpoint_dev, "Can't create sysfs cmd for ep_cmd %s with no i2c_cmds\n", ep_cmd->name);
+            } else if (ep_cmd->num_msgs == 0) {
+				dev_err(endpoint_dev, "Can't create sysfs cmd for ep_cmd %s with no msgs\n", ep_cmd->name);
 				continue;
-			} else if (ep_cmd->i2c_cmds == NULL) {
-				dev_err(endpoint_dev, "BAD ep_cmd %s with num_i2c_cmds but NULL pointer\n", ep_cmd->name);
+			} else if (ep_cmd->msgs == NULL) {
+				dev_err(endpoint_dev, "BAD ep_cmd %s with num_msgs but NULL pointer\n", ep_cmd->name);
 				continue;
 			}
 
@@ -926,11 +927,11 @@ int fusion_io_create_sysfs_io_card(struct platform_device *pdev, struct io_card 
 
 			if (ep_cmd->export == false) {
                 continue;
-            } else if (ep_cmd->num_i2c_cmds == 0) {
-				dev_err(endpoint_dev, "Can't create sysfs cmd for ep_cmd %s with no i2c_cmds\n", ep_cmd->name);
+            } else if (ep_cmd->num_msgs == 0) {
+				dev_err(endpoint_dev, "Can't create sysfs cmd for ep_cmd %s with no msgs\n", ep_cmd->name);
 				continue;
-			} else if (ep_cmd->i2c_cmds == NULL) {
-				dev_err(endpoint_dev, "BAD ep_cmd %s with num_i2c_cmds but NULL pointer\n", ep_cmd->name);
+			} else if (ep_cmd->msgs == NULL) {
+				dev_err(endpoint_dev, "BAD ep_cmd %s with num_msgs but NULL pointer\n", ep_cmd->name);
 				continue;
 			}
 

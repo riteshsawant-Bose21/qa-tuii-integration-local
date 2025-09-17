@@ -74,17 +74,90 @@ static int configure_i2c_mux_adapters(struct endpoint *ep)
     return 0;
 }
 
+// get the i2c client for the endpoint
+static int endpoint_get_i2c_client(struct endpoint *ep)
+{
+    struct i2c_board_info i2c_info;
+    struct i2c_client *client;
+    struct i2c_adapter *i2c_adapter;
+    int ret, tries, delay_ms;
+    int id = -ENXIO; /* for logging */
+
+    if (bd_drvdata->muxc != NULL && ep->parent_io_card) {
+        i2c_adapter = bd_drvdata->muxc->adapter[ep->parent_io_card->slot];
+    } else {
+        i2c_adapter = bd_drvdata->i2c_adapter;
+    }
+
+    if (!ep || !i2c_adapter) return -EINVAL;
+    if (!ep->i2c_addr) {
+        dev_err(&bd_drvdata->pdev->dev, "Endpoint %s missing i2c addr\n", ep->name);
+        return -EINVAL;
+    }
+    if (!ep->cmds || ep->cmds->num_msgs == 0 || !ep->cmds->msgs) {
+        dev_err(&bd_drvdata->pdev->dev, "Endpoint %s missing i2c commands\n", ep->name);
+        return -EINVAL;
+    }
+
+    memset(&i2c_info, 0, sizeof(i2c_info));
+    strscpy(i2c_info.type, ep->name, sizeof(i2c_info.type));
+    i2c_info.addr  = ep->i2c_addr;
+    i2c_info.flags = 0;
+
+    client = i2c_new_client_device(i2c_adapter, &i2c_info);
+    if (IS_ERR(client)) {
+        ret = PTR_ERR(client);
+        dev_err(&bd_drvdata->pdev->dev, "Failed new_client %s@0x%02x: %d\n",
+                ep->name, ep->i2c_addr, ret);
+        return ret;
+    }
+
+    /* Probe the device with bounded retries / backoff */
+    tries = 7;        /* 1,2,4,8,16,32,64 ms ≈ 127 ms total */
+    delay_ms = 1;
+
+    while (tries-- > 0) {
+        if (ep->cmds->msgs->reg_addr == ENDPOINT_CMD_MSG_ADDR_NONE)
+            id = i2c_smbus_read_byte(client);
+        else
+            id = i2c_smbus_read_byte_data(client, ep->cmds->msgs->reg_addr);
+
+        if (id >= 0) {
+            dev_dbg(&bd_drvdata->pdev->dev,
+                    "Discovered endpoint %s at 0x%02x (id=0x%02x)\n",
+                    i2c_info.type, client->addr, id & 0xff);
+            ep->i2c_client = client;
+            return 0;
+        }
+
+        /* sleep between attempts; prefer usleep_range for <20ms */
+        if (delay_ms < 20)
+            usleep_range(delay_ms * 1000, delay_ms * 1000 + 1000);
+        else
+            msleep(delay_ms);
+
+        if (delay_ms < 64)
+            delay_ms <<= 1;
+    }
+
+    dev_err(&bd_drvdata->pdev->dev,
+            "Endpoint %s at 0x%02x not responding (last err=%d)\n",
+            ep->name, ep->i2c_addr, id);
+
+    i2c_unregister_device(client);
+    return (id < 0) ? id : -EIO;
+}
+
 static int configure_i2c_endpoint(struct endpoint *ep) 
 {
     struct i2c_client *client;
     struct endpoint_cmd *cmd;
-    struct i2c_reg_data *data;
+    struct endpoint_cmd_msg *msg;
 
     int ret;
     int i;
 
-    if (ep->i2c_addr && ep->i2c_client) {
-        client = ep->i2c_client;
+    if (ep->i2c_addr) {
         cmd = &ep->cmds[EP_CMD_TYPE_CFG];
         if (strcmp(cmd->name, "cmd_config")) {
             return 0;
@@ -95,34 +168,39 @@ static int configure_i2c_endpoint(struct endpoint *ep)
             return ep->ep_configure(ep, cmd);
         }
 
+        // set up the i2c_client
+        endpoint_get_i2c_client(ep);
+        if(ep->i2c_client == NULL) {
+            dev_err(&bd_drvdata->pdev->dev, "Failed to set i2c client...");
+            return -ENODEV;
+        }
+
+        client = ep->i2c_client;
+
         // otherwise use the generic one
-        for (i = 0; i < cmd->num_i2c_cmds; ++i) {
-            data = &cmd->i2c_cmds[i];
+        for (i = 0; i < cmd->num_msgs; ++i) {
+            msg = &cmd->msgs[i];
             
             // i2c devices with no register table don't need configuring
-            if (data->reg_addr == I2C_REG_DATA_ADDR_NONE) {
+            if (msg->reg_addr == ENDPOINT_CMD_MSG_ADDR_NONE) {
                 break;
             }
 
             // need to be wary of LE vs BE devices for 16bit ops here...
             // account for this in the device config (i.e. don't do 16bit ops for BE devices)
-            if (data->op_size == I2C_REG_DATA_OP_8BIT) {
-                ret = i2c_smbus_write_byte_data(client, data->reg_addr, (u8)data->data_mask);
-            } else if (data->op_size == I2C_REG_DATA_OP_16BIT) {
-                ret = i2c_smbus_write_word_data(client, data->reg_addr, data->data_mask);
+            if (msg->op_size == ENDPOINT_CMD_MSG_OP_8BIT) {
+                ret = i2c_smbus_write_byte_data(client, msg->reg_addr, (u8)msg->data);
+            } else if (msg->op_size == ENDPOINT_CMD_MSG_OP_16BIT) {
+                ret = i2c_smbus_write_word_data(client, msg->reg_addr, msg->data);
             } else {
-                dev_err(&bd_drvdata->pdev->dev, "Unknown register type for register 0x%02x reg_data 0x%04x\n", data->reg_addr, data->data_mask);
+                dev_err(&bd_drvdata->pdev->dev, "Unknown register type for register 0x%02x reg_data 0x%04x\n", msg->reg_addr, msg->data);
                 return -EINVAL;
             }
 
             if (ret < 0) {
                 dev_err(&bd_drvdata->pdev->dev, "Failed to write register 0x%04x with data 0x%04x to I2C device at 0x%02x\n",
-                                                                            data->reg_addr, data->data_mask, client->addr);
+                                                                            msg->reg_addr, msg->data, client->addr);
                 return ret;
-            }
-            else{
-              //  dev_info(&bd_drvdata->pdev->dev, "Wrote register 0x%04x with data 0x%04x to I2C device at 0x%02x\n",
-                                                                           // data->reg_addr, data->data_mask, client->addr);
             }
         }
     }
@@ -135,7 +213,16 @@ int ads7128_configure(struct endpoint *ep, struct endpoint_cmd *cmd)
 {
     struct i2c_msg msg;
     u8 buf[3];
+
     int ret;
+    int i;
+
+    // set up the i2c_client
+    endpoint_get_i2c_client(ep);
+    if(ep->i2c_client == NULL) {
+        dev_err(&bd_drvdata->pdev->dev, "Failed to set i2c client for ads7128...");
+        return -ENODEV;
+    }
 
     buf[0] = ADS7128_OPCODE_WRITE_REG;
     msg.addr = ep->i2c_client->addr;
@@ -143,9 +230,9 @@ int ads7128_configure(struct endpoint *ep, struct endpoint_cmd *cmd)
     msg.len = 3;
     msg.buf = buf;
 
-    for (int i = 0; i < cmd->num_i2c_cmds; ++i) {
-        buf[1] = cmd->i2c_cmds[i].reg_addr;
-        buf[2] = cmd->i2c_cmds[i].data_mask;
+    for (i = 0; i < cmd->num_msgs; ++i) {
+        buf[1] = cmd->msgs[i].reg_addr;
+        buf[2] = cmd->msgs[i].data;
 
         ret = i2c_transfer(ep->i2c_client->adapter, &msg, 1);
         if (ret < 0) {
@@ -159,58 +246,49 @@ int ads7128_configure(struct endpoint *ep, struct endpoint_cmd *cmd)
 
 int tca9544_configure(struct endpoint *ep, struct endpoint_cmd *cmd)
 {
+    // set up the i2c_client
+    endpoint_get_i2c_client(ep);
+    if(ep->i2c_client == NULL) {
+        dev_err(&bd_drvdata->pdev->dev, "Failed to set i2c client for tca9544...");
+        return -ENODEV;
+    }
+
     // configure the mux adapters
     return configure_i2c_mux_adapters(ep);
 }
 
-// get the i2c client for the endpoint
-static void endpoint_get_i2c_client(struct endpoint *ep, struct i2c_adapter *adapter) 
+int ep9512t_configure(struct endpoint *ep, struct endpoint_cmd *cmd)
 {
-    struct i2c_board_info i2c_info;
-    struct i2c_client *client = NULL;
-    int id;
+    struct i2c_client *client;
+    struct endpoint_cmd_msg *msg;
 
-    if (ep->i2c_addr == 0) {
-        dev_err(&bd_drvdata->pdev->dev, "Endpoint %s is missing i2c addr\n", ep->name);
-        return;
-    } else if (ep->cmds == NULL || ep->cmds->num_i2c_cmds == 0 || ep->cmds->i2c_cmds == NULL) {
-        dev_err(&bd_drvdata->pdev->dev, "Endpoint %s is missing i2c commands\n", ep->name);
-        return;
+    int ret;
+    int i;
+
+    // ep9512t needs extra time on a hard power cycle. 
+    msleep(250);
+
+    // set up the i2c_client
+    endpoint_get_i2c_client(ep);
+    if(ep->i2c_client == NULL) {
+        dev_err(&bd_drvdata->pdev->dev, "Failed to set i2c client for ep9512t...");
+        return -ENODEV;
     }
 
-    memset(&i2c_info, 0, sizeof(struct i2c_board_info));
-    strscpy(i2c_info.type, ep->name, sizeof(i2c_info.type));
-    i2c_info.addr = ep->i2c_addr;
-    i2c_info.flags = 0;
+    client = ep->i2c_client;
 
-    client = i2c_new_client_device(adapter, &i2c_info);
+    for (i = 0; i < cmd->num_msgs; ++i) {
+        msg = &cmd->msgs[i];
 
-    // try the device to see if it exists
-    // TODO don't like this so much
-    if (!IS_ERR(client)) {
-        if (ep->cmds->i2c_cmds->reg_addr == I2C_REG_DATA_ADDR_NONE) {
-            id = i2c_smbus_read_byte(client);
-        } else {
-            id = i2c_smbus_read_byte_data(client, ep->cmds->i2c_cmds->reg_addr);
+        ret = i2c_smbus_write_byte_data(client, msg->reg_addr, (u8)msg->data);
+        if (ret < 0) {
+            dev_err(&bd_drvdata->pdev->dev, "Failed to write register 0x%04x with data 0x%04x to EP9512t at 0x%02x\n",
+                                                                        msg->reg_addr, msg->data, client->addr);
+            return ret;
         }
-
-        if (id < 0) {
-            dev_err(&bd_drvdata->pdev->dev, "Failed to id %s\n", ep->name);
-            i2c_unregister_device(client);
-            return;
-        }
-    
-        dev_dbg(&bd_drvdata->pdev->dev, "Discovered endpoint %s at I2C address 0x%x\n", 
-                i2c_info.type, client->addr);
-
-        ep->i2c_client = client;
-        return;
-    } else {
-        dev_err(&bd_drvdata->pdev->dev, "Failed to get i2c_client for %s\n", ep->name);
     }
 
-    dev_err(&bd_drvdata->pdev->dev, "Failed to discover endpoint %s\n", ep->name);
-    return;
+    return 0;
 }
 
 // recursively called func to traverse through linked gpios and handle irq.
@@ -222,7 +300,7 @@ static int handle_irq(struct endpoint_gpio *ep_gpio)
     int ret = -1;
   
     if (ep_gpio->parent_endpoint) {
-        printk(KERN_DEBUG "handle_irq: calling ep_handle_irq for gpio %s\n", ep_gpio->name);
+        printk(KERN_INFO "handle_irq: calling ep_handle_irq for gpio %s\n", ep_gpio->name);
         ret = ep_gpio->parent_endpoint->ep_handle_irq(ep_gpio);
     } else if (ep_gpio->parent_io_card) {
         for (int i = 0; i < ep_gpio->num_aggregate_gpios; ++i) {
@@ -436,6 +514,8 @@ int ads7128_handle_irq(struct endpoint_gpio *ep_gpio)
     }
     pin_cfg = *rd_data_buf;
 
+    printk(KERN_INFO "ads7128_handle_irq: pin_cfg=0x%02x\n", pin_cfg);
+
     // Process interrupts for all channels in the mask
     for (channel = 0; channel < 8; channel++) {
         if (!(event_mask & (1 << channel))) {
@@ -486,7 +566,7 @@ int ads7128_handle_irq(struct endpoint_gpio *ep_gpio)
                 continue;
             }
         } else {
-            // TODO gpi
+            printk(KERN_DEBUG "ads7128_handle_irq: in GPI handling\n");
             // Read GPIO value for input interrupts
             rd_opcode_buf[1] = ADS7128_REG_GPI_VALUE;
             ret = i2c_transfer(client->adapter, rd_msgs, 2);
@@ -495,6 +575,11 @@ int ads7128_handle_irq(struct endpoint_gpio *ep_gpio)
                 return ret;
             }
             gpi_value = *rd_data_buf;
+
+            printk(KERN_DEBUG "ads7128_handle_irq: rd_data_buf=0x%04x\n", *(u16 *)rd_data_buf);
+            printk(KERN_DEBUG "ads7128_handle_irq: gpi_value=0x%02x\n", gpi_value);
+
+            gpio->value = (gpi_value & (1UL << channel)) ? 1 : 0;
         }
 
         // clear event flag bits
@@ -533,7 +618,7 @@ static void handle_irq_work(struct work_struct *work)
     int ret;
 
     // Debug context
-    printk(KERN_DEBUG "handle_irq_work: gpio %s\n", irq_gpio->name);
+    printk(KERN_INFO "handle_irq_work: gpio %s\n", irq_gpio->name);
 
     ret = handle_irq(irq_gpio);
     if (ret)
@@ -1273,15 +1358,6 @@ static int fusion_io_probe(struct platform_device *pdev)
 
         dev_dbg(&pdev->dev, "Setting i2c client for base device endpoint %s...\n", ep->name);
 
-        // set up the i2c_client
-        endpoint_get_i2c_client(ep, bd_drvdata->i2c_adapter);
-
-        if (ep->i2c_client == NULL) {
-            dev_err(&pdev->dev, "Failed to set i2c client...");
-            ret = -ENODEV;
-            goto error;
-        }
-
         // configure i2c device
         ret = configure_i2c_endpoint(ep);
         if (ret) {
@@ -1324,6 +1400,8 @@ static int fusion_io_probe(struct platform_device *pdev)
             // set up parent references
             configure_io_card_references(ic);
 
+            ic->slot = i;
+
             // for all the endpoints on that io block
             for (j = 0; j < ic->num_eps; ++j) {
                 ep = &ic->endpoints[j];
@@ -1334,20 +1412,6 @@ static int fusion_io_probe(struct platform_device *pdev)
 
                 dev_dbg(&pdev->dev, "Setting i2c client for block %s endpoint %s...\n", 
                                       ic->data.model, ep->name);
-
-                // set up the i2c_client
-                if (bd_drvdata->muxc != NULL && ep->parent_io_card) {
-                    i2c_adapter = bd_drvdata->muxc->adapter[i];
-                } else {
-                    i2c_adapter = bd_drvdata->i2c_adapter;
-                }
-                endpoint_get_i2c_client(ep, i2c_adapter);
-
-                if(ep->i2c_client == NULL) {
-                    dev_err(&pdev->dev, "Failed to set i2c client...");
-                    ret = -ENODEV;
-                    goto error;
-                }
 
                 // configure i2c device
                 ret = configure_i2c_endpoint(ep);
@@ -1394,18 +1458,13 @@ static int fusion_io_probe(struct platform_device *pdev)
                 ep->parent_io_card = ic;
                 
                 // get adapter (should always be mux adapter for slot)
-                if (bd_drvdata->muxc != NULL) {
-                    i2c_adapter = bd_drvdata->muxc->adapter[i];
-                } else {
-                    i2c_adapter = bd_drvdata->i2c_adapter;
-                }
-                endpoint_get_i2c_client(ep, i2c_adapter);
+                endpoint_get_i2c_client(ep);
                 
                 if (ep->i2c_client) {
                     dev_dbg(&pdev->dev, "Found %s on io-card model %s, slot %d\n", 
                                                                     ep->name, 
                                                                     ic->data.model, 
-                                                                    ic->slot);
+                                                                    i);
                     break;
                 }
 
@@ -1431,7 +1490,7 @@ static int fusion_io_probe(struct platform_device *pdev)
             // TODO!!! crypto part, data size, address, etc
             // TODO: probably need read eeprom data commands for different sec eeproms
             // ret = i2c_smbus_read_i2c_block_data(i2c_client, 
-            //                                     ep->cmds[EP_CMD_EEPROM_RD_DATA].i2c_cmds[0].reg_addr, 
+            //                                     ep->cmds[EP_CMD_EEPROM_RD_DATA].msgs[0].reg_addr, 
             //                                     sizeof(data), 
             //                                     (char *)&data);
 
@@ -1465,21 +1524,6 @@ static int fusion_io_probe(struct platform_device *pdev)
 
                 dev_dbg(&pdev->dev, "Setting i2c client for card slot %d block %s endpoint %s...\n", 
                                                                 ic->slot, ic->data.model, ep->name);
-
-                // set up the i2c_client
-                // get adapter (should always be mux adapter for slot)
-                if (bd_drvdata->muxc != NULL) {
-                    i2c_adapter = bd_drvdata->muxc->adapter[i];
-                } else {
-                    i2c_adapter = bd_drvdata->i2c_adapter;
-                }
-                endpoint_get_i2c_client(ep, i2c_adapter);
-
-                if(ep->i2c_client == NULL) {
-                    dev_err(&pdev->dev, "Failed to set i2c client...");
-                    ret = -ENODEV;
-                    goto error;
-                }
                 
                 ret = configure_i2c_endpoint(ep);
                 if (ret) {
@@ -1555,7 +1599,6 @@ static int __init fusion_io_init(void)
         return ret;
     }
 
-    pr_info("fusion-io: Initialization successful\n");
     return 0;
 }
 
