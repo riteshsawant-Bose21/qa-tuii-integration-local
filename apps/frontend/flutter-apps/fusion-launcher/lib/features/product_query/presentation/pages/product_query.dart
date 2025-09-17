@@ -397,12 +397,12 @@ class ProductAPI {
       final List<dynamic> controllersData = jsonDecode(controllersJson);
 
       return controllersData.map((dynamic data) {
+        // print price and imageUrl fields
+        print('Controller Data: ${data['price']}, ${data['imageUrl']}');
         return ProductQueryModel(
           name: data['name'] ?? '',
-          price: 0.0,
-          // Add price if available in fusion_lib device model
+          price: data["price"] != null ? (data['price'] as num).toDouble() : 0.0,
           image: data['imageUrl'] ?? '',
-          // Add image if available in fusion_lib device model
           type: ProductType.controllers,
           sku: data['name'] ?? '',
           specifications: '${data['analogInputs']}in • ${data['analogOutputs']}out • ${data['networkIO']} network I/O',
@@ -421,13 +421,13 @@ class ProductAPI {
       // print("Devices Data: $devicesData");
 
       return controllersData.map((dynamic deviceData) {
+        print('Controller Data: ${deviceData['price']}, ${deviceData['imageUrl']}');
+
         return ProductQueryModel(
           name: deviceData['name'] ?? '',
-          price: 0.0,
-          // Add price if available in fusion_lib device model
-          image: deviceData['image_url'] ?? '',
-          // Add image if available in fusion_lib device model
-          type: ProductType.endpoints, // Fixed: should be endpoints, not controllers
+          price: deviceData['price'],
+          image: deviceData['imageUrl'] ?? '',
+          type: ProductType.endpoints,
           sku: deviceData['name'] ?? '',
           specifications: '${deviceData['analogInputs']}in • ${deviceData['analogOutputs']}out • ${deviceData['networkIO']} network I/O',
         );

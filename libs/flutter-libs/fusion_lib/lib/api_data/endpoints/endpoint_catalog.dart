@@ -10,7 +10,7 @@ class EndpointCatalog {
   static const List<BluetoothEndpoint> bluetoothEndpoints = [
     BluetoothEndpoint(
       name: "Bluetooth endpoint",
-      imageUrl: "assets/images/blue_pal.png",
+      imageUrl: "assets/images/endpoints/blue_pal.png",
       price: 199.99,
     ),
   ];
@@ -19,7 +19,7 @@ class EndpointCatalog {
   static const List<XLREndpoint> xlrEndpoints = [
     XLREndpoint(
       name: "XLR endpoint",
-      imageUrl: "assets/images/xlr_pal.png",
+      imageUrl: "assets/images/endpoints/xlr_pal.png",
       price: 299.99,
     ),
   ];
