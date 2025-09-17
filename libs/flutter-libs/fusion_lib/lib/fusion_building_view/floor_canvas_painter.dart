@@ -415,7 +415,7 @@ class FloorCanvasPainter extends CustomPainter {
   /// Draw all hardware components (speakers, etc.) on the canvas
 
   void _drawHardwareComponents(Canvas canvas) {
-    final double iconSize = ((gridSize / 2.5) / zoomScale).clamp(gridSize * 0.75, gridSize * 1.25);
+    final double iconSize = ((gridSize / 2.5) / zoomScale).clamp(gridSize * 0.5, gridSize * 1.0);
 
     for (int i = 0; i < hardwareComponents.length; i++) {
       final HardwareComponent comp = hardwareComponents[i];
