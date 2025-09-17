@@ -513,8 +513,6 @@ int ads7128_handle_irq(struct endpoint_gpio *ep_gpio)
     }
     pin_cfg = *rd_data_buf;
 
-    printk(KERN_INFO "ads7128_handle_irq: pin_cfg=0x%02x\n", pin_cfg);
-
     // Process interrupts for all channels in the mask
     for (channel = 0; channel < 8; channel++) {
         if (!(event_mask & (1 << channel))) {
@@ -602,9 +600,6 @@ static void handle_irq_work(struct work_struct *work)
     struct fusion_irq_work *irq_work = container_of(work, struct fusion_irq_work, work);
     struct endpoint_gpio *irq_gpio = irq_work->irq_gpio;
     int ret;
-
-    // Debug context
-    printk(KERN_INFO "handle_irq_work: gpio %s\n", irq_gpio->name);
 
     ret = handle_irq(irq_gpio);
     if (ret)
