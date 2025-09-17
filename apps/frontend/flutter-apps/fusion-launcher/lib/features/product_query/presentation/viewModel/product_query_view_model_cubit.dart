@@ -55,6 +55,17 @@ class ProductQueryCubit extends Cubit<ProductQueryState> {
 
   /// Apply all selected filters to the product list
   List<ProductQueryModel> _getFilteredProducts() {
+    // If no filters are applied, return all products
+    if (state.selectedProductTypes.isEmpty &&
+        state.selectedMountTypes.isEmpty &&
+        state.selectedVenueTypes.isEmpty &&
+        state.selectedColors.isEmpty &&
+        state.selectedCoverages.isEmpty &&
+        state.selectedImpedances.isEmpty &&
+        state.selectedProductType == null) {
+      return ProductAPI.getAllProducts();
+    }
+
     /// Start with all products
     List<ProductQueryModel> products = ProductAPI.getAllProducts();
 
@@ -275,8 +286,8 @@ class ProductQueryCubit extends Cubit<ProductQueryState> {
     // Then create sorted products using the updated state
     final List<ProductQueryModel> newFilteredProducts = _performSearch(state.searchQuery);
 
-    print("Products before sort: ${state.filteredProducts.take(3).map((p) => p.name).toList()}");
-    print("Products after sort: ${newFilteredProducts.take(3).map((p) => p.name).toList()}");
+    print("Products before sort: ${state.filteredProducts.take(3).map((ProductQueryModel p) => p.name).toList()}");
+    print("Products after sort: ${newFilteredProducts.take(3).map((ProductQueryModel p) => p.name).toList()}");
 
     // Emit the final state with sorted products
     emit(
@@ -294,10 +305,21 @@ class ProductQueryCubit extends Cubit<ProductQueryState> {
     // Sync selectedProductType with selectedProductTypes when filters change
     final ProductType? singleProductType = state.selectedProductTypes.length == 1 ? state.selectedProductTypes.first : null;
 
+    // If no filters are selected, show all products
+    final List<ProductQueryModel> newFilteredProducts =
+        state.selectedProductTypes.isEmpty &&
+                state.selectedMountTypes.isEmpty &&
+                state.selectedVenueTypes.isEmpty &&
+                state.selectedColors.isEmpty &&
+                state.selectedCoverages.isEmpty &&
+                state.selectedImpedances.isEmpty
+            ? ProductAPI.getAllProducts()
+            : _performSearch(state.searchQuery);
+
     emit(
       state.copyWith(
         selectedProductType: singleProductType,
-        filteredProducts: _performSearch(state.searchQuery),
+        filteredProducts: newFilteredProducts,
       ),
     );
   }
