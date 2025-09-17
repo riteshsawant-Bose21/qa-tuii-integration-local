@@ -21,8 +21,6 @@ class CoveragePanelState extends State<CoveragePanel> {
     return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
       builder: (BuildContext context, ProjectViewModelState state) {
         return SizedBox(
-          width: 280,
-
           // color: Colors.grey[50],
           child: Column(
             children: <Widget>[

@@ -24,6 +24,7 @@ class Speaker extends HardwareComponent {
     required this.speakerSKU,
     this.rotation = 0.0,
     required this.gain,
+    super.zAxis,
     required super.assetImagePath,
     List<ProcessingBlockModel>? blocks,
     required this.type,
@@ -43,6 +44,7 @@ class Speaker extends HardwareComponent {
     Offset? pos,
     double? rotation,
     double? gain,
+    double? zAxis,
     String? assetImagePath,
     List<ProcessingBlockModel>? blocks,
     OutputType? type,
@@ -61,6 +63,7 @@ class Speaker extends HardwareComponent {
       pos: pos ?? this.pos,
       rotation: rotation ?? this.rotation,
       gain: gain ?? this.gain,
+      zAxis: zAxis ?? this.zAxis,
       assetImagePath: assetImagePath ?? this.assetImagePath,
       blocks: blocks ?? this.blocks,
       type: type ?? this.type,
@@ -89,6 +92,7 @@ class Speaker extends HardwareComponent {
         ipAddress == other.ipAddress &&
         speakerSKU == other.speakerSKU &&
         type == other.type &&
+        zAxis == other.zAxis &&
         fusionDeviceId == other.fusionDeviceId &&
         portNumbers == other.portNumbers;
   }
@@ -106,6 +110,7 @@ class Speaker extends HardwareComponent {
         (ipAddress?.hashCode ?? 0) ^
         speakerSKU.hashCode ^
         type.hashCode ^
+        zAxis.hashCode ^
         fusionDeviceId.hashCode ^
         portNumbers.hashCode;
   }
@@ -127,6 +132,7 @@ class Speaker extends HardwareComponent {
       'portNumbers': portNumbers,
       'fusionDeviceId': fusionDeviceId,
       'price': price,
+      "zAxis": zAxis,
       'hardwareName': hardwareName,
     };
   }
@@ -148,6 +154,7 @@ class Speaker extends HardwareComponent {
       fusionDeviceId: json['fusionDeviceId'] as String?,
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
       hardwareName: json['hardwareName'] as String? ?? '',
+      zAxis: (json['zAxis'] as num?)?.toDouble() ?? 0.0,
     );
   }
 }

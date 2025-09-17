@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import 'package:fusion_lib/fusion_utils/app_enums.dart';
 
 /// Filter dropdown content widget
 class FilterDropdownContent extends StatefulWidget {

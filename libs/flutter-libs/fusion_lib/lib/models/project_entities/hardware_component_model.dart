@@ -11,6 +11,7 @@ abstract class HardwareComponent {
   final String id;
   final String name;
   Offset pos;
+  double zAxis;
   final String assetImagePath;
   final LocationModel locationEntity;
   final double price;
@@ -22,6 +23,7 @@ abstract class HardwareComponent {
     String? id,
     required this.name,
     Offset? pos,
+    this.zAxis = 0,
     required this.assetImagePath,
     required this.locationEntity,
     required this.price,
@@ -50,6 +52,7 @@ abstract class HardwareComponent {
     String? id,
     String? name,
     Offset? pos,
+    double? zAxis,
     String? assetImagePath,
     LocationModel? locationEntity,
     double? price,

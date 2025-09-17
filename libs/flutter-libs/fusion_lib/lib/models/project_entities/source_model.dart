@@ -21,6 +21,7 @@ class Source extends HardwareComponent {
     required super.locationEntity,
     required super.name,
     super.pos,
+    super.zAxis,
     required this.type,
     required super.assetImagePath,
     List<ProcessingBlockModel>? blocks,
@@ -39,6 +40,7 @@ class Source extends HardwareComponent {
     String? id,
     String? name,
     Offset? pos,
+    double? zAxis,
     SourceType? type,
     String? assetImagePath,
     List<ProcessingBlockModel>? blocks,
@@ -54,6 +56,7 @@ class Source extends HardwareComponent {
       id: id ?? this.id,
       name: name ?? this.name,
       pos: pos ?? this.pos,
+      zAxis: zAxis ?? this.zAxis,
       type: type ?? this.type,
       assetImagePath: assetImagePath ?? this.assetImagePath,
       blocks: blocks ?? this.blocks,
@@ -85,6 +88,7 @@ class Source extends HardwareComponent {
       sku: json['sku'] as String? ?? '',
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
       hardwareName: json['hardwareName'] as String? ?? '',
+      zAxis: (json['zAxis'] as num?)?.toDouble() ?? 0.0,
     );
   }
 
@@ -104,6 +108,7 @@ class Source extends HardwareComponent {
       'sku': sku,
       'price': price,
       'hardwareName': hardwareName,
+      'zAxis': zAxis,
     };
   }
 }

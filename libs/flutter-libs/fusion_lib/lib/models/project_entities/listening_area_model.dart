@@ -12,6 +12,7 @@ class ListeningArea {
   final String listeningHeight;
   final String ceilingHeight;
   final String splRange;
+  final String customListeningAreaHeight;
 
   ListeningArea({
     String? id,
@@ -22,6 +23,7 @@ class ListeningArea {
     this.listeningHeight = '',
     this.ceilingHeight = '',
     this.splRange = '',
+    this.customListeningAreaHeight = '',
   }) : id = id ?? const Uuid().v4();
 
   List<Offset> getFieldPointsSet({int cols = 60, int rows = 60}) {
@@ -99,6 +101,7 @@ class ListeningArea {
     String? listeningHeight,
     String? ceilingHeight,
     String? splRange,
+    String? customListeningAreaHeight,
   }) {
     return ListeningArea(
       vertices: vertices ?? this.vertices,
@@ -109,6 +112,7 @@ class ListeningArea {
       listeningHeight: listeningHeight ?? this.listeningHeight,
       ceilingHeight: ceilingHeight ?? this.ceilingHeight,
       splRange: splRange ?? this.splRange,
+      customListeningAreaHeight: customListeningAreaHeight ?? this.customListeningAreaHeight,
     );
   }
 
@@ -126,6 +130,7 @@ class ListeningArea {
     'listeningHeight': listeningHeight,
     'ceilingHeight': ceilingHeight,
     'splRange': splRange,
+    'customListeningAreaHeight': customListeningAreaHeight,
   };
 
   /// Parses back from JSON, turning the dynamic list into List<Offset>
@@ -150,6 +155,7 @@ class ListeningArea {
       listeningHeight: json['listeningHeight'] as String? ?? '',
       ceilingHeight: json['ceilingHeight'] as String? ?? '',
       splRange: json['splRange'] as String? ?? '',
+      customListeningAreaHeight: json['customListeningAreaHeight'] as String? ?? '',
     );
   }
 
