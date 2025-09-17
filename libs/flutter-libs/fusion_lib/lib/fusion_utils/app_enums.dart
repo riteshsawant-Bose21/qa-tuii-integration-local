@@ -6,6 +6,7 @@ enum ProductType {
   sources,
   dsps,
   controllers,
+  racks,
 }
 
 /// Sort options enum

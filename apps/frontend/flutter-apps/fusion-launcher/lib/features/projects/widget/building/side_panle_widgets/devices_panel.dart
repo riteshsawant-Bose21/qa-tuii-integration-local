@@ -6,12 +6,70 @@ import 'package:fusion_lib/fusion_lib.dart';
 import '../../../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../../models/device_item_model.dart';
 
+enum DeviceType {
+  speakers,
+  sources,
+  endpoints,
+  amplifiers,
+  dsp,
+  controllers,
+  rack,
+}
+
+extension DeviceTypeExtension on DeviceType {
+  String get name {
+    switch (this) {
+      case DeviceType.speakers:
+        return 'Speakers';
+      case DeviceType.sources:
+        return 'Sources';
+      case DeviceType.endpoints:
+        return 'Endpoints';
+      case DeviceType.amplifiers:
+        return 'Amplifiers';
+      case DeviceType.dsp:
+        return 'DSPs';
+      case DeviceType.controllers:
+        return 'Controllers';
+      case DeviceType.rack:
+        return 'Rack';
+    }
+  }
+
+  IconData get icon {
+    switch (this) {
+      case DeviceType.speakers:
+        return Icons.speaker;
+      case DeviceType.sources:
+        return Icons.mic;
+      case DeviceType.endpoints:
+        return Icons.hub_outlined;
+      case DeviceType.amplifiers:
+        return Icons.amp_stories;
+      case DeviceType.dsp:
+        return Icons.dns_outlined;
+      case DeviceType.controllers:
+        return Icons.tune;
+      case DeviceType.rack:
+        return Icons.tune;
+    }
+  }
+
+  bool get hasAddButton {
+    return this == DeviceType.sources || this == DeviceType.rack;
+  }
+
+  int get index {
+    return DeviceType.values.indexOf(this);
+  }
+}
+
 class DevicesPanel extends StatefulWidget {
-  final ExpansibleController productsController;
+  final Function() onProductSelected;
 
   const DevicesPanel({
     super.key,
-    required this.productsController,
+    required this.onProductSelected,
   });
 
   @override
@@ -48,8 +106,15 @@ class _DevicesPanelState extends State<DevicesPanel> {
   ];
 
   void goToDevicePlacementMode() {
-    widget.productsController.expand();
+    widget.onProductSelected();
   }
+
+  static const List<String> rackOptions = <String>[
+    '4U',
+    '8U',
+    '12U',
+    '24U',
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -57,64 +122,20 @@ class _DevicesPanelState extends State<DevicesPanel> {
       builder: (BuildContext context, ProjectViewModelState state) {
         return Container(
           margin: const EdgeInsets.only(left: 10),
-          // color: Colors.grey[50],
           child: Column(
-            children: <Widget>[
-              _buildSubItem(
-                Icons.speaker,
-                'Speaker',
-                isSelected: serviceLocator<ProjectViewModel>().currentDeviceTypeIndex == 0,
-                onTap: () {
-                  goToDevicePlacementMode();
-                  serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(0);
-                },
-              ),
-              _buildSubItem(
-                Icons.mic,
-                'Sources',
-                isSource: true,
-                isSelected: serviceLocator<ProjectViewModel>().currentDeviceTypeIndex == 1,
-                onTap: () {
-                  serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(1);
-                },
-              ),
-              _buildSubItem(
-                Icons.hub_outlined,
-                isSelected: serviceLocator<ProjectViewModel>().currentDeviceTypeIndex == 2,
-                'Endpoints',
-                onTap: () {
-                  goToDevicePlacementMode();
-                  serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(2);
-                },
-              ),
-              _buildSubItem(
-                Icons.amp_stories,
-                isSelected: serviceLocator<ProjectViewModel>().currentDeviceTypeIndex == 3,
-                'Amplifiers',
-                onTap: () {
-                  goToDevicePlacementMode();
-                  serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(3);
-                },
-              ),
-              _buildSubItem(
-                Icons.dns_outlined,
-                isSelected: serviceLocator<ProjectViewModel>().currentDeviceTypeIndex == 4,
-                'DSPs',
-                onTap: () {
-                  goToDevicePlacementMode();
-                  serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(4);
-                },
-              ),
-              _buildSubItem(
-                Icons.tune,
-                'Controllers',
-                isSelected: serviceLocator<ProjectViewModel>().currentDeviceTypeIndex == 5,
-                onTap: () {
-                  goToDevicePlacementMode();
-                  serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(5);
-                },
-              ),
-            ],
+            children:
+                DeviceType.values.map((DeviceType deviceType) {
+                  return _buildSubItem(
+                    deviceType,
+                    isSelected: serviceLocator<ProjectViewModel>().currentDeviceTypeIndex == deviceType.index,
+                    onTap: () {
+                      if (deviceType != DeviceType.sources && deviceType != DeviceType.rack) {
+                        goToDevicePlacementMode();
+                      }
+                      serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(deviceType.index);
+                    },
+                  );
+                }).toList(),
           ),
         );
       },
@@ -122,38 +143,30 @@ class _DevicesPanelState extends State<DevicesPanel> {
   }
 
   Widget _buildSubItem(
-    IconData icon,
-    String title, {
+    DeviceType deviceType, {
     bool isSelected = false,
-    bool isSource = false,
     required Function() onTap,
   }) {
     return Stack(
       children: <Widget>[
         Container(
-          // margin: const EdgeInsets.only(bottom: 2),
-          //if selected is true change background color to light blue
           color: isSelected ? Colors.grey[100] : Colors.transparent,
-
           child: ListTile(
             dense: true,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
             ),
             leading: Icon(
-              icon,
+              deviceType.icon,
               size: 14,
               color: Colors.black87,
             ),
             title: FusionAppText(
-              text: title,
+              text: deviceType.name,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 12),
             ),
-
-            trailing: (isSource && isSelected) ? _buildAddButton() : null,
-            onTap: () {
-              onTap();
-            },
+            trailing: (deviceType.hasAddButton && isSelected) ? _buildAddButton(deviceType) : null,
+            onTap: onTap,
           ),
         ),
         if (isSelected)
@@ -172,7 +185,7 @@ class _DevicesPanelState extends State<DevicesPanel> {
     );
   }
 
-  Widget _buildAddButton() {
+  Widget _buildAddButton(DeviceType deviceType) {
     return SizedBox(
       child: PopupMenuButton<DeviceItemModel>(
         icon: const Icon(
@@ -181,28 +194,29 @@ class _DevicesPanelState extends State<DevicesPanel> {
           color: Colors.black87,
         ),
         constraints: const BoxConstraints(
-          maxHeight: 400,
-          maxWidth: 300,
+          maxHeight: 500,
+          maxWidth: 320,
         ),
         onSelected: (DeviceItemModel selectedItem) {
           final ProductQueryModel product = ProductQueryModel(
             name: selectedItem.name,
             price: 0.0,
             image: selectedItem.image,
-            type: ProductType.sources,
+            type: deviceType == DeviceType.sources ? ProductType.sources : ProductType.racks,
             sku: selectedItem.sku,
           );
 
           serviceLocator<ProjectViewModel>().setSelectedProductToAdd(product);
         },
         color: Colors.white,
-        itemBuilder:
-            (BuildContext context) => <PopupMenuEntry<DeviceItemModel>>[
+        itemBuilder: (BuildContext context) {
+          if (deviceType == DeviceType.sources) {
+            return <PopupMenuEntry<DeviceItemModel>>[
               const PopupMenuItem<DeviceItemModel>(
                 enabled: false,
                 child: Text(
                   'MICROPHONES',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey),
+                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey, fontSize: 11),
                 ),
               ),
               ..._microphoneItems.map(
@@ -215,10 +229,15 @@ class _DevicesPanelState extends State<DevicesPanel> {
                         item.image,
                         height: 14,
                         width: 14,
-                        // color: Colors.black87,
                       ),
                       const SizedBox(width: 8),
-                      Text(item.name),
+                      Expanded(
+                        child: Text(
+                          item.name,
+                          style: const TextStyle(fontSize: 12),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -228,7 +247,7 @@ class _DevicesPanelState extends State<DevicesPanel> {
                 enabled: false,
                 child: Text(
                   'MEDIA SOURCES',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey),
+                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey, fontSize: 11),
                 ),
               ),
               ..._mediaSourceItems.map(
@@ -241,15 +260,54 @@ class _DevicesPanelState extends State<DevicesPanel> {
                         item.image,
                         height: 14,
                         width: 14,
-                        // color: Colors.black87,
                       ),
                       const SizedBox(width: 8),
-                      Text(item.name),
+                      Expanded(
+                        child: Text(
+                          item.name,
+                          style: const TextStyle(fontSize: 12),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                     ],
                   ),
                 ),
               ),
-            ],
+            ];
+          } else if (deviceType == DeviceType.rack) {
+            return <PopupMenuEntry<DeviceItemModel>>[
+              const PopupMenuItem<DeviceItemModel>(
+                enabled: false,
+                child: Text(
+                  'RACK OPTIONS',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey),
+                ),
+              ),
+              ...rackOptions.map(
+                (String option) => PopupMenuItem<DeviceItemModel>(
+                  height: 30,
+                  value: DeviceItemModel(
+                    sku: option.toLowerCase(),
+                    name: '$option Rack',
+                    image: 'assets/images/products/rack.png',
+                  ),
+                  child: Row(
+                    children: <Widget>[
+                      Image.asset(
+                        'assets/images/products/rack.png',
+                        height: 14,
+                        width: 14,
+                      ),
+                      const SizedBox(width: 8),
+                      Text('$option Rack'),
+                    ],
+                  ),
+                ),
+              ),
+            ];
+          }
+          return <PopupMenuEntry<DeviceItemModel>>[];
+        },
       ),
     );
   }

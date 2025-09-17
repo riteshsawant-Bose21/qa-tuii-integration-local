@@ -59,6 +59,9 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
       animationDuration: Duration.zero,
     );
 
+    //Need to handle this in a better way
+    serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(-1);
+
     subscription = projectTabBroadcastController.stream.listen((int index) {
       if (index >= 0 && index < _tabController.length) {
         _tabController.animateTo(index);
@@ -72,6 +75,12 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
     _tabController.dispose();
     subscription?.cancel();
     _projectNameController.dispose();
+    _projectNameFocusNode.dispose();
+    productsController.dispose();
+    splController.dispose();
+    zoneAreaController.dispose();
+    _splRangeController.dispose();
+
     super.dispose();
   }
 
@@ -345,7 +354,9 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                             isCollapsibleSection: true,
                             dockItemWidget:
                                 () => DevicesPanel(
-                                  productsController: productsController,
+                                  onProductSelected: () {
+                                    productsController.expand();
+                                  },
                                 ),
                           ),
 
@@ -353,6 +364,7 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                             id: "5",
                             title: "PROPERTIES",
                             side: "right",
+                            alowUndock: false,
                             dockItemWidget: () => const Properties(),
                           ),
                           DockItemConfig(

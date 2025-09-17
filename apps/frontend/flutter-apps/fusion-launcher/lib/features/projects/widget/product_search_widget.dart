@@ -57,7 +57,7 @@ class ProductSearchWidget extends StatelessWidget {
                 Expanded(
                   child: FusionTextField(
                     controller: searchController,
-                    hintText: 'Search products...',
+                    hintText: 'Search by name, series or type...',
                     prefixIcon: Icon(Icons.search, color: Colors.grey[400], size: 16),
                     suffixIcon:
                         searchController.text.isNotEmpty
@@ -343,6 +343,8 @@ class ProductSearchWidget extends StatelessWidget {
         return 'DSPs';
       case ProductType.sources:
         return 'Sources';
+      case ProductType.racks:
+        return 'Racks';
     }
   }
 

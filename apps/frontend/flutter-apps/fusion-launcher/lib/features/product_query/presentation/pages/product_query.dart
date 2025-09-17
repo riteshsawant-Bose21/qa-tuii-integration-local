@@ -20,7 +20,7 @@ class ProductQueryView extends StatelessWidget {
     if (index == 3) return ProductType.amplifier;
     if (index == 4) return ProductType.dsps;
     if (index == 5) return ProductType.controllers;
-    return ProductType.speaker;
+    return null;
   }
 
   @override
@@ -151,26 +151,8 @@ class ProductCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                /// Product name with highlighting
-                _buildHighlightedText(
-                  style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  text: product.name,
-                  query: searchQuery,
-                ),
-
-                const SizedBox(height: 2),
-
-                /// Product type and specifications
-                FusionAppText(
-                  text: _getProductTypeAndSpecs(product),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+                /// Product information with highlighting
+                _buildProductInfo(context, product, searchQuery),
                 const SizedBox(height: 10),
 
                 /// Product price
@@ -190,6 +172,51 @@ class ProductCard extends StatelessWidget {
     );
   }
 
+  /// Build highlighted product information with series and type
+  Widget _buildProductInfo(BuildContext context, ProductQueryModel product, String searchQuery) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        /// Product name with highlighting
+        _buildHighlightedText(
+          style: Theme.of(context).textTheme.bodySmall!.copyWith(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+          ),
+          text: product.name,
+          query: searchQuery,
+        ),
+
+        const SizedBox(height: 2),
+
+        // /// Series with highlighting (if available)
+        // if (product.series != null && product.series!.isNotEmpty) ...<Widget>[
+        //   _buildHighlightedText(
+        //     style: Theme.of(context).textTheme.bodySmall!.copyWith(
+        //       fontSize: 10,
+        //       fontWeight: FontWeight.w500,
+        //       color: Theme.of(context).primaryColor,
+        //     ),
+        //     text: 'Series: ${product.series!}',
+        //     query: searchQuery,
+        //   ),
+        //   const SizedBox(height: 2),
+        // ],
+
+        /// Product type with highlighting
+        _buildHighlightedText(
+          style: Theme.of(context).textTheme.bodySmall!.copyWith(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+          ),
+          text: _getProductTypeAndSpecs(product),
+          query: searchQuery,
+        ),
+      ],
+    );
+  }
+
+  // Move the methods from ProductQueryView to ProductCard
   String _getDefaultImage(ProductType type) {
     switch (type) {
       case ProductType.speaker:
@@ -199,12 +226,13 @@ class ProductCard extends StatelessWidget {
       case ProductType.dsps:
       case ProductType.endpoints:
         return "assets/images/devices/default_device.png";
-
       case ProductType.sources:
         return "assets/images/products/mic1.png";
-
       case ProductType.controllers:
         return "assets/images/products/bose_dsp.png";
+
+      case ProductType.racks:
+        return "assets/images/products/rack.png";
     }
   }
 
@@ -215,17 +243,19 @@ class ProductCard extends StatelessWidget {
       case ProductType.amplifier:
         return 'Amplifier';
       case ProductType.controllers:
-        return 'Controllers';
+        return 'Controller';
       case ProductType.endpoints:
         return 'Endpoint';
       case ProductType.sources:
         return 'Source';
       case ProductType.dsps:
         return 'DSP';
+      case ProductType.racks:
+        return 'Rack';
     }
   }
 
-  /// Highlight search terms in product name
+  /// Highlight search terms in text (enhanced for multiple fields)
   Widget _buildHighlightedText({
     /// If style is null, default to bodyMedium
     required String text,
@@ -243,36 +273,58 @@ class ProductCard extends StatelessWidget {
 
     /// Case-insensitive search
     /// Convert both text and query to lower case for comparison
-    /// Index of the first match
+    /// Find all matches in the text
     final String lowerText = text.toLowerCase();
     final String lowerQuery = query.toLowerCase();
-    final int index = lowerText.indexOf(lowerQuery);
+
+    // Find all occurrences of the query in the text
+    final List<int> matches = <int>[];
+    int startIndex = 0;
+    while (true) {
+      final int index = lowerText.indexOf(lowerQuery, startIndex);
+      if (index == -1) break;
+      matches.add(index);
+      startIndex = index + 1;
+    }
 
     /// If query not found, return normal text
-    if (index == -1) {
+    if (matches.isEmpty) {
       return FusionAppText(text: text, style: style, maxLine: 1);
     }
 
-    /// Highlight the matched part
-    /// Using RichText to style the matched substring
-    /// with background color and bold font weight
+    /// Build highlighted text spans
+    final List<InlineSpan> spans = <InlineSpan>[];
+    int currentIndex = 0;
+
+    for (final int matchIndex in matches) {
+      // Add text before the match
+      if (matchIndex > currentIndex) {
+        spans.add(TextSpan(text: text.substring(currentIndex, matchIndex)));
+      }
+
+      // Add highlighted match
+      spans.add(
+        TextSpan(
+          text: text.substring(matchIndex, matchIndex + query.length),
+          style: style.copyWith(
+            backgroundColor: Colors.yellow.withAlpha(100),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      );
+
+      currentIndex = matchIndex + query.length;
+    }
+
+    // Add remaining text after the last match
+    if (currentIndex < text.length) {
+      spans.add(TextSpan(text: text.substring(currentIndex)));
+    }
+
     return RichText(
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
-      text: TextSpan(
-        style: style,
-        children: <InlineSpan>[
-          TextSpan(text: text.substring(0, index)),
-          TextSpan(
-            text: text.substring(index, index + query.length),
-            style: style.copyWith(
-              backgroundColor: Colors.yellow.withAlpha(100),
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          TextSpan(text: text.substring(index + query.length)),
-        ],
-      ),
+      text: TextSpan(style: style, children: spans),
     );
   }
 }
@@ -304,17 +356,8 @@ class ProductAPI {
       case ProductType.dsps:
         return getDeviceProducts();
       case ProductType.sources:
-        return <ProductQueryModel>[
-          const ProductQueryModel(
-            name: 'Mic',
-            price: 123.0,
-            image: 'assets/images/products/mic1.png',
-            type: ProductType.sources,
-            sku: 'MIC123',
-            //speakerData['model'] ??
-            specifications: 'New Mic',
-          ),
-        ];
+      case ProductType.racks:
+        return <ProductQueryModel>[];
     }
   }
 
@@ -323,19 +366,19 @@ class ProductAPI {
     try {
       final String speakersJson = fusionDevices.getSpeakers();
       final List<dynamic> speakersData = jsonDecode(speakersJson);
-      // print("Speakers Data: $speakersData");
       return speakersData.map((dynamic speakerData) {
         return ProductQueryModel(
           name: speakerData['model'] ?? '',
           price: (speakerData['price'] ?? 0.0).toDouble(),
-          image: speakerData["image_url"],
+          image: speakerData["image_url"] ?? '',
           type: ProductType.speaker,
           color: speakerData["color"],
           mountingType: speakerData["mounting_type"],
           outdoorRated: speakerData["outdoor_rated"],
-          maxSpl: speakerData["max_spl"],
-          nominalOhms: speakerData["nominal_ohms"],
+          maxSpl: speakerData["max_spl"] != null ? (speakerData["max_spl"] as num).toDouble() : null,
+          nominalOhms: speakerData["nominal_ohms"] != null ? (speakerData["nominal_ohms"] as num).toDouble() : null,
           sku: 'MSA12XOHS',
+          specifications: '${speakerData['max_spl'] ?? 0} dB SPL • ${speakerData['mounting_type'] ?? 'Unknown'}',
         );
       }).toList();
     } catch (e) {
@@ -352,10 +395,9 @@ class ProductAPI {
       return amplifiersData.map((dynamic ampData) {
         return ProductQueryModel(
           name: ampData['name'] ?? '',
-          price: ampData['price'],
-          // Add price if available in fusion_lib amp model
+          series: ampData['series'] ?? '',
+          price: ampData['price'] != null ? (ampData['price'] as num).toDouble() : 0.0,
           image: ampData['image_url'] ?? '',
-          // Add image if available in fusion_lib amp model
           type: ProductType.amplifier,
           sku: ampData['name'] ?? '',
           specifications: '${ampData['channels']}ch • ${(ampData['peakPerChannel'] ?? 0).toInt()}W per ch',
@@ -371,18 +413,15 @@ class ProductAPI {
     try {
       final String devicesJson = fusionDevices.getDevices();
       final List<dynamic> devicesData = jsonDecode(devicesJson);
-      // print("Devices Data: $devicesData");
 
       return devicesData.map((dynamic deviceData) {
         return ProductQueryModel(
           name: deviceData['name'] ?? '',
-          price: deviceData['price'],
-          // Add price if available in fusion_lib device model
+          price: deviceData['price'] != null ? (deviceData['price'] as num).toDouble() : 0.0,
           image: deviceData['image_url'] ?? '',
-          // Add image if available in fusion_lib device model
-          type: ProductType.dsps, // Fixed: should be dsps, not controllers
+          type: ProductType.dsps,
           sku: deviceData['name'] ?? '',
-          specifications: '${deviceData['analogInputs']}in • ${deviceData['analogOutputs']}out • ${deviceData['networkIO']} network I/O',
+          specifications: '${deviceData['analogInputs'] ?? 0}in • ${deviceData['analogOutputs'] ?? 0}out • ${deviceData['networkIO'] ?? 0} network I/O',
         );
       }).toList();
     } catch (e) {
@@ -397,15 +436,13 @@ class ProductAPI {
       final List<dynamic> controllersData = jsonDecode(controllersJson);
 
       return controllersData.map((dynamic data) {
-        // print price and imageUrl fields
-        print('Controller Data: ${data['price']}, ${data['imageUrl']}');
         return ProductQueryModel(
           name: data['name'] ?? '',
           price: data["price"] != null ? (data['price'] as num).toDouble() : 0.0,
           image: data['imageUrl'] ?? '',
           type: ProductType.controllers,
           sku: data['name'] ?? '',
-          specifications: '${data['analogInputs']}in • ${data['analogOutputs']}out • ${data['networkIO']} network I/O',
+          specifications: '${data['analogInputs'] ?? 0}in • ${data['analogOutputs'] ?? 0}out • ${data['networkIO'] ?? 0} network I/O',
         );
       }).toList();
     } catch (e) {
@@ -413,23 +450,20 @@ class ProductAPI {
     }
   }
 
-  /// Convert controllers specs to products using fusion_lib
+  /// Convert endpoints specs to products using fusion_lib
   static List<ProductQueryModel> getEndpoints() {
     try {
       final String controllersJson = fusionDevices.getAllEndpoints();
       final List<dynamic> controllersData = jsonDecode(controllersJson);
-      // print("Devices Data: $devicesData");
 
       return controllersData.map((dynamic deviceData) {
-        print('Controller Data: ${deviceData['price']}, ${deviceData['imageUrl']}');
-
         return ProductQueryModel(
           name: deviceData['name'] ?? '',
-          price: deviceData['price'],
+          price: deviceData['price'] != null ? (deviceData['price'] as num).toDouble() : 0.0,
           image: deviceData['imageUrl'] ?? '',
           type: ProductType.endpoints,
           sku: deviceData['name'] ?? '',
-          specifications: '${deviceData['analogInputs']}in • ${deviceData['analogOutputs']}out • ${deviceData['networkIO']} network I/O',
+          specifications: '${deviceData['analogInputs'] ?? 0}in • ${deviceData['analogOutputs'] ?? 0}out • ${deviceData['networkIO'] ?? 0} network I/O',
         );
       }).toList();
     } catch (e) {
