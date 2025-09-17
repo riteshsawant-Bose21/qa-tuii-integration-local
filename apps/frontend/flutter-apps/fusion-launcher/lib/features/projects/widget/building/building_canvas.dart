@@ -118,13 +118,36 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
       zone,
     );
 
-    if (selectedAreas != null && selectedAreas.isNotEmpty) {
-      for (ListeningArea area in selectedAreas) {
+    if (selectedAreas != null) {
+      // Get existing listening areas for this zone
+      final List<ListeningArea> existingAreas = serviceLocator<ProjectViewModel>().getListeningAreasForZone(zone.id);
+
+      // Find areas to remove (existing but not in selected)
+      final List<ListeningArea> areasToRemove =
+          existingAreas.where((ListeningArea existingArea) => !selectedAreas.any((ListeningArea selected) => selected.id == existingArea.id)).toList();
+
+      // Find areas to add (selected but not in existing)
+      final List<ListeningArea> areasToAdd =
+          selectedAreas.where((ListeningArea selected) => !existingAreas.any((ListeningArea existing) => existing.id == selected.id)).toList();
+
+      // Remove areas that are no longer selected
+      for (ListeningArea area in areasToRemove) {
+        serviceLocator<ProjectViewModel>().removeListeningAreaFromZone(area.id, zone.id);
+      }
+
+      // Add newly selected areas
+      for (ListeningArea area in areasToAdd) {
         serviceLocator<ProjectViewModel>().addListeningAreaToZone(area.id, zone.id);
       }
       serviceLocator<ProjectViewModel>().saveProjectToLocal();
     } else {
-      debugPrint("No areas selected");
+      // If selectedAreas is null, remove all areas from the zone
+      final List<ListeningArea> existingAreas = serviceLocator<ProjectViewModel>().getListeningAreasForZone(zone.id);
+      for (ListeningArea existingArea in existingAreas) {
+        serviceLocator<ProjectViewModel>().removeListeningAreaFromZone(existingArea.id, zone.id);
+      }
+      serviceLocator<ProjectViewModel>().saveProjectToLocal();
+      debugPrint("No areas selected - removed all areas from zone");
     }
   }
 

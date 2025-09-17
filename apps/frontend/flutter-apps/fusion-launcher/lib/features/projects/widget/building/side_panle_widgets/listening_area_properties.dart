@@ -22,9 +22,9 @@ class ListeningAreaProperties extends StatelessWidget {
   ];
 
   final List<String> listeningHeightOptions = <String>[
-    "Ground 1 ft",
     "Sitting 3 ft",
     "Standing 6 ft",
+    "Custom",
   ];
 
   final List<String> splRangeOptions = <String>[
@@ -34,8 +34,8 @@ class ListeningAreaProperties extends StatelessWidget {
   ];
 
   final TextEditingController ceilingHeightController = TextEditingController();
-
   final TextEditingController listeningAreaController = TextEditingController();
+  final TextEditingController customListeningHeightController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -45,6 +45,15 @@ class ListeningAreaProperties extends StatelessWidget {
       builder: (BuildContext context, ProjectViewModelState state) {
         ceilingHeightController.text = selectedListeningArea.ceilingHeight;
         listeningAreaController.text = selectedListeningArea.name;
+
+        // Check if custom listening height is selected
+        final bool isCustomListeningHeight = selectedListeningArea.listeningHeight == "Custom";
+
+        // Set custom height controller text if it's a custom value
+        if (isCustomListeningHeight) {
+          // If it's custom, try to get the custom value from some property or use empty
+          customListeningHeightController.text = selectedListeningArea.customListeningAreaHeight ?? '';
+        }
 
         //prepare List<PropertyRow> rows from selectedListeningArea vertices
         final List<PropertyRow> rows =
@@ -60,9 +69,11 @@ class ListeningAreaProperties extends StatelessWidget {
             }).toList();
 
         return Container(
-          padding: const EdgeInsets.only(top: 0, bottom: 16, left: 16, right: 16),
+          padding: const EdgeInsets.all(20),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
+              // Header section with name and delete button
               Row(
                 children: <Widget>[
                   Expanded(
@@ -72,10 +83,11 @@ class ListeningAreaProperties extends StatelessWidget {
                       decoration: const InputDecoration(
                         hintText: 'Area Name',
                         border: InputBorder.none,
+                        contentPadding: EdgeInsets.zero,
                       ),
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w600,
-                        fontSize: 12,
+                        fontSize: 14,
                       ),
                       onFieldSubmitted: (String v) {
                         final ListeningArea updatedLA = selectedListeningArea.copyWith(name: v);
@@ -83,94 +95,131 @@ class ListeningAreaProperties extends StatelessWidget {
                       },
                     ),
                   ),
-
+                  const SizedBox(width: 8),
                   //small delete icon button to delete the selectedListeningArea
-                  Expanded(
-                    flex: 3,
-                    child: IconButton(
-                      icon: Icon(
-                        Icons.delete,
-                        size: 15,
-                        color: Theme.of(context).colorScheme.error,
-                      ),
-                      onPressed: () {
-                        viewModel.removeListeningArea(selectedListeningArea.id);
-                      },
+                  IconButton(
+                    icon: Icon(
+                      Icons.delete,
+                      size: 18,
+                      color: Theme.of(context).colorScheme.error,
                     ),
+                    onPressed: () {
+                      viewModel.removeListeningArea(selectedListeningArea.id);
+                    },
                   ),
                 ],
               ),
-              _buildLAPropertyRow(
-                context: context,
-                label: "Zone",
-                value: viewModel.getZonesForListeningArea(selectedListeningArea.id)?.name ?? "N/A",
-                options: viewModel.zones.map((Zone zone) => zone.name).toList(),
-                onOptionSelected: (int selectedIndex) {
-                  final Zone selectedZone = viewModel.zones[selectedIndex];
-                  viewModel.addListeningAreaToZone(selectedListeningArea.id, selectedZone.id);
-                },
-              ),
-              const SizedBox(
-                height: 8,
-              ),
-              _buildLAPropertyRow(
-                context: context,
-                label: "Type",
-                value: selectedListeningArea.venuType.isNotEmpty ? selectedListeningArea.venuType : "Default Type",
-                options: venueOptions,
-                onOptionSelected: (int selectedIndex) {
-                  final String selectedType = venueOptions[selectedIndex];
-                  final ListeningArea updatedLA = selectedListeningArea.copyWith(venuType: selectedType);
-                  viewModel.updateListeningArea(updatedLA);
-                },
-              ),
-              const SizedBox(
-                height: 8,
-              ),
-              _buildLAPropertyRow(
-                context: context,
-                label: "Listening Ht",
-                value: selectedListeningArea.listeningHeight,
-                options: listeningHeightOptions,
-                onOptionSelected: (int selectedIndex) {
-                  final String selectedHeight = listeningHeightOptions[selectedIndex];
-                  final ListeningArea updatedLA = selectedListeningArea.copyWith(listeningHeight: selectedHeight);
-                  viewModel.updateListeningArea(updatedLA);
-                },
-              ),
-              const SizedBox(
-                height: 8,
-              ),
-              _buildLAPropertyRow(
-                context: context,
-                label: "SPL Range",
-                value: selectedListeningArea.splRange,
-                options: splRangeOptions,
-                onOptionSelected: (int selectedIndex) {
-                  final String selectedRange = splRangeOptions[selectedIndex];
-                  final ListeningArea updatedLA = selectedListeningArea.copyWith(splRange: selectedRange);
-                  viewModel.updateListeningArea(updatedLA);
-                },
-              ),
-              const SizedBox(
-                height: 8,
-              ),
-              _buildPropertyRowForTextField(
-                context: context,
-                label: "Ceiling Ht",
-                controller: ceilingHeightController,
-                hintText: "e.g., 10 ft",
-                onSubmit: (String newValue) {
-                  final ListeningArea updatedLA = selectedListeningArea.copyWith(ceilingHeight: newValue);
-                  viewModel.updateListeningArea(updatedLA);
-                },
-              ),
-              const SizedBox(
-                height: 8,
+
+              const SizedBox(height: 20),
+
+              // Properties section
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    'Properties',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.fusionTextViewColor.withOpacity(0.7),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildLAPropertyRow(
+                    context: context,
+                    label: "Zone",
+                    value: viewModel.getZonesForListeningArea(selectedListeningArea.id)?.name ?? "N/A",
+                    options: viewModel.zones.map((Zone zone) => zone.name).toList(),
+                    onOptionSelected: (int selectedIndex) {
+                      final Zone selectedZone = viewModel.zones[selectedIndex];
+                      viewModel.addListeningAreaToZone(selectedListeningArea.id, selectedZone.id);
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  _buildLAPropertyRow(
+                    context: context,
+                    label: "Type",
+                    value: selectedListeningArea.venuType.isNotEmpty ? selectedListeningArea.venuType : "Default Type",
+                    options: venueOptions,
+                    onOptionSelected: (int selectedIndex) {
+                      final String selectedType = venueOptions[selectedIndex];
+                      final ListeningArea updatedLA = selectedListeningArea.copyWith(venuType: selectedType);
+                      viewModel.updateListeningArea(updatedLA);
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  _buildLAPropertyRow(
+                    context: context,
+                    label: "Listening Ht",
+                    value: selectedListeningArea.listeningHeight,
+                    options: listeningHeightOptions,
+                    onOptionSelected: (int selectedIndex) {
+                      final String selectedHeight = listeningHeightOptions[selectedIndex];
+                      final ListeningArea updatedLA = selectedListeningArea.copyWith(listeningHeight: selectedHeight);
+                      viewModel.updateListeningArea(updatedLA);
+                    },
+                  ),
+
+                  // Show custom listening height text field if "Custom" is selected
+                  if (isCustomListeningHeight) ...<Widget>[
+                    const SizedBox(height: 10),
+                    _buildPropertyRowForTextField(
+                      context: context,
+                      label: "Custom Height",
+                      controller: customListeningHeightController,
+                      hintText: "e.g., 4 ft",
+                      onSubmit: (String newValue) {
+                        final ListeningArea updatedLA = selectedListeningArea.copyWith(customListeningAreaHeight: newValue);
+                        viewModel.updateListeningArea(updatedLA);
+                      },
+                    ),
+                  ],
+
+                  const SizedBox(height: 10),
+                  _buildLAPropertyRow(
+                    context: context,
+                    label: "SPL Range",
+                    value: selectedListeningArea.splRange,
+                    options: splRangeOptions,
+                    onOptionSelected: (int selectedIndex) {
+                      final String selectedRange = splRangeOptions[selectedIndex];
+                      final ListeningArea updatedLA = selectedListeningArea.copyWith(splRange: selectedRange);
+                      viewModel.updateListeningArea(updatedLA);
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  _buildPropertyRowForTextField(
+                    context: context,
+                    label: "Ceiling Ht",
+                    controller: ceilingHeightController,
+                    hintText: "e.g., 10 ft",
+                    onSubmit: (String newValue) {
+                      final ListeningArea updatedLA = selectedListeningArea.copyWith(ceilingHeight: newValue);
+                      viewModel.updateListeningArea(updatedLA);
+                    },
+                  ),
+                ],
               ),
 
-              PropertyListWidget(
-                rows: rows,
+              const SizedBox(height: 12),
+
+              // Vertices section
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    'Vertices',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.fusionTextViewColor.withOpacity(0.7),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  PropertyListWidget(
+                    rows: rows,
+                  ),
+                ],
               ),
             ],
           ),
@@ -221,7 +270,7 @@ class ListeningAreaProperties extends StatelessWidget {
         }).toList();
       },
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 0),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: <Widget>[
@@ -238,7 +287,6 @@ class ListeningAreaProperties extends StatelessWidget {
               alignment: Alignment.centerLeft,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-
                 children: <Widget>[
                   FusionAppText(
                     text: value,
@@ -247,7 +295,7 @@ class ListeningAreaProperties extends StatelessWidget {
                       fontSize: 11,
                     ),
                   ),
-                  const SizedBox(width: 4),
+                  const SizedBox(width: 6),
                   Icon(
                     Icons.keyboard_arrow_down,
                     size: 16,
@@ -269,51 +317,46 @@ class ListeningAreaProperties extends StatelessWidget {
     String? hintText,
     Function(String)? onSubmit,
   }) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: <Widget>[
-        // Left: Label
-        FusionAppText(
-          text: label,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            fontSize: 11,
-            color: Theme.of(context).colorScheme.fusionTextViewColor.withOpacity(0.5),
-          ),
-        ),
-
-        // Right: TextField
-        SizedBox(
-          width: 100,
-          height: 24,
-          child: TextField(
-            controller: controller,
-            onSubmitted: onSubmit,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: <Widget>[
+          // Left: Label
+          FusionAppText(
+            text: label,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               fontSize: 11,
-              color: Theme.of(context).colorScheme.fusionTextViewColor,
-            ),
-            decoration: InputDecoration(
-              isDense: true,
-              contentPadding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-              hintText: hintText,
-              hintStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
-                fontSize: 11,
-                color: Theme.of(context).colorScheme.fusionTextViewColor.withOpacity(0.5),
-              ),
-              // border: OutlineInputBorder(
-              //   borderRadius: BorderRadius.circular(4),
-              //   borderSide: BorderSide(color: Theme.of(context).colorScheme.dividerColor),
-              // ),
-              // focusedBorder: OutlineInputBorder(
-              //   borderRadius: BorderRadius.circular(4),
-              //   borderSide: BorderSide(color: Theme.of(context).colorScheme.primary),
-              // ),
-              filled: true,
-              fillColor: Theme.of(context).colorScheme.white,
+              color: Theme.of(context).colorScheme.fusionTextViewColor.withOpacity(0.5),
             ),
           ),
-        ),
-      ],
+
+          // Right: TextField
+          SizedBox(
+            width: 100,
+            height: 28,
+            child: TextField(
+              controller: controller,
+              onSubmitted: onSubmit,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                fontSize: 11,
+                color: Theme.of(context).colorScheme.fusionTextViewColor,
+              ),
+              decoration: InputDecoration(
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+                hintText: hintText,
+                hintStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontSize: 11,
+                  color: Theme.of(context).colorScheme.fusionTextViewColor.withOpacity(0.5),
+                ),
+
+                fillColor: Theme.of(context).colorScheme.white,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -358,11 +401,21 @@ class _PropertyListWidgetState extends State<PropertyListWidget> {
 
         // Show more / less button if more than 4 rows
         if (widget.rows.length > 4)
-          GestureDetector(
-            onTap: () {
-              setState(() => _showAll = !_showAll);
-            },
-            child: Text(_showAll ? "Show Less" : "Show More"),
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: GestureDetector(
+              onTap: () {
+                setState(() => _showAll = !_showAll);
+              },
+              child: Text(
+                _showAll ? "Show Less" : "Show More",
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontSize: 11,
+                  color: Theme.of(context).primaryColor,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
           ),
       ],
     );
@@ -387,10 +440,8 @@ class _PropertyRowWidget extends StatelessWidget {
       fontWeight: FontWeight.w400,
     );
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        vertical: 4,
-      ),
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 0),
       child: Row(
         children: <Widget>[
           // Title
@@ -404,9 +455,7 @@ class _PropertyRowWidget extends StatelessWidget {
             child: Row(
               children: <Widget>[
                 Text("X", style: textStyleGrey),
-                const SizedBox(
-                  width: 2,
-                ),
+                const SizedBox(width: 4),
                 Text(
                   "${row.x}",
                   style: textStyleBlack,
@@ -421,9 +470,7 @@ class _PropertyRowWidget extends StatelessWidget {
             child: Row(
               children: <Widget>[
                 Text("Y", style: textStyleGrey),
-                const SizedBox(
-                  width: 2,
-                ),
+                const SizedBox(width: 4),
                 Text(
                   "${row.y}",
                   style: textStyleBlack,
@@ -438,9 +485,7 @@ class _PropertyRowWidget extends StatelessWidget {
             child: Row(
               children: <Widget>[
                 Text("Z", style: textStyleGrey),
-                const SizedBox(
-                  width: 2,
-                ),
+                const SizedBox(width: 4),
                 Text(
                   "${row.z}",
                   style: textStyleBlack,

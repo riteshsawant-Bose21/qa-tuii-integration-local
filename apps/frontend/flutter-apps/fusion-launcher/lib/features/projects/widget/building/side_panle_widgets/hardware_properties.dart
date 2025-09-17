@@ -16,6 +16,9 @@ class HardwareComponentProperties extends StatelessWidget {
 
   final TextEditingController gainController = TextEditingController();
   final TextEditingController rotationController = TextEditingController();
+  final TextEditingController xController = TextEditingController();
+  final TextEditingController yController = TextEditingController();
+  final TextEditingController zController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -34,22 +37,26 @@ class HardwareComponentProperties extends StatelessWidget {
         final ProjectViewModel viewModel = serviceLocator<ProjectViewModel>();
         gainController.text = selectedHardware is Speaker ? (selectedHardware as Speaker).gain.toString() : '0.0';
         rotationController.text = selectedHardware is Speaker ? (selectedHardware as Speaker).rotation.toString() : '0.0';
+        xController.text = selectedHardware.pos.dx.toStringAsFixed(2);
+        yController.text = selectedHardware.pos.dy.toStringAsFixed(2);
+        zController.text = selectedHardware.zAxis.toStringAsFixed(2);
 
         return Container(
-          padding: const EdgeInsets.only(top: 0, bottom: 16, left: 16, right: 16),
+          padding: const EdgeInsets.all(20),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              //A Row with Speaker icon, name and price
+              // Hardware header section with icon, name and price
               Row(
                 children: <Widget>[
-                  //Speaker image from selected hardware assetPath
+                  // Speaker image from selected hardware assetPath
                   Image.asset(
                     selectedHardware.assetImagePath,
-                    width: 24,
-                    height: 24,
+                    width: 28,
+                    height: 28,
                     fit: BoxFit.contain,
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -62,7 +69,7 @@ class HardwareComponentProperties extends StatelessWidget {
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
-
+                        const SizedBox(height: 4),
                         Text(
                           '\$${selectedHardware.price.toStringAsFixed(2)}',
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -77,7 +84,7 @@ class HardwareComponentProperties extends StatelessWidget {
                   IconButton(
                     icon: Icon(
                       Icons.delete,
-                      size: 15,
+                      size: 18,
                       color: Theme.of(context).colorScheme.error,
                     ),
                     onPressed: () {
@@ -87,184 +94,254 @@ class HardwareComponentProperties extends StatelessWidget {
                 ],
               ),
 
-              Row(
-                children: <Widget>[
-                  Expanded(
-                    flex: 7,
-                    child: TextFormField(
-                      initialValue: selectedHardware.name,
-                      decoration: const InputDecoration(
-                        hintText: 'Hardware Name',
-                        border: InputBorder.none,
-                      ),
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 12,
-                      ),
-                      onFieldSubmitted: (String v) {
-                        final HardwareComponent updated = selectedHardware.copyWith(name: v);
-                        viewModel.updateHardware(updated);
-                      },
-                    ),
-                  ),
-                ],
+              const SizedBox(height: 12),
+
+              // Hardware name input field
+              TextFormField(
+                initialValue: selectedHardware.name,
+                decoration: const InputDecoration(
+                  hintText: 'Hardware Name',
+                  border: InputBorder.none,
+                ),
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                ),
+                onFieldSubmitted: (String v) {
+                  final HardwareComponent updated = selectedHardware.copyWith(name: v);
+                  viewModel.updateHardware(updated);
+                },
               ),
 
-              const SizedBox(height: 5),
+              const SizedBox(height: 10),
 
-              Row(
+              // Coordinates section
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Expanded(
-                    flex: 2,
-                    child: Row(
-                      children: <Widget>[
-                        Text("X", style: textStyleGrey),
-                        const SizedBox(
-                          width: 2,
-                        ),
-                        Text(
-                          selectedHardware.pos.dx.toStringAsFixed(2),
-                          style: textStyleBlack,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
+                  Text(
+                    'Position',
+                    style: textStyleGrey?.copyWith(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-
-                  Expanded(
-                    flex: 2,
-                    child: Row(
-                      children: <Widget>[
-                        Text("Y", style: textStyleGrey),
-                        const SizedBox(
-                          width: 2,
+                  const SizedBox(height: 8),
+                  Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: Row(
+                          children: <Widget>[
+                            Text("X", style: textStyleGrey),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: TextFormField(
+                                controller: xController,
+                                decoration: const InputDecoration(
+                                  hintText: 'X',
+                                  border: InputBorder.none,
+                                  isDense: true,
+                                ),
+                                style: textStyleBlack,
+                                keyboardType: TextInputType.number,
+                                onFieldSubmitted: (String v) {
+                                  final double? xValue = double.tryParse(v);
+                                  if (xValue != null) {
+                                    final HardwareComponent updated = selectedHardware.copyWith(pos: Offset(xValue, selectedHardware.pos.dy));
+                                    viewModel.updateHardware(updated);
+                                  }
+                                },
+                              ),
+                            ),
+                          ],
                         ),
-                        Text(
-                          selectedHardware.pos.dy.toStringAsFixed(2),
-                          style: textStyleBlack,
-                          overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Row(
+                          children: <Widget>[
+                            Text("Y", style: textStyleGrey),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: TextFormField(
+                                controller: yController,
+                                decoration: const InputDecoration(
+                                  hintText: 'Y',
+                                  border: InputBorder.none,
+                                  isDense: true,
+                                ),
+                                style: textStyleBlack,
+                                keyboardType: TextInputType.number,
+                                onFieldSubmitted: (String v) {
+                                  final double? yValue = double.tryParse(v);
+                                  if (yValue != null) {
+                                    final HardwareComponent updated = selectedHardware.copyWith(pos: Offset(selectedHardware.pos.dx, yValue));
+                                    viewModel.updateHardware(updated);
+                                  }
+                                },
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                  ),
-
-                  Expanded(
-                    flex: 2,
-                    child: Row(
-                      children: <Widget>[
-                        Text("Z", style: textStyleGrey),
-                        const SizedBox(
-                          width: 2,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Row(
+                          children: <Widget>[
+                            Text("Z", style: textStyleGrey),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: TextFormField(
+                                controller: zController,
+                                decoration: const InputDecoration(
+                                  hintText: 'Z',
+                                  border: InputBorder.none,
+                                  isDense: true,
+                                ),
+                                style: textStyleBlack,
+                                keyboardType: TextInputType.number,
+                                onFieldSubmitted: (String v) {
+                                  final double? zValue = double.tryParse(v);
+                                  if (zValue != null) {
+                                    final HardwareComponent updated = selectedHardware.copyWith(zAxis: zValue);
+                                    viewModel.updateHardware(updated);
+                                  }
+                                },
+                              ),
+                            ),
+                          ],
                         ),
-                        Text(
-                          "${0.0}",
-                          style: textStyleBlack,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ],
               ),
 
               if (selectedHardware is Speaker) ...<Widget>[
-                const SizedBox(
-                  height: 8,
+                const SizedBox(height: 16),
+
+                // Rotation field
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Row(
+                    children: <Widget>[
+                      SizedBox(
+                        width: 80,
+                        child: Text("Rotation", style: textStyleGrey?.copyWith(fontSize: 11)),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: //for rotation
+                            Row(
+                          children: <Widget>[
+                            Expanded(
+                              child: TextFormField(
+                                controller: rotationController,
+                                decoration: const InputDecoration(
+                                  hintText: 'Rotation',
+                                  border: InputBorder.none,
+                                  isDense: true,
+                                ),
+                                style: textStyleBlack,
+                                keyboardType: TextInputType.number,
+                                onFieldSubmitted: (String v) {
+                                  final double? rotation = double.tryParse(v);
+                                  if (rotation != null) {
+                                    final Speaker updated = (selectedHardware as Speaker).copyWith(rotation: rotation);
+                                    viewModel.updateHardware(updated);
+                                  }
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
 
-                //for rotation
-                Row(
-                  children: <Widget>[
-                    Text("Rotation", style: textStyleGrey),
-                    const SizedBox(
-                      width: 2,
-                    ),
-                    Expanded(
-                      child: TextFormField(
-                        controller: rotationController,
-                        decoration: const InputDecoration(
-                          hintText: 'Rotation',
-                          border: InputBorder.none,
-                          isDense: true,
-                        ),
-                        style: textStyleBlack,
-                        keyboardType: TextInputType.number,
-                        onFieldSubmitted: (String v) {
-                          final double? rotation = double.tryParse(v);
-                          if (rotation != null) {
-                            final Speaker updated = (selectedHardware as Speaker).copyWith(rotation: rotation);
-                            viewModel.updateHardware(updated);
-                          }
-                        },
+                const SizedBox(height: 12),
+
+                // Gain field
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Row(
+                    children: <Widget>[
+                      SizedBox(
+                        width: 80,
+                        child: Text("Gain", style: textStyleGrey?.copyWith(fontSize: 11)),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(
-                  height: 8,
-                ),
-                Row(
-                  children: <Widget>[
-                    Text("Gain", style: textStyleGrey),
-                    const SizedBox(
-                      width: 2,
-                    ),
-                    Expanded(
-                      child: TextFormField(
-                        controller: gainController,
-                        decoration: const InputDecoration(
-                          hintText: 'Gain',
-                          isDense: true,
-                          border: InputBorder.none,
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Row(
+                          children: <Widget>[
+                            Expanded(
+                              child: TextFormField(
+                                controller: gainController,
+                                decoration: const InputDecoration(
+                                  hintText: 'Gain',
+                                  border: InputBorder.none,
+                                  isDense: true,
+                                ),
+                                style: textStyleBlack,
+                                keyboardType: TextInputType.number,
+                                onFieldSubmitted: (String v) {
+                                  final double? gain = double.tryParse(v);
+                                  if (gain != null) {
+                                    final Speaker updated = (selectedHardware as Speaker).copyWith(gain: gain);
+                                    viewModel.updateHardware(updated);
+                                  }
+                                },
+                              ),
+                            ),
+                          ],
                         ),
-                        style: textStyleBlack,
-                        keyboardType: TextInputType.number,
-                        onFieldSubmitted: (String v) {
-                          final double? gain = double.tryParse(v);
-                          if (gain != null) {
-                            final Speaker updated = (selectedHardware as Speaker).copyWith(gain: gain);
-                            viewModel.updateHardware(updated);
-                          }
-                        },
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
-              const SizedBox(
-                height: 8,
-              ),
-              _buildHardwarePropertyRow(
-                context: context,
-                label: "Listening Area",
-                value: viewModel.getListeningAreaForHardware(selectedHardware.id)?.name ?? "N/A",
-                options: viewModel.listeningAreas.map((ListeningArea listeningArea) => listeningArea.name).toList(),
-                onOptionSelected: (int selectedIndex) {
-                  final ListeningArea? selectedArea = viewModel.listeningAreas.isNotEmpty ? viewModel.listeningAreas[selectedIndex] : null;
-                  if (selectedArea != null) {
-                    print("Selected Area: ${selectedArea.name}");
-                    final LocationModel updated = selectedHardware.locationEntity.copyWith(
-                      listeningAreaId: selectedArea.id,
-                    );
-                    viewModel.updateHardwareLocation(selectedHardware.id, updated);
-                  }
-                },
-              ),
 
-              _buildHardwarePropertyTextRow(
-                context: context,
-                label: "Color",
-                value: "Black",
-              ),
-              _buildHardwarePropertyTextRow(
-                context: context,
-                label: "Type",
-                value: "Ceiling",
-              ),
-              _buildHardwarePropertyTextRow(
-                context: context,
-                label: "Impedance",
-                value: "Low",
+              // Properties section
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  const SizedBox(height: 12),
+                  _buildHardwarePropertyRow(
+                    context: context,
+                    label: "Listening Area",
+                    value: viewModel.getListeningAreaForHardware(selectedHardware.id)?.name ?? "N/A",
+                    options: viewModel.listeningAreas.map((ListeningArea listeningArea) => listeningArea.name).toList(),
+                    onOptionSelected: (int selectedIndex) {
+                      final ListeningArea? selectedArea = viewModel.listeningAreas.isNotEmpty ? viewModel.listeningAreas[selectedIndex] : null;
+                      if (selectedArea != null) {
+                        print("Selected Area: ${selectedArea.name}");
+                        final LocationModel updated = selectedHardware.locationEntity.copyWith(
+                          listeningAreaId: selectedArea.id,
+                        );
+                        viewModel.updateHardwareLocation(selectedHardware.id, updated);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  _buildHardwarePropertyTextRow(
+                    context: context,
+                    label: "Color",
+                    value: "Black",
+                  ),
+                  const SizedBox(height: 8),
+                  _buildHardwarePropertyTextRow(
+                    context: context,
+                    label: "Type",
+                    value: "Ceiling",
+                  ),
+                  const SizedBox(height: 8),
+                  _buildHardwarePropertyTextRow(
+                    context: context,
+                    label: "Impedance",
+                    value: "Low",
+                  ),
+                ],
               ),
             ],
           ),
@@ -315,7 +392,7 @@ class HardwareComponentProperties extends StatelessWidget {
         }).toList();
       },
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 0),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: <Widget>[
@@ -332,7 +409,6 @@ class HardwareComponentProperties extends StatelessWidget {
               alignment: Alignment.centerLeft,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-
                 children: <Widget>[
                   FusionAppText(
                     text: value,
@@ -341,7 +417,7 @@ class HardwareComponentProperties extends StatelessWidget {
                       fontSize: 11,
                     ),
                   ),
-                  const SizedBox(width: 4),
+                  const SizedBox(width: 6),
                   Icon(
                     Icons.keyboard_arrow_down,
                     size: 16,
@@ -356,14 +432,14 @@ class HardwareComponentProperties extends StatelessWidget {
     );
   }
 
-  /// Builds a dropdown row displaying a property label and its selectable value.
+  /// Builds a text row displaying a property label and its value.
   Widget _buildHardwarePropertyTextRow({
     required BuildContext context,
     required String label,
     required String value,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: <Widget>[
@@ -375,8 +451,7 @@ class HardwareComponentProperties extends StatelessWidget {
               color: Theme.of(context).colorScheme.fusionTextViewColor.withOpacity(0.5),
             ),
           ),
-
-          // Right: Value + Arrow
+          // Right: Value
           FusionAppText(
             text: value,
             textAlign: TextAlign.left,

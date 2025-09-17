@@ -146,7 +146,7 @@ class ProductQueryCubit extends Cubit<ProductQueryState> {
       final int beforeCoverageFilter = products.length;
 
       // Debug: Show all speakers and their maxSpl values
-      final List<ProductQueryModel> currentSpeakers = products.where((p) => p.type == ProductType.speaker).toList();
+      final List<ProductQueryModel> currentSpeakers = products.where((ProductQueryModel p) => p.type == ProductType.speaker).toList();
       print("Current speakers before coverage filter:");
       for (final ProductQueryModel speaker in currentSpeakers) {
         print("  ${speaker.name}: maxSpl=${speaker.maxSpl}");
@@ -179,7 +179,7 @@ class ProductQueryCubit extends Cubit<ProductQueryState> {
       final int beforeImpedanceFilter = products.length;
 
       // Debug: Show all speakers and their nominalOhms values
-      final List<ProductQueryModel> currentSpeakers = products.where((p) => p.type == ProductType.speaker).toList();
+      final List<ProductQueryModel> currentSpeakers = products.where((ProductQueryModel p) => p.type == ProductType.speaker).toList();
       print("Current speakers before impedance filter:");
       for (final ProductQueryModel speaker in currentSpeakers) {
         print("  ${speaker.name}: nominalOhms=${speaker.nominalOhms}");

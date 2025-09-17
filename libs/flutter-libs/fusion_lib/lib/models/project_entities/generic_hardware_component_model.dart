@@ -13,6 +13,7 @@ class GenericHardwareComponent extends HardwareComponent {
     super.id,
     required super.locationEntity,
     required super.name,
+    super.zAxis,
     required Offset super.pos,
     required this.type,
     required super.assetImagePath,
@@ -27,6 +28,7 @@ class GenericHardwareComponent extends HardwareComponent {
     String? id,
     String? name,
     Offset? pos,
+    double? zAxis,
     GenericHardwareComponentType? type,
     String? assetImagePath,
     LocationModel? locationEntity,
@@ -38,6 +40,7 @@ class GenericHardwareComponent extends HardwareComponent {
       id: id ?? this.id,
       name: name ?? this.name,
       pos: pos ?? this.pos,
+      zAxis: zAxis ?? this.zAxis,
       type: type ?? this.type,
       assetImagePath: assetImagePath ?? this.assetImagePath,
       locationEntity: locationEntity ?? this.locationEntity,
@@ -53,6 +56,7 @@ class GenericHardwareComponent extends HardwareComponent {
       'name': name,
       'pos': <String, double>{'dx': pos.dx, 'dy': pos.dy},
       'type': type.name,
+      "zAxis": zAxis,
       'assetImagePath': assetImagePath,
       'componentType': 'generic',
       'locationEntity': locationEntity.toJson(),
@@ -87,6 +91,7 @@ class GenericHardwareComponent extends HardwareComponent {
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
       hardwareName: json['hardwareName'],
       sku: json['sku'] as String? ?? '',
+      zAxis: (json['zAxis'] as num?)?.toDouble() ?? 0.0,
     );
   }
 }

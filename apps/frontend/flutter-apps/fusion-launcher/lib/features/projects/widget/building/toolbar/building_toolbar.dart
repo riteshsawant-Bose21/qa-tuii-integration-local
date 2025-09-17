@@ -72,21 +72,21 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
                 onTap: widget.onSplSelected,
                 isSelected: widget.isSplSelected,
               ),
-              _buildToolItem(
-                assetIcon: Assets.tableIcon,
-                "floor plan",
-                onTap: widget.onEditFloorPlanSelected,
-              ),
-              _buildToolItem(
-                assetIcon: Assets.panIcon,
-                "Hand",
-                onTap: widget.onPanSelected,
-              ),
-              _buildToolItem(
-                assetIcon: Assets.trashIcon,
-                "Delete",
-                onTap: widget.onTrashSelected,
-              ),
+              // _buildToolItem(
+              //   assetIcon: Assets.tableIcon,
+              //   "floor plan",
+              //   onTap: widget.onEditFloorPlanSelected,
+              // ),
+              // _buildToolItem(
+              //   assetIcon: Assets.panIcon,
+              //   "Hand",
+              //   onTap: widget.onPanSelected,
+              // ),
+              // _buildToolItem(
+              //   assetIcon: Assets.trashIcon,
+              //   "Delete",
+              //   onTap: widget.onTrashSelected,
+              // ),
               _buildToolItem(
                 icon: Icons.fit_screen_rounded,
                 "Fit to screen",

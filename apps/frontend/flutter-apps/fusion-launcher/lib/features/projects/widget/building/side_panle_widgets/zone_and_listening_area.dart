@@ -38,24 +38,23 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
     return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
       builder: (BuildContext context, ProjectViewModelState state) {
         return SizedBox(
-          width: 280,
-
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               // Header Section
-              _buildHeader(),
 
-              // Divider
-              Container(
-                height: 1,
-                color: Colors.grey[200],
-                margin: const EdgeInsets.symmetric(horizontal: 16),
-              ),
+              // // Divider
+              // Container(
+              //   height: 1,
+              //   color: Colors.grey[200],
+              //   margin: const EdgeInsets.symmetric(horizontal: 16),
+              // ),
 
               // Zones List
               _buildZonesList(),
+              _buildFooter(),
+              const SizedBox(height: 8),
             ],
           ),
         );
@@ -63,59 +62,33 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildFooter() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.end,
         mainAxisSize: MainAxisSize.max,
         children: <Widget>[
-          Flexible(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                Icon(
-                  Icons.layers_outlined,
-                  size: 16,
-                  color: Colors.grey[700],
-                ),
-                const SizedBox(width: 8),
-                FusionAppText(
-                  text: 'Add new zone',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 12,
-                    color: Colors.black87,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ],
+          OutlinedButton(
+            onPressed: () {
+              _addNewZone();
+            },
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: Colors.black54),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              minimumSize: const Size(0, 32),
+            ),
+            child: const Text(
+              '+ Add Zone',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: Colors.black87,
+              ),
             ),
           ),
-          _buildAddButton(),
         ],
-      ),
-    );
-  }
-
-  Widget _buildAddButton() {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(6),
-        onTap: () => _addNewZone(),
-        child: Container(
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: Colors.black54, width: 1),
-          ),
-          child: const Icon(
-            Icons.add,
-            size: 16,
-            color: Colors.black87,
-          ),
-        ),
       ),
     );
   }
@@ -148,9 +121,10 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
   Widget _buildEmptyState() {
     return Container(
       constraints: const BoxConstraints(),
-      padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
           Icon(
             Icons.layers_outlined,
@@ -164,14 +138,6 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
               color: Colors.grey[600],
               fontSize: 14,
               fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 8),
-          FusionAppText(
-            text: 'Create your first zone to get started',
-            style: TextStyle(
-              color: Colors.grey[500],
-              fontSize: 12,
             ),
           ),
         ],
@@ -216,12 +182,15 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                             Expanded(
                               child: _buildZoneTitle(zone, isSelected),
                             ),
+
                             InkWell(
                               onTap: () => serviceLocator<ProjectViewModel>().enterZoneSelectionMode(zone),
                               child: _buildAddIcon(),
                             ),
                             const SizedBox(width: 8),
                             _buildDeleteButton(zone),
+                            const SizedBox(width: 8),
+                            _buildExpandIcon(isExpanded),
                           ],
                         ),
                       ),
@@ -282,8 +251,8 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
       onColorChanged: (Color color) {
         serviceLocator<ProjectViewModel>().updateZone(zone.copyWith(zoneColor: colorToHex(color)));
       },
-      width: 5,
-      height: 24,
+      width: 18,
+      height: 18,
       borderRadius: 4,
     );
     // return Container(
@@ -393,6 +362,11 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
         child: ListTile(
           dense: true,
 
+          leading: const Icon(
+            Icons.volume_up,
+            size: 14,
+            color: Colors.black87,
+          ),
           title: FusionAppText(
             text: area.name,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -420,7 +394,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
   Widget _buildNoListeningAreasMessage() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.grey[100],
         borderRadius: BorderRadius.circular(6),
@@ -431,7 +405,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
         children: <Widget>[
           Icon(
             Icons.info_outline,
-            size: 14,
+            size: 12,
             color: Colors.grey[500],
           ),
           const SizedBox(width: 12),
@@ -443,17 +417,9 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                 FusionAppText(
                   text: 'No listening areas',
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 11,
                     color: Colors.grey[600],
                     fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                FusionAppText(
-                  text: 'Add listening areas to this zone',
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: Colors.grey[500],
                   ),
                 ),
               ],
@@ -512,24 +478,28 @@ class DraggingListItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return FractionalTranslation(
       translation: const Offset(-0.5, -0.5),
-      child: ClipRRect(
+      child: SizedBox(
         key: dragKey,
-        borderRadius: BorderRadius.circular(12),
-        child: SizedBox(
-          height: 50,
-          width: 50,
-          child: Opacity(
-            opacity: 0.85,
-            child: Text(
+        height: 50,
+        child: Row(
+          children: <Widget>[
+            const Icon(
+              Icons.volume_up,
+              size: 24,
+              color: Colors.black54,
+            ),
+            const SizedBox(width: 8),
+            Text(
               listeningArea,
+
               style: const TextStyle(
                 color: Colors.black87,
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
+                decoration: TextDecoration.none,
               ),
-              textAlign: TextAlign.center,
             ),
-          ),
+          ],
         ),
       ),
     );
