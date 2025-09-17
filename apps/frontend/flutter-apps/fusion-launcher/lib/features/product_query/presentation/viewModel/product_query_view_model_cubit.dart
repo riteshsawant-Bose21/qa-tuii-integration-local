@@ -44,41 +44,173 @@ class ProductQueryCubit extends Cubit<ProductQueryState> {
 
   /// Apply all selected filters to the product list
   List<ProductQueryModel> _getFilteredProducts() {
-    print(
-      "all states: ${state.selectedProductType}, ${state.selectedProductTypes}, ${state.selectedMountTypes}, ${state.selectedVenueTypes}, ${state.selectedColors}, ${state.selectedCoverages}, ${state.selectedImpedances}",
-    );
-
     /// Start with all products
     List<ProductQueryModel> products = ProductAPI.getAllProducts();
 
-    /// Filter by product type
-    if (state.selectedProductType != null) {
-      products = products.where((ProductQueryModel product) => product.type == state.selectedProductType).toList();
-    }
+    /// Debug: Print all speaker data
+    final List<ProductQueryModel> speakers = products.where((ProductQueryModel p) => p.type == ProductType.speaker).toList();
 
-    /// Filter by multiple product types
+    /// Filter by multiple product types from filter dropdown (priority)
     if (state.selectedProductTypes.isNotEmpty) {
       products = products.where((ProductQueryModel product) => state.selectedProductTypes.contains(product.type)).toList();
     }
+    /// Filter by single product type from main dropdown (fallback)
+    else if (state.selectedProductType != null) {
+      products = products.where((ProductQueryModel product) => product.type == state.selectedProductType).toList();
+    }
 
-    /// Filter by other attributes (mount types, venue types, colors, coverages, impedances)
-    if (state.selectedMountTypes.isNotEmpty ||
-        state.selectedVenueTypes.isNotEmpty ||
-        state.selectedCoverages.isNotEmpty ||
-        state.selectedImpedances.isNotEmpty) {
+    /// Filter by color (only for speakers)
+    if (state.selectedColors.isNotEmpty) {
+      final int beforeColorFilter = products.length;
       products =
           products.where((ProductQueryModel product) {
-            if (product.type != ProductType.speaker) return true;
+            // For speakers, only include if they have a matching color (case insensitive)
+            if (product.type == ProductType.speaker) {
+              if (product.color == null) {
+                return false;
+              }
+              final bool matches = state.selectedColors.any((String selectedColor) => selectedColor.toLowerCase() == product.color!.toLowerCase());
+              return matches;
+            }
+            // For non-speakers, always include them
             return true;
           }).toList();
     }
 
-    /// Example placeholder for color filtering
-    if (state.selectedColors.isNotEmpty) {
-      // code for filtering by colors if applicable
+    /// Filter by mount type (only for speakers)
+    if (state.selectedMountTypes.isNotEmpty) {
+      final int beforeMountFilter = products.length;
+      products =
+          products.where((ProductQueryModel product) {
+            // For speakers, only include if they have a matching mounting type (case insensitive)
+            if (product.type == ProductType.speaker) {
+              if (product.mountingType == null) {
+                return false;
+              }
+              final bool matches = state.selectedMountTypes.any((String selectedMount) => selectedMount.toLowerCase() == product.mountingType!.toLowerCase());
+              return matches;
+            }
+            // For non-speakers, always include them
+            return true;
+          }).toList();
+      print("Mount type filter: $beforeMountFilter -> ${products.length} products");
     }
 
+    /// Filter by venue type (only for speakers based on outdoorRated)
+    if (state.selectedVenueTypes.isNotEmpty) {
+      print("Filtering by venue types: ${state.selectedVenueTypes}");
+      final int beforeVenueFilter = products.length;
+      products =
+          products.where((ProductQueryModel product) {
+            // For speakers, filter based on outdoor rating
+            if (product.type == ProductType.speaker) {
+              if (product.outdoorRated == null) {
+                print("Speaker ${product.name} has no outdoor rating data");
+                return false;
+              }
+
+              final bool matches = state.selectedVenueTypes.any((String selectedVenue) {
+                if (selectedVenue == 'Indoor') {
+                  // Indoor only matches products that are NOT outdoor rated (false)
+                  return product.outdoorRated == false;
+                } else if (selectedVenue == 'Indoor + Outdoor') {
+                  // Indoor + Outdoor matches products that ARE outdoor rated (true)
+                  return product.outdoorRated == true;
+                }
+                return false;
+              });
+
+              print("Speaker ${product.name} outdoor rated: ${product.outdoorRated}, matches: $matches");
+              return matches;
+            }
+            // For non-speakers, always include them
+            return true;
+          }).toList();
+      print("Venue type filter: $beforeVenueFilter -> ${products.length} products");
+    }
+
+    /// Filter by coverage (only for speakers based on maxSpl)
+    if (state.selectedCoverages.isNotEmpty) {
+      print("Filtering by coverages: ${state.selectedCoverages}");
+      final int beforeCoverageFilter = products.length;
+
+      // Debug: Show all speakers and their maxSpl values
+      final List<ProductQueryModel> currentSpeakers = products.where((p) => p.type == ProductType.speaker).toList();
+      print("Current speakers before coverage filter:");
+      for (final ProductQueryModel speaker in currentSpeakers) {
+        print("  ${speaker.name}: maxSpl=${speaker.maxSpl}");
+      }
+
+      products =
+          products.where((ProductQueryModel product) {
+            // For speakers, filter based on maxSpl coverage levels
+            if (product.type == ProductType.speaker) {
+              if (product.maxSpl == null || product.maxSpl == 0.0) {
+                print("Speaker ${product.name} has no valid maxSpl data (${product.maxSpl})");
+                return false;
+              }
+
+              final String coverageLevel = _getCoverageLevelFromMaxSpl(product.maxSpl!);
+              final bool matches = state.selectedCoverages.any((String selectedCoverage) => selectedCoverage.toLowerCase() == coverageLevel.toLowerCase());
+
+              print("Speaker ${product.name} maxSpl: ${product.maxSpl}, coverage: $coverageLevel, selected: ${state.selectedCoverages}, matches: $matches");
+              return matches;
+            }
+            // For non-speakers, always include them
+            return true;
+          }).toList();
+      print("Coverage filter: $beforeCoverageFilter -> ${products.length} products");
+    }
+
+    /// Filter by impedance (only for speakers based on nominalOhms)
+    if (state.selectedImpedances.isNotEmpty) {
+      print("Filtering by impedances: ${state.selectedImpedances}");
+      final int beforeImpedanceFilter = products.length;
+
+      // Debug: Show all speakers and their nominalOhms values
+      final List<ProductQueryModel> currentSpeakers = products.where((p) => p.type == ProductType.speaker).toList();
+      print("Current speakers before impedance filter:");
+      for (final ProductQueryModel speaker in currentSpeakers) {
+        print("  ${speaker.name}: nominalOhms=${speaker.nominalOhms}");
+      }
+
+      products =
+          products.where((ProductQueryModel product) {
+            // For speakers, filter based on nominalOhms impedance levels
+            if (product.type == ProductType.speaker) {
+              if (product.nominalOhms == null || product.nominalOhms == 0.0) {
+                print("Speaker ${product.name} has no valid nominalOhms data (${product.nominalOhms})");
+                return false;
+              }
+
+              final String impedanceLevel = _getImpedanceLevelFromOhms(product.nominalOhms!);
+              final bool matches = state.selectedImpedances.any((String selectedImpedance) => selectedImpedance.toLowerCase() == impedanceLevel.toLowerCase());
+
+              print(
+                "Speaker ${product.name} nominalOhms: ${product.nominalOhms}, impedance: $impedanceLevel, selected: ${state.selectedImpedances}, matches: $matches",
+              );
+              return matches;
+            }
+            // For non-speakers, always include them
+            return true;
+          }).toList();
+      print("Impedance filter: $beforeImpedanceFilter -> ${products.length} products");
+    }
+
+    print("Filtered products count: ${products.length}");
     return products;
+  }
+
+  /// Get coverage level from maxSpl value
+  String _getCoverageLevelFromMaxSpl(double maxSpl) {
+    if (maxSpl < 100) return 'Low';
+    if (maxSpl < 110) return 'Mid';
+    return 'High';
+  }
+
+  /// Get impedance level from nominalOhms value
+  String _getImpedanceLevelFromOhms(double ohms) {
+    return ohms <= 4 ? 'Low' : 'High';
   }
 
   /// Sort products based on selected sort option
@@ -112,6 +244,7 @@ class ProductQueryCubit extends Cubit<ProductQueryState> {
     emit(
       state.copyWith(
         selectedProductType: type,
+        selectedProductTypes: type != null ? <ProductType>{type} : <ProductType>{},
         filteredProducts: type != null ? ProductAPI.getProductsByType(type) : ProductAPI.getAllProducts(),
       ),
     );
@@ -128,8 +261,12 @@ class ProductQueryCubit extends Cubit<ProductQueryState> {
   }
 
   void onFiltersChanged() {
+    // Sync selectedProductType with selectedProductTypes when filters change
+    final ProductType? singleProductType = state.selectedProductTypes.length == 1 ? state.selectedProductTypes.first : null;
+
     emit(
       state.copyWith(
+        selectedProductType: singleProductType,
         filteredProducts: _performSearch(state.searchQuery),
       ),
     );

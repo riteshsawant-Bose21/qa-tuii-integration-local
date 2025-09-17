@@ -35,11 +35,11 @@ class ProductQueryState {
   factory ProductQueryState.initial() {
     return ProductQueryState(
       searchController: TextEditingController(),
-      filteredProducts: ProductAPI.getAllProducts(),
+      filteredProducts: ProductAPI.getSpeakerProducts(),
       searchQuery: '',
       selectedProductType: null,
       selectedSortOption: null,
-      selectedProductTypes: <ProductType>{},
+      selectedProductTypes: <ProductType>{ProductType.speaker},
       selectedMountTypes: <String>{},
       selectedVenueTypes: <String>{},
       selectedColors: <String>{},

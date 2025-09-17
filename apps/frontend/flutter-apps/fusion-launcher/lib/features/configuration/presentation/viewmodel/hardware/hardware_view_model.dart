@@ -154,7 +154,40 @@ extension HardwareViewModel on ProjectViewModel {
           type: SourceType.analogInput,
         );
       case ProductType.amplifier:
-      case ProductType.device:
+        return GenericHardwareComponent(
+          locationEntity: locationEntity,
+          name: product.name,
+          pos: pos,
+          assetImagePath: product.image,
+          sku: product.sku,
+          price: product.price,
+          hardwareName: product.name,
+          type: GenericHardwareComponentType.other,
+        );
+      case ProductType.controllers:
+        return GenericHardwareComponent(
+          locationEntity: locationEntity,
+          name: product.name,
+          pos: pos,
+          assetImagePath: product.image,
+          sku: product.sku,
+          price: product.price,
+          hardwareName: product.name,
+          type: GenericHardwareComponentType.controller,
+        );
+      case ProductType.dsps:
+        return GenericHardwareComponent(
+          locationEntity: locationEntity,
+          name: product.name,
+          pos: pos,
+          assetImagePath: product.image,
+          sku: product.sku,
+          price: product.price,
+          hardwareName: product.name,
+          type: GenericHardwareComponentType.other,
+        );
+
+      case ProductType.endpoints:
         return GenericHardwareComponent(
           locationEntity: locationEntity,
           name: product.name,
