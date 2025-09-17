@@ -266,7 +266,7 @@ int ep9512t_configure(struct endpoint *ep, struct endpoint_cmd *cmd)
     int i;
 
     // ep9512t needs extra time on a hard power cycle. 
-    msleep(250);
+    msleep(1000);
 
     // set up the i2c_client
     endpoint_get_i2c_client(ep);
@@ -300,12 +300,10 @@ static int handle_irq(struct endpoint_gpio *ep_gpio)
     int ret = -1;
   
     if (ep_gpio->parent_endpoint) {
-        printk(KERN_INFO "handle_irq: calling ep_handle_irq for gpio %s\n", ep_gpio->name);
         ret = ep_gpio->parent_endpoint->ep_handle_irq(ep_gpio);
     } else if (ep_gpio->parent_io_card) {
         for (int i = 0; i < ep_gpio->num_aggregate_gpios; ++i) {
             aggregate_gpio = ep_gpio->aggregate_gpios[i];
-            printk(KERN_DEBUG "handle_irq: calling ep_handle_irq for agg_gpio %s\n", ep_gpio->name);
             ret = aggregate_gpio->parent_endpoint->ep_handle_irq(aggregate_gpio);
             if (ret == 0) {
                 break;
@@ -458,6 +456,7 @@ int ep9512t_handle_irq(struct endpoint_gpio *ep_gpio)
     return 0;
 }
 
+// TODO: how to simulate GPI digital input from ADC?
 int ads7128_handle_irq(struct endpoint_gpio *ep_gpio)
 {
     struct endpoint *ads7128 = ep_gpio->parent_endpoint;
@@ -469,7 +468,7 @@ int ads7128_handle_irq(struct endpoint_gpio *ep_gpio)
     u8 rd_opcode_buf[2];
     u8 rd_data_buf[2];
 
-    u8 event_mask, gpi_value, pin_cfg;
+    u8 event_mask, pin_cfg;
     u16 adc_value;
     u16 new_high, new_low;
     int ret, channel;
@@ -566,20 +565,7 @@ int ads7128_handle_irq(struct endpoint_gpio *ep_gpio)
                 continue;
             }
         } else {
-            printk(KERN_DEBUG "ads7128_handle_irq: in GPI handling\n");
-            // Read GPIO value for input interrupts
-            rd_opcode_buf[1] = ADS7128_REG_GPI_VALUE;
-            ret = i2c_transfer(client->adapter, rd_msgs, 2);
-            if (ret < 0) {
-                printk(KERN_ERR "ads7128_handle_irq: failed read GPI_VALUE\n");
-                return ret;
-            }
-            gpi_value = *rd_data_buf;
-
-            printk(KERN_DEBUG "ads7128_handle_irq: rd_data_buf=0x%04x\n", *(u16 *)rd_data_buf);
-            printk(KERN_DEBUG "ads7128_handle_irq: gpi_value=0x%02x\n", gpi_value);
-
-            gpio->value = (gpi_value & (1UL << channel)) ? 1 : 0;
+            // cannot use Digital input with C0 due to voltage divider scheme at input
         }
 
         // clear event flag bits
