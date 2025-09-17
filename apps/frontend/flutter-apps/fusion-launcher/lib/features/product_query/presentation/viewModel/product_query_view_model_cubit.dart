@@ -66,6 +66,12 @@ class ProductQueryCubit extends Cubit<ProductQueryState> {
       return ProductAPI.getAllProducts();
     }
 
+    print("state.searchQuery => ${state.searchQuery}");
+
+    if (state.selectedProductTypes.isEmpty && state.searchQuery.isEmpty) {
+      return ProductAPI.getAllProducts();
+    }
+
     /// Start with all products
     List<ProductQueryModel> products = ProductAPI.getAllProducts();
 
@@ -286,8 +292,8 @@ class ProductQueryCubit extends Cubit<ProductQueryState> {
     // Then create sorted products using the updated state
     final List<ProductQueryModel> newFilteredProducts = _performSearch(state.searchQuery);
 
-    print("Products before sort: ${state.filteredProducts.take(3).map((ProductQueryModel p) => p.name).toList()}");
-    print("Products after sort: ${newFilteredProducts.take(3).map((ProductQueryModel p) => p.name).toList()}");
+    print("Products before sort: ${state.filteredProducts.take(3).map((p) => p.name).toList()}");
+    print("Products after sort: ${newFilteredProducts.take(3).map((p) => p.name).toList()}");
 
     // Emit the final state with sorted products
     emit(

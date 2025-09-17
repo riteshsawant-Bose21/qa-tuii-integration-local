@@ -4,6 +4,7 @@ import '../../fusion_utils/app_enums.dart';
 class ProductQueryModel {
   const ProductQueryModel({
     required this.name,
+    this.series,
     required this.price,
     required this.image,
     required this.type,
@@ -17,6 +18,7 @@ class ProductQueryModel {
   });
 
   final String name;
+  final String? series;
   final double price;
   final String image;
   final ProductType type;
