@@ -24,7 +24,7 @@ private:
 
     bosepro::DspCoeffMemory<float *[]> gain;
     bosepro::DspCoeffMemory<bool *[]> mute;
-    bosepro::DspCoeffMemory<bool *[]> input_mute;
+    bosepro::DspCoeffMemory<bool []> input_mute;
 
     bosepro::DspTelemetryMemory<bool []> input_presence;
 
