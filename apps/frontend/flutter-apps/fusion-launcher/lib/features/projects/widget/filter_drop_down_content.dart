@@ -304,6 +304,8 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
         return 'DSPs';
       case ProductType.sources:
         return 'Sources';
+      case ProductType.racks:
+        return 'Racks';
     }
   }
 
@@ -321,6 +323,8 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
         return ProductType.sources;
       case 'DSPs':
         return ProductType.dsps;
+      case 'Racks':
+        return ProductType.racks;
       default:
         return null;
     }

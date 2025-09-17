@@ -295,13 +295,20 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
     return Container(
       constraints: const BoxConstraints(),
       padding: const EdgeInsets.symmetric(vertical: 4),
-      child: FusionAppText(
-        text: zone.name,
-        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-          fontSize: 13,
-          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-          color: isSelected ? Colors.black87 : Colors.grey[800],
+      child: TextFormField(
+        initialValue: zone.name,
+        decoration: const InputDecoration(
+          hintText: 'Zone Name',
+          border: InputBorder.none,
         ),
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.w600,
+          fontSize: 12,
+        ),
+        onFieldSubmitted: (String v) {
+          final Zone updated = zone.copyWith(name: v);
+          serviceLocator<ProjectViewModel>().updateZone(updated);
+        },
       ),
     );
   }

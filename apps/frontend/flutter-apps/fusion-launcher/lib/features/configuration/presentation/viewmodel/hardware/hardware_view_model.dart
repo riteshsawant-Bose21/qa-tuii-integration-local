@@ -198,6 +198,17 @@ extension HardwareViewModel on ProjectViewModel {
           hardwareName: product.name,
           type: GenericHardwareComponentType.other,
         );
+      case ProductType.racks:
+        return GenericHardwareComponent(
+          locationEntity: locationEntity,
+          name: product.name,
+          pos: pos,
+          assetImagePath: product.image,
+          sku: product.sku,
+          price: product.price,
+          hardwareName: product.name,
+          type: GenericHardwareComponentType.rack,
+        );
     }
   }
 }

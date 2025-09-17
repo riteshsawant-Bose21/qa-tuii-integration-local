@@ -343,6 +343,8 @@ class ProductSearchWidget extends StatelessWidget {
         return 'DSPs';
       case ProductType.sources:
         return 'Sources';
+      case ProductType.racks:
+        return 'Racks';
     }
   }
 

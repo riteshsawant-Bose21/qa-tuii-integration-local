@@ -20,7 +20,7 @@ class ProductQueryView extends StatelessWidget {
     if (index == 3) return ProductType.amplifier;
     if (index == 4) return ProductType.dsps;
     if (index == 5) return ProductType.controllers;
-    return ProductType.speaker;
+    return null;
   }
 
   @override
@@ -205,6 +205,9 @@ class ProductCard extends StatelessWidget {
 
       case ProductType.controllers:
         return "assets/images/products/bose_dsp.png";
+
+      case ProductType.racks:
+        return "assets/images/products/rack.png";
     }
   }
 
@@ -222,6 +225,8 @@ class ProductCard extends StatelessWidget {
         return 'Source';
       case ProductType.dsps:
         return 'DSP';
+      case ProductType.racks:
+        return 'Rack';
     }
   }
 
@@ -304,17 +309,8 @@ class ProductAPI {
       case ProductType.dsps:
         return getDeviceProducts();
       case ProductType.sources:
-        return <ProductQueryModel>[
-          const ProductQueryModel(
-            name: 'Mic',
-            price: 123.0,
-            image: 'assets/images/products/mic1.png',
-            type: ProductType.sources,
-            sku: 'MIC123',
-            //speakerData['model'] ??
-            specifications: 'New Mic',
-          ),
-        ];
+      case ProductType.racks:
+        return <ProductQueryModel>[];
     }
   }
 

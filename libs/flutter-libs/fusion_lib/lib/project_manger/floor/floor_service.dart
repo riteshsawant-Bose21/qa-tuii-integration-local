@@ -11,6 +11,13 @@ extension FloorService on ProjectService {
 
   /// Remove Floor
   void removeFloor(String floorId, {bool cascade = true}) {
+    List<HardwareComponent> allHardwareComponents = getAllHardwareInFloor(floorId);
+
+    //delete Hardware in the floor
+    for (final hw in allHardwareComponents) {
+      removeHardware(hw.id);
+    }
+
     floors.remove(floorId);
     final areas = relationships.getChildren(RelationshipType.floorListening, floorId);
     relationships.removeAllRelationships(floorId);
