@@ -96,11 +96,11 @@ class ProductSearchWidget extends StatelessWidget {
                   context: context,
                   image: "assets/images/sort_descending.png",
                   tooltip: 'Sort',
-                  hasActiveFilters: false,
+                  hasActiveFilters: selectedSortOption != null, // Show active state when sort is selected
                   dropdownBuilder:
                       (BuildContext context) => SortDropdownContent(
                         selectedSortOption: selectedSortOption,
-                        onSortOptionChanged: onSortOptionChanged ?? (SortOption? option) {}, // Updated default callback
+                        onSortOptionChanged: onSortOptionChanged ?? (SortOption? option) {},
                       ),
                 ),
 
