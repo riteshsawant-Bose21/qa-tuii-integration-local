@@ -183,58 +183,68 @@ class ProductSearchWidget extends StatelessWidget {
     }
 
     // Mount Type chips
-    for (final String mountType in selectedMountTypes) {
-      chips.add(
-        _buildFilterChip(
-          context: context,
-          label: 'Mount: $mountType',
-          onRemove: () => _removeMountTypeFilter(mountType),
-        ),
-      );
+    if (selectedProductTypes.contains(ProductType.speaker)) {
+      for (final String mountType in selectedMountTypes) {
+        chips.add(
+          _buildFilterChip(
+            context: context,
+            label: 'Mount: $mountType',
+            onRemove: () => _removeMountTypeFilter(mountType),
+          ),
+        );
+      }
     }
 
     // Venue Type chips
-    for (final String venueType in selectedVenueTypes) {
-      chips.add(
-        _buildFilterChip(
-          context: context,
-          label: 'Venue: $venueType',
-          onRemove: () => _removeVenueTypeFilter(venueType),
-        ),
-      );
+    if (selectedProductTypes.contains(ProductType.speaker)) {
+      for (final String venueType in selectedVenueTypes) {
+        chips.add(
+          _buildFilterChip(
+            context: context,
+            label: 'Venue: $venueType',
+            onRemove: () => _removeVenueTypeFilter(venueType),
+          ),
+        );
+      }
     }
 
     // Color chips
-    for (final String color in selectedColors) {
-      chips.add(
-        _buildFilterChip(
-          context: context,
-          label: 'Color: $color',
-          onRemove: () => _removeColorFilter(color),
-        ),
-      );
+    if (selectedProductTypes.contains(ProductType.speaker)) {
+      for (final String color in selectedColors) {
+        chips.add(
+          _buildFilterChip(
+            context: context,
+            label: 'Color: $color',
+            onRemove: () => _removeColorFilter(color),
+          ),
+        );
+      }
     }
 
     // Coverage chips
-    for (final String coverage in selectedCoverages) {
-      chips.add(
-        _buildFilterChip(
-          context: context,
-          label: 'Coverage: $coverage',
-          onRemove: () => _removeCoverageFilter(coverage),
-        ),
-      );
+    if (selectedProductTypes.contains(ProductType.speaker)) {
+      for (final String coverage in selectedCoverages) {
+        chips.add(
+          _buildFilterChip(
+            context: context,
+            label: 'Coverage: $coverage',
+            onRemove: () => _removeCoverageFilter(coverage),
+          ),
+        );
+      }
     }
 
     // Impedance chips
-    for (final String impedance in selectedImpedances) {
-      chips.add(
-        _buildFilterChip(
-          context: context,
-          label: 'Impedance: $impedance',
-          onRemove: () => _removeImpedanceFilter(impedance),
-        ),
-      );
+    if (selectedProductTypes.contains(ProductType.speaker)) {
+      for (final String impedance in selectedImpedances) {
+        chips.add(
+          _buildFilterChip(
+            context: context,
+            label: 'Impedance: $impedance',
+            onRemove: () => _removeImpedanceFilter(impedance),
+          ),
+        );
+      }
     }
 
     return Container(
@@ -251,7 +261,10 @@ class ProductSearchWidget extends StatelessWidget {
               itemBuilder: (BuildContext context, int index) => chips[index],
             ),
           ),
-          if (chips.isNotEmpty)
+
+          /// Clear all button
+          /// Only show if there are active filters and product type is speaker
+          if (chips.isNotEmpty && selectedProductTypes.contains(ProductType.speaker))
             Container(
               padding: const EdgeInsets.only(right: 12),
               child: TextButton(

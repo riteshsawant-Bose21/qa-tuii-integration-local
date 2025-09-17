@@ -377,7 +377,7 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                                 ),
                           ),
                           DockItemConfig(
-                            id: "3",
+                            id: "7",
                             title: "ZONE & LISTENING AREAS",
                             side: "right",
                             controller: zoneAreaController,
@@ -386,14 +386,14 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                             dockItemWidget: () => const ZoneAndListeningAreaPanel(),
                           ),
                           DockItemConfig(
-                            id: "7",
+                            id: "8",
                             title: "PRODUCT QUERY",
                             side: "right",
                             dockItemWidget: () => const ProductQueryView(),
                             controller: productsController,
                           ),
                           DockItemConfig(
-                            id: "8",
+                            id: "9",
                             title: "SPL MAPPING",
                             side: "right",
                             controller: splController,
@@ -445,7 +445,7 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                             ),
                       ),
                       DockItemConfig(
-                        id: "7",
+                        id: "8",
                         title: "PRODUCT QUERY",
                         side: "right",
                         dockItemWidget: () => const ProductQueryView(),
