@@ -79,23 +79,40 @@ class _DevicesPanelState extends State<DevicesPanel> {
                 },
               ),
               _buildSubItem(
-                Icons.tune,
-                'Controllers',
+                Icons.hub_outlined,
                 isSelected: serviceLocator<ProjectViewModel>().currentDeviceTypeIndex == 2,
+                'Endpoints',
                 onTap: () {
                   goToDevicePlacementMode();
                   serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(2);
                 },
               ),
               _buildSubItem(
-                Icons.hub_outlined,
-                'Endpoints',
-                onTap: () {},
+                Icons.amp_stories,
+                isSelected: serviceLocator<ProjectViewModel>().currentDeviceTypeIndex == 3,
+                'Amplifiers',
+                onTap: () {
+                  goToDevicePlacementMode();
+                  serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(3);
+                },
               ),
               _buildSubItem(
                 Icons.dns_outlined,
-                'Endpoints',
-                onTap: () {},
+                isSelected: serviceLocator<ProjectViewModel>().currentDeviceTypeIndex == 4,
+                'DSPs',
+                onTap: () {
+                  goToDevicePlacementMode();
+                  serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(4);
+                },
+              ),
+              _buildSubItem(
+                Icons.tune,
+                'Controllers',
+                isSelected: serviceLocator<ProjectViewModel>().currentDeviceTypeIndex == 5,
+                onTap: () {
+                  goToDevicePlacementMode();
+                  serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(5);
+                },
               ),
             ],
           ),
