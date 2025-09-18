@@ -180,6 +180,7 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
     isInZoneSelectionMode = false;
     isInListeningAreaSelectionMode = false;
     currentSelectedZoneId = null;
+    print("Device type index changed to $index");
     emit(DeviceTypeIndexChanged(index));
   }
 

@@ -306,7 +306,19 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
           fontSize: 12,
         ),
         onFieldSubmitted: (String v) {
-          final Zone updated = zone.copyWith(name: v);
+          final String trimmedValue = v.trim();
+          if (trimmedValue.isEmpty) {
+            // Show a snackbar to inform user that zone name cannot be empty
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Zone name cannot be empty'),
+                duration: Duration(seconds: 2),
+              ),
+            );
+            // Don't update zone name and revert to previous name
+            return;
+          }
+          final Zone updated = zone.copyWith(name: trimmedValue);
           serviceLocator<ProjectViewModel>().updateZone(updated);
         },
       ),
