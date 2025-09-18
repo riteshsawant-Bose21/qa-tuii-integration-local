@@ -82,6 +82,7 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
             _buildFilterSection(
               title: 'Product Type',
               image: "assets/images/coverage.png",
+              initiallyExpanded: _localProductTypes.length == 1 && _localProductTypes.contains(ProductType.speaker) ? false : true,
               options:
                   ProductType.values
                       .where((ProductType type) => type != ProductType.sources)
@@ -100,8 +101,8 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
               },
             ),
 
-            /// Mount Type Filter (only for speakers)
-            if (_localProductTypes.isEmpty || _localProductTypes.contains(ProductType.speaker))
+            /// Mount Type Filter (only for speakers when it's the only selected type)
+            if (_localProductTypes.length == 1 && _localProductTypes.contains(ProductType.speaker))
               _buildFilterSection(
                 title: 'Mount Type',
                 image: "assets/images/mount_type.png",
@@ -115,8 +116,8 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
                 },
               ),
 
-            /// Venue Type Filter (only for speakers)
-            if (_localProductTypes.isEmpty || _localProductTypes.contains(ProductType.speaker))
+            /// Venue Type Filter (only for speakers when it's the only selected type)
+            if (_localProductTypes.length == 1 && _localProductTypes.contains(ProductType.speaker))
               _buildFilterSection(
                 title: 'Venue Type',
                 image: "assets/images/venue_type.png",
@@ -130,8 +131,8 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
                 },
               ),
 
-            /// Color Filter (only for speakers or when no specific product type is selected)
-            if (_localProductTypes.isEmpty || _localProductTypes.contains(ProductType.speaker))
+            /// Color Filter (only for speakers when it's the only selected type)
+            if (_localProductTypes.length == 1 && _localProductTypes.contains(ProductType.speaker))
               _buildFilterSection(
                 title: 'Color',
                 image: "assets/images/color.png",
@@ -145,8 +146,8 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
                 },
               ),
 
-            /// Coverage Filter (only for speakers)
-            if (_localProductTypes.isEmpty || _localProductTypes.contains(ProductType.speaker))
+            /// Coverage Filter (only for speakers when it's the only selected type)
+            if (_localProductTypes.length == 1 && _localProductTypes.contains(ProductType.speaker))
               _buildFilterSection(
                 title: 'Coverage',
                 image: "assets/images/coverage.png",
@@ -160,8 +161,8 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
                 },
               ),
 
-            /// Impedance Filter (only for speakers)
-            if (_localProductTypes.isEmpty || _localProductTypes.contains(ProductType.speaker))
+            /// Impedance Filter (only for speakers when it's the only selected type)
+            if (_localProductTypes.length == 1 && _localProductTypes.contains(ProductType.speaker))
               _buildFilterSection(
                 title: 'Impedance',
                 image: "assets/images/impedance.png",
@@ -184,6 +185,7 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
   Widget _buildFilterSection({
     required String title,
     required String image,
+    bool initiallyExpanded = false,
     required List<String> options,
     required Set<String> selectedOptions,
     required ValueChanged<Set<String>> onChanged,
@@ -192,7 +194,7 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
       minTileHeight: 24,
       iconColor: Colors.black,
       collapsedIconColor: Colors.black,
-      initiallyExpanded: selectedOptions.isNotEmpty,
+      initiallyExpanded: initiallyExpanded,
       childrenPadding: const EdgeInsets.only(left: 34, right: 16, bottom: 8),
       tilePadding: const EdgeInsets.symmetric(horizontal: 16),
       title: Row(
