@@ -13,7 +13,7 @@ class ListeningArea {
   final String ceilingHeight;
   final double minSPL;
   final double maxSPL;
-  final String customListeningAreaHeight;
+  final double customListeningAreaHeight;
 
   ListeningArea({
     String? id,
@@ -25,7 +25,7 @@ class ListeningArea {
     this.ceilingHeight = '',
     this.minSPL = 60.0,
     this.maxSPL = 70.0,
-    this.customListeningAreaHeight = '',
+    this.customListeningAreaHeight = 0.0,
   }) : id = id ?? const Uuid().v4();
 
   List<Offset> getFieldPointsSet({int cols = 60, int rows = 60}) {
@@ -102,7 +102,7 @@ class ListeningArea {
     String? venuType,
     double? listeningHeight,
     String? ceilingHeight,
-    String? customListeningAreaHeight,
+    double? customListeningAreaHeight,
     double? minSPL,
     double? maxSPL,
   }) {
@@ -159,7 +159,7 @@ class ListeningArea {
       venuType: json['venuType'] as String? ?? '',
       listeningHeight: (json['listeningHeight'] as num?)?.toDouble() ?? 3.0,
       ceilingHeight: json['ceilingHeight'] as String? ?? '',
-      customListeningAreaHeight: json['customListeningAreaHeight'] as String? ?? '',
+      customListeningAreaHeight: (json['customListeningAreaHeight'] as num?)?.toDouble() ?? 0.0,
       minSPL: (json['minSPL'] as num?)?.toDouble() ?? 60.0,
       maxSPL: (json['maxSPL'] as num?)?.toDouble() ?? 70.0,
     );

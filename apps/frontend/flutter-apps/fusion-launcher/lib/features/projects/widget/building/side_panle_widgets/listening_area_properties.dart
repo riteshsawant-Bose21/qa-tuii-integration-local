@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
@@ -178,18 +179,19 @@ class ListeningAreaProperties extends StatelessWidget {
                   // Show custom listening height text field if "Custom" is selected
                   if (isCustomListeningHeight) ...<Widget>[
                     const SizedBox(height: 10),
-                    _buildPropertyRowForTextField(
+                    _buildValidatedPropertyRowForTextField(
                       context: context,
                       label: "Custom Height",
                       controller: customListeningHeightController,
                       hintText: "e.g., 4.5",
                       onSubmit: (String newValue) {
                         final double? customHeight = double.tryParse(newValue);
-                        if (customHeight != null) {
+                        if (customHeight != null && customHeight > 0) {
                           final ListeningArea updatedLA = selectedListeningArea.copyWith(listeningHeight: customHeight);
                           viewModel.updateListeningArea(updatedLA);
                         }
                       },
+                      viewModel: viewModel,
                     ),
                   ],
 
@@ -384,7 +386,7 @@ class ListeningAreaProperties extends StatelessWidget {
 
           // Right: TextField
           SizedBox(
-            width: 100,
+            width: 80,
             height: 28,
             child: TextField(
               controller: controller,
@@ -403,6 +405,118 @@ class ListeningAreaProperties extends StatelessWidget {
                 ),
                 fillColor: Theme.of(context).colorScheme.white,
               ),
+              inputFormatters: <TextInputFormatter>[
+                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Builds a validated text field specifically for decimal inputs like custom listening height
+  Widget _buildValidatedPropertyRowForTextField({
+    required BuildContext context,
+    required String label,
+    required TextEditingController controller,
+    String? hintText,
+    Function(String)? onSubmit,
+    required ProjectViewModel viewModel,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: <Widget>[
+          // Left: Label
+          FusionAppText(
+            text: label,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              fontSize: 11,
+              color: Theme.of(context).colorScheme.fusionTextViewColor.withValues(alpha: 0.5),
+            ),
+          ),
+
+          // Right: TextField with validation
+          SizedBox(
+            width: 80,
+            height: 28,
+            child: TextFormField(
+              controller: controller,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                fontSize: 11,
+                color: Theme.of(context).colorScheme.fusionTextViewColor,
+              ),
+              decoration: InputDecoration(
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+                hintText: hintText,
+                hintStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontSize: 11,
+                  color: Theme.of(context).colorScheme.fusionTextViewColor.withValues(alpha: 0.5),
+                ),
+                fillColor: Theme.of(context).colorScheme.white,
+              ),
+
+              inputFormatters: <TextInputFormatter>[
+                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*$')),
+                LengthLimitingTextInputFormatter(8), // Limit to reasonable length
+              ],
+              validator: (String? value) {
+                if (value == null || value.isEmpty) {
+                  return 'Required';
+                }
+
+                final double? parsed = double.tryParse(value);
+                if (parsed == null) {
+                  return 'Invalid decimal';
+                }
+
+                if (parsed <= 0) {
+                  return 'Must be > 0';
+                }
+
+                if (parsed > 1000) {
+                  return 'Too large';
+                }
+
+                return null;
+              },
+              onFieldSubmitted: (String value) {
+                final double? parsed = double.tryParse(value);
+                if (parsed != null && parsed > 0 && parsed <= 1000) {
+                  onSubmit?.call(value);
+                } else {
+                  // Reset to previous valid value if invalid
+                  controller.text = selectedListeningArea.listeningHeight.toString();
+
+                  // Show error feedback
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Please enter a valid decimal value between 0.1 and 1000',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.white,
+                        ),
+                      ),
+                      backgroundColor: Theme.of(context).colorScheme.error,
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                }
+              },
+              onChanged: (String value) {
+                // Real-time validation feedback
+                final double? parsed = double.tryParse(value);
+                if (value.isNotEmpty && (parsed == null || parsed <= 0 || parsed > 1000)) {
+                  // Visual feedback for invalid input
+                  controller.selection = TextSelection.fromPosition(
+                    TextPosition(offset: controller.text.length),
+                  );
+                }
+              },
             ),
           ),
         ],
