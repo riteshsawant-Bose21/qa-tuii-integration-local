@@ -39,6 +39,7 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
   late TextEditingController _projectNameController;
   final FocusNode _projectNameFocusNode = FocusNode();
   final GlobalKey _projectNameKey = GlobalKey();
+  String? _projectNameError;
 
   final SplRangeController _splRangeController = SplRangeController();
 
@@ -522,27 +523,30 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-                  builder: (BuildContext context, ProjectViewModelState state) {
-                    return FusionAppText(
-                      text: serviceLocator<ProjectViewModel>().projectName,
-                      textOverflow: TextOverflow.ellipsis,
-                      maxLine: 1,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w900),
-                    );
-                  },
-                ),
-                const SizedBox(height: 2),
-                FusionAppText(
-                  text: "File_Version",
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10, color: Theme.of(context).colorScheme.greyDark),
-                ),
-              ],
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+                    builder: (BuildContext context, ProjectViewModelState state) {
+                      return FusionAppText(
+                        text: serviceLocator<ProjectViewModel>().projectName,
+                        textOverflow: TextOverflow.ellipsis,
+                        maxLine: 1,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w900),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 2),
+                  FusionAppText(
+                    text: "File_Version",
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10, color: Theme.of(context).colorScheme.greyDark),
+                  ),
+                ],
+              ),
             ),
+            const SizedBox(width: 2),
             const Icon(
               Icons.arrow_drop_down_outlined,
               size: 18,
@@ -589,7 +593,7 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
               });
 
               return Container(
-                width: 237, // Match the project name container width
+                width: 237,
                 padding: const EdgeInsets.all(12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -627,16 +631,40 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(4),
-                          borderSide: BorderSide(color: Theme.of(context).colorScheme.fusionTextViewColor),
+                          borderSide: BorderSide(color: _projectNameError != null ? Colors.red : Theme.of(context).colorScheme.fusionTextViewColor),
                         ),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                         isDense: true,
                       ),
+                      onChanged: (String value) {
+                        if (_projectNameError != null) {
+                          setMenuState(() {
+                            _projectNameError = null;
+                          });
+                        }
+                      },
                       onSubmitted: (String value) {
-                        serviceLocator<ProjectViewModel>().setProjectName(value.trim());
-                        Navigator.of(context).pop();
+                        final String trimmedName = value.trim();
+                        if (trimmedName.isNotEmpty) {
+                          serviceLocator<ProjectViewModel>().setProjectName(trimmedName);
+                          Navigator.of(context).pop();
+                        } else {
+                          setMenuState(() {
+                            _projectNameError = "Name can not be empty";
+                          });
+                        }
                       },
                     ),
+                    if (_projectNameError != null) ...<Widget>[
+                      const SizedBox(height: 4),
+                      FusionAppText(
+                        text: _projectNameError!,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontSize: 10,
+                          color: Colors.red,
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 18),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
@@ -658,8 +686,15 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
 
                           label: "Edit Name",
                           onTap: () {
-                            serviceLocator<ProjectViewModel>().setProjectName(_projectNameController.text.trim());
-                            Navigator.of(context).pop();
+                            final String trimmedName = _projectNameController.text.trim();
+                            if (trimmedName.isNotEmpty) {
+                              serviceLocator<ProjectViewModel>().setProjectName(trimmedName);
+                              Navigator.of(context).pop();
+                            } else {
+                              setMenuState(() {
+                                _projectNameError = "Name can't be empty";
+                              });
+                            }
                           },
                         ),
                       ],
