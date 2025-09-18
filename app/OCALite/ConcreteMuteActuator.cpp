@@ -43,14 +43,17 @@ inline const char *muteStateToString(::OcaLiteMuteState state)
 ConcreteMuteActuator::ConcreteMuteActuator(::OcaONo objectNumber,
                                            ::OcaBoolean lockable,
                                            const ::OcaLiteString &role,
-                                           const ::OcaLiteList<::OcaLitePort> &ports)
+                                           const ::OcaLiteList<::OcaLitePort> &ports,
+                                           const std::string &gainID)
     : ::OcaLiteMute(objectNumber, lockable, role, ports),
-      m_actualMuteState(OCAMUTESTATE_UNMUTED) // Initialize to unmuted
+      m_actualMuteState(OCAMUTESTATE_UNMUTED), // Initialize to unmuted
+      m_gainID(gainID)
 {
     // Enhanced logging with dynamic information
     OCA_LOG_INFO("=== ConcreteMuteActuator Created ===");
     OCA_LOG_INFO_PARAMS("Object Number: %u", objectNumber);
     OCA_LOG_INFO_PARAMS("Role: %s", role.GetString().c_str());
+    OCA_LOG_INFO_PARAMS("Gain ID: %s", m_gainID.empty() ? "N/A" : m_gainID.c_str());
     OCA_LOG_INFO_PARAMS("Initial State: %s", muteStateToString(OCAMUTESTATE_UNMUTED));
     OCA_LOG_INFO_PARAMS("Number of Ports: %u", ports.GetCount());
 
@@ -59,10 +62,10 @@ ConcreteMuteActuator::ConcreteMuteActuator(::OcaONo objectNumber,
     {
         const ::OcaLitePort &port = ports.GetItem(i);
         std::string direction = (port.GetID().GetMode() == OCAPORTMODE_INPUT) ? "INPUT" : "OUTPUT";
-        OCA_LOG_INFO_PARAMS("  Port %u: %s (%s #%u)", 
-                            (i + 1), 
+        OCA_LOG_INFO_PARAMS("  Port %u: %s (%s #%u)",
+                            (i + 1),
                             port.GetName().GetString().c_str(),
-                            direction.c_str(), 
+                            direction.c_str(),
                             port.GetID().GetIndex());
     }
     OCA_LOG_INFO("====================================");
@@ -75,7 +78,8 @@ ConcreteMuteActuator::ConcreteMuteActuator(::OcaONo objectNumber,
         // Simulate setting the mute state in the actual audio processing hardware/software
         // In a real implementation, this would interface with your DSP or audio hardware
 
-        OCA_LOG_INFO_PARAMS("[MUTE] Setting mute state to %s", muteStateToString(muteState));
+        OCA_LOG_INFO_PARAMS("[MUTE] Setting mute state to %s (Gain ID: %s)",
+                            muteStateToString(muteState), m_gainID.empty() ? "N/A" : m_gainID.c_str());
 
         // Here you would typically:
         // 1. Send the mute command to your audio processing hardware/DSP
@@ -90,7 +94,8 @@ ConcreteMuteActuator::ConcreteMuteActuator(::OcaONo objectNumber,
         // For this example, we'll just store the value and simulate successful setting
         m_actualMuteState = muteState;
 
-        OCA_LOG_INFO_PARAMS("[MUTE] ✓ Mute state successfully set to %s", muteStateToString(muteState));
+        OCA_LOG_INFO_PARAMS("[MUTE] ✓ Mute state successfully set to %s (Gain ID: %s)",
+                            muteStateToString(muteState), m_gainID.empty() ? "N/A" : m_gainID.c_str());
 
         return OCASTATUS_OK;
     }
@@ -117,7 +122,7 @@ ConcreteMuteActuator::ConcreteMuteActuator(::OcaONo objectNumber,
         // For this example, we'll return the stored value
         muteState = m_actualMuteState;
 
-        OCA_LOG_INFO_PARAMS("[MUTE] Getting current mute state: %s", muteStateToString(muteState));
+        OCA_LOG_INFO_PARAMS("[MUTE] Getting current mute state: %s (Gain ID: %s)", muteStateToString(muteState), m_gainID.empty() ? "N/A" : m_gainID.c_str());
 
         return OCASTATUS_OK;
     }

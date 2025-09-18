@@ -43,7 +43,7 @@ static bool parseZonesInternal(const std::string &json, std::vector<ZoneDef> &ou
         if (!*arrStart)
             break;
         ZoneDef z;
-        bool haveId = false, haveName = false;
+        bool haveId = false, haveName = false, haveGainID = false;
         bool done = false;
         while (*arrStart && !done)
         {
@@ -86,9 +86,10 @@ static bool parseZonesInternal(const std::string &json, std::vector<ZoneDef> &ou
                             z.name = val;
                             haveName = true;
                         }
-                        else
+                        else if (key == "gainID")
                         {
                             z.gainID = val;
+                            haveGainID = true;
                         }
                     }
                 }
@@ -256,7 +257,7 @@ static bool parseZonesInternal(const std::string &json, std::vector<ZoneDef> &ou
             }
             ++arrStart;
         }
-        if (haveId && haveName)
+        if (haveId && haveName && haveGainID)
             out.push_back(z);
         while (*arrStart && (*arrStart == ' ' || *arrStart == '\n'))
             ++arrStart;
@@ -334,7 +335,7 @@ BuiltZones createZoneObjects(const std::vector<ZoneDef> &zoneDefs,
 
         // Gain
         ::OcaLiteList<::OcaLitePort> gainPorts;
-        zb.gain.reset(new ConcreteGainActuator(gainONo, static_cast<::OcaBoolean>(true), ::OcaLiteString((zoneDef.name + " Gain").c_str()), gainPorts, -60.0, 20.0));
+        zb.gain.reset(new ConcreteGainActuator(gainONo, static_cast<::OcaBoolean>(true), ::OcaLiteString((zoneDef.name + " Gain").c_str()), gainPorts, -60.0, 20.0, zoneDef.gainID));
         if (!zb.gain)
         {
             model.zones.push_back(std::move(zb));
@@ -343,7 +344,7 @@ BuiltZones createZoneObjects(const std::vector<ZoneDef> &zoneDefs,
 
         // Mute
         ::OcaLiteList<::OcaLitePort> mutePorts;
-        zb.mute.reset(new ConcreteMuteActuator(muteONo, static_cast<::OcaBoolean>(true), ::OcaLiteString((zoneDef.name + " Mute").c_str()), mutePorts));
+        zb.mute.reset(new ConcreteMuteActuator(muteONo, static_cast<::OcaBoolean>(true), ::OcaLiteString((zoneDef.name + " Mute").c_str()), mutePorts, zoneDef.gainID));
 
         // Switch
         if (!zoneDef.sources.empty())
@@ -361,7 +362,8 @@ BuiltZones createZoneObjects(const std::vector<ZoneDef> &zoneDefs,
                 static_cast<::OcaUint16>(minPos),
                 static_cast<::OcaUint16>(maxPos),
                 names,
-                enables));
+                enables,
+                zoneDef.id));
         }
         model.zones.push_back(std::move(zb));
     }

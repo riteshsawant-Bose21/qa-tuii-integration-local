@@ -38,11 +38,13 @@ public:
      * @param[in] lockable        Indicates whether or not this object is lockable.
      * @param[in] role            The role of this instance.
      * @param[in] ports           The OCA input and output ports.
+     * @param[in] gainID          The gain identifier from JSON configuration (required)
      */
     ConcreteMuteActuator(::OcaONo objectNumber,
                          ::OcaBoolean lockable,
                          const ::OcaLiteString &role,
-                         const ::OcaLiteList<::OcaLitePort> &ports);
+                         const ::OcaLiteList<::OcaLitePort> &ports,
+                         const std::string &gainID);
 
     /**
      * Destructor.
@@ -71,6 +73,9 @@ protected:
 private:
     /** Actual mute state storage */
     ::OcaLiteMuteState m_actualMuteState;
+
+    /** The gain identifier from JSON configuration */
+    std::string m_gainID;
 
     /** Copy constructor */
     ConcreteMuteActuator(const ConcreteMuteActuator &);
