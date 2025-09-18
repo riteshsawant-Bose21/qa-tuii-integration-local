@@ -28,9 +28,11 @@ class ListeningAreaProperties extends StatelessWidget {
   ];
 
   final List<String> splRangeOptions = <String>[
-    "Low (70-90 dB)",
-    "Medium (90-110 dB)",
-    "High (110-130 dB)",
+    "Background Music",
+    "Paging",
+    "Foreground Music",
+    "Moderate live sound reinforcement",
+    "High-SPL live sound reinforcement",
   ];
 
   final TextEditingController ceilingHeightController = TextEditingController();
@@ -179,11 +181,41 @@ class ListeningAreaProperties extends StatelessWidget {
                   _buildLAPropertyRow(
                     context: context,
                     label: "SPL Range",
-                    value: selectedListeningArea.splRange,
+                    value: _getCurrentSplRange(selectedListeningArea.minSPL, selectedListeningArea.maxSPL),
                     options: splRangeOptions,
                     onOptionSelected: (int selectedIndex) {
-                      final String selectedRange = splRangeOptions[selectedIndex];
-                      final ListeningArea updatedLA = selectedListeningArea.copyWith(splRange: selectedRange);
+                      // Set min/max SPL values based on selection
+                      double minSPL, maxSPL;
+                      switch (selectedIndex) {
+                        case 0: // Background Music
+                          minSPL = 60.0;
+                          maxSPL = 70.0;
+                          break;
+                        case 1: // Paging
+                          minSPL = 70.0;
+                          maxSPL = 80.0;
+                          break;
+                        case 2: // Foreground Music
+                          minSPL = 75.0;
+                          maxSPL = 90.0;
+                          break;
+                        case 3: // Moderate live sound reinforcement
+                          minSPL = 90.0;
+                          maxSPL = 100.0;
+                          break;
+                        case 4: // High-SPL live sound reinforcement
+                          minSPL = 100.0;
+                          maxSPL = 120.0;
+                          break;
+                        default:
+                          minSPL = 60.0;
+                          maxSPL = 70.0;
+                      }
+
+                      final ListeningArea updatedLA = selectedListeningArea.copyWith(
+                        minSPL: minSPL,
+                        maxSPL: maxSPL,
+                      );
                       viewModel.updateListeningArea(updatedLA);
                     },
                   ),
@@ -288,11 +320,14 @@ class ListeningAreaProperties extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: <Widget>[
-                  FusionAppText(
-                    text: value,
-                    textAlign: TextAlign.left,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontSize: 11,
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 100),
+                    child: FusionAppText(
+                      text: value,
+                      textAlign: TextAlign.left,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 6),
@@ -358,6 +393,23 @@ class ListeningAreaProperties extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  /// Helper method to determine current SPL range based on min/max values
+  String _getCurrentSplRange(double minSPL, double maxSPL) {
+    if (minSPL == 60.0 && maxSPL == 70.0) {
+      return "Background Music";
+    } else if (minSPL == 70.0 && maxSPL == 80.0) {
+      return "Paging";
+    } else if (minSPL == 75.0 && maxSPL == 90.0) {
+      return "Foreground Music";
+    } else if (minSPL == 90.0 && maxSPL == 100.0) {
+      return "Moderate live sound reinforcement";
+    } else if (minSPL == 100.0 && maxSPL == 120.0) {
+      return "High-SPL live sound reinforcement";
+    } else {
+      return "Background Music"; // Default fallback
+    }
   }
 }
 

@@ -11,7 +11,8 @@ class ListeningArea {
   final String venuType;
   final String listeningHeight;
   final String ceilingHeight;
-  final String splRange;
+  final double minSPL;
+  final double maxSPL;
   final String customListeningAreaHeight;
 
   ListeningArea({
@@ -22,7 +23,8 @@ class ListeningArea {
     this.venuType = '',
     this.listeningHeight = '',
     this.ceilingHeight = '',
-    this.splRange = '',
+    this.minSPL = 60.0,
+    this.maxSPL = 70.0,
     this.customListeningAreaHeight = '',
   }) : id = id ?? const Uuid().v4();
 
@@ -100,8 +102,9 @@ class ListeningArea {
     String? venuType,
     String? listeningHeight,
     String? ceilingHeight,
-    String? splRange,
     String? customListeningAreaHeight,
+    double? minSPL,
+    double? maxSPL,
   }) {
     return ListeningArea(
       vertices: vertices ?? this.vertices,
@@ -111,7 +114,8 @@ class ListeningArea {
       venuType: venuType ?? this.venuType,
       listeningHeight: listeningHeight ?? this.listeningHeight,
       ceilingHeight: ceilingHeight ?? this.ceilingHeight,
-      splRange: splRange ?? this.splRange,
+      minSPL: minSPL ?? this.minSPL,
+      maxSPL: maxSPL ?? this.maxSPL,
       customListeningAreaHeight: customListeningAreaHeight ?? this.customListeningAreaHeight,
     );
   }
@@ -129,7 +133,8 @@ class ListeningArea {
     'venuType': venuType,
     'listeningHeight': listeningHeight,
     'ceilingHeight': ceilingHeight,
-    'splRange': splRange,
+    'minSPL': minSPL,
+    'maxSPL': maxSPL,
     'customListeningAreaHeight': customListeningAreaHeight,
   };
 
@@ -154,8 +159,9 @@ class ListeningArea {
       venuType: json['venuType'] as String? ?? '',
       listeningHeight: json['listeningHeight'] as String? ?? '',
       ceilingHeight: json['ceilingHeight'] as String? ?? '',
-      splRange: json['splRange'] as String? ?? '',
       customListeningAreaHeight: json['customListeningAreaHeight'] as String? ?? '',
+      minSPL: (json['minSPL'] as num?)?.toDouble() ?? 60.0,
+      maxSPL: (json['maxSPL'] as num?)?.toDouble() ?? 70.0,
     );
   }
 

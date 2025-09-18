@@ -134,8 +134,20 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                   fontSize: 12,
                 ),
                 onFieldSubmitted: (String v) {
-                  final HardwareComponent updated = widget.selectedHardware.copyWith(name: v);
-                  viewModel.updateHardware(updated);
+                  // Validate that the name is not empty or just whitespace
+                  final String trimmedName = v.trim();
+                  if (trimmedName.isNotEmpty) {
+                    final HardwareComponent updated = widget.selectedHardware.copyWith(name: trimmedName);
+                    viewModel.updateHardware(updated);
+                  } else {
+                    // Show a snackbar to inform user
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Hardware name cannot be empty'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  }
                 },
               ),
 
@@ -171,10 +183,20 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                 style: textStyleBlack,
                                 keyboardType: TextInputType.number,
                                 onFieldSubmitted: (String v) {
-                                  final double? xValue = double.tryParse(v);
+                                  final double? xValue = double.tryParse(v.trim());
                                   if (xValue != null) {
                                     final HardwareComponent updated = widget.selectedHardware.copyWith(pos: Offset(xValue, widget.selectedHardware.pos.dy));
                                     viewModel.updateHardware(updated);
+                                  } else {
+                                    // Reset to previous value if invalid
+                                    xController.text = widget.selectedHardware.pos.dx.toStringAsFixed(2);
+                                    // Show validation error
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('X position must be a valid decimal number'),
+                                        duration: Duration(seconds: 2),
+                                      ),
+                                    );
                                   }
                                 },
                               ),
@@ -199,10 +221,20 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                 style: textStyleBlack,
                                 keyboardType: TextInputType.number,
                                 onFieldSubmitted: (String v) {
-                                  final double? yValue = double.tryParse(v);
+                                  final double? yValue = double.tryParse(v.trim());
                                   if (yValue != null) {
                                     final HardwareComponent updated = widget.selectedHardware.copyWith(pos: Offset(widget.selectedHardware.pos.dx, yValue));
                                     viewModel.updateHardware(updated);
+                                  } else {
+                                    // Reset to previous value if invalid
+                                    yController.text = widget.selectedHardware.pos.dy.toStringAsFixed(2);
+                                    // Show validation error
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Y position must be a valid decimal number'),
+                                        duration: Duration(seconds: 2),
+                                      ),
+                                    );
                                   }
                                 },
                               ),
@@ -227,10 +259,20 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                 style: textStyleBlack,
                                 keyboardType: TextInputType.number,
                                 onFieldSubmitted: (String v) {
-                                  final double? zValue = double.tryParse(v);
+                                  final double? zValue = double.tryParse(v.trim());
                                   if (zValue != null) {
                                     final HardwareComponent updated = widget.selectedHardware.copyWith(zAxis: zValue);
                                     viewModel.updateHardware(updated);
+                                  } else {
+                                    // Reset to previous value if invalid
+                                    zController.text = widget.selectedHardware.zAxis.toStringAsFixed(2);
+                                    // Show validation error
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Z position must be a valid decimal number'),
+                                        duration: Duration(seconds: 2),
+                                      ),
+                                    );
                                   }
                                 },
                               ),
@@ -270,10 +312,20 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                 style: textStyleBlack,
                                 keyboardType: TextInputType.number,
                                 onFieldSubmitted: (String v) {
-                                  final double? pitch = double.tryParse(v);
+                                  final double? pitch = double.tryParse(v.trim());
                                   if (pitch != null) {
                                     final Speaker updated = (widget.selectedHardware as Speaker).copyWith(pitch: pitch);
                                     viewModel.updateHardware(updated);
+                                  } else {
+                                    // Reset to previous value if invalid
+                                    pitchController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).pitch.toString() : '0.0';
+                                    // Show validation error
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Pitch must be a valid decimal number'),
+                                        duration: Duration(seconds: 2),
+                                      ),
+                                    );
                                   }
                                 },
                               ),
@@ -311,10 +363,20 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                 style: textStyleBlack,
                                 keyboardType: TextInputType.number,
                                 onFieldSubmitted: (String v) {
-                                  final double? yaw = double.tryParse(v);
+                                  final double? yaw = double.tryParse(v.trim());
                                   if (yaw != null) {
                                     final Speaker updated = (widget.selectedHardware as Speaker).copyWith(yaw: yaw);
                                     viewModel.updateHardware(updated);
+                                  } else {
+                                    // Reset to previous value if invalid
+                                    yawController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).yaw.toString() : '0.0';
+                                    // Show validation error
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Yaw must be a valid decimal number'),
+                                        duration: Duration(seconds: 2),
+                                      ),
+                                    );
                                   }
                                 },
                               ),
@@ -352,10 +414,20 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                 style: textStyleBlack,
                                 keyboardType: TextInputType.number,
                                 onFieldSubmitted: (String v) {
-                                  final double? roll = double.tryParse(v);
+                                  final double? roll = double.tryParse(v.trim());
                                   if (roll != null) {
                                     final Speaker updated = (widget.selectedHardware as Speaker).copyWith(roll: roll);
                                     viewModel.updateHardware(updated);
+                                  } else {
+                                    // Reset to previous value if invalid
+                                    rollController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).roll.toString() : '0.0';
+                                    // Show validation error
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Roll must be a valid decimal number'),
+                                        duration: Duration(seconds: 2),
+                                      ),
+                                    );
                                   }
                                 },
                               ),
@@ -393,10 +465,20 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                 style: textStyleBlack,
                                 keyboardType: TextInputType.number,
                                 onFieldSubmitted: (String v) {
-                                  final double? gain = double.tryParse(v);
+                                  final double? gain = double.tryParse(v.trim());
                                   if (gain != null) {
                                     final Speaker updated = (widget.selectedHardware as Speaker).copyWith(gain: gain);
                                     viewModel.updateHardware(updated);
+                                  } else {
+                                    // Reset to previous value if invalid
+                                    gainController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).gain.toString() : '0.0';
+                                    // Show validation error
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Gain must be a valid decimal number'),
+                                        duration: Duration(seconds: 2),
+                                      ),
+                                    );
                                   }
                                 },
                               ),
