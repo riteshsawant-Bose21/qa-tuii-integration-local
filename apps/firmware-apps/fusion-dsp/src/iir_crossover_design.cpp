@@ -113,6 +113,7 @@ static const FilterOrderConfig linkwitz_riley_configs[] = {
 
 // Butterworth coefficients
 static CoeffCalcFunc butterworth_lpf_first = [](float tx, float q, float cum_b0, float& b0, float& b1, float& b2, float& a1, float& a2) {
+    (void)q;
     float tmp = 1.0f + tx;
     b0 = cum_b0 * tx / tmp;
     b1 = 1.0f;
@@ -133,6 +134,7 @@ static CoeffCalcFunc butterworth_lpf_second = [](float tx, float q, float cum_b0
 };
 
 static CoeffCalcFunc butterworth_hpf_first = [](float tx, float q, float cum_b0, float& b0, float& b1, float& b2, float& a1, float& a2) {
+    (void)q;
     float tmp = 1.0f + tx;
     b0 = cum_b0 / tmp;
     b1 = -1.0f; 
@@ -154,6 +156,7 @@ static CoeffCalcFunc butterworth_hpf_second = [](float tx, float q, float cum_b0
 
 // Bessel coefficients
 static CoeffCalcFunc bessel_lpf_first = [](float tx, float q, float cum_b0, float& b0, float& b1, float& b2, float& a1, float& a2) {
+    (void)q;
     float tmp = 1.0f + tx;
     b0 = cum_b0 * tx / tmp;
     b1 = 1.0f;
@@ -174,6 +177,7 @@ static CoeffCalcFunc bessel_lpf_second = [](float tx, float q, float cum_b0, flo
 };
 
 static CoeffCalcFunc bessel_hpf_first = [](float tx, float q, float cum_b0, float& b0, float& b1, float& b2, float& a1, float& a2) {
+    (void)q;
     float tmp = 1.0f + tx;
     b0 = cum_b0 / tmp;
     b1 = -1.0f;
@@ -218,6 +222,8 @@ static CoeffCalcFunc lr_hpf_second = [](float tx, float q, float cum_b0, float& 
 
 static CoeffCalcFunc lr_error_first = [](float tx, float q, float cum_b0, float& b0, float& b1, float& b2, float& a1, float& a2) {
    SPDLOG_ERROR("Linkwitz-Riley first order filter is not supported."); 
+   (void)tx;
+   (void)q;
    b0 = cum_b0;
    b1 = b2 = a1 = a2 = 0.0f;
 };
@@ -228,11 +234,15 @@ static const FilterOrderConfig* find_config(int order, const FilterOrderConfig* 
             return &configs[i];
         }
     }
-    SPDLOG_WARN("filter_design: No configuration found for order {}, defaulting to {}", order, configs[0].order);
-    if (num_configs > 1) {
-        return &configs[1];
-    }
-    return &configs[0];
+    
+    // fallback logic - we support only 2,3,4,6,8 orders and if user requests 5 or 7 we're falling back to 2. This may be unexpected (confirm?)
+    int fallback_index = (num_configs > 1) ? 1 : 0;
+    int actual_order = configs[fallback_index].order;
+    
+    SPDLOG_WARN("filter_design: Order {} not supported, falling back to order {} ({} dB/octave)", 
+               order, actual_order, actual_order * 6);
+    
+    return &configs[fallback_index];
 }
 
 static void butterworth_common_lpf(IirFilter *iir, int start_section, float frequency,
