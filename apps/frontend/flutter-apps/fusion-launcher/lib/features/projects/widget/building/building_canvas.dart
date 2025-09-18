@@ -140,14 +140,6 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
         serviceLocator<ProjectViewModel>().addListeningAreaToZone(area.id, zone.id);
       }
       serviceLocator<ProjectViewModel>().saveProjectToLocal();
-    } else {
-      // If selectedAreas is null, remove all areas from the zone
-      final List<ListeningArea> existingAreas = serviceLocator<ProjectViewModel>().getListeningAreasForZone(zone.id);
-      for (ListeningArea existingArea in existingAreas) {
-        serviceLocator<ProjectViewModel>().removeListeningAreaFromZone(existingArea.id, zone.id);
-      }
-      serviceLocator<ProjectViewModel>().saveProjectToLocal();
-      debugPrint("No areas selected - removed all areas from zone");
     }
   }
 
