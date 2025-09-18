@@ -10,9 +10,14 @@ import '../../../projects/widget/product_search_widget.dart';
 import '../viewModel/product_query_view_model_cubit.dart';
 import '../viewModel/product_query_view_model_state.dart';
 
-class ProductQueryView extends StatelessWidget {
+class ProductQueryView extends StatefulWidget {
   const ProductQueryView({super.key});
 
+  @override
+  State<ProductQueryView> createState() => _ProductQueryViewState();
+}
+
+class _ProductQueryViewState extends State<ProductQueryView> {
   ProductType? getCurrentProductType(int index) {
     if (index == -1) return null;
     if (index == 0) return ProductType.speaker;
@@ -24,16 +29,26 @@ class ProductQueryView extends StatelessWidget {
   }
 
   @override
+  void initState() {
+    super.initState();
+    serviceLocator<ProductQueryCubit>().onProductTypeChanged(getCurrentProductType(serviceLocator<ProjectViewModel>().currentDeviceTypeIndex));
+  }
+
+  @override
   Widget build(BuildContext context) {
     return BlocListener<ProjectViewModel, ProjectViewModelState>(
       listener: (BuildContext context, ProjectViewModelState state) {
         if (state is DeviceTypeIndexChanged) {
+          // print getCurrentProductType(state.index)
+          print("Product type changed to: ${getCurrentProductType(state.index)}");
           serviceLocator<ProductQueryCubit>().onProductTypeChanged(getCurrentProductType(state.index));
         }
       },
       child: BlocBuilder<ProductQueryCubit, ProductQueryState>(
         builder: (BuildContext context, ProductQueryState state) {
           final ProductQueryCubit cubit = serviceLocator<ProductQueryCubit>();
+
+          print("Rebuilding ProductQueryView with ${state.filteredProducts.length} products ${state.selectedProductTypes}");
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,

@@ -9,17 +9,6 @@ import '../pages/product_query.dart';
 class ProductQueryCubit extends Cubit<ProductQueryState> {
   ProductQueryCubit() : super(ProductQueryState.initial()) {
     state.searchController.addListener(_onSearchChanged);
-    // Apply initial sort to the products on startup
-    _applyInitialSort();
-  }
-
-  /// Apply initial sort when cubit is created
-  void _applyInitialSort() {
-    emit(
-      state.copyWith(
-        filteredProducts: _performSearch(state.searchQuery),
-      ),
-    );
   }
 
   @override
@@ -181,7 +170,6 @@ class ProductQueryCubit extends Cubit<ProductQueryState> {
     /// Filter by impedance (only for speakers based on nominalOhms)
     if (state.selectedImpedances.isNotEmpty) {
       final int beforeImpedanceFilter = products.length;
-
 
       products =
           products.where((ProductQueryModel product) {

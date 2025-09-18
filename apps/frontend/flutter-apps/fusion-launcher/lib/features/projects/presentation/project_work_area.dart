@@ -71,6 +71,12 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
     _projectNameController = TextEditingController(text: serviceLocator<ProjectViewModel>().projectName);
   }
 
+  /// Clear input fields
+  void _clearFields() {
+    _projectNameController.clear();
+    _projectNameError = null;
+  }
+
   @override
   void dispose() {
     _tabController.dispose();
@@ -650,7 +656,7 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                           Navigator.of(context).pop();
                         } else {
                           setMenuState(() {
-                            _projectNameError = "Name can not be empty";
+                            _projectNameError = "Name cannot be empty";
                           });
                         }
                       },
@@ -675,6 +681,7 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                           label: "Cancel",
                           textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10),
                           onTap: () {
+                            _clearFields();
                             Navigator.of(context).pop();
                           },
                         ),
@@ -692,7 +699,7 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                               Navigator.of(context).pop();
                             } else {
                               setMenuState(() {
-                                _projectNameError = "Name can't be empty";
+                                _projectNameError = "Name cannot be empty";
                               });
                             }
                           },
