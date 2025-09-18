@@ -9,21 +9,23 @@ class ListeningArea {
   SplData? splData;
   final String name;
   final String venuType;
-  final String listeningHeight;
+  final double listeningHeight;
   final String ceilingHeight;
-  final String splRange;
-  final String customListeningAreaHeight;
+  final double minSPL;
+  final double maxSPL;
+  final double customListeningAreaHeight;
 
   ListeningArea({
     String? id,
     required this.vertices,
     this.splData,
     this.name = '',
-    this.venuType = '',
-    this.listeningHeight = '',
+    this.venuType = 'Indoor',
+    this.listeningHeight = 3.0, // Default to sitting height (3 ft)
     this.ceilingHeight = '',
-    this.splRange = '',
-    this.customListeningAreaHeight = '',
+    this.minSPL = 60.0,
+    this.maxSPL = 70.0,
+    this.customListeningAreaHeight = 0.0,
   }) : id = id ?? const Uuid().v4();
 
   List<Offset> getFieldPointsSet({int cols = 60, int rows = 60}) {
@@ -98,10 +100,11 @@ class ListeningArea {
     String? name,
     List<String>? hardwareComponentIds,
     String? venuType,
-    String? listeningHeight,
+    double? listeningHeight,
     String? ceilingHeight,
-    String? splRange,
-    String? customListeningAreaHeight,
+    double? customListeningAreaHeight,
+    double? minSPL,
+    double? maxSPL,
   }) {
     return ListeningArea(
       vertices: vertices ?? this.vertices,
@@ -111,7 +114,8 @@ class ListeningArea {
       venuType: venuType ?? this.venuType,
       listeningHeight: listeningHeight ?? this.listeningHeight,
       ceilingHeight: ceilingHeight ?? this.ceilingHeight,
-      splRange: splRange ?? this.splRange,
+      minSPL: minSPL ?? this.minSPL,
+      maxSPL: maxSPL ?? this.maxSPL,
       customListeningAreaHeight: customListeningAreaHeight ?? this.customListeningAreaHeight,
     );
   }
@@ -129,7 +133,8 @@ class ListeningArea {
     'venuType': venuType,
     'listeningHeight': listeningHeight,
     'ceilingHeight': ceilingHeight,
-    'splRange': splRange,
+    'minSPL': minSPL,
+    'maxSPL': maxSPL,
     'customListeningAreaHeight': customListeningAreaHeight,
   };
 
@@ -152,10 +157,11 @@ class ListeningArea {
       splData: null,
       name: json['name'] as String,
       venuType: json['venuType'] as String? ?? '',
-      listeningHeight: json['listeningHeight'] as String? ?? '',
+      listeningHeight: (json['listeningHeight'] as num?)?.toDouble() ?? 3.0,
       ceilingHeight: json['ceilingHeight'] as String? ?? '',
-      splRange: json['splRange'] as String? ?? '',
-      customListeningAreaHeight: json['customListeningAreaHeight'] as String? ?? '',
+      customListeningAreaHeight: (json['customListeningAreaHeight'] as num?)?.toDouble() ?? 0.0,
+      minSPL: (json['minSPL'] as num?)?.toDouble() ?? 60.0,
+      maxSPL: (json['maxSPL'] as num?)?.toDouble() ?? 70.0,
     );
   }
 

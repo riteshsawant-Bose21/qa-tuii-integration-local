@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
@@ -14,7 +15,6 @@ class ListeningAreaProperties extends StatelessWidget {
   });
 
   final List<String> venueOptions = <String>[
-    "Default Type",
     "Indoor",
     "Outdoor",
     "Mixed",
@@ -22,15 +22,24 @@ class ListeningAreaProperties extends StatelessWidget {
   ];
 
   final List<String> listeningHeightOptions = <String>[
-    "Sitting 3 ft",
-    "Standing 6 ft",
+    "Sitting",
+    "Standing",
     "Custom",
   ];
 
+  // Map display options to actual values
+  final Map<String, double> listeningHeightValues = <String, double>{
+    "Sitting": 3.0,
+    "Standing": 6.0,
+    "Custom": 1.0,
+  };
+
   final List<String> splRangeOptions = <String>[
-    "Low (70-90 dB)",
-    "Medium (90-110 dB)",
-    "High (110-130 dB)",
+    "Background Music",
+    "Paging",
+    "Foreground Music",
+    "Moderate live sound reinforcement",
+    "High-SPL live sound reinforcement",
   ];
 
   final TextEditingController ceilingHeightController = TextEditingController();
@@ -46,13 +55,18 @@ class ListeningAreaProperties extends StatelessWidget {
         ceilingHeightController.text = selectedListeningArea.ceilingHeight;
         listeningAreaController.text = selectedListeningArea.name;
 
-        // Check if custom listening height is selected
-        final bool isCustomListeningHeight = selectedListeningArea.listeningHeight == "Custom";
+        // Determine display value and if custom is selected based on listeningHeight double value
+        String displayValue;
+        bool isCustomListeningHeight = false;
 
-        // Set custom height controller text if it's a custom value
-        if (isCustomListeningHeight) {
-          // If it's custom, try to get the custom value from some property or use empty
-          customListeningHeightController.text = selectedListeningArea.customListeningAreaHeight ?? '';
+        if (selectedListeningArea.listeningHeight == 3.0) {
+          displayValue = "Sitting";
+        } else if (selectedListeningArea.listeningHeight == 6.0) {
+          displayValue = "Standing";
+        } else {
+          displayValue = "Custom";
+          isCustomListeningHeight = true;
+          customListeningHeightController.text = selectedListeningArea.listeningHeight.toString();
         }
 
         //prepare List<PropertyRow> rows from selectedListeningArea vertices
@@ -121,7 +135,7 @@ class ListeningAreaProperties extends StatelessWidget {
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.fusionTextViewColor.withOpacity(0.7),
+                      color: Theme.of(context).colorScheme.fusionTextViewColor.withValues(alpha: 0.7),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -139,7 +153,7 @@ class ListeningAreaProperties extends StatelessWidget {
                   _buildLAPropertyRow(
                     context: context,
                     label: "Type",
-                    value: selectedListeningArea.venuType.isNotEmpty ? selectedListeningArea.venuType : "Default Type",
+                    value: selectedListeningArea.venuType,
                     options: venueOptions,
                     onOptionSelected: (int selectedIndex) {
                       final String selectedType = venueOptions[selectedIndex];
@@ -151,11 +165,13 @@ class ListeningAreaProperties extends StatelessWidget {
                   _buildLAPropertyRow(
                     context: context,
                     label: "Listening Ht",
-                    value: selectedListeningArea.listeningHeight,
+                    value: displayValue,
                     options: listeningHeightOptions,
                     onOptionSelected: (int selectedIndex) {
-                      final String selectedHeight = listeningHeightOptions[selectedIndex];
-                      final ListeningArea updatedLA = selectedListeningArea.copyWith(listeningHeight: selectedHeight);
+                      final String selectedOption = listeningHeightOptions[selectedIndex];
+                      final double heightValue = listeningHeightValues[selectedOption] ?? 3.0;
+
+                      final ListeningArea updatedLA = selectedListeningArea.copyWith(listeningHeight: heightValue);
                       viewModel.updateListeningArea(updatedLA);
                     },
                   ),
@@ -163,15 +179,19 @@ class ListeningAreaProperties extends StatelessWidget {
                   // Show custom listening height text field if "Custom" is selected
                   if (isCustomListeningHeight) ...<Widget>[
                     const SizedBox(height: 10),
-                    _buildPropertyRowForTextField(
+                    _buildValidatedPropertyRowForTextField(
                       context: context,
                       label: "Custom Height",
                       controller: customListeningHeightController,
-                      hintText: "e.g., 4 ft",
+                      hintText: "e.g., 4.5",
                       onSubmit: (String newValue) {
-                        final ListeningArea updatedLA = selectedListeningArea.copyWith(customListeningAreaHeight: newValue);
-                        viewModel.updateListeningArea(updatedLA);
+                        final double? customHeight = double.tryParse(newValue);
+                        if (customHeight != null && customHeight > 0) {
+                          final ListeningArea updatedLA = selectedListeningArea.copyWith(listeningHeight: customHeight);
+                          viewModel.updateListeningArea(updatedLA);
+                        }
                       },
+                      viewModel: viewModel,
                     ),
                   ],
 
@@ -179,11 +199,41 @@ class ListeningAreaProperties extends StatelessWidget {
                   _buildLAPropertyRow(
                     context: context,
                     label: "SPL Range",
-                    value: selectedListeningArea.splRange,
+                    value: _getCurrentSplRange(selectedListeningArea.minSPL, selectedListeningArea.maxSPL),
                     options: splRangeOptions,
                     onOptionSelected: (int selectedIndex) {
-                      final String selectedRange = splRangeOptions[selectedIndex];
-                      final ListeningArea updatedLA = selectedListeningArea.copyWith(splRange: selectedRange);
+                      // Set min/max SPL values based on selection
+                      double minSPL, maxSPL;
+                      switch (selectedIndex) {
+                        case 0: // Background Music
+                          minSPL = 60.0;
+                          maxSPL = 70.0;
+                          break;
+                        case 1: // Paging
+                          minSPL = 70.0;
+                          maxSPL = 80.0;
+                          break;
+                        case 2: // Foreground Music
+                          minSPL = 75.0;
+                          maxSPL = 90.0;
+                          break;
+                        case 3: // Moderate live sound reinforcement
+                          minSPL = 90.0;
+                          maxSPL = 100.0;
+                          break;
+                        case 4: // High-SPL live sound reinforcement
+                          minSPL = 100.0;
+                          maxSPL = 120.0;
+                          break;
+                        default:
+                          minSPL = 60.0;
+                          maxSPL = 70.0;
+                      }
+
+                      final ListeningArea updatedLA = selectedListeningArea.copyWith(
+                        minSPL: minSPL,
+                        maxSPL: maxSPL,
+                      );
                       viewModel.updateListeningArea(updatedLA);
                     },
                   ),
@@ -212,7 +262,7 @@ class ListeningAreaProperties extends StatelessWidget {
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.fusionTextViewColor.withOpacity(0.7),
+                      color: Theme.of(context).colorScheme.fusionTextViewColor.withValues(alpha: 0.7),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -279,7 +329,7 @@ class ListeningAreaProperties extends StatelessWidget {
               text: label,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 fontSize: 11,
-                color: Theme.of(context).colorScheme.fusionTextViewColor.withOpacity(0.5),
+                color: Theme.of(context).colorScheme.fusionTextViewColor.withValues(alpha: 0.5),
               ),
             ),
             // Right: Value + Arrow
@@ -288,11 +338,14 @@ class ListeningAreaProperties extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: <Widget>[
-                  FusionAppText(
-                    text: value,
-                    textAlign: TextAlign.left,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontSize: 11,
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 100),
+                    child: FusionAppText(
+                      text: value,
+                      textAlign: TextAlign.left,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 6),
@@ -327,13 +380,13 @@ class ListeningAreaProperties extends StatelessWidget {
             text: label,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               fontSize: 11,
-              color: Theme.of(context).colorScheme.fusionTextViewColor.withOpacity(0.5),
+              color: Theme.of(context).colorScheme.fusionTextViewColor.withValues(alpha: 0.5),
             ),
           ),
 
           // Right: TextField
           SizedBox(
-            width: 100,
+            width: 80,
             height: 28,
             child: TextField(
               controller: controller,
@@ -348,16 +401,144 @@ class ListeningAreaProperties extends StatelessWidget {
                 hintText: hintText,
                 hintStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
                   fontSize: 11,
-                  color: Theme.of(context).colorScheme.fusionTextViewColor.withOpacity(0.5),
+                  color: Theme.of(context).colorScheme.fusionTextViewColor.withValues(alpha: 0.5),
                 ),
-
                 fillColor: Theme.of(context).colorScheme.white,
               ),
+              inputFormatters: <TextInputFormatter>[
+                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+              ],
             ),
           ),
         ],
       ),
     );
+  }
+
+  /// Builds a validated text field specifically for decimal inputs like custom listening height
+  Widget _buildValidatedPropertyRowForTextField({
+    required BuildContext context,
+    required String label,
+    required TextEditingController controller,
+    String? hintText,
+    Function(String)? onSubmit,
+    required ProjectViewModel viewModel,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: <Widget>[
+          // Left: Label
+          FusionAppText(
+            text: label,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              fontSize: 11,
+              color: Theme.of(context).colorScheme.fusionTextViewColor.withValues(alpha: 0.5),
+            ),
+          ),
+
+          // Right: TextField with validation
+          SizedBox(
+            width: 80,
+            height: 28,
+            child: TextFormField(
+              controller: controller,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                fontSize: 11,
+                color: Theme.of(context).colorScheme.fusionTextViewColor,
+              ),
+              decoration: InputDecoration(
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+                hintText: hintText,
+                hintStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontSize: 11,
+                  color: Theme.of(context).colorScheme.fusionTextViewColor.withValues(alpha: 0.5),
+                ),
+                fillColor: Theme.of(context).colorScheme.white,
+              ),
+
+              inputFormatters: <TextInputFormatter>[
+                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*$')),
+                LengthLimitingTextInputFormatter(8), // Limit to reasonable length
+              ],
+              validator: (String? value) {
+                if (value == null || value.isEmpty) {
+                  return 'Required';
+                }
+
+                final double? parsed = double.tryParse(value);
+                if (parsed == null) {
+                  return 'Invalid decimal';
+                }
+
+                if (parsed <= 0) {
+                  return 'Must be > 0';
+                }
+
+                if (parsed > 1000) {
+                  return 'Too large';
+                }
+
+                return null;
+              },
+              onFieldSubmitted: (String value) {
+                final double? parsed = double.tryParse(value);
+                if (parsed != null && parsed > 0 && parsed <= 1000) {
+                  onSubmit?.call(value);
+                } else {
+                  // Reset to previous valid value if invalid
+                  controller.text = selectedListeningArea.listeningHeight.toString();
+
+                  // Show error feedback
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Please enter a valid decimal value between 0.1 and 1000',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.white,
+                        ),
+                      ),
+                      backgroundColor: Theme.of(context).colorScheme.error,
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                }
+              },
+              onChanged: (String value) {
+                // Real-time validation feedback
+                final double? parsed = double.tryParse(value);
+                if (value.isNotEmpty && (parsed == null || parsed <= 0 || parsed > 1000)) {
+                  // Visual feedback for invalid input
+                  controller.selection = TextSelection.fromPosition(
+                    TextPosition(offset: controller.text.length),
+                  );
+                }
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Helper method to determine current SPL range based on min/max values
+  String _getCurrentSplRange(double minSPL, double maxSPL) {
+    if (minSPL == 60.0 && maxSPL == 70.0) {
+      return "Background Music";
+    } else if (minSPL == 70.0 && maxSPL == 80.0) {
+      return "Paging";
+    } else if (minSPL == 75.0 && maxSPL == 90.0) {
+      return "Foreground Music";
+    } else if (minSPL == 90.0 && maxSPL == 100.0) {
+      return "Moderate live sound reinforcement";
+    } else if (minSPL == 100.0 && maxSPL == 120.0) {
+      return "High-SPL live sound reinforcement";
+    } else {
+      return "Background Music"; // Default fallback
+    }
   }
 }
 
