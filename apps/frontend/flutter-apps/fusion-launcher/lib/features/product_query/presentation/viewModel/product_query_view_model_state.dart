@@ -38,7 +38,7 @@ class ProductQueryState {
       filteredProducts: ProductAPI.getAllProducts(),
       searchQuery: '',
       selectedProductType: null,
-      selectedSortOption: SortOption.nameAToZ, // Set A-Z as default
+      selectedSortOption: null,
       selectedProductTypes: <ProductType>{}, // Empty set to show all products initially
       selectedMountTypes: <String>{},
       selectedVenueTypes: <String>{},

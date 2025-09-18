@@ -132,6 +132,7 @@ class _DevicesPanelState extends State<DevicesPanel> {
                       if (deviceType != DeviceType.sources && deviceType != DeviceType.rack) {
                         goToDevicePlacementMode();
                       }
+                      print("Device type selected: ${deviceType.name}, index: ${deviceType.index}");
                       serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(deviceType.index);
                     },
                   );

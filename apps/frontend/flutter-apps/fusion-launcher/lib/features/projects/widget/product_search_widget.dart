@@ -59,6 +59,10 @@ class ProductSearchWidget extends StatelessWidget {
                     controller: searchController,
                     hintText: 'Search by name, series or type...',
                     prefixIcon: Icon(Icons.search, color: Colors.grey[400], size: 16),
+                    onChanged: (String value) {
+                      /// If search is cleared, call onClearSearch to reset filters
+                      value.isEmpty ? onClearSearch?.call() : null;
+                    },
                     suffixIcon:
                         searchController.text.isNotEmpty
                             ? IconButton(
