@@ -34,6 +34,15 @@ class FusionDockSidebar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DragTarget<DockItem>(
+      onWillAccept: (DockItem? item) {
+        // Only accept items that can be docked to this side
+        return item != null;
+      },
+      onAccept: (DockItem item) {
+        // Handle docking to this sidebar
+        print("Item ${item.title} docked to $side sidebar");
+        // This will be handled by the main drag end logic
+      },
       builder: (BuildContext context, List<DockItem?> candidateItems, List<dynamic> rejectedItems) {
         final bool hasIncomingData = candidateItems.isNotEmpty;
         return Container(
