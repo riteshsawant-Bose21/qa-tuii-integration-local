@@ -84,19 +84,31 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
   void _handleFloatingItemDragEnd(DockItem item, DraggableDetails details, double screenWidth) {
     setState(() {
       final dx = details.offset.dx;
-      if (widget.showLeft && dx < 240) {
+      final dy = details.offset.dy;
+
+      /// Calculate more generous docking zones
+      final double leftDockZone = widget.showLeft ? 240 : 0;
+      final double rightDockZone = widget.showRight ? screenWidth - 484 : screenWidth;
+
+      if (widget.showLeft && dx < leftDockZone) {
+        /// Dock to left side
+        print("Docking ${item.title} to left side");
         item.docked = true;
         item.expanded = false;
         item.side = "left";
         _leftDockOrder++;
         item.dockedOrder = _leftDockOrder;
-      } else if (widget.showRight && dx > screenWidth - 484) {
+      } else if (widget.showRight && dx > rightDockZone) {
+        /// Dock to right side
+        print("Docking ${item.title} to right side");
         item.docked = true;
         item.expanded = false;
         item.side = "right";
         _rightDockOrder++;
         item.dockedOrder = _rightDockOrder;
       } else {
+        /// Keep floating
+        print("Keeping ${item.title} floating at: ${details.offset}");
         item.position = details.offset;
         item.docked = false;
         item.expanded = true;
@@ -107,14 +119,21 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
 
   /// Handle undocking from sidebar
   void _handleSidebarUndock(DockItem item, DraggableDetails details) {
-    setState(() {
-      item.docked = false;
-      item.position = details.offset;
-      item.expanded = true;
-    });
+    print("Undocking ${item.title} from ${item.side} sidebar at: ${details.offset}");
 
-    /// Bring to front when undocked
-    _bringItemToFront(item);
+    // First handle the undocking with the main drag end logic
+    _handleFloatingItemDragEnd(item, details, MediaQuery.of(context).size.width);
+
+    // If it didn't dock to a sidebar, make it floating
+    if (!item.docked) {
+      setState(() {
+        item.position = details.offset;
+        item.expanded = true;
+      });
+
+      /// Bring to front when undocked
+      _bringItemToFront(item);
+    }
   }
 
   /// Undock and reset position if widget side is right then duck to right side or else right side

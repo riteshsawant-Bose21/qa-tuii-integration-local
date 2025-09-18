@@ -364,6 +364,7 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                             id: "5",
                             title: "PROPERTIES",
                             side: "right",
+                            alowUndock: false,
                             dockItemWidget: () => const Properties(),
                           ),
                           DockItemConfig(
