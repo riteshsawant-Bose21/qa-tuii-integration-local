@@ -9,7 +9,7 @@ class ListeningArea {
   SplData? splData;
   final String name;
   final String venuType;
-  final String listeningHeight;
+  final double listeningHeight;
   final String ceilingHeight;
   final double minSPL;
   final double maxSPL;
@@ -20,8 +20,8 @@ class ListeningArea {
     required this.vertices,
     this.splData,
     this.name = '',
-    this.venuType = '',
-    this.listeningHeight = '',
+    this.venuType = 'Indoor',
+    this.listeningHeight = 3.0, // Default to sitting height (3 ft)
     this.ceilingHeight = '',
     this.minSPL = 60.0,
     this.maxSPL = 70.0,
@@ -100,7 +100,7 @@ class ListeningArea {
     String? name,
     List<String>? hardwareComponentIds,
     String? venuType,
-    String? listeningHeight,
+    double? listeningHeight,
     String? ceilingHeight,
     String? customListeningAreaHeight,
     double? minSPL,
@@ -157,7 +157,7 @@ class ListeningArea {
       splData: null,
       name: json['name'] as String,
       venuType: json['venuType'] as String? ?? '',
-      listeningHeight: json['listeningHeight'] as String? ?? '',
+      listeningHeight: (json['listeningHeight'] as num?)?.toDouble() ?? 3.0,
       ceilingHeight: json['ceilingHeight'] as String? ?? '',
       customListeningAreaHeight: json['customListeningAreaHeight'] as String? ?? '',
       minSPL: (json['minSPL'] as num?)?.toDouble() ?? 60.0,

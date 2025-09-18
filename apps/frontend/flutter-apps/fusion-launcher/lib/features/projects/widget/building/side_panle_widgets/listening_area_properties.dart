@@ -14,7 +14,6 @@ class ListeningAreaProperties extends StatelessWidget {
   });
 
   final List<String> venueOptions = <String>[
-    "Default Type",
     "Indoor",
     "Outdoor",
     "Mixed",
@@ -22,10 +21,17 @@ class ListeningAreaProperties extends StatelessWidget {
   ];
 
   final List<String> listeningHeightOptions = <String>[
-    "Sitting 3 ft",
-    "Standing 6 ft",
+    "Sitting",
+    "Standing",
     "Custom",
   ];
+
+  // Map display options to actual values
+  final Map<String, double> listeningHeightValues = <String, double>{
+    "Sitting": 3.0,
+    "Standing": 6.0,
+    "Custom": 1.0,
+  };
 
   final List<String> splRangeOptions = <String>[
     "Background Music",
@@ -48,13 +54,18 @@ class ListeningAreaProperties extends StatelessWidget {
         ceilingHeightController.text = selectedListeningArea.ceilingHeight;
         listeningAreaController.text = selectedListeningArea.name;
 
-        // Check if custom listening height is selected
-        final bool isCustomListeningHeight = selectedListeningArea.listeningHeight == "Custom";
+        // Determine display value and if custom is selected based on listeningHeight double value
+        String displayValue;
+        bool isCustomListeningHeight = false;
 
-        // Set custom height controller text if it's a custom value
-        if (isCustomListeningHeight) {
-          // If it's custom, try to get the custom value from some property or use empty
-          customListeningHeightController.text = selectedListeningArea.customListeningAreaHeight ?? '';
+        if (selectedListeningArea.listeningHeight == 3.0) {
+          displayValue = "Sitting";
+        } else if (selectedListeningArea.listeningHeight == 6.0) {
+          displayValue = "Standing";
+        } else {
+          displayValue = "Custom";
+          isCustomListeningHeight = true;
+          customListeningHeightController.text = selectedListeningArea.listeningHeight.toString();
         }
 
         //prepare List<PropertyRow> rows from selectedListeningArea vertices
@@ -123,7 +134,7 @@ class ListeningAreaProperties extends StatelessWidget {
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.fusionTextViewColor.withOpacity(0.7),
+                      color: Theme.of(context).colorScheme.fusionTextViewColor.withValues(alpha: 0.7),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -141,7 +152,7 @@ class ListeningAreaProperties extends StatelessWidget {
                   _buildLAPropertyRow(
                     context: context,
                     label: "Type",
-                    value: selectedListeningArea.venuType.isNotEmpty ? selectedListeningArea.venuType : "Default Type",
+                    value: selectedListeningArea.venuType,
                     options: venueOptions,
                     onOptionSelected: (int selectedIndex) {
                       final String selectedType = venueOptions[selectedIndex];
@@ -153,11 +164,13 @@ class ListeningAreaProperties extends StatelessWidget {
                   _buildLAPropertyRow(
                     context: context,
                     label: "Listening Ht",
-                    value: selectedListeningArea.listeningHeight,
+                    value: displayValue,
                     options: listeningHeightOptions,
                     onOptionSelected: (int selectedIndex) {
-                      final String selectedHeight = listeningHeightOptions[selectedIndex];
-                      final ListeningArea updatedLA = selectedListeningArea.copyWith(listeningHeight: selectedHeight);
+                      final String selectedOption = listeningHeightOptions[selectedIndex];
+                      final double heightValue = listeningHeightValues[selectedOption] ?? 3.0;
+
+                      final ListeningArea updatedLA = selectedListeningArea.copyWith(listeningHeight: heightValue);
                       viewModel.updateListeningArea(updatedLA);
                     },
                   ),
@@ -169,10 +182,13 @@ class ListeningAreaProperties extends StatelessWidget {
                       context: context,
                       label: "Custom Height",
                       controller: customListeningHeightController,
-                      hintText: "e.g., 4 ft",
+                      hintText: "e.g., 4.5",
                       onSubmit: (String newValue) {
-                        final ListeningArea updatedLA = selectedListeningArea.copyWith(customListeningAreaHeight: newValue);
-                        viewModel.updateListeningArea(updatedLA);
+                        final double? customHeight = double.tryParse(newValue);
+                        if (customHeight != null) {
+                          final ListeningArea updatedLA = selectedListeningArea.copyWith(listeningHeight: customHeight);
+                          viewModel.updateListeningArea(updatedLA);
+                        }
                       },
                     ),
                   ],
@@ -244,7 +260,7 @@ class ListeningAreaProperties extends StatelessWidget {
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.fusionTextViewColor.withOpacity(0.7),
+                      color: Theme.of(context).colorScheme.fusionTextViewColor.withValues(alpha: 0.7),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -311,7 +327,7 @@ class ListeningAreaProperties extends StatelessWidget {
               text: label,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 fontSize: 11,
-                color: Theme.of(context).colorScheme.fusionTextViewColor.withOpacity(0.5),
+                color: Theme.of(context).colorScheme.fusionTextViewColor.withValues(alpha: 0.5),
               ),
             ),
             // Right: Value + Arrow
@@ -362,7 +378,7 @@ class ListeningAreaProperties extends StatelessWidget {
             text: label,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               fontSize: 11,
-              color: Theme.of(context).colorScheme.fusionTextViewColor.withOpacity(0.5),
+              color: Theme.of(context).colorScheme.fusionTextViewColor.withValues(alpha: 0.5),
             ),
           ),
 
@@ -383,9 +399,8 @@ class ListeningAreaProperties extends StatelessWidget {
                 hintText: hintText,
                 hintStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
                   fontSize: 11,
-                  color: Theme.of(context).colorScheme.fusionTextViewColor.withOpacity(0.5),
+                  color: Theme.of(context).colorScheme.fusionTextViewColor.withValues(alpha: 0.5),
                 ),
-
                 fillColor: Theme.of(context).colorScheme.white,
               ),
             ),
