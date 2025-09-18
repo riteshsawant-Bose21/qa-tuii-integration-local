@@ -15,6 +15,9 @@ class Speaker extends HardwareComponent {
   String speakerSKU;
   final List<int> portNumbers;
   final String? fusionDeviceId;
+  final double pitch;
+  final double roll;
+  final double yaw;
 
   Speaker({
     super.id,
@@ -25,6 +28,9 @@ class Speaker extends HardwareComponent {
     this.rotation = 0.0,
     required this.gain,
     super.zAxis,
+    this.pitch = 0.0,
+    this.roll = 0.0,
+    this.yaw = 0.0,
     required super.assetImagePath,
     List<ProcessingBlockModel>? blocks,
     required this.type,
@@ -56,6 +62,9 @@ class Speaker extends HardwareComponent {
     String? fusionDeviceId,
     double? price,
     String? hardwareName,
+    double? pitch,
+    double? roll,
+    double? yaw,
   }) {
     return Speaker(
       id: id ?? this.id,
@@ -74,6 +83,9 @@ class Speaker extends HardwareComponent {
       fusionDeviceId: fusionDeviceId ?? this.fusionDeviceId,
       price: price ?? this.price,
       hardwareName: hardwareName ?? this.hardwareName,
+      pitch: pitch ?? this.pitch,
+      roll: roll ?? this.roll,
+      yaw: yaw ?? this.yaw,
     );
   }
 
@@ -134,6 +146,9 @@ class Speaker extends HardwareComponent {
       'price': price,
       "zAxis": zAxis,
       'hardwareName': hardwareName,
+      'pitch': pitch,
+      'roll': roll,
+      'yaw': yaw,
     };
   }
 
@@ -155,6 +170,9 @@ class Speaker extends HardwareComponent {
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
       hardwareName: json['hardwareName'] as String? ?? '',
       zAxis: (json['zAxis'] as num?)?.toDouble() ?? 0.0,
+      pitch: (json['pitch'] as num?)?.toDouble() ?? 0.0,
+      roll: (json['roll'] as num?)?.toDouble() ?? 0.0,
+      yaw: (json['yaw'] as num?)?.toDouble() ?? 0.0,
     );
   }
 }

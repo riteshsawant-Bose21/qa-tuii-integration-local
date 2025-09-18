@@ -6,19 +6,43 @@ import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import '../../../../../core/service_locator.dart';
 import '../../../../configuration/presentation/viewmodel/project_view_model.dart';
 
-class HardwareComponentProperties extends StatelessWidget {
+class HardwareComponentProperties extends StatefulWidget {
   final HardwareComponent selectedHardware;
 
-  HardwareComponentProperties({
+  const HardwareComponentProperties({
     super.key,
     required this.selectedHardware,
   });
 
+  @override
+  State<HardwareComponentProperties> createState() => _HardwareComponentPropertiesState();
+}
+
+class _HardwareComponentPropertiesState extends State<HardwareComponentProperties> {
   final TextEditingController gainController = TextEditingController();
-  final TextEditingController rotationController = TextEditingController();
+
+  final TextEditingController pitchController = TextEditingController();
+  final TextEditingController yawController = TextEditingController();
+  final TextEditingController rollController = TextEditingController();
+
   final TextEditingController xController = TextEditingController();
+
   final TextEditingController yController = TextEditingController();
+
   final TextEditingController zController = TextEditingController();
+
+  //dispose controllers
+  @override
+  void dispose() {
+    gainController.dispose();
+    pitchController.dispose();
+    yawController.dispose();
+    rollController.dispose();
+    xController.dispose();
+    yController.dispose();
+    zController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,11 +59,13 @@ class HardwareComponentProperties extends StatelessWidget {
     return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
       builder: (BuildContext context, Object? state) {
         final ProjectViewModel viewModel = serviceLocator<ProjectViewModel>();
-        gainController.text = selectedHardware is Speaker ? (selectedHardware as Speaker).gain.toString() : '0.0';
-        rotationController.text = selectedHardware is Speaker ? (selectedHardware as Speaker).rotation.toString() : '0.0';
-        xController.text = selectedHardware.pos.dx.toStringAsFixed(2);
-        yController.text = selectedHardware.pos.dy.toStringAsFixed(2);
-        zController.text = selectedHardware.zAxis.toStringAsFixed(2);
+        gainController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).gain.toString() : '0.0';
+        pitchController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).pitch.toString() : '0.0';
+        yawController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).yaw.toString() : '0.0';
+        rollController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).roll.toString() : '0.0';
+        xController.text = widget.selectedHardware.pos.dx.toStringAsFixed(2);
+        yController.text = widget.selectedHardware.pos.dy.toStringAsFixed(2);
+        zController.text = widget.selectedHardware.zAxis.toStringAsFixed(2);
 
         return Container(
           padding: const EdgeInsets.all(20),
@@ -51,7 +77,7 @@ class HardwareComponentProperties extends StatelessWidget {
                 children: <Widget>[
                   // Speaker image from selected hardware assetPath
                   Image.asset(
-                    selectedHardware.assetImagePath,
+                    widget.selectedHardware.assetImagePath,
                     width: 28,
                     height: 28,
                     fit: BoxFit.contain,
@@ -62,7 +88,7 @@ class HardwareComponentProperties extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
                         Text(
-                          selectedHardware.name,
+                          widget.selectedHardware.name,
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w600,
                             fontSize: 14,
@@ -71,7 +97,7 @@ class HardwareComponentProperties extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '\$${selectedHardware.price.toStringAsFixed(2)}',
+                          '\$${widget.selectedHardware.price.toStringAsFixed(2)}',
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             fontWeight: FontWeight.w500,
                             fontSize: 12,
@@ -88,7 +114,7 @@ class HardwareComponentProperties extends StatelessWidget {
                       color: Theme.of(context).colorScheme.error,
                     ),
                     onPressed: () {
-                      viewModel.removeHardware(selectedHardware.id);
+                      viewModel.removeHardware(widget.selectedHardware.id);
                     },
                   ),
                 ],
@@ -98,7 +124,7 @@ class HardwareComponentProperties extends StatelessWidget {
 
               // Hardware name input field
               TextFormField(
-                initialValue: selectedHardware.name,
+                initialValue: widget.selectedHardware.name,
                 decoration: const InputDecoration(
                   hintText: 'Hardware Name',
                   border: InputBorder.none,
@@ -108,7 +134,7 @@ class HardwareComponentProperties extends StatelessWidget {
                   fontSize: 12,
                 ),
                 onFieldSubmitted: (String v) {
-                  final HardwareComponent updated = selectedHardware.copyWith(name: v);
+                  final HardwareComponent updated = widget.selectedHardware.copyWith(name: v);
                   viewModel.updateHardware(updated);
                 },
               ),
@@ -147,7 +173,7 @@ class HardwareComponentProperties extends StatelessWidget {
                                 onFieldSubmitted: (String v) {
                                   final double? xValue = double.tryParse(v);
                                   if (xValue != null) {
-                                    final HardwareComponent updated = selectedHardware.copyWith(pos: Offset(xValue, selectedHardware.pos.dy));
+                                    final HardwareComponent updated = widget.selectedHardware.copyWith(pos: Offset(xValue, widget.selectedHardware.pos.dy));
                                     viewModel.updateHardware(updated);
                                   }
                                 },
@@ -175,7 +201,7 @@ class HardwareComponentProperties extends StatelessWidget {
                                 onFieldSubmitted: (String v) {
                                   final double? yValue = double.tryParse(v);
                                   if (yValue != null) {
-                                    final HardwareComponent updated = selectedHardware.copyWith(pos: Offset(selectedHardware.pos.dx, yValue));
+                                    final HardwareComponent updated = widget.selectedHardware.copyWith(pos: Offset(widget.selectedHardware.pos.dx, yValue));
                                     viewModel.updateHardware(updated);
                                   }
                                 },
@@ -203,7 +229,7 @@ class HardwareComponentProperties extends StatelessWidget {
                                 onFieldSubmitted: (String v) {
                                   final double? zValue = double.tryParse(v);
                                   if (zValue != null) {
-                                    final HardwareComponent updated = selectedHardware.copyWith(zAxis: zValue);
+                                    final HardwareComponent updated = widget.selectedHardware.copyWith(zAxis: zValue);
                                     viewModel.updateHardware(updated);
                                   }
                                 },
@@ -217,37 +243,118 @@ class HardwareComponentProperties extends StatelessWidget {
                 ],
               ),
 
-              if (selectedHardware is Speaker) ...<Widget>[
+              if (widget.selectedHardware is Speaker) ...<Widget>[
                 const SizedBox(height: 16),
 
-                // Rotation field
+                // Pitch field
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
                   child: Row(
                     children: <Widget>[
                       SizedBox(
                         width: 80,
-                        child: Text("Rotation", style: textStyleGrey?.copyWith(fontSize: 11)),
+                        child: Text("Pitch", style: textStyleGrey?.copyWith(fontSize: 11)),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: //for rotation
-                            Row(
+                        child: Row(
                           children: <Widget>[
                             Expanded(
                               child: TextFormField(
-                                controller: rotationController,
+                                controller: pitchController,
                                 decoration: const InputDecoration(
-                                  hintText: 'Rotation',
+                                  hintText: 'Pitch',
                                   border: InputBorder.none,
                                   isDense: true,
                                 ),
                                 style: textStyleBlack,
                                 keyboardType: TextInputType.number,
                                 onFieldSubmitted: (String v) {
-                                  final double? rotation = double.tryParse(v);
-                                  if (rotation != null) {
-                                    final Speaker updated = (selectedHardware as Speaker).copyWith(rotation: rotation);
+                                  final double? pitch = double.tryParse(v);
+                                  if (pitch != null) {
+                                    final Speaker updated = (widget.selectedHardware as Speaker).copyWith(pitch: pitch);
+                                    viewModel.updateHardware(updated);
+                                  }
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                // Yaw field
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Row(
+                    children: <Widget>[
+                      SizedBox(
+                        width: 80,
+                        child: Text("Yaw", style: textStyleGrey?.copyWith(fontSize: 11)),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Row(
+                          children: <Widget>[
+                            Expanded(
+                              child: TextFormField(
+                                controller: yawController,
+                                decoration: const InputDecoration(
+                                  hintText: 'Yaw',
+                                  border: InputBorder.none,
+                                  isDense: true,
+                                ),
+                                style: textStyleBlack,
+                                keyboardType: TextInputType.number,
+                                onFieldSubmitted: (String v) {
+                                  final double? yaw = double.tryParse(v);
+                                  if (yaw != null) {
+                                    final Speaker updated = (widget.selectedHardware as Speaker).copyWith(yaw: yaw);
+                                    viewModel.updateHardware(updated);
+                                  }
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                // Roll field
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Row(
+                    children: <Widget>[
+                      SizedBox(
+                        width: 80,
+                        child: Text("Roll", style: textStyleGrey?.copyWith(fontSize: 11)),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Row(
+                          children: <Widget>[
+                            Expanded(
+                              child: TextFormField(
+                                controller: rollController,
+                                decoration: const InputDecoration(
+                                  hintText: 'Roll',
+                                  border: InputBorder.none,
+                                  isDense: true,
+                                ),
+                                style: textStyleBlack,
+                                keyboardType: TextInputType.number,
+                                onFieldSubmitted: (String v) {
+                                  final double? roll = double.tryParse(v);
+                                  if (roll != null) {
+                                    final Speaker updated = (widget.selectedHardware as Speaker).copyWith(roll: roll);
                                     viewModel.updateHardware(updated);
                                   }
                                 },
@@ -288,7 +395,7 @@ class HardwareComponentProperties extends StatelessWidget {
                                 onFieldSubmitted: (String v) {
                                   final double? gain = double.tryParse(v);
                                   if (gain != null) {
-                                    final Speaker updated = (selectedHardware as Speaker).copyWith(gain: gain);
+                                    final Speaker updated = (widget.selectedHardware as Speaker).copyWith(gain: gain);
                                     viewModel.updateHardware(updated);
                                   }
                                 },
@@ -310,16 +417,16 @@ class HardwareComponentProperties extends StatelessWidget {
                   _buildHardwarePropertyRow(
                     context: context,
                     label: "Listening Area",
-                    value: viewModel.getListeningAreaForHardware(selectedHardware.id)?.name ?? "N/A",
+                    value: viewModel.getListeningAreaForHardware(widget.selectedHardware.id)?.name ?? "N/A",
                     options: viewModel.listeningAreas.map((ListeningArea listeningArea) => listeningArea.name).toList(),
                     onOptionSelected: (int selectedIndex) {
                       final ListeningArea? selectedArea = viewModel.listeningAreas.isNotEmpty ? viewModel.listeningAreas[selectedIndex] : null;
                       if (selectedArea != null) {
                         print("Selected Area: ${selectedArea.name}");
-                        final LocationModel updated = selectedHardware.locationEntity.copyWith(
+                        final LocationModel updated = widget.selectedHardware.locationEntity.copyWith(
                           listeningAreaId: selectedArea.id,
                         );
-                        viewModel.updateHardwareLocation(selectedHardware.id, updated);
+                        viewModel.updateHardwareLocation(widget.selectedHardware.id, updated);
                       }
                     },
                   ),
