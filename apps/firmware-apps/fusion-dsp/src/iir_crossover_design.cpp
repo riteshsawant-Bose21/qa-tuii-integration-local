@@ -1,3 +1,9 @@
+//
+// iir_crossover_design.cpp
+// IIR filter coefficient calculations for crossovers.
+// Implements Butterworth, Bessel, and Linkwitz-Riley filter designs from CSD.
+//
+
 #include "iir_design.h"
 #include "iir.h"
 #include <spdlog/spdlog.h>
@@ -235,7 +241,6 @@ static const FilterOrderConfig* find_config(int order, const FilterOrderConfig* 
         }
     }
     
-    // fallback logic - we support only 2,3,4,6,8 orders and if user requests 5 or 7 we're falling back to 2. This may be unexpected (confirm?)
     int fallback_index = (num_configs > 1) ? 1 : 0;
     int actual_order = configs[fallback_index].order;
     
