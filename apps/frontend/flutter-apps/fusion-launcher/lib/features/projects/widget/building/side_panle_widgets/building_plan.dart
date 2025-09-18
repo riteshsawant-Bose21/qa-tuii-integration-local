@@ -348,7 +348,7 @@ class _BuildingPlanState extends State<BuildingPlan> {
                                                 )
                                                 : FusionAppText(
                                                   text: floor.name,
-                                              maxLine: 2,
+                                                  maxLine: 2,
                                                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                                     fontSize: 12,
                                                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
@@ -379,26 +379,26 @@ class _BuildingPlanState extends State<BuildingPlan> {
                                               ),
                                             )
                                             : Container(),
-                                    (!isEditing)
-                                        ? IconButton(
-                                          icon: Icon(
-                                            Icons.edit,
-                                            size: 16,
-                                            color: Theme.of(context).colorScheme.fusionTextViewColor,
-                                          ),
-                                          onPressed: () {
-                                            // Prevent starting edit if already editing
-                                            if (_editingFloorIndex != null) return;
+                                        (!isEditing)
+                                            ? IconButton(
+                                              icon: Icon(
+                                                Icons.edit,
+                                                size: 16,
+                                                color: Theme.of(context).colorScheme.fusionTextViewColor,
+                                              ),
+                                              onPressed: () {
+                                                // Prevent starting edit if already editing
+                                                if (_editingFloorIndex != null) return;
 
-                                            _startEditingFloor(index, floor.name);
-                                          },
-                                          padding: EdgeInsets.zero,
-                                          constraints: const BoxConstraints(
-                                            minWidth: 24,
-                                            minHeight: 24,
-                                          ),
-                                        )
-                                        : Container(),
+                                                _startEditingFloor(index, floor.name);
+                                              },
+                                              padding: EdgeInsets.zero,
+                                              constraints: const BoxConstraints(
+                                                minWidth: 24,
+                                                minHeight: 24,
+                                              ),
+                                            )
+                                            : Container(),
                                         // Only show delete if there's more than one floor and not editing
                                         if (floors.length > 1 && !isEditing)
                                           GestureDetector(
