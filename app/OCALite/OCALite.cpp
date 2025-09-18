@@ -28,6 +28,9 @@
 #include "ConcreteSwitchActuator.h"
 #include "ZoneGroup.h"
 #include "ZoneConfigBuilder.h"
+// Constants for ONO assignments
+const ::OcaONo ROOT_ZONE_CONTAINER_ONO = static_cast<::OcaONo>(8000);
+
 #ifdef OCA_RUN
 extern void Ocp1LiteServiceRun();
 #else
@@ -55,15 +58,15 @@ int main(int argc, const char *argv[])
     static_cast<void>(::OcaLiteBlock::GetRootBlock());
 
     // Example zone JSON (will later drive dynamic creation). For now we still create actuators manually below.
-    const char *zonesJson = "{\n  \"zones\": [\n    {\n      \"id\": \"zone1757016258290241\",\n      \"name\": \"Zone 1\",\n      \"gainID\": \"gain1757016233268\",\n      \"sources\": [\n        { \"index\": 1, \"label\": \"source1\" },\n        { \"index\": 2, \"label\": \"source2\" },\n        { \"index\": 3, \"label\": \"source3\" }\n      ]\n    },\n    {\n      \"id\": \"zone173424\",\n      \"name\": \"Zone 2\",\n      \"gainID\": \"gain123423\",\n      \"sources\": [\n        { \"index\": 1, \"label\": \"source1\" },\n        { \"index\": 2, \"label\": \"source2\" },\n        { \"index\": 3, \"label\": \"source3\" }\n      ]\n    }\n  ]\n}";
+    const char *zonesJson = "{\n  \"zones\": [\n    {\n      \"id\": \"zone1757016258290241\",\n      \"zoneONO\" : 5050,\n      \"name\": \"Zone 1\",\n      \"gainID\": \"gain1757016233268\",\n      \"gainONO\": 5001,\n      \"muteONO\" : 5002,\n      \"sourceSelectorONO\": 5003,\n      \"sources\": [\n        { \"index\": 1, \"label\": \"source1\" },\n        { \"index\": 2, \"label\": \"source2\" },\n        { \"index\": 3, \"label\": \"source3\" }\n      ]\n    },\n    {\n      \"id\": \"zone173424\",\n      \"zoneONO\" : 5051,\n      \"name\": \"Zone 2\",\n      \"gainID\": \"gain123423\",\n      \"gainONO\": 5004,\n      \"muteONO\" : 5005,\n      \"sourceSelectorONO\": 5006,\n      \"sources\": [\n        { \"index\": 1, \"label\": \"source5\" },\n        { \"index\": 2, \"label\": \"source6\" },\n        { \"index\": 3, \"label\": \"source7\" }\n      ]\n    }\n  ]\n}";
 
-    BuiltZones bz = BuildZonesFromJson(zonesJson);
+    BuiltZones bz = BuildZonesFromJson(zonesJson, ROOT_ZONE_CONTAINER_ONO);
     if (bz.zonesContainer)
     {
         ZoneGroup *rootZone = bz.zonesContainer.get();
         if (::OcaLiteBlock::GetRootBlock().AddObject(*rootZone))
         {
-            printf("✓ Zones container (JSON) added (Object #5000) with %zu inner zone groups\r\n", bz.zones.size());
+            printf("✓ Zones container (JSON) added (Object #%u) with %zu inner zone groups\r\n", ROOT_ZONE_CONTAINER_ONO, bz.zones.size());
             bz.zonesContainer.release();
         }
         else
