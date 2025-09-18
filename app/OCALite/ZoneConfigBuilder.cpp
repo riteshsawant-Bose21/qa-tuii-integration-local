@@ -17,257 +17,379 @@ static std::string trim(const std::string &s)
     return s.substr(b, e - b);
 }
 
-// Internal legacy parser implementation (now used by public parseJson wrapper)
-static bool parseZonesInternal(const std::string &json, std::vector<ZoneDef> &out)
+// Helper function to parse a numeric value from JSON
+static bool parseNumber(const char *&p, ::OcaONo &result)
 {
-    // TODO: add error messages for parsing errors.
-    const char *p = json.c_str();
-    const char *zonesKey = strstr(p, "\"zones\"");
-    if (!zonesKey)
-        return false;
-    const char *arrStart = strchr(zonesKey, '[');
-    if (!arrStart)
-        return false;
-    ++arrStart;
-    while (*arrStart)
-    {
-        while (*arrStart && (*arrStart == ' ' || *arrStart == '\n' || *arrStart == '{' || *arrStart == ','))
-        {
-            if (*arrStart == '{')
-            {
-                ++arrStart;
-                break;
-            }
-            ++arrStart;
-        }
-        if (!*arrStart)
-            break;
-        ZoneDef z;
-        bool haveId = false, haveName = false, haveGainID = false;
-        bool done = false;
-        while (*arrStart && !done)
-        {
-            if (*arrStart == '"')
-            {
-                const char *keyStart = ++arrStart;
-                while (*arrStart && *arrStart != '"')
-                    ++arrStart;
-                if (!*arrStart)
-                    return false;
-                std::string key(keyStart, arrStart - keyStart);
-                ++arrStart;
-                while (*arrStart && *arrStart != ':')
-                    ++arrStart;
-                if (!*arrStart)
-                    return false;
-                ++arrStart;
-                while (*arrStart == ' ')
-                    ++arrStart;
-                if (key == "id" || key == "name" || key == "gainID")
-                {
-                    if (*arrStart == '"')
-                    {
-                        ++arrStart;
-                        const char *valStart = arrStart;
-                        while (*arrStart && *arrStart != '"')
-                            ++arrStart;
-                        if (!*arrStart)
-                            return false;
-                        std::string val(valStart, arrStart - valStart);
-                        ++arrStart;
-                        val = trim(val);
-                        if (key == "id")
-                        {
-                            z.id = val;
-                            haveId = true;
-                        }
-                        else if (key == "name")
-                        {
-                            z.name = val;
-                            haveName = true;
-                        }
-                        else if (key == "gainID")
-                        {
-                            z.gainID = val;
-                            haveGainID = true;
-                        }
-                    }
-                }
-                else if (key == "zoneONO" || key == "gainONO" || key == "muteONO" || key == "sourceSelectorONO")
-                {
-                    // Parse numeric ONO values
-                    errno = 0;
-                    char *endPtr = nullptr;
-                    unsigned long val = std::strtoul(arrStart, &endPtr, 10);
-                    // Validation: must consume at least one digit
-                    if (endPtr == arrStart)
-                    {
-                        return false; // No digits
-                    }
-                    // Range / errno check
-                    if (errno == ERANGE || val > std::numeric_limits<::OcaONo>::max())
-                    {
-                        return false; // out of range
-                    }
-                    // Delimiter check: allow space, comma, newline, carriage return, tab, closing brace
-                    if (!(*endPtr == ' ' || *endPtr == '\n' || *endPtr == '\r' || *endPtr == '\t' || *endPtr == ',' || *endPtr == '}'))
-                    {
-                        return false; // Unexpected trailing character
-                    }
+    errno = 0;
+    char *endPtr = nullptr;
+    unsigned long val = std::strtoul(p, &endPtr, 10);
 
-                    ::OcaONo onoVal = static_cast<::OcaONo>(val);
-                    if (key == "zoneONO")
-                    {
-                        z.zoneONO = onoVal;
-                    }
-                    else if (key == "gainONO")
-                    {
-                        z.gainONO = onoVal;
-                    }
-                    else if (key == "muteONO")
-                    {
-                        z.muteONO = onoVal;
-                    }
-                    else if (key == "sourceSelectorONO")
-                    {
-                        z.sourceSelectorONO = onoVal;
-                    }
+    if (endPtr == p)
+        return false; // No digits
+    if (errno == ERANGE || val > std::numeric_limits<::OcaONo>::max())
+        return false; // out of range
+    if (!(*endPtr == ' ' || *endPtr == '\n' || *endPtr == '\r' || *endPtr == '\t' ||
+          *endPtr == ',' || *endPtr == '}' || *endPtr == '"'))
+        return false; // Invalid delimiter
 
-                    // Advance arrStart to endPtr so outer loop continues from right position
-                    arrStart = endPtr;
-                }
-                else if (key == "sources")
-                {
-                    while (*arrStart && *arrStart != '[')
-                        ++arrStart;
-                    if (!*arrStart)
-                        return false;
-                    ++arrStart;
-                    while (*arrStart)
-                    {
-                        while (*arrStart && (*arrStart == ' ' || *arrStart == '\n' || *arrStart == '{' || *arrStart == ','))
-                        {
-                            if (*arrStart == '{')
-                            {
-                                ++arrStart;
-                                break;
-                            }
-                            ++arrStart;
-                        }
-                        if (!*arrStart)
-                            break;
-                        if (*arrStart == ']')
-                        {
-                            ++arrStart;
-                            break;
-                        }
-                        ZoneSourceDef s;
-                        bool haveIdx = false, haveLabel = false;
-                        bool sourceDone = false;
-                        while (*arrStart && !sourceDone)
-                        {
-                            if (*arrStart == '"')
-                            {
-                                const char *sk = ++arrStart;
-                                while (*arrStart && *arrStart != '"')
-                                    ++arrStart;
-                                if (!*arrStart)
-                                    return false;
-                                std::string skey(sk, arrStart - sk);
-                                ++arrStart;
-                                while (*arrStart && *arrStart != ':')
-                                    ++arrStart;
-                                if (!*arrStart)
-                                    return false;
-                                ++arrStart;
-                                while (*arrStart == ' ')
-                                    ++arrStart;
-                                if (skey == "index")
-                                {
-                                    errno = 0;
-                                    char *endPtr = nullptr;
-                                    unsigned long val = std::strtoul(arrStart, &endPtr, 10);
-                                    // Validation: must consume at least one digit
-                                    if (endPtr == arrStart)
-                                    {
-                                        // No digits; treat as parse failure for this source field; bail out
-                                        return false;
-                                    }
-                                    // Range / errno check
-                                    if (errno == ERANGE || val > std::numeric_limits<unsigned>::max())
-                                    {
-                                        return false; // out of range
-                                    }
-                                    // Delimiter check: allow space, comma, newline, carriage return, tab, closing brace/array
-                                    if (!(*endPtr == ' ' || *endPtr == '\n' || *endPtr == '\r' || *endPtr == '\t' || *endPtr == ',' || *endPtr == '}' || *endPtr == ']'))
-                                    {
-                                        // Unexpected trailing character; reject
-                                        return false;
-                                    }
-                                    s.index = static_cast<unsigned>(val);
-                                    haveIdx = true;
-                                    // Advance arrStart to endPtr so outer loop continues from right position
-                                    arrStart = endPtr;
-                                }
-                                else if (skey == "label")
-                                {
-                                    if (*arrStart == '"')
-                                    {
-                                        ++arrStart;
-                                        const char *sv = arrStart;
-                                        while (*arrStart && *arrStart != '"')
-                                            ++arrStart;
-                                        if (!*arrStart)
-                                            return false;
-                                        s.label.assign(sv, arrStart - sv);
-                                        ++arrStart;
-                                        haveLabel = true;
-                                    }
-                                }
-                            }
-                            if (*arrStart == '}')
-                            {
-                                ++arrStart;
-                                sourceDone = true;
-                            }
-                            else
-                                ++arrStart;
-                        }
-                        if (haveIdx)
-                        {
-                            if (!haveLabel)
-                                s.label = "";
-                            z.sources.push_back(s);
-                        }
-                        while (*arrStart && (*arrStart == ' ' || *arrStart == '\n'))
-                            ++arrStart;
-                        if (*arrStart == ']')
-                        {
-                            ++arrStart;
-                            break;
-                        }
-                    }
-                }
-            }
-            if (*arrStart == '}')
-            {
-                ++arrStart;
-                done = true;
-                break;
-            }
-            ++arrStart;
-        }
-        if (haveId && haveName && haveGainID)
-            out.push_back(z);
-        while (*arrStart && (*arrStart == ' ' || *arrStart == '\n'))
-            ++arrStart;
-        if (*arrStart == ']')
-            break;
-    }
-    return !out.empty();
+    result = static_cast<::OcaONo>(val);
+    p = endPtr;
+    return true;
 }
 
-// Public wrapper for tests / external usage
+// Helper function to parse a string value from JSON
+static bool parseString(const char *&p, std::string &result)
+{
+    if (*p != '"')
+        return false;
+    ++p;
+
+    const char *start = p;
+    while (*p && *p != '"')
+        ++p;
+    if (!*p)
+        return false;
+
+    result.assign(start, p - start);
+    ++p;
+    return true;
+}
+
+// Helper function to skip whitespace
+static void skipWhitespace(const char *&p)
+{
+    while (*p && (*p == ' ' || *p == '\n' || *p == '\t' || *p == '\r'))
+        ++p;
+}
+
+// Helper function to find and parse the zones object
+static bool parseZonesObject(const char *json, std::vector<ZoneDef> &zones)
+{
+    const char *p = json;
+
+    // Find "zones": pattern (not just "zones" which could be inside "zoneIds")
+    const char *zonesKey = strstr(p, "\"zones\":");
+    if (!zonesKey)
+        return false;
+
+    p = zonesKey + 8; // Skip "zones":
+    skipWhitespace(p);
+    skipWhitespace(p);
+
+    if (*p != '{')
+        return false;
+    ++p;
+    skipWhitespace(p);
+
+    // Parse each zone in the zones object
+    while (*p && *p != '}')
+    {
+        // Skip comma if not first zone
+        if (*p == ',')
+        {
+            ++p;
+            skipWhitespace(p);
+        }
+
+        if (*p == '}')
+            break;
+
+        // Parse zone key (zone ID)
+        std::string zoneKey;
+        if (!parseString(p, zoneKey))
+            return false;
+
+        skipWhitespace(p);
+        if (*p != ':')
+            return false;
+        ++p;
+        skipWhitespace(p);
+
+        if (*p != '{')
+            return false;
+        ++p;
+        skipWhitespace(p);
+
+        // Parse zone object
+        ZoneDef zone;
+        zone.id = zoneKey;
+
+        bool hasName = false, hasGainID = false, hasOno = false;
+
+        while (*p && *p != '}')
+        {
+            if (*p == ',')
+            {
+                ++p;
+                skipWhitespace(p);
+            }
+
+            if (*p == '}')
+                break;
+
+            // Parse property key
+            std::string propKey;
+            if (!parseString(p, propKey))
+                return false;
+
+            skipWhitespace(p);
+            if (*p != ':')
+                return false;
+            ++p;
+            skipWhitespace(p);
+
+            if (propKey == "id")
+            {
+                std::string id;
+                if (!parseString(p, id))
+                    return false;
+                // zone.id already set from key, could validate they match
+            }
+            else if (propKey == "name")
+            {
+                if (!parseString(p, zone.name))
+                    return false;
+                hasName = true;
+            }
+            else if (propKey == "controllerId")
+            {
+                if (!parseString(p, zone.controllerId))
+                    return false;
+                // Parsed but not used as per requirements
+            }
+            else if (propKey == "gainID")
+            {
+                if (!parseString(p, zone.gainID))
+                    return false;
+                hasGainID = true;
+            }
+            else if (propKey == "ono")
+            {
+                if (*p != '{')
+                    return false;
+                ++p;
+                skipWhitespace(p);
+
+                bool hasZone = false, hasGain = false, hasMute = false, hasSourceSelector = false;
+
+                while (*p && *p != '}')
+                {
+                    if (*p == ',')
+                    {
+                        ++p;
+                        skipWhitespace(p);
+                    }
+
+                    if (*p == '}')
+                        break;
+
+                    std::string onoKey;
+                    if (!parseString(p, onoKey))
+                        return false;
+
+                    skipWhitespace(p);
+                    if (*p != ':')
+                        return false;
+                    ++p;
+                    skipWhitespace(p);
+
+                    if (onoKey == "zone")
+                    {
+                        if (!parseNumber(p, zone.ono.zone))
+                            return false;
+                        hasZone = true;
+                    }
+                    else if (onoKey == "gain")
+                    {
+                        if (!parseNumber(p, zone.ono.gain))
+                            return false;
+                        hasGain = true;
+                    }
+                    else if (onoKey == "mute")
+                    {
+                        if (!parseNumber(p, zone.ono.mute))
+                            return false;
+                        hasMute = true;
+                    }
+                    else if (onoKey == "sourceSelector")
+                    {
+                        if (!parseNumber(p, zone.ono.sourceSelector))
+                            return false;
+                        hasSourceSelector = true;
+                    }
+                    else
+                    {
+                        // Skip unknown ONO property
+                        while (*p && *p != ',' && *p != '}')
+                            ++p;
+                    }
+
+                    skipWhitespace(p);
+                }
+
+                if (*p != '}')
+                    return false;
+                ++p;
+
+                if (hasZone && hasGain && hasMute && hasSourceSelector)
+                {
+                    hasOno = true;
+                }
+            }
+            else if (propKey == "sources")
+            {
+                if (*p != '[')
+                    return false;
+                ++p;
+                skipWhitespace(p);
+
+                while (*p && *p != ']')
+                {
+                    if (*p == ',')
+                    {
+                        ++p;
+                        skipWhitespace(p);
+                    }
+
+                    if (*p == ']')
+                        break;
+
+                    if (*p != '{')
+                        return false;
+                    ++p;
+                    skipWhitespace(p);
+
+                    ZoneSourceDef source;
+                    bool hasIndex = false, hasLabel = false;
+
+                    while (*p && *p != '}')
+                    {
+                        if (*p == ',')
+                        {
+                            ++p;
+                            skipWhitespace(p);
+                        }
+
+                        if (*p == '}')
+                            break;
+
+                        std::string srcKey;
+                        if (!parseString(p, srcKey))
+                            return false;
+
+                        skipWhitespace(p);
+                        if (*p != ':')
+                            return false;
+                        ++p;
+                        skipWhitespace(p);
+
+                        if (srcKey == "index")
+                        {
+                            // Parse numeric index value directly (not as string)
+                            ::OcaONo indexVal;
+                            if (!parseNumber(p, indexVal))
+                                return false;
+                            source.index = static_cast<unsigned>(indexVal);
+                            hasIndex = true;
+                        }
+                        else if (srcKey == "label")
+                        {
+                            if (!parseString(p, source.label))
+                                return false;
+                            hasLabel = true;
+                        }
+                        else
+                        {
+                            // Skip unknown source property
+                            if (*p == '"')
+                            {
+                                std::string dummy;
+                                parseString(p, dummy);
+                            }
+                            else
+                            {
+                                while (*p && *p != ',' && *p != '}')
+                                    ++p;
+                            }
+                        }
+
+                        skipWhitespace(p);
+                    }
+
+                    if (*p != '}')
+                        return false;
+                    ++p;
+
+                    if (hasIndex)
+                    {
+                        if (!hasLabel)
+                            source.label = "";
+                        zone.sources.push_back(source);
+                    }
+
+                    skipWhitespace(p);
+                }
+
+                if (*p != ']')
+                    return false;
+                ++p;
+            }
+            else
+            {
+                // Skip unknown property
+                if (*p == '"')
+                {
+                    std::string dummy;
+                    parseString(p, dummy);
+                }
+                else if (*p == '{' || *p == '[')
+                {
+                    // Skip complex objects/arrays
+                    char openChar = *p;
+                    char closeChar = (openChar == '{') ? '}' : ']';
+                    int depth = 1;
+                    ++p;
+
+                    while (*p && depth > 0)
+                    {
+                        if (*p == openChar)
+                            depth++;
+                        else if (*p == closeChar)
+                            depth--;
+                        ++p;
+                    }
+                }
+                else
+                {
+                    while (*p && *p != ',' && *p != '}')
+                        ++p;
+                }
+            }
+
+            skipWhitespace(p);
+        }
+
+        if (*p != '}')
+            return false;
+        ++p;
+
+        // Validate required fields
+        if (hasName && hasGainID && hasOno)
+        {
+            zones.push_back(zone);
+        }
+
+        skipWhitespace(p);
+    }
+
+    return !zones.empty();
+}
+
+// Internal parser implementation for new JSON structure
+static bool parseZonesInternal(const std::string &json, std::vector<ZoneDef> &out)
+{
+    return parseZonesObject(json.c_str(), out);
+} // Public wrapper for tests / external usage
 bool parseJson(const std::string &json, std::vector<ZoneDef> &zonesOut)
 {
     zonesOut.clear();
@@ -321,17 +443,17 @@ BuiltZones createZoneObjects(const std::vector<ZoneDef> &zoneDefs,
     {
         const ZoneDef &zoneDef = zoneDefs[i];
         ZoneObjects zb;
-        zb.group.reset(new ZoneGroup(zoneDef.zoneONO, static_cast<::OcaBoolean>(true), ::OcaLiteString(zoneDef.name.c_str())));
+        zb.group.reset(new ZoneGroup(zoneDef.ono.zone, static_cast<::OcaBoolean>(true), ::OcaLiteString(zoneDef.name.c_str())));
         if (!zb.group)
         {
             model.zones.push_back(std::move(zb));
             continue;
         }
 
-        // Use ONOs from JSON instead of computing them
-        ::OcaONo gainONo = zoneDef.gainONO;
-        ::OcaONo muteONo = zoneDef.muteONO;
-        ::OcaONo switchONo = zoneDef.sourceSelectorONO;
+        // Use ONOs from nested structure
+        ::OcaONo gainONo = zoneDef.ono.gain;
+        ::OcaONo muteONo = zoneDef.ono.mute;
+        ::OcaONo switchONo = zoneDef.ono.sourceSelector;
 
         // Gain
         ::OcaLiteList<::OcaLitePort> gainPorts;

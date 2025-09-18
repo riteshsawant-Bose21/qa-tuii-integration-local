@@ -21,15 +21,21 @@ struct ZoneSourceDef
     std::string label;
 };
 
+struct ZoneONODef
+{
+    ::OcaONo zone;
+    ::OcaONo gain;
+    ::OcaONo mute;
+    ::OcaONo sourceSelector;
+};
+
 struct ZoneDef
 {
-    std::string id;             // e.g., zone1757016...
-    ::OcaONo zoneONO;           // ONO for the zone group itself
-    std::string name;           // Human readable
-    std::string gainID;         // gain identifier token (not used yet to lookup anything)
-    ::OcaONo gainONO;           // ONO for the gain actuator
-    ::OcaONo muteONO;           // ONO for the mute actuator
-    ::OcaONo sourceSelectorONO; // ONO for the source selector (switch)
+    std::string id;           // e.g., zone1757016...
+    std::string name;         // Human readable
+    std::string controllerId; // controller identifier (parsed but not used)
+    ZoneONODef ono;           // nested ONO structure
+    std::string gainID;       // gain identifier token
     std::vector<ZoneSourceDef> sources;
 };
 
