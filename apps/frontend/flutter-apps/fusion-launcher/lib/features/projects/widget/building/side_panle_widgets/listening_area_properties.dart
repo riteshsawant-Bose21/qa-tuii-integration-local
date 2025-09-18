@@ -104,8 +104,13 @@ class ListeningAreaProperties extends StatelessWidget {
                         fontSize: 14,
                       ),
                       onFieldSubmitted: (String v) {
-                        final ListeningArea updatedLA = selectedListeningArea.copyWith(name: v);
-                        viewModel.updateListeningArea(updatedLA);
+                        if (v.trim().isNotEmpty) {
+                          final ListeningArea updatedLA = selectedListeningArea.copyWith(name: v.trim());
+                          viewModel.updateListeningArea(updatedLA);
+                        } else {
+                          // Reset to previous value if empty
+                          listeningAreaController.text = selectedListeningArea.name;
+                        }
                       },
                     ),
                   ),
