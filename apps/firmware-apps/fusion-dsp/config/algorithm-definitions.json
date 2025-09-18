@@ -1,5 +1,5 @@
 {
-    "version": "0.1.4",
+    "version": "0.1.5",
     "algorithms": [
         {
             "name": "alsa_in",
@@ -1871,6 +1871,82 @@
                     "direction": "input",
                     "minimum_channels": 1,
                     "maximum_channels": 64
+                }
+            ]
+        }
+        ,
+        {
+            "name": "iir_crossover",
+            "properties": [
+                {
+                    "name": "channels",
+                    "value_type": "integer",
+                    "default_value": 2,
+                    "minimum_value": 1,
+                    "maximum_value": 64
+                }
+            ],
+            "terminals": [
+                {
+                    "name": "in",
+                    "signal_type": "audio",
+                    "direction": "input",
+                    "channels": "channels"
+                },
+                {
+                    "name": "low_out",
+                    "signal_type": "audio",
+                    "direction": "output",
+                    "channels": "channels",
+                    "bypass_source": "in"
+                },
+                {
+                    "name": "high_out",
+                    "signal_type": "audio",
+                    "direction": "output",
+                    "channels": "channels",
+                    "bypass_source": "in"
+                }
+            ],
+            "parameters": [
+                {
+                    "name": "lowpass_freq",
+                    "value_type": "float",
+                    "dimensions": ["in"],
+                    "default_value": 200.0,
+                    "minimum_value": 20.0,
+                    "maximum_value": 20000.0
+                },
+                {
+                    "name": "highpass_freq",
+                    "value_type": "float",
+                    "dimensions": ["in"],
+                    "default_value": 200.0,
+                    "minimum_value": 20.0,
+                    "maximum_value": 20000.0
+                },
+                {
+                    "name": "lowpass_order",
+                    "value_type": "integer",
+                    "default_value": 4,
+                    "allowed_values": [1, 2, 3, 4, 6, 8]
+                },
+                {
+                    "name": "highpass_order",
+                    "value_type": "integer",
+                    "default_value": 4,
+                    "allowed_values": [1, 2, 3, 4, 6, 8]
+                },
+                {
+                    "name": "type",
+                    "value_type": "string",
+                    "default_value": "linkwitz_riley",
+                    "allowed_values": ["linkwitz_riley", "butterworth", "bessel"]
+                },
+                {
+                    "name": "enabled",
+                    "value_type": "bool",
+                    "default_value": true
                 }
             ]
         }

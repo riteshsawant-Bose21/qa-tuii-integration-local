@@ -30,15 +30,8 @@ void Crossover::design()
         return;
     }
 
-    // Clamp orders to our supported range (1..8).
     int l_order = params.lowpass_order;
     int h_order = params.highpass_order;
-
-    if (l_order < 1) l_order = 1;
-    if (h_order < 1) h_order = 1;
-
-    if (l_order > 8) l_order = 8;
-    if (h_order > 8) h_order = 8;
 
     // For Bessel, minimum order is 2
     if (params.type == CrossoverType::BESSEL || params.type == CrossoverType::LINKWITZ_RILEY) {

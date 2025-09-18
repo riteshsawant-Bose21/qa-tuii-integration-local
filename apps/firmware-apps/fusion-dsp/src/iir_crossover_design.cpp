@@ -240,14 +240,24 @@ static const FilterOrderConfig* find_config(int order, const FilterOrderConfig* 
             return &configs[i];
         }
     }
-    
-    int fallback_index = (num_configs > 1) ? 1 : 0;
-    int actual_order = configs[fallback_index].order;
-    
-    SPDLOG_WARN("filter_design: Order {} not supported, falling back to order {} ({} dB/octave)", 
+
+    // if no exact match: pick the nearest supported order. If equal distance,
+    // prefer the higher order so behavior is closer to requested slope.
+    int best_idx = 0;
+    int best_diff = std::abs(configs[0].order - order);
+    for (int i = 1; i < num_configs; ++i) {
+        int diff = std::abs(configs[i].order - order);
+        if (diff < best_diff || (diff == best_diff && configs[i].order > configs[best_idx].order)) {
+            best_idx = i;
+            best_diff = diff;
+        }
+    }
+
+    int actual_order = configs[best_idx].order;
+    SPDLOG_WARN("filter_design: Order {} not supported, falling back to nearest supported order {} ({} dB/octave)",
                order, actual_order, actual_order * 6);
-    
-    return &configs[fallback_index];
+
+    return &configs[best_idx];
 }
 
 static void butterworth_common_lpf(IirFilter *iir, int start_section, float frequency,
