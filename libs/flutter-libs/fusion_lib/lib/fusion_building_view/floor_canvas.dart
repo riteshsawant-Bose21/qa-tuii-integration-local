@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'dart:math';
 import 'dart:ui' as ui;
 
@@ -634,32 +633,33 @@ class FloorCanvasState extends State<FloorCanvas> {
     }
 
     // ─── Floor-plan resize ─────────────────────────────────────────────────────
-    if (_isImageVertexDrag && _dragImageCorner != null && _dragImageOpposite != null) {
-      // 1) Compute diagonal scaling just like before
-      final Offset opp = _dragImageOpposite!;
-      final Offset v = worldPos - opp;
-      final double diag = v.distance;
-      final double sf = diag / _imageOrigDiag;
-      final double newW = _planOrigW! * sf;
-      final double newH = _planOrigH! * sf;
+    // if (_isImageVertexDrag && _dragImageCorner != null && _dragImageOpposite != null) {
+    //   // 1) Compute diagonal scaling just like before
+    //   final Offset opp = _dragImageOpposite!;
+    //   final Offset v = worldPos - opp;
+    //   final double diag = v.distance;
+    //   final double sf = diag / _imageOrigDiag;
+    //   final double newW = _planOrigW! * sf;
+    //   final double newH = _planOrigH! * sf;
+    //
+    //   // 2) Determine new top-left corner and size
+    //   //    (we assume the user drags one corner away from ‘opp’)
+    //   final Offset newCorner = opp + Offset(v.dx.sign * newW, v.dy.sign * newH);
+    //   final double minX = math.min(newCorner.dx, opp.dx);
+    //   final double minY = math.min(newCorner.dy, opp.dy);
+    //   final Size newSize = Size((newCorner.dx - opp.dx).abs(), (newCorner.dy - opp.dy).abs());
+    //
+    //   // 3) Build an updated FloorPlanEntity
+    //   final FloorPlanModel updated = widget.floorPlanEntity.copyWith(position: Offset(minX, minY), size: newSize);
+    //
+    //   // 4) Tell the parent/store about it
+    //   widget.onFloorPlanUpdated(updated);
+    //
+    //   return;
+    // }
 
-      // 2) Determine new top-left corner and size
-      //    (we assume the user drags one corner away from ‘opp’)
-      final Offset newCorner = opp + Offset(v.dx.sign * newW, v.dy.sign * newH);
-      final double minX = math.min(newCorner.dx, opp.dx);
-      final double minY = math.min(newCorner.dy, opp.dy);
-      final Size newSize = Size((newCorner.dx - opp.dx).abs(), (newCorner.dy - opp.dy).abs());
-
-      // 3) Build an updated FloorPlanEntity
-      final FloorPlanModel updated = widget.floorPlanEntity.copyWith(position: Offset(minX, minY), size: newSize);
-
-      // 4) Tell the parent/store about it
-      widget.onFloorPlanUpdated(updated);
-
-      return;
-    }
-
-    // ─── Full-image drag ─────────────────────────────────────────────────────────
+    // ─── Floor plan -image drag ─────────────────────────────────────────────────────────
+    if (widget.zones.isNotEmpty || widget.listeningAreas.isNotEmpty || widget.hardwareComponents.isNotEmpty) return;
     if (_isImageDragging && _imageDragStart != null) {
       final ui.Offset worldPos = (e.localPosition - _panOffset) / _zoomScale;
       final ui.Offset delta = worldPos - _imageDragStart!;
