@@ -66,6 +66,12 @@ class ProductQueryCubit extends Cubit<ProductQueryState> {
       return ProductAPI.getAllProducts();
     }
 
+    print("state.searchQuery => ${state.searchQuery}");
+
+    if (state.selectedProductTypes.isEmpty && state.searchQuery.isEmpty) {
+      return ProductAPI.getAllProducts();
+    }
+
     /// Start with all products
     List<ProductQueryModel> products = ProductAPI.getAllProducts();
 
@@ -176,28 +182,31 @@ class ProductQueryCubit extends Cubit<ProductQueryState> {
     if (state.selectedImpedances.isNotEmpty) {
       final int beforeImpedanceFilter = products.length;
 
-      // Debug: Show all speakers and their nominalOhms values
-      final List<ProductQueryModel> currentSpeakers = products.where((ProductQueryModel p) => p.type == ProductType.speaker).toList();
-      for (final ProductQueryModel speaker in currentSpeakers) {}
 
       products =
           products.where((ProductQueryModel product) {
             // For speakers, filter based on nominalOhms impedance levels
             if (product.type == ProductType.speaker) {
               if (product.nominalOhms == null || product.nominalOhms == 0.0) {
+                print("Speaker ${product.name} has no valid nominalOhms data (${product.nominalOhms})");
                 return false;
               }
 
               final String impedanceLevel = _getImpedanceLevelFromOhms(product.nominalOhms!);
               final bool matches = state.selectedImpedances.any((String selectedImpedance) => selectedImpedance.toLowerCase() == impedanceLevel.toLowerCase());
 
+              print(
+                "Speaker ${product.name} nominalOhms: ${product.nominalOhms}, impedance: $impedanceLevel, selected: ${state.selectedImpedances}, matches: $matches",
+              );
               return matches;
             }
             // For non-speakers, always include them
             return true;
           }).toList();
+      print("Impedance filter: $beforeImpedanceFilter -> ${products.length} products");
     }
 
+    print("Filtered products count: ${products.length}");
     return products;
   }
 
@@ -251,6 +260,9 @@ class ProductQueryCubit extends Cubit<ProductQueryState> {
   }
 
   void onSortOptionChanged(SortOption? option) {
+    print("=== Sort Debug ===");
+    print("Sort option changing from ${state.selectedSortOption} to: $option");
+
     // First emit the new state with the updated sort option
     emit(
       state.copyWith(
@@ -268,6 +280,9 @@ class ProductQueryCubit extends Cubit<ProductQueryState> {
         filteredProducts: newFilteredProducts,
       ),
     );
+
+    print("State updated - selectedSortOption: ${state.selectedSortOption}");
+    print("=== End Sort Debug ===");
   }
 
   void onFiltersChanged() {

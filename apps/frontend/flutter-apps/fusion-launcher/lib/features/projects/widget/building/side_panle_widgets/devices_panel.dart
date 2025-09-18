@@ -129,7 +129,7 @@ class _DevicesPanelState extends State<DevicesPanel> {
                     deviceType,
                     isSelected: serviceLocator<ProjectViewModel>().currentDeviceTypeIndex == deviceType.index,
                     onTap: () {
-                      if (deviceType != DeviceType.sources) {
+                      if (deviceType != DeviceType.sources && deviceType != DeviceType.rack) {
                         goToDevicePlacementMode();
                       }
                       serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(deviceType.index);
