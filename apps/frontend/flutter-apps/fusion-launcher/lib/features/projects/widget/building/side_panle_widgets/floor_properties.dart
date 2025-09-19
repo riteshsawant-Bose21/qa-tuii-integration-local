@@ -53,8 +53,22 @@ class FloorProperties extends StatelessWidget {
                         fontSize: 12,
                       ),
                       onFieldSubmitted: (String v) {
-                        final FloorModel updated = selectedFloor.copyWith(name: v);
-                        viewModel.updateFloor(updated);
+                        // Validate that the name is not empty or just whitespace
+                        final String trimmedName = v.trim();
+                        if (trimmedName.isNotEmpty) {
+                          final FloorModel updated = selectedFloor.copyWith(name: trimmedName);
+                          viewModel.updateFloor(updated);
+                        } else {
+                          // Reset to previous name if empty
+                          floorNameController.text = selectedFloor.name;
+                          // Show a snackbar to inform user
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Floor name cannot be empty'),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        }
                       },
                     ),
                   ),
