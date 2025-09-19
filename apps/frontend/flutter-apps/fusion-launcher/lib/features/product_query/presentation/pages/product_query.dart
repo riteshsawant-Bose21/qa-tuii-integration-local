@@ -56,7 +56,6 @@ class _ProductQueryViewState extends State<ProductQueryView> {
             children: <Widget>[
               ProductSearchWidget(
                 searchController: state.searchController,
-                selectedProductType: state.selectedProductType,
                 selectedSortOption: state.selectedSortOption,
                 selectedProductTypes: state.selectedProductTypes,
                 selectedMountTypes: state.selectedMountTypes,
@@ -393,7 +392,7 @@ class ProductAPI {
           maxSpl: speakerData["max_spl"] != null ? (speakerData["max_spl"] as num).toDouble() : null,
           nominalOhms: speakerData["nominal_ohms"] != null ? (speakerData["nominal_ohms"] as num).toDouble() : null,
           sku: 'MSA12XOHS',
-          specifications: '${speakerData['max_spl'] ?? 0} dB SPL • ${speakerData['mounting_type'] ?? 'Unknown'}',
+          specifications: '',
         );
       }).toList();
     } catch (e) {
