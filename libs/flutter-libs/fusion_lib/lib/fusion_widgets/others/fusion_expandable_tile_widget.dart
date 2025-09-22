@@ -110,6 +110,7 @@ class _FusionExpandableTileWidgetState extends State<FusionExpandableTileWidget>
           border: Border(bottom: BorderSide(color: theme.colorScheme.dividerColor, width: 1)),
         ),
         child: ExpansionTile(
+          key: ValueKey<String>(widget.config.title),
           minTileHeight: 24,
           controller: widget.controller,
           dense: true,
