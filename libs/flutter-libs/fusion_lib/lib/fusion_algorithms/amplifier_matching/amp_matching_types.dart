@@ -1,10 +1,10 @@
 /// Amplifier Matching Types and Data Structures
-///
+/// 
 /// This file defines all the data types and structures needed for the
 /// advanced amplifier matching algorithm with power sharing optimization.
-library;
 
 import '../../api_data/amplifiers/amplifier_types.dart' show AmpModel;
+
 
 /// Circuit information with power requirements and configuration
 class Circuit {
@@ -69,7 +69,9 @@ class AmpAssignment {
 
   factory AmpAssignment.fromJson(Map<String, dynamic> json) => AmpAssignment(
     ampModel: AmpModel.fromJson(json['amplifier'] ?? {}),
-    circuits: (json['circuits'] as List<dynamic>? ?? []).map((c) => Circuit.fromJson(c)).toList(),
+    circuits: (json['circuits'] as List<dynamic>? ?? [])
+        .map((c) => Circuit.fromJson(c))
+        .toList(),
   );
 
   @override
@@ -101,7 +103,7 @@ class AmpMatchingResult {
   double get powerEfficiency => totalPowerRequirement / totalSystemCapacity;
   double get channelEfficiency => totalChannelsUsed / totalChannelsAvailable;
   int get amplifierCount => assignments.length;
-
+  
   bool get hasErrors => errors.isNotEmpty;
   bool get hasWarnings => warnings.isNotEmpty;
 
@@ -120,7 +122,9 @@ class AmpMatchingResult {
   };
 
   factory AmpMatchingResult.fromJson(Map<String, dynamic> json) => AmpMatchingResult(
-    assignments: (json['assignments'] as List<dynamic>? ?? []).map((a) => AmpAssignment.fromJson(a)).toList(),
+    assignments: (json['assignments'] as List<dynamic>? ?? [])
+        .map((a) => AmpAssignment.fromJson(a))
+        .toList(),
     totalPowerRequirement: (json['total_power_requirement'] ?? 0.0).toDouble(),
     totalSystemCapacity: (json['total_system_capacity'] ?? 0.0).toDouble(),
     totalChannelsUsed: json['total_channels_used'] ?? 0,

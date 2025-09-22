@@ -11,13 +11,13 @@ class AmpCatalog {
   /// All available amplifiers in the catalog
   ///
   /// TODO: Replace with API call to amplifier specifications service
-  static const List<AmpModel> models = [
+  static final List<AmpModel> models = [
     // PowerPure series
-    AmpModel(series: 'Power Pure', name: 'PP-4150', channels: 4, peakPerChannel: 150.0, imageUrl: 'assets/images/amplifier_img.webp', price: 999.0),
-    AmpModel(series: 'Power Pure', name: 'PP-8300', channels: 8, peakPerChannel: 300.0, imageUrl: 'assets/images/amplifier_img.webp', price: 1499.0),
-    AmpModel(series: 'Power Pure', name: 'PP-4150', channels: 4, peakPerChannel: 1500.0, imageUrl: 'assets/images/amplifier_img.webp', price: 1999.0),
+    const AmpModel(series: 'Power Pure', name: 'PP-4150', channels: 4, peakPerChannel: 150.0, imageUrl: 'assets/images/amplifier_img.webp', price: 999.0),
+    const AmpModel(series: 'Power Pure', name: 'PP-8300', channels: 8, peakPerChannel: 300.0, imageUrl: 'assets/images/amplifier_img.webp', price: 1499.0),
+    const AmpModel(series: 'Power Pure', name: 'PP-41500', channels: 4, peakPerChannel: 1500.0, imageUrl: 'assets/images/amplifier_img.webp', price: 1999.0),
     // PowerSmart series
-    AmpModel(
+    const AmpModel(
       series: 'Power Smart',
       name: 'PSM-4150',
       channels: 4,
@@ -25,7 +25,7 @@ class AmpCatalog {
       imageUrl: 'assets/images/amplifier_img.webp',
       price: 999.0,
     ), // 600W total
-    AmpModel(
+    const AmpModel(
       series: 'Power Smart',
       name: 'PSM-4300',
       channels: 4,
@@ -33,7 +33,7 @@ class AmpCatalog {
       imageUrl: 'assets/images/amplifier_img.webp',
       price: 1499.0,
     ), // 1200W total
-    AmpModel(
+    const AmpModel(
       series: 'Power Smart',
       name: 'PSM-4600',
       channels: 4,
@@ -41,7 +41,7 @@ class AmpCatalog {
       imageUrl: 'assets/images/amplifier_img.webp',
       price: 1999.0,
     ), // 2400W total
-    AmpModel(
+    const AmpModel(
       series: 'Power Smart',
       name: 'PSM-8300',
       channels: 8,
@@ -49,7 +49,7 @@ class AmpCatalog {
       imageUrl: 'assets/images/amplifier_img.webp',
       price: 2499.0,
     ), // 2400W total
-    AmpModel(
+    const AmpModel(
       series: 'Power Smart',
       name: 'PSM-8600',
       channels: 8,
@@ -57,7 +57,7 @@ class AmpCatalog {
       imageUrl: 'assets/images/amplifier_img.webp',
       price: 2999.0,
     ), // 4800W total
-    AmpModel(
+    const AmpModel(
       series: 'Power Smart',
       name: 'PSM-41500',
       channels: 4,
@@ -65,10 +65,31 @@ class AmpCatalog {
       imageUrl: 'assets/images/amplifier_img.webp',
       price: 3999.0,
     ), // 6000W total
-    // PowershareX series
-    // AmpModel(series: 'PowershareX', name: 'PSX1204D', channels: 4, peakPerChannel: 300.0, imageUrl: 'assets/images/amplifier_img.webp', price: 2499.0), // 1200W total
-    // AmpModel(series: 'PowershareX', name: 'PSX2404D', channels: 4, peakPerChannel: 600.0, imageUrl: 'assets/images/amplifier_img.webp', price: 3499.0), // 2400W total
-    // AmpModel(series: 'PowershareX', name: 'PSX4804D', channels: 4, peakPerChannel: 1200.0, imageUrl: 'assets/images/amplifier_img.webp', price: 4499.0), // 4800W total
+    // PowershareX series - Enhanced with detailed power specifications
+    AmpModel(
+      series: 'PowershareX', 
+      name: 'PSX1204D', 
+      channels: 4, 
+      peakPerChannel: 300.0, 
+      imageUrl: 'assets/images/amplifier_img.webp', 
+      price: 2499.0, 
+    ), // 1200W total
+    AmpModel(
+      series: 'PowershareX', 
+      name: 'PSX2404D', 
+      channels: 4, 
+      peakPerChannel: 600.0, 
+      imageUrl: 'assets/images/amplifier_img.webp', 
+      price: 3499.0, 
+    ), // 2400W total
+    AmpModel(
+      series: 'PowershareX', 
+      name: 'PSX4804D', 
+      channels: 4, 
+      peakPerChannel: 1200.0, 
+      imageUrl: 'assets/images/amplifier_img.webp', 
+      price: 4499.0, 
+    ), // 4800W total
   ];
 
   /// Get amplifiers sorted by power (ascending)
@@ -134,36 +155,5 @@ class AmpCatalog {
     final channels = models.map((amp) => amp.channels).toSet().toList();
     channels.sort();
     return channels;
-  }
-
-  /// Future API integration method
-  ///
-  /// This method would replace the static models list above
-  /// Example:
-  /// ```dart
-  /// final amplifiers = await AmpCatalog.fetchFromApi();
-  /// ```
-  static Future<List<AmpModel>> fetchFromApi({
-    String? apiEndpoint,
-    Map<String, String>? headers,
-  }) async {
-    // TODO: Implement actual API call
-    // Example implementation:
-    //
-    // final response = await http.get(
-    //   Uri.parse(apiEndpoint ?? 'https://api.bose.com/v1/amplifiers'),
-    //   headers: headers ?? {'Content-Type': 'application/json'},
-    // );
-
-    // if (response.statusCode == 200) {
-    //   final data = jsonDecode(response.body) as List<dynamic>;
-    //   return data.map((json) => AmpModel.fromJson(json)).toList();
-    // }
-
-    // throw Exception('Failed to fetch amplifiers: ${response.statusCode}');
-
-    // For now, return the static models
-    await Future.delayed(const Duration(milliseconds: 100)); // Simulate API delay
-    return models;
   }
 }

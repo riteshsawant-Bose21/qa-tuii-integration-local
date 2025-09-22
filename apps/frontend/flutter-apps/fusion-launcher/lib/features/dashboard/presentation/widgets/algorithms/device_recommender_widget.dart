@@ -14,22 +14,18 @@ class _DeviceRecommenderWidgetState extends State<DeviceRecommenderWidget>
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
-  // Input state
-  Map<String, int> inputs = <String, int>{
+  // Analog Input state
+  Map<String, int> analogInputs = <String, int>{
     'mics': 0,
     'line': 0,
     'rca': 0,
     'jack35': 0,
-    'aes67In': 0,
-    'danteIn': 0,
   };
 
-  // Output state
-  Map<String, int> outputs = <String, int>{
-    'speakers': 0,
-    'lineOut': 0,
-    'aes67Out': 0,
-    'danteOut': 0,
+  // Analog Output state (separated into line vs speakers)
+  Map<String, int> analogOutputs = <String, int>{
+    'lineOut': 0,      // Line-level outputs
+    'speakers': 0,     // Loudspeaker/amplified outputs
   };
 
   @override
@@ -59,30 +55,25 @@ class _DeviceRecommenderWidgetState extends State<DeviceRecommenderWidget>
 
   String recommend() {
     try {
-      // Calculate totals from the inputs map
-      final int totalAnalogInputs = inputs['mics']! + inputs['line']! + inputs['rca']! + inputs['jack35']!;
-      final int totalNetworkInputs = inputs['aes67In']! + inputs['danteIn']!;
-      final int totalAnalogOutputs = outputs['speakers']! + outputs['lineOut']!;
-      final int totalNetworkOutputs = outputs['aes67Out']! + outputs['danteOut']!;
-      final int bluetoothInputs = 0; // Bluetooth removed from UI
+      // Calculate totals from the analog inputs map
+      final int totalAnalogInputs = analogInputs['mics']! + analogInputs['line']! + analogInputs['rca']! + analogInputs['jack35']!;
+      final int totalLineOutputs = analogOutputs['lineOut']!;
+      final int totalLoudspeakerOutputs = analogOutputs['speakers']!;
 
       // Return empty if no inputs/outputs
-      if (totalAnalogInputs == 0 && totalAnalogOutputs == 0 && totalNetworkInputs == 0 && 
-          totalNetworkOutputs == 0 && bluetoothInputs == 0) {
-        return "Configure inputs and outputs to get recommendations";
+      if (totalAnalogInputs == 0 && totalLineOutputs == 0 && totalLoudspeakerOutputs == 0) {
+        return "Configure analog inputs and outputs to get recommendations";
       }
 
-      // Create recommendation input using the library
-      final RecommendInput input = RecommendInput(
+      // Create analog recommendation input using the new library
+      final AnalogRecommendInput input = AnalogRecommendInput(
         analogInputs: totalAnalogInputs,
-        analogOutputs: totalAnalogOutputs,
-        networkInputs: totalNetworkInputs,
-        networkOutputs: totalNetworkOutputs,
-        bluetoothInputs: bluetoothInputs,
+        lineOutputs: totalLineOutputs,
+        loudspeakerOutputs: totalLoudspeakerOutputs,
       );
 
-      // Get device recommendations from the library
-      final List<String> devices = DeviceRecommender.recommendDevices(input);
+      // Get device recommendations from the new analog algorithm
+      final List<String> devices = DeviceRecommender.recommendAnalogDevices(input);
       
       if (devices.isEmpty) {
         return "No suitable device configuration found";
@@ -96,19 +87,15 @@ class _DeviceRecommenderWidgetState extends State<DeviceRecommenderWidget>
 
   void _clearAll() {
     setState(() {
-      inputs = <String, int>{
+      analogInputs = <String, int>{
         'mics': 0,
         'line': 0,
         'rca': 0,
         'jack35': 0,
-        'aes67In': 0,
-        'danteIn': 0,
       };
-      outputs = <String, int>{
-        'speakers': 0,
+      analogOutputs = <String, int>{
         'lineOut': 0,
-        'aes67Out': 0,
-        'danteOut': 0,
+        'speakers': 0,
       };
     });
   }
@@ -160,9 +147,9 @@ class _DeviceRecommenderWidgetState extends State<DeviceRecommenderWidget>
                   onPressed: count > 0 ? () {
                     setState(() {
                       if (isOutput) {
-                        outputs[key] = (outputs[key]! - 1).clamp(0, double.infinity).toInt();
+                        analogOutputs[key] = (analogOutputs[key]! - 1).clamp(0, double.infinity).toInt();
                       } else {
-                        inputs[key] = (inputs[key]! - 1).clamp(0, double.infinity).toInt();
+                        analogInputs[key] = (analogInputs[key]! - 1).clamp(0, double.infinity).toInt();
                       }
                     });
                   } : null,
@@ -190,9 +177,9 @@ class _DeviceRecommenderWidgetState extends State<DeviceRecommenderWidget>
                   onPressed: () {
                     setState(() {
                       if (isOutput) {
-                        outputs[key] = outputs[key]! + 1;
+                        analogOutputs[key] = analogOutputs[key]! + 1;
                       } else {
-                        inputs[key] = inputs[key]! + 1;
+                        analogInputs[key] = analogInputs[key]! + 1;
                       }
                     });
                   },
@@ -210,115 +197,11 @@ class _DeviceRecommenderWidgetState extends State<DeviceRecommenderWidget>
     );
   }
 
-  Widget _buildIconCounter({
-    required String label,
-    required int count,
-    required VoidCallback onIncrement,
-    required VoidCallback onDecrement,
-    required IconData icon,
-    double height = 160.0, // Add height parameter with default
-  }) {
-    return SizedBox(
-      height: height,
-      width: double.infinity, // Ensures it fills the grid cell
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey.shade300),
-          borderRadius: BorderRadius.circular(16),
-          color: Colors.white,
-          boxShadow: <BoxShadow>[
-            BoxShadow(
-              color: Colors.grey.shade200,
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: <Widget>[
-            Icon(icon, size: height < 140 ? 24 : 32, color: Colors.grey.shade700), // Smaller icon for smaller cards
-            Text(
-              label,
-              style: TextStyle(fontSize: height < 140 ? 10 : 12, fontWeight: FontWeight.w500),
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            Text(
-              count.toString(),
-              style: TextStyle(fontSize: height < 140 ? 16 : 20, fontWeight: FontWeight.bold),
-            ),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                SizedBox(
-                  width: height < 140 ? 28 : 32,
-                  height: height < 140 ? 28 : 32,
-                  child: OutlinedButton(
-                    onPressed: count > 0 ? onDecrement : null,
-                    style: OutlinedButton.styleFrom(
-                      padding: EdgeInsets.zero,
-                      minimumSize: Size(height < 140 ? 28 : 32, height < 140 ? 28 : 32),
-                    ),
-                    child: Text('-', style: TextStyle(fontSize: height < 140 ? 14 : 16)),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                SizedBox(
-                  width: height < 140 ? 28 : 32,
-                  height: height < 140 ? 28 : 32,
-                  child: ElevatedButton(
-                    onPressed: onIncrement,
-                    style: ElevatedButton.styleFrom(
-                      padding: EdgeInsets.zero,
-                      minimumSize: Size(height < 140 ? 28 : 32, height < 140 ? 28 : 32),
-                    ),
-                    child: Text('+', style: TextStyle(fontSize: height < 140 ? 14 : 16)),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSection({
-    required String title,
-    required List<Widget> children,
-    int crossAxisCount = 4,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Text(
-          title,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 12),
-        GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: crossAxisCount,
-          mainAxisSpacing: 16,
-          crossAxisSpacing: 16,
-          childAspectRatio: crossAxisCount <= 2 ? 1.8 : 1.2, // Adjust aspect ratio based on column count
-          children: children,
-        ),
-        const SizedBox(height: 32),
-      ],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final int totalAnalogIn = inputs['mics']! + inputs['line']! + inputs['rca']! + inputs['jack35']!;
-    final int totalAnalogOut = outputs['speakers']! + outputs['lineOut']!;
-    final int totalNetworkIn = inputs['aes67In']! + inputs['danteIn']!;
-    final int totalNetworkOut = outputs['aes67Out']! + outputs['danteOut']!;
+    final int totalAnalogIn = analogInputs['mics']! + analogInputs['line']! + analogInputs['rca']! + analogInputs['jack35']!;
+    final int totalLineOut = analogOutputs['lineOut']!;
+    final int totalSpeakers = analogOutputs['speakers']!;
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
@@ -340,41 +223,30 @@ class _DeviceRecommenderWidgetState extends State<DeviceRecommenderWidget>
                       child: FadeTransition(
                         opacity: _fadeAnimation,
                         child: const Text(
-                          'DSP Calculator',
+                          'Analog I/O Calculator',
                           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ),
                     const SizedBox(height: 16),
 
-                    // Analog Inputs Section - Compact
+                    // Analog Inputs Section
                     _buildCompactSection(
                       title: 'Analog Inputs',
                       children: <Widget>[
-                        _buildCompactCounter('Mics', inputs['mics']!, 'mics', Icons.mic),
-                        _buildCompactCounter('Line', inputs['line']!, 'line', Icons.music_note),
-                        _buildCompactCounter('RCA', inputs['rca']!, 'rca', Icons.album),
-                        _buildCompactCounter('3.5mm', inputs['jack35']!, 'jack35', Icons.radio),
+                        _buildCompactCounter('Mics', analogInputs['mics']!, 'mics', Icons.mic),
+                        _buildCompactCounter('Line', analogInputs['line']!, 'line', Icons.music_note),
+                        _buildCompactCounter('RCA', analogInputs['rca']!, 'rca', Icons.album),
+                        _buildCompactCounter('3.5mm', analogInputs['jack35']!, 'jack35', Icons.radio),
                       ],
                     ),
 
-                    // Network Inputs Section - Compact
+                    // Analog Outputs Section (separated into line vs speakers)
                     _buildCompactSection(
-                      title: 'Network Inputs',
+                      title: 'Analog Outputs',
                       children: <Widget>[
-                        _buildCompactCounter('AES67', inputs['aes67In']!, 'aes67In', Icons.network_check),
-                        _buildCompactCounter('Dante', inputs['danteIn']!, 'danteIn', Icons.network_check),
-                      ],
-                    ),
-
-                    // Outputs Section - Compact
-                    _buildCompactSection(
-                      title: 'Outputs',
-                      children: <Widget>[
-                        _buildCompactCounter('Speakers', outputs['speakers']!, 'speakers', Icons.speaker, isOutput: true),
-                        _buildCompactCounter('Line Out', outputs['lineOut']!, 'lineOut', Icons.album, isOutput: true),
-                        _buildCompactCounter('AES67 Out', outputs['aes67Out']!, 'aes67Out', Icons.network_check, isOutput: true),
-                        _buildCompactCounter('Dante Out', outputs['danteOut']!, 'danteOut', Icons.network_check, isOutput: true),
+                        _buildCompactCounter('Line Outputs', analogOutputs['lineOut']!, 'lineOut', Icons.volume_up, isOutput: true),
+                        _buildCompactCounter('Loudspeakers', analogOutputs['speakers']!, 'speakers', Icons.speaker, isOutput: true),
                       ],
                     ),
 
@@ -397,7 +269,7 @@ class _DeviceRecommenderWidgetState extends State<DeviceRecommenderWidget>
             // Right Panel - Live Recommendations
             Expanded(
               flex: 3,
-              child: Container(
+              child: SizedBox(
                 height: MediaQuery.of(context).size.height - 32,
                 child: Card(
                   elevation: 4,
@@ -447,10 +319,21 @@ class _DeviceRecommenderWidgetState extends State<DeviceRecommenderWidget>
                                     style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                                   ),
                                   const SizedBox(height: 12),
-                            _buildSummaryRow('Analog Inputs', '$totalAnalogIn (Mic: ${inputs['mics']}, Line: ${inputs['line']}, RCA: ${inputs['rca']}, 3.5mm: ${inputs['jack35']})'),
-                            _buildSummaryRow('Analog Outputs', '$totalAnalogOut (Speakers: ${outputs['speakers']}, Line: ${outputs['lineOut']})'),
-                            _buildSummaryRow('Network Inputs', '$totalNetworkIn (AES67: ${inputs['aes67In']}, Dante: ${inputs['danteIn']})'),
-                            _buildSummaryRow('Network Outputs', '$totalNetworkOut (AES67: ${outputs['aes67Out']}, Dante: ${outputs['danteOut']})'),                                  const SizedBox(height: 16),
+                            _buildSummaryRow('Analog Inputs', '$totalAnalogIn (Mic: ${analogInputs['mics']}, Line: ${analogInputs['line']}, RCA: ${analogInputs['rca']}, 3.5mm: ${analogInputs['jack35']})'),
+                            _buildSummaryRow('Line Outputs', '$totalLineOut'),
+                            _buildSummaryRow('Loudspeaker Outputs', '$totalSpeakers'),
+                                  const SizedBox(height: 16),
+                                  const Divider(),
+                                  const SizedBox(height: 16),
+                                  
+                                  const Text(
+                                    'Scaling Algorithm Rules',
+                                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  ..._buildScalingRules(),
+                                  
+                                  const SizedBox(height: 16),
                                   const Divider(),
                                   const SizedBox(height: 16),
                                   
@@ -516,49 +399,35 @@ class _DeviceRecommenderWidgetState extends State<DeviceRecommenderWidget>
     );
   }
 
+  List<Widget> _buildScalingRules() {
+    final List<Widget> widgets = <Widget>[];
+    
+    final List<String> rules = <String>[
+      '1. Always start with 4ch PowerSmart',
+      '2. Input Scaling: More inputs than outputs → FM6 + PowerPure',
+      '3. Equal Scaling: Equal inputs/outputs → PowerSmart series',
+      '4. Output Scaling: More outputs than inputs → PowerSmart series',
+    ];
+
+    for (final String rule in rules) {
+      widgets.add(_buildCapabilityRow(rule));
+    }
+
+    return widgets;
+  }
+
   List<Widget> _buildCapabilitiesList() {
     final List<Widget> widgets = <Widget>[];
     
-    // DSP Devices section
-    widgets.add(
-      const Text(
-        'DSP Devices:',
-        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-      ),
-    );
-    widgets.add(const SizedBox(height: 4));
-
-    // Add DSP device capabilities
-    final List<String> dspCapabilities = <String>[
-      '4ch PowerSmart → Analog I/O: 8 (4 in, 4 speaker out), Network I/O: 8 (4 in, 4 out)',
-      '8ch PowerSmart → Analog I/O: 16 (8 in, 8 speaker out), Network I/O: 16 (8 in, 8 out)',
-      'FM6 → Analog I/O: 8 (4 in, 4 out), Network I/O: 0',
-      'FM8Y → Analog I/O: 12 (4 in, 8 out), Network I/O: 16 (8 in, 8 out)',
+    // Add device capabilities with new analog I/O format
+    final List<String> capabilities = <String>[
+      '4ch PowerSmart → 4 Inputs + 4 Line Outputs + 4 Loudspeaker Outputs',
+      '8ch PowerSmart → 8 Inputs + 8 Line Outputs + 8 Loudspeaker Outputs',
+      'FM6 → 4 Inputs + 4 Line Outputs + 0 Loudspeaker Outputs',
+      'FM8Y → 4 Inputs + 8 Line Outputs + 0 Loudspeaker Outputs',
     ];
 
-    for (final String capability in dspCapabilities) {
-      widgets.add(_buildCapabilityRow(capability));
-    }
-
-    // Add separator
-    widgets.add(const SizedBox(height: 12));
-
-    // Add other devices header
-    widgets.add(
-      const Text(
-        'Other Devices:',
-        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-      ),
-    );
-    widgets.add(const SizedBox(height: 4));
-
-    // Add other device capabilities
-    final List<String> otherCapabilities = <String>[
-      'FusionConnect → Analog I/O: 48 (24 in, 24 out), Network I/O: 0',
-      'PowerPure Amplifier → Analog I/O: 4 (0 in, 4 speaker out), Network I/O: 0',
-    ];
-
-    for (final String capability in otherCapabilities) {
+    for (final String capability in capabilities) {
       widgets.add(_buildCapabilityRow(capability));
     }
 

@@ -7,7 +7,7 @@
 class AmpModel {
   final String name;
   final int channels;
-  final double peakPerChannel;
+  final double peakPerChannel; // Legacy field - will be replaced by powerSpecs
   final String imageUrl;
   final String series;
   final double price;
@@ -18,7 +18,7 @@ class AmpModel {
     required this.peakPerChannel,
     required this.imageUrl,
     required this.series,
-    this.price = 0.0,
+    this.price = 0.0
   });
 
   double get totalCapacity => channels * peakPerChannel;
@@ -30,7 +30,7 @@ class AmpModel {
     'total_capacity': totalCapacity,
     'image_url': imageUrl,
     'series': series,
-    'price': price,
+    'price': price
   };
 
   factory AmpModel.fromJson(Map<String, dynamic> json) => AmpModel(
