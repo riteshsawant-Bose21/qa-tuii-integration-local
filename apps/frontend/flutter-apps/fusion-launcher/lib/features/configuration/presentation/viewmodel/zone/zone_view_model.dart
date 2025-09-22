@@ -42,6 +42,19 @@ extension ZoneViewModel on ProjectViewModel {
     }
   }
 
+  void removeAllZones() {
+    try {
+      final List<Zone> allZones = getAllZones();
+      for (final Zone zone in allZones) {
+        projectManager.removeZone(zone.id);
+      }
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to remove all zones: $e");
+      throwError("Failed to remove all zones: $e");
+    }
+  }
+
   List<Zone> getAllZones() {
     try {
       return projectManager.getAllZones();

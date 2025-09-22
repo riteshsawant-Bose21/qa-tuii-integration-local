@@ -409,6 +409,15 @@ class _BuildingPlanState extends State<BuildingPlan> {
                                               color: Theme.of(context).colorScheme.error,
                                             ),
                                           ),
+                                        if (floors.length == 1 && !isEditing)
+                                          GestureDetector(
+                                            onTap: () => _showRestConfirmDialog(index),
+                                            child: Icon(
+                                              Icons.delete_outline,
+                                              size: 16,
+                                              color: Theme.of(context).colorScheme.error,
+                                            ),
+                                          ),
                                       ],
                                     ],
                                   ),
@@ -442,6 +451,23 @@ class _BuildingPlanState extends State<BuildingPlan> {
         ],
       ),
     );
+  }
+
+  /// Reset floor to default state
+  void _resetFloor(int index) {
+    final ProjectViewModel viewModel = serviceLocator<ProjectViewModel>();
+    final FloorModel currentFloor = viewModel.floors[index];
+    //remove floor
+    viewModel.removeFloor(currentFloor.id);
+    //add new floor with same name
+    final FloorModel model = FloorModel(
+      name: "Floor 1",
+      floorPlan: FloorPlanModel.defaultFloorPlan,
+    );
+
+    // remove all zones
+    viewModel.removeAllZones();
+    viewModel.addFloor(model);
   }
 
   /// Show confirmation dialog for deleting a floor
@@ -486,6 +512,56 @@ class _BuildingPlanState extends State<BuildingPlan> {
               onTap: () {
                 Navigator.of(context).pop(true);
                 _deleteFloor(index);
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// Show confirmation dialog for deleting a floor
+  void _showRestConfirmDialog(int index) {
+    final ProjectViewModel viewModel = serviceLocator<ProjectViewModel>();
+    final String floorName = viewModel.floors[index].name;
+
+    showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(
+            'Reset Floor',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          content: Text(
+            'Are you sure you want to Reset "$floorName"? This action cannot be undone.',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          actions: <Widget>[
+            FusionOutlinedButton(
+              height: 32,
+              width: 80,
+              label: "Cancel",
+              textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 12),
+              onTap: () {
+                Navigator.of(context).pop(false);
+              },
+            ),
+            const SizedBox(width: 8),
+            FusionButton(
+              height: 32,
+              width: 80,
+              label: "Delete",
+              activeBackgroundColor: Theme.of(context).colorScheme.error,
+              textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+                fontSize: 12,
+                color: Colors.white,
+              ),
+              onTap: () {
+                Navigator.of(context).pop(true);
+                _resetFloor(index);
               },
             ),
           ],

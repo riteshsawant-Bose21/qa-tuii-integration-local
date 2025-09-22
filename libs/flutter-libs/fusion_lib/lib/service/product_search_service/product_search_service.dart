@@ -85,12 +85,6 @@ class ProductSearchService {
         }
       }
 
-      // Specifications matching (lowest priority)
-      final String lowerSpecs = product.specifications.toLowerCase();
-      if (lowerSpecs.contains(lowerQuery)) {
-        score += 10.0; // Specifications contain query
-      }
-
       // Color matching (for speakers)
       if (product.color != null) {
         final String lowerColor = product.color!.toLowerCase();
