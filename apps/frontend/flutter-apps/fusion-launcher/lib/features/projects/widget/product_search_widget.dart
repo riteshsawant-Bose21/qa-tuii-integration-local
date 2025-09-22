@@ -10,7 +10,6 @@ class ProductSearchWidget extends StatelessWidget {
   const ProductSearchWidget({
     super.key,
     required this.searchController,
-    required this.selectedProductType,
     this.selectedSortOption,
     required this.selectedProductTypes,
     required this.selectedMountTypes,
@@ -25,7 +24,6 @@ class ProductSearchWidget extends StatelessWidget {
   });
 
   final TextEditingController searchController;
-  final ProductType? selectedProductType;
   final SortOption? selectedSortOption;
   final Set<ProductType> selectedProductTypes;
   final Set<String> selectedMountTypes;
@@ -392,5 +390,6 @@ class ProductSearchWidget extends StatelessWidget {
     selectedCoverages.clear();
     selectedImpedances.clear();
     onFiltersChanged?.call();
+    // searchController.text = '';
   }
 }

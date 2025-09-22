@@ -69,10 +69,18 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
                   Expanded(
                     child: FusionAppText(text: "Filter", style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 11)),
                   ),
+                  TextButton(
+                    onPressed: () {
+                      // Apply filters and close the dropdown
+                      // _applyFilters();
+                      Navigator.of(context).pop();
+                    },
+                    child: Text('Apply', style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 11)),
+                  ),
                   if (_hasAnyFilters())
                     TextButton(
                       onPressed: _clearAllFilters,
-                      child: Text('Clear All', style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 11)),
+                      child: Text('Clear', style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 11)),
                     ),
                 ],
               ),
@@ -290,6 +298,8 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
       _localImpedances.clear();
     });
     _applyFilters();
+    // Close the dropdown after clearing
+    Navigator.of(context).pop();
   }
 
   String _getProductTypeDisplayName(ProductType type) {

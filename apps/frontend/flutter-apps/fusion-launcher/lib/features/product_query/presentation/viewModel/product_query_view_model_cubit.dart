@@ -32,6 +32,7 @@ class ProductQueryCubit extends Cubit<ProductQueryState> {
 
   /// Perform search and return sorted results
   List<ProductQueryModel> _performSearch(String query) {
+    /// Start with filtered products based on selected filters
     final List<ProductQueryModel> searchBase = _getFilteredProducts();
 
     if (query.isEmpty) {
@@ -50,12 +51,9 @@ class ProductQueryCubit extends Cubit<ProductQueryState> {
         state.selectedVenueTypes.isEmpty &&
         state.selectedColors.isEmpty &&
         state.selectedCoverages.isEmpty &&
-        state.selectedImpedances.isEmpty &&
-        state.selectedProductType == null) {
+        state.selectedImpedances.isEmpty) {
       return ProductAPI.getAllProducts();
     }
-
-    print("state.searchQuery => ${state.searchQuery}");
 
     if (state.selectedProductTypes.isEmpty && state.searchQuery.isEmpty) {
       return ProductAPI.getAllProducts();
@@ -70,10 +68,6 @@ class ProductQueryCubit extends Cubit<ProductQueryState> {
     /// Filter by multiple product types from filter dropdown (priority)
     if (state.selectedProductTypes.isNotEmpty) {
       products = products.where((ProductQueryModel product) => state.selectedProductTypes.contains(product.type)).toList();
-    }
-    /// Filter by single product type from main dropdown (fallback)
-    else if (state.selectedProductType != null) {
-      products = products.where((ProductQueryModel product) => product.type == state.selectedProductType).toList();
     }
 
     /// Filter by color (only for speakers)
@@ -176,25 +170,19 @@ class ProductQueryCubit extends Cubit<ProductQueryState> {
             // For speakers, filter based on nominalOhms impedance levels
             if (product.type == ProductType.speaker) {
               if (product.nominalOhms == null || product.nominalOhms == 0.0) {
-                print("Speaker ${product.name} has no valid nominalOhms data (${product.nominalOhms})");
                 return false;
               }
 
               final String impedanceLevel = _getImpedanceLevelFromOhms(product.nominalOhms!);
               final bool matches = state.selectedImpedances.any((String selectedImpedance) => selectedImpedance.toLowerCase() == impedanceLevel.toLowerCase());
 
-              print(
-                "Speaker ${product.name} nominalOhms: ${product.nominalOhms}, impedance: $impedanceLevel, selected: ${state.selectedImpedances}, matches: $matches",
-              );
               return matches;
             }
             // For non-speakers, always include them
             return true;
           }).toList();
-      print("Impedance filter: $beforeImpedanceFilter -> ${products.length} products");
     }
 
-    print("Filtered products count: ${products.length}");
     return products;
   }
 
@@ -248,9 +236,6 @@ class ProductQueryCubit extends Cubit<ProductQueryState> {
   }
 
   void onSortOptionChanged(SortOption? option) {
-    print("=== Sort Debug ===");
-    print("Sort option changing from ${state.selectedSortOption} to: $option");
-
     // First emit the new state with the updated sort option
     emit(
       state.copyWith(
@@ -268,15 +253,11 @@ class ProductQueryCubit extends Cubit<ProductQueryState> {
         filteredProducts: newFilteredProducts,
       ),
     );
-
-    print("State updated - selectedSortOption: ${state.selectedSortOption}");
-    print("=== End Sort Debug ===");
   }
 
   void onFiltersChanged() {
     // Sync selectedProductType with selectedProductTypes when filters change
     final ProductType? singleProductType = state.selectedProductTypes.length == 1 ? state.selectedProductTypes.first : null;
-
     // If no filters are selected, show all products
     final List<ProductQueryModel> newFilteredProducts =
         state.selectedProductTypes.isEmpty &&
@@ -284,7 +265,8 @@ class ProductQueryCubit extends Cubit<ProductQueryState> {
                 state.selectedVenueTypes.isEmpty &&
                 state.selectedColors.isEmpty &&
                 state.selectedCoverages.isEmpty &&
-                state.selectedImpedances.isEmpty
+                state.selectedImpedances.isEmpty &&
+                state.searchQuery.isEmpty
             ? ProductAPI.getAllProducts()
             : _performSearch(state.searchQuery);
 
