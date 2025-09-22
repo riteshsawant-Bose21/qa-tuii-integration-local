@@ -175,23 +175,30 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                         decoration: BoxDecoration(
                           color: isSelected ? Colors.grey[200] : Colors.white,
                         ),
-                        child: Row(
-                          children: <Widget>[
-                            _buildZoneIndicator(zone),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: _buildZoneTitle(zone, isSelected),
-                            ),
+                        child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+                          builder: (BuildContext context, ProjectViewModelState state) {
+                            return Row(
+                              children: <Widget>[
+                                _buildZoneIndicator(zone),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: _buildZoneTitle(zone, isSelected),
+                                ),
 
-                            InkWell(
-                              onTap: () => serviceLocator<ProjectViewModel>().enterZoneSelectionMode(zone),
-                              child: _buildAddIcon(),
-                            ),
-                            const SizedBox(width: 8),
-                            _buildDeleteButton(zone),
-                            const SizedBox(width: 8),
-                            _buildExpandIcon(isExpanded),
-                          ],
+                                if (serviceLocator<ProjectViewModel>().currentSelectedZoneId == null) ...<Widget>[
+                                  InkWell(
+                                    onTap: () => serviceLocator<ProjectViewModel>().enterZoneSelectionMode(zone),
+                                    child: _buildAddIcon(),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  _buildDeleteButton(zone),
+                                ],
+
+                                const SizedBox(width: 8),
+                                _buildExpandIcon(isExpanded),
+                              ],
+                            );
+                          },
                         ),
                       ),
                     ),
@@ -246,6 +253,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
 
   Widget _buildZoneIndicator(Zone zone) {
     return ColorSelector(
+      enabled: serviceLocator<ProjectViewModel>().currentSelectedZoneId == null,
       selectedColor: hexToColor(zone.zoneColor),
       availableColors: Zone.zoneColors.map((String color) => hexToColor(color)).toList(),
       onColorChanged: (Color color) {
@@ -297,6 +305,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: TextFormField(
         initialValue: zone.name,
+        enabled: serviceLocator<ProjectViewModel>().currentSelectedZoneId == null,
         decoration: const InputDecoration(
           hintText: 'Zone Name',
           border: InputBorder.none,
