@@ -23,10 +23,10 @@
 #include <OCP.1/Ocp1LiteUdpNetwork.h>
 #endif
 #include <OCP.1/Ocp1LiteNetworkSystemInterfaceID.h>
-#include "ConcreteGainActuator.h"
-#include "ConcreteMuteActuator.h"
-#include "ConcreteSwitchActuator.h"
-#include "ZoneGroup.h"
+#include "workers/ConcreteGainActuator.h"
+#include "workers/ConcreteMuteActuator.h"
+#include "workers/ConcreteSwitchActuator.h"
+#include "workers/ZoneGroup.h"
 #include "ZoneConfigBuilder.h"
 // Constants for ONO assignments
 const ::OcaONo ROOT_ZONE_CONTAINER_ONO = static_cast<::OcaONo>(8000);

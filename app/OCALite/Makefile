@@ -26,6 +26,7 @@ endif
 CXXFLAGS := -Wall -Wextra -std=c++11 $(PKG_CFLAGS) \
 	    $(PKG_CDEFS) \
 	    -DOCA_RUN \
+    -I../common \
     -I../../common \
     -I../../common/HostInterfaceLite \
     -I../../common/OCALite \
@@ -38,16 +39,19 @@ CXXFLAGS := -Wall -Wextra -std=c++11 $(PKG_CFLAGS) \
 APP_SOURCES := $(wildcard *.cpp) \
                $(shell find HostInterface -name "*.cpp" | grep -v "AES67")
 
-# Common source files (all from common directory, excluding AES67)
-COMMON_SOURCES := $(shell find ../../common -name "*.cpp" | grep -v "AES67" | grep -v "OcaLiteMediaTransportNetworkAES67")
+# Common source files
+FRAMEWORK_COMMON_SOURCES := $(shell find ../../common -name "*.cpp" | grep -v "AES67" | grep -v "OcaLiteMediaTransportNetworkAES67")
+APP_COMMON_SOURCES       := ../common/ZoneConfigBuilder.cpp \
+                           ../common/workers/ConcreteGainActuator.cpp \
+                           ../common/workers/ConcreteMuteActuator.cpp \
+                           ../common/workers/ConcreteSwitchActuator.cpp \
+                           ../common/workers/ZoneGroup.cpp
 
-# All source files
-ALL_SOURCES := $(APP_SOURCES) $(COMMON_SOURCES)
-
-# Object files in build directory, preserving directory structure
-APP_OBJECTS := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(APP_SOURCES))
-COMMON_OBJECTS := $(patsubst ../../common/%.cpp,$(BUILD_DIR)/common/%.o,$(COMMON_SOURCES))
-ALL_OBJECTS := $(APP_OBJECTS) $(COMMON_OBJECTS)
+# Object files
+APP_OBJECTS                := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(APP_SOURCES))
+FRAMEWORK_COMMON_OBJECTS   := $(patsubst ../../common/%.cpp,$(BUILD_DIR)/framework-common/%.o,$(FRAMEWORK_COMMON_SOURCES))
+APP_COMMON_OBJECTS         := $(patsubst ../common/%.cpp,$(BUILD_DIR)/app-common/%.o,$(APP_COMMON_SOURCES))
+ALL_OBJECTS                := $(APP_OBJECTS) $(FRAMEWORK_COMMON_OBJECTS) $(APP_COMMON_OBJECTS)
 
 # Output executable
 TARGET := ocalite
@@ -57,15 +61,20 @@ TARGET := ocalite
 all: $(TARGET)
 
 $(TARGET): $(ALL_OBJECTS)
-	$(CXX) $(ALL_OBJECTS) $(PKG_LIBS) -o $@ -lpthread -lc $(LDFLAGS)
+	$(CXX) $^ $(PKG_LIBS) -o $@ -lpthread -lc $(LDFLAGS)
 
 # App source files
 $(BUILD_DIR)/%.o: %.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-# Common source files  
-$(BUILD_DIR)/common/%.o: ../../common/%.cpp
+# App-common source files
+$(BUILD_DIR)/app-common/%.o: ../common/%.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+# Framework-common source files
+$(BUILD_DIR)/framework-common/%.o: ../../common/%.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
