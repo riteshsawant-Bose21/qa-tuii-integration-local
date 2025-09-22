@@ -1,8 +1,8 @@
 /// Product types enum
 enum ProductType {
   speaker,
-  amplifier,
   endpoints,
+  amplifier,
   sources,
   dsps,
   controllers,

@@ -93,7 +93,7 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
               initiallyExpanded: _localProductTypes.length == 1 && _localProductTypes.contains(ProductType.speaker) ? false : true,
               options:
                   ProductType.values
-                      .where((ProductType type) => type != ProductType.sources)
+                      .where((ProductType type) => (type != ProductType.sources) && (type != ProductType.racks))
                       .map((ProductType type) => _getProductTypeDisplayName(type))
                       .toList(),
               selectedOptions: _localProductTypes.map((ProductType type) => _getProductTypeDisplayName(type)).toSet(),
