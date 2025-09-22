@@ -10,6 +10,7 @@ class ColorSelector extends StatefulWidget {
   final double? popupWidth;
   final int? gridColumns;
   final double? alpha;
+  final bool enabled;
 
   const ColorSelector({
     super.key,
@@ -22,6 +23,7 @@ class ColorSelector extends StatefulWidget {
     this.popupWidth = 200,
     this.gridColumns = 4,
     this.alpha = 0.6,
+    this.enabled = true,
   });
 
   @override
@@ -147,13 +149,16 @@ class _ColorSelectorState extends State<ColorSelector> {
     return CompositedTransformTarget(
       link: _layerLink,
       child: GestureDetector(
-        onTap: () {
-          if (_overlayEntry == null) {
-            _showColorPicker();
-          } else {
-            _hideColorPicker();
-          }
-        },
+        onTap:
+            widget.enabled
+                ? () {
+                  if (_overlayEntry == null) {
+                    _showColorPicker();
+                  } else {
+                    _hideColorPicker();
+                  }
+                }
+                : null,
         child: Container(
           width: widget.width,
           height: widget.height,
