@@ -39,7 +39,11 @@ CXXFLAGS := -Wall -Wextra -std=c++11 $(PKG_CFLAGS) \
 FRAMEWORK_COMMON_SOURCES := $(shell find ../../common -name "*.cpp" | grep -v "AES67" | grep -v "OcaLiteMediaTransportNetworkAES67")
 
 # Source files from the app-level common directory
-APP_COMMON_SOURCES       := $(shell find ../common -name "*.cpp")
+APP_COMMON_SOURCES       := ../common/ZoneConfigBuilder.cpp \
+                           ../common/workers/ConcreteGainActuator.cpp \
+                           ../common/workers/ConcreteMuteActuator.cpp \
+                           ../common/workers/ConcreteSwitchActuator.cpp \
+                           ../common/workers/ZoneGroup.cpp
 
 # App-specific source files
 APP_SOURCES := OCALiteController.cpp \
