@@ -27,7 +27,6 @@ CXXFLAGS := -Wall -Wextra -std=c++11 $(PKG_CFLAGS) \
 	    $(PKG_CDEFS) \
 	    -DOCA_RUN \
     -I../common \
-    -I../common/workers \
     -I../../common \
     -I../../common/HostInterfaceLite \
     -I../../common/OCALite \
