@@ -146,8 +146,52 @@ bool ConnectToDevice(const OcaServiceDiscovery::DiscoveredDevice &device, ::Ocp1
     }
 }
 
-int main(int /*argc*/, const char * /*argv*/[])
+void ShowUsage(const char* programName)
 {
+    std::cout << "Usage: " << programName << " [OPTIONS]\n";
+    std::cout << "Options:\n";
+    std::cout << "  -id <string>    Set custom node ID (default: auto-generated)\n";
+    std::cout << "  -h, --help      Show this help message\n";
+    std::cout << "\nExample:\n";
+    std::cout << "  " << programName << " -id \"MyController\"\n";
+}
+
+int main(int argc, const char *argv[])
+{
+    std::string customNodeId = "";
+    
+    // Parse command line arguments
+    for (int i = 1; i < argc; i++)
+    {
+        std::string arg = argv[i];
+        
+        if (arg == "-h" || arg == "--help")
+        {
+            ShowUsage(argv[0]);
+            return 0;
+        }
+        else if (arg == "-id")
+        {
+            if (i + 1 < argc)
+            {
+                customNodeId = argv[i + 1];
+                i++; // Skip the next argument since it's the ID value
+            }
+            else
+            {
+                std::cerr << "Error: -id option requires a value\n";
+                ShowUsage(argv[0]);
+                return 1;
+            }
+        }
+        else
+        {
+            std::cerr << "Error: Unknown option '" << arg << "'\n";
+            ShowUsage(argv[0]);
+            return 1;
+        }
+    }
+
     // Initialize Oca Device
     static_cast<void>(::OcaLiteBlock::GetRootBlock());
 
@@ -173,7 +217,20 @@ int main(int /*argc*/, const char * /*argv*/[])
             // Create a controller network object (no server port)
             Ocp1LiteNetworkSystemInterfaceID interfaceId = ::Ocp1LiteNetworkSystemInterfaceID(static_cast<::OcaUint32>(0));
             std::vector<std::string> txtRecords; // Empty for controller
-            ::OcaLiteString nodeId = ::OcaLiteString("OCALiteController@" + OcfLiteConfigureGetDeviceName());
+            
+            // Use custom node ID if provided, otherwise use auto-generated
+            ::OcaLiteString nodeId;
+            if (!customNodeId.empty())
+            {
+                nodeId = ::OcaLiteString(customNodeId);
+                OCA_LOG_INFO_PARAMS("Using custom node ID: %s", customNodeId.c_str());
+            }
+            else
+            {
+                // ::OcaLiteString nodeId = ::OcaLiteString("OCALiteController@" + OcfLiteConfigureGetDeviceName());
+                nodeId = ::OcaLiteString("OCALiteController@" + OcfLiteConfigureGetDeviceName());
+                OCA_LOG_INFO_PARAMS("Using auto-generated node ID: %s", nodeId.GetString().c_str());
+            }
 
             // Create network with port 0 (no server socket)
             ::Ocp1LiteNetwork *ocp1Network = new ::Ocp1LiteNetwork(static_cast<::OcaONo>(9001), static_cast<::OcaBoolean>(true),
