@@ -1876,12 +1876,12 @@
         }
         ,
         {
-            "name": "iir_crossover",
+            "name": "crossover",
             "properties": [
                 {
                     "name": "channels",
                     "value_type": "integer",
-                    "default_value": 2,
+                    "default_value": 1,
                     "minimum_value": 1,
                     "maximum_value": 64
                 }
@@ -1894,14 +1894,7 @@
                     "channels": "channels"
                 },
                 {
-                    "name": "low_out",
-                    "signal_type": "audio",
-                    "direction": "output",
-                    "channels": "channels",
-                    "bypass_source": "in"
-                },
-                {
-                    "name": "high_out",
+                    "name": "out",
                     "signal_type": "audio",
                     "direction": "output",
                     "channels": "channels",
@@ -1910,43 +1903,49 @@
             ],
             "parameters": [
                 {
-                    "name": "lowpass_freq",
+                    "name": "hpf_freq",
                     "value_type": "float",
                     "dimensions": ["in"],
-                    "default_value": 200.0,
+                    "default_value": 20.0,
                     "minimum_value": 20.0,
                     "maximum_value": 20000.0
                 },
                 {
-                    "name": "highpass_freq",
+                    "name": "lpf_freq",
                     "value_type": "float",
                     "dimensions": ["in"],
-                    "default_value": 200.0,
+                    "default_value": 20000.0,
                     "minimum_value": 20.0,
                     "maximum_value": 20000.0
                 },
                 {
-                    "name": "lowpass_order",
+                    "name": "hpf_order",
                     "value_type": "integer",
                     "default_value": 4,
                     "allowed_values": [1, 2, 3, 4, 6, 8]
                 },
                 {
-                    "name": "highpass_order",
+                    "name": "lpf_order",
                     "value_type": "integer",
                     "default_value": 4,
                     "allowed_values": [1, 2, 3, 4, 6, 8]
                 },
                 {
-                    "name": "type",
+                    "name": "hpf_type",
                     "value_type": "string",
                     "default_value": "linkwitz_riley",
                     "allowed_values": ["linkwitz_riley", "butterworth", "bessel"]
                 },
                 {
-                    "name": "enabled",
+                    "name": "lpf_type",
+                    "value_type": "string",
+                    "default_value": "linkwitz_riley",
+                    "allowed_values": ["linkwitz_riley", "butterworth", "bessel"]
+                },
+                {
+                    "name": "bypass",
                     "value_type": "bool",
-                    "default_value": true
+                    "default_value": false
                 }
             ]
         }

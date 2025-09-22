@@ -1,0 +1,177 @@
+{
+    "session": {
+        "property_settings": [
+            { "name": "frame_size", "value": 32 },
+            { "name": "sample_rate", "value": 48000 }
+        ]
+    },
+    "audio_tasks": [
+        {
+            "name": "crossover_test",
+            "property_settings": [
+                { "name": "is_jack_client", "value": false },
+                { "name": "frame_size", "value": 32 },
+                { "name": "sample_rate", "value": 48000 }
+            ],
+            "blocks": [
+                {
+                    "name": "infile",
+                    "algorithm": "wav_read",
+                    "property_settings": [
+                        { "name": "frame_size", "value": 32 },
+                        { "name": "sample_rate", "value": 48000 }
+                    ],
+                    "terminal_channels": [
+                        { "name": "out", "channels": 1 }
+                    ]
+                },
+                {
+                    "name": "crossover_low",
+                    "algorithm": "crossover",
+                    "property_settings": [
+                        { "name": "channels", "value": 1 },
+                        { "name": "frame_size", "value": 32 },
+                        { "name": "sample_rate", "value": 48000 }
+                    ]
+                },
+                {
+                    "name": "crossover_high",
+                    "algorithm": "crossover",
+                    "property_settings": [
+                        { "name": "channels", "value": 1 },
+                        { "name": "frame_size", "value": 32 },
+                        { "name": "sample_rate", "value": 48000 }
+                    ]
+                },
+                {
+                    "name": "outfile_low",
+                    "algorithm": "wav_write",
+                    "property_settings": [
+                        { "name": "frame_size", "value": 32 },
+                        { "name": "sample_rate", "value": 48000 }
+                    ],
+                    "terminal_channels": [
+                        { "name": "in", "channels": 1 }
+                    ]
+                },
+                {
+                    "name": "outfile_high",
+                    "algorithm": "wav_write",
+                    "property_settings": [
+                        { "name": "frame_size", "value": 32 },
+                        { "name": "sample_rate", "value": 48000 }
+                    ],
+                    "terminal_channels": [
+                        { "name": "in", "channels": 1 }
+                    ]
+                }
+            ],
+            "block_connections": [
+                {
+                    "source_block": "infile",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "crossover_low",
+                    "input_terminal": "in",
+                    "input_channel": 1
+                },
+                {
+                    "source_block": "infile",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "crossover_high",
+                    "input_terminal": "in",
+                    "input_channel": 1
+                },
+                {
+                    "source_block": "crossover_low",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "outfile_low",
+                    "input_terminal": "in",
+                    "input_channel": 1
+                },
+                {
+                    "source_block": "crossover_high",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "outfile_high",
+                    "input_terminal": "in",
+                    "input_channel": 1
+                }
+            ]
+        }
+    ],
+    "parameter_settings": [
+        {
+            "target": "crossover_low",
+            "name": "hpf_freq",
+            "value": 30.0
+        },
+        {
+            "target": "crossover_low",
+            "name": "lpf_freq",
+            "value": 200.0
+        },
+        {
+            "target": "crossover_low",
+            "name": "hpf_order",
+            "value": 2
+        },
+        {
+            "target": "crossover_low",
+            "name": "lpf_order",
+            "value": 4
+        },
+        {
+            "target": "crossover_low",
+            "name": "hpf_type",
+            "value": "butterworth"
+        },
+        {
+            "target": "crossover_low",
+            "name": "lpf_type",
+            "value": "linkwitz_riley"
+        },
+        {
+            "target": "crossover_low",
+            "name": "bypass",
+            "value": false
+        },
+        {
+            "target": "crossover_high",
+            "name": "hpf_freq",
+            "value": 200.0
+        },
+        {
+            "target": "crossover_high",
+            "name": "lpf_freq",
+            "value": 18000.0
+        },
+        {
+            "target": "crossover_high",
+            "name": "hpf_order",
+            "value": 4
+        },
+        {
+            "target": "crossover_high",
+            "name": "lpf_order",
+            "value": 2
+        },
+        {
+            "target": "crossover_high",
+            "name": "hpf_type",
+            "value": "linkwitz_riley"
+        },
+        {
+            "target": "crossover_high",
+            "name": "lpf_type",
+            "value": "butterworth"
+        },
+        {
+            "target": "crossover_high",
+            "name": "bypass",
+            "value": false
+        }
+    ]
+}
