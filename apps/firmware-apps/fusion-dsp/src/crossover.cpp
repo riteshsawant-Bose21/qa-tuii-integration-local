@@ -4,142 +4,221 @@
 // real-time processing using configurable IIR filter designs.
 //
 
-#include "crossover.h"
-
 #include "iir.h"
+
+#include <bosepro/algorithm.h>
 #include <spdlog/spdlog.h>
+#include <cstdint>
 
-#include <cstring>
+namespace {
 
-namespace filter {
+enum class FilterType {
+    LINKWITZ_RILEY,
+    BUTTERWORTH,
+    BESSEL
+};
 
-
-Crossover::Crossover(int frame_size)
-    : frame_size(frame_size)
+class Crossover : public bosepro::Algorithm
 {
-    lpf = std::make_unique<IirFilter>(MAX_SOS);
-    hpf = std::make_unique<IirFilter>(MAX_SOS);
+public:
+    Crossover(const bosepro::BlockConfiguration &configuration);
+    virtual ~Crossover() = default;
+
+    virtual void process() override;
+
+private:
+    int_fast32_t channels;
+    bosepro::DspSignalMemory<const float *[]> in;
+    bosepro::DspSignalMemory<float *[]> out;
+    
+    bosepro::DspStateMemory<filter::IirFilter> hpf;
+    bosepro::DspStateMemory<filter::IirFilter> lpf;
+    
+    float hpf_freq;
+    float lpf_freq;
+    int hpf_order;
+    int lpf_order;
+    std::string hpf_type_str;
+    std::string lpf_type_str;
+    
+    FilterType hpf_type{FilterType::LINKWITZ_RILEY};
+    FilterType lpf_type{FilterType::LINKWITZ_RILEY};
+    static const int MAX_SOS = 4;
+    
+    void update_hpf();
+    void update_lpf();
+    void update_hpf_type();
+    void update_lpf_type();
+    void design_filter(filter::IirFilter* filter, FilterType type, bool is_highpass,
+                      float freq, int order);
+    
+    ALGORITHM_DECLARE(Crossover);
+};
+
+ALGORITHM_REGISTER(Crossover, "crossover");
+
+Crossover::Crossover(const bosepro::BlockConfiguration &configuration)
+    : bosepro::Algorithm(configuration)
+{
+    get_property("channels", channels);
+    
+    assign_terminal("in", in);
+    assign_terminal("out", out);
+    
+    assign_parameter("hpf_freq", &hpf_freq, 
+                     POST_FUNCTION_SCALAR(update_hpf));
+    assign_parameter("lpf_freq", &lpf_freq, 
+                     POST_FUNCTION_SCALAR(update_lpf));
+    assign_parameter("hpf_order", &hpf_order, 
+                     POST_FUNCTION_SCALAR(update_hpf));
+    assign_parameter("lpf_order", &lpf_order, 
+                     POST_FUNCTION_SCALAR(update_lpf));
+    assign_parameter("hpf_type", &hpf_type_str, 
+                     POST_FUNCTION_SCALAR(update_hpf_type));
+    assign_parameter("lpf_type", &lpf_type_str, 
+                     POST_FUNCTION_SCALAR(update_lpf_type));
+    
+    new (hpf.get()) filter::IirFilter(MAX_SOS, channels);
+    new (lpf.get()) filter::IirFilter(MAX_SOS, channels);
+    
+    update_hpf_type();
+    update_lpf_type();
+    
+    update_hpf();
+    update_lpf();
 }
 
-void Crossover::design()
+void Crossover::process()
 {
-    // early exit if disabled
-    if (!params.enabled)
+    hpf->process(out.get(), in.get(), get_frame_size());
+    lpf->process(out.get(), const_cast<const float**>(out.get()), get_frame_size());
+}
+
+void Crossover::update_hpf()
+{
+    design_filter(hpf.get(), hpf_type, true, hpf_freq, hpf_order);
+}
+
+void Crossover::update_lpf()
+{
+    design_filter(lpf.get(), lpf_type, false, lpf_freq, lpf_order);
+}
+
+// Convert string parameter to enum
+void Crossover::update_hpf_type()
+{
+    if (hpf_type_str == "butterworth")
     {
-        SPDLOG_DEBUG("Crossover::design() called while disabled");
-        return;
+        hpf_type = FilterType::BUTTERWORTH;
     }
-
-    int l_order = params.lowpass_order;
-    int h_order = params.highpass_order;
-
-    // For Bessel, minimum order is 2
-    if (params.type == CrossoverType::BESSEL || params.type == CrossoverType::LINKWITZ_RILEY) {
-        if (l_order < 2) {
-            l_order = 2;
-            SPDLOG_WARN("{} filters require minimum order 2, clamping lowpass from {} to 2", 
-                       (params.type == CrossoverType::BESSEL) ? "Bessel" : "Linkwitz-Riley", 
-                       params.lowpass_order);
-        }
-        if (h_order < 2) {
-            h_order = 2;
-            SPDLOG_WARN("{} filters require minimum order 2, clamping highpass from {} to 2",
-                       (params.type == CrossoverType::BESSEL) ? "Bessel" : "Linkwitz-Riley", 
-                       params.highpass_order);
-        }
-    }
-
-    // For Linkwitz-Riley crossovers, the order must be even
-    if (params.type == CrossoverType::LINKWITZ_RILEY)
+    else if (hpf_type_str == "bessel")
     {
-        if ((l_order & 1) != 0)
+        hpf_type = FilterType::BESSEL;
+    }
+    else
+    {
+        hpf_type = FilterType::LINKWITZ_RILEY;
+    }
+    
+    update_hpf();
+}
+
+void Crossover::update_lpf_type()
+{
+    if (lpf_type_str == "butterworth")
+    {
+        lpf_type = FilterType::BUTTERWORTH;
+    }
+    else if (lpf_type_str == "bessel")
+    {
+        lpf_type = FilterType::BESSEL;
+    }
+    else
+    {
+        lpf_type = FilterType::LINKWITZ_RILEY;
+    }
+    
+    update_lpf();
+}
+
+void Crossover::design_filter(filter::IirFilter* filter, FilterType type, 
+                              bool is_highpass, float freq, int order)
+{
+    int actual_order = order;
+    
+    // For Bessel and Linkwitz-Riley, minimum order is 2
+    if (type == FilterType::BESSEL || type == FilterType::LINKWITZ_RILEY)
+    {
+        if (actual_order < 2)
         {
-            ++l_order;
-            SPDLOG_WARN("Crossover::design() rounded LPF order up to even {} for LR", l_order);
-        }
-        if ((h_order & 1) != 0)
-        {
-            ++h_order;
-            SPDLOG_WARN("Crossover::design() rounded HPF order up to even {} for LR", h_order);
+            actual_order = 2;
+            SPDLOG_WARN("{} filters require minimum order 2, clamping {} from {} to 2", 
+                       (type == FilterType::BESSEL) ? "Bessel" : "Linkwitz-Riley",
+                       is_highpass ? "HPF" : "LPF", order);
         }
     }
-
-    int l_sections = (l_order + 1) / 2;
-    int h_sections = (h_order + 1) / 2;
-
-    float fs = params.sample_rate;
-
+    
+    // For Linkwitz-Riley, order must be even
+    if (type == FilterType::LINKWITZ_RILEY)
+    {
+        if ((actual_order & 1) != 0)
+        {
+            ++actual_order;
+            SPDLOG_WARN("Crossover: rounded {} order up to even {} for LR", 
+                       is_highpass ? "HPF" : "LPF", actual_order);
+        }
+    }
+    
+    int sections = (actual_order + 1) / 2;
+    float fs = get_sample_rate();
+    
     // validation of sample rate and frequencies
     if (fs <= 0.0f)
     {
-        SPDLOG_ERROR("Crossover::design() invalid sample rate {}", fs);
+        SPDLOG_ERROR("Crossover: invalid sample rate {}", fs);
         return;
     }
-
+    
     const float nyq = fs * 0.5f;
-    if (!(params.lowpass_freq > 0.0f && params.lowpass_freq < nyq))
+    float actual_freq = freq;
+    
+    if (!(actual_freq > 0.0f && actual_freq < nyq))
     {
-        SPDLOG_WARN("Crossover::design() lowpass_freq {} out of (0, fs/2). Clamping.", params.lowpass_freq);
-        if (params.lowpass_freq <= 0.0f) params.lowpass_freq = 20.0f;
-        if (params.lowpass_freq >= nyq) params.lowpass_freq = nyq - 1.0f;
+        SPDLOG_WARN("Crossover: {} freq {} out of (0, fs/2). Clamping.", 
+                   is_highpass ? "HPF" : "LPF", actual_freq);
+        if (actual_freq <= 0.0f) actual_freq = 20.0f;
+        if (actual_freq >= nyq) actual_freq = nyq - 1.0f;
     }
-    if (!(params.highpass_freq > 0.0f && params.highpass_freq < nyq))
+    
+    const char* design_name = nullptr;
+    
+    if (type == FilterType::BUTTERWORTH)
     {
-        SPDLOG_WARN("Crossover::design() highpass_freq {} out of (0, fs/2). Clamping.", params.highpass_freq);
-        if (params.highpass_freq <= 0.0f) params.highpass_freq = 20.0f;
-        if (params.highpass_freq >= nyq) params.highpass_freq = nyq - 1.0f;
+        design_name = is_highpass ? "iir_crossover_butterworth_hpf" 
+                                  : "iir_crossover_butterworth_lpf";
     }
-
-    if (params.type == CrossoverType::BUTTERWORTH)
+    else if (type == FilterType::LINKWITZ_RILEY)
     {
-        lpf->design("iir_crossover_butterworth_lpf", 0, params.lowpass_freq, l_order, fs, MAX_SOS);
-        hpf->design("iir_crossover_butterworth_hpf", 0, params.highpass_freq, h_order, fs, MAX_SOS);
+        design_name = is_highpass ? "iir_crossover_linkwitz_riley_hpf"
+                                  : "iir_crossover_linkwitz_riley_lpf";
     }
-    else if (params.type == CrossoverType::LINKWITZ_RILEY)
+    else if (type == FilterType::BESSEL)
     {
-        lpf->design("iir_crossover_linkwitz_riley_lpf", 0, params.lowpass_freq, l_order, fs, MAX_SOS);
-        hpf->design("iir_crossover_linkwitz_riley_hpf", 0, params.highpass_freq, h_order, fs, MAX_SOS);
+        design_name = is_highpass ? "iir_crossover_bessel_hpf"
+                                  : "iir_crossover_bessel_lpf";
     }
-    else if (params.type == CrossoverType::BESSEL)
-    {
-        lpf->design("iir_crossover_bessel_lpf", 0, params.lowpass_freq, l_order, fs, MAX_SOS);
-        hpf->design("iir_crossover_bessel_hpf", 0, params.highpass_freq, h_order, fs, MAX_SOS);
-    }
-
+    
+    filter->design(design_name, 0, actual_freq, actual_order, fs, MAX_SOS);
+    
     // unused sections are unity pass-through.
-    for (int s = l_sections; s < MAX_SOS; ++s)
+    for (int s = sections; s < MAX_SOS; ++s)
     {
-        lpf->set_section_coeffs(s, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0);
+        filter->set_section_coeffs(s, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f);
     }
-
-    for (int s = h_sections; s < MAX_SOS; ++s)
-    {
-        hpf->set_section_coeffs(s, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0);
-    }
-
-    SPDLOG_DEBUG("Crossover::design() placeholder configured: l_sec={} h_sec={} fs={}",
-                 l_sections, h_sections, fs);
+    
+    SPDLOG_DEBUG("Crossover: designed {} {} order={} freq={} fs={}",
+                is_highpass ? "HPF" : "LPF", design_name, 
+                actual_order, actual_freq, fs);
 }
 
-
-void Crossover::process(float *out_low, float *out_high, const float *in)
-{
-    if (!params.enabled)
-    {
-        std::memcpy(out_low, in, sizeof(float) * frame_size);
-        std::memcpy(out_high, in, sizeof(float) * frame_size);
-        return;
-    }
-
-    lpf->process(out_low, in, frame_size);
-    hpf->process(out_high, in, frame_size);
-}
-
-
-void Crossover::reset()
-{
-    lpf = std::make_unique<IirFilter>(MAX_SOS);
-    hpf = std::make_unique<IirFilter>(MAX_SOS);
-}
-
-} // namespace filter
+} // namespace
