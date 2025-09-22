@@ -37,13 +37,15 @@ public:
      * @param[in]  ports        The OCA input and output ports.
      * @param[in]  minGain      Lower limit of the gain in dB
      * @param[in]  maxGain      Upper limit of the gain in dB
+     * @param[in]  gainID       The gain identifier from JSON configuration (required)
      */
     ConcreteGainActuator(::OcaONo objectNumber,
                          ::OcaBoolean lockable,
                          const ::OcaLiteString &role,
                          const ::OcaLiteList<::OcaLitePort> &ports,
                          ::OcaDB minGain,
-                         ::OcaDB maxGain);
+                         ::OcaDB maxGain,
+                         const std::string &gainID);
 
     /**
      * Destructor.
@@ -71,6 +73,9 @@ protected:
 private:
     /** The actual gain value applied to the audio signal */
     mutable ::OcaDB m_actualGain;
+
+    /** The gain identifier from JSON configuration */
+    std::string m_gainID;
 
     /** private copy constructor, no copying of object allowed */
     ConcreteGainActuator(const ConcreteGainActuator &);

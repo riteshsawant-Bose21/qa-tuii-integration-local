@@ -46,14 +46,17 @@ ConcreteGainActuator::ConcreteGainActuator(::OcaONo objectNumber,
                                            const ::OcaLiteString &role,
                                            const ::OcaLiteList<::OcaLitePort> &ports,
                                            ::OcaDB minGain,
-                                           ::OcaDB maxGain)
+                                           ::OcaDB maxGain,
+                                           const std::string &gainID)
     : ::OcaLiteGain(objectNumber, lockable, role, ports, minGain, maxGain),
-      m_actualGain(0.0) // Initialize to 0 dB (unity gain)
+      m_actualGain(0.0), // Initialize to 0 dB (unity gain)
+      m_gainID(gainID)
 {
     // Enhanced logging with dynamic information
     OCA_LOG_INFO("=== ConcreteGainActuator Created ===");
     OCA_LOG_INFO_PARAMS("Object Number: %u", objectNumber);
     OCA_LOG_INFO_PARAMS("Role: %s", role.GetString().c_str());
+    OCA_LOG_INFO_PARAMS("Gain ID: %s", m_gainID.empty() ? "N/A" : m_gainID.c_str());
     OCA_LOG_INFO_PARAMS("Gain Range: %.2f dB to %.2f dB", minGain, maxGain);
     OCA_LOG_INFO_PARAMS("Number of Ports: %u", ports.GetCount());
 
@@ -62,10 +65,10 @@ ConcreteGainActuator::ConcreteGainActuator(::OcaONo objectNumber,
     {
         const ::OcaLitePort &port = ports.GetItem(i);
         std::string direction = (port.GetID().GetMode() == OCAPORTMODE_INPUT) ? "INPUT" : "OUTPUT";
-        OCA_LOG_INFO_PARAMS("  Port %u: %s (%s #%u)", 
-                            (i + 1), 
+        OCA_LOG_INFO_PARAMS("  Port %u: %s (%s #%u)",
+                            (i + 1),
                             port.GetName().GetString().c_str(),
-                            direction.c_str(), 
+                            direction.c_str(),
                             port.GetID().GetIndex());
     }
     OCA_LOG_INFO("====================================");
@@ -78,7 +81,7 @@ ConcreteGainActuator::ConcreteGainActuator(::OcaONo objectNumber,
         // Simulate setting the gain value in the actual audio processing hardware/software
         // In a real implementation, this would interface with your DSP or audio hardware
 
-        OCA_LOG_INFO_PARAMS("[GAIN] Setting gain to %.2f dB", gain);
+        OCA_LOG_INFO_PARAMS("[GAIN] Setting gain to %.2f dB (Gain ID: %s)", gain, m_gainID.empty() ? "N/A" : m_gainID.c_str());
 
         // Convert dB to linear for internal processing (if needed)
         double linearGain = dbToLinear(gain);
@@ -96,7 +99,8 @@ ConcreteGainActuator::ConcreteGainActuator(::OcaONo objectNumber,
         // For this example, we'll just store the value and simulate successful setting
         m_actualGain = gain;
 
-        OCA_LOG_INFO_PARAMS("[GAIN] ✓ Gain successfully set to %.2f dB (linear: %.6f)", gain, linearGain);
+        OCA_LOG_INFO_PARAMS("[GAIN] ✓ Gain successfully set to %.2f dB (linear: %.6f) (Gain ID: %s)",
+                            gain, linearGain, m_gainID.empty() ? "N/A" : m_gainID.c_str());
 
         return OCASTATUS_OK;
     }
@@ -121,7 +125,7 @@ ConcreteGainActuator::ConcreteGainActuator(::OcaONo objectNumber,
         // For this example, we'll return the stored value
         gain = m_actualGain;
 
-        OCA_LOG_INFO_PARAMS("[GAIN] Getting current gain value: %.2f dB", gain);
+        OCA_LOG_INFO_PARAMS("[GAIN] Getting current gain value: %.2f dB (Gain ID: %s)", gain, m_gainID.empty() ? "N/A" : m_gainID.c_str());
 
         return OCASTATUS_OK;
     }

@@ -25,7 +25,8 @@ public:
                            ::OcaUint16 minPosition,
                            ::OcaUint16 maxPosition,
                            const ::OcaLiteList<::OcaLiteString> &positionNames,
-                           const ::OcaLiteList<::OcaBoolean> &positionEnable);
+                           const ::OcaLiteList<::OcaBoolean> &positionEnable,
+                           const std::string &zoneID);
 
     virtual ~ConcreteSwitchActuator() {}
 
@@ -38,6 +39,9 @@ protected:
     virtual ::OcaLiteStatus SetPositionEnabledsValue(const ::OcaLiteList<::OcaBoolean> &enableds) override;
 
 private:
+    /** The zone identifier from JSON configuration */
+    std::string m_zoneID;
+    
     ConcreteSwitchActuator(const ConcreteSwitchActuator &);
     ConcreteSwitchActuator &operator=(const ConcreteSwitchActuator &);
 };

@@ -28,6 +28,9 @@
 #include "ConcreteSwitchActuator.h"
 #include "ZoneGroup.h"
 #include "ZoneConfigBuilder.h"
+// Constants for ONO assignments
+const ::OcaONo ROOT_ZONE_CONTAINER_ONO = static_cast<::OcaONo>(8000);
+
 #ifdef OCA_RUN
 extern void Ocp1LiteServiceRun();
 #else
@@ -54,16 +57,82 @@ int main(int argc, const char *argv[])
     // Initialize Oca Device
     static_cast<void>(::OcaLiteBlock::GetRootBlock());
 
-    // Example zone JSON (will later drive dynamic creation). For now we still create actuators manually below.
-    const char *zonesJson = "{\n  \"zones\": [\n    {\n      \"id\": \"zone1757016258290241\",\n      \"name\": \"Zone 1\",\n      \"gainID\": \"gain1757016233268\",\n      \"sources\": [\n        { \"index\": 1, \"label\": \"source1\" },\n        { \"index\": 2, \"label\": \"source2\" },\n        { \"index\": 3, \"label\": \"source3\" }\n      ]\n    },\n    {\n      \"id\": \"zone173424\",\n      \"name\": \"Zone 2\",\n      \"gainID\": \"gain123423\",\n      \"sources\": [\n        { \"index\": 1, \"label\": \"source1\" },\n        { \"index\": 2, \"label\": \"source2\" },\n        { \"index\": 3, \"label\": \"source3\" }\n      ]\n    }\n  ]\n}";
+    // Example zone JSON with new nested zones object structure
+    const char *zonesJson =
+        "{\n"
+        "  \"controllers\": {\n"
+        "    \"ctrl1\": {\n"
+        "      \"id\": \"ctrl1\",\n"
+        "      \"name\": \"Controller 1\",\n"
+        "      \"zoneIds\": [\"zone1\"]\n"
+        "    },\n"
+        "    \"ctrl2\": {\n"
+        "      \"id\": \"ctrl2\",\n"
+        "      \"name\": \"Controller 2\",\n"
+        "      \"zoneIds\": [\"zone2\", \"zone3\"]\n"
+        "    }\n"
+        "  },\n"
+        "  \"zones\": {\n"
+        "    \"zone1\": {\n"
+        "      \"id\": \"zone1\",\n"
+        "      \"name\": \"Living Room\",\n"
+        "      \"controllerId\": \"ctrl1\",\n"
+        "      \"gainID\": \"gain1\",\n"
+        "      \"ono\": {\n"
+        "        \"zone\": 8001,\n"
+        "        \"gain\": 8002,\n"
+        "        \"mute\": 8003,\n"
+        "        \"sourceSelector\": 8004\n"
+        "      },\n"
+        "      \"sources\": [\n"
+        "        {\"index\": 0, \"label\": \"HDMI 1\"},\n"
+        "        {\"index\": 1, \"label\": \"HDMI 2\"},\n"
+        "        {\"index\": 2, \"label\": \"Bluetooth\"}\n"
+        "      ]\n"
+        "    },\n"
+        "    \"zone2\": {\n"
+        "      \"id\": \"zone2\",\n"
+        "      \"name\": \"Kitchen\",\n"
+        "      \"controllerId\": \"ctrl2\",\n"
+        "      \"gainID\": \"gain2\",\n"
+        "      \"ono\": {\n"
+        "        \"zone\": 8005,\n"
+        "        \"gain\": 8006,\n"
+        "        \"mute\": 8007,\n"
+        "        \"sourceSelector\": 8008\n"
+        "      },\n"
+        "      \"sources\": [\n"
+        "        {\"index\": 0, \"label\": \"Radio\"},\n"
+        "        {\"index\": 1, \"label\": \"Streaming\"}\n"
+        "      ]\n"
+        "    },\n"
+        "    \"zone3\": {\n"
+        "      \"id\": \"zone3\",\n"
+        "      \"name\": \"Bedroom\",\n"
+        "      \"controllerId\": \"ctrl2\",\n"
+        "      \"gainID\": \"gain3\",\n"
+        "      \"ono\": {\n"
+        "        \"zone\": 8009,\n"
+        "        \"gain\": 8010,\n"
+        "        \"mute\": 8011,\n"
+        "        \"sourceSelector\": 8012\n"
+        "      },\n"
+        "      \"sources\": [\n"
+        "        {\"index\": 0, \"label\": \"TV\"},\n"
+        "        {\"index\": 1, \"label\": \"AUX\"},\n"
+        "        {\"index\": 2, \"label\": \"AirPlay\"}\n"
+        "      ]\n"
+        "    }\n"
+        "  }\n"
+        "}";
 
-    BuiltZones bz = BuildZonesFromJson(zonesJson);
+    BuiltZones bz = BuildZonesFromJson(zonesJson, ROOT_ZONE_CONTAINER_ONO);
     if (bz.zonesContainer)
     {
         ZoneGroup *rootZone = bz.zonesContainer.get();
         if (::OcaLiteBlock::GetRootBlock().AddObject(*rootZone))
         {
-            printf("✓ Zones container (JSON) added (Object #5000) with %zu inner zone groups\r\n", bz.zones.size());
+            printf("✓ Zones container (JSON) added (Object #%u) with %zu inner zone groups\r\n", ROOT_ZONE_CONTAINER_ONO, bz.zones.size());
             bz.zonesContainer.release();
         }
         else
