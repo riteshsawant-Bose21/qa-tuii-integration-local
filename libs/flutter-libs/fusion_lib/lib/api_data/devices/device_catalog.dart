@@ -12,7 +12,9 @@ class DeviceCatalog {
     DeviceSpec(
       name: "4ch PowerSmart", 
       analogInputs: 4, 
-      analogOutputs: 4, 
+      analogOutputs: 4,           // Keep for backwards compatibility
+      lineOutputs: 4,             // 4 line outputs (can be converted from loudspeaker outputs)
+      loudspeakerOutputs: 4,      // 4 loudspeaker outputs per new spec
       networkInputs: 4,
       networkOutputs: 4,
       imageUrl: 'assets/images/bose_dsp.png',
@@ -21,7 +23,9 @@ class DeviceCatalog {
     DeviceSpec(
       name: "8ch PowerSmart", 
       analogInputs: 8, 
-      analogOutputs: 8, 
+      analogOutputs: 8,           // Keep for backwards compatibility
+      lineOutputs: 8,             // 8 line outputs (can be converted from loudspeaker outputs)
+      loudspeakerOutputs: 8,      // 8 loudspeaker outputs per new spec
       networkInputs: 8,
       networkOutputs: 8,
       imageUrl: 'assets/images/bose_dsp.png',
@@ -30,7 +34,9 @@ class DeviceCatalog {
     DeviceSpec(
       name: "FM6", 
       analogInputs: 4, 
-      analogOutputs: 4, 
+      analogOutputs: 4,           // Keep for backwards compatibility
+      lineOutputs: 4,             // 4 analog outputs per new spec
+      loudspeakerOutputs: 0,      // 0 loudspeaker outputs per new spec
       networkInputs: 0,
       networkOutputs: 0,
       imageUrl: 'assets/images/bose_dsp.png',
@@ -39,7 +45,9 @@ class DeviceCatalog {
     DeviceSpec(
       name: "FM8Y", 
       analogInputs: 4, 
-      analogOutputs: 8, 
+      analogOutputs: 8,           // Keep for backwards compatibility
+      lineOutputs: 8,             // 8 analog outputs per new spec
+      loudspeakerOutputs: 0,      // 0 loudspeaker outputs per new spec
       networkInputs: 8,
       networkOutputs: 8,
       imageUrl: 'assets/images/bose_dsp.png',
@@ -52,7 +60,9 @@ class DeviceCatalog {
     DeviceSpec(
       name: "FusionConnect", 
       analogInputs: 24, 
-      analogOutputs: 24, 
+      analogOutputs: 24,          // Keep for backwards compatibility
+      lineOutputs: 24,            // Assume all 24 are line outputs for now
+      loudspeakerOutputs: 0,      // No built-in loudspeaker outputs
       networkInputs: 0,
       networkOutputs: 0,
       imageUrl: 'assets/images/bose_dsp.png',
@@ -61,7 +71,9 @@ class DeviceCatalog {
     DeviceSpec(
       name: "PowerPure Amplifier", 
       analogInputs: 0, 
-      analogOutputs: 4, 
+      analogOutputs: 4,           // Keep for backwards compatibility
+      lineOutputs: 0,             // No line outputs
+      loudspeakerOutputs: 4,      // 4 loudspeaker outputs
       networkInputs: 0,
       networkOutputs: 0,
       imageUrl: 'assets/images/bose_dsp.png',

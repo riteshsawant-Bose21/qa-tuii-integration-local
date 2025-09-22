@@ -1,13 +1,13 @@
 /// Fusion Algorithms Library
-///
+/// 
 /// This library contains algorithms for audio system design and configuration,
 /// including SPL calculations, speaker recommendations, tap setting calculations,
 /// and system optimization.
-///
+/// 
 /// Data structures (speakers, amplifiers, devices) are now located in the
 /// separate API data module for better organization and API integration.
 
-library;
+library fusion_algorithms;
 
 // API Data exports (centralized data structures)
 export '../api_data/api_data.dart';
@@ -35,10 +35,3 @@ export 'device_recommender/device_recommender.dart';
 export 'shared/math_utils.dart';
 export 'shared/validation_utils.dart';
 export 'shared/shared.dart';
-
-// Amplifier Matching exports
-export 'amplifier_matching/amplifier_matching.dart';
-export 'amplifier_matching/amp_matching_types.dart';
-export 'amplifier_matching/amplifier_matcher.dart';
-export 'amplifier_matching/amplifier_matching_error_handler.dart';
-export 'amplifier_matching/amplifier_matching_logger.dart';
