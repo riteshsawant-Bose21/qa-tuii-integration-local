@@ -10,7 +10,6 @@
 
 #include <cmath>
 #include <array>
-#include <functional>
 
 using namespace filter;
 
@@ -22,68 +21,19 @@ struct FilterSection {
         : alpha(a), q(q_val), is_first_order(first_order) {}
 };
 
-
 using FilterConfig = std::array<FilterSection, 4>;
 
 struct FilterOrderConfig {
     int order;
     FilterConfig config;
-    FilterOrderConfig(int ord, const FilterConfig& cfg) : order(ord), config(cfg) {}
 };
-
-using CoeffCalcFunc = std::function<void(float tx, float q, float cumulative_b0,
-                                        float& b0, float& b1, float& b2,
-                                        float& a1, float& a2)>;
-
-static void generic_filter_design(IirFilter *iir, int start_section, float frequency,
-                                int order, float sample_rate, int max_sections,
-                                const FilterOrderConfig& config,
-                                CoeffCalcFunc calc_first_order,
-                                CoeffCalcFunc calc_second_order)
-{
-    int used_sections = (order + 1) / 2;
-    if (used_sections > max_sections) {
-        SPDLOG_WARN("filter_design: requested {} sections, max {}. Clamping.", used_sections, max_sections);
-        used_sections = max_sections;
-    }
-
-    const float PI = 3.14159265f;
-    float cumulative_b0 = 1.0f;
-
-    for (int s = 0; s < used_sections; ++s) {
-        const FilterSection& section = config.config[s];
-
-        if (section.alpha == 0.0f && section.q == 0.0f) {
-            iir->set_section_coeffs(start_section + s, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f);
-            continue;
-        }
-
-        float tx = tanf(frequency * (PI / sample_rate));
-        float b0, b1, b2, a1, a2;
-
-        if (section.is_first_order) {
-            calc_first_order(tx * section.alpha, section.q, cumulative_b0, b0, b1, b2, a1, a2);
-        } else {
-            calc_second_order(tx * section.alpha, section.q, cumulative_b0, b0, b1, b2, a1, a2);
-        }
-
-        cumulative_b0 = b0;
-        iir->set_section_coeffs(start_section + s, b0, b1, b2, 1.0f, a1, a2);
-    }
-
-    for (int s = used_sections; s < max_sections; ++s) {
-        iir->set_section_coeffs(start_section + s, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f);
-    }
-}
 
 static const FilterOrderConfig butterworth_configs[] = {
     //6dB
     {1, {{ {1.0f, 0.0f, true}, {0,0,false}, {0,0,false}, {0,0,false} }}},
     //12dB
     {2, {{ {1.0f, 0.707107f, false}, {0,0,false}, {0,0,false}, {0,0,false} }}},
-    //18dB
-    {3, {{ {1.0f, 0.0f, true}, {1.0f, 1.000000f, false}, {0,0,false}, {0,0,false} }}},
-    //24dB
+    {3, {{ {1.0f, 0.0f, true}, {1.0f, 1.0f, false}, {0,0,false}, {0,0,false} }}},
     {4, {{ {1.0f, 0.541196f, false}, {1.0f, 1.306563f, false}, {0,0,false}, {0,0,false} }}},
     //36dB
     {6, {{ {1.0f, 0.517638f, false}, {1.0f, 0.707107f, false}, {1.0f, 1.931852f, false}, {0,0,false} }}},
@@ -117,123 +67,6 @@ static const FilterOrderConfig linkwitz_riley_configs[] = {
     {8, {{ {1.0f, 0.541196f, false}, {1.0f, 1.306563f, false}, {1.0f, 0.541196f, false}, {1.0f, 1.306563f, false} }}}
 };
 
-// Butterworth coefficients
-static CoeffCalcFunc butterworth_lpf_first = [](float tx, float q, float cum_b0, float& b0, float& b1, float& b2, float& a1, float& a2) {
-    (void)q;
-    float tmp = 1.0f + tx;
-    b0 = cum_b0 * tx / tmp;
-    b1 = 1.0f;
-    b2 = 0.0f;
-    a1 = (1.0f - tx) / tmp;
-    a2 = 0.0f;
-};
-
-static CoeffCalcFunc butterworth_lpf_second = [](float tx, float q, float cum_b0, float& b0, float& b1, float& b2, float& a1, float& a2) {
-    float tx2 = tx * tx;
-    float txq = tx / q;
-    float tmp = 1.0f + txq + tx2;
-    b0 = cum_b0 * tx2 / tmp;
-    b1 = 2.0f;
-    b2 = 1.0f;
-    a1 = 2.0f * (1.0f - tx2) / tmp;
-    a2 = -((1.0f - txq + tx2) / tmp);
-};
-
-static CoeffCalcFunc butterworth_hpf_first = [](float tx, float q, float cum_b0, float& b0, float& b1, float& b2, float& a1, float& a2) {
-    (void)q;
-    float tmp = 1.0f + tx;
-    b0 = cum_b0 / tmp;
-    b1 = -1.0f; 
-    b2 = 0.0f;
-    a1 = (1.0f - tx) / tmp;
-    a2 = 0.0f;
-};
-
-static CoeffCalcFunc butterworth_hpf_second = [](float tx, float q, float cum_b0, float& b0, float& b1, float& b2, float& a1, float& a2) {
-    float tx2 = tx * tx;
-    float txq = tx / q;
-    float tmp = 1.0f + txq + tx2;
-    b0 = cum_b0 / tmp;
-    b1 = -2.0f; 
-    b2 = 1.0f;
-    a1 = 2.0f * (1.0f - tx2) / tmp;
-    a2 = -(1.0f - txq + tx2) / tmp;
-};
-
-// Bessel coefficients
-static CoeffCalcFunc bessel_lpf_first = [](float tx, float q, float cum_b0, float& b0, float& b1, float& b2, float& a1, float& a2) {
-    (void)q;
-    float tmp = 1.0f + tx;
-    b0 = cum_b0 * tx / tmp;
-    b1 = 1.0f;
-    b2 = 0.0f;
-    a1 = (1.0f - tx) / tmp;
-    a2 = 0.0f;
-};
-
-static CoeffCalcFunc bessel_lpf_second = [](float tx, float q, float cum_b0, float& b0, float& b1, float& b2, float& a1, float& a2) {
-    float tx2 = tx * tx;
-    float txq = tx / q;
-    float tmp = 1.0f + txq + tx2;
-    b0 = cum_b0 * tx2 / tmp;
-    b1 = 2.0f;
-    b2 = 1.0f;
-    a1 = 2.0f * (1.0f - tx2) / tmp;
-    a2 = -((1.0f - txq + tx2) / tmp);
-};
-
-static CoeffCalcFunc bessel_hpf_first = [](float tx, float q, float cum_b0, float& b0, float& b1, float& b2, float& a1, float& a2) {
-    (void)q;
-    float tmp = 1.0f + tx;
-    b0 = cum_b0 / tmp;
-    b1 = -1.0f;
-    b2 = 0.0f;
-    a1 = (1.0f - tx) / tmp;
-    a2 = 0.0f;
-};
-
-static CoeffCalcFunc bessel_hpf_second = [](float tx, float q, float cum_b0, float& b0, float& b1, float& b2, float& a1, float& a2) {
-    float tx2 = tx * tx;
-    float txq = tx / q;
-    float tmp = 1.0f + txq + tx2;
-    b0 = cum_b0 / tmp;
-    b1 = -2.0f;
-    b2 = 1.0f;
-    a1 = 2.0f * (1.0f - tx2) / tmp;
-    a2 = -(1.0f - txq + tx2) / tmp;
-};
-
-// Linkwitz-Riley coefficient functions (only 2nd order)
-static CoeffCalcFunc lr_lpf_second = [](float tx, float q, float cum_b0, float& b0, float& b1, float& b2, float& a1, float& a2) {
-    float tx2 = tx * tx;
-    float txq = tx / q;
-    float tmp = 1.0f + txq + tx2;
-    b0 = cum_b0 * tx2 / tmp;
-    b1 = 2.0f;
-    b2 = 1.0f;
-    a1 = 2.0f * (1.0f - tx2) / tmp;
-    a2 = -(1.0f - txq + tx2) / tmp;
-};
-
-static CoeffCalcFunc lr_hpf_second = [](float tx, float q, float cum_b0, float& b0, float& b1, float& b2, float& a1, float& a2) {
-    float tx2 = tx * tx;
-    float txq = tx / q;
-    float tmp = 1.0f + txq + tx2;
-    b0 = cum_b0 / tmp;
-    b1 = -2.0f;
-    b2 = 1.0f;
-    a1 = 2.0f * (1.0f - tx2) / tmp;
-    a2 = -(1.0f - txq + tx2) / tmp;
-};
-
-static CoeffCalcFunc lr_error_first = [](float tx, float q, float cum_b0, float& b0, float& b1, float& b2, float& a1, float& a2) {
-   SPDLOG_ERROR("Linkwitz-Riley first order filter is not supported."); 
-   (void)tx;
-   (void)q;
-   b0 = cum_b0;
-   b1 = b2 = a1 = a2 = 0.0f;
-};
-
 static const FilterOrderConfig* find_config(int order, const FilterOrderConfig* configs, int num_configs) {
     for (int i = 0; i < num_configs; ++i) {
         if (configs[i].order == order) {
@@ -241,8 +74,7 @@ static const FilterOrderConfig* find_config(int order, const FilterOrderConfig* 
         }
     }
 
-    // if no exact match: pick the nearest supported order. If equal distance,
-    // prefer the higher order so behavior is closer to requested slope.
+    // Find nearest supported order
     int best_idx = 0;
     int best_diff = std::abs(configs[0].order - order);
     for (int i = 1; i < num_configs; ++i) {
@@ -253,58 +85,132 @@ static const FilterOrderConfig* find_config(int order, const FilterOrderConfig* 
         }
     }
 
-    int actual_order = configs[best_idx].order;
-    SPDLOG_WARN("filter_design: Order {} not supported, falling back to nearest supported order {} ({} dB/octave)",
-               order, actual_order, actual_order * 6);
-
+    SPDLOG_WARN("Order {} not supported, using nearest supported order {}", 
+                order, configs[best_idx].order);
     return &configs[best_idx];
 }
 
-static void butterworth_common_lpf(IirFilter *iir, int start_section, float frequency,
+static void design_crossover_filter(IirFilter *iir, int start_section, float frequency,
+                                    int order, float sample_rate, int max_sections,
+                                    const FilterOrderConfig* config, bool is_highpass) {
+    int used_sections = (order + 1) / 2;
+    if (used_sections > max_sections) {
+        SPDLOG_WARN("Requested {} sections, max {}. Clamping.", used_sections, max_sections);
+        used_sections = max_sections;
+    }
+    
+    const float PI = 3.14159265f;
+    
+    for (int s = 0; s < used_sections; ++s) {
+        const FilterSection& section = config->config[s];
+        
+        if (section.alpha == 0.0f && section.q == 0.0f) {
+            iir->set_section_coeffs(start_section + s, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f);
+            continue;
+        }
+        
+        // t based on filter type
+        float t;
+        if (is_highpass) {
+            t = tanf(frequency * PI / sample_rate) / section.alpha;
+        } else {
+            t = tanf(frequency * PI / sample_rate) * section.alpha;
+        }
+        
+        float b0, b1, b2, a0, a1, a2;
+        
+        if (section.is_first_order) {
+            // First-order section
+            if (is_highpass) {
+                b0 = 1.0f;
+                b1 = -1.0f;
+                b2 = 0.0f;
+            } else {
+                b0 = t;
+                b1 = t;
+                b2 = 0.0f;
+            }
+            a0 = 1.0f + t;
+            a1 = t - 1.0f;
+            a2 = 0.0f;
+        } else {
+            // Second-order section
+            float t2 = t * t;
+            float t_q = t / section.q;
+            
+            if (is_highpass) {
+                b0 = 1.0f;
+                b1 = -2.0f;
+                b2 = 1.0f;
+            } else {
+                b0 = t2;
+                b1 = 2.0f * t2;
+                b2 = t2;
+            }
+            a0 = 1.0f + t_q + t2;
+            a1 = 2.0f * (t2 - 1.0f);
+            a2 = 1.0f - t_q + t2;
+        }
+        
+        iir->set_section_coeffs(start_section + s, b0, b1, b2, a0, a1, a2);
+    }
+    
+    for (int s = used_sections; s < max_sections; ++s) {
+        iir->set_section_coeffs(start_section + s, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f);
+    }
+}
+
+static void butterworth_lpf(IirFilter *iir, int start_section, float frequency,
                                   int order, float sample_rate, int max_sections) {
-    const FilterOrderConfig* config = find_config(order, butterworth_configs, sizeof(butterworth_configs)/sizeof(butterworth_configs[0]));
-    generic_filter_design(iir, start_section, frequency, order, sample_rate, max_sections,
-                          *config, butterworth_lpf_first, butterworth_lpf_second);
+    const FilterOrderConfig* config = find_config(order, butterworth_configs, 
+                                                  sizeof(butterworth_configs)/sizeof(butterworth_configs[0]));
+    design_crossover_filter(iir, start_section, frequency, order, sample_rate, 
+                           max_sections, config, false);
 }
 
-static void butterworth_common_hpf(IirFilter *iir, int start_section, float frequency,
+static void butterworth_hpf(IirFilter *iir, int start_section, float frequency,
                                   int order, float sample_rate, int max_sections) {
-    const FilterOrderConfig* config = find_config(order, butterworth_configs, sizeof(butterworth_configs)/sizeof(butterworth_configs[0]));
-    generic_filter_design(iir, start_section, frequency, order, sample_rate, max_sections,
-                          *config, butterworth_hpf_first, butterworth_hpf_second);
+    const FilterOrderConfig* config = find_config(order, butterworth_configs, 
+                                                  sizeof(butterworth_configs)/sizeof(butterworth_configs[0]));
+    design_crossover_filter(iir, start_section, frequency, order, sample_rate, 
+                           max_sections, config, true);
 }
 
-static void bessel_common_lpf(IirFilter *iir, int start_section, float frequency,
+static void bessel_lpf(IirFilter *iir, int start_section, float frequency,
                              int order, float sample_rate, int max_sections) {
-    const FilterOrderConfig* config = find_config(order, bessel_configs, sizeof(bessel_configs)/sizeof(bessel_configs[0]));
-    generic_filter_design(iir, start_section, frequency, order, sample_rate, max_sections,
-                          *config, bessel_lpf_first, bessel_lpf_second);
+    const FilterOrderConfig* config = find_config(order, bessel_configs, 
+                                                  sizeof(bessel_configs)/sizeof(bessel_configs[0]));
+    design_crossover_filter(iir, start_section, frequency, order, sample_rate, 
+                           max_sections, config, false);
 }
 
-static void bessel_common_hpf(IirFilter *iir, int start_section, float frequency,
+static void bessel_hpf(IirFilter *iir, int start_section, float frequency,
                              int order, float sample_rate, int max_sections) {
-    const FilterOrderConfig* config = find_config(order, bessel_configs, sizeof(bessel_configs)/sizeof(bessel_configs[0]));
-    generic_filter_design(iir, start_section, frequency, order, sample_rate, max_sections,
-                          *config, bessel_hpf_first, bessel_hpf_second);
+    const FilterOrderConfig* config = find_config(order, bessel_configs, 
+                                                  sizeof(bessel_configs)/sizeof(bessel_configs[0]));
+    design_crossover_filter(iir, start_section, frequency, order, sample_rate, 
+                           max_sections, config, true);
 }
 
-static void lr_common_lpf(IirFilter *iir, int start_section, float frequency,
+static void lr_lpf(IirFilter *iir, int start_section, float frequency,
                           int order, float sample_rate, int max_sections) {
-    const FilterOrderConfig* config = find_config(order, linkwitz_riley_configs, sizeof(linkwitz_riley_configs)/sizeof(linkwitz_riley_configs[0]));
-    generic_filter_design(iir, start_section, frequency, order, sample_rate, max_sections,
-                          *config, lr_error_first, lr_lpf_second);
+    const FilterOrderConfig* config = find_config(order, linkwitz_riley_configs, 
+                                                  sizeof(linkwitz_riley_configs)/sizeof(linkwitz_riley_configs[0]));
+    design_crossover_filter(iir, start_section, frequency, order, sample_rate, 
+                           max_sections, config, false);
 }
 
-static void lr_common_hpf(IirFilter *iir, int start_section, float frequency,
+static void lr_hpf(IirFilter *iir, int start_section, float frequency,
                           int order, float sample_rate, int max_sections) {
-    const FilterOrderConfig* config = find_config(order, linkwitz_riley_configs, sizeof(linkwitz_riley_configs)/sizeof(linkwitz_riley_configs[0]));
-    generic_filter_design(iir, start_section, frequency, order, sample_rate, max_sections,
-                          *config, lr_error_first, lr_hpf_second);
+    const FilterOrderConfig* config = find_config(order, linkwitz_riley_configs, 
+                                                  sizeof(linkwitz_riley_configs)/sizeof(linkwitz_riley_configs[0]));
+    design_crossover_filter(iir, start_section, frequency, order, sample_rate, 
+                           max_sections, config, true);
 }
 
-IIR_DESIGN_REGISTER(iir_crossover_butterworth_lpf, butterworth_common_lpf);
-IIR_DESIGN_REGISTER(iir_crossover_butterworth_hpf, butterworth_common_hpf);
-IIR_DESIGN_REGISTER(iir_crossover_bessel_lpf, bessel_common_lpf);
-IIR_DESIGN_REGISTER(iir_crossover_bessel_hpf, bessel_common_hpf);
-IIR_DESIGN_REGISTER(iir_crossover_linkwitz_riley_lpf, lr_common_lpf);
-IIR_DESIGN_REGISTER(iir_crossover_linkwitz_riley_hpf, lr_common_hpf);
+IIR_DESIGN_REGISTER(iir_crossover_butterworth_lpf, butterworth_lpf);
+IIR_DESIGN_REGISTER(iir_crossover_butterworth_hpf, butterworth_hpf);
+IIR_DESIGN_REGISTER(iir_crossover_bessel_lpf, bessel_lpf);
+IIR_DESIGN_REGISTER(iir_crossover_bessel_hpf, bessel_hpf);
+IIR_DESIGN_REGISTER(iir_crossover_linkwitz_riley_lpf, lr_lpf);
+IIR_DESIGN_REGISTER(iir_crossover_linkwitz_riley_hpf, lr_hpf);
