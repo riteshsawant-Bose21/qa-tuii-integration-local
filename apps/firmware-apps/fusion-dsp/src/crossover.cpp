@@ -34,12 +34,12 @@ private:
     bosepro::DspStateMemory<filter::IirFilter> hpf;
     bosepro::DspStateMemory<filter::IirFilter> lpf;
     
-    float hpf_freq;
-    float lpf_freq;
-    int hpf_order;
-    int lpf_order;
-    std::string hpf_type_str;
-    std::string lpf_type_str;
+    float hpf_freq{20.0f};
+    float lpf_freq{20000.0f};
+    int_fast32_t hpf_order{4};
+    int_fast32_t lpf_order{4};
+    std::string hpf_type_str{"linkwitz_riley"};
+    std::string lpf_type_str{"linkwitz_riley"};
     
     FilterType hpf_type{FilterType::LINKWITZ_RILEY};
     FilterType lpf_type{FilterType::LINKWITZ_RILEY};
@@ -80,12 +80,6 @@ Crossover::Crossover(const bosepro::BlockConfiguration &configuration)
     
     new (hpf.get()) filter::IirFilter(MAX_SOS, channels);
     new (lpf.get()) filter::IirFilter(MAX_SOS, channels);
-    
-    update_hpf_type();
-    update_lpf_type();
-    
-    update_hpf();
-    update_lpf();
 }
 
 void Crossover::process()
