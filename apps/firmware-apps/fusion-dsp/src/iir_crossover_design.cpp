@@ -14,10 +14,10 @@
 using namespace filter;
 
 struct FilterSection {
-    float alpha;
-    float q;
+    double alpha;
+    double q;
     bool is_first_order;
-    FilterSection(float a = 0.0f, float q_val = 0.0f, bool first_order = false)
+    FilterSection(double a = 0.0, double q_val = 0.0, bool first_order = false)
         : alpha(a), q(q_val), is_first_order(first_order) {}
 };
 
@@ -30,41 +30,41 @@ struct FilterOrderConfig {
 
 static const FilterOrderConfig butterworth_configs[] = {
     //6dB
-    {1, {{ {1.0f, 0.0f, true}, {0,0,false}, {0,0,false}, {0,0,false} }}},
+    {1, {{ {1.0, 0.0, true}, {0,0,false}, {0,0,false}, {0,0,false} }}},
     //12dB
-    {2, {{ {1.0f, 0.707107f, false}, {0,0,false}, {0,0,false}, {0,0,false} }}},
-    {3, {{ {1.0f, 0.0f, true}, {1.0f, 1.0f, false}, {0,0,false}, {0,0,false} }}},
-    {4, {{ {1.0f, 0.541196f, false}, {1.0f, 1.306563f, false}, {0,0,false}, {0,0,false} }}},
+    {2, {{ {1.0, 0.707107, false}, {0,0,false}, {0,0,false}, {0,0,false} }}},
+    {3, {{ {1.0, 0.0, true}, {1.0, 1.0, false}, {0,0,false}, {0,0,false} }}},
+    {4, {{ {1.0, 0.541196, false}, {1.0, 1.306563, false}, {0,0,false}, {0,0,false} }}},
     //36dB
-    {6, {{ {1.0f, 0.517638f, false}, {1.0f, 0.707107f, false}, {1.0f, 1.931852f, false}, {0,0,false} }}},
+    {6, {{ {1.0, 0.517638, false}, {1.0, 0.707107, false}, {1.0, 1.931852, false}, {0,0,false} }}},
     //48dB
-    {8, {{ {1.0f, 0.509796f, false}, {1.0f, 0.601345f, false}, {1.0f, 0.899976f, false}, {1.0f, 2.562915f, false} }}}
+    {8, {{ {1.0, 0.509796, false}, {1.0, 0.601345, false}, {1.0, 0.899976, false}, {1.0, 2.562915, false} }}}
 };
 
 static const FilterOrderConfig bessel_configs[] = {
     //12dB:
-    {2, {{ {1.0f, 0.5773502692f, false}, {0,0,false}, {0,0,false}, {0,0,false} }}},
+    {2, {{ {1.0, 0.5773502692, false}, {0,0,false}, {0,0,false}, {0,0,false} }}},
     //18dB:
-    {3, {{ {0.9375044628f, 0.0f, true}, {1.023621594f, 0.6907282598f, false}, {0,0,false}, {0,0,false} }}},
+    {3, {{ {0.9375044628, 0.0, true}, {1.023621594, 0.6907282598, false}, {0,0,false}, {0,0,false} }}},
     //24dB:
-    {4, {{ {0.932877433f, 0.522208208f, false}, {1.046118213f, 0.8051365672f, false}, {0,0,false}, {0,0,false} }}},
+    {4, {{ {0.932877433, 0.522208208, false}, {1.046118213, 0.8051365672, false}, {0,0,false}, {0,0,false} }}},
     //36dB:
-    {6,{{ {0.907955101f, 0.510317315f, false}, {0.956210131f, 0.61119594f, false}, {1.078227361f, 1.023313015f, false}, {0,0,false} }}},
+    {6,{{ {0.907955101, 0.510317315, false}, {0.956210131, 0.61119594, false}, {1.078227361, 1.023313015, false}, {0,0,false} }}},
     //48dB:
-    {8,{{ {0.8941314387f, 0.505991070f, false}, {0.921092487f,  0.5596091625f, false}, {0.9819776223f, 0.7108520759f, false},
-        {1.100391590f,  1.225669430f, false}
+    {8,{{ {0.8941314387, 0.505991070, false}, {0.921092487,  0.5596091625, false}, {0.9819776223, 0.7108520759, false},
+        {1.100391590,  1.225669430, false}
     }}}
 };
 
 static const FilterOrderConfig linkwitz_riley_configs[] = {
     //12dB
-    {2, {{ {1.0f, 0.5f, false}, {0,0,false}, {0,0,false}, {0,0,false} }}},
+    {2, {{ {1.0, 0.5, false}, {0,0,false}, {0,0,false}, {0,0,false} }}},
     //24dB
-    {4, {{ {1.0f, 0.707107f, false}, {1.0f, 0.707107f, false}, {0,0,false}, {0,0,false} }}},
+    {4, {{ {1.0, 0.707107, false}, {1.0, 0.707107, false}, {0,0,false}, {0,0,false} }}},
     //36dB
-    {6, {{ {1.0f, 0.5f, false}, {1.0f, 1.0f, false}, {1.0f, 1.0f, false}, {0,0,false} }}},
+    {6, {{ {1.0, 0.5, false}, {1.0, 1.0, false}, {1.0, 1.0, false}, {0,0,false} }}},
     //48dB
-    {8, {{ {1.0f, 0.541196f, false}, {1.0f, 1.306563f, false}, {1.0f, 0.541196f, false}, {1.0f, 1.306563f, false} }}}
+    {8, {{ {1.0, 0.541196, false}, {1.0, 1.306563, false}, {1.0, 0.541196, false}, {1.0, 1.306563, false} }}}
 };
 
 static const FilterOrderConfig* find_config(int order, const FilterOrderConfig* configs, int num_configs) {
@@ -99,64 +99,66 @@ static void design_crossover_filter(IirFilter *iir, int start_section, float fre
         used_sections = max_sections;
     }
     
-    const float PI = 3.14159265f;
+    const double PI = 3.14159265;
+    double freq_d = frequency;
+    double fs_d = sample_rate;
     
     for (int s = 0; s < used_sections; ++s) {
         const FilterSection& section = config->config[s];
         
-        if (section.alpha == 0.0f && section.q == 0.0f) {
-            iir->set_section_coeffs(start_section + s, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f);
+        if (section.alpha == 0.0 && section.q == 0.0) {
+            iir->set_section_coeffs(start_section + s, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0);
             continue;
         }
         
         // t based on filter type
-        float t;
+        double t;
         if (is_highpass) {
-            t = tanf(frequency * PI / sample_rate) / section.alpha;
+            t = std::tan(freq_d * PI / fs_d) / section.alpha;
         } else {
-            t = tanf(frequency * PI / sample_rate) * section.alpha;
+            t = std::tan(freq_d * PI / fs_d) * section.alpha;
         }
         
-        float b0, b1, b2, a0, a1, a2;
+        double b0, b1, b2, a0, a1, a2;
         
         if (section.is_first_order) {
             // First-order section
             if (is_highpass) {
-                b0 = 1.0f;
-                b1 = -1.0f;
-                b2 = 0.0f;
+                b0 = 1.0;
+                b1 = -1.0;
+                b2 = 0.0;
             } else {
                 b0 = t;
                 b1 = t;
-                b2 = 0.0f;
+                b2 = 0.0;
             }
-            a0 = 1.0f + t;
-            a1 = t - 1.0f;
-            a2 = 0.0f;
+            a0 = 1.0 + t;
+            a1 = t - 1.0;
+            a2 = 0.0;
         } else {
             // Second-order section
-            float t2 = t * t;
-            float t_q = t / section.q;
+            double t2 = t * t;
+            double t_q = t / section.q;
             
             if (is_highpass) {
-                b0 = 1.0f;
-                b1 = -2.0f;
-                b2 = 1.0f;
+                b0 = 1.0;
+                b1 = -2.0;
+                b2 = 1.0;
             } else {
                 b0 = t2;
-                b1 = 2.0f * t2;
+                b1 = 2.0 * t2;
                 b2 = t2;
             }
-            a0 = 1.0f + t_q + t2;
-            a1 = 2.0f * (t2 - 1.0f);
-            a2 = 1.0f - t_q + t2;
+            a0 = 1.0 + t_q + t2;
+            a1 = 2.0 * (t2 - 1.0);
+            a2 = 1.0 - t_q + t2;
         }
         
         iir->set_section_coeffs(start_section + s, b0, b1, b2, a0, a1, a2);
     }
     
     for (int s = used_sections; s < max_sections; ++s) {
-        iir->set_section_coeffs(start_section + s, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f);
+        iir->set_section_coeffs(start_section + s, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0);
     }
 }
 
