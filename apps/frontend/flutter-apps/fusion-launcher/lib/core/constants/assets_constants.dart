@@ -11,4 +11,7 @@ class Assets {
 
   //Images
   static const String dmPendent = 'assets/images/speakers/DM_pendant.png';
+
+  //svgs
+  static const String listeningAreaSvg = 'assets/svg/ear_sound.svg';
 }

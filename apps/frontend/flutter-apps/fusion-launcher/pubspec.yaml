@@ -59,6 +59,7 @@ dependencies:
   nested: ^1.0.0
   bloc: ^9.0.0
   equatable: ^2.0.7
+  flutter_svg: ^2.2.1
 
   fusion_lib:
     path: ../../../../libs/flutter-libs/fusion_lib
@@ -100,6 +101,7 @@ flutter:
     - assets/Loudspeakers/
     - assets/images/splash/
     - assets/icons/
+    - assets/svg/
 
 
   # An image asset can refer to one or more resolution-specific "variants", see
