@@ -36,7 +36,7 @@ static void iir_design_peq_cs(filter::IirFilter *iir, int section,
     double a1 = 2.0 * a - 2.0;
     double a2 = 1.0 - l + a;
 
-    if (gain_db > 0.0f)
+    if (gain_db > 0.0)
     {
         iir->set_section_coeffs(section, b0, b1, b2, a0, a1, a2);
     }
@@ -89,7 +89,7 @@ static void iir_design_high_shelf_cs(filter::IirFilter *iir, int section,
     double a1 = 2.0 * (a - 1.0);
     double a2 = 1.0 + a - 2.0 * tx;
 
-    if (gain_db > 0.0f)
+    if (gain_db > 0.0)
     {
         iir->set_section_coeffs(section, b0, b1, b2, a0, a1, a2);
     }
@@ -119,7 +119,7 @@ static void iir_design_low_shelf_cs(filter::IirFilter *iir, int section,
     double a1 = 2.0 * (a - 1.0);
     double a2 = 1.0 + a - 2.0 * tx;
 
-    if (gain_db > 0.0f)
+    if (gain_db > 0.0)
     {
         iir->set_section_coeffs(section, b0, b1, b2, a0, a1, a2);
     }
@@ -136,19 +136,19 @@ static void iir_design_notch_cs(filter::IirFilter *iir, int section,
                              float frequency, float q, float /* gain_db */,
                              float sample_rate)
 {
-    double r = 1.0f / (2.0f * q);
-    double o = 2.0f * std::sin(frequency * M_PI / sample_rate);
+    double r = 1.0 / (2.0 * q);
+    double o = 2.0 * std::sin(frequency * M_PI / sample_rate);
     double oo = o * o;
     double ro = r * o;
-    double tmp1 = 2.0f - oo;
-    double tmp2 = 1.0f / (1.0f + ro);
+    double tmp1 = 2.0 - oo;
+    double tmp2 = 1.0 / (1.0 + ro);
 
     double b0 = tmp2;                    // B0'
-    double b1 = -tmp1;                   // B1
-    double b2 = 1.0f;                    // B2
-    double a0 = 1.0f;                    // Normalized 
+    double b1 = tmp1;                   // B1
+    double b2 = 1.0;                    // B2
+    double a0 = 1.0;                    // Normalized 
     double a1 = tmp1 * tmp2;             // A1
-    double a2 = (ro - 1.0f) * tmp2;      // A2
+    double a2 = (ro - 1.0) * tmp2;      // A2
 
     iir->set_section_coeffs(section, b0, b1, b2, a0, a1, a2);
 }
@@ -161,31 +161,31 @@ static void iir_design_lpf_cs(filter::IirFilter *iir, int section,
 {
     double tx = std::tan(frequency * M_PI / sample_rate);
 
-    if (q > 0.1f) { // 2nd order case: -12dB/oct
-        double q = 0.707107f; 
+    if (q > 0.1) { // 2nd order case: -12dB/oct
+        double q = 0.707107; 
         double l = tx / q;
         double a = tx * tx;
-        double tmp1 = 1.0f + a;
-        double tmp2 = 1.0f / (tmp1 + l);
+        double tmp1 = 1.0 + a;
+        double tmp2 = 1.0 / (tmp1 + l);
 
         double b0 = a * tmp2;                      // B0'
-        double b1 = 2.0f;                            // B1
-        double b2 = 1.0f;                            // B2
-        double a0 = 1.0f;                            // Normalized
-        double a1 = 2.0f * (1.0f - a) * tmp2;     // A1
-        double a2 = (l - tmp1) * tmp2;             // A2
+        double b1 = 2.0;                            // B1
+        double b2 = 1.0;                            // B2
+        double a0 = 1.0;                            // Normalized
+        double a1 = 2.0 * (a - 1.0) * tmp2;     // A1
+        double a2 = (tmp1 - l) * tmp2;             // A2
 
         iir->set_section_coeffs(section, b0, b1, b2, a0, a1, a2);
     }
     else { // 1st order case: 6dB/octave
-        double tmp = 1.0f / (1.0f + tx);
+    double tmp = 1.0 / (1.0 + tx);
 
-        double b0 = tx * tmp;        // B0'
-        double b1 = 1.0f;            // B1
-        double b2 = 0.0f;            // B2
-        double a0 = 1.0f;            // Normalized
-        double a1 = (1.0f - tx) * tmp; // A1
-        double a2 = 0.0f;            // A2
+    double b0 = tx * tmp;        // B0'
+    double b1 = 1.0;            // B1
+    double b2 = 0.0;            // B2
+    double a0 = 1.0;            // Normalized
+    double a1 = (tx - 1.0) * tmp; // A1
+    double a2 = 0.0;            // A2
         
         iir->set_section_coeffs(section, b0, b1, b2, a0, a1, a2);
     }
@@ -199,31 +199,31 @@ static void iir_design_hpf_cs(filter::IirFilter *iir, int section,
 {
     double tx = std::tan(frequency * M_PI / sample_rate);
     
-    if (q > 0.1f) {// 2nd order case: -12dB/oct
-        double q = 0.707107f;
+    if (q > 0.1) {// 2nd order case: -12dB/oct
+        double q = 0.707107;
         double l = tx / q;
         double a = tx * tx;
-        double tmp1 = 1.0f + a;
-        double tmp2 = 1.0f / (tmp1 + l);
+        double tmp1 = 1.0 + a;
+        double tmp2 = 1.0 / (tmp1 + l);
         
         double b0 = tmp2;                            // B0'
-        double b1 = -2.0f;                           // B1
-        double b2 = 1.0f;                            // B2
-        double a0 = 1.0f;                            // Normalized
-        double a1 = 2.0f * (1.0f - a) * tmp2;     // A1
-        double a2 = (l - tmp1) * tmp2;             // A2
+        double b1 = -2.0;                           // B1
+        double b2 = 1.0;                            // B2
+        double a0 = 1.0;                            // Normalized
+        double a1 = 2.0 * (a - 1.0) * tmp2;     // A1
+        double a2 = (tmp1 - l) * tmp2;             // A2
 
         iir->set_section_coeffs(section, b0, b1, b2, a0, a1, a2);
     }
     else { // 1st order case: 6dB/octave
-        double tmp = 1.0f / (1.0f + tx);
+    double tmp = 1.0 / (1.0 + tx);
 
-        double b0 = tmp;             // B0'
-        double b1 = -1.0f;           // B1
-        double b2 = 0.0f;            // B2
-        double a0 = 1.0f;            // Normalized
-        double a1 = (1.0f - tx) * tmp; // A1
-        double a2 = 0.0f;            // A2
+    double b0 = tmp;             // B0'
+    double b1 = -1.0;           // B1
+    double b2 = 0.0;            // B2
+    double a0 = 1.0;            // Normalized
+    double a1 = (tx - 1.0) * tmp; // A1
+    double a2 = 0.0;            // A2
         
         iir->set_section_coeffs(section, b0, b1, b2, a0, a1, a2);
     }
