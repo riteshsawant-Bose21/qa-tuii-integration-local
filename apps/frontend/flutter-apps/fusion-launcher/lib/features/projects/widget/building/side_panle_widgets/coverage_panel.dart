@@ -3,9 +3,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+
+import '../../../../../core/constants/assets_constants.dart';
 
 class CoveragePanel extends StatefulWidget {
   final Function(bool selected) onModeSelection;
+
   const CoveragePanel({
     super.key,
     required this.onModeSelection,
@@ -25,7 +29,15 @@ class CoveragePanelState extends State<CoveragePanel> {
           child: Column(
             children: <Widget>[
               _buildSubItem(
-                Icons.volume_up_outlined,
+                SvgPicture.asset(
+                  Assets.listeningAreaSvg,
+                  width: 14,
+                  height: 14,
+                  colorFilter: const ColorFilter.mode(
+                    Colors.black87,
+                    BlendMode.srcIn,
+                  ),
+                ),
                 'Listening Area',
                 isSelected: serviceLocator<ProjectViewModel>().isInListeningAreaSelectionMode,
                 onTap: () {
@@ -37,7 +49,11 @@ class CoveragePanelState extends State<CoveragePanel> {
                 },
               ),
               _buildSubItem(
-                Icons.layers_outlined,
+                const Icon(
+                  Icons.layers_outlined,
+                  size: 14,
+                  color: Colors.black87,
+                ),
                 'Zone',
                 isSelected: serviceLocator<ProjectViewModel>().isInZoneSelectionMode,
                 onTap: () {
@@ -60,7 +76,7 @@ class CoveragePanelState extends State<CoveragePanel> {
   }
 
   Widget _buildSubItem(
-    IconData icon,
+    Widget icon,
     String title, {
     bool isSelected = false,
     required Function() onTap,
@@ -90,11 +106,7 @@ class CoveragePanelState extends State<CoveragePanel> {
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
             ),
-            leading: Icon(
-              icon,
-              size: 14,
-              color: Colors.black87,
-            ),
+            leading: icon,
             title: FusionAppText(
               text: title,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 12),

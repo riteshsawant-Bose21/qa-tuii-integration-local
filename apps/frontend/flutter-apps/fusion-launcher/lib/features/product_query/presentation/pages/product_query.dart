@@ -391,7 +391,7 @@ class ProductAPI {
           outdoorRated: speakerData["outdoor_rated"],
           maxSpl: speakerData["max_spl"] != null ? (speakerData["max_spl"] as num).toDouble() : null,
           nominalOhms: speakerData["nominal_ohms"] != null ? (speakerData["nominal_ohms"] as num).toDouble() : null,
-          sku: 'MSA12XOHS',
+          sku: speakerData['model'] ?? '',
           specifications: '',
         );
       }).toList();

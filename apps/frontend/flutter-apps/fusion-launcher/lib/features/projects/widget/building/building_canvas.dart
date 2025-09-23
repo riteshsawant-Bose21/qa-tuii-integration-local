@@ -140,6 +140,8 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
         serviceLocator<ProjectViewModel>().addListeningAreaToZone(area.id, zone.id);
       }
       serviceLocator<ProjectViewModel>().saveProjectToLocal();
+    } else {
+      serviceLocator<ProjectViewModel>().clearSelectedZone();
     }
   }
 
@@ -340,6 +342,10 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                     }
 
                     if (state is ListeningAreaSelectionMode) {
+                      floorCanvasController.toggleDraw();
+                    }
+
+                    if (!serviceLocator<ProjectViewModel>().isInListeningAreaSelectionMode && floorCanvasController.isDrawing.value) {
                       floorCanvasController.toggleDraw();
                     }
 
