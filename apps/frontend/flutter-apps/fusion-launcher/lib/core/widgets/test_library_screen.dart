@@ -19,6 +19,7 @@ import 'package:fusion_lib/fusion_widgets/text_views/fusion_rich_text.dart';
 import '../../features/dashboard/presentation/widgets/algorithms/amplifier_matching_widget.dart';
 import '../../features/dashboard/presentation/widgets/algorithms/circuiting_widget.dart';
 import '../../features/dashboard/presentation/widgets/algorithms/device_recommender_widget.dart';
+import '../../features/dashboard/presentation/widgets/algorithms/speaker_auto_placement.dart';
 import '../../features/dashboard/presentation/widgets/algorithms/spl_calculation_widget.dart';
 import '../../features/dashboard/presentation/widgets/algorithms/tap_setting_widget.dart';
 import '../../features/dashboard/presentation/widgets/products_filter/product_filter.dart';
@@ -696,16 +697,18 @@ class TestLibraryScreen extends StatelessWidget {
 
   Widget _buildAlgorithmsTab(BuildContext context) {
     return const DefaultTabController(
-      length: 5,
+      length: 6,
       child: Column(
         children: <Widget>[
           TabBar(
+            isScrollable: true,
             tabs: <Widget>[
               Tab(text: 'SPL Calculation'),
               Tab(text: 'Tap Setting'),
               Tab(text: 'Circuiting'),
               Tab(text: 'Amp Matching'),
               Tab(text: 'Device Recommender'),
+              Tab(text: 'Speaker Placement'),
             ],
           ),
           Expanded(
@@ -716,6 +719,7 @@ class TestLibraryScreen extends StatelessWidget {
                 CircuitingWidget(),
                 AmplifierMatchingWidget(),
                 DeviceRecommenderWidget(),
+                SpeakerAutoPlacementWidget(),
               ],
             ),
           ),

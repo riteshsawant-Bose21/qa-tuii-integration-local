@@ -28,6 +28,9 @@ export 'circuiting/circuiting_calculation.dart';
 export 'circuiting/circuiting_types.dart';
 export 'circuiting/circuiting_helpers.dart';
 
+// Speaker Placement exports
+export 'speaker_placements/speaker_placements.dart';
+
 // Device Recommender exports
 export 'device_recommender/device_recommender.dart';
 
