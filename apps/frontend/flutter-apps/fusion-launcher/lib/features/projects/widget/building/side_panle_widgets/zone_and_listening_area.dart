@@ -1,9 +1,12 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
+import '../../../../../core/constants/assets_constants.dart';
 import '../../../../../core/widgets/color_selector_popup.dart';
 
 class ZoneAndListeningAreaPanel extends StatefulWidget {
@@ -108,7 +111,6 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
           const SizedBox(height: 3),
           ...zones.map(
             (Zone zone) => Container(
-              margin: const EdgeInsets.only(bottom: 4),
               child: _buildZoneCard(zone),
             ),
           ),
@@ -159,47 +161,44 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
         final bool hasIncomingData = candidateItems.isNotEmpty && candidateItems.first != null;
 
         return Container(
-          margin: const EdgeInsets.symmetric(horizontal: 12),
+          margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 4),
           child: Stack(
             children: <Widget>[
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
                   // Zone Header (always visible)
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () => _toggleZoneExpansion(zone.id),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: isSelected ? Colors.grey[200] : Colors.white,
-                        ),
-                        child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-                          builder: (BuildContext context, ProjectViewModelState state) {
-                            return Row(
-                              children: <Widget>[
-                                _buildZoneIndicator(zone),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: _buildZoneTitle(zone, isSelected),
+                  InkWell(
+                    onTap: () => _toggleZoneExpansion(zone.id),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: isSelected ? Colors.grey[200] : Colors.white,
+                        // border: Border.all(color: Colors.grey[300]!),
+                      ),
+                      child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+                        builder: (BuildContext context, ProjectViewModelState state) {
+                          return Row(
+                            children: <Widget>[
+                              _buildZoneIndicator(zone),
+                              const SizedBox(width: 8),
+
+                              Expanded(
+                                child: _buildZoneTitle(zone, isSelected),
+                              ),
+                              if (serviceLocator<ProjectViewModel>().currentSelectedZoneId == null) ...<Widget>[
+                                InkWell(
+                                  onTap: () => serviceLocator<ProjectViewModel>().enterZoneSelectionMode(zone),
+                                  child: _buildAddIcon(),
                                 ),
-
-                                if (serviceLocator<ProjectViewModel>().currentSelectedZoneId == null) ...<Widget>[
-                                  InkWell(
-                                    onTap: () => serviceLocator<ProjectViewModel>().enterZoneSelectionMode(zone),
-                                    child: _buildAddIcon(),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  _buildDeleteButton(zone),
-                                ],
-
                                 const SizedBox(width: 8),
-                                _buildExpandIcon(isExpanded),
+                                _buildDeleteButton(zone),
                               ],
-                            );
-                          },
-                        ),
+
+                              const SizedBox(width: 8),
+                              _buildExpandIcon(isExpanded),
+                            ],
+                          );
+                        },
                       ),
                     ),
                   ),
@@ -301,19 +300,24 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
 
   Widget _buildZoneTitle(Zone zone, bool isSelected) {
     return Container(
+      key: ValueKey<String>(zone.id),
       constraints: const BoxConstraints(),
-      padding: const EdgeInsets.symmetric(vertical: 4),
       child: TextFormField(
         initialValue: zone.name,
         enabled: serviceLocator<ProjectViewModel>().currentSelectedZoneId == null,
         decoration: const InputDecoration(
           hintText: 'Zone Name',
           border: InputBorder.none,
+          contentPadding: EdgeInsets.zero,
+          isDense: true,
         ),
         style: Theme.of(context).textTheme.titleMedium?.copyWith(
           fontWeight: FontWeight.w600,
           fontSize: 12,
         ),
+        scrollPadding: EdgeInsets.zero,
+
+        maxLines: 1,
         onFieldSubmitted: (String v) {
           final String trimmedValue = v.trim();
           if (trimmedValue.isEmpty) {
@@ -375,6 +379,8 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
   Widget _buildListeningAreaItem(ListeningArea area, Zone zone) {
     final bool isSelected = serviceLocator<ProjectViewModel>().currentSelectedListeningAreaId == area.id;
 
+    final String floorName = serviceLocator<ProjectViewModel>().getFloorForListeningArea(area.id)?.name ?? '';
+
     return Draggable<ListeningArea>(
       data: area,
       dragAnchorStrategy: pointerDragAnchorStrategy,
@@ -390,13 +396,17 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
         child: ListTile(
           dense: true,
 
-          leading: const Icon(
-            Icons.volume_up,
-            size: 14,
-            color: Colors.black87,
+          leading: SvgPicture.asset(
+            Assets.listeningAreaSvg,
+            width: 14,
+            height: 14,
+            colorFilter: const ColorFilter.mode(
+              Colors.black87,
+              BlendMode.srcIn,
+            ),
           ),
           title: FusionAppText(
-            text: area.name,
+            text: "$floorName / ${area.name}",
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               fontSize: 11,
               fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
