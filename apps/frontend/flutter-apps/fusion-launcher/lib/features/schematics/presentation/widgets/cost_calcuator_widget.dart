@@ -123,7 +123,7 @@ class _CostCalculatorScreenState extends State<CostCalculatorScreen> with Ticker
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              const SizedBox(width: 20),
+              const SizedBox(width: 28),
               FusionAppText(
                 text: '\$${totalCost.toStringAsFixed(2)}',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -149,45 +149,40 @@ class _CostCalculatorScreenState extends State<CostCalculatorScreen> with Ticker
         backgroundColor: Colors.transparent,
         collapsedIconColor: CostCalculatorScreen.primaryText,
         iconColor: CostCalculatorScreen.accentColor,
-        title: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: <Widget>[
-              // Icon(icon, size: 16, color: const Color(0xFF464545)),
-              // const SizedBox(width: 8),
-              Text(
+        title: Row(
+          children: <Widget>[
+            Expanded(
+              child: Text(
                 title,
                 style: const TextStyle(
                   fontSize: CostCalculatorScreen.fsRegular,
                   color: CostCalculatorScreen.primaryText,
                 ),
               ),
-
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  items.length.toString().padLeft(2, '0'),
-                  style: const TextStyle(
-                    fontSize: CostCalculatorScreen.fsSmall,
-                    color: CostCalculatorScreen.primaryText,
-                  ),
+            ),
+            Container(
+              width: 40,
+              alignment: Alignment.centerRight,
+              child: Text(
+                items.length.toString().padLeft(2, '0'),
+                style: const TextStyle(
+                  fontSize: CostCalculatorScreen.fsSmall,
+                  color: CostCalculatorScreen.primaryText,
                 ),
               ),
-
-              Text(
+            ),
+            Container(
+              width: 70,
+              alignment: Alignment.centerRight,
+              child: Text(
                 '\$${items.totalPrice.toStringAsFixed(2)}',
                 style: const TextStyle(
                   fontSize: CostCalculatorScreen.fsRegular,
                   color: CostCalculatorScreen.primaryText,
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
 
         children: <Widget>[
@@ -223,33 +218,36 @@ class _CostCalculatorScreenState extends State<CostCalculatorScreen> with Ticker
       tilePadding: EdgeInsets.zero,
       showTrailingIcon: false, // Hide default trailing icon since we're using custom one
       initiallyExpanded: true, // Start expanded by default
-      title: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: <Widget>[
-            _RotatingIcon(animation: _rotationAnimations[title] ?? _rotationAnimations.values.first, color: Theme.of(context).colorScheme.fusionButtonColor),
-            const SizedBox(width: 4),
-            FusionAppText(
+      title: Row(
+        children: <Widget>[
+          _RotatingIcon(animation: _rotationAnimations[title] ?? _rotationAnimations.values.first, color: Theme.of(context).colorScheme.fusionButtonColor),
+          const SizedBox(width: 4),
+          Expanded(
+            child: FusionAppText(
               text: title,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 fontSize: 11,
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          FusionAppText(
-            text: items.length.toString().padLeft(2, ''),
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              fontSize: 11,
+          Container(
+            width: 40,
+            alignment: Alignment.centerRight,
+            child: FusionAppText(
+              text: items.length.toString().padLeft(2, '0'),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                fontSize: 11,
+              ),
             ),
           ),
-          const SizedBox(width: 8),
           Container(
             width: 70,
+            color: Colors.red,
             alignment: Alignment.centerRight,
             child: FusionAppText(
               maxLine: 1,
@@ -276,37 +274,36 @@ class _CostCalculatorScreenState extends State<CostCalculatorScreen> with Ticker
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: <Widget>[
           Container(
             width: 4,
             height: 4,
-            margin: const EdgeInsets.only(top: 6, right: 8),
+            margin: const EdgeInsets.only(top: 0, right: 8),
             decoration: BoxDecoration(
               color: CostCalculatorScreen.accentColor,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  _getItemName(item),
-                  style: const TextStyle(
-                    fontSize: CostCalculatorScreen.fsSmall,
-                    color: CostCalculatorScreen.primaryText,
-                  ),
-                ),
-              ],
+            child: Text(
+              _getItemName(item),
+              style: const TextStyle(
+                fontSize: CostCalculatorScreen.fsSmall,
+                color: CostCalculatorScreen.primaryText,
+              ),
             ),
           ),
-          const SizedBox(width: 8),
-          Text(
-            '\$${_getItemPrice(item).toStringAsFixed(2)}',
-            style: const TextStyle(
-              fontSize: CostCalculatorScreen.fsSmall,
-              color: CostCalculatorScreen.primaryText,
+
+          Container(
+            width: 70,
+            alignment: Alignment.centerRight,
+            child: Text(
+              '\$${_getItemPrice(item).toStringAsFixed(2)}',
+              style: const TextStyle(
+                fontSize: CostCalculatorScreen.fsSmall,
+                color: CostCalculatorScreen.primaryText,
+              ),
             ),
           ),
         ],
@@ -322,12 +319,12 @@ class _CostCalculatorScreenState extends State<CostCalculatorScreen> with Ticker
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: <Widget>[
           Container(
             width: 4,
             height: 4,
-            margin: const EdgeInsets.only(top: 6, right: 8),
+            margin: const EdgeInsets.only(top: 0, right: 8),
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.primary,
               borderRadius: BorderRadius.circular(2),
@@ -342,18 +339,24 @@ class _CostCalculatorScreenState extends State<CostCalculatorScreen> with Ticker
               ),
             ),
           ),
-          const SizedBox(width: 8),
-          FusionAppText(
-            text: 'x$quantity',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              fontSize: 11,
+          Container(
+            width: 40,
+            alignment: Alignment.centerRight,
+            child: FusionAppText(
+              text: 'x$quantity',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                fontSize: 11,
+              ),
             ),
           ),
-          const SizedBox(width: 18),
-          FusionAppText(
-            text: '\$${totalPrice.toStringAsFixed(2)}',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              fontSize: 11,
+          Container(
+            width: 70,
+            alignment: Alignment.centerRight,
+            child: FusionAppText(
+              text: '\$${totalPrice.toStringAsFixed(2)}',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                fontSize: 11,
+              ),
             ),
           ),
         ],
