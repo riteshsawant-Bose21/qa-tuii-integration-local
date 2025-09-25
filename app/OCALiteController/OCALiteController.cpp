@@ -26,7 +26,8 @@
 #include "HostInterfaceLite/OCA/OCF/Timer/IOcfLiteTimer.h"
 #include <sys/time.h>
 #include <iostream>
-#include "../common/ZoneConfigBuilder.h" // For deserializing JSON configuration
+#include "../common/ZoneConfigBuilder.h"    // For deserializing JSON configuration
+#include "../common/CustomONODefinitions.h" // For custom ONO constants
 
 #ifdef OCA_RUN
 extern void Ocp1LiteServiceRun();
@@ -86,8 +87,8 @@ bool ConnectToDevice(const OcaServiceDiscovery::DiscoveredDevice &device,
         OCA_LOG_INFO_PARAMS("Created proxy with session ID: %u, network ONO: %u", sessionId, ocp1Network->GetObjectNumber());
 
         ::OcaLiteString configData;
-        OCA_LOG_INFO("Calling OcaControllerConfigManager_GetConfigDetails with ONO 8...");
-        OcaLiteStatus status = proxy.OcaControllerConfigManager_GetConfigDetails(8, controllerId, configData);
+        OCA_LOG_INFO_PARAMS("Calling OcaControllerConfigManager_GetConfigDetails with ONO %u...", CONTROLLER_CONFIG_MANAGER_ONO);
+        OcaLiteStatus status = proxy.OcaControllerConfigManager_GetConfigDetails(CONTROLLER_CONFIG_MANAGER_ONO, controllerId, configData);
 
         if (OCASTATUS_OK == status)
         {
@@ -107,28 +108,28 @@ bool ConnectToDevice(const OcaServiceDiscovery::DiscoveredDevice &device,
 
             // Deserialize the JSON using ZoneConfigBuilder
             std::vector<Controller> controllers = DeserializeControllers(jsonStr);
-            
+
             if (!controllers.empty())
             {
                 OCA_LOG_INFO("=== Parsed Controller Configuration ===");
-                for (const auto& controller : controllers)
+                for (const auto &controller : controllers)
                 {
                     OCA_LOG_INFO_PARAMS("Controller ID: %s", controller.id.c_str());
                     OCA_LOG_INFO_PARAMS("Controller Name: %s", controller.name.c_str());
                     OCA_LOG_INFO_PARAMS("Number of Zones: %zu", controller.zones.size());
-                    
+
                     for (size_t i = 0; i < controller.zones.size(); ++i)
                     {
-                        const auto& zone = controller.zones[i];
+                        const auto &zone = controller.zones[i];
                         OCA_LOG_INFO_PARAMS("  Zone %zu: %s (%s)", i + 1, zone->name.c_str(), zone->id.c_str());
-                        OCA_LOG_INFO_PARAMS("    ONOs - Zone: %u, Gain: %u, Mute: %u, Switch: %u", 
-                                          zone->ono.zone, zone->ono.gain, zone->ono.mute, zone->ono.sourceSelector);
+                        OCA_LOG_INFO_PARAMS("    ONOs - Zone: %u, Gain: %u, Mute: %u, Switch: %u",
+                                            zone->ono.zone, zone->ono.gain, zone->ono.mute, zone->ono.sourceSelector);
                         OCA_LOG_INFO_PARAMS("    Gain ID: %s", zone->gainID.c_str());
                         OCA_LOG_INFO_PARAMS("    Sources: %zu", zone->sources.size());
-                        
+
                         for (size_t j = 0; j < zone->sources.size(); ++j)
                         {
-                            const auto& source = zone->sources[j];
+                            const auto &source = zone->sources[j];
                             OCA_LOG_INFO_PARAMS("      Source %zu: Index %u - %s", j + 1, source.index, source.label.c_str());
                         }
                     }

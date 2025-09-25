@@ -29,8 +29,7 @@
 #include "workers/ZoneGroup.h"
 #include "ZoneConfigBuilder.h"
 #include "OcaLiteControllerConfigManager.h"
-// Constants for ONO assignments
-const ::OcaONo ROOT_ZONE_CONTAINER_ONO = static_cast<::OcaONo>(8000);
+#include "../common/CustomONODefinitions.h" // For custom ONO constants
 
 #ifdef OCA_RUN
 extern void Ocp1LiteServiceRun();

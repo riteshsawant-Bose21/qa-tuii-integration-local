@@ -10,6 +10,7 @@
 #include <vector>
 #include <memory>
 #include <OCC/ControlDataTypes/OcaLiteBaseDataTypes.h>
+#include "CustomONODefinitions.h" // For custom ONO constants
 #include "workers/ZoneGroup.h"
 #include "workers/ConcreteGainActuator.h"
 #include "workers/ConcreteMuteActuator.h"
@@ -68,11 +69,11 @@ struct BuiltZones
  *  - Each zone must specify: zoneONO, gainONO, muteONO, sourceSelectorONO
  *
  * @param json   Raw JSON string.
- * @param baseZoneGroupONo ONO for top container (8000 by default)
+ * @param baseZoneGroupONo ONO for top container (ROOT_ZONE_CONTAINER_ONO by default)
  * @return structure containing created objects (already added to hierarchy except top container which caller adds to root) or nullptr members on failure.
  */
 BuiltZones BuildZonesFromJson(const std::string &json,
-                              ::OcaONo baseZoneGroupONo = static_cast<::OcaONo>(8000));
+                              ::OcaONo baseZoneGroupONo = ROOT_ZONE_CONTAINER_ONO);
 
 // Refactored helper steps
 bool parseJson(const std::string &json, std::vector<Zone> &zonesOut);

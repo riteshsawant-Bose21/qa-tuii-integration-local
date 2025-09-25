@@ -153,13 +153,6 @@ static bool parseZonesObject(const char *json, std::vector<Zone> &zones)
                     return false;
                 hasName = true;
             }
-            else if (propKey == "controllerId")
-            {
-                // Skip this property - no longer used
-                std::string dummy;
-                if (!parseString(p, dummy))
-                    return false;
-            }
             else if (propKey == "gainID")
             {
                 if (!parseString(p, zone.gainID))
@@ -780,7 +773,7 @@ std::vector<Controller> BuildControllersFromMetadataJson(const std::string &json
 std::vector<Controller> DeserializeControllers(const std::string &json)
 {
     std::vector<Controller> controllers;
-    
+
     if (json.empty())
     {
         return controllers;
@@ -857,7 +850,7 @@ std::vector<Controller> DeserializeControllers(const std::string &json)
                     {
                         // Parse zone object
                         auto zone = std::make_shared<Zone>();
-                        
+
                         const char *zoneStart = p;
                         ++p; // Skip opening brace
                         skipWhitespace(p);
@@ -1123,7 +1116,28 @@ std::vector<Controller> DeserializeControllers(const std::string &json)
 std::string SerializeControllerToJson(const Controller &controller)
 {
     std::string json;
-    json.reserve(1024);
+
+    // Calculate approximate JSON size to reduce string reallocations
+    size_t estimatedSize = 100; // Base overhead for controller structure: {"id":"","name":"","zones":[]}
+    estimatedSize += controller.id.length() + controller.name.length();
+
+    for (const auto &zone : controller.zones)
+    {
+        estimatedSize += 150; // Base zone structure overhead: {"id":"","name":"","ono":{...},"gainID":"","sources":[]}
+        estimatedSize += zone->id.length() + zone->name.length() + zone->gainID.length();
+        estimatedSize += 80; // ONO numbers: "zone":9101,"gain":9102,"mute":9103,"sourceSelector":9104
+
+        for (const auto &source : zone->sources)
+        {
+            estimatedSize += 50; // Source structure: {"index":0,"label":""}
+            estimatedSize += source.label.length();
+        }
+    }
+
+    // Add 20% buffer for safety
+    estimatedSize = static_cast<size_t>(estimatedSize * 1.2);
+    json.reserve(estimatedSize);
+
     json += '{';
     json += "\"id\":\"" + controller.id + "\",";
     json += "\"name\":\"" + controller.name + "\",";

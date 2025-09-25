@@ -11,7 +11,8 @@
 
 // ---- Include local include files ----
 #include "OcaLiteControllerConfigManager.h"
-#include "ZoneConfigBuilder.h" // for Controller and Zone structs
+#include "ZoneConfigBuilder.h"    // for Controller and Zone structs
+#include "CustomONODefinitions.h" // for custom ONO constants
 #include "../../common/OCALite/OCF/OcaLiteCommandHandler.h"
 #include "../../common/OCALite/OCC/ControlDataTypes/OcaLiteTemplateHelpers.h"
 #include "../../common/OCALite/OCC/ControlDataTypes/OcaLiteClassIdentification.h"
@@ -29,7 +30,7 @@ const ::OcaLiteClassID OcaLiteControllerConfigManager::CLASS_ID(static_cast<::Oc
 // ---- Local data ----
 
 ::OcaLiteControllerConfigManager *OcaLiteControllerConfigManager::m_pSingleton(NULL);
-const ::OcaONo OcaLiteControllerConfigManager::MANAGER_ONO(static_cast<::OcaONo>(8));
+const ::OcaONo OcaLiteControllerConfigManager::MANAGER_ONO(CONTROLLER_CONFIG_MANAGER_ONO);
 
 // ---- Class Implementation ----
 
