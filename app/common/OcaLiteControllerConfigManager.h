@@ -68,7 +68,6 @@ private:
     static ::OcaLiteControllerConfigManager *m_pSingleton;
     std::vector<Controller> m_controllers;
 
-    static const ::OcaONo OBJECT_NUMBER;
 };
 
 #endif // OCALITECONTROLLERCONFIGMANAGER_H
