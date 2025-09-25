@@ -1905,7 +1905,6 @@
                 {
                     "name": "hpf_freq",
                     "value_type": "float",
-                    "dimensions": ["in"],
                     "default_value": 20.0,
                     "minimum_value": 20.0,
                     "maximum_value": 20000.0
@@ -1913,7 +1912,6 @@
                 {
                     "name": "lpf_freq",
                     "value_type": "float",
-                    "dimensions": ["in"],
                     "default_value": 20000.0,
                     "minimum_value": 20.0,
                     "maximum_value": 20000.0
