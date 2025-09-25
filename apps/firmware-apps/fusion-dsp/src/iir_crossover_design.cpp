@@ -92,7 +92,8 @@ static const FilterOrderConfig* find_config(int order, const FilterOrderConfig* 
 
 static void design_crossover_filter(IirFilter *iir, int start_section, float frequency,
                                     int order, float sample_rate, int max_sections,
-                                    const FilterOrderConfig* config, bool is_highpass) {
+                                    const FilterOrderConfig* config, bool is_highpass,
+                                    const char* filter_type) {
     int used_sections = (order + 1) / 2;
     if (used_sections > max_sections) {
         SPDLOG_WARN("Requested {} sections, max {}. Clamping.", used_sections, max_sections);
@@ -108,6 +109,9 @@ static void design_crossover_filter(IirFilter *iir, int start_section, float fre
         
         if (section.alpha == 0.0 && section.q == 0.0) {
             iir->set_section_coeffs(start_section + s, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0);
+            SPDLOG_DEBUG("IIR_COEFF [{}_{}_{}Hz_ord{}] sec{}: b0={:.17g} b1={:.17g} b2={:.17g} a0={:.17g} a1={:.17g} a2={:.17g}",
+                         filter_type, is_highpass ? "HPF" : "LPF", (int)frequency, order,
+                         start_section + s, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0);
             continue;
         }
         
@@ -155,6 +159,9 @@ static void design_crossover_filter(IirFilter *iir, int start_section, float fre
         }
         
         iir->set_section_coeffs(start_section + s, b0, b1, b2, a0, a1, a2);
+        SPDLOG_DEBUG("IIR_COEFF [{}_{}_{}Hz_ord{}] sec{}: b0={:.17g} b1={:.17g} b2={:.17g} a0={:.17g} a1={:.17g} a2={:.17g}",
+                     filter_type, is_highpass ? "HPF" : "LPF", (int)frequency, order,
+                     start_section + s, b0, b1, b2, a0, a1, a2);
     }
     
     for (int s = used_sections; s < max_sections; ++s) {
@@ -167,7 +174,7 @@ static void butterworth_lpf(IirFilter *iir, int start_section, float frequency,
     const FilterOrderConfig* config = find_config(order, butterworth_configs, 
                                                   sizeof(butterworth_configs)/sizeof(butterworth_configs[0]));
     design_crossover_filter(iir, start_section, frequency, order, sample_rate, 
-                           max_sections, config, false);
+                           max_sections, config, false, "Butterworth");
 }
 
 static void butterworth_hpf(IirFilter *iir, int start_section, float frequency,
@@ -175,7 +182,7 @@ static void butterworth_hpf(IirFilter *iir, int start_section, float frequency,
     const FilterOrderConfig* config = find_config(order, butterworth_configs, 
                                                   sizeof(butterworth_configs)/sizeof(butterworth_configs[0]));
     design_crossover_filter(iir, start_section, frequency, order, sample_rate, 
-                           max_sections, config, true);
+                           max_sections, config, true, "Butterworth");
 }
 
 static void bessel_lpf(IirFilter *iir, int start_section, float frequency,
@@ -183,7 +190,7 @@ static void bessel_lpf(IirFilter *iir, int start_section, float frequency,
     const FilterOrderConfig* config = find_config(order, bessel_configs, 
                                                   sizeof(bessel_configs)/sizeof(bessel_configs[0]));
     design_crossover_filter(iir, start_section, frequency, order, sample_rate, 
-                           max_sections, config, false);
+                           max_sections, config, false, "Bessel");
 }
 
 static void bessel_hpf(IirFilter *iir, int start_section, float frequency,
@@ -191,7 +198,7 @@ static void bessel_hpf(IirFilter *iir, int start_section, float frequency,
     const FilterOrderConfig* config = find_config(order, bessel_configs, 
                                                   sizeof(bessel_configs)/sizeof(bessel_configs[0]));
     design_crossover_filter(iir, start_section, frequency, order, sample_rate, 
-                           max_sections, config, true);
+                           max_sections, config, true, "Bessel");
 }
 
 static void lr_lpf(IirFilter *iir, int start_section, float frequency,
@@ -199,7 +206,7 @@ static void lr_lpf(IirFilter *iir, int start_section, float frequency,
     const FilterOrderConfig* config = find_config(order, linkwitz_riley_configs, 
                                                   sizeof(linkwitz_riley_configs)/sizeof(linkwitz_riley_configs[0]));
     design_crossover_filter(iir, start_section, frequency, order, sample_rate, 
-                           max_sections, config, false);
+                           max_sections, config, false, "LinkwitzRiley");
 }
 
 static void lr_hpf(IirFilter *iir, int start_section, float frequency,
@@ -207,7 +214,7 @@ static void lr_hpf(IirFilter *iir, int start_section, float frequency,
     const FilterOrderConfig* config = find_config(order, linkwitz_riley_configs, 
                                                   sizeof(linkwitz_riley_configs)/sizeof(linkwitz_riley_configs[0]));
     design_crossover_filter(iir, start_section, frequency, order, sample_rate, 
-                           max_sections, config, true);
+                           max_sections, config, true, "LinkwitzRiley");
 }
 
 IIR_DESIGN_REGISTER(iir_crossover_butterworth_lpf, butterworth_lpf);
