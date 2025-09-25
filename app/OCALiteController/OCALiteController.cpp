@@ -144,24 +144,24 @@ bool ConnectToDevice(const OcaServiceDiscovery::DiscoveredDevice &device,
         else
         {
             OCA_LOG_ERROR_PARAMS("✗ Failed to retrieve configuration data, status: %u (0x%X)", status, status);
-            if (status == 1)
-                OCA_LOG_ERROR("Status 1: OCASTATUS_PROCESSING_FAILED");
-            else if (status == 2)
-                OCA_LOG_ERROR("Status 2: OCASTATUS_BAD_FORMAT");
-            else if (status == 3)
-                OCA_LOG_ERROR("Status 3: OCASTATUS_BAD_ONO");
-            else if (status == 4)
-                OCA_LOG_ERROR("Status 4: OCASTATUS_PARAMETER_ERROR");
-            else if (status == 5)
-                OCA_LOG_ERROR("Status 5: OCASTATUS_PARAMETER_OUT_OF_RANGE");
-            else if (status == 6)
-                OCA_LOG_ERROR("Status 6: OCASTATUS_NOT_IMPLEMENTED");
-            else if (status == 7)
-                OCA_LOG_ERROR("Status 7: OCASTATUS_INVALID_REQUEST");
-            else if (status == 8)
-                OCA_LOG_ERROR("Status 8: OCASTATUS_LOCKED");
-            else if (status == 9)
-                OCA_LOG_ERROR("Status 9: OCASTATUS_BAD_METHOD");
+            if (status == OCASTATUS_PROCESSING_FAILED)
+                OCA_LOG_ERROR("Status OCASTATUS_PROCESSING_FAILED");
+            else if (status == OCASTATUS_BAD_FORMAT)
+                OCA_LOG_ERROR("Status OCASTATUS_BAD_FORMAT");
+            else if (status == OCASTATUS_BAD_ONO)
+                OCA_LOG_ERROR("Status OCASTATUS_BAD_ONO");
+            else if (status == OCASTATUS_PARAMETER_ERROR)
+                OCA_LOG_ERROR("Status OCASTATUS_PARAMETER_ERROR");
+            else if (status == OCASTATUS_PARAMETER_OUT_OF_RANGE)
+                OCA_LOG_ERROR("Status OCASTATUS_PARAMETER_OUT_OF_RANGE");
+            else if (status == OCASTATUS_NOT_IMPLEMENTED)
+                OCA_LOG_ERROR("Status OCASTATUS_NOT_IMPLEMENTED");
+            else if (status == OCASTATUS_INVALID_REQUEST)
+                OCA_LOG_ERROR("Status OCASTATUS_INVALID_REQUEST");
+            else if (status == OCASTATUS_LOCKED)
+                OCA_LOG_ERROR("Status OCASTATUS_LOCKED");
+            else if (status == OCASTATUS_BAD_METHOD)
+                OCA_LOG_ERROR("Status OCASTATUS_BAD_METHOD");
             else
                 OCA_LOG_ERROR_PARAMS("Status %u: Unknown error code", status);
         }
