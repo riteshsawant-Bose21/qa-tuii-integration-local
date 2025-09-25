@@ -4,6 +4,8 @@
 #include <cerrno>
 #include <limits>
 #include <cctype>
+#include <map>
+#include <memory>
 
 // Helper trim of simple quotes/spaces
 static std::string trim(const std::string &s)
@@ -63,7 +65,7 @@ static void skipWhitespace(const char *&p)
 }
 
 // Helper function to find and parse the zones object
-static bool parseZonesObject(const char *json, std::vector<ZoneDef> &zones)
+static bool parseZonesObject(const char *json, std::vector<Zone> &zones)
 {
     const char *p = json;
 
@@ -111,7 +113,7 @@ static bool parseZonesObject(const char *json, std::vector<ZoneDef> &zones)
         skipWhitespace(p);
 
         // Parse zone object
-        ZoneDef zone;
+        Zone zone;
         zone.id = zoneKey;
 
         bool hasName = false, hasGainID = false, hasOno = false;
@@ -153,9 +155,10 @@ static bool parseZonesObject(const char *json, std::vector<ZoneDef> &zones)
             }
             else if (propKey == "controllerId")
             {
-                if (!parseString(p, zone.controllerId))
+                // Skip this property - no longer used
+                std::string dummy;
+                if (!parseString(p, dummy))
                     return false;
-                // Parsed but not used as per requirements
             }
             else if (propKey == "gainID")
             {
@@ -386,11 +389,11 @@ static bool parseZonesObject(const char *json, std::vector<ZoneDef> &zones)
 }
 
 // Internal parser implementation for new JSON structure
-static bool parseZonesInternal(const std::string &json, std::vector<ZoneDef> &out)
+static bool parseZonesInternal(const std::string &json, std::vector<Zone> &out)
 {
     return parseZonesObject(json.c_str(), out);
 } // Public wrapper for tests / external usage
-bool parseJson(const std::string &json, std::vector<ZoneDef> &zonesOut)
+bool parseJson(const std::string &json, std::vector<Zone> &zonesOut)
 {
     zonesOut.clear();
     return parseZonesInternal(json, zonesOut);
@@ -430,7 +433,7 @@ static void buildSwitchLists(const std::vector<ZoneSourceDef> &sources,
     }
 }
 
-BuiltZones createZoneObjects(const std::vector<ZoneDef> &zoneDefs,
+BuiltZones createZoneObjects(const std::vector<Zone> &zoneDefs,
                              ::OcaONo baseZoneGroupONo)
 {
     BuiltZones model{};
@@ -441,7 +444,7 @@ BuiltZones createZoneObjects(const std::vector<ZoneDef> &zoneDefs,
     model.zones.reserve(zoneDefs.size());
     for (size_t i = 0; i < zoneDefs.size(); ++i)
     {
-        const ZoneDef &zoneDef = zoneDefs[i];
+        const Zone &zoneDef = zoneDefs[i];
         ZoneObjects zb;
         zb.group.reset(new ZoneGroup(zoneDef.ono.zone, static_cast<::OcaBoolean>(true), ::OcaLiteString(zoneDef.name.c_str())));
         if (!zb.group)
@@ -549,7 +552,7 @@ void buildHierarchy(BuiltZones &zonesModel)
 BuiltZones BuildZonesFromJson(const std::string &json, ::OcaONo baseZoneGroupONo)
 {
     BuiltZones empty{};
-    std::vector<ZoneDef> zones;
+    std::vector<Zone> zones;
     if (!parseJson(json, zones))
     {
         OCA_LOG_ERROR("[ZoneConfig] Failed to parse any zones from JSON\n");
@@ -558,4 +561,608 @@ BuiltZones BuildZonesFromJson(const std::string &json, ::OcaONo baseZoneGroupONo
     BuiltZones model = createZoneObjects(zones, baseZoneGroupONo);
     buildHierarchy(model);
     return model;
+}
+
+std::vector<Controller> BuildControllersFromMetadataJson(const std::string &json)
+{
+    std::vector<Controller> controllers;
+
+    // First, parse all zones
+    std::vector<Zone> allZones;
+    if (!parseJson(json, allZones))
+    {
+        return controllers; // empty vector on parse failure
+    }
+
+    // Create a map for quick zone lookup by ID
+    std::map<std::string, std::shared_ptr<Zone>> zoneMap;
+    for (const auto &zone : allZones)
+    {
+        zoneMap[zone.id] = std::make_shared<Zone>(zone);
+    }
+
+    // Parse controllers section
+    const char *controllersStart = strstr(json.c_str(), "\"controllers\"");
+    if (!controllersStart)
+    {
+        return controllers; // No controllers section found
+    }
+
+    const char *objStart = strchr(controllersStart, '{');
+    if (!objStart)
+    {
+        return controllers;
+    }
+
+    const char *p = objStart + 1;
+    skipWhitespace(p);
+
+    while (*p && *p != '}')
+    {
+        // Skip comma if not first controller
+        if (*p == ',')
+        {
+            ++p;
+            skipWhitespace(p);
+        }
+
+        if (*p == '}')
+            break;
+
+        // Parse controller key (controller ID)
+        std::string controllerKey;
+        if (!parseString(p, controllerKey))
+        {
+            ++p;
+            continue;
+        }
+
+        skipWhitespace(p);
+        if (*p != ':')
+        {
+            ++p;
+            continue;
+        }
+        ++p;
+        skipWhitespace(p);
+
+        if (*p != '{')
+        {
+            ++p;
+            continue;
+        }
+
+        // Find the end of this controller object
+        const char *controllerObjStart = p;
+        const char *objEnd = p + 1;
+        int braceCount = 1;
+        while (*objEnd && braceCount > 0)
+        {
+            if (*objEnd == '{')
+                braceCount++;
+            else if (*objEnd == '}')
+                braceCount--;
+            objEnd++;
+        }
+
+        if (braceCount != 0)
+            break; // malformed JSON
+
+        // Parse controller object
+        Controller controller;
+        controller.id = controllerKey; // Use the key as the controller ID
+
+        // Parse the controller object properties
+        const char *innerP = controllerObjStart + 1;
+        skipWhitespace(innerP);
+
+        while (*innerP && *innerP != '}')
+        {
+            if (*innerP == ',')
+            {
+                ++innerP;
+                skipWhitespace(innerP);
+            }
+
+            if (*innerP == '}')
+                break;
+
+            // Parse property key
+            std::string propKey;
+            if (!parseString(innerP, propKey))
+                break;
+
+            skipWhitespace(innerP);
+            if (*innerP != ':')
+                break;
+            ++innerP;
+            skipWhitespace(innerP);
+
+            if (propKey == "id")
+            {
+                // Skip the id property (we already have it from the key)
+                std::string dummy;
+                if (*innerP == '"')
+                {
+                    parseString(innerP, dummy);
+                }
+            }
+            else if (propKey == "name")
+            {
+                if (*innerP == '"')
+                {
+                    parseString(innerP, controller.name);
+                }
+            }
+            else if (propKey == "zoneIds")
+            {
+                if (*innerP == '[')
+                {
+                    ++innerP;
+                    skipWhitespace(innerP);
+
+                    while (*innerP && *innerP != ']')
+                    {
+                        if (*innerP == ',')
+                        {
+                            ++innerP;
+                            skipWhitespace(innerP);
+                        }
+
+                        if (*innerP == ']')
+                            break;
+
+                        std::string zoneId;
+                        if (*innerP == '"' && parseString(innerP, zoneId))
+                        {
+                            // Find the zone with this ID and add it to the controller
+                            auto zoneIt = zoneMap.find(zoneId);
+                            if (zoneIt != zoneMap.end())
+                            {
+                                controller.zones.push_back(zoneIt->second);
+                            }
+                        }
+
+                        skipWhitespace(innerP);
+                    }
+
+                    if (*innerP == ']')
+                        ++innerP;
+                }
+            }
+            else
+            {
+                // Skip unknown property
+                if (*innerP == '"')
+                {
+                    std::string dummy;
+                    parseString(innerP, dummy);
+                }
+                else if (*innerP == '[' || *innerP == '{')
+                {
+                    // Skip complex objects/arrays
+                    char openChar = *innerP;
+                    char closeChar = (openChar == '{') ? '}' : ']';
+                    int depth = 1;
+                    ++innerP;
+
+                    while (*innerP && depth > 0)
+                    {
+                        if (*innerP == openChar)
+                            depth++;
+                        else if (*innerP == closeChar)
+                            depth--;
+                        ++innerP;
+                    }
+                }
+                else
+                {
+                    while (*innerP && *innerP != ',' && *innerP != '}')
+                        ++innerP;
+                }
+            }
+
+            skipWhitespace(innerP);
+        }
+
+        if (!controller.id.empty())
+        {
+            controllers.push_back(controller);
+        }
+
+        p = objEnd;
+        skipWhitespace(p);
+    }
+
+    return controllers;
+}
+
+std::vector<Controller> DeserializeControllers(const std::string &json)
+{
+    std::vector<Controller> controllers;
+    
+    if (json.empty())
+    {
+        return controllers;
+    }
+
+    const char *p = json.c_str();
+    skipWhitespace(p);
+
+    if (*p != '{')
+    {
+        return controllers; // Not a valid JSON object
+    }
+
+    ++p; // Skip opening brace
+    skipWhitespace(p);
+
+    Controller controller;
+
+    while (*p && *p != '}')
+    {
+        if (*p == ',')
+        {
+            ++p;
+            skipWhitespace(p);
+        }
+
+        if (*p == '}')
+            break;
+
+        // Parse property key
+        std::string propKey;
+        if (!parseString(p, propKey))
+            break;
+
+        skipWhitespace(p);
+        if (*p != ':')
+            break;
+        ++p;
+        skipWhitespace(p);
+
+        if (propKey == "id")
+        {
+            if (*p == '"')
+            {
+                parseString(p, controller.id);
+            }
+        }
+        else if (propKey == "name")
+        {
+            if (*p == '"')
+            {
+                parseString(p, controller.name);
+            }
+        }
+        else if (propKey == "zones")
+        {
+            if (*p == '[')
+            {
+                ++p;
+                skipWhitespace(p);
+
+                while (*p && *p != ']')
+                {
+                    if (*p == ',')
+                    {
+                        ++p;
+                        skipWhitespace(p);
+                    }
+
+                    if (*p == ']')
+                        break;
+
+                    if (*p == '{')
+                    {
+                        // Parse zone object
+                        auto zone = std::make_shared<Zone>();
+                        
+                        const char *zoneStart = p;
+                        ++p; // Skip opening brace
+                        skipWhitespace(p);
+
+                        while (*p && *p != '}')
+                        {
+                            if (*p == ',')
+                            {
+                                ++p;
+                                skipWhitespace(p);
+                            }
+
+                            if (*p == '}')
+                                break;
+
+                            std::string zoneKey;
+                            if (!parseString(p, zoneKey))
+                                break;
+
+                            skipWhitespace(p);
+                            if (*p != ':')
+                                break;
+                            ++p;
+                            skipWhitespace(p);
+
+                            if (zoneKey == "id")
+                            {
+                                if (*p == '"')
+                                {
+                                    parseString(p, zone->id);
+                                }
+                            }
+                            else if (zoneKey == "name")
+                            {
+                                if (*p == '"')
+                                {
+                                    parseString(p, zone->name);
+                                }
+                            }
+                            else if (zoneKey == "gainID")
+                            {
+                                if (*p == '"')
+                                {
+                                    parseString(p, zone->gainID);
+                                }
+                            }
+                            else if (zoneKey == "ono")
+                            {
+                                if (*p == '{')
+                                {
+                                    ++p;
+                                    skipWhitespace(p);
+
+                                    while (*p && *p != '}')
+                                    {
+                                        if (*p == ',')
+                                        {
+                                            ++p;
+                                            skipWhitespace(p);
+                                        }
+
+                                        if (*p == '}')
+                                            break;
+
+                                        std::string onoKey;
+                                        if (!parseString(p, onoKey))
+                                            break;
+
+                                        skipWhitespace(p);
+                                        if (*p != ':')
+                                            break;
+                                        ++p;
+                                        skipWhitespace(p);
+
+                                        ::OcaONo onoValue;
+                                        if (parseNumber(p, onoValue))
+                                        {
+                                            if (onoKey == "zone")
+                                                zone->ono.zone = onoValue;
+                                            else if (onoKey == "gain")
+                                                zone->ono.gain = onoValue;
+                                            else if (onoKey == "mute")
+                                                zone->ono.mute = onoValue;
+                                            else if (onoKey == "sourceSelector")
+                                                zone->ono.sourceSelector = onoValue;
+                                        }
+
+                                        skipWhitespace(p);
+                                    }
+
+                                    if (*p == '}')
+                                        ++p;
+                                }
+                            }
+                            else if (zoneKey == "sources")
+                            {
+                                if (*p == '[')
+                                {
+                                    ++p;
+                                    skipWhitespace(p);
+
+                                    while (*p && *p != ']')
+                                    {
+                                        if (*p == ',')
+                                        {
+                                            ++p;
+                                            skipWhitespace(p);
+                                        }
+
+                                        if (*p == ']')
+                                            break;
+
+                                        if (*p == '{')
+                                        {
+                                            ZoneSourceDef source;
+                                            ++p;
+                                            skipWhitespace(p);
+
+                                            while (*p && *p != '}')
+                                            {
+                                                if (*p == ',')
+                                                {
+                                                    ++p;
+                                                    skipWhitespace(p);
+                                                }
+
+                                                if (*p == '}')
+                                                    break;
+
+                                                std::string sourceKey;
+                                                if (!parseString(p, sourceKey))
+                                                    break;
+
+                                                skipWhitespace(p);
+                                                if (*p != ':')
+                                                    break;
+                                                ++p;
+                                                skipWhitespace(p);
+
+                                                if (sourceKey == "index")
+                                                {
+                                                    ::OcaONo indexValue;
+                                                    if (parseNumber(p, indexValue))
+                                                    {
+                                                        source.index = static_cast<unsigned int>(indexValue);
+                                                    }
+                                                }
+                                                else if (sourceKey == "label")
+                                                {
+                                                    if (*p == '"')
+                                                    {
+                                                        parseString(p, source.label);
+                                                    }
+                                                }
+
+                                                skipWhitespace(p);
+                                            }
+
+                                            if (*p == '}')
+                                                ++p;
+
+                                            zone->sources.push_back(source);
+                                        }
+
+                                        skipWhitespace(p);
+                                    }
+
+                                    if (*p == ']')
+                                        ++p;
+                                }
+                            }
+                            else
+                            {
+                                // Skip unknown property
+                                if (*p == '"')
+                                {
+                                    std::string dummy;
+                                    parseString(p, dummy);
+                                }
+                                else if (*p == '[' || *p == '{')
+                                {
+                                    // Skip complex objects/arrays
+                                    char openChar = *p;
+                                    char closeChar = (openChar == '{') ? '}' : ']';
+                                    int depth = 1;
+                                    ++p;
+
+                                    while (*p && depth > 0)
+                                    {
+                                        if (*p == openChar)
+                                            depth++;
+                                        else if (*p == closeChar)
+                                            depth--;
+                                        ++p;
+                                    }
+                                }
+                                else
+                                {
+                                    while (*p && *p != ',' && *p != '}')
+                                        ++p;
+                                }
+                            }
+
+                            skipWhitespace(p);
+                        }
+
+                        if (*p == '}')
+                            ++p;
+
+                        controller.zones.push_back(zone);
+                    }
+
+                    skipWhitespace(p);
+                }
+
+                if (*p == ']')
+                    ++p;
+            }
+        }
+        else
+        {
+            // Skip unknown property
+            if (*p == '"')
+            {
+                std::string dummy;
+                parseString(p, dummy);
+            }
+            else if (*p == '[' || *p == '{')
+            {
+                // Skip complex objects/arrays
+                char openChar = *p;
+                char closeChar = (openChar == '{') ? '}' : ']';
+                int depth = 1;
+                ++p;
+
+                while (*p && depth > 0)
+                {
+                    if (*p == openChar)
+                        depth++;
+                    else if (*p == closeChar)
+                        depth--;
+                    ++p;
+                }
+            }
+            else
+            {
+                while (*p && *p != ',' && *p != '}')
+                    ++p;
+            }
+        }
+
+        skipWhitespace(p);
+    }
+
+    if (!controller.id.empty())
+    {
+        controllers.push_back(controller);
+    }
+
+    return controllers;
+}
+
+std::string SerializeControllerToJson(const Controller &controller)
+{
+    std::string json;
+    json.reserve(1024);
+    json += '{';
+    json += "\"id\":\"" + controller.id + "\",";
+    json += "\"name\":\"" + controller.name + "\",";
+    json += "\"zones\":[";
+
+    for (size_t i = 0; i < controller.zones.size(); ++i)
+    {
+        const auto &zone = controller.zones[i];
+        json += '{';
+        json += "\"id\":\"" + zone->id + "\",";
+        json += "\"name\":\"" + zone->name + "\",";
+        json += "\"ono\":{";
+        json += "\"zone\":" + std::to_string(static_cast<long long>(zone->ono.zone)) + ",";
+        json += "\"gain\":" + std::to_string(static_cast<long long>(zone->ono.gain)) + ",";
+        json += "\"mute\":" + std::to_string(static_cast<long long>(zone->ono.mute)) + ",";
+        json += "\"sourceSelector\":" + std::to_string(static_cast<long long>(zone->ono.sourceSelector)) + "},";
+        json += "\"gainID\":\"" + zone->gainID + "\",";
+        json += "\"sources\":[";
+
+        for (size_t j = 0; j < zone->sources.size(); ++j)
+        {
+            const auto &source = zone->sources[j];
+            json += '{';
+            json += "\"index\":" + std::to_string(static_cast<unsigned long long>(source.index)) + ",";
+            json += "\"label\":\"" + source.label + "\"";
+            json += '}';
+            if (j + 1 < zone->sources.size())
+            {
+                json += ',';
+            }
+        }
+        json += "]}";
+
+        if (i + 1 < controller.zones.size())
+        {
+            json += ',';
+        }
+    }
+    json += "]}";
+
+    return json;
 }

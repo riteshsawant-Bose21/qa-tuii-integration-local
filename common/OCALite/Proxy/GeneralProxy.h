@@ -56,7 +56,7 @@ public:
      *
      * @return The resulting status
      */
-    ::OcaLiteStatus OcaRoot_GetClassIdentification(::OcaONo remoteObjectNumber, ::OcaLiteClassIdentification& classIdentification);
+    ::OcaLiteStatus OcaRoot_GetClassIdentification(::OcaONo remoteObjectNumber, ::OcaLiteClassIdentification &classIdentification);
 
     /**
      * GetMembersRecursive from an OcaBlock
@@ -66,8 +66,8 @@ public:
      *
      * @return The resulting status.
      */
-    ::OcaLiteStatus OcaBlock_GetMembersRecursive(::OcaONo remoteObjectNumber, ::OcaLiteList< ::OcaLiteBlockMember>& members);
-    
+    ::OcaLiteStatus OcaBlock_GetMembersRecursive(::OcaONo remoteObjectNumber, ::OcaLiteList<::OcaLiteBlockMember> &members);
+
     /**
      * GetMembers from an OcaBlock
      *
@@ -76,7 +76,7 @@ public:
      *
      * @return The resulting status.
      */
-    ::OcaLiteStatus OcaBlock_GetMembers(::OcaONo remoteObjectNumber, ::OcaLiteList< ::OcaLiteObjectIdentification>& members);
+    ::OcaLiteStatus OcaBlock_GetMembers(::OcaONo remoteObjectNumber, ::OcaLiteList<::OcaLiteObjectIdentification> &members);
 
     /**
      * GetManager from the OcaDeviceManager
@@ -85,7 +85,7 @@ public:
      *
      * @return The resulting status.
      */
-    ::OcaLiteStatus OcaDeviceManager_GetManagers(::OcaLiteList< ::OcaLiteManagerDescriptor>& managers);
+    ::OcaLiteStatus OcaDeviceManager_GetManagers(::OcaLiteList<::OcaLiteManagerDescriptor> &managers);
 
     /**
      * SetResetKey to the OcaDeviceManager.
@@ -95,8 +95,8 @@ public:
      *
      * @return The resulting status.
      */
-    ::OcaLiteStatus OcaDeviceManager_SetResetKey(const ::OcaLiteBlobFixedLen<16>& resetKey, ::OcaLiteNetworkAddress networkAddress);
-    
+    ::OcaLiteStatus OcaDeviceManager_SetResetKey(const ::OcaLiteBlobFixedLen<16> &resetKey, ::OcaLiteNetworkAddress networkAddress);
+
     /**
      * Send a clear reset cause command to the OcaDeviceManger
      *
@@ -111,8 +111,8 @@ public:
      *
      * @return The resulting status.
      */
-    ::OcaLiteStatus OcaDeviceManager_GetResetCause(::OcaLiteResetCause& resetCause);
-    
+    ::OcaLiteStatus OcaDeviceManager_GetResetCause(::OcaLiteResetCause &resetCause);
+
     /**
      * Add a subscription to the passed event
      *
@@ -124,11 +124,11 @@ public:
      *
      * @return The resulting status
      */
-    ::OcaLiteStatus OcaSubscriptionManager_AddSubscription(const OcaLiteEvent& ocaEvent,
-                                                           const OcaLiteMethod& subscriber,
-                                                           const OcaLiteBlob& context,
+    ::OcaLiteStatus OcaSubscriptionManager_AddSubscription(const OcaLiteEvent &ocaEvent,
+                                                           const OcaLiteMethod &subscriber,
+                                                           const OcaLiteBlob &context,
                                                            ::OcaLiteNotificationDeliveryMode deliveryMode,
-                                                           const ::OcaLiteNetworkAddress& destInfo);
+                                                           const ::OcaLiteNetworkAddress &destInfo);
 
     /**
      * Remove a subscription from the passed event
@@ -138,8 +138,8 @@ public:
      *
      * @return The resulting status
      */
-    ::OcaLiteStatus OcaSubscriptionManager_RemoveSubscription(const OcaLiteEvent& ocaEvent,
-                                                              const OcaLiteMethod& subscriber);
+    ::OcaLiteStatus OcaSubscriptionManager_RemoveSubscription(const OcaLiteEvent &ocaEvent,
+                                                              const OcaLiteMethod &subscriber);
 
     /**
      * Send an invalid call to the passed objectnumber / method id. This to verify the existence of the method.
@@ -149,16 +149,29 @@ public:
      *
      * @return The resulting status
      */
-    ::OcaLiteStatus OcaCompliancyTestTool_InvalidCall(::OcaONo objectNumber, ::OcaLiteMethodID& methodId);
+    ::OcaLiteStatus OcaCompliancyTestTool_InvalidCall(::OcaONo objectNumber, ::OcaLiteMethodID &methodId);
+
+    /**
+     * Get configuration details from the Controller Config Manager
+     *
+     * @param[in]  managerONo     The object number of the Config Manager (typically 8001)
+     * @param[in]  controllerId   The controller ID to get configuration for
+     * @param[out] configData     The configuration data as string
+     *
+     * @return The resulting status
+     */
+    ::OcaLiteStatus OcaControllerConfigManager_GetConfigDetails(::OcaONo managerONo,
+                                                                const ::OcaLiteString &controllerId,
+                                                                ::OcaLiteString &configData);
 
 protected:
 private:
     /** The session ID */
-    ::OcaSessionID  m_sessionId;
+    ::OcaSessionID m_sessionId;
     /** The network object number */
-    ::OcaONo        m_networkObjectNumber;
+    ::OcaONo m_networkObjectNumber;
     /** Buffer */
-    ::OcaUint8      m_buffer[10*1024];
+    ::OcaUint8 m_buffer[10 * 1024];
 };
 
-#endif //GENERAL_PROXY_H
+#endif // GENERAL_PROXY_H
