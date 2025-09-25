@@ -16,6 +16,22 @@
 
 #include "../../common/OCALite/OCC/ControlDataTypes/OcaLiteFrameworkDataTypes.h"
 
+// Custom Class IDs for AES70 class hierarchy
+// Class ID defines the inheritance path: OcaRoot -> OcaManager -> OcaLiteControllerConfigManager
+// Format: {OCA_MANAGER_CLASSID, custom_extension_number}
+//
+// OCA_ROOT_CLASSID = 1 (base class for all OCA objects)
+// OCA_MANAGER_CLASSID = {1, 3} (all managers inherit from OcaRoot with manager extension 3)
+// Our custom manager = {1, 3, 1516}
+//
+// So the full class path is 1.3.1516, meaning:
+// Level 1: OcaRoot (class ID = 1)
+// Level 2: OcaManager (class ID = 1.3)
+// Level 3: OcaLiteControllerConfigManager (class ID = 1.3.1516)
+//
+// The 1516 is an arbitrary number for our custom manager class.
+const ::OcaUint16 CONTROLLER_CONFIG_MANAGER_CLASS_ID = static_cast<::OcaUint16>(1516);
+
 // Custom Manager ONOs
 // From the standard table:
 

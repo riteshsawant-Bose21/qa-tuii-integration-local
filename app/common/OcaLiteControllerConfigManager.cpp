@@ -19,7 +19,7 @@
 
 // ---- Helper types and constants ----
 
-static const ::OcaUint16 classID[] = {OCA_MANAGER_CLASSID, static_cast<::OcaUint16>(1000)};
+static const ::OcaUint16 classID[] = {OCA_MANAGER_CLASSID, CONTROLLER_CONFIG_MANAGER_CLASS_ID};
 const ::OcaLiteClassID OcaLiteControllerConfigManager::CLASS_ID(static_cast<::OcaUint16>(sizeof(classID) / sizeof(classID[0])), classID);
 
 /** Defines the version increment of this class compared to its base class. */
