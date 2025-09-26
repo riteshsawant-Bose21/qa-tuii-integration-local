@@ -1,423 +1,305 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'package:fusion_lib/models/fusion_models.dart';
-
-import '../../../../core/models/products_data.dart';
-import '../../../../core/service_locator.dart';
-import '../../../../core/widgets/horizontal_resizable_container.dart';
-import '../widgets/hardware_list_card.dart';
-import '../widgets/zone_schematic_card.dart';
+import 'package:flutter_svg/svg.dart';
+import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 class SchematicsPage extends StatefulWidget {
   const SchematicsPage({super.key});
 
   @override
-  SchematicsPageState createState() => SchematicsPageState();
+  _SchematicsPageState createState() => _SchematicsPageState();
 }
 
-class SchematicsPageState extends State<SchematicsPage> {
-  final ScrollController _horizontalController = ScrollController();
+class _SchematicsPageState extends State<SchematicsPage> {
+  double? leftPanelWidth; // Make nullable to calculate dynamically
+  final double minPanelWidth = 300.0;
+  final double dividerWidth = 1.0;
 
-  @override
-  void initState() {
-    super.initState();
-  }
+  // Add view state management
+  bool isListingView = true; // true for listing view, false for wiring view
+
+  // Zone expansion state
+  final ValueNotifier<bool> zone1Expanded = ValueNotifier<bool>(true);
+  final ValueNotifier<bool> zone2Expanded = ValueNotifier<bool>(false);
+  final ValueNotifier<bool> zone3Expanded = ValueNotifier<bool>(false);
+  final ValueNotifier<bool> zone4Expanded = ValueNotifier<bool>(false);
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-        builder: (BuildContext context, ProjectViewModelState state) {
-          return Row(
-            children: <Widget>[
-              Expanded(
-                child: Scrollbar(
-                  controller: _horizontalController,
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    controller: _horizontalController,
-                    child: Padding(
-                      padding: const EdgeInsets.all(15),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          HorizontalResizableContainer(
-                            minWidth: 150,
-                            maxWidth: 1000,
-                            dragLeft: false,
-                            dragRight: true,
-                            child: _buildSourcesSection(),
-                          ),
-                          const SizedBox(width: 16),
-                          HorizontalResizableContainer(
-                            maxWidth: 1000,
-                            dragLeft: false,
-                            dragRight: true,
-                            child: _buildProcessorsSection(),
-                          ),
-                          const SizedBox(width: 16),
-                          HorizontalResizableContainer(
-                            maxWidth: 1000,
-                            dragLeft: false,
-                            dragRight: true,
-                            child: _buildAmplifiersSection(),
-                          ),
-                          const SizedBox(width: 16),
-                          HorizontalResizableContainer(
-                            maxWidth: 1000,
-                            dragLeft: false,
-                            dragRight: true,
-                            child: _buildRacksSection(),
-                          ),
-                          const SizedBox(width: 16),
-                          HorizontalResizableContainer(
-                            minWidth: 300,
-                            maxWidth: 1000,
-                            dragLeft: false,
-                            dragRight: true,
-                            child: _buildZonesSection(),
-                          ),
-                        ],
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final double availableWidth = constraints.maxWidth;
+        leftPanelWidth ??= ((availableWidth - dividerWidth) / 2).clamp(minPanelWidth, availableWidth - minPanelWidth - dividerWidth);
+        final double rightPanelWidth = (availableWidth - leftPanelWidth! - dividerWidth).clamp(minPanelWidth, availableWidth * 0.8);
+
+        return Column(
+          children: <Widget>[
+            Expanded(
+              child: isListingView ? _buildListingView(availableWidth, rightPanelWidth) : _buildWiringView(),
+            ),
+            Container(
+              height: 44,
+              color: Colors.white,
+              child: Row(
+                children: <Widget>[
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        isListingView = true;
+                      });
+                    },
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      color: isListingView ? Colors.black87 : Colors.transparent,
+                      child: SvgPicture.asset(
+                        "assets/svg/listing_view_icon.svg",
+                        width: 40,
+                        height: 40,
+                        colorFilter: ColorFilter.mode(
+                          isListingView ? Colors.white : Colors.black87,
+                          BlendMode.srcIn,
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ),
-
-              // Container(
-              //   width: 310,
-              //   decoration: BoxDecoration(
-              //     color: Colors.white,
-              //     border: Border(left: BorderSide(color: Colors.grey.shade200, width: 1)),
-              //   ),
-              //   child: Column(
-              //     crossAxisAlignment: CrossAxisAlignment.start,
-              //     children: <Widget>[
-              //       // Header
-              //       Container(
-              //         width: double.infinity,
-              //         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-              //         decoration: BoxDecoration(
-              //           color: Colors.grey.shade50,
-              //           borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
-              //           border: Border(
-              //             bottom: BorderSide(color: Colors.grey.shade200, width: 1),
-              //           ),
-              //         ),
-              //         child: Row(
-              //           mainAxisSize: MainAxisSize.min,
-              //           children: <Widget>[
-              //             const SizedBox(width: 8),
-              //             Icon(Icons.tune, size: 18, color: Colors.grey.shade600),
-              //             const SizedBox(width: 8),
-              //             Expanded(
-              //               child: AnimatedOpacity(
-              //                 duration: const Duration(milliseconds: 150),
-              //                 opacity: 1.0,
-              //                 child: Text(
-              //                   "Properties",
-              //                   style: TextStyle(
-              //                     fontSize: 14,
-              //                     fontWeight: FontWeight.w600,
-              //                     color: Colors.grey.shade700,
-              //                   ),
-              //                   overflow: TextOverflow.ellipsis,
-              //                   maxLines: 1,
-              //                 ),
-              //               ),
-              //             ),
-              //           ],
-              //         ),
-              //       ),
-              //
-              //       // Body
-              //       Expanded(
-              //         child: SingleChildScrollView(
-              //           padding: const EdgeInsets.all(6),
-              //           child: Column(
-              //             crossAxisAlignment: CrossAxisAlignment.start,
-              //             children: <Widget>[
-              //               Align(
-              //                 alignment: Alignment.topRight,
-              //                 child: SingleChildScrollView(
-              //                   child: Column(
-              //                     mainAxisAlignment: MainAxisAlignment.start,
-              //                     children: <Widget>[
-              //                       CostCalculatorScreen(
-              //                         speakers: serviceLocator<ProjectViewModel>().speakers,
-              //                         sources: serviceLocator<ProjectViewModel>().sources,
-              //                         controllers:
-              //                             serviceLocator<ProjectViewModel>().genericHardwareComponents
-              //                                 .where((GenericHardwareComponent component) => component.type == GenericHardwareComponentType.controller)
-              //                                 .toList(),
-              //                         racks:
-              //                             serviceLocator<ProjectViewModel>().genericHardwareComponents
-              //                                 .where((GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack)
-              //                                 .toList(),
-              //                         amplifiers: <Amplifier>[],
-              //                         fusionDevices: <FusionDevice>[],
-              //                         others:
-              //                             serviceLocator<ProjectViewModel>().genericHardwareComponents
-              //                                 .where(
-              //                                   (HardwareComponent component) =>
-              //                                       component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
-              //                                 )
-              //                                 .toList(),
-              //                       ),
-              //
-              //                       const SizedBox(
-              //                         height: 5,
-              //                       ),
-              //
-              //                       const DevicesCatalogWidget(),
-              //                     ],
-              //                   ),
-              //                 ),
-              //               ),
-              //             ],
-              //           ),
-              //         ),
-              //       ),
-              //     ],
-              //   ),
-              // ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildSectionHeader(
-    String title, {
-    bool showAddButton = true,
-    Widget? addButton,
-    Function()? onAddTap,
-    Function()? onMoreTap,
-    bool hasIncomingData = false,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(5),
-          topRight: Radius.circular(5),
-        ),
-        border: Border(bottom: BorderSide(color: hasIncomingData ? const Color(0xFF80C7FF) : const Color(0xFFD5D5D5))),
-      ),
-
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: <Widget>[
-          Text(
-            title,
-            style: const TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 12,
-              color: Colors.black,
-            ),
-          ),
-          const Spacer(),
-          if (showAddButton)
-            Container(
-              child:
-                  addButton ??
-                  InkWell(
-                    onTap: onAddTap,
-                    child: const Icon(Icons.add, size: 20, color: Colors.black),
-                  ),
-            ),
-
-          InkWell(
-            onTap: onMoreTap,
-            child: const Icon(Icons.more_vert, size: 20, color: Colors.black),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSourcesSection() {
-    //get sources form projectManager.hardware componets
-    final List<Source> sources = serviceLocator<ProjectViewModel>().sources;
-
-    return DragTarget<DeviceComponent>(
-      onAcceptWithDetails: (DragTargetDetails<DeviceComponent> details) {
-        final DeviceComponent component = details.data;
-        if (component is SourceData) {
-          final Source source = Source(
-            name: component.name,
-            pos: const Offset(0, 0),
-            assetImagePath: component.assetPath,
-            type: component.type,
-            locationEntity: LocationModel(),
-            price: component.price,
-            sku: component.id,
-          );
-          serviceLocator<ProjectViewModel>().addHardware(source);
-        }
-      },
-      builder: (BuildContext context, List<DeviceComponent?> candidateItems, List<dynamic> rejectedItems) {
-        final bool hasIncomingData = candidateItems.isNotEmpty && (candidateItems.last is SourceData);
-
-        return Container(
-          decoration: ShapeDecoration(
-            color: hasIncomingData ? const Color(0xFF80C7FF) : Colors.white,
-            shape: RoundedRectangleBorder(
-              side: BorderSide(
-                width: hasIncomingData ? 3 : 1,
-                strokeAlign: BorderSide.strokeAlignOutside,
-                color: hasIncomingData ? const Color(0xFF80C7FF) : const Color(0xFFD5D5D5),
-              ),
-              borderRadius: BorderRadius.circular(5),
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              _buildSectionHeader(
-                'Source(s)',
-                hasIncomingData: hasIncomingData,
-                addButton: PopupMenuButton<SourceData>(
-                  tooltip: 'Add Source',
-                  onSelected: (SourceData selectedBlock) {
-                    final Source source = Source(
-                      name: selectedBlock.name,
-                      pos: null,
-                      type: selectedBlock.type,
-                      assetImagePath: selectedBlock.assetPath,
-                      locationEntity: LocationModel(),
-                      sku: selectedBlock.id,
-                      price: selectedBlock.price,
-                    );
-                    serviceLocator<ProjectViewModel>().addHardware(source);
-                  },
-                  color: Colors.white,
-                  itemBuilder: (BuildContext context) {
-                    return SourceData.demoSources.map((SourceData block) {
-                      return PopupMenuItem<SourceData>(
-                        value: block,
-                        child: Row(
-                          children: <Widget>[
-                            Image.asset(
-                              block.assetPath,
-                              height: 24,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(block.name),
-                          ],
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        isListingView = false;
+                      });
+                    },
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      color: !isListingView ? Colors.black87 : Colors.transparent,
+                      child: SvgPicture.asset(
+                        "assets/svg/wiring_view_icon.svg",
+                        width: 40,
+                        height: 40,
+                        colorFilter: ColorFilter.mode(
+                          !isListingView ? Colors.white : Colors.black87,
+                          BlendMode.srcIn,
                         ),
-                      );
-                    }).toList();
-                  },
-                  child: const IconButton(
-                    icon: Icon(
-                      Icons.add,
-                      color: Colors.black,
-                      size: 20,
+                      ),
                     ),
-                    onPressed: null,
-                    padding: EdgeInsets.zero,
-                    constraints: BoxConstraints(),
                   ),
-                ),
+                ],
               ),
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Container(
-                    width: double.infinity,
-                    constraints: const BoxConstraints(minHeight: 100),
-                    color: hasIncomingData ? const Color(0xFF80C7FF) : Colors.white,
+            ),
+          ],
+        );
+      },
+    );
+  }
 
-                    child:
-                        (sources.isEmpty)
-                            ? Center(
-                              child: Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(
-                                  hasIncomingData ? 'Drop here' : 'No Sources available.',
-                                  style: const TextStyle(fontSize: 10, color: Colors.grey),
-                                ),
-                              ),
-                            )
-                            : HardwareListCard(
-                              hardwareComponents: sources,
-                              onDelete: (HardwareComponent component) {
-                                serviceLocator<ProjectViewModel>().removeHardware(component.id);
-                              },
-                            ),
-                  ),
+  Widget _buildListingView(double availableWidth, double rightPanelWidth) {
+    return Row(
+      children: <Widget>[
+        // Left Panel - Sources, Processors, etc.
+        Container(
+          width: leftPanelWidth,
+          height: double.infinity,
+          color: Colors.white,
+          child: LeftPanel(panelWidth: leftPanelWidth!),
+        ),
+
+        // Resizable Divider
+        MouseRegion(
+          cursor: SystemMouseCursors.resizeColumn,
+          child: GestureDetector(
+            onPanUpdate: (DragUpdateDetails details) {
+              final double newWidth = leftPanelWidth! + details.delta.dx;
+              final double maxAllowedWidth = availableWidth - minPanelWidth - dividerWidth;
+              if (newWidth >= minPanelWidth && newWidth <= maxAllowedWidth) {
+                setState(() {
+                  leftPanelWidth = newWidth;
+                });
+              }
+            },
+            child: Container(
+              width: dividerWidth,
+              height: double.infinity,
+              color: Colors.grey[300],
+              child: Center(
+                child: Container(
+                  width: 1,
+                  height: double.infinity,
+                  color: Colors.grey[400],
                 ),
               ),
-            ],
+            ),
+          ),
+        ),
+
+        // Right Panel - Zones
+        Expanded(
+          child: Container(
+            constraints: BoxConstraints(
+              maxWidth: rightPanelWidth,
+              minWidth: minPanelWidth,
+            ),
+            height: double.infinity,
+            color: Colors.white,
+            child: RightPanel(
+              panelWidth: rightPanelWidth,
+              zone1Expanded: zone1Expanded,
+              zone2Expanded: zone2Expanded,
+              zone3Expanded: zone3Expanded,
+              zone4Expanded: zone4Expanded,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildWiringView() {
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      color: Colors.grey[50],
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            Icon(
+              Icons.cable,
+              size: 80,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Wiring View',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Coming Soon...',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[500],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class LeftPanel extends StatefulWidget {
+  final double panelWidth;
+
+  const LeftPanel({super.key, required this.panelWidth});
+
+  @override
+  State<LeftPanel> createState() => _LeftPanelState();
+}
+
+class _LeftPanelState extends State<LeftPanel> {
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final double availableWidth = constraints.maxWidth;
+        final double availableHeight = constraints.maxHeight;
+        final double spacing = 0.0;
+        final double usableWidth = availableWidth - (spacing * 2);
+
+        /// Force 2x2 layout (2 columns, 2 rows) by default
+        double containerWidth;
+        final double minContainerWidth = 180.0;
+        int containersPerRow = 2;
+
+        /// Always start with 2 columns
+
+        /// Only allow single column if space is extremely tight
+        if (usableWidth < (minContainerWidth * 2 + spacing)) {
+          containersPerRow = 1;
+        }
+
+        /// Calculate container width based on columns
+        if (containersPerRow == 1) {
+          containerWidth = usableWidth.clamp(minContainerWidth, double.infinity);
+        } else {
+          /// For 2 columns, distribute width evenly
+          containerWidth = (usableWidth - spacing) / 2;
+          containerWidth = containerWidth.clamp(minContainerWidth, double.infinity);
+        }
+
+        /// Calculate container height for 2x2 grid (2 rows)
+        final int rows = 2; // Force 2 rows for 2x2 layout
+        final double totalVerticalSpacing = spacing * (rows + 1); // Top, bottom, and between rows
+        final double containerHeight = ((availableHeight - totalVerticalSpacing) / rows).clamp(250.0, double.infinity);
+
+        final List<String> sections = <String>["Sources", "Processors & Amplifiers", "End Points", "Other Devices"];
+
+        return SingleChildScrollView(
+          padding: EdgeInsets.all(spacing),
+          child: Wrap(
+            spacing: spacing,
+            runSpacing: spacing,
+            children:
+                sections
+                    .map((String sectionName) => _buildSection(context: context, title: sectionName, width: containerWidth, height: containerHeight))
+                    .toList(),
           ),
         );
       },
     );
   }
 
-  Widget _buildProcessorsSection() {
-    //get processors from projectManager.hardware components
-    final List<FusionDevice> processors = serviceLocator<ProjectViewModel>().fusionDevices;
-
-    final List<GenericHardwareComponent> processorComponents =
-        processors
-            .map(
-              (FusionDevice device) => GenericHardwareComponent(
-                id: device.id,
-                locationEntity: LocationModel(id: device.location),
-                name: device.name,
-                sku: device.id,
-                type: GenericHardwareComponentType.other,
-                assetImagePath: "assets/images/processor_img.webp",
-                price: 1000,
-                pos: const Offset(0, 0),
-              ),
-            )
-            .toList();
-
+  Widget _buildSection({required BuildContext context, required String title, required double width, required double height}) {
     return Container(
-      decoration: ShapeDecoration(
-        color: Colors.white,
-        shape: RoundedRectangleBorder(
-          side: const BorderSide(width: 1, color: Color(0xFFD5D5D5)),
-          borderRadius: BorderRadius.circular(5),
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.launcherBgColor1,
+        border: Border(
+          bottom: BorderSide(width: 1, color: Theme.of(context).colorScheme.grey),
+          right: BorderSide(width: 1, color: Theme.of(context).colorScheme.grey),
         ),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          _buildSectionHeader(
-            'Processor(s)',
-            showAddButton: false,
+          /// Header
+          Container(
+            width: width,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border(
+                bottom: BorderSide(width: 1, color: Theme.of(context).colorScheme.grey),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: <Widget>[
+                Expanded(
+                  child: FusionAppText(
+                    text: title,
+                    style: Theme.of(context).textTheme.bodySmall,
+                    maxLine: 1,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Icon(Icons.add, size: 20, color: Theme.of(context).colorScheme.fusionTextViewColor),
+              ],
+            ),
           ),
-          Expanded(
-            child: SingleChildScrollView(
-              child: Container(
-                width: double.infinity,
-                constraints: const BoxConstraints(minHeight: 100),
 
-                child:
-                    processorComponents.isEmpty
-                        ? const Center(
-                          child: Padding(
-                            padding: EdgeInsets.all(8.0),
-                            child: Text(
-                              'No Processors available.',
-                              style: TextStyle(fontSize: 10, color: Colors.grey),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        )
-                        : HardwareListCard(
-                          componentWidth: 150,
-                          componentHeight: 25,
-                          hardwareComponents: processorComponents,
-                          showAddedBySystem: true,
-                        ),
+          /// Content
+          Expanded(
+            child: Container(
+              width: width,
+              padding: const EdgeInsets.all(10),
+              child: SingleChildScrollView(
+                child: _buildSectionContent(title),
               ),
             ),
           ),
@@ -426,293 +308,472 @@ class SchematicsPageState extends State<SchematicsPage> {
     );
   }
 
-  Widget _buildAmplifiersSection() {
-    //get amplifiers from projectManager.hardware components
-    final List<Amplifier> amplifiers = <Amplifier>[];
-    // final List<Amplifier> amplifiers = projectManager.value.amplifiers;
+  Widget _buildSectionContent(String sectionTitle) {
+    switch (sectionTitle) {
+      case "Sources":
+        return Column(
+          children: <Widget>[
+            _buildSourceItem("Paging Mic(2)", Icons.mic, false),
+            _buildSourceItem("Paging Mic(1)", Icons.mic, false),
+            _buildSourceItem("Wire Mic(2)", Icons.mic, true),
+            _buildSourceItem("Wire Mic(1)", Icons.mic, true),
+            _buildSourceItem("Laptop(2)", Icons.laptop, false),
+            _buildSourceItem("Laptop(1)", Icons.laptop, false),
+            _buildSourceItem("DVD", Icons.album, false),
+          ],
+        );
 
-    final List<GenericHardwareComponent> amplifierComponents =
-        amplifiers
-            .map(
-              (Amplifier amplifier) => GenericHardwareComponent(
-                id: amplifier.id,
-                locationEntity: LocationModel(id: amplifier.id),
-                name: amplifier.name,
-                sku: amplifier.id,
-                type: GenericHardwareComponentType.controller,
-                assetImagePath: "assets/images/amplifier_img.webp",
-                price: 800,
-                pos: const Offset(0, 0),
-                hardwareName: amplifier.name,
-              ),
-            )
-            .toList();
+      case "Processors & Amplifiers":
+        return Column(
+          children: <Widget>[
+            _buildProcessorItem("Fusion Mini 6", false),
+            const SizedBox(height: 4),
+            _buildProcessorItem("PowerSmart PSM-8300 (2)", true, <String>[
+              "Z1",
+              "Z2",
+              "Z3",
+              "Z4",
+              "Z4",
+              "Z4",
+              "Z4",
+              "Z4",
+              "Z4",
+              "Z4",
+              "Z4",
+              "Z4",
+              "Z4",
+              "Z4",
+              "Z4",
+              "Z4",
+              "Z4",
+              "Z4",
+              "Z4",
+              "GF",
+            ]),
+            const SizedBox(height: 4),
+            _buildProcessorItem("PowerSmart PSM-8300 (1)", false, <String>["Z1", "Z2", "Z3", "Z4", "GF"]),
+          ],
+        );
+
+      case "End Points":
+        return Column(
+          children: <Widget>[
+            _buildSourceItem("BluePaL", Icons.bluetooth, false),
+            _buildSourceItem("XLRPaL (2)", Icons.cable, false),
+            _buildSourceItem("XLRPaL (1)", Icons.cable, false),
+          ],
+        );
+
+      case "Other Devices":
+        return Column(
+          children: <Widget>[
+            _buildSourceItem("8 Unit Rack", Icons.storage, false),
+            _buildSourceItem("Network Switch", Icons.router, false),
+          ],
+        );
+
+      default:
+        return Container();
+    }
+  }
+
+  Widget _buildSourceItem(String name, IconData icon, bool isActive) {
     return Container(
-      decoration: ShapeDecoration(
-        color: Colors.white,
-        shape: RoundedRectangleBorder(
-          side: const BorderSide(width: 1, color: Color(0xFFD5D5D5)),
-          borderRadius: BorderRadius.circular(5),
-        ),
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      // decoration: BoxDecoration(
+      //   color: isActive ? Colors.grey[200] : Colors.white,
+      //   border: Border.all(color: Colors.grey[300]!),
+      //   borderRadius: BorderRadius.circular(4),
+      // ),
+      child: Row(
+        children: <Widget>[
+          Icon(icon, size: 18, color: Colors.grey[600]),
+          const SizedBox(width: 6),
+          Expanded(
+            // child: Text(
+            //   name,
+            //   style: TextStyle(fontSize: 11, color: Colors.grey[800]),
+            //   overflow: TextOverflow.ellipsis,
+            // ),
+            child: FusionAppText(
+              text: name,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 10),
+            ),
+          ),
+        ],
       ),
+    );
+  }
+
+  Widget _buildProcessorItem(String name, bool isActive, [List<String>? zones]) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      // decoration: BoxDecoration(
+      //   color: isActive ? Colors.grey[200] : Colors.white,
+      //   border: Border.all(color: Colors.grey[300]!),
+      //   borderRadius: BorderRadius.circular(4),
+      // ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          _buildSectionHeader('Amplifier(s)', showAddButton: false),
-          SingleChildScrollView(
-            child: Container(
-              width: double.infinity,
-              constraints: const BoxConstraints(minHeight: 100),
-              child:
-                  amplifierComponents.isEmpty
-                      ? const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(8.0),
+          Row(
+            children: <Widget>[
+              Container(
+                width: 16,
+                height: 10,
+                decoration: BoxDecoration(
+                  color: Colors.black87,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: FusionAppText(
+                  text: name,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 10),
+                ),
+              ),
+            ],
+          ),
+          if (zones != null) ...<Widget>[
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 5,
+              runSpacing: 5,
+              children:
+                  zones
+                      .map(
+                        (String zone) => Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: _getZoneColor(zone),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
                           child: Text(
-                            'No amplifiers available.',
-                            style: TextStyle(fontSize: 10, color: Colors.grey),
-                            textAlign: TextAlign.center,
+                            zone,
+                            style: const TextStyle(fontSize: 8, color: Colors.white),
                           ),
                         ),
                       )
-                      : HardwareListCard(
-                        componentWidth: 150,
-                        componentHeight: 25,
-                        hardwareComponents: amplifierComponents,
-                        showAddedBySystem: true,
-                      ),
+                      .toList(),
             ),
-          ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildRacksSection() {
-    final List<HardwareComponent> racks =
-        serviceLocator<ProjectViewModel>().genericHardwareComponents
-            .where(
-              (HardwareComponent component) => component is GenericHardwareComponent && component.type == GenericHardwareComponentType.rack,
-            )
-            .toList();
+  Color _getZoneColor(String zone) {
+    switch (zone) {
+      case 'Z1':
+        return Colors.teal;
+      case 'Z2':
+        return Colors.purple;
+      case 'Z3':
+        return Colors.amber;
+      case 'Z4':
+        return Colors.red;
+      case 'GF':
+        return Colors.grey;
+      default:
+        return Colors.blue;
+    }
+  }
+}
 
-    return DragTarget<DeviceComponent>(
-      onAcceptWithDetails: (DragTargetDetails<DeviceComponent> details) {
-        final DeviceComponent component = details.data;
-        if (component is RackData) {
-          final GenericHardwareComponent genericHardwareComponent = GenericHardwareComponent(
-            name: component.name,
-            pos: Offset.zero,
-            type: GenericHardwareComponentType.rack,
-            assetImagePath: component.assetPath,
-            locationEntity: LocationModel(),
-            price: component.price,
-          );
-          serviceLocator<ProjectViewModel>().addHardware(genericHardwareComponent);
-        }
-      },
-      builder: (BuildContext context, List<DeviceComponent?> candidateItems, List<dynamic> rejectedItems) {
-        final bool hasIncomingData = candidateItems.isNotEmpty && (candidateItems.last is RackData);
+class RightPanel extends StatefulWidget {
+  final double panelWidth;
+  final ValueNotifier<bool> zone1Expanded;
+  final ValueNotifier<bool> zone2Expanded;
+  final ValueNotifier<bool> zone3Expanded;
+  final ValueNotifier<bool> zone4Expanded;
 
-        return Container(
-          decoration: ShapeDecoration(
-            color: hasIncomingData ? const Color(0xFF80C7FF) : Colors.white,
-            shape: RoundedRectangleBorder(
-              side: BorderSide(
-                width: hasIncomingData ? 3 : 1,
-                strokeAlign: BorderSide.strokeAlignOutside,
-                color: hasIncomingData ? const Color(0xFF80C7FF) : const Color(0xFFD5D5D5),
+  const RightPanel({
+    super.key,
+    required this.panelWidth,
+    required this.zone1Expanded,
+    required this.zone2Expanded,
+    required this.zone3Expanded,
+    required this.zone4Expanded,
+  });
+
+  @override
+  State<RightPanel> createState() => _RightPanelState();
+}
+
+class _RightPanelState extends State<RightPanel> {
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        return Column(
+          children: <Widget>[
+            /// Header
+            Container(
+              // width: width,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border(
+                  bottom: BorderSide(width: 1, color: Theme.of(context).colorScheme.grey),
+                ),
               ),
-              borderRadius: BorderRadius.circular(5),
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              _buildSectionHeader(
-                'Rack(s)',
-                hasIncomingData: hasIncomingData,
-                addButton: PopupMenuButton<RackData>(
-                  tooltip: 'Add Racks',
-                  onSelected: (RackData rackData) {
-                    final GenericHardwareComponent rack = GenericHardwareComponent(
-                      name: rackData.name,
-                      pos: const Offset(0, 0),
-                      type: GenericHardwareComponentType.rack,
-                      assetImagePath: rackData.assetPath,
-                      locationEntity: LocationModel(),
-                      sku: rackData.name,
-                      price: rackData.price,
-                    );
-                    serviceLocator<ProjectViewModel>().addHardware(rack);
-                  },
-                  color: Colors.white,
-                  itemBuilder: (BuildContext context) {
-                    return RackData.demoRacks.map((RackData block) {
-                      return PopupMenuItem<RackData>(
-                        value: block,
-                        child: Row(
-                          children: <Widget>[
-                            Image.asset(
-                              block.assetPath,
-                              height: 24,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(block.name),
-                          ],
-                        ),
-                      );
-                    }).toList();
-                  },
-                  child: const IconButton(
-                    icon: Icon(
-                      Icons.add,
-                      color: Colors.black,
-                      size: 20,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: <Widget>[
+                  Expanded(
+                    child: FusionAppText(
+                      text: "Zones",
+                      style: Theme.of(context).textTheme.bodySmall,
+                      maxLine: 1,
                     ),
-                    onPressed: null,
-                    padding: EdgeInsets.zero,
-                    constraints: BoxConstraints(),
                   ),
-                ),
+                  const SizedBox(width: 4),
+                  Icon(Icons.add, size: 20, color: Theme.of(context).colorScheme.fusionTextViewColor),
+                ],
               ),
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Container(
-                    width: double.infinity,
-                    constraints: const BoxConstraints(minHeight: 100),
+            ),
 
-                    child:
-                        racks.isEmpty
-                            ? Center(
-                              child: Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(
-                                  hasIncomingData ? 'Drop Here' : 'No Racks available.',
-                                  style: const TextStyle(fontSize: 10, color: Colors.grey),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                            )
-                            : HardwareListCard(
-                              componentHeight: 70,
-                              componentWidth: 80,
-                              hardwareComponents: racks,
-                              onDelete: (HardwareComponent component) {
-                                serviceLocator<ProjectViewModel>().removeHardware(component.id);
-                              },
-                            ),
-                  ),
+            /// Zones List
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: <Widget>[
+                    _buildZoneItem("Zone 1_Reception", widget.zone1Expanded, Colors.teal[100]!, constraints.maxWidth),
+                    const SizedBox(height: 8),
+                    _buildZoneItem("Zone 2_Cardio", widget.zone2Expanded, Colors.purple[100]!, constraints.maxWidth),
+                    const SizedBox(height: 8),
+                    _buildZoneItem("Zone 3_Weight", widget.zone3Expanded, Colors.amber[100]!, constraints.maxWidth),
+                    const SizedBox(height: 8),
+                    _buildZoneItem("Zone 4_Studio", widget.zone4Expanded, Colors.red[100]!, constraints.maxWidth),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         );
       },
     );
   }
 
-  Widget _buildZonesSection() {
-    final List<HardwareComponent> speakersAndControllers = serviceLocator<ProjectViewModel>().hardwareComponents;
+  Widget _buildZoneItem(String zoneName, ValueNotifier<bool> isExpanded, Color bgColor, double availableWidth) {
+    return ValueListenableBuilder<bool>(
+      valueListenable: isExpanded,
+      builder: (BuildContext context, bool expanded, Widget? child) {
+        return Column(
+          children: <Widget>[
+            /// Zone Header
+            InkWell(
+              onTap: () => isExpanded.value = !isExpanded.value,
+              child: Container(
+                color: Colors.grey[100],
+                height: 32,
+                child: Row(
+                  children: <Widget>[
+                    Container(
+                      width: 10,
+                      decoration: BoxDecoration(
+                        color: bgColor,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Icon(
+                      expanded ? Icons.arrow_drop_up_rounded : Icons.arrow_drop_down_rounded,
+                      color: Colors.grey[600],
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        zoneName,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey[800],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
 
-    final List<Zone> zones = serviceLocator<ProjectViewModel>().zones;
+            // Zone Content
+            if (expanded) _buildZoneContent(availableWidth),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildZoneContent(double availableWidth) {
+    final double spacing = 0.0;
+    final double minSectionWidth = 180.0;
+    int sectionsPerRow = 2;
+
+    if (availableWidth < (minSectionWidth * 2 + spacing)) {
+      sectionsPerRow = 1;
+    }
+
+    double sectionWidth;
+    if (sectionsPerRow == 1) {
+      sectionWidth = availableWidth;
+    } else {
+      sectionWidth = (availableWidth - spacing) / 2;
+    }
 
     return Container(
-      decoration: ShapeDecoration(
-        color: Colors.white,
-        shape: RoundedRectangleBorder(
-          side: const BorderSide(width: 1, color: Color(0xFFD5D5D5)),
-          borderRadius: BorderRadius.circular(5),
+      width: availableWidth,
+      color: Colors.grey[100],
+      child: Padding(
+        padding: EdgeInsets.zero,
+        child: Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: <Widget>[
+            SizedBox(
+              width: sectionWidth,
+              child: _buildZoneSection(
+                context: context,
+                title: "Speakers",
+                items: <Widget>[
+                  _buildSpeakerItem("DM55E(2)", "4"),
+                  _buildSpeakerItem("DM85E", "20"),
+                  _buildSpeakerItem("DM55E(1)", "4"),
+                ],
+              ),
+            ),
+            SizedBox(
+              width: sectionWidth,
+              child: _buildZoneSection(
+                context: context,
+                title: "Controllers",
+                items: <Widget>[
+                  _buildControllerItem("Control PAL LT(2)"),
+                  _buildControllerItem("Control PAL LT(1)"),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Common section widget for Speakers/Controllers
+  Widget _buildZoneSection({
+    required BuildContext context,
+    required String title,
+    required List<Widget> items,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.launcherBgColor1,
+        border: Border(
+          right: BorderSide(width: 1, color: Theme.of(context).colorScheme.grey),
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          _buildSectionHeader(
-            'Zone(s)',
-            onAddTap: () {
-              serviceLocator<ProjectViewModel>().addZone(
-                Zone(
-                  id: "zone${DateTime.now().millisecondsSinceEpoch.toString()}",
-                  name: 'Zone ${serviceLocator<ProjectViewModel>().zones.length + 1}',
-                ),
-              );
-            },
-          ),
-          Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                children: <Widget>[
-                  if (zones.isEmpty)
-                    Container(
-                      width: double.infinity,
-                      constraints: const BoxConstraints(minHeight: 100),
-                      child: const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(8.0),
-                          child: Text(
-                            'No zones added.',
-                            style: TextStyle(fontSize: 10, color: Colors.grey),
-                          ),
-                        ),
-                      ),
-                    ),
-
-                  for (Zone zone in zones) ...<Widget>[
-                    Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                      child: ZoneSchematicCard(
-                        zone: zone,
-                        hardwareComponents:
-                            speakersAndControllers.where((HardwareComponent component) {
-                              if (component is Speaker) {
-                                return component.locationEntity.zoneId == zone.id;
-                              } else if (component is GenericHardwareComponent && component.type == GenericHardwareComponentType.controller) {
-                                return component.locationEntity.zoneId == zone.id;
-                              }
-                              return false;
-                            }).toList(),
-                        onSpeakerAdded: (SpeakerData speakerData) {
-                          final Speaker cs = Speaker(
-                            name: speakerData.name,
-                            speakerSKU: speakerData.sku,
-                            gain:
-                                speakerData.sku == "MSA12X"
-                                    ? 50.0
-                                    : speakerData.sku == "CO-12 H120"
-                                    ? 10.0
-                                    : 0.0,
-                            pos: const Offset(0, 0),
-                            rotation: 0.0,
-                            assetImagePath: speakerData.assetPath,
-                            type: speakerData.type,
-                            locationEntity: LocationModel(zoneId: zone.id),
-                            price: speakerData.price,
-                          );
-                          serviceLocator<ProjectViewModel>().addHardware(cs);
-                        },
-                        onControllerAdded: (ControllerData controllerData) {
-                          final GenericHardwareComponent controller = GenericHardwareComponent(
-                            name: controllerData.name,
-                            pos: Offset.zero,
-                            type: GenericHardwareComponentType.controller,
-                            assetImagePath: controllerData.assetPath,
-                            locationEntity: LocationModel(zoneId: zone.id),
-                            price: controllerData.price,
-                            hardwareName: controllerData.name,
-                            sku: controllerData.sku,
-                          );
-
-                          serviceLocator<ProjectViewModel>().addHardware(controller);
-                        },
-                      ),
-                    ),
-                    const SizedBox(
-                      height: 10,
-                    ),
-                  ],
-                ],
+          /// header
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border(
+                bottom: BorderSide(width: 1, color: Theme.of(context).colorScheme.grey),
               ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: <Widget>[
+                Expanded(
+                  child: FusionAppText(
+                    text: title,
+                    style: Theme.of(context).textTheme.bodySmall,
+                    maxLine: 1,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Icon(Icons.add, size: 20, color: Theme.of(context).colorScheme.fusionTextViewColor),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          ...items,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSpeakerItem(String name, String value) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+
+      // decoration: BoxDecoration(
+      //   color: Colors.white,
+      //   border: Border.all(color: Colors.grey[300]!),
+      //   borderRadius: BorderRadius.circular(4),
+      // ),
+      child: Row(
+        children: <Widget>[
+          Container(
+            width: 16,
+            height: 16,
+            decoration: BoxDecoration(
+              color: Colors.grey[700],
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              name,
+              style: TextStyle(fontSize: 12, color: Colors.grey[800]),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            "- $value",
+            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+          ),
+          const SizedBox(width: 4),
+          Icon(Icons.add, size: 14, color: Colors.grey[500]),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildControllerItem(String name) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.softGray,
+      ),
+      child: Row(
+        children: <Widget>[
+          // todo : icon here
+          Container(
+            width: 16,
+            height: 16,
+            decoration: BoxDecoration(
+              color: Colors.black87,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              name,
+              style: TextStyle(fontSize: 12, color: Colors.grey[800]),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
             ),
           ),
         ],
