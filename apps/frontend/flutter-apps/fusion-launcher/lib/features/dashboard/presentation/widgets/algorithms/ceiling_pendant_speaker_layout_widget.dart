@@ -1,22 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-class SpeakerAutoPlacementWidget extends StatefulWidget {
-  const SpeakerAutoPlacementWidget({super.key});
+class CeilingPendantSpeakerLayoutWidget extends StatefulWidget {
+  const CeilingPendantSpeakerLayoutWidget({super.key});
 
   @override
-  State<SpeakerAutoPlacementWidget> createState() => _SpeakerAutoPlacementWidgetState();
+  State<CeilingPendantSpeakerLayoutWidget> createState() => _CeilingPendantSpeakerLayoutWidgetState();
 }
 
-class _SpeakerAutoPlacementWidgetState extends State<SpeakerAutoPlacementWidget> {
+class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeakerLayoutWidget> {
   // Form controllers
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  final TextEditingController _roomWidthController = TextEditingController(text: '20.0');
-  final TextEditingController _roomHeightController = TextEditingController(text: '15.0');
-  final TextEditingController _ceilingHeightController = TextEditingController(text: '9.0');
-  final TextEditingController _listenerHeightController = TextEditingController(text: '4.0');
+  final TextEditingController _roomWidthController = TextEditingController(text: '6.1');
+  final TextEditingController _roomHeightController = TextEditingController(text: '4.6');
+  final TextEditingController _ceilingHeightController = TextEditingController(text: '2.7');
+  final TextEditingController _listenerHeightController = TextEditingController(text: '1.2');
   final TextEditingController _coverageAngleController = TextEditingController(text: '90.0');
-  final TextEditingController _pendantHeightController = TextEditingController(text: '7.0');
+  final TextEditingController _pendantHeightController = TextEditingController(text: '2.1');
   final TextEditingController _customXController = TextEditingController();
   final TextEditingController _customYController = TextEditingController();
 
@@ -110,7 +110,7 @@ class _SpeakerAutoPlacementWidgetState extends State<SpeakerAutoPlacementWidget>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Speaker Auto Placement'),
+        title: const Text('Ceiling/Pendant Speaker Auto Placement'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
       body: Padding(
@@ -137,26 +137,26 @@ class _SpeakerAutoPlacementWidgetState extends State<SpeakerAutoPlacementWidget>
                           const SizedBox(height: 16),
                           _buildNumberField(
                             controller: _roomWidthController,
-                            label: 'Room Width (ft)',
-                            hint: 'Enter room width in feet',
+                            label: 'Room Width (m)',
+                            hint: 'Enter room width in meters',
                           ),
                           const SizedBox(height: 12),
                           _buildNumberField(
                             controller: _roomHeightController,
-                            label: 'Room Height (ft)',
-                            hint: 'Enter room height in feet',
+                            label: 'Room Height (m)',
+                            hint: 'Enter room height in meters',
                           ),
                           const SizedBox(height: 12),
                           _buildNumberField(
                             controller: _ceilingHeightController,
-                            label: 'Ceiling Height (ft)',
-                            hint: 'Enter ceiling height in feet',
+                            label: 'Ceiling Height (m)',
+                            hint: 'Enter ceiling height in meters',
                           ),
                           const SizedBox(height: 12),
                           _buildNumberField(
                             controller: _listenerHeightController,
-                            label: 'Listener Height (ft)',
-                            hint: 'Enter listener height in feet',
+                            label: 'Listener Height (m)',
+                            hint: 'Enter listener height in meters',
                           ),
                           
                           const SizedBox(height: 24),
@@ -200,8 +200,8 @@ class _SpeakerAutoPlacementWidgetState extends State<SpeakerAutoPlacementWidget>
                             const SizedBox(height: 12),
                             _buildNumberField(
                               controller: _pendantHeightController,
-                              label: 'Pendant Height (ft)',
-                              hint: 'Enter pendant speaker height',
+                              label: 'Pendant Height (m)',
+                              hint: 'Enter pendant speaker height in meters',
                             ),
                           ],
                           
@@ -441,9 +441,9 @@ class _SpeakerAutoPlacementWidgetState extends State<SpeakerAutoPlacementWidget>
                   ),
                   const SizedBox(height: 12),
                   _buildSummaryRow('Number of Speakers:', '${_result!.speakerPositions.length}'),
-                  _buildSummaryRow('Grid Spacing:', '${_result!.gridSpacing.toStringAsFixed(2)} ft'),
+                  _buildSummaryRow('Grid Spacing:', '${_result!.gridSpacing.toStringAsFixed(2)} m'),
                   _buildSummaryRow('Room Centroid:', '${_result!.centroid}'),
-                  _buildSummaryRow('Distance:', '${_result!.distance.toStringAsFixed(2)} ft'),
+                  _buildSummaryRow('Distance:', '${_result!.distance.toStringAsFixed(2)} m'),
                 ],
               ),
             ),
@@ -625,7 +625,7 @@ class _SpeakerAutoPlacementWidgetState extends State<SpeakerAutoPlacementWidget>
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
-                    '${roomWidth.toStringAsFixed(1)} ft',
+                    '${roomWidth.toStringAsFixed(1)} m',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 10,
@@ -647,7 +647,7 @@ class _SpeakerAutoPlacementWidgetState extends State<SpeakerAutoPlacementWidget>
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
-                      '${roomHeight.toStringAsFixed(1)} ft',
+                      '${roomHeight.toStringAsFixed(1)} m',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 10,
@@ -805,7 +805,7 @@ class _SpeakerAutoPlacementWidgetState extends State<SpeakerAutoPlacementWidget>
               _buildStatItem(
                 icon: Icons.straighten,
                 label: 'Spacing',
-                value: '${_result!.gridSpacing.toStringAsFixed(1)} ft',
+                value: '${_result!.gridSpacing.toStringAsFixed(1)} m',
               ),
               _buildStatItem(
                 icon: Icons.settings_input_antenna,
@@ -821,7 +821,7 @@ class _SpeakerAutoPlacementWidgetState extends State<SpeakerAutoPlacementWidget>
               _buildStatItem(
                 icon: Icons.height,
                 label: 'Distance',
-                value: '${_result!.distance.toStringAsFixed(1)} ft',
+                value: '${_result!.distance.toStringAsFixed(1)} m',
               ),
               _buildStatItem(
                 icon: Icons.calculate,

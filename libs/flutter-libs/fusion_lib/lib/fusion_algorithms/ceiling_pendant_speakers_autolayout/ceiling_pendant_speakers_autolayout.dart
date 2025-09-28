@@ -113,9 +113,9 @@ class PlacementResult {
     return '''
 PlacementResult:
   Speakers: ${speakerPositions.length}
-  Grid Spacing: ${gridSpacing.toStringAsFixed(2)}ft
+  Grid Spacing: ${gridSpacing.toStringAsFixed(2)}m
   Centroid: $centroid
-  Distance: ${distance.toStringAsFixed(2)}ft
+  Distance: ${distance.toStringAsFixed(2)}m
   Positions: ${speakerPositions.join(', ')}
   
 Calculation Steps:
@@ -129,10 +129,10 @@ ${calculationSteps.map((step) => '  $step').join('\n')}
 /// This library calculates optimal placement for ceiling-mounted and pendant-mounted speakers only.
 /// It does not support wall-mounted, floor-standing, or other speaker types.
 class AutoSpeakerPlacement {
-  /// DG correction factor - set to 1.0 (inactive) as per document
+  /// DG correction factor - set to 1.0 (inactive) 
   static const double dgCorrection = 1.0;
   
-  /// Calculate speaker placement following the exact algorithm from document
+  /// Calculate speaker placement  
   static PlacementResult calculatePlacement({
     required Room room,
     required SpeakerSpec speakerSpec,
@@ -149,7 +149,7 @@ class AutoSpeakerPlacement {
     // Step 2: Calculate distance based on speaker type
     double distance = _calculateDistance(room, speakerSpec, steps);
     
-    // Step 3: Calculate grid spacing using alternate formula
+    // Step 3: Calculate grid spacing 
     double gridSpacing = _calculateGridSpacing(
       speakerSpec.coverageAngle, 
       distance, 
@@ -191,7 +191,7 @@ class AutoSpeakerPlacement {
       case SpeakerType.ceiling:
         // Ceiling speakers: distance from ceiling to listener height
         distance = room.ceilingHeight - room.listenerHeight;
-        steps.add('Step 2: d_ceiling = ${room.ceilingHeight} - ${room.listenerHeight} = ${distance}ft');
+        steps.add('Step 2: d_ceiling = ${room.ceilingHeight} - ${room.listenerHeight} = ${distance}m');
         break;
         
       case SpeakerType.pendant:
@@ -200,7 +200,7 @@ class AutoSpeakerPlacement {
           throw ArgumentError('Pendant height required for pendant speakers');
         }
         distance = room.ceilingHeight - speakerSpec.pendantHeight!;
-        steps.add('Step 2: d_pendant = ${room.ceilingHeight} - ${speakerSpec.pendantHeight} = ${distance}ft');
+        steps.add('Step 2: d_pendant = ${room.ceilingHeight} - ${speakerSpec.pendantHeight} = ${distance}m');
         break;
     }
     
@@ -227,7 +227,7 @@ class AutoSpeakerPlacement {
     steps.add('  sin(${coverageAngleDegrees/2}°) = ${sinHalfAngle.toStringAsFixed(3)}');
     steps.add('  overlap = ${preference.overlapMultiplier} (${preference.name})');
     steps.add('  Grid spacing = ${sinHalfAngle.toStringAsFixed(3)} × 4 × $distance × ${preference.overlapMultiplier} × $dgCorrection');
-    steps.add('  Grid spacing = ${gridSpacing.toStringAsFixed(2)}ft');
+    steps.add('  Grid spacing = ${gridSpacing.toStringAsFixed(2)}m');
     
     return gridSpacing;
   }

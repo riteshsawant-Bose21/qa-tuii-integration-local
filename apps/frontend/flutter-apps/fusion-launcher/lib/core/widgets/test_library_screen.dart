@@ -19,8 +19,10 @@ import 'package:fusion_lib/fusion_widgets/text_views/fusion_rich_text.dart';
 import '../../features/dashboard/presentation/widgets/algorithms/amplifier_matching_widget.dart';
 import '../../features/dashboard/presentation/widgets/algorithms/circuiting_widget.dart';
 import '../../features/dashboard/presentation/widgets/algorithms/device_recommender_widget.dart';
-import '../../features/dashboard/presentation/widgets/algorithms/speaker_auto_placement.dart';
+import '../../features/dashboard/presentation/widgets/algorithms/edgemax_speaker_layout_widget.dart';
+import '../../features/dashboard/presentation/widgets/algorithms/ceiling_pendant_speaker_layout_widget.dart';
 import '../../features/dashboard/presentation/widgets/algorithms/spl_calculation_widget.dart';
+import '../../features/dashboard/presentation/widgets/algorithms/surface_speaker_layout_widget.dart';
 import '../../features/dashboard/presentation/widgets/algorithms/tap_setting_widget.dart';
 import '../../features/dashboard/presentation/widgets/products_filter/product_filter.dart';
 
@@ -697,7 +699,7 @@ class TestLibraryScreen extends StatelessWidget {
 
   Widget _buildAlgorithmsTab(BuildContext context) {
     return const DefaultTabController(
-      length: 6,
+      length: 8,
       child: Column(
         children: <Widget>[
           TabBar(
@@ -708,7 +710,9 @@ class TestLibraryScreen extends StatelessWidget {
               Tab(text: 'Circuiting'),
               Tab(text: 'Amp Matching'),
               Tab(text: 'Device Recommender'),
-              Tab(text: 'Speaker Placement'),
+              Tab(text: 'Ceiling/Pendant Placement'),
+              Tab(text: 'Surface Placement'),
+              Tab(text: 'EdgeMax Placement'),
             ],
           ),
           Expanded(
@@ -719,7 +723,9 @@ class TestLibraryScreen extends StatelessWidget {
                 CircuitingWidget(),
                 AmplifierMatchingWidget(),
                 DeviceRecommenderWidget(),
-                SpeakerAutoPlacementWidget(),
+                CeilingPendantSpeakerLayoutWidget(),
+                SurfaceSpeakerLayoutWidget(),
+                EdgeMaxSpeakerLayoutWidget(),
               ],
             ),
           ),
