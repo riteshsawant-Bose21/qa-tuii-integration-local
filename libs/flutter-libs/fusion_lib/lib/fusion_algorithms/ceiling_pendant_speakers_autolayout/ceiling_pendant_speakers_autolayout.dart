@@ -23,30 +23,30 @@ class Point2D {
 /// Represents a rectangular room
 class Room {
   final double width;
-  final double height;
+  final double roomLength;
   final double ceilingHeight;
   final double listenerHeight;
   
   const Room({
     required this.width,
-    required this.height,
+    required this.roomLength,
     required this.ceilingHeight,
     required this.listenerHeight,
   });
   
   /// Calculate geometric center (centroid) of rectangular room
-  Point2D get centroid => Point2D(width / 2, height / 2);
+  Point2D get centroid => Point2D(width / 2, roomLength / 2);
   
   /// Check if a point is within room boundaries
   bool contains(Point2D point) {
     return point.x >= 0 && point.x <= width && 
-           point.y >= 0 && point.y <= height;
+           point.y >= 0 && point.y <= roomLength;
   }
   
   /// Check if point is "near" boundary (within overlap region)
   bool isNearBoundary(Point2D point, double overlapDistance) {
     return point.x < overlapDistance || point.x > (width - overlapDistance) ||
-           point.y < overlapDistance || point.y > (height - overlapDistance);
+           point.y < overlapDistance || point.y > (roomLength - overlapDistance);
   }
 }
 
@@ -159,6 +159,7 @@ class AutoSpeakerPlacement {
     
     // Step 4: Create grid layout
     List<Point2D> gridPoints = _createGridLayout(
+      room,
       centroid, 
       gridSpacing, 
       layoutPattern,
@@ -234,6 +235,7 @@ class AutoSpeakerPlacement {
   
   /// Step 4: Create grid layout (square or hexagonal)
   static List<Point2D> _createGridLayout(
+    Room room,
     Point2D centroid, 
     double gridSpacing, 
     LayoutPattern pattern,
@@ -243,12 +245,12 @@ class AutoSpeakerPlacement {
     
     switch (pattern) {
       case LayoutPattern.square:
-        gridPoints = _createSquareGrid(centroid, gridSpacing);
+        gridPoints = _createSquareGrid(room, centroid, gridSpacing);
         steps.add('Step 4: Created square grid layout with ${gridPoints.length} initial positions');
         break;
         
       case LayoutPattern.hexagonal:
-        gridPoints = _createHexagonalGrid(centroid, gridSpacing);
+        gridPoints = _createHexagonalGrid(room, centroid, gridSpacing);
         steps.add('Step 4: Created hexagonal grid layout with ${gridPoints.length} initial positions');
         break;
     }
@@ -256,42 +258,101 @@ class AutoSpeakerPlacement {
     return gridPoints;
   }
   
-  /// Create square grid pattern
-  static List<Point2D> _createSquareGrid(Point2D centroid, double spacing) {
+  /// Create square grid pattern - efficient approach
+  static List<Point2D> _createSquareGrid(Room room, Point2D centroid, double spacing) {
     List<Point2D> points = [];
     
-    // Create 3x3 grid centered on centroid
-    for (int i = -1; i <= 1; i++) {
-      for (int j = -1; j <= 1; j++) {
-        double x = centroid.x + (i * spacing);
-        double y = centroid.y + (j * spacing);
-        points.add(Point2D(x, y));
+    // Step 1: Calculate exact number of speakers needed per axis
+    int nx = (room.width / spacing).ceil();
+    int ny = (room.roomLength / spacing).ceil();
+    
+    // Step 2: Calculate positions along each axis, centered around centroid
+    List<double> xPositions = [];
+    List<double> yPositions = [];
+    
+    if (nx == 1) {
+      xPositions.add(centroid.x);
+    } else {
+      double halfSpanX = (nx - 1) * spacing / 2;
+      for (int i = 0; i < nx; i++) {
+        xPositions.add(centroid.x - halfSpanX + (i * spacing));
+      }
+    }
+    
+    if (ny == 1) {
+      yPositions.add(centroid.y);
+    } else {
+      double halfSpanY = (ny - 1) * spacing / 2;
+      for (int j = 0; j < ny; j++) {
+        yPositions.add(centroid.y - halfSpanY + (j * spacing));
+      }
+    }
+    
+    // Step 3: Generate grid using calculated positions
+    for (double x in xPositions) {
+      for (double y in yPositions) {
+        // Only add positions that are within room bounds
+        if (x >= 0 && x <= room.width && y >= 0 && y <= room.roomLength) {
+          points.add(Point2D(x, y));
+        }
       }
     }
     
     return points;
   }
   
-  /// Create hexagonal grid pattern
-  static List<Point2D> _createHexagonalGrid(Point2D centroid, double spacing) {
+  /// Create hexagonal grid pattern - efficient approach
+  static List<Point2D> _createHexagonalGrid(Room room, Point2D centroid, double spacing) {
     List<Point2D> points = [];
     
     // Hexagonal offset calculations as per document
     double xOffset = spacing / 2;
     double yOffset = sqrt(3) * (spacing / 2); // Pythagorean theorem
     
-    // Create hexagonal pattern (simplified 3x3 with offsets)
-    for (int row = -1; row <= 1; row++) {
-      for (int col = -1; col <= 1; col++) {
-        double x = centroid.x + (col * spacing);
-        double y = centroid.y + (row * yOffset);
+    // Step 1: Calculate exact number of speakers needed per axis
+    int nx = (room.width / spacing).ceil();
+    int ny = (room.roomLength / yOffset).ceil();
+    
+    // Step 2: Calculate row and column positions
+    List<double> xPositions = [];
+    List<double> yPositions = [];
+    
+    // X positions (columns)
+    if (nx == 1) {
+      xPositions.add(centroid.x);
+    } else {
+      double halfSpanX = (nx - 1) * spacing / 2;
+      for (int i = 0; i < nx; i++) {
+        xPositions.add(centroid.x - halfSpanX + (i * spacing));
+      }
+    }
+    
+    // Y positions (rows with hex offset)
+    if (ny == 1) {
+      yPositions.add(centroid.y);
+    } else {
+      double halfSpanY = (ny - 1) * yOffset / 2;
+      for (int j = 0; j < ny; j++) {
+        yPositions.add(centroid.y - halfSpanY + (j * yOffset));
+      }
+    }
+    
+    // Step 3: Generate hexagonal grid
+    for (int rowIndex = 0; rowIndex < yPositions.length; rowIndex++) {
+      double y = yPositions[rowIndex];
+      
+      for (int colIndex = 0; colIndex < xPositions.length; colIndex++) {
+        double x = xPositions[colIndex];
         
         // Apply hexagonal offset for every other row
-        if (row % 2 != 0) {
+        if (rowIndex % 2 != 0) {
           x += xOffset;
         }
         
-        points.add(Point2D(x, y));
+        // Only add positions that are within room bounds
+        if (x >= 0 && x <= room.width && y >= 0 && y <= room.roomLength) {
+          points.add(Point2D(x, y));
+        }
       }
     }
     

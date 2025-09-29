@@ -12,7 +12,7 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
   // Form controllers
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _roomWidthController = TextEditingController(text: '6.1');
-  final TextEditingController _roomHeightController = TextEditingController(text: '4.6');
+  final TextEditingController _roomLengthController = TextEditingController(text: '4.6');
   final TextEditingController _ceilingHeightController = TextEditingController(text: '2.7');
   final TextEditingController _listenerHeightController = TextEditingController(text: '1.2');
   final TextEditingController _coverageAngleController = TextEditingController(text: '90.0');
@@ -33,7 +33,7 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
   @override
   void dispose() {
     _roomWidthController.dispose();
-    _roomHeightController.dispose();
+    _roomLengthController.dispose();
     _ceilingHeightController.dispose();
     _listenerHeightController.dispose();
     _coverageAngleController.dispose();
@@ -55,7 +55,7 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
       // Create room
       final Room room = Room(
         width: double.parse(_roomWidthController.text),
-        height: double.parse(_roomHeightController.text),
+        roomLength: double.parse(_roomLengthController.text),
         ceilingHeight: double.parse(_ceilingHeightController.text),
         listenerHeight: double.parse(_listenerHeightController.text),
       );
@@ -142,9 +142,9 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
                           ),
                           const SizedBox(height: 12),
                           _buildNumberField(
-                            controller: _roomHeightController,
-                            label: 'Room Height (m)',
-                            hint: 'Enter room height in meters',
+                            controller: _roomLengthController,
+                            label: 'Room Length (m)',
+                            hint: 'Enter room length in meters',
                           ),
                           const SizedBox(height: 12),
                           _buildNumberField(
@@ -552,14 +552,14 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
     
     // Calculate room dimensions for visualization
     final double roomWidth = double.parse(_roomWidthController.text);
-    final double roomHeight = double.parse(_roomHeightController.text);
-    
+    final double roomLength = double.parse(_roomLengthController.text);
+
     // Scale factor to fit the visualization in a reasonable size
     const double maxDisplaySize = 300.0;
-    final double scaleFactor = maxDisplaySize / (roomWidth > roomHeight ? roomWidth : roomHeight);
+    final double scaleFactor = maxDisplaySize / (roomWidth > roomLength ? roomWidth : roomLength);
     final double displayWidth = roomWidth * scaleFactor;
-    final double displayHeight = roomHeight * scaleFactor;
-    
+    final double displayHeight = roomLength * scaleFactor;
+
     return Column(
       children: <Widget>[
         // Legend
@@ -647,7 +647,7 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
-                      '${roomHeight.toStringAsFixed(1)} m',
+                      '${roomLength.toStringAsFixed(1)} m',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 10,
