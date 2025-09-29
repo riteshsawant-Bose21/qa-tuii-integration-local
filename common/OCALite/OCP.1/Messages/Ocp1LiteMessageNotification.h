@@ -49,6 +49,10 @@ private:
     Ocp1LiteMessageNotification(const ::Ocp1LiteMessageNotification&);
     /** Private assignment operator; no assignment of object allowed. */
     ::Ocp1LiteMessageNotification& operator=(const ::Ocp1LiteMessageNotification&);
+
+#ifdef OCA_LITE_CONTROLLER
+    ::OcaLiteStatus UpdateEventData(::OcaUint32& bytesLeft, const ::OcaUint8** source, ::OcaONo ocaONo, const ::IOcaLiteReader& reader);
+#endif
 };
 
 #endif // OCP1LITEMESSAGENOTIFICATION_H

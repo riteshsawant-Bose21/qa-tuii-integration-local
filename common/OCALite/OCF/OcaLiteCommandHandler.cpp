@@ -14,6 +14,7 @@
 #include <OCC/ControlClasses/Managers/OcaLiteDeviceManager.h>
 #include <OCC/ControlClasses/Managers/OcaLiteNetworkManager.h>
 #include <OCC/ControlClasses/Workers/BlocksAndMatrices/OcaLiteBlock.h>
+#include <OCC/ControlClasses/Workers/Actuators/OcaLiteGain.h>  //DEBUG
 #include <OCC/ControlDataTypes/OcaLiteEventData.h>
 #include <OCC/ControlDataTypes/OcaLiteList.h>
 
@@ -248,6 +249,7 @@ void OcaLiteCommandHandler::HandleNetworks(::OcaUint32 timeout)
             {
                 // Retrieve a notification message
                 ::OcaLiteMessageGeneral* pMsg(pOcaLiteNetwork->RetrieveMessage(::OcaLiteHeader::OCA_MSG_NTF));
+
                 if (NULL != pMsg)
                 {
                     ::OcaLiteMessageNotification* pMsgNotification(static_cast< ::OcaLiteMessageNotification*>(pMsg));
@@ -298,101 +300,132 @@ void OcaLiteCommandHandler::HandleMessages()
                         {
                             switch (msg->GetMessageType())
                             {
-                            case ::OcaLiteHeader::OCA_MSG_CMD:
-                            {
-                                ::OcaLiteMessageCommand* cmdMess(static_cast< ::OcaLiteMessageCommand*>(msg));
-
-                                // Find the object to execute the command on
-                                ::OcaLiteRoot* pOcaLiteRoot(GetDeviceObject(cmdMess->GetTargetONo()));
-
-                                if (NULL != pOcaLiteRoot)
-                                {
-                                    // Ignore return value, no response expected/required
-                                    OcaUint8* response(NULL);
-
-                                    ::OcaLiteStatus rc(pOcaLiteRoot->Execute(pNetwork->GetReader(),
-                                        pNetwork->GetWriter(),
-                                        sessionID,
-                                        cmdMess->GetMethodID(),
-                                        cmdMess->GetParametersSize(),
-                                        cmdMess->GetParameters(),
-                                        &response));
-
-                                    if ((OCASTATUS_OK != rc) && (OCASTATUS_NOT_IMPLEMENTED != rc)) // Not implemented is not an actual failure. Don't log this.
+                                case ::OcaLiteHeader::OCA_MSG_CMD:
                                     {
-                                        OCA_LOG_ERROR_PARAMS("OCA_MSG_CMD failure execution rc = %i", rc);
-                                    }
-                                }
-                            }
-                            break;
-                            case ::OcaLiteHeader::OCA_MSG_CMD_RRQ:
-                            {
-                                const ::OcaLiteMessageCommand* cmdMess(static_cast< ::OcaLiteMessageCommand*>(msg));
+                                        ::OcaLiteMessageCommand* cmdMess(static_cast< ::OcaLiteMessageCommand*>(msg));
 
-                                // Find the object to execute the command on
-                                ::OcaLiteRoot* pOcaLiteRoot(GetDeviceObject(cmdMess->GetTargetONo()));
+                                        // Find the object to execute the command on
+                                        ::OcaLiteRoot* pOcaLiteRoot(GetDeviceObject(cmdMess->GetTargetONo()));
 
-                                // Retrieve a new response message
-                                ::OcaLiteMessageResponse* pMsgResponse(static_cast< ::OcaLiteMessageResponse*>(pNetwork->RetrieveMessage(::OcaLiteHeader::OCA_MSG_RSP)));
-
-                                if (NULL != pMsgResponse)
-                                {
-                                    if (NULL != pOcaLiteRoot)
-                                    {
-                                        OcaUint8* response(NULL);
-
-                                        ::OcaLiteStatus rc(pOcaLiteRoot->Execute(pNetwork->GetReader(),
-                                            pNetwork->GetWriter(),
-                                            sessionID,
-                                            cmdMess->GetMethodID(),
-                                            cmdMess->GetParametersSize(),
-                                            cmdMess->GetParameters(),
-                                            &response));
-                                        if ((OCASTATUS_OK != rc) &&
-                                            (OCASTATUS_NOT_IMPLEMENTED != rc))
+                                        if (NULL != pOcaLiteRoot)
                                         {
-                                            OCA_LOG_ERROR_PARAMS("OCA_MSG_CMD_RRQ failure execution rc = %d (targetONo %d, method %d, %d)",
-                                                rc, cmdMess->GetTargetONo(), cmdMess->GetMethodID().GetDefLevel(), cmdMess->GetMethodID().GetMethodIndex());
+                                            // Ignore return value, no response expected/required
+                                            OcaUint8* response(NULL);
+
+                                            ::OcaLiteStatus rc(pOcaLiteRoot->Execute(pNetwork->GetReader(),
+                                                        pNetwork->GetWriter(),
+                                                        sessionID,
+                                                        cmdMess->GetMethodID(),
+                                                        cmdMess->GetParametersSize(),
+                                                        cmdMess->GetParameters(),
+                                                        &response));
+
+                                            if ((OCASTATUS_OK != rc) && (OCASTATUS_NOT_IMPLEMENTED != rc)) // Not implemented is not an actual failure. Don't log this.
+                                            {
+                                                OCA_LOG_ERROR_PARAMS("OCA_MSG_CMD failure execution rc = %i", rc);
+                                            }
                                         }
+                                    }
+                                    break;
+                                case ::OcaLiteHeader::OCA_MSG_CMD_RRQ:
+                                    {
+                                        const ::OcaLiteMessageCommand* cmdMess(static_cast< ::OcaLiteMessageCommand*>(msg));
 
-                                        // Clear the response parameters
-                                        if (OCASTATUS_OK != rc)
+                                        // Find the object to execute the command on
+                                        ::OcaLiteRoot* pOcaLiteRoot(GetDeviceObject(cmdMess->GetTargetONo()));
+
+                                        // Retrieve a new response message
+                                        ::OcaLiteMessageResponse* pMsgResponse(static_cast< ::OcaLiteMessageResponse*>(pNetwork->RetrieveMessage(::OcaLiteHeader::OCA_MSG_RSP)));
+
+                                        if (NULL != pMsgResponse)
                                         {
-                                            pMsgResponse->WriteParameters(cmdMess->GetHandle(), NULL, 0, rc);
+                                            if (NULL != pOcaLiteRoot)
+                                            {
+                                                OcaUint8* response(NULL);
+
+                                                ::OcaLiteStatus rc(pOcaLiteRoot->Execute(pNetwork->GetReader(),
+                                                            pNetwork->GetWriter(),
+                                                            sessionID,
+                                                            cmdMess->GetMethodID(),
+                                                            cmdMess->GetParametersSize(),
+                                                            cmdMess->GetParameters(),
+                                                            &response));
+                                                if ((OCASTATUS_OK != rc) &&
+                                                        (OCASTATUS_NOT_IMPLEMENTED != rc))
+                                                {
+                                                    OCA_LOG_ERROR_PARAMS("OCA_MSG_CMD_RRQ failure execution rc = %d (targetONo %d, method %d, %d)",
+                                                            rc, cmdMess->GetTargetONo(), cmdMess->GetMethodID().GetDefLevel(), cmdMess->GetMethodID().GetMethodIndex());
+                                                }
+
+                                                // Clear the response parameters
+                                                if (OCASTATUS_OK != rc)
+                                                {
+                                                    pMsgResponse->WriteParameters(cmdMess->GetHandle(), NULL, 0, rc);
+                                                }
+                                                else
+                                                {
+                                                    pMsgResponse->WriteParameters(cmdMess->GetHandle(), response, m_responseBufferSize, rc);
+                                                }
+                                            }
+                                            else
+                                            {
+                                                pMsgResponse->WriteParameters(cmdMess->GetHandle(), NULL, 0, OCASTATUS_BAD_ONO);
+                                            }
+
+                                            ::OcaLiteStatus responseStatus(pNetwork->SendOcaMessage(sessionID, *pMsgResponse));
+                                            if (OCASTATUS_OK != responseStatus)
+                                            {
+                                                OCA_LOG_ERROR_PARAMS("Sending response for command with handle %u failed (rc = %d)",
+                                                        cmdMess->GetHandle(), responseStatus);
+                                            }
+
+                                            pNetwork->ReturnMessage(pMsgResponse);
+                                        }
+                                    }
+                                    break;
+#ifdef OCA_LITE_CONTROLLER
+                                case ::OcaLiteHeader::OCA_MSG_NTF:
+                                    {
+                                        ::OcaLiteMessageNotification* ntfMesg(static_cast< ::OcaLiteMessageNotification*>(msg));
+
+                                        // Find the object to execute the command on
+                                        ::OcaLiteRoot* pOcaLiteRoot(GetDeviceObject(ntfMesg->GetTargetONo())); // <=== RIght here we have the object and 
+                                                                                                               //      can be executed once we have the 
+                                                                                                               //      value (and type)
+                                        if (NULL != pOcaLiteRoot)
+                                        {
+                                            ::OcaONo                  destONo(ntfMesg->GetTargetONo());
+                                            ::OcaLiteMethodID         destMethodId(ntfMesg->GetMethodID());
+                                            const ::OcaLiteEventData* srcEventData(ntfMesg->GetEventData());
+
+                                            // Ignore return value, no response expected/required
+                                            OcaUint8* response(NULL);
+                                            const ::OcaUint8* dummy(NULL);
+
+                                            ::OcaLiteStatus rc(pOcaLiteRoot->Execute(pNetwork->GetReader(),
+                                                        pNetwork->GetWriter(),
+                                                        sessionID,
+                                                        ntfMesg->GetMethodID(),
+                                                        ntfMesg->GetParametersSize(),
+                                                        ntfMesg->GetParameters(),
+                                                        &response));
                                         }
                                         else
                                         {
-                                            pMsgResponse->WriteParameters(cmdMess->GetHandle(), response, m_responseBufferSize, rc);
+                                            OCA_LOG_ERROR("Notification Error ..");
                                         }
                                     }
-                                    else
+                                    break;
+#endif
+                                case ::OcaLiteHeader::OCA_MSG_RSP:
                                     {
-                                        pMsgResponse->WriteParameters(cmdMess->GetHandle(), NULL, 0, OCASTATUS_BAD_ONO);
+                                        const ::OcaLiteMessageResponse* rspMsg(static_cast< ::OcaLiteMessageResponse*>(msg));
+                                        assert(NULL != rspMsg);
+                                        HandleResponse(*rspMsg);
                                     }
-
-                                    ::OcaLiteStatus responseStatus(pNetwork->SendOcaMessage(sessionID, *pMsgResponse));
-                                    if (OCASTATUS_OK != responseStatus)
-                                    {
-                                        OCA_LOG_ERROR_PARAMS("Sending response for command with handle %u failed (rc = %d)",
-                                            cmdMess->GetHandle(), responseStatus);
-                                    }
-
-                                    pNetwork->ReturnMessage(pMsgResponse);
-                                }
-                            }
-                            break;
-                            case ::OcaLiteHeader::OCA_MSG_NTF:
-                                OCA_LOG_ERROR("Received notification. Process..");
-                                break;
-                            case ::OcaLiteHeader::OCA_MSG_RSP:
-                            {
-                                const ::OcaLiteMessageResponse* rspMsg(static_cast< ::OcaLiteMessageResponse*>(msg));
-                                assert(NULL != rspMsg);
-                                HandleResponse(*rspMsg);
-                            }
-                            break;
-                            default:
-                                break;
+                                    break;
+                                default:
+                                    break;
                             }
 
                             pNetwork->ReturnMessage(msg);

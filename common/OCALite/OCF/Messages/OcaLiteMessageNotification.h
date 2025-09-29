@@ -12,6 +12,8 @@
 
 // ---- Include system wide include files ----
 #include <OCC/ControlDataTypes/OcaLiteMethodID.h>
+#include <OCC/ControlDataTypes/OcaLiteBlob.h>
+#include <OCC/ControlDataTypes/OcaLiteEventData.h>
 
 // ---- Include local include files ----
 #include "OcaLiteMessageGeneral.h"
@@ -87,6 +89,13 @@ public:
                          const ::OcaLiteEventData& eventData,
                          const ::IOcaLiteWriter& writer);
 
+#ifdef OCA_LITE_CONTROLLER
+    const ::OcaLiteEventData*  GetEventData() const
+    {
+        return m_eventData;
+    }
+#endif
+
 protected:
     /** Constructor */
     explicit OcaLiteMessageNotification();
@@ -103,10 +112,26 @@ protected:
     void WriteParameters(::OcaONo targetONo,
                          const ::OcaLiteMethodID& methodID);
 
+#ifdef OCA_LITE_CONTROLLER
+
+    void WriteParameters(::OcaONo targetONo,
+                         const ::OcaLiteMethodID&   methodID,
+                         const ::OcaLiteBlob&       context,
+                         ::OcaLiteEventData*  m_eventData);
+
+
+    void UpdateNotificationValue(::OcaFloat32& parameters);
+    void UpdateNotificationValue(::OcaUint8& parameters);
+#endif
 private:
 
     /** Parameters */
     ::OcaUint8*                     m_pParameters;
+
+#ifdef OCA_LITE_CONTROLLER
+    ::OcaLiteBlob                   m_context;
+    ::OcaLiteEventData*             m_eventData;
+#endif
     ::OcaUint32                     m_parametersSize;
 
     /** TargetONo */

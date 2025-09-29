@@ -12,6 +12,7 @@
 #include <OCC/ControlDataTypes/OcaLiteBlob.h>
 #include <OCC/ControlDataTypes/OcaLiteEventData.h>
 #include <OCF/OcaLiteCommandHandler.h>
+#include <OCP.1/Ocp1LiteWriter.h>
 
 // ---- FileInfo Macro ----
 
@@ -28,7 +29,13 @@
 
 OcaLiteMessageNotification::OcaLiteMessageNotification()
     : ::OcaLiteMessageGeneral(::OcaLiteHeader::OCA_MSG_NTF),
+#ifdef OCA_LITE_CONTROLLER
+      m_eventData(NULL),
+      m_context(),
+      m_pParameters(new UINT8[32]),
+#else
       m_pParameters(NULL),
+#endif
       m_parametersSize(0),
       m_targetONo(OCA_INVALID_ONO),
       m_methodID()
@@ -50,6 +57,7 @@ bool OcaLiteMessageNotification::WriteParameters(::OcaONo targetONo,
     WriteParameters(targetONo, methodID);
 
     m_parametersSize = ::GetSizeValue< ::OcaUint8>(2, writer) + context.GetSize(writer) + eventData.GetSize(writer);
+
     if (OCA_BUFFER_SIZE >= m_parametersSize)
     {
         m_pParameters = ::OcaLiteCommandHandler::GetInstance().GetResponseBuffer(m_parametersSize);
@@ -70,3 +78,40 @@ void OcaLiteMessageNotification::WriteParameters(::OcaONo targetONo,
     m_targetONo = targetONo;
     m_methodID = methodID;
 }
+
+#ifdef OCA_LITE_CONTROLLER
+void OcaLiteMessageNotification::WriteParameters(::OcaONo                   targetONo,
+                                                 const ::OcaLiteMethodID&   methodID,
+                                                 const ::OcaLiteBlob&       context,
+                                                 ::OcaLiteEventData*        eventData)
+{
+    m_targetONo  = targetONo;
+    m_methodID   = methodID;
+    m_context    = context;
+    m_eventData  = eventData;
+}
+
+// For Gain Object
+void OcaLiteMessageNotification::UpdateNotificationValue(::OcaFloat32& parameter)
+{
+    ::Ocp1LiteWriter ntfWriter;
+    ::OcaUint8* bufPtr(m_pParameters);
+
+    ntfWriter.Write(static_cast<::OcaInt8>(1), &bufPtr);
+    ntfWriter.Write(parameter, &bufPtr);
+
+    m_parametersSize = sizeof(parameter) + 1;
+}
+
+//FOr Mute object
+void OcaLiteMessageNotification::UpdateNotificationValue(::OcaUint8& parameter)
+{
+    ::Ocp1LiteWriter ntfWriter;
+    ::OcaUint8* bufPtr(m_pParameters);
+
+    ntfWriter.Write(static_cast<::OcaInt8>(1), &bufPtr);
+    ntfWriter.Write(parameter, &bufPtr);
+
+    m_parametersSize = sizeof(parameter) + 1;
+}
+#endif
