@@ -116,11 +116,11 @@ static void design_crossover_filter(IirFilter *iir, int start_section, float fre
         }
         
         // t based on filter type
-        double t;
+        double tx;
         if (is_highpass) {
-            t = std::tan(freq_d * PI / fs_d) / section.alpha;
+            tx = std::tan(freq_d * PI / fs_d) / section.alpha;
         } else {
-            t = std::tan(freq_d * PI / fs_d) * section.alpha;
+            tx = std::tan(freq_d * PI / fs_d) * section.alpha;
         }
         
         double b0, b1, b2, a0, a1, a2;
@@ -132,30 +132,30 @@ static void design_crossover_filter(IirFilter *iir, int start_section, float fre
                 b1 = -1.0;
                 b2 = 0.0;
             } else {
-                b0 = t;
-                b1 = t;
+                b0 = tx;
+                b1 = tx;
                 b2 = 0.0;
             }
-            a0 = 1.0 + t;
-            a1 = t - 1.0;
+            a0 = 1.0 + tx;
+            a1 = tx - 1.0;
             a2 = 0.0;
         } else {
             // Second-order section
-            double t2 = t * t;
-            double t_q = t / section.q;
+            double tx2 = tx * tx;
+            double txq = tx / section.q;
             
             if (is_highpass) {
                 b0 = 1.0;
                 b1 = -2.0;
                 b2 = 1.0;
             } else {
-                b0 = t2;
-                b1 = 2.0 * t2;
-                b2 = t2;
+                b0 = tx2;
+                b1 = 2.0 * tx2;
+                b2 = tx2;
             }
-            a0 = 1.0 + t_q + t2;
-            a1 = 2.0 * (t2 - 1.0);
-            a2 = 1.0 - t_q + t2;
+            a0 = 1.0 + txq + tx2;
+            a1 = 2.0 * (tx2 - 1.0);
+            a2 = 1.0 - txq + tx2;
         }
         
         iir->set_section_coeffs(start_section + s, b0, b1, b2, a0, a1, a2);
