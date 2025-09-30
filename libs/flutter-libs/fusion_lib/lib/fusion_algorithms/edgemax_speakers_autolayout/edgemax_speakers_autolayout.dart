@@ -36,13 +36,13 @@
 /// 
 /// ## Algorithm Steps:
 /// 1. Validate room shape (rectangular)
-/// 2. Select speaker type (EM vs EM-LP based on ceiling height)
+/// 2. Select speaker type (EM vs EM-LP based on ceiling height ≤ 12ft/3.7m)
 /// 3. Calculate UTD (Usable Throw Distance)
-/// 4. Determine diagonal corner coverage
+/// 4. Determine diagonal corner coverage (Corner #1 if UTD < d1, else Corner #1 & #3)
 /// 5. Calculate LSD (Loudspeaker Spacing Distance)  
-/// 6. Determine adjacent corner coverage
+/// 6. Determine adjacent corner coverage (Corner #2 if d2 < LSD, Corner #4 if d3 < LSD & UTD ≤ d1)
 /// 7. Place corner speakers (EM90/EM-LP90)
-/// 8. Place wall speakers (EM180/EM-LP180)
+/// 8. Place wall speakers (EM180/EM-LP180 if d2 > 2*LSD or d3 > 2*LSD)
 /// 
 library edgemax_speaker_placement;
 
@@ -110,12 +110,12 @@ class RectangularRoom {
   /// Check if room is valid rectangular shape
   bool get isValidRectangle => length > 0 && width > 0;
 
-  /// Get corner positions (clockwise from bottom-left)
+  /// Get corner positions (correct layout: 1=top-left, 2=top-right, 3=bottom-right, 4=bottom-left)
   List<EdgeMaxPoint> get corners => <EdgeMaxPoint>[
-    const EdgeMaxPoint(0, 0), // Corner 1 (bottom-left)
-    EdgeMaxPoint(length, 0), // Corner 2 (bottom-right)
-    EdgeMaxPoint(length, width), // Corner 3 (top-right)
-    EdgeMaxPoint(0, width), // Corner 4 (top-left)
+    EdgeMaxPoint(0, width), // Corner 1 (top-left)
+    EdgeMaxPoint(length, width), // Corner 2 (top-right)
+    EdgeMaxPoint(length, 0), // Corner 3 (bottom-right)
+    const EdgeMaxPoint(0, 0), // Corner 4 (bottom-left)
   ];
 }
 
@@ -179,7 +179,7 @@ class EdgeMaxAutoPlacement {
     final double lsd = _calculateLSD(room, speakerConfig);
 
     // Step 6: Determine adjacent corner coverage
-    final Set<int> adjacentCorners = _getAdjacentCorners(room, lsd, diagonalCorners);
+    final Set<int> adjacentCorners = _getAdjacentCorners(room, lsd, utd, diagonalCorners);
 
     // Step 7: Place corner speakers (EM90)
     final Set<int> allCorners = <int>{...diagonalCorners, ...adjacentCorners};
@@ -232,34 +232,25 @@ class EdgeMaxAutoPlacement {
   static Set<int> _getAdjacentCorners(
     RectangularRoom room,
     double lsd,
+    double utd,
     Set<int> diagonalCorners,
   ) {
     final Set<int> adjacentCorners = <int>{};
 
-    // Check if length coverage requires additional corners
-    if (lsd < room.length) {
-      if (diagonalCorners.contains(0)) {
-        adjacentCorners.add(1); // Corner 2 (adjacent to Corner 1 along length)
-      }
-      if (diagonalCorners.contains(2)) {
-        adjacentCorners.add(3); // Corner 4 (adjacent to Corner 3 along length)
-      }
+    // Following spec: if d2 < LSD, add Corner #2
+    if (room.length < lsd) {
+      adjacentCorners.add(1); // Corner 2 (index 1)
     }
 
-    // Check if width coverage requires additional corners
-    if (lsd < room.width) {
-      if (diagonalCorners.contains(0)) {
-        adjacentCorners.add(3); // Corner 4 (adjacent to Corner 1 along width)
-      }
-      if (diagonalCorners.contains(2)) {
-        adjacentCorners.add(1); // Corner 2 (adjacent to Corner 3 along width)
-      }
+    // Following spec: if UTD < d1, add Corner #4
+    if (utd < room.diagonal) {
+      adjacentCorners.add(3); // Corner 4 (index 3)
     }
 
     return adjacentCorners;
   }
 
-  /// Step 7: Determine which walls need EM180 speakers
+  /// Step 8: Determine which walls need EM180 speakers
   static List<String> _getWallSpeakers(
     RectangularRoom room,
     double lsd,
@@ -268,25 +259,25 @@ class EdgeMaxAutoPlacement {
     final List<String> wallSpeakers = <String>[];
     final double doubleLSD = 2 * lsd;
 
-    // Check length walls (north and south)
-    if (room.length > doubleLSD) {
-      // Check if corners are populated along length
-      final bool hasLengthCorners = populatedCorners.any(
-        (int corner) => <int>[0, 1, 2, 3].contains(corner),
-      );
-      if (hasLengthCorners) {
-        wallSpeakers.add('wall_length');
+    // Following spec: if d2 < 2*LSD, add EM180 between corners 1&2 (and 3&4 if speakers exist)
+    if (room.length < doubleLSD && populatedCorners.isNotEmpty) {
+      // Always add top wall (between corners 1&2)
+      wallSpeakers.add('wall_top');
+      
+      // Add bottom wall (between corners 3&4) if corner 3 or 4 has speakers
+      if (populatedCorners.contains(2) || populatedCorners.contains(3)) {
+        wallSpeakers.add('wall_bottom');
       }
     }
 
-    // Check width walls (east and west)
-    if (room.width > doubleLSD) {
-      // Check if corners are populated along width
-      final bool hasWidthCorners = populatedCorners.any(
-        (int corner) => <int>[0, 1, 2, 3].contains(corner),
-      );
-      if (hasWidthCorners) {
-        wallSpeakers.add('wall_width');
+    // Following spec: if d3 < 2*LSD, add EM180 between corners 1&4 and 2&3
+    if (room.width < doubleLSD && populatedCorners.isNotEmpty) {
+      // Always add left wall (between corners 1&4)
+      wallSpeakers.add('wall_left');
+      
+      // Add right wall (between corners 2&3) if corner 2 or 3 has speakers
+      if (populatedCorners.contains(1) || populatedCorners.contains(2)) {
+        wallSpeakers.add('wall_right');
       }
     }
 
@@ -319,19 +310,53 @@ class EdgeMaxAutoPlacement {
     String location;
 
     switch (wallType) {
-      case 'wall_length':
+      case 'wall_top':
+        // Place EM180 on the top wall between corners 1 and 2
         position = EdgeMaxPoint(
-          room.length / 2,
-          room.width / 2,
-        ); // Center for simplicity
-        location = 'wall_length_center';
+          room.length / 2,  // Center of length
+          room.width,       // On the top wall (y = width)
+        );
+        location = 'wall_top_center';
+        break;
+      case 'wall_bottom':
+        // Place EM180 on the bottom wall between corners 3 and 4
+        position = EdgeMaxPoint(
+          room.length / 2,  // Center of length
+          0,                // On the bottom wall (y = 0)
+        );
+        location = 'wall_bottom_center';
+        break;
+      case 'wall_left':
+        // Place EM180 on the left wall between corners 1 and 4
+        position = EdgeMaxPoint(
+          0,                // On the left wall (x = 0)
+          room.width / 2,   // Center of width
+        );
+        location = 'wall_left_center';
+        break;
+      case 'wall_right':
+        // Place EM180 on the right wall between corners 2 and 3
+        position = EdgeMaxPoint(
+          room.length,      // On the right wall (x = length)
+          room.width / 2,   // Center of width
+        );
+        location = 'wall_right_center';
+        break;
+      case 'wall_length':
+        // Legacy support - map to bottom wall
+        position = EdgeMaxPoint(
+          room.length / 2,  // Center of length
+          0,                // On the bottom wall (y = 0)
+        );
+        location = 'wall_bottom_center';
         break;
       case 'wall_width':
+        // Legacy support - map to left wall
         position = EdgeMaxPoint(
-          room.length / 2,
-          room.width / 2,
-        ); // Center for simplicity
-        location = 'wall_width_center';
+          0,                // On the left wall (x = 0)
+          room.width / 2,   // Center of width
+        );
+        location = 'wall_left_center';
         break;
       default:
         throw ArgumentError('Unknown wall type: $wallType');

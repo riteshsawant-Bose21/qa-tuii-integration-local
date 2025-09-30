@@ -1,5 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_algorithms/edgemax_speakers_autolayout/edgemax_speakers_autolayout.dart';
+import 'edgemax_test_scenarios.dart';
+
+/// Represents a single calculation step in the EdgeMax algorithm
+class CalculationStep {
+  final int stepNumber;
+  final String title;
+  final String description;
+  final Map<String, dynamic> inputs;
+  final Map<String, dynamic> outputs;
+  final String result;
+  final bool isComplete;
+
+  CalculationStep({
+    required this.stepNumber,
+    required this.title,
+    required this.description,
+    required this.inputs,
+    required this.outputs,
+    required this.result,
+    this.isComplete = false,
+  });
+}
 
 /// EdgeMax Speaker Layout Widget
 /// 
@@ -22,19 +44,29 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
   final TextEditingController _listenerHeightController = TextEditingController(text: '1.2');
   
   EdgeMaxPlacementResult? _result;
+  RectangularRoom? _currentRoom;
   List<String> _validationErrors = <String>[];
   bool _isLoading = false;
+  
+  // Step-by-step calculation state
+  int _currentStep = 0;
+  final int _totalSteps = 8;
+  List<CalculationStep> _calculationSteps = <CalculationStep>[];
+  bool _showStepByStep = false;
 
   @override
   void initState() {
     super.initState();
-    _calculatePlacement(); // Calculate on widget load
+    // Don't auto-calculate on widget load - wait for user to click calculate button
   }
 
   void _calculatePlacement() async {
     setState(() {
       _isLoading = true;
       _validationErrors.clear();
+      _calculationSteps.clear();
+      _currentStep = 0;
+      _showStepByStep = false;
     });
 
     try {
@@ -43,22 +75,31 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
       final double ceilingHeight = double.parse(_ceilingHeightController.text);
       final double listenerHeight = double.parse(_listenerHeightController.text);
 
-      // Simulate processing delay for better UX
-      await Future<void>.delayed(const Duration(milliseconds: 500));
-
-      final RectangularRoom room = RectangularRoom(
+      _currentRoom = RectangularRoom(
         length: length,
         width: width,
         ceilingHeight: ceilingHeight,
         listenerHeight: listenerHeight,
       );
-      
-      final EdgeMaxPlacementResult result = EdgeMaxSpeakerPlacementService.calculateCompleteResult(room);
 
+      // Generate step-by-step calculations
+      await _generateCalculationSteps(_currentRoom!);
+      
+      // Start step-by-step animation
+      setState(() {
+        _isLoading = false;
+        _showStepByStep = true;
+      });
+      
+      // Animate through each step
+      await _animateSteps();
+      
+      // Calculate final result
+      final EdgeMaxPlacementResult result = EdgeMaxSpeakerPlacementService.calculateCompleteResult(_currentRoom!);
       setState(() {
         _result = result;
-        _isLoading = false;
       });
+
     } catch (e) {
       setState(() {
         _validationErrors = <String>['Invalid input: Please enter valid numbers'];
@@ -67,11 +108,197 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
     }
   }
 
+  Future<void> _generateCalculationSteps(RectangularRoom room) async {
+    _calculationSteps.clear();
+    
+    // Get calculation details for reference
+    final Map<String, dynamic> details = EdgeMaxAutoPlacement.getCalculationDetails(room);
+    final double utd = details['utd'] as double;
+    final double lsd = details['lsd'] as double;
+    final String speakerType = details['speaker_type'] as String;
+    
+    // Step 1: Room Validation
+    _calculationSteps.add(CalculationStep(
+      stepNumber: 1,
+      title: 'Validate Room Shape',
+      description: 'Confirm the room is rectangular with valid dimensions',
+      inputs: <String, dynamic>{
+        'Length': '${room.length}m',
+        'Width': '${room.width}m',
+        'Ceiling Height': '${room.ceilingHeight}m',
+        'Listener Height': '${room.listenerHeight}m',
+      },
+      outputs: <String, dynamic>{
+        'Room Diagonal': '${room.diagonal.toStringAsFixed(2)}m',
+        'Height Difference': '${room.heightDifference.toStringAsFixed(2)}m',
+        'Is Valid': room.isValidRectangle ? 'Yes' : 'No',
+      },
+      result: room.isValidRectangle ? '✓ Room is valid rectangular shape' : '✗ Invalid room shape',
+    ));
+
+    // Step 2: Speaker Type Selection
+    _calculationSteps.add(CalculationStep(
+      stepNumber: 2,
+      title: 'Select Speaker Type',
+      description: 'Choose EM-LP for ≤3.7m ceiling height, EM for >3.7m',
+      inputs: <String, dynamic>{
+        'Ceiling Height': '${room.ceilingHeight}m',
+        'Threshold': '3.7m (12 feet)',
+      },
+      outputs: <String, dynamic>{
+        'Selected Type': speakerType,
+        'Vertical Angle': speakerType == 'EM-LP' ? '80°' : '75°',
+        'Horizontal Angle': '90°/180°',
+      },
+      result: 'Selected $speakerType speakers (${room.ceilingHeight <= 3.7 ? 'Low ceiling' : 'Standard ceiling'})',
+    ));
+
+    // Step 3: UTD Calculation
+    _calculationSteps.add(CalculationStep(
+      stepNumber: 3,
+      title: 'Calculate UTD (Usable Throw Distance)',
+      description: 'UTD = height_difference × tan(vertical_angle)',
+      inputs: <String, dynamic>{
+        'Height Difference': '${room.heightDifference.toStringAsFixed(2)}m',
+        'Vertical Angle': speakerType == 'EM-LP' ? '80°' : '75°',
+      },
+      outputs: <String, dynamic>{
+        'UTD': '${utd.toStringAsFixed(2)}m',
+        'Formula': 'UTD = ${room.heightDifference.toStringAsFixed(2)} × tan(${speakerType == 'EM-LP' ? '80' : '75'}°)',
+      },
+      result: 'UTD = ${utd.toStringAsFixed(2)}m',
+    ));
+
+    // Step 4: Diagonal Corner Coverage
+    final bool utdGreaterThanDiagonal = utd > room.diagonal;
+    _calculationSteps.add(CalculationStep(
+      stepNumber: 4,
+      title: 'Diagonal Corner Coverage Decision',
+      description: 'Compare UTD with room diagonal to determine corner placement',
+      inputs: <String, dynamic>{
+        'UTD': '${utd.toStringAsFixed(2)}m',
+        'Room Diagonal': '${room.diagonal.toStringAsFixed(2)}m',
+      },
+      outputs: <String, dynamic>{
+        'UTD vs Diagonal': utdGreaterThanDiagonal ? 'UTD > Diagonal' : 'UTD ≤ Diagonal',
+        'Corner Strategy': utdGreaterThanDiagonal ? 'Place Corner #1 & #3' : 'Place Corner #1 only',
+      },
+      result: utdGreaterThanDiagonal ? 'Place speakers in opposite corners (1 & 3)' : 'Place speaker in corner 1 only',
+    ));
+
+    // Step 5: LSD Calculation
+    _calculationSteps.add(CalculationStep(
+      stepNumber: 5,
+      title: 'Calculate LSD (Loudspeaker Spacing Distance)',
+      description: 'LSD = height_difference × 2 × tan(horizontal_angle/2)',
+      inputs: <String, dynamic>{
+        'Height Difference': '${room.heightDifference.toStringAsFixed(2)}m',
+        'Horizontal Angle': '90°',
+        'Half Angle': '45°',
+      },
+      outputs: <String, dynamic>{
+        'LSD': '${lsd.toStringAsFixed(2)}m',
+        'Double LSD': '${(2 * lsd).toStringAsFixed(2)}m',
+        'Formula': 'LSD = ${room.heightDifference.toStringAsFixed(2)} × 2 × tan(45°)',
+      },
+      result: 'LSD = ${lsd.toStringAsFixed(2)}m',
+    ));
+
+    // Step 6: Adjacent Corner Analysis
+    final bool needsCorner2 = room.length < lsd;
+    final bool needsCorner4 = utd < room.diagonal;
+    _calculationSteps.add(CalculationStep(
+      stepNumber: 6,
+      title: 'Adjacent Corner Coverage Analysis',
+      description: 'Determine if additional corner speakers are needed',
+      inputs: <String, dynamic>{
+        'LSD': '${lsd.toStringAsFixed(2)}m',
+        'Room Length (d2)': '${room.length}m',
+        'UTD': '${utd.toStringAsFixed(2)}m',
+        'Room Diagonal (d1)': '${room.diagonal.toStringAsFixed(2)}m',
+      },
+      outputs: <String, dynamic>{
+        'd2 < LSD': needsCorner2 ? 'Yes → Add Corner #2' : 'No',
+        'UTD < d1': needsCorner4 ? 'Yes → Add Corner #4' : 'No',
+      },
+      result: 'Additional corners: ${needsCorner2 ? 'Corner #2 ' : ''}${needsCorner4 ? 'Corner #4' : ''}${!needsCorner2 && !needsCorner4 ? 'None' : ''}',
+    ));
+
+    // Step 7: Wall Speaker Analysis
+    final bool needsLengthWall = room.length < 2 * lsd;
+    final bool needsWidthWall = room.width < 2 * lsd;
+    _calculationSteps.add(CalculationStep(
+      stepNumber: 7,
+      title: 'Wall Speaker Analysis',
+      description: 'Determine if EM180 wall speakers are needed between corners',
+      inputs: <String, dynamic>{
+        'Room Length (d2)': '${room.length}m',
+        'Room Width (d3)': '${room.width}m',
+        'Double LSD (2×LSD)': '${(2 * lsd).toStringAsFixed(2)}m',
+      },
+      outputs: <String, dynamic>{
+        'd2 < 2×LSD': needsLengthWall ? 'Yes → Add EM180 between corners 1-2 (and 3-4 if speakers exist)' : 'No',
+        'd3 < 2×LSD': needsWidthWall ? 'Yes → Add EM180 between corners 1-4 and 2-3' : 'No',
+      },
+      result: 'Wall speakers: ${needsLengthWall ? 'Top/Bottom walls (1-2, 3-4) ' : ''}${needsWidthWall ? 'Left/Right walls (1-4, 2-3)' : ''}${!needsLengthWall && !needsWidthWall ? 'None needed' : ''}',
+    ));
+
+    // Step 8: Final Placement Summary
+    final EdgeMaxPlacementResult finalResult = EdgeMaxSpeakerPlacementService.calculateCompleteResult(room);
+    _calculationSteps.add(CalculationStep(
+      stepNumber: 8,
+      title: 'Final Speaker Placement',
+      description: 'Complete speaker layout with positions and types',
+      inputs: <String, dynamic>{
+        'Total Calculations': 'Steps 1-7 completed',
+      },
+      outputs: <String, dynamic>{
+        'Total Speakers': finalResult.summary.totalSpeakers.toString(),
+        'EM90/EM-LP90': '${finalResult.summary.em90Count + finalResult.summary.emlp90Count}',
+        'EM180/EM-LP180': '${finalResult.summary.em180Count + finalResult.summary.emlp180Count}',
+      },
+      result: 'Algorithm complete: ${finalResult.summary.totalSpeakers} speakers placed',
+    ));
+  }
+
+  Future<void> _animateSteps() async {
+    for (int i = 0; i < _calculationSteps.length; i++) {
+      setState(() {
+        _currentStep = i + 1;
+      });
+      await Future<void>.delayed(const Duration(milliseconds: 800));
+    }
+    
+    // Mark all steps as complete by setting current step beyond total steps
+    setState(() {
+      _currentStep = _totalSteps + 1;
+    });
+  }
+
+  void _loadTestScenario(TestScenario scenario) {
+    setState(() {
+      _lengthController.text = scenario.room.length.toString();
+      _widthController.text = scenario.room.width.toString();
+      _ceilingHeightController.text = scenario.room.ceilingHeight.toString();
+      _listenerHeightController.text = scenario.room.listenerHeight.toString();
+      
+      // Reset calculation state when loading new scenario
+      _result = null;
+      _currentRoom = null;
+      _calculationSteps.clear();
+      _currentStep = 0;
+      _showStepByStep = false;
+      _validationErrors.clear();
+    });
+    
+    // Don't auto-calculate - wait for user to click the calculate button
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('EdgeMax Speaker Layout'),
+        title: const Text('EdgeMax Speaker Layout Calculator'),
         backgroundColor: Colors.teal,
         foregroundColor: Colors.white,
       ),
@@ -176,7 +403,7 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.calculate),
-                        label: Text(_isLoading ? 'Calculating...' : 'Calculate Placement'),
+                        label: Text(_isLoading ? 'Calculating...' : 'Calculate Step-by-Step'),
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 16),
                         ),
@@ -189,9 +416,15 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
             
             const SizedBox(height: 20),
             
-            // Results Section
-            if (_result != null) ...<Widget>[
-              // Room Layout Visualization - Featured prominently!
+            // Test Scenarios Section
+            EdgeMaxTestScenariosWidget(
+              onScenarioSelected: _loadTestScenario,
+            ),
+            
+            const SizedBox(height: 20),
+            
+            // Step-by-Step Calculation Section
+            if (_showStepByStep) ...<Widget>[
               Card(
                 elevation: 6,
                 child: Padding(
@@ -201,13 +434,126 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
                     children: <Widget>[
                       Row(
                         children: <Widget>[
-                          const Icon(Icons.view_in_ar, color: Colors.teal, size: 28),
+                          const Icon(Icons.timeline, color: Colors.blue, size: 28),
                           const SizedBox(width: 12),
                           Text(
-                            'Room Layout with Speaker Icons',
+                            'EdgeMax Algorithm Steps',
                             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                               fontWeight: FontWeight.bold,
-                              color: Colors.teal,
+                              color: Colors.blue,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      LinearProgressIndicator(
+                        value: _currentStep > _totalSteps ? 1.0 : _currentStep / _totalSteps,
+                        backgroundColor: Colors.grey.shade300,
+                        valueColor: const AlwaysStoppedAnimation<Color>(Colors.blue),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _currentStep > _totalSteps 
+                          ? 'All steps completed!'
+                          : 'Step $_currentStep of $_totalSteps',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      
+                      // Display steps
+                      ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: _calculationSteps.length,
+                        itemBuilder: (BuildContext context, int index) {
+                          final CalculationStep step = _calculationSteps[index];
+                          final bool isActive = index < _currentStep;
+                          final bool isCurrent = index == _currentStep - 1 && _currentStep <= _totalSteps;
+                          final bool isCompleted = index < _currentStep - 1 || _currentStep > _totalSteps;
+                          
+                          return _buildStepWidget(step, isActive, isCurrent, isCompleted);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              
+              const SizedBox(height: 20),
+            ] else if (!_isLoading) ...<Widget>[
+              // Instruction card when no calculation has been performed
+              Card(
+                elevation: 2,
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    children: <Widget>[
+                      Icon(
+                        Icons.info_outline,
+                        size: 48,
+                        color: Colors.blue.shade300,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Ready to Calculate Speaker Placement',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: Colors.blue.shade700,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Enter room dimensions above or select a test scenario, then click "Calculate Step-by-Step" to see the EdgeMax algorithm in action.',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.grey[600],
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: <Widget>[
+                          Icon(Icons.arrow_upward, color: Colors.blue.shade300),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Click "Calculate Step-by-Step" when ready',
+                            style: TextStyle(
+                              color: Colors.blue.shade600,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              
+              const SizedBox(height: 20),
+            ],
+            
+            // Results Section - Show only after all steps are complete
+            if (_result != null && _currentStep >= _totalSteps) ...<Widget>[
+              // Room Layout Visualization
+              Card(
+                elevation: 6,
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Row(
+                        children: <Widget>[
+                          const Icon(Icons.view_in_ar, color: Colors.green, size: 28),
+                          const SizedBox(width: 12),
+                          Text(
+                            'Final Room Layout',
+                            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green,
                             ),
                           ),
                         ],
@@ -231,7 +577,7 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
                           const Icon(Icons.summarize, color: Colors.green),
                           const SizedBox(width: 8),
                           Text(
-                            'Placement Summary',
+                            'Final Summary',
                             style: Theme.of(context).textTheme.titleLarge,
                           ),
                         ],
@@ -246,7 +592,7 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
                         ),
                         child: Column(
                           children: <Widget>[
-                            _buildSummaryRow('Total Speakers', '${_result!.summary.totalSpeakers}'),
+                            _buildSummaryRow('Total Speakers', '${_result!.summary.totalSpeakers}', isTotal: true),
                             _buildSummaryRow('EM90 Speakers', '${_result!.summary.em90Count}'),
                             _buildSummaryRow('EM180 Speakers', '${_result!.summary.em180Count}'),
                             _buildSummaryRow('EM-LP90 Speakers', '${_result!.summary.emlp90Count}'),
@@ -336,35 +682,224 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
                   ),
                 ),
               ),
-
-              // Calculation Details Section  
-              Card(
-                child: ExpansionTile(
-                  leading: const Icon(Icons.info_outline, color: Colors.blue),
-                  title: const Text('Calculation Details'),
-                  children: <Widget>[
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.blue.shade50,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Column(
-                          children: _result!.calculationDetails.entries
-                              .map((MapEntry<String, dynamic> entry) => 
-                                  _buildDetailRow(entry.key, entry.value.toString()))
-                              .toList(),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
             ],
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStepWidget(CalculationStep step, bool isActive, bool isCurrent, bool isCompleted) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16.0),
+      child: Card(
+        elevation: isCurrent ? 8 : (isActive ? 4 : 2),
+        color: isCurrent 
+          ? Colors.blue.shade50 
+          : isCompleted || isActive 
+            ? Colors.green.shade50 
+            : Colors.grey.shade100,
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              // Step Header
+              Row(
+                children: <Widget>[
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: isCurrent 
+                        ? Colors.blue 
+                        : isCompleted || isActive 
+                          ? Colors.green 
+                          : Colors.grey,
+                    ),
+                    child: Center(
+                      child: isCurrent
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : Icon(
+                            isCompleted || isActive ? Icons.check : Icons.pending,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          'Step ${step.stepNumber}: ${step.title}',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: isCurrent 
+                              ? Colors.blue 
+                              : isCompleted || isActive 
+                                ? Colors.green.shade700 
+                                : Colors.grey.shade600,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          step.description,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              
+              // Step Content - Only show if active or completed
+              if (isActive || isCompleted) ...<Widget>[
+                const SizedBox(height: 16),
+                
+                // Inputs Section
+                if (step.inputs.isNotEmpty) ...<Widget>[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.blue.shade200),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Row(
+                          children: <Widget>[
+                            Icon(Icons.input, color: Colors.blue.shade700, size: 16),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Inputs',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue.shade700,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        ...step.inputs.entries.map((MapEntry<String, dynamic> entry) =>
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 2),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: <Widget>[
+                                Text(entry.key, style: const TextStyle(fontSize: 12)),
+                                Text(
+                                  entry.value.toString(),
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ).toList(),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                
+                // Outputs Section
+                if (step.outputs.isNotEmpty) ...<Widget>[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.orange.shade200),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Row(
+                          children: <Widget>[
+                            Icon(Icons.output, color: Colors.orange.shade700, size: 16),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Calculations',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.orange.shade700,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        ...step.outputs.entries.map((MapEntry<String, dynamic> entry) =>
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 2),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: <Widget>[
+                                Text(entry.key, style: const TextStyle(fontSize: 12)),
+                                Text(
+                                  entry.value.toString(),
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ).toList(),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                
+                // Result Section
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.green.shade200),
+                  ),
+                  child: Row(
+                    children: <Widget>[
+                      Icon(Icons.check_circle, color: Colors.green.shade700, size: 16),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          step.result,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green.shade700,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );
@@ -457,7 +992,8 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
                     final SpeakerPlacement placement = entry.value;
                     
                     final double visualX = placement.position.x * scaleX;
-                    final double visualY = placement.position.y * scaleY;
+                    // Flip Y coordinate: room (0,0) = bottom-left, Flutter (0,0) = top-left
+                    final double visualY = visualHeight - (placement.position.y * scaleY);
                     
                     return _buildEnhancedSpeaker(
                       index: index,
@@ -470,7 +1006,7 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
                   }).toList(),
                   
                   // Coverage Area Indicators (optional)
-                  ..._buildCoverageAreas(scaleX, scaleY),
+                  ..._buildCoverageAreas(scaleX, scaleY, visualHeight),
                 ],
               ),
             ),
@@ -628,7 +1164,7 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
   List<Widget> _buildCornerMarkers(double width, double height) {
     const double markerSize = 12.0;
     return <Widget>[
-      // Top-left corner
+      // Corner 1 (Top-left in Flutter = top-left in room coordinates)
       Positioned(
         left: 0,
         top: 0,
@@ -641,9 +1177,19 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
               bottomRight: Radius.circular(6),
             ),
           ),
+          child: const Center(
+            child: Text(
+              '1',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 8,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
         ),
       ),
-      // Top-right corner
+      // Corner 2 (Top-right in Flutter = top-right in room coordinates)
       Positioned(
         right: 0,
         top: 0,
@@ -656,9 +1202,19 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
               bottomLeft: Radius.circular(6),
             ),
           ),
+          child: const Center(
+            child: Text(
+              '2',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 8,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
         ),
       ),
-      // Bottom-left corner
+      // Corner 4 (Bottom-left in Flutter = bottom-left in room coordinates)
       Positioned(
         left: 0,
         bottom: 0,
@@ -671,9 +1227,19 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
               topRight: Radius.circular(6),
             ),
           ),
+          child: const Center(
+            child: Text(
+              '4',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 8,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
         ),
       ),
-      // Bottom-right corner
+      // Corner 3 (Bottom-right in Flutter = bottom-right in room coordinates)
       Positioned(
         right: 0,
         bottom: 0,
@@ -686,16 +1252,29 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
               topLeft: Radius.circular(6),
             ),
           ),
+          child: const Center(
+            child: Text(
+              '3',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 8,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
         ),
       ),
     ];
   }
 
-  List<Widget> _buildCoverageAreas(double scaleX, double scaleY) {
+  List<Widget> _buildCoverageAreas(double scaleX, double scaleY, double visualHeight) {
+    if (_result == null) return <Widget>[];
+    
     // Simplified coverage areas - you could enhance this based on actual coverage calculations
     return _result!.placements.map((SpeakerPlacement placement) {
       final double visualX = placement.position.x * scaleX;
-      final double visualY = placement.position.y * scaleY;
+      // Flip Y coordinate: room (0,0) = bottom-left, Flutter (0,0) = top-left
+      final double visualY = visualHeight - (placement.position.y * scaleY);
       final double coverageRadius = placement.speakerType.contains('180') ? 60.0 : 45.0;
       
       return Positioned(
@@ -890,32 +1469,6 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
                 fontWeight: FontWeight.bold,
                 color: isTotal ? Colors.white : Colors.black87,
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDetailRow(String key, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: <Widget>[
-          Expanded(
-            flex: 2,
-            child: Text(
-              key.replaceAll('_', ' ').toUpperCase(),
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-            ),
-          ),
-          Expanded(
-            flex: 3,
-            child: Text(
-              value,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-              textAlign: TextAlign.right,
             ),
           ),
         ],
