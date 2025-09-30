@@ -5,8 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/bill_of_materials/presentation/bill_of_materials_page.dart';
 import 'package:fusion_launcher/features/configuration/presentation/pages/audio_system_design_page.dart';
-import 'package:fusion_launcher/features/projects/widget/building/side_panle_widgets/devices_panel.dart';
 import 'package:fusion_launcher/features/product_query/presentation/pages/product_query.dart';
+import 'package:fusion_launcher/features/projects/widget/building/side_panle_widgets/devices_panel.dart';
 import 'package:fusion_lib/fusion_building_view/spl_range_controller.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
@@ -19,11 +19,11 @@ import '../../cloud_ui/presentation/pages/cloud_web_view.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../schematics/presentation/pages/schematics_page.dart';
 import '../../schematics/presentation/widgets/cost_calcuator_widget.dart';
-import '../widget/building/side_panle_widgets/coverage_panel.dart';
-import '../widget/building/side_panle_widgets/zone_and_listening_area.dart';
 import '../widget/building/building_canvas.dart';
 import '../widget/building/side_panle_widgets/building_plan.dart';
-import '../widget/building/side_panle_widgets/properties.dart';
+import '../widget/building/side_panle_widgets/coverage_panel.dart';
+import '../widget/building/side_panle_widgets/properties_panel.dart';
+import '../widget/building/side_panle_widgets/zone_and_listening_area.dart';
 import '../widget/control_design_tab_switcher.dart';
 
 class ProjectWorkArea extends StatefulWidget {
@@ -60,7 +60,7 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
       animationDuration: Duration.zero,
     );
 
-    //Need to handle this in a better way
+    /// Todo: Need to handle this in a better way
     serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(-1);
 
     subscription = projectTabBroadcastController.stream.listen((int index) {
@@ -372,7 +372,7 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                             title: "PROPERTIES",
                             side: "right",
                             alowUndock: false,
-                            dockItemWidget: () => const Properties(),
+                            dockItemWidget: () => const PropertiesPanel(),
                           ),
                           DockItemConfig(
                             id: "6",

@@ -11,11 +11,13 @@ abstract class HardwareComponent {
   final String id;
   final String name;
   Offset pos;
-  double zAxis;
   final String assetImagePath;
   final LocationModel locationEntity;
   final double price;
   final String hardwareName;
+
+  /// Todo: add zAxis to x and y position (create a 3D position class)
+  double zAxis;
 
   static final Uuid _uuid = const Uuid();
 
@@ -23,12 +25,13 @@ abstract class HardwareComponent {
     String? id,
     required this.name,
     Offset? pos,
-    this.zAxis = 0,
+    double? zAxis,
     required this.assetImagePath,
     required this.locationEntity,
     required this.price,
     required this.hardwareName,
   }) : id = id ?? getShortId(),
+       zAxis = zAxis ?? 0.0,
        pos = pos ?? const Offset(0, 0);
 
   //generate a short unique ID with timestamp

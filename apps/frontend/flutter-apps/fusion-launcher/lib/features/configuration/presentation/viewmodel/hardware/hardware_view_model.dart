@@ -131,13 +131,9 @@ extension HardwareViewModel on ProjectViewModel {
           locationEntity: locationEntity,
           name: product.name,
           pos: pos,
+          zAxis: 10.0,
           speakerSKU: product.sku,
-          gain:
-              product.sku == "MSA12X"
-                  ? 50.0
-                  : product.sku == "CO-12 H120"
-                  ? 10.0
-                  : 0.0,
+          gain: 30.0,
           assetImagePath: product.image,
           type: OutputType.analogOutput,
           price: product.price,

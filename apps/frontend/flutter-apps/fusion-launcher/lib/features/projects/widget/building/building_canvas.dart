@@ -19,8 +19,8 @@ import 'package:fusion_lib/fusion_widgets/others/fusion_image.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
 
-import '../../../../core/mace_calculation_manager.dart';
-import '../../../../core/mace_engine_provider.dart';
+import '../../../../core/spl_calculation/mace_calculation_manager.dart';
+import '../../../../core/spl_calculation/mace_engine_provider.dart';
 import '../../../../core/widgets/clean_widgets.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import 'toolbar/building_toolbar.dart';
@@ -244,7 +244,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                   floor.copyWith(floorPlan: floor.floorPlan.copyWith(canvasZoom: z)),
                                 );
                                 if (floorCanvasController.isShowingSpl.value && splInitCalculated) {
-                                  calculateSPL();
+                                  // calculateSPL();
                                 }
                               },
                               onCanvasPanChanged: (ui.Offset p) {
@@ -313,7 +313,6 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                   listeningAreaId: listeningAreaId,
                                 );
                                 serviceLocator<ProjectViewModel>().saveProjectToLocal();
-                                // calculateSPL();
                               },
                             ),
                           ),

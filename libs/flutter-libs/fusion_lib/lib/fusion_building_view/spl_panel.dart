@@ -8,9 +8,9 @@ import 'spl_range_controller.dart';
 
 /// Weighting options for SPL measurements
 enum SplWeighting {
-  aWeighted('A-Weighted'),
-  cWeighted('C-Weighted'),
-  zWeighted('Z-Weighted');
+  aWeighted('Direct SPL (A-Weighted)'),
+  zWeighted('Direct SPL (Z)'),
+  cWeighted('C-Weighted');
 
   const SplWeighting(this.displayName);
   final String displayName;
@@ -106,6 +106,7 @@ enum SplResolution {
 }
 
 /// Extension methods to get lists of display names for dropdowns
+/// Note: This extension is now deprecated since we use enums directly
 extension SplEnumExtensions on Object {
   static List<String> get weightingOptions => SplWeighting.values.map((SplWeighting e) => e.displayName).toList();
 
@@ -134,11 +135,11 @@ class SplPanel extends StatefulWidget {
 }
 
 class _SplPanelState extends State<SplPanel> {
-  // Top selections
-  String _weighting = 'A-Weighted';
-  String _frequency = '2 kHz';
-  String _bandwidth = '3 Octaves';
-  String _resolution = 'Medium';
+  // Top selections - using enums directly instead of strings
+  SplWeighting _weighting = SplWeighting.aWeighted;
+  SplFrequency _frequency = SplFrequency.hz2000;
+  SplBandwidth _bandwidth = SplBandwidth.oneThirdOctave;
+  SplResolution _resolution = SplResolution.low;
 
   // SPL Range
   bool _splExpanded = true;
@@ -156,10 +157,10 @@ class _SplPanelState extends State<SplPanel> {
   void initState() {
     super.initState();
     final SplPanelData i = widget.initial;
-    _weighting = i.weighting;
-    _frequency = i.frequency;
-    _bandwidth = i.bandwidth;
-    _resolution = i.resolution;
+    _weighting = SplWeighting.fromString(i.weighting);
+    _frequency = SplFrequency.fromString(i.frequency);
+    _bandwidth = SplBandwidth.fromString(i.bandwidth);
+    _resolution = SplResolution.fromString(i.resolution);
 
     _splAutoScale = i.splAutoScale;
     _splInvert = i.splInvertColor;
@@ -267,10 +268,10 @@ class _SplPanelState extends State<SplPanel> {
   void _emit() {
     widget.onChanged?.call(
       SplPanelData(
-        weighting: _weighting,
-        frequency: _frequency,
-        bandwidth: _bandwidth,
-        resolution: _resolution,
+        weighting: _weighting.displayName,
+        frequency: _frequency.displayName,
+        bandwidth: _bandwidth.displayName,
+        resolution: _resolution.displayName,
         splAutoScale: _splAutoScale,
         splInvertColor: _splInvert,
         splUpperDb: double.tryParse(_splUpper.text),
@@ -321,10 +322,10 @@ class _SplPanelState extends State<SplPanel> {
                     _row(
                       label: 'Weighting',
                       labelStyle: labelStyle,
-                      control: _dd(
+                      control: _enumDropdown<SplWeighting>(
                         value: _weighting,
-                        items: SplEnumExtensions.weightingOptions,
-                        onChanged: (String? v) {
+                        items: SplWeighting.values,
+                        onChanged: (SplWeighting? v) {
                           setState(() => _weighting = v!);
                           _emit();
                         },
@@ -333,10 +334,10 @@ class _SplPanelState extends State<SplPanel> {
                     _row(
                       label: 'Frequency',
                       labelStyle: labelStyle,
-                      control: _dd(
+                      control: _enumDropdown<SplFrequency>(
                         value: _frequency,
-                        items: SplEnumExtensions.frequencyOptions,
-                        onChanged: (String? v) {
+                        items: SplFrequency.values,
+                        onChanged: (SplFrequency? v) {
                           setState(() => _frequency = v!);
                           _emit();
                         },
@@ -345,10 +346,10 @@ class _SplPanelState extends State<SplPanel> {
                     _row(
                       label: 'Bandwidth',
                       labelStyle: labelStyle,
-                      control: _dd(
+                      control: _enumDropdown<SplBandwidth>(
                         value: _bandwidth,
-                        items: SplEnumExtensions.bandwidthOptions,
-                        onChanged: (String? v) {
+                        items: SplBandwidth.values,
+                        onChanged: (SplBandwidth? v) {
                           setState(() => _bandwidth = v!);
                           _emit();
                         },
@@ -357,10 +358,10 @@ class _SplPanelState extends State<SplPanel> {
                     _row(
                       label: 'Resolution',
                       labelStyle: labelStyle,
-                      control: _dd(
+                      control: _enumDropdown<SplResolution>(
                         value: _resolution,
-                        items: SplEnumExtensions.resolutionOptions,
-                        onChanged: (String? v) {
+                        items: SplResolution.values,
+                        onChanged: (SplResolution? v) {
                           setState(() => _resolution = v!);
                           _emit();
                         },
@@ -468,22 +469,26 @@ class _SplPanelState extends State<SplPanel> {
     );
   }
 
-  static Widget _dd({
-    required String value,
-    required List<String> items,
-    required ValueChanged<String?> onChanged,
+  // New generic enum dropdown method
+  Widget _enumDropdown<T extends Enum>({
+    required T value,
+    required List<T> items,
+    required ValueChanged<T?> onChanged,
   }) {
     return SizedBox(
       height: 32,
-      child: DropdownButtonFormField<String>(
-        value: value, // Fix deprecation warning: use initialValue instead of value
+      child: DropdownButtonFormField<T>(
+        initialValue: value,
         isExpanded: true,
         style: const TextStyle(fontSize: 12, color: Colors.black),
         items: items
             .map(
-              (String e) => DropdownMenuItem<String>(
+              (T e) => DropdownMenuItem<T>(
                 value: e,
-                child: Text(e, style: const TextStyle(fontSize: 12)),
+                child: Text(
+                  (e as dynamic).displayName,
+                  style: const TextStyle(fontSize: 12),
+                ),
               ),
             )
             .toList(),

@@ -21,14 +21,12 @@ class HardwareComponentProperties extends StatefulWidget {
 class _HardwareComponentPropertiesState extends State<HardwareComponentProperties> {
   final TextEditingController gainController = TextEditingController();
 
+  final TextEditingController rollController = TextEditingController();
   final TextEditingController pitchController = TextEditingController();
   final TextEditingController yawController = TextEditingController();
-  final TextEditingController rollController = TextEditingController();
 
   final TextEditingController xController = TextEditingController();
-
   final TextEditingController yController = TextEditingController();
-
   final TextEditingController zController = TextEditingController();
 
   //dispose controllers
@@ -120,8 +118,6 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                 ],
               ),
 
-              const SizedBox(height: 12),
-
               // Hardware name input field
               TextFormField(
                 initialValue: widget.selectedHardware.name,
@@ -150,8 +146,6 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                   }
                 },
               ),
-
-              const SizedBox(height: 10),
 
               // Coordinates section
               Column(
@@ -288,206 +282,194 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
               if (widget.selectedHardware is Speaker) ...<Widget>[
                 const SizedBox(height: 16),
 
-                // Pitch field
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: Row(
-                    children: <Widget>[
-                      SizedBox(
-                        width: 80,
-                        child: Text("Pitch", style: textStyleGrey?.copyWith(fontSize: 11)),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Row(
-                          children: <Widget>[
-                            Expanded(
-                              child: TextFormField(
-                                controller: pitchController,
-                                decoration: const InputDecoration(
-                                  hintText: 'Pitch',
-                                  border: InputBorder.none,
-                                  isDense: true,
-                                ),
-                                style: textStyleBlack,
-                                keyboardType: TextInputType.number,
-                                onFieldSubmitted: (String v) {
-                                  final double? pitch = double.tryParse(v.trim());
-                                  if (pitch != null) {
-                                    final Speaker updated = (widget.selectedHardware as Speaker).copyWith(pitch: pitch);
-                                    viewModel.updateHardware(updated);
-                                  } else {
-                                    // Reset to previous value if invalid
-                                    pitchController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).pitch.toString() : '0.0';
-                                    // Show validation error
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Pitch must be a valid decimal number'),
-                                        duration: Duration(seconds: 2),
-                                      ),
-                                    );
-                                  }
-                                },
+                // Roll field
+                Row(
+                  children: <Widget>[
+                    SizedBox(
+                      width: 80,
+                      child: Text("Roll", style: textStyleGrey?.copyWith(fontSize: 11)),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Row(
+                        children: <Widget>[
+                          Expanded(
+                            child: TextFormField(
+                              controller: rollController,
+                              decoration: const InputDecoration(
+                                hintText: 'Roll',
+                                border: InputBorder.none,
+                                isDense: true,
                               ),
+                              style: textStyleBlack,
+                              keyboardType: TextInputType.number,
+                              onFieldSubmitted: (String v) {
+                                final double? roll = double.tryParse(v.trim());
+                                if (roll != null) {
+                                  final Speaker updated = (widget.selectedHardware as Speaker).copyWith(roll: roll);
+                                  viewModel.updateHardware(updated);
+                                } else {
+                                  // Reset to previous value if invalid
+                                  rollController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).roll.toString() : '0.0';
+                                  // Show validation error
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Roll must be a valid decimal number'),
+                                      duration: Duration(seconds: 2),
+                                    ),
+                                  );
+                                }
+                              },
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 12),
+
+                // Pitch field
+                Row(
+                  children: <Widget>[
+                    SizedBox(
+                      width: 80,
+                      child: Text("Pitch", style: textStyleGrey?.copyWith(fontSize: 11)),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Row(
+                        children: <Widget>[
+                          Expanded(
+                            child: TextFormField(
+                              controller: pitchController,
+                              decoration: const InputDecoration(
+                                hintText: 'Pitch',
+                                border: InputBorder.none,
+                                isDense: true,
+                              ),
+                              style: textStyleBlack,
+                              keyboardType: TextInputType.number,
+                              onFieldSubmitted: (String v) {
+                                final double? pitch = double.tryParse(v.trim());
+                                if (pitch != null) {
+                                  final Speaker updated = (widget.selectedHardware as Speaker).copyWith(pitch: pitch);
+                                  viewModel.updateHardware(updated);
+                                } else {
+                                  // Reset to previous value if invalid
+                                  pitchController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).pitch.toString() : '0.0';
+                                  // Show validation error
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Pitch must be a valid decimal number'),
+                                      duration: Duration(seconds: 2),
+                                    ),
+                                  );
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
 
                 const SizedBox(height: 12),
 
                 // Yaw field
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: Row(
-                    children: <Widget>[
-                      SizedBox(
-                        width: 80,
-                        child: Text("Yaw", style: textStyleGrey?.copyWith(fontSize: 11)),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Row(
-                          children: <Widget>[
-                            Expanded(
-                              child: TextFormField(
-                                controller: yawController,
-                                decoration: const InputDecoration(
-                                  hintText: 'Yaw',
-                                  border: InputBorder.none,
-                                  isDense: true,
-                                ),
-                                style: textStyleBlack,
-                                keyboardType: TextInputType.number,
-                                onFieldSubmitted: (String v) {
-                                  final double? yaw = double.tryParse(v.trim());
-                                  if (yaw != null) {
-                                    final Speaker updated = (widget.selectedHardware as Speaker).copyWith(yaw: yaw);
-                                    viewModel.updateHardware(updated);
-                                  } else {
-                                    // Reset to previous value if invalid
-                                    yawController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).yaw.toString() : '0.0';
-                                    // Show validation error
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Yaw must be a valid decimal number'),
-                                        duration: Duration(seconds: 2),
-                                      ),
-                                    );
-                                  }
-                                },
+                Row(
+                  children: <Widget>[
+                    SizedBox(
+                      width: 80,
+                      child: Text("Yaw", style: textStyleGrey?.copyWith(fontSize: 11)),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Row(
+                        children: <Widget>[
+                          Expanded(
+                            child: TextFormField(
+                              controller: yawController,
+                              decoration: const InputDecoration(
+                                hintText: 'Yaw',
+                                border: InputBorder.none,
+                                isDense: true,
                               ),
+                              style: textStyleBlack,
+                              keyboardType: TextInputType.number,
+                              onFieldSubmitted: (String v) {
+                                final double? yaw = double.tryParse(v.trim());
+                                if (yaw != null) {
+                                  final Speaker updated = (widget.selectedHardware as Speaker).copyWith(yaw: yaw);
+                                  viewModel.updateHardware(updated);
+                                } else {
+                                  // Reset to previous value if invalid
+                                  yawController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).yaw.toString() : '0.0';
+                                  // Show validation error
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Yaw must be a valid decimal number'),
+                                      duration: Duration(seconds: 2),
+                                    ),
+                                  );
+                                }
+                              },
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 12),
-
-                // Roll field
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: Row(
-                    children: <Widget>[
-                      SizedBox(
-                        width: 80,
-                        child: Text("Roll", style: textStyleGrey?.copyWith(fontSize: 11)),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Row(
-                          children: <Widget>[
-                            Expanded(
-                              child: TextFormField(
-                                controller: rollController,
-                                decoration: const InputDecoration(
-                                  hintText: 'Roll',
-                                  border: InputBorder.none,
-                                  isDense: true,
-                                ),
-                                style: textStyleBlack,
-                                keyboardType: TextInputType.number,
-                                onFieldSubmitted: (String v) {
-                                  final double? roll = double.tryParse(v.trim());
-                                  if (roll != null) {
-                                    final Speaker updated = (widget.selectedHardware as Speaker).copyWith(roll: roll);
-                                    viewModel.updateHardware(updated);
-                                  } else {
-                                    // Reset to previous value if invalid
-                                    rollController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).roll.toString() : '0.0';
-                                    // Show validation error
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Roll must be a valid decimal number'),
-                                        duration: Duration(seconds: 2),
-                                      ),
-                                    );
-                                  }
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
 
                 const SizedBox(height: 12),
 
                 // Gain field
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: Row(
-                    children: <Widget>[
-                      SizedBox(
-                        width: 80,
-                        child: Text("Gain", style: textStyleGrey?.copyWith(fontSize: 11)),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Row(
-                          children: <Widget>[
-                            Expanded(
-                              child: TextFormField(
-                                controller: gainController,
-                                decoration: const InputDecoration(
-                                  hintText: 'Gain',
-                                  border: InputBorder.none,
-                                  isDense: true,
-                                ),
-                                style: textStyleBlack,
-                                keyboardType: TextInputType.number,
-                                onFieldSubmitted: (String v) {
-                                  final double? gain = double.tryParse(v.trim());
-                                  if (gain != null) {
-                                    final Speaker updated = (widget.selectedHardware as Speaker).copyWith(gain: gain);
-                                    viewModel.updateHardware(updated);
-                                  } else {
-                                    // Reset to previous value if invalid
-                                    gainController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).gain.toString() : '0.0';
-                                    // Show validation error
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Gain must be a valid decimal number'),
-                                        duration: Duration(seconds: 2),
-                                      ),
-                                    );
-                                  }
-                                },
+                Row(
+                  children: <Widget>[
+                    SizedBox(
+                      width: 80,
+                      child: Text("Gain", style: textStyleGrey?.copyWith(fontSize: 11)),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Row(
+                        children: <Widget>[
+                          Expanded(
+                            child: TextFormField(
+                              controller: gainController,
+                              decoration: const InputDecoration(
+                                hintText: 'Gain',
+                                border: InputBorder.none,
+                                isDense: true,
                               ),
+                              style: textStyleBlack,
+                              keyboardType: TextInputType.number,
+                              onFieldSubmitted: (String v) {
+                                final double? gain = double.tryParse(v.trim());
+                                if (gain != null) {
+                                  final Speaker updated = (widget.selectedHardware as Speaker).copyWith(gain: gain);
+                                  viewModel.updateHardware(updated);
+                                } else {
+                                  // Reset to previous value if invalid
+                                  gainController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).gain.toString() : '0.0';
+                                  // Show validation error
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Gain must be a valid decimal number'),
+                                      duration: Duration(seconds: 2),
+                                    ),
+                                  );
+                                }
+                              },
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ],
 

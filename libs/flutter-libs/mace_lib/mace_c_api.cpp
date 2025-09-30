@@ -150,11 +150,15 @@ ClusterHandle mace_add_speaker_cluster(
     EngineHandle /*e*/,
     const char*  speakerName,
     double       x, double y, double z,
-    double       gain
+    double       gain,
+    double roll,
+    double pitch,
+    double yaw
 ) {
     printf("[mace_capi] Enter mace_add_speaker_cluster "
-           "(name=\"%s\", x=%.2f, y=%.2f, z=%.2f)\n",
-           speakerName, x, y, z);
+           "(name=\"%s\", x=%.2f, y=%.2f, z=%.2f, "
+           "gain=%.2f, roll=%.2f, pitch=%.2f, yaw=%.2f)\n",
+           speakerName, x, y, z, gain, roll, pitch, yaw);
     fflush(stdout);
 
     auto spk = HardwareComponentFactory::instance()
@@ -172,6 +176,7 @@ ClusterHandle mace_add_speaker_cluster(
 
     cluster->addComponent(spk);
     cluster->setLocation({x, y, z});
+    cluster->setOrientation({roll, pitch, yaw});
     // cluster->setMaxGain();
     cluster->setGain(gain);
     EngineFactory::GetEngine()->AddCluster(cluster);
@@ -323,6 +328,156 @@ int mace_get_spl(
 
     return n;
 }
+
+/// Computes SPL for all default ISO center frequencies across:
+/// - oneThirdOctave (Bandwidth::Third)
+/// - oneOctave      (Bandwidth::Octave)
+/// - vocalBands     (Bandwidth::VocalBands)
+/// - broadband      (Bandwidth::Broadband)
+///
+/// Returns: JSON string
+///
+/// JSON:
+/// {
+///   "frequencies":[100,125,...,10000],
+///   "bandwidths":["oneThirdOctave","oneOctave","vocalBands","broadband"],
+///   "points": N,
+///   "spl": {
+///     "oneThirdOctave": [[p0f0, p0f1, ...], [p1f0, ...], ...],
+///     "oneOctave":      [[...], ...],
+///     "vocalBands":     [vb0, vb1, ...],   // one value per point
+///     "broadband":      [bb0, bb1, ...]
+///   }
+/// }
+const char* mace_get_all_spl_json(
+    EngineHandle      /*e*/,
+    FieldPointsHandle fph
+) {
+    printf("[mace_capi] Enter mace_get_spl_multi_json (fph=%llu)\n",
+           (unsigned long long)fph);
+    fflush(stdout);
+
+    auto data = EngineFactory::GetEngine()->GetData(fph);
+    if (!data) {
+        printf("[mace_capi] ERROR: GetData(%llu) returned nullptr\n",
+               (unsigned long long)fph);
+        fflush(stdout);
+        return strdup("{}");
+    }
+
+    // Default ISO centers (Hz)
+    static const double kFreqs[] = {
+        100, 125, 160, 200, 250, 315, 400, 500, 630, 800,
+        1000, 1250, 1600, 2000, 2500, 3150, 4000, 5000, 6300, 8000, 10000
+    };
+    static const int kNFreqs = (int)(sizeof(kFreqs) / sizeof(kFreqs[0]));
+
+    // Prepare frequency vector (non-broadband/vocal queries)
+    Freqs freqs;
+    freqs.reserve(kNFreqs);
+    for (int i = 0; i < kNFreqs; ++i) freqs.emplace_back(kFreqs[i]);
+
+    // Fetch SPL for required bandwidths
+    PairedData d_third, d_oct, d_bb, d_vb;
+    data->getData()->GetSPL(d_third, acoustics::Bandwidth::Third,     freqs);
+    data->getData()->GetSPL(d_oct,   acoustics::Bandwidth::Octave,    freqs);
+    { Freqs empty; data->getData()->GetSPL(d_bb, acoustics::Bandwidth::Broadband, empty); }
+    { Freqs empty; data->getData()->GetSPL(d_vb, acoustics::Bandwidth::VocalBands, empty); }
+
+    // Point count (prefer broadband if present)
+    const int nPoints =
+        !d_bb.empty()   ? (int)d_bb.size() :
+        !d_vb.empty()   ? (int)d_vb.size() :
+        !d_third.empty()? (int)d_third.size() :
+        !d_oct.empty()  ? (int)d_oct.size() : 0;
+
+    printf("[mace_capi] SPL all-bw: points=%d, freqs=%d\n", nPoints, kNFreqs);
+    fflush(stdout);
+
+    // ---- Build JSON ----
+    std::string json;
+    json.reserve(64u * (size_t)std::max(1, nPoints) * 4u);
+
+    json += "{";
+
+    // frequencies
+    json += "\"frequencies\":[";
+    for (int i = 0; i < kNFreqs; ++i) {
+        if (i) json += ",";
+        if (kFreqs[i] == (int)kFreqs[i]) json += std::to_string((int)kFreqs[i]);
+        else                              json += std::to_string(kFreqs[i]);
+    }
+    json += "],";
+
+    // bandwidths
+    json += "\"bandwidths\":[\"oneThirdOctave\",\"oneOctave\",\"vocalBands\",\"broadband\"],";
+
+    // points
+    json += "\"points\":";
+    json += std::to_string(nPoints);
+    json += ",";
+
+    // spl object
+    json += "\"spl\":{";
+
+    // Helper: append 2D matrix [points][freqs] from PairedData
+    auto appendMatrixFromPaired = [&](const PairedData& d, const char* key) {
+        json += "\""; json += key; json += "\":[";
+        for (int p = 0; p < nPoints; ++p) {
+            if (p) json += ",";
+            json += "[";
+            const auto& row = (p < (int)d.size()) ? d[p].second : std::vector<double>{};
+            for (int f = 0; f < kNFreqs; ++f) {
+                if (f) json += ",";
+                double v = (f < (int)row.size()) ? row[f] : 0.0;
+                json += std::to_string(v);
+            }
+            json += "]";
+        }
+        json += "]";
+    };
+
+    // oneThirdOctave
+    appendMatrixFromPaired(d_third, "oneThirdOctave");
+    json += ",";
+
+    // oneOctave
+    appendMatrixFromPaired(d_oct, "oneOctave");
+    json += ",";
+
+    // vocalBands: flat array [points]
+    json += "\"vocalBands\":[";
+    for (int p = 0; p < nPoints; ++p) {
+        if (p) json += ",";
+        double v = (p < (int)d_vb.size() && !d_vb[p].second.empty()) ? d_vb[p].second[0] : 0.0;
+        json += std::to_string(v);
+    }
+    json += "],";
+
+    // broadband: flat array [points]
+    json += "\"broadband\":[";
+    for (int p = 0; p < nPoints; ++p) {
+        if (p) json += ",";
+        double v = (p < (int)d_bb.size() && !d_bb[p].second.empty()) ? d_bb[p].second[0] : 0.0;
+        json += std::to_string(v);
+    }
+    json += "]";
+
+    json += "}"; // spl
+    json += "}"; // root
+
+    // malloc-dup for caller
+    char* out = (char*)std::malloc(json.size() + 1);
+    if (!out) {
+        printf("[mace_capi] ERROR: malloc failed for JSON out\n");
+        fflush(stdout);
+        return strdup("{}");
+    }
+    std::memcpy(out, json.c_str(), json.size());
+    out[json.size()] = '\0';
+    return out;
+}
+
 
 /// Clear all engine state (surfaces, clusters, measurements, etc.)
 void mace_clear(uint64_t /*e*/)

@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -230,17 +229,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
               if (hasIncomingData)
                 Positioned.fill(
                   child: Container(
-                    color: Colors.blue.withOpacity(0.3), // Semi-transparent background
-                    child: const Center(
-                      child: Text(
-                        'Drop here',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.blue,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
+                    color: Colors.blue.withValues(alpha: 0.3),
                   ),
                 ),
             ],
