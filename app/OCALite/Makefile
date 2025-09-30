@@ -45,6 +45,7 @@ APP_COMMON_SOURCES       := ../common/ZoneConfigBuilder.cpp \
                            ../common/workers/ConcreteGainActuator.cpp \
                            ../common/workers/ConcreteMuteActuator.cpp \
                            ../common/workers/ConcreteSwitchActuator.cpp \
+                           ../common/workers/FusionBlock.cpp \
                            ../common/workers/ZoneGroup.cpp
 
 # Object files
