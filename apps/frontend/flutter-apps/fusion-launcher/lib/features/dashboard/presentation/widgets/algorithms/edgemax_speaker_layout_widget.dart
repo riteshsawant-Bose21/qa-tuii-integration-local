@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_algorithms/edgemax_speakers_autolayout/edgemax_speakers_autolayout.dart';
-import 'edgemax_test_scenarios.dart';
 
 /// Represents a single calculation step in the EdgeMax algorithm
 class CalculationStep {
@@ -275,24 +274,6 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
     });
   }
 
-  void _loadTestScenario(TestScenario scenario) {
-    setState(() {
-      _lengthController.text = scenario.room.length.toString();
-      _widthController.text = scenario.room.width.toString();
-      _ceilingHeightController.text = scenario.room.ceilingHeight.toString();
-      _listenerHeightController.text = scenario.room.listenerHeight.toString();
-      
-      // Reset calculation state when loading new scenario
-      _result = null;
-      _currentRoom = null;
-      _calculationSteps.clear();
-      _currentStep = 0;
-      _showStepByStep = false;
-      _validationErrors.clear();
-    });
-    
-    // Don't auto-calculate - wait for user to click the calculate button
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -416,10 +397,6 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
             
             const SizedBox(height: 20),
             
-            // Test Scenarios Section
-            EdgeMaxTestScenariosWidget(
-              onScenarioSelected: _loadTestScenario,
-            ),
             
             const SizedBox(height: 20),
             
