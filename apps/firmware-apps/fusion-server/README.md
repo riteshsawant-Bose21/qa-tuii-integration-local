@@ -324,8 +324,8 @@ EOF'
 A new fusion-server binary can be pushed and propogated across all running instances.
   
 There are endpoints for updating the binary and rolling back a binary.
-  - `PUT /updateVersion` - Post a new binary to replace the running fusion-server instance.
-  - `POST /rollbackVersion` - Rollback a binary a certain number of previous updates.
+  - `PUT /version` - Post a new binary to replace the running fusion-server instance.
+  - `POST /version` - Rollback a binary a certain number of previous updates.
 
 
 The curl command can also be used to call the endpoints from the command line.
@@ -343,7 +343,7 @@ The checksum of the new binary can be calculated as part of the curl command.
 curl -X POST \
   -F "binary=@build/fusion-server_linux_arm64" \
   -F "checksum=$(shasum -a 256 build/fusion-server_linux_arm64  | cut -d ' ' -f 1)" \
-  http://192.168.64.100:8080/updateVersion
+  http://192.168.64.100:8080/version
 ```
 
 ## Basic Commands

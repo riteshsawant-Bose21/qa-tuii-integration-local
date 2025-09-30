@@ -56,13 +56,15 @@ const (
 
 	PAVAEndpoint               = "/pava"
 	PAVAAlarmsEndpoint         = PAVAEndpoint + "/alarms"
-	PAVAAudioEndpoint          = PAVAEndpoint + "/audio"
-	PAVAAudioDeleteEndpoint    = PAVAAudioEndpoint + "/{name}"
 	PAVADiagnosticsEndpoint    = PAVAEndpoint + "/diagnostics"
 	PAVAMessagesEndpoint       = PAVAEndpoint + "/messages"
-	PAVAMessageTriggerEndpoint = PAVAMessagesEndpoint + "/trigger/{name}"
+	PAVAScheduleEndpoint       = PAVAEndpoint + "/schedule"
 	PAVAStatusEndpoint         = PAVAEndpoint + "/status"
 	PAVAZonesEndpoint          = PAVAEndpoint + "/zones"
+	PAVAMessagesIDEndpoint     = PAVAMessagesEndpoint + "/{id}"
+	PAVAMessagesTagsEndpoint   = PAVAMessagesEndpoint + "/tags"
+	PAVAMessageStreamEndpoint  = PAVAMessagesIDEndpoint + "/stream"
+	PAVAMessageTriggerEndpoint = PAVAMessagesIDEndpoint + "/trigger"
 	PAVAZoneStatusEndpoint     = PAVAZonesEndpoint + "/status/{name}"
 
 	RootEndpoint = "/"
@@ -82,9 +84,7 @@ const (
 
 	ValueEndpoint = "/value"
 
-	VersionEndpoint         = "/version"
-	VersionUpdateEndpoint   = VersionEndpoint + "/update"
-	VersionRollbackEndpoint = VersionEndpoint + "/rollback"
+	VersionEndpoint = "/version"
 
 	WebsocketEndpoint = "/ws"
 

@@ -12,5 +12,6 @@ const (
 
 	AudioFilesLocation = "/var/lib/fusion/audio"
 
+	MessageIDKey  = "message_id"
 	SnapshotIDKey = "snapshot_id"
 )

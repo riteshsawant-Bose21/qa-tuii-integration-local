@@ -67,7 +67,7 @@ func NewTaskManager(config *api.AppConfig, persistence *persistence.Persistence)
 		},
 		api.TaskTypeAudioPlayback: func(t *api.Task) func() {
 			path := t.Params["file_path"]
-			return tm.wrapTask(t, tm.taskPlayAudioFunc(path))
+			return tm.wrapTask(t, tm.taskPlayAudioFunc(t, path))
 		},
 	}
 	return tm
@@ -505,7 +505,7 @@ func (tm *TaskManager) makeTaskFunc(task *api.Task) (TaskFunc, error) {
 		if path == "" {
 			return nil, fmt.Errorf("missing 'file_path'")
 		}
-		return tm.taskPlayAudioFunc(path), nil
+		return tm.taskPlayAudioFunc(task, path), nil
 	default:
 		return nil, fmt.Errorf("unsupported task type %q", task.Type)
 	}
