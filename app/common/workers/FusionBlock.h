@@ -3,7 +3,7 @@
  *  agreement located in the LICENSE file in the root of this project
  *  as an original contracting party.
  *
- *  Description         : ConcreteMuteActuator - Concrete implementation of OcaLiteMute
+ *  Description         : FusionBlock - Custom OCA Block implementation.
  *
  */
 
@@ -41,10 +41,7 @@ class FusionBlock : public ::OcaLiteBlock
                 const ::OcaLiteList< ::OcaLitePort>& ports, ::OcaONo type) :
             ::OcaLiteBlock(objectNumber, lockable, role, ports, type) {}
 
-#if 1
         ::OcaLiteStatus GetMembersRecursive(::OcaLiteList< ::OcaLiteBlockMember>& members) const;
-        //::OcaLiteStatus GetFusionMembersRecursive(::OcaLiteList< ::OcaLiteBlockMember>& members) const;
-#endif
 
         ~FusionBlock() {}
 
@@ -54,4 +51,4 @@ class FusionBlock : public ::OcaLiteBlock
                 ::OcaUint8** response);
 };
 
-#endif
+#endif //FUSIONBLOCK_H

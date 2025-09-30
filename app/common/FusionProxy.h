@@ -3,7 +3,7 @@
  *  agreement located in the LICENSE file in the root of this project
  *  as an original contracting party.
  *
- *  Description         : The General Proxy class.
+ *  Description         : The Fusion Proxy class.
  */
 #ifndef FUSION_PROXY_H
 #define FUSION_PROXY_H
@@ -81,4 +81,4 @@ private:
     ::OcaUint8      m_buffer[10*1024];
 };
 
-#endif //GENERAL_PROXY_H
+#endif //FUSION_PROXY_H

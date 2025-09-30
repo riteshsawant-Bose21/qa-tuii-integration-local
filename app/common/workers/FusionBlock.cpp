@@ -3,7 +3,7 @@
  *  agreement located in the LICENSE file in the root of this project
  *  as an original contracting party.
  *
- *  Description         : ConcreteGainActuator - Concrete implementation of OcaLiteGain
+ *  Description         : FusionBlock - Custom OOCA Block implementation.
  *
  */
 
@@ -53,8 +53,6 @@
                     {
                         ::OcaUint8 numberOfParameters(0);
 
-                        printf("=====> FUSION BLOCK \n");
-
                         if (reader.Read(bytesLeft, &pCmdParameters, numberOfParameters) &&
                                 (0 == numberOfParameters))
                         {
@@ -80,36 +78,6 @@
                             }
                         }
                     }
-#if 0
-                    {
-                        ::OcaUint8 numberOfParameters(0);
-                        if (reader.Read(bytesLeft, &pCmdParameters,
-                                    numberOfParameters) &&
-                                (0 == numberOfParameters))
-                        {
-                            ::OcaLiteList< ::OcaLiteBlockMember> members;
-                            rc = GetFusionMembersRecursive(members);
-                            //rc = GetMembersRecursive(members);
-                            if (OCASTATUS_OK == rc)
-                            {
-                                ::OcaUint32 responseSize(::GetSizeValue< ::OcaUint8>(static_cast< ::OcaUint8>(1), writer) + members.GetSize(writer));
-                                responseBuffer = ::OcaLiteCommandHandler::GetInstance().GetResponseBuffer(responseSize);
-                                if (NULL != responseBuffer)
-                                {
-                                    ::OcaUint8* pResponse(responseBuffer);
-                                    writer.Write(static_cast< ::OcaUint8>(1/*NrParameters*/), &pResponse);
-                                    members.Marshal(&pResponse, writer);
-
-                                    *response = responseBuffer;
-                                }
-                                else
-                                {
-                                    rc = OCASTATUS_BUFFER_OVERFLOW;
-                                }
-                            }
-                        }
-                    }
-#endif
                     break;
 
                 default:
@@ -121,21 +89,3 @@
     return rc;
 }
 
-::OcaLiteStatus FusionBlock::GetMembersRecursive(::OcaLiteList< ::OcaLiteBlockMember>& members) const
-{
-    ::OcaLiteStatus rc(OCASTATUS_OK);
-
-    printf("=====> FUSION BLOCK (recrv) \n");
-    return rc;
-}
-
-#if 0
-::OcaLiteStatus FusionBlock::GetFusionMembersRecursive(::OcaLiteList< ::OcaLiteBlockMember>& members) const
-{
-    ::OcaLiteStatus rc(OCASTATUS_OK);
-
-    printf(" In FusionBock\n");
-    
-    return rc;
-}
-#endif
