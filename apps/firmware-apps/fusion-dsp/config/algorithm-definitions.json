@@ -1,5 +1,5 @@
 {
-    "version": "0.1.6",
+    "version": "0.1.7",
     "algorithms": [
         {
             "name": "alsa_in",
@@ -1351,57 +1351,6 @@
                     "default_value": -60.0,
                     "minimum_value": -60.0,
                     "maximum_value": 0.0,
-                    "telemetry_type": "meter",
-                    "period_type": "HI"
-                }
-            ]
-        },
-        {
-            "name": "standard_mixer",
-            "terminals": [
-                {
-                    "name": "in",
-                    "signal_type": "audio",
-                    "direction": "input",
-                    "minimum_channels": 1,
-                    "maximum_channels": 64
-                },
-                {
-                    "name": "out",
-                    "signal_type": "audio",
-                    "direction": "output",
-                    "minimum_channels": 1,
-                    "maximum_channels": 64
-                }
-            ],
-            "parameters": [
-                {
-                    "name": "input_gain",
-                    "value_type": "float",
-                    "dimensions": ["in"],
-                    "default_value": 0.0,
-                    "minimum_value": -60.0,
-                    "maximum_value": 0.0
-                },
-                {
-                    "name": "input_mute",
-                    "value_type": "bool",
-                    "dimensions": ["in"],
-                    "default_value": false
-                },
-                {
-                    "name": "routing",
-                    "value_type": "bool",
-                    "dimensions": ["in", "out"],
-                    "default_value": true
-                }
-            ],
-            "telemetry": [
-                {
-                    "name": "input_presence",
-                    "dimensions": ["in"],
-                    "value_type": "bool",
-                    "default_value": false,
                     "telemetry_type": "meter",
                     "period_type": "HI"
                 }
