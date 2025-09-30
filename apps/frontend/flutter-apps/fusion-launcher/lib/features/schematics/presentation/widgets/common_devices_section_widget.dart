@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
+import 'package:fusion_lib/fusion_widgets/others/fusion_vertical_resizable_widget.dart';
 
 import 'expandable_popup_menu_widget.dart';
 
@@ -10,6 +11,10 @@ class CommonDevicesSectionWidget extends StatelessWidget {
   final String title;
   final Widget sectionContent;
   final Widget addButtonWidget;
+  final ValueChanged<double>? onHeightChanged;
+  final double minHeight;
+  final bool enableResize;
+
   const CommonDevicesSectionWidget({
     super.key,
     required this.width,
@@ -17,13 +22,32 @@ class CommonDevicesSectionWidget extends StatelessWidget {
     required this.title,
     required this.sectionContent,
     required this.addButtonWidget,
+    this.onHeightChanged,
+    this.minHeight = 150,
+    this.enableResize = true,
   });
 
   @override
   Widget build(BuildContext context) {
+    if (enableResize) {
+      return FusionVerticalResizableWidget(
+        initialHeight: height,
+        minHeight: minHeight,
+        maxHeight: double.infinity,
+        onHeightChanged: onHeightChanged,
+        child: _buildContainer(context),
+      );
+    } else {
+      return SizedBox(
+        height: height,
+        child: _buildContainer(context),
+      );
+    }
+  }
+
+  Widget _buildContainer(BuildContext context) {
     return Container(
       width: width,
-      height: height,
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.launcherBgColor1,
         border: Border(

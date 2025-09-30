@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:fusion_launcher/core/theme/app_theme.dart';
 import '../widgets/schematics_left_panel.dart';
 import '../widgets/schematics_right_panel.dart';
 import 'old_schematics_page.dart';
@@ -50,7 +51,13 @@ class _SchematicsPageState extends State<SchematicsPage> {
             ),
             Container(
               height: 44,
-              color: Colors.white,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.white,
+                border: Border(
+                  top: BorderSide(width: 1, color: Theme.of(context).colorScheme.grey),
+                ),
+              ),
+
               child: Row(
                 children: <Widget>[
                   GestureDetector(

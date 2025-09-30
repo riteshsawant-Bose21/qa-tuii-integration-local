@@ -17,11 +17,51 @@ class SchematicsLeftPanel extends StatefulWidget {
 
 class _LeftPanelState extends State<SchematicsLeftPanel> {
   final ValueNotifier<String?> _hoveredSourceId = ValueNotifier<String?>(null);
+  Map<String, double> _sectionHeights = <String, double>{};
+  static const double _minSectionHeight = 150.0;
+
+  /// Define section pairs for responsive resizing
+  static const Map<String, String> _sectionPairs = <String, String>{
+    "Sources": "End Points",
+    "End Points": "Sources",
+    "Processors & Amplifiers": "Other Devices",
+    "Other Devices": "Processors & Amplifiers",
+  };
 
   @override
   void dispose() {
     _hoveredSourceId.dispose();
     super.dispose();
+  }
+
+  void _updateSectionHeight(String sectionTitle, double newHeight) {
+    final String? pairedSection = _sectionPairs[sectionTitle];
+    if (pairedSection == null) {
+      /// No paired section, just update current section
+      setState(() {
+        _sectionHeights[sectionTitle] = newHeight.clamp(_minSectionHeight, double.infinity);
+      });
+      return;
+    }
+
+    /// Get current heights
+    final double currentHeight = _sectionHeights[sectionTitle] ?? _minSectionHeight;
+    final double pairedCurrentHeight = _sectionHeights[pairedSection] ?? _minSectionHeight;
+    final double totalColumnHeight = currentHeight + pairedCurrentHeight;
+
+    /// Calculate new paired height
+    final double newPairedHeight = totalColumnHeight - newHeight;
+
+    /// Check constraints
+    if (newHeight < _minSectionHeight || newPairedHeight < _minSectionHeight) {
+      /// Don't allow resize if it violates minimum height constraints
+      return;
+    }
+
+    setState(() {
+      _sectionHeights[sectionTitle] = newHeight;
+      _sectionHeights[pairedSection] = newPairedHeight;
+    });
   }
 
   @override
@@ -33,79 +73,106 @@ class _LeftPanelState extends State<SchematicsLeftPanel> {
         final double spacing = 0.0;
         final double usableWidth = availableWidth - (spacing * 2);
 
+        /// Calculate initial container height for 2x2 grid (2 rows)
+        final int rows = 2;
+        final double totalVerticalSpacing = spacing * (rows + 1);
+        final double containerHeight = ((availableHeight - totalVerticalSpacing) / rows).clamp(_minSectionHeight, double.infinity);
+
+        /// Initialize section heights if empty
+        if (_sectionHeights.isEmpty) {
+          _sectionHeights = <String, double>{
+            "Sources": containerHeight,
+            "Processors & Amplifiers": containerHeight,
+            "End Points": containerHeight,
+            "Other Devices": containerHeight,
+          };
+        }
+
         /// Force 2x2 layout (2 columns, 2 rows) by default
         double containerWidth;
         final double minContainerWidth = 180.0;
         int containersPerRow = 2;
-
-        /// Always start with 2 columns
 
         /// Only allow single column if space is extremely tight
         if (usableWidth < (minContainerWidth * 2 + spacing)) {
           containersPerRow = 1;
         }
 
-        /// Calculate container width based on columns
+        /// Calculate container dimensions
         if (containersPerRow == 1) {
           containerWidth = usableWidth.clamp(minContainerWidth, double.infinity);
         } else {
-          /// For 2 columns, distribute width evenly
           containerWidth = (usableWidth - spacing) / 2;
           containerWidth = containerWidth.clamp(minContainerWidth, double.infinity);
         }
 
-        /// Calculate container height for 2x2 grid (2 rows)
-        final int rows = 2; // Force 2 rows for 2x2 layout
-        final double totalVerticalSpacing = spacing * (rows + 1); // Top, bottom, and between rows
-        final double containerHeight = ((availableHeight - totalVerticalSpacing) / rows).clamp(250.0, double.infinity);
+        /// Handle single column layout with scrolling
+        if (containersPerRow == 1) {
+          return SingleChildScrollView(
+            physics: const ClampingScrollPhysics(),
+            padding: EdgeInsets.all(spacing),
+            child: Wrap(
+              spacing: spacing,
+              runSpacing: spacing,
+              children: <Widget>[
+                /// Single column layout with individual sections
+                _buildSection("Sources", containerWidth, enableResize: true),
+                _buildSection("Processors & Amplifiers", containerWidth, enableResize: true),
+                _buildSection("End Points", containerWidth, enableResize: true),
+                _buildSection("Other Devices", containerWidth, enableResize: true),
+              ],
+            ),
+          );
+        }
 
-        final List<String> sections = <String>["Sources", "Processors & Amplifiers", "End Points", "Other Devices"];
-
-        return SingleChildScrollView(
+        /// 2x2 layout without scrolling
+        return Padding(
           padding: EdgeInsets.all(spacing),
           child: Wrap(
             spacing: spacing,
-            runSpacing: spacing,
+            runSpacing: 0.0,
             children: <Widget>[
-              /// Sources Section
-              CommonDevicesSectionWidget(
-                title: "Sources",
+              /// Left Column (Sources + End Points as a single unit)
+              SizedBox(
                 width: containerWidth,
-                height: containerHeight,
-                sectionContent: _buildSectionContent(sectionTitle: "Sources"),
-                addButtonWidget: const SizedBox(), // Empty widget since we handle it in CommonDevicesSectionWidget
+                child: Column(
+                  children: <Widget>[
+                    _buildSection("Sources", containerWidth, enableResize: true),
+                    SizedBox(height: spacing),
+                    _buildSection("End Points", containerWidth, enableResize: false),
+                  ],
+                ),
               ),
 
-              /// Processors & Amplifiers Section
-              CommonDevicesSectionWidget(
-                title: "Processors & Amplifiers",
+              /// Right Column (Processors + Other Devices as a single unit)
+              SizedBox(
                 width: containerWidth,
-                height: containerHeight,
-                sectionContent: _buildSectionContent(sectionTitle: "Processors & Amplifiers"),
-                addButtonWidget: const SizedBox(), // Empty widget since we handle it in CommonDevicesSectionWidget
-              ),
-
-              /// End Points Section
-              CommonDevicesSectionWidget(
-                title: "End Points",
-                width: containerWidth,
-                height: containerHeight,
-                sectionContent: _buildSectionContent(sectionTitle: "End Points"),
-                addButtonWidget: const SizedBox(), // Empty widget since we handle it in CommonDevicesSectionWidget
-              ),
-
-              /// Other Devices Section
-              CommonDevicesSectionWidget(
-                title: "Other Devices",
-                width: containerWidth,
-                height: containerHeight,
-                sectionContent: _buildSectionContent(sectionTitle: "Other Devices"),
-                addButtonWidget: const SizedBox(), // Empty widget since we handle it in CommonDevicesSectionWidget
+                child: Column(
+                  children: <Widget>[
+                    _buildSection("Processors & Amplifiers", containerWidth, enableResize: true),
+                    SizedBox(height: spacing),
+                    _buildSection("Other Devices", containerWidth, enableResize: false),
+                  ],
+                ),
               ),
             ],
           ),
         );
       },
+    );
+  }
+
+  /// Build individual section with optional resizing
+  Widget _buildSection(String title, double containerWidth, {bool enableResize = true}) {
+    return CommonDevicesSectionWidget(
+      title: title,
+      width: containerWidth,
+      height: _sectionHeights[title]!,
+      sectionContent: _buildSectionContent(sectionTitle: title),
+      addButtonWidget: const SizedBox(),
+      onHeightChanged: enableResize ? (double height) => _updateSectionHeight(title, height) : null,
+      minHeight: _minSectionHeight,
+      enableResize: enableResize,
     );
   }
 
@@ -201,6 +268,7 @@ class _LeftPanelState extends State<SchematicsLeftPanel> {
     }
   }
 
+  /// Build individual source item with hover and delete functionality
   Widget _buildSourceItem({
     required String name,
     required String assetImagePath,
@@ -213,9 +281,6 @@ class _LeftPanelState extends State<SchematicsLeftPanel> {
         final bool isHovered = (hoveredId == sourceId);
 
         return MouseRegion(
-          // onEnter: (_) {
-          //   _hoveredSourceId.value = sourceId;
-          // },
           onHover: (_) {
             _hoveredSourceId.value = sourceId;
           },
@@ -231,7 +296,6 @@ class _LeftPanelState extends State<SchematicsLeftPanel> {
             ),
             child: Row(
               children: <Widget>[
-                // add FusionImage
                 FusionImage.asset(assetImagePath, width: 18, height: 18, fit: BoxFit.contain),
                 const SizedBox(width: 6),
                 Expanded(
@@ -240,7 +304,6 @@ class _LeftPanelState extends State<SchematicsLeftPanel> {
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 10),
                   ),
                 ),
-                // Show delete icon on hover
                 if (isHovered && sourceId != null)
                   GestureDetector(
                     onTap: () {
@@ -263,15 +326,11 @@ class _LeftPanelState extends State<SchematicsLeftPanel> {
     );
   }
 
+  /// Build individual processor item with zones
   Widget _buildProcessorItem(String name, bool isActive, [List<String>? zones]) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      // decoration: BoxDecoration(
-      //   color: isActive ? Colors.grey[200] : Colors.white,
-      //   border: Border.all(color: Colors.grey[300]!),
-      //   borderRadius: BorderRadius.circular(4),
-      // ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -322,6 +381,7 @@ class _LeftPanelState extends State<SchematicsLeftPanel> {
     );
   }
 
+  /// color coding for zones
   Color _getZoneColor(String zone) {
     switch (zone) {
       case 'Z1':
