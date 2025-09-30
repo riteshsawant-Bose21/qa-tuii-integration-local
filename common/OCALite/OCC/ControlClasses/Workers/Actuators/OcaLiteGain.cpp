@@ -69,6 +69,7 @@ OcaLiteGain::OcaLiteGain(::OcaONo objectNumber, ::OcaBoolean lockable, const ::O
                 {
                     m_gain = gain;
 
+#ifndef OCA_LITE_CONTROLLER   // Controllers should not generate events
                     ::OcaDB actualGain;
                     rc = GetGainValue(actualGain);
                     if (OCASTATUS_OK == rc)
@@ -80,6 +81,7 @@ OcaLiteGain::OcaLiteGain(::OcaONo objectNumber, ::OcaBoolean lockable, const ::O
                                                                           OCAPROPERTYCHANGETYPE_CURRENT_CHANGED);
                         PropertyChanged(eventData, propertyID);
                     }
+#endif
                 }
             }
         }
@@ -145,6 +147,7 @@ OcaLiteGain::OcaLiteGain(::OcaONo objectNumber, ::OcaBoolean lockable, const ::O
                         (1 == numberOfParameters) &&
                         reader.Read(bytesLeft, &pCmdParameters, gain))
                     {
+                        OCA_LOG_INFO_PARAMS(" =============> SET GAIN-2: %d, %f (%d)", numberOfParameters, gain, bytesLeft);
                         rc = SetGain(gain);
                         if (OCASTATUS_OK == rc)
                         {
