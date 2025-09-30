@@ -1,5 +1,8 @@
 
 #include <bosepro/algorithm.h>
+#include <cstdint>
+#include <cstring>
+#include <cmath>
 
 namespace {
     
@@ -17,7 +20,7 @@ namespace {
         bosepro::DspSignalMemory<const float *[]> in;
         bosepro::DspSignalMemory<float *[]> out;
 
-        bosepro::DspCoeffMemory<int []> route;
+        bosepro::DspCoeffMemory<int_fast32_t []> route;
 
         bosepro::DspTelemetryMemory<bool []> input_presence;
 
@@ -57,8 +60,8 @@ namespace {
 
         for (int output = 0; output < num_outputs; output++)
         {
-            int input = route[output];
-            if (input >= 0 && input < num_inputs)
+            int_fast32_t input = route[output];
+                if (input >= 0 && input < num_inputs)
             {
                 std::memcpy(out[output], in[input],
                             get_frame_size() * sizeof(float));
