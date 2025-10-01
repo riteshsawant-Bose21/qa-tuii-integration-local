@@ -15,7 +15,13 @@ inputs:
     required: true
   cert_thumbprint:
     description: 'Certificate thumbprint for code signing'
-    required: true        
+    required: true  
+  SM_API_KEY:
+    description: 'Secure Mail API Key for code signing'
+    required: true
+  SM_CLIENT_CERT_PASSWORD:
+    description: 'Secure Mail Client Certificate Password for code signing'
+    required: true      
 runs:
   using: "composite"
   steps:
@@ -49,8 +55,13 @@ runs:
         flutter pub get
         moon run flutter-apps:build-win
         E:\'Program Files (x86)'\NSIS\makensis.exe .\windows\Installer\NSIS\fusion_launcher.nsi
-        signtool.exe sign /d "Fusion Launcher" /sha1 "${{ inputs.cert_thumbprint }}" /fd sha256 /v ./windows/Installer/NSIS/FusionLauncherInstaller.exe
-        signtool.exe timestamp /td SHA256 /tr http://timestamp.digicert.com?alg=sha256 /v ./windows/Installer/NSIS/FusionLauncherInstaller.exe
+
+        echo "SM_API_KEY=${{ inputs.SM_API_KEY }}" >> $env:GITHUB_ENV
+        echo "SM_CLIENT_CERT_PASSWORD=${{ inputs.SM_CLIENT_CERT_PASSWORD }}" >> $env:GITHUB_ENV
+
+        $thumbprint = "${{ inputs.cert_thumbprint }}"
+        smctl sign --fingerprint $thumbprint --input ./windows/Installer/NSIS/FusionLauncherInstaller.exe --config-file "C:\Program Files\DigiCert\DigiCert/ One/ Signing/ Manager/ Tools\pkcs11properties.cfg" --description "Fusion Launcher" --timestamp http://timestamp.digicert.com?alg=sha256
+        
         $runNumber = $env:GITHUB_RUN_NUMBER
         $branchName = $env:GITHUB_REF_NAME
         $version = "${{ steps.get_version.outputs.version }}-$runNumber+$(git rev-parse --short=8 HEAD)"
