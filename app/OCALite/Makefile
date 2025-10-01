@@ -23,9 +23,10 @@ else
     LDFLAGS := -ldns_sd
 endif
 
-CXXFLAGS := -Wall -Wextra -std=c++11 $(PKG_CFLAGS) \
+CXXFLAGS := -Wall -Wextra -std=c++11 -g -O0 $(PKG_CFLAGS) \
 	    $(PKG_CDEFS) \
 	    -DOCA_RUN \
+	    -D_DEBUG \
     -I../common \
     -I../../common \
     -I../../common/HostInterfaceLite \
@@ -46,8 +47,8 @@ APP_COMMON_SOURCES       := ../common/ZoneConfigBuilder.cpp \
                            ../common/workers/ConcreteMuteActuator.cpp \
                            ../common/workers/ConcreteSwitchActuator.cpp \
                            ../common/workers/ZoneGroup.cpp \
-                           ../common/OcaLiteControllerConfigManager.cpp
-                           ../common/workers/FusionBlock.cpp \
+                           ../common/OcaLiteControllerConfigManager.cpp \
+                           ../common/workers/FusionBlock.cpp
 
 # Object files
 APP_OBJECTS                := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(APP_SOURCES))

@@ -22,10 +22,11 @@ else
     LDFLAGS := -ldns_sd
 endif
 
-CXXFLAGS := -Wall -Wextra -std=c++11 $(PKG_CFLAGS) \
+CXXFLAGS := -Wall -Wextra -std=c++11 -g -O0 $(PKG_CFLAGS) \
 	    $(PKG_CDEFS) \
 	    -DOCA_LITE_CONTROLLER \
 	    -DOCA_RUN \
+	    -D_DEBUG \
 	-I../common \
     -I../../common \
     -I../../common/HostInterfaceLite \

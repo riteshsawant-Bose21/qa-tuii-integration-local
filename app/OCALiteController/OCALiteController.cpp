@@ -26,8 +26,8 @@
 #include "HostInterfaceLite/OCA/OCF/Timer/IOcfLiteTimer.h"
 #include <sys/time.h>
 #include <iostream>
-#include "../common/ZoneConfigBuilder.h"    // For deserializing JSON configuration
-#include "../common/CustomONODefinitions.h" // For custom ONO constants
+#include "../common/ZoneConfigBuilder.h"  // For deserializing JSON configuration
+#include "../common/FusionOCAConstants.h" // For custom ONO constants
 
 #ifdef OCA_RUN
 extern void Ocp1LiteServiceRun();
