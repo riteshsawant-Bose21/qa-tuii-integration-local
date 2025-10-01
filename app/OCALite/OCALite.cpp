@@ -28,8 +28,8 @@
 #include "workers/ConcreteSwitchActuator.h"
 #include "workers/ZoneGroup.h"
 #include "ZoneConfigBuilder.h"
-// Constants for ONO assignments
-const ::OcaONo ROOT_ZONE_CONTAINER_ONO = static_cast<::OcaONo>(8000);
+#include "OcaLiteControllerConfigManager.h"
+#include "../common/CustomONODefinitions.h" // For custom ONO constants
 
 #ifdef OCA_RUN
 extern void Ocp1LiteServiceRun();
@@ -76,7 +76,6 @@ int main(int argc, const char *argv[])
         "    \"zone1\": {\n"
         "      \"id\": \"zone1\",\n"
         "      \"name\": \"Living Room\",\n"
-        "      \"controllerId\": \"ctrl1\",\n"
         "      \"gainID\": \"gain1\",\n"
         "      \"ono\": {\n"
         "        \"zone\": 8001,\n"
@@ -93,7 +92,6 @@ int main(int argc, const char *argv[])
         "    \"zone2\": {\n"
         "      \"id\": \"zone2\",\n"
         "      \"name\": \"Kitchen\",\n"
-        "      \"controllerId\": \"ctrl2\",\n"
         "      \"gainID\": \"gain2\",\n"
         "      \"ono\": {\n"
         "        \"zone\": 8005,\n"
@@ -109,7 +107,6 @@ int main(int argc, const char *argv[])
         "    \"zone3\": {\n"
         "      \"id\": \"zone3\",\n"
         "      \"name\": \"Bedroom\",\n"
-        "      \"controllerId\": \"ctrl2\",\n"
         "      \"gainID\": \"gain3\",\n"
         "      \"ono\": {\n"
         "        \"zone\": 8009,\n"
@@ -146,9 +143,21 @@ int main(int argc, const char *argv[])
     bSuccess = bSuccess && static_cast<bool>(::OcaLiteSubscriptionManager::GetInstance().Initialize());
     bSuccess = bSuccess && static_cast<bool>(::OcaLiteDeviceManager::GetInstance().Initialize());
     bSuccess = bSuccess && static_cast<bool>(::OcaLiteFirmwareManager::GetInstance().Initialize());
+    bSuccess = bSuccess && static_cast<bool>(::OcaLiteControllerConfigManager::GetInstance().Initialize());
 
     if (bSuccess)
     {
+        // Build controllers from JSON and set them in the config manager
+        std::vector<Controller> controllers = BuildControllersFromMetadataJson(zonesJson);
+        if (!controllers.empty())
+        {
+            ::OcaLiteControllerConfigManager::GetInstance().SetConfigData(controllers);
+            printf("✓ Controller configuration set with %zu controllers\r\n", controllers.size());
+        }
+        else
+        {
+            printf("✗ Failed to parse controllers from JSON\r\n");
+        }
         Ocp1LiteNetworkSystemInterfaceID interfaceId = ::Ocp1LiteNetworkSystemInterfaceID(static_cast<::OcaUint32>(0));
         std::vector<std::string> txtRecords;
         txtRecords.push_back("modelGUID=DEADBEEFEATERS");

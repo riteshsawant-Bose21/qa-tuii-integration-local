@@ -26,6 +26,8 @@
 #include "HostInterfaceLite/OCA/OCF/Timer/IOcfLiteTimer.h"
 #include <sys/time.h>
 #include <iostream>
+#include "../common/ZoneConfigBuilder.h"    // For deserializing JSON configuration
+#include "../common/CustomONODefinitions.h" // For custom ONO constants
 
 #ifdef OCA_RUN
 extern void Ocp1LiteServiceRun();
@@ -55,7 +57,9 @@ void DisplayDiscoveredDevices(const std::vector<OcaServiceDiscovery::DiscoveredD
     OCA_LOG_INFO("===============================");
 }
 
-bool ConnectToDevice(const OcaServiceDiscovery::DiscoveredDevice &device, ::Ocp1LiteNetwork *ocp1Network)
+bool ConnectToDevice(const OcaServiceDiscovery::DiscoveredDevice &device,
+                     ::Ocp1LiteNetwork *ocp1Network,
+                     const std::string &customNodeId)
 {
     OCA_LOG_INFO_PARAMS("Connecting to %s at %s:%d...",
                         device.name.c_str(), device.hostname.c_str(), device.port);
@@ -73,59 +77,94 @@ bool ConnectToDevice(const OcaServiceDiscovery::DiscoveredDevice &device, ::Ocp1
 
     if (sessionId != 0)
     {
-        ::OcaLiteList< ::OcaONo> networks;
-
         OCA_LOG_INFO_PARAMS("✓ Connected to %s! Session ID: %u", device.name.c_str(), sessionId);
 
-        // Demonstrate basic device introspection
-        ::GeneralProxy proxy(sessionId, 9001); // Using our network object number
+        ::OcaLiteString controllerId = customNodeId.empty() ? ::OcaLiteString("ctrl1") : ::OcaLiteString(customNodeId);
 
-        ::OcaLiteNetworkManager::GetInstance().GetNetworks(networks);
-            OCA_LOG_INFO_PARAMS("Networks Count:%u ", networks.GetCount());
+        OCA_LOG_INFO_PARAMS("Using controller ID: %s", controllerId.GetString().c_str());
 
-        // Get device managers
-        ::OcaLiteList<::OcaLiteManagerDescriptor> managers;
-        ::OcaLiteStatus status = proxy.OcaDeviceManager_GetManagers(managers);
+        ::GeneralProxy proxy(sessionId, ocp1Network->GetObjectNumber());
+        OCA_LOG_INFO_PARAMS("Created proxy with session ID: %u, network ONO: %u", sessionId, ocp1Network->GetObjectNumber());
 
-        if (status == OCASTATUS_OK)
+        ::OcaLiteString configData;
+        OCA_LOG_INFO_PARAMS("Calling OcaControllerConfigManager_GetConfigDetails with ONO %u...", CONTROLLER_CONFIG_MANAGER_ONO);
+        OcaLiteStatus status = proxy.OcaControllerConfigManager_GetConfigDetails(CONTROLLER_CONFIG_MANAGER_ONO, controllerId, configData);
+
+        if (OCASTATUS_OK == status)
         {
-            OCA_LOG_INFO_PARAMS("Device has %u managers:", managers.GetCount());
-            for (::OcaUint16 i = 0; i < managers.GetCount(); ++i)
+            OCA_LOG_INFO_PARAMS("✓ Successfully retrieved configuration data (%zu characters):", configData.GetString().length());
+            OCA_LOG_INFO("=== Configuration JSON ===");
+
+            // Print JSON in chunks to avoid log truncation
+            const std::string jsonStr = configData.GetString();
+            const size_t chunkSize = 200; // Print in 200 character chunks
+
+            for (size_t i = 0; i < jsonStr.length(); i += chunkSize)
             {
-                const auto &manager = managers.GetItem(i);
-                OCA_LOG_INFO_PARAMS("  - Manager %u: Object #%u", i + 1, manager.GetObjectNumber());
+                std::string chunk = jsonStr.substr(i, chunkSize);
+                OCA_LOG_INFO(chunk.c_str());
+            }
+            OCA_LOG_INFO("=== End Configuration JSON ===");
+
+            // Deserialize the JSON using ZoneConfigBuilder
+            std::vector<Controller> controllers = DeserializeControllers(jsonStr);
+
+            if (!controllers.empty())
+            {
+                OCA_LOG_INFO("=== Parsed Controller Configuration ===");
+                for (const auto &controller : controllers)
+                {
+                    OCA_LOG_INFO_PARAMS("Controller ID: %s", controller.id.c_str());
+                    OCA_LOG_INFO_PARAMS("Controller Name: %s", controller.name.c_str());
+                    OCA_LOG_INFO_PARAMS("Number of Zones: %zu", controller.zones.size());
+
+                    for (size_t i = 0; i < controller.zones.size(); ++i)
+                    {
+                        const auto &zone = controller.zones[i];
+                        OCA_LOG_INFO_PARAMS("  Zone %zu: %s (%s)", i + 1, zone->name.c_str(), zone->id.c_str());
+                        OCA_LOG_INFO_PARAMS("    ONOs - Zone: %u, Gain: %u, Mute: %u, Switch: %u",
+                                            zone->ono.zone, zone->ono.gain, zone->ono.mute, zone->ono.sourceSelector);
+                        OCA_LOG_INFO_PARAMS("    Gain ID: %s", zone->gainID.c_str());
+                        OCA_LOG_INFO_PARAMS("    Sources: %zu", zone->sources.size());
+
+                        for (size_t j = 0; j < zone->sources.size(); ++j)
+                        {
+                            const auto &source = zone->sources[j];
+                            OCA_LOG_INFO_PARAMS("      Source %zu: Index %u - %s", j + 1, source.index, source.label.c_str());
+                        }
+                    }
+                }
+                OCA_LOG_INFO("=== End Parsed Configuration ===");
+            }
+            else
+            {
+                OCA_LOG_WARNING("✗ Failed to parse JSON configuration data");
             }
         }
         else
         {
-            OCA_LOG_INFO_PARAMS("FAIL --- OcaDeviceManager_GetManagers() %u ", status);
+            OCA_LOG_ERROR_PARAMS("✗ Failed to retrieve configuration data, status: %u (0x%X)", status, status);
+            if (status == OCASTATUS_PROCESSING_FAILED)
+                OCA_LOG_ERROR("Status OCASTATUS_PROCESSING_FAILED");
+            else if (status == OCASTATUS_BAD_FORMAT)
+                OCA_LOG_ERROR("Status OCASTATUS_BAD_FORMAT");
+            else if (status == OCASTATUS_BAD_ONO)
+                OCA_LOG_ERROR("Status OCASTATUS_BAD_ONO");
+            else if (status == OCASTATUS_PARAMETER_ERROR)
+                OCA_LOG_ERROR("Status OCASTATUS_PARAMETER_ERROR");
+            else if (status == OCASTATUS_PARAMETER_OUT_OF_RANGE)
+                OCA_LOG_ERROR("Status OCASTATUS_PARAMETER_OUT_OF_RANGE");
+            else if (status == OCASTATUS_NOT_IMPLEMENTED)
+                OCA_LOG_ERROR("Status OCASTATUS_NOT_IMPLEMENTED");
+            else if (status == OCASTATUS_INVALID_REQUEST)
+                OCA_LOG_ERROR("Status OCASTATUS_INVALID_REQUEST");
+            else if (status == OCASTATUS_LOCKED)
+                OCA_LOG_ERROR("Status OCASTATUS_LOCKED");
+            else if (status == OCASTATUS_BAD_METHOD)
+                OCA_LOG_ERROR("Status OCASTATUS_BAD_METHOD");
+            else
+                OCA_LOG_ERROR_PARAMS("Status %u: Unknown error code", status);
         }
-
-        // Get root block members
-        ::OcaLiteList<::OcaLiteBlockMember> members;
-        status = proxy.OcaBlock_GetMembersRecursive(100, members); // Root block is typically object #1
-
-        if (status == OCASTATUS_OK)
-        {
-            OCA_LOG_INFO_PARAMS("Device root block has %u members:", members.GetCount());
-            for (::OcaUint16 i = 0; i < members.GetCount() && i < 5; ++i) // Show first 5
-            {
-                const auto &member = members.GetItem(i);
-                OCA_LOG_INFO_PARAMS("  - Member %u: Object #%u", i + 1, member.GetMemberObjectIdentification().GetONo());
-            }
-            if (members.GetCount() > 5)
-            {
-                OCA_LOG_INFO_PARAMS("  ... and %u more", members.GetCount() - 5);
-            }
-        }
-        else
-        {
-            OCA_LOG_INFO_PARAMS("FAIL --- OcaBlock_GetMembersRecursive() %u ", status);
-        }
-
-        // Keep connection open briefly
-        OCA_LOG_INFO("Keeping connection open for 3 seconds...");
-        sleep(3);
 
         // Disconnect
         if (ocp1Network->Disconnect(sessionId))
@@ -146,7 +185,7 @@ bool ConnectToDevice(const OcaServiceDiscovery::DiscoveredDevice &device, ::Ocp1
     }
 }
 
-void ShowUsage(const char* programName)
+void ShowUsage(const char *programName)
 {
     std::cout << "Usage: " << programName << " [OPTIONS]\n";
     std::cout << "Options:\n";
@@ -159,12 +198,12 @@ void ShowUsage(const char* programName)
 int main(int argc, const char *argv[])
 {
     std::string customNodeId = "";
-    
+
     // Parse command line arguments
     for (int i = 1; i < argc; i++)
     {
         std::string arg = argv[i];
-        
+
         if (arg == "-h" || arg == "--help")
         {
             ShowUsage(argv[0]);
@@ -217,7 +256,7 @@ int main(int argc, const char *argv[])
             // Create a controller network object (no server port)
             Ocp1LiteNetworkSystemInterfaceID interfaceId = ::Ocp1LiteNetworkSystemInterfaceID(static_cast<::OcaUint32>(0));
             std::vector<std::string> txtRecords; // Empty for controller
-            
+
             // Use custom node ID if provided, otherwise use auto-generated
             ::OcaLiteString nodeId;
             if (!customNodeId.empty())
@@ -271,7 +310,7 @@ int main(int argc, const char *argv[])
                                 const auto &selectedDevice = discoveredDevices[0];
                                 OCA_LOG_INFO_PARAMS("Automatically selecting: %s", selectedDevice.name.c_str());
 
-                                if (ConnectToDevice(selectedDevice, ocp1Network))
+                                if (ConnectToDevice(selectedDevice, ocp1Network, customNodeId))
                                 {
                                     OCA_LOG_INFO("✓ Service discovery and connection test successful!");
                                 }

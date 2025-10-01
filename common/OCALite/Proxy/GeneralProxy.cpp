@@ -17,6 +17,10 @@
 #include <OCC/ControlDataTypes/OcaLiteMethod.h>
 #include <OCC/ControlDataTypes/OcaLiteNetworkAddress.h>
 #include <OCF/OcaLiteCommandHandlerController.h>
+#include <OCF/IOcaLiteWriter.h>
+#include <OCF/IOcaLiteReader.h>
+#include <OCP.1/Ocp1LiteReader.h>
+#include <OCP.1/Ocp1LiteWriter.h>
 
 // ---- FileInfo Macro ----
 
@@ -32,16 +36,16 @@
 // ---- Class Implementation ----
 GeneralProxy::GeneralProxy(::OcaSessionID sessionId, ::OcaONo networkObjectNumber)
     : m_sessionId(sessionId),
-    m_networkObjectNumber(networkObjectNumber)
+      m_networkObjectNumber(networkObjectNumber)
 {
     memset(m_buffer, 0, sizeof(m_buffer));
 }
 
-::OcaLiteStatus GeneralProxy::OcaRoot_GetClassIdentification(::OcaONo remoteObjectNumber, ::OcaLiteClassIdentification& classIdentification)
+::OcaLiteStatus GeneralProxy::OcaRoot_GetClassIdentification(::OcaONo remoteObjectNumber, ::OcaLiteClassIdentification &classIdentification)
 {
     ::OcaUint8 noParams(0);
     ::OcaUint32 responseSize;
-    ::OcaUint8* pResponse;
+    ::OcaUint8 *pResponse;
     ::OcaLiteStatus rc(::OcaLiteCommandHandlerController::GetInstance().SendCommandWithResponse(m_sessionId,
                                                                                                 m_networkObjectNumber,
                                                                                                 remoteObjectNumber,
@@ -55,9 +59,9 @@ GeneralProxy::GeneralProxy(::OcaSessionID sessionId, ::OcaONo networkObjectNumbe
     if ((OCASTATUS_OK == rc) &&
         (responseSize > 0))
     {
-        const ::IOcaLiteReader& reader(::OcaLiteNetworkManager::GetInstance().GetNetwork(m_networkObjectNumber)->GetReader());
+        const ::IOcaLiteReader &reader(::OcaLiteNetworkManager::GetInstance().GetNetwork(m_networkObjectNumber)->GetReader());
         ::OcaUint8 nrParameters(0);
-        const ::OcaUint8* source(pResponse);
+        const ::OcaUint8 *source(pResponse);
         reader.Read(responseSize, &source, nrParameters);
         if (nrParameters == 1)
         {
@@ -75,14 +79,13 @@ GeneralProxy::GeneralProxy(::OcaSessionID sessionId, ::OcaONo networkObjectNumbe
     return rc;
 }
 
-
-::OcaLiteStatus GeneralProxy::OcaBlock_GetMembersRecursive(::OcaONo remoteObjectNumber, ::OcaLiteList< ::OcaLiteBlockMember>& members)
+::OcaLiteStatus GeneralProxy::OcaBlock_GetMembersRecursive(::OcaONo remoteObjectNumber, ::OcaLiteList<::OcaLiteBlockMember> &members)
 {
     members.Clear();
 
     ::OcaUint8 noParams(0);
     ::OcaUint32 responseSize;
-    ::OcaUint8* pResponse;
+    ::OcaUint8 *pResponse;
     ::OcaLiteStatus rc(::OcaLiteCommandHandlerController::GetInstance().SendCommandWithResponse(m_sessionId,
                                                                                                 m_networkObjectNumber,
                                                                                                 remoteObjectNumber,
@@ -96,9 +99,9 @@ GeneralProxy::GeneralProxy(::OcaSessionID sessionId, ::OcaONo networkObjectNumbe
     if ((OCASTATUS_OK == rc) &&
         (responseSize > 0))
     {
-        const ::IOcaLiteReader& reader(::OcaLiteNetworkManager::GetInstance().GetNetwork(m_networkObjectNumber)->GetReader());
+        const ::IOcaLiteReader &reader(::OcaLiteNetworkManager::GetInstance().GetNetwork(m_networkObjectNumber)->GetReader());
         ::OcaUint8 nrParameters(0);
-        const ::OcaUint8* source(pResponse);
+        const ::OcaUint8 *source(pResponse);
         reader.Read(responseSize, &source, nrParameters);
         if (nrParameters == 1)
         {
@@ -115,13 +118,13 @@ GeneralProxy::GeneralProxy(::OcaSessionID sessionId, ::OcaONo networkObjectNumbe
 
     return rc;
 }
-::OcaLiteStatus GeneralProxy::OcaBlock_GetMembers(::OcaONo remoteObjectNumber, ::OcaLiteList< ::OcaLiteObjectIdentification>& members)
+::OcaLiteStatus GeneralProxy::OcaBlock_GetMembers(::OcaONo remoteObjectNumber, ::OcaLiteList<::OcaLiteObjectIdentification> &members)
 {
-     members.Clear();
+    members.Clear();
 
     ::OcaUint8 noParams(0);
     ::OcaUint32 responseSize;
-    ::OcaUint8* pResponse;
+    ::OcaUint8 *pResponse;
     ::OcaLiteStatus rc(::OcaLiteCommandHandlerController::GetInstance().SendCommandWithResponse(m_sessionId,
                                                                                                 m_networkObjectNumber,
                                                                                                 remoteObjectNumber,
@@ -135,9 +138,9 @@ GeneralProxy::GeneralProxy(::OcaSessionID sessionId, ::OcaONo networkObjectNumbe
     if ((OCASTATUS_OK == rc) &&
         (responseSize > 0))
     {
-        const ::IOcaLiteReader& reader(::OcaLiteNetworkManager::GetInstance().GetNetwork(m_networkObjectNumber)->GetReader());
+        const ::IOcaLiteReader &reader(::OcaLiteNetworkManager::GetInstance().GetNetwork(m_networkObjectNumber)->GetReader());
         ::OcaUint8 nrParameters(0);
-        const ::OcaUint8* source(pResponse);
+        const ::OcaUint8 *source(pResponse);
         reader.Read(responseSize, &source, nrParameters);
         if (nrParameters == 1)
         {
@@ -155,18 +158,18 @@ GeneralProxy::GeneralProxy(::OcaSessionID sessionId, ::OcaONo networkObjectNumbe
     return rc;
 }
 
-::OcaLiteStatus GeneralProxy::OcaDeviceManager_GetManagers(::OcaLiteList< ::OcaLiteManagerDescriptor>& managers)
+::OcaLiteStatus GeneralProxy::OcaDeviceManager_GetManagers(::OcaLiteList<::OcaLiteManagerDescriptor> &managers)
 {
     managers.Clear();
 
     ::OcaUint8 noParams(0);
     ::OcaUint32 responseSize;
-    ::OcaUint8* pResponse;
+    ::OcaUint8 *pResponse;
     ::OcaLiteStatus rc(::OcaLiteCommandHandlerController::GetInstance().SendCommandWithResponse(m_sessionId,
                                                                                                 m_networkObjectNumber,
                                                                                                 ::OcaLiteDeviceManager::OBJECT_NUMBER,
                                                                                                 ::OcaLiteMethodID(::OcaLiteDeviceManager::CLASS_ID.GetFieldCount(),
-                                                                                                    ::OcaLiteDeviceManager::GET_MANAGERS),
+                                                                                                                  ::OcaLiteDeviceManager::GET_MANAGERS),
                                                                                                 1,
                                                                                                 &noParams,
                                                                                                 responseSize,
@@ -175,9 +178,9 @@ GeneralProxy::GeneralProxy(::OcaSessionID sessionId, ::OcaONo networkObjectNumbe
     if ((OCASTATUS_OK == rc) &&
         (responseSize > 0))
     {
-        const ::IOcaLiteReader& reader(::OcaLiteNetworkManager::GetInstance().GetNetwork(m_networkObjectNumber)->GetReader());
+        const ::IOcaLiteReader &reader(::OcaLiteNetworkManager::GetInstance().GetNetwork(m_networkObjectNumber)->GetReader());
         ::OcaUint8 nrParameters(0);
-        const ::OcaUint8* source(pResponse);
+        const ::OcaUint8 *source(pResponse);
         reader.Read(responseSize, &source, nrParameters);
         if (nrParameters == 1)
         {
@@ -195,28 +198,28 @@ GeneralProxy::GeneralProxy(::OcaSessionID sessionId, ::OcaONo networkObjectNumbe
     return rc;
 }
 
-::OcaLiteStatus GeneralProxy::OcaDeviceManager_SetResetKey(const ::OcaLiteBlobFixedLen<16>& resetKey, ::OcaLiteNetworkAddress networkAddress)
+::OcaLiteStatus GeneralProxy::OcaDeviceManager_SetResetKey(const ::OcaLiteBlobFixedLen<16> &resetKey, ::OcaLiteNetworkAddress networkAddress)
 {
-    const ::IOcaLiteWriter& writer(::OcaLiteNetworkManager::GetInstance().GetNetwork(m_networkObjectNumber)->GetWriter());
-    ::OcaUint8* pParams(m_buffer);
+    const ::IOcaLiteWriter &writer(::OcaLiteNetworkManager::GetInstance().GetNetwork(m_networkObjectNumber)->GetWriter());
+    ::OcaUint8 *pParams(m_buffer);
 
     writer.Write(static_cast<UINT8>(2), &pParams); // Nr params
     resetKey.Marshal(&pParams, writer);
     networkAddress.Marshal(&pParams, writer);
 
     ::OcaUint32 responseSize;
-    ::OcaUint8* pResponse;
+    ::OcaUint8 *pResponse;
     ::OcaLiteStatus rc(::OcaLiteCommandHandlerController::GetInstance().SendCommandWithResponse(m_sessionId,
                                                                                                 m_networkObjectNumber,
                                                                                                 ::OcaLiteDeviceManager::OBJECT_NUMBER,
                                                                                                 ::OcaLiteMethodID(::OcaLiteDeviceManager::CLASS_ID.GetFieldCount(),
                                                                                                                   ::OcaLiteDeviceManager::SET_RESET_KEY),
-                                                                                                static_cast< ::OcaUint32>(pParams - m_buffer),
+                                                                                                static_cast<::OcaUint32>(pParams - m_buffer),
                                                                                                 m_buffer,
                                                                                                 responseSize,
                                                                                                 &pResponse));
 
-    if ((responseSize != 1) && 
+    if ((responseSize != 1) &&
         (OCASTATUS_OK == rc))
     {
         rc = OCASTATUS_PARAMETER_ERROR;
@@ -229,18 +232,18 @@ GeneralProxy::GeneralProxy(::OcaSessionID sessionId, ::OcaONo networkObjectNumbe
 {
     ::OcaUint8 noParams(0);
     ::OcaUint32 responseSize;
-    ::OcaUint8* pResponse;
+    ::OcaUint8 *pResponse;
     ::OcaLiteStatus rc(::OcaLiteCommandHandlerController::GetInstance().SendCommandWithResponse(m_sessionId,
                                                                                                 m_networkObjectNumber,
                                                                                                 ::OcaLiteDeviceManager::OBJECT_NUMBER,
                                                                                                 ::OcaLiteMethodID(::OcaLiteDeviceManager::CLASS_ID.GetFieldCount(),
-                                                                                                    ::OcaLiteDeviceManager::CLEAR_RESET_CAUSE),
+                                                                                                                  ::OcaLiteDeviceManager::CLEAR_RESET_CAUSE),
                                                                                                 1,
                                                                                                 &noParams,
                                                                                                 responseSize,
                                                                                                 &pResponse));
 
-    if ((responseSize != 1) && 
+    if ((responseSize != 1) &&
         (OCASTATUS_OK == rc))
     {
         rc = OCASTATUS_PARAMETER_ERROR;
@@ -249,16 +252,16 @@ GeneralProxy::GeneralProxy(::OcaSessionID sessionId, ::OcaONo networkObjectNumbe
     return rc;
 }
 
-::OcaLiteStatus GeneralProxy::OcaDeviceManager_GetResetCause(::OcaLiteResetCause& resetCause)
+::OcaLiteStatus GeneralProxy::OcaDeviceManager_GetResetCause(::OcaLiteResetCause &resetCause)
 {
     ::OcaUint8 noParams(0);
     ::OcaUint32 responseSize;
-    ::OcaUint8* pResponse;
+    ::OcaUint8 *pResponse;
     ::OcaLiteStatus rc(::OcaLiteCommandHandlerController::GetInstance().SendCommandWithResponse(m_sessionId,
                                                                                                 m_networkObjectNumber,
                                                                                                 ::OcaLiteDeviceManager::OBJECT_NUMBER,
                                                                                                 ::OcaLiteMethodID(::OcaLiteDeviceManager::CLASS_ID.GetFieldCount(),
-                                                                                                    ::OcaLiteDeviceManager::GET_RESET_CAUSE),
+                                                                                                                  ::OcaLiteDeviceManager::GET_RESET_CAUSE),
                                                                                                 1,
                                                                                                 &noParams,
                                                                                                 responseSize,
@@ -267,13 +270,13 @@ GeneralProxy::GeneralProxy(::OcaSessionID sessionId, ::OcaONo networkObjectNumbe
     if ((OCASTATUS_OK == rc) &&
         (responseSize > 0))
     {
-        const ::IOcaLiteReader& reader(::OcaLiteNetworkManager::GetInstance().GetNetwork(m_networkObjectNumber)->GetReader());
+        const ::IOcaLiteReader &reader(::OcaLiteNetworkManager::GetInstance().GetNetwork(m_networkObjectNumber)->GetReader());
         ::OcaUint8 nrParameters(0);
-        const ::OcaUint8* source(pResponse);
+        const ::OcaUint8 *source(pResponse);
         reader.Read(responseSize, &source, nrParameters);
         if (nrParameters == 1)
         {
-            if (!::UnmarshalValue< ::OcaLiteResetCause>(resetCause, responseSize, &source, reader))
+            if (!::UnmarshalValue<::OcaLiteResetCause>(resetCause, responseSize, &source, reader))
             {
                 rc = OCASTATUS_PARAMETER_ERROR;
             }
@@ -287,35 +290,35 @@ GeneralProxy::GeneralProxy(::OcaSessionID sessionId, ::OcaONo networkObjectNumbe
     return rc;
 }
 
-::OcaLiteStatus GeneralProxy::OcaSubscriptionManager_AddSubscription(const OcaLiteEvent& ocaEvent,
-                                                                     const OcaLiteMethod& subscriber,
-                                                                     const OcaLiteBlob& context,
+::OcaLiteStatus GeneralProxy::OcaSubscriptionManager_AddSubscription(const OcaLiteEvent &ocaEvent,
+                                                                     const OcaLiteMethod &subscriber,
+                                                                     const OcaLiteBlob &context,
                                                                      ::OcaLiteNotificationDeliveryMode deliveryMode,
-                                                                     const ::OcaLiteNetworkAddress& destInfo)
+                                                                     const ::OcaLiteNetworkAddress &destInfo)
 {
-    const ::IOcaLiteWriter& writer(::OcaLiteNetworkManager::GetInstance().GetNetwork(m_networkObjectNumber)->GetWriter());
-    ::OcaUint8* pParams(m_buffer);
+    const ::IOcaLiteWriter &writer(::OcaLiteNetworkManager::GetInstance().GetNetwork(m_networkObjectNumber)->GetWriter());
+    ::OcaUint8 *pParams(m_buffer);
 
     writer.Write(static_cast<UINT8>(5), &pParams); // Nr params
     ocaEvent.Marshal(&pParams, writer);
     subscriber.Marshal(&pParams, writer);
     context.Marshal(&pParams, writer);
-    MarshalValue< ::OcaLiteNotificationDeliveryMode>(deliveryMode, &pParams, writer);
+    MarshalValue<::OcaLiteNotificationDeliveryMode>(deliveryMode, &pParams, writer);
     destInfo.Marshal(&pParams, writer);
 
     ::OcaUint32 responseSize;
-    ::OcaUint8* pResponse;
+    ::OcaUint8 *pResponse;
     ::OcaLiteStatus rc(::OcaLiteCommandHandlerController::GetInstance().SendCommandWithResponse(m_sessionId,
                                                                                                 m_networkObjectNumber,
                                                                                                 ::OcaLiteSubscriptionManager::OBJECT_NUMBER,
                                                                                                 ::OcaLiteMethodID(::OcaLiteSubscriptionManager::CLASS_ID.GetFieldCount(),
                                                                                                                   ::OcaLiteSubscriptionManager::ADD_SUBSCRIPTION),
-                                                                                                static_cast< ::OcaUint32>(pParams - m_buffer),
+                                                                                                static_cast<::OcaUint32>(pParams - m_buffer),
                                                                                                 m_buffer,
                                                                                                 responseSize,
                                                                                                 &pResponse));
 
-    if ((responseSize != 1) && 
+    if ((responseSize != 1) &&
         (OCASTATUS_OK == rc))
     {
         rc = OCASTATUS_PARAMETER_ERROR;
@@ -324,29 +327,29 @@ GeneralProxy::GeneralProxy(::OcaSessionID sessionId, ::OcaONo networkObjectNumbe
     return rc;
 }
 
-::OcaLiteStatus GeneralProxy::OcaSubscriptionManager_RemoveSubscription(const OcaLiteEvent& ocaEvent,
-                                                                        const OcaLiteMethod& subscriber)
+::OcaLiteStatus GeneralProxy::OcaSubscriptionManager_RemoveSubscription(const OcaLiteEvent &ocaEvent,
+                                                                        const OcaLiteMethod &subscriber)
 {
-    const ::IOcaLiteWriter& writer(::OcaLiteNetworkManager::GetInstance().GetNetwork(m_networkObjectNumber)->GetWriter());
-    ::OcaUint8* pParams(m_buffer);
+    const ::IOcaLiteWriter &writer(::OcaLiteNetworkManager::GetInstance().GetNetwork(m_networkObjectNumber)->GetWriter());
+    ::OcaUint8 *pParams(m_buffer);
 
     writer.Write(static_cast<UINT8>(2), &pParams); // Nr params
     ocaEvent.Marshal(&pParams, writer);
     subscriber.Marshal(&pParams, writer);
 
     ::OcaUint32 responseSize;
-    ::OcaUint8* pResponse;
+    ::OcaUint8 *pResponse;
     ::OcaLiteStatus rc(::OcaLiteCommandHandlerController::GetInstance().SendCommandWithResponse(m_sessionId,
                                                                                                 m_networkObjectNumber,
                                                                                                 ::OcaLiteSubscriptionManager::OBJECT_NUMBER,
                                                                                                 ::OcaLiteMethodID(::OcaLiteSubscriptionManager::CLASS_ID.GetFieldCount(),
                                                                                                                   ::OcaLiteSubscriptionManager::REMOVE_SUBSCRIPTION),
-                                                                                                static_cast< ::OcaUint32>(pParams - m_buffer),
+                                                                                                static_cast<::OcaUint32>(pParams - m_buffer),
                                                                                                 m_buffer,
                                                                                                 responseSize,
                                                                                                 &pResponse));
 
-    if ((responseSize != 1) && 
+    if ((responseSize != 1) &&
         (OCASTATUS_OK == rc))
     {
         rc = OCASTATUS_PARAMETER_ERROR;
@@ -355,11 +358,11 @@ GeneralProxy::GeneralProxy(::OcaSessionID sessionId, ::OcaONo networkObjectNumbe
     return rc;
 }
 
-::OcaLiteStatus GeneralProxy::OcaCompliancyTestTool_InvalidCall(::OcaONo objectNumber, ::OcaLiteMethodID& methodId)
+::OcaLiteStatus GeneralProxy::OcaCompliancyTestTool_InvalidCall(::OcaONo objectNumber, ::OcaLiteMethodID &methodId)
 {
     ::OcaUint8 noParams(100);
     ::OcaUint32 responseSize;
-    ::OcaUint8* pResponse;
+    ::OcaUint8 *pResponse;
     return ::OcaLiteCommandHandlerController::GetInstance().SendCommandWithResponse(m_sessionId,
                                                                                     m_networkObjectNumber,
                                                                                     objectNumber,
@@ -368,4 +371,51 @@ GeneralProxy::GeneralProxy(::OcaSessionID sessionId, ::OcaONo networkObjectNumbe
                                                                                     &noParams,
                                                                                     responseSize,
                                                                                     &pResponse);
+}
+
+// TODO: Move to fusion proxy
+::OcaLiteStatus GeneralProxy::OcaControllerConfigManager_GetConfigDetails(::OcaONo managerONo,
+                                                                          const ::OcaLiteString &controllerId,
+                                                                          ::OcaLiteString &configData)
+{
+    const ::IOcaLiteWriter &writer(::OcaLiteNetworkManager::GetInstance().GetNetwork(m_networkObjectNumber)->GetWriter());
+    ::OcaUint8 *pParams(m_buffer);
+
+    writer.Write(static_cast<UINT8>(1), &pParams); // Nr params
+    controllerId.Marshal(&pParams, writer);
+
+    ::OcaUint32 responseSize;
+    ::OcaUint8 *pResponse;
+    ::OcaLiteMethodID methodId(3, 1);
+
+    ::OcaLiteStatus rc(::OcaLiteCommandHandlerController::GetInstance().SendCommandWithResponse(m_sessionId,
+                                                                                                m_networkObjectNumber,
+                                                                                                managerONo,
+                                                                                                methodId,
+                                                                                                static_cast<::OcaUint32>(pParams - m_buffer),
+                                                                                                m_buffer,
+                                                                                                responseSize,
+                                                                                                &pResponse));
+
+    if ((OCASTATUS_OK == rc) &&
+        (responseSize > 0))
+    {
+        const ::IOcaLiteReader &reader(::OcaLiteNetworkManager::GetInstance().GetNetwork(m_networkObjectNumber)->GetReader());
+        ::OcaUint8 nrParameters(0);
+        const ::OcaUint8 *source(pResponse);
+        reader.Read(responseSize, &source, nrParameters);
+        if (nrParameters == 1)
+        {
+            if (!configData.Unmarshal(responseSize, &source, reader))
+            {
+                rc = OCASTATUS_PARAMETER_ERROR;
+            }
+        }
+        else
+        {
+            rc = OCASTATUS_PARAMETER_ERROR;
+        }
+    }
+
+    return rc;
 }
