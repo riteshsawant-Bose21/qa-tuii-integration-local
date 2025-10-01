@@ -91,6 +91,7 @@ Section "Install"
 	; Copy files from Flutter build
 	!define BUILD_DIR "${__FILE__}"
 	!searchparse /noerrors "${BUILD_DIR}" "\" fusion_launcher.nsi" "" $0
+	DetailPrint "DEBUG: \$0 is $0"
 	File /r "$0\..\..\..\..\build\windows\x64\runner\Release\*"
 
 	; Start menu shortcut always created
