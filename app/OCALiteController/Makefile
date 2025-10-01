@@ -40,6 +40,7 @@ FRAMEWORK_COMMON_SOURCES := $(shell find ../../common -name "*.cpp" | grep -v "A
 
 # Source files from the app-level common directory
 APP_COMMON_SOURCES       := ../common/ZoneConfigBuilder.cpp \
+                           ../common/FusionProxy.cpp \
                            ../common/workers/ConcreteGainActuator.cpp \
                            ../common/workers/ConcreteMuteActuator.cpp \
                            ../common/workers/ConcreteSwitchActuator.cpp \

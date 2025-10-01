@@ -160,7 +160,7 @@ public:
      * @param[out]  members            The list of block members
      * @return Indicates whether the list was successfully retrieved.
      */
-    ::OcaLiteStatus GetMembersRecursive(::OcaLiteList< ::OcaLiteBlockMember>& members) const;
+    virtual ::OcaLiteStatus GetMembersRecursive(::OcaLiteList< ::OcaLiteBlockMember>& members) const;
 
     // ---- Miscelaneous methods  ----
     /**

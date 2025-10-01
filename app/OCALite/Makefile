@@ -47,6 +47,7 @@ APP_COMMON_SOURCES       := ../common/ZoneConfigBuilder.cpp \
                            ../common/workers/ConcreteSwitchActuator.cpp \
                            ../common/workers/ZoneGroup.cpp \
                            ../common/OcaLiteControllerConfigManager.cpp
+                           ../common/workers/FusionBlock.cpp \
 
 # Object files
 APP_OBJECTS                := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(APP_SOURCES))
