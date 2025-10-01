@@ -13,7 +13,9 @@ inputs:
   nexus_url:
     description: 'Nexus repository URL'
     required: true
-        
+  cert_thumbprint:
+    description: 'Certificate thumbprint for code signing'
+    required: true        
 runs:
   using: "composite"
   steps:
@@ -47,6 +49,8 @@ runs:
         flutter pub get
         moon run flutter-apps:build-win
         E:\'Program Files (x86)'\NSIS\makensis.exe .\windows\Installer\NSIS\fusion_launcher.nsi
+        signtool.exe sign /d "Fusion Launcher" /sha1 "${{ inputs.cert_thumbprint }}" /fd sha256 /v ./windows/Installer/NSIS/FusionLauncherInstaller.exe
+        signtool.exe timestamp /td SHA256 /tr http://timestamp.digicert.com?alg=sha256 /v ./windows/Installer/NSIS/FusionLauncherInstaller.exe
         $runNumber = $env:GITHUB_RUN_NUMBER
         $branchName = $env:GITHUB_REF_NAME
         $version = "${{ steps.get_version.outputs.version }}-$runNumber+$(git rev-parse --short=8 HEAD)"

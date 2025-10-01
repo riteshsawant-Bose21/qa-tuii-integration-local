@@ -107,6 +107,7 @@ jobs:
           nexus_password: ${{ secrets.NEXUS_PASSWORD }}
           nexus_url: ${{ secrets.NEXUS_BASE_URL }}
           keychain_password: ${{ secrets.KEYCHAIN_PASSWORD }}
+          cert_thumbprint: ${{ secrets.CERT_THUMBPRINT }}
 
   flutter-web-build:
     needs: buildChecks
