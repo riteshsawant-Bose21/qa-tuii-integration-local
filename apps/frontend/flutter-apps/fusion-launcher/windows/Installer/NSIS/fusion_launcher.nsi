@@ -27,7 +27,7 @@ Var ProductUninstallKey
 Function .onInit
 	!insertmacro SetProductVersionShort
 	!insertmacro SetProductUninstallKey
-	StrCpy $INSTDIR "$PROGRAMFILES\${PRODUCT_NAME}"
+	StrCpy $INSTDIR "$PROGRAMFILES\${PRODUCT_PUBLISHER}\${PRODUCT_NAME}"
 FunctionEnd
 
 Function un.onInit
