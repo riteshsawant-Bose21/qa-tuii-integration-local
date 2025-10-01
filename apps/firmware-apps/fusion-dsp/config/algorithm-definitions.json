@@ -1,5 +1,5 @@
 {
-    "version": "0.1.6",
+    "version": "0.1.7",
     "algorithms": [
         {
             "name": "alsa_in",
@@ -1402,6 +1402,47 @@
                     "dimensions": ["in"],
                     "value_type": "bool",
                     "default_value": false,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
+                }
+            ]
+        },
+        {
+            "name": "router",
+            "terminals": [
+                {
+                    "name": "in",
+                    "signal_type": "audio",
+                    "direction": "input",
+                    "minimum_channels": 1,
+                    "maximum_channels": 64
+                },
+                {
+                    "name": "out",
+                    "signal_type": "audio",
+                    "direction": "output",
+                    "minimum_channels": 1,
+                    "maximum_channels": 64
+                }
+            ],
+            "parameters": [
+                {
+                    "name": "route",
+                    "value_type": "int",
+                    "dimensions": ["out"],
+                    "default_value": 0,
+                    "minimum_value": 0,
+                    "maximum_value": "in" 
+                }
+            ],
+            "telemetry": [
+                {
+                    "name": "out_meter",
+                    "dimensions": ["channels"],
+                    "value_type": "float",
+                    "default_value": -60.0,
+                    "minimum_value": -60.0,
+                    "maximum_value": 0.0,
                     "telemetry_type": "meter",
                     "period_type": "HI"
                 }
