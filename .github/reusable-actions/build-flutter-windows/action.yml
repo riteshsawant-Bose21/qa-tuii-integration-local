@@ -58,6 +58,7 @@ runs:
 
         echo "SM_API_KEY=${{ inputs.SM_API_KEY }}" >> $env:GITHUB_ENV
         echo "SM_CLIENT_CERT_PASSWORD=${{ inputs.SM_CLIENT_CERT_PASSWORD }}" >> $env:GITHUB_ENV
+        echo "C:\Program Files\DigiCert\DigiCert One Signing Manager Tools\smctl.exe" >> $env:GITHUB_PATH
 
         $thumbprint = "${{ inputs.cert_thumbprint }}"
         smctl.exe sign --fingerprint $thumbprint --input ./windows/Installer/NSIS/FusionLauncherInstaller.exe --config-file "C:\Program Files\DigiCert\DigiCert/ One/ Signing/ Manager/ Tools\pkcs11properties.cfg" --description "Fusion Launcher" --timestamp http://timestamp.digicert.com?alg=sha256
