@@ -46,6 +46,7 @@ runs:
       run: |
         flutter pub get
         moon run flutter-apps:build-win
+        E:\'Program Files (x86)'\NSIS\makensis.exe .\windows\fusion_launcher.nsi
         $runNumber = $env:GITHUB_RUN_NUMBER
         $branchName = $env:GITHUB_REF_NAME
         $version = "${{ steps.get_version.outputs.version }}-$runNumber+$(git rev-parse --short=8 HEAD)"
