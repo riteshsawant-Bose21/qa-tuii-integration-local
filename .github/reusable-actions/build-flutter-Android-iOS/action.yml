@@ -54,7 +54,7 @@ runs:
         codesign -vvv -d --verbose ./build/macos/Build/Products/Release/Fusion\ Launcher.app
         hdiutil create -srcfolder "./build/macos/Build/Products/Release/Fusion Launcher.app" -volname "Fusion Launcher app" -fs HFS+ -fsargs "-c c=64,a=16,e=16" -format UDRW ./build/macos/Build/Products/Release/Fusion_Launcher.dmg
         hdiutil convert ./build/macos/Build/Products/Release/Fusion_Launcher.dmg -format UDZO -imagekey zlib-level=9 -ov -o ./build/macos/Build/Products/Release/Fusion_Launcher_installer.dmg
-        xcrun --verbose notarytool submit Fusion_Launcher_installer.dmg --apple-id ${{ inputs.notarize_apple_id }} --password ${{ inputs.notarize_app_password }} --team-id "7FDK3RUF89" --wait
+        xcrun --verbose notarytool submit ./build/macos/Build/Products/Release/Fusion_Launcher_installer.dmg --apple-id ${{ inputs.notarize_apple_id }} --password ${{ inputs.notarize_app_password }} --team-id "7FDK3RUF89" --wait
         VERSION="${{ steps.get_version.outputs.version }}-${GITHUB_RUN_NUMBER}+$(git rev-parse --short HEAD)"
         curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T ./build/app/outputs/flutter-apk/app-release.apk ${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/${GITHUB_REF_NAME}/$VERSION/flutter-apk/Fusion-Launcher-$VERSION.apk
         curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T ./build/ios/ipa/Fusion\ Launcher.ipa ${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/${GITHUB_REF_NAME}/$VERSION/flutter-iOS/Fusion-Launcher-$VERSION.ipa
