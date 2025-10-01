@@ -10,7 +10,7 @@
 #include <vector>
 #include <memory>
 #include <OCC/ControlDataTypes/OcaLiteBaseDataTypes.h>
-#include "CustomONODefinitions.h" // For custom ONO constants
+#include "FusionOCAConstants.h" // For custom ONO constants
 #include "workers/ZoneGroup.h"
 #include "workers/ConcreteGainActuator.h"
 #include "workers/ConcreteMuteActuator.h"

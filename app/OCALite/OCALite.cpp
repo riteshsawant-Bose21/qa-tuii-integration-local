@@ -29,7 +29,7 @@
 #include "workers/ZoneGroup.h"
 #include "ZoneConfigBuilder.h"
 #include "OcaLiteControllerConfigManager.h"
-#include "../common/CustomONODefinitions.h" // For custom ONO constants
+#include "../common/FusionOCAConstants.h" // For custom ONO constants
 
 #ifdef OCA_RUN
 extern void Ocp1LiteServiceRun();

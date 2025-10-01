@@ -11,8 +11,8 @@
 
 // ---- Include local include files ----
 #include "OcaLiteControllerConfigManager.h"
-#include "ZoneConfigBuilder.h"    // for Controller and Zone structs
-#include "CustomONODefinitions.h" // for custom ONO constants
+#include "ZoneConfigBuilder.h"  // for Controller and Zone structs
+#include "FusionOCAConstants.h" // for custom ONO constants
 #include "../../common/OCALite/OCF/OcaLiteCommandHandler.h"
 #include "../../common/OCALite/OCC/ControlDataTypes/OcaLiteTemplateHelpers.h"
 #include "../../common/OCALite/OCC/ControlDataTypes/OcaLiteClassIdentification.h"
