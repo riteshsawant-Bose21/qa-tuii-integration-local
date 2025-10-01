@@ -61,7 +61,7 @@ runs:
         echo "C:\Program Files\DigiCert\DigiCert One Signing Manager Tools\smctl.exe" >> $env:GITHUB_PATH
 
         $thumbprint = "${{ inputs.cert_thumbprint }}"
-        C:\'Program Files'\DigiCert\'DigiCert One Signing Manager Tools'\smctl.exe sign --fingerprint $thumbprint --input ./windows/Installer/NSIS/FusionLauncherInstaller.exe --config-file "C:\Program Files\DigiCert\DigiCert/ One/ Signing/ Manager/ Tools\pkcs11properties.cfg" --description "Fusion Launcher" --timestamp http://timestamp.digicert.com?alg=sha256
+        smctl.exe sign --fingerprint $thumbprint --input ./windows/Installer/NSIS/FusionLauncherInstaller.exe --config-file "C:\Program Files\DigiCert\DigiCert/ One/ Signing/ Manager/ Tools\pkcs11properties.cfg" --description "Fusion Launcher" --timestamp http://timestamp.digicert.com?alg=sha256
         
         $runNumber = $env:GITHUB_RUN_NUMBER
         $branchName = $env:GITHUB_REF_NAME

@@ -80,7 +80,7 @@ RequestExecutionLevel admin
 Section "Install"
 
 	; Kill if app is running
-	nsExec::ExecToLog 'taskkill /F /IM fusion_launcher.exe'
+	nsExec::ExecToLog 'taskkill /F /IM fusion_design_tool_prototype.exe'
 
 	; Clear old AppData (user data)
 	RMDir /r "$APPDATA\Fusion Launcher"
@@ -97,7 +97,7 @@ Section "Install"
 	; Start menu shortcut always created
 	SetShellVarContext all
 	CreateDirectory "$SMPROGRAMS\Fusion Launcher"
-	CreateShortCut "$SMPROGRAMS\Fusion Launcher\Fusion Launcher.lnk" "$INSTDIR\fusion_launcher.exe"
+	CreateShortCut "$SMPROGRAMS\Fusion Launcher\Fusion Launcher.lnk" "$INSTDIR\fusion_design_tool_prototype.exe"
 
 	; Uninstaller
 	WriteUninstaller "$INSTDIR\uninstall.exe"
@@ -114,7 +114,7 @@ Section "Install"
 	WriteRegStr HKLM "$ProductUninstallKey" "DisplayVersion" "${PRODUCT_VERSION}"
 	WriteRegStr HKLM "$ProductUninstallKey" "URLInfoAbout" "${PRODUCT_WEB_SITE}"
 	WriteRegDWORD HKLM "$ProductUninstallKey" "EstimatedSize" $estimatedSize
-	WriteRegStr HKLM "$ProductUninstallKey" "DisplayIcon" "$INSTDIR\fusion_launcher.exe"
+	WriteRegStr HKLM "$ProductUninstallKey" "DisplayIcon" "$INSTDIR\fusion_design_tool_prototype.exe"
 
 SectionEnd
 
@@ -122,7 +122,7 @@ SectionEnd
 ; Launch App After Install
 
 Function LaunchApp
-	ExecShell "" "$INSTDIR\fusion_launcher.exe"
+	ExecShell "" "$INSTDIR\fusion_design_tool_prototype.exe"
 FunctionEnd
 
 ;--------------------------------
@@ -130,7 +130,7 @@ FunctionEnd
 
 Function CreateShortcut
 	SetShellVarContext all
-	CreateShortCut "$DESKTOP\Fusion Launcher.lnk" "$INSTDIR\fusion_launcher.exe"
+	CreateShortCut "$DESKTOP\Fusion Launcher.lnk" "$INSTDIR\fusion_design_tool_prototype.exe"
 FunctionEnd
 
 ;--------------------------------
@@ -139,7 +139,7 @@ FunctionEnd
 Section "Uninstall"
 
 	; Kill app if running
-	nsExec::ExecToLog 'taskkill /F /IM fusion_launcher.exe'
+	nsExec::ExecToLog 'taskkill /F /IM fusion_design_tool_prototype.exe'
 
 	; Remove installed files
 	RMDir /r "$INSTDIR"
