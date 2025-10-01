@@ -11,6 +11,7 @@
 #include <OCC/ControlClasses/Managers/OcaLiteNetworkManager.h>
 #include <OCC/ControlClasses/Managers/OcaLiteSubscriptionManager.h>
 #include <OCC/ControlClasses/Workers/BlocksAndMatrices/OcaLiteBlock.h>
+#include <OCC/ControlClasses/Workers/Actuators/OcaLiteGain.h>
 #include <OCC/ControlDataTypes/OcaLiteBlockMember.h>
 #include <OCC/ControlDataTypes/OcaLiteEvent.h>
 #include <OCC/ControlDataTypes/OcaLiteManagerDescriptor.h>
@@ -126,3 +127,69 @@ FusionProxy::FusionProxy(::OcaSessionID sessionId, ::OcaONo networkObjectNumber)
     return rc;
 }
 
+::OcaLiteStatus FusionProxy::ConcreteGainActuator_SetGain(::OcaONo remoteObjectNumber, ::OcaDB gainVal)
+{
+    const ::IOcaLiteWriter& writer(::OcaLiteNetworkManager::GetInstance().GetNetwork(m_networkObjectNumber)->GetWriter());
+    ::OcaUint8* pParams(m_buffer);
+    ::OcaUint32 responseSize;
+    ::OcaUint8* pResponse;
+
+    writer.Write(static_cast<UINT8>(1), &pParams); // Nr params
+    writer.Write(static_cast<FLOAT>(gainVal), &pParams); // Nr params
+
+    ::OcaLiteStatus rc(
+            ::OcaLiteCommandHandlerController::GetInstance().SendCommand(
+                m_sessionId,
+                m_networkObjectNumber,
+                remoteObjectNumber,
+                ::OcaLiteMethodID(::OcaLiteGain::CLASS_ID.GetFieldCount(),
+                                  ::OcaLiteGain::SET_GAIN),
+                static_cast< ::OcaUint32>(pParams - m_buffer),
+                m_buffer));
+
+    return rc;
+}
+
+::OcaLiteStatus FusionProxy::ConcreteGainActuator_GetGain(::OcaONo remoteObjectNumber, ::OcaDB& gainVal)
+{
+    ::OcaUint8 noParams(0);
+    ::OcaUint32 responseSize;
+    ::OcaUint8* pResponse;
+    ::OcaDB min_val;
+    ::OcaDB max_val;
+
+    gainVal = 0;
+    ::OcaLiteStatus rc(
+        ::OcaLiteCommandHandlerController::GetInstance().SendCommandWithResponse(
+            m_sessionId,
+            m_networkObjectNumber,
+            remoteObjectNumber,
+                ::OcaLiteMethodID(::OcaLiteGain::CLASS_ID.GetFieldCount(),
+                                  ::OcaLiteGain::GET_GAIN),
+            1,
+            &noParams,
+            responseSize,
+            &pResponse));
+
+    if ((OCASTATUS_OK == rc) &&
+        (responseSize > 0))
+    {
+        const ::IOcaLiteReader& reader(::OcaLiteNetworkManager::GetInstance().GetNetwork(m_networkObjectNumber)->GetReader());
+        ::OcaUint8 nrParameters(0);
+        const ::OcaUint8* source(pResponse);
+        reader.Read(responseSize, &source, nrParameters);
+
+        if (nrParameters == 3)
+        {
+            reader.Read(responseSize, &source, gainVal);
+            reader.Read(responseSize, &source, min_val);
+            reader.Read(responseSize, &source, max_val);
+        }
+        else
+        {
+            rc = OCASTATUS_PARAMETER_ERROR;
+        }
+    }
+
+    return rc;
+}

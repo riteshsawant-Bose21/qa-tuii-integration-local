@@ -89,3 +89,8 @@
     return rc;
 }
 
+::OcaLiteStatus FusionBlock::GetMembersRecursive(::OcaLiteList< ::OcaLiteBlockMember>& members) const
+{
+    return OCASTATUS_OK;
+}
+
