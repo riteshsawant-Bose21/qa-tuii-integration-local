@@ -30,6 +30,7 @@
 #include "ZoneConfigBuilder.h"
 #include "OcaLiteControllerConfigManager.h"
 #include "../common/FusionOCAConstants.h" // For custom ONO constants
+#include "Observer.h"                     // Add the UDP JSON Observer
 
 #ifdef OCA_RUN
 extern void Ocp1LiteServiceRun();
@@ -37,6 +38,55 @@ extern void Ocp1LiteServiceRun();
 extern void Ocp1LiteServiceRunWithFdSet(fd_set *readSet);
 extern int Ocp1LiteServiceGetSocket();
 #endif
+
+// Global pointer to manage the UDP observer lifecycle
+std::unique_ptr<UDPValueMonitor> g_udpObserver;
+
+/**
+ * @brief Initialize UDP Observer for monitoring audio settings
+ * @param serverIP UDP server IP address
+ * @param serverPort UDP server port
+ * @param verbose Enable verbose logging
+ * @return true if initialization successful, false otherwise
+ */
+bool InitializeUDPObserver(const std::string &serverIP, unsigned int serverPort, bool verbose = true)
+{
+    try
+    {
+        g_udpObserver = std::unique_ptr<UDPValueMonitor>(new UDPValueMonitor(
+            serverIP,
+            serverPort,
+            verbose));
+        printf("✓ UDP Observer started - monitoring audio.settings from %s:%u\r\n",
+               serverIP.c_str(), serverPort);
+
+        g_udpObserver->watch("audio.settings", [](const std::string &path,
+                                                  const Json::Value &oldVal,
+                                                  const Json::Value &newVal)
+                             { OCA_LOG_TRACE_PARAMS("Audio settings changed at %s: %s -> %s\n",
+                                                    path.c_str(), oldVal.toStyledString().c_str(),
+                                                    newVal.toStyledString().c_str()); });
+        return true;
+    }
+    catch (const std::exception &e)
+    {
+        printf("✗ Failed to start UDP Observer: %s\r\n", e.what());
+        return false;
+    }
+}
+
+/**
+ * @brief Stop and cleanup UDP Observer
+ */
+void ShutdownUDPObserver()
+{
+    if (g_udpObserver)
+    {
+        printf("Stopping UDP Observer...\r\n");
+        g_udpObserver->stop();
+        g_udpObserver.reset();
+    }
+}
 
 int main(int argc, const char *argv[])
 {
@@ -176,6 +226,12 @@ int main(int argc, const char *argv[])
                     ::OcaLiteDeviceManager::GetInstance().SetErrorAndOperationalState(static_cast<::OcaBoolean>(!bSuccess), ::OcaLiteDeviceManager::OCA_OPSTATE_OPERATIONAL);
                     ::OcaLiteDeviceManager::GetInstance().SetEnabled(static_cast<::OcaBoolean>(bSuccess));
 
+                    // Initialize UDP Observer if enabled
+                    if (bSuccess)
+                    {
+                        InitializeUDPObserver("192.168.64.53", 7947, false);
+                    }
+
                     OCA_LOG_ERROR("Starting run loop..");
                     while (bSuccess)
                     {
@@ -213,6 +269,9 @@ int main(int argc, const char *argv[])
                         }
 #endif
                     }
+
+                    // Clean up UDP Observer before exit
+                    ShutdownUDPObserver();
                 }
             }
         }
