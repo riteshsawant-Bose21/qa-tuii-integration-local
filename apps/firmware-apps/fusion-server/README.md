@@ -154,7 +154,11 @@ Make targets:
 
 NOTE: Local builds don't support haproxy, keepalived or memberlist. You can ignore log output about issues related to this.
 Local builds are good for developing the various server components without dealing with instance management.
- 
+
+**Build and Deploy Fusion-server binary to a device**
+```bash
+./scripts/remote_scripts/deploy-fusion-server-to-device.sh root@192.168.1.3
+```
 ### API Endpoints
 
 **Configuration Management**
@@ -320,8 +324,8 @@ EOF'
 A new fusion-server binary can be pushed and propogated across all running instances.
   
 There are endpoints for updating the binary and rolling back a binary.
-  - `PUT /updateVersion` - Post a new binary to replace the running fusion-server instance.
-  - `POST /rollbackVersion` - Rollback a binary a certain number of previous updates.
+  - `PUT /version` - Post a new binary to replace the running fusion-server instance.
+  - `POST /version` - Rollback a binary a certain number of previous updates.
 
 
 The curl command can also be used to call the endpoints from the command line.
@@ -339,7 +343,7 @@ The checksum of the new binary can be calculated as part of the curl command.
 curl -X POST \
   -F "binary=@build/fusion-server_linux_arm64" \
   -F "checksum=$(shasum -a 256 build/fusion-server_linux_arm64  | cut -d ' ' -f 1)" \
-  http://192.168.64.100:8080/updateVersion
+  http://192.168.64.100:8080/version
 ```
 
 ## Basic Commands
@@ -474,7 +478,7 @@ multipass exec fusion1 -- systemctl status fusion-server
     ```bash
     multipass exec fusion1 -- chronyc tracking
     ```
-    
+
 6. **Load Balancer Issues**
    - Check HAProxy configuration
    - Verify backend metrics
@@ -493,6 +497,11 @@ multipass exec fusion1 -- systemctl status fusion-server
    
    Multipass has not yet released a version that resolves this issue on M4 Macs. In the meantime, you can install the package from this [workaround](https://github.com/canonical/multipass/issues/3842#issuecomment-2552189605).
 
+8. **list failed: cannot connect to the multipass socket**
+```bash
+sudo launchctl load -w /Library/LaunchDaemons/com.canonical.multipassd.plist
+sudo launchctl kickstart -k system/com.canonical.multipassd
+```
 
 ## Testing
 

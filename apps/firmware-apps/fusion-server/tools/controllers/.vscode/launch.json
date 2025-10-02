@@ -1,0 +1,48 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "macOS",
+            "request": "launch",
+            "type": "dart",
+            "deviceId": "macos",
+            "program": "lib/main.dart",
+        },
+        {
+            "name": "iOS Simulator",
+            "request": "launch",
+            "type": "dart",
+            "deviceId": "ios-simulator",
+            "program": "lib/main.dart",
+        },
+        {
+            "name": "iOS Device",
+            "request": "launch",
+            "type": "dart",
+            "deviceId": "ios",
+            "program": "lib/main.dart",
+        },
+        {
+            "name": "Chrome",
+            "request": "launch",
+            "type": "dart",
+            "deviceId": "chrome",
+            "program": "lib/main.dart",
+        },
+        {
+            "name": "All Devices",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+        }
+    ],
+    "compounds": [
+        {
+            "name": "All Desktop & Web",
+            "configurations": [
+                "macOS",
+                "Chrome"
+            ]
+        }
+    ]
+}
