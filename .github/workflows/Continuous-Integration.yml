@@ -85,6 +85,8 @@ jobs:
           nexus_password: ${{ secrets.NEXUS_PASSWORD }}
           nexus_url: ${{ secrets.NEXUS_BASE_URL }}
           keychain_password: ${{ secrets.KEYCHAIN_PASSWORD }}
+          notarize_apple_id: ${{ secrets.NOTARIZE_APPLE_ID }}
+          notarize_app_password: ${{ secrets.NOTARIZE_APP_PASSWORD }}
 
   flutter-windows-build:
     needs: buildChecks
@@ -105,6 +107,9 @@ jobs:
           nexus_password: ${{ secrets.NEXUS_PASSWORD }}
           nexus_url: ${{ secrets.NEXUS_BASE_URL }}
           keychain_password: ${{ secrets.KEYCHAIN_PASSWORD }}
+          cert_thumbprint: ${{ secrets.CERT_THUMBPRINT }}
+          SM_API_KEY: ${{ secrets.SM_API_KEY }}
+          SM_CLIENT_CERT_PASSWORD: ${{ secrets.SM_CLIENT_CERT_PASSWORD }}
 
   flutter-web-build:
     needs: buildChecks
