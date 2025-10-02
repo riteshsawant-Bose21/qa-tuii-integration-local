@@ -1,1 +1,0 @@
-./prometheus --config.file=tools/prometheus/prometheus.yml
