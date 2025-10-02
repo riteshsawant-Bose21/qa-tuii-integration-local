@@ -29,6 +29,6 @@ runs:
       run: |
         moon run fusion-system-monitor:build
         VERSION="$(./Jenkins/SetVersionProperty.sh)-${GITHUB_RUN_NUMBER}+$(git rev-parse --short HEAD)"
-        curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T ./build/fusion_system_monitor ${{ inputs.nexus_url }}/Fusion-System-Monitor/Continuous/${GITHUB_REF_NAME}/fusion-system-monitor/$VERSION/fusion-system-monitor-$VERSION
+        curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T ./build/fusion_system_monitor ${{ inputs.nexus_url }}/Fusion-System-Monitor/Continuous/${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}/fusion-system-monitor/$VERSION/fusion-system-monitor-$VERSION
         echo "Fusion System Monitor build uploaded to Nexus successfully!"
-        echo "fusion-dsp: ${{ inputs.nexus_url }}/Fusion-System-Monitor/Continuous/${GITHUB_REF_NAME}/fusion-system-monitor/$VERSION/fusion-system-monitor-$VERSION"
+        echo "fusion-system-monitor: ${{ inputs.nexus_url }}/Fusion-System-Monitor/Continuous/${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}/fusion-system-monitor/$VERSION/fusion-system-monitor-$VERSION"
