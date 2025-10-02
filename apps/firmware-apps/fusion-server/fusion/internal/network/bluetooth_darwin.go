@@ -7,7 +7,7 @@ import (
 	"github.com/go-ble/ble/darwin"
 )
 
-func newBLEDevice(name string) (ble.Device, error) {
+func newBLEDevice(_ string) (ble.Device, error) {
 	// Name is applied when advertising.
 	d, err := darwin.NewDevice()
 	if err != nil {

@@ -130,8 +130,16 @@ func (h *Handler) HandleAudioUpload(w http.ResponseWriter, r *http.Request) {
 		displayName = strings.TrimSuffix(origName, ext)
 	}
 
+	// Get the audio file using the display name
+	existing, err := h.persistence.GetAudioByDisplayName(displayName)
+	if err != nil {
+		logger.Error("Error getting audio with display name: %v", err)
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		return
+	}
+
 	// Check if display name already exists
-	if existing, _ := h.persistence.GetAudioByDisplayName(displayName); existing != nil {
+	if existing != nil {
 		http.Error(w, "An audio file with this display name already exists", http.StatusConflict)
 		return
 	}
@@ -244,7 +252,7 @@ func (h *Handler) HandleAudioUpload(w http.ResponseWriter, r *http.Request) {
 	// Return created metadata
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	_ = json.NewEncoder(w).Encode(meta)
+	json.NewEncoder(w).Encode(meta)
 }
 
 // HandleAudioGet returns metadata for a single audio file.
@@ -262,7 +270,7 @@ func (h *Handler) HandleAudioGet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(meta)
+	json.NewEncoder(w).Encode(meta)
 }
 
 // HandleAudioGet serves an audio file by ID with range support.

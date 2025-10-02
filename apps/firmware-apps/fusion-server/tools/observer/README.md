@@ -50,7 +50,7 @@ Basic syntax:
 ```bash
 /usr/local/bin/observer <server_ip> <port> <path>
 ```
-There is an options --verbose argument which enables debug output.
+The --verbose argument enables debug output.
 
 The observer supports several path notation formats:
 

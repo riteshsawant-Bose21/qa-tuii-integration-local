@@ -150,7 +150,7 @@ func (h *Handler) initiateVersionUpdate(newBinaryPath string) error {
 		return fmt.Errorf("failed to marshal update: %w", err)
 	}
 
-	message := api.VersionMessage{
+	message := api.VersionUpdate{
 		Type:    VersionUpdate,
 		Payload: data,
 	}
@@ -192,7 +192,7 @@ func (h *Handler) initiateBinaryRollback(currentBinaryPath string, index int) er
 		return fmt.Errorf("failed to marshal rollback: %w", err)
 	}
 
-	message := api.VersionMessage{
+	message := api.VersionUpdate{
 		Type:    VersionRollback,
 		Payload: data,
 	}
@@ -256,7 +256,7 @@ func (h *Handler) streamBinaryToNode(node *memberlist.Node, binaryPath string) e
 			return fmt.Errorf("failed to marshal chunk: %w", err)
 		}
 
-		message := api.VersionMessage{
+		message := api.VersionUpdate{
 			Type:    UpdateChunk,
 			Payload: chunkData,
 		}
@@ -280,7 +280,7 @@ func (h *Handler) streamBinaryToNode(node *memberlist.Node, binaryPath string) e
 		return fmt.Errorf("failed to marshal final chunk: %w", err)
 	}
 
-	message := api.VersionMessage{
+	message := api.VersionUpdate{
 		Type:    UpdateChunk,
 		Payload: chunkData,
 	}
