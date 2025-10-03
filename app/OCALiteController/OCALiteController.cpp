@@ -300,12 +300,20 @@ int main(int argc, const char *argv[])
                             OCA_LOG_INFO("✓ Service discovery started");
 
                             // Wait for devices to be discovered
-                            size_t deviceCount = discovery.WaitForDevices(8000); // Wait 8 seconds
+                            size_t deviceCount(0);
+                            uint8_t retry_cnt(0);
 
-                            auto discoveredDevices = discovery.GetDiscoveredDevices();
+                             // Retry loop
+                             deviceCount = discovery.WaitForDevices(8000);
+                             while ( (deviceCount <= 0 ) && (retry_cnt++ < 10))
+                             {
+                                 deviceCount = discovery.WaitForDevices(8000);
+                             }
 
                             if (deviceCount > 0)
                             {
+                                auto discoveredDevices = discovery.GetDiscoveredDevices();
+
                                 DisplayDiscoveredDevices(discoveredDevices);
 
                                 // Connect to the first discovered device
