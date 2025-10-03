@@ -1,0 +1,100 @@
+{
+    "session": {
+        "property_settings": [
+            { "name": "frame_size", "value": 32},
+            { "name": "sample_rate", "value": 48000 }
+        ]
+    },
+    "audio_tasks": [
+        {
+            "name": "task1",
+            "property_settings": [
+                { "name": "is_jack_client", "value": false },
+                { "name": "frame_size", "value": 32},
+                { "name": "sample_rate", "value": 48000 }
+            ],
+            "blocks": [
+                {
+                    "name": "infile",
+                    "algorithm": "wav_read",
+                    "property_settings": [
+                        { "name": "frame_size", "value": 32},
+                        { "name": "sample_rate", "value": 48000 },
+                        { "name": "filename", "value": "in_step.wav" }
+                    ],
+                    "terminal_channels": [
+                        { "name": "out", "channels": 1 }
+                    ]
+                },
+                {
+                    "name": "compressor",
+                    "algorithm": "compressor",
+                    "property_settings": [
+                        { "name": "channels", "value": 1 },
+                        { "name": "frame_size", "value": 32 },
+                        { "name": "sample_rate", "value": 48000 }
+                    ]
+                },
+                {
+                    "name": "outfile",
+                    "algorithm": "wav_write",
+                    "property_settings": [
+                        { "name": "frame_size", "value": 32 },
+                        { "name": "sample_rate", "value": 48000 }
+                    ],
+                    "terminal_channels": [
+                        { "name": "in", "channels": 1 }
+                    ]
+                }
+            ],
+            "block_connections": [
+                {
+                    "source_block": "infile",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "compressor",
+                    "input_terminal": "sidechain_in",
+                    "input_channel": 1
+                },
+                {
+                    "source_block": "infile",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "compressor",
+                    "input_terminal": "in",
+                    "input_channel": 1
+                },
+                {
+                    "source_block": "compressor",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "outfile",
+                    "input_terminal": "in",
+                    "input_channel": 1
+                }
+            ]
+        }
+    ],
+    "parameter_settings": [
+        {
+            "target": "compressor",
+            "name": "threshold",
+            "value": -10.0
+        },
+        {
+            "target": "compressor",
+            "name": "attack",
+            "value": 5.0
+        },
+        {
+            "target": "compressor",
+            "name": "release",
+            "value": 100.0
+        },
+        {
+            "target": "compressor",
+            "name": "ratio",
+            "value": 2.0
+        }
+    ]
+}

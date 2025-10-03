@@ -1,0 +1,82 @@
+{
+    "session": {
+        "property_settings": [
+            { "name": "frame_size", "value": 32},
+            { "name": "sample_rate", "value": 48000 }
+        ]
+    },
+    "audio_tasks": [
+        {
+            "name": "task1",
+            "property_settings": [
+                { "name": "is_jack_client", "value": false },
+                { "name": "frame_size", "value": 32},
+                { "name": "sample_rate", "value": 48000 },
+                { "name": "timing_log_file", "value": "{{ output_file }}"},
+                { "name": "profile_blocks", "value": true}
+            ],
+            "blocks": [
+                {% for input in range(1, num_inputs+1) %}
+                {
+                    "name": "infile{{ input }}",
+                    "algorithm": "wav_read",
+                    "property_settings": [
+                        { "name": "frame_size", "value": 32},
+                        { "name": "sample_rate", "value": 48000 },
+                        { "name": "filename", "value": "{{ wav_input }}"}
+                    ],
+                    "terminal_channels": [
+                        { "name": "out", "channels": 1 }
+                    ]
+                },
+                {% endfor %}
+                {
+                    "name": "matrix_mixer",
+                    "algorithm": "matrix_mixer",
+                    "property_settings": [
+                        { "name": "frame_size", "value": 32 },
+                        { "name": "sample_rate", "value": 48000 }
+                    ],
+                    "terminal_channels" : [
+                        { "name": "in", "channels": {{ num_inputs }} },
+                        { "name": "out", "channels": {{ num_outputs }}}
+                    ]
+                },
+                {
+                    "name": "outfile",
+                    "algorithm": "wav_write",
+                    "property_settings": [
+                        { "name": "frame_size", "value": 32 },
+                        { "name": "sample_rate", "value": 48000 },
+                        { "name": "filename", "value": "out.wav"}
+                    ],
+                    "terminal_channels": [
+                        { "name": "in", "channels": {{ num_outputs }} }
+                    ]
+                }
+            ],
+            "block_connections": [
+                {% for input in range(1, num_inputs+1) %}
+                {
+                    "source_block": "infile{{ input }}",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "matrix_mixer",
+                    "input_terminal": "in",
+                    "input_channel": {{ input }}
+                }{% if not loop.last %},{% elif num_outputs > 0 %},{% endif %}
+                {% endfor %}
+                {% for output in range(1, num_outputs+1) %}
+                {
+                    "source_block": "matrix_mixer",
+                    "output_terminal": "out",
+                    "output_channel": {{ output }},
+                    "destination_block": "outfile",
+                    "input_terminal": "in",
+                    "input_channel": {{ output }}
+                }{% if not loop.last %},{% endif %}
+                {% endfor %}
+            ]
+        }
+    ]
+}
