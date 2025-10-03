@@ -1,0 +1,20 @@
+project:
+  name: 'Fusion DSP'
+  description: 'Fusion DSP application moon tasks'
+
+tasks:
+
+  build:
+    command: "python3"
+    args: ["package.py"]
+    deps:
+      - create-binary
+
+  create-binary:
+    command: "./moon-build.sh"
+    deps:
+      - ready-script
+
+  ready-script:
+    command: "chmod"
+    args: ["+x", "moon-build.sh", "Jenkins/SetVersionProperty.sh"]
