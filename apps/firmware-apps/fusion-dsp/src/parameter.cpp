@@ -15,7 +15,12 @@ namespace bosepro {
 template <typename T>
 void Parameter::assign(T *value)
 {
-    dimensions = 0;
+    if (dimensions != 0)
+    {
+        SPDLOG_CRITICAL("Parameter assigned wrong number of dimensions.");
+        return;
+    }
+
     ParameterDataScalar<T> *parameter_data_scalar =
         dynamic_cast<ParameterDataScalar<T> *>(this);
     parameter_data_scalar->assign(value);
@@ -25,7 +30,12 @@ void Parameter::assign(T *value)
 template <typename T>
 void Parameter::assign(T *value, T (*conversion_function)(T))
 {
-    dimensions = 0;
+    if (dimensions != 0)
+    {
+        SPDLOG_CRITICAL("Parameter assigned wrong number of dimensions.");
+        return;
+    }
+
     ParameterDataScalar<T> *parameter_data_scalar =
         dynamic_cast<ParameterDataScalar<T> *>(this);
     parameter_data_scalar->assign(value, conversion_function);
@@ -35,7 +45,12 @@ void Parameter::assign(T *value, T (*conversion_function)(T))
 template <typename T>
 void Parameter::assign(T *value, std::function<void()> post_function)
 {
-    dimensions = 0;
+    if (dimensions != 0)
+    {
+        SPDLOG_CRITICAL("Parameter assigned wrong number of dimensions.");
+        return;
+    }
+
     ParameterDataScalar<T> *parameter_data_scalar =
         dynamic_cast<ParameterDataScalar<T> *>(this);
     parameter_data_scalar->assign(value, post_function);
@@ -45,7 +60,12 @@ void Parameter::assign(T *value, std::function<void()> post_function)
 template <typename T>
 void Parameter::assign(DspCoeffMemory<T[]> &value)
 {
-    dimensions = 1;
+    if (dimensions != 1)
+    {
+        SPDLOG_CRITICAL("Parameter assigned wrong number of dimensions.");
+        return;
+    }
+
     ParameterDataVector<T> *parameter_data_vector =
         dynamic_cast<ParameterDataVector<T> *>(this);
     parameter_data_vector->assign(value);
@@ -55,7 +75,12 @@ void Parameter::assign(DspCoeffMemory<T[]> &value)
 template <typename T>
 void Parameter::assign(DspCoeffMemory<T[]> &value, T (*conversion_function)(T))
 {
-    dimensions = 1;
+    if (dimensions != 1)
+    {
+        SPDLOG_CRITICAL("Parameter assigned wrong number of dimensions.");
+        return;
+    }
+
     ParameterDataVector<T> *parameter_data_vector =
         dynamic_cast<ParameterDataVector<T> *>(this);
     parameter_data_vector->assign(value, conversion_function);
@@ -66,7 +91,12 @@ template <typename T>
 void Parameter::assign(DspParamMemory<T[]> &value,
                        std::function<void(int)> post_function)
 {
-    dimensions = 1;
+    if (dimensions != 1)
+    {
+        SPDLOG_CRITICAL("Parameter assigned wrong number of dimensions.");
+        return;
+    }
+
     ParameterDataVector<T> *parameter_data_vector =
         dynamic_cast<ParameterDataVector<T> *>(this);
     parameter_data_vector->assign(value, post_function);
@@ -76,7 +106,12 @@ void Parameter::assign(DspParamMemory<T[]> &value,
 template <typename T>
 void Parameter::assign(DspCoeffMemory<T*[]> &value)
 {
-    dimensions = 2;
+    if (dimensions != 2)
+    {
+        SPDLOG_CRITICAL("Parameter assigned wrong number of dimensions.");
+        return;
+    }
+
     ParameterDataMatrix<T> *parameter_data_matrix =
         dynamic_cast<ParameterDataMatrix<T> *>(this);
     parameter_data_matrix->assign(value);
@@ -86,7 +121,12 @@ void Parameter::assign(DspCoeffMemory<T*[]> &value)
 template <typename T>
 void Parameter::assign(DspCoeffMemory<T*[]> &value, T (*conversion_function)(T))
 {
-    dimensions = 2;
+    if (dimensions != 2)
+    {
+        SPDLOG_CRITICAL("Parameter assigned wrong number of dimensions.");
+        return;
+    }
+
     ParameterDataMatrix<T> *parameter_data_matrix =
         dynamic_cast<ParameterDataMatrix<T> *>(this);
     parameter_data_matrix->assign(value, conversion_function);
@@ -97,7 +137,12 @@ template <typename T>
 void Parameter::assign(DspParamMemory<T*[]> &value,
                        std::function<void(int, int)> post_function)
 {
-    dimensions = 2;
+    if (dimensions != 2)
+    {
+        SPDLOG_CRITICAL("Parameter assigned wrong number of dimensions.");
+        return;
+    }
+
     ParameterDataMatrix<T> *parameter_data_matrix =
         dynamic_cast<ParameterDataMatrix<T> *>(this);
     parameter_data_matrix->assign(value, post_function);
