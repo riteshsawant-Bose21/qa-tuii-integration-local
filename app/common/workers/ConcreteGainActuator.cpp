@@ -49,7 +49,6 @@ ConcreteGainActuator::ConcreteGainActuator(::OcaONo objectNumber,
                                            ::OcaDB maxGain,
                                            const std::string &gainID)
     : ::OcaLiteGain(objectNumber, lockable, role, ports, minGain, maxGain),
-      m_actualGain(0.0), // Initialize to 0 dB (unity gain)
       m_gainID(gainID)
 {
     // Enhanced logging with dynamic information
@@ -96,9 +95,6 @@ ConcreteGainActuator::ConcreteGainActuator(::OcaONo objectNumber,
         // dspLibrary.updateGainParameter(gain);
         // registerWrite(GAIN_REGISTER, gainToRegisterValue(gain));
 
-        // For this example, we'll just store the value and simulate successful setting
-        m_actualGain = gain;
-
         OCA_LOG_INFO_PARAMS("[GAIN] ✓ Gain successfully set to %.2f dB (linear: %.6f) (Gain ID: %s)",
                             gain, linearGain, m_gainID.empty() ? "N/A" : m_gainID.c_str());
 
@@ -111,27 +107,3 @@ ConcreteGainActuator::ConcreteGainActuator(::OcaONo objectNumber,
     }
 }
 
-::OcaLiteStatus ConcreteGainActuator::GetGainValue(::OcaDB &gain) const
-{
-    try
-    {
-        // In a real implementation, this would read the actual gain value from
-        // your audio processing hardware/DSP to ensure accuracy
-
-        // Example hardware read calls (commented out):
-        // gain = audioHardware.getChannelGain(channelId);
-        // gain = registerRead(GAIN_REGISTER_READBACK);
-
-        // For this example, we'll return the stored value
-        gain = m_actualGain;
-
-        OCA_LOG_INFO_PARAMS("[GAIN] Getting current gain value: %.2f dB (Gain ID: %s)", gain, m_gainID.empty() ? "N/A" : m_gainID.c_str());
-
-        return OCASTATUS_OK;
-    }
-    catch (const std::exception &e)
-    {
-        OCA_LOG_ERROR_PARAMS("[GAIN] Error getting gain: %s", e.what());
-        return OCASTATUS_PROCESSING_FAILED;
-    }
-}

@@ -61,18 +61,7 @@ protected:
      */
     virtual ::OcaLiteStatus SetStateValue(::OcaLiteMuteState muteState);
 
-    /**
-     * Implementation of GetStateValue to read the actual mute state.
-     * This method retrieves the current mute state from hardware/software.
-     *
-     * @param[out] muteState The current mute state.
-     * @return               Status of the operation.
-     */
-    virtual ::OcaLiteStatus GetStateValue(::OcaLiteMuteState &muteState) const;
-
 private:
-    /** Actual mute state storage */
-    ::OcaLiteMuteState m_actualMuteState;
 
     /** The gain identifier from JSON configuration */
     std::string m_gainID;

@@ -12,6 +12,7 @@
 #include <OCC/ControlDataTypes/OcaLiteBaseDataTypes.h>
 #include "FusionOCAConstants.h" // For custom ONO constants
 #include "workers/ZoneGroup.h"
+#include "workers/FusionBlock.h"
 #include "workers/ConcreteGainActuator.h"
 #include "workers/ConcreteMuteActuator.h"
 #include "workers/ConcreteSwitchActuator.h"
@@ -50,7 +51,7 @@ struct Controller
 // Aggregated per-zone object bundle
 struct ZoneObjects
 {
-    std::unique_ptr<ZoneGroup> group;           // may be null if creation failed
+    std::unique_ptr<FusionBlock> group;           // may be null if creation failed
     std::unique_ptr<ConcreteGainActuator> gain; // optional
     std::unique_ptr<ConcreteMuteActuator> mute; // optional
     std::unique_ptr<ConcreteSwitchActuator> sw; // optional

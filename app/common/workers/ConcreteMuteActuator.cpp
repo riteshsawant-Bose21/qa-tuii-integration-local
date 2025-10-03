@@ -46,7 +46,6 @@ ConcreteMuteActuator::ConcreteMuteActuator(::OcaONo objectNumber,
                                            const ::OcaLiteList<::OcaLitePort> &ports,
                                            const std::string &gainID)
     : ::OcaLiteMute(objectNumber, lockable, role, ports),
-      m_actualMuteState(OCAMUTESTATE_UNMUTED), // Initialize to unmuted
       m_gainID(gainID)
 {
     // Enhanced logging with dynamic information
@@ -91,9 +90,6 @@ ConcreteMuteActuator::ConcreteMuteActuator(::OcaONo objectNumber,
         // dspLibrary.updateMuteParameter(muteState);
         // registerWrite(MUTE_REGISTER, muteState == OCAMUTESTATE_MUTED ? 1 : 0);
 
-        // For this example, we'll just store the value and simulate successful setting
-        m_actualMuteState = muteState;
-
         OCA_LOG_INFO_PARAMS("[MUTE] ✓ Mute state successfully set to %s (Gain ID: %s)",
                             muteStateToString(muteState), m_gainID.empty() ? "N/A" : m_gainID.c_str());
 
@@ -106,29 +102,3 @@ ConcreteMuteActuator::ConcreteMuteActuator(::OcaONo objectNumber,
     }
 }
 
-::OcaLiteStatus ConcreteMuteActuator::GetStateValue(::OcaLiteMuteState &muteState) const
-{
-    try
-    {
-        // In a real implementation, this would read the actual mute state from
-        // your audio processing hardware/DSP to ensure accuracy
-
-        // Example hardware read calls (commented out):
-        // bool isMuted = audioHardware.getChannelMute(channelId);
-        // muteState = isMuted ? OCAMUTESTATE_MUTED : OCAMUTESTATE_UNMUTED;
-        // int muteRegValue = registerRead(MUTE_REGISTER_READBACK);
-        // muteState = (muteRegValue == 1) ? OCAMUTESTATE_MUTED : OCAMUTESTATE_UNMUTED;
-
-        // For this example, we'll return the stored value
-        muteState = m_actualMuteState;
-
-        OCA_LOG_INFO_PARAMS("[MUTE] Getting current mute state: %s (Gain ID: %s)", muteStateToString(muteState), m_gainID.empty() ? "N/A" : m_gainID.c_str());
-
-        return OCASTATUS_OK;
-    }
-    catch (const std::exception &e)
-    {
-        OCA_LOG_ERROR_PARAMS("[MUTE] Error getting mute state: %s", e.what());
-        return OCASTATUS_PROCESSING_FAILED;
-    }
-}

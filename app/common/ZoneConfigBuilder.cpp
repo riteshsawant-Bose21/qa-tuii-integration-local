@@ -392,6 +392,8 @@ bool parseJson(const std::string &json, std::vector<Zone> &zonesOut)
     return parseZonesInternal(json, zonesOut);
 }
 
+#ifndef OCA_LITE_CONTROLLER
+
 // Build lists for switch names/enables
 static void buildSwitchLists(const std::vector<ZoneSourceDef> &sources,
                              unsigned &minPos, unsigned &maxPos,
@@ -429,8 +431,12 @@ static void buildSwitchLists(const std::vector<ZoneSourceDef> &sources,
 BuiltZones createZoneObjects(const std::vector<Zone> &zoneDefs,
                              ::OcaONo baseZoneGroupONo)
 {
+    static ::OcaLiteList<::OcaLitePort> s_emptyPorts;
     BuiltZones model{};
-    model.zonesContainer.reset(new ZoneGroup(baseZoneGroupONo, static_cast<::OcaBoolean>(true), ::OcaLiteString("Zone")));
+    model.zonesContainer.reset(
+            new ZoneGroup(baseZoneGroupONo,
+                          static_cast<::OcaBoolean>(true),
+                          ::OcaLiteString("Zone")));
     if (!model.zonesContainer)
         return model;
 
@@ -439,7 +445,11 @@ BuiltZones createZoneObjects(const std::vector<Zone> &zoneDefs,
     {
         const Zone &zoneDef = zoneDefs[i];
         ZoneObjects zb;
-        zb.group.reset(new ZoneGroup(zoneDef.ono.zone, static_cast<::OcaBoolean>(true), ::OcaLiteString(zoneDef.name.c_str())));
+        zb.group.reset(new FusionBlock(zoneDef.ono.zone,
+                                       static_cast<::OcaBoolean>(true),
+                                       ::OcaLiteString(zoneDef.name.c_str()),
+                                       s_emptyPorts,
+                                       static_cast<::OcaONo>(0)));
         if (!zb.group)
         {
             model.zones.push_back(std::move(zb));
@@ -496,7 +506,7 @@ void buildHierarchy(BuiltZones &zonesModel)
     {
         if (!zb.group)
             continue;
-        ZoneGroup *groupRaw = zb.group.get();
+        FusionBlock *groupRaw = zb.group.get();
         if (!zonesModel.zonesContainer->AddObject(*groupRaw))
         {
             zb.group.reset();
@@ -769,6 +779,75 @@ std::vector<Controller> BuildControllersFromMetadataJson(const std::string &json
 
     return controllers;
 }
+
+std::string SerializeControllerToJson(const Controller &controller)
+{
+    std::string json;
+
+    // Calculate approximate JSON size to reduce string reallocations
+    size_t estimatedSize = 100; // Base overhead for controller structure: {"id":"","name":"","zones":[]}
+    estimatedSize += controller.id.length() + controller.name.length();
+
+    for (const auto &zone : controller.zones)
+    {
+        estimatedSize += 150; // Base zone structure overhead: {"id":"","name":"","ono":{...},"gainID":"","sources":[]}
+        estimatedSize += zone->id.length() + zone->name.length() + zone->gainID.length();
+        estimatedSize += 80; // ONO numbers: "zone":9101,"gain":9102,"mute":9103,"sourceSelector":9104
+
+        for (const auto &source : zone->sources)
+        {
+            estimatedSize += 50; // Source structure: {"index":0,"label":""}
+            estimatedSize += source.label.length();
+        }
+    }
+
+    // Add 20% buffer for safety
+    estimatedSize = static_cast<size_t>(estimatedSize * 1.2);
+    json.reserve(estimatedSize);
+
+    json += '{';
+    json += "\"id\":\"" + controller.id + "\",";
+    json += "\"name\":\"" + controller.name + "\",";
+    json += "\"zones\":[";
+
+    for (size_t i = 0; i < controller.zones.size(); ++i)
+    {
+        const auto &zone = controller.zones[i];
+        json += '{';
+        json += "\"id\":\"" + zone->id + "\",";
+        json += "\"name\":\"" + zone->name + "\",";
+        json += "\"ono\":{";
+        json += "\"zone\":" + std::to_string(static_cast<long long>(zone->ono.zone)) + ",";
+        json += "\"gain\":" + std::to_string(static_cast<long long>(zone->ono.gain)) + ",";
+        json += "\"mute\":" + std::to_string(static_cast<long long>(zone->ono.mute)) + ",";
+        json += "\"sourceSelector\":" + std::to_string(static_cast<long long>(zone->ono.sourceSelector)) + "},";
+        json += "\"gainID\":\"" + zone->gainID + "\",";
+        json += "\"sources\":[";
+
+        for (size_t j = 0; j < zone->sources.size(); ++j)
+        {
+            const auto &source = zone->sources[j];
+            json += '{';
+            json += "\"index\":" + std::to_string(static_cast<unsigned long long>(source.index)) + ",";
+            json += "\"label\":\"" + source.label + "\"";
+            json += '}';
+            if (j + 1 < zone->sources.size())
+            {
+                json += ',';
+            }
+        }
+        json += "]}";
+
+        if (i + 1 < controller.zones.size())
+        {
+            json += ',';
+        }
+    }
+    json += "]}";
+
+    return json;
+}
+#else
 
 std::vector<Controller> DeserializeControllers(const std::string &json)
 {
@@ -1112,71 +1191,5 @@ std::vector<Controller> DeserializeControllers(const std::string &json)
 
     return controllers;
 }
+#endif
 
-std::string SerializeControllerToJson(const Controller &controller)
-{
-    std::string json;
-
-    // Calculate approximate JSON size to reduce string reallocations
-    size_t estimatedSize = 100; // Base overhead for controller structure: {"id":"","name":"","zones":[]}
-    estimatedSize += controller.id.length() + controller.name.length();
-
-    for (const auto &zone : controller.zones)
-    {
-        estimatedSize += 150; // Base zone structure overhead: {"id":"","name":"","ono":{...},"gainID":"","sources":[]}
-        estimatedSize += zone->id.length() + zone->name.length() + zone->gainID.length();
-        estimatedSize += 80; // ONO numbers: "zone":9101,"gain":9102,"mute":9103,"sourceSelector":9104
-
-        for (const auto &source : zone->sources)
-        {
-            estimatedSize += 50; // Source structure: {"index":0,"label":""}
-            estimatedSize += source.label.length();
-        }
-    }
-
-    // Add 20% buffer for safety
-    estimatedSize = static_cast<size_t>(estimatedSize * 1.2);
-    json.reserve(estimatedSize);
-
-    json += '{';
-    json += "\"id\":\"" + controller.id + "\",";
-    json += "\"name\":\"" + controller.name + "\",";
-    json += "\"zones\":[";
-
-    for (size_t i = 0; i < controller.zones.size(); ++i)
-    {
-        const auto &zone = controller.zones[i];
-        json += '{';
-        json += "\"id\":\"" + zone->id + "\",";
-        json += "\"name\":\"" + zone->name + "\",";
-        json += "\"ono\":{";
-        json += "\"zone\":" + std::to_string(static_cast<long long>(zone->ono.zone)) + ",";
-        json += "\"gain\":" + std::to_string(static_cast<long long>(zone->ono.gain)) + ",";
-        json += "\"mute\":" + std::to_string(static_cast<long long>(zone->ono.mute)) + ",";
-        json += "\"sourceSelector\":" + std::to_string(static_cast<long long>(zone->ono.sourceSelector)) + "},";
-        json += "\"gainID\":\"" + zone->gainID + "\",";
-        json += "\"sources\":[";
-
-        for (size_t j = 0; j < zone->sources.size(); ++j)
-        {
-            const auto &source = zone->sources[j];
-            json += '{';
-            json += "\"index\":" + std::to_string(static_cast<unsigned long long>(source.index)) + ",";
-            json += "\"label\":\"" + source.label + "\"";
-            json += '}';
-            if (j + 1 < zone->sources.size())
-            {
-                json += ',';
-            }
-        }
-        json += "]}";
-
-        if (i + 1 < controller.zones.size())
-        {
-            json += ',';
-        }
-    }
-    json += "]}";
-
-    return json;
-}
