@@ -210,7 +210,7 @@ jobs:
 
   fusion-server-build:
     needs: buildChecks
-    if: needs.buildChecks.outputs.fusionServer == 'true' || needs.buildChecks.outputs.fusionDSP == 'true'
+    if: needs.buildChecks.outputs.fusionDSP == 'true'
     concurrency:
       group: fusion-server-build
     runs-on: ubuntu-agent
