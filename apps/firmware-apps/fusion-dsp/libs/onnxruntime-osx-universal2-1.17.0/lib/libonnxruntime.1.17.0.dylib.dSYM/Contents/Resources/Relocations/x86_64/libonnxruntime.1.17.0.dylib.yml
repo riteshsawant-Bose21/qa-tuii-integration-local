@@ -1,5 +1,0 @@
----
-triple:          'x86_64-apple-darwin'
-binary-path:     '/Users/runner/work/1/b/onnxruntime-osx-universal2-1.17.0/lib/libonnxruntime.1.17.0.dylib'
-relocations:     []
-...
