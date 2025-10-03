@@ -62,18 +62,7 @@ protected:
      */
     virtual ::OcaLiteStatus SetGainValue(::OcaDB gain) override;
 
-    /**
-     * Gets the current value of the Gain property from the actual audio processing.
-     *
-     * @param[out]  gain    The current value of the Gain property in dB.
-     * @return Indicates whether the operation succeeded.
-     */
-    virtual ::OcaLiteStatus GetGainValue(::OcaDB &gain) const override;
-
 private:
-    /** The actual gain value applied to the audio signal */
-    mutable ::OcaDB m_actualGain;
-
     /** The gain identifier from JSON configuration */
     std::string m_gainID;
 

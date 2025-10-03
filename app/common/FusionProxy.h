@@ -3,7 +3,7 @@
  *  agreement located in the LICENSE file in the root of this project
  *  as an original contracting party.
  *
- *  Description         : The Fusion Proxy class.
+ *  Description         : The General Proxy class.
  */
 #ifndef FUSION_PROXY_H
 #define FUSION_PROXY_H
@@ -12,6 +12,7 @@
 #include <PlatformDataTypes.h>
 #include <OCC/ControlDataTypes/OcaLiteFrameworkDataTypes.h>
 #include <OCC/ControlDataTypes/OcaLiteEventSubscriptionDataTypes.h>
+#include <OCC/ControlDataTypes/OcaLiteWorkerDataTypes.h>
 #include <OCC/ControlDataTypes/OcaLiteList.h>
 #include <OCC/ControlDataTypes/OcaLiteBlobFixedLen.h>
 #include <OCC/ControlClasses/Managers/OcaLiteDeviceManager.h>
@@ -72,6 +73,10 @@ public:
     ::OcaLiteStatus FusionBlock_GetMembers(::OcaONo remoteObjectNumber,
                                            ::OcaLiteList< ::OcaLiteObjectIdentification>& members);
 
+    ::OcaLiteStatus ConcreteGainActuator_SetGain(::OcaONo remoteObjectNumber, ::OcaDB gainVal);
+
+    ::OcaLiteStatus ConcreteGainActuator_GetGain(::OcaONo remoteObjectNumber, ::OcaDB& gainVal);
+
 private:
     /** The session ID */
     ::OcaSessionID  m_sessionId;
@@ -81,4 +86,4 @@ private:
     ::OcaUint8      m_buffer[10*1024];
 };
 
-#endif //FUSION_PROXY_H
+#endif //GENERAL_PROXY_H
