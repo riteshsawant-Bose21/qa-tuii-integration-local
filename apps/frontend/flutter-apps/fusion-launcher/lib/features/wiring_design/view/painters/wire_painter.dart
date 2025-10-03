@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/features/wiring_design/algorithm/wire_router.dart';
 import 'package:fusion_launcher/features/wiring_design/model/canvas_element.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 import '../../model/wire.dart';
 import 'base_painter.dart';
@@ -8,6 +10,7 @@ class WirePainter extends BasePainter {
   WirePainter({
     required this.wire,
     required super.controller,
+    required super.colorScheme,
     this.strokeWidth = 5.0,
     this.strokeCap = StrokeCap.round,
     this.strokeJoin = StrokeJoin.round,
@@ -24,14 +27,16 @@ class WirePainter extends BasePainter {
   @override
   void paint(Canvas canvas, Size size) {
     _rebuildCacheIfNeeded();
-    final Paint paint = Paint()
-      ..color = controller.selectedElement == wire
-          ? Colors.red
-          : const Color(0xFF000000)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = strokeCap
-      ..strokeJoin = strokeJoin;
+    final Paint paint =
+        Paint()
+          ..color =
+              controller.selectedElement == wire
+                  ? Colors.red
+                  : colorScheme.wireColor
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = strokeWidth
+          ..strokeCap = strokeCap
+          ..strokeJoin = strokeJoin;
 
     if (path != null) {
       canvas.drawPath(path!, paint);
@@ -99,7 +104,8 @@ class WirePainter extends BasePainter {
       final double dx = b.dx - a.dx;
       final double dy = b.dy - a.dy;
       final double l2 = dx * dx + dy * dy;
-      final double t = ((position.dx - a.dx) * dx + (position.dy - a.dy) * dy) / l2;
+      final double t =
+          ((position.dx - a.dx) * dx + (position.dy - a.dy) * dy) / l2;
 
       if (t >= 0.0 && t <= 1.0) {
         // perpendicular projection falls inside the segment
@@ -141,15 +147,29 @@ class WirePainter extends BasePainter {
     // Rebuild the points list and bounds if missing (lazy; kept simple)
     if (_points != null && path != null && _inflatedBounds != null) return;
 
-    final List<Offset> pts = <Offset>[];
-    pts.add(wire.from.absolutePosition);
     if (wire.joints.isEmpty) return;
-    final bool isHorizontal = wire.from.absolutePosition.dy == wire.joints.first.dy;
-    // if (!isHorizontal) {
-    //   pts.add(Offset(wire.joints.first.dx, wire.from.absolutePosition.dy));
-    // } else {
-    //   pts.add(Offset(wire.from.absolutePosition.dx, wire.joints.first.dy));
-    // }
+    final List<Offset> pts = <Offset>[];
+    final LineDirection direction = getLineDirection(
+      wire.from.absolutePosition,
+      wire.joints.first,
+    );
+    final Offset point = wire.from.absolutePosition;
+    final double fpRadius = wire.from.parent.data.portRadius;
+    switch (direction) {
+      case LineDirection.upToDown:
+        pts.add(Offset(point.dx, point.dy + fpRadius));
+        break;
+      case LineDirection.downToUp:
+        pts.add(Offset(point.dx, point.dy - fpRadius));
+        break;
+      case LineDirection.leftToRight:
+        pts.add(Offset(point.dx + fpRadius, point.dy));
+        break;
+      case LineDirection.rightToLeft:
+        pts.add(Offset(point.dx - fpRadius, point.dy));
+        break;
+    }
+    // pts.add(wire.from.absolutePosition);
     // pts.add(wire.from.absolutePositionWithOffset);
 
     for (final Offset j in wire.joints) {
@@ -165,7 +185,36 @@ class WirePainter extends BasePainter {
     //   pts.add(Offset(wire.joints.last.dx, wire.to.absolutePosition.dy));
     // }
     // pts.add(wire.to.absolutePositionWithOffset);
-    pts.add(wire.to.absolutePosition);
+    // pts.add(wire.to.absolutePosition);
+
+    final Offset toPoint = wire.to.absolutePosition;
+    final LineDirection eDirection = getLineDirection(
+      toPoint,
+      pts.last,
+    );
+    final double epRadius = wire.to.parent.data.portRadius;
+    switch (eDirection) {
+      case LineDirection.upToDown:
+        pts.add(
+          Offset(toPoint.dx, toPoint.dy + epRadius),
+        );
+        break;
+      case LineDirection.downToUp:
+        pts.add(
+          Offset(toPoint.dx, toPoint.dy - epRadius),
+        );
+        break;
+      case LineDirection.leftToRight:
+        pts.add(
+          Offset(toPoint.dx + epRadius, toPoint.dy),
+        );
+        break;
+      case LineDirection.rightToLeft:
+        pts.add(
+          Offset(toPoint.dx - epRadius, toPoint.dy),
+        );
+        break;
+    }
 
     // Build path for drawing & bounds
     final Path p = Path();

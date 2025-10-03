@@ -1,4 +1,9 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/core/image_loader_service.dart';
+import 'package:fusion_lib/di/service_locator.dart';
+import 'package:fusion_lib/project_manger/project/project_manager.dart';
 
 import '../algorithm/path_finder_algorithm.dart';
 import '../algorithm/wire_router.dart';
@@ -10,11 +15,30 @@ part 'helpers/canvas_elements_handler_mixin.dart';
 
 class CircuitController extends ChangeNotifier
     with CanvasHandlerMixin, _CanvasElementsHandlerMixin {
-  CircuitController() {
+  final ProjectManager projectManager;
+  CircuitController(this.projectManager) {
     initialize();
+    _loadAllHardwareImages();
   }
+  @override
   final List<CircuitComponent> components = <CircuitComponent>[];
+  @override
   final List<Wire> wires = <Wire>[];
+
+  Map<String, ui.Image> imagesCache = <String, ui.Image>{};
+  void _loadAllHardwareImages() {
+    final ImageLoaderService loader = fusionLibLocator<ImageLoaderService>();
+    for (final CircuitComponent comp in components) {
+      final String? path = comp.data.image;
+      if (path == null) continue;
+      if (!imagesCache.containsKey(path)) {
+        loader.loadImage(path).then((ui.Image img) {
+          imagesCache[path] = img;
+          notifyListeners();
+        });
+      }
+    }
+  }
 
   List<List<Offset>> get allWireJoints =>
       wires
@@ -31,8 +55,10 @@ class CircuitController extends ChangeNotifier
   /// Caching for Performance
   ///
 
-  Map<CircuitComponent, List<Wire>> _compnentWireCache =
+  final Map<CircuitComponent, List<Wire>> _compnentWireCache =
       <CircuitComponent, List<Wire>>{};
+  final Map<CircuitPort, List<Wire>> _portWireCache =
+      <CircuitPort, List<Wire>>{};
 
   final WireRouter wiewRoter = WireRouter(
     basePaths: <PathSide, Map<PathSide, List<Offset>>>{},
@@ -64,9 +90,17 @@ class CircuitController extends ChangeNotifier
     _compnentWireCache[from.parent]!.add(wire);
     _compnentWireCache[to.parent] ??= <Wire>[];
     _compnentWireCache[to.parent]!.add(wire);
+    _portWireCache[from] ??= <Wire>[];
+    _portWireCache[from]!.add(wire);
+    _portWireCache[to] ??= <Wire>[];
+    _portWireCache[to]!.add(wire);
     wires.add(wire);
     wiewRoter.addWire(fromSide, toSide, wire, obstacles);
     saveState();
+  }
+
+  bool hasConnection(CircuitPort port) {
+    return _portWireCache[port]?.isNotEmpty ?? false;
   }
 
   PathSide _constructPathSide(CircuitPort port) {
@@ -78,6 +112,7 @@ class CircuitController extends ChangeNotifier
     return PathSide(component: parent, side: side);
   }
 
+  @override
   void saveState() {
     // Implement state saving logic here
     notifyListeners();

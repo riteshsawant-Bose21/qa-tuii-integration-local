@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/wiring_design/model/canvas_element.dart';
 import 'package:fusion_launcher/features/wiring_design/model/circuit_port.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 import 'base_painter.dart';
 
@@ -13,6 +14,7 @@ class IntermediateWirePainter extends BasePainter {
     required this.start,
     required this.end,
     required this.joints,
+    required super.colorScheme,
     this.path,
     required super.controller,
   });
@@ -21,7 +23,7 @@ class IntermediateWirePainter extends BasePainter {
   void paint(Canvas canvas, Size size) {
     final Paint paint =
         Paint()
-          ..color = const Color(0xFF000000)
+          ..color = colorScheme.wireColor
           ..style = PaintingStyle.stroke
           ..strokeWidth = 5;
     path = Path();

@@ -8,8 +8,9 @@ import 'package:fusion_launcher/features/wiring_design/view/painters/wire_painte
 import 'intermediate_wire_painter.dart';
 
 class CircuitPainter extends CustomPainter {
-  CircuitPainter(this.controller);
+  CircuitPainter(this.controller, this.colorScheme);
   final CircuitController controller;
+  final ColorScheme colorScheme;
 
   final List<BasePainter> painters = <BasePainter>[];
   @override
@@ -24,6 +25,7 @@ class CircuitPainter extends CustomPainter {
       final ComponentPainter componentPainter = ComponentPainter(
         component: component,
         controller: controller,
+        colorScheme: colorScheme,
       );
       componentPainter.paint(canvas, size);
       painters.add(componentPainter);
@@ -31,39 +33,47 @@ class CircuitPainter extends CustomPainter {
 
     // Paint wires
     for (final Wire wire in controller.wires) {
-      final WirePainter wirePainter = WirePainter(wire: wire, controller: controller);
+      final WirePainter wirePainter = WirePainter(
+        wire: wire,
+        controller: controller,
+        colorScheme: colorScheme,
+      );
       wirePainter.paint(canvas, size);
       painters.add(wirePainter);
     }
 
     if (controller.selectedElement is CircuitPort &&
         controller.elementDragPosition != null) {
-      final IntermediateWirePainter intermediateWirePainter = IntermediateWirePainter(
-        start: (controller.selectedElement as CircuitPort),
-        end: controller.elementDragPosition!,
-        controller: controller,
-        joints: controller.intermediateJoints,
-      );
+      final IntermediateWirePainter intermediateWirePainter =
+          IntermediateWirePainter(
+            start: (controller.selectedElement as CircuitPort),
+            end: controller.elementDragPosition!,
+            controller: controller,
+            joints: controller.intermediateJoints,
+            colorScheme: colorScheme,
+          );
       intermediateWirePainter.paint(canvas, size);
     }
 
-    for (final PathSide aKey in controller.wiewRoter.basePaths.keys) {
-      for (final PathSide bKey in controller.wiewRoter.basePaths[aKey]!.keys) {
-        final Path path = Path();
-        final List<Offset>? shortestPath = controller.wiewRoter.basePaths[aKey]?[bKey];
-        if (shortestPath != null && shortestPath.isNotEmpty) {
-          path.moveTo(shortestPath.first.dx, shortestPath.first.dy);
-          for (final Offset point in shortestPath) {
-            path.lineTo(point.dx, point.dy);
-          }
-          final Paint paint = Paint()
-            ..color = Colors.green
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 1.0;
-          canvas.drawPath(path, paint);
-        }
-      }
-    }
+    // for (final PathSide aKey in controller.wiewRoter.basePaths.keys) {
+    //   for (final PathSide bKey in controller.wiewRoter.basePaths[aKey]!.keys) {
+    //     final Path path = Path();
+    //     final List<Offset>? shortestPath =
+    //         controller.wiewRoter.basePaths[aKey]?[bKey];
+    //     if (shortestPath != null && shortestPath.isNotEmpty) {
+    //       path.moveTo(shortestPath.first.dx, shortestPath.first.dy);
+    //       for (final Offset point in shortestPath) {
+    //         path.lineTo(point.dx, point.dy);
+    //       }
+    //       final Paint paint =
+    //           Paint()
+    //             ..color = Colors.green
+    //             ..style = PaintingStyle.stroke
+    //             ..strokeWidth = 1.0;
+    //       canvas.drawPath(path, paint);
+    //     }
+    //   }
+    // }
     canvas.restore();
   }
 

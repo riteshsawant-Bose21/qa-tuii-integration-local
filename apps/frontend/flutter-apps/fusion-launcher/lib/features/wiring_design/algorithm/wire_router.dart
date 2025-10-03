@@ -1,11 +1,11 @@
 import 'dart:math';
 import 'dart:ui';
 
-import 'path_finder_algorithm.dart';
 import '../controller/circuit_controller.dart';
 import '../model/circuit_component.dart';
 import '../model/circuit_port.dart';
 import '../model/wire.dart';
+import 'path_finder_algorithm.dart';
 
 class WireRouter {
   WireRouter({
@@ -52,9 +52,10 @@ class WireRouter {
 
   PathSide _constructPathSide(CircuitPort port) {
     final CircuitComponent parent = port.parent;
-    final Side side = port.absolutePositionWithOffset.dx > parent.position.dx
-        ? Side.right
-        : Side.left;
+    final Side side =
+        port.absolutePositionWithOffset.dx > parent.position.dx
+            ? Side.right
+            : Side.left;
     return PathSide(component: parent, side: side);
   }
 
@@ -88,13 +89,15 @@ class WireRouter {
     for (int i = 0; i < wires.length; i++) {
       final Wire wire = wires[i];
       final bool isReversed = from.component == wire.to.parent;
-     final List<Offset> parallalPath = isReversed
-          ? parallalPaths[i].reversed.toList()
-          : parallalPaths[i];
+      final List<Offset> parallalPath =
+          isReversed ? parallalPaths[i].reversed.toList() : parallalPaths[i];
       if (parallalPath.isEmpty) continue;
 
       /// For Starting
-      final LineDirection direction = _getDirection(parallalPath.first, parallalPath[1]);
+      final LineDirection direction = getLineDirection(
+        parallalPath.first,
+        parallalPath[1],
+      );
 
       final Offset lineStartPoint = parallalPath.first;
       if (direction == LineDirection.upToDown) {
@@ -121,7 +124,6 @@ class WireRouter {
         );
       } else if (direction == LineDirection.leftToRight) {
         parallalPath.removeAt(0);
-        // wire.from.padding = Offset(10 * (wires.length - i) + 5, 0);
         parallalPath.insert(
           0,
           Offset(wire.from.absolutePositionWithOffset.dx, lineStartPoint.dy),
@@ -129,7 +131,6 @@ class WireRouter {
         parallalPath.insert(0, wire.from.absolutePositionWithOffset);
       } else if (direction == LineDirection.rightToLeft) {
         parallalPath.removeAt(0);
-        wire.from.padding = Offset(-10 * (wires.length - i) - 5, 0);
         parallalPath.insert(
           0,
           Offset(wire.from.absolutePositionWithOffset.dx, lineStartPoint.dy),
@@ -137,14 +138,15 @@ class WireRouter {
         parallalPath.insert(0, wire.from.absolutePositionWithOffset);
       }
 
-      final LineDirection endDirection = _getDirection(
+      final LineDirection endDirection = getLineDirection(
         parallalPath[parallalPath.length - 2],
         parallalPath.last,
       );
 
       final Offset lineEndPoint = parallalPath.last;
       if (endDirection == LineDirection.upToDown) {
-        final bool isAbove = lineEndPoint.dy > wire.to.absolutePositionWithOffset.dy;
+        final bool isAbove =
+            lineEndPoint.dy > wire.to.absolutePositionWithOffset.dy;
 
         if (isAbove) {
           parallalPath.removeLast();
@@ -153,7 +155,8 @@ class WireRouter {
           Offset(lineEndPoint.dx, wire.to.absolutePositionWithOffset.dy),
         );
       } else if (endDirection == LineDirection.downToUp) {
-        final bool isAbove = lineEndPoint.dy > wire.to.absolutePositionWithOffset.dy;
+        final bool isAbove =
+            lineEndPoint.dy > wire.to.absolutePositionWithOffset.dy;
         parallalPath.removeLast();
         if (isAbove) {}
         parallalPath.add(
@@ -195,7 +198,12 @@ class WireRouter {
     }
 
     final List<List<Offset>> allPaths = <List<Offset>>[];
-    allPaths.addAll(List<List<Offset>>.generate(wires.length, (int index) => <Offset>[...basePath]));
+    allPaths.addAll(
+      List<List<Offset>>.generate(
+        wires.length,
+        (int index) => <Offset>[...basePath],
+      ),
+    );
     outBounds.clear();
 
     void shiftLineUp(int index, double offset) {
@@ -209,8 +217,14 @@ class WireRouter {
     void shiftLineDown(int index, double offset) {
       bool isShifingReverse = true;
       if (index > 0) {
-        final LineDirection prevLD = _getDirection(basePath[index - 1], basePath[index]);
-        final LineDirection currentLD = _getDirection(basePath[index], basePath[index + 1]);
+        final LineDirection prevLD = getLineDirection(
+          basePath[index - 1],
+          basePath[index],
+        );
+        final LineDirection currentLD = getLineDirection(
+          basePath[index],
+          basePath[index + 1],
+        );
         isShifingReverse = (prevLD == LineDirection.downToUp);
         // print("Prev Direction: $prevLD. CurrentLD: $currentLD");
       }
@@ -338,7 +352,7 @@ class WireRouter {
   //   }
 }
 
-LineDirection _getDirection(Offset from, Offset to) {
+LineDirection getLineDirection(Offset from, Offset to) {
   if ((to.dx - from.dx).abs() >= (to.dy - from.dy).abs()) {
     // Horizontal movement dominates
     return to.dx > from.dx

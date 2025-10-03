@@ -1,48 +1,44 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/features/wiring_design/model/canvas_element.dart';
-import 'package:fusion_launcher/features/wiring_design/model/circuit_component.dart';
+import 'package:fusion_launcher/features/wiring_design/dto/component_data.dart';
 import 'package:fusion_launcher/features/wiring_design/model/model.dart';
+import 'package:fusion_launcher/features/wiring_design/util/canvas_util.dart';
 import 'package:fusion_launcher/features/wiring_design/view/painters/base_painter.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
+
+part './component/base_component_painter.dart';
+part './component/device_schematic_component_painter.dart';
+part './component/source_component_painter.dart';
+part './component/speaker_component_painter.dart';
 
 class ComponentPainter extends BasePainter {
   final CircuitComponent component;
-
-  ComponentPainter({required this.component, required super.controller});
+  ComponentPainter({
+    required this.component,
+    required super.controller,
+    required super.colorScheme,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
-    final Rect rect = component.position & component.size;
-    final Paint paint = Paint()
-      ..color = const Color(0xFFCCCCCC)
-      ..style = PaintingStyle.fill;
+    final ComponentDataPainter comPainter = switch (component.data) {
+      DeviceSchematicComponentData() => DeviceSchematicComponentPainter(
+        component,
+        this,
+      ),
+      SourceComponentData() => SourceComponentPainter(
+        component: component,
+        painter: this,
+      ),
+      SpeakerComponentData() => SpeakerComponentPainter(
+        component: component,
+        painter: this,
+      ),
+      _ => BaseComponentPainter(component: component, painter: this),
+    };
 
-    // Draw component body
-    canvas.drawRect(rect, paint);
-
-    // Draw component border
-    final Paint borderPaint = Paint()
-      ..color = component == controller.selectedElement
-          ? Colors.red
-          : const Color(0xFF000000)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
-    canvas.drawRect(rect, borderPaint);
-
-    // Draw ports
-    final Paint portPaint = Paint()
-      ..color = const Color(0xFF0000FF)
-      ..style = PaintingStyle.fill;
-
-    for (final CircuitPort port in component.ports) {
-      final Path portPath = Path();
-      portPath.addOval(
-        Rect.fromCircle(
-          center: component.position + port.relativePosition,
-          radius: 5,
-        ),
-      );
-      canvas.drawPath(portPath, portPaint);
-    }
+    comPainter.paint(canvas, size);
   }
 
   @override
@@ -50,7 +46,7 @@ class ComponentPainter extends BasePainter {
     for (final CircuitPort port in component.ports) {
       final Rect portRect = Rect.fromCircle(
         center: component.position + port.relativePosition,
-        radius: 10,
+        radius: WiringViewConstants.portRadius,
       );
       if (portRect.contains(position)) {
         return port;
@@ -62,4 +58,12 @@ class ComponentPainter extends BasePainter {
     }
     return null;
   }
+
+  bool hasConnection(CircuitPort port) {
+    return controller.hasConnection(port);
+  }
+}
+
+abstract class ComponentDataPainter {
+  void paint(Canvas canvas, Size size);
 }
