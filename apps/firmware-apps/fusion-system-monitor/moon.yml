@@ -1,0 +1,14 @@
+project:
+  name: 'Fusion System Monitor'
+  description: 'Fusion System Monitor Application'
+
+tasks:
+
+  build:
+    command: "./moon-build.sh"
+    deps:
+      - ready-script
+
+  ready-script:
+    command: "chmod"
+    args: ["+x", "moon-build.sh", "Jenkins/SetVersionProperty.sh"]
