@@ -8,10 +8,12 @@ import '../../../../configuration/presentation/viewmodel/project_view_model.dart
 
 class HardwareComponentProperties extends StatefulWidget {
   final HardwareComponent selectedHardware;
+  final VoidCallback? onSpeakerParametersChanged;
 
   const HardwareComponentProperties({
     super.key,
     required this.selectedHardware,
+    this.onSpeakerParametersChanged,
   });
 
   @override
@@ -181,6 +183,9 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                   if (xValue != null) {
                                     final HardwareComponent updated = widget.selectedHardware.copyWith(pos: Offset(xValue, widget.selectedHardware.pos.dy));
                                     viewModel.updateHardware(updated);
+                                    if (widget.selectedHardware is Speaker) {
+                                      widget.onSpeakerParametersChanged?.call();
+                                    }
                                   } else {
                                     // Reset to previous value if invalid
                                     xController.text = widget.selectedHardware.pos.dx.toStringAsFixed(2);
@@ -219,6 +224,9 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                   if (yValue != null) {
                                     final HardwareComponent updated = widget.selectedHardware.copyWith(pos: Offset(widget.selectedHardware.pos.dx, yValue));
                                     viewModel.updateHardware(updated);
+                                    if (widget.selectedHardware is Speaker) {
+                                      widget.onSpeakerParametersChanged?.call();
+                                    }
                                   } else {
                                     // Reset to previous value if invalid
                                     yController.text = widget.selectedHardware.pos.dy.toStringAsFixed(2);
@@ -257,6 +265,9 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                   if (zValue != null) {
                                     final HardwareComponent updated = widget.selectedHardware.copyWith(zAxis: zValue);
                                     viewModel.updateHardware(updated);
+                                    if (widget.selectedHardware is Speaker) {
+                                      widget.onSpeakerParametersChanged?.call();
+                                    }
                                   } else {
                                     // Reset to previous value if invalid
                                     zController.text = widget.selectedHardware.zAxis.toStringAsFixed(2);
@@ -308,10 +319,12 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                 if (roll != null) {
                                   final Speaker updated = (widget.selectedHardware as Speaker).copyWith(roll: roll);
                                   viewModel.updateHardware(updated);
+                                  widget.onSpeakerParametersChanged?.call();
                                 } else {
                                   // Reset to previous value if invalid
                                   rollController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).roll.toString() : '0.0';
                                   // Show validation error
+                                  // Trigger SPL update for speaker orientation changes
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
                                       content: Text('Roll must be a valid decimal number'),
@@ -356,6 +369,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                 if (pitch != null) {
                                   final Speaker updated = (widget.selectedHardware as Speaker).copyWith(pitch: pitch);
                                   viewModel.updateHardware(updated);
+                                  widget.onSpeakerParametersChanged?.call();
                                 } else {
                                   // Reset to previous value if invalid
                                   pitchController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).pitch.toString() : '0.0';
@@ -404,6 +418,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                 if (yaw != null) {
                                   final Speaker updated = (widget.selectedHardware as Speaker).copyWith(yaw: yaw);
                                   viewModel.updateHardware(updated);
+                                  widget.onSpeakerParametersChanged?.call();
                                 } else {
                                   // Reset to previous value if invalid
                                   yawController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).yaw.toString() : '0.0';
@@ -452,6 +467,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                 if (gain != null) {
                                   final Speaker updated = (widget.selectedHardware as Speaker).copyWith(gain: gain);
                                   viewModel.updateHardware(updated);
+                                  widget.onSpeakerParametersChanged?.call();
                                 } else {
                                   // Reset to previous value if invalid
                                   gainController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).gain.toString() : '0.0';

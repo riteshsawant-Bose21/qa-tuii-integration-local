@@ -24,4 +24,7 @@ class MaceEngine {
   void runCalculation() => throw UnsupportedError('FFI is not supported on this platform.');
   List<double> getSpl(int fph, int freqHz, int numPoints) => throw UnsupportedError('FFI is not supported on this platform.');
   void debugSpeakers() => throw UnsupportedError('FFI is not supported on this platform.');
+
+  List<double> getSplForBandwidth(int fph, int freqHz, int numPoints) => throw UnsupportedError('FFI is not supported on this platform.');
+  Map<String, dynamic> getAllSplJson(int fph) => throw UnsupportedError('FFI is not supported on this platform.');
 }

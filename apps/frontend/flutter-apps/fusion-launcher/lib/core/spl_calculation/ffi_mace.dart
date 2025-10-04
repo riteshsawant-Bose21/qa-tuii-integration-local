@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:ffi';
 import 'dart:io';
 
@@ -5,6 +6,13 @@ import 'package:ffi/ffi.dart';
 import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+
+enum Bandwidth {
+  oneThirdOctave,
+  oneOctave,
+  vocalBands,
+  broadband,
+}
 
 /// Load the dylib from the app bundle’s Frameworks folder
 final DynamicLibrary _mace = () {
@@ -55,6 +63,9 @@ typedef DartRunCalc = void Function(int);
 typedef GetSpl = Int32 Function(Uint64, Uint64, Pointer<Double>, Int32);
 typedef DartGetSpl = int Function(int, int, Pointer<Double>, int);
 
+typedef GetAllSplJsonNative = Pointer<Utf8> Function(Uint64, Uint64);
+typedef GetAllSplJsonDart = Pointer<Utf8> Function(int, int);
+
 typedef DebugSpeakers = Void Function();
 typedef DartDebugSpeakers = void Function();
 
@@ -78,6 +89,7 @@ final DartAddGroupsToMeasurement maceAddGroupsToMeasurement =
         .asFunction();
 final DartRunCalc maceRunCalc = _mace.lookup<NativeFunction<RunCalculation>>('mace_run_calculation').asFunction();
 final DartGetSpl maceGetSpl = _mace.lookup<NativeFunction<GetSpl>>('mace_get_spl').asFunction();
+final GetAllSplJsonDart _maceGetAllSplJson = _mace.lookup<NativeFunction<GetAllSplJsonNative>>('mace_get_all_spl_json').asFunction<GetAllSplJsonDart>();
 final DartDebugSpeakers maceDebugSpeakers = _mace.lookup<NativeFunction<DebugSpeakers>>('mace_debug_speakers').asFunction();
 
 /// Copy .bsf assets into the macOS sandbox and return that folder path
@@ -227,7 +239,64 @@ class MaceEngine {
     final int count = maceGetSpl(_handle, fph, out, freqHz);
     final List<double> res = List<double>.generate(count, (int i) => out[i]);
     calloc.free(out);
+
+    //getAllSplJson(fph); and print the result for debugging
+    final Map<String, dynamic> splJson = getAllSplJson(fph);
+    print('ALL SPL JSON: $splJson');
+
     return res;
+  }
+
+  /// Run MACE calculation and get all SPL data as JSON
+  void runSplCalculation(int fph) {
+    runCalculation();
+  }
+
+  /// Run calculation and extract SPL values for a given bandwidth + frequency.
+  /// Returns one value per field point.
+  List<double> getSplForBandwidth(
+    int fph,
+    Bandwidth bw, {
+    int? freqHz, // only required for oneThirdOctave and oneOctave
+  }) {
+    // Pull JSON from native
+    final Map<String, dynamic> json = getAllSplJson(fph);
+
+    // Fix: Properly cast dynamic list to num list, then to int list
+    final List<int> freqs = (json['frequencies'] as List<dynamic>).map((dynamic e) => (e as num).toInt()).toList();
+
+    switch (bw) {
+      case Bandwidth.oneThirdOctave:
+      case Bandwidth.oneOctave:
+        if (freqHz == null) {
+          throw ArgumentError('freqHz must be provided for $bw');
+        }
+        final int idx = freqs.indexOf(freqHz);
+        if (idx == -1) {
+          throw ArgumentError('Frequency $freqHz Hz not available in data');
+        }
+
+        // Fix: Correctly parse the matrix structure
+        final List<List<double>> mat =
+            (json['spl'][bw == Bandwidth.oneThirdOctave ? 'oneThirdOctave' : 'oneOctave'] as List<dynamic>)
+                .map<List<double>>((dynamic row) => (row as List<dynamic>).cast<num>().map((num e) => e.toDouble()).toList())
+                .toList();
+
+        return List<double>.generate(mat.length, (int p) => mat[p][idx]);
+
+      case Bandwidth.vocalBands:
+        return (json['spl']['vocalBands'] as List<dynamic>).map((dynamic e) => (e as num).toDouble()).toList();
+
+      case Bandwidth.broadband:
+        return (json['spl']['broadband'] as List<dynamic>).map((dynamic e) => (e as num).toDouble()).toList();
+    }
+  }
+
+  Map<String, dynamic> getAllSplJson(int fph) {
+    final Pointer<Utf8> splJson = _maceGetAllSplJson(_handle, fph);
+    final String jsonStr = splJson.toDartString();
+    calloc.free(splJson);
+    return jsonDecode(jsonStr) as Map<String, dynamic>;
   }
 
   /// Prints loaded speaker models (debug).

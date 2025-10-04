@@ -74,7 +74,7 @@ enum SplFrequency {
 enum SplBandwidth {
   oneThirdOctave('1/3 Octave'),
   oneOctave('1 Octave'),
-  threeOctaves('3 Octaves'),
+  vocal('Vocal Bands'),
   broadband('Broadband');
 
   const SplBandwidth(this.displayName);
@@ -83,7 +83,7 @@ enum SplBandwidth {
   static SplBandwidth fromString(String value) {
     return values.firstWhere(
       (SplBandwidth e) => e.displayName == value,
-      orElse: () => SplBandwidth.threeOctaves,
+      orElse: () => SplBandwidth.vocal,
     );
   }
 }
@@ -147,6 +147,8 @@ class _SplPanelState extends State<SplPanel> {
   bool _splInvert = false;
   final TextEditingController _splUpper = TextEditingController();
   final TextEditingController _splLower = TextEditingController();
+  final FocusNode _splUpperFocusNode = FocusNode();
+  final FocusNode _splLowerFocusNode = FocusNode();
   bool _isUpdatingFromController = false;
 
   static final List<TextInputFormatter> _numFmt = <TextInputFormatter>[
@@ -157,10 +159,10 @@ class _SplPanelState extends State<SplPanel> {
   void initState() {
     super.initState();
     final SplPanelData i = widget.initial;
-    _weighting = SplWeighting.fromString(i.weighting);
-    _frequency = SplFrequency.fromString(i.frequency);
-    _bandwidth = SplBandwidth.fromString(i.bandwidth);
-    _resolution = SplResolution.fromString(i.resolution);
+    _weighting = i.weighting;
+    _frequency = i.frequency;
+    _bandwidth = i.bandwidth;
+    _resolution = i.resolution;
 
     _splAutoScale = i.splAutoScale;
     _splInvert = i.splInvertColor;
@@ -174,17 +176,23 @@ class _SplPanelState extends State<SplPanel> {
       _splLower.text = _numOrEmpty(i.splLowerDb);
     }
 
-    _splUpper.addListener(_onTextFieldChanged);
-    _splLower.addListener(_onTextFieldChanged);
+    // _splUpper.addListener(_onTextFieldChanged);
+    // _splLower.addListener(_onTextFieldChanged);
+    _splUpperFocusNode.addListener(_onFocusChanged);
+    _splLowerFocusNode.addListener(_onFocusChanged);
   }
 
   @override
   void dispose() {
     widget.controller?.removeListener(_onControllerChanged);
-    _splUpper.removeListener(_onTextFieldChanged);
-    _splLower.removeListener(_onTextFieldChanged);
+    // _splUpper.removeListener(_onTextFieldChanged);
+    // _splLower.removeListener(_onTextFieldChanged);
+    _splUpperFocusNode.removeListener(_onFocusChanged);
+    _splLowerFocusNode.removeListener(_onFocusChanged);
     _splUpper.dispose();
     _splLower.dispose();
+    _splUpperFocusNode.dispose();
+    _splLowerFocusNode.dispose();
     super.dispose();
   }
 
@@ -192,15 +200,61 @@ class _SplPanelState extends State<SplPanel> {
     if (widget.controller != null && !_isUpdatingFromController) {
       final String upperText = widget.controller!.upperLimit.round().toString();
       final String lowerText = widget.controller!.lowerLimit.round().toString();
+      if (_splUpper.text != upperText) _splUpper.text = upperText;
+      if (_splLower.text != lowerText) _splLower.text = lowerText;
+    }
+  }
 
-      // Only update if the text has actually changed to avoid cursor issues
-      if (_splUpper.text != upperText) {
-        _splUpper.text = upperText;
+  void _submitSpl({required bool isUpper}) {
+    const double minDb = 36.0, maxDb = 132.0;
+
+    // Current values from controller (fallbacks keep things sane)
+    double upper = widget.controller?.upperLimit ?? maxDb;
+    double lower = widget.controller?.lowerLimit ?? minDb;
+
+    // Parse user input
+    final double? typedUpper = double.tryParse(_splUpper.text);
+    final double? typedLower = double.tryParse(_splLower.text);
+
+    if (isUpper) {
+      // If invalid, snap back to current
+      if (typedUpper == null) {
+        _splUpper.text = upper.round().toString();
+        return;
       }
-      if (_splLower.text != lowerText) {
-        _splLower.text = lowerText;
+      upper = typedUpper.clamp(minDb, maxDb);
+      // Enforce strict relation
+      if (upper <= lower) upper = (lower + 1).clamp(minDb, maxDb);
+    } else {
+      if (typedLower == null) {
+        _splLower.text = lower.round().toString();
+        return;
+      }
+      lower = typedLower.clamp(minDb, maxDb);
+      if (lower >= upper) lower = (upper - 1).clamp(minDb, maxDb);
+    }
+
+    // Final safety: if still crossed due to clamping edges, adjust the opposite by 1 dB
+    if (upper <= lower) {
+      if (isUpper) {
+        lower = (upper - 1).clamp(minDb, maxDb);
+      } else {
+        upper = (lower + 1).clamp(minDb, maxDb);
       }
     }
+
+    // Push to range controller
+    if (widget.controller != null) {
+      _isUpdatingFromController = true;
+      widget.controller!.setRange(lower, upper);
+      _isUpdatingFromController = false;
+    }
+
+    // Reflect normalized values
+    _splUpper.text = upper.round().toString();
+    _splLower.text = lower.round().toString();
+    _emit();
+    setState(() {});
   }
 
   void _onControllerChanged() {
@@ -210,45 +264,63 @@ class _SplPanelState extends State<SplPanel> {
     }
   }
 
-  void _onTextFieldChanged() {
-    // Update controller when text fields change (from user typing)
-    if (widget.controller != null && !_isUpdatingFromController) {
-      final double? upper = double.tryParse(_splUpper.text);
-      final double? lower = double.tryParse(_splLower.text);
+  void _onFocusChanged() {
+    if (!_splUpperFocusNode.hasFocus) {
+      _validateAndClampTextFields(isUpper: true);
+      _updateTextFieldsFromController(); // resync after losing focus
+    }
+    if (!_splLowerFocusNode.hasFocus) {
+      _validateAndClampTextFields(isUpper: false);
+      _updateTextFieldsFromController(); // resync after losing focus
+    }
+  }
 
-      if (upper != null && lower != null) {
-        // Validate SPL ranges (36-132 dB)
-        final double validatedUpper = upper.clamp(36.0, 132.0);
-        final double validatedLower = lower.clamp(36.0, 132.0);
+  void _validateAndClampTextFields({bool? isUpper}) {
+    final double? upperInput = double.tryParse(_splUpper.text);
+    final double? lowerInput = double.tryParse(_splLower.text);
 
-        // Ensure upper >= lower
-        final double finalLower = validatedLower;
-        final double finalUpper = validatedUpper < finalLower ? finalLower : validatedUpper;
+    // Get current controller values or use defaults
+    double currentUpper = widget.controller?.upperLimit ?? 132.0;
+    double currentLower = widget.controller?.lowerLimit ?? 36.0;
 
-        // Only update text fields if values were actually clamped and different
-        // This prevents interrupting user typing
-        if (upper != finalUpper && !_splUpper.selection.isValid) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              _splUpper.text = finalUpper.round().toString();
-            }
-          });
-        }
-        if (lower != finalLower && !_splLower.selection.isValid) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              _splLower.text = finalLower.round().toString();
-            }
-          });
-        }
+    bool needsUpdate = false;
+    double newUpper = currentUpper;
+    double newLower = currentLower;
 
-        _isUpdatingFromController = true;
-        widget.controller!.setRange(finalLower, finalUpper);
-        _isUpdatingFromController = false;
+    if (isUpper == true && upperInput != null) {
+      // Clamp to min/max range
+      final double clampedUpper = upperInput.clamp(36.0, 132.0);
+
+      // Check if it violates the lower limit constraint
+      if (clampedUpper >= currentLower) {
+        newUpper = clampedUpper;
+        needsUpdate = true;
+      } else {
+        // Invalid: upper would be less than lower, revert to previous valid value
+        _splUpper.text = currentUpper.round().toString();
+        return; // Don't update controller with invalid value
+      }
+    } else if (isUpper == false && lowerInput != null) {
+      // Clamp to min/max range
+      final double clampedLower = lowerInput.clamp(36.0, 132.0);
+
+      // Check if it violates the upper limit constraint
+      if (clampedLower <= currentUpper) {
+        newLower = clampedLower;
+        needsUpdate = true;
+      } else {
+        // Invalid: lower would be greater than upper, revert to previous valid value
+        _splLower.text = currentLower.round().toString();
+        return; // Don't update controller with invalid value
       }
     }
 
-    _emit();
+    // Only update controller if we have valid changes
+    if (needsUpdate && widget.controller != null) {
+      _isUpdatingFromController = true;
+      widget.controller!.setRange(newLower, newUpper);
+      _isUpdatingFromController = false;
+    }
   }
 
   @override
@@ -268,14 +340,14 @@ class _SplPanelState extends State<SplPanel> {
   void _emit() {
     widget.onChanged?.call(
       SplPanelData(
-        weighting: _weighting.displayName,
-        frequency: _frequency.displayName,
-        bandwidth: _bandwidth.displayName,
-        resolution: _resolution.displayName,
+        weighting: _weighting,
+        frequency: _frequency,
+        bandwidth: _bandwidth,
+        resolution: _resolution,
         splAutoScale: _splAutoScale,
         splInvertColor: _splInvert,
-        splUpperDb: double.tryParse(_splUpper.text),
-        splLowerDb: double.tryParse(_splLower.text),
+        splUpperDb: double.parse(_splUpper.text).clamp(36.0, 132.0),
+        splLowerDb: double.parse(_splLower.text).clamp(36.0, 132.0),
       ),
     );
   }
@@ -414,8 +486,12 @@ class _SplPanelState extends State<SplPanel> {
                             labelStyle: labelStyle,
                             control: _tf(
                               controller: _splUpper,
+                              focusNode: _splUpperFocusNode,
                               hint: 'Value',
                               enabled: !_splAutoScale,
+                              onSubmitted: (value) {
+                                _submitSpl(isUpper: true);
+                              },
                             ),
                           ),
                           _row(
@@ -423,8 +499,12 @@ class _SplPanelState extends State<SplPanel> {
                             labelStyle: labelStyle,
                             control: _tf(
                               controller: _splLower,
+                              focusNode: _splLowerFocusNode,
                               hint: 'Value',
                               enabled: !_splAutoScale,
+                              onSubmitted: (value) {
+                                _submitSpl(isUpper: false);
+                              },
                             ),
                           ),
                         ],
@@ -450,7 +530,7 @@ class _SplPanelState extends State<SplPanel> {
   }
 
   // Helper methods for creating UI components
-  static TableRow _row({
+  TableRow _row({
     required String label,
     TextStyle? labelStyle,
     required Widget control,
@@ -507,14 +587,18 @@ class _SplPanelState extends State<SplPanel> {
 
   Widget _tf({
     required TextEditingController controller,
+    required FocusNode focusNode,
     required String hint,
     required bool enabled,
+    ValueChanged<String>? onSubmitted,
   }) {
     return SizedBox(
       height: 32,
       child: TextField(
         controller: controller,
+        focusNode: focusNode,
         enabled: enabled,
+        onSubmitted: onSubmitted,
         style: const TextStyle(fontSize: 12),
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
         inputFormatters: _numFmt,
@@ -544,35 +628,57 @@ class _SplPanelState extends State<SplPanel> {
     );
   }
 
-  static String _numOrEmpty(double? v) => v == null ? '' : v.toString();
+  String _numOrEmpty(double? v) => v == null ? '' : v.toString();
 }
 
 /// Immutable values emitted by the panel.
 class SplPanelData {
-  final String weighting;
-  final String frequency;
-  final String bandwidth;
-  final String resolution;
+  final SplWeighting weighting;
+  final SplFrequency frequency;
+  final SplBandwidth bandwidth;
+  final SplResolution resolution;
 
   final bool splAutoScale;
   final bool splInvertColor;
-  final double? splUpperDb;
-  final double? splLowerDb;
+  final double splUpperDb;
+  final double splLowerDb;
 
   const SplPanelData({
-    this.weighting = 'A-Weighted',
-    this.frequency = '2 kHz',
-    this.bandwidth = '3 Octaves',
-    this.resolution = 'Medium',
+    this.weighting = SplWeighting.aWeighted,
+    this.frequency = SplFrequency.hz2000,
+    this.bandwidth = SplBandwidth.vocal,
+    this.resolution = SplResolution.medium,
     this.splAutoScale = false,
     this.splInvertColor = false,
-    this.splUpperDb,
-    this.splLowerDb,
+    this.splUpperDb = 90,
+    this.splLowerDb = 45,
   });
+
+  SplPanelData copyWith({
+    SplWeighting? weighting,
+    SplFrequency? frequency,
+    SplBandwidth? bandwidth,
+    SplResolution? resolution,
+    bool? splAutoScale,
+    bool? splInvertColor,
+    double? splUpperDb,
+    double? splLowerDb,
+  }) {
+    return SplPanelData(
+      weighting: weighting ?? this.weighting,
+      frequency: frequency ?? this.frequency,
+      bandwidth: bandwidth ?? this.bandwidth,
+      resolution: resolution ?? this.resolution,
+      splAutoScale: splAutoScale ?? this.splAutoScale,
+      splInvertColor: splInvertColor ?? this.splInvertColor,
+      splUpperDb: splUpperDb ?? this.splUpperDb,
+      splLowerDb: splLowerDb ?? this.splLowerDb,
+    );
+  }
 
   @override
   String toString() =>
-      'SplPanelData(weighting:$weighting, frequency:$frequency, bandwidth:$bandwidth, resolution:$resolution, '
+      'SplPanelData(weighting:${weighting.displayName}, frequency:${frequency.displayName}, bandwidth:${bandwidth.displayName}, resolution:${resolution.displayName}, '
       'splAuto:$splAutoScale, splInv:$splInvertColor, '
       'splU:$splUpperDb, splL:$splLowerDb)';
 }

@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -7,12 +9,16 @@ import 'package:fusion_launcher/features/bill_of_materials/presentation/bill_of_
 import 'package:fusion_launcher/features/configuration/presentation/pages/audio_system_design_page.dart';
 import 'package:fusion_launcher/features/product_query/presentation/pages/product_query.dart';
 import 'package:fusion_launcher/features/projects/widget/building/side_panle_widgets/devices_panel.dart';
+import 'package:fusion_lib/fusion_building_view/floor_canvas_controller.dart';
 import 'package:fusion_lib/fusion_building_view/spl_range_controller.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/models/dock_item_config.dart';
 
+import '../../../../core/spl_calculation/mace_calculation_manager.dart';
+import '../../../../core/spl_calculation/mace_engine_provider.dart';
 import '../../../core/service_locator.dart';
+import '../../../core/spl_calculation/ffi_mace.dart' show Bandwidth;
 import '../../../core/utils/broadcast_controllers.dart';
 import '../../../core/widgets/clean_widgets.dart';
 import '../../cloud_ui/presentation/pages/cloud_web_view.dart';
@@ -30,10 +36,10 @@ class ProjectWorkArea extends StatefulWidget {
   const ProjectWorkArea({super.key});
 
   @override
-  State<ProjectWorkArea> createState() => _TestLibraryScreenState();
+  State<ProjectWorkArea> createState() => _ProjectWorkAreaState();
 }
 
-class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
+class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   late TabController _tabController;
   StreamSubscription<int>? subscription;
   late TextEditingController _projectNameController;
@@ -42,6 +48,9 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
   String? _projectNameError;
 
   final SplRangeController _splRangeController = SplRangeController();
+
+  final FloorCanvasController _floorCanvasController = FloorCanvasController();
+  MaceEngine? _engine;
 
   final List<Widget> _tabs = const <Widget>[
     Tab(text: 'Building'),
@@ -69,6 +78,102 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
       }
     });
     _projectNameController = TextEditingController(text: serviceLocator<ProjectViewModel>().projectName);
+    _initMace();
+    _initSplRangeDefaults();
+  }
+
+  Future<void> _initMace() async {
+    if (Platform.isMacOS || Platform.isIOS) {
+      WidgetsFlutterBinding.ensureInitialized();
+      _engine = await MaceEngine.create();
+    }
+  }
+
+  SplPanelData? _lastPanelData;
+  _initSplRangeDefaults() {
+    final SplPanelData currentPanelData = _splRangeController.getPanelData();
+    _lastPanelData = currentPanelData;
+    serviceLocator<ProjectViewModel>().setMinSPL(currentPanelData.splLowerDb);
+    serviceLocator<ProjectViewModel>().setMaxSPL(currentPanelData.splUpperDb);
+  }
+
+  void _updateSPLFromPanelData() {
+    final SplPanelData currentPanelData = _splRangeController.getPanelData();
+    if (_lastPanelData != currentPanelData) {
+      _lastPanelData = currentPanelData;
+      final Bandwidth maceBandwidth = _mapToMaceBandwidth(currentPanelData.bandwidth);
+      final double frequency = currentPanelData.frequency.frequencyValue.toDouble();
+      serviceLocator<ProjectViewModel>().setMinSPL(currentPanelData.splLowerDb);
+      serviceLocator<ProjectViewModel>().setMaxSPL(currentPanelData.splUpperDb);
+      updateSpl(maceBandwidth, frequency);
+    }
+  }
+
+  Bandwidth _mapToMaceBandwidth(SplBandwidth b) {
+    switch (b) {
+      case SplBandwidth.oneThirdOctave:
+        return Bandwidth.oneThirdOctave;
+      case SplBandwidth.oneOctave:
+        return Bandwidth.oneOctave;
+      case SplBandwidth.vocal:
+        return Bandwidth.vocalBands;
+      case SplBandwidth.broadband:
+        return Bandwidth.broadband;
+    }
+  }
+
+  Future<void> calculateSPL() async {
+    if (_engine == null) return;
+    if (!_floorCanvasController.isShowingSpl.value) return;
+
+    final int currentFloorIndex = serviceLocator<ProjectViewModel>().currentFloorIndex;
+    if (currentFloorIndex == -1) return;
+
+    final FloorModel currentFloor = serviceLocator<ProjectViewModel>().floors[currentFloorIndex];
+    if (currentFloor.listeningAreaIds.isEmpty) return;
+
+    final List<Speaker> speakers = List<Speaker>.from(
+      serviceLocator<ProjectViewModel>().getHardwareForFloor(currentFloor.id).whereType<Speaker>(),
+    );
+    final List<ListeningArea> surfaces = serviceLocator<ProjectViewModel>().getListeningAreasForFloor(currentFloor.id);
+
+    await SPLCalculationManager.calculateSpl(_engine!, speakers, surfaces);
+
+    final SplPanelData currentPanelData = _splRangeController.getPanelData();
+    final Bandwidth maceBandwidth = _mapToMaceBandwidth(currentPanelData.bandwidth);
+    final double frequency = currentPanelData.frequency.frequencyValue.toDouble();
+    await updateSpl(maceBandwidth, frequency);
+  }
+
+  Future<void> updateSpl(Bandwidth bw, double frequency) async {
+    if (_engine == null) return;
+    if (!_floorCanvasController.isShowingSpl.value) return;
+
+    final int currentFloorIndex = serviceLocator<ProjectViewModel>().currentFloorIndex;
+    if (currentFloorIndex == -1) return;
+
+    final FloorModel currentFloor = serviceLocator<ProjectViewModel>().floors[currentFloorIndex];
+    if (currentFloor.listeningAreaIds.isEmpty) return;
+
+    final List<SPLCalculation> toApply = <SPLCalculation>[];
+    final Iterable<SPLCalculation> currentCalcs = SPLCalculationManager.currentCalculations();
+
+    for (final SPLCalculation sc in currentCalcs) {
+      if (!currentFloor.listeningAreaIds.contains(sc.surface.id)) continue;
+
+      final List<SPLCalculation> updated = SPLCalculationManager.getSplForBandwidth(
+        _engine!,
+        sc.fphHandle,
+        bandwidth: bw,
+        freqHz: (bw == Bandwidth.oneThirdOctave || bw == Bandwidth.oneOctave) ? frequency.toInt() : null,
+      );
+      toApply.addAll(updated);
+    }
+
+    for (final SPLCalculation calc in toApply) {
+      final List<ui.Offset> pts = calc.surface.getFieldPoints();
+      calc.surface.setSplData(pts, calc.spl);
+    }
   }
 
   /// Clear input fields
@@ -87,6 +192,8 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
     splController.dispose();
     zoneAreaController.dispose();
     _splRangeController.dispose();
+    _engine?.dispose();
+    _floorCanvasController.dispose();
 
     super.dispose();
   }
@@ -323,6 +430,9 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                                   splController.collapse();
                                 }
                               },
+                              floorCanvasController: _floorCanvasController,
+                              onCalculateSpl: calculateSPL, // <— delegate up
+                              onUpdateSpl: updateSpl,
                             );
                           },
                         ),
@@ -372,7 +482,13 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                             title: "PROPERTIES",
                             side: "right",
                             alowUndock: false,
-                            dockItemWidget: () => const PropertiesPanel(),
+                            dockItemWidget:
+                                () => PropertiesPanel(
+                                  onSpeakerUpdated: () {
+                                    print("Speaker properties updated, update SPL...");
+                                    calculateSPL();
+                                  },
+                                ),
                           ),
                           DockItemConfig(
                             id: "6",
@@ -426,7 +542,9 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                                 () => SplPanel(
                                   controller: _splRangeController,
                                   onChanged: (SplPanelData value) {
-                                    FusionLogger.log(tag: LogTag.panel, message: value.toString());
+                                    // FusionLogger.log(tag: LogTag.panel, message: value.toString());
+                                    _splRangeController.onMappingDataChanged(value);
+                                    _updateSPLFromPanelData();
                                   },
                                 ),
                           ),

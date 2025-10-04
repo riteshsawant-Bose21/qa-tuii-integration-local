@@ -19,101 +19,46 @@ import 'package:fusion_lib/fusion_widgets/others/fusion_image.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
 
-import '../../../../core/spl_calculation/mace_calculation_manager.dart';
-import '../../../../core/spl_calculation/mace_engine_provider.dart';
+import '../../../../core/spl_calculation/ffi_mace.dart' show Bandwidth;
 import '../../../../core/widgets/clean_widgets.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import 'toolbar/building_toolbar.dart';
 
 class BuildingCanvas extends StatefulWidget {
+  final SplRangeController? splRangeController;
+  final Function(bool isShowing) onSplStateChanged;
+  final FloorCanvasController floorCanvasController;
+  final Future<void> Function() onCalculateSpl;
+  final Future<void> Function(Bandwidth, double)? onUpdateSpl;
+
   const BuildingCanvas({
     super.key,
     this.splRangeController,
     required this.onSplStateChanged,
+    required this.floorCanvasController,
+    required this.onCalculateSpl,
+    this.onUpdateSpl,
   });
-
-  final SplRangeController? splRangeController;
-  final Function(bool isShowing) onSplStateChanged;
 
   @override
   State<BuildingCanvas> createState() => _BuildingCanvasState();
 }
 
 class _BuildingCanvasState extends State<BuildingCanvas> {
-  MaceEngine? engine;
   Offset viewPortCenter = Offset.zero;
-  final FloorCanvasController floorCanvasController = FloorCanvasController();
-  bool splInitCalculated = false;
 
   @override
   void initState() {
     super.initState();
-    // initFloorsTabs();
-    initMace();
   }
 
   @override
   void dispose() {
-    if (engine != null) engine!.dispose();
     super.dispose();
   }
 
-  /// Initialize MACE engine for SPL calculations
-  Future<void> initMace() async {
-    if (Platform.isMacOS || Platform.isIOS) {
-      WidgetsFlutterBinding.ensureInitialized();
-      engine = await MaceEngine.create();
-    }
-  }
-
-  /// if floors get added/removed, rebuild the TabController…
-  onFloorUpdated() {
-    // final int newLen = serviceLocator<ProjectViewModel>().floors.length;
-    // if (_tabController.length != newLen) {
-    //   if (mounted) {
-    //     _tabController = TabController(length: newLen, vsync: this, initialIndex: serviceLocator<ProjectViewModel>().currentFloorIndex)..addListener(() {
-    //       if (!_tabController.indexIsChanging) return;
-    //       serviceLocator<ProjectViewModel>().setCurrentFloorIndex(_tabController.index);
-    //       WidgetsBinding.instance.addPostFrameCallback((_) {
-    //         calculateSPL();
-    //       });
-    //     });
-    //     setState(() {});
-    //   }
-    // }
-  }
-
-  Future<void> calculateSPL() async {
-    if (engine != null) {
-      if (!floorCanvasController.isShowingSpl.value) {
-        return;
-      }
-
-      final int currentFloorIndex = serviceLocator<ProjectViewModel>().currentFloorIndex;
-      if (currentFloorIndex != -1 && serviceLocator<ProjectViewModel>().floors[currentFloorIndex].listeningAreaIds.isNotEmpty) {
-        final FloorModel currentFloor = serviceLocator<ProjectViewModel>().floors[currentFloorIndex];
-        final List<Speaker> speakers = List<Speaker>.from(
-          serviceLocator<ProjectViewModel>().getHardwareForFloor(currentFloor.id).whereType<Speaker>(),
-        );
-        final List<ListeningArea> surfaces = serviceLocator<ProjectViewModel>().getListeningAreasForFloor(currentFloor.id);
-        final List<SPLCalculation> surfaceCalculations = await SPLCalculationManager.calculateSpl(
-          engine!,
-          speakers,
-          surfaces,
-        );
-
-        for (final SPLCalculation calc in surfaceCalculations) {
-          final List<ui.Offset> pts = calc.surface.getFieldPoints();
-          calc.surface.setSplData(pts, calc.spl);
-        }
-        splInitCalculated = true;
-        setState(() {});
-      }
-    }
-  }
-
   void zoneSelectionMode(Zone zone) async {
-    final List<ListeningArea>? selectedAreas = await floorCanvasController.requestListeningAreaSelection(
+    final List<ListeningArea>? selectedAreas = await widget.floorCanvasController.requestListeningAreaSelection(
       serviceLocator<ProjectViewModel>().getListeningAreasForZone(zone.id),
       zone,
     );
@@ -201,9 +146,9 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                   ),
                   child: BlocConsumer<ProjectViewModel, ProjectViewModelState>(
                     listener: (BuildContext context, ProjectViewModelState state) {
-                      if (state is FloorsUpdated) {
-                        onFloorUpdated();
-                      }
+                      // if (state is FloorsUpdated) {
+                      //   onFloorUpdated();
+                      // }
                     },
                     builder: (BuildContext context, ProjectViewModelState state) {
                       final int currentFloorIndex = serviceLocator<ProjectViewModel>().currentFloorIndex;
@@ -232,7 +177,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                             },
                             child: FloorCanvas(
                               gridSize: 100,
-                              controller: floorCanvasController,
+                              controller: widget.floorCanvasController,
                               hardwareComponents: serviceLocator<ProjectViewModel>().getHardwareForFloor(floor.id),
                               listeningAreas: serviceLocator<ProjectViewModel>().getListeningAreasForFloor(floor.id),
                               floor: floor,
@@ -243,9 +188,6 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                 serviceLocator<ProjectViewModel>().updateFloor(
                                   floor.copyWith(floorPlan: floor.floorPlan.copyWith(canvasZoom: z)),
                                 );
-                                if (floorCanvasController.isShowingSpl.value && splInitCalculated) {
-                                  // calculateSPL();
-                                }
                               },
                               onCanvasPanChanged: (ui.Offset p) {
                                 serviceLocator<ProjectViewModel>().updateFloor(
@@ -268,7 +210,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                   }
                                 }
 
-                                calculateSPL();
+                                widget.onCalculateSpl!();
                                 serviceLocator<ProjectViewModel>().saveProjectToLocal();
                               },
                               onUpdateListeningArea: serviceLocator<ProjectViewModel>().updateListeningArea,
@@ -282,7 +224,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                               },
                               onComponentTransformed: (dynamic component) {
                                 if (component is Speaker || component is ListeningArea) {
-                                  calculateSPL();
+                                  widget.onCalculateSpl();
                                 }
                                 serviceLocator<ProjectViewModel>().saveProjectToLocal();
                               },
@@ -341,19 +283,15 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                     }
 
                     if (state is ListeningAreaSelectionMode) {
-                      floorCanvasController.toggleDraw();
+                      widget.floorCanvasController.toggleDraw();
                     }
 
-                    if (!serviceLocator<ProjectViewModel>().isInListeningAreaSelectionMode && floorCanvasController.isDrawing.value) {
-                      floorCanvasController.toggleDraw();
+                    if (!serviceLocator<ProjectViewModel>().isInListeningAreaSelectionMode && widget.floorCanvasController.isDrawing.value) {
+                      widget.floorCanvasController.toggleDraw();
                     }
 
-                    if (!serviceLocator<ProjectViewModel>().isInZoneSelectionMode && floorCanvasController.isListeningAreaSelectionActive.value) {
-                      floorCanvasController.cancelListeningAreaSelection();
-                    }
-
-                    if (state is FloorsUpdated) {
-                      onFloorUpdated();
+                    if (!serviceLocator<ProjectViewModel>().isInZoneSelectionMode && widget.floorCanvasController.isListeningAreaSelectionActive.value) {
+                      widget.floorCanvasController.cancelListeningAreaSelection();
                     }
                   },
                   builder: (BuildContext context, ProjectViewModelState state) {
@@ -366,7 +304,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                         child: Padding(
                           padding: const EdgeInsets.only(bottom: 12.0),
                           child: ValueListenableBuilder<bool>(
-                            valueListenable: floorCanvasController.isListeningAreaSelectionActive,
+                            valueListenable: widget.floorCanvasController.isListeningAreaSelectionActive,
                             builder: (_, bool isActive, __) {
                               return Container(
                                 padding: const EdgeInsets.symmetric(
@@ -376,7 +314,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                 decoration: BoxDecoration(
                                   color:
                                       isActive
-                                          ? FusionUtils.hexToColor(floorCanvasController.currentlySelectingZone!.zoneColor).withValues(alpha: 0.75)
+                                          ? FusionUtils.hexToColor(widget.floorCanvasController.currentlySelectingZone!.zoneColor).withValues(alpha: 0.75)
                                           : Colors.white,
                                   borderRadius: BorderRadius.circular(24),
                                   boxShadow: <BoxShadow>[
@@ -394,12 +332,12 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                         mainAxisSize: MainAxisSize.min,
                                         children: <Widget>[
                                           Text(
-                                            'Select listening areas for ${floorCanvasController.currentlySelectingZone!.name}',
+                                            'Select listening areas for ${widget.floorCanvasController.currentlySelectingZone!.name}',
                                             style: TextStyle(
                                               fontSize: 14,
                                               color:
                                                   ThemeData.estimateBrightnessForColor(
-                                                            FusionUtils.hexToColor(floorCanvasController.currentlySelectingZone!.zoneColor),
+                                                            FusionUtils.hexToColor(widget.floorCanvasController.currentlySelectingZone!.zoneColor),
                                                           ) ==
                                                           Brightness.light
                                                       ? Colors.grey.shade800
@@ -410,7 +348,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                           InkWell(
                                             onTap: () {
                                               serviceLocator<ProjectViewModel>().clearSelectedZone();
-                                              floorCanvasController.cancelListeningAreaSelection();
+                                              widget.floorCanvasController.cancelListeningAreaSelection();
                                             },
                                             borderRadius: BorderRadius.circular(12),
                                             child: Container(
@@ -419,7 +357,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                                 border: Border.all(
                                                   color:
                                                       ThemeData.estimateBrightnessForColor(
-                                                                FusionUtils.hexToColor(floorCanvasController.currentlySelectingZone!.zoneColor),
+                                                                FusionUtils.hexToColor(widget.floorCanvasController.currentlySelectingZone!.zoneColor),
                                                               ) ==
                                                               Brightness.light
                                                           ? Colors.grey.shade800
@@ -434,7 +372,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                                 size: 16,
                                                 color:
                                                     ThemeData.estimateBrightnessForColor(
-                                                              FusionUtils.hexToColor(floorCanvasController.currentlySelectingZone!.zoneColor),
+                                                              FusionUtils.hexToColor(widget.floorCanvasController.currentlySelectingZone!.zoneColor),
                                                             ) ==
                                                             Brightness.light
                                                         ? Colors.grey.shade800
@@ -446,7 +384,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                           InkWell(
                                             onTap: () {
                                               serviceLocator<ProjectViewModel>().clearSelectedZone();
-                                              floorCanvasController.completeListeningAreaSelection();
+                                              widget.floorCanvasController.completeListeningAreaSelection();
                                             },
                                             borderRadius: BorderRadius.circular(12),
                                             child: Container(
@@ -455,7 +393,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                                 border: Border.all(
                                                   color:
                                                       ThemeData.estimateBrightnessForColor(
-                                                                FusionUtils.hexToColor(floorCanvasController.currentlySelectingZone!.zoneColor),
+                                                                FusionUtils.hexToColor(widget.floorCanvasController.currentlySelectingZone!.zoneColor),
                                                               ) ==
                                                               Brightness.light
                                                           ? Colors.grey.shade800
@@ -469,7 +407,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                                 size: 16,
                                                 color:
                                                     ThemeData.estimateBrightnessForColor(
-                                                              FusionUtils.hexToColor(floorCanvasController.currentlySelectingZone!.zoneColor),
+                                                              FusionUtils.hexToColor(widget.floorCanvasController.currentlySelectingZone!.zoneColor),
                                                             ) ==
                                                             Brightness.light
                                                         ? Colors.grey.shade800
@@ -481,26 +419,26 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                       );
                                     }
                                     return ValueListenableBuilder<bool>(
-                                      valueListenable: floorCanvasController.isDrawing,
+                                      valueListenable: widget.floorCanvasController.isDrawing,
                                       builder: (_, bool isDrawing, __) {
                                         return BuildingToolbar(
                                           onSplSelected: () {
-                                            floorCanvasController.toggleSpl();
-                                            calculateSPL();
-                                            widget.onSplStateChanged(floorCanvasController.isShowingSpl.value);
+                                            widget.floorCanvasController.toggleSpl();
+                                            widget.onCalculateSpl();
+                                            widget.onSplStateChanged(widget.floorCanvasController.isShowingSpl.value);
                                           },
                                           onPanSelected: () {},
                                           onMoveSelected: () {},
                                           onPencilSelected: () {
-                                            floorCanvasController.toggleDraw();
+                                            widget.floorCanvasController.toggleDraw();
                                           },
                                           onEditFloorPlanSelected: _showFloorPlanPicker,
                                           onTrashSelected: () {},
                                           onFitSelected: () {
-                                            floorCanvasController.fitToView();
+                                            widget.floorCanvasController.fitToView();
                                           },
                                           isPencilSelected: isDrawing,
-                                          isSplSelected: floorCanvasController.isShowingSpl.value,
+                                          isSplSelected: widget.floorCanvasController.isShowingSpl.value,
                                         );
                                       },
                                     );
@@ -517,7 +455,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
 
                 //SPL range slider
                 ValueListenableBuilder<bool>(
-                  valueListenable: floorCanvasController.isShowingSpl,
+                  valueListenable: widget.floorCanvasController.isShowingSpl,
                   builder: (_, bool isShowingSpl, __) {
                     if (!isShowingSpl) {
                       return const SizedBox.shrink();
@@ -533,13 +471,12 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                             minValue: serviceLocator<ProjectViewModel>().minSPL,
                             maxValue: serviceLocator<ProjectViewModel>().maxSPL,
                             onChanged: (double min, double max) {
-                              debugPrint("SPL Range changed: ${min.round()} - ${max.round()}");
+                              // debugPrint("SPL Range changed: ${min.round()} - ${max.round()}");
                               serviceLocator<ProjectViewModel>().setMinSPL(min);
                               serviceLocator<ProjectViewModel>().setMaxSPL(max);
                             },
                             onChangeEnd: (double min, double max) {
-                              debugPrint("SPL Range change ended: ${min.round()} - ${max.round()}");
-
+                              // debugPrint("SPL Range change ended: ${min.round()} - ${max.round()}");
                               serviceLocator<ProjectViewModel>().setMinSPL(min);
                               serviceLocator<ProjectViewModel>().setMaxSPL(max);
                               // serviceLocator<ProjectViewModel>().saveProjectToLocal();
@@ -553,177 +490,10 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
               ],
             ),
           ),
-
-          // Clean header with tabs
-          // Container(
-          //   decoration: BoxDecoration(
-          //     // color: Colors.grey.shade100,
-          //     border: Border(
-          //       top: BorderSide(
-          //         color: Colors.grey.shade300,
-          //         width: 1,
-          //       ),
-          //     ),
-          //   ),
-          //   child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-          //     builder: (BuildContext context, ProjectViewModelState state) {
-          //       return Row(
-          //         children: <Widget>[
-          //           // Clean Floors TabBar
-          //           Expanded(
-          //             child: Theme(
-          //               data: Theme.of(context).copyWith(
-          //                 tabBarTheme: TabBarThemeData(
-          //                   labelColor: Colors.grey.shade800,
-          //                   unselectedLabelColor: Colors.grey.shade500,
-          //                   indicatorSize: TabBarIndicatorSize.label,
-          //                   dividerColor: Colors.transparent,
-          //                   labelStyle: const TextStyle(
-          //                     fontSize: 13,
-          //                     fontWeight: FontWeight.w500,
-          //                   ),
-          //                   unselectedLabelStyle: const TextStyle(
-          //                     fontSize: 13,
-          //                     fontWeight: FontWeight.w400,
-          //                   ),
-          //                   indicator: UnderlineTabIndicator(
-          //                     borderSide: BorderSide(color: Colors.grey.shade800, width: 3.0),
-          //                     insets: const EdgeInsets.fromLTRB(50.0, 0.0, 50.0, 46.0),
-          //                   ),
-          //                 ),
-          //               ),
-          //               child: TabBar(
-          //                 controller: _tabController,
-          //                 isScrollable: true,
-          //                 tabAlignment: TabAlignment.start,
-          //                 tabs: serviceLocator<ProjectViewModel>().floors.map((FloorModel f) => Tab(text: f.name)).toList(),
-          //               ),
-          //             ),
-          //           ),
-          //
-          //           const SizedBox(width: 12),
-          //
-          //           // Clean action buttons
-          //           CleanIconButton(
-          //             icon: Icons.add,
-          //             tooltip: 'Add new floor',
-          //             onPressed: () => _showAddFloorDialog(context),
-          //           ),
-          //
-          //           const SizedBox(width: 8),
-          //
-          //           CleanIconButton(
-          //             icon: Icons.schema_outlined,
-          //             tooltip: 'Schematics',
-          //             onPressed: () {
-          //               Navigator.push(
-          //                 context,
-          //                 MaterialPageRoute<AmplifierMatchingPage>(
-          //                   builder: (_) => const AmplifierMatchingPage(),
-          //                 ),
-          //               );
-          //             },
-          //           ),
-          //
-          //           const SizedBox(width: 8),
-          //
-          //           // CleanIconButton(
-          //           //   icon: Icons.speaker_group_sharp,
-          //           //   tooltip: 'Source Sets',
-          //           //   onPressed: () {
-          //           //     Navigator.push(
-          //           //       context,
-          //           //       MaterialPageRoute<AudioSystemDesignPage>(
-          //           //         builder: (_) => const AudioSystemDesignPage(),
-          //           //       ),
-          //           //     );
-          //           //   },
-          //           // ),
-          //           //
-          //           // const SizedBox(width: 8),
-          //         ],
-          //       );
-          //     },
-          //   ),
-          // ),
         ],
       ),
     );
   }
-
-  // Future<void> _showAddFloorDialog(BuildContext context) async {
-  //   String? newName;
-  //
-  //   await showDialog(
-  //     context: context,
-  //     builder:
-  //         (BuildContext ctx) => CleanDialog(
-  //           title: 'New Floor',
-  //           actions: <Widget>[
-  //             TextButton(
-  //               onPressed: () => Navigator.pop(ctx),
-  //               child: Text(
-  //                 'Cancel',
-  //                 style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-  //               ),
-  //             ),
-  //             ElevatedButton(
-  //               onPressed: () {
-  //                 if (newName?.trim().isNotEmpty ?? false) {
-  //                   final FloorPlanModel plan = FloorPlanModel.defaultFloorPlan;
-  //                   serviceLocator<ProjectViewModel>().addFloor(
-  //                     FloorModel(name: newName!.trim(), floorPlan: plan),
-  //                   );
-  //                   serviceLocator<ProjectViewModel>().saveProjectToLocal();
-  //                   Navigator.pop(ctx);
-  //                 }
-  //               },
-  //               style: ElevatedButton.styleFrom(
-  //                 backgroundColor: Colors.grey.shade800,
-  //                 foregroundColor: Colors.white,
-  //                 shape: RoundedRectangleBorder(
-  //                   borderRadius: BorderRadius.circular(4),
-  //                 ),
-  //                 elevation: 0,
-  //               ),
-  //               child: const Text(
-  //                 'Create',
-  //                 style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-  //               ),
-  //             ),
-  //           ],
-  //           child: TextField(
-  //             autofocus: true,
-  //             style: const TextStyle(fontSize: 14),
-  //             decoration: InputDecoration(
-  //               hintText: 'Floor name',
-  //               hintStyle: TextStyle(fontSize: 13, color: Colors.grey.shade500),
-  //               contentPadding: const EdgeInsets.symmetric(
-  //                 horizontal: 12,
-  //                 vertical: 8,
-  //               ),
-  //               border: OutlineInputBorder(
-  //                 borderRadius: BorderRadius.circular(4),
-  //                 borderSide: BorderSide(color: Colors.grey.shade300),
-  //               ),
-  //               enabledBorder: OutlineInputBorder(
-  //                 borderRadius: BorderRadius.circular(4),
-  //                 borderSide: BorderSide(color: Colors.grey.shade300),
-  //               ),
-  //               focusedBorder: OutlineInputBorder(
-  //                 borderRadius: BorderRadius.circular(4),
-  //                 borderSide: BorderSide(color: Colors.grey.shade600),
-  //               ),
-  //               filled: true,
-  //               fillColor: Colors.white,
-  //             ),
-  //             onChanged: (String v) => newName = v,
-  //           ),
-  //         ),
-  //   );
-  //
-  //   _tabController.animateTo(serviceLocator<ProjectViewModel>().floors.length - 1);
-  // }
 
   Widget _buildEmptyFloorWidget() {
     return Center(
@@ -1029,7 +799,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
           ),
         );
 
-        floorCanvasController.loadFloorPlanImage();
+        widget.floorCanvasController.loadFloorPlanImage();
         serviceLocator<ProjectViewModel>().saveProjectToLocal();
       } else {
         debugPrint('Calibration cancelled by user');

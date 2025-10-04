@@ -12,7 +12,7 @@ class SpeakerCatalog {
   /// TODO: Replace with API call to product catalog service
   static const Map<String, SpeakerModel> database = {
     'DM2C-LP': SpeakerModel(
-      model: 'DM2C-LP',
+      model: 'DM2C-LP 100V',
       maxSpl: 97,
       mountingType: 'ceiling',
       outdoorRated: false,

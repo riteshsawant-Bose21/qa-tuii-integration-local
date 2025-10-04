@@ -9,7 +9,8 @@ import 'hardware_properties.dart';
 import 'listening_area_properties.dart';
 
 class PropertiesPanel extends StatefulWidget {
-  const PropertiesPanel({super.key});
+  const PropertiesPanel({super.key, this.onSpeakerUpdated});
+  final VoidCallback? onSpeakerUpdated;
 
   @override
   State<PropertiesPanel> createState() => _PropertiesPanelState();
@@ -57,7 +58,10 @@ class _PropertiesPanelState extends State<PropertiesPanel> with SingleTickerProv
         final FloorModel currentFloor = projectViewModel.currentFloor;
 
         if (selectedHardware != null) {
-          return HardwareComponentProperties(selectedHardware: selectedHardware);
+          return HardwareComponentProperties(
+            selectedHardware: selectedHardware,
+            onSpeakerParametersChanged: widget.onSpeakerUpdated,
+          );
         } else if (selectedListeningArea != null) {
           return ListeningAreaProperties(selectedListeningArea: selectedListeningArea);
         } else {
