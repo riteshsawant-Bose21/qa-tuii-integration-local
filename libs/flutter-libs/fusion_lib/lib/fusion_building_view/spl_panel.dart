@@ -24,7 +24,13 @@ enum SplWeighting {
 }
 
 /// Center frequency options for SPL measurements (in Hz)
+/// Center frequency options for SPL measurements (ISO within 31.5–16k Hz)
 enum SplFrequency {
+  hz31_5('31.5 Hz'),
+  hz40('40 Hz'),
+  hz50('50 Hz'),
+  hz63('63 Hz'),
+  hz80('80 Hz'),
   hz100('100 Hz'),
   hz125('125 Hz'),
   hz160('160 Hz'),
@@ -45,7 +51,9 @@ enum SplFrequency {
   hz5000('5 kHz'),
   hz6300('6.3 kHz'),
   hz8000('8 kHz'),
-  hz10000('10 kHz');
+  hz10000('10 kHz'),
+  hz12500('12.5 kHz'),
+  hz16000('16 kHz');
 
   const SplFrequency(this.displayName);
   final String displayName;
@@ -57,25 +65,25 @@ enum SplFrequency {
     );
   }
 
-  /// Get frequency value as integer (in Hz)
+  /// Get frequency value as integer Hz (round if decimal)
   int get frequencyValue {
     if (displayName.contains('kHz')) {
-      final numericPart = displayName.replaceAll(' kHz', '');
+      final numericPart = displayName.replaceAll(' kHz', '').replaceAll(' ', '');
       return (double.parse(numericPart) * 1000).round();
     } else if (displayName.contains('Hz')) {
-      final numericPart = displayName.replaceAll(' Hz', '');
-      return int.parse(numericPart);
+      final numericPart = displayName.replaceAll(' Hz', '').replaceAll(' ', '');
+      return double.parse(numericPart).round(); // handles 31.5 Hz etc.
     }
-    return int.parse(displayName);
+    return double.parse(displayName).round();
   }
 }
 
 /// Bandwidth options for SPL measurements
 enum SplBandwidth {
-  oneThirdOctave('1/3 Octave'),
   oneOctave('1 Octave'),
-  vocal('Vocal Bands'),
-  broadband('Broadband');
+  oneThirdOctave('1/3 Octave'),
+  allBands('All Bands'),
+  vocal('Vocal Bands');
 
   const SplBandwidth(this.displayName);
   final String displayName;
@@ -154,6 +162,82 @@ class _SplPanelState extends State<SplPanel> {
   static final List<TextInputFormatter> _numFmt = <TextInputFormatter>[
     FilteringTextInputFormatter.allow(RegExp(r'[-]?\d*\.?\d*')),
   ];
+
+  bool get _needsFrequency => _bandwidth == SplBandwidth.oneThirdOctave || _bandwidth == SplBandwidth.oneOctave;
+
+  /// Allowed ISO centers by bandwidth
+  List<SplFrequency> _allowedFrequenciesFor(SplBandwidth bw) {
+    if (bw == SplBandwidth.oneOctave) {
+      // Octave centers within 31.5–16k
+      return <SplFrequency>[
+        SplFrequency.hz31_5,
+        SplFrequency.hz63,
+        SplFrequency.hz125,
+        SplFrequency.hz250,
+        SplFrequency.hz500,
+        SplFrequency.hz1000,
+        SplFrequency.hz2000,
+        SplFrequency.hz4000,
+        SplFrequency.hz8000,
+        SplFrequency.hz16000,
+      ];
+    }
+    if (bw == SplBandwidth.oneThirdOctave) {
+      // Full 1/3-oct ISO list already declared in enum
+      return <SplFrequency>[
+        SplFrequency.hz31_5,
+        SplFrequency.hz40,
+        SplFrequency.hz50,
+        SplFrequency.hz63,
+        SplFrequency.hz80,
+        SplFrequency.hz100,
+        SplFrequency.hz125,
+        SplFrequency.hz160,
+        SplFrequency.hz200,
+        SplFrequency.hz250,
+        SplFrequency.hz315,
+        SplFrequency.hz400,
+        SplFrequency.hz500,
+        SplFrequency.hz630,
+        SplFrequency.hz800,
+        SplFrequency.hz1000,
+        SplFrequency.hz1250,
+        SplFrequency.hz1600,
+        SplFrequency.hz2000,
+        SplFrequency.hz2500,
+        SplFrequency.hz3150,
+        SplFrequency.hz4000,
+        SplFrequency.hz5000,
+        SplFrequency.hz6300,
+        SplFrequency.hz8000,
+        SplFrequency.hz10000,
+        SplFrequency.hz12500,
+        SplFrequency.hz16000,
+      ];
+    }
+    // Vocal/All Bands/Broadband don't use frequency
+    return const <SplFrequency>[];
+  }
+
+  /// Ensure _frequency is valid for the new bandwidth
+  void _coerceFrequencyForBandwidth(SplBandwidth bw) {
+    if (!_needsFrequency) return;
+    final allowed = _allowedFrequenciesFor(bw);
+    if (!allowed.contains(_frequency)) {
+      // Snap to closest by absolute Hz distance
+      final int currentHz = _frequency.frequencyValue;
+      SplFrequency best = allowed.first;
+      int bestErr = (best.frequencyValue - currentHz).abs();
+      for (final f in allowed.skip(1)) {
+        final int err = (f.frequencyValue - currentHz).abs();
+        if (err < bestErr) {
+          best = f;
+          bestErr = err;
+        }
+      }
+      _frequency = best;
+    }
+  }
 
   @override
   void initState() {
@@ -404,29 +488,58 @@ class _SplPanelState extends State<SplPanel> {
                       ),
                     ),
                     _row(
-                      label: 'Frequency',
-                      labelStyle: labelStyle,
-                      control: _enumDropdown<SplFrequency>(
-                        value: _frequency,
-                        items: SplFrequency.values,
-                        onChanged: (SplFrequency? v) {
-                          setState(() => _frequency = v!);
-                          _emit();
-                        },
-                      ),
-                    ),
-                    _row(
                       label: 'Bandwidth',
                       labelStyle: labelStyle,
                       control: _enumDropdown<SplBandwidth>(
                         value: _bandwidth,
                         items: SplBandwidth.values,
                         onChanged: (SplBandwidth? v) {
-                          setState(() => _bandwidth = v!);
+                          setState(() {
+                            _bandwidth = v!;
+                            if (_needsFrequency) {
+                              _coerceFrequencyForBandwidth(_bandwidth);
+                            }
+                          });
                           _emit();
                         },
                       ),
                     ),
+                    if (_needsFrequency)
+                      _row(
+                        label: 'Frequency',
+                        labelStyle: labelStyle,
+                        control: SizedBox(
+                          height: 32,
+                          child: DropdownButtonFormField<SplFrequency>(
+                            isExpanded: true,
+                            value: _allowedFrequenciesFor(_bandwidth).contains(_frequency)
+                                ? _frequency
+                                : (_allowedFrequenciesFor(_bandwidth).isNotEmpty ? _allowedFrequenciesFor(_bandwidth).first : null),
+                            items: _allowedFrequenciesFor(_bandwidth)
+                                .map(
+                                  (SplFrequency e) => DropdownMenuItem<SplFrequency>(
+                                    value: e,
+                                    child: Text(e.displayName, style: const TextStyle(fontSize: 12)),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (SplFrequency? v) {
+                              if (v == null) return;
+                              setState(() => _frequency = v);
+                              _emit();
+                            },
+                            decoration: const InputDecoration(
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              errorBorder: InputBorder.none,
+                              disabledBorder: InputBorder.none,
+                            ),
+                            icon: const Icon(Icons.arrow_drop_down, size: 16),
+                            style: const TextStyle(fontSize: 12, color: Colors.black),
+                          ),
+                        ),
+                      ),
                     _row(
                       label: 'Resolution',
                       labelStyle: labelStyle,

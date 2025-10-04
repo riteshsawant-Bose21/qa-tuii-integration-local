@@ -29,7 +29,8 @@
 		33CC11132044BFA00003C045 /* MainFlutterWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33CC11122044BFA00003C045 /* MainFlutterWindow.swift */; };
 		5A32BAED1198C743B344D048 /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D43E3FE05B467C89DC6A68C7 /* Pods_Runner.framework */; };
 		A59A3F6218E913BEBB4A4C30 /* Pods_RunnerTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 605E46AD842B310D26D4980B /* Pods_RunnerTests.framework */; };
-		DC6F36252E8AE8F600810BDB /* libMaceAPI.dylib in Bundle Framework */ = {isa = PBXBuildFile; fileRef = DC6F36242E8AE8ED00810BDB /* libMaceAPI.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		DC6F363F2E9197E400810BDB /* libMaceAPI.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = DC6F363E2E9197E400810BDB /* libMaceAPI.dylib */; };
+		DC6F36402E9197F200810BDB /* libMaceAPI.dylib in Bundle Framework */ = {isa = PBXBuildFile; fileRef = DC6F363E2E9197E400810BDB /* libMaceAPI.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -56,7 +57,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				DC6F36252E8AE8F600810BDB /* libMaceAPI.dylib in Bundle Framework */,
+				DC6F36402E9197F200810BDB /* libMaceAPI.dylib in Bundle Framework */,
 			);
 			name = "Bundle Framework";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -89,7 +90,7 @@
 		BF091CB27D2C76F9B1D0043C /* Pods-Runner.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.debug.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"; sourceTree = "<group>"; };
 		D1C0955165201363E6CF84D9 /* Pods-Runner.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.profile.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.profile.xcconfig"; sourceTree = "<group>"; };
 		D43E3FE05B467C89DC6A68C7 /* Pods_Runner.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Runner.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		DC6F36242E8AE8ED00810BDB /* libMaceAPI.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libMaceAPI.dylib; sourceTree = "<group>"; };
+		DC6F363E2E9197E400810BDB /* libMaceAPI.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libMaceAPI.dylib; sourceTree = "<group>"; };
 		F0BE72888DCF496AA8940655 /* Pods-RunnerTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.release.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.release.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -132,6 +133,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				5A32BAED1198C743B344D048 /* Pods_Runner.framework in Frameworks */,
+				DC6F363F2E9197E400810BDB /* libMaceAPI.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -160,7 +162,6 @@
 		33CC10E42044A3C60003C045 = {
 			isa = PBXGroup;
 			children = (
-				DC6F36242E8AE8ED00810BDB /* libMaceAPI.dylib */,
 				33FAB671232836740065AC1E /* Runner */,
 				33CEB47122A05771004F2AC0 /* Flutter */,
 				331C80D6294CF71000263BE5 /* RunnerTests */,
@@ -169,6 +170,7 @@
 				33CC10EE2044A3C60003C045 /* Products */,
 				D73912EC22F37F3D000D13A0 /* Frameworks */,
 				4C9AEABA018BAD8EA7A89317 /* Pods */,
+				DC6F363E2E9197E400810BDB /* libMaceAPI.dylib */,
 			);
 			sourceTree = "<group>";
 		};

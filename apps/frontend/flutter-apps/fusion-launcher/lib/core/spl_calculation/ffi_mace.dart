@@ -11,7 +11,7 @@ enum Bandwidth {
   oneThirdOctave,
   oneOctave,
   vocalBands,
-  broadband,
+  allBands,
 }
 
 /// Load the dylib from the app bundle’s Frameworks folder
@@ -66,6 +66,9 @@ typedef DartGetSpl = int Function(int, int, Pointer<Double>, int);
 typedef GetAllSplJsonNative = Pointer<Utf8> Function(Uint64, Uint64);
 typedef GetAllSplJsonDart = Pointer<Utf8> Function(int, int);
 
+typedef GetSplAt = Int32 Function(Uint64, Uint64, Int32, Double, Pointer<Double>, Pointer<Double>);
+typedef DartGetSplAt = int Function(int, int, int, double, Pointer<Double>, Pointer<Double>);
+
 typedef DebugSpeakers = Void Function();
 typedef DartDebugSpeakers = void Function();
 
@@ -82,15 +85,12 @@ final DartCreateMeasurement maceCreateMeasurement = _mace.lookup<NativeFunction<
 final DartCreateGroup maceCreateGroup = _mace.lookup<NativeFunction<CreateGroup>>('mace_create_group').asFunction();
 final DartAddToGroup maceAddToGroup = _mace.lookup<NativeFunction<AddToGroup>>('mace_add_to_group').asFunction();
 final DartAddGroupsToMeasurement maceAddGroupsToMeasurement =
-    _mace
-        .lookup<NativeFunction<AddGroupsToMeasurement>>(
-          'mace_add_groups_to_measurement',
-        )
-        .asFunction();
+    _mace.lookup<NativeFunction<AddGroupsToMeasurement>>('mace_add_groups_to_measurement').asFunction();
 final DartRunCalc maceRunCalc = _mace.lookup<NativeFunction<RunCalculation>>('mace_run_calculation').asFunction();
 final DartGetSpl maceGetSpl = _mace.lookup<NativeFunction<GetSpl>>('mace_get_spl').asFunction();
 final GetAllSplJsonDart _maceGetAllSplJson = _mace.lookup<NativeFunction<GetAllSplJsonNative>>('mace_get_all_spl_json').asFunction<GetAllSplJsonDart>();
 final DartDebugSpeakers maceDebugSpeakers = _mace.lookup<NativeFunction<DebugSpeakers>>('mace_debug_speakers').asFunction();
+final DartGetSplAt maceGetSplAt = _mace.lookup<NativeFunction<GetSplAt>>('mace_get_spl_at').asFunction();
 
 /// Copy .bsf assets into the macOS sandbox and return that folder path
 Future<String> prepareLoudspeakersFolder() async {
@@ -287,7 +287,7 @@ class MaceEngine {
       case Bandwidth.vocalBands:
         return (json['spl']['vocalBands'] as List<dynamic>).map((dynamic e) => (e as num).toDouble()).toList();
 
-      case Bandwidth.broadband:
+      case Bandwidth.allBands:
         return (json['spl']['broadband'] as List<dynamic>).map((dynamic e) => (e as num).toDouble()).toList();
     }
   }
@@ -297,6 +297,26 @@ class MaceEngine {
     final String jsonStr = splJson.toDartString();
     calloc.free(splJson);
     return jsonDecode(jsonStr) as Map<String, dynamic>;
+  }
+
+  List<double> getSplAt(
+    int fph,
+    int bandwidth,
+    double freqHz,
+    int pointCount,
+  ) {
+    final Pointer<Double> out = calloc<Double>(pointCount);
+    final Pointer<Double> act = calloc<Double>(1);
+    try {
+      final int n = maceGetSplAt(_handle, fph, bandwidth, freqHz, out, act);
+      final double usedHz = act.value; // show in UI if you want
+      final List<double> list = List<double>.generate(n, (int i) => out[i]);
+      // Optionally: return usedHz too (tuple)
+      return list;
+    } finally {
+      calloc.free(out);
+      calloc.free(act);
+    }
   }
 
   /// Prints loaded speaker models (debug).

@@ -17,6 +17,8 @@
 #include "bose/DataSet.h"
 #include "bose/Bandwidth.h"
 #include "bose/Enum.h"
+#include "bose/OctaveBandFrequencies.h"
+#include "bose/DataSet.h"
 
 namespace fs = std::filesystem;
 
@@ -28,6 +30,7 @@ using namespace bosepro::model;
 using namespace bosepro::simulation;
 using namespace bosepro::acoustics;
 using namespace bosepro::measurement;
+
 
 using EngineHandle      = uint64_t;
 using SurfaceHandle     = uint64_t;
@@ -329,6 +332,91 @@ int mace_get_spl(
     return n;
 }
 
+
+extern "C" int mace_get_spl_at(EngineHandle /*e*/,
+                               FieldPointsHandle fph,
+                               int bandwidth,
+                               double freqHz,
+                               double* outLevels,
+                               double* actualFreqHz)
+{
+
+    if (actualFreqHz) *actualFreqHz = 0.0;
+    if (!outLevels) return 0;
+
+    auto data = EngineFactory::GetEngine()->GetData(fph);
+    if (!data) return 0;
+
+    const Bandwidth bw = static_cast<Bandwidth>(bandwidth);
+
+    auto writeScalar = [&](const PairedData& d)->int {
+        const int n = (int)d.size();
+        for (int i=0; i<n; ++i) {
+            outLevels[i] = d[i].second.empty() ? 0.0 : d[i].second[0];
+        }
+        return n;
+    };
+
+    PairedData pd;
+
+    // Band sums (ignore freq)
+    if (bw == Bandwidth::Broadband || bw == Bandwidth::VocalBands) {
+        Freqs empty;
+        data->getData()->GetSPL(pd, bw, empty);
+        return writeScalar(pd);
+    }
+
+    // Fractional-octave path
+    // 1) Try single-frequency (fast)
+    if (freqHz > 0.0) {
+        Freqs one{freqHz};
+        data->getData()->GetSPL(pd, bw, one);
+        if (!pd.empty() && !pd[0].second.empty()) {
+            if (actualFreqHz) *actualFreqHz = freqHz;
+            const int n = (int)pd.size();
+            for (int i=0; i<n; ++i) outLevels[i] = pd[i].second[0];
+            return n;
+        }
+    }
+
+    // 2) Fallback: ISO centers, pick nearest
+    Freqs freqs;
+    auto push = [&](double f){ freqs.push_back(f); };
+
+    if (bw == Bandwidth::Octave) {
+        const double iso[] = {31.5,63,125,250,500,1000,2000,4000,8000,16000};
+        for (double f : iso) push(f);
+    } else { // Third or other fractional
+        const double iso[] = {
+                31.5,40,50,63,80,100,125,160,200,250,315,400,500,630,800,
+                1000,1250,1600,2000,2500,3150,4000,5000,6300,8000,10000,12500,16000
+        };
+        for (double f : iso) push(f);
+    }
+
+    data->getData()->GetSPL(pd, bw, freqs);
+    if (pd.empty() || pd[0].second.empty()) return 0;
+
+    int bestIdx = 0;
+    if (freqHz > 0.0) {
+        double bestErr = std::abs(freqs[0] - freqHz);
+        for (int i=1; i<(int)freqs.size(); ++i) {
+            const double err = std::abs(freqs[i] - freqHz);
+            if (err < bestErr) { bestErr = err; bestIdx = i; }
+        }
+    }
+    if (actualFreqHz) *actualFreqHz = freqs[bestIdx];
+
+    const int nPoints = (int)pd.size();
+    for (int p=0; p<nPoints; ++p) {
+        const auto& row = pd[p].second;
+        outLevels[p] = (bestIdx < (int)row.size()) ? row[bestIdx] : 0.0;
+    }
+    return nPoints;
+}
+
+
+
 /// Computes SPL for all default ISO center frequencies across:
 /// - oneThirdOctave (Bandwidth::Third)
 /// - oneOctave      (Bandwidth::Octave)
@@ -349,10 +437,8 @@ int mace_get_spl(
 ///     "broadband":      [bb0, bb1, ...]
 ///   }
 /// }
-const char* mace_get_all_spl_json(
-    EngineHandle      /*e*/,
-    FieldPointsHandle fph
-) {
+const char* mace_get_all_spl_json(EngineHandle /*e*/, FieldPointsHandle fph)
+{
     printf("[mace_capi] Enter mace_get_spl_multi_json (fph=%llu)\n",
            (unsigned long long)fph);
     fflush(stdout);
@@ -365,69 +451,92 @@ const char* mace_get_all_spl_json(
         return strdup("{}");
     }
 
-    // Default ISO centers (Hz)
-    static const double kFreqs[] = {
-        100, 125, 160, 200, 250, 315, 400, 500, 630, 800,
-        1000, 1250, 1600, 2000, 2500, 3150, 4000, 5000, 6300, 8000, 10000
-    };
-    static const int kNFreqs = (int)(sizeof(kFreqs) / sizeof(kFreqs[0]));
+    // ---- Ask engine for native bins (preferred) ----
+    Freqs thirdFreqs, octaveFreqs;
 
-    // Prepare frequency vector (non-broadband/vocal queries)
-    Freqs freqs;
-    freqs.reserve(kNFreqs);
-    for (int i = 0; i < kNFreqs; ++i) freqs.emplace_back(kFreqs[i]);
+    // Best case: the SDK exposes available-frequency queries:
+    // bool okThird  = data->getData()->GetAvailableFrequencies(acoustics::Bandwidth::Third,  thirdFreqs);
+    // bool okOctave = data->getData()->GetAvailableFrequencies(acoustics::Bandwidth::Octave, octaveFreqs);
 
-    // Fetch SPL for required bandwidths
+    // Portable fallback: call GetSPL with EMPTY Freqs to get native bin lengths,
+    // then re-query with the engine's own freq vectors if you can obtain them.
     PairedData d_third, d_oct, d_bb, d_vb;
-    data->getData()->GetSPL(d_third, acoustics::Bandwidth::Third,     freqs);
-    data->getData()->GetSPL(d_oct,   acoustics::Bandwidth::Octave,    freqs);
-    { Freqs empty; data->getData()->GetSPL(d_bb, acoustics::Bandwidth::Broadband, empty); }
-    { Freqs empty; data->getData()->GetSPL(d_vb, acoustics::Bandwidth::VocalBands, empty); }
 
-    // Point count (prefer broadband if present)
+    { Freqs empty; data->getData()->GetSPL(d_third, acoustics::Bandwidth::Third,  empty); }
+    { Freqs empty; data->getData()->GetSPL(d_oct,   acoustics::Bandwidth::Octave, empty); }
+    { Freqs empty; data->getData()->GetSPL(d_bb,    acoustics::Bandwidth::Broadband, empty); }
+    { Freqs empty; data->getData()->GetSPL(d_vb,    acoustics::Bandwidth::VocalBands, empty); }
+
     const int nPoints =
-        !d_bb.empty()   ? (int)d_bb.size() :
-        !d_vb.empty()   ? (int)d_vb.size() :
-        !d_third.empty()? (int)d_third.size() :
-        !d_oct.empty()  ? (int)d_oct.size() : 0;
+            !d_bb.empty()    ? (int)d_bb.size() :
+            !d_vb.empty()    ? (int)d_vb.size() :
+            !d_third.empty() ? (int)d_third.size() :
+            !d_oct.empty()   ? (int)d_oct.size() : 0;
 
-    printf("[mace_capi] SPL all-bw: points=%d, freqs=%d\n", nPoints, kNFreqs);
+    // Infer native band counts from returned rows (safe even if some bands are missing)
+    const int nThird  = (!d_third.empty() && !d_third[0].second.empty()) ? (int)d_third[0].second.size() : 0;
+    const int nOctave = (!d_oct.empty()   && !d_oct[0].second.empty())   ? (int)d_oct[0].second.size()   : 0;
+
+    printf("[mace_capi] points=%d, thirdBins=%d, octaveBins=%d\n", nPoints, nThird, nOctave);
     fflush(stdout);
+
+    // If the SDK cannot return the actual frequency values, we still serialize matrices
+    // correctly and omit/approximate the "frequencies" list per band.
+    auto freqsToJson = [](const Freqs& f)->std::string {
+        std::string s;
+        s.reserve(f.size()*6);
+        s += "[";
+        for (size_t i=0;i<f.size();++i) {
+            if (i) s += ",";
+            double v = f[i];
+            if ((double)(int)v == v) s += std::to_string((int)v);
+            else                     s += std::to_string(v);
+        }
+        s += "]";
+        return s;
+    };
+
+    // Try to populate thirdFreqs/octaveFreqs via an API if available.
+    // If not available, we will skip "frequencies" or place placeholders.
+    // --- BEGIN optional placeholder block ---
+    if (thirdFreqs.empty() && nThird > 0) {
+        // As a last resort, leave it empty; Dart should not rely on 'frequencies'
+        // for band selection unless available. (We’ll still ship matrices.)
+        // Alternatively, you can synthesize ISO centers of length nThird if you KNOW they match.
+    }
+    if (octaveFreqs.empty() && nOctave > 0) {
+        // Same note as above.
+    }
+    // --- END optional placeholder block ---
 
     // ---- Build JSON ----
     std::string json;
     json.reserve(64u * (size_t)std::max(1, nPoints) * 4u);
-
     json += "{";
 
-    // frequencies
-    json += "\"frequencies\":[";
-    for (int i = 0; i < kNFreqs; ++i) {
-        if (i) json += ",";
-        if (kFreqs[i] == (int)kFreqs[i]) json += std::to_string((int)kFreqs[i]);
-        else                              json += std::to_string(kFreqs[i]);
-    }
-    json += "],";
+    // For backward compat, we keep a top-level "frequencies" but prefer third if present,
+    // else octave; otherwise an empty array.
+    json += "\"frequencies\":";
+    if (!thirdFreqs.empty()) json += freqsToJson(thirdFreqs);
+    else if (!octaveFreqs.empty()) json += freqsToJson(octaveFreqs);
+    else json += "[]";
+    json += ",";
 
-    // bandwidths
     json += "\"bandwidths\":[\"oneThirdOctave\",\"oneOctave\",\"vocalBands\",\"broadband\"],";
 
-    // points
     json += "\"points\":";
     json += std::to_string(nPoints);
     json += ",";
 
-    // spl object
     json += "\"spl\":{";
 
-    // Helper: append 2D matrix [points][freqs] from PairedData
-    auto appendMatrixFromPaired = [&](const PairedData& d, const char* key) {
+    auto appendMatrix = [&](const PairedData& d, const char* key, int nCols) {
         json += "\""; json += key; json += "\":[";
         for (int p = 0; p < nPoints; ++p) {
             if (p) json += ",";
             json += "[";
             const auto& row = (p < (int)d.size()) ? d[p].second : std::vector<double>{};
-            for (int f = 0; f < kNFreqs; ++f) {
+            for (int f = 0; f < nCols; ++f) {
                 if (f) json += ",";
                 double v = (f < (int)row.size()) ? row[f] : 0.0;
                 json += std::to_string(v);
@@ -437,15 +546,15 @@ const char* mace_get_all_spl_json(
         json += "]";
     };
 
-    // oneThirdOctave
-    appendMatrixFromPaired(d_third, "oneThirdOctave");
+    // One-third octave (points x nThird)
+    appendMatrix(d_third, "oneThirdOctave", nThird);
     json += ",";
 
-    // oneOctave
-    appendMatrixFromPaired(d_oct, "oneOctave");
+    // One-octave (points x nOctave)
+    appendMatrix(d_oct, "oneOctave", nOctave);
     json += ",";
 
-    // vocalBands: flat array [points]
+    // Vocal bands (points)
     json += "\"vocalBands\":[";
     for (int p = 0; p < nPoints; ++p) {
         if (p) json += ",";
@@ -454,7 +563,7 @@ const char* mace_get_all_spl_json(
     }
     json += "],";
 
-    // broadband: flat array [points]
+    // Broadband (points)
     json += "\"broadband\":[";
     for (int p = 0; p < nPoints; ++p) {
         if (p) json += ",";
@@ -466,7 +575,6 @@ const char* mace_get_all_spl_json(
     json += "}"; // spl
     json += "}"; // root
 
-    // malloc-dup for caller
     char* out = (char*)std::malloc(json.size() + 1);
     if (!out) {
         printf("[mace_capi] ERROR: malloc failed for JSON out\n");
@@ -477,6 +585,7 @@ const char* mace_get_all_spl_json(
     out[json.size()] = '\0';
     return out;
 }
+
 
 
 /// Clear all engine state (surfaces, clusters, measurements, etc.)

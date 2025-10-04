@@ -117,8 +117,8 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
         return Bandwidth.oneOctave;
       case SplBandwidth.vocal:
         return Bandwidth.vocalBands;
-      case SplBandwidth.broadband:
-        return Bandwidth.broadband;
+      case SplBandwidth.allBands:
+        return Bandwidth.allBands;
     }
   }
 
@@ -161,12 +161,13 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
     for (final SPLCalculation sc in currentCalcs) {
       if (!currentFloor.listeningAreaIds.contains(sc.surface.id)) continue;
 
-      final List<SPLCalculation> updated = SPLCalculationManager.getSplForBandwidth(
+      final List<SPLCalculation> updated = SPLCalculationManager.getSplAt(
         _engine!,
         sc.fphHandle,
-        bandwidth: bw,
-        freqHz: (bw == Bandwidth.oneThirdOctave || bw == Bandwidth.oneOctave) ? frequency.toInt() : null,
+        bw,
+        (bw == Bandwidth.oneThirdOctave || bw == Bandwidth.oneOctave) ? frequency : 2000,
       );
+
       toApply.addAll(updated);
     }
 
