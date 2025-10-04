@@ -295,11 +295,21 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Text(
-                    'Power Allocation Strategy',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Row(
+                    children: <Widget>[
+                      Icon(
+                        Icons.settings_input_component,
+                        color: Colors.blue[600],
+                        size: 24,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Power Allocation Strategy',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -307,20 +317,84 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
                     style: TextStyle(color: Colors.grey[600]),
                   ),
                   const SizedBox(height: 16),
+                  
+                  // Enhanced Strategy Options
                   Column(
                     children: PowerAllocationStrategy.values.map((PowerAllocationStrategy strategy) {
+                      final bool isSelected = _selectedStrategy == strategy;
+                      
                       return Padding(
-                        padding: const EdgeInsets.only(bottom: 8.0),
-                        child: RadioListTile<PowerAllocationStrategy>(
-                          title: Text(strategy.label, style: const TextStyle(fontSize: 14)),
-                          subtitle: Text(strategy.description, style: const TextStyle(fontSize: 14)),
-                          value: strategy,
-                          groupValue: _selectedStrategy,
-                          onChanged: (PowerAllocationStrategy? value) {
-                            setState(() {
-                              _selectedStrategy = value!;
-                            });
-                          },
+                        padding: const EdgeInsets.only(bottom: 12.0),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: isSelected ? Colors.blue : Colors.grey.shade300,
+                              width: isSelected ? 2 : 1,
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                            color: isSelected ? Colors.blue.shade50 : null,
+                          ),
+                          child: RadioListTile<PowerAllocationStrategy>(
+                            title: Text(
+                              strategy.label, 
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                              ),
+                            ),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                Text(
+                                  strategy.description, 
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                                if (strategy == PowerAllocationStrategy.asymmetrical)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 4.0),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: BoxDecoration(
+                                        color: Colors.orange.shade100,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: <Widget>[
+                                          Text(
+                                            '⚡ Uses Real Asymmetrical Power Limits:',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.orange.shade800,
+                                            ),
+                                          ),
+                                          Text(
+                                            '• PSX1204D: 2200W (not 2400W)',
+                                            style: TextStyle(fontSize: 10, color: Colors.orange.shade700),
+                                          ),
+                                          Text(
+                                            '• PSX2404D: 3000W (not 4800W)',
+                                            style: TextStyle(fontSize: 10, color: Colors.orange.shade700),
+                                          ),
+                                          Text(
+                                            '• PSX4804D: 4400W (not 9600W)',
+                                            style: TextStyle(fontSize: 10, color: Colors.orange.shade700),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            value: strategy,
+                            groupValue: _selectedStrategy,
+                            onChanged: (PowerAllocationStrategy? value) {
+                              setState(() {
+                                _selectedStrategy = value!;
+                              });
+                            },
+                          ),
                         ),
                       );
                     }).toList(),
@@ -589,6 +663,10 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
             // Step-by-step calculation process
             _buildCalculationSteps(result),
             const SizedBox(height: 16),
+
+            // Power Constraints Summary (new)
+            if (_selectedStrategy == PowerAllocationStrategy.asymmetrical)
+              _buildPowerConstraintsSummary(result),
 
             // Amplifier assignments
             Text(
@@ -949,7 +1027,12 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
             final int index = entry.key;
             final AmpAssignment assignment = entry.value;
             final double totalAssignedPower = assignment.circuits.fold(0.0, (double sum, Circuit circuit) => sum + _getCircuitPower(circuit));
-            final double totalAmpCapacity = assignment.ampModel.peakPerChannel * assignment.ampModel.channels;
+            
+            // Calculate both symmetrical and asymmetrical capacity
+            final double symmetricalCapacity = assignment.ampModel.peakPerChannel * assignment.ampModel.channels;
+            final double asymmetricalCapacity = assignment.ampModel.getAsymmetricalPeakPower();
+            final bool isAsymmetricalMode = _selectedStrategy == PowerAllocationStrategy.asymmetrical;
+            final double displayCapacity = isAsymmetricalMode ? asymmetricalCapacity : symmetricalCapacity;
             
             return Container(
               margin: const EdgeInsets.only(bottom: 8),
@@ -963,16 +1046,18 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Text(
-                    'Amplifier ${index + 1}: ${assignment.ampModel.name}',
+                    'Amplifier ${index + 1}: ${_getAmplifierConfiguration(assignment)}',
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Capacity: ${assignment.ampModel.peakPerChannel}W × ${assignment.ampModel.channels} channels = ${totalAmpCapacity}W total',
+                    isAsymmetricalMode 
+                      ? 'Capacity: ${assignment.ampModel.peakPerChannel}W × ${assignment.ampModel.channels} channels (${symmetricalCapacity}W symmetrical, ${asymmetricalCapacity}W asymmetrical)'
+                      : 'Capacity: ${assignment.ampModel.peakPerChannel}W × ${assignment.ampModel.channels} channels = ${symmetricalCapacity}W total',
                     style: const TextStyle(fontSize: 14),
                   ),
                   Text(
-                    'Assigned: ${totalAssignedPower.toStringAsFixed(1)}W (${(totalAssignedPower / totalAmpCapacity * 100).toStringAsFixed(1)}% utilization)',
+                    'Assigned: ${totalAssignedPower.toStringAsFixed(1)}W (${(totalAssignedPower / displayCapacity * 100).toStringAsFixed(1)}% utilization)',
                     style: const TextStyle(fontSize: 14),
                   ),
                   const SizedBox(height: 4),
@@ -1088,44 +1173,99 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
       assignedPower += _getCircuitPower(circuit);
     }
     
-    final double totalAmpPower = assignment.ampModel.peakPerChannel * assignment.ampModel.channels;
-    final double powerUtilization = assignedPower / totalAmpPower;
+    final double symmetricalCapacity = assignment.ampModel.peakPerChannel * assignment.ampModel.channels;
+    final double asymmetricalCapacity = assignment.ampModel.getAsymmetricalPeakPower();
+    final bool isAsymmetricalMode = _selectedStrategy == PowerAllocationStrategy.asymmetrical;
+    final double displayCapacity = isAsymmetricalMode ? asymmetricalCapacity : symmetricalCapacity;
+    final double powerUtilization = assignedPower / displayCapacity;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ExpansionTile(
-        title: Text(
-          assignment.ampModel.name,
-          style: const TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        subtitle: Row(
+        title: Row(
           children: <Widget>[
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.blue[100],
-                borderRadius: BorderRadius.circular(12),
-              ),
+            Expanded(
               child: Text(
-                '${assignment.usedChannels}/${assignment.totalChannels} channels',
-                style: const TextStyle(fontWeight: FontWeight.w500),
+                _getAmplifierConfiguration(assignment),
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: powerUtilization > 0.8 ? Colors.red[100] : Colors.green[100],
-                borderRadius: BorderRadius.circular(12),
+            if (isAsymmetricalMode)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.orange[100],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange.shade300),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Icon(Icons.share, size: 14, color: Colors.orange[700]),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Power Sharing',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.orange[700],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              child: Text(
-                '${(powerUtilization * 100).toStringAsFixed(1)}% power',
-                style: const TextStyle(fontWeight: FontWeight.w500),
-              ),
+          ],
+        ),
+        subtitle: Column(
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.blue[100],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${assignment.usedChannels}/${assignment.totalChannels} channels',
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: powerUtilization > 0.8 ? Colors.red[100] : Colors.green[100],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${(powerUtilization * 100).toStringAsFixed(1)}% power',
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                  ),
+                ),
+              ],
             ),
+            if (isAsymmetricalMode)
+              Padding(
+                padding: const EdgeInsets.only(top: 4.0),
+                child: Row(
+                  children: <Widget>[
+                    Icon(Icons.info_outline, size: 14, color: Colors.orange[600]),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Using ${asymmetricalCapacity.toStringAsFixed(0)}W asymmetrical limit',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.orange[600],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
           ],
         ),
         children: <Widget>[
@@ -1147,7 +1287,11 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
                       const Text('Amplifier Specifications:', style: TextStyle(fontWeight: FontWeight.bold)),
                       Text('• ${assignment.ampModel.peakPerChannel}W per channel'),
                       Text('• ${assignment.ampModel.channels} channels'),
-                      Text('• ${totalAmpPower}W total capacity'),
+                      if (isAsymmetricalMode) ...<Widget>[
+                        Text('• ${symmetricalCapacity}W symmetrical capacity'),
+                        Text('• ${asymmetricalCapacity}W asymmetrical capacity'),
+                      ] else
+                        Text('• ${symmetricalCapacity}W total capacity'),
                     ],
                   ),
                 ),
@@ -1186,7 +1330,7 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: <Widget>[
                     const Text('Remaining Capacity:', style: TextStyle(fontWeight: FontWeight.bold)),
-                    Text('${(totalAmpPower - assignedPower).toStringAsFixed(1)}W', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Text('${(displayCapacity - assignedPower).toStringAsFixed(1)}W', style: const TextStyle(fontWeight: FontWeight.bold)),
                   ],
                 ),
               ],
@@ -1341,22 +1485,77 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
               '${(asymmetrical.channelEfficiency * 100).toStringAsFixed(1)}%'),
           _buildComparisonRow('Total System Power', '${symmetrical.totalSystemCapacity.toStringAsFixed(0)}W', 
               '${asymmetrical.totalSystemCapacity.toStringAsFixed(0)}W'),
+              
+          // Add power constraint details
+          const Divider(thickness: 2),
+          Container(
+            padding: const EdgeInsets.all(8),
+            color: Colors.blue.shade50,
+            child: const Row(
+              children: <Widget>[
+                Expanded(child: Text('Power Constraints', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
+                Expanded(child: Text('Per-Channel Limits', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
+                Expanded(child: Text('Real Asymmetrical Limits', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
+              ],
+            ),
+          ),
+          
+          // Show power constraints for each amplifier model used
+          ...asymmetrical.assignments.map((AmpAssignment assignment) {
+            final double symmetricalCapacity = assignment.ampModel.peakPerChannel * assignment.ampModel.channels;
+            final double asymmetricalCapacity = assignment.ampModel.getAsymmetricalPeakPower();
+            
+            return _buildComparisonRow(
+              _getAmplifierConfiguration(assignment),
+              '${symmetricalCapacity.toStringAsFixed(0)}W',
+              '${asymmetricalCapacity.toStringAsFixed(0)}W',
+              isConstraintRow: true,
+            );
+          }),
         ],
       ),
     );
   }
 
-  Widget _buildComparisonRow(String metric, String symValue, String asymValue) {
+  Widget _buildComparisonRow(String metric, String symValue, String asymValue, {bool isConstraintRow = false}) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
+        color: isConstraintRow ? Colors.orange.shade50 : null,
       ),
       child: Row(
         children: <Widget>[
-          Expanded(child: Text(metric, style: const TextStyle(fontWeight: FontWeight.w500))),
-          Expanded(child: Text(symValue, textAlign: TextAlign.center)),
-          Expanded(child: Text(asymValue, textAlign: TextAlign.center)),
+          Expanded(
+            child: Text(
+              metric, 
+              style: TextStyle(
+                fontWeight: isConstraintRow ? FontWeight.bold : FontWeight.w500,
+                color: isConstraintRow ? Colors.orange[800] : null,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              symValue, 
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: isConstraintRow ? 'monospace' : null,
+                color: isConstraintRow ? Colors.grey[600] : null,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              asymValue, 
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: isConstraintRow ? 'monospace' : null,
+                fontWeight: isConstraintRow ? FontWeight.bold : null,
+                color: isConstraintRow ? Colors.orange[700] : null,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -1828,7 +2027,7 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Text('Amplifier ${index + 1}: ${assignment.ampModel.name}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  Text('Amplifier ${index + 1}: ${_getAmplifierConfiguration(assignment)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                   
                   // Detailed capacity breakdown
                   Text('Total Capacity: ${assignment.ampModel.peakPerChannel}W/ch × ${assignment.ampModel.channels}ch = ${totalCapacity.toStringAsFixed(1)}W', 
@@ -1988,7 +2187,7 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Text('Amplifier ${index + 1}: ${assignment.ampModel.name}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  Text('Amplifier ${index + 1}: ${_getAmplifierConfiguration(assignment)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                   
                   // Detailed power breakdown
                   Text('Current load: ${usedPower.toStringAsFixed(1)}W ÷ ${totalCapacity.toStringAsFixed(1)}W = ${(utilization * 100).toStringAsFixed(1)}%', 
@@ -2100,7 +2299,7 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Text('Amplifier ${index + 1}: ${assignment.ampModel.name}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  Text('Amplifier ${index + 1}: ${_getAmplifierConfiguration(assignment)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                   
                   // Enhanced optimization calculations
                   Text('Total Capacity: ${assignment.ampModel.peakPerChannel}W/ch × ${assignment.ampModel.channels}ch = ${totalCapacity.toStringAsFixed(1)}W', 
@@ -2212,7 +2411,7 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
                         Text(
-                          'Amp ${index + 1}: ${assignment.ampModel.name}',
+                          'Amp ${index + 1}: ${_getAmplifierConfiguration(assignment)}',
                           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                         ),
                         Text(
@@ -2271,7 +2470,7 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
                         Text(
-                          'Amp ${index + 1}: ${assignment.ampModel.name}',
+                          'Amp ${index + 1}: ${_getAmplifierConfiguration(assignment)}',
                           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                         ),
                         Text(
@@ -2303,6 +2502,224 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
         ),
       ],
     );
+  }
+
+  /// Build power constraints summary for asymmetrical mode
+  Widget _buildPowerConstraintsSummary(AmpMatchingResult result) {
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                Icon(
+                  Icons.power,
+                  color: Colors.orange[600],
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Asymmetrical Power Constraints Applied',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: Colors.orange[800],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange.shade200),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    'Real asymmetrical power limits are used instead of theoretical maximums:',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[700],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  
+                  // Show actual vs theoretical for each assigned amplifier
+                  ...result.assignments.map((AmpAssignment assignment) {
+                    final double symmetrical = assignment.ampModel.peakPerChannel * assignment.ampModel.channels;
+                    final double asymmetrical = assignment.ampModel.getAsymmetricalPeakPower();
+                    final double difference = symmetrical - asymmetrical;
+                    final double percentageReduction = (difference / symmetrical) * 100;
+                    
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 6.0),
+                      child: Row(
+                        children: <Widget>[
+                          Expanded(
+                            flex: 2,
+                            child: Text(
+                              '${_getAmplifierConfiguration(assignment)}:',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            flex: 3,
+                            child: Text(
+                              '${asymmetrical.toStringAsFixed(0)}W (not ${symmetrical.toStringAsFixed(0)}W)',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.orange[700],
+                                fontFamily: 'monospace',
+                              ),
+                            ),
+                          ),
+                          if (difference > 0)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.red.shade100,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                '-${percentageReduction.toStringAsFixed(0)}%',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.red.shade700,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    );
+                  }),
+                  
+                  const SizedBox(height: 8),
+                  Row(
+                    children: <Widget>[
+                      Icon(
+                        Icons.info_outline,
+                        size: 16,
+                        color: Colors.blue[600],
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'These limits prevent amplifier overload and ensure reliable operation.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.blue[600],
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Determine the optimal configuration for an amplifier based on assigned circuits and power requirements
+  String _getAmplifierConfiguration(AmpAssignment assignment) {
+    if (assignment.circuits.isEmpty) {
+      return assignment.ampModel.name;
+    }
+
+    // Analyze circuits to determine optimal configuration
+    bool hasHiZ = false;
+    bool hasLoZ = false;
+    double maxTapWatts = 0;
+    double totalPowerRequired = 0;
+    
+    for (final Circuit circuit in assignment.circuits) {
+      final double circuitPower = _getCircuitPower(circuit);
+      totalPowerRequired += circuitPower;
+      
+      if (circuit.mode.toLowerCase() == 'hi-z') {
+        hasHiZ = true;
+        if (circuit.tapWatts > maxTapWatts) {
+          maxTapWatts = circuit.tapWatts;
+        }
+      } else {
+        hasLoZ = true;
+      }
+    }
+
+    final specs = assignment.ampModel.powerSpecs;
+    if (specs == null) {
+      return assignment.ampModel.name;
+    }
+
+    // For mixed circuits, choose configuration that can handle total power efficiently
+    if (hasHiZ && hasLoZ) {
+      // Prefer configuration that best matches total power requirement
+      if (specs.asymmetricalPeakPower8Ohm >= totalPowerRequired && 
+          specs.asymmetricalPeakPower70V >= totalPowerRequired) {
+        // Both can handle it - choose based on efficiency or user preference
+        return '${assignment.ampModel.name} @ Mixed (8Ω/70V)';
+      } else if (specs.asymmetricalPeakPower100V >= totalPowerRequired) {
+        return '${assignment.ampModel.name} @ Mixed (8Ω/100V)';
+      }
+      return '${assignment.ampModel.name} @ Mixed';
+    }
+    
+    // For Hi-Z only circuits, choose optimal voltage based on power and tap watts
+    if (hasHiZ && !hasLoZ) {
+      final bool needs100V = maxTapWatts > 50;
+      final double power70V = specs.asymmetricalPeakPower70V;
+      final double power100V = specs.asymmetricalPeakPower100V;
+      
+      if (needs100V && power100V >= totalPowerRequired) {
+        return '${assignment.ampModel.name} @ 100V';
+      } else if (power70V >= totalPowerRequired) {
+        return '${assignment.ampModel.name} @ 70V';
+      } else if (power100V >= totalPowerRequired) {
+        return '${assignment.ampModel.name} @ 100V';
+      }
+      // Fallback
+      return '${assignment.ampModel.name} @ ${needs100V ? '100V' : '70V'}';
+    }
+    
+    // For Lo-Z only circuits, choose optimal impedance based on power requirements
+    if (hasLoZ && !hasHiZ) {
+      final double power2Ohm = specs.asymmetricalPeakPower2Ohm;
+      final double power4Ohm = specs.asymmetricalPeakPower4Ohm;
+      final double power8Ohm = specs.asymmetricalPeakPower8Ohm;
+      
+      // Choose the most efficient configuration that can handle the power
+      if (power8Ohm >= totalPowerRequired) {
+        return '${assignment.ampModel.name} @ 8Ω';
+      } else if (power4Ohm >= totalPowerRequired) {
+        return '${assignment.ampModel.name} @ 4Ω';
+      } else if (power2Ohm >= totalPowerRequired) {
+        return '${assignment.ampModel.name} @ 2Ω';
+      }
+      // Fallback to highest power option
+      if (power2Ohm > power4Ohm && power2Ohm > power8Ohm) {
+        return '${assignment.ampModel.name} @ 2Ω';
+      } else if (power4Ohm > power8Ohm) {
+        return '${assignment.ampModel.name} @ 4Ω';
+      }
+      return '${assignment.ampModel.name} @ 8Ω';
+    }
+
+    return assignment.ampModel.name;
   }
 
 }

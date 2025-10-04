@@ -89,6 +89,47 @@ class AmplifierMatcher {
   static int _optimizationIterations = 0;
   static int _circuitMovesPerformed = 0;
 
+  /// Helper function to get asymmetrical power capacity based on circuit impedance/voltage
+  static double _getAsymmetricalCapacity(AmpModel amp, List<_CircuitCalc> circuits) {
+    // If we have enhanced power specs, use them
+    if (amp.powerSpecs != null) {
+      // Analyze circuits to determine the most restrictive impedance/voltage configuration
+      double? maxVoltage;
+      bool hasLoZ = false;
+      
+      for (final circuit in circuits) {
+        if (circuit.base.mode == 'Hi-Z' || circuit.base.mode == 'hi-z') {
+          // For Hi-Z circuits, estimate voltage from tap watts
+          if (circuit.base.tapWatts > 0) {
+            // Heuristic: Higher tap watts usually indicate 100V systems
+            final estimatedVoltage = circuit.base.tapWatts > 50 ? 100.0 : 70.0;
+            if (maxVoltage == null || estimatedVoltage > maxVoltage) {
+              maxVoltage = estimatedVoltage;
+            }
+          }
+        } else {
+          // Lo-Z circuits detected
+          hasLoZ = true;
+        }
+      }
+      
+      // Get asymmetrical capacity based on the most restrictive configuration
+      if (maxVoltage != null) {
+        // Use Hi-Z voltage-based rating
+        return amp.powerSpecs!.getAsymmetricalPeakPower(voltage: maxVoltage);
+      } else if (hasLoZ) {
+        // Use 8Ω Lo-Z rating as conservative default
+        return amp.powerSpecs!.getAsymmetricalPeakPower(impedance: 8.0);
+      } else {
+        // Default to 8Ω if unclear
+        return amp.powerSpecs!.getAsymmetricalPeakPower(impedance: 8.0);
+      }
+    }
+    
+    // Fallback to legacy calculation for amplifiers without enhanced specs
+    return amp.peakPerChannel * amp.channels;
+  }
+
   /// Main entry point: matches amplifiers to circuits with comprehensive logging
   ///
   /// [input] - List of audio circuits to be matched
@@ -381,7 +422,7 @@ class AmplifierMatcher {
         usedPower += assign.loads[j].ppkTotal;
       }
 
-      final totalCapacity = assign.amp.peakPerChannel * assign.amp.channels;
+      final totalCapacity = _getAsymmetricalCapacity(assign.amp, assign.loads);
       final netSharing = totalCapacity - usedPower;
 
       AmpMatchingLogger.logPowerSharingAnalysis(
@@ -443,7 +484,7 @@ class AmplifierMatcher {
         }
       } else {
         // Asymmetrical: total power must fit within total amplifier capacity
-        final totalCapacity = assign.amp.peakPerChannel * assign.amp.channels;
+        final totalCapacity = _getAsymmetricalCapacity(assign.amp, assign.loads);
         passesRule = totalCapacity >= totalLoad;
         AmpMatchingLogger.logTierValidation(amp: assign.amp, maxCircuitPower: totalLoad, passesRule: passesRule);
         
@@ -516,10 +557,10 @@ class AmplifierMatcher {
       } else {
         // For asymmetrical, we already chose based on total capacity, so only ensure channel count matches
         if (ampModel.channels < blockChannels) {
-          // If selected amp doesn't have enough channels, find one with the right channel count but same total capacity
+          // If selected amp doesn't have enough channels, find one with the right channel count but same asymmetrical capacity
           final sameTotalCapacity = catalog.where((amp) => 
             amp.channels >= blockChannels && 
-            (amp.peakPerChannel * amp.channels) == (ampModel.peakPerChannel * ampModel.channels)
+            amp.getAsymmetricalPeakPower() == ampModel.getAsymmetricalPeakPower()
           ).toList();
           if (sameTotalCapacity.isNotEmpty) {
             ampModel = sameTotalCapacity.first;
@@ -582,9 +623,9 @@ class AmplifierMatcher {
     // Convert total peak power to RMS for comparison with amplifier RMS specs
     final totalPowerNeededRms = totalPowerNeeded / 2.0; // Convert peak to RMS
 
-    // Sort by total capacity (peakPerChannel * channels)
+    // Sort by total asymmetrical capacity for power sharing mode
     final sortedByTotal = catalog.where((amp) => amp.channels >= channelsNeeded).toList();
-    sortedByTotal.sort((a, b) => (a.peakPerChannel * a.channels).compareTo(b.peakPerChannel * b.channels));
+    sortedByTotal.sort((a, b) => a.getAsymmetricalPeakPower().compareTo(b.getAsymmetricalPeakPower()));
 
     if (sortedByTotal.isEmpty) {
       return catalog.last; // Fallback to largest available
@@ -592,7 +633,8 @@ class AmplifierMatcher {
 
     // Find smallest amp with sufficient total capacity
     for (final amp in sortedByTotal) {
-      final totalCapacity = amp.peakPerChannel * amp.channels;
+      // Use asymmetrical capacity calculation for power sharing mode
+      final totalCapacity = amp.getAsymmetricalPeakPower() / 2.0; // Convert to RMS
       if (totalCapacity >= totalPowerNeededRms) {
         return amp;
       }
@@ -757,11 +799,12 @@ class AmplifierMatcher {
         // Convert peak power to RMS for comparison with amplifier specs
         final totalLoadRms = totalLoad / 2.0;
         final sortedByTotal = catalog.where((amp) => amp.channels >= a.loads.length).toList();
-        sortedByTotal.sort((x, y) => (x.peakPerChannel * x.channels).compareTo(y.peakPerChannel * y.channels));
+        sortedByTotal.sort((x, y) => x.getAsymmetricalPeakPower().compareTo(y.getAsymmetricalPeakPower()));
         
         best = sortedByTotal.last; // fallback
         for (final c in sortedByTotal) {
-          final totalCapacity = c.peakPerChannel * c.channels;
+          // Use asymmetrical capacity for power sharing mode
+          final totalCapacity = c.getAsymmetricalPeakPower() / 2.0; // Convert to RMS
           if (totalCapacity >= totalLoadRms) {
             best = c;
             break;
