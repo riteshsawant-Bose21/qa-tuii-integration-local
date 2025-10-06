@@ -23,10 +23,12 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Build with Make
+    - name: Build with WAF
       shell: bash
       working-directory: apps/firmware-apps/fusion-telemetry-core
       run: |
         moon run fusion-telemetry-core:build
         VERSION="$(./Jenkins/SetVersionProperty.sh)-${GITHUB_RUN_NUMBER}+$(git rev-parse --short HEAD)"
-        ls -ltr
+        curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T ./build/telemetry_core ${{ inputs.nexus_url }}/Fusion-Telemetry-Core/Continuous/${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}/fusion-telemetry-core/$VERSION/fusion-telemetry-core-$VERSION
+        echo "Fusion Telemetry Core build uploaded to Nexus successfully!"
+        echo "fusion-telemetry-core: ${{ inputs.nexus_url }}/Fusion-Telemetry-Core/Continuous/${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}/fusion-telemetry-core/$VERSION/fusion-telemetry-core-$VERSION"
