@@ -73,7 +73,7 @@ class EdgeMaxPoint {
 /// Represents speaker placement result
 class SpeakerPlacement {
   final EdgeMaxPoint position;
-  final String speakerType; // 'EM90', 'EM180', 'EM-LP90', 'EM-LP180'
+  final String speakerType; // 'EM' or 'EM-LP'
   final String location; // 'corner1', 'corner2', 'wall_north', etc.
 
   SpeakerPlacement({
@@ -123,15 +123,17 @@ class RectangularRoom {
 class SpeakerConfig {
   final String baseType; // 'EM' or 'EM-LP'
   final double verticalAngle; // degrees
-  final double horizontalAngle90; // degrees for 90-degree speakers
-  final double horizontalAngle180; // degrees for 180-degree speakers
+  final double horizontalAngle; // degrees - actual horizontal coverage angle
 
   SpeakerConfig({
     required this.baseType,
     required this.verticalAngle,
-    required this.horizontalAngle90,
-    required this.horizontalAngle180,
+    required this.horizontalAngle,
   });
+
+  // Legacy compatibility getters
+  double get horizontalAngle90 => horizontalAngle;
+  double get horizontalAngle180 => horizontalAngle;
 
   /// Get speaker type based on coverage angle
   String getSpeakerType(int coverageAngle) => '$baseType$coverageAngle';
@@ -146,14 +148,12 @@ class EdgeMaxAutoPlacement {
     'EM': SpeakerConfig(
       baseType: 'EM',
       verticalAngle: 75.0,
-      horizontalAngle90: 90.0,
-      horizontalAngle180: 180.0,
+      horizontalAngle: 90.0,  // EM speakers have 90° horizontal coverage
     ),
     'EM-LP': SpeakerConfig(
       baseType: 'EM-LP',
       verticalAngle: 80.0,
-      horizontalAngle90: 90.0,
-      horizontalAngle180: 180.0,
+      horizontalAngle: 120.0, // EM-LP speakers have 120° horizontal coverage
     ),
   };
 
@@ -224,7 +224,8 @@ class EdgeMaxAutoPlacement {
   /// Step 5: Calculate Loudspeaker Spacing Distance
   static double _calculateLSD(RectangularRoom room, SpeakerConfig config) {
     final double h = room.heightDifference;
-    final double halfAngleRad = (config.horizontalAngle90 / 2) * pi / 180;
+    // Use the horizontal angle of the selected speaker type (90° for EM, 120° for EM-LP)
+    final double halfAngleRad = (config.horizontalAngle / 2) * pi / 180;
     return h * 2 * tan(halfAngleRad);
   }
 
@@ -257,34 +258,32 @@ class EdgeMaxAutoPlacement {
     Set<int> populatedCorners,
   ) {
     final List<String> wallSpeakers = <String>[];
+    // Use the LSD from step 5 (90° speakers) to determine wall coverage gaps
     final double doubleLSD = 2 * lsd;
 
-    // Following spec: if d2 < 2*LSD, add EM180 between corners 1&2 (and 3&4 if speakers exist)
+    // Wall speakers are needed when room dimension is LESS than 2*LSD_90
+    // This means the 90° corner speakers cannot provide adequate coverage
     if (room.length < doubleLSD && populatedCorners.isNotEmpty) {
       // Always add top wall (between corners 1&2)
       wallSpeakers.add('wall_top');
       
-      // Add bottom wall (between corners 3&4) if corner 3 or 4 has speakers
-      if (populatedCorners.contains(2) || populatedCorners.contains(3)) {
-        wallSpeakers.add('wall_bottom');
-      }
+      // Always add bottom wall (between corners 3&4) when length coverage is needed
+      wallSpeakers.add('wall_bottom');
     }
 
-    // Following spec: if d3 < 2*LSD, add EM180 between corners 1&4 and 2&3
+    // Wall speakers needed when width is less than 2*LSD_90
     if (room.width < doubleLSD && populatedCorners.isNotEmpty) {
       // Always add left wall (between corners 1&4)
       wallSpeakers.add('wall_left');
       
-      // Add right wall (between corners 2&3) if corner 2 or 3 has speakers
-      if (populatedCorners.contains(1) || populatedCorners.contains(2)) {
-        wallSpeakers.add('wall_right');
-      }
+      // Always add right wall (between corners 2&3) when width coverage is needed
+      wallSpeakers.add('wall_right');
     }
 
     return wallSpeakers;
   }
 
-  /// Create corner speaker placement
+  /// Create corner speaker placement (90° speakers)
   static SpeakerPlacement _createCornerSpeaker(
     RectangularRoom room,
     int cornerIndex,
@@ -295,7 +294,7 @@ class EdgeMaxAutoPlacement {
 
     return SpeakerPlacement(
       position: EdgeMaxPoint(corners[cornerIndex].x, corners[cornerIndex].y),
-      speakerType: config.getSpeakerType(90), // EM90 for corners
+      speakerType: '${config.baseType}90', // EM90 or EM-LP90 for corner speakers
       location: cornerNames[cornerIndex],
     );
   }
@@ -364,7 +363,7 @@ class EdgeMaxAutoPlacement {
 
     return SpeakerPlacement(
       position: position,
-      speakerType: config.getSpeakerType(180), // EM180 for walls
+      speakerType: '${config.baseType}180', // EM180 or EM-LP180 for wall speakers
       location: location,
     );
   }
@@ -380,6 +379,7 @@ class EdgeMaxAutoPlacement {
       'height_difference': room.heightDifference,
       'speaker_type': speakerConfig.baseType,
       'vertical_angle': speakerConfig.verticalAngle,
+      'horizontal_angle': speakerConfig.horizontalAngle, // Single horizontal angle
       'utd': utd,
       'lsd': lsd,
       'double_lsd': 2 * lsd,
@@ -436,6 +436,11 @@ class PlacementSummary {
         return emlp90Count;
       case 'EM-LP180':
         return emlp180Count;
+      // Legacy support for old UI
+      case 'EM':
+        return em90Count + em180Count;  // Total EM speakers
+      case 'EM-LP':
+        return emlp90Count + emlp180Count;  // Total EM-LP speakers
       default:
         return 0;
     }
@@ -554,10 +559,10 @@ class EdgeMaxSpeakerPlacementService {
 
     return PlacementSummary(
       totalSpeakers: placements.length,
-      em90Count: em90Count,
-      em180Count: em180Count,
-      emlp90Count: emlp90Count,
-      emlp180Count: emlp180Count,
+      em90Count: em90Count,        // EM90 corner speakers
+      em180Count: em180Count,      // EM180 wall speakers
+      emlp90Count: emlp90Count,    // EM-LP90 corner speakers
+      emlp180Count: emlp180Count,  // EM-LP180 wall speakers
     );
   }
 }

@@ -147,7 +147,7 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
       outputs: <String, dynamic>{
         'Selected Type': speakerType,
         'Vertical Angle': speakerType == 'EM-LP' ? '80°' : '75°',
-        'Horizontal Angle': '90°/180°',
+        'Horizontal Angle': speakerType == 'EM-LP' ? '120°' : '90°',
       },
       result: 'Selected $speakerType speakers (${room.ceilingHeight <= 3.7 ? 'Low ceiling' : 'Standard ceiling'})',
     ));
@@ -186,21 +186,23 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
     ));
 
     // Step 5: LSD Calculation
+    final String horizontalAngle = speakerType == 'EM-LP' ? '120°' : '90°';
+    final String halfAngle = speakerType == 'EM-LP' ? '60°' : '45°';
     _calculationSteps.add(CalculationStep(
       stepNumber: 5,
       title: 'Calculate LSD (Loudspeaker Spacing Distance)',
       description: 'LSD = height_difference × 2 × tan(horizontal_angle/2)',
       inputs: <String, dynamic>{
         'Height Difference': '${room.heightDifference.toStringAsFixed(2)}m',
-        'Horizontal Angle': '90°',
-        'Half Angle': '45°',
+        'Horizontal Angle': horizontalAngle,
+        'Half Angle': halfAngle,
       },
       outputs: <String, dynamic>{
         'LSD': '${lsd.toStringAsFixed(2)}m',
         'Double LSD': '${(2 * lsd).toStringAsFixed(2)}m',
-        'Formula': 'LSD = ${room.heightDifference.toStringAsFixed(2)} × 2 × tan(45°)',
+        'Formula': 'LSD = ${room.heightDifference.toStringAsFixed(2)} × 2 × tan($halfAngle)',
       },
-      result: 'LSD = ${lsd.toStringAsFixed(2)}m',
+      result: 'LSD = ${lsd.toStringAsFixed(2)}m (using $speakerType $horizontalAngle coverage)',
     ));
 
     // Step 6: Adjacent Corner Analysis
@@ -229,15 +231,15 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
     _calculationSteps.add(CalculationStep(
       stepNumber: 7,
       title: 'Wall Speaker Analysis',
-      description: 'Determine if EM180 wall speakers are needed between corners',
+      description: 'Determine if additional wall speakers are needed to fill coverage gaps',
       inputs: <String, dynamic>{
         'Room Length (d2)': '${room.length}m',
         'Room Width (d3)': '${room.width}m',
         'Double LSD (2×LSD)': '${(2 * lsd).toStringAsFixed(2)}m',
       },
       outputs: <String, dynamic>{
-        'd2 < 2×LSD': needsLengthWall ? 'Yes → Add EM180 between corners 1-2 (and 3-4 if speakers exist)' : 'No',
-        'd3 < 2×LSD': needsWidthWall ? 'Yes → Add EM180 between corners 1-4 and 2-3' : 'No',
+        'd2 < 2×LSD': needsLengthWall ? 'Yes → Add $speakerType between corners 1-2 (and 3-4 if speakers exist)' : 'No',
+        'd3 < 2×LSD': needsWidthWall ? 'Yes → Add $speakerType between corners 1-4 and 2-3' : 'No',
       },
       result: 'Wall speakers: ${needsLengthWall ? 'Top/Bottom walls (1-2, 3-4) ' : ''}${needsWidthWall ? 'Left/Right walls (1-4, 2-3)' : ''}${!needsLengthWall && !needsWidthWall ? 'None needed' : ''}',
     ));
@@ -253,8 +255,14 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
       },
       outputs: <String, dynamic>{
         'Total Speakers': finalResult.summary.totalSpeakers.toString(),
-        'EM90/EM-LP90': '${finalResult.summary.em90Count + finalResult.summary.emlp90Count}',
-        'EM180/EM-LP180': '${finalResult.summary.em180Count + finalResult.summary.emlp180Count}',
+        // Show speaker breakdown based on ceiling height
+        if (_currentRoom!.ceilingHeight > 3.7) ...<String, String>{
+          'EM90 (Corner)': '${finalResult.summary.getCountByType('EM90')}',
+          'EM180 (Wall)': '${finalResult.summary.getCountByType('EM180')}',
+        } else ...<String, String>{
+          'EM-LP90 (Corner)': '${finalResult.summary.getCountByType('EM-LP90')}',
+          'EM-LP180 (Wall)': '${finalResult.summary.getCountByType('EM-LP180')}',
+        },
       },
       result: 'Algorithm complete: ${finalResult.summary.totalSpeakers} speakers placed',
     ));
@@ -570,10 +578,14 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
                         child: Column(
                           children: <Widget>[
                             _buildSummaryRow('Total Speakers', '${_result!.summary.totalSpeakers}', isTotal: true),
-                            _buildSummaryRow('EM90 Speakers', '${_result!.summary.em90Count}'),
-                            _buildSummaryRow('EM180 Speakers', '${_result!.summary.em180Count}'),
-                            _buildSummaryRow('EM-LP90 Speakers', '${_result!.summary.emlp90Count}'),
-                            _buildSummaryRow('EM-LP180 Speakers', '${_result!.summary.emlp180Count}'),
+                            // Show speaker breakdown based on ceiling height
+                            if (_currentRoom!.ceilingHeight > 3.7) ...<Widget>[
+                              _buildSummaryRow('EM90 (Corner)', '${_result!.summary.getCountByType('EM90')}'),
+                              _buildSummaryRow('EM180 (Wall)', '${_result!.summary.getCountByType('EM180')}'),
+                            ] else ...<Widget>[
+                              _buildSummaryRow('EM-LP90 (Corner)', '${_result!.summary.getCountByType('EM-LP90')}'),
+                              _buildSummaryRow('EM-LP180 (Wall)', '${_result!.summary.getCountByType('EM-LP180')}'),
+                            ],
                           ],
                         ),
                       ),
