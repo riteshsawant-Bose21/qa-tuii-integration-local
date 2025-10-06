@@ -50,6 +50,8 @@ const ::OcaUint16 CONTROLLER_CONFIG_MANAGER_CLASS_ID = static_cast<::OcaUint16>(
 // 15-99: UNUSED
 // 100: OcaBlock (Root Block)
 
+const ::OcaONo OCP_NETWORK_ONO = static_cast<::OcaONo>(9000);
+
 const ::OcaONo CONTROLLER_CONFIG_MANAGER_ONO = static_cast<::OcaONo>(33); // ONO 33 = 3+3 = F -> Fusion ;)
 
 // Custom Object ONOs (must be 4096+ per AES70 standard for device objects)
