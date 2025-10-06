@@ -344,22 +344,22 @@ jobs:
 
   integration-tests:
     needs:
-      - flutter-android-iOS-macOS
-      - flutter-windows
-      - flutter-web
-      - fusion-dsp
-      - fusion-server
-      - fusion-system-monitor
-      - fusion-edge-gateway
-      - fusion-telemetry-core
+      - flutter-android-iOS-macOS-build
+      - flutter-windows-build
+      - flutter-web-build
+      - fusion-dsp-build
+      - fusion-server-build
+      - fusion-system-monitor-build
+      - fusion-edge-gateway-build
+      - fusion-telemetry-core-build
 
     if: |
       always() && (
-        (needs.fusion-dsp.result == 'success' && needs.fusion-dsp.outputs.ran == 'true') ||
-        (needs.fusion-server.result == 'success' && needs.fusion-server.outputs.ran == 'true') ||
-        (needs.fusion-system-monitor.result == 'success' && needs.fusion-system-monitor.outputs.ran == 'true') ||
-        (needs.fusion-edge-gateway.result == 'success' && needs.fusion-edge-gateway.outputs.ran == 'true') ||
-        (needs.fusion-telemetry-core.result == 'success' && needs.fusion-telemetry-core.outputs.ran == 'true')
+        (needs.fusion-dsp-build.result == 'success' && needs.fusion-dsp-build.outputs.ran == 'true') ||
+        (needs.fusion-server-build.result == 'success' && needs.fusion-server-build.outputs.ran == 'true') ||
+        (needs.fusion-system-monitor-build.result == 'success' && needs.fusion-system-monitor-build.outputs.ran == 'true') ||
+        (needs.fusion-edge-gateway-build.result == 'success' && needs.fusion-edge-gateway-build.outputs.ran == 'true') ||
+        (needs.fusion-telemetry-core-build.result == 'success' && needs.fusion-telemetry-core-build.outputs.ran == 'true')
       )
     concurrency:
       group: integration-tests
@@ -383,7 +383,7 @@ jobs:
         needs.integration-tests.result == 'success' && needs.integration-tests.outputs.ran == 'true'
       )
     concurrency:
-      group: yocto-image-build-trigger
+      group: yocto-image-build
     runs-on: ubuntu-agent
     timeout-minutes: 30
     steps:
