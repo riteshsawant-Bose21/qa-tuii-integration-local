@@ -4,6 +4,7 @@ function show_help() {
     echo "Usage: ./run_tests.sh [--all|--controllers|--fusion] [--vip IP:PORT]"
     echo "Options:"
     echo "  --all         Run all tests (default)"
+    echo "  --audio       Run only audio tests"
     echo "  --bluetooth   Run only bluetooth tests"
     echo "  --cluster     Run only cluster tests"
     echo "  --controllers Run only controller tests"
@@ -28,6 +29,10 @@ while [[ $# -gt 0 ]]; do
     case $1 in
         --all)
             test_type="all"
+            shift
+            ;;
+        --audio)
+            test_type="audio"
             shift
             ;;
         --bluetooth)
@@ -100,6 +105,9 @@ cd fusion/test || exit 1
 case "$test_type" in
     "all")
         go test -v --race ./... -args --auto --vip "$vip"
+        ;;
+    "audio")
+        go test -v --race ./audio_test.go
         ;;
     "bluetooth")
         go test -v --race ./bluetooth_test.go

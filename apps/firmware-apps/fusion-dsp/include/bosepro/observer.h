@@ -1,3 +1,5 @@
+#pragma once
+
 #include <arpa/inet.h>
 #include <atomic>
 #include <cctype>
@@ -50,7 +52,7 @@ struct PathComponent {
  *   - isArrayAccess is true.
  *   - isArrayWildcard true means match any index.
  *   - isSlice true means that a slice is specified (with sliceStart and
- * sliceEnd).
+ *     sliceEnd).
  *   - Otherwise, index holds the required numeric index.
  */
 struct PatternComponent {
@@ -82,12 +84,54 @@ inline std::vector<PatternComponent> parsePattern(const std::string &pattern) {
   std::istringstream iss(pattern);
   std::string token;
 
-  // Split on '.'
-  while (std::getline(iss, token, '.')) {
-    if (token.empty())
-      continue;
+  auto pushKey = [&](const std::string& key) {
+    if (!key.empty()) {
+      PatternComponent pc;
+      pc.key = key;
+      components.push_back(pc);
+    }
+  };
 
-    // Token exactly "[*]" means “any array element”
+  auto parseBracket = [&](const std::string& inside, const std::string& wholeToken) {
+    PatternComponent pcArr;
+    pcArr.isArrayAccess = true;
+
+    if (inside == "*") {
+      pcArr.isArrayWildcard = true;
+    } else if (inside.find(':') != std::string::npos) {
+      // Slice
+      pcArr.isSlice = true;
+      const size_t colonPos = inside.find(':');
+      const std::string startStr = inside.substr(0, colonPos);
+      const std::string endStr   = inside.substr(colonPos + 1);
+      try {
+        pcArr.sliceStart = std::stoi(startStr);
+        pcArr.sliceEnd   = std::stoi(endStr);
+      } catch (...) {
+        throw std::runtime_error("Invalid slice indices in pattern: " + wholeToken);
+      }
+    } else {
+      // Literal numeric index
+      for (char c : inside) {
+        if (!std::isdigit(static_cast<unsigned char>(c))) {
+          throw std::runtime_error("Invalid array index in pattern: " + wholeToken);
+        }
+      }
+      try {
+        pcArr.index = std::stoi(inside);
+      } catch (...) {
+        throw std::runtime_error("Invalid array index in pattern: " + wholeToken);
+      }
+    }
+
+    components.push_back(pcArr);
+  };
+
+  // Split the pattern on '.'
+  while (std::getline(iss, token, '.')) {
+    if (token.empty()) continue;
+
+    // Special-case token that is exactly "[*]"
     if (token == "[*]") {
       PatternComponent pc;
       pc.isArrayAccess = true;
@@ -96,58 +140,38 @@ inline std::vector<PatternComponent> parsePattern(const std::string &pattern) {
       continue;
     }
 
-    // If token contains '[' and ends with ']'
-    size_t bracketPos = token.find('[');
-    if (bracketPos != std::string::npos && token.back() == ']') {
-      // Add any key portion before '['.
-      const std::string keyPart = token.substr(0, bracketPos);
-      if (!keyPart.empty()) {
-        PatternComponent pc;
-        pc.key = keyPart;
-        components.push_back(pc);
-      }
+    // General case: key followed by zero or more bracket groups
+    // e.g., "matrix[*][2]" -> key "matrix", then two array components
+    size_t pos = 0;
 
-      // Process the bracketed part.
-      const std::string inside =
-          token.substr(bracketPos + 1, token.size() - bracketPos - 2);
-      PatternComponent pcArr;
-      pcArr.isArrayAccess = true;
-      if (inside == "*") {
-        pcArr.isArrayWildcard = true;
-      } else if (inside.find(':') != std::string::npos) {
-        // Slice pattern.
-        pcArr.isSlice = true;
-        const size_t colonPos = inside.find(':');
-        const std::string startStr = inside.substr(0, colonPos);
-        const std::string endStr = inside.substr(colonPos + 1);
-        try {
-          pcArr.sliceStart = std::stoi(startStr);
-          pcArr.sliceEnd = std::stoi(endStr);
-        } catch (...) {
-          throw std::runtime_error("Invalid slice indices in pattern: " +
-                                   token);
-        }
-      } else {
-        // Literal numeric index.
-        for (char c : inside) {
-          if (!std::isdigit(c))
-            throw std::runtime_error("Invalid array index in pattern: " +
-                                     token);
-        }
-        try {
-          pcArr.index = std::stoi(inside);
-        } catch (const std::exception &) {
-          throw std::runtime_error("Invalid array index in pattern: " + token);
-        }
+    // Extract optional key prefix (everything before the first '[')
+    size_t firstBracket = token.find('[');
+    if (firstBracket == std::string::npos) {
+      // Pure key token
+      pushKey(token);
+      continue;
+    }
+
+    // Push the key (if any)
+    std::string keyPart = token.substr(0, firstBracket);
+    pushKey(keyPart);
+    pos = firstBracket;
+
+    // Parse a chain of bracket groups
+    while (pos < token.size()) {
+      if (token[pos] != '[') {
+        throw std::runtime_error("Unexpected character in pattern token: " + token);
       }
-      components.push_back(pcArr);
-    } else {
-      // Simple key token.
-      PatternComponent pc;
-      pc.key = token;
-      components.push_back(pc);
+      size_t close = token.find(']', pos);
+      if (close == std::string::npos) {
+        throw std::runtime_error("Unclosed '[' in pattern token: " + token);
+      }
+      std::string inside = token.substr(pos + 1, close - (pos + 1));
+      parseBracket(inside, token);
+      pos = close + 1;
     }
   }
+
   return components;
 }
 
@@ -185,6 +209,41 @@ getJsonValueAtPath(const Json::Value &root,
     }
   }
   return *current;
+}
+
+/**
+ * @brief Like getJsonValueAtPath but indicates whether the path existed.
+ *
+ * Returns true if the path is present (even if value is explicit JSON null).
+ */
+inline bool tryGetJsonValueAtPath(const Json::Value &root,
+                                  const std::vector<PathComponent> &pathParts,
+                                  Json::Value *out) {
+  const Json::Value *current = &root;
+  for (const auto &part : pathParts) {
+    if (part.isArrayAccess) {
+      if (!current->isArray()) {
+        SPDLOG_DEBUG("Expected an array at index: {}", part.arrayIndex);
+        return false;
+      }
+      if (part.arrayIndex < 0 ||
+          part.arrayIndex >= static_cast<int>(current->size())) {
+        SPDLOG_DEBUG("Array index {} out of bounds (size: {})",
+                     part.arrayIndex, current->size());
+        return false;
+      }
+      current = &((*current)[part.arrayIndex]);
+    } else {
+      if (!current->isObject() || !current->isMember(part.key)) {
+        SPDLOG_DEBUG("Missing key: {}", part.key);
+        return false;
+      }
+      current = &((*current)[part.key]);
+    }
+  }
+  if (out)
+    *out = *current;
+  return true;
 }
 
 /**
@@ -253,6 +312,7 @@ public:
    * @param callback The function to call when the specified path is updated.
    */
   void watch(const std::string &path, ChangeCallback callback) {
+    std::lock_guard<std::mutex> lk(watchers_mutex_);
     if (path.empty()) {
       root_watchers_.push_back(callback);
     } else {
@@ -269,7 +329,31 @@ public:
    * occurs.
    */
   void watchPattern(const std::string &pattern, ChangeCallback callback) {
+    std::lock_guard<std::mutex> lk(watchers_mutex_);
     pattern_watchers_[pattern].push_back(callback);
+  }
+
+  void watchMatrixCell(JsonMonitor& jm, const std::string& base, int r, int c,
+                       JsonMonitor::ChangeCallback cb) {
+        jm.watch(base + "[" + std::to_string(r) + "][" + std::to_string(c) + "]", std::move(cb));
+  }
+
+  void watchMatrixRow(JsonMonitor& jm, const std::string& base, int r,
+                      JsonMonitor::ChangeCallback cb) {
+    jm.watchPattern(base + "[" + std::to_string(r) + "][*]", std::move(cb));
+  }
+
+  void watchMatrixCol(JsonMonitor& jm, const std::string& base, int c,
+                      JsonMonitor::ChangeCallback cb) {
+    jm.watchPattern(base + "[*][" + std::to_string(c) + "]", std::move(cb));
+  }
+
+  void watchMatrixRegion(JsonMonitor& jm, const std::string& base,
+    int r0, int r1, int c0, int c1,
+                        JsonMonitor::ChangeCallback cb) {
+    jm.watchPattern(base + "[" + std::to_string(r0) + ":" + std::to_string(r1) + "]"
+                          + "[" + std::to_string(c0) + ":" + std::to_string(c1) + "]",
+                    std::move(cb));
   }
 
   /**
@@ -368,62 +452,71 @@ public:
   /**
    * @brief Process an external JSON update for a given path.
    *
-   * This function updates the internal state and notifies any registered
-   * watchers (exact, pattern, and root watchers) if the state has changed.
+   * Updates internal state and notifies registered watchers (exact, pattern, root)
+   * if the state has changed.
    *
    * @param path The concrete JSON path that has been updated.
    * @param new_state The new JSON state for that path.
    */
   void handleExternalUpdate(const std::string &path,
                             const Json::Value &new_state) {
-    std::lock_guard<std::mutex> lock(state_mutex_);
+    // Mutate state and compute diffs under state_mutex_
+    Json::Value oldData, newData, oldValue, newValue;
+    {
+      std::lock_guard<std::mutex> slk(state_mutex_);
+      SPDLOG_DEBUG("Received update for path: {}", path);
 
-    SPDLOG_DEBUG("Received update for path: {}", path);
+      oldData = data_;
+      updateInternalState(path, new_state);
+      newData = data_;
 
-    Json::Value oldData = data_;
-    updateInternalState(path, new_state);
-    Json::Value newData = data_;
-
-    if (oldData == newData) {
-      SPDLOG_DEBUG("No change detected for path: {}", path);
-      return;
-    }
-
-    const Json::Value oldValue = extractValue(oldData, path);
-    const Json::Value newValue = extractValue(newData, path);
-
-    // Notify exact-match watchers.
-    const auto it = watchers_.find(path);
-    if (it != watchers_.end()) {
-      SPDLOG_DEBUG("Triggering exact watchers for: {}", path);
-      for (const auto &callback : it->second)
-        callback(path, oldValue, newValue);
-    }
-
-    // Notify pattern watchers.
-    for (const auto &[subscription, callbacks] : pattern_watchers_) {
-      const auto &tokens = getParsedPattern(subscription);
-      std::vector<PathComponent> splitP = splitPath(path);
-      if (patternMatchesPath(tokens, splitP)) {
-        SPDLOG_DEBUG("Triggering pattern watchers for: {}", path);
-        for (const auto &callback : callbacks)
-          callback(path, oldValue, newValue);
+      if (oldData == newData) {
+        SPDLOG_DEBUG("No change detected for path: {}", path);
+        return;
       }
+
+      oldValue = extractValue(oldData, path);
+      newValue = extractValue(newData, path);
     }
 
-    // Notify root watchers.
-    for (const auto &callback : root_watchers_) {
-      SPDLOG_DEBUG("Triggering root watchers for: {}", path);
-      callback(path, oldValue, newValue);
+    // Collect callbacks under watchers_mutex_
+    std::vector<ChangeCallback> exact, patternCbs, roots;
+    std::vector<PathComponent> splitP = splitPath(path);
+    {
+      std::lock_guard<std::mutex> wlk(watchers_mutex_);
+      if (auto it = watchers_.find(path); it != watchers_.end())
+        exact = it->second;
+
+      for (const auto &kv : pattern_watchers_) {
+        const auto &subscription = kv.first;
+        const auto &callbacks = kv.second;
+        const auto &tokens = getParsedPattern(subscription);
+        if (patternMatchesPath(tokens, splitP)) {
+          patternCbs.insert(patternCbs.end(), callbacks.begin(), callbacks.end());
+        }
+      }
+      roots = root_watchers_;
+    }
+
+    if ((!exact.empty() || !patternCbs.empty() || !roots.empty())) {
+      SPDLOG_DEBUG("Dispatching callbacks for: {}", path);
+    }
+
+    for (const auto &cb : exact) {
+        cb(path, oldValue, newValue);
+    }
+
+    for (const auto &cb : patternCbs) {
+        cb(path, oldValue, newValue);
+    }
+
+    for (const auto &cb : roots) {
+        cb(path, oldValue, newValue);
     }
   }
 
   /**
-   * @brief Retrieves the parsed pattern for the given subscription, using a
-   * cache.
-   *
-   * @param pattern The subscription pattern string.
-   * @return The parsed pattern as a vector of PatternComponent.
+   * @brief Retrieves the parsed pattern for the given subscription, using a cache.
    */
   const std::vector<PatternComponent> &
   getParsedPattern(const std::string &pattern) {
@@ -433,7 +526,6 @@ public:
       return it->second;
     }
 
-    // Parse and cache the pattern.
     parsedPatternCache_[pattern] = parsePattern(pattern);
     return parsedPatternCache_[pattern];
   }
@@ -442,12 +534,6 @@ public:
 private:
   /**
    * @brief Updates the internal JSON state at a given path.
-   *
-   * If the path is empty, the entire state is replaced. Otherwise, the function
-   * traverses (and creates nodes as needed) and updates the target node.
-   *
-   * @param path The JSON path to update.
-   * @param new_state The new JSON value to set at the path.
    */
   void updateInternalState(const std::string &path,
                            const Json::Value &new_state) {
@@ -494,10 +580,6 @@ private:
 
   /**
    * @brief Extracts the JSON value from a state at the specified path.
-   *
-   * @param state The root JSON state.
-   * @param path The concrete JSON path.
-   * @return The JSON value at the path, or Json::nullValue if not found.
    */
   Json::Value extractValue(const Json::Value &state,
                            const std::string &path) const {
@@ -508,6 +590,7 @@ private:
   }
 
   mutable std::mutex state_mutex_;
+  mutable std::mutex watchers_mutex_;
   Json::Value data_;
   std::unordered_map<std::string, std::vector<ChangeCallback>> watchers_;
   std::unordered_map<std::string, std::vector<ChangeCallback>>
@@ -522,19 +605,9 @@ private:
 
 /**
  * @brief A RAII wrapper for a UDP socket.
- *
- * This class handles creation and cleanup of a UDP socket.
  */
 class UDPSocket {
 public:
-  /**
-   * @brief Constructs a UDPSocket.
-   *
-   * @param domain The protocol family (e.g., AF_INET).
-   * @param type The socket type (e.g., SOCK_DGRAM).
-   * @param protocol The protocol to use.
-   * @throws std::runtime_error if socket creation fails.
-   */
   UDPSocket(int domain, int type, int protocol)
       : sockfd_(::socket(domain, type, protocol)) {
     if (sockfd_ < 0)
@@ -549,7 +622,6 @@ public:
 
   int get() const { return sockfd_; }
 
-  // Non-copyable.
   UDPSocket(const UDPSocket &) = delete;
   UDPSocket &operator=(const UDPSocket &) = delete;
 
@@ -559,23 +631,9 @@ private:
 
 /**
  * @brief Monitors remote JSON values via UDP and updates a local JsonMonitor.
- *
- * The UDPValueMonitor listens for incoming JSON messages via UDP, processes
- * them, and notifies registered callbacks.
  */
 class UDPValueMonitor {
 public:
-  /**
-   * @brief Constructs a UDPValueMonitor.
-   *
-   * Sets up the UDP socket, binds to a local port, registers callbacks,
-   * sends an initial state request, and starts the receive thread.
-   *
-   * @param serverIP The server's IP address.
-   * @param port The server's port number.
-   * @param targetPaths A vector of JSON paths or patterns to monitor.
-   * @throws std::runtime_error on socket or binding errors.
-   */
   UDPValueMonitor(const std::string &serverIP, int port,
                   const std::vector<std::string> &targetPaths,
                   void (*updateHandler)(const std::string &))
@@ -601,11 +659,18 @@ public:
       throw std::runtime_error("Failed to bind socket: " +
                                std::string(strerror(errno)));
 
-    // Set socket non-blocking.
+    // Set socket non-blocking with error checks.
     int flags = fcntl(sockfd, F_GETFL, 0);
-    fcntl(sockfd, F_SETFL, flags | O_NONBLOCK);
+    if (flags == -1) {
+      throw std::runtime_error(std::string("fcntl(F_GETFL) failed: ") +
+                               strerror(errno));
+    }
+    if (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK) == -1) {
+      throw std::runtime_error(std::string("fcntl(F_SETFL) failed: ") +
+                               strerror(errno));
+    }
 
-    // Register watchers based on whether the path contains a wildcard.
+    // Register watchers.
     for (const auto &path : targetPaths_) {
       if (path.find('*') != std::string::npos) {
         jsonMonitor_.watchPattern(path, [this](const std::string &p,
@@ -627,38 +692,14 @@ public:
 
   ~UDPValueMonitor() { stop(); }
 
-  /**
-   * @brief Stops the UDPValueMonitor and joins the receive thread.
-   */
   void stop() {
     running_ = false;
-    if (receiveThread_.joinable())
+    if (receiveThread_.joinable()) {
       receiveThread_.join();
+    }
   }
 
-  /**
-   * @brief For testing: Get the JSON value at a given path.
-   *
-   * @param path The JSON path.
-   * @return The JSON value.
-   */
-  Json::Value get(const std::string &path) const {
-    return jsonMonitor_.get(path);
-  }
-
-  /**
-   * @brief For testing: Get the local port to which the socket is bound.
-   *
-   * @return The local port number, or -1 on error.
-   */
-  int getLocalPort() const {
-    sockaddr_in localAddr;
-    socklen_t addrLen = sizeof(localAddr);
-    if (getsockname(udpSocket_.get(), reinterpret_cast<sockaddr *>(&localAddr),
-                    &addrLen) == 0)
-      return ntohs(localAddr.sin_port);
-    return -1;
-  }
+  Json::Value get(const std::string &path) const { return jsonMonitor_.get(path); }
 
   /**
    * @brief Sets the device ID for filtering updates.
@@ -673,9 +714,6 @@ public:
   }
 
 private:
-  /**
-   * @brief Returns the current timestamp as a string (HH:MM:SS).
-   */
   std::string getTimestamp() const {
     auto now = std::chrono::system_clock::now();
     auto now_c = std::chrono::system_clock::to_time_t(now);
@@ -693,9 +731,6 @@ private:
     return totalSize;
   }
 
-  /**
-   * @brief Handles a monitored value change.
-   */
   void handleValueChange(const std::string &path, const Json::Value &old_val,
                          const Json::Value &new_val) {
     std::vector<PathComponent> path_parts = jsonMonitor_.splitPath(path);
@@ -707,7 +742,11 @@ private:
             + ", \"name\": \"" + path_parts[3].key + "\""
             + ((path_parts.size() > 4 && path_parts[4].isArrayAccess)
                ? ", \"index\": ["
-                   + std::to_string(path_parts[4].arrayIndex + 1) + "]"
+                   + std::to_string(path_parts[4].arrayIndex + 1)
+                   + ((path_parts.size() > 5 && path_parts[5].isArrayAccess)
+                     ? ", "
+                       + std::to_string(path_parts[5].arrayIndex + 1) + "]"
+                     : "]")
                : "")
             + ", \"value\": " + (new_val.isString() ? "\"" : "")
             + new_val.asString() + (new_val.isString() ? "\"" : "") + " }";
@@ -774,9 +813,6 @@ private:
     }
   }
 
-  /**
-   * @brief Sends an initial state request to the server.
-   */
   void requestInitialState(const sockaddr_in &serverAddr) {
     Json::Value message;
     message["action"] = "get";
@@ -792,18 +828,11 @@ private:
     receivedInitialState_ = false;
   }
 
-  /**
-   * @brief Retrieves a JSON value at a given path from a JSON tree.
-   */
   Json::Value getValueAtPath(const Json::Value &root,
                              const std::vector<PathComponent> &pathParts) {
     return getJsonValueAtPath(root, pathParts);
   }
 
-  /**
-   * @brief Helper to construct a JSON path string from a vector of
-   * PathComponent.
-   */
   std::string constructPath(const std::vector<PathComponent> &path) const {
     std::ostringstream oss;
     for (size_t i = 0; i < path.size(); ++i) {
@@ -818,9 +847,6 @@ private:
     return oss.str();
   }
 
-  /**
-   * @brief Recursively traverses a JSON node and updates matching paths.
-   */
   void traverseAndUpdate(const Json::Value &node,
                          std::vector<PathComponent> &currentPath,
                          const std::vector<PatternComponent> &parsedPattern) {
@@ -843,9 +869,6 @@ private:
     }
   }
 
-  /**
-   * @brief Processes an incoming JSON update message.
-   */
   void handleUpdateMessage(const Json::Value &update) {
     SPDLOG_TRACE("Received update: {}", update.toStyledString());
 
@@ -856,8 +879,8 @@ private:
         traverseAndUpdate(update, currentPath, parsedPattern);
       } else {
         auto path_parts = jsonMonitor_.splitPath(path);
-        Json::Value value = getValueAtPath(update, path_parts);
-        if (!value.isNull()) {
+        Json::Value value;
+        if (tryGetJsonValueAtPath(update, path_parts, &value)) {
           SPDLOG_DEBUG("Detected value at {}: {}", path, value.toStyledString());
           jsonMonitor_.handleExternalUpdate(path, value);
         } else {
@@ -867,9 +890,6 @@ private:
     }
   }
 
-  /**
-   * @brief Main loop that listens for incoming UDP messages.
-   */
   void receiveLoop() {
     pollfd pfd;
     pfd.fd = udpSocket_.get();
@@ -893,6 +913,7 @@ private:
       }
 
       if (pfd.revents & POLLIN) {
+        senderLen = sizeof(senderAddr);
         const ssize_t received =
             recvfrom(udpSocket_.get(), buffer, BUFFER_SIZE - 1, 0,
                      reinterpret_cast<sockaddr *>(&senderAddr), &senderLen);
@@ -900,6 +921,11 @@ private:
           if (errno == EWOULDBLOCK || errno == EAGAIN)
             continue;
           std::cerr << "Error receiving data: " << strerror(errno) << std::endl;
+          continue;
+        }
+        // Optional: filter unexpected senders.
+        if (senderAddr.sin_addr.s_addr != serverAddr_.sin_addr.s_addr) {
+          SPDLOG_DEBUG("Ignoring datagram from unexpected sender");
           continue;
         }
         buffer[received] = '\0';
@@ -931,7 +957,7 @@ private:
   std::vector<std::string> targetPaths_;
   void (*updateHandler_)(const std::string &);
   JsonMonitor jsonMonitor_;
-  sockaddr_in serverAddr_;
+  sockaddr_in serverAddr_{};
   std::string device_id;
   bool fixed_device_id;
   bool receivedInitialState_{false};

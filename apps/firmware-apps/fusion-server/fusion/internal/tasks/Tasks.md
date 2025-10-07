@@ -13,6 +13,24 @@ with features for task management, execution history, and HTTP endpoints for int
 - Supports custom task functions and tracks their execution status.
 - Handles panics in task execution gracefully.
 
+## Development Questions
+
+Define what happens if a node was down during its window; catch-up or skip? 
+Make it a per-task setting?
+
+The model is "autonomous on every node". This is ideal for playing audio and immediate
+application of configuration data. Snapshot data is synced across nodes, so the
+data store should be identical.
+
+Are there conditions where the snapshots be out of sync when a task is run?
+
+Since schedules are time-based, node clocsk must be kept tight with chrony/ntpd. 
+Should we consider having tasks default to UTC schedules? 
+Maybe this is already the case for AES67 audio?
+
+Add optional node selectors (tags/labels) so some tasks only run on nodes with certain capabilities?
+(e.g., role=player, site=lobby).
+
 ## Usage
 
 ### Task Management
