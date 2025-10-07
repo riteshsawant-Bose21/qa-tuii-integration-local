@@ -391,7 +391,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: BoseProfessional/meta-fusion
-          ref: develop
+          ref: main
           token: ${{ secrets.META_FUSION_REPO_TOKEN }}
           fetch-depth: 0
 
