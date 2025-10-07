@@ -304,8 +304,10 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
       constraints: const BoxConstraints(),
       child: TextFormField(
         initialValue: zone.name,
+        maxLength: 24,
         enabled: serviceLocator<ProjectViewModel>().currentSelectedZoneId == null,
         decoration: const InputDecoration(
+          counterText: "",
           hintText: 'Zone Name',
           border: InputBorder.none,
           contentPadding: EdgeInsets.zero,
