@@ -408,9 +408,9 @@ jobs:
           else
             # Replace the line or append it
             if grep -q "^FUSION_MONOREPO_BRANCH=" "$FILE"; then
-              sed -i "s|^FUSION_MONOREPO_BRANCH=.*|FUSION_MONOREPO_BRANCH=${BRANCH_NAME}|" "$FILE"
+              sed -i "s|^FUSION_MONOREPO_BRANCH=.*|FUSION_MONOREPO_BRANCH=\"${BRANCH_NAME}\"|" "$FILE"
             else
-              echo "FUSION_MONOREPO_BRANCH=${BRANCH_NAME}" >> "$FILE"
+              echo "FUSION_MONOREPO_BRANCH=\"${BRANCH_NAME}\"" >> "$FILE"
             fi
           fi
 
