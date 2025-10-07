@@ -11,8 +11,8 @@
 
 // ---- Include local include files ----
 #include "OcaLiteControllerConfigManager.h"
-#include "ZoneConfigBuilder.h"  // for Controller and Zone structs
-#include "FusionOCAConstants.h" // for custom ONO constants
+#include "models/WallControllerConfigParser.h" // for Controller and Zone structs
+#include "FusionOCAConstants.h"                // for custom ONO constants
 #include "../../common/OCALite/OCF/OcaLiteCommandHandler.h"
 #include "../../common/OCALite/OCC/ControlDataTypes/OcaLiteTemplateHelpers.h"
 #include "../../common/OCALite/OCC/ControlDataTypes/OcaLiteClassIdentification.h"
@@ -81,12 +81,12 @@ bool OcaLiteControllerConfigManager::Initialize()
     std::string controllerIdStr = controllerId.GetString();
 
     // Find the controller with matching ID
-    const Controller *foundController = nullptr;
+    std::shared_ptr<const Controller> foundController = nullptr;
     for (const auto &controller : m_controllers)
     {
-        if (controller.id == controllerIdStr)
+        if (controller->id == controllerIdStr)
         {
-            foundController = &controller;
+            foundController = controller;
             break;
         }
     }
@@ -97,8 +97,8 @@ bool OcaLiteControllerConfigManager::Initialize()
         return OCASTATUS_PARAMETER_ERROR;
     }
 
-    // Serialize the controller to JSON using ZoneConfigBuilder function
-    std::string json = SerializeControllerToJson(*foundController);
+    // Serialize the controller to JSON using WallControllerConfigParser function
+    std::string json = WallControllerToJsonString(*foundController);
     configData = ::OcaLiteString(json);
 
     OCA_LOG_INFO_PARAMS("✓ Config data for controller '%s' returned successfully (%zu zones)",
@@ -106,7 +106,7 @@ bool OcaLiteControllerConfigManager::Initialize()
     return OCASTATUS_OK;
 }
 
-void OcaLiteControllerConfigManager::SetConfigData(const std::vector<Controller> &controllers)
+void OcaLiteControllerConfigManager::SetConfigData(const std::vector<std::shared_ptr<Controller>> &controllers)
 {
     m_controllers = controllers;
     OCA_LOG_INFO_PARAMS("✓ Controller configuration set with %zu controllers", controllers.size());

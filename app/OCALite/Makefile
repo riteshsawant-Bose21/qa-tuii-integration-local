@@ -50,7 +50,7 @@ endif
 PKG_CFLAGS += $(JSONCPP_CFLAGS)
 PKG_LIBS += $(JSONCPP_LIBS)
 
-CXXFLAGS := -Wall -Wextra -std=c++11 -g -O0 $(PKG_CFLAGS) \
+CXXFLAGS := -Wall -Wextra -std=c++17 -g -O0 $(PKG_CFLAGS) \
 	    $(PKG_CDEFS) \
 	    -DOCA_RUN \
 	    -D_DEBUG \
@@ -69,8 +69,7 @@ APP_SOURCES := $(wildcard *.cpp) \
 
 # Common source files
 FRAMEWORK_COMMON_SOURCES := $(shell find ../../common -name "*.cpp" | grep -v "AES67" | grep -v "OcaLiteMediaTransportNetworkAES67")
-APP_COMMON_SOURCES       := ../common/ZoneConfigBuilder.cpp \
-                           ../common/workers/ConcreteGainActuator.cpp \
+APP_COMMON_SOURCES       :=../common/workers/ConcreteGainActuator.cpp \
                            ../common/workers/ConcreteMuteActuator.cpp \
                            ../common/workers/ConcreteSwitchActuator.cpp \
                            ../common/workers/ZoneGroup.cpp \
