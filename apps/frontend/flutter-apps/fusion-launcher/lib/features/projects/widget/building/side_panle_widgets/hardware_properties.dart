@@ -125,7 +125,9 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
               // Hardware name input field
               TextFormField(
                 initialValue: widget.selectedHardware.name,
+                maxLength: 24,
                 decoration: const InputDecoration(
+                  counterText: "",
                   hintText: 'Hardware Name',
                   border: InputBorder.none,
                 ),
@@ -175,7 +177,9 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                             Expanded(
                               child: TextFormField(
                                 controller: xController,
+                                maxLength: 24,
                                 decoration: const InputDecoration(
+                                  counterText: "",
                                   hintText: 'X',
                                   border: InputBorder.none,
                                   isDense: true,
@@ -213,7 +217,9 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                             Expanded(
                               child: TextFormField(
                                 controller: yController,
+                                maxLength: 24,
                                 decoration: const InputDecoration(
+                                  counterText: "",
                                   hintText: 'Y',
                                   border: InputBorder.none,
                                   isDense: true,
@@ -251,7 +257,9 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                             Expanded(
                               child: TextFormField(
                                 controller: zController,
+                                maxLength: 24,
                                 decoration: const InputDecoration(
+                                  counterText: "",
                                   hintText: 'Z',
                                   border: InputBorder.none,
                                   isDense: true,
@@ -304,7 +312,9 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                             Expanded(
                               child: TextFormField(
                                 controller: pitchController,
+                                maxLength: 24,
                                 decoration: const InputDecoration(
+                                  counterText: "",
                                   hintText: 'Pitch',
                                   border: InputBorder.none,
                                   isDense: true,
@@ -355,7 +365,9 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                             Expanded(
                               child: TextFormField(
                                 controller: yawController,
+                                maxLength: 24,
                                 decoration: const InputDecoration(
+                                  counterText: "",
                                   hintText: 'Yaw',
                                   border: InputBorder.none,
                                   isDense: true,
@@ -406,7 +418,9 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                             Expanded(
                               child: TextFormField(
                                 controller: rollController,
+                                maxLength: 24,
                                 decoration: const InputDecoration(
+                                  counterText: "",
                                   hintText: 'Roll',
                                   border: InputBorder.none,
                                   isDense: true,
@@ -457,7 +471,9 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                             Expanded(
                               child: TextFormField(
                                 controller: gainController,
+                                maxLength: 24,
                                 decoration: const InputDecoration(
+                                  counterText: "",
                                   hintText: 'Gain',
                                   border: InputBorder.none,
                                   isDense: true,
