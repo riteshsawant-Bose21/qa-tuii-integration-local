@@ -113,14 +113,17 @@ class CoveragePanelState extends State<CoveragePanel> {
             ),
             trailing:
                 isSelected
-                    ? IconButton(
-                      onPressed: () {
-                        onAddTap();
-                      },
-                      icon: const Icon(
-                        Icons.add,
-                        size: 14,
-                        color: Colors.black87,
+                    ? Visibility(
+                      visible: serviceLocator<ProjectViewModel>().currentSelectedZoneId == null,
+                      child: IconButton(
+                        onPressed: () {
+                          onAddTap();
+                        },
+                        icon: const Icon(
+                          Icons.add,
+                          size: 14,
+                          color: Colors.black87,
+                        ),
                       ),
                     )
                     : null,
