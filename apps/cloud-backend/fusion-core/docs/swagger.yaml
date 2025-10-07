@@ -1,0 +1,432 @@
+basePath: /api/v1
+definitions:
+  fusion.Amplifier:
+    properties:
+      category:
+        type: string
+      id:
+        type: integer
+      meta_info:
+        $ref: '#/definitions/fusion.Amplifier_meta_response'
+    type: object
+  fusion.Amplifier_meta_response:
+    properties:
+      channels:
+        type: integer
+      image_url:
+        items:
+          type: string
+        type: array
+      name:
+        type: string
+      power_output:
+        $ref: '#/definitions/fusion.powerOutput'
+      total_capacity:
+        type: number
+    type: object
+  fusion.DSP_meta:
+    properties:
+      acoustic_echo_cancellation:
+        properties:
+          channels:
+            type: integer
+        type: object
+      configuration_software:
+        type: string
+      dimensions:
+        properties:
+          rack_space:
+            type: string
+          size:
+            items:
+              properties:
+                depth:
+                  type: integer
+                height:
+                  type: integer
+                unit:
+                  type: string
+                width:
+                  type: integer
+              type: object
+            type: array
+        type: object
+      dsp_architecture:
+        type: string
+      firmware:
+        properties:
+          current_published_version:
+            type: string
+          current_running_version:
+            type: string
+        type: object
+      gpio_logic_ports:
+        properties:
+          inputs:
+            type: integer
+          outputs:
+            type: integer
+        type: object
+      id:
+        type: integer
+      images:
+        items:
+          type: string
+        type: array
+      max_number_of_analog_control:
+        type: integer
+      max_number_of_digital_control:
+        type: integer
+      model:
+        type: string
+      name:
+        type: string
+      net_weight:
+        items:
+          properties:
+            unit:
+              type: string
+            value:
+              type: string
+          type: object
+        type: array
+      number_of_inputs_and_outputs:
+        properties:
+          aes67:
+            properties:
+              max_inputs:
+                type: integer
+              max_outputs:
+                type: integer
+            type: object
+          dante:
+            properties:
+              max_inputs:
+                type: integer
+              max_outputs:
+                type: integer
+            type: object
+          fusion_connect:
+            properties:
+              max_inputs:
+                type: integer
+              max_outputs:
+                type: integer
+            type: object
+        type: object
+      product_codes:
+        items:
+          type: string
+        type: array
+      safe_operating_temperature:
+        properties:
+          max:
+            type: integer
+          min:
+            type: integer
+          unit:
+            type: string
+        type: object
+      skus:
+        items:
+          type: integer
+        type: array
+      supported_bose_professional_dante_endpoints:
+        items:
+          type: string
+        type: array
+    type: object
+  fusion.DigitalSignalProcessor:
+    properties:
+      category:
+        type: string
+      id:
+        type: integer
+      meta_info:
+        $ref: '#/definitions/fusion.DSP_meta'
+    type: object
+  fusion.ProductResponse:
+    properties:
+      amplifier:
+        items:
+          $ref: '#/definitions/fusion.Amplifier'
+        type: array
+      digital_signal_processors:
+        items:
+          $ref: '#/definitions/fusion.DigitalSignalProcessor'
+        type: array
+      speaker:
+        items:
+          $ref: '#/definitions/fusion.Speaker'
+        type: array
+    type: object
+  fusion.Speaker:
+    properties:
+      category:
+        type: string
+      id:
+        type: integer
+      meta_info:
+        $ref: '#/definitions/fusion.Speaker_meta_response'
+    type: object
+  fusion.Speaker_meta_response:
+    properties:
+      available_taps:
+        properties:
+          70v:
+            items:
+              type: number
+            type: array
+          100v:
+            items:
+              type: number
+            type: array
+        type: object
+      environment:
+        type: string
+      image_url:
+        items:
+          type: string
+        type: array
+      is_subwoofer:
+        type: boolean
+      max_spl:
+        type: number
+      model:
+        type: string
+      mount_type:
+        type: string
+      nominal_impedance:
+        $ref: '#/definitions/fusion.nominal_impedence'
+      power_handling:
+        properties:
+          long_term_continuous:
+            type: string
+          peak:
+            type: string
+          unit:
+            type: string
+        type: object
+      sensitivity:
+        properties:
+          at:
+            items:
+              properties:
+                key:
+                  type: string
+                value:
+                  type: string
+              type: object
+            type: array
+          unit:
+            type: string
+        type: object
+    type: object
+  fusion.nominal_impedence:
+    properties:
+      unit:
+        type: string
+      value:
+        type: string
+    type: object
+  fusion.powerOutput:
+    properties:
+      asymmetrical:
+        properties:
+          peak_per_channel:
+            properties:
+              at:
+                items:
+                  properties:
+                    key:
+                      type: string
+                    value:
+                      type: integer
+                  type: object
+                type: array
+              unit:
+                type: string
+            type: object
+          peak_per_channel_high_voltage:
+            properties:
+              at:
+                items:
+                  properties:
+                    key:
+                      type: string
+                    value:
+                      type: integer
+                  type: object
+                type: array
+              unit:
+                type: string
+            type: object
+          rated_per_channel:
+            properties:
+              at:
+                items:
+                  properties:
+                    key:
+                      type: string
+                    value:
+                      type: integer
+                  type: object
+                type: array
+              unit:
+                type: string
+            type: object
+          rated_per_channel_high_voltage:
+            properties:
+              at:
+                items:
+                  properties:
+                    key:
+                      type: string
+                    value:
+                      type: integer
+                  type: object
+                type: array
+              unit:
+                type: string
+            type: object
+        type: object
+      symmetrical:
+        properties:
+          peak_per_channel:
+            properties:
+              at:
+                items:
+                  properties:
+                    key:
+                      type: string
+                    value:
+                      type: integer
+                  type: object
+                type: array
+              unit:
+                type: string
+            type: object
+          peak_per_channel_high_voltage:
+            properties:
+              at:
+                items:
+                  properties:
+                    key:
+                      type: string
+                    value:
+                      type: integer
+                  type: object
+                type: array
+              unit:
+                type: string
+            type: object
+          rated_per_channel:
+            properties:
+              at:
+                items:
+                  properties:
+                    impedance:
+                      properties:
+                        unit:
+                          type: string
+                        value:
+                          type: integer
+                      type: object
+                    power:
+                      properties:
+                        unit:
+                          type: string
+                        value:
+                          type: integer
+                      type: object
+                  type: object
+                type: array
+            type: object
+          rated_per_channel_high_voltage:
+            properties:
+              at:
+                items:
+                  properties:
+                    key:
+                      type: string
+                    value:
+                      type: integer
+                  type: object
+                type: array
+              unit:
+                type: string
+            type: object
+        type: object
+    type: object
+host: localhost:8020
+info:
+  contact: {}
+  description: This is the Fusion Cloud Backend API server.
+  title: Fusion Cloud Backend API
+  version: "1.0"
+paths:
+  /products:
+    get:
+      consumes:
+      - application/json
+      description: Get all available products including speakers, amplifiers and digital
+        signal processors
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successful response with all products
+          schema:
+            $ref: '#/definitions/fusion.ProductResponse'
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get all products
+      tags:
+      - products
+  /products/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get a specific product by its unique identifier
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successful response with product details
+          schema:
+            $ref: '#/definitions/fusion.ProductResponse'
+        "400":
+          description: Bad request - Product ID is required
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Product not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get product by ID
+      tags:
+      - products
+schemes:
+- http
+- https
+swagger: "2.0"

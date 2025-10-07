@@ -19,6 +19,14 @@ func NewProductHandler(productSvc product.Product) *ProductHandler {
 }
 
 // GetAllProducts retrieves all products.
+// @Summary Get all products
+// @Description Get all available products including speakers, amplifiers and digital signal processors
+// @Tags products
+// @Accept json
+// @Produce json
+// @Success 200 {object} fusion.ProductResponse "Successful response with all products"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /products [get]
 func (a *ProductHandler) GetAllProducts(c *gin.Context) {
 	products, err := a.product.GetAllProducts(c.Request.Context())
 	if err != nil {
@@ -29,6 +37,17 @@ func (a *ProductHandler) GetAllProducts(c *gin.Context) {
 }
 
 // GetProductByID retrieves a product by its ID.
+// @Summary Get product by ID
+// @Description Get a specific product by its unique identifier
+// @Tags products
+// @Accept json
+// @Produce json
+// @Param id path string true "Product ID"
+// @Success 200 {object} fusion.ProductResponse "Successful response with product details"
+// @Failure 400 {object} map[string]string "Bad request - Product ID is required"
+// @Failure 404 {object} map[string]string "Product not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /products/{id} [get]
 func (a *ProductHandler) GetProductByID(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {

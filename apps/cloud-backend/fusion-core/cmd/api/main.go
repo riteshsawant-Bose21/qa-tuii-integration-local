@@ -1,3 +1,10 @@
+// @title Fusion Cloud Backend API
+// @version 1.0
+// @description This is the Fusion Cloud Backend API server.
+
+// @host localhost:8020
+// @BasePath /api/v1
+// @schemes http https
 package main
 
 import (
@@ -13,8 +20,9 @@ import (
 	sql "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/sql"
 	"go.uber.org/zap"
 
-	projectdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project/db"
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project"
+	_ "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/docs"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func main() {
@@ -77,6 +85,10 @@ func main() {
 	logger.Info("Initialized Project Service.")
 
 	engine := gin.Default()
+
+	// Setup Swagger
+	engine.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
 	// Initialize API Service
 	apiSvc, err := api.New(engine, productSVC, projectSVC)
 	if err != nil {
@@ -87,7 +99,6 @@ func main() {
 	Host := "localhost"
 	Port := "8020"
 
-	// Setup Swagger
 	// Start server
 	addr := fmt.Sprintf("%s:%s", Host, Port)
 	logger.Info(fmt.Sprintf("Starting HTTP server at %s...", addr))

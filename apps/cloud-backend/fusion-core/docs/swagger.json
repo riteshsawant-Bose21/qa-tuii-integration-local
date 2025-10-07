@@ -1,0 +1,669 @@
+{
+    "schemes": [
+        "http",
+        "https"
+    ],
+    "swagger": "2.0",
+    "info": {
+        "description": "This is the Fusion Cloud Backend API server.",
+        "title": "Fusion Cloud Backend API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "host": "localhost:8020",
+    "basePath": "/api/v1",
+    "paths": {
+        "/products": {
+            "get": {
+                "description": "Get all available products including speakers, amplifiers and digital signal processors",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "products"
+                ],
+                "summary": "Get all products",
+                "responses": {
+                    "200": {
+                        "description": "Successful response with all products",
+                        "schema": {
+                            "$ref": "#/definitions/fusion.ProductResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/products/{id}": {
+            "get": {
+                "description": "Get a specific product by its unique identifier",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "products"
+                ],
+                "summary": "Get product by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Product ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful response with product details",
+                        "schema": {
+                            "$ref": "#/definitions/fusion.ProductResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - Product ID is required",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Product not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "fusion.Amplifier": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "meta_info": {
+                    "$ref": "#/definitions/fusion.Amplifier_meta_response"
+                }
+            }
+        },
+        "fusion.Amplifier_meta_response": {
+            "type": "object",
+            "properties": {
+                "channels": {
+                    "type": "integer"
+                },
+                "image_url": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "name": {
+                    "type": "string"
+                },
+                "power_output": {
+                    "$ref": "#/definitions/fusion.powerOutput"
+                },
+                "total_capacity": {
+                    "type": "number"
+                }
+            }
+        },
+        "fusion.DSP_meta": {
+            "type": "object",
+            "properties": {
+                "acoustic_echo_cancellation": {
+                    "type": "object",
+                    "properties": {
+                        "channels": {
+                            "type": "integer"
+                        }
+                    }
+                },
+                "configuration_software": {
+                    "type": "string"
+                },
+                "dimensions": {
+                    "type": "object",
+                    "properties": {
+                        "rack_space": {
+                            "type": "string"
+                        },
+                        "size": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "depth": {
+                                        "type": "integer"
+                                    },
+                                    "height": {
+                                        "type": "integer"
+                                    },
+                                    "unit": {
+                                        "type": "string"
+                                    },
+                                    "width": {
+                                        "type": "integer"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "dsp_architecture": {
+                    "type": "string"
+                },
+                "firmware": {
+                    "type": "object",
+                    "properties": {
+                        "current_published_version": {
+                            "type": "string"
+                        },
+                        "current_running_version": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "gpio_logic_ports": {
+                    "type": "object",
+                    "properties": {
+                        "inputs": {
+                            "type": "integer"
+                        },
+                        "outputs": {
+                            "type": "integer"
+                        }
+                    }
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "images": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "max_number_of_analog_control": {
+                    "type": "integer"
+                },
+                "max_number_of_digital_control": {
+                    "type": "integer"
+                },
+                "model": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "net_weight": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "unit": {
+                                "type": "string"
+                            },
+                            "value": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                },
+                "number_of_inputs_and_outputs": {
+                    "type": "object",
+                    "properties": {
+                        "aes67": {
+                            "type": "object",
+                            "properties": {
+                                "max_inputs": {
+                                    "type": "integer"
+                                },
+                                "max_outputs": {
+                                    "type": "integer"
+                                }
+                            }
+                        },
+                        "dante": {
+                            "type": "object",
+                            "properties": {
+                                "max_inputs": {
+                                    "type": "integer"
+                                },
+                                "max_outputs": {
+                                    "type": "integer"
+                                }
+                            }
+                        },
+                        "fusion_connect": {
+                            "type": "object",
+                            "properties": {
+                                "max_inputs": {
+                                    "type": "integer"
+                                },
+                                "max_outputs": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    }
+                },
+                "product_codes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "safe_operating_temperature": {
+                    "type": "object",
+                    "properties": {
+                        "max": {
+                            "type": "integer"
+                        },
+                        "min": {
+                            "type": "integer"
+                        },
+                        "unit": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "skus": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "supported_bose_professional_dante_endpoints": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "fusion.DigitalSignalProcessor": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "meta_info": {
+                    "$ref": "#/definitions/fusion.DSP_meta"
+                }
+            }
+        },
+        "fusion.ProductResponse": {
+            "type": "object",
+            "properties": {
+                "amplifier": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/fusion.Amplifier"
+                    }
+                },
+                "digital_signal_processors": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/fusion.DigitalSignalProcessor"
+                    }
+                },
+                "speaker": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/fusion.Speaker"
+                    }
+                }
+            }
+        },
+        "fusion.Speaker": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "meta_info": {
+                    "$ref": "#/definitions/fusion.Speaker_meta_response"
+                }
+            }
+        },
+        "fusion.Speaker_meta_response": {
+            "type": "object",
+            "properties": {
+                "available_taps": {
+                    "type": "object",
+                    "properties": {
+                        "100v": {
+                            "type": "array",
+                            "items": {
+                                "type": "number"
+                            }
+                        },
+                        "70v": {
+                            "type": "array",
+                            "items": {
+                                "type": "number"
+                            }
+                        }
+                    }
+                },
+                "environment": {
+                    "type": "string"
+                },
+                "image_url": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "is_subwoofer": {
+                    "type": "boolean"
+                },
+                "max_spl": {
+                    "type": "number"
+                },
+                "model": {
+                    "type": "string"
+                },
+                "mount_type": {
+                    "type": "string"
+                },
+                "nominal_impedance": {
+                    "$ref": "#/definitions/fusion.nominal_impedence"
+                },
+                "power_handling": {
+                    "type": "object",
+                    "properties": {
+                        "long_term_continuous": {
+                            "type": "string"
+                        },
+                        "peak": {
+                            "type": "string"
+                        },
+                        "unit": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "sensitivity": {
+                    "type": "object",
+                    "properties": {
+                        "at": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "key": {
+                                        "type": "string"
+                                    },
+                                    "value": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        },
+                        "unit": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "fusion.nominal_impedence": {
+            "type": "object",
+            "properties": {
+                "unit": {
+                    "type": "string"
+                },
+                "value": {
+                    "type": "string"
+                }
+            }
+        },
+        "fusion.powerOutput": {
+            "type": "object",
+            "properties": {
+                "asymmetrical": {
+                    "type": "object",
+                    "properties": {
+                        "peak_per_channel": {
+                            "type": "object",
+                            "properties": {
+                                "at": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "key": {
+                                                "type": "string"
+                                            },
+                                            "value": {
+                                                "type": "integer"
+                                            }
+                                        }
+                                    }
+                                },
+                                "unit": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "peak_per_channel_high_voltage": {
+                            "type": "object",
+                            "properties": {
+                                "at": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "key": {
+                                                "type": "string"
+                                            },
+                                            "value": {
+                                                "type": "integer"
+                                            }
+                                        }
+                                    }
+                                },
+                                "unit": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "rated_per_channel": {
+                            "type": "object",
+                            "properties": {
+                                "at": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "key": {
+                                                "type": "string"
+                                            },
+                                            "value": {
+                                                "type": "integer"
+                                            }
+                                        }
+                                    }
+                                },
+                                "unit": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "rated_per_channel_high_voltage": {
+                            "type": "object",
+                            "properties": {
+                                "at": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "key": {
+                                                "type": "string"
+                                            },
+                                            "value": {
+                                                "type": "integer"
+                                            }
+                                        }
+                                    }
+                                },
+                                "unit": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                },
+                "symmetrical": {
+                    "type": "object",
+                    "properties": {
+                        "peak_per_channel": {
+                            "type": "object",
+                            "properties": {
+                                "at": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "key": {
+                                                "type": "string"
+                                            },
+                                            "value": {
+                                                "type": "integer"
+                                            }
+                                        }
+                                    }
+                                },
+                                "unit": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "peak_per_channel_high_voltage": {
+                            "type": "object",
+                            "properties": {
+                                "at": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "key": {
+                                                "type": "string"
+                                            },
+                                            "value": {
+                                                "type": "integer"
+                                            }
+                                        }
+                                    }
+                                },
+                                "unit": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "rated_per_channel": {
+                            "type": "object",
+                            "properties": {
+                                "at": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "impedance": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "unit": {
+                                                        "type": "string"
+                                                    },
+                                                    "value": {
+                                                        "type": "integer"
+                                                    }
+                                                }
+                                            },
+                                            "power": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "unit": {
+                                                        "type": "string"
+                                                    },
+                                                    "value": {
+                                                        "type": "integer"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "rated_per_channel_high_voltage": {
+                            "type": "object",
+                            "properties": {
+                                "at": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "key": {
+                                                "type": "string"
+                                            },
+                                            "value": {
+                                                "type": "integer"
+                                            }
+                                        }
+                                    }
+                                },
+                                "unit": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
