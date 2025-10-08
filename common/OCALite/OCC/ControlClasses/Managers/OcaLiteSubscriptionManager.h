@@ -1,5 +1,5 @@
 /*
- *  By downloading or using this file, the user agrees to be bound by the terms of the license 
+ *  By downloading or using this file, the user agrees to be bound by the terms of the license
  *  agreement located in the LICENSE file in the root of this project
  *  as an original contracting party.
  *
@@ -28,16 +28,19 @@ class OcaLiteNetworkAddress;
 /**
  * Comparator structure to compare events for use in a map
  */
-struct event_comparator : public binary_function< ::OcaLiteEvent, ::OcaLiteEvent, bool>
+struct event_comparator
 {
-    bool operator()(const ::OcaLiteEvent& lhs, const ::OcaLiteEvent& rhs) const;
+    using first_argument_type = ::OcaLiteEvent;
+    using second_argument_type = ::OcaLiteEvent;
+    using result_type = bool;
+    bool operator()(const ::OcaLiteEvent &lhs, const ::OcaLiteEvent &rhs) const;
 };
 
 // ---- Helper types and constants ----
 /**
  * The classID used for initialization.
  */
-#define OCA_SUBSCRIPTION_MANAGER_CLASSID      OCA_MANAGER_CLASSID,static_cast< ::OcaUint16>(4)
+#define OCA_SUBSCRIPTION_MANAGER_CLASSID OCA_MANAGER_CLASSID, static_cast<::OcaUint16>(4)
 
 // ---- Helper functions ----
 
@@ -56,26 +59,26 @@ public:
     enum MethodIndex
     {
         /** AddSubscription() */
-        ADD_SUBSCRIPTION                        = 1,
+        ADD_SUBSCRIPTION = 1,
         /** RemoveSubscription() */
-        REMOVE_SUBSCRIPTION                     = 2,
+        REMOVE_SUBSCRIPTION = 2,
         /** DisableNotifications() */
-        DISABLE_NOTIFICATIONS                   = 3,
+        DISABLE_NOTIFICATIONS = 3,
         /** ReEnableNotifications() */
-        RE_ENABLE_NOTIFICATIONS                 = 4,
+        RE_ENABLE_NOTIFICATIONS = 4,
         /** AddPropertyChangeSubscription() */
-        ADD_PROPERTY_CHANGE_SUBSCRIPTION        = 5,
+        ADD_PROPERTY_CHANGE_SUBSCRIPTION = 5,
         /** RemovePropertyChangeSubscription() */
-        REMOVE_PROPERTY_CHANGE_SUBSCRIPTION     = 6,
+        REMOVE_PROPERTY_CHANGE_SUBSCRIPTION = 6,
         /** GetMaximumSubscriberContextLength() */
-        GET_MAXIMUM_SUBSCRIBER_CONTEXT_LENGTH   = 7
+        GET_MAXIMUM_SUBSCRIBER_CONTEXT_LENGTH = 7
     };
 
     /** Property indexes for the supported properties. */
     enum PropertyIndex
     {
         /** Events enabled or disabled. */
-        OCA_PROP_STATE                  = 1
+        OCA_PROP_STATE = 1
     };
 
     /** Event indexes for supported events. */
@@ -85,13 +88,13 @@ public:
          * Event that is raised when the DisableEvents() method is called. This way all subscribers are
          * notified of the fact that the device will temporarily not emit notifications.
          */
-        OCA_EVENT_EVENTS_DISABLED       = 1,
+        OCA_EVENT_EVENTS_DISABLED = 1,
         /**
          * Event that is raised when the ReEnableNotifications() method is called. All subscribers are
          * notified of the fact that the device will start emitting event-notifications again, and are
          * given lists of which objects changed state during the period that notifications were disabled.
          */
-         OCA_EVENT_SYNCHRONIZE_STATE    = 2
+        OCA_EVENT_SYNCHRONIZE_STATE = 2
     };
 
     /**
@@ -111,7 +114,7 @@ public:
      *
      * @return  Reference to the OcaLiteSubscriptionManager.
      */
-    static OcaLiteSubscriptionManager& GetInstance();
+    static OcaLiteSubscriptionManager &GetInstance();
 
     /**
      * Cleans up the singleton instance.
@@ -137,11 +140,11 @@ public:
      * @return Indicates whether the subscription succeeded.
      */
     ::OcaLiteStatus AddSubscription(::OcaSessionID sessionID,
-                                    const ::OcaLiteEvent& ocaEvent,
-                                    const ::OcaLiteMethod& subscriber,
-                                    const ::OcaLiteBlob& context,
+                                    const ::OcaLiteEvent &ocaEvent,
+                                    const ::OcaLiteMethod &subscriber,
+                                    const ::OcaLiteBlob &context,
                                     ::OcaLiteNotificationDeliveryMode deliveryMode,
-                                    const ::OcaLiteNetworkAddress& destInfo);
+                                    const ::OcaLiteNetworkAddress &destInfo);
 
     /**
      * Removes a subscription to an event.
@@ -152,8 +155,8 @@ public:
      * @return Indicates whether the subscription was successfully removed.
      */
     ::OcaLiteStatus RemoveSubscription(::OcaSessionID sessionID,
-                                       const ::OcaLiteEvent& ocaEvent,
-                                       const ::OcaLiteMethod& subscriber);
+                                       const ::OcaLiteEvent &ocaEvent,
+                                       const ::OcaLiteMethod &subscriber);
 
     /**
      * Add a subscription to a property change event. The local administration is updated and
@@ -171,11 +174,11 @@ public:
      */
     ::OcaLiteStatus AddPropertyChangeSubscription(::OcaSessionID sessionID,
                                                   ::OcaONo emitter,
-                                                  const ::OcaLitePropertyID& property,
-                                                  const ::OcaLiteMethod& subscriber,
-                                                  const ::OcaLiteBlob& context,
+                                                  const ::OcaLitePropertyID &property,
+                                                  const ::OcaLiteMethod &subscriber,
+                                                  const ::OcaLiteBlob &context,
                                                   ::OcaLiteNotificationDeliveryMode deliveryMode,
-                                                  const ::OcaLiteNetworkAddress& destInfo);
+                                                  const ::OcaLiteNetworkAddress &destInfo);
 
     /**
      * Removes a subscription to an event.
@@ -188,16 +191,16 @@ public:
      */
     ::OcaLiteStatus RemovePropertyChangeSubscription(::OcaSessionID sessionID,
                                                      ::OcaONo emitter,
-                                                     const ::OcaLitePropertyID& property,
-                                                     const ::OcaLiteMethod& subscriber);
+                                                     const ::OcaLitePropertyID &property,
+                                                     const ::OcaLiteMethod &subscriber);
 
     // ---- Miscellaneous methods ----
-    virtual ::OcaLiteStatus Execute(const ::IOcaLiteReader& reader, const ::IOcaLiteWriter& writer, ::OcaSessionID sessionID, const ::OcaLiteMethodID& methodID,
-                                    ::OcaUint32 parametersSize, const ::OcaUint8* parameters, ::OcaUint8** response);
+    virtual ::OcaLiteStatus Execute(const ::IOcaLiteReader &reader, const ::IOcaLiteWriter &writer, ::OcaSessionID sessionID, const ::OcaLiteMethodID &methodID,
+                                    ::OcaUint32 parametersSize, const ::OcaUint8 *parameters, ::OcaUint8 **response);
 
-    virtual ::OcaBoolean AddEventSubscription(const ::OcaLiteEventID& eventID, IEventDelegate& eventDelegate);
+    virtual ::OcaBoolean AddEventSubscription(const ::OcaLiteEventID &eventID, IEventDelegate &eventDelegate);
 
-    virtual void RemoveEventSubscription(const ::OcaLiteEventID& eventID);
+    virtual void RemoveEventSubscription(const ::OcaLiteEventID &eventID);
 
     virtual void SessionLost(::OcaSessionID sessionID);
 
@@ -235,14 +238,14 @@ public:
          *
          * @param[in]  subscriptionManager    The subscription reference
          */
-        explicit OcaEventController(::OcaLiteSubscriptionManager& subscriptionManager);
+        explicit OcaEventController(::OcaLiteSubscriptionManager &subscriptionManager);
 
         /** Destructor */
         virtual ~OcaEventController();
 
         // ---- Interface methods ----
-        virtual void OnEvent(const ::OcaLiteEventData& eventData);
-        virtual void OnEvent(const ::OcaLiteEventData& eventData, const ::OcaLitePropertyID& propertyID);
+        virtual void OnEvent(const ::OcaLiteEventData &eventData);
+        virtual void OnEvent(const ::OcaLiteEventData &eventData, const ::OcaLitePropertyID &propertyID);
 
         /**
          * Add a subscription to an event. The local administration is updated and
@@ -258,11 +261,11 @@ public:
          * @return Indicates whether the subscription succeeded.
          */
         ::OcaLiteStatus AddSubscription(::OcaSessionID sessionID,
-                                        const ::OcaLiteEvent& ocaEvent,
-                                        const ::OcaLiteMethod& subscriber,
-                                        const ::OcaLiteBlob& context,
+                                        const ::OcaLiteEvent &ocaEvent,
+                                        const ::OcaLiteMethod &subscriber,
+                                        const ::OcaLiteBlob &context,
                                         ::OcaLiteNotificationDeliveryMode deliveryMode,
-                                        const ::OcaLiteNetworkAddress& destInfo);
+                                        const ::OcaLiteNetworkAddress &destInfo);
 
         /**
          * Removes a subscription to an event.
@@ -273,8 +276,8 @@ public:
          * @return Indicates whether the subscription was successfully removed.
          */
         ::OcaLiteStatus RemoveSubscription(::OcaSessionID sessionID,
-                                           const ::OcaLiteEvent& ocaEvent,
-                                           const ::OcaLiteMethod& subscriber);
+                                           const ::OcaLiteEvent &ocaEvent,
+                                           const ::OcaLiteMethod &subscriber);
 
         /**
          * Add a subscription to a property change event. The local administration is updated and
@@ -292,11 +295,11 @@ public:
          */
         ::OcaLiteStatus AddPropertyChangeSubscription(::OcaSessionID sessionID,
                                                       ::OcaONo emitter,
-                                                      const ::OcaLitePropertyID& property,
-                                                      const ::OcaLiteMethod& subscriber,
-                                                      const ::OcaLiteBlob& context,
+                                                      const ::OcaLitePropertyID &property,
+                                                      const ::OcaLiteMethod &subscriber,
+                                                      const ::OcaLiteBlob &context,
                                                       ::OcaLiteNotificationDeliveryMode deliveryMode,
-                                                      const ::OcaLiteNetworkAddress& destInfo);
+                                                      const ::OcaLiteNetworkAddress &destInfo);
 
         /**
          * Removes a subscription to an event.
@@ -309,9 +312,8 @@ public:
          */
         ::OcaLiteStatus RemovePropertyChangeSubscription(::OcaSessionID sessionID,
                                                          ::OcaONo emitter,
-                                                         const ::OcaLitePropertyID& property,
-                                                         const ::OcaLiteMethod& subscriber);
-
+                                                         const ::OcaLitePropertyID &property,
+                                                         const ::OcaLiteMethod &subscriber);
 
         /**
          * When the session is lost all of the event subscriptions belonging to the
@@ -346,9 +348,9 @@ public:
              * @param[in]  subscriber       The subscriber
              * @param[in]  methodID         The method ID
              */
-            OcaSubscription(const ::OcaLiteEvent& ocaEvent,
+            OcaSubscription(const ::OcaLiteEvent &ocaEvent,
                             ::OcaONo subscriber,
-                            const ::OcaLiteMethodID& methodID)
+                            const ::OcaLiteMethodID &methodID)
                 : m_ocaEvent(ocaEvent),
                   m_subscriber(subscriber),
                   m_methodID(methodID)
@@ -363,7 +365,7 @@ public:
              *
              * @return The event
              */
-            const ::OcaLiteEvent& GetEvent() const
+            const ::OcaLiteEvent &GetEvent() const
             {
                 return m_ocaEvent;
             }
@@ -383,17 +385,17 @@ public:
              *
              * @return The methodID
              */
-            const ::OcaLiteMethodID& GetMethodID() const
+            const ::OcaLiteMethodID &GetMethodID() const
             {
                 return m_methodID;
             }
 
         private:
             /** The OCA event */
-            ::OcaLiteEvent    m_ocaEvent;
+            ::OcaLiteEvent m_ocaEvent;
 
             /** The subscriber */
-            ::OcaONo      m_subscriber;
+            ::OcaONo m_subscriber;
 
             /** The method ID */
             ::OcaLiteMethodID m_methodID;
@@ -414,10 +416,10 @@ public:
              * @param[in]  deliveryMode     Notification delivery mode
              * @param[in]  destInfo         Destination information
              */
-            OcaEventDestination(const ::OcaLiteMethod& subscriber,
+            OcaEventDestination(const ::OcaLiteMethod &subscriber,
                                 ::OcaSessionID OcaSessionID,
                                 ::OcaLiteNotificationDeliveryMode deliveryMode,
-                                const ::OcaLiteNetworkAddress& destInfo)
+                                const ::OcaLiteNetworkAddress &destInfo)
                 : m_subscriber(subscriber),
                   m_OcaLiteSessionID(OcaSessionID),
                   m_deliveryMode(deliveryMode),
@@ -426,7 +428,7 @@ public:
             {
             }
 
-                        /**
+            /**
              * Constructor
              *
              * @param[in]  subscriber       Method subscriber
@@ -435,11 +437,11 @@ public:
              * @param[in]  destInfo         Destination information
              * @param[in]  propertyIDFilter The property ID filter
              */
-            OcaEventDestination(const ::OcaLiteMethod& subscriber,
+            OcaEventDestination(const ::OcaLiteMethod &subscriber,
                                 ::OcaSessionID OcaSessionID,
                                 ::OcaLiteNotificationDeliveryMode deliveryMode,
-                                const ::OcaLiteNetworkAddress& destInfo,
-                                const ::OcaLitePropertyID& propertyID)
+                                const ::OcaLiteNetworkAddress &destInfo,
+                                const ::OcaLitePropertyID &propertyID)
                 : m_subscriber(subscriber),
                   m_OcaLiteSessionID(OcaSessionID),
                   m_deliveryMode(deliveryMode),
@@ -449,14 +451,14 @@ public:
             }
 
             /** Destructor */
-            virtual ~OcaEventDestination() { }
+            virtual ~OcaEventDestination() {}
 
             /**
              * Getter for the subscriber
              *
              * @return The subscriber
              */
-            const ::OcaLiteMethod& GetSubscriber() const
+            const ::OcaLiteMethod &GetSubscriber() const
             {
                 return m_subscriber;
             }
@@ -486,33 +488,33 @@ public:
              *
              * @return The destination information
              */
-            const ::OcaLiteNetworkAddress& GetDestinationInfo() const
+            const ::OcaLiteNetworkAddress &GetDestinationInfo() const
             {
                 return m_destInfo;
             }
 
             /**
-             * Getter for the property ID filter 
+             * Getter for the property ID filter
              *
              * @return The property ID filter
              */
-            const ::OcaLitePropertyID& GetPropertyIDFilter() const
+            const ::OcaLitePropertyID &GetPropertyIDFilter() const
             {
                 return m_propertyIDFilter;
             }
 
         private:
             /** Method of the event handler at the subscriber side. */
-            ::OcaLiteMethod                     m_subscriber;
+            ::OcaLiteMethod m_subscriber;
             /** Session ID of the network session on which the OCA notification message
                 must be sent.*/
-            ::OcaSessionID                      m_OcaLiteSessionID;
+            ::OcaSessionID m_OcaLiteSessionID;
             /** Network notification delivery mode */
-            ::OcaLiteNotificationDeliveryMode   m_deliveryMode;
+            ::OcaLiteNotificationDeliveryMode m_deliveryMode;
             /** Destination information */
-            ::OcaLiteNetworkAddress             m_destInfo;
+            ::OcaLiteNetworkAddress m_destInfo;
             /** Property ID filter */
-            ::OcaLitePropertyID                 m_propertyIDFilter;
+            ::OcaLitePropertyID m_propertyIDFilter;
         };
 
         /**
@@ -528,16 +530,17 @@ public:
          * @param[in]  oNo          The object number
          * @return The object pointer if succeeded, otherwise NULL
          */
-        ::OcaLiteRoot* GetOcaRootObject(::OcaONo oNo) const;
+        ::OcaLiteRoot *GetOcaRootObject(::OcaONo oNo) const;
 
         /** The event to which this controller is related. */
-        ::OcaLiteEvent                          m_event;
+        ::OcaLiteEvent m_event;
         /** List with OcaEventDestinations. */
-        typedef std::vector< OcaEventDestination> OcaEventDestinationList;
-        OcaEventDestinationList                 m_eventDestinations;
+        typedef std::vector<OcaEventDestination> OcaEventDestinationList;
+        OcaEventDestinationList m_eventDestinations;
         /** The subscription manager */
-        ::OcaLiteSubscriptionManager&           m_subscriptionManager;
+        ::OcaLiteSubscriptionManager &m_subscriptionManager;
     };
+
 protected:
     /**
      * Constructor
@@ -549,7 +552,7 @@ protected:
      */
     virtual ~OcaLiteSubscriptionManager();
 
-    virtual const ::OcaLiteClassID& GetClassID() const
+    virtual const ::OcaLiteClassID &GetClassID() const
     {
         return CLASS_ID;
     }
@@ -557,22 +560,21 @@ protected:
     virtual ::OcaClassVersionNumber GetClassVersion() const;
 
 private:
-
     /** Singleton instance of the server */
-    static ::OcaLiteSubscriptionManager*        m_pSingleton;
+    static ::OcaLiteSubscriptionManager *m_pSingleton;
 
     /** The maximum number of events that can be subscribed to at once. */
-    ::OcaUint16                                 m_nrEvents;
+    ::OcaUint16 m_nrEvents;
 
     /** The map of events to event controllers, which are used to dispatch
         the event from the emitter to the subscriber(s). */
-    typedef std::map< ::OcaLiteEvent, OcaEventController*, ::event_comparator> OcaEventHandlerMap;
-    OcaEventHandlerMap                          m_eventHandlers;
+    typedef std::map<::OcaLiteEvent, OcaEventController *, ::event_comparator> OcaEventHandlerMap;
+    OcaEventHandlerMap m_eventHandlers;
 
     /** private copy constructor, no copying of object allowed */
-    OcaLiteSubscriptionManager(const ::OcaLiteSubscriptionManager&);
+    OcaLiteSubscriptionManager(const ::OcaLiteSubscriptionManager &);
     /** private assignment operator, no assignment of object allowed */
-    ::OcaLiteSubscriptionManager& operator=(const ::OcaLiteSubscriptionManager&);
+    ::OcaLiteSubscriptionManager &operator=(const ::OcaLiteSubscriptionManager &);
 };
 
 #endif // OCALITESUBSCRIPTIONMANAGER_H

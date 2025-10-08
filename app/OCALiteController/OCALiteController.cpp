@@ -26,8 +26,8 @@
 #include "HostInterfaceLite/OCA/OCF/Timer/IOcfLiteTimer.h"
 #include <sys/time.h>
 #include <iostream>
-#include "../common/ZoneConfigBuilder.h"  // For deserializing JSON configuration
-#include "../common/FusionOCAConstants.h" // For custom ONO constants
+#include "../common/models/WallControllerConfigParser.h" // For deserializing JSON configuration
+#include "../common/FusionOCAConstants.h"                // For custom ONO constants
 
 #ifdef OCA_RUN
 extern void Ocp1LiteServiceRun();
@@ -106,34 +106,36 @@ bool ConnectToDevice(const OcaServiceDiscovery::DiscoveredDevice &device,
             }
             OCA_LOG_INFO("=== End Configuration JSON ===");
 
-            // Deserialize the JSON using ZoneConfigBuilder
-            std::vector<Controller> controllers = DeserializeControllers(jsonStr);
+            // Deserialize the JSON using ControlSystemConfigParser
+            std::shared_ptr<Controller> controller = JsonStringToWallController(jsonStr);
 
-            if (!controllers.empty())
+            if (controller)
             {
                 OCA_LOG_INFO("=== Parsed Controller Configuration ===");
-                for (const auto &controller : controllers)
+                OCA_LOG_INFO_PARAMS("Controller ID: %s", controller->id.c_str());
+                OCA_LOG_INFO_PARAMS("Controller Name: %s", controller->name.c_str());
+                OCA_LOG_INFO_PARAMS("Number of Zones: %zu", controller->zones.size());
+
+                for (size_t i = 0; i < controller->zones.size(); ++i)
                 {
-                    OCA_LOG_INFO_PARAMS("Controller ID: %s", controller.id.c_str());
-                    OCA_LOG_INFO_PARAMS("Controller Name: %s", controller.name.c_str());
-                    OCA_LOG_INFO_PARAMS("Number of Zones: %zu", controller.zones.size());
+                    const auto &zone = controller->zones[i];
+                    OCA_LOG_INFO_PARAMS("  Zone %zu: %s (%s)", i + 1, zone->name.c_str(), zone->id.c_str());
+                    OCA_LOG_INFO_PARAMS("    ONOs - Zone: %u, Gain: %u, Mute: %u, Switch: %u",
+                                        zone->ono.zone, zone->ono.gain, zone->ono.mute, zone->ono.sourceSelector);
+                    OCA_LOG_INFO_PARAMS("    Gain ID: %s", zone->gain.gainID.c_str());
+                    OCA_LOG_INFO_PARAMS("    Gain Range: %s to %s", zone->gain.min_value.c_str(), zone->gain.max_value.c_str());
+                    OCA_LOG_INFO_PARAMS("    Default Gain: %s", zone->gain.default_gain_value.c_str());
+                    OCA_LOG_INFO_PARAMS("    Default Mute: %s", zone->gain.default_mute_value.c_str());
 
-                    for (size_t i = 0; i < controller.zones.size(); ++i)
+                    OCA_LOG_INFO_PARAMS("    Sources: %zu", zone->sources.size());
+
+                    for (size_t j = 0; j < zone->sources.size(); ++j)
                     {
-                        const auto &zone = controller.zones[i];
-                        OCA_LOG_INFO_PARAMS("  Zone %zu: %s (%s)", i + 1, zone->name.c_str(), zone->id.c_str());
-                        OCA_LOG_INFO_PARAMS("    ONOs - Zone: %u, Gain: %u, Mute: %u, Switch: %u",
-                                            zone->ono.zone, zone->ono.gain, zone->ono.mute, zone->ono.sourceSelector);
-                        OCA_LOG_INFO_PARAMS("    Gain ID: %s", zone->gainID.c_str());
-                        OCA_LOG_INFO_PARAMS("    Sources: %zu", zone->sources.size());
-
-                        for (size_t j = 0; j < zone->sources.size(); ++j)
-                        {
-                            const auto &source = zone->sources[j];
-                            OCA_LOG_INFO_PARAMS("      Source %zu: Index %u - %s", j + 1, source.index, source.label.c_str());
-                        }
+                        const auto &source = zone->sources[j];
+                        OCA_LOG_INFO_PARAMS("      Source %zu: Index %u - %s", j + 1, source.index, source.label.c_str());
                     }
                 }
+
                 OCA_LOG_INFO("=== End Parsed Configuration ===");
             }
             else

@@ -23,7 +23,34 @@ else
     LDFLAGS := -ldns_sd
 endif
 
-CXXFLAGS := -Wall -Wextra -std=c++11 -g -O0 $(PKG_CFLAGS) \
+# ================================
+# Cross-platform jsoncpp support
+# ================================
+ifeq ($(UNAME_S),Darwin)
+    # macOS: Prefer pkg-config, fallback to Homebrew paths
+    PKGCONF := pkg-config
+    JSONCPP_LIBS := $(shell $(PKGCONF) --libs jsoncpp 2>/dev/null || echo "-L/opt/homebrew/lib -ljsoncpp")
+    JSONCPP_CFLAGS := $(shell $(PKGCONF) --cflags jsoncpp 2>/dev/null || echo "-I/opt/homebrew/include")
+else ifeq ($(ARCH),arm64)
+    # Cross-compile ARM64: Use SDK paths if available, otherwise standard Linux
+    ifneq ($(SDK_DIR),)
+        JSONCPP_LIBS := -ljsoncpp
+        JSONCPP_CFLAGS := -I${SDK_DIR}/sysroots/cortexa53-crypto-poky-linux/usr/include/jsoncpp
+    else
+        JSONCPP_LIBS := -ljsoncpp
+        JSONCPP_CFLAGS := -I/usr/include/jsoncpp
+    endif
+else
+    # Linux: Standard system paths
+    JSONCPP_LIBS := -ljsoncpp
+    JSONCPP_CFLAGS := -I/usr/include/jsoncpp
+endif
+
+# Add jsoncpp flags to existing variables
+PKG_CFLAGS += $(JSONCPP_CFLAGS)
+PKG_LIBS += $(JSONCPP_LIBS)
+
+CXXFLAGS := -Wall -Wextra -std=c++17 -g -O0 $(PKG_CFLAGS) \
 	    $(PKG_CDEFS) \
 	    -DOCA_RUN \
 	    -D_DEBUG \
@@ -42,8 +69,7 @@ APP_SOURCES := $(wildcard *.cpp) \
 
 # Common source files
 FRAMEWORK_COMMON_SOURCES := $(shell find ../../common -name "*.cpp" | grep -v "AES67" | grep -v "OcaLiteMediaTransportNetworkAES67")
-APP_COMMON_SOURCES       := ../common/ZoneConfigBuilder.cpp \
-                           ../common/workers/ConcreteGainActuator.cpp \
+APP_COMMON_SOURCES       := ../common/workers/ConcreteGainActuator.cpp \
                            ../common/workers/ConcreteMuteActuator.cpp \
                            ../common/workers/ConcreteSwitchActuator.cpp \
                            ../common/workers/ZoneGroup.cpp \

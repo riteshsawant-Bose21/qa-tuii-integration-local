@@ -5,7 +5,7 @@
  *  Description         : OcaLiteMediaTransportNetwork
  *
  */
- 
+
 // ---- Include system wide include files ----
 #include <assert.h>
 #include <OCC/ControlClasses/Managers/OcaLiteNetworkManager.h>
@@ -27,14 +27,14 @@
 
 // ---- Helper types and constants ----
 
-static const ::OcaUint16        classID[]   = {OCA_MEDIA_TRANSPORT_NETWORK_CLASSID};
-const ::OcaLiteClassID          OcaLiteMediaTransportNetwork::CLASS_ID(static_cast< ::OcaUint16>(sizeof(classID) / sizeof(classID[0])), classID);
+static const ::OcaUint16 classID[] = {OCA_MEDIA_TRANSPORT_NETWORK_CLASSID};
+const ::OcaLiteClassID OcaLiteMediaTransportNetwork::CLASS_ID(static_cast<::OcaUint16>(sizeof(classID) / sizeof(classID[0])), classID);
 
 /** Defines the version increment of this class compared to its base class. */
-#define CLASS_VERSION_INCREMENT     0
+#define CLASS_VERSION_INCREMENT 0
 
 /** The internal ID of an empty internal connector. */
-#define EMPTY_ID_INTERNAL           static_cast< ::OcaLiteMediaConnectorID>(0)
+#define EMPTY_ID_INTERNAL static_cast<::OcaLiteMediaConnectorID>(0)
 
 // ---- Helper functions ----
 
@@ -42,9 +42,12 @@ const ::OcaLiteClassID          OcaLiteMediaTransportNetwork::CLASS_ID(static_ca
  * Comparator structure to find an empty connector
  */
 template <class ConnectorType>
-struct connector_empty : public unary_function<ConnectorType, bool>
+struct connector_empty
 {
-    bool operator()(const ConnectorType& obj) const
+    using argument_type = ConnectorType;
+    using result_type = bool;
+
+    bool operator()(const ConnectorType &obj) const
     {
         return (obj.IsEmpty());
     }
@@ -54,19 +57,22 @@ struct connector_empty : public unary_function<ConnectorType, bool>
  * Comparator structure to compare the internal ID of a connector
  */
 template <class ConnectorType>
-struct connector_internal_id : public unary_function<ConnectorType, bool>
+struct connector_internal_id
 {
+    using argument_type = ConnectorType;
+    using result_type = bool;
+
     explicit connector_internal_id(::OcaLiteMediaConnectorID idInternal)
         : m_idInternal(idInternal)
     {
     }
 
-    bool operator()(const ConnectorType& obj) const
+    bool operator()(const ConnectorType &obj) const
     {
         return (!obj.IsEmpty() && (obj.GetIDInternal() == m_idInternal));
     }
 
-    ::OcaLiteMediaConnectorID   m_idInternal;
+    ::OcaLiteMediaConnectorID m_idInternal;
 };
 
 // ---- Local data ----
@@ -75,7 +81,7 @@ struct connector_internal_id : public unary_function<ConnectorType, bool>
 
 OcaLiteMediaTransportNetwork::OcaLiteMediaTransportNetwork(::OcaONo objectNumber,
                                                            ::OcaBoolean lockable,
-                                                           const ::OcaLiteString& role,
+                                                           const ::OcaLiteString &role,
                                                            ::OcaDBfs defaultAlignmentLevel,
                                                            ::OcaDBfs minAlignmentLevel,
                                                            ::OcaDBfs maxAlignmentLevel,
@@ -97,7 +103,7 @@ OcaLiteMediaTransportNetwork::OcaLiteMediaTransportNetwork(::OcaONo objectNumber
       m_minAlignmentGain(minAlignmentGain),
       m_maxAlignmentGain(maxAlignmentGain)
 {
-    ::OcaLiteNetworkManager& networkManager(::OcaLiteNetworkManager::GetInstance());
+    ::OcaLiteNetworkManager &networkManager(::OcaLiteNetworkManager::GetInstance());
     static_cast<void>(networkManager.AddMediaTransportNetwork(*this));
 }
 
@@ -107,18 +113,18 @@ OcaLiteMediaTransportNetwork::~OcaLiteMediaTransportNetwork()
     m_pSinkConnectorChangedEventDelegate = NULL;
     m_pConnectorStatusChangedEventDelegate = NULL;
 
-    ::OcaLiteNetworkManager& networkManager(::OcaLiteNetworkManager::GetInstance());
+    ::OcaLiteNetworkManager &networkManager(::OcaLiteNetworkManager::GetInstance());
     networkManager.RemoveMediaTransportNetwork(*this);
 }
 
-::OcaLiteStatus OcaLiteMediaTransportNetwork::GetPorts(::OcaLiteList< ::OcaLitePort>& ports) const
+::OcaLiteStatus OcaLiteMediaTransportNetwork::GetPorts(::OcaLiteList<::OcaLitePort> &ports) const
 {
     ::OcaLiteStatus rc(InternalGetPorts(ports));
 
     return rc;
 }
 
-::OcaLiteStatus OcaLiteMediaTransportNetwork::GetPortName(const ::OcaLitePortID& id, ::OcaLiteString& name) const
+::OcaLiteStatus OcaLiteMediaTransportNetwork::GetPortName(const ::OcaLitePortID &id, ::OcaLiteString &name) const
 {
     ::OcaLiteStatus rc(OCASTATUS_PARAMETER_OUT_OF_RANGE);
 
@@ -137,7 +143,7 @@ OcaLiteMediaTransportNetwork::~OcaLiteMediaTransportNetwork()
     return rc;
 }
 
-::OcaLiteStatus OcaLiteMediaTransportNetwork::GetSourceConnectors(::OcaLiteList< ::OcaLiteMediaSourceConnector>& connectors) const
+::OcaLiteStatus OcaLiteMediaTransportNetwork::GetSourceConnectors(::OcaLiteList<::OcaLiteMediaSourceConnector> &connectors) const
 {
     connectors.Clear();
     for (SourceConnectorList::const_iterator it(m_sourceConnectors.begin());
@@ -154,14 +160,14 @@ OcaLiteMediaTransportNetwork::~OcaLiteMediaTransportNetwork()
     return OCASTATUS_OK;
 }
 
-::OcaLiteStatus OcaLiteMediaTransportNetwork::GetSourceConnector(::OcaLiteMediaConnectorID id, ::OcaLiteMediaSourceConnector& connector) const
+::OcaLiteStatus OcaLiteMediaTransportNetwork::GetSourceConnector(::OcaLiteMediaConnectorID id, ::OcaLiteMediaSourceConnector &connector) const
 {
     ::OcaLiteStatus rc(GetSourceConnectorValue(id, connector));
 
     return rc;
 }
 
-::OcaLiteStatus OcaLiteMediaTransportNetwork::GetSinkConnectors(::OcaLiteList< ::OcaLiteMediaSinkConnector>& connectors) const
+::OcaLiteStatus OcaLiteMediaTransportNetwork::GetSinkConnectors(::OcaLiteList<::OcaLiteMediaSinkConnector> &connectors) const
 {
     connectors.Clear();
     for (SinkConnectorList::const_iterator it(m_sinkConnectors.begin());
@@ -179,27 +185,27 @@ OcaLiteMediaTransportNetwork::~OcaLiteMediaTransportNetwork()
     return OCASTATUS_OK;
 }
 
-::OcaLiteStatus OcaLiteMediaTransportNetwork::GetSinkConnector(::OcaLiteMediaConnectorID id, ::OcaLiteMediaSinkConnector& connector) const
+::OcaLiteStatus OcaLiteMediaTransportNetwork::GetSinkConnector(::OcaLiteMediaConnectorID id, ::OcaLiteMediaSinkConnector &connector) const
 {
     ::OcaLiteStatus rc(GetSinkConnectorValue(id, connector));
 
     return rc;
 }
 
-::OcaLiteStatus OcaLiteMediaTransportNetwork::GetConnectorsStatuses(::OcaLiteList< ::OcaLiteMediaConnectorStatus>& statuses) const
+::OcaLiteStatus OcaLiteMediaTransportNetwork::GetConnectorsStatuses(::OcaLiteList<::OcaLiteMediaConnectorStatus> &statuses) const
 {
     statuses = m_connectorsStatuses;
 
     return OCASTATUS_OK;
 }
 
-::OcaLiteStatus OcaLiteMediaTransportNetwork::GetConnectorStatus(::OcaLiteMediaConnectorID id, ::OcaLiteMediaConnectorStatus& status) const
+::OcaLiteStatus OcaLiteMediaTransportNetwork::GetConnectorStatus(::OcaLiteMediaConnectorID id, ::OcaLiteMediaConnectorStatus &status) const
 {
     ::OcaLiteStatus rc(OCASTATUS_PARAMETER_OUT_OF_RANGE);
 
-    for (::OcaUint16 i(static_cast< ::OcaUint16>(0)); i < m_connectorsStatuses.GetCount(); i++)
+    for (::OcaUint16 i(static_cast<::OcaUint16>(0)); i < m_connectorsStatuses.GetCount(); i++)
     {
-        const ::OcaLiteMediaConnectorStatus& connectorStatus(m_connectorsStatuses.GetItem(i));
+        const ::OcaLiteMediaConnectorStatus &connectorStatus(m_connectorsStatuses.GetItem(i));
         if (connectorStatus.GetConnectorID() == id)
         {
             status = connectorStatus;
@@ -211,10 +217,10 @@ OcaLiteMediaTransportNetwork::~OcaLiteMediaTransportNetwork()
     return rc;
 }
 
-::OcaLiteStatus OcaLiteMediaTransportNetwork::AddSourceConnector(::OcaLiteMediaConnectorState initialState, ::OcaLiteMediaSourceConnector& connector)
+::OcaLiteStatus OcaLiteMediaTransportNetwork::AddSourceConnector(::OcaLiteMediaConnectorState initialState, ::OcaLiteMediaSourceConnector &connector)
 {
     // Retrieve some boundary values
-    ::OcaUint16 maxPins(static_cast< ::OcaUint16>(0));
+    ::OcaUint16 maxPins(static_cast<::OcaUint16>(0));
     ::OcaLiteStatus rc(GetMaxPinsPerConnector(maxPins));
 
     // Check the data structure
@@ -257,7 +263,7 @@ OcaLiteMediaTransportNetwork::~OcaLiteMediaTransportNetwork()
                     {
                         *emptySlot = connector;
                         SourceConnectorChanged(connector, OCAPROPERTYCHANGETYPE_ITEM_ADDED, OCAMEDIACONNECTORELEMENT_ADDED);
-                        ::OcaLiteMediaConnectorStatus connectorStatus(connector.GetIDInternal(), initialState, static_cast< ::OcaUint16>(0));
+                        ::OcaLiteMediaConnectorStatus connectorStatus(connector.GetIDInternal(), initialState, static_cast<::OcaUint16>(0));
                         m_connectorsStatuses.Add(connectorStatus);
                         ConnectorStatusChanged(connectorStatus);
                     }
@@ -289,11 +295,11 @@ OcaLiteMediaTransportNetwork::~OcaLiteMediaTransportNetwork()
     return rc;
 }
 
-::OcaLiteStatus OcaLiteMediaTransportNetwork::AddSinkConnector(::OcaLiteMediaConnectorState initialState, ::OcaLiteMediaSinkConnector& connector)
+::OcaLiteStatus OcaLiteMediaTransportNetwork::AddSinkConnector(::OcaLiteMediaConnectorState initialState, ::OcaLiteMediaSinkConnector &connector)
 {
     // Retrieve some boundary values
-    ::OcaUint16 maxPins(static_cast< ::OcaUint16>(0));
-    ::OcaUint16 maxPorts(static_cast< ::OcaUint16>(0));
+    ::OcaUint16 maxPins(static_cast<::OcaUint16>(0));
+    ::OcaUint16 maxPorts(static_cast<::OcaUint16>(0));
     ::OcaLiteStatus rc(GetMaxPinsPerConnector(maxPins));
     if (OCASTATUS_OK == rc)
     {
@@ -340,7 +346,7 @@ OcaLiteMediaTransportNetwork::~OcaLiteMediaTransportNetwork()
                     {
                         *emptySlot = connector;
                         SinkConnectorChanged(connector, OCAPROPERTYCHANGETYPE_ITEM_ADDED, OCAMEDIACONNECTORELEMENT_ADDED);
-                        ::OcaLiteMediaConnectorStatus connectorStatus(connector.GetIDInternal(), initialState, static_cast< ::OcaUint16>(0));
+                        ::OcaLiteMediaConnectorStatus connectorStatus(connector.GetIDInternal(), initialState, static_cast<::OcaUint16>(0));
                         m_connectorsStatuses.Add(connectorStatus);
                         ConnectorStatusChanged(connectorStatus);
                     }
@@ -373,7 +379,7 @@ OcaLiteMediaTransportNetwork::~OcaLiteMediaTransportNetwork()
 }
 
 ::OcaLiteStatus OcaLiteMediaTransportNetwork::SetSourceConnectorPinMap(::OcaLiteMediaConnectorID connectorID,
-                                                                       const ::OcaLiteMap< ::OcaUint16, ::OcaLitePortID>& channelPinMap)
+                                                                       const ::OcaLiteMap<::OcaUint16, ::OcaLitePortID> &channelPinMap)
 {
     ::OcaLiteStatus rc(OCASTATUS_PARAMETER_OUT_OF_RANGE);
 
@@ -385,9 +391,9 @@ OcaLiteMediaTransportNetwork::~OcaLiteMediaTransportNetwork()
         {
             // Find the status for the connector
             ::OcaLiteMediaConnectorStatus status;
-            for (::OcaUint16 i(static_cast< ::OcaUint16>(0)); i < m_connectorsStatuses.GetCount(); i++)
+            for (::OcaUint16 i(static_cast<::OcaUint16>(0)); i < m_connectorsStatuses.GetCount(); i++)
             {
-                const ::OcaLiteMediaConnectorStatus& listStatus(m_connectorsStatuses.GetItem(i));
+                const ::OcaLiteMediaConnectorStatus &listStatus(m_connectorsStatuses.GetItem(i));
                 if (listStatus.GetConnectorID() == connectorID)
                 {
                     status = listStatus;
@@ -398,7 +404,7 @@ OcaLiteMediaTransportNetwork::~OcaLiteMediaTransportNetwork()
 
             ::OcaLiteMediaSourceConnector connector;
             connectorIt->AssignToOca(connector);
-            ::OcaLiteMediaSourceConnector oldConnector(connector);  // Make a copy for later checks
+            ::OcaLiteMediaSourceConnector oldConnector(connector); // Make a copy for later checks
             rc = SetSourceConnectorPinMapValue(connector, channelPinMap, status);
 
             if ((OCASTATUS_OK == rc) ||
@@ -429,10 +435,10 @@ OcaLiteMediaTransportNetwork::~OcaLiteMediaTransportNetwork()
 }
 
 ::OcaLiteStatus OcaLiteMediaTransportNetwork::SetSinkConnectorPinMap(::OcaLiteMediaConnectorID connectorID,
-                                                                     const ::OcaLiteMultiMap< ::OcaUint16, ::OcaLitePortID>& channelPinMap)
+                                                                     const ::OcaLiteMultiMap<::OcaUint16, ::OcaLitePortID> &channelPinMap)
 {
     // Retrieve some boundary values
-    ::OcaUint16 maxPorts(static_cast< ::OcaUint16>(0));
+    ::OcaUint16 maxPorts(static_cast<::OcaUint16>(0));
     ::OcaLiteStatus rc(GetMaxPortsPerPin(maxPorts));
 
     if (OCASTATUS_OK == rc)
@@ -445,9 +451,9 @@ OcaLiteMediaTransportNetwork::~OcaLiteMediaTransportNetwork()
             {
                 // Find the status for the connector
                 ::OcaLiteMediaConnectorStatus status;
-                for (::OcaUint16 i(static_cast< ::OcaUint16>(0)); i < m_connectorsStatuses.GetCount(); i++)
+                for (::OcaUint16 i(static_cast<::OcaUint16>(0)); i < m_connectorsStatuses.GetCount(); i++)
                 {
-                    const ::OcaLiteMediaConnectorStatus& listStatus(m_connectorsStatuses.GetItem(i));
+                    const ::OcaLiteMediaConnectorStatus &listStatus(m_connectorsStatuses.GetItem(i));
                     if (listStatus.GetConnectorID() == connectorID)
                     {
                         status = listStatus;
@@ -458,7 +464,7 @@ OcaLiteMediaTransportNetwork::~OcaLiteMediaTransportNetwork()
 
                 ::OcaLiteMediaSinkConnector connector;
                 connectorIt->AssignToOca(connector);
-                ::OcaLiteMediaSinkConnector oldConnector(connector);    // Make a copy for later checks
+                ::OcaLiteMediaSinkConnector oldConnector(connector); // Make a copy for later checks
                 rc = SetSinkConnectorPinMapValue(connector, channelPinMap, status);
 
                 if ((OCASTATUS_OK == rc) ||
@@ -547,9 +553,9 @@ OcaLiteMediaTransportNetwork::~OcaLiteMediaTransportNetwork()
         assert((m_sourceConnectors.end() != sourceIt) || (m_sinkConnectors.end() != sinkIt));
 
         // Delete the status from the list of statuses
-        for (::OcaUint16 i(static_cast< ::OcaUint16>(0)); i < m_connectorsStatuses.GetCount(); i++)
+        for (::OcaUint16 i(static_cast<::OcaUint16>(0)); i < m_connectorsStatuses.GetCount(); i++)
         {
-            const ::OcaLiteMediaConnectorStatus& status(m_connectorsStatuses.GetItem(i));
+            const ::OcaLiteMediaConnectorStatus &status(m_connectorsStatuses.GetItem(i));
             if (status.GetConnectorID() == connectorID)
             {
                 ::OcaLiteMediaConnectorStatus connectorStatus(status.GetConnectorID(), OCAMEDIACONNECTORSTATE_STOPPED, status.GetErrorCode());
@@ -563,9 +569,9 @@ OcaLiteMediaTransportNetwork::~OcaLiteMediaTransportNetwork()
     return rc;
 }
 
-::OcaLiteStatus OcaLiteMediaTransportNetwork::GetAlignmentLevel(::OcaDBfs& level,
-                                                                ::OcaDBfs& minLevel,
-                                                                ::OcaDBfs& maxLevel) const
+::OcaLiteStatus OcaLiteMediaTransportNetwork::GetAlignmentLevel(::OcaDBfs &level,
+                                                                ::OcaDBfs &minLevel,
+                                                                ::OcaDBfs &maxLevel) const
 {
     level = m_defaultAlignmentLevel;
     minLevel = m_minAlignmentLevel;
@@ -574,9 +580,9 @@ OcaLiteMediaTransportNetwork::~OcaLiteMediaTransportNetwork()
     return OCASTATUS_OK;
 }
 
-::OcaLiteStatus OcaLiteMediaTransportNetwork::GetAlignmentGain(::OcaDB& gain,
-                                                               ::OcaDB& minGain,
-                                                               ::OcaDB& maxGain) const
+::OcaLiteStatus OcaLiteMediaTransportNetwork::GetAlignmentGain(::OcaDB &gain,
+                                                               ::OcaDB &minGain,
+                                                               ::OcaDB &maxGain) const
 {
     gain = m_defaultAlignmentGain;
     minGain = m_minAlignmentGain;
@@ -585,650 +591,650 @@ OcaLiteMediaTransportNetwork::~OcaLiteMediaTransportNetwork()
     return OCASTATUS_OK;
 }
 
-::OcaLiteStatus OcaLiteMediaTransportNetwork::Execute(const ::IOcaLiteReader& reader, const ::IOcaLiteWriter& writer, ::OcaSessionID sessionID, const ::OcaLiteMethodID& methodID,
-                                                      ::OcaUint32 parametersSize, const ::OcaUint8* parameters, ::OcaUint8** response)
+::OcaLiteStatus OcaLiteMediaTransportNetwork::Execute(const ::IOcaLiteReader &reader, const ::IOcaLiteWriter &writer, ::OcaSessionID sessionID, const ::OcaLiteMethodID &methodID,
+                                                      ::OcaUint32 parametersSize, const ::OcaUint8 *parameters, ::OcaUint8 **response)
 {
     ::OcaLiteStatus rc(OCASTATUS_PARAMETER_ERROR);
     if (!IsLocked(sessionID))
     {
         if (methodID.GetDefLevel() == CLASS_ID.GetFieldCount())
         {
-            ::OcaUint8* responseBuffer(NULL);
-            const ::OcaUint8* pCmdParameters(parameters);
+            ::OcaUint8 *responseBuffer(NULL);
+            const ::OcaUint8 *pCmdParameters(parameters);
             ::OcaUint32 bytesLeft(parametersSize);
 
             switch (methodID.GetMethodIndex())
             {
             case GET_MEDIA_PROTOCOL:
+            {
+                ::OcaUint8 numberOfParameters(0);
+                if (reader.Read(bytesLeft, &pCmdParameters, numberOfParameters) &&
+                    (0 == numberOfParameters))
                 {
-                    ::OcaUint8 numberOfParameters(0);
-                    if (reader.Read(bytesLeft, &pCmdParameters, numberOfParameters) &&
-                        (0 == numberOfParameters))
+                    ::OcaLiteNetworkMediaProtocol protocol;
+                    rc = GetMediaProtocol(protocol);
+                    if (OCASTATUS_OK == rc)
                     {
-                        ::OcaLiteNetworkMediaProtocol protocol;
-                        rc = GetMediaProtocol(protocol);
-                        if (OCASTATUS_OK == rc)
+                        ::OcaUint32 responseSize(::GetSizeValue<::OcaUint8>(static_cast<::OcaUint8>(1), writer) +
+                                                 ::GetSizeValue<::OcaLiteNetworkMediaProtocol>(protocol, writer));
+                        responseBuffer = ::OcaLiteCommandHandler::GetInstance().GetResponseBuffer(responseSize);
+
+                        if (NULL != responseBuffer)
                         {
-                            ::OcaUint32 responseSize(::GetSizeValue< ::OcaUint8>(static_cast< ::OcaUint8>(1), writer) +
-                                                     ::GetSizeValue< ::OcaLiteNetworkMediaProtocol>(protocol, writer));
-                            responseBuffer = ::OcaLiteCommandHandler::GetInstance().GetResponseBuffer(responseSize);
+                            ::OcaUint8 *pResponse(responseBuffer);
+                            writer.Write(static_cast<::OcaUint8>(1 /*NrParameters*/), &pResponse);
+                            ::MarshalValue<::OcaLiteNetworkMediaProtocol>(protocol, &pResponse, writer);
 
-                            if (NULL != responseBuffer)
-                            {
-                                ::OcaUint8* pResponse(responseBuffer);
-                                writer.Write(static_cast< ::OcaUint8>(1/*NrParameters*/), &pResponse);
-                                ::MarshalValue< ::OcaLiteNetworkMediaProtocol>(protocol, &pResponse, writer);
-
-                                *response = responseBuffer;
-                            }
-                            else
-                            {
-                                rc = OCASTATUS_BUFFER_OVERFLOW;
-                            }
+                            *response = responseBuffer;
+                        }
+                        else
+                        {
+                            rc = OCASTATUS_BUFFER_OVERFLOW;
                         }
                     }
                 }
-                break;
+            }
+            break;
             case GET_PORTS:
+            {
+                ::OcaUint8 numberOfParameters(0);
+                if (reader.Read(bytesLeft, &pCmdParameters, numberOfParameters) &&
+                    (0 == numberOfParameters))
                 {
-                    ::OcaUint8 numberOfParameters(0);
-                    if (reader.Read(bytesLeft, &pCmdParameters, numberOfParameters) &&
-                        (0 == numberOfParameters))
+                    ::OcaLiteList<::OcaLitePort> ocaPorts;
+                    rc = GetPorts(ocaPorts);
+                    if (OCASTATUS_OK == rc)
                     {
-                        ::OcaLiteList< ::OcaLitePort> ocaPorts;
-                        rc = GetPorts(ocaPorts);
-                        if (OCASTATUS_OK == rc)
+                        ::OcaUint32 responseSize(::GetSizeValue<::OcaUint8>(static_cast<::OcaUint8>(1), writer) +
+                                                 ocaPorts.GetSize(writer));
+                        responseBuffer = ::OcaLiteCommandHandler::GetInstance().GetResponseBuffer(responseSize);
+
+                        if (NULL != responseBuffer)
                         {
-                            ::OcaUint32 responseSize(::GetSizeValue< ::OcaUint8>(static_cast< ::OcaUint8>(1), writer) +
-                                                     ocaPorts.GetSize(writer));
-                            responseBuffer = ::OcaLiteCommandHandler::GetInstance().GetResponseBuffer(responseSize);
+                            ::OcaUint8 *pResponse(responseBuffer);
+                            writer.Write(static_cast<::OcaUint8>(1 /*NrParameters*/), &pResponse);
+                            ocaPorts.Marshal(&pResponse, writer);
 
-                            if (NULL != responseBuffer)
-                            {
-                                ::OcaUint8* pResponse(responseBuffer);
-                                writer.Write(static_cast< ::OcaUint8>(1/*NrParameters*/), &pResponse);
-                                ocaPorts.Marshal(&pResponse, writer);
-
-                                *response = responseBuffer;
-                            }
-                            else
-                            {
-                                rc = OCASTATUS_BUFFER_OVERFLOW;
-                            }
+                            *response = responseBuffer;
+                        }
+                        else
+                        {
+                            rc = OCASTATUS_BUFFER_OVERFLOW;
                         }
                     }
                 }
-                break;
+            }
+            break;
             case GET_PORT_NAME:
+            {
+                ::OcaUint8 numberOfParameters(0);
+                ::OcaLitePortID portId;
+                if (reader.Read(bytesLeft, &pCmdParameters, numberOfParameters) &&
+                    (1 == numberOfParameters) &&
+                    (portId.Unmarshal(bytesLeft, &pCmdParameters, reader)))
                 {
-                    ::OcaUint8 numberOfParameters(0);
-                    ::OcaLitePortID portId;
-                    if (reader.Read(bytesLeft, &pCmdParameters, numberOfParameters) &&
-                        (1 == numberOfParameters) &&
-                        (portId.Unmarshal(bytesLeft, &pCmdParameters, reader)))
+                    ::OcaLiteString name;
+                    rc = GetPortName(portId, name);
+                    if (OCASTATUS_OK == rc)
                     {
-                        ::OcaLiteString name;
-                        rc = GetPortName(portId, name);
-                        if (OCASTATUS_OK == rc)
+                        ::OcaUint32 responseSize(::GetSizeValue<::OcaUint8>(static_cast<::OcaUint8>(1), writer) +
+                                                 name.GetSize(writer));
+                        responseBuffer = ::OcaLiteCommandHandler::GetInstance().GetResponseBuffer(responseSize);
+
+                        if (NULL != responseBuffer)
                         {
-                            ::OcaUint32 responseSize(::GetSizeValue< ::OcaUint8>(static_cast< ::OcaUint8>(1), writer) +
-                                                     name.GetSize(writer));
-                            responseBuffer = ::OcaLiteCommandHandler::GetInstance().GetResponseBuffer(responseSize);
+                            ::OcaUint8 *pResponse(responseBuffer);
+                            writer.Write(static_cast<::OcaUint8>(1 /*NrParameters*/), &pResponse);
+                            name.Marshal(&pResponse, writer);
 
-                            if (NULL != responseBuffer)
-                            {
-                                ::OcaUint8* pResponse(responseBuffer);
-                                writer.Write(static_cast< ::OcaUint8>(1/*NrParameters*/), &pResponse);
-                                name.Marshal(&pResponse, writer);
-
-                                *response = responseBuffer;
-                            }
-                            else
-                            {
-                                rc = OCASTATUS_BUFFER_OVERFLOW;
-                            }
+                            *response = responseBuffer;
+                        }
+                        else
+                        {
+                            rc = OCASTATUS_BUFFER_OVERFLOW;
                         }
                     }
                 }
-                break;
+            }
+            break;
             case GET_MAX_SOURCE_CONNECTORS:
+            {
+                ::OcaUint8 numberOfParameters(0);
+                if (reader.Read(bytesLeft, &pCmdParameters, numberOfParameters) &&
+                    (0 == numberOfParameters))
                 {
-                    ::OcaUint8 numberOfParameters(0);
-                    if (reader.Read(bytesLeft, &pCmdParameters, numberOfParameters) &&
-                        (0 == numberOfParameters))
+                    ::OcaUint16 maxSourceConnectors;
+                    rc = GetMaxSourceConnectors(maxSourceConnectors);
+                    if (OCASTATUS_OK == rc)
                     {
-                        ::OcaUint16 maxSourceConnectors;
-                        rc = GetMaxSourceConnectors(maxSourceConnectors);
-                        if (OCASTATUS_OK == rc)
+                        ::OcaUint32 responseSize(::GetSizeValue<::OcaUint8>(static_cast<::OcaUint8>(1), writer) +
+                                                 writer.GetSize(maxSourceConnectors));
+                        responseBuffer = ::OcaLiteCommandHandler::GetInstance().GetResponseBuffer(responseSize);
+
+                        if (NULL != responseBuffer)
                         {
-                            ::OcaUint32 responseSize(::GetSizeValue< ::OcaUint8>(static_cast< ::OcaUint8>(1), writer) +
-                                                     writer.GetSize(maxSourceConnectors));
-                            responseBuffer = ::OcaLiteCommandHandler::GetInstance().GetResponseBuffer(responseSize);
+                            ::OcaUint8 *pResponse(responseBuffer);
+                            writer.Write(static_cast<::OcaUint8>(1 /*NrParameters*/), &pResponse);
+                            writer.Write(maxSourceConnectors, &pResponse);
 
-                            if (NULL != responseBuffer)
-                            {
-                                ::OcaUint8* pResponse(responseBuffer);
-                                writer.Write(static_cast< ::OcaUint8>(1/*NrParameters*/), &pResponse);
-                                writer.Write(maxSourceConnectors, &pResponse);
-
-                                *response = responseBuffer;
-                            }
-                            else
-                            {
-                                rc = OCASTATUS_BUFFER_OVERFLOW;
-                            }
+                            *response = responseBuffer;
+                        }
+                        else
+                        {
+                            rc = OCASTATUS_BUFFER_OVERFLOW;
                         }
                     }
                 }
-                break;
+            }
+            break;
             case GET_MAX_SINK_CONNECTORS:
+            {
+                ::OcaUint8 numberOfParameters(0);
+                if (reader.Read(bytesLeft, &pCmdParameters, numberOfParameters) &&
+                    (0 == numberOfParameters))
                 {
-                    ::OcaUint8 numberOfParameters(0);
-                    if (reader.Read(bytesLeft, &pCmdParameters, numberOfParameters) &&
-                        (0 == numberOfParameters))
+                    ::OcaUint16 maxSinkConnectors;
+                    rc = GetMaxSinkConnectors(maxSinkConnectors);
+                    if (OCASTATUS_OK == rc)
                     {
-                        ::OcaUint16 maxSinkConnectors;
-                        rc = GetMaxSinkConnectors(maxSinkConnectors);
-                        if (OCASTATUS_OK == rc)
+                        ::OcaUint32 responseSize(::GetSizeValue<::OcaUint8>(static_cast<::OcaUint8>(1), writer) +
+                                                 writer.GetSize(maxSinkConnectors));
+                        responseBuffer = ::OcaLiteCommandHandler::GetInstance().GetResponseBuffer(responseSize);
+
+                        if (NULL != responseBuffer)
                         {
-                            ::OcaUint32 responseSize(::GetSizeValue< ::OcaUint8>(static_cast< ::OcaUint8>(1), writer) +
-                                                     writer.GetSize(maxSinkConnectors));
-                            responseBuffer = ::OcaLiteCommandHandler::GetInstance().GetResponseBuffer(responseSize);
+                            ::OcaUint8 *pResponse(responseBuffer);
+                            writer.Write(static_cast<::OcaUint8>(1 /*NrParameters*/), &pResponse);
+                            writer.Write(maxSinkConnectors, &pResponse);
 
-                            if (NULL != responseBuffer)
-                            {
-                                ::OcaUint8* pResponse(responseBuffer);
-                                writer.Write(static_cast< ::OcaUint8>(1/*NrParameters*/), &pResponse);
-                                writer.Write(maxSinkConnectors, &pResponse);
-
-                                *response = responseBuffer;
-                            }
-                            else
-                            {
-                                rc = OCASTATUS_BUFFER_OVERFLOW;
-                            }
+                            *response = responseBuffer;
+                        }
+                        else
+                        {
+                            rc = OCASTATUS_BUFFER_OVERFLOW;
                         }
                     }
                 }
-                break;
+            }
+            break;
             case GET_MAX_PINS_PER_CONNECTOR:
+            {
+                ::OcaUint8 numberOfParameters(0);
+                if (reader.Read(bytesLeft, &pCmdParameters, numberOfParameters) &&
+                    (0 == numberOfParameters))
                 {
-                    ::OcaUint8 numberOfParameters(0);
-                    if (reader.Read(bytesLeft, &pCmdParameters, numberOfParameters) &&
-                        (0 == numberOfParameters))
+                    ::OcaUint16 maxPins;
+                    rc = GetMaxPinsPerConnector(maxPins);
+                    if (OCASTATUS_OK == rc)
                     {
-                        ::OcaUint16 maxPins;
-                        rc = GetMaxPinsPerConnector(maxPins);
-                        if (OCASTATUS_OK == rc)
+                        ::OcaUint32 responseSize(::GetSizeValue<::OcaUint8>(static_cast<::OcaUint8>(1), writer) +
+                                                 writer.GetSize(maxPins));
+                        responseBuffer = ::OcaLiteCommandHandler::GetInstance().GetResponseBuffer(responseSize);
+
+                        if (NULL != responseBuffer)
                         {
-                            ::OcaUint32 responseSize(::GetSizeValue< ::OcaUint8>(static_cast< ::OcaUint8>(1), writer) +
-                                                     writer.GetSize(maxPins));
-                            responseBuffer = ::OcaLiteCommandHandler::GetInstance().GetResponseBuffer(responseSize);
+                            ::OcaUint8 *pResponse(responseBuffer);
+                            writer.Write(static_cast<::OcaUint8>(1 /*NrParameters*/), &pResponse);
+                            writer.Write(maxPins, &pResponse);
 
-                            if (NULL != responseBuffer)
-                            {
-                                ::OcaUint8* pResponse(responseBuffer);
-                                writer.Write(static_cast< ::OcaUint8>(1/*NrParameters*/), &pResponse);
-                                writer.Write(maxPins, &pResponse);
-
-                                *response = responseBuffer;
-                            }
-                            else
-                            {
-                                rc = OCASTATUS_BUFFER_OVERFLOW;
-                            }
+                            *response = responseBuffer;
+                        }
+                        else
+                        {
+                            rc = OCASTATUS_BUFFER_OVERFLOW;
                         }
                     }
                 }
-                break;
+            }
+            break;
             case GET_MAX_PORTS_PER_PIN:
+            {
+                ::OcaUint8 numberOfParameters(0);
+                if (reader.Read(bytesLeft, &pCmdParameters, numberOfParameters) &&
+                    (0 == numberOfParameters))
                 {
-                    ::OcaUint8 numberOfParameters(0);
-                    if (reader.Read(bytesLeft, &pCmdParameters, numberOfParameters) &&
-                        (0 == numberOfParameters))
+                    ::OcaUint16 maxPorts;
+                    rc = GetMaxPortsPerPin(maxPorts);
+                    if (OCASTATUS_OK == rc)
                     {
-                        ::OcaUint16 maxPorts;
-                        rc = GetMaxPortsPerPin(maxPorts);
-                        if (OCASTATUS_OK == rc)
+                        ::OcaUint32 responseSize(::GetSizeValue<::OcaUint8>(static_cast<::OcaUint8>(1), writer) +
+                                                 writer.GetSize(maxPorts));
+                        responseBuffer = ::OcaLiteCommandHandler::GetInstance().GetResponseBuffer(responseSize);
+
+                        if (NULL != responseBuffer)
                         {
-                            ::OcaUint32 responseSize(::GetSizeValue< ::OcaUint8>(static_cast< ::OcaUint8>(1), writer) +
-                                                     writer.GetSize(maxPorts));
-                            responseBuffer = ::OcaLiteCommandHandler::GetInstance().GetResponseBuffer(responseSize);
+                            ::OcaUint8 *pResponse(responseBuffer);
+                            writer.Write(static_cast<::OcaUint8>(1 /*NrParameters*/), &pResponse);
+                            writer.Write(maxPorts, &pResponse);
 
-                            if (NULL != responseBuffer)
-                            {
-                                ::OcaUint8* pResponse(responseBuffer);
-                                writer.Write(static_cast< ::OcaUint8>(1/*NrParameters*/), &pResponse);
-                                writer.Write(maxPorts, &pResponse);
-
-                                *response = responseBuffer;
-                            }
-                            else
-                            {
-                                rc = OCASTATUS_BUFFER_OVERFLOW;
-                            }
+                            *response = responseBuffer;
+                        }
+                        else
+                        {
+                            rc = OCASTATUS_BUFFER_OVERFLOW;
                         }
                     }
                 }
-                break;
+            }
+            break;
             case GET_SOURCE_CONNECTORS:
+            {
+                ::OcaUint8 numberOfParameters(0);
+                if (reader.Read(bytesLeft, &pCmdParameters, numberOfParameters) &&
+                    (0 == numberOfParameters))
                 {
-                    ::OcaUint8 numberOfParameters(0);
-                    if (reader.Read(bytesLeft, &pCmdParameters, numberOfParameters) &&
-                        (0 == numberOfParameters))
+                    ::OcaLiteList<::OcaLiteMediaSourceConnector> connectors;
+                    rc = GetSourceConnectors(connectors);
+                    if (OCASTATUS_OK == rc)
                     {
-                        ::OcaLiteList< ::OcaLiteMediaSourceConnector> connectors;
-                        rc = GetSourceConnectors(connectors);
-                        if (OCASTATUS_OK == rc)
+                        ::OcaUint32 responseSize(::GetSizeValue<::OcaUint8>(static_cast<::OcaUint8>(1), writer) +
+                                                 connectors.GetSize(writer));
+                        responseBuffer = ::OcaLiteCommandHandler::GetInstance().GetResponseBuffer(responseSize);
+
+                        if (NULL != responseBuffer)
                         {
-                            ::OcaUint32 responseSize(::GetSizeValue< ::OcaUint8>(static_cast< ::OcaUint8>(1), writer) +
-                                                     connectors.GetSize(writer));
-                            responseBuffer = ::OcaLiteCommandHandler::GetInstance().GetResponseBuffer(responseSize);
+                            ::OcaUint8 *pResponse(responseBuffer);
+                            writer.Write(static_cast<::OcaUint8>(1 /*NrParameters*/), &pResponse);
+                            connectors.Marshal(&pResponse, writer);
 
-                            if (NULL != responseBuffer)
-                            {
-                                ::OcaUint8* pResponse(responseBuffer);
-                                writer.Write(static_cast< ::OcaUint8>(1/*NrParameters*/), &pResponse);
-                                connectors.Marshal(&pResponse, writer);
-
-                                *response = responseBuffer;
-                            }
-                            else
-                            {
-                                rc = OCASTATUS_BUFFER_OVERFLOW;
-                            }
+                            *response = responseBuffer;
+                        }
+                        else
+                        {
+                            rc = OCASTATUS_BUFFER_OVERFLOW;
                         }
                     }
                 }
-                break;
+            }
+            break;
             case GET_SOURCE_CONNECTOR:
+            {
+                ::OcaLiteMediaConnectorID connectorId;
+                ::OcaUint8 numberOfParameters(0);
+                if (reader.Read(bytesLeft, &pCmdParameters, numberOfParameters) &&
+                    (1 == numberOfParameters) &&
+                    reader.Read(bytesLeft, &pCmdParameters, connectorId))
                 {
-                    ::OcaLiteMediaConnectorID connectorId;
-                    ::OcaUint8 numberOfParameters(0);
-                    if (reader.Read(bytesLeft, &pCmdParameters, numberOfParameters) &&
-                        (1 == numberOfParameters) &&
-                        reader.Read(bytesLeft, &pCmdParameters, connectorId))
+                    ::OcaLiteMediaSourceConnector connector;
+                    rc = GetSourceConnector(connectorId, connector);
+                    if (OCASTATUS_OK == rc)
                     {
-                        ::OcaLiteMediaSourceConnector connector;
-                        rc = GetSourceConnector(connectorId, connector);
-                        if (OCASTATUS_OK == rc)
+                        ::OcaUint32 responseSize(::GetSizeValue<::OcaUint8>(static_cast<::OcaUint8>(1), writer) +
+                                                 connector.GetSize(writer));
+                        responseBuffer = ::OcaLiteCommandHandler::GetInstance().GetResponseBuffer(responseSize);
+
+                        if (NULL != responseBuffer)
                         {
-                            ::OcaUint32 responseSize(::GetSizeValue< ::OcaUint8>(static_cast< ::OcaUint8>(1), writer) +
-                                                     connector.GetSize(writer));
-                            responseBuffer = ::OcaLiteCommandHandler::GetInstance().GetResponseBuffer(responseSize);
+                            ::OcaUint8 *pResponse(responseBuffer);
+                            writer.Write(static_cast<::OcaUint8>(1 /*NrParameters*/), &pResponse);
+                            connector.Marshal(&pResponse, writer);
 
-                            if (NULL != responseBuffer)
-                            {
-                                ::OcaUint8* pResponse(responseBuffer);
-                                writer.Write(static_cast< ::OcaUint8>(1/*NrParameters*/), &pResponse);
-                                connector.Marshal(&pResponse, writer);
-
-                                *response = responseBuffer;
-                            }
-                            else
-                            {
-                                rc = OCASTATUS_BUFFER_OVERFLOW;
-                            }
+                            *response = responseBuffer;
+                        }
+                        else
+                        {
+                            rc = OCASTATUS_BUFFER_OVERFLOW;
                         }
                     }
                 }
-                break;
+            }
+            break;
             case GET_SINK_CONNECTORS:
+            {
+                ::OcaUint8 numberOfParameters(0);
+                if (reader.Read(bytesLeft, &pCmdParameters, numberOfParameters) &&
+                    (0 == numberOfParameters))
                 {
-                    ::OcaUint8 numberOfParameters(0);
-                    if (reader.Read(bytesLeft, &pCmdParameters, numberOfParameters) &&
-                        (0 == numberOfParameters))
+                    ::OcaLiteList<::OcaLiteMediaSinkConnector> connectors;
+                    rc = GetSinkConnectors(connectors);
+                    if (OCASTATUS_OK == rc)
                     {
-                        ::OcaLiteList< ::OcaLiteMediaSinkConnector> connectors;
-                        rc = GetSinkConnectors(connectors);
-                        if (OCASTATUS_OK == rc)
+                        ::OcaUint32 responseSize(::GetSizeValue<::OcaUint8>(static_cast<::OcaUint8>(1), writer) +
+                                                 connectors.GetSize(writer));
+                        responseBuffer = ::OcaLiteCommandHandler::GetInstance().GetResponseBuffer(responseSize);
+
+                        if (NULL != responseBuffer)
                         {
-                            ::OcaUint32 responseSize(::GetSizeValue< ::OcaUint8>(static_cast< ::OcaUint8>(1), writer) +
-                                                     connectors.GetSize(writer));
-                            responseBuffer = ::OcaLiteCommandHandler::GetInstance().GetResponseBuffer(responseSize);
+                            ::OcaUint8 *pResponse(responseBuffer);
+                            writer.Write(static_cast<::OcaUint8>(1 /*NrParameters*/), &pResponse);
+                            connectors.Marshal(&pResponse, writer);
 
-                            if (NULL != responseBuffer)
-                            {
-                                ::OcaUint8* pResponse(responseBuffer);
-                                writer.Write(static_cast< ::OcaUint8>(1/*NrParameters*/), &pResponse);
-                                connectors.Marshal(&pResponse, writer);
-
-                                *response = responseBuffer;
-                            }
-                            else
-                            {
-                                rc = OCASTATUS_BUFFER_OVERFLOW;
-                            }
+                            *response = responseBuffer;
+                        }
+                        else
+                        {
+                            rc = OCASTATUS_BUFFER_OVERFLOW;
                         }
                     }
                 }
-                break;
+            }
+            break;
             case GET_SINK_CONNECTOR:
+            {
+                ::OcaLiteMediaConnectorID connectorId;
+                ::OcaUint8 numberOfParameters(0);
+                if (reader.Read(bytesLeft, &pCmdParameters, numberOfParameters) &&
+                    (1 == numberOfParameters) &&
+                    reader.Read(bytesLeft, &pCmdParameters, connectorId))
                 {
-                    ::OcaLiteMediaConnectorID connectorId;
-                    ::OcaUint8 numberOfParameters(0);
-                    if (reader.Read(bytesLeft, &pCmdParameters, numberOfParameters) &&
-                        (1 == numberOfParameters) &&
-                        reader.Read(bytesLeft, &pCmdParameters, connectorId))
+                    ::OcaLiteMediaSinkConnector connector;
+                    rc = GetSinkConnector(connectorId, connector);
+                    if (OCASTATUS_OK == rc)
                     {
-                        ::OcaLiteMediaSinkConnector connector;
-                        rc = GetSinkConnector(connectorId, connector);
-                        if (OCASTATUS_OK == rc)
+                        ::OcaUint32 responseSize(::GetSizeValue<::OcaUint8>(static_cast<::OcaUint8>(1), writer) +
+                                                 connector.GetSize(writer));
+                        responseBuffer = ::OcaLiteCommandHandler::GetInstance().GetResponseBuffer(responseSize);
+
+                        if (NULL != responseBuffer)
                         {
-                            ::OcaUint32 responseSize(::GetSizeValue< ::OcaUint8>(static_cast< ::OcaUint8>(1), writer) +
-                                                     connector.GetSize(writer));
-                            responseBuffer = ::OcaLiteCommandHandler::GetInstance().GetResponseBuffer(responseSize);
+                            ::OcaUint8 *pResponse(responseBuffer);
+                            writer.Write(static_cast<::OcaUint8>(1 /*NrParameters*/), &pResponse);
+                            connector.Marshal(&pResponse, writer);
 
-                            if (NULL != responseBuffer)
-                            {
-                                ::OcaUint8* pResponse(responseBuffer);
-                                writer.Write(static_cast< ::OcaUint8>(1/*NrParameters*/), &pResponse);
-                                connector.Marshal(&pResponse, writer);
-
-                                *response = responseBuffer;
-                            }
-                            else
-                            {
-                                rc = OCASTATUS_BUFFER_OVERFLOW;
-                            }
+                            *response = responseBuffer;
+                        }
+                        else
+                        {
+                            rc = OCASTATUS_BUFFER_OVERFLOW;
                         }
                     }
                 }
-                break;
+            }
+            break;
             case GET_CONNECTORS_STATUSES:
+            {
+                ::OcaUint8 numberOfParameters(0);
+                if (reader.Read(bytesLeft, &pCmdParameters, numberOfParameters) &&
+                    (0 == numberOfParameters))
                 {
-                    ::OcaUint8 numberOfParameters(0);
-                    if (reader.Read(bytesLeft, &pCmdParameters, numberOfParameters) &&
-                        (0 == numberOfParameters))
+                    ::OcaLiteList<::OcaLiteMediaConnectorStatus> statuses;
+                    rc = GetConnectorsStatuses(statuses);
+                    if (OCASTATUS_OK == rc)
                     {
-                        ::OcaLiteList< ::OcaLiteMediaConnectorStatus> statuses;
-                        rc = GetConnectorsStatuses(statuses);
-                        if (OCASTATUS_OK == rc)
+                        ::OcaUint32 responseSize(::GetSizeValue<::OcaUint8>(static_cast<::OcaUint8>(1), writer) +
+                                                 statuses.GetSize(writer));
+                        responseBuffer = ::OcaLiteCommandHandler::GetInstance().GetResponseBuffer(responseSize);
+
+                        if (NULL != responseBuffer)
                         {
-                            ::OcaUint32 responseSize(::GetSizeValue< ::OcaUint8>(static_cast< ::OcaUint8>(1), writer) +
-                                                     statuses.GetSize(writer));
-                            responseBuffer = ::OcaLiteCommandHandler::GetInstance().GetResponseBuffer(responseSize);
+                            ::OcaUint8 *pResponse(responseBuffer);
+                            writer.Write(static_cast<::OcaUint8>(1 /*NrParameters*/), &pResponse);
+                            statuses.Marshal(&pResponse, writer);
 
-                            if (NULL != responseBuffer)
-                            {
-                                ::OcaUint8* pResponse(responseBuffer);
-                                writer.Write(static_cast< ::OcaUint8>(1/*NrParameters*/), &pResponse);
-                                statuses.Marshal(&pResponse, writer);
-
-                                *response = responseBuffer;
-                            }
-                            else
-                            {
-                                rc = OCASTATUS_BUFFER_OVERFLOW;
-                            }
+                            *response = responseBuffer;
+                        }
+                        else
+                        {
+                            rc = OCASTATUS_BUFFER_OVERFLOW;
                         }
                     }
                 }
-                break;
+            }
+            break;
             case GET_CONNECTOR_STATUS:
+            {
+                ::OcaLiteMediaConnectorID connectorId;
+                ::OcaUint8 numberOfParameters(0);
+                if (reader.Read(bytesLeft, &pCmdParameters, numberOfParameters) &&
+                    (1 == numberOfParameters) &&
+                    reader.Read(bytesLeft, &pCmdParameters, connectorId))
                 {
-                    ::OcaLiteMediaConnectorID connectorId;
-                    ::OcaUint8 numberOfParameters(0);
-                    if (reader.Read(bytesLeft, &pCmdParameters, numberOfParameters) &&
-                        (1 == numberOfParameters) &&
-                        reader.Read(bytesLeft, &pCmdParameters, connectorId))
+                    ::OcaLiteMediaConnectorStatus status;
+                    rc = GetConnectorStatus(connectorId, status);
+                    if (OCASTATUS_OK == rc)
                     {
-                        ::OcaLiteMediaConnectorStatus status;
-                        rc = GetConnectorStatus(connectorId, status);
-                        if (OCASTATUS_OK == rc)
+                        ::OcaUint32 responseSize(::GetSizeValue<::OcaUint8>(static_cast<::OcaUint8>(1), writer) +
+                                                 status.GetSize(writer));
+                        responseBuffer = ::OcaLiteCommandHandler::GetInstance().GetResponseBuffer(responseSize);
+
+                        if (NULL != responseBuffer)
                         {
-                            ::OcaUint32 responseSize(::GetSizeValue< ::OcaUint8>(static_cast< ::OcaUint8>(1), writer) +
-                                                     status.GetSize(writer));
-                            responseBuffer = ::OcaLiteCommandHandler::GetInstance().GetResponseBuffer(responseSize);
+                            ::OcaUint8 *pResponse(responseBuffer);
+                            writer.Write(static_cast<::OcaUint8>(1 /*NrParameters*/), &pResponse);
+                            status.Marshal(&pResponse, writer);
 
-                            if (NULL != responseBuffer)
-                            {
-                                ::OcaUint8* pResponse(responseBuffer);
-                                writer.Write(static_cast< ::OcaUint8>(1/*NrParameters*/), &pResponse);
-                                status.Marshal(&pResponse, writer);
-
-                                *response = responseBuffer;
-                            }
-                            else
-                            {
-                                rc = OCASTATUS_BUFFER_OVERFLOW;
-                            }
+                            *response = responseBuffer;
+                        }
+                        else
+                        {
+                            rc = OCASTATUS_BUFFER_OVERFLOW;
                         }
                     }
                 }
-                break;
+            }
+            break;
             case ADD_SOURCE_CONNECTOR:
+            {
+                ::OcaLiteMediaConnectorState connectorState;
+                ::OcaLiteMediaSourceConnector sourceConnector;
+                ::OcaUint8 numberOfParameters(0);
+                if (reader.Read(bytesLeft, &pCmdParameters, numberOfParameters) &&
+                    (2 == numberOfParameters) &&
+                    UnmarshalValue<::OcaLiteMediaConnectorState>(connectorState, bytesLeft, &pCmdParameters, reader) &&
+                    sourceConnector.Unmarshal(bytesLeft, &pCmdParameters, reader))
                 {
-                    ::OcaLiteMediaConnectorState connectorState;
-                    ::OcaLiteMediaSourceConnector sourceConnector;
-                    ::OcaUint8 numberOfParameters(0);
-                    if (reader.Read(bytesLeft, &pCmdParameters, numberOfParameters) &&
-                        (2 == numberOfParameters) &&
-                        UnmarshalValue< ::OcaLiteMediaConnectorState>(connectorState, bytesLeft, &pCmdParameters, reader) &&
-                        sourceConnector.Unmarshal(bytesLeft, &pCmdParameters, reader))
+                    rc = AddSourceConnector(connectorState, sourceConnector);
+                    if (OCASTATUS_OK == rc)
                     {
-                        rc = AddSourceConnector(connectorState, sourceConnector);
-                        if (OCASTATUS_OK == rc)
+                        ::OcaUint32 responseSize(::GetSizeValue<::OcaUint8>(static_cast<::OcaUint8>(1), writer) +
+                                                 sourceConnector.GetSize(writer));
+                        responseBuffer = ::OcaLiteCommandHandler::GetInstance().GetResponseBuffer(responseSize);
+
+                        if (NULL != responseBuffer)
                         {
-                            ::OcaUint32 responseSize(::GetSizeValue< ::OcaUint8>(static_cast< ::OcaUint8>(1), writer) +
-                                sourceConnector.GetSize(writer));
-                            responseBuffer = ::OcaLiteCommandHandler::GetInstance().GetResponseBuffer(responseSize);
+                            ::OcaUint8 *pResponse(responseBuffer);
+                            writer.Write(static_cast<::OcaUint8>(1 /*NrParameters*/), &pResponse);
+                            sourceConnector.Marshal(&pResponse, writer);
 
-                            if (NULL != responseBuffer)
-                            {
-                                ::OcaUint8* pResponse(responseBuffer);
-                                writer.Write(static_cast< ::OcaUint8>(1/*NrParameters*/), &pResponse);
-                                sourceConnector.Marshal(&pResponse, writer);
-
-                                *response = responseBuffer;
-                            }
-                            else
-                            {
-                                rc = OCASTATUS_BUFFER_OVERFLOW;
-                            }
+                            *response = responseBuffer;
+                        }
+                        else
+                        {
+                            rc = OCASTATUS_BUFFER_OVERFLOW;
                         }
                     }
                 }
-                break;
+            }
+            break;
             case ADD_SINK_CONNECTOR:
+            {
+                ::OcaLiteMediaConnectorState connectorState;
+                ::OcaLiteMediaSinkConnector sinkConnector;
+                ::OcaUint8 numberOfParameters(0);
+                if (reader.Read(bytesLeft, &pCmdParameters, numberOfParameters) &&
+                    (2 == numberOfParameters) &&
+                    UnmarshalValue<::OcaLiteMediaConnectorState>(connectorState, bytesLeft, &pCmdParameters, reader) &&
+                    sinkConnector.Unmarshal(bytesLeft, &pCmdParameters, reader))
                 {
-                    ::OcaLiteMediaConnectorState connectorState;
-                    ::OcaLiteMediaSinkConnector sinkConnector;
-                    ::OcaUint8 numberOfParameters(0);
-                    if (reader.Read(bytesLeft, &pCmdParameters, numberOfParameters) &&
-                        (2 == numberOfParameters) &&
-                        UnmarshalValue< ::OcaLiteMediaConnectorState>(connectorState, bytesLeft, &pCmdParameters, reader) &&
-                        sinkConnector.Unmarshal(bytesLeft, &pCmdParameters, reader))
+                    rc = AddSinkConnector(connectorState, sinkConnector);
+                    if (OCASTATUS_OK == rc)
                     {
-                        rc = AddSinkConnector(connectorState, sinkConnector);
-                        if (OCASTATUS_OK == rc)
+                        ::OcaUint32 responseSize(::GetSizeValue<::OcaUint8>(static_cast<::OcaUint8>(1), writer) +
+                                                 sinkConnector.GetSize(writer));
+                        responseBuffer = ::OcaLiteCommandHandler::GetInstance().GetResponseBuffer(responseSize);
+
+                        if (NULL != responseBuffer)
                         {
-                            ::OcaUint32 responseSize(::GetSizeValue< ::OcaUint8>(static_cast< ::OcaUint8>(1), writer) +
-                                sinkConnector.GetSize(writer));
-                            responseBuffer = ::OcaLiteCommandHandler::GetInstance().GetResponseBuffer(responseSize);
+                            ::OcaUint8 *pResponse(responseBuffer);
+                            writer.Write(static_cast<::OcaUint8>(1 /*NrParameters*/), &pResponse);
+                            sinkConnector.Marshal(&pResponse, writer);
 
-                            if (NULL != responseBuffer)
-                            {
-                                ::OcaUint8* pResponse(responseBuffer);
-                                writer.Write(static_cast< ::OcaUint8>(1/*NrParameters*/), &pResponse);
-                                sinkConnector.Marshal(&pResponse, writer);
-
-                                *response = responseBuffer;
-                            }
-                            else
-                            {
-                                rc = OCASTATUS_BUFFER_OVERFLOW;
-                            }
+                            *response = responseBuffer;
+                        }
+                        else
+                        {
+                            rc = OCASTATUS_BUFFER_OVERFLOW;
                         }
                     }
                 }
-                break;
+            }
+            break;
             case SET_SOURCE_CONNECTOR_PINMAP:
+            {
+                ::OcaLiteMediaConnectorID connectorId;
+                ::OcaLiteMap<::OcaUint16, ::OcaLitePortID> pinMap;
+                ::OcaUint8 numberOfParameters(0);
+
+                if (reader.Read(bytesLeft, &pCmdParameters, numberOfParameters) &&
+                    (2 == numberOfParameters) &&
+                    reader.Read(bytesLeft, &pCmdParameters, connectorId) &&
+                    pinMap.Unmarshal(bytesLeft, &pCmdParameters, reader))
                 {
-                    ::OcaLiteMediaConnectorID connectorId;
-                    ::OcaLiteMap< ::OcaUint16, ::OcaLitePortID> pinMap;
-                    ::OcaUint8 numberOfParameters(0);
-
-                    if (reader.Read(bytesLeft, &pCmdParameters, numberOfParameters) &&
-                        (2 == numberOfParameters) &&
-                        reader.Read(bytesLeft, &pCmdParameters, connectorId) &&
-                        pinMap.Unmarshal(bytesLeft, &pCmdParameters, reader))
+                    rc = SetSourceConnectorPinMap(connectorId, pinMap);
+                    if (OCASTATUS_OK == rc)
                     {
-                        rc = SetSourceConnectorPinMap(connectorId, pinMap);
-                        if (OCASTATUS_OK == rc)
+                        ::OcaUint32 responseSize(::GetSizeValue<::OcaUint8>(static_cast<::OcaUint8>(0), writer));
+                        responseBuffer = ::OcaLiteCommandHandler::GetInstance().GetResponseBuffer(responseSize);
+
+                        if (NULL != responseBuffer)
                         {
-                            ::OcaUint32 responseSize(::GetSizeValue< ::OcaUint8>(static_cast< ::OcaUint8>(0), writer));
-                            responseBuffer = ::OcaLiteCommandHandler::GetInstance().GetResponseBuffer(responseSize);
+                            ::OcaUint8 *pResponse(responseBuffer);
+                            writer.Write(static_cast<::OcaUint8>(0 /*NrParameters*/), &pResponse);
 
-                            if (NULL != responseBuffer)
-                            {
-                                ::OcaUint8* pResponse(responseBuffer);
-                                writer.Write(static_cast< ::OcaUint8>(0/*NrParameters*/), &pResponse);
-
-                                *response = responseBuffer;
-                            }
-                            else
-                            {
-                                rc = OCASTATUS_BUFFER_OVERFLOW;
-                            }
+                            *response = responseBuffer;
+                        }
+                        else
+                        {
+                            rc = OCASTATUS_BUFFER_OVERFLOW;
                         }
                     }
                 }
-                break;
+            }
+            break;
             case SET_SINK_CONNECTOR_PINMAP:
+            {
+                ::OcaLiteMediaConnectorID connectorId;
+                ::OcaLiteMultiMap<::OcaUint16, ::OcaLitePortID> pinMap;
+                ::OcaUint8 numberOfParameters(0);
+
+                if (reader.Read(bytesLeft, &pCmdParameters, numberOfParameters) &&
+                    (2 == numberOfParameters) &&
+                    reader.Read(bytesLeft, &pCmdParameters, connectorId) &&
+                    pinMap.Unmarshal(bytesLeft, &pCmdParameters, reader))
                 {
-                    ::OcaLiteMediaConnectorID connectorId;
-                    ::OcaLiteMultiMap< ::OcaUint16, ::OcaLitePortID> pinMap;
-                    ::OcaUint8 numberOfParameters(0);
-
-                    if (reader.Read(bytesLeft, &pCmdParameters, numberOfParameters) &&
-                        (2 == numberOfParameters) &&
-                        reader.Read(bytesLeft, &pCmdParameters, connectorId) &&
-                        pinMap.Unmarshal(bytesLeft, &pCmdParameters, reader))
+                    rc = SetSinkConnectorPinMap(connectorId, pinMap);
+                    if (OCASTATUS_OK == rc)
                     {
-                        rc = SetSinkConnectorPinMap(connectorId, pinMap);
-                        if (OCASTATUS_OK == rc)
+                        ::OcaUint32 responseSize(::GetSizeValue<::OcaUint8>(static_cast<::OcaUint8>(0), writer));
+                        responseBuffer = ::OcaLiteCommandHandler::GetInstance().GetResponseBuffer(responseSize);
+
+                        if (NULL != responseBuffer)
                         {
-                            ::OcaUint32 responseSize(::GetSizeValue< ::OcaUint8>(static_cast< ::OcaUint8>(0), writer));
-                            responseBuffer = ::OcaLiteCommandHandler::GetInstance().GetResponseBuffer(responseSize);
+                            ::OcaUint8 *pResponse(responseBuffer);
+                            writer.Write(static_cast<::OcaUint8>(0 /*NrParameters*/), &pResponse);
 
-                            if (NULL != responseBuffer)
-                            {
-                                ::OcaUint8* pResponse(responseBuffer);
-                                writer.Write(static_cast< ::OcaUint8>(0/*NrParameters*/), &pResponse);
-
-                                *response = responseBuffer;
-                            }
-                            else
-                            {
-                                rc = OCASTATUS_BUFFER_OVERFLOW;
-                            }
+                            *response = responseBuffer;
+                        }
+                        else
+                        {
+                            rc = OCASTATUS_BUFFER_OVERFLOW;
                         }
                     }
                 }
-                break;
+            }
+            break;
             case DELETE_CONNECTOR:
+            {
+                ::OcaLiteMediaConnectorID connectorId;
+                ::OcaUint8 numberOfParameters(0);
+
+                if (reader.Read(bytesLeft, &pCmdParameters, numberOfParameters) &&
+                    (1 == numberOfParameters) &&
+                    reader.Read(bytesLeft, &pCmdParameters, connectorId))
                 {
-                    ::OcaLiteMediaConnectorID connectorId;
-                    ::OcaUint8 numberOfParameters(0);
-
-                    if (reader.Read(bytesLeft, &pCmdParameters, numberOfParameters) &&
-                        (1 == numberOfParameters) &&
-                        reader.Read(bytesLeft, &pCmdParameters, connectorId))
+                    rc = DeleteConnector(connectorId);
+                    if (OCASTATUS_OK == rc)
                     {
-                        rc = DeleteConnector(connectorId);
-                        if (OCASTATUS_OK == rc)
+                        ::OcaUint32 responseSize(::GetSizeValue<::OcaUint8>(static_cast<::OcaUint8>(0), writer));
+                        responseBuffer = ::OcaLiteCommandHandler::GetInstance().GetResponseBuffer(responseSize);
+
+                        if (NULL != responseBuffer)
                         {
-                            ::OcaUint32 responseSize(::GetSizeValue< ::OcaUint8>(static_cast< ::OcaUint8>(0), writer));
-                            responseBuffer = ::OcaLiteCommandHandler::GetInstance().GetResponseBuffer(responseSize);
+                            ::OcaUint8 *pResponse(responseBuffer);
+                            writer.Write(static_cast<::OcaUint8>(0 /*NrParameters*/), &pResponse);
 
-                            if (NULL != responseBuffer)
-                            {
-                                ::OcaUint8* pResponse(responseBuffer);
-                                writer.Write(static_cast< ::OcaUint8>(0/*NrParameters*/), &pResponse);
-
-                                *response = responseBuffer;
-                            }
-                            else
-                            {
-                                rc = OCASTATUS_BUFFER_OVERFLOW;
-                            }
+                            *response = responseBuffer;
+                        }
+                        else
+                        {
+                            rc = OCASTATUS_BUFFER_OVERFLOW;
                         }
                     }
                 }
-                break;
+            }
+            break;
             case GET_ALIGNMENT_LEVEL:
+            {
+                ::OcaUint8 numberOfParameters(0);
+                if (reader.Read(bytesLeft, &pCmdParameters, numberOfParameters) &&
+                    (0 == numberOfParameters))
                 {
-                    ::OcaUint8 numberOfParameters(0);
-                    if (reader.Read(bytesLeft, &pCmdParameters, numberOfParameters) &&
-                        (0 == numberOfParameters))
+                    ::OcaDBfs alignmentLevel;
+                    ::OcaDBfs minAlignmentLevel;
+                    ::OcaDBfs maxAlignmentLevel;
+                    rc = GetAlignmentLevel(alignmentLevel, minAlignmentLevel, maxAlignmentLevel);
+                    if (OCASTATUS_OK == rc)
                     {
-                        ::OcaDBfs alignmentLevel;
-                        ::OcaDBfs minAlignmentLevel;
-                        ::OcaDBfs maxAlignmentLevel;
-                        rc = GetAlignmentLevel(alignmentLevel, minAlignmentLevel, maxAlignmentLevel);
-                        if (OCASTATUS_OK == rc)
+                        ::OcaUint32 responseSize(::GetSizeValue<::OcaUint8>(static_cast<::OcaUint8>(3), writer) +
+                                                 ::GetSizeValue<::OcaDBfs>(alignmentLevel, writer) +
+                                                 ::GetSizeValue<::OcaDBfs>(minAlignmentLevel, writer) +
+                                                 ::GetSizeValue<::OcaDBfs>(maxAlignmentLevel, writer));
+                        responseBuffer = ::OcaLiteCommandHandler::GetInstance().GetResponseBuffer(responseSize);
+
+                        if (NULL != responseBuffer)
                         {
-                            ::OcaUint32 responseSize(::GetSizeValue< ::OcaUint8>(static_cast< ::OcaUint8>(3), writer) +
-                                                     ::GetSizeValue< ::OcaDBfs>(alignmentLevel, writer) +
-                                                     ::GetSizeValue< ::OcaDBfs>(minAlignmentLevel, writer) +
-                                                     ::GetSizeValue< ::OcaDBfs>(maxAlignmentLevel, writer));
-                            responseBuffer = ::OcaLiteCommandHandler::GetInstance().GetResponseBuffer(responseSize);
+                            ::OcaUint8 *pResponse(responseBuffer);
+                            writer.Write(static_cast<::OcaUint8>(3 /*NrParameters*/), &pResponse);
+                            ::MarshalValue<::OcaDB>(alignmentLevel, &pResponse, writer);
+                            ::MarshalValue<::OcaDB>(minAlignmentLevel, &pResponse, writer);
+                            ::MarshalValue<::OcaDB>(maxAlignmentLevel, &pResponse, writer);
 
-                            if (NULL != responseBuffer)
-                            {
-                                ::OcaUint8* pResponse(responseBuffer);
-                                writer.Write(static_cast< ::OcaUint8>(3/*NrParameters*/), &pResponse);
-                                ::MarshalValue< ::OcaDB>(alignmentLevel, &pResponse, writer);
-                                ::MarshalValue< ::OcaDB>(minAlignmentLevel, &pResponse, writer);
-                                ::MarshalValue< ::OcaDB>(maxAlignmentLevel, &pResponse, writer);
-
-                                *response = responseBuffer;
-                            }
-                            else
-                            {
-                                rc = OCASTATUS_BUFFER_OVERFLOW;
-                            }
+                            *response = responseBuffer;
+                        }
+                        else
+                        {
+                            rc = OCASTATUS_BUFFER_OVERFLOW;
                         }
                     }
                 }
-                break;
+            }
+            break;
             case GET_ALIGNMENT_GAIN:
+            {
+                ::OcaUint8 numberOfParameters(0);
+                if (reader.Read(bytesLeft, &pCmdParameters, numberOfParameters) &&
+                    (0 == numberOfParameters))
                 {
-                    ::OcaUint8 numberOfParameters(0);
-                    if (reader.Read(bytesLeft, &pCmdParameters, numberOfParameters) &&
-                        (0 == numberOfParameters))
+                    ::OcaDB alignmentGain;
+                    ::OcaDB minAlignmentGain;
+                    ::OcaDB maxAlignmentGain;
+                    rc = GetAlignmentGain(alignmentGain, minAlignmentGain, maxAlignmentGain);
+                    if (OCASTATUS_OK == rc)
                     {
-                        ::OcaDB alignmentGain;
-                        ::OcaDB minAlignmentGain;
-                        ::OcaDB maxAlignmentGain;
-                        rc = GetAlignmentGain(alignmentGain, minAlignmentGain, maxAlignmentGain);
-                        if (OCASTATUS_OK == rc)
+                        ::OcaUint32 responseSize(::GetSizeValue<::OcaUint8>(static_cast<::OcaUint8>(3), writer) +
+                                                 ::GetSizeValue<::OcaDB>(alignmentGain, writer) +
+                                                 ::GetSizeValue<::OcaDB>(minAlignmentGain, writer) +
+                                                 ::GetSizeValue<::OcaDB>(maxAlignmentGain, writer));
+                        responseBuffer = ::OcaLiteCommandHandler::GetInstance().GetResponseBuffer(responseSize);
+
+                        if (NULL != responseBuffer)
                         {
-                            ::OcaUint32 responseSize(::GetSizeValue< ::OcaUint8>(static_cast< ::OcaUint8>(3), writer) +
-                                                     ::GetSizeValue< ::OcaDB>(alignmentGain, writer) +
-                                                     ::GetSizeValue< ::OcaDB>(minAlignmentGain, writer) +
-                                                     ::GetSizeValue< ::OcaDB>(maxAlignmentGain, writer));
-                            responseBuffer = ::OcaLiteCommandHandler::GetInstance().GetResponseBuffer(responseSize);
+                            ::OcaUint8 *pResponse(responseBuffer);
+                            writer.Write(static_cast<::OcaUint8>(3 /*NrParameters*/), &pResponse);
+                            ::MarshalValue<::OcaDBfs>(alignmentGain, &pResponse, writer);
+                            ::MarshalValue<::OcaDBfs>(minAlignmentGain, &pResponse, writer);
+                            ::MarshalValue<::OcaDBfs>(maxAlignmentGain, &pResponse, writer);
 
-                            if (NULL != responseBuffer)
-                            {
-                                ::OcaUint8* pResponse(responseBuffer);
-                                writer.Write(static_cast< ::OcaUint8>(3/*NrParameters*/), &pResponse);
-                                ::MarshalValue< ::OcaDBfs>(alignmentGain, &pResponse, writer);
-                                ::MarshalValue< ::OcaDBfs>(minAlignmentGain, &pResponse, writer);
-                                ::MarshalValue< ::OcaDBfs>(maxAlignmentGain, &pResponse, writer);
-
-                                *response = responseBuffer;
-                            }
-                            else
-                            {
-                                rc = OCASTATUS_BUFFER_OVERFLOW;
-                            }
+                            *response = responseBuffer;
+                        }
+                        else
+                        {
+                            rc = OCASTATUS_BUFFER_OVERFLOW;
                         }
                     }
                 }
-                break;
+            }
+            break;
             case SET_PORT_NAME:
             case SET_CONNECTOR_CONNECTION:
             case SET_CONNECTOR_CODING:
@@ -1256,8 +1262,8 @@ OcaLiteMediaTransportNetwork::~OcaLiteMediaTransportNetwork()
     return rc;
 }
 
-::OcaBoolean OcaLiteMediaTransportNetwork::AddEventSubscription(const ::OcaLiteEventID& eventID,
-                                                                IEventDelegate& eventDelegate)
+::OcaBoolean OcaLiteMediaTransportNetwork::AddEventSubscription(const ::OcaLiteEventID &eventID,
+                                                                IEventDelegate &eventDelegate)
 {
     bool bSuccess(false);
 
@@ -1288,17 +1294,17 @@ OcaLiteMediaTransportNetwork::~OcaLiteMediaTransportNetwork()
             break;
         default:
             break;
-        }   
+        }
     }
     else
     {
         bSuccess = static_cast<bool>(OcaLiteApplicationNetwork::AddEventSubscription(eventID, eventDelegate));
     }
 
-    return static_cast< ::OcaBoolean>(bSuccess);
+    return static_cast<::OcaBoolean>(bSuccess);
 }
 
-void OcaLiteMediaTransportNetwork::RemoveEventSubscription(const ::OcaLiteEventID& eventID)
+void OcaLiteMediaTransportNetwork::RemoveEventSubscription(const ::OcaLiteEventID &eventID)
 {
     if (eventID.GetDefLevel() == CLASS_ID.GetFieldCount())
     {
@@ -1326,14 +1332,14 @@ void OcaLiteMediaTransportNetwork::RemoveEventSubscription(const ::OcaLiteEventI
 
 ::OcaClassVersionNumber OcaLiteMediaTransportNetwork::GetClassVersion() const
 {
-    return static_cast< ::OcaClassVersionNumber>(static_cast<int>(OcaLiteApplicationNetwork::GetClassVersion()) + CLASS_VERSION_INCREMENT);
+    return static_cast<::OcaClassVersionNumber>(static_cast<int>(OcaLiteApplicationNetwork::GetClassVersion()) + CLASS_VERSION_INCREMENT);
 }
 
 void OcaLiteMediaTransportNetwork::ReserveConnectors(::OcaUint16 nrSourceConnectors, ::OcaUint16 nrSinkConnectors, ::OcaUint16 maxPins, ::OcaUint16 maxPorts)
 {
     // Add an empty source connector for every possible slot and reserve space for the pins and slots
     m_sourceConnectors.reserve(static_cast<size_t>(nrSourceConnectors));
-    for (::OcaUint16 connector(static_cast< ::OcaUint16>(0)); connector < nrSourceConnectors; connector++)
+    for (::OcaUint16 connector(static_cast<::OcaUint16>(0)); connector < nrSourceConnectors; connector++)
     {
         m_sourceConnectors.push_back(InternalMediaSourceConnector());
         SourceConnectorList::reverse_iterator it(m_sourceConnectors.rbegin());
@@ -1342,7 +1348,7 @@ void OcaLiteMediaTransportNetwork::ReserveConnectors(::OcaUint16 nrSourceConnect
 
     // Add an empty sink connector for every possible slot and reserve space for the pins and slots
     m_sinkConnectors.reserve(static_cast<size_t>(nrSinkConnectors));
-    for (::OcaUint16 connector(static_cast< ::OcaUint16>(0)); connector < nrSinkConnectors; connector++)
+    for (::OcaUint16 connector(static_cast<::OcaUint16>(0)); connector < nrSinkConnectors; connector++)
     {
         m_sinkConnectors.push_back(InternalMediaSinkConnector());
         SinkConnectorList::reverse_iterator it(m_sinkConnectors.rbegin());
@@ -1353,8 +1359,7 @@ void OcaLiteMediaTransportNetwork::ReserveConnectors(::OcaUint16 nrSourceConnect
     m_connectorsStatuses.Reserve(nrSourceConnectors + nrSinkConnectors);
 }
 
-
-::OcaLiteStatus OcaLiteMediaTransportNetwork::GetSourceConnectorValue(::OcaLiteMediaConnectorID id, ::OcaLiteMediaSourceConnector& connector) const
+::OcaLiteStatus OcaLiteMediaTransportNetwork::GetSourceConnectorValue(::OcaLiteMediaConnectorID id, ::OcaLiteMediaSourceConnector &connector) const
 {
     ::OcaLiteStatus rc(OCASTATUS_PARAMETER_OUT_OF_RANGE);
 
@@ -1368,7 +1373,7 @@ void OcaLiteMediaTransportNetwork::ReserveConnectors(::OcaUint16 nrSourceConnect
     return rc;
 }
 
-::OcaLiteStatus OcaLiteMediaTransportNetwork::GetSinkConnectorValue(::OcaLiteMediaConnectorID id, ::OcaLiteMediaSinkConnector& connector) const
+::OcaLiteStatus OcaLiteMediaTransportNetwork::GetSinkConnectorValue(::OcaLiteMediaConnectorID id, ::OcaLiteMediaSinkConnector &connector) const
 {
     ::OcaLiteStatus rc(OCASTATUS_PARAMETER_OUT_OF_RANGE);
 
@@ -1382,7 +1387,7 @@ void OcaLiteMediaTransportNetwork::ReserveConnectors(::OcaUint16 nrSourceConnect
     return rc;
 }
 
-::OcaLiteStatus OcaLiteMediaTransportNetwork::InternalGetPorts(::OcaLiteList< ::OcaLitePort>& ports) const
+::OcaLiteStatus OcaLiteMediaTransportNetwork::InternalGetPorts(::OcaLiteList<::OcaLitePort> &ports) const
 {
     ports.Clear();
     for (PortList::const_iterator iter(m_ocaPorts.begin()); iter != m_ocaPorts.end(); ++iter)
@@ -1393,9 +1398,9 @@ void OcaLiteMediaTransportNetwork::ReserveConnectors(::OcaUint16 nrSourceConnect
     return OCASTATUS_OK;
 }
 
-const ::OcaLitePort* OcaLiteMediaTransportNetwork::InternalGetPort(const ::OcaLitePortID& id) const
+const ::OcaLitePort *OcaLiteMediaTransportNetwork::InternalGetPort(const ::OcaLitePortID &id) const
 {
-    const ::OcaLitePort* pPort(NULL);
+    const ::OcaLitePort *pPort(NULL);
 
     for (PortList::const_iterator iter(m_ocaPorts.begin()); iter != m_ocaPorts.end(); ++iter)
     {
@@ -1409,18 +1414,18 @@ const ::OcaLitePort* OcaLiteMediaTransportNetwork::InternalGetPort(const ::OcaLi
     return pPort;
 }
 
-::OcaLiteStatus OcaLiteMediaTransportNetwork::InternalAddPort(const ::OcaLiteString& label, ::OcaPortMode portMode, ::OcaLitePortID& id)
+::OcaLiteStatus OcaLiteMediaTransportNetwork::InternalAddPort(const ::OcaLiteString &label, ::OcaPortMode portMode, ::OcaLitePortID &id)
 {
     ::OcaLiteStatus rc(OCASTATUS_OK);
 
     // Determine the new index
-    ::OcaUint16 newIndex(static_cast< ::OcaUint16>(1));
-    while ((newIndex > static_cast< ::OcaUint16>(0)) && PortsContainIndex(portMode, newIndex))
+    ::OcaUint16 newIndex(static_cast<::OcaUint16>(1));
+    while ((newIndex > static_cast<::OcaUint16>(0)) && PortsContainIndex(portMode, newIndex))
     {
         newIndex++;
     }
 
-    if (newIndex > static_cast< ::OcaUint16>(0))
+    if (newIndex > static_cast<::OcaUint16>(0))
     {
         ::OcaLitePortID newPortID(portMode, newIndex);
         id = newPortID;
@@ -1434,7 +1439,7 @@ const ::OcaLitePort* OcaLiteMediaTransportNetwork::InternalGetPort(const ::OcaLi
     return rc;
 }
 
-::OcaLiteStatus OcaLiteMediaTransportNetwork::InternalDeletePort(const ::OcaLitePortID& id)
+::OcaLiteStatus OcaLiteMediaTransportNetwork::InternalDeletePort(const ::OcaLitePortID &id)
 {
     ::OcaLiteStatus rc(OCASTATUS_PARAMETER_OUT_OF_RANGE);
 
@@ -1456,7 +1461,7 @@ const ::OcaLitePort* OcaLiteMediaTransportNetwork::InternalGetPort(const ::OcaLi
 }
 
 ::OcaLiteStatus OcaLiteMediaTransportNetwork::InternalAddSourceConnector(::OcaLiteMediaConnectorState initialState,
-                                                                         const ::OcaLiteMediaSourceConnector& connector)
+                                                                         const ::OcaLiteMediaSourceConnector &connector)
 {
     assert((EMPTY_ID_INTERNAL != connector.GetIDInternal()) && !ConnectorsContainID(connector.GetIDInternal()));
 
@@ -1468,7 +1473,7 @@ const ::OcaLitePort* OcaLiteMediaTransportNetwork::InternalGetPort(const ::OcaLi
     {
         *emptySlot = connector;
         SourceConnectorChanged(connector, OCAPROPERTYCHANGETYPE_ITEM_ADDED, OCAMEDIACONNECTORELEMENT_ADDED);
-        ::OcaLiteMediaConnectorStatus connectorStatus(connector.GetIDInternal(), initialState, static_cast< ::OcaUint16>(0));
+        ::OcaLiteMediaConnectorStatus connectorStatus(connector.GetIDInternal(), initialState, static_cast<::OcaUint16>(0));
         m_connectorsStatuses.Add(connectorStatus);
         ConnectorStatusChanged(connectorStatus);
 
@@ -1483,7 +1488,7 @@ const ::OcaLitePort* OcaLiteMediaTransportNetwork::InternalGetPort(const ::OcaLi
 }
 
 ::OcaLiteStatus OcaLiteMediaTransportNetwork::InternalAddSinkConnector(::OcaLiteMediaConnectorState initialState,
-                                                                       const ::OcaLiteMediaSinkConnector& connector)
+                                                                       const ::OcaLiteMediaSinkConnector &connector)
 {
     assert((EMPTY_ID_INTERNAL != connector.GetIDInternal()) && !ConnectorsContainID(connector.GetIDInternal()));
 
@@ -1495,7 +1500,7 @@ const ::OcaLitePort* OcaLiteMediaTransportNetwork::InternalGetPort(const ::OcaLi
     {
         *emptySlot = connector;
         SinkConnectorChanged(connector, OCAPROPERTYCHANGETYPE_ITEM_ADDED, OCAMEDIACONNECTORELEMENT_ADDED);
-        ::OcaLiteMediaConnectorStatus connectorStatus(connector.GetIDInternal(), initialState, static_cast< ::OcaUint16>(0));
+        ::OcaLiteMediaConnectorStatus connectorStatus(connector.GetIDInternal(), initialState, static_cast<::OcaUint16>(0));
         m_connectorsStatuses.Add(connectorStatus);
         ConnectorStatusChanged(connectorStatus);
 
@@ -1509,8 +1514,8 @@ const ::OcaLitePort* OcaLiteMediaTransportNetwork::InternalGetPort(const ::OcaLi
     return rc;
 }
 
-::OcaLiteStatus OcaLiteMediaTransportNetwork::InternalUpdateSourceConnector(const ::OcaLiteMediaSourceConnector& connector,
-                                                                    ::OcaLiteMediaConnectorElement changedElement)
+::OcaLiteStatus OcaLiteMediaTransportNetwork::InternalUpdateSourceConnector(const ::OcaLiteMediaSourceConnector &connector,
+                                                                            ::OcaLiteMediaConnectorElement changedElement)
 {
     ::OcaLiteStatus rc(OCASTATUS_PARAMETER_OUT_OF_RANGE);
 
@@ -1526,8 +1531,8 @@ const ::OcaLitePort* OcaLiteMediaTransportNetwork::InternalGetPort(const ::OcaLi
     return rc;
 }
 
-::OcaLiteStatus OcaLiteMediaTransportNetwork::InternalUpdateSinkConnector(const ::OcaLiteMediaSinkConnector& connector,
-                                                                  ::OcaLiteMediaConnectorElement changedElement)
+::OcaLiteStatus OcaLiteMediaTransportNetwork::InternalUpdateSinkConnector(const ::OcaLiteMediaSinkConnector &connector,
+                                                                          ::OcaLiteMediaConnectorElement changedElement)
 {
     ::OcaLiteStatus rc(OCASTATUS_PARAMETER_OUT_OF_RANGE);
 
@@ -1580,9 +1585,9 @@ const ::OcaLitePort* OcaLiteMediaTransportNetwork::InternalGetPort(const ::OcaLi
         assert((m_sourceConnectors.end() != sourceIt) || (m_sinkConnectors.end() != sinkIt));
 
         // Delete the status from the list of statuses
-        for (::OcaUint16 i(static_cast< ::OcaUint16>(0)); i < m_connectorsStatuses.GetCount(); i++)
+        for (::OcaUint16 i(static_cast<::OcaUint16>(0)); i < m_connectorsStatuses.GetCount(); i++)
         {
-            const ::OcaLiteMediaConnectorStatus& status(m_connectorsStatuses.GetItem(i));
+            const ::OcaLiteMediaConnectorStatus &status(m_connectorsStatuses.GetItem(i));
             if (status.GetConnectorID() == id)
             {
                 ::OcaLiteMediaConnectorStatus connectorStatus(status.GetConnectorID(), OCAMEDIACONNECTORSTATE_STOPPED, status.GetErrorCode());
@@ -1596,17 +1601,17 @@ const ::OcaLitePort* OcaLiteMediaTransportNetwork::InternalGetPort(const ::OcaLi
     return rc;
 }
 
-::OcaLiteStatus OcaLiteMediaTransportNetwork::SetPortNameValue(const ::OcaLitePortID&, const ::OcaLiteString&)
+::OcaLiteStatus OcaLiteMediaTransportNetwork::SetPortNameValue(const ::OcaLitePortID &, const ::OcaLiteString &)
 {
     return OCASTATUS_NOT_IMPLEMENTED;
 }
 
-void OcaLiteMediaTransportNetwork::UpdateConnectorStatus(const ::OcaLiteMediaConnectorStatus& status)
+void OcaLiteMediaTransportNetwork::UpdateConnectorStatus(const ::OcaLiteMediaConnectorStatus &status)
 {
     // Find the status in the current list of status
-    for (::OcaUint16 i(static_cast< ::OcaUint16>(0)); i < m_connectorsStatuses.GetCount(); i++)
+    for (::OcaUint16 i(static_cast<::OcaUint16>(0)); i < m_connectorsStatuses.GetCount(); i++)
     {
-        ::OcaLiteMediaConnectorStatus& listStatus(m_connectorsStatuses.GetItem(i));
+        ::OcaLiteMediaConnectorStatus &listStatus(m_connectorsStatuses.GetItem(i));
         if (listStatus.GetConnectorID() == status.GetConnectorID())
         {
             if (listStatus != status)
@@ -1657,59 +1662,59 @@ bool OcaLiteMediaTransportNetwork::ConnectorsContainID(::OcaLiteMediaConnectorID
 
 void OcaLiteMediaTransportNetwork::PortsChanged(::OcaLitePropertyChangeType changeType)
 {
-    ::OcaLitePropertyID propertyID(CLASS_ID.GetFieldCount(), static_cast< ::OcaUint16>(OCA_PROP_PORTS));
-    ::OcaLiteList< ::OcaLitePort> ports;
+    ::OcaLitePropertyID propertyID(CLASS_ID.GetFieldCount(), static_cast<::OcaUint16>(OCA_PROP_PORTS));
+    ::OcaLiteList<::OcaLitePort> ports;
     if (OCASTATUS_OK == InternalGetPorts(ports))
     {
-        ::OcaLitePropertyChangedEventData< ::OcaLiteList< ::OcaLitePort> > eventData(GetObjectNumber(),
-                                                                                     propertyID,
-                                                                                     ports,
-                                                                                     changeType);
+        ::OcaLitePropertyChangedEventData<::OcaLiteList<::OcaLitePort>> eventData(GetObjectNumber(),
+                                                                                  propertyID,
+                                                                                  ports,
+                                                                                  changeType);
         PropertyChanged(eventData, propertyID);
     }
 }
 
-void OcaLiteMediaTransportNetwork::SourceConnectorChanged(const ::OcaLiteMediaSourceConnector& connector,
-                                                      ::OcaLitePropertyChangeType changeType,
-                                                      ::OcaLiteMediaConnectorElement changedElement)
+void OcaLiteMediaTransportNetwork::SourceConnectorChanged(const ::OcaLiteMediaSourceConnector &connector,
+                                                          ::OcaLitePropertyChangeType changeType,
+                                                          ::OcaLiteMediaConnectorElement changedElement)
 {
     if (NULL != m_pSourceConnectorChangedEventDelegate)
     {
         // Send the event
-        ::OcaLiteEventID eventID(CLASS_ID.GetFieldCount(), static_cast< ::OcaUint16>(OCA_EVENT_SOURCE_CONNECTOR_CHANGED));
+        ::OcaLiteEventID eventID(CLASS_ID.GetFieldCount(), static_cast<::OcaUint16>(OCA_EVENT_SOURCE_CONNECTOR_CHANGED));
         ::OcaLiteEvent event(GetObjectNumber(), eventID);
         ::OcaLiteMediaSourceConnectorChangedEventData eventData(event, connector, changeType, changedElement);
-        IEventDelegate* pEventDelegate(m_pSourceConnectorChangedEventDelegate);
+        IEventDelegate *pEventDelegate(m_pSourceConnectorChangedEventDelegate);
 
         pEventDelegate->OnEvent(eventData);
     }
 }
 
-void OcaLiteMediaTransportNetwork::SinkConnectorChanged(const ::OcaLiteMediaSinkConnector& connector,
-                                                    ::OcaLitePropertyChangeType changeType,
-                                                    ::OcaLiteMediaConnectorElement changedElement)
+void OcaLiteMediaTransportNetwork::SinkConnectorChanged(const ::OcaLiteMediaSinkConnector &connector,
+                                                        ::OcaLitePropertyChangeType changeType,
+                                                        ::OcaLiteMediaConnectorElement changedElement)
 {
     if (NULL != m_pSinkConnectorChangedEventDelegate)
     {
         // Send the event
-        ::OcaLiteEventID eventID(CLASS_ID.GetFieldCount(), static_cast< ::OcaUint16>(OCA_EVENT_SINK_CONNECTOR_CHANGED));
+        ::OcaLiteEventID eventID(CLASS_ID.GetFieldCount(), static_cast<::OcaUint16>(OCA_EVENT_SINK_CONNECTOR_CHANGED));
         ::OcaLiteEvent event(GetObjectNumber(), eventID);
         ::OcaLiteMediaSinkConnectorChangedEventData eventData(event, connector, changeType, changedElement);
-        IEventDelegate* pEventDelegate(m_pSinkConnectorChangedEventDelegate);
+        IEventDelegate *pEventDelegate(m_pSinkConnectorChangedEventDelegate);
 
         pEventDelegate->OnEvent(eventData);
     }
 }
 
-void OcaLiteMediaTransportNetwork::ConnectorStatusChanged(const ::OcaLiteMediaConnectorStatus& status)
+void OcaLiteMediaTransportNetwork::ConnectorStatusChanged(const ::OcaLiteMediaConnectorStatus &status)
 {
     if (NULL != m_pConnectorStatusChangedEventDelegate)
     {
         // Send the event
-        ::OcaLiteEventID eventID(CLASS_ID.GetFieldCount(), static_cast< ::OcaUint16>(OCA_EVENT_CONNECTOR_STATUS_CHANGED));
+        ::OcaLiteEventID eventID(CLASS_ID.GetFieldCount(), static_cast<::OcaUint16>(OCA_EVENT_CONNECTOR_STATUS_CHANGED));
         ::OcaLiteEvent event(GetObjectNumber(), eventID);
         ::OcaLiteMediaConnectorStatusChangedEventData eventData(event, status);
-        IEventDelegate* pEventDelegate(m_pConnectorStatusChangedEventDelegate);
+        IEventDelegate *pEventDelegate(m_pConnectorStatusChangedEventDelegate);
 
         pEventDelegate->OnEvent(eventData);
     }
@@ -1723,12 +1728,12 @@ OcaLiteMediaTransportNetwork::InternalMediaSourceConnector::InternalMediaSourceC
       m_idExternal(),
       m_connection(),
       m_coding(),
-      m_pinCount(static_cast< ::OcaUint16>(0)),
+      m_pinCount(static_cast<::OcaUint16>(0)),
       m_channelPinMap()
 {
 }
 
-OcaLiteMediaTransportNetwork::InternalMediaSourceConnector::InternalMediaSourceConnector(const InternalMediaSourceConnector& source)
+OcaLiteMediaTransportNetwork::InternalMediaSourceConnector::InternalMediaSourceConnector(const InternalMediaSourceConnector &source)
     : m_isEmpty(source.m_isEmpty),
       m_idInternal(source.m_idInternal),
       m_idExternal(source.m_idExternal),
@@ -1765,15 +1770,15 @@ void OcaLiteMediaTransportNetwork::InternalMediaSourceConnector::Clear()
     m_idExternal = ::OcaLiteString();
     m_connection = ::OcaLiteMediaConnection();
     m_coding = ::OcaLiteMediaCoding();
-    m_pinCount = static_cast< ::OcaUint16>(0);
+    m_pinCount = static_cast<::OcaUint16>(0);
     m_channelPinMap.clear();
 }
 
-bool OcaLiteMediaTransportNetwork::ArePortsInChannelPinMapValid(const ::OcaLiteMap< ::OcaUint16, ::OcaLitePortID>& channelPinMap) const
+bool OcaLiteMediaTransportNetwork::ArePortsInChannelPinMapValid(const ::OcaLiteMap<::OcaUint16, ::OcaLitePortID> &channelPinMap) const
 {
     bool allValid(true);
 
-    for (::OcaLiteMap< ::OcaUint16, ::OcaLitePortID>::Iterator it(channelPinMap.Begin());
+    for (::OcaLiteMap<::OcaUint16, ::OcaLitePortID>::Iterator it(channelPinMap.Begin());
          allValid && (it != channelPinMap.End());
          ++it)
     {
@@ -1783,11 +1788,11 @@ bool OcaLiteMediaTransportNetwork::ArePortsInChannelPinMapValid(const ::OcaLiteM
     return allValid;
 }
 
-bool OcaLiteMediaTransportNetwork::ArePortsInChannelPinMapValid(const ::OcaLiteMultiMap< ::OcaUint16, ::OcaLitePortID>& channelPinMap) const
+bool OcaLiteMediaTransportNetwork::ArePortsInChannelPinMapValid(const ::OcaLiteMultiMap<::OcaUint16, ::OcaLitePortID> &channelPinMap) const
 {
     bool allValid(true);
 
-    for (::OcaLiteMultiMap< ::OcaUint16, ::OcaLitePortID>::Iterator it(channelPinMap.Begin());
+    for (::OcaLiteMultiMap<::OcaUint16, ::OcaLitePortID>::Iterator it(channelPinMap.Begin());
          allValid && (it != channelPinMap.End());
          ++it)
     {
@@ -1807,7 +1812,7 @@ bool OcaLiteMediaTransportNetwork::ArePortsInChannelPinMapValid(const ::OcaLiteM
     return m_pinCount;
 }
 
-void OcaLiteMediaTransportNetwork::InternalMediaSourceConnector::AssignToOca(::OcaLiteMediaSourceConnector& target) const
+void OcaLiteMediaTransportNetwork::InternalMediaSourceConnector::AssignToOca(::OcaLiteMediaSourceConnector &target) const
 {
     assert(!m_isEmpty);
     target.SetIDInternal(m_idInternal);
@@ -1817,8 +1822,8 @@ void OcaLiteMediaTransportNetwork::InternalMediaSourceConnector::AssignToOca(::O
     target.SetPinCount(m_pinCount);
 
     // Copy the channel pin map
-    ::OcaLiteMap< ::OcaUint16, ::OcaLitePortID> channelPinMap;
-    for (std::vector< ::OcaLiteMapItem< ::OcaUint16, ::OcaLitePortID> >::const_iterator it(m_channelPinMap.begin());
+    ::OcaLiteMap<::OcaUint16, ::OcaLitePortID> channelPinMap;
+    for (std::vector<::OcaLiteMapItem<::OcaUint16, ::OcaLitePortID>>::const_iterator it(m_channelPinMap.begin());
          it != m_channelPinMap.end();
          ++it)
     {
@@ -1827,7 +1832,7 @@ void OcaLiteMediaTransportNetwork::InternalMediaSourceConnector::AssignToOca(::O
     target.SetChannelPinMap(channelPinMap);
 }
 
-OcaLiteMediaTransportNetwork::InternalMediaSourceConnector& OcaLiteMediaTransportNetwork::InternalMediaSourceConnector::operator=(const InternalMediaSourceConnector& source)
+OcaLiteMediaTransportNetwork::InternalMediaSourceConnector &OcaLiteMediaTransportNetwork::InternalMediaSourceConnector::operator=(const InternalMediaSourceConnector &source)
 {
     if (this != &source)
     {
@@ -1844,7 +1849,7 @@ OcaLiteMediaTransportNetwork::InternalMediaSourceConnector& OcaLiteMediaTranspor
     return *this;
 }
 
-OcaLiteMediaTransportNetwork::InternalMediaSourceConnector& OcaLiteMediaTransportNetwork::InternalMediaSourceConnector::operator=(const ::OcaLiteMediaSourceConnector& source)
+OcaLiteMediaTransportNetwork::InternalMediaSourceConnector &OcaLiteMediaTransportNetwork::InternalMediaSourceConnector::operator=(const ::OcaLiteMediaSourceConnector &source)
 {
     m_isEmpty = false;
     m_idInternal = source.GetIDInternal();
@@ -1854,9 +1859,9 @@ OcaLiteMediaTransportNetwork::InternalMediaSourceConnector& OcaLiteMediaTranspor
     m_pinCount = source.GetPinCount();
 
     // Copy the channel pin map
-    const ::OcaLiteMap< ::OcaUint16, ::OcaLitePortID> channelPinMap(source.GetChannelPinMap());
+    const ::OcaLiteMap<::OcaUint16, ::OcaLitePortID> channelPinMap(source.GetChannelPinMap());
     m_channelPinMap.clear();
-    for (::OcaLiteMap< ::OcaUint16, ::OcaLitePortID>::Iterator it(channelPinMap.Begin());
+    for (::OcaLiteMap<::OcaUint16, ::OcaLitePortID>::Iterator it(channelPinMap.Begin());
          it != channelPinMap.End();
          ++it)
     {
@@ -1874,12 +1879,12 @@ OcaLiteMediaTransportNetwork::InternalMediaSinkConnector::InternalMediaSinkConne
       m_idExternal(),
       m_connection(),
       m_coding(),
-      m_pinCount(static_cast< ::OcaUint16>(0)),
+      m_pinCount(static_cast<::OcaUint16>(0)),
       m_channelPinMap()
 {
 }
 
-OcaLiteMediaTransportNetwork::InternalMediaSinkConnector::InternalMediaSinkConnector(const InternalMediaSinkConnector& source)
+OcaLiteMediaTransportNetwork::InternalMediaSinkConnector::InternalMediaSinkConnector(const InternalMediaSinkConnector &source)
     : m_isEmpty(source.m_isEmpty),
       m_idInternal(source.m_idInternal),
       m_idExternal(source.m_idExternal),
@@ -1916,7 +1921,7 @@ void OcaLiteMediaTransportNetwork::InternalMediaSinkConnector::Clear()
     m_idExternal = ::OcaLiteString();
     m_connection = ::OcaLiteMediaConnection();
     m_coding = ::OcaLiteMediaCoding();
-    m_pinCount = static_cast< ::OcaUint16>(0);
+    m_pinCount = static_cast<::OcaUint16>(0);
     m_channelPinMap.clear();
 }
 
@@ -1930,7 +1935,7 @@ void OcaLiteMediaTransportNetwork::InternalMediaSinkConnector::Clear()
     return m_pinCount;
 }
 
-void OcaLiteMediaTransportNetwork::InternalMediaSinkConnector::AssignToOca(::OcaLiteMediaSinkConnector& target) const
+void OcaLiteMediaTransportNetwork::InternalMediaSinkConnector::AssignToOca(::OcaLiteMediaSinkConnector &target) const
 {
     assert(!m_isEmpty);
     target.SetIDInternal(m_idInternal);
@@ -1940,8 +1945,8 @@ void OcaLiteMediaTransportNetwork::InternalMediaSinkConnector::AssignToOca(::Oca
     target.SetPinCount(m_pinCount);
 
     // Copy the channel pin map
-    ::OcaLiteMultiMap< ::OcaUint16, ::OcaLitePortID> channelPinMap;
-    for (std::vector< ::OcaLiteMapItem< ::OcaUint16, ::OcaLitePortID> >::const_iterator it(m_channelPinMap.begin());
+    ::OcaLiteMultiMap<::OcaUint16, ::OcaLitePortID> channelPinMap;
+    for (std::vector<::OcaLiteMapItem<::OcaUint16, ::OcaLitePortID>>::const_iterator it(m_channelPinMap.begin());
          it != m_channelPinMap.end();
          ++it)
     {
@@ -1950,7 +1955,7 @@ void OcaLiteMediaTransportNetwork::InternalMediaSinkConnector::AssignToOca(::Oca
     target.SetChannelPinMap(channelPinMap);
 }
 
-OcaLiteMediaTransportNetwork::InternalMediaSinkConnector& OcaLiteMediaTransportNetwork::InternalMediaSinkConnector::operator=(const InternalMediaSinkConnector& source)
+OcaLiteMediaTransportNetwork::InternalMediaSinkConnector &OcaLiteMediaTransportNetwork::InternalMediaSinkConnector::operator=(const InternalMediaSinkConnector &source)
 {
     if (this != &source)
     {
@@ -1967,7 +1972,7 @@ OcaLiteMediaTransportNetwork::InternalMediaSinkConnector& OcaLiteMediaTransportN
     return *this;
 }
 
-OcaLiteMediaTransportNetwork::InternalMediaSinkConnector& OcaLiteMediaTransportNetwork::InternalMediaSinkConnector::operator=(const ::OcaLiteMediaSinkConnector& source)
+OcaLiteMediaTransportNetwork::InternalMediaSinkConnector &OcaLiteMediaTransportNetwork::InternalMediaSinkConnector::operator=(const ::OcaLiteMediaSinkConnector &source)
 {
     m_isEmpty = false;
     m_idInternal = source.GetIDInternal();
@@ -1977,9 +1982,9 @@ OcaLiteMediaTransportNetwork::InternalMediaSinkConnector& OcaLiteMediaTransportN
     m_pinCount = source.GetPinCount();
 
     // Copy the channel pin map
-    const ::OcaLiteMultiMap< ::OcaUint16, ::OcaLitePortID> channelPinMap(source.GetChannelPinMap());
+    const ::OcaLiteMultiMap<::OcaUint16, ::OcaLitePortID> channelPinMap(source.GetChannelPinMap());
     m_channelPinMap.clear();
-    for (::OcaLiteMultiMap< ::OcaUint16, ::OcaLitePortID>::Iterator it(channelPinMap.Begin());
+    for (::OcaLiteMultiMap<::OcaUint16, ::OcaLitePortID>::Iterator it(channelPinMap.Begin());
          it != channelPinMap.End();
          ++it)
     {

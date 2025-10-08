@@ -1,9 +1,9 @@
-/*  By downloading or using this file, the user agrees to be bound by the terms of the license 
+/*  By downloading or using this file, the user agrees to be bound by the terms of the license
  *  agreement located in the LICENSE file in the root of this project
  *  as an original contracting party.
  */
 
- /*
+/*
  *  Description         : The host interface Ocf Configuration object that can be
  *                        used on any OcaLite enabled platform.
  *
@@ -35,18 +35,18 @@ bool OcfLiteConfigureInitialize(void)
     return true;
 }
 
-bool OcfLiteConfigureGetModelGUID(UINT32& mnfrCode, UINT32& modelCode)
+bool OcfLiteConfigureGetModelGUID(UINT32 &mnfrCode, UINT32 &modelCode)
 {
     mnfrCode = static_cast<UINT32>(0x123456);
     modelCode = static_cast<UINT32>(0);
-    
+
     return true;
 }
 
-bool OcfLiteConfigureGetModelDescription(std::string& manufacturer, std::string& name, std::string& version)
+bool OcfLiteConfigureGetModelDescription(std::string &manufacturer, std::string &name, std::string &version)
 {
-    static_cast<void>(manufacturer.assign("OCA Alliance"));
-    static_cast<void>(name.assign("Proto device"));
+    static_cast<void>(manufacturer.assign("Bose Professional"));
+    static_cast<void>(name.assign("Fusion"));
     static_cast<void>(version.assign("First version"));
 
     return true;

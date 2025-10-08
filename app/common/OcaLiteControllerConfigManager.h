@@ -10,6 +10,7 @@
 #include "../../common/OCALite/OCC/ControlDataTypes/OcaLiteString.h"
 #include <string>
 #include <vector>
+#include <memory>
 
 // Forward declarations to avoid heavy includes in the header.
 struct Controller;
@@ -40,7 +41,10 @@ public:
                                      ::OcaLiteString &configData) const;
 
     // Accept list of controllers and store them for filtering by controller ID
-    void SetConfigData(const std::vector<Controller> &controllers);
+    void SetConfigData(const std::vector<std::shared_ptr<Controller>> &controllers);
+
+    // Clear all stored controller configuration data
+    void ClearConfigData();
 
     enum MethodIndex
     {
@@ -66,8 +70,7 @@ private:
     ::OcaLiteControllerConfigManager &operator=(const ::OcaLiteControllerConfigManager &);
 
     static ::OcaLiteControllerConfigManager *m_pSingleton;
-    std::vector<Controller> m_controllers;
-
+    std::vector<std::shared_ptr<Controller>> m_controllers;
 };
 
 #endif // OCALITECONTROLLERCONFIGMANAGER_H

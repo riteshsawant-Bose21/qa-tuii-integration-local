@@ -1,4 +1,4 @@
-/*  By downloading or using this file, the user agrees to be bound by the terms of the license 
+/*  By downloading or using this file, the user agrees to be bound by the terms of the license
  *  agreement located in the LICENSE file in the root of this project
  *  as an original contracting party.
  *
@@ -30,9 +30,13 @@
  * Comparator structure to compare key of a multimap
  */
 template <class KeyDataType, class ValueDataType>
-struct multimap_key_comparator : public binary_function<std::pair<KeyDataType, ValueDataType>, std::pair<KeyDataType, ValueDataType>, bool>
+struct multimap_key_comparator
 {
-    bool operator()(const ::std::pair<KeyDataType, ValueDataType>& lhs, const ::std::pair<KeyDataType, ValueDataType>& rhs) const
+    using first_argument_type = std::pair<KeyDataType, ValueDataType>;
+    using second_argument_type = std::pair<KeyDataType, ValueDataType>;
+    using result_type = bool;
+
+    bool operator()(const ::std::pair<KeyDataType, ValueDataType> &lhs, const ::std::pair<KeyDataType, ValueDataType> &rhs) const
     {
         return (lhs.first < rhs.first);
     }
@@ -75,7 +79,7 @@ public:
          *
          * @return The key of the element pointed to.
          */
-        const KeyDataType& GetKey() const
+        const KeyDataType &GetKey() const
         {
             return m_iter->first;
         }
@@ -85,7 +89,7 @@ public:
          *
          * @return The value of the element pointed to.
          */
-        const ValueDataType& GetValue() const
+        const ValueDataType &GetValue() const
         {
             return m_iter->second;
         }
@@ -97,7 +101,7 @@ public:
          * @param[in]   rhs         The object to compare with.
          * @return True if the classes are equal.
          */
-        bool operator==(const Iterator& rhs) const
+        bool operator==(const Iterator &rhs) const
         {
             bool result(m_iter == rhs.m_iter);
 
@@ -110,7 +114,7 @@ public:
          * @param[in]   rhs         The object to compare with.
          * @return True if the classes are not equal.
          */
-        bool operator!=(const Iterator& rhs) const
+        bool operator!=(const Iterator &rhs) const
         {
             return !(operator==(rhs));
         }
@@ -120,7 +124,7 @@ public:
          *
          * @return The reference to the iterator.
          */
-        Iterator& operator++()
+        Iterator &operator++()
         {
             ++m_iter;
             return *this;
@@ -139,7 +143,7 @@ public:
 
     private:
         /** The iterator for the underlying std::multimap. */
-        typename std::multimap<KeyDataType, ValueDataType>::const_iterator   m_iter;
+        typename std::multimap<KeyDataType, ValueDataType>::const_iterator m_iter;
     };
 
     /** Default constructor. */
@@ -155,13 +159,13 @@ public:
      * @param[in]   cnt         The number of entries (key value pairs) in the map.
      * @param[in]   items       The array of items of the map.
      */
-    OcaLiteMultiMap(::OcaUint16 cnt, const ::OcaLiteMapItem<KeyDataType, ValueDataType>* items)
+    OcaLiteMultiMap(::OcaUint16 cnt, const ::OcaLiteMapItem<KeyDataType, ValueDataType> *items)
         : ::IOcaLiteMarshal(),
           m_items()
     {
         assert(NULL != items);
 
-        for (::OcaUint16 i(static_cast< ::OcaUint16>(0)); i < cnt; i++)
+        for (::OcaUint16 i(static_cast<::OcaUint16>(0)); i < cnt; i++)
         {
             static_cast<void>(m_items.insert(std::pair<KeyDataType, ValueDataType>(items[i].GetKey(), items[i].GetValue())));
         }
@@ -172,7 +176,7 @@ public:
      *
      * @param[in]   source      The source to copy the object from.
      */
-    OcaLiteMultiMap(const ::OcaLiteMultiMap<KeyDataType, ValueDataType>& source)
+    OcaLiteMultiMap(const ::OcaLiteMultiMap<KeyDataType, ValueDataType> &source)
         : ::IOcaLiteMarshal(source),
           m_items(source.m_items)
     {
@@ -192,7 +196,7 @@ public:
      */
     ::OcaUint16 GetCount() const
     {
-        return static_cast< ::OcaUint16>(m_items.size());
+        return static_cast<::OcaUint16>(m_items.size());
     }
 
     /**
@@ -209,7 +213,7 @@ public:
         {
             keyCount++;
         }
-        return static_cast< ::OcaUint16>(keyCount);
+        return static_cast<::OcaUint16>(keyCount);
     }
 
     /**
@@ -218,11 +222,11 @@ public:
      * @param[in]   key         The key to find.
      * @return True if the map contains the key, false otherwise.
      */
-    ::OcaBoolean ContainsKey(const KeyDataType& key) const
+    ::OcaBoolean ContainsKey(const KeyDataType &key) const
     {
         typename TMultiMap::const_iterator it(m_items.find(key));
 
-        return static_cast< ::OcaBoolean>(it != m_items.end());
+        return static_cast<::OcaBoolean>(it != m_items.end());
     }
 
     /**
@@ -231,7 +235,7 @@ public:
      * @param[in]   value       The value to find.
      * @return True if the map contains the value, false otherwise.
      */
-    ::OcaBoolean ContainsValue(const ValueDataType& value) const
+    ::OcaBoolean ContainsValue(const ValueDataType &value) const
     {
         typename TMultiMap::const_iterator it(m_items.begin());
         bool bFound(false);
@@ -242,7 +246,7 @@ public:
             ++it;
         }
 
-        return static_cast< ::OcaBoolean>(bFound);
+        return static_cast<::OcaBoolean>(bFound);
     }
 
     /**
@@ -252,7 +256,7 @@ public:
      * @return The range of values with the given key. The first element points to the first element with the given key,
      *         the second value points to the first element greater than the key.
      */
-    std::pair<const Iterator, const Iterator> GetValueRange(const KeyDataType& key) const
+    std::pair<const Iterator, const Iterator> GetValueRange(const KeyDataType &key) const
     {
         typename std::pair<typename TMultiMap::const_iterator, typename TMultiMap::const_iterator> range(m_items.equal_range(key));
 
@@ -266,7 +270,7 @@ public:
      * @return The range of values with the given key. The first element points to the first element with the given key,
      *         the second value points to the first element greater than the key.
      */
-    std::pair<Iterator, Iterator> GetValueRange(const KeyDataType& key)
+    std::pair<Iterator, Iterator> GetValueRange(const KeyDataType &key)
     {
         typename std::pair<typename TMultiMap::iterator, typename TMultiMap::iterator> range(m_items.equal_range(key));
 
@@ -281,9 +285,9 @@ public:
      *
      * @param[in]   element     The element to add to the map.
      */
-    void Add(const ::OcaLiteMapItem<KeyDataType, ValueDataType>& element)
+    void Add(const ::OcaLiteMapItem<KeyDataType, ValueDataType> &element)
     {
-        assert(static_cast< ::OcaUint16>(m_items.size()) < (std::numeric_limits< ::OcaUint16>::max)());
+        assert(static_cast<::OcaUint16>(m_items.size()) < (std::numeric_limits<::OcaUint16>::max)());
         static_cast<void>(m_items.insert(std::pair<KeyDataType, ValueDataType>(element.GetKey(), element.GetValue())));
     }
 
@@ -292,7 +296,7 @@ public:
      *
      * @param[in]   key         The key of the item to remove.
      */
-    void Remove(const KeyDataType& key)
+    void Remove(const KeyDataType &key)
     {
         typename TMultiMap::iterator it(m_items.find(key));
 
@@ -306,10 +310,10 @@ public:
      * Assignment operator.
      *
      * @param[in]   source      The source to assign the object from.
-     * 
+     *
      * @return A reference to this object.
      */
-    ::OcaLiteMultiMap<KeyDataType, ValueDataType>& operator=(const ::OcaLiteMultiMap<KeyDataType, ValueDataType>& source)
+    ::OcaLiteMultiMap<KeyDataType, ValueDataType> &operator=(const ::OcaLiteMultiMap<KeyDataType, ValueDataType> &source)
     {
         if (this != &source)
         {
@@ -354,7 +358,7 @@ public:
      * @param[in]   rhs         The object to compare with.
      * @return True if the classes are equal.
      */
-    bool operator==(const ::OcaLiteMultiMap<KeyDataType, ValueDataType>& rhs) const
+    bool operator==(const ::OcaLiteMultiMap<KeyDataType, ValueDataType> &rhs) const
     {
         bool result(m_items == rhs.m_items);
 
@@ -367,16 +371,16 @@ public:
      * @param[in]   rhs         The object to compare with.
      * @return True if the classes are not equal.
      */
-    bool operator!=(const ::OcaLiteMultiMap<KeyDataType, ValueDataType>& rhs) const
+    bool operator!=(const ::OcaLiteMultiMap<KeyDataType, ValueDataType> &rhs) const
     {
         return !(operator==(rhs));
     }
 
     // ---- IOcaLiteMarshal methods ----
 
-    virtual void Marshal(::OcaUint8** destination, const ::IOcaLiteWriter& writer) const
+    virtual void Marshal(::OcaUint8 **destination, const ::IOcaLiteWriter &writer) const
     {
-        writer.Write(static_cast< ::OcaUint16>(m_items.size()), destination);
+        writer.Write(static_cast<::OcaUint16>(m_items.size()), destination);
         for (typename TMultiMap::const_iterator it(m_items.begin());
              it != m_items.end();
              ++it)
@@ -386,13 +390,13 @@ public:
         }
     }
 
-    virtual bool Unmarshal(::OcaUint32& bytesLeft, const ::OcaUint8** source, const ::IOcaLiteReader& reader)
+    virtual bool Unmarshal(::OcaUint32 &bytesLeft, const ::OcaUint8 **source, const ::IOcaLiteReader &reader)
     {
         m_items.clear();
 
         ::OcaUint16 cnt;
         bool result(reader.Read(bytesLeft, source, cnt));
-        for (::OcaUint16 i(static_cast< ::OcaUint16>(0)); (i < cnt) && result; i++)
+        for (::OcaUint16 i(static_cast<::OcaUint16>(0)); (i < cnt) && result; i++)
         {
             KeyDataType key;
             result = result && UnmarshalValue<KeyDataType>(key, bytesLeft, source, reader);
@@ -409,9 +413,9 @@ public:
         return result;
     }
 
-    virtual ::OcaUint32 GetSize(const ::IOcaLiteWriter& writer) const
+    virtual ::OcaUint32 GetSize(const ::IOcaLiteWriter &writer) const
     {
-        ::OcaUint32 length(writer.GetSize(static_cast< ::OcaUint16>(m_items.size())));
+        ::OcaUint32 length(writer.GetSize(static_cast<::OcaUint16>(m_items.size())));
         for (typename TMultiMap::const_iterator it(m_items.begin());
              it != m_items.end();
              ++it)
@@ -428,7 +432,7 @@ private:
     typedef std::multimap<KeyDataType, ValueDataType> TMultiMap;
 
     /** The items of the map. */
-    TMultiMap               m_items;
+    TMultiMap m_items;
 };
 
 #endif // OCALITEMULTIMAP_H
