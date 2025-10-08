@@ -46,7 +46,7 @@ bool OcfLiteConfigureGetModelGUID(UINT32 &mnfrCode, UINT32 &modelCode)
 bool OcfLiteConfigureGetModelDescription(std::string &manufacturer, std::string &name, std::string &version)
 {
     static_cast<void>(manufacturer.assign("Bose Professional"));
-    static_cast<void>(name.assign("Fusion "));
+    static_cast<void>(name.assign("Fusion"));
     static_cast<void>(version.assign("First version"));
 
     return true;

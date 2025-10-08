@@ -69,7 +69,7 @@ APP_SOURCES := $(wildcard *.cpp) \
 
 # Common source files
 FRAMEWORK_COMMON_SOURCES := $(shell find ../../common -name "*.cpp" | grep -v "AES67" | grep -v "OcaLiteMediaTransportNetworkAES67")
-APP_COMMON_SOURCES       :=../common/workers/ConcreteGainActuator.cpp \
+APP_COMMON_SOURCES       := ../common/workers/ConcreteGainActuator.cpp \
                            ../common/workers/ConcreteMuteActuator.cpp \
                            ../common/workers/ConcreteSwitchActuator.cpp \
                            ../common/workers/ZoneGroup.cpp \
