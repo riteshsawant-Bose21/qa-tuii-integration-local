@@ -1,4 +1,4 @@
-/*  By downloading or using this file, the user agrees to be bound by the terms of the license 
+/*  By downloading or using this file, the user agrees to be bound by the terms of the license
  *  agreement located in the LICENSE file in the root of this project
  *  as an original contracting party.
  */
@@ -47,12 +47,11 @@
 // ---- Local data ----
 
 #ifdef ERRNO
-   int err;
+int err;
 #endif
 // ---- Class Implementation ----
 
-
-INT32 OcfLiteHostInterfaceSelect(INT32 highest, OcfLiteSelectableSet& readset,  OcfLiteSelectableSet& writeset, OcfLiteSelectableSet& exceptset, INT32 timeout)
+INT32 OcfLiteHostInterfaceSelect(INT32 highest, OcfLiteSelectableSet &readset, OcfLiteSelectableSet &writeset, OcfLiteSelectableSet &exceptset, INT32 timeout)
 {
     struct timeval timeValue = {0};
 
@@ -61,7 +60,7 @@ INT32 OcfLiteHostInterfaceSelect(INT32 highest, OcfLiteSelectableSet& readset,  
         timeValue.tv_sec = timeout / 1000;
         timeValue.tv_usec = timeout % 1000;
     }
-    
+
     return select(highest + 1, &readset, &writeset, &exceptset, &timeValue);
 }
 
@@ -71,29 +70,39 @@ INT32 Ocp1LiteHostInterfaceRetrieveSocket(::SocketNetworkProtocolType networkPro
 
     int socketType = (transportProtocolType == PROTOCOL_UDP) ? SOCK_DGRAM : SOCK_STREAM;
     int socketFd = socket(AF_INET, socketType, transportProtocolType);
-    if (SOCKET_ERROR != -1)
+    if (SOCKET_ERROR != socketFd && socketFd != SOCKET_ERROR)
     {
-        bool optionOn(true);
+        int optionOn = 1;
+        int result = ::setsockopt(socketFd, SOL_SOCKET, SO_REUSEADDR,
+                                  &optionOn, sizeof(optionOn));
 
-        // Set SO_REUSEADDR option
-        int result(::setsockopt(static_cast<int>(socketFd), SOL_SOCKET, SO_REUSEADDR,
-                               reinterpret_cast<const char*>(&optionOn), sizeof(optionOn)));
+        // I was getting a EINVAL error here.
+        // Turns out optionOn was a bool which is one byte but setsockopt expects 4 bytes.
+        // changed it to use int so that it matches the expected size.
+        // Original code:
+        // bool optionOn(true);
+
+        // // Set SO_REUSEADDR option
+        // int result(::setsockopt(static_cast<int>(socketFd), SOL_SOCKET, SO_REUSEADDR,
+        //                         reinterpret_cast<const char *>(&optionOn), sizeof(optionOn)));
         if (0 != result)
         {
             OCA_LOG_ERROR_PARAMS("setsockopt SO_REUSEADDR failed, errorcode=%d",
-                errno);
+                                 errno);
         }
+
+        // TODO: Check if we need TCP_NODELAY option to be true.
 
         // Set TCP_NODELAY option for TCP sockets
         if ((0 == result) &&
             (PROTOCOL_TCP == transportProtocolType))
         {
             result = ::setsockopt(static_cast<int>(socketFd), IPPROTO_TCP, TCP_NODELAY,
-                                   reinterpret_cast<const char*>(&optionOn), sizeof(optionOn));
+                                  reinterpret_cast<const char *>(&optionOn), sizeof(optionOn));
             if (0 != result)
             {
                 OCA_LOG_ERROR_PARAMS("setsockopt TCP_NODELAY failed, errorcode=%d",
-                    errno);
+                                     errno);
             }
         }
 
@@ -103,12 +112,12 @@ INT32 Ocp1LiteHostInterfaceRetrieveSocket(::SocketNetworkProtocolType networkPro
         {
             UINT32 ttl(32);
             result = ::setsockopt(static_cast<int>(socketFd), IPPROTO_IP, IP_MULTICAST_TTL,
-                                    reinterpret_cast<const char*>(&ttl), sizeof(ttl));
+                                  reinterpret_cast<const char *>(&ttl), sizeof(ttl));
 
             if (0 != result)
             {
                 OCA_LOG_ERROR_PARAMS("setsockopt IP_MULTICAST_TTL failed, errorcode=%d",
-                    errno);
+                                     errno);
             }
         }
     }
@@ -161,7 +170,7 @@ bool Ocp1LiteSocketListen(INT32 socket, UINT8 backlog)
     }
 }
 
-bool Ocp1LiteSocketAccept(INT32 socket, INT32& newsocket)
+bool Ocp1LiteSocketAccept(INT32 socket, INT32 &newsocket)
 {
     int result;
     int optionOn(1);
@@ -223,12 +232,12 @@ bool Ocp1LiteSocketAccept(INT32 socket, INT32& newsocket)
         OCA_LOG_INFO_PARAMS("✓ CLIENT CONNECTED: %s:%d on socket %d", clientIP, clientPort, newsocket);
     }
 #endif
-    
+
     result = ::setsockopt(newsocket, SOL_SOCKET, SO_REUSEADDR, (char *)&optionOn, sizeof(optionOn));
     if (0 != result)
     {
         OCA_LOG_ERROR_PARAMS("setsockopt SO_REUSEADDR failed, errorcode=%d",
-            errno);
+                             errno);
     }
 
     // Set TCP_NODELAY option for TCP sockets
@@ -238,18 +247,17 @@ bool Ocp1LiteSocketAccept(INT32 socket, INT32& newsocket)
         if (0 != result)
         {
             OCA_LOG_ERROR_PARAMS("setsockopt TCP_NODELAY failed, errorcode=%d",
-                errno);
+                                 errno);
         }
     }
-    
-    return (newsocket != INVALID_SOCKET);
 
+    return (newsocket != INVALID_SOCKET);
 }
 
 bool Ocp1LiteSocketReject(INT32 socket)
 {
     assert(socket != INVALID_SOCKET);
-    
+
     struct sockaddr_in sin;
     socklen_t sinLen(sizeof(struct sockaddr_in));
     INT32 newSocket = accept(socket, (struct sockaddr *)&sin, &sinLen);
@@ -266,13 +274,13 @@ bool Ocp1LiteSocketReject(INT32 socket)
     return false;
 }
 
-INT32 Ocp1LiteSocketSend(INT32 socket, const void* buffer, INT32 length)
+INT32 Ocp1LiteSocketSend(INT32 socket, const void *buffer, INT32 length)
 {
     assert(socket != INVALID_SOCKET);
-    return send(socket, reinterpret_cast<const char*>(buffer), length, 0);
+    return send(socket, reinterpret_cast<const char *>(buffer), length, 0);
 }
 
-INT32 Ocp1LiteSocketSendTo(INT32 socket, const void* buffer, INT32 length, const std::string& hostOrIp, UINT16 port)
+INT32 Ocp1LiteSocketSendTo(INT32 socket, const void *buffer, INT32 length, const std::string &hostOrIp, UINT16 port)
 {
     assert(socket != SOCKET_ERROR);
     struct sockaddr_in sockAddr;
@@ -280,7 +288,7 @@ INT32 Ocp1LiteSocketSendTo(INT32 socket, const void* buffer, INT32 length, const
     int socketAddressSize(sizeof(sockAddr));
 
     struct addrinfo hints;
-    struct addrinfo* pAddressList(NULL);
+    struct addrinfo *pAddressList(NULL);
     INT32 error;
 
     memset(&sockAddr, 0, sizeof(sockAddr));
@@ -295,10 +303,10 @@ INT32 Ocp1LiteSocketSendTo(INT32 socket, const void* buffer, INT32 length, const
     error = getaddrinfo(hostOrIp.c_str(), NULL, &hints, &pAddressList);
     if (-1 != error)
     {
-        struct sockaddr_in* resolvedAddress = (struct sockaddr_in*)pAddressList->ai_addr;
+        struct sockaddr_in *resolvedAddress = (struct sockaddr_in *)pAddressList->ai_addr;
         sockAddr.sin_addr = resolvedAddress->sin_addr;
 
-        error = sendto(socket, (char*)buffer, (int)length, 0, (struct sockaddr*)&sockAddr, socketAddressSize);
+        error = sendto(socket, (char *)buffer, (int)length, 0, (struct sockaddr *)&sockAddr, socketAddressSize);
     }
 
     if (NULL != pAddressList)
@@ -308,46 +316,46 @@ INT32 Ocp1LiteSocketSendTo(INT32 socket, const void* buffer, INT32 length, const
     return error;
 }
 
-INT32 Ocp1LiteSocketReceiveFrom(INT32 socket, void* buffer, INT32 length, std::string& fromIp, UINT16& recvFromPort)
+INT32 Ocp1LiteSocketReceiveFrom(INT32 socket, void *buffer, INT32 length, std::string &fromIp, UINT16 &recvFromPort)
 {
 #ifdef _WIN32
     SOCKADDR_INET remoteSocketAddress;
     PSOCKADDR pSocketAddress = PSOCKADDR(&remoteSocketAddress.Ipv4);
     INT32 socketAddressSize = sizeof(remoteSocketAddress.Ipv4);
-    int result(recvfrom(socket, static_cast<char*>(buffer), length, 0, pSocketAddress, &socketAddressSize));
+    int result(recvfrom(socket, static_cast<char *>(buffer), length, 0, pSocketAddress, &socketAddressSize));
 
     recvFromPort = ntohs(remoteSocketAddress.Ipv4.sin_port);
-    char address[25] = { 0 };
+    char address[25] = {0};
     sprintf(address, "%d.%d.%d.%d",
-        (remoteSocketAddress.Ipv4.sin_addr.S_un.S_addr >> 0) & 0xFF,
-        (remoteSocketAddress.Ipv4.sin_addr.S_un.S_addr >> 8) & 0xFF,
-        (remoteSocketAddress.Ipv4.sin_addr.S_un.S_addr >> 16) & 0xFF,
-        (remoteSocketAddress.Ipv4.sin_addr.S_un.S_addr >> 24) & 0xFF);
+            (remoteSocketAddress.Ipv4.sin_addr.S_un.S_addr >> 0) & 0xFF,
+            (remoteSocketAddress.Ipv4.sin_addr.S_un.S_addr >> 8) & 0xFF,
+            (remoteSocketAddress.Ipv4.sin_addr.S_un.S_addr >> 16) & 0xFF,
+            (remoteSocketAddress.Ipv4.sin_addr.S_un.S_addr >> 24) & 0xFF);
     static_cast<void>(fromIp.assign(address));
     return result;
 #else
     struct sockaddr_in remoteSocketAddress;
     socklen_t sockaddr_size = sizeof(struct sockaddr_in);
 
-    int result(recvfrom(socket, static_cast<char*>(buffer), length, 0, (struct sockaddr *) &remoteSocketAddress, &sockaddr_size));
-    
+    int result(recvfrom(socket, static_cast<char *>(buffer), length, 0, (struct sockaddr *)&remoteSocketAddress, &sockaddr_size));
+
     recvFromPort = ntohs(remoteSocketAddress.sin_port);
-    char address[25] = { 0 };
+    char address[25] = {0};
     sprintf(address, "%d.%d.%d.%d",
-        (remoteSocketAddress.sin_addr.s_addr >> 0) & 0xFF,
-        (remoteSocketAddress.sin_addr.s_addr >> 8) & 0xFF,
-        (remoteSocketAddress.sin_addr.s_addr >> 16) & 0xFF,
-        (remoteSocketAddress.sin_addr.s_addr >> 24) & 0xFF);
+            (remoteSocketAddress.sin_addr.s_addr >> 0) & 0xFF,
+            (remoteSocketAddress.sin_addr.s_addr >> 8) & 0xFF,
+            (remoteSocketAddress.sin_addr.s_addr >> 16) & 0xFF,
+            (remoteSocketAddress.sin_addr.s_addr >> 24) & 0xFF);
     static_cast<void>(fromIp.assign(address));
     return result;
 #endif
 }
 
-INT32 Ocp1LiteSocketReceive(INT32 socket, void* buffer, INT32 length)
+INT32 Ocp1LiteSocketReceive(INT32 socket, void *buffer, INT32 length)
 {
     assert(socket != INVALID_SOCKET);
 
-    return recv(socket, static_cast<char*>(buffer), length, 0);
+    return recv(socket, static_cast<char *>(buffer), length, 0);
 }
 
 bool Ocp1LiteSocketShutdown(INT32 socket)
