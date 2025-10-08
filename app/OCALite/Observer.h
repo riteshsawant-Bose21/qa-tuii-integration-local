@@ -9,7 +9,7 @@
  */
 
 #ifdef OCA_LITE_CONTROLLER
-#error "Observer.h is not available for OCALiteController builds"
+#error "Observer.h is not available for OCALiteController builds. This header is intended only for OCALite device applications. For controller functionality, use the appropriate OCALiteController headers instead."
 #endif
 
 #include <arpa/inet.h>
