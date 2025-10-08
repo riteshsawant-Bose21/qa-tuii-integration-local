@@ -25,7 +25,8 @@
 #include <unistd.h>
 #include "OcaServiceDiscovery.h"
 #include <iostream>
-#include "../common/ZoneConfigBuilder.h"  // For deserializing JSON configuration
+#include "../common/models/Models.h"  // For deserializing JSON configuration
+#include "../common/models/WallControllerConfigParser.h"  // For deserializing JSON configuration
 #include "../common/FusionOCAConstants.h" // For custom ONO constants
 #include "../common/workers/ZoneGroup.h"
 #include "ControlPalGainActuator.h"
@@ -118,30 +119,32 @@ void DisplayDiscoveredDevices(
         OCA_LOG_INFO("=== End Configuration JSON ===");
 
         // Deserialize the JSON using ZoneConfigBuilder
-        newController = DeserializeControllers(jsonStr);
-        controllerCfg = newController;
+        std::shared_ptr<Controller> newController = JsonStringToWallController(jsonStr);
 
         printf("*******  DESERIAL DONE *****\n");
 
         // TODO: Delete this sectionafter debug done
         // Check if requested ID matches received data
-        if (controllerCfg.id == controllerId.GetString())
+        if (newController)
         {
-            OCA_LOG_INFO("=== Parsed Controller Configuration ===");
-            OCA_LOG_INFO_PARAMS("Controller ID: %s",
-                                   controllerCfg.id.c_str());
-            OCA_LOG_INFO_PARAMS("Controller Name: %s",
-                                   controllerCfg.name.c_str());
-            OCA_LOG_INFO_PARAMS("Number of Zones: %zu",
-                                   controllerCfg.zones.size());
+            controllerCfg = *newController;
 
-            for (size_t i = 0; i < controllerCfg.zones.size(); ++i)
+            OCA_LOG_INFO("=== Parsed Controller Configuration ===");
+            OCA_LOG_INFO_PARAMS("Controller ID: %s", newController->id.c_str());
+            OCA_LOG_INFO_PARAMS("Controller Name: %s", newController->name.c_str());
+            OCA_LOG_INFO_PARAMS("Number of Zones: %zu", newController->zones.size());
+
+            for (size_t i = 0; i < newController->zones.size(); ++i)
             {
-                const auto &zone = controllerCfg.zones[i];
+                const auto &zone = newController->zones[i];
                 OCA_LOG_INFO_PARAMS("  Zone %zu: %s (%s)", i + 1, zone->name.c_str(), zone->id.c_str());
                 OCA_LOG_INFO_PARAMS("    ONOs - Zone: %u, Gain: %u, Mute: %u, Switch: %u",
                         zone->ono.zone, zone->ono.gain, zone->ono.mute, zone->ono.sourceSelector);
-                OCA_LOG_INFO_PARAMS("    Gain ID: %s", zone->gainID.c_str());
+                OCA_LOG_INFO_PARAMS("    Gain ID: %s", zone->gain.gainID.c_str());
+                OCA_LOG_INFO_PARAMS("    Gain Range: %s to %s", zone->gain.min_value.c_str(), zone->gain.max_value.c_str());
+                OCA_LOG_INFO_PARAMS("    Default Gain: %s", zone->gain.default_gain_value.c_str());
+                OCA_LOG_INFO_PARAMS("    Default Mute: %s", zone->gain.default_mute_value.c_str());
+
                 OCA_LOG_INFO_PARAMS("    Sources: %zu", zone->sources.size());
 
                 for (size_t j = 0; j < zone->sources.size(); ++j)
@@ -150,6 +153,7 @@ void DisplayDiscoveredDevices(
                     OCA_LOG_INFO_PARAMS("      Source %zu: Index %u - %s", j + 1, source.index, source.label.c_str());
                 }
             }
+
             OCA_LOG_INFO("=== End Parsed Configuration ===");
         }
         else
@@ -275,7 +279,7 @@ ZoneGroup* CreateZoneGroup(Zone& newZone)
                 emptyPorts,
                 -20.0,
                 60.0,
-                newZone.gainID);
+                newZone.gain.gainID);
         if (newGainObj)
         {
             newZoneGrp->AddObject(*newGainObj);
@@ -287,7 +291,7 @@ ZoneGroup* CreateZoneGroup(Zone& newZone)
                 static_cast<::OcaBoolean>(true),
                 static_cast<const ::OcaLiteString>("Mute"),
                 emptyPorts,
-                newZone.gainID);
+                newZone.gain.gainID);
         if (newMuteObj)
         {
             newZoneGrp->AddObject(*newMuteObj);

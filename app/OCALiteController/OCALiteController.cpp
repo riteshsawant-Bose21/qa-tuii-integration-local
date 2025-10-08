@@ -28,7 +28,7 @@
 #include "HostInterfaceLite/OCA/OCF/Timer/IOcfLiteTimer.h"
 #include <sys/time.h>
 #include <iostream>
-#include "../common/ZoneConfigBuilder.h"  // For deserializing JSON configuration
+#include "../common/models/Models.h"  // For deserializing JSON configuration
 #include "../common/FusionOCAConstants.h" // For custom ONO constants
 #include "../common/workers/ZoneGroup.h"
 #include "ControlPalGainActuator.h"
