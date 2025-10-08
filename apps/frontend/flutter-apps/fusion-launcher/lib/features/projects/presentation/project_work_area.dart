@@ -720,6 +720,7 @@ class _TestLibraryScreenState extends State<ProjectWorkArea>
                     TextField(
                       controller: _projectNameController,
                       focusNode: _projectNameFocusNode,
+                      maxLength: 24,
                       autofocus: true,
                       style: TextStyle(
                         color:
@@ -727,6 +728,7 @@ class _TestLibraryScreenState extends State<ProjectWorkArea>
                         fontSize: 12,
                       ),
                       decoration: InputDecoration(
+                        counterText: "",
                         hintText: 'Enter project name',
                         hintStyle: TextStyle(
                           color: Theme.of(context).colorScheme.grey,

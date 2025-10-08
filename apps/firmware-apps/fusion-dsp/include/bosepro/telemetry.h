@@ -392,7 +392,58 @@ public:
                       || std::is_same_v<T, float>)
         {
             definition.get_minimum_value(minimum_value);
-            definition.get_maximum_value(maximum_value);
+
+            std::string maximum_name;
+
+            definition.get_maximum_value(maximum_value, maximum_name);
+
+            if (!maximum_name.empty())
+            {
+                if (processor.has_property(maximum_name))
+                {
+                    if (configuration->has_property(maximum_name))
+                    {
+                        const PropertyConfiguration &pc =
+                            configuration->get_property(maximum_name);
+                        pc.get_value(maximum_value);
+
+                        const PropertyDefinition &pd =
+                            processor.get_property(maximum_name);
+                        T property_minimum;
+                        T property_maximum;
+                        pd.get_minimum_value(property_minimum);
+                        pd.get_maximum_value(property_maximum);
+
+                        if (maximum_value < property_minimum
+                            || maximum_value > property_maximum)
+                        {
+                            throw std::runtime_error("Invalid maximum_value for property '"
+                                    + maximum_name + "'.");
+                        }
+                    }
+                    else
+                    {
+                        const PropertyDefinition &pd =
+                            processor.get_property(maximum_name);
+                        pd.get_default_value(maximum_value);
+                    }
+                }
+                else if (processor.has_terminal(maximum_name))
+                {
+                    if (configuration->has_terminal(maximum_name))
+                    {
+                        const TerminalConfiguration &tc =
+                            configuration->get_terminal(maximum_name);
+                        maximum_value = tc.get_num_channels();
+                    }
+                }
+                else
+                {
+                    SPDLOG_ERROR("Telemetry '{}' has maximum_value '{}' but no property or terminal with that name.",
+                                 definition.get_name(), maximum_name);
+                    maximum_value = minimum_value;
+                }
+            }
         }
     }
 

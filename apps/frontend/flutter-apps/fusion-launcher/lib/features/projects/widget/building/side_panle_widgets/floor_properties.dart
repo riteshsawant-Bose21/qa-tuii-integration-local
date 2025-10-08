@@ -44,7 +44,9 @@ class FloorProperties extends StatelessWidget {
                     flex: 7,
                     child: TextFormField(
                       controller: floorNameController,
+                      maxLength: 24,
                       decoration: const InputDecoration(
+                        counterText: '',
                         hintText: 'Floor Name',
                         border: InputBorder.none,
                       ),

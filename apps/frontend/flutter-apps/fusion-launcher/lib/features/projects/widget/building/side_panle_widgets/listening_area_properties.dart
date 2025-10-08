@@ -94,7 +94,9 @@ class ListeningAreaProperties extends StatelessWidget {
                     flex: 7,
                     child: TextFormField(
                       controller: listeningAreaController,
+                      maxLength: 24,
                       decoration: const InputDecoration(
+                        counterText: "",
                         hintText: 'Area Name',
                         border: InputBorder.none,
                         contentPadding: EdgeInsets.zero,
@@ -449,12 +451,14 @@ class ListeningAreaProperties extends StatelessWidget {
             height: 28,
             child: TextFormField(
               controller: controller,
+              maxLength: 24,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 fontSize: 11,
                 color: Theme.of(context).colorScheme.fusionTextViewColor,
               ),
               decoration: InputDecoration(
+                counterText: "",
                 isDense: true,
                 contentPadding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
                 hintText: hintText,
