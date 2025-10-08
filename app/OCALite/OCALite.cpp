@@ -76,19 +76,236 @@ bool RebuildConfiguration(const Json::Value &configJson);
 void RemoveZoneObjectsFromRootBlock();
 void BuildObjectTracker(const ControlSystemConfig &config);
 void ClearObjectTracker();
-bool RestartOCAServicesWithExponentialBackoff(::Ocp1LiteNetwork *ocp1Network);
+void ShutdownUDPObserver();
+bool StartOCAServicesWithExponentialBackoff(::Ocp1LiteNetwork *ocp1Network);
+
+int main(int argc, const char *argv[])
+{
+    unsigned int connectionPort = 65000;
+    if (argc > 1)
+    {
+        static_cast<void>(sscanf(argv[1], "%u", &connectionPort));
+    }
+    OCA_LOG_INFO_PARAMS("Using connection port %d", connectionPort);
+
+    // Store connection port globally for configuration updates
+    g_connectionPort = connectionPort;
+
+    // Set log level to show INFO messages (including client connection logs)
+    ::OcfLiteLogSetLogLevel(OCA_LOG_LVL_TRACE);
+
+    // Initialize the host interfaces
+    g_bSuccess = InitializeHostInterfaces();
+    if (!g_bSuccess)
+    {
+        OCA_LOG_ERROR("✗ Host interface initialization failed");
+        return -1;
+    }
+
+    // Initialize Oca Device
+    static_cast<void>(::OcaLiteBlock::GetRootBlock());
+
+    // Start with hardcoded configuration as fallback
+    // UDP observer will update this when available
+    const std::string zonesJsonString = R"(
+        {
+        "controllers": [
+            {
+            "id": "ctrl1",
+            "name": "Controller 1",
+            "zoneIds": [
+                "zone1"
+            ]
+            },
+            {
+            "id": "ctrl2",
+            "name": "Controller 2",
+            "zoneIds": [
+                "zone2",
+                "zone3"
+            ]
+            }
+        ],
+        "zones": [
+            {
+            "id": "zone1",
+            "name": "Living Room",
+            "ono": {
+                "zone": 8001,
+                "gain": 8002,
+                "mute": 8003,
+                "sourceSelector": 8004
+            },
+            "gain": {
+                "gainID": "gain1",
+                "min_value": "0",
+                "max_value": "100",
+                "default_gain_value": "50",
+                "default_mute_value": "50"
+            },
+            "sources": [
+                { "index": 0, "label": "HDMI 1" },
+                { "index": 1, "label": "HDMI 2" },
+                { "index": 2, "label": "Bluetooth" }
+            ]
+            },
+            {
+            "id": "zone2",
+            "name": "Kitchen",
+            "gain": {
+                "gainID": "gain2",
+                "min_value": "0",
+                "max_value": "100",
+                "default_gain_value": "50",
+                "default_mute_value": "50"
+            },
+            "ono": {
+                "zone": 8005,
+                "gain": 8006,
+                "mute": 8007,
+                "sourceSelector": 8008
+            },
+            "sources": [
+                { "index": 0, "label": "Radio" },
+                { "index": 1, "label": "Streaming" }
+            ]
+            },
+            {
+            "id": "zone3",
+            "name": "Bedroom",
+            "gain": {
+                "gainID": "gain3",
+                "min_value": "0",
+                "max_value": "100",
+                "default_gain_value": "50",
+                "default_mute_value": "50"
+            },
+            "ono": {
+                "zone": 8009,
+                "gain": 8010,
+                "mute": 8011,
+                "sourceSelector": 8012
+            },
+            "sources": [
+                { "index": 0, "label": "TV" },
+                { "index": 1, "label": "AUX" },
+                { "index": 2, "label": "AirPlay" }
+            ]
+            }
+        ]
+        }
+        )";
+
+    // Convert string to Json::Value
+    Json::Value zonesJson;
+    Json::Reader reader;
+    if (!reader.parse(zonesJsonString, zonesJson))
+    {
+        OCA_LOG_ERROR_PARAMS("Failed to parse hardcoded JSON: %s", reader.getFormattedErrorMessages().c_str());
+        return -1;
+    }
+
+    // Initialize OCA managers
+    g_bSuccess = InitializeOCAManagers();
+    if (!g_bSuccess)
+    {
+        OCA_LOG_ERROR("✗ OCA managers initialization failed");
+        return -1;
+    }
+
+    // Setup OCP1 network
+    g_ocp1Network = SetupOCP1Network(connectionPort);
+    if (!g_ocp1Network)
+    {
+        OCA_LOG_ERROR("✗ OCP1 network setup failed");
+        return -1;
+    }
+    // Apply zone configuration
+    g_bSuccess = ApplyZoneConfiguration(zonesJson);
+    if (!g_bSuccess)
+    {
+        OCA_LOG_ERROR("✗ Zone configuration failed");
+        return -1;
+    }
+
+    // Start OCA services
+    g_bSuccess = StartOCAServices(g_ocp1Network);
+    if (!g_bSuccess)
+    {
+        OCA_LOG_ERROR("✗ OCA services startup failed");
+        return -1;
+    }
+
+    // Setup UDP watchers
+    g_bSuccess = SetupUDPWatchers("192.168.64.53", 7947);
+    if (!g_bSuccess)
+    {
+        OCA_LOG_ERROR("✗ UDP watchers setup failed");
+        // //TODO: what to do if UDP observer setup fails
+        // For now, continue without UDP observer
+        g_bSuccess = true;
+    }
+
+    // Run main loop
+    RunMainLoop();
+
+    // Clean up UDP Observer before exit
+    ShutdownUDPObserver();
+
+    return 0;
+}
 
 /**
- * @brief Stop and cleanup UDP Observer
+ * @brief Main execution loop
  */
-void ShutdownUDPObserver()
+void RunMainLoop()
 {
-    if (g_udpObserver)
+    OCA_LOG_INFO("Starting run loop..");
+
+    while (g_bSuccess)
     {
-        OCA_LOG_INFO("Stopping UDP Observer...");
-        g_udpObserver->stop();
-        g_udpObserver.reset();
+        // Process any pending configuration updates
+        if (!ProcessPendingConfigurationUpdate())
+        {
+            OCA_LOG_ERROR("Configuration update failed - continuing with current config");
+        }
+
+#ifdef OCA_RUN
+        ::OcaLiteCommandHandler::GetInstance().RunWithTimeout(1000);
+        Ocp1LiteServiceRun();
+#else
+        int highestFd(-1);
+        fd_set readset;
+        fd_set writeset;
+        fd_set exceptset;
+        FD_ZERO(&readset);
+        FD_ZERO(&writeset);
+        FD_ZERO(&exceptset);
+
+        bool bShortSelect(::OcaLiteCommandHandler::GetInstance().AddSelectables(highestFd, readset, writeset, exceptset));
+
+        int serviceFd(Ocp1LiteServiceGetSocket());
+        if (-1 != serviceFd)
+        {
+            FD_SET(serviceFd, &readset);
+            if (highestFd < serviceFd)
+            {
+                highestFd = serviceFd;
+            }
+        }
+
+        timeval timeout = {bShortSelect ? 1 : 0, 0};
+        select(highestFd + 1, &readset, &writeset, &exceptset, &timeout);
+
+        ::OcaLiteCommandHandler::GetInstance().RunWithSelectSet(readset, writeset, exceptset);
+        if (FD_ISSET(serviceFd, &readset))
+        {
+            Ocp1LiteServiceRunWithFdSet(&readset);
+        }
+#endif
     }
+
+    OCA_LOG_INFO("Main loop terminated");
 }
 
 /**
@@ -97,7 +314,6 @@ void ShutdownUDPObserver()
  */
 bool InitializeHostInterfaces()
 {
-    OCA_LOG_INFO("Initializing host interfaces...");
     bool success = ::OcfLiteHostInterfaceInitialize();
     success = success && ::Ocp1LiteHostInterfaceInitialize();
 
@@ -118,7 +334,6 @@ bool InitializeHostInterfaces()
  */
 bool InitializeOCAManagers()
 {
-    OCA_LOG_INFO("Initializing OCA managers...");
     bool success = static_cast<bool>(::OcaLiteNetworkManager::GetInstance().Initialize());
     success = success && static_cast<bool>(::OcaLiteSubscriptionManager::GetInstance().SetNrEvents(1 /*OCA_NR_EVENTS*/));
     success = success && static_cast<bool>(::OcaLiteSubscriptionManager::GetInstance().Initialize());
@@ -139,65 +354,12 @@ bool InitializeOCAManagers()
 }
 
 /**
- * @brief Apply zone configuration from JSON
- * @param configJson JSON configuration value
- * @return true if configuration applied successfully, false otherwise
- */
-bool ApplyZoneConfiguration(const Json::Value &configJson)
-{
-    OCA_LOG_INFO("Applying zone configuration...");
-
-    // TODO: Validate JSON configuration
-    // TODO: What to do if configuration is invalid - Option integrate with telemetry core and raise a alarm
-
-    ControlSystemConfig config = MakeControlSystemModelFromJson(configJson);
-
-    // Build object tracker from parsed configuration
-    BuildObjectTracker(config);
-
-    auto zoneContainer = MakeZoneGroupFromControlSystemConfig(config);
-    if (zoneContainer)
-    {
-        // Add the zone container to the root block
-        if (::OcaLiteBlock::GetRootBlock().AddObject(*zoneContainer))
-        {
-            OCA_LOG_INFO("✓ Zone configuration applied successfully");
-            zoneContainer.release(); // OCA now owns it
-
-            // Get controllers from config and set them in the config manager
-            if (!config.controllers.empty())
-            {
-                ::OcaLiteControllerConfigManager::GetInstance().SetConfigData(config.controllers);
-                OCA_LOG_INFO("✓ Controllers configuration applied successfully");
-            }
-            else
-            {
-                OCA_LOG_WARNING("No controllers found in configuration");
-            }
-
-            return true;
-        }
-        else
-        {
-            OCA_LOG_ERROR("✗ Failed to add zone container to root block");
-            return false;
-        }
-    }
-    else
-    {
-        OCA_LOG_ERROR("✗ Failed to create zone container");
-        return false;
-    }
-}
-
-/**
  * @brief Setup OCP1 network
  * @param connectionPort Port number for the network connection
  * @return Pointer to created network or nullptr on failure
  */
 ::Ocp1LiteNetwork *SetupOCP1Network(unsigned int connectionPort)
 {
-    OCA_LOG_INFO_PARAMS("Setting up OCP1 network on port %u...", connectionPort);
 
     Ocp1LiteNetworkSystemInterfaceID interfaceId = ::Ocp1LiteNetworkSystemInterfaceID(static_cast<::OcaUint32>(0));
     std::vector<std::string> txtRecords;
@@ -218,7 +380,7 @@ bool ApplyZoneConfiguration(const Json::Value &configJson)
     {
         if (::OcaLiteBlock::GetRootBlock().AddObject(*ocp1Network))
         {
-            OCA_LOG_INFO("✓ OCP1 network setup successful");
+            OCA_LOG_INFO_PARAMS("✓ OCP1 network setup successful on port %u...", connectionPort);
             return ocp1Network;
         }
         else
@@ -278,58 +440,35 @@ bool StartOCAServices(::Ocp1LiteNetwork *ocp1Network)
     }
 }
 
-/**
- * @brief Main execution loop
- */
-void RunMainLoop()
+bool StartOCAServicesWithExponentialBackoff(::Ocp1LiteNetwork *ocp1Network)
 {
-    OCA_LOG_INFO("Starting main loop...");
-    OCA_LOG_ERROR("Starting run loop..");
+    const int maxRetries = 15;
+    int retryCount = 0;
 
-    while (g_bSuccess)
+    while (retryCount < maxRetries)
     {
-        // Process any pending configuration updates
-        if (!ProcessPendingConfigurationUpdate())
+        OCA_LOG_INFO_PARAMS("Attempting to restart OCA services (Attempt %d/%d)...",
+                            retryCount + 1, maxRetries);
+
+        // Try to restart the OCA services
+        if (StartOCAServices(ocp1Network))
         {
-            OCA_LOG_ERROR("Configuration update failed - continuing with current config");
+            OCA_LOG_INFO("✓ OCA services restarted successfully");
+            return true;
         }
 
-#ifdef OCA_RUN
-        ::OcaLiteCommandHandler::GetInstance().RunWithTimeout(1000);
-        Ocp1LiteServiceRun();
-#else
-        int highestFd(-1);
-        fd_set readset;
-        fd_set writeset;
-        fd_set exceptset;
-        FD_ZERO(&readset);
-        FD_ZERO(&writeset);
-        FD_ZERO(&exceptset);
+        OCA_LOG_ERROR("Failed to restart OCA services");
 
-        bool bShortSelect(::OcaLiteCommandHandler::GetInstance().AddSelectables(highestFd, readset, writeset, exceptset));
+        // Exponential backoff
+        int backoffTime = (1 << retryCount) * 1000; // 2^retryCount * 1000 ms
+        OCA_LOG_INFO_PARAMS("Waiting %d ms before retrying...", backoffTime);
+        std::this_thread::sleep_for(std::chrono::milliseconds(backoffTime));
 
-        int serviceFd(Ocp1LiteServiceGetSocket());
-        if (-1 != serviceFd)
-        {
-            FD_SET(serviceFd, &readset);
-            if (highestFd < serviceFd)
-            {
-                highestFd = serviceFd;
-            }
-        }
-
-        timeval timeout = {bShortSelect ? 1 : 0, 0};
-        select(highestFd + 1, &readset, &writeset, &exceptset, &timeout);
-
-        ::OcaLiteCommandHandler::GetInstance().RunWithSelectSet(readset, writeset, exceptset);
-        if (FD_ISSET(serviceFd, &readset))
-        {
-            Ocp1LiteServiceRunWithFdSet(&readset);
-        }
-#endif
+        retryCount++;
     }
 
-    OCA_LOG_INFO("Main loop terminated");
+    OCA_LOG_ERROR("✗ All attempts to restart OCA services failed");
+    return false;
 }
 
 /**
@@ -340,8 +479,6 @@ void RunMainLoop()
  */
 bool SetupUDPWatchers(const std::string &serverIP, unsigned int serverPort)
 {
-    OCA_LOG_INFO("Setting up UDP watchers...");
-
     try
     {
         g_udpObserver = std::unique_ptr<UDPValueMonitor>(new UDPValueMonitor(
@@ -382,8 +519,6 @@ bool SetupUDPWatchers(const std::string &serverIP, unsigned int serverPort)
  */
 void HandleConfigurationUpdate(const Json::Value &newConfig)
 {
-    OCA_LOG_INFO("Configuration update received from UDP observer");
-
     // Add 10-second delay to allow system stabilization
     OCA_LOG_INFO("Waiting 10 seconds before processing configuration update...");
     sleep(10);
@@ -442,8 +577,6 @@ void HandleAudioSettingsUpdate(const Json::Value &newSettings)
  */
 bool ValidateConfigurationJson(const Json::Value &config)
 {
-    OCA_LOG_INFO("Validating configuration JSON...");
-
     // JSON Structure Validation
     if (!config.isObject())
     {
@@ -789,6 +922,70 @@ bool TeardownCurrentConfiguration()
 }
 
 /**
+ * @brief Stop and cleanup UDP Observer
+ */
+void ShutdownUDPObserver()
+{
+    if (g_udpObserver)
+    {
+        OCA_LOG_INFO("Stopping UDP Observer...");
+        g_udpObserver->stop();
+        g_udpObserver.reset();
+    }
+}
+
+/**
+ * @brief Apply zone configuration from JSON
+ * @param configJson JSON configuration value
+ * @return true if configuration applied successfully, false otherwise
+ */
+bool ApplyZoneConfiguration(const Json::Value &configJson)
+{
+    OCA_LOG_INFO("Applying zone configuration...");
+
+    // TODO: Validate JSON configuration
+    // TODO: What to do if configuration is invalid - Option integrate with telemetry core and raise a alarm
+
+    ControlSystemConfig config = MakeControlSystemModelFromJson(configJson);
+
+    // Build object tracker from parsed configuration
+    BuildObjectTracker(config);
+
+    auto zoneContainer = MakeZoneGroupFromControlSystemConfig(config);
+    if (zoneContainer)
+    {
+        // Add the zone container to the root block
+        if (::OcaLiteBlock::GetRootBlock().AddObject(*zoneContainer))
+        {
+            OCA_LOG_INFO("✓ Zone configuration applied successfully");
+            zoneContainer.release(); // OCA now owns it
+
+            // Get controllers from config and set them in the config manager
+            if (!config.controllers.empty())
+            {
+                ::OcaLiteControllerConfigManager::GetInstance().SetConfigData(config.controllers);
+            }
+            else
+            {
+                OCA_LOG_WARNING("No controllers found in configuration");
+            }
+
+            return true;
+        }
+        else
+        {
+            OCA_LOG_ERROR("✗ Failed to add zone container to root block");
+            return false;
+        }
+    }
+    else
+    {
+        OCA_LOG_ERROR("✗ Failed to create zone container");
+        return false;
+    }
+}
+
+/**
  * @brief Rebuild OCA configuration with new JSON
  * @param configJson New configuration JSON value
  * @return true if successful, false otherwise
@@ -841,8 +1038,7 @@ bool RebuildConfiguration(const Json::Value &configJson)
     }
 
     // 6. Start OCA Services
-    OCA_LOG_INFO("Starting OCA services...");
-    if (!RestartOCAServicesWithExponentialBackoff(g_ocp1Network))
+    if (!StartOCAServicesWithExponentialBackoff(g_ocp1Network))
     {
         OCA_LOG_ERROR("Failed to start OCA services");
         return false;
@@ -850,37 +1046,6 @@ bool RebuildConfiguration(const Json::Value &configJson)
 
     OCA_LOG_INFO("✓ Configuration rebuild completed successfully");
     return true;
-}
-
-bool RestartOCAServicesWithExponentialBackoff(::Ocp1LiteNetwork *ocp1Network)
-{
-    const int maxRetries = 15;
-    int retryCount = 0;
-
-    while (retryCount < maxRetries)
-    {
-        OCA_LOG_INFO_PARAMS("Attempting to restart OCA services (Attempt %d/%d)...",
-                            retryCount + 1, maxRetries);
-
-        // Try to restart the OCA services
-        if (StartOCAServices(ocp1Network))
-        {
-            OCA_LOG_INFO("✓ OCA services restarted successfully");
-            return true;
-        }
-
-        OCA_LOG_ERROR("Failed to restart OCA services");
-
-        // Exponential backoff
-        int backoffTime = (1 << retryCount) * 1000; // 2^retryCount * 1000 ms
-        OCA_LOG_INFO_PARAMS("Waiting %d ms before retrying...", backoffTime);
-        std::this_thread::sleep_for(std::chrono::milliseconds(backoffTime));
-
-        retryCount++;
-    }
-
-    OCA_LOG_ERROR("✗ All attempts to restart OCA services failed");
-    return false;
 }
 
 /**
@@ -932,180 +1097,4 @@ bool ProcessPendingConfigurationUpdate()
 
     OCA_LOG_INFO("✓ Configuration update completed successfully");
     return true;
-}
-
-int main(int argc, const char *argv[])
-{
-    unsigned int connectionPort = 65000;
-    if (argc > 1)
-    {
-        static_cast<void>(sscanf(argv[1], "%u", &connectionPort));
-    }
-    OCA_LOG_INFO_PARAMS("Using connection port %d", connectionPort);
-
-    // Store connection port globally for configuration updates
-    g_connectionPort = connectionPort;
-
-    // Set log level to show INFO messages (including client connection logs)
-    ::OcfLiteLogSetLogLevel(OCA_LOG_LVL_TRACE);
-
-    // Initialize the host interfaces
-    g_bSuccess = InitializeHostInterfaces();
-    if (!g_bSuccess)
-    {
-        OCA_LOG_ERROR("✗ Host interface initialization failed");
-        return -1;
-    }
-
-    // Initialize Oca Device
-    static_cast<void>(::OcaLiteBlock::GetRootBlock());
-
-    // Start with hardcoded configuration as fallback
-    // UDP observer will update this when available
-    const std::string zonesJsonString = R"(
-        {
-        "controllers": [
-            {
-            "id": "ctrl1",
-            "name": "Controller 1",
-            "zoneIds": [
-                "zone1"
-            ]
-            },
-            {
-            "id": "ctrl2",
-            "name": "Controller 2",
-            "zoneIds": [
-                "zone2",
-                "zone3"
-            ]
-            }
-        ],
-        "zones": [
-            {
-            "id": "zone1",
-            "name": "Living Room",
-            "ono": {
-                "zone": 8001,
-                "gain": 8002,
-                "mute": 8003,
-                "sourceSelector": 8004
-            },
-            "gain": {
-                "gainID": "gain1",
-                "min_value": "0",
-                "max_value": "100",
-                "default_gain_value": "50",
-                "default_mute_value": "50"
-            },
-            "sources": [
-                { "index": 0, "label": "HDMI 1" },
-                { "index": 1, "label": "HDMI 2" },
-                { "index": 2, "label": "Bluetooth" }
-            ]
-            },
-            {
-            "id": "zone2",
-            "name": "Kitchen",
-            "gain": {
-                "gainID": "gain2",
-                "min_value": "0",
-                "max_value": "100",
-                "default_gain_value": "50",
-                "default_mute_value": "50"
-            },
-            "ono": {
-                "zone": 8005,
-                "gain": 8006,
-                "mute": 8007,
-                "sourceSelector": 8008
-            },
-            "sources": [
-                { "index": 0, "label": "Radio" },
-                { "index": 1, "label": "Streaming" }
-            ]
-            },
-            {
-            "id": "zone3",
-            "name": "Bedroom",
-            "gain": {
-                "gainID": "gain3",
-                "min_value": "0",
-                "max_value": "100",
-                "default_gain_value": "50",
-                "default_mute_value": "50"
-            },
-            "ono": {
-                "zone": 8009,
-                "gain": 8010,
-                "mute": 8011,
-                "sourceSelector": 8012
-            },
-            "sources": [
-                { "index": 0, "label": "TV" },
-                { "index": 1, "label": "AUX" },
-                { "index": 2, "label": "AirPlay" }
-            ]
-            }
-        ]
-        }
-        )";
-
-    // Convert string to Json::Value
-    Json::Value zonesJson;
-    Json::Reader reader;
-    if (!reader.parse(zonesJsonString, zonesJson))
-    {
-        OCA_LOG_ERROR_PARAMS("Failed to parse hardcoded JSON: %s", reader.getFormattedErrorMessages().c_str());
-        return -1;
-    }
-
-    // Initialize OCA managers
-    g_bSuccess = InitializeOCAManagers();
-    if (!g_bSuccess)
-    {
-        OCA_LOG_ERROR("✗ OCA managers initialization failed");
-        return -1;
-    }
-
-    // Setup OCP1 network
-    g_ocp1Network = SetupOCP1Network(connectionPort);
-    if (!g_ocp1Network)
-    {
-        OCA_LOG_ERROR("✗ OCP1 network setup failed");
-        return -1;
-    }
-    // Apply zone configuration
-    g_bSuccess = ApplyZoneConfiguration(zonesJson);
-    if (!g_bSuccess)
-    {
-        OCA_LOG_ERROR("✗ Zone configuration failed");
-        return -1;
-    }
-
-    // Start OCA services
-    g_bSuccess = StartOCAServices(g_ocp1Network);
-    if (!g_bSuccess)
-    {
-        OCA_LOG_ERROR("✗ OCA services startup failed");
-        return -1;
-    }
-
-    // Setup UDP watchers
-    g_bSuccess = SetupUDPWatchers("192.168.64.53", 7947);
-    if (!g_bSuccess)
-    {
-        OCA_LOG_ERROR("✗ UDP watchers setup failed");
-        // //TODO: what to do if UDP observer setup fails
-        // For now, continue without UDP observer
-        g_bSuccess = true;
-    }
-
-    // Run main loop
-    RunMainLoop();
-
-    // Clean up UDP Observer before exit
-    ShutdownUDPObserver();
-
-    return 0;
 }
