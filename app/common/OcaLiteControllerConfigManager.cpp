@@ -112,6 +112,12 @@ void OcaLiteControllerConfigManager::SetConfigData(const std::vector<std::shared
     OCA_LOG_INFO_PARAMS("✓ Controller configuration set with %zu controllers", controllers.size());
 }
 
+void OcaLiteControllerConfigManager::ClearConfigData()
+{
+    m_controllers.clear();
+    OCA_LOG_INFO("✓ Controller configuration data cleared");
+}
+
 ::OcaLiteStatus OcaLiteControllerConfigManager::Execute(const ::IOcaLiteReader &reader, const ::IOcaLiteWriter &writer, ::OcaSessionID sessionID, const ::OcaLiteMethodID &methodID,
                                                         ::OcaUint32 parametersSize, const ::OcaUint8 *parameters, ::OcaUint8 **response)
 {

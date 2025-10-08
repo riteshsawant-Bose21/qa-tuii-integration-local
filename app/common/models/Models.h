@@ -79,16 +79,16 @@ public:
     ControlSystemConfig &operator=(ControlSystemConfig &&) noexcept = default;
 };
 
-struct ZoneOCAObjects
-{
-    std::unique_ptr<FusionBlock> group;         // may be null if creation failed
-    std::unique_ptr<ConcreteGainActuator> gain; // optional
-    std::unique_ptr<ConcreteMuteActuator> mute; // optional
-    std::unique_ptr<ConcreteSwitchActuator> sw; // optional
-};
+// struct ZoneOCAObjects
+// {
+//     std::unique_ptr<FusionBlock> group;         // may be null if creation failed
+//     std::unique_ptr<ConcreteGainActuator> gain; // optional
+//     std::unique_ptr<ConcreteMuteActuator> mute; // optional
+//     std::unique_ptr<ConcreteSwitchActuator> sw; // optional
+// };
 
-struct BuiltZones
-{
-    std::unique_ptr<ZoneGroup> zonesContainer; // Top level container
-    std::vector<ZoneOCAObjects> zones;         // One entry per parsed zone
-};
+// struct BuiltZones
+// {
+//     std::unique_ptr<ZoneGroup> zonesContainer; // Top level container
+//     std::vector<ZoneOCAObjects> zones;         // One entry per parsed zone
+// };

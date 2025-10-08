@@ -43,6 +43,9 @@ public:
     // Accept list of controllers and store them for filtering by controller ID
     void SetConfigData(const std::vector<std::shared_ptr<Controller>> &controllers);
 
+    // Clear all stored controller configuration data
+    void ClearConfigData();
+
     enum MethodIndex
     {
         GET_CONFIG_DETAILS = 1

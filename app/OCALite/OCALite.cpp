@@ -18,6 +18,7 @@
 #include <OCC/ControlClasses/Managers/OcaLiteFirmwareManager.h>
 #include <OCF/OcaLiteCommandHandler.h>
 #include <mutex>
+#include <unistd.h> // For sleep function
 #ifndef UDP
 #include <OCP.1/Ocp1LiteNetwork.h>
 #else
@@ -47,10 +48,16 @@ std::unique_ptr<UDPValueMonitor> g_udpObserver;
 static bool g_bSuccess = false;
 
 // Global state for configuration updates
-// static std::mutex g_configUpdateMutex;
-// static std::string g_pendingConfigJson;
-// static bool g_configUpdatePending = false;
+static std::mutex g_configUpdateMutex;
+static std::string g_pendingConfigJson;
+static bool g_configUpdatePending = false;
 static ::Ocp1LiteNetwork *g_ocp1Network = nullptr;
+
+// Global connection port storage
+static unsigned int g_connectionPort = 65000;
+
+// Global object tracking for configuration management
+static std::map<std::string, std::vector<::OcaONo>> g_objectTracker;
 
 // Function declarations
 bool InitializeHostInterfaces();
@@ -62,9 +69,14 @@ void RunMainLoop();
 bool SetupUDPWatchers(const std::string &serverIP, unsigned int serverPort);
 void HandleConfigurationUpdate(const Json::Value &newConfig);
 void HandleAudioSettingsUpdate(const Json::Value &newSettings);
-// bool ProcessPendingConfigurationUpdate();
-// bool TeardownCurrentConfiguration();
-// bool RebuildConfiguration(const Json::Value &configJson);
+bool ValidateConfigurationJson(const Json::Value &config);
+bool ProcessPendingConfigurationUpdate();
+bool TeardownCurrentConfiguration();
+bool RebuildConfiguration(const Json::Value &configJson);
+void RemoveZoneObjectsFromRootBlock();
+void BuildObjectTracker(const ControlSystemConfig &config);
+void ClearObjectTracker();
+bool RestartOCAServicesWithExponentialBackoff(::Ocp1LiteNetwork *ocp1Network);
 
 /**
  * @brief Stop and cleanup UDP Observer
@@ -139,6 +151,9 @@ bool ApplyZoneConfiguration(const Json::Value &configJson)
     // TODO: What to do if configuration is invalid - Option integrate with telemetry core and raise a alarm
 
     ControlSystemConfig config = MakeControlSystemModelFromJson(configJson);
+
+    // Build object tracker from parsed configuration
+    BuildObjectTracker(config);
 
     auto zoneContainer = MakeZoneGroupFromControlSystemConfig(config);
     if (zoneContainer)
@@ -273,11 +288,11 @@ void RunMainLoop()
 
     while (g_bSuccess)
     {
-        // // Process any pending configuration updates
-        // if (!ProcessPendingConfigurationUpdate())
-        // {
-        //     OCA_LOG_ERROR("Configuration update failed - continuing with current config");
-        // }
+        // Process any pending configuration updates
+        if (!ProcessPendingConfigurationUpdate())
+        {
+            OCA_LOG_ERROR("Configuration update failed - continuing with current config");
+        }
 
 #ifdef OCA_RUN
         ::OcaLiteCommandHandler::GetInstance().RunWithTimeout(1000);
@@ -369,19 +384,39 @@ void HandleConfigurationUpdate(const Json::Value &newConfig)
 {
     OCA_LOG_INFO("Configuration update received from UDP observer");
 
-    // // Convert JSON to string for safe storage
-    // std::string configString = newConfig.toStyledString();
+    // Add 10-second delay to allow system stabilization
+    OCA_LOG_INFO("Waiting 10 seconds before processing configuration update...");
+    sleep(10);
 
-    // // Thread-safe queuing of configuration update
-    // std::lock_guard<std::mutex> lock(g_configUpdateMutex);
+    // Input Validation
+    if (newConfig.isNull() || !newConfig.isObject())
+    {
+        OCA_LOG_ERROR("Invalid configuration JSON received - not an object");
+        return;
+    }
 
-    // if (g_configUpdatePending)
-    // {
-    //     OCA_LOG_INFO("Configuration update already pending, replacing with newer version");
-    // }
+    // Full Configuration Validation
+    if (!ValidateConfigurationJson(newConfig))
+    {
+        OCA_LOG_ERROR("Configuration validation failed - rejecting update");
+        return;
+    }
 
-    // g_pendingConfigJson = configString;
-    // g_configUpdatePending = true;
+    // JSON Serialization for safe storage
+    Json::StreamWriterBuilder builder;
+    builder["indentation"] = ""; // Compact format
+    std::string configString = Json::writeString(builder, newConfig);
+
+    // Thread-safe queuing of configuration update
+    std::lock_guard<std::mutex> lock(g_configUpdateMutex);
+
+    if (g_configUpdatePending)
+    {
+        OCA_LOG_INFO("Configuration update already pending, replacing with newer version");
+    }
+
+    g_pendingConfigJson = configString;
+    g_configUpdatePending = true;
 
     OCA_LOG_INFO("Configuration update queued for main thread processing");
 }
@@ -400,103 +435,504 @@ void HandleAudioSettingsUpdate(const Json::Value &newSettings)
     OCA_LOG_INFO("Audio settings update processing not yet implemented");
 }
 
-// /**
-//  * @brief Process pending configuration update on main thread
-//  * @return true if successful, false otherwise
-//  */
-// bool ProcessPendingConfigurationUpdate()
-// {
-//     std::string configJson;
+/**
+ * @brief Comprehensive validation of configuration JSON
+ * @param config JSON configuration to validate
+ * @return true if valid, false otherwise
+ */
+bool ValidateConfigurationJson(const Json::Value &config)
+{
+    OCA_LOG_INFO("Validating configuration JSON...");
 
-//     // Check if there's a pending update
-//     {
-//         std::lock_guard<std::mutex> lock(g_configUpdateMutex);
-//         if (!g_configUpdatePending)
-//         {
-//             return true; // No update pending
-//         }
+    // JSON Structure Validation
+    if (!config.isObject())
+    {
+        OCA_LOG_ERROR("Configuration must be a JSON object");
+        return false;
+    }
 
-//         configJson = g_pendingConfigJson;
-//         g_configUpdatePending = false;
-//         g_pendingConfigJson.clear();
-//     }
+    if (!config.isMember("zones") || !config["zones"].isArray())
+    {
+        OCA_LOG_ERROR("Configuration must contain 'zones' array");
+        return false;
+    }
 
-//     OCA_LOG_INFO("Processing configuration update on main thread");
+    if (!config.isMember("controllers") || !config["controllers"].isArray())
+    {
+        OCA_LOG_ERROR("Configuration must contain 'controllers' array");
+        return false;
+    }
 
-//     // Parse JSON to validate structure
-//     Json::Value config;
-//     Json::Reader reader;
-//     if (!reader.parse(configJson, config))
-//     {
-//         OCA_LOG_ERROR_PARAMS("Failed to parse configuration JSON: %s", reader.getFormattedErrorMessages().c_str());
-//         return false;
-//     }
+    const Json::Value &zones = config["zones"];
+    const Json::Value &controllers = config["controllers"];
 
-//     // Teardown current configuration
-//     if (!TeardownCurrentConfiguration())
-//     {
-//         OCA_LOG_ERROR("Failed to teardown current configuration");
-//         return false;
-//     }
+    // Zone Validation
+    std::set<std::string> zoneIds;
+    std::set<int> usedOnos;
 
-//     // Rebuild with new configuration
-//     if (!RebuildConfiguration(configJson))
-//     {
-//         OCA_LOG_ERROR("Failed to rebuild configuration - system may be in inconsistent state");
-//         return false;
-//     }
+    for (const auto &zone : zones)
+    {
+        if (!zone.isObject())
+        {
+            OCA_LOG_ERROR("Each zone must be a JSON object");
+            return false;
+        }
 
-//     OCA_LOG_INFO("✓ Configuration update completed successfully");
-//     return true;
-// }
+        // Check required zone fields
+        const std::vector<std::string> requiredZoneFields = {"id", "name", "ono", "gain", "sources"};
+        for (const auto &field : requiredZoneFields)
+        {
+            if (!zone.isMember(field))
+            {
+                OCA_LOG_ERROR_PARAMS("Zone missing required field: %s", field.c_str());
+                return false;
+            }
+        }
 
-// /**
-//  * @brief Teardown current OCA configuration
-//  * @return true if successful, false otherwise
-//  */
-// bool TeardownCurrentConfiguration()
-// {
+        // Validate zone ID uniqueness
+        std::string zoneId = zone["id"].asString();
+        if (zoneIds.count(zoneId))
+        {
+            OCA_LOG_ERROR_PARAMS("Duplicate zone ID found: %s", zoneId.c_str());
+            return false;
+        }
+        zoneIds.insert(zoneId);
 
-//     OCA_LOG_INFO("Shutting down command handler...");
-//     ::OcaLiteCommandHandler::GetInstance().Shutdown();
+        // Validate ONO structure and uniqueness
+        const Json::Value &ono = zone["ono"];
+        if (!ono.isObject())
+        {
+            OCA_LOG_ERROR_PARAMS("Zone '%s' ONO must be an object", zoneId.c_str());
+            return false;
+        }
 
-//     // Clear the root block (this removes all zones and objects)
-//     OCA_LOG_INFO("Clearing root block...");
-//     // ::OcaLiteBlock &rootBlock = ::OcaLiteBlock::GetRootBlock();
-//     // rootBlock.FreeRootBlock();
-//     // Note: There's no public clear method, so we'll rely on
-//     // the fact that ApplyZoneConfiguration will overwrite the structure
+        const std::vector<std::string> requiredOnoFields = {"zone", "gain", "mute", "sourceSelector"};
+        for (const auto &field : requiredOnoFields)
+        {
+            if (!ono.isMember(field) || !ono[field].isInt())
+            {
+                OCA_LOG_ERROR_PARAMS("Zone '%s' ONO missing or invalid field: %s", zoneId.c_str(), field.c_str());
+                return false;
+            }
 
-//     OCA_LOG_INFO("✓ Current configuration teardown completed");
-//     return true;
-// }
+            int onoValue = ono[field].asInt();
+            if (usedOnos.count(onoValue))
+            {
+                OCA_LOG_ERROR_PARAMS("Duplicate ONO value found: %d in zone '%s'", onoValue, zoneId.c_str());
+                return false;
+            }
+            usedOnos.insert(onoValue);
+        }
 
-// /**
-//  * @brief Rebuild OCA configuration with new JSON
-//  * @param configJson New configuration JSON value
-//  * @return true if successful, false otherwise
-//  */
-// bool RebuildConfiguration(const Json::Value &configJson)
-// {
-//     OCA_LOG_INFO("Rebuilding configuration with new JSON...");
+        // Validate gain structure
+        const Json::Value &gain = zone["gain"];
+        if (!gain.isObject())
+        {
+            OCA_LOG_ERROR_PARAMS("Zone '%s' gain must be an object", zoneId.c_str());
+            return false;
+        }
 
-//     // Apply the new zone configuration
-//     if (!ApplyZoneConfiguration(configJson))
-//     {
-//         OCA_LOG_ERROR("Failed to apply new zone configuration");
-//         return false;
-//     }
+        const std::vector<std::string> requiredGainFields = {"gainID", "min_value", "max_value", "default_gain_value", "default_mute_value"};
+        for (const auto &field : requiredGainFields)
+        {
+            if (!gain.isMember(field))
+            {
+                OCA_LOG_ERROR_PARAMS("Zone '%s' gain missing required field: %s", zoneId.c_str(), field.c_str());
+                return false;
+            }
+        }
 
-//     // Restart the command handler
-//     if (!::OcaLiteCommandHandler::GetInstance().Initialize())
-//     {
-//         OCA_LOG_ERROR("Failed to reinitialize command handler");
-//         return false;
-//     }
+        // Validate sources array
+        const Json::Value &sources = zone["sources"];
+        if (!sources.isArray() || sources.size() == 0)
+        {
+            OCA_LOG_ERROR_PARAMS("Zone '%s' must have a non-empty sources array", zoneId.c_str());
+            return false;
+        }
 
-//     OCA_LOG_INFO("✓ Configuration rebuild completed successfully");
-//     return true;
-// }
+        for (const auto &source : sources)
+        {
+            if (!source.isObject() || !source.isMember("index") || !source.isMember("label"))
+            {
+                OCA_LOG_ERROR_PARAMS("Zone '%s' source must have 'index' and 'label' fields", zoneId.c_str());
+                return false;
+            }
+        }
+    }
+
+    // Controller Validation
+    std::set<std::string> controllerIds;
+    for (const auto &controller : controllers)
+    {
+        if (!controller.isObject())
+        {
+            OCA_LOG_ERROR("Each controller must be a JSON object");
+            return false;
+        }
+
+        // Check required controller fields
+        const std::vector<std::string> requiredControllerFields = {"id", "name", "zoneIds"};
+        for (const auto &field : requiredControllerFields)
+        {
+            if (!controller.isMember(field))
+            {
+                OCA_LOG_ERROR_PARAMS("Controller missing required field: %s", field.c_str());
+                return false;
+            }
+        }
+
+        // Validate controller ID uniqueness
+        std::string controllerId = controller["id"].asString();
+        if (controllerIds.count(controllerId))
+        {
+            OCA_LOG_ERROR_PARAMS("Duplicate controller ID found: %s", controllerId.c_str());
+            return false;
+        }
+        controllerIds.insert(controllerId);
+
+        // Validate zone references
+        const Json::Value &controllerZoneIds = controller["zoneIds"];
+        if (!controllerZoneIds.isArray())
+        {
+            OCA_LOG_ERROR_PARAMS("Controller '%s' zoneIds must be an array", controllerId.c_str());
+            return false;
+        }
+
+        for (const auto &zoneIdRef : controllerZoneIds)
+        {
+            std::string referencedZoneId = zoneIdRef.asString();
+            if (!zoneIds.count(referencedZoneId))
+            {
+                OCA_LOG_ERROR_PARAMS("Controller '%s' references non-existent zone: %s",
+                                     controllerId.c_str(), referencedZoneId.c_str());
+                return false;
+            }
+        }
+    }
+
+    OCA_LOG_INFO_PARAMS("✓ Configuration validation successful - %zu zones, %zu controllers",
+                        zones.size(), controllers.size());
+    return true;
+}
+
+/**
+ * @brief Build object tracker map from ControlSystemConfig
+ * @param config ControlSystemConfig to extract object mappings from
+ */
+void BuildObjectTracker(const ControlSystemConfig &config)
+{
+    OCA_LOG_INFO("Building object tracker map from configuration...");
+
+    g_objectTracker.clear();
+
+    for (const auto &zonePtr : config.zones)
+    {
+        if (!zonePtr)
+            continue; // Skip null pointers
+
+        const Zone &zone = *zonePtr;
+
+        // Extract zone information
+        std::string zoneId = zone.id;
+        std::string gainId = zone.gain.gainID;
+
+        // Extract ONOs from zone
+        ::OcaONo gainOno = static_cast<::OcaONo>(zone.ono.gain);
+        ::OcaONo muteOno = static_cast<::OcaONo>(zone.ono.mute);
+        ::OcaONo switchOno = static_cast<::OcaONo>(zone.ono.sourceSelector);
+
+        // Map gainID to gain and mute ONOs
+        g_objectTracker[gainId] = {gainOno, muteOno};
+
+        // Map zoneID to switch ONO
+        g_objectTracker[zoneId] = {switchOno};
+
+        OCA_LOG_INFO_PARAMS("Tracked objects - GainID '%s': [%u, %u], ZoneID '%s': [%u]",
+                            gainId.c_str(), gainOno, muteOno, zoneId.c_str(), switchOno);
+    }
+
+    OCA_LOG_INFO_PARAMS("✓ Object tracker built with %zu entries", g_objectTracker.size());
+}
+
+/**
+ * @brief Clear the object tracker map
+ */
+void ClearObjectTracker()
+{
+    g_objectTracker.clear();
+    OCA_LOG_INFO("Object tracker cleared");
+}
+
+/**
+ * @brief Remove all zone-related objects from root block using object tracker
+ */
+/**
+ * @brief Remove all zone-related objects from root block using object tracker
+ */
+void RemoveZoneObjectsFromRootBlock()
+{
+    OCA_LOG_INFO("Removing zone objects from root block using object tracker...");
+
+    if (g_objectTracker.empty())
+    {
+        OCA_LOG_WARNING("Object tracker is empty - falling back to range-based removal");
+
+        // Fallback to the old method if tracker is empty
+        ::OcaLiteList<::OcaLiteObjectIdentification> members;
+        if (OCASTATUS_OK == ::OcaLiteBlock::GetRootBlock().GetMembers(members))
+        {
+            for (::OcaUint16 i = 0; i < members.GetCount(); i++)
+            {
+                const ::OcaLiteObjectIdentification &member = members.GetItem(i);
+                ::OcaONo memberONo = member.GetONo();
+
+                // Remove zone-related objects (zones typically have ONOs in custom ranges)
+                // Skip system objects (ONOs < 1000) and network objects
+                if (memberONo >= 1000 && memberONo <= 9999) // Zone ONO range from our config
+                {
+                    OCA_LOG_INFO_PARAMS("Removing zone object with ONO: %u", memberONo);
+                    ::OcaLiteBlock::GetRootBlock().RemoveObject(memberONo);
+                }
+            }
+        }
+        else
+        {
+            OCA_LOG_WARNING("Failed to get members list from root block");
+        }
+        return;
+    }
+
+    // Use object tracker for precise removal
+    for (const auto &entry : g_objectTracker)
+    {
+        const std::string &identifier = entry.first;
+        const std::vector<::OcaONo> &onos = entry.second;
+
+        OCA_LOG_INFO_PARAMS("Removing objects for identifier '%s':", identifier.c_str());
+
+        for (::OcaONo ono : onos)
+        {
+            OCA_LOG_INFO_PARAMS("  Removing object with ONO: %u", ono);
+            ::OcaLiteBlock::GetRootBlock().RemoveObject(ono);
+        }
+    }
+
+    // Also remove the root zone container
+    OCA_LOG_INFO_PARAMS("Removing root zone container with ONO: %u", ROOT_ZONE_CONTAINER_ONO);
+    ::OcaLiteBlock::GetRootBlock().RemoveObject(ROOT_ZONE_CONTAINER_ONO);
+
+    OCA_LOG_INFO("✓ Object tracker-based removal completed");
+}
+
+/**
+ * @brief Teardown current OCA configuration safely
+ * @return true if successful, false otherwise
+ */
+bool TeardownCurrentConfiguration()
+{
+    OCA_LOG_INFO("Starting configuration teardown...");
+
+    // 1. Set device to shutting down state FIRST (required for object removal)
+    OCA_LOG_INFO("Setting device to shutting down state...");
+    ::OcaLiteDeviceManager::GetInstance().SetErrorAndOperationalState(
+        static_cast<::OcaBoolean>(false),
+        ::OcaLiteDeviceManager::OCA_OPSTATE_SHUTTING_DOWN);
+
+    // 2. Shutdown Command Handler
+    OCA_LOG_INFO("Shutting down command handler...");
+    ::OcaLiteCommandHandler::GetInstance().Shutdown();
+
+    // // 2. Shutdown Subscription Manager
+    // OCA_LOG_INFO("Shutting down subscription manager...");
+    // ::OcaLiteSubscriptionManager::GetInstance().Shutdown();
+
+    // 3. Shutdown and Teardown Network
+    if (g_ocp1Network)
+    {
+        OCA_LOG_INFO("Shutting down OCP1 network...");
+
+        ::OcaONo networkONo = g_ocp1Network->GetObjectNumber();
+        ::OcaLiteStatus shutdownStatus = g_ocp1Network->Shutdown();
+        if (OCASTATUS_OK != shutdownStatus)
+        {
+            OCA_LOG_WARNING_PARAMS("Network shutdown returned status: %u", shutdownStatus);
+        }
+
+        g_ocp1Network->Teardown();
+
+        // Remove from root block
+        ::OcaLiteBlock::GetRootBlock().RemoveObject(networkONo);
+
+        // Clean up network object
+        delete g_ocp1Network;
+        g_ocp1Network = nullptr;
+
+        OCA_LOG_INFO("✓ OCP1 network torn down successfully");
+    }
+    else
+    {
+        OCA_LOG_WARNING("No OCP1 network to teardown");
+    }
+
+    // 4. Clear Controller Configuration
+    OCA_LOG_INFO("Clearing controller configuration...");
+    ::OcaLiteControllerConfigManager::GetInstance().ClearConfigData();
+
+    // 5. Remove Zone Objects
+    RemoveZoneObjectsFromRootBlock();
+
+    // 6. Clear Object Tracker
+    ClearObjectTracker();
+
+    OCA_LOG_INFO("✓ Configuration teardown completed");
+    return true;
+}
+
+/**
+ * @brief Rebuild OCA configuration with new JSON
+ * @param configJson New configuration JSON value
+ * @return true if successful, false otherwise
+ */
+bool RebuildConfiguration(const Json::Value &configJson)
+{
+    OCA_LOG_INFO("Rebuilding configuration with new JSON...");
+
+    // 1. Set device to INITIALIZING state for object creation
+    OCA_LOG_INFO("Setting device to INITIALIZING state for configuration rebuild...");
+    ::OcaLiteDeviceManager::GetInstance().SetErrorAndOperationalState(
+        static_cast<::OcaBoolean>(false),
+        ::OcaLiteDeviceManager::OCA_OPSTATE_INITIALIZING);
+
+    // 2. Re-setup OCP1 Network
+    OCA_LOG_INFO("Re-setting up OCP1 network...");
+
+    // Add a small delay to ensure socket is fully released
+    OCA_LOG_INFO("Waiting 2 seconds for socket cleanup...");
+    sleep(2);
+
+    g_ocp1Network = SetupOCP1Network(g_connectionPort);
+    if (!g_ocp1Network)
+    {
+        OCA_LOG_ERROR("Failed to re-setup OCP1 network");
+        return false;
+    }
+
+    // 3. Apply Zone Configuration
+    OCA_LOG_INFO("Applying new zone configuration...");
+    if (!ApplyZoneConfiguration(configJson))
+    {
+        OCA_LOG_ERROR("Failed to apply new zone configuration");
+        return false;
+    }
+
+    // 4. Update Device Manager State (CRITICAL - must restore operational state)
+    OCA_LOG_INFO("Updating device manager state to OPERATIONAL...");
+    ::OcaLiteDeviceManager::GetInstance().SetErrorAndOperationalState(
+        static_cast<::OcaBoolean>(false),
+        ::OcaLiteDeviceManager::OCA_OPSTATE_OPERATIONAL);
+    ::OcaLiteDeviceManager::GetInstance().SetEnabled(static_cast<::OcaBoolean>(true));
+
+    // 5. Restart Command Handler
+    OCA_LOG_INFO("Reinitializing command handler...");
+    if (!::OcaLiteCommandHandler::GetInstance().Initialize())
+    {
+        OCA_LOG_ERROR("Failed to reinitialize command handler");
+        return false;
+    }
+
+    // 6. Start OCA Services
+    OCA_LOG_INFO("Starting OCA services...");
+    if (!RestartOCAServicesWithExponentialBackoff(g_ocp1Network))
+    {
+        OCA_LOG_ERROR("Failed to start OCA services");
+        return false;
+    }
+
+    OCA_LOG_INFO("✓ Configuration rebuild completed successfully");
+    return true;
+}
+
+bool RestartOCAServicesWithExponentialBackoff(::Ocp1LiteNetwork *ocp1Network)
+{
+    const int maxRetries = 15;
+    int retryCount = 0;
+
+    while (retryCount < maxRetries)
+    {
+        OCA_LOG_INFO_PARAMS("Attempting to restart OCA services (Attempt %d/%d)...",
+                            retryCount + 1, maxRetries);
+
+        // Try to restart the OCA services
+        if (StartOCAServices(ocp1Network))
+        {
+            OCA_LOG_INFO("✓ OCA services restarted successfully");
+            return true;
+        }
+
+        OCA_LOG_ERROR("Failed to restart OCA services");
+
+        // Exponential backoff
+        int backoffTime = (1 << retryCount) * 1000; // 2^retryCount * 1000 ms
+        OCA_LOG_INFO_PARAMS("Waiting %d ms before retrying...", backoffTime);
+        std::this_thread::sleep_for(std::chrono::milliseconds(backoffTime));
+
+        retryCount++;
+    }
+
+    OCA_LOG_ERROR("✗ All attempts to restart OCA services failed");
+    return false;
+}
+
+/**
+ * @brief Process pending configuration update on main thread
+ * @return true if successful, false otherwise
+ */
+bool ProcessPendingConfigurationUpdate()
+{
+    std::string configJson;
+
+    // Check if there's a pending update
+    {
+        std::lock_guard<std::mutex> lock(g_configUpdateMutex);
+        if (!g_configUpdatePending)
+        {
+            return true; // No update pending
+        }
+
+        configJson = g_pendingConfigJson;
+        g_configUpdatePending = false;
+        g_pendingConfigJson.clear();
+    }
+
+    OCA_LOG_INFO("Processing configuration update on main thread");
+
+    // Parse JSON to validate structure
+    Json::Value config;
+    Json::Reader reader;
+    if (!reader.parse(configJson, config))
+    {
+        OCA_LOG_ERROR_PARAMS("Failed to parse queued configuration JSON: %s",
+                             reader.getFormattedErrorMessages().c_str());
+        return false;
+    }
+
+    // Teardown current configuration
+    if (!TeardownCurrentConfiguration())
+    {
+        OCA_LOG_ERROR("Failed to teardown current configuration");
+        return false;
+    }
+    sleep(2); // Small delay to ensure full cleanup
+    // Rebuild with new configuration
+    if (!RebuildConfiguration(config))
+    {
+        OCA_LOG_ERROR("Failed to rebuild configuration");
+        return false;
+    }
+
+    OCA_LOG_INFO("✓ Configuration update completed successfully");
+    return true;
+}
 
 int main(int argc, const char *argv[])
 {
@@ -506,6 +942,9 @@ int main(int argc, const char *argv[])
         static_cast<void>(sscanf(argv[1], "%u", &connectionPort));
     }
     OCA_LOG_INFO_PARAMS("Using connection port %d", connectionPort);
+
+    // Store connection port globally for configuration updates
+    g_connectionPort = connectionPort;
 
     // Set log level to show INFO messages (including client connection logs)
     ::OcfLiteLogSetLogLevel(OCA_LOG_LVL_TRACE);
