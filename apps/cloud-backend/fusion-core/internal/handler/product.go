@@ -4,17 +4,22 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
 	"github.com/gin-gonic/gin"
 )
 
 // ProductHandler handles HTTP requests related to products.
 type ProductHandler struct {
-	product product.Product
+	product ProductSVC
+}
+
+type ProductSVC interface {
+	GetProductByID(ctx context.Context, id string) (*fusion.ProductResponse, error)
+	GetAllProducts(ctx context.Context) (*fusion.ProductResponse, error)
 }
 
 // NewProductHandler creates a new ProductHandler Service.
-func NewProductHandler(productSvc product.Product) *ProductHandler {
+func NewProductHandler(productSvc ProductSVC) *ProductHandler {
 	return &ProductHandler{product: productSvc}
 }
 
