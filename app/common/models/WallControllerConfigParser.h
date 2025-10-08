@@ -1,5 +1,5 @@
-// This class houses the parsing logic for all the JSON updates for and to the wall controller.
-// The difference here is that there is parsing logic for the zones as well.
+// This file contains parsing functions for all the JSON updates for and to the wall controller.
+// It also includes parsing logic for the zones.
 
 #pragma once
 
