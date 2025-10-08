@@ -18,7 +18,6 @@
 #include <OCC/ControlClasses/Managers/OcaLiteFirmwareManager.h>
 #include <OCF/OcaLiteCommandHandler.h>
 #include <mutex>
-#include <unistd.h> // For sleep function
 #ifndef UDP
 #include <OCP.1/Ocp1LiteNetwork.h>
 #else
@@ -521,7 +520,7 @@ void HandleConfigurationUpdate(const Json::Value &newConfig)
 {
     // Add 10-second delay to allow system stabilization
     OCA_LOG_INFO("Waiting 10 seconds before processing configuration update...");
-    sleep(10);
+    std::this_thread::sleep_for(std::chrono::seconds(10));
 
     // Input Validation
     if (newConfig.isNull() || !newConfig.isObject())
@@ -871,6 +870,10 @@ bool TeardownCurrentConfiguration()
         static_cast<::OcaBoolean>(false),
         ::OcaLiteDeviceManager::OCA_OPSTATE_SHUTTING_DOWN);
 
+    // Allow time for shutdown notification to be sent to connected clients
+    OCA_LOG_INFO("Waiting 1 second for shutdown notification to be sent...");
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+
     // 2. Shutdown Command Handler
     OCA_LOG_INFO("Shutting down command handler...");
     ::OcaLiteCommandHandler::GetInstance().Shutdown();
@@ -1005,7 +1008,7 @@ bool RebuildConfiguration(const Json::Value &configJson)
 
     // Add a small delay to ensure socket is fully released
     OCA_LOG_INFO("Waiting 2 seconds for socket cleanup...");
-    sleep(2);
+    std::this_thread::sleep_for(std::chrono::seconds(2));
 
     g_ocp1Network = SetupOCP1Network(g_connectionPort);
     if (!g_ocp1Network)
@@ -1087,7 +1090,8 @@ bool ProcessPendingConfigurationUpdate()
         OCA_LOG_ERROR("Failed to teardown current configuration");
         return false;
     }
-    sleep(2); // Small delay to ensure full cleanup
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+    // Small delay to ensure full cleanup
     // Rebuild with new configuration
     if (!RebuildConfiguration(config))
     {
