@@ -70,7 +70,7 @@ INT32 Ocp1LiteHostInterfaceRetrieveSocket(::SocketNetworkProtocolType networkPro
 
     int socketType = (transportProtocolType == PROTOCOL_UDP) ? SOCK_DGRAM : SOCK_STREAM;
     int socketFd = socket(AF_INET, socketType, transportProtocolType);
-    if (SOCKET_ERROR != socketFd && socketFd != SOCKET_ERROR)
+    if (socketFd != SOCKET_ERROR)
     {
         int optionOn = 1;
         int result = ::setsockopt(socketFd, SOL_SOCKET, SO_REUSEADDR,
