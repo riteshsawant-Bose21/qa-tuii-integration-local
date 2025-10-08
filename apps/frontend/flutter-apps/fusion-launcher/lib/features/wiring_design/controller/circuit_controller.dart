@@ -55,12 +55,12 @@ class CircuitController extends ChangeNotifier
   /// Caching for Performance
   ///
 
-  final Map<CircuitComponent, List<Wire>> _compnentWireCache =
+  final Map<CircuitComponent, List<Wire>> _componentWireCache =
       <CircuitComponent, List<Wire>>{};
   final Map<CircuitPort, List<Wire>> _portWireCache =
       <CircuitPort, List<Wire>>{};
 
-  final WireRouter wiewRoter = WireRouter(
+  final WireRouter wireRouter = WireRouter(
     basePaths: <PathSide, Map<PathSide, List<Offset>>>{},
     usedPaths: <PathSide, Map<PathSide, List<Wire>>>{},
   );
@@ -86,16 +86,21 @@ class CircuitController extends ChangeNotifier
             .map((CircuitComponent e) => Obstacle(e.position & e.size))
             .toList();
     final Wire wire = Wire(id: 'id', from: from, to: to, joints: <Offset>[]);
-    _compnentWireCache[from.parent] ??= <Wire>[];
-    _compnentWireCache[from.parent]!.add(wire);
-    _compnentWireCache[to.parent] ??= <Wire>[];
-    _compnentWireCache[to.parent]!.add(wire);
+    _componentWireCache[from.parent] ??= <Wire>[];
+    _componentWireCache[from.parent]!.add(wire);
+    _componentWireCache[to.parent] ??= <Wire>[];
+    _componentWireCache[to.parent]!.add(wire);
     _portWireCache[from] ??= <Wire>[];
     _portWireCache[from]!.add(wire);
     _portWireCache[to] ??= <Wire>[];
     _portWireCache[to]!.add(wire);
     wires.add(wire);
-    wiewRoter.addWire(fromSide, toSide, wire, obstacles);
+    wireRouter.addWire(fromSide, toSide, wire, obstacles);
+
+    wire.joints = pathFinder.findPath(
+      wire.from.absolutePositionWithOffset,
+      wire.to.absolutePositionWithOffset,
+    );
     saveState();
   }
 
@@ -127,121 +132,136 @@ class CircuitController extends ChangeNotifier
   }
 
   void _updateWirePath(CircuitComponent component) {
-    final List<Obstacle> obstacles =
-        components
-            .map((CircuitComponent e) => Obstacle(e.position & e.size))
-            .toList();
-    final List<Wire> connectedWires = _compnentWireCache[component] ?? <Wire>[];
-    for (final Wire wire in connectedWires) {
-      // final path = pathFinder.findPath(
-      //   wire.from.absolutePositionWithOffset,
-      //   wire.to.absolutePositionWithOffset,
-      //   // stops: stops.length > 1 ? [stops[1]] : [],
-      // );
-      // wire.joints = path;
-      wiewRoter.updateRouteForWire(wire, obstacles);
+    // final List<Obstacle> obstacles =
+    //     components
+    //         .map((CircuitComponent e) => Obstacle(e.position & e.size))
+    //         .toList();
+    final List<Wire> connectedWires =
+        _componentWireCache[component]?.toList() ?? <Wire>[];
+    if (component.parent != null) {
+      connectedWires.addAll(_componentWireCache[component.parent] ?? <Wire>[]);
+      for (final CircuitComponent child
+          in component.parent?.children ?? <CircuitComponent>[]) {
+        if (component != child) {
+          connectedWires.addAll(_componentWireCache[child] ?? <Wire>[]);
+        }
+      }
     }
-    adjustPaths();
+
+    for (final CircuitComponent child in component.children) {
+      connectedWires.addAll(_componentWireCache[child] ?? <Wire>[]);
+    }
+
+    for (final Wire wire in connectedWires) {
+      final List<ui.Offset> path = pathFinder.findPath(
+        wire.from.absolutePositionWithOffset,
+        wire.to.absolutePositionWithOffset,
+        // stops: stops.length > 1 ? [stops[1]] : [],
+      );
+      wire.joints = path;
+      // wireRouter.updateRouteForWire(wire, obstacles);
+    }
+    // adjustPaths();
   }
 
   @override
   CircuitController get self => this;
 
-  void adjustPaths() {
-    final List<Obstacle> obstacles =
-        components
-            .map((CircuitComponent e) => Obstacle(e.position & e.size))
-            .toList();
-    for (final Wire wire in wires) {
-      wiewRoter.updateRouteForWire(wire, obstacles);
-    }
-    // PathAdjuster(obstacles: [...components]).resolveAll(wires);
-    notifyListeners();
-    computeBasePaths();
-  }
+  // void adjustPaths() {
+  //   final List<Obstacle> obstacles =
+  //       components
+  //           .map((CircuitComponent e) => Obstacle(e.position & e.size))
+  //           .toList();
+  //   for (final Wire wire in wires) {
+  //     wireRouter.updateRouteForWire(wire, obstacles);
+  //   }
+  //   // PathAdjuster(obstacles: [...components]).resolveAll(wires);
+  //   notifyListeners();
+  //   computeBasePaths();
+  // }
 
-  // Map<PathSide, Map<PathSide, List<Wire>>> usedPaths = {};
+  // // Map<PathSide, Map<PathSide, List<Wire>>> usedPaths = {};
 
-  void computeBasePaths() {
-    final Map<PathSide, Map<PathSide, List<Offset>>> basePaths =
-        <PathSide, Map<PathSide, List<Offset>>>{};
-    basePaths.clear();
-    for (int i = 0; i < components.length; i++) {
-      for (final Side aSide in Side.values) {
-        final PathSide compA = PathSide(component: components[i], side: aSide);
-        for (int j = 0; j < components.length; j++) {
-          if (components[i] == components[j]) continue;
-          for (final Side bSide in Side.values) {
-            final PathSide compB = PathSide(
-              component: components[j],
-              side: bSide,
-            );
-            final Offset start;
-            final Offset end;
-            const double offset = 20.0;
-            switch (aSide) {
-              case Side.top:
-                start =
-                    compA.component.position +
-                    Offset(compA.component.size.width / 2, -offset);
-              case Side.bottom:
-                start =
-                    compA.component.position +
-                    Offset(
-                      compA.component.size.width / 2,
-                      compA.component.size.height + offset,
-                    );
-              case Side.left:
-                start =
-                    compA.component.position +
-                    Offset(-offset, compA.component.size.height / 2);
-              case Side.right:
-                start =
-                    compA.component.position +
-                    Offset(
-                      compA.component.size.width + offset,
-                      compA.component.size.height / 2,
-                    );
-            }
-            switch (bSide) {
-              case Side.top:
-                end =
-                    compB.component.position +
-                    Offset(compB.component.size.width / 2, -offset);
-              case Side.bottom:
-                end =
-                    compB.component.position +
-                    Offset(
-                      compB.component.size.width / 2,
-                      compB.component.size.height + offset,
-                    );
-              case Side.left:
-                end =
-                    compB.component.position +
-                    Offset(-offset, compB.component.size.height / 2);
-              case Side.right:
-                end =
-                    compB.component.position +
-                    Offset(
-                      compB.component.size.width + offset,
-                      compB.component.size.height / 2,
-                    );
-            }
-            final List<Offset> path = pathFinder.findPath(
-              start,
-              end,
-              // thickness: compB.component.ports.length * 15,
-            );
-            basePaths[compA] ??= <PathSide, List<Offset>>{};
-            basePaths[compA]![compB] = path.toList();
-            // basePaths[compB] ??= {};
-            // basePaths[compB]![compA] = path.reversed.toList();
-          }
-        }
-      }
-    }
-    wiewRoter.basePaths.addAll(basePaths);
-  }
+  // void computeBasePaths() {
+  //   final Map<PathSide, Map<PathSide, List<Offset>>> basePaths =
+  //       <PathSide, Map<PathSide, List<Offset>>>{};
+  //   basePaths.clear();
+  //   for (int i = 0; i < components.length; i++) {
+  //     for (final Side aSide in Side.values) {
+  //       final PathSide compA = PathSide(component: components[i], side: aSide);
+  //       for (int j = 0; j < components.length; j++) {
+  //         if (components[i] == components[j]) continue;
+  //         for (final Side bSide in Side.values) {
+  //           final PathSide compB = PathSide(
+  //             component: components[j],
+  //             side: bSide,
+  //           );
+  //           final Offset start;
+  //           final Offset end;
+  //           const double offset = 20.0;
+  //           switch (aSide) {
+  //             case Side.top:
+  //               start =
+  //                   compA.component.position +
+  //                   Offset(compA.component.size.width / 2, -offset);
+  //             case Side.bottom:
+  //               start =
+  //                   compA.component.position +
+  //                   Offset(
+  //                     compA.component.size.width / 2,
+  //                     compA.component.size.height + offset,
+  //                   );
+  //             case Side.left:
+  //               start =
+  //                   compA.component.position +
+  //                   Offset(-offset, compA.component.size.height / 2);
+  //             case Side.right:
+  //               start =
+  //                   compA.component.position +
+  //                   Offset(
+  //                     compA.component.size.width + offset,
+  //                     compA.component.size.height / 2,
+  //                   );
+  //           }
+  //           switch (bSide) {
+  //             case Side.top:
+  //               end =
+  //                   compB.component.position +
+  //                   Offset(compB.component.size.width / 2, -offset);
+  //             case Side.bottom:
+  //               end =
+  //                   compB.component.position +
+  //                   Offset(
+  //                     compB.component.size.width / 2,
+  //                     compB.component.size.height + offset,
+  //                   );
+  //             case Side.left:
+  //               end =
+  //                   compB.component.position +
+  //                   Offset(-offset, compB.component.size.height / 2);
+  //             case Side.right:
+  //               end =
+  //                   compB.component.position +
+  //                   Offset(
+  //                     compB.component.size.width + offset,
+  //                     compB.component.size.height / 2,
+  //                   );
+  //           }
+  //           final List<Offset> path = pathFinder.findPath(
+  //             start,
+  //             end,
+  //             // thickness: compB.component.ports.length * 15,
+  //           );
+  //           basePaths[compA] ??= <PathSide, List<Offset>>{};
+  //           basePaths[compA]![compB] = path.toList();
+  //           // basePaths[compB] ??= {};
+  //           // basePaths[compB]![compA] = path.reversed.toList();
+  //         }
+  //       }
+  //     }
+  //   }
+  //   wireRouter.basePaths.addAll(basePaths);
+  // }
 }
 
 class PathSide {

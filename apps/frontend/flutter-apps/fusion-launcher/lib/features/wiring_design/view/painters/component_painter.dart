@@ -11,6 +11,7 @@ part './component/base_component_painter.dart';
 part './component/device_schematic_component_painter.dart';
 part './component/source_component_painter.dart';
 part './component/speaker_component_painter.dart';
+part './component/zone_component_painter.dart';
 
 class ComponentPainter extends BasePainter {
   final CircuitComponent component;
@@ -35,6 +36,10 @@ class ComponentPainter extends BasePainter {
         component: component,
         painter: this,
       ),
+      ZoneComponentData() => ZoneComponentPainter(
+        component: component,
+        painter: this,
+      ),
       _ => BaseComponentPainter(component: component, painter: this),
     };
 
@@ -43,20 +48,21 @@ class ComponentPainter extends BasePainter {
 
   @override
   CanvasElement? isHit(Offset position) {
-    for (final CircuitPort port in component.ports) {
-      final Rect portRect = Rect.fromCircle(
-        center: component.position + port.relativePosition,
-        radius: WiringViewConstants.portRadius,
-      );
-      if (portRect.contains(position)) {
-        return port;
-      }
-    }
-    final Rect rect = component.position & component.size;
-    if (rect.contains(position)) {
-      return component;
-    }
-    return null;
+    return component.isHit(position);
+    // for (final CircuitPort port in component.ports) {
+    //   final Rect portRect = Rect.fromCircle(
+    //     center: component.position + port.relativePosition,
+    //     radius: WiringViewConstants.portRadius,
+    //   );
+    //   if (portRect.contains(position)) {
+    //     return port;
+    //   }
+    // }
+    // final Rect rect = component.position & component.size;
+    // if (rect.contains(position)) {
+
+    //   return component;
+    // }
   }
 
   bool hasConnection(CircuitPort port) {

@@ -6,6 +6,7 @@ import 'package:fusion_lib/fusion_lib.dart';
 import '../util/canvas_util.dart';
 
 abstract class ComponentData {
+  String get id;
   final String? image;
   final String label;
   final List<InputComponentPort> inputPorts;
@@ -76,6 +77,9 @@ class DeviceSchematicComponentData extends ComponentData {
   Offset get portOffset => const Offset(0, WiringViewConstants.headingHeight);
   @override
   double get portRadius => WiringViewConstants.portRadius;
+
+  @override
+  String get id => data.id;
 }
 
 class SourceComponentData extends ComponentData {
@@ -103,6 +107,8 @@ class SourceComponentData extends ComponentData {
   }
 
   @override
+  String get id => source.id;
+  @override
   Size get size => const Size(100, 100);
 
   @override
@@ -128,18 +134,21 @@ class ZoneComponentData extends ComponentData {
       comPorts: <ComComponentPort>[],
       inputPorts: <InputComponentPort>[],
       outputPorts: <OutputComponentPort>[
-        OutputComponentPort(data: 0, label: "0"),
+        // OutputComponentPort(data: 0, label: "0"),÷
       ],
       zone: zone,
     );
   }
 
   @override
+  String get id => zone.id;
+
+  @override
   Offset get portOffset => Offset.zero;
   @override
-  Size get size => const Size(300, 100);
+  Size get size => const Size(160, 30);
   @override
-  double get portRadius => WiringViewConstants.portRadius / 2;
+  double get portRadius => 0;
 }
 
 class SpeakerComponentData extends ComponentData {
@@ -163,6 +172,8 @@ class SpeakerComponentData extends ComponentData {
     );
   }
 
+  @override
+  String get id => speaker.id;
   @override
   Size get size => const Size(100, 100);
   @override

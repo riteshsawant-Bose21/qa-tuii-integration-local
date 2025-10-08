@@ -1,5 +1,3 @@
-import 'dart:developer';
-
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/wiring_design/controller/circuit_controller.dart';
@@ -27,9 +25,9 @@ class CircuitView extends StatelessWidget {
           return Listener(
             onPointerPanZoomUpdate: (PointerPanZoomUpdateEvent event) {
               if (event.scale == 1) return;
-              log(
-                "In Pan scale : ${event.scale}. ${controller.canvasScale - event.scale}. ${controller.canvasScale}",
-              );
+              // log(
+              //   "In Pan scale : ${event.scale}. ${controller.canvasScale - event.scale}. ${controller.canvasScale}",
+              // );
               controller.onScaleUpdate(
                 event.scale - controller.canvasScale,
                 event.localPosition,

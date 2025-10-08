@@ -38,6 +38,7 @@ abstract class BasePainter {
     TextStyle? style,
     required Offset position,
     double maxWidth = double.infinity,
+    Alignment positionAlignment = Alignment.center,
   }) {
     final TextPainter tp = TextPainter(
       text: TextSpan(
@@ -55,8 +56,8 @@ abstract class BasePainter {
     tp.paint(
       canvas,
       Offset(
-        position.dx - tp.width / 2,
-        position.dy - tp.height / 2,
+        position.dx - tp.width / 2 - tp.width * 0.5 * positionAlignment.x,
+        position.dy - tp.height / 2 - tp.height * 0.5 * positionAlignment.y,
       ),
     );
     return true;

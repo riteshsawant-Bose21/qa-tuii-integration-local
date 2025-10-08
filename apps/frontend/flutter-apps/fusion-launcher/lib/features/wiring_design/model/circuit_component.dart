@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'dart:ui';
 
 import 'package:fusion_launcher/features/wiring_design/dto/component_data.dart';
@@ -8,29 +9,83 @@ import 'circuit_port.dart';
 
 class CircuitComponent extends CanvasElement {
   final String id;
+  Offset _position;
+
   @override
-  Offset position; // Top-left corner
+  Offset get position => (parent?.position ?? Offset.zero) + _position;
+
+  void changePosition(Offset offset) {
+    if (parent != null) {
+      parent!.changePosition(offset);
+    } else {
+      _position += offset;
+    }
+  }
+
+  // set position(Offset value) {
+  //   _position = value;
+  // } // Top-left corner
   @override
-  Size size;
+  Size get size {
+    if (children.isEmpty) return data.size;
+
+    num maxWidth = data.size.width;
+    num maxHight = data.size.height;
+
+    for (final CircuitComponent child in children) {
+      maxWidth = max(maxWidth, child.size.width);
+      maxHight += child.size.height + 30;
+    }
+    return Size(maxWidth.toDouble(), maxHight.toDouble());
+  }
+
+  CanvasElement? isHit(Offset position) {
+    for (final CircuitPort port in ports) {
+      final Rect portRect = Rect.fromCircle(
+        center: this.position + port.relativePosition,
+        radius: WiringViewConstants.portRadius,
+      );
+      if (portRect.contains(position)) {
+        return port;
+      }
+    }
+    for (final CircuitComponent child in children) {
+      final CanvasElement? val = child.isHit(position);
+      if (val != null) return val;
+    }
+    final Rect rect = this.position & size;
+    if (rect.contains(position)) {
+      return this;
+    }
+    return null;
+  }
+
   final List<CircuitPort> ports;
+
+  CircuitComponent? parent;
+  final List<CircuitComponent> children = <CircuitComponent>[];
 
   final ComponentData data;
   CircuitComponent({
     required this.id,
-    required this.position,
-    required this.size,
+    required Offset position,
     required this.ports,
     required this.data,
-  });
+    this.parent,
+  }) : _position = position;
 
-  static CircuitComponent from(ComponentData data, int index) {
+  static CircuitComponent from(ComponentData data, CircuitComponent? parent) {
     final List<CircuitPort> ports = <CircuitPort>[];
 
     final Size size = data.size;
     final CircuitComponent circuitComponent = CircuitComponent(
-      id: "_$index",
-      position: Offset(100, 100.0 * index),
-      size: size,
+      id: data.id,
+      position:
+          (parent?.position ?? Offset.zero) +
+          Offset(
+            10,
+            parent?.size.height ?? 0,
+          ), //Offset(100, 100.0 * index),
       ports: ports,
       data: data,
     );

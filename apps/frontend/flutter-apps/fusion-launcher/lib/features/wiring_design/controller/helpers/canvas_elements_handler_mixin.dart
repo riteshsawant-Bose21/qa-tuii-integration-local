@@ -32,7 +32,8 @@ mixin _CanvasElementsHandlerMixin on CanvasHandlerMixin {
         delta;
     if (selectedElement is CircuitComponent) {
       final CircuitComponent component = selectedElement as CircuitComponent;
-      component.position += delta;
+      // component.position += delta;
+      component.changePosition(delta);
     }
     if (selectedElement is CircuitPort) {
       intermediateJoints = self.pathFinder.findPath(
