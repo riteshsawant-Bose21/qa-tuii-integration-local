@@ -185,9 +185,14 @@ class SpeakerComponentData extends ComponentData {
 abstract class ComponentPort {
   final String? image;
   final String? label;
+  final String type;
+  final List<String> compatibleTypes;
+
   ComponentPort({
     this.image,
     this.label,
+    required this.type,
+    required this.compatibleTypes,
   });
 }
 
@@ -197,6 +202,8 @@ class InputComponentPort extends ComponentPort {
     required this.data,
     super.image,
     super.label,
+    super.type = 'output',
+    super.compatibleTypes = const <String>['input'],
   });
 }
 
@@ -206,6 +213,8 @@ class OutputComponentPort extends ComponentPort {
     required this.data,
     super.image,
     super.label,
+    super.type = 'output',
+    super.compatibleTypes = const <String>['input'],
   });
 }
 
@@ -215,5 +224,7 @@ class ComComponentPort extends ComponentPort {
     required this.data,
     super.image,
     super.label,
+    required super.type,
+    required super.compatibleTypes,
   });
 }

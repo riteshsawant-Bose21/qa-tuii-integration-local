@@ -106,7 +106,10 @@ class DeviceSchematicComponentPainter extends ComponentDataPainter {
       );
     }
 
-    for (final CircuitPort port in component.ports) {
+    for (final CircuitPort port in <CircuitPort>[
+      ...component.inputPorts,
+      ...component.outputPorts,
+    ]) {
       final Path portPath = Path();
 
       /// Port

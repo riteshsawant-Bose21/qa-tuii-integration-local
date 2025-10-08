@@ -93,6 +93,12 @@ class CircuitPainter extends CustomPainter {
     return (position - offset) / scale;
   }
 
+  Offset transformPosition(Offset position) {
+    final Offset offset = controller.canvasOffset;
+    final double scale = controller.canvasScale;
+    return (position * scale) + offset;
+  }
+
   @override
   bool shouldRepaint(covariant CircuitPainter oldDelegate) => true;
 }

@@ -510,8 +510,14 @@ extension ColorExtends on ColorScheme {
   Color get activePortFG => Colors.white;
   Color get inactivePortBG => Color(0xFFAEAEAE);
   Color get inactivePortFG => Colors.black;
+
+  ///
+  ///
+  ///
+  Color get portOverlayTitle => Color(0xFF929292);
 }
 
 extension ColorContextExtension on BuildContext {
   ColorScheme get colorScheme => Theme.of(this).colorScheme;
+  TextTheme get textTheme => Theme.of(this).textTheme;
 }

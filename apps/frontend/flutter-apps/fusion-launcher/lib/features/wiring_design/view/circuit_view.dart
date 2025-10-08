@@ -1,9 +1,13 @@
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/wiring_design/controller/circuit_controller.dart';
+import 'package:fusion_launcher/features/wiring_design/model/circuit_port.dart';
 import 'package:fusion_launcher/features/wiring_design/view/painters/circuit_painter.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:provider/provider.dart';
+
+import 'port_connection/port_connection_overlay.dart';
+import 'widgets/canvas_control_wrapper.dart';
+import 'widgets/overlay_container.dart';
 
 class CircuitView extends StatelessWidget {
   const CircuitView({super.key, required this.controller});
@@ -22,62 +26,43 @@ class CircuitView extends StatelessWidget {
             controller,
             context.colorScheme,
           );
-          return Listener(
-            onPointerPanZoomUpdate: (PointerPanZoomUpdateEvent event) {
-              if (event.scale == 1) return;
-              // log(
-              //   "In Pan scale : ${event.scale}. ${controller.canvasScale - event.scale}. ${controller.canvasScale}",
-              // );
-              controller.onScaleUpdate(
-                event.scale - controller.canvasScale,
-                event.localPosition,
-              );
-            },
-            onPointerSignal: (PointerSignalEvent event) {
-              if (event is PointerScrollEvent) {
-                controller.onScaleUpdate(
-                  event.scrollDelta.distance *
-                      0.001 *
-                      event.scrollDelta.direction,
-                  event.localPosition,
-                );
-              }
-            },
-            child: ClipRect(
-              child: Container(
-                color: context.colorScheme.canvasBG,
-                child: GestureDetector(
-                  onTapUp: (TapUpDetails details) {
-                    final dynamic value = circuitPainter.isHit(
-                      circuitPainter.correctPosition(details.localPosition),
-                    );
-                    controller.selectElement(value);
-                  },
-                  onPanStart: (DragStartDetails details) {
-                    final Offset correctedPos = circuitPainter.correctPosition(
-                      details.localPosition,
-                    );
-                    final dynamic value = circuitPainter.isHit(correctedPos);
-
-                    controller.onMoveStart(value, correctedPos);
-                  },
-                  onPanUpdate: (DragUpdateDetails details) {
-                    controller.onMoveUpdate(
-                      details.delta / controller.canvasScale,
-                    );
-                  },
-                  onPanEnd: (DragEndDetails details) {
-                    final Offset correctedPos = circuitPainter.correctPosition(
-                      details.localPosition,
-                    );
-                    final dynamic value = circuitPainter.isHit(correctedPos);
-                    controller.onMoveEnd(value, correctedPos);
-                  },
-                  child: CustomPaint(
+          Widget? overlay;
+          if (controller.selectedElement is CircuitPort) {
+            final CircuitPort port = controller.selectedElement as CircuitPort;
+            final Offset transformedPos = circuitPainter.transformPosition(
+              port.position,
+            );
+            Offset resultedPosition = transformedPos;
+            final double width = 150; //* controller.canvasScale;
+            final double padding = 30 * controller.canvasScale;
+            if (port.relativePosition.dx < port.parent.size.width * 0.1) {
+              resultedPosition = transformedPos + Offset(-width - padding, 0);
+            } else if (port.relativePosition.dx >
+                port.parent.size.width * 0.7) {
+              resultedPosition = transformedPos + Offset(padding, 0);
+            }
+            overlay = OverlayContainer(
+              position: resultedPosition,
+              tipPosition: transformedPos,
+              width: width,
+              child: PortConnectionOverlay(
+                port: port,
+              ),
+            );
+          }
+          return CanvasControlWrapper(
+            circuitPainter: circuitPainter,
+            controller: controller,
+            child: Container(
+              color: context.colorScheme.canvasBG,
+              child: Stack(
+                children: <Widget>[
+                  CustomPaint(
                     size: Size.infinite,
                     painter: circuitPainter,
                   ),
-                ),
+                  if (overlay != null) overlay,
+                ],
               ),
             ),
           );
