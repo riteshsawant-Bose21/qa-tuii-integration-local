@@ -22,7 +22,10 @@ func (h *ProjectHandler) CreateProject(ctx *gin.Context) {
 		ctx.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
-	h.project.Insert(ctx, &p)
+	if err := h.project.Insert(ctx, &p); err != nil {
+		ctx.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
 	ctx.JSON(201, p)
 }
 
@@ -55,7 +58,10 @@ func (h *ProjectHandler) UpdateProject(ctx *gin.Context) {
 		ctx.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
-	h.project.Update(ctx, id, &p)
+	if err := h.project.Update(ctx, id, &p); err != nil {
+		ctx.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
 	ctx.JSON(200, p)
 }
 

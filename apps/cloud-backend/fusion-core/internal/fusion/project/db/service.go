@@ -32,7 +32,6 @@ func NewService(db *sql.DB) *Service {
 
 func (s *Service) Insert(ctx context.Context, project *fusion.Project) error {
 	if project == nil {
-		fmt.Println("[DEBUG] Insert called with nil project")
 		return errors.New("project cannot be nil")
 	}
 
@@ -40,16 +39,12 @@ func (s *Service) Insert(ctx context.Context, project *fusion.Project) error {
 		project.ID = uuid.New().String()
 	}
 
-	fmt.Printf("[DEBUG] Insert payload: %+v\n", project)
-
 	budgetJSON, err := json.Marshal(project.Budget)
 	if err != nil {
-		fmt.Printf("[DEBUG] Failed to marshal budget: %v\n", err)
 		return fmt.Errorf("failed to marshal budget: %v", err)
 	}
 	metaDataJSON, err := json.Marshal(project.MetaData)
 	if err != nil {
-		fmt.Printf("[DEBUG] Failed to marshal meta_data: %v\n", err)
 		return fmt.Errorf("failed to marshal meta_data: %v", err)
 	}
 
@@ -66,14 +61,10 @@ func (s *Service) Insert(ctx context.Context, project *fusion.Project) error {
 		ProjectFileURL: null.NewString(project.ProjectFileURL, project.ProjectFileURL != ""),
 	}
 
-	fmt.Printf("[DEBUG] DB row: %+v\n", row)
-
 	err = row.Insert(ctx, s.db, boil.Infer())
 	if err != nil {
-		fmt.Printf("[DEBUG] Failed to insert project: %v\n", err)
 		return fmt.Errorf("failed to insert project: %v", err)
 	}
-	fmt.Println("[DEBUG] Insert successful")
 	return nil
 }
 
