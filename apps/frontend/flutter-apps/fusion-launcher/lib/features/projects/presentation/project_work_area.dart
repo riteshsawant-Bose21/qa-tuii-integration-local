@@ -7,7 +7,7 @@ import 'package:fusion_launcher/features/bill_of_materials/presentation/bill_of_
 import 'package:fusion_launcher/features/configuration/presentation/pages/audio_system_design_page.dart';
 import 'package:fusion_launcher/features/product_query/presentation/pages/product_query.dart';
 import 'package:fusion_launcher/features/projects/widget/building/side_panle_widgets/devices_panel.dart';
-import 'package:fusion_launcher/features/wiring_design/view/wiring_page.dart';
+import 'package:fusion_launcher/features/schematics/presentation/pages/schematics_page.dart';
 import 'package:fusion_lib/fusion_building_view/spl_range_controller.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
@@ -510,7 +510,7 @@ class _TestLibraryScreenState extends State<ProjectWorkArea>
                     tabKey: "tab2",
                     showLeft: false,
                     showRight: true,
-                    mainArea: const WiringPage(), //const SchematicsPage(),
+                    mainArea: const SchematicsPage(),
                     dockItemList: <DockItemConfig>[
                       DockItemConfig(
                         id: "6",

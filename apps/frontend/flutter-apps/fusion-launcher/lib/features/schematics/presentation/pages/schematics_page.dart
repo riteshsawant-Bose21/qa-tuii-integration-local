@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:fusion_launcher/core/theme/app_theme.dart';
+import 'package:fusion_launcher/features/wiring_design/view/wiring_page.dart';
+
 import '../widgets/schematics_left_panel.dart';
 import '../widgets/schematics_right_panel.dart';
-import 'old_schematics_page.dart';
 
 class SchematicsPage extends StatefulWidget {
   const SchematicsPage({super.key});
@@ -34,27 +35,42 @@ class _SchematicsPageState extends State<SchematicsPage> {
         final double availableWidth = constraints.maxWidth;
 
         /// Calculate left panel width as percentage of available space
-        double leftPanelWidth = (availableWidth - dividerWidth) * _leftPanelRatio;
+        double leftPanelWidth =
+            (availableWidth - dividerWidth) * _leftPanelRatio;
 
         /// Ensure minimum widths are respected
-        leftPanelWidth = leftPanelWidth.clamp(minPanelWidth, availableWidth - minPanelWidth - dividerWidth);
+        leftPanelWidth = leftPanelWidth.clamp(
+          minPanelWidth,
+          availableWidth - minPanelWidth - dividerWidth,
+        );
 
         /// Recalculate ratio based on clamped width to maintain consistency
         _leftPanelRatio = leftPanelWidth / (availableWidth - dividerWidth);
 
-        final double rightPanelWidth = availableWidth - leftPanelWidth - dividerWidth;
+        final double rightPanelWidth =
+            availableWidth - leftPanelWidth - dividerWidth;
 
         return Column(
           children: <Widget>[
             Expanded(
-              child: isListingView ? _buildListingView(availableWidth, leftPanelWidth, rightPanelWidth) : const OlsSchematicsPage(),
+              child:
+                  isListingView
+                      ? _buildListingView(
+                        availableWidth,
+                        leftPanelWidth,
+                        rightPanelWidth,
+                      )
+                      : const WiringPage(),
             ),
             Container(
               height: 44,
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.white,
                 border: Border(
-                  top: BorderSide(width: 1, color: Theme.of(context).colorScheme.grey),
+                  top: BorderSide(
+                    width: 1,
+                    color: Theme.of(context).colorScheme.grey,
+                  ),
                 ),
               ),
 
@@ -69,7 +85,8 @@ class _SchematicsPageState extends State<SchematicsPage> {
                     child: Container(
                       width: 40,
                       height: 40,
-                      color: isListingView ? Colors.black87 : Colors.transparent,
+                      color:
+                          isListingView ? Colors.black87 : Colors.transparent,
                       child: SvgPicture.asset(
                         "assets/svg/listing_view_icon.svg",
                         width: 40,
@@ -90,7 +107,8 @@ class _SchematicsPageState extends State<SchematicsPage> {
                     child: Container(
                       width: 40,
                       height: 40,
-                      color: !isListingView ? Colors.black87 : Colors.transparent,
+                      color:
+                          !isListingView ? Colors.black87 : Colors.transparent,
                       child: SvgPicture.asset(
                         "assets/svg/wiring_view_icon.svg",
                         width: 40,
@@ -111,7 +129,11 @@ class _SchematicsPageState extends State<SchematicsPage> {
     );
   }
 
-  Widget _buildListingView(double availableWidth, double leftPanelWidth, double rightPanelWidth) {
+  Widget _buildListingView(
+    double availableWidth,
+    double leftPanelWidth,
+    double rightPanelWidth,
+  ) {
     return Row(
       children: <Widget>[
         /// Left Panel - Sources, Processors, etc.
@@ -131,12 +153,16 @@ class _SchematicsPageState extends State<SchematicsPage> {
             onPanUpdate: (DragUpdateDetails details) {
               setState(() {
                 final double newWidth = leftPanelWidth + details.delta.dx;
-                final double maxAllowedWidth = availableWidth - minPanelWidth - dividerWidth;
+                final double maxAllowedWidth =
+                    availableWidth - minPanelWidth - dividerWidth;
 
                 if (newWidth >= minPanelWidth && newWidth <= maxAllowedWidth) {
                   // Update the ratio instead of absolute width
                   _leftPanelRatio = newWidth / (availableWidth - dividerWidth);
-                  _leftPanelRatio = _leftPanelRatio.clamp(0.2, 0.8); // Keep between 20% and 80%
+                  _leftPanelRatio = _leftPanelRatio.clamp(
+                    0.2,
+                    0.8,
+                  ); // Keep between 20% and 80%
                 }
               });
             },
