@@ -46,27 +46,6 @@ class DeviceSchematicComponentPainter extends ComponentDataPainter {
     ///
     /// Body
     ///
-    // final TextPainter tp = TextPainter(
-    //   text: TextSpan(
-    //     text: component.data.label,
-    // style: TextStyle(
-    //   color: painter.colorScheme.componentFG,
-    //   // color:
-    //   fontSize: rect.width * 0.05,
-    //   fontWeight: FontWeight.w600,
-    // ),
-    //   ),
-    //   textAlign: TextAlign.center,
-    //   textDirection: TextDirection.ltr,
-    // )..layout(maxWidth: rect.width * 0.35);
-    // // Center Align lable
-    // tp.paint(
-    //   canvas,
-    //   Offset(
-    //     rect.center.dx - tp.width / 2,
-    //     rect.center.dy - tp.height / 2,
-    //   ),
-    // );
 
     painter.drawText(
       canvas: canvas,
@@ -93,6 +72,39 @@ class DeviceSchematicComponentPainter extends ComponentDataPainter {
           ..color = painter.colorScheme.inactivePortBG
           ..strokeWidth = WiringViewConstants.portRadius * 0.10
           ..style = PaintingStyle.stroke;
+
+    if (component.inputPorts.isNotEmpty) {
+      painter.drawText(
+        canvas: canvas,
+        text: "INPUT",
+        position:
+            component.inputPorts.first.absolutePosition +
+            const Offset(WiringViewConstants.portRadius * 2, 0),
+        positionAlignment: Alignment.centerLeft,
+        style: TextStyle(
+          color: painter.colorScheme.componentFG,
+          // color:
+          fontSize: rect.width * 0.035,
+          fontWeight: FontWeight.w600,
+        ),
+      );
+    }
+    if (component.outputPorts.isNotEmpty) {
+      painter.drawText(
+        canvas: canvas,
+        text: "OUTPUT",
+        position:
+            component.outputPorts.first.absolutePosition -
+            const Offset(WiringViewConstants.portRadius * 2, 0),
+        positionAlignment: Alignment.centerRight,
+        style: TextStyle(
+          color: painter.colorScheme.componentFG,
+          // color:
+          fontSize: rect.width * 0.035,
+          fontWeight: FontWeight.w600,
+        ),
+      );
+    }
 
     for (final CircuitPort port in component.ports) {
       final Path portPath = Path();

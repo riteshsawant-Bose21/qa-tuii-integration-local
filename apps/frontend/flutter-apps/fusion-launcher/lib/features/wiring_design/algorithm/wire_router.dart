@@ -20,7 +20,7 @@ class WireRouter {
 
   final double wireSpacing;
 
-  List<List<Offset>> parallalPaths = <List<Offset>>[];
+  List<List<Offset>> parallelPaths = <List<Offset>>[];
   List<Rect> outBounds = <Rect>[];
   List<Rect> inBounds = <Rect>[];
 
@@ -73,7 +73,7 @@ class WireRouter {
 
     // }
     // // Generate parallel versions of base path
-    parallalPaths = makeParallelRoutes(
+    parallelPaths = makeParallelRoutes(
       wires,
       basePath,
       spacing: 15,
@@ -90,7 +90,7 @@ class WireRouter {
       final Wire wire = wires[i];
       final bool isReversed = from.component == wire.to.parent;
       final List<Offset> parallalPath =
-          isReversed ? parallalPaths[i].reversed.toList() : parallalPaths[i];
+          isReversed ? parallelPaths[i].reversed.toList() : parallelPaths[i];
       if (parallalPath.isEmpty) continue;
 
       /// For Starting

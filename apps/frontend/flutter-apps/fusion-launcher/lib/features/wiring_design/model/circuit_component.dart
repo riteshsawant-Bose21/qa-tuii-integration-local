@@ -60,7 +60,15 @@ class CircuitComponent extends CanvasElement {
     return null;
   }
 
-  final List<CircuitPort> ports;
+  // final List<CircuitPort> ports = <CircuitPort>[];
+  List<CircuitPort> get ports => <CircuitPort>[
+    ...inputPorts,
+    ...outputPorts,  
+    ...otherPorts,
+  ];
+  final List<CircuitPort> inputPorts = <CircuitPort>[];
+  final List<CircuitPort> outputPorts = <CircuitPort>[];
+  final List<CircuitPort> otherPorts = <CircuitPort>[];
 
   CircuitComponent? parent;
   final List<CircuitComponent> children = <CircuitComponent>[];
@@ -69,14 +77,12 @@ class CircuitComponent extends CanvasElement {
   CircuitComponent({
     required this.id,
     required Offset position,
-    required this.ports,
+    // required this.ports,
     required this.data,
     this.parent,
   }) : _position = position;
 
   static CircuitComponent from(ComponentData data, CircuitComponent? parent) {
-    final List<CircuitPort> ports = <CircuitPort>[];
-
     final Size size = data.size;
     final CircuitComponent circuitComponent = CircuitComponent(
       id: data.id,
@@ -86,7 +92,7 @@ class CircuitComponent extends CanvasElement {
             10,
             parent?.size.height ?? 0,
           ), //Offset(100, 100.0 * index),
-      ports: ports,
+      // ports: ports,
       data: data,
     );
 
@@ -95,7 +101,7 @@ class CircuitComponent extends CanvasElement {
     ///
     for (int i = 0; i < data.inputPorts.length; i++) {
       final InputComponentPort element = data.inputPorts[i];
-      ports.add(
+      circuitComponent.addInputPort(
         CircuitPort(
           id: "input_$i",
           relativePosition: Offset(
@@ -115,7 +121,7 @@ class CircuitComponent extends CanvasElement {
     /// For Right Side
     for (int i = 0; i < data.outputPorts.length; i++) {
       final OutputComponentPort element = data.outputPorts[i];
-      ports.add(
+      circuitComponent.addOutputPort(
         CircuitPort(
           id: "output_$i",
           relativePosition: Offset(
@@ -133,5 +139,17 @@ class CircuitComponent extends CanvasElement {
     }
 
     return circuitComponent;
+  }
+
+  void addInputPort(CircuitPort port) {
+    inputPorts.add(port);
+  }
+
+  void addOutputPort(CircuitPort port) {
+    outputPorts.add(port);
+  }
+
+  void addOtherPort(CircuitPort port) {
+    otherPorts.add(port);
   }
 }
