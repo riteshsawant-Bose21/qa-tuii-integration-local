@@ -2,7 +2,7 @@ package project
 
 import (
 	"context"
-	"github.com/BoseProfessional/fusion-monorepo/apps/backend/fusion-cloud-backend/internal/fusion"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
 )
 
 // Service provides methods to interact with the project database
