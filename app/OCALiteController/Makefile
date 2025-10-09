@@ -68,14 +68,15 @@ FRAMEWORK_COMMON_SOURCES := $(shell find ../../common -name "*.cpp" | grep -v "A
 
 # Source files from the app-level common directory
 APP_COMMON_SOURCES       := ../common/FusionProxy.cpp \
-                           ../common/workers/ConcreteGainActuator.cpp \
-                           ../common/workers/ConcreteMuteActuator.cpp \
-                           ../common/workers/ConcreteSwitchActuator.cpp \
-                           ../common/workers/ZoneGroup.cpp
+                            ../common/workers/ZoneGroup.cpp
 
 # App-specific source files
 APP_SOURCES := OCALiteController.cpp \
                OcaServiceDiscovery.cpp \
+               ControlPalGainActuator.cpp \
+               ControlPalMuteActuator.cpp \
+               ControlPalSwitchActuator.cpp \
+               ControlPalSetupUtils.cpp \
                $(shell find HostInterface -name "*.cpp")
 
 # Object files in build directory, preserving directory structure

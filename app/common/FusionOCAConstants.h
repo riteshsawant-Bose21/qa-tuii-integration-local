@@ -57,4 +57,7 @@ const ::OcaONo CONTROLLER_CONFIG_MANAGER_ONO = static_cast<::OcaONo>(33); // ONO
 // Custom Object ONOs (must be 4096+ per AES70 standard for device objects)
 const ::OcaONo ROOT_ZONE_CONTAINER_ONO = static_cast<::OcaONo>(631965); // again, cryptographic representation of Fusion ;)
 
+const ::OcaONo FUSION_NETWORK_ONO        = static_cast<::OcaONo>(9001);
+const ::OcaONo FUSION_CONNECTION_MON_ONO = static_cast<::OcaONo>(9002);
+
 #endif // FUSION_OCA_CONSTANTS_H
