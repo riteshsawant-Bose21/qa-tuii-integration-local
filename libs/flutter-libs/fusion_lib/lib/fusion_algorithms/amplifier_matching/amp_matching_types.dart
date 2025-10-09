@@ -21,7 +21,7 @@ class Circuit {
     required this.mode,
     required this.speakerCount,
     this.tapWatts = 0.0,
-    this.outputOffsetDb = 0.0,
+    this.outputOffsetDb = 0.0, double? specifiedVoltage,
   });
 
   Map<String, dynamic> toJson() => {

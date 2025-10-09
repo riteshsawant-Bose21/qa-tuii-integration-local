@@ -65,97 +65,112 @@ class AmpCatalog {
     //   imageUrl: 'assets/images/amplifier_img.webp',
     //   price: 3999.0,
     // ), // 6000W total
-    // PowershareX series - Enhanced with detailed power specifications from official specs
+    // PowershareX series - Updated with correct official specifications
     AmpModel(
       series: 'PowershareX', 
       name: 'PSX1204D', 
       channels: 4, 
-      peakPerChannel: 300.0, // Legacy field for backward compatibility
+      peakPerChannel: 600.0, // Legacy field for backward compatibility (8Ω peak)
       imageUrl: 'assets/images/amplifier_img.webp', 
       price: 2499.0,
       powerSpecs: const PowerSpecs(
-        // Rated power per channel (symmetrical)
-        ratedPowerPerChannel2Ohm: 400.0,   // @ 2Ω from spec table
-        ratedPowerPerChannel4Ohm: 600.0,   // @ 4Ω from spec table
-        ratedPowerPerChannel8Ohm: 600.0,   // @ 8Ω from spec table
-        ratedPowerPerChannel70V: 1600.0,   // @ 70V from spec table
-        ratedPowerPerChannel100V: 1600.0,  // @ 100V from spec table
+        // Rated power per channel - estimated from peak values
+        ratedPowerPerChannel2Ohm: 1600.0,   // Same as peak for this model
+        ratedPowerPerChannel4Ohm: 600.0,    // Same as peak for this model
+        ratedPowerPerChannel8Ohm: 600.0,    // Same as peak for this model
+        ratedPowerPerChannel70V: 600.0,     // Same as peak for this model
+        ratedPowerPerChannel100V: 600.0,    // Same as peak for this model
         
-        // Peak power per channel (symmetrical) 
-        peakPowerPerChannel2Ohm: 600.0,    // Peak @ 2Ω
+        // Symmetrical peak power per channel - from official spec table
+        peakPowerPerChannel2Ohm: 1600.0,   // Peak @ 2Ω
         peakPowerPerChannel4Ohm: 600.0,    // Peak @ 4Ω
-        peakPowerPerChannel8Ohm: 600.0,    // Peak @ 8Ω
-        peakPowerPerChannel70V: 2200.0,    // Peak @ 70V
-        peakPowerPerChannel100V: 2200.0,   // Peak @ 100V
+        peakPowerPerChannel8Ohm: 600.0,    // Peak @ 8Ω/70V/100V
+        peakPowerPerChannel70V: 600.0,     // Peak @ 70V
+        peakPowerPerChannel100V: 600.0,    // Peak @ 100V
         
-        // Asymmetrical peak power (total power sharing)
-        asymmetricalPeakPower2Ohm: 1600.0,  // From asymmetrical spec table
-        asymmetricalPeakPower4Ohm: 2200.0,  // From asymmetrical spec table
-        asymmetricalPeakPower8Ohm: 2200.0,  // From asymmetrical spec table - KEY CONSTRAINT
-        asymmetricalPeakPower70V: 2200.0,   // From asymmetrical spec table
-        asymmetricalPeakPower100V: 2200.0,  // From asymmetrical spec table
+        // Total symmetrical power (4 channels)
+        // 2Ω: 4 × 1600W = 6400W total
+        // 4Ω: 4 × 600W = 2400W total  
+        // 8Ω/70V/100V: 4 × 600W = 2400W total
+        
+        // Asymmetrical peak power per channel - from official spec table
+        asymmetricalPeakPower2Ohm: 1600.0,  // Total asymmetrical @ 2Ω
+        asymmetricalPeakPower4Ohm: 2200.0,  // Total asymmetrical @ 4Ω
+        asymmetricalPeakPower8Ohm: 2200.0,  // Total asymmetrical @ 8Ω/70V/100V
+        asymmetricalPeakPower70V: 2200.0,   // Total asymmetrical @ 70V
+        asymmetricalPeakPower100V: 2200.0,  // Total asymmetrical @ 100V
       ),
-    ), // PSX1204D: 1200W symmetrical, 2200W asymmetrical max
+    ), // PSX1204D: Max 6400W symmetrical (2Ω), 2400W symmetrical (4Ω/8Ω), 2200W asymmetrical max
     AmpModel(
       series: 'PowershareX', 
       name: 'PSX2404D', 
       channels: 4, 
-      peakPerChannel: 600.0, // Legacy field for backward compatibility
+      peakPerChannel: 1200.0, // Legacy field for backward compatibility (8Ω peak)
       imageUrl: 'assets/images/amplifier_img.webp', 
       price: 3499.0,
       powerSpecs: const PowerSpecs(
-        // Rated power per channel (symmetrical) 
-        ratedPowerPerChannel2Ohm: 800.0,   // @ 2Ω from spec table
-        ratedPowerPerChannel4Ohm: 1200.0,  // @ 4Ω from spec table
-        ratedPowerPerChannel8Ohm: 1200.0,  // @ 8Ω from spec table
-        ratedPowerPerChannel70V: 1700.0,   // @ 70V from spec table
-        ratedPowerPerChannel100V: 1500.0,  // @ 100V from spec table
+        // Rated power per channel - estimated from peak values
+        ratedPowerPerChannel2Ohm: 3700.0,   // Same as peak for this model
+        ratedPowerPerChannel4Ohm: 1200.0,   // Same as peak for this model
+        ratedPowerPerChannel8Ohm: 1200.0,   // Same as peak for this model
+        ratedPowerPerChannel70V: 1200.0,    // Same as peak for this model
+        ratedPowerPerChannel100V: 1200.0,   // Same as peak for this model
         
-        // Peak power per channel (symmetrical)
-        peakPowerPerChannel2Ohm: 1200.0,   // Peak @ 2Ω
+        // Symmetrical peak power per channel - from official spec table
+        peakPowerPerChannel2Ohm: 3700.0,   // Peak @ 2Ω
         peakPowerPerChannel4Ohm: 1200.0,   // Peak @ 4Ω
-        peakPowerPerChannel8Ohm: 1200.0,   // Peak @ 8Ω
-        peakPowerPerChannel70V: 3400.0,    // Peak @ 70V
-        peakPowerPerChannel100V: 3000.0,   // Peak @ 100V
+        peakPowerPerChannel8Ohm: 1200.0,   // Peak @ 8Ω/70V/100V
+        peakPowerPerChannel70V: 1200.0,    // Peak @ 70V
+        peakPowerPerChannel100V: 1200.0,   // Peak @ 100V
         
-        // Asymmetrical peak power (total power sharing)
-        asymmetricalPeakPower2Ohm: 3700.0,  // From asymmetrical spec table
-        asymmetricalPeakPower4Ohm: 2500.0,  // From asymmetrical spec table
-        asymmetricalPeakPower8Ohm: 3000.0,  // From asymmetrical spec table - KEY CONSTRAINT
-        asymmetricalPeakPower70V: 3400.0,   // From asymmetrical spec table
-        asymmetricalPeakPower100V: 3000.0,  // From asymmetrical spec table
+        // Total symmetrical power (4 channels)
+        // 2Ω: 4 × 3700W = 14800W total
+        // 4Ω: 4 × 1200W = 4800W total  
+        // 8Ω/70V/100V: 4 × 1200W = 4800W total
+        
+        // Asymmetrical peak power - from official spec table
+        asymmetricalPeakPower2Ohm: 3700.0,  // Total asymmetrical @ 2Ω
+        asymmetricalPeakPower4Ohm: 2500.0,  // Total asymmetrical @ 4Ω
+        asymmetricalPeakPower8Ohm: 3000.0,  // Total asymmetrical @ 8Ω/70V/100V
+        asymmetricalPeakPower70V: 3000.0,   // Total asymmetrical @ 70V
+        asymmetricalPeakPower100V: 3000.0,  // Total asymmetrical @ 100V
       ),
-    ), // PSX2404D: 2400W symmetrical, 3000W asymmetrical max
+    ), // PSX2404D: Max 14800W symmetrical (2Ω), 4800W symmetrical (4Ω/8Ω), 3000W asymmetrical max
     AmpModel(
       series: 'PowershareX', 
       name: 'PSX4804D', 
       channels: 4, 
-      peakPerChannel: 1200.0, // Legacy field for backward compatibility
+      peakPerChannel: 2400.0, // Legacy field for backward compatibility (8Ω peak)
       imageUrl: 'assets/images/amplifier_img.webp', 
       price: 4499.0,
       powerSpecs: const PowerSpecs(
-        // Rated power per channel (symmetrical)
-        ratedPowerPerChannel2Ohm: 1500.0,  // @ 2Ω from spec table  
-        ratedPowerPerChannel4Ohm: 2400.0,  // @ 4Ω from spec table
-        ratedPowerPerChannel8Ohm: 2400.0,  // @ 8Ω from spec table
-        ratedPowerPerChannel70V: 2100.0,   // @ 70V from spec table
-        ratedPowerPerChannel100V: 2200.0,  // @ 100V from spec table
+        // Rated power per channel - estimated from peak values
+        ratedPowerPerChannel2Ohm: 4100.0,   // Same as peak for this model
+        ratedPowerPerChannel4Ohm: 3000.0,   // Same as peak for this model
+        ratedPowerPerChannel8Ohm: 2400.0,   // Same as peak for this model
+        ratedPowerPerChannel70V: 2400.0,    // Same as peak for this model
+        ratedPowerPerChannel100V: 2400.0,   // Same as peak for this model
         
-        // Peak power per channel (symmetrical)
-        peakPowerPerChannel2Ohm: 3000.0,   // Peak @ 2Ω
+        // Symmetrical peak power per channel - from official spec table
+        peakPowerPerChannel2Ohm: 4100.0,   // Peak @ 2Ω
         peakPowerPerChannel4Ohm: 3000.0,   // Peak @ 4Ω
-        peakPowerPerChannel8Ohm: 2500.0,   // Peak @ 8Ω  
-        peakPowerPerChannel70V: 4200.0,    // Peak @ 70V
-        peakPowerPerChannel100V: 4400.0,   // Peak @ 100V
+        peakPowerPerChannel8Ohm: 2400.0,   // Peak @ 8Ω/70V/100V
+        peakPowerPerChannel70V: 2400.0,    // Peak @ 70V
+        peakPowerPerChannel100V: 2400.0,   // Peak @ 100V
         
-        // Asymmetrical peak power (total power sharing)
-        asymmetricalPeakPower2Ohm: 4100.0,  // From asymmetrical spec table
-        asymmetricalPeakPower4Ohm: 4800.0,  // From asymmetrical spec table
-        asymmetricalPeakPower8Ohm: 2500.0,  // From asymmetrical spec table
-        asymmetricalPeakPower70V: 4200.0,   // From asymmetrical spec table
-        asymmetricalPeakPower100V: 4400.0,  // From asymmetrical spec table - KEY CONSTRAINT
+        // Total symmetrical power (4 channels)
+        // 2Ω: 4 × 4100W = 16400W total
+        // 4Ω: 4 × 3000W = 12000W total  
+        // 8Ω/70V/100V: 4 × 2400W = 9600W total
+        
+        // Asymmetrical peak power - from official spec table
+        asymmetricalPeakPower2Ohm: 4100.0,  // Total asymmetrical @ 2Ω
+        asymmetricalPeakPower4Ohm: 4800.0,  // Total asymmetrical @ 4Ω
+        asymmetricalPeakPower8Ohm: 2500.0,  // Total asymmetrical @ 8Ω/70V/100V
+        asymmetricalPeakPower70V: 2500.0,   // Total asymmetrical @ 70V
+        asymmetricalPeakPower100V: 2500.0,  // Total asymmetrical @ 100V
       ),
-    ), // PSX4804D: 4800W symmetrical, 4400W asymmetrical max
+    ), // PSX4804D: Max 16400W symmetrical (2Ω), 12000W (4Ω), 9600W (8Ω), 2500W asymmetrical max
   ];
 
   /// Get amplifiers sorted by power (ascending)

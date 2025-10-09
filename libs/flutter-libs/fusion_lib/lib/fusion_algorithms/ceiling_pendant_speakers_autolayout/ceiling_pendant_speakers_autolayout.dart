@@ -27,12 +27,31 @@ class Room {
   final double ceilingHeight;
   final double listenerHeight;
   
-  const Room({
+  Room({
     required this.width,
     required this.roomLength,
     required this.ceilingHeight,
     required this.listenerHeight,
-  });
+  }) {
+    // Validate room dimensions
+    if (width <= 0) {
+      throw ArgumentError('Room width must be positive, got: $width');
+    }
+    if (roomLength <= 0) {
+      throw ArgumentError('Room length must be positive, got: $roomLength');
+    }
+    if (ceilingHeight <= 0) {
+      throw ArgumentError('Ceiling height must be positive, got: $ceilingHeight');
+    }
+    if (listenerHeight < 0) {
+      throw ArgumentError('Listener height must be non-negative, got: $listenerHeight');
+    }
+    if (ceilingHeight <= listenerHeight) {
+      throw ArgumentError(
+        'Ceiling height ($ceilingHeight) must be greater than listener height ($listenerHeight)'
+      );
+    }
+  }
   
   /// Calculate geometric center (centroid) of rectangular room
   Point2D get centroid => Point2D(width / 2, roomLength / 2);
@@ -166,11 +185,12 @@ class AutoSpeakerPlacement {
       steps
     );
     
-    // Step 5: Remove out-of-bounds speakers
-    List<Point2D> validSpeakers = _filterBoundaries(
+    // Step 5: Remove speakers whose coverage circles overlap with room boundaries
+    List<Point2D> validSpeakers = _filterBoundariesByCoverage(
       gridPoints, 
       room, 
-      gridSpacing * coveragePreference.overlapMultiplier,
+      distance,
+      speakerSpec.coverageAngle,
       steps
     );
     
@@ -205,6 +225,16 @@ class AutoSpeakerPlacement {
         break;
     }
     
+    // Validate distance to prevent calculation errors
+    if (distance <= 0) {
+      throw ArgumentError(
+        'Invalid room configuration: Distance from speaker to listener plane must be positive. '
+        'Current distance: ${distance}m. '
+        'For ceiling speakers: ceiling height (${room.ceilingHeight}m) must be greater than listener height (${room.listenerHeight}m). '
+        'For pendant speakers: ceiling height must be greater than pendant height.'
+      );
+    }
+    
     return distance;
   }
   
@@ -216,6 +246,15 @@ class AutoSpeakerPlacement {
     CoveragePreference preference,
     List<String> steps
   ) {
+    // Validate inputs
+    if (coverageAngleDegrees <= 0 || coverageAngleDegrees >= 180) {
+      throw ArgumentError('Coverage angle must be between 0 and 180 degrees, got: $coverageAngleDegrees');
+    }
+    
+    if (distance <= 0) {
+      throw ArgumentError('Distance must be positive, got: $distance');
+    }
+    
     // Convert angle to radians for sin calculation
     double halfAngleRadians = (coverageAngleDegrees / 2) * (pi / 180);
     double sinHalfAngle = sin(halfAngleRadians);
@@ -224,11 +263,16 @@ class AutoSpeakerPlacement {
     double gridSpacing = sinHalfAngle * 4 * distance * preference.overlapMultiplier * dgCorrection;
     
     steps.add('Step 3: Grid spacing calculation:');
-    steps.add('  θ = ${coverageAngleDegrees}°, θ/2 = ${coverageAngleDegrees/2}°');
+    steps.add('  θ = $coverageAngleDegrees°, θ/2 = ${(coverageAngleDegrees/2).toStringAsFixed(1)}°');
     steps.add('  sin(${coverageAngleDegrees/2}°) = ${sinHalfAngle.toStringAsFixed(3)}');
-    steps.add('  overlap = ${preference.overlapMultiplier} (${preference.name})');
+    steps.add('  overlap = $preference.overlapMultiplier ($preference.name)');
     steps.add('  Grid spacing = ${sinHalfAngle.toStringAsFixed(3)} × 4 × $distance × ${preference.overlapMultiplier} × $dgCorrection');
     steps.add('  Grid spacing = ${gridSpacing.toStringAsFixed(2)}m');
+    
+    // Final validation for grid spacing
+    if (gridSpacing <= 0 || !gridSpacing.isFinite) {
+      throw ArgumentError('Invalid grid spacing calculated: $gridSpacing. Check input parameters.');
+    }
     
     return gridSpacing;
   }
@@ -258,39 +302,52 @@ class AutoSpeakerPlacement {
     return gridPoints;
   }
   
-  /// Create square grid pattern - efficient approach
+  /// Create square grid pattern - starting from centroid
   static List<Point2D> _createSquareGrid(Room room, Point2D centroid, double spacing) {
     List<Point2D> points = [];
     
-    // Step 1: Calculate exact number of speakers needed per axis
-    int nx = (room.width / spacing).ceil();
-    int ny = (room.roomLength / spacing).ceil();
-    
-    // Step 2: Calculate positions along each axis, centered around centroid
-    List<double> xPositions = [];
-    List<double> yPositions = [];
-    
-    if (nx == 1) {
-      xPositions.add(centroid.x);
-    } else {
-      double halfSpanX = (nx - 1) * spacing / 2;
-      for (int i = 0; i < nx; i++) {
-        xPositions.add(centroid.x - halfSpanX + (i * spacing));
-      }
+    // Safety check for spacing
+    if (spacing <= 0 || !spacing.isFinite) {
+      throw ArgumentError('Invalid spacing for grid creation: $spacing');
     }
     
-    if (ny == 1) {
-      yPositions.add(centroid.y);
-    } else {
-      double halfSpanY = (ny - 1) * spacing / 2;
-      for (int j = 0; j < ny; j++) {
-        yPositions.add(centroid.y - halfSpanY + (j * spacing));
-      }
+    // Step 1: Always place the first speaker at the centroid
+    points.add(centroid);
+    
+    // Step 2: Calculate how many additional speakers we can fit in each direction
+    // Use safe division and bounds checking
+    double maxStepsXDouble = (room.width - centroid.x) / spacing;
+    double maxStepsYDouble = (room.roomLength - centroid.y) / spacing;
+    double minStepsXDouble = centroid.x / spacing;
+    double minStepsYDouble = centroid.y / spacing;
+    
+    // Check for finite values before converting to int
+    if (!maxStepsXDouble.isFinite || !maxStepsYDouble.isFinite || 
+        !minStepsXDouble.isFinite || !minStepsYDouble.isFinite) {
+      throw ArgumentError('Invalid step calculations for grid creation. Check spacing value: $spacing');
     }
     
-    // Step 3: Generate grid using calculated positions
-    for (double x in xPositions) {
-      for (double y in yPositions) {
+    int maxStepsX = maxStepsXDouble.floor();
+    int maxStepsY = maxStepsYDouble.floor();
+    int minStepsX = minStepsXDouble.floor();
+    int minStepsY = minStepsYDouble.floor();
+    
+    // Limit maximum steps to prevent excessive grid sizes
+    const int maxGridSteps = 1000;
+    maxStepsX = maxStepsX.clamp(0, maxGridSteps);
+    maxStepsY = maxStepsY.clamp(0, maxGridSteps);
+    minStepsX = minStepsX.clamp(0, maxGridSteps);
+    minStepsY = minStepsY.clamp(0, maxGridSteps);
+    
+    // Step 3: Create grid radiating outward from centroid
+    for (int i = -minStepsX; i <= maxStepsX; i++) {
+      for (int j = -minStepsY; j <= maxStepsY; j++) {
+        // Skip the centroid position as it's already added
+        if (i == 0 && j == 0) continue;
+        
+        double x = centroid.x + (i * spacing);
+        double y = centroid.y + (j * spacing);
+        
         // Only add positions that are within room bounds
         if (x >= 0 && x <= room.width && y >= 0 && y <= room.roomLength) {
           points.add(Point2D(x, y));
@@ -301,52 +358,62 @@ class AutoSpeakerPlacement {
     return points;
   }
   
-  /// Create hexagonal grid pattern - efficient approach
+  /// Create hexagonal grid pattern - starting from centroid
+  /// Follows the hexagonal layout pattern as shown in design documentation
   static List<Point2D> _createHexagonalGrid(Room room, Point2D centroid, double spacing) {
     List<Point2D> points = [];
     
-    // Hexagonal offset calculations as per document
-    double xOffset = spacing / 2;
-    double yOffset = sqrt(3) * (spacing / 2); // Pythagorean theorem
-    
-    // Step 1: Calculate exact number of speakers needed per axis
-    int nx = (room.width / spacing).ceil();
-    int ny = (room.roomLength / yOffset).ceil();
-    
-    // Step 2: Calculate row and column positions
-    List<double> xPositions = [];
-    List<double> yPositions = [];
-    
-    // X positions (columns)
-    if (nx == 1) {
-      xPositions.add(centroid.x);
-    } else {
-      double halfSpanX = (nx - 1) * spacing / 2;
-      for (int i = 0; i < nx; i++) {
-        xPositions.add(centroid.x - halfSpanX + (i * spacing));
-      }
+    // Safety check for spacing
+    if (spacing <= 0 || !spacing.isFinite) {
+      throw ArgumentError('Invalid spacing for grid creation: $spacing');
     }
     
-    // Y positions (rows with hex offset)
-    if (ny == 1) {
-      yPositions.add(centroid.y);
-    } else {
-      double halfSpanY = (ny - 1) * yOffset / 2;
-      for (int j = 0; j < ny; j++) {
-        yPositions.add(centroid.y - halfSpanY + (j * yOffset));
-      }
+    // Step 1: Always place the first speaker at the centroid
+    points.add(centroid);
+    
+    // Hexagonal grid calculations as per documentation and design pattern
+    // For hexagonal packing: horizontal spacing = spacing, vertical spacing = spacing * sqrt(3)/2
+    double horizontalSpacing = spacing;
+    double verticalSpacing = spacing * sqrt(3) / 2;
+    double rowOffset = spacing / 2; // Offset for alternating rows
+    
+    // Step 2: Calculate how many steps we can take in each direction from centroid
+    double maxStepsXDouble = (room.width - centroid.x) / horizontalSpacing;
+    double maxStepsYDouble = (room.roomLength - centroid.y) / verticalSpacing;
+    double minStepsXDouble = centroid.x / horizontalSpacing;
+    double minStepsYDouble = centroid.y / verticalSpacing;
+    
+    // Check for finite values before converting to int
+    if (!maxStepsXDouble.isFinite || !maxStepsYDouble.isFinite || 
+        !minStepsXDouble.isFinite || !minStepsYDouble.isFinite) {
+      throw ArgumentError('Invalid step calculations for hexagonal grid creation. Check spacing value: $spacing');
     }
     
-    // Step 3: Generate hexagonal grid
-    for (int rowIndex = 0; rowIndex < yPositions.length; rowIndex++) {
-      double y = yPositions[rowIndex];
-      
-      for (int colIndex = 0; colIndex < xPositions.length; colIndex++) {
-        double x = xPositions[colIndex];
+    int maxStepsX = maxStepsXDouble.floor();
+    int maxStepsY = maxStepsYDouble.floor();
+    int minStepsX = minStepsXDouble.floor();
+    int minStepsY = minStepsYDouble.floor();
+    
+    // Limit maximum steps to prevent excessive grid sizes
+    const int maxGridSteps = 1000;
+    maxStepsX = maxStepsX.clamp(0, maxGridSteps);
+    maxStepsY = maxStepsY.clamp(0, maxGridSteps);
+    minStepsX = minStepsX.clamp(0, maxGridSteps);
+    minStepsY = minStepsY.clamp(0, maxGridSteps);
+    
+    // Step 3: Create hexagonal grid radiating outward from centroid
+    for (int rowIndex = -minStepsY; rowIndex <= maxStepsY; rowIndex++) {
+      for (int colIndex = -minStepsX; colIndex <= maxStepsX; colIndex++) {
+        // Skip the centroid position as it's already added
+        if (rowIndex == 0 && colIndex == 0) continue;
         
-        // Apply hexagonal offset for every other row
+        double x = centroid.x + (colIndex * horizontalSpacing);
+        double y = centroid.y + (rowIndex * verticalSpacing);
+        
+        // Apply hexagonal offset: every other row is shifted by half spacing
+        // This creates the characteristic hexagonal pattern
         if (rowIndex % 2 != 0) {
-          x += xOffset;
+          x += rowOffset;
         }
         
         // Only add positions that are within room bounds
@@ -359,33 +426,36 @@ class AutoSpeakerPlacement {
     return points;
   }
   
-  /// Step 5: Filter speakers based on room boundaries
-  static List<Point2D> _filterBoundaries(
-    List<Point2D> gridPoints, 
-    Room room, 
-    double overlapDistance,
+  /// Step 5: Filter speakers based on coverage circle boundary overlap
+  /// Enhanced boundary filtering based on coverage circle overlap
+  /// Remove speakers whose coverage circles extend beyond room boundaries
+  static List<Point2D> _filterBoundariesByCoverage(
+    List<Point2D> gridPoints,
+    Room room,
+    double distance,
+    double coverageAngleDegrees,
     List<String> steps
   ) {
     List<Point2D> validSpeakers = [];
     List<Point2D> removedSpeakers = [];
     
+    // Calculate coverage radius at listener plane
+    double coverageRadius = _calculateCoverageRadius(distance, coverageAngleDegrees);
+    
     for (Point2D point in gridPoints) {
-      if (room.contains(point)) {
-        // Additional check for "near" boundary as defined in document
-        if (!room.isNearBoundary(point, overlapDistance)) {
-          validSpeakers.add(point);
-        } else {
-          // Speaker is within bounds but "near" boundary (within overlap region)
-          validSpeakers.add(point); // Keep it but note the condition
-        }
+      bool isValid = _isCoverageCircleWithinRoom(point, coverageRadius, room);
+      
+      if (isValid) {
+        validSpeakers.add(point);
       } else {
         removedSpeakers.add(point);
       }
     }
     
-    steps.add('Step 5: Boundary filtering:');
+    steps.add('Step 5: Coverage circle boundary filtering:');
+    steps.add('  Coverage radius at listener plane: ${coverageRadius.toStringAsFixed(2)}m');
     steps.add('  Total initial positions: ${gridPoints.length}');
-    steps.add('  Removed (out of bounds): ${removedSpeakers.length}');
+    steps.add('  Removed (coverage circle overlaps boundary): ${removedSpeakers.length}');
     steps.add('  Valid speakers remaining: ${validSpeakers.length}');
     
     if (removedSpeakers.isNotEmpty) {
@@ -393,5 +463,37 @@ class AutoSpeakerPlacement {
     }
     
     return validSpeakers;
+  }
+
+  /// Calculate coverage radius at listener plane using coverage angle and distance
+  static double _calculateCoverageRadius(double distance, double coverageAngleDegrees) {
+    // Convert half angle to radians
+    double halfAngleRadians = (coverageAngleDegrees / 2) * (pi / 180);
+    
+    // Calculate radius using tan(θ/2) = radius / distance
+    // Therefore: radius = distance × tan(θ/2)
+    double coverageRadius = distance * tan(halfAngleRadians);
+    
+    return coverageRadius;
+  }
+
+  /// Check if speaker's coverage circle is completely within room boundaries
+  static bool _isCoverageCircleWithinRoom(Point2D speakerPosition, double coverageRadius, Room room) {
+    // Check if the coverage circle extends beyond any room boundary
+    
+    // Left boundary
+    if (speakerPosition.x - coverageRadius < 0) return false;
+    
+    // Right boundary  
+    if (speakerPosition.x + coverageRadius > room.width) return false;
+    
+    // Bottom boundary
+    if (speakerPosition.y - coverageRadius < 0) return false;
+    
+    // Top boundary
+    if (speakerPosition.y + coverageRadius > room.roomLength) return false;
+    
+    // If all checks pass, coverage circle is within room
+    return true;
   }
 }
