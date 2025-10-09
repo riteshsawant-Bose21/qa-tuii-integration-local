@@ -121,14 +121,12 @@ void DisplayDiscoveredDevices(
         // Deserialize the JSON using ZoneConfigBuilder
         std::shared_ptr<Controller> newController = JsonStringToWallController(jsonStr);
 
-        printf("*******  DESERIAL DONE *****\n");
-
-        // TODO: Delete this sectionafter debug done
         // Check if requested ID matches received data
-        if (newController)
+        if (newController && (newController->id == controllerId.GetString()))
         {
             controllerCfg = *newController;
 
+            // TODO: Delete this section after debug done
             OCA_LOG_INFO("=== Parsed Controller Configuration ===");
             OCA_LOG_INFO_PARAMS("Controller ID: %s", newController->id.c_str());
             OCA_LOG_INFO_PARAMS("Controller Name: %s", newController->name.c_str());
@@ -192,7 +190,7 @@ void DisplayDiscoveredDevices(
 
 ::OcaBoolean AddSubscriptions(Zone& newZone, ::GeneralProxy& proxy)
 {
-    // These two do not need to be initialized, they are not used 
+    // These two do not need to be initialized, they are not used  in OcaLib
     OcaLiteNetworkAddress  sub_addr; // This is not used in RELIABLE mode
     const ::OcaLiteBlob    sub_blob; // Not used
 
@@ -396,7 +394,7 @@ OcaBoolean ControlPalSetupConnection(::Ocp1LiteNetwork *ocp1Network,
     {
         for (auto newZone : controllerCfg.zones)
         {
-            // Create Worker Objects
+            // Create Worker Objects andd add to FusionBlock
             ZoneGroup *newGroup = CreateZoneGroup(*newZone);
 
             // Add 'ZoneGroup' to 'Root' block
