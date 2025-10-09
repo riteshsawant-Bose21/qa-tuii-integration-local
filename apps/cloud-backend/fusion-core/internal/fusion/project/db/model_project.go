@@ -52,12 +52,16 @@ func newProject(row *model.Project) (*fusion.Project, error) {
 
 	var budget fusion.Budget
 	if row.Budget.Valid {
-		_ = json.Unmarshal(row.Budget.JSON, &budget)
+		if err := json.Unmarshal(row.Budget.JSON, &budget); err != nil {
+			return nil, errors.New("failed to unmarshal budget JSON: " + err.Error())
+		}
 	}
 
 	var metaData map[string]interface{}
 	if row.MetaData.Valid {
-		_ = json.Unmarshal(row.MetaData.JSON, &metaData)
+		if err := json.Unmarshal(row.MetaData.JSON, &metaData); err != nil {
+			return nil, errors.New("failed to unmarshal meta_data JSON: " + err.Error())
+		}
 	}
 
 	return &fusion.Project{
