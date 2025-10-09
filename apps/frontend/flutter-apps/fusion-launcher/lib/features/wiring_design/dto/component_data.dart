@@ -202,8 +202,8 @@ class InputComponentPort extends ComponentPort {
     required this.data,
     super.image,
     super.label,
-    super.type = 'output',
-    super.compatibleTypes = const <String>['input'],
+    super.type = 'input',
+    super.compatibleTypes = const <String>['output'],
   });
 }
 

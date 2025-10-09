@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/image_loader_service.dart';
+import 'package:fusion_launcher/features/wiring_design/controller/helpers/connection_methods_extension.dart';
 import 'package:fusion_lib/di/service_locator.dart';
 import 'package:fusion_lib/project_manger/project/project_manager.dart';
 
@@ -79,7 +80,7 @@ class CircuitController extends ChangeNotifier
   void addWire(CircuitPort from, CircuitPort to) {
     final PathSide fromSide = _constructPathSide(from);
     final PathSide toSide = _constructPathSide(to);
-
+    if (!canHaveConnection(from, to)) return;
     // final base = addPath(fromSide, toSide, from, to);
     final List<Obstacle> obstacles =
         components
