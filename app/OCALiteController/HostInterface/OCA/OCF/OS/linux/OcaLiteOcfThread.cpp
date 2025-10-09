@@ -4,10 +4,10 @@
 #include <functional>
 #include <chrono> // For std::this_thread::sleep_for
                  
-std::thread& OcaLiteOcfThread_create(std::function<void(int)> threadFunction,
+std::thread* OcaLiteOcfThread_create(std::function<void(int)> threadFunction,
                                      int arg)
 {
-    std::thread ocaThread(threadFunction, arg);
+    std::thread* ocaThread = new std::thread(threadFunction, arg);
     return ocaThread;
 }
 
