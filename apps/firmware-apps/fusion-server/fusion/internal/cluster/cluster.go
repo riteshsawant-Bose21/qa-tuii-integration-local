@@ -130,7 +130,7 @@ func NewCluster(appConfig *api.AppConfig, delegate *ClusterDelegate, memberlist 
 }
 
 func (c *Cluster) Stop() {
-	c.startStatusNotifier()
+	c.stopStatusNotifier()
 }
 
 // GetInfo returns detailed information about the cluster
@@ -659,7 +659,9 @@ func (c *Cluster) startStatusNotifier() error {
 
 func (c *Cluster) stopStatusNotifier() {
 	close(c.statusQuit)
-	c.statusConnection.Close()
+	if c.statusConnection != nil {
+		c.statusConnection.Close()
+	}
 }
 
 // broadcastForInterface finds the broadcast address for a given interface (e.g. "en0" or "eth0").

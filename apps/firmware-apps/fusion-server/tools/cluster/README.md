@@ -44,7 +44,7 @@ multipass exec fusion1 -- sudo mv /tmp/cluster_listener /usr/local/bin
 
 Basic syntax:
 ```bash
-/usr/local/bin/cluster_listener <server_ip> <port> <path>
+/usr/local/bin/cluster_listener <port>
 ```
 
 ## Example Output
@@ -52,7 +52,6 @@ Basic syntax:
 Cluster status will be displayed with timestamps:
 
 ```
-14:23:45 settings.audio.volume changed from: 0.5 to: 0.7
-14:23:47 settings.audio.peq1.gain[2] changed from: -6.0 to: -3.0
-14:23:50 devices[0].channel.volume changed from: 0.8 to: 0.6
-```
+2024-06-12T14:23:45Z {"cluster_id": "main", "status": "active", "nodes": [{"id": "node1", "state": "online"}, {"id": "node2", "state": "offline"}], "load": 0.42}
+2024-06-12T14:23:47Z {"cluster_id": "main", "status": "active", "nodes": [{"id": "node1", "state": "online"}, {"id": "node2", "state": "online"}], "load": 0.38}
+2024-06-12T14:23:50Z {"cluster_id": "main", "status": "degraded", "nodes": [{"id": "node1", "state": "online"}, {"id": "node2", "state": "offline"}], "load": 0.65}```
