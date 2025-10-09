@@ -412,11 +412,11 @@ class FloorCanvasState extends State<FloorCanvas> {
     if (_isDrawing) {
       if (e.buttons == kPrimaryMouseButton) {
         if (_current.isNotEmpty && (worldPos - _current.first).distance < 10.0 / _zoomScale) {
-          final ListeningArea newArea = ListeningArea(name: "Area ${widget.listeningAreas.length + 1}", vertices: List<Offset>.of(_current));
-
-          final List<HardwareComponent> hardwareForArea = _getHardwareComponentsInListeningAreas(newArea);
-
-          widget.onAddListeningArea(newArea, hardwareForArea);
+          if (_current.length >= 3) {
+            final ListeningArea newArea = ListeningArea(name: "Area ${widget.listeningAreas.length + 1}", vertices: List<Offset>.of(_current));
+            final List<HardwareComponent> hardwareForArea = _getHardwareComponentsInListeningAreas(newArea);
+            widget.onAddListeningArea(newArea, hardwareForArea);
+          }
 
           setState(() {
             _current.clear();

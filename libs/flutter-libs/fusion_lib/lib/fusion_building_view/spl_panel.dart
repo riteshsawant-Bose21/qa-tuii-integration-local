@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:fusion_lib/fusion_widgets/others/hover_dropdown.dart';
 
 import 'spl_range_controller.dart';
 
@@ -509,8 +510,10 @@ class _SplPanelState extends State<SplPanel> {
                         label: 'Frequency',
                         labelStyle: labelStyle,
                         control: SizedBox(
-                          height: 32,
-                          child: DropdownButtonFormField<SplFrequency>(
+                          height: 40,
+                          child: HoverDropdownButtonFormField<SplFrequency>(
+                            itemHeight: 48, // or null to use default
+                            isDense: true,
                             isExpanded: true,
                             value: _allowedFrequenciesFor(_bandwidth).contains(_frequency)
                                 ? _frequency
@@ -528,7 +531,19 @@ class _SplPanelState extends State<SplPanel> {
                               setState(() => _frequency = v);
                               _emit();
                             },
+                            onHover: (value, index) {
+                              if (value == null) return;
+                              setState(() => _frequency = value);
+                              _emit();
+                            },
+                            onSaved: (newValue) {
+                              if (newValue == null) return;
+                              setState(() => _frequency = newValue);
+                              _emit();
+                            },
                             decoration: const InputDecoration(
+                              isDense: true,
+                              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                               border: InputBorder.none,
                               enabledBorder: InputBorder.none,
                               focusedBorder: InputBorder.none,

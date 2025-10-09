@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'dart:ui';
 
 import 'package:fusion_lib/fusion_lib.dart';
@@ -47,9 +48,9 @@ class SPLCalculationManager {
         sp.pos.dy,
         sp.zAxis,
         sp.gain,
-        sp.roll,
-        sp.pitch,
-        sp.yaw,
+        (sp.roll) * (pi / 180),
+        (sp.pitch) * (pi / 180),
+        (sp.yaw) * (pi / 180),
       );
       clusterIds.add(cid);
     }

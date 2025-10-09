@@ -209,8 +209,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                     );
                                   }
                                 }
-
-                                widget.onCalculateSpl!();
+                                widget.onCalculateSpl();
                                 serviceLocator<ProjectViewModel>().saveProjectToLocal();
                               },
                               onUpdateListeningArea: serviceLocator<ProjectViewModel>().updateListeningArea,
