@@ -55,7 +55,13 @@ func (h *ProjectHandler) GetProject(ctx *gin.Context) {
 	id := ctx.Param("id")
 	project, err := h.project.GetByID(ctx, id)
 	if err != nil {
-		ctx.JSON(404, gin.H{"error": err.Error()})
+		// Check if it's a "not found" error
+		if err.Error() == "project not found" || err.Error() == "sql: no rows in result set" {
+			ctx.JSON(404, gin.H{"error": "Project not found"})
+			return
+		}
+		// All other errors are internal server errors
+		ctx.JSON(500, gin.H{"error": "Internal server error"})
 		return
 	}
 	ctx.JSON(200, project)
@@ -100,7 +106,13 @@ func (h *ProjectHandler) UpdateProject(ctx *gin.Context) {
 		return
 	}
 	if err := h.project.Update(ctx, id, &p); err != nil {
-		ctx.JSON(500, gin.H{"error": err.Error()})
+		// Check if it's a "not found" error
+		if err.Error() == "project not found" || err.Error() == "sql: no rows in result set" {
+			ctx.JSON(404, gin.H{"error": "Project not found"})
+			return
+		}
+		// All other errors are internal server errors
+		ctx.JSON(500, gin.H{"error": "Internal server error"})
 		return
 	}
 	ctx.JSON(200, p)
@@ -120,7 +132,13 @@ func (h *ProjectHandler) UpdateProject(ctx *gin.Context) {
 func (h *ProjectHandler) DeleteProject(ctx *gin.Context) {
 	id := ctx.Param("id")
 	if err := h.project.Delete(ctx, id); err != nil {
-		ctx.JSON(404, gin.H{"error": err.Error()})
+		// Check if it's a "not found" error
+		if err.Error() == "project not found" || err.Error() == "sql: no rows in result set" {
+			ctx.JSON(404, gin.H{"error": "Project not found"})
+			return
+		}
+		// All other errors are internal server errors
+		ctx.JSON(500, gin.H{"error": "Internal server error"})
 		return
 	}
 	ctx.JSON(204, nil)
