@@ -210,7 +210,7 @@ jobs:
 
   fusion-server-build:
     needs: buildChecks
-    if: needs.buildChecks.outputs.fusionServer == 'true' || needs.buildChecks.outputs.fusionDSP == 'true'
+    if: needs.buildChecks.outputs.fusionServer == 'true'
     concurrency:
       group: fusion-server-build
     runs-on: ubuntu-agent
@@ -342,9 +342,11 @@ jobs:
         id: set-output
         run: echo "ran=true" >> $GITHUB_OUTPUT
 
-  yocto-image-build-trigger:
+  integration-tests:
     needs:
-      - buildChecks
+      - flutter-android-iOS-macOS-build
+      - flutter-windows-build
+      - flutter-web-build
       - fusion-dsp-build
       - fusion-server-build
       - fusion-system-monitor-build
@@ -352,8 +354,7 @@ jobs:
       - fusion-telemetry-core-build
 
     if: |
-      always() &&
-      github.ref_name == 'devops/trigger-yocto-build' && (
+      always() && (
         (needs.fusion-dsp-build.result == 'success' && needs.fusion-dsp-build.outputs.ran == 'true') ||
         (needs.fusion-server-build.result == 'success' && needs.fusion-server-build.outputs.ran == 'true') ||
         (needs.fusion-system-monitor-build.result == 'success' && needs.fusion-system-monitor-build.outputs.ran == 'true') ||
@@ -361,7 +362,28 @@ jobs:
         (needs.fusion-telemetry-core-build.result == 'success' && needs.fusion-telemetry-core-build.outputs.ran == 'true')
       )
     concurrency:
-      group: yocto-image-build-trigger
+      group: integration-tests
+    runs-on: ubuntu-agent
+    outputs:
+      ran: ${{ steps.set-output.outputs.ran }}
+    timeout-minutes: 30
+    steps:
+      - name: Make changes in target repo
+        run: |
+          echo "Integration Tests successful"
+      - name: Set output
+        id: set-output
+        run: echo "ran=true" >> $GITHUB_OUTPUT
+
+  yocto-image-build:
+    needs:
+      - integration-tests
+    if: |
+      always() && (
+        needs.integration-tests.result == 'success' && needs.integration-tests.outputs.ran == 'true'
+      )
+    concurrency:
+      group: yocto-image-build
     runs-on: ubuntu-agent
     timeout-minutes: 30
     steps:
@@ -369,15 +391,31 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: BoseProfessional/meta-fusion
-          ref: devops/trigger-yocto-build
+          ref: develop
           token: ${{ secrets.META_FUSION_REPO_TOKEN }}
           fetch-depth: 0
-          
-      - name: Make changes in target repo
+
+      - name: Update fusion config file with branch name
+        env:
+          BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
         run: |
-          echo "Build successful on $(date)" >> build-status.txt
-          git add build-status.txt
-          git commit -m "CI: Build success from Fusion monorepo" || echo "No changes to commit"
+          FILE="conf/fusion-mini_properties.inc"
+
+          # Create file if it doesn't exist
+          if [ ! -f "$FILE" ]; then
+            echo "File $FILE does not exist. Failing the step."
+            exit 1
+          else
+            # Replace the line or append it
+            if grep -q "^FUSION_MONOREPO_BRANCH=" "$FILE"; then
+              sed -i "s|^FUSION_MONOREPO_BRANCH=.*|FUSION_MONOREPO_BRANCH=\"${BRANCH_NAME}\"|" "$FILE"
+            else
+              echo "FUSION_MONOREPO_BRANCH=\"${BRANCH_NAME}\"" >> "$FILE"
+            fi
+          fi
+
+          git add conf/fusion-mini_properties.inc
+          git commit -m "CI: Build trigger from Fusion Monorepo branch: ${{ github.ref_name }}" || echo "No changes to commit"
 
       - name: Push commit to target repo
         run: |
