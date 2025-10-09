@@ -378,7 +378,10 @@ OcaBoolean ControlPalSetupConnection(::Ocp1LiteNetwork *ocp1Network,
         }
     }
 
-    OCA_LOG_INFO("✓ Service discovery and connection successful!");
+    if (retVal)
+    {
+        OCA_LOG_INFO("✓ Service discovery and connection successful!");
+    }
     return retVal;
 }
 
