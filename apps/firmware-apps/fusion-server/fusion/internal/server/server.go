@@ -59,9 +59,9 @@ func NewFusionServer(node string, handler *handler.Handler, hub *pubsub.Hub) *Fu
 	return server
 }
 
-// BroadcastUpdate sends a notification message to all connected WebSocket clients.
+// BroadcastMessage sends a notification message to all connected WebSocket clients.
 // It acquires a read lock on the clients list to ensure thread-safe access.
-func (s *FusionServer) BroadcastUpdate(message *api.NotifyMessage) error {
+func (s *FusionServer) BroadcastMessage(message *api.NotifyMessage) error {
 	s.wsLock.RLock()
 	defer s.wsLock.RUnlock()
 

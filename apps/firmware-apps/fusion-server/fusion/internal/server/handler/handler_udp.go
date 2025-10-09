@@ -3,12 +3,13 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
+	"fusion/internal/api"
 )
 
 // UDP Server methods
 func (h *Handler) HandleUDPMessage(data []byte) (any, error) {
 	var msg struct {
-		Action string          `json:"action"`
+		Action api.NotifyOp    `json:"action"`
 		Raw    json.RawMessage `json:",omitempty"`
 	}
 
@@ -17,14 +18,14 @@ func (h *Handler) HandleUDPMessage(data []byte) (any, error) {
 	}
 
 	switch msg.Action {
-	case "get":
+	case api.NotifyOpValueGet:
 		data := h.StateManager.GetStateMap()
 		return map[string]any{
 			"status": "success",
 			"data":   data,
 		}, nil
 
-	case "set":
+	case api.NotifyOpValueSet:
 		var update map[string]any
 		if err := json.Unmarshal(data, &update); err != nil {
 			return nil, fmt.Errorf("invalid JSON: %w", err)
