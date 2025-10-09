@@ -40,8 +40,10 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
   final FocusNode _projectNameFocusNode = FocusNode();
   final GlobalKey _projectNameKey = GlobalKey();
   String? _projectNameError;
+  final ProjectViewModel _projectViewModel = serviceLocator<ProjectViewModel>();
 
   final SplRangeController _splRangeController = SplRangeController();
+  bool get isListingViewMode => _projectViewModel.currentProjectMode == ProjectMode.systemListingMode;
 
   final List<Widget> _tabs = const <Widget>[
     Tab(text: 'Building'),
@@ -436,46 +438,56 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                   ),
 
                   /// schematics tab with docking area
-                  FusionDockableArea(
-                    tabKey: "tab2",
-                    showLeft: false,
-                    showRight: true,
-                    mainArea: const SchematicsPage(),
-                    dockItemList: <DockItemConfig>[
-                      DockItemConfig(
-                        id: "6",
-                        title: "COST CALCULATOR",
-                        side: "right",
-                        dockItemWidget:
-                            () => CostCalculatorScreen(
-                              speakers: serviceLocator<ProjectViewModel>().speakers,
-                              sources: serviceLocator<ProjectViewModel>().sources,
-                              controllers:
-                                  serviceLocator<ProjectViewModel>().genericHardwareComponents
-                                      .where((GenericHardwareComponent component) => component.type == GenericHardwareComponentType.controller)
-                                      .toList(),
-                              racks:
-                                  serviceLocator<ProjectViewModel>().genericHardwareComponents
-                                      .where((GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack)
-                                      .toList(),
-                              amplifiers: <Amplifier>[],
-                              fusionDevices: <FusionDevice>[],
-                              others:
-                                  serviceLocator<ProjectViewModel>().genericHardwareComponents
-                                      .where(
-                                        (HardwareComponent component) =>
-                                            component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
-                                      )
-                                      .toList(),
-                            ),
-                      ),
-                      DockItemConfig(
-                        id: "8",
-                        title: "PRODUCT QUERY",
-                        side: "right",
-                        dockItemWidget: () => const ProductQueryView(),
-                      ),
-                    ],
+                  BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+                    builder: (BuildContext context, Object? state) {
+                      return FusionDockableArea(
+                        tabKey: "tab2",
+                        showLeft: isListingViewMode ? false : true,
+                        showRight: true,
+                        mainArea: const SchematicsPage(),
+                        dockItemList: <DockItemConfig>[
+                          DockItemConfig(
+                            id: "6",
+                            title: "COST CALCULATOR",
+                            side: "right",
+                            dockItemWidget:
+                                () => CostCalculatorScreen(
+                                  speakers: serviceLocator<ProjectViewModel>().speakers,
+                                  sources: serviceLocator<ProjectViewModel>().sources,
+                                  controllers:
+                                      serviceLocator<ProjectViewModel>().genericHardwareComponents
+                                          .where((GenericHardwareComponent component) => component.type == GenericHardwareComponentType.controller)
+                                          .toList(),
+                                  racks:
+                                      serviceLocator<ProjectViewModel>().genericHardwareComponents
+                                          .where((GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack)
+                                          .toList(),
+                                  amplifiers: <Amplifier>[],
+                                  fusionDevices: <FusionDevice>[],
+                                  others:
+                                      serviceLocator<ProjectViewModel>().genericHardwareComponents
+                                          .where(
+                                            (HardwareComponent component) =>
+                                                component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
+                                          )
+                                          .toList(),
+                                ),
+                          ),
+                          DockItemConfig(
+                            id: "8",
+                            title: "PRODUCT QUERY",
+                            side: "right",
+                            dockItemWidget: () => const ProductQueryView(),
+                          ),
+                          DockItemConfig(
+                            id: "10",
+                            title: "PRODUCT List",
+                            side: "left",
+                            dockItemWidget: () => const FusionAppText(text: "PRODUCT List"),
+                          ),
+                        ],
+                      );
+                    },
                   ),
 
                   /// budget tab with docking area

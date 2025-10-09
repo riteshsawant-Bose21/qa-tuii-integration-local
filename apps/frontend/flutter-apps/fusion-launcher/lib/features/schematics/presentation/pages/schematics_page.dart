@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:fusion_launcher/core/theme/app_theme.dart';
+import '../../../../core/service_locator.dart';
+import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../widgets/schematics_left_panel.dart';
 import '../widgets/schematics_right_panel.dart';
 import 'old_schematics_page.dart';
@@ -15,9 +18,10 @@ class SchematicsPage extends StatefulWidget {
 class _SchematicsPageState extends State<SchematicsPage> {
   final double minPanelWidth = 300.0;
   final double dividerWidth = 1.0;
+  final ProjectViewModel _projectViewModel = serviceLocator<ProjectViewModel>();
+  bool get isListingViewMode => _projectViewModel.currentProjectMode == ProjectMode.systemListingMode;
 
   /// Add view state management
-  bool isListingView = true; // true for listing view, false for wiring view
 
   /// Track left panel width as percentage of available space instead of absolute pixels
   double _leftPanelRatio = 0.5; // Default to 50% of available space
@@ -29,6 +33,7 @@ class _SchematicsPageState extends State<SchematicsPage> {
 
   @override
   Widget build(BuildContext context) {
+    print("isListingViewMode: $isListingViewMode");
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         final double availableWidth = constraints.maxWidth;
@@ -44,68 +49,68 @@ class _SchematicsPageState extends State<SchematicsPage> {
 
         final double rightPanelWidth = availableWidth - leftPanelWidth - dividerWidth;
 
-        return Column(
-          children: <Widget>[
-            Expanded(
-              child: isListingView ? _buildListingView(availableWidth, leftPanelWidth, rightPanelWidth) : const OlsSchematicsPage(),
-            ),
-            Container(
-              height: 44,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.white,
-                border: Border(
-                  top: BorderSide(width: 1, color: Theme.of(context).colorScheme.grey),
+        return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+          builder: (BuildContext context, Object? state) {
+            return Column(
+              children: <Widget>[
+                Expanded(
+                  child: isListingViewMode ? _buildListingView(availableWidth, leftPanelWidth, rightPanelWidth) : const OlsSchematicsPage(),
                 ),
-              ),
+                Container(
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.white,
+                    border: Border(
+                      top: BorderSide(width: 1, color: Theme.of(context).colorScheme.grey),
+                    ),
+                  ),
 
-              child: Row(
-                children: <Widget>[
-                  GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        isListingView = true;
-                      });
-                    },
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      color: isListingView ? Colors.black87 : Colors.transparent,
-                      child: SvgPicture.asset(
-                        "assets/svg/listing_view_icon.svg",
-                        width: 40,
-                        height: 40,
-                        colorFilter: ColorFilter.mode(
-                          isListingView ? Colors.white : Colors.black87,
-                          BlendMode.srcIn,
+                  child: Row(
+                    children: <Widget>[
+                      GestureDetector(
+                        onTap: () {
+                          _projectViewModel.setProjectMode(ProjectMode.systemListingMode);
+                        },
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          color: isListingViewMode ? Colors.black87 : Colors.transparent,
+                          child: SvgPicture.asset(
+                            "assets/svg/listing_view_icon.svg",
+                            width: 40,
+                            height: 40,
+                            colorFilter: ColorFilter.mode(
+                              isListingViewMode ? Colors.white : Colors.black87,
+                              BlendMode.srcIn,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        isListingView = false;
-                      });
-                    },
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      color: !isListingView ? Colors.black87 : Colors.transparent,
-                      child: SvgPicture.asset(
-                        "assets/svg/wiring_view_icon.svg",
-                        width: 40,
-                        height: 40,
-                        colorFilter: ColorFilter.mode(
-                          !isListingView ? Colors.white : Colors.black87,
-                          BlendMode.srcIn,
+                      GestureDetector(
+                        onTap: () {
+                          _projectViewModel.setProjectMode(ProjectMode.systemWiringMode);
+                        },
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          color: !isListingViewMode ? Colors.black87 : Colors.transparent,
+                          child: SvgPicture.asset(
+                            "assets/svg/wiring_view_icon.svg",
+                            width: 40,
+                            height: 40,
+                            colorFilter: ColorFilter.mode(
+                              !isListingViewMode ? Colors.white : Colors.black87,
+                              BlendMode.srcIn,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ),
-                ],
-              ),
-            ),
-          ],
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -166,44 +171,6 @@ class _SchematicsPageState extends State<SchematicsPage> {
           ),
         ),
       ],
-    );
-  }
-
-  /// Placeholder wiring view
-  Widget _buildWiringView() {
-    return Container(
-      width: double.infinity,
-      height: double.infinity,
-      color: Colors.grey[50],
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Icon(
-              Icons.cable,
-              size: 80,
-              color: Colors.grey[400],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Wiring View',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w500,
-                color: Colors.grey[600],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Coming Soon...',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[500],
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

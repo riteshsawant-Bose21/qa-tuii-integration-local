@@ -14,6 +14,15 @@ export 'project_images/project_image_view_model.dart';
 
 part 'project_view_model_state.dart';
 
+enum ProjectMode {
+  normal,
+  listeningAreaSelection,
+  zoneSelection,
+  deviceSelection,
+  systemListingMode,
+  systemWiringMode,
+}
+
 class ProjectViewModel extends Cubit<ProjectViewModelState> {
   final ProjectManager projectManager;
 
@@ -37,6 +46,8 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
   bool isInZoneSelectionMode = false;
 
   int currentDeviceTypeIndex = -1;
+
+  ProjectMode currentProjectMode = ProjectMode.systemListingMode;
 
   ProductQueryModel? selectedProductToAdd;
 
@@ -186,5 +197,15 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
 
   void resetDeviceTypeIndex() {
     currentDeviceTypeIndex = -1;
+  }
+
+  void setProjectMode(ProjectMode mode) {
+    currentProjectMode = mode;
+    updateProject();
+  }
+
+  void resetProjectMode() {
+    currentProjectMode = ProjectMode.normal;
+    updateProject();
   }
 }

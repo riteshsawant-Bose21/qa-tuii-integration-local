@@ -103,7 +103,7 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
       case "Sources":
         return <Widget>[
           /// Microphones Section
-          _buildExpandableSection(
+          _buildExpandableSection<SourceData>(
             title: 'MICROPHONES',
             isExpanded: _microphoneExpanded,
             onTap: () => setMenuState(() => _microphoneExpanded = !_microphoneExpanded),
@@ -111,7 +111,7 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
           ),
 
           /// Media Sources Section
-          _buildExpandableSection(
+          _buildExpandableSection<SourceData>(
             title: 'MEDIA SOURCES',
             isExpanded: _mediaSourceExpanded,
             onTap: () => setMenuState(() => _mediaSourceExpanded = !_mediaSourceExpanded),
@@ -122,7 +122,7 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
       case "Processors & Amplifiers":
         return <Widget>[
           /// Processors & Amplifiers Section
-          _buildExpandableSection(
+          _buildExpandableSection<SourceData>(
             title: 'PROCESSORS & AMPLIFIERS',
             isExpanded: _processorsExpanded,
             onTap: () => setMenuState(() => _processorsExpanded = !_processorsExpanded),
@@ -133,7 +133,7 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
       case "End Points":
         return <Widget>[
           /// End Points Section
-          _buildExpandableSection(
+          _buildExpandableSection<SourceData>(
             title: 'END POINTS',
             isExpanded: _endPointsExpanded,
             onTap: () => setMenuState(() => _endPointsExpanded = !_endPointsExpanded),
@@ -144,15 +144,20 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
       case "Other Devices":
         return <Widget>[
           /// Racks Section
-          _buildExpandableSection(
+          _buildExpandableSection<String>(
             title: 'RACKS',
             isExpanded: _racksExpanded,
             onTap: () => setMenuState(() => _racksExpanded = !_racksExpanded),
-            items: SourceData.microphoneItems, // Replace with actual rack items when available
+            items: <String>[
+              '4U',
+              '8U',
+              '12U',
+              '24U',
+            ], // Replace with actual rack items when available
           ),
 
           /// Other Devices Section
-          _buildExpandableSection(
+          _buildExpandableSection<SourceData>(
             title: 'OTHER DEVICES',
             isExpanded: _otherDevicesExpanded,
             onTap: () => setMenuState(() => _otherDevicesExpanded = !_otherDevicesExpanded),
@@ -163,7 +168,7 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
       default:
         return <Widget>[
           /// Show all sections if no specific match
-          _buildExpandableSection(
+          _buildExpandableSection<SourceData>(
             title: 'MICROPHONES',
             isExpanded: _microphoneExpanded,
             onTap: () => setMenuState(() => _microphoneExpanded = !_microphoneExpanded),
@@ -171,7 +176,7 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
           ),
 
           /// Media Sources Section
-          _buildExpandableSection(
+          _buildExpandableSection<SourceData>(
             title: 'MEDIA SOURCES',
             isExpanded: _mediaSourceExpanded,
             onTap: () => setMenuState(() => _mediaSourceExpanded = !_mediaSourceExpanded),
@@ -182,11 +187,11 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
   }
 
   /// Builds an expandable section with a header and items
-  Widget _buildExpandableSection({
+  Widget _buildExpandableSection<T>({
     required String title,
     required bool isExpanded,
     required VoidCallback onTap,
-    required List<SourceData> items,
+    required List<T> items,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -220,23 +225,26 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
         /// Section Items (conditionally shown)
         if (isExpanded)
           ...items.map(
-            (SourceData item) => InkWell(
+            (T item) => InkWell(
               onTap: () {
                 Navigator.of(context).pop();
-                final Source source = Source(
-                  name: item.name,
-                  pos: null,
-                  type: item.type,
-                  assetImagePath: item.assetPath,
-                  locationEntity: LocationModel(),
-                  sku: item.id,
-                  price: item.price,
-                );
-                serviceLocator<ProjectViewModel>().addHardware(source);
+                if (item is SourceData) {
+                  final Source source = Source(
+                    name: item.name,
+                    pos: null,
+                    type: item.type,
+                    assetImagePath: item.assetPath,
+                    locationEntity: LocationModel(),
+                    sku: item.id,
+                    price: item.price,
+                  );
+                  serviceLocator<ProjectViewModel>().addHardware(source);
+                }
+                // Add more type checks and logic for other models as needed
               },
               child: Container(
                 height: 30,
-                width: 218, // Fixed width for items (250 - 16 left - 16 right)
+                width: 218,
                 margin: const EdgeInsets.only(left: 16, right: 16, bottom: 2),
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                 decoration: BoxDecoration(
@@ -245,20 +253,16 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
                 ),
                 child: Row(
                   children: <Widget>[
-                    Image.asset(
-                      item.assetPath,
-                      height: 14,
-                      width: 14,
-                    ),
+                    if (item is SourceData)
+                      Image.asset(
+                        item.assetPath,
+                        height: 14,
+                        width: 14,
+                      ),
                     const SizedBox(width: 8),
                     Expanded(
-                      // child: Text(
-                      //   item.name,
-                      //   style: const TextStyle(fontSize: 12),
-                      //   overflow: TextOverflow.ellipsis,
-                      // ),
                       child: FusionAppText(
-                        text: item.name,
+                        text: item is SourceData ? item.name : item.toString(),
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ),

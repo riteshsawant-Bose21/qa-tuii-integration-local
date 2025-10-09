@@ -5,7 +5,7 @@ import 'package:fusion_lib/fusion_widgets/others/fusion_vertical_resizable_widge
 
 import 'expandable_popup_menu_widget.dart';
 
-class CommonDevicesSectionWidget extends StatelessWidget {
+class CommonDevicesSectionWidget extends StatefulWidget {
   final double width;
   final double height;
   final String title;
@@ -28,18 +28,23 @@ class CommonDevicesSectionWidget extends StatelessWidget {
   });
 
   @override
+  State<CommonDevicesSectionWidget> createState() => _CommonDevicesSectionWidgetState();
+}
+
+class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget> {
+  @override
   Widget build(BuildContext context) {
-    if (enableResize) {
+    if (widget.enableResize) {
       return FusionVerticalResizableWidget(
-        initialHeight: height,
-        minHeight: minHeight,
+        initialHeight: widget.height,
+        minHeight: widget.minHeight,
         maxHeight: double.infinity,
-        onHeightChanged: onHeightChanged,
+        onHeightChanged: widget.onHeightChanged,
         child: _buildContainer(context),
       );
     } else {
       return SizedBox(
-        height: height,
+        height: widget.height,
         child: _buildContainer(context),
       );
     }
@@ -47,7 +52,7 @@ class CommonDevicesSectionWidget extends StatelessWidget {
 
   Widget _buildContainer(BuildContext context) {
     return Container(
-      width: width,
+      width: widget.width,
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.launcherBgColor1,
         border: Border(
@@ -59,7 +64,7 @@ class CommonDevicesSectionWidget extends StatelessWidget {
         children: <Widget>[
           /// Header
           Container(
-            width: width,
+            width: widget.width,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
               color: Colors.white,
@@ -72,7 +77,7 @@ class CommonDevicesSectionWidget extends StatelessWidget {
               children: <Widget>[
                 Expanded(
                   child: FusionAppText(
-                    text: title,
+                    text: widget.title,
                     style: Theme.of(context).textTheme.bodySmall,
                     maxLine: 1,
                   ),
@@ -80,19 +85,19 @@ class CommonDevicesSectionWidget extends StatelessWidget {
                 const SizedBox(width: 4),
 
                 /// Pass section title to the expandable popup menu
-                ExpandablePopupMenuWidget(sectionTitle: title),
+                ExpandablePopupMenuWidget(sectionTitle: widget.title),
               ],
             ),
           ),
 
-          /// Content
+          /// Content - Direct content without automatic reordering
           Expanded(
             child: Container(
-              width: width,
+              width: widget.width,
               padding: const EdgeInsets.all(10),
               child: SingleChildScrollView(
                 physics: const ClampingScrollPhysics(),
-                child: sectionContent,
+                child: widget.sectionContent,
               ),
             ),
           ),
