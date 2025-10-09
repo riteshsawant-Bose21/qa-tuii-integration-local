@@ -156,10 +156,17 @@ bool ocaMain(std::string& customNodeId)
                                     // Create and setup control objects
                                     if (ControlPalSetupControls(controllerId, proxy))
                                     {
-                                        // Wait for Events from Device
-                                        ::OcaLiteCommandHandler::GetInstance().RunWithTimeout(OCA_RUN_TIMEOUT_MSEC);
+                                        // TODO: This should be a forever loop
+                                        // TODO: Add signal capturing to exit
+                                        //       gracefully.
+                                        int countIdx(0);
+                                        while (countIdx++ < 10)
+                                        {
+                                            // Wait for Events from Device
+                                            ::OcaLiteCommandHandler::GetInstance().RunWithTimeout(OCA_RUN_TIMEOUT_MSEC);
 
-                                        //TODO: Check for local h/w events
+                                            //TODO: Check for local h/w events
+                                        }
                                     }
                                     else
                                     {
