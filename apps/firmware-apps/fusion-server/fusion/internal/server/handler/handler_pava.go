@@ -252,7 +252,10 @@ func (h *Handler) HandleAudioUpload(w http.ResponseWriter, r *http.Request) {
 	// Return created metadata
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(meta)
+	if err := json.NewEncoder(w).Encode(meta); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 // HandleAudioGet returns metadata for a single audio file.
@@ -270,7 +273,10 @@ func (h *Handler) HandleAudioGet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(meta)
+	if err := json.NewEncoder(w).Encode(meta); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 // HandleAudioGet serves an audio file by ID with range support.
