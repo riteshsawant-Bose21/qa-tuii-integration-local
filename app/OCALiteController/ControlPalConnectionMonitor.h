@@ -35,6 +35,7 @@ class ControlPalConnectionMonitor :
         virtual ::OcaLiteStatus SetSettingValue(::OcaBoolean setting)
         {
             // Do Nothing
+            return OCASTATUS_OK;
         }
 
         virtual void OnConnectionLost(::OcaSessionID sessionID)
