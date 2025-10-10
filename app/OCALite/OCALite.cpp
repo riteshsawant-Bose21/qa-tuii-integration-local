@@ -32,6 +32,7 @@
 #include "../common/FusionOCAConstants.h" // For custom ONO constants
 #include "Observer.h"                     // Add the UDP JSON Observer
 #include "../common/models/ControlSystemConfigParser.h"
+#include "../common/UDPSender.h" // UDP JSON sender
 
 #ifdef OCA_RUN
 extern void Ocp1LiteServiceRun();
@@ -77,6 +78,8 @@ void BuildObjectTracker(const ControlSystemConfig &config);
 void ClearObjectTracker();
 void ShutdownUDPObserver();
 bool StartOCAServicesWithExponentialBackoff(::Ocp1LiteNetwork *ocp1Network);
+bool InitializeUDPSender();
+void ShutdownUDPSender();
 
 int main(int argc, const char *argv[])
 {
@@ -245,10 +248,20 @@ int main(int argc, const char *argv[])
         g_bSuccess = true;
     }
 
+    // Initialize UDP sender for outbound communication
+    g_bSuccess = InitializeUDPSender();
+    if (!g_bSuccess)
+    {
+        OCA_LOG_ERROR("✗ UDP sender initialization failed");
+        // Continue without UDP sender
+        g_bSuccess = true;
+    }
+
     // Run main loop
     RunMainLoop();
 
-    // Clean up UDP Observer before exit
+    // Clean up UDP components before exit
+    ShutdownUDPSender();
     ShutdownUDPObserver();
 
     return 0;
@@ -1101,4 +1114,37 @@ bool ProcessPendingConfigurationUpdate()
 
     OCA_LOG_INFO("✓ Configuration update completed successfully");
     return true;
+}
+
+/**
+ * @brief Initialize the UDP sender singleton
+ */
+bool InitializeUDPSender()
+{
+    try
+    {
+        UDPSender &sender = UDPSender::getInstance();
+        return sender.initialize();
+    }
+    catch (const std::exception &e)
+    {
+        OCA_LOG_ERROR_PARAMS("Exception during UDP sender initialization: %s", e.what());
+        return false;
+    }
+}
+
+/**
+ * @brief Shutdown the UDP sender
+ */
+void ShutdownUDPSender()
+{
+    try
+    {
+        UDPSender &sender = UDPSender::getInstance();
+        sender.shutdown();
+    }
+    catch (const std::exception &e)
+    {
+        OCA_LOG_ERROR_PARAMS("Exception during UDP sender shutdown: %s", e.what());
+    }
 }
