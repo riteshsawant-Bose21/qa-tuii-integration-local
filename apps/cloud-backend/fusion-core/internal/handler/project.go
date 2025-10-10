@@ -1,18 +1,31 @@
 package handler
 
 import (
+	"context"
+	"net/http"
+
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project"
 	"github.com/gin-gonic/gin"
 )
 
+// ProjectHandler handles HTTP requests for project management.
 type ProjectHandler struct {
-	project project.Project
+	project ProjectSVC
 }
 
-func NewProjectHandler(project project.Project) *ProjectHandler {
+type ProjectSVC interface {
+	CreateProject(ctx context.Context, project *fusion.Project) error
+	GetProjectByID(ctx context.Context, id string) (*fusion.Project, error)
+	GetAllProjects(ctx context.Context) ([]*fusion.Project, error)
+	UpdateProject(ctx context.Context, id string, project *fusion.Project) error
+	DeleteProject(ctx context.Context, id string) error
+
+	SyncProject(ctx context.Context, projectID string, metaData map[string]interface{}, zipFileURL string) error
+}
+
+func NewProjectHandler(projectSvc ProjectSVC) *ProjectHandler {
 	return &ProjectHandler{
-		project: project,
+		project: projectSvc,
 	}
 }
 
@@ -30,14 +43,14 @@ func NewProjectHandler(project project.Project) *ProjectHandler {
 func (h *ProjectHandler) CreateProject(ctx *gin.Context) {
 	var p fusion.Project
 	if err := ctx.ShouldBindJSON(&p); err != nil {
-		ctx.JSON(400, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if err := h.project.Insert(ctx, &p); err != nil {
-		ctx.JSON(500, gin.H{"error": err.Error()})
+	if err := h.project.CreateProject(ctx, &p); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	ctx.JSON(201, p)
+	ctx.JSON(http.StatusCreated, p)
 }
 
 // GetProject retrieves a project by ID.
@@ -51,20 +64,20 @@ func (h *ProjectHandler) CreateProject(ctx *gin.Context) {
 // @Failure 404 {object} map[string]string "Project not found"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Router /projects/{id} [get]
-func (h *ProjectHandler) GetProject(ctx *gin.Context) {
+func (h *ProjectHandler) GetProjectByID(ctx *gin.Context) {
 	id := ctx.Param("id")
-	project, err := h.project.GetByID(ctx, id)
+	project, err := h.project.GetProjectByID(ctx, id)
 	if err != nil {
 		// Check if it's a "not found" error
 		if err.Error() == "project not found" || err.Error() == "sql: no rows in result set" {
-			ctx.JSON(404, gin.H{"error": "Project not found"})
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "Project not found"})
 			return
 		}
 		// All other errors are internal server errors
-		ctx.JSON(500, gin.H{"error": "Internal server error"})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
-	ctx.JSON(200, project)
+	ctx.JSON(http.StatusOK, project)
 }
 
 // GetProjects retrieves all projects.
@@ -76,13 +89,13 @@ func (h *ProjectHandler) GetProject(ctx *gin.Context) {
 // @Success 200 {array} fusion.Project "Successfully retrieved all projects"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Router /projects [get]
-func (h *ProjectHandler) GetProjects(ctx *gin.Context) {
-	projects, err := h.project.GetAll(ctx)
+func (h *ProjectHandler) GetAllProjects(ctx *gin.Context) {
+	projects, err := h.project.GetAllProjects(ctx)
 	if err != nil {
-		ctx.JSON(500, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	ctx.JSON(200, projects)
+	ctx.JSON(http.StatusOK, projects)
 }
 
 // UpdateProject updates an existing project.
@@ -102,20 +115,20 @@ func (h *ProjectHandler) UpdateProject(ctx *gin.Context) {
 	id := ctx.Param("id")
 	var p fusion.Project
 	if err := ctx.ShouldBindJSON(&p); err != nil {
-		ctx.JSON(400, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if err := h.project.Update(ctx, id, &p); err != nil {
+	if err := h.project.UpdateProject(ctx, id, &p); err != nil {
 		// Check if it's a "not found" error
 		if err.Error() == "project not found" || err.Error() == "sql: no rows in result set" {
-			ctx.JSON(404, gin.H{"error": "Project not found"})
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "Project not found"})
 			return
 		}
 		// All other errors are internal server errors
-		ctx.JSON(500, gin.H{"error": "Internal server error"})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
-	ctx.JSON(200, p)
+	ctx.JSON(http.StatusOK, p)
 }
 
 // DeleteProject deletes a project by ID.
@@ -131,23 +144,17 @@ func (h *ProjectHandler) UpdateProject(ctx *gin.Context) {
 // @Router /projects/{id} [delete]
 func (h *ProjectHandler) DeleteProject(ctx *gin.Context) {
 	id := ctx.Param("id")
-	if err := h.project.Delete(ctx, id); err != nil {
+	if err := h.project.DeleteProject(ctx, id); err != nil {
 		// Check if it's a "not found" error
 		if err.Error() == "project not found" || err.Error() == "sql: no rows in result set" {
-			ctx.JSON(404, gin.H{"error": "Project not found"})
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "Project not found"})
 			return
 		}
 		// All other errors are internal server errors
-		ctx.JSON(500, gin.H{"error": "Internal server error"})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
-	ctx.JSON(204, nil)
-}
-
-// SyncProjectRequest represents the request body for project synchronization.
-type SyncProjectRequest struct {
-	MetaData   map[string]interface{} `json:"meta_data" example:"{\"version\": \"1.0\", \"updated_by\": \"user123\"}" validate:"required"`
-	ZipFileURL string                 `json:"zip_file_url" example:"https://example.com/project.zip" validate:"required,url"`
+	ctx.JSON(http.StatusNoContent, nil)
 }
 
 // SyncProject triggers synchronization for a project by ID.
@@ -165,14 +172,14 @@ type SyncProjectRequest struct {
 // @Router /projects/{id}/sync [post]
 func (h *ProjectHandler) SyncProject(ctx *gin.Context) {
 	id := ctx.Param("id")
-	var req SyncProjectRequest
+	var req fusion.SyncProjectRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(400, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	if err := h.project.SyncProject(ctx, id, req.MetaData, req.ZipFileURL); err != nil {
-		ctx.JSON(500, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	ctx.JSON(200, gin.H{"message": "Project sync initiated"})
+	ctx.JSON(http.StatusOK, gin.H{"message": "Project sync initiated"})
 }

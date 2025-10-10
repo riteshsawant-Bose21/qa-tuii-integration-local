@@ -17,3 +17,9 @@ type Project struct {
 	MetaData       map[string]interface{} `json:"meta_data"`
 	ProjectFileURL string                 `json:"project_file_url"`
 }
+
+// SyncProjectRequest represents the request body for project synchronization.
+type SyncProjectRequest struct {
+	MetaData   map[string]interface{} `json:"meta_data" example:"{\"version\": \"1.0\", \"updated_by\": \"user123\"}" validate:"required"`
+	ZipFileURL string                 `json:"zip_file_url" example:"https://example.com/project.zip" validate:"required,url"`
+}

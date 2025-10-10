@@ -26,22 +26,21 @@ func (p *Service) GetAllProducts(ctx context.Context) (*fusion.ProductResponse, 
 
 // UpdateProducts updates the products in the database.
 func (p *Service) UpdateProducts(ctx context.Context, product *fusion.ProductFetch) error {
+	if product == nil {
+		return fmt.Errorf("product cannot be nil")
+	}
 
-	// if product == nil {
-	// 	return fmt.Errorf("product cannot be nil")
-	// }
+	if product.Speakers != nil {
+		for _, speaker := range product.Speakers {
+			if speaker.ID == 0 {
+				return fmt.Errorf("speaker ID is required")
+			}
+		}
 
-	// if product.Speakers != nil {
-	// 	for _, speaker := range product.Speakers {
-	// 		if speaker.ID == "" {
-	// 			return fmt.Errorf("speaker ID is required")
-	// 		}
-	// 	}
-
-	// 	err := p.dbService.Upsert(ctx, product)
-	// 	if err != nil {
-	// 		return fmt.Errorf("error inserting product into DB: %w", err)
-	// 	}
-	// }
+		err := p.dbService.Upsert(ctx, product)
+		if err != nil {
+			return fmt.Errorf("error inserting product into DB: %w", err)
+		}
+	}
 	return nil
 }

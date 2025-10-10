@@ -8,13 +8,18 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	inbuiltlog "log"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/log"
-	"github.com/gin-gonic/gin"
 
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/id"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product"
 	productdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product/db"
 	sql "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/sql"
@@ -24,8 +29,6 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project"
 
 	_ "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/docs"
-	swaggerFiles "github.com/swaggo/files"
-	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func main() {
@@ -59,8 +62,12 @@ func main() {
 
 	logger.Info("Database connection established successfully")
 
-	// Initaialize s3 client
-
+	// Initialize ID Service
+	idSVC := id.NewService()
+	if idSVC == nil {
+		logger.Fatal("Failed to initialize ID service")
+	}
+	logger.Info("Initialized ID Service.")
 	//Initialize Product DB Service
 	productDBSvc := productdb.NewService(pgs)
 	if productDBSvc == nil {
@@ -75,38 +82,90 @@ func main() {
 	}
 
 	//Initialize Product Service
-	productSVC := product.NewService(productDBSvc)
+	productSVC := product.NewService(productDBSvc, idSVC)
 	if productSVC == nil {
 		logger.Fatal("Failed to initialize product service")
 	}
 	logger.Info("Initialized Product Service.")
 
+	//Initialize Project Service
 	projectSVC := project.NewService(projectDBSvc)
 	if projectSVC == nil {
 		logger.Fatal("Failed to initialize project service")
 	}
 	logger.Info("Initialized Project Service.")
 
-	engine := gin.Default()
+	// engine := gin.Default()
 
-	// Setup Swagger
-	engine.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	// // Setup Swagger
+	// engine.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// Initialize API Service
-	apiSvc, err := api.New(engine, productSVC, projectSVC)
+	// apiSvc, err := api.New(engine, productSVC)
+	// Initialize API Server
+	server, err := api.New(&api.Config{
+		Host: "localhost",
+		Port: "8080",
+	}, productSVC, projectSVC)
 	if err != nil {
 		logger.Fatal(fmt.Sprintf("Error while initializing API: %v", err))
 	}
 	logger.Info("Initialized the API.")
 
-	Host := "localhost"
-	Port := "8020"
+	// Setup graceful shutdown
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	// Start server
-	addr := fmt.Sprintf("%s:%s", Host, Port)
-	logger.Info(fmt.Sprintf("Starting HTTP server at %s...", addr))
+	shutdownChan := make(chan os.Signal, 1)
+	signal.Notify(shutdownChan, syscall.SIGINT, syscall.SIGTERM)
 
-	if err := apiSvc.Engine().Run(fmt.Sprintf("%s:%s", Host, Port)); err != nil {
-		logger.Fatal(fmt.Sprintf("Server error: %s", err))
+	// Start server in goroutine
+	serverErrChan := make(chan error, 1)
+	go func() {
+		logger.Info("Starting server...")
+		if err := server.Start(ctx); err != nil {
+			serverErrChan <- err
+		}
+	}()
+
+	// Wait for shutdown signal or server error
+	select {
+	case <-shutdownChan:
+		logger.Info("Received shutdown signal, initiating graceful shutdown...")
+		cancel()
+
+		// Give server time to shutdown gracefully
+		shutdownTimeout := time.NewTimer(30 * time.Second)
+		defer shutdownTimeout.Stop()
+
+		select {
+		case <-serverErrChan:
+			logger.Info("Server shutdown completed")
+		case <-shutdownTimeout.C:
+			logger.Info("Server shutdown timeout exceeded")
+		}
+
+	case err := <-serverErrChan:
+		if err != nil {
+			logger.Error("Server error", zap.Error(err))
+		}
+		cancel()
 	}
+
+	logger.Info("Application stopped gracefully")
+
+	// Host := "localhost"
+	// Port := "8020"
+
+	// // Setup Swagger
+	// // Start server
+	// addr := fmt.Sprintf("%s:%s", Host, Port)
+	// logger.Info(fmt.Sprintf("Starting HTTP server at %s...", addr))
+	// Start server
+	// addr := fmt.Sprintf("%s:%s", Host, Port)
+	// logger.Info(fmt.Sprintf("Starting HTTP server at %s...", addr))
+
+	// if err := apiSvc.Engine().Run(fmt.Sprintf("%s:%s", Host, Port)); err != nil {
+	// 	logger.Fatal(fmt.Sprintf("Server error: %s", err))
+	// }
 }

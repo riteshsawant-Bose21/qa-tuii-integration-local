@@ -16,10 +16,12 @@ import (
 	model "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
 )
 
+// Service is a service for managing projects in the database.
 type Service struct {
 	db *sql.DB
 }
 
+// NewService creates a new database service.
 func NewService(db *sql.DB) *Service {
 	if db == nil {
 		panic("db cannot be nil")
@@ -30,6 +32,7 @@ func NewService(db *sql.DB) *Service {
 	}
 }
 
+// Insert inserts a new project into the database.
 func (s *Service) Insert(ctx context.Context, project *fusion.Project) error {
 	if project == nil {
 		return errors.New("project cannot be nil")
@@ -68,7 +71,8 @@ func (s *Service) Insert(ctx context.Context, project *fusion.Project) error {
 	return nil
 }
 
-func (s *Service) GetByID(ctx context.Context, id string) (*fusion.Project, error) {
+// SelectByID retrieves a project by its ID.
+func (s *Service) SelectByID(ctx context.Context, id string) (*fusion.Project, error) {
 	if id == "" {
 		return nil, errors.New("id cannot be empty")
 	}
@@ -86,7 +90,8 @@ func (s *Service) GetByID(ctx context.Context, id string) (*fusion.Project, erro
 	return project, nil
 }
 
-func (s *Service) GetAll(ctx context.Context) ([]*fusion.Project, error) {
+// SelectAll retrieves all projects from the database.
+func (s *Service) SelectAll(ctx context.Context) ([]*fusion.Project, error) {
 	// Retrieve all projects from the database.
 
 	var q []qm.QueryMod
@@ -109,6 +114,7 @@ func (s *Service) GetAll(ctx context.Context) ([]*fusion.Project, error) {
 	return projects, nil
 }
 
+// Update updates an existing project in the database.
 func (s *Service) Update(ctx context.Context, id string, project *fusion.Project) error {
 	if id == "" {
 		return errors.New("id cannot be empty")
@@ -151,6 +157,7 @@ func (s *Service) Update(ctx context.Context, id string, project *fusion.Project
 	return nil
 }
 
+// Delete removes a project by its ID.
 func (s *Service) Delete(ctx context.Context, id string) error {
 	if id == "" {
 		return errors.New("id cannot be empty")
@@ -169,6 +176,7 @@ func (s *Service) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
+// SyncProject synchronizes project data across different systems.
 func (s *Service) SyncProject(ctx context.Context, projectID string, metaData map[string]interface{}, zipFileURL string) error {
 	if projectID == "" {
 		return errors.New("projectID cannot be empty")

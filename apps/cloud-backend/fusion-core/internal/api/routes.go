@@ -1,10 +1,17 @@
 package api
 
-import "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/handler"
+import (
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/handler"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+)
 
 // registerRoutes sets up the API routes.
 func (a *API) registerRoutes() {
 	v1 := a.engine.Group("/api/v1")
+
+	// Swagger documentation route
+	a.engine.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// Product routes
 	productHandler := handler.NewProductHandler(a.product)
@@ -19,8 +26,8 @@ func (a *API) registerRoutes() {
 	projects := v1.Group("/projects")
 	{
 		projects.POST("", projectHandler.CreateProject)
-		projects.GET("/:id", projectHandler.GetProject)
-		projects.GET("", projectHandler.GetProjects) // Optional: List all projects
+		projects.GET("/:id", projectHandler.GetProjectByID)
+		projects.GET("", projectHandler.GetAllProjects) // Optional: List all projects
 		projects.PATCH("/:id", projectHandler.UpdateProject)
 		projects.DELETE("/:id", projectHandler.DeleteProject)
 
