@@ -338,11 +338,19 @@ extern "C" int mace_get_spl_at(EngineHandle /*e*/,
                                int bandwidth,
                                double freqHz,
                                double* outLevels,
-                               double* actualFreqHz)
+                               double* actualFreqHz,
+                               const char* weighting)
 {
 
     if (actualFreqHz) *actualFreqHz = 0.0;
     if (!outLevels) return 0;
+
+    auto normWeight = [&](const char* w)->std::string {
+        if (!w || !*w) return "Z";
+        char c = (char)std::toupper((unsigned char)*w);
+        return (c=='A' || c=='C' || c=='Z') ? std::string(1, c) : "Z";
+    };
+    const std::string w = normWeight(weighting);
 
     auto data = EngineFactory::GetEngine()->GetData(fph);
     if (!data) return 0;
@@ -362,7 +370,7 @@ extern "C" int mace_get_spl_at(EngineHandle /*e*/,
     // Band sums (ignore freq)
     if (bw == Bandwidth::Broadband || bw == Bandwidth::VocalBands) {
         Freqs empty;
-        data->getData()->GetSPL(pd, bw, empty);
+        data->getData()->GetSPL(pd, bw, empty, "", w, true);
         return writeScalar(pd);
     }
 
@@ -370,7 +378,7 @@ extern "C" int mace_get_spl_at(EngineHandle /*e*/,
     // 1) Try single-frequency (fast)
     if (freqHz > 0.0) {
         Freqs one{freqHz};
-        data->getData()->GetSPL(pd, bw, one);
+        data->getData()->GetSPL(pd, bw, one, "", w, true);
         if (!pd.empty() && !pd[0].second.empty()) {
             if (actualFreqHz) *actualFreqHz = freqHz;
             const int n = (int)pd.size();
@@ -394,7 +402,7 @@ extern "C" int mace_get_spl_at(EngineHandle /*e*/,
         for (double f : iso) push(f);
     }
 
-    data->getData()->GetSPL(pd, bw, freqs);
+    data->getData()->GetSPL(pd, bw, freqs, "", w, true);
     if (pd.empty() || pd[0].second.empty()) return 0;
 
     int bestIdx = 0;

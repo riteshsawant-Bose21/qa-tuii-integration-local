@@ -22,6 +22,7 @@ class FloorCanvas extends StatefulWidget {
   final FloorModel floor;
   final double splMin;
   final double splMax;
+  final SplPanelData splPanelData;
 
   final FloorCanvasController controller;
 
@@ -67,6 +68,7 @@ class FloorCanvas extends StatefulWidget {
     required this.splMax,
     required this.moveHardware,
     required this.addNewHardwareComponent,
+    required this.splPanelData,
   });
 
   @override
@@ -223,6 +225,7 @@ class FloorCanvasState extends State<FloorCanvas> {
                     selectedListeningAreaIds: widget.controller.selectedListeningAreas.map((ListeningArea s) => s.id).toList(),
                     splMax: widget.splMax,
                     splMin: widget.splMin,
+                    splPanelData: widget.splPanelData,
                   ),
                 ),
               ),

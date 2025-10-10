@@ -9,8 +9,8 @@ import 'spl_range_controller.dart';
 
 /// Weighting options for SPL measurements
 enum SplWeighting {
-  aWeighted('Direct SPL (A-Weighted)'),
-  zWeighted('Direct SPL (Z)'),
+  aWeighted('A-Weighted'),
+  zWeighted('Z-Weighted'),
   cWeighted('C-Weighted');
 
   const SplWeighting(this.displayName);
@@ -128,16 +128,16 @@ extension SplEnumExtensions on Object {
 
 /// Panel widget for configuring SPL mapping attributes
 class SplPanel extends StatefulWidget {
-  const SplPanel({
-    super.key,
-    this.initial = const SplPanelData(),
-    this.onChanged,
-    this.controller,
-  });
-
-  final SplPanelData initial;
   final ValueChanged<SplPanelData>? onChanged;
   final SplRangeController? controller;
+  final SplPanelData initialData;
+
+  const SplPanel({
+    super.key,
+    this.onChanged,
+    this.controller,
+    required this.initialData,
+  });
 
   @override
   State<SplPanel> createState() => _SplPanelState();
@@ -151,9 +151,9 @@ class _SplPanelState extends State<SplPanel> {
   SplResolution _resolution = SplResolution.low;
 
   // SPL Range
-  bool _splExpanded = true;
   bool _splAutoScale = false;
   bool _splInvert = false;
+  bool _relativeDb = false;
   final TextEditingController _splUpper = TextEditingController();
   final TextEditingController _splLower = TextEditingController();
   final FocusNode _splUpperFocusNode = FocusNode();
@@ -243,7 +243,7 @@ class _SplPanelState extends State<SplPanel> {
   @override
   void initState() {
     super.initState();
-    final SplPanelData i = widget.initial;
+    final SplPanelData i = widget.initialData;
     _weighting = i.weighting;
     _frequency = i.frequency;
     _bandwidth = i.bandwidth;
@@ -251,6 +251,7 @@ class _SplPanelState extends State<SplPanel> {
 
     _splAutoScale = i.splAutoScale;
     _splInvert = i.splInvertColor;
+    _relativeDb = i.relative;
 
     // Initialize text fields with controller values if available, otherwise use initial data
     if (widget.controller != null) {
@@ -433,6 +434,7 @@ class _SplPanelState extends State<SplPanel> {
         splInvertColor: _splInvert,
         splUpperDb: double.parse(_splUpper.text).clamp(36.0, 132.0),
         splLowerDb: double.parse(_splLower.text).clamp(36.0, 132.0),
+        relative: _relativeDb,
       ),
     );
   }
@@ -569,85 +571,68 @@ class _SplPanelState extends State<SplPanel> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
 
-                // Light divider after top selectors
-                Divider(
-                  height: 1,
-                  thickness: 0.5,
-                  color: Colors.grey.shade300,
-                ),
-                const SizedBox(height: 16),
-
-                Text(
-                  'Scaling for Mapping',
-                  style: labelStyle?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                    color: Colors.black87,
-                  ),
+                _toggleRow(
+                  label: 'Relative (±6 dB)',
+                  value: _relativeDb,
+                  onChanged: (bool v) {
+                    setState(() => _relativeDb = v);
+                    _emit();
+                  },
                 ),
 
-                // SPL Range section
-                _Section(
-                  title: 'SPL Range',
-                  initiallyExpanded: _splExpanded,
-                  onExpansionChanged: (bool v) => setState(() => _splExpanded = v),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      _toggleRow(
-                        label: 'Scale Automatically',
-                        value: _splAutoScale,
-                        onChanged: (bool v) {
-                          setState(() => _splAutoScale = v);
-                          _emit();
+                const SizedBox(height: 6),
+
+                Table(
+                  columnWidths: const <int, TableColumnWidth>{0: col0, 1: FlexColumnWidth()},
+                  defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                  children: <TableRow>[
+                    _row(
+                      label: 'Upper Limit (dB)',
+                      labelStyle: labelStyle,
+                      control: _tf(
+                        controller: _splUpper,
+                        focusNode: _splUpperFocusNode,
+                        hint: 'Value',
+                        enabled: !_splAutoScale,
+                        onSubmitted: (value) {
+                          _submitSpl(isUpper: true);
                         },
                       ),
-                      const SizedBox(height: 8),
-                      Table(
-                        columnWidths: const <int, TableColumnWidth>{0: col0, 1: FlexColumnWidth()},
-                        defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                        children: <TableRow>[
-                          _row(
-                            label: 'Upper Limit (dB)',
-                            labelStyle: labelStyle,
-                            control: _tf(
-                              controller: _splUpper,
-                              focusNode: _splUpperFocusNode,
-                              hint: 'Value',
-                              enabled: !_splAutoScale,
-                              onSubmitted: (value) {
-                                _submitSpl(isUpper: true);
-                              },
-                            ),
-                          ),
-                          _row(
-                            label: 'Lower Limit (dB)',
-                            labelStyle: labelStyle,
-                            control: _tf(
-                              controller: _splLower,
-                              focusNode: _splLowerFocusNode,
-                              hint: 'Value',
-                              enabled: !_splAutoScale,
-                              onSubmitted: (value) {
-                                _submitSpl(isUpper: false);
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      _toggleRow(
-                        label: 'Invert Color Scale',
-                        value: _splInvert,
-                        onChanged: (bool v) {
-                          setState(() => _splInvert = v);
-                          _emit();
+                    ),
+                    _row(
+                      label: 'Lower Limit (dB)',
+                      labelStyle: labelStyle,
+                      control: _tf(
+                        controller: _splLower,
+                        focusNode: _splLowerFocusNode,
+                        hint: 'Value',
+                        enabled: !_splAutoScale,
+                        onSubmitted: (value) {
+                          _submitSpl(isUpper: false);
                         },
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 6),
+
+                _toggleRow(
+                  label: 'Scale Automatically',
+                  value: _splAutoScale,
+                  onChanged: (bool v) {
+                    setState(() => _splAutoScale = v);
+                    _emit();
+                  },
+                ),
+                _toggleRow(
+                  label: 'Invert Color Scale',
+                  value: _splInvert,
+                  onChanged: (bool v) {
+                    setState(() => _splInvert = v);
+                    _emit();
+                  },
                 ),
               ],
             ),
@@ -770,16 +755,18 @@ class SplPanelData {
   final bool splInvertColor;
   final double splUpperDb;
   final double splLowerDb;
+  final bool relative;
 
   const SplPanelData({
-    this.weighting = SplWeighting.aWeighted,
+    this.weighting = SplWeighting.zWeighted,
     this.frequency = SplFrequency.hz2000,
-    this.bandwidth = SplBandwidth.vocal,
+    this.bandwidth = SplBandwidth.allBands,
     this.resolution = SplResolution.medium,
     this.splAutoScale = false,
     this.splInvertColor = false,
-    this.splUpperDb = 90,
-    this.splLowerDb = 45,
+    this.splUpperDb = 63,
+    this.splLowerDb = 36,
+    this.relative = false,
   });
 
   SplPanelData copyWith({
@@ -791,6 +778,7 @@ class SplPanelData {
     bool? splInvertColor,
     double? splUpperDb,
     double? splLowerDb,
+    bool? relativeDb,
   }) {
     return SplPanelData(
       weighting: weighting ?? this.weighting,
@@ -801,14 +789,26 @@ class SplPanelData {
       splInvertColor: splInvertColor ?? this.splInvertColor,
       splUpperDb: splUpperDb ?? this.splUpperDb,
       splLowerDb: splLowerDb ?? this.splLowerDb,
+      relative: relativeDb ?? relative,
     );
+  }
+
+  double getResolutionSpacing() {
+    switch (resolution) {
+      case SplResolution.low:
+        return 40;
+      case SplResolution.medium:
+        return 20;
+      case SplResolution.high:
+        return 10;
+    }
   }
 
   @override
   String toString() =>
       'SplPanelData(weighting:${weighting.displayName}, frequency:${frequency.displayName}, bandwidth:${bandwidth.displayName}, resolution:${resolution.displayName}, '
       'splAuto:$splAutoScale, splInv:$splInvertColor, '
-      'splU:$splUpperDb, splL:$splLowerDb)';
+      'splU:$splUpperDb, splL:$splLowerDb, relativeDb:$relative)';
 }
 
 /// Collapsible section widget for organizing content

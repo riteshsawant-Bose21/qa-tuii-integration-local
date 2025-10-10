@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/api_data/speakers/speaker_catalog.dart';
+import 'package:fusion_lib/fusion_building_view/spl_panel.dart';
 import 'package:fusion_lib/fusion_utils/color_utils.dart';
 import 'package:fusion_lib/models/project_entities/zone_model.dart';
 
@@ -34,6 +35,7 @@ class FloorCanvasPainter extends CustomPainter {
   final List<String> selectedListeningAreaIds;
   final List<Zone> zones;
   Zone? currentlySelectingZone;
+  final SplPanelData splPanelData;
 
   FloorCanvasPainter({
     required this.gridSize,
@@ -56,6 +58,7 @@ class FloorCanvasPainter extends CustomPainter {
     this.previewPoint,
     this.highlightedIndex,
     this.selectedHardwareComponentId,
+    required this.splPanelData,
   });
 
   @override
@@ -64,9 +67,15 @@ class FloorCanvasPainter extends CustomPainter {
     canvas.translate(panOffset.dx, panOffset.dy);
     canvas.scale(zoomScale);
 
-    _drawHeatMap(canvas);
-    _drawFloorPlanImage(canvas);
-    _drawGrid(canvas, size);
+    if (showSpl) {
+      _drawGrid(canvas, size);
+      _drawHeatMap(canvas);
+      _drawFloorPlanImage(canvas);
+    } else {
+      _drawFloorPlanImage(canvas);
+      _drawGrid(canvas, size);
+    }
+
     _drawFloorPlanImageHandles(canvas);
     _drawListeningAreas(canvas);
     _drawHardwareComponents(canvas);
@@ -165,8 +174,8 @@ class FloorCanvasPainter extends CustomPainter {
     // draw base image and inverted-luminance mask
     canvas.saveLayer(dst, Paint());
     canvas.drawImageRect(floorPlanImage!, src, dst, Paint());
-    const List<double> invLum = <double>[1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, -0.2126, -0.7152, -0.0722, 1, 0];
 
+    const List<double> invLum = <double>[1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, -0.2126, -0.7152, -0.0722, 1, 0];
     Paint floorPlanPaint = Paint();
 
     if (showSpl) {
@@ -582,7 +591,13 @@ class FloorCanvasPainter extends CustomPainter {
     final int i0 = idx.floor().clamp(0, n - 1);
     final int i1 = idx.ceil().clamp(0, n - 1);
     final double f = idx - i0;
-    return Color.lerp(SPLCalculationData.legendColors[i0], SPLCalculationData.legendColors[i1], f)!;
+
+    List<Color> colors = SPLCalculationData.legendColors;
+    if (splPanelData.splInvertColor) {
+      colors = colors.reversed.toList();
+    }
+
+    return Color.lerp(colors[i0], colors[i1], f)!;
   }
 
   @override

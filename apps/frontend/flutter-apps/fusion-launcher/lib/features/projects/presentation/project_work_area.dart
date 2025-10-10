@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/core/spl_calculation/ffi_mace.dart' show Bandwidth, Weighting;
 import 'package:fusion_launcher/features/bill_of_materials/presentation/bill_of_materials_page.dart';
 import 'package:fusion_launcher/features/configuration/presentation/pages/audio_system_design_page.dart';
 import 'package:fusion_launcher/features/product_query/presentation/pages/product_query.dart';
@@ -18,7 +19,6 @@ import 'package:fusion_lib/models/dock_item_config.dart';
 import '../../../../core/spl_calculation/mace_calculation_manager.dart';
 import '../../../../core/spl_calculation/mace_engine_provider.dart';
 import '../../../core/service_locator.dart';
-import '../../../core/spl_calculation/ffi_mace.dart' show Bandwidth;
 import '../../../core/utils/broadcast_controllers.dart';
 import '../../../core/widgets/clean_widgets.dart';
 import '../../cloud_ui/presentation/pages/cloud_web_view.dart';
@@ -48,7 +48,6 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
   String? _projectNameError;
 
   final SplRangeController _splRangeController = SplRangeController();
-
   final FloorCanvasController _floorCanvasController = FloorCanvasController();
   MaceEngine? _engine;
 
@@ -100,12 +99,31 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
   void _updateSPLFromPanelData() {
     final SplPanelData currentPanelData = _splRangeController.getPanelData();
     if (_lastPanelData != currentPanelData) {
+      // if resolution changed, need to recalculate all SPLs
+      if (_lastPanelData?.resolution != currentPanelData.resolution) {
+        _lastPanelData = currentPanelData;
+        calculateSPL();
+        return;
+      }
       _lastPanelData = currentPanelData;
       final Bandwidth maceBandwidth = _mapToMaceBandwidth(currentPanelData.bandwidth);
       final double frequency = currentPanelData.frequency.frequencyValue.toDouble();
+      final Weighting weighting = _mapToMaceWeighting(currentPanelData.weighting);
       serviceLocator<ProjectViewModel>().setMinSPL(currentPanelData.splLowerDb);
       serviceLocator<ProjectViewModel>().setMaxSPL(currentPanelData.splUpperDb);
-      updateSpl(maceBandwidth, frequency);
+      updateSpl(maceBandwidth, frequency, weighting, currentPanelData.relative);
+      setState(() {}); // <-- Trigger rebuild
+    }
+  }
+
+  Weighting _mapToMaceWeighting(SplWeighting w) {
+    switch (w) {
+      case SplWeighting.aWeighted:
+        return Weighting.a;
+      case SplWeighting.cWeighted:
+        return Weighting.c;
+      case SplWeighting.zWeighted:
+        return Weighting.z;
     }
   }
 
@@ -137,15 +155,21 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
     );
     final List<ListeningArea> surfaces = serviceLocator<ProjectViewModel>().getListeningAreasForFloor(currentFloor.id);
 
-    await SPLCalculationManager.calculateSpl(_engine!, speakers, surfaces);
+    await SPLCalculationManager.calculateSpl(_engine!, speakers, surfaces, _lastPanelData!.getResolutionSpacing());
 
     final SplPanelData currentPanelData = _splRangeController.getPanelData();
     final Bandwidth maceBandwidth = _mapToMaceBandwidth(currentPanelData.bandwidth);
+    final Weighting weighting = _mapToMaceWeighting(currentPanelData.weighting);
     final double frequency = currentPanelData.frequency.frequencyValue.toDouble();
-    await updateSpl(maceBandwidth, frequency);
+    await updateSpl(maceBandwidth, frequency, weighting, currentPanelData.relative);
   }
 
-  Future<void> updateSpl(Bandwidth bw, double frequency) async {
+  Future<void> updateSpl(
+    Bandwidth bw,
+    double frequency,
+    Weighting weighting,
+    bool relative,
+  ) async {
     if (_engine == null) return;
     if (!_floorCanvasController.isShowingSpl.value) return;
 
@@ -166,13 +190,16 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
         sc.fphHandle,
         bw,
         (bw == Bandwidth.oneThirdOctave || bw == Bandwidth.oneOctave) ? frequency : 2000,
+        weighting,
+        relative,
+        _lastPanelData?.getResolutionSpacing() ?? 20.0,
       );
 
       toApply.addAll(updated);
     }
 
     for (final SPLCalculation calc in toApply) {
-      final List<ui.Offset> pts = calc.surface.getFieldPoints();
+      final List<ui.Offset> pts = calc.surface.getFieldPoints(_lastPanelData?.getResolutionSpacing() ?? 20.0);
       calc.surface.setSplData(pts, calc.spl);
     }
   }
@@ -433,7 +460,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                               },
                               floorCanvasController: _floorCanvasController,
                               onCalculateSpl: calculateSPL,
-                              onUpdateSpl: updateSpl,
+                              splPanelData: _lastPanelData!,
                             );
                           },
                         ),
@@ -542,10 +569,12 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                             dockItemWidget:
                                 () => SplPanel(
                                   controller: _splRangeController,
+                                  initialData: _lastPanelData!,
                                   onChanged: (SplPanelData value) {
-                                    // FusionLogger.log(tag: LogTag.panel, message: value.toString());
+                                    FusionLogger.log(tag: LogTag.panel, message: value.toString());
                                     _splRangeController.onMappingDataChanged(value);
                                     _updateSPLFromPanelData();
+                                    setState(() {});
                                   },
                                 ),
                           ),

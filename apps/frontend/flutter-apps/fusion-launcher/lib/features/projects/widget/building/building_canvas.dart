@@ -11,6 +11,7 @@ import 'package:fusion_launcher/core/utils/fusion_utils.dart';
 import 'package:fusion_lib/fusion_building_view/floor_canvas.dart';
 import 'package:fusion_lib/fusion_building_view/floor_canvas_controller.dart';
 import 'package:fusion_lib/fusion_building_view/floor_plan_calibrator.dart';
+import 'package:fusion_lib/fusion_building_view/spl_panel.dart';
 import 'package:fusion_lib/fusion_building_view/spl_range_controller.dart';
 import 'package:fusion_lib/fusion_building_view/spl_range_slider.dart';
 import 'package:fusion_lib/fusion_utils/image_loader_service.dart';
@@ -19,7 +20,6 @@ import 'package:fusion_lib/fusion_widgets/others/fusion_image.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
 
-import '../../../../core/spl_calculation/ffi_mace.dart' show Bandwidth;
 import '../../../../core/widgets/clean_widgets.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import 'toolbar/building_toolbar.dart';
@@ -29,7 +29,7 @@ class BuildingCanvas extends StatefulWidget {
   final Function(bool isShowing) onSplStateChanged;
   final FloorCanvasController floorCanvasController;
   final Future<void> Function() onCalculateSpl;
-  final Future<void> Function(Bandwidth, double)? onUpdateSpl;
+  final SplPanelData splPanelData;
 
   const BuildingCanvas({
     super.key,
@@ -37,7 +37,7 @@ class BuildingCanvas extends StatefulWidget {
     required this.onSplStateChanged,
     required this.floorCanvasController,
     required this.onCalculateSpl,
-    this.onUpdateSpl,
+    required this.splPanelData,
   });
 
   @override
@@ -184,6 +184,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                               floorPlanEntity: floor.floorPlan,
                               onUpdateHardwareComponent: serviceLocator<ProjectViewModel>().updateHardware,
                               zones: serviceLocator<ProjectViewModel>().zones,
+                              splPanelData: widget.splPanelData,
                               onCanvasZoomChanged: (double z) {
                                 serviceLocator<ProjectViewModel>().updateFloor(
                                   floor.copyWith(floorPlan: floor.floorPlan.copyWith(canvasZoom: z)),
@@ -469,6 +470,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                             controller: widget.splRangeController,
                             minValue: serviceLocator<ProjectViewModel>().minSPL,
                             maxValue: serviceLocator<ProjectViewModel>().maxSPL,
+                            invertedColors: widget.splPanelData.splInvertColor,
                             onChanged: (double min, double max) {
                               // debugPrint("SPL Range changed: ${min.round()} - ${max.round()}");
                               serviceLocator<ProjectViewModel>().setMinSPL(min);

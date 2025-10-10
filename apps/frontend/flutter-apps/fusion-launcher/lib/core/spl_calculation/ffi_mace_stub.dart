@@ -27,5 +27,6 @@ class MaceEngine {
 
   List<double> getSplForBandwidth(int fph, int freqHz, int numPoints) => throw UnsupportedError('FFI is not supported on this platform.');
   Map<String, dynamic> getAllSplJson(int fph) => throw UnsupportedError('FFI is not supported on this platform.');
-  List<double> getSplAt(int fph, int bandwidth, double freqHz, int pointCount) => throw UnsupportedError('FFI is not supported on this platform.');
+  List<double> getSplAt(int fph, int bandwidth, double freqHz, int pointCount, String weighting) =>
+      throw UnsupportedError('FFI is not supported on this platform.');
 }

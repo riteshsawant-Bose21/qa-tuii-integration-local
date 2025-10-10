@@ -14,6 +14,12 @@ enum Bandwidth {
   allBands,
 }
 
+enum Weighting {
+  a,
+  c,
+  z,
+}
+
 /// Load the dylib from the app bundle’s Frameworks folder
 final DynamicLibrary _mace = () {
   if (Platform.isMacOS) {
@@ -66,8 +72,8 @@ typedef DartGetSpl = int Function(int, int, Pointer<Double>, int);
 typedef GetAllSplJsonNative = Pointer<Utf8> Function(Uint64, Uint64);
 typedef GetAllSplJsonDart = Pointer<Utf8> Function(int, int);
 
-typedef GetSplAt = Int32 Function(Uint64, Uint64, Int32, Double, Pointer<Double>, Pointer<Double>);
-typedef DartGetSplAt = int Function(int, int, int, double, Pointer<Double>, Pointer<Double>);
+typedef GetSplAt = Int32 Function(Uint64, Uint64, Int32, Double, Pointer<Double>, Pointer<Double>, Pointer<Utf8>);
+typedef DartGetSplAt = int Function(int, int, int, double, Pointer<Double>, Pointer<Double>, Pointer<Utf8>);
 
 typedef DebugSpeakers = Void Function();
 typedef DartDebugSpeakers = void Function();
@@ -304,11 +310,20 @@ class MaceEngine {
     int bandwidth,
     double freqHz,
     int pointCount,
+    String weighting,
   ) {
     final Pointer<Double> out = calloc<Double>(pointCount);
     final Pointer<Double> act = calloc<Double>(1);
     try {
-      final int n = maceGetSplAt(_handle, fph, bandwidth, freqHz, out, act);
+      final int n = maceGetSplAt(
+        _handle,
+        fph,
+        bandwidth,
+        freqHz,
+        out,
+        act,
+        weighting.toNativeUtf8(),
+      );
       final double usedHz = act.value; // show in UI if you want
       final List<double> list = List<double>.generate(n, (int i) => out[i]);
       // Optionally: return usedHz too (tuple)

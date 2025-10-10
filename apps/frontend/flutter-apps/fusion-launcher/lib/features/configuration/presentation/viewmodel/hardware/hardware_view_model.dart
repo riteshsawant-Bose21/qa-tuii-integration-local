@@ -131,12 +131,13 @@ extension HardwareViewModel on ProjectViewModel {
           locationEntity: locationEntity,
           name: product.name,
           pos: pos,
-          zAxis: 10.0,
+          zAxis: 300.0, // 200 cm default height
           speakerSKU: product.sku,
-          gain: 30.0,
+          gain: 20.0,
           assetImagePath: product.image,
           type: OutputType.analogOutput,
           price: product.price,
+          pitch: product.mountingType == "pendant" ? 90.0 : 0.0,
         );
       case ProductType.sources:
         return Source(
