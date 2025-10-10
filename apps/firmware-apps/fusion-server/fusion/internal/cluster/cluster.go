@@ -240,6 +240,9 @@ func (c *Cluster) startVRRPListener() error {
 	if err := network.StartVRRPListener(c.listenerUpdated); err != nil {
 		return fmt.Errorf("unable to start keepalived listener: %v", err)
 	}
+
+	//go c.watchLocalVIP()
+
 	return nil
 }
 
