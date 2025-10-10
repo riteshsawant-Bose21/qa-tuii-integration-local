@@ -114,5 +114,39 @@
             "name": "play_message",
             "value": "{ \"filename\": \"file3.wav\", \"priority\": 100 }"
         }
+    ],
+    "task_connections": [
+        {
+            "source_task": "task1",
+            "output_block": "outfile",
+            "output_channel": 1,
+            "destination_task": "system",
+            "input_block": "playback",
+            "input_channel": 1
+        },
+        {
+            "source_task": "task1",
+            "output_block": "outfile",
+            "output_channel": 2,
+            "destination_task": "system",
+            "input_block": "playback",
+            "input_channel": 2
+        },
+        {
+            "source_task": "task1",
+            "output_block": "outfile",
+            "output_channel": 3,
+            "destination_task": "system",
+            "input_block": "playback",
+            "input_channel": 1
+        },
+        {
+            "source_task": "task1",
+            "output_block": "outfile",
+            "output_channel": 4,
+            "destination_task": "system",
+            "input_block": "playback",
+            "input_channel": 2
+        }
     ]
 }
