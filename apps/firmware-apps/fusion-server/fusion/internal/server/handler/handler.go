@@ -160,5 +160,5 @@ func (h *Handler) handleConfigUpdate(data map[string]any, clear bool) error {
 		api.WithConfigUpdate(configUpdate),
 	)
 
-	return h.broadcastUpdate(message)
+	return h.broadcastMessage(message)
 }

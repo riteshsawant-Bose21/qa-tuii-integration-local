@@ -125,7 +125,9 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
               // Hardware name input field
               TextFormField(
                 initialValue: widget.selectedHardware.name,
+                maxLength: 24,
                 decoration: const InputDecoration(
+                  counterText: "",
                   hintText: 'Hardware Name',
                   border: InputBorder.none,
                 ),
@@ -173,7 +175,9 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                             IntrinsicWidth(
                               child: TextFormField(
                                 controller: xController,
+                                maxLength: 24,
                                 decoration: const InputDecoration(
+                                  counterText: "",
                                   hintText: 'X',
                                   border: InputBorder.none,
                                   suffixText: "m",
@@ -218,7 +222,9 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                             IntrinsicWidth(
                               child: TextFormField(
                                 controller: yController,
+                                maxLength: 24,
                                 decoration: const InputDecoration(
+                                  counterText: "",
                                   hintText: 'Y',
                                   border: InputBorder.none,
                                   isDense: true,
@@ -263,7 +269,9 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                             IntrinsicWidth(
                               child: TextFormField(
                                 controller: zController,
+                                maxLength: 24,
                                 decoration: const InputDecoration(
+                                  counterText: "",
                                   hintText: 'Z',
                                   border: InputBorder.none,
                                   isDense: true,

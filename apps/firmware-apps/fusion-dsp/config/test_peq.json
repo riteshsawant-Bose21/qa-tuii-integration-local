@@ -69,23 +69,338 @@
     ],
     "parameter_settings": [
         {
+            "_comment": "Band 1: Standard PEQ - boost at 100Hz",
             "target": "peq",
-            "name": "gain",
+            "name": "type",
             "index": [1],
-            "value": 15.0
+            "value": "peq"
         },
         {
             "target": "peq",
             "name": "frequency",
             "index": [1],
-            "value": 1000.0
+            "value": 100.0
         },
         {
             "target": "peq",
             "name": "q",
             "index": [1],
+            "value": 2.0
+        },
+        {
+            "target": "peq",
+            "name": "gain",
+            "index": [1],
+            "value": 6.0
+        },
+        {
+            "target": "peq",
+            "name": "band_enable",
+            "index": [1],
+            "value": true
+        },
+
+        {
+            "_comment": "Band 2: Standard PEQ - cut at 250Hz",
+            "target": "peq",
+            "name": "type",
+            "index": [2],
+            "value": "peq"
+        },
+        {
+            "target": "peq",
+            "name": "frequency",
+            "index": [2],
+            "value": 250.0
+        },
+        {
+            "target": "peq",
+            "name": "q",
+            "index": [2],
             "value": 1.414
+        },
+        {
+            "target": "peq",
+            "name": "gain",
+            "index": [2],
+            "value": -4.0
+        },
+        {
+            "target": "peq",
+            "name": "band_enable",
+            "index": [2],
+            "value": true
+        },
+
+        {
+            "_comment": "Band 3: Low Shelf at 200Hz",
+            "target": "peq",
+            "name": "type",
+            "index": [3],
+            "value": "low_shelf"
+        },
+        {
+            "target": "peq",
+            "name": "frequency",
+            "index": [3],
+            "value": 200.0
+        },
+        {
+            "target": "peq",
+            "name": "q",
+            "index": [3],
+            "value": 0.707
+        },
+        {
+            "target": "peq",
+            "name": "gain",
+            "index": [3],
+            "value": 3.0
+        },
+        {
+            "target": "peq",
+            "name": "band_enable",
+            "index": [3],
+            "value": true
+        },
+
+        {
+            "_comment": "Band 4: High Shelf at 8kHz",
+            "target": "peq",
+            "name": "type",
+            "index": [4],
+            "value": "high_shelf"
+        },
+        {
+            "target": "peq",
+            "name": "frequency",
+            "index": [4],
+            "value": 8000.0
+        },
+        {
+            "target": "peq",
+            "name": "q",
+            "index": [4],
+            "value": 0.707
+        },
+        {
+            "target": "peq",
+            "name": "gain",
+            "index": [4],
+            "value": 4.0
+        },
+        {
+            "target": "peq",
+            "name": "band_enable",
+            "index": [4],
+            "value": true
+        },
+
+        {
+            "_comment": "Band 5: High Pass at 80Hz",
+            "target": "peq",
+            "name": "type",
+            "index": [5],
+            "value": "high_pass"
+        },
+        {
+            "target": "peq",
+            "name": "frequency",
+            "index": [5],
+            "value": 80.0
+        },
+        {
+            "target": "peq",
+            "name": "q",
+            "index": [5],
+            "value": 0.707
+        },
+        {
+            "target": "peq",
+            "name": "gain",
+            "index": [5],
+            "value": 0.0
+        },
+        {
+            "target": "peq",
+            "name": "band_enable",
+            "index": [5],
+            "value": true
+        },
+
+        {
+            "_comment": "Band 6: Low Pass at 12kHz",
+            "target": "peq",
+            "name": "type",
+            "index": [6],
+            "value": "low_pass"
+        },
+        {
+            "target": "peq",
+            "name": "frequency",
+            "index": [6],
+            "value": 12000.0
+        },
+        {
+            "target": "peq",
+            "name": "q",
+            "index": [6],
+            "value": 0.707
+        },
+        {
+            "target": "peq",
+            "name": "gain",
+            "index": [6],
+            "value": 0.0
+        },
+        {
+            "target": "peq",
+            "name": "band_enable",
+            "index": [6],
+            "value": true
+        },
+
+        {
+            "_comment": "Band 7: Notch filter at 1kHz",
+            "target": "peq",
+            "name": "type",
+            "index": [7],
+            "value": "notch"
+        },
+        {
+            "target": "peq",
+            "name": "frequency",
+            "index": [7],
+            "value": 1000.0
+        },
+        {
+            "target": "peq",
+            "name": "q",
+            "index": [7],
+            "value": 10.0
+        },
+        {
+            "target": "peq",
+            "name": "gain",
+            "index": [7],
+            "value": 0.0
+        },
+        {
+            "target": "peq",
+            "name": "band_enable",
+            "index": [7],
+            "value": true
+        },
+
+        {
+            "_comment": "Band 8: Another PEQ at 2.5kHz",
+            "target": "peq",
+            "name": "type",
+            "index": [8],
+            "value": "peq"
+        },
+        {
+            "target": "peq",
+            "name": "frequency",
+            "index": [8],
+            "value": 2500.0
+        },
+        {
+            "target": "peq",
+            "name": "q",
+            "index": [8],
+            "value": 1.0
+        },
+        {
+            "target": "peq",
+            "name": "gain",
+            "index": [8],
+            "value": -3.0
+        },
+        {
+            "target": "peq",
+            "name": "band_enable",
+            "index": [8],
+            "value": true
+        },
+
+        {
+            "_comment": "Band 9: Wide notch at 500Hz",
+            "target": "peq",
+            "name": "type",
+            "index": [9],
+            "value": "notch"
+        },
+        {
+            "target": "peq",
+            "name": "frequency",
+            "index": [9],
+            "value": 500.0
+        },
+        {
+            "target": "peq",
+            "name": "q",
+            "index": [9],
+            "value": 2.0
+        },
+        {
+            "target": "peq",
+            "name": "gain",
+            "index": [9],
+            "value": 0.0
+        },
+        {
+            "target": "peq",
+            "name": "band_enable",
+            "index": [9],
+            "value": true
+        },
+
+        {
+            "_comment": "Band 10: Disabled band (for testing bypass functionality)",
+            "target": "peq",
+            "name": "type",
+            "index": [10],
+            "value": "peq"
+        },
+        {
+            "target": "peq",
+            "name": "frequency",
+            "index": [10],
+            "value": 5000.0
+        },
+        {
+            "target": "peq",
+            "name": "q",
+            "index": [10],
+            "value": 1.414
+        },
+        {
+            "target": "peq",
+            "name": "gain",
+            "index": [10],
+            "value": 10.0
+        },
+        {
+            "target": "peq",
+            "name": "band_enable",
+            "index": [10],
+            "value": false
+        },
+
+        {
+            "_comment": "Output gain setting",
+            "target": "peq",
+            "name": "out_gain",
+            "index": [1],
+            "value": -3.0
+        },
+
+        {
+            "_comment": "Bypass setting (false = processing enabled)",
+            "target": "peq",
+            "name": "bypass",
+            "value": false
         }
     ]
 }
-

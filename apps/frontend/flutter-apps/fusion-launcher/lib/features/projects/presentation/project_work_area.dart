@@ -764,12 +764,14 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                     TextField(
                       controller: _projectNameController,
                       focusNode: _projectNameFocusNode,
+                      maxLength: 24,
                       autofocus: true,
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.fusionTextViewColor,
                         fontSize: 12,
                       ),
                       decoration: InputDecoration(
+                        counterText: "",
                         hintText: 'Enter project name',
                         hintStyle: TextStyle(
                           color: Theme.of(context).colorScheme.grey,

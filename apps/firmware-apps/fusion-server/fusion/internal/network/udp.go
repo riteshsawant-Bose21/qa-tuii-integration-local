@@ -18,6 +18,10 @@ type UDPServer struct {
 	clients    map[string]*net.UDPAddr
 	clientsMux sync.RWMutex
 	handler    *handler.Handler
+
+	// Messages waiting for acknowledgement
+	pending    map[string]chan struct{} // messageID -> notify channel
+	pendingMux sync.Mutex
 }
 
 func NewUDPServer(addr string, handler *handler.Handler) (*UDPServer, error) {
@@ -43,11 +47,12 @@ func NewUDPServer(addr string, handler *handler.Handler) (*UDPServer, error) {
 	return srv, nil
 }
 
-func (s *UDPServer) BroadcastUpdate(msg *api.NotifyMessage) error {
+func (s *UDPServer) BroadcastMessage(msg *api.NotifyMessage) error {
 
-	if msg.Operation != api.NotifyOpConfigUpdate {
+	if !msg.IsPublic() {
 		return nil
 	}
+
 	data, err := json.Marshal(msg.ConfigUpdate.Data)
 	if err != nil {
 		return fmt.Errorf("marshal update: %w", err)
@@ -76,9 +81,17 @@ func (s *UDPServer) BroadcastUpdate(msg *api.NotifyMessage) error {
 
 func (s *UDPServer) packetHandler(data []byte, addr *net.UDPAddr) {
 
-	s.clientsMux.Lock()
-	s.clients[addr.String()] = addr
-	s.clientsMux.Unlock()
+	// Handle acknowledgements
+	var msg api.NotifyMessage
+	if err := json.Unmarshal(data, &msg); err == nil && msg.Operation == api.NotifyOpAck {
+		s.pendingMux.Lock()
+		if ch, ok := s.pending[msg.ID]; ok {
+			close(ch)
+			delete(s.pending, msg.ID)
+		}
+		s.pendingMux.Unlock()
+		return
+	}
 
 	resp, err := s.handler.HandleUDPMessage(data)
 	if err != nil {

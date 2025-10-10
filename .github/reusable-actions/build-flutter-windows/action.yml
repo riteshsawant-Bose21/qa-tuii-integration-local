@@ -13,7 +13,15 @@ inputs:
   nexus_url:
     description: 'Nexus repository URL'
     required: true
-        
+  cert_thumbprint:
+    description: 'Certificate thumbprint for code signing'
+    required: true  
+  SM_API_KEY:
+    description: 'Secure Mail API Key for code signing'
+    required: true
+  SM_CLIENT_CERT_PASSWORD:
+    description: 'Secure Mail Client Certificate Password for code signing'
+    required: true      
 runs:
   using: "composite"
   steps:
@@ -46,12 +54,21 @@ runs:
       run: |
         flutter pub get
         moon run flutter-apps:build-win
+        E:\'Program Files (x86)'\NSIS\makensis.exe .\windows\Installer\NSIS\fusion_launcher.nsi
+
+        echo "SM_API_KEY=${{ inputs.SM_API_KEY }}" >> $env:GITHUB_ENV
+        echo "SM_CLIENT_CERT_PASSWORD=${{ inputs.SM_CLIENT_CERT_PASSWORD }}" >> $env:GITHUB_ENV
+        echo "C:\Program Files\DigiCert\DigiCert One Signing Manager Tools\smctl.exe" >> $env:GITHUB_PATH
+
+        $thumbprint = "${{ inputs.cert_thumbprint }}"
+        smctl.exe sign --fingerprint $thumbprint --input ./windows/Installer/NSIS/FusionLauncherInstaller.exe --config-file "C:\Program Files\DigiCert\DigiCert/ One/ Signing/ Manager/ Tools\pkcs11properties.cfg" --description "Fusion Launcher" --timestamp http://timestamp.digicert.com?alg=sha256
+        
         $runNumber = $env:GITHUB_RUN_NUMBER
-        $branchName = $env:GITHUB_REF_NAME
+        $branchName = if ($env:GITHUB_HEAD_REF) { $env:GITHUB_HEAD_REF } else { $env:GITHUB_REF_NAME }
         $version = "${{ steps.get_version.outputs.version }}-$runNumber+$(git rev-parse --short=8 HEAD)"
         Write-Output "VERSION: $version"
 
-        $buildPath = "./build/windows/x64/runner/Release/fusion_design_tool_prototype.exe"
+        $buildPath = "./windows/Installer/NSIS/FusionLauncherInstaller.exe"
         $nexusUrl = "${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/$branchName/$version/flutter-windows/Fusion-Launcher-$version.exe"
         $username = "github-actions-uploader"
         $password = "${{ inputs.nexus_password }}"

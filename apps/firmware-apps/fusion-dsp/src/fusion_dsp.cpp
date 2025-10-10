@@ -193,6 +193,8 @@ int main(int argc, char *argv[])
 
         // Path for the static configuration
         target_paths.push_back("devices[*]");
+        // Path for dynamic parameter setttings with matrix indices
+        target_paths.push_back("settings.audio.*.*[*][*]");
         // Path for dynamic parameter setttings with vector indices
         target_paths.push_back("settings.audio.*.*[*]");
         // Path for dynamic parameter setttings
