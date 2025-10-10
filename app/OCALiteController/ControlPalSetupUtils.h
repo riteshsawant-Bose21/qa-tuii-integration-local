@@ -7,6 +7,8 @@
 #ifndef CONTROLPAL_SETUP_UTILS_H_
 #define CONTROLPAL_SETUP_UTILS_H_
 
+#include "OcaServiceDiscovery.h"
+
 // Helper functions
 void DisplayDiscoveredDevices(
          const std::vector<OcaServiceDiscovery::DiscoveredDevice> &devices);
@@ -30,5 +32,8 @@ OcaBoolean ControlPalSetupConnection(::Ocp1LiteNetwork *ocp1Network,
                                      ::OcaSessionID&   sessionId);
 
 ::OcaBoolean ControlPalSetupControls(::OcaLiteString& controllerId,
-                                        ::GeneralProxy& proxy);
+                                        ::GeneralProxy& proxy,
+                                        std::vector<::OcaONo>& zoneONo);
+
+::OcaBoolean ControlPalTeardownControls(std::vector<::OcaONo>& zoneONo);
 #endif // CONTROLPAL_SETUP_UTILS_H_

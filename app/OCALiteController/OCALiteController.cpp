@@ -24,7 +24,6 @@
 #include <OCC/ControlDataTypes/OcaLiteList.h>
 #include <OCC/ControlDataTypes/OcaLiteMethod.h>
 #include <unistd.h>
-#include "OcaServiceDiscovery.h"
 #include "HostInterfaceLite/OCA/OCF/Timer/IOcfLiteTimer.h"
 #include <sys/time.h>
 #include <iostream>
@@ -45,6 +44,9 @@ extern void Ocp1LiteServiceRun();
 extern void Ocp1LiteServiceRunWithFdSet(fd_set *readSet);
 extern int Ocp1LiteServiceGetSocket();
 #endif
+
+
+// TODO: Add signal capturing to exit gracefully.
 
 void ShowUsage(const char *programName)
 {
@@ -75,14 +77,16 @@ bool ocaMain(std::string& customNodeId)
         OCA_LOG_INFO("✓ Host interfaces initialized");
 
         // Initialize network manager
-        bSuccess = static_cast<bool>(::OcaLiteNetworkManager::GetInstance().Initialize());
+        bSuccess =
+         static_cast<bool>(::OcaLiteNetworkManager::GetInstance().Initialize());
 
         if (bSuccess)
         {
             OCA_LOG_INFO("✓ Network manager initialized");
 
             // Create a controller network object (no server port)
-            Ocp1LiteNetworkSystemInterfaceID interfaceId = ::Ocp1LiteNetworkSystemInterfaceID(static_cast<::OcaUint32>(0));
+            Ocp1LiteNetworkSystemInterfaceID interfaceId =
+               ::Ocp1LiteNetworkSystemInterfaceID(static_cast<::OcaUint32>(0));
             std::vector<std::string> txtRecords; // Empty for controller
 
             // Use custom node ID if provided, otherwise use auto-generated
@@ -120,15 +124,14 @@ bool ocaMain(std::string& customNodeId)
                     ::OcaLiteCommandHandler::GetInstance();
                     bSuccess = ::OcaLiteCommandHandlerController::GetInstance().Initialize();
                     bSuccess &= ::OcaLiteCommandHandler::GetInstance().Initialize();
+                    OCA_LOG_INFO("✓ Controller command handler initialized");
 
                     if (bSuccess)
                     {
-                        OCA_LOG_INFO("✓ Controller command handler initialized");
-
                         // Create Connection Monitor Object
-                        ControlPalConnectionMonitor *connMonitor = 
-                            new ControlPalConnectionMonitor(FUSION_CONNECTION_MON_ONO);
-
+                        ControlPalConnectionMonitor *connMonitor =
+                                          new ControlPalConnectionMonitor(
+                                                   FUSION_CONNECTION_MON_ONO);
                         if (connMonitor)
                         {
                             if (::OcaLiteBlock::GetRootBlock().AddObject(*connMonitor))
@@ -137,45 +140,58 @@ bool ocaMain(std::string& customNodeId)
                                 ::OcaLiteCommandHandler::GetInstance().RegisterConnectionLostEventHandler(
                                         static_cast<::OcaLiteCommandHandler::IConnectionLostDelegate*>(connMonitor));
 
-                                // Setup connection to the Device
-                                if (ControlPalSetupConnection(ocp1Network, customNodeId, sessionId))
+                                while(1)
                                 {
-                                    ::GeneralProxy proxy(
-                                            sessionId,
-                                            ocp1Network->GetObjectNumber());
-                                    OCA_LOG_INFO_PARAMS(
-                                            "Created proxy with session ID: %u, network ONO: %u",
-                                            sessionId, ocp1Network->GetObjectNumber());
-
-                                    // TODO: 'controllerID' should be read from Flash config partition
-                                    ::OcaLiteString controllerId =
-                                        customNodeId.empty() ?
-                                        ::OcaLiteString("ctrl1") :
-                                        ::OcaLiteString(customNodeId);
-
-                                    // Create and setup control objects
-                                    if (ControlPalSetupControls(controllerId, proxy))
+                                    // Setup connection to the Device
+                                    if (ControlPalSetupConnection(ocp1Network, customNodeId, sessionId))
                                     {
-                                        // TODO: This should be a forever loop
-                                        // TODO: Add signal capturing to exit
-                                        //       gracefully.
-                                        int countIdx(0);
-                                        while (countIdx++ < 10)
-                                        {
-                                            // Wait for Events from Device
-                                            ::OcaLiteCommandHandler::GetInstance().RunWithTimeout(OCA_RUN_TIMEOUT_MSEC);
+                                        // Set connected status to true
+                                        connMonitor->SetSetting(static_cast<OcaBoolean>(true));
 
-                                            //TODO: Check for local h/w events
+                                        ::GeneralProxy proxy(
+                                                sessionId,
+                                                ocp1Network->GetObjectNumber());
+                                        OCA_LOG_INFO_PARAMS(
+                                                "Created proxy with session ID: %u, network ONO: %u",
+                                                sessionId, ocp1Network->GetObjectNumber());
+
+                                        // TODO: 'controllerID' should be read from Flash config partition
+                                        ::OcaLiteString controllerId =
+                                            customNodeId.empty() ?
+                                            ::OcaLiteString("ctrl1") :
+                                            ::OcaLiteString(customNodeId);
+
+                                        // Holds ONo of each zone assigned to the controller
+                                        std::vector<::OcaONo> zoneONos;
+
+                                        // Create and setup control objects
+                                        if (ControlPalSetupControls(controllerId, proxy, zoneONos))
+                                        {
+                                            ::OcaBoolean connectStatus(true);
+                                            while (connectStatus)
+                                            {
+                                                // Wait for Events from Device
+                                                ::OcaLiteCommandHandler::GetInstance().RunWithTimeout(OCA_RUN_TIMEOUT_MSEC);
+
+                                                //TODO: Check for local h/w events
+
+                                                // Check Connection status
+                                                connMonitor->GetSetting(connectStatus);
+                                            }
+
+                                            // Connection lost, teardown all
+                                            // the control objects
+                                            ControlPalTeardownControls(zoneONos);
+                                        }
+                                        else
+                                        {
+                                            OCA_LOG_ERROR("✗ SetupControls failed");
                                         }
                                     }
                                     else
                                     {
-                                        OCA_LOG_ERROR("✗ SetupControls failed");
+                                        OCA_LOG_ERROR("✗ Failed to Setup Connection");
                                     }
-                                }
-                                else
-                                {
-                                    OCA_LOG_ERROR("✗ Failed to Setup Connection");
                                 }
 
                             }
@@ -261,7 +277,7 @@ int main(int argc, const char *argv[])
     //
     // TODO: ControlInterface_Init();  // e.g. TochGFX, CLI interface etc
     //
-    // IPC used to exchage upstream and 
+    // IPC used to exchage upstream and
     // downstream value changes.
     // TODO: IPC_init();  // e.g. semaphores, mutex etc.
     //

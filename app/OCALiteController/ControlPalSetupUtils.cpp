@@ -23,7 +23,6 @@
 #include <OCC/ControlDataTypes/OcaLiteList.h>
 #include <OCC/ControlDataTypes/OcaLiteMethod.h>
 #include <unistd.h>
-#include "OcaServiceDiscovery.h"
 #include <iostream>
 #include "../common/models/Models.h"  // For deserializing JSON configuration
 #include "../common/models/WallControllerConfigParser.h"  // For deserializing JSON configuration
@@ -96,7 +95,7 @@ void DisplayDiscoveredDevices(
 
     ::OcaLiteString configData;
     OCA_LOG_INFO_PARAMS("Calling OcaControllerConfigManager_GetConfigDetails with ONO %u...", CONTROLLER_CONFIG_MANAGER_ONO);
-    OcaLiteStatus status = 
+    OcaLiteStatus status =
         proxy.OcaControllerConfigManager_GetConfigDetails(
                                         CONTROLLER_CONFIG_MANAGER_ONO,
                                         controllerId,
@@ -335,11 +334,11 @@ ZoneGroup* CreateZoneGroup(Zone& newZone)
     return newZoneGrp;
 }
 
-OcaBoolean ControlPalSetupConnection(::Ocp1LiteNetwork *ocp1Network,
+::OcaBoolean ControlPalSetupConnection(::Ocp1LiteNetwork *ocp1Network,
                                      const std::string &customNodeId,
                                      ::OcaSessionID&   sessionId)
 {
-    OcaBoolean retVal(false);
+    ::OcaBoolean retVal(false);
 
     // Start service discovery
     OcaServiceDiscovery discovery;
@@ -352,8 +351,16 @@ OcaBoolean ControlPalSetupConnection(::Ocp1LiteNetwork *ocp1Network,
         size_t deviceCount(0);
         uint8_t retry_cnt(0);
 
-        // Retry loop
+        // NOTE: In the case of a retry after a Device disconnect,
+        //       discovery could find the service and resolve the address
+        //       even if the Device is down. This is due to records not
+        //       getting cleared from the DNS server.
+        //       It will however fail to establish connection when it tries
+        //       to connect. This can be mitigated to some extent if aging
+        //       and scavenging are enabled on the DNS server.
         deviceCount = discovery.WaitForDevices(8000);
+
+        // Retry loop
         while ( (deviceCount <= 0 ) && (retry_cnt++ < 10))
         {
             deviceCount = discovery.WaitForDevices(8000);
@@ -377,6 +384,7 @@ OcaBoolean ControlPalSetupConnection(::Ocp1LiteNetwork *ocp1Network,
             }
         }
     }
+    discovery.StopDiscovery();
 
     if (retVal)
     {
@@ -386,7 +394,8 @@ OcaBoolean ControlPalSetupConnection(::Ocp1LiteNetwork *ocp1Network,
 }
 
 ::OcaBoolean ControlPalSetupControls(::OcaLiteString& controllerId,
-                                        ::GeneralProxy& proxy)
+                                        ::GeneralProxy& proxy,
+                                        std::vector<::OcaONo>& zoneONo)
 {
     ::OcaBoolean bSuccess(false);
     Controller controllerCfg;
@@ -405,10 +414,51 @@ OcaBoolean ControlPalSetupConnection(::Ocp1LiteNetwork *ocp1Network,
 
             // Add event subscriptions
             bSuccess |= AddSubscriptions(*newZone, proxy);
+
+            if (bSuccess)
+            {
+                zoneONo.push_back(newGroup->GetObjectNumber());
+            }
         }
     }
 
     return bSuccess;
 }
 
+::OcaBoolean ControlPalTeardownControls(std::vector<::OcaONo>& zoneBlockONo)
+{
+    ::OcaBoolean bSuccess(true);
+
+    for (auto tdownBlockONo : zoneBlockONo)
+    {
+        ::OcaLiteList<::OcaLiteObjectIdentification> tdownMembers;
+        ::OcaLiteBlock* tdownBlock;
+
+        // TODO: Get Zone(Block) object
+        tdownBlock = static_cast<::OcaLiteBlock *>(::OcaLiteBlock::GetRootBlock().GetOCAObject(tdownBlockONo));
+
+        if (OCASTATUS_OK == tdownBlock->GetMembers(tdownMembers))
+        {
+            // Clear the ZoneBlock
+            for (::OcaUint16 i = 0; i < tdownMembers.GetCount(); i++)
+            {
+                // TODO: Get worker objects in zone
+                ::OcaONo       workerONo   = tdownMembers.GetItem(i).GetONo();
+                ::OcaLiteRoot* tdownWorker = tdownBlock->GetOCAObject(workerONo);
+
+                // TODO: Remove worker object from zone
+                tdownBlock->RemoveObject(workerONo);
+
+                // TODO: Delete worker object
+                delete tdownWorker;
+            }
+
+            // TODO: Remove Block object from Root block.
+            ::OcaLiteBlock::GetRootBlock().RemoveObject(tdownBlockONo);
+
+            // TODO: Delete Block object
+            delete tdownBlock;
+        }
+    }
+}
 
