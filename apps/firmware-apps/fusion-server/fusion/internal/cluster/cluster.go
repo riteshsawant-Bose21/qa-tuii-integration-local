@@ -90,27 +90,27 @@ func NewCluster(appConfig *api.AppConfig, delegate *ClusterDelegate, memberlist 
 	if !cluster.config.Local {
 		logger := logging.GetLogger()
 
-		if vip, err := cluster.getVIPFromConfig(); err != nil {
-			logger.Fatal("getVIPFromConfig: %v", err)
-		} else {
-			if cluster.isLocalVIP(vip) {
+		// if vip, err := cluster.getVIPFromConfig(); err != nil {
+		// 	logger.Fatal("getVIPFromConfig: %v", err)
+		// } else {
+		// 	if cluster.isLocalVIP(vip) {
 
-				cluster.vipLock.Lock()
-				cluster.vip = vip
-				cluster.vipLock.Unlock()
+		// 		cluster.vipLock.Lock()
+		// 		cluster.vip = vip
+		// 		cluster.vipLock.Unlock()
 
-				// Start the TaskManager
-				if err := cluster.delegate.taskManager.Start(); err != nil {
-					logger.Fatal("TaskManager.Start: %v", err)
-				}
-				logger.Info("TaskManager running on %s", cluster.nodeName)
+		// 		// Start the TaskManager
+		// 		if err := cluster.delegate.taskManager.Start(); err != nil {
+		// 			logger.Fatal("TaskManager.Start: %v", err)
+		// 		}
+		// 		logger.Info("TaskManager running on %s", cluster.nodeName)
 
-				if err := cluster.startStatusNotifier(); err != nil {
-					logger.Fatal("startStatusNotifier: %v", err)
-				}
-				logger.Info("StatusNotifier running on %s", cluster.nodeName)
-			}
-		}
+		// 		if err := cluster.startStatusNotifier(); err != nil {
+		// 			logger.Fatal("startStatusNotifier: %v", err)
+		// 		}
+		// 		logger.Info("StatusNotifier running on %s", cluster.nodeName)
+		// 	}
+		// }
 
 		if err := cluster.startVRRPListener(); err != nil {
 			logger.Fatal("startVRRPListener: %v", err)
@@ -170,42 +170,49 @@ func (c *Cluster) getClusterIPs() []string {
 	return ips
 }
 
-func (c *Cluster) listenerUpdated(vip string) {
-
+func (c *Cluster) listenerUpdated(vip, srcIP string) {
 	logger := logging.GetLogger()
 
-	// Serialize the rewrite/reload sequence
 	c.vipLock.Lock()
+	defer c.vipLock.Unlock()
+
+	// Ignore empty or duplicate VIP notifications.
 	if vip == "" || vip == c.vip {
-		c.vipLock.Unlock()
 		return
 	}
+
 	old := c.vip
 	c.vip = vip
 
-	if old != "" && old != vip && !c.isLocalVIP(vip) {
+	isLocal := c.isLocalVIP(vip)
+
+	logger.Info("VIP update: old=%s new=%s src=%s (local=%v)", old, vip, srcIP, isLocal)
+
+	// If we lost ownership of the VIP, stop local services.
+	if old != "" && old != vip && !isLocal {
 		logger.Debug("Lost VIP %s → %s", old, vip)
 		c.delegate.taskManager.Stop()
 		c.stopStatusNotifier()
 	}
 
+	// Update the system VIP configuration.
 	if err := c.updateVIP(vip); err != nil {
 		logger.Error("updateVIP(%q): %v", vip, err)
-		c.vipLock.Unlock()
 		return
 	}
 
+	// Reload dependent subsystems.
 	if err := c.reloadVIP(); err != nil {
 		logger.Error("reloadVIP: %v", err)
-		c.vipLock.Unlock()
 		return
 	}
-	c.vipLock.Unlock()
 
 	logger.Debug("New VIP detected: %q → %q", old, vip)
 
-	if c.isLocalVIP(vip) {
-		if member, err := c.isMember(); err != nil {
+	// Only perform these actions if the new VIP is local.
+	if isLocal {
+		member, err := c.isMember()
+		if err != nil {
 			logger.Error("isMember: %v", err)
 		} else if !member {
 			if err := c.JoinMemberlist(); err != nil {
