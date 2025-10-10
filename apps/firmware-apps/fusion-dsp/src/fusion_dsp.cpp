@@ -169,7 +169,6 @@ private:
                             std::string command = "{ \"target\": \"" + mp +
                                 "\", \"name\": \"play_message\", \"value\": \""
                                 + escape_quotes(response_str) + "\" }";
-                                //+ "{\\\"filename\\\":\\\"file1.wav\\\",\\\"priority\\\":50}" + "\" }";
                             handle_update(command);
                         }
                     }
