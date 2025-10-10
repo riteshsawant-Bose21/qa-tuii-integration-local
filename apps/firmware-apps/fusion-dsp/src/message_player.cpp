@@ -79,7 +79,6 @@ void MessagePlayer::update_play_message()
             std::set<std::string> message_zones;
             ms.get_zone_names(message_zones);
 
-            new_channel_mask = 0;
             for (const auto &zone : message_zones)
             {
                 auto it = zone_map.find(zone);
