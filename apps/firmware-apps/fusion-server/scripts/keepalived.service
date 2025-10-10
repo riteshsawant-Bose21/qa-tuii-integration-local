@@ -1,8 +1,8 @@
 # Fusion keepalived service file
 [Unit]
 Description=Keepalived VRRP Framework
-After=network.target
-Requires=network.target
+Wants=network-online.target
+After=network-online.target
 
 [Service]
 Type=notify

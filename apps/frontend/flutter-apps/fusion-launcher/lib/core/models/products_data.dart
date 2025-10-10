@@ -72,6 +72,45 @@ class SourceData extends DeviceComponent {
     required super.price,
   });
 
+  static const List<SourceData> microphoneItems = <SourceData>[
+    SourceData(id: "gooseneck", name: "Gooseneck", assetPath: "assets/images/products/mic1.png", type: SourceType.analogInput, price: 100.0),
+    SourceData(id: "hanging", name: "Hanging", assetPath: "assets/images/products/hanging_mic.png", type: SourceType.analogInput, price: 100.0),
+    SourceData(id: "condenser", name: "Condenser", assetPath: "assets/images/products/mic1.png", type: SourceType.analogInput, price: 100.0),
+    SourceData(id: "dynamic", name: "Dynamic", assetPath: "assets/images/products/mic1.png", type: SourceType.analogInput, price: 100.0),
+    SourceData(id: "shotgun", name: "Shotgun", assetPath: "assets/images/products/mic1.png", type: SourceType.analogInput, price: 100.0),
+    SourceData(id: "pzm", name: "PZM", assetPath: "assets/images/products/mic1.png", type: SourceType.analogInput, price: 100.0),
+    SourceData(id: "lavalier", name: "Lavalier", assetPath: "assets/images/products/mic1.png", type: SourceType.analogInput, price: 100.0),
+    SourceData(id: "headset", name: "Headset", assetPath: "assets/images/products/mic1.png", type: SourceType.analogInput, price: 100.0),
+    SourceData(id: "handheld", name: "Handheld", assetPath: "assets/images/products/mic1.png", type: SourceType.analogInput, price: 100.0),
+    SourceData(id: "beltpack", name: "Beltpack", assetPath: "assets/images/products/mic1.png", type: SourceType.analogInput, price: 100.0),
+    SourceData(id: "paging", name: "Paging", assetPath: "assets/images/products/paging_mic.png", type: SourceType.analogInput, price: 100.0),
+  ];
+
+  static const List<SourceData> mediaSourceItems = <SourceData>[
+    SourceData(id: "generic_mono", name: "Generic Mono", assetPath: "assets/images/products/dvdplayer.png", type: SourceType.analogInput, price: 100.0),
+    SourceData(id: "generic_stereo", name: "Generic Stereo", assetPath: "assets/images/products/dvdplayer.png", type: SourceType.analogInput, price: 100.0),
+    SourceData(id: "cd", name: "CD", assetPath: "assets/images/products/dvdplayer.png", type: SourceType.analogInput, price: 100.0),
+    SourceData(id: "sat_cable_hdmi", name: "Sat/Cable - HDMI", assetPath: "assets/images/products/hdmi.png", type: SourceType.analogInput, price: 100.0),
+    SourceData(id: "media_player", name: "Media Player", assetPath: "assets/images/products/dvdplayer.png", type: SourceType.analogInput, price: 100.0),
+    SourceData(id: "tuner", name: "Tuner", assetPath: "assets/images/products/dvdplayer.png", type: SourceType.analogInput, price: 100.0),
+    SourceData(id: "dvd_hdmi", name: "DVD - HDMI", assetPath: "assets/images/products/hdmi.png", type: SourceType.analogInput, price: 100.0),
+    SourceData(id: "bluray_hdmi", name: "BluRay HDMI", assetPath: "assets/images/products/hdmi.png", type: SourceType.analogInput, price: 100.0),
+    SourceData(
+      id: "laptop_usb_hdmi",
+      name: "Laptop - USB - or HDMI",
+      assetPath: "assets/images/products/laptop.png",
+      type: SourceType.analogInput,
+      price: 100.0,
+    ),
+    SourceData(
+      id: "deskpc_usb_hdmi",
+      name: "DeskPC - USB - or HDMI",
+      assetPath: "assets/images/products/laptop.png",
+      type: SourceType.analogInput,
+      price: 100.0,
+    ),
+  ];
+
   static const List<SourceData> demoSources = <SourceData>[
     SourceData(
       assetPath: 'assets/images/products/mic1.png',
