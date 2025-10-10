@@ -202,7 +202,7 @@ bosepro::Session *psession;
 
 void handle_update(const std::string &update_setting)
 {
-    std::mutex mtx;
+    static std::mutex mtx;
     std::lock_guard<std::mutex> lock(mtx);
 
     std::stringstream ss;
