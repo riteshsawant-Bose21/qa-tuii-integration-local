@@ -432,7 +432,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                                 }
                               },
                               floorCanvasController: _floorCanvasController,
-                              onCalculateSpl: calculateSPL, // <— delegate up
+                              onCalculateSpl: calculateSPL,
                               onUpdateSpl: updateSpl,
                             );
                           },

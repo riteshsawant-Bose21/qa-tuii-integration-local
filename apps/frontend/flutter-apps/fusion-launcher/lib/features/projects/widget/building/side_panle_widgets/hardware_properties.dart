@@ -168,12 +168,13 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                           children: <Widget>[
                             Text("X", style: textStyleGrey),
                             const SizedBox(width: 4),
-                            Expanded(
+                            IntrinsicWidth(
                               child: TextFormField(
                                 controller: xController,
                                 decoration: const InputDecoration(
                                   hintText: 'X',
                                   border: InputBorder.none,
+                                  suffixText: "m",
                                   isDense: true,
                                 ),
                                 style: textStyleBlack,
@@ -209,13 +210,14 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                           children: <Widget>[
                             Text("Y", style: textStyleGrey),
                             const SizedBox(width: 4),
-                            Expanded(
+                            IntrinsicWidth(
                               child: TextFormField(
                                 controller: yController,
                                 decoration: const InputDecoration(
                                   hintText: 'Y',
                                   border: InputBorder.none,
                                   isDense: true,
+                                  suffixText: "m",
                                 ),
                                 style: textStyleBlack,
                                 keyboardType: TextInputType.number,
@@ -250,13 +252,14 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                           children: <Widget>[
                             Text("Z", style: textStyleGrey),
                             const SizedBox(width: 4),
-                            Expanded(
+                            IntrinsicWidth(
                               child: TextFormField(
                                 controller: zController,
                                 decoration: const InputDecoration(
                                   hintText: 'Z',
                                   border: InputBorder.none,
                                   isDense: true,
+                                  suffixText: "m",
                                 ),
                                 style: textStyleBlack,
                                 keyboardType: TextInputType.number,
@@ -301,41 +304,36 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                       child: Text("Roll", style: textStyleGrey?.copyWith(fontSize: 11)),
                     ),
                     const SizedBox(width: 8),
-                    Expanded(
-                      child: Row(
-                        children: <Widget>[
-                          Expanded(
-                            child: TextFormField(
-                              controller: rollController,
-                              decoration: const InputDecoration(
-                                hintText: 'Roll',
-                                border: InputBorder.none,
-                                isDense: true,
+                    IntrinsicWidth(
+                      child: TextFormField(
+                        controller: rollController,
+                        decoration: const InputDecoration(
+                          hintText: 'Roll',
+                          border: InputBorder.none,
+                          isDense: true,
+                          suffixText: "°",
+                        ),
+                        style: textStyleBlack,
+                        keyboardType: TextInputType.number,
+                        onFieldSubmitted: (String v) {
+                          final double? roll = double.tryParse(v.trim());
+                          if (roll != null) {
+                            final Speaker updated = (widget.selectedHardware as Speaker).copyWith(roll: roll);
+                            viewModel.updateHardware(updated);
+                            widget.onSpeakerParametersChanged?.call();
+                          } else {
+                            // Reset to previous value if invalid
+                            rollController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).roll.toString() : '0.0';
+                            // Show validation error
+                            // Trigger SPL update for speaker orientation changes
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Roll must be a valid decimal number'),
+                                duration: Duration(seconds: 2),
                               ),
-                              style: textStyleBlack,
-                              keyboardType: TextInputType.number,
-                              onFieldSubmitted: (String v) {
-                                final double? roll = double.tryParse(v.trim());
-                                if (roll != null) {
-                                  final Speaker updated = (widget.selectedHardware as Speaker).copyWith(roll: roll);
-                                  viewModel.updateHardware(updated);
-                                  widget.onSpeakerParametersChanged?.call();
-                                } else {
-                                  // Reset to previous value if invalid
-                                  rollController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).roll.toString() : '0.0';
-                                  // Show validation error
-                                  // Trigger SPL update for speaker orientation changes
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Roll must be a valid decimal number'),
-                                      duration: Duration(seconds: 2),
-                                    ),
-                                  );
-                                }
-                              },
-                            ),
-                          ),
-                        ],
+                            );
+                          }
+                        },
                       ),
                     ),
                   ],
@@ -351,40 +349,35 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                       child: Text("Pitch", style: textStyleGrey?.copyWith(fontSize: 11)),
                     ),
                     const SizedBox(width: 8),
-                    Expanded(
-                      child: Row(
-                        children: <Widget>[
-                          Expanded(
-                            child: TextFormField(
-                              controller: pitchController,
-                              decoration: const InputDecoration(
-                                hintText: 'Pitch',
-                                border: InputBorder.none,
-                                isDense: true,
+                    IntrinsicWidth(
+                      child: TextFormField(
+                        controller: pitchController,
+                        decoration: const InputDecoration(
+                          hintText: 'Pitch',
+                          border: InputBorder.none,
+                          isDense: true,
+                          suffixText: "°",
+                        ),
+                        style: textStyleBlack,
+                        keyboardType: TextInputType.number,
+                        onFieldSubmitted: (String v) {
+                          final double? pitch = double.tryParse(v.trim());
+                          if (pitch != null) {
+                            final Speaker updated = (widget.selectedHardware as Speaker).copyWith(pitch: pitch);
+                            viewModel.updateHardware(updated);
+                            widget.onSpeakerParametersChanged?.call();
+                          } else {
+                            // Reset to previous value if invalid
+                            pitchController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).pitch.toString() : '0.0';
+                            // Show validation error
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Pitch must be a valid decimal number'),
+                                duration: Duration(seconds: 2),
                               ),
-                              style: textStyleBlack,
-                              keyboardType: TextInputType.number,
-                              onFieldSubmitted: (String v) {
-                                final double? pitch = double.tryParse(v.trim());
-                                if (pitch != null) {
-                                  final Speaker updated = (widget.selectedHardware as Speaker).copyWith(pitch: pitch);
-                                  viewModel.updateHardware(updated);
-                                  widget.onSpeakerParametersChanged?.call();
-                                } else {
-                                  // Reset to previous value if invalid
-                                  pitchController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).pitch.toString() : '0.0';
-                                  // Show validation error
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Pitch must be a valid decimal number'),
-                                      duration: Duration(seconds: 2),
-                                    ),
-                                  );
-                                }
-                              },
-                            ),
-                          ),
-                        ],
+                            );
+                          }
+                        },
                       ),
                     ),
                   ],
@@ -400,40 +393,35 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                       child: Text("Yaw", style: textStyleGrey?.copyWith(fontSize: 11)),
                     ),
                     const SizedBox(width: 8),
-                    Expanded(
-                      child: Row(
-                        children: <Widget>[
-                          Expanded(
-                            child: TextFormField(
-                              controller: yawController,
-                              decoration: const InputDecoration(
-                                hintText: 'Yaw',
-                                border: InputBorder.none,
-                                isDense: true,
+                    IntrinsicWidth(
+                      child: TextFormField(
+                        controller: yawController,
+                        decoration: const InputDecoration(
+                          hintText: 'Yaw',
+                          border: InputBorder.none,
+                          isDense: true,
+                          suffixText: "°",
+                        ),
+                        style: textStyleBlack,
+                        keyboardType: TextInputType.number,
+                        onFieldSubmitted: (String v) {
+                          final double? yaw = double.tryParse(v.trim());
+                          if (yaw != null) {
+                            final Speaker updated = (widget.selectedHardware as Speaker).copyWith(yaw: yaw);
+                            viewModel.updateHardware(updated);
+                            widget.onSpeakerParametersChanged?.call();
+                          } else {
+                            // Reset to previous value if invalid
+                            yawController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).yaw.toString() : '0.0';
+                            // Show validation error
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Yaw must be a valid decimal number'),
+                                duration: Duration(seconds: 2),
                               ),
-                              style: textStyleBlack,
-                              keyboardType: TextInputType.number,
-                              onFieldSubmitted: (String v) {
-                                final double? yaw = double.tryParse(v.trim());
-                                if (yaw != null) {
-                                  final Speaker updated = (widget.selectedHardware as Speaker).copyWith(yaw: yaw);
-                                  viewModel.updateHardware(updated);
-                                  widget.onSpeakerParametersChanged?.call();
-                                } else {
-                                  // Reset to previous value if invalid
-                                  yawController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).yaw.toString() : '0.0';
-                                  // Show validation error
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Yaw must be a valid decimal number'),
-                                      duration: Duration(seconds: 2),
-                                    ),
-                                  );
-                                }
-                              },
-                            ),
-                          ),
-                        ],
+                            );
+                          }
+                        },
                       ),
                     ),
                   ],
@@ -452,13 +440,14 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                     Expanded(
                       child: Row(
                         children: <Widget>[
-                          Expanded(
+                          IntrinsicWidth(
                             child: TextFormField(
                               controller: gainController,
                               decoration: const InputDecoration(
                                 hintText: 'Gain',
                                 border: InputBorder.none,
                                 isDense: true,
+                                suffixText: "dB",
                               ),
                               style: textStyleBlack,
                               keyboardType: TextInputType.number,
