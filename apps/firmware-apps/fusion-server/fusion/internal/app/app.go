@@ -117,6 +117,7 @@ func (app *App) Close() {
 	if app.BLEServer != nil {
 		app.BLEServer.Stop()
 	}
+	app.Cluster.Stop()
 	app.UDPServer.Stop()
 	app.Persistence.Close()
 	app.Logger.Close()
@@ -492,7 +493,6 @@ func initLogging(config *api.AppConfig) *logging.Logger {
 		MaxFileSize: 100,
 		MaxFiles:    5,
 		LogLevel:    logLevel,
-		//LokiEndpoint: "http://192.168.64.1:3100",
 	})
 	return logging.GetLogger()
 }
