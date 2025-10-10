@@ -35,5 +35,5 @@ OcaBoolean ControlPalSetupConnection(::Ocp1LiteNetwork *ocp1Network,
                                         ::GeneralProxy& proxy,
                                         std::vector<::OcaONo>& zoneONo);
 
-::OcaBoolean ControlPalTeardownControls(std::vector<::OcaONo>& zoneONo);
+void ControlPalTeardownControls(std::vector<::OcaONo>& zoneONo);
 #endif // CONTROLPAL_SETUP_UTILS_H_

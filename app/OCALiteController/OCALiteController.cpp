@@ -140,7 +140,7 @@ bool ocaMain(std::string& customNodeId)
                                 ::OcaLiteCommandHandler::GetInstance().RegisterConnectionLostEventHandler(
                                         static_cast<::OcaLiteCommandHandler::IConnectionLostDelegate*>(connMonitor));
 
-                                while(1)
+                                while(true)
                                 {
                                     // Setup connection to the Device
                                     if (ControlPalSetupConnection(ocp1Network, customNodeId, sessionId))

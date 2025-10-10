@@ -425,7 +425,7 @@ ZoneGroup* CreateZoneGroup(Zone& newZone)
     return bSuccess;
 }
 
-::OcaBoolean ControlPalTeardownControls(std::vector<::OcaONo>& zoneBlockONo)
+void ControlPalTeardownControls(std::vector<::OcaONo>& zoneBlockONo)
 {
     ::OcaBoolean bSuccess(true);
 
