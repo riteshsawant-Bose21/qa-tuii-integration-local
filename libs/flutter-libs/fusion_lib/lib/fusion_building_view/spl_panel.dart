@@ -572,15 +572,14 @@ class _SplPanelState extends State<SplPanel> {
                   ],
                 ),
 
-                _toggleRow(
-                  label: 'Relative (±6 dB)',
-                  value: _relativeDb,
-                  onChanged: (bool v) {
-                    setState(() => _relativeDb = v);
-                    _emit();
-                  },
-                ),
-
+                // _toggleRow(
+                //   label: 'Relative (±6 dB)',
+                //   value: _relativeDb,
+                //   onChanged: (bool v) {
+                //     setState(() => _relativeDb = v);
+                //     _emit();
+                //   },
+                // ),
                 const SizedBox(height: 6),
 
                 Table(
@@ -618,14 +617,14 @@ class _SplPanelState extends State<SplPanel> {
 
                 const SizedBox(height: 6),
 
-                _toggleRow(
-                  label: 'Scale Automatically',
-                  value: _splAutoScale,
-                  onChanged: (bool v) {
-                    setState(() => _splAutoScale = v);
-                    _emit();
-                  },
-                ),
+                // _toggleRow(
+                //   label: 'Scale Automatically',
+                //   value: _splAutoScale,
+                //   onChanged: (bool v) {
+                //     setState(() => _splAutoScale = v);
+                //     _emit();
+                //   },
+                // ),
                 _toggleRow(
                   label: 'Invert Color Scale',
                   value: _splInvert,
