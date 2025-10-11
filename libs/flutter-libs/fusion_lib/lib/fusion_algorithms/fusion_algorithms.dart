@@ -35,7 +35,7 @@ export 'ceiling_pendant_speakers_autolayout/ceiling_pendant_speakers_autolayout.
 export 'edgemax_speakers_autolayout/edgemax_speakers_autolayout.dart';
 
 // Surface Speaker Placement exports
-export 'surface_speakers_autolayout/surface_speakers_autolayout.dart';
+export 'surface_speakers_autolayout/surface_speakers_autolayout.dart' hide CoveragePreference;
 
 // Device Recommender exports
 export 'device_recommender/device_recommender.dart';

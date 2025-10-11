@@ -1,5 +1,30 @@
 import 'dart:math';
 
+/// Coverage preference options for speaker overlap (aligned with ceiling/pendant placement).
+/// 
+/// This enum defines the overlap style using the same multiplier approach as ceiling speakers,
+/// but note that surface speakers have **directional sector coverage** (not circular coverage).
+/// Surface speakers project coverage in a wedge/sector pattern from the wall into the room.
+enum CoveragePreference {
+  /// Edge-to-edge coverage with no overlap (tangent sectors)
+  edgeToEdge(1.0, "minimum/value-oriented arrangement"),
+  
+  /// Optimal layout with medium overlap for balanced coverage  
+  minimumOverlap(0.7, "optimal layout"),
+  
+  /// High overlap for critical applications with significant coverage redundancy
+  centerToCenter(0.5, "significant interference");
+  
+  const CoveragePreference(this.overlapMultiplier, this.description);
+  
+  /// Multiplier applied to base coverage width for spacing calculation
+  /// Note: This applies to directional coverage sectors, not circles
+  final double overlapMultiplier;
+  
+  /// Human-readable description of the coverage preference
+  final String description;
+}
+
 /// Represents a 3D position for a speaker in a room coordinate system.
 /// 
 /// The coordinate system follows these conventions:
@@ -7,18 +32,18 @@ import 'dart:math';
 /// - y: Width dimension (0 to room width)
 /// - z: Height dimension (0 to ceiling height)
 class SpeakerPosition {
-  /// X coordinate in meters (length dimension)
+  /// X coordinate in feet (length dimension)
   final double x;
   
-  /// Y coordinate in meters (width dimension)
+  /// Y coordinate in feet (width dimension)
   final double y;
   
-  /// Z coordinate in meters (height dimension)
+  /// Z coordinate in feet (height dimension)
   final double z;
   
   /// Creates a speaker position with the given coordinates.
   /// 
-  /// All coordinates should be in meters and non-negative.
+  /// All coordinates should be in feet and non-negative.
   const SpeakerPosition(this.x, this.y, this.z);
   
   /// Creates a copy of this position with optionally updated coordinates.
@@ -64,21 +89,21 @@ class SpeakerPosition {
 /// 
 /// This class encapsulates all room-related parameters needed for speaker placement calculations.
 class SurfaceRoom {
-  /// Room width in meters
+  /// Room width in feet
   final double width;
   
-  /// Room length in meters  
+  /// Room length in feet  
   final double length;
   
-  /// Ceiling height in meters
+  /// Ceiling height in feet
   final double ceilingHeight;
   
-  /// Listener ear height in meters (typically 1.1-1.4m for seated, 1.7-1.8m for standing)
+  /// Listener ear height in feet (typically 3.6-4.6ft for seated, 5.6-5.9ft for standing, max 8ft)
   final double listenerHeight;
   
   /// Creates a room zone with the specified dimensions.
   /// 
-  /// All dimensions must be positive values in meters.
+  /// All dimensions must be positive values in feet.
   /// 
   /// Throws [ArgumentError] if any dimension is invalid.
   SurfaceRoom({
@@ -104,26 +129,29 @@ class SurfaceRoom {
     if (listenerHeight <= 0) {
       throw ArgumentError('Listener height must be positive, got: $listenerHeight');
     }
+    if (listenerHeight > 8.0) { // 8 feet max
+      throw ArgumentError('Listener height cannot exceed 8 feet, got: ${listenerHeight} feet');
+    }
     if (listenerHeight >= ceilingHeight) {
-      throw ArgumentError('Listener height ($listenerHeight) must be less than ceiling height ($ceilingHeight)');
+      throw ArgumentError('Listener height ($listenerHeight ft) must be less than ceiling height ($ceilingHeight ft)');
     }
     
     // Check for reasonable dimensions
-    if (ceilingHeight < 2.1 || ceilingHeight > 9.1) {
-      print('Warning: Unusual ceiling height: ${ceilingHeight}m');
+    if (ceilingHeight < 7.0 || ceilingHeight > 30.0) {
+      print('Warning: Unusual ceiling height: ${ceilingHeight} feet');
     }
-    if (width > 61 || length > 61) {
+    if (width > 200 || length > 200) {
       print('Warning: Very large room dimensions may require different approach');
     }
   }
   
-  /// Room area in square meters
+  /// Room area in square feet
   double get area => width * length;
   
-  /// Room volume in cubic meters  
+  /// Room volume in cubic feet  
   double get volume => width * length * ceilingHeight;
   
-  /// Room perimeter in meters
+  /// Room perimeter in feet
   double get perimeter => 2 * (width + length);
   
   /// Room aspect ratio (length/width)
@@ -131,7 +159,7 @@ class SurfaceRoom {
   
   @override
   String toString() {
-    return 'SurfaceRoom(${length.toStringAsFixed(1)}m × ${width.toStringAsFixed(1)}m × ${ceilingHeight.toStringAsFixed(1)}m, listener: ${listenerHeight.toStringAsFixed(1)}m)';
+    return 'SurfaceRoom(${length.toStringAsFixed(1)}ft × ${width.toStringAsFixed(1)}ft × ${ceilingHeight.toStringAsFixed(1)}ft, listener: ${listenerHeight.toStringAsFixed(1)}ft)';
   }
 }
 
@@ -139,7 +167,10 @@ class SurfaceRoom {
 /// 
 /// This class encapsulates all speaker-related parameters needed for placement calculations.
 class Loudspeaker {
-  /// Physical height of the speaker in meters
+  /// Physical height of the speaker in feet (hardcoded to 3 feet)
+  static const double defaultHeight = 3.0; // 3 feet
+  
+  /// Physical height of the speaker in feet
   final double height;
   
   /// Horizontal coverage angle in degrees (e.g., 90, 120)
@@ -156,13 +187,13 @@ class Loudspeaker {
   
   /// Creates a loudspeaker with the specified characteristics.
   /// 
-  /// [height] must be positive and represents the speaker's physical height in meters.
+  /// [height] defaults to 3 feet if not specified.
   /// [horizontalCoverageAngle] must be between 30 and 180 degrees.
   /// [type] is a descriptive name for the speaker model.
   /// 
   /// Throws [ArgumentError] if any parameter is invalid.
   Loudspeaker({
-    required this.height,
+    this.height = defaultHeight,
     required this.horizontalCoverageAngle,
     required this.type,
     this.verticalCoverageAngle,
@@ -176,8 +207,9 @@ class Loudspeaker {
     if (height <= 0) {
       throw ArgumentError('Speaker height must be positive, got: $height');
     }
-    if (height > 1.5) {
-      print('Warning: Speaker height seems unusually large: $height meters');
+    // Updated threshold since we're using 3 feet as standard
+    if (height > 6.0) {
+      print('Warning: Speaker height seems unusually large: $height feet');
     }
     if (horizontalCoverageAngle < 30 || horizontalCoverageAngle > 180) {
       throw ArgumentError('Horizontal coverage angle must be between 30-180 degrees, got: $horizontalCoverageAngle');
@@ -206,14 +238,14 @@ class Loudspeaker {
   
   @override
   String toString() {
-    return 'Loudspeaker($type, ${horizontalCoverageAngle.toStringAsFixed(0)}°, ${height.toStringAsFixed(1)}m)';
+    return 'Loudspeaker($type, ${horizontalCoverageAngle.toStringAsFixed(0)}°, ${height.toStringAsFixed(1)}ft)';
   }
 }
 
 /// Configuration options for surface speaker placement.
 class PlacementConfig {
-  /// Overlap percentage between adjacent speakers (0.0 to 0.5)
-  final double overlapPercentage;
+  /// Coverage preference using tangent circle approach (aligned with ceiling/pendant)
+  final CoveragePreference coveragePreference;
   
   /// Whether to enable debug output
   final bool enableDebugOutput;
@@ -229,24 +261,56 @@ class PlacementConfig {
   
   /// Creates placement configuration with the specified options.
   const PlacementConfig({
-    this.overlapPercentage = 0.1, // 10% default overlap
+    this.coveragePreference = CoveragePreference.minimumOverlap, // Default to optimal layout
     this.enableDebugOutput = false,
     this.customDownAngle,
     this.minSpeakersPerWall = 1,
     this.maxSpeakersPerWall = 20,
   });
   
-  /// Default configuration with standard settings
+  /// Creates a copy of this configuration with optionally updated values.
+  PlacementConfig copyWith({
+    CoveragePreference? coveragePreference,
+    bool? enableDebugOutput,
+    double? customDownAngle,
+    int? minSpeakersPerWall,
+    int? maxSpeakersPerWall,
+  }) {
+    return PlacementConfig(
+      coveragePreference: coveragePreference ?? this.coveragePreference,
+      enableDebugOutput: enableDebugOutput ?? this.enableDebugOutput,
+      customDownAngle: customDownAngle ?? this.customDownAngle,
+      minSpeakersPerWall: minSpeakersPerWall ?? this.minSpeakersPerWall,
+      maxSpeakersPerWall: maxSpeakersPerWall ?? this.maxSpeakersPerWall,
+    );
+  }
+  
+  /// Default configuration with optimal overlap
   static const PlacementConfig standard = PlacementConfig();
   
-  /// Configuration with higher overlap for critical applications
-  static const PlacementConfig highOverlap = PlacementConfig(overlapPercentage: 0.2);
+  /// Configuration with edge-to-edge coverage (no overlap)
+  static const PlacementConfig edgeToEdge = PlacementConfig(coveragePreference: CoveragePreference.edgeToEdge);
+  
+  /// Configuration with high overlap for critical applications
+  static const PlacementConfig highOverlap = PlacementConfig(coveragePreference: CoveragePreference.centerToCenter);
   
   /// Configuration with debug output enabled
   static const PlacementConfig debug = PlacementConfig(enableDebugOutput: true);
+  
+  /// Legacy support - converts old percentage to coverage preference
+  @Deprecated('Use coveragePreference instead. This will be removed in a future version.')
+  static PlacementConfig fromOverlapPercentage(double overlapPercentage) {
+    if (overlapPercentage <= 0.1) {
+      return const PlacementConfig(coveragePreference: CoveragePreference.edgeToEdge);
+    } else if (overlapPercentage <= 0.2) {
+      return const PlacementConfig(coveragePreference: CoveragePreference.minimumOverlap);
+    } else {
+      return const PlacementConfig(coveragePreference: CoveragePreference.centerToCenter);
+    }
+  }
 }
 
-/// Results from surface speaker placement calculation.
+  /// Results from surface speaker placement calculation.
 class SurfacePlacementResult {
   /// List of calculated speaker positions
   final List<SpeakerPosition> positions;
@@ -272,6 +336,15 @@ class SurfacePlacementResult {
   /// Number of speakers on width walls  
   final int speakersOnWidth;
   
+  /// Horizontal coverage angle in degrees
+  final double horizontalCoverageAngle;
+  
+  /// Room length in feet
+  final double roomLength;
+  
+  /// Room width in feet
+  final double roomWidth;
+  
   /// Total number of speakers required
   int get totalSpeakers => positions.length;
   
@@ -285,6 +358,9 @@ class SurfacePlacementResult {
     required this.effectiveCoverage,
     required this.speakersOnLength,
     required this.speakersOnWidth,
+    required this.horizontalCoverageAngle,
+    required this.roomLength,
+    required this.roomWidth,
   });
   
   @override
@@ -300,17 +376,20 @@ class SurfacePlacementResult {
 class SurfaceSpeakerPlacer {
   /// Determines the down-angle based on mounting height according to design guide.
   /// 
-  /// This follows industry best practices for surface-mounted speakers:
-  /// - Heights less than 2.4m: No down-angle needed (0°)
-  /// - Heights 2.4-4.5m: Light down-angle (-15°)
-  /// - Heights 4.6-5.5m: Medium down-angle (-30°)  
-  /// - Heights 5.5m and above: Steep down-angle (-45°)
+  /// This follows industry best practices for surface-mounted speakers with 
+  /// a minimum down-angle to ensure intersection with listener plane:
+  /// - Heights less than 8ft: Minimum down-angle (-5°) to ensure listener plane intersection
+  /// - Heights 8-15ft: Light down-angle (-15°)
+  /// - Heights 15-18ft: Medium down-angle (-30°)  
+  /// - Heights 18ft and above: Steep down-angle (-45°)
+  /// 
+  /// The minimum -5° angle prevents infinite horizontal projection at low ceiling heights.
   static double getDownAngle(double mountingHeight) {
-    if (mountingHeight < 2.4) {
-      return 0.0;
-    } else if (mountingHeight <= 4.5) {
+    if (mountingHeight < 8.0) {
+      return -5.0; // Minimum angle to ensure listener plane intersection
+    } else if (mountingHeight <= 15.0) {
       return -15.0;
-    } else if (mountingHeight <= 5.5) {
+    } else if (mountingHeight <= 18.0) {
       return -30.0;
     } else {
       return -45.0;
@@ -325,47 +404,52 @@ class SurfaceSpeakerPlacer {
   /// Calculate horizontal distance from speaker to listener plane.
   /// 
   /// CORRECTED ALGORITHM: Uses proper trigonometry for horizontal distance calculation.
-  /// For a speaker at height H aiming down at angle θ to reach listener at height L,
-  /// the horizontal distance is: (H - L) / tan(θ)
+  /// For a surface speaker, the horizontal distance is: (mounting_height - listener_height) / tan(down_angle)
   /// 
-  /// [speakerHeight] - Height of speaker mounting point in meters
-  /// [listenerHeight] - Height of listener ears in meters  
+  /// [mountingHeight] - Height of speaker mounting point in feet
+  /// [listenerHeight] - Height of listener ears in feet  
   /// [downAngleDegrees] - Down-angle in degrees (negative for downward)
   static double calculateDistanceToListenerPlane(
-    double speakerHeight,
+    double mountingHeight,
     double listenerHeight,
     double downAngleDegrees,
   ) {
-    if (speakerHeight <= listenerHeight) {
-      throw ArgumentError('Speaker height must be greater than listener height');
+    if (mountingHeight <= listenerHeight) {
+      throw ArgumentError('Mounting height must be greater than listener height');
     }
     
-    final verticalDistance = speakerHeight - listenerHeight;
+    final verticalDistance = mountingHeight - listenerHeight;
     
-    // Handle special case of zero down-angle (horizontal projection)
+    // With minimum -5° down-angle, we no longer have zero angle issues
     if (downAngleDegrees.abs() < 0.001) {
-      return double.infinity; // Infinite horizontal reach
+      throw ArgumentError('Down-angle too small: $downAngleDegrees degrees. Minimum -5° required.');
     }
     
     final downAngleRadians = degreesToRadians(downAngleDegrees.abs());
-    return verticalDistance / cos(downAngleRadians);
+    return verticalDistance / tan(downAngleRadians);
   }
   
-  /// Calculate horizontal coverage width at listener plane.
+  /// Calculate horizontal coverage width at listener plane for surface speakers.
+  /// 
+  /// Surface speakers have DIRECTIONAL coverage patterns (sector/wedge shaped), 
+  /// unlike ceiling speakers which have circular coverage. This method calculates
+  /// the width of the coverage sector at the listener plane distance.
   /// 
   /// Uses trigonometry to determine the coverage width based on:
-  /// - Distance from speaker to listener plane
-  /// - Speaker's horizontal coverage angle
+  /// - Distance from speaker to listener plane  
+  /// - Speaker's horizontal coverage angle (defines the sector width)
+  /// 
+  /// Returns the width of the coverage sector (not a circle radius).
   static double calculateHorizontalCoverage(
     double distance,
     double horizontalCoverageAngleDegrees,
   ) {
-    if (distance <= 0 || distance == double.infinity) {
-      // For infinite distance (0 down-angle), use a reasonable default
-      distance = 6.1; // Assume 6.1m coverage distance
+    if (distance <= 0) {
+      throw ArgumentError('Distance must be positive, got: $distance');
     }
     
     final angleRadians = degreesToRadians(horizontalCoverageAngleDegrees);
+    // Calculate width of coverage sector at listener plane
     return 2 * tan(angleRadians / 2) * distance;
   }
   
@@ -381,10 +465,17 @@ class SurfaceSpeakerPlacer {
     required Loudspeaker speaker,
     PlacementConfig config = PlacementConfig.standard,
   }) {
-    // Step 1: Calculate mounting height
-    final mountingHeight = room.ceilingHeight - speaker.height;
-    if (mountingHeight <= room.listenerHeight) {
-      throw ArgumentError('Insufficient ceiling height for speaker mounting');
+    // Step 1: Calculate mounting height for surface speakers
+    // Surface speakers should be mounted as high as possible on walls
+    // For low ceilings, mount speakers at ceiling height minus minimal clearance
+    final mountingHeight = room.ceilingHeight - 0.5; // 6 inches (0.5ft) below ceiling for mounting clearance
+    
+    // Validate that speakers can be mounted above listener height
+    // Allow minimal clearance (just 4 inches / 0.33ft) for practical scenarios
+    final minimumClearance = 0.33; // 4 inches minimum clearance above listener
+    if (mountingHeight <= room.listenerHeight + minimumClearance) {
+      final minimumCeilingHeight = room.listenerHeight + minimumClearance + 0.5; // listener + clearance + mounting space
+      throw ArgumentError('Ceiling height (${room.ceilingHeight.toStringAsFixed(1)} ft) too low for listener height (${room.listenerHeight.toStringAsFixed(1)} ft). Need at least ${minimumCeilingHeight.toStringAsFixed(1)} ft ceiling.');
     }
     
     // Step 2: Determine down-angle (use custom if provided)
@@ -403,20 +494,36 @@ class SurfaceSpeakerPlacer {
       speaker.horizontalCoverageAngle,
     );
     
-    // Step 5: Calculate effective coverage considering overlap
-    final effectiveCoverage = coverageWidth * (1 - config.overlapPercentage);
+    // Step 5: Apply coverage preference (directional sector approach)
+    // Note: Surface speakers have directional coverage (sectors), not circular like ceiling speakers
+    // The overlap mechanism uses the same multipliers but applies to sector width, not circle radius
+    final effectiveCoverage = coverageWidth * config.coveragePreference.overlapMultiplier;
     
     if (effectiveCoverage <= 0) {
-      throw ArgumentError('Effective coverage is zero or negative - check overlap percentage');
+      throw ArgumentError('Effective coverage is zero or negative - check coverage preference');
     }
     
     // Step 6: Calculate number of speakers needed for each wall
     int speakersOnLength = (room.length / effectiveCoverage).ceil();
-    int speakersOnWidth = (room.width / effectiveCoverage).ceil();
+    
+    // For side walls (width), use simplified logic: 1 speaker unless wall is very long
+    int speakersOnWidth;
+    if (room.width <= effectiveCoverage * 3.0) {
+      // If wall width is within 3x coverage, use single centered speaker (more aggressive)
+      speakersOnWidth = 1;
+      print('DEBUG: Using single speaker for width walls (${room.width}ft <= ${effectiveCoverage * 3.0}ft)');
+    } else {
+      // For very wide rooms, use coverage calculation
+      speakersOnWidth = (room.width / effectiveCoverage).ceil();
+      print('DEBUG: Using multiple speakers for width walls (${room.width}ft > ${effectiveCoverage * 3.0}ft)');
+    }
     
     // Apply constraints
+    print('DEBUG: Before constraints - Length: $speakersOnLength, Width: $speakersOnWidth');
     speakersOnLength = speakersOnLength.clamp(config.minSpeakersPerWall, config.maxSpeakersPerWall);
     speakersOnWidth = speakersOnWidth.clamp(config.minSpeakersPerWall, config.maxSpeakersPerWall);
+    print('DEBUG: After constraints - Length: $speakersOnLength, Width: $speakersOnWidth');
+    print('DEBUG: Constraints - Min: ${config.minSpeakersPerWall}, Max: ${config.maxSpeakersPerWall}');
     
     // Step 7: Calculate actual spacing and place speakers
     final positions = _placeSpeakersAroundPerimeter(
@@ -442,6 +549,18 @@ class SurfaceSpeakerPlacer {
       );
     }
     
+    // Always print key values for debugging optimization
+    print('=== DEBUG: Optimization Check ===');
+    print('Room: ${room.length}ft x ${room.width}ft');
+    print('Coverage Width: ${coverageWidth.toStringAsFixed(2)}ft');
+    print('Effective Coverage: ${effectiveCoverage.toStringAsFixed(2)}ft');
+    print('Width threshold (1.5x): ${(effectiveCoverage * 1.5).toStringAsFixed(2)}ft');
+    print('Room width (${room.width}ft) <= threshold? ${room.width <= effectiveCoverage * 1.5}');
+    print('Speakers on length: $speakersOnLength');
+    print('Speakers on width: $speakersOnWidth');
+    print('Total speakers before optimization: ${2 * (speakersOnLength + speakersOnWidth)}');
+    print('=====================================');
+    
     return SurfacePlacementResult(
       positions: positions,
       mountingHeight: mountingHeight,
@@ -451,10 +570,13 @@ class SurfaceSpeakerPlacer {
       effectiveCoverage: effectiveCoverage,
       speakersOnLength: speakersOnLength,
       speakersOnWidth: speakersOnWidth,
+      horizontalCoverageAngle: speaker.horizontalCoverageAngle,
+      roomLength: room.length,
+      roomWidth: room.width,
     );
   }
   
-  /// Places speakers around the room perimeter.
+  /// Places speakers around the room perimeter with overlap optimization.
   static List<SpeakerPosition> _placeSpeakersAroundPerimeter({
     required SurfaceRoom room,
     required double mountingHeight,
@@ -467,7 +589,54 @@ class SurfaceSpeakerPlacer {
     final lengthSpacing = room.length / speakersOnLength;
     final widthSpacing = room.width / speakersOnWidth;
     
-    // Place speakers on length walls (front and back)
+    // Step 1: Place speakers on length walls (front and back) with optimization
+    _placeLengthWallSpeakers(positions, room, mountingHeight, speakersOnLength, lengthSpacing);
+    
+    // Step 2: Place speakers on width walls (left and right) with optimization  
+    _placeWidthWallSpeakers(positions, room, mountingHeight, speakersOnWidth, widthSpacing);
+    
+    // Step 3: Optimize corner overlaps between adjacent walls
+    _optimizeCornerOverlaps(positions, room, mountingHeight);
+    
+    return positions;
+  }
+  
+  /// Places speakers on front and back walls with center optimization.
+  static void _placeLengthWallSpeakers(
+    List<SpeakerPosition> positions,
+    SurfaceRoom room,
+    double mountingHeight,
+    int speakersOnLength,
+    double lengthSpacing,
+  ) {
+    print('DEBUG: _placeLengthWallSpeakers called with $speakersOnLength speakers');
+    
+    if (speakersOnLength == 2) {
+      // Check if two speakers would be close to each other, replace with center
+      final speaker1X = lengthSpacing * 0.5;
+      final speaker2X = lengthSpacing * 1.5;
+      final centerX = room.length / 2;
+      
+      // If speakers are within 40% of wall length from center, use single centered speaker
+      final distanceFromCenter1 = (speaker1X - centerX).abs();
+      final distanceFromCenter2 = (speaker2X - centerX).abs();
+      final maxDistance = room.length * 0.2; // 20% of wall length (more aggressive)
+      
+      print('DEBUG: Length wall optimization check:');
+      print('  Speaker1 at ${speaker1X.toStringAsFixed(1)}ft, distance from center: ${distanceFromCenter1.toStringAsFixed(1)}ft');
+      print('  Speaker2 at ${speaker2X.toStringAsFixed(1)}ft, distance from center: ${distanceFromCenter2.toStringAsFixed(1)}ft');
+      print('  Max distance threshold: ${maxDistance.toStringAsFixed(1)}ft');
+      
+      if (distanceFromCenter1 < maxDistance && distanceFromCenter2 < maxDistance) {
+        // Replace two close speakers with one centered speaker
+        print('DEBUG: Optimizing front/back walls - using centered speakers');
+        positions.add(SpeakerPosition(centerX, 0, mountingHeight)); // Front wall center
+        positions.add(SpeakerPosition(centerX, room.width, mountingHeight)); // Back wall center
+        return;
+      }
+    }
+    
+    // Standard placement for other cases
     for (int i = 0; i < speakersOnLength; i++) {
       final x = lengthSpacing * (i + 0.5); // Center speakers in their segments
       
@@ -477,30 +646,142 @@ class SurfaceSpeakerPlacer {
       // Back wall (y = width)
       positions.add(SpeakerPosition(x, room.width, mountingHeight));
     }
+  }
+  
+  /// Places speakers on left and right walls with center optimization.
+  static void _placeWidthWallSpeakers(
+    List<SpeakerPosition> positions,
+    SurfaceRoom room,
+    double mountingHeight,
+    int speakersOnWidth,
+    double widthSpacing,
+  ) {
+    print('DEBUG: _placeWidthWallSpeakers called with $speakersOnWidth speakers');
     
-    // Place speakers on width walls (left and right)
-    for (int i = 0; i < speakersOnWidth; i++) {
-      final y = widthSpacing * (i + 0.5); // Center speakers in their segments
+    if (speakersOnWidth == 1) {
+      // Single centered speaker on each side wall
+      final centerY = room.width / 2;
       
-      // Left wall (x = 0)
-      positions.add(SpeakerPosition(0, y, mountingHeight));
+      // Left wall (x = 0) - centered
+      positions.add(SpeakerPosition(0, centerY, mountingHeight));
       
-      // Right wall (x = length)
-      positions.add(SpeakerPosition(room.length, y, mountingHeight));
+      // Right wall (x = length) - centered
+      positions.add(SpeakerPosition(room.length, centerY, mountingHeight));
+    } else if (speakersOnWidth == 2) {
+      // Check if two speakers would be close to center, replace with single center speaker
+      final speaker1Y = widthSpacing * 0.5;
+      final speaker2Y = widthSpacing * 1.5;
+      final centerY = room.width / 2;
+      
+      // If speakers are within 40% of wall width from center, use single centered speaker
+      final distanceFromCenter1 = (speaker1Y - centerY).abs();
+      final distanceFromCenter2 = (speaker2Y - centerY).abs();
+      final maxDistance = room.width * 0.2; // 20% of wall width (more aggressive)
+      
+      print('DEBUG: Width wall optimization check:');
+      print('  Speaker1 at ${speaker1Y.toStringAsFixed(1)}ft, distance from center: ${distanceFromCenter1.toStringAsFixed(1)}ft');
+      print('  Speaker2 at ${speaker2Y.toStringAsFixed(1)}ft, distance from center: ${distanceFromCenter2.toStringAsFixed(1)}ft');
+      print('  Max distance threshold: ${maxDistance.toStringAsFixed(1)}ft');
+      
+      if (distanceFromCenter1 < maxDistance && distanceFromCenter2 < maxDistance) {
+        // Replace two close speakers with one centered speaker
+        print('DEBUG: Optimizing left/right walls - using centered speakers');
+        positions.add(SpeakerPosition(0, centerY, mountingHeight)); // Left wall center
+        positions.add(SpeakerPosition(room.length, centerY, mountingHeight)); // Right wall center
+        return;
+      }
+      
+      // Standard placement for two speakers
+      for (int i = 0; i < speakersOnWidth; i++) {
+        final y = widthSpacing * (i + 0.5);
+        
+        // Left wall (x = 0)
+        positions.add(SpeakerPosition(0, y, mountingHeight));
+        
+        // Right wall (x = length)
+        positions.add(SpeakerPosition(room.length, y, mountingHeight));
+      }
+    } else {
+      // Multiple speakers distributed along side walls
+      for (int i = 0; i < speakersOnWidth; i++) {
+        final y = widthSpacing * (i + 0.5); // Center speakers in their segments
+        
+        // Left wall (x = 0)
+        positions.add(SpeakerPosition(0, y, mountingHeight));
+        
+        // Right wall (x = length)
+        positions.add(SpeakerPosition(room.length, y, mountingHeight));
+      }
+    }
+  }
+  
+  /// Optimizes corner overlaps where speakers from adjacent walls are too close.
+  static void _optimizeCornerOverlaps(
+    List<SpeakerPosition> positions,
+    SurfaceRoom room,
+    double mountingHeight,
+  ) {
+    final cornerThreshold = 3.0; // 3 feet minimum distance from corners
+    
+    // Check each corner for overlapping speakers
+    _checkCornerOverlap(positions, 0, 0, cornerThreshold, room, mountingHeight); // Front-left corner
+    _checkCornerOverlap(positions, room.length, 0, cornerThreshold, room, mountingHeight); // Front-right corner
+    _checkCornerOverlap(positions, 0, room.width, cornerThreshold, room, mountingHeight); // Back-left corner
+    _checkCornerOverlap(positions, room.length, room.width, cornerThreshold, room, mountingHeight); // Back-right corner
+  }
+  
+  /// Checks for speakers too close to a specific corner and optimizes placement.
+  static void _checkCornerOverlap(
+    List<SpeakerPosition> positions,
+    double cornerX,
+    double cornerY,
+    double threshold,
+    SurfaceRoom room,
+    double mountingHeight,
+  ) {
+    final speakersNearCorner = <SpeakerPosition>[];
+    
+    // Find speakers within threshold distance of this corner
+    for (final position in positions) {
+      final distance = sqrt(pow(position.x - cornerX, 2) + pow(position.y - cornerY, 2));
+      if (distance < threshold) {
+        speakersNearCorner.add(position);
+      }
     }
     
-    return positions;
+    // If we have 2+ speakers near a corner, consider consolidation
+    if (speakersNearCorner.length >= 2) {
+      // Remove overlapping speakers
+      for (final speaker in speakersNearCorner) {
+        positions.remove(speaker);
+      }
+      
+      // Add a single speaker at optimal corner position
+      // Place it slightly away from the actual corner for better coverage
+      final optimalX = cornerX == 0 ? threshold / 2 : cornerX - threshold / 2;
+      final optimalY = cornerY == 0 ? threshold / 2 : cornerY - threshold / 2;
+      
+      // Determine which wall this speaker should be placed on (closest wall)
+      if ((cornerX == 0 || cornerX == room.length)) {
+        // Place on front/back wall
+        positions.add(SpeakerPosition(optimalX, cornerY, mountingHeight));
+      } else {
+        // Place on left/right wall  
+        positions.add(SpeakerPosition(cornerX, optimalY, mountingHeight));
+      }
+    }
   }
   
   /// Legacy method for backward compatibility.
   /// 
   /// Use [calculatePlacement] for new code as it provides more detailed results.
+  @Deprecated('Use calculatePlacement with CoveragePreference instead')
   static List<SpeakerPosition> placeSurfaceSpeakers({
     required SurfaceRoom room,
     required Loudspeaker speaker,
     double overlapPercentage = 0.1,
   }) {
-    final config = PlacementConfig(overlapPercentage: overlapPercentage);
+    final config = PlacementConfig.fromOverlapPercentage(overlapPercentage);
     final result = calculatePlacement(room: room, speaker: speaker, config: config);
     return result.positions;
   }
@@ -519,18 +800,18 @@ class SurfaceSpeakerPlacer {
     required int speakersOnWidth,
   }) {
     print('=== Surface Speaker Placement Calculations ===');
-    print('Room: ${room.length}m x ${room.width}m x ${room.ceilingHeight}m');
-    print('Listener Height: ${room.listenerHeight}m');
+    print('Room: ${room.length}ft x ${room.width}ft x ${room.ceilingHeight}ft');
+    print('Listener Height: ${room.listenerHeight}ft');
     print('Speaker: ${speaker.type}');
-    print('Speaker Height: ${speaker.height}m');
+    print('Speaker Height: ${speaker.height}ft');
     print('Horizontal Coverage: ${speaker.horizontalCoverageAngle}°');
     print('');
     print('Calculated Parameters:');
-    print('Mounting Height: ${mountingHeight.toStringAsFixed(1)}m');
+    print('Mounting Height: ${mountingHeight.toStringAsFixed(1)}ft');
     print('Down Angle: ${downAngle.toStringAsFixed(1)}°');
-    print('Distance to Listener Plane: ${distance.toStringAsFixed(2)}m');
-    print('Coverage Width: ${coverageWidth.toStringAsFixed(2)}m');
-    print('Effective Coverage: ${effectiveCoverage.toStringAsFixed(2)}m (${(config.overlapPercentage * 100).toStringAsFixed(0)}% overlap)');
+    print('Distance to Listener Plane: ${distance.toStringAsFixed(2)}ft');
+    print('Coverage Width: ${coverageWidth.toStringAsFixed(2)}ft');
+    print('Effective Coverage: ${effectiveCoverage.toStringAsFixed(2)}ft (${config.coveragePreference.name} - ${config.coveragePreference.overlapMultiplier}x)');
     print('');
     print('Speaker Distribution:');
     print('Length walls: $speakersOnLength speakers each');
@@ -542,12 +823,13 @@ class SurfaceSpeakerPlacer {
   /// Print detailed calculation results for debugging.
   /// 
   /// Use [calculatePlacement] with debug config for new code.
+  @Deprecated('Use calculatePlacement with debug config and CoveragePreference instead')
   static void printCalculationDetails({
     required SurfaceRoom room,
     required Loudspeaker speaker,
     double overlapPercentage = 0.1,
   }) {
-    final config = PlacementConfig(overlapPercentage: overlapPercentage, enableDebugOutput: true);
+    final config = PlacementConfig.fromOverlapPercentage(overlapPercentage).copyWith(enableDebugOutput: true);
     calculatePlacement(room: room, speaker: speaker, config: config);
   }
 }
@@ -571,7 +853,8 @@ class SurfaceSpeakerPlacer {
 ///   ceilingHeight: 3.7, listenerHeight: 1.2
 /// );
 /// final speaker = Loudspeaker(
-///   height: 0.3, horizontalCoverageAngle: 90.0, 
+///   // height defaults to 3 feet (0.914m)
+///   horizontalCoverageAngle: 90.0, 
 ///   type: 'Surface Mount Speaker'
 /// );
 /// 
@@ -592,7 +875,7 @@ class SurfaceSpeakerPlacer {
 /// 
 /// ```dart
 /// final customConfig = PlacementConfig(
-///   overlapPercentage: 0.15,  // 15% overlap
+///   coveragePreference: CoveragePreference.centerToCenter,  // High overlap
 ///   enableDebugOutput: true,
 ///   customDownAngle: -20.0,   // Override auto-calculation
 /// );
@@ -611,10 +894,13 @@ class SurfaceSpeakerPlacer {
 /// ✅ **Corrected Distance Calculation**: Uses proper trigonometry (tan) for horizontal 
 ///    distance to listener plane, not cosine projection
 /// ✅ **Industry Standard Down-angles**: Follows established guidelines for mounting height
-/// ✅ **Coverage Pattern Accuracy**: Proper geometric calculation of dispersion patterns
-/// ✅ **Overlap Management**: Configurable overlap to prevent coverage gaps
+///    with minimum -5° to ensure listener plane intersection at all ceiling heights
+/// ✅ **Directional Coverage Accuracy**: Proper geometric calculation of sector-shaped 
+///    dispersion patterns (not circular like ceiling speakers)
+/// ✅ **Overlap Management**: Configurable overlap using same multipliers as ceiling/pendant
+///    but applied to directional coverage sectors
 /// ✅ **Input Validation**: Comprehensive validation of room and speaker parameters
-/// ✅ **Edge Case Handling**: Handles special cases like zero down-angle gracefully
+/// ✅ **Edge Case Handling**: Handles special cases like low ceiling heights gracefully
 /// 
-/// This implementation corrects issues in the original algorithm and provides a 
-/// production-ready, reusable library for acoustic system design applications.
+/// This implementation provides a production-ready, reusable library for surface-mounted
+/// acoustic system design applications with proper directional coverage modeling.

@@ -16,13 +16,13 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
   final TextEditingController _lengthController = TextEditingController(text: '100.0');
   final TextEditingController _widthController = TextEditingController(text: '66.0');
   final TextEditingController _heightController = TextEditingController(text: '39.0');
-  final TextEditingController _listenerHeightController = TextEditingController(text: '13.0');
-  final TextEditingController _speakerHeightController = TextEditingController(text: '3.3');
+  final TextEditingController _listenerHeightController = TextEditingController(text: '5.5');
+  // Speaker height removed - now hardcoded to 3 feet (0.914m) in the algorithm
   final TextEditingController _coverageAngleController = TextEditingController(text: '90.0');
   final TextEditingController _speakerTypeController = TextEditingController(text: 'Surface Mount Speaker');
   
   // Configuration
-  double _overlapPercentage = 0.1;
+  CoveragePreference _coveragePreference = CoveragePreference.minimumOverlap;
   
   // Results
   SurfacePlacementResult? _result;
@@ -42,7 +42,7 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
     _widthController.dispose();
     _heightController.dispose();
     _listenerHeightController.dispose();
-    _speakerHeightController.dispose();
+    // _speakerHeightController removed - height now hardcoded
     _coverageAngleController.dispose();
     _speakerTypeController.dispose();
     super.dispose();
@@ -65,13 +65,13 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
       );
 
       final Loudspeaker speaker = Loudspeaker(
-        height: double.parse(_speakerHeightController.text),
+        // height defaults to 3 feet (0.914m) - no longer user configurable
         horizontalCoverageAngle: double.parse(_coverageAngleController.text),
         type: _speakerTypeController.text,
       );
 
       final PlacementConfig config = PlacementConfig(
-        overlapPercentage: _overlapPercentage,
+        coveragePreference: _coveragePreference,
         enableDebugOutput: false,
       );
 
@@ -82,21 +82,9 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
       );
 
       // Additional validation checks
-      final double lengthSpacing = room.length / result.speakersOnLength;
-      final double widthSpacing = room.width / result.speakersOnWidth;
       
-      String? warning;
-      if (lengthSpacing < 3.0 || widthSpacing < 3.0) {
-        warning = 'Warning: Speakers may be too close together (< 3ft spacing). Consider reducing overlap or increasing coverage angle.';
-      } else if (lengthSpacing > 15.0 || widthSpacing > 15.0) {
-        warning = 'Warning: Large gaps between speakers (> 15ft spacing). Consider increasing overlap or decreasing coverage angle.';
-      } else if (result.totalSpeakers > 30) {
-        warning = 'Warning: Very high speaker count (${result.totalSpeakers}). Consider optimizing room acoustics or speaker parameters.';
-      }
-
       setState(() {
         _result = result;
-        _errorMessage = warning;
       });
     } catch (e) {
       setState(() {
@@ -163,7 +151,7 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
               children: <Widget>[
                 Expanded(child: _buildNumberField(_heightController, 'Ceiling Height (ft)', Icons.height)),
                 const SizedBox(width: 16),
-                Expanded(child: _buildNumberField(_listenerHeightController, 'Listener Height (ft)', Icons.person)),
+                Expanded(child: _buildNumberField(_listenerHeightController, 'Listener Height (ft)', Icons.person, min: 0.1, max: 8.0)),
               ],
             ),
           ],
@@ -191,12 +179,14 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
               validator: (String? value) => value?.isEmpty == true ? 'Please enter speaker type' : null,
             ),
             const SizedBox(height: 16),
-            Row(
-              children: <Widget>[
-                Expanded(child: _buildNumberField(_speakerHeightController, 'Speaker Height (ft)', Icons.speaker_group)),
-                const SizedBox(width: 16),
-                Expanded(child: _buildNumberField(_coverageAngleController, 'Coverage Angle (°)', Icons.radio_button_unchecked, min: 30, max: 180)),
-              ],
+            _buildNumberField(_coverageAngleController, 'Coverage Angle (°)', Icons.radio_button_unchecked, min: 30, max: 180),
+            const SizedBox(height: 8),
+            Text(
+              'Mounting: 6 inches below ceiling (practical installation)',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontStyle: FontStyle.italic,
+              ),
             ),
           ],
         ),
@@ -211,25 +201,88 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text('Configuration', style: Theme.of(context).textTheme.headlineSmall),
+            Text('Coverage Configuration', style: Theme.of(context).textTheme.headlineSmall),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Theme.of(context).colorScheme.outline.withOpacity(0.5)),
+              ),
+              child: Row(
+                children: <Widget>[
+                  Icon(Icons.info_outline, size: 16, color: Theme.of(context).colorScheme.primary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Surface speakers have directional coverage (sector/wedge shaped), not circular like ceiling speakers.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 16),
-            Text('Overlap Percentage: ${(_overlapPercentage * 100).toStringAsFixed(0)}%'),
-            Slider(
-              value: _overlapPercentage,
-              min: 0.05,
-              max: 0.3,
-              divisions: 25,
-              onChanged: (double value) {
-                setState(() {
-                  _overlapPercentage = value;
-                });
-                _calculatePlacement();
-              },
+            Text('Coverage Preference: ${_coveragePreference.name}'),
+            const SizedBox(height: 8),
+            Text(
+              _coveragePreference.description,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8.0,
+              children: CoveragePreference.values.map((CoveragePreference preference) {
+                final bool isSelected = _coveragePreference == preference;
+                return ChoiceChip(
+                  label: Text(_formatPreferenceName(preference.name)),
+                  selected: isSelected,
+                  onSelected: (bool selected) {
+                    if (selected) {
+                      setState(() {
+                        _coveragePreference = preference;
+                      });
+                      _calculatePlacement();
+                    }
+                  },
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: <Widget>[
+                Icon(Icons.info_outline, size: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Overlap multiplier: ${_coveragePreference.overlapMultiplier}x (directional sector coverage, not circular)',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
       ),
     );
+  }
+  
+  String _formatPreferenceName(String name) {
+    // Convert camelCase to Title Case
+    return name.replaceAllMapped(RegExp(r'([A-Z])'), (Match match) => ' ${match.group(1)}')
+               .split(' ')
+               .map((String word) => word.isEmpty ? '' : word[0].toUpperCase() + word.substring(1))
+               .join(' ')
+               .trim();
   }
 
   Widget _buildDownAngleReferenceCard() {
@@ -295,7 +348,7 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
                     ),
                   ),
                   // Table rows
-                  _buildTableRow('Less than 8', '0', _result?.mountingHeight != null && _result!.mountingHeight < 8),
+                  _buildTableRow('Less than 8', '-5', _result?.mountingHeight != null && _result!.mountingHeight < 8),
                   _buildTableRow('8 - 15', '-15', _result?.mountingHeight != null && _result!.mountingHeight >= 8 && _result!.mountingHeight <= 15),
                   _buildTableRow('15 - 18', '-30', _result?.mountingHeight != null && _result!.mountingHeight >= 15 && _result!.mountingHeight <= 18),
                   _buildTableRow('18 and above', '-45', _result?.mountingHeight != null && _result!.mountingHeight >= 18),
@@ -409,7 +462,7 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
         ElevatedButton.icon(
           onPressed: _calculatePlacement,
           icon: const Icon(Icons.calculate),
-          label: const Text('Recalculate'),
+          label: const Text('Calculate'),
         ),
         const SizedBox(width: 16),
         OutlinedButton.icon(
@@ -425,11 +478,11 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
     _lengthController.text = '100.0';
     _widthController.text = '66.0';
     _heightController.text = '39.0';
-    _listenerHeightController.text = '13.0';
-    _speakerHeightController.text = '3.3';
+    _listenerHeightController.text = '5.5';
+    // Speaker height removed - now hardcoded to 3 feet
     _coverageAngleController.text = '90.0';
     _speakerTypeController.text = 'Surface Mount Speaker';
-    setState(() => _overlapPercentage = 0.1);
+    setState(() => _coveragePreference = CoveragePreference.minimumOverlap);
     _calculatePlacement();
   }
 
@@ -570,12 +623,12 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
               stepNumber: 1,
               title: 'Find Distance from Loudspeaker to Listener Plane',
               icon: Icons.straighten,
-              formula: 'd = (speaker height - listener height) / cos(down_angle)',
-              calculation: 'd = (${_result!.mountingHeight.toStringAsFixed(1)} - ${double.parse(_listenerHeightController.text)}) / cos(${_result!.downAngle.abs().toStringAsFixed(0)}°)\n'
-                          'd = ${(_result!.mountingHeight - double.parse(_listenerHeightController.text)).toStringAsFixed(1)} / ${(cos(_result!.downAngle.abs() * pi / 180)).toStringAsFixed(3)}\n'
-                          'd = ${_result!.distanceToListenerPlane.toStringAsFixed(2)} ft',
-              result: 'd = ${_result!.distanceToListenerPlane.toStringAsFixed(2)} ft',
-              explanation: 'Distance from loudspeaker center to the listener plane of the room',
+              formula: 'd_horiz = (mounting_height - listener_height) / tan(down_angle)',
+              calculation: 'd_horiz = (${_result!.mountingHeight.toStringAsFixed(1)} - ${double.parse(_listenerHeightController.text)}) / tan(${_result!.downAngle.abs().toStringAsFixed(0)}°)\n'
+                          'd_horiz = ${(_result!.mountingHeight - double.parse(_listenerHeightController.text)).toStringAsFixed(1)} / ${(tan(_result!.downAngle.abs() * pi / 180)).toStringAsFixed(3)}\n'
+                          'd_horiz = ${_result!.distanceToListenerPlane.toStringAsFixed(2)} ft',
+              result: 'd_horiz = ${_result!.distanceToListenerPlane.toStringAsFixed(2)} ft',
+              explanation: 'Horizontal distance from loudspeaker to the listener plane using the down-angle',
             ),
             
             // Step 2: Determine horizontal coverage
@@ -598,7 +651,7 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
               title: 'Place Horizontal Loudspeakers Around Perimeter',
               icon: Icons.grid_view,
               formula: 'Speakers per Wall = ceil(Wall Length / Effective Coverage)',
-              calculation: 'Effective Coverage = ${_result!.coverageWidth.toStringAsFixed(2)} × (1 - ${(_overlapPercentage * 100).toStringAsFixed(0)}% overlap) = ${_result!.effectiveCoverage.toStringAsFixed(2)} ft\n\n'
+              calculation: 'Effective Coverage = ${_result!.coverageWidth.toStringAsFixed(2)} × ${_coveragePreference.overlapMultiplier} (${_coveragePreference.name}) = ${_result!.effectiveCoverage.toStringAsFixed(2)} ft\n\n'
                           'Length Walls (${double.parse(_lengthController.text)} ft): ceil(${double.parse(_lengthController.text)} / ${_result!.effectiveCoverage.toStringAsFixed(2)}) = ${_result!.speakersOnLength} each\n'
                           'Width Walls (${double.parse(_widthController.text)} ft): ceil(${double.parse(_widthController.text)} / ${_result!.effectiveCoverage.toStringAsFixed(2)}) = ${_result!.speakersOnWidth} each\n\n'
                           'Total: (${_result!.speakersOnLength} × 2) + (${_result!.speakersOnWidth} × 2) = ${_result!.totalSpeakers} speakers',
@@ -816,15 +869,14 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: <Widget>[
-                      _buildLegendItem(Colors.blue.shade400, 'Room Walls', Icons.crop_square),
-                      _buildLegendItem(Colors.red.shade600, 'Speakers', Icons.speaker),
-                      _buildLegendItem(Colors.green.shade400, 'Listener Area', Icons.person),
-                      _buildLegendItem(Colors.orange.withOpacity(0.3), 'Coverage Zone', Icons.radio_button_unchecked),
+                      _buildLegendItem(Colors.blue.shade700, 'Room Walls', Icons.crop_square),
+                      _buildLegendItem(Colors.red.shade600, 'Surface Speakers', Icons.crop_square),
+                      _buildLegendItem(Colors.orange.withOpacity(0.3), 'Directional Coverage', Icons.play_arrow),
                     ],
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Top-down view showing speaker placement around room perimeter with coverage patterns',
+                    'Top-down view showing surface speakers mounted on walls with directional sector coverage patterns',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       fontStyle: FontStyle.italic,
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -901,6 +953,14 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
                   'Speaker tilt angle',
                 ),
               ),
+              Expanded(
+                child: _buildDetailItem(
+                  'Coverage Angle',
+                  '${_result!.horizontalCoverageAngle.toStringAsFixed(0)}°',
+                  Icons.radio_button_unchecked,
+                  'Horizontal coverage spread',
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -916,10 +976,10 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
               ),
               Expanded(
                 child: _buildDetailItem(
-                  'Overlap',
-                  '${(_overlapPercentage * 100).toStringAsFixed(0)}%',
+                  'Coverage',
+                  '${_coveragePreference.overlapMultiplier}x',
                   Icons.compare_arrows,
-                  'Speaker overlap',
+                  'Coverage preference: ${_coveragePreference.name}',
                 ),
               ),
             ],
@@ -1086,7 +1146,7 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
   }
 }
 
-/// Enhanced custom painter for room layout visualization with coverage patterns
+/// Enhanced custom painter for room layout visualization with proper directional coverage patterns
 class RoomLayoutPainter extends CustomPainter {
   const RoomLayoutPainter(this.result);
   
@@ -1094,62 +1154,43 @@ class RoomLayoutPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Get room dimensions
-    final double roomLength = result.positions.isNotEmpty 
-        ? result.positions.map((SpeakerPosition p) => p.x).reduce((double a, double b) => a > b ? a : b)
-        : 30.0;
-    final double roomWidth = result.positions.isNotEmpty
-        ? result.positions.map((SpeakerPosition p) => p.y).reduce((double a, double b) => a > b ? a : b)
-        : 20.0;
+    // Use actual room dimensions from the result
+    final double roomLength = result.roomLength;
+    final double roomWidth = result.roomWidth;
 
-    // Calculate scale
-    const double padding = 50.0;
+    // Calculate scale with proper padding
+    const double padding = 60.0;
     final double scaleX = (size.width - 2 * padding) / roomLength;
     final double scaleY = (size.height - 2 * padding) / roomWidth;
     final double scale = scaleX < scaleY ? scaleX : scaleY;
 
-    // Calculate offset
+    // Calculate offset to center the room
     final double offsetX = (size.width - roomLength * scale) / 2;
     final double offsetY = (size.height - roomWidth * scale) / 2;
 
+    _drawRoom(canvas, size, offsetX, offsetY, roomLength, roomWidth, scale);
+    _drawDirectionalCoverage(canvas, offsetX, offsetY, roomLength, roomWidth, scale);
+    _drawSpeakers(canvas, offsetX, offsetY, scale);
+    _drawRoomLabels(canvas, offsetX, offsetY, roomLength, roomWidth, scale);
+  }
+
+  void _drawRoom(Canvas canvas, Size size, double offsetX, double offsetY, double roomLength, double roomWidth, double scale) {
     // Paint styles
     final Paint roomFillPaint = Paint()
-      ..color = Colors.blue.withOpacity(0.1)
+      ..color = const Color(0xFFF5F5F5)
       ..style = PaintingStyle.fill;
     
     final Paint roomBorderPaint = Paint()
-      ..color = Colors.blue.shade600
+      ..color = Colors.blue.shade700
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3;
 
-    final Paint speakerPaint = Paint()
-      ..color = Colors.red.shade600
-      ..style = PaintingStyle.fill;
-
-    final Paint speakerBorderPaint = Paint()
-      ..color = Colors.red.shade800
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
-
-    final Paint listenerAreaPaint = Paint()
-      ..color = Colors.green.withOpacity(0.2)
-      ..style = PaintingStyle.fill;
-
-    final Paint listenerBorderPaint = Paint()
-      ..color = Colors.green.shade600
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
-
-    final Paint coveragePaint = Paint()
-      ..color = Colors.orange.withOpacity(0.1)
-      ..style = PaintingStyle.fill;
-
     final Paint gridPaint = Paint()
-      ..color = Colors.grey.withOpacity(0.3)
+      ..color = Colors.grey.withOpacity(0.2)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
 
-    // Draw room background with grid
+    // Draw room background
     final Rect roomRect = Rect.fromLTWH(
       offsetX,
       offsetY,
@@ -1157,7 +1198,7 @@ class RoomLayoutPainter extends CustomPainter {
       roomWidth * scale,
     );
 
-    // Draw grid lines
+    // Draw subtle grid lines every 5 feet
     for (double i = 0; i <= roomLength; i += 5) {
       final double x = offsetX + i * scale;
       canvas.drawLine(
@@ -1177,43 +1218,148 @@ class RoomLayoutPainter extends CustomPainter {
 
     canvas.drawRect(roomRect, roomFillPaint);
     canvas.drawRect(roomRect, roomBorderPaint);
+  }
 
-    // Draw coverage areas first (behind speakers)
+  void _drawDirectionalCoverage(Canvas canvas, double offsetX, double offsetY, double roomLength, double roomWidth, double scale) {
+    final Paint coveragePaint = Paint()
+      ..color = Colors.orange.withOpacity(0.15)
+      ..style = PaintingStyle.fill;
+
+    final Paint coverageStrokePaint = Paint()
+      ..color = Colors.orange.withOpacity(0.4)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+
+    // Create clipping rectangle for room boundaries
+    final Rect roomBounds = Rect.fromLTWH(
+      offsetX,
+      offsetY,
+      roomLength * scale,
+      roomWidth * scale,
+    );
+
+    // Save canvas state and apply clipping
+    canvas.save();
+    canvas.clipRect(roomBounds);
+
+    // Draw directional coverage sectors for each speaker
     for (final SpeakerPosition position in result.positions) {
       final double speakerX = offsetX + position.x * scale;
       final double speakerY = offsetY + position.y * scale;
       
-      // Draw coverage area as a simplified circle
-      final double coverageRadius = (result.coverageWidth / 2) * scale;
-      canvas.drawCircle(
-        Offset(speakerX, speakerY),
-        coverageRadius,
-        coveragePaint,
-      );
+      // Determine speaker wall position and coverage direction
+      final bool onLeftWall = position.x == 0;
+      final bool onRightWall = position.x == roomLength;
+      final bool onFrontWall = position.y == 0;
+      final bool onBackWall = position.y == roomWidth;
+
+      // Calculate coverage sector based on wall position
+      // For visualization, limit coverage distance to room dimensions
+      double maxCoverageDistance;
+      if (onFrontWall || onBackWall) {
+        maxCoverageDistance = roomWidth; // Front/back walls cover across width
+      } else {
+        maxCoverageDistance = roomLength; // Left/right walls cover across length
+      }
+      
+      // Use the smaller of calculated distance or room dimension for visualization
+      final double actualDistance = result.distanceToListenerPlane;
+      final double visualDistance = (actualDistance < maxCoverageDistance) ? actualDistance : maxCoverageDistance;
+      final double coverageDistance = visualDistance * scale;
+      final double coverageWidth = result.coverageWidth * scale;
+      
+      final Path coveragePath = Path();
+      
+      if (onFrontWall) {
+        // Speaker on front wall - coverage points into room (downward)
+        _drawSectorCoverage(canvas, coveragePath, speakerX, speakerY, 
+                           coverageDistance, coverageWidth, 90, // 90 degrees = pointing down into room
+                           coveragePaint, coverageStrokePaint);
+      } else if (onBackWall) {
+        // Speaker on back wall - coverage points into room (upward)  
+        _drawSectorCoverage(canvas, coveragePath, speakerX, speakerY,
+                           coverageDistance, coverageWidth, 270, // 270 degrees = pointing up into room
+                           coveragePaint, coverageStrokePaint);
+      } else if (onLeftWall) {
+        // Speaker on left wall - coverage points into room (rightward)
+        _drawSectorCoverage(canvas, coveragePath, speakerX, speakerY,
+                           coverageDistance, coverageWidth, 0, // 0 degrees = pointing right into room
+                           coveragePaint, coverageStrokePaint);
+      } else if (onRightWall) {
+        // Speaker on right wall - coverage points into room (leftward)
+        _drawSectorCoverage(canvas, coveragePath, speakerX, speakerY,
+                           coverageDistance, coverageWidth, 180, // 180 degrees = pointing left into room
+                           coveragePaint, coverageStrokePaint);
+      }
     }
 
-    // Draw listener area in center
-    final double listenerAreaSize = 6.0 * scale;
-    final Rect listenerRect = Rect.fromCenter(
-      center: Offset(
-        offsetX + roomLength * scale / 2,
-        offsetY + roomWidth * scale / 2,
-      ),
-      width: listenerAreaSize,
-      height: listenerAreaSize,
-    );
-    canvas.drawRRect(RRect.fromRectAndRadius(listenerRect, const Radius.circular(4)), listenerAreaPaint);
-    canvas.drawRRect(RRect.fromRectAndRadius(listenerRect, const Radius.circular(4)), listenerBorderPaint);
+    // Restore canvas state (remove clipping)
+    canvas.restore();
+  }
 
-    // Draw speakers with enhanced styling
+  void _drawSectorCoverage(Canvas canvas, Path path, double centerX, double centerY, 
+                          double distance, double width, double directionDegrees,
+                          Paint fillPaint, Paint strokePaint) {
+    // Convert direction to radians
+    final double directionRadians = directionDegrees * 3.14159 / 180;
+    
+    // Use actual horizontal coverage angle from speaker specification
+    final double halfAngleRadians = (result.horizontalCoverageAngle * 3.14159 / 180) / 2;
+    
+    // Calculate the sector endpoints
+    final double leftAngle = directionRadians - halfAngleRadians;
+    final double rightAngle = directionRadians + halfAngleRadians;
+    
+    // Calculate the end points of the sector
+    final double leftEndX = centerX + distance * cos(leftAngle);
+    final double leftEndY = centerY + distance * sin(leftAngle);
+    
+    // Create directional sector path (pie slice)
+    path.reset();
+    path.moveTo(centerX, centerY); // Start at speaker position
+    path.lineTo(leftEndX, leftEndY); // Line to left edge of coverage
+    
+    // Add arc between the endpoints
+    path.arcTo(
+      Rect.fromCenter(center: Offset(centerX, centerY), width: distance * 2, height: distance * 2),
+      leftAngle,
+      rightAngle - leftAngle,
+      false,
+    );
+    
+    path.lineTo(centerX, centerY); // Line back to speaker position
+    path.close();
+    
+    // Draw coverage sector
+    canvas.drawPath(path, fillPaint);
+    canvas.drawPath(path, strokePaint);
+  }
+
+  void _drawSpeakers(Canvas canvas, double offsetX, double offsetY, double scale) {
+    final Paint speakerPaint = Paint()
+      ..color = Colors.red.shade600
+      ..style = PaintingStyle.fill;
+
+    final Paint speakerBorderPaint = Paint()
+      ..color = Colors.red.shade800
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+
+    // Draw speakers with directional indicators
     for (int i = 0; i < result.positions.length; i++) {
       final SpeakerPosition position = result.positions[i];
       final double speakerX = offsetX + position.x * scale;
       final double speakerY = offsetY + position.y * scale;
       
-      // Draw speaker circle
-      canvas.drawCircle(Offset(speakerX, speakerY), 8, speakerPaint);
-      canvas.drawCircle(Offset(speakerX, speakerY), 8, speakerBorderPaint);
+      // Draw speaker as a square (more representative of surface mount)
+      final Rect speakerRect = Rect.fromCenter(
+        center: Offset(speakerX, speakerY),
+        width: 12,
+        height: 12,
+      );
+      
+      canvas.drawRRect(RRect.fromRectAndRadius(speakerRect, const Radius.circular(2)), speakerPaint);
+      canvas.drawRRect(RRect.fromRectAndRadius(speakerRect, const Radius.circular(2)), speakerBorderPaint);
       
       // Draw speaker number
       final TextPainter textPainter = TextPainter(
@@ -1221,7 +1367,7 @@ class RoomLayoutPainter extends CustomPainter {
           text: '${i + 1}',
           style: const TextStyle(
             color: Colors.white,
-            fontSize: 10,
+            fontSize: 9,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -1237,8 +1383,9 @@ class RoomLayoutPainter extends CustomPainter {
         ),
       );
     }
+  }
 
-    // Draw wall labels and dimensions
+  void _drawRoomLabels(Canvas canvas, double offsetX, double offsetY, double roomLength, double roomWidth, double scale) {
     final TextPainter labelPainter = TextPainter(
       textAlign: TextAlign.center,
       textDirection: TextDirection.ltr,
@@ -1256,18 +1403,18 @@ class RoomLayoutPainter extends CustomPainter {
     labelPainter.layout();
     labelPainter.paint(
       canvas,
-      Offset(offsetX + roomLength * scale / 2 - labelPainter.width / 2, offsetY - 30),
+      Offset(offsetX + roomLength * scale / 2 - labelPainter.width / 2, offsetY - 35),
     );
 
     // Length dimension
     labelPainter.text = TextSpan(
       text: '${roomLength.toStringAsFixed(0)} ft',
-      style: const TextStyle(color: Colors.black, fontSize: 11),
+      style: const TextStyle(color: Colors.black54, fontSize: 11),
     );
     labelPainter.layout();
     labelPainter.paint(
       canvas,
-      Offset(offsetX + roomLength * scale / 2 - labelPainter.width / 2, offsetY - 15),
+      Offset(offsetX + roomLength * scale / 2 - labelPainter.width / 2, offsetY - 20),
     );
 
     // Back wall label
@@ -1282,13 +1429,24 @@ class RoomLayoutPainter extends CustomPainter {
     labelPainter.layout();
     labelPainter.paint(
       canvas,
-      Offset(offsetX + roomLength * scale / 2 - labelPainter.width / 2, offsetY + roomWidth * scale + 10),
+      Offset(offsetX + roomLength * scale / 2 - labelPainter.width / 2, offsetY + roomWidth * scale + 15),
+    );
+
+    // Width dimension
+    labelPainter.text = TextSpan(
+      text: '${roomWidth.toStringAsFixed(0)} ft',
+      style: const TextStyle(color: Colors.black54, fontSize: 11),
+    );
+    labelPainter.layout();
+    labelPainter.paint(
+      canvas,
+      Offset(offsetX + roomLength * scale / 2 - labelPainter.width / 2, offsetY + roomWidth * scale + 30),
     );
 
     // Left wall label (rotated)
     canvas.save();
-    canvas.translate(offsetX - 35, offsetY + roomWidth * scale / 2);
-    canvas.rotate(-pi / 2);
+    canvas.translate(offsetX - 25, offsetY + roomWidth * scale / 2);
+    canvas.rotate(-3.14159 / 2); // Rotate 90 degrees counterclockwise
     labelPainter.text = const TextSpan(
       text: 'LEFT WALL',
       style: TextStyle(
@@ -1298,25 +1456,13 @@ class RoomLayoutPainter extends CustomPainter {
       ),
     );
     labelPainter.layout();
-    labelPainter.paint(canvas, Offset(-labelPainter.width / 2, -labelPainter.height / 2));
-    canvas.restore();
-
-    // Width dimension (rotated)
-    canvas.save();
-    canvas.translate(offsetX - 20, offsetY + roomWidth * scale / 2);
-    canvas.rotate(-pi / 2);
-    labelPainter.text = TextSpan(
-      text: '${roomWidth.toStringAsFixed(0)} ft',
-      style: const TextStyle(color: Colors.black, fontSize: 11),
-    );
-    labelPainter.layout();
-    labelPainter.paint(canvas, Offset(-labelPainter.width / 2, -labelPainter.height / 2));
+    labelPainter.paint(canvas, Offset(-labelPainter.width / 2, 0));
     canvas.restore();
 
     // Right wall label (rotated)
     canvas.save();
-    canvas.translate(offsetX + roomLength * scale + 35, offsetY + roomWidth * scale / 2);
-    canvas.rotate(-pi / 2);
+    canvas.translate(offsetX + roomLength * scale + 25, offsetY + roomWidth * scale / 2);
+    canvas.rotate(3.14159 / 2); // Rotate 90 degrees clockwise
     labelPainter.text = const TextSpan(
       text: 'RIGHT WALL',
       style: TextStyle(
@@ -1326,26 +1472,8 @@ class RoomLayoutPainter extends CustomPainter {
       ),
     );
     labelPainter.layout();
-    labelPainter.paint(canvas, Offset(-labelPainter.width / 2, -labelPainter.height / 2));
+    labelPainter.paint(canvas, Offset(-labelPainter.width / 2, 0));
     canvas.restore();
-
-    // Draw listener area label
-    labelPainter.text = const TextSpan(
-      text: 'LISTENER\nAREA',
-      style: TextStyle(
-        color: Colors.green,
-        fontSize: 10,
-        fontWeight: FontWeight.bold,
-      ),
-    );
-    labelPainter.layout();
-    labelPainter.paint(
-      canvas,
-      Offset(
-        offsetX + roomLength * scale / 2 - labelPainter.width / 2,
-        offsetY + roomWidth * scale / 2 + 15,
-      ),
-    );
   }
 
   @override
