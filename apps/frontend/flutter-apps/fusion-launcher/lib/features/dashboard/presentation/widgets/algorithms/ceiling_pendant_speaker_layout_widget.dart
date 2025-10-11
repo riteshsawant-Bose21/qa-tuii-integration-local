@@ -28,8 +28,8 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
   SpeakerType _selectedSpeakerType = SpeakerType.ceiling;
   CoveragePreference _selectedCoveragePreference = CoveragePreference.minimumOverlap;
   LayoutPattern _selectedLayoutPattern = LayoutPattern.square;
+  RoomType _selectedRoomType = RoomType.symmetrical;
   bool _useCustomOrigin = false;
-  bool _useCustomRoomShape = false;
   
   // Results
   PlacementResult? _result;
@@ -62,13 +62,27 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
     });
 
     try {
-      // Create room
-      final Room room = Room(
-        width: double.parse(_roomWidthController.text),
-        roomLength: double.parse(_roomLengthController.text),
-        ceilingHeight: double.parse(_ceilingHeightController.text),
-        listenerHeight: double.parse(_listenerHeightController.text),
-      );
+      // Create room based on selected type
+      Room room;
+      
+      if (_selectedRoomType == RoomType.symmetrical) {
+        // Create rectangular room
+        room = Room(
+          width: double.parse(_roomWidthController.text),
+          roomLength: double.parse(_roomLengthController.text),
+          ceilingHeight: double.parse(_ceilingHeightController.text),
+          listenerHeight: double.parse(_listenerHeightController.text),
+          roomType: RoomType.symmetrical,
+        );
+      } else {
+        // Create asymmetrical room from coordinates
+        final List<Point2D> geometry = _parseRoomCoordinates(_roomCoordinatesController.text);
+        room = Room.asymmetrical(
+          geometry: geometry,
+          ceilingHeight: double.parse(_ceilingHeightController.text),
+          listenerHeight: double.parse(_listenerHeightController.text),
+        );
+      }
 
       // Create speaker spec
       final SpeakerSpec speakerSpec = SpeakerSpec(
@@ -251,51 +265,78 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
                             controller: _roomWidthController,
                             label: 'Room Width (m)',
                             hint: 'Enter room width in meters',
+                            autoRecalculate: true,
                           ),
                           const SizedBox(height: 12),
                           _buildNumberField(
                             controller: _roomLengthController,
                             label: 'Room Length (m)',
                             hint: 'Enter room length in meters',
+                            autoRecalculate: true,
                           ),
                           const SizedBox(height: 12),
                           _buildNumberField(
                             controller: _ceilingHeightController,
                             label: 'Ceiling Height (m)',
                             hint: 'Enter ceiling height in meters',
+                            autoRecalculate: true,
                           ),
                           const SizedBox(height: 12),
                           _buildNumberField(
                             controller: _listenerHeightController,
                             label: 'Listener Height (m)',
                             hint: 'Enter listener height in meters',
+                            autoRecalculate: true,
                           ),
                           
                           const SizedBox(height: 16),
                           
-                          // Custom Room Shape
-                          CheckboxListTile(
-                            title: const Text('Use Custom Room Shape'),
-                            subtitle: Text(
-                              _useCustomRoomShape 
-                                  ? 'Enter coordinates to define room geometry'
-                                  : 'Use width × length rectangle',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[600],
-                              ),
+                          // Room Type Selection
+                          const Text(
+                            'Room Shape Type',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
                             ),
-                            value: _useCustomRoomShape,
-                            onChanged: (bool? value) {
+                          ),
+                          const SizedBox(height: 8),
+                          
+                          // Symmetrical room option
+                          RadioListTile<RoomType>(
+                            title: const Text('Symmetrical (Rectangular)'),
+                            subtitle: const Text('Standard width × length rectangle'),
+                            value: RoomType.symmetrical,
+                            groupValue: _selectedRoomType,
+                            onChanged: (RoomType? value) {
                               setState(() {
-                                _useCustomRoomShape = value!;
+                                _selectedRoomType = value!;
                               });
+                              // Automatically recalculate when room type changes
+                              _calculatePlacement();
                             },
-                            controlAffinity: ListTileControlAffinity.leading,
                             contentPadding: EdgeInsets.zero,
                           ),
                           
-                          if (_useCustomRoomShape) ...<Widget>[
+                          // Asymmetrical room option
+                          RadioListTile<RoomType>(
+                            title: const Text('Asymmetrical (Custom Shape)'),
+                            subtitle: const Text('Define room using coordinate points'),
+                            value: RoomType.asymmetrical,
+                            groupValue: _selectedRoomType,
+                            onChanged: (RoomType? value) {
+                              setState(() {
+                                _selectedRoomType = value!;
+                              });
+                              // Automatically recalculate when room type changes
+                              // But only if coordinates are already provided
+                              if (_roomCoordinatesController.text.isNotEmpty) {
+                                _calculatePlacement();
+                              }
+                            },
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                          
+                          if (_selectedRoomType == RoomType.asymmetrical) ...<Widget>[
                             const SizedBox(height: 8),
                             TextFormField(
                               controller: _roomCoordinatesController,
@@ -307,7 +348,23 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
                                 contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                 helperText: 'Coordinates should form a closed polygon',
                               ),
-                              validator: _useCustomRoomShape ? (String? value) {
+                              onChanged: (String value) {
+                                // Auto-recalculate when coordinates change (with debounce)
+                                if (value.isNotEmpty && _selectedRoomType == RoomType.asymmetrical) {
+                                  try {
+                                    _parseRoomCoordinates(value);
+                                    // Only recalculate if coordinates are valid
+                                    Future<void>.delayed(const Duration(milliseconds: 500), () {
+                                      if (_roomCoordinatesController.text == value) {
+                                        _calculatePlacement();
+                                      }
+                                    });
+                                  } catch (e) {
+                                    // Don't recalculate if coordinates are invalid
+                                  }
+                                }
+                              },
+                              validator: _selectedRoomType == RoomType.asymmetrical ? (String? value) {
                                 if (value == null || value.isEmpty) {
                                   return 'Room coordinates are required';
                                 }
@@ -364,6 +421,8 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
                               setState(() {
                                 _selectedSpeakerType = value!;
                               });
+                              // Auto-recalculate when speaker type changes
+                              _calculatePlacement();
                             },
                             items: SpeakerType.values.map((SpeakerType type) {
                               return DropdownMenuItem<SpeakerType>(
@@ -382,6 +441,7 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
                             controller: _coverageAngleController,
                             label: 'Coverage Angle (degrees)',
                             hint: 'Enter speaker coverage angle',
+                            autoRecalculate: true,
                           ),
                           
                           // Pendant Height (conditional)
@@ -410,6 +470,8 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
                               setState(() {
                                 _selectedCoveragePreference = value!;
                               });
+                              // Auto-recalculate when coverage preference changes
+                              _calculatePlacement();
                             },
                             items: CoveragePreference.values.map((CoveragePreference pref) {
                               return DropdownMenuItem<CoveragePreference>(
@@ -458,6 +520,8 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
                               setState(() {
                                 _selectedLayoutPattern = value!;
                               });
+                              // Auto-recalculate when layout pattern changes
+                              _calculatePlacement();
                             },
                             items: LayoutPattern.values.map((LayoutPattern pattern) {
                               return DropdownMenuItem<LayoutPattern>(
@@ -481,6 +545,8 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
                               setState(() {
                                 _useCustomOrigin = value!;
                               });
+                              // Auto-recalculate when custom origin option changes
+                              _calculatePlacement();
                             },
                             controlAffinity: ListTileControlAffinity.leading,
                             contentPadding: EdgeInsets.zero,
@@ -589,6 +655,7 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
     required String label,
     required String hint,
     bool required = true,
+    bool autoRecalculate = false,
   }) {
     return TextFormField(
       controller: controller,
@@ -599,6 +666,16 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
         border: const OutlineInputBorder(),
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
+      onChanged: autoRecalculate ? (String value) {
+        // Auto-recalculate when value changes (with debounce)
+        if (value.isNotEmpty && double.tryParse(value) != null) {
+          Future<void>.delayed(const Duration(milliseconds: 800), () {
+            if (controller.text == value) {
+              _calculatePlacement();
+            }
+          });
+        }
+      } : null,
       validator: required ? (String? value) {
         if (value == null || value.isEmpty) {
           return 'This field is required';
@@ -616,6 +693,10 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
       onPressed: () {
         setState(() {
           _roomCoordinatesController.text = coordinates;
+        });
+        // Automatically calculate placement when template is selected
+        Future<void>.delayed(const Duration(milliseconds: 100), () {
+          _calculatePlacement();
         });
       },
       style: ElevatedButton.styleFrom(
@@ -1011,7 +1092,7 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
         const SizedBox(height: 16),
         
         // Coordinate system info for custom rooms
-        if (_useCustomRoomShape)
+        if (_selectedRoomType == RoomType.asymmetrical)
           Card(
             color: Colors.green[50],
             child: Padding(
@@ -1040,7 +1121,7 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Current room shape: ${_useCustomRoomShape ? "Custom polygon" : "Rectangle"}',
+                    'Current room shape: ${_selectedRoomType == RoomType.asymmetrical ? "Custom polygon" : "Rectangle"}',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
@@ -1079,7 +1160,7 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
   }
 
   List<Point2D> _generateRoomGeometry(double width, double length) {
-    if (_useCustomRoomShape && _roomCoordinatesController.text.isNotEmpty) {
+    if (_selectedRoomType == RoomType.asymmetrical && _roomCoordinatesController.text.isNotEmpty) {
       try {
         return _parseRoomCoordinates(_roomCoordinatesController.text);
       } catch (e) {
