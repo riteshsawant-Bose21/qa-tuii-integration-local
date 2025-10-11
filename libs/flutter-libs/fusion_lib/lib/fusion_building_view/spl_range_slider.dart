@@ -11,6 +11,7 @@ class SPLRangeSlider extends StatefulWidget {
   final double width;
   final double height;
   final SplRangeController? controller;
+  final bool invertedColors;
 
   const SPLRangeSlider({
     super.key,
@@ -18,6 +19,7 @@ class SPLRangeSlider extends StatefulWidget {
     required this.maxValue,
     required this.onChanged,
     required this.onChangeEnd,
+    required this.invertedColors,
     this.width = 60,
     this.height = 400,
     this.controller,
@@ -110,11 +112,16 @@ class _SPLRangeSliderState extends State<SPLRangeSlider> {
   }
 
   List<Color> _buildGradientColors() {
-    return <Color>[
+    final gradientColors = <Color>[
       SPLCalculationData.legendColors.last,
       ...SPLCalculationData.legendColors.reversed,
       SPLCalculationData.legendColors.first,
     ];
+
+    if (widget.invertedColors) {
+      return gradientColors.reversed.toList();
+    }
+    return gradientColors;
   }
 
   List<double> _buildGradientStops() {
