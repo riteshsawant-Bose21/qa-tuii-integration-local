@@ -17,6 +17,7 @@ import 'package:fusion_lib/fusion_widgets/text_views/fusion_gradient_text.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_rich_text.dart';
 
 import '../../features/dashboard/presentation/widgets/algorithms/amplifier_matching_widget.dart';
+import '../../features/dashboard/presentation/widgets/algorithms/amp_sugestion_widget.dart';
 import '../../features/dashboard/presentation/widgets/algorithms/circuiting_widget.dart';
 import '../../features/dashboard/presentation/widgets/algorithms/device_recommender_widget.dart';
 import '../../features/dashboard/presentation/widgets/algorithms/edgemax_speaker_layout_widget.dart';
@@ -699,7 +700,7 @@ class TestLibraryScreen extends StatelessWidget {
 
   Widget _buildAlgorithmsTab(BuildContext context) {
     return const DefaultTabController(
-      length: 8,
+      length: 9,
       child: Column(
         children: <Widget>[
           TabBar(
@@ -709,6 +710,7 @@ class TestLibraryScreen extends StatelessWidget {
               Tab(text: 'Tap Setting'),
               Tab(text: 'Circuiting'),
               Tab(text: 'Amp Matching'),
+              Tab(text: 'Enhanced Amp Matching'),
               Tab(text: 'Device Recommender'),
               Tab(text: 'Ceiling/Pendant Placement'),
               Tab(text: 'Surface Placement'),
@@ -722,6 +724,7 @@ class TestLibraryScreen extends StatelessWidget {
                 TapSettingWidget(),
                 CircuitingWidget(),
                 AmplifierMatchingWidget(),
+                AmpSuggestionWidget(),
                 DeviceRecommenderWidget(),
                 CeilingPendantSpeakerLayoutWidget(),
                 SurfaceSpeakerLayoutWidget(),
