@@ -90,25 +90,16 @@ func NewCluster(appConfig *api.AppConfig, delegate *ClusterDelegate, memberlist 
 	if !cluster.config.Local {
 		logger := logging.GetLogger()
 
-		// if vip, err := cluster.getVIPFromConfig(); err != nil {
-		// 	logger.Fatal("getVIPFromConfig: %v", err)
+		// addrs, err := netlink.AddrList(nil, netlink.FamilyAll)
+		// if err != nil {
+		// 	logger.Error("AddrList failed: %v", err)
 		// } else {
-		// 	if cluster.isLocalVIP(vip) {
-
-		// 		cluster.vipLock.Lock()
-		// 		cluster.vip = vip
-		// 		cluster.vipLock.Unlock()
-
-		// 		// Start the TaskManager
-		// 		if err := cluster.delegate.taskManager.Start(); err != nil {
-		// 			logger.Fatal("TaskManager.Start: %v", err)
+		// 	for _, a := range addrs {
+		// 		if a.IP.String() == cluster.vip {
+		// 			logger.Info("VIP address found on startup: %s", c.vip)
+		// 			c.listenerUpdated(cluster.vip, cluster.localIP)
+		// 			break
 		// 		}
-		// 		logger.Info("TaskManager running on %s", cluster.nodeName)
-
-		// 		if err := cluster.startStatusNotifier(); err != nil {
-		// 			logger.Fatal("startStatusNotifier: %v", err)
-		// 		}
-		// 		logger.Info("StatusNotifier running on %s", cluster.nodeName)
 		// 	}
 		// }
 
@@ -190,7 +181,7 @@ func (c *Cluster) listenerUpdated(vip, srcIP string) {
 
 	// If we lost ownership of the VIP, stop local services.
 	if old != "" && old != vip && !isLocal {
-		logger.Debug("Lost VIP %s → %s", old, vip)
+		logger.Info("Lost VIP %s → %s", old, vip)
 		c.delegate.taskManager.Stop()
 		c.stopStatusNotifier()
 	}
@@ -207,7 +198,7 @@ func (c *Cluster) listenerUpdated(vip, srcIP string) {
 		return
 	}
 
-	logger.Debug("New VIP detected: %q → %q", old, vip)
+	logger.Info("New VIP detected: %q → %q", old, vip)
 
 	// Only perform these actions if the new VIP is local.
 	if isLocal {
@@ -218,20 +209,20 @@ func (c *Cluster) listenerUpdated(vip, srcIP string) {
 			if err := c.JoinMemberlist(); err != nil {
 				logger.Error("JoinMemberlist: %v", err)
 			} else {
-				logger.Debug("Joined memberlist with VIP %s", vip)
+				logger.Info("Joined memberlist with VIP %s", vip)
 			}
 		}
 
 		if err := c.delegate.taskManager.Start(); err != nil {
 			logger.Error("TaskManager start: %v", err)
 		} else {
-			logger.Debug("TaskManager running on %s", c.nodeName)
+			logger.Info("TaskManager running on %s", c.nodeName)
 		}
 
 		if err := c.startStatusNotifier(); err != nil {
 			logger.Error("startStatusNotifier: %v", err)
 		} else {
-			logger.Debug("StatusNotifier running on %s", c.nodeName)
+			logger.Info("StatusNotifier running on %s", c.nodeName)
 		}
 	}
 }
@@ -241,7 +232,7 @@ func (c *Cluster) startVRRPListener() error {
 		return fmt.Errorf("unable to start keepalived listener: %v", err)
 	}
 
-	//go c.watchLocalVIP()
+	go c.watchLocalVIP()
 
 	return nil
 }
