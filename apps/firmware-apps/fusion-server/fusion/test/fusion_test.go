@@ -15,6 +15,7 @@ import (
 	"reflect"
 	"sort"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -799,6 +800,88 @@ func TestPatchRemoveArrayElement(t *testing.T) {
 	expected := []any{100.0, nil, 300.0}
 	if !reflect.DeepEqual(updatedResponse.Value, expected) {
 		t.Errorf("Expected updated array %v, got %v", expected, updatedResponse.Value)
+	}
+}
+
+// TestConcurrentPatchRequests tests multiple concurrent PATCH requests
+func TestConcurrentPatchRequests(t *testing.T) {
+	serverAddr := "http://localhost:8080" // or however your test harness provides this
+
+	// Initial config with nested maps and arrays
+	initialConfig := map[string]any{
+		"settings": map[string]any{
+			"audio": map[string]any{
+				"eq": map[string]any{
+					"bands": []float64{100.0, 200.0, 300.0},
+				},
+			},
+		},
+	}
+
+	jsonData, _ := json.Marshal(initialConfig)
+	resp, err := http.Post(fmt.Sprintf("%s/value", serverAddr), api.JsonMIMEType, bytes.NewBuffer(jsonData))
+	if err != nil {
+		t.Fatalf("failed to set initial configuration: %v", err)
+	}
+	resp.Body.Close()
+
+	// Prepare concurrent updates
+	client := &http.Client{}
+	const numWorkers = 10
+	const numRequests = 50
+	errCh := make(chan error, numWorkers*numRequests)
+	var wg sync.WaitGroup
+
+	for w := range numWorkers {
+		wg.Add(1)
+		go func(worker int) {
+			defer wg.Done()
+			for i := 0; i < numRequests; i++ {
+				updateData := map[string]any{
+					"value": float64(100 + worker + i),
+				}
+				jsonUpdate, _ := json.Marshal(updateData)
+
+				req, _ := http.NewRequest("PATCH",
+					fmt.Sprintf("%s/value?key=settings.audio.eq.bands[%d]", serverAddr, i%3),
+					bytes.NewBuffer(jsonUpdate))
+				req.Header.Set(api.ContentType, api.JsonMIMEType)
+
+				resp, err := client.Do(req)
+				if err != nil {
+					errCh <- fmt.Errorf("worker %d request %d failed: %w", worker, i, err)
+					return
+				}
+				io.Copy(io.Discard, resp.Body)
+				resp.Body.Close()
+			}
+		}(w)
+	}
+
+	wg.Wait()
+	close(errCh)
+
+	for err := range errCh {
+		t.Errorf("patch error: %v", err)
+	}
+
+	// Fetch final array to ensure server still responds and data is consistent
+	getResp, err := http.Get(fmt.Sprintf("%s/value?key=settings.audio.eq.bands", serverAddr))
+	if err != nil {
+		t.Fatalf("failed to get final array: %v", err)
+	}
+	defer getResp.Body.Close()
+
+	var finalResp struct {
+		Exists bool      `json:"exists"`
+		Value  []float64 `json:"value"`
+	}
+	if err := json.NewDecoder(getResp.Body).Decode(&finalResp); err != nil {
+		t.Fatalf("failed to decode final array: %v", err)
+	}
+
+	if !finalResp.Exists {
+		t.Error("final array missing after concurrent patches")
 	}
 }
 

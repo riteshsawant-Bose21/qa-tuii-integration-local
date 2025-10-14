@@ -397,3 +397,39 @@ func ExtractName(r *http.Request) (string, error) {
 	return ExtractValue(r, "name")
 
 }
+
+// DeepCopy recursively copies maps, slices, and arrays.
+// It supports arbitrary nesting of map[string]any, []any, and primitive values.
+func DeepCopy(src any) any {
+	switch v := src.(type) {
+	case map[string]any:
+		cp := make(map[string]any, len(v))
+		for key, val := range v {
+			cp[key] = DeepCopy(val)
+		}
+		return cp
+
+	case []any:
+		cp := make([]any, len(v))
+		for i, val := range v {
+			cp[i] = DeepCopy(val)
+		}
+		return cp
+
+	case []float64:
+		cp := make([]float64, len(v))
+		copy(cp, v)
+		return cp
+	case []int:
+		cp := make([]int, len(v))
+		copy(cp, v)
+		return cp
+	case []string:
+		cp := make([]string, len(v))
+		copy(cp, v)
+		return cp
+
+	default:
+		return v
+	}
+}
