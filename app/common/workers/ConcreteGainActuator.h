@@ -10,6 +10,7 @@
 #define CONCRETEGAINACTUATOR_H
 
 // ---- Include system wide include files ----
+#include <mutex>
 
 // ---- Include local include files ----
 #include <OCC/ControlClasses/Workers/Actuators/OcaLiteGain.h>
@@ -52,19 +53,37 @@ public:
      */
     virtual ~ConcreteGainActuator() {}
 
+    /**
+     * @brief Handle gain update message received from Fusion server
+     * @param gainValue The gain value received from Fusion
+     */
+    void handleFusionGainMessage(::OcaDB gainValue);
+
 protected:
     /**
      * Set the value of the Gain property. This method performs the actual
      * gain adjustment in the audio processing chain.
      *
      * @param[in]  gain     Input parameter that holds the value of the Gain property in dB.
+     * @param[in]  source   Source of the gain change ("aes70" or "fusion"). Default is "aes70".
      * @return Indicates whether the operation succeeded.
+     */
+    virtual ::OcaLiteStatus SetGainValue(::OcaDB gain, const std::string &source = "aes70");
+
+    /**
+     * Base class override - calls SetGainValue with default "aes70" source
      */
     virtual ::OcaLiteStatus SetGainValue(::OcaDB gain) override;
 
 private:
     /** The gain identifier from JSON configuration */
     std::string m_gainID;
+
+    /** Mutex for thread synchronization */
+    mutable std::mutex m_gainMutex;
+
+    /** Flag to indicate when processing a Fusion update (to prevent sending back to Fusion) */
+    bool m_processingFusionUpdate;
 
     /** private copy constructor, no copying of object allowed */
     ConcreteGainActuator(const ConcreteGainActuator &);

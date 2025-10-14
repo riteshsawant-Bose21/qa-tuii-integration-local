@@ -12,10 +12,6 @@
 
 using udp = boost::asio::ip::udp;
 
-// Hardcoded server target (kept to match your existing interface)
-static constexpr const char *kServerHost = "192.168.64.53";
-static constexpr unsigned short kServerPort = 7947;
-
 UDPSender::UDPSender()
     : m_ioContext(nullptr),
       m_workGuard(std::nullopt),
@@ -37,7 +33,8 @@ UDPSender &UDPSender::getInstance()
     return instance;
 }
 
-bool UDPSender::initialize()
+bool UDPSender::initialize(const std::string &serverIP,
+                           unsigned int serverPort)
 {
     if (m_initialized.load())
     {
@@ -60,7 +57,7 @@ bool UDPSender::initialize()
 
         // Resolve server endpoint
         udp::resolver resolver(*m_ioContext);
-        auto results = resolver.resolve(kServerHost, std::to_string(kServerPort));
+        auto results = resolver.resolve(serverIP, std::to_string(serverPort));
         if (results.begin() == results.end())
         {
             OCA_LOG_ERROR("Failed to resolve server host/port");
@@ -230,6 +227,9 @@ void UDPSender::doAsyncSend(const std::string &message)
 
     // Keep message buffer alive until handler completes
     auto buf = std::make_shared<std::string>(message);
+
+    // Log the actual message content being sent
+    OCA_LOG_INFO_PARAMS("UDP message content: %s", message.c_str());
 
     // Ensure initiation happens on the io_context thread
     boost::asio::post(*m_ioContext, [this, buf]()

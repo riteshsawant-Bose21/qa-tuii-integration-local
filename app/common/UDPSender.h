@@ -50,7 +50,8 @@ public:
      * @brief Initialize the UDP sender (call during startup)
      * @return true if initialization successful, false otherwise
      */
-    bool initialize();
+    bool initialize(const std::string &serverIP,
+                    unsigned int serverPort);
 
     /**
      * @brief Check if the UDP sender is initialized

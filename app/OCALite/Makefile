@@ -101,7 +101,8 @@ APP_COMMON_SOURCES       := ../common/workers/ConcreteGainActuator.cpp \
                            ../common/workers/ZoneGroup.cpp \
                            ../common/OcaLiteControllerConfigManager.cpp \
                            ../common/workers/FusionBlock.cpp \
-                           ../common/UDPSender.cpp
+                           ../common/UDPSender.cpp \
+                           ../common/FusionAudioBridge.cpp
 
 # Object files
 APP_OBJECTS                := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(APP_SOURCES))

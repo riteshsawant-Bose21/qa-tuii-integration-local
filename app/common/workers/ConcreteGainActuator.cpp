@@ -10,12 +10,16 @@
 // ---- Include system wide include files ----
 #include <iostream>
 #include <cmath>
+#include <string>
+#include <sstream>
+#include <mutex>
 
 // ---- FileInfo Macro ----
 
 // ---- Include local include files ----
 #include "ConcreteGainActuator.h"
 #include <HostInterfaceLite/OCA/OCF/Logging/IOcfLiteLog.h>
+#include "../FusionAudioBridge.h"
 
 // ---- Helper types and constants ----
 
@@ -49,7 +53,8 @@ ConcreteGainActuator::ConcreteGainActuator(::OcaONo objectNumber,
                                            ::OcaDB maxGain,
                                            const std::string &gainID)
     : ::OcaLiteGain(objectNumber, lockable, role, ports, minGain, maxGain),
-      m_gainID(gainID)
+      m_gainID(gainID),
+      m_processingFusionUpdate(false)
 {
     // Enhanced logging with dynamic information
     OCA_LOG_INFO("=== ConcreteGainActuator Created ===");
@@ -75,25 +80,44 @@ ConcreteGainActuator::ConcreteGainActuator(::OcaONo objectNumber,
 
 ::OcaLiteStatus ConcreteGainActuator::SetGainValue(::OcaDB gain)
 {
+    return SetGainValue(gain, "aes70");
+}
+
+::OcaLiteStatus ConcreteGainActuator::SetGainValue(::OcaDB gain, const std::string &source)
+{
     try
     {
         // Simulate setting the gain value in the actual audio processing hardware/software
         // In a real implementation, this would interface with your DSP or audio hardware
 
-        OCA_LOG_INFO_PARAMS("[GAIN] Setting gain to %.2f dB (Gain ID: %s)", gain, m_gainID.empty() ? "N/A" : m_gainID.c_str());
+        OCA_LOG_INFO_PARAMS("[GAIN] SetGainValue called with %.2f dB (Gain ID: %s, Source: %s)",
+                            gain, m_gainID.empty() ? "N/A" : m_gainID.c_str(), source.c_str());
 
         // Convert dB to linear for internal processing (if needed)
         double linearGain = dbToLinear(gain);
 
-        // Here you would typically:
-        // 1. Send the gain value to your audio processing hardware/DSP
-        // 2. Update internal audio processing parameters
-        // 3. Validate that the setting was successful
-
-        // Example hardware interface calls (commented out):
-        // audioHardware.setChannelGain(channelId, gain);
-        // dspLibrary.updateGainParameter(gain);
-        // registerWrite(GAIN_REGISTER, gainToRegisterValue(gain));
+        // Send to Fusion server via FusionAudioBridge (only if source is "aes70" and not processing Fusion update)
+        if (!m_processingFusionUpdate && source == "aes70")
+        {
+            FusionAudioBridge &bridge = FusionAudioBridge::getInstance();
+            if (bridge.isInitialized())
+            {
+                bridge.sendGainToFusion(m_gainID, gain, source);
+                OCA_LOG_INFO_PARAMS("[GAIN] Sent gain update to FusionAudioBridge (source: %s)", source.c_str());
+            }
+            else
+            {
+                OCA_LOG_WARNING("[GAIN] FusionAudioBridge not initialized, skipping Fusion communication");
+            }
+        }
+        else if (m_processingFusionUpdate)
+        {
+            OCA_LOG_INFO_PARAMS("[GAIN] Skipping Fusion send for gain update from Fusion (gain ID: %s)", m_gainID.c_str());
+        }
+        else
+        {
+            OCA_LOG_INFO_PARAMS("[GAIN] Skipping Fusion send for gain update (source: %s, gain ID: %s)", source.c_str(), m_gainID.c_str());
+        }
 
         OCA_LOG_INFO_PARAMS("[GAIN] ✓ Gain successfully set to %.2f dB (linear: %.6f) (Gain ID: %s)",
                             gain, linearGain, m_gainID.empty() ? "N/A" : m_gainID.c_str());
@@ -106,4 +130,69 @@ ConcreteGainActuator::ConcreteGainActuator(::OcaONo objectNumber,
         return OCASTATUS_PROCESSING_FAILED;
     }
 }
+void ConcreteGainActuator::handleFusionGainMessage(::OcaDB gainValue)
+{
+    try
+    {
+        OCA_LOG_INFO_PARAMS("ConcreteGainActuator[%s]: handleFusionGainMessage called with %.2f dB",
+                            m_gainID.c_str(), gainValue);
 
+        // Get current gain limits from base class
+        ::OcaDB currentGain, minGain, maxGain;
+        ::OcaLiteStatus status = GetGain(currentGain, minGain, maxGain);
+
+        if (status != OCASTATUS_OK)
+        {
+            OCA_LOG_ERROR_PARAMS("ConcreteGainActuator[%s]: Failed to get gain limits", m_gainID.c_str());
+            return;
+        }
+
+        // Clamp the gain value to valid range
+        ::OcaDB clampedGain = gainValue;
+        if (gainValue < minGain)
+        {
+            clampedGain = minGain;
+            OCA_LOG_INFO_PARAMS("ConcreteGainActuator[%s]: Clamping gain %.2f to minimum %.2f dB",
+                                m_gainID.c_str(), gainValue, minGain);
+        }
+        else if (gainValue > maxGain)
+        {
+            clampedGain = maxGain;
+            OCA_LOG_INFO_PARAMS("ConcreteGainActuator[%s]: Clamping gain %.2f to maximum %.2f dB",
+                                m_gainID.c_str(), gainValue, maxGain);
+        }
+
+        // Set the gain value using the base class method with Fusion flag set
+        // This will update the internal state AND notify AES70 clients, but won't send back to Fusion
+        {
+            std::lock_guard<std::mutex> lock(m_gainMutex);
+            m_processingFusionUpdate = true;
+        }
+
+        OCA_LOG_INFO_PARAMS("ConcreteGainActuator[%s]: About to call SetGain(%.2f) with Fusion flag", m_gainID.c_str(), clampedGain);
+        status = SetGain(clampedGain);
+
+        {
+            std::lock_guard<std::mutex> lock(m_gainMutex);
+            m_processingFusionUpdate = false;
+        }
+
+        OCA_LOG_INFO_PARAMS("ConcreteGainActuator[%s]: SetGain returned with status %d", m_gainID.c_str(), static_cast<int>(status));
+
+        if (status == OCASTATUS_OK)
+        {
+            OCA_LOG_INFO_PARAMS("ConcreteGainActuator[%s]: Successfully updated gain to %.2f dB from Fusion message",
+                                m_gainID.c_str(), clampedGain);
+        }
+        else
+        {
+            OCA_LOG_ERROR_PARAMS("ConcreteGainActuator[%s]: Failed to set gain to %.2f dB (status: %d)",
+                                 m_gainID.c_str(), clampedGain, static_cast<int>(status));
+        }
+    }
+    catch (const std::exception &e)
+    {
+        OCA_LOG_ERROR_PARAMS("ConcreteGainActuator[%s]: Error handling Fusion gain message: %s",
+                             m_gainID.c_str(), e.what());
+    }
+}

@@ -18,21 +18,23 @@
 #include <OCC/ControlClasses/Managers/OcaLiteFirmwareManager.h>
 #include <OCF/OcaLiteCommandHandler.h>
 #include <mutex>
+#include <memory>
 #ifndef UDP
 #include <OCP.1/Ocp1LiteNetwork.h>
 #else
 #include <OCP.1/Ocp1LiteUdpNetwork.h>
 #endif
 #include <OCP.1/Ocp1LiteNetworkSystemInterfaceID.h>
-#include "workers/ConcreteGainActuator.h"
-#include "workers/ConcreteMuteActuator.h"
-#include "workers/ConcreteSwitchActuator.h"
-#include "workers/ZoneGroup.h"
+#include "../common/workers/ConcreteGainActuator.h"
+#include "../common/workers/ConcreteMuteActuator.h"
+#include "../common/workers/ConcreteSwitchActuator.h"
+#include "../common/workers/ZoneGroup.h"
 #include "OcaLiteControllerConfigManager.h"
 #include "../common/FusionOCAConstants.h" // For custom ONO constants
 #include "Observer.h"                     // Add the UDP JSON Observer
 #include "../common/models/ControlSystemConfigParser.h"
-#include "../common/UDPSender.h" // UDP JSON sender
+#include "../common/UDPSender.h"         // UDP JSON sender
+#include "../common/FusionAudioBridge.h" // Centralized Fusion communication
 
 #ifdef OCA_RUN
 extern void Ocp1LiteServiceRun();
@@ -56,8 +58,8 @@ static ::Ocp1LiteNetwork *g_ocp1Network = nullptr;
 // Global connection port storage
 static unsigned int g_connectionPort = 65000;
 
-// Global object tracking for configuration management
-static std::map<std::string, std::vector<::OcaONo>> g_objectTracker;
+// Global object tracking for configuration management (shared with FusionAudioBridge)
+static std::shared_ptr<std::map<std::string, std::vector<::OcaONo>>> g_objectTracker = std::make_shared<std::map<std::string, std::vector<::OcaONo>>>();
 
 // Function declarations
 bool InitializeHostInterfaces();
@@ -66,7 +68,7 @@ bool ApplyZoneConfiguration(const Json::Value &configJson);
 ::Ocp1LiteNetwork *SetupOCP1Network(unsigned int connectionPort);
 bool StartOCAServices(::Ocp1LiteNetwork *ocp1Network);
 void RunMainLoop();
-bool SetupUDPWatchers(const std::string &serverIP, unsigned int serverPort);
+bool InitializeFusionAudioBridge(const std::string &serverIP, unsigned int serverPort);
 void HandleConfigurationUpdate(const Json::Value &newConfig);
 void HandleAudioSettingsUpdate(const Json::Value &newSettings);
 bool ValidateConfigurationJson(const Json::Value &config);
@@ -76,10 +78,8 @@ bool RebuildConfiguration(const Json::Value &configJson);
 void RemoveZoneObjectsFromRootBlock();
 void BuildObjectTracker(const ControlSystemConfig &config);
 void ClearObjectTracker();
-void ShutdownUDPObserver();
+void ShutdownFusionAudioBridge();
 bool StartOCAServicesWithExponentialBackoff(::Ocp1LiteNetwork *ocp1Network);
-bool InitializeUDPSender();
-void ShutdownUDPSender();
 
 int main(int argc, const char *argv[])
 {
@@ -109,99 +109,10 @@ int main(int argc, const char *argv[])
 
     // Start with hardcoded configuration as fallback
     // UDP observer will update this when available
-    const std::string zonesJsonString = R"(
-        {
-        "controllers": [
-            {
-            "id": "ctrl1",
-            "name": "Controller 1",
-            "zoneIds": [
-                "zone1"
-            ]
-            },
-            {
-            "id": "ctrl2",
-            "name": "Controller 2",
-            "zoneIds": [
-                "zone2",
-                "zone3"
-            ]
-            }
-        ],
-        "zones": [
-            {
-            "id": "zone1",
-            "name": "Living Room",
-            "ono": {
-                "zone": 8001,
-                "gain": 8002,
-                "mute": 8003,
-                "sourceSelector": 8004
-            },
-            "gain": {
-                "gainID": "gain1",
-                "min_value": "0",
-                "max_value": "100",
-                "default_gain_value": "50",
-                "default_mute_value": "50"
-            },
-            "sources": [
-                { "index": 0, "label": "HDMI 1" },
-                { "index": 1, "label": "HDMI 2" },
-                { "index": 2, "label": "Bluetooth" }
-            ]
-            },
-            {
-            "id": "zone2",
-            "name": "Kitchen",
-            "gain": {
-                "gainID": "gain2",
-                "min_value": "0",
-                "max_value": "100",
-                "default_gain_value": "50",
-                "default_mute_value": "50"
-            },
-            "ono": {
-                "zone": 8005,
-                "gain": 8006,
-                "mute": 8007,
-                "sourceSelector": 8008
-            },
-            "sources": [
-                { "index": 0, "label": "Radio" },
-                { "index": 1, "label": "Streaming" }
-            ]
-            },
-            {
-            "id": "zone3",
-            "name": "Bedroom",
-            "gain": {
-                "gainID": "gain3",
-                "min_value": "0",
-                "max_value": "100",
-                "default_gain_value": "50",
-                "default_mute_value": "50"
-            },
-            "ono": {
-                "zone": 8009,
-                "gain": 8010,
-                "mute": 8011,
-                "sourceSelector": 8012
-            },
-            "sources": [
-                { "index": 0, "label": "TV" },
-                { "index": 1, "label": "AUX" },
-                { "index": 2, "label": "AirPlay" }
-            ]
-            }
-        ]
-        }
-        )";
 
-    // Convert string to Json::Value
     Json::Value zonesJson;
     Json::Reader reader;
-    if (!reader.parse(zonesJsonString, zonesJson))
+    if (!reader.parse(ZONES_JSON_STRING_FOR_DEV, zonesJson))
     {
         OCA_LOG_ERROR_PARAMS("Failed to parse hardcoded JSON: %s", reader.getFormattedErrorMessages().c_str());
         return -1;
@@ -238,31 +149,20 @@ int main(int argc, const char *argv[])
         return -1;
     }
 
-    // Setup UDP watchers
-    g_bSuccess = SetupUDPWatchers("192.168.64.53", 7947);
+    // Initialize FusionAudioBridge for centralized Fusion communication
+    g_bSuccess = InitializeFusionAudioBridge("192.168.0.19", 7947);
     if (!g_bSuccess)
     {
-        OCA_LOG_ERROR("✗ UDP watchers setup failed");
-        // //TODO: what to do if UDP observer setup fails
-        // For now, continue without UDP observer
-        g_bSuccess = true;
-    }
-
-    // Initialize UDP sender for outbound communication
-    g_bSuccess = InitializeUDPSender();
-    if (!g_bSuccess)
-    {
-        OCA_LOG_ERROR("✗ UDP sender initialization failed");
-        // Continue without UDP sender
+        OCA_LOG_ERROR("✗ FusionAudioBridge initialization failed");
+        // Continue without Fusion communication
         g_bSuccess = true;
     }
 
     // Run main loop
     RunMainLoop();
 
-    // Clean up UDP components before exit
-    ShutdownUDPSender();
-    ShutdownUDPObserver();
+    // Clean up Fusion components before exit
+    ShutdownFusionAudioBridge();
 
     return 0;
 }
@@ -484,43 +384,65 @@ bool StartOCAServicesWithExponentialBackoff(::Ocp1LiteNetwork *ocp1Network)
 }
 
 /**
- * @brief Setup UDP watchers for configuration and audio settings
- * @param serverIP UDP server IP address
- * @param serverPort UDP server port
- * @return true if watchers setup successfully, false otherwise
+ * @brief Initialize FusionAudioBridge for centralized Fusion communication
+ * @param serverIP Fusion server IP address
+ * @param serverPort Fusion server port
+ * @return true if bridge initialized successfully, false otherwise
  */
-bool SetupUDPWatchers(const std::string &serverIP, unsigned int serverPort)
+bool InitializeFusionAudioBridge(const std::string &serverIP, unsigned int serverPort)
 {
     try
     {
-        g_udpObserver = std::unique_ptr<UDPValueMonitor>(new UDPValueMonitor(
-            serverIP,
-            serverPort,
-            false)); // verbose = false
+        // Initialize the FusionAudioBridge singleton
+        FusionAudioBridge &bridge = FusionAudioBridge::getInstance();
 
-        OCA_LOG_INFO_PARAMS("✓ UDP Observer started - monitoring from %s:%u", serverIP.c_str(), serverPort);
+        bool success = bridge.initialize(serverIP, serverPort, g_objectTracker);
+        if (!success)
+        {
+            OCA_LOG_ERROR("✗ Failed to initialize FusionAudioBridge");
+            return false;
+        }
 
-        // Watch for configuration updates (both initial and ongoing)
-        g_udpObserver->watch("wall_controller_config", [](const std::string &path,
-                                                          const Json::Value &oldVal,
-                                                          const Json::Value &newVal)
-                             { 
-                                 OCA_LOG_INFO_PARAMS("Configuration update received at %s", path.c_str());
-                                 HandleConfigurationUpdate(newVal); });
+        // Only setup UDP observer if it doesn't already exist (preserve during config updates)
+        if (!g_udpObserver)
+        {
+            // Setup UDP observer for configuration and audio updates
+            g_udpObserver = std::unique_ptr<UDPValueMonitor>(new UDPValueMonitor(
+                serverIP,
+                serverPort,
+                false)); // verbose = false
 
-        // Watch for audio settings updates
-        g_udpObserver->watch("settings.audio", [](const std::string &path,
-                                                  const Json::Value &oldVal,
-                                                  const Json::Value &newVal)
-                             { 
-                                 OCA_LOG_INFO_PARAMS("Audio settings update received at %s", path.c_str());
-                                 HandleAudioSettingsUpdate(newVal); });
+            OCA_LOG_INFO_PARAMS("✓ UDP Observer started - monitoring from %s:%u", serverIP.c_str(), serverPort);
 
+            // Watch for configuration updates (both initial and ongoing)
+            g_udpObserver->watch("wall_controller_config", [](const std::string &path,
+                                                              const Json::Value &oldVal,
+                                                              const Json::Value &newVal)
+                                 { 
+                                     OCA_LOG_INFO_PARAMS("Configuration update received at %s", path.c_str());
+                                    OCA_LOG_INFO_PARAMS("Configuration update from %s to %s", oldVal.toStyledString().c_str(), newVal.toStyledString().c_str());
+
+                                     HandleConfigurationUpdate(newVal); });
+
+            // Watch for audio settings updates - use FusionAudioBridge for processing
+            g_udpObserver->watch("settings.audio", [](const std::string &path,
+                                                      const Json::Value &oldVal,
+                                                      const Json::Value &newVal)
+                                 { 
+                                     OCA_LOG_INFO_PARAMS("Audio settings update received at %s oldValue: %s, newValue: %s", path.c_str(), oldVal.toStyledString().c_str(), newVal.toStyledString().c_str());
+                                     HandleAudioSettingsUpdate(newVal); });
+        }
+        else
+        {
+            OCA_LOG_INFO("UDP Observer already running - preserved during configuration update");
+        }
+
+        OCA_LOG_INFO("✓ FusionAudioBridge initialized successfully");
         return true;
     }
     catch (const std::exception &e)
     {
-        OCA_LOG_ERROR_PARAMS("✗ Failed to setup UDP watchers: %s", e.what());
+        OCA_LOG_ERROR_PARAMS("✗ Failed to initialize FusionAudioBridge: %s", e.what());
         return false;
     }
 }
@@ -576,10 +498,61 @@ void HandleAudioSettingsUpdate(const Json::Value &newSettings)
 {
     OCA_LOG_INFO("Processing audio settings update...");
 
-    // TODO: Implement audio settings update logic
-    // This should update OCA device values without tearing down the stack
+    try
+    {
+        // Validate that newSettings is an object
+        if (!newSettings.isObject())
+        {
+            OCA_LOG_ERROR("Audio settings must be a JSON object - discarding message");
+            return;
+        }
 
-    OCA_LOG_INFO("Audio settings update processing not yet implemented");
+        // Iterate through all gain settings in the audio settings
+        for (const auto &gainID : newSettings.getMemberNames())
+        {
+            const Json::Value &gainSettings = newSettings[gainID];
+
+            // Validate that each gain setting is an object with a "gain" property
+            if (!gainSettings.isObject() || !gainSettings.isMember("gain"))
+            {
+                OCA_LOG_WARNING_PARAMS("Gain setting for '%s' missing 'gain' property - skipping", gainID.c_str());
+                continue;
+            }
+
+            // Extract the gain value
+            const Json::Value &gainValueJson = gainSettings["gain"];
+            if (!gainValueJson.isNumeric())
+            {
+                OCA_LOG_WARNING_PARAMS("Gain value for '%s' is not numeric - skipping", gainID.c_str());
+                continue;
+            }
+
+            double gainValue = gainValueJson.asDouble();
+
+            OCA_LOG_INFO_PARAMS("Processing gain update: %s = %.6f dB", gainID.c_str(), gainValue);
+
+            // Process the gain update via FusionAudioBridge
+            FusionAudioBridge &bridge = FusionAudioBridge::getInstance();
+            if (bridge.isInitialized())
+            {
+                bridge.handleFusionGainUpdate(gainID, gainValue);
+            }
+            else
+            {
+                OCA_LOG_WARNING("FusionAudioBridge not initialized - discarding gain update");
+            }
+        }
+
+        OCA_LOG_INFO("Audio settings update processing completed");
+    }
+    catch (const std::exception &e)
+    {
+        OCA_LOG_ERROR_PARAMS("Exception during audio settings update: %s", e.what());
+    }
+    catch (...)
+    {
+        OCA_LOG_ERROR("Unknown exception during audio settings update");
+    }
 }
 
 /**
@@ -768,7 +741,7 @@ void BuildObjectTracker(const ControlSystemConfig &config)
 {
     OCA_LOG_INFO("Building object tracker map from configuration...");
 
-    g_objectTracker.clear();
+    g_objectTracker->clear();
 
     for (const auto &zonePtr : config.zones)
     {
@@ -787,16 +760,16 @@ void BuildObjectTracker(const ControlSystemConfig &config)
         ::OcaONo switchOno = static_cast<::OcaONo>(zone.ono.sourceSelector);
 
         // Map gainID to gain and mute ONOs
-        g_objectTracker[gainId] = {gainOno, muteOno};
+        (*g_objectTracker)[gainId] = {gainOno, muteOno};
 
         // Map zoneID to switch ONO
-        g_objectTracker[zoneId] = {switchOno};
+        (*g_objectTracker)[zoneId] = {switchOno};
 
         OCA_LOG_INFO_PARAMS("Tracked objects - GainID '%s': [%u, %u], ZoneID '%s': [%u]",
                             gainId.c_str(), gainOno, muteOno, zoneId.c_str(), switchOno);
     }
 
-    OCA_LOG_INFO_PARAMS("✓ Object tracker built with %zu entries", g_objectTracker.size());
+    OCA_LOG_INFO_PARAMS("✓ Object tracker built with %zu entries", g_objectTracker->size());
 }
 
 /**
@@ -804,7 +777,7 @@ void BuildObjectTracker(const ControlSystemConfig &config)
  */
 void ClearObjectTracker()
 {
-    g_objectTracker.clear();
+    g_objectTracker->clear();
     OCA_LOG_INFO("Object tracker cleared");
 }
 
@@ -818,7 +791,7 @@ void RemoveZoneObjectsFromRootBlock()
 {
     OCA_LOG_INFO("Removing zone objects from root block using object tracker...");
 
-    if (g_objectTracker.empty())
+    if (g_objectTracker->empty())
     {
         OCA_LOG_WARNING("Object tracker is empty - falling back to range-based removal");
 
@@ -848,7 +821,7 @@ void RemoveZoneObjectsFromRootBlock()
     }
 
     // Use object tracker for precise removal
-    for (const auto &entry : g_objectTracker)
+    for (const auto &entry : *g_objectTracker)
     {
         const std::string &identifier = entry.first;
         const std::vector<::OcaONo> &onos = entry.second;
@@ -938,10 +911,16 @@ bool TeardownCurrentConfiguration()
 }
 
 /**
- * @brief Stop and cleanup UDP Observer
+ * @brief Stop and cleanup FusionAudioBridge and UDP Observer
  */
-void ShutdownUDPObserver()
+void ShutdownFusionAudioBridge()
 {
+    // Shutdown FusionAudioBridge
+    FusionAudioBridge &bridge = FusionAudioBridge::getInstance();
+    bridge.shutdown();
+    OCA_LOG_INFO("FusionAudioBridge shutdown complete");
+
+    // Shutdown UDP Observer - only during final shutdown
     if (g_udpObserver)
     {
         OCA_LOG_INFO("Stopping UDP Observer...");
@@ -1114,37 +1093,4 @@ bool ProcessPendingConfigurationUpdate()
 
     OCA_LOG_INFO("✓ Configuration update completed successfully");
     return true;
-}
-
-/**
- * @brief Initialize the UDP sender singleton
- */
-bool InitializeUDPSender()
-{
-    try
-    {
-        UDPSender &sender = UDPSender::getInstance();
-        return sender.initialize();
-    }
-    catch (const std::exception &e)
-    {
-        OCA_LOG_ERROR_PARAMS("Exception during UDP sender initialization: %s", e.what());
-        return false;
-    }
-}
-
-/**
- * @brief Shutdown the UDP sender
- */
-void ShutdownUDPSender()
-{
-    try
-    {
-        UDPSender &sender = UDPSender::getInstance();
-        sender.shutdown();
-    }
-    catch (const std::exception &e)
-    {
-        OCA_LOG_ERROR_PARAMS("Exception during UDP sender shutdown: %s", e.what());
-    }
 }
