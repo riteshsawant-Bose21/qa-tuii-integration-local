@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/features/wiring_design/controller/state/canvas_state.dart';
 
 mixin CanvasHandlerMixin on ChangeNotifier {
-  Offset canvasOffset = Offset.zero;
-  double canvasScale = 1.0;
+  CanvasState get canvasState;
 
   double get minScale => 0.5;
   double get maxScale => 3.0;
@@ -12,12 +12,14 @@ mixin CanvasHandlerMixin on ChangeNotifier {
   }
 
   void onPanUpdate(Offset delta) {
-    canvasOffset += delta;
+    // canvasOffset += delta;
+    setCanvasState(canvasState.pan(delta));
     notifyListeners();
   }
 
   void onPanEnd(DragEndDetails details) {
-    // Handle pan end if needed
+    setCanvasState(canvasState.idle());
+
     saveState();
   }
 
@@ -26,24 +28,32 @@ mixin CanvasHandlerMixin on ChangeNotifier {
   }
 
   void onScaleUpdate(double scale, Offset focalPoint) {
-    final double oldScale = canvasScale;
-    final double newScale = (canvasScale + scale).clamp(minScale, maxScale);
+    final double oldScale = canvasState.scale;
+    final double newScale = (canvasState.scale + scale).clamp(
+      minScale,
+      maxScale,
+    );
 
     // Calculate the actual scale change that will be applied
     final double actualScaleChange = newScale / oldScale;
 
     // Adjust offset to zoom towards focal point
     // The focal point should remain at the same screen position
-    canvasOffset = focalPoint - (focalPoint - canvasOffset) * actualScaleChange;
+    final Offset delta =
+        (focalPoint - (focalPoint - canvasState.offset) * actualScaleChange) -
+        canvasState.offset;
+    setCanvasState(canvasState.scaleCanvas(newScale, offset: delta));
 
-    canvasScale = newScale;
     notifyListeners();
   }
 
   void onScaleEnd(ScaleEndDetails details) {
     // Handle scale end if needed
+    setCanvasState(canvasState.idle());
     saveState();
   }
 
   void saveState();
+
+  void setCanvasState(CanvasState state);
 }

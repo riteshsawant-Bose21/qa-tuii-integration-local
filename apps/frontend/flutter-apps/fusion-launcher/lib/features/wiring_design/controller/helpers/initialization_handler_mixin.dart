@@ -1,7 +1,8 @@
-import 'package:fusion_launcher/features/wiring_design/dto/component_data.dart';
 import 'package:fusion_launcher/features/wiring_design/model/circuit_component.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
+import '../../dto/component_data.dart';
+import '../../dto/factory.dart';
 import '../circuit_controller.dart';
 
 extension InitializationHandlerMixin on CircuitController {
@@ -14,11 +15,18 @@ extension InitializationHandlerMixin on CircuitController {
         <HardwareComponent, Zone>{};
     for (int i = 0; i < zones.length; i++) {
       final Zone zone = zones[i];
+      final ZoneComponentData componentData = ComponentDataFactory.fromZone(
+        zone,
+      );
       final CircuitComponent component = CircuitComponent.from(
-        _getZoneComponent(zone),
+        componentData,
         null,
       );
       zoneComponent[zone.id] = component;
+
+      componentDB.addComponent(component);
+      componentDB.addComponentData(componentData);
+
       addComponent(component);
       final List<HardwareComponent> hardwares = projectManager
           .getHardwareInZone(zone.id);
@@ -37,29 +45,25 @@ extension InitializationHandlerMixin on CircuitController {
         final Zone? zone = zoneMapping[component];
         parent = zoneComponent[zone?.id];
       }
+      final ComponentData componentData = ComponentDataFactory.fromHardware(
+        component,
+      );
       final CircuitComponent from = CircuitComponent.from(
-        _getComponent(component),
+        componentData,
         parent,
       );
+
       if (parent != null) {
         from.parent = parent;
         parent.children.add(from);
       }
+
+      componentDB.addComponent(from);
+      componentDB.addComponentData(componentData);
+
       addComponent(
         from,
       );
     }
-  }
-
-  ComponentData _getComponent(HardwareComponent hardwareComponent) {
-    return switch (hardwareComponent) {
-      Speaker() => SpeakerComponentData.from(hardwareComponent),
-      Source() => SourceComponentData.from(hardwareComponent),
-      _ => DeviceSchematicComponentData.from(hardwareComponent),
-    };
-  }
-
-  ZoneComponentData _getZoneComponent(Zone zone) {
-    return ZoneComponentData.from(zone);
   }
 }

@@ -16,7 +16,7 @@ class DeviceSchematicComponentPainter extends ComponentDataPainter {
     ///
     final Rect rect = component.position & component.size;
 
-    if (painter.controller.selectedElement == component) {
+    if (painter.isSelected(component)) {
       canvas.drawShadow(Path()..addRect(rect), Colors.black, 20, false);
     }
     canvas.drawRect(rect, Paint()..color = painter.colorScheme.componentBG);

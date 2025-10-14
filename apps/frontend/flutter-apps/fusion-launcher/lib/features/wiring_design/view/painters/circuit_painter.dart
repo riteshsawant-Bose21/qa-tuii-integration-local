@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/wiring_design/controller/circuit_controller.dart';
+import 'package:fusion_launcher/features/wiring_design/controller/state/wiring_state.dart';
 import 'package:fusion_launcher/features/wiring_design/model/model.dart';
 import 'package:fusion_launcher/features/wiring_design/view/painters/base_painter.dart';
 import 'package:fusion_launcher/features/wiring_design/view/painters/component_painter.dart';
@@ -17,11 +18,11 @@ class CircuitPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     painters.clear();
     canvas.save();
-    final Offset offset = controller.canvasOffset;
+    final Offset offset = controller.canvasState.offset;
     canvas.translate(offset.dx, offset.dy);
-    canvas.scale(controller.canvasScale);
+    canvas.scale(controller.canvasState.scale);
     // Paint components
-    for (final CircuitComponent component in controller.components) {
+    for (final CircuitComponent component in controller.state.components) {
       final ComponentPainter componentPainter = ComponentPainter(
         component: component,
         controller: controller,
@@ -32,7 +33,7 @@ class CircuitPainter extends CustomPainter {
     }
 
     // Paint wires
-    for (final Wire wire in controller.wires) {
+    for (final Wire wire in controller.state.wires) {
       final WirePainter wirePainter = WirePainter(
         wire: wire,
         controller: controller,
@@ -42,14 +43,15 @@ class CircuitPainter extends CustomPainter {
       painters.add(wirePainter);
     }
 
-    if (controller.selectedElement is CircuitPort &&
-        controller.elementDragPosition != null) {
+    if (controller.state is ConnectionProgressWiringState) {
+      final ConnectionProgressWiringState state =
+          (controller.state as ConnectionProgressWiringState);
       final IntermediateWirePainter intermediateWirePainter =
           IntermediateWirePainter(
-            start: (controller.selectedElement as CircuitPort),
-            end: controller.elementDragPosition!,
+            start: state.port,
+            end: state.destination,
             controller: controller,
-            joints: controller.intermediateJoints,
+            joints: state.path,
             colorScheme: colorScheme,
           );
       intermediateWirePainter.paint(canvas, size);
@@ -88,14 +90,14 @@ class CircuitPainter extends CustomPainter {
   }
 
   Offset correctPosition(Offset position) {
-    final Offset offset = controller.canvasOffset;
-    final double scale = controller.canvasScale;
+    final Offset offset = controller.canvasState.offset;
+    final double scale = controller.canvasState.scale;
     return (position - offset) / scale;
   }
 
   Offset transformPosition(Offset position) {
-    final Offset offset = controller.canvasOffset;
-    final double scale = controller.canvasScale;
+    final Offset offset = controller.canvasState.offset;
+    final double scale = controller.canvasState.scale;
     return (position * scale) + offset;
   }
 

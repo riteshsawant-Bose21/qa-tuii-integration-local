@@ -1,7 +1,6 @@
 import 'dart:math';
 import 'dart:ui';
 
-import '../controller/circuit_controller.dart';
 import '../model/circuit_component.dart';
 import '../model/circuit_port.dart';
 import '../model/wire.dart';
@@ -177,7 +176,7 @@ class WireRouter {
         );
         parallalPath.add(wire.to.absolutePositionWithOffset);
       }
-      wires[i].joints = parallalPath;
+      wires[i].setPath(parallalPath);
     }
   }
 
@@ -365,3 +364,24 @@ LineDirection getLineDirection(Offset from, Offset to) {
 }
 
 enum LineDirection { upToDown, downToUp, leftToRight, rightToLeft }
+
+class PathSide {
+  const PathSide({required this.component, required this.side});
+  final CircuitComponent component;
+  final Side side;
+
+  @override
+  String toString() => 'PathSide(component: $component, side: $side)';
+
+  @override
+  bool operator ==(covariant PathSide other) {
+    if (identical(this, other)) return true;
+
+    return other.component == component && other.side == side;
+  }
+
+  @override
+  int get hashCode => component.hashCode ^ side.hashCode;
+}
+
+enum Side { top, bottom, left, right }

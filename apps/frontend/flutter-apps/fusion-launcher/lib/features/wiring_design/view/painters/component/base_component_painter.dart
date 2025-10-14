@@ -20,7 +20,7 @@ class BaseComponentPainter extends ComponentDataPainter {
     final Paint borderPaint =
         Paint()
           ..color =
-              component == painter.controller.selectedElement
+              painter.isSelected(component)
                   ? Colors.red
                   : const Color(0xFF000000)
           ..style = PaintingStyle.stroke

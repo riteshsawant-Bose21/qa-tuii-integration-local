@@ -15,7 +15,7 @@ class SourceComponentPainter extends ComponentDataPainter {
           ..color = const Color(0xFF000000)
           ..style = PaintingStyle.stroke
           ..strokeWidth = 2;
-    if (component == painter.controller.selectedElement) {
+    if (painter.isSelected(component)) {
       canvas.drawRect(rect, borderPaint);
     }
 

@@ -20,10 +20,7 @@ class ZoneComponentPainter extends ComponentDataPainter {
     // Draw component border
     final Paint borderPaint =
         Paint()
-          ..color =
-              component == painter.controller.selectedElement
-                  ? Colors.red
-                  : data.zone.color
+          ..color = painter.isSelected(component) ? Colors.red : data.zone.color
           ..style = PaintingStyle.stroke
           ..strokeWidth = 2;
     canvas.drawRect(rect, borderPaint);

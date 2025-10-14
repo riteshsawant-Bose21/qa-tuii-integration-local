@@ -16,14 +16,13 @@ class CanvasControlWrapper extends StatelessWidget {
   final CircuitPainter circuitPainter;
   final Widget child;
 
-
   @override
   Widget build(BuildContext context) {
     return Listener(
       onPointerPanZoomUpdate: (PointerPanZoomUpdateEvent event) {
         if (event.scale == 1) return;
         controller.onScaleUpdate(
-          event.scale - controller.canvasScale,
+          event.scale - controller.state.canvasState.scale,
           event.localPosition,
         );
       },
@@ -54,7 +53,7 @@ class CanvasControlWrapper extends StatelessWidget {
           },
           onPanUpdate: (DragUpdateDetails details) {
             controller.onMoveUpdate(
-              details.delta / controller.canvasScale,
+              details.delta / controller.canvasState.scale,
             );
           },
           onPanEnd: (DragEndDetails details) {

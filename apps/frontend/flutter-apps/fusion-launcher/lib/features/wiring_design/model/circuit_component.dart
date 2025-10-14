@@ -2,15 +2,17 @@ import 'dart:math';
 import 'dart:ui';
 
 import 'package:fusion_launcher/features/wiring_design/dto/component_data.dart';
+import 'package:fusion_launcher/features/wiring_design/util/wiring_serialization_util.dart';
 
 import '../util/canvas_util.dart';
 import 'canvas_element.dart';
 import 'circuit_port.dart';
 
 class CircuitComponent extends CanvasElement {
+  @override
   final String id;
-  Offset _position;
 
+  Offset _position;
   @override
   Offset get position => (parent?.position ?? Offset.zero) + _position;
 
@@ -22,9 +24,6 @@ class CircuitComponent extends CanvasElement {
     }
   }
 
-  // set position(Offset value) {
-  //   _position = value;
-  // } // Top-left corner
   @override
   Size get size {
     if (children.isEmpty) return data.size;
@@ -39,31 +38,9 @@ class CircuitComponent extends CanvasElement {
     return Size(maxWidth.toDouble(), maxHight.toDouble());
   }
 
-  CanvasElement? isHit(Offset position) {
-    for (final CircuitPort port in ports) {
-      final Rect portRect = Rect.fromCircle(
-        center: this.position + port.relativePosition,
-        radius: WiringViewConstants.portRadius,
-      );
-      if (portRect.contains(position)) {
-        return port;
-      }
-    }
-    for (final CircuitComponent child in children) {
-      final CanvasElement? val = child.isHit(position);
-      if (val != null) return val;
-    }
-    final Rect rect = this.position & size;
-    if (rect.contains(position)) {
-      return this;
-    }
-    return null;
-  }
-
-  // final List<CircuitPort> ports = <CircuitPort>[];
   List<CircuitPort> get ports => <CircuitPort>[
     ...inputPorts,
-    ...outputPorts,  
+    ...outputPorts,
     ...otherPorts,
   ];
   final List<CircuitPort> inputPorts = <CircuitPort>[];
@@ -100,10 +77,10 @@ class CircuitComponent extends CanvasElement {
     /// For Left Side
     ///
     for (int i = 0; i < data.inputPorts.length; i++) {
-      final InputComponentPort element = data.inputPorts[i];
+      final ComponentPort element = data.inputPorts[i];
       circuitComponent.addInputPort(
         CircuitPort(
-          id: "input_$i",
+          id: "${data.id}_input_$i",
           relativePosition: Offset(
             data.portRadius + WiringViewConstants.portSpacing,
             data.portRadius +
@@ -120,10 +97,10 @@ class CircuitComponent extends CanvasElement {
 
     /// For Right Side
     for (int i = 0; i < data.outputPorts.length; i++) {
-      final OutputComponentPort element = data.outputPorts[i];
+      final ComponentPort element = data.outputPorts[i];
       circuitComponent.addOutputPort(
         CircuitPort(
-          id: "output_$i",
+          id: "${data.id}_output_$i",
           relativePosition: Offset(
             size.width - data.portRadius - WiringViewConstants.portSpacing,
             data.portRadius +
@@ -151,5 +128,52 @@ class CircuitComponent extends CanvasElement {
 
   void addOtherPort(CircuitPort port) {
     otherPorts.add(port);
+  }
+
+  CanvasElement? isHit(Offset position) {
+    for (final CircuitPort port in ports) {
+      final Rect portRect = Rect.fromCircle(
+        center: port.position,
+        radius: WiringViewConstants.portRadius,
+      );
+      if (portRect.contains(position)) {
+        return port;
+      }
+    }
+    for (final CircuitComponent child in children) {
+      final CanvasElement? val = child.isHit(position);
+      if (val != null) return val;
+    }
+    final Rect rect = this.position & size;
+    if (rect.contains(position)) {
+      return this;
+    }
+    return null;
+  }
+
+  @override
+  Map<String, dynamic> toMap() {
+    return <String, dynamic>{
+      'id': id,
+      'position': <String, double>{
+        "x": _position.dx,
+        "y": _position.dy,
+      },
+      'parent': parent?.id,
+      'children': children.map((CircuitComponent e) => e.id).toList(),
+      'data': data.id,
+      'input_ports': inputPorts.map((CircuitPort e) => e.id).toList(),
+      'output_ports': outputPorts.map((CircuitPort e) => e.id).toList(),
+      'other_ports': otherPorts.map((CircuitPort e) => e.id).toList(),
+    };
+  }
+
+  @override
+  void restoreFromMap(Map<dynamic, dynamic> map) {
+    _position =
+        WiringSerializationUtil.offsetDeserializer.deserialize(
+          map['position'],
+        ) ??
+        _position;
   }
 }

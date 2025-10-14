@@ -1,17 +1,21 @@
+import 'dart:convert';
 import 'dart:math';
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../util/canvas_util.dart';
+
+part 'component_port.dart';
 
 abstract class ComponentData {
   String get id;
   final String? image;
   final String label;
-  final List<InputComponentPort> inputPorts;
-  final List<OutputComponentPort> outputPorts;
-  final List<ComComponentPort> comPorts;
+  final List<ComponentPort> inputPorts;
+  final List<ComponentPort> outputPorts;
+  final List<ComponentPort> comPorts;
 
   ComponentData({
     this.image,
@@ -21,9 +25,12 @@ abstract class ComponentData {
     required this.outputPorts,
   });
 
+  String get type;
+
   Size get size;
   Offset get portOffset;
   double get portRadius;
+
 }
 
 class DeviceSchematicComponentData extends ComponentData {
@@ -41,16 +48,20 @@ class DeviceSchematicComponentData extends ComponentData {
     return DeviceSchematicComponentData(
       image: hardware.assetImagePath,
       label: hardware.name,
-      comPorts: <ComComponentPort>[],
-      inputPorts: List<InputComponentPort>.generate(
+      comPorts: <ComponentPort>[],
+      inputPorts: List<ComponentPort>.generate(
         Random().nextInt(4) + 3,
-        (int index) =>
-            InputComponentPort(data: index, label: (index + 1).toString()),
+        (int index) => ComponentPort.input(
+          data: index.toString(),
+          label: (index + 1).toString(),
+        ),
       ),
-      outputPorts: List<OutputComponentPort>.generate(
+      outputPorts: List<ComponentPort>.generate(
         Random().nextInt(4) + 3,
-        (int index) =>
-            OutputComponentPort(data: index, label: (index + 1).toString()),
+        (int index) => ComponentPort.output(
+          data: index.toString(),
+          label: (index + 1).toString(),
+        ),
       ),
       data: hardware,
     );
@@ -80,6 +91,9 @@ class DeviceSchematicComponentData extends ComponentData {
 
   @override
   String get id => data.id;
+
+  @override
+  String get type => 'device_schematic';
 }
 
 class SourceComponentData extends ComponentData {
@@ -97,10 +111,10 @@ class SourceComponentData extends ComponentData {
     return SourceComponentData(
       image: source.assetImagePath,
       label: source.name,
-      comPorts: <ComComponentPort>[],
-      inputPorts: <InputComponentPort>[],
-      outputPorts: <OutputComponentPort>[
-        OutputComponentPort(data: 0, label: "0"),
+      comPorts: <ComponentPort>[],
+      inputPorts: <ComponentPort>[],
+      outputPorts: <ComponentPort>[
+        ComponentPort.output(data: "0", label: "0"),
       ],
       source: source,
     );
@@ -115,6 +129,9 @@ class SourceComponentData extends ComponentData {
   Offset get portOffset => Offset(0, size.height / 2 - portRadius);
   @override
   double get portRadius => WiringViewConstants.portRadius / 2;
+
+  @override
+  String get type => 'source';
 }
 
 class ZoneComponentData extends ComponentData {
@@ -131,10 +148,10 @@ class ZoneComponentData extends ComponentData {
     return ZoneComponentData(
       // image: source.assetImagePath,
       label: zone.name,
-      comPorts: <ComComponentPort>[],
-      inputPorts: <InputComponentPort>[],
-      outputPorts: <OutputComponentPort>[
-        // OutputComponentPort(data: 0, label: "0"),÷
+      comPorts: <ComponentPort>[],
+      inputPorts: <ComponentPort>[],
+      outputPorts: <ComponentPort>[
+        // ComponentPort(data: 0, label: "0"),
       ],
       zone: zone,
     );
@@ -149,6 +166,8 @@ class ZoneComponentData extends ComponentData {
   Size get size => const Size(160, 30);
   @override
   double get portRadius => 0;
+  @override
+  String get type => 'zone';
 }
 
 class SpeakerComponentData extends ComponentData {
@@ -165,9 +184,9 @@ class SpeakerComponentData extends ComponentData {
     return SpeakerComponentData(
       image: speaker.assetImagePath,
       label: speaker.name,
-      comPorts: <ComComponentPort>[],
-      inputPorts: <InputComponentPort>[InputComponentPort(data: 0, label: "0")],
-      outputPorts: <OutputComponentPort>[],
+      comPorts: <ComponentPort>[],
+      inputPorts: <ComponentPort>[ComponentPort.input(data: "0", label: "0")],
+      outputPorts: <ComponentPort>[],
       speaker: speaker,
     );
   }
@@ -180,51 +199,7 @@ class SpeakerComponentData extends ComponentData {
   Offset get portOffset => Offset(0, size.height / 2 - portRadius);
   @override
   double get portRadius => WiringViewConstants.portRadius / 2;
-}
 
-abstract class ComponentPort {
-  final String? image;
-  final String? label;
-  final String type;
-  final List<String> compatibleTypes;
-
-  ComponentPort({
-    this.image,
-    this.label,
-    required this.type,
-    required this.compatibleTypes,
-  });
-}
-
-class InputComponentPort extends ComponentPort {
-  final int data;
-  InputComponentPort({
-    required this.data,
-    super.image,
-    super.label,
-    super.type = 'input',
-    super.compatibleTypes = const <String>['output'],
-  });
-}
-
-class OutputComponentPort extends ComponentPort {
-  final int data;
-  OutputComponentPort({
-    required this.data,
-    super.image,
-    super.label,
-    super.type = 'output',
-    super.compatibleTypes = const <String>['input'],
-  });
-}
-
-class ComComponentPort extends ComponentPort {
-  final int data;
-  ComComponentPort({
-    required this.data,
-    super.image,
-    super.label,
-    required super.type,
-    required super.compatibleTypes,
-  });
+  @override
+  String get type => 'speaker';
 }

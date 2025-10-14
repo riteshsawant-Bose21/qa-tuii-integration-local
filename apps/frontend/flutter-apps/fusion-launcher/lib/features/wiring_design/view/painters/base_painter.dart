@@ -2,12 +2,41 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/wiring_design/controller/circuit_controller.dart';
+import 'package:fusion_launcher/features/wiring_design/controller/state/wiring_state.dart';
 import 'package:fusion_launcher/features/wiring_design/model/canvas_element.dart';
+import 'package:fusion_launcher/features/wiring_design/model/circuit_port.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 abstract class BasePainter {
   final CircuitController controller;
   final ColorScheme colorScheme;
+
+  BasePainter({required this.controller, required this.colorScheme});
+  void paint(Canvas canvas, Size size);
+  CanvasElement? isHit(Offset position);
+
+  /// ------------------------------------------------------------------------
+  ///
+  ///
+  ///  HELPER FUNCTIONS
+  ///
+  ///
+  /// ------------------------------------------------------------------------
+
+  bool isSelected(CanvasElement component) {
+    return switch (controller.state) {
+      ElementSelectionState(element: final CanvasElement element) =>
+        element == component,
+      ElementMovingState(element: final CanvasElement element) =>
+        element == component,
+      ConnectionProgressWiringState(
+        port: final CircuitPort port,
+      ) =>
+        port == component,
+      _ => false,
+    };
+  }
+
   ui.Image? getImage(String path) {
     return controller.imagesCache[path];
   }
@@ -62,10 +91,4 @@ abstract class BasePainter {
     );
     return true;
   }
-
-  BasePainter({required this.controller, required this.colorScheme});
-  void paint(Canvas canvas, Size size);
-  // bool shouldRepaint(covariant BasePainter oldDelegate);
-
-  CanvasElement? isHit(Offset position);
 }
