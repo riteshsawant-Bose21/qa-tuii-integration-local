@@ -4,8 +4,7 @@ import 'package:flutter_svg/svg.dart';
 import 'package:fusion_launcher/core/theme/app_theme.dart';
 import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
-import '../widgets/schematics_left_panel.dart';
-import '../widgets/schematics_right_panel.dart';
+import 'schematics_main_panel.dart';
 import 'old_schematics_page.dart';
 
 class SchematicsPage extends StatefulWidget {
@@ -16,161 +15,74 @@ class SchematicsPage extends StatefulWidget {
 }
 
 class _SchematicsPageState extends State<SchematicsPage> {
-  final double minPanelWidth = 300.0;
-  final double dividerWidth = 1.0;
   final ProjectViewModel _projectViewModel = serviceLocator<ProjectViewModel>();
   bool get isListingViewMode => _projectViewModel.currentProjectMode == ProjectMode.systemListingMode;
 
-  /// Add view state management
-
-  /// Track left panel width as percentage of available space instead of absolute pixels
-  double _leftPanelRatio = 0.5; // Default to 50% of available space
-
-  @override
-  void dispose() {
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
-    print("isListingViewMode: $isListingViewMode");
-    return LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints constraints) {
-        final double availableWidth = constraints.maxWidth;
-
-        /// Calculate left panel width as percentage of available space
-        double leftPanelWidth = (availableWidth - dividerWidth) * _leftPanelRatio;
-
-        /// Ensure minimum widths are respected
-        leftPanelWidth = leftPanelWidth.clamp(minPanelWidth, availableWidth - minPanelWidth - dividerWidth);
-
-        /// Recalculate ratio based on clamped width to maintain consistency
-        _leftPanelRatio = leftPanelWidth / (availableWidth - dividerWidth);
-
-        final double rightPanelWidth = availableWidth - leftPanelWidth - dividerWidth;
-
-        return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-          builder: (BuildContext context, Object? state) {
-            return Column(
-              children: <Widget>[
-                Expanded(
-                  child: isListingViewMode ? _buildListingView(availableWidth, leftPanelWidth, rightPanelWidth) : const OlsSchematicsPage(),
-                ),
-                Container(
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.white,
-                    border: Border(
-                      top: BorderSide(width: 1, color: Theme.of(context).colorScheme.grey),
-                    ),
-                  ),
-
-                  child: Row(
-                    children: <Widget>[
-                      GestureDetector(
-                        onTap: () {
-                          _projectViewModel.setProjectMode(ProjectMode.systemListingMode);
-                        },
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          color: isListingViewMode ? Colors.black87 : Colors.transparent,
-                          child: SvgPicture.asset(
-                            "assets/svg/listing_view_icon.svg",
-                            width: 40,
-                            height: 40,
-                            colorFilter: ColorFilter.mode(
-                              isListingViewMode ? Colors.white : Colors.black87,
-                              BlendMode.srcIn,
-                            ),
-                          ),
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: () {
-                          _projectViewModel.setProjectMode(ProjectMode.systemWiringMode);
-                        },
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          color: !isListingViewMode ? Colors.black87 : Colors.transparent,
-                          child: SvgPicture.asset(
-                            "assets/svg/wiring_view_icon.svg",
-                            width: 40,
-                            height: 40,
-                            colorFilter: ColorFilter.mode(
-                              !isListingViewMode ? Colors.white : Colors.black87,
-                              BlendMode.srcIn,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildListingView(double availableWidth, double leftPanelWidth, double rightPanelWidth) {
-    return Row(
-      children: <Widget>[
-        /// Left Panel - Sources, Processors, etc.
-        SizedBox(
-          width: leftPanelWidth,
-          height: double.infinity,
-          child: Container(
-            color: Colors.white,
-            child: SchematicsLeftPanel(panelWidth: leftPanelWidth),
-          ),
-        ),
-
-        /// Resizable Divider
-        MouseRegion(
-          cursor: SystemMouseCursors.resizeColumn,
-          child: GestureDetector(
-            onPanUpdate: (DragUpdateDetails details) {
-              setState(() {
-                final double newWidth = leftPanelWidth + details.delta.dx;
-                final double maxAllowedWidth = availableWidth - minPanelWidth - dividerWidth;
-
-                if (newWidth >= minPanelWidth && newWidth <= maxAllowedWidth) {
-                  // Update the ratio instead of absolute width
-                  _leftPanelRatio = newWidth / (availableWidth - dividerWidth);
-                  _leftPanelRatio = _leftPanelRatio.clamp(0.2, 0.8); // Keep between 20% and 80%
-                }
-              });
-            },
-            child: Container(
-              width: 4, // Increased interactive area from 1 to 8 pixels
-              height: double.infinity,
-              color: Colors.white, // Make the wider area transparent
-              child: Center(
-                child: Container(
-                  width: 1, // Keep the visual line at 1 pixel
-                  height: double.infinity,
-                  color: Colors.transparent,
+    return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+      builder: (BuildContext context, Object? state) {
+        return Column(
+          children: <Widget>[
+            Container(
+              height: 44,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.white,
+                border: Border(
+                  bottom: BorderSide(width: 1, color: Theme.of(context).colorScheme.grey),
                 ),
               ),
+              child: Row(
+                children: <Widget>[
+                  GestureDetector(
+                    onTap: () {
+                      _projectViewModel.setProjectMode(ProjectMode.systemListingMode);
+                    },
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      color: isListingViewMode ? Colors.black87 : Colors.transparent,
+                      child: SvgPicture.asset(
+                        "assets/svg/listing_view_icon.svg",
+                        width: 40,
+                        height: 40,
+                        colorFilter: ColorFilter.mode(
+                          isListingViewMode ? Colors.white : Colors.black87,
+                          BlendMode.srcIn,
+                        ),
+                      ),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      _projectViewModel.setProjectMode(ProjectMode.systemWiringMode);
+                    },
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      color: !isListingViewMode ? Colors.black87 : Colors.transparent,
+                      child: SvgPicture.asset(
+                        "assets/svg/wiring_view_icon.svg",
+                        width: 40,
+                        height: 40,
+                        colorFilter: ColorFilter.mode(
+                          !isListingViewMode ? Colors.white : Colors.black87,
+                          BlendMode.srcIn,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ),
 
-        /// Right Panel - Zones
-        Expanded(
-          child: Container(
-            height: double.infinity,
-            color: Colors.white,
-            child: SchematicsRightPanel(
-              panelWidth: rightPanelWidth,
+            /// Main Panel
+            Expanded(
+              child: isListingViewMode ? const SchematicsMainPanel() : const OlsSchematicsPage(),
             ),
-          ),
-        ),
-      ],
+          ],
+        );
+      },
     );
   }
 }
