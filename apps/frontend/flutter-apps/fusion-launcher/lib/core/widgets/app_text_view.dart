@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/core/utils/semantic_helper.dart';
+import 'package:fusion_launcher/core/utils/semantic_type.dart';
 
 class AppTextView extends StatefulWidget {
   const AppTextView({
@@ -32,20 +34,16 @@ class _AppTextViewState extends State<AppTextView> {
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         //to handle the responsive sizes we can change the font sizes here based on the screen width
-        return Semantics(
-          container: true,
-          identifier: widget.accessIdentifier ?? widget.text,
-          label: widget.accessLabel ?? widget.text,
-          child: ExcludeSemantics(
-            excluding: true,
-            child: Text(
-              widget.text ?? "",
-              textAlign: widget.textAlign,
-              style: widget.style ?? Theme.of(context).textTheme.labelMedium,
-              maxLines: widget.maxLines,
-              overflow: widget.overflow ?? ((widget.maxLines != null) ? TextOverflow.ellipsis : null),
-            ),
-          ),
+        // 
+        return SemanticHelper.staticText(
+          testId: SemanticHelper.createTestId(SemanticTypes.text, (widget.accessIdentifier ?? widget.text)!), 
+          child: Text(
+            widget.text ?? "",
+            textAlign: widget.textAlign,
+            style: widget.style ?? Theme.of(context).textTheme.labelMedium,
+            maxLines: widget.maxLines,
+            overflow: widget.overflow ?? ((widget.maxLines != null) ? TextOverflow.ellipsis : null),
+          )
         );
       },
     );

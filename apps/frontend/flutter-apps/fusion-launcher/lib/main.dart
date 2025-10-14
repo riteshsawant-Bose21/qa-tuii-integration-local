@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/router/navigation_observer.dart';
@@ -27,6 +28,10 @@ Future<void> main() async {
   await setupServiceLocator();
 
   runApp(const MyApp());
+
+  //This needs to be conditionally switched on based on some commandline param.
+  //Else, this would create the semantics tree everytime misusing computation power.
+  SemanticsBinding.instance.ensureSemantics();
 
   _setupMacOSDeepLinkListener();
 }

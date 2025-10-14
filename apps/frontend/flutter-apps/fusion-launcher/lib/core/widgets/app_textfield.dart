@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fusion_launcher/core/theme/app_theme.dart';
+import 'package:fusion_launcher/core/utils/semantic_helper.dart';
+import 'package:fusion_launcher/core/utils/semantic_type.dart';
 
 import 'app_text_view.dart';
 
@@ -94,34 +96,37 @@ class _AppTextFieldState extends State<AppTextField> {
             //     offset: const Offset(0, 4),
             //   )
             // ]),
-            padding: widget.showWithoutPadding ? null : const EdgeInsets.symmetric(horizontal: 15.0),
-            child: TextFormField(
-              autovalidateMode: widget.autoValidate,
-              controller: widget.controller,
-              autofocus: widget.autoFocus,
-              enabled: widget.enabled,
-              textInputAction: TextInputAction.done,
-              keyboardType: widget.keyboardType,
-              focusNode: widget.focusNode,
-              validator: widget.validator,
-              obscureText: widget.obscureText,
-              initialValue: widget.value,
-              decoration: InputDecoration(
-                fillColor: Theme.of(context).colorScheme.softGrey.withValues(alpha: 0.8),
-                filled: true,
-                hintText: widget.hintText,
-                suffixIcon: widget.suffixIcon,
-                contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(32.0),
-                  borderSide: const BorderSide(
-                    width: 0,
-                    style: BorderStyle.none,
+            padding: widget.showWithoutPadding ? null : const EdgeInsets.symmetric(horizontal: 15.0),  
+            child: SemanticHelper.formControl(
+              testId: SemanticHelper.createTestId(SemanticTypes.textInput, widget.title),
+              child: TextFormField(
+                autovalidateMode: widget.autoValidate,
+                controller: widget.controller,
+                autofocus: widget.autoFocus,
+                enabled: widget.enabled,
+                textInputAction: TextInputAction.done,
+                keyboardType: widget.keyboardType,
+                focusNode: widget.focusNode,
+                validator: widget.validator,
+                obscureText: widget.obscureText,
+                initialValue: widget.value,
+                decoration: InputDecoration(
+                  fillColor: Theme.of(context).colorScheme.softGrey.withValues(alpha: 0.8),
+                  filled: true,
+                  hintText: widget.hintText,
+                  suffixIcon: widget.suffixIcon,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(32.0),
+                    borderSide: const BorderSide(
+                      width: 0,
+                      style: BorderStyle.none,
+                    ),
                   ),
                 ),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(fontSize: 16),
+                onFieldSubmitted: widget.onSubmit,
               ),
-              style: Theme.of(context).textTheme.labelMedium!.copyWith(fontSize: 16),
-              onFieldSubmitted: widget.onSubmit,
             ),
           ),
         ],
