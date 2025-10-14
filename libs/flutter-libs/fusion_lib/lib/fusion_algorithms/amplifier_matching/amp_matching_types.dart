@@ -4,6 +4,7 @@
 /// advanced amplifier matching algorithm with power sharing optimization.
 
 import '../../api_data/amplifiers/amplifier_types.dart' show AmpModel;
+import 'amplifier_matcher.dart' show PowerAllocationStrategy;
 
 
 /// Circuit information with power requirements and configuration
@@ -59,6 +60,43 @@ class AmpAssignment {
   int get usedChannels => circuits.length;
   int get totalChannels => ampModel.channels;
   double get channelUtilization => usedChannels / totalChannels;
+  
+  /// Get total capacity based on circuit characteristics and power mode
+  double getTotalCapacity({PowerAllocationStrategy? strategy, double? systemVoltage}) {
+    // If strategy is asymmetrical and we have enhanced power specs, use asymmetrical capacity
+    if (strategy == PowerAllocationStrategy.asymmetrical && ampModel.powerSpecs != null) {
+      // Analyze circuits to determine voltage/impedance requirements
+      bool hasHiZ = false;
+      bool hasLoZ = false;
+      double? maxVoltage;
+      
+      for (final circuit in circuits) {
+        if (circuit.mode.toLowerCase().contains('hi')) {
+          hasHiZ = true;
+          if (systemVoltage != null) {
+            maxVoltage = systemVoltage;
+          } else if (circuit.tapWatts > 50) {
+            maxVoltage = 100.0;
+          } else {
+            maxVoltage = 70.0;
+          }
+        } else {
+          hasLoZ = true;
+        }
+      }
+      
+      if (hasHiZ && maxVoltage != null) {
+        return ampModel.powerSpecs!.getAsymmetricalPeakPower(voltage: maxVoltage);
+      } else if (hasLoZ) {
+        return ampModel.powerSpecs!.getAsymmetricalPeakPower(impedance: 8.0);
+      }
+    }
+    
+    // Default to symmetrical calculation (legacy behavior)
+    return ampModel.totalCapacity;
+  }
+  
+  /// Legacy total capacity getter for backward compatibility
   double get totalCapacity => ampModel.totalCapacity;
 
   Map<String, dynamic> toJson() => {

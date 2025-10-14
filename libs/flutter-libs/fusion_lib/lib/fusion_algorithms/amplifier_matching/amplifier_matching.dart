@@ -24,6 +24,7 @@ export 'amplifier_matching_logger.dart';
 ///
 /// [circuits] - List of circuits to match with detailed specifications
 /// [speakerDatabase] - Speaker specification database for power calculations
+/// [systemVoltage] - System voltage for Hi-Z circuits (70.0 or 100.0V, default: 70.0)
 /// [enableLogging] - Enable detailed step-by-step logging (default: true)
 /// [minLogLevel] - Minimum log level to display (default: debug)
 /// [enablePowerSharing] - Enable asymmetrical power sharing optimization (default: true)
@@ -33,6 +34,7 @@ export 'amplifier_matching_logger.dart';
 Future<AmpMatchingResult> matchAmplifiers(
   List<Circuit> circuits,
   Map<String, SpeakerModel> speakerDatabase, {
+  double systemVoltage = 70.0,
   bool enableLogging = true,
   LogLevel minLogLevel = LogLevel.info,
   bool enablePowerSharing = true,
@@ -42,7 +44,8 @@ Future<AmpMatchingResult> matchAmplifiers(
   AmpMatchingLogger.setLoggingEnabled(enableLogging);
   AmpMatchingLogger.setMinLogLevel(minLogLevel);
 
-  return AmplifierMatcher.matchAmplifiers(circuits, speakerDatabase, strategy: strategy);
+  return AmplifierMatcher.matchAmplifiers(circuits, speakerDatabase, 
+    systemVoltage: systemVoltage, strategy: strategy);
 }
 
 /// Configure logging settings for amplifier matching algorithm

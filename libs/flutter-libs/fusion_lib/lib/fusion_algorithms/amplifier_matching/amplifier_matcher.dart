@@ -115,13 +115,13 @@ class AmplifierMatcher {
       
       // Get asymmetrical capacity based on the most restrictive configuration
       if (maxVoltage != null) {
-        // Use Hi-Z voltage-based rating
+        // Use Hi-Z voltage-based rating for asymmetrical power
         return amp.powerSpecs!.getAsymmetricalPeakPower(voltage: maxVoltage);
       } else if (hasLoZ) {
-        // Use 8Ω Lo-Z rating as conservative default
+        // Use 8Ω Lo-Z rating as conservative default for asymmetrical power
         return amp.powerSpecs!.getAsymmetricalPeakPower(impedance: 8.0);
       } else {
-        // Default to 8Ω if unclear
+        // Default to 8Ω asymmetrical power if unclear
         return amp.powerSpecs!.getAsymmetricalPeakPower(impedance: 8.0);
       }
     }
@@ -142,7 +142,7 @@ class AmplifierMatcher {
     List<Circuit> input, 
     Map<String, SpeakerModel> speakers, 
     List<AmpModel> amps,
-    {PowerAllocationStrategy strategy = PowerAllocationStrategy.symmetrical}
+    {double systemVoltage = 70.0, PowerAllocationStrategy strategy = PowerAllocationStrategy.symmetrical}
   ) {
     final stopwatch = Stopwatch()..start();
     _optimizationIterations = 0;
@@ -857,13 +857,14 @@ class AmplifierMatcher {
   static Future<AmpMatchingResult> matchAmplifiers(
     List<Circuit> circuits, 
     Map<String, SpeakerModel> speakerDatabase,
-    {PowerAllocationStrategy strategy = PowerAllocationStrategy.symmetrical}
+    {double systemVoltage = 70.0, PowerAllocationStrategy strategy = PowerAllocationStrategy.symmetrical}
   ) async {
     final stopwatch = Stopwatch()..start();
 
     try {
       // Execute the core matching algorithm
-      final assignments = matchAmps(circuits, speakerDatabase, AmpCatalog.models, strategy: strategy);
+      final assignments = matchAmps(circuits, speakerDatabase, AmpCatalog.models, 
+        strategy: strategy);
 
       // Convert to legacy format
       final ampAssignments = assignments.map((assignment) {
@@ -871,7 +872,8 @@ class AmplifierMatcher {
       }).toList();
 
       // Calculate comprehensive metrics
-      final metrics = _calculateSystemMetrics(ampAssignments, circuits, speakerDatabase);
+      final metrics = _calculateSystemMetrics(ampAssignments, circuits, speakerDatabase, 
+        strategy: strategy);
 
       stopwatch.stop();
 
@@ -918,8 +920,9 @@ class AmplifierMatcher {
   static Map<String, dynamic> _calculateSystemMetrics(
     List<AmpAssignment> assignments,
     List<Circuit> originalCircuits,
-    Map<String, SpeakerModel> speakerDatabase,
-  ) {
+    Map<String, SpeakerModel> speakerDatabase, {
+    PowerAllocationStrategy strategy = PowerAllocationStrategy.symmetrical,
+  }) {
     double totalAvailablePower = 0.0;
     double totalUsedPower = 0.0;
     int totalChannels = 0;
@@ -931,7 +934,16 @@ class AmplifierMatcher {
     for (final assignment in assignments) {
       totalChannels += assignment.ampModel.channels;
       usedChannels += assignment.circuits.length;
-      totalAvailablePower += assignment.ampModel.peakPerChannel * assignment.ampModel.channels;
+      
+      // Use correct power calculation based on strategy
+      if (strategy == PowerAllocationStrategy.asymmetrical) {
+        // For asymmetrical, use asymmetrical peak power capacity
+        totalAvailablePower += _getAsymmetricalCapacity(assignment.ampModel, 
+          originalCircuits.map((Circuit c) => _CircuitCalc(c)).toList());
+      } else {
+        // For symmetrical, use per-channel × channels
+        totalAvailablePower += assignment.ampModel.peakPerChannel * assignment.ampModel.channels;
+      }
 
       // Validate each circuit assignment
       for (final circuit in assignment.circuits) {
