@@ -16,6 +16,7 @@ import 'package:fusion_lib/fusion_building_view/spl_range_controller.dart';
 import 'package:fusion_lib/fusion_building_view/spl_range_slider.dart';
 import 'package:fusion_lib/fusion_utils/image_loader_service.dart';
 import 'package:fusion_lib/fusion_widgets/buttons/fusion_outlined_button.dart';
+import 'package:fusion_lib/fusion_widgets/buttons/fusion_text_button.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_image.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
@@ -532,6 +533,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
             FusionOutlinedButton(
               height: 32,
               width: 160,
+              semanticsId: "Upload Floor-plan",
               label: "Upload Floor-plan",
               textStyle: Theme.of(context).textTheme.titleSmall,
               onTap: () {
@@ -558,19 +560,13 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
           (BuildContext ctx) => CleanDialog(
             title: 'Select Floor Plan',
             actions: <Widget>[
-              TextButton(
-                onPressed: () => _importFloorPlan(),
-                child: Text(
-                  'Import',
-                  style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-                ),
+              FusionTextButton(
+                onTap: () => _importFloorPlan(),
+                label: 'Import',
               ),
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: Text(
-                  'Cancel',
-                  style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-                ),
+              FusionTextButton(
+                onTap: () => Navigator.of(ctx).pop(),
+                label: 'Cancel',
               ),
             ],
             child: SizedBox(

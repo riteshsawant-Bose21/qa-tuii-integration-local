@@ -657,27 +657,30 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
                   }
                 },
                 child: Center(
-                  child: CustomPaint(
-                    painter: FloorPlanCalibrationPainter(
-                      image: widget.floorPlanImage,
-                      startPoint: _startPointDisplay,
-                      endPoint: _endPointDisplay,
-                      distanceText: _distanceController.text.trim(),
-                      unit: _selectedUnit,
-                      cropRectNormalized: _cropRectN,
-                      showCropHandles: _mode == _ToolMode.crop,
-                      onImageRectChanged: (ui.Rect r) {
-                        _imageRect = r;
-                        // keep display points in sync if image rect changes
-                        if (_startPointNormalized != null) {
-                          _startPointDisplay = _normalizedToScreen(_startPointNormalized!);
-                        }
-                        if (_endPointNormalized != null) {
-                          _endPointDisplay = _normalizedToScreen(_endPointNormalized!);
-                        }
-                      },
+                  child: SemanticHelper.container(
+                    testId: SemanticHelper.createTestId(SemanticTypes.container, "Floor Plan Calibration"),
+                    child: CustomPaint(
+                      painter: FloorPlanCalibrationPainter(
+                        image: widget.floorPlanImage,
+                        startPoint: _startPointDisplay,
+                        endPoint: _endPointDisplay,
+                        distanceText: _distanceController.text.trim(),
+                        unit: _selectedUnit,
+                        cropRectNormalized: _cropRectN,
+                        showCropHandles: _mode == _ToolMode.crop,
+                        onImageRectChanged: (ui.Rect r) {
+                          _imageRect = r;
+                          // keep display points in sync if image rect changes
+                          if (_startPointNormalized != null) {
+                            _startPointDisplay = _normalizedToScreen(_startPointNormalized!);
+                          }
+                          if (_endPointNormalized != null) {
+                            _endPointDisplay = _normalizedToScreen(_endPointNormalized!);
+                          }
+                        },
+                      ),
+                      child: const SizedBox.expand(),
                     ),
-                    child: const SizedBox.expand(),
                   ),
                 ),
               ),
