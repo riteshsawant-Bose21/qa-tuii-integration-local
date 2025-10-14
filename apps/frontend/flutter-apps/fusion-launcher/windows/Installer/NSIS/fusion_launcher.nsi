@@ -27,7 +27,7 @@ Var ProductUninstallKey
 Function .onInit
 	!insertmacro SetProductVersionShort
 	!insertmacro SetProductUninstallKey
-	StrCpy $INSTDIR "$PROGRAMFILES\${PRODUCT_PUBLISHER}\${PRODUCT_NAME}"
+	StrCpy $INSTDIR "$LOCALAPPDATA\${PRODUCT_PUBLISHER}\${PRODUCT_NAME}"
 FunctionEnd
 
 Function un.onInit
@@ -37,7 +37,7 @@ FunctionEnd
 
 Name "${PRODUCT_NAME} $ProductVersionShort"
 OutFile "FusionLauncherInstaller.exe"
-RequestExecutionLevel admin
+RequestExecutionLevel user
 
 ;--------------------------------
 ; Interface Settings
