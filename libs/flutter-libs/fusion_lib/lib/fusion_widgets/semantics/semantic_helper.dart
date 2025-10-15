@@ -16,6 +16,7 @@ class SemanticHelper {
     return Semantics(
       identifier: testId,
       button: true,
+      container: true,
       child: child,
     );
   }
