@@ -5,7 +5,6 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/core/spl_calculation/ffi_mace.dart' show Bandwidth, Weighting;
 import 'package:fusion_launcher/features/bill_of_materials/presentation/bill_of_materials_page.dart';
 import 'package:fusion_launcher/features/configuration/presentation/pages/audio_system_design_page.dart';
 import 'package:fusion_launcher/features/product_query/presentation/pages/product_query.dart';
@@ -19,6 +18,7 @@ import 'package:fusion_lib/models/dock_item_config.dart';
 import '../../../../core/spl_calculation/mace_calculation_manager.dart';
 import '../../../../core/spl_calculation/mace_engine_provider.dart';
 import '../../../core/service_locator.dart';
+import '../../../core/spl_calculation/ffi_constants.dart';
 import '../../../core/utils/broadcast_controllers.dart';
 import '../../../core/widgets/clean_widgets.dart';
 import '../../cloud_ui/presentation/pages/cloud_web_view.dart';
