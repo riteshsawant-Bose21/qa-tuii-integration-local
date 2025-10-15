@@ -81,6 +81,11 @@ func (s *UDPServer) BroadcastMessage(msg *api.NotifyMessage) error {
 
 func (s *UDPServer) packetHandler(data []byte, addr *net.UDPAddr) {
 
+	// Add caller to client map
+	s.clientsMux.Lock()
+	s.clients[addr.String()] = addr
+	s.clientsMux.Unlock()
+
 	// Handle acknowledgements
 	var msg api.NotifyMessage
 	if err := json.Unmarshal(data, &msg); err == nil && msg.Operation == api.NotifyOpAck {
@@ -93,6 +98,7 @@ func (s *UDPServer) packetHandler(data []byte, addr *net.UDPAddr) {
 		return
 	}
 
+	// Handle normal messages
 	resp, err := s.handler.HandleUDPMessage(data)
 	if err != nil {
 		s.sendResponse(addr, server.UDPResponse{

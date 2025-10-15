@@ -3,9 +3,9 @@ import 'dart:math' as math;
 import 'dart:math';
 import 'dart:ui';
 
-import 'package:fusion_launcher/core/spl_calculation/ffi_mace.dart' show Bandwidth, Weighting;
 import 'package:fusion_lib/fusion_lib.dart';
 
+import 'ffi_constants.dart';
 import 'mace_engine_provider.dart';
 
 class SPLCalculation {

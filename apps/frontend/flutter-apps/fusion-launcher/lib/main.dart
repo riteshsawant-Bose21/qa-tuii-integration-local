@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
@@ -38,6 +39,9 @@ Future<void> main() async {
 }
 
 void _setupMacOSDeepLinkListener() {
+  if (kIsWeb) {
+    return;
+  }
   // Use MethodChannel to receive the URL from native code
   const MethodChannel channel = MethodChannel('custom_url_scheme_channel');
   channel.setMethodCallHandler((MethodCall call) async {

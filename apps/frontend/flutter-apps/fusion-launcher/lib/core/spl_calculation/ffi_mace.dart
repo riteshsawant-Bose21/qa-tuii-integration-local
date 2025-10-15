@@ -7,18 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
-enum Bandwidth {
-  oneThirdOctave,
-  oneOctave,
-  vocalBands,
-  allBands,
-}
-
-enum Weighting {
-  a,
-  c,
-  z,
-}
+import 'ffi_constants.dart';
 
 /// Load the dylib from the app bundle’s Frameworks folder
 final DynamicLibrary _mace = () {
