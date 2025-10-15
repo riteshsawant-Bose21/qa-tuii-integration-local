@@ -8,6 +8,8 @@
 
 #include "ControlPalSwitchActuator.h"
 #include <HostInterfaceLite/OCA/OCF/Logging/IOcfLiteLog.h>
+#include "PlatformInterface/linux/OcaLiteOcfMsgQueue.h"
+#include "HostInterface/CommandInterface/CommandInterface.h"
 
 ControlPalSwitchActuator::ControlPalSwitchActuator(::OcaONo objectNumber,
                                                ::OcaBoolean lockable,
@@ -32,6 +34,15 @@ ControlPalSwitchActuator::ControlPalSwitchActuator(::OcaONo objectNumber,
 
 ::OcaLiteStatus ControlPalSwitchActuator::SetPositionValue(::OcaUint16 position)
 {
+    ControlPal_MsgQueue<ControllerCmdIntfc> *cmdQueue =
+                         static_cast<ControlPal_MsgQueue<ControllerCmdIntfc> * >(m_cmdQueue);
+    ControllerCmdIntfc setPositionCmd;
+    setPositionCmd.cmd = CTRL_CMD_SOURCE_SET;
+    setPositionCmd.val.int_val = static_cast<uint32_t>(position);
+
+    // Call fn. to send Source POSITION value command to UI task
+    cmdQueue->push(setPositionCmd);
+
     OCA_LOG_INFO_PARAMS("[SWITCH] SetPositionValue -> %u (Zone ID: %s)", position, m_zoneID.empty() ? "N/A" : m_zoneID.c_str());
     return OCASTATUS_OK;
 }

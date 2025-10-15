@@ -86,15 +86,12 @@ ControlPalGainActuator::ControlPalGainActuator(::OcaONo objectNumber,
 
     try
     {
-        // Simulate setting the gain value in the actual audio processing hardware/software
-        // In a real implementation, this would interface with your DSP or audio hardware
-
         OCA_LOG_INFO_PARAMS("[GAIN] Setting gain to %.2f dB (Gain ID: %s)", gain, m_gainID.empty() ? "N/A" : m_gainID.c_str());
 
         // Convert dB to linear for internal processing (if needed)
         double linearGain = dbToLinear(gain);
 
-        // TODO: Call fn. to send GAIN value command to UI task
+        // Call fn. to send GAIN value command to UI task
         cmdQueue->push(setGainCmd);
 
         OCA_LOG_INFO_PARAMS("[GAIN] ✓ Gain successfully set to %.2f dB (linear: %.6f) (Gain ID: %s)",
