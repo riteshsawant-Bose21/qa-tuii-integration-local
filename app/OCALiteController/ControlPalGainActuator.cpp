@@ -16,6 +16,8 @@
 // ---- Include local include files ----
 #include "ControlPalGainActuator.h"
 #include <HostInterfaceLite/OCA/OCF/Logging/IOcfLiteLog.h>
+#include "PlatformInterface/linux/OcaLiteOcfMsgQueue.h"
+#include "HostInterface/CommandInterface/CommandInterface.h"
 
 // ---- Helper types and constants ----
 
@@ -47,9 +49,10 @@ ControlPalGainActuator::ControlPalGainActuator(::OcaONo objectNumber,
                                            const ::OcaLiteList<::OcaLitePort> &ports,
                                            ::OcaDB minGain,
                                            ::OcaDB maxGain,
-                                           const std::string &gainID)
+                                           const std::string &gainID,
+                                           void *cmdQueue)
     : ::OcaLiteGain(objectNumber, lockable, role, ports, minGain, maxGain),
-      m_gainID(gainID)
+      m_gainID(gainID), m_cmdQueue(cmdQueue)
 {
     // Enhanced logging with dynamic information
     OCA_LOG_INFO("=== ControlPalGainActuator Created ===");
@@ -75,6 +78,12 @@ ControlPalGainActuator::ControlPalGainActuator(::OcaONo objectNumber,
 
 ::OcaLiteStatus ControlPalGainActuator::SetGainValue(::OcaDB gain)
 {
+    ControlPal_MsgQueue<ControllerCmdIntfc> *cmdQueue =
+                         static_cast<ControlPal_MsgQueue<ControllerCmdIntfc> * >(m_cmdQueue);
+    ControllerCmdIntfc setGainCmd;
+    setGainCmd.cmd = CTRL_CMD_GAIN_SET;
+    setGainCmd.val.flt_val = gain;
+
     try
     {
         // Simulate setting the gain value in the actual audio processing hardware/software
@@ -85,15 +94,8 @@ ControlPalGainActuator::ControlPalGainActuator(::OcaONo objectNumber,
         // Convert dB to linear for internal processing (if needed)
         double linearGain = dbToLinear(gain);
 
-        // Here you would typically:
-        // 1. Send the gain value to your audio processing hardware/DSP
-        // 2. Update internal audio processing parameters
-        // 3. Validate that the setting was successful
-
-        // Example hardware interface calls (commented out):
-        // audioHardware.setChannelGain(channelId, gain);
-        // dspLibrary.updateGainParameter(gain);
-        // registerWrite(GAIN_REGISTER, gainToRegisterValue(gain));
+        // TODO: Call fn. to send GAIN value command to UI task
+        cmdQueue->push(setGainCmd);
 
         OCA_LOG_INFO_PARAMS("[GAIN] ✓ Gain successfully set to %.2f dB (linear: %.6f) (Gain ID: %s)",
                             gain, linearGain, m_gainID.empty() ? "N/A" : m_gainID.c_str());

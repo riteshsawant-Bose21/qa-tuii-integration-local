@@ -44,9 +44,10 @@ ControlPalMuteActuator::ControlPalMuteActuator(::OcaONo objectNumber,
                                            ::OcaBoolean lockable,
                                            const ::OcaLiteString &role,
                                            const ::OcaLiteList<::OcaLitePort> &ports,
-                                           const std::string &gainID)
+                                           const std::string &gainID,
+                                           void *cmdQueue)
     : ::OcaLiteMute(objectNumber, lockable, role, ports),
-      m_gainID(gainID)
+      m_gainID(gainID), m_cmdQueue(cmdQueue)
 {
     // Enhanced logging with dynamic information
     OCA_LOG_INFO("=== ControlPalMuteActuator Created ===");

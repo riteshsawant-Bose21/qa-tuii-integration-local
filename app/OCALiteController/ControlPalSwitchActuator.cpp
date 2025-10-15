@@ -17,9 +17,10 @@ ControlPalSwitchActuator::ControlPalSwitchActuator(::OcaONo objectNumber,
                                                ::OcaUint16 maxPosition,
                                                const ::OcaLiteList<::OcaLiteString> &positionNames,
                                                const ::OcaLiteList<::OcaBoolean> &positionEnable,
-                                               const std::string &zoneID)
+                                               const std::string &zoneID,
+                                               void *cmdQueue)
     : ::OcaLiteSwitch(objectNumber, lockable, role, ports, minPosition, maxPosition, positionNames, positionEnable),
-      m_zoneID(zoneID)
+      m_zoneID(zoneID), m_cmdQueue(cmdQueue)
 {
     OCA_LOG_INFO("=== ControlPalSwitchActuator Created ===");
     OCA_LOG_INFO_PARAMS("Object Number: %u", objectNumber);

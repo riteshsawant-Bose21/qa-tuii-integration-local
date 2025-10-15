@@ -35,6 +35,8 @@
 #include "ControlPalSwitchActuator.h"
 #include "ControlPalSetupUtils.h"
 #include "ControlPalConnectionMonitor.h"
+#include "HostInterface/CommandInterface/CommandInterface.h"
+#include "PlatformInterface/linux/OcaLiteOcfMsgQueue.h"
 
 #define OCA_RUN_TIMEOUT_MSEC    500
 
@@ -58,8 +60,14 @@ void ShowUsage(const char *programName)
     std::cout << "  " << programName << " -id \"MyController\"\n";
 }
 
-bool ocaMain(std::string& customNodeId)
+bool ocaMain(std::string& customNodeId,
+                std::vector<ControlPal_MsgQueue<ControllerCmdIntfc>*> msgQues)
 {
+    // AES70 --> UI
+    ControlPal_MsgQueue<ControllerCmdIntfc> *ocaMsgQueue = msgQues.at(0);
+    // UI --> AES70
+    ControlPal_MsgQueue<ControllerCmdIntfc> *uiMsgQueue = msgQues.at(1);
+
     // Initialize Oca Device
     static_cast<void>(::OcaLiteBlock::GetRootBlock());
 
@@ -165,7 +173,11 @@ bool ocaMain(std::string& customNodeId)
                                         std::vector<::OcaONo> zoneONos;
 
                                         // Create and setup control objects
-                                        if (ControlPalSetupControls(controllerId, proxy, zoneONos))
+                                        if (ControlPalSetupControls(
+                                                 controllerId,
+                                                 proxy,
+                                                 zoneONos,
+                                                 static_cast<void *>(ocaMsgQueue)))
                                         {
                                             ::OcaBoolean connectStatus(true);
                                             while (connectStatus)
@@ -174,6 +186,9 @@ bool ocaMain(std::string& customNodeId)
                                                 ::OcaLiteCommandHandler::GetInstance().RunWithTimeout(OCA_RUN_TIMEOUT_MSEC);
 
                                                 //TODO: Check for local h/w events
+
+                                                //*uiMsgQueue
+                                                //*
 
                                                 // Check Connection status
                                                 connMonitor->GetSetting(connectStatus);
@@ -277,14 +292,29 @@ int main(int argc, const char *argv[])
     //
     // TODO: ControlInterface_Init();  // e.g. TochGFX, CLI interface etc
     //
+
     // IPC used to exchage upstream and
     // downstream value changes.
+
     // TODO: IPC_init();  // e.g. semaphores, mutex etc.
-    //
-    // TODO: Create User Interface task. THis task handles UI, Physical Encoders etc.
-    //
+
+    // TODO: Create que objects
+    ControlPal_MsgQueue<ControllerCmdIntfc> ocaQueue; // AES70 --> UI
+    ControlPal_MsgQueue<ControllerCmdIntfc> uiQueue;   //    UI --> AES70
+
+    // Populate vector that will be passed to UI task
+    std::vector<ControlPal_MsgQueue<ControllerCmdIntfc>*> msgQues;
+    msgQues.push_back(&ocaQueue);
+    msgQues.push_back(&uiQueue);
+
+#if 0
+    // TODO: Create User Interface task. This task handles UI,
+    //       Physical Encoders etc.
+    std::thread *uiThread = OcaLiteOcfThread_create(ControllerView,
+                                              static_cast<void *>(&msgQues));
+#endif
 
     // Start OCA processing
-    return ocaMain(customNodeId);
+    return ocaMain(customNodeId, msgQues);
 }
 

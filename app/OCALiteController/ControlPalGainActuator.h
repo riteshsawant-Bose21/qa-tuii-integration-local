@@ -38,6 +38,7 @@ public:
      * @param[in]  minGain      Lower limit of the gain in dB
      * @param[in]  maxGain      Upper limit of the gain in dB
      * @param[in]  gainID       The gain identifier from JSON configuration (required)
+     * @param[in]  commandQueue The pointer to the command queue object
      */
     ControlPalGainActuator(::OcaONo objectNumber,
                          ::OcaBoolean lockable,
@@ -45,7 +46,8 @@ public:
                          const ::OcaLiteList<::OcaLitePort> &ports,
                          ::OcaDB minGain,
                          ::OcaDB maxGain,
-                         const std::string &gainID);
+                         const std::string &gainID,
+                         void *commandQue);
 
     /**
      * Destructor.
@@ -65,6 +67,9 @@ protected:
 private:
     /** The gain identifier from JSON configuration */
     std::string m_gainID;
+
+    // Pointer to command queue
+    void *m_cmdQueue;
 
     /** private copy constructor, no copying of object allowed */
     ControlPalGainActuator(const ControlPalGainActuator &);

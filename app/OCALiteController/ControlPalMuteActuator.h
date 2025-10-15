@@ -39,12 +39,14 @@ public:
      * @param[in] role            The role of this instance.
      * @param[in] ports           The OCA input and output ports.
      * @param[in] gainID          The gain identifier from JSON configuration (required)
+     * @param[in] commandQueue The pointer to the command queue object
      */
     ControlPalMuteActuator(::OcaONo objectNumber,
                          ::OcaBoolean lockable,
                          const ::OcaLiteString &role,
                          const ::OcaLiteList<::OcaLitePort> &ports,
-                         const std::string &gainID);
+                         const std::string &gainID,
+                         void *commandQue);
 
     /**
      * Destructor.
@@ -65,6 +67,9 @@ private:
 
     /** The gain identifier from JSON configuration */
     std::string m_gainID;
+
+    // Pointer to command queue
+    void *m_cmdQueue;
 
     /** Copy constructor */
     ControlPalMuteActuator(const ControlPalMuteActuator &);

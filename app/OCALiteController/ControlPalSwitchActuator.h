@@ -26,7 +26,8 @@ public:
                            ::OcaUint16 maxPosition,
                            const ::OcaLiteList<::OcaLiteString> &positionNames,
                            const ::OcaLiteList<::OcaBoolean> &positionEnable,
-                           const std::string &zoneID);
+                           const std::string &zoneID,
+                           void *commandQue);
 
     virtual ~ControlPalSwitchActuator() {}
 
@@ -42,6 +43,9 @@ private:
     /** The zone identifier from JSON configuration */
     std::string m_zoneID;
     
+    // Pointer to command queue
+    void *m_cmdQueue;
+
     ControlPalSwitchActuator(const ControlPalSwitchActuator &);
     ControlPalSwitchActuator &operator=(const ControlPalSwitchActuator &);
 };

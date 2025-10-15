@@ -258,7 +258,7 @@ void DisplayDiscoveredDevices(
     return status;
 }
 
-ZoneGroup* CreateZoneGroup(Zone& newZone)
+ZoneGroup* CreateZoneGroup(Zone& newZone, void *commandQueue)
 {
     // Create a block/zone
     ZoneGroup* newZoneGrp = new ZoneGroup(newZone.ono.zone,
@@ -276,7 +276,8 @@ ZoneGroup* CreateZoneGroup(Zone& newZone)
                 emptyPorts,
                 -20.0,
                 60.0,
-                newZone.gain.gainID);
+                newZone.gain.gainID,
+                commandQueue);
         if (newGainObj)
         {
             newZoneGrp->AddObject(*newGainObj);
@@ -288,7 +289,8 @@ ZoneGroup* CreateZoneGroup(Zone& newZone)
                 static_cast<::OcaBoolean>(true),
                 static_cast<const ::OcaLiteString>("Mute"),
                 emptyPorts,
-                newZone.gain.gainID);
+                newZone.gain.gainID,
+                commandQueue);
         if (newMuteObj)
         {
             newZoneGrp->AddObject(*newMuteObj);
@@ -322,7 +324,8 @@ ZoneGroup* CreateZoneGroup(Zone& newZone)
                 static_cast<::OcaUint16>(newZone.sources.size() - 1), // Max Pos.
                 label,
                 enable,
-                newZone.id);
+                newZone.id,
+                commandQueue);
 
         // Add to block
         if (newSelectorObj)
@@ -395,7 +398,8 @@ ZoneGroup* CreateZoneGroup(Zone& newZone)
 
 ::OcaBoolean ControlPalSetupControls(::OcaLiteString& controllerId,
                                         ::GeneralProxy& proxy,
-                                        std::vector<::OcaONo>& zoneONo)
+                                        std::vector<::OcaONo>& zoneONo,
+                                        void *commandQueue)
 {
     ::OcaBoolean bSuccess(false);
     Controller controllerCfg;
@@ -407,7 +411,7 @@ ZoneGroup* CreateZoneGroup(Zone& newZone)
         for (auto newZone : controllerCfg.zones)
         {
             // Create Worker Objects andd add to FusionBlock
-            ZoneGroup *newGroup = CreateZoneGroup(*newZone);
+            ZoneGroup *newGroup = CreateZoneGroup(*newZone, commandQueue);
 
             // Add 'ZoneGroup' to 'Root' block
             bSuccess |= ::OcaLiteBlock::GetRootBlock().AddObject(*newGroup);
