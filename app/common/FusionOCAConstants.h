@@ -146,4 +146,7 @@ const std::string ZONES_JSON_STRING_FOR_DEV = R"(
         }
         )";
 
+const ::OcaONo FUSION_NETWORK_ONO        = static_cast<::OcaONo>(9001);
+const ::OcaONo FUSION_CONNECTION_MON_ONO = static_cast<::OcaONo>(9002);
+
 #endif // FUSION_OCA_CONSTANTS_H

@@ -157,6 +157,9 @@ void OcaServiceDiscovery::StopDiscovery()
     }
     m_resolveServices.clear();
 
+    // Clear any previous discoveries
+    m_discoveredDevices.clear();
+
     m_isDiscovering = false;
     OCA_LOG_INFO("Service discovery stopped");
 }
