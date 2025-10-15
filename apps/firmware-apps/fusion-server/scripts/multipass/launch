@@ -341,7 +341,7 @@ launch_instance() {
     
     # Create and launch instance
     print_step "Creating multipass instance..."
-    if ! multipass launch --name "$instance_name" --network en0 --cloud-init "$cloud_init_file" --memory 2G --cpus 2; then
+    if ! multipass launch jammy --name "$instance_name" --network en0 --cloud-init "$cloud_init_file" --memory 2G --cpus 2; then
         print_error "Failed to launch instance $instance_name"
         return 1
     fi

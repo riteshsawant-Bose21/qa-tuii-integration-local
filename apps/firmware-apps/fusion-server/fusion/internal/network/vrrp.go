@@ -41,7 +41,7 @@ func StartVRRPListener(onUpdate func(vip string, srcIP string)) error {
 	}
 
 	logger := logging.GetLogger()
-	logger.Info("VRRP listener started")
+	logger.Debug("VRRP listener started")
 
 	go func() {
 		defer syscall.Close(fd)
@@ -71,7 +71,7 @@ func StartVRRPListener(onUpdate func(vip string, srcIP string)) error {
 			if srcIP != lastSrc || vip != lastVIP {
 				lastSrc = srcIP
 				lastVIP = vip
-				logger.Info("VRRP update: %s binds %s", srcIP, vip)
+				logger.Debug("VRRP update: %s binds %s", srcIP, vip)
 				onUpdate(vip, srcIP)
 			}
 		}

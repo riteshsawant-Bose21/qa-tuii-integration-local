@@ -427,9 +427,7 @@ func initStateManager(config *api.AppConfig) *persistence.StateManager {
 // initTaskManager initializes the timer manager.
 func initTaskManager(config *api.AppConfig, persistence *persistence.Persistence) *tasks.TaskManager {
 	taskManager := tasks.NewTaskManager(config, persistence)
-	if err := taskManager.Start(); err != nil {
-		logging.GetLogger().Fatal("Failed to start TaskManager: %v", err)
-	}
+	taskManager.Start()
 	return taskManager
 }
 

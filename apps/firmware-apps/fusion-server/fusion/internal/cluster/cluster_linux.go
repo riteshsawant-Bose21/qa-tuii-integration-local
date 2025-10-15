@@ -9,15 +9,24 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
+const updateChannels = 16
+
 func (c *Cluster) watchLocalVIP() {
 	logger := logging.GetLogger()
+
+	expectedVIP, err := c.getVIPFromConfig()
+	if err != nil {
+		logger.Error("Failed to get VIP from config: %v", err)
+		return
+	}
 
 	addrs, err := netlink.AddrList(nil, netlink.FAMILY_ALL)
 	if err == nil {
 		for _, a := range addrs {
-			if a.IP.String() == c.vip {
-				logger.Info("Detected VIP present at startup: %s", c.vip)
-				c.listenerUpdated(c.vip, c.bindAddr)
+			if a.IP.String() == expectedVIP {
+				logger.Info("VIP present at startup: %s", expectedVIP)
+				c.listenerUpdated(expectedVIP, c.bindAddr)
+				c.notifyLocalVIPChange(true)
 				break
 			}
 		}
@@ -25,7 +34,7 @@ func (c *Cluster) watchLocalVIP() {
 		logger.Error("AddrList in startup scan failed: %v", err)
 	}
 
-	updates := make(chan netlink.AddrUpdate, 16)
+	updates := make(chan netlink.AddrUpdate, updateChannels)
 	done := make(chan struct{})
 
 	if err := netlink.AddrSubscribeWithOptions(updates, done, netlink.AddrSubscribeOptions{
@@ -37,23 +46,23 @@ func (c *Cluster) watchLocalVIP() {
 		return
 	}
 
-	for {
-		for {
-			update, ok := <-updates
-			if !ok {
-				logger.Error("netlink updates channel closed")
-				return
-			}
-			ip := update.LinkAddress.IP.String()
-			if ip == c.vip {
-				if update.NewAddr {
-					logger.Info("Local VIP appeared: %s", ip)
-					c.listenerUpdated(ip, c.bindAddr)
-				} else {
-					logger.Info("Local VIP removed: %s", ip)
-					c.listenerUpdated("", c.bindAddr)
-				}
+	for update := range updates {
+		ip := update.LinkAddress.IP
+		if ip == nil || ip.To4() == nil {
+			continue
+		}
+		theIP := ip.String()
+
+		if update.NewAddr {
+			logger.Debug("Local VIP appeared: %s", theIP)
+			c.listenerUpdated(theIP, c.bindAddr)
+		} else {
+			logger.Debug("Local VIP removed: %s", theIP)
+			if c.isLocalVIP(theIP) {
+				c.listenerUpdated("", c.bindAddr)
 			}
 		}
 	}
+
+	logger.Warn("netlink updates channel closed")
 }
