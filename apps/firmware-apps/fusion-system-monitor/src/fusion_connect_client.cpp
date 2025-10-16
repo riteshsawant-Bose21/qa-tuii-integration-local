@@ -445,10 +445,9 @@ static bool get_tai_offset_seconds(int* tai_sec) {
     return true;
 }
 
-// ---------- the one you asked for ----------
 static bool set_ptp_sync(NetlinkClient& c)
 {
-    // Prefer by interface, then /dev/ptp1 (your ptp4l unit hints it), then first-present.
+    // Prefer by interface, then /dev/ptp1, then first-present.
     std::string ptp_dev = choose_ptp_device("eth0");
     if (ptp_dev.empty() && access("/dev/ptp1", R_OK | W_OK) == 0) ptp_dev = "/dev/ptp1";
     if (ptp_dev.empty()) ptp_dev = first_present_ptp();
@@ -739,7 +738,7 @@ FusionConnectClient::FusionConnectClient(const bosepro::BlockConfiguration &conf
 
 static bool is_source_stream_by_name(const char *name) {
     if (!name) return false;
-    // Your conventions: FC_TX_* and AES67_tx are TX; FC_RX_* and AES67_rx are RX
+    // Our conventions: FC_TX_* and AES67_tx are TX; FC_RX_* and AES67_rx are RX
     return (strncmp(name, "FC_TX_", 6) == 0) || (strncmp(name, "AES67_tx", 8) == 0);
 }
 
@@ -971,7 +970,7 @@ void FusionConnectClient::audio_streams_update_func() {
         config.is_fusion_connect  = is_fusion_connect;
 
         // IP defaults: DO NOT pre-fill to system_ip (prevents RX map mismatch)
-        config.source_ip = 0; // wildcard unless role dictates otherwise
+        config.source_ip = 0; 
         config.dest_ip   = 0;
 
         // Allow standards overrides from properties (safe ones)
@@ -1090,7 +1089,7 @@ void FusionConnectClient::audio_streams_update_func() {
                 }
                 // (No further constraints: multicast TX is allowed; unicast TX is allowed.)
             } else {
-                // RX: two cases
+                // RX
                 const bool have_dest = (config.dest_ip != 0 && config.dest_ip != INADDR_NONE);
                 const bool dest_is_mcast = have_dest && is_ip_mcast(config.dest_ip);
 
@@ -1179,7 +1178,7 @@ void FusionConnectClient::process() {
     if (!(ptp_synchronized && mgr_started)) return;
 
     // --- Fusion Connect ---
-    for (auto it = fusion_connect_stream_map.begin(); it != fusion_connect_stream_map.end(); /* no ++ here */) {
+    for (auto it = fusion_connect_stream_map.begin(); it != fusion_connect_stream_map.end();) {
         const std::string& name = it->first;
         auto              & cfg = it->second;
 
@@ -1201,7 +1200,7 @@ void FusionConnectClient::process() {
             if (ps.retry_cnt == 0) {
                 SPDLOG_ERROR("Failed to create Fusion Connect stream {}", name);
                 pending_streams.erase(ps_it);
-                it = fusion_connect_stream_map.erase(it);  // returns next iterator
+                it = fusion_connect_stream_map.erase(it);
             } else {
                 --ps.retry_cnt;
                 ++it; // keep entry, try again later
@@ -1210,7 +1209,7 @@ void FusionConnectClient::process() {
     }
 
     // --- AES67 ---
-    for (auto it = aes67_stream_map.begin(); it != aes67_stream_map.end(); /* no ++ here */) {
+    for (auto it = aes67_stream_map.begin(); it != aes67_stream_map.end();) {
         const std::string& name = it->first;
         auto              & cfg = it->second;
 
@@ -1236,7 +1235,7 @@ void FusionConnectClient::process() {
             if (ps.retry_cnt == 0) {
                 SPDLOG_ERROR("Failed to create AES67 stream {}", name);
                 pending_streams.erase(ps_it);
-                it = aes67_stream_map.erase(it);  // returns next iterator
+                it = aes67_stream_map.erase(it);
             } else {
                 --ps.retry_cnt;
                 ++it; // keep entry, try again later
