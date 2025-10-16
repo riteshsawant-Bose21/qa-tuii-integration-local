@@ -228,12 +228,14 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
 
           /// Content
           Expanded(
-            child: Container(
-              width: widget.width,
-              padding: const EdgeInsets.all(10),
-              child: SingleChildScrollView(
-                physics: const ClampingScrollPhysics(),
-                child: widget.sectionContent,
+            child: SingleChildScrollView(
+              child: SizedBox(
+                width: widget.width,
+                // padding: const EdgeInsets.all(10),
+                child: SingleChildScrollView(
+                  physics: const ClampingScrollPhysics(),
+                  child: widget.sectionContent,
+                ),
               ),
             ),
           ),

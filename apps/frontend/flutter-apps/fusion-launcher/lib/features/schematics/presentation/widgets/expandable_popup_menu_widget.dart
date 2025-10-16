@@ -238,17 +238,14 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
                     price: item.price,
                   );
                   serviceLocator<ProjectViewModel>().addHardware(source);
-                } else if (item is ProductQueryModel) {
-                  // final Source source = Source(
+                } else if (item is FusionDevice) {
+                  // final FusionDevice fusionDevice = FusionDevice(
                   //   name: item.name,
-                  //   pos: null,
-                  //   type: item.type.name,
-                  //   assetImagePath: item.image.isNotEmpty ? item.image : _getDefaultImageForProductType(item.type),
-                  //   locationEntity: LocationModel(),
-                  //   sku: item.sku,
                   //   price: item.price,
+                  //   location: 'EqpLoc.',
+                  //   status: FusionDeviceSetupStatus.notStarted,
                   // );
-                  // serviceLocator<ProjectViewModel>().addHardware(source);
+                  // serviceLocator<ProjectViewModel>().addHardware(fusionDevice);
                 }
               },
               child: Container(

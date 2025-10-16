@@ -45,3 +45,15 @@ final class DeviceTypeIndexChanged extends ProjectViewModelState {
   final int index;
   DeviceTypeIndexChanged(this.index);
 }
+
+final class DeviceHoverChanged extends ProjectViewModelState {
+  final SelectedItem? hoveredDevice;
+  DeviceHoverChanged(this.hoveredDevice);
+}
+
+final class DeviceSelectionChanged extends ProjectViewModelState {
+  final SelectedItem? selectedDevice;
+  DeviceSelectionChanged(this.selectedDevice);
+}
+
+final class DeviceSelectionsCleared extends ProjectViewModelState {}
