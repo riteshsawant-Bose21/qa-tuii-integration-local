@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -7,22 +9,26 @@ import 'package:fusion_launcher/features/bill_of_materials/presentation/bill_of_
 import 'package:fusion_launcher/features/configuration/presentation/pages/audio_system_design_page.dart';
 import 'package:fusion_launcher/features/product_query/presentation/pages/product_query.dart';
 import 'package:fusion_launcher/features/projects/widget/building/side_panle_widgets/devices_panel.dart';
-import 'package:fusion_launcher/features/schematics/presentation/pages/schematics_page.dart';
+import 'package:fusion_lib/fusion_building_view/floor_canvas_controller.dart';
 import 'package:fusion_lib/fusion_building_view/spl_range_controller.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/models/dock_item_config.dart';
 
+import '../../../../core/spl_calculation/mace_calculation_manager.dart';
+import '../../../../core/spl_calculation/mace_engine_provider.dart';
 import '../../../core/service_locator.dart';
+import '../../../core/spl_calculation/ffi_constants.dart';
 import '../../../core/utils/broadcast_controllers.dart';
 import '../../../core/widgets/clean_widgets.dart';
 import '../../cloud_ui/presentation/pages/cloud_web_view.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
+import '../../schematics/presentation/pages/schematics_page.dart';
 import '../../schematics/presentation/widgets/cost_calcuator_widget.dart';
 import '../widget/building/building_canvas.dart';
 import '../widget/building/side_panle_widgets/building_plan.dart';
 import '../widget/building/side_panle_widgets/coverage_panel.dart';
-import '../widget/building/side_panle_widgets/properties.dart';
+import '../widget/building/side_panle_widgets/properties_panel.dart';
 import '../widget/building/side_panle_widgets/zone_and_listening_area.dart';
 import '../widget/control_design_tab_switcher.dart';
 
@@ -30,19 +36,23 @@ class ProjectWorkArea extends StatefulWidget {
   const ProjectWorkArea({super.key});
 
   @override
-  State<ProjectWorkArea> createState() => _TestLibraryScreenState();
+  State<ProjectWorkArea> createState() => _ProjectWorkAreaState();
 }
 
-class _TestLibraryScreenState extends State<ProjectWorkArea>
-    with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
+class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   late TabController _tabController;
   StreamSubscription<int>? subscription;
   late TextEditingController _projectNameController;
   final FocusNode _projectNameFocusNode = FocusNode();
   final GlobalKey _projectNameKey = GlobalKey();
   String? _projectNameError;
+  final ProjectViewModel _projectViewModel = serviceLocator<ProjectViewModel>();
 
   final SplRangeController _splRangeController = SplRangeController();
+  final FloorCanvasController _floorCanvasController = FloorCanvasController();
+  MaceEngine? _engine;
+
+  bool get isListingViewMode => _projectViewModel.currentProjectMode == ProjectMode.systemListingMode;
 
   final List<Widget> _tabs = const <Widget>[
     Tab(text: 'Building'),
@@ -61,7 +71,7 @@ class _TestLibraryScreenState extends State<ProjectWorkArea>
       animationDuration: Duration.zero,
     );
 
-    //Need to handle this in a better way
+    /// Todo: Need to handle this in a better way
     serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(-1);
 
     subscription = projectTabBroadcastController.stream.listen((int index) {
@@ -69,9 +79,132 @@ class _TestLibraryScreenState extends State<ProjectWorkArea>
         _tabController.animateTo(index);
       }
     });
-    _projectNameController = TextEditingController(
-      text: serviceLocator<ProjectViewModel>().projectName,
+    _projectNameController = TextEditingController(text: serviceLocator<ProjectViewModel>().projectName);
+    _initMace();
+    _initSplRangeDefaults();
+  }
+
+  Future<void> _initMace() async {
+    if (Platform.isMacOS || Platform.isIOS) {
+      WidgetsFlutterBinding.ensureInitialized();
+      _engine = await MaceEngine.create();
+    }
+  }
+
+  SplPanelData? _lastPanelData;
+  _initSplRangeDefaults() {
+    final SplPanelData currentPanelData = _splRangeController.getPanelData();
+    _lastPanelData = currentPanelData;
+    serviceLocator<ProjectViewModel>().setMinSPL(currentPanelData.splLowerDb);
+    serviceLocator<ProjectViewModel>().setMaxSPL(currentPanelData.splUpperDb);
+  }
+
+  void _updateSPLFromPanelData() {
+    final SplPanelData currentPanelData = _splRangeController.getPanelData();
+    if (_lastPanelData != currentPanelData) {
+      // if resolution changed, need to recalculate all SPLs
+      if (_lastPanelData?.resolution != currentPanelData.resolution) {
+        _lastPanelData = currentPanelData;
+        calculateSPL();
+        return;
+      }
+      _lastPanelData = currentPanelData;
+      final Bandwidth maceBandwidth = _mapToMaceBandwidth(currentPanelData.bandwidth);
+      final double frequency = currentPanelData.frequency.frequencyValue.toDouble();
+      final Weighting weighting = _mapToMaceWeighting(currentPanelData.weighting);
+      serviceLocator<ProjectViewModel>().setMinSPL(currentPanelData.splLowerDb);
+      serviceLocator<ProjectViewModel>().setMaxSPL(currentPanelData.splUpperDb);
+      updateSpl(maceBandwidth, frequency, weighting, currentPanelData.relative);
+      setState(() {}); // <-- Trigger rebuild
+    }
+  }
+
+  Weighting _mapToMaceWeighting(SplWeighting w) {
+    switch (w) {
+      case SplWeighting.aWeighted:
+        return Weighting.a;
+      case SplWeighting.cWeighted:
+        return Weighting.c;
+      case SplWeighting.zWeighted:
+        return Weighting.z;
+    }
+  }
+
+  Bandwidth _mapToMaceBandwidth(SplBandwidth b) {
+    switch (b) {
+      case SplBandwidth.oneThirdOctave:
+        return Bandwidth.oneThirdOctave;
+      case SplBandwidth.oneOctave:
+        return Bandwidth.oneOctave;
+      case SplBandwidth.vocal:
+        return Bandwidth.vocalBands;
+      case SplBandwidth.allBands:
+        return Bandwidth.allBands;
+    }
+  }
+
+  Future<void> calculateSPL() async {
+    if (_engine == null) return;
+    if (!_floorCanvasController.isShowingSpl.value) return;
+
+    final int currentFloorIndex = serviceLocator<ProjectViewModel>().currentFloorIndex;
+    if (currentFloorIndex == -1) return;
+
+    final FloorModel currentFloor = serviceLocator<ProjectViewModel>().floors[currentFloorIndex];
+    if (currentFloor.listeningAreaIds.isEmpty) return;
+
+    final List<Speaker> speakers = List<Speaker>.from(
+      serviceLocator<ProjectViewModel>().getHardwareForFloor(currentFloor.id).whereType<Speaker>(),
     );
+    final List<ListeningArea> surfaces = serviceLocator<ProjectViewModel>().getListeningAreasForFloor(currentFloor.id);
+
+    await SPLCalculationManager.calculateSpl(_engine!, speakers, surfaces, _lastPanelData!.getResolutionSpacing());
+
+    final SplPanelData currentPanelData = _splRangeController.getPanelData();
+    final Bandwidth maceBandwidth = _mapToMaceBandwidth(currentPanelData.bandwidth);
+    final Weighting weighting = _mapToMaceWeighting(currentPanelData.weighting);
+    final double frequency = currentPanelData.frequency.frequencyValue.toDouble();
+    await updateSpl(maceBandwidth, frequency, weighting, currentPanelData.relative);
+  }
+
+  Future<void> updateSpl(
+    Bandwidth bw,
+    double frequency,
+    Weighting weighting,
+    bool relative,
+  ) async {
+    if (_engine == null) return;
+    if (!_floorCanvasController.isShowingSpl.value) return;
+
+    final int currentFloorIndex = serviceLocator<ProjectViewModel>().currentFloorIndex;
+    if (currentFloorIndex == -1) return;
+
+    final FloorModel currentFloor = serviceLocator<ProjectViewModel>().floors[currentFloorIndex];
+    if (currentFloor.listeningAreaIds.isEmpty) return;
+
+    final List<SPLCalculation> toApply = <SPLCalculation>[];
+    final Iterable<SPLCalculation> currentCalcs = SPLCalculationManager.currentCalculations();
+
+    for (final SPLCalculation sc in currentCalcs) {
+      if (!currentFloor.listeningAreaIds.contains(sc.surface.id)) continue;
+
+      final List<SPLCalculation> updated = SPLCalculationManager.getSplAt(
+        _engine!,
+        sc.fphHandle,
+        bw,
+        (bw == Bandwidth.oneThirdOctave || bw == Bandwidth.oneOctave) ? frequency : 2000,
+        weighting,
+        relative,
+        _lastPanelData?.getResolutionSpacing() ?? 20.0,
+      );
+
+      toApply.addAll(updated);
+    }
+
+    for (final SPLCalculation calc in toApply) {
+      final List<ui.Offset> pts = calc.surface.getFieldPoints(_lastPanelData?.getResolutionSpacing() ?? 20.0);
+      calc.surface.setSplData(pts, calc.spl);
+    }
   }
 
   /// Clear input fields
@@ -90,6 +223,8 @@ class _TestLibraryScreenState extends State<ProjectWorkArea>
     splController.dispose();
     zoneAreaController.dispose();
     _splRangeController.dispose();
+    _engine?.dispose();
+    _floorCanvasController.dispose();
 
     super.dispose();
   }
@@ -174,10 +309,7 @@ class _TestLibraryScreenState extends State<ProjectWorkArea>
               height: 48,
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.white,
-                border: Border.all(
-                  color: Theme.of(context).colorScheme.dividerColor,
-                  width: 1,
-                ),
+                border: Border.all(color: Theme.of(context).colorScheme.dividerColor, width: 1),
               ),
               child: Row(
                 children: <Widget>[
@@ -214,17 +346,12 @@ class _TestLibraryScreenState extends State<ProjectWorkArea>
                     visible: false,
                     child: GestureDetector(
                       onTap: () {
-                        serviceLocator<ProjectViewModel>().canUndo
-                            ? () => serviceLocator<ProjectViewModel>().undo()
-                            : null;
+                        serviceLocator<ProjectViewModel>().canUndo ? () => serviceLocator<ProjectViewModel>().undo() : null;
                       },
                       child: Container(
                         width: 56,
                         height: 48,
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 8,
-                          horizontal: 8,
-                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
 
                         decoration: BoxDecoration(
                           color: Theme.of(context).colorScheme.white,
@@ -243,17 +370,12 @@ class _TestLibraryScreenState extends State<ProjectWorkArea>
                     visible: false,
                     child: GestureDetector(
                       onTap: () {
-                        serviceLocator<ProjectViewModel>().canRedo
-                            ? () => serviceLocator<ProjectViewModel>().redo()
-                            : null;
+                        serviceLocator<ProjectViewModel>().canRedo ? () => serviceLocator<ProjectViewModel>().redo() : null;
                       },
                       child: Container(
                         width: 56,
                         height: 48,
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 8,
-                          horizontal: 8,
-                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
 
                         decoration: BoxDecoration(
                           color: Theme.of(context).colorScheme.white,
@@ -288,10 +410,7 @@ class _TestLibraryScreenState extends State<ProjectWorkArea>
                       ),
                       tooltip: 'Save project',
                       onPressed: () => _showProjectJsonDialog(context),
-                      onLongPress:
-                          () =>
-                              serviceLocator<ProjectViewModel>()
-                                  .deleteCurrentProjectFromLocal(),
+                      onLongPress: () => serviceLocator<ProjectViewModel>().deleteCurrentProjectFromLocal(),
                     ),
                   ),
 
@@ -299,22 +418,13 @@ class _TestLibraryScreenState extends State<ProjectWorkArea>
                   Container(
                     width: 56,
                     height: 48,
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 12,
-                      horizontal: 16,
-                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                     decoration: BoxDecoration(
                       color: Theme.of(context).colorScheme.white,
                       // border horizontal
                       border: Border(
-                        left: BorderSide(
-                          color: Theme.of(context).colorScheme.dividerColor,
-                          width: 1,
-                        ),
-                        right: BorderSide(
-                          color: Theme.of(context).colorScheme.dividerColor,
-                          width: 1,
-                        ),
+                        left: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
+                        right: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
                       ),
                     ),
                     child: Image.asset(
@@ -334,22 +444,13 @@ class _TestLibraryScreenState extends State<ProjectWorkArea>
                 children: <Widget>[
                   /// building tab with docking area
                   BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-                    builder: (
-                      BuildContext context,
-                      ProjectViewModelState state,
-                    ) {
+                    builder: (BuildContext context, ProjectViewModelState state) {
                       return FusionDockableArea(
                         tabKey: "tab1",
                         showLeft: true,
                         showRight: true,
-                        mainArea: BlocBuilder<
-                          ProjectViewModel,
-                          ProjectViewModelState
-                        >(
-                          builder: (
-                            BuildContext context,
-                            ProjectViewModelState state,
-                          ) {
+                        mainArea: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+                          builder: (BuildContext context, ProjectViewModelState state) {
                             return BuildingCanvas(
                               splRangeController: _splRangeController,
                               onSplStateChanged: (bool value) {
@@ -360,6 +461,9 @@ class _TestLibraryScreenState extends State<ProjectWorkArea>
                                   splController.collapse();
                                 }
                               },
+                              floorCanvasController: _floorCanvasController,
+                              onCalculateSpl: calculateSPL,
+                              splPanelData: _lastPanelData!,
                             );
                           },
                         ),
@@ -409,7 +513,13 @@ class _TestLibraryScreenState extends State<ProjectWorkArea>
                             title: "PROPERTIES",
                             side: "right",
                             alowUndock: false,
-                            dockItemWidget: () => const Properties(),
+                            dockItemWidget:
+                                () => PropertiesPanel(
+                                  onSpeakerUpdated: () {
+                                    print("Speaker properties updated, update SPL...");
+                                    calculateSPL();
+                                  },
+                                ),
                           ),
                           DockItemConfig(
                             id: "6",
@@ -417,50 +527,20 @@ class _TestLibraryScreenState extends State<ProjectWorkArea>
                             side: "right",
                             dockItemWidget:
                                 () => CostCalculatorScreen(
-                                  speakers:
-                                      serviceLocator<ProjectViewModel>()
-                                          .speakers,
-                                  sources:
-                                      serviceLocator<ProjectViewModel>()
-                                          .sources,
-                                  controllers:
-                                      serviceLocator<ProjectViewModel>()
-                                          .genericHardwareComponents
-                                          .where(
-                                            (
-                                              GenericHardwareComponent
-                                              component,
-                                            ) =>
-                                                component.type ==
-                                                GenericHardwareComponentType
-                                                    .controller,
-                                          )
-                                          .toList(),
+                                  speakers: serviceLocator<ProjectViewModel>().speakers,
+                                  sources: serviceLocator<ProjectViewModel>().sources,
+                                  controllers: serviceLocator<ProjectViewModel>().fusionControllers,
                                   racks:
-                                      serviceLocator<ProjectViewModel>()
-                                          .genericHardwareComponents
-                                          .where(
-                                            (
-                                              GenericHardwareComponent
-                                              component,
-                                            ) =>
-                                                component.type ==
-                                                GenericHardwareComponentType
-                                                    .rack,
-                                          )
+                                      serviceLocator<ProjectViewModel>().genericHardwareComponents
+                                          .where((GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack)
                                           .toList(),
                                   amplifiers: <Amplifier>[],
-                                  fusionDevices: <FusionDevice>[],
+                                  fusionDevices: <FusionDsp>[],
                                   others:
-                                      serviceLocator<ProjectViewModel>()
-                                          .genericHardwareComponents
+                                      serviceLocator<ProjectViewModel>().genericHardwareComponents
                                           .where(
                                             (HardwareComponent component) =>
-                                                component
-                                                    is GenericHardwareComponent &&
-                                                component.type ==
-                                                    GenericHardwareComponentType
-                                                        .other,
+                                                component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
                                           )
                                           .toList(),
                                 ),
@@ -470,12 +550,9 @@ class _TestLibraryScreenState extends State<ProjectWorkArea>
                             title: "ZONE & LISTENING AREAS",
                             side: "right",
                             controller: zoneAreaController,
-                            initiallyExpanded:
-                                serviceLocator<ProjectViewModel>()
-                                    .isInZoneSelectionMode,
+                            initiallyExpanded: serviceLocator<ProjectViewModel>().isInZoneSelectionMode,
                             // isVisible: serviceLocator<ProjectViewModel>().isInZoneSelectionMode ,
-                            dockItemWidget:
-                                () => const ZoneAndListeningAreaPanel(),
+                            dockItemWidget: () => const ZoneAndListeningAreaPanel(),
                           ),
                           DockItemConfig(
                             id: "8",
@@ -492,11 +569,12 @@ class _TestLibraryScreenState extends State<ProjectWorkArea>
                             dockItemWidget:
                                 () => SplPanel(
                                   controller: _splRangeController,
+                                  initialData: _lastPanelData!,
                                   onChanged: (SplPanelData value) {
-                                    FusionLogger.log(
-                                      tag: LogTag.panel,
-                                      message: value.toString(),
-                                    );
+                                    FusionLogger.log(tag: LogTag.panel, message: value.toString());
+                                    _splRangeController.onMappingDataChanged(value);
+                                    _updateSPLFromPanelData();
+                                    setState(() {});
                                   },
                                 ),
                           ),
@@ -506,64 +584,53 @@ class _TestLibraryScreenState extends State<ProjectWorkArea>
                   ),
 
                   /// schematics tab with docking area
-                  FusionDockableArea(
-                    tabKey: "tab2",
-                    showLeft: false,
-                    showRight: true,
-                    mainArea: const SchematicsPage(),
-                    dockItemList: <DockItemConfig>[
-                      DockItemConfig(
-                        id: "6",
-                        title: "COST CALCULATOR",
-                        side: "right",
-                        dockItemWidget:
-                            () => CostCalculatorScreen(
-                              speakers:
-                                  serviceLocator<ProjectViewModel>().speakers,
-                              sources:
-                                  serviceLocator<ProjectViewModel>().sources,
-                              controllers:
-                                  serviceLocator<ProjectViewModel>()
-                                      .genericHardwareComponents
-                                      .where(
-                                        (GenericHardwareComponent component) =>
-                                            component.type ==
-                                            GenericHardwareComponentType
-                                                .controller,
-                                      )
-                                      .toList(),
-                              racks:
-                                  serviceLocator<ProjectViewModel>()
-                                      .genericHardwareComponents
-                                      .where(
-                                        (GenericHardwareComponent component) =>
-                                            component.type ==
-                                            GenericHardwareComponentType.rack,
-                                      )
-                                      .toList(),
-                              amplifiers: <Amplifier>[],
-                              fusionDevices: <FusionDevice>[],
-                              others:
-                                  serviceLocator<ProjectViewModel>()
-                                      .genericHardwareComponents
-                                      .where(
-                                        (HardwareComponent component) =>
-                                            component
-                                                is GenericHardwareComponent &&
-                                            component.type ==
-                                                GenericHardwareComponentType
-                                                    .other,
-                                      )
-                                      .toList(),
-                            ),
-                      ),
-                      DockItemConfig(
-                        id: "8",
-                        title: "PRODUCT QUERY",
-                        side: "right",
-                        dockItemWidget: () => const ProductQueryView(),
-                      ),
-                    ],
+                  BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+                    builder: (BuildContext context, Object? state) {
+                      return FusionDockableArea(
+                        tabKey: "tab2",
+                        showLeft: isListingViewMode ? false : true,
+                        showRight: true,
+                        mainArea: const SchematicsPage(),
+                        dockItemList: <DockItemConfig>[
+                          DockItemConfig(
+                            id: "6",
+                            title: "COST CALCULATOR",
+                            side: "right",
+                            dockItemWidget:
+                                () => CostCalculatorScreen(
+                                  speakers: serviceLocator<ProjectViewModel>().speakers,
+                                  sources: serviceLocator<ProjectViewModel>().sources,
+                                  controllers: serviceLocator<ProjectViewModel>().fusionControllers,
+                                  racks:
+                                      serviceLocator<ProjectViewModel>().genericHardwareComponents
+                                          .where((GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack)
+                                          .toList(),
+                                  amplifiers: <Amplifier>[],
+                                  fusionDevices: <FusionDsp>[],
+                                  others:
+                                      serviceLocator<ProjectViewModel>().genericHardwareComponents
+                                          .where(
+                                            (HardwareComponent component) =>
+                                                component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
+                                          )
+                                          .toList(),
+                                ),
+                          ),
+                          DockItemConfig(
+                            id: "8",
+                            title: "PRODUCT QUERY",
+                            side: "right",
+                            dockItemWidget: () => const ProductQueryView(),
+                          ),
+                          DockItemConfig(
+                            id: "10",
+                            title: "PRODUCT List",
+                            side: "left",
+                            dockItemWidget: () => const FusionAppText(text: "PRODUCT List"),
+                          ),
+                        ],
+                      );
+                    },
                   ),
 
                   /// budget tab with docking area
@@ -610,10 +677,7 @@ class _TestLibraryScreenState extends State<ProjectWorkArea>
           color: Theme.of(context).colorScheme.white,
           // border right
           border: Border(
-            right: BorderSide(
-              color: Theme.of(context).colorScheme.dividerColor,
-              width: 1,
-            ),
+            right: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
           ),
         ),
         child: Row(
@@ -626,27 +690,19 @@ class _TestLibraryScreenState extends State<ProjectWorkArea>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-                    builder: (
-                      BuildContext context,
-                      ProjectViewModelState state,
-                    ) {
+                    builder: (BuildContext context, ProjectViewModelState state) {
                       return FusionAppText(
                         text: serviceLocator<ProjectViewModel>().projectName,
                         textOverflow: TextOverflow.ellipsis,
                         maxLine: 1,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w900,
-                        ),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w900),
                       );
                     },
                   ),
                   const SizedBox(height: 2),
                   FusionAppText(
                     text: "File_Version",
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontSize: 10,
-                      color: Theme.of(context).colorScheme.greyDark,
-                    ),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10, color: Theme.of(context).colorScheme.greyDark),
                   ),
                 ],
               ),
@@ -664,18 +720,13 @@ class _TestLibraryScreenState extends State<ProjectWorkArea>
 
   /// Show Edit Project Name Dropdown
   void _showEditProjectNameDropdown() {
-    final RenderBox button =
-        _projectNameKey.currentContext!.findRenderObject() as RenderBox;
-    final RenderBox overlay =
-        Overlay.of(context).context.findRenderObject() as RenderBox;
+    final RenderBox button = _projectNameKey.currentContext!.findRenderObject() as RenderBox;
+    final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
 
     final RelativeRect position = RelativeRect.fromRect(
       Rect.fromPoints(
         button.localToGlobal(Offset.zero, ancestor: overlay),
-        button.localToGlobal(
-          button.size.bottomRight(Offset.zero),
-          ancestor: overlay,
-        ),
+        button.localToGlobal(button.size.bottomRight(Offset.zero), ancestor: overlay),
       ),
       const Offset(-100, -20) & overlay.size,
     );
@@ -723,8 +774,7 @@ class _TestLibraryScreenState extends State<ProjectWorkArea>
                       maxLength: 24,
                       autofocus: true,
                       style: TextStyle(
-                        color:
-                            Theme.of(context).colorScheme.fusionTextViewColor,
+                        color: Theme.of(context).colorScheme.fusionTextViewColor,
                         fontSize: 12,
                       ),
                       decoration: InputDecoration(
@@ -736,31 +786,17 @@ class _TestLibraryScreenState extends State<ProjectWorkArea>
                         ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(4),
-                          borderSide: BorderSide(
-                            color: Theme.of(context).colorScheme.dividerColor,
-                          ),
+                          borderSide: BorderSide(color: Theme.of(context).colorScheme.dividerColor),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(4),
-                          borderSide: BorderSide(
-                            color: Theme.of(context).colorScheme.dividerColor,
-                          ),
+                          borderSide: BorderSide(color: Theme.of(context).colorScheme.dividerColor),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(4),
-                          borderSide: BorderSide(
-                            color:
-                                _projectNameError != null
-                                    ? Colors.red
-                                    : Theme.of(
-                                      context,
-                                    ).colorScheme.fusionTextViewColor,
-                          ),
+                          borderSide: BorderSide(color: _projectNameError != null ? Colors.red : Theme.of(context).colorScheme.fusionTextViewColor),
                         ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 8,
-                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                         isDense: true,
                       ),
                       onChanged: (String value) {
@@ -773,9 +809,7 @@ class _TestLibraryScreenState extends State<ProjectWorkArea>
                       onSubmitted: (String value) {
                         final String trimmedName = value.trim();
                         if (trimmedName.isNotEmpty) {
-                          serviceLocator<ProjectViewModel>().setProjectName(
-                            trimmedName,
-                          );
+                          serviceLocator<ProjectViewModel>().setProjectName(trimmedName);
                           Navigator.of(context).pop();
                         } else {
                           setMenuState(() {
@@ -802,9 +836,7 @@ class _TestLibraryScreenState extends State<ProjectWorkArea>
                           height: 28,
                           width: 64,
                           label: "Cancel",
-                          textStyle: Theme.of(
-                            context,
-                          ).textTheme.labelLarge?.copyWith(fontSize: 10),
+                          textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10),
                           onTap: () {
                             _clearFields();
                             Navigator.of(context).pop();
@@ -814,24 +846,13 @@ class _TestLibraryScreenState extends State<ProjectWorkArea>
                         FusionButton(
                           height: 28,
                           width: 84,
-                          textStyle: Theme.of(
-                            context,
-                          ).textTheme.labelLarge?.copyWith(
-                            fontSize: 10,
-                            color:
-                                Theme.of(
-                                  context,
-                                ).colorScheme.fusionButtonTextColor,
-                          ),
+                          textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10, color: Theme.of(context).colorScheme.fusionButtonTextColor),
 
                           label: "Edit Name",
                           onTap: () {
-                            final String trimmedName =
-                                _projectNameController.text.trim();
+                            final String trimmedName = _projectNameController.text.trim();
                             if (trimmedName.isNotEmpty) {
-                              serviceLocator<ProjectViewModel>().setProjectName(
-                                trimmedName,
-                              );
+                              serviceLocator<ProjectViewModel>().setProjectName(trimmedName);
                               Navigator.of(context).pop();
                             } else {
                               setMenuState(() {
@@ -856,8 +877,7 @@ class _TestLibraryScreenState extends State<ProjectWorkArea>
     serviceLocator<ProjectViewModel>().saveProjectToLocal();
 
     const JsonEncoder encoder = JsonEncoder.withIndent('  ');
-    final Map<String, dynamic> jsonMap =
-        serviceLocator<ProjectViewModel>().getProjectJson();
+    final Map<String, dynamic> jsonMap = serviceLocator<ProjectViewModel>().getProjectJson();
     final String prettyJson = encoder.convert(jsonMap);
 
     showDialog(
@@ -871,9 +891,7 @@ class _TestLibraryScreenState extends State<ProjectWorkArea>
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.grey.shade800,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(4),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                   elevation: 0,
                 ),
                 child: const Text(

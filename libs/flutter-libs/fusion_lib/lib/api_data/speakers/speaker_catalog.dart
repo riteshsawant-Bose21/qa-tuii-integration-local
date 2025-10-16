@@ -12,7 +12,7 @@ class SpeakerCatalog {
   /// TODO: Replace with API call to product catalog service
   static const Map<String, SpeakerModel> database = {
     'DM2C-LP': SpeakerModel(
-      model: 'DM2C-LP',
+      model: 'DM2C-LP 100V',
       maxSpl: 97,
       mountingType: 'ceiling',
       outdoorRated: false,
@@ -25,6 +25,23 @@ class SpeakerCatalog {
       longTermRms: 20,
       ppk: 40,
       imageUrl: 'assets/images/speakers/DesignMax_DM2C-LP_white.png',
+      price: 189.99,
+      color: 'white',
+    ),
+    'MSA12XTB': SpeakerModel(
+      model: 'MSA12XTB',
+      maxSpl: 97,
+      mountingType: 'surface',
+      outdoorRated: false,
+      isSubwoofer: false,
+      nominalOhms: 16,
+      hasHiZ: true,
+      hiZTaps: [9],
+      taps70V: [1.2, 2.3, 4.5, 9],
+      taps100V: [2.3, 4.5, 9],
+      longTermRms: 20,
+      ppk: 40,
+      imageUrl: 'assets/images/speakers/designmax_dm8se.png',
       price: 189.99,
       color: 'white',
     ),

@@ -89,7 +89,7 @@ extension ProjectPropertiesManager on ProjectManager {
   }
 
   //get all fusion devices
-  List<FusionDevice> getAllFusionDevices() {
+  List<FusionDsp> getAllFusionDevices() {
     return projectService!.getAllFusionDevices();
   }
 }

@@ -158,4 +158,11 @@ class FloorCanvasController {
     _selectedListeningAreas.clear();
     deselectAll();
   }
+
+  ///dispose the controller
+  void dispose() {
+    isDrawing.dispose();
+    isShowingSpl.dispose();
+    isListeningAreaSelectionActive.dispose();
+  }
 }

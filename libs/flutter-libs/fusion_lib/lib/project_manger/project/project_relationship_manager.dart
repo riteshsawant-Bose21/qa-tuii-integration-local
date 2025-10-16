@@ -1,7 +1,16 @@
 /// -------------------
 /// Relationship Manager
 /// -------------------
-enum RelationshipType { floorListening, zoneListening, zoneSourceSet, hardwareLocation }
+enum RelationshipType {
+  floorListening,
+  zoneListening,
+  zoneSourceSet,
+  zoneSubZones,
+  hardwareLocation,
+  circuitHardware,
+  zoneCircuits,
+  wiringConnectionDevice,
+}
 
 class RelationshipManager {
   final Map<RelationshipType, Map<String, Set<String>>> _parentToChildren = {};

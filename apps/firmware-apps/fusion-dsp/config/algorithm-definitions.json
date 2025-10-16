@@ -1506,6 +1506,33 @@
             ]
         },
         {
+            "name": "message_player",
+            "terminals": [
+                {
+                    "name": "out",
+                    "signal_type": "audio",
+                    "direction": "output",
+                    "minimum_channels": 1,
+                    "maximum_channels": 64
+                }
+            ],
+            "parameters": [
+                {
+                    "name": "zone_name",
+                    "value_type": "string",
+                    "dimensions": ["out"],
+                    "default_value": "",
+                    "maximum_length": 256
+                },
+                {
+                    "name": "play_message",
+                    "value_type": "string",
+                    "default_value": "",
+                    "maximum_length": 16384
+                }
+            ]
+        },
+        {
             "name": "ml_benchmark",
             "properties": [
                 {

@@ -1,3 +1,5 @@
+import 'package:fusion_lib/models/project_entities/circuit_model.dart';
+
 import '../../../fusion_lib.dart';
 
 /// -------------------
@@ -72,10 +74,16 @@ class ListeningAreaRepository extends Repository<ListeningArea> {}
 
 class ZoneRepository extends Repository<Zone> {}
 
+class SubZoneRepository extends Repository<SubZone> {}
+
 class SourceSetRepository extends Repository<SourceSet> {}
 
 class HardwareRepository extends Repository<HardwareComponent> {}
 
-class FusionDeviceRepository extends Repository<FusionDevice> {}
+class FusionDeviceRepository extends Repository<FusionDsp> {}
 
 class AmplifierRepository extends Repository<Amplifier> {}
+
+class CircuitRepository extends Repository<CircuitModel> {}
+
+class WiringConnectionRepository extends Repository<WiringConnectionModel> {}

@@ -14,15 +14,38 @@ extension HardwareService on ProjectService {
     if (loc.floorId != null) {
       relationships.link(RelationshipType.hardwareLocation, loc.floorId!, hw.id);
     }
-    if (loc.zoneId != null) {
-      relationships.link(RelationshipType.hardwareLocation, loc.zoneId!, hw.id);
-    }
+
     if (loc.listeningAreaId != null) {
       relationships.link(RelationshipType.hardwareLocation, loc.listeningAreaId!, hw.id);
     }
-
     // Optional persistence/notification hook
     // _onProjectChanged();
+  }
+
+  Zone? getZoneForHardware(String hardwareId) {
+    final hw = hardware.get(hardwareId);
+    if (hw == null) throw Exception('Hardware $hardwareId not found');
+    final loc = hw.locationEntity;
+    if (loc.listeningAreaId == null) {
+      final laId = loc.listeningAreaId!;
+      final parentZoneIds = relationships.getParents(RelationshipType.zoneListening, laId);
+      if (parentZoneIds.isNotEmpty) {
+        final zoneId = parentZoneIds.first;
+        final zone = zones.get(zoneId);
+        return zone;
+      }
+    }
+    return null;
+  }
+
+  CircuitModel? getCircuitForHardware(String hardwareId) {
+    final circuitIds = relationships.getParents(RelationshipType.circuitHardware, hardwareId);
+    if (circuitIds.isNotEmpty) {
+      final circuitId = circuitIds.first;
+      final circuit = circuits.get(circuitId);
+      return circuit;
+    }
+    return null;
   }
 
   /// Remove hardware and all relationships to/from it.
@@ -56,14 +79,20 @@ extension HardwareService on ProjectService {
   ///  - Removes existing hardwareLocation links (zone/LA/floor) for this hardware.
   ///  - Updates hardware.locationEntity.{zoneId, listeningAreaId, floorId}.
   ///  - Adds new hardwareLocation links for floor, listeningArea, and inferred zone (if any).
+  //todo: Update this method to support Circuits
   void moveHardware(String hardwareId, {String? listeningAreaId, String? floorId}) {
     // Validation
+
     if (listeningAreaId == null && floorId == null) {
       throw ArgumentError('Either listeningAreaId or floorId must be provided');
     }
 
     final hw = hardware.get(hardwareId);
     if (hw == null) throw Exception('Hardware $hardwareId not found');
+
+    if (hw.lockListeningArea) {
+      throw Exception('Hardware $hardwareId is locked to its current listening area and cannot be moved.');
+    }
 
     final loc = hw.locationEntity;
 
@@ -74,7 +103,6 @@ extension HardwareService on ProjectService {
     }
 
     // 2) Clear existing location fields (we will populate new ones)
-    loc.zoneId = null;
     loc.listeningAreaId = null;
     loc.floorId = null;
 
@@ -97,18 +125,18 @@ extension HardwareService on ProjectService {
         relationships.link(RelationshipType.hardwareLocation, inferredFloorId, hardwareId);
       }
 
-      // if the listening area belongs to any zone(s), attach to the first one
-      final parentZoneIds = relationships.getParents(RelationshipType.zoneListening, listeningAreaId);
-      if (parentZoneIds.isNotEmpty) {
-        final chosenZoneId = parentZoneIds.first;
-        if (zones.exists(chosenZoneId)) {
-          loc.zoneId = chosenZoneId;
-          relationships.link(RelationshipType.hardwareLocation, chosenZoneId, hardwareId);
-        } else {
-          // if zone doesn't exist in repo, just ignore (but remove any dangling relation)
-          relationships.unlink(RelationshipType.zoneListening, chosenZoneId, listeningAreaId);
-        }
-      }
+      // // if the listening area belongs to any zone(s), attach to the first one
+      // final parentZoneIds = relationships.getParents(RelationshipType.zoneListening, listeningAreaId);
+      // if (parentZoneIds.isNotEmpty) {
+      //   final chosenZoneId = parentZoneIds.first;
+      //   if (zones.exists(chosenZoneId)) {
+      //     loc.zoneId = chosenZoneId;
+      //     relationships.link(RelationshipType.hardwareLocation, chosenZoneId, hardwareId);
+      //   } else {
+      //     // if zone doesn't exist in repo, just ignore (but remove any dangling relation)
+      //     relationships.unlink(RelationshipType.zoneListening, chosenZoneId, listeningAreaId);
+      //   }
+      // }
     } else if (floorId != null) {
       // 4) Moving to a floor only (no listening area, no zone)
       if (!floors.exists(floorId)) {
@@ -188,9 +216,9 @@ extension HardwareService on ProjectService {
       if (newLocation.floorId == null && hw.locationEntity.floorId != null) {
         relationships.unlink(RelationshipType.hardwareLocation, hw.locationEntity.floorId!, hw.id);
       }
-      if (newLocation.zoneId == null && hw.locationEntity.zoneId != null) {
-        relationships.unlink(RelationshipType.hardwareLocation, hw.locationEntity.zoneId!, hw.id);
-      }
+      // if (newLocation.zoneId == null && hw.locationEntity.zoneId != null) {
+      //   relationships.unlink(RelationshipType.hardwareLocation, hw.locationEntity.zoneId!, hw.id);
+      // }
       if (newLocation.listeningAreaId == null && hw.locationEntity.listeningAreaId != null) {
         relationships.unlink(RelationshipType.hardwareLocation, hw.locationEntity.listeningAreaId!, hw.id);
       }

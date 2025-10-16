@@ -1,6 +1,7 @@
 package cluster
 
 import (
+	"encoding/json"
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/logging"
@@ -18,9 +19,10 @@ import (
 )
 
 const (
-	ConfFile        = "keepalived.conf"
-	configPath      = "/etc/keepalived/" + ConfFile
-	monitorInterval = 10 * time.Second
+	ConfFile             = "keepalived.conf"
+	configPath           = "/etc/keepalived/" + ConfFile
+	statusUpdateInterval = 30 * time.Second
+	monitorInterval      = 10 * time.Second
 )
 
 // ClusterInfo provides information about the cluster
@@ -46,6 +48,14 @@ type ClusterMember struct {
 	State   string `json:"state"`
 }
 
+// ClusterStatus holds information of the cluster state
+type ClusterStatus struct {
+	VIP       string   `json:"vip"`     // Current VIP address (eg. "192.168.64.100")
+	Host      string   `json:"host"`    // Local IP address of the node holding VIP
+	Cluster   []string `json:"cluster"` // All known cluster node addresses
+	Timestamp int64    `json:"ts"`      // Unix timestamp for freshness
+}
+
 type Cluster struct {
 	nodeName         string
 	bindAddr         string
@@ -58,6 +68,8 @@ type Cluster struct {
 	configPath       string
 	Metrics          *MetricsCollector
 	networkLatencies *NetworkLatencyStore
+	statusConnection *net.UDPConn
+	statusQuit       chan struct{}
 }
 
 func NewCluster(appConfig *api.AppConfig, delegate *ClusterDelegate, memberlist *memberlist.Memberlist) *Cluster {
@@ -72,28 +84,31 @@ func NewCluster(appConfig *api.AppConfig, delegate *ClusterDelegate, memberlist 
 		configPath:       configPath,
 		Metrics:          NewMetricsCollector(memberlist, delegate.stateManager),
 		networkLatencies: NewNetworkLatencyStore(maxLatencyCount, latencyPruneTime),
+		statusQuit:       make(chan struct{}),
 	}
 
 	if !cluster.config.Local {
 		logger := logging.GetLogger()
 
-		if vips, err := cluster.getVIPFromConfig(); err != nil {
+		if vip, err := cluster.getVIPFromConfig(); err != nil {
 			logger.Fatal("getVIPFromConfig: %v", err)
 		} else {
-			for _, vip := range vips {
-				if cluster.isLocalVIP(vip) {
+			if cluster.isLocalVIP(vip) {
 
-					cluster.vipLock.Lock()
-					cluster.vip = vip
-					cluster.vipLock.Unlock()
+				cluster.vipLock.Lock()
+				cluster.vip = vip
+				cluster.vipLock.Unlock()
 
-					// Start the TaskManager
-					if err := cluster.delegate.taskManager.Start(); err != nil {
-						logger.Fatal("TaskManager.Start: %v", err)
-					}
-					logger.Info("TaskManager running on %s", cluster.nodeName)
-					break
+				// Start the TaskManager
+				if err := cluster.delegate.taskManager.Start(); err != nil {
+					logger.Fatal("TaskManager.Start: %v", err)
 				}
+				logger.Info("TaskManager running on %s", cluster.nodeName)
+
+				if err := cluster.startStatusNotifier(); err != nil {
+					logger.Fatal("startStatusNotifier: %v", err)
+				}
+				logger.Info("StatusNotifier running on %s", cluster.nodeName)
 			}
 		}
 
@@ -112,6 +127,10 @@ func NewCluster(appConfig *api.AppConfig, delegate *ClusterDelegate, memberlist 
 	go cluster.startNetworkLatencyProbes()
 
 	return cluster
+}
+
+func (c *Cluster) Stop() {
+	c.stopStatusNotifier()
 }
 
 // GetInfo returns detailed information about the cluster
@@ -167,6 +186,7 @@ func (c *Cluster) listenerUpdated(vip string) {
 	if old != "" && old != vip && !c.isLocalVIP(vip) {
 		logger.Debug("Lost VIP %s → %s", old, vip)
 		c.delegate.taskManager.Stop()
+		c.stopStatusNotifier()
 	}
 
 	if err := c.updateVIP(vip); err != nil {
@@ -199,6 +219,12 @@ func (c *Cluster) listenerUpdated(vip string) {
 			logger.Error("TaskManager start: %v", err)
 		} else {
 			logger.Debug("TaskManager running on %s", c.nodeName)
+		}
+
+		if err := c.startStatusNotifier(); err != nil {
+			logger.Error("startStatusNotifier: %v", err)
+		} else {
+			logger.Debug("StatusNotifier running on %s", c.nodeName)
 		}
 	}
 }
@@ -239,7 +265,7 @@ func (c *Cluster) isLocalVIP(vip string) bool {
 }
 
 // getLocalAndVIP checks whether `vip` (CIDR or plain IP) is assigned on any local interface.
-// If so, it returns two things:
+// If so, it returns:
 //   - internalAddr: the first non-loopback IPv4 address that is NOT equal to the VIP
 //   - vipAddr: the exact Addr where vip was found
 //   - ok = true
@@ -288,11 +314,11 @@ func (c *Cluster) getLocalForVIP(vip string) (net.Addr, net.Addr, bool) {
 	return internalAddr, vipAddr, true
 }
 
-func (c *Cluster) getVIPFromConfig() ([]string, error) {
+func (c *Cluster) getVIPFromConfig() (string, error) {
 
 	data, err := os.ReadFile(c.configPath)
 	if err != nil {
-		return nil, fmt.Errorf("unable to read config file: %v", err)
+		return "", fmt.Errorf("unable to read config file: %v", err)
 	}
 	configText := string(data)
 
@@ -301,7 +327,7 @@ func (c *Cluster) getVIPFromConfig() ([]string, error) {
 	re := regexp.MustCompile(`virtual_ipaddress\s*{([^}]+)}`)
 	matches := re.FindStringSubmatch(configText)
 	if len(matches) < 2 {
-		return nil, fmt.Errorf("no virtual_ipaddress block found")
+		return "", fmt.Errorf("no virtual_ipaddress block found")
 	}
 
 	// Extract the content between braces and split by newline or whitespace
@@ -316,7 +342,17 @@ func (c *Cluster) getVIPFromConfig() ([]string, error) {
 			vips = append(vips, v)
 		}
 	}
-	return vips, nil
+
+	if len(vips) == 0 {
+		return "", fmt.Errorf("no VIP found")
+	}
+
+	if len(vips) > 1 {
+		logger := logging.GetLogger()
+		logger.Warn("More than one VIP found.")
+	}
+
+	return vips[0], nil
 }
 
 // restartKeepalived reloads the keepalived process
@@ -557,4 +593,128 @@ func (c *Cluster) hostIsLocal(addr string) bool {
 // getLocalURL builds a full API URL to the endpoint
 func getLocalURL(addr, endpoint string) string {
 	return fmt.Sprintf("%s%s%s", api.Protocol, addr, endpoint)
+}
+
+func (c *Cluster) startStatusNotifier() error {
+	vip := c.vip
+	_, vipAddr, ok := c.getLocalForVIP(vip)
+	if !ok {
+		return fmt.Errorf("VIP %s not found on any local interface", vip)
+	}
+
+	// Find interface for the VIP
+	iface, err := interfaceForIP(vipAddr.String())
+	if err != nil {
+		return fmt.Errorf("failed to find interface for VIP: %v", err)
+	}
+
+	// Get broadcast address
+	broadcast, err := broadcastForInterface(iface.Name)
+	if err != nil {
+		return fmt.Errorf("failed to get broadcast address for %s: %v", iface.Name, err)
+	}
+
+	// Connect to the broadcast address (Go allows this without special socket options)
+	remote, err := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%s", broadcast, api.NotifierPort))
+	if err != nil {
+		return fmt.Errorf("resolve UDP: %v", err)
+	}
+
+	conn, err := net.DialUDP("udp4", nil, remote)
+	if err != nil {
+		return fmt.Errorf("dial UDP: %v", err)
+	}
+	c.statusConnection = conn
+
+	go func() {
+		ticker := time.NewTicker(statusUpdateInterval)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+				host, _, _ := c.getLocalForVIP(vip)
+				cluster := c.getClusterIPs()
+
+				msg := ClusterStatus{
+					VIP:       vip,
+					Host:      host.String(),
+					Cluster:   cluster,
+					Timestamp: time.Now().Unix(),
+				}
+
+				data, _ := json.Marshal(msg)
+				if _, err := c.statusConnection.Write(data); err != nil {
+					logging.GetLogger().Error("cluster status send failed: %v", err)
+				}
+
+			case <-c.statusQuit:
+				return
+			}
+		}
+	}()
+
+	return nil
+}
+
+func (c *Cluster) stopStatusNotifier() {
+	close(c.statusQuit)
+	if c.statusConnection != nil {
+		c.statusConnection.Close()
+	}
+}
+
+// broadcastForInterface finds the broadcast address for a given interface (e.g. "en0" or "eth0").
+func broadcastForInterface(ifaceName string) (string, error) {
+	iface, err := net.InterfaceByName(ifaceName)
+	if err != nil {
+		return "", fmt.Errorf("interface %s not found: %v", ifaceName, err)
+	}
+
+	addrs, err := iface.Addrs()
+	if err != nil {
+		return "", fmt.Errorf("failed to get addresses for %s: %v", ifaceName, err)
+	}
+
+	for _, addr := range addrs {
+		ipnet, ok := addr.(*net.IPNet)
+		if !ok || ipnet.IP.To4() == nil {
+			continue
+		}
+		ip := ipnet.IP.To4()
+		broadcast := make(net.IP, 4)
+		for i := 0; i < 4; i++ {
+			broadcast[i] = ip[i] | ^ipnet.Mask[i]
+		}
+		return broadcast.String(), nil
+	}
+
+	return "", fmt.Errorf("no IPv4 address found on %s", ifaceName)
+}
+
+// interfaceForIP returns the interface that has the given IP assigned.
+func interfaceForIP(ip string) (*net.Interface, error) {
+	target := net.ParseIP(ip)
+	if target == nil {
+		return nil, fmt.Errorf("invalid IP: %s", ip)
+	}
+
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, iface := range ifaces {
+		addrs, _ := iface.Addrs()
+		for _, addr := range addrs {
+			ipnet, ok := addr.(*net.IPNet)
+			if !ok {
+				continue
+			}
+			if ipnet.IP.Equal(target) {
+				return &iface, nil
+			}
+		}
+	}
+	return nil, fmt.Errorf("no interface found for IP %s", ip)
 }

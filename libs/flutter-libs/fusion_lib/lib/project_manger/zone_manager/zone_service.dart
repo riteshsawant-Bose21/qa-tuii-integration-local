@@ -64,22 +64,12 @@ extension ZoneService on ProjectService {
     final toAddLAs = newLAs.difference(oldLAs);
     final toRemoveLAs = oldLAs.difference(newLAs);
 
-    // Remove LAs that are no longer part of this zone
+    // Remove LAs that are no longer p art of this zone
     for (final laId in toRemoveLAs) {
       // unlink relationship
       relationships.unlink(RelationshipType.zoneListening, zoneId, laId);
       // update zone model list
       existing.listeningAreasIds.remove(laId);
-
-      // For hardware placed in this listening area: if hw.locationEntity.zoneId == this zone -> clear it and unlink hardwareLocation zone->hw
-      final hwIdsInLA = relationships.getChildren(RelationshipType.hardwareLocation, laId);
-      for (final hwId in hwIdsInLA) {
-        final hw = hardware.get(hwId);
-        if (hw != null && hw.locationEntity.zoneId == zoneId) {
-          hw.locationEntity.zoneId = null;
-          relationships.unlink(RelationshipType.hardwareLocation, zoneId, hwId);
-        }
-      }
     }
 
     // Add / move listening areas into this zone
@@ -100,16 +90,6 @@ extension ZoneService on ProjectService {
         if (oldZone != null) {
           oldZone.listeningAreasIds.remove(laId);
         }
-
-        // fix hardware references that pointed to oldZone via this LA
-        final hwIds = relationships.getChildren(RelationshipType.hardwareLocation, laId);
-        for (final hwId in hwIds) {
-          final hw = hardware.get(hwId);
-          if (hw != null && hw.locationEntity.zoneId == oldZoneId) {
-            hw.locationEntity.zoneId = null;
-            relationships.unlink(RelationshipType.hardwareLocation, oldZoneId, hwId);
-          }
-        }
       }
 
       // link this zone -> la
@@ -118,15 +98,6 @@ extension ZoneService on ProjectService {
       // update zone model list (idempotent)
       if (!existing.listeningAreasIds.contains(laId)) {
         existing.listeningAreasIds.add(laId);
-      }
-
-      // ensure hardware in this LA are linked to this zone and have locationEntity.zoneId set
-      final hwIdsNow = relationships.getChildren(RelationshipType.hardwareLocation, laId);
-      for (final hwId in hwIdsNow) {
-        final hw = hardware.get(hwId);
-        if (hw == null) continue;
-        hw.locationEntity.zoneId = zoneId;
-        relationships.link(RelationshipType.hardwareLocation, zoneId, hwId);
       }
     }
 
@@ -151,82 +122,122 @@ extension ZoneService on ProjectService {
       relationships.link(RelationshipType.zoneSourceSet, zoneId, mixId);
     }
 
+    //sub zones diff
+    final oldSubZones = Set<String>.from(existing.subZones);
+    final newSubZones = Set<String>.from(updatedZone.subZones);
+    final toAddSubZones = newSubZones.difference(oldSubZones);
+    final toRemoveSubZones = oldSubZones.difference(newSubZones);
+    // Remove sub zones
+    for (final subZoneId in toRemoveSubZones) {
+      existing.subZones.remove(subZoneId);
+      relationships.unlink(RelationshipType.zoneSubZones, zoneId, subZoneId);
+    }
+
+    // Add sub zones
+    for (final subZoneId in toAddSubZones) {
+      if (!subZones.exists(subZoneId)) {
+        throw Exception('Sub Zone $subZoneId not found');
+      }
+      if (!existing.subZones.contains(subZoneId)) existing.subZones.add(subZoneId);
+      relationships.link(RelationshipType.zoneSubZones, zoneId, subZoneId);
+    }
+
+    // --- Circuits diff
+    final oldCircuits = Set<String>.from(existing.circuits);
+    final newCircuits = Set<String>.from(updatedZone.circuits);
+    final toAddCircuits = newCircuits.difference(oldCircuits);
+    final toRemoveCircuits = oldCircuits.difference(newCircuits);
+    // Remove circuits
+    for (final circuitId in toRemoveCircuits) {
+      existing.circuits.remove(circuitId);
+      relationships.unlink(RelationshipType.zoneCircuits, zoneId, circuitId);
+    }
+
+    // Add circuits
+    for (final circuitId in toAddCircuits) {
+      if (!circuits.exists(circuitId)) {
+        throw Exception('Circuit $circuitId not found');
+      }
+      if (!existing.circuits.contains(circuitId)) existing.circuits.add(circuitId);
+      relationships.link(RelationshipType.zoneCircuits, zoneId, circuitId);
+    }
+
     zones.add(updatedZone.id, updatedZone);
   }
 
-  /// Add a hardware (speaker) to a zone. This updates:
-  ///  - hardware.locationEntity.zoneId/listeningAreaId/floorId
-  ///  - hardwareLocation relationships (zone, listeningArea, floor)
-  ///
-  /// Moves the hardware from any previous location to the new zone.
-  void addSpeakerToZone(String hardwareId, String zoneId) {
-    if (!hardware.exists(hardwareId)) {
-      throw Exception('Hardware $hardwareId not found');
-    }
-    if (!zones.exists(zoneId)) {
-      throw Exception('Zone $zoneId not found');
-    }
+  // /// Add a hardware (speaker) to a zone. This updates:
+  // ///  - hardware.locationEntity.zoneId/listeningAreaId/floorId
+  // ///  - hardwareLocation relationships (zone, listeningArea, floor)
+  // ///
+  // /// Moves the hardware from any previous location to the new zone.
+  // void addSpeakerToZone(String hardwareId, String zoneId) {
+  //   if (!hardware.exists(hardwareId)) {
+  //     throw Exception('Hardware $hardwareId not found');
+  //   }
+  //   if (!zones.exists(zoneId)) {
+  //     throw Exception('Zone $zoneId not found');
+  //   }
+  //
+  //   final hw = hardware.get(hardwareId)!;
+  //   final loc = hw.locationEntity; // LocationModel instance
+  //
+  //   // 1) Unlink existing hardwareLocation relationships (move semantics)
+  //   final prevParents = relationships.getParents(RelationshipType.hardwareLocation, hardwareId).toList();
+  //   for (final parentId in prevParents) {
+  //     relationships.unlink(RelationshipType.hardwareLocation, parentId, hardwareId);
+  //   }
+  //
+  //   // 2) Update the LocationModel
+  //   loc.zoneId = zoneId;
+  //
+  //   // 3) Infer listeningArea and floor from zone relationships (if any)
+  //   final listeningAreasForZone = relationships.getChildren(RelationshipType.zoneListening, zoneId);
+  //   if (listeningAreasForZone.isNotEmpty) {
+  //     final chosenLA = listeningAreasForZone.first; // pick the first (or change strategy)
+  //     loc.listeningAreaId = chosenLA;
+  //     // find floor for that listening area
+  //     final floorId = relationships.getParent(RelationshipType.floorListening, chosenLA);
+  //     loc.floorId = floorId;
+  //     // 4) Link hardware to listeningArea & floor (if found)
+  //     relationships.link(RelationshipType.hardwareLocation, chosenLA, hardwareId);
+  //     if (floorId != null) relationships.link(RelationshipType.hardwareLocation, floorId, hardwareId);
+  //   } else {
+  //     // No listening area -> clear those fields
+  //     loc.listeningAreaId = null;
+  //     loc.floorId = null;
+  //   }
+  //
+  //   // 5) Link hardware to the zone itself
+  //   relationships.link(RelationshipType.hardwareLocation, zoneId, hardwareId);
+  // }
 
-    final hw = hardware.get(hardwareId)!;
-    final loc = hw.locationEntity; // LocationModel instance
-
-    // 1) Unlink existing hardwareLocation relationships (move semantics)
-    final prevParents = relationships.getParents(RelationshipType.hardwareLocation, hardwareId).toList();
-    for (final parentId in prevParents) {
-      relationships.unlink(RelationshipType.hardwareLocation, parentId, hardwareId);
-    }
-
-    // 2) Update the LocationModel
-    loc.zoneId = zoneId;
-
-    // 3) Infer listeningArea and floor from zone relationships (if any)
-    final listeningAreasForZone = relationships.getChildren(RelationshipType.zoneListening, zoneId);
-    if (listeningAreasForZone.isNotEmpty) {
-      final chosenLA = listeningAreasForZone.first; // pick the first (or change strategy)
-      loc.listeningAreaId = chosenLA;
-      // find floor for that listening area
-      final floorId = relationships.getParent(RelationshipType.floorListening, chosenLA);
-      loc.floorId = floorId;
-      // 4) Link hardware to listeningArea & floor (if found)
-      relationships.link(RelationshipType.hardwareLocation, chosenLA, hardwareId);
-      if (floorId != null) relationships.link(RelationshipType.hardwareLocation, floorId, hardwareId);
-    } else {
-      // No listening area -> clear those fields
-      loc.listeningAreaId = null;
-      loc.floorId = null;
-    }
-
-    // 5) Link hardware to the zone itself
-    relationships.link(RelationshipType.hardwareLocation, zoneId, hardwareId);
-  }
-
-  /// Remove hardware from a zone. This will:
-  ///  - unlink hardware <-> zone (and any inferred listeningArea & floor),
-  ///  - clear the LocationModel fields (zone/listeningArea/floor).
-  void removeSpeakerFromZone(String hardwareId, String zoneId) {
-    if (!hardware.exists(hardwareId)) return;
-    final hw = hardware.get(hardwareId)!;
-    final loc = hw.locationEntity;
-
-    // If hardware not in that zone, nothing to do
-    if (loc.zoneId != zoneId) return;
-
-    // Unlink zone
-    relationships.unlink(RelationshipType.hardwareLocation, zoneId, hardwareId);
-
-    // If we had listeningArea/floor set, unlink those too
-    if (loc.listeningAreaId != null) {
-      relationships.unlink(RelationshipType.hardwareLocation, loc.listeningAreaId!, hardwareId);
-    }
-    if (loc.floorId != null) {
-      relationships.unlink(RelationshipType.hardwareLocation, loc.floorId!, hardwareId);
-    }
-
-    // Clear location fields
-    loc.zoneId = null;
-    loc.listeningAreaId = null;
-    loc.floorId = null;
-  }
+  // /// Remove hardware from a zone. This will:
+  // ///  - unlink hardware <-> zone (and any inferred listeningArea & floor),
+  // ///  - clear the LocationModel fields (zone/listeningArea/floor).
+  // void removeSpeakerFromZone(String hardwareId, String zoneId) {
+  //   if (!hardware.exists(hardwareId)) return;
+  //   final hw = hardware.get(hardwareId)!;
+  //   final loc = hw.locationEntity;
+  //
+  //   // If hardware not in that zone, nothing to do
+  //   if (loc.zoneId != zoneId) return;
+  //
+  //   // Unlink zone
+  //   relationships.unlink(RelationshipType.hardwareLocation, zoneId, hardwareId);
+  //
+  //   // If we had listeningArea/floor set, unlink those too
+  //   if (loc.listeningAreaId != null) {
+  //     relationships.unlink(RelationshipType.hardwareLocation, loc.listeningAreaId!, hardwareId);
+  //   }
+  //   if (loc.floorId != null) {
+  //     relationships.unlink(RelationshipType.hardwareLocation, loc.floorId!, hardwareId);
+  //   }
+  //
+  //   // Clear location fields
+  //   loc.zoneId = null;
+  //   loc.listeningAreaId = null;
+  //   loc.floorId = null;
+  // }
 
   // Get zone by id
   Zone? getZoneById(String zoneId) {
@@ -278,5 +289,41 @@ extension ZoneService on ProjectService {
   List<SourceSet> getSourceSetsInZone(String zoneId) {
     final sourceSetIds = relationships.getChildren(RelationshipType.zoneSourceSet, zoneId);
     return sourceSetIds.map((id) => sourceSets.get(id)).where((m) => m != null).cast<SourceSet>().toList();
+  }
+
+  //Add Circuit to Zone
+  void addCircuitToZone(String circuitId, String zoneId) {
+    if (!circuits.exists(circuitId)) throw Exception('Circuit $circuitId not found');
+    if (!zones.exists(zoneId)) throw Exception('Zone $zoneId not found');
+
+    final zone = zones.get(zoneId)!;
+    if (!zone.circuits.contains(circuitId)) {
+      zone.circuits.add(circuitId);
+    }
+
+    // Update relationship graph (idempotent)
+    relationships.link(RelationshipType.zoneCircuits, zoneId, circuitId);
+  }
+
+  //Remove Circuit from Zone
+  void removeCircuitFromZone(String circuitId, String zoneId) {
+    if (!zones.exists(zoneId)) return;
+
+    final hwChildren = relationships.getChildren(RelationshipType.circuitHardware, circuitId);
+
+    for (final hwId in hwChildren) {
+      relationships.unlink(RelationshipType.circuitHardware, circuitId, hwId);
+    }
+
+    final zone = zones.get(zoneId)!;
+    zone.circuits.remove(circuitId);
+
+    relationships.unlink(RelationshipType.zoneCircuits, zoneId, circuitId);
+  }
+
+  /// returns all the Circuits linked to the given zoneId
+  List<CircuitModel> getCircuitsInZone(String zoneId) {
+    final circuitIds = relationships.getChildren(RelationshipType.zoneCircuits, zoneId);
+    return circuitIds.map((id) => circuits.get(id)).where((m) => m != null).cast<CircuitModel>().toList();
   }
 }

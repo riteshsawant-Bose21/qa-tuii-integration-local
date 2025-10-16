@@ -88,6 +88,36 @@ extension HardwareViewModel on ProjectViewModel {
     }
   }
 
+  // get zone for hardware
+  Zone? getZoneForHardware(String hardwareId) {
+    try {
+      return projectManager.getZoneForHardware(hardwareId);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get zone for hardware: $e");
+      return null;
+    }
+  }
+
+  // get CircuitModel for hardware
+  CircuitModel? getCircuitForHardware(String hardwareId) {
+    try {
+      return projectManager.getCircuitForHardware(hardwareId);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get circuit for hardware: $e");
+      return null;
+    }
+  }
+
+  //add hardware and create circuit
+  void addHardwareAndCreateCircuit(HardwareComponent hw, String circuitId) {
+    try {
+      projectManager.addHardwareAndCreateCircuit(hw, circuitId);
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to add hardware and create circuit: $e");
+    }
+  }
+
   // Update hardware location
   void updateHardwareLocation(String hardwareId, LocationModel newLocation) {
     try {
@@ -131,16 +161,13 @@ extension HardwareViewModel on ProjectViewModel {
           locationEntity: locationEntity,
           name: product.name,
           pos: pos,
+          zAxis: 300.0, // 200 cm default height
           speakerSKU: product.sku,
-          gain:
-              product.sku == "MSA12X"
-                  ? 50.0
-                  : product.sku == "CO-12 H120"
-                  ? 10.0
-                  : 0.0,
+          gain: 20.0,
           assetImagePath: product.image,
           type: OutputType.analogOutput,
           price: product.price,
+          pitch: product.mountingType == "pendant" ? 90.0 : 0.0,
         );
       case ProductType.sources:
         return Source(
@@ -173,7 +200,7 @@ extension HardwareViewModel on ProjectViewModel {
           sku: product.sku,
           price: product.price,
           hardwareName: product.name,
-          type: GenericHardwareComponentType.controller,
+          type: GenericHardwareComponentType.other,
         );
       case ProductType.dsps:
         return GenericHardwareComponent(

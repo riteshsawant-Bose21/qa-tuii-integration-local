@@ -1,0 +1,87 @@
+import 'package:fusion_lib/fusion_lib.dart';
+
+extension SubZoneManager on ProjectManager {
+  //Add SubZone
+  void addSubZone(SubZone subZone) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    projectService!.addSubZone(subZone);
+  }
+
+  /// Remove SubZone
+  void removeSubZone(String subZoneId) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    projectService!.removeSubZone(subZoneId);
+  }
+
+  ///Update SubZone
+  void updateSubZone(SubZone updatedSubZone) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    projectService!.updateSubZone(updatedSubZone);
+  }
+
+  List<SubZone> getAllSubZones() {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getAllSubZones();
+  }
+
+  // Get SubZone by Id
+  SubZone getSubZoneById(String subZoneId) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getSubZoneById(subZoneId)!;
+  }
+
+  void addSubZoneToZone(String subZoneId, String parentZoneId) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    projectService!.addSubZoneToZone(subZoneId, parentZoneId);
+  }
+
+  void removeSubZoneFromZone(String subZoneId, String parentZoneId) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    projectService!.removeSubZoneFromZone(subZoneId, parentZoneId);
+  }
+
+  List<SubZone> getSubZonesForZone(String parentZoneId) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getSubZones(parentZoneId);
+  }
+
+  //add Circuit to SubZone
+  void addCircuitToSubZone(String subZoneId, String circuitId) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    projectService!.addCircuitToSubZone(subZoneId, circuitId);
+  }
+
+  //remove Circuit from SubZone
+  void removeCircuitFromSubZone(String subZoneId, String circuitId) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    projectService!.removeCircuitFromSubZone(subZoneId, circuitId);
+  }
+
+  //get hardware in SubZone
+  List<HardwareComponent> getHardwareInSubZone(String subZoneId) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getHardwareInZone(subZoneId);
+  }
+}

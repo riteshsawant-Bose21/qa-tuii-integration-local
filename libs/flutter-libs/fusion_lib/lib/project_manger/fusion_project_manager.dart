@@ -37,3 +37,12 @@ export 'undo_redo/undo_redo_manager.dart';
 //Project Properties
 export 'project_properties/project_properties_manager.dart';
 export 'project_properties/project_properties_service.dart';
+
+export 'sub_zone/sub_zone_manager.dart';
+export 'sub_zone/sub_zone_service.dart';
+
+export 'circuit/circuit_manager.dart';
+export 'circuit/circuit_service.dart';
+
+export 'wiring_connection/wiring_connection_manager.dart';
+export 'wiring_connection/wiring_connection_service.dart';

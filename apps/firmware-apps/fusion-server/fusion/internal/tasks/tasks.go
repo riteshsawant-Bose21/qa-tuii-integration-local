@@ -66,7 +66,7 @@ func NewTaskManager(config *api.AppConfig, persistence *persistence.Persistence)
 			return tm.wrapTask(t, tm.taskActivateSnapshotFunc(snapID))
 		},
 		api.TaskTypeAudioPlayback: func(t *api.Task) func() {
-			path := t.Params["file_path"]
+			path := t.Params[api.MessageIDKey]
 			return tm.wrapTask(t, tm.taskPlayAudioFunc(t, path))
 		},
 	}
@@ -494,18 +494,21 @@ func (tm *TaskManager) getTask(id string) (*api.Task, error) {
 
 func (tm *TaskManager) makeTaskFunc(task *api.Task) (TaskFunc, error) {
 	switch task.Type {
+
 	case api.TaskTypeSnapshot:
 		id := task.Params[api.SnapshotIDKey]
 		if id == "" {
 			return nil, fmt.Errorf("missing '%s'", api.SnapshotIDKey)
 		}
 		return tm.taskActivateSnapshotFunc(id), nil
+
 	case api.TaskTypeAudioPlayback:
-		path := task.Params["file_path"]
-		if path == "" {
-			return nil, fmt.Errorf("missing 'file_path'")
+		id := task.Params[api.MessageIDKey]
+		if id == "" {
+			return nil, fmt.Errorf("missing '%s'", api.MessageIDKey)
 		}
-		return tm.taskPlayAudioFunc(task, path), nil
+		return tm.taskPlayAudioFunc(task, id), nil
+
 	default:
 		return nil, fmt.Errorf("unsupported task type %q", task.Type)
 	}
