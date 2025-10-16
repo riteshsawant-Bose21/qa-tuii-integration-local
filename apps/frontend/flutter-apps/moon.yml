@@ -23,3 +23,7 @@ tasks:
   win-automation-build:
     deps:
       - "fusion-launcher:build-windows-automation"
+
+  macos-automation-build:
+    deps:
+      - "fusion-launcher:build-macos-automation"

@@ -120,4 +120,4 @@ runs:
         $password = "${{ inputs.nexus_password }}"
         
         curl.exe -k --ssl-no-revoke -f -u "$username`:$password" -T $buildPath $nexusUrl
-        Write-Output "flutter-windows: $nexusUrl"
+        Write-Output "flutter-automation-build-windows: $nexusUrl"
