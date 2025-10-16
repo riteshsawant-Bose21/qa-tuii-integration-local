@@ -128,7 +128,7 @@ func TestMultipassSAPIntegration_Race(t *testing.T) {
 	stop := time.Now().Add(duration)
 	var wg sync.WaitGroup
 
-	// continually write packets
+	// Continually write packets
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -144,7 +144,7 @@ func TestMultipassSAPIntegration_Race(t *testing.T) {
 		}
 	}()
 
-	// continually read sessions
+	// Continually read sessions
 	wg.Add(1)
 	go func() {
 		defer wg.Done()

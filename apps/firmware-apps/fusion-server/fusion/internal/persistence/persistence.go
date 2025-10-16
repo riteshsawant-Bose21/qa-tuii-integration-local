@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/logging"
@@ -16,6 +17,7 @@ import (
 )
 
 const (
+	bucketAudio        = "audio"
 	bucketDevice       = "device"
 	bucketFusion       = "fusion"
 	bucketSnapshots    = "snapshots"
@@ -27,6 +29,9 @@ const (
 	debounceTime = 100 * time.Millisecond
 	permPrivate  = 0600
 )
+
+// ErrNotFound is returned when a record or bucket doesn't exist.
+var ErrNotFound = errors.New("not found")
 
 // Persistence handles state persistence and metadata management.
 type Persistence struct {
@@ -351,8 +356,10 @@ func createBucketIfNotExists(tx *bbolt.Tx, bucket string) error {
 func (p *Persistence) initializeDatabase() error {
 
 	return p.db.Update(func(tx *bbolt.Tx) error {
+
 		// Bail out if buckets exist
-		if tx.Bucket([]byte(bucketFusion)) != nil &&
+		if tx.Bucket([]byte(bucketAudio)) != nil &&
+			tx.Bucket([]byte(bucketFusion)) != nil &&
 			tx.Bucket([]byte(bucketDevice)) != nil &&
 			tx.Bucket([]byte(bucketTasks)) != nil &&
 			tx.Bucket([]byte(bucketSnapshots)) != nil {
@@ -360,7 +367,7 @@ func (p *Persistence) initializeDatabase() error {
 		}
 
 		// Otherwise create any missing buckets
-		for _, bucket := range []string{bucketFusion, bucketDevice, bucketTasks, bucketSnapshots} {
+		for _, bucket := range []string{bucketAudio, bucketDevice, bucketFusion, bucketTasks, bucketSnapshots} {
 			if err := createBucketIfNotExists(tx, bucket); err != nil {
 				return err
 			}

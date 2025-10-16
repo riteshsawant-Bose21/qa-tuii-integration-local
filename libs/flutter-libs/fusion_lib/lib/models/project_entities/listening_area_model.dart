@@ -59,10 +59,10 @@ class ListeningArea {
   /// Returns all points inside the polygon on a uniform grid where
   /// the distance between adjacent points is approximately [spacing]
   /// world‐units (rather than a fixed cols×rows).
-  List<Offset> getFieldPoints() {
+  List<Offset> getFieldPoints(double spacing) {
     if (vertices.isEmpty) return <Offset>[];
 
-    final double spacing = 20.0;
+    // final double spacing = 20.0;
 
     // 1) compute axis‐aligned bounding box
     final Iterable<double> xs = vertices.map((Offset v) => v.dx);

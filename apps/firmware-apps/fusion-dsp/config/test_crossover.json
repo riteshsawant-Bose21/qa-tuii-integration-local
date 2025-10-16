@@ -1,0 +1,443 @@
+{
+    "session": {
+        "property_settings": [
+            { "name": "frame_size", "value": 32 },
+            { "name": "sample_rate", "value": 48000 }
+        ]
+    },
+    "audio_tasks": [
+        {
+            "name": "crossover_test",
+            "property_settings": [
+                { "name": "is_jack_client", "value": false },
+                { "name": "frame_size", "value": 32 },
+                { "name": "sample_rate", "value": 48000 }
+            ],
+            "blocks": [
+                {
+                    "name": "infile",
+                    "algorithm": "wav_read",
+                    "property_settings": [
+                        { "name": "frame_size", "value": 32 },
+                        { "name": "sample_rate", "value": 48000 }
+                    ],
+                    "terminal_channels": [
+                        { "name": "out", "channels": 6 }
+                    ]
+                },
+                
+                {
+                    "_comment": "Butterworth HPF 4th order @ 100Hz",
+                    "name": "butter_hp",
+                    "algorithm": "crossover",
+                    "property_settings": [
+                        { "name": "channels", "value": 1 },
+                        { "name": "frame_size", "value": 32 },
+                        { "name": "sample_rate", "value": 48000 }
+                    ]
+                },
+                
+                {
+                    "_comment": "Butterworth LPF 4th order @ 100Hz",
+                    "name": "butter_lp",
+                    "algorithm": "crossover",
+                    "property_settings": [
+                        { "name": "channels", "value": 1 },
+                        { "name": "frame_size", "value": 32 },
+                        { "name": "sample_rate", "value": 48000 }
+                    ]
+                },
+                
+                {
+                    "_comment": "Linkwitz-Riley HPF 4th order @ 100Hz",
+                    "name": "lr_hp",
+                    "algorithm": "crossover",
+                    "property_settings": [
+                        { "name": "channels", "value": 1 },
+                        { "name": "frame_size", "value": 32 },
+                        { "name": "sample_rate", "value": 48000 }
+                    ]
+                },
+                
+                {
+                    "_comment": "Linkwitz-Riley LPF 4th order @ 100Hz",
+                    "name": "lr_lp",
+                    "algorithm": "crossover",
+                    "property_settings": [
+                        { "name": "channels", "value": 1 },
+                        { "name": "frame_size", "value": 32 },
+                        { "name": "sample_rate", "value": 48000 }
+                    ]
+                },
+                
+                {
+                    "_comment": "Bessel HPF 4th order @ 100Hz",
+                    "name": "bessel_hp",
+                    "algorithm": "crossover",
+                    "property_settings": [
+                        { "name": "channels", "value": 1 },
+                        { "name": "frame_size", "value": 32 },
+                        { "name": "sample_rate", "value": 48000 }
+                    ]
+                },
+                
+                {
+                    "_comment": "Bessel LPF 4th order @ 100Hz",
+                    "name": "bessel_lp",
+                    "algorithm": "crossover",
+                    "property_settings": [
+                        { "name": "channels", "value": 1 },
+                        { "name": "frame_size", "value": 32 },
+                        { "name": "sample_rate", "value": 48000 }
+                    ]
+                },
+                
+                {
+                    "name": "outfile",
+                    "algorithm": "wav_write",
+                    "property_settings": [
+                        { "name": "frame_size", "value": 32 },
+                        { "name": "sample_rate", "value": 48000 }
+                    ],
+                    "terminal_channels": [
+                        { "name": "in", "channels": 6 }
+                    ]
+                }
+            ],
+            "block_connections": [
+                {
+                    "_comment": "Connect input to butter_hp",
+                    "source_block": "infile",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "butter_hp",
+                    "input_terminal": "in",
+                    "input_channel": 1
+                },
+                {
+                    "_comment": "Connect input to butter_lp",
+                    "source_block": "infile",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "butter_lp",
+                    "input_terminal": "in",
+                    "input_channel": 1
+                },
+                {
+                    "_comment": "Connect input to lr_hp",
+                    "source_block": "infile",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "lr_hp",
+                    "input_terminal": "in",
+                    "input_channel": 1
+                },
+                {
+                    "_comment": "Connect input to lr_lp",
+                    "source_block": "infile",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "lr_lp",
+                    "input_terminal": "in",
+                    "input_channel": 1
+                },
+                {
+                    "_comment": "Connect input to bessel_hp",
+                    "source_block": "infile",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "bessel_hp",
+                    "input_terminal": "in",
+                    "input_channel": 1
+                },
+                {
+                    "_comment": "Connect input to bessel_lp",
+                    "source_block": "infile",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "bessel_lp",
+                    "input_terminal": "in",
+                    "input_channel": 1
+                },
+                
+                {
+                    "_comment": "Connect butter_hp to output channel 1",
+                    "source_block": "butter_hp",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "outfile",
+                    "input_terminal": "in",
+                    "input_channel": 1
+                },
+                {
+                    "_comment": "Connect butter_lp to output channel 2",
+                    "source_block": "butter_lp",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "outfile",
+                    "input_terminal": "in",
+                    "input_channel": 2
+                },
+                {
+                    "_comment": "Connect lr_hp to output channel 3",
+                    "source_block": "lr_hp",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "outfile",
+                    "input_terminal": "in",
+                    "input_channel": 3
+                },
+                {
+                    "_comment": "Connect lr_lp to output channel 4",
+                    "source_block": "lr_lp",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "outfile",
+                    "input_terminal": "in",
+                    "input_channel": 4
+                },
+                {
+                    "_comment": "Connect bessel_hp to output channel 5",
+                    "source_block": "bessel_hp",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "outfile",
+                    "input_terminal": "in",
+                    "input_channel": 5
+                },
+                {
+                    "_comment": "Connect bessel_lp to output channel 6",
+                    "source_block": "bessel_lp",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "outfile",
+                    "input_terminal": "in",
+                    "input_channel": 6
+                }
+            ]
+        }
+    ],
+    "parameter_settings": [
+        {
+            "_comment": "Butterworth HPF settings",
+            "target": "butter_hp",
+            "name": "hpf_freq",
+            "value": 100.0
+        },
+        {
+            "target": "butter_hp",
+            "name": "lpf_freq",
+            "value": 20000.0
+        },
+        {
+            "target": "butter_hp",
+            "name": "hpf_order",
+            "value": 4
+        },
+        {
+            "target": "butter_hp",
+            "name": "lpf_order",
+            "value": 1
+        },
+        {
+            "target": "butter_hp",
+            "name": "hpf_type",
+            "value": "butterworth"
+        },
+        {
+            "target": "butter_hp",
+            "name": "lpf_type",
+            "value": "butterworth"
+        },
+        {
+            "target": "butter_hp",
+            "name": "bypass",
+            "value": false
+        },
+        
+        {
+            "_comment": "Butterworth LPF settings",
+            "target": "butter_lp",
+            "name": "hpf_freq",
+            "value": 20.0
+        },
+        {
+            "target": "butter_lp",
+            "name": "lpf_freq",
+            "value": 100.0
+        },
+        {
+            "target": "butter_lp",
+            "name": "hpf_order",
+            "value": 1
+        },
+        {
+            "target": "butter_lp",
+            "name": "lpf_order",
+            "value": 4
+        },
+        {
+            "target": "butter_lp",
+            "name": "hpf_type",
+            "value": "butterworth"
+        },
+        {
+            "target": "butter_lp",
+            "name": "lpf_type",
+            "value": "butterworth"
+        },
+        {
+            "target": "butter_lp",
+            "name": "bypass",
+            "value": false
+        },
+        
+        {
+            "_comment": "Linkwitz-Riley HPF settings",
+            "target": "lr_hp",
+            "name": "hpf_freq",
+            "value": 100.0
+        },
+        {
+            "target": "lr_hp",
+            "name": "lpf_freq",
+            "value": 20000.0
+        },
+        {
+            "target": "lr_hp",
+            "name": "hpf_order",
+            "value": 4
+        },
+        {
+            "target": "lr_hp",
+            "name": "lpf_order",
+            "value": 2
+        },
+        {
+            "target": "lr_hp",
+            "name": "hpf_type",
+            "value": "linkwitz_riley"
+        },
+        {
+            "target": "lr_hp",
+            "name": "lpf_type",
+            "value": "linkwitz_riley"
+        },
+        {
+            "target": "lr_hp",
+            "name": "bypass",
+            "value": false
+        },
+        
+        {
+            "_comment": "Linkwitz-Riley LPF settings",
+            "target": "lr_lp",
+            "name": "hpf_freq",
+            "value": 20.0
+        },
+        {
+            "target": "lr_lp",
+            "name": "lpf_freq",
+            "value": 100.0
+        },
+        {
+            "target": "lr_lp",
+            "name": "hpf_order",
+            "value": 2
+        },
+        {
+            "target": "lr_lp",
+            "name": "lpf_order",
+            "value": 4
+        },
+        {
+            "target": "lr_lp",
+            "name": "hpf_type",
+            "value": "linkwitz_riley"
+        },
+        {
+            "target": "lr_lp",
+            "name": "lpf_type",
+            "value": "linkwitz_riley"
+        },
+        {
+            "target": "lr_lp",
+            "name": "bypass",
+            "value": false
+        },
+        
+        {
+            "_comment": "Bessel HPF settings",
+            "target": "bessel_hp",
+            "name": "hpf_freq",
+            "value": 100.0
+        },
+        {
+            "target": "bessel_hp",
+            "name": "lpf_freq",
+            "value": 20000.0
+        },
+        {
+            "target": "bessel_hp",
+            "name": "hpf_order",
+            "value": 4
+        },
+        {
+            "target": "bessel_hp",
+            "name": "lpf_order",
+            "value": 2
+        },
+        {
+            "target": "bessel_hp",
+            "name": "hpf_type",
+            "value": "bessel"
+        },
+        {
+            "target": "bessel_hp",
+            "name": "lpf_type",
+            "value": "butterworth"
+        },
+        {
+            "target": "bessel_hp",
+            "name": "bypass",
+            "value": false
+        },
+        
+        {
+            "_comment": "Bessel LPF settings",
+            "target": "bessel_lp",
+            "name": "hpf_freq",
+            "value": 20.0
+        },
+        {
+            "target": "bessel_lp",
+            "name": "lpf_freq",
+            "value": 100.0
+        },
+        {
+            "target": "bessel_lp",
+            "name": "hpf_order",
+            "value": 2
+        },
+        {
+            "target": "bessel_lp",
+            "name": "lpf_order",
+            "value": 4
+        },
+        {
+            "target": "bessel_lp",
+            "name": "hpf_type",
+            "value": "butterworth"
+        },
+        {
+            "target": "bessel_lp",
+            "name": "lpf_type",
+            "value": "bessel"
+        },
+        {
+            "target": "bessel_lp",
+            "name": "bypass",
+            "value": false
+        }
+    ]
+}

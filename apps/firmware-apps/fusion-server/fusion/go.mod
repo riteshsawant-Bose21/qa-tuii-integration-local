@@ -9,6 +9,7 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/websocket v1.5.3
 	github.com/hashicorp/memberlist v0.5.1
+	github.com/oklog/ulid/v2 v2.1.1
 	github.com/pion/sdp/v3 v3.0.13
 	github.com/prometheus/client_golang v1.22.0
 	github.com/robfig/cron/v3 v3.0.1

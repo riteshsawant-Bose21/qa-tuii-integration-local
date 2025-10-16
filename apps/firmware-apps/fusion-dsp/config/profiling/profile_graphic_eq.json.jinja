@@ -22,7 +22,6 @@
                     "property_settings": [
                         { "name": "frame_size", "value": 32 },
                         { "name": "sample_rate", "value": 48000 },
-                        { "name": "channels", "value": 1 },
                         { "name": "filename", "value": "in.wav"}
                     ],
                     "terminal_channels": [
@@ -43,9 +42,7 @@
                     "algorithm": "wav_write",
                     "property_settings": [
                         { "name": "frame_size", "value": 32 },
-                        { "name": "sample_rate", "value": 48000 },
-                        { "name": "channels", "value": {{ channels }} }
-
+                        { "name": "sample_rate", "value": 48000 }
                     ],
                     "terminal_channels": [
                         { "name": "in", "channels": {{ channels }} }
@@ -86,7 +83,7 @@
         {
             "target": "graphic_eq",
             "name": "gain",
-            "index": [0],
+            "index": [1],
             "value": -15.0
         },
         {

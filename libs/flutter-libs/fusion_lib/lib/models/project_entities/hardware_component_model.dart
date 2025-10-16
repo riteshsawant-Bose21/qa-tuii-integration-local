@@ -49,7 +49,7 @@ abstract class HardwareComponent {
     required this.name,
     Offset? pos,
     this.wiringPos,
-    this.zAxis = 0,
+    this.zAxis = 0.0,
     required this.assetImagePath,
     required this.locationEntity,
     required this.price,

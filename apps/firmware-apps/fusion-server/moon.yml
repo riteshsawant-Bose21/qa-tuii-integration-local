@@ -3,7 +3,7 @@
 # docker-compose up --build
 project:
   name: 'Fusion Server'
-  description: 'Go based FUsion server application'
+  description: 'Go-based Fusion server application'
 
 language: go
 

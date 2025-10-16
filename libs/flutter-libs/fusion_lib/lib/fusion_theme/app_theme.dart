@@ -392,6 +392,8 @@ extension ColorExtends on ColorScheme {
   static const Color _borderColorL = Color(0x24091E42);
   static const Color _dividerColorL = Color(0x1A000000);
   static const Color _dividerColorD = Color(0x1AFFFFFF);
+  static const Color _softGrayD = Color(0x1AF9F9F9);
+  static const Color _softGrayL = Color(0x1AF9F9F9);
 
   static const Gradient _gradientTextColorLight = LinearGradient(
     colors: [Color(0xFF146C94), Color(0xFF19A7CE)],
@@ -415,6 +417,7 @@ extension ColorExtends on ColorScheme {
   Color get textFieldLabelColor => isDarkMode ? _greyDarkD : _greyDarkL;
   Gradient get gradientTextColor => isDarkMode ? _gradientTextColorDark : _gradientTextColorLight;
   Color get dividerColor => isDarkMode ? _dividerColorD : _dividerColorL;
+  Color get softGray => isDarkMode ? _softGrayD : _softGrayL;
 
   // todo : remove if not needed
   /// onboard screen colors

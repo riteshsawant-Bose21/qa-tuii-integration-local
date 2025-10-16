@@ -127,3 +127,6 @@ You should hear audible changes in the noise output.
 If you quit the DSP (using ctrl-C) and restart, you will notice that it will
 resume with the latest settings that you applied.
 
+DSP algorithm profiling
+------------------------------
+See [PROFILE_BLOCK.md](PROFILE_BLOCK.md).
