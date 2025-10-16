@@ -149,5 +149,58 @@ class DeviceSchematicComponentPainter extends ComponentDataPainter {
         ),
       );
     }
+    for (final CircuitPort port in <CircuitPort>[
+      ...component.otherPorts,
+    ]) {
+      final Path portPath = Path();
+
+      /// Port
+      // portPath.add(
+      // Rect.fromCircle(
+      //   center: port.absolutePosition,
+      //   radius: WiringViewConstants.portRadius,
+      // ),
+      // );
+      painter.drawImage(
+        canvas: canvas,
+        path: port.data.image!,
+        rect: Rect.fromCircle(
+          center: port.absolutePosition,
+          radius: WiringViewConstants.portRadius,
+        ),
+      );
+      final bool hasConnection = painter.hasConnection(port);
+      canvas.drawPath(
+        portPath,
+        hasConnection ? connectedPortPaint : freePortPaint,
+      );
+
+      /// Port Label
+      final TextPainter tp = TextPainter(
+        text: TextSpan(
+          text: port.data.label ?? port.data.type,
+          style: TextStyle(
+            color:
+                hasConnection
+                    ? painter.colorScheme.activePortFG
+                    : painter.colorScheme.inactivePortFG,
+            fontSize: WiringViewConstants.portRadius * 0.75,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+
+      // Align text to center
+      tp.paint(
+        canvas,
+        Offset(
+          WiringViewConstants.portRadius * 2 +
+              10 +
+              port.absolutePosition.dx -
+              tp.width / 2,
+          port.absolutePosition.dy - tp.height / 2,
+        ),
+      );
+    }
   }
 }

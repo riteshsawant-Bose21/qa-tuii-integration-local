@@ -114,6 +114,119 @@ class CircuitComponent extends CanvasElement {
         ),
       );
     }
+    final double currentHeight = circuitComponent.ports.fold(
+      0.0,
+      (double a, CircuitPort b) => max(a, b.relativePosition.dy),
+    );
+
+    // /// For Other Ports
+    // for (int i = 0; i < data.comPorts.length; i++) {
+    //   final ComponentPort element = data.comPorts[i];
+
+    //   circuitComponent.addOtherPort(
+    //     CircuitPort(
+    //       id: "${data.id}_other_$i",
+    //       relativePosition: Offset(
+    //         data.portRadius +
+    //             data.portOffset.dy +
+    //             (WiringViewConstants.portSpacing * (i + 1)) +
+    //             i * data.portRadius * 2,
+    //         size.height - data.portRadius - WiringViewConstants.portSpacing,
+    //       ),
+    //       padding: Offset(50 + i * 10, 0),
+    //       parent: circuitComponent,
+    //       data: element,
+    //     ),
+    //   );
+    // }
+    final List<ComponentPort> leftSidePorts =
+        data.comPorts
+            .where(
+              (ComponentPort e) => e.position == PortPosition.bottomLeft,
+            )
+            .toList()
+          ..sort(
+            (ComponentPort a, ComponentPort b) => a.index.compareTo(b.index),
+          );
+    final List<ComponentPort> rightSidePorts =
+        data.comPorts
+            .where(
+              (ComponentPort e) => e.position == PortPosition.bottomRight,
+            )
+            .toList()
+          ..sort(
+            (ComponentPort a, ComponentPort b) => a.index.compareTo(b.index),
+          );
+    final List<ComponentPort> footerLeft =
+        data.comPorts
+            .where(
+              (ComponentPort e) => e.position == PortPosition.footerLeft,
+            )
+            .toList()
+          ..sort(
+            (ComponentPort a, ComponentPort b) => a.index.compareTo(b.index),
+          );
+    final List<ComponentPort> footerCenter =
+        data.comPorts
+            .where(
+              (ComponentPort e) =>
+                  e.position == PortPosition.footerCenter || e.position == null,
+            )
+            .toList()
+          ..sort(
+            (ComponentPort a, ComponentPort b) => a.index.compareTo(b.index),
+          );
+    final List<ComponentPort> footerRight =
+        data.comPorts
+            .where(
+              (ComponentPort e) => e.position == PortPosition.footerRight,
+            )
+            .toList()
+          ..sort(
+            (ComponentPort a, ComponentPort b) => a.index.compareTo(b.index),
+          );
+
+    for (int i = 0; i < leftSidePorts.length; i++) {
+      final ComponentPort element = leftSidePorts[i];
+
+      circuitComponent.addOtherPort(
+        CircuitPort(
+          id: "${data.id}_other_$i",
+          relativePosition: Offset(
+            data.portRadius + WiringViewConstants.portSpacing,
+            currentHeight +
+                data.portOffset.dy +
+                data.portRadius +
+                (WiringViewConstants.portSpacing * (i + 1)) +
+                i * data.portRadius * 2,
+          ),
+          padding: Offset(50 + i * 10, 0),
+          parent: circuitComponent,
+          data: element,
+        ),
+      );
+    }
+    for (int i = 0; i < rightSidePorts.length; i++) {
+      final ComponentPort element = rightSidePorts[i];
+
+      circuitComponent.addOtherPort(
+        CircuitPort(
+          id: "${data.id}_other_$i",
+          relativePosition: Offset(
+            size.width - data.portRadius - WiringViewConstants.portSpacing,
+            data.portRadius +
+                data.portOffset.dy +
+                (WiringViewConstants.portSpacing * (i + 1)) +
+                i * data.portRadius * 2,
+          ),
+          padding: Offset(50 + i * 10, 0),
+          parent: circuitComponent,
+          data: element,
+        ),
+      );
+    }
+
+    
 
     return circuitComponent;
   }

@@ -38,19 +38,28 @@ class CircuitController extends ChangeNotifier
     final ImageLoaderService loader = fusionLibLocator<ImageLoaderService>();
     for (final CircuitComponent comp in state.components) {
       final String? path = comp.data.image;
-      if (path == null) continue;
-      if (!imagesCache.containsKey(path)) {
-        loader.loadImage(path).then((ui.Image img) {
-          imagesCache[path] = img;
-          notifyListeners();
-        });
+      // if (path == null) continue;
+      final List<String> images = <String>[
+        if (path != null) path,
+      ];
+      for (final CircuitPort port in comp.ports) {
+        if (port.data.image != null) {
+          images.add(port.data.image!);
+        }
+      }
+      for (final String imgPth in images) {
+        if (!imagesCache.containsKey(imgPth)) {
+          loader.loadImage(imgPth).then((ui.Image img) {
+            imagesCache[imgPth] = img;
+            notifyListeners();
+          });
+        }
       }
     }
   }
 
   void addComponent(CircuitComponent component) {
     setState(state.addComponent(component));
-    // saveState();
   }
 
   final ComponentDb componentDB = ComponentDb();

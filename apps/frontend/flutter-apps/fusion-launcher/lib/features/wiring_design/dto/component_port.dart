@@ -6,12 +6,16 @@ class ComponentPort {
   final String type;
   final List<String> compatibleTypes;
   final String data;
+  final PortPosition? position;
+  final int index;
   ComponentPort({
     required this.data,
     this.image,
     this.label,
     required this.type,
     required this.compatibleTypes,
+    this.position,
+    this.index = 0,
   });
 
   static ComponentPort input({

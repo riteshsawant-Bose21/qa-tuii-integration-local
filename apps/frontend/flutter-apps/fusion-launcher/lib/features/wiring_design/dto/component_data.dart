@@ -30,7 +30,6 @@ abstract class ComponentData {
   Size get size;
   Offset get portOffset;
   double get portRadius;
-
 }
 
 class DeviceSchematicComponentData extends ComponentData {
@@ -48,7 +47,68 @@ class DeviceSchematicComponentData extends ComponentData {
     return DeviceSchematicComponentData(
       image: hardware.assetImagePath,
       label: hardware.name,
-      comPorts: <ComponentPort>[],
+      comPorts: <ComponentPort>[
+        ComponentPort(
+          image: 'assets/icons/wiring_ports/stereo.png',
+          data: 'stereo_1',
+          type: 'stereo',
+          label: "Stereo",
+          compatibleTypes: <String>['stereo'],
+          position: PortPosition.bottomLeft,
+          index: 0,
+        ),
+        ComponentPort(
+          image: 'assets/icons/wiring_ports/hdmi.png',
+          data: 'hdmi_1',
+          type: 'hdmi',
+          label: "HDMI",
+          compatibleTypes: <String>['hdmi'],
+          position: PortPosition.bottomLeft,
+          index: 1,
+        ),
+        ComponentPort(
+          image: 'assets/icons/wiring_ports/usb.png',
+          data: 'usb_1',
+          type: 'usb',
+          label: "USB",
+          compatibleTypes: <String>['usb'],
+          position: PortPosition.bottomLeft,
+          index: 2,
+        ),
+        ComponentPort(
+          image: 'assets/icons/wiring_ports/ethernet.png',
+          data: 'ethernet_1',
+          type: 'ethernet',
+          label: "Ethernet 1",
+          compatibleTypes: <String>['ethernet'],
+          position: PortPosition.footerLeft,
+        ),
+        ComponentPort(
+          image: 'assets/icons/wiring_ports/ethernet.png',
+          data: 'ethernet_2',
+          type: 'ethernet',
+          label: "Ethernet 2",
+          compatibleTypes: <String>['ethernet'],
+          position: PortPosition.footerLeft,
+        ),
+
+        ComponentPort(
+          image: 'assets/icons/wiring_ports/wifi.png',
+          data: 'wifi',
+          type: 'wifi',
+          label: "Wifi",
+          compatibleTypes: <String>['wifi'],
+          position: PortPosition.footerRight,
+        ),
+        ComponentPort(
+          image: 'assets/icons/wiring_ports/bluetooth.png',
+          data: 'bluetooth',
+          type: 'bluetooth',
+          label: "Bluetooth",
+          compatibleTypes: <String>['bluetooth'],
+          position: PortPosition.footerRight,
+        ),
+      ],
       inputPorts: List<ComponentPort>.generate(
         Random().nextInt(4) + 3,
         (int index) => ComponentPort.input(
@@ -63,6 +123,7 @@ class DeviceSchematicComponentData extends ComponentData {
           label: (index + 1).toString(),
         ),
       ),
+
       data: hardware,
     );
   }
@@ -79,7 +140,23 @@ class DeviceSchematicComponentData extends ComponentData {
     );
 
     if (comPorts.isNotEmpty) {
-      cSize += const Offset(0, 100);
+      final int extraHeight = max(
+        comPorts
+            .where((ComponentPort e) => e.position == PortPosition.bottomLeft)
+            .length,
+        comPorts
+            .where((ComponentPort e) => e.position == PortPosition.bottomRight)
+            .length,
+      );
+      cSize += Offset(0, extraHeight * 100);
+      if (comPorts.any(
+        (ComponentPort e) =>
+            e.position == PortPosition.footerLeft ||
+            e.position == PortPosition.footerCenter ||
+            e.position == PortPosition.footerRight,
+      )) {
+        cSize += const Offset(0, 100);
+      }
     }
     return cSize;
   }
@@ -202,4 +279,12 @@ class SpeakerComponentData extends ComponentData {
 
   @override
   String get type => 'speaker';
+}
+
+enum PortPosition {
+  bottomLeft,
+  bottomRight,
+  footerLeft,
+  footerRight,
+  footerCenter,
 }
