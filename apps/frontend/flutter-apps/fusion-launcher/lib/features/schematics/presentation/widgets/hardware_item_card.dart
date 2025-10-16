@@ -45,7 +45,7 @@ class HardwareItemCard extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
           decoration: BoxDecoration(
             color: isHovered ? Colors.white.withOpacity(0.5) : (isSelected ? Colors.transparent : Colors.white),
-            border: Border.all(color: isSelected ? Colors.grey[400]! : Colors.transparent, width: 1),
+            border: Border.all(color: isSelected ? Colors.black : Colors.transparent, width: 1),
             borderRadius: BorderRadius.circular(4),
           ),
           child: Row(
