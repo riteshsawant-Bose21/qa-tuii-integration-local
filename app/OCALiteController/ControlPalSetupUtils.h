@@ -27,7 +27,8 @@ void DisplayDiscoveredDevices(
 
 ::OcaBoolean AddSubscriptions(Zone& newZone, GeneralProxy& proxy);
 
-ZoneGroup* CreateZoneGroup(Zone& newZone, void *commandQueue);
+ZoneGroup* CreateZoneGroup(Zone& newZone, FusionProxy& proxy,
+                                             void *commandQueue);
 
 OcaBoolean ControlPalSetupConnection(::Ocp1LiteNetwork *ocp1Network,
                                      const std::string &customNodeId,

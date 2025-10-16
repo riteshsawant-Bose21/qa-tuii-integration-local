@@ -258,12 +258,15 @@ void DisplayDiscoveredDevices(
     return status;
 }
 
-ZoneGroup* CreateZoneGroup(Zone& newZone, void *commandQueue)
+ZoneGroup* CreateZoneGroup(Zone& newZone, FusionProxy &fusion_proxy,
+                                                   void *commandQueue)
 {
     // Create a block/zone
     ZoneGroup* newZoneGrp = new ZoneGroup(newZone.ono.zone,
                                           static_cast<::OcaBoolean>(true),
-                                          ::OcaLiteString(newZone.id));
+                                          ::OcaLiteString(newZone.id),
+                                          ::OcaLiteString(newZone.name),
+                                          commandQueue);
 
     if (newZoneGrp)
     {
@@ -335,7 +338,30 @@ ZoneGroup* CreateZoneGroup(Zone& newZone, void *commandQueue)
             newZoneGrp->AddObject(*newSelectorObj);
         }
 
+        // Send Zone Name to frontend
+        newZoneGrp->SendValue();
+
         //TODO: Sync Control setting (with Device)
+        // Get & Set Gain value
+        ::OcaDB gainVal;
+        fusion_proxy.ConcreteGainActuator_GetGain(
+                                     newGainObj->GetObjectNumber(),
+                                     gainVal);
+        newGainObj->SetGain(gainVal);
+
+        // Get & Set Mute state
+        ::OcaLiteMuteState state;
+        fusion_proxy.ConcreteMuteActuator_GetMute(
+                                     newMuteObj->GetObjectNumber(),
+                                     state);
+        newMuteObj->SetState(state);
+
+        // Get & Set Switch Position
+        ::OcaUint16 position;
+        fusion_proxy.ConcreteSwitchActuator_SetSwitch(
+                                newSelectorObj->GetObjectNumber(),
+                                position);
+        newSelectorObj->SetPosition(position);
     }
 
     return newZoneGrp;
@@ -416,7 +442,8 @@ ZoneGroup* CreateZoneGroup(Zone& newZone, void *commandQueue)
         for (auto newZone : controllerCfg.zones)
         {
             // Create Worker Objects andd add to FusionBlock
-            ZoneGroup *newGroup = CreateZoneGroup(*newZone, commandQueue);
+            ZoneGroup *newGroup =
+                    CreateZoneGroup(*newZone, proxy, commandQueue);
 
             // Add 'ZoneGroup' to 'Root' block
             bSuccess |= ::OcaLiteBlock::GetRootBlock().AddObject(*newGroup);
@@ -428,10 +455,6 @@ ZoneGroup* CreateZoneGroup(Zone& newZone, void *commandQueue)
             {
                 zoneONo.push_back(newGroup->GetObjectNumber());
             }
-
-            //TODO: Send UI the control details
-            //          Send Zone Name
-
         }
     }
 
