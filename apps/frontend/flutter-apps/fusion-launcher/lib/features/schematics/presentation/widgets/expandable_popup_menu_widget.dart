@@ -238,7 +238,7 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
                     price: item.price,
                   );
                   serviceLocator<ProjectViewModel>().addHardware(source);
-                } else if (item is FusionDevice) {
+                } else if (item is FusionDsp) {
                   // final FusionDevice fusionDevice = FusionDevice(
                   //   name: item.name,
                   //   price: item.price,

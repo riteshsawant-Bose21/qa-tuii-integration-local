@@ -53,11 +53,11 @@ class _SchematicsMainPanelState extends State<SchematicsMainPanel> {
     ];
 
     // Initialize processors
-    final List<FusionDevice> processors = serviceLocator<ProjectViewModel>().fusionDevices;
+    final List<FusionDsp> processors = serviceLocator<ProjectViewModel>().fusionDevices;
     _reorderableProcessors =
         processors
             .map(
-              (FusionDevice device) => GenericHardwareComponent(
+              (FusionDsp device) => GenericHardwareComponent(
                 id: device.id,
                 locationEntity: LocationModel(id: device.location),
                 name: device.name,
