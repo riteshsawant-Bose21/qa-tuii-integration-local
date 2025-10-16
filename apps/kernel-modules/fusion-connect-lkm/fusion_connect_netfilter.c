@@ -1,19 +1,3 @@
-/*
- * Copyright (C) 2025 Bose Professional
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License as published by the
- * Free Software Foundation; either version 2 of the License, or (at your
- * option) any later version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
- * more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, see <http://www.gnu.org/licenses/>.
- */
-
 #include <linux/skbuff.h>
 #include <linux/netfilter_ipv4.h>
 #include <linux/netdevice.h>
@@ -24,42 +8,83 @@
 static unsigned int nf_hook_func(void *priv, struct sk_buff *skb, const struct nf_hook_state *state)
 {
     struct fusion_cn_rtp_manager *rtp_mgr = priv;
-    struct iphdr *ip_header;
-    uint8_t *rtp_header;
-    struct fusion_cn_rtp_packet *packet;
+    struct iphdr *iph;
+    struct udphdr *udph;
+    u8 *rtph;
+    u16 ip_tot_len;
+    int iphl;
 
-    ip_header = ip_hdr(skb);
-    if (!skb || !ip_header) {
+    if (!atomic_read(&rtp_mgr->nf->is_enabled))
         return NF_ACCEPT;
-    }
 
-    if (ip_header->ihl != 5) {
+    if (!skb)
         return NF_ACCEPT;
-    }
 
-    // Filter by UDP protocol
-    if (ip_header->protocol != IPPROTO_UDP) {
+    /* Ensure we can read a minimal IP header */
+    if (!pskb_may_pull(skb, sizeof(struct iphdr)))
         return NF_ACCEPT;
-    }
 
-    if (skb_is_nonlinear(skb) && skb_linearize(skb) < 0) {
+    iph = ip_hdr(skb);
+    if (!iph || iph->version != 4)
         return NF_ACCEPT;
-    }
 
-    if (skb->len + ETH_HLEN < sizeof(struct fusion_cn_rtp_packet)) {
+    /* Only IPv4/UDP */
+    if (iph->protocol != IPPROTO_UDP)
         return NF_ACCEPT;
-    }
 
-    packet = (void *)skb_mac_header(skb);
-
-    // Check RTP header: Version (first byte) should be 0x80 (Version 2)
-    rtp_header = (uint8_t *)packet + ETH_HLEN + (ip_header->ihl * 4) + sizeof(struct udphdr);
-    if (*rtp_header != 0x80) {
+    iphl = iph->ihl * 4;
+    ip_tot_len = ntohs(iph->tot_len);
+    if (ip_tot_len < iphl + sizeof(struct udphdr) + 12) /* need UDP + RTP hdr */
         return NF_ACCEPT;
-    }
 
-    return fusion_cn_rtp_process_packet(rtp_mgr, packet);
+    /* Make sure UDP header & a byte of RTP are available */
+    if (!pskb_may_pull(skb, iphl + sizeof(struct udphdr) + 1))
+        return NF_ACCEPT;
+
+    /* Point transport header to UDP */
+    skb_set_transport_header(skb, iphl);
+    udph = udp_hdr(skb);
+    if (!udph)
+        return NF_ACCEPT;
+
+    /* RTP header begins after UDP */
+    rtph = (u8 *)udph + sizeof(struct udphdr);
+
+    /* RTP v2 check (don’t assume Ethernet present; don’t add ETH_HLEN) */
+    if ( (rtph[0] & 0xC0) != 0x80 )
+        return NF_ACCEPT;
+
+    /* Build a contiguous “packet” buffer with a synthetic Ethernet header */
+    {
+        const int copy_len = ip_tot_len;                /* IP header + UDP + RTP + payload */
+        const int pkt_len  = ETH_HLEN + copy_len;       /* what process_packet expects */
+        struct fusion_cn_rtp_packet *pkt;
+        u8 *buf;
+
+        buf = kmalloc(pkt_len, GFP_ATOMIC);
+        if (!buf)
+            return NF_ACCEPT;
+
+        /* Fake Ethernet header: just EtherType IPv4; MACs unused by your parser */
+        memset(buf, 0, ETH_HLEN - 2);
+        buf[12] = 0x08; buf[13] = 0x00;                 /* ETH_P_IP */
+
+        /* Copy IP..payload from the skb */
+        if (skb_copy_bits(skb, skb_network_offset(skb), buf + ETH_HLEN, copy_len)) {
+            kfree(buf);
+            return NF_ACCEPT;
+        }
+
+        pkt = (struct fusion_cn_rtp_packet *)buf;
+
+        /* Hand to your existing parser */
+        fusion_cn_rtp_process_packet(rtp_mgr, pkt);
+
+        kfree(buf);
+        return NF_DROP; /* we consumed it */
+    }
 }
+
 
 int fusion_cn_nf_init(void *rtp_mgr)
 {
@@ -88,7 +113,7 @@ void fusion_cn_nf_destroy(struct fusion_cn_netfilter *nf)
 }
 
 int fusion_cn_nf_create_packet(struct fusion_cn_netfilter *nf, struct sk_buff **skb,
-                               void **data, uint32_t *data_size)
+                               void **data, u32 *data_size)
 {
     if (*skb && (*skb)->truesize >= *data_size) {
         *data = skb_put(*skb, *data_size);
@@ -119,7 +144,7 @@ int fusion_cn_nf_create_packet(struct fusion_cn_netfilter *nf, struct sk_buff **
     return 0;
 }
 
-int fusion_cn_nf_tx_packet(void *rtp_mgr, struct sk_buff *skb, uint32_t data_size)
+int fusion_cn_nf_tx_packet(void *rtp_mgr, struct sk_buff *skb, u32 data_size)
 {
     struct net_device *dev;
     int ret;
@@ -136,45 +161,33 @@ int fusion_cn_nf_tx_packet(void *rtp_mgr, struct sk_buff *skb, uint32_t data_siz
         return -EINVAL;
     }
 
-    if (mgr->internal_loopback) {
-        // For loopback packets, process directly
-        if (ip_header->daddr == ip_header->saddr) {
-            // Ensure skb is linear
-            if (skb_is_nonlinear(skb) && skb_linearize(skb) < 0) {
-                printk(KERN_ERR "fusion_cn: tx_packet: Failed to linearize skb\n");
-                kfree_skb(skb);
-                return -ENOMEM;
-            }
-
-            // Access UDP header directly
-            udp_header = (struct udphdr *)((char *)ip_header + (ip_header->ihl * 4));
-
-            // Use the original packet pointer (starting at Ethernet header) for process_packet
-            packet = (struct fusion_cn_rtp_packet *)skb->data;
-
-            // Process directly
-            ret = fusion_cn_rtp_process_packet(mgr, packet);
-            kfree_skb(skb);  // Free the skb since we're done
-            return ret == NF_DROP ? 0 : -1;
-        }
-    }
-
-    // loopback if daddr == saddr, otherwise eth_iface
+    // internally loopback
     if (ip_header->daddr == ip_header->saddr) {
-        dev = dev_get_by_name(&init_net, "lo");
-        if (!dev) {
-            printk(KERN_ERR "fusion_cn: tx_packet: Interface lo not found\n");
+        // Ensure skb is linear
+        if (skb_is_nonlinear(skb) && skb_linearize(skb) < 0) {
+            printk(KERN_ERR "fusion_cn: tx_packet: Failed to linearize skb\n");
             kfree_skb(skb);
-            return -ENODEV;
+            return -ENOMEM;
         }
-    } else {
-        dev = dev_get_by_name(&init_net, nf->iface_name);
-        if (!dev) {
-            printk(KERN_ERR "fusion_cn: tx_packet: Interface %s not found\n", nf->iface_name);
-            kfree_skb(skb);
-            return -ENODEV;
-        }   
+
+        // Access UDP header directly
+        udp_header = (struct udphdr *)((char *)ip_header + (ip_header->ihl * 4));
+
+        // Use the original packet pointer (starting at Ethernet header) for process_packet
+        packet = (struct fusion_cn_rtp_packet *)skb->data;
+
+        // Process directly
+        ret = fusion_cn_rtp_process_packet(mgr, packet);
+        kfree_skb(skb);  // Free the skb since we're done
+        return ret == NF_DROP ? 0 : -1;
     }
+
+    dev = dev_get_by_name(&init_net, nf->iface_name);
+    if (!dev) {
+        printk(KERN_ERR "fusion_cn: tx_packet: Interface %s not found\n", nf->iface_name);
+        kfree_skb(skb);
+        return -ENODEV;
+    }   
 
     if (data_size == 0) {
         printk(KERN_ERR "fusion_cn: tx_packet: Empty data\n");

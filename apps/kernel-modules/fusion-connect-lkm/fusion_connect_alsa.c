@@ -1,19 +1,3 @@
-/*
- * Copyright (C) 2025 Bose Professional
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License as published by the
- * Free Software Foundation; either version 2 of the License, or (at your
- * option) any later version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
- * more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, see <http://www.gnu.org/licenses/>.
- */
-
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 #include <sound/pcm.h>
@@ -111,7 +95,7 @@ static int fusion_cn_pcm_hw_params(struct snd_pcm_substream *substream, struct s
     runtime->period_size = period_size;
     runtime->periods = buffer_bytes / (period_size * stream->sample_width * stream->channels);
 
-    printk(KERN_INFO "fusion_cn_alsa: hw_params: buffer_size=%lu frames, period_size=%lu, periods=%u for stream %s\n",
+    printk(KERN_DEBUG "fusion_cn_alsa: hw_params: buffer_size=%lu frames, period_size=%lu, periods=%u for stream %s\n",
            runtime->buffer_size, runtime->period_size, runtime->periods, stream->stream_name);
 
     stream->pcm_indirect.hw_buffer_size = buffer_bytes;
@@ -135,7 +119,7 @@ void fusion_cn_alsa_substream_release(struct kref *kref)
         snd_device_free(card, pcm);  /* non-GPL */
     }
 
-    printk(KERN_INFO "fusion_cn_alsa: substream_release: release stream %s\n", s->stream_name);
+    printk(KERN_DEBUG "fusion_cn_alsa: substream_release: release stream %s\n", s->stream_name);
 
     kfree(s);
 }
@@ -295,7 +279,7 @@ int fusion_cn_alsa_remove_substream(struct fusion_cn_substream *stream)
     // remove ref taken in add_substream
     kref_put(&stream->ref, fusion_cn_alsa_substream_release);
 
-    pr_info("fusion_cn_alsa: remove_substream: Stream %s removed, device=%d%s\n",
+    printk(KERN_DEBUG "fusion_cn_alsa: remove_substream: Stream %s removed, device=%d%s\n",
             stream->stream_name, stream->stream_index,
             stream->pending_free ? " (pending free)" : "");
     return 0;
@@ -425,7 +409,7 @@ static int fusion_cn_pcm_open(struct snd_pcm_substream *substream)
 
     atomic_inc(&stream->open_count);
 
-    printk(KERN_INFO "fusion_cn_alsa: pcm_open: Opened stream %s\n", stream_name);
+    printk(KERN_DEBUG "fusion_cn_alsa: pcm_open: Opened stream %s\n", stream_name);
     return 0;
 }
 
@@ -457,7 +441,7 @@ static int fusion_cn_pcm_close(struct snd_pcm_substream *substream)
     atomic_set(&stream->disconnected, 0);
     kref_put(&stream->ref, fusion_cn_alsa_substream_release);
 
-    printk(KERN_INFO "fusion_cn_alsa: pcm_close: Closed stream %s\n", stream->stream_name);
+    printk(KERN_DEBUG "fusion_cn_alsa: pcm_close: Closed stream %s\n", stream->stream_name);
 
     return 0;
 }
@@ -517,7 +501,7 @@ static int fusion_cn_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
                    stream->stream_name, err);
             return err;
         }
-        printk(KERN_INFO "fusion_cn_alsa: pcm_trigger: Stream %s started\n", stream->stream_name);
+        printk(KERN_DEBUG "fusion_cn_alsa: pcm_trigger: Stream %s started\n", stream->stream_name);
         return 0;
     case SNDRV_PCM_TRIGGER_STOP:
     case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
@@ -533,7 +517,7 @@ static int fusion_cn_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
                 stream->stream_name, err);
             return err;
         }
-        printk(KERN_INFO "fusion_cn_alsa: pcm_trigger: Stream %s stopped\n", stream->stream_name);
+        printk(KERN_DEBUG "fusion_cn_alsa: pcm_trigger: Stream %s stopped\n", stream->stream_name);
         return 0;
     }
     default:
@@ -560,9 +544,33 @@ static struct snd_pcm_ops fusion_cn_pcm_ops = {
     .fill_silence = fusion_cn_pcm_fill_silence,
 };
 
-int fusion_cn_alsa_open_substream(struct fusion_cn_chip *alsa_chip, uint64_t stream_handle, const char *stream_name,
-                                    int direction, unsigned int channels, uint32_t rate, snd_pcm_format_t format, 
-                                    uint32_t frames_per_packet, struct fusion_cn_substream **alsa_substream)
+inline u32 fusion_cn_alsa_get_buffer_depth(struct fusion_cn_substream *stream)
+{
+    struct snd_pcm_substream *ss = stream->substream;
+    struct snd_pcm_runtime *rt = ss->runtime;
+    snd_pcm_uframes_t size, app, hw;
+
+    size = rt->buffer_size;
+
+    /* appl_ptr / hw_ptr are monotonic; reduce to ring domain */
+    app = READ_ONCE(rt->control->appl_ptr) % size;
+    hw  = READ_ONCE(rt->status->hw_ptr)   % size;
+
+    if (ss->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+        /* queued-to-DAC = buffer_size - playback_avail
+           playback_avail = (size + hw - app) % size */
+        snd_pcm_uframes_t avail = (size + hw - app) % size;
+        return (u32)(size - avail);
+    } else {
+        /* capture_avail = (size + app - hw) % size
+           That's also “queued for consumer” in your capture-as-sink model */
+        return (u32)((size + app - hw) % size);
+    }
+}
+
+int fusion_cn_alsa_open_substream(struct fusion_cn_chip *alsa_chip, u64 stream_handle, const char *stream_name,
+                                    int direction, unsigned int channels, u32 rate, snd_pcm_format_t format, 
+                                    u32 frames_per_packet, struct fusion_cn_substream **alsa_substream)
 {
     struct fusion_cn_chip *chip = alsa_chip;
     unsigned long flags;
@@ -570,7 +578,7 @@ int fusion_cn_alsa_open_substream(struct fusion_cn_chip *alsa_chip, uint64_t str
     int err;
     int bucket;
     struct fusion_cn_substream *stream;
-    uint64_t packet_time_ns;
+    u64 packet_time_ns;
     int max_channels;
     bool is_96khz;
     bool is_32b;
@@ -638,7 +646,7 @@ int fusion_cn_alsa_open_substream(struct fusion_cn_chip *alsa_chip, uint64_t str
         goto stream_free;
     }
 
-    packet_time_ns = ((uint64_t)frames_per_packet * NSEC_PER_SEC) / rate;
+    packet_time_ns = ((u64)frames_per_packet * NSEC_PER_SEC) / rate;
     is_96khz = rate == 96000;
     is_32b = (format == SNDRV_PCM_FORMAT_FLOAT_BE);
     is_24b = (format == SNDRV_PCM_FORMAT_S24_3BE);
@@ -700,7 +708,7 @@ int fusion_cn_alsa_open_substream(struct fusion_cn_chip *alsa_chip, uint64_t str
     stream->pending_free = false;
     atomic_set(&stream->disconnected, 0);
 
-    printk(KERN_INFO "fusion_cn_alsa: open_substream: Successfully created substream for stream %s, device=%d, format=%d, channels=%u, rate=%u, frames_per_packet=%u\n", 
+    printk(KERN_DEBUG "fusion_cn_alsa: open_substream: Successfully created substream for stream %s, device=%d, format=%d, channels=%u, rate=%u, frames_per_packet=%u\n", 
                                                                                       stream_name, stream_index, format, 
                                                                                       channels, rate, frames_per_packet);
     
@@ -897,5 +905,5 @@ void fusion_cn_alsa_destroy(void)
         g_pdev = NULL;
     }
     platform_driver_unregister(&fusion_cn_driver);
-    printk(KERN_INFO "fusion_cn_alsa: Card exit\n");
+    printk(KERN_DEBUG "fusion_cn_alsa: Card exit\n");
 }

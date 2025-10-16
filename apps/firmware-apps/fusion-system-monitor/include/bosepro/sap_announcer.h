@@ -108,7 +108,6 @@ private:
             clock_id += std::toupper(cleaned[i + 1]);
         }
 
-        SPDLOG_INFO("Formatted PTP clock ID: {}", clock_id);
         return clock_id;
     }
 
@@ -191,27 +190,6 @@ public:
             channels_str += "ch" + std::to_string(i);
             if (i < ann.channels) channels_str += ",";
         }
-        char sdp_buf[512];
-        snprintf(sdp_buf, sizeof(sdp_buf),
-                 "v=0\r\n"
-                 "o=- %u %u IN IP4 %s\r\n"
-                 "s=%s\r\n"
-                 "c=IN IP4 %s/32\r\n"
-                 "t=0 0\r\n"
-                 "m=audio %u RTP/AVP %u\r\n"
-                 "i=%u channels: %s\r\n"
-                 "a=recvonly\r\n"
-                 "a=rtpmap:%u L24/%u/%u\r\n"
-                 "a=ptime:1\r\n"
-                 "a=ts-refclk:ptp=IEEE1588-2008:%s:0\r\n"
-                 "a=mediaclk:direct=0\r\n",
-                 ann.ntp_ts, ann.ntp_ts + 16, system_ip.c_str(),
-                 name.c_str(), ipToString(ann.multicast_ip).c_str(),
-                 ann.sink_port, ann.payload_type,
-                 (unsigned int)ann.channels, channels_str.c_str(),
-                 ann.payload_type, ann.sample_rate, (unsigned int)ann.channels,
-                 ptp_clock_id.c_str());
-        sdp = sdp_buf;
 
         // Build SAP header
         std::string payload_type = "application/sdp";
@@ -226,6 +204,28 @@ public:
         inet_pton(AF_INET, system_ip.c_str(), &origin_ip);
         memcpy(&sap_header[4], &origin_ip, sizeof(origin_ip));
         memcpy(&sap_header[8], payload_type.c_str(), payload_type.size() + 1);
+
+        char sdp_buf[512];
+        snprintf(sdp_buf, sizeof(sdp_buf),
+                 "v=0\r\n"
+                 "o=- %u %u IN IP4 %s\r\n"
+                 "s=%s\r\n"
+                 "c=IN IP4 %s/32\r\n"
+                 "t=0 0\r\n"
+                 "m=audio %u RTP/AVP %u\r\n"
+                 "i=%u channels: %s\r\n"
+                 "a=recvonly\r\n"
+                 "a=rtpmap:%u L24/%u/%u\r\n"
+                 "a=ptime:1\r\n"
+                 "a=ts-refclk:ptp=IEEE1588-2008:%s:0\r\n"
+                 "a=mediaclk:direct=0\r\n",
+                 msgID + 16, msgID + 16, system_ip.c_str(),
+                 name.c_str(), ipToString(ann.multicast_ip).c_str(),
+                 ann.sink_port, ann.payload_type,
+                 (unsigned int)ann.channels, channels_str.c_str(),
+                 ann.payload_type, ann.sample_rate, (unsigned int)ann.channels,
+                 ptp_clock_id.c_str());
+        sdp = sdp_buf;
 
         // Combine and send
         std::string packet(reinterpret_cast<char*>(sap_header), sizeof(sap_header));
