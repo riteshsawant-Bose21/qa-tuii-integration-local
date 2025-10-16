@@ -160,4 +160,13 @@ extension ZoneViewModel on ProjectViewModel {
       throwError("Failed to remove circuit from zone: $e");
     }
   }
+
+  List<CircuitModel> getCircuitsInZone(String zoneId) {
+    try {
+      return projectManager.getCircuitsInZone(zoneId);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get circuits for zone: $e");
+      return <CircuitModel>[];
+    }
+  }
 }

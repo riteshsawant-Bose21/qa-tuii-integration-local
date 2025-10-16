@@ -62,4 +62,24 @@ extension CircuitService on ProjectService {
     }
     relationships.unlink(RelationshipType.circuitHardware, circuitId, hwId);
   }
+
+  List<ListeningArea> getListeningAreasForCircuit(String circuitId) {
+    if (!circuits.exists(circuitId)) {
+      throw Exception('Circuit with id $circuitId does not exist');
+    }
+
+    //get circuit hardware and its unique listening areas
+    final hardwareIds = relationships.getChildren(RelationshipType.circuitHardware, circuitId);
+    final Set<String> listeningAreaIds = {};
+    for (final hwId in hardwareIds) {
+      final hw = hardware.get(hwId);
+      if (hw == null) continue;
+      if (hw.locationEntity.listeningAreaId != null) {
+        if (!listeningAreaIds.contains(hw.locationEntity.listeningAreaId)) {
+          listeningAreaIds.add(hw.locationEntity.listeningAreaId!);
+        }
+      }
+    }
+    return listeningAreaIds.map((id) => listeningAreas.get(id)).whereType<ListeningArea>().toList();
+  }
 }

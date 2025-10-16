@@ -34,16 +34,10 @@ extension WiringConnectionService on ProjectService {
     return wiringConnection.getAll();
   }
 
-  WiringConnectionModel? getConnectionForDevice(String deviceId) {
+  List<WiringConnectionModel>? getConnectionForDevice(String deviceId) {
     final connectionIds = relationships.getChildren(RelationshipType.wiringConnectionDevice, deviceId);
     if (connectionIds.isNotEmpty) {
-      final connectionId = connectionIds.first;
-      final connection = wiringConnection.get(connectionId);
-      if (connection != null) {
-        return connection;
-      } else {
-        return null;
-      }
+      return connectionIds.map((id) => wiringConnection.get(id)).whereType<WiringConnectionModel>().toList();
     } else {
       return null;
     }

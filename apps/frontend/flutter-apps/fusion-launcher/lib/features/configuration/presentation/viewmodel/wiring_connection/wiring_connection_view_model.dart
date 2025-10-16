@@ -19,7 +19,7 @@ extension WiringConnectionViewModel on ProjectViewModel {
     return projectManager.getAllWiringConnections();
   }
 
-  WiringConnectionModel? getConnectionForDevice(String deviceId) {
+  List<WiringConnectionModel>? getConnectionForDevice(String deviceId) {
     return projectManager.getConnectionForDevice(deviceId);
   }
 }

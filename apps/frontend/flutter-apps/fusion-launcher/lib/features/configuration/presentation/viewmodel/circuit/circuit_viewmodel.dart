@@ -107,4 +107,14 @@ extension CircuitViewmodel on ProjectViewModel {
       throwError("Failed to remove all circuits: $e");
     }
   }
+
+  List<ListeningArea> getListeningAreasForCircuit(String circuitId) {
+    try {
+      return projectManager.getListeningAreasForCircuit(circuitId);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get listening areas for circuit: $e");
+      throwError("Failed to get listening areas for circuit: $e");
+      return <ListeningArea>[];
+    }
+  }
 }
