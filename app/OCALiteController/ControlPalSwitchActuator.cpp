@@ -9,7 +9,6 @@
 #include "ControlPalSwitchActuator.h"
 #include <HostInterfaceLite/OCA/OCF/Logging/IOcfLiteLog.h>
 #include "PlatformInterface/linux/OcaLiteOcfMsgQueue.h"
-#include "HostInterface/CommandInterface/CommandInterface.h"
 #include "ControlPalOcaUtils.h"
 
 ControlPalSwitchActuator::ControlPalSwitchActuator(::OcaONo objectNumber,
@@ -23,8 +22,10 @@ ControlPalSwitchActuator::ControlPalSwitchActuator(::OcaONo objectNumber,
                                                const std::string &zoneID,
                                                const ::OcaONo zoneONo,
                                                void *cmdQueue)
-    : ::OcaLiteSwitch(objectNumber, lockable, role, ports, minPosition, maxPosition, positionNames, positionEnable),
-      m_zoneID(zoneID), m_zoneONo(zoneONo), m_cmdQueue(cmdQueue)
+    : ::OcaLiteSwitch(objectNumber, lockable, role, ports,
+                      minPosition, maxPosition, positionNames, positionEnable),
+      ControlPalMsgInterface(cmdQueue),
+      m_zoneID(zoneID), m_zoneONo(zoneONo)
 {
     OCA_LOG_INFO("=== ControlPalSwitchActuator Created ===");
     OCA_LOG_INFO_PARAMS("Object Number: %u", objectNumber);
@@ -36,15 +37,8 @@ ControlPalSwitchActuator::ControlPalSwitchActuator(::OcaONo objectNumber,
 
 ::OcaLiteStatus ControlPalSwitchActuator::SetPositionValue(::OcaUint16 position)
 {
-    ControlPal_MsgQueue<ControllerCmdIntfc> *cmdQueue =
-                         static_cast<ControlPal_MsgQueue<ControllerCmdIntfc> * >(m_cmdQueue);
-    ControllerCmdIntfc setPositionCmd;
-    setPositionCmd.cmd = CTRL_CMD_SOURCE_SET;
-    setPositionCmd.ono = m_zoneONo; // Zone ONo
-    setPositionCmd.val.int_val = static_cast<uint32_t>(position);
-
     // Call fn. to send Source POSITION value command to UI task
-    cmdQueue->push(setPositionCmd);
+    SendValue();
 
     OCA_LOG_INFO_PARAMS("[SWITCH] SetPositionValue -> %u (Zone ID: %s)", position, m_zoneID.empty() ? "N/A" : m_zoneID.c_str());
     return OCASTATUS_OK;
@@ -74,3 +68,18 @@ ControlPalSwitchActuator::ControlPalSwitchActuator(::OcaONo objectNumber,
     OCA_LOG_INFO_PARAMS("[SWITCH] SetPositionEnabledsValue count=%u (Zone ID: %s)", enableds.GetCount(), m_zoneID.empty() ? "N/A" : m_zoneID.c_str());
     return OCASTATUS_OK;
 }
+
+void ControlPalSwitchActuator::SendValue()
+{
+    ::OcaUint16 posVal, minVal, maxVal;
+    ControllerCmdIntfc setPositionCmd;
+
+    GetPosition( posVal, minVal, maxVal);
+
+    setPositionCmd.cmd = CTRL_CMD_SOURCE_SET;
+    setPositionCmd.ono = m_zoneONo; // Zone ONo
+    setPositionCmd.val.int_val = static_cast<uint32_t>(posVal);
+
+    PushToMsgQueue(setPositionCmd);
+}
+

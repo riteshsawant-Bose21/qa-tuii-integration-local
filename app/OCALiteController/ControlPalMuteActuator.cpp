@@ -16,7 +16,6 @@
 #include "ControlPalMuteActuator.h"
 #include <HostInterfaceLite/OCA/OCF/Logging/IOcfLiteLog.h>
 #include "PlatformInterface/linux/OcaLiteOcfMsgQueue.h"
-#include "HostInterface/CommandInterface/CommandInterface.h"
 #include "ControlPalOcaUtils.h"
 
 // ---- Helper types and constants ----
@@ -51,7 +50,8 @@ ControlPalMuteActuator::ControlPalMuteActuator(::OcaONo objectNumber,
                                            const ::OcaONo zoneONo,
                                            void *cmdQueue)
     : ::OcaLiteMute(objectNumber, lockable, role, ports),
-      m_gainID(gainID), m_zoneONo(zoneONo), m_cmdQueue(cmdQueue)
+      ControlPalMsgInterface(cmdQueue),
+      m_gainID(gainID), m_zoneONo(zoneONo)
 {
     // Enhanced logging with dynamic information
     OCA_LOG_INFO("=== ControlPalMuteActuator Created ===");
@@ -77,20 +77,13 @@ ControlPalMuteActuator::ControlPalMuteActuator(::OcaONo objectNumber,
 
 ::OcaLiteStatus ControlPalMuteActuator::SetStateValue(::OcaLiteMuteState muteState)
 {
-    ControlPal_MsgQueue<ControllerCmdIntfc> *cmdQueue =
-                         static_cast<ControlPal_MsgQueue<ControllerCmdIntfc> * >(m_cmdQueue);
-    ControllerCmdIntfc setMuteCmd;
-    setMuteCmd.cmd = CTRL_CMD_MUTE_SET;
-    setMuteCmd.ono = m_zoneONo; //Zone Ono
-    setMuteCmd.val.int_val = static_cast<uint32_t>(muteState);
-
     try
     {
         OCA_LOG_INFO_PARAMS("[MUTE] Setting mute state to %s (Gain ID: %s)",
                             muteStateToString(muteState), m_gainID.empty() ? "N/A" : m_gainID.c_str());
 
         // Call fn. to send MUTE value command to UI task
-        cmdQueue->push(setMuteCmd);
+        SendValue();
 
         OCA_LOG_INFO_PARAMS("[MUTE] ✓ Mute state successfully set to %s (Gain ID: %s)",
                             muteStateToString(muteState), m_gainID.empty() ? "N/A" : m_gainID.c_str());
@@ -104,3 +97,16 @@ ControlPalMuteActuator::ControlPalMuteActuator(::OcaONo objectNumber,
     }
 }
 
+void ControlPalMuteActuator::SendValue()
+{
+    ControllerCmdIntfc setMuteCmd;
+    OcaLiteMuteState muteState;
+
+    GetState(muteState);
+
+    setMuteCmd.cmd = CTRL_CMD_MUTE_SET;
+    setMuteCmd.ono = m_zoneONo; //Zone Ono
+    setMuteCmd.val.int_val = static_cast<uint32_t>(muteState);
+
+    PushToMsgQueue(setMuteCmd);
+}

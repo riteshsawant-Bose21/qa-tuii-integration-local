@@ -52,78 +52,65 @@ void ProcessCommand(ControllerCmdIntfc& newCmd, FusionProxy& fusion_proxy)
     switch (newCmd.cmd)
     {
         case CTRL_CMD_GAIN_GET:
-            //TODO:
             // Verify Class ID
             target = FindObject(newCmd.ono, ::OcaLiteGain::CLASS_ID);
             if (target)
             {
-                // Read local gain
-                ::OcaDB gainVal, minVal, maxVal;
-                static_cast<::OcaLiteGain*>(target)->GetGain(gainVal,
-                                                             minVal,
-                                                             maxVal);
-
                 //TODO: Send back value
+                static_cast<::ControlPalGainActuator*>(target)->SendValue();
             }
             break;
 
         case CTRL_CMD_MUTE_GET:
-            //TODO:
             // Verify Class ID
             target = FindObject(newCmd.ono, ::OcaLiteMute::CLASS_ID);
             if (target)
             {
-                OcaLiteMuteState muteVal;
-                static_cast<::OcaLiteMute*>(target)->GetState(muteVal);
-
                 //TODO: Send back value
+                static_cast<::ControlPalMuteActuator*>(target)->SendValue();
+
             }
             break;
 
         case CTRL_CMD_SOURCE_GET:
-            //TODO:
             // Verify Class ID
             target = FindObject(newCmd.ono, ::OcaLiteSwitch::CLASS_ID);
             if (target)
             {
-                ::OcaUint16 posVal, minVal, maxVal;
-                static_cast<::OcaLiteSwitch*>(target)->GetPosition(posVal,
-                                                                   minVal,
-                                                                   maxVal);
-
                 //TODO: Send back value
+                static_cast<::ControlPalSwitchActuator*>(target)->SendValue();
             }
             break;
 
         case CTRL_CMD_GAIN_SET:
-            //TODO:
             // Verify Class ID
             target = FindObject(newCmd.ono, ::OcaLiteGain::CLASS_ID);
             if (target)
             {
-                fusion_proxy.ConcreteGainActuator_SetGain(target->GetObjectNumber(),
+                fusion_proxy.ConcreteGainActuator_SetGain(
+                                     target->GetObjectNumber(),
                                      static_cast<::OcaDB>(newCmd.val.flt_val));
             }
             break;
 
         case CTRL_CMD_MUTE_SET:
-            //TODO:
             // Verify Class ID
             target = FindObject(newCmd.ono, ::OcaLiteMute::CLASS_ID);
             if (target)
             {
-                fusion_proxy.ConcreteMuteActuator_SetMute(target->GetObjectNumber(),
+                fusion_proxy.ConcreteMuteActuator_SetMute(
+                         target->GetObjectNumber(),
                          static_cast<::OcaLiteMuteState>(newCmd.val.int_val));
             }
             break;
 
         case CTRL_CMD_SOURCE_SET:
-            //TODO:
             // Verify Class ID
             target = FindObject(newCmd.ono, ::OcaLiteSwitch::CLASS_ID);
             if (target)
             {
-                fusion_proxy.ConcreteSwitchActuator_SetSwitch(target->GetObjectNumber(),
+                fusion_proxy.ConcreteSwitchActuator_SetSwitch(
+                         target->GetObjectNumber(),
                          static_cast<::OcaUint16>(newCmd.val.int_val));
             }
             break;

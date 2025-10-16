@@ -13,6 +13,8 @@
 
 // ---- Include local include files ----
 #include <OCC/ControlClasses/Workers/Actuators/OcaLiteGain.h>
+#include "HostInterface/CommandInterface/CommandInterface.h"
+#include "ControlPalMsgInterface.h"
 
 // ---- Referenced classes and types ----
 
@@ -25,7 +27,8 @@
  * ControlPal implementation of a gain actuator that actually performs gain adjustment.
  * This class inherits from OcaLiteGain and implements the pure virtual SetGainValue method.
  */
-class ControlPalGainActuator : public ::OcaLiteGain
+class ControlPalGainActuator : public ::OcaLiteGain,
+                               public ControlPalMsgInterface<ControllerCmdIntfc>
 {
 public:
     /**
@@ -60,6 +63,8 @@ public:
         return m_zoneONo;
     }
 
+    void SendValue();
+
 protected:
     /**
      * Set the value of the Gain property. This method performs the actual
@@ -76,9 +81,6 @@ private:
 
     // ONo of the ZoneBlock
     ::OcaONo    m_zoneONo;
-
-    // Pointer to command queue
-    void *m_cmdQueue;
 
     /** private copy constructor, no copying of object allowed */
     ControlPalGainActuator(const ControlPalGainActuator &);

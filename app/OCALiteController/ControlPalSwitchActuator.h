@@ -9,13 +9,16 @@
 #define CONTROLPAL_SWITCHACTUATOR_H
 
 #include <OCC/ControlClasses/Workers/Actuators/OcaLiteSwitch.h>
+#include "HostInterface/CommandInterface/CommandInterface.h"
+#include "ControlPalMsgInterface.h"
 
 /**
  * ControlPal implementation of OcaLiteSwitch used for simple source selection.
  * Sources are provided at construction time (position names) and all enabled.
  * Implements the pure virtual mutator methods required by OcaLiteSwitch.
  */
-class ControlPalSwitchActuator : public ::OcaLiteSwitch
+class ControlPalSwitchActuator : public ::OcaLiteSwitch,
+                                 public ControlPalMsgInterface<ControllerCmdIntfc>
 {
 public:
     ControlPalSwitchActuator(::OcaONo objectNumber,
@@ -37,6 +40,8 @@ public:
         return m_zoneONo;
     }
 
+    void SendValue();
+
 protected:
     // Store selected position internally (base also keeps its own). We mirror for potential future hardware logic.
     virtual ::OcaLiteStatus SetPositionValue(::OcaUint16 position) override;
@@ -51,9 +56,6 @@ private:
     
     // ONo of the ZoneBlock
     ::OcaONo    m_zoneONo;
-
-    // Pointer to command queue
-    void *m_cmdQueue;
 
     ControlPalSwitchActuator(const ControlPalSwitchActuator &);
     ControlPalSwitchActuator &operator=(const ControlPalSwitchActuator &);

@@ -17,7 +17,6 @@
 #include "ControlPalGainActuator.h"
 #include <HostInterfaceLite/OCA/OCF/Logging/IOcfLiteLog.h>
 #include "PlatformInterface/linux/OcaLiteOcfMsgQueue.h"
-#include "HostInterface/CommandInterface/CommandInterface.h"
 #include "ControlPalOcaUtils.h"
 
 // ---- Helper types and constants ----
@@ -54,7 +53,8 @@ ControlPalGainActuator::ControlPalGainActuator(::OcaONo objectNumber,
                                            ::OcaONo zoneONo,
                                            void *cmdQueue)
     : ::OcaLiteGain(objectNumber, lockable, role, ports, minGain, maxGain),
-      m_gainID(gainID), m_zoneONo(zoneONo), m_cmdQueue(cmdQueue)
+      ControlPalMsgInterface(cmdQueue),
+      m_gainID(gainID), m_zoneONo(zoneONo)
 {
     // Enhanced logging with dynamic information
     OCA_LOG_INFO("=== ControlPalGainActuator Created ===");
@@ -80,25 +80,19 @@ ControlPalGainActuator::ControlPalGainActuator(::OcaONo objectNumber,
 
 ::OcaLiteStatus ControlPalGainActuator::SetGainValue(::OcaDB gain)
 {
-    ControlPal_MsgQueue<ControllerCmdIntfc> *cmdQueue =
-                         static_cast<ControlPal_MsgQueue<ControllerCmdIntfc> * >(m_cmdQueue);
-    ControllerCmdIntfc setGainCmd;
-    setGainCmd.cmd = CTRL_CMD_GAIN_SET;
-    setGainCmd.ono = m_zoneONo;
-    setGainCmd.val.flt_val = gain;
-
     try
     {
-        OCA_LOG_INFO_PARAMS("[GAIN] Setting gain to %.2f dB (Gain ID: %s)", gain, m_gainID.empty() ? "N/A" : m_gainID.c_str());
+        OCA_LOG_INFO_PARAMS("[GAIN] Setting gain to %.2f dB (Gain ID: %s)",
+                gain, m_gainID.empty() ? "N/A" : m_gainID.c_str());
 
         // Convert dB to linear for internal processing (if needed)
         double linearGain = dbToLinear(gain);
 
-        // Call fn. to send GAIN value command to UI task
-        cmdQueue->push(setGainCmd);
+        // Call fn. to send GAIN value command to frontend task
+        SendValue();
 
         OCA_LOG_INFO_PARAMS("[GAIN] ✓ Gain successfully set to %.2f dB (linear: %.6f) (Gain ID: %s)",
-                            gain, linearGain, m_gainID.empty() ? "N/A" : m_gainID.c_str());
+                gain, linearGain, m_gainID.empty() ? "N/A" : m_gainID.c_str());
 
         return OCASTATUS_OK;
     }
@@ -107,5 +101,18 @@ ControlPalGainActuator::ControlPalGainActuator(::OcaONo objectNumber,
         OCA_LOG_ERROR_PARAMS("[GAIN] Error setting gain: %s", e.what());
         return OCASTATUS_PROCESSING_FAILED;
     }
+}
+
+void ControlPalGainActuator::SendValue()
+{
+    ::OcaDB gainVal, minVal, maxVal;
+    ControllerCmdIntfc setGainCmd;
+
+    GetGain(gainVal, minVal, maxVal);
+    setGainCmd.cmd = CTRL_CMD_GAIN_SET;
+    setGainCmd.ono = m_zoneONo;
+    setGainCmd.val.flt_val = gainVal;
+
+    PushToMsgQueue(setGainCmd);
 }
 

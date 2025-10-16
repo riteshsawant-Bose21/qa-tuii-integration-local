@@ -14,6 +14,8 @@
 
 // ---- Include local include files ----
 #include <OCC/ControlClasses/Workers/Actuators/OcaLiteMute.h>
+#include "HostInterface/CommandInterface/CommandInterface.h"
+#include "ControlPalMsgInterface.h"
 
 // ---- Referenced classes and types ----
 
@@ -28,7 +30,8 @@
  * This class provides a real implementation of the mute functionality
  * by implementing the pure virtual SetStateValue method from OcaLiteMute.
  */
-class ControlPalMuteActuator : public ::OcaLiteMute
+class ControlPalMuteActuator : public ::OcaLiteMute,
+                               public ControlPalMsgInterface<ControllerCmdIntfc>
 {
 public:
     /**
@@ -59,6 +62,8 @@ public:
         return m_zoneONo;
     }
 
+    void SendValue();
+
 protected:
     /**
      * Implementation of pure virtual SetStateValue from OcaLiteMute.
@@ -76,9 +81,6 @@ private:
 
     // ONo of the ZoneBlock
     ::OcaONo    m_zoneONo;
-
-    // Pointer to command queue
-    void *m_cmdQueue;
 
     /** Copy constructor */
     ControlPalMuteActuator(const ControlPalMuteActuator &);
