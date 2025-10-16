@@ -7,6 +7,7 @@ import 'package:fusion_lib/models/project_entities/source_model.dart';
 import '../../../../core/models/products_data.dart';
 import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
+import '../../../product_query/presentation/pages/product_query.dart';
 
 class ExpandablePopupMenuWidget extends StatefulWidget {
   final String sectionTitle;
@@ -21,6 +22,9 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
   bool _microphoneExpanded = false;
   bool _mediaSourceExpanded = false;
   bool _processorsExpanded = false;
+  bool _amplifiersExpanded = false;
+  bool _speakersExpanded = false;
+  bool _controllersExpanded = false;
   bool _racksExpanded = false;
   bool _endPointsExpanded = false;
   bool _otherDevicesExpanded = false;
@@ -28,14 +32,16 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
   /// Returns tooltip text based on the section title
   String getSectionToolTip() {
     switch (widget.sectionTitle) {
-      case "Sources":
-        return "Add Source";
+      case "Sources & Endpoints":
+        return "Add Source or Endpoint";
       case "Processors & Amplifiers":
         return "Add Processor or Amplifier";
-      case "End Points":
-        return "Add End Point";
-      case "Other Devices":
-        return "Add Other Device";
+      case "Speakers":
+        return "Add Speaker";
+      case "Controllers":
+        return "Add Controller";
+      case "Accessories":
+        return "Add Accessory";
       default:
         return "Add Device";
     }
@@ -100,93 +106,91 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
   /// Builds sections based on the provided section title
   List<Widget> _buildSectionsForTitle(StateSetter setMenuState) {
     switch (widget.sectionTitle) {
-      case "Sources":
+      case "Sources & Endpoints":
         return <Widget>[
-          /// Microphones Section
-          _buildExpandableSection(
+          _buildExpandableSection<SourceData>(
             title: 'MICROPHONES',
             isExpanded: _microphoneExpanded,
             onTap: () => setMenuState(() => _microphoneExpanded = !_microphoneExpanded),
             items: SourceData.microphoneItems,
           ),
-
-          /// Media Sources Section
-          _buildExpandableSection(
+          _buildExpandableSection<SourceData>(
             title: 'MEDIA SOURCES',
             isExpanded: _mediaSourceExpanded,
             onTap: () => setMenuState(() => _mediaSourceExpanded = !_mediaSourceExpanded),
             items: SourceData.mediaSourceItems,
+          ),
+          _buildExpandableSection<ProductQueryModel>(
+            title: 'END POINTS',
+            isExpanded: _endPointsExpanded,
+            onTap: () => setMenuState(() => _endPointsExpanded = !_endPointsExpanded),
+            items: ProductAPI.getEndpoints(),
           ),
         ];
 
       case "Processors & Amplifiers":
         return <Widget>[
-          /// Processors & Amplifiers Section
-          _buildExpandableSection(
-            title: 'PROCESSORS & AMPLIFIERS',
+          _buildExpandableSection<ProductQueryModel>(
+            title: 'PROCESSORS',
             isExpanded: _processorsExpanded,
             onTap: () => setMenuState(() => _processorsExpanded = !_processorsExpanded),
-            items: SourceData.microphoneItems, // Replace with actual processor items when available
+            items: ProductAPI.getControllers(),
+          ),
+          _buildExpandableSection<ProductQueryModel>(
+            title: 'AMPLIFIERS',
+            isExpanded: _amplifiersExpanded,
+            onTap: () => setMenuState(() => _amplifiersExpanded = !_amplifiersExpanded),
+            items: ProductAPI.getAmplifierProducts(),
           ),
         ];
 
-      case "End Points":
+      case "Speakers":
         return <Widget>[
-          /// End Points Section
-          _buildExpandableSection(
-            title: 'END POINTS',
-            isExpanded: _endPointsExpanded,
-            onTap: () => setMenuState(() => _endPointsExpanded = !_endPointsExpanded),
-            items: SourceData.microphoneItems, // Replace with actual endpoint items when available
+          _buildExpandableSection<ProductQueryModel>(
+            title: 'SPEAKERS',
+            isExpanded: _speakersExpanded,
+            onTap: () => setMenuState(() => _speakersExpanded = !_speakersExpanded),
+            items: ProductAPI.getSpeakerProducts(),
           ),
         ];
 
-      case "Other Devices":
+      case "Controllers":
         return <Widget>[
-          /// Racks Section
-          _buildExpandableSection(
+          _buildExpandableSection<ProductQueryModel>(
+            title: 'CONTROLLERS',
+            isExpanded: _controllersExpanded,
+            onTap: () => setMenuState(() => _controllersExpanded = !_controllersExpanded),
+            items: ProductAPI.getControllers(),
+          ),
+        ];
+
+      case "Accessories":
+        return <Widget>[
+          _buildExpandableSection<String>(
             title: 'RACKS',
             isExpanded: _racksExpanded,
             onTap: () => setMenuState(() => _racksExpanded = !_racksExpanded),
-            items: SourceData.microphoneItems, // Replace with actual rack items when available
+            items: <String>['4U', '8U', '12U', '24U'],
           ),
-
-          /// Other Devices Section
-          _buildExpandableSection(
+          _buildExpandableSection<SourceData>(
             title: 'OTHER DEVICES',
             isExpanded: _otherDevicesExpanded,
             onTap: () => setMenuState(() => _otherDevicesExpanded = !_otherDevicesExpanded),
-            items: SourceData.microphoneItems, // Replace with actual other device items when available
+            items: SourceData.microphoneItems,
           ),
         ];
 
       default:
-        return <Widget>[
-          /// Show all sections if no specific match
-          _buildExpandableSection(
-            title: 'MICROPHONES',
-            isExpanded: _microphoneExpanded,
-            onTap: () => setMenuState(() => _microphoneExpanded = !_microphoneExpanded),
-            items: SourceData.microphoneItems,
-          ),
-
-          /// Media Sources Section
-          _buildExpandableSection(
-            title: 'MEDIA SOURCES',
-            isExpanded: _mediaSourceExpanded,
-            onTap: () => setMenuState(() => _mediaSourceExpanded = !_mediaSourceExpanded),
-            items: SourceData.mediaSourceItems,
-          ),
-        ];
+        return <Widget>[];
     }
   }
 
   /// Builds an expandable section with a header and items
-  Widget _buildExpandableSection({
+  Widget _buildExpandableSection<T>({
     required String title,
     required bool isExpanded,
     required VoidCallback onTap,
-    required List<SourceData> items,
+    required List<T> items,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -220,23 +224,36 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
         /// Section Items (conditionally shown)
         if (isExpanded)
           ...items.map(
-            (SourceData item) => InkWell(
+            (T item) => InkWell(
               onTap: () {
                 Navigator.of(context).pop();
-                final Source source = Source(
-                  name: item.name,
-                  pos: null,
-                  type: item.type,
-                  assetImagePath: item.assetPath,
-                  locationEntity: LocationModel(),
-                  sku: item.id,
-                  price: item.price,
-                );
-                serviceLocator<ProjectViewModel>().addHardware(source);
+                if (item is SourceData) {
+                  final Source source = Source(
+                    name: item.name,
+                    pos: null,
+                    type: item.type,
+                    assetImagePath: item.assetPath,
+                    locationEntity: LocationModel(),
+                    sku: item.id,
+                    price: item.price,
+                  );
+                  serviceLocator<ProjectViewModel>().addHardware(source);
+                } else if (item is ProductQueryModel) {
+                  // final Source source = Source(
+                  //   name: item.name,
+                  //   pos: null,
+                  //   type: item.type.name,
+                  //   assetImagePath: item.image.isNotEmpty ? item.image : _getDefaultImageForProductType(item.type),
+                  //   locationEntity: LocationModel(),
+                  //   sku: item.sku,
+                  //   price: item.price,
+                  // );
+                  // serviceLocator<ProjectViewModel>().addHardware(source);
+                }
               },
               child: Container(
                 height: 30,
-                width: 218, // Fixed width for items (250 - 16 left - 16 right)
+                width: 218,
                 margin: const EdgeInsets.only(left: 16, right: 16, bottom: 2),
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                 decoration: BoxDecoration(
@@ -245,20 +262,32 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
                 ),
                 child: Row(
                   children: <Widget>[
-                    Image.asset(
-                      item.assetPath,
-                      height: 14,
-                      width: 14,
-                    ),
+                    if (item is SourceData)
+                      Image.asset(
+                        item.assetPath,
+                        height: 14,
+                        width: 14,
+                      )
+                    else if (item is ProductQueryModel)
+                      FusionImage.asset(
+                        item.image.isNotEmpty ? item.image : _getDefaultImageForProductType(item.type),
+                        height: 14,
+                        width: 14,
+                        fit: BoxFit.contain,
+                      )
+                    else
+                      Container(
+                        height: 14,
+                        width: 14,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[400],
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
                     const SizedBox(width: 8),
                     Expanded(
-                      // child: Text(
-                      //   item.name,
-                      //   style: const TextStyle(fontSize: 12),
-                      //   overflow: TextOverflow.ellipsis,
-                      // ),
                       child: FusionAppText(
-                        text: item.name,
+                        text: _getDisplayName(item),
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ),
@@ -269,5 +298,36 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
           ),
       ],
     );
+  }
+
+  /// Get display name for different item types
+  String _getDisplayName(dynamic item) {
+    if (item is SourceData) {
+      return item.name;
+    } else if (item is ProductQueryModel) {
+      return item.name;
+    } else if (item is String) {
+      return item;
+    }
+    return item.toString();
+  }
+
+  /// Get default image for ProductType
+  String _getDefaultImageForProductType(ProductType type) {
+    switch (type) {
+      case ProductType.speaker:
+        return "assets/images/speakers/DM_pendant.png";
+      case ProductType.amplifier:
+        return "assets/images/amps/default_amp.png";
+      case ProductType.dsps:
+      case ProductType.endpoints:
+        return "assets/images/devices/default_device.png";
+      case ProductType.sources:
+        return "assets/images/products/mic1.png";
+      case ProductType.controllers:
+        return "assets/images/products/bose_dsp.png";
+      case ProductType.racks:
+        return "assets/images/products/rack.png";
+    }
   }
 }
