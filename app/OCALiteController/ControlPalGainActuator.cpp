@@ -18,6 +18,7 @@
 #include <HostInterfaceLite/OCA/OCF/Logging/IOcfLiteLog.h>
 #include "PlatformInterface/linux/OcaLiteOcfMsgQueue.h"
 #include "HostInterface/CommandInterface/CommandInterface.h"
+#include "ControlPalOcaUtils.h"
 
 // ---- Helper types and constants ----
 
@@ -50,9 +51,10 @@ ControlPalGainActuator::ControlPalGainActuator(::OcaONo objectNumber,
                                            ::OcaDB minGain,
                                            ::OcaDB maxGain,
                                            const std::string &gainID,
+                                           ::OcaONo zoneONo,
                                            void *cmdQueue)
     : ::OcaLiteGain(objectNumber, lockable, role, ports, minGain, maxGain),
-      m_gainID(gainID), m_cmdQueue(cmdQueue)
+      m_gainID(gainID), m_zoneONo(zoneONo), m_cmdQueue(cmdQueue)
 {
     // Enhanced logging with dynamic information
     OCA_LOG_INFO("=== ControlPalGainActuator Created ===");
@@ -82,6 +84,7 @@ ControlPalGainActuator::ControlPalGainActuator(::OcaONo objectNumber,
                          static_cast<ControlPal_MsgQueue<ControllerCmdIntfc> * >(m_cmdQueue);
     ControllerCmdIntfc setGainCmd;
     setGainCmd.cmd = CTRL_CMD_GAIN_SET;
+    setGainCmd.ono = m_zoneONo;
     setGainCmd.val.flt_val = gain;
 
     try

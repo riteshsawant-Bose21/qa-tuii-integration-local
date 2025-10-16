@@ -277,6 +277,7 @@ ZoneGroup* CreateZoneGroup(Zone& newZone, void *commandQueue)
                 -20.0,
                 60.0,
                 newZone.gain.gainID,
+                newZone.ono.zone,
                 commandQueue);
         if (newGainObj)
         {
@@ -290,6 +291,7 @@ ZoneGroup* CreateZoneGroup(Zone& newZone, void *commandQueue)
                 static_cast<const ::OcaLiteString>("Mute"),
                 emptyPorts,
                 newZone.gain.gainID,
+                newZone.ono.zone,
                 commandQueue);
         if (newMuteObj)
         {
@@ -325,6 +327,7 @@ ZoneGroup* CreateZoneGroup(Zone& newZone, void *commandQueue)
                 label,
                 enable,
                 newZone.id,
+                newZone.ono.zone,
                 commandQueue);
 
         // Add to block
@@ -423,6 +426,13 @@ ZoneGroup* CreateZoneGroup(Zone& newZone, void *commandQueue)
             {
                 zoneONo.push_back(newGroup->GetObjectNumber());
             }
+
+            //TODO: Send UI the control details
+            //          Send Zone Name
+            //          Gain Val
+            //          Mute State
+            //          Selector details (positions, manes, state)
+
         }
     }
 

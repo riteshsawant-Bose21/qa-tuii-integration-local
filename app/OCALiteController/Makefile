@@ -77,6 +77,8 @@ APP_SOURCES := OCALiteController.cpp \
                ControlPalMuteActuator.cpp \
                ControlPalSwitchActuator.cpp \
                ControlPalSetupUtils.cpp \
+               ControlPalOcaUtils.cpp \
+               ControlPalCommandHandler.cpp \
                $(shell find HostInterface -name "*.cpp")
 
 # Object files in build directory, preserving directory structure

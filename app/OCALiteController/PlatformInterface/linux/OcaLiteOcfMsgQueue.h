@@ -1,3 +1,6 @@
+#ifndef _OCALITE_OCF_MSG_QUEUE_H
+#define _OCALITE_OCF_MSG_QUEUE_H
+
 #include <queue>
 #include <mutex>
 #include <condition_variable>
@@ -33,3 +36,4 @@ private:
     std::condition_variable cond_var_;
 };
 
+#endif

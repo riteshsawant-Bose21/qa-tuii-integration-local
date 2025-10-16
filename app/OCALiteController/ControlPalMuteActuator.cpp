@@ -17,6 +17,7 @@
 #include <HostInterfaceLite/OCA/OCF/Logging/IOcfLiteLog.h>
 #include "PlatformInterface/linux/OcaLiteOcfMsgQueue.h"
 #include "HostInterface/CommandInterface/CommandInterface.h"
+#include "ControlPalOcaUtils.h"
 
 // ---- Helper types and constants ----
 
@@ -47,9 +48,10 @@ ControlPalMuteActuator::ControlPalMuteActuator(::OcaONo objectNumber,
                                            const ::OcaLiteString &role,
                                            const ::OcaLiteList<::OcaLitePort> &ports,
                                            const std::string &gainID,
+                                           const ::OcaONo zoneONo,
                                            void *cmdQueue)
     : ::OcaLiteMute(objectNumber, lockable, role, ports),
-      m_gainID(gainID), m_cmdQueue(cmdQueue)
+      m_gainID(gainID), m_zoneONo(zoneONo), m_cmdQueue(cmdQueue)
 {
     // Enhanced logging with dynamic information
     OCA_LOG_INFO("=== ControlPalMuteActuator Created ===");
@@ -79,6 +81,7 @@ ControlPalMuteActuator::ControlPalMuteActuator(::OcaONo objectNumber,
                          static_cast<ControlPal_MsgQueue<ControllerCmdIntfc> * >(m_cmdQueue);
     ControllerCmdIntfc setMuteCmd;
     setMuteCmd.cmd = CTRL_CMD_MUTE_SET;
+    setMuteCmd.ono = m_zoneONo; //Zone Ono
     setMuteCmd.val.int_val = static_cast<uint32_t>(muteState);
 
     try

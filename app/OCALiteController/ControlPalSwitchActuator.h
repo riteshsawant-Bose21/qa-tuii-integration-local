@@ -27,9 +27,15 @@ public:
                            const ::OcaLiteList<::OcaLiteString> &positionNames,
                            const ::OcaLiteList<::OcaBoolean> &positionEnable,
                            const std::string &zoneID,
+                           const ::OcaONo zoneONo,
                            void *commandQue);
 
     virtual ~ControlPalSwitchActuator() {}
+
+    ::OcaONo GetZoneONo()
+    {
+        return m_zoneONo;
+    }
 
 protected:
     // Store selected position internally (base also keeps its own). We mirror for potential future hardware logic.
@@ -43,6 +49,9 @@ private:
     /** The zone identifier from JSON configuration */
     std::string m_zoneID;
     
+    // ONo of the ZoneBlock
+    ::OcaONo    m_zoneONo;
+
     // Pointer to command queue
     void *m_cmdQueue;
 

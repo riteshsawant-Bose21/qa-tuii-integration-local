@@ -35,6 +35,7 @@
 #include "ControlPalSwitchActuator.h"
 #include "ControlPalSetupUtils.h"
 #include "ControlPalConnectionMonitor.h"
+#include "ControlPalCommandHandler.h"
 #include "HostInterface/CommandInterface/CommandInterface.h"
 #include "PlatformInterface/linux/OcaLiteOcfMsgQueue.h"
 
@@ -180,15 +181,19 @@ bool ocaMain(std::string& customNodeId,
                                                  static_cast<void *>(ocaMsgQueue)))
                                         {
                                             ::OcaBoolean connectStatus(true);
+                                            FusionProxy fusion_proxy(
+                                                sessionId,
+                                                ocp1Network->GetObjectNumber());
+
                                             while (connectStatus)
                                             {
                                                 // Wait for Events from Device
                                                 ::OcaLiteCommandHandler::GetInstance().RunWithTimeout(OCA_RUN_TIMEOUT_MSEC);
 
-                                                //TODO: Check for local h/w events
-
-                                                //*uiMsgQueue
-                                                //*
+                                                //TODO: Check for local UI command
+                                                {
+                                                    ControlPalUICommandHandler(uiMsgQueue, zoneONos, fusion_proxy);
+                                                }
 
                                                 // Check Connection status
                                                 connMonitor->GetSetting(connectStatus);

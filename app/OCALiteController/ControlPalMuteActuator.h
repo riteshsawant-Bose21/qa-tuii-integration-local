@@ -46,12 +46,18 @@ public:
                          const ::OcaLiteString &role,
                          const ::OcaLiteList<::OcaLitePort> &ports,
                          const std::string &gainID,
+                         const ::OcaONo zoneONo,
                          void *commandQue);
 
     /**
      * Destructor.
      */
     virtual ~ControlPalMuteActuator() {}
+
+    ::OcaONo GetZoneONo()
+    {
+        return m_zoneONo;
+    }
 
 protected:
     /**
@@ -67,6 +73,9 @@ private:
 
     /** The gain identifier from JSON configuration */
     std::string m_gainID;
+
+    // ONo of the ZoneBlock
+    ::OcaONo    m_zoneONo;
 
     // Pointer to command queue
     void *m_cmdQueue;
