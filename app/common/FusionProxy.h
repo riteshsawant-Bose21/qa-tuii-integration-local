@@ -58,8 +58,9 @@ public:
      *
      * @return The resulting status.
      */
-    ::OcaLiteStatus FusionBlock_GetMembersRecursive(::OcaONo remoteObjectNumber,
-                                                    ::OcaLiteList<::OcaLiteBlockMember>& members);
+    ::OcaLiteStatus FusionBlock_GetMembersRecursive(
+                                ::OcaONo remoteObjectNumber,
+                                ::OcaLiteList<::OcaLiteBlockMember>& members);
     
     /**
      * GetMembers from an OcaBlock
@@ -69,8 +70,23 @@ public:
      *
      * @return The resulting status.
      */
-    ::OcaLiteStatus FusionBlock_GetMembers(::OcaONo remoteObjectNumber,
-                                           ::OcaLiteList< ::OcaLiteObjectIdentification>& members);
+    ::OcaLiteStatus FusionBlock_GetMembers(
+            ::OcaONo remoteObjectNumber,
+            ::OcaLiteList< ::OcaLiteObjectIdentification>& members);
+
+        /**
+     * Get configuration details from the Controller Config Manager
+     *
+     * @param[in]  managerONo     The object number of the Config Manager (typically 8001)
+     * @param[in]  controllerId   The controller ID to get configuration for
+     * @param[out] configData     The configuration data as string
+     *
+     * @return The resulting status
+     */
+    ::OcaLiteStatus OcaControllerConfigManager_GetConfigDetails(
+                                         ::OcaONo managerONo,
+                                         const ::OcaLiteString &controllerId,
+                                         ::OcaLiteString &configData);
 
     ::OcaLiteStatus ConcreteGainActuator_SetGain(::OcaONo remoteObjectNumber,
                                                  ::OcaDB gainVal);

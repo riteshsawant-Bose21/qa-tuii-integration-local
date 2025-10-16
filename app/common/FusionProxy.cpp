@@ -129,6 +129,53 @@ FusionProxy::FusionProxy(::OcaSessionID sessionId, ::OcaONo networkObjectNumber)
     return rc;
 }
 
+::OcaLiteStatus FusionProxy::OcaControllerConfigManager_GetConfigDetails(
+                                           ::OcaONo managerONo,
+                                           const ::OcaLiteString &controllerId,
+                                           ::OcaLiteString &configData)
+{
+    const ::IOcaLiteWriter &writer(::OcaLiteNetworkManager::GetInstance().GetNetwork(m_networkObjectNumber)->GetWriter());
+    ::OcaUint8 *pParams(m_buffer);
+
+    writer.Write(static_cast<UINT8>(1), &pParams); // Nr params
+    controllerId.Marshal(&pParams, writer);
+
+    ::OcaUint32 responseSize;
+    ::OcaUint8 *pResponse;
+    ::OcaLiteMethodID methodId(3, 1);
+
+    ::OcaLiteStatus rc(::OcaLiteCommandHandlerController::GetInstance().SendCommandWithResponse(m_sessionId,
+                                                                                                m_networkObjectNumber,
+                                                                                                managerONo,
+                                                                                                methodId,
+                                                                                                static_cast<::OcaUint32>(pParams - m_buffer),
+                                                                                                m_buffer,
+                                                                                                responseSize,
+                                                                                                &pResponse));
+
+    if ((OCASTATUS_OK == rc) &&
+        (responseSize > 0))
+    {
+        const ::IOcaLiteReader &reader(::OcaLiteNetworkManager::GetInstance().GetNetwork(m_networkObjectNumber)->GetReader());
+        ::OcaUint8 nrParameters(0);
+        const ::OcaUint8 *source(pResponse);
+        reader.Read(responseSize, &source, nrParameters);
+        if (nrParameters == 1)
+        {
+            if (!configData.Unmarshal(responseSize, &source, reader))
+            {
+                rc = OCASTATUS_PARAMETER_ERROR;
+            }
+        }
+        else
+        {
+            rc = OCASTATUS_PARAMETER_ERROR;
+        }
+    }
+
+    return rc;
+}
+
 ::OcaLiteStatus FusionProxy::ConcreteGainActuator_SetGain(::OcaONo remoteObjectNumber, ::OcaDB gainVal)
 {
     const ::IOcaLiteWriter& writer(::OcaLiteNetworkManager::GetInstance().GetNetwork(m_networkObjectNumber)->GetWriter());

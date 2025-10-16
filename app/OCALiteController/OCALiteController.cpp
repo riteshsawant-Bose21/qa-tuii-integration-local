@@ -164,44 +164,52 @@ bool ocaMain(std::string& customNodeId,
                                                 "Created proxy with session ID: %u, network ONO: %u",
                                                 sessionId, ocp1Network->GetObjectNumber());
 
-                                        // TODO: 'controllerID' should be read from Flash config partition
+                                        // TODO: 'controllerID' should be
+                                        // read from Flash config partition
                                         ::OcaLiteString controllerId =
                                             customNodeId.empty() ?
                                             ::OcaLiteString("ctrl1") :
                                             ::OcaLiteString(customNodeId);
 
-                                        // Holds ONo of each zone assigned to the controller
+                                        // Holds ONo of each zone assigned
+                                        // to the controller
                                         std::vector<::OcaONo> zoneONos;
 
+                                        FusionProxy fusion_proxy(
+                                                sessionId,
+                                                ocp1Network->GetObjectNumber());
                                         // Create and setup control objects
                                         if (ControlPalSetupControls(
                                                  controllerId,
                                                  proxy,
+                                                 fusion_proxy,
                                                  zoneONos,
                                                  static_cast<void *>(ocaMsgQueue)))
                                         {
                                             ::OcaBoolean connectStatus(true);
-                                            FusionProxy fusion_proxy(
-                                                sessionId,
-                                                ocp1Network->GetObjectNumber());
 
                                             while (connectStatus)
                                             {
                                                 // Wait for Events from Device
                                                 ::OcaLiteCommandHandler::GetInstance().RunWithTimeout(OCA_RUN_TIMEOUT_MSEC);
 
-                                                //TODO: Check for local UI command
+                                                //Check for local UI command
                                                 {
-                                                    ControlPalUICommandHandler(uiMsgQueue, zoneONos, fusion_proxy);
+                                                    ControlPalUICommandHandler(
+                                                                 uiMsgQueue,
+                                                                 zoneONos,
+                                                                 fusion_proxy);
                                                 }
 
                                                 // Check Connection status
-                                                connMonitor->GetSetting(connectStatus);
+                                                connMonitor->GetSetting(
+                                                                connectStatus);
                                             }
 
                                             // Connection lost, teardown all
                                             // the control objects
-                                            ControlPalTeardownControls(zoneONos);
+                                            ControlPalTeardownControls(
+                                                                    zoneONos);
                                         }
                                         else
                                         {

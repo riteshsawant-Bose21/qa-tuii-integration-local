@@ -151,19 +151,6 @@ public:
      */
     ::OcaLiteStatus OcaCompliancyTestTool_InvalidCall(::OcaONo objectNumber, ::OcaLiteMethodID &methodId);
 
-    /**
-     * Get configuration details from the Controller Config Manager
-     *
-     * @param[in]  managerONo     The object number of the Config Manager (typically 8001)
-     * @param[in]  controllerId   The controller ID to get configuration for
-     * @param[out] configData     The configuration data as string
-     *
-     * @return The resulting status
-     */
-    ::OcaLiteStatus OcaControllerConfigManager_GetConfigDetails(::OcaONo managerONo,
-                                                                const ::OcaLiteString &controllerId,
-                                                                ::OcaLiteString &configData);
-
 protected:
 private:
     /** The session ID */

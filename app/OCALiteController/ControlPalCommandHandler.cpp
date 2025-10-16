@@ -56,7 +56,7 @@ void ProcessCommand(ControllerCmdIntfc& newCmd, FusionProxy& fusion_proxy)
             target = FindObject(newCmd.ono, ::OcaLiteGain::CLASS_ID);
             if (target)
             {
-                //TODO: Send back value
+                //Send back value
                 static_cast<::ControlPalGainActuator*>(target)->SendValue();
             }
             break;
@@ -66,7 +66,7 @@ void ProcessCommand(ControllerCmdIntfc& newCmd, FusionProxy& fusion_proxy)
             target = FindObject(newCmd.ono, ::OcaLiteMute::CLASS_ID);
             if (target)
             {
-                //TODO: Send back value
+                //Send back value
                 static_cast<::ControlPalMuteActuator*>(target)->SendValue();
 
             }
@@ -77,7 +77,7 @@ void ProcessCommand(ControllerCmdIntfc& newCmd, FusionProxy& fusion_proxy)
             target = FindObject(newCmd.ono, ::OcaLiteSwitch::CLASS_ID);
             if (target)
             {
-                //TODO: Send back value
+                //Send back value
                 static_cast<::ControlPalSwitchActuator*>(target)->SendValue();
             }
             break;
@@ -87,6 +87,7 @@ void ProcessCommand(ControllerCmdIntfc& newCmd, FusionProxy& fusion_proxy)
             target = FindObject(newCmd.ono, ::OcaLiteGain::CLASS_ID);
             if (target)
             {
+                // Send message to Device
                 fusion_proxy.ConcreteGainActuator_SetGain(
                                      target->GetObjectNumber(),
                                      static_cast<::OcaDB>(newCmd.val.flt_val));
@@ -98,6 +99,7 @@ void ProcessCommand(ControllerCmdIntfc& newCmd, FusionProxy& fusion_proxy)
             target = FindObject(newCmd.ono, ::OcaLiteMute::CLASS_ID);
             if (target)
             {
+                // Send message to Device
                 fusion_proxy.ConcreteMuteActuator_SetMute(
                          target->GetObjectNumber(),
                          static_cast<::OcaLiteMuteState>(newCmd.val.int_val));
@@ -109,6 +111,7 @@ void ProcessCommand(ControllerCmdIntfc& newCmd, FusionProxy& fusion_proxy)
             target = FindObject(newCmd.ono, ::OcaLiteSwitch::CLASS_ID);
             if (target)
             {
+                // Send message to Device
                 fusion_proxy.ConcreteSwitchActuator_SetSwitch(
                          target->GetObjectNumber(),
                          static_cast<::OcaUint16>(newCmd.val.int_val));

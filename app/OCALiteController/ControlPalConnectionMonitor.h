@@ -40,12 +40,8 @@ class ControlPalConnectionMonitor :
 
         virtual void OnConnectionLost(::OcaSessionID sessionID)
         {
-            // TODO: Signal connection Lost
+            // Signal connection Lost
             SetSetting(static_cast<::OcaBoolean>(false));
-
-            // TODO: Cleanup zone blocks
-
-            // TODO: Start discovery, Connect and create
         }
 
     private:

@@ -17,7 +17,6 @@
 #include <OCP.1/Ocp1LiteNetwork.h>
 #include <OCP.1/Ocp1LiteNetworkSystemInterfaceID.h>
 #include <OCP.1/Ocp1LiteConnectParameters.h>
-#include <Proxy/GeneralProxy.h>
 #include <StandardLib/StandardLib.h>
 #include <OCC/ControlDataTypes/OcaLiteBlockMember.h>
 #include <OCC/ControlDataTypes/OcaLiteList.h>
@@ -32,6 +31,7 @@
 #include "ControlPalMuteActuator.h"
 #include "ControlPalSwitchActuator.h"
 #include "ControlPalSetupUtils.h"
+
 
 // Helper functions
 void DisplayDiscoveredDevices(
@@ -86,7 +86,7 @@ void DisplayDiscoveredDevices(
 }
 
 ::OcaLiteStatus GetControllerConfig(::OcaLiteString& controllerId,
-                                    ::GeneralProxy& proxy,
+                                    FusionProxy& proxy,
                                     Controller& controllerCfg)
 {
     Controller newController;
@@ -187,7 +187,7 @@ void DisplayDiscoveredDevices(
     return status;
 }
 
-::OcaBoolean AddSubscriptions(Zone& newZone, ::GeneralProxy& proxy)
+::OcaBoolean AddSubscriptions(Zone& newZone, GeneralProxy& proxy)
 {
     // These two do not need to be initialized, they are not used  in OcaLib
     OcaLiteNetworkAddress  sub_addr; // This is not used in RELIABLE mode
@@ -235,7 +235,7 @@ void DisplayDiscoveredDevices(
                                     sub_addr);
     }
 
-    //// TODO: Subscribe to Selector
+    //// Subscribe to Selector
     {
         // Set remote(device) event to subscribe to
         ::OcaLiteEvent sub_event(newZone.ono.sourceSelector,
@@ -284,7 +284,6 @@ ZoneGroup* CreateZoneGroup(Zone& newZone, void *commandQueue)
             newZoneGrp->AddObject(*newGainObj);
         }
 
-        // Create Mute object
         ControlPalMuteActuator* newMuteObj = new ControlPalMuteActuator(
                 newZone.ono.mute,
                 static_cast<::OcaBoolean>(true),
@@ -335,6 +334,8 @@ ZoneGroup* CreateZoneGroup(Zone& newZone, void *commandQueue)
         {
             newZoneGrp->AddObject(*newSelectorObj);
         }
+
+        //TODO: Sync Control setting (with Device)
     }
 
     return newZoneGrp;
@@ -400,7 +401,8 @@ ZoneGroup* CreateZoneGroup(Zone& newZone, void *commandQueue)
 }
 
 ::OcaBoolean ControlPalSetupControls(::OcaLiteString& controllerId,
-                                        ::GeneralProxy& proxy,
+                                        ::GeneralProxy& gen_proxy,
+                                        FusionProxy& proxy,
                                         std::vector<::OcaONo>& zoneONo,
                                         void *commandQueue)
 {
@@ -420,7 +422,7 @@ ZoneGroup* CreateZoneGroup(Zone& newZone, void *commandQueue)
             bSuccess |= ::OcaLiteBlock::GetRootBlock().AddObject(*newGroup);
 
             // Add event subscriptions
-            bSuccess |= AddSubscriptions(*newZone, proxy);
+            bSuccess |= AddSubscriptions(*newZone, gen_proxy);
 
             if (bSuccess)
             {
@@ -429,9 +431,6 @@ ZoneGroup* CreateZoneGroup(Zone& newZone, void *commandQueue)
 
             //TODO: Send UI the control details
             //          Send Zone Name
-            //          Gain Val
-            //          Mute State
-            //          Selector details (positions, manes, state)
 
         }
     }
@@ -448,29 +447,31 @@ void ControlPalTeardownControls(std::vector<::OcaONo>& zoneBlockONo)
         ::OcaLiteList<::OcaLiteObjectIdentification> tdownMembers;
         ::OcaLiteBlock* tdownBlock;
 
-        // TODO: Get Zone(Block) object
-        tdownBlock = static_cast<::OcaLiteBlock *>(::OcaLiteBlock::GetRootBlock().GetOCAObject(tdownBlockONo));
+        // Get Zone(Block) object
+        tdownBlock = static_cast<::OcaLiteBlock *>(
+                  ::OcaLiteBlock::GetRootBlock().GetOCAObject(tdownBlockONo));
 
         if (OCASTATUS_OK == tdownBlock->GetMembers(tdownMembers))
         {
             // Clear the ZoneBlock
             for (::OcaUint16 i = 0; i < tdownMembers.GetCount(); i++)
             {
-                // TODO: Get worker objects in zone
+                // Get worker objects in zone
                 ::OcaONo       workerONo   = tdownMembers.GetItem(i).GetONo();
-                ::OcaLiteRoot* tdownWorker = tdownBlock->GetOCAObject(workerONo);
+                ::OcaLiteRoot* tdownWorker =
+                                     tdownBlock->GetOCAObject(workerONo);
 
-                // TODO: Remove worker object from zone
+                // Remove worker object from zone
                 tdownBlock->RemoveObject(workerONo);
 
-                // TODO: Delete worker object
+                // Delete worker object
                 delete tdownWorker;
             }
 
-            // TODO: Remove Block object from Root block.
+            // Remove Block object from Root block.
             ::OcaLiteBlock::GetRootBlock().RemoveObject(tdownBlockONo);
 
-            // TODO: Delete Block object
+            // Delete Block object
             delete tdownBlock;
         }
     }

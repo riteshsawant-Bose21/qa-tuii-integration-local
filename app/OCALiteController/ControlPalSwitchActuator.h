@@ -41,6 +41,7 @@ public:
     }
 
     void SendValue();
+    void SendConfigurationValue();
 
 protected:
     // Store selected position internally (base also keeps its own). We mirror for potential future hardware logic.

@@ -7,7 +7,9 @@
 #ifndef CONTROLPAL_SETUP_UTILS_H_
 #define CONTROLPAL_SETUP_UTILS_H_
 
+#include <Proxy/GeneralProxy.h>
 #include "OcaServiceDiscovery.h"
+#include "../common/FusionProxy.h"
 
 // Helper functions
 void DisplayDiscoveredDevices(
@@ -20,10 +22,10 @@ void DisplayDiscoveredDevices(
                      ::OcaSessionID& sessionId);
 
 ::OcaLiteStatus GetControllerConfig(::OcaLiteString& controllerId,
-                                    ::GeneralProxy& proxy,
+                                    FusionProxy& proxy,
                                     Controller& controllerCfg);
 
-::OcaBoolean AddSubscriptions(Zone& newZone, ::GeneralProxy& proxy);
+::OcaBoolean AddSubscriptions(Zone& newZone, GeneralProxy& proxy);
 
 ZoneGroup* CreateZoneGroup(Zone& newZone, void *commandQueue);
 
@@ -32,7 +34,8 @@ OcaBoolean ControlPalSetupConnection(::Ocp1LiteNetwork *ocp1Network,
                                      ::OcaSessionID&   sessionId);
 
 ::OcaBoolean ControlPalSetupControls(::OcaLiteString& controllerId,
-                                        ::GeneralProxy& proxy,
+                                        ::GeneralProxy& gen_proxy,
+                                        FusionProxy& proxy,
                                         std::vector<::OcaONo>& zoneONo,
                                         void *commandQueue);
 

@@ -83,3 +83,102 @@ void ControlPalSwitchActuator::SendValue()
     PushToMsgQueue(setPositionCmd);
 }
 
+void ControlPalSwitchActuator::SendConfigurationValue()
+{
+    {
+        ::OcaUint16 posVal, minVal, maxVal;
+        ControllerCmdIntfc setPositionCmd;
+
+        GetPosition( posVal, minVal, maxVal);
+
+        // Send # positions
+        setPositionCmd.cmd = CTRL_CMD_SOURCE_COUNT_SET;
+        setPositionCmd.ono = m_zoneONo; // Zone ONo
+        setPositionCmd.val.int_val = static_cast<uint32_t>(maxVal - minVal + 1);
+        PushToMsgQueue(setPositionCmd);
+    }
+
+    // Send names
+    {
+        ::OcaLiteList<::OcaLiteString> names;
+        ControllerCmdIntfc setPositionCmd;
+
+        GetPositionNamesValue(names);
+        int8_t posCount = names.GetCount();
+
+        // Only a max. of 5 positions supported
+        if (posCount > 5)
+        {
+            posCount = 5;
+        }
+
+        // Position-1
+        setPositionCmd.cmd = CTRL_CMD_SOURCE_1_SET;
+        setPositionCmd.ono = m_zoneONo; // Zone ONo
+        std::string temp;
+        temp.assign((names.GetItem(0).GetString()));
+        if (temp.size() > 8)
+        {
+            temp.assign(temp,0,8);
+        }
+        memcpy(setPositionCmd.val.char_val, temp.c_str(), temp.size());
+        PushToMsgQueue(setPositionCmd);
+
+        // Position-2
+        if (--posCount > 0)
+        {
+            setPositionCmd.cmd = CTRL_CMD_SOURCE_2_SET;
+            setPositionCmd.ono = m_zoneONo; // Zone ONo
+            temp.assign((names.GetItem(1).GetString()));
+            if (temp.size() > 8)
+            {
+                temp.assign(temp,0,8);
+            }
+            memcpy(setPositionCmd.val.char_val, temp.c_str(), temp.size());
+            PushToMsgQueue(setPositionCmd);
+        }
+
+        // Position-3
+        if (--posCount > 0)
+        {
+            setPositionCmd.cmd = CTRL_CMD_SOURCE_3_SET;
+            setPositionCmd.ono = m_zoneONo; // Zone ONo
+            temp.assign((names.GetItem(2).GetString()));
+            if (temp.size() > 8)
+            {
+                temp.assign(temp,0,8);
+            }
+            memcpy(setPositionCmd.val.char_val, temp.c_str(), temp.size());
+            PushToMsgQueue(setPositionCmd);
+        }
+
+        // Position-4
+        if (--posCount > 0)
+        {
+            setPositionCmd.cmd = CTRL_CMD_SOURCE_4_SET;
+            setPositionCmd.ono = m_zoneONo; // Zone ONo
+            temp.assign((names.GetItem(3).GetString()));
+            if (temp.size() > 8)
+            {
+                temp.assign(temp,0,8);
+            }
+            memcpy(setPositionCmd.val.char_val, temp.c_str(), temp.size());
+            PushToMsgQueue(setPositionCmd);
+        }
+
+        // Position-5
+        if (--posCount > 0)
+        {
+            setPositionCmd.cmd = CTRL_CMD_SOURCE_5_SET;
+            setPositionCmd.ono = m_zoneONo; // Zone ONo
+            temp.assign((names.GetItem(4).GetString()));
+            if (temp.size() > 8)
+            {
+                temp.assign(temp,0,8);
+            }
+            memcpy(setPositionCmd.val.char_val, temp.c_str(), temp.size());
+            PushToMsgQueue(setPositionCmd);
+        }
+    }
+}
+
