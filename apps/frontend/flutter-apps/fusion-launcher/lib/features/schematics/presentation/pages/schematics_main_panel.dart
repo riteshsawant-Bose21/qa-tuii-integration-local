@@ -661,9 +661,26 @@ class _SchematicsMainPanelState extends State<SchematicsMainPanel> {
   Widget _buildSpeakersContent() {
     return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
       builder: (BuildContext context, ProjectViewModelState state) {
-        return CommonReorderableListView<Map<String, dynamic>>(
-          items: _reorderableZones,
-          emptyMessage: "No zones added yet",
+        if (_reorderableZones.isEmpty) {
+          return Container(
+            padding: const EdgeInsets.all(16),
+            child: Center(
+              child: FusionAppText(
+                text: "No zones added yet",
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ),
+          );
+        }
+
+        return ReorderableListView.builder(
+          shrinkWrap: true,
+          physics: const ClampingScrollPhysics(),
+          buildDefaultDragHandles: false,
+          itemCount: _reorderableZones.length,
           onReorder: (int oldIndex, int newIndex) {
             setState(() {
               if (newIndex > oldIndex) newIndex -= 1;
@@ -671,63 +688,67 @@ class _SchematicsMainPanelState extends State<SchematicsMainPanel> {
               _reorderableZones.insert(newIndex, item);
             });
           },
-          keyExtractor: (Map<String, dynamic> zone) => zone['id'] as String,
-          itemBuilder: (BuildContext context, Map<String, dynamic> zone, int index) {
-            return ExpandableZoneWidget(
-              name: zone['name'] as String,
-              assetImagePath: 'assets/speaker.png',
-              speakerId: zone['id'] as String,
-              bgColor: zone['color'] as Color,
-              initiallyExpanded: false,
-              subZones: _reorderableSubZones[zone['id']] ?? <Map<String, dynamic>>[],
-              devices: _reorderableDevices,
-              onZoneReorder: (String zoneId, int oldIndex, int newIndex) {
-                setState(() {
-                  if (newIndex > oldIndex) newIndex -= 1;
-                  final Map<String, dynamic> item = _reorderableZones.removeAt(oldIndex);
-                  _reorderableZones.insert(newIndex, item);
-                });
-              },
-              onSubZoneReorder: (String zoneId, int oldIndex, int newIndex) {
-                setState(() {
-                  final List<Map<String, dynamic>>? subZones = _reorderableSubZones[zoneId];
-                  if (subZones != null) {
+          itemBuilder: (BuildContext context, int index) {
+            final Map<String, dynamic> zone = _reorderableZones[index];
+            return ReorderableDragStartListener(
+              key: ValueKey<String>(zone['id'] as String),
+              index: index,
+              child: ExpandableZoneWidget(
+                name: zone['name'] as String,
+                assetImagePath: 'assets/speaker.png',
+                speakerId: zone['id'] as String,
+                bgColor: zone['color'] as Color,
+                initiallyExpanded: false,
+                subZones: _reorderableSubZones[zone['id']] ?? <Map<String, dynamic>>[],
+                devices: _reorderableDevices,
+                onZoneReorder: (String zoneId, int oldIndex, int newIndex) {
+                  setState(() {
                     if (newIndex > oldIndex) newIndex -= 1;
-                    final Map<String, dynamic> item = subZones.removeAt(oldIndex);
-                    subZones.insert(newIndex, item);
-                  }
-                });
-              },
-              onDeviceReorder: (String subZoneId, int oldIndex, int newIndex) {
-                setState(() {
-                  final List<Map<String, dynamic>>? devices = _reorderableDevices[subZoneId];
-                  if (devices != null) {
-                    if (newIndex > oldIndex) newIndex -= 1;
-                    final Map<String, dynamic> item = devices.removeAt(oldIndex);
-                    devices.insert(newIndex, item);
-                  }
-                });
-              },
-              onDelete: (String id) {
-                setState(() {
-                  _reorderableZones.removeWhere((Map<String, dynamic> zone) => zone['id'] == id);
-                  // Also remove associated subzones and devices
-                  _reorderableSubZones.remove(id);
-                  final List<String> subZoneIds = _reorderableSubZones[id]?.map((Map<String, dynamic> sz) => sz['id'] as String).toList() ?? <String>[];
-                  for (final String subZoneId in subZoneIds) {
-                    _reorderableDevices.remove(subZoneId);
-                  }
-                });
-                FusionToast.show(
-                  context,
-                  message: 'Zone "${zone['name']}" deleted',
-                  icon: Icons.delete_outline,
-                  backgroundColor: Colors.red[600],
-                );
-              },
-              onRename: (String id) => print('Rename zone $id'),
-              onDuplicate: (String id) => print('Duplicate zone $id'),
-              onAddDevice: () => print('Add device to zone'),
+                    final Map<String, dynamic> item = _reorderableZones.removeAt(oldIndex);
+                    _reorderableZones.insert(newIndex, item);
+                  });
+                },
+                onSubZoneReorder: (String zoneId, int oldIndex, int newIndex) {
+                  setState(() {
+                    final List<Map<String, dynamic>>? subZones = _reorderableSubZones[zoneId];
+                    if (subZones != null) {
+                      if (newIndex > oldIndex) newIndex -= 1;
+                      final Map<String, dynamic> item = subZones.removeAt(oldIndex);
+                      subZones.insert(newIndex, item);
+                    }
+                  });
+                },
+                onDeviceReorder: (String subZoneId, int oldIndex, int newIndex) {
+                  setState(() {
+                    final List<Map<String, dynamic>>? devices = _reorderableDevices[subZoneId];
+                    if (devices != null) {
+                      if (newIndex > oldIndex) newIndex -= 1;
+                      final Map<String, dynamic> item = devices.removeAt(oldIndex);
+                      devices.insert(newIndex, item);
+                    }
+                  });
+                },
+                onDelete: (String id) {
+                  setState(() {
+                    _reorderableZones.removeWhere((Map<String, dynamic> zone) => zone['id'] == id);
+                    // Also remove associated subzones and devices
+                    _reorderableSubZones.remove(id);
+                    final List<String> subZoneIds = _reorderableSubZones[id]?.map((Map<String, dynamic> sz) => sz['id'] as String).toList() ?? <String>[];
+                    for (final String subZoneId in subZoneIds) {
+                      _reorderableDevices.remove(subZoneId);
+                    }
+                  });
+                  FusionToast.show(
+                    context,
+                    message: 'Zone "${zone['name']}" deleted',
+                    icon: Icons.delete_outline,
+                    backgroundColor: Colors.red[600],
+                  );
+                },
+                onRename: (String id) => print('Rename zone $id'),
+                onDuplicate: (String id) => print('Duplicate zone $id'),
+                onAddDevice: () => print('Add device to zone'),
+              ),
             );
           },
         );

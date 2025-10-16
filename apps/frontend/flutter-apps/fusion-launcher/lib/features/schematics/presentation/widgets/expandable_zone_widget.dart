@@ -128,22 +128,45 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
     );
   }
 
-  /// Zone content (visible when expanded) - contains subzones without ReorderableListView
+  /// Zone content (visible when expanded) - contains reorderable subzones
   Widget _buildZoneContent() {
+    if (widget.subZones.isEmpty) {
+      return Container(
+        color: widget.bgColor.withAlpha(30),
+        padding: const EdgeInsets.all(16),
+        child: const Center(
+          child: Text(
+            'No subzones added yet',
+            style: TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+        ),
+      );
+    }
+
     return Container(
       color: widget.bgColor.withAlpha(30),
-      child: Column(
-        children:
-            widget.subZones.map((Map<String, dynamic> subZone) {
-              return SubZoneWidget(
-                key: ValueKey<String>(subZone['id'] as String),
-                name: subZone['name'] as String,
-                subZoneId: subZone['id'] as String,
-                zoneId: widget.speakerId!,
-                devices: widget.devices[subZone['id']] ?? <Map<String, dynamic>>[],
-                onDeviceReorder: widget.onDeviceReorder,
-              );
-            }).toList(),
+      child: ReorderableListView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        buildDefaultDragHandles: false,
+        itemCount: widget.subZones.length,
+        onReorder: (int oldIndex, int newIndex) {
+          widget.onSubZoneReorder?.call(widget.speakerId!, oldIndex, newIndex);
+        },
+        itemBuilder: (BuildContext context, int index) {
+          final Map<String, dynamic> subZone = widget.subZones[index];
+          return ReorderableDragStartListener(
+            key: ValueKey<String>(subZone['id'] as String),
+            index: index,
+            child: SubZoneWidget(
+              name: subZone['name'] as String,
+              subZoneId: subZone['id'] as String,
+              zoneId: widget.speakerId!,
+              devices: widget.devices[subZone['id']] ?? <Map<String, dynamic>>[],
+              onDeviceReorder: widget.onDeviceReorder,
+            ),
+          );
+        },
       ),
     );
   }
@@ -185,7 +208,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
           ),
           const SizedBox(width: 4),
           FusionAppText(
-            text: "Speakers",
+            text: "Speaker",
             style: TextStyle(
               fontSize: 8,
               fontWeight: FontWeight.w400,
@@ -600,7 +623,7 @@ class _SubZoneWidgetState extends State<SubZoneWidget> {
           ),
           const SizedBox(width: 4),
           FusionAppText(
-            text: "Speakers",
+            text: "Speaker",
             style: TextStyle(
               fontSize: 8,
               fontWeight: FontWeight.w400,
