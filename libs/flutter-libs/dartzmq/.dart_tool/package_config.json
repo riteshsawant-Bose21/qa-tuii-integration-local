@@ -3,7 +3,7 @@
   "packages": [
     {
       "name": "ffi",
-      "rootUri": "file:///Users/prithvirajshetty/.pub-cache/hosted/pub.dev/ffi-2.1.3",
+      "rootUri": "file:///Users/rithesh/.pub-cache/hosted/pub.dev/ffi-2.1.3",
       "packageUri": "lib/",
       "languageVersion": "3.3"
     },
@@ -15,8 +15,8 @@
     }
   ],
   "generator": "pub",
-  "generatorVersion": "3.9.0",
-  "flutterRoot": "file:///Users/prithvirajshetty/Documents/Flutter/flutter",
-  "flutterVersion": "3.35.1",
-  "pubCache": "file:///Users/prithvirajshetty/.pub-cache"
+  "generatorVersion": "3.9.2",
+  "flutterRoot": "file:///Users/rithesh/Developer/tools/flutter",
+  "flutterVersion": "3.35.3",
+  "pubCache": "file:///Users/rithesh/.pub-cache"
 }
