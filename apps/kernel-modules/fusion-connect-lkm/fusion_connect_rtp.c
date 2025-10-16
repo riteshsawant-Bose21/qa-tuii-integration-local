@@ -317,7 +317,7 @@ int fusion_cn_rtp_add_stream(struct fusion_cn_rtp_manager *rtp_mgr,
     hlist_add_head(&stream->hnode,
         &rtp_mgr->streams[HASH_KEY(info->stream_handle)]);
 
-    stream->rtp_phc_bias_valid = false;
+    stream->rtp_phc_offset_valid = false;
 
     /* Packet maps only needed for sinks (RX path) */
     if (!info->is_source) {
@@ -539,17 +539,9 @@ __always_inline int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *r
             // phc = (sac * NSEC_PER_SEC) / sample_rate
             reconstructed_phc_ns = (global_sac * 62500) / (stream->info.sample_rate == 48000 ? 3 : 6);
 
-            // stash a bias offset to compensate for phase/network
-            if (!stream->rtp_phc_bias_valid) {
-                stream->rtp_phc_bias_ns = current_phc_ns - reconstructed_phc_ns;
-                stream->rtp_phc_bias_valid = true;
+            
 
-                printk(KERN_DEBUG "fusion_cn_rtp: process_packet: RTP timestamp anchor = %lld\n", stream->rtp_phc_bias_ns);
-            }
-
-            reconstructed_phc_ns += stream->rtp_phc_bias_ns;
-
-            // for fusion-connect streams, reconstruct exact phc time from rtp timestamp
+            // for fusion-connect streams only, reconstruct exact phc time from rtp timestamp
             if (stream->info.is_fusion_connect) {
                 ns_from_ms_boundary = reconstructed_phc_ns % NSEC_PER_MSEC;
                 reconstructed_phc_ns -= ns_from_ms_boundary;
@@ -561,6 +553,16 @@ __always_inline int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *r
                 } else {
                     reconstructed_phc_ns += NSEC_PER_MSEC;
                 }
+            // for aes67 streams only, stash a bias offset to compensate for phase/network
+            } else {
+                if (!stream->rtp_phc_offset_valid) {
+                    stream->rtp_phc_offset_ns = current_phc_ns - reconstructed_phc_ns;
+                    stream->rtp_phc_offset_valid = true;
+
+                    printk(KERN_DEBUG "fusion_cn_rtp: process_packet: RTP timestamp anchor = %lld\n", stream->rtp_phc_offset_ns);
+                }
+
+                reconstructed_phc_ns += stream->rtp_phc_offset_ns;
             }
 
             sched_ns = reconstructed_phc_ns + stream->info.playout_delay;

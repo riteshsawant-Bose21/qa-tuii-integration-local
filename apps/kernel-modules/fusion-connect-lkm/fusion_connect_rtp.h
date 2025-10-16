@@ -77,8 +77,8 @@ struct fusion_cn_rtp_stream {
     u32 playback_index; 
     u64 packet_time;
     u64 ns_per_sample;
-    bool rtp_phc_bias_valid;
-    s64 rtp_phc_bias_ns;
+    bool rtp_phc_offset_valid;
+    s64 rtp_phc_offset_ns;
 
     struct fusion_cn_stream_metrics *metrics;
     void *stream_node;
