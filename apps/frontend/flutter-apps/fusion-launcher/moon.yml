@@ -36,9 +36,27 @@ tasks:
     options:
       cache: false
 
+  build-macos-automation:
+    command: "flutter"
+    args: ["build", "macos"]
+    deps:
+#      - "analyze"
+#      - "unit-tests"
+    options:
+      cache: false
+
   build-windows:
     command: "flutter"
     args: ["build", "windows"]
+    deps:
+#      - "analyze"
+#      - "unit-tests"
+    options:
+      cache: false
+
+  build-windows-automation:
+    command: "flutter"
+    args: ["build", "windows", "--profile", '.\integration_test\appium.dart']
     deps:
 #      - "analyze"
 #      - "unit-tests"
