@@ -140,7 +140,7 @@ class _SourceWidgetState extends State<SourceWidget> {
                     if (widget.source.fusionDeviceId != null) ...<Widget>[
                       Flexible(
                         child: Text(
-                          serviceLocator<ProjectViewModel>().fusionDevices.firstWhere((FusionDevice val) => val.id == widget.source.fusionDeviceId).name,
+                          serviceLocator<ProjectViewModel>().fusionDevices.firstWhere((FusionDsp val) => val.id == widget.source.fusionDeviceId).name,
                           style: const TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,

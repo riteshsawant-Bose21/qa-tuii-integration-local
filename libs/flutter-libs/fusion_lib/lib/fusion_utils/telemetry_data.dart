@@ -34,11 +34,11 @@ class TelemetryData {
       final ResponseCallback<dynamic> responseCallback = await fusionNetworkClient.get(api: FusionApiEndpoint.fusionDevice);
 
       if (responseCallback.success && responseCallback.data != null) {
-        final List<FusionDevice> fusionDevices = (responseCallback.data as List<dynamic>)
-            .map((dynamic e) => FusionDevice.fromJson(e as Map<String, dynamic>))
+        final List<FusionDsp> fusionDevices = (responseCallback.data as List<dynamic>)
+            .map((dynamic e) => FusionDsp.fromJson(e as Map<String, dynamic>))
             .toList();
 
-        final List<String> addresses = fusionDevices.map((FusionDevice device) => "ws://${device.localIp}:5678").toList();
+        final List<String> addresses = fusionDevices.map((FusionDsp device) => "ws://${device.localIp}:5678").toList();
 
         telemetryAddresses = addresses;
 

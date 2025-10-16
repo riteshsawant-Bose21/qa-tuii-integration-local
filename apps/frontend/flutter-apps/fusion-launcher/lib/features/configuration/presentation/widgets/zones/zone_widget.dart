@@ -3,7 +3,6 @@ import 'package:fusion_launcher/features/configuration/presentation/viewmodel/pr
 import 'package:fusion_lib/models/fusion_models.dart';
 
 import '../../../../../core/constants.dart';
-import '../../../../../core/models/products_data.dart';
 import '../../../../../core/service_locator.dart';
 import '../../../../dynamic_config/data/datasources/panel_datasource.dart';
 import '../../../../dynamic_config/domain/entities/audio_widget_entity.dart';
@@ -363,78 +362,77 @@ class ZoneWidgetState extends State<ZoneWidget> {
             ),
 
             // ── Circuits header + Add button ──
-            if (!widget.isControlMode)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: <Widget>[
-                    //todo: add localized ids from the listening area
-                    Text('Outputs: ${widget.zoneSpeakers.length}', style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12)),
-                    PopupMenuButton<SpeakerData>(
-                      tooltip: 'Add Output',
-                      onSelected: (SpeakerData speakerData) {
-                        print('Selected: ${speakerData.name}');
-                        final Speaker newSpeaker = Speaker(
-                          name: speakerData.name,
-                          type: speakerData.type,
-                          assetImagePath: speakerData.assetPath,
-                          speakerSKU: speakerData.sku,
-                          locationEntity: LocationModel(
-                            zoneId: widget.zone.id,
-                          ),
-                          pos: const Offset(0, 0),
-                          gain: 0.0,
-                          blocks: <ProcessingBlockModel>[],
-                          price: speakerData.price,
-                        );
-                        print(
-                          "New Speaker: location - ${newSpeaker.locationEntity.zoneId} , floor - ${newSpeaker.locationEntity.floorId}, LA - ${newSpeaker.locationEntity.listeningAreaId}",
-                        );
-                        widget.onSpeakerAdded(newSpeaker, widget.zone.id);
-                      },
-                      color: Colors.white,
-                      itemBuilder: (BuildContext context) {
-                        return SpeakerData.demoSpeakers.map((SpeakerData speakerData) {
-                          return PopupMenuItem<SpeakerData>(
-                            value: speakerData,
-                            child: Row(
-                              children: <Widget>[
-                                Image.asset(
-                                  speakerData.assetPath,
-                                  height: 24,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(speakerData.name),
-                              ],
-                            ),
-                          );
-                        }).toList();
-                      },
-                      child: ElevatedButton.icon(
-                        onPressed: null,
-                        icon: const Icon(Icons.add, size: 14),
-                        label: Text(
-                          'Add Outputs',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: colors.primary,
-                          ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFB8956A),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          minimumSize: const Size(0, 28),
-                          disabledBackgroundColor: colors.primaryContainer,
-                          disabledForegroundColor: colors.primary,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
+            // if (!widget.isControlMode)
+            //   Padding(
+            //     padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            //     child: Row(
+            //       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            //       children: <Widget>[
+            //         //todo: add localized ids from the listening area
+            //         Text('Outputs: ${widget.zoneSpeakers.length}', style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12)),
+            //         PopupMenuButton<SpeakerData>(
+            //           tooltip: 'Add Output',
+            //           onSelected: (SpeakerData speakerData) {
+            //             print('Selected: ${speakerData.name}');
+            //             final Speaker newSpeaker = Speaker(
+            //               name: speakerData.name,
+            //               type: speakerData.type,
+            //               assetImagePath: speakerData.assetPath,
+            //               speakerSKU: speakerData.sku,
+            //               locationEntity: LocationModel(
+            //                 zoneId: widget.zone.id,
+            //               ),
+            //               pos: const Offset(0, 0),
+            //               gain: 0.0,
+            //               blocks: <ProcessingBlockModel>[],
+            //               price: speakerData.price,
+            //             );
+            //             print(
+            //               "New Speaker: location - ${newSpeaker.locationEntity.zoneId} , floor - ${newSpeaker.locationEntity.floorId}, LA - ${newSpeaker.locationEntity.listeningAreaId}",
+            //             );
+            //             widget.onSpeakerAdded(newSpeaker, widget.zone.id);
+            //           },
+            //           color: Colors.white,
+            //           itemBuilder: (BuildContext context) {
+            //             return SpeakerData.demoSpeakers.map((SpeakerData speakerData) {
+            //               return PopupMenuItem<SpeakerData>(
+            //                 value: speakerData,
+            //                 child: Row(
+            //                   children: <Widget>[
+            //                     Image.asset(
+            //                       speakerData.assetPath,
+            //                       height: 24,
+            //                     ),
+            //                     const SizedBox(width: 8),
+            //                     Text(speakerData.name),
+            //                   ],
+            //                 ),
+            //               );
+            //             }).toList();
+            //           },
+            //           child: ElevatedButton.icon(
+            //             onPressed: null,
+            //             icon: const Icon(Icons.add, size: 14),
+            //             label: Text(
+            //               'Add Outputs',
+            //               style: TextStyle(
+            //                 fontSize: 11,
+            //                 color: colors.primary,
+            //               ),
+            //             ),
+            //             style: ElevatedButton.styleFrom(
+            //               backgroundColor: const Color(0xFFB8956A),
+            //               foregroundColor: Colors.white,
+            //               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            //               minimumSize: const Size(0, 28),
+            //               disabledBackgroundColor: colors.primaryContainer,
+            //               disabledForegroundColor: colors.primary,
+            //             ),
+            //           ),
+            //         ),
+            //       ],
+            //     ),
+            //   ),
             const SizedBox(height: 6),
 
             // ── Render each circuit with your CircuitWidget ──

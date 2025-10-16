@@ -1,6 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/models/project_entities/controller.dart';
+import 'package:fusion_lib/models/project_entities/endpoints.dart';
 
 extension ProjectPropertiesViewModel on ProjectViewModel {
   List<Zone> get zones => projectManager.getAllZones();
@@ -43,13 +45,27 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
     return hardwareComponents.whereType<Speaker>().toList();
   }
 
+  // get Amplifiers
+  List<Amplifier> get amplifiers {
+    return hardwareComponents.whereType<Amplifier>().toList();
+  }
+
+  List<FusionEndpoints> get fusionEndpoints {
+    return hardwareComponents.whereType<FusionEndpoints>().toList();
+  }
+
+  List<FusionController> get fusionControllers {
+    return hardwareComponents.whereType<FusionController>().toList();
+  }
+
   //get generic hardware components
   List<GenericHardwareComponent> get genericHardwareComponents {
     return hardwareComponents.whereType<GenericHardwareComponent>().toList();
   }
 
+  //extend hardware component,
   //get all Fusion devices
-  List<FusionDevice> get fusionDevices => projectManager.getAllFusionDevices();
+  List<FusionDsp> get fusionDevices => projectManager.getAllFusionDevices();
 
   FloorModel get currentFloor {
     return floors[currentFloorIndex];

@@ -382,16 +382,13 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                                 () => CostCalculatorScreen(
                                   speakers: serviceLocator<ProjectViewModel>().speakers,
                                   sources: serviceLocator<ProjectViewModel>().sources,
-                                  controllers:
-                                      serviceLocator<ProjectViewModel>().genericHardwareComponents
-                                          .where((GenericHardwareComponent component) => component.type == GenericHardwareComponentType.controller)
-                                          .toList(),
+                                  controllers: serviceLocator<ProjectViewModel>().fusionControllers,
                                   racks:
                                       serviceLocator<ProjectViewModel>().genericHardwareComponents
                                           .where((GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack)
                                           .toList(),
                                   amplifiers: <Amplifier>[],
-                                  fusionDevices: <FusionDevice>[],
+                                  fusionDevices: <FusionDsp>[],
                                   others:
                                       serviceLocator<ProjectViewModel>().genericHardwareComponents
                                           .where(
@@ -450,16 +447,13 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                             () => CostCalculatorScreen(
                               speakers: serviceLocator<ProjectViewModel>().speakers,
                               sources: serviceLocator<ProjectViewModel>().sources,
-                              controllers:
-                                  serviceLocator<ProjectViewModel>().genericHardwareComponents
-                                      .where((GenericHardwareComponent component) => component.type == GenericHardwareComponentType.controller)
-                                      .toList(),
+                              controllers: serviceLocator<ProjectViewModel>().fusionControllers,
                               racks:
                                   serviceLocator<ProjectViewModel>().genericHardwareComponents
                                       .where((GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack)
                                       .toList(),
                               amplifiers: <Amplifier>[],
-                              fusionDevices: <FusionDevice>[],
+                              fusionDevices: <FusionDsp>[],
                               others:
                                   serviceLocator<ProjectViewModel>().genericHardwareComponents
                                       .where(

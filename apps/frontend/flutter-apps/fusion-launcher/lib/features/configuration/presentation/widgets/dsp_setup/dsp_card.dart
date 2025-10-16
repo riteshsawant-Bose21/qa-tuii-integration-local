@@ -13,10 +13,10 @@ import 'claim_device_popup.dart';
 import 'device_assign_button.dart';
 
 class DSPDeviceCard extends StatefulWidget {
-  final FusionDevice device;
+  final FusionDsp device;
   final String? vipAddress;
   final Function() onConfigureVip;
-  final List<FusionDevice> allDevicesInProject;
+  final List<FusionDsp> allDevicesInProject;
   final bool isControlMode;
 
   const DSPDeviceCard({

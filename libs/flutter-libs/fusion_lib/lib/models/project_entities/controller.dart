@@ -2,59 +2,54 @@ import 'dart:ui';
 
 import 'package:fusion_lib/fusion_lib.dart';
 
-enum GenericHardwareComponentType { rack, other }
-
-class GenericHardwareComponent extends HardwareComponent {
-  GenericHardwareComponentType type;
+class FusionController extends HardwareComponent {
   final String sku;
 
-  GenericHardwareComponent({
+  FusionController({
     super.id,
-    required super.locationEntity,
     required super.name,
-    super.zAxis,
-    required Offset super.pos,
+    super.pos,
     super.wiringPos,
-    required this.type,
+    super.zAxis,
     required super.assetImagePath,
+    LocationModel? locationEntity,
     required super.price,
+    String? hardwareName,
+    String? sku,
+    super.lockListeningArea,
     super.portData,
     super.communicationPorts,
     super.inputPortsData,
     super.outputPortsData,
-    String? sku,
-    String? hardwareName,
-    super.lockListeningArea,
   }) : sku = sku ?? name,
-       super(hardwareName: hardwareName ?? name);
+       super(
+         hardwareName: hardwareName ?? name,
+         locationEntity: locationEntity ?? LocationModel(),
+       );
 
   @override
-  GenericHardwareComponent copyWith({
+  FusionController copyWith({
     String? id,
     String? name,
     Offset? pos,
     Offset? wiringPos,
     double? zAxis,
-    GenericHardwareComponentType? type,
     String? assetImagePath,
     LocationModel? locationEntity,
     double? price,
     String? hardwareName,
     String? sku,
-    int? outputPorts,
-    int? inputPorts,
     bool? lockListeningArea,
     List<PortData>? communicationPorts,
     List<PortData>? inputPortsData,
     List<PortData>? outputPortsData,
   }) {
-    return GenericHardwareComponent(
+    return FusionController(
       id: id ?? this.id,
       name: name ?? this.name,
       pos: pos ?? this.pos,
       wiringPos: wiringPos ?? this.wiringPos,
       zAxis: zAxis ?? this.zAxis,
-      type: type ?? this.type,
       assetImagePath: assetImagePath ?? this.assetImagePath,
       locationEntity: locationEntity ?? this.locationEntity,
       price: price ?? this.price,
@@ -71,16 +66,15 @@ class GenericHardwareComponent extends HardwareComponent {
     return <String, dynamic>{
       'id': id,
       'name': name,
-      'pos': <String, double>{'dx': pos.dx, 'dy': pos.dy},
-      'wiringPos': wiringPos != null ? <String, double>{'dx': wiringPos!.dx, 'dy': wiringPos!.dy} : null,
-      'type': type.name,
-      "zAxis": zAxis,
+      'pos': {'x': pos.dx, 'y': pos.dy},
+      'wiringPos': wiringPos != null ? {'x': wiringPos!.dx, 'y': wiringPos!.dy} : null,
+      'zAxis': zAxis,
       'assetImagePath': assetImagePath,
-      'componentType': 'generic',
       'locationEntity': locationEntity.toJson(),
       'price': price,
       'hardwareName': hardwareName,
       'sku': sku,
+      'componentType': 'controller',
       'lockListeningArea': lockListeningArea,
       'communicationPorts': communicationPorts.map((PortData port) => port.toJson()).toList(),
       'outputPortsData': outputPortsData.map((PortData port) => port.toJson()).toList(),
@@ -88,33 +82,18 @@ class GenericHardwareComponent extends HardwareComponent {
     };
   }
 
-  factory GenericHardwareComponent.fromJson(Map<String, dynamic> json) {
-    final String rawType = (json['type'] as String? ?? '').toLowerCase();
-
-    final GenericHardwareComponentType productType = GenericHardwareComponentType.values.firstWhere(
-      (GenericHardwareComponentType e) => e.name.toLowerCase() == rawType,
-      orElse: () {
-        throw FormatException('Unknown CanvasProductType "$rawType" in JSON: $json');
-      },
-    );
-
-    final Map<String, dynamic> posMap = json['pos'] as Map<String, dynamic>? ?? (throw FormatException('Missing "pos" in CanvasProduct JSON: $json'));
-
-    final double dx = (posMap['dx'] as num?)?.toDouble() ?? (throw FormatException('Invalid pos.dx in CanvasProduct JSON: $json'));
-    final double dy = (posMap['dy'] as num?)?.toDouble() ?? (throw FormatException('Invalid pos.dy in CanvasProduct JSON: $json'));
-
-    return GenericHardwareComponent(
+  factory FusionController.fromJson(Map<String, dynamic> json) {
+    return FusionController(
       id: json['id'] as String?,
-      name: json['name'] as String? ?? (throw FormatException('Missing "name" in CanvasProduct JSON: $json')),
-      pos: Offset(dx, dy),
+      name: json['name'] as String,
+      pos: Offset((json['pos']['x'] as num).toDouble(), (json['pos']['y'] as num).toDouble()),
       wiringPos: json['wiringPos'] != null ? Offset((json['wiringPos']['x'] as num).toDouble(), (json['wiringPos']['y'] as num).toDouble()) : null,
-      type: productType,
+      zAxis: (json['zAxis'] as num?)?.toDouble() ?? 0.0,
       assetImagePath: json['assetImagePath'] as String,
       locationEntity: LocationModel.fromJson(json['locationEntity'] as Map<String, dynamic>),
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
-      hardwareName: json['hardwareName'],
-      sku: json['sku'] as String? ?? '',
-      zAxis: (json['zAxis'] as num?)?.toDouble() ?? 0.0,
+      hardwareName: json['hardwareName'] as String? ?? json['name'] as String,
+      sku: json['sku'] as String? ?? json['name'] as String,
       lockListeningArea: json['lockListeningArea'] as bool? ?? false,
       communicationPorts:
           (json['communicationPorts'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],

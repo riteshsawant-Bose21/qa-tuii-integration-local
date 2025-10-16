@@ -154,6 +154,7 @@ extension ListeningAreaService on ProjectService {
   ///  - RelationshipManager (zoneListening links),
   ///  - Zone.listeningAreasIds lists,
   ///  - Hardware.locationEntity.zoneId and hardwareLocation links (remove old zone links, add new).
+  /// Add ListeningArea to Zone with full validation + circuit + cleanup support
   void addListeningAreaToZone(String listeningAreaId, String zoneId) {
     if (!listeningAreas.exists(listeningAreaId)) {
       throw Exception('ListeningArea $listeningAreaId not found');
@@ -162,96 +163,74 @@ extension ListeningAreaService on ProjectService {
       throw Exception('Zone $zoneId not found');
     }
 
-    // 1) Find current parent zones (if any)
-    final currentZones = relationships.getParents(RelationshipType.zoneListening, listeningAreaId).toList();
+    final zone = zones.get(zoneId)!;
 
-    // If already assigned exclusively to this zone and nothing else to remove, still ensure zone model contains it
-    if (currentZones.length == 1 && currentZones.first == zoneId) {
-      final targetZone = zones.get(zoneId);
-      if (targetZone != null && !targetZone.listeningAreasIds.contains(listeningAreaId)) {
-        targetZone.listeningAreasIds.add(listeningAreaId);
-      }
-      return; // already assigned — nothing else
+    // 1️⃣ Find current zones where this ListeningArea exists
+    final currentZones = relationships
+        .getParents(
+          RelationshipType.zoneListening,
+          listeningAreaId,
+        )
+        .toList();
+
+    // 2️⃣ If already in the same zone, ensure model is updated and return
+    if (currentZones.contains(zoneId)) {
+      return;
     }
 
-    // 2) Remove from any old zones (unlink relationships + update zone models, and fix hardware zone links)
+    // 3️⃣ Remove from any old zones first (cleanup old zone links)
     for (final oldZoneId in currentZones) {
-      if (oldZoneId == zoneId) continue; // if same as target, skip removal
-      // unlink relationship
-      relationships.unlink(RelationshipType.zoneListening, oldZoneId, listeningAreaId);
-
-      // update old zone model's listeningAreasIds
-      final oldZone = zones.get(oldZoneId);
-      if (oldZone != null) {
-        oldZone.listeningAreasIds.remove(listeningAreaId);
-      }
-
-      // For hardware placed in this listening area, if their location's zoneId was oldZoneId,
-      // clear it and remove the hardware-location link to the old zone.
-      final hwIdsInLA = relationships.getChildren(RelationshipType.hardwareLocation, listeningAreaId);
-      for (final hwId in hwIdsInLA) {
-        final hw = hardware.get(hwId);
-        if (hw != null && hw.locationEntity.zoneId == oldZoneId) {
-          hw.locationEntity.zoneId = null;
-          relationships.unlink(RelationshipType.hardwareLocation, oldZoneId, hwId);
-        }
-      }
+      removeListeningAreaFromZone(listeningAreaId, oldZoneId);
     }
 
-    // 3) Now link to the new zone (idempotent)
+    // 5️⃣ Update target zone model
+    if (!zone.listeningAreasIds.contains(listeningAreaId)) {
+      zone.listeningAreasIds.add(listeningAreaId);
+    }
+    zones.add(zone.id, zone);
+
     relationships.link(RelationshipType.zoneListening, zoneId, listeningAreaId);
-
-    // Update target zone model list
-    final targetZone = zones.get(zoneId);
-    if (targetZone != null && !targetZone.listeningAreasIds.contains(listeningAreaId)) {
-      targetZone.listeningAreasIds.add(listeningAreaId);
-    }
-
-    // 4) Ensure hardware placed in this listening area are linked to the new zone and update their LocationModel.zoneId
-    final hwIds = relationships.getChildren(RelationshipType.hardwareLocation, listeningAreaId);
-    for (final hwId in hwIds) {
-      final hw = hardware.get(hwId);
-      if (hw == null) continue;
-
-      // Set hw.locationEntity.zoneId to the new zone
-      hw.locationEntity.zoneId = zoneId;
-
-      // Link hardwareLocation: zone -> hardware
-      relationships.link(RelationshipType.hardwareLocation, zoneId, hwId);
-    }
   }
 
-  /// Remove a listening area from a zone.
-  /// Also clears hardware.zoneId and hardwareLocation link for hardware that were connected to this zone via that LA.
+  /// Remove ListeningArea from Zone, cleaning circuits + hardware references
   void removeListeningAreaFromZone(String listeningAreaId, String zoneId) {
     if (!listeningAreas.exists(listeningAreaId)) return;
     if (!zones.exists(zoneId)) return;
 
-    // If the relationship doesn't exist, nothing to do
-    final children = relationships.getChildren(RelationshipType.zoneListening, zoneId);
-    if (!children.contains(listeningAreaId)) return;
+    final zone = zones.get(zoneId)!;
 
-    // Unlink relationship and update zone model
-    relationships.unlink(RelationshipType.zoneListening, zoneId, listeningAreaId);
-    final zone = zones.get(zoneId);
-    if (zone != null) {
-      zone.listeningAreasIds.remove(listeningAreaId);
-    }
+    // 1️⃣ If the zone doesn’t actually include this LA, skip
+    if (!zone.listeningAreasIds.contains(listeningAreaId)) return;
 
-    // For hardware located in this listening area, if their LocationModel.zoneId equals this zone,
-    // clear it and unlink the hardwareLocation relationship between the zone and hardware.
-    final hwIds = relationships.getChildren(RelationshipType.hardwareLocation, listeningAreaId);
-    for (final hwId in hwIds) {
-      final hw = hardware.get(hwId);
-      if (hw == null) continue;
-      if (hw.locationEntity.zoneId == zoneId) {
-        hw.locationEntity.zoneId = null;
-        relationships.unlink(RelationshipType.hardwareLocation, zoneId, hwId);
+    final circuitIds = relationships.getChildren(RelationshipType.zoneCircuits, zoneId);
+
+    for (final cId in circuitIds) {
+      final hardwareInCircuit = relationships.getChildren(RelationshipType.circuitHardware, cId);
+
+      final hardwareInArea = hardwareInCircuit
+          .map((hwId) => hardware.get(hwId))
+          .whereType<HardwareComponent>()
+          .where((hw) => hw.locationEntity.listeningAreaId == listeningAreaId)
+          .toList();
+
+      // Unlink hardware
+      for (final hw in hardwareInArea) {
+        relationships.unlink(RelationshipType.circuitHardware, cId, hw.id);
+      }
+
+      // If the circuit now has no hardware or LAs, delete it
+      final remainingHW = relationships.getChildren(RelationshipType.circuitHardware, cId);
+      if (remainingHW.isEmpty) {
+        removeCircuitFromZone(cId, zoneId);
       }
     }
 
-    // done (optionally call persistence/notification hook)
-    // onChangeCallback?.call();
+    // 3️⃣ Unlink listening area from zone
+    relationships.unlink(RelationshipType.zoneListening, zoneId, listeningAreaId);
+
+    // 4️⃣ Update zone model
+    zone.listeningAreasIds.remove(listeningAreaId);
+    zones.add(zone.id, zone);
   }
 
   FloorModel? getFloorForListeningArea(String listeningAreaId) {

@@ -361,12 +361,12 @@ class SchematicsPageState extends State<SchematicsPage> {
 
   Widget _buildProcessorsSection() {
     //get processors from projectManager.hardware components
-    final List<FusionDevice> processors = serviceLocator<ProjectViewModel>().fusionDevices;
+    final List<FusionDsp> processors = serviceLocator<ProjectViewModel>().fusionDevices;
 
     final List<GenericHardwareComponent> processorComponents =
         processors
             .map(
-              (FusionDevice device) => GenericHardwareComponent(
+              (FusionDsp device) => GenericHardwareComponent(
                 id: device.id,
                 locationEntity: LocationModel(id: device.location),
                 name: device.name,
@@ -439,7 +439,7 @@ class SchematicsPageState extends State<SchematicsPage> {
                 locationEntity: LocationModel(id: amplifier.id),
                 name: amplifier.name,
                 sku: amplifier.id,
-                type: GenericHardwareComponentType.controller,
+                type: GenericHardwareComponentType.other,
                 assetImagePath: "assets/images/amplifier_img.webp",
                 price: 800,
                 pos: const Offset(0, 0),
@@ -663,48 +663,9 @@ class SchematicsPageState extends State<SchematicsPage> {
                       margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                       child: ZoneSchematicCard(
                         zone: zone,
-                        hardwareComponents:
-                            speakersAndControllers.where((HardwareComponent component) {
-                              if (component is Speaker) {
-                                return component.locationEntity.zoneId == zone.id;
-                              } else if (component is GenericHardwareComponent && component.type == GenericHardwareComponentType.controller) {
-                                return component.locationEntity.zoneId == zone.id;
-                              }
-                              return false;
-                            }).toList(),
-                        onSpeakerAdded: (SpeakerData speakerData) {
-                          final Speaker cs = Speaker(
-                            name: speakerData.name,
-                            speakerSKU: speakerData.sku,
-                            gain:
-                                speakerData.sku == "MSA12X"
-                                    ? 50.0
-                                    : speakerData.sku == "CO-12 H120"
-                                    ? 10.0
-                                    : 0.0,
-                            pos: const Offset(0, 0),
-                            rotation: 0.0,
-                            assetImagePath: speakerData.assetPath,
-                            type: speakerData.type,
-                            locationEntity: LocationModel(zoneId: zone.id),
-                            price: speakerData.price,
-                          );
-                          serviceLocator<ProjectViewModel>().addHardware(cs);
-                        },
-                        onControllerAdded: (ControllerData controllerData) {
-                          final GenericHardwareComponent controller = GenericHardwareComponent(
-                            name: controllerData.name,
-                            pos: Offset.zero,
-                            type: GenericHardwareComponentType.controller,
-                            assetImagePath: controllerData.assetPath,
-                            locationEntity: LocationModel(zoneId: zone.id),
-                            price: controllerData.price,
-                            hardwareName: controllerData.name,
-                            sku: controllerData.sku,
-                          );
-
-                          serviceLocator<ProjectViewModel>().addHardware(controller);
-                        },
+                        hardwareComponents: <HardwareComponent>[],
+                        onSpeakerAdded: (SpeakerData speakerData) {},
+                        onControllerAdded: (ControllerData controllerData) {},
                       ),
                     ),
                     const SizedBox(

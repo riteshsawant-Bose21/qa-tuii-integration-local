@@ -136,12 +136,12 @@ class OutputWidgetState extends State<OutputWidget> {
 
             Builder(
               builder: (BuildContext context) {
-                final List<FusionDevice> devices = serviceLocator<ProjectViewModel>().fusionDevices;
-                FusionDevice? device;
+                final List<FusionDsp> devices = serviceLocator<ProjectViewModel>().fusionDevices;
+                FusionDsp? device;
                 try {
                   device =
                       widget.speaker.fusionDeviceId != null
-                          ? devices.firstWhere((FusionDevice d) {
+                          ? devices.firstWhere((FusionDsp d) {
                             return d.id == widget.speaker.fusionDeviceId;
                           })
                           : null;
@@ -149,65 +149,67 @@ class OutputWidgetState extends State<OutputWidget> {
                   return const SizedBox.shrink();
                 }
 
-                if (device == null && widget.speaker.portNumbers.isEmpty) {
-                  return const SizedBox.shrink();
-                }
+                return const SizedBox.shrink();
 
-                return Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 8),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).primaryColor,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey.shade200),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: <Widget>[
-                      const Icon(Icons.memory, size: 14, color: Colors.white),
-                      const SizedBox(width: 8),
-
-                      // only show the name if we actually found the device
-                      if (device != null) ...<Widget>[
-                        Flexible(
-                          child: Text(
-                            device.name,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-
-                        if (widget.speaker.portNumbers.isNotEmpty) ...<Widget>[
-                          Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 8),
-                            width: 1,
-                            height: 12,
-                            color: Colors.white,
-                          ),
-                        ],
-                      ],
-
-                      // port numbers (if any)
-                      if (widget.speaker.portNumbers.isNotEmpty) ...<Widget>[
-                        const Icon(Icons.electrical_services, size: 14, color: Colors.white),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Port ${widget.speaker.portNumbers.join(', ')}',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Colors.white,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                );
+                //    if (device == null && widget.speaker.portNumbers.isEmpty) {
+                //      return const SizedBox.shrink();
+                //    }
+                //
+                //    return Container(
+                //      margin: const EdgeInsets.symmetric(horizontal: 8),
+                //      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                //      decoration: BoxDecoration(
+                //        color: Theme.of(context).primaryColor,
+                //        borderRadius: BorderRadius.circular(8),
+                //        border: Border.all(color: Colors.grey.shade200),
+                //      ),
+                //      child: Row(
+                //        mainAxisAlignment: MainAxisAlignment.start,
+                //        crossAxisAlignment: CrossAxisAlignment.center,
+                //        children: <Widget>[
+                //          const Icon(Icons.memory, size: 14, color: Colors.white),
+                //          const SizedBox(width: 8),
+                //
+                //          // only show the name if we actually found the device
+                //          if (device != null) ...<Widget>[
+                //            Flexible(
+                //              child: Text(
+                //                device.name,
+                //                style: const TextStyle(
+                //                  fontSize: 12,
+                //                  fontWeight: FontWeight.w600,
+                //                  color: Colors.white,
+                //                ),
+                //                overflow: TextOverflow.ellipsis,
+                //              ),
+                //            ),
+                //
+                //            // if (widget.speaker.portNumbers.isNotEmpty) ...<Widget>[
+                //            //   Container(
+                //            //     margin: const EdgeInsets.symmetric(horizontal: 8),
+                //            //     width: 1,
+                //            //     height: 12,
+                //            //     color: Colors.white,
+                //            //   ),
+                //            // ],
+                //          ],
+                //
+                //          // port numbers (if any)
+                // /*         if (widget.speaker.portNumbers.isNotEmpty) ...<Widget>[
+                //            const Icon(Icons.electrical_services, size: 14, color: Colors.white),
+                //            const SizedBox(width: 4),
+                //            Text(
+                //              'Port ${widget.speaker.portNumbers.join(', ')}',
+                //              style: const TextStyle(
+                //                fontSize: 12,
+                //                color: Colors.white,
+                //                fontWeight: FontWeight.w500,
+                //              ),
+                //            ),
+                //          ],*/
+                //        ],
+                //      ),
+                // );
               },
             ),
 

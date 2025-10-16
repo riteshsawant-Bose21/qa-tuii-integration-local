@@ -94,4 +94,28 @@ extension HardwareManager on ProjectManager {
     }
     projectService!.updateHardwareLocation(hardwareId, newLocation);
   }
+
+  //add hardware to circuit
+  void addHardwareAndCreateCircuit(HardwareComponent hw, String circuitId) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    addHardware(hw);
+    projectService!.addHardwareToCircuit(hw.id, circuitId);
+  }
+
+  //get zone for hardware
+  Zone? getZoneForHardware(String hardwareId) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getZoneForHardware(hardwareId);
+  }
+
+  CircuitModel? getCircuitForHardware(String hardwareId) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getCircuitForHardware(hardwareId);
+  }
 }

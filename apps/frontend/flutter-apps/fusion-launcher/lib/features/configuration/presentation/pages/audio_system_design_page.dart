@@ -168,7 +168,7 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
                                       vipAddress: serviceLocator<ProjectViewModel>().virtualIP,
                                       isControlMode: serviceLocator<ProjectViewModel>().isInControlMode,
                                       droAddress: serviceLocator<FusionPreferences>().droServerUrl,
-                                      fusionDevices: serviceLocator<ProjectViewModel>().fusionDevices ?? <FusionDevice>[],
+                                      fusionDevices: serviceLocator<ProjectViewModel>().fusionDevices ?? <FusionDsp>[],
                                       onRequestFusionDeviceList: () {
                                         sendDataToDRO();
                                       },

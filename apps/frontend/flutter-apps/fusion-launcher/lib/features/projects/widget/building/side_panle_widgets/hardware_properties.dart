@@ -496,22 +496,28 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   const SizedBox(height: 12),
-                  _buildHardwarePropertyRow(
-                    context: context,
-                    label: "Listening Area",
-                    value: viewModel.getListeningAreaForHardware(widget.selectedHardware.id)?.name ?? "N/A",
-                    options: viewModel.listeningAreas.map((ListeningArea listeningArea) => listeningArea.name).toList(),
-                    onOptionSelected: (int selectedIndex) {
-                      final ListeningArea? selectedArea = viewModel.listeningAreas.isNotEmpty ? viewModel.listeningAreas[selectedIndex] : null;
-                      if (selectedArea != null) {
-                        print("Selected Area: ${selectedArea.name}");
-                        final LocationModel updated = widget.selectedHardware.locationEntity.copyWith(
-                          listeningAreaId: selectedArea.id,
-                        );
-                        viewModel.updateHardwareLocation(widget.selectedHardware.id, updated);
-                      }
-                    },
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: <Widget>[
+                      _buildHardwarePropertyRow(
+                        context: context,
+                        label: "Listening Area",
+                        value: viewModel.getListeningAreaForHardware(widget.selectedHardware.id)?.name ?? "N/A",
+                        options: viewModel.listeningAreas.map((ListeningArea listeningArea) => listeningArea.name).toList(),
+                        onOptionSelected: (int selectedIndex) {
+                          final ListeningArea? selectedArea = viewModel.listeningAreas.isNotEmpty ? viewModel.listeningAreas[selectedIndex] : null;
+                          if (selectedArea != null) {
+                            print("Selected Area: ${selectedArea.name}");
+                            final LocationModel updated = widget.selectedHardware.locationEntity.copyWith(
+                              listeningAreaId: selectedArea.id,
+                            );
+                            viewModel.updateHardwareLocation(widget.selectedHardware.id, updated);
+                          }
+                        },
+                      ),
+                    ],
                   ),
+
                   const SizedBox(height: 8),
                   _buildHardwarePropertyTextRow(
                     context: context,

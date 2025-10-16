@@ -1,43 +1,71 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:uuid/uuid.dart';
 
-class Amplifier {
-  final String id;
-  final String name;
+class Amplifier extends HardwareComponent {
   final int channels;
   final double powerPerChannel;
   final MaterialColor color;
-  final String assetPath;
-  final double price;
 
   Amplifier({
-    String? id,
-    required this.name,
+    super.id,
+    required super.name,
     required this.channels,
     required this.powerPerChannel,
     required this.color,
-    this.assetPath = 'assets/images/amplifier.png',
-    this.price = 1000.0,
-  }) : id = id ?? const Uuid().v4();
+    super.assetImagePath = 'assets/images/amplifier.png',
+    super.price = 1000.0,
+    super.pos,
+    super.wiringPos,
+    super.zAxis,
+    String? hardwareName,
+    LocationModel? locationEntity,
+    super.lockListeningArea,
+    super.communicationPorts,
+    super.portData,
+    super.inputPortsData,
+    super.outputPortsData,
+  }) : super(hardwareName: hardwareName ?? name, locationEntity: locationEntity ?? LocationModel());
 
   double get totalPower => channels * powerPerChannel;
 
   //copyWith
+  @override
   Amplifier copyWith({
     String? name,
     int? channels,
     double? powerPerChannel,
     MaterialColor? color,
-    String? assetPath,
+    String? assetImagePath,
     double? price,
+    String? hardwareName,
+    LocationModel? locationEntity,
+    Offset? pos,
+    Offset? wiringPos,
+    double? zAxis,
+    String? id,
+    bool? lockListeningArea,
+    List<PortData>? communicationPorts,
+    List<PortData>? inputPortsData,
+    List<PortData>? outputPortsData,
   }) {
     return Amplifier(
       name: name ?? this.name,
       channels: channels ?? this.channels,
       powerPerChannel: powerPerChannel ?? this.powerPerChannel,
       color: color ?? this.color,
-      assetPath: assetPath ?? this.assetPath,
+      assetImagePath: assetImagePath ?? this.assetImagePath,
       price: price ?? this.price,
+      hardwareName: hardwareName ?? this.hardwareName,
+      locationEntity: locationEntity ?? this.locationEntity,
+      pos: pos ?? this.pos,
+      wiringPos: wiringPos ?? this.wiringPos,
+      zAxis: zAxis ?? this.zAxis,
+      id: id ?? this.id,
+      lockListeningArea: lockListeningArea ?? this.lockListeningArea,
+      communicationPorts: communicationPorts ?? this.communicationPorts,
+      inputPortsData: inputPortsData ?? this.inputPortsData,
+      outputPortsData: outputPortsData ?? this.outputPortsData,
     );
   }
 
@@ -47,8 +75,19 @@ class Amplifier {
       channels: json['channels'] as int,
       powerPerChannel: (json['powerPerChannel'] as num).toDouble(),
       color: _materialColorFromHex(json['color'] as String),
-      assetPath: json['assetPath'] as String,
+      assetImagePath: json['assetImagePath'] as String,
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
+      id: json['id'] as String?,
+      hardwareName: json['hardwareName'] as String?,
+      locationEntity: json['locationEntity'] != null ? LocationModel.fromJson(json['locationEntity'] as Map<String, dynamic>) : null,
+      pos: json['pos'] != null ? Offset((json['pos']['dx'] as num).toDouble(), (json['pos']['dy'] as num).toDouble()) : null,
+      wiringPos: json['wiringPos'] != null ? Offset((json['wiringPos']['dx'] as num).toDouble(), (json['wiringPos']['dy'] as num).toDouble()) : null,
+      zAxis: (json['zAxis'] as num?)?.toDouble() ?? 0.0,
+      lockListeningArea: json['lockListeningArea'] as bool? ?? false,
+      communicationPorts:
+          (json['communicationPorts'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
+      outputPortsData: (json['outputPortsData'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
+      inputPortsData: (json['inputPortsData'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
     );
   }
 
@@ -58,8 +97,19 @@ class Amplifier {
       'channels': channels,
       'powerPerChannel': powerPerChannel,
       'color': '#${color.value.toRadixString(16).padLeft(8, '0')}',
-      'assetPath': assetPath,
+      'assetImagePath': assetImagePath,
       'price': price,
+      'id': id,
+      'hardwareName': hardwareName,
+      'locationEntity': locationEntity.toJson(),
+      'pos': <String, double>{'dx': pos.dx, 'dy': pos.dy},
+      'wiringPos': wiringPos != null ? <String, double>{'dx': wiringPos!.dx, 'dy': wiringPos!.dy} : null,
+      'zAxis': zAxis,
+      'componentType': 'amplifier',
+      'lockListeningArea': lockListeningArea,
+      'communicationPorts': communicationPorts.map((PortData port) => port.toJson()).toList(),
+      'outputPortsData': outputPortsData.map((PortData port) => port.toJson()).toList(),
+      'inputPortsData': inputPortsData.map((PortData port) => port.toJson()).toList(),
     };
   }
 

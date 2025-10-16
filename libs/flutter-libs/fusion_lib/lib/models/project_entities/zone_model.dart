@@ -11,16 +11,19 @@ class Zone {
   final List<String> listeningAreasIds;
   final List<String> sourceSetIds;
   final String zoneColor;
+  final List<String> subZones;
+  final List<String> circuits;
 
   Zone({
     String? id,
     required this.name,
     List<String>? listeningAreaIds,
     List<ProcessingBlockModel>? processingBlocks,
-    List<String>? nonLocalSpeakerIds,
     List<String>? sourceSetIds,
     String? zoneColor,
     this.selectedMixIndex = 0,
+    this.subZones = const <String>[],
+    this.circuits = const <String>[],
   }) : id = id ?? getShortId(),
        listeningAreasIds = listeningAreaIds ?? <String>[],
        processingBlocks = processingBlocks ?? <ProcessingBlockModel>[],
@@ -63,6 +66,8 @@ class Zone {
     int? selectedMixIndex,
     List<String>? sourceSetIds,
     String? zoneColor,
+    List<String>? subZones,
+    List<String>? circuits,
   }) {
     return Zone(
       id: id ?? this.id,
@@ -72,6 +77,8 @@ class Zone {
       selectedMixIndex: selectedMixIndex ?? this.selectedMixIndex,
       sourceSetIds: sourceSetIds ?? this.sourceSetIds,
       zoneColor: zoneColor ?? this.zoneColor,
+      subZones: subZones ?? this.subZones,
+      circuits: circuits ?? this.circuits,
     );
   }
 
@@ -83,6 +90,8 @@ class Zone {
     'selectedMixIndex': selectedMixIndex,
     'sourceSetIds': sourceSetIds,
     'zoneColor': zoneColor,
+    'subZones': subZones,
+    'circuits': circuits,
   };
 
   factory Zone.fromJson(Map<String, dynamic> json) => Zone(
@@ -93,5 +102,7 @@ class Zone {
     selectedMixIndex: json['selectedMixIndex'] as int? ?? 0,
     sourceSetIds: List<String>.from(json['sourceSetIds'] as List<dynamic>),
     zoneColor: json['zoneColor'] as String? ?? getRandomColor(),
+    subZones: List<String>.from(json['subZones'] as List<dynamic>? ?? <String>[]),
+    circuits: List<String>.from(json['circuits'] as List<dynamic>? ?? <String>[]),
   );
 }

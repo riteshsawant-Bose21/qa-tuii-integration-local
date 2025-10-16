@@ -29,7 +29,7 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
   List<HardwareComponent> controllers = <HardwareComponent>[];
   List<HardwareComponent> racks = <HardwareComponent>[];
   List<Amplifier> amplifiers = <Amplifier>[];
-  List<FusionDevice> fusionDevices = <FusionDevice>[];
+  List<FusionDsp> fusionDevices = <FusionDsp>[];
   List<HardwareComponent> others = <HardwareComponent>[];
 
   @override
@@ -129,7 +129,7 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
     }
 
     // Add fusion devices
-    for (FusionDevice device in fusionDevices) {
+    for (FusionDsp device in fusionDevices) {
       rawItems.add(
         BOMItem(
           id: device.id ?? '',
@@ -199,18 +199,14 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
   loadData() {
     speakers = serviceLocator<ProjectViewModel>().hardwareComponents.whereType<Speaker>().toList();
     sources = serviceLocator<ProjectViewModel>().hardwareComponents.whereType<Source>().toList();
-    controllers =
-        serviceLocator<ProjectViewModel>().hardwareComponents
-            .whereType<GenericHardwareComponent>()
-            .where((GenericHardwareComponent component) => component.type == GenericHardwareComponentType.controller)
-            .toList();
+    controllers = serviceLocator<ProjectViewModel>().fusionControllers;
     racks =
         serviceLocator<ProjectViewModel>().hardwareComponents
             .whereType<GenericHardwareComponent>()
             .where((GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack)
             .toList();
     amplifiers = <Amplifier>[];
-    fusionDevices = <FusionDevice>[];
+    fusionDevices = <FusionDsp>[];
     others =
         serviceLocator<ProjectViewModel>().hardwareComponents
             .where(

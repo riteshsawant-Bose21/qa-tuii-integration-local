@@ -219,7 +219,7 @@ class FloorPlanProjectEditorState extends State<FloorPlanProjectEditor> with Tic
                         calculateSPL();
                         serviceLocator<ProjectViewModel>().saveProjectToLocal();
                       },
-                      onProductSelected: (GenericHardwareComponent product) {
+                      onProductSelected: (HardwareComponent product) {
                         //get current floor
                         final int currentFloorIndex = serviceLocator<ProjectViewModel>().currentFloorIndex;
                         final FloorModel currentFloor = serviceLocator<ProjectViewModel>().floors[currentFloorIndex];
