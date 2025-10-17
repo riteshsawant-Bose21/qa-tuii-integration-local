@@ -146,7 +146,7 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
 
       case "Speakers":
         return <Widget>[
-          _buildExpandableSection<ProductQueryModel>(
+          _buildCreateZoneSection<ProductQueryModel>(
             title: 'SPEAKERS',
             isExpanded: _speakersExpanded,
             onTap: () => setMenuState(() => _speakersExpanded = !_speakersExpanded),
@@ -233,16 +233,16 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
                     pos: null,
                     type: item.type,
                     assetImagePath: item.assetPath,
-                    locationEntity: LocationModel(),
+                    locationEntity: LocationModel(listeningAreaId: 'frf', floorId: 'dfd'),
                     sku: item.id,
                     price: item.price,
                   );
                   serviceLocator<ProjectViewModel>().addHardware(source);
-                } else if (item is FusionDevice) {
+                } else if (item is ProductQueryModel) {
                   // final FusionDevice fusionDevice = FusionDevice(
                   //   name: item.name,
                   //   price: item.price,
-                  //   location: 'EqpLoc.',
+                  //   locationEntity: LocationModel(listeningAreaId: 'frf', floorId: 'dfd'),
                   //   status: FusionDeviceSetupStatus.notStarted,
                   // );
                   // serviceLocator<ProjectViewModel>().addHardware(fusionDevice);
@@ -293,6 +293,65 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
               ),
             ),
           ),
+      ],
+    );
+  }
+
+  /// create zone section
+  Widget _buildCreateZoneSection<T>({
+    required String title,
+    required bool isExpanded,
+    required VoidCallback onTap,
+    required List<T> items,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        /// Section Header with close button
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(width: 1, color: Theme.of(context).colorScheme.grey),
+            ),
+          ),
+          child: Row(
+            children: <Widget>[
+              const SizedBox(width: 16),
+              Expanded(
+                child: FusionAppText(
+                  text: "Create Zone",
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11),
+                ),
+              ),
+              IconButton(
+                icon: Icon(
+                  Icons.close,
+                  size: 22,
+                  color: Theme.of(context).colorScheme.fusionTextViewColor,
+                ),
+                onPressed: () => Navigator.of(context).pop(),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+            ],
+          ),
+        ),
+
+        FusionAppText(
+          text: "Zone Name",
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 9),
+        ),
+        const SizedBox(height: 8),
+        FusionTextField(
+          hintText: "",
+          controller: TextEditingController(),
+          decoration: FusionInputDecoration.fusionDense(
+            colorScheme: Theme.of(context).colorScheme,
+            hintText: 'Enter zone name',
+            // errorText: "",
+          ),
+        ),
       ],
     );
   }

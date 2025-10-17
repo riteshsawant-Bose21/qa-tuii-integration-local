@@ -485,6 +485,13 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                             side: "left",
                             dockItemWidget: () => const FusionAppText(text: "PRODUCT List"),
                           ),
+                          DockItemConfig(
+                            id: "5",
+                            title: "PROPERTIES",
+                            side: "right",
+                            alowUndock: false,
+                            dockItemWidget: () => const Properties(),
+                          ),
                         ],
                       );
                     },
