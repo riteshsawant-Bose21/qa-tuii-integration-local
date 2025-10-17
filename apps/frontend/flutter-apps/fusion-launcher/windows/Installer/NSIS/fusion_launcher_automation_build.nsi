@@ -90,7 +90,7 @@ Section "Install"
 
 	; Copy files from Flutter build
 	!define BUILD_DIR "${__FILE__}"
-	!searchparse /noerrors "${BUILD_DIR}" "\" fusion_launcher.nsi" "" $0
+	!searchparse /noerrors "${BUILD_DIR}" "\" fusion_launcher_automation_build.nsi" "" $0
 	DetailPrint "DEBUG: \$0 is $0"
 	File /r "C:\Users\Administrator\actions-runner\_work\fusion-monorepo\fusion-monorepo\apps\frontend\flutter-apps\fusion-launcher\build\windows\x64\runner\Profile\*"
 
