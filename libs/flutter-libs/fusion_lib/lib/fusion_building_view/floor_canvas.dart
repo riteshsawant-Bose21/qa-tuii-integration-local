@@ -22,6 +22,7 @@ class FloorCanvas extends StatefulWidget {
   final FloorModel floor;
   final double splMin;
   final double splMax;
+  final SplPanelData splPanelData;
 
   final FloorCanvasController controller;
 
@@ -67,6 +68,7 @@ class FloorCanvas extends StatefulWidget {
     required this.splMax,
     required this.moveHardware,
     required this.addNewHardwareComponent,
+    required this.splPanelData,
   });
 
   @override
@@ -223,6 +225,7 @@ class FloorCanvasState extends State<FloorCanvas> {
                     selectedListeningAreaIds: widget.controller.selectedListeningAreas.map((ListeningArea s) => s.id).toList(),
                     splMax: widget.splMax,
                     splMin: widget.splMin,
+                    splPanelData: widget.splPanelData,
                   ),
                 ),
               ),
@@ -412,11 +415,11 @@ class FloorCanvasState extends State<FloorCanvas> {
     if (_isDrawing) {
       if (e.buttons == kPrimaryMouseButton) {
         if (_current.isNotEmpty && (worldPos - _current.first).distance < 10.0 / _zoomScale) {
-          final ListeningArea newArea = ListeningArea(name: "Area ${widget.listeningAreas.length + 1}", vertices: List<Offset>.of(_current));
-
-          final List<HardwareComponent> hardwareForArea = _getHardwareComponentsInListeningAreas(newArea);
-
-          widget.onAddListeningArea(newArea, hardwareForArea);
+          if (_current.length >= 3) {
+            final ListeningArea newArea = ListeningArea(name: "Area ${widget.listeningAreas.length + 1}", vertices: List<Offset>.of(_current));
+            final List<HardwareComponent> hardwareForArea = _getHardwareComponentsInListeningAreas(newArea);
+            widget.onAddListeningArea(newArea, hardwareForArea);
+          }
 
           setState(() {
             _current.clear();

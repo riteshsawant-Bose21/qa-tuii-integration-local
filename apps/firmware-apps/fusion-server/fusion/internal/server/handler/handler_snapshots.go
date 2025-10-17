@@ -72,5 +72,5 @@ func (h *Handler) handleSnapshotOperation(node string, name string, update api.N
 	msg := api.NewNotifyMessage(update, node,
 		api.WithSnapshotUpdate(&api.SnapshotUpdate{Name: name, Data: data, Timestamp: time.Now().UTC()}),
 	)
-	return h.broadcastUpdate(msg)
+	return h.broadcastMessage(msg)
 }

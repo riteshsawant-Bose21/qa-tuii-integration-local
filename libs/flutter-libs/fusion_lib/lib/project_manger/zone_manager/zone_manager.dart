@@ -32,21 +32,21 @@ extension ZoneManager on ProjectManager {
     return projectService!.zones.getAll();
   }
 
-  /// Add Speaker to Zone
-  void addSpeakerToZone(String speakerId, String zoneId) {
-    if (projectService == null) {
-      throw Exception('No project is currently open');
-    }
-    projectService!.addSpeakerToZone(speakerId, zoneId);
-  }
-
-  /// Remove Speaker from Zone
-  void removeSpeakerFromZone(String speakerId, String zoneId) {
-    if (projectService == null) {
-      throw Exception('No project is currently open');
-    }
-    projectService!.removeSpeakerFromZone(speakerId, zoneId);
-  }
+  // /// Add Speaker to Zone
+  // void addSpeakerToZone(String speakerId, String zoneId) {
+  //   if (projectService == null) {
+  //     throw Exception('No project is currently open');
+  //   }
+  //   projectService!.addSpeakerToZone(speakerId, zoneId);
+  // }
+  //
+  // /// Remove Speaker from Zone
+  // void removeSpeakerFromZone(String speakerId, String zoneId) {
+  //   if (projectService == null) {
+  //     throw Exception('No project is currently open');
+  //   }
+  //   projectService!.removeSpeakerFromZone(speakerId, zoneId);
+  // }
 
   // Get Zone by Id
   Zone getZoneById(String zoneId) {
@@ -85,5 +85,27 @@ extension ZoneManager on ProjectManager {
       throw Exception('No project is currently open');
     }
     return projectService!.getSourceSetsInZone(zoneId);
+  }
+
+  //add all missing methods from zone_service.dart
+  void addCircuitToZone(String circuitId, String zoneId) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    projectService!.addCircuitToZone(circuitId, zoneId);
+  }
+
+  void removeCircuitFromZone(String circuitId, String zoneId) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    projectService!.removeCircuitFromZone(circuitId, zoneId);
+  }
+
+  List<CircuitModel> getCircuitsInZone(String zoneId) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getCircuitsInZone(zoneId);
   }
 }

@@ -7,7 +7,7 @@ import '../dro-visualizer/dro_visualizer.dart';
 import 'dsp_card.dart';
 
 class DspColumn extends StatefulWidget {
-  final List<FusionDevice> fusionDevices;
+  final List<FusionDsp> fusionDevices;
   final String? vipAddress;
   final String? droAddress;
   final Function() onRequestFusionDeviceList;

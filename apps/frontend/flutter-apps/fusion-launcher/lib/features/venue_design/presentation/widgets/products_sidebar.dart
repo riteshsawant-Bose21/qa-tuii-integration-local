@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
+import 'package:fusion_lib/models/project_entities/controller.dart';
 
 import '../../../../core/models/products_data.dart';
 
@@ -17,7 +18,7 @@ class ProductsSidebar extends StatefulWidget {
   final ValueChanged<SpeakerData>? onSpeakerSelected;
   final ValueChanged<SpeakerData>? onAutoPlaceRequested;
   final ValueChanged<Source>? onSourceSelected;
-  final ValueChanged<GenericHardwareComponent>? onProductSelected;
+  final ValueChanged<HardwareComponent>? onProductSelected;
 
   const ProductsSidebar({
     super.key,
@@ -115,10 +116,9 @@ class ProductsSidebarState extends State<ProductsSidebar> {
       items: widget.controllers,
       onTap: (ControllerData d) {
         widget.onProductSelected?.call(
-          GenericHardwareComponent(
+          FusionController(
             name: d.name,
             pos: Offset.zero,
-            type: GenericHardwareComponentType.controller,
             assetImagePath: d.assetPath,
             locationEntity: LocationModel(),
             price: d.price,

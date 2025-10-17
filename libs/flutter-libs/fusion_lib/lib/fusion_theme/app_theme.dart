@@ -193,7 +193,11 @@ class FusionAppTheme {
           foregroundColor: lightColorScheme.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
           elevation: 0,
-          textStyle: TextStyle(fontSize: 11, fontFamily: GoogleFonts.montserrat().fontFamily, fontWeight: FontWeight.w500),
+          textStyle: TextStyle(
+            fontSize: 11,
+            fontFamily: GoogleFonts.montserrat().fontFamily,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ),
 
@@ -203,7 +207,11 @@ class FusionAppTheme {
           foregroundColor: lightColorScheme.primaryColor,
           side: BorderSide(color: lightColorScheme.primaryColor),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-          textStyle: TextStyle(fontSize: 11, fontFamily: GoogleFonts.montserrat().fontFamily, fontWeight: FontWeight.w500),
+          textStyle: TextStyle(
+            fontSize: 11,
+            fontFamily: GoogleFonts.montserrat().fontFamily,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ),
 
@@ -211,14 +219,24 @@ class FusionAppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: lightColorScheme.primaryColor,
-          textStyle: TextStyle(fontSize: 11, fontFamily: GoogleFonts.montserrat().fontFamily, fontWeight: FontWeight.w500),
+          textStyle: TextStyle(
+            fontSize: 11,
+            fontFamily: GoogleFonts.montserrat().fontFamily,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ),
 
       /// Tab bar styling with custom font and colors
       tabBarTheme: TabBarThemeData(
-        labelStyle: TextStyle(fontFamily: GoogleFonts.montserrat().fontFamily, fontWeight: FontWeight.w600),
-        unselectedLabelStyle: TextStyle(fontFamily: GoogleFonts.montserrat().fontFamily, fontWeight: FontWeight.w400),
+        labelStyle: TextStyle(
+          fontFamily: GoogleFonts.montserrat().fontFamily,
+          fontWeight: FontWeight.w600,
+        ),
+        unselectedLabelStyle: TextStyle(
+          fontFamily: GoogleFonts.montserrat().fontFamily,
+          fontWeight: FontWeight.w400,
+        ),
         labelColor: lightColorScheme.primaryColor,
         unselectedLabelColor: lightColorScheme.greyDark,
       ),
@@ -227,7 +245,12 @@ class FusionAppTheme {
       appBarTheme: AppBarTheme(
         backgroundColor: lightColorScheme.primaryColor,
         foregroundColor: lightColorScheme.white,
-        titleTextStyle: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, fontFamily: GoogleFonts.montserrat().fontFamily, color: lightColorScheme.white),
+        titleTextStyle: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+          fontFamily: GoogleFonts.montserrat().fontFamily,
+          color: lightColorScheme.white,
+        ),
       ),
 
       /// Input field styling with soft grey background and custom borders
@@ -291,7 +314,11 @@ class FusionAppTheme {
           foregroundColor: darkColorScheme.black,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
           elevation: 0,
-          textStyle: TextStyle(fontSize: 11, fontFamily: GoogleFonts.montserrat().fontFamily, fontWeight: FontWeight.w500),
+          textStyle: TextStyle(
+            fontSize: 11,
+            fontFamily: GoogleFonts.montserrat().fontFamily,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ),
 
@@ -301,7 +328,11 @@ class FusionAppTheme {
           foregroundColor: darkColorScheme.primaryColor,
           side: BorderSide(color: darkColorScheme.primaryColor),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-          textStyle: TextStyle(fontSize: 11, fontFamily: GoogleFonts.montserrat().fontFamily, fontWeight: FontWeight.w500),
+          textStyle: TextStyle(
+            fontSize: 11,
+            fontFamily: GoogleFonts.montserrat().fontFamily,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ),
 
@@ -309,14 +340,24 @@ class FusionAppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: darkColorScheme.primaryColor,
-          textStyle: TextStyle(fontSize: 11, fontFamily: GoogleFonts.montserrat().fontFamily, fontWeight: FontWeight.w500),
+          textStyle: TextStyle(
+            fontSize: 11,
+            fontFamily: GoogleFonts.montserrat().fontFamily,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ),
 
       /// Tab bar styling with custom font and dark theme colors
       tabBarTheme: TabBarThemeData(
-        labelStyle: TextStyle(fontFamily: GoogleFonts.montserrat().fontFamily, fontWeight: FontWeight.w600),
-        unselectedLabelStyle: TextStyle(fontFamily: GoogleFonts.montserrat().fontFamily, fontWeight: FontWeight.w400),
+        labelStyle: TextStyle(
+          fontFamily: GoogleFonts.montserrat().fontFamily,
+          fontWeight: FontWeight.w600,
+        ),
+        unselectedLabelStyle: TextStyle(
+          fontFamily: GoogleFonts.montserrat().fontFamily,
+          fontWeight: FontWeight.w400,
+        ),
         labelColor: darkColorScheme.primaryColor,
         unselectedLabelColor: darkColorScheme.greyDark,
       ),
@@ -325,17 +366,33 @@ class FusionAppTheme {
       appBarTheme: AppBarTheme(
         backgroundColor: darkColorScheme.launcherBgColor1,
         foregroundColor: darkColorScheme.white,
-        titleTextStyle: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, fontFamily: GoogleFonts.montserrat().fontFamily, color: darkColorScheme.white),
+        titleTextStyle: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+          fontFamily: GoogleFonts.montserrat().fontFamily,
+          color: darkColorScheme.white,
+        ),
       ),
 
       /// Input field styling with dark backgrounds and borders for dark theme
       inputDecorationTheme: InputDecorationTheme(
-        labelStyle: TextStyle(fontSize: 13, fontWeight: FontWeight.w400, color: darkColorScheme.textFieldLabelColor),
-        hintStyle: TextStyle(fontSize: 13, fontWeight: FontWeight.w300, color: darkColorScheme.textFieldLabelColor),
+        labelStyle: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w400,
+          color: darkColorScheme.textFieldLabelColor,
+        ),
+        hintStyle: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w300,
+          color: darkColorScheme.textFieldLabelColor,
+        ),
 
         filled: true,
         fillColor: darkColorScheme.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 10,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(color: darkColorScheme.textFieldBorderColor),
@@ -409,13 +466,15 @@ extension ColorExtends on ColorScheme {
 
   bool get isDarkMode => brightness == Brightness.dark;
   Color get primaryColor => isDarkMode ? _primaryColorD : _primaryColorL;
-  Color get fusionButtonColor => isDarkMode ? _fusionButtonColorL : _fusionButtonColorD;
+  Color get fusionButtonColor =>
+      isDarkMode ? _fusionButtonColorL : _fusionButtonColorD;
   Color get fusionButtonTextColor => isDarkMode ? _blackD : _blackL;
   Color get fusionTextViewColor => isDarkMode ? _blackL : _blackD;
   Color get fusionOutlinedButtonColor => isDarkMode ? _blackL : _blackD;
   Color get textFieldBorderColor => isDarkMode ? _borderColorD : _borderColorL;
   Color get textFieldLabelColor => isDarkMode ? _greyDarkD : _greyDarkL;
-  Gradient get gradientTextColor => isDarkMode ? _gradientTextColorDark : _gradientTextColorLight;
+  Gradient get gradientTextColor =>
+      isDarkMode ? _gradientTextColorDark : _gradientTextColorLight;
   Color get dividerColor => isDarkMode ? _dividerColorD : _dividerColorL;
   Color get softGray => isDarkMode ? _softGrayD : _softGrayL;
 
@@ -428,12 +487,42 @@ extension ColorExtends on ColorScheme {
   Color get black => isDarkMode ? _blackD : _blackL;
 
   /// app launcher background colors
-  Color get launcherBgColor1 => isDarkMode ? launcherBgColorDark1 : launcherBgColorLight1;
-  Color get launcherBgColor2 => isDarkMode ? launcherBgColorDark2 : launcherBgColorLight2;
+  Color get launcherBgColor1 =>
+      isDarkMode ? launcherBgColorDark1 : launcherBgColorLight1;
+  Color get launcherBgColor2 =>
+      isDarkMode ? launcherBgColorDark2 : launcherBgColorLight2;
 
   /// app text field colors
   Color get greyDark => isDarkMode ? _greyDarkD : _greyDarkL;
   Color get softGrey => isDarkMode ? _softGreyD : _softGreyL;
+
+  ///
+  /// Wiring view color scheme
+  ///
+  Color get canvasBG => Color(0xFFFFFFFF);
+  Color get componentBG => Color(0xFFFBFBFB);
+  Color get componentBorder => Color(0xFFC4C4C4);
+  Color get componentHeadingBG => Color(0xFF181717);
+  Color get wireColor => Color(0xFFC89450);
+  Color get componentFG => Colors.black;
+
+  ///
+  /// Component Port
+  ///
+  Color get activePortBG => Colors.black;
+  Color get activePortFG => Colors.white;
+  Color get inactivePortBG => Color(0xFFAEAEAE);
+  Color get inactivePortFG => Colors.black;
+
+  ///
+  ///
+  ///
+  Color get portOverlayTitle => Color(0xFF929292);
+}
+
+extension ColorContextExtension on BuildContext {
+  ColorScheme get colorScheme => Theme.of(this).colorScheme;
+  TextTheme get textTheme => Theme.of(this).textTheme;
 }
 
 /// Extension on [InputDecoration] that provides factory methods for common Fusion App input styles.

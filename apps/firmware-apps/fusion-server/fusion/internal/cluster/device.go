@@ -190,7 +190,7 @@ func (c *Cluster) GetVIP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vips, err := c.getVIPFromConfig()
+	vip, err := c.getVIPFromConfig()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -198,21 +198,18 @@ func (c *Cluster) GetVIP(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
 
-	for _, vip := range vips {
-		if isVip := c.isLocalVIP(vip); isVip {
+	if isVip := c.isLocalVIP(vip); isVip {
 
-			local, vip, ok := c.getLocalForVIP(vip)
-			if !ok {
-				w.WriteHeader(http.StatusNotFound)
-				return
-			}
-
-			json.NewEncoder(w).Encode(map[string]string{
-				"local": local.String(),
-				"vip":   vip.String(),
-			})
+		local, vip, ok := c.getLocalForVIP(vip)
+		if !ok {
+			w.WriteHeader(http.StatusNotFound)
 			return
 		}
+
+		json.NewEncoder(w).Encode(map[string]string{
+			"local": local.String(),
+			"vip":   vip.String(),
+		})
 	}
 
 	w.WriteHeader(http.StatusNotFound)
@@ -390,13 +387,8 @@ func (c *Cluster) isLocalNodePrimary() bool {
 		return false
 	}
 
-	for _, v := range vip {
-		_, _, isLocal := c.getLocalForVIP(v)
-		if isLocal {
-			return true
-		}
-	}
-	return false
+	_, _, isLocal := c.getLocalForVIP(vip)
+	return isLocal
 }
 
 func (c *Cluster) applyPatch(patch *persistence.DevicePatch, info *persistence.DeviceInfo) {

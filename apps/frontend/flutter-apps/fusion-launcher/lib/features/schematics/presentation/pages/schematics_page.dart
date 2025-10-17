@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:fusion_launcher/core/theme/app_theme.dart';
+import 'package:fusion_launcher/features/wiring_design/view/wiring_page.dart';
 import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import 'schematics_main_panel.dart';
-import 'old_schematics_page.dart';
 
 class SchematicsPage extends StatefulWidget {
   const SchematicsPage({super.key});
@@ -78,7 +78,7 @@ class _SchematicsPageState extends State<SchematicsPage> {
 
             /// Main Panel
             Expanded(
-              child: isListingViewMode ? const SchematicsMainPanel() : const OlsSchematicsPage(),
+              child: isListingViewMode ? const SchematicsMainPanel() : const WiringPage(),
             ),
           ],
         );

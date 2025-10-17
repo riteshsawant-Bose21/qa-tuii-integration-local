@@ -73,7 +73,7 @@ class JsonFormatConverter {
   }
 
   /// Converts the input JSON format to the expected output format
-  static Map<String, dynamic> convertFormat(Map<String, dynamic> inputJson, List<FusionDevice> fusionDevices) {
+  static Map<String, dynamic> convertFormat(Map<String, dynamic> inputJson, List<FusionDsp> fusionDevices) {
     // Create the base structure with only property_settings and user_setting as defaults
     final Map<String, dynamic> outputJson = <String, dynamic>{
       "request_id": _generateRequestId(),
@@ -237,7 +237,7 @@ class JsonFormatConverter {
 
     final List<dynamic> maxDevices = <dynamic>[];
 
-    for (FusionDevice device in fusionDevices) {
+    for (FusionDsp device in fusionDevices) {
       final String deviceId = device.id;
       // Add device to max_devices
       maxDevices.add(<String, dynamic>{

@@ -1,3 +1,4 @@
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/circuit/circuit_viewmodel.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../project_view_model.dart';
@@ -82,25 +83,17 @@ extension ZoneViewModel on ProjectViewModel {
     }
   }
 
-  //add Speaker to zone
+  //add Speaker to zone with a new circuit
   void addSpeakerToZone(String hardwareId, String zoneId) {
     try {
-      projectManager.addSpeakerToZone(hardwareId, zoneId);
+      final CircuitModel circuitModel = CircuitModel(name: "New Circuit");
+      addCircuit(circuitModel);
+      addHardwareToCircuit(hardwareId, circuitModel.id);
+      addCircuitToZone(circuitModel.id, zoneId);
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to add speaker to zone: $e");
       throwError("Failed to add speaker to zone: $e");
-    }
-  }
-
-  //remove speaker from zone
-  void removeSpeakerFromZone(String hardwareId, String zoneId) {
-    try {
-      projectManager.removeSpeakerFromZone(hardwareId, zoneId);
-      updateProject();
-    } catch (e) {
-      FusionLogger.log(tag: LogTag.project, message: "Failed to remove speaker from zone: $e");
-      throwError("Failed to remove speaker from zone: $e");
     }
   }
 
@@ -145,6 +138,35 @@ extension ZoneViewModel on ProjectViewModel {
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to remove listening area from zone: $e");
       throwError("Failed to remove listening area from zone: $e");
+    }
+  }
+
+  void addCircuitToZone(String circuitId, String zoneId) {
+    try {
+      projectManager.addCircuitToZone(circuitId, zoneId);
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to add circuit to zone: $e");
+      throwError("Failed to add circuit to zone: $e");
+    }
+  }
+
+  void removeCircuitFromZone(String circuitId, String zoneId) {
+    try {
+      projectManager.removeCircuitFromZone(circuitId, zoneId);
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to remove circuit from zone: $e");
+      throwError("Failed to remove circuit from zone: $e");
+    }
+  }
+
+  List<CircuitModel> getCircuitsInZone(String zoneId) {
+    try {
+      return projectManager.getCircuitsInZone(zoneId);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get circuits for zone: $e");
+      return <CircuitModel>[];
     }
   }
 }

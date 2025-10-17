@@ -1,8 +1,6 @@
 import 'dart:ui';
 
-import 'hardware_component_model.dart';
-import 'location_model.dart';
-import 'processing_block_model.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 enum OutputType { analogOutput, aes67output }
 
@@ -13,7 +11,6 @@ class Speaker extends HardwareComponent {
   List<ProcessingBlockModel> blocks;
   String? ipAddress; // Optional field for AES67 output type
   String speakerSKU;
-  final List<int> portNumbers;
   final String? fusionDeviceId;
   final double pitch;
   final double roll;
@@ -24,6 +21,7 @@ class Speaker extends HardwareComponent {
     required super.locationEntity,
     required super.name,
     required super.pos,
+    super.wiringPos,
     required this.speakerSKU,
     this.rotation = 0.0,
     required this.gain,
@@ -38,9 +36,13 @@ class Speaker extends HardwareComponent {
     List<int>? portNumbers,
     this.fusionDeviceId,
     required super.price,
+    super.lockListeningArea,
     String? hardwareName,
+    super.portData,
+    super.communicationPorts,
+    super.inputPortsData,
+    super.outputPortsData,
   }) : blocks = blocks ?? <ProcessingBlockModel>[],
-       portNumbers = portNumbers ?? <int>[],
        super(hardwareName: hardwareName ?? name);
 
   @override
@@ -48,6 +50,7 @@ class Speaker extends HardwareComponent {
     String? id,
     String? name,
     Offset? pos,
+    Offset? wiringPos,
     double? rotation,
     double? gain,
     double? zAxis,
@@ -58,18 +61,22 @@ class Speaker extends HardwareComponent {
     LocationModel? locationEntity,
     String? ipAddress,
     String? speakerSKU,
-    List<int>? portNumbers,
     String? fusionDeviceId,
     double? price,
     String? hardwareName,
     double? pitch,
     double? roll,
     double? yaw,
+    bool? lockListeningArea,
+    List<PortData>? communicationPorts,
+    List<PortData>? inputPortsData,
+    List<PortData>? outputPortsData,
   }) {
     return Speaker(
       id: id ?? this.id,
       name: name ?? this.name,
       pos: pos ?? this.pos,
+      wiringPos: wiringPos ?? this.wiringPos,
       rotation: rotation ?? this.rotation,
       gain: gain ?? this.gain,
       zAxis: zAxis ?? this.zAxis,
@@ -79,13 +86,16 @@ class Speaker extends HardwareComponent {
       locationEntity: locationEntity ?? this.locationEntity,
       ipAddress: ipAddress ?? this.ipAddress,
       speakerSKU: speakerSKU ?? this.speakerSKU,
-      portNumbers: portNumbers ?? this.portNumbers,
       fusionDeviceId: fusionDeviceId ?? this.fusionDeviceId,
       price: price ?? this.price,
       hardwareName: hardwareName ?? this.hardwareName,
       pitch: pitch ?? this.pitch,
       roll: roll ?? this.roll,
       yaw: yaw ?? this.yaw,
+      lockListeningArea: lockListeningArea ?? this.lockListeningArea,
+      communicationPorts: communicationPorts ?? this.communicationPorts,
+      inputPortsData: inputPortsData ?? this.inputPortsData,
+      outputPortsData: outputPortsData ?? this.outputPortsData,
     );
   }
 
@@ -105,8 +115,7 @@ class Speaker extends HardwareComponent {
         speakerSKU == other.speakerSKU &&
         type == other.type &&
         zAxis == other.zAxis &&
-        fusionDeviceId == other.fusionDeviceId &&
-        portNumbers == other.portNumbers;
+        fusionDeviceId == other.fusionDeviceId;
   }
 
   @override
@@ -123,8 +132,7 @@ class Speaker extends HardwareComponent {
         speakerSKU.hashCode ^
         type.hashCode ^
         zAxis.hashCode ^
-        fusionDeviceId.hashCode ^
-        portNumbers.hashCode;
+        fusionDeviceId.hashCode;
   }
 
   Map<String, dynamic> toJson() {
@@ -132,6 +140,7 @@ class Speaker extends HardwareComponent {
       'id': id,
       'name': name,
       'pos': <String, double>{'dx': pos.dx, 'dy': pos.dy},
+      'wiringPos': wiringPos != null ? <String, double>{'dx': wiringPos!.dx, 'dy': wiringPos!.dy} : null,
       'rotation': rotation,
       'gain': gain,
       'assetImagePath': assetImagePath,
@@ -141,7 +150,6 @@ class Speaker extends HardwareComponent {
       'locationEntity': locationEntity.toJson(),
       'ipAddress': ipAddress,
       'speakerSKU': speakerSKU,
-      'portNumbers': portNumbers,
       'fusionDeviceId': fusionDeviceId,
       'price': price,
       "zAxis": zAxis,
@@ -149,6 +157,10 @@ class Speaker extends HardwareComponent {
       'pitch': pitch,
       'roll': roll,
       'yaw': yaw,
+      'lockListeningArea': lockListeningArea,
+      'communicationPorts': communicationPorts.map((PortData port) => port.toJson()).toList(),
+      'outputPortsData': outputPortsData.map((PortData port) => port.toJson()).toList(),
+      'inputPortsData': inputPortsData.map((PortData port) => port.toJson()).toList(),
     };
   }
 
@@ -157,6 +169,7 @@ class Speaker extends HardwareComponent {
       id: json['id'] as String?,
       name: json['name'] as String,
       pos: Offset(json['pos']['dx'] as double, json['pos']['dy'] as double),
+      wiringPos: json['wiringPos'] != null ? Offset((json['wiringPos']['x'] as num).toDouble(), (json['wiringPos']['y'] as num).toDouble()) : null,
       rotation: (json['rotation'] as num).toDouble(),
       gain: (json['gain'] as num).toDouble(),
       assetImagePath: json['assetImagePath'] as String,
@@ -173,6 +186,11 @@ class Speaker extends HardwareComponent {
       pitch: (json['pitch'] as num?)?.toDouble() ?? 0.0,
       roll: (json['roll'] as num?)?.toDouble() ?? 0.0,
       yaw: (json['yaw'] as num?)?.toDouble() ?? 0.0,
+      lockListeningArea: json['lockListeningArea'] as bool? ?? false,
+      communicationPorts:
+          (json['communicationPorts'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
+      outputPortsData: (json['outputPortsData'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
+      inputPortsData: (json['inputPortsData'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
     );
   }
 }

@@ -23,3 +23,7 @@ export 'project_entities/speaker_model.dart';
 export 'project_entities/zone_model.dart';
 export 'response_callback.dart';
 export 'product_query/product_query_model.dart';
+export 'project_entities/communication_ports.dart';
+export 'project_entities/circuit_model.dart';
+export 'project_entities/sub_zone_model.dart';
+export 'project_entities/connections_model.dart';

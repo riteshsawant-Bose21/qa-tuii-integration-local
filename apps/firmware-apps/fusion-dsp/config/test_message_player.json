@@ -1,0 +1,152 @@
+{
+    "session": {
+        "property_settings": [
+            { "name": "frame_size", "value": 256},
+            { "name": "sample_rate", "value": 48000 }
+        ]
+    },
+    "audio_tasks": [
+        {
+            "name": "task1",
+            "property_settings": [
+                { "name": "is_jack_client", "value": true },
+                { "name": "frame_size", "value": 256},
+                { "name": "sample_rate", "value": 48000 }
+            ],
+            "blocks": [
+                {
+                    "name": "player",
+                    "algorithm": "message_player",
+                    "property_settings": [
+                        { "name": "frame_size", "value": 256},
+                        { "name": "sample_rate", "value": 48000 }
+                    ],
+                    "terminal_channels": [
+                        { "name": "out", "channels": 4 }
+                    ]
+                },
+                {
+                    "name": "outfile",
+                    "algorithm": "jack_out",
+                    "property_settings": [
+                        { "name": "frame_size", "value": 256 },
+                        { "name": "sample_rate", "value": 48000 },
+                        { "name": "client_name", "value": "task1" }
+                    ],
+                    "terminal_channels": [
+                        { "name": "in", "channels": 4 }
+                    ]
+                }
+            ],
+            "block_connections": [
+                {
+                    "source_block": "player",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "outfile",
+                    "input_terminal": "in",
+                    "input_channel": 1
+                },
+                {
+                    "source_block": "player",
+                    "output_terminal": "out",
+                    "output_channel": 2,
+                    "destination_block": "outfile",
+                    "input_terminal": "in",
+                    "input_channel": 2
+                },
+                {
+                    "source_block": "player",
+                    "output_terminal": "out",
+                    "output_channel": 3,
+                    "destination_block": "outfile",
+                    "input_terminal": "in",
+                    "input_channel": 3
+                },
+                {
+                    "source_block": "player",
+                    "output_terminal": "out",
+                    "output_channel": 4,
+                    "destination_block": "outfile",
+                    "input_terminal": "in",
+                    "input_channel": 4
+                }
+            ]
+        }
+    ],
+    "parameter_settings": [
+        {
+            "target": "player",
+            "name": "zone_name",
+            "index": [1],
+            "value": "lobby"
+        },
+        {
+            "target": "player",
+            "name": "zone_name",
+            "index": [2],
+            "value": "atrium"
+        },
+        {
+            "target": "player",
+            "name": "zone_name",
+            "index": [3],
+            "value": "patio"
+        },
+        {
+            "target": "player",
+            "name": "zone_name",
+            "index": [4],
+            "value": "bar"
+        },
+        {
+            "target": "player",
+            "name": "play_message",
+            "value": "{ \"filename\": \"file1.wav\", \"priority\": 50, \"zones\": [\"lobby\", \"atrium\"] }"
+        },
+        {
+            "target": "player",
+            "name": "play_message",
+            "value": "{ \"filename\": \"file2.wav\", \"priority\": 50, \"zones\": [\"patio\", \"bar\"] }"
+        },
+        {
+            "target": "player",
+            "name": "play_message",
+            "value": "{ \"filename\": \"file3.wav\", \"priority\": 100 }"
+        }
+    ],
+    "task_connections": [
+        {
+            "source_task": "task1",
+            "output_block": "outfile",
+            "output_channel": 1,
+            "destination_task": "system",
+            "input_block": "playback",
+            "input_channel": 1
+        },
+        {
+            "source_task": "task1",
+            "output_block": "outfile",
+            "output_channel": 2,
+            "destination_task": "system",
+            "input_block": "playback",
+            "input_channel": 2
+        },
+        {
+            "source_task": "task1",
+            "output_block": "outfile",
+            "output_channel": 3,
+            "destination_task": "system",
+            "input_block": "playback",
+            "input_channel": 1
+        },
+        {
+            "source_task": "task1",
+            "output_block": "outfile",
+            "output_channel": 4,
+            "destination_task": "system",
+            "input_block": "playback",
+            "input_channel": 2
+        }
+    ]
+}
