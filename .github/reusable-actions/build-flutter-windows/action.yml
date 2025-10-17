@@ -98,26 +98,23 @@ runs:
       shell: powershell
       working-directory: apps/frontend/flutter-apps/fusion-launcher
       run: |
-        flutter clean
         flutter pub get
-        rm -rf windows/flutter/ephemeral
-        rm -rf build/
         moon run flutter-apps:win-automation-build
-        E:\'Program Files (x86)'\NSIS\makensis.exe .\windows\Installer\NSIS\fusion_launcher.nsi
+        E:\'Program Files (x86)'\NSIS\makensis.exe .\windows\Installer\NSIS\fusion_launcher_automation_build.nsi
 
         echo "SM_API_KEY=${{ inputs.SM_API_KEY }}" >> $env:GITHUB_ENV
         echo "SM_CLIENT_CERT_PASSWORD=${{ inputs.SM_CLIENT_CERT_PASSWORD }}" >> $env:GITHUB_ENV
         echo "C:\Program Files\DigiCert\DigiCert One Signing Manager Tools\smctl.exe" >> $env:GITHUB_PATH
 
         $thumbprint = "${{ inputs.cert_thumbprint }}"
-        smctl.exe sign --fingerprint $thumbprint --input ./windows/Installer/NSIS/FusionLauncherInstaller.exe --config-file "C:\Program Files\DigiCert\DigiCert/ One/ Signing/ Manager/ Tools\pkcs11properties.cfg" --description "Fusion Launcher" --timestamp http://timestamp.digicert.com?alg=sha256
+        smctl.exe sign --fingerprint $thumbprint --input ./windows/Installer/NSIS/FusionLauncherAutomationBuildInstaller.exe --config-file "C:\Program Files\DigiCert\DigiCert/ One/ Signing/ Manager/ Tools\pkcs11properties.cfg" --description "Fusion Launcher" --timestamp http://timestamp.digicert.com?alg=sha256
         
         $runNumber = $env:GITHUB_RUN_NUMBER
         $branchName = if ($env:GITHUB_HEAD_REF) { $env:GITHUB_HEAD_REF } else { $env:GITHUB_REF_NAME }
         $version = "${{ steps.get_version.outputs.version }}-$runNumber+$(git rev-parse --short=8 HEAD)"
         Write-Output "VERSION: $version"
 
-        $buildPath = "./windows/Installer/NSIS/FusionLauncherInstaller.exe"
+        $buildPath = "./windows/Installer/NSIS/FusionLauncherAutomationBuildInstaller.exe"
         $nexusUrl = "${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/$branchName/$version/flutter-windows/Fusion-Launcher-Automation-Build-$version.exe"
         $username = "github-actions-uploader"
         $password = "${{ inputs.nexus_password }}"
