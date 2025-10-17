@@ -66,7 +66,7 @@ public:
      * @param value The gain value in dB
      * @param source The source of the change ("aes70" or "fusion")
      */
-    void sendGainToFusion(const std::string &gainID, double value, const std::string &source);
+    void sendGainToFusion(const std::string &gainID, double value);
 
     /**
      * @brief Handle gain update received from Fusion server
@@ -74,6 +74,36 @@ public:
      * @param value The gain value in dB
      */
     void handleFusionGainUpdate(const std::string &gainID, double value);
+
+    /**
+     * @brief Send mute update to Fusion server
+     * @param gainID The gain identifier (mute uses same ID as gain)
+     * @param muteState The mute state (true = muted, false = unmuted)
+     * @param source The source of the change ("aes70" or "fusion")
+     */
+    void sendMuteToFusion(const std::string &gainID, bool muteState);
+
+    /**
+     * @brief Handle mute update received from Fusion server
+     * @param gainID The gain identifier (mute uses same ID as gain)
+     * @param muteState The mute state (true = muted, false = unmuted)
+     */
+    void handleFusionMuteUpdate(const std::string &gainID, bool muteState);
+
+    /**
+     * @brief Send source selection update to Fusion server
+     * @param zoneID The zone identifier
+     * @param sourceIndex The selected source index
+     * @param source The source of the change ("aes70" or "fusion")
+     */
+    void sendSourceToFusion(const std::string &zoneID, ::OcaUint16 sourceIndex);
+
+    /**
+     * @brief Handle source selection update received from Fusion server
+     * @param zoneID The zone identifier
+     * @param sourceIndex The selected source index
+     */
+    void handleFusionSourceUpdate(const std::string &zoneID, ::OcaUint16 sourceIndex);
 
     /**
      * @brief Shutdown the bridge and cleanup resources
@@ -88,25 +118,6 @@ public:
 
 private:
     /**
-     * @brief Structure to track recently sent gain values for echo suppression
-     */
-    struct SentGainRecord
-    {
-        std::string gainID;
-        double value;
-        std::chrono::steady_clock::time_point timestamp;
-        std::string source;
-
-        SentGainRecord(const std::string &id, double val, const std::string &src)
-            : gainID(id), value(val), timestamp(std::chrono::steady_clock::now()), source(src) {}
-    };
-
-    // Configuration constants
-    static constexpr double ECHO_TOLERANCE_DB = 0.01;
-    static constexpr std::chrono::milliseconds ECHO_WINDOW_MS{1000};
-    static constexpr size_t MAX_TRACKED_VALUES = 20;
-
-    /**
      * @brief Private constructor for singleton pattern
      */
     FusionAudioBridge();
@@ -117,28 +128,6 @@ private:
     ~FusionAudioBridge() noexcept;
 
     /**
-     * @brief Check if an incoming message is likely an echo of a recently sent message
-     * @param gainID The gain identifier
-     * @param value The gain value
-     * @return true if this appears to be an echo, false otherwise
-     */
-    bool isEchoMessage(const std::string &gainID, double value);
-
-    /**
-     * @brief Record a sent gain value for echo detection
-     * @param gainID The gain identifier
-     * @param value The gain value
-     * @param source The source of the change
-     */
-    void recordSentValue(const std::string &gainID, double value, const std::string &source);
-
-    /**
-     * @brief Clean up old records beyond the echo detection window for a specific gain
-     * @param gainID The gain identifier to clean up
-     */
-    void cleanupOldRecordsForGain(const std::string &gainID) noexcept;
-
-    /**
      * @brief Process a gain update by finding and calling the appropriate ConcreteGainActuator
      * @param gainID The gain identifier
      * @param value The gain value
@@ -146,11 +135,21 @@ private:
      */
     bool processGainUpdate(const std::string &gainID, double value);
 
-    // Member variables
-    mutable std::mutex m_recordsMutex;
+    /**
+     * @brief Process a mute update by finding and calling the appropriate ConcreteMuteActuator
+     * @param gainID The gain identifier
+     * @param muteState The mute state
+     * @return true if processed successfully, false otherwise
+     */
+    bool processMuteUpdate(const std::string &gainID, bool muteState);
 
-    // Per-gain echo tracking for O(1) typical case performance
-    std::unordered_map<std::string, std::deque<SentGainRecord>> m_recentByGain;
+    /**
+     * @brief Process a source update by finding and calling the appropriate ConcreteSwitchActuator
+     * @param zoneID The zone identifier
+     * @param sourceIndex The source index
+     * @return true if processed successfully, false otherwise
+     */
+    bool processSourceUpdate(const std::string &zoneID, ::OcaUint16 sourceIndex);
 
     // Shared pointer to object tracker for lock-free reads with snapshot semantics
     std::shared_ptr<const std::map<std::string, std::vector<::OcaONo>>> m_objectTrackerPtr;

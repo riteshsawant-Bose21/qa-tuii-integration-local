@@ -18,6 +18,8 @@
 #include "FusionAudioBridge.h"
 #include "UDPSender.h"
 #include "workers/ConcreteGainActuator.h"
+#include "workers/ConcreteMuteActuator.h"
+#include "workers/ConcreteSwitchActuator.h"
 #include <OCC/ControlClasses/Workers/Actuators/OcaLiteGain.h>
 #include <OCC/ControlClasses/Workers/BlocksAndMatrices/OcaLiteBlock.h>
 #include <HostInterfaceLite/OCA/OCF/OcfLiteHostInterface.h>
@@ -83,7 +85,7 @@ bool FusionAudioBridge::initialize(const std::string &serverIP,
     }
 }
 
-void FusionAudioBridge::sendGainToFusion(const std::string &gainID, double value, const std::string &source)
+void FusionAudioBridge::sendGainToFusion(const std::string &gainID, double value)
 {
     if (!m_initialized.load())
     {
@@ -91,24 +93,8 @@ void FusionAudioBridge::sendGainToFusion(const std::string &gainID, double value
         return;
     }
 
-    // Validate gain value to prevent invalid JSON
-    if (!std::isfinite(value))
-    {
-        OCA_LOG_INFO_PARAMS("[FusionAudioBridge] Invalid gain value (NaN/Inf) for %s, skipping send", gainID.c_str());
-        return;
-    }
-
-    // Only send to Fusion if the change originated from AES70
-    if (source != "aes70")
-    {
-        OCA_LOG_INFO_PARAMS("[FusionAudioBridge] Skipping Fusion send for %s (source: %s)", gainID.c_str(), source.c_str());
-        return;
-    }
-
     try
     {
-        // Record the value we're sending for echo detection
-        recordSentValue(gainID, value, source);
 
         // Create JSON message with correct format:
         // {"action": "set", "settings": {"audio": {"gainID": {"gain": value}}}}
@@ -136,19 +122,20 @@ void FusionAudioBridge::handleFusionGainUpdate(const std::string &gainID, double
         return;
     }
 
-    // Validate gain value
-    if (!std::isfinite(value))
-    {
-        OCA_LOG_INFO_PARAMS("[FusionAudioBridge] Invalid gain value (NaN/Inf) for %s, ignoring update", gainID.c_str());
-        return;
-    }
+    // // Validate gain value
+    // if (!std::isfinite(value))
+    // {
+    //     OCA_LOG_INFO_PARAMS("[FusionAudioBridge] Invalid gain value (NaN/Inf) for %s, ignoring update", gainID.c_str());
+    //     return;
+    // }
 
     // Check if this is an echo of a message we recently sent
-    if (isEchoMessage(gainID, value))
-    {
-        OCA_LOG_INFO_PARAMS("[FusionAudioBridge] Suppressing echo for %s = %.6f dB", gainID.c_str(), value);
-        return;
-    }
+    // OCA_LOG_INFO_PARAMS("[FusionAudioBridge] DEBUG: Checking echo for %s = %.6f dB", gainID.c_str(), value);
+    // if (isEchoMessage(gainID, value))
+    // {
+    //     OCA_LOG_INFO_PARAMS("[FusionAudioBridge] Suppressing echo for %s = %.6f dB", gainID.c_str(), value);
+    //     return;
+    // }
 
     OCA_LOG_INFO_PARAMS("[FusionAudioBridge] Processing Fusion gain update: %s = %.6f dB", gainID.c_str(), value);
 
@@ -173,12 +160,6 @@ void FusionAudioBridge::shutdown()
 
     // Cleanup (Note: UDPSender is singleton, don't try to destroy it)
 
-    // Clear tracked values
-    {
-        std::lock_guard<std::mutex> recordsLock(m_recordsMutex);
-        m_recentByGain.clear();
-    }
-
     // Clear object tracker and server config
     m_objectTrackerPtr.reset();
 
@@ -188,108 +169,6 @@ void FusionAudioBridge::shutdown()
 bool FusionAudioBridge::isInitialized() const noexcept
 {
     return m_initialized.load();
-}
-
-bool FusionAudioBridge::isEchoMessage(const std::string &gainID, double value)
-{
-    std::string echoLogMessage;
-    bool isEcho = false;
-
-    {
-        std::lock_guard<std::mutex> lock(m_recordsMutex);
-
-        // Clean up old records for this specific gain first
-        cleanupOldRecordsForGain(gainID);
-
-        auto now = std::chrono::steady_clock::now();
-
-        // Check only the records for this specific gain (O(1) typical case)
-        auto gainIt = m_recentByGain.find(gainID);
-        if (gainIt != m_recentByGain.end())
-        {
-            for (const auto &record : gainIt->second)
-            {
-                // Check if within time window
-                auto timeDiff = std::chrono::duration_cast<std::chrono::milliseconds>(now - record.timestamp);
-                if (timeDiff <= ECHO_WINDOW_MS)
-                {
-                    // Check if values are close enough to be considered the same
-                    double valueDiff = std::abs(value - record.value);
-                    if (valueDiff <= ECHO_TOLERANCE_DB)
-                    {
-                        // Prepare log message without logging while holding the lock
-                        std::ostringstream logStream;
-                        logStream << "Echo detected: " << gainID << " value=" << value
-                                  << " matches recent send value=" << record.value
-                                  << " (diff=" << valueDiff << "dB, time=" << timeDiff.count() << "ms)";
-                        echoLogMessage = logStream.str();
-                        isEcho = true;
-                        break;
-                    }
-                }
-            }
-        }
-    }
-
-    // Log after releasing the lock to avoid blocking
-    if (isEcho && !echoLogMessage.empty())
-    {
-        OCA_LOG_INFO_PARAMS("[FusionAudioBridge] %s", echoLogMessage.c_str());
-    }
-
-    return isEcho;
-}
-
-void FusionAudioBridge::recordSentValue(const std::string &gainID, double value, const std::string &source)
-{
-    std::lock_guard<std::mutex> lock(m_recordsMutex);
-
-    // Add new record to the specific gain's deque
-    m_recentByGain[gainID].emplace_back(gainID, value, source);
-
-    // Remove oldest records if we exceed the limit for this gain
-    auto &gainRecords = m_recentByGain[gainID];
-    while (gainRecords.size() > MAX_TRACKED_VALUES)
-    {
-        gainRecords.pop_front();
-    }
-
-    // Clean up old records for this gain
-    cleanupOldRecordsForGain(gainID);
-}
-
-void FusionAudioBridge::cleanupOldRecordsForGain(const std::string &gainID) noexcept
-{
-    auto now = std::chrono::steady_clock::now();
-
-    auto gainIt = m_recentByGain.find(gainID);
-    if (gainIt == m_recentByGain.end())
-    {
-        return; // No records for this gain
-    }
-
-    auto &records = gainIt->second;
-
-    // Remove records older than the echo window
-    auto it = records.begin();
-    while (it != records.end())
-    {
-        auto timeDiff = std::chrono::duration_cast<std::chrono::milliseconds>(now - it->timestamp);
-        if (timeDiff > ECHO_WINDOW_MS)
-        {
-            it = records.erase(it);
-        }
-        else
-        {
-            ++it;
-        }
-    }
-
-    // Remove the entire entry if no records remain
-    if (records.empty())
-    {
-        m_recentByGain.erase(gainIt);
-    }
 }
 
 bool FusionAudioBridge::processGainUpdate(const std::string &gainID, double value)
@@ -352,4 +231,222 @@ bool FusionAudioBridge::processGainUpdate(const std::string &gainID, double valu
     }
 
     return success;
+}
+
+void FusionAudioBridge::sendMuteToFusion(const std::string &gainID, bool muteState)
+{
+    if (!m_initialized.load())
+    {
+        OCA_LOG_INFO("[FusionAudioBridge] Bridge not initialized, cannot send mute");
+        return;
+    }
+
+    try
+    {
+        // Create JSON message: {"action":"set","settings":{"audio":{"gainID":{"mute": true/false}}}}
+        std::ostringstream jsonStream;
+        jsonStream << "{\"action\":\"set\",\"settings\":{\"audio\":{\""
+                   << gainID << "\":{\"mute\":" << (muteState ? "true" : "false") << "}}}}";
+        std::string message = jsonStream.str();
+
+        // Send to Fusion using singleton
+        UDPSender &sender = UDPSender::getInstance();
+        sender.sendMessage(message);
+        OCA_LOG_INFO_PARAMS("[FusionAudioBridge] Sent mute to Fusion: %s", message.c_str());
+    }
+    catch (const std::exception &e)
+    {
+        OCA_LOG_INFO_PARAMS("[FusionAudioBridge] Failed to send mute to Fusion: %s", e.what());
+    }
+}
+
+void FusionAudioBridge::handleFusionMuteUpdate(const std::string &gainID, bool muteState)
+{
+    if (!m_initialized.load())
+    {
+        OCA_LOG_INFO("[FusionAudioBridge] Bridge not initialized, cannot handle mute update");
+        return;
+    }
+
+    OCA_LOG_INFO_PARAMS("[FusionAudioBridge] Processing Fusion mute update: %s = %s", gainID.c_str(), muteState ? "MUTED" : "UNMUTED");
+
+    // Process the mute update
+    if (!processMuteUpdate(gainID, muteState))
+    {
+        OCA_LOG_INFO_PARAMS("[FusionAudioBridge] Failed to process mute update for %s", gainID.c_str());
+    }
+}
+
+void FusionAudioBridge::sendSourceToFusion(const std::string &zoneID, ::OcaUint16 sourceIndex)
+{
+    if (!m_initialized.load())
+    {
+        OCA_LOG_INFO("[FusionAudioBridge] Bridge not initialized, cannot send source");
+        return;
+    }
+
+    try
+    {
+        // Create JSON message: {"action":"set","settings":{"audio":{"zoneID":{"source": sourceIndex}}}}
+        std::ostringstream jsonStream;
+        jsonStream << "{\"action\":\"set\",\"settings\":{\"audio\":{\""
+                   << zoneID << "\":{\"input\":" << sourceIndex << "}}}}";
+        std::string message = jsonStream.str();
+
+        // Send to Fusion using singleton
+        UDPSender &sender = UDPSender::getInstance();
+        sender.sendMessage(message);
+        OCA_LOG_INFO_PARAMS("[FusionAudioBridge] Sent source to Fusion: %s", message.c_str());
+    }
+    catch (const std::exception &e)
+    {
+        OCA_LOG_INFO_PARAMS("[FusionAudioBridge] Failed to send source to Fusion: %s", e.what());
+    }
+}
+
+void FusionAudioBridge::handleFusionSourceUpdate(const std::string &zoneID, ::OcaUint16 sourceIndex)
+{
+    if (!m_initialized.load())
+    {
+        OCA_LOG_INFO("[FusionAudioBridge] Bridge not initialized, cannot handle source update");
+        return;
+    }
+
+    OCA_LOG_INFO_PARAMS("[FusionAudioBridge] Processing Fusion source update: %s = %u", zoneID.c_str(), sourceIndex);
+
+    // Process the source update
+    if (!processSourceUpdate(zoneID, sourceIndex))
+    {
+        OCA_LOG_INFO_PARAMS("[FusionAudioBridge] Failed to process source update for %s", zoneID.c_str());
+    }
+}
+
+bool FusionAudioBridge::processMuteUpdate(const std::string &gainID, bool muteState)
+{
+    // Snapshot the object tracker pointer
+    std::shared_ptr<const std::map<std::string, std::vector<::OcaONo>>> objectTrackerPtr;
+    {
+        std::lock_guard<std::mutex> lock(m_initMutex);
+        if (!m_initialized.load())
+        {
+            OCA_LOG_INFO("[FusionAudioBridge] Bridge not initialized");
+            return false;
+        }
+        objectTrackerPtr = m_objectTrackerPtr;
+    }
+
+    if (!objectTrackerPtr)
+    {
+        OCA_LOG_INFO("[FusionAudioBridge] Object tracker not available");
+        return false;
+    }
+
+    // Find the object number(s) for this gain ID
+    auto it = objectTrackerPtr->find(gainID);
+    if (it == objectTrackerPtr->end())
+    {
+        OCA_LOG_INFO_PARAMS("[FusionAudioBridge] No object found for gain ID: %s", gainID.c_str());
+        return false;
+    }
+
+    // For mute, we need the second object (muteOno) from the gain mapping
+    const std::vector<::OcaONo> &targets = it->second;
+    if (targets.size() < 2)
+    {
+        OCA_LOG_INFO_PARAMS("[FusionAudioBridge] Invalid object mapping for gain ID %s - expected at least 2 objects", gainID.c_str());
+        return false;
+    }
+
+    ::OcaONo muteOno = targets[1]; // Second object is the mute object
+
+    // Get the worker object from the root block
+    ::OcaLiteRoot *pObject = ::OcaLiteBlock::GetRootBlock().GetObject(muteOno);
+    if (pObject != nullptr)
+    {
+        // Try to cast to ConcreteMuteActuator
+        ConcreteMuteActuator *pMuteActuator = dynamic_cast<ConcreteMuteActuator *>(pObject);
+        if (pMuteActuator != nullptr)
+        {
+            // Update the mute value with "fusion" source to prevent echo
+            pMuteActuator->handleFusionMuteMessage(muteState);
+            OCA_LOG_INFO_PARAMS("[FusionAudioBridge] Successfully updated mute %s (object %u) to %s",
+                                gainID.c_str(), muteOno, muteState ? "MUTED" : "UNMUTED");
+            return true;
+        }
+        else
+        {
+            OCA_LOG_INFO_PARAMS("[FusionAudioBridge] Object %u is not a ConcreteMuteActuator", muteOno);
+        }
+    }
+    else
+    {
+        OCA_LOG_INFO_PARAMS("[FusionAudioBridge] Could not find mute object %u", muteOno);
+    }
+
+    return false;
+}
+
+bool FusionAudioBridge::processSourceUpdate(const std::string &zoneID, ::OcaUint16 sourceIndex)
+{
+    // Snapshot the object tracker pointer
+    std::shared_ptr<const std::map<std::string, std::vector<::OcaONo>>> objectTrackerPtr;
+    {
+        std::lock_guard<std::mutex> lock(m_initMutex);
+        if (!m_initialized.load())
+        {
+            OCA_LOG_INFO("[FusionAudioBridge] Bridge not initialized");
+            return false;
+        }
+        objectTrackerPtr = m_objectTrackerPtr;
+    }
+
+    if (!objectTrackerPtr)
+    {
+        OCA_LOG_INFO("[FusionAudioBridge] Object tracker not available");
+        return false;
+    }
+
+    // Find the object number(s) for this zone ID
+    auto it = objectTrackerPtr->find(zoneID);
+    if (it == objectTrackerPtr->end())
+    {
+        OCA_LOG_INFO_PARAMS("[FusionAudioBridge] No object found for zone ID: %s", zoneID.c_str());
+        return false;
+    }
+
+    // For source, we use the first (and only) object from the zone mapping
+    const std::vector<::OcaONo> &targets = it->second;
+    if (targets.empty())
+    {
+        OCA_LOG_INFO_PARAMS("[FusionAudioBridge] Empty object mapping for zone ID: %s", zoneID.c_str());
+        return false;
+    }
+
+    ::OcaONo switchOno = targets[0]; // First object is the switch object
+
+    // Get the worker object from the root block
+    ::OcaLiteRoot *pObject = ::OcaLiteBlock::GetRootBlock().GetObject(switchOno);
+    if (pObject != nullptr)
+    {
+        // Try to cast to ConcreteSwitchActuator
+        ConcreteSwitchActuator *pSwitchActuator = dynamic_cast<ConcreteSwitchActuator *>(pObject);
+        if (pSwitchActuator != nullptr)
+        {
+            // Update the source selection with "fusion" source to prevent echo
+            pSwitchActuator->handleFusionSourceMessage(sourceIndex);
+            OCA_LOG_INFO_PARAMS("[FusionAudioBridge] Successfully updated source %s (object %u) to %u",
+                                zoneID.c_str(), switchOno, sourceIndex);
+            return true;
+        }
+        else
+        {
+            OCA_LOG_INFO_PARAMS("[FusionAudioBridge] Object %u is not a ConcreteSwitchActuator", switchOno);
+        }
+    }
+    else
+    {
+        OCA_LOG_INFO_PARAMS("[FusionAudioBridge] Could not find switch object %u", switchOno);
+    }
+
+    return false;
 }

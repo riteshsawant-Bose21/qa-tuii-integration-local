@@ -9,6 +9,8 @@
 #define CONCRETESWITCHACTUATOR_H
 
 #include <OCC/ControlClasses/Workers/Actuators/OcaLiteSwitch.h>
+#include <atomic>
+#include <mutex>
 
 /**
  * Concrete implementation of OcaLiteSwitch used for simple source selection.
@@ -28,11 +30,20 @@ public:
                            const ::OcaLiteList<::OcaBoolean> &positionEnable,
                            const std::string &zoneID);
 
-    virtual ~ConcreteSwitchActuator() {}
+    virtual ~ConcreteSwitchActuator();
+
+    /**
+     * Handle source selection message from Fusion system.
+     * This method is used to update the source selection from external Fusion commands
+     * without triggering feedback loops.
+     *
+     * @param[in] sourceIndex  The source index from Fusion.
+     */
+    void handleFusionSourceMessage(::OcaUint16 sourceIndex);
 
 protected:
-    // Store selected position internally (base also keeps its own). We mirror for potential future hardware logic.
     virtual ::OcaLiteStatus SetPositionValue(::OcaUint16 position) override;
+
     virtual ::OcaLiteStatus SetPositionNameValue(::OcaUint16 index, const ::OcaLiteString &name) override;
     virtual ::OcaLiteStatus SetPositionNamesValue(const ::OcaLiteList<::OcaLiteString> &names) override;
     virtual ::OcaLiteStatus SetPositionEnabledValue(::OcaUint16 index, ::OcaBoolean enabled) override;
@@ -41,7 +52,13 @@ protected:
 private:
     /** The zone identifier from JSON configuration */
     std::string m_zoneID;
-    
+
+    /** The minimum position value */
+    ::OcaUint16 m_minPosition;
+
+    /** The maximum position value */
+    ::OcaUint16 m_maxPosition;
+
     ConcreteSwitchActuator(const ConcreteSwitchActuator &);
     ConcreteSwitchActuator &operator=(const ConcreteSwitchActuator &);
 };

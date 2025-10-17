@@ -7,6 +7,7 @@
  */
 
 #include "ConcreteSwitchActuator.h"
+#include "../FusionAudioBridge.h"
 #include <HostInterfaceLite/OCA/OCF/Logging/IOcfLiteLog.h>
 
 ConcreteSwitchActuator::ConcreteSwitchActuator(::OcaONo objectNumber,
@@ -19,7 +20,9 @@ ConcreteSwitchActuator::ConcreteSwitchActuator(::OcaONo objectNumber,
                                                const ::OcaLiteList<::OcaBoolean> &positionEnable,
                                                const std::string &zoneID)
     : ::OcaLiteSwitch(objectNumber, lockable, role, ports, minPosition, maxPosition, positionNames, positionEnable),
-      m_zoneID(zoneID)
+      m_zoneID(zoneID),
+      m_minPosition(minPosition),
+      m_maxPosition(maxPosition)
 {
     OCA_LOG_INFO("=== ConcreteSwitchActuator Created ===");
     OCA_LOG_INFO_PARAMS("Object Number: %u", objectNumber);
@@ -29,15 +32,40 @@ ConcreteSwitchActuator::ConcreteSwitchActuator(::OcaONo objectNumber,
     OCA_LOG_INFO_PARAMS("Number of Position Names: %u", positionNames.GetCount());
 }
 
-::OcaLiteStatus ConcreteSwitchActuator::SetPositionValue(::OcaUint16 position)
+ConcreteSwitchActuator::~ConcreteSwitchActuator()
 {
-    OCA_LOG_INFO_PARAMS("[SWITCH] SetPositionValue -> %u (Zone ID: %s)", position, m_zoneID.empty() ? "N/A" : m_zoneID.c_str());
-    return OCASTATUS_OK;
+    // Destructor implementation - ensures vtable is properly generated
 }
 
+::OcaLiteStatus ConcreteSwitchActuator::SetPositionValue(::OcaUint16 position)
+{
+
+    OCA_LOG_INFO_PARAMS("[SWITCH] SetPositionValue -> %u (Zone ID: %s)",
+                        position, m_zoneID.empty() ? "N/A" : m_zoneID.c_str());
+
+    if (!m_zoneID.empty())
+    {
+        FusionAudioBridge &bridge = FusionAudioBridge::getInstance();
+        if (bridge.isInitialized())
+        {
+            bridge.sendSourceToFusion(m_zoneID, position);
+            OCA_LOG_INFO_PARAMS("[SWITCH] Sent source selection to Fusion: %s = %u",
+                                m_zoneID.c_str(), position);
+        }
+        else
+        {
+            OCA_LOG_WARNING("[SWITCH] FusionAudioBridge not initialized - source selection not sent to Fusion");
+        }
+    }
+    else
+    {
+        OCA_LOG_WARNING("[SWITCH] No zone ID configured - source selection not sent to Fusion");
+    }
+
+    return OCASTATUS_OK;
+}
 ::OcaLiteStatus ConcreteSwitchActuator::SetPositionNameValue(::OcaUint16 index, const ::OcaLiteString &name)
 {
-    // Could validate name length or character set here.
     OCA_LOG_INFO_PARAMS("[SWITCH] SetPositionNameValue index=%u name=%s (Zone ID: %s)", index, name.GetString().c_str(), m_zoneID.empty() ? "N/A" : m_zoneID.c_str());
     return OCASTATUS_OK;
 }
@@ -58,4 +86,41 @@ ConcreteSwitchActuator::ConcreteSwitchActuator(::OcaONo objectNumber,
 {
     OCA_LOG_INFO_PARAMS("[SWITCH] SetPositionEnabledsValue count=%u (Zone ID: %s)", enableds.GetCount(), m_zoneID.empty() ? "N/A" : m_zoneID.c_str());
     return OCASTATUS_OK;
+}
+
+void ConcreteSwitchActuator::handleFusionSourceMessage(::OcaUint16 sourceIndex)
+{
+    try
+    {
+        OCA_LOG_INFO_PARAMS("[SWITCH] Handling Fusion source message: %u (Zone ID: %s)",
+                            sourceIndex, m_zoneID.c_str());
+
+        // Validate source index is within valid range
+        if (sourceIndex < m_minPosition || sourceIndex > m_maxPosition)
+        {
+            OCA_LOG_ERROR_PARAMS("[SWITCH] Invalid source index %u, must be between %u and %u (Zone ID: %s)",
+                                 sourceIndex, m_minPosition, m_maxPosition, m_zoneID.c_str());
+            return;
+        }
+
+        // Set the position using the public SetPosition method
+        // This will update the internal state AND notify OCA clients properly
+
+        ::OcaLiteStatus status = SetPositionFromFusion(sourceIndex);
+
+        if (OCASTATUS_OK == status)
+        {
+            OCA_LOG_INFO_PARAMS("[SWITCH] ✓ Fusion source selection applied: %u (Zone ID: %s)",
+                                sourceIndex, m_zoneID.c_str());
+        }
+        else
+        {
+            OCA_LOG_ERROR_PARAMS("[SWITCH] Failed to apply Fusion source selection: %u (Zone ID: %s)",
+                                 sourceIndex, m_zoneID.c_str());
+        }
+    }
+    catch (const std::exception &e)
+    {
+        OCA_LOG_ERROR_PARAMS("[SWITCH] Exception in handleFusionSourceMessage: %s", e.what());
+    }
 }

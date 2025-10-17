@@ -289,8 +289,8 @@ void UDPSender::handleAckReceived(const std::array<char, 1024> &buffer,
                         static_cast<int>(from.port()));
 
     // Optional: parse/validate ACK payload
-    // std::string_view ack(buffer.data(), bytesReceived);
-    // OCA_LOG_INFO_PARAMS("ACK payload: %.*s", (int)ack.size(), ack.data());
+    std::string_view ack(buffer.data(), bytesReceived);
+    OCA_LOG_INFO_PARAMS("ACK payload: %.*s", (int)ack.size(), ack.data());
 
     (void)buffer;
     (void)bytesReceived;

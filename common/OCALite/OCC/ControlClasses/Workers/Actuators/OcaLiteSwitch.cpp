@@ -1,4 +1,4 @@
-/*  By downloading or using this file, the user agrees to be bound by the terms of the license 
+/*  By downloading or using this file, the user agrees to be bound by the terms of the license
  *  agreement located in the LICENSE file in the root of this project
  *  as an original contracting party.
  */
@@ -10,7 +10,6 @@
 // ---- Include system wide include files ----
 #include <assert.h>
 
-
 // ---- FileInfo Macro ----
 
 // ---- Include local include files ----
@@ -18,11 +17,11 @@
 
 // ---- Helper types and constants ----
 
-static const ::OcaUint16        classID[]   = {OCA_SWITCH_CLASSID};
-const ::OcaLiteClassID          OcaLiteSwitch::CLASS_ID(static_cast< ::OcaUint16>(sizeof(classID) / sizeof(classID[0])), classID);
+static const ::OcaUint16 classID[] = {OCA_SWITCH_CLASSID};
+const ::OcaLiteClassID OcaLiteSwitch::CLASS_ID(static_cast<::OcaUint16>(sizeof(classID) / sizeof(classID[0])), classID);
 
 /** Defines the version increment of this class compared to its base class. */
-#define CLASS_VERSION_INCREMENT     0
+#define CLASS_VERSION_INCREMENT 0
 
 // ---- Helper functions ----
 
@@ -36,7 +35,7 @@ const ::OcaLiteClassID          OcaLiteSwitch::CLASS_ID(static_cast< ::OcaUint16
 
 // ---- Class Implementation ----
 
-OcaLiteSwitch::OcaLiteSwitch(::OcaONo objectNumber, ::OcaBoolean lockable, const ::OcaLiteString& role, const ::OcaLiteList< ::OcaLitePort>& ports, ::OcaUint16 minPosition, ::OcaUint16 maxPosition)
+OcaLiteSwitch::OcaLiteSwitch(::OcaONo objectNumber, ::OcaBoolean lockable, const ::OcaLiteString &role, const ::OcaLiteList<::OcaLitePort> &ports, ::OcaUint16 minPosition, ::OcaUint16 maxPosition)
     : ::OcaLiteActuator(objectNumber, lockable, role, ports),
       m_position(minPosition),
       m_minPosition(minPosition),
@@ -45,16 +44,16 @@ OcaLiteSwitch::OcaLiteSwitch(::OcaONo objectNumber, ::OcaBoolean lockable, const
       m_positionEnable()
 {
     assert(minPosition <= maxPosition);
-    // Add dummy enabled empty positions 
-    for (::OcaUint16 position(static_cast< ::OcaUint16>(0)); position < ((maxPosition - minPosition) + static_cast< ::OcaUint16>(1))/*Total number of available positions*/; position++)
+    // Add dummy enabled empty positions
+    for (::OcaUint16 position(static_cast<::OcaUint16>(0)); position < ((maxPosition - minPosition) + static_cast<::OcaUint16>(1)) /*Total number of available positions*/; position++)
     {
-        m_positionNames.Add( ::OcaLiteString());
-        m_positionEnable.Add(static_cast< ::OcaBoolean>(true));
+        m_positionNames.Add(::OcaLiteString());
+        m_positionEnable.Add(static_cast<::OcaBoolean>(true));
     }
 }
 
-OcaLiteSwitch::OcaLiteSwitch(::OcaONo objectNumber, ::OcaBoolean lockable, const ::OcaLiteString& role, const ::OcaLiteList< ::OcaLitePort>& ports, ::OcaUint16 minPosition,
-                     ::OcaUint16 maxPosition, const ::OcaLiteList< ::OcaLiteString>& positionNames, const ::OcaLiteList< ::OcaBoolean>& positionEnable)
+OcaLiteSwitch::OcaLiteSwitch(::OcaONo objectNumber, ::OcaBoolean lockable, const ::OcaLiteString &role, const ::OcaLiteList<::OcaLitePort> &ports, ::OcaUint16 minPosition,
+                             ::OcaUint16 maxPosition, const ::OcaLiteList<::OcaLiteString> &positionNames, const ::OcaLiteList<::OcaBoolean> &positionEnable)
     : ::OcaLiteActuator(objectNumber, lockable, role, ports),
       m_position(minPosition),
       m_minPosition(minPosition),
@@ -64,10 +63,10 @@ OcaLiteSwitch::OcaLiteSwitch(::OcaONo objectNumber, ::OcaBoolean lockable, const
 {
     assert(minPosition <= maxPosition);
     assert(positionEnable.GetCount() == positionNames.GetCount());
-    assert(positionEnable.GetCount() == ((maxPosition - minPosition) + static_cast< ::OcaUint16>(1))/*Total number of available positions*/);
+    assert(positionEnable.GetCount() == ((maxPosition - minPosition) + static_cast<::OcaUint16>(1)) /*Total number of available positions*/);
 }
 
-::OcaLiteStatus OcaLiteSwitch::GetPosition(::OcaUint16& position, ::OcaUint16& minPosition, ::OcaUint16& maxPosition) const
+::OcaLiteStatus OcaLiteSwitch::GetPosition(::OcaUint16 &position, ::OcaUint16 &minPosition, ::OcaUint16 &maxPosition) const
 {
     ::OcaLiteStatus rc(GetPositionValue(position));
     minPosition = m_minPosition;
@@ -75,6 +74,38 @@ OcaLiteSwitch::OcaLiteSwitch(::OcaONo objectNumber, ::OcaBoolean lockable, const
 
     return rc;
 }
+
+// ::OcaLiteStatus OcaLiteSwitch::SetPosition(::OcaUint16 position)
+// {
+//     ::OcaLiteStatus rc(OCASTATUS_PARAMETER_OUT_OF_RANGE);
+//     if ((position >= m_minPosition) && (position <= m_maxPosition))
+//     {
+//         ::OcaUint16 oldPosition;
+//         rc = GetPositionValue(oldPosition);
+//         if (oldPosition != position)
+//         {
+//             rc = SetPositionValue(position);
+//             if (OCASTATUS_OK == rc)
+//             {
+//                 m_position = position;
+
+//                 ::OcaUint16 actualPosition;
+//                 rc = GetPositionValue(actualPosition);
+//                 if (OCASTATUS_OK == rc)
+//                 {
+//                     ::OcaLitePropertyID propertyID(CLASS_ID.GetFieldCount(), static_cast< ::OcaUint16>(OCA_PROP_POSITION));
+//                     ::OcaLitePropertyChangedEventData< ::OcaUint16> eventData(GetObjectNumber(),
+//                                                                           propertyID,
+//                                                                           actualPosition,
+//                                                                           OCAPROPERTYCHANGETYPE_CURRENT_CHANGED);
+//                     PropertyChanged(eventData, propertyID);
+//                 }
+//             }
+
+//         }
+//     }
+//     return rc;
+// }
 
 ::OcaLiteStatus OcaLiteSwitch::SetPosition(::OcaUint16 position)
 {
@@ -88,32 +119,48 @@ OcaLiteSwitch::OcaLiteSwitch(::OcaONo objectNumber, ::OcaBoolean lockable, const
             rc = SetPositionValue(position);
             if (OCASTATUS_OK == rc)
             {
-                m_position = position;
-
-                ::OcaUint16 actualPosition;
-                rc = GetPositionValue(actualPosition);
-                if (OCASTATUS_OK == rc)
-                {
-                    ::OcaLitePropertyID propertyID(CLASS_ID.GetFieldCount(), static_cast< ::OcaUint16>(OCA_PROP_POSITION));
-                    ::OcaLitePropertyChangedEventData< ::OcaUint16> eventData(GetObjectNumber(),
-                                                                          propertyID,
-                                                                          actualPosition,
-                                                                          OCAPROPERTYCHANGETYPE_CURRENT_CHANGED);
-                    PropertyChanged(eventData, propertyID);
-                }
+                // m_position = position;
             }
-
         }
     }
     return rc;
 }
 
-::OcaLiteStatus OcaLiteSwitch::GetPositionName(::OcaUint16 index, ::OcaLiteString& name) const
+::OcaLiteStatus OcaLiteSwitch::SetPositionFromFusion(::OcaUint16 position)
+{
+    ::OcaLiteStatus rc(OCASTATUS_PARAMETER_OUT_OF_RANGE);
+    if ((position >= m_minPosition) && (position <= m_maxPosition))
+    {
+        ::OcaUint16 oldPosition;
+        rc = GetPositionValue(oldPosition);
+        if (oldPosition != position)
+        {
+            m_position = position;
+#ifndef OCA_LITE_CONTROLLER // Controllers should not generate events
+
+            ::OcaUint16 actualPosition;
+            rc = GetPositionValue(actualPosition);
+            if (OCASTATUS_OK == rc)
+            {
+                ::OcaLitePropertyID propertyID(CLASS_ID.GetFieldCount(), static_cast<::OcaUint16>(OCA_PROP_POSITION));
+                ::OcaLitePropertyChangedEventData<::OcaUint16> eventData(GetObjectNumber(),
+                                                                         propertyID,
+                                                                         actualPosition,
+                                                                         OCAPROPERTYCHANGETYPE_CURRENT_CHANGED);
+                PropertyChanged(eventData, propertyID);
+            }
+#endif
+        }
+    }
+    return rc;
+}
+
+::OcaLiteStatus OcaLiteSwitch::GetPositionName(::OcaUint16 index, ::OcaLiteString &name) const
 {
     return GetPositionNameValue(index, name);
 }
 
-::OcaLiteStatus OcaLiteSwitch::SetPositionName(::OcaUint16 index, const ::OcaLiteString& name)
+::OcaLiteStatus OcaLiteSwitch::SetPositionName(::OcaUint16 index, const ::OcaLiteString &name)
 {
     ::OcaLiteStatus rc(OCASTATUS_PARAMETER_OUT_OF_RANGE);
     if ((index >= m_minPosition) && (index <= m_maxPosition))
@@ -130,15 +177,15 @@ OcaLiteSwitch::OcaLiteSwitch(::OcaONo objectNumber, ::OcaBoolean lockable, const
                     m_positionNames.RemovePosition(index - m_minPosition);
                     m_positionNames.Insert(index - m_minPosition, name);
 
-                    ::OcaLiteList< ::OcaLiteString> actualNames;
+                    ::OcaLiteList<::OcaLiteString> actualNames;
                     rc = GetPositionNamesValue(actualNames);
                     if (OCASTATUS_OK == rc)
                     {
-                        ::OcaLitePropertyID propertyID(CLASS_ID.GetFieldCount(), static_cast< ::OcaUint16>(OCA_PROP_POSITION_NAMES));
-                        ::OcaLitePropertyChangedEventData< ::OcaLiteList< ::OcaLiteString> > eventData(GetObjectNumber(),
-                                                                                           propertyID,
-                                                                                           actualNames,
-                                                                                           OCAPROPERTYCHANGETYPE_CURRENT_CHANGED);
+                        ::OcaLitePropertyID propertyID(CLASS_ID.GetFieldCount(), static_cast<::OcaUint16>(OCA_PROP_POSITION_NAMES));
+                        ::OcaLitePropertyChangedEventData<::OcaLiteList<::OcaLiteString>> eventData(GetObjectNumber(),
+                                                                                                    propertyID,
+                                                                                                    actualNames,
+                                                                                                    OCAPROPERTYCHANGETYPE_CURRENT_CHANGED);
                         PropertyChanged(eventData, propertyID);
                     }
                 }
@@ -148,14 +195,14 @@ OcaLiteSwitch::OcaLiteSwitch(::OcaONo objectNumber, ::OcaBoolean lockable, const
     return rc;
 }
 
-::OcaLiteStatus OcaLiteSwitch::GetPositionNames(::OcaLiteList< ::OcaLiteString>& names) const
+::OcaLiteStatus OcaLiteSwitch::GetPositionNames(::OcaLiteList<::OcaLiteString> &names) const
 {
     return GetPositionNamesValue(names);
 }
 
-::OcaLiteStatus OcaLiteSwitch::SetPositionNames(const ::OcaLiteList< ::OcaLiteString>& names)
+::OcaLiteStatus OcaLiteSwitch::SetPositionNames(const ::OcaLiteList<::OcaLiteString> &names)
 {
-    ::OcaLiteList< ::OcaLiteString> oldNames;
+    ::OcaLiteList<::OcaLiteString> oldNames;
     ::OcaLiteStatus rc(GetPositionNamesValue(oldNames));
     if (OCASTATUS_OK == rc)
     {
@@ -169,15 +216,15 @@ OcaLiteSwitch::OcaLiteSwitch(::OcaONo objectNumber, ::OcaBoolean lockable, const
                 {
                     m_positionNames = names;
 
-                    ::OcaLiteList< ::OcaLiteString> actualNames;
+                    ::OcaLiteList<::OcaLiteString> actualNames;
                     rc = GetPositionNamesValue(actualNames);
                     if (OCASTATUS_OK == rc)
                     {
-                        ::OcaLitePropertyID propertyID(CLASS_ID.GetFieldCount(), static_cast< ::OcaUint16>(OCA_PROP_POSITION_NAMES));
-                        ::OcaLitePropertyChangedEventData< ::OcaLiteList< ::OcaLiteString> > eventData(GetObjectNumber(),
-                                                                                           propertyID,
-                                                                                           actualNames,
-                                                                                           OCAPROPERTYCHANGETYPE_CURRENT_CHANGED);
+                        ::OcaLitePropertyID propertyID(CLASS_ID.GetFieldCount(), static_cast<::OcaUint16>(OCA_PROP_POSITION_NAMES));
+                        ::OcaLitePropertyChangedEventData<::OcaLiteList<::OcaLiteString>> eventData(GetObjectNumber(),
+                                                                                                    propertyID,
+                                                                                                    actualNames,
+                                                                                                    OCAPROPERTYCHANGETYPE_CURRENT_CHANGED);
                         PropertyChanged(eventData, propertyID);
                     }
                 }
@@ -191,7 +238,7 @@ OcaLiteSwitch::OcaLiteSwitch(::OcaONo objectNumber, ::OcaBoolean lockable, const
     return rc;
 }
 
-::OcaLiteStatus OcaLiteSwitch::GetPositionEnabled(::OcaUint16 index, ::OcaBoolean& enabled) const
+::OcaLiteStatus OcaLiteSwitch::GetPositionEnabled(::OcaUint16 index, ::OcaBoolean &enabled) const
 {
     return GetPositionEnabledValue(index, enabled);
 }
@@ -205,7 +252,7 @@ OcaLiteSwitch::OcaLiteSwitch(::OcaONo objectNumber, ::OcaBoolean lockable, const
         rc = GetPositionEnabledValue(index, oldEnabled);
         if (OCASTATUS_OK == rc)
         {
-            if ( ((oldEnabled && !enabled) || (!oldEnabled && enabled)))
+            if (((oldEnabled && !enabled) || (!oldEnabled && enabled)))
             {
                 rc = SetPositionEnabledValue(index, enabled);
                 if (OCASTATUS_OK == rc)

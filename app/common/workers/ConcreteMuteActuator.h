@@ -14,6 +14,8 @@
 
 // ---- Include local include files ----
 #include <OCC/ControlClasses/Workers/Actuators/OcaLiteMute.h>
+#include <atomic>
+#include <mutex>
 
 // ---- Referenced classes and types ----
 
@@ -49,7 +51,16 @@ public:
     /**
      * Destructor.
      */
-    virtual ~ConcreteMuteActuator() {}
+    virtual ~ConcreteMuteActuator();
+
+    /**
+     * Handle mute message from Fusion system.
+     * This method is used to update the mute state from external Fusion commands
+     * without triggering feedback loops.
+     *
+     * @param[in] muteState  The mute state from Fusion (true = muted, false = unmuted).
+     */
+    void handleFusionMuteMessage(bool muteState);
 
 protected:
     /**
@@ -62,7 +73,6 @@ protected:
     virtual ::OcaLiteStatus SetStateValue(::OcaLiteMuteState muteState);
 
 private:
-
     /** The gain identifier from JSON configuration */
     std::string m_gainID;
 

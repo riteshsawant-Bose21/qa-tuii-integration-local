@@ -150,7 +150,8 @@ int main(int argc, const char *argv[])
     }
 
     // Initialize FusionAudioBridge for centralized Fusion communication
-    g_bSuccess = InitializeFusionAudioBridge("192.168.0.19", 7947);
+    // g_bSuccess = InitializeFusionAudioBridge("192.168.0.19", 7947);
+    g_bSuccess = InitializeFusionAudioBridge("10.0.0.116", 7947);
     if (!g_bSuccess)
     {
         OCA_LOG_ERROR("✗ FusionAudioBridge initialization failed");
@@ -507,39 +508,71 @@ void HandleAudioSettingsUpdate(const Json::Value &newSettings)
             return;
         }
 
-        // Iterate through all gain settings in the audio settings
-        for (const auto &gainID : newSettings.getMemberNames())
+        // Iterate through all settings in the audio settings
+        for (const auto &settingID : newSettings.getMemberNames())
         {
-            const Json::Value &gainSettings = newSettings[gainID];
+            const Json::Value &settings = newSettings[settingID];
 
-            // Validate that each gain setting is an object with a "gain" property
-            if (!gainSettings.isObject() || !gainSettings.isMember("gain"))
+            // Validate that each setting is an object
+            if (!settings.isObject())
             {
-                OCA_LOG_WARNING_PARAMS("Gain setting for '%s' missing 'gain' property - skipping", gainID.c_str());
+                OCA_LOG_WARNING_PARAMS("Audio setting for '%s' is not an object - skipping", settingID.c_str());
                 continue;
             }
 
-            // Extract the gain value
-            const Json::Value &gainValueJson = gainSettings["gain"];
-            if (!gainValueJson.isNumeric())
-            {
-                OCA_LOG_WARNING_PARAMS("Gain value for '%s' is not numeric - skipping", gainID.c_str());
-                continue;
-            }
-
-            double gainValue = gainValueJson.asDouble();
-
-            OCA_LOG_INFO_PARAMS("Processing gain update: %s = %.6f dB", gainID.c_str(), gainValue);
-
-            // Process the gain update via FusionAudioBridge
             FusionAudioBridge &bridge = FusionAudioBridge::getInstance();
-            if (bridge.isInitialized())
+            if (!bridge.isInitialized())
             {
-                bridge.handleFusionGainUpdate(gainID, gainValue);
+                OCA_LOG_WARNING("FusionAudioBridge not initialized - discarding audio update");
+                continue;
             }
-            else
+
+            // Process gain updates
+            if (settings.isMember("gain"))
             {
-                OCA_LOG_WARNING("FusionAudioBridge not initialized - discarding gain update");
+                const Json::Value &gainValueJson = settings["gain"];
+                if (gainValueJson.isNumeric())
+                {
+                    double gainValue = gainValueJson.asDouble();
+                    OCA_LOG_INFO_PARAMS("Processing gain update: %s = %.6f dB", settingID.c_str(), gainValue);
+                    bridge.handleFusionGainUpdate(settingID, gainValue);
+                }
+                else
+                {
+                    OCA_LOG_WARNING_PARAMS("Gain value for '%s' is not numeric - skipping", settingID.c_str());
+                }
+            }
+
+            // Process mute updates (uses same gainID)
+            if (settings.isMember("mute"))
+            {
+                const Json::Value &muteValueJson = settings["mute"];
+                if (muteValueJson.isBool())
+                {
+                    bool muteState = muteValueJson.asBool();
+                    OCA_LOG_INFO_PARAMS("Processing mute update: %s = %s", settingID.c_str(), muteState ? "MUTED" : "UNMUTED");
+                    bridge.handleFusionMuteUpdate(settingID, muteState);
+                }
+                else
+                {
+                    OCA_LOG_WARNING_PARAMS("Mute value for '%s' is not boolean - skipping", settingID.c_str());
+                }
+            }
+
+            // Process source selection updates (uses zoneID)
+            if (settings.isMember("input"))
+            {
+                const Json::Value &sourceValueJson = settings["input"];
+                if (sourceValueJson.isInt())
+                {
+                    ::OcaUint16 sourceIndex = static_cast<::OcaUint16>(sourceValueJson.asInt());
+                    OCA_LOG_INFO_PARAMS("Processing source update: %s = %u", settingID.c_str(), sourceIndex);
+                    bridge.handleFusionSourceUpdate(settingID, sourceIndex);
+                }
+                else
+                {
+                    OCA_LOG_WARNING_PARAMS("Source value for '%s' is not integer - skipping", settingID.c_str());
+                }
             }
         }
 
