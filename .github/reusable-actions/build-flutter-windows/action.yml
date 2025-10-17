@@ -100,7 +100,6 @@ runs:
       run: |
         flutter clean
         flutter pub get
-        Remove-Item -Recurse -Force windows/flutter/ephemeral -ErrorAction SilentlyContinue
         moon run flutter-apps:win-automation-build
         E:\'Program Files (x86)'\NSIS\makensis.exe .\windows\Installer\NSIS\fusion_launcher_automation_build.nsi
 
