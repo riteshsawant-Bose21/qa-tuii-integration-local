@@ -98,7 +98,10 @@ runs:
       shell: powershell
       working-directory: apps/frontend/flutter-apps/fusion-launcher
       run: |
+        flutter clean
         flutter pub get
+        rm -rf windows/flutter/ephemeral
+        rm -rf build/
         moon run flutter-apps:win-automation-build
         E:\'Program Files (x86)'\NSIS\makensis.exe .\windows\Installer\NSIS\fusion_launcher.nsi
 

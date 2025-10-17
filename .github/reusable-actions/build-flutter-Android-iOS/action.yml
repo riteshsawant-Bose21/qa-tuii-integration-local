@@ -87,7 +87,10 @@ runs:
       shell: bash
       working-directory: apps/frontend/flutter-apps/fusion-launcher
       run: |
+        flutter clean
         flutter pub get
+        rm -rf windows/flutter/ephemeral
+        rm -rf build/
         moon run flutter-apps:macos-automation-build
         codesign --force  --verbose=4 --display  --options runtime --sign "Developer ID Application: Transom Post Opco LLC (7FDK3RUF89)" --identifier "com.bosepro.fusion" -vvv ./build/macos/Build/Products/Release/Fusion\ Launcher.app/Contents/Frameworks/*
         codesign --force  --verbose=4 --display  --options runtime --sign "Developer ID Application: Transom Post Opco LLC (7FDK3RUF89)" --identifier "com.bosepro.fusion" -vvv ./build/macos/Build/Products/Release/Fusion\ Launcher.app/Contents/MacOS/Fusion\ Launcher*
