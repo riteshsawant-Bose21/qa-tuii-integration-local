@@ -33,7 +33,7 @@ static unsigned int nf_hook_func(void *priv, struct sk_buff *skb, const struct n
         return NF_ACCEPT;
 
     iphl = iph->ihl * 4;
-    ip_tot_len = ntohs(iph->tot_len);
+    ip_tot_len = be16_to_cpu(iph->tot_len);
     if (ip_tot_len < iphl + sizeof(struct udphdr) + 12) /* need UDP + RTP hdr */
         return NF_ACCEPT;
 

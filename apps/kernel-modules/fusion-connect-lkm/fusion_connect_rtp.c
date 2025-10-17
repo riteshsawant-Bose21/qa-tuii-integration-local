@@ -120,9 +120,9 @@ static int fusion_cn_rtp_resolve_unicast_mac(struct fusion_cn_rtp_manager *rtp_m
     int err = -EAGAIN;
 
     struct flowi4 fl4 = {
-        .saddr       = htonl(INADDR_ANY),
+        .saddr       = cpu_to_be32(INADDR_ANY),
         .daddr       = daddr_be,
-        .flowi4_oif  = 0,   /* set to ifindex if you want to force iface */
+        .flowi4_oif  = 0,   
         .flowi4_mark = 0,
         .flowi4_tos  = 0,
     };
@@ -194,7 +194,7 @@ int fusion_cn_rtp_add_stream(struct fusion_cn_rtp_manager *rtp_mgr,
            "dest_ip=0x%08x, source_ip=0x%08x, dest_port=%u, source_port=%u, "
            "is_source=%d, is_fusion_connect=%d\n",
            info->stream_name, info->sample_rate, info->channels,
-           info->dest_ip, info->source_ip, info->dest_port, info->source_port,
+           be32_to_cpu(info->dest_ip), be32_to_cpu(info->source_ip), info->dest_port, info->source_port,
            info->is_source, info->is_fusion_connect);
 
     if (!info->stream_handle || !info->sample_rate || !info->channels ||
@@ -238,7 +238,7 @@ int fusion_cn_rtp_add_stream(struct fusion_cn_rtp_manager *rtp_mgr,
     payload_bytes = info->frames_per_packet * info->channels * (sample_physical_width_bits / 8);
 
     /* Prepare invariant headers template */
-    stream->rtp_packet_base.eth.h_proto = swab16(ETH_P_IP);
+    stream->rtp_packet_base.eth.h_proto = cpu_to_be16(ETH_P_IP);
     /* Set source MAC from device */
     ether_addr_copy(stream->rtp_packet_base.eth.h_source, dev->dev_addr);
 
@@ -250,8 +250,8 @@ int fusion_cn_rtp_add_stream(struct fusion_cn_rtp_manager *rtp_mgr,
     stream->rtp_packet_base.ip.tos      = 0xB8; /* EF; adjust per stream if needed */
     stream->rtp_packet_base.ip.ttl      = 64;
 
-    stream->rtp_packet_base.udp.source  = htons(info->source_port);
-    stream->rtp_packet_base.udp.dest    = htons(info->dest_port);
+    stream->rtp_packet_base.udp.source  = cpu_to_be16(info->source_port);
+    stream->rtp_packet_base.udp.dest    = cpu_to_be16(info->dest_port);
 
     stream->rtp_packet_base.rtp.version      = 0x80;
     stream->rtp_packet_base.rtp.payload_type = info->payload_type;
@@ -292,14 +292,14 @@ int fusion_cn_rtp_add_stream(struct fusion_cn_rtp_manager *rtp_mgr,
      * packet_bytes = ETH + IP + UDP + RTP + payload
      */
     pkt_bytes = sizeof(struct fusion_cn_rtp_packet) + payload_bytes;
-    stream->rtp_packet_base.ip.tot_len = swab16(pkt_bytes - ETH_HLEN);
-    stream->rtp_packet_base.udp.len    = swab16(pkt_bytes - ETH_HLEN - sizeof(struct iphdr));
+    stream->rtp_packet_base.ip.tot_len = cpu_to_be16(pkt_bytes - ETH_HLEN);
+    stream->rtp_packet_base.udp.len    = cpu_to_be16(pkt_bytes - ETH_HLEN - sizeof(struct iphdr));
 
     if (info->is_source) {
         get_random_bytes(&stream->ssrc, sizeof(stream->ssrc));
-        stream->rtp_packet_base.rtp.ssrc = swab32(stream->ssrc);
+        stream->rtp_packet_base.rtp.ssrc = cpu_to_be32(stream->ssrc);
         get_random_bytes(&stream->outgoing_seq_num, sizeof(stream->outgoing_seq_num));
-        stream->rtp_packet_base.rtp.seq_num = swab16(stream->outgoing_seq_num);
+        stream->rtp_packet_base.rtp.seq_num = cpu_to_be16(stream->outgoing_seq_num);
     } else {
         stream->ssrc = 0;
     }
@@ -337,6 +337,11 @@ int fusion_cn_rtp_add_stream(struct fusion_cn_rtp_manager *rtp_mgr,
             }
             hlist_add_head(&map->hnode,
                 &rtp_mgr->uc_packet_maps[PACKET_MAP_KEY_UC(map->source_ip, map->source_port)]);
+        }
+
+        // finally, if playout delay is 0, default it to 1ms
+        if (stream->info.playout_delay == 0) {
+            stream->info.playout_delay = NSEC_PER_MSEC;
         }
     }
     write_unlock_irqrestore(&rtp_mgr->lock, flags);
@@ -414,19 +419,19 @@ static inline void fc_rx_metrics_note(struct fusion_cn_rtp_stream *rtp,
                                 payload_len, flags);
 }
 
-__always_inline int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr, struct fusion_cn_rtp_packet *packet)
+__always_inline int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr,
+                                                 struct fusion_cn_rtp_packet *packet)
 {
     struct fusion_cn_rtp_stream *stream;
     struct fusion_cn_packet_map *map;
-    u32 payload_len, len1, len2, frames_in_payload;
+    u32 payload_len, frames_in_payload;
     u8 *payload;
     void *buf;
     unsigned long flags;
     u32 packet_ssrc;
     u64 handle = 0;
     u16 seq_num;
-    u32 write_slot;
-    u32 buf_offset;
+    u32 write_slot, buf_offset;
     u64 current_phc_ns, current_sac, global_sac, ns_from_ms_boundary, reconstructed_phc_ns;
     u32 rtp_timestamp;
     int sample_physical_width_bits;
@@ -436,27 +441,18 @@ __always_inline int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *r
     bool marker, malformed, duplicate, reorder = false, late, early;
     u16 metrics_flags = 0;
 
-    if (!packet) {
-        printk(KERN_ERR "fusion_cn_rtp: process_packet: Invalid packet pointer\n");
+    if (unlikely(!packet))
         return NF_ACCEPT;
-    }
 
-    // TODO: start profiling
     read_lock_irqsave(&rtp_mgr->lock, flags);
     if (fusion_cn_rtp_is_ip_mcast(packet->ip.daddr)) {
         hlist_for_each_entry(map, &rtp_mgr->mc_packet_maps[PACKET_MAP_KEY_MC(packet->ip.daddr)], hnode) {
-            if (map->dest_ip == packet->ip.daddr) {
-                handle = map->stream_handle;
-                break;
-            }
+            if (map->dest_ip == packet->ip.daddr) { handle = map->stream_handle; break; }
         }
     } else {
-        int source_port = ntohs(packet->udp.source);
+        u16 source_port = be16_to_cpu(packet->udp.source);
         hlist_for_each_entry(map, &rtp_mgr->uc_packet_maps[PACKET_MAP_KEY_UC(packet->ip.saddr, source_port)], hnode) {
-            if (map->source_ip == packet->ip.saddr && map->source_port == source_port) {
-                handle = map->stream_handle;
-                break;
-            }
+            if (map->source_ip == packet->ip.saddr && map->source_port == source_port) { handle = map->stream_handle; break; }
         }
     }
     if (!handle) {
@@ -473,10 +469,10 @@ __always_inline int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *r
                 read_unlock_irqrestore(&rtp_mgr->lock, flags);
                 return NF_DROP;
             }
-            
+
             sample_physical_width_bits = snd_pcm_format_physical_width(stream->info.format);
 
-            packet_ssrc = swab32(packet->rtp.ssrc);
+            packet_ssrc = be32_to_cpu(packet->rtp.ssrc);
             if (stream->ssrc == 0 || packet_ssrc != stream->ssrc) {
                 stream->ssrc = packet_ssrc;
                 stream->current_seq_num = 0;
@@ -484,126 +480,135 @@ __always_inline int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *r
                        stream->ssrc, stream->info.stream_name);
             }
 
-            payload_len = swab16(packet->udp.len) - sizeof(struct udphdr) - sizeof(struct fusion_cn_rtp_header);
-            payload = (u8 *)packet + sizeof(*packet);
+            payload_len = be16_to_cpu(packet->udp.len) - sizeof(struct udphdr) - sizeof(struct fusion_cn_rtp_header);
+            payload     = (u8 *)packet + sizeof(*packet);
 
-            frames_in_payload = payload_len / (stream->info.channels * sample_physical_width_bits / 8);
-            malformed = frames_in_payload != stream->info.frames_per_packet;
-            marker = !!(packet->rtp.payload_type & 0x80);
+            /* frame counts */
+            frames_in_payload = payload_len / (stream->info.channels * (sample_physical_width_bits / 8));
+            malformed         = (frames_in_payload != stream->info.frames_per_packet);
+            marker            = !!(packet->rtp.payload_type & 0x80);
 
-            seq_num = swab16(packet->rtp.seq_num);
-            duplicate = (stream->current_seq_num && seq_num == stream->current_seq_num);
+            /* sequence/slot */
+            seq_num    = be16_to_cpu(packet->rtp.seq_num);
+            duplicate  = (stream->current_seq_num && seq_num == stream->current_seq_num);
             write_slot = seq_num % stream->buf_size_in_packets;
             buf_offset = write_slot * stream->info.frames_per_packet;
 
-            if (stream->playback_index >= stream->buf_size_in_packets) {
+            if (stream->playback_index >= stream->buf_size_in_packets)
                 stream->playback_index = write_slot;
-            }
 
             buf = rtp_mgr->ops->get_buffer(map->alsa_stream);
-            if (!buf) {
+            if (unlikely(!buf)) {
                 printk(KERN_WARNING "fusion_cn_rtp: process_packet: Invalid Buffer!\n");
                 spin_unlock(&stream->lock);
                 read_unlock_irqrestore(&rtp_mgr->lock, flags);
                 return NF_DROP;
             }
 
-            len1 = min(stream->buf_size_in_frames - buf_offset, frames_in_payload);
-            len2 = frames_in_payload - len1;
+            /* ---- SAFE PAYLOAD INGEST ---- */
+            {
+                u32 bytes_per_frame = stream->info.channels * (sample_physical_width_bits / 8);
+                u8 *dst0 = buf;
 
-            if (len1) {
-                memcpy(buf + buf_offset * stream->info.channels * sample_physical_width_bits / 8, 
-                    payload, len1 * stream->info.channels * sample_physical_width_bits / 8);
-            }
-            if (len2) {
-                memcpy(buf, payload + len1 * stream->info.channels * sample_physical_width_bits / 8,
-                    len2 * stream->info.channels * sample_physical_width_bits / 8);
+                if (unlikely(malformed)) {
+                    /* Don’t trust size; write silence for exactly one packet slot */
+                    memset(dst0 + (size_t)buf_offset * bytes_per_frame, 0,
+                           (size_t)stream->info.frames_per_packet * bytes_per_frame);
+                } else {
+                    /* Normal case: copy exactly one packet’s worth, wrapping if needed */
+                    u32 want_frames = stream->info.frames_per_packet;
+                    u32 frames_before_wrap = min(stream->buf_size_in_frames - buf_offset, want_frames);
+                    u32 frames_after_wrap  = want_frames - frames_before_wrap;
+
+                    if (frames_before_wrap) {
+                        memcpy(dst0 + (size_t)buf_offset * bytes_per_frame,
+                               payload,
+                               (size_t)frames_before_wrap * bytes_per_frame);
+                    }
+                    if (frames_after_wrap) {
+                        memcpy(dst0,
+                               payload + (size_t)frames_before_wrap * bytes_per_frame,
+                               (size_t)frames_after_wrap * bytes_per_frame);
+                    }
+                }
             }
 
-            rtp_timestamp = swab32(packet->rtp.timestamp);
+            /* timing */
+            rtp_timestamp  = be32_to_cpu(packet->rtp.timestamp);
             current_phc_ns = rtp_mgr->ops->get_phc_ns();
-            // TODO: review for 96k
-            // sac = (phc * sample_rate) / NSEC_PER_SEC 
+
+            /* sac = (phc * Fs) / 1e9 */
             current_sac = (((current_phc_ns >> (stream->info.sample_rate == 48000 ? 2 : 1)) * 3) / 15625);
 
             global_sac = ((current_sac & 0xFFFFFFFF00000000ULL) | rtp_timestamp) - stream->info.timestamp_offset;
-            
-            if (rtp_timestamp < 0x3FFFFFFFU && (u32)current_sac >= 0xC0000000U) {
+            if (rtp_timestamp < 0x3FFFFFFFU && (u32)current_sac >= 0xC0000000U)
                 global_sac += (1ULL << 32);
-            } else if ((u32)current_sac < 0x3FFFFFFFU && rtp_timestamp >= 0xC0000000U) {
+            else if ((u32)current_sac < 0x3FFFFFFFU && rtp_timestamp >= 0xC0000000U)
                 global_sac -= (1ULL << 32);
-            }
-            
-            // Avoid overflow in reconstructed_phc_ns calculation
-            // TODO: review for 96k
-            // phc = (sac * NSEC_PER_SEC) / sample_rate
+
+            /* phc(ns) ≈ (sac * 1e9) / Fs */
             reconstructed_phc_ns = (global_sac * 62500) / (stream->info.sample_rate == 48000 ? 3 : 6);
 
-            
-
-            // for fusion-connect streams only, reconstruct exact phc time from rtp timestamp
             if (stream->info.is_fusion_connect) {
                 ns_from_ms_boundary = reconstructed_phc_ns % NSEC_PER_MSEC;
                 reconstructed_phc_ns -= ns_from_ms_boundary;
-
-                if (ns_from_ms_boundary <= TIMER_BASE_INTERVAL_NS) {
-                    reconstructed_phc_ns += TIMER_BASE_INTERVAL_NS;
-                } else if (ns_from_ms_boundary <= 2 * TIMER_BASE_INTERVAL_NS) {
-                    reconstructed_phc_ns += 2 * TIMER_BASE_INTERVAL_NS;
-                } else {
-                    reconstructed_phc_ns += NSEC_PER_MSEC;
-                }
-            // for aes67 streams only, stash a bias offset to compensate for phase/network
+                if (ns_from_ms_boundary <= TIMER_BASE_INTERVAL_NS)      reconstructed_phc_ns += TIMER_BASE_INTERVAL_NS;
+                else if (ns_from_ms_boundary <= 2 * TIMER_BASE_INTERVAL_NS) reconstructed_phc_ns += 2 * TIMER_BASE_INTERVAL_NS;
+                else                                                     reconstructed_phc_ns += NSEC_PER_MSEC;
             } else {
                 if (!stream->rtp_phc_offset_valid) {
                     stream->rtp_phc_offset_ns = current_phc_ns - reconstructed_phc_ns;
                     stream->rtp_phc_offset_valid = true;
-
-                    printk(KERN_DEBUG "fusion_cn_rtp: process_packet: RTP timestamp anchor = %lld\n", stream->rtp_phc_offset_ns);
+                    printk(KERN_DEBUG "fusion_cn_rtp: process_packet: RTP timestamp anchor = %lld\n",
+                           stream->rtp_phc_offset_ns);
                 }
-
                 reconstructed_phc_ns += stream->rtp_phc_offset_ns;
             }
 
-            // if no playout_delay specified, use 1ms
-            sched_ns = reconstructed_phc_ns + (stream->info.playout_delay ? stream->info.playout_delay : 1000000);
-            delta = (s64)current_phc_ns - (s64)sched_ns;   /* >0 means we’re past the target (late) */
-            thresh = stream->packet_time / 4;              /* threshold to avoid noise; tune as needed */
+            sched_ns = reconstructed_phc_ns + stream->info.playout_delay;
 
-            late  = (delta > (s64)thresh);
-            early = (delta < -(s64)thresh);
+            delta  = (s64)current_phc_ns - (s64)sched_ns;
+            thresh = stream->packet_time / 4;
+            late   = (delta >  (s64)thresh);
+            early  = (delta < -(s64)thresh);
 
-            if (stream->current_seq_num != 0 && seq_num > stream->current_seq_num && seq_num != stream->current_seq_num + 1) {
-                for (int i = stream->current_seq_num + 1; i < seq_num; i++) {
-                    u32 gap_slot = i % stream->buf_size_in_packets;
+            /* gaps & reorders */
+            if (stream->current_seq_num != 0 && seq_num > stream->current_seq_num && seq_num != (u16)(stream->current_seq_num + 1)) {
+                for (u16 i = stream->current_seq_num + 1; i != seq_num; i++) {
+                    u32 gap_slot   = i % stream->buf_size_in_packets;
                     u32 gap_offset = gap_slot * stream->info.frames_per_packet;
-                    printk(KERN_WARNING "fusion_cn_rtp: process_packet: Gap detected in stream %s, seq_num=%u, gap_slot=%u\n",
-                            stream->info.stream_name, i, gap_slot);
+                    u32 bytes_per_frame = stream->info.channels * (sample_physical_width_bits / 8);
 
-                    memset(buf + gap_offset * stream->info.channels * sample_physical_width_bits / 8,
-                            0, stream->info.frames_per_packet * stream->info.channels * sample_physical_width_bits / 8);
-                    stream->next_action_times[gap_slot] = (reconstructed_phc_ns - ((seq_num - i) * stream->packet_time)) + stream->info.playout_delay;
+                    printk(KERN_WARNING "fusion_cn_rtp: process_packet: Gap stream %s, seq=%u, slot=%u\n",
+                           stream->info.stream_name, i, gap_slot);
+
+                    memset(buf + (size_t)gap_offset * bytes_per_frame, 0,
+                           (size_t)stream->info.frames_per_packet * bytes_per_frame);
+                    stream->next_action_times[gap_slot] =
+                        (reconstructed_phc_ns - ((u64)((u16)(seq_num - i)) * stream->packet_time))
+                        + stream->info.playout_delay;
                 }
-            } else if (seq_num < stream->current_seq_num && stream->current_seq_num != 65535) {
-                printk(KERN_WARNING "fusion_cn_rtp: process_packet: Got older packet for stream %s, seq_num=%u\n",
-                            stream->info.stream_name, seq_num);
+            } else if (seq_num != 0 && seq_num < stream->current_seq_num && stream->current_seq_num != 65535) {
+                printk(KERN_WARNING "fusion_cn_rtp: process_packet: Reorder stream %s, seq=%u\n",
+                       stream->info.stream_name, seq_num);
                 reorder = true;
             }
 
             stream->next_action_times[write_slot] = reconstructed_phc_ns + stream->info.playout_delay;
             stream->current_seq_num = seq_num;
 
-            // end profile
+            if (rtp_mgr->debug) {
+                printk(KERN_DEBUG "fusion_cn_rtp: process_packet: %s slot=%u seq=%u now=%llu recon=%llu next=%llu\n",
+                       stream->info.stream_name, write_slot, seq_num,
+                       current_phc_ns, reconstructed_phc_ns, stream->next_action_times[write_slot]);
+            }
 
-            if (rtp_mgr->debug) printk(KERN_DEBUG "fusion_cn_rtp: process_packet: Stream %s, slot=%u, seq_num=%u, current_phc_ns=%llu, reconstructed_phc=%llu, next_action_time=%llu\n",
-                stream->info.stream_name, write_slot, seq_num, current_phc_ns, reconstructed_phc_ns, stream->next_action_times[write_slot]);
-
-            if (marker)        metrics_flags |= FUSION_CN_PKTF_MARKER;
-            if (malformed)     metrics_flags |= FUSION_CN_PKTF_MALFORMED;
-            if (duplicate)     metrics_flags |= FUSION_CN_PKTF_DUP;
-            if (reorder)       metrics_flags |= FUSION_CN_PKTF_REORDERHINT;
-            if (late)          metrics_flags |= FUSION_CN_PKTF_LATE;
-            if (early)         metrics_flags |= FUSION_CN_PKTF_EARLY;
+            if (marker)    metrics_flags |= FUSION_CN_PKTF_MARKER;
+            if (malformed) metrics_flags |= FUSION_CN_PKTF_MALFORMED;
+            if (duplicate) metrics_flags |= FUSION_CN_PKTF_DUP;
+            if (reorder)   metrics_flags |= FUSION_CN_PKTF_REORDERHINT;
+            if (late)      metrics_flags |= FUSION_CN_PKTF_LATE;
+            if (early)     metrics_flags |= FUSION_CN_PKTF_EARLY;
 
             fc_rx_metrics_note(stream, rtp_timestamp, payload_len, metrics_flags, current_phc_ns);
 
@@ -647,7 +652,7 @@ __always_inline void fusion_cn_rtp_send_packet(struct fusion_cn_rtp_manager *rtp
     const u32 frames       = stream->info.frames_per_packet;
     const u32 payload_len  = sample_bytes * ch * frames;
 
-    /* ETH+IP+UDP+RTP template size you prebuilt into stream->rtp_packet_base */
+    /* ETH+IP+UDP+RTP template size prebuilt into stream->rtp_packet_base */
     const u32 hdr_len      = sizeof(stream->rtp_packet_base);
     const u32 total_len    = hdr_len + payload_len;
 
@@ -655,13 +660,12 @@ __always_inline void fusion_cn_rtp_send_packet(struct fusion_cn_rtp_manager *rtp
 
     /* ---------- Per-packet RTP fields ---------- */
     {
-        /* sac = phc*Fs/1e9, using your integer trick */
+        /* sac = phc*Fs/1e9 */
         u64 sac = (((stream->next_action_time >>
                     (stream->info.sample_rate == 48000 ? 2 : 1)) * 3) / 15625);
 
-        /* NOTE: make sure the RTP header’s first byte (vpxcc) is exactly 0x80 in your template */
-        stream->rtp_packet_base.rtp.timestamp = htonl((u32)(sac + stream->info.timestamp_offset));
-        stream->rtp_packet_base.rtp.seq_num   = htons(stream->outgoing_seq_num++);
+        stream->rtp_packet_base.rtp.timestamp = cpu_to_be32((u32)(sac + stream->info.timestamp_offset));
+        stream->rtp_packet_base.rtp.seq_num   = cpu_to_be16(stream->outgoing_seq_num++);
     }
 
     /* ---------- Per-packet IP/UDP finalize ---------- */
@@ -673,8 +677,8 @@ __always_inline void fusion_cn_rtp_send_packet(struct fusion_cn_rtp_manager *rtp
         const u16 udp_len    = (u16)(total_len - ETH_HLEN - sizeof(struct iphdr)); /* = sizeof(udp)+RTP+payload */
 
         /* lengths (network order) */
-        iph->tot_len = htons(ip_tot_len);
-        udph->len    = htons(udp_len);
+        iph->tot_len = cpu_to_be16(ip_tot_len);
+        udph->len    = cpu_to_be16(udp_len);
 
         /* recompute IPv4 header checksum from scratch */
         iph->check   = 0;
@@ -716,12 +720,12 @@ __always_inline void fusion_cn_rtp_send_packet(struct fusion_cn_rtp_manager *rtp
     /* annotate for the stack */
     skb_set_network_header(skb, ETH_HLEN);   /* keep network header at IP */
     skb_reset_mac_header(skb);               /* L2 starts at skb->data */
-    skb->protocol   = htons(ETH_P_IP);
+    skb->protocol   = cpu_to_be16(ETH_P_IP);
     skb->ip_summed  = CHECKSUM_NONE;         /* we provided full checksums */
 
     if (rtp_mgr->debug) {
         printk(KERN_DEBUG "fusion_cn_rtp: send_packet %s seq=%u len=%u\n",
-               stream->info.stream_name, (u32)(ntohs(stream->rtp_packet_base.rtp.seq_num)),
+               stream->info.stream_name, (u32)(be16_to_cpu(stream->rtp_packet_base.rtp.seq_num)),
                total_len);
     }
 

@@ -22,13 +22,18 @@ static inline u32 rtp_units_to_ns(u32 units, u32 rate)
     return (u32)n;
 }
 
-/* convert ns delta to RTP timestamp domain (for jitter transit calc) */
-static inline s32 ns_to_rtp_units_s64(s64 ns, u32 rate)
+/* convert ns delta to RTP timestamp domain (for jitter transit calc)
+ * NOTE: expects a *delta* (can be negative), not an absolute timestamp.
+ */
+static inline s32 ns_delta_to_rtp_units(s64 ns, u32 rate)
 {
     if (!rate) return 0;
     /* (ns * rate) / 1e9 */
-    return (s32)div_s64((s64)ns * (s64)rate, 1000000000LL);
+    return (s32)div_s64(ns * (s64)rate, 1000000000LL);
 }
+
+/* wrap-safe 32-bit RTP delta (signed) */
+static inline s32 rtp32_delta(u32 a, u32 b) { return (s32)(a - b); }
 
 /* Fold-only TX path: per-CPU counters -> snapshot, and stamp ts */
 void fusion_cn_metrics_aggregate_tx(struct fusion_cn_stream_metrics *m)
@@ -74,10 +79,10 @@ void fusion_cn_metrics_aggregate_rx(struct fusion_cn_stream_metrics *m,
     struct fusion_cn_metrics_window *w = &m->win;
 
     /* === 1) Drain RX ring ===
-     * Producer publishes wr_idx with release; we load with acquire.
+     * Producer publishes wr_idx with store-release; we load with acquire.
      */
     u32 rd = m->rd_idx;
-    u32 wr = smp_load_acquire(&m->wr_idx.counter);
+    u32 wr = smp_load_acquire(&m->wr_idx);
 
     u64 last_arrival = w->last_arrival_ns;
     bool last_rtp_ts_valid = false;
@@ -137,16 +142,17 @@ void fusion_cn_metrics_aggregate_rx(struct fusion_cn_stream_metrics *m,
 
         /* --- RFC3550 jitter (transit variance in RTP units, EWMA 1/16) --- */
         if (w->rtp_clock_rate) {
-            s32 arrival_units = ns_to_rtp_units_s64((s64)s.arrival_phc_ns, w->rtp_clock_rate);
-            s32 transit = arrival_units - (s32)s.rtp_ts;
-
             if (last_rtp_ts_valid) {
-                s32 last_arrival_units = ns_to_rtp_units_s64((s64)w->last_arrival_ns, w->rtp_clock_rate);
-                s32 d = (transit - (last_arrival_units - (s32)last_rtp_ts));
-                if (d < 0) d = -d;
+                /* compute deltas first, then convert ns delta to RTP units */
+                s64 d_arrival_ns = (s64)s.arrival_phc_ns - (s64)w->last_arrival_ns;
+                s32 dR = rtp32_delta(s.rtp_ts, last_rtp_ts);
+                s32 dA = ns_delta_to_rtp_units(d_arrival_ns, w->rtp_clock_rate);
+
+                s32 D = dA - dR;
+                if (D < 0) D = -D;
 
                 /* J = J + (|D|-J)/16 (RFC3550) in RTP units; cache ns for snapshot */
-                w->rfc3550_jitter_ts_fp += (u64)((s64)d - (s64)w->rfc3550_jitter_ts_fp) / 16;
+                w->rfc3550_jitter_ts_fp += (u64)((s64)D - (s64)w->rfc3550_jitter_ts_fp) / 16;
                 w->rfc3550_jitter_ns = rtp_units_to_ns((u32)w->rfc3550_jitter_ts_fp, w->rtp_clock_rate);
             }
             last_rtp_ts = s.rtp_ts;
@@ -252,7 +258,7 @@ struct fusion_cn_stream_metrics *fusion_cn_metrics_create(u32 sample_rate, u64 p
         goto err_free_ctx;
 
     m->ring_mask = FUSION_CN_METRICS_RING_SIZE - 1;
-    atomic_set(&m->wr_idx, 0);
+    m->wr_idx = 0;   /* SPSC producer index (published with store-release) */
     m->rd_idx = 0;
 
     m->pcpu = alloc_percpu(struct fusion_cn_metrics_pcpu);

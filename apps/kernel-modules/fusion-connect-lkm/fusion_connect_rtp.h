@@ -10,7 +10,6 @@
 #include <linux/if_ether.h>
 #include <linux/ip.h>
 #include <linux/udp.h>
-#include <linux/swab.h>
 #include <sound/asound.h>
 #include "fusion_connect_netfilter.h"
 

@@ -138,7 +138,7 @@ struct fusion_cn_stream_metrics
     /* hot path ring (SPSC: producer=packet path, consumer=aggregator) */
     struct fusion_cn_pkt_sample *ring;
     u32                          ring_mask;
-    atomic_t                     wr_idx;   /* producer publishes with store_release */
+    u32                          wr_idx;   /* producer publishes with store_release */
     u32                          rd_idx;   /* consumer loads wr_idx with load_acquire */
 
     /* per-CPU counters (folded in aggregator) */
@@ -174,7 +174,7 @@ static inline void fusion_cn_metrics_rx_stash(struct fusion_cn_stream_metrics *m
 
     /* SPSC ring: reserve -> write -> publish with release */
     {
-        u32 i = (u32)atomic_read(&m->wr_idx);         /* single producer -> safe */
+        u32 i = READ_ONCE(m->wr_idx);         /* single producer -> safe */
         m->ring[i & m->ring_mask] = (struct fusion_cn_pkt_sample) {
             .seq = seq,
             .rtp_ts = rtp_ts,
@@ -183,7 +183,8 @@ static inline void fusion_cn_metrics_rx_stash(struct fusion_cn_stream_metrics *m
             .flags = flags,
         };
         /* publish wr = i+1 with release semantics */
-        smp_store_release(&m->wr_idx.counter, i + 1);
+        smp_wmb();
+        WRITE_ONCE(m->wr_idx, i + 1);
     }
 }
 
