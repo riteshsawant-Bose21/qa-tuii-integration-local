@@ -963,7 +963,7 @@ void FusionConnectClient::audio_streams_update_func() {
         config.frames_per_packet  = 48;
         config.dest_port          = 5004;     // AES67 default; FC uses same
         config.source_port        = 49152;    // sensible default; FC overrides
-        config.playout_delay      = 0;
+        config.playout_delay      = 1000000;
         config.timestamp_offset   = 0;
         config.payload_type       = is_fusion_connect ? 100 : 97;
         config.format             = is_fusion_connect ? 15/*FLOAT_BE*/ : 33/*S24_3BE*/;

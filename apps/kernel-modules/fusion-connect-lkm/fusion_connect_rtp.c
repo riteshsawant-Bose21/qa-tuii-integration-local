@@ -330,8 +330,8 @@ int fusion_cn_rtp_add_stream(struct fusion_cn_rtp_manager *rtp_mgr,
             hlist_add_head(&map->hnode,
                 &rtp_mgr->mc_packet_maps[PACKET_MAP_KEY_MC(map->dest_ip)]);
         } else {
-            if (!info->source_ip) {
-                printk(KERN_ERR "fusion_cn_rtp: add_stream: missing source_ip for unicast stream--required for 1-to-1 mapping\n");
+            if (!info->source_ip || !info->source_port) {
+                printk(KERN_ERR "fusion_cn_rtp: add_stream: missing source IP or port for unicast stream--required for 1-to-1 mapping\n");
                 write_unlock_irqrestore(&rtp_mgr->lock, flags);
                 return -EINVAL;
             }
@@ -565,7 +565,8 @@ __always_inline int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *r
                 reconstructed_phc_ns += stream->rtp_phc_offset_ns;
             }
 
-            sched_ns = reconstructed_phc_ns + stream->info.playout_delay;
+            // if no playout_delay specified, use 1ms
+            sched_ns = reconstructed_phc_ns + (stream->info.playout_delay ? stream->info.playout_delay : 1000000);
             delta = (s64)current_phc_ns - (s64)sched_ns;   /* >0 means we’re past the target (late) */
             thresh = stream->packet_time / 4;              /* threshold to avoid noise; tune as needed */
 
