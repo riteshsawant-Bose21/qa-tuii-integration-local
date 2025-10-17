@@ -90,6 +90,7 @@ OcaLiteSwitch::OcaLiteSwitch(::OcaONo objectNumber, ::OcaBoolean lockable, const
             {
                 m_position = position;
 
+#ifndef OCA_LITE_CONTROLLER   // Controllers should not generate events
                 ::OcaUint16 actualPosition;
                 rc = GetPositionValue(actualPosition);
                 if (OCASTATUS_OK == rc)
@@ -101,6 +102,7 @@ OcaLiteSwitch::OcaLiteSwitch(::OcaONo objectNumber, ::OcaBoolean lockable, const
                                                                           OCAPROPERTYCHANGETYPE_CURRENT_CHANGED);
                     PropertyChanged(eventData, propertyID);
                 }
+#endif
             }
 
         }

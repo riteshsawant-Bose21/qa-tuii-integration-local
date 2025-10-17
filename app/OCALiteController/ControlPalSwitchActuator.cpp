@@ -6,6 +6,7 @@
  *  Description         : ControlPalSwitchActuator - ControlPal implementation of OcaLiteSwitch
  */
 
+#include <iostream>
 #include "ControlPalSwitchActuator.h"
 #include <HostInterfaceLite/OCA/OCF/Logging/IOcfLiteLog.h>
 #include "PlatformInterface/linux/OcaLiteOcfMsgQueue.h"
@@ -117,11 +118,12 @@ void ControlPalSwitchActuator::SendConfigurationValue()
         setPositionCmd.ono = m_zoneONo; // Zone ONo
         std::string temp;
         temp.assign((names.GetItem(0).GetString()));
-        if (temp.size() > 8)
+        if (temp.size() > (CMD_INTFC_MAX_STRING_LENGTH - 1))
         {
-            temp.assign(temp,0,8);
+            temp.assign(temp,0,(CMD_INTFC_MAX_STRING_LENGTH - 1));
         }
-        memcpy(setPositionCmd.val.char_val, temp.c_str(), temp.size());
+        strcpy(setPositionCmd.val.char_val, temp.c_str());
+
         PushToMsgQueue(setPositionCmd);
 
         // Position-2
@@ -129,12 +131,14 @@ void ControlPalSwitchActuator::SendConfigurationValue()
         {
             setPositionCmd.cmd = CTRL_CMD_SOURCE_2_SET;
             setPositionCmd.ono = m_zoneONo; // Zone ONo
+            temp.clear();
             temp.assign((names.GetItem(1).GetString()));
-            if (temp.size() > 8)
+            if (temp.size() > (CMD_INTFC_MAX_STRING_LENGTH - 1))
             {
-                temp.assign(temp,0,8);
+                temp.assign(temp,0,(CMD_INTFC_MAX_STRING_LENGTH - 1));
             }
-            memcpy(setPositionCmd.val.char_val, temp.c_str(), temp.size());
+            strcpy(setPositionCmd.val.char_val, temp.c_str());
+
             PushToMsgQueue(setPositionCmd);
         }
 
@@ -143,12 +147,15 @@ void ControlPalSwitchActuator::SendConfigurationValue()
         {
             setPositionCmd.cmd = CTRL_CMD_SOURCE_3_SET;
             setPositionCmd.ono = m_zoneONo; // Zone ONo
+            temp.clear();
             temp.assign((names.GetItem(2).GetString()));
-            if (temp.size() > 8)
+
+            if (temp.size() > (CMD_INTFC_MAX_STRING_LENGTH - 1))
             {
-                temp.assign(temp,0,8);
+                temp.assign(temp,0,(CMD_INTFC_MAX_STRING_LENGTH - 1));
             }
-            memcpy(setPositionCmd.val.char_val, temp.c_str(), temp.size());
+            strcpy(setPositionCmd.val.char_val, temp.c_str());
+
             PushToMsgQueue(setPositionCmd);
         }
 
@@ -157,12 +164,14 @@ void ControlPalSwitchActuator::SendConfigurationValue()
         {
             setPositionCmd.cmd = CTRL_CMD_SOURCE_4_SET;
             setPositionCmd.ono = m_zoneONo; // Zone ONo
+            temp.clear();
             temp.assign((names.GetItem(3).GetString()));
-            if (temp.size() > 8)
+            if (temp.size() > (CMD_INTFC_MAX_STRING_LENGTH - 1))
             {
-                temp.assign(temp,0,8);
+                temp.assign(temp,0,(CMD_INTFC_MAX_STRING_LENGTH - 1));
             }
-            memcpy(setPositionCmd.val.char_val, temp.c_str(), temp.size());
+            strcpy(setPositionCmd.val.char_val, temp.c_str());
+
             PushToMsgQueue(setPositionCmd);
         }
 
@@ -171,12 +180,15 @@ void ControlPalSwitchActuator::SendConfigurationValue()
         {
             setPositionCmd.cmd = CTRL_CMD_SOURCE_5_SET;
             setPositionCmd.ono = m_zoneONo; // Zone ONo
+            temp.clear();
             temp.assign((names.GetItem(4).GetString()));
-            if (temp.size() > 8)
+            if (temp.size() > (CMD_INTFC_MAX_STRING_LENGTH - 1))
             {
-                temp.assign(temp,0,8);
+                temp.assign(temp,0,(CMD_INTFC_MAX_STRING_LENGTH - 1));
             }
             memcpy(setPositionCmd.val.char_val, temp.c_str(), temp.size());
+            strcpy(setPositionCmd.val.char_val, temp.c_str());
+
             PushToMsgQueue(setPositionCmd);
         }
     }

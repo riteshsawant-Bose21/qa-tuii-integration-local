@@ -66,6 +66,7 @@ OcaLiteMute::OcaLiteMute(::OcaONo objectNumber, ::OcaBoolean lockable, const ::O
             {
                 m_state = state;
                                     
+#ifndef OCA_LITE_CONTROLLER   // Controllers should not generate events
                 ::OcaLiteMuteState actualState;
                 rc = GetStateValue(actualState);
                 if (OCASTATUS_OK == rc)
@@ -77,6 +78,7 @@ OcaLiteMute::OcaLiteMute(::OcaONo objectNumber, ::OcaBoolean lockable, const ::O
                                                                              OCAPROPERTYCHANGETYPE_CURRENT_CHANGED);
                     PropertyChanged(eventData, propertyID);
                 }
+#endif
             }
         }
     }

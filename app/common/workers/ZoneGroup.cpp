@@ -16,11 +16,11 @@ void ZoneGroup::SendValue()
 
     std::string temp;
     temp.assign(m_name.GetString());
-    if (temp.size() > 8)
+    if (temp.size() > (CMD_INTFC_MAX_STRING_LENGTH-1))
     {
-        temp.assign(temp,0,8);
+        temp.assign(temp,0,(CMD_INTFC_MAX_STRING_LENGTH-1));
     }
-    memcpy(setNameCmd.val.char_val, temp.c_str(), temp.size());
+    strcpy(setNameCmd.val.char_val, temp.c_str());
 
     PushToMsgQueue(setNameCmd);
 }
