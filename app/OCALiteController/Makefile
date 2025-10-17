@@ -71,7 +71,8 @@ APP_COMMON_SOURCES       := ../common/FusionProxy.cpp \
                             ../common/workers/ZoneGroup.cpp
 
 # App-specific source files
-APP_SOURCES := OCALiteController.cpp \
+APP_SOURCES := main.cpp \
+	       OCALiteController.cpp \
                OcaServiceDiscovery.cpp \
                ControlPalGainActuator.cpp \
                ControlPalMuteActuator.cpp \

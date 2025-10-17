@@ -341,7 +341,7 @@ ZoneGroup* CreateZoneGroup(Zone& newZone, FusionProxy &fusion_proxy,
         // Send Zone Name to frontend
         newZoneGrp->SendValue();
 
-        //TODO: Sync Control setting (with Device)
+        // Sync Control values (with Device)
         // Get & Set Gain value
         ::OcaDB gainVal;
         fusion_proxy.ConcreteGainActuator_GetGain(
