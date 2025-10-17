@@ -48,33 +48,33 @@ runs:
     #       -Dsonar.exclusions=build/**
     #       -Dsonar.inclusions=lib/**,android/**,ios/**
 
-    - name: Flutter Windows
-      shell: powershell
-      working-directory: apps/frontend/flutter-apps/fusion-launcher
-      run: |
-        flutter pub get
-        moon run flutter-apps:build-win
-        E:\'Program Files (x86)'\NSIS\makensis.exe .\windows\Installer\NSIS\fusion_launcher.nsi
+    # - name: Flutter Windows
+    #   shell: powershell
+    #   working-directory: apps/frontend/flutter-apps/fusion-launcher
+    #   run: |
+    #     flutter pub get
+    #     moon run flutter-apps:build-win
+    #     E:\'Program Files (x86)'\NSIS\makensis.exe .\windows\Installer\NSIS\fusion_launcher.nsi
 
-        echo "SM_API_KEY=${{ inputs.SM_API_KEY }}" >> $env:GITHUB_ENV
-        echo "SM_CLIENT_CERT_PASSWORD=${{ inputs.SM_CLIENT_CERT_PASSWORD }}" >> $env:GITHUB_ENV
-        echo "C:\Program Files\DigiCert\DigiCert One Signing Manager Tools\smctl.exe" >> $env:GITHUB_PATH
+    #     echo "SM_API_KEY=${{ inputs.SM_API_KEY }}" >> $env:GITHUB_ENV
+    #     echo "SM_CLIENT_CERT_PASSWORD=${{ inputs.SM_CLIENT_CERT_PASSWORD }}" >> $env:GITHUB_ENV
+    #     echo "C:\Program Files\DigiCert\DigiCert One Signing Manager Tools\smctl.exe" >> $env:GITHUB_PATH
 
-        $thumbprint = "${{ inputs.cert_thumbprint }}"
-        smctl.exe sign --fingerprint $thumbprint --input ./windows/Installer/NSIS/FusionLauncherInstaller.exe --config-file "C:\Program Files\DigiCert\DigiCert/ One/ Signing/ Manager/ Tools\pkcs11properties.cfg" --description "Fusion Launcher" --timestamp http://timestamp.digicert.com?alg=sha256
+    #     $thumbprint = "${{ inputs.cert_thumbprint }}"
+    #     smctl.exe sign --fingerprint $thumbprint --input ./windows/Installer/NSIS/FusionLauncherInstaller.exe --config-file "C:\Program Files\DigiCert\DigiCert/ One/ Signing/ Manager/ Tools\pkcs11properties.cfg" --description "Fusion Launcher" --timestamp http://timestamp.digicert.com?alg=sha256
         
-        $runNumber = $env:GITHUB_RUN_NUMBER
-        $branchName = if ($env:GITHUB_HEAD_REF) { $env:GITHUB_HEAD_REF } else { $env:GITHUB_REF_NAME }
-        $version = "${{ steps.get_version.outputs.version }}-$runNumber+$(git rev-parse --short=8 HEAD)"
-        Write-Output "VERSION: $version"
+    #     $runNumber = $env:GITHUB_RUN_NUMBER
+    #     $branchName = if ($env:GITHUB_HEAD_REF) { $env:GITHUB_HEAD_REF } else { $env:GITHUB_REF_NAME }
+    #     $version = "${{ steps.get_version.outputs.version }}-$runNumber+$(git rev-parse --short=8 HEAD)"
+    #     Write-Output "VERSION: $version"
 
-        $buildPath = "./windows/Installer/NSIS/FusionLauncherInstaller.exe"
-        $nexusUrl = "${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/$branchName/$version/flutter-windows/Fusion-Launcher-$version.exe"
-        $username = "github-actions-uploader"
-        $password = "${{ inputs.nexus_password }}"
+    #     $buildPath = "./windows/Installer/NSIS/FusionLauncherInstaller.exe"
+    #     $nexusUrl = "${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/$branchName/$version/flutter-windows/Fusion-Launcher-$version.exe"
+    #     $username = "github-actions-uploader"
+    #     $password = "${{ inputs.nexus_password }}"
         
-        curl.exe -k --ssl-no-revoke -f -u "$username`:$password" -T $buildPath $nexusUrl
-        Write-Output "flutter-windows: $nexusUrl"
+    #     curl.exe -k --ssl-no-revoke -f -u "$username`:$password" -T $buildPath $nexusUrl
+    #     Write-Output "flutter-windows: $nexusUrl"
 
     - name: Flutter Windows Automation build
       if: >-
