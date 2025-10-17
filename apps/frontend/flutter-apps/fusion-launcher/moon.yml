@@ -56,7 +56,7 @@ tasks:
 
   build-windows-automation:
     command: "flutter"
-    args: ["build", "windows", "--profile", '.\integration_test\appium.dart']
+    args: ["build", "windows", "--profile", '.\integration_test\appium.dart', "--verbose"]
     deps:
 #      - "analyze"
 #      - "unit-tests"
