@@ -37,7 +37,7 @@ extension SourceSetService on ProjectService {
   /// - Sets an initial mix level in sourceMixLevels if not present.
   ///
   /// Optionally call onChangeCallback?.call() or persist after this method.
-  void addSourceToSourceSet(String sourceId, String sourceSetId, {double initialMixLevel = 1.0}) {
+  void addSourceToSourceSet(String sourceId, String sourceSetId, {double? initialMixLevel}) {
     // Adjust repo name if yours is `mixes` instead of `sourceSets`.
     if (!sourceSets.exists(sourceSetId)) {
       throw Exception('SourceSet $sourceSetId not found');
@@ -46,12 +46,11 @@ extension SourceSetService on ProjectService {
     final ss = sourceSets.get(sourceSetId)!;
 
     // Add to id list idempotently
-    if (!ss.sourceIds.contains(sourceId)) {
-      ss.sourceIds.add(sourceId);
-    }
+    relationships.link(RelationshipType.sourceSetSources, sourceSetId, sourceId);
 
     // Ensure a mix level exists for this source (do not override existing level)
-    ss.sourceMixLevels.putIfAbsent(sourceId, () => initialMixLevel);
+    initialMixLevel ??= 0.0;
+    ss.sourceMixLevels.putIfAbsent(sourceId, () => initialMixLevel!);
   }
 
   /// Remove a source id from a SourceSet (idempotent).
@@ -60,10 +59,10 @@ extension SourceSetService on ProjectService {
   void removeSourceFromSourceSet(String sourceId, String sourceSetId) {
     if (!sourceSets.exists(sourceSetId)) return;
 
+    relationships.unlink(RelationshipType.sourceSetSources, sourceSetId, sourceId);
+
     final ss = sourceSets.get(sourceSetId)!;
 
-    // Remove from ids and mix-levels
-    ss.sourceIds.remove(sourceId);
     ss.sourceMixLevels.remove(sourceId);
   }
 
@@ -74,7 +73,8 @@ extension SourceSetService on ProjectService {
 
     // If the source is not part of the SourceSet, it's likely a user error.
     // We allow adding the source id into the set if you want, but here we'll require it to exist.
-    if (!sourceSet.sourceIds.contains(sourceId)) {
+    final sourcesInSet = relationships.getChildren(RelationshipType.sourceSetSources, sourceSetId);
+    if (!sourcesInSet.contains(sourceId)) {
       throw Exception('Source $sourceId is not part of SourceSet $sourceSetId');
     }
 
@@ -88,9 +88,9 @@ extension SourceSetService on ProjectService {
   }
 
   // Get all Source in a SourceSet
-  List<HardwareComponent> getSourcesInSourceSet(String sourceSetId) {
-    final sourceSet = sourceSets.get(sourceSetId);
-    if (sourceSet == null) return <HardwareComponent>[];
-    return sourceSet.sourceIds.map((s) => getHardwareById(s)).whereType<Source>().toList();
+  List<Source> getSourcesInSourceSet(String sourceSetId) {
+    final sourcesInSet = relationships.getChildren(RelationshipType.sourceSetSources, sourceSetId);
+    if (sourcesInSet.isEmpty) return <Source>[];
+    return sourcesInSet.map((s) => getHardwareById(s)).whereType<Source>().toList();
   }
 }

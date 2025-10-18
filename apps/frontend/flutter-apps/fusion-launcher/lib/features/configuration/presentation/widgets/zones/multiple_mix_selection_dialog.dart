@@ -137,6 +137,8 @@ class MultiMixPickerDialogState extends State<MultiMixPickerDialog> {
                           final SourceSet mix = _filteredDevices[index];
                           final bool isSelected = _selected.contains(mix);
 
+                          final List<Source> sourcesInSet = serviceLocator<ProjectViewModel>().getSourcesInSourceSet(mix.id);
+
                           return Card(
                             margin: const EdgeInsets.only(bottom: 8),
                             elevation: 0,
@@ -228,7 +230,7 @@ class MultiMixPickerDialogState extends State<MultiMixPickerDialog> {
                                                   borderRadius: BorderRadius.circular(4),
                                                 ),
                                                 child: Text(
-                                                  "${mix.sourceIds.length.toString().toUpperCase()} Source${mix.sourceIds.length == 1 ? '' : 's'}",
+                                                  "${sourcesInSet.length.toString().toUpperCase()} Source${sourcesInSet.length == 1 ? '' : 's'}",
                                                   style: TextStyle(
                                                     fontSize: 10,
                                                     fontWeight: FontWeight.w500,

@@ -8,7 +8,10 @@ import 'multi_device_selection_dialog.dart';
 class MixWidget extends StatefulWidget {
   final SourceSet mix;
   final List<Source> availableSources;
+  final List<Source> selectedSources;
   final void Function(SourceSet) onMixUpdated;
+  final void Function(String sourceId) onSourceRemoved;
+  final void Function(String sourceSetId, List<String> sourceIds) onSourcesSetUpdated;
   final void Function() duplicateMix;
   final Function() onDelete;
   final bool isControlMode;
@@ -17,10 +20,13 @@ class MixWidget extends StatefulWidget {
     super.key,
     required this.mix,
     required this.availableSources,
+    required this.selectedSources,
     required this.onMixUpdated,
     required this.onDelete,
     required this.duplicateMix,
     required this.isControlMode,
+    required this.onSourceRemoved,
+    required this.onSourcesSetUpdated,
   });
 
   @override
@@ -35,7 +41,7 @@ class MixWidgetState extends State<MixWidget> {
           (_) => MultiDevicePickerDialog(
             title: 'Pick Input Devices',
             devices: widget.availableSources,
-            initiallySelected: mix.sourceIds.map((String id) => widget.availableSources.firstWhere((Source s) => s.id == id)).toList(),
+            initiallySelected: widget.selectedSources,
           ),
     );
     if (picked != null) {
@@ -51,8 +57,7 @@ class MixWidgetState extends State<MixWidget> {
         }
       }
 
-      final SourceSet updatedMix = mix.copyWith(sourceIds: selectedIds);
-      widget.onMixUpdated(updatedMix);
+      widget.onSourcesSetUpdated(widget.mix.id, selectedIds);
     }
   }
 
@@ -140,7 +145,7 @@ class MixWidgetState extends State<MixWidget> {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
-                                '${widget.mix.sourceIds.length}',
+                                '${widget.selectedSources.length}',
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w500,
@@ -164,7 +169,7 @@ class MixWidgetState extends State<MixWidget> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    if (widget.mix.sourceIds.isEmpty)
+                    if (widget.selectedSources.isEmpty)
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
@@ -200,7 +205,7 @@ class MixWidgetState extends State<MixWidget> {
                         child: ListView.separated(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
-                          itemCount: widget.mix.sourceIds.length,
+                          itemCount: widget.selectedSources.length,
                           separatorBuilder: (BuildContext context, int index) {
                             return Divider(
                               height: 1,
@@ -208,10 +213,7 @@ class MixWidgetState extends State<MixWidget> {
                             );
                           },
                           itemBuilder: (BuildContext context, int index) {
-                            final String id = widget.mix.sourceIds[index];
-                            final Source source = widget.availableSources.firstWhere(
-                              (Source s) => s.id == id,
-                            );
+                            final Source source = widget.selectedSources[index];
                             final double currentValue =
                                 widget.mix.sourceMixLevels.containsKey(source.id) ? double.parse(widget.mix.sourceMixLevels[source.id].toString()) : 0.0;
 
@@ -256,10 +258,7 @@ class MixWidgetState extends State<MixWidget> {
                                       if (!widget.isControlMode)
                                         GestureDetector(
                                           onTap: () {
-                                            final SourceSet updatedMix = widget.mix.copyWith(
-                                              sourceIds: List<String>.from(widget.mix.sourceIds)..removeAt(index),
-                                            );
-                                            widget.onMixUpdated(updatedMix);
+                                            widget.onSourceRemoved(source.id);
                                           },
                                           child: Container(
                                             padding: const EdgeInsets.all(4),

@@ -22,6 +22,25 @@ extension SourceSetViewModel on ProjectViewModel {
     }
   }
 
+  void updateSourcesInSourceSet(String sourceSetId, List<String> sourceIds) {
+    try {
+      final List<Source> currentSources = getSourcesInSourceSet(sourceSetId);
+      final List<String> currentSourceIds = currentSources.map((Source e) => e.id).toList();
+      final List<String> toRemove = currentSourceIds.where((String id) => !sourceIds.contains(id)).toList();
+      final List<String> toAdd = sourceIds.where((String id) => !currentSourceIds.contains(id)).toList();
+      for (final String id in toRemove) {
+        projectManager.removeSourceFromSourceSet(id, sourceSetId);
+      }
+      for (final String id in toAdd) {
+        projectManager.addSourceToSourceSet(id, sourceSetId);
+      }
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to update sources for source set: $e");
+      throwError("Failed to update sources for source set: $e");
+    }
+  }
+
   void addSourceSet(SourceSet sourceSet) {
     try {
       projectManager.addSourceSet(sourceSet);
@@ -53,7 +72,7 @@ extension SourceSetViewModel on ProjectViewModel {
 
   List<Source> getSourcesInSourceSet(String sourceSetId) {
     try {
-      return projectManager.getSourcesInSourceSet(sourceSetId) as List<Source>;
+      return projectManager.getSourcesInSourceSet(sourceSetId);
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to get sources in source set: $e");
       return <Source>[];
