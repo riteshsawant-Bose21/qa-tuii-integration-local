@@ -2,7 +2,6 @@ import 'dart:math';
 import 'dart:ui';
 
 import '../../fusion_utils/fusion_utilities.dart';
-import 'processing_block_model.dart';
 
 class Zone {
   final String id;
@@ -17,10 +16,6 @@ class Zone {
     this.selectedMixIndex = 0,
   }) : id = id ?? "ZONE${FusionUtils.shortStringUUID()}",
        zoneColor = zoneColor ?? getRandomColor();
-
-  static String getShortId() {
-    return 'zone${DateTime.now().millisecondsSinceEpoch}${Random().nextInt(1000)}';
-  }
 
   Color get color {
     return Color(int.parse(zoneColor.substring(1, 7), radix: 16) + 0xFF000000);
