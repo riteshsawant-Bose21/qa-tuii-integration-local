@@ -370,8 +370,19 @@ class _ZoneCircuitConfigPageState extends State<ZoneCircuitConfigPage> {
             ),
           ),
           IconButton(
+            icon: const Icon(Icons.remove, size: 18),
+            onPressed: () {
+              final Speaker speaker = circuitSpeakers.last;
+              decrementHardwareInCircuit(speaker.id);
+            },
+            tooltip: 'remove Speaker',
+          ),
+          IconButton(
             icon: const Icon(Icons.add, size: 18),
-            onPressed: () => _showAddSpeakerToCircuitDialog(circuit),
+            onPressed: () {
+              final Speaker speaker = circuitSpeakers.first.getClone();
+              incrementHardwareInCircuit(speaker, circuit.id);
+            },
             tooltip: 'Add Speaker',
           ),
           IconButton(
@@ -1296,6 +1307,15 @@ class _ZoneCircuitConfigPageState extends State<ZoneCircuitConfigPage> {
 
   void addSpeakerToCircuit(String speakerId, String circuitId) {
     serviceLocator<ProjectViewModel>().addHardwareToCircuit(speakerId, circuitId);
+  }
+
+  void incrementHardwareInCircuit(Speaker speaker, String circuitId) {
+    serviceLocator<ProjectViewModel>().addHardware(speaker);
+    serviceLocator<ProjectViewModel>().addHardwareToCircuit(speaker.id, circuitId);
+  }
+
+  void decrementHardwareInCircuit(String speakerId) {
+    serviceLocator<ProjectViewModel>().removeHardware(speakerId);
   }
 
   void removeSpeakerFromCircuit(String speakerId, String circuitId) {
