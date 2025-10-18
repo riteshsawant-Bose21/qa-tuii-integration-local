@@ -20,7 +20,7 @@ class WiringConnectionModel {
     required this.targetDeviceId,
     required this.targetPortId,
     required this.type,
-  }) : id = id ?? FusionUtils.shortStringUUID();
+  }) : id = id ?? "WIRE${FusionUtils.shortStringUUID()}";
 
   WiringConnectionModel copyWith({
     String? deviceId,

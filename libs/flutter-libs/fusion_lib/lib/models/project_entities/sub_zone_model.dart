@@ -11,12 +11,8 @@ class SubZone {
     String? id,
     required this.name,
     List<ProcessingBlockModel>? processingBlocks,
-  }) : id = id ?? getShortId(),
+  }) : id = id ?? "SUBZONE${FusionUtils.shortStringUUID()}",
        processingBlocks = processingBlocks ?? <ProcessingBlockModel>[];
-
-  static String getShortId() {
-    return 'zone${DateTime.now().millisecondsSinceEpoch}${Random().nextInt(1000)}';
-  }
 
   SubZone copyWith({
     String? id,

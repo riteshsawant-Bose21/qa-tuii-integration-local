@@ -103,7 +103,12 @@ class LocalProjectManager {
         'createdAt': now.toIso8601String(),
         'updatedAt': now.toIso8601String(),
         "floors": [
-          {"id": FusionUtils.shortStringUUID(), 'name': "Floor 1", 'floorPlan': FloorPlanModel.defaultFloorPlan, 'listeningAreas': []},
+          {
+            "id": "FLOOR${FusionUtils.shortStringUUID()}",
+            'name': "Floor 1",
+            'floorPlan': FloorPlanModel.defaultFloorPlan,
+            'listeningAreas': [],
+          },
         ],
         "listeningAreas": [],
         "zones": [],

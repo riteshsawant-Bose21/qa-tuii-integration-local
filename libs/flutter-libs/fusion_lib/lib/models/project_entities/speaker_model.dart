@@ -17,7 +17,7 @@ class Speaker extends HardwareComponent {
   final double yaw;
 
   Speaker({
-    super.id,
+    String? id,
     required super.locationEntity,
     required super.name,
     required super.pos,
@@ -43,7 +43,10 @@ class Speaker extends HardwareComponent {
     super.inputPortsData,
     super.outputPortsData,
   }) : blocks = blocks ?? <ProcessingBlockModel>[],
-       super(hardwareName: hardwareName ?? name);
+       super(
+         hardwareName: hardwareName ?? name,
+         id: id ?? "SPEAKER${FusionUtils.shortStringUUID()}",
+       );
 
   @override
   Speaker copyWith({

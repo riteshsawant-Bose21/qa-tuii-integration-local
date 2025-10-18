@@ -9,7 +9,7 @@ class CircuitModel {
     String? id,
     required this.name,
     PortData? inputPort,
-  }) : id = id ?? FusionUtils.shortStringUUID(),
+  }) : id = id ?? "CIRCUIT${FusionUtils.shortStringUUID()}",
        inputPort =
            inputPort ??
            PortData(

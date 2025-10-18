@@ -1,6 +1,8 @@
 import 'package:fusion_lib/models/fusion_models.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../fusion_utils/fusion_utilities.dart';
+
 class FloorModel {
   final String id;
   final String name;
@@ -10,7 +12,7 @@ class FloorModel {
     String? id,
     required this.name,
     required this.floorPlan,
-  }) : id = id ?? const Uuid().v4();
+  }) : id = id ?? "FLOOR${FusionUtils.shortStringUUID()}";
 
   FloorModel copyWith({
     String? id,

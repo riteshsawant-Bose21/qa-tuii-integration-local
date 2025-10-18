@@ -879,6 +879,8 @@ class _ZoneCircuitConfigPageState extends State<ZoneCircuitConfigPage> {
                             circuitName: nameController.text,
                           );
                           Navigator.pop(context);
+                        } else {
+                          FusionToast.error(context, message: "Please select a speaker and listening area");
                         }
                       }
                     },

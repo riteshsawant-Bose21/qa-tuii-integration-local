@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'dart:ui';
 
+import '../../fusion_utils/fusion_utilities.dart';
 import 'processing_block_model.dart';
 
 class Zone {
@@ -16,7 +17,7 @@ class Zone {
     List<ProcessingBlockModel>? processingBlocks,
     String? zoneColor,
     this.selectedMixIndex = 0,
-  }) : id = id ?? getShortId(),
+  }) : id = id ?? "ZONE${FusionUtils.shortStringUUID()}",
        processingBlocks = processingBlocks ?? <ProcessingBlockModel>[],
        zoneColor = zoneColor ?? getRandomColor();
 

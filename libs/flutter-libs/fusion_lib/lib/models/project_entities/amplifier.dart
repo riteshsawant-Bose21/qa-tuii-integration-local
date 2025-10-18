@@ -8,7 +8,7 @@ class Amplifier extends HardwareComponent {
   final MaterialColor color;
 
   Amplifier({
-    super.id,
+    String? id,
     required super.name,
     required this.channels,
     required this.powerPerChannel,
@@ -25,7 +25,11 @@ class Amplifier extends HardwareComponent {
     super.portData,
     super.inputPortsData,
     super.outputPortsData,
-  }) : super(hardwareName: hardwareName ?? name, locationEntity: locationEntity ?? LocationModel());
+  }) : super(
+         hardwareName: hardwareName ?? name,
+         locationEntity: locationEntity ?? LocationModel(),
+         id: id ?? "AMPLIFIER${FusionUtils.shortStringUUID()}",
+       );
 
   double get totalPower => channels * powerPerChannel;
 

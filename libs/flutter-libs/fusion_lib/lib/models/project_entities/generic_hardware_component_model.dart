@@ -9,7 +9,7 @@ class GenericHardwareComponent extends HardwareComponent {
   final String sku;
 
   GenericHardwareComponent({
-    super.id,
+    String? id,
     required super.locationEntity,
     required super.name,
     super.zAxis,
@@ -26,7 +26,7 @@ class GenericHardwareComponent extends HardwareComponent {
     String? hardwareName,
     super.lockListeningArea,
   }) : sku = sku ?? name,
-       super(hardwareName: hardwareName ?? name);
+       super(hardwareName: hardwareName ?? name, id: id ?? "${type.name.toUpperCase()}{FusionUtils.shortStringUUID()}");
 
   @override
   GenericHardwareComponent copyWith({

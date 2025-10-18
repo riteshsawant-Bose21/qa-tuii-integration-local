@@ -6,7 +6,7 @@ class FusionController extends HardwareComponent {
   final String sku;
 
   FusionController({
-    super.id,
+    String? id,
     required super.name,
     super.pos,
     super.wiringPos,
@@ -25,6 +25,7 @@ class FusionController extends HardwareComponent {
        super(
          hardwareName: hardwareName ?? name,
          locationEntity: locationEntity ?? LocationModel(),
+         id: id ?? "CONTROLLER${FusionUtils.shortStringUUID()}",
        );
 
   @override

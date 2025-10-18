@@ -15,7 +15,7 @@ class Source extends HardwareComponent {
 
   /// Constructor for SourceEntity
   Source({
-    super.id,
+    String? id,
     required super.locationEntity,
     required super.name,
     super.pos,
@@ -37,7 +37,7 @@ class Source extends HardwareComponent {
     super.outputPortsData,
   }) : blocks = blocks ?? <ProcessingBlockModel>[],
        portNumbers = portNumbers ?? <int>[],
-       super(hardwareName: hardwareName ?? name);
+       super(hardwareName: hardwareName ?? name, id: id ?? "SOURCE${FusionUtils.shortStringUUID()}");
 
   @override
   Source copyWith({
