@@ -78,7 +78,13 @@ class SubZoneRepository extends Repository<SubZone> {}
 
 class SourceSetRepository extends Repository<SourceSet> {}
 
-class HardwareRepository extends Repository<HardwareComponent> {}
+class HardwareRepository extends Repository<HardwareComponent> {
+  HardwareRepository copyWith(Map<String, HardwareComponent> items) {
+    final newRepo = HardwareRepository();
+    newRepo._items.addAll(items);
+    return newRepo;
+  }
+}
 
 class FusionDeviceRepository extends Repository<FusionDsp> {}
 

@@ -182,6 +182,10 @@ extension HardwareService on ProjectService {
     }
   }
 
+  List<HardwareComponent> getAllHardware() {
+    return hardware.getAll();
+  }
+
   // returns hardware objects directly (if some IDs were removed, filters nulls)
   List<HardwareComponent> getHardwareForFloorDirect(String floorId) {
     final ids = relationships.getChildren(RelationshipType.hardwareLocation, floorId);
@@ -245,5 +249,51 @@ extension HardwareService on ProjectService {
         relationships.unlink(RelationshipType.hardwareLocation, hw.locationEntity.listeningAreaId!, hw.id);
       }
     }
+  }
+
+  // List<HardwareComponent> reOrderHardware({
+  //   required String hwToMoveId,
+  //   required String hwAtNewIndexId,
+  // }) {
+  //   final hardwareList = getAllHardware();
+  //
+  //   final currentIndex = hardwareList.indexWhere((h) => h.id == hwToMoveId);
+  //   final newIndex = hardwareList.indexWhere((h) => h.id == hwAtNewIndexId);
+  //
+  //   if (currentIndex == -1) {
+  //     throw Exception("Hardware to move not found");
+  //   }
+  //   if (newIndex == -1) {
+  //     throw Exception("Hardware at new index not found");
+  //   }
+  //
+  //   final updatedList = List<HardwareComponent>.from(hardwareList);
+  //   final item = updatedList.removeAt(currentIndex);
+  //   updatedList.insert(newIndex, item);
+  //
+  //   return updatedList;
+  // }
+
+  Map<String, HardwareComponent> reOrderHardware({
+    required String hwToMoveId,
+    required String hwAtNewIndexId,
+  }) {
+    List<HardwareComponent> items = hardware.getAll();
+
+    // Find indices
+    int fromIndex = items.indexWhere((hw) => hw.id == hwToMoveId);
+    int toIndex = items.indexWhere((hw) => hw.id == hwAtNewIndexId);
+
+    // Validate
+    if (fromIndex == -1 || toIndex == -1) {
+      throw ArgumentError('Invalid hardware IDs');
+    }
+
+    // Reorder using List operations
+    HardwareComponent item = items.removeAt(fromIndex);
+    items.insert(toIndex, item);
+
+    // Convert back to Map
+    return {for (var hw in items) hw.id: hw};
   }
 }

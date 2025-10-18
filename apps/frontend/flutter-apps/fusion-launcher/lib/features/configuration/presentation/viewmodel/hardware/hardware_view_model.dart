@@ -134,6 +134,16 @@ extension HardwareViewModel on ProjectViewModel {
     }
   }
 
+  void reOrderHardware({required String hardwareIdToMove, required String hardwareAtNewIndex}) {
+    try {
+      projectManager.reOrderHardware(hardwareIdToMove: hardwareIdToMove, hardwareAtNewIndex: hardwareAtNewIndex);
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to reorder hardware: $e");
+      throwError("Failed to reorder hardware: $e");
+    }
+  }
+
   void addSelectedProduct({required Offset position, String? listeningAreaId}) {
     if (selectedProductToAdd == null) return;
     try {
