@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
@@ -146,9 +148,13 @@ extension CircuitViewmodel on ProjectViewModel {
     }
 
     for (int i = 0; i < speakerCount; i++) {
-      final Speaker newSpeaker = speakerData.toSpeakerWithLocation(locationModel);
-      addHardware(newSpeaker);
-      addHardwareToCircuit(newSpeaker.id, circuitModel.id);
+      final HardwareComponent newHardware = fromProductQueryModel(
+        selectedProductToAdd!,
+        pos: Offset.zero,
+        locationEntity: locationModel,
+      );
+      addHardware(newHardware);
+      addHardwareToCircuit(newHardware.id, circuitModel.id);
     }
   }
 }

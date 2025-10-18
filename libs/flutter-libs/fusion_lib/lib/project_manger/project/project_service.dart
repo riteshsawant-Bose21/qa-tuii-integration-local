@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/models/project_entities/controller.dart';
+import 'package:fusion_lib/models/project_entities/endpoints.dart';
 
 import '../../fusion_lib.dart';
 
@@ -41,6 +43,7 @@ class ProjectService {
   // -----------------
   List<Map<String, dynamic>> undoStack = [];
   List<Map<String, dynamic>> redoStack = [];
+
   int get maxHistory => 10; // cap history to avoid unbounded memory growth
 
   ProjectService({
@@ -184,6 +187,14 @@ class ProjectService {
           return c.toJson();
         } else if (c is Speaker) {
           return c.toJson();
+        } else if (c is FusionDsp) {
+          return c.toJson();
+        } else if (c is FusionController) {
+          return c.toJson();
+        } else if (c is Amplifier) {
+          return c.toJson();
+        } else if (c is FusionEndpoints) {
+          return c.toJson();
         } else {
           return (c as GenericHardwareComponent).toJson();
         }
@@ -227,6 +238,14 @@ class ProjectService {
         return Source.fromJson(m);
       } else if (m.containsKey('componentType') && m['componentType'] == 'speaker') {
         return Speaker.fromJson(m);
+      } else if (m.containsKey('componentType') && m['componentType'] == 'fusionDsp') {
+        return FusionDsp.fromJson(m);
+      } else if (m.containsKey('componentType') && m['componentType'] == 'controller') {
+        return FusionController.fromJson(m);
+      } else if (m.containsKey('componentType') && m['componentType'] == 'fusionEndpoint') {
+        return FusionEndpoints.fromJson(m);
+      } else if (m.containsKey('componentType') && m['componentType'] == 'amplifier') {
+        return Amplifier.fromJson(m);
       } else {
         return GenericHardwareComponent.fromJson(m);
       }

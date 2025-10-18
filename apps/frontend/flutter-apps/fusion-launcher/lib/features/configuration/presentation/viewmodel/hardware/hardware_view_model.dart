@@ -1,7 +1,10 @@
 import 'dart:ui';
 
+import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/models/project_entities/controller.dart';
+import 'package:fusion_lib/models/project_entities/endpoints.dart';
 
 extension HardwareViewModel on ProjectViewModel {
   //get Hardware by id
@@ -183,6 +186,16 @@ extension HardwareViewModel on ProjectViewModel {
           type: OutputType.analogOutput,
           price: product.price,
           pitch: product.mountingType == "pendant" ? 90.0 : 0.0,
+          inputPortsData: <PortData>[
+            PortData(
+              name: "In",
+              position: PortPosition.bottomRight,
+              portNumber: 1,
+              compatibleTypes: <PortType>[PortType.amplifierOutput],
+              type: PortType.analogInput,
+            ),
+          ],
+          outputPortsData: <PortData>[],
         );
       case ProductType.sources:
         return Source(
@@ -194,9 +207,19 @@ extension HardwareViewModel on ProjectViewModel {
           price: product.price,
           hardwareName: product.name,
           type: SourceType.analogInput,
+          inputPortsData: <PortData>[],
+          outputPortsData: <PortData>[
+            PortData(
+              name: "Out",
+              position: PortPosition.bottomRight,
+              portNumber: 1,
+              compatibleTypes: <PortType>[PortType.dspAnalogInput],
+              type: PortType.analogOutput,
+            ),
+          ],
         );
       case ProductType.amplifier:
-        return GenericHardwareComponent(
+        return Amplifier(
           locationEntity: locationEntity,
           name: product.name,
           pos: pos,
@@ -204,10 +227,22 @@ extension HardwareViewModel on ProjectViewModel {
           sku: product.sku,
           price: product.price,
           hardwareName: product.name,
-          type: GenericHardwareComponentType.other,
+          portData: HardwarePortData(
+            inputPorts: 5,
+            outputPorts: 5,
+            inputPortType: PortType.analogInput,
+            outputPortType: PortType.analogOutput,
+            compatibleInputTypes: <PortType>[PortType.analogInput, PortType.digitalInput],
+            compatibleOutputTypes: <PortType>[PortType.analogOutput, PortType.digitalOutput],
+            portPosition: PortPosition.topLeft,
+          ),
+          communicationPorts: <PortData>[],
+          powerPerChannel: 100.0,
+          color: Colors.blue,
+          channels: 5,
         );
       case ProductType.controllers:
-        return GenericHardwareComponent(
+        return FusionController(
           locationEntity: locationEntity,
           name: product.name,
           pos: pos,
@@ -215,10 +250,41 @@ extension HardwareViewModel on ProjectViewModel {
           sku: product.sku,
           price: product.price,
           hardwareName: product.name,
-          type: GenericHardwareComponentType.other,
+          inputPortsData: <PortData>[
+            PortData(
+              name: "In",
+              position: PortPosition.bottomRight,
+              portNumber: 1,
+              compatibleTypes: <PortType>[PortType.analogInput, PortType.ble],
+              type: PortType.analogInput,
+            ),
+            PortData(
+              name: "In",
+              position: PortPosition.bottomRight,
+              portNumber: 1,
+              compatibleTypes: <PortType>[PortType.analogInput, PortType.ble],
+              type: PortType.analogInput,
+            ),
+          ],
+          outputPortsData: <PortData>[
+            PortData(
+              name: "Out",
+              position: PortPosition.bottomRight,
+              portNumber: 1,
+              compatibleTypes: <PortType>[PortType.dspAnalogInput],
+              type: PortType.analogOutput,
+            ),
+            PortData(
+              name: "Out",
+              position: PortPosition.bottomRight,
+              portNumber: 1,
+              compatibleTypes: <PortType>[PortType.dspAnalogInput],
+              type: PortType.analogOutput,
+            ),
+          ],
         );
       case ProductType.dsps:
-        return GenericHardwareComponent(
+        return FusionDsp(
           locationEntity: locationEntity,
           name: product.name,
           pos: pos,
@@ -226,11 +292,26 @@ extension HardwareViewModel on ProjectViewModel {
           sku: product.sku,
           price: product.price,
           hardwareName: product.name,
-          type: GenericHardwareComponentType.other,
+          portData: HardwarePortData(
+            inputPorts: 5,
+            outputPorts: 5,
+            inputPortType: PortType.analogInput,
+            outputPortType: PortType.analogOutput,
+            compatibleInputTypes: <PortType>[PortType.analogInput, PortType.digitalInput],
+            compatibleOutputTypes: <PortType>[PortType.analogOutput, PortType.digitalOutput],
+            portPosition: PortPosition.topLeft,
+          ),
+          communicationPorts: <PortData>[
+            PortData(name: 'Wifi', position: PortPosition.footerRight, portNumber: 1, type: PortType.wifi, compatibleTypes: <PortType>[PortType.wifi]),
+            PortData(name: 'USB', position: PortPosition.footerRight, portNumber: 2, type: PortType.usb, compatibleTypes: <PortType>[PortType.usb]),
+            PortData(name: 'ble', position: PortPosition.footerRight, portNumber: 3, type: PortType.ble, compatibleTypes: <PortType>[PortType.ble]),
+          ],
+          location: '',
+          status: FusionDeviceSetupStatus.notStarted,
         );
 
       case ProductType.endpoints:
-        return GenericHardwareComponent(
+        return FusionEndpoints(
           locationEntity: locationEntity,
           name: product.name,
           pos: pos,
@@ -238,7 +319,7 @@ extension HardwareViewModel on ProjectViewModel {
           sku: product.sku,
           price: product.price,
           hardwareName: product.name,
-          type: GenericHardwareComponentType.other,
+          ipAddress: '',
         );
       case ProductType.racks:
         return GenericHardwareComponent(
