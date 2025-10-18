@@ -1001,6 +1001,8 @@ void FusionConnectClient::audio_streams_update_func() {
             // Determine role(s)
             if (!create_source && !create_sink) continue;
 
+            config.frames_per_packet  = 16;
+
             if (create_source) {
                 config.is_source = true;
                 std::snprintf(config.stream_name, sizeof(config.stream_name), "FC_TX_%u", config.source_port);
