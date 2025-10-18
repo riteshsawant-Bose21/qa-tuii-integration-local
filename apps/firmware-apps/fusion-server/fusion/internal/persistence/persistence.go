@@ -41,6 +41,7 @@ type Persistence struct {
 	mutex        sync.RWMutex
 	lastSave     time.Time
 	saveDebounce time.Duration
+	saveCh       chan struct{}
 }
 
 // NewPersistence opens the database and returns a new persistence instance.
@@ -64,11 +65,15 @@ func NewPersistence(dbPath string, stateManager *StateManager) (*Persistence, er
 		stateManager: stateManager,
 		db:           db,
 		saveDebounce: debounceTime,
+		saveCh:       make(chan struct{}, 1),
 	}
 
 	if err := persistence.initializeDatabase(); err != nil {
 		return nil, err
 	}
+
+	go persistence.saveWorker()
+
 	return persistence, nil
 }
 
@@ -92,18 +97,16 @@ func (p *Persistence) MarkDirty() {
 // SaveState persists the current state using the active snapshot key.
 func (p *Persistence) SaveState() error {
 	p.mutex.Lock()
-	snapshotKey := p.getActiveSnapshotKey()
-	p.mutex.Unlock()
+	defer p.mutex.Unlock()
 
-	// No need to lock here. BoltDB serializes writes.
+	snapshotKey := p.getActiveSnapshotKey()
+
 	ps, err := p.persistState(snapshotKey)
 	if err != nil {
 		return err
 	}
 
-	p.mutex.Lock()
 	p.lastSave = time.Now().UTC()
-	p.mutex.Unlock()
 
 	metadata, err := p.loadMetadata()
 	if err != nil {
@@ -239,11 +242,13 @@ func (p *Persistence) ImportData(importData map[string]any) error {
 func (p *Persistence) persistState(snapshotKey string) (*PersistentState, error) {
 	state := p.stateManager.GetFullState()
 
+	deepCopy := deepCopyState(state.State)
+
 	ps := &PersistentState{
 		Version:   p.stateManager.GetVersion(),
 		Timestamp: time.Now().UTC(),
 		Checksum:  state.Checksum,
-		State:     state.State,
+		State:     deepCopy,
 	}
 
 	data, err := json.Marshal(ps)
@@ -258,6 +263,7 @@ func (p *Persistence) persistState(snapshotKey string) (*PersistentState, error)
 		}
 		return bucket.Put([]byte(snapshotKey), data)
 	})
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to save state: %w", err)
 	}
@@ -473,4 +479,46 @@ func (p *Persistence) initializeMetadata(bucket *bbolt.Bucket) error {
 	}
 
 	return nil
+}
+
+// deepCopyState makes a deep copy of the state map
+func deepCopyState(src map[string]*api.StateEntry) map[string]*api.StateEntry {
+	if src == nil {
+		return nil
+	}
+	dst := make(map[string]*api.StateEntry, len(src))
+	for k, v := range src {
+		if v == nil {
+			dst[k] = nil
+			continue
+		}
+		// Create a copy of the struct, not the pointer
+		copyVal := *v
+		dst[k] = &copyVal
+	}
+	return dst
+}
+
+// saveWorker saves state with debounce on a channel
+func (p *Persistence) saveWorker() {
+	debounce := p.saveDebounce
+
+	for range p.saveCh {
+
+		time.Sleep(debounce)
+
+		for {
+			select {
+			case <-p.saveCh:
+				time.Sleep(debounce)
+			default:
+				goto save
+			}
+		}
+
+	save:
+		if err := p.SaveState(); err != nil {
+			logging.GetLogger().Error("Failed to persist state: %v", err)
+		}
+	}
 }
