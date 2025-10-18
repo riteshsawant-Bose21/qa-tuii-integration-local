@@ -30,9 +30,7 @@ extension ZoneViewModel on ProjectViewModel {
       final List<String> toRemove = currentListeningAreaIds.where((String id) => !listeningAreaIds.contains(id)).toList();
       final List<String> toAdd = listeningAreaIds.where((String id) => !currentListeningAreaIds.contains(id)).toList();
       for (final String id in toRemove) {
-        print("Removing listening area $id from zone $zoneId ##############");
         projectManager.removeListeningAreaFromZone(id, zoneId);
-        print("################ Removed listening area $id from zone $zoneId");
       }
       for (final String id in toAdd) {
         projectManager.addListeningAreaToZone(id, zoneId);

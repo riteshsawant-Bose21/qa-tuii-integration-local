@@ -15,26 +15,6 @@ class ZoneCircuitConfigPage extends StatefulWidget {
 }
 
 class _ZoneCircuitConfigPageState extends State<ZoneCircuitConfigPage> {
-  List<CircuitModel> getCircuitForZone(String zoneId) {
-    return serviceLocator<ProjectViewModel>().getCircuitsInZone(zoneId);
-  }
-
-  List<CircuitModel> getCircuitForSubZone(String subZoneId) {
-    return serviceLocator<ProjectViewModel>().getCircuitsInSubZone(subZoneId);
-  }
-
-  List<ListeningArea> getListeningAreasForZone(String zoneId) {
-    return serviceLocator<ProjectViewModel>().getListeningAreasForZone(zoneId);
-  }
-
-  List<ListeningArea> getListeningAreasForSubZone(String subZoneId) {
-    return serviceLocator<ProjectViewModel>().getListeningAreasInSubZone(subZoneId);
-  }
-
-  List<SubZone> getSubZonesForZone(String zoneId) {
-    return serviceLocator<ProjectViewModel>().getSubZonesForZone(zoneId);
-  }
-
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<ProjectViewModel, ProjectViewModelState>(
@@ -438,6 +418,13 @@ class _ZoneCircuitConfigPageState extends State<ZoneCircuitConfigPage> {
               onPressed: () => _showAddCircuitDialog(zone, subZone),
               tooltip: 'Add Circuit',
             ),
+            //edit
+            IconButton(
+              icon: const Icon(Icons.edit, size: 18),
+              onPressed: () => _showEditSubZoneDialog(subZone, zone),
+              tooltip: 'Edit SubZone',
+            ),
+
             IconButton(
               icon: const Icon(Icons.delete_outline, size: 18),
               onPressed: () => _deleteSubZone(subZone, zone),
@@ -982,6 +969,92 @@ class _ZoneCircuitConfigPageState extends State<ZoneCircuitConfigPage> {
     );
   }
 
+  void _showEditSubZoneDialog(SubZone subZone, Zone zone) {
+    final TextEditingController nameController = TextEditingController(text: subZone.name);
+    final List<ListeningArea> subZoneAreas = getListeningAreasForSubZone(subZone.id);
+    final List<String> selectedListeningAreas = subZoneAreas.map((ListeningArea e) => e.id).toList();
+
+    final List<ListeningArea> availableAreas = serviceLocator<ProjectViewModel>().getListeningAreasForZone(zone.id);
+
+    showDialog(
+      context: context,
+      builder:
+          (BuildContext context) => StatefulBuilder(
+            builder:
+                (BuildContext context, dynamic setDialogState) => AlertDialog(
+                  title: const Text('Edit SubZone'),
+                  content: SizedBox(
+                    width: 400,
+                    child: SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          TextField(
+                            controller: nameController,
+                            decoration: const InputDecoration(
+                              labelText: 'SubZone Name',
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.folder),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          const Text('Listening Areas', style: TextStyle(fontWeight: FontWeight.w500)),
+                          const SizedBox(height: 8),
+                          Container(
+                            constraints: const BoxConstraints(maxHeight: 200),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: ListView(
+                              shrinkWrap: true,
+                              children:
+                                  availableAreas.map((ListeningArea area) {
+                                    return CheckboxListTile(
+                                      title: Text(area.name),
+                                      value: selectedListeningAreas.contains(area.id),
+                                      onChanged: (bool? value) {
+                                        setDialogState(() {
+                                          if (value == true) {
+                                            selectedListeningAreas.add(area.id);
+                                          } else {
+                                            selectedListeningAreas.remove(area.id);
+                                          }
+                                        });
+                                      },
+                                    );
+                                  }).toList(),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  actions: <Widget>[
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Cancel'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        if (nameController.text.isNotEmpty) {
+                          updateSubZone(
+                            subZone.id,
+                            name: nameController.text,
+                            listeningAreaIds: selectedListeningAreas,
+                          );
+                          Navigator.pop(context);
+                        }
+                      },
+                      child: const Text('Update SubZone'),
+                    ),
+                  ],
+                ),
+          ),
+    );
+  }
+
   void _showAddSpeakerToCircuitDialog(CircuitModel circuit) {
     final List<Speaker> circuitSpeakers = _getSpeakersInCircuit(circuit.id);
 
@@ -1022,6 +1095,26 @@ class _ZoneCircuitConfigPageState extends State<ZoneCircuitConfigPage> {
             ),
           ),
     );
+  }
+
+  List<CircuitModel> getCircuitForZone(String zoneId) {
+    return serviceLocator<ProjectViewModel>().getCircuitsInZone(zoneId);
+  }
+
+  List<CircuitModel> getCircuitForSubZone(String subZoneId) {
+    return serviceLocator<ProjectViewModel>().getCircuitsInSubZone(subZoneId);
+  }
+
+  List<ListeningArea> getListeningAreasForZone(String zoneId) {
+    return serviceLocator<ProjectViewModel>().getListeningAreasForZone(zoneId);
+  }
+
+  List<ListeningArea> getListeningAreasForSubZone(String subZoneId) {
+    return serviceLocator<ProjectViewModel>().getListeningAreasInSubZone(subZoneId);
+  }
+
+  List<SubZone> getSubZonesForZone(String zoneId) {
+    return serviceLocator<ProjectViewModel>().getSubZonesForZone(zoneId);
   }
 
   void _deleteZone(Zone zone) {

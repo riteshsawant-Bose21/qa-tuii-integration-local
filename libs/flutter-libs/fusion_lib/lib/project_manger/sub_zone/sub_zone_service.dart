@@ -139,7 +139,7 @@ extension SubZoneService on ProjectService {
       throw Exception('ListeningArea $listeningAreaId not found');
     }
 
-    final subZoneListeningAreas = relationships.getChildren(RelationshipType.zoneAreas, listeningAreaId);
+    final subZoneListeningAreas = relationships.getChildren(RelationshipType.zoneAreas, subZoneId);
 
     //if listening area id is not in subzone listening areas, return
     if (!subZoneListeningAreas.contains(listeningAreaId)) {
