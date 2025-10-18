@@ -1,4 +1,7 @@
+import 'dart:ui';
+
 import '../../fusion_utils/app_enums.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 /// Unified Product model
 class ProductQueryModel {
@@ -29,4 +32,52 @@ class ProductQueryModel {
   final bool? outdoorRated;
   final double? maxSpl;
   final double? nominalOhms;
+}
+
+extension HardwareBuilderExtension on ProductQueryModel {
+  Speaker toSpeaker() {
+    return Speaker(
+      name: name,
+      pos: Offset.zero,
+      assetImagePath: image,
+      locationEntity: LocationModel(),
+      type: OutputType.analogOutput,
+      price: price,
+      speakerSKU: sku,
+      gain: 0.0,
+      outputPortsData: <PortData>[
+        PortData(
+          name: "Out",
+          position: PortPosition.bottomRight,
+          portNumber: 1,
+          compatibleTypes: <PortType>[PortType.amplifierOutput],
+          type: PortType.analogInput,
+        ),
+      ],
+      inputPortsData: <PortData>[],
+    );
+  }
+
+  Speaker toSpeakerWithLocation(LocationModel location) {
+    return Speaker(
+      name: name,
+      pos: Offset.zero,
+      assetImagePath: image,
+      locationEntity: location,
+      type: OutputType.analogOutput,
+      price: price,
+      speakerSKU: sku,
+      gain: 0.0,
+      outputPortsData: <PortData>[
+        PortData(
+          name: "Out",
+          position: PortPosition.bottomRight,
+          portNumber: 1,
+          compatibleTypes: <PortType>[PortType.amplifierOutput],
+          type: PortType.analogInput,
+        ),
+      ],
+      inputPortsData: <PortData>[],
+    );
+  }
 }

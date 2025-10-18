@@ -5,7 +5,6 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/bill_of_materials/presentation/bill_of_materials_page.dart';
 import 'package:fusion_launcher/features/configuration/presentation/pages/audio_system_design_page.dart';
 import 'package:fusion_launcher/features/product_query/presentation/pages/product_query.dart';
 import 'package:fusion_launcher/features/projects/widget/building/side_panle_widgets/devices_panel.dart';
@@ -21,9 +20,11 @@ import '../../../core/service_locator.dart';
 import '../../../core/spl_calculation/ffi_constants.dart';
 import '../../../core/utils/broadcast_controllers.dart';
 import '../../../core/widgets/clean_widgets.dart';
+import '../../bill_of_materials/presentation/bill_of_materials_page.dart';
 import '../../cloud_ui/presentation/pages/cloud_web_view.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../schematics/presentation/pages/schematics_page.dart';
+import '../../schematics/presentation/widgets/circuit_test_widget.dart';
 import '../../schematics/presentation/widgets/cost_calcuator_widget.dart';
 import '../widget/building/building_canvas.dart';
 import '../widget/building/side_panle_widgets/building_plan.dart';
@@ -57,6 +58,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
   final List<Widget> _tabs = const <Widget>[
     Tab(text: 'Building'),
     Tab(text: 'Schematics'),
+    Tab(text: 'Zone config'),
     Tab(text: 'Budget'),
     Tab(text: 'Configuration'),
     Tab(text: 'Cloud'),
@@ -151,7 +153,9 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
     if (currentFloorIndex == -1) return;
 
     final FloorModel currentFloor = serviceLocator<ProjectViewModel>().floors[currentFloorIndex];
-    if (currentFloor.listeningAreaIds.isEmpty) return;
+
+    final List<ListeningArea> floorListeningAreas = serviceLocator<ProjectViewModel>().getListeningAreasForFloor(currentFloor.id);
+    if (floorListeningAreas.isEmpty) return;
 
     final List<Speaker> speakers = List<Speaker>.from(
       serviceLocator<ProjectViewModel>().getHardwareForFloor(currentFloor.id).whereType<Speaker>(),
@@ -180,13 +184,14 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
     if (currentFloorIndex == -1) return;
 
     final FloorModel currentFloor = serviceLocator<ProjectViewModel>().floors[currentFloorIndex];
-    if (currentFloor.listeningAreaIds.isEmpty) return;
+    final List<ListeningArea> floorListeningAreas = serviceLocator<ProjectViewModel>().getListeningAreasForFloor(currentFloor.id);
+    if (floorListeningAreas.isEmpty) return;
 
     final List<SPLCalculation> toApply = <SPLCalculation>[];
     final Iterable<SPLCalculation> currentCalcs = SPLCalculationManager.currentCalculations();
 
     for (final SPLCalculation sc in currentCalcs) {
-      if (!currentFloor.listeningAreaIds.contains(sc.surface.id)) continue;
+      if (!floorListeningAreas.any((ListeningArea area) => area.id == sc.surface.id)) continue;
 
       final List<SPLCalculation> updated = SPLCalculationManager.getSplAt(
         _engine!,
@@ -631,6 +636,14 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                         ],
                       );
                     },
+                  ),
+
+                  const FusionDockableArea(
+                    tabKey: "testTab",
+                    showLeft: false,
+                    showRight: false,
+                    mainArea: ZoneCircuitConfigPage(),
+                    dockItemList: <DockItemConfig>[],
                   ),
 
                   /// budget tab with docking area

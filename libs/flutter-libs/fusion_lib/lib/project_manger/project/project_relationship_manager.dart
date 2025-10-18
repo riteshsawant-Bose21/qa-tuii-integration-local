@@ -2,14 +2,16 @@
 /// Relationship Manager
 /// -------------------
 enum RelationshipType {
-  floorListening,
-  zoneListening,
+  floorAreas,
+  zoneAreas,
   zoneSourceSet,
   zoneSubZones,
+  sourceSetSources,
   hardwareLocation,
   circuitHardware,
   zoneCircuits,
-  wiringConnectionDevice,
+  wireConnection,
+  processingBlock,
 }
 
 class RelationshipManager {

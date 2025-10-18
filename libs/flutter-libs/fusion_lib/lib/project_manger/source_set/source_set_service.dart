@@ -25,17 +25,10 @@ extension SourceSetService on ProjectService {
     final parentZones = relationships.getParents(RelationshipType.zoneSourceSet, sourceSetId);
 
     // Remove sourceSet id from each zone's internal list (if present) and unlink relationship
-    for (final zoneId in parentZones) {
-      final zone = zones.get(zoneId);
-      if (zone != null) {
-        zone.sourceSetIds.remove(sourceSetId);
-      }
-      relationships.unlink(RelationshipType.zoneSourceSet, zoneId, sourceSetId);
-    }
+    relationships.removeAllRelationships(sourceSetId);
 
     // Remove sourceSet repository entry and all remaining relationships for the sourceSet
     sourceSets.remove(sourceSetId);
-    relationships.removeAllRelationships(sourceSetId);
   }
 
   /// Add a source id into a SourceSet (idempotent).

@@ -11,6 +11,9 @@ export 'zone/zone_view_model.dart';
 export 'project_properties/project_properties_view_model.dart';
 export 'undo_redo/undo_redo_view_model.dart';
 export 'project_images/project_image_view_model.dart';
+export 'wiring_connection/wiring_connection_view_model.dart';
+export 'subzones/subzone_view_model.dart';
+export 'circuit/circuit_viewmodel.dart';
 
 part 'project_view_model_state.dart';
 

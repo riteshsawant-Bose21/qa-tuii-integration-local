@@ -93,5 +93,31 @@ extension ListeningAreaViewModel on ProjectViewModel {
     }
   }
 
-  //add
+  List<ListeningArea> getAvailableListeningAreasForZoneOrSubZone({required String id}) {
+    try {
+      return projectManager.getAvailableListeningAreasForZoneOrSubZone(id: id);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get available listening areas for zone: $e");
+      return <ListeningArea>[];
+    }
+  }
+
+  Map<String, String> getListeningAreaToZoneMap() {
+    try {
+      final List<ListeningArea> allListeningAreas = getAllListeningAreas();
+      final Map<String, String> laToZoneMap = <String, String>{};
+
+      for (final ListeningArea la in allListeningAreas) {
+        final Zone? zone = getZonesForListeningArea(la.id);
+        if (zone != null) {
+          laToZoneMap[la.id] = zone.id;
+        }
+      }
+
+      return laToZoneMap;
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get listening area to zone map: $e");
+      return <String, String>{};
+    }
+  }
 }

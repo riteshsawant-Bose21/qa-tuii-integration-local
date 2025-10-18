@@ -194,3 +194,11 @@ class Speaker extends HardwareComponent {
     );
   }
 }
+
+extension SpeakerExtension on Speaker {
+  Speaker getClone() {
+    final json = toJson();
+    json['id'] = FusionUtils.shortStringUUID();
+    return Speaker.fromJson(json);
+  }
+}

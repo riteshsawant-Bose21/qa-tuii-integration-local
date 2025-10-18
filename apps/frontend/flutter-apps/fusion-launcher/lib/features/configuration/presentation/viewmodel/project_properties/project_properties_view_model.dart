@@ -7,6 +7,8 @@ import 'package:fusion_lib/models/project_entities/endpoints.dart';
 extension ProjectPropertiesViewModel on ProjectViewModel {
   List<Zone> get zones => projectManager.getAllZones();
 
+  List<SubZone> get subZones => projectManager.getAllSubZones();
+
   List<FloorModel> get floors => projectManager.getAllFloors();
 
   List<HardwareComponent> get hardwareComponents => projectManager.getAllHardwareComponents();
@@ -14,6 +16,8 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
   List<ListeningArea> get listeningAreas => projectManager.getAllListeningAreas();
 
   List<SourceSet> get sourceSets => projectManager.getAllSourceSets();
+
+  List<CircuitModel> get circuits => projectManager.getAllCircuits();
 
   String get projectName => projectManager.getProjectName();
 

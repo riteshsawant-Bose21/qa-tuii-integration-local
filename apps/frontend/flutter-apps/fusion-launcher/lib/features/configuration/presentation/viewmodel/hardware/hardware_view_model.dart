@@ -23,9 +23,14 @@ extension HardwareViewModel on ProjectViewModel {
     }
   }
 
-  void addHardware(HardwareComponent hardware) {
+  void addHardware(HardwareComponent hardware, {int count = 1}) {
     try {
       projectManager.addHardware(hardware);
+      if (hardware is Speaker) {
+        for (int i = 1; i < count; i++) {
+          projectManager.addHardware(hardware.getClone());
+        }
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to add hardware: $e");

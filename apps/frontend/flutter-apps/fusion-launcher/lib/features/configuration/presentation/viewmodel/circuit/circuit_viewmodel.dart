@@ -117,4 +117,38 @@ extension CircuitViewmodel on ProjectViewModel {
       return <ListeningArea>[];
     }
   }
+
+  void createCircuitWithSpeakers({
+    required ProductQueryModel speakerData,
+    required String listeningAreaId,
+    required int speakerCount,
+    String? circuitName,
+    String? subZoneId,
+    required String zoneId,
+  }) {
+    final FloorModel? floorModel = getFloorForListeningArea(listeningAreaId);
+    final LocationModel locationModel = LocationModel(
+      listeningAreaId: listeningAreaId,
+      floorId: floorModel?.id,
+    );
+
+    final CircuitModel circuitModel = CircuitModel(
+      name: circuitName ?? "Circuit ${circuits.length + 1}",
+    );
+    addCircuit(
+      circuitModel,
+    );
+
+    if (subZoneId != null) {
+      addCircuitToSubZone(subZoneId, circuitModel.id);
+    } else {
+      addCircuitToZone(zoneId, circuitModel.id);
+    }
+
+    for (int i = 0; i < speakerCount; i++) {
+      final Speaker newSpeaker = speakerData.toSpeakerWithLocation(locationModel);
+      addHardware(newSpeaker);
+      addHardwareToCircuit(newSpeaker.id, circuitModel.id);
+    }
+  }
 }

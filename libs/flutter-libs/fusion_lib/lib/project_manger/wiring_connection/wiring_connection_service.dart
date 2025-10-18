@@ -10,8 +10,8 @@ extension WiringConnectionService on ProjectService {
     wiringConnection.add(connection.id, connection);
 
     // Link to the relevant parent(s). Use wiringConnectionDevice relationship type.
-    relationships.link(RelationshipType.wiringConnectionDevice, connection.deviceId, connection.id);
-    relationships.link(RelationshipType.wiringConnectionDevice, connection.targetDeviceId, connection.id);
+    relationships.link(RelationshipType.wireConnection, connection.deviceId, connection.id);
+    relationships.link(RelationshipType.wireConnection, connection.targetDeviceId, connection.id);
   }
 
   /// Remove wiring connection and all relationships to/from it.
@@ -35,7 +35,7 @@ extension WiringConnectionService on ProjectService {
   }
 
   List<WiringConnectionModel>? getConnectionForDevice(String deviceId) {
-    final connectionIds = relationships.getChildren(RelationshipType.wiringConnectionDevice, deviceId);
+    final connectionIds = relationships.getChildren(RelationshipType.wireConnection, deviceId);
     if (connectionIds.isNotEmpty) {
       return connectionIds.map((id) => wiringConnection.get(id)).whereType<WiringConnectionModel>().toList();
     } else {

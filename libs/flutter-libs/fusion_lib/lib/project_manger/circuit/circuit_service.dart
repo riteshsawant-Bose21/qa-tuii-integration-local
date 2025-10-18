@@ -17,10 +17,28 @@ extension CircuitService on ProjectService {
     if (!circuits.exists(circuitId)) {
       throw Exception('Circuit with id $circuitId does not exist');
     }
+
+    //remove all the hardware in the circuit
+    final hardwareIds = relationships.getChildren(RelationshipType.circuitHardware, circuitId);
+    for (final hwId in hardwareIds) {
+      // Remove relationship links
+      relationships.removeAllRelationships(hwId);
+
+      // Remove repo entry
+      hardware.remove(hwId);
+    }
+
+    final wireConnections = relationships.getChildren(RelationshipType.wireConnection, circuitId);
+    for (final connId in wireConnections) {
+      removeWiringConnection(connId);
+    }
+
     // Remove all relationships
     relationships.removeAllRelationships(circuitId);
     // Remove the circuit
     circuits.remove(circuitId);
+
+    print("Circuit $circuitId removed successfully");
   }
 
   void updateCircuit(CircuitModel circuit) {
@@ -61,6 +79,12 @@ extension CircuitService on ProjectService {
       throw Exception('Hardware with id $hwId does not exist');
     }
     relationships.unlink(RelationshipType.circuitHardware, circuitId, hwId);
+
+    final hwIds = relationships.getChildren(RelationshipType.circuitHardware, circuitId);
+    if (hwIds.isEmpty) {
+      //remove circuit if no hardware left
+      removeCircuit(circuitId);
+    }
   }
 
   List<ListeningArea> getListeningAreasForCircuit(String circuitId) {

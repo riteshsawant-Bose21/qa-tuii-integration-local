@@ -42,6 +42,7 @@ class FloorCanvas extends StatefulWidget {
   final Function(HardwareComponent, String? listeningAreaId, String? floorId) moveHardware;
   final Function(ListeningArea newArea, List<HardwareComponent>? hardwaresInsideArea) onAddListeningArea;
   final Function(Offset speakerPosition, String? listeningAreaId) addNewHardwareComponent;
+  final Map<String, String> listeningAreaToZoneMap;
 
   const FloorCanvas({
     super.key,
@@ -69,6 +70,7 @@ class FloorCanvas extends StatefulWidget {
     required this.moveHardware,
     required this.addNewHardwareComponent,
     required this.splPanelData,
+    required this.listeningAreaToZoneMap,
   });
 
   @override
@@ -226,6 +228,8 @@ class FloorCanvasState extends State<FloorCanvas> {
                     splMax: widget.splMax,
                     splMin: widget.splMin,
                     splPanelData: widget.splPanelData,
+                    //prepare a map of listening area id to zone
+                    listeningAreaToZoneMap: widget.listeningAreaToZoneMap,
                   ),
                 ),
               ),

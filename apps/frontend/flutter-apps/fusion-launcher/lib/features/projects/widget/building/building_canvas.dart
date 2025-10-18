@@ -256,6 +256,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                 );
                                 serviceLocator<ProjectViewModel>().saveProjectToLocal();
                               },
+                              listeningAreaToZoneMap: serviceLocator<ProjectViewModel>().getListeningAreaToZoneMap(),
                             ),
                           ),
 

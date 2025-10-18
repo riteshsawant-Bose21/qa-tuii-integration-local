@@ -69,12 +69,12 @@ class ZoneWidgetState extends State<ZoneWidget> {
           (_) => MultiMixPickerDialog(
             title: 'Select Mixes',
             devices: widget.availableMixes,
-            initiallySelected: widget.availableMixes.where((SourceSet m) => zone.sourceSetIds.contains(m.id)).toList(),
+            initiallySelected: serviceLocator<ProjectViewModel>().getSourceSetsInZone(widget.zone.id),
           ),
     );
     if (picked != null) {
       final List<String> updatedMixIds = picked.map((SourceSet m) => m.id).toList();
-      widget.onZoneUpdated(zone.copyWith(sourceSetIds: updatedMixIds));
+      serviceLocator<ProjectViewModel>().updateSourceSets(zone.id, updatedMixIds);
     }
   }
 
@@ -117,6 +117,8 @@ class ZoneWidgetState extends State<ZoneWidget> {
   Widget build(BuildContext context) {
     final ColorScheme colors = Theme.of(context).colorScheme;
     _nameController.text = widget.zone.name;
+
+    final List<SourceSet> sourceSetsInZone = serviceLocator<ProjectViewModel>().getSourceSetsInZone(widget.zone.id);
 
     return Card(
       elevation: 0,
@@ -200,7 +202,7 @@ class ZoneWidgetState extends State<ZoneWidget> {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
-                                '${widget.zone.sourceSetIds.length}',
+                                '${sourceSetsInZone.length}',
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w500,
@@ -224,7 +226,7 @@ class ZoneWidgetState extends State<ZoneWidget> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    if (widget.zone.sourceSetIds.isEmpty)
+                    if (sourceSetsInZone.isEmpty)
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
@@ -254,12 +256,9 @@ class ZoneWidgetState extends State<ZoneWidget> {
                         spacing: 8,
                         runSpacing: 8,
                         children:
-                            widget.zone.sourceSetIds.asMap().entries.map((MapEntry<int, String> sourceId) {
-                              final String d = sourceId.value;
-                              final int deviceIndex = sourceId.key;
-                              final SourceSet mix = widget.availableMixes.firstWhere(
-                                (SourceSet s) => s.id == d,
-                              );
+                            sourceSetsInZone.map((SourceSet sourceSet) {
+                              final int sourceSetIndex = sourceSetsInZone.indexOf(sourceSet);
+
                               return InkWell(
                                 onTap: () async {
                                   if (!widget.isControlMode) {
@@ -279,19 +278,19 @@ class ZoneWidgetState extends State<ZoneWidget> {
                                       dimensionIndex: 0,
                                       value: AudioWidgetValue.from(0, "integer"),
                                       minValue: AudioWidgetValue.from(1, "integer"),
-                                      maxValue: AudioWidgetValue.from(widget.zone.sourceSetIds.length, "integer"),
+                                      maxValue: AudioWidgetValue.from(sourceSetsInZone.length, "integer"),
                                     );
 
-                                    final AudioWidgetValue widgetValue = AudioWidgetValue.from(deviceIndex + 1, "integer");
+                                    final AudioWidgetValue widgetValue = AudioWidgetValue.from(sourceSetIndex + 1, "integer");
 
                                     final AudioWidgetEntity updatedEntity = await serviceLocator<PanelDataSource>().sendWidgetData(
                                       audioWidgetEntity,
                                       widgetValue,
                                     );
 
-                                    if (updatedEntity.value.value == deviceIndex + 1) {
+                                    if (updatedEntity.value.value == sourceSetIndex + 1) {
                                       setState(() {
-                                        selectedMixIndex = deviceIndex;
+                                        selectedMixIndex = sourceSetIndex;
                                       });
                                     }
                                   } else {
@@ -304,11 +303,11 @@ class ZoneWidgetState extends State<ZoneWidget> {
                                   }
                                 },
                                 child: Chip(
-                                  label: Text(mix.name),
+                                  label: Text(sourceSet.name),
 
-                                  backgroundColor: selectedMixIndex == deviceIndex ? Theme.of(context).colorScheme.primaryContainer : AppColors.cardSoft,
+                                  backgroundColor: selectedMixIndex == sourceSetIndex ? Theme.of(context).colorScheme.primaryContainer : AppColors.cardSoft,
 
-                                  side: selectedMixIndex == deviceIndex ? BorderSide(color: colors.primary, width: 1.5) : null,
+                                  side: selectedMixIndex == sourceSetIndex ? BorderSide(color: colors.primary, width: 1.5) : null,
 
                                   labelStyle: TextStyle(color: colors.onSecondaryContainer, fontSize: 10),
                                   deleteIcon:
@@ -323,9 +322,7 @@ class ZoneWidgetState extends State<ZoneWidget> {
                                       (widget.isControlMode)
                                           ? null
                                           : () {
-                                            final List<String> updatedMixIds = List<String>.from(widget.zone.sourceSetIds);
-                                            updatedMixIds.removeAt(deviceIndex);
-                                            widget.onZoneUpdated(widget.zone.copyWith(sourceSetIds: updatedMixIds));
+                                            serviceLocator<ProjectViewModel>().removeSourceSetFromZone(sourceSet.id, widget.zone.id);
                                           },
                                 ),
                               );

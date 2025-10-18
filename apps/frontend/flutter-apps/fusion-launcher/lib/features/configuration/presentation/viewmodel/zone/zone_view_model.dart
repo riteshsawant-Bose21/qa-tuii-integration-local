@@ -23,6 +23,27 @@ extension ZoneViewModel on ProjectViewModel {
     }
   }
 
+  void updateListeningAreasInZone(String zoneId, List<String> listeningAreaIds) {
+    try {
+      final List<ListeningArea> currentListeningAreas = getListeningAreasForZone(zoneId);
+      final List<String> currentListeningAreaIds = currentListeningAreas.map((ListeningArea e) => e.id).toList();
+      final List<String> toRemove = currentListeningAreaIds.where((String id) => !listeningAreaIds.contains(id)).toList();
+      final List<String> toAdd = listeningAreaIds.where((String id) => !currentListeningAreaIds.contains(id)).toList();
+      for (final String id in toRemove) {
+        print("Removing listening area $id from zone $zoneId ##############");
+        projectManager.removeListeningAreaFromZone(id, zoneId);
+        print("################ Removed listening area $id from zone $zoneId");
+      }
+      for (final String id in toAdd) {
+        projectManager.addListeningAreaToZone(id, zoneId);
+      }
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to update listening areas for zone: $e");
+      throwError("Failed to update listening areas for zone: $e");
+    }
+  }
+
   void addZone(Zone zone) {
     try {
       projectManager.addZone(zone);
@@ -80,6 +101,25 @@ extension ZoneViewModel on ProjectViewModel {
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to get source sets for zone: $e");
       return <SourceSet>[];
+    }
+  }
+
+  void updateSourceSets(String zoneId, List<String> sourceSetIds) {
+    try {
+      final List<SourceSet> currentSourceSets = getSourceSetsInZone(zoneId);
+      final List<String> currentSourceSetIds = currentSourceSets.map((SourceSet e) => e.id).toList();
+      final List<String> toRemove = currentSourceSetIds.where((String id) => !sourceSetIds.contains(id)).toList();
+      final List<String> toAdd = sourceSetIds.where((String id) => !currentSourceSetIds.contains(id)).toList();
+      for (final String id in toRemove) {
+        projectManager.removeSourceSetFromZone(id, zoneId);
+      }
+      for (final String id in toAdd) {
+        projectManager.addSourceSetToZone(id, zoneId);
+      }
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to update source sets for zone: $e");
+      throwError("Failed to update source sets for zone: $e");
     }
   }
 
@@ -141,7 +181,7 @@ extension ZoneViewModel on ProjectViewModel {
     }
   }
 
-  void addCircuitToZone(String circuitId, String zoneId) {
+  void addCircuitToZone(String zoneId, String circuitId) {
     try {
       projectManager.addCircuitToZone(circuitId, zoneId);
       updateProject();
