@@ -336,7 +336,6 @@ static ssize_t fusion_io_virt_gpio_store(struct device *dev,
 /* command */
 static ssize_t ads7128_cmd_regop(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
-    struct endpoint_cmd *ep_cmd = container_of(attr, struct endpoint_cmd, dev_attr);
     struct endpoint *ep = dev_get_drvdata(dev);
     struct i2c_client *client = ep->i2c_client;
     unsigned int reg_addr, value;
@@ -367,7 +366,6 @@ static ssize_t ads7128_cmd_regop(struct device *dev, struct device_attribute *at
         ret = i2c_transfer(client->adapter, &wr_msg, 1);
         if (ret < 0)
             return ret;
-        ep_cmd->msgs[0].data = value; // Store for show
     } else if (sscanf(buf, "%x", &reg_addr) == 1) {
         // Read operation
         rd_opcode_buf[0] = ADS7128_OPCODE_READ_REG; // Opcode 0x10
@@ -375,19 +373,12 @@ static ssize_t ads7128_cmd_regop(struct device *dev, struct device_attribute *at
         ret = i2c_transfer(client->adapter, rd_msgs, 2);
         if (ret < 0)
             return ret;
-        ep_cmd->msgs[0].data = rd_data_buf[0]; // Store for show
         printk(KERN_INFO "0x%02x\n", rd_data_buf[0]);
     } else {
         return -EINVAL; // Invalid format
     }
 
     return count;
-}
-
-static ssize_t ads7128_cmd_regop_show(struct device *dev, struct device_attribute *attr, char *buf)
-{
-    struct endpoint_cmd *ep_cmd = container_of(attr, struct endpoint_cmd, dev_attr);
-    return scnprintf(buf, PAGE_SIZE, "0x%02x\n", ep_cmd->msgs[0].data);
 }
 
 static int fusion_io_create_sysfs_gpio(struct device *parent_dev,
@@ -473,8 +464,7 @@ static int fusion_io_create_sysfs_cmd(struct device *parent_dev, struct endpoint
         case EP_TYPE_ADC_ADS7128:
 			switch(ep_cmd->type) {
 				case EP_CMD_TYPE_ADC_REGOP:
-    				ep_cmd->dev_attr.attr.mode = 0664;
-					ep_cmd->dev_attr.show  = ads7128_cmd_regop_show;
+    				ep_cmd->dev_attr.attr.mode = 0220;
 					ep_cmd->dev_attr.store = ads7128_cmd_regop;
 					break;
 				default:
@@ -690,13 +680,7 @@ int fusion_io_create_sysfs_base(struct platform_device *pdev)
 
 			if (ep_cmd->export == false) {
                 continue;
-            } else if (ep_cmd->num_msgs == 0) {
-				dev_err(endpoint_dev, "Can't create sysfs cmd for ep_cmd %s with no msgs\n", ep_cmd->name);
-				continue;
-			} else if (ep_cmd->msgs == NULL) {
-				dev_err(endpoint_dev, "BAD ep_cmd %s with num_msgs but NULL pointer\n", ep_cmd->name);
-				continue;
-			}
+            }
 
             ret = fusion_io_create_sysfs_cmd(endpoint_dev, ep_cmd);
             if (ret) {
@@ -759,7 +743,7 @@ static ssize_t io_card_sn_show(struct device *dev, struct device_attribute *attr
 static ssize_t io_card_slot_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
     struct io_card *ic = dev_get_drvdata(dev);
-    return sprintf(buf, "%d\n", ic->slot);
+    return sprintf(buf, "%d\n", ic->sw_port);
 }
 
 static ssize_t io_card_num_inputs_show(struct device *dev, struct device_attribute *attr, char *buf)
@@ -927,13 +911,7 @@ int fusion_io_create_sysfs_io_card(struct platform_device *pdev, struct io_card 
 
 			if (ep_cmd->export == false) {
                 continue;
-            } else if (ep_cmd->num_msgs == 0) {
-				dev_err(endpoint_dev, "Can't create sysfs cmd for ep_cmd %s with no msgs\n", ep_cmd->name);
-				continue;
-			} else if (ep_cmd->msgs == NULL) {
-				dev_err(endpoint_dev, "BAD ep_cmd %s with num_msgs but NULL pointer\n", ep_cmd->name);
-				continue;
-			}
+            }
 
             ret = fusion_io_create_sysfs_cmd(endpoint_dev, ep_cmd);
             if (ret) {
