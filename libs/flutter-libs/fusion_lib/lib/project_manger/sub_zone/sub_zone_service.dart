@@ -148,6 +148,8 @@ extension SubZoneService on ProjectService {
 
     final circuitIds = relationships.getChildren(RelationshipType.zoneCircuits, subZoneId);
 
+    List<String> circuitIdsToRemove = [];
+
     for (final cId in circuitIds) {
       final hardwareInCircuit = relationships.getChildren(RelationshipType.circuitHardware, cId);
 
@@ -165,8 +167,13 @@ extension SubZoneService on ProjectService {
       // If the circuit now has no hardware or LAs, delete it
       final remainingHW = relationships.getChildren(RelationshipType.circuitHardware, cId);
       if (remainingHW.isEmpty) {
-        removeCircuit(cId);
+        circuitIdsToRemove.add(cId);
       }
+    }
+
+    //remove empty circuits
+    for (final cId in circuitIdsToRemove) {
+      removeCircuit(cId);
     }
 
     //unlink relationship

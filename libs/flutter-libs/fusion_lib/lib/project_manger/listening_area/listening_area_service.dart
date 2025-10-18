@@ -160,8 +160,6 @@ extension ListeningAreaService on ProjectService {
     if (!listeningAreas.exists(listeningAreaId)) return;
     if (!zones.exists(zoneId)) return;
 
-    print("-------------- Removing Listening Area $listeningAreaId from Zone $zoneId ############");
-
     final zoneAreas = relationships.getChildren(RelationshipType.zoneAreas, zoneId);
 
     //If the zone doesn’t actually include this LA, skip
@@ -169,8 +167,9 @@ extension ListeningAreaService on ProjectService {
 
     final circuitIds = relationships.getChildren(RelationshipType.zoneCircuits, zoneId);
 
+    List<String> circuitIdToRemove = [];
+
     for (final cId in circuitIds) {
-      print("Checking Circuit $cId for hardware in Listening Area $listeningAreaId");
       final hardwareInCircuit = relationships.getChildren(RelationshipType.circuitHardware, cId);
 
       final hardwareInArea = hardwareInCircuit
@@ -187,29 +186,23 @@ extension ListeningAreaService on ProjectService {
       // If the circuit now has no hardware or LAs, delete it
       final remainingHW = relationships.getChildren(RelationshipType.circuitHardware, cId);
       if (remainingHW.isEmpty) {
-        print("Removing Circuit $cId as it has no remaining hardware after LA removal");
-        removeCircuit(cId);
+        circuitIdToRemove.add(cId);
       }
     }
-
-    print("Removing Listening Area $listeningAreaId from Zone $zoneId");
+    // Remove empty circuits
+    for (final cId in circuitIdToRemove) {
+      removeCircuit(cId);
+    }
 
     // Unlink listening area from zone
     relationships.unlink(RelationshipType.zoneAreas, zoneId, listeningAreaId);
 
-    print("Checking for SubZones under Zone $zoneId to remove Listening Area $listeningAreaId");
-
     final subZoneIds = relationships.getChildren(RelationshipType.zoneSubZones, zoneId);
-
-    print("Found SubZones: $subZoneIds");
 
     // Also remove from any subzones under this zone
     for (final subZoneId in subZoneIds) {
-      print("Removing Listening Area $listeningAreaId from SubZone $subZoneId");
       removeListeningAreaFromSubZone(listeningAreaId, subZoneId);
     }
-
-    print("------Sucesss-------- Removed Listening Area $listeningAreaId from Zone $zoneId ############");
   }
 
   FloorModel? getFloorForListeningArea(String listeningAreaId) {

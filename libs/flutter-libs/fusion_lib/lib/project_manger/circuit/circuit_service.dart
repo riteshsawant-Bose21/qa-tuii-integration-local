@@ -37,8 +37,6 @@ extension CircuitService on ProjectService {
     relationships.removeAllRelationships(circuitId);
     // Remove the circuit
     circuits.remove(circuitId);
-
-    print("Circuit $circuitId removed successfully");
   }
 
   void updateCircuit(CircuitModel circuit) {

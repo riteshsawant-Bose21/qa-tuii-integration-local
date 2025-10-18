@@ -22,7 +22,7 @@ extension SourceSetService on ProjectService {
     if (!sourceSets.exists(sourceSetId)) return;
 
     // Find zones that reference this sourceSet via relationships
-    final parentZones = relationships.getParents(RelationshipType.zoneSourceSet, sourceSetId);
+    relationships.getParents(RelationshipType.zoneSourceSet, sourceSetId);
 
     // Remove sourceSet id from each zone's internal list (if present) and unlink relationship
     relationships.removeAllRelationships(sourceSetId);
