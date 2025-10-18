@@ -14,6 +14,7 @@ export 'project_images/project_image_view_model.dart';
 export 'wiring_connection/wiring_connection_view_model.dart';
 export 'subzones/subzone_view_model.dart';
 export 'circuit/circuit_viewmodel.dart';
+export 'processing_block/processing_block_viewmodel.dart';
 
 part 'project_view_model_state.dart';
 

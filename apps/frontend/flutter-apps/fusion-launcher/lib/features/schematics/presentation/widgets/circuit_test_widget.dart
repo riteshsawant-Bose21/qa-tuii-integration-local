@@ -1152,7 +1152,6 @@ class _ZoneCircuitConfigPageState extends State<ZoneCircuitConfigPage> {
     final Zone newZone = Zone(
       id: 'zone_${DateTime.now().millisecondsSinceEpoch}',
       name: name,
-      processingBlocks: <ProcessingBlockModel>[],
       selectedMixIndex: 0,
       zoneColor: color,
     );
@@ -1226,7 +1225,6 @@ class _ZoneCircuitConfigPageState extends State<ZoneCircuitConfigPage> {
     final SubZone newSubZone = SubZone(
       id: 'subzone_${DateTime.now().millisecondsSinceEpoch}',
       name: subZoneName,
-      processingBlocks: <ProcessingBlockModel>[],
     );
 
     serviceLocator<ProjectViewModel>().addSubZone(newSubZone);

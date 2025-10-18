@@ -7,7 +7,6 @@ enum SourceType { analogInput, aes67input, bluetooth }
 class Source extends HardwareComponent {
   /// Type of the source
   final SourceType type;
-  List<ProcessingBlockModel> blocks;
   String? ipAddress; //for AES67 sources
   final List<int> portNumbers;
   final String? fusionDeviceId;
@@ -23,7 +22,6 @@ class Source extends HardwareComponent {
     super.zAxis,
     required this.type,
     required super.assetImagePath,
-    List<ProcessingBlockModel>? blocks,
     this.ipAddress,
     List<int>? portNumbers,
     this.fusionDeviceId,
@@ -35,8 +33,7 @@ class Source extends HardwareComponent {
     super.communicationPorts,
     super.inputPortsData,
     super.outputPortsData,
-  }) : blocks = blocks ?? <ProcessingBlockModel>[],
-       portNumbers = portNumbers ?? <int>[],
+  }) : portNumbers = portNumbers ?? <int>[],
        super(hardwareName: hardwareName ?? name, id: id ?? "SOURCE${FusionUtils.shortStringUUID()}");
 
   @override
@@ -48,7 +45,6 @@ class Source extends HardwareComponent {
     double? zAxis,
     SourceType? type,
     String? assetImagePath,
-    List<ProcessingBlockModel>? blocks,
     LocationModel? locationEntity,
     String? ipAddress,
     List<int>? portNumbers,
@@ -69,7 +65,6 @@ class Source extends HardwareComponent {
       zAxis: zAxis ?? this.zAxis,
       type: type ?? this.type,
       assetImagePath: assetImagePath ?? this.assetImagePath,
-      blocks: blocks ?? this.blocks,
       locationEntity: locationEntity ?? this.locationEntity,
       ipAddress: ipAddress ?? this.ipAddress,
       portNumbers: portNumbers ?? this.portNumbers,
@@ -95,7 +90,6 @@ class Source extends HardwareComponent {
         orElse: () => throw FormatException('Unknown SourceType in JSON: ${json['type']}'),
       ),
       assetImagePath: json['assetImagePath'] as String,
-      blocks: (json['blocks'] as List<dynamic>?)?.map((dynamic e) => ProcessingBlockModel.fromJson(e as Map<String, dynamic>)).toList(),
       locationEntity: LocationModel.fromJson(json['locationEntity'] as Map<String, dynamic>),
       ipAddress: json['ipAddress'] as String?,
       portNumbers: (json['portNumbers'] as List<dynamic>?)?.map((dynamic e) => e as int).toList() ?? <int>[],
@@ -120,7 +114,6 @@ class Source extends HardwareComponent {
       'wiringPos': wiringPos != null ? <String, double>{'dx': wiringPos!.dx, 'dy': wiringPos!.dy} : null,
       'type': type.name,
       'assetImagePath': assetImagePath,
-      'blocks': blocks.map((ProcessingBlockModel e) => e.toJson()).toList(),
       'componentType': 'source',
       'locationEntity': locationEntity.toJson(),
       'ipAddress': ipAddress,

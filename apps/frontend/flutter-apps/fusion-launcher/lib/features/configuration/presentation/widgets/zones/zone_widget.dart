@@ -337,24 +337,16 @@ class ZoneWidgetState extends State<ZoneWidget> {
             //Processing blocks
             ProcessingBlockView(
               processingType: ProcessingType.zone,
-              selectedBlocks: widget.zone.processingBlocks,
-              onBlocksUpdated: (List<ProcessingBlockModel> chain) {
-                widget.onZoneUpdated(widget.zone.copyWith(processingBlocks: chain));
+              selectedBlocks: serviceLocator<ProjectViewModel>().getProcessingBlockFor(widget.zone.id),
+              onBlocksUpdated: (int oldIndex, int newIndex) {
+                serviceLocator<ProjectViewModel>().reOrderProcessingBlocks(widget.zone.id, oldIndex, newIndex);
               },
               isControlMode: widget.isControlMode,
-              onBlockRemoved: (int index) {
-                final List<ProcessingBlockModel> updatedBlocks = List<ProcessingBlockModel>.from(
-                  widget.zone.processingBlocks,
-                );
-                updatedBlocks.removeAt(index);
-                widget.onZoneUpdated(widget.zone.copyWith(processingBlocks: updatedBlocks));
+              onBlockRemoved: (String blockId) {
+                serviceLocator<ProjectViewModel>().removeProcessingBlock(blockId);
               },
               onBlockSelected: (ProcessingBlockModel block) {
-                final List<ProcessingBlockModel> updatedBlocks = List<ProcessingBlockModel>.from(
-                  widget.zone.processingBlocks,
-                );
-                updatedBlocks.add(block);
-                widget.onZoneUpdated(widget.zone.copyWith(processingBlocks: updatedBlocks));
+                serviceLocator<ProjectViewModel>().addProcessingBlockToParent(block, widget.zone.id);
               },
             ),
 

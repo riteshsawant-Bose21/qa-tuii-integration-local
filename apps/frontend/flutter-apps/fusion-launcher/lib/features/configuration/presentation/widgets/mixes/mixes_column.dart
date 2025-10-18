@@ -124,7 +124,6 @@ class _MixColumnState extends State<MixColumn> {
               duplicateMix: () {
                 final SourceSet newMix = SourceSet(
                   name: '${widget.mixes[i].name} (Copy)',
-                  processingBlocks: widget.mixes[i].processingBlocks,
                 );
                 widget.onMixAdded(newMix);
               },

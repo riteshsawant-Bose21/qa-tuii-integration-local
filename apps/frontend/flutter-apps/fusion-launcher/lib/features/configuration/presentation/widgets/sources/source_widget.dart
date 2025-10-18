@@ -230,26 +230,15 @@ class _SourceWidgetState extends State<SourceWidget> {
             ProcessingBlockView(
               processingType: ProcessingType.input,
               isControlMode: widget.isControlMode,
-              selectedBlocks: widget.source.blocks ?? <ProcessingBlockModel>[],
-              onBlocksUpdated:
-                  (List<ProcessingBlockModel> chain) => widget.onSourceChanged(
-                    widget.source.copyWith(
-                      blocks: chain,
-                    ),
-                  ),
-              onBlockRemoved: (int index) {
-                final List<ProcessingBlockModel> updatedBlocks = List<ProcessingBlockModel>.from(
-                  widget.source.blocks ?? <ProcessingBlockModel>[],
-                );
-                updatedBlocks.removeAt(index);
-                widget.onSourceChanged(widget.source.copyWith(blocks: updatedBlocks));
+              selectedBlocks: serviceLocator<ProjectViewModel>().getProcessingBlockFor(widget.source.id) ?? <ProcessingBlockModel>[],
+              onBlocksUpdated: (int oldIndex, int newIndex) {
+                serviceLocator<ProjectViewModel>().reOrderProcessingBlocks(widget.source.id, oldIndex, newIndex);
+              },
+              onBlockRemoved: (String blockId) {
+                serviceLocator<ProjectViewModel>().removeProcessingBlock(blockId);
               },
               onBlockSelected: (ProcessingBlockModel block) {
-                final List<ProcessingBlockModel> updatedBlocks = List<ProcessingBlockModel>.from(
-                  widget.source.blocks ?? <ProcessingBlockModel>[],
-                );
-                updatedBlocks.add(block);
-                widget.onSourceChanged(widget.source.copyWith(blocks: updatedBlocks));
+                serviceLocator<ProjectViewModel>().addProcessingBlockToParent(block, widget.source.id);
               },
             ),
           ],

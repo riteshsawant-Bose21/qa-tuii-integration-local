@@ -271,27 +271,15 @@ class OutputWidgetState extends State<OutputWidget> {
             ProcessingBlockView(
               processingType: ProcessingType.output,
               isControlMode: widget.isControlMode,
-              selectedBlocks: widget.speaker.blocks ?? <ProcessingBlockModel>[],
-              onBlocksUpdated: (List<ProcessingBlockModel> chain) {
-                widget.onOutputChanged(
-                  widget.speaker.copyWith(
-                    blocks: chain,
-                  ),
-                );
+              selectedBlocks: serviceLocator<ProjectViewModel>().getProcessingBlockFor(widget.speaker.id) ?? <ProcessingBlockModel>[],
+              onBlocksUpdated: (int oldIndex, int newIndex) {
+                serviceLocator<ProjectViewModel>().reOrderProcessingBlocks(widget.speaker.id, oldIndex, newIndex);
               },
-              onBlockRemoved: (int index) {
-                final List<ProcessingBlockModel> updatedBlocks = List<ProcessingBlockModel>.from(
-                  widget.speaker.blocks ?? <ProcessingBlockModel>[],
-                );
-                updatedBlocks.removeAt(index);
-                widget.onOutputChanged(widget.speaker.copyWith(blocks: updatedBlocks));
+              onBlockRemoved: (String blockId) {
+                serviceLocator<ProjectViewModel>().removeProcessingBlock(blockId);
               },
               onBlockSelected: (ProcessingBlockModel block) {
-                final List<ProcessingBlockModel> updatedBlocks = List<ProcessingBlockModel>.from(
-                  widget.speaker.blocks ?? <ProcessingBlockModel>[],
-                );
-                updatedBlocks.add(block);
-                widget.onOutputChanged(widget.speaker.copyWith(blocks: updatedBlocks));
+                serviceLocator<ProjectViewModel>().addProcessingBlockToParent(block, widget.speaker.id);
               },
             ),
           ],

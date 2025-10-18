@@ -8,7 +8,6 @@ class Speaker extends HardwareComponent {
   double rotation;
   double gain;
   OutputType type;
-  List<ProcessingBlockModel> blocks;
   String? ipAddress; // Optional field for AES67 output type
   String speakerSKU;
   final String? fusionDeviceId;
@@ -30,7 +29,6 @@ class Speaker extends HardwareComponent {
     this.roll = 0.0,
     this.yaw = 0.0,
     required super.assetImagePath,
-    List<ProcessingBlockModel>? blocks,
     required this.type,
     this.ipAddress,
     List<int>? portNumbers,
@@ -42,8 +40,7 @@ class Speaker extends HardwareComponent {
     super.communicationPorts,
     super.inputPortsData,
     super.outputPortsData,
-  }) : blocks = blocks ?? <ProcessingBlockModel>[],
-       super(
+  }) : super(
          hardwareName: hardwareName ?? name,
          id: id ?? "SPEAKER${FusionUtils.shortStringUUID()}",
        );
@@ -58,7 +55,6 @@ class Speaker extends HardwareComponent {
     double? gain,
     double? zAxis,
     String? assetImagePath,
-    List<ProcessingBlockModel>? blocks,
     OutputType? type,
     String? listeningAreaId,
     LocationModel? locationEntity,
@@ -84,7 +80,6 @@ class Speaker extends HardwareComponent {
       gain: gain ?? this.gain,
       zAxis: zAxis ?? this.zAxis,
       assetImagePath: assetImagePath ?? this.assetImagePath,
-      blocks: blocks ?? this.blocks,
       type: type ?? this.type,
       locationEntity: locationEntity ?? this.locationEntity,
       ipAddress: ipAddress ?? this.ipAddress,
@@ -112,7 +107,6 @@ class Speaker extends HardwareComponent {
         rotation == other.rotation &&
         gain == other.gain &&
         assetImagePath == other.assetImagePath &&
-        blocks == other.blocks &&
         locationEntity == other.locationEntity &&
         ipAddress == other.ipAddress &&
         speakerSKU == other.speakerSKU &&
@@ -129,7 +123,6 @@ class Speaker extends HardwareComponent {
         rotation.hashCode ^
         gain.hashCode ^
         assetImagePath.hashCode ^
-        blocks.hashCode ^
         locationEntity.hashCode ^
         (ipAddress?.hashCode ?? 0) ^
         speakerSKU.hashCode ^
@@ -147,7 +140,6 @@ class Speaker extends HardwareComponent {
       'rotation': rotation,
       'gain': gain,
       'assetImagePath': assetImagePath,
-      'blocks': blocks.map((ProcessingBlockModel block) => block.toJson()).toList(),
       'componentType': 'speaker',
       'type': type.name,
       'locationEntity': locationEntity.toJson(),
@@ -176,7 +168,6 @@ class Speaker extends HardwareComponent {
       rotation: (json['rotation'] as num).toDouble(),
       gain: (json['gain'] as num).toDouble(),
       assetImagePath: json['assetImagePath'] as String,
-      blocks: (json['blocks'] as List<dynamic>?)?.map((dynamic e) => ProcessingBlockModel.fromJson(e as Map<String, dynamic>)).toList(),
       type: OutputType.values.firstWhere((OutputType e) => e.name == json['type'], orElse: () => OutputType.analogOutput),
       locationEntity: LocationModel.fromJson(json['locationEntity'] as Map<String, dynamic>),
       ipAddress: json['ipAddress'] as String?,

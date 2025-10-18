@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
 
 import '../../../../../core/constants.dart';
+import '../../viewmodel/project_view_model.dart';
 import '../common/processing_block_view.dart';
 import 'multi_device_selection_dialog.dart';
 
@@ -367,25 +369,16 @@ class MixWidgetState extends State<MixWidget> {
             //Processing blocks
             ProcessingBlockView(
               processingType: ProcessingType.mix,
-              selectedBlocks: widget.mix.processingBlocks,
+              selectedBlocks: serviceLocator<ProjectViewModel>().getProcessingBlockFor(widget.mix.id),
               isControlMode: widget.isControlMode,
-              onBlocksUpdated: (List<ProcessingBlockModel> chain) {
-                final SourceSet updatedMix = widget.mix.copyWith(processingBlocks: chain);
-                widget.onMixUpdated(updatedMix);
+              onBlocksUpdated: (int oldIndex, int newIndex) {
+                serviceLocator<ProjectViewModel>().reOrderProcessingBlocks(widget.mix.id, oldIndex, newIndex);
               },
-              onBlockRemoved: (int index) {
-                final List<ProcessingBlockModel> updatedBlocks = List<ProcessingBlockModel>.from(
-                  widget.mix.processingBlocks,
-                );
-                updatedBlocks.removeAt(index);
-                widget.onMixUpdated(widget.mix.copyWith(processingBlocks: updatedBlocks));
+              onBlockRemoved: (String blockId) {
+                serviceLocator<ProjectViewModel>().removeProcessingBlock(blockId);
               },
               onBlockSelected: (ProcessingBlockModel block) {
-                final List<ProcessingBlockModel> updatedBlocks = List<ProcessingBlockModel>.from(
-                  widget.mix.processingBlocks,
-                );
-                updatedBlocks.add(block);
-                widget.onMixUpdated(widget.mix.copyWith(processingBlocks: updatedBlocks));
+                serviceLocator<ProjectViewModel>().addProcessingBlockToParent(block, widget.mix.id);
               },
             ),
           ],

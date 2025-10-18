@@ -87,3 +87,5 @@ class AmplifierRepository extends Repository<Amplifier> {}
 class CircuitRepository extends Repository<CircuitModel> {}
 
 class WiringConnectionRepository extends Repository<WiringConnectionModel> {}
+
+class ProcessingBlockRepository extends Repository<ProcessingBlockModel> {}

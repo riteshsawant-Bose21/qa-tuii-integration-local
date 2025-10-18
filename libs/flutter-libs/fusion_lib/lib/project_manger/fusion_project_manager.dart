@@ -46,3 +46,7 @@ export 'circuit/circuit_service.dart';
 
 export 'wiring_connection/wiring_connection_manager.dart';
 export 'wiring_connection/wiring_connection_service.dart';
+
+//Processing blocks
+export 'processing_block/processing_block_manager.dart';
+export 'processing_block/processing_block_service.dart';

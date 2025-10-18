@@ -7,18 +7,15 @@ import 'processing_block_model.dart';
 class Zone {
   final String id;
   final String name;
-  final List<ProcessingBlockModel> processingBlocks;
   final int selectedMixIndex;
   final String zoneColor;
 
   Zone({
     String? id,
     required this.name,
-    List<ProcessingBlockModel>? processingBlocks,
     String? zoneColor,
     this.selectedMixIndex = 0,
   }) : id = id ?? "ZONE${FusionUtils.shortStringUUID()}",
-       processingBlocks = processingBlocks ?? <ProcessingBlockModel>[],
        zoneColor = zoneColor ?? getRandomColor();
 
   static String getShortId() {
@@ -52,14 +49,12 @@ class Zone {
   Zone copyWith({
     String? id,
     String? name,
-    List<ProcessingBlockModel>? processingBlocks,
     int? selectedMixIndex,
     String? zoneColor,
   }) {
     return Zone(
       id: id ?? this.id,
       name: name ?? this.name,
-      processingBlocks: processingBlocks ?? this.processingBlocks,
       selectedMixIndex: selectedMixIndex ?? this.selectedMixIndex,
       zoneColor: zoneColor ?? this.zoneColor,
     );
@@ -68,7 +63,6 @@ class Zone {
   Map<String, dynamic> toJson() => <String, dynamic>{
     'id': id,
     'name': name,
-    'processingBlocks': processingBlocks.map((ProcessingBlockModel pb) => pb.toJson()).toList(),
     'selectedMixIndex': selectedMixIndex,
     'zoneColor': zoneColor,
   };
@@ -76,7 +70,6 @@ class Zone {
   factory Zone.fromJson(Map<String, dynamic> json) => Zone(
     id: json['id'] as String,
     name: json['name'] as String,
-    processingBlocks: (json['processingBlocks'] as List<dynamic>).map((dynamic e) => ProcessingBlockModel.fromJson(e as Map<String, dynamic>)).toList(),
     selectedMixIndex: json['selectedMixIndex'] as int? ?? 0,
     zoneColor: json['zoneColor'] as String? ?? getRandomColor(),
   );

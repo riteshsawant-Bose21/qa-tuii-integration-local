@@ -29,6 +29,13 @@ class RelationshipManager {
     _childToParents[type]?[childId]?.remove(parentId);
   }
 
+  void reOrder(RelationshipType type, String parentId, List<String> newOrder) {
+    if (!_parentToChildren.containsKey(type)) return;
+    if (!_parentToChildren[type]!.containsKey(parentId)) return;
+
+    _parentToChildren[type]?[parentId] = Set<String>.from(newOrder);
+  }
+
   Set<String> getChildren(RelationshipType type, String parentId) => _parentToChildren[type]?[parentId] ?? {};
 
   Set<String> getParents(RelationshipType type, String childId) => _childToParents[type]?[childId] ?? {};

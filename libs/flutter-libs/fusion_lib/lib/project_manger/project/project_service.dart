@@ -32,6 +32,7 @@ class ProjectService {
   final CircuitRepository circuits;
   final SubZoneRepository subZones;
   final WiringConnectionRepository wiringConnection;
+  final ProcessingBlockRepository processingBlocks;
 
   final RelationshipManager relationships;
 
@@ -68,6 +69,7 @@ class ProjectService {
     AmplifierRepository? amplifiers,
     CircuitRepository? circuits,
     WiringConnectionRepository? wiringConnection,
+    ProcessingBlockRepository? processingBlocks,
     RelationshipManager? relationships,
   }) : floors = floors ?? FloorRepository(),
        listeningAreas = listeningAreas ?? ListeningAreaRepository(),
@@ -80,6 +82,7 @@ class ProjectService {
        amplifiers = amplifiers ?? AmplifierRepository(),
        circuits = circuits ?? CircuitRepository(),
        wiringConnection = wiringConnection ?? WiringConnectionRepository(),
+       processingBlocks = processingBlocks ?? ProcessingBlockRepository(),
        relationships = relationships ?? RelationshipManager();
 
   ProjectService copyWith({
@@ -107,7 +110,7 @@ class ProjectService {
     AmplifierRepository? amplifiers,
     CircuitRepository? circuits,
     WiringConnectionRepository? wiringConnection,
-
+    ProcessingBlockRepository? processingBlocks,
     RelationshipManager? relationships,
     bool? isInHardwareMode,
   }) {
@@ -136,6 +139,7 @@ class ProjectService {
       amplifiers: amplifiers ?? this.amplifiers,
       circuits: circuits ?? this.circuits,
       wiringConnection: wiringConnection ?? this.wiringConnection,
+      processingBlocks: processingBlocks ?? this.processingBlocks,
       relationships: relationships ?? this.relationships,
       isInHardwareMode: isInHardwareMode ?? this.isInHardwareMode,
     );
@@ -189,6 +193,7 @@ class ProjectService {
       "amplifiers": amplifiers.toJson((a) => a.toJson()),
       "circuits": circuits.toJson((c) => c.toJson()),
       "wiringConnection": wiringConnection.toJson((wc) => wc.toJson()),
+      "processingBlocks": processingBlocks.toJson((pb) => pb.toJson()),
       "relationships": relationships.toJson(),
     };
   }
@@ -231,6 +236,7 @@ class ProjectService {
     service.amplifiers.fromJsonList(json["amplifiers"], (m) => Amplifier.fromJson(m), "id");
     service.circuits.fromJsonList(json["circuits"], (m) => CircuitModel.fromJson(m), "id");
     service.wiringConnection.fromJsonList(json["wiringConnection"], (m) => WiringConnectionModel.fromJson(m), "id");
+    service.processingBlocks.fromJsonList(json["processingBlocks"], (m) => ProcessingBlockModel.fromJson(m), "id");
     service.relationships.fromJson(json["relationships"]);
 
     return service;
