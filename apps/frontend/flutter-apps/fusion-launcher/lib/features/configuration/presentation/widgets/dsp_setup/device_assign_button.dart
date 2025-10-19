@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/utils/fusion_utils.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'package:fusion_lib/fusion_networking/network/fusion_network_client.dart';
-import 'package:fusion_lib/models/fusion_device/fusion_device.dart';
-import 'package:fusion_lib/models/response_callback.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../../core/constants.dart';
 import '../../../../../core/service_locator.dart';
@@ -44,7 +42,7 @@ class _AssignDeviceButtonState extends State<AssignDeviceButton> {
   }
 
   void _onMenuItemSelected(FusionDsp selectedDevice) async {
-    FusionUtils.showLoader(context);
+    FusionUiUtils.showLoader(context);
 
     print("Selected device: ${selectedDevice.toString()}");
 
@@ -69,7 +67,7 @@ class _AssignDeviceButtonState extends State<AssignDeviceButton> {
       data: data,
     );
 
-    if (mounted) FusionUtils.hideLoader(context);
+    if (mounted) FusionUiUtils.hideLoader(context);
 
     if (responseCallback.success) {
       //Todo: Update this as per new logic of project manager

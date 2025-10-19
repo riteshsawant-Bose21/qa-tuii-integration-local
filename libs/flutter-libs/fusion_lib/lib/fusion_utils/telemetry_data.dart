@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fusion_lib/models/response_callback.dart';
 
 import '../fusion_networking/network/fusion_network_client.dart';
-import '../models/fusion_device/fusion_device.dart';
+import '../models/project_entities/fusion_dsp.dart';
 
 class TelemetryData {
   TelemetryData();

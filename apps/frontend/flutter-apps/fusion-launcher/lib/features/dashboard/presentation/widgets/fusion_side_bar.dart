@@ -586,11 +586,11 @@ class _FusionSidebarState extends State<FusionSidebar> {
                   return;
                 }
 
-                FusionUtils.showLoader(context);
+                FusionUiUtils.showLoader(context);
                 final NewProjectDetails newProject = NewProjectDetails(name: projectName);
                 final ProjectData? projectData = await serviceLocator<ProjectViewModel>().createAndSaveNewProject(newProject);
                 if (context.mounted) {
-                  FusionUtils.hideLoader(context);
+                  FusionUiUtils.hideLoader(context);
                 }
 
                 serviceLocator<ProjectViewModel>().openProject(projectData!.id);

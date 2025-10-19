@@ -464,11 +464,11 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
                                 height: 28,
                                 child: ElevatedButton(
                                   onPressed: () async {
-                                    FusionUtils.showLoader(context);
+                                    FusionUiUtils.showLoader(context);
                                     final ResponseCallback<dynamic> response = await serviceLocator<FusionNetworkClient>().delete(
                                       api: FusionApiEndpoint.fusionGetValue,
                                     );
-                                    if (context.mounted) FusionUtils.hideLoader(context);
+                                    if (context.mounted) FusionUiUtils.hideLoader(context);
                                   },
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.grey.shade800,

@@ -315,7 +315,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                 decoration: BoxDecoration(
                                   color:
                                       isActive
-                                          ? FusionUtils.hexToColor(widget.floorCanvasController.currentlySelectingZone!.zoneColor).withValues(alpha: 0.75)
+                                          ? FusionUiUtils.hexToColor(widget.floorCanvasController.currentlySelectingZone!.zoneColor).withValues(alpha: 0.75)
                                           : Colors.white,
                                   borderRadius: BorderRadius.circular(24),
                                   boxShadow: <BoxShadow>[
@@ -338,7 +338,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                               fontSize: 14,
                                               color:
                                                   ThemeData.estimateBrightnessForColor(
-                                                            FusionUtils.hexToColor(widget.floorCanvasController.currentlySelectingZone!.zoneColor),
+                                                            FusionUiUtils.hexToColor(widget.floorCanvasController.currentlySelectingZone!.zoneColor),
                                                           ) ==
                                                           Brightness.light
                                                       ? Colors.grey.shade800
@@ -358,7 +358,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                                 border: Border.all(
                                                   color:
                                                       ThemeData.estimateBrightnessForColor(
-                                                                FusionUtils.hexToColor(widget.floorCanvasController.currentlySelectingZone!.zoneColor),
+                                                                FusionUiUtils.hexToColor(widget.floorCanvasController.currentlySelectingZone!.zoneColor),
                                                               ) ==
                                                               Brightness.light
                                                           ? Colors.grey.shade800
@@ -373,7 +373,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                                 size: 16,
                                                 color:
                                                     ThemeData.estimateBrightnessForColor(
-                                                              FusionUtils.hexToColor(widget.floorCanvasController.currentlySelectingZone!.zoneColor),
+                                                              FusionUiUtils.hexToColor(widget.floorCanvasController.currentlySelectingZone!.zoneColor),
                                                             ) ==
                                                             Brightness.light
                                                         ? Colors.grey.shade800
@@ -394,7 +394,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                                 border: Border.all(
                                                   color:
                                                       ThemeData.estimateBrightnessForColor(
-                                                                FusionUtils.hexToColor(widget.floorCanvasController.currentlySelectingZone!.zoneColor),
+                                                                FusionUiUtils.hexToColor(widget.floorCanvasController.currentlySelectingZone!.zoneColor),
                                                               ) ==
                                                               Brightness.light
                                                           ? Colors.grey.shade800
@@ -408,7 +408,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                                 size: 16,
                                                 color:
                                                     ThemeData.estimateBrightnessForColor(
-                                                              FusionUtils.hexToColor(widget.floorCanvasController.currentlySelectingZone!.zoneColor),
+                                                              FusionUiUtils.hexToColor(widget.floorCanvasController.currentlySelectingZone!.zoneColor),
                                                             ) ==
                                                             Brightness.light
                                                         ? Colors.grey.shade800

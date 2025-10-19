@@ -5,7 +5,7 @@ export 'fusion_auth/login_response_dto.dart';
 export 'fusion_auth/refresh_token_response_dto.dart';
 export 'fusion_auth/registration_response_dto.dart';
 export 'fusion_auth/user_dto.dart';
-export 'fusion_device/fusion_device.dart';
+export 'project_entities/fusion_dsp.dart';
 export 'project_entities/amplifier.dart';
 export 'project_entities/floor_model.dart';
 export 'project_entities/floor_plan_model.dart';

@@ -287,7 +287,7 @@ class _HomeTabContentState extends State<HomeTabContent> {
       listener: (BuildContext context, ProjectViewModelState state) {
         if (state is ProjectLoaded && context.mounted) {
           if (state.currentProject != null) {
-            FusionUtils.hideLoader(context);
+            FusionUiUtils.hideLoader(context);
             Navigator.pushNamed(
               context,
               Routes.projectPage,
@@ -295,7 +295,7 @@ class _HomeTabContentState extends State<HomeTabContent> {
           }
         }
         if (state is OpenProjectError && context.mounted) {
-          FusionUtils.hideLoader(context);
+          FusionUiUtils.hideLoader(context);
           FusionToast.show(context, message: state.message);
         }
       },
@@ -323,7 +323,7 @@ class _HomeTabContentState extends State<HomeTabContent> {
             (int i) {
               return GestureDetector(
                 onTap: () async {
-                  FusionUtils.showLoader(context);
+                  FusionUiUtils.showLoader(context);
                   serviceLocator<ProjectViewModel>().openProject(serviceLocator<ProjectViewModel>().allProjects[i].id);
                 },
                 child: _buildProjectCard(

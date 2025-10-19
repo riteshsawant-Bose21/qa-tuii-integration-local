@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/utils/broadcast_controllers.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_networking/network/fusion_network_client.dart';
-import 'package:fusion_lib/models/fusion_device/fusion_device.dart';
 import 'package:fusion_lib/models/response_callback.dart';
 import 'package:uuid/uuid.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../../core/constants.dart';
 import '../../../../../core/service_locator.dart';
@@ -90,7 +90,7 @@ class _DSPDeviceCardState extends State<DSPDeviceCard> with SingleTickerProvider
   Future<void> _resetDeviceStatus() async {
     if (!mounted) return;
 
-    FusionUtils.showLoader(context);
+    FusionUiUtils.showLoader(context);
 
     try {
       final ResponseCallback<dynamic> responseCallback = await serviceLocator<FusionNetworkClient>().patch(
@@ -104,7 +104,7 @@ class _DSPDeviceCardState extends State<DSPDeviceCard> with SingleTickerProvider
       );
 
       if (mounted) {
-        FusionUtils.hideLoader(context);
+        FusionUiUtils.hideLoader(context);
 
         if (responseCallback.success) {
           //Todo: update this as per new project manager
@@ -142,7 +142,7 @@ class _DSPDeviceCardState extends State<DSPDeviceCard> with SingleTickerProvider
       }
     } catch (e) {
       if (mounted) {
-        FusionUtils.hideLoader(context);
+        FusionUiUtils.hideLoader(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: ${e.toString()}'),
