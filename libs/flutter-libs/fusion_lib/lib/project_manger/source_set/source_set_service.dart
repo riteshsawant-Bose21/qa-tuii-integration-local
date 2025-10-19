@@ -93,4 +93,13 @@ extension SourceSetService on ProjectService {
     if (sourcesInSet.isEmpty) return <Source>[];
     return sourcesInSet.map((s) => getHardwareById(s)).whereType<Source>().toList();
   }
+
+  void reOrderSourcesInSourceSet(String parentId, int oldIndex, int newIndex) {
+    final sourceSetSources = relationships.getChildren(RelationshipType.sourceSetSources, parentId).toList();
+
+    final item = sourceSetSources.removeAt(oldIndex);
+    sourceSetSources.insert(newIndex, item);
+
+    relationships.reOrder(RelationshipType.sourceSetSources, parentId, sourceSetSources);
+  }
 }

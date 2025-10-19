@@ -109,4 +109,27 @@ extension ZoneService on ProjectService {
     final circuitIds = relationships.getChildren(RelationshipType.zoneCircuits, zoneId);
     return circuitIds.map((id) => circuits.get(id)).where((m) => m != null).cast<CircuitModel>().toList();
   }
+
+  Map<String, Zone> reOrderZones({
+    required String zoneIdToMove,
+    required String zoneAtNewIndexId,
+  }) {
+    List<Zone> items = zones.getAll();
+
+    // Find indices
+    int fromIndex = items.indexWhere((hw) => hw.id == zoneIdToMove);
+    int toIndex = items.indexWhere((hw) => hw.id == zoneAtNewIndexId);
+
+    // Validate
+    if (fromIndex == -1 || toIndex == -1) {
+      throw ArgumentError('Invalid hardware IDs');
+    }
+
+    // Reorder using List operations
+    Zone item = items.removeAt(fromIndex);
+    items.insert(toIndex, item);
+
+    // Convert back to Map
+    return {for (var zone in items) zone.id: zone};
+  }
 }

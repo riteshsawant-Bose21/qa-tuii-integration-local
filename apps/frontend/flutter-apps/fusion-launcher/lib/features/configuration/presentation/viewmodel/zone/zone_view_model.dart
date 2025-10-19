@@ -207,4 +207,14 @@ extension ZoneViewModel on ProjectViewModel {
       return <CircuitModel>[];
     }
   }
+
+  void reorderZones({required String zoneIdToMove, required String zoneIdAtNewIndex}) {
+    try {
+      projectManager.reOrderZones(zoneIdToMove: zoneIdToMove, zoneAtNewIndex: zoneIdAtNewIndex);
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to reorder zones: $e");
+      throwError("Failed to reorder zones: $e");
+    }
+  }
 }

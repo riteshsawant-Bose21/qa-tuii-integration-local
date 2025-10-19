@@ -77,4 +77,11 @@ extension SourceSetManager on ProjectManager {
     }
     return projectService!.getSourcesInSourceSet(sourceSetId);
   }
+
+  void reOrderSourceInSourceSet(String parentId, int oldIndex, int newIndex) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    projectService!.reOrderSourcesInSourceSet(parentId, oldIndex, newIndex);
+  }
 }

@@ -100,4 +100,14 @@ extension SourceSetViewModel on ProjectViewModel {
       throwError("Failed to remove source from source set: $e");
     }
   }
+
+  void reorderSourceSetInZone(String parentId, int oldIndex, int newIndex) {
+    try {
+      projectManager.reOrderSourceInSourceSet(parentId, oldIndex, newIndex);
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to reorder sources in source set: $e");
+      throwError("Failed to reorder sources in source set: $e");
+    }
+  }
 }

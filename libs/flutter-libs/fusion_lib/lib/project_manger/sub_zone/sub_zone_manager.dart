@@ -105,4 +105,11 @@ extension SubZoneManager on ProjectManager {
     }
     return projectService!.removeListeningAreaFromSubZone(listeningAreaId, subZoneId);
   }
+
+  void reOrderSubZones(String parentId, int oldIndex, int newIndex) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    projectService!.reOrderSubZonesInZone(parentId, oldIndex, newIndex);
+  }
 }

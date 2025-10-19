@@ -174,4 +174,14 @@ extension SubzoneViewModel on ProjectViewModel {
       return <ListeningArea>[];
     }
   }
+
+  void reOrderSubZoneInZone(String parentId, int oldIndex, int newIndex) {
+    try {
+      projectManager.reOrderSubZones(parentId, oldIndex, newIndex);
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to reorder subzones in zone: $e");
+      throwError("Failed to reorder subzones in zone: $e");
+    }
+  }
 }

@@ -104,4 +104,13 @@ extension CircuitService on ProjectService {
     }
     return listeningAreaIds.map((id) => listeningAreas.get(id)).whereType<ListeningArea>().toList();
   }
+
+  void reOderCircuitsInZone(String parentId, int oldIndex, int newIndex) {
+    final circuitsInZone = relationships.getChildren(RelationshipType.zoneCircuits, parentId).toList();
+
+    final item = circuitsInZone.removeAt(oldIndex);
+    circuitsInZone.insert(newIndex, item);
+
+    relationships.reOrder(RelationshipType.zoneCircuits, parentId, circuitsInZone);
+  }
 }

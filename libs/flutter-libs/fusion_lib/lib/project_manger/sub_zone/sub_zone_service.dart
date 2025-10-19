@@ -188,4 +188,13 @@ extension SubZoneService on ProjectService {
     final areas = areaIds.map((id) => listeningAreas.get(id)).whereType<ListeningArea>().toList();
     return areas;
   }
+
+  void reOrderSubZonesInZone(String parentId, int oldIndex, int newIndex) {
+    final subZonesInZone = relationships.getChildren(RelationshipType.zoneSubZones, parentId).toList();
+
+    final item = subZonesInZone.removeAt(oldIndex);
+    subZonesInZone.insert(newIndex, item);
+
+    relationships.reOrder(RelationshipType.zoneSubZones, parentId, subZonesInZone);
+  }
 }

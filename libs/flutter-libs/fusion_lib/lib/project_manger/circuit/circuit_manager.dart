@@ -67,4 +67,11 @@ extension CircuitManager on ProjectManager {
     }
     return projectService!.getListeningAreasForCircuit(circuitId);
   }
+
+  void reorderCircuitsInZone(String parentId, int oldIndex, int newIndex) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    projectService!.reOderCircuitsInZone(parentId, oldIndex, newIndex);
+  }
 }

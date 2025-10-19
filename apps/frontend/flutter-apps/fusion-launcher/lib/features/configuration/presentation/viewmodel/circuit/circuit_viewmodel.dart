@@ -157,4 +157,14 @@ extension CircuitViewmodel on ProjectViewModel {
       addHardwareToCircuit(newHardware.id, circuitModel.id);
     }
   }
+
+  void reOrderCircuitInZone(String parentId, int oldIndex, int newIndex) {
+    try {
+      projectManager.reorderCircuitsInZone(parentId, oldIndex, newIndex);
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to reorder circuit in zone: $e");
+      throwError("Failed to reorder circuit in zone: $e");
+    }
+  }
 }

@@ -72,7 +72,13 @@ class FloorRepository extends Repository<FloorModel> {}
 
 class ListeningAreaRepository extends Repository<ListeningArea> {}
 
-class ZoneRepository extends Repository<Zone> {}
+class ZoneRepository extends Repository<Zone> {
+  ZoneRepository copyWith(Map<String, Zone> items) {
+    final newRepo = ZoneRepository();
+    newRepo._items.addAll(items);
+    return newRepo;
+  }
+}
 
 class SubZoneRepository extends Repository<SubZone> {}
 
