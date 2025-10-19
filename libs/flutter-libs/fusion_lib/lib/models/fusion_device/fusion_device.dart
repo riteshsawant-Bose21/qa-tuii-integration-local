@@ -107,7 +107,7 @@ class FusionDsp extends HardwareComponent {
       price: (json['price'] as num?)?.toDouble() ?? 1000,
       hardwareName: json['hardwareName'] as String?,
       zAxis: (json['zAxis'] as num?)?.toDouble() ?? 0.0,
-      pos: json['pos'] != null ? Offset((json['pos']['dx'] as num).toDouble(), (json[' pos']['dy'] as num).toDouble()) : const Offset(0, 0),
+      pos: Offset(json['pos']['dx'] as double, json['pos']['dy'] as double),
       wiringPos: json['wiringPos'] != null ? Offset((json['wiringPos']['dx'] as num).toDouble(), (json['wiringPos']['dy'] as num).toDouble()) : null,
       assetImagePath: json['assetImagePath'] as String? ?? '',
       lockListeningArea: json['lockListeningArea'] as bool? ?? false,

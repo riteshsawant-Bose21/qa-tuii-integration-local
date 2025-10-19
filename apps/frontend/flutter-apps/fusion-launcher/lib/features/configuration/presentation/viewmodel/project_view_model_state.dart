@@ -16,6 +16,12 @@ final class ProjectLoaded extends ProjectViewModelState {
   ProjectLoaded({required this.projects, this.currentProject});
 }
 
+final class OpenProjectError extends ProjectViewModelState {
+  final String message;
+
+  OpenProjectError({required this.message});
+}
+
 final class ProjectUpdated extends ProjectViewModelState {
   final String projectId;
 

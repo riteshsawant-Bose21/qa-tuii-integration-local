@@ -218,7 +218,8 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
       _currentProject = projectResponse.data;
       emit(ProjectLoaded(projects: allProjects, currentProject: projectResponse.data));
     } else {
-      throwError("Unable to open project ${projectResponse.message}");
+      emit(OpenProjectError(message: "Unable to open project: ${projectResponse.message}"));
+      // throwError("Unable to open project ${projectResponse.message}");
     }
   }
 
