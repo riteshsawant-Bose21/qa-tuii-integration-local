@@ -288,11 +288,23 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
   }
 
   Widget _buildZoneTitle(Zone zone, bool isSelected) {
+    final TextEditingController controller = TextEditingController(text: zone.name);
+
+    void saveValue() {
+      final String trimmedValue = controller.text.trim();
+      if (trimmedValue.isNotEmpty && trimmedValue != zone.name) {
+        final Zone updated = zone.copyWith(name: trimmedValue);
+        serviceLocator<ProjectViewModel>().updateZone(updated);
+      } else if (trimmedValue.isEmpty) {
+        controller.text = zone.name; // Revert to original name
+      }
+    }
+
     return Container(
       key: ValueKey<String>(zone.id),
       constraints: const BoxConstraints(),
       child: TextFormField(
-        initialValue: zone.name,
+        controller: controller,
         maxLength: 24,
         enabled: serviceLocator<ProjectViewModel>().currentSelectedZoneId == null,
         decoration: const InputDecoration(
@@ -307,23 +319,24 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
           fontSize: 12,
         ),
         scrollPadding: EdgeInsets.zero,
-
         maxLines: 1,
+        onTapOutside: (PointerDownEvent event) {
+          FocusManager.instance.primaryFocus?.unfocus();
+          saveValue();
+        },
         onFieldSubmitted: (String v) {
           final String trimmedValue = v.trim();
           if (trimmedValue.isEmpty) {
-            // Show a snackbar to inform user that zone name cannot be empty
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('Zone name cannot be empty'),
                 duration: Duration(seconds: 2),
               ),
             );
-            // Don't update zone name and revert to previous name
+            controller.text = zone.name; // Revert to original name
             return;
           }
-          final Zone updated = zone.copyWith(name: trimmedValue);
-          serviceLocator<ProjectViewModel>().updateZone(updated);
+          saveValue();
         },
       ),
     );
