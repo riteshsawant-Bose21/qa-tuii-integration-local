@@ -115,73 +115,72 @@ class _SourceWidgetState extends State<SourceWidget> {
               height: 5,
             ),
 
-            if (widget.source.fusionDeviceId != null || widget.source.portNumbers.isNotEmpty)
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey.shade200),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: <Widget>[
-                    // Device Icon
-                    const Icon(
-                      Icons.memory,
-                      size: 14,
-                      color: Colors.white,
-                    ),
-                    const SizedBox(width: 8),
-
-                    // Device Name
-                    if (widget.source.fusionDeviceId != null) ...<Widget>[
-                      Flexible(
-                        child: Text(
-                          serviceLocator<ProjectViewModel>().fusionDevices.firstWhere((FusionDsp val) => val.id == widget.source.fusionDeviceId).name,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-
-                      // Separator
-                      if (widget.source.portNumbers.isNotEmpty) ...<Widget>[
-                        Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 8),
-                          width: 1,
-                          height: 12,
-                          color: Colors.white,
-                        ),
-                      ],
-                    ],
-
-                    // Port Information
-                    if (widget.source.portNumbers.isNotEmpty) ...<Widget>[
-                      const Icon(
-                        Icons.electrical_services,
-                        size: 14,
-                        color: Colors.white,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Port ${widget.source.portNumbers.join(', ')}',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.white,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-
+            // if (widget.source.fusionDeviceId != null || widget.source.portNumbers.isNotEmpty)
+            //   Container(
+            //     margin: const EdgeInsets.symmetric(horizontal: 8),
+            //     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            //     decoration: BoxDecoration(
+            //       color: Theme.of(context).primaryColor,
+            //       borderRadius: BorderRadius.circular(8),
+            //       border: Border.all(color: Colors.grey.shade200),
+            //     ),
+            //     child: Row(
+            //       mainAxisAlignment: MainAxisAlignment.start,
+            //       crossAxisAlignment: CrossAxisAlignment.center,
+            //       children: <Widget>[
+            //         // Device Icon
+            //         const Icon(
+            //           Icons.memory,
+            //           size: 14,
+            //           color: Colors.white,
+            //         ),
+            //         const SizedBox(width: 8),
+            //
+            //         // Device Name
+            //         if (widget.source.fusionDeviceId != null) ...<Widget>[
+            //           Flexible(
+            //             child: Text(
+            //               serviceLocator<ProjectViewModel>().fusionDevices.firstWhere((FusionDsp val) => val.id == widget.source.fusionDeviceId).name,
+            //               style: const TextStyle(
+            //                 fontSize: 13,
+            //                 fontWeight: FontWeight.w600,
+            //                 color: Colors.white,
+            //               ),
+            //               overflow: TextOverflow.ellipsis,
+            //             ),
+            //           ),
+            //
+            //           // Separator
+            //           if (widget.source.portNumbers.isNotEmpty) ...<Widget>[
+            //             Container(
+            //               margin: const EdgeInsets.symmetric(horizontal: 8),
+            //               width: 1,
+            //               height: 12,
+            //               color: Colors.white,
+            //             ),
+            //           ],
+            //         ],
+            //
+            //         // Port Information
+            //         if (widget.source.portNumbers.isNotEmpty) ...<Widget>[
+            //           const Icon(
+            //             Icons.electrical_services,
+            //             size: 14,
+            //             color: Colors.white,
+            //           ),
+            //           const SizedBox(width: 4),
+            //           Text(
+            //             'Port ${widget.source.portNumbers.join(', ')}',
+            //             style: const TextStyle(
+            //               fontSize: 12,
+            //               color: Colors.white,
+            //               fontWeight: FontWeight.w500,
+            //             ),
+            //           ),
+            //         ],
+            //       ],
+            //     ),
+            //   ),
             if (widget.source.type == SourceType.aes67input) ...<Widget>[
               const SizedBox(height: 12),
               IPAddressField(

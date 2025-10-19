@@ -136,18 +136,18 @@ class OutputWidgetState extends State<OutputWidget> {
 
             Builder(
               builder: (BuildContext context) {
-                final List<FusionDsp> devices = serviceLocator<ProjectViewModel>().fusionDevices;
-                FusionDsp? device;
-                try {
-                  device =
-                      widget.speaker.fusionDeviceId != null
-                          ? devices.firstWhere((FusionDsp d) {
-                            return d.id == widget.speaker.fusionDeviceId;
-                          })
-                          : null;
-                } catch (e) {
-                  return const SizedBox.shrink();
-                }
+                // final List<FusionDsp> devices = serviceLocator<ProjectViewModel>().fusionDevices;
+                // FusionDsp? device;
+                // try {
+                //   device =
+                //       widget.speaker.fusionDeviceId != null
+                //           ? devices.firstWhere((FusionDsp d) {
+                //             return d.id == widget.speaker.fusionDeviceId;
+                //           })
+                //           : null;
+                // } catch (e) {
+                //   return const SizedBox.shrink();
+                // }
 
                 return const SizedBox.shrink();
 

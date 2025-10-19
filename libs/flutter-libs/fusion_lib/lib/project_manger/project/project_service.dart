@@ -195,6 +195,10 @@ class ProjectService {
           return c.toJson();
         } else if (c is FusionEndpoints) {
           return c.toJson();
+        } else if (c is HardwareRack) {
+          return c.toJson();
+        } else if (c is NetworkSwitch) {
+          return c.toJson();
         } else {
           return (c as GenericHardwareComponent).toJson();
         }
@@ -246,6 +250,10 @@ class ProjectService {
         return FusionEndpoints.fromJson(m);
       } else if (m.containsKey('componentType') && m['componentType'] == 'amplifier') {
         return Amplifier.fromJson(m);
+      } else if (m.containsKey('componentType') && m['componentType'] == 'hardwareRack') {
+        return HardwareRack.fromJson(m);
+      } else if (m.containsKey('componentType') && m['componentType'] == 'networkSwitch') {
+        return NetworkSwitch.fromJson(m);
       } else {
         return GenericHardwareComponent.fromJson(m);
       }

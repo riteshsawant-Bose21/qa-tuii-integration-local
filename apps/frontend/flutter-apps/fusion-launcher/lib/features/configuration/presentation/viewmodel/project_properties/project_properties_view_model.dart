@@ -62,6 +62,14 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
     return hardwareComponents.whereType<FusionController>().toList();
   }
 
+  List<NetworkSwitch> get networkSwitches {
+    return hardwareComponents.whereType<NetworkSwitch>().toList();
+  }
+
+  List<HardwareRack> get hardwareRacks {
+    return hardwareComponents.whereType<HardwareRack>().toList();
+  }
+
   //get generic hardware components
   List<GenericHardwareComponent> get genericHardwareComponents {
     return hardwareComponents.whereType<GenericHardwareComponent>().toList();

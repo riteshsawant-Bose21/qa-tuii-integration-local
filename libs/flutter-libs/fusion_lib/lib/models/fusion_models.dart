@@ -27,3 +27,5 @@ export 'project_entities/communication_ports.dart';
 export 'project_entities/circuit_model.dart';
 export 'project_entities/sub_zone_model.dart';
 export 'project_entities/connections_model.dart';
+export 'project_entities/network_switch.dart';
+export 'project_entities/hardware_rack.dart';
