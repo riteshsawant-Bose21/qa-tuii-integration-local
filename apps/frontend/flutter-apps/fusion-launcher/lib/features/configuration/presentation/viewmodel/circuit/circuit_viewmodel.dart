@@ -149,7 +149,7 @@ extension CircuitViewmodel on ProjectViewModel {
 
     for (int i = 0; i < speakerCount; i++) {
       final HardwareComponent newHardware = fromProductQueryModel(
-        selectedProductToAdd!,
+        speakerData,
         pos: Offset.zero,
         locationEntity: locationModel,
       );
