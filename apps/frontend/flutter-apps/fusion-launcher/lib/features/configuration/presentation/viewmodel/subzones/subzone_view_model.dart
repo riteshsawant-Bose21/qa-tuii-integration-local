@@ -5,6 +5,9 @@ extension SubzoneViewModel on ProjectViewModel {
   //add SubZone
   void addSubZone({required SubZone subZone, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.addSubZone(subZone);
       if (autoSave) {
         saveProject();
@@ -27,6 +30,9 @@ extension SubzoneViewModel on ProjectViewModel {
 
   void updateSubZone({required SubZone subZone, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.updateSubZone(subZone);
       if (autoSave) {
         saveProject();
@@ -44,6 +50,9 @@ extension SubzoneViewModel on ProjectViewModel {
     bool autoSave = true,
   }) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       final List<ListeningArea> currentListeningAreas = getListeningAreasInSubZone(subZoneId: subZoneId);
       final List<String> currentListeningAreaIds = currentListeningAreas.map((ListeningArea e) => e.id).toList();
       final List<String> toRemove = currentListeningAreaIds.where((String id) => !listeningAreaIds.contains(id)).toList();
@@ -66,6 +75,9 @@ extension SubzoneViewModel on ProjectViewModel {
 
   void removeSubZone({required String subZoneId, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.removeSubZone(subZoneId);
       if (autoSave) {
         saveProject();
@@ -99,6 +111,9 @@ extension SubzoneViewModel on ProjectViewModel {
 
   void addSubZoneToZone({required String subZoneId, required String parentZoneId, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.addSubZoneToZone(subZoneId, parentZoneId);
       if (autoSave) {
         saveProject();
@@ -112,6 +127,9 @@ extension SubzoneViewModel on ProjectViewModel {
 
   void removeSubZoneFromZone({required String subZoneId, required String parentZoneId, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.removeSubZoneFromZone(subZoneId, parentZoneId);
       if (autoSave) {
         saveProject();
@@ -135,6 +153,9 @@ extension SubzoneViewModel on ProjectViewModel {
 
   void addCircuitToSubZone({required String subZoneId, required String circuitId, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.addCircuitToSubZone(subZoneId, circuitId);
       if (autoSave) {
         saveProject();
@@ -148,6 +169,9 @@ extension SubzoneViewModel on ProjectViewModel {
 
   void removeCircuitFromSubZone({required String subZoneId, required String circuitId, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.removeCircuitFromSubZone(subZoneId, circuitId);
       if (autoSave) {
         saveProject();
@@ -175,6 +199,9 @@ extension SubzoneViewModel on ProjectViewModel {
 
   void addListeningAreaToSubZone({required String areaId, required String subZoneId, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.addListeningAreaToSubZone(areaId, subZoneId);
       if (autoSave) {
         saveProject();
@@ -188,6 +215,9 @@ extension SubzoneViewModel on ProjectViewModel {
 
   void removeListeningAreaFromSubZone({required String areaId, required String subZoneId, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.removeListeningAreaFromSubZone(areaId, subZoneId);
       if (autoSave) {
         saveProject();
@@ -216,6 +246,9 @@ extension SubzoneViewModel on ProjectViewModel {
     bool autoSave = true,
   }) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.reOrderSubZones(parentId, oldIndex, newIndex);
       if (autoSave) {
         saveProject();

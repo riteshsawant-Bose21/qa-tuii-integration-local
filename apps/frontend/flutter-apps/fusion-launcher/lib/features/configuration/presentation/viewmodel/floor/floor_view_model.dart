@@ -13,6 +13,9 @@ extension FloorViewModel on ProjectViewModel {
 
   void updateFloor({required FloorModel floor, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       final ResponseCallback<bool> responseCallback = projectManager.updateFloor(floor);
       if (responseCallback.success) {
         if (autoSave) {
@@ -30,6 +33,9 @@ extension FloorViewModel on ProjectViewModel {
 
   void addFloor({required FloorModel floor, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       final ResponseCallback<bool> responseCallback = projectManager.addFloor(floor);
       if (responseCallback.success) {
         emitFloorUpdated();
@@ -48,6 +54,9 @@ extension FloorViewModel on ProjectViewModel {
 
   void removeFloor({required String floorId, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       final ResponseCallback<bool> responseCallback = projectManager.removeFloor(floorId);
       if (responseCallback.success) {
         emitFloorUpdated();

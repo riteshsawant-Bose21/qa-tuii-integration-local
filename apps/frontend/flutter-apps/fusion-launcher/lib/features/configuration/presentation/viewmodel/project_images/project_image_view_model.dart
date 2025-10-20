@@ -6,8 +6,10 @@ import 'package:fusion_lib/fusion_lib.dart';
 extension ProjectImageViewModel on ProjectViewModel {
   //Add Image to Project
   Future<ResponseCallback<String?>> addImageToProject({required String imagePath, bool autoSave = true}) async {
-    print("addImageToProject called with imagePath: $imagePath");
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       final ResponseCallback<String> response = await projectManager.saveImageToCurrentProject(imagePath);
       if (autoSave) {
         saveProject();
@@ -22,8 +24,10 @@ extension ProjectImageViewModel on ProjectViewModel {
 
   //Add Asset Image to Project
   Future<ResponseCallback<String?>> addAssetImageToProject({required String assetPath, bool autoSave = true}) async {
-    print("addAssetImageToProject called with assetPath: $assetPath");
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       final ResponseCallback<String> response = await projectManager.saveAssetImageToCurrentProject(assetPath);
       if (autoSave) {
         saveProject();

@@ -4,6 +4,9 @@ import 'package:fusion_lib/fusion_lib.dart';
 extension ProcessingBlockViewmodel on ProjectViewModel {
   void addProcessingBlock({required ProcessingBlockModel processingBlock, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.addProcessingBlock(processingBlock);
       if (autoSave) {
         saveProject();
@@ -17,6 +20,9 @@ extension ProcessingBlockViewmodel on ProjectViewModel {
 
   void addProcessingBlockToParent({required ProcessingBlockModel processingBlock, required String parentId, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.addProcessingBlockToParent(processingBlock, parentId);
       if (autoSave) {
         saveProject();
@@ -30,6 +36,9 @@ extension ProcessingBlockViewmodel on ProjectViewModel {
 
   void mapProcessingBlockToParent({required String processingBlockId, required String parentId, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.mapProcessingBlockToParent(processingBlockId, parentId);
       if (autoSave) {
         saveProject();
@@ -43,6 +52,9 @@ extension ProcessingBlockViewmodel on ProjectViewModel {
 
   void removeProcessingBlockFromParent({required String processingBlockId, required String parentId, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.removeProcessingBlockFromParent(processingBlockId, parentId);
       if (autoSave) {
         saveProject();
@@ -56,6 +68,9 @@ extension ProcessingBlockViewmodel on ProjectViewModel {
 
   void removeProcessingBlock({required String processingBlockId, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.removeProcessingBlock(processingBlockId);
       if (autoSave) {
         saveProject();
@@ -69,6 +84,9 @@ extension ProcessingBlockViewmodel on ProjectViewModel {
 
   void updateProcessingBlock({required ProcessingBlockModel processingBlock, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.updateProcessingBlock(processingBlock);
       if (autoSave) {
         saveProject();
@@ -100,6 +118,9 @@ extension ProcessingBlockViewmodel on ProjectViewModel {
 
   void reOrderProcessingBlocks({required String parentId, required int oldIndex, required int newIndex, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.reOrderProcessingBlocks(parentId, oldIndex, newIndex);
       if (autoSave) {
         saveProject();

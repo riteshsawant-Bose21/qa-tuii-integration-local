@@ -17,8 +17,10 @@ extension HardwareViewModel on ProjectViewModel {
   }
 
   void updateHardware({required HardwareComponent hardware, bool autoSave = true}) {
-    print("Updating hardware: ${hardware.id}");
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       final HardwareComponent oldHw = projectManager.getHardwareById(hardware.id);
       if (oldHw != hardware) {
         projectManager.updateHardware(hardware);
@@ -37,6 +39,9 @@ extension HardwareViewModel on ProjectViewModel {
 
   void addHardware({required HardwareComponent hardware, int count = 1, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.addHardware(hardware);
       if (hardware is Speaker) {
         for (int i = 1; i < count; i++) {
@@ -54,6 +59,9 @@ extension HardwareViewModel on ProjectViewModel {
 
   void removeHardware({required String hardwareId, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.removeHardware(hardwareId);
       if (autoSave) {
         saveProject();
@@ -92,8 +100,10 @@ extension HardwareViewModel on ProjectViewModel {
   }
 
   ResponseCallback<bool> moveHardware({required String hardwareId, String? listeningAreaId, String? floorId, bool autoSave = true}) {
-    print("Moving hardware: $hardwareId to listeningAreaId: $listeningAreaId, floorId: $floorId");
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       final ResponseCallback<bool> responseCallback = projectManager.moveHardware(hardwareId, listeningAreaId: listeningAreaId, floorId: floorId);
       if (autoSave) {
         saveProject();
@@ -138,6 +148,9 @@ extension HardwareViewModel on ProjectViewModel {
   //add hardware and create circuit
   void addHardwareAndCreateCircuit({required HardwareComponent hw, required String circuitId, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.addHardwareAndCreateCircuit(hw, circuitId);
       if (autoSave) {
         saveProject();
@@ -151,6 +164,9 @@ extension HardwareViewModel on ProjectViewModel {
   // Update hardware location
   void updateHardwareLocation({required String hardwareId, required LocationModel newLocation, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.updateHardwareLocation(hardwareId, newLocation);
       if (autoSave) {
         saveProject();
@@ -164,6 +180,9 @@ extension HardwareViewModel on ProjectViewModel {
 
   void reOrderHardware({required String hardwareIdToMove, required String hardwareAtNewIndex, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.reOrderHardware(hardwareIdToMove: hardwareIdToMove, hardwareAtNewIndex: hardwareAtNewIndex);
       if (autoSave) {
         saveProject();
@@ -178,6 +197,9 @@ extension HardwareViewModel on ProjectViewModel {
   void addSelectedProduct({required Offset position, String? listeningAreaId, bool autoSave = true}) {
     if (selectedProductToAdd == null) return;
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       final HardwareComponent newHardware = fromProductQueryModel(
         selectedProductToAdd!,
         pos: position,

@@ -188,6 +188,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                 // serviceLocator<ProjectViewModel>().saveProjectToLocal();
                               },
                               onAddListeningArea: (ListeningArea created, List<HardwareComponent>? containedHardware) {
+                                serviceLocator<ProjectViewModel>().recordSnapshot();
                                 serviceLocator<ProjectViewModel>().addListeningArea(area: created, floorId: floor.id, autoSave: false);
                                 if (containedHardware != null) {
                                   for (final HardwareComponent hc in containedHardware) {

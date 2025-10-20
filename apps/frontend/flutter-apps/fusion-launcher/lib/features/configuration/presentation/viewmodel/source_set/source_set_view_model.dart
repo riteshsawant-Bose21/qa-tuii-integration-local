@@ -14,6 +14,9 @@ extension SourceSetViewModel on ProjectViewModel {
 
   void updateSourceSet({required SourceSet sourceSet, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.updateSourceSet(sourceSet);
       if (autoSave) {
         saveProject();
@@ -27,6 +30,9 @@ extension SourceSetViewModel on ProjectViewModel {
 
   void updateSourcesInSourceSet({required String sourceSetId, required List<String> sourceIds, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       final List<Source> currentSources = getSourcesInSourceSet(sourceSetId: sourceSetId);
       final List<String> currentSourceIds = currentSources.map((Source e) => e.id).toList();
       final List<String> toRemove = currentSourceIds.where((String id) => !sourceIds.contains(id)).toList();
@@ -49,6 +55,9 @@ extension SourceSetViewModel on ProjectViewModel {
 
   void addSourceSet({required SourceSet sourceSet, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.addSourceSet(sourceSet);
       if (autoSave) {
         saveProject();
@@ -62,6 +71,9 @@ extension SourceSetViewModel on ProjectViewModel {
 
   void removeSourceSet({required String sourceSetId, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.removeSourceSet(sourceSetId);
       if (autoSave) {
         saveProject();
@@ -94,6 +106,9 @@ extension SourceSetViewModel on ProjectViewModel {
   //Add Source to SourceSet
   void addSourceToSourceSet({required String sourceId, required String sourceSetId, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.addSourceToSourceSet(sourceId, sourceSetId);
       if (autoSave) {
         saveProject();
@@ -108,6 +123,9 @@ extension SourceSetViewModel on ProjectViewModel {
   //Remove Source from SourceSet
   void removeSourceFromSourceSet({required String sourceId, required String sourceSetId, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.removeSourceFromSourceSet(sourceId, sourceSetId);
       if (autoSave) {
         saveProject();
@@ -121,6 +139,9 @@ extension SourceSetViewModel on ProjectViewModel {
 
   void reorderSourceSetInZone({required String parentId, required int oldIndex, required int newIndex, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.reOrderSourceInSourceSet(parentId, oldIndex, newIndex);
       if (autoSave) {
         saveProject();

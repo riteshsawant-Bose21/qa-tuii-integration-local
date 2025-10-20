@@ -14,6 +14,9 @@ extension ListeningAreaViewModel on ProjectViewModel {
 
   void updateListeningArea({required ListeningArea area, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.updateListeningArea(area);
       if (autoSave) {
         saveProject();
@@ -27,6 +30,9 @@ extension ListeningAreaViewModel on ProjectViewModel {
 
   void addListeningArea({required ListeningArea area, required String floorId, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.addListeningArea(area, floorId);
       if (autoSave) {
         saveProject();
@@ -39,6 +45,9 @@ extension ListeningAreaViewModel on ProjectViewModel {
 
   void removeListeningArea({required String areaId, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.removeListeningArea(areaId);
       if (autoSave) {
         saveProject();

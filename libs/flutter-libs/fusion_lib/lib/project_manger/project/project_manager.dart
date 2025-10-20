@@ -90,6 +90,9 @@ class ProjectManager {
       final ProjectData project = getProjectById(projectId);
       projectService = ProjectService.fromJson(project.projectRawData);
 
+      //initial state of project;
+      projectService!.recordChange();
+
       return ResponseCallback.success(project);
     } catch (e) {
       return ResponseCallback.failure("Error opening project: $e");
@@ -106,7 +109,7 @@ class ProjectManager {
     return await _mutex.protect(() async {
       // Record the change before saving (for undo/redo functionality)
       // We can add this before every change to the projectService to support step by step undo/redo
-      projectService!.recordChange();
+      // projectService!.recordChange();
 
       try {
         final ProjectData currentProject = getProjectById(projectService!.id);

@@ -1181,6 +1181,7 @@ class _ZoneCircuitConfigPageState extends State<ZoneCircuitConfigPage> {
       zoneColor: color ?? zone.zoneColor,
     );
 
+    serviceLocator<ProjectViewModel>().recordSnapshot();
     serviceLocator<ProjectViewModel>().updateZone(zone: updatedZone, autoSave: false);
     if (listeningAreaIds != null) {
       serviceLocator<ProjectViewModel>().updateListeningAreasInZone(zoneId: zoneId, listeningAreaIds: listeningAreaIds, autoSave: false);
@@ -1239,9 +1240,11 @@ class _ZoneCircuitConfigPageState extends State<ZoneCircuitConfigPage> {
       name: subZoneName,
     );
 
+    serviceLocator<ProjectViewModel>().recordSnapshot();
     serviceLocator<ProjectViewModel>().addSubZone(subZone: newSubZone, autoSave: false);
     serviceLocator<ProjectViewModel>().addSubZoneToZone(subZoneId: newSubZone.id, parentZoneId: zoneId, autoSave: false);
-    serviceLocator<ProjectViewModel>().updateListeningAreasInSubZone(subZoneId: newSubZone.id, listeningAreaIds: listeningAreaIds);
+    serviceLocator<ProjectViewModel>().updateListeningAreasInSubZone(subZoneId: newSubZone.id, listeningAreaIds: listeningAreaIds, autoSave: false);
+    serviceLocator<ProjectViewModel>().saveProject();
   }
 
   void updateSubZone(String subZoneId, {String? name, List<String>? listeningAreaIds}) {
@@ -1253,7 +1256,7 @@ class _ZoneCircuitConfigPageState extends State<ZoneCircuitConfigPage> {
     final SubZone updatedSubZone = subZone.copyWith(
       name: name ?? subZone.name,
     );
-
+    serviceLocator<ProjectViewModel>().recordSnapshot();
     serviceLocator<ProjectViewModel>().updateSubZone(subZone: updatedSubZone, autoSave: false);
 
     if (listeningAreaIds != null) {

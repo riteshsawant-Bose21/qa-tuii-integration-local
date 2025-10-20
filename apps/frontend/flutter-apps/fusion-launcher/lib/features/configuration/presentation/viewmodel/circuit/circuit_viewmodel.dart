@@ -6,6 +6,9 @@ import 'package:fusion_lib/fusion_lib.dart';
 extension CircuitViewmodel on ProjectViewModel {
   void addNewCircuitWithHardware({required HardwareComponent hardware, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       final CircuitModel newCircuit = CircuitModel(
         id: FusionUtils.shortStringUUID(),
         name: "New Circuit",
@@ -24,6 +27,9 @@ extension CircuitViewmodel on ProjectViewModel {
 
   void addCircuit({required CircuitModel circuit, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.addCircuit(circuit);
       if (autoSave) {
         saveProject();
@@ -37,6 +43,9 @@ extension CircuitViewmodel on ProjectViewModel {
 
   void updateCircuit({required CircuitModel circuit, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.updateCircuit(circuit);
       if (autoSave) {
         saveProject();
@@ -50,6 +59,9 @@ extension CircuitViewmodel on ProjectViewModel {
 
   void removeCircuit({required String circuitId, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.removeCircuit(circuitId);
       if (autoSave) {
         saveProject();
@@ -91,6 +103,9 @@ extension CircuitViewmodel on ProjectViewModel {
 
   void addHardwareToCircuit({required String hwId, required String circuitId, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.addHardwareToCircuit(hwId, circuitId);
       if (autoSave) {
         saveProject();
@@ -104,6 +119,9 @@ extension CircuitViewmodel on ProjectViewModel {
 
   void removeHardwareFromCircuit({required String hwId, required String circuitId, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.removeHardwareFromCircuit(hwId, circuitId);
       if (autoSave) {
         saveProject();
@@ -117,6 +135,9 @@ extension CircuitViewmodel on ProjectViewModel {
 
   void removeAllCircuits({bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       final List<CircuitModel> allCircuits = getAllCircuits();
       for (final CircuitModel circuit in allCircuits) {
         projectManager.removeCircuit(circuit.id);
@@ -150,6 +171,9 @@ extension CircuitViewmodel on ProjectViewModel {
     required String zoneId,
     bool autoSave = true,
   }) {
+    if (autoSave) {
+      recordSnapshot();
+    }
     final FloorModel? floorModel = getFloorForListeningArea(areaId: listeningAreaId);
     final LocationModel locationModel = LocationModel(
       listeningAreaId: listeningAreaId,
@@ -184,6 +208,9 @@ extension CircuitViewmodel on ProjectViewModel {
 
   void reOrderCircuitInZone({required String parentId, required int oldIndex, required int newIndex, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.reorderCircuitsInZone(parentId, oldIndex, newIndex);
       if (autoSave) {
         saveProject();

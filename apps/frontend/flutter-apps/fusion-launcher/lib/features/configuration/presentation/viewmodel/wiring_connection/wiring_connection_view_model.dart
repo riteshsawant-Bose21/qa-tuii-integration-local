@@ -5,6 +5,9 @@ import '../project_view_model.dart';
 extension WiringConnectionViewModel on ProjectViewModel {
   void addWiringConnection({required WiringConnectionModel connection, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.addWiringConnection(connection);
       if (autoSave) {
         saveProject();
@@ -18,6 +21,9 @@ extension WiringConnectionViewModel on ProjectViewModel {
 
   void removeWiringConnection({required String connectionId, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.removeWiringConnection(connectionId);
       if (autoSave) {
         saveProject();
@@ -31,6 +37,9 @@ extension WiringConnectionViewModel on ProjectViewModel {
 
   void updateWiringConnection({required WiringConnectionModel connection, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.updateWiringConnection(connection);
       if (autoSave) {
         saveProject();

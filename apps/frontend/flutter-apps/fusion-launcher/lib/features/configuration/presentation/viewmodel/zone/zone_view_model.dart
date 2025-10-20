@@ -14,6 +14,9 @@ extension ZoneViewModel on ProjectViewModel {
 
   void updateZone({required Zone zone, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.updateZone(zone);
       if (autoSave) {
         saveProject();
@@ -27,6 +30,9 @@ extension ZoneViewModel on ProjectViewModel {
 
   void updateListeningAreasInZone({required String zoneId, required List<String> listeningAreaIds, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       final List<ListeningArea> currentListeningAreas = getListeningAreasForZone(zoneId: zoneId);
       final List<String> currentListeningAreaIds = currentListeningAreas.map((ListeningArea e) => e.id).toList();
       final List<String> toRemove = currentListeningAreaIds.where((String id) => !listeningAreaIds.contains(id)).toList();
@@ -49,6 +55,9 @@ extension ZoneViewModel on ProjectViewModel {
 
   void addZone({required Zone zone, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.addZone(zone);
       if (autoSave) {
         saveProject();
@@ -62,6 +71,9 @@ extension ZoneViewModel on ProjectViewModel {
 
   void removeZone({required String zoneId, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.removeZone(zoneId);
       if (autoSave) {
         saveProject();
@@ -75,6 +87,9 @@ extension ZoneViewModel on ProjectViewModel {
 
   void removeAllZones({bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       final List<Zone> allZones = getAllZones();
       for (final Zone zone in allZones) {
         projectManager.removeZone(zone.id);
@@ -118,6 +133,9 @@ extension ZoneViewModel on ProjectViewModel {
 
   void updateSourceSets({required String zoneId, required List<String> sourceSetIds, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       final List<SourceSet> currentSourceSets = getSourceSetsInZone(zoneId: zoneId);
       final List<String> currentSourceSetIds = currentSourceSets.map((SourceSet e) => e.id).toList();
       final List<String> toRemove = currentSourceSetIds.where((String id) => !sourceSetIds.contains(id)).toList();
@@ -141,6 +159,9 @@ extension ZoneViewModel on ProjectViewModel {
   //add Speaker to zone with a new circuit
   void addSpeakerToZone({required String hardwareId, required String zoneId, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       final CircuitModel circuitModel = CircuitModel(name: "New Circuit");
       projectManager.addCircuit(circuitModel);
       projectManager.addHardwareToCircuit(hardwareId, circuitModel.id);
@@ -158,6 +179,9 @@ extension ZoneViewModel on ProjectViewModel {
   // Add Source Set to Zone
   void addSourceSetToZone({required String sourceSetId, required String zoneId, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.addSourceSetToZone(sourceSetId, zoneId);
       if (autoSave) {
         saveProject();
@@ -172,6 +196,9 @@ extension ZoneViewModel on ProjectViewModel {
   // Remove Source Set from Zone
   void removeSourceSetFromZone({required String sourceSetId, required String zoneId, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.removeSourceSetFromZone(sourceSetId, zoneId);
       if (autoSave) {
         saveProject();
@@ -186,6 +213,9 @@ extension ZoneViewModel on ProjectViewModel {
   //Add Listening Area to Zone
   void addListeningAreaToZone({required String listeningAreaId, required String zoneId, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.addListeningAreaToZone(listeningAreaId, zoneId);
       if (autoSave) {
         saveProject();
@@ -200,6 +230,9 @@ extension ZoneViewModel on ProjectViewModel {
   // Remove Listening Area from Zone
   void removeListeningAreaFromZone({required String listeningAreaId, required String zoneId, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.removeListeningAreaFromZone(listeningAreaId, zoneId);
       if (autoSave) {
         saveProject();
@@ -213,6 +246,9 @@ extension ZoneViewModel on ProjectViewModel {
 
   void addCircuitToZone({required String zoneId, required String circuitId, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.addCircuitToZone(circuitId, zoneId);
       if (autoSave) {
         saveProject();
@@ -226,6 +262,9 @@ extension ZoneViewModel on ProjectViewModel {
 
   void removeCircuitFromZone({required String circuitId, required String zoneId, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.removeCircuitFromZone(circuitId, zoneId);
       if (autoSave) {
         saveProject();

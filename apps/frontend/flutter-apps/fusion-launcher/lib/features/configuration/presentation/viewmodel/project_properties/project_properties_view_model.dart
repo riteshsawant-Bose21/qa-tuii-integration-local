@@ -86,6 +86,9 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
   //set project name
   void setProjectName({required String name, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.setProjectName(name);
       if (autoSave) {
         saveProject();
@@ -100,6 +103,9 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
   //set virtual IP
   void setVirtualIP({required String? ip, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.setVirtualIP(ip);
       if (autoSave) {
         saveProject();
@@ -114,6 +120,9 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
   //set meta data
   void setMetaData({required String metaData, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.setMetaData(metaData);
       if (autoSave) {
         saveProject();
@@ -128,6 +137,9 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
   //set min SPL
   void setMinSPL({required double minSPL, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.setMinSPL(minSPL);
       if (autoSave) {
         saveProject();
@@ -142,6 +154,9 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
   //set max SPL
   void setMaxSPL({required double maxSPL, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.setMaxSPL(maxSPL);
       if (autoSave) {
         saveProject();
@@ -156,6 +171,9 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
   //set control mode
   void toggleControlMode({bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.toggleControlMode();
       if (autoSave) {
         saveProject();
