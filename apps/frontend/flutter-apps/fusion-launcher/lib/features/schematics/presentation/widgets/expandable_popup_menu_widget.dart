@@ -66,7 +66,7 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
             sku: selectedBlock.id,
             price: selectedBlock.price,
           );
-          serviceLocator<ProjectViewModel>().addHardware(source);
+          serviceLocator<ProjectViewModel>().addHardware(hardware: source);
         }
       },
       color: Colors.white,
@@ -239,7 +239,7 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
                     sku: item.id,
                     price: item.price,
                   );
-                  serviceLocator<ProjectViewModel>().addHardware(source);
+                  serviceLocator<ProjectViewModel>().addHardware(hardware: source);
                 } else if (item is FusionDsp) {
                   // final FusionDevice fusionDevice = FusionDevice(
                   //   name: item.name,

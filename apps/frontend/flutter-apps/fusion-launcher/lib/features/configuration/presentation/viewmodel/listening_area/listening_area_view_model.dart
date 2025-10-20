@@ -4,7 +4,7 @@ import '../project_view_model.dart';
 
 extension ListeningAreaViewModel on ProjectViewModel {
   //get ListeningArea by id
-  ListeningArea getListeningArea(String areaId) {
+  ListeningArea getListeningArea({required String areaId}) {
     try {
       return projectManager.getListeningAreaById(areaId);
     } catch (e) {
@@ -12,9 +12,12 @@ extension ListeningAreaViewModel on ProjectViewModel {
     }
   }
 
-  void updateListeningArea(ListeningArea area) {
+  void updateListeningArea({required ListeningArea area, bool autoSave = true}) {
     try {
       projectManager.updateListeningArea(area);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to update listening area: $e");
@@ -22,19 +25,24 @@ extension ListeningAreaViewModel on ProjectViewModel {
     }
   }
 
-  void addListeningArea(ListeningArea area, String floorId) {
+  void addListeningArea({required ListeningArea area, required String floorId, bool autoSave = true}) {
     try {
       projectManager.addListeningArea(area, floorId);
-
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to add listening area: $e");
     }
   }
 
-  void removeListeningArea(String areaId) {
+  void removeListeningArea({required String areaId, bool autoSave = true}) {
     try {
       projectManager.removeListeningArea(areaId);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to remove listening area: $e");
@@ -50,7 +58,7 @@ extension ListeningAreaViewModel on ProjectViewModel {
     }
   }
 
-  Zone? getZonesForListeningArea(String areaId) {
+  Zone? getZonesForListeningArea({required String areaId}) {
     try {
       return projectManager.getZoneForListeningArea(areaId);
     } catch (e) {
@@ -59,7 +67,7 @@ extension ListeningAreaViewModel on ProjectViewModel {
     }
   }
 
-  FloorModel? getFloorForListeningArea(String areaId) {
+  FloorModel? getFloorForListeningArea({required String areaId}) {
     try {
       return projectManager.getFloorForListeningArea(areaId);
     } catch (e) {
@@ -69,7 +77,7 @@ extension ListeningAreaViewModel on ProjectViewModel {
   }
 
   //get Listening Areas for Floor id
-  List<ListeningArea> getListeningAreasForFloor(String floorId) {
+  List<ListeningArea> getListeningAreasForFloor({required String floorId}) {
     try {
       return projectManager.getAllListeningAreaForFloor(floorId);
     } catch (e) {
@@ -78,7 +86,7 @@ extension ListeningAreaViewModel on ProjectViewModel {
     }
   }
 
-  ListeningArea? getListeningAreaForHardware(String hardwareId) {
+  ListeningArea? getListeningAreaForHardware({required String hardwareId}) {
     try {
       final HardwareComponent hardwareComponent = projectManager.getHardwareById(hardwareId);
       final String? laId = hardwareComponent.locationEntity.listeningAreaId;
@@ -108,7 +116,7 @@ extension ListeningAreaViewModel on ProjectViewModel {
       final Map<String, String> laToZoneMap = <String, String>{};
 
       for (final ListeningArea la in allListeningAreas) {
-        final Zone? zone = getZonesForListeningArea(la.id);
+        final Zone? zone = getZonesForListeningArea(areaId: la.id);
         if (zone != null) {
           laToZoneMap[la.id] = zone.id;
         }

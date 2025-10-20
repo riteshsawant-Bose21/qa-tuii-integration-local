@@ -3,12 +3,16 @@ import 'package:fusion_lib/fusion_lib.dart';
 class CircuitModel {
   final String id;
   final String name;
-  PortData inputPort;
+  final PortData inputPort;
+  final String? tapSetting;
+  final String? impedance;
 
   CircuitModel({
     String? id,
     required this.name,
     PortData? inputPort,
+    this.impedance,
+    this.tapSetting,
   }) : id = id ?? "CIRCUIT${FusionUtils.shortStringUUID()}",
        inputPort =
            inputPort ??
@@ -26,13 +30,16 @@ class CircuitModel {
   CircuitModel copyWith({
     String? id,
     String? name,
-    String? zoneId,
     PortData? inputPort,
+    String? tapSetting,
+    String? impedance,
   }) {
     return CircuitModel(
       id: id ?? this.id,
       name: name ?? this.name,
       inputPort: inputPort ?? this.inputPort,
+      tapSetting: tapSetting ?? this.tapSetting,
+      impedance: impedance ?? this.impedance,
     );
   }
 
@@ -41,6 +48,8 @@ class CircuitModel {
       id: json['id'],
       name: json['name'],
       inputPort: json['inputPort'] != null ? PortData.fromJson(json['inputPort']) : null,
+      impedance: json['impedance'],
+      tapSetting: json['tapSetting'],
     );
   }
 
@@ -49,6 +58,8 @@ class CircuitModel {
       'id': id,
       'name': name,
       'inputPort': inputPort.toJson(),
+      'impedance': impedance,
+      'tapSetting': tapSetting,
     };
   }
 }

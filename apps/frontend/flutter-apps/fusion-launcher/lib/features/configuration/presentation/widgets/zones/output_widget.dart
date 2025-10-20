@@ -87,7 +87,7 @@ class OutputWidgetState extends State<OutputWidget> {
                   Offset? center;
 
                   if (location.listeningAreaId != null) {
-                    final ListeningArea area = serviceLocator<ProjectViewModel>().getListeningArea(location.listeningAreaId!);
+                    final ListeningArea area = serviceLocator<ProjectViewModel>().getListeningArea(areaId: location.listeningAreaId!);
 
                     //find the center of area.vertices
                     center = Offset(
@@ -271,15 +271,15 @@ class OutputWidgetState extends State<OutputWidget> {
             ProcessingBlockView(
               processingType: ProcessingType.output,
               isControlMode: widget.isControlMode,
-              selectedBlocks: serviceLocator<ProjectViewModel>().getProcessingBlockFor(widget.speaker.id) ?? <ProcessingBlockModel>[],
+              selectedBlocks: serviceLocator<ProjectViewModel>().getProcessingBlockFor(parentId: widget.speaker.id) ?? <ProcessingBlockModel>[],
               onBlocksUpdated: (int oldIndex, int newIndex) {
-                serviceLocator<ProjectViewModel>().reOrderProcessingBlocks(widget.speaker.id, oldIndex, newIndex);
+                serviceLocator<ProjectViewModel>().reOrderProcessingBlocks(parentId: widget.speaker.id, oldIndex: oldIndex, newIndex: newIndex);
               },
               onBlockRemoved: (String blockId) {
-                serviceLocator<ProjectViewModel>().removeProcessingBlock(blockId);
+                serviceLocator<ProjectViewModel>().removeProcessingBlock(processingBlockId: blockId);
               },
               onBlockSelected: (ProcessingBlockModel block) {
-                serviceLocator<ProjectViewModel>().addProcessingBlockToParent(block, widget.speaker.id);
+                serviceLocator<ProjectViewModel>().addProcessingBlockToParent(processingBlock: block, parentId: widget.speaker.id);
               },
             ),
           ],
@@ -341,11 +341,11 @@ class OutputWidgetState extends State<OutputWidget> {
 
   String getLocation(LocationModel location) {
     if (location.floorId != null && location.listeningAreaId != null) {
-      final FloorModel floor = serviceLocator<ProjectViewModel>().getFloorById(location.floorId!);
-      final ListeningArea area = serviceLocator<ProjectViewModel>().getListeningArea(location.listeningAreaId!);
+      final FloorModel floor = serviceLocator<ProjectViewModel>().getFloorById(floorId: location.floorId!);
+      final ListeningArea area = serviceLocator<ProjectViewModel>().getListeningArea(areaId: location.listeningAreaId!);
       return "${floor.name}/${area.name}"; // Display floor and listening area names
     } else if (location.floorId != null) {
-      final FloorModel floor = serviceLocator<ProjectViewModel>().getFloorById(location.floorId!);
+      final FloorModel floor = serviceLocator<ProjectViewModel>().getFloorById(floorId: location.floorId!);
       return floor.name; // Display floor number
     } else if (location.listeningAreaId != null) {
       return "Listening Area ${location.listeningAreaId}"; // Display listening area number

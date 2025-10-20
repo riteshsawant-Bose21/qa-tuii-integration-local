@@ -59,13 +59,13 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
 
   void zoneSelectionMode(Zone zone) async {
     final List<ListeningArea>? selectedAreas = await widget.floorCanvasController.requestListeningAreaSelection(
-      serviceLocator<ProjectViewModel>().getListeningAreasForZone(zone.id),
+      serviceLocator<ProjectViewModel>().getListeningAreasForZone(zoneId: zone.id),
       zone,
     );
 
     if (selectedAreas != null) {
       // Get existing listening areas for this zone
-      final List<ListeningArea> existingAreas = serviceLocator<ProjectViewModel>().getListeningAreasForZone(zone.id);
+      final List<ListeningArea> existingAreas = serviceLocator<ProjectViewModel>().getListeningAreasForZone(zoneId: zone.id);
 
       // Find areas to remove (existing but not in selected)
       final List<ListeningArea> areasToRemove =
@@ -77,14 +77,14 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
 
       // Remove areas that are no longer selected
       for (ListeningArea area in areasToRemove) {
-        serviceLocator<ProjectViewModel>().removeListeningAreaFromZone(area.id, zone.id);
+        serviceLocator<ProjectViewModel>().removeListeningAreaFromZone(listeningAreaId: area.id, zoneId: zone.id);
       }
 
       // Add newly selected areas
       for (ListeningArea area in areasToAdd) {
-        serviceLocator<ProjectViewModel>().addListeningAreaToZone(area.id, zone.id);
+        serviceLocator<ProjectViewModel>().addListeningAreaToZone(listeningAreaId: area.id, zoneId: zone.id);
       }
-      serviceLocator<ProjectViewModel>().saveProjectToLocal();
+      serviceLocator<ProjectViewModel>().saveProject();
     } else {
       serviceLocator<ProjectViewModel>().clearSelectedZone();
     }
@@ -178,45 +178,50 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                             child: FloorCanvas(
                               gridSize: 100,
                               controller: widget.floorCanvasController,
-                              hardwareComponents: serviceLocator<ProjectViewModel>().getHardwareForFloor(floor.id),
-                              listeningAreas: serviceLocator<ProjectViewModel>().getListeningAreasForFloor(floor.id),
+                              hardwareComponents: serviceLocator<ProjectViewModel>().getHardwareForFloor(floorId: floor.id),
+                              listeningAreas: serviceLocator<ProjectViewModel>().getListeningAreasForFloor(floorId: floor.id),
                               floor: floor,
                               floorPlanEntity: floor.floorPlan,
-                              onUpdateHardwareComponent: serviceLocator<ProjectViewModel>().updateHardware,
+                              onUpdateHardwareComponent: (HardwareComponent updatedHw) {
+                                serviceLocator<ProjectViewModel>().updateHardware(hardware: updatedHw);
+                              },
                               zones: serviceLocator<ProjectViewModel>().zones,
                               splPanelData: widget.splPanelData,
                               onCanvasZoomChanged: (double z) {
                                 serviceLocator<ProjectViewModel>().updateFloor(
-                                  floor.copyWith(floorPlan: floor.floorPlan.copyWith(canvasZoom: z)),
+                                  floor: floor.copyWith(floorPlan: floor.floorPlan.copyWith(canvasZoom: z)),
                                 );
                               },
                               onCanvasPanChanged: (ui.Offset p) {
                                 serviceLocator<ProjectViewModel>().updateFloor(
-                                  floor.copyWith(floorPlan: floor.floorPlan.copyWith(canvasPan: p)),
+                                  floor: floor.copyWith(floorPlan: floor.floorPlan.copyWith(canvasPan: p)),
                                 );
                               },
                               moveHardware: (HardwareComponent hardware, String? newListeningAreaId, String? floorId) {
-                                serviceLocator<ProjectViewModel>().moveHardware(hardware.id, floorId: floorId, listeningAreaId: newListeningAreaId);
+                                serviceLocator<ProjectViewModel>().moveHardware(hardwareId: hardware.id, floorId: floorId, listeningAreaId: newListeningAreaId);
                                 // serviceLocator<ProjectViewModel>().saveProjectToLocal();
                               },
                               onAddListeningArea: (ListeningArea created, List<HardwareComponent>? containedHardware) {
-                                serviceLocator<ProjectViewModel>().addListeningArea(created, floor.id);
+                                serviceLocator<ProjectViewModel>().addListeningArea(area: created, floorId: floor.id, autoSave: false);
                                 if (containedHardware != null) {
                                   for (final HardwareComponent hc in containedHardware) {
                                     serviceLocator<ProjectViewModel>().moveHardware(
-                                      hc.id,
+                                      hardwareId: hc.id,
                                       listeningAreaId: created.id,
                                       floorId: floor.id,
+                                      autoSave: false,
                                     );
                                   }
                                 }
                                 widget.onCalculateSpl();
-                                serviceLocator<ProjectViewModel>().saveProjectToLocal();
+                                serviceLocator<ProjectViewModel>().saveProject();
                               },
-                              onUpdateListeningArea: serviceLocator<ProjectViewModel>().updateListeningArea,
+                              onUpdateListeningArea: (ListeningArea area) {
+                                serviceLocator<ProjectViewModel>().updateListeningArea(area: area);
+                              },
                               onFloorPlanUpdated: (FloorPlanModel updatedPlan) {
                                 serviceLocator<ProjectViewModel>().updateFloor(
-                                  floor.copyWith(floorPlan: updatedPlan),
+                                  floor: floor.copyWith(floorPlan: updatedPlan),
                                 );
                               },
                               onViewportCenterUpdated: (ui.Offset center) {
@@ -226,7 +231,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                 if (component is Speaker || component is ListeningArea) {
                                   widget.onCalculateSpl();
                                 }
-                                serviceLocator<ProjectViewModel>().saveProjectToLocal();
+                                serviceLocator<ProjectViewModel>().saveProject();
                               },
                               onTapListeningArea: (ListeningArea value) {
                                 // serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(value.id);
@@ -254,7 +259,6 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                   position: speakerPosition,
                                   listeningAreaId: listeningAreaId,
                                 );
-                                serviceLocator<ProjectViewModel>().saveProjectToLocal();
                               },
                               listeningAreaToZoneMap: serviceLocator<ProjectViewModel>().getListeningAreaToZoneMap(),
                             ),
@@ -474,13 +478,13 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                             invertedColors: widget.splPanelData.splInvertColor,
                             onChanged: (double min, double max) {
                               // debugPrint("SPL Range changed: ${min.round()} - ${max.round()}");
-                              serviceLocator<ProjectViewModel>().setMinSPL(min);
-                              serviceLocator<ProjectViewModel>().setMaxSPL(max);
+                              serviceLocator<ProjectViewModel>().setMinSPL(minSPL: min, autoSave: false);
+                              serviceLocator<ProjectViewModel>().setMaxSPL(maxSPL: max);
                             },
                             onChangeEnd: (double min, double max) {
                               // debugPrint("SPL Range change ended: ${min.round()} - ${max.round()}");
-                              serviceLocator<ProjectViewModel>().setMinSPL(min);
-                              serviceLocator<ProjectViewModel>().setMaxSPL(max);
+                              serviceLocator<ProjectViewModel>().setMinSPL(minSPL: min, autoSave: false);
+                              serviceLocator<ProjectViewModel>().setMaxSPL(maxSPL: max);
                               // serviceLocator<ProjectViewModel>().saveProjectToLocal();
                             },
                           ),
@@ -646,7 +650,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
 
   Future<void> _selectAssetFloorPlan(String assetImagePath) async {
     if (mounted) Navigator.of(context).pop();
-    final ResponseCallback<String?> responseCallback = await serviceLocator<ProjectViewModel>().addAssetImageToProject(assetImagePath);
+    final ResponseCallback<String?> responseCallback = await serviceLocator<ProjectViewModel>().addAssetImageToProject(assetPath: assetImagePath);
     if (responseCallback.success && responseCallback.data != null) {
       final String savedImagePath = responseCallback.data!;
       _calibrateFloorPlan(savedImagePath);
@@ -672,7 +676,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
       if (result != null && result.files.single.path != null) {
         final String sourcePath = result.files.single.path!;
         final String fileName = result.files.single.name;
-        final ResponseCallback<String?> responseCallback = await serviceLocator<ProjectViewModel>().addImageToProject(sourcePath);
+        final ResponseCallback<String?> responseCallback = await serviceLocator<ProjectViewModel>().addImageToProject(imagePath: sourcePath);
         if (responseCallback.success && responseCallback.data != null) {
           final String savedImagePath = responseCallback.data!;
           _calibrateFloorPlan(savedImagePath);
@@ -792,7 +796,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
         }
 
         serviceLocator<ProjectViewModel>().updateFloor(
-          floor.copyWith(
+          floor: floor.copyWith(
             floorPlan: floor.floorPlan.copyWith(
               imagePath: imagePathToUse,
               position: floor.floorPlan.imagePath.isNotEmpty ? floor.floorPlan.position : viewPortCenter,
@@ -802,7 +806,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
         );
 
         widget.floorCanvasController.loadFloorPlanImage();
-        serviceLocator<ProjectViewModel>().saveProjectToLocal();
+        serviceLocator<ProjectViewModel>().saveProject();
       } else {
         debugPrint('Calibration cancelled by user');
       }
@@ -847,7 +851,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
     debugPrint('Cropped image temporarily saved to: $tempPath');
 
     // Now use the project's image management system to properly store it
-    final ResponseCallback<String?> responseCallback = await serviceLocator<ProjectViewModel>().addImageToProject(tempPath);
+    final ResponseCallback<String?> responseCallback = await serviceLocator<ProjectViewModel>().addImageToProject(imagePath: tempPath);
 
     // Clean up the temporary file
     try {

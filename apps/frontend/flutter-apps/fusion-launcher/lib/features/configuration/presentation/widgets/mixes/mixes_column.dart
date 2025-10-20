@@ -115,12 +115,12 @@ class _MixColumnState extends State<MixColumn> {
                 widget.onMixUpdated(ss);
               },
               onSourceRemoved: (String sourceId) {
-                serviceLocator<ProjectViewModel>().removeSourceFromSourceSet(sourceId, widget.mixes[i].id);
+                serviceLocator<ProjectViewModel>().removeSourceFromSourceSet(sourceId: sourceId, sourceSetId: widget.mixes[i].id);
               },
               onDelete: () {
                 widget.onMixDeleted(widget.mixes[i]);
               },
-              selectedSources: serviceLocator<ProjectViewModel>().getSourcesInSourceSet(widget.mixes[i].id),
+              selectedSources: serviceLocator<ProjectViewModel>().getSourcesInSourceSet(sourceSetId: widget.mixes[i].id),
               duplicateMix: () {
                 final SourceSet newMix = SourceSet(
                   name: '${widget.mixes[i].name} (Copy)',
@@ -128,7 +128,7 @@ class _MixColumnState extends State<MixColumn> {
                 widget.onMixAdded(newMix);
               },
               onSourcesSetUpdated: (String sourceSetId, List<String> newSourceIds) {
-                serviceLocator<ProjectViewModel>().updateSourcesInSourceSet(sourceSetId, newSourceIds);
+                serviceLocator<ProjectViewModel>().updateSourcesInSourceSet(sourceSetId: sourceSetId, sourceIds: newSourceIds);
               },
             ),
           ),

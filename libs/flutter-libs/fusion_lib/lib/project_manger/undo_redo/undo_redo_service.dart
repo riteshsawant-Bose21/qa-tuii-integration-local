@@ -41,7 +41,9 @@ extension UndoRedoService on ProjectService {
       // if batching already started, we already captured before snapshot on beginBatch
       return;
     }
+    print("Recording undo snapshot");
     _pushUndoSnapshot(_captureSnapshot());
+    print("Undo stack size: ${undoStack.length}");
   }
 
   /// Begin grouping multiple operations into a single undo step.
@@ -75,6 +77,7 @@ extension UndoRedoService on ProjectService {
 
     // Pop the previous state from undo and restore it
     final snapshot = undoStack.removeLast();
+    print("Undo performed. Undo stack size: ${undoStack.length}, Redo stack size: ${redoStack.length}");
     return snapshot;
   }
 
@@ -86,6 +89,7 @@ extension UndoRedoService on ProjectService {
 
     // pop redo
     final snapshot = redoStack.removeLast();
+    print("Redo performed. Undo stack size: ${undoStack.length}, Redo stack size: ${redoStack.length}");
     return snapshot;
   }
 }

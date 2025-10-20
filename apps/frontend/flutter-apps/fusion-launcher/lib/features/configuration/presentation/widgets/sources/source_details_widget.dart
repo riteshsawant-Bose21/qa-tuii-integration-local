@@ -183,16 +183,20 @@ class _DevicePropertiesWidgetState extends State<DevicePropertiesWidget> {
           // ),
           ProcessingBlockView(
             processingType: ProcessingType.input,
-            selectedBlocks: serviceLocator<ProjectViewModel>().getProcessingBlockFor(widget.device.id),
+            selectedBlocks: serviceLocator<ProjectViewModel>().getProcessingBlockFor(parentId: widget.device.id),
             isControlMode: false,
             onBlockSelected: (ProcessingBlockModel selected) {
-              serviceLocator<ProjectViewModel>().addProcessingBlockToParent(selected, widget.device.id);
+              serviceLocator<ProjectViewModel>().addProcessingBlockToParent(processingBlock: selected, parentId: widget.device.id);
             },
             onBlockRemoved: (String blockId) {
-              serviceLocator<ProjectViewModel>().removeProcessingBlock(blockId);
+              serviceLocator<ProjectViewModel>().removeProcessingBlock(processingBlockId: blockId);
             },
             onBlocksUpdated: (int oldIndex, int newIndex) {
-              serviceLocator<ProjectViewModel>().reOrderProcessingBlocks(widget.device.id, oldIndex, newIndex);
+              serviceLocator<ProjectViewModel>().reOrderProcessingBlocks(
+                parentId: widget.device.id,
+                oldIndex: oldIndex,
+                newIndex: newIndex,
+              );
             },
           ),
           const SizedBox(

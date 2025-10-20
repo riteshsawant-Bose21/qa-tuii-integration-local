@@ -69,12 +69,12 @@ class ZoneWidgetState extends State<ZoneWidget> {
           (_) => MultiMixPickerDialog(
             title: 'Select Mixes',
             devices: widget.availableMixes,
-            initiallySelected: serviceLocator<ProjectViewModel>().getSourceSetsInZone(widget.zone.id),
+            initiallySelected: serviceLocator<ProjectViewModel>().getSourceSetsInZone(zoneId: widget.zone.id),
           ),
     );
     if (picked != null) {
       final List<String> updatedMixIds = picked.map((SourceSet m) => m.id).toList();
-      serviceLocator<ProjectViewModel>().updateSourceSets(zone.id, updatedMixIds);
+      serviceLocator<ProjectViewModel>().updateSourceSets(zoneId: zone.id, sourceSetIds: updatedMixIds);
     }
   }
 
@@ -118,7 +118,7 @@ class ZoneWidgetState extends State<ZoneWidget> {
     final ColorScheme colors = Theme.of(context).colorScheme;
     _nameController.text = widget.zone.name;
 
-    final List<SourceSet> sourceSetsInZone = serviceLocator<ProjectViewModel>().getSourceSetsInZone(widget.zone.id);
+    final List<SourceSet> sourceSetsInZone = serviceLocator<ProjectViewModel>().getSourceSetsInZone(zoneId: widget.zone.id);
 
     return Card(
       elevation: 0,
@@ -322,7 +322,7 @@ class ZoneWidgetState extends State<ZoneWidget> {
                                       (widget.isControlMode)
                                           ? null
                                           : () {
-                                            serviceLocator<ProjectViewModel>().removeSourceSetFromZone(sourceSet.id, widget.zone.id);
+                                            serviceLocator<ProjectViewModel>().removeSourceSetFromZone(sourceSetId: sourceSet.id, zoneId: widget.zone.id);
                                           },
                                 ),
                               );
@@ -337,16 +337,16 @@ class ZoneWidgetState extends State<ZoneWidget> {
             //Processing blocks
             ProcessingBlockView(
               processingType: ProcessingType.zone,
-              selectedBlocks: serviceLocator<ProjectViewModel>().getProcessingBlockFor(widget.zone.id),
+              selectedBlocks: serviceLocator<ProjectViewModel>().getProcessingBlockFor(parentId: widget.zone.id),
               onBlocksUpdated: (int oldIndex, int newIndex) {
-                serviceLocator<ProjectViewModel>().reOrderProcessingBlocks(widget.zone.id, oldIndex, newIndex);
+                serviceLocator<ProjectViewModel>().reOrderProcessingBlocks(parentId: widget.zone.id, oldIndex: oldIndex, newIndex: newIndex);
               },
               isControlMode: widget.isControlMode,
               onBlockRemoved: (String blockId) {
-                serviceLocator<ProjectViewModel>().removeProcessingBlock(blockId);
+                serviceLocator<ProjectViewModel>().removeProcessingBlock(processingBlockId: blockId);
               },
               onBlockSelected: (ProcessingBlockModel block) {
-                serviceLocator<ProjectViewModel>().addProcessingBlockToParent(block, widget.zone.id);
+                serviceLocator<ProjectViewModel>().addProcessingBlockToParent(processingBlock: block, parentId: widget.zone.id);
               },
             ),
 

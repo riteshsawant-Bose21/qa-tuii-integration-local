@@ -94,10 +94,10 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
                                       onSourceAdded: _addSource,
                                       isControlMode: serviceLocator<ProjectViewModel>().isInControlMode,
                                       onFloorUpdated: (FloorModel updatedFloor) {
-                                        serviceLocator<ProjectViewModel>().updateFloor(updatedFloor);
+                                        serviceLocator<ProjectViewModel>().updateFloor(floor: updatedFloor);
                                       },
                                       onFloorAdded: (FloorModel newFloor) {
-                                        serviceLocator<ProjectViewModel>().addFloor(newFloor);
+                                        serviceLocator<ProjectViewModel>().addFloor(floor: newFloor);
                                       },
                                     ),
                                   ),
@@ -133,27 +133,27 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
                                       onZoneDeleted: _deleteZone,
                                       onSpeakerUpdated: (Speaker speakers) {
                                         print("Updating hardware: ${speakers.toJson()}");
-                                        serviceLocator<ProjectViewModel>().updateHardware(speakers);
+                                        serviceLocator<ProjectViewModel>().updateHardware(hardware: speakers);
                                       },
                                       onSpeakerModelUpdated: (Speaker speaker, LocationModel locationModel) {
                                         // Update speaker model for position and rotation changes
                                         // serviceLocator<ProjectViewModel>().updateHardware(speaker);
                                         print("Updating hardware location: ${speaker.toJson()} with location: ${locationModel.toJson()}");
                                         //for location changes
-                                        serviceLocator<ProjectViewModel>().updateHardwareLocation(speaker.id, locationModel);
+                                        serviceLocator<ProjectViewModel>().updateHardwareLocation(hardwareId: speaker.id, newLocation: locationModel);
                                       },
                                       onSpeakerDeleted: (Speaker speaker) {
-                                        serviceLocator<ProjectViewModel>().removeHardware(speaker.id);
+                                        serviceLocator<ProjectViewModel>().removeHardware(hardwareId: speaker.id);
                                       },
                                       onSpeakerAdded: (Speaker speaker, String zoneId) {
-                                        serviceLocator<ProjectViewModel>().addHardware(speaker);
-                                        serviceLocator<ProjectViewModel>().addSpeakerToZone(speaker.id, zoneId);
+                                        serviceLocator<ProjectViewModel>().addHardware(hardware: speaker, autoSave: false);
+                                        serviceLocator<ProjectViewModel>().addSpeakerToZone(hardwareId: speaker.id, zoneId: zoneId);
                                       },
                                       onFloorUpdated: (FloorModel updatedFloor) {
-                                        serviceLocator<ProjectViewModel>().updateFloor(updatedFloor);
+                                        serviceLocator<ProjectViewModel>().updateFloor(floor: updatedFloor);
                                       },
                                       onFloorAdded: (FloorModel newFloor) {
-                                        serviceLocator<ProjectViewModel>().addFloor(newFloor);
+                                        serviceLocator<ProjectViewModel>().addFloor(floor: newFloor);
                                       },
                                     ),
                                   ),
@@ -313,7 +313,7 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
                                 height: 28,
                                 child: ElevatedButton(
                                   onPressed: () {
-                                    serviceLocator<ProjectViewModel>().setVirtualIP(_virtualIPController.text);
+                                    serviceLocator<ProjectViewModel>().setVirtualIP(ip: _virtualIPController.text);
                                   },
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.grey.shade800,
@@ -520,7 +520,7 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
 
   // show a dialog with the JSON representation of the audio system data with pretty formatting
   void sendDataToDRO() async {
-    serviceLocator<ProjectViewModel>().saveProjectToLocal();
+    serviceLocator<ProjectViewModel>().saveProject();
     /*final Map<String, dynamic> outputJson = JsonFormatConverter.convertFormat(projectManager.value.toJson(), projectManager.value.fusionDevices);
 
     //show a loader dialog while processing
@@ -598,7 +598,7 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
   }
 
   void sendToDSP() async {
-    serviceLocator<ProjectViewModel>().saveProjectToLocal();
+    serviceLocator<ProjectViewModel>().saveProject();
 
     /*    //show a loader dialog while processing
     FusionUtils.showLoader(context);
@@ -660,51 +660,42 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
   }
 
   void _deleteSource(Source source) {
-    serviceLocator<ProjectViewModel>().removeHardware(source.id);
-    saveProject();
+    serviceLocator<ProjectViewModel>().removeHardware(hardwareId: source.id);
   }
 
   void _updateSource(Source source) {
-    serviceLocator<ProjectViewModel>().updateHardware(source);
-    saveProject();
+    serviceLocator<ProjectViewModel>().updateHardware(hardware: source);
   }
 
   void _addSource(Source source) {
-    serviceLocator<ProjectViewModel>().addHardware(source);
-    saveProject();
+    serviceLocator<ProjectViewModel>().addHardware(hardware: source);
   }
 
   void _onMixUpdated(SourceSet p1) {
-    serviceLocator<ProjectViewModel>().updateSourceSet(p1);
-    saveProject();
+    serviceLocator<ProjectViewModel>().updateSourceSet(sourceSet: p1);
   }
 
   void _onMixAdded(SourceSet p1) {
-    serviceLocator<ProjectViewModel>().addSourceSet(p1);
-    saveProject();
+    serviceLocator<ProjectViewModel>().addSourceSet(sourceSet: p1);
   }
 
   void _onMixDeleted(SourceSet p1) {
-    serviceLocator<ProjectViewModel>().removeSourceSet(p1.id);
-    saveProject();
+    serviceLocator<ProjectViewModel>().removeSourceSet(sourceSetId: p1.id);
   }
 
   void _addNewZone(Zone p1) {
-    serviceLocator<ProjectViewModel>().addZone(p1);
-    saveProject();
+    serviceLocator<ProjectViewModel>().addZone(zone: p1);
   }
 
   void _updateZone(Zone updated) {
-    serviceLocator<ProjectViewModel>().updateZone(updated);
-    saveProject();
+    serviceLocator<ProjectViewModel>().updateZone(zone: updated);
   }
 
   void _deleteZone(Zone zone) {
-    serviceLocator<ProjectViewModel>().removeZone(zone.id);
-    saveProject();
+    serviceLocator<ProjectViewModel>().removeZone(zoneId: zone.id);
   }
 
-  saveProject() {
-    serviceLocator<ProjectViewModel>().saveProjectToLocal();
-  }
+  // saveProject() {
+  //   serviceLocator<ProjectViewModel>().saveProject();
+  // }
 }

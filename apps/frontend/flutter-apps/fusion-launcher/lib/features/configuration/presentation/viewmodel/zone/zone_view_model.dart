@@ -1,11 +1,10 @@
-import 'package:fusion_launcher/features/configuration/presentation/viewmodel/circuit/circuit_viewmodel.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../project_view_model.dart';
 
 extension ZoneViewModel on ProjectViewModel {
   //get Zone by id
-  Zone? getZone(String zoneId) {
+  Zone? getZone({required String zoneId}) {
     try {
       return projectManager.getZoneById(zoneId);
     } catch (e) {
@@ -13,9 +12,12 @@ extension ZoneViewModel on ProjectViewModel {
     }
   }
 
-  void updateZone(Zone zone) {
+  void updateZone({required Zone zone, bool autoSave = true}) {
     try {
       projectManager.updateZone(zone);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to update zone: $e");
@@ -23,9 +25,9 @@ extension ZoneViewModel on ProjectViewModel {
     }
   }
 
-  void updateListeningAreasInZone(String zoneId, List<String> listeningAreaIds) {
+  void updateListeningAreasInZone({required String zoneId, required List<String> listeningAreaIds, bool autoSave = true}) {
     try {
-      final List<ListeningArea> currentListeningAreas = getListeningAreasForZone(zoneId);
+      final List<ListeningArea> currentListeningAreas = getListeningAreasForZone(zoneId: zoneId);
       final List<String> currentListeningAreaIds = currentListeningAreas.map((ListeningArea e) => e.id).toList();
       final List<String> toRemove = currentListeningAreaIds.where((String id) => !listeningAreaIds.contains(id)).toList();
       final List<String> toAdd = listeningAreaIds.where((String id) => !currentListeningAreaIds.contains(id)).toList();
@@ -35,6 +37,9 @@ extension ZoneViewModel on ProjectViewModel {
       for (final String id in toAdd) {
         projectManager.addListeningAreaToZone(id, zoneId);
       }
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to update listening areas for zone: $e");
@@ -42,9 +47,12 @@ extension ZoneViewModel on ProjectViewModel {
     }
   }
 
-  void addZone(Zone zone) {
+  void addZone({required Zone zone, bool autoSave = true}) {
     try {
       projectManager.addZone(zone);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to add zone: $e");
@@ -52,9 +60,12 @@ extension ZoneViewModel on ProjectViewModel {
     }
   }
 
-  void removeZone(String zoneId) {
+  void removeZone({required String zoneId, bool autoSave = true}) {
     try {
       projectManager.removeZone(zoneId);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to remove zone: $e");
@@ -62,11 +73,14 @@ extension ZoneViewModel on ProjectViewModel {
     }
   }
 
-  void removeAllZones() {
+  void removeAllZones({bool autoSave = true}) {
     try {
       final List<Zone> allZones = getAllZones();
       for (final Zone zone in allZones) {
         projectManager.removeZone(zone.id);
+      }
+      if (autoSave) {
+        saveProject();
       }
       updateProject();
     } catch (e) {
@@ -84,7 +98,7 @@ extension ZoneViewModel on ProjectViewModel {
     }
   }
 
-  List<ListeningArea> getListeningAreasForZone(String zoneId) {
+  List<ListeningArea> getListeningAreasForZone({required String zoneId}) {
     try {
       return projectManager.getListeningAreasForZone(zoneId);
     } catch (e) {
@@ -93,7 +107,7 @@ extension ZoneViewModel on ProjectViewModel {
     }
   }
 
-  List<SourceSet> getSourceSetsInZone(String zoneId) {
+  List<SourceSet> getSourceSetsInZone({required String zoneId}) {
     try {
       return projectManager.getSourceSetsInZone(zoneId);
     } catch (e) {
@@ -102,9 +116,9 @@ extension ZoneViewModel on ProjectViewModel {
     }
   }
 
-  void updateSourceSets(String zoneId, List<String> sourceSetIds) {
+  void updateSourceSets({required String zoneId, required List<String> sourceSetIds, bool autoSave = true}) {
     try {
-      final List<SourceSet> currentSourceSets = getSourceSetsInZone(zoneId);
+      final List<SourceSet> currentSourceSets = getSourceSetsInZone(zoneId: zoneId);
       final List<String> currentSourceSetIds = currentSourceSets.map((SourceSet e) => e.id).toList();
       final List<String> toRemove = currentSourceSetIds.where((String id) => !sourceSetIds.contains(id)).toList();
       final List<String> toAdd = sourceSetIds.where((String id) => !currentSourceSetIds.contains(id)).toList();
@@ -114,6 +128,9 @@ extension ZoneViewModel on ProjectViewModel {
       for (final String id in toAdd) {
         projectManager.addSourceSetToZone(id, zoneId);
       }
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to update source sets for zone: $e");
@@ -122,12 +139,15 @@ extension ZoneViewModel on ProjectViewModel {
   }
 
   //add Speaker to zone with a new circuit
-  void addSpeakerToZone(String hardwareId, String zoneId) {
+  void addSpeakerToZone({required String hardwareId, required String zoneId, bool autoSave = true}) {
     try {
       final CircuitModel circuitModel = CircuitModel(name: "New Circuit");
-      addCircuit(circuitModel);
-      addHardwareToCircuit(hardwareId, circuitModel.id);
-      addCircuitToZone(circuitModel.id, zoneId);
+      projectManager.addCircuit(circuitModel);
+      projectManager.addHardwareToCircuit(hardwareId, circuitModel.id);
+      projectManager.addCircuitToZone(circuitModel.id, zoneId);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to add speaker to zone: $e");
@@ -136,9 +156,12 @@ extension ZoneViewModel on ProjectViewModel {
   }
 
   // Add Source Set to Zone
-  void addSourceSetToZone(String sourceSetId, String zoneId) {
+  void addSourceSetToZone({required String sourceSetId, required String zoneId, bool autoSave = true}) {
     try {
       projectManager.addSourceSetToZone(sourceSetId, zoneId);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to add source set to zone: $e");
@@ -147,9 +170,12 @@ extension ZoneViewModel on ProjectViewModel {
   }
 
   // Remove Source Set from Zone
-  void removeSourceSetFromZone(String sourceSetId, String zoneId) {
+  void removeSourceSetFromZone({required String sourceSetId, required String zoneId, bool autoSave = true}) {
     try {
       projectManager.removeSourceSetFromZone(sourceSetId, zoneId);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to remove source set from zone: $e");
@@ -158,9 +184,12 @@ extension ZoneViewModel on ProjectViewModel {
   }
 
   //Add Listening Area to Zone
-  void addListeningAreaToZone(String listeningAreaId, String zoneId) {
+  void addListeningAreaToZone({required String listeningAreaId, required String zoneId, bool autoSave = true}) {
     try {
       projectManager.addListeningAreaToZone(listeningAreaId, zoneId);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to add listening area to zone: $e");
@@ -169,9 +198,12 @@ extension ZoneViewModel on ProjectViewModel {
   }
 
   // Remove Listening Area from Zone
-  void removeListeningAreaFromZone(String listeningAreaId, String zoneId) {
+  void removeListeningAreaFromZone({required String listeningAreaId, required String zoneId, bool autoSave = true}) {
     try {
       projectManager.removeListeningAreaFromZone(listeningAreaId, zoneId);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to remove listening area from zone: $e");
@@ -179,9 +211,12 @@ extension ZoneViewModel on ProjectViewModel {
     }
   }
 
-  void addCircuitToZone(String zoneId, String circuitId) {
+  void addCircuitToZone({required String zoneId, required String circuitId, bool autoSave = true}) {
     try {
       projectManager.addCircuitToZone(circuitId, zoneId);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to add circuit to zone: $e");
@@ -189,9 +224,12 @@ extension ZoneViewModel on ProjectViewModel {
     }
   }
 
-  void removeCircuitFromZone(String circuitId, String zoneId) {
+  void removeCircuitFromZone({required String circuitId, required String zoneId, bool autoSave = true}) {
     try {
       projectManager.removeCircuitFromZone(circuitId, zoneId);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to remove circuit from zone: $e");

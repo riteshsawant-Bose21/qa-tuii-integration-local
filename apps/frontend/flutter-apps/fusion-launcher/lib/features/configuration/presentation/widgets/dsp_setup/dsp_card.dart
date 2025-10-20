@@ -111,7 +111,7 @@ class _DSPDeviceCardState extends State<DSPDeviceCard> with SingleTickerProvider
           // serviceLocator<ProjectViewModel>().updateFusionDevice(
           //   widget.device.copyWith(status: FusionDeviceSetupStatus.notStarted),
           // );
-          serviceLocator<ProjectViewModel>().saveProjectToLocal();
+          serviceLocator<ProjectViewModel>().saveProject();
 
           // Show success feedback
           ScaffoldMessenger.of(context).showSnackBar(

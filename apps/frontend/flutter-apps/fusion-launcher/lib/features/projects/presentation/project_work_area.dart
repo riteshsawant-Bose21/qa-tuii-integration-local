@@ -94,11 +94,12 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
   }
 
   SplPanelData? _lastPanelData;
+
   _initSplRangeDefaults() {
     final SplPanelData currentPanelData = _splRangeController.getPanelData();
     _lastPanelData = currentPanelData;
-    serviceLocator<ProjectViewModel>().setMinSPL(currentPanelData.splLowerDb);
-    serviceLocator<ProjectViewModel>().setMaxSPL(currentPanelData.splUpperDb);
+    serviceLocator<ProjectViewModel>().setMinSPL(minSPL: currentPanelData.splLowerDb);
+    serviceLocator<ProjectViewModel>().setMaxSPL(maxSPL: currentPanelData.splUpperDb);
   }
 
   void _updateSPLFromPanelData() {
@@ -114,8 +115,8 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
       final Bandwidth maceBandwidth = _mapToMaceBandwidth(currentPanelData.bandwidth);
       final double frequency = currentPanelData.frequency.frequencyValue.toDouble();
       final Weighting weighting = _mapToMaceWeighting(currentPanelData.weighting);
-      serviceLocator<ProjectViewModel>().setMinSPL(currentPanelData.splLowerDb);
-      serviceLocator<ProjectViewModel>().setMaxSPL(currentPanelData.splUpperDb);
+      serviceLocator<ProjectViewModel>().setMinSPL(minSPL: currentPanelData.splLowerDb);
+      serviceLocator<ProjectViewModel>().setMaxSPL(maxSPL: currentPanelData.splUpperDb);
       updateSpl(maceBandwidth, frequency, weighting, currentPanelData.relative);
       setState(() {}); // <-- Trigger rebuild
     }
@@ -154,13 +155,13 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
 
     final FloorModel currentFloor = serviceLocator<ProjectViewModel>().floors[currentFloorIndex];
 
-    final List<ListeningArea> floorListeningAreas = serviceLocator<ProjectViewModel>().getListeningAreasForFloor(currentFloor.id);
+    final List<ListeningArea> floorListeningAreas = serviceLocator<ProjectViewModel>().getListeningAreasForFloor(floorId: currentFloor.id);
     if (floorListeningAreas.isEmpty) return;
 
     final List<Speaker> speakers = List<Speaker>.from(
-      serviceLocator<ProjectViewModel>().getHardwareForFloor(currentFloor.id).whereType<Speaker>(),
+      serviceLocator<ProjectViewModel>().getHardwareForFloor(floorId: currentFloor.id).whereType<Speaker>(),
     );
-    final List<ListeningArea> surfaces = serviceLocator<ProjectViewModel>().getListeningAreasForFloor(currentFloor.id);
+    final List<ListeningArea> surfaces = serviceLocator<ProjectViewModel>().getListeningAreasForFloor(floorId: currentFloor.id);
 
     await SPLCalculationManager.calculateSpl(_engine!, speakers, surfaces, _lastPanelData!.getResolutionSpacing());
 
@@ -184,7 +185,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
     if (currentFloorIndex == -1) return;
 
     final FloorModel currentFloor = serviceLocator<ProjectViewModel>().floors[currentFloorIndex];
-    final List<ListeningArea> floorListeningAreas = serviceLocator<ProjectViewModel>().getListeningAreasForFloor(currentFloor.id);
+    final List<ListeningArea> floorListeningAreas = serviceLocator<ProjectViewModel>().getListeningAreasForFloor(floorId: currentFloor.id);
     if (floorListeningAreas.isEmpty) return;
 
     final List<SPLCalculation> toApply = <SPLCalculation>[];
@@ -248,432 +249,447 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
       animationDuration: Duration.zero,
 
       length: 4,
-      child: Scaffold(
-        appBar: FusionAppBar(
-          backgroundColor: Colors.black87,
-          leading: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: SizedBox(
-              width: 50,
-              height: 50,
-              child: IconButton(
-                icon: Icon(
-                  Icons.arrow_back_ios,
-                  color: Theme.of(context).colorScheme.white,
-                  size: 20,
+      child: BlocConsumer<ProjectViewModel, ProjectViewModelState>(
+        listener: (BuildContext context, ProjectViewModelState state) {},
+        builder: (BuildContext context, ProjectViewModelState state) {
+          return Scaffold(
+            appBar: FusionAppBar(
+              backgroundColor: Colors.black87,
+              leading: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: SizedBox(
+                  width: 50,
+                  height: 50,
+                  child: IconButton(
+                    icon: Icon(
+                      Icons.arrow_back_ios,
+                      color: Theme.of(context).colorScheme.white,
+                      size: 20,
+                    ),
+                    onPressed: () {
+                      serviceLocator<ProjectViewModel>().closeProject();
+                      Navigator.of(context).pop();
+                    },
+                    tooltip: 'Back to projects',
+                  ),
                 ),
-                onPressed: () {
-                  serviceLocator<ProjectViewModel>().closeProject();
-                  Navigator.of(context).pop();
-                },
-                tooltip: 'Back to projects',
-              ),
+              ), // List icon
+              // title: IntrinsicWidth(
+              //   child: TextField(
+              //     controller: _projectNameController,
+              //     textAlign: TextAlign.start,
+              //     style: const TextStyle(
+              //       color: Colors.white,
+              //       fontSize: 20,
+              //       fontWeight: FontWeight.normal,
+              //     ),
+              //     decoration: const InputDecoration(
+              //       border: InputBorder.none,
+              //       isDense: true,
+              //       contentPadding: EdgeInsets.zero,
+              //       hintText: 'Project Name',
+              //       suffixIcon: Icon(
+              //         Icons.edit,
+              //         size: 16,
+              //         color: Colors.grey,
+              //       ),
+              //       suffixIconConstraints: BoxConstraints(
+              //         minWidth: 0,
+              //         minHeight: 0,
+              //       ),
+              //     ),
+              //     onSubmitted: (String value) {
+              //       serviceLocator<ProjectViewModel>().setProjectName(value.trim());
+              //     },
+              //   ),
+              // ),
+              actions: <Widget>[
+                const FusionProfileImage(
+                  assetPath: "assets/images/fusion_default_icon.png",
+                  size: 24,
+                ),
+              ],
+              title: const SizedBox(),
             ),
-          ), // List icon
-          // title: IntrinsicWidth(
-          //   child: TextField(
-          //     controller: _projectNameController,
-          //     textAlign: TextAlign.start,
-          //     style: const TextStyle(
-          //       color: Colors.white,
-          //       fontSize: 20,
-          //       fontWeight: FontWeight.normal,
-          //     ),
-          //     decoration: const InputDecoration(
-          //       border: InputBorder.none,
-          //       isDense: true,
-          //       contentPadding: EdgeInsets.zero,
-          //       hintText: 'Project Name',
-          //       suffixIcon: Icon(
-          //         Icons.edit,
-          //         size: 16,
-          //         color: Colors.grey,
-          //       ),
-          //       suffixIconConstraints: BoxConstraints(
-          //         minWidth: 0,
-          //         minHeight: 0,
-          //       ),
-          //     ),
-          //     onSubmitted: (String value) {
-          //       serviceLocator<ProjectViewModel>().setProjectName(value.trim());
-          //     },
-          //   ),
-          // ),
-          actions: <Widget>[
-            const FusionProfileImage(
-              assetPath: "assets/images/fusion_default_icon.png",
-              size: 24,
-            ),
-          ],
-          title: const SizedBox(),
-        ),
-        body: Column(
-          children: <Widget>[
-            /// Tab Bar Section
-            Container(
-              height: 48,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.white,
-                border: Border.all(color: Theme.of(context).colorScheme.dividerColor, width: 1),
-              ),
-              child: Row(
-                children: <Widget>[
-                  /// Project Name Section
-                  _projectNameSection(),
-
-                  /// Tabs Section
-                  Expanded(
-                    child: TabBar(
-                      labelColor: Colors.black87,
-                      unselectedLabelColor: Theme.of(context).colorScheme.grey,
-                      dividerColor: Colors.transparent,
-                      controller: _tabController,
-                      isScrollable: true,
-                      tabAlignment: TabAlignment.start,
-                      indicatorColor: Colors.black,
-                      indicatorWeight: 3,
-                      indicatorSize: TabBarIndicatorSize.label,
-                      labelStyle: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      unselectedLabelStyle: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w400,
-                      ),
-                      labelPadding: const EdgeInsets.only(left: 32),
-                      tabs: _tabs,
-                    ),
+            body: Column(
+              children: <Widget>[
+                /// Tab Bar Section
+                Container(
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.white,
+                    border: Border.all(color: Theme.of(context).colorScheme.dividerColor, width: 1),
                   ),
+                  child: Row(
+                    children: <Widget>[
+                      /// Project Name Section
+                      _projectNameSection(),
 
-                  /// Undo Icon Section
-                  Visibility(
-                    visible: false,
-                    child: GestureDetector(
-                      onTap: () {
-                        serviceLocator<ProjectViewModel>().canUndo ? () => serviceLocator<ProjectViewModel>().undo() : null;
-                      },
-                      child: Container(
-                        width: 56,
-                        height: 48,
-                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.white,
-                        ),
-                        child: const FusionImage.asset(
-                          "assets/images/return_icon.png",
-                          width: 20,
-                          height: 20,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  /// Redo Icon Section
-                  Visibility(
-                    visible: false,
-                    child: GestureDetector(
-                      onTap: () {
-                        serviceLocator<ProjectViewModel>().canRedo ? () => serviceLocator<ProjectViewModel>().redo() : null;
-                      },
-                      child: Container(
-                        width: 56,
-                        height: 48,
-                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.white,
-                        ),
-
-                        child: Transform(
-                          alignment: Alignment.center,
-                          transform: Matrix4.rotationY(3.14),
-                          child: const FusionImage.asset(
-                            "assets/images/return_icon.png",
-                            width: 20,
-                            height: 20,
+                      /// Tabs Section
+                      Expanded(
+                        child: TabBar(
+                          labelColor: Colors.black87,
+                          unselectedLabelColor: Theme.of(context).colorScheme.grey,
+                          dividerColor: Colors.transparent,
+                          controller: _tabController,
+                          isScrollable: true,
+                          tabAlignment: TabAlignment.start,
+                          indicatorColor: Colors.black,
+                          indicatorWeight: 3,
+                          indicatorSize: TabBarIndicatorSize.label,
+                          labelStyle: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
                           ),
+                          unselectedLabelStyle: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w400,
+                          ),
+                          labelPadding: const EdgeInsets.only(left: 32),
+                          tabs: _tabs,
                         ),
                       ),
-                    ),
-                  ),
 
-                  /// Save Icon Section
-                  Container(
-                    width: 56,
-                    height: 48,
-                    // padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.white,
-                    ),
-                    child: IconButton(
-                      icon: Icon(
-                        Icons.save,
-                        size: 24,
-                        color: Theme.of(context).colorScheme.greyDark,
-                      ),
-                      tooltip: 'Save project',
-                      onPressed: () => _showProjectJsonDialog(context),
-                      onLongPress: () => serviceLocator<ProjectViewModel>().deleteCurrentProjectFromLocal(),
-                    ),
-                  ),
-
-                  /// Share Icon Section
-                  Container(
-                    width: 56,
-                    height: 48,
-                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.white,
-                      // border horizontal
-                      border: Border(
-                        left: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
-                        right: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
-                      ),
-                    ),
-                    child: Image.asset(
-                      "assets/images/share_icon.png",
-                      width: 24,
-                      height: 24,
-                    ),
-                  ),
-                  const ControlDesignTabSwitcher(),
-                ],
-              ),
-            ),
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                physics: const NeverScrollableScrollPhysics(),
-                children: <Widget>[
-                  /// building tab with docking area
-                  BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-                    builder: (BuildContext context, ProjectViewModelState state) {
-                      return FusionDockableArea(
-                        tabKey: "tab1",
-                        showLeft: true,
-                        showRight: true,
-                        mainArea: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-                          builder: (BuildContext context, ProjectViewModelState state) {
-                            return BuildingCanvas(
-                              splRangeController: _splRangeController,
-                              onSplStateChanged: (bool value) {
-                                if (value) {
-                                  productsController.collapse();
-                                  splController.expand();
-                                } else {
-                                  splController.collapse();
-                                }
-                              },
-                              floorCanvasController: _floorCanvasController,
-                              onCalculateSpl: calculateSPL,
-                              splPanelData: _lastPanelData!,
-                            );
+                      /// Undo Icon Section
+                      Visibility(
+                        visible: true,
+                        child: GestureDetector(
+                          onTap: () {
+                            if (serviceLocator<ProjectViewModel>().canUndo) {
+                              serviceLocator<ProjectViewModel>().undo();
+                            }
                           },
-                        ),
-                        dockItemList: <DockItemConfig>[
-                          DockItemConfig(
-                            id: "1",
-                            title: "BUILDING PLAN",
-                            side: "left",
-                            alowUndock: false,
-                            isCollapsibleSection: false,
-                            dockItemWidget: () => const BuildingPlan(),
+                          child: Tooltip(
+                            message: serviceLocator<ProjectViewModel>().canUndo ? "Undo" : "Nothing to undo",
+                            child: Container(
+                              width: 56,
+                              height: 48,
+                              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.white,
+                              ),
+                              child: const FusionImage.asset(
+                                "assets/images/return_icon.png",
+                                width: 20,
+                                height: 20,
+                              ),
+                            ),
                           ),
-                          DockItemConfig(
-                            id: "2",
-                            title: "COVERAGE",
-                            side: "left",
-                            alowUndock: false,
-                            initiallyExpanded: true,
-                            isCollapsibleSection: true,
-                            dockItemWidget:
-                                () => CoveragePanel(
-                                  onModeSelection: (bool value) {
+                        ),
+                      ),
+
+                      /// Redo Icon Section
+                      Visibility(
+                        visible: true,
+                        child: GestureDetector(
+                          onTap: () {
+                            if (serviceLocator<ProjectViewModel>().canRedo) {
+                              serviceLocator<ProjectViewModel>().redo();
+                            }
+                          },
+                          child: Tooltip(
+                            message: serviceLocator<ProjectViewModel>().canRedo ? "Redo" : "Nothing to redo",
+                            child: Container(
+                              width: 56,
+                              height: 48,
+                              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.white,
+                              ),
+
+                              child: Transform(
+                                alignment: Alignment.center,
+                                transform: Matrix4.rotationY(3.14),
+                                child: const FusionImage.asset(
+                                  "assets/images/return_icon.png",
+                                  width: 20,
+                                  height: 20,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      /// Save Icon Section
+                      Container(
+                        width: 56,
+                        height: 48,
+                        // padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.white,
+                        ),
+                        child: IconButton(
+                          icon: Icon(
+                            Icons.save,
+                            size: 24,
+                            color: Theme.of(context).colorScheme.greyDark,
+                          ),
+                          tooltip: 'Save project',
+                          onPressed: () => _showProjectJsonDialog(context),
+                          onLongPress: () => serviceLocator<ProjectViewModel>().deleteCurrentProjectFromLocal(),
+                        ),
+                      ),
+
+                      /// Share Icon Section
+                      Container(
+                        width: 56,
+                        height: 48,
+                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.white,
+                          // border horizontal
+                          border: Border(
+                            left: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
+                            right: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
+                          ),
+                        ),
+                        child: Image.asset(
+                          "assets/images/share_icon.png",
+                          width: 24,
+                          height: 24,
+                        ),
+                      ),
+                      const ControlDesignTabSwitcher(),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: TabBarView(
+                    controller: _tabController,
+                    physics: const NeverScrollableScrollPhysics(),
+                    children: <Widget>[
+                      /// building tab with docking area
+                      BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+                        builder: (BuildContext context, ProjectViewModelState state) {
+                          return FusionDockableArea(
+                            tabKey: "tab1",
+                            showLeft: true,
+                            showRight: true,
+                            mainArea: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+                              builder: (BuildContext context, ProjectViewModelState state) {
+                                return BuildingCanvas(
+                                  splRangeController: _splRangeController,
+                                  onSplStateChanged: (bool value) {
                                     if (value) {
-                                      zoneAreaController.expand();
+                                      productsController.collapse();
+                                      splController.expand();
+                                    } else {
+                                      splController.collapse();
                                     }
                                   },
-                                ),
-                          ),
+                                  floorCanvasController: _floorCanvasController,
+                                  onCalculateSpl: calculateSPL,
+                                  splPanelData: _lastPanelData!,
+                                );
+                              },
+                            ),
+                            dockItemList: <DockItemConfig>[
+                              DockItemConfig(
+                                id: "1",
+                                title: "BUILDING PLAN",
+                                side: "left",
+                                alowUndock: false,
+                                isCollapsibleSection: false,
+                                dockItemWidget: () => const BuildingPlan(),
+                              ),
+                              DockItemConfig(
+                                id: "2",
+                                title: "COVERAGE",
+                                side: "left",
+                                alowUndock: false,
+                                initiallyExpanded: true,
+                                isCollapsibleSection: true,
+                                dockItemWidget:
+                                    () => CoveragePanel(
+                                      onModeSelection: (bool value) {
+                                        if (value) {
+                                          zoneAreaController.expand();
+                                        }
+                                      },
+                                    ),
+                              ),
 
-                          DockItemConfig(
-                            id: "4",
-                            title: "DEVICES",
-                            side: "left",
-                            alowUndock: false,
-                            initiallyExpanded: true,
-                            isCollapsibleSection: true,
-                            dockItemWidget:
-                                () => DevicesPanel(
-                                  onProductSelected: () {
-                                    productsController.expand();
-                                  },
-                                ),
-                          ),
+                              DockItemConfig(
+                                id: "4",
+                                title: "DEVICES",
+                                side: "left",
+                                alowUndock: false,
+                                initiallyExpanded: true,
+                                isCollapsibleSection: true,
+                                dockItemWidget:
+                                    () => DevicesPanel(
+                                      onProductSelected: () {
+                                        productsController.expand();
+                                      },
+                                    ),
+                              ),
 
-                          DockItemConfig(
-                            id: "5",
-                            title: "PROPERTIES",
-                            side: "right",
-                            alowUndock: false,
-                            dockItemWidget:
-                                () => PropertiesPanel(
-                                  onSpeakerUpdated: () {
-                                    print("Speaker properties updated, update SPL...");
-                                    calculateSPL();
-                                  },
-                                ),
-                          ),
-                          DockItemConfig(
-                            id: "6",
-                            title: "COST CALCULATOR",
-                            side: "right",
-                            dockItemWidget:
-                                () => CostCalculatorScreen(
-                                  speakers: serviceLocator<ProjectViewModel>().speakers,
-                                  sources: serviceLocator<ProjectViewModel>().sources,
-                                  controllers: serviceLocator<ProjectViewModel>().fusionControllers,
-                                  racks:
-                                      serviceLocator<ProjectViewModel>().genericHardwareComponents
-                                          .where((GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack)
-                                          .toList(),
-                                  amplifiers: <Amplifier>[],
-                                  fusionDevices: <FusionDsp>[],
-                                  others:
-                                      serviceLocator<ProjectViewModel>().genericHardwareComponents
-                                          .where(
-                                            (HardwareComponent component) =>
-                                                component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
-                                          )
-                                          .toList(),
-                                ),
-                          ),
-                          DockItemConfig(
-                            id: "7",
-                            title: "ZONE & LISTENING AREAS",
-                            side: "right",
-                            controller: zoneAreaController,
-                            initiallyExpanded: serviceLocator<ProjectViewModel>().isInZoneSelectionMode,
-                            // isVisible: serviceLocator<ProjectViewModel>().isInZoneSelectionMode ,
-                            dockItemWidget: () => const ZoneAndListeningAreaPanel(),
-                          ),
-                          DockItemConfig(
-                            id: "8",
-                            title: "PRODUCT QUERY",
-                            side: "right",
-                            dockItemWidget: () => const ProductQueryView(),
-                            controller: productsController,
-                          ),
-                          DockItemConfig(
-                            id: "9",
-                            title: "SPL MAPPING",
-                            side: "right",
-                            controller: splController,
-                            dockItemWidget:
-                                () => SplPanel(
-                                  controller: _splRangeController,
-                                  initialData: _lastPanelData!,
-                                  onChanged: (SplPanelData value) {
-                                    FusionLogger.log(tag: LogTag.panel, message: value.toString());
-                                    _splRangeController.onMappingDataChanged(value);
-                                    _updateSPLFromPanelData();
-                                    setState(() {});
-                                  },
-                                ),
-                          ),
-                        ],
-                      );
-                    },
+                              DockItemConfig(
+                                id: "5",
+                                title: "PROPERTIES",
+                                side: "right",
+                                alowUndock: false,
+                                dockItemWidget:
+                                    () => PropertiesPanel(
+                                      onSpeakerUpdated: () {
+                                        print("Speaker properties updated, update SPL...");
+                                        calculateSPL();
+                                      },
+                                    ),
+                              ),
+                              DockItemConfig(
+                                id: "6",
+                                title: "COST CALCULATOR",
+                                side: "right",
+                                dockItemWidget:
+                                    () => CostCalculatorScreen(
+                                      speakers: serviceLocator<ProjectViewModel>().speakers,
+                                      sources: serviceLocator<ProjectViewModel>().sources,
+                                      controllers: serviceLocator<ProjectViewModel>().fusionControllers,
+                                      racks:
+                                          serviceLocator<ProjectViewModel>().genericHardwareComponents
+                                              .where((GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack)
+                                              .toList(),
+                                      amplifiers: <Amplifier>[],
+                                      fusionDevices: <FusionDsp>[],
+                                      others:
+                                          serviceLocator<ProjectViewModel>().genericHardwareComponents
+                                              .where(
+                                                (HardwareComponent component) =>
+                                                    component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
+                                              )
+                                              .toList(),
+                                    ),
+                              ),
+                              DockItemConfig(
+                                id: "7",
+                                title: "ZONE & LISTENING AREAS",
+                                side: "right",
+                                controller: zoneAreaController,
+                                initiallyExpanded: serviceLocator<ProjectViewModel>().isInZoneSelectionMode,
+                                // isVisible: serviceLocator<ProjectViewModel>().isInZoneSelectionMode ,
+                                dockItemWidget: () => const ZoneAndListeningAreaPanel(),
+                              ),
+                              DockItemConfig(
+                                id: "8",
+                                title: "PRODUCT QUERY",
+                                side: "right",
+                                dockItemWidget: () => const ProductQueryView(),
+                                controller: productsController,
+                              ),
+                              DockItemConfig(
+                                id: "9",
+                                title: "SPL MAPPING",
+                                side: "right",
+                                controller: splController,
+                                dockItemWidget:
+                                    () => SplPanel(
+                                      controller: _splRangeController,
+                                      initialData: _lastPanelData!,
+                                      onChanged: (SplPanelData value) {
+                                        FusionLogger.log(tag: LogTag.panel, message: value.toString());
+                                        _splRangeController.onMappingDataChanged(value);
+                                        _updateSPLFromPanelData();
+                                        setState(() {});
+                                      },
+                                    ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+
+                      /// schematics tab with docking area
+                      BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+                        builder: (BuildContext context, Object? state) {
+                          return FusionDockableArea(
+                            tabKey: "tab2",
+                            showLeft: isListingViewMode ? false : true,
+                            showRight: true,
+                            mainArea: const SchematicsPage(),
+                            dockItemList: <DockItemConfig>[
+                              DockItemConfig(
+                                id: "6",
+                                title: "COST CALCULATOR",
+                                side: "right",
+                                dockItemWidget:
+                                    () => CostCalculatorScreen(
+                                      speakers: serviceLocator<ProjectViewModel>().speakers,
+                                      sources: serviceLocator<ProjectViewModel>().sources,
+                                      controllers: serviceLocator<ProjectViewModel>().fusionControllers,
+                                      racks:
+                                          serviceLocator<ProjectViewModel>().genericHardwareComponents
+                                              .where((GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack)
+                                              .toList(),
+                                      amplifiers: <Amplifier>[],
+                                      fusionDevices: <FusionDsp>[],
+                                      others:
+                                          serviceLocator<ProjectViewModel>().genericHardwareComponents
+                                              .where(
+                                                (HardwareComponent component) =>
+                                                    component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
+                                              )
+                                              .toList(),
+                                    ),
+                              ),
+                              DockItemConfig(
+                                id: "8",
+                                title: "PRODUCT QUERY",
+                                side: "right",
+                                dockItemWidget: () => const ProductQueryView(),
+                              ),
+                              DockItemConfig(
+                                id: "10",
+                                title: "PRODUCT List",
+                                side: "left",
+                                dockItemWidget: () => const FusionAppText(text: "PRODUCT List"),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+
+                      const FusionDockableArea(
+                        tabKey: "testTab",
+                        showLeft: false,
+                        showRight: false,
+                        mainArea: ZoneCircuitConfigPage(),
+                        dockItemList: <DockItemConfig>[],
+                      ),
+
+                      /// budget tab with docking area
+                      const FusionDockableArea(
+                        tabKey: "tab3",
+                        showLeft: false,
+                        showRight: false,
+                        mainArea: BillOfMaterialsPage(),
+                        dockItemList: <DockItemConfig>[],
+                      ),
+
+                      /// Config tab without docking area
+                      const FusionDockableArea(
+                        tabKey: "tab4",
+                        showLeft: false,
+                        showRight: false,
+                        mainArea: AudioSystemDesignPage(),
+                        dockItemList: <DockItemConfig>[],
+                      ),
+
+                      /// Cloud tab without docking area
+                      const FusionCloudWebView(
+                        pageToRedirect: "google.com",
+                        // "embed/projects/${projectManager.value.cloudId}?token=${serviceLocator<SharedPreferencesHandler>().getString(SharedPreferenceKeys.accessToken)}",
+                      ),
+                    ],
                   ),
-
-                  /// schematics tab with docking area
-                  BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-                    builder: (BuildContext context, Object? state) {
-                      return FusionDockableArea(
-                        tabKey: "tab2",
-                        showLeft: isListingViewMode ? false : true,
-                        showRight: true,
-                        mainArea: const SchematicsPage(),
-                        dockItemList: <DockItemConfig>[
-                          DockItemConfig(
-                            id: "6",
-                            title: "COST CALCULATOR",
-                            side: "right",
-                            dockItemWidget:
-                                () => CostCalculatorScreen(
-                                  speakers: serviceLocator<ProjectViewModel>().speakers,
-                                  sources: serviceLocator<ProjectViewModel>().sources,
-                                  controllers: serviceLocator<ProjectViewModel>().fusionControllers,
-                                  racks:
-                                      serviceLocator<ProjectViewModel>().genericHardwareComponents
-                                          .where((GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack)
-                                          .toList(),
-                                  amplifiers: <Amplifier>[],
-                                  fusionDevices: <FusionDsp>[],
-                                  others:
-                                      serviceLocator<ProjectViewModel>().genericHardwareComponents
-                                          .where(
-                                            (HardwareComponent component) =>
-                                                component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
-                                          )
-                                          .toList(),
-                                ),
-                          ),
-                          DockItemConfig(
-                            id: "8",
-                            title: "PRODUCT QUERY",
-                            side: "right",
-                            dockItemWidget: () => const ProductQueryView(),
-                          ),
-                          DockItemConfig(
-                            id: "10",
-                            title: "PRODUCT List",
-                            side: "left",
-                            dockItemWidget: () => const FusionAppText(text: "PRODUCT List"),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-
-                  const FusionDockableArea(
-                    tabKey: "testTab",
-                    showLeft: false,
-                    showRight: false,
-                    mainArea: ZoneCircuitConfigPage(),
-                    dockItemList: <DockItemConfig>[],
-                  ),
-
-                  /// budget tab with docking area
-                  const FusionDockableArea(
-                    tabKey: "tab3",
-                    showLeft: false,
-                    showRight: false,
-                    mainArea: BillOfMaterialsPage(),
-                    dockItemList: <DockItemConfig>[],
-                  ),
-
-                  /// Config tab without docking area
-                  const FusionDockableArea(
-                    tabKey: "tab4",
-                    showLeft: false,
-                    showRight: false,
-                    mainArea: AudioSystemDesignPage(),
-                    dockItemList: <DockItemConfig>[],
-                  ),
-
-                  /// Cloud tab without docking area
-                  const FusionCloudWebView(
-                    pageToRedirect: "google.com",
-                    // "embed/projects/${projectManager.value.cloudId}?token=${serviceLocator<SharedPreferencesHandler>().getString(SharedPreferenceKeys.accessToken)}",
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -822,7 +838,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                       onSubmitted: (String value) {
                         final String trimmedName = value.trim();
                         if (trimmedName.isNotEmpty) {
-                          serviceLocator<ProjectViewModel>().setProjectName(trimmedName);
+                          serviceLocator<ProjectViewModel>().setProjectName(name: trimmedName);
                           Navigator.of(context).pop();
                         } else {
                           setMenuState(() {
@@ -865,7 +881,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                           onTap: () {
                             final String trimmedName = _projectNameController.text.trim();
                             if (trimmedName.isNotEmpty) {
-                              serviceLocator<ProjectViewModel>().setProjectName(trimmedName);
+                              serviceLocator<ProjectViewModel>().setProjectName(name: trimmedName);
                               Navigator.of(context).pop();
                             } else {
                               setMenuState(() {
@@ -887,7 +903,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
   }
 
   void _showProjectJsonDialog(BuildContext context) {
-    serviceLocator<ProjectViewModel>().saveProjectToLocal();
+    serviceLocator<ProjectViewModel>().saveProject();
 
     const JsonEncoder encoder = JsonEncoder.withIndent('  ');
     final Map<String, dynamic> jsonMap = serviceLocator<ProjectViewModel>().getProjectJson();

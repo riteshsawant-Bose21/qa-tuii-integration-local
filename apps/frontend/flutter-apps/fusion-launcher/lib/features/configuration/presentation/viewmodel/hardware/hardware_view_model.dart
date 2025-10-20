@@ -8,7 +8,7 @@ import 'package:fusion_lib/models/project_entities/endpoints.dart';
 
 extension HardwareViewModel on ProjectViewModel {
   //get Hardware by id
-  HardwareComponent? getHardware(String hardwareId) {
+  HardwareComponent? getHardware({required String hardwareId}) {
     try {
       return projectManager.getHardwareById(hardwareId);
     } catch (e) {
@@ -16,9 +16,12 @@ extension HardwareViewModel on ProjectViewModel {
     }
   }
 
-  void updateHardware(HardwareComponent hardware) {
+  void updateHardware({required HardwareComponent hardware, bool autoSave = true}) {
     try {
       projectManager.updateHardware(hardware);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to update hardware: $e");
@@ -26,7 +29,7 @@ extension HardwareViewModel on ProjectViewModel {
     }
   }
 
-  void addHardware(HardwareComponent hardware, {int count = 1}) {
+  void addHardware({required HardwareComponent hardware, int count = 1, bool autoSave = true}) {
     try {
       projectManager.addHardware(hardware);
       if (hardware is Speaker) {
@@ -34,15 +37,21 @@ extension HardwareViewModel on ProjectViewModel {
           projectManager.addHardware(hardware.getClone());
         }
       }
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to add hardware: $e");
     }
   }
 
-  void removeHardware(String hardwareId) {
+  void removeHardware({required String hardwareId, bool autoSave = true}) {
     try {
       projectManager.removeHardware(hardwareId);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to remove hardware: $e");
@@ -58,7 +67,7 @@ extension HardwareViewModel on ProjectViewModel {
     }
   }
 
-  List<HardwareComponent> getHardwareForListeningArea(String listeningAreaId) {
+  List<HardwareComponent> getHardwareForListeningArea({required String listeningAreaId}) {
     try {
       return projectManager.getHardwareForListeningArea(listeningAreaId);
     } catch (e) {
@@ -67,7 +76,7 @@ extension HardwareViewModel on ProjectViewModel {
     }
   }
 
-  List<HardwareComponent> getHardwareForFloor(String floorId) {
+  List<HardwareComponent> getHardwareForFloor({required String floorId}) {
     try {
       return projectManager.getHardwareForFloor(floorId);
     } catch (e) {
@@ -76,9 +85,12 @@ extension HardwareViewModel on ProjectViewModel {
     }
   }
 
-  ResponseCallback<bool> moveHardware(String hardwareId, {String? listeningAreaId, String? floorId}) {
+  ResponseCallback<bool> moveHardware({required String hardwareId, String? listeningAreaId, String? floorId, bool autoSave = true}) {
     try {
       final ResponseCallback<bool> responseCallback = projectManager.moveHardware(hardwareId, listeningAreaId: listeningAreaId, floorId: floorId);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
       return responseCallback;
     } catch (e) {
@@ -87,7 +99,7 @@ extension HardwareViewModel on ProjectViewModel {
     }
   }
 
-  List<HardwareComponent> getSpeakersInZone(String zoneId) {
+  List<HardwareComponent> getSpeakersInZone({required String zoneId}) {
     try {
       return projectManager.getHardwareInZone(zoneId);
     } catch (e) {
@@ -97,7 +109,7 @@ extension HardwareViewModel on ProjectViewModel {
   }
 
   // get zone for hardware
-  Zone? getZoneForHardware(String hardwareId) {
+  Zone? getZoneForHardware({required String hardwareId}) {
     try {
       return projectManager.getZoneForHardware(hardwareId);
     } catch (e) {
@@ -107,7 +119,7 @@ extension HardwareViewModel on ProjectViewModel {
   }
 
   // get CircuitModel for hardware
-  CircuitModel? getCircuitForHardware(String hardwareId) {
+  CircuitModel? getCircuitForHardware({required String hardwareId}) {
     try {
       return projectManager.getCircuitForHardware(hardwareId);
     } catch (e) {
@@ -117,9 +129,12 @@ extension HardwareViewModel on ProjectViewModel {
   }
 
   //add hardware and create circuit
-  void addHardwareAndCreateCircuit(HardwareComponent hw, String circuitId) {
+  void addHardwareAndCreateCircuit({required HardwareComponent hw, required String circuitId, bool autoSave = true}) {
     try {
       projectManager.addHardwareAndCreateCircuit(hw, circuitId);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to add hardware and create circuit: $e");
@@ -127,9 +142,12 @@ extension HardwareViewModel on ProjectViewModel {
   }
 
   // Update hardware location
-  void updateHardwareLocation(String hardwareId, LocationModel newLocation) {
+  void updateHardwareLocation({required String hardwareId, required LocationModel newLocation, bool autoSave = true}) {
     try {
       projectManager.updateHardwareLocation(hardwareId, newLocation);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to update hardware location: $e");
@@ -137,9 +155,12 @@ extension HardwareViewModel on ProjectViewModel {
     }
   }
 
-  void reOrderHardware({required String hardwareIdToMove, required String hardwareAtNewIndex}) {
+  void reOrderHardware({required String hardwareIdToMove, required String hardwareAtNewIndex, bool autoSave = true}) {
     try {
       projectManager.reOrderHardware(hardwareIdToMove: hardwareIdToMove, hardwareAtNewIndex: hardwareAtNewIndex);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to reorder hardware: $e");
@@ -147,7 +168,7 @@ extension HardwareViewModel on ProjectViewModel {
     }
   }
 
-  void addSelectedProduct({required Offset position, String? listeningAreaId}) {
+  void addSelectedProduct({required Offset position, String? listeningAreaId, bool autoSave = true}) {
     if (selectedProductToAdd == null) return;
     try {
       final HardwareComponent newHardware = fromProductQueryModel(
@@ -158,7 +179,7 @@ extension HardwareViewModel on ProjectViewModel {
           listeningAreaId: listeningAreaId,
         ),
       );
-      addHardware(newHardware);
+      addHardware(hardware: newHardware, autoSave: autoSave);
 
       // Clear selected product after adding
       clearSelectedProduct();
@@ -179,7 +200,8 @@ extension HardwareViewModel on ProjectViewModel {
           locationEntity: locationEntity,
           name: product.name,
           pos: pos,
-          zAxis: 300.0, // 200 cm default height
+          zAxis: 300.0,
+          // 200 cm default height
           speakerSKU: product.sku,
           gain: 20.0,
           assetImagePath: product.image,
@@ -322,16 +344,24 @@ extension HardwareViewModel on ProjectViewModel {
           ipAddress: '',
         );
       case ProductType.racks:
-        return GenericHardwareComponent(
+        return HardwareRack(
           locationEntity: locationEntity,
           name: product.name,
           pos: pos,
           assetImagePath: product.image,
-          sku: product.sku,
           price: product.price,
           hardwareName: product.name,
-          type: GenericHardwareComponentType.rack,
         );
+      // Add network switch to product type and uncomment this
+      // case ProductType.networkSwitches:
+      //   return NetworkSwitch(
+      //     locationEntity: locationEntity,
+      //     name: product.name,
+      //     pos: pos,
+      //     assetImagePath: product.image,
+      //     price: product.price,
+      //     hardwareName: product.name,
+      //   );
     }
   }
 }

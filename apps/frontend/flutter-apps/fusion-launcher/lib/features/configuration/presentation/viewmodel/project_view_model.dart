@@ -133,6 +133,7 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
 
   /// Loads all local projects and emits the appropriate state.
   Future<void> loadAllLocalProjects() async {
+    print("Loading all local projects...");
     emit(ProjectLoading());
     try {
       final ResponseCallback<List<ProjectData>> projectsResponse = await projectManager.loadProjectsFromLocal();
@@ -149,14 +150,11 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
   }
 
   /// Save Project to local storage
-  Future<void> saveProjectToLocal() async {
+  Future<void> saveProject() async {
     emit(ProjectLoading());
     try {
       final ResponseCallback<void> saveResponse = await projectManager.saveCurrentProject();
-      if (saveResponse.success) {
-        // Reload projects after saving
-        await loadAllLocalProjects();
-      } else {
+      if (!saveResponse.success) {
         emit(ProjectError(message: "Failed to save project: ${saveResponse.message}"));
         return;
       }

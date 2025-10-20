@@ -291,7 +291,9 @@ class _HomeTabContentState extends State<HomeTabContent> {
             Navigator.pushNamed(
               context,
               Routes.projectPage,
-            );
+            ).then((_) async {
+              await serviceLocator<ProjectViewModel>().loadAllLocalProjects();
+            });
           }
         }
         if (state is OpenProjectError && context.mounted) {

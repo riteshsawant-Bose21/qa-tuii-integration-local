@@ -2,9 +2,12 @@ import 'package:fusion_launcher/features/configuration/presentation/viewmodel/pr
 import 'package:fusion_lib/fusion_lib.dart';
 
 extension ProcessingBlockViewmodel on ProjectViewModel {
-  void addProcessingBlock(ProcessingBlockModel processingBlock) {
+  void addProcessingBlock({required ProcessingBlockModel processingBlock, bool autoSave = true}) {
     try {
       projectManager.addProcessingBlock(processingBlock);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to add processing block: $e");
@@ -12,9 +15,12 @@ extension ProcessingBlockViewmodel on ProjectViewModel {
     }
   }
 
-  void addProcessingBlockToParent(ProcessingBlockModel processingBlock, String parentId) {
+  void addProcessingBlockToParent({required ProcessingBlockModel processingBlock, required String parentId, bool autoSave = true}) {
     try {
       projectManager.addProcessingBlockToParent(processingBlock, parentId);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to add processing block to parent: $e");
@@ -22,9 +28,12 @@ extension ProcessingBlockViewmodel on ProjectViewModel {
     }
   }
 
-  void mapProcessingBlockToParent(String processingBlockId, String parentId) {
+  void mapProcessingBlockToParent({required String processingBlockId, required String parentId, bool autoSave = true}) {
     try {
       projectManager.mapProcessingBlockToParent(processingBlockId, parentId);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to map processing block to parent: $e");
@@ -32,9 +41,12 @@ extension ProcessingBlockViewmodel on ProjectViewModel {
     }
   }
 
-  void removeProcessingBlockFromParent(String processingBlockId, String parentId) {
+  void removeProcessingBlockFromParent({required String processingBlockId, required String parentId, bool autoSave = true}) {
     try {
       projectManager.removeProcessingBlockFromParent(processingBlockId, parentId);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to remove processing block from parent: $e");
@@ -42,9 +54,12 @@ extension ProcessingBlockViewmodel on ProjectViewModel {
     }
   }
 
-  void removeProcessingBlock(String processingBlockId) {
+  void removeProcessingBlock({required String processingBlockId, bool autoSave = true}) {
     try {
       projectManager.removeProcessingBlock(processingBlockId);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to remove processing block: $e");
@@ -52,9 +67,12 @@ extension ProcessingBlockViewmodel on ProjectViewModel {
     }
   }
 
-  void updateProcessingBlock(ProcessingBlockModel processingBlock) {
+  void updateProcessingBlock({required ProcessingBlockModel processingBlock, bool autoSave = true}) {
     try {
       projectManager.updateProcessingBlock(processingBlock);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to update processing block: $e");
@@ -71,7 +89,7 @@ extension ProcessingBlockViewmodel on ProjectViewModel {
     }
   }
 
-  List<ProcessingBlockModel> getProcessingBlockFor(String parentId) {
+  List<ProcessingBlockModel> getProcessingBlockFor({required String parentId}) {
     try {
       return projectManager.getProcessingBlockFor(parentId);
     } catch (e) {
@@ -80,9 +98,12 @@ extension ProcessingBlockViewmodel on ProjectViewModel {
     }
   }
 
-  void reOrderProcessingBlocks(String parentId, int oldIndex, int newIndex) {
+  void reOrderProcessingBlocks({required String parentId, required int oldIndex, required int newIndex, bool autoSave = true}) {
     try {
       projectManager.reOrderProcessingBlocks(parentId, oldIndex, newIndex);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to reorder processing blocks: $e");

@@ -82,7 +82,7 @@ class _AssignDeviceButtonState extends State<AssignDeviceButton> {
       //     isClaimed: selectedDevice.isClaimed,
       //   ),
       // );
-      serviceLocator<ProjectViewModel>().saveProjectToLocal();
+      serviceLocator<ProjectViewModel>().saveProject();
       // if (mounted) Navigator.pop(context);
     } else {
       debugPrint("Failed to assign device: ${responseCallback.message}");

@@ -4,14 +4,17 @@ import 'package:fusion_launcher/features/configuration/presentation/viewmodel/pr
 import 'package:fusion_lib/fusion_lib.dart';
 
 extension CircuitViewmodel on ProjectViewModel {
-  void addNewCircuitWithHardware(HardwareComponent hardware) {
+  void addNewCircuitWithHardware({required HardwareComponent hardware, bool autoSave = true}) {
     try {
       final CircuitModel newCircuit = CircuitModel(
         id: FusionUtils.shortStringUUID(),
         name: "New Circuit",
       );
-      addCircuit(newCircuit);
-      addHardwareToCircuit(hardware.id, newCircuit.id);
+      projectManager.addCircuit(newCircuit);
+      projectManager.addHardwareToCircuit(hardware.id, newCircuit.id);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to add new circuit with hardware: $e");
@@ -19,9 +22,12 @@ extension CircuitViewmodel on ProjectViewModel {
     }
   }
 
-  void addCircuit(CircuitModel circuit) {
+  void addCircuit({required CircuitModel circuit, bool autoSave = true}) {
     try {
       projectManager.addCircuit(circuit);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to add circuit: $e");
@@ -29,9 +35,12 @@ extension CircuitViewmodel on ProjectViewModel {
     }
   }
 
-  void updateCircuit(CircuitModel circuit) {
+  void updateCircuit({required CircuitModel circuit, bool autoSave = true}) {
     try {
       projectManager.updateCircuit(circuit);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to update circuit: $e");
@@ -39,9 +48,12 @@ extension CircuitViewmodel on ProjectViewModel {
     }
   }
 
-  void removeCircuit(String circuitId) {
+  void removeCircuit({required String circuitId, bool autoSave = true}) {
     try {
       projectManager.removeCircuit(circuitId);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to remove circuit: $e");
@@ -49,7 +61,7 @@ extension CircuitViewmodel on ProjectViewModel {
     }
   }
 
-  CircuitModel? getCircuitById(String circuitId) {
+  CircuitModel? getCircuitById({required String circuitId}) {
     try {
       return projectManager.getCircuitById(circuitId);
     } catch (e) {
@@ -67,7 +79,7 @@ extension CircuitViewmodel on ProjectViewModel {
     }
   }
 
-  List<HardwareComponent> getHardwareForCircuit(String circuitId) {
+  List<HardwareComponent> getHardwareForCircuit({required String circuitId}) {
     try {
       return projectManager.getHardwareForCircuit(circuitId);
     } catch (e) {
@@ -77,9 +89,12 @@ extension CircuitViewmodel on ProjectViewModel {
     }
   }
 
-  void addHardwareToCircuit(String hwId, String circuitId) {
+  void addHardwareToCircuit({required String hwId, required String circuitId, bool autoSave = true}) {
     try {
       projectManager.addHardwareToCircuit(hwId, circuitId);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to add hardware to circuit: $e");
@@ -87,9 +102,12 @@ extension CircuitViewmodel on ProjectViewModel {
     }
   }
 
-  void removeHardwareFromCircuit(String hwId, String circuitId) {
+  void removeHardwareFromCircuit({required String hwId, required String circuitId, bool autoSave = true}) {
     try {
       projectManager.removeHardwareFromCircuit(hwId, circuitId);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to remove hardware from circuit: $e");
@@ -97,11 +115,14 @@ extension CircuitViewmodel on ProjectViewModel {
     }
   }
 
-  void removeAllCircuits() {
+  void removeAllCircuits({bool autoSave = true}) {
     try {
       final List<CircuitModel> allCircuits = getAllCircuits();
       for (final CircuitModel circuit in allCircuits) {
         projectManager.removeCircuit(circuit.id);
+      }
+      if (autoSave) {
+        saveProject();
       }
       updateProject();
     } catch (e) {
@@ -110,7 +131,7 @@ extension CircuitViewmodel on ProjectViewModel {
     }
   }
 
-  List<ListeningArea> getListeningAreasForCircuit(String circuitId) {
+  List<ListeningArea> getListeningAreasForCircuit({required String circuitId}) {
     try {
       return projectManager.getListeningAreasForCircuit(circuitId);
     } catch (e) {
@@ -127,8 +148,9 @@ extension CircuitViewmodel on ProjectViewModel {
     String? circuitName,
     String? subZoneId,
     required String zoneId,
+    bool autoSave = true,
   }) {
-    final FloorModel? floorModel = getFloorForListeningArea(listeningAreaId);
+    final FloorModel? floorModel = getFloorForListeningArea(areaId: listeningAreaId);
     final LocationModel locationModel = LocationModel(
       listeningAreaId: listeningAreaId,
       floorId: floorModel?.id,
@@ -137,14 +159,12 @@ extension CircuitViewmodel on ProjectViewModel {
     final CircuitModel circuitModel = CircuitModel(
       name: circuitName ?? "Circuit ${circuits.length + 1}",
     );
-    addCircuit(
-      circuitModel,
-    );
+    projectManager.addCircuit(circuitModel);
 
     if (subZoneId != null) {
-      addCircuitToSubZone(subZoneId, circuitModel.id);
+      projectManager.addCircuitToSubZone(subZoneId, circuitModel.id);
     } else {
-      addCircuitToZone(zoneId, circuitModel.id);
+      projectManager.addCircuitToZone(circuitModel.id, zoneId);
     }
 
     for (int i = 0; i < speakerCount; i++) {
@@ -153,14 +173,21 @@ extension CircuitViewmodel on ProjectViewModel {
         pos: Offset.zero,
         locationEntity: locationModel,
       );
-      addHardware(newHardware);
-      addHardwareToCircuit(newHardware.id, circuitModel.id);
+      projectManager.addHardware(newHardware);
+      projectManager.addHardwareToCircuit(newHardware.id, circuitModel.id);
     }
+    if (autoSave) {
+      saveProject();
+    }
+    updateProject();
   }
 
-  void reOrderCircuitInZone(String parentId, int oldIndex, int newIndex) {
+  void reOrderCircuitInZone({required String parentId, required int oldIndex, required int newIndex, bool autoSave = true}) {
     try {
       projectManager.reorderCircuitsInZone(parentId, oldIndex, newIndex);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to reorder circuit in zone: $e");

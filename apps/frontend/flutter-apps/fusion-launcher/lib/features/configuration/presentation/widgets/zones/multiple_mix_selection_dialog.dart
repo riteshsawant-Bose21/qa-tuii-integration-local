@@ -137,7 +137,7 @@ class MultiMixPickerDialogState extends State<MultiMixPickerDialog> {
                           final SourceSet mix = _filteredDevices[index];
                           final bool isSelected = _selected.contains(mix);
 
-                          final List<Source> sourcesInSet = serviceLocator<ProjectViewModel>().getSourcesInSourceSet(mix.id);
+                          final List<Source> sourcesInSet = serviceLocator<ProjectViewModel>().getSourcesInSourceSet(sourceSetId: mix.id);
 
                           return Card(
                             margin: const EdgeInsets.only(bottom: 8),
@@ -269,11 +269,11 @@ class MultiMixPickerDialogState extends State<MultiMixPickerDialog> {
 
   String getLocation(LocationModel location) {
     if (location.floorId != null && location.listeningAreaId != null) {
-      final FloorModel floor = serviceLocator<ProjectViewModel>().getFloorById(location.floorId!);
-      final ListeningArea area = serviceLocator<ProjectViewModel>().getListeningArea(location.listeningAreaId!);
+      final FloorModel floor = serviceLocator<ProjectViewModel>().getFloorById(floorId: location.floorId!);
+      final ListeningArea area = serviceLocator<ProjectViewModel>().getListeningArea(areaId: location.listeningAreaId!);
       return "${floor.name}/${area.name}"; // Display floor and listening area names
     } else if (location.floorId != null) {
-      final FloorModel floor = serviceLocator<ProjectViewModel>().getFloorById(location.floorId!);
+      final FloorModel floor = serviceLocator<ProjectViewModel>().getFloorById(floorId: location.floorId!);
       return floor.name; // Display floor number
     } else if (location.listeningAreaId != null) {
       return "Listening Area ${location.listeningAreaId}"; // Display listening area number

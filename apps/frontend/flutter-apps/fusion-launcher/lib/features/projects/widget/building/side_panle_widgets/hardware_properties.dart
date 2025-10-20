@@ -116,7 +116,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                       color: Theme.of(context).colorScheme.error,
                     ),
                     onPressed: () {
-                      viewModel.removeHardware(widget.selectedHardware.id);
+                      viewModel.removeHardware(hardwareId: widget.selectedHardware.id);
                     },
                   ),
                 ],
@@ -140,7 +140,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                   final String trimmedName = v.trim();
                   if (trimmedName.isNotEmpty) {
                     final HardwareComponent updated = widget.selectedHardware.copyWith(name: trimmedName);
-                    viewModel.updateHardware(updated);
+                    viewModel.updateHardware(hardware: updated);
                   } else {
                     // Show a snackbar to inform user
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -192,7 +192,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                     final HardwareComponent updated = widget.selectedHardware.copyWith(
                                       pos: Offset(xValue * 100, widget.selectedHardware.pos.dy),
                                     );
-                                    viewModel.updateHardware(updated);
+                                    viewModel.updateHardware(hardware: updated);
                                     if (widget.selectedHardware is Speaker) {
                                       widget.onSpeakerParametersChanged?.call();
                                     }
@@ -239,7 +239,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                     final HardwareComponent updated = widget.selectedHardware.copyWith(
                                       pos: Offset(widget.selectedHardware.pos.dx, yValue * 100),
                                     );
-                                    viewModel.updateHardware(updated);
+                                    viewModel.updateHardware(hardware: updated);
                                     if (widget.selectedHardware is Speaker) {
                                       widget.onSpeakerParametersChanged?.call();
                                     }
@@ -284,7 +284,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                   if (zValue != null) {
                                     // Multiply by 100 when submitting
                                     final HardwareComponent updated = widget.selectedHardware.copyWith(zAxis: zValue * 100);
-                                    viewModel.updateHardware(updated);
+                                    viewModel.updateHardware(hardware: updated);
                                     if (widget.selectedHardware is Speaker) {
                                       widget.onSpeakerParametersChanged?.call();
                                     }
@@ -336,7 +336,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                           final double? roll = double.tryParse(v.trim());
                           if (roll != null) {
                             final Speaker updated = (widget.selectedHardware as Speaker).copyWith(roll: roll);
-                            viewModel.updateHardware(updated);
+                            viewModel.updateHardware(hardware: updated);
                             widget.onSpeakerParametersChanged?.call();
                           } else {
                             // Reset to previous value if invalid
@@ -381,7 +381,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                           final double? pitch = double.tryParse(v.trim());
                           if (pitch != null) {
                             final Speaker updated = (widget.selectedHardware as Speaker).copyWith(pitch: pitch);
-                            viewModel.updateHardware(updated);
+                            viewModel.updateHardware(hardware: updated);
                             widget.onSpeakerParametersChanged?.call();
                           } else {
                             // Reset to previous value if invalid
@@ -425,7 +425,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                           final double? yaw = double.tryParse(v.trim());
                           if (yaw != null) {
                             final Speaker updated = (widget.selectedHardware as Speaker).copyWith(yaw: yaw);
-                            viewModel.updateHardware(updated);
+                            viewModel.updateHardware(hardware: updated);
                             widget.onSpeakerParametersChanged?.call();
                           } else {
                             // Reset to previous value if invalid
@@ -472,7 +472,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                 final double? gain = double.tryParse(v.trim());
                                 if (gain != null) {
                                   final Speaker updated = (widget.selectedHardware as Speaker).copyWith(gain: gain);
-                                  viewModel.updateHardware(updated);
+                                  viewModel.updateHardware(hardware: updated);
                                   widget.onSpeakerParametersChanged?.call();
                                 } else {
                                   // Reset to previous value if invalid
@@ -525,7 +525,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: <Widget>[
                                       FusionAppText(
-                                        text: viewModel.getListeningAreaForHardware(widget.selectedHardware.id)?.name ?? "N/A",
+                                        text: viewModel.getListeningAreaForHardware(hardwareId: widget.selectedHardware.id)?.name ?? "N/A",
                                         textAlign: TextAlign.left,
                                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                           fontSize: 11,
@@ -544,7 +544,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                           child: _buildHardwarePropertyRow(
                             context: context,
                             label: "Area ",
-                            value: viewModel.getListeningAreaForHardware(widget.selectedHardware.id)?.name ?? "N/A",
+                            value: viewModel.getListeningAreaForHardware(hardwareId: widget.selectedHardware.id)?.name ?? "N/A",
                             options:
                                 widget.selectedHardware.lockListeningArea
                                     ? <String>[]
@@ -557,7 +557,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                   final LocationModel updated = widget.selectedHardware.locationEntity.copyWith(
                                     listeningAreaId: selectedArea.id,
                                   );
-                                  viewModel.updateHardwareLocation(widget.selectedHardware.id, updated);
+                                  viewModel.updateHardwareLocation(hardwareId: widget.selectedHardware.id, newLocation: updated);
                                 }
                               }
                             },
@@ -570,7 +570,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                         child: GestureDetector(
                           onTap: () {
                             viewModel.updateHardware(
-                              widget.selectedHardware.copyWith(
+                              hardware: widget.selectedHardware.copyWith(
                                 lockListeningArea: !widget.selectedHardware.lockListeningArea,
                               ),
                             );

@@ -147,14 +147,14 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
   }
 
   Widget _buildZoneCard(Zone zone) {
-    final List<ListeningArea> listeningAreas = serviceLocator<ProjectViewModel>().getListeningAreasForZone(zone.id);
+    final List<ListeningArea> listeningAreas = serviceLocator<ProjectViewModel>().getListeningAreasForZone(zoneId: zone.id);
     final bool isSelected = serviceLocator<ProjectViewModel>().isInZoneSelectionMode && serviceLocator<ProjectViewModel>().currentSelectedZoneId == zone.id;
     final bool isExpanded = _expandedZones.contains(zone.id);
 
     return DragTarget<ListeningArea>(
       onAcceptWithDetails: (DragTargetDetails<ListeningArea> details) {
         final ListeningArea listeningArea = details.data;
-        serviceLocator<ProjectViewModel>().addListeningAreaToZone(listeningArea.id, zone.id);
+        serviceLocator<ProjectViewModel>().addListeningAreaToZone(listeningAreaId: listeningArea.id, zoneId: zone.id);
       },
       builder: (BuildContext context, List<ListeningArea?> candidateItems, List<dynamic> rejectedItems) {
         final bool hasIncomingData = candidateItems.isNotEmpty && candidateItems.first != null;
@@ -245,7 +245,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
       selectedColor: hexToColor(zone.zoneColor),
       availableColors: Zone.zoneColors.map((String color) => hexToColor(color)).toList(),
       onColorChanged: (Color color) {
-        serviceLocator<ProjectViewModel>().updateZone(zone.copyWith(zoneColor: colorToHex(color)));
+        serviceLocator<ProjectViewModel>().updateZone(zone: zone.copyWith(zoneColor: colorToHex(color)));
       },
       width: 18,
       height: 18,
@@ -294,7 +294,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
       final String trimmedValue = controller.text.trim();
       if (trimmedValue.isNotEmpty && trimmedValue != zone.name) {
         final Zone updated = zone.copyWith(name: trimmedValue);
-        serviceLocator<ProjectViewModel>().updateZone(updated);
+        serviceLocator<ProjectViewModel>().updateZone(zone: updated);
       } else if (trimmedValue.isEmpty) {
         controller.text = zone.name; // Revert to original name
       }
@@ -383,7 +383,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
   Widget _buildListeningAreaItem(ListeningArea area, Zone zone) {
     final bool isSelected = serviceLocator<ProjectViewModel>().currentSelectedListeningAreaId == area.id;
 
-    final String floorName = serviceLocator<ProjectViewModel>().getFloorForListeningArea(area.id)?.name ?? '';
+    final String floorName = serviceLocator<ProjectViewModel>().getFloorForListeningArea(areaId: area.id)?.name ?? '';
 
     return Draggable<ListeningArea>(
       data: area,
@@ -476,7 +476,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
     final Zone zone = Zone(
       name: 'Zone ${serviceLocator<ProjectViewModel>().zones.length + 1}',
     );
-    serviceLocator<ProjectViewModel>().addZone(zone);
+    serviceLocator<ProjectViewModel>().addZone(zone: zone);
   }
 
   void _showDeleteConfirmation(Zone zone) {
@@ -493,7 +493,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
             ),
             TextButton(
               onPressed: () {
-                serviceLocator<ProjectViewModel>().removeZone(zone.id);
+                serviceLocator<ProjectViewModel>().removeZone(zoneId: zone.id);
                 Navigator.of(context).pop();
               },
               style: TextButton.styleFrom(foregroundColor: Colors.red),

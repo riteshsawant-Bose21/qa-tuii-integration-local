@@ -97,7 +97,7 @@ class ZoneSchematicCard extends StatelessWidget {
                             title: "Speakers",
                             hardwareComponents: hardwareComponents.whereType<Speaker>().toList(),
                             onDelete: (HardwareComponent component) {
-                              serviceLocator<ProjectViewModel>().removeHardware(component.id);
+                              serviceLocator<ProjectViewModel>().removeHardware(hardwareId: component.id);
                             },
                           ),
                         if (hardwareComponents.whereType<GenericHardwareComponent>().toList().isNotEmpty)
@@ -105,7 +105,7 @@ class ZoneSchematicCard extends StatelessWidget {
                             title: "Controllers",
                             hardwareComponents: hardwareComponents.whereType<GenericHardwareComponent>().toList(),
                             onDelete: (HardwareComponent component) {
-                              serviceLocator<ProjectViewModel>().removeHardware(component.id);
+                              serviceLocator<ProjectViewModel>().removeHardware(hardwareId: component.id);
                             },
                           ),
                       ],

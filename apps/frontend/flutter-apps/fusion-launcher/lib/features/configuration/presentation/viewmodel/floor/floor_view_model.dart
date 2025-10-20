@@ -3,7 +3,7 @@ import 'package:fusion_lib/fusion_lib.dart';
 
 extension FloorViewModel on ProjectViewModel {
   //get Floor by id
-  FloorModel? getFloor(String floorId) {
+  FloorModel? getFloor({required String floorId}) {
     try {
       return projectManager.getFloorById(floorId);
     } catch (e) {
@@ -11,10 +11,13 @@ extension FloorViewModel on ProjectViewModel {
     }
   }
 
-  void updateFloor(FloorModel floor) {
+  void updateFloor({required FloorModel floor, bool autoSave = true}) {
     try {
       final ResponseCallback<bool> responseCallback = projectManager.updateFloor(floor);
       if (responseCallback.success) {
+        if (autoSave) {
+          saveProject();
+        }
         updateProject();
       } else {
         FusionLogger.log(tag: LogTag.project, message: "Failed to update floor: ${responseCallback.message}");
@@ -25,11 +28,14 @@ extension FloorViewModel on ProjectViewModel {
     }
   }
 
-  void addFloor(FloorModel floor) {
+  void addFloor({required FloorModel floor, bool autoSave = true}) {
     try {
       final ResponseCallback<bool> responseCallback = projectManager.addFloor(floor);
       if (responseCallback.success) {
         emitFloorUpdated();
+        if (autoSave) {
+          saveProject();
+        }
         updateProject();
       } else {
         FusionLogger.log(tag: LogTag.project, message: "Failed to add floor: ${responseCallback.message}");
@@ -40,11 +46,14 @@ extension FloorViewModel on ProjectViewModel {
     }
   }
 
-  void removeFloor(String floorId) {
+  void removeFloor({required String floorId, bool autoSave = true}) {
     try {
       final ResponseCallback<bool> responseCallback = projectManager.removeFloor(floorId);
       if (responseCallback.success) {
         emitFloorUpdated();
+        if (autoSave) {
+          saveProject();
+        }
         updateProject();
       } else {
         FusionLogger.log(tag: LogTag.project, message: "Failed to remove floor: ${responseCallback.message}");
@@ -65,7 +74,7 @@ extension FloorViewModel on ProjectViewModel {
   }
 
   //Get Floor by id
-  FloorModel getFloorById(String floorId) {
+  FloorModel getFloorById({required String floorId}) {
     try {
       return projectManager.getFloorById(floorId);
     } catch (e) {

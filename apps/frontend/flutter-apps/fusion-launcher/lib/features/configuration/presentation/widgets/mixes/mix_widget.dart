@@ -369,16 +369,16 @@ class MixWidgetState extends State<MixWidget> {
             //Processing blocks
             ProcessingBlockView(
               processingType: ProcessingType.mix,
-              selectedBlocks: serviceLocator<ProjectViewModel>().getProcessingBlockFor(widget.mix.id),
+              selectedBlocks: serviceLocator<ProjectViewModel>().getProcessingBlockFor(parentId: widget.mix.id),
               isControlMode: widget.isControlMode,
               onBlocksUpdated: (int oldIndex, int newIndex) {
-                serviceLocator<ProjectViewModel>().reOrderProcessingBlocks(widget.mix.id, oldIndex, newIndex);
+                serviceLocator<ProjectViewModel>().reOrderProcessingBlocks(parentId: widget.mix.id, oldIndex: oldIndex, newIndex: newIndex);
               },
               onBlockRemoved: (String blockId) {
-                serviceLocator<ProjectViewModel>().removeProcessingBlock(blockId);
+                serviceLocator<ProjectViewModel>().removeProcessingBlock(processingBlockId: blockId);
               },
               onBlockSelected: (ProcessingBlockModel block) {
-                serviceLocator<ProjectViewModel>().addProcessingBlockToParent(block, widget.mix.id);
+                serviceLocator<ProjectViewModel>().addProcessingBlockToParent(processingBlock: block, parentId: widget.mix.id);
               },
             ),
           ],

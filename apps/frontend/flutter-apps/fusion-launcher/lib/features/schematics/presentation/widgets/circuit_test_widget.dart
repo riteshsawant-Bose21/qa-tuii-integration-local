@@ -739,9 +739,9 @@ class _ZoneCircuitConfigPageState extends State<ZoneCircuitConfigPage> {
     List<ListeningArea> listeningAreas = <ListeningArea>[];
 
     if (subZone != null) {
-      listeningAreas = serviceLocator<ProjectViewModel>().getListeningAreasInSubZone(subZone.id);
+      listeningAreas = serviceLocator<ProjectViewModel>().getListeningAreasInSubZone(subZoneId: subZone.id);
     } else {
-      listeningAreas = serviceLocator<ProjectViewModel>().getListeningAreasForZone(zone.id);
+      listeningAreas = serviceLocator<ProjectViewModel>().getListeningAreasForZone(zoneId: zone.id);
     }
 
     ProductQueryModel? speakerData;
@@ -987,7 +987,7 @@ class _ZoneCircuitConfigPageState extends State<ZoneCircuitConfigPage> {
     final List<ListeningArea> subZoneAreas = getListeningAreasForSubZone(subZone.id);
     final List<String> selectedListeningAreas = subZoneAreas.map((ListeningArea e) => e.id).toList();
 
-    final List<ListeningArea> availableAreas = serviceLocator<ProjectViewModel>().getListeningAreasForZone(zone.id);
+    final List<ListeningArea> availableAreas = serviceLocator<ProjectViewModel>().getListeningAreasForZone(zoneId: zone.id);
 
     showDialog(
       context: context,
@@ -1115,19 +1115,19 @@ class _ZoneCircuitConfigPageState extends State<ZoneCircuitConfigPage> {
   }
 
   List<CircuitModel> getCircuitForSubZone(String subZoneId) {
-    return serviceLocator<ProjectViewModel>().getCircuitsInSubZone(subZoneId);
+    return serviceLocator<ProjectViewModel>().getCircuitsInSubZone(subZoneId: subZoneId);
   }
 
   List<ListeningArea> getListeningAreasForZone(String zoneId) {
-    return serviceLocator<ProjectViewModel>().getListeningAreasForZone(zoneId);
+    return serviceLocator<ProjectViewModel>().getListeningAreasForZone(zoneId: zoneId);
   }
 
   List<ListeningArea> getListeningAreasForSubZone(String subZoneId) {
-    return serviceLocator<ProjectViewModel>().getListeningAreasInSubZone(subZoneId);
+    return serviceLocator<ProjectViewModel>().getListeningAreasInSubZone(subZoneId: subZoneId);
   }
 
   List<SubZone> getSubZonesForZone(String zoneId) {
-    return serviceLocator<ProjectViewModel>().getSubZonesForZone(zoneId);
+    return serviceLocator<ProjectViewModel>().getSubZonesForZone(parentZoneId: zoneId);
   }
 
   void _deleteZone(Zone zone) {
@@ -1147,15 +1147,15 @@ class _ZoneCircuitConfigPageState extends State<ZoneCircuitConfigPage> {
   }
 
   CircuitModel? _findCircuitById(String id) {
-    return serviceLocator<ProjectViewModel>().getCircuitById(id);
+    return serviceLocator<ProjectViewModel>().getCircuitById(circuitId: id);
   }
 
   SubZone? _findSubZoneById(String id) {
-    return serviceLocator<ProjectViewModel>().getSubZone(id);
+    return serviceLocator<ProjectViewModel>().getSubZone(subZoneId: id);
   }
 
   List<Speaker> _getSpeakersInCircuit(String circuitId) {
-    return serviceLocator<ProjectViewModel>().getHardwareForCircuit(circuitId).whereType<Speaker>().toList();
+    return serviceLocator<ProjectViewModel>().getHardwareForCircuit(circuitId: circuitId).whereType<Speaker>().toList();
   }
 
   // CRUD Methods for Zone
@@ -1166,12 +1166,12 @@ class _ZoneCircuitConfigPageState extends State<ZoneCircuitConfigPage> {
       selectedMixIndex: 0,
       zoneColor: color,
     );
-    serviceLocator<ProjectViewModel>().addZone(newZone);
-    serviceLocator<ProjectViewModel>().updateListeningAreasInZone(newZone.id, listeningAreaIds);
+    serviceLocator<ProjectViewModel>().addZone(zone: newZone, autoSave: false);
+    serviceLocator<ProjectViewModel>().updateListeningAreasInZone(zoneId: newZone.id, listeningAreaIds: listeningAreaIds);
   }
 
   void updateZone(String zoneId, {String? name, String? color, List<String>? listeningAreaIds}) {
-    final Zone? zone = serviceLocator<ProjectViewModel>().getZone(zoneId);
+    final Zone? zone = serviceLocator<ProjectViewModel>().getZone(zoneId: zoneId);
     if (zone == null) {
       return;
     }
@@ -1181,37 +1181,38 @@ class _ZoneCircuitConfigPageState extends State<ZoneCircuitConfigPage> {
       zoneColor: color ?? zone.zoneColor,
     );
 
-    serviceLocator<ProjectViewModel>().updateZone(updatedZone);
+    serviceLocator<ProjectViewModel>().updateZone(zone: updatedZone, autoSave: false);
     if (listeningAreaIds != null) {
-      serviceLocator<ProjectViewModel>().updateListeningAreasInZone(zoneId, listeningAreaIds);
+      serviceLocator<ProjectViewModel>().updateListeningAreasInZone(zoneId: zoneId, listeningAreaIds: listeningAreaIds, autoSave: false);
     }
+    serviceLocator<ProjectViewModel>().saveProject();
   }
 
   void removeZone(String zoneId) {
-    serviceLocator<ProjectViewModel>().removeZone(zoneId);
+    serviceLocator<ProjectViewModel>().removeZone(zoneId: zoneId);
   }
 
   // CRUD Methods for Circuit
   void addNewCircuitToZone(String? circuitName, String zoneId) {
     final CircuitModel circuitModel = CircuitModel(name: circuitName ?? "Circuit ${serviceLocator<ProjectViewModel>().circuits.length + 1}");
     serviceLocator<ProjectViewModel>().addCircuit(
-      circuitModel,
+      circuit: circuitModel,
     );
 
-    serviceLocator<ProjectViewModel>().addCircuitToZone(circuitModel.id, zoneId);
+    serviceLocator<ProjectViewModel>().addCircuitToZone(circuitId: circuitModel.id, zoneId: zoneId);
   }
 
   void addCircuitToSubZone(String circuitName, String subZoneId) {
     final CircuitModel circuitModel = CircuitModel(name: "Circuit ${serviceLocator<ProjectViewModel>().circuits.length + 1}");
     serviceLocator<ProjectViewModel>().addCircuit(
-      circuitModel,
+      circuit: circuitModel,
     );
 
-    serviceLocator<ProjectViewModel>().addCircuitToSubZone(subZoneId, circuitModel.id);
+    serviceLocator<ProjectViewModel>().addCircuitToSubZone(subZoneId: subZoneId, circuitId: circuitModel.id);
   }
 
   void updateCircuit(String circuitId, String newName) {
-    final CircuitModel? circuit = serviceLocator<ProjectViewModel>().getCircuitById(circuitId);
+    final CircuitModel? circuit = serviceLocator<ProjectViewModel>().getCircuitById(circuitId: circuitId);
     if (circuit == null) {
       return;
     }
@@ -1220,15 +1221,15 @@ class _ZoneCircuitConfigPageState extends State<ZoneCircuitConfigPage> {
       name: newName,
     );
 
-    serviceLocator<ProjectViewModel>().updateCircuit(updatedCircuit);
+    serviceLocator<ProjectViewModel>().updateCircuit(circuit: updatedCircuit);
   }
 
   void removeCircuitFromZone(String circuitId, String zoneId) {
-    serviceLocator<ProjectViewModel>().removeCircuitFromZone(circuitId, zoneId);
+    serviceLocator<ProjectViewModel>().removeCircuitFromZone(circuitId: circuitId, zoneId: zoneId);
   }
 
   void removeCircuitFromSubZone(String circuitId, String subZoneId) {
-    serviceLocator<ProjectViewModel>().removeCircuitFromSubZone(subZoneId, circuitId);
+    serviceLocator<ProjectViewModel>().removeCircuitFromSubZone(subZoneId: subZoneId, circuitId: circuitId);
   }
 
   // CRUD Methods for SubZone
@@ -1238,13 +1239,13 @@ class _ZoneCircuitConfigPageState extends State<ZoneCircuitConfigPage> {
       name: subZoneName,
     );
 
-    serviceLocator<ProjectViewModel>().addSubZone(newSubZone);
-    serviceLocator<ProjectViewModel>().addSubZoneToZone(newSubZone.id, zoneId);
-    serviceLocator<ProjectViewModel>().updateListeningAreasInSubZone(newSubZone.id, listeningAreaIds);
+    serviceLocator<ProjectViewModel>().addSubZone(subZone: newSubZone, autoSave: false);
+    serviceLocator<ProjectViewModel>().addSubZoneToZone(subZoneId: newSubZone.id, parentZoneId: zoneId, autoSave: false);
+    serviceLocator<ProjectViewModel>().updateListeningAreasInSubZone(subZoneId: newSubZone.id, listeningAreaIds: listeningAreaIds);
   }
 
   void updateSubZone(String subZoneId, {String? name, List<String>? listeningAreaIds}) {
-    final SubZone? subZone = serviceLocator<ProjectViewModel>().getSubZone(subZoneId);
+    final SubZone? subZone = serviceLocator<ProjectViewModel>().getSubZone(subZoneId: subZoneId);
     if (subZone == null) {
       return;
     }
@@ -1253,15 +1254,16 @@ class _ZoneCircuitConfigPageState extends State<ZoneCircuitConfigPage> {
       name: name ?? subZone.name,
     );
 
-    serviceLocator<ProjectViewModel>().updateSubZone(updatedSubZone);
+    serviceLocator<ProjectViewModel>().updateSubZone(subZone: updatedSubZone, autoSave: false);
 
     if (listeningAreaIds != null) {
-      serviceLocator<ProjectViewModel>().updateListeningAreasInSubZone(subZoneId, listeningAreaIds);
+      serviceLocator<ProjectViewModel>().updateListeningAreasInSubZone(subZoneId: subZoneId, listeningAreaIds: listeningAreaIds, autoSave: false);
     }
+    serviceLocator<ProjectViewModel>().saveProject();
   }
 
   void removeSubZoneFromZone(String subZoneId, String zoneId) {
-    serviceLocator<ProjectViewModel>().removeSubZoneFromZone(subZoneId, zoneId);
+    serviceLocator<ProjectViewModel>().removeSubZoneFromZone(subZoneId: subZoneId, parentZoneId: zoneId);
   }
 
   void createCircuitWithSpeaker({
@@ -1283,7 +1285,7 @@ class _ZoneCircuitConfigPageState extends State<ZoneCircuitConfigPage> {
   }
 
   void updateSpeaker(String speakerId, {String? name, String? sku, String? listeningAreaId}) {
-    final Speaker speaker = serviceLocator<ProjectViewModel>().getHardware(speakerId) as Speaker;
+    final Speaker speaker = serviceLocator<ProjectViewModel>().getHardware(hardwareId: speakerId) as Speaker;
 
     final Speaker updatedSpeaker = speaker.copyWith(
       name: name ?? speaker.name,
@@ -1298,27 +1300,27 @@ class _ZoneCircuitConfigPageState extends State<ZoneCircuitConfigPage> {
               : speaker.locationEntity,
     );
 
-    serviceLocator<ProjectViewModel>().updateHardware(updatedSpeaker);
+    serviceLocator<ProjectViewModel>().updateHardware(hardware: updatedSpeaker);
   }
 
   void removeSpeaker(String speakerId) {
-    serviceLocator<ProjectViewModel>().removeHardware(speakerId);
+    serviceLocator<ProjectViewModel>().removeHardware(hardwareId: speakerId);
   }
 
   void addSpeakerToCircuit(String speakerId, String circuitId) {
-    serviceLocator<ProjectViewModel>().addHardwareToCircuit(speakerId, circuitId);
+    serviceLocator<ProjectViewModel>().addHardwareToCircuit(hwId: speakerId, circuitId: circuitId);
   }
 
   void incrementHardwareInCircuit(Speaker speaker, String circuitId) {
-    serviceLocator<ProjectViewModel>().addHardware(speaker);
-    serviceLocator<ProjectViewModel>().addHardwareToCircuit(speaker.id, circuitId);
+    serviceLocator<ProjectViewModel>().addHardware(hardware: speaker, autoSave: false);
+    serviceLocator<ProjectViewModel>().addHardwareToCircuit(hwId: speaker.id, circuitId: circuitId);
   }
 
   void decrementHardwareInCircuit(String speakerId) {
-    serviceLocator<ProjectViewModel>().removeHardware(speakerId);
+    serviceLocator<ProjectViewModel>().removeHardware(hardwareId: speakerId);
   }
 
   void removeSpeakerFromCircuit(String speakerId, String circuitId) {
-    serviceLocator<ProjectViewModel>().removeHardwareFromCircuit(speakerId, circuitId);
+    serviceLocator<ProjectViewModel>().removeHardwareFromCircuit(hwId: speakerId, circuitId: circuitId);
   }
 }
