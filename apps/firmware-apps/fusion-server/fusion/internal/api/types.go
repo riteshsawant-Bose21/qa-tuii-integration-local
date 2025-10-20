@@ -16,6 +16,7 @@ type AppConfig struct {
 	BindAddr string
 	BindPort int
 	Local    bool
+	Profile  bool
 	Verbose  bool
 }
 
