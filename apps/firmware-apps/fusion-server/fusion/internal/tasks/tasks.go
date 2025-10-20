@@ -197,25 +197,32 @@ func (tm *TaskManager) GetExecutionHistory() []ExecutionRecord {
 }
 
 // Start starts the TaskManager's scheduler.
-func (tm *TaskManager) Start() error {
+func (tm *TaskManager) Start() {
+
+	logger := logging.GetLogger()
+
+	if tm.running {
+		logger.Warn("TaskManager already running")
+		return
+	}
 
 	if err := tm.loadTasks(); err != nil {
-		return err
+		logger.Fatal("%v", err)
 	}
 
 	if err := tm.loadHistory(); err != nil {
-		return err
+		logger.Fatal("%v", err)
 	}
 
 	if err := tm.registerEnabledTasks(); err != nil {
-		return err
+		logger.Fatal("%v", err)
 	}
 
 	tm.cron.Start()
 
 	tm.running = true
 
-	return nil
+	logger.Info("TaskManager running")
 }
 
 // Stop stops the TaskManager's scheduler.
