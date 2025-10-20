@@ -13,6 +13,7 @@ require (
 	github.com/pion/sdp/v3 v3.0.13
 	github.com/prometheus/client_golang v1.22.0
 	github.com/robfig/cron/v3 v3.0.1
+	github.com/vishvananda/netlink v1.3.1
 	go.etcd.io/bbolt v1.4.0
 )
 
@@ -36,6 +37,7 @@ require (
 	github.com/prometheus/procfs v0.15.1 // indirect
 	github.com/raff/goble v0.0.0-20190909174656-72afc67d6a99 // indirect
 	github.com/sirupsen/logrus v1.5.0 // indirect
+	github.com/vishvananda/netns v0.0.5 // indirect
 	golang.org/x/mod v0.22.0 // indirect
 	golang.org/x/sync v0.10.0 // indirect
 	golang.org/x/tools v0.29.0 // indirect

@@ -18,6 +18,7 @@ type AppConfig struct {
 	Local    bool
 	Profile  bool
 	Verbose  bool
+	Profile  bool
 }
 
 // Version encodes a Lamport counter plus the origin node's ID.
