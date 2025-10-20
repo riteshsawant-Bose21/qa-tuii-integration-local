@@ -344,9 +344,9 @@ jobs:
 
   integration-tests:
     needs:
-      - flutter-android-iOS-macOS-build
+      # - flutter-android-iOS-macOS-build
       - flutter-windows-build
-      - flutter-web-build
+      # - flutter-web-build
       - fusion-dsp-build
       - fusion-server-build
       - fusion-system-monitor-build
