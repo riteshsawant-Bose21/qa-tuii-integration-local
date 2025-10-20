@@ -1,17 +1,22 @@
 package main
 
 import (
-	"encoding/json"
 	"net"
+	"runtime"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
+
+	json "github.com/goccy/go-json"
 
 	"fusion/internal/api"
 )
 
-const fusionUDPAddr = "192.168.64.100:7947"
+const (
+	fusionUDPAddr = "192.168.64.100:7947"
+)
 
 // contains is helper to check substring
 func contains(s, sub string) bool { return strings.Contains(s, sub) }
@@ -79,27 +84,53 @@ func TestFusionUDP_BroadcastPropagation(t *testing.T) {
 	}
 }
 
+// High-load UDP stress test for profiling
 func TestFusionUDP_Stress(t *testing.T) {
-	conn, err := net.Dial("udp", fusionUDPAddr)
-	if err != nil {
-		t.Fatalf("dial: %v", err)
-	}
-	defer conn.Close()
+	const (
+		testDuration = 15 * time.Second // sustain load long enough for profiling
+		numWriters   = 8                // parallel senders
+		message      = `{{"action":"set","settings":{{"audio":{{"gainID1":{{"gain":{100}}}}}}}}}`
+	)
 
-	msg := []byte(`{"id":"spam","operation":"noop"}`)
-	stop := time.Now().Add(2 * time.Second)
-
+	var totalWrites uint64
 	var wg sync.WaitGroup
-	for i := 0; i < 4; i++ {
+	stop := time.Now().Add(testDuration)
+
+	t.Logf("Starting %d UDP writers for %v\n", numWriters, testDuration)
+
+	for i := 0; i < numWriters; i++ {
 		wg.Add(1)
-		go func() {
+		go func(id int) {
 			defer wg.Done()
-			for time.Now().Before(stop) {
-				conn.Write(msg)
+
+			conn, err := net.Dial("udp", fusionUDPAddr)
+			if err != nil {
+				t.Errorf("writer %d: dial error: %v", id, err)
+				return
 			}
-		}()
+			defer conn.Close()
+
+			buf := []byte(message)
+			var count uint64
+
+			for time.Now().Before(stop) {
+				if _, err := conn.Write(buf); err != nil {
+					// rare, ignore transient errors
+					continue
+				}
+				count++
+				// yield to let other goroutines run
+				runtime.Gosched()
+			}
+
+			atomic.AddUint64(&totalWrites, count)
+			t.Logf("writer %d sent %d packets", id, count)
+		}(i)
 	}
+
 	wg.Wait()
 
-	t.Log("stress test completed successfully (no panic or timeout)")
+	elapsed := testDuration.Seconds()
+	wps := float64(totalWrites) / elapsed
+	t.Logf("completed %d total writes (%.0f writes/sec)", totalWrites, wps)
 }

@@ -1,11 +1,14 @@
 package network
 
 import (
-	"encoding/json"
 	"fmt"
+	"math/rand"
 	"net"
+	"runtime"
 	"sync"
 	"time"
+
+	json "github.com/goccy/go-json"
 
 	"fusion/internal/api"
 	"fusion/internal/logging"
@@ -14,8 +17,8 @@ import (
 )
 
 const (
-	queueSize    = 1024
-	queueWorkers = 4
+	maxConcurrent = 32
+	queueSize     = 2048
 )
 
 type packet struct {
@@ -35,10 +38,7 @@ type UDPServer struct {
 	numWorkers int
 
 	// ACK handling
-	pending    map[string]chan struct{}
-	pendingMux sync.Mutex
-
-	bufPool sync.Pool
+	pending sync.Map
 }
 
 func NewUDPServer(addr string, handler *handler.Handler) (*UDPServer, error) {
@@ -48,13 +48,15 @@ func NewUDPServer(addr string, handler *handler.Handler) (*UDPServer, error) {
 	}
 	logging.GetLogger().Info("UDP listening on %s", addr)
 
+	queueWorkers := runtime.NumCPU() * 2
+	queueSize := queueWorkers * 2048
+
 	srv := &UDPServer{
 		handler:    handler,
 		queue:      make(chan packet, queueSize),
 		numWorkers: queueWorkers,
 		clients:    sync.Map{},
-		pending:    make(map[string]chan struct{}),
-		bufPool:    sync.Pool{New: func() any { return make([]byte, defaultBufferSize) }},
+		pending:    sync.Map{},
 	}
 
 	srv.Listener = NewListener(
@@ -76,10 +78,15 @@ func NewUDPServer(addr string, handler *handler.Handler) (*UDPServer, error) {
 // enqueuePacket is called from the I/O goroutine. Keep it very fast.
 func (s *UDPServer) enqueuePacket(data []byte, addr *net.UDPAddr) {
 	select {
-	case s.queue <- packet{append([]byte(nil), data...), addr}:
+	case s.queue <- packet{data, addr}:
 	default:
 		// Drop packet if queue full
-		logging.GetLogger().Warn("UDP queue full; dropping packet from %s", addr)
+
+		// Log ~0.1% of drops
+		if rand.Intn(1000) == 0 {
+			logging.GetLogger().Warn("UDP queue full; dropping packet from %s", addr)
+		}
+
 	}
 }
 
@@ -96,12 +103,11 @@ func (s *UDPServer) handlePacket(data []byte, addr *net.UDPAddr) {
 
 	var msg api.NotifyMessage
 	if err := json.Unmarshal(data, &msg); err == nil && msg.Operation == api.NotifyOpAck {
-		s.pendingMux.Lock()
-		if ch, ok := s.pending[msg.ID]; ok {
+		if chVal, ok := s.pending.Load(msg.ID); ok {
+			ch := chVal.(chan struct{})
 			close(ch)
-			delete(s.pending, msg.ID)
+			s.pending.Delete(msg.ID)
 		}
-		s.pendingMux.Unlock()
 		return
 	}
 
@@ -138,12 +144,29 @@ func (s *UDPServer) BroadcastMessage(msg *api.NotifyMessage) error {
 		return fmt.Errorf("marshal update: %w", err)
 	}
 
-	var dead []string
 	logger := logging.GetLogger()
 
+	// Limit the number of concurrent writes
+	sem := make(chan struct{}, maxConcurrent)
+	var wg sync.WaitGroup
+
 	s.clients.Range(func(k, v any) bool {
-		addr := v.(*net.UDPAddr)
+		addr, ok := v.(*net.UDPAddr)
+		if !ok || addr == nil {
+			return true
+		}
+
+		wg.Add(1)
+
+		// Acquire a slot
+		sem <- struct{}{}
 		go func(k string, addr *net.UDPAddr) {
+			defer wg.Done()
+			defer func() {
+				// Release the slot
+				<-sem
+			}()
+
 			if _, err := s.conn.WriteToUDP(data, addr); err != nil {
 				logger.Warn("broadcast to %s failed: %v", k, err)
 				s.clients.Delete(k)
@@ -152,10 +175,7 @@ func (s *UDPServer) BroadcastMessage(msg *api.NotifyMessage) error {
 		return true
 	})
 
-	for _, k := range dead {
-		s.clients.Delete(k)
-	}
-
+	wg.Wait()
 	return nil
 }
 

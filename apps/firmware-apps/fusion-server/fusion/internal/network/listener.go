@@ -45,30 +45,28 @@ func (l *Listener) Start() {
 	l.wg.Add(1)
 	go func() {
 		defer l.wg.Done()
-		buf := make([]byte, l.BufferSize)
+
 		for {
 			select {
 			case <-l.stopChan:
 				return
 			default:
+				buf := make([]byte, l.BufferSize)
 				l.conn.SetReadDeadline(time.Now().Add(l.Timeout))
 				n, addr, err := l.conn.ReadFromUDP(buf)
 				if err != nil {
-					// Retry on timeout
 					if ne, ok := err.(net.Error); ok && ne.Timeout() {
 						continue
 					}
-
-					// Shutting down; exit quietly.
 					if errors.Is(err, net.ErrClosed) ||
 						err.Error() == "use of closed network connection" {
 						return
 					}
-
 					logging.GetLogger().Error("read error from %v: %v", addr, err)
 					continue
 				}
-				go l.Handler(buf[:n], addr)
+
+				l.Handler(buf[:n], addr)
 			}
 		}
 	}()
