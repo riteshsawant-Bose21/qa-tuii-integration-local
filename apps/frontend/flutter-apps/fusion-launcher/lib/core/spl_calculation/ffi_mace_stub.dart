@@ -1,4 +1,5 @@
 // File: lib/core/ffi_mace_stub.dart
+
 class MaceEngine {
   static Future<MaceEngine> create() async => throw UnsupportedError('FFI is not supported on this platform.');
   void dispose() => throw UnsupportedError('FFI is not supported on this platform.');
