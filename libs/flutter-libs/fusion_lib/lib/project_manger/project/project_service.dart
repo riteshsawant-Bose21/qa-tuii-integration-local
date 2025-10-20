@@ -44,7 +44,7 @@ class ProjectService {
   List<Map<String, dynamic>> undoStack = [];
   List<Map<String, dynamic>> redoStack = [];
 
-  int get maxHistory => 10; // cap history to avoid unbounded memory growth
+  int get maxHistory => 25; // cap history to avoid unbounded memory growth
 
   ProjectService({
     required this.id,
