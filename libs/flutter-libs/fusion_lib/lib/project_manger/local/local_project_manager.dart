@@ -84,6 +84,8 @@ class LocalProjectManager {
       final Directory fusionDir = await fusionProjectDirectory;
       final Directory projectDir = Directory('${fusionDir.path}/$projectId');
 
+      print('Creating new project directory at: ${projectDir.path}');
+
       /// Check if folder already exists
       if (await projectDir.exists()) {
         return ResponseCallback.failure("Project folder '$projectId' already exists.");

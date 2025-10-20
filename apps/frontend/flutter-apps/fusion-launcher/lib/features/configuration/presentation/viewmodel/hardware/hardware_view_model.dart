@@ -17,12 +17,18 @@ extension HardwareViewModel on ProjectViewModel {
   }
 
   void updateHardware({required HardwareComponent hardware, bool autoSave = true}) {
+    print("Updating hardware: ${hardware.id}");
     try {
-      projectManager.updateHardware(hardware);
-      if (autoSave) {
-        saveProject();
+      final HardwareComponent oldHw = projectManager.getHardwareById(hardware.id);
+      if (oldHw != hardware) {
+        projectManager.updateHardware(hardware);
+        if (autoSave) {
+          saveProject();
+        }
+        updateProject();
+      } else {
+        FusionLogger.log(tag: LogTag.project, message: "No changes detected for hardware: ${hardware.id}, skipping update.");
       }
-      updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to update hardware: $e");
       throwError("Failed to update hardware: $e");
@@ -86,6 +92,7 @@ extension HardwareViewModel on ProjectViewModel {
   }
 
   ResponseCallback<bool> moveHardware({required String hardwareId, String? listeningAreaId, String? floorId, bool autoSave = true}) {
+    print("Moving hardware: $hardwareId to listeningAreaId: $listeningAreaId, floorId: $floorId");
     try {
       final ResponseCallback<bool> responseCallback = projectManager.moveHardware(hardwareId, listeningAreaId: listeningAreaId, floorId: floorId);
       if (autoSave) {

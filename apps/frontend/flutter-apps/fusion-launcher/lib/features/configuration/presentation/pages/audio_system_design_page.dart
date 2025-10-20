@@ -520,7 +520,7 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
 
   // show a dialog with the JSON representation of the audio system data with pretty formatting
   void sendDataToDRO() async {
-    serviceLocator<ProjectViewModel>().saveProject();
+    // serviceLocator<ProjectViewModel>().saveProject();
     /*final Map<String, dynamic> outputJson = JsonFormatConverter.convertFormat(projectManager.value.toJson(), projectManager.value.fusionDevices);
 
     //show a loader dialog while processing
@@ -598,7 +598,7 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
   }
 
   void sendToDSP() async {
-    serviceLocator<ProjectViewModel>().saveProject();
+    // serviceLocator<ProjectViewModel>().saveProject();
 
     /*    //show a loader dialog while processing
     FusionUtils.showLoader(context);

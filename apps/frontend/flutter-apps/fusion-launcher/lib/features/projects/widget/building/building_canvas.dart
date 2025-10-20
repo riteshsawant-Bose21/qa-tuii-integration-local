@@ -8,17 +8,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/core/theme/app_theme.dart';
 import 'package:fusion_launcher/core/utils/fusion_utils.dart';
-import 'package:fusion_lib/fusion_building_view/floor_canvas.dart';
 import 'package:fusion_lib/fusion_building_view/floor_canvas_controller.dart';
 import 'package:fusion_lib/fusion_building_view/floor_plan_calibrator.dart';
-import 'package:fusion_lib/fusion_building_view/spl_panel.dart';
 import 'package:fusion_lib/fusion_building_view/spl_range_controller.dart';
-import 'package:fusion_lib/fusion_building_view/spl_range_slider.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_utils/image_loader_service.dart';
-import 'package:fusion_lib/fusion_widgets/buttons/fusion_outlined_button.dart';
-import 'package:fusion_lib/fusion_widgets/others/fusion_image.dart';
-import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
-import 'package:fusion_lib/models/fusion_models.dart';
 
 import '../../../../core/widgets/clean_widgets.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
@@ -64,27 +58,10 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
     );
 
     if (selectedAreas != null) {
-      // Get existing listening areas for this zone
-      final List<ListeningArea> existingAreas = serviceLocator<ProjectViewModel>().getListeningAreasForZone(zoneId: zone.id);
-
-      // Find areas to remove (existing but not in selected)
-      final List<ListeningArea> areasToRemove =
-          existingAreas.where((ListeningArea existingArea) => !selectedAreas.any((ListeningArea selected) => selected.id == existingArea.id)).toList();
-
-      // Find areas to add (selected but not in existing)
-      final List<ListeningArea> areasToAdd =
-          selectedAreas.where((ListeningArea selected) => !existingAreas.any((ListeningArea existing) => existing.id == selected.id)).toList();
-
-      // Remove areas that are no longer selected
-      for (ListeningArea area in areasToRemove) {
-        serviceLocator<ProjectViewModel>().removeListeningAreaFromZone(listeningAreaId: area.id, zoneId: zone.id);
-      }
-
-      // Add newly selected areas
-      for (ListeningArea area in areasToAdd) {
-        serviceLocator<ProjectViewModel>().addListeningAreaToZone(listeningAreaId: area.id, zoneId: zone.id);
-      }
-      serviceLocator<ProjectViewModel>().saveProject();
+      serviceLocator<ProjectViewModel>().updateListeningAreasInZone(
+        zoneId: zone.id,
+        listeningAreaIds: selectedAreas.map((ListeningArea e) => e.id).toList(),
+      );
     } else {
       serviceLocator<ProjectViewModel>().clearSelectedZone();
     }
@@ -183,7 +160,16 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                               floor: floor,
                               floorPlanEntity: floor.floorPlan,
                               onUpdateHardwareComponent: (HardwareComponent updatedHw) {
-                                serviceLocator<ProjectViewModel>().updateHardware(hardware: updatedHw);
+                                final HardwareComponent oldHw = serviceLocator<ProjectViewModel>().getHardware(hardwareId: updatedHw.id)!;
+
+                                //check for pos && listenign area id since only those two can be updated from canvas
+                                if (oldHw.pos != updatedHw.pos ||
+                                    oldHw.locationEntity.listeningAreaId != updatedHw.locationEntity.listeningAreaId ||
+                                    oldHw.locationEntity.floorId != updatedHw.locationEntity.floorId) {
+                                  serviceLocator<ProjectViewModel>().updateHardware(hardware: updatedHw);
+                                } else {
+                                  debugPrint("No changes detected for hardware ${updatedHw.id}, skipping update.");
+                                }
                               },
                               zones: serviceLocator<ProjectViewModel>().zones,
                               splPanelData: widget.splPanelData,
@@ -231,7 +217,6 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                 if (component is Speaker || component is ListeningArea) {
                                   widget.onCalculateSpl();
                                 }
-                                serviceLocator<ProjectViewModel>().saveProject();
                               },
                               onTapListeningArea: (ListeningArea value) {
                                 // serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(value.id);
@@ -806,7 +791,6 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
         );
 
         widget.floorCanvasController.loadFloorPlanImage();
-        serviceLocator<ProjectViewModel>().saveProject();
       } else {
         debugPrint('Calibration cancelled by user');
       }

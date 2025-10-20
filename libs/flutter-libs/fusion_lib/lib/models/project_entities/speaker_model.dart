@@ -97,32 +97,83 @@ class Speaker extends HardwareComponent {
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     if (other is! Speaker) return false;
-    return id == other.id &&
-        name == other.name &&
-        pos == other.pos &&
-        rotation == other.rotation &&
-        gain == other.gain &&
-        assetImagePath == other.assetImagePath &&
-        locationEntity == other.locationEntity &&
-        ipAddress == other.ipAddress &&
-        speakerSKU == other.speakerSKU &&
-        type == other.type &&
-        zAxis == other.zAxis;
+
+    // Check cheap primitive fields first to fail fast
+    if (id != other.id ||
+        rotation != other.rotation ||
+        gain != other.gain ||
+        type != other.type ||
+        pitch != other.pitch ||
+        roll != other.roll ||
+        yaw != other.yaw ||
+        zAxis != other.zAxis ||
+        price != other.price ||
+        lockListeningArea != other.lockListeningArea) {
+      return false;
+    }
+
+    // Check string fields (slightly more expensive)
+    if (name != other.name ||
+        assetImagePath != other.assetImagePath ||
+        ipAddress != other.ipAddress ||
+        speakerSKU != other.speakerSKU ||
+        hardwareName != other.hardwareName) {
+      return false;
+    }
+
+    // Check object fields (more expensive)
+    if (pos != other.pos || wiringPos != other.wiringPos || locationEntity != other.locationEntity) {
+      return false;
+    }
+
+    // Check expensive list comparisons last
+    return _listEquals(communicationPorts, other.communicationPorts) &&
+        _listEquals(inputPortsData, other.inputPortsData) &&
+        _listEquals(outputPortsData, other.outputPortsData);
+  }
+
+  bool _listEquals<T>(List<T>? a, List<T>? b) {
+    if (identical(a, b)) return true; // Same reference
+    if (a == null || b == null) return a == b; // One is null
+
+    final length = a.length;
+    if (length != b.length) return false; // Different lengths
+
+    // Early return for empty lists
+    if (length == 0) return true;
+
+    // Compare elements
+    for (int index = 0; index < length; index++) {
+      if (a[index] != b[index]) return false;
+    }
+    return true;
   }
 
   @override
   int get hashCode {
-    return id.hashCode ^
-        name.hashCode ^
-        pos.hashCode ^
-        rotation.hashCode ^
-        gain.hashCode ^
-        assetImagePath.hashCode ^
-        locationEntity.hashCode ^
-        (ipAddress?.hashCode ?? 0) ^
-        speakerSKU.hashCode ^
-        type.hashCode ^
-        zAxis.hashCode;
+    return Object.hash(
+          id,
+          name,
+          pos,
+          wiringPos,
+          rotation,
+          gain,
+          assetImagePath,
+          locationEntity,
+          ipAddress,
+          speakerSKU,
+          type,
+          zAxis,
+          price,
+          hardwareName,
+          pitch,
+          roll,
+          yaw,
+          lockListeningArea,
+          Object.hashAll(communicationPorts),
+          Object.hashAll(inputPortsData),
+        ) ^
+        Object.hashAll(outputPortsData);
   }
 
   Map<String, dynamic> toJson() {

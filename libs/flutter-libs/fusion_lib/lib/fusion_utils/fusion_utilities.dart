@@ -31,4 +31,9 @@ class FusionUtils {
     Colors.primaries[Random().nextInt(Colors.primaries.length)],
     Colors.primaries[Random().nextInt(Colors.primaries.length)],
   ];
+
+  static bool areVerticesEqualIgnoringOrder(List<Offset> list1, List<Offset> list2) {
+    if (list1.length != list2.length) return false;
+    return Set<Offset>.from(list1).containsAll(list2);
+  }
 }

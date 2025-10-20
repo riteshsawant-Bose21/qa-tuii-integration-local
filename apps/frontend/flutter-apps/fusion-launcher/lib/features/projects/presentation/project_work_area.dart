@@ -98,8 +98,8 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
   _initSplRangeDefaults() {
     final SplPanelData currentPanelData = _splRangeController.getPanelData();
     _lastPanelData = currentPanelData;
-    serviceLocator<ProjectViewModel>().setMinSPL(minSPL: currentPanelData.splLowerDb);
-    serviceLocator<ProjectViewModel>().setMaxSPL(maxSPL: currentPanelData.splUpperDb);
+    serviceLocator<ProjectViewModel>().setMinSPL(minSPL: currentPanelData.splLowerDb, autoSave: false);
+    serviceLocator<ProjectViewModel>().setMaxSPL(maxSPL: currentPanelData.splUpperDb, autoSave: false);
   }
 
   void _updateSPLFromPanelData() {

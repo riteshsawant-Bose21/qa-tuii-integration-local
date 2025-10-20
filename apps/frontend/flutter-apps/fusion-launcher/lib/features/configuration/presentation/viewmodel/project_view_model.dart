@@ -153,6 +153,7 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
   Future<void> saveProject() async {
     emit(ProjectLoading());
     try {
+      print("Saving current project...");
       final ResponseCallback<void> saveResponse = await projectManager.saveCurrentProject();
       if (!saveResponse.success) {
         emit(ProjectError(message: "Failed to save project: ${saveResponse.message}"));
