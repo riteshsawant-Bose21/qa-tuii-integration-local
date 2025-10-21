@@ -4,35 +4,20 @@
  *
  */
 
-// OCALiteController.cpp : Defines the entry point for the OCA Controller application.
+// main.cpp : Defines the entry point for the OCA Controller application.
 //
 
-#if 0
-#include <HostInterfaceLite/OCA/OCF/OcfLiteHostInterface.h>
-#include <HostInterfaceLite/OCA/OCF/Logging/IOcfLiteLog.h>
-#include <HostInterfaceLite/OCA/OCP.1/Ocp1LiteHostInterface.h>
-#include <OCC/ControlClasses/Managers/OcaLiteNetworkManager.h>
-#include <OCC/ControlDataTypes/OcaLiteClassIdentification.h>
-#include <OCC/ControlClasses/Workers/BlocksAndMatrices/OcaLiteBlock.h>
-#include <OCF/OcaLiteCommandHandlerController.h>
-#include <OCP.1/Ocp1LiteNetwork.h>
-#include <OCP.1/Ocp1LiteNetworkSystemInterfaceID.h>
-#include <OCP.1/Ocp1LiteConnectParameters.h>
-#include <Proxy/GeneralProxy.h>
-#include <StandardLib/StandardLib.h>
-#include <OCC/ControlDataTypes/OcaLiteManagerDescriptor.h>
-#include <OCC/ControlDataTypes/OcaLiteBlockMember.h>
-#include <OCC/ControlDataTypes/OcaLiteList.h>
-#include <OCC/ControlDataTypes/OcaLiteMethod.h>
-#endif
 #include <unistd.h>
 #include <sys/time.h>
 #include <iostream>
+#include <thread>
 #include "PlatformInterface/linux/OcaLiteOcfMsgQueue.h"
+#include "PlatformInterface/linux/OcaLiteOcfThread.h"
 #include "HostInterface/CommandInterface/CommandInterface.h"
 
 bool ocaMain(std::string& customNodeId,
              std::vector<ControlPal_MsgQueue<ControllerCmdIntfc>*> msgQues);
+void ControllerViewProc(void *msgQues);
 
 // TODO: Add signal capturing to exit gracefully.
 
@@ -103,14 +88,18 @@ int main(int argc, const char *argv[])
     msgQues.push_back(&ocaQueue);
     msgQues.push_back(&uiQueue);
 
-#if 0
     // TODO: Create User Interface task. This task handles UI,
     //       Physical Encoders etc.
-    std::thread *uiThread = OcaLiteOcfThread_create(ControllerView,
+    std::cout << "Starting uiThread ... " << std::endl;
+    //std::thread uiThread = OcaLiteOcfThread_create(uiThreadProc,
+    std::thread uiThread = OcaLiteOcfThread_create(ControllerViewProc,
                                               static_cast<void *>(&msgQues));
-#endif
 
+    // TODO: Add ready sychronization between OCA and UI tasks
+    std::cout << "Sleeping 5sec ... " << std::endl;
+    sleep(5);
     // Start OCA processing
+    std::cout << "Starting ocaMain ... " << std::endl;
     return ocaMain(customNodeId, msgQues);
 }
 

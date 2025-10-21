@@ -180,8 +180,6 @@ FusionProxy::FusionProxy(::OcaSessionID sessionId, ::OcaONo networkObjectNumber)
 {
     const ::IOcaLiteWriter& writer(::OcaLiteNetworkManager::GetInstance().GetNetwork(m_networkObjectNumber)->GetWriter());
     ::OcaUint8* pParams(m_buffer);
-    ::OcaUint32 responseSize;
-    ::OcaUint8* pResponse;
 
     writer.Write(static_cast<UINT8>(1), &pParams); // Nr params
     writer.Write(static_cast<FLOAT>(gainVal), &pParams); // Nr params
@@ -247,8 +245,6 @@ FusionProxy::FusionProxy(::OcaSessionID sessionId, ::OcaONo networkObjectNumber)
 {
     const ::IOcaLiteWriter& writer(::OcaLiteNetworkManager::GetInstance().GetNetwork(m_networkObjectNumber)->GetWriter());
     ::OcaUint8* pParams(m_buffer);
-    ::OcaUint32 responseSize;
-    ::OcaUint8* pResponse;
 
     writer.Write(static_cast<UINT8>(1), &pParams); // Nr params
     writer.Write(static_cast<UINT8>(state), &pParams);
@@ -311,8 +307,6 @@ FusionProxy::FusionProxy(::OcaSessionID sessionId, ::OcaONo networkObjectNumber)
 {
     const ::IOcaLiteWriter& writer(::OcaLiteNetworkManager::GetInstance().GetNetwork(m_networkObjectNumber)->GetWriter());
     ::OcaUint8* pParams(m_buffer);
-    ::OcaUint32 responseSize;
-    ::OcaUint8* pResponse;
 
     writer.Write(static_cast<UINT8>(1), &pParams); // Nr params
     writer.Write(static_cast<UINT16>(position), &pParams);

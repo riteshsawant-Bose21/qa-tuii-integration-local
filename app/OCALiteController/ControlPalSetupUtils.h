@@ -17,8 +17,6 @@ void DisplayDiscoveredDevices(
 
 ::OcaBoolean ConnectToDevice(
                      const OcaServiceDiscovery::DiscoveredDevice &device,
-                     ::Ocp1LiteNetwork *ocp1Network,
-                     const std::string &customNodeId,
                      ::OcaSessionID& sessionId);
 
 ::OcaLiteStatus GetControllerConfig(::OcaLiteString& controllerId,
@@ -30,15 +28,13 @@ void DisplayDiscoveredDevices(
 ZoneGroup* CreateZoneGroup(Zone& newZone, FusionProxy& proxy,
                                              void *commandQueue);
 
-OcaBoolean ControlPalSetupConnection(::Ocp1LiteNetwork *ocp1Network,
-                                     const std::string &customNodeId,
-                                     ::OcaSessionID&   sessionId);
+OcaBoolean ControlPalSetupConnection(::OcaSessionID& sessionId);
 
 ::OcaBoolean ControlPalSetupControls(::OcaLiteString& controllerId,
                                         ::GeneralProxy& gen_proxy,
                                         FusionProxy& proxy,
-                                        std::vector<::OcaONo>& zoneONo,
-                                        void *commandQueue);
+                                        void *commandQueue,
+                                        std::vector<::OcaONo>& zoneONo);
 
 void ControlPalTeardownControls(std::vector<::OcaONo>& zoneONo);
 #endif // CONTROLPAL_SETUP_UTILS_H_

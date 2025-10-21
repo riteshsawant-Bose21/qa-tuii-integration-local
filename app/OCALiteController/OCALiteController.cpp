@@ -61,7 +61,7 @@ bool ocaMain(std::string& customNodeId,
 
     OCA_LOG_INFO("=== OCA Lite Controller with Service Discovery ===");
     // Set log level to show INFO messages (including client connection logs)
-    ::OcfLiteLogSetLogLevel(OCA_LOG_LVL_TRACE);
+    //::OcfLiteLogSetLogLevel(OCA_LOG_LVL_TRACE);
 
     // Initialize the host interfaces
     bool bSuccess = ::OcfLiteHostInterfaceInitialize();
@@ -139,9 +139,7 @@ bool ocaMain(std::string& customNodeId,
                                 while(true)
                                 {
                                     // Setup connection to the Device
-                                    if (ControlPalSetupConnection(ocp1Network,
-                                                                  customNodeId,
-                                                                  sessionId))
+                                    if (ControlPalSetupConnection(sessionId))
                                     {
                                         // Set connected status to true
                                         connMonitor->SetSetting(static_cast<OcaBoolean>(true));
@@ -171,8 +169,8 @@ bool ocaMain(std::string& customNodeId,
                                                  controllerId,
                                                  proxy,
                                                  fusion_proxy,
-                                                 zoneONos,
-                                                 static_cast<void *>(ocaMsgQueue)))
+                                                 static_cast<void *>(ocaMsgQueue),
+                                                 zoneONos))
                                         {
                                             ::OcaBoolean connectStatus(true);
 

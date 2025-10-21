@@ -64,25 +64,28 @@ OcaLiteGain::OcaLiteGain(::OcaONo objectNumber, ::OcaBoolean lockable, const ::O
         {
             if (!CompareValue< ::OcaDB>(oldGain, gain))
             {
+#ifdef OCA_LITE_CONTROLLER  // Controllers will set object state first
+                m_gain = gain;
+#endif
                 rc = SetGainValue(gain);
+#ifndef OCA_LITE_CONTROLLER   // Controllers should not generate events
                 if (OCASTATUS_OK == rc)
                 {
                     m_gain = gain;
 
-#ifndef OCA_LITE_CONTROLLER   // Controllers should not generate events
                     ::OcaDB actualGain;
                     rc = GetGainValue(actualGain);
                     if (OCASTATUS_OK == rc)
                     {
                         ::OcaLitePropertyID propertyID(CLASS_ID.GetFieldCount(), static_cast< ::OcaUint16>(OCA_PROP_GAIN));
                         ::OcaLitePropertyChangedEventData< ::OcaDB> eventData(GetObjectNumber(),
-                                                                          propertyID,
-                                                                          actualGain,
-                                                                          OCAPROPERTYCHANGETYPE_CURRENT_CHANGED);
+                                propertyID,
+                                actualGain,
+                                OCAPROPERTYCHANGETYPE_CURRENT_CHANGED);
                         PropertyChanged(eventData, propertyID);
                     }
-#endif
                 }
+#endif
             }
         }
     }

@@ -61,25 +61,28 @@ OcaLiteMute::OcaLiteMute(::OcaONo objectNumber, ::OcaBoolean lockable, const ::O
         rc = GetStateValue(oldState);
         if ((OCASTATUS_OK == rc) && !CompareValue< ::OcaLiteMuteState>(oldState, state))
         {
+#ifdef OCA_LITE_CONTROLLER   // Controllers will set object state first
+                m_state = state;
+#endif
             rc = SetStateValue(state);
+#ifndef OCA_LITE_CONTROLLER   // Controllers should not generate events
             if (OCASTATUS_OK == rc)
             {
                 m_state = state;
                                     
-#ifndef OCA_LITE_CONTROLLER   // Controllers should not generate events
                 ::OcaLiteMuteState actualState;
                 rc = GetStateValue(actualState);
                 if (OCASTATUS_OK == rc)
                 {
                     ::OcaLitePropertyID propertyID(CLASS_ID.GetFieldCount(), static_cast< ::OcaUint16>(OCA_PROP_STATE));
-                    ::OcaLitePropertyChangedEventData< ::OcaUint8> eventData(GetObjectNumber(),                            // ::OcaLiteMuteState cast to ::OcaUint8 according to OcaLiteWorkerDataTypes.h
+                    ::OcaLitePropertyChangedEventData< ::OcaUint8> eventData(GetObjectNumber(),  // ::OcaLiteMuteState cast to ::OcaUint8 according to OcaLiteWorkerDataTypes.h
                                                                              propertyID,
                                                                              actualState,
                                                                              OCAPROPERTYCHANGETYPE_CURRENT_CHANGED);
                     PropertyChanged(eventData, propertyID);
                 }
-#endif
             }
+#endif
         }
     }
 

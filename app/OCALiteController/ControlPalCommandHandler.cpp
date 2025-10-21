@@ -87,10 +87,27 @@ void ProcessCommand(ControllerCmdIntfc& newCmd, FusionProxy& fusion_proxy)
             target = FindObject(newCmd.ono, ::OcaLiteGain::CLASS_ID);
             if (target)
             {
+                ::OcaDB currGain, minGain, maxGain;
+                ::ControlPalGainActuator *gainObj =
+                          static_cast<::ControlPalGainActuator*>(target);
+
+                currGain = gainObj->LastGainGet();
+
+                // Verify no gain updates are in progress
+                if (currGain == 0.0)
+                {
+                    // Get current Gain
+                    static_cast<::ControlPalGainActuator*>(target)->GetGain(
+                            currGain,
+                            minGain,
+                            maxGain);
+                }
+                currGain += newCmd.val.flt_val;
+                gainObj->LastGainSet(currGain);
+
                 // Send message to Device
                 fusion_proxy.ConcreteGainActuator_SetGain(
-                                     target->GetObjectNumber(),
-                                     static_cast<::OcaDB>(newCmd.val.flt_val));
+                                     target->GetObjectNumber(), currGain);
             }
             break;
 
@@ -99,10 +116,22 @@ void ProcessCommand(ControllerCmdIntfc& newCmd, FusionProxy& fusion_proxy)
             target = FindObject(newCmd.ono, ::OcaLiteMute::CLASS_ID);
             if (target)
             {
+                ::OcaLiteMuteState newState;
+                static_cast<::ControlPalMuteActuator*>(target)->GetState(newState);
+
+                // Toggle state
+                if (newState == OCAMUTESTATE_MUTED)
+                {
+                    newState = OCAMUTESTATE_UNMUTED;
+                }
+                else
+                {
+                    newState = OCAMUTESTATE_MUTED;
+                }
+
                 // Send message to Device
                 fusion_proxy.ConcreteMuteActuator_SetMute(
-                         target->GetObjectNumber(),
-                         static_cast<::OcaLiteMuteState>(newCmd.val.int_val));
+                                   target->GetObjectNumber(), newState);
             }
             break;
 
@@ -111,10 +140,16 @@ void ProcessCommand(ControllerCmdIntfc& newCmd, FusionProxy& fusion_proxy)
             target = FindObject(newCmd.ono, ::OcaLiteSwitch::CLASS_ID);
             if (target)
             {
+                ::OcaUint16 newPos, minPos, maxPos;
+                static_cast<::ControlPalSwitchActuator*>(target)->GetPosition(
+                                                    newPos, minPos, maxPos);
+
+                // Move to next position
+                newPos = (newPos +1) % (maxPos - minPos + 1);
+
                 // Send message to Device
                 fusion_proxy.ConcreteSwitchActuator_SetSwitch(
-                         target->GetObjectNumber(),
-                         static_cast<::OcaUint16>(newCmd.val.int_val));
+                         target->GetObjectNumber(), newPos);
             }
             break;
 
