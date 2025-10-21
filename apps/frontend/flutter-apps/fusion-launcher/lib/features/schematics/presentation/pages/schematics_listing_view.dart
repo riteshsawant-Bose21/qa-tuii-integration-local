@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/models/project_entities/endpoints.dart';
 
 import '../../../../core/models/products_data.dart';
 import '../../../../core/service_locator.dart';
@@ -19,7 +20,7 @@ class SchematicsListingview extends StatefulWidget {
 
 class _SchematicsListingviewState extends State<SchematicsListingview> {
   List<Source> _reorderableSources = <Source>[];
-  List<Map<String, dynamic>> _reorderableEndpoints = <Map<String, dynamic>>[];
+  List<FusionEndpoints> _reorderableEndpoints = <FusionEndpoints>[];
   List<GenericHardwareComponent> _reorderableProcessors = <GenericHardwareComponent>[];
   List<Map<String, dynamic>> _reorderableSpeakers = <Map<String, dynamic>>[];
   List<Map<String, dynamic>> _reorderableControllers = <Map<String, dynamic>>[];
@@ -46,11 +47,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
     _reorderableSources = List<Source>.from(serviceLocator<ProjectViewModel>().sources);
 
     // Initialize endpoints
-    _reorderableEndpoints = <Map<String, dynamic>>[
-      <String, dynamic>{'name': 'Audio Input 1', 'assetPath': 'assets/icons/lising_view_icon.png'},
-      <String, dynamic>{'name': 'Audio Input 2', 'assetPath': 'assets/icons/lising_view_icon.png'},
-      <String, dynamic>{'name': 'HDMI Input', 'assetPath': 'assets/icons/lising_view_icon.png'},
-    ];
+    _reorderableEndpoints = List<FusionEndpoints>.from(serviceLocator<ProjectViewModel>().fusionEndpoints);
 
     // Initialize processors
     final List<FusionDsp> processors = serviceLocator<ProjectViewModel>().fusionDevices;
@@ -239,10 +236,21 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
 
   @override
   void dispose() {
-    // Remove local dispose calls - now handled by ProjectViewModel
-    // _hoveredDeviceId.dispose();
-    // _selectedDeviceId.dispose();
     super.dispose();
+  }
+
+  /// Get location name from listeningAreaId
+  String? getLocationName(String? listeningAreaId) {
+    if (listeningAreaId == null) return null;
+
+    final ListeningArea area = serviceLocator<ProjectViewModel>().getListeningArea(areaId: listeningAreaId);
+
+    return area.name;
+  }
+
+  /// Get zone data from hardwareId
+  Zone? getZoneData(String hardwareId) {
+    return serviceLocator<ProjectViewModel>().getZoneForHardware(hardwareId: hardwareId);
   }
 
   // Mock data for listening areas and zones - replace with actual data from your project
@@ -303,6 +311,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                 zones: _zones,
                 selectedDeviceId: _projectViewModel.selectedDevice?.type == SelectedItemType.source ? _projectViewModel.selectedDevice?.id : null,
                 onTapAddDevice: (dynamic item, String areaId, String floorId) {
+                  /// Sources [onTapAddDevice]
                   if (item is SourceData) {
                     final Source source = Source(
                       name: item.name,
@@ -312,6 +321,26 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                       locationEntity: LocationModel(listeningAreaId: areaId, floorId: floorId),
                       sku: item.id,
                       price: item.price,
+                      portData: HardwarePortData(
+                        inputPorts: 5,
+                        outputPorts: 5,
+                        inputPortType: PortType.analogInput,
+                        outputPortType: PortType.analogOutput,
+                        compatibleInputTypes: <PortType>[PortType.analogInput, PortType.digitalInput],
+                        compatibleOutputTypes: <PortType>[PortType.analogOutput, PortType.digitalOutput],
+                        portPosition: PortPosition.topLeft,
+                      ),
+                      communicationPorts: <PortData>[
+                        PortData(
+                          name: 'Wifi',
+                          position: PortPosition.footerRight,
+                          portNumber: 1,
+                          type: PortType.wifi,
+                          compatibleTypes: <PortType>[PortType.wifi],
+                        ),
+                        PortData(name: 'USB', position: PortPosition.footerRight, portNumber: 2, type: PortType.usb, compatibleTypes: <PortType>[PortType.usb]),
+                        PortData(name: 'ble', position: PortPosition.footerRight, portNumber: 3, type: PortType.ble, compatibleTypes: <PortType>[PortType.ble]),
+                      ],
                     );
                     serviceLocator<ProjectViewModel>().addHardware(hardware: source);
                     FusionToast.show(
@@ -322,6 +351,36 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                     );
                     setState(() {
                       _reorderableSources.add(source);
+                    });
+                  }
+                  /// Endpoints [onTapAddDevice]
+                  else if (item is ProductQueryModel) {
+                    final HardwareComponent hardware = serviceLocator<ProjectViewModel>().fromProductQueryModel(
+                      item,
+                      locationEntity: LocationModel(listeningAreaId: areaId, floorId: floorId),
+                      pos: Offset.zero,
+                    );
+
+                    // todo remove this once you implement onreorder from PVM
+                    final FusionEndpoints endpoint = FusionEndpoints(
+                      name: item.name,
+                      assetImagePath: item.image.isNotEmpty ? item.image : 'assets/icons/endpoint_icon.png',
+                      pos: Offset.zero,
+                      locationEntity: LocationModel(listeningAreaId: areaId, floorId: floorId),
+                      sku: "",
+                      ipAddress: "",
+                      price: item.price,
+                      hardwareName: "",
+                    );
+                    serviceLocator<ProjectViewModel>().addHardware(hardware: hardware);
+                    FusionToast.show(
+                      context,
+                      message: "Endpoint \"${item.name}\" added",
+                      icon: Icons.check_circle_outline,
+                      backgroundColor: Colors.green[600],
+                    );
+                    setState(() {
+                      _reorderableEndpoints.add(endpoint);
                     });
                   }
                 },
@@ -438,11 +497,12 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
           ),
           const SizedBox(height: 8),
 
+          /// Sources List
           _buildSourcesContent(),
 
           const SizedBox(height: 16),
 
-          // Endpoints Section
+          /// Endpoints Section
           FusionAppText(
             text: "Endpoints",
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -453,6 +513,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
           ),
           const SizedBox(height: 8),
 
+          /// Endpoints List
           _buildEndpointsContent(),
         ],
       ),
@@ -466,15 +527,6 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
         final List<Source> currentSources = serviceLocator<ProjectViewModel>().sources;
         final SelectedItem? hoveredDevice = _projectViewModel.hoveredDevice;
         final SelectedItem? selectedDevice = _projectViewModel.selectedDevice;
-
-        if (currentSources.length != _reorderableSources.length ||
-            !currentSources.every((Source source) => _reorderableSources.any((Source rs) => rs.id == source.id))) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            setState(() {
-              _reorderableSources = List<Source>.from(currentSources);
-            });
-          });
-        }
 
         return CommonReorderableListView<Source>(
           items: _reorderableSources,
@@ -492,38 +544,27 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
           itemBuilder: (BuildContext context, Source source, int index) {
             final bool isHovered = hoveredDevice?.id == source.id && hoveredDevice?.type == SelectedItemType.source;
             final bool isSelected = selectedDevice?.id == source.id && selectedDevice?.type == SelectedItemType.source;
-
-            /// Get location name for the source
-            final String? locationName =
-                source.locationEntity.listeningAreaId != null
-                    ? serviceLocator<ProjectViewModel>().getListeningArea(areaId: source.locationEntity.listeningAreaId!).name
-                    : null;
-
-            /// Get zone data for the source
-            final Zone? zoneData = serviceLocator<ProjectViewModel>().getZoneForHardware(hardwareId: source.id);
-
             // print("Sourceeeeee ${source.id} is in location: $locationName, zone: ${zoneData?.name ?? "No Zone"}");
 
             return HardwareItemCard(
               name: source.name,
               assetImagePath: source.assetImagePath,
               itemId: source.id,
-              zone: zoneData,
-              location: locationName ?? "Add Location",
+              zone: getZoneData(source.id),
+              location: getLocationName(source.locationEntity.listeningAreaId) ?? "Add Location",
               isHovered: isHovered,
               isSelected: isSelected,
               onTap: () => _projectViewModel.setSelectedDevice(source.id, SelectedItemType.source),
               onHover: () => _projectViewModel.setHoveredDevice(source.id, SelectedItemType.source),
               onExit: () => _projectViewModel.setHoveredDevice(null, null),
               onDelete: (String id) {
-                final String sourceName = source.name;
                 setState(() {
                   _reorderableSources.removeWhere((Source s) => s.id == id);
                 });
                 serviceLocator<ProjectViewModel>().removeHardware(hardwareId: id);
                 FusionToast.show(
                   context,
-                  message: 'Source "$sourceName" deleted',
+                  message: 'Source "${source.name}" deleted',
                   icon: Icons.delete_outline,
                   backgroundColor: Colors.red[600],
                 );
@@ -544,41 +585,41 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
         final SelectedItem? hoveredDevice = _projectViewModel.hoveredDevice;
         final SelectedItem? selectedDevice = _projectViewModel.selectedDevice;
 
-        return CommonReorderableListView<Map<String, dynamic>>(
+        return CommonReorderableListView<FusionEndpoints>(
           items: _reorderableEndpoints,
           emptyMessage: "No endpoints added yet",
           onReorder: (int oldIndex, int newIndex) {
             setState(() {
               if (newIndex > oldIndex) newIndex -= 1;
-              final Map<String, dynamic> item = _reorderableEndpoints.removeAt(oldIndex);
+              final FusionEndpoints item = _reorderableEndpoints.removeAt(oldIndex);
               _reorderableEndpoints.insert(newIndex, item);
               _projectViewModel.setSelectedDevice('endpoint_$newIndex', SelectedItemType.endpoint);
             });
           },
-          keyExtractor: (Map<String, dynamic> endpoint) => 'endpoint_${endpoint['name']}',
-          itemBuilder: (BuildContext context, Map<String, dynamic> endpoint, int index) {
-            final String endpointId = 'endpoint_$index';
-            final bool isHovered = hoveredDevice?.id == endpointId && hoveredDevice?.type == SelectedItemType.endpoint;
-            final bool isSelected = selectedDevice?.id == endpointId && selectedDevice?.type == SelectedItemType.endpoint;
+          keyExtractor: (FusionEndpoints endpoint) => endpoint.id,
+          itemBuilder: (BuildContext context, FusionEndpoints endpoint, int index) {
+            final bool isHovered = hoveredDevice?.id == endpoint.id && hoveredDevice?.type == SelectedItemType.endpoint;
+            final bool isSelected = selectedDevice?.id == endpoint.id && selectedDevice?.type == SelectedItemType.endpoint;
 
             return HardwareItemCard(
-              name: endpoint['name'] as String,
-              assetImagePath: endpoint['assetPath'] as String,
-              itemId: endpointId,
-              location: "Eqp Loc.",
+              name: endpoint.name,
+              assetImagePath: endpoint.assetImagePath,
+              itemId: endpoint.id,
+              zone: getZoneData(endpoint.id),
+              location: getLocationName(endpoint.locationEntity.listeningAreaId) ?? "Add Location",
               isHovered: isHovered,
               isSelected: isSelected,
-              onTap: () => _projectViewModel.setSelectedDevice(endpointId, SelectedItemType.endpoint),
-              onHover: () => _projectViewModel.setHoveredDevice(endpointId, SelectedItemType.endpoint),
+              onTap: () => _projectViewModel.setSelectedDevice(endpoint.id, SelectedItemType.endpoint),
+              onHover: () => _projectViewModel.setHoveredDevice(endpoint.id, SelectedItemType.endpoint),
               onExit: () => _projectViewModel.setHoveredDevice(null, null),
               onDelete: (String id) {
-                final String endpointName = endpoint['name'] as String;
                 setState(() {
-                  _reorderableEndpoints.removeAt(index);
+                  _reorderableEndpoints.removeWhere((FusionEndpoints s) => s.id == id);
                 });
+                serviceLocator<ProjectViewModel>().removeHardware(hardwareId: id);
                 FusionToast.show(
                   context,
-                  message: 'Endpoint "$endpointName" deleted',
+                  message: 'Endpoint "${endpoint.name}" deleted',
                   icon: Icons.delete_outline,
                   backgroundColor: Colors.red[600],
                 );

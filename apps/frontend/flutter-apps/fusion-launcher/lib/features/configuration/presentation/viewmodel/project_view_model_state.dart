@@ -63,7 +63,3 @@ final class DeviceSelectionChanged extends ProjectViewModelState {
 }
 
 final class DeviceSelectionsCleared extends ProjectViewModelState {}
-
-final class PopupDeviceSelectionChanged extends ProjectViewModelState {}
-
-final class PopupSelectionsCleared extends ProjectViewModelState {}

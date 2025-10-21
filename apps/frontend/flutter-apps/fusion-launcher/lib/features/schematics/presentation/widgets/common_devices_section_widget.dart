@@ -3,9 +3,7 @@ import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/form_fields/fusion_text_field.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import 'expandable_popup_menu_widget.dart';
 
 class CommonDevicesSectionWidget extends StatefulWidget {
@@ -171,144 +169,137 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-      builder: (BuildContext context, ProjectViewModelState state) {
-        final ProjectViewModel projectViewModel = context.read<ProjectViewModel>();
-        final bool canAddDevice = projectViewModel.selectedPopupDevice != null;
+    return Container(
+      width: widget.width,
+      height: widget.height,
+      decoration: BoxDecoration(
+        color: widget.backgroundColor,
+        border: Border(
+          right: BorderSide(width: 1, color: Theme.of(context).colorScheme.grey),
+        ),
+      ),
+      child: Column(
+        children: <Widget>[
+          /// section Header
+          Container(
+            width: widget.width,
+            height: 44,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border(
+                bottom: BorderSide(width: 1, color: Theme.of(context).colorScheme.grey),
+              ),
+            ),
+            child: AnimatedBuilder(
+              animation: _searchAnimation,
+              builder: (BuildContext context, Widget? child) {
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: <Widget>[
+                    /// Title and search field with smooth transition
+                    Expanded(
+                      child: Stack(
+                        children: <Widget>[
+                          /// Title - fades out when search is visible
+                          Opacity(
+                            opacity: 1.0 - _searchAnimation.value,
+                            child: Row(
+                              children: <Widget>[
+                                Expanded(
+                                  child: FusionAppText(
+                                    text: widget.title,
+                                    style: Theme.of(context).textTheme.bodySmall,
+                                    maxLine: 1,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
 
-        return Container(
-          width: widget.width,
-          height: widget.height,
-          decoration: BoxDecoration(
-            color: widget.backgroundColor,
-            border: Border(
-              right: BorderSide(width: 1, color: Theme.of(context).colorScheme.grey),
+                                /// Add button with listening areas support
+                                ExpandablePopupMenuWidget(
+                                  sectionTitle: widget.title,
+                                  onTapAddDevice: widget.onTapAddDevice,
+                                  listeningAreas: widget.listeningAreas,
+                                  zones: widget.zones,
+                                ),
+                              ],
+                            ),
+                          ),
+                          // Search field - slides in when visible
+                          if (_searchAnimation.value > 0)
+                            Opacity(
+                              opacity: _searchAnimation.value,
+                              child: Transform.translate(
+                                offset: Offset((1.0 - _searchAnimation.value) * 50, 0),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context).colorScheme.greyLight,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  height: 36,
+                                  child: FusionTextField(
+                                    controller: searchController,
+                                    hintText: 'Search by name, series or type...',
+                                    onChanged: (String value) {
+                                      setState(() {}); // Rebuild for clear button visibility
+                                    },
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(width: 4),
+
+                    /// Animated search button
+                    AnimatedBuilder(
+                      animation: Listenable.merge(<Listenable?>[_iconScaleAnimation, _iconRotationAnimation]),
+                      builder: (BuildContext context, Widget? child) {
+                        return Transform.scale(
+                          scale: _iconScaleAnimation.value,
+                          child: Transform.rotate(
+                            angle: _iconRotationAnimation.value * 3.14159,
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(12),
+                                onTap: _onSearchIconPressed,
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  child: Icon(
+                                    isSearchVisible ? Icons.close : Icons.search,
+                                    color: Colors.grey[400],
+                                    size: 16,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                );
+              },
             ),
           ),
-          child: Column(
-            children: <Widget>[
-              /// section Header
-              Container(
+
+          /// Content
+          Expanded(
+            child: SingleChildScrollView(
+              child: SizedBox(
                 width: widget.width,
-                height: 44,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border(
-                    bottom: BorderSide(width: 1, color: Theme.of(context).colorScheme.grey),
-                  ),
-                ),
-                child: AnimatedBuilder(
-                  animation: _searchAnimation,
-                  builder: (BuildContext context, Widget? child) {
-                    return Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: <Widget>[
-                        /// Title and search field with smooth transition
-                        Expanded(
-                          child: Stack(
-                            children: <Widget>[
-                              /// Title - fades out when search is visible
-                              Opacity(
-                                opacity: 1.0 - _searchAnimation.value,
-                                child: Row(
-                                  children: <Widget>[
-                                    Expanded(
-                                      child: FusionAppText(
-                                        text: widget.title,
-                                        style: Theme.of(context).textTheme.bodySmall,
-                                        maxLine: 1,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 4),
-
-                                    /// Add button with listening areas support
-                                    ExpandablePopupMenuWidget(
-                                      sectionTitle: widget.title,
-                                      onTapAddDevice: widget.onTapAddDevice,
-                                      listeningAreas: widget.listeningAreas,
-                                      zones: widget.zones,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              // Search field - slides in when visible
-                              if (_searchAnimation.value > 0)
-                                Opacity(
-                                  opacity: _searchAnimation.value,
-                                  child: Transform.translate(
-                                    offset: Offset((1.0 - _searchAnimation.value) * 50, 0),
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        color: Theme.of(context).colorScheme.greyLight,
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      height: 36,
-                                      child: FusionTextField(
-                                        controller: searchController,
-                                        hintText: 'Search by name, series or type...',
-                                        onChanged: (String value) {
-                                          setState(() {}); // Rebuild for clear button visibility
-                                        },
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-
-                        const SizedBox(width: 4),
-
-                        /// Animated search button
-                        AnimatedBuilder(
-                          animation: Listenable.merge(<Listenable?>[_iconScaleAnimation, _iconRotationAnimation]),
-                          builder: (BuildContext context, Widget? child) {
-                            return Transform.scale(
-                              scale: _iconScaleAnimation.value,
-                              child: Transform.rotate(
-                                angle: _iconRotationAnimation.value * 3.14159,
-                                child: Material(
-                                  color: Colors.transparent,
-                                  child: InkWell(
-                                    borderRadius: BorderRadius.circular(12),
-                                    onTap: _onSearchIconPressed,
-                                    child: Container(
-                                      padding: const EdgeInsets.all(4),
-                                      child: Icon(
-                                        isSearchVisible ? Icons.close : Icons.search,
-                                        color: Colors.grey[400],
-                                        size: 16,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ),
-
-              /// Content
-              Expanded(
                 child: SingleChildScrollView(
-                  child: SizedBox(
-                    width: widget.width,
-                    child: SingleChildScrollView(
-                      physics: const ClampingScrollPhysics(),
-                      child: widget.sectionContent,
-                    ),
-                  ),
+                  physics: const ClampingScrollPhysics(),
+                  child: widget.sectionContent,
                 ),
               ),
-            ],
+            ),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 }

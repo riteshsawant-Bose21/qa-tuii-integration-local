@@ -86,20 +86,24 @@ class HardwareItemCard extends StatelessWidget {
                     zone != null
                         ? Container(
                           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-
+                          decoration: BoxDecoration(
+                            color: isHovered ? Colors.white.withOpacity(0.5) : (isSelected ? Colors.transparent : Theme.of(context).colorScheme.white),
+                            // border: Border.all(color: Theme.of(context).colorScheme.greyDark, width: 1),
+                          ),
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: <Widget>[
                               Container(
-                                width: 7,
-                                height: 16,
+                                width: 8,
+                                height: 16, // Add explicit height
                                 decoration: BoxDecoration(
-                                  color: zone?.color ?? Colors.transparent,
-                                  borderRadius: BorderRadius.circular(2),
+                                  color: zone?.color ?? Colors.red, // Use zone color instead of hardcoded red
+                                  borderRadius: BorderRadius.circular(2), // Optional: add slight border radius
                                 ),
                               ),
-                              const SizedBox(width: 6),
+                              const SizedBox(width: 4), // Add spacing between color indicator and text
                               Expanded(
+                                // Wrap text in Expanded to prevent overflow
                                 child: FusionAppText(
                                   text: zone?.name ?? "",
                                   style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 9),
@@ -114,7 +118,6 @@ class HardwareItemCard extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: isHovered ? Colors.white.withOpacity(0.5) : (isSelected ? Colors.transparent : Theme.of(context).colorScheme.white),
                             border: Border.all(color: Theme.of(context).colorScheme.greyDark, width: 1),
-                            borderRadius: BorderRadius.circular(2),
                           ),
                           child: FusionAppText(
                             text: location!,
@@ -126,7 +129,7 @@ class HardwareItemCard extends StatelessWidget {
               ),
 
               /// kebab menu
-              if (isSelected && itemId != null) ...<Widget>[
+              if ((isHovered || isSelected) && itemId != null) ...<Widget>[
                 const SizedBox(width: 4),
                 PopupMenuButton<String>(
                   icon: Icon(
