@@ -54,6 +54,13 @@ extension SubZoneManager on ProjectManager {
     projectService!.removeSubZoneFromZone(subZoneId, parentZoneId);
   }
 
+  List<ListeningArea> getListeningAreasInSubZone(String subZoneId) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getListeningAreasInSubZone(subZoneId);
+  }
+
   List<SubZone> getSubZonesForZone(String parentZoneId) {
     if (projectService == null) {
       throw Exception('No project is currently open');
@@ -83,5 +90,26 @@ extension SubZoneManager on ProjectManager {
       throw Exception('No project is currently open');
     }
     return projectService!.getHardwareInZone(subZoneId);
+  }
+
+  void addListeningAreaToSubZone(String listeningAreaId, String subZoneId) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.addListeningAreaToSubZone(listeningAreaId, subZoneId);
+  }
+
+  void removeListeningAreaFromSubZone(String listeningAreaId, String subZoneId) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.removeListeningAreaFromSubZone(listeningAreaId, subZoneId);
+  }
+
+  void reOrderSubZones(String parentId, int oldIndex, int newIndex) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    projectService!.reOrderSubZonesInZone(parentId, oldIndex, newIndex);
   }
 }

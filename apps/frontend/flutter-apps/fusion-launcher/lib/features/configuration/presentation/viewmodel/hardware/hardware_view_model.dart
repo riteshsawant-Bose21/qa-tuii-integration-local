@@ -1,11 +1,14 @@
 import 'dart:ui';
 
+import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/models/project_entities/controller.dart';
+import 'package:fusion_lib/models/project_entities/endpoints.dart';
 
 extension HardwareViewModel on ProjectViewModel {
   //get Hardware by id
-  HardwareComponent? getHardware(String hardwareId) {
+  HardwareComponent? getHardware({required String hardwareId}) {
     try {
       return projectManager.getHardwareById(hardwareId);
     } catch (e) {
@@ -13,28 +16,56 @@ extension HardwareViewModel on ProjectViewModel {
     }
   }
 
-  void updateHardware(HardwareComponent hardware) {
+  void updateHardware({required HardwareComponent hardware, bool autoSave = true}) {
     try {
-      projectManager.updateHardware(hardware);
-      updateProject();
+      if (autoSave) {
+        recordSnapshot();
+      }
+      final HardwareComponent oldHw = projectManager.getHardwareById(hardware.id);
+      if (oldHw != hardware) {
+        projectManager.updateHardware(hardware);
+        if (autoSave) {
+          saveProject();
+        }
+        updateProject();
+      } else {
+        FusionLogger.log(tag: LogTag.project, message: "No changes detected for hardware: ${hardware.id}, skipping update.");
+      }
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to update hardware: $e");
       throwError("Failed to update hardware: $e");
     }
   }
 
-  void addHardware(HardwareComponent hardware) {
+  void addHardware({required HardwareComponent hardware, int count = 1, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.addHardware(hardware);
+      if (hardware is Speaker) {
+        for (int i = 1; i < count; i++) {
+          projectManager.addHardware(hardware.getClone());
+        }
+      }
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to add hardware: $e");
     }
   }
 
-  void removeHardware(String hardwareId) {
+  void removeHardware({required String hardwareId, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.removeHardware(hardwareId);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to remove hardware: $e");
@@ -50,7 +81,7 @@ extension HardwareViewModel on ProjectViewModel {
     }
   }
 
-  List<HardwareComponent> getHardwareForListeningArea(String listeningAreaId) {
+  List<HardwareComponent> getHardwareForListeningArea({required String listeningAreaId}) {
     try {
       return projectManager.getHardwareForListeningArea(listeningAreaId);
     } catch (e) {
@@ -59,7 +90,7 @@ extension HardwareViewModel on ProjectViewModel {
     }
   }
 
-  List<HardwareComponent> getHardwareForFloor(String floorId) {
+  List<HardwareComponent> getHardwareForFloor({required String floorId}) {
     try {
       return projectManager.getHardwareForFloor(floorId);
     } catch (e) {
@@ -68,9 +99,15 @@ extension HardwareViewModel on ProjectViewModel {
     }
   }
 
-  ResponseCallback<bool> moveHardware(String hardwareId, {String? listeningAreaId, String? floorId}) {
+  ResponseCallback<bool> moveHardware({required String hardwareId, String? listeningAreaId, String? floorId, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       final ResponseCallback<bool> responseCallback = projectManager.moveHardware(hardwareId, listeningAreaId: listeningAreaId, floorId: floorId);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
       return responseCallback;
     } catch (e) {
@@ -79,7 +116,7 @@ extension HardwareViewModel on ProjectViewModel {
     }
   }
 
-  List<HardwareComponent> getSpeakersInZone(String zoneId) {
+  List<HardwareComponent> getSpeakersInZone({required String zoneId}) {
     try {
       return projectManager.getHardwareInZone(zoneId);
     } catch (e) {
@@ -89,7 +126,7 @@ extension HardwareViewModel on ProjectViewModel {
   }
 
   // get zone for hardware
-  Zone? getZoneForHardware(String hardwareId) {
+  Zone? getZoneForHardware({required String hardwareId}) {
     try {
       return projectManager.getZoneForHardware(hardwareId);
     } catch (e) {
@@ -99,7 +136,7 @@ extension HardwareViewModel on ProjectViewModel {
   }
 
   // get CircuitModel for hardware
-  CircuitModel? getCircuitForHardware(String hardwareId) {
+  CircuitModel? getCircuitForHardware({required String hardwareId}) {
     try {
       return projectManager.getCircuitForHardware(hardwareId);
     } catch (e) {
@@ -109,9 +146,15 @@ extension HardwareViewModel on ProjectViewModel {
   }
 
   //add hardware and create circuit
-  void addHardwareAndCreateCircuit(HardwareComponent hw, String circuitId) {
+  void addHardwareAndCreateCircuit({required HardwareComponent hw, required String circuitId, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.addHardwareAndCreateCircuit(hw, circuitId);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to add hardware and create circuit: $e");
@@ -119,9 +162,15 @@ extension HardwareViewModel on ProjectViewModel {
   }
 
   // Update hardware location
-  void updateHardwareLocation(String hardwareId, LocationModel newLocation) {
+  void updateHardwareLocation({required String hardwareId, required LocationModel newLocation, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.updateHardwareLocation(hardwareId, newLocation);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to update hardware location: $e");
@@ -129,9 +178,28 @@ extension HardwareViewModel on ProjectViewModel {
     }
   }
 
-  void addSelectedProduct({required Offset position, String? listeningAreaId}) {
+  void reOrderHardware({required String hardwareIdToMove, required String hardwareAtNewIndex, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      projectManager.reOrderHardware(hardwareIdToMove: hardwareIdToMove, hardwareAtNewIndex: hardwareAtNewIndex);
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to reorder hardware: $e");
+      throwError("Failed to reorder hardware: $e");
+    }
+  }
+
+  void addSelectedProduct({required Offset position, String? listeningAreaId, bool autoSave = true}) {
     if (selectedProductToAdd == null) return;
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       final HardwareComponent newHardware = fromProductQueryModel(
         selectedProductToAdd!,
         pos: position,
@@ -140,7 +208,7 @@ extension HardwareViewModel on ProjectViewModel {
           listeningAreaId: listeningAreaId,
         ),
       );
-      addHardware(newHardware);
+      addHardware(hardware: newHardware, autoSave: autoSave);
 
       // Clear selected product after adding
       clearSelectedProduct();
@@ -161,13 +229,24 @@ extension HardwareViewModel on ProjectViewModel {
           locationEntity: locationEntity,
           name: product.name,
           pos: pos,
-          zAxis: 300.0, // 200 cm default height
+          zAxis: 300.0,
+          // 200 cm default height
           speakerSKU: product.sku,
           gain: 20.0,
           assetImagePath: product.image,
           type: OutputType.analogOutput,
           price: product.price,
           pitch: product.mountingType == "pendant" ? 90.0 : 0.0,
+          inputPortsData: <PortData>[
+            PortData(
+              name: "In",
+              position: PortPosition.bottomRight,
+              portNumber: 1,
+              compatibleTypes: <PortType>[PortType.amplifierOutput],
+              type: PortType.analogInput,
+            ),
+          ],
+          outputPortsData: <PortData>[],
         );
       case ProductType.sources:
         return Source(
@@ -179,9 +258,19 @@ extension HardwareViewModel on ProjectViewModel {
           price: product.price,
           hardwareName: product.name,
           type: SourceType.analogInput,
+          inputPortsData: <PortData>[],
+          outputPortsData: <PortData>[
+            PortData(
+              name: "Out",
+              position: PortPosition.bottomRight,
+              portNumber: 1,
+              compatibleTypes: <PortType>[PortType.dspAnalogInput],
+              type: PortType.analogOutput,
+            ),
+          ],
         );
       case ProductType.amplifier:
-        return GenericHardwareComponent(
+        return Amplifier(
           locationEntity: locationEntity,
           name: product.name,
           pos: pos,
@@ -189,10 +278,22 @@ extension HardwareViewModel on ProjectViewModel {
           sku: product.sku,
           price: product.price,
           hardwareName: product.name,
-          type: GenericHardwareComponentType.other,
+          portData: HardwarePortData(
+            inputPorts: 5,
+            outputPorts: 5,
+            inputPortType: PortType.analogInput,
+            outputPortType: PortType.analogOutput,
+            compatibleInputTypes: <PortType>[PortType.analogInput, PortType.digitalInput],
+            compatibleOutputTypes: <PortType>[PortType.analogOutput, PortType.digitalOutput],
+            portPosition: PortPosition.topLeft,
+          ),
+          communicationPorts: <PortData>[],
+          powerPerChannel: 100.0,
+          color: Colors.blue,
+          channels: 5,
         );
       case ProductType.controllers:
-        return GenericHardwareComponent(
+        return FusionController(
           locationEntity: locationEntity,
           name: product.name,
           pos: pos,
@@ -200,10 +301,41 @@ extension HardwareViewModel on ProjectViewModel {
           sku: product.sku,
           price: product.price,
           hardwareName: product.name,
-          type: GenericHardwareComponentType.other,
+          inputPortsData: <PortData>[
+            PortData(
+              name: "In",
+              position: PortPosition.bottomRight,
+              portNumber: 1,
+              compatibleTypes: <PortType>[PortType.analogInput, PortType.ble],
+              type: PortType.analogInput,
+            ),
+            PortData(
+              name: "In",
+              position: PortPosition.bottomRight,
+              portNumber: 1,
+              compatibleTypes: <PortType>[PortType.analogInput, PortType.ble],
+              type: PortType.analogInput,
+            ),
+          ],
+          outputPortsData: <PortData>[
+            PortData(
+              name: "Out",
+              position: PortPosition.bottomRight,
+              portNumber: 1,
+              compatibleTypes: <PortType>[PortType.dspAnalogInput],
+              type: PortType.analogOutput,
+            ),
+            PortData(
+              name: "Out",
+              position: PortPosition.bottomRight,
+              portNumber: 1,
+              compatibleTypes: <PortType>[PortType.dspAnalogInput],
+              type: PortType.analogOutput,
+            ),
+          ],
         );
       case ProductType.dsps:
-        return GenericHardwareComponent(
+        return FusionDsp(
           locationEntity: locationEntity,
           name: product.name,
           pos: pos,
@@ -211,11 +343,26 @@ extension HardwareViewModel on ProjectViewModel {
           sku: product.sku,
           price: product.price,
           hardwareName: product.name,
-          type: GenericHardwareComponentType.other,
+          portData: HardwarePortData(
+            inputPorts: 5,
+            outputPorts: 5,
+            inputPortType: PortType.analogInput,
+            outputPortType: PortType.analogOutput,
+            compatibleInputTypes: <PortType>[PortType.analogInput, PortType.digitalInput],
+            compatibleOutputTypes: <PortType>[PortType.analogOutput, PortType.digitalOutput],
+            portPosition: PortPosition.topLeft,
+          ),
+          communicationPorts: <PortData>[
+            PortData(name: 'Wifi', position: PortPosition.footerRight, portNumber: 1, type: PortType.wifi, compatibleTypes: <PortType>[PortType.wifi]),
+            PortData(name: 'USB', position: PortPosition.footerRight, portNumber: 2, type: PortType.usb, compatibleTypes: <PortType>[PortType.usb]),
+            PortData(name: 'ble', position: PortPosition.footerRight, portNumber: 3, type: PortType.ble, compatibleTypes: <PortType>[PortType.ble]),
+          ],
+          location: '',
+          status: FusionDeviceSetupStatus.notStarted,
         );
 
       case ProductType.endpoints:
-        return GenericHardwareComponent(
+        return FusionEndpoints(
           locationEntity: locationEntity,
           name: product.name,
           pos: pos,
@@ -223,19 +370,27 @@ extension HardwareViewModel on ProjectViewModel {
           sku: product.sku,
           price: product.price,
           hardwareName: product.name,
-          type: GenericHardwareComponentType.other,
+          ipAddress: '',
         );
       case ProductType.racks:
-        return GenericHardwareComponent(
+        return HardwareRack(
           locationEntity: locationEntity,
           name: product.name,
           pos: pos,
           assetImagePath: product.image,
-          sku: product.sku,
           price: product.price,
           hardwareName: product.name,
-          type: GenericHardwareComponentType.rack,
         );
+      // Add network switch to product type and uncomment this
+      // case ProductType.networkSwitches:
+      //   return NetworkSwitch(
+      //     locationEntity: locationEntity,
+      //     name: product.name,
+      //     pos: pos,
+      //     assetImagePath: product.image,
+      //     price: product.price,
+      //     hardwareName: product.name,
+      //   );
     }
   }
 }

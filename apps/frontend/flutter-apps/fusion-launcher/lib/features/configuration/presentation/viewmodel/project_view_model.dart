@@ -11,6 +11,10 @@ export 'zone/zone_view_model.dart';
 export 'project_properties/project_properties_view_model.dart';
 export 'undo_redo/undo_redo_view_model.dart';
 export 'project_images/project_image_view_model.dart';
+export 'wiring_connection/wiring_connection_view_model.dart';
+export 'subzones/subzone_view_model.dart';
+export 'circuit/circuit_viewmodel.dart';
+export 'processing_block/processing_block_viewmodel.dart';
 
 part 'project_view_model_state.dart';
 
@@ -152,6 +156,7 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
 
   /// Loads all local projects and emits the appropriate state.
   Future<void> loadAllLocalProjects() async {
+    print("Loading all local projects...");
     emit(ProjectLoading());
     try {
       final ResponseCallback<List<ProjectData>> projectsResponse = await projectManager.loadProjectsFromLocal();
@@ -168,14 +173,12 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
   }
 
   /// Save Project to local storage
-  Future<void> saveProjectToLocal() async {
+  Future<void> saveProject() async {
     emit(ProjectLoading());
     try {
+      print("Saving current project...");
       final ResponseCallback<void> saveResponse = await projectManager.saveCurrentProject();
-      if (saveResponse.success) {
-        // Reload projects after saving
-        await loadAllLocalProjects();
-      } else {
+      if (!saveResponse.success) {
         emit(ProjectError(message: "Failed to save project: ${saveResponse.message}"));
         return;
       }
@@ -237,7 +240,8 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
       _currentProject = projectResponse.data;
       emit(ProjectLoaded(projects: allProjects, currentProject: projectResponse.data));
     } else {
-      throwError("Unable to open project ${projectResponse.message}");
+      emit(OpenProjectError(message: "Unable to open project: ${projectResponse.message}"));
+      // throwError("Unable to open project ${projectResponse.message}");
     }
   }
 

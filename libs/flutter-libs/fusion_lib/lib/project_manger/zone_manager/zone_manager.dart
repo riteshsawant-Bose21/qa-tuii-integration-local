@@ -108,4 +108,18 @@ extension ZoneManager on ProjectManager {
     }
     return projectService!.getCircuitsInZone(zoneId);
   }
+
+  void reOrderZones({required String zoneIdToMove, required String zoneAtNewIndex}) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    Map<String, Zone> reorderedList = projectService!.reOrderZones(
+      zoneIdToMove: zoneIdToMove,
+      zoneAtNewIndexId: zoneAtNewIndex,
+    );
+
+    projectService = projectService!.copyWith(
+      zones: projectService!.zones.copyWith(reorderedList),
+    );
+  }
 }

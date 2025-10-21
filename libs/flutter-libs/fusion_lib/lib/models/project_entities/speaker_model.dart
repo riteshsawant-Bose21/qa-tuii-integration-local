@@ -8,16 +8,14 @@ class Speaker extends HardwareComponent {
   double rotation;
   double gain;
   OutputType type;
-  List<ProcessingBlockModel> blocks;
   String? ipAddress; // Optional field for AES67 output type
   String speakerSKU;
-  final String? fusionDeviceId;
   final double pitch;
   final double roll;
   final double yaw;
 
   Speaker({
-    super.id,
+    String? id,
     required super.locationEntity,
     required super.name,
     required super.pos,
@@ -30,11 +28,9 @@ class Speaker extends HardwareComponent {
     this.roll = 0.0,
     this.yaw = 0.0,
     required super.assetImagePath,
-    List<ProcessingBlockModel>? blocks,
     required this.type,
     this.ipAddress,
     List<int>? portNumbers,
-    this.fusionDeviceId,
     required super.price,
     super.lockListeningArea,
     String? hardwareName,
@@ -42,8 +38,10 @@ class Speaker extends HardwareComponent {
     super.communicationPorts,
     super.inputPortsData,
     super.outputPortsData,
-  }) : blocks = blocks ?? <ProcessingBlockModel>[],
-       super(hardwareName: hardwareName ?? name);
+  }) : super(
+         hardwareName: hardwareName ?? name,
+         id: id ?? "SPEAKER${FusionUtils.shortStringUUID()}",
+       );
 
   @override
   Speaker copyWith({
@@ -55,13 +53,11 @@ class Speaker extends HardwareComponent {
     double? gain,
     double? zAxis,
     String? assetImagePath,
-    List<ProcessingBlockModel>? blocks,
     OutputType? type,
     String? listeningAreaId,
     LocationModel? locationEntity,
     String? ipAddress,
     String? speakerSKU,
-    String? fusionDeviceId,
     double? price,
     String? hardwareName,
     double? pitch,
@@ -81,12 +77,10 @@ class Speaker extends HardwareComponent {
       gain: gain ?? this.gain,
       zAxis: zAxis ?? this.zAxis,
       assetImagePath: assetImagePath ?? this.assetImagePath,
-      blocks: blocks ?? this.blocks,
       type: type ?? this.type,
       locationEntity: locationEntity ?? this.locationEntity,
       ipAddress: ipAddress ?? this.ipAddress,
       speakerSKU: speakerSKU ?? this.speakerSKU,
-      fusionDeviceId: fusionDeviceId ?? this.fusionDeviceId,
       price: price ?? this.price,
       hardwareName: hardwareName ?? this.hardwareName,
       pitch: pitch ?? this.pitch,
@@ -103,36 +97,83 @@ class Speaker extends HardwareComponent {
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     if (other is! Speaker) return false;
-    return id == other.id &&
-        name == other.name &&
-        pos == other.pos &&
-        rotation == other.rotation &&
-        gain == other.gain &&
-        assetImagePath == other.assetImagePath &&
-        blocks == other.blocks &&
-        locationEntity == other.locationEntity &&
-        ipAddress == other.ipAddress &&
-        speakerSKU == other.speakerSKU &&
-        type == other.type &&
-        zAxis == other.zAxis &&
-        fusionDeviceId == other.fusionDeviceId;
+
+    // Check cheap primitive fields first to fail fast
+    if (id != other.id ||
+        rotation != other.rotation ||
+        gain != other.gain ||
+        type != other.type ||
+        pitch != other.pitch ||
+        roll != other.roll ||
+        yaw != other.yaw ||
+        zAxis != other.zAxis ||
+        price != other.price ||
+        lockListeningArea != other.lockListeningArea) {
+      return false;
+    }
+
+    // Check string fields (slightly more expensive)
+    if (name != other.name ||
+        assetImagePath != other.assetImagePath ||
+        ipAddress != other.ipAddress ||
+        speakerSKU != other.speakerSKU ||
+        hardwareName != other.hardwareName) {
+      return false;
+    }
+
+    // Check object fields (more expensive)
+    if (pos != other.pos || wiringPos != other.wiringPos || locationEntity != other.locationEntity) {
+      return false;
+    }
+
+    // Check expensive list comparisons last
+    return _listEquals(communicationPorts, other.communicationPorts) &&
+        _listEquals(inputPortsData, other.inputPortsData) &&
+        _listEquals(outputPortsData, other.outputPortsData);
+  }
+
+  bool _listEquals<T>(List<T>? a, List<T>? b) {
+    if (identical(a, b)) return true; // Same reference
+    if (a == null || b == null) return a == b; // One is null
+
+    final length = a.length;
+    if (length != b.length) return false; // Different lengths
+
+    // Early return for empty lists
+    if (length == 0) return true;
+
+    // Compare elements
+    for (int index = 0; index < length; index++) {
+      if (a[index] != b[index]) return false;
+    }
+    return true;
   }
 
   @override
   int get hashCode {
-    return id.hashCode ^
-        name.hashCode ^
-        pos.hashCode ^
-        rotation.hashCode ^
-        gain.hashCode ^
-        assetImagePath.hashCode ^
-        blocks.hashCode ^
-        locationEntity.hashCode ^
-        (ipAddress?.hashCode ?? 0) ^
-        speakerSKU.hashCode ^
-        type.hashCode ^
-        zAxis.hashCode ^
-        fusionDeviceId.hashCode;
+    return Object.hash(
+          id,
+          name,
+          pos,
+          wiringPos,
+          rotation,
+          gain,
+          assetImagePath,
+          locationEntity,
+          ipAddress,
+          speakerSKU,
+          type,
+          zAxis,
+          price,
+          hardwareName,
+          pitch,
+          roll,
+          yaw,
+          lockListeningArea,
+          Object.hashAll(communicationPorts),
+          Object.hashAll(inputPortsData),
+        ) ^
+        Object.hashAll(outputPortsData);
   }
 
   Map<String, dynamic> toJson() {
@@ -144,13 +185,11 @@ class Speaker extends HardwareComponent {
       'rotation': rotation,
       'gain': gain,
       'assetImagePath': assetImagePath,
-      'blocks': blocks.map((ProcessingBlockModel block) => block.toJson()).toList(),
       'componentType': 'speaker',
       'type': type.name,
       'locationEntity': locationEntity.toJson(),
       'ipAddress': ipAddress,
       'speakerSKU': speakerSKU,
-      'fusionDeviceId': fusionDeviceId,
       'price': price,
       "zAxis": zAxis,
       'hardwareName': hardwareName,
@@ -173,13 +212,10 @@ class Speaker extends HardwareComponent {
       rotation: (json['rotation'] as num).toDouble(),
       gain: (json['gain'] as num).toDouble(),
       assetImagePath: json['assetImagePath'] as String,
-      blocks: (json['blocks'] as List<dynamic>?)?.map((dynamic e) => ProcessingBlockModel.fromJson(e as Map<String, dynamic>)).toList(),
       type: OutputType.values.firstWhere((OutputType e) => e.name == json['type'], orElse: () => OutputType.analogOutput),
       locationEntity: LocationModel.fromJson(json['locationEntity'] as Map<String, dynamic>),
       ipAddress: json['ipAddress'] as String?,
       speakerSKU: json['speakerSKU'] as String,
-      portNumbers: (json['portNumbers'] as List<dynamic>?)?.map((dynamic e) => e as int).toList() ?? <int>[],
-      fusionDeviceId: json['fusionDeviceId'] as String?,
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
       hardwareName: json['hardwareName'] as String? ?? '',
       zAxis: (json['zAxis'] as num?)?.toDouble() ?? 0.0,
@@ -192,5 +228,13 @@ class Speaker extends HardwareComponent {
       outputPortsData: (json['outputPortsData'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
       inputPortsData: (json['inputPortsData'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
     );
+  }
+}
+
+extension SpeakerExtension on Speaker {
+  Speaker getClone() {
+    final json = toJson();
+    json['id'] = FusionUtils.shortStringUUID();
+    return Speaker.fromJson(json);
   }
 }

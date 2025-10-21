@@ -2,34 +2,29 @@ import 'dart:ui';
 
 import 'package:fusion_lib/fusion_lib.dart';
 
-class FusionController extends HardwareComponent {
-  final String sku;
-
-  FusionController({
+class NetworkSwitch extends HardwareComponent {
+  NetworkSwitch({
     String? id,
     required super.name,
     super.pos,
     super.wiringPos,
     super.zAxis,
     required super.assetImagePath,
-    LocationModel? locationEntity,
+    required super.locationEntity,
     required super.price,
     String? hardwareName,
-    String? sku,
     super.lockListeningArea,
     super.portData,
     super.communicationPorts,
     super.inputPortsData,
     super.outputPortsData,
-  }) : sku = sku ?? name,
-       super(
+  }) : super(
+         id: id ?? "SWITCH${FusionUtils.shortStringUUID()}",
          hardwareName: hardwareName ?? name,
-         locationEntity: locationEntity ?? LocationModel(),
-         id: id ?? "CONTROLLER${FusionUtils.shortStringUUID()}",
        );
 
   @override
-  FusionController copyWith({
+  HardwareComponent copyWith({
     String? id,
     String? name,
     Offset? pos,
@@ -39,13 +34,12 @@ class FusionController extends HardwareComponent {
     LocationModel? locationEntity,
     double? price,
     String? hardwareName,
-    String? sku,
     bool? lockListeningArea,
     List<PortData>? communicationPorts,
     List<PortData>? inputPortsData,
     List<PortData>? outputPortsData,
   }) {
-    return FusionController(
+    return NetworkSwitch(
       id: id ?? this.id,
       name: name ?? this.name,
       pos: pos ?? this.pos,
@@ -55,7 +49,6 @@ class FusionController extends HardwareComponent {
       locationEntity: locationEntity ?? this.locationEntity,
       price: price ?? this.price,
       hardwareName: hardwareName ?? this.hardwareName,
-      sku: sku ?? this.sku,
       lockListeningArea: lockListeningArea ?? this.lockListeningArea,
       communicationPorts: communicationPorts ?? this.communicationPorts,
       inputPortsData: inputPortsData ?? this.inputPortsData,
@@ -63,39 +56,37 @@ class FusionController extends HardwareComponent {
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return <String, dynamic>{
-      'id': id,
-      'name': name,
-      'pos': {'x': pos.dx, 'y': pos.dy},
-      'wiringPos': wiringPos != null ? {'x': wiringPos!.dx, 'y': wiringPos!.dy} : null,
-      'zAxis': zAxis,
-      'assetImagePath': assetImagePath,
-      'locationEntity': locationEntity.toJson(),
-      'price': price,
-      'hardwareName': hardwareName,
-      'sku': sku,
-      'componentType': 'controller',
-      'lockListeningArea': lockListeningArea,
-      'communicationPorts': communicationPorts.map((PortData port) => port.toJson()).toList(),
-      'outputPortsData': outputPortsData.map((PortData port) => port.toJson()).toList(),
-      'inputPortsData': inputPortsData.map((PortData port) => port.toJson()).toList(),
-    };
-  }
+  // JSON serialization
 
-  factory FusionController.fromJson(Map<String, dynamic> json) {
-    return FusionController(
-      id: json['id'] as String?,
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'id': id,
+    'name': name,
+    'pos': <String, double>{'dx': pos.dx, 'dy': pos.dy},
+    'wiringPos': wiringPos != null ? <String, double>{'dx': wiringPos!.dx, 'dy': wiringPos!.dy} : null,
+    'zAxis': zAxis,
+    'assetImagePath': assetImagePath,
+    'locationEntity': locationEntity.toJson(),
+    'price': price,
+    'componentType': 'networkSwitch',
+    'hardwareName': hardwareName,
+    'lockListeningArea': lockListeningArea,
+    'communicationPorts': communicationPorts.map((e) => e.toJson()).toList(),
+    'inputPortsData': inputPortsData.map((e) => e.toJson()).toList(),
+    'outputPortsData': outputPortsData.map((e) => e.toJson()).toList(),
+  };
+
+  factory NetworkSwitch.fromJson(Map<String, dynamic> json) {
+    return NetworkSwitch(
+      id: json['id'] as String,
       name: json['name'] as String,
-      pos: Offset((json['pos']['x'] as num).toDouble(), (json['pos']['y'] as num).toDouble()),
+      pos: Offset(json['pos']['dx'] as double, json['pos']['dy'] as double),
       wiringPos: json['wiringPos'] != null ? Offset((json['wiringPos']['x'] as num).toDouble(), (json['wiringPos']['y'] as num).toDouble()) : null,
-      zAxis: (json['zAxis'] as num?)?.toDouble() ?? 0.0,
+      zAxis: (json['zAxis'] as num).toDouble(),
       assetImagePath: json['assetImagePath'] as String,
       locationEntity: LocationModel.fromJson(json['locationEntity'] as Map<String, dynamic>),
-      price: (json['price'] as num?)?.toDouble() ?? 0.0,
-      hardwareName: json['hardwareName'] as String? ?? json['name'] as String,
-      sku: json['sku'] as String? ?? json['name'] as String,
-      lockListeningArea: json['lockListeningArea'] as bool? ?? false,
+      price: (json['price'] as num).toDouble(),
+      hardwareName: json['hardwareName'] as String,
+      lockListeningArea: json['lockListeningArea'] as bool,
       communicationPorts:
           (json['communicationPorts'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
       outputPortsData: (json['outputPortsData'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],

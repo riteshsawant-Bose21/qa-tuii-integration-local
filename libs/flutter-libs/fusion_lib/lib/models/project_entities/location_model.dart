@@ -1,11 +1,15 @@
-import 'package:uuid/uuid.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 class LocationModel {
   String id;
   String? listeningAreaId;
   String? floorId;
 
-  LocationModel({this.listeningAreaId, this.floorId, String? id}) : id = id ?? const Uuid().v4();
+  LocationModel({
+    this.listeningAreaId,
+    this.floorId,
+    String? id,
+  }) : id = id ?? "LOCATION${FusionUtils.shortStringUUID()}";
 
   LocationModel copyWith({String? listeningAreaId, String? floorId, String? circuitId}) {
     return LocationModel(

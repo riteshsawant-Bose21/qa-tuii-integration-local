@@ -35,7 +35,7 @@ extension HardwareManager on ProjectManager {
     if (projectService == null) {
       throw Exception('No project is currently open');
     }
-    return projectService!.hardware.getAll();
+    return projectService!.getAllHardware();
   }
 
   /// Move Hardware
@@ -117,5 +117,19 @@ extension HardwareManager on ProjectManager {
       throw Exception('No project is currently open');
     }
     return projectService!.getCircuitForHardware(hardwareId);
+  }
+
+  void reOrderHardware({required String hardwareIdToMove, required String hardwareAtNewIndex}) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    Map<String, HardwareComponent> reorderedList = projectService!.reOrderHardware(
+      hwToMoveId: hardwareIdToMove,
+      hwAtNewIndexId: hardwareAtNewIndex,
+    );
+
+    projectService = projectService!.copyWith(
+      hardware: projectService!.hardware.copyWith(reorderedList),
+    );
   }
 }

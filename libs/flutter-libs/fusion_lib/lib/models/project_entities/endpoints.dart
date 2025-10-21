@@ -7,7 +7,7 @@ class FusionEndpoints extends HardwareComponent {
   final String sku;
 
   FusionEndpoints({
-    super.id,
+    String? id,
     required super.name,
     required this.ipAddress,
     required this.sku,
@@ -23,7 +23,11 @@ class FusionEndpoints extends HardwareComponent {
     super.communicationPorts,
     super.inputPortsData,
     super.outputPortsData,
-  }) : super(hardwareName: hardwareName ?? name, locationEntity: locationEntity ?? LocationModel());
+  }) : super(
+         hardwareName: hardwareName ?? name,
+         locationEntity: locationEntity ?? LocationModel(),
+         id: id ?? "ENDPOINT${FusionUtils.shortStringUUID()}",
+       );
 
   @override
   FusionEndpoints copyWith({

@@ -59,7 +59,7 @@ abstract class HardwareComponent {
     List<PortData>? outputPortsData,
     this.lockListeningArea = false,
     this.communicationPorts = const [],
-  }) : id = id ?? FusionUtils.shortStringUUID(),
+  }) : id = id ?? "HW${FusionUtils.shortStringUUID()}",
        pos = pos ?? const Offset(0, 0),
        inputPortsData =
            inputPortsData ??

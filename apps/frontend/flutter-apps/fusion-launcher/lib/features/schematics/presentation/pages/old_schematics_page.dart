@@ -257,7 +257,7 @@ class OlsSchematicsPageState extends State<OlsSchematicsPage> {
             price: component.price,
             sku: component.id,
           );
-          serviceLocator<ProjectViewModel>().addHardware(source);
+          serviceLocator<ProjectViewModel>().addHardware(hardware: source);
         }
       },
       builder: (BuildContext context, List<DeviceComponent?> candidateItems, List<dynamic> rejectedItems) {
@@ -293,7 +293,7 @@ class OlsSchematicsPageState extends State<OlsSchematicsPage> {
                       sku: selectedBlock.id,
                       price: selectedBlock.price,
                     );
-                    serviceLocator<ProjectViewModel>().addHardware(source);
+                    serviceLocator<ProjectViewModel>().addHardware(hardware: source);
                   },
                   color: Colors.white,
                   itemBuilder: (BuildContext context) {
@@ -348,7 +348,7 @@ class OlsSchematicsPageState extends State<OlsSchematicsPage> {
                             : HardwareListCard(
                               hardwareComponents: sources,
                               onDelete: (HardwareComponent component) {
-                                serviceLocator<ProjectViewModel>().removeHardware(component.id);
+                                serviceLocator<ProjectViewModel>().removeHardware(hardwareId: component.id);
                               },
                             ),
                   ),
@@ -510,7 +510,7 @@ class OlsSchematicsPageState extends State<OlsSchematicsPage> {
             locationEntity: LocationModel(),
             price: component.price,
           );
-          serviceLocator<ProjectViewModel>().addHardware(genericHardwareComponent);
+          serviceLocator<ProjectViewModel>().addHardware(hardware: genericHardwareComponent);
         }
       },
       builder: (BuildContext context, List<DeviceComponent?> candidateItems, List<dynamic> rejectedItems) {
@@ -546,7 +546,7 @@ class OlsSchematicsPageState extends State<OlsSchematicsPage> {
                       sku: rackData.name,
                       price: rackData.price,
                     );
-                    serviceLocator<ProjectViewModel>().addHardware(rack);
+                    serviceLocator<ProjectViewModel>().addHardware(hardware: rack);
                   },
                   color: Colors.white,
                   itemBuilder: (BuildContext context) {
@@ -601,7 +601,7 @@ class OlsSchematicsPageState extends State<OlsSchematicsPage> {
                               componentWidth: 80,
                               hardwareComponents: racks,
                               onDelete: (HardwareComponent component) {
-                                serviceLocator<ProjectViewModel>().removeHardware(component.id);
+                                serviceLocator<ProjectViewModel>().removeHardware(hardwareId: component.id);
                               },
                             ),
                   ),
@@ -634,7 +634,7 @@ class OlsSchematicsPageState extends State<OlsSchematicsPage> {
             'Zone(s)',
             onAddTap: () {
               serviceLocator<ProjectViewModel>().addZone(
-                Zone(
+                zone: Zone(
                   id: "zone${DateTime.now().millisecondsSinceEpoch.toString()}",
                   name: 'Zone ${serviceLocator<ProjectViewModel>().zones.length + 1}',
                 ),
@@ -691,7 +691,7 @@ class OlsSchematicsPageState extends State<OlsSchematicsPage> {
                             locationEntity: LocationModel(),
                             price: speakerData.price,
                           );
-                          serviceLocator<ProjectViewModel>().addHardware(cs);
+                          serviceLocator<ProjectViewModel>().addHardware(hardware: cs);
                         },
                         onControllerAdded: (ControllerData controllerData) {
                           // final GenericHardwareComponent controller = GenericHardwareComponent(

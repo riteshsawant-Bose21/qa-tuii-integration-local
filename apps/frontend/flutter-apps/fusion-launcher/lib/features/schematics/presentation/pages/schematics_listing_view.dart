@@ -519,7 +519,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                 setState(() {
                   _reorderableSources.removeWhere((Source s) => s.id == id);
                 });
-                serviceLocator<ProjectViewModel>().removeHardware(id);
+                serviceLocator<ProjectViewModel>().removeHardware(hardwareId: id);
                 FusionToast.show(
                   context,
                   message: 'Source "$sourceName" deleted',
