@@ -119,26 +119,6 @@ class CircuitComponent extends CanvasElement {
       (double a, CircuitPort b) => max(a, b.relativePosition.dy),
     );
 
-    // /// For Other Ports
-    // for (int i = 0; i < data.comPorts.length; i++) {
-    //   final ComponentPort element = data.comPorts[i];
-
-    //   circuitComponent.addOtherPort(
-    //     CircuitPort(
-    //       id: "${data.id}_other_$i",
-    //       relativePosition: Offset(
-    //         data.portRadius +
-    //             data.portOffset.dy +
-    //             (WiringViewConstants.portSpacing * (i + 1)) +
-    //             i * data.portRadius * 2,
-    //         size.height - data.portRadius - WiringViewConstants.portSpacing,
-    //       ),
-    //       padding: Offset(50 + i * 10, 0),
-    //       parent: circuitComponent,
-    //       data: element,
-    //     ),
-    //   );
-    // }
     final List<ComponentPort> leftSidePorts =
         data.comPorts
             .where(
@@ -183,9 +163,8 @@ class CircuitComponent extends CanvasElement {
             )
             .toList()
           ..sort(
-            (ComponentPort a, ComponentPort b) => a.index.compareTo(b.index),
+            (ComponentPort a, ComponentPort b) => b.index.compareTo(a.index),
           );
-
     for (int i = 0; i < leftSidePorts.length; i++) {
       final ComponentPort element = leftSidePorts[i];
 
@@ -226,7 +205,78 @@ class CircuitComponent extends CanvasElement {
       );
     }
 
-    
+    // final int totalFooterItems =
+    //     footerLeft.length + footerCenter.length + footerRight.length;
+    double cuPortPosition =
+        WiringViewConstants.portSpacing + WiringViewConstants.comPortWidth / 2;
+    final double widthPerPort =
+        data.size.width /
+        max(
+          1,
+          max(1, footerLeft.length) +
+              max(1, footerCenter.length) +
+              max(1, footerRight.length),
+        );
+
+    /// For Footer Left Side
+    for (int i = 0; i < footerLeft.length; i++) {
+      final ComponentPort element = footerLeft[i];
+
+      circuitComponent.addOtherPort(
+        CircuitPort(
+          id: "${data.id}_other_footerLeft_$i",
+          relativePosition: Offset(
+            cuPortPosition,
+            size.height - data.portRadius - WiringViewConstants.portSpacing,
+          ),
+          padding: Offset(0, 50 + i * 10),
+          parent: circuitComponent,
+          data: element,
+        ),
+      );
+      cuPortPosition += widthPerPort;
+    }
+    if (footerLeft.isEmpty) {
+      cuPortPosition += WiringViewConstants.comPortWidth;
+    }
+
+    /// For Footer Center Side
+    for (int i = 0; i < footerCenter.length; i++) {
+      final ComponentPort element = footerCenter[i];
+      circuitComponent.addOtherPort(
+        CircuitPort(
+          id: "${data.id}_other_footerCenter_$i",
+          relativePosition: Offset(
+            cuPortPosition,
+            size.height - data.portRadius - WiringViewConstants.portSpacing,
+          ),
+          padding: Offset(0, 50 + i * 10),
+          parent: circuitComponent,
+          data: element,
+        ),
+      );
+      cuPortPosition += widthPerPort;
+    }
+    if (footerCenter.isEmpty) {
+      cuPortPosition += WiringViewConstants.comPortWidth;
+    }
+
+    for (int i = 0; i < footerRight.length; i++) {
+      final ComponentPort element = footerRight[i];
+      circuitComponent.addOtherPort(
+        CircuitPort(
+          id: "${data.id}_other_footerRight_$i",
+          relativePosition: Offset(
+            cuPortPosition,
+            size.height - data.portRadius - WiringViewConstants.portSpacing,
+          ),
+          padding: Offset(0, 50 + i * 10),
+          parent: circuitComponent,
+          data: element,
+        ),
+      );
+      cuPortPosition += widthPerPort;
+    }
 
     return circuitComponent;
   }

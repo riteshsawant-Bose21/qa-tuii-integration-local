@@ -75,39 +75,55 @@ class DeviceSchematicComponentData extends ComponentData {
           position: PortPosition.bottomLeft,
           index: 2,
         ),
-        ComponentPort(
-          image: 'assets/icons/wiring_ports/ethernet.png',
-          data: 'ethernet_1',
-          type: 'ethernet',
-          label: "Ethernet 1",
-          compatibleTypes: <String>['ethernet'],
-          position: PortPosition.footerLeft,
-        ),
-        ComponentPort(
-          image: 'assets/icons/wiring_ports/ethernet.png',
-          data: 'ethernet_2',
-          type: 'ethernet',
-          label: "Ethernet 2",
-          compatibleTypes: <String>['ethernet'],
-          position: PortPosition.footerLeft,
-        ),
 
+        // ComponentPort(
+        //   image: 'assets/icons/wiring_ports/ethernet.png',
+        //   data: 'ethernet_1',
+        //   type: 'ethernet',
+        //   label: "Ethernet 1",
+        //   compatibleTypes: <String>['ethernet'],
+        //   position: PortPosition.footerLeft,
+        // ),
+        // ComponentPort(
+        //   image: 'assets/icons/wiring_ports/ethernet.png',
+        //   data: 'ethernet_2',
+        //   type: 'ethernet',
+        //   label: "Ethernet 2",
+        //   compatibleTypes: <String>['ethernet'],
+        //   position: PortPosition.footerLeft,
+        // ),
         ComponentPort(
           image: 'assets/icons/wiring_ports/wifi.png',
           data: 'wifi',
           type: 'wifi',
           label: "Wifi",
           compatibleTypes: <String>['wifi'],
-          position: PortPosition.footerRight,
+          position: PortPosition.footerCenter,
         ),
-        ComponentPort(
-          image: 'assets/icons/wiring_ports/bluetooth.png',
-          data: 'bluetooth',
-          type: 'bluetooth',
-          label: "Bluetooth",
-          compatibleTypes: <String>['bluetooth'],
-          position: PortPosition.footerRight,
-        ),
+        // ComponentPort(
+        //   image: 'assets/icons/wiring_ports/wifi.png',
+        //   data: 'wifi_!',
+        //   type: 'wifi',
+        //   label: "Wifi",
+        //   compatibleTypes: <String>['wifi'],
+        //   position: PortPosition.footerCenter,
+        // ),
+        // ComponentPort(
+        //   image: 'assets/icons/wiring_ports/bluetooth.png',
+        //   data: 'bluetooth',
+        //   type: 'bluetooth',
+        //   label: "Bluetooth",
+        //   compatibleTypes: <String>['bluetooth'],
+        //   position: PortPosition.footerRight,
+        // ),
+        // ComponentPort(
+        //   image: 'assets/icons/wiring_ports/bluetooth.png',
+        //   data: 'bluetooth_1',
+        //   type: 'bluetooth',
+        //   label: "Bluetooth",
+        //   compatibleTypes: <String>['bluetooth'],
+        //   position: PortPosition.footerRight,
+        // ),
       ],
       inputPorts: List<ComponentPort>.generate(
         Random().nextInt(4) + 3,
@@ -148,14 +164,61 @@ class DeviceSchematicComponentData extends ComponentData {
             .where((ComponentPort e) => e.position == PortPosition.bottomRight)
             .length,
       );
-      cSize += Offset(0, extraHeight * 100);
-      if (comPorts.any(
-        (ComponentPort e) =>
-            e.position == PortPosition.footerLeft ||
-            e.position == PortPosition.footerCenter ||
-            e.position == PortPosition.footerRight,
-      )) {
-        cSize += const Offset(0, 100);
+      cSize += Offset(0, extraHeight * WiringViewConstants.portDimension);
+
+      cSize += Offset(
+        0,
+        max(0, extraHeight - 1) * WiringViewConstants.portSpacing,
+      );
+      final int hasFooterLeft =
+          comPorts
+              .where(
+                (ComponentPort e) => e.position == PortPosition.footerLeft,
+              )
+              .length;
+      final int hasFooterCenter =
+          comPorts
+              .where(
+                (ComponentPort e) => e.position == PortPosition.footerCenter,
+              )
+              .length;
+      final int hasFooterRight =
+          comPorts
+              .where(
+                (ComponentPort e) => e.position == PortPosition.footerRight,
+              )
+              .length;
+      if ((hasFooterLeft + hasFooterRight + hasFooterCenter) > 0) {
+        double comPortWidth = WiringViewConstants.portSpacing;
+        if (hasFooterLeft > 0) {
+          comPortWidth +=
+              hasFooterLeft * WiringViewConstants.comPortWidth +
+              (hasFooterLeft) * WiringViewConstants.portSpacing;
+        } else {
+          comPortWidth += WiringViewConstants.comPortWidth;
+        }
+        if (hasFooterCenter > 0) {
+          comPortWidth +=
+              hasFooterCenter * WiringViewConstants.comPortWidth +
+              (hasFooterCenter) * WiringViewConstants.portSpacing;
+        } else {
+          comPortWidth += WiringViewConstants.comPortWidth;
+        }
+        if (hasFooterRight > 0) {
+          comPortWidth +=
+              hasFooterRight * WiringViewConstants.comPortWidth +
+              (hasFooterRight) * WiringViewConstants.portSpacing;
+        } else {
+          comPortWidth += WiringViewConstants.comPortWidth;
+        }
+        cSize += Offset(
+          max(
+                cSize.width,
+                comPortWidth,
+              ) -
+              cSize.width,
+          100,
+        );
       }
     }
     return cSize;

@@ -6,6 +6,7 @@ import 'package:fusion_launcher/features/wiring_design/controller/helpers/connec
 import 'package:fusion_launcher/features/wiring_design/controller/state/canvas_state.dart';
 import 'package:fusion_launcher/features/wiring_design/controller/state/wiring_state.dart';
 import 'package:fusion_lib/di/service_locator.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/project_manger/project/project_manager.dart';
 
 import '../algorithm/path_finder_algorithm.dart';

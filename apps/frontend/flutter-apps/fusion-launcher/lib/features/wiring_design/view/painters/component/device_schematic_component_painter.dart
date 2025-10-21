@@ -161,6 +161,15 @@ class DeviceSchematicComponentPainter extends ComponentDataPainter {
       //   radius: WiringViewConstants.portRadius,
       // ),
       // );
+      // canvas.drawRect(
+      //   Rect.fromLTRB(
+      //     port.absolutePosition.dx - WiringViewConstants.comPortWidth / 2,
+      //     port.absolutePosition.dy - WiringViewConstants.portRadius,
+      //     port.absolutePosition.dx + WiringViewConstants.comPortWidth / 2,
+      //     port.absolutePosition.dy + WiringViewConstants.portRadius,
+      //   ),
+      //   freePortPaint,
+      // );
       painter.drawImage(
         canvas: canvas,
         path: port.data.image!,
@@ -188,18 +197,39 @@ class DeviceSchematicComponentPainter extends ComponentDataPainter {
           ),
         ),
         textDirection: TextDirection.ltr,
-      )..layout();
+      )..layout(
+        maxWidth: WiringViewConstants.comPortWidth,
+      );
 
-      // Align text to center
-      tp.paint(
-        canvas,
-        Offset(
+      final Offset labelPosition = switch (port.data.position) {
+        PortPosition.bottomRight => Offset(
+          port.absolutePosition.dx + WiringViewConstants.portRadius + 10,
+          port.absolutePosition.dy +
+              WiringViewConstants.portRadius -
+              tp.height / 2,
+        ),
+        PortPosition.footerLeft ||
+        PortPosition.footerCenter ||
+        PortPosition.footerRight => Offset(
+          port.absolutePosition.dx - tp.width / 2,
+          port.absolutePosition.dy -
+              WiringViewConstants.portRadius -
+              tp.height -
+              5,
+        ),
+        _ => Offset(
           WiringViewConstants.portRadius * 2 +
               10 +
               port.absolutePosition.dx -
               tp.width / 2,
           port.absolutePosition.dy - tp.height / 2,
         ),
+      };
+
+      // Align text to center
+      tp.paint(
+        canvas,
+        labelPosition,
       );
     }
   }
