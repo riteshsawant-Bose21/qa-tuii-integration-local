@@ -57,3 +57,12 @@ final class DeviceSelectionChanged extends ProjectViewModelState {
 }
 
 final class DeviceSelectionsCleared extends ProjectViewModelState {}
+
+final class PopupDeviceSelectionChanged extends ProjectViewModelState {}
+
+final class ListeningAreaSelectionUpdated extends ProjectViewModelState {
+  final List<String> selectedAreaIds;
+  ListeningAreaSelectionUpdated(this.selectedAreaIds);
+}
+
+final class PopupSelectionsCleared extends ProjectViewModelState {}

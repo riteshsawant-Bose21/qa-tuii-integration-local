@@ -74,6 +74,10 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
   String? currentSelectedListeningAreaId;
   String? currentSelectedZoneId;
 
+  /// Popup menu selection state
+  dynamic selectedPopupDevice;
+  List<String> selectedListeningAreaIds = <String>[];
+
   /// Listening area selection mode flag
   bool isInListeningAreaSelectionMode = false;
   bool isInZoneSelectionMode = false;
@@ -109,6 +113,25 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
       _selectedDevice = newSelectedDevice;
       emit(DeviceSelectionChanged(_selectedDevice));
     }
+  }
+
+  /// Update popup device selection
+  void setPopupDeviceSelection(dynamic device) {
+    selectedPopupDevice = device;
+    emit(PopupDeviceSelectionChanged());
+  }
+
+  /// Update listening area selection state
+  void setListeningAreaSelection(List<String> selectedAreaIds) {
+    selectedListeningAreaIds = selectedAreaIds;
+    emit(ListeningAreaSelectionUpdated(selectedAreaIds));
+  }
+
+  /// Clear popup selections
+  void clearPopupSelections() {
+    selectedPopupDevice = null;
+    selectedListeningAreaIds.clear();
+    emit(PopupSelectionsCleared());
   }
 
   /// Clear all selections

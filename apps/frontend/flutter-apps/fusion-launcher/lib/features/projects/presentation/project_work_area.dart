@@ -633,7 +633,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                             title: "PROPERTIES",
                             side: "right",
                             alowUndock: false,
-                            dockItemWidget: () => const Properties(),
+                            dockItemWidget: () => const SizedBox(),
                           ),
                         ],
                       );

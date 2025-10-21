@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
+import '../../../../core/models/products_data.dart';
 import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../widgets/common_devices_section_widget.dart';
@@ -9,14 +10,14 @@ import '../widgets/expandable_zone_widget.dart';
 import '../widgets/hardware_item_card.dart';
 import '../widgets/common_reorderable_list_view.dart';
 
-class SchematicsMainPanel extends StatefulWidget {
-  const SchematicsMainPanel({super.key});
+class SchematicsListingview extends StatefulWidget {
+  const SchematicsListingview({super.key});
 
   @override
-  State<SchematicsMainPanel> createState() => _SchematicsMainPanelState();
+  State<SchematicsListingview> createState() => _SchematicsListingviewState();
 }
 
-class _SchematicsMainPanelState extends State<SchematicsMainPanel> {
+class _SchematicsListingviewState extends State<SchematicsListingview> {
   List<Source> _reorderableSources = <Source>[];
   List<Map<String, dynamic>> _reorderableEndpoints = <Map<String, dynamic>>[];
   List<GenericHardwareComponent> _reorderableProcessors = <GenericHardwareComponent>[];
@@ -24,7 +25,6 @@ class _SchematicsMainPanelState extends State<SchematicsMainPanel> {
   List<Map<String, dynamic>> _reorderableControllers = <Map<String, dynamic>>[];
   List<Map<String, dynamic>> _reorderableAccessories = <Map<String, dynamic>>[];
 
-  // Add reorderable lists for zones, subzones, and devices
   List<Map<String, dynamic>> _reorderableZones = <Map<String, dynamic>>[];
   final Map<String, List<Map<String, dynamic>>> _reorderableSubZones = <String, List<Map<String, dynamic>>>{};
   final Map<String, List<Map<String, dynamic>>> _reorderableDevices = <String, List<Map<String, dynamic>>>{};
@@ -245,6 +245,56 @@ class _SchematicsMainPanelState extends State<SchematicsMainPanel> {
     super.dispose();
   }
 
+  // Mock data for listening areas and zones - replace with actual data from your project
+  List<ListeningArea> get _listeningAreas => <ListeningArea>[
+    ListeningArea(
+      id: 'la_1',
+      name: 'Main Hall',
+      vertices: <Offset>[],
+      venuType: 'Indoor',
+    ),
+    ListeningArea(
+      id: 'la_2',
+      name: 'Conference Room A',
+      vertices: <Offset>[],
+      venuType: 'Indoor',
+    ),
+    ListeningArea(
+      id: 'la_3',
+      name: 'Outdoor Stage',
+      vertices: <Offset>[],
+      venuType: 'Outdoor',
+    ),
+  ];
+
+  List<Zone> get _zones => <Zone>[
+    Zone(
+      id: 'zone_1',
+      name: 'Zone 1',
+      listeningAreaIds: <String>['la_1', 'la_2'],
+    ),
+    Zone(
+      id: 'zone_2',
+      name: 'Zone 2',
+      listeningAreaIds: <String>['la_3'],
+    ),
+  ];
+
+  void _handleAddDeviceToAreas(String deviceId, List<String> listeningAreaIds) {
+    // Handle adding device to listening areas
+    print('Adding device $deviceId to listening areas: $listeningAreaIds');
+
+    // You can implement the actual logic here to associate the device with listening areas
+    // For example, update your project model or send to a service
+
+    FusionToast.show(
+      context,
+      message: 'Device added to ${listeningAreaIds.length} listening area(s)',
+      icon: Icons.check_circle_outline,
+      backgroundColor: Colors.green[600],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -266,6 +316,27 @@ class _SchematicsMainPanelState extends State<SchematicsMainPanel> {
                 height: double.infinity,
                 backgroundColor: Colors.grey[200]!,
                 sectionContent: _buildSourcesAndEndpointsContent(),
+                listeningAreas: _listeningAreas,
+                zones: _zones,
+                selectedDeviceId: _projectViewModel.selectedDevice?.type == SelectedItemType.source ? _projectViewModel.selectedDevice?.id : null,
+                onAddDeviceToAreas: _handleAddDeviceToAreas,
+                onTapAddDevice: (dynamic item) {
+                  if (item is SourceData) {
+                    final Source source = Source(
+                      name: item.name,
+                      pos: null,
+                      type: item.type,
+                      assetImagePath: item.assetPath,
+                      locationEntity: LocationModel(listeningAreaId: 'frf', floorId: 'dfd'),
+                      sku: item.id,
+                      price: item.price,
+                    );
+                    serviceLocator<ProjectViewModel>().addHardware(source);
+                    setState(() {
+                      _reorderableSources.add(source);
+                    });
+                  }
+                },
               ),
 
               // Processors & Amplifiers
@@ -275,6 +346,11 @@ class _SchematicsMainPanelState extends State<SchematicsMainPanel> {
                 height: double.infinity,
                 backgroundColor: Colors.grey[200]!,
                 sectionContent: _buildProcessorsContent(),
+                listeningAreas: _listeningAreas,
+                zones: _zones,
+                selectedDeviceId: _projectViewModel.selectedDevice?.type == SelectedItemType.processor ? _projectViewModel.selectedDevice?.id : null,
+                onAddDeviceToAreas: _handleAddDeviceToAreas,
+                onTapAddDevice: (dynamic item) {},
               ),
 
               // Speakers (wider and white background)
@@ -284,6 +360,22 @@ class _SchematicsMainPanelState extends State<SchematicsMainPanel> {
                 height: double.infinity,
                 backgroundColor: Colors.white,
                 sectionContent: _buildSpeakersContent(),
+                listeningAreas: _listeningAreas,
+                zones: _zones,
+                selectedDeviceId: _projectViewModel.selectedDevice?.type == SelectedItemType.zone ? _projectViewModel.selectedDevice?.id : null,
+                onAddDeviceToAreas: _handleAddDeviceToAreas,
+                onTapAddDevice: (dynamic item) {
+                  if (item is ProductQueryModel) {
+                    final Map<String, dynamic> newZone = <String, dynamic>{
+                      'id': 'zone_${DateTime.now().millisecondsSinceEpoch}',
+                      'name': 'New Zone',
+                      'color': Colors.lightBlueAccent[100],
+                    };
+                    setState(() {
+                      _reorderableZones.add(newZone);
+                    });
+                  }
+                },
               ),
 
               // Controllers
@@ -293,6 +385,21 @@ class _SchematicsMainPanelState extends State<SchematicsMainPanel> {
                 height: double.infinity,
                 backgroundColor: Colors.grey[200]!,
                 sectionContent: _buildControllersContent(),
+                listeningAreas: _listeningAreas,
+                zones: _zones,
+                selectedDeviceId: _projectViewModel.selectedDevice?.type == SelectedItemType.controller ? _projectViewModel.selectedDevice?.id : null,
+                onAddDeviceToAreas: _handleAddDeviceToAreas,
+                onTapAddDevice: (dynamic item) {
+                  if (item is ProductQueryModel) {
+                    final Map<String, dynamic> deviceData = <String, dynamic>{
+                      'name': item.name,
+                      'assetPath': item.image.isNotEmpty ? item.image : 'assets/icons/lising_view_icon.png',
+                    };
+                    setState(() {
+                      _reorderableControllers.add(deviceData);
+                    });
+                  }
+                },
               ),
 
               // Accessories
@@ -302,6 +409,21 @@ class _SchematicsMainPanelState extends State<SchematicsMainPanel> {
                 height: double.infinity,
                 backgroundColor: Colors.grey[200]!,
                 sectionContent: _buildAccessoriesContent(),
+                listeningAreas: _listeningAreas,
+                zones: _zones,
+                selectedDeviceId: _projectViewModel.selectedDevice?.type == SelectedItemType.accessory ? _projectViewModel.selectedDevice?.id : null,
+                onAddDeviceToAreas: _handleAddDeviceToAreas,
+                onTapAddDevice: (dynamic item) {
+                  if (item is String) {
+                    final Map<String, dynamic> accessory = <String, dynamic>{
+                      'name': 'Rack $item',
+                      'assetPath': 'assets/icons/lising_view_icon.png',
+                    };
+                    setState(() {
+                      _reorderableAccessories.add(accessory);
+                    });
+                  }
+                },
               ),
             ],
           ),
@@ -312,55 +434,40 @@ class _SchematicsMainPanelState extends State<SchematicsMainPanel> {
 
   /// Combined Sources & Endpoints content with separate sections
   Widget _buildSourcesAndEndpointsContent() {
-    return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-      builder: (BuildContext context, ProjectViewModelState state) {
-        final List<Source> currentSources = serviceLocator<ProjectViewModel>().sources;
-
-        if (currentSources.length != _reorderableSources.length ||
-            !currentSources.every((Source source) => _reorderableSources.any((Source rs) => rs.id == source.id))) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            setState(() {
-              _reorderableSources = List<Source>.from(currentSources);
-            });
-          });
-        }
-
-        return Padding(
-          padding: const EdgeInsets.all(10.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              /// Sources Section
-              FusionAppText(
-                text: "Sources",
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey[700],
-                ),
-              ),
-              const SizedBox(height: 8),
-
-              _buildSourcesContent(),
-
-              const SizedBox(height: 16),
-
-              // Endpoints Section
-              FusionAppText(
-                text: "Endpoints",
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey[700],
-                ),
-              ),
-              const SizedBox(height: 8),
-
-              _buildEndpointsContent(),
-            ],
+    return Padding(
+      padding: const EdgeInsets.all(10.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          /// Sources Section
+          FusionAppText(
+            text: "Sources",
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[700],
+            ),
           ),
-        );
-      },
+          const SizedBox(height: 8),
+
+          _buildSourcesContent(),
+
+          const SizedBox(height: 16),
+
+          // Endpoints Section
+          FusionAppText(
+            text: "Endpoints",
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[700],
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          _buildEndpointsContent(),
+        ],
+      ),
     );
   }
 
@@ -401,7 +508,7 @@ class _SchematicsMainPanelState extends State<SchematicsMainPanel> {
               name: source.name,
               assetImagePath: source.assetImagePath,
               itemId: source.id,
-              location: "Eqp Loc.",
+              location: source.locationEntity.listeningAreaId ?? "Eqp Loc.",
               isHovered: isHovered,
               isSelected: isSelected,
               onTap: () => _projectViewModel.setSelectedDevice(source.id, SelectedItemType.source),
