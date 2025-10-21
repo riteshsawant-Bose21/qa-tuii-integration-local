@@ -293,7 +293,7 @@ FusionProxy::FusionProxy(::OcaSessionID sessionId, ::OcaONo networkObjectNumber)
         reader.Read(responseSize, &source, nrParameters);
 
         ::OcaUint8 readState;
-        if (nrParameters == 3)
+        if (nrParameters == 1)
         {
             reader.Read(responseSize, &source, readState);
             state = static_cast<::OcaLiteMuteState>(readState);

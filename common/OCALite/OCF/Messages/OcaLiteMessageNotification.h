@@ -121,6 +121,7 @@ protected:
 
 
     void UpdateNotificationValue(::OcaFloat32& parameters);
+    void UpdateNotificationValue(::OcaUint16& parameters);
     void UpdateNotificationValue(::OcaUint8& parameters);
 #endif
 private:
