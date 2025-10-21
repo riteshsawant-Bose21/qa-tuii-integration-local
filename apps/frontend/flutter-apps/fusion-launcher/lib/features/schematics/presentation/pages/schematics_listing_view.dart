@@ -271,29 +271,12 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
     Zone(
       id: 'zone_1',
       name: 'Zone 1',
-      listeningAreaIds: <String>['la_1', 'la_2'],
     ),
     Zone(
       id: 'zone_2',
       name: 'Zone 2',
-      listeningAreaIds: <String>['la_3'],
     ),
   ];
-
-  void _handleAddDeviceToAreas(String deviceId, List<String> listeningAreaIds) {
-    // Handle adding device to listening areas
-    print('Adding device $deviceId to listening areas: $listeningAreaIds');
-
-    // You can implement the actual logic here to associate the device with listening areas
-    // For example, update your project model or send to a service
-
-    FusionToast.show(
-      context,
-      message: 'Device added to ${listeningAreaIds.length} listening area(s)',
-      icon: Icons.check_circle_outline,
-      backgroundColor: Colors.green[600],
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -319,19 +302,24 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                 listeningAreas: _listeningAreas,
                 zones: _zones,
                 selectedDeviceId: _projectViewModel.selectedDevice?.type == SelectedItemType.source ? _projectViewModel.selectedDevice?.id : null,
-                onAddDeviceToAreas: _handleAddDeviceToAreas,
-                onTapAddDevice: (dynamic item) {
+                onTapAddDevice: (dynamic item, String areaId, String floorId) {
                   if (item is SourceData) {
                     final Source source = Source(
                       name: item.name,
                       pos: null,
                       type: item.type,
                       assetImagePath: item.assetPath,
-                      locationEntity: LocationModel(listeningAreaId: 'frf', floorId: 'dfd'),
+                      locationEntity: LocationModel(listeningAreaId: areaId, floorId: floorId),
                       sku: item.id,
                       price: item.price,
                     );
-                    serviceLocator<ProjectViewModel>().addHardware(source);
+                    serviceLocator<ProjectViewModel>().addHardware(hardware: source);
+                    FusionToast.show(
+                      context,
+                      message: "Source \"${item.name}\" added",
+                      icon: Icons.check_circle_outline,
+                      backgroundColor: Colors.green[600],
+                    );
                     setState(() {
                       _reorderableSources.add(source);
                     });
@@ -339,7 +327,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                 },
               ),
 
-              // Processors & Amplifiers
+              /// Processors & Amplifiers
               CommonDevicesSectionWidget(
                 title: "Processors & Amplifiers",
                 width: normalColumnWidth,
@@ -349,11 +337,14 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                 listeningAreas: _listeningAreas,
                 zones: _zones,
                 selectedDeviceId: _projectViewModel.selectedDevice?.type == SelectedItemType.processor ? _projectViewModel.selectedDevice?.id : null,
-                onAddDeviceToAreas: _handleAddDeviceToAreas,
-                onTapAddDevice: (dynamic item) {},
+                onTapAddDevice: (dynamic item, String areaId, String floorId) {
+                  if (item is ProductQueryModel) {
+                    // final HardwareComponent hardware = serviceLocator<ProjectViewModel>().fromProductQueryModel();
+                  }
+                },
               ),
 
-              // Speakers (wider and white background)
+              /// Speakers
               CommonDevicesSectionWidget(
                 title: "Speakers",
                 width: speakersColumnWidth,
@@ -363,8 +354,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                 listeningAreas: _listeningAreas,
                 zones: _zones,
                 selectedDeviceId: _projectViewModel.selectedDevice?.type == SelectedItemType.zone ? _projectViewModel.selectedDevice?.id : null,
-                onAddDeviceToAreas: _handleAddDeviceToAreas,
-                onTapAddDevice: (dynamic item) {
+                onTapAddDevice: (dynamic item, String areaId, String floorId) {
                   if (item is ProductQueryModel) {
                     final Map<String, dynamic> newZone = <String, dynamic>{
                       'id': 'zone_${DateTime.now().millisecondsSinceEpoch}',
@@ -388,8 +378,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                 listeningAreas: _listeningAreas,
                 zones: _zones,
                 selectedDeviceId: _projectViewModel.selectedDevice?.type == SelectedItemType.controller ? _projectViewModel.selectedDevice?.id : null,
-                onAddDeviceToAreas: _handleAddDeviceToAreas,
-                onTapAddDevice: (dynamic item) {
+                onTapAddDevice: (dynamic item, String areaId, String floorId) {
                   if (item is ProductQueryModel) {
                     final Map<String, dynamic> deviceData = <String, dynamic>{
                       'name': item.name,
@@ -412,8 +401,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                 listeningAreas: _listeningAreas,
                 zones: _zones,
                 selectedDeviceId: _projectViewModel.selectedDevice?.type == SelectedItemType.accessory ? _projectViewModel.selectedDevice?.id : null,
-                onAddDeviceToAreas: _handleAddDeviceToAreas,
-                onTapAddDevice: (dynamic item) {
+                onTapAddDevice: (dynamic item, String areaId, String floorId) {
                   if (item is String) {
                     final Map<String, dynamic> accessory = <String, dynamic>{
                       'name': 'Rack $item',
@@ -492,6 +480,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
           items: _reorderableSources,
           emptyMessage: "No sources added yet",
           onReorder: (int oldIndex, int newIndex) {
+            // serviceLocator<ProjectViewModel>().reOrderHardware(hardwareIdToMove: , hardwareAtNewIndex: 'newIndex');
             setState(() {
               if (newIndex > oldIndex) newIndex -= 1;
               final Source item = _reorderableSources.removeAt(oldIndex);
@@ -504,11 +493,23 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
             final bool isHovered = hoveredDevice?.id == source.id && hoveredDevice?.type == SelectedItemType.source;
             final bool isSelected = selectedDevice?.id == source.id && selectedDevice?.type == SelectedItemType.source;
 
+            /// Get location name for the source
+            final String? locationName =
+                source.locationEntity.listeningAreaId != null
+                    ? serviceLocator<ProjectViewModel>().getListeningArea(areaId: source.locationEntity.listeningAreaId!).name
+                    : null;
+
+            /// Get zone data for the source
+            final Zone? zoneData = serviceLocator<ProjectViewModel>().getZoneForHardware(hardwareId: source.id);
+
+            // print("Sourceeeeee ${source.id} is in location: $locationName, zone: ${zoneData?.name ?? "No Zone"}");
+
             return HardwareItemCard(
               name: source.name,
               assetImagePath: source.assetImagePath,
               itemId: source.id,
-              location: source.locationEntity.listeningAreaId ?? "Eqp Loc.",
+              zone: zoneData,
+              location: locationName ?? "Add Location",
               isHovered: isHovered,
               isSelected: isSelected,
               onTap: () => _projectViewModel.setSelectedDevice(source.id, SelectedItemType.source),

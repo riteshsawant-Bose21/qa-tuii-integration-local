@@ -602,62 +602,62 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                         },
                       ),
 
-                  /// schematics tab with docking area
-                  BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-                    builder: (BuildContext context, Object? state) {
-                      return FusionDockableArea(
-                        tabKey: "tab2",
-                        showLeft: isListingViewMode ? false : true,
-                        showRight: true,
-                        mainArea: const SchematicsPage(),
-                        dockItemList: <DockItemConfig>[
-                          DockItemConfig(
-                            id: "6",
-                            title: "COST CALCULATOR",
-                            side: "right",
-                            dockItemWidget:
-                                () => CostCalculatorScreen(
-                                  speakers: serviceLocator<ProjectViewModel>().speakers,
-                                  sources: serviceLocator<ProjectViewModel>().sources,
-                                  controllers: serviceLocator<ProjectViewModel>().fusionControllers,
-                                  racks:
-                                      serviceLocator<ProjectViewModel>().genericHardwareComponents
-                                          .where((GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack)
-                                          .toList(),
-                                  amplifiers: <Amplifier>[],
-                                  fusionDevices: <FusionDsp>[],
-                                  others:
-                                      serviceLocator<ProjectViewModel>().genericHardwareComponents
-                                          .where(
-                                            (HardwareComponent component) =>
-                                                component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
-                                          )
-                                          .toList(),
-                                ),
-                          ),
-                          DockItemConfig(
-                            id: "8",
-                            title: "PRODUCT QUERY",
-                            side: "right",
-                            dockItemWidget: () => const ProductQueryView(),
-                          ),
-                          DockItemConfig(
-                            id: "10",
-                            title: "PRODUCT List",
-                            side: "left",
-                            dockItemWidget: () => const FusionAppText(text: "PRODUCT List"),
-                          ),
-                          DockItemConfig(
-                            id: "5",
-                            title: "PROPERTIES",
-                            side: "right",
-                            alowUndock: false,
-                            dockItemWidget: () => const SizedBox(),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
+                      /// schematics tab with docking area
+                      BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+                        builder: (BuildContext context, Object? state) {
+                          return FusionDockableArea(
+                            tabKey: "tab2",
+                            showLeft: isListingViewMode ? false : true,
+                            showRight: true,
+                            mainArea: const SchematicsPage(),
+                            dockItemList: <DockItemConfig>[
+                              DockItemConfig(
+                                id: "6",
+                                title: "COST CALCULATOR",
+                                side: "right",
+                                dockItemWidget:
+                                    () => CostCalculatorScreen(
+                                      speakers: serviceLocator<ProjectViewModel>().speakers,
+                                      sources: serviceLocator<ProjectViewModel>().sources,
+                                      controllers: serviceLocator<ProjectViewModel>().fusionControllers,
+                                      racks:
+                                          serviceLocator<ProjectViewModel>().genericHardwareComponents
+                                              .where((GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack)
+                                              .toList(),
+                                      amplifiers: <Amplifier>[],
+                                      fusionDevices: <FusionDsp>[],
+                                      others:
+                                          serviceLocator<ProjectViewModel>().genericHardwareComponents
+                                              .where(
+                                                (HardwareComponent component) =>
+                                                    component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
+                                              )
+                                              .toList(),
+                                    ),
+                              ),
+                              DockItemConfig(
+                                id: "8",
+                                title: "PRODUCT QUERY",
+                                side: "right",
+                                dockItemWidget: () => const ProductQueryView(),
+                              ),
+                              DockItemConfig(
+                                id: "10",
+                                title: "PRODUCT List",
+                                side: "left",
+                                dockItemWidget: () => const FusionAppText(text: "PRODUCT List"),
+                              ),
+                              DockItemConfig(
+                                id: "5",
+                                title: "PROPERTIES",
+                                side: "right",
+                                alowUndock: false,
+                                dockItemWidget: () => const SizedBox(),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
 
                       const FusionDockableArea(
                         tabKey: "testTab",

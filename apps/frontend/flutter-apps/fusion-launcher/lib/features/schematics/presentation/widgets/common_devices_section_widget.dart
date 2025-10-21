@@ -14,7 +14,7 @@ class CommonDevicesSectionWidget extends StatefulWidget {
   final String title;
   final Widget sectionContent;
   final Color backgroundColor;
-  final void Function(dynamic item)? onTapAddDevice;
+  final void Function(dynamic item, String areaId, String floorId)? onTapAddDevice;
   final List<ListeningArea> listeningAreas;
   final List<Zone> zones;
   final String? selectedDeviceId;
@@ -174,7 +174,7 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
     return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
       builder: (BuildContext context, ProjectViewModelState state) {
         final ProjectViewModel projectViewModel = context.read<ProjectViewModel>();
-        final bool canAddDevice = projectViewModel.selectedPopupDevice != null && projectViewModel.selectedListeningAreaIds.isNotEmpty;
+        final bool canAddDevice = projectViewModel.selectedPopupDevice != null;
 
         return Container(
           width: widget.width,
@@ -225,10 +225,9 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
                                     /// Add button with listening areas support
                                     ExpandablePopupMenuWidget(
                                       sectionTitle: widget.title,
-                                      onItemTap: widget.onTapAddDevice,
+                                      onTapAddDevice: widget.onTapAddDevice,
                                       listeningAreas: widget.listeningAreas,
                                       zones: widget.zones,
-                                      onAddDeviceToAreas: widget.onAddDeviceToAreas,
                                     ),
                                   ],
                                 ),

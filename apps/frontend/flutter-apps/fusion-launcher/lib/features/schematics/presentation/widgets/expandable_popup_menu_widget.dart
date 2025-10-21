@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
@@ -10,18 +11,16 @@ import 'listening_area_dropdown_widget.dart';
 
 class ExpandablePopupMenuWidget extends StatefulWidget {
   final String sectionTitle;
-  final void Function(dynamic item)? onItemTap;
+  final void Function(dynamic item, String areaId, String floorId)? onTapAddDevice;
   final List<ListeningArea> listeningAreas;
   final List<Zone> zones;
-  final Function(String deviceId, List<String> listeningAreaIds)? onAddDeviceToAreas;
 
   const ExpandablePopupMenuWidget({
     super.key,
     required this.sectionTitle,
-    this.onItemTap,
+    this.onTapAddDevice,
     this.listeningAreas = const <ListeningArea>[],
     this.zones = const <Zone>[],
-    this.onAddDeviceToAreas,
   });
 
   @override
@@ -38,6 +37,9 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
   bool _racksExpanded = false;
   bool _endPointsExpanded = false;
   bool _otherDevicesExpanded = false;
+
+  /// Local state for listening area selection
+  List<String> _selectedListeningAreaIds = <String>[];
 
   /// Returns tooltip text based on the section title
   String getSectionToolTip() {
@@ -58,14 +60,17 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
   }
 
   void _addDeviceToSelectedAreas() {
-    final ProjectViewModel projectViewModel = context.read<ProjectViewModel>();
+    final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
     final dynamic selectedDevice = projectViewModel.selectedPopupDevice;
-    final List<String> selectedAreas = projectViewModel.selectedListeningAreaIds;
+    final FloorModel? floorData = serviceLocator<ProjectViewModel>().getFloorForListeningArea(areaId: _selectedListeningAreaIds.first);
 
-    print('Add device called - Device: $selectedDevice, Areas: $selectedAreas'); // Debug print
-    if (selectedDevice != null && selectedAreas.isNotEmpty) {
-      widget.onItemTap?.call(selectedDevice);
+    print('Add device called - Device: $selectedDevice, Areas: $_selectedListeningAreaIds'); // Debug print
+    if (selectedDevice != null && _selectedListeningAreaIds.isNotEmpty) {
+      widget.onTapAddDevice?.call(selectedDevice, _selectedListeningAreaIds.first, floorData?.id ?? "");
       projectViewModel.clearPopupSelections();
+      setState(() {
+        _selectedListeningAreaIds.clear();
+      });
       Navigator.of(context).pop();
     }
   }
@@ -254,8 +259,7 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
       builder: (BuildContext context, ProjectViewModelState state) {
         final ProjectViewModel projectViewModel = context.read<ProjectViewModel>();
         final dynamic selectedDevice = projectViewModel.selectedPopupDevice;
-        final List<String> selectedAreas = projectViewModel.selectedListeningAreaIds;
-        final bool canAddDevice = selectedDevice != null && selectedAreas.isNotEmpty;
+        final bool canAddDevice = selectedDevice != null && _selectedListeningAreaIds.isNotEmpty;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -372,21 +376,13 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
                       child: ListeningAreaDropdownWidget(
                         listeningAreas: widget.listeningAreas,
                         zones: widget.zones,
-                        selectedListeningAreaIds: selectedAreas,
-                        onSelectionChanged: (List<String> selectedIds) {
-                          context.read<ProjectViewModel>().setListeningAreaSelection(selectedIds);
+                        selectedListeningAreaIds: _selectedListeningAreaIds,
+                        onSelectionChanged: (List<String> selectedIds, String floorId) {
+                          setState(() {
+                            _selectedListeningAreaIds = selectedIds;
+                          });
+                          setMenuState(() {}); // Update popup menu UI
                           print('Listening areas selected: $selectedIds'); // Debug print
-                        },
-                        onCreateNewArea: (String areaName, String venueType) {
-                          final ListeningArea newArea = ListeningArea(
-                            name: areaName,
-                            vertices: <Offset>[],
-                            venuType: venueType,
-                          );
-
-                          final List<String> updatedSelection = List<String>.from(selectedAreas)..add(newArea.id);
-                          context.read<ProjectViewModel>().setListeningAreaSelection(updatedSelection);
-                          print('Created new listening area: $areaName ($venueType)');
                         },
                       ),
                     ),
@@ -394,8 +390,6 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
                 ),
               ),
 
-              // Add Device Button (only visible when device and areas are selected)
-              // if (canAddDevice)
               Container(
                 margin: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
                 child: SizedBox(

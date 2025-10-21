@@ -26,7 +26,7 @@ extension HardwareService on ProjectService {
     final hw = hardware.get(hardwareId);
     if (hw == null) throw Exception('Hardware $hardwareId not found');
     final loc = hw.locationEntity;
-    if (loc.listeningAreaId == null) {
+    if (loc.listeningAreaId != null) {
       final laId = loc.listeningAreaId!;
       final parentZoneIds = relationships.getParents(RelationshipType.zoneAreas, laId);
       if (parentZoneIds.isNotEmpty) {

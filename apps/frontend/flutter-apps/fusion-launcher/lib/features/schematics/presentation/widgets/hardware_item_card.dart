@@ -7,6 +7,7 @@ class HardwareItemCard extends StatelessWidget {
   final String assetImagePath;
   final String? itemId;
   final String? location;
+  final Zone? zone;
   final bool isHovered;
   final bool isSelected;
   final VoidCallback? onTap;
@@ -30,6 +31,7 @@ class HardwareItemCard extends StatelessWidget {
     this.onDelete,
     this.onRename,
     this.onDuplicate,
+    this.zone,
   });
 
   @override
@@ -81,24 +83,50 @@ class HardwareItemCard extends StatelessWidget {
                     const SizedBox(height: 6),
 
                     /// device location
-                    if (location != null)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: isHovered ? Colors.white.withOpacity(0.5) : (isSelected ? Colors.transparent : Theme.of(context).colorScheme.white),
-                          border: Border.all(color: Theme.of(context).colorScheme.greyDark, width: 1),
+                    zone != null
+                        ? Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: <Widget>[
+                              Container(
+                                width: 7,
+                                height: 16,
+                                decoration: BoxDecoration(
+                                  color: zone?.color ?? Colors.transparent,
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: FusionAppText(
+                                  text: zone?.name ?? "",
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 9),
+                                  maxLine: 1, // Prevent text overflow
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                        : Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: isHovered ? Colors.white.withOpacity(0.5) : (isSelected ? Colors.transparent : Theme.of(context).colorScheme.white),
+                            border: Border.all(color: Theme.of(context).colorScheme.greyDark, width: 1),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                          child: FusionAppText(
+                            text: location!,
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 9),
+                          ),
                         ),
-                        child: FusionAppText(
-                          text: location!,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 9),
-                        ),
-                      ),
                   ],
                 ),
               ),
 
               /// kebab menu
-              if ((isHovered || isSelected) && itemId != null) ...<Widget>[
+              if (isSelected && itemId != null) ...<Widget>[
                 const SizedBox(width: 4),
                 PopupMenuButton<String>(
                   icon: Icon(
