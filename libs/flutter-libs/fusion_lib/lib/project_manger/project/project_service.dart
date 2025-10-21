@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/models/project_entities/controller.dart';
+import 'package:fusion_lib/models/project_entities/endpoints.dart';
 
 import '../../fusion_lib.dart';
 
@@ -32,6 +34,7 @@ class ProjectService {
   final CircuitRepository circuits;
   final SubZoneRepository subZones;
   final WiringConnectionRepository wiringConnection;
+  final ProcessingBlockRepository processingBlocks;
 
   final RelationshipManager relationships;
 
@@ -40,7 +43,8 @@ class ProjectService {
   // -----------------
   List<Map<String, dynamic>> undoStack = [];
   List<Map<String, dynamic>> redoStack = [];
-  int get maxHistory => 10; // cap history to avoid unbounded memory growth
+
+  int get maxHistory => 25; // cap history to avoid unbounded memory growth
 
   ProjectService({
     required this.id,
@@ -68,6 +72,7 @@ class ProjectService {
     AmplifierRepository? amplifiers,
     CircuitRepository? circuits,
     WiringConnectionRepository? wiringConnection,
+    ProcessingBlockRepository? processingBlocks,
     RelationshipManager? relationships,
   }) : floors = floors ?? FloorRepository(),
        listeningAreas = listeningAreas ?? ListeningAreaRepository(),
@@ -80,6 +85,7 @@ class ProjectService {
        amplifiers = amplifiers ?? AmplifierRepository(),
        circuits = circuits ?? CircuitRepository(),
        wiringConnection = wiringConnection ?? WiringConnectionRepository(),
+       processingBlocks = processingBlocks ?? ProcessingBlockRepository(),
        relationships = relationships ?? RelationshipManager();
 
   ProjectService copyWith({
@@ -107,7 +113,7 @@ class ProjectService {
     AmplifierRepository? amplifiers,
     CircuitRepository? circuits,
     WiringConnectionRepository? wiringConnection,
-
+    ProcessingBlockRepository? processingBlocks,
     RelationshipManager? relationships,
     bool? isInHardwareMode,
   }) {
@@ -136,6 +142,7 @@ class ProjectService {
       amplifiers: amplifiers ?? this.amplifiers,
       circuits: circuits ?? this.circuits,
       wiringConnection: wiringConnection ?? this.wiringConnection,
+      processingBlocks: processingBlocks ?? this.processingBlocks,
       relationships: relationships ?? this.relationships,
       isInHardwareMode: isInHardwareMode ?? this.isInHardwareMode,
     );
@@ -180,6 +187,18 @@ class ProjectService {
           return c.toJson();
         } else if (c is Speaker) {
           return c.toJson();
+        } else if (c is FusionDsp) {
+          return c.toJson();
+        } else if (c is FusionController) {
+          return c.toJson();
+        } else if (c is Amplifier) {
+          return c.toJson();
+        } else if (c is FusionEndpoints) {
+          return c.toJson();
+        } else if (c is HardwareRack) {
+          return c.toJson();
+        } else if (c is NetworkSwitch) {
+          return c.toJson();
         } else {
           return (c as GenericHardwareComponent).toJson();
         }
@@ -189,6 +208,7 @@ class ProjectService {
       "amplifiers": amplifiers.toJson((a) => a.toJson()),
       "circuits": circuits.toJson((c) => c.toJson()),
       "wiringConnection": wiringConnection.toJson((wc) => wc.toJson()),
+      "processingBlocks": processingBlocks.toJson((pb) => pb.toJson()),
       "relationships": relationships.toJson(),
     };
   }
@@ -222,6 +242,18 @@ class ProjectService {
         return Source.fromJson(m);
       } else if (m.containsKey('componentType') && m['componentType'] == 'speaker') {
         return Speaker.fromJson(m);
+      } else if (m.containsKey('componentType') && m['componentType'] == 'fusionDsp') {
+        return FusionDsp.fromJson(m);
+      } else if (m.containsKey('componentType') && m['componentType'] == 'controller') {
+        return FusionController.fromJson(m);
+      } else if (m.containsKey('componentType') && m['componentType'] == 'fusionEndpoint') {
+        return FusionEndpoints.fromJson(m);
+      } else if (m.containsKey('componentType') && m['componentType'] == 'amplifier') {
+        return Amplifier.fromJson(m);
+      } else if (m.containsKey('componentType') && m['componentType'] == 'hardwareRack') {
+        return HardwareRack.fromJson(m);
+      } else if (m.containsKey('componentType') && m['componentType'] == 'networkSwitch') {
+        return NetworkSwitch.fromJson(m);
       } else {
         return GenericHardwareComponent.fromJson(m);
       }
@@ -231,6 +263,7 @@ class ProjectService {
     service.amplifiers.fromJsonList(json["amplifiers"], (m) => Amplifier.fromJson(m), "id");
     service.circuits.fromJsonList(json["circuits"], (m) => CircuitModel.fromJson(m), "id");
     service.wiringConnection.fromJsonList(json["wiringConnection"], (m) => WiringConnectionModel.fromJson(m), "id");
+    service.processingBlocks.fromJsonList(json["processingBlocks"], (m) => ProcessingBlockModel.fromJson(m), "id");
     service.relationships.fromJson(json["relationships"]);
 
     return service;

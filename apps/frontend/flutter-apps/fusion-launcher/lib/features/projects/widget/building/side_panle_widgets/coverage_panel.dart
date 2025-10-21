@@ -64,7 +64,7 @@ class CoveragePanelState extends State<CoveragePanel> {
                   final Zone newZone = Zone(
                     name: 'Zone ${serviceLocator<ProjectViewModel>().zones.length + 1}',
                   );
-                  serviceLocator<ProjectViewModel>().addZone(newZone);
+                  serviceLocator<ProjectViewModel>().addZone(zone: newZone);
                   serviceLocator<ProjectViewModel>().enterZoneSelectionMode(newZone);
                 },
               ),

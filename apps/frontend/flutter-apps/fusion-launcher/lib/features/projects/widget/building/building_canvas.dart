@@ -8,17 +8,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/core/theme/app_theme.dart';
 import 'package:fusion_launcher/core/utils/fusion_utils.dart';
-import 'package:fusion_lib/fusion_building_view/floor_canvas.dart';
 import 'package:fusion_lib/fusion_building_view/floor_canvas_controller.dart';
 import 'package:fusion_lib/fusion_building_view/floor_plan_calibrator.dart';
-import 'package:fusion_lib/fusion_building_view/spl_panel.dart';
 import 'package:fusion_lib/fusion_building_view/spl_range_controller.dart';
-import 'package:fusion_lib/fusion_building_view/spl_range_slider.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_utils/image_loader_service.dart';
-import 'package:fusion_lib/fusion_widgets/buttons/fusion_outlined_button.dart';
-import 'package:fusion_lib/fusion_widgets/others/fusion_image.dart';
-import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
-import 'package:fusion_lib/models/fusion_models.dart';
 
 import '../../../../core/widgets/clean_widgets.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
@@ -59,32 +53,15 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
 
   void zoneSelectionMode(Zone zone) async {
     final List<ListeningArea>? selectedAreas = await widget.floorCanvasController.requestListeningAreaSelection(
-      serviceLocator<ProjectViewModel>().getListeningAreasForZone(zone.id),
+      serviceLocator<ProjectViewModel>().getListeningAreasForZone(zoneId: zone.id),
       zone,
     );
 
     if (selectedAreas != null) {
-      // Get existing listening areas for this zone
-      final List<ListeningArea> existingAreas = serviceLocator<ProjectViewModel>().getListeningAreasForZone(zone.id);
-
-      // Find areas to remove (existing but not in selected)
-      final List<ListeningArea> areasToRemove =
-          existingAreas.where((ListeningArea existingArea) => !selectedAreas.any((ListeningArea selected) => selected.id == existingArea.id)).toList();
-
-      // Find areas to add (selected but not in existing)
-      final List<ListeningArea> areasToAdd =
-          selectedAreas.where((ListeningArea selected) => !existingAreas.any((ListeningArea existing) => existing.id == selected.id)).toList();
-
-      // Remove areas that are no longer selected
-      for (ListeningArea area in areasToRemove) {
-        serviceLocator<ProjectViewModel>().removeListeningAreaFromZone(area.id, zone.id);
-      }
-
-      // Add newly selected areas
-      for (ListeningArea area in areasToAdd) {
-        serviceLocator<ProjectViewModel>().addListeningAreaToZone(area.id, zone.id);
-      }
-      serviceLocator<ProjectViewModel>().saveProjectToLocal();
+      serviceLocator<ProjectViewModel>().updateListeningAreasInZone(
+        zoneId: zone.id,
+        listeningAreaIds: selectedAreas.map((ListeningArea e) => e.id).toList(),
+      );
     } else {
       serviceLocator<ProjectViewModel>().clearSelectedZone();
     }
@@ -178,45 +155,60 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                             child: FloorCanvas(
                               gridSize: 100,
                               controller: widget.floorCanvasController,
-                              hardwareComponents: serviceLocator<ProjectViewModel>().getHardwareForFloor(floor.id),
-                              listeningAreas: serviceLocator<ProjectViewModel>().getListeningAreasForFloor(floor.id),
+                              hardwareComponents: serviceLocator<ProjectViewModel>().getHardwareForFloor(floorId: floor.id),
+                              listeningAreas: serviceLocator<ProjectViewModel>().getListeningAreasForFloor(floorId: floor.id),
                               floor: floor,
                               floorPlanEntity: floor.floorPlan,
-                              onUpdateHardwareComponent: serviceLocator<ProjectViewModel>().updateHardware,
+                              onUpdateHardwareComponent: (HardwareComponent updatedHw) {
+                                final HardwareComponent oldHw = serviceLocator<ProjectViewModel>().getHardware(hardwareId: updatedHw.id)!;
+
+                                //check for pos && listenign area id since only those two can be updated from canvas
+                                if (oldHw.pos != updatedHw.pos ||
+                                    oldHw.locationEntity.listeningAreaId != updatedHw.locationEntity.listeningAreaId ||
+                                    oldHw.locationEntity.floorId != updatedHw.locationEntity.floorId) {
+                                  serviceLocator<ProjectViewModel>().updateHardware(hardware: updatedHw);
+                                } else {
+                                  debugPrint("No changes detected for hardware ${updatedHw.id}, skipping update.");
+                                }
+                              },
                               zones: serviceLocator<ProjectViewModel>().zones,
                               splPanelData: widget.splPanelData,
                               onCanvasZoomChanged: (double z) {
                                 serviceLocator<ProjectViewModel>().updateFloor(
-                                  floor.copyWith(floorPlan: floor.floorPlan.copyWith(canvasZoom: z)),
+                                  floor: floor.copyWith(floorPlan: floor.floorPlan.copyWith(canvasZoom: z)),
                                 );
                               },
                               onCanvasPanChanged: (ui.Offset p) {
                                 serviceLocator<ProjectViewModel>().updateFloor(
-                                  floor.copyWith(floorPlan: floor.floorPlan.copyWith(canvasPan: p)),
+                                  floor: floor.copyWith(floorPlan: floor.floorPlan.copyWith(canvasPan: p)),
                                 );
                               },
                               moveHardware: (HardwareComponent hardware, String? newListeningAreaId, String? floorId) {
-                                serviceLocator<ProjectViewModel>().moveHardware(hardware.id, floorId: floorId, listeningAreaId: newListeningAreaId);
+                                serviceLocator<ProjectViewModel>().moveHardware(hardwareId: hardware.id, floorId: floorId, listeningAreaId: newListeningAreaId);
                                 // serviceLocator<ProjectViewModel>().saveProjectToLocal();
                               },
                               onAddListeningArea: (ListeningArea created, List<HardwareComponent>? containedHardware) {
-                                serviceLocator<ProjectViewModel>().addListeningArea(created, floor.id);
+                                serviceLocator<ProjectViewModel>().recordSnapshot();
+                                serviceLocator<ProjectViewModel>().addListeningArea(area: created, floorId: floor.id, autoSave: false);
                                 if (containedHardware != null) {
                                   for (final HardwareComponent hc in containedHardware) {
                                     serviceLocator<ProjectViewModel>().moveHardware(
-                                      hc.id,
+                                      hardwareId: hc.id,
                                       listeningAreaId: created.id,
                                       floorId: floor.id,
+                                      autoSave: false,
                                     );
                                   }
                                 }
                                 widget.onCalculateSpl();
-                                serviceLocator<ProjectViewModel>().saveProjectToLocal();
+                                serviceLocator<ProjectViewModel>().saveProject();
                               },
-                              onUpdateListeningArea: serviceLocator<ProjectViewModel>().updateListeningArea,
+                              onUpdateListeningArea: (ListeningArea area) {
+                                serviceLocator<ProjectViewModel>().updateListeningArea(area: area);
+                              },
                               onFloorPlanUpdated: (FloorPlanModel updatedPlan) {
                                 serviceLocator<ProjectViewModel>().updateFloor(
-                                  floor.copyWith(floorPlan: updatedPlan),
+                                  floor: floor.copyWith(floorPlan: updatedPlan),
                                 );
                               },
                               onViewportCenterUpdated: (ui.Offset center) {
@@ -226,7 +218,6 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                 if (component is Speaker || component is ListeningArea) {
                                   widget.onCalculateSpl();
                                 }
-                                serviceLocator<ProjectViewModel>().saveProjectToLocal();
                               },
                               onTapListeningArea: (ListeningArea value) {
                                 // serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(value.id);
@@ -254,8 +245,8 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                   position: speakerPosition,
                                   listeningAreaId: listeningAreaId,
                                 );
-                                serviceLocator<ProjectViewModel>().saveProjectToLocal();
                               },
+                              listeningAreaToZoneMap: serviceLocator<ProjectViewModel>().getListeningAreaToZoneMap(),
                             ),
                           ),
 
@@ -314,7 +305,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                 decoration: BoxDecoration(
                                   color:
                                       isActive
-                                          ? FusionUtils.hexToColor(widget.floorCanvasController.currentlySelectingZone!.zoneColor).withValues(alpha: 0.75)
+                                          ? FusionUiUtils.hexToColor(widget.floorCanvasController.currentlySelectingZone!.zoneColor).withValues(alpha: 0.75)
                                           : Colors.white,
                                   borderRadius: BorderRadius.circular(24),
                                   boxShadow: <BoxShadow>[
@@ -337,7 +328,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                               fontSize: 14,
                                               color:
                                                   ThemeData.estimateBrightnessForColor(
-                                                            FusionUtils.hexToColor(widget.floorCanvasController.currentlySelectingZone!.zoneColor),
+                                                            FusionUiUtils.hexToColor(widget.floorCanvasController.currentlySelectingZone!.zoneColor),
                                                           ) ==
                                                           Brightness.light
                                                       ? Colors.grey.shade800
@@ -357,7 +348,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                                 border: Border.all(
                                                   color:
                                                       ThemeData.estimateBrightnessForColor(
-                                                                FusionUtils.hexToColor(widget.floorCanvasController.currentlySelectingZone!.zoneColor),
+                                                                FusionUiUtils.hexToColor(widget.floorCanvasController.currentlySelectingZone!.zoneColor),
                                                               ) ==
                                                               Brightness.light
                                                           ? Colors.grey.shade800
@@ -372,7 +363,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                                 size: 16,
                                                 color:
                                                     ThemeData.estimateBrightnessForColor(
-                                                              FusionUtils.hexToColor(widget.floorCanvasController.currentlySelectingZone!.zoneColor),
+                                                              FusionUiUtils.hexToColor(widget.floorCanvasController.currentlySelectingZone!.zoneColor),
                                                             ) ==
                                                             Brightness.light
                                                         ? Colors.grey.shade800
@@ -393,7 +384,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                                 border: Border.all(
                                                   color:
                                                       ThemeData.estimateBrightnessForColor(
-                                                                FusionUtils.hexToColor(widget.floorCanvasController.currentlySelectingZone!.zoneColor),
+                                                                FusionUiUtils.hexToColor(widget.floorCanvasController.currentlySelectingZone!.zoneColor),
                                                               ) ==
                                                               Brightness.light
                                                           ? Colors.grey.shade800
@@ -407,7 +398,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                                 size: 16,
                                                 color:
                                                     ThemeData.estimateBrightnessForColor(
-                                                              FusionUtils.hexToColor(widget.floorCanvasController.currentlySelectingZone!.zoneColor),
+                                                              FusionUiUtils.hexToColor(widget.floorCanvasController.currentlySelectingZone!.zoneColor),
                                                             ) ==
                                                             Brightness.light
                                                         ? Colors.grey.shade800
@@ -473,13 +464,13 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                             invertedColors: widget.splPanelData.splInvertColor,
                             onChanged: (double min, double max) {
                               // debugPrint("SPL Range changed: ${min.round()} - ${max.round()}");
-                              serviceLocator<ProjectViewModel>().setMinSPL(min);
-                              serviceLocator<ProjectViewModel>().setMaxSPL(max);
+                              serviceLocator<ProjectViewModel>().setMinSPL(minSPL: min, autoSave: false);
+                              serviceLocator<ProjectViewModel>().setMaxSPL(maxSPL: max);
                             },
                             onChangeEnd: (double min, double max) {
                               // debugPrint("SPL Range change ended: ${min.round()} - ${max.round()}");
-                              serviceLocator<ProjectViewModel>().setMinSPL(min);
-                              serviceLocator<ProjectViewModel>().setMaxSPL(max);
+                              serviceLocator<ProjectViewModel>().setMinSPL(minSPL: min, autoSave: false);
+                              serviceLocator<ProjectViewModel>().setMaxSPL(maxSPL: max);
                               // serviceLocator<ProjectViewModel>().saveProjectToLocal();
                             },
                           ),
@@ -645,7 +636,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
 
   Future<void> _selectAssetFloorPlan(String assetImagePath) async {
     if (mounted) Navigator.of(context).pop();
-    final ResponseCallback<String?> responseCallback = await serviceLocator<ProjectViewModel>().addAssetImageToProject(assetImagePath);
+    final ResponseCallback<String?> responseCallback = await serviceLocator<ProjectViewModel>().addAssetImageToProject(assetPath: assetImagePath);
     if (responseCallback.success && responseCallback.data != null) {
       final String savedImagePath = responseCallback.data!;
       _calibrateFloorPlan(savedImagePath);
@@ -671,7 +662,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
       if (result != null && result.files.single.path != null) {
         final String sourcePath = result.files.single.path!;
         final String fileName = result.files.single.name;
-        final ResponseCallback<String?> responseCallback = await serviceLocator<ProjectViewModel>().addImageToProject(sourcePath);
+        final ResponseCallback<String?> responseCallback = await serviceLocator<ProjectViewModel>().addImageToProject(imagePath: sourcePath);
         if (responseCallback.success && responseCallback.data != null) {
           final String savedImagePath = responseCallback.data!;
           _calibrateFloorPlan(savedImagePath);
@@ -791,7 +782,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
         }
 
         serviceLocator<ProjectViewModel>().updateFloor(
-          floor.copyWith(
+          floor: floor.copyWith(
             floorPlan: floor.floorPlan.copyWith(
               imagePath: imagePathToUse,
               position: floor.floorPlan.imagePath.isNotEmpty ? floor.floorPlan.position : viewPortCenter,
@@ -801,7 +792,6 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
         );
 
         widget.floorCanvasController.loadFloorPlanImage();
-        serviceLocator<ProjectViewModel>().saveProjectToLocal();
       } else {
         debugPrint('Calibration cancelled by user');
       }
@@ -846,7 +836,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
     debugPrint('Cropped image temporarily saved to: $tempPath');
 
     // Now use the project's image management system to properly store it
-    final ResponseCallback<String?> responseCallback = await serviceLocator<ProjectViewModel>().addImageToProject(tempPath);
+    final ResponseCallback<String?> responseCallback = await serviceLocator<ProjectViewModel>().addImageToProject(imagePath: tempPath);
 
     // Clean up the temporary file
     try {

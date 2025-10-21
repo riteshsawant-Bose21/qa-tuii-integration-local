@@ -42,6 +42,7 @@ class FloorCanvas extends StatefulWidget {
   final Function(HardwareComponent, String? listeningAreaId, String? floorId) moveHardware;
   final Function(ListeningArea newArea, List<HardwareComponent>? hardwaresInsideArea) onAddListeningArea;
   final Function(Offset speakerPosition, String? listeningAreaId) addNewHardwareComponent;
+  final Map<String, String> listeningAreaToZoneMap;
 
   const FloorCanvas({
     super.key,
@@ -69,6 +70,7 @@ class FloorCanvas extends StatefulWidget {
     required this.moveHardware,
     required this.addNewHardwareComponent,
     required this.splPanelData,
+    required this.listeningAreaToZoneMap,
   });
 
   @override
@@ -126,6 +128,16 @@ class FloorCanvasState extends State<FloorCanvas> {
   Size _viewportSize = Size.zero;
   final Map<String, ui.Image> _hardwareImages = <String, ui.Image>{};
 
+  List<HardwareComponent> originalHardwareList = [];
+  List<ListeningArea> originalListeningAreaList = [];
+  List<Zone> originalZoneList = [];
+
+  Future<void> copyItems() async {
+    originalHardwareList = widget.hardwareComponents.map((component) => component.copyWith()).toList();
+    originalListeningAreaList = widget.listeningAreas.map((area) => area.copyWith()).toList();
+    originalZoneList = widget.zones.map((zone) => zone.copyWith()).toList();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -133,6 +145,8 @@ class FloorCanvasState extends State<FloorCanvas> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       widget.onViewportCenterUpdated(getViewportCenter());
     });
+
+    copyItems();
 
     _loadAllHardwareImages();
 
@@ -182,6 +196,7 @@ class FloorCanvasState extends State<FloorCanvas> {
         _loadPlanImage();
       });
     }
+    copyItems();
     _loadAllHardwareImages();
   }
 
@@ -226,6 +241,8 @@ class FloorCanvasState extends State<FloorCanvas> {
                     splMax: widget.splMax,
                     splMin: widget.splMin,
                     splPanelData: widget.splPanelData,
+                    //prepare a map of listening area id to zone
+                    listeningAreaToZoneMap: widget.listeningAreaToZoneMap,
                   ),
                 ),
               ),
@@ -605,7 +622,7 @@ class FloorCanvasState extends State<FloorCanvas> {
       final HardwareComponent hardwareComponent = widget.hardwareComponents.firstWhere((HardwareComponent sp) => sp.id == _selectedHardwareComponentId);
       final ui.Offset delta = worldPos - _hardwareComponentDragStart;
       setState(() => hardwareComponent.pos = _hardwareComponentOrigPos! + delta);
-      widget.onUpdateHardwareComponent(hardwareComponent);
+      // widget.onUpdateHardwareComponent(hardwareComponent);
       return;
     }
 
@@ -621,8 +638,10 @@ class FloorCanvasState extends State<FloorCanvas> {
     // poly-vertex drag
     if (_isListeningAreaVertexDragging && _dragIndex != null && _dragVertexIndex != null) {
       final ListeningArea cs = widget.listeningAreas[_dragIndex!];
-      cs.vertices[_dragVertexIndex!] = worldPos;
-      widget.onUpdateListeningArea(cs);
+      setState(() {
+        cs.vertices[_dragVertexIndex!] = worldPos;
+      });
+      // widget.onUpdateListeningArea(cs);
       return;
     }
 
@@ -631,7 +650,10 @@ class FloorCanvasState extends State<FloorCanvas> {
       final ui.Offset delta = worldPos - _dragStartWorld!;
       final ListeningArea cs = widget.listeningAreas[_dragIndex!];
       final ListeningArea updated = cs.copyWith(vertices: _dragOriginal!.map((ui.Offset pt) => pt + delta).toList());
-      widget.onUpdateListeningArea(updated);
+      setState(() {
+        widget.listeningAreas[_dragIndex!] = updated;
+      });
+      // widget.onUpdateListeningArea(updated);
       return;
     }
 
@@ -696,17 +718,23 @@ class FloorCanvasState extends State<FloorCanvas> {
       });
     }
     if (_isListeningAreaVertexDragging) {
+      final ListeningArea cs = widget.listeningAreas[_dragIndex!];
       setState(() {
         _isListeningAreaVertexDragging = false;
-        widget.onComponentTransformed(widget.listeningAreas[_dragIndex!]);
+        widget.onUpdateListeningArea(cs);
+        widget.onComponentTransformed(cs);
       });
     }
     if (_isListeningAreaDragging) {
       final ListeningArea cs = widget.listeningAreas[_dragIndex!];
+      final ListeningArea originalArea = originalListeningAreaList.firstWhere((area) => area.id == cs.id);
       setState(() {
         _isListeningAreaDragging = false;
-        widget.onTapListeningArea(cs);
-        widget.onComponentTransformed(cs);
+        if (!FusionUtils.areVerticesEqualIgnoringOrder(cs.vertices, originalArea.vertices)) {
+          widget.onUpdateListeningArea(cs);
+          widget.onTapListeningArea(cs);
+          widget.onComponentTransformed(cs);
+        }
       });
     }
     if (_isPanning && e.buttons == 0) {
@@ -769,26 +797,14 @@ class FloorCanvasState extends State<FloorCanvas> {
     // Determine the new listeningAreaId (use empty string when none)
     final String newListeningAreaId = hit?.id ?? '';
 
-    //Old Logic
-    // // Find the first zone that contains this listeningAreaId
-    // String newZoneId = '';
-    // for (final Zone zone in widget.zones) {
-    //   if (zone.listeningAreasIds.contains(newListeningAreaId)) {
-    //     newZoneId = zone.id;
-    //     break;
-    //   }
-    // }
-    //
-    // final HardwareComponent updated = hardwareComponent.copyWith(
-    //   locationEntity: hardwareComponent.locationEntity.copyWith(listeningAreaId: newListeningAreaId, zoneId: newZoneId),
-    // );
-    //
-    // widget.onUpdateHardwareComponent(updated);
+    final HardwareComponent originalHardware = originalHardwareList.firstWhere((comp) => comp.id == hardwareComponent.id);
 
-    print("Calling moveHardware with newListeningAreaId: $newListeningAreaId");
+    if (newListeningAreaId != originalHardware.locationEntity.listeningAreaId || hardwareComponent.pos != originalHardware.pos) {
+      print("Calling moveHardware with newListeningAreaId: $newListeningAreaId");
 
-    //new logic
-    widget.moveHardware(hardwareComponent, newListeningAreaId.isNotEmpty ? newListeningAreaId : null, widget.floor.id);
+      //new logic
+      widget.moveHardware(hardwareComponent, newListeningAreaId.isNotEmpty ? newListeningAreaId : null, widget.floor.id);
+    }
   }
 
   ListeningArea? _findListeningAreaAt(Offset worldPos) {

@@ -31,6 +31,7 @@ enum PortType {
   speakerData,
   digitalInput,
   digitalOutput,
+  circuitInput,
 }
 
 //DSP input port supported device port types

@@ -1,12 +1,17 @@
-import 'package:fusion_launcher/features/configuration/presentation/viewmodel/circuit/circuit_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 extension SubzoneViewModel on ProjectViewModel {
   //add SubZone
-  void addSubZone(SubZone subZone) {
+  void addSubZone({required SubZone subZone, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.addSubZone(subZone);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to add subzone: $e");
@@ -15,7 +20,7 @@ extension SubzoneViewModel on ProjectViewModel {
   }
 
   //get SubZone by id
-  SubZone? getSubZone(String subZoneId) {
+  SubZone? getSubZone({required String subZoneId}) {
     try {
       return projectManager.getSubZoneById(subZoneId);
     } catch (e) {
@@ -23,9 +28,15 @@ extension SubzoneViewModel on ProjectViewModel {
     }
   }
 
-  void updateSubZone(SubZone subZone) {
+  void updateSubZone({required SubZone subZone, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.updateSubZone(subZone);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to update subzone: $e");
@@ -33,9 +44,44 @@ extension SubzoneViewModel on ProjectViewModel {
     }
   }
 
-  void removeSubZone(String subZoneId) {
+  void updateListeningAreasInSubZone({
+    required String subZoneId,
+    required List<String> listeningAreaIds,
+    bool autoSave = true,
+  }) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      final List<ListeningArea> currentListeningAreas = getListeningAreasInSubZone(subZoneId: subZoneId);
+      final List<String> currentListeningAreaIds = currentListeningAreas.map((ListeningArea e) => e.id).toList();
+      final List<String> toRemove = currentListeningAreaIds.where((String id) => !listeningAreaIds.contains(id)).toList();
+      final List<String> toAdd = listeningAreaIds.where((String id) => !currentListeningAreaIds.contains(id)).toList();
+      for (final String id in toRemove) {
+        projectManager.removeListeningAreaFromSubZone(id, subZoneId);
+      }
+      for (final String id in toAdd) {
+        projectManager.addListeningAreaToSubZone(id, subZoneId);
+      }
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to update listening areas for subzone: $e");
+      throwError("Failed to update listening areas for subzone: $e");
+    }
+  }
+
+  void removeSubZone({required String subZoneId, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.removeSubZone(subZoneId);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to remove subzone: $e");
@@ -53,7 +99,7 @@ extension SubzoneViewModel on ProjectViewModel {
     }
   }
 
-  List<SubZone> getSubZonesForZone(String parentZoneId) {
+  List<SubZone> getSubZonesForZone({required String parentZoneId}) {
     try {
       return projectManager.getSubZonesForZone(parentZoneId);
     } catch (e) {
@@ -63,9 +109,15 @@ extension SubzoneViewModel on ProjectViewModel {
     }
   }
 
-  void addSubZoneToZone(String subZoneId, String parentZoneId) {
+  void addSubZoneToZone({required String subZoneId, required String parentZoneId, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.addSubZoneToZone(subZoneId, parentZoneId);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to add subzone to zone: $e");
@@ -73,9 +125,15 @@ extension SubzoneViewModel on ProjectViewModel {
     }
   }
 
-  void removeSubZoneFromZone(String subZoneId, String parentZoneId) {
+  void removeSubZoneFromZone({required String subZoneId, required String parentZoneId, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.removeSubZoneFromZone(subZoneId, parentZoneId);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to remove subzone from zone: $e");
@@ -83,7 +141,7 @@ extension SubzoneViewModel on ProjectViewModel {
     }
   }
 
-  List<HardwareComponent> getHardwareInSubZone(String subZoneId) {
+  List<HardwareComponent> getHardwareInSubZone({required String subZoneId}) {
     try {
       return projectManager.getHardwareInSubZone(subZoneId);
     } catch (e) {
@@ -93,9 +151,15 @@ extension SubzoneViewModel on ProjectViewModel {
     }
   }
 
-  void addCircuitToSubZone(String subZoneId, String circuitId) {
+  void addCircuitToSubZone({required String subZoneId, required String circuitId, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.addCircuitToSubZone(subZoneId, circuitId);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to add circuit to subzone: $e");
@@ -103,9 +167,15 @@ extension SubzoneViewModel on ProjectViewModel {
     }
   }
 
-  void removeCircuitFromSubZone(String subZoneId, String circuitId) {
+  void removeCircuitFromSubZone({required String subZoneId, required String circuitId, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.removeCircuitFromSubZone(subZoneId, circuitId);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to remove circuit from subzone: $e");
@@ -113,17 +183,80 @@ extension SubzoneViewModel on ProjectViewModel {
     }
   }
 
-  List<CircuitModel> getCircuitsInSubZone(String subZoneId) {
+  List<CircuitModel> getCircuitsInSubZone({required String subZoneId}) {
     try {
-      final SubZone? subZone = getSubZone(subZoneId);
+      final SubZone? subZone = getSubZone(subZoneId: subZoneId);
       if (subZone == null) {
         throw Exception('SubZone with id $subZoneId does not exist');
       }
-      return subZone.circuits.map((String cId) => getCircuitById(cId)).whereType<CircuitModel>().toList();
+      return projectManager.getCircuitsInZone(subZoneId);
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to get circuits for subzone: $e");
       throwError("Failed to get circuits for subzone: $e");
       return <CircuitModel>[];
+    }
+  }
+
+  void addListeningAreaToSubZone({required String areaId, required String subZoneId, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      projectManager.addListeningAreaToSubZone(areaId, subZoneId);
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to add listening area to subzone: $e");
+      throwError("Failed to add listening area to subzone: $e");
+    }
+  }
+
+  void removeListeningAreaFromSubZone({required String areaId, required String subZoneId, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      projectManager.removeListeningAreaFromSubZone(areaId, subZoneId);
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to remove listening area from subzone: $e");
+      throwError("Failed to remove listening area from subzone: $e");
+    }
+  }
+
+  List<ListeningArea> getListeningAreasInSubZone({required String subZoneId}) {
+    try {
+      return projectManager.getListeningAreasInSubZone(subZoneId);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get listening areas for subzone: $e");
+      throwError("Failed to get listening areas for subzone: $e");
+      return <ListeningArea>[];
+    }
+  }
+
+  void reOrderSubZoneInZone({
+    required String parentId,
+    required int oldIndex,
+    required int newIndex,
+    bool autoSave = true,
+  }) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      projectManager.reOrderSubZones(parentId, oldIndex, newIndex);
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to reorder subzones in zone: $e");
+      throwError("Failed to reorder subzones in zone: $e");
     }
   }
 }

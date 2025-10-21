@@ -60,4 +60,18 @@ extension CircuitManager on ProjectManager {
     }
     projectService!.addHardwareToCircuit(hardwareId, circuitId);
   }
+
+  List<ListeningArea> getListeningAreasForCircuit(String circuitId) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getListeningAreasForCircuit(circuitId);
+  }
+
+  void reorderCircuitsInZone(String parentId, int oldIndex, int newIndex) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    projectService!.reOderCircuitsInZone(parentId, oldIndex, newIndex);
+  }
 }

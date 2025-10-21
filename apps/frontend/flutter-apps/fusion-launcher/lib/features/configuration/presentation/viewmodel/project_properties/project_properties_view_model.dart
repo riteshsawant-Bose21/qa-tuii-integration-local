@@ -7,6 +7,8 @@ import 'package:fusion_lib/models/project_entities/endpoints.dart';
 extension ProjectPropertiesViewModel on ProjectViewModel {
   List<Zone> get zones => projectManager.getAllZones();
 
+  List<SubZone> get subZones => projectManager.getAllSubZones();
+
   List<FloorModel> get floors => projectManager.getAllFloors();
 
   List<HardwareComponent> get hardwareComponents => projectManager.getAllHardwareComponents();
@@ -14,6 +16,8 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
   List<ListeningArea> get listeningAreas => projectManager.getAllListeningAreas();
 
   List<SourceSet> get sourceSets => projectManager.getAllSourceSets();
+
+  List<CircuitModel> get circuits => projectManager.getAllCircuits();
 
   String get projectName => projectManager.getProjectName();
 
@@ -58,6 +62,14 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
     return hardwareComponents.whereType<FusionController>().toList();
   }
 
+  List<NetworkSwitch> get networkSwitches {
+    return hardwareComponents.whereType<NetworkSwitch>().toList();
+  }
+
+  List<HardwareRack> get hardwareRacks {
+    return hardwareComponents.whereType<HardwareRack>().toList();
+  }
+
   //get generic hardware components
   List<GenericHardwareComponent> get genericHardwareComponents {
     return hardwareComponents.whereType<GenericHardwareComponent>().toList();
@@ -72,9 +84,15 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
   }
 
   //set project name
-  void setProjectName(String name) {
+  void setProjectName({required String name, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.setProjectName(name);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to set project name: $e");
@@ -83,9 +101,15 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
   }
 
   //set virtual IP
-  void setVirtualIP(String? ip) {
+  void setVirtualIP({required String? ip, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.setVirtualIP(ip);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to set virtual IP: $e");
@@ -94,9 +118,15 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
   }
 
   //set meta data
-  void setMetaData(String metaData) {
+  void setMetaData({required String metaData, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.setMetaData(metaData);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to set meta data: $e");
@@ -105,9 +135,15 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
   }
 
   //set min SPL
-  void setMinSPL(double minSPL) {
+  void setMinSPL({required double minSPL, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.setMinSPL(minSPL);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to set min SPL: $e");
@@ -116,9 +152,15 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
   }
 
   //set max SPL
-  void setMaxSPL(double maxSPL) {
+  void setMaxSPL({required double maxSPL, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.setMaxSPL(maxSPL);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to set max SPL: $e");
@@ -127,9 +169,15 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
   }
 
   //set control mode
-  void toggleControlMode() {
+  void toggleControlMode({bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.toggleControlMode();
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to set control mode: $e");
@@ -172,7 +220,7 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
   HardwareComponent? getCurrentSelectedHardware() {
     if (currentSelectedHardwareId == null) return null;
     try {
-      return getHardware(currentSelectedHardwareId!);
+      return getHardware(hardwareId: currentSelectedHardwareId!);
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to get current selected hardware: $e");
       currentSelectedHardwareId = null;
@@ -183,7 +231,7 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
   ListeningArea? getCurrentSelectedListeningArea() {
     if (currentSelectedListeningAreaId == null) return null;
     try {
-      return getListeningArea(currentSelectedListeningAreaId!);
+      return getListeningArea(areaId: currentSelectedListeningAreaId!);
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to get current selected listening area: $e");
       currentSelectedListeningAreaId = null;

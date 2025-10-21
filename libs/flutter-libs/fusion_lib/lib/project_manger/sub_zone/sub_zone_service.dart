@@ -17,6 +17,13 @@ extension SubZoneService on ProjectService {
     if (!subZones.exists(subZoneId)) {
       throw Exception('SubZone with id $subZoneId does not exist');
     }
+
+    //remove all the circuits in the subzone
+    final circuitIds = relationships.getChildren(RelationshipType.zoneCircuits, subZoneId);
+    for (final cId in circuitIds) {
+      removeCircuit(cId);
+    }
+
     // Remove all relationships
     relationships.removeAllRelationships(subZoneId);
     // Remove the subzone
@@ -49,28 +56,24 @@ extension SubZoneService on ProjectService {
   }
 
   //add sub zone
-  void addSubZoneToZone(String zoneId, String subZoneId) {
+  void addSubZoneToZone(String subZoneId, String zoneId) {
     if (!zones.exists(zoneId)) throw Exception('Zone $zoneId not found');
     if (!subZones.exists(subZoneId)) throw Exception('Sub Zone $subZoneId not found');
-
-    final zone = zones.get(zoneId)!;
-    if (!zone.subZones.contains(subZoneId)) {
-      zone.subZones.add(subZoneId);
-    }
 
     // Update relationship graph (idempotent)
     relationships.link(RelationshipType.zoneSubZones, zoneId, subZoneId);
   }
 
   //remove sub zone
-  void removeSubZoneFromZone(String zoneId, String subZoneId) {
+  void removeSubZoneFromZone(String subZoneId, String zoneId) {
     if (!zones.exists(zoneId)) return;
 
-    final zone = zones.get(zoneId)!;
-    zone.subZones.remove(subZoneId);
-    zones.add(zone.id, zone);
+    //On remove we will directly delete the subzone now
+    removeSubZone(subZoneId);
 
-    relationships.unlink(RelationshipType.zoneSubZones, zoneId, subZoneId);
+    // if we want to keep the subzone but just unlink it from the zone
+
+    // relationships.unlink(RelationshipType.zoneSubZones, zoneId, subZoneId);
   }
 
   /// returns all the SubZones linked to the given zoneId
@@ -83,11 +86,6 @@ extension SubZoneService on ProjectService {
     if (!subZones.exists(subZoneId)) throw Exception('Sub Zone $subZoneId not found');
     if (!circuits.exists(circuitId)) throw Exception('Circuit $circuitId not found');
 
-    final subZone = subZones.get(subZoneId)!;
-    if (!subZone.circuits.contains(circuitId)) {
-      subZone.circuits.add(circuitId);
-    }
-
     // Update relationship graph (idempotent)
     relationships.link(RelationshipType.zoneCircuits, subZoneId, circuitId);
   }
@@ -95,10 +93,108 @@ extension SubZoneService on ProjectService {
   void removeCircuitFromSubZone(String subZoneId, String circuitId) {
     if (!subZones.exists(subZoneId)) return;
 
-    final subZone = subZones.get(subZoneId)!;
-    subZone.circuits.remove(circuitId);
-    subZones.add(subZone.id, subZone);
-
     relationships.unlink(RelationshipType.zoneCircuits, subZoneId, circuitId);
+  }
+
+  //add Listening area to sub zone
+  void addListeningAreaToSubZone(String listeningAreaId, String subZoneId) {
+    //check if subzone exists
+    if (!subZones.exists(subZoneId)) {
+      throw Exception('SubZone $subZoneId not found');
+    }
+
+    //check if listening area exists
+    if (!listeningAreas.exists(listeningAreaId)) {
+      throw Exception('ListeningArea $listeningAreaId not found');
+    }
+
+    //get parent zone
+    final parentZoneId = relationships.getParent(RelationshipType.zoneSubZones, subZoneId);
+
+    if (parentZoneId == null) {
+      throw Exception('SubZone $subZoneId has no parent Zone');
+    }
+
+    //get listening areas in parent zone
+    final parentsListeningAreas = relationships.getChildren(RelationshipType.zoneAreas, parentZoneId);
+
+    //if listening area id is not in parents listening areas, throw exception
+    if (!parentsListeningAreas.contains(listeningAreaId)) {
+      throw Exception('ListeningArea $listeningAreaId is not part of parent Zone $parentZoneId');
+    }
+
+    //link relationship
+    relationships.link(RelationshipType.zoneAreas, subZoneId, listeningAreaId);
+  }
+
+  //remove Listening area from sub zone
+  void removeListeningAreaFromSubZone(String listeningAreaId, String subZoneId) {
+    //check if subzone exists
+    if (!subZones.exists(subZoneId)) {
+      throw Exception('SubZone $subZoneId not found');
+    }
+
+    //check if listening area exists
+    if (!listeningAreas.exists(listeningAreaId)) {
+      throw Exception('ListeningArea $listeningAreaId not found');
+    }
+
+    final subZoneListeningAreas = relationships.getChildren(RelationshipType.zoneAreas, subZoneId);
+
+    //if listening area id is not in subzone listening areas, return
+    if (!subZoneListeningAreas.contains(listeningAreaId)) {
+      return;
+    }
+
+    final circuitIds = relationships.getChildren(RelationshipType.zoneCircuits, subZoneId);
+
+    List<String> circuitIdsToRemove = [];
+
+    for (final cId in circuitIds) {
+      final hardwareInCircuit = relationships.getChildren(RelationshipType.circuitHardware, cId);
+
+      final hardwareInArea = hardwareInCircuit
+          .map((hwId) => hardware.get(hwId))
+          .whereType<HardwareComponent>()
+          .where((hw) => hw.locationEntity.listeningAreaId == listeningAreaId)
+          .toList();
+
+      // Unlink hardware
+      for (final hw in hardwareInArea) {
+        relationships.unlink(RelationshipType.circuitHardware, cId, hw.id);
+      }
+
+      // If the circuit now has no hardware or LAs, delete it
+      final remainingHW = relationships.getChildren(RelationshipType.circuitHardware, cId);
+      if (remainingHW.isEmpty) {
+        circuitIdsToRemove.add(cId);
+      }
+    }
+
+    //remove empty circuits
+    for (final cId in circuitIdsToRemove) {
+      removeCircuit(cId);
+    }
+
+    //unlink relationship
+    relationships.unlink(RelationshipType.zoneAreas, subZoneId, listeningAreaId);
+  }
+
+  List<ListeningArea> getListeningAreasInSubZone(String subZoneId) {
+    if (!subZones.exists(subZoneId)) {
+      throw Exception('SubZone with id $subZoneId does not exist');
+    }
+    final areaIds = relationships.getChildren(RelationshipType.zoneAreas, subZoneId);
+    final areas = areaIds.map((id) => listeningAreas.get(id)).whereType<ListeningArea>().toList();
+    return areas;
+  }
+
+  void reOrderSubZonesInZone(String parentId, int oldIndex, int newIndex) {
+    final subZonesInZone = relationships.getChildren(RelationshipType.zoneSubZones, parentId).toList();
+
+    final item = subZonesInZone.removeAt(oldIndex);
+    subZonesInZone.insert(newIndex, item);
+
+    relationships.reOrder(RelationshipType.zoneSubZones, parentId, subZonesInZone);
   }
 }

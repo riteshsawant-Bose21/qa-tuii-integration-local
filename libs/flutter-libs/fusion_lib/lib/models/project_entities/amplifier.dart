@@ -6,9 +6,10 @@ class Amplifier extends HardwareComponent {
   final int channels;
   final double powerPerChannel;
   final MaterialColor color;
+  final String sku;
 
   Amplifier({
-    super.id,
+    String? id,
     required super.name,
     required this.channels,
     required this.powerPerChannel,
@@ -25,7 +26,12 @@ class Amplifier extends HardwareComponent {
     super.portData,
     super.inputPortsData,
     super.outputPortsData,
-  }) : super(hardwareName: hardwareName ?? name, locationEntity: locationEntity ?? LocationModel());
+    this.sku = '',
+  }) : super(
+         hardwareName: hardwareName ?? name,
+         locationEntity: locationEntity ?? LocationModel(),
+         id: id ?? "AMPLIFIER${FusionUtils.shortStringUUID()}",
+       );
 
   double get totalPower => channels * powerPerChannel;
 
@@ -48,6 +54,7 @@ class Amplifier extends HardwareComponent {
     List<PortData>? communicationPorts,
     List<PortData>? inputPortsData,
     List<PortData>? outputPortsData,
+    String? sku,
   }) {
     return Amplifier(
       name: name ?? this.name,
@@ -66,6 +73,7 @@ class Amplifier extends HardwareComponent {
       communicationPorts: communicationPorts ?? this.communicationPorts,
       inputPortsData: inputPortsData ?? this.inputPortsData,
       outputPortsData: outputPortsData ?? this.outputPortsData,
+      sku: sku ?? this.sku,
     );
   }
 
@@ -88,6 +96,7 @@ class Amplifier extends HardwareComponent {
           (json['communicationPorts'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
       outputPortsData: (json['outputPortsData'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
       inputPortsData: (json['inputPortsData'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
+      sku: json['sku'] as String? ?? '',
     );
   }
 
@@ -110,6 +119,7 @@ class Amplifier extends HardwareComponent {
       'communicationPorts': communicationPorts.map((PortData port) => port.toJson()).toList(),
       'outputPortsData': outputPortsData.map((PortData port) => port.toJson()).toList(),
       'inputPortsData': inputPortsData.map((PortData port) => port.toJson()).toList(),
+      'sku': sku,
     };
   }
 

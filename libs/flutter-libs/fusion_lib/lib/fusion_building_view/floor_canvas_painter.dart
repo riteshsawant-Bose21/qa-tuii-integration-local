@@ -37,6 +37,9 @@ class FloorCanvasPainter extends CustomPainter {
   Zone? currentlySelectingZone;
   final SplPanelData splPanelData;
 
+  //key value pair for listening area and its zone
+  final Map<String, String> listeningAreaToZoneMap;
+
   FloorCanvasPainter({
     required this.gridSize,
     required this.zoomScale,
@@ -59,6 +62,7 @@ class FloorCanvasPainter extends CustomPainter {
     this.highlightedIndex,
     this.selectedHardwareComponentId,
     required this.splPanelData,
+    required this.listeningAreaToZoneMap,
   });
 
   @override
@@ -236,9 +240,12 @@ class FloorCanvasPainter extends CustomPainter {
 
       bool selected = false;
 
-      late Zone? parentZone;
+      Zone? parentZone;
       try {
-        parentZone = zones.firstWhere((Zone z) => z.listeningAreasIds.contains(listeningAreas[i].id));
+        final String? zoneId = listeningAreaToZoneMap[listeningAreas[i].id];
+        if (zoneId != null) {
+          parentZone = zones.firstWhere((Zone z) => z.id == zoneId);
+        }
       } catch (e) {
         parentZone = null;
       }

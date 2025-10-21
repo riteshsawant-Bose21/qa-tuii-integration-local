@@ -35,7 +35,7 @@ extension WiringConnectionManager on ProjectManager {
     return projectService!.getAllWiringConnections();
   }
 
-  WiringConnectionModel? getConnectionForDevice(String deviceId) {
+  List<WiringConnectionModel>? getConnectionForDevice(String deviceId) {
     if (projectService == null) {
       throw Exception('No project is currently open');
     }

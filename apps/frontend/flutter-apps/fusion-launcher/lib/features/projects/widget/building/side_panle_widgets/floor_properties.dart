@@ -59,7 +59,7 @@ class FloorProperties extends StatelessWidget {
                         final String trimmedName = v.trim();
                         if (trimmedName.isNotEmpty) {
                           final FloorModel updated = selectedFloor.copyWith(name: trimmedName);
-                          viewModel.updateFloor(updated);
+                          viewModel.updateFloor(floor: updated);
                         } else {
                           // Reset to previous name if empty
                           floorNameController.text = selectedFloor.name;
@@ -87,7 +87,7 @@ class FloorProperties extends StatelessWidget {
                       onPressed:
                           viewModel.floors.length > 1
                               ? () {
-                                viewModel.removeFloor(selectedFloor.id);
+                                viewModel.removeFloor(floorId: selectedFloor.id);
                               }
                               : null,
                     ),
@@ -100,12 +100,12 @@ class FloorProperties extends StatelessWidget {
               _buildHardwarePropertyTextRow(
                 context: context,
                 label: "Total LA",
-                value: "${viewModel.getListeningAreasForFloor(selectedFloor.id).length}",
+                value: "${viewModel.getListeningAreasForFloor(floorId: selectedFloor.id).length}",
               ),
               _buildHardwarePropertyTextRow(
                 context: context,
                 label: "Total H/W",
-                value: "${viewModel.getHardwareForFloor(selectedFloor.id).length}",
+                value: "${viewModel.getHardwareForFloor(floorId: selectedFloor.id).length}",
               ),
             ],
           ),

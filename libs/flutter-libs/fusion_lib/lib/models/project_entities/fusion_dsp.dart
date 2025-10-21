@@ -14,6 +14,7 @@ class FusionDsp extends HardwareComponent {
   final String? cloudId;
   final bool isClaimed;
   final FusionDeviceSetupStatus status;
+  final String sku;
 
   FusionDsp({
     String? id,
@@ -35,6 +36,7 @@ class FusionDsp extends HardwareComponent {
     super.inputPortsData,
     super.outputPortsData,
     required super.locationEntity,
+    this.sku = '',
   }) : super(hardwareName: hardwareName ?? name);
 
   @override
@@ -63,6 +65,7 @@ class FusionDsp extends HardwareComponent {
     List<PortData>? communicationPorts,
     List<PortData>? inputPortsData,
     List<PortData>? outputPortsData,
+    String? sku,
   }) {
     return FusionDsp(
       id: id ?? this.id,
@@ -83,6 +86,7 @@ class FusionDsp extends HardwareComponent {
       communicationPorts: communicationPorts ?? this.communicationPorts,
       inputPortsData: inputPortsData ?? this.inputPortsData,
       outputPortsData: outputPortsData ?? this.outputPortsData,
+      sku: sku ?? this.sku,
     );
   }
 
@@ -103,7 +107,7 @@ class FusionDsp extends HardwareComponent {
       price: (json['price'] as num?)?.toDouble() ?? 1000,
       hardwareName: json['hardwareName'] as String?,
       zAxis: (json['zAxis'] as num?)?.toDouble() ?? 0.0,
-      pos: json['pos'] != null ? Offset((json['pos']['dx'] as num).toDouble(), (json[' pos']['dy'] as num).toDouble()) : const Offset(0, 0),
+      pos: Offset(json['pos']['dx'] as double, json['pos']['dy'] as double),
       wiringPos: json['wiringPos'] != null ? Offset((json['wiringPos']['dx'] as num).toDouble(), (json['wiringPos']['dy'] as num).toDouble()) : null,
       assetImagePath: json['assetImagePath'] as String? ?? '',
       lockListeningArea: json['lockListeningArea'] as bool? ?? false,
@@ -111,6 +115,7 @@ class FusionDsp extends HardwareComponent {
           (json['communicationPorts'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
       outputPortsData: (json['outputPortsData'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
       inputPortsData: (json['inputPortsData'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
+      sku: json['sku'] as String? ?? '',
     );
   }
 
@@ -124,7 +129,7 @@ class FusionDsp extends HardwareComponent {
       'address': localIp,
       'xyte_cloud_id': cloudId,
       'is_claimed': isClaimed,
-      'componentType': 'fusionDevice',
+      'componentType': 'fusionDsp',
       'locationEntity': locationEntity.toJson(),
       'price': price,
       'hardwareName': hardwareName,
@@ -136,6 +141,7 @@ class FusionDsp extends HardwareComponent {
       'communicationPorts': communicationPorts.map((PortData port) => port.toJson()).toList(),
       'outputPortsData': outputPortsData.map((PortData port) => port.toJson()).toList(),
       'inputPortsData': inputPortsData.map((PortData port) => port.toJson()).toList(),
+      'sku': sku,
     };
   }
 }

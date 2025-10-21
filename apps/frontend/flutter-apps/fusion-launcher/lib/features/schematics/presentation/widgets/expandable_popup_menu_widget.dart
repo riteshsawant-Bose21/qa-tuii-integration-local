@@ -55,17 +55,19 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
         maxHeight: 500,
         maxWidth: 250,
       ),
-      onSelected: (SourceData selectedBlock) {
-        final Source source = Source(
-          name: selectedBlock.name,
-          pos: null,
-          type: selectedBlock.type,
-          assetImagePath: selectedBlock.assetPath,
-          locationEntity: LocationModel(),
-          sku: selectedBlock.id,
-          price: selectedBlock.price,
-        );
-        serviceLocator<ProjectViewModel>().addHardware(source);
+      onSelected: (DeviceComponent selectedBlock) {
+        if (selectedBlock is SourceData) {
+          final Source source = Source(
+            name: selectedBlock.name,
+            pos: null,
+            type: selectedBlock.type,
+            assetImagePath: selectedBlock.assetPath,
+            locationEntity: LocationModel(),
+            sku: selectedBlock.id,
+            price: selectedBlock.price,
+          );
+          serviceLocator<ProjectViewModel>().addHardware(hardware: source);
+        }
       },
       color: Colors.white,
       itemBuilder: (BuildContext context) {
@@ -237,7 +239,7 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
                     sku: item.id,
                     price: item.price,
                   );
-                  serviceLocator<ProjectViewModel>().addHardware(source);
+                  serviceLocator<ProjectViewModel>().addHardware(hardware: source);
                 } else if (item is FusionDsp) {
                   // final FusionDevice fusionDevice = FusionDevice(
                   //   name: item.name,

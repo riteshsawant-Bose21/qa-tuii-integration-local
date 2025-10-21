@@ -87,7 +87,7 @@ class _BuildingPlanState extends State<BuildingPlan> {
 
     /// Add floor to the project
     final ProjectViewModel viewModel = serviceLocator<ProjectViewModel>();
-    viewModel.addFloor(model);
+    viewModel.addFloor(floor: model);
 
     setState(() {
       /// Select the newly added floor
@@ -105,7 +105,7 @@ class _BuildingPlanState extends State<BuildingPlan> {
     final ProjectViewModel viewModel = serviceLocator<ProjectViewModel>();
     if (viewModel.floors.length > 1) {
       final String floorId = viewModel.floors[index].id;
-      viewModel.removeFloor(floorId);
+      viewModel.removeFloor(floorId: floorId);
 
       setState(() {
         // Adjust selectedIndex after deletion
@@ -162,7 +162,7 @@ class _BuildingPlanState extends State<BuildingPlan> {
     if (!nameExists) {
       // Update the floor name
       final FloorModel updatedFloor = viewModel.floors[index].copyWith(name: newName);
-      viewModel.updateFloor(updatedFloor);
+      viewModel.updateFloor(floor: updatedFloor);
 
       setState(() {
         _editingFloorIndex = null;
@@ -460,7 +460,7 @@ class _BuildingPlanState extends State<BuildingPlan> {
     final ProjectViewModel viewModel = serviceLocator<ProjectViewModel>();
     final FloorModel currentFloor = viewModel.floors[index];
     //remove floor
-    viewModel.removeFloor(currentFloor.id);
+    viewModel.removeFloor(floorId: currentFloor.id);
     //add new floor with same name
     final FloorModel model = FloorModel(
       name: "Floor 1",
@@ -469,7 +469,7 @@ class _BuildingPlanState extends State<BuildingPlan> {
 
     // remove all zones
     viewModel.removeAllZones();
-    viewModel.addFloor(model);
+    viewModel.addFloor(floor: model);
   }
 
   /// Show confirmation dialog for deleting a floor
