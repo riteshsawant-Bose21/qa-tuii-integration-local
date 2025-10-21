@@ -18,8 +18,6 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
   final TextEditingController _listenerHeightController = TextEditingController(text: '1.2');
   final TextEditingController _coverageAngleController = TextEditingController(text: '90.0');
   final TextEditingController _pendantHeightController = TextEditingController(text: '2.1');
-  final TextEditingController _customXController = TextEditingController();
-  final TextEditingController _customYController = TextEditingController();
   final TextEditingController _roomCoordinatesController = TextEditingController(
     text: '(0,0), (6.1,0), (6.1,4.6), (0,4.6)', // Default rectangle
   );
@@ -30,6 +28,9 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
   LayoutPattern _selectedLayoutPattern = LayoutPattern.square;
   RoomType _selectedRoomType = RoomType.symmetrical;
   bool _useCustomOrigin = false;
+  double _customOriginOffsetX = 0.0; // Offset from centroid
+  double _customOriginOffsetY = 0.0; // Offset from centroid
+  double _boundaryOverlapThreshold = 0.7; // Default 70% coverage within room
   
   // Results
   PlacementResult? _result;
@@ -45,8 +46,6 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
     _listenerHeightController.dispose();
     _coverageAngleController.dispose();
     _pendantHeightController.dispose();
-    _customXController.dispose();
-    _customYController.dispose();
     _roomCoordinatesController.dispose();
     super.dispose();
   }
@@ -93,16 +92,15 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
             : null,
       );
 
-      // Create custom origin if specified
-      Point2D? customOrigin;
+      // Create custom origin offset if specified
+      Point2D? customOriginOffset;
       if (_useCustomOrigin && 
-          _customXController.text.isNotEmpty && 
-          _customYController.text.isNotEmpty) {
-        customOrigin = Point2D(
-          double.parse(_customXController.text),
-          double.parse(_customYController.text),
-        );
+          (_customOriginOffsetX != 0.0 || _customOriginOffsetY != 0.0)) {
+        customOriginOffset = Point2D(_customOriginOffsetX, _customOriginOffsetY);
       }
+
+      // Ensure boundary threshold is within valid range
+      final double clampedBoundaryThreshold = _boundaryOverlapThreshold.clamp(0.3, 0.9);
 
       // Calculate placement with enhanced details
       final PlacementResult result = AutoSpeakerPlacement.calculatePlacement(
@@ -110,7 +108,8 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
         speakerSpec: speakerSpec,
         coveragePreference: _selectedCoveragePreference,
         layoutPattern: _selectedLayoutPattern,
-        customOrigin: customOrigin,
+        customOriginOffset: customOriginOffset,
+        boundaryOverlapThreshold: clampedBoundaryThreshold,
       );
 
       // Generate all grid points for display purposes
@@ -539,11 +538,17 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
                           
                           // Custom Origin
                           CheckboxListTile(
-                            title: const Text('Use Custom Origin'),
+                            title: const Text('Use Custom Origin Offset'),
+                            subtitle: const Text('Adjust origin position relative to room centroid'),
                             value: _useCustomOrigin,
                             onChanged: (bool? value) {
                               setState(() {
                                 _useCustomOrigin = value!;
+                                if (!_useCustomOrigin) {
+                                  // Reset offsets when disabled
+                                  _customOriginOffsetX = 0.0;
+                                  _customOriginOffsetY = 0.0;
+                                }
                               });
                               // Auto-recalculate when custom origin option changes
                               _calculatePlacement();
@@ -553,29 +558,175 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
                           ),
                           
                           if (_useCustomOrigin) ...<Widget>[
-                            const SizedBox(height: 8),
-                            Row(
+                            const SizedBox(height: 12),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.blue[50],
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.blue[200]!),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  const Text(
+                                    'Origin Offset from Room Centroid',
+                                    style: TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Current offset: (${_customOriginOffsetX.toStringAsFixed(2)}, ${_customOriginOffsetY.toStringAsFixed(2)}) m',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[700],
+                                      fontFamily: 'monospace',
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  
+                                  // X Offset Slider
+                                  Text('X Offset: ${_customOriginOffsetX.toStringAsFixed(2)} m'),
+                                  Slider(
+                                    value: _customOriginOffsetX,
+                                    min: -3.0,
+                                    max: 3.0,
+                                    divisions: 60,
+                                    label: '${_customOriginOffsetX.toStringAsFixed(2)} m',
+                                    onChanged: (double value) {
+                                      setState(() {
+                                        _customOriginOffsetX = value;
+                                      });
+                                    },
+                                    onChangeEnd: (double value) {
+                                      // Auto-recalculate when slider changes
+                                      _calculatePlacement();
+                                    },
+                                  ),
+                                  
+                                  const SizedBox(height: 8),
+                                  
+                                  // Y Offset Slider
+                                  Text('Y Offset: ${_customOriginOffsetY.toStringAsFixed(2)} m'),
+                                  Slider(
+                                    value: _customOriginOffsetY,
+                                    min: -3.0,
+                                    max: 3.0,
+                                    divisions: 60,
+                                    label: '${_customOriginOffsetY.toStringAsFixed(2)} m',
+                                    onChanged: (double value) {
+                                      setState(() {
+                                        _customOriginOffsetY = value;
+                                      });
+                                    },
+                                    onChangeEnd: (double value) {
+                                      // Auto-recalculate when slider changes
+                                      _calculatePlacement();
+                                    },
+                                  ),
+                                  
+                                  const SizedBox(height: 8),
+                                  
+                                  // Reset button
+                                  Row(
+                                    children: <Widget>[
+                                      TextButton(
+                                        onPressed: () {
+                                          setState(() {
+                                            _customOriginOffsetX = 0.0;
+                                            _customOriginOffsetY = 0.0;
+                                          });
+                                          _calculatePlacement();
+                                        },
+                                        child: const Text('Reset to Centroid'),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                          
+                          const SizedBox(height: 24),
+                          
+                          // Boundary Overlap Threshold
+                          const Text(
+                            'Boundary Filtering',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 16),
+                          
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.orange[50],
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.orange[200]!),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: <Widget>[
-                                Expanded(
-                                  child: _buildNumberField(
-                                    controller: _customXController,
-                                    label: 'X Coordinate',
-                                    hint: 'X position',
-                                    required: false,
+                                const Text(
+                                  'Coverage Overlap Threshold',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Minimum percentage of speaker coverage that must be within room boundaries: ${(_boundaryOverlapThreshold * 100).toStringAsFixed(0)}%',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[700],
                                   ),
                                 ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: _buildNumberField(
-                                    controller: _customYController,
-                                    label: 'Y Coordinate',
-                                    hint: 'Y position',
-                                    required: false,
+                                const SizedBox(height: 12),
+                                
+                                Text('Boundary Threshold: ${(_boundaryOverlapThreshold * 100).toStringAsFixed(0)}%'),
+                                Slider(
+                                  value: _boundaryOverlapThreshold.clamp(0.3, 0.9),
+                                  min: 0.3,
+                                  max: 0.9,
+                                  divisions: 12,
+                                  label: '${(_boundaryOverlapThreshold * 100).toStringAsFixed(0)}%',
+                                  onChanged: (double value) {
+                                    setState(() {
+                                      _boundaryOverlapThreshold = value.clamp(0.3, 0.9);
+                                    });
+                                  },
+                                  onChangeEnd: (double value) {
+                                    // Auto-recalculate when slider changes
+                                    _calculatePlacement();
+                                  },
+                                ),
+                                
+                                const SizedBox(height: 8),
+                                
+                                // Quick preset buttons
+                                Row(
+                                  children: <Widget>[
+                                    _buildThresholdPresetButton('Conservative (90%)', 0.9),
+                                    const SizedBox(width: 8),
+                                    _buildThresholdPresetButton('Balanced (70%)', 0.7),
+                                    const SizedBox(width: 8),
+                                    _buildThresholdPresetButton('Relaxed (50%)', 0.5),
+                                  ],
+                                ),
+                                
+                                const SizedBox(height: 8),
+                                
+                                Text(
+                                  _boundaryOverlapThreshold >= 0.8 
+                                      ? '• Conservative: Speakers well inside room boundaries'
+                                      : _boundaryOverlapThreshold >= 0.6
+                                          ? '• Balanced: Good coverage with reasonable boundary margin'
+                                          : '• Relaxed: Allows speakers closer to walls, more coverage',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.orange[700],
+                                    fontStyle: FontStyle.italic,
                                   ),
                                 ),
                               ],
                             ),
-                          ],
+                          ),
                           
                           const SizedBox(height: 24),
                           SizedBox(
@@ -710,6 +861,32 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
     );
   }
 
+  Widget _buildThresholdPresetButton(String label, double threshold) {
+    return ElevatedButton(
+      onPressed: () {
+        setState(() {
+          _boundaryOverlapThreshold = threshold.clamp(0.3, 0.9);
+        });
+        // Automatically calculate placement when preset is selected
+        _calculatePlacement();
+      },
+      style: ElevatedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        minimumSize: const Size(60, 28),
+        backgroundColor: (_boundaryOverlapThreshold - threshold).abs() < 0.001
+            ? Theme.of(context).primaryColor 
+            : null,
+        foregroundColor: (_boundaryOverlapThreshold - threshold).abs() < 0.001
+            ? Colors.white 
+            : null,
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(fontSize: 10),
+      ),
+    );
+  }
+
   List<Point2D> _parseRoomCoordinates(String input) {
     final List<Point2D> points = <Point2D>[];
     
@@ -757,8 +934,18 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
                   const SizedBox(height: 12),
                   _buildSummaryRow('Number of Speakers:', '${_result!.speakerPositions.length}'),
                   _buildSummaryRow('Grid Spacing:', '${_result!.gridSpacing.toStringAsFixed(2)} m'),
-                  _buildSummaryRow('Room Centroid:', '${_result!.centroid}'),
+                  
+                  // Show origin information based on whether custom offset is used
+                  if (_result!.customOriginOffset != null) ...<Widget>[
+                    _buildSummaryRow('Base Centroid:', '${_result!.baseCentroid}'),
+                    _buildSummaryRow('Custom Offset:', '${_result!.customOriginOffset}'),
+                    _buildSummaryRow('Effective Origin:', '${_result!.centroid}'),
+                  ] else ...<Widget>[
+                    _buildSummaryRow('Origin (Centroid):', '${_result!.centroid}'),
+                  ],
+                  
                   _buildSummaryRow('Distance:', '${_result!.distance.toStringAsFixed(2)} m'),
+                  _buildSummaryRow('Boundary Threshold:', '${(_boundaryOverlapThreshold * 100).toStringAsFixed(0)}%'),
                 ],
               ),
             ),
@@ -1045,10 +1232,16 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
               color: Colors.blue,
             ),
             _buildLegendItem(
-              icon: Icons.location_on,
-              label: 'Room Center',
-              color: Colors.red,
+              icon: Icons.center_focus_strong,
+              label: 'Base Centroid',
+              color: Colors.blue,
             ),
+            if (_result!.customOriginOffset != null)
+              _buildLegendItem(
+                icon: Icons.location_on,
+                label: 'Effective Origin',
+                color: Colors.red,
+              ),
             if (_removedPoints != null && _removedPoints!.isNotEmpty)
               _buildLegendItem(
                 icon: Icons.close,
@@ -1082,6 +1275,8 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
               allGridPoints: _allGridPoints ?? <Point2D>[],
               removedPoints: _removedPoints ?? <Point2D>[],
               centroid: _result!.centroid,
+              baseCentroid: _result!.baseCentroid,
+              customOriginOffset: _result!.customOriginOffset,
               gridSpacing: _result!.gridSpacing,
               speakerType: _selectedSpeakerType,
               layoutPattern: _selectedLayoutPattern,
@@ -1321,7 +1516,9 @@ class RoomLayoutPainter extends CustomPainter {
   final List<Point2D> speakerPositions;
   final List<Point2D> allGridPoints;
   final List<Point2D> removedPoints;
-  final Point2D centroid;
+  final Point2D centroid; // Effective origin used for calculations
+  final Point2D baseCentroid; // Original room centroid
+  final Point2D? customOriginOffset; // Custom offset applied
   final double gridSpacing;
   final SpeakerType speakerType;
   final LayoutPattern layoutPattern;
@@ -1332,6 +1529,8 @@ class RoomLayoutPainter extends CustomPainter {
     required this.allGridPoints,
     required this.removedPoints,
     required this.centroid,
+    required this.baseCentroid,
+    this.customOriginOffset,
     required this.gridSpacing,
     required this.speakerType,
     required this.layoutPattern,
@@ -1522,29 +1721,99 @@ class RoomLayoutPainter extends CustomPainter {
   }
   
   void _drawCentroid(Canvas canvas, double scaleFactor, Offset offset) {
-    final Offset center = _transformPoint(centroid, scaleFactor, offset);
+    // Draw base centroid (always present)
+    final Offset baseCenterPoint = _transformPoint(baseCentroid, scaleFactor, offset);
     
-    final Paint paint = Paint()
-      ..color = Colors.red
+    final Paint basePaint = Paint()
+      ..color = Colors.blue
       ..style = PaintingStyle.fill;
     
-    canvas.drawCircle(center, 6, paint);
+    canvas.drawCircle(baseCenterPoint, 6, basePaint);
     
-    // Draw cross lines
-    final Paint linePaint = Paint()
-      ..color = Colors.red
+    // Draw cross lines for base centroid
+    final Paint baseLinePaint = Paint()
+      ..color = Colors.blue
       ..strokeWidth = 2.0;
     
     canvas.drawLine(
-      Offset(center.dx - 10, center.dy),
-      Offset(center.dx + 10, center.dy),
-      linePaint,
+      Offset(baseCenterPoint.dx - 10, baseCenterPoint.dy),
+      Offset(baseCenterPoint.dx + 10, baseCenterPoint.dy),
+      baseLinePaint,
     );
     canvas.drawLine(
-      Offset(center.dx, center.dy - 10),
-      Offset(center.dx, center.dy + 10),
-      linePaint,
+      Offset(baseCenterPoint.dx, baseCenterPoint.dy - 10),
+      Offset(baseCenterPoint.dx, baseCenterPoint.dy + 10),
+      baseLinePaint,
     );
+    
+    // Draw effective origin (if different from base centroid)
+    if (customOriginOffset != null) {
+      final Offset effectiveCenter = _transformPoint(centroid, scaleFactor, offset);
+      
+      final Paint paint = Paint()
+        ..color = Colors.red
+        ..style = PaintingStyle.fill;
+      
+      canvas.drawCircle(effectiveCenter, 8, paint);
+      
+      // Draw cross lines for effective origin
+      final Paint linePaint = Paint()
+        ..color = Colors.red
+        ..strokeWidth = 2.0;
+      
+      canvas.drawLine(
+        Offset(effectiveCenter.dx - 12, effectiveCenter.dy),
+        Offset(effectiveCenter.dx + 12, effectiveCenter.dy),
+        linePaint,
+      );
+      canvas.drawLine(
+        Offset(effectiveCenter.dx, effectiveCenter.dy - 12),
+        Offset(effectiveCenter.dx, effectiveCenter.dy + 12),
+        linePaint,
+      );
+      
+      // Draw line connecting base centroid to effective origin
+      final Paint connectionPaint = Paint()
+        ..color = Colors.orange
+        ..strokeWidth = 1.5
+        ..style = PaintingStyle.stroke;
+      
+      canvas.drawLine(baseCenterPoint, effectiveCenter, connectionPaint);
+      
+      // Draw offset arrow
+      _drawArrow(canvas, baseCenterPoint, effectiveCenter, connectionPaint);
+    }
+  }
+  
+  /// Draw an arrow from start to end point
+  void _drawArrow(Canvas canvas, Offset start, Offset end, Paint paint) {
+    const double arrowLength = 8.0;
+    const double arrowAngle = 0.5; // radians
+    
+    // Calculate direction vector
+    final Offset direction = end - start;
+    final double length = direction.distance;
+    
+    if (length < arrowLength * 2) return; // Don't draw arrow if line is too short
+    
+    final Offset unitDirection = direction / length;
+    
+    // Calculate arrow head points
+    final double angle = atan2(unitDirection.dy, unitDirection.dx);
+    
+    final Offset arrowHead1 = end + Offset(
+      -arrowLength * cos(angle - arrowAngle),
+      -arrowLength * sin(angle - arrowAngle),
+    );
+    
+    final Offset arrowHead2 = end + Offset(
+      -arrowLength * cos(angle + arrowAngle),
+      -arrowLength * sin(angle + arrowAngle),
+    );
+    
+    // Draw arrow head
+    canvas.drawLine(end, arrowHead1, paint);
+    canvas.drawLine(end, arrowHead2, paint);
   }
   
   void _drawRemovedPoints(Canvas canvas, double scaleFactor, Offset offset) {
@@ -1681,6 +1950,8 @@ class RoomLayoutPainter extends CustomPainter {
            allGridPoints != oldDelegate.allGridPoints ||
            removedPoints != oldDelegate.removedPoints ||
            centroid != oldDelegate.centroid ||
+           baseCentroid != oldDelegate.baseCentroid ||
+           customOriginOffset != oldDelegate.customOriginOffset ||
            gridSpacing != oldDelegate.gridSpacing ||
            speakerType != oldDelegate.speakerType ||
            layoutPattern != oldDelegate.layoutPattern;

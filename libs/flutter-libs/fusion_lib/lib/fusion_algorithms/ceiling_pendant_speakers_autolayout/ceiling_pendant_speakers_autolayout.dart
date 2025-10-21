@@ -344,7 +344,9 @@ class SpeakerSpec {
 class PlacementResult {
   final List<Point2D> speakerPositions;
   final double gridSpacing;
-  final Point2D centroid;
+  final Point2D centroid; // Effective origin used for calculations
+  final Point2D baseCentroid; // Original room centroid for UI reference
+  final Point2D? customOriginOffset; // Offset applied to base centroid
   final double distance;
   final List<String> calculationSteps;
   
@@ -352,17 +354,26 @@ class PlacementResult {
     required this.speakerPositions,
     required this.gridSpacing,
     required this.centroid,
+    required this.baseCentroid,
+    this.customOriginOffset,
     required this.distance,
     required this.calculationSteps,
   });
   
   @override
   String toString() {
+    String originInfo = customOriginOffset != null 
+        ? '''
+  Base Centroid: $baseCentroid
+  Custom Origin Offset: $customOriginOffset
+  Effective Origin: $centroid'''
+        : '''
+  Centroid (Origin): $centroid''';
+        
     return '''
 PlacementResult:
   Speakers: ${speakerPositions.length}
-  Grid Spacing: ${gridSpacing.toStringAsFixed(2)}m
-  Centroid: $centroid
+  Grid Spacing: ${gridSpacing.toStringAsFixed(2)}m$originInfo
   Distance: ${distance.toStringAsFixed(2)}m
   Positions: ${speakerPositions.join(', ')}
   
@@ -380,19 +391,37 @@ class AutoSpeakerPlacement {
   /// DG correction factor - set to 1.0 (inactive) 
   static const double dgCorrection = 1.0;
   
-  /// Calculate speaker placement  
+  /// Calculate speaker placement for ceiling and pendant speakers
+  /// 
+  /// Parameters:
+  /// - [room]: Room dimensions and geometry
+  /// - [speakerSpec]: Speaker specifications (coverage angle, type, pendant height)
+  /// - [coveragePreference]: Coverage overlap preference (edgeToEdge, minimumOverlap, centerToCenter)
+  /// - [layoutPattern]: Grid layout pattern (square or hexagonal)
+  /// - [customOriginOffset]: Optional offset from room centroid for speaker grid origin (default: null = use centroid)
+  /// - [boundaryOverlapThreshold]: Minimum fraction of speaker coverage that must be within room (default: 0.7 = 70%)
+  ///   Lower values (e.g., 0.5) allow more speakers near boundaries, higher values (e.g., 0.9) are more conservative
   static PlacementResult calculatePlacement({
     required Room room,
     required SpeakerSpec speakerSpec,
     required CoveragePreference coveragePreference,
     LayoutPattern layoutPattern = LayoutPattern.square,
-    Point2D? customOrigin,
+    Point2D? customOriginOffset,
+    double boundaryOverlapThreshold = 0.7,
   }) {
     List<String> steps = [];
     
-    // Step 1: Find geometric center (centroid)
-    Point2D centroid = customOrigin ?? room.centroid;
-    steps.add('Step 1: Centroid calculated at $centroid');
+    // Step 1: Find geometric center (centroid) and apply custom offset if provided
+    Point2D baseCentroid = room.centroid;
+    Point2D effectiveOrigin = customOriginOffset != null 
+        ? Point2D(baseCentroid.x + customOriginOffset.x, baseCentroid.y + customOriginOffset.y)
+        : baseCentroid;
+    
+    steps.add('Step 1: Base centroid calculated at $baseCentroid');
+    if (customOriginOffset != null) {
+      steps.add('Step 1.1: Custom origin offset applied: $customOriginOffset');
+      steps.add('Step 1.2: Effective origin: $effectiveOrigin');
+    }
     
     // Step 2: Calculate distance based on speaker type
     double distance = _calculateDistance(room, speakerSpec, steps);
@@ -421,7 +450,7 @@ class AutoSpeakerPlacement {
     // Step 4: Create grid layout
     List<Point2D> gridPoints = _createGridLayout(
       room,
-      centroid, 
+      effectiveOrigin, 
       gridSpacing, 
       layoutPattern,
       steps
@@ -433,6 +462,7 @@ class AutoSpeakerPlacement {
       room, 
       distance,
       speakerSpec.coverageAngle,
+      boundaryOverlapThreshold,
       steps
     );
     
@@ -444,7 +474,9 @@ class AutoSpeakerPlacement {
     return PlacementResult(
       speakerPositions: validSpeakers,
       gridSpacing: gridSpacing,
-      centroid: centroid,
+      centroid: effectiveOrigin,
+      baseCentroid: baseCentroid,
+      customOriginOffset: customOriginOffset,
       distance: distance,
       calculationSteps: steps,
     );
@@ -828,6 +860,7 @@ class AutoSpeakerPlacement {
     Room room,
     double distance,
     double coverageAngleDegrees,
+    double boundaryOverlapThreshold,
     List<String> steps
   ) {
     List<Point2D> validSpeakers = [];
@@ -842,10 +875,10 @@ class AutoSpeakerPlacement {
       if (room.roomType == RoomType.asymmetrical) {
         // For asymmetrical rooms, check if the speaker position is within the room boundary
         // and if the coverage circle doesn't extend too far beyond room edges
-        isValid = _isSpeakerValidInAsymmetricalRoom(point, coverageRadius, room);
+        isValid = _isSpeakerValidInAsymmetricalRoom(point, coverageRadius, room, boundaryOverlapThreshold);
       } else {
-        // Original logic for rectangular rooms
-        isValid = _isCoverageCircleWithinRoom(point, coverageRadius, room);
+        // For rectangular rooms, also use threshold-based filtering
+        isValid = _isSpeakerValidInRectangularRoom(point, coverageRadius, room, boundaryOverlapThreshold);
       }
       
       if (isValid) {
@@ -856,13 +889,12 @@ class AutoSpeakerPlacement {
     }
     
     String roomTypeDesc = room.roomType == RoomType.asymmetrical ? 'asymmetrical' : 'rectangular';
-    String filteringDesc = room.roomType == RoomType.asymmetrical 
-        ? 'Enhanced border filtering (excludes speakers near edges and with insufficient coverage within room)'
-        : 'Standard boundary filtering';
+    String filteringDesc = 'Threshold-based filtering (requires ${(boundaryOverlapThreshold * 100).toStringAsFixed(0)}% coverage within room)';
     
     steps.add('Step 5: Coverage circle boundary filtering ($roomTypeDesc room):');
     steps.add('  $filteringDesc');
     steps.add('  Coverage radius at listener plane: ${coverageRadius.toStringAsFixed(2)}m');
+    steps.add('  Boundary overlap threshold: ${(boundaryOverlapThreshold * 100).toStringAsFixed(0)}% coverage within room');
     steps.add('  Total initial positions: ${gridPoints.length}');
     steps.add('  Removed (coverage issues or outside boundary): ${removedSpeakers.length}');
     steps.add('  Valid speakers remaining: ${validSpeakers.length}');
@@ -874,9 +906,45 @@ class AutoSpeakerPlacement {
     return validSpeakers;
   }
   
+  /// Check if speaker is valid in rectangular room using threshold-based filtering
+  /// Allows configurable amount of coverage to extend outside room boundaries
+  static bool _isSpeakerValidInRectangularRoom(Point2D speakerPosition, double coverageRadius, Room room, double boundaryOverlapThreshold) {
+    // First check if speaker position itself is within room
+    if (speakerPosition.x < 0 || speakerPosition.x > room.width || 
+        speakerPosition.y < 0 || speakerPosition.y > room.roomLength) {
+      return false;
+    }
+    
+    // Sample points around the coverage circle to check how much is within room
+    int samplePoints = 8; // Check 8 points around the circle (every 45 degrees)
+    int validPoints = 0;
+    
+    // Also check the center point
+    validPoints++; // Speaker position is already confirmed to be within room
+    
+    for (int i = 0; i < samplePoints; i++) {
+      double angle = (i * 2 * pi) / samplePoints;
+      double sampleX = speakerPosition.x + coverageRadius * cos(angle);
+      double sampleY = speakerPosition.y + coverageRadius * sin(angle);
+      
+      // Check if this sample point is within room boundaries
+      if (sampleX >= 0 && sampleX <= room.width && 
+          sampleY >= 0 && sampleY <= room.roomLength) {
+        validPoints++;
+      }
+    }
+    
+    // Calculate percentage of coverage within room
+    double totalSamplePoints = samplePoints + 1; // +1 for center point
+    double validPercentage = validPoints / totalSamplePoints;
+    
+    // Use the configurable threshold
+    return validPercentage >= boundaryOverlapThreshold;
+  }
+
   /// Check if speaker is valid in asymmetrical room
   /// Combines position check with coverage area validation
-  static bool _isSpeakerValidInAsymmetricalRoom(Point2D speakerPosition, double coverageRadius, Room room) {
+  static bool _isSpeakerValidInAsymmetricalRoom(Point2D speakerPosition, double coverageRadius, Room room, double boundaryOverlapThreshold) {
     // First check if speaker position itself is within room
     if (!room.contains(speakerPosition)) {
       return false;
@@ -896,11 +964,11 @@ class AutoSpeakerPlacement {
     
     // Additional check: ensure the coverage circle doesn't extend too far outside room boundaries
     // Sample points around the coverage circle to verify most of the coverage area is within room
-    return _validateCoverageAreaInAsymmetricalRoom(speakerPosition, coverageRadius, room);
+    return _validateCoverageAreaInAsymmetricalRoom(speakerPosition, coverageRadius, room, boundaryOverlapThreshold);
   }
   
   /// Validate that most of the speaker's coverage area is within the asymmetrical room
-  static bool _validateCoverageAreaInAsymmetricalRoom(Point2D speakerPosition, double coverageRadius, Room room) {
+  static bool _validateCoverageAreaInAsymmetricalRoom(Point2D speakerPosition, double coverageRadius, Room room, double boundaryOverlapThreshold) {
     // Sample points around the coverage circle
     int samplePoints = 8; // Check 8 points around the circle (every 45 degrees)
     int validPoints = 0;
@@ -916,10 +984,10 @@ class AutoSpeakerPlacement {
       }
     }
     
-    // Require at least 70% of coverage area to be within room boundaries
-    // This is more practical while still filtering out problematic border speakers
+    // Require the configured threshold of coverage area to be within room boundaries
+    // This is now configurable - default is 70% but can be adjusted for more/less strict boundary requirements
     double validPercentage = validPoints / samplePoints;
-    return validPercentage >= 0.70;
+    return validPercentage >= boundaryOverlapThreshold;
   }
 
   /// Calculate coverage radius at listener plane using coverage angle and distance
@@ -934,23 +1002,4 @@ class AutoSpeakerPlacement {
     return coverageRadius;
   }
 
-  /// Check if speaker's coverage circle is completely within room boundaries
-  static bool _isCoverageCircleWithinRoom(Point2D speakerPosition, double coverageRadius, Room room) {
-    // Check if the coverage circle extends beyond any room boundary
-    
-    // Left boundary
-    if (speakerPosition.x - coverageRadius < 0) return false;
-    
-    // Right boundary  
-    if (speakerPosition.x + coverageRadius > room.width) return false;
-    
-    // Bottom boundary
-    if (speakerPosition.y - coverageRadius < 0) return false;
-    
-    // Top boundary
-    if (speakerPosition.y + coverageRadius > room.roomLength) return false;
-    
-    // If all checks pass, coverage circle is within room
-    return true;
-  }
 }

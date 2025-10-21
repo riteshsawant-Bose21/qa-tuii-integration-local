@@ -13,10 +13,10 @@ class SurfaceSpeakerLayoutWidget extends StatefulWidget {
 
 class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget> {
   // Form controllers
-  final TextEditingController _lengthController = TextEditingController(text: '100.0');
-  final TextEditingController _widthController = TextEditingController(text: '66.0');
-  final TextEditingController _heightController = TextEditingController(text: '39.0');
-  final TextEditingController _listenerHeightController = TextEditingController(text: '5.5');
+  final TextEditingController _lengthController = TextEditingController(text: '30.5');
+  final TextEditingController _widthController = TextEditingController(text: '20.1');
+  final TextEditingController _heightController = TextEditingController(text: '11.9');
+  final TextEditingController _listenerHeightController = TextEditingController(text: '1.7');
   // Speaker height removed - now hardcoded to 3 feet (0.914m) in the algorithm
   final TextEditingController _coverageAngleController = TextEditingController(text: '90.0');
   final TextEditingController _speakerTypeController = TextEditingController(text: 'Surface Mount Speaker');
@@ -141,17 +141,17 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
             const SizedBox(height: 16),
             Row(
               children: <Widget>[
-                Expanded(child: _buildNumberField(_lengthController, 'Length (ft)', Icons.straighten)),
+                Expanded(child: _buildNumberField(_lengthController, 'Length (m)', Icons.straighten)),
                 const SizedBox(width: 16),
-                Expanded(child: _buildNumberField(_widthController, 'Width (ft)', Icons.width_normal)),
+                Expanded(child: _buildNumberField(_widthController, 'Width (m)', Icons.width_normal)),
               ],
             ),
             const SizedBox(height: 16),
             Row(
               children: <Widget>[
-                Expanded(child: _buildNumberField(_heightController, 'Ceiling Height (ft)', Icons.height)),
+                Expanded(child: _buildNumberField(_heightController, 'Ceiling Height (m)', Icons.height)),
                 const SizedBox(width: 16),
-                Expanded(child: _buildNumberField(_listenerHeightController, 'Listener Height (ft)', Icons.person, min: 0.1, max: 8.0)),
+                Expanded(child: _buildNumberField(_listenerHeightController, 'Listener Height (m)', Icons.person, min: 0.1, max: 2.4)),
               ],
             ),
           ],
@@ -323,7 +323,7 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
                       children: <Widget>[
                         Expanded(
                           child: Text(
-                            'Mounting Height (ft)',
+                            'Mounting Height (m)',
                             style: Theme.of(context).textTheme.titleSmall?.copyWith(
                               fontWeight: FontWeight.bold,
                             ),
@@ -348,10 +348,10 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
                     ),
                   ),
                   // Table rows
-                  _buildTableRow('Less than 8', '-5', _result?.mountingHeight != null && _result!.mountingHeight < 8),
-                  _buildTableRow('8 - 15', '-15', _result?.mountingHeight != null && _result!.mountingHeight >= 8 && _result!.mountingHeight <= 15),
-                  _buildTableRow('15 - 18', '-30', _result?.mountingHeight != null && _result!.mountingHeight >= 15 && _result!.mountingHeight <= 18),
-                  _buildTableRow('18 and above', '-45', _result?.mountingHeight != null && _result!.mountingHeight >= 18),
+                  _buildTableRow('Less than 2.4', '-5', _result?.mountingHeight != null && _result!.mountingHeight < 2.4),
+                  _buildTableRow('2.4 - 4.6', '-15', _result?.mountingHeight != null && _result!.mountingHeight >= 2.4 && _result!.mountingHeight <= 4.6),
+                  _buildTableRow('4.6 - 5.5', '-30', _result?.mountingHeight != null && _result!.mountingHeight >= 4.6 && _result!.mountingHeight <= 5.5),
+                  _buildTableRow('5.5 and above', '-45', _result?.mountingHeight != null && _result!.mountingHeight >= 5.5),
                 ],
               ),
             ),
@@ -475,11 +475,11 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
   }
 
   void _resetToDefaults() {
-    _lengthController.text = '100.0';
-    _widthController.text = '66.0';
-    _heightController.text = '39.0';
-    _listenerHeightController.text = '5.5';
-    // Speaker height removed - now hardcoded to 3 feet
+    _lengthController.text = '30.5';
+    _widthController.text = '20.1';
+    _heightController.text = '11.9';
+    _listenerHeightController.text = '1.7';
+    // Speaker height removed - now hardcoded to 0.91 meters
     _coverageAngleController.text = '90.0';
     _speakerTypeController.text = 'Surface Mount Speaker';
     setState(() => _coveragePreference = CoveragePreference.minimumOverlap);
@@ -549,31 +549,6 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
                     _buildSummaryMetric('Left/Right Walls', '${_result!.speakersOnWidth} each', Icons.linear_scale_outlined),
                   ],
                 ),
-                if (_result!.totalSpeakers > 20)
-                  Container(
-                    margin: const EdgeInsets.only(top: 12),
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.shade100,
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: Colors.orange.shade300),
-                    ),
-                    child: Row(
-                      children: <Widget>[
-                        Icon(Icons.warning, color: Colors.orange.shade700, size: 16),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'High speaker count detected. Consider larger coverage angles or higher mounting.',
-                            style: TextStyle(
-                              color: Colors.orange.shade700,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
               ],
             ),
           ),
@@ -626,8 +601,8 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
               formula: 'd_horiz = (mounting_height - listener_height) / tan(down_angle)',
               calculation: 'd_horiz = (${_result!.mountingHeight.toStringAsFixed(1)} - ${double.parse(_listenerHeightController.text)}) / tan(${_result!.downAngle.abs().toStringAsFixed(0)}°)\n'
                           'd_horiz = ${(_result!.mountingHeight - double.parse(_listenerHeightController.text)).toStringAsFixed(1)} / ${(tan(_result!.downAngle.abs() * pi / 180)).toStringAsFixed(3)}\n'
-                          'd_horiz = ${_result!.distanceToListenerPlane.toStringAsFixed(2)} ft',
-              result: 'd_horiz = ${_result!.distanceToListenerPlane.toStringAsFixed(2)} ft',
+                          'd_horiz = ${_result!.distanceToListenerPlane.toStringAsFixed(2)} m',
+              result: 'd_horiz = ${_result!.distanceToListenerPlane.toStringAsFixed(2)} m',
               explanation: 'Horizontal distance from loudspeaker to the listener plane using the down-angle',
             ),
             
@@ -640,8 +615,8 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
               calculation: 'Horizontal_coverage = 2 × tan(${double.parse(_coverageAngleController.text)}°/2) × ${_result!.distanceToListenerPlane.toStringAsFixed(2)}\n'
                           'Horizontal_coverage = 2 × tan(${(double.parse(_coverageAngleController.text)/2).toStringAsFixed(1)}°) × ${_result!.distanceToListenerPlane.toStringAsFixed(2)}\n'
                           'Horizontal_coverage = 2 × ${(tan((double.parse(_coverageAngleController.text)/2) * pi / 180)).toStringAsFixed(3)} × ${_result!.distanceToListenerPlane.toStringAsFixed(2)}\n'
-                          'Horizontal_coverage = ${_result!.coverageWidth.toStringAsFixed(2)} ft',
-              result: '${_result!.coverageWidth.toStringAsFixed(2)} ft',
+                          'Horizontal_coverage = ${_result!.coverageWidth.toStringAsFixed(2)} m',
+              result: '${_result!.coverageWidth.toStringAsFixed(2)} m',
               explanation: 'Horizontal coverage slice the loudspeaker provides at the initial mounting height',
             ),
             
@@ -651,9 +626,9 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
               title: 'Place Horizontal Loudspeakers Around Perimeter',
               icon: Icons.grid_view,
               formula: 'Speakers per Wall = ceil(Wall Length / Effective Coverage)',
-              calculation: 'Effective Coverage = ${_result!.coverageWidth.toStringAsFixed(2)} × ${_coveragePreference.overlapMultiplier} (${_coveragePreference.name}) = ${_result!.effectiveCoverage.toStringAsFixed(2)} ft\n\n'
-                          'Length Walls (${double.parse(_lengthController.text)} ft): ceil(${double.parse(_lengthController.text)} / ${_result!.effectiveCoverage.toStringAsFixed(2)}) = ${_result!.speakersOnLength} each\n'
-                          'Width Walls (${double.parse(_widthController.text)} ft): ceil(${double.parse(_widthController.text)} / ${_result!.effectiveCoverage.toStringAsFixed(2)}) = ${_result!.speakersOnWidth} each\n\n'
+              calculation: 'Effective Coverage = ${_result!.coverageWidth.toStringAsFixed(2)} × ${_coveragePreference.overlapMultiplier} (${_coveragePreference.name}) = ${_result!.effectiveCoverage.toStringAsFixed(2)} m\n\n'
+                          'Length Walls (${double.parse(_lengthController.text)} m): ceil(${double.parse(_lengthController.text)} / ${_result!.effectiveCoverage.toStringAsFixed(2)}) = ${_result!.speakersOnLength} each\n'
+                          'Width Walls (${double.parse(_widthController.text)} m): ceil(${double.parse(_widthController.text)} / ${_result!.effectiveCoverage.toStringAsFixed(2)}) = ${_result!.speakersOnWidth} each\n\n'
                           'Total: (${_result!.speakersOnLength} × 2) + (${_result!.speakersOnWidth} × 2) = ${_result!.totalSpeakers} speakers',
               result: 'Total: ${_result!.totalSpeakers} speakers',
               explanation: 'Place horizontal loudspeakers around perimeter such that desired overlap is fulfilled',
@@ -823,9 +798,9 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: <Widget>[
-                  _buildDimensionInfo('Length', '${double.parse(_lengthController.text)} ft', Icons.straighten),
-                  _buildDimensionInfo('Width', '${double.parse(_widthController.text)} ft', Icons.width_normal),
-                  _buildDimensionInfo('Height', '${double.parse(_heightController.text)} ft', Icons.height),
+                  _buildDimensionInfo('Length', '${double.parse(_lengthController.text)} m', Icons.straighten),
+                  _buildDimensionInfo('Width', '${double.parse(_widthController.text)} m', Icons.width_normal),
+                  _buildDimensionInfo('Height', '${double.parse(_heightController.text)} m', Icons.height),
                 ],
               ),
             ),
@@ -940,7 +915,7 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
               Expanded(
                 child: _buildDetailItem(
                   'Mounting Height',
-                  '${_result!.mountingHeight.toStringAsFixed(1)} ft',
+                  '${_result!.mountingHeight.toStringAsFixed(1)} m',
                   Icons.height,
                   'Height above floor',
                 ),
@@ -969,7 +944,7 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
               Expanded(
                 child: _buildDetailItem(
                   'Coverage Width',
-                  '${_result!.coverageWidth.toStringAsFixed(1)} ft',
+                  '${_result!.coverageWidth.toStringAsFixed(1)} m',
                   Icons.radio_button_unchecked,
                   'Sound coverage width',
                 ),
@@ -1198,8 +1173,8 @@ class RoomLayoutPainter extends CustomPainter {
       roomWidth * scale,
     );
 
-    // Draw subtle grid lines every 5 feet
-    for (double i = 0; i <= roomLength; i += 5) {
+    // Draw subtle grid lines every 1.5 meters
+    for (double i = 0; i <= roomLength; i += 1.5) {
       final double x = offsetX + i * scale;
       canvas.drawLine(
         Offset(x, offsetY),
@@ -1207,7 +1182,7 @@ class RoomLayoutPainter extends CustomPainter {
         gridPaint,
       );
     }
-    for (double i = 0; i <= roomWidth; i += 5) {
+    for (double i = 0; i <= roomWidth; i += 1.5) {
       final double y = offsetY + i * scale;
       canvas.drawLine(
         Offset(offsetX, y),
@@ -1408,7 +1383,7 @@ class RoomLayoutPainter extends CustomPainter {
 
     // Length dimension
     labelPainter.text = TextSpan(
-      text: '${roomLength.toStringAsFixed(0)} ft',
+      text: '${roomLength.toStringAsFixed(1)} m',
       style: const TextStyle(color: Colors.black54, fontSize: 11),
     );
     labelPainter.layout();
@@ -1434,7 +1409,7 @@ class RoomLayoutPainter extends CustomPainter {
 
     // Width dimension
     labelPainter.text = TextSpan(
-      text: '${roomWidth.toStringAsFixed(0)} ft',
+      text: '${roomWidth.toStringAsFixed(1)} m',
       style: const TextStyle(color: Colors.black54, fontSize: 11),
     );
     labelPainter.layout();

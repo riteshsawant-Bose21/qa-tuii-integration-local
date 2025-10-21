@@ -89,21 +89,21 @@ class SpeakerPosition {
 /// 
 /// This class encapsulates all room-related parameters needed for speaker placement calculations.
 class SurfaceRoom {
-  /// Room width in feet
+  /// Room width in meters
   final double width;
   
-  /// Room length in feet  
+  /// Room length in meters  
   final double length;
   
-  /// Ceiling height in feet
+  /// Ceiling height in meters
   final double ceilingHeight;
   
-  /// Listener ear height in feet (typically 3.6-4.6ft for seated, 5.6-5.9ft for standing, max 8ft)
+  /// Listener ear height in meters (typically 1.1-1.4m for seated, 1.7-1.8m for standing, max 2.4m)
   final double listenerHeight;
   
   /// Creates a room zone with the specified dimensions.
   /// 
-  /// All dimensions must be positive values in feet.
+  /// All dimensions must be positive values in meters.
   /// 
   /// Throws [ArgumentError] if any dimension is invalid.
   SurfaceRoom({
@@ -129,29 +129,29 @@ class SurfaceRoom {
     if (listenerHeight <= 0) {
       throw ArgumentError('Listener height must be positive, got: $listenerHeight');
     }
-    if (listenerHeight > 8.0) { // 8 feet max
-      throw ArgumentError('Listener height cannot exceed 8 feet, got: ${listenerHeight} feet');
+    if (listenerHeight > 2.4) { // 2.4 meters max (8 feet equivalent)
+      throw ArgumentError('Listener height cannot exceed 2.4 meters, got: ${listenerHeight} meters');
     }
     if (listenerHeight >= ceilingHeight) {
-      throw ArgumentError('Listener height ($listenerHeight ft) must be less than ceiling height ($ceilingHeight ft)');
+      throw ArgumentError('Listener height ($listenerHeight m) must be less than ceiling height ($ceilingHeight m)');
     }
     
     // Check for reasonable dimensions
-    if (ceilingHeight < 7.0 || ceilingHeight > 30.0) {
-      print('Warning: Unusual ceiling height: ${ceilingHeight} feet');
+    if (ceilingHeight < 2.1 || ceilingHeight > 9.1) { // 7-30 feet equivalent
+      print('Warning: Unusual ceiling height: ${ceilingHeight} meters');
     }
-    if (width > 200 || length > 200) {
+    if (width > 61.0 || length > 61.0) { // 200 feet equivalent
       print('Warning: Very large room dimensions may require different approach');
     }
   }
   
-  /// Room area in square feet
+  /// Room area in square meters
   double get area => width * length;
   
-  /// Room volume in cubic feet  
+  /// Room volume in cubic meters  
   double get volume => width * length * ceilingHeight;
   
-  /// Room perimeter in feet
+  /// Room perimeter in meters
   double get perimeter => 2 * (width + length);
   
   /// Room aspect ratio (length/width)
@@ -159,7 +159,7 @@ class SurfaceRoom {
   
   @override
   String toString() {
-    return 'SurfaceRoom(${length.toStringAsFixed(1)}ft × ${width.toStringAsFixed(1)}ft × ${ceilingHeight.toStringAsFixed(1)}ft, listener: ${listenerHeight.toStringAsFixed(1)}ft)';
+    return 'SurfaceRoom(${length.toStringAsFixed(1)}m × ${width.toStringAsFixed(1)}m × ${ceilingHeight.toStringAsFixed(1)}m, listener: ${listenerHeight.toStringAsFixed(1)}m)';
   }
 }
 
@@ -167,10 +167,10 @@ class SurfaceRoom {
 /// 
 /// This class encapsulates all speaker-related parameters needed for placement calculations.
 class Loudspeaker {
-  /// Physical height of the speaker in feet (hardcoded to 3 feet)
-  static const double defaultHeight = 3.0; // 3 feet
+  /// Physical height of the speaker in meters (hardcoded to 0.91 meters / 3 feet)
+  static const double defaultHeight = 0.91; // 0.91 meters (3 feet)
   
-  /// Physical height of the speaker in feet
+  /// Physical height of the speaker in meters
   final double height;
   
   /// Horizontal coverage angle in degrees (e.g., 90, 120)
@@ -187,7 +187,7 @@ class Loudspeaker {
   
   /// Creates a loudspeaker with the specified characteristics.
   /// 
-  /// [height] defaults to 3 feet if not specified.
+  /// [height] defaults to 0.91 meters if not specified.
   /// [horizontalCoverageAngle] must be between 30 and 180 degrees.
   /// [type] is a descriptive name for the speaker model.
   /// 
@@ -207,9 +207,9 @@ class Loudspeaker {
     if (height <= 0) {
       throw ArgumentError('Speaker height must be positive, got: $height');
     }
-    // Updated threshold since we're using 3 feet as standard
-    if (height > 6.0) {
-      print('Warning: Speaker height seems unusually large: $height feet');
+    // Updated threshold since we're using 0.91 meters as standard
+    if (height > 1.8) { // 6 feet equivalent
+      print('Warning: Speaker height seems unusually large: $height meters');
     }
     if (horizontalCoverageAngle < 30 || horizontalCoverageAngle > 180) {
       throw ArgumentError('Horizontal coverage angle must be between 30-180 degrees, got: $horizontalCoverageAngle');
@@ -238,7 +238,7 @@ class Loudspeaker {
   
   @override
   String toString() {
-    return 'Loudspeaker($type, ${horizontalCoverageAngle.toStringAsFixed(0)}°, ${height.toStringAsFixed(1)}ft)';
+    return 'Loudspeaker($type, ${horizontalCoverageAngle.toStringAsFixed(0)}°, ${height.toStringAsFixed(1)}m)';
   }
 }
 
@@ -339,10 +339,10 @@ class SurfacePlacementResult {
   /// Horizontal coverage angle in degrees
   final double horizontalCoverageAngle;
   
-  /// Room length in feet
+  /// Room length in meters
   final double roomLength;
   
-  /// Room width in feet
+  /// Room width in meters
   final double roomWidth;
   
   /// Total number of speakers required
@@ -378,18 +378,18 @@ class SurfaceSpeakerPlacer {
   /// 
   /// This follows industry best practices for surface-mounted speakers with 
   /// a minimum down-angle to ensure intersection with listener plane:
-  /// - Heights less than 8ft: Minimum down-angle (-5°) to ensure listener plane intersection
-  /// - Heights 8-15ft: Light down-angle (-15°)
-  /// - Heights 15-18ft: Medium down-angle (-30°)  
-  /// - Heights 18ft and above: Steep down-angle (-45°)
+  /// - Heights less than 2.4m: Minimum down-angle (-5°) to ensure listener plane intersection
+  /// - Heights 2.4-4.6m: Light down-angle (-15°)
+  /// - Heights 4.6-5.5m: Medium down-angle (-30°)  
+  /// - Heights 5.5m and above: Steep down-angle (-45°)
   /// 
   /// The minimum -5° angle prevents infinite horizontal projection at low ceiling heights.
   static double getDownAngle(double mountingHeight) {
-    if (mountingHeight < 8.0) {
+    if (mountingHeight < 2.4) { // 8 feet equivalent
       return -5.0; // Minimum angle to ensure listener plane intersection
-    } else if (mountingHeight <= 15.0) {
+    } else if (mountingHeight <= 4.6) { // 15 feet equivalent
       return -15.0;
-    } else if (mountingHeight <= 18.0) {
+    } else if (mountingHeight <= 5.5) { // 18 feet equivalent
       return -30.0;
     } else {
       return -45.0;
@@ -406,8 +406,8 @@ class SurfaceSpeakerPlacer {
   /// CORRECTED ALGORITHM: Uses proper trigonometry for horizontal distance calculation.
   /// For a surface speaker, the horizontal distance is: (mounting_height - listener_height) / tan(down_angle)
   /// 
-  /// [mountingHeight] - Height of speaker mounting point in feet
-  /// [listenerHeight] - Height of listener ears in feet  
+  /// [mountingHeight] - Height of speaker mounting point in meters
+  /// [listenerHeight] - Height of listener ears in meters  
   /// [downAngleDegrees] - Down-angle in degrees (negative for downward)
   static double calculateDistanceToListenerPlane(
     double mountingHeight,
@@ -468,14 +468,14 @@ class SurfaceSpeakerPlacer {
     // Step 1: Calculate mounting height for surface speakers
     // Surface speakers should be mounted as high as possible on walls
     // For low ceilings, mount speakers at ceiling height minus minimal clearance
-    final mountingHeight = room.ceilingHeight - 0.5; // 6 inches (0.5ft) below ceiling for mounting clearance
+    final mountingHeight = room.ceilingHeight - 0.15; // 15 cm (0.15m) below ceiling for mounting clearance
     
     // Validate that speakers can be mounted above listener height
-    // Allow minimal clearance (just 4 inches / 0.33ft) for practical scenarios
-    final minimumClearance = 0.33; // 4 inches minimum clearance above listener
+    // Allow minimal clearance (just 10 cm / 0.1m) for practical scenarios
+    final minimumClearance = 0.1; // 10 cm minimum clearance above listener
     if (mountingHeight <= room.listenerHeight + minimumClearance) {
-      final minimumCeilingHeight = room.listenerHeight + minimumClearance + 0.5; // listener + clearance + mounting space
-      throw ArgumentError('Ceiling height (${room.ceilingHeight.toStringAsFixed(1)} ft) too low for listener height (${room.listenerHeight.toStringAsFixed(1)} ft). Need at least ${minimumCeilingHeight.toStringAsFixed(1)} ft ceiling.');
+      final minimumCeilingHeight = room.listenerHeight + minimumClearance + 0.15; // listener + clearance + mounting space
+      throw ArgumentError('Ceiling height (${room.ceilingHeight.toStringAsFixed(1)} m) too low for listener height (${room.listenerHeight.toStringAsFixed(1)} m). Need at least ${minimumCeilingHeight.toStringAsFixed(1)} m ceiling.');
     }
     
     // Step 2: Determine down-angle (use custom if provided)
@@ -511,11 +511,11 @@ class SurfaceSpeakerPlacer {
     if (room.width <= effectiveCoverage * 3.0) {
       // If wall width is within 3x coverage, use single centered speaker (more aggressive)
       speakersOnWidth = 1;
-      print('DEBUG: Using single speaker for width walls (${room.width}ft <= ${effectiveCoverage * 3.0}ft)');
+      print('DEBUG: Using single speaker for width walls (${room.width}m <= ${effectiveCoverage * 3.0}m)');
     } else {
       // For very wide rooms, use coverage calculation
       speakersOnWidth = (room.width / effectiveCoverage).ceil();
-      print('DEBUG: Using multiple speakers for width walls (${room.width}ft > ${effectiveCoverage * 3.0}ft)');
+      print('DEBUG: Using multiple speakers for width walls (${room.width}m > ${effectiveCoverage * 3.0}m)');
     }
     
     // Apply constraints
@@ -551,11 +551,11 @@ class SurfaceSpeakerPlacer {
     
     // Always print key values for debugging optimization
     print('=== DEBUG: Optimization Check ===');
-    print('Room: ${room.length}ft x ${room.width}ft');
-    print('Coverage Width: ${coverageWidth.toStringAsFixed(2)}ft');
-    print('Effective Coverage: ${effectiveCoverage.toStringAsFixed(2)}ft');
-    print('Width threshold (1.5x): ${(effectiveCoverage * 1.5).toStringAsFixed(2)}ft');
-    print('Room width (${room.width}ft) <= threshold? ${room.width <= effectiveCoverage * 1.5}');
+    print('Room: ${room.length}m x ${room.width}m');
+    print('Coverage Width: ${coverageWidth.toStringAsFixed(2)}m');
+    print('Effective Coverage: ${effectiveCoverage.toStringAsFixed(2)}m');
+    print('Width threshold (1.5x): ${(effectiveCoverage * 1.5).toStringAsFixed(2)}m');
+    print('Room width (${room.width}m) <= threshold? ${room.width <= effectiveCoverage * 1.5}');
     print('Speakers on length: $speakersOnLength');
     print('Speakers on width: $speakersOnWidth');
     print('Total speakers before optimization: ${2 * (speakersOnLength + speakersOnWidth)}');
@@ -849,11 +849,11 @@ class SurfaceSpeakerPlacer {
 /// ```dart
 /// // Define room and speaker
 /// final room = SurfaceRoom(
-///   width: 6.1, length: 9.1, 
-///   ceilingHeight: 3.7, listenerHeight: 1.2
+///   width: 1.86, length: 2.77, 
+///   ceilingHeight: 1.13, listenerHeight: 0.37
 /// );
 /// final speaker = Loudspeaker(
-///   // height defaults to 3 feet (0.914m)
+///   // height defaults to 0.91 meters
 ///   horizontalCoverageAngle: 90.0, 
 ///   type: 'Surface Mount Speaker'
 /// );

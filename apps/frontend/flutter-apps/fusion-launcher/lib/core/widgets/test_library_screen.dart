@@ -699,7 +699,7 @@ class TestLibraryScreen extends StatelessWidget {
 
   Widget _buildAlgorithmsTab(BuildContext context) {
     return const DefaultTabController(
-      length: 9,
+      length: 8,
       child: Column(
         children: <Widget>[
           TabBar(
