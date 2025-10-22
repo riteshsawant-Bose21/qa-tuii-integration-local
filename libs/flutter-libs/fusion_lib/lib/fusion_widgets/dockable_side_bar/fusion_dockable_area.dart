@@ -197,8 +197,19 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
                 ),
               ),
 
-            /// Main Area
-            Expanded(child: widget.mainArea),
+            /// Main Area - Wrapped in Expanded to ensure it gets proper constraints
+            Expanded(
+              child: LayoutBuilder(
+                builder: (BuildContext context, BoxConstraints constraints) {
+                  // This ensures the main area widget gets notified of constraint changes
+                  return SizedBox(
+                    width: constraints.maxWidth,
+                    height: constraints.maxHeight,
+                    child: widget.mainArea,
+                  );
+                },
+              ),
+            ),
 
             /// Right Sidebar
             if (widget.showRight)

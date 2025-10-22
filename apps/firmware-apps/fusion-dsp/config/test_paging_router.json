@@ -1,0 +1,114 @@
+{
+    "session": {
+        "property_settings": [
+            { "name": "frame_size", "value": 32},
+            { "name": "sample_rate", "value": 48000 }
+        ]
+    },
+    "audio_tasks": [
+        {
+            "name": "task1",
+            "property_settings": [
+                { "name": "is_jack_client", "value": false },
+                { "name": "frame_size", "value": 32},
+                { "name": "sample_rate", "value": 48000 }
+            ],
+            "blocks": [
+                {
+                    "name": "noise",
+                    "algorithm": "wav_read",
+                    "property_settings": [
+                        { "name": "frame_size", "value": 32},
+                        { "name": "sample_rate", "value": 48000 },
+                        { "name": "filename", "value": "noise.wav" }
+                    ],
+                    "terminal_channels": [
+                        { "name": "out", "channels": 1 }
+                    ]
+                },
+                {
+                    "name": "paging1",
+                    "algorithm": "wav_read",
+                    "property_settings": [
+                        { "name": "frame_size", "value": 32},
+                        { "name": "sample_rate", "value": 48000 },
+                        { "name": "filename", "value": "paging1.wav" }
+                    ],
+                    "terminal_channels": [
+                        { "name": "out", "channels": 1 }
+                    ]
+                },
+                {
+                    "name": "paging2",
+                    "algorithm": "wav_read",
+                    "property_settings": [
+                        { "name": "frame_size", "value": 32},
+                        { "name": "sample_rate", "value": 48000 },
+                        { "name": "filename", "value": "paging2.wav" }
+                    ],
+                    "terminal_channels": [
+                        { "name": "out", "channels": 1 }
+                    ]
+                },
+                {
+                    "name": "paging_router",
+                    "algorithm": "paging_router",
+                    "property_settings": [
+                        { "name": "channels", "value": 1 },
+                        { "name": "frame_size", "value": 32 },
+                        { "name": "sample_rate", "value": 48000 }
+                    ],
+                    "terminal_channels": [
+                        { "name": "paging_in", "channels": 2 }
+                    ]
+                },
+                {
+                    "name": "outfile",
+                    "algorithm": "wav_write",
+                    "property_settings": [
+                        { "name": "frame_size", "value": 32 },
+                        { "name": "sample_rate", "value": 48000 },
+                        { "name": "filename", "value": "out.wav" }
+                    ],
+                    "terminal_channels": [
+                        { "name": "in", "channels": 1 }
+                    ]
+                }
+            ],
+            "block_connections": [
+                {
+                    "source_block": "noise",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "paging_router",
+                    "input_terminal": "in",
+                    "input_channel": 1
+                },
+                {
+                    "source_block": "paging1",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "paging_router",
+                    "input_terminal": "paging_in",
+                    "input_channel": 1
+                },
+                {
+                    "source_block": "paging2",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "paging_router",
+                    "input_terminal": "paging_in",
+                    "input_channel": 2
+                },
+                {
+                    "source_block": "paging_router",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "outfile",
+                    "input_terminal": "in",
+                    "input_channel": 1
+                }
+            ]
+        }
+    ]
+}

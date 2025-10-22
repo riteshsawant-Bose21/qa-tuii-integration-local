@@ -28,6 +28,7 @@ private:
     bosepro::DspParamMemory<float[]> gain;
     bosepro::DspParamMemory<float[]> frequency;
     bosepro::DspParamMemory<float[]> q;
+    bosepro::DspParamMemory<std::string[]> type;
 
     void update_band(int band);
 
@@ -51,6 +52,7 @@ Peq::Peq(const bosepro::BlockConfiguration &configuration)
     assign_parameter("gain", gain, POST_FUNCTION_VECTOR(update_band));
     assign_parameter("frequency", frequency, POST_FUNCTION_VECTOR(update_band));
     assign_parameter("q", q, POST_FUNCTION_VECTOR(update_band));
+    assign_parameter("type", type, POST_FUNCTION_VECTOR(update_band));
 
     new (iir.get()) filter::IirFilter(bands, channels);
 }
@@ -64,14 +66,36 @@ void Peq::process()
 
 void Peq::update_band(int band)
 {
-    if (band_enable[band])
-    {
-        iir->design_band("peq_cs", band, frequency[band], q[band], gain[band],
-                         get_sample_rate());
-    }
-    else
+    if (!band_enable[band])
     {
         iir->design_band("disabled", band, 0.0f, 0.0f, 0.0f, get_sample_rate());
+        return;
+    }
+
+    const std::string &t = type[band];
+    if (t == "peq")
+    {
+        iir->design_band("peq_cs", band, frequency[band], q[band], gain[band], get_sample_rate());
+    }
+    else if (t == "high_shelf")
+    {
+        iir->design_band("high_shelf_cs", band, frequency[band], q[band], gain[band], get_sample_rate());
+    }
+    else if (t == "low_shelf")
+    {
+        iir->design_band("low_shelf_cs", band, frequency[band], q[band], gain[band], get_sample_rate());
+    }
+    else if (t == "notch")
+    {
+        iir->design_band("notch_cs", band, frequency[band], q[band], gain[band], get_sample_rate());
+    }
+    else if (t == "low_pass")
+    {
+        iir->design_band("lpf_cs", band, frequency[band], q[band], gain[band], get_sample_rate());
+    }
+    else if (t == "high_pass")
+    {
+        iir->design_band("hpf_cs", band, frequency[band], q[band], gain[band], get_sample_rate());
     }
 }
 

@@ -5,7 +5,6 @@ import (
 	"fusion/internal/api"
 	"fusion/internal/persistence"
 	"fusion/internal/pubsub"
-	"fusion/internal/utils"
 	"fusion/internal/version"
 	"sync"
 
@@ -87,16 +86,27 @@ func (h *Handler) HandleHTTPSet(update map[string]any) (any, error) {
 
 // HandleHTTPPatch updates only the specified fields.
 func (h *Handler) HandleHTTPPatch(update map[string]any) (any, error) {
-	existingData := h.StateManager.GetStateMap()
-	if err := utils.ApplyPatch(existingData, update); err != nil {
-		return nil, fmt.Errorf("failed to apply patch: %w", err)
+	patched, err := h.StateManager.ApplyPatch(update)
+	if err != nil {
+		return nil, err
 	}
 
-	if err := h.handleConfigUpdate(existingData, false); err != nil {
-		return nil, fmt.Errorf("failed to handle update after patch: %w", err)
+	configUpdate, err := h.StateManager.NewConfigUpdate(patched)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create config update: %w", err)
 	}
 
-	return existingData, nil
+	message := api.NewNotifyMessage(
+		api.NotifyOpConfigUpdate,
+		h.memberlist.LocalNode().Name,
+		api.WithConfigUpdate(configUpdate),
+	)
+
+	if err := h.broadcastMessage(message); err != nil {
+		return nil, fmt.Errorf("failed to broadcast patch update: %w", err)
+	}
+
+	return patched, nil
 }
 
 func (h *Handler) HandleClearAllData() error {
@@ -160,5 +170,5 @@ func (h *Handler) handleConfigUpdate(data map[string]any, clear bool) error {
 		api.WithConfigUpdate(configUpdate),
 	)
 
-	return h.broadcastUpdate(message)
+	return h.broadcastMessage(message)
 }

@@ -24,12 +24,18 @@ private:
     bosepro::DspSignalMemory<const float *[]> peak_in;
     bosepro::DspSignalMemory<float *[]> out;
     // --- user parameters ---
+    float peak_threshold_db;
+    float peak_attack_time;
+    float peak_release_time;
+    float rms_threshold_db;
+    float rms_attack_time;
+    float rms_release_time;
     float peak_threshold;
-    float peak_attack;
-    float peak_release;
+    float peak_attack_coeff;
+    float peak_release_coeff;
     float rms_threshold;
-    float rms_attack;
-    float rms_release;
+    float rms_attack_coeff;
+    float rms_release_coeff;
     int_fast32_t delay;
     // if instant attack
     bool brick_wall;                     
@@ -71,17 +77,17 @@ Limiter::Limiter(const bosepro::BlockConfiguration &configuration)
     assign_terminal("peak_in", peak_in);
     assign_terminal("out", out);
 
-    assign_parameter("peak_threshold", &peak_threshold,
+    assign_parameter("peak_threshold", &peak_threshold_db,
                      POST_FUNCTION_SCALAR(update_peak_threshold));
-    assign_parameter("peak_attack", &peak_attack,
+    assign_parameter("peak_attack", &peak_attack_time,
                      POST_FUNCTION_SCALAR(update_peak_attack));
-    assign_parameter("peak_release", &peak_release,
+    assign_parameter("peak_release", &peak_release_time,
                      POST_FUNCTION_SCALAR(update_peak_release));
-    assign_parameter("rms_threshold", &rms_threshold,
+    assign_parameter("rms_threshold", &rms_threshold_db,
                      POST_FUNCTION_SCALAR(update_rms_threshold));
-    assign_parameter("rms_attack", &rms_attack,
+    assign_parameter("rms_attack", &rms_attack_time,
                      POST_FUNCTION_SCALAR(update_rms_attack));
-    assign_parameter("rms_release", &rms_release,
+    assign_parameter("rms_release", &rms_release_time,
                      POST_FUNCTION_SCALAR(update_rms_release));
     assign_parameter("delay", &delay);
     assign_parameter("brick_wall", &brick_wall);
@@ -130,22 +136,24 @@ void Limiter::process()
         if (brick_wall)
         {
             // instant attack, slower release
-            peak_level = (peak_energy > peak_level) ? peak_energy : peak_level + 
-                (peak_energy - peak_level) * peak_release;
+            peak_level = (peak_energy > peak_level) ? peak_energy
+                : peak_level + (peak_energy - peak_level) * peak_release_coeff;
             // apply threshold
             // - log10(peak_level^1/2), 0.5 is a square-root to convert 
             // from energy to amplitude
             float peak_adjust = peak_threshold - 0.5f * log10f(peak_level);
             // limit gain range between 0 and -100 dB
-            peak_adjust = (peak_adjust > 0.0f) ? 
+            peak_adjust = (peak_adjust > 0.0f) ?
                 0.0f : ((peak_adjust < -5.0f) ? -5.0f : peak_adjust);
-            peak_gain = peak_gain + (peak_adjust - peak_gain) * peak_attack;
+            peak_gain = peak_gain
+                + (peak_adjust - peak_gain) * peak_attack_coeff;
         }
         else
         {
             // fast attack, slower release
-            peak_level = peak_level + (peak_energy - peak_level) * 
-                ((peak_energy < peak_level) ? peak_release : peak_attack);
+            peak_level = peak_level + (peak_energy - peak_level) *
+                ((peak_energy < peak_level) ? peak_release_coeff
+                 : peak_attack_coeff);
             // apply threshold
             // - log10(peak_level^1/2), 0.5 is a square-root to convert 
             // from energy to amplitude
@@ -155,7 +163,7 @@ void Limiter::process()
                 0.0f : ((peak_adjust < -5.0f) ? -5.0f : peak_adjust);
             peak_gain = peak_adjust;
         }
-        
+
         // RMS filter on squared signal (the M in RMS)
         rms_level = rms_level + (rms_energy - rms_level) * rms_coeff;
         // apply threshold
@@ -164,8 +172,8 @@ void Limiter::process()
         rms_adjust = (rms_adjust > 0.0f) ? 
             0.0f : ((rms_adjust < -5.0f) ? -5.0f : rms_adjust);
         // apply attack and release filter
-        rms_gain = rms_gain + (rms_adjust - rms_gain) * ((rms_adjust > rms_gain) ? 
-            rms_release : rms_attack);
+        rms_gain = rms_gain + (rms_adjust - rms_gain)
+            * ((rms_adjust > rms_gain) ? rms_release_coeff : rms_attack_coeff);
 
         // get the linear gain
         float g = powf(10.0f, (rms_gain < peak_gain) ? rms_gain : peak_gain);
@@ -196,41 +204,47 @@ void Limiter::process()
 // convert peak threshold from dB to log10
 void Limiter::update_peak_threshold()
 {
-    peak_threshold = 0.05 * peak_threshold;
+    peak_threshold = 0.05 * peak_threshold_db;
 }
 
 // convert attack time constant to integrator coefficient
 void Limiter::update_peak_attack()
 {
-    peak_attack = 1.0f - exp(-1.0/(get_sample_rate() * peak_attack));
+    peak_attack_coeff = 1.0f
+        - exp(-1.0/(get_sample_rate() * peak_attack_time * 0.001f));
 }
 
 // convert release time constant to integrator coefficient
 void Limiter::update_peak_release()
 {
-    peak_release = 1.0f - exp(-1.0/(get_sample_rate() * peak_release));
+    peak_release_coeff = 1.0f
+        - exp(-1.0/(get_sample_rate() * peak_release_time * 0.001f));
 }
 
 // convert RMS threshold from dB to log10
 void Limiter::update_rms_threshold()
 {
-    rms_threshold = 0.05 * rms_threshold;
+    rms_threshold = 0.05 * rms_threshold_db;
 }
 
 // convert attack time constant to integrator coefficient
 void Limiter::update_rms_attack()
 {
-    rms_attack = 1.0f - exp(-1.0/(get_sample_rate() * rms_attack));
+    rms_attack_coeff = 1.0f
+        - exp(-1.0/(get_sample_rate() * rms_attack_time * 0.001f));
     // RMS is 4 times faster than attack & release.
-    rms_coeff = 4.0f * ((rms_attack > rms_release) ? rms_attack : rms_release);
+    rms_coeff = 4.0f * ((rms_attack_coeff > rms_release_coeff)
+                        ? rms_attack_coeff : rms_release_coeff);
 }
 
 // convert release time constant to integrator coefficient
 void Limiter::update_rms_release()
 {
-    rms_release = 1.0f - exp(-1.0/(get_sample_rate() * rms_release));
+    rms_release_coeff = 1.0f
+        - exp(-1.0/(get_sample_rate() * rms_release_time * 0.001f));
     // RMS is 4 times faster than attack & release.
-    rms_coeff = 4.0f * ((rms_attack > rms_release) ? rms_attack : rms_release);
+    rms_coeff = 4.0f * ((rms_attack_coeff > rms_release_coeff)
+                        ? rms_attack_coeff : rms_release_coeff);
 }
 
 } // namespace

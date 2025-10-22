@@ -314,12 +314,14 @@ class _BuildingPlanState extends State<BuildingPlan> {
                                                 ? TextField(
                                                   controller: _editControllers[index],
                                                   focusNode: _editFocusNodes[index],
+                                                  maxLength: 24,
                                                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                                     fontSize: 12,
                                                     fontWeight: FontWeight.w600,
                                                     color: Theme.of(context).colorScheme.fusionTextViewColor,
                                                   ),
                                                   decoration: InputDecoration(
+                                                    counterText: "",
                                                     border: InputBorder.none,
                                                     contentPadding: EdgeInsets.zero,
                                                     isDense: true,
@@ -622,12 +624,14 @@ class _BuildingPlanState extends State<BuildingPlan> {
                     TextField(
                       controller: _floorNameController,
                       focusNode: _floorNameFocusNode,
+                      maxLength: 24,
                       autofocus: true,
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.fusionTextViewColor,
                         fontSize: 12,
                       ),
                       decoration: InputDecoration(
+                        counterText: "",
                         hintText: 'Enter floor name',
                         hintStyle: TextStyle(
                           color: Theme.of(context).colorScheme.grey,

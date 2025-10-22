@@ -24,6 +24,7 @@ private:
 
     bosepro::DspCoeffMemory<float *[]> gain;
     bosepro::DspCoeffMemory<bool *[]> mute;
+    bosepro::DspCoeffMemory<bool []> input_mute;
 
     bosepro::DspTelemetryMemory<bool []> input_presence;
 
@@ -44,6 +45,7 @@ MatrixMixer::MatrixMixer(const bosepro::BlockConfiguration &configuration)
 
     assign_parameter("gain", gain, bosepro::db_to_linear);
     assign_parameter("mute", mute);
+    assign_parameter("input_mute", input_mute);
 
     assign_telemetry("input_presence", input_presence);
 }
@@ -71,6 +73,10 @@ void MatrixMixer::process()
 
         for (int input = 0; input < num_inputs; input++)
         {
+            if (input_mute[input]) {
+                continue;
+            }
+
             float g = mute[input][output] ? 0.0f : gain[input][output];
 
             for (int_fast32_t sample = 0; sample < get_frame_size(); sample++)

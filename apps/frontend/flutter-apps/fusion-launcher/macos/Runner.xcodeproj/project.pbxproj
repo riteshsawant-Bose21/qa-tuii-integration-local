@@ -27,9 +27,10 @@
 		33CC10F32044A3C60003C045 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 33CC10F22044A3C60003C045 /* Assets.xcassets */; };
 		33CC10F62044A3C60003C045 /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 33CC10F42044A3C60003C045 /* MainMenu.xib */; };
 		33CC11132044BFA00003C045 /* MainFlutterWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33CC11122044BFA00003C045 /* MainFlutterWindow.swift */; };
-		3D6FFA732E170B7C00B60E09 /* libmaceapi.dylib in Bundle Framework */ = {isa = PBXBuildFile; fileRef = DCDFE9222DDB260500C09D96 /* libmaceapi.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		5A32BAED1198C743B344D048 /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D43E3FE05B467C89DC6A68C7 /* Pods_Runner.framework */; };
 		A59A3F6218E913BEBB4A4C30 /* Pods_RunnerTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 605E46AD842B310D26D4980B /* Pods_RunnerTests.framework */; };
+		DC6F364B2E9915A800810BDB /* libMaceAPI.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = DC6F364A2E9915A800810BDB /* libMaceAPI.dylib */; };
+		DC6F364C2E9915B300810BDB /* libMaceAPI.dylib in Bundle Framework */ = {isa = PBXBuildFile; fileRef = DC6F364A2E9915A800810BDB /* libMaceAPI.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -56,7 +57,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				3D6FFA732E170B7C00B60E09 /* libmaceapi.dylib in Bundle Framework */,
+				DC6F364C2E9915B300810BDB /* libMaceAPI.dylib in Bundle Framework */,
 			);
 			name = "Bundle Framework";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -70,7 +71,7 @@
 		331C80D7294CF71000263BE5 /* RunnerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunnerTests.swift; sourceTree = "<group>"; };
 		333000ED22D3DE5D00554162 /* Warnings.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Warnings.xcconfig; sourceTree = "<group>"; };
 		335BBD1A22A9A15E00E9071D /* GeneratedPluginRegistrant.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GeneratedPluginRegistrant.swift; sourceTree = "<group>"; };
-		33CC10ED2044A3C60003C045 /* fusion_design_tool_prototype.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = fusion_design_tool_prototype.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		33CC10ED2044A3C60003C045 /* Fusion Launcher.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Fusion Launcher.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		33CC10F02044A3C60003C045 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		33CC10F22044A3C60003C045 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Assets.xcassets; path = Runner/Assets.xcassets; sourceTree = "<group>"; };
 		33CC10F52044A3C60003C045 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/MainMenu.xib; sourceTree = "<group>"; };
@@ -89,7 +90,7 @@
 		BF091CB27D2C76F9B1D0043C /* Pods-Runner.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.debug.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"; sourceTree = "<group>"; };
 		D1C0955165201363E6CF84D9 /* Pods-Runner.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.profile.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.profile.xcconfig"; sourceTree = "<group>"; };
 		D43E3FE05B467C89DC6A68C7 /* Pods_Runner.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Runner.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		DCDFE9222DDB260500C09D96 /* libmaceapi.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libmaceapi.dylib; sourceTree = "<group>"; };
+		DC6F364A2E9915A800810BDB /* libMaceAPI.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libMaceAPI.dylib; sourceTree = "<group>"; };
 		F0BE72888DCF496AA8940655 /* Pods-RunnerTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.release.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.release.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -132,6 +133,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				5A32BAED1198C743B344D048 /* Pods_Runner.framework in Frameworks */,
+				DC6F364B2E9915A800810BDB /* libMaceAPI.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -168,14 +170,14 @@
 				33CC10EE2044A3C60003C045 /* Products */,
 				D73912EC22F37F3D000D13A0 /* Frameworks */,
 				4C9AEABA018BAD8EA7A89317 /* Pods */,
-				DCDFE9222DDB260500C09D96 /* libmaceapi.dylib */,
+				DC6F364A2E9915A800810BDB /* libMaceAPI.dylib */,
 			);
 			sourceTree = "<group>";
 		};
 		33CC10EE2044A3C60003C045 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				33CC10ED2044A3C60003C045 /* fusion_design_tool_prototype.app */,
+				33CC10ED2044A3C60003C045 /* Fusion Launcher.app */,
 				331C80D5294CF71000263BE5 /* RunnerTests.xctest */,
 			);
 			name = Products;
@@ -279,7 +281,7 @@
 			);
 			name = Runner;
 			productName = Runner;
-			productReference = 33CC10ED2044A3C60003C045 /* fusion_design_tool_prototype.app */;
+			productReference = 33CC10ED2044A3C60003C045 /* Fusion Launcher.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */

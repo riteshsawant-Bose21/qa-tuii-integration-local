@@ -190,7 +190,7 @@ func (c *Cluster) GetVIP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vips, err := c.getVIPFromConfig()
+	vip, err := c.getVIPFromConfig()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -198,21 +198,18 @@ func (c *Cluster) GetVIP(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
 
-	for _, vip := range vips {
-		if isVip := c.isLocalVIP(vip); isVip {
+	if isVip := c.isLocalVIP(vip); isVip {
 
-			local, vip, ok := c.getLocalForVIP(vip)
-			if !ok {
-				w.WriteHeader(http.StatusNotFound)
-				return
-			}
-
-			json.NewEncoder(w).Encode(map[string]string{
-				"local": local.String(),
-				"vip":   vip.String(),
-			})
+		local, vip, ok := c.getLocalForVIP(vip)
+		if !ok {
+			w.WriteHeader(http.StatusNotFound)
 			return
 		}
+
+		json.NewEncoder(w).Encode(map[string]string{
+			"local": local.String(),
+			"vip":   vip.String(),
+		})
 	}
 
 	w.WriteHeader(http.StatusNotFound)
@@ -312,7 +309,7 @@ func (c *Cluster) ReloadVIPLocal(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// updateVIP updates keepalived.conf with the new VIP but DOES NOT restart keepalived.
+// updateVIP updates keepalived configuration with the new VIP but DOES NOT restart keepalived.
 func (c *Cluster) updateVIP(vip string) error {
 
 	if err := validateVIP(vip); err != nil {
@@ -334,15 +331,6 @@ func (c *Cluster) reloadVIP() error {
 	if err := c.restartKeepalived(); err != nil {
 		return err
 	}
-
-	logger := logging.GetLogger()
-
-	// After reload, attempt to join the gossip ring so cluster size grows
-	if err := c.JoinMemberlist(); err != nil {
-		logger.Error("JoinMemberlist after reloadVIP: %v", err)
-	}
-
-	logger.Debug("Reloaded VIP")
 
 	return nil
 }
@@ -377,7 +365,21 @@ func (c *Cluster) getLocalDeviceInfo() persistence.DeviceInfo {
 	if err != nil {
 		return persistence.DeviceInfo{}
 	}
+	info.IsPrimaryNode = c.isLocalNodePrimary()
+
 	return *info
+}
+
+func (c *Cluster) isLocalNodePrimary() bool {
+
+	vip, err := c.getVIPFromConfig()
+	if err != nil {
+		logging.GetLogger().Error("Failed to get VIP from config: %v", err)
+		return false
+	}
+
+	_, _, isLocal := c.getLocalForVIP(vip)
+	return isLocal
 }
 
 func (c *Cluster) applyPatch(patch *persistence.DevicePatch, info *persistence.DeviceInfo) {
@@ -441,7 +443,6 @@ func validateNoDuplication(
 }
 
 func (c *Cluster) setVIPInConfig(newVIP string) error {
-
 	if c.config.Local {
 		return setVIPInLocalConfig(newVIP)
 	}
@@ -505,19 +506,46 @@ func (c *Cluster) setVIPInConfig(newVIP string) error {
 		return fmt.Errorf("no virtual_ipaddress block found")
 	}
 
-	// Write the modified content back to disk
-	outFile, err := os.Create(c.configPath)
-	if err != nil {
-		return fmt.Errorf("unable to open config for writing: %w", err)
-	}
-	defer outFile.Close()
+	dir := filepath.Dir(c.configPath)
 
-	writer := bufio.NewWriter(outFile)
+	// Write to a temporary file
+	tmpFile, err := os.CreateTemp(dir, ConfFile+".*.tmp")
+	if err != nil {
+		return fmt.Errorf("unable to create temp config file: %w", err)
+	}
+
+	writer := bufio.NewWriter(tmpFile)
 	for _, l := range outLines {
-		_, _ = writer.WriteString(l + "\n")
+		if _, err := writer.WriteString(l + "\n"); err != nil {
+			tmpFile.Close()
+			os.Remove(tmpFile.Name())
+			return fmt.Errorf("error writing to temp config: %w", err)
+		}
 	}
 	if err := writer.Flush(); err != nil {
-		return fmt.Errorf("error writing updated config: %w", err)
+		tmpFile.Close()
+		os.Remove(tmpFile.Name())
+		return fmt.Errorf("error flushing temp config: %w", err)
+	}
+	if err := tmpFile.Close(); err != nil {
+		os.Remove(tmpFile.Name())
+		return fmt.Errorf("error closing temp config: %w", err)
+	}
+
+	// Backup the current configuration file
+	backupPath := filepath.Join(dir, ConfFile+"*.bak")
+	if err := os.Rename(c.configPath, backupPath); err != nil {
+		// If backup fails, remove temp and abort
+		os.Remove(tmpFile.Name())
+		return fmt.Errorf("error creating backup of config: %w", err)
+	}
+
+	// Replace with the new configuration
+	if err := os.Rename(tmpFile.Name(), c.configPath); err != nil {
+		// If replace fails, restore the backup
+		os.Rename(backupPath, c.configPath)
+		os.Remove(tmpFile.Name())
+		return fmt.Errorf("error replacing config file: %w", err)
 	}
 
 	return nil

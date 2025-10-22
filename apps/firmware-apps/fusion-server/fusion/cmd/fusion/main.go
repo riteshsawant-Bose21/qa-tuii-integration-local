@@ -8,7 +8,9 @@ import (
 	"math/rand"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"runtime/debug"
+	"runtime/pprof"
 	"strconv"
 	"syscall"
 	"time"
@@ -31,6 +33,7 @@ func parseFlags() *api.AppConfig {
 	bindPort := flag.Int("bind-port", 7946, "Bind port for cluster communication (default 7946)")
 	local := flag.Bool("local", false, "Run in local-only mode (no clustering)")
 	verbose := flag.Bool("verbose", false, "Enable verbose logging")
+	profile := flag.Bool("profile", false, "Enable profile dump")
 	flag.Parse()
 
 	if *versionFlag {
@@ -45,6 +48,7 @@ func parseFlags() *api.AppConfig {
 		BindPort: *bindPort,
 		Local:    *local,
 		Verbose:  *verbose,
+		Profile:  *profile,
 	}
 }
 
@@ -56,6 +60,7 @@ func createUniqueNodeName(baseName string) string {
 }
 
 func main() {
+
 	defer func() {
 		if r := recover(); r != nil {
 			logging.GetLogger().Fatal("PANIC: %v\n%s", r, debug.Stack())
@@ -63,6 +68,27 @@ func main() {
 	}()
 
 	config := parseFlags()
+
+	if config.Profile {
+		// Create profile dump
+		timestamp := time.Now().Format("20060102_150405")
+		profilePath := filepath.Join("/tmp", fmt.Sprintf("fusion_server_cpu_%s.prof", timestamp))
+
+		f, err := os.Create(profilePath)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "failed to create profile file: %v\n", err)
+			os.Exit(1)
+		}
+		defer f.Close()
+
+		// Start CPU profiling
+		fmt.Printf("Writing CPU profile to %s\n", profilePath)
+		if err := pprof.StartCPUProfile(f); err != nil {
+			fmt.Fprintf(os.Stderr, "could not start CPU profile: %v\n", err)
+			os.Exit(1)
+		}
+		defer pprof.StopCPUProfile()
+	}
 
 	app := app.NewApp(config)
 	defer app.Close()

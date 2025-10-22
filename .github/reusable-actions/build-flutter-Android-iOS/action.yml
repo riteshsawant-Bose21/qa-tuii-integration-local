@@ -10,6 +10,12 @@ inputs:
   keychain_password:
     description: 'Keychain password for iOS build'
     required: true
+  notarize_apple_id:
+    description: 'Apple ID for notarization'
+    required: true
+  notarize_app_password:
+    description: 'App-specific password for notarization'
+    required: true
   nexus_url:
     description: 'Nexus repository URL'
     required: true
@@ -42,13 +48,19 @@ runs:
       run: |
         flutter pub get
         moon run flutter-apps:build-mac-ios-android
+        codesign --force  --verbose=4 --display  --options runtime --sign "Developer ID Application: Transom Post Opco LLC (7FDK3RUF89)" --identifier "com.bosepro.fusion" -vvv ./build/macos/Build/Products/Release/Fusion\ Launcher.app/Contents/Frameworks/*
+        codesign --force  --verbose=4 --display  --options runtime --sign "Developer ID Application: Transom Post Opco LLC (7FDK3RUF89)" --identifier "com.bosepro.fusion" -vvv ./build/macos/Build/Products/Release/Fusion\ Launcher.app/Contents/MacOS/Fusion\ Launcher*
+        codesign --force  --verbose=4 --display  --options runtime --sign "Developer ID Application: Transom Post Opco LLC (7FDK3RUF89)" --identifier "com.bosepro.fusion" -vvv ./build/macos/Build/Products/Release/Fusion\ Launcher.app
+        codesign -vvv -d --verbose ./build/macos/Build/Products/Release/Fusion\ Launcher.app
         hdiutil create -srcfolder "./build/macos/Build/Products/Release/Fusion Launcher.app" -volname "Fusion Launcher app" -fs HFS+ -fsargs "-c c=64,a=16,e=16" -format UDRW ./build/macos/Build/Products/Release/Fusion_Launcher.dmg
         hdiutil convert ./build/macos/Build/Products/Release/Fusion_Launcher.dmg -format UDZO -imagekey zlib-level=9 -ov -o ./build/macos/Build/Products/Release/Fusion_Launcher_installer.dmg
-        VERSION="${{ steps.get_version.outputs.version }}-${GITHUB_RUN_NUMBER}+$(git rev-parse --short HEAD)"
-        curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T ./build/app/outputs/flutter-apk/app-release.apk ${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/${GITHUB_REF_NAME}/$VERSION/flutter-apk/Fusion-Launcher-$VERSION.apk
-        curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T ./build/ios/ipa/Fusion\ Launcher.ipa ${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/${GITHUB_REF_NAME}/$VERSION/flutter-iOS/Fusion-Launcher-$VERSION.ipa
-        curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T ./build/macos/Build/Products/Release/Fusion_Launcher_installer.dmg ${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/${GITHUB_REF_NAME}/$VERSION/flutter-macOS/Fusion-Launcher-$VERSION.dmg
+        xcrun --verbose notarytool submit ./build/macos/Build/Products/Release/Fusion_Launcher_installer.dmg --apple-id ${{ inputs.notarize_apple_id }} --password ${{ inputs.notarize_app_password }} --team-id "7FDK3RUF89" --wait
+        xcrun --verbose stapler staple ./build/macos/Build/Products/Release/Fusion_Launcher_installer.dmg
+        VERSION="${{ steps.get_version.outputs.version }}-${GITHUB_RUN_NUMBER}+$(git rev-parse --short=8 HEAD)"
+        curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T ./build/app/outputs/flutter-apk/app-release.apk ${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}/$VERSION/flutter-apk/Fusion-Launcher-$VERSION.apk
+        curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T ./build/ios/ipa/Fusion\ Launcher.ipa ${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}/$VERSION/flutter-iOS/Fusion-Launcher-$VERSION.ipa
+        curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T ./build/macos/Build/Products/Release/Fusion_Launcher_installer.dmg ${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}/$VERSION/flutter-macOS/Fusion-Launcher-$VERSION.dmg
         echo "Builds uploaded to Nexus successfully!"
-        echo "flutter-apk: ${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/${GITHUB_REF_NAME}/$VERSION/flutter-apk/Fusion-Launcher-$VERSION.apk"
-        echo "flutter-iOS: ${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/${GITHUB_REF_NAME}/$VERSION/flutter-iOS/Fusion-Launcher-$VERSION.ipa"
-        echo "flutter-macOS: ${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/${GITHUB_REF_NAME}/$VERSION/flutter-macOS/Fusion-Launcher-$VERSION.dmg"
+        echo "flutter-apk: ${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}/$VERSION/flutter-apk/Fusion-Launcher-$VERSION.apk"
+        echo "flutter-iOS: ${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}/$VERSION/flutter-iOS/Fusion-Launcher-$VERSION.ipa"
+        echo "flutter-macOS: ${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}/$VERSION/flutter-macOS/Fusion-Launcher-$VERSION.dmg"

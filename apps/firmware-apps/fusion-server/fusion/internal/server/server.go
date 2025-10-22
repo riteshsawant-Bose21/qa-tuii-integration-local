@@ -59,9 +59,9 @@ func NewFusionServer(node string, handler *handler.Handler, hub *pubsub.Hub) *Fu
 	return server
 }
 
-// BroadcastUpdate sends a notification message to all connected WebSocket clients.
+// BroadcastMessage sends a notification message to all connected WebSocket clients.
 // It acquires a read lock on the clients list to ensure thread-safe access.
-func (s *FusionServer) BroadcastUpdate(message *api.NotifyMessage) error {
+func (s *FusionServer) BroadcastMessage(message *api.NotifyMessage) error {
 	s.wsLock.RLock()
 	defer s.wsLock.RUnlock()
 
@@ -606,6 +606,28 @@ func (s *FusionServer) ListMessages(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequireGet(w, r) {
 		return
 	}
+	s.handler.HandleAudioList(w, r)
+}
+
+func (s *FusionServer) ListMessageTags(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireGet(w, r) {
+		return
+	}
+	s.handler.HandleAudioTagList(w, r)
+}
+
+func (s *FusionServer) GetMessage(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireGet(w, r) {
+		return
+	}
+	s.handler.HandleAudioGet(w, r)
+}
+
+func (s *FusionServer) StreamMessage(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireGet(w, r) {
+		return
+	}
+	s.handler.HandleAudioStream(w, r)
 }
 
 func (s *FusionServer) UploadMessage(w http.ResponseWriter, r *http.Request) {
@@ -620,6 +642,18 @@ func (s *FusionServer) DeleteMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.handler.HandleAudioRemove(w, r)
+}
+
+func (s *FusionServer) ListScheduledMessages(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireGet(w, r) {
+		return
+	}
+}
+
+func (s *FusionServer) ScheduleMessage(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequirePost(w, r) {
+		return
+	}
 }
 
 func (s *FusionServer) ListZones(w http.ResponseWriter, r *http.Request) {
@@ -642,18 +676,6 @@ func (s *FusionServer) GetSystemDiagnostics(w http.ResponseWriter, r *http.Reque
 
 func (s *FusionServer) GetSystemStatus(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequireGet(w, r) {
-		return
-	}
-}
-
-func (s *FusionServer) ListScheduledMessages(w http.ResponseWriter, r *http.Request) {
-	if !utils.RequireGet(w, r) {
-		return
-	}
-}
-
-func (s *FusionServer) ScheduleMessage(w http.ResponseWriter, r *http.Request) {
-	if !utils.RequirePost(w, r) {
 		return
 	}
 }
