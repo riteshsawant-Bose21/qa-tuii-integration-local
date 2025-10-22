@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/models/project_entities/controller.dart';
 import 'package:fusion_lib/models/project_entities/endpoints.dart';
 
 import '../../../../core/models/products_data.dart';
@@ -19,12 +20,7 @@ class SchematicsListingview extends StatefulWidget {
 }
 
 class _SchematicsListingviewState extends State<SchematicsListingview> {
-  List<Source> _reorderableSources = <Source>[];
-  List<FusionEndpoints> _reorderableEndpoints = <FusionEndpoints>[];
-  List<GenericHardwareComponent> _reorderableProcessors = <GenericHardwareComponent>[];
-  List<Map<String, dynamic>> _reorderableSpeakers = <Map<String, dynamic>>[];
-  List<Map<String, dynamic>> _reorderableControllers = <Map<String, dynamic>>[];
-  List<Map<String, dynamic>> _reorderableAccessories = <Map<String, dynamic>>[];
+  List<Speaker> _reorderableSpeakers = <Speaker>[];
 
   List<Map<String, dynamic>> _reorderableZones = <Map<String, dynamic>>[];
   final Map<String, List<Map<String, dynamic>>> _reorderableSubZones = <String, List<Map<String, dynamic>>>{};
@@ -43,146 +39,6 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
   }
 
   void _initializeReorderableLists() {
-    // Initialize sources from the view model
-    _reorderableSources = List<Source>.from(serviceLocator<ProjectViewModel>().sources);
-
-    // Initialize endpoints
-    _reorderableEndpoints = List<FusionEndpoints>.from(serviceLocator<ProjectViewModel>().fusionEndpoints);
-
-    // Initialize processors
-    final List<FusionDsp> processors = serviceLocator<ProjectViewModel>().fusionDevices;
-    _reorderableProcessors =
-        processors
-            .map(
-              (FusionDsp device) => GenericHardwareComponent(
-                id: device.id,
-                locationEntity: LocationModel(id: device.location),
-                name: device.name,
-                sku: device.id,
-                type: GenericHardwareComponentType.other,
-                assetImagePath: "assets/images/processor_img.webp",
-                price: 1000,
-                pos: const Offset(0, 0),
-              ),
-            )
-            .toList();
-
-    // Initialize speakers
-    _reorderableSpeakers = <Map<String, dynamic>>[
-      <String, dynamic>{
-        "zones": <Map<String, Object>>[
-          <String, Object>{
-            "id": "zone_001",
-            "name": "Main Hall",
-            "processingBlocks": <Map<String, Object>>[
-              <String, Object>{
-                "id": "pb_001",
-                "type": "equalizer",
-                "parameters": <String, Object>{"bands": 10, "enabled": true},
-              },
-              <String, Object>{
-                "id": "pb_002",
-                "type": "compressor",
-                "parameters": <String, num>{"threshold": -20, "ratio": 4.0},
-              },
-            ],
-            "selectedMixIndex": 0,
-            "listeningAreasIds": <String>["la_001", "la_002", "la_003"],
-            "sourceSetIds": <String>["ss_001", "ss_002"],
-            "zoneColor": "#FF5733",
-            "subZones": <String>["subzone_001", "subzone_002"],
-            "circuits": <String>["circuit_001", "circuit_002", "circuit_003"],
-          },
-          <String, Object>{
-            "id": "zone_002",
-            "name": "Conference Room A",
-            "processingBlocks": <Map<String, Object>>[
-              <String, Object>{
-                "id": "pb_003",
-                "type": "reverb",
-                "parameters": <String, double>{"roomSize": 0.7, "decay": 2.5},
-              },
-            ],
-            "selectedMixIndex": 1,
-            "listeningAreasIds": <String>["la_004", "la_005"],
-            "sourceSetIds": <String>["ss_003"],
-            "zoneColor": "#3498DB",
-            "subZones": <String>["subzone_003"],
-            "circuits": <String>["circuit_004"],
-          },
-        ],
-        "subZones": <Map<String, Object>>[
-          <String, Object>{
-            "id": "subzone_001",
-            "name": "Stage Area",
-            "processingBlocks": <Map<String, Object>>[
-              <String, Object>{
-                "id": "pb_004",
-                "type": "delay",
-                "parameters": <String, num>{"delayTime": 50, "feedback": 0.3},
-              },
-            ],
-            "listeningAreasIds": <String>["la_001", "la_002"],
-            "circuits": <String>["circuit_001", "circuit_002"],
-          },
-          <String, Object>{
-            "id": "subzone_002",
-            "name": "Audience Area",
-            "processingBlocks": <dynamic>[],
-            "listeningAreasIds": <String>["la_003"],
-            "circuits": <String>["circuit_003"],
-          },
-          <String, Object>{
-            "id": "subzone_003",
-            "name": "Presentation Zone",
-            "processingBlocks": <Map<String, Object>>[
-              <String, Object>{
-                "id": "pb_005",
-                "type": "limiter",
-                "parameters": <String, int>{"threshold": -3, "release": 100},
-              },
-            ],
-            "listeningAreasIds": <String>["la_004"],
-            "circuits": <String>["circuit_004"],
-          },
-        ],
-        "circuits": <Map<String, Object>>[
-          <String, Object>{
-            "id": "circuit_001",
-            "name": "Front Left Speakers",
-            "listeningAreaIds": <String>["la_001"],
-          },
-          <String, Object>{
-            "id": "circuit_002",
-            "name": "Front Right Speakers",
-            "listeningAreaIds": <String>["la_001", "la_002"],
-          },
-          <String, Object>{
-            "id": "circuit_003",
-            "name": "Rear Speakers",
-            "listeningAreaIds": <String>["la_003"],
-          },
-          <String, Object>{
-            "id": "circuit_004",
-            "name": "Ceiling Speakers",
-            "listeningAreaIds": <String>["la_004", "la_005"],
-          },
-        ],
-      },
-    ];
-
-    // Initialize controllers
-    _reorderableControllers = <Map<String, dynamic>>[
-      <String, dynamic>{'name': 'Control PAL LT', 'assetPath': 'assets/icons/lising_view_icon.png'},
-      <String, dynamic>{'name': 'ControlSpace CC-64', 'assetPath': 'assets/icons/lising_view_icon.png'},
-    ];
-
-    // Initialize accessories
-    _reorderableAccessories = <Map<String, dynamic>>[
-      <String, dynamic>{'name': 'Rack 4U', 'assetPath': 'assets/icons/lising_view_icon.png'},
-      <String, dynamic>{'name': 'Rack 8U', 'assetPath': 'assets/icons/lising_view_icon.png'},
-    ];
-
     // Initialize zones with subzones and devices
     _reorderableZones = <Map<String, dynamic>>[
       <String, dynamic>{
@@ -236,6 +92,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
 
   @override
   void dispose() {
+    _projectViewModel.clearSelections();
     super.dispose();
   }
 
@@ -343,15 +200,10 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                       ],
                     );
                     serviceLocator<ProjectViewModel>().addHardware(hardware: source);
-                    FusionToast.show(
+                    FusionToast.success(
                       context,
                       message: "Source \"${item.name}\" added",
-                      icon: Icons.check_circle_outline,
-                      backgroundColor: Colors.green[600],
                     );
-                    setState(() {
-                      _reorderableSources.add(source);
-                    });
                   }
                   /// Endpoints [onTapAddDevice]
                   else if (item is ProductQueryModel) {
@@ -361,17 +213,6 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                       pos: Offset.zero,
                     );
 
-                    // todo remove this once you implement onreorder from PVM
-                    final FusionEndpoints endpoint = FusionEndpoints(
-                      name: item.name,
-                      assetImagePath: item.image.isNotEmpty ? item.image : 'assets/icons/endpoint_icon.png',
-                      pos: Offset.zero,
-                      locationEntity: LocationModel(listeningAreaId: areaId, floorId: floorId),
-                      sku: "",
-                      ipAddress: "",
-                      price: item.price,
-                      hardwareName: "",
-                    );
                     serviceLocator<ProjectViewModel>().addHardware(hardware: hardware);
                     FusionToast.show(
                       context,
@@ -379,9 +220,6 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                       icon: Icons.check_circle_outline,
                       backgroundColor: Colors.green[600],
                     );
-                    setState(() {
-                      _reorderableEndpoints.add(endpoint);
-                    });
                   }
                 },
               ),
@@ -392,13 +230,33 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                 width: normalColumnWidth,
                 height: double.infinity,
                 backgroundColor: Colors.grey[200]!,
-                sectionContent: _buildProcessorsContent(),
+                sectionContent: _buildProcessorsAndAmplifiers(),
                 listeningAreas: _listeningAreas,
                 zones: _zones,
                 selectedDeviceId: _projectViewModel.selectedDevice?.type == SelectedItemType.processor ? _projectViewModel.selectedDevice?.id : null,
                 onTapAddDevice: (dynamic item, String areaId, String floorId) {
+                  print("Adding hardware of type: ${item.type}");
+
                   if (item is ProductQueryModel) {
-                    // final HardwareComponent hardware = serviceLocator<ProjectViewModel>().fromProductQueryModel();
+                    final HardwareComponent hardware = serviceLocator<ProjectViewModel>().fromProductQueryModel(
+                      item,
+                      locationEntity: LocationModel(listeningAreaId: areaId, floorId: floorId),
+                      pos: Offset.zero,
+                    );
+                    if (item.type == ProductType.dsps) {
+                      serviceLocator<ProjectViewModel>().addHardware(hardware: hardware);
+                      FusionToast.success(
+                        context,
+                        message: "Processors \"${item.name}\" added",
+                      );
+                    } else {
+                      serviceLocator<ProjectViewModel>().addHardware(hardware: hardware);
+                      FusionToast.success(
+                        context,
+                        message: "Amplifier \"${item.name}\" added",
+                      );
+                      return;
+                    }
                   }
                 },
               ),
@@ -427,7 +285,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                 },
               ),
 
-              // Controllers
+              /// Controllers
               CommonDevicesSectionWidget(
                 title: "Controllers",
                 width: normalColumnWidth,
@@ -439,36 +297,62 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                 selectedDeviceId: _projectViewModel.selectedDevice?.type == SelectedItemType.controller ? _projectViewModel.selectedDevice?.id : null,
                 onTapAddDevice: (dynamic item, String areaId, String floorId) {
                   if (item is ProductQueryModel) {
-                    final Map<String, dynamic> deviceData = <String, dynamic>{
-                      'name': item.name,
-                      'assetPath': item.image.isNotEmpty ? item.image : 'assets/icons/lising_view_icon.png',
-                    };
-                    setState(() {
-                      _reorderableControllers.add(deviceData);
-                    });
+                    final HardwareComponent hardware = serviceLocator<ProjectViewModel>().fromProductQueryModel(
+                      item,
+                      locationEntity: LocationModel(listeningAreaId: areaId, floorId: floorId),
+                      pos: Offset.zero,
+                    );
+
+                    serviceLocator<ProjectViewModel>().addHardware(hardware: hardware);
+                    FusionToast.show(
+                      context,
+                      message: "Controller \"${item.name}\" added",
+                      icon: Icons.check_circle_outline,
+                      backgroundColor: Colors.green[600],
+                    );
                   }
                 },
               ),
 
-              // Accessories
+              /// Accessories
               CommonDevicesSectionWidget(
                 title: "Accessories",
                 width: normalColumnWidth,
                 height: double.infinity,
                 backgroundColor: Colors.grey[200]!,
-                sectionContent: _buildAccessoriesContent(),
+                sectionContent: _buildAccessories(),
                 listeningAreas: _listeningAreas,
                 zones: _zones,
-                selectedDeviceId: _projectViewModel.selectedDevice?.type == SelectedItemType.accessory ? _projectViewModel.selectedDevice?.id : null,
+                selectedDeviceId: _projectViewModel.selectedDevice?.type == SelectedItemType.racks ? _projectViewModel.selectedDevice?.id : null,
                 onTapAddDevice: (dynamic item, String areaId, String floorId) {
-                  if (item is String) {
-                    final Map<String, dynamic> accessory = <String, dynamic>{
-                      'name': 'Rack $item',
-                      'assetPath': 'assets/icons/lising_view_icon.png',
-                    };
-                    setState(() {
-                      _reorderableAccessories.add(accessory);
-                    });
+                  if (item is RackData) {
+                    final HardwareRack hardwareRack = HardwareRack(
+                      locationEntity: LocationModel(listeningAreaId: areaId, floorId: floorId),
+                      name: item.name,
+                      pos: Offset.zero,
+                      assetImagePath: item.assetPath,
+                      price: item.price,
+                      hardwareName: item.name,
+                    );
+                    serviceLocator<ProjectViewModel>().addHardware(hardware: hardwareRack);
+                    FusionToast.success(
+                      context,
+                      message: "Hardware Rack \"${item.name}\" added",
+                    );
+                  } else if (item is SwitchData) {
+                    final NetworkSwitch networkSwitch = NetworkSwitch(
+                      locationEntity: LocationModel(listeningAreaId: areaId, floorId: floorId),
+                      name: item.name,
+                      pos: Offset.zero,
+                      assetImagePath: item.assetPath,
+                      price: item.price,
+                      hardwareName: item.name,
+                    );
+                    serviceLocator<ProjectViewModel>().addHardware(hardware: networkSwitch);
+                    FusionToast.success(
+                      context,
+                      message: "Switch \"${item.name}\" added",
+                    );
                   }
                 },
               ),
@@ -492,7 +376,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: Colors.grey[700],
+              color: Colors.black,
             ),
           ),
           const SizedBox(height: 8),
@@ -508,7 +392,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: Colors.grey[700],
+              color: Colors.black,
             ),
           ),
           const SizedBox(height: 8),
@@ -520,25 +404,106 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
     );
   }
 
+  /// Combined Processors & Amplifiers content with separate sections
+  Widget _buildProcessorsAndAmplifiers() {
+    return Padding(
+      padding: const EdgeInsets.all(10.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          /// Processors Section
+          FusionAppText(
+            text: "Fusion Devices",
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Colors.black,
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          /// Processors List
+          _buildProcessorsContent(),
+
+          const SizedBox(height: 16),
+
+          /// Amplifiers Section
+          FusionAppText(
+            text: "Amplifiers",
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Colors.black,
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          /// Amplifiers List
+          _buildAmplifiersContent(),
+        ],
+      ),
+    );
+  }
+
+  /// Amplifiers content using CommonReorderableListView
+  Widget _buildAccessories() {
+    return Padding(
+      padding: const EdgeInsets.all(10.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          /// Processors Section
+          FusionAppText(
+            text: "Racks",
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Colors.black,
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          /// Processors List
+          _buildRacksContent(),
+
+          const SizedBox(height: 16),
+
+          /// Amplifiers Section
+          FusionAppText(
+            text: "Switches",
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Colors.black,
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          /// Amplifiers List
+          _buildSwitchesContent(),
+        ],
+      ),
+    );
+  }
+
   /// Optimized Sources content using CommonReorderableListView
   Widget _buildSourcesContent() {
     return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
       builder: (BuildContext context, ProjectViewModelState state) {
-        final List<Source> currentSources = serviceLocator<ProjectViewModel>().sources;
         final SelectedItem? hoveredDevice = _projectViewModel.hoveredDevice;
         final SelectedItem? selectedDevice = _projectViewModel.selectedDevice;
 
         return CommonReorderableListView<Source>(
-          items: _reorderableSources,
+          items: _projectViewModel.sources,
           emptyMessage: "No sources added yet",
           onReorder: (int oldIndex, int newIndex) {
-            // serviceLocator<ProjectViewModel>().reOrderHardware(hardwareIdToMove: , hardwareAtNewIndex: 'newIndex');
-            setState(() {
-              if (newIndex > oldIndex) newIndex -= 1;
-              final Source item = _reorderableSources.removeAt(oldIndex);
-              _reorderableSources.insert(newIndex, item);
-              _projectViewModel.setSelectedDevice(item.id, SelectedItemType.source);
-            });
+            if (oldIndex < newIndex) {
+              newIndex -= 1;
+            }
+            final String hwToMove = _projectViewModel.sources[oldIndex].id;
+            final String hwAtNewIndex = _projectViewModel.sources[newIndex].id;
+            _projectViewModel.reOrderHardware(hardwareIdToMove: hwToMove, hardwareAtNewIndex: hwAtNewIndex);
+            _projectViewModel.setSelectedDevice(hwToMove, SelectedItemType.source);
           },
           keyExtractor: (Source source) => source.id,
           itemBuilder: (BuildContext context, Source source, int index) {
@@ -558,15 +523,10 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
               onHover: () => _projectViewModel.setHoveredDevice(source.id, SelectedItemType.source),
               onExit: () => _projectViewModel.setHoveredDevice(null, null),
               onDelete: (String id) {
-                setState(() {
-                  _reorderableSources.removeWhere((Source s) => s.id == id);
-                });
                 serviceLocator<ProjectViewModel>().removeHardware(hardwareId: id);
-                FusionToast.show(
+                FusionToast.error(
                   context,
                   message: 'Source "${source.name}" deleted',
-                  icon: Icons.delete_outline,
-                  backgroundColor: Colors.red[600],
                 );
               },
               onRename: (String id) => print('Rename source $id'),
@@ -586,15 +546,16 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
         final SelectedItem? selectedDevice = _projectViewModel.selectedDevice;
 
         return CommonReorderableListView<FusionEndpoints>(
-          items: _reorderableEndpoints,
+          items: _projectViewModel.fusionEndpoints,
           emptyMessage: "No endpoints added yet",
           onReorder: (int oldIndex, int newIndex) {
-            setState(() {
-              if (newIndex > oldIndex) newIndex -= 1;
-              final FusionEndpoints item = _reorderableEndpoints.removeAt(oldIndex);
-              _reorderableEndpoints.insert(newIndex, item);
-              _projectViewModel.setSelectedDevice('endpoint_$newIndex', SelectedItemType.endpoint);
-            });
+            if (oldIndex < newIndex) {
+              newIndex -= 1;
+            }
+            final String hwToMove = _projectViewModel.fusionEndpoints[oldIndex].id;
+            final String hwAtNewIndex = _projectViewModel.fusionEndpoints[newIndex].id;
+            _projectViewModel.reOrderHardware(hardwareIdToMove: hwToMove, hardwareAtNewIndex: hwAtNewIndex);
+            _projectViewModel.setSelectedDevice(hwToMove, SelectedItemType.endpoint);
           },
           keyExtractor: (FusionEndpoints endpoint) => endpoint.id,
           itemBuilder: (BuildContext context, FusionEndpoints endpoint, int index) {
@@ -613,15 +574,10 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
               onHover: () => _projectViewModel.setHoveredDevice(endpoint.id, SelectedItemType.endpoint),
               onExit: () => _projectViewModel.setHoveredDevice(null, null),
               onDelete: (String id) {
-                setState(() {
-                  _reorderableEndpoints.removeWhere((FusionEndpoints s) => s.id == id);
-                });
                 serviceLocator<ProjectViewModel>().removeHardware(hardwareId: id);
-                FusionToast.show(
+                FusionToast.error(
                   context,
                   message: 'Endpoint "${endpoint.name}" deleted',
-                  icon: Icons.delete_outline,
-                  backgroundColor: Colors.red[600],
                 );
               },
               onRename: (String id) => print('Rename endpoint $id'),
@@ -633,65 +589,159 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
     );
   }
 
-  /// Optimized Processors content using CommonReorderableListView
+  ///  Processors content using CommonReorderableListView
   Widget _buildProcessorsContent() {
-    return Padding(
-      padding: const EdgeInsets.all(10.0),
-      child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-        builder: (BuildContext context, ProjectViewModelState state) {
-          final SelectedItem? hoveredDevice = _projectViewModel.hoveredDevice;
-          final SelectedItem? selectedDevice = _projectViewModel.selectedDevice;
+    return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+      builder: (BuildContext context, ProjectViewModelState state) {
+        final SelectedItem? hoveredDevice = _projectViewModel.hoveredDevice;
+        final SelectedItem? selectedDevice = _projectViewModel.selectedDevice;
 
-          return CommonReorderableListView<GenericHardwareComponent>(
-            items: _reorderableProcessors,
-            emptyMessage: "No processors added yet",
-            onReorder: (int oldIndex, int newIndex) {
-              setState(() {
-                if (newIndex > oldIndex) newIndex -= 1;
-                final GenericHardwareComponent item = _reorderableProcessors.removeAt(oldIndex);
-                _reorderableProcessors.insert(newIndex, item);
-                _projectViewModel.setSelectedDevice(item.id, SelectedItemType.processor);
-              });
-            },
-            keyExtractor: (GenericHardwareComponent processor) => 'processor_${processor.name}',
-            itemBuilder: (BuildContext context, GenericHardwareComponent processor, int index) {
-              final String processorId = 'processor_$index';
-              final bool isHovered = hoveredDevice?.id == processorId && hoveredDevice?.type == SelectedItemType.processor;
-              final bool isSelected = selectedDevice?.id == processorId && selectedDevice?.type == SelectedItemType.processor;
+        return CommonReorderableListView<FusionDsp>(
+          items: _projectViewModel.fusionDsps,
+          emptyMessage: "No processors added yet",
+          onReorder: (int oldIndex, int newIndex) {
+            if (oldIndex < newIndex) {
+              newIndex -= 1;
+            }
+            final String hwToMove = _projectViewModel.fusionDsps[oldIndex].id;
+            final String hwAtNewIndex = _projectViewModel.fusionDsps[newIndex].id;
+            _projectViewModel.reOrderHardware(hardwareIdToMove: hwToMove, hardwareAtNewIndex: hwAtNewIndex);
+            _projectViewModel.setSelectedDevice(hwToMove, SelectedItemType.processor);
+          },
+          keyExtractor: (FusionDsp processor) => processor.id,
+          itemBuilder: (BuildContext context, FusionDsp processor, int index) {
+            final bool isHovered = hoveredDevice?.id == processor.id && hoveredDevice?.type == SelectedItemType.processor;
+            final bool isSelected = selectedDevice?.id == processor.id && selectedDevice?.type == SelectedItemType.processor;
 
-              return HardwareItemCard(
-                name: processor.name,
-                assetImagePath: 'assets/icons/lising_view_icon.png',
-                itemId: processorId,
-                location: ' hbv',
-                isHovered: isHovered,
-                isSelected: isSelected,
-                onTap: () => _projectViewModel.setSelectedDevice(processorId, SelectedItemType.processor),
-                onHover: () => _projectViewModel.setHoveredDevice(processorId, SelectedItemType.processor),
-                onExit: () => _projectViewModel.setHoveredDevice(null, null),
-                onDelete: (String id) {
-                  final String processorName = processor.name;
-                  setState(() {
-                    _reorderableProcessors.removeAt(index);
-                  });
-                  FusionToast.show(
-                    context,
-                    message: 'Processor "$processorName" deleted',
-                    icon: Icons.delete_outline,
-                    backgroundColor: Colors.red[600],
-                  );
-                },
-                onRename: (String id) => print('Rename processor $id'),
-                onDuplicate: (String id) => print('Duplicate processor $id'),
-              );
-            },
-          );
-        },
-      ),
+            return HardwareItemCard(
+              name: processor.name,
+              assetImagePath: processor.assetImagePath,
+              itemId: processor.id,
+              // zone: getZoneData(processor.id),
+              location: getLocationName(processor.locationEntity.listeningAreaId) ?? "Add Location",
+              isHovered: isHovered,
+              isSelected: isSelected,
+              onTap: () => _projectViewModel.setSelectedDevice(processor.id, SelectedItemType.processor),
+              onHover: () => _projectViewModel.setHoveredDevice(processor.id, SelectedItemType.processor),
+              onExit: () => _projectViewModel.setHoveredDevice(null, null),
+              onDelete: (String id) {
+                FusionToast.error(
+                  context,
+                  message: 'Processor "${processor.name}" deleted',
+                );
+              },
+              onRename: (String id) => print('Rename processor $id'),
+              onDuplicate: (String id) => print('Duplicate processor $id'),
+            );
+          },
+        );
+      },
     );
   }
 
-  /// Optimized Controllers content using CommonReorderableListView
+  /// Racks content using CommonReorderableListView
+  Widget _buildRacksContent() {
+    return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+      builder: (BuildContext context, ProjectViewModelState state) {
+        final SelectedItem? hoveredDevice = _projectViewModel.hoveredDevice;
+        final SelectedItem? selectedDevice = _projectViewModel.selectedDevice;
+        return CommonReorderableListView<HardwareRack>(
+          items: _projectViewModel.hardwareRacks,
+          emptyMessage: "No processors added yet",
+          onReorder: (int oldIndex, int newIndex) {
+            if (oldIndex < newIndex) {
+              newIndex -= 1;
+            }
+            final String hwToMove = _projectViewModel.hardwareRacks[oldIndex].id;
+            final String hwAtNewIndex = _projectViewModel.hardwareRacks[newIndex].id;
+            _projectViewModel.reOrderHardware(hardwareIdToMove: hwToMove, hardwareAtNewIndex: hwAtNewIndex);
+            _projectViewModel.setSelectedDevice(hwToMove, SelectedItemType.racks);
+          },
+          keyExtractor: (HardwareRack hardwareRack) => hardwareRack.id,
+          itemBuilder: (BuildContext context, HardwareRack hardwareRack, int index) {
+            final bool isHovered = hoveredDevice?.id == hardwareRack.id && hoveredDevice?.type == SelectedItemType.racks;
+            final bool isSelected = selectedDevice?.id == hardwareRack.id && selectedDevice?.type == SelectedItemType.racks;
+
+            return HardwareItemCard(
+              name: hardwareRack.name,
+              assetImagePath: hardwareRack.assetImagePath,
+              itemId: hardwareRack.id,
+              // zone: getZoneData(processor.id),
+              location: getLocationName(hardwareRack.locationEntity.listeningAreaId) ?? "Add Location",
+              isHovered: isHovered,
+              isSelected: isSelected,
+              onTap: () => _projectViewModel.setSelectedDevice(hardwareRack.id, SelectedItemType.racks),
+              onHover: () => _projectViewModel.setHoveredDevice(hardwareRack.id, SelectedItemType.racks),
+              onExit: () => _projectViewModel.setHoveredDevice(null, null),
+              onDelete: (String id) {
+                serviceLocator<ProjectViewModel>().removeHardware(hardwareId: id);
+
+                FusionToast.error(
+                  context,
+                  message: 'Racks "${hardwareRack.name}" deleted',
+                );
+              },
+              onRename: (String id) => print('Rename processor $id'),
+              onDuplicate: (String id) => print('Duplicate processor $id'),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  /// Amplifiers content using CommonReorderableListView
+  Widget _buildAmplifiersContent() {
+    return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+      builder: (BuildContext context, ProjectViewModelState state) {
+        final SelectedItem? hoveredDevice = _projectViewModel.hoveredDevice;
+        final SelectedItem? selectedDevice = _projectViewModel.selectedDevice;
+
+        return CommonReorderableListView<Amplifier>(
+          items: _projectViewModel.amplifiers,
+          emptyMessage: "No processors added yet",
+          onReorder: (int oldIndex, int newIndex) {
+            if (oldIndex < newIndex) {
+              newIndex -= 1;
+            }
+            final String hwToMove = _projectViewModel.amplifiers[oldIndex].id;
+            final String hwAtNewIndex = _projectViewModel.amplifiers[newIndex].id;
+            _projectViewModel.reOrderHardware(hardwareIdToMove: hwToMove, hardwareAtNewIndex: hwAtNewIndex);
+            _projectViewModel.setSelectedDevice(hwToMove, SelectedItemType.amplifier);
+          },
+          keyExtractor: (Amplifier amplifier) => amplifier.id,
+          itemBuilder: (BuildContext context, Amplifier amplifier, int index) {
+            final bool isHovered = hoveredDevice?.id == amplifier.id && hoveredDevice?.type == SelectedItemType.amplifier;
+            final bool isSelected = selectedDevice?.id == amplifier.id && selectedDevice?.type == SelectedItemType.amplifier;
+
+            return HardwareItemCard(
+              name: amplifier.name,
+              assetImagePath: amplifier.assetImagePath,
+              itemId: amplifier.id,
+              // zone: getZoneData(amplifier.id),
+              location: getLocationName(amplifier.locationEntity.listeningAreaId) ?? "Add Location",
+              isHovered: isHovered,
+              isSelected: isSelected,
+              onTap: () => _projectViewModel.setSelectedDevice(amplifier.id, SelectedItemType.amplifier),
+              onHover: () => _projectViewModel.setHoveredDevice(amplifier.id, SelectedItemType.amplifier),
+              onExit: () => _projectViewModel.setHoveredDevice(null, null),
+              onDelete: (String id) {
+                serviceLocator<ProjectViewModel>().removeHardware(hardwareId: id);
+                FusionToast.error(
+                  context,
+                  message: 'Amplifier "${amplifier.name}" deleted',
+                );
+              },
+              onRename: (String id) => print('Rename processor $id'),
+              onDuplicate: (String id) => print('Duplicate processor $id'),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  /// Controllers content using CommonReorderableListView
   Widget _buildControllersContent() {
     return Padding(
       padding: const EdgeInsets.all(10.0),
@@ -700,43 +750,39 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
           final SelectedItem? hoveredDevice = _projectViewModel.hoveredDevice;
           final SelectedItem? selectedDevice = _projectViewModel.selectedDevice;
 
-          return CommonReorderableListView<Map<String, dynamic>>(
-            items: _reorderableControllers,
+          return CommonReorderableListView<FusionController>(
+            items: _projectViewModel.fusionControllers,
             emptyMessage: "No controllers added yet",
             onReorder: (int oldIndex, int newIndex) {
-              setState(() {
-                if (newIndex > oldIndex) newIndex -= 1;
-                final Map<String, dynamic> item = _reorderableControllers.removeAt(oldIndex);
-                _reorderableControllers.insert(newIndex, item);
-                _projectViewModel.setSelectedDevice('controller_$newIndex', SelectedItemType.controller);
-              });
+              if (oldIndex < newIndex) {
+                newIndex -= 1;
+              }
+              final String hwToMove = _projectViewModel.fusionControllers[oldIndex].id;
+              final String hwAtNewIndex = _projectViewModel.fusionControllers[newIndex].id;
+              _projectViewModel.reOrderHardware(hardwareIdToMove: hwToMove, hardwareAtNewIndex: hwAtNewIndex);
+              _projectViewModel.setSelectedDevice(hwToMove, SelectedItemType.controller);
             },
-            keyExtractor: (Map<String, dynamic> controller) => 'controller_${controller['name']}',
-            itemBuilder: (BuildContext context, Map<String, dynamic> controller, int index) {
-              final String controllerId = 'controller_$index';
-              final bool isHovered = hoveredDevice?.id == controllerId && hoveredDevice?.type == SelectedItemType.controller;
-              final bool isSelected = selectedDevice?.id == controllerId && selectedDevice?.type == SelectedItemType.controller;
+            keyExtractor: (FusionController controller) => controller.id,
+            itemBuilder: (BuildContext context, FusionController controller, int index) {
+              final bool isHovered = hoveredDevice?.id == controller.id && hoveredDevice?.type == SelectedItemType.controller;
+              final bool isSelected = selectedDevice?.id == controller.id && selectedDevice?.type == SelectedItemType.controller;
 
               return HardwareItemCard(
-                name: controller['name'] as String,
-                assetImagePath: controller['assetPath'] as String,
-                itemId: controllerId,
-                location: "Eqp Loc.",
+                name: controller.name,
+                assetImagePath: controller.assetImagePath,
+                itemId: controller.id,
+                zone: getZoneData(controller.id),
+                location: getLocationName(controller.locationEntity.listeningAreaId) ?? "Add Location",
                 isHovered: isHovered,
                 isSelected: isSelected,
-                onTap: () => _projectViewModel.setSelectedDevice(controllerId, SelectedItemType.controller),
-                onHover: () => _projectViewModel.setHoveredDevice(controllerId, SelectedItemType.controller),
+                onTap: () => _projectViewModel.setSelectedDevice(controller.id, SelectedItemType.controller),
+                onHover: () => _projectViewModel.setHoveredDevice(controller.id, SelectedItemType.controller),
                 onExit: () => _projectViewModel.setHoveredDevice(null, null),
                 onDelete: (String id) {
-                  final String controllerName = controller['name'] as String;
-                  setState(() {
-                    _reorderableControllers.removeAt(index);
-                  });
-                  FusionToast.show(
+                  serviceLocator<ProjectViewModel>().removeHardware(hardwareId: id);
+                  FusionToast.error(
                     context,
-                    message: 'Controller "$controllerName" deleted',
-                    icon: Icons.delete_outline,
-                    backgroundColor: Colors.red[600],
+                    message: 'Controller "${controller.name}" deleted',
                   );
                 },
                 onRename: (String id) => print('Rename controller $id'),
@@ -749,61 +795,54 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
     );
   }
 
-  /// Optimized Accessories content using CommonReorderableListView
-  Widget _buildAccessoriesContent() {
-    return Padding(
-      padding: const EdgeInsets.all(10.0),
-      child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-        builder: (BuildContext context, ProjectViewModelState state) {
-          final SelectedItem? hoveredDevice = _projectViewModel.hoveredDevice;
-          final SelectedItem? selectedDevice = _projectViewModel.selectedDevice;
+  /// Accessories content using CommonReorderableListView
+  Widget _buildSwitchesContent() {
+    return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+      builder: (BuildContext context, ProjectViewModelState state) {
+        final SelectedItem? hoveredDevice = _projectViewModel.hoveredDevice;
+        final SelectedItem? selectedDevice = _projectViewModel.selectedDevice;
 
-          return CommonReorderableListView<Map<String, dynamic>>(
-            items: _reorderableAccessories,
-            emptyMessage: "No accessories added yet",
-            onReorder: (int oldIndex, int newIndex) {
-              setState(() {
-                if (newIndex > oldIndex) newIndex -= 1;
-                final Map<String, dynamic> item = _reorderableAccessories.removeAt(oldIndex);
-                _reorderableAccessories.insert(newIndex, item);
-                _projectViewModel.setSelectedDevice('accessory_$newIndex', SelectedItemType.accessory);
-              });
-            },
-            keyExtractor: (Map<String, dynamic> accessory) => 'accessory_${accessory['name']}',
-            itemBuilder: (BuildContext context, Map<String, dynamic> accessory, int index) {
-              final String accessoryId = 'accessory_$index';
-              final bool isHovered = hoveredDevice?.id == accessoryId && hoveredDevice?.type == SelectedItemType.accessory;
-              final bool isSelected = selectedDevice?.id == accessoryId && selectedDevice?.type == SelectedItemType.accessory;
+        return CommonReorderableListView<NetworkSwitch>(
+          items: _projectViewModel.networkSwitches,
+          emptyMessage: "No accessories added yet",
+          onReorder: (int oldIndex, int newIndex) {
+            setState(() {
+              if (newIndex > oldIndex) newIndex -= 1;
+              final NetworkSwitch item = _projectViewModel.networkSwitches.removeAt(oldIndex);
+              _projectViewModel.networkSwitches.insert(newIndex, item);
+              _projectViewModel.setSelectedDevice('accessory_$newIndex', SelectedItemType.switchs);
+            });
+          },
+          keyExtractor: (NetworkSwitch networkSwitch) => networkSwitch.id,
+          itemBuilder: (BuildContext context, NetworkSwitch networkSwitch, int index) {
+            final bool isHovered = hoveredDevice?.id == networkSwitch.id && hoveredDevice?.type == SelectedItemType.switchs;
+            final bool isSelected = selectedDevice?.id == networkSwitch.id && selectedDevice?.type == SelectedItemType.switchs;
 
-              return HardwareItemCard(
-                name: accessory['name'] as String,
-                assetImagePath: accessory['assetPath'] as String,
-                itemId: accessoryId,
-                location: "Eqp Loc.",
-                isHovered: isHovered,
-                isSelected: isSelected,
-                onTap: () => _projectViewModel.setSelectedDevice(accessoryId, SelectedItemType.accessory),
-                onHover: () => _projectViewModel.setHoveredDevice(accessoryId, SelectedItemType.accessory),
-                onExit: () => _projectViewModel.setHoveredDevice(null, null),
-                onDelete: (String id) {
-                  final String accessoryName = accessory['name'] as String;
-                  setState(() {
-                    _reorderableAccessories.removeAt(index);
-                  });
-                  FusionToast.show(
-                    context,
-                    message: 'Accessory "$accessoryName" deleted',
-                    icon: Icons.delete_outline,
-                    backgroundColor: Colors.red[600],
-                  );
-                },
-                onRename: (String id) => print('Rename accessory $id'),
-                onDuplicate: (String id) => print('Duplicate accessory $id'),
-              );
-            },
-          );
-        },
-      ),
+            return HardwareItemCard(
+              name: networkSwitch.name,
+              assetImagePath: networkSwitch.assetImagePath,
+              itemId: networkSwitch.id,
+              // zone: getZoneData(accessoryId),
+              location: getLocationName(networkSwitch.locationEntity.listeningAreaId) ?? "Add Location",
+              isHovered: isHovered,
+              isSelected: isSelected,
+              onTap: () => _projectViewModel.setSelectedDevice(networkSwitch.id, SelectedItemType.switchs),
+              onHover: () => _projectViewModel.setHoveredDevice(networkSwitch.id, SelectedItemType.switchs),
+              onExit: () => _projectViewModel.setHoveredDevice(null, null),
+              onDelete: (String id) {
+                serviceLocator<ProjectViewModel>().removeHardware(hardwareId: id);
+
+                FusionToast.error(
+                  context,
+                  message: 'Accessory "${networkSwitch.name}" deleted',
+                );
+              },
+              onRename: (String id) => print('Rename accessory $id'),
+              onDuplicate: (String id) => print('Duplicate accessory $id'),
+            );
+          },
+        );
+      },
     );
   }
 

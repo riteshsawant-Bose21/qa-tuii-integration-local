@@ -31,8 +31,11 @@ class _ListeningAreaDropdownWidgetState extends State<ListeningAreaDropdownWidge
 
   @override
   void initState() {
-    _selectedFloor = serviceLocator<ProjectViewModel>().currentFloor.name;
     super.initState();
+    // Initialize with current floor data
+    final FloorModel currentFloor = serviceLocator<ProjectViewModel>().currentFloor;
+    _selectedFloor = currentFloor.name;
+    _selectedFloorId = currentFloor.id;
   }
 
   @override
@@ -45,24 +48,51 @@ class _ListeningAreaDropdownWidgetState extends State<ListeningAreaDropdownWidge
   void _toggleListeningAreaSelection(String areaId, String floorId) {
     final List<String> newSelection = <String>[areaId];
     widget.onSelectionChanged(newSelection, floorId);
-    print('Listening area selected: $areaId');
     Navigator.of(context).pop();
   }
 
+  /// Create a new listening area
   void _createNewArea({required String floorId}) {
-    if (_areaNameController.text.trim().isNotEmpty) {
+    if (_areaNameController.text.trim().isNotEmpty && floorId.isNotEmpty) {
       final ListeningArea newListeningArea = ListeningArea(
         name: _areaNameController.text.trim(),
         vertices: <Offset>[
           const Offset(0, 0),
+          const Offset(100, 0),
+          const Offset(100, 100),
+          const Offset(0, 100),
         ],
       );
 
-      serviceLocator<ProjectViewModel>().addListeningArea(area: newListeningArea, floorId: floorId);
-      _areaNameController.clear();
-      setState(() {
-        _isCreateAreaExpanded = false;
-      });
+      try {
+        serviceLocator<ProjectViewModel>().addListeningArea(area: newListeningArea, floorId: floorId);
+
+        /// Clear form and close expansion
+        _areaNameController.clear();
+        setState(() {
+          _isCreateAreaExpanded = false;
+        });
+
+        /// Show success message
+        FusionToast.success(
+          context,
+          message: "Listening area '${newListeningArea.name}' created successfully",
+        );
+
+        /// Automatically select the newly created area
+        widget.onSelectionChanged(<String>[newListeningArea.id], floorId);
+        Navigator.of(context).pop();
+      } catch (e) {
+        FusionToast.error(
+          context,
+          message: "Failed to create listening area: $e",
+        );
+      }
+    } else {
+      FusionToast.error(
+        context,
+        message: "Please enter area name and select a floor",
+      );
     }
   }
 
@@ -319,12 +349,9 @@ class _ListeningAreaDropdownWidgetState extends State<ListeningAreaDropdownWidge
                                     FusionButton(
                                       height: 36,
                                       label: "Add",
-                                      isActive: _areaNameController.text.trim().isNotEmpty,
+                                      isActive: _areaNameController.text.trim().isNotEmpty && _selectedFloorId.isNotEmpty,
                                       onTap: () {
-                                        if (_areaNameController.text.trim().isNotEmpty) {
-                                          _createNewArea(floorId: _selectedFloorId);
-                                          setDropdownState(() {});
-                                        }
+                                        _createNewArea(floorId: _selectedFloorId);
                                       },
                                     ),
                                   ],
