@@ -84,7 +84,6 @@ ConcreteMuteActuator::~ConcreteMuteActuator()
         OCA_LOG_INFO_PARAMS("[MUTE] Setting mute state to %s (Gain ID: %s)",
                             muteStateToString(muteState), m_gainID.empty() ? "N/A" : m_gainID.c_str());
 
-        // Only send to Fusion if this is NOT a Fusion update (avoid feedback loop)
         if (!m_gainID.empty())
         {
             FusionAudioBridge &bridge = FusionAudioBridge::getInstance();

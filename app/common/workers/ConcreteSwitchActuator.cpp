@@ -20,9 +20,7 @@ ConcreteSwitchActuator::ConcreteSwitchActuator(::OcaONo objectNumber,
                                                const ::OcaLiteList<::OcaBoolean> &positionEnable,
                                                const std::string &zoneID)
     : ::OcaLiteSwitch(objectNumber, lockable, role, ports, minPosition, maxPosition, positionNames, positionEnable),
-      m_zoneID(zoneID),
-      m_minPosition(minPosition),
-      m_maxPosition(maxPosition)
+      m_zoneID(zoneID)
 {
     OCA_LOG_INFO("=== ConcreteSwitchActuator Created ===");
     OCA_LOG_INFO_PARAMS("Object Number: %u", objectNumber);
@@ -99,20 +97,30 @@ void ConcreteSwitchActuator::handleFusionSourceMessage(::OcaUint16 sourceIndex)
         OCA_LOG_INFO_PARAMS("[SWITCH] Handling Fusion source message: %u (Zone ID: %s)",
                             sourceIndex, m_zoneID.c_str());
 
+        // Get current position and limits from base class
+        ::OcaUint16 currentPosition, minPosition, maxPosition;
+        ::OcaLiteStatus getStatus = GetPosition(currentPosition, minPosition, maxPosition);
+
+        if (getStatus != OCASTATUS_OK)
+        {
+            OCA_LOG_ERROR_PARAMS("[SWITCH] Failed to get position limits (Zone ID: %s)", m_zoneID.c_str());
+            return;
+        }
+
         // Validate source index is within valid range
-        if (sourceIndex < m_minPosition || sourceIndex > m_maxPosition)
+        if (sourceIndex < minPosition || sourceIndex > maxPosition)
         {
             OCA_LOG_ERROR_PARAMS("[SWITCH] Invalid source index %u, must be between %u and %u (Zone ID: %s)",
-                                 sourceIndex, m_minPosition, m_maxPosition, m_zoneID.c_str());
+                                 sourceIndex, minPosition, maxPosition, m_zoneID.c_str());
             return;
         }
 
         // Set the position value using the base class method
         // This will update the internal state AND notify AES70 clients, but won't send back to Fusion
 
-        ::OcaLiteStatus status = SetPositionFromFusion(sourceIndex);
+        ::OcaLiteStatus setStatus = SetPositionFromFusion(sourceIndex);
 
-        if (OCASTATUS_OK == status)
+        if (OCASTATUS_OK == setStatus)
         {
             OCA_LOG_INFO_PARAMS("[SWITCH] ✓ Fusion source selection applied: %u (Zone ID: %s)",
                                 sourceIndex, m_zoneID.c_str());

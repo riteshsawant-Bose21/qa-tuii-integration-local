@@ -54,12 +54,6 @@ private:
     /** The zone identifier from JSON configuration */
     std::string m_zoneID;
 
-    /** The minimum position value */
-    ::OcaUint16 m_minPosition;
-
-    /** The maximum position value */
-    ::OcaUint16 m_maxPosition;
-
     ConcreteSwitchActuator(const ConcreteSwitchActuator &);
     ConcreteSwitchActuator &operator=(const ConcreteSwitchActuator &);
 };
