@@ -36,17 +36,43 @@ class SchematicPropertiesState extends State<SchematicProperties> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.selectedItem == null) return const SizedBox.shrink();
-
     return Padding(
       padding: const EdgeInsets.only(top: 0, bottom: 16, left: 16, right: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         spacing: 10,
         children: <Widget>[
-          const SizedBox(height: 5),
-          const SectionHeader(title: 'Basic'),
-          // Speaker Qty row
+          const SectionHeader(title: 'Circuits'),
+
+          Row(
+            spacing: 3,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: <Widget>[
+              Expanded(
+                child: FusionAppText(
+                  text: 'Model',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
+              Expanded(
+                child: Row(
+                  children: <Widget>[
+                    Image.asset("assets/images/speakers/designmax_dm8se.png", width: 32, height: 32),
+                    const SizedBox(width: 8),
+
+                    Expanded(
+                      child: FusionAppText(
+                        text: 'DBMS16',
+                        maxLine: 1,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
           Row(
             spacing: 3,
             children: <Widget>[
@@ -109,34 +135,6 @@ class SchematicPropertiesState extends State<SchematicProperties> {
             ],
           ),
 
-          Row(
-            spacing: 3,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: <Widget>[
-              Expanded(
-                child: FusionAppText(
-                  text: 'Model',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ),
-              Expanded(
-                child: Row(
-                  children: <Widget>[
-                    Image.asset("assets/images/speakers/designmax_dm8se.png", width: 32, height: 32),
-                    const SizedBox(width: 8),
-
-                    Expanded(
-                      child: FusionAppText(
-                        text: 'DBMS16',
-                        maxLine: 1,
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
           Row(
             spacing: 3,
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
