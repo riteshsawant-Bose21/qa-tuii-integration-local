@@ -1,7 +1,6 @@
 package cluster
 
 import (
-	"encoding/json"
 	"fusion/internal/api"
 	"fusion/internal/logging"
 	"fusion/internal/persistence"
@@ -11,6 +10,8 @@ import (
 	"math"
 	"sync"
 	"time"
+
+	json "github.com/goccy/go-json"
 )
 
 const (

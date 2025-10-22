@@ -2,13 +2,14 @@ package tasks
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
 	"runtime/debug"
 	"sync"
 	"time"
+
+	json "github.com/goccy/go-json"
 
 	"fusion/internal/api"
 	"fusion/internal/logging"

@@ -2,13 +2,14 @@ package tasks
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/logging"
 	"fusion/internal/utils"
 	"io"
 	"net/http"
+
+	json "github.com/goccy/go-json"
 )
 
 // CreateApplySnapshotTask handles HTTP POST requests to add a new snapshot task.
