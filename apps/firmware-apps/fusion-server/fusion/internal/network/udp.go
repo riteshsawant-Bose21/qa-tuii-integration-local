@@ -17,8 +17,8 @@ import (
 )
 
 const (
-	maxConcurrent = 32
-	queueSize     = 2048
+	maxConcurrent    = 32
+	queueElementSize = 2048
 )
 
 type packet struct {
@@ -49,7 +49,7 @@ func NewUDPServer(addr string, handler *handler.Handler) (*UDPServer, error) {
 	logging.GetLogger().Info("UDP listening on %s", addr)
 
 	queueWorkers := runtime.NumCPU() * 2
-	queueSize := queueWorkers * 2048
+	queueSize := queueWorkers * queueElementSize
 
 	srv := &UDPServer{
 		handler:    handler,

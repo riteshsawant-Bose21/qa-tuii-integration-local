@@ -46,12 +46,13 @@ func (l *Listener) Start() {
 	go func() {
 		defer l.wg.Done()
 
+		buf := make([]byte, l.BufferSize)
+
 		for {
 			select {
 			case <-l.stopChan:
 				return
 			default:
-				buf := make([]byte, l.BufferSize)
 				l.conn.SetReadDeadline(time.Now().Add(l.Timeout))
 				n, addr, err := l.conn.ReadFromUDP(buf)
 				if err != nil {
