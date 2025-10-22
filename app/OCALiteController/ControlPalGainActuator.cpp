@@ -88,12 +88,6 @@ ControlPalGainActuator::ControlPalGainActuator(::OcaONo objectNumber,
         // Convert dB to linear for internal processing (if needed)
         double linearGain = dbToLinear(gain);
 
-        // We have to keep a copy of gain here because the base class
-        // gain is set only after the SetGainValue() function completes
-        // sucessfully. So the value read in the SendValue() using
-        // GetGain will be stale.
-        //m_cPalGain = gain;
-
         // Call fn. to send GAIN value command to frontend task
         SendValue();
 

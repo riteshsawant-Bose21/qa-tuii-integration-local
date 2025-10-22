@@ -93,13 +93,6 @@ private:
     ::OcaONo    m_zoneONo;
 
     ::OcaDB     m_lastGainSet;
-#if 0
-    ::OcaDB     m_cPalGain;    // We have to keep a copy of gain here because
-                               // the base class gain is set only after the
-                               // SetGainValue() function completes
-                               // sucessfully. So the value read in the
-                               // SendValue() using GetGain will be stale.
-#endif
 
     /** private copy constructor, no copying of object allowed */
     ControlPalGainActuator(const ControlPalGainActuator &);

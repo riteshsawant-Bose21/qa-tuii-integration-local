@@ -203,12 +203,6 @@ void ControllerMenu::run()
 
 void ControllerMenu::SendValue()
 {
-#if 1
-    std::cout << "Cmd:" << m_uiMsg.cmd << std::endl;
-    std::cout << "ONo:" << m_uiMsg.ono << std::endl;
-    std::cout << "VALFlt:" << m_uiMsg.val.flt_val << std::endl;
-    std::cout << "VALInt:" << m_uiMsg.val.int_val << std::endl;
-#endif
     PushToMsgQueue(m_uiMsg);
 }
 

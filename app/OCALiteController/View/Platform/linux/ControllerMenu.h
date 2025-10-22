@@ -51,21 +51,6 @@ public:
     void setMute(uint32_t ONo, uint32_t mute);
     void setSource(uint32_t ONo, uint32_t pos);
 
-#if 0
-    bool findObject(uint32_t ONo, zoneProperties *obj)
-    {
-        bool retVal(false);
-        auto it = m_zoneMap.find(ONo);
-
-        if (it != m_zoneMap.end())
-        {
-            obj = it->second.get();
-            retVal = true;
-        }
-        return retVal;
-    }
-#endif
-    
     std::unique_ptr<zoneProperties> &findObject(uint32_t ONo)
     {
         auto it = m_zoneMap.find(ONo);

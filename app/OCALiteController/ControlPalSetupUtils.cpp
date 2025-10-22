@@ -345,6 +345,8 @@ ZoneGroup* CreateZoneGroup(Zone& newZone, FusionProxy &fusion_proxy,
         fusion_proxy.ConcreteGainActuator_GetGain(
                                      newGainObj->GetObjectNumber(),
                                      gainVal);
+
+        // Also sends updated value to front-end
         newGainObj->SetGain(gainVal);
 
         // Get & Set Mute state
@@ -353,11 +355,16 @@ ZoneGroup* CreateZoneGroup(Zone& newZone, FusionProxy &fusion_proxy,
                                      newMuteObj->GetObjectNumber(),
                                      state);
 
+        // Also sends updated value to front-end
+        newMuteObj->SetState(state);
+
         // Get & Set Switch Position
         ::OcaUint16 position;
         fusion_proxy.ConcreteSwitchActuator_GetSwitch(
                                 newSelectorObj->GetObjectNumber(),
                                 position);
+
+        // Also sends updated value to front-end
         newSelectorObj->SendConfigurationValue();
     }
 
@@ -437,13 +444,12 @@ ZoneGroup* CreateZoneGroup(Zone& newZone, FusionProxy &fusion_proxy,
         {
             ControlPal_MsgQueue<ControllerCmdIntfc> *ocaQue =
             static_cast<ControlPal_MsgQueue<ControllerCmdIntfc>*>(commandQueue);
-            std::string siteName = "ControlPAL"; // TODO; Probably needs to come from device
             ControllerCmdIntfc cfgCmd;
 
             // Configuration start message to UI
             cfgCmd.cmd          = CTRL_CMD_ZONE_CFG_START;
             cfgCmd.ono          = 0;  // Don't care for message
-            strcpy(cfgCmd.val.char_val, siteName.c_str()); // Controller Name
+            strcpy(cfgCmd.val.char_val, controllerCfg.name.c_str()); // Controller Name
             ocaQue->push(cfgCmd);
 
             for (auto newZone : controllerCfg.zones)

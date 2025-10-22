@@ -99,8 +99,8 @@ void ControllerViewProc(void *queue)
     bool cfgStart(false);
 
     // Define globals used by the menu display
-    float       g_gain;
-    uint32_t    g_mute;
+    float       g_gain = 0.0;
+    uint32_t    g_mute = 1;
     std::string g_source;
 
     // Wait for configuration start messages
