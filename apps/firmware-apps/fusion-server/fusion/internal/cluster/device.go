@@ -332,15 +332,6 @@ func (c *Cluster) reloadVIP() error {
 		return err
 	}
 
-	logger := logging.GetLogger()
-
-	// After reload, attempt to join the gossip ring so cluster size grows
-	if err := c.JoinMemberlist(); err != nil {
-		logger.Error("JoinMemberlist after reloadVIP: %v", err)
-	}
-
-	logger.Debug("Reloaded VIP")
-
 	return nil
 }
 
