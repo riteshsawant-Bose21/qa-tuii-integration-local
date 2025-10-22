@@ -17,6 +17,7 @@ extension HardwareViewModel on ProjectViewModel {
   }
 
   void updateHardware({required HardwareComponent hardware, bool autoSave = true}) {
+    print("Updating hardware: ${hardware.id}, pos: ${hardware.pos}, location: ${hardware.locationEntity.listeningAreaId}");
     try {
       if (autoSave) {
         recordSnapshot();
@@ -131,6 +132,16 @@ extension HardwareViewModel on ProjectViewModel {
       return projectManager.getZoneForHardware(hardwareId);
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to get zone for hardware: $e");
+      return null;
+    }
+  }
+
+  // get zone for hardware
+  SubZone? getSubZoneForHardware({required String hardwareId}) {
+    try {
+      return projectManager.getSubZoneForHardware(hardwareId);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get subzone for hardware: $e");
       return null;
     }
   }

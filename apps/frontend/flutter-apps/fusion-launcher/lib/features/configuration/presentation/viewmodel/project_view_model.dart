@@ -93,6 +93,7 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
   SelectedItem? _selectedDevice;
 
   SelectedItem? get hoveredDevice => _hoveredDevice;
+
   SelectedItem? get selectedDevice => _selectedDevice;
 
   /// Update hover state
@@ -287,5 +288,28 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
   void resetProjectMode() {
     currentProjectMode = ProjectMode.normal;
     updateProject();
+  }
+
+  void deleteSelectedItem() {
+    if (_selectedDevice != null) {
+      switch (_selectedDevice!.type) {
+        case SelectedItemType.source:
+        case SelectedItemType.endpoint:
+        case SelectedItemType.processor:
+        case SelectedItemType.controller:
+        case SelectedItemType.accessory:
+        case SelectedItemType.device:
+          projectManager.removeHardware(_selectedDevice!.id);
+          break;
+        case SelectedItemType.zone:
+          projectManager.removeZone(_selectedDevice!.id);
+          break;
+        case SelectedItemType.subzone:
+          projectManager.removeSubZone(_selectedDevice!.id);
+          break;
+      }
+      clearSelections();
+      updateProject();
+    }
   }
 }

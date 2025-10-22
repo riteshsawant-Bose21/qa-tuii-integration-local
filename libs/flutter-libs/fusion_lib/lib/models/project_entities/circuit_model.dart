@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:fusion_lib/fusion_lib.dart';
 
 class CircuitModel {
@@ -6,6 +8,7 @@ class CircuitModel {
   final PortData inputPort;
   final String? tapSetting;
   final String? impedance;
+  final Offset? wiringPos;
 
   CircuitModel({
     String? id,
@@ -13,6 +16,7 @@ class CircuitModel {
     PortData? inputPort,
     this.impedance,
     this.tapSetting,
+    this.wiringPos,
   }) : id = id ?? "CIRCUIT${FusionUtils.shortStringUUID()}",
        inputPort =
            inputPort ??
@@ -33,6 +37,7 @@ class CircuitModel {
     PortData? inputPort,
     String? tapSetting,
     String? impedance,
+    Offset? wiringPos,
   }) {
     return CircuitModel(
       id: id ?? this.id,
@@ -40,6 +45,7 @@ class CircuitModel {
       inputPort: inputPort ?? this.inputPort,
       tapSetting: tapSetting ?? this.tapSetting,
       impedance: impedance ?? this.impedance,
+      wiringPos: wiringPos ?? this.wiringPos,
     );
   }
 
@@ -50,6 +56,12 @@ class CircuitModel {
       inputPort: json['inputPort'] != null ? PortData.fromJson(json['inputPort']) : null,
       impedance: json['impedance'],
       tapSetting: json['tapSetting'],
+      wiringPos: json['wiringPos'] != null
+          ? Offset(
+              (json['wiringPos']['dx'] as num).toDouble(),
+              (json['wiringPos']['dy'] as num).toDouble(),
+            )
+          : null,
     );
   }
 
@@ -60,6 +72,7 @@ class CircuitModel {
       'inputPort': inputPort.toJson(),
       'impedance': impedance,
       'tapSetting': tapSetting,
+      'wiringPos': wiringPos != null ? <String, double>{'dx': wiringPos!.dx, 'dy': wiringPos!.dy} : null,
     };
   }
 }
