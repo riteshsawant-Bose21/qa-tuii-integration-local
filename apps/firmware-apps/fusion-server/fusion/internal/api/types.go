@@ -49,6 +49,14 @@ type ConfigValue struct {
 	Value json.RawMessage `json:"value,omitempty"`
 }
 
+// ControllerInfo represents a generic hardware controller
+type ControllerInfo struct {
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	Address string `json:"address"`
+	Version string `json:"version,omitempty"`
+}
+
 // DatabaseMetadata holds metadata information from the database.
 type DatabaseMetadata struct {
 	Version        Version `json:"version"`
@@ -117,18 +125,20 @@ type VersionUpdate struct {
 type NotifyOp string
 
 const (
-	NotifyOpAck           NotifyOp = "ack"
-	NotifyOpConfigUpdate  NotifyOp = "config_update"
-	NotifyOpSnapActivate  NotifyOp = "snapshot_activate"
-	NotifyOpSnapCreate    NotifyOp = "snapshot_create"
-	NotifyOpSnapDelete    NotifyOp = "snapshot_delete"
-	NotifyOpTaskCreate    NotifyOp = "task_create"
-	NotifyOpTaskDelete    NotifyOp = "task_delete"
-	NotifyOpTaskUpdate    NotifyOp = "task_update"
-	NotifyOpVIPStatus     NotifyOp = "vip_status"
-	NotifyOpValueGet      NotifyOp = "get"
-	NotifyOpValueSet      NotifyOp = "set"
-	NotifyOpVersionUpdate NotifyOp = "version_update"
+	NotifyOpAck              NotifyOp = "ack"
+	NotifyOpControllerAdd    NotifyOp = "controller_add"
+	NotifyOpControllerRemove NotifyOp = "controller_remove"
+	NotifyOpConfigUpdate     NotifyOp = "config_update"
+	NotifyOpSnapActivate     NotifyOp = "snapshot_activate"
+	NotifyOpSnapCreate       NotifyOp = "snapshot_create"
+	NotifyOpSnapDelete       NotifyOp = "snapshot_delete"
+	NotifyOpTaskCreate       NotifyOp = "task_create"
+	NotifyOpTaskDelete       NotifyOp = "task_delete"
+	NotifyOpTaskUpdate       NotifyOp = "task_update"
+	NotifyOpVIPStatus        NotifyOp = "vip_status"
+	NotifyOpValueGet         NotifyOp = "get"
+	NotifyOpValueSet         NotifyOp = "set"
+	NotifyOpVersionUpdate    NotifyOp = "version_update"
 )
 
 // NotifyMessage holds information about a cross-node message

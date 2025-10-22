@@ -728,6 +728,96 @@ func (s *FusionServer) GetSession(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
 }
 
+// GetControllers handles HTTP GET requests to list registered controllers.
+func (s *FusionServer) GetControllers(w http.ResponseWriter, r *http.Request) {
+
+	if !utils.RequireGet(w, r) {
+		return
+	}
+
+	result := s.handler.HandleGetControllers()
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
+	json.NewEncoder(w).Encode(result)
+}
+
+// RegisterController handles HTTP POST requests to register a controller.
+func (s *FusionServer) RegisterController(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequirePost(w, r) {
+		return
+	}
+
+	var payload map[string]any
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		http.Error(w, fmt.Sprintf("Invalid JSON: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	result, err := s.handler.HandleRegisterController(payload)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error registering controller: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
+	json.NewEncoder(w).Encode(result)
+}
+
+// DeleteController handles HTTP DELETE requests to unregister a controller.
+func (s *FusionServer) DeleteController(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireDelete(w, r) {
+		return
+	}
+
+	id, err := utils.ExtractId(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err = s.handler.HandleDeleteController(id)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error deleting controller: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// GetControllerByID handles HTTP GET requests to get a specific controller info.
+func (s *FusionServer) GetControllerByID(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireGet(w, r) {
+		return
+	}
+
+	id, err := utils.ExtractId(r)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Invalid controller ID: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	ctrl, err := s.handler.HandleGetControllerByID(id)
+	if err != nil {
+		// If the handler returns a not found error, return 404
+		if strings.Contains(strings.ToLower(err.Error()), "not found") {
+			http.Error(w, err.Error(), http.StatusNotFound)
+		} else {
+			http.Error(w, fmt.Sprintf("Error retrieving controller: %v", err), http.StatusInternalServerError)
+		}
+		return
+	}
+
+	if ctrl == nil {
+		http.Error(w, "Controller not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(ctrl); err != nil {
+		http.Error(w, fmt.Sprintf("Failed to encode response: %v", err), http.StatusInternalServerError)
+	}
+}
+
 // getSingleQueryParam retrieves the value of a query parameter if it exists exactly once.
 // It returns an empty string if the parameter is missing and an error if it appears multiple times
 // or contains invalid characters.
