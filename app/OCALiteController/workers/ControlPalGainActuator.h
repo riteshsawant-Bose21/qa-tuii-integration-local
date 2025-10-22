@@ -13,8 +13,8 @@
 
 // ---- Include local include files ----
 #include <OCC/ControlClasses/Workers/Actuators/OcaLiteGain.h>
-#include "HostInterface/CommandInterface/CommandInterface.h"
-#include "ControlPalMsgInterface.h"
+#include "../HostInterface/CommandInterface/CommandInterface.h"
+#include "../ControlPalMsgInterface.h"
 
 // ---- Referenced classes and types ----
 

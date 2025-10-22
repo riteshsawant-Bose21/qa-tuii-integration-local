@@ -16,8 +16,8 @@
 // ---- Include local include files ----
 #include "ControlPalGainActuator.h"
 #include <HostInterfaceLite/OCA/OCF/Logging/IOcfLiteLog.h>
-#include "PlatformInterface/linux/OcaLiteOcfMsgQueue.h"
-#include "ControlPalOcaUtils.h"
+#include "../PlatformInterface/linux/OcaLiteOcfMsgQueue.h"
+#include "../ControlPalOcaUtils.h"
 
 // ---- Helper types and constants ----
 

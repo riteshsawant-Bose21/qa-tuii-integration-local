@@ -9,8 +9,8 @@
 #include <iostream>
 #include "ControlPalSwitchActuator.h"
 #include <HostInterfaceLite/OCA/OCF/Logging/IOcfLiteLog.h>
-#include "PlatformInterface/linux/OcaLiteOcfMsgQueue.h"
-#include "ControlPalOcaUtils.h"
+#include "../PlatformInterface/linux/OcaLiteOcfMsgQueue.h"
+#include "../ControlPalOcaUtils.h"
 
 ControlPalSwitchActuator::ControlPalSwitchActuator(::OcaONo objectNumber,
                                                ::OcaBoolean lockable,

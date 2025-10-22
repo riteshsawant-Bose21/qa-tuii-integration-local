@@ -74,12 +74,12 @@ APP_COMMON_SOURCES       := ../common/FusionProxy.cpp \
 APP_SOURCES := main.cpp \
 	       OCALiteController.cpp \
                OcaServiceDiscovery.cpp \
-               ControlPalGainActuator.cpp \
-               ControlPalMuteActuator.cpp \
-               ControlPalSwitchActuator.cpp \
                ControlPalSetupUtils.cpp \
                ControlPalOcaUtils.cpp \
                ControlPalCommandHandler.cpp \
+               workers/ControlPalGainActuator.cpp \
+               workers/ControlPalMuteActuator.cpp \
+               workers/ControlPalSwitchActuator.cpp \
                $(shell find HostInterface -name "*.cpp")
 
 VIEW_SOURCES := View/Platform/linux/View.cpp \

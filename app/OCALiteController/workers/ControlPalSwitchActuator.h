@@ -9,8 +9,8 @@
 #define CONTROLPAL_SWITCHACTUATOR_H
 
 #include <OCC/ControlClasses/Workers/Actuators/OcaLiteSwitch.h>
-#include "HostInterface/CommandInterface/CommandInterface.h"
-#include "ControlPalMsgInterface.h"
+#include "../HostInterface/CommandInterface/CommandInterface.h"
+#include "../ControlPalMsgInterface.h"
 
 /**
  * ControlPal implementation of OcaLiteSwitch used for simple source selection.

@@ -32,9 +32,9 @@
 #include "../common/models/WallControllerConfigParser.h"  // For deserializing JSON configuration
 #include "../common/FusionOCAConstants.h" // For custom ONO constants
 #include "../common/workers/ZoneGroup.h"
-#include "ControlPalGainActuator.h"
-#include "ControlPalMuteActuator.h"
-#include "ControlPalSwitchActuator.h"
+#include "workers/ControlPalGainActuator.h"
+#include "workers/ControlPalMuteActuator.h"
+#include "workers/ControlPalSwitchActuator.h"
 #include "ControlPalCommandHandler.h"
 #include "ControlPalOcaUtils.h"
 
