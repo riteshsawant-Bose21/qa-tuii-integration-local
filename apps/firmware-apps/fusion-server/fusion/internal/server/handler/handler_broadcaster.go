@@ -1,10 +1,11 @@
 package handler
 
 import (
-	"encoding/json"
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/logging"
+
+	json "github.com/goccy/go-json"
 )
 
 // broadcastMessage processes an incoming NotifyMessage by applying configuration or snapshot updates,

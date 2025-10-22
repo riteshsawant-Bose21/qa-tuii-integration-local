@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"encoding/csv"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"fusion/internal/api"
@@ -18,6 +17,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	json "github.com/goccy/go-json"
 )
 
 // clusterNode represents a node in the test cluster
