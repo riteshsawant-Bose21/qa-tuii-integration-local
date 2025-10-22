@@ -11,15 +11,11 @@
 
 // ---- Include system wide include files ----
 #include <string>
-#include <deque>
 #include <mutex>
-#include <chrono>
 #include <memory>
 #include <map>
 #include <vector>
 #include <atomic>
-#include <cmath>
-#include <unordered_map>
 
 // ---- Include local include files ----
 #include <OCC/ControlDataTypes/OcaLiteWorkerDataTypes.h>
@@ -27,7 +23,6 @@
 
 // ---- Forward declarations ----
 class UDPSender;
-class UDPValueMonitor;
 class ConcreteGainActuator;
 
 // ---- Helper types and constants ----
@@ -64,7 +59,6 @@ public:
      * @brief Send gain update to Fusion server
      * @param gainID The gain identifier (e.g., "gain1")
      * @param value The gain value in dB
-     * @param source The source of the change ("aes70" or "fusion")
      */
     void sendGainToFusion(const std::string &gainID, double value);
 
@@ -79,7 +73,6 @@ public:
      * @brief Send mute update to Fusion server
      * @param gainID The gain identifier (mute uses same ID as gain)
      * @param muteState The mute state (true = muted, false = unmuted)
-     * @param source The source of the change ("aes70" or "fusion")
      */
     void sendMuteToFusion(const std::string &gainID, bool muteState);
 
@@ -94,7 +87,6 @@ public:
      * @brief Send source selection update to Fusion server
      * @param zoneID The zone identifier
      * @param sourceIndex The selected source index
-     * @param source The source of the change ("aes70" or "fusion")
      */
     void sendSourceToFusion(const std::string &zoneID, ::OcaUint16 sourceIndex);
 
@@ -150,6 +142,12 @@ private:
      * @return true if processed successfully, false otherwise
      */
     bool processSourceUpdate(const std::string &zoneID, ::OcaUint16 sourceIndex);
+
+    /**
+     * @brief Get a snapshot of the object tracker with thread safety
+     * @return Shared pointer to the object tracker snapshot, or nullptr if not available
+     */
+    std::shared_ptr<const std::map<std::string, std::vector<::OcaONo>>> getObjectTrackerSnapshot() const;
 
     // Shared pointer to object tracker for lock-free reads with snapshot semantics
     std::shared_ptr<const std::map<std::string, std::vector<::OcaONo>>> m_objectTrackerPtr;

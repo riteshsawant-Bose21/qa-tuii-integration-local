@@ -157,21 +157,21 @@ bool FusionAudioBridge::isInitialized() const noexcept
     return m_initialized.load();
 }
 
+std::shared_ptr<const std::map<std::string, std::vector<::OcaONo>>> FusionAudioBridge::getObjectTrackerSnapshot() const
+{
+    std::lock_guard<std::mutex> lock(m_initMutex);
+    if (!m_initialized.load())
+    {
+        OCA_LOG_INFO("[FusionAudioBridge] Bridge not initialized");
+        return nullptr;
+    }
+    return m_objectTrackerPtr;
+}
+
 bool FusionAudioBridge::processGainUpdate(const std::string &gainID, double value)
 {
-    // Snapshot the object tracker pointer with minimal lock time
-    std::shared_ptr<const std::map<std::string, std::vector<::OcaONo>>> objectTrackerPtr;
-    {
-        std::lock_guard<std::mutex> lock(m_initMutex);
-        if (!m_initialized.load())
-        {
-            OCA_LOG_INFO("[FusionAudioBridge] Bridge not initialized");
-            return false;
-        }
-        objectTrackerPtr = m_objectTrackerPtr; // Copy shared_ptr (cheap)
-    }
-
-    // Use the snapshot without holding any locks
+    // Get object tracker snapshot using helper method
+    auto objectTrackerPtr = getObjectTrackerSnapshot();
     if (!objectTrackerPtr)
     {
         OCA_LOG_INFO("[FusionAudioBridge] Object tracker not available");
@@ -309,18 +309,8 @@ void FusionAudioBridge::handleFusionSourceUpdate(const std::string &zoneID, ::Oc
 
 bool FusionAudioBridge::processMuteUpdate(const std::string &gainID, bool muteState)
 {
-    // Snapshot the object tracker pointer
-    std::shared_ptr<const std::map<std::string, std::vector<::OcaONo>>> objectTrackerPtr;
-    {
-        std::lock_guard<std::mutex> lock(m_initMutex);
-        if (!m_initialized.load())
-        {
-            OCA_LOG_INFO("[FusionAudioBridge] Bridge not initialized");
-            return false;
-        }
-        objectTrackerPtr = m_objectTrackerPtr;
-    }
-
+    // Get object tracker snapshot using helper method
+    auto objectTrackerPtr = getObjectTrackerSnapshot();
     if (!objectTrackerPtr)
     {
         OCA_LOG_INFO("[FusionAudioBridge] Object tracker not available");
@@ -374,18 +364,8 @@ bool FusionAudioBridge::processMuteUpdate(const std::string &gainID, bool muteSt
 
 bool FusionAudioBridge::processSourceUpdate(const std::string &zoneID, ::OcaUint16 sourceIndex)
 {
-    // Snapshot the object tracker pointer
-    std::shared_ptr<const std::map<std::string, std::vector<::OcaONo>>> objectTrackerPtr;
-    {
-        std::lock_guard<std::mutex> lock(m_initMutex);
-        if (!m_initialized.load())
-        {
-            OCA_LOG_INFO("[FusionAudioBridge] Bridge not initialized");
-            return false;
-        }
-        objectTrackerPtr = m_objectTrackerPtr;
-    }
-
+    // Get object tracker snapshot using helper method
+    auto objectTrackerPtr = getObjectTrackerSnapshot();
     if (!objectTrackerPtr)
     {
         OCA_LOG_INFO("[FusionAudioBridge] Object tracker not available");
