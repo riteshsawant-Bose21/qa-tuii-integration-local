@@ -1,7 +1,6 @@
 package cluster
 
 import (
-	"encoding/json"
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/logging"
@@ -14,6 +13,8 @@ import (
 	"sort"
 	"sync"
 	"time"
+
+	json "github.com/goccy/go-json"
 
 	"slices"
 

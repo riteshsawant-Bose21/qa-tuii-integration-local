@@ -2,7 +2,6 @@ package cluster
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"fusion/internal/api"
@@ -16,6 +15,8 @@ import (
 	"slices"
 	"syscall"
 	"time"
+
+	json "github.com/goccy/go-json"
 
 	"github.com/hashicorp/memberlist"
 )
