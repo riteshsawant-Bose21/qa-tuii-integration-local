@@ -17,6 +17,7 @@ type AppConfig struct {
 	BindPort int
 	Local    bool
 	Verbose  bool
+	Profile  bool
 }
 
 // Version encodes a Lamport counter plus the origin node's ID.
