@@ -10,60 +10,69 @@ import (
 )
 
 const (
-	MinPacketLength  = 40 // Minimum length for IP packet (20) + VRRP packet (20)
 	VIPPassword      = "fusion"
-	VRRPDataOffset   = 20 // RAW socket with IP header.
-	VRRPPort         = 112
+	VRRPBufSize      = 1500
+	VRRPProtocol     = 112
 	MinIPv4HeaderLen = 20
 )
 
 type VRRPHeader struct {
-	VersType    uint8 // high-nibble = Version, low-nibble = Type
+	VersType    uint8
 	VRID        uint8
 	Priority    uint8
-	IPCount     uint8 // number of virtual IPs
+	IPCount     uint8
 	AuthType    uint8
 	AdvInterval uint8
-	Checksum    uint16 // big-endian
+	Checksum    uint16
 }
 
-// VRRPPacket bundles header, IP list, and auth data.
 type VRRPPacket struct {
 	Header     VRRPHeader
-	VirtualIPs []net.IP // length = Header.IPCount
-	AuthData   [8]byte  // text password (null-padded)
+	VirtualIPs []net.IP
+	AuthData   [8]byte
 }
 
-func StartVRRPListener(onUpdate func(string)) error {
-	fd, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_RAW, VRRPPort)
+// StartVRRPListener starts a goroutine that listens for VRRP advertisements.
+// onUpdate(vip, src) is called when the VIP ownership changes.
+func StartVRRPListener(onUpdate func(vip string, srcIP string)) error {
+	fd, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_RAW, VRRPProtocol)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create raw socket: %w", err)
 	}
 
-	var lastVIP string
+	logger := logging.GetLogger()
+	logger.Debug("VRRP listener started")
 
 	go func() {
+		defer syscall.Close(fd)
 
-		logger := logging.GetLogger()
-
-		buf := make([]byte, 1500)
+		buf := make([]byte, VRRPBufSize)
+		var lastSrc, lastVIP string
 
 		for {
-			_, _, err := syscall.Recvfrom(fd, buf, 0)
+			n, from, err := syscall.Recvfrom(fd, buf, 0)
 			if err != nil {
 				logger.Error("VRRP read error: %v", err)
 				continue
 			}
+			if n <= MinIPv4HeaderLen {
+				continue
+			}
 
-			vip, err := parseVRRPAddress(buf)
-			if err == nil {
+			sa := from.(*syscall.SockaddrInet4)
+			srcIP := fmt.Sprintf("%d.%d.%d.%d", sa.Addr[0], sa.Addr[1], sa.Addr[2], sa.Addr[3])
 
-				if vip != "" && vip != lastVIP {
-					lastVIP = vip
-					onUpdate(vip)
-				}
-			} else {
-				logger.Debug("VRRP listener: %v", err)
+			vip, err := parseVRRPAddress(buf[:n])
+			if err != nil {
+				logger.Error("VRRP parse error: %v", err)
+				continue
+			}
+
+			if srcIP != lastSrc || vip != lastVIP {
+				lastSrc = srcIP
+				lastVIP = vip
+				logger.Debug("VRRP update: %s binds %s", srcIP, vip)
+				onUpdate(vip, srcIP)
 			}
 		}
 	}()
@@ -71,15 +80,16 @@ func StartVRRPListener(onUpdate func(string)) error {
 	return nil
 }
 
-// ParseVRRPAddress extracts the first VIP from a full IPv4+VRRP packet.
 func parseVRRPAddress(buffer []byte) (string, error) {
 	if len(buffer) < MinIPv4HeaderLen {
 		return "", fmt.Errorf("packet too short for IPv4 header")
 	}
+
 	ihl := int(buffer[0]&0x0F) * 4
 	if len(buffer) < ihl {
 		return "", fmt.Errorf("packet shorter than IHL: %d < %d", len(buffer), ihl)
 	}
+
 	vrrpData := buffer[ihl:]
 	pkt, err := Unmarshal(vrrpData)
 	if err != nil {
@@ -88,25 +98,18 @@ func parseVRRPAddress(buffer []byte) (string, error) {
 	if len(pkt.VirtualIPs) < 1 {
 		return "", fmt.Errorf("no virtual IPs in VRRP packet")
 	}
-	// validate password
+
 	pwd := strings.TrimRight(string(pkt.AuthData[:]), "\x00")
 	if pwd != VIPPassword {
-		return "", fmt.Errorf("wrong password %q (expected %q)", pwd, VIPPassword)
+		return "", fmt.Errorf("invalid VRRP auth password %q", pwd)
 	}
+
 	return pkt.VirtualIPs[0].String(), nil
 }
 
-// Version returns the VRRP version.
-func (h *VRRPHeader) Version() uint8 {
-	return h.VersType >> 4
-}
+func (h *VRRPHeader) Version() uint8 { return h.VersType >> 4 }
+func (h *VRRPHeader) Type() uint8    { return h.VersType & 0x0F }
 
-// Type returns the VRRP message type.
-func (h *VRRPHeader) Type() uint8 {
-	return h.VersType & 0x0F
-}
-
-// Unmarshal parses a raw VRRP byte-slice (starting at the VRRP header).
 func Unmarshal(data []byte) (*VRRPPacket, error) {
 	if len(data) < 8 {
 		return nil, fmt.Errorf("too short for VRRP header: %d bytes", len(data))
@@ -129,24 +132,21 @@ func Unmarshal(data []byte) (*VRRPPacket, error) {
 		return nil, fmt.Errorf("unsupported auth type %d", hdr.AuthType)
 	}
 
-	// compute total length needed: header + IP list + auth
-	need := 8 + int(hdr.IPCount)*4 + 8
-	if len(data) < need {
-		return nil, fmt.Errorf("packet too short: need %d, have %d", need, len(data))
+	required := 8 + int(hdr.IPCount)*4 + 8
+	if len(data) < required {
+		return nil, fmt.Errorf("packet too short: need %d, have %d", required, len(data))
 	}
 
 	pkt := &VRRPPacket{Header: hdr}
 	off := 8
 
-	// parse virtual IPs
 	pkt.VirtualIPs = make([]net.IP, hdr.IPCount)
 	for i := 0; i < int(hdr.IPCount); i++ {
-		b := data[off : off+4]
-		pkt.VirtualIPs[i] = net.IPv4(b[0], b[1], b[2], b[3])
+		ipb := data[off : off+4]
+		pkt.VirtualIPs[i] = net.IPv4(ipb[0], ipb[1], ipb[2], ipb[3])
 		off += 4
 	}
 
-	// copy auth data
 	copy(pkt.AuthData[:], data[off:off+8])
 	return pkt, nil
 }
