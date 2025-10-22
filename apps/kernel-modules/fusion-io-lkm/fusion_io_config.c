@@ -29,7 +29,7 @@ const enum io_card_type default_ic_types[] = {
 const struct io_card *default_ics[] = {
     &ic_empty
 };
-/*    END    */
+/*    */
 
 
 // Default base devices
@@ -72,7 +72,6 @@ const struct base_device bd_fusion_c0 = {
             .name = "gpio_a_mute_out",
             .type = EP_GPIO_TYPE_PHYS,
             .num = 47,
-            //.is_irq = true,
             .dir = EP_GPIO_DIR_I
         },
         {
@@ -135,17 +134,6 @@ const struct base_device bd_fusion_c0 = {
                     .is_irq = true,
                     .trigger_type = IRQ_TYPE_EDGE_FALLING
                 }
-            },
-            .num_cmds = 1,
-            .cmds = (struct endpoint_cmd[]) {
-                [EP_CMD_TYPE_CFG] = {
-                    .name = "cmd_config",
-                    .type = EP_CMD_TYPE_CFG,
-                    .num_msgs = 1,
-                    .msgs = (struct endpoint_cmd_msg[]) {
-                        { .reg_addr = ENDPOINT_CMD_MSG_ADDR_NONE }
-                    }
-                }
             }
         },
         {
@@ -202,27 +190,10 @@ const struct base_device bd_fusion_c0 = {
                     .is_irq = true,
                     .trigger_type = IRQ_TYPE_EDGE_FALLING
                 }
-            },
-            .num_cmds = 1,
-            .cmds = (struct endpoint_cmd[]) {
-                [EP_CMD_TYPE_CFG] = {
-                    .name = "cmd_config",
-                    .type = EP_CMD_TYPE_CFG,
-                    .num_msgs = 7,
-                    .msgs = (struct endpoint_cmd_msg[]) {
-                        { .reg_addr = TCAL6408_REG_POLARITY_INV,        .data = 0x00 },
-                        { .reg_addr = TCAL6408_REG_CONFIGURATION,       .data = 0x00 }, // all output
-                        { .reg_addr = TCAL6408_REG_OUTPUT_DR_STR0,      .data = 0xff }, // full strength
-                        { .reg_addr = TCAL6408_REG_OUTPUT_DR_STR1,      .data = 0xff }, // full strength
-                        { .reg_addr = TCAL6408_REG_INT_MASK_REG,        .data = 0xff }, // all disabled
-                        { .reg_addr = TCAL6408_REG_OUTPUT_PORT_CFG_REG, .data = 0x00 }, // push-pull
-                        { .reg_addr = TCAL6408_REG_OUTPUT_PORT,         .data = 0xff }  // All on
-                    }
-                }
             }
         }
     },
-    .num_ics = 4,
+    .num_ics = 3,
     .io_cards = (struct io_card[]) {
         {
             .data = {
@@ -230,6 +201,7 @@ const struct base_device bd_fusion_c0 = {
                 .sn = "n/a",
                 .type = IC_TYPE_AN_IN_OUT
             },
+            .sw_port = 1,
             .num_inputs = 6,
             .num_outputs = 4,
             .num_gpios = 3,
@@ -367,26 +339,6 @@ const struct base_device bd_fusion_c0 = {
                             .aggregate_id = 6,
                             .trigger_type = IRQ_TYPE_EDGE_FALLING
                         }
-                    },
-                    .num_cmds = 1,
-                    .cmds = (struct endpoint_cmd[]) {
-                        [EP_CMD_TYPE_CFG] = {
-                            .name = "cmd_config",
-                            .type = EP_CMD_TYPE_CFG,
-                            .num_msgs = 2,
-                            .msgs = (struct endpoint_cmd_msg[]) {
-                                {
-                                    .reg_addr = TCA9535_REG_OUTPUT_PORT0,
-                                    .op_size = ENDPOINT_CMD_MSG_OP_16BIT,
-                                    .data = 0x0000
-                                },
-                                {
-                                    .reg_addr = TCA9535_REG_CONFIGURATION0,
-                                    .op_size = ENDPOINT_CMD_MSG_OP_16BIT,
-                                    .data = 0x0000  // all outputs
-                                }
-                            }
-                        }
                     }
                 },
                 {
@@ -434,26 +386,6 @@ const struct base_device bd_fusion_c0 = {
                             .aggregate_id = 6,
                             .trigger_type = IRQ_TYPE_EDGE_FALLING
                         }
-                    },
-                    .num_cmds = 1,
-                    .cmds = (struct endpoint_cmd[]) {
-                        [EP_CMD_TYPE_CFG] = {
-                            .name = "cmd_config",
-                            .type = EP_CMD_TYPE_CFG,
-                            .num_msgs = 2,
-                            .msgs = (struct endpoint_cmd_msg[]) {
-                                {
-                                    .reg_addr = TCA9535_REG_OUTPUT_PORT0,
-                                    .op_size = ENDPOINT_CMD_MSG_OP_16BIT,
-                                    .data = 0x0030 // 15v_psw and dac_mute  
-                                },
-                                {
-                                    .reg_addr = TCA9535_REG_CONFIGURATION0,
-                                    .op_size = ENDPOINT_CMD_MSG_OP_16BIT,
-                                    .data = 0x0000  // all outputs
-                                }
-                            }
-                        }
                     }
                 },
                 {
@@ -462,9 +394,7 @@ const struct base_device bd_fusion_c0 = {
                     .export = true,
                     .in_ch_bm = 0x0003,
                     .num_gpios = 0,
-                    .gpios = NULL,
-                    .num_cmds = 0,
-                    .cmds = NULL
+                    .gpios = NULL
                 },
                 {
                     .name = "ep_aud_in_chs-34",
@@ -499,9 +429,7 @@ const struct base_device bd_fusion_c0 = {
                             .export = true,
                             .ioexp_id = 3
                         }
-                    },
-                    .num_cmds = 0,
-                    .cmds = NULL
+                    }
                 },
                 {
                     .name = "ep_aud_in_chs-56",
@@ -536,9 +464,7 @@ const struct base_device bd_fusion_c0 = {
                             .export = true,
                             .ioexp_id = 3
                         }
-                    },
-                    .num_cmds = 0,
-                    .cmds = NULL
+                    }
                 },
                 {
                     .name = "ep_aud_out_chs-12",
@@ -553,9 +479,7 @@ const struct base_device bd_fusion_c0 = {
                             .export = true,
                             .ioexp_id = 3
                         }
-                    },
-                    .num_cmds = 0,
-                    .cmds = NULL
+                    }
                 },
                 {
                     .name = "ep_aud_out_chs-34",
@@ -570,9 +494,7 @@ const struct base_device bd_fusion_c0 = {
                             .export = true,
                             .ioexp_id = 3
                         }
-                    },
-                    .num_cmds = 0,
-                    .cmds = NULL
+                    }
                 }
             }
         },
@@ -582,6 +504,7 @@ const struct base_device bd_fusion_c0 = {
                 .sn = "n/a",
                 .type = IC_TYPE_HDMI
             },
+            .sw_port = 2,
             .num_gpios = 4,
             .gpios = (struct endpoint_gpio[]) {
                 {
@@ -624,17 +547,6 @@ const struct base_device bd_fusion_c0 = {
                             .export = true,
                             .ioexp_id = 1
                         }
-                    },
-                    .num_cmds = 1,
-                    .cmds = (struct endpoint_cmd[]) {
-                        [EP_CMD_TYPE_CFG] = {
-                            .name = "cmd_config",
-                            .type = EP_CMD_TYPE_CFG,
-                            .num_msgs = 1,
-                            .msgs = (struct endpoint_cmd_msg[]) {
-                                { .reg_addr = AK4137_REG_PCM_CONT0, .data = 0x13 }
-                            }
-                        }
                     }
                 },
                 {
@@ -665,31 +577,6 @@ const struct base_device bd_fusion_c0 = {
                             .export = true,
                             .ioexp_id = 1
                         }
-                    },
-                    .num_cmds = 1,
-                    .cmds = (struct endpoint_cmd[]) {
-                        [EP_CMD_TYPE_CFG] = {
-                            .name = "cmd_config",
-                            .type = EP_CMD_TYPE_CFG,
-                            .num_msgs = 3,
-                            .msgs = (struct endpoint_cmd_msg[]) {
-                                {
-                                    .reg_addr  = EP9512T_REG_GENERAL_CTRL, // 0x10
-                                    .op_size   = ENDPOINT_CMD_MSG_OP_8BIT,    
-                                    .data = 0x21                // ARC_EN = 1, Audio_Path = 1, others 0
-                                },
-                                {
-                                    .reg_addr  = EP9512T_REG_TX_CTRL,    // 0x11
-                                    .op_size   = ENDPOINT_CMD_MSG_OP_8BIT,
-                                    .data = 0x00                  // All zero, clear all bits
-                                },
-                                {
-                                    .reg_addr  = EP9512T_REG_AUDIO_CFG,  // 0x12
-                                    .op_size   = ENDPOINT_CMD_MSG_OP_8BIT,
-                                    .data = 0x01                  //  A_IN = 01 (I2S), others 0
-                                }
-                            }
-                        }
                     }
                 }
             }
@@ -700,6 +587,7 @@ const struct base_device bd_fusion_c0 = {
                 .sn = "n/a",
                 .type = IC_TYPE_GPIO
             },
+            .sw_port = 3,
             .num_gpios = 7,
             .gpios = (struct endpoint_gpio[]) {
                 {
@@ -828,26 +716,6 @@ const struct base_device bd_fusion_c0 = {
                             .aggregate_id = 7,
                             .trigger_type = IRQ_TYPE_EDGE_FALLING
                         }
-                    },
-                    .num_cmds = 1,
-                    .cmds = (struct endpoint_cmd[]) {
-                        [EP_CMD_TYPE_CFG] = {
-                            .name = "cmd_config",
-                            .type = EP_CMD_TYPE_CFG,
-                            .num_msgs = 2,
-                            .msgs = (struct endpoint_cmd_msg[]) {
-                                {
-                                    .reg_addr = TCA9535_REG_OUTPUT_PORT0,
-                                    .op_size = ENDPOINT_CMD_MSG_OP_16BIT,
-                                    .data = 0x03ff
-                                },
-                                {
-                                    .reg_addr = TCA9535_REG_CONFIGURATION0,
-                                    .op_size = ENDPOINT_CMD_MSG_OP_16BIT,
-                                    .data = 0xfc00  // all outputs
-                                }
-                            }
-                        }
                     }
                 },
                 {
@@ -903,69 +771,163 @@ const struct base_device bd_fusion_c0 = {
                             .trigger_type = IRQ_TYPE_EDGE_FALLING
                         }
                     },
-                    .num_cmds = 2,
+                    .num_cmds = 1,
                     .cmds = (struct endpoint_cmd[]) {
-                        [EP_CMD_TYPE_CFG] = {
-                            .name = "cmd_config",
-                            .type = EP_CMD_TYPE_CFG,
-                            .num_msgs = 13,
-                            .msgs = (struct endpoint_cmd_msg[]) {
-                                { .reg_addr = ADS7128_REG_SYSTEM_STATUS,   .data = 0x01 }, // clear BOR
-                                { .reg_addr = ADS7128_REG_AUTO_SEQ_CH_SEL, .data = 0x3F }, // AUTO_SEQ_CHSEL 0-5
-                                { .reg_addr = ADS7128_REG_SEQUENCE_CFG,    .data = 0x01 }, // SEQ_MODE auto
-                                { .reg_addr = ADS7128_REG_HIGH_TH_CH0,     .data = 0x01 }, // DWC high thresholds
-                                { .reg_addr = ADS7128_REG_HIGH_TH_CH1,     .data = 0x01 },
-                                { .reg_addr = ADS7128_REG_HIGH_TH_CH2,     .data = 0x01 },
-                                { .reg_addr = ADS7128_REG_HIGH_TH_CH3,     .data = 0x01 },
-                                { .reg_addr = ADS7128_REG_HIGH_TH_CH4,     .data = 0x01 },
-                                { .reg_addr = ADS7128_REG_ALERT_CH_SEL,    .data = 0x3f }, // alerts on all chs
-                                { .reg_addr = ADS7128_REG_OPMODE_CFG,      .data = 0x3d }, // CONV_MODE autonomous, OSC_SEL lp, CLK_DIV 3072us
-                                { .reg_addr = ADS7128_REG_OSR_CFG,         .data = 0x03 }, // OSR 8 samples
-                                { .reg_addr = ADS7128_REG_GENERAL_CFG,     .data = 0x30 }, // STAT_EN, DWC_EN
-                                { .reg_addr = ADS7128_REG_SEQUENCE_CFG,    .data = 0x11 }  // SEQ_START 
-                            }
-                        },
-                        [EP_CMD_TYPE_ADC_REGOP] = {
+                        {
                             .name = "cmd_regop",
                             .type = EP_CMD_TYPE_ADC_REGOP,
-                            .export = true,
-                            .num_msgs = 1,
-                            .msgs = (struct endpoint_cmd_msg[]) {
-                                { .reg_addr = ENDPOINT_CMD_MSG_ADDR_NONE }
-                            }
+                            .export = true
                         }
                     }
                 }
             }
-        },
-        {
-            .data = {
-                .model = "block_amp",
-                .sn = "n/a",
-                .type = IC_TYPE_AMP
+        }
+    },
+    .cfg_seq = {
+        .num_pwrup_cmds = 9,
+        .pwrup_cmds = (struct config_sequence_cmd[]) {
+            {
+                .name = "tca9544_config",
+                .parent_ep_name = "ep_i2csw_tca9544"
             },
-            .num_gpios = 3,
-            .gpios = (struct endpoint_gpio[]) {
-                {
-                    .name = "gpio_amp_int",
-                    .type = EP_GPIO_TYPE_VIRT,
-                    .is_irq = true
-                },
-                {
-                    .name = "gpio_amp_reset",
-                    .type = EP_GPIO_TYPE_VIRT,
-                    .export = true,
-                    .ioexp_id = 1
-                },
-                {
-                    .name = "gpio_amp_stby",
-                    .type = EP_GPIO_TYPE_VIRT,
-                    .export = true,
-                    .ioexp_id = 1
+            {
+                .name = "tcal6408_config",
+                .parent_ep_name = "ep_ioexp_tcal6408",
+                .num_msgs = 7,
+                .msgs = (struct endpoint_cmd_msg[]) {
+                    { .reg_addr = TCAL6408_REG_POLARITY_INV,        .data = 0x00 },
+                    { .reg_addr = TCAL6408_REG_OUTPUT_DR_STR0,      .data = 0xff }, // full strength
+                    { .reg_addr = TCAL6408_REG_OUTPUT_DR_STR1,      .data = 0xff }, // full strength
+                    { .reg_addr = TCAL6408_REG_INT_MASK_REG,        .data = 0xff }, // all disabled
+                    { .reg_addr = TCAL6408_REG_OUTPUT_PORT_CFG_REG, .data = 0x00 }, // push-pull
+                    { .reg_addr = TCAL6408_REG_OUTPUT_PORT,         .data = 0x00 }, // default low
+                    { .reg_addr = TCAL6408_REG_CONFIGURATION,       .data = 0x00 }, // all output
                 }
             },
-            .num_eps = 0,
-            .endpoints = NULL
+            {
+                .name = "ana_3v3_psw",
+                .parent_ep_name = "ep_ioexp_tcal6408",
+                .num_msgs = 1,
+                .msgs = (struct endpoint_cmd_msg[]) {
+                    { .reg_addr = TCAL6408_REG_OUTPUT_PORT, .data = 0x01 }
+                },
+                .seq_delay_ms = 25
+            },
+            {
+                .name = "ana_15v_psw",
+                .parent_ep_name = "ep_ioexp_tca9535-1",
+                .num_msgs = 2,
+                .msgs = (struct endpoint_cmd_msg[]) { 
+                    { .reg_addr = TCA9535_REG_OUTPUT_PORT0,   .op_size = ENDPOINT_CMD_MSG_OP_16BIT, .data = 0x0010 },
+                    { .reg_addr = TCA9535_REG_CONFIGURATION0, .op_size = ENDPOINT_CMD_MSG_OP_16BIT, .data = 0x0000 }
+                },
+                .seq_delay_ms = 25
+            },
+            {
+                .name = "hdmi_psw",
+                .parent_ep_name = "ep_ioexp_tcal6408",
+                .num_msgs = 1,
+                .msgs = (struct endpoint_cmd_msg[]) { 
+                    { .reg_addr = TCAL6408_REG_OUTPUT_PORT, .data = 0x05 }
+                },
+                .seq_delay_ms = 25
+            },
+            {
+                .name = "hdmi_reset",
+                .parent_ep_name = "ep_ioexp_tcal6408",
+                .num_msgs = 1,
+                .msgs = (struct endpoint_cmd_msg[]) {
+                    { .reg_addr = TCAL6408_REG_OUTPUT_PORT, .data = 0x15 }
+                }
+            },
+            {
+                .name = "gpio_psw",
+                .parent_ep_name = "ep_ioexp_tcal6408",
+                .num_msgs = 1,
+                .msgs = (struct endpoint_cmd_msg[]) { 
+                    { .reg_addr = TCAL6408_REG_OUTPUT_PORT, .data = 0x17 }
+                },
+                .seq_delay_ms = 25
+            },
+            {
+                .name = "tca9535-2_config",
+                .parent_ep_name = "ep_ioexp_tca9535-2",
+                .num_msgs = 2,
+                .msgs = (struct endpoint_cmd_msg[]) {
+                    { .reg_addr = TCA9535_REG_OUTPUT_PORT0,   .op_size = ENDPOINT_CMD_MSG_OP_16BIT, .data = 0x02aa },
+                    { .reg_addr = TCA9535_REG_CONFIGURATION0, .op_size = ENDPOINT_CMD_MSG_OP_16BIT, .data = 0x0000 }
+                }
+            },
+            {
+                .name = "ads7128_config",
+                .parent_ep_name = "ep_adc_ads7128",
+                .num_msgs = 13,
+                .msgs = (struct endpoint_cmd_msg[]) {
+                    { .reg_addr = ADS7128_REG_SYSTEM_STATUS,   .data = 0x01 }, // clear BOR
+                    { .reg_addr = ADS7128_REG_AUTO_SEQ_CH_SEL, .data = 0x3F }, // AUTO_SEQ_CHSEL 0-5
+                    { .reg_addr = ADS7128_REG_SEQUENCE_CFG,    .data = 0x01 }, // SEQ_MODE auto
+                    { .reg_addr = ADS7128_REG_HIGH_TH_CH0,     .data = 0x01 }, // DWC high thresholds
+                    { .reg_addr = ADS7128_REG_HIGH_TH_CH1,     .data = 0x01 },
+                    { .reg_addr = ADS7128_REG_HIGH_TH_CH2,     .data = 0x01 },
+                    { .reg_addr = ADS7128_REG_HIGH_TH_CH3,     .data = 0x01 },
+                    { .reg_addr = ADS7128_REG_HIGH_TH_CH4,     .data = 0x01 },
+                    { .reg_addr = ADS7128_REG_ALERT_CH_SEL,    .data = 0x3f }, // alerts on all chs
+                    { .reg_addr = ADS7128_REG_OPMODE_CFG,      .data = 0x3d }, // CONV_MODE autonomous, OSC_SEL lp, CLK_DIV 3072us
+                    { .reg_addr = ADS7128_REG_OSR_CFG,         .data = 0x03 }, // OSR 8 samples
+                    { .reg_addr = ADS7128_REG_GENERAL_CFG,     .data = 0x30 }, // STAT_EN, DWC_EN
+                    { .reg_addr = ADS7128_REG_SEQUENCE_CFG,    .data = 0x11 }  // SEQ_START 
+                }
+            }
+        },
+        .num_cfg_cmds = 3,
+        .cfg_cmds = (struct config_sequence_cmd[]) {
+            {
+                .name = "tca9535-0_config",
+                .parent_ep_name = "ep_ioexp_tca9535-0",
+                .num_msgs = 2,
+                .msgs = (struct endpoint_cmd_msg[]) {
+                    { .reg_addr = TCA9535_REG_OUTPUT_PORT0,   .op_size = ENDPOINT_CMD_MSG_OP_16BIT, .data = 0x0000 },
+                    { .reg_addr = TCA9535_REG_CONFIGURATION0, .op_size = ENDPOINT_CMD_MSG_OP_16BIT, .data = 0x0000 }
+                }
+            },
+            {
+                .name = "ep9512t_config",
+                .parent_ep_name = "ep_hdmi_ep9512t",
+                .num_msgs = 3,
+                .msgs = (struct endpoint_cmd_msg[]) {
+                    { .reg_addr  = EP9512T_REG_GENERAL_CTRL, .data = 0x21 }, // ARC_EN = 1, Audio_Path = 1
+                    { .reg_addr  = EP9512T_REG_TX_CTRL,      .data = 0x00 },
+                    { .reg_addr  = EP9512T_REG_AUDIO_CFG,    .data = 0x01 }  // A_IN = 01 (I2S)
+                }
+            },
+            {
+                .name = "ak4137_config",
+                .parent_ep_name = "ep_src_ak4137",
+                .num_msgs = 1,
+                .msgs = (struct endpoint_cmd_msg[]) {
+                    { .reg_addr = AK4137_REG_PCM_CONT0, .data = 0x13 } // input format i2s
+                }
+            }
+        },
+        .num_post_cfg_cmds = 2,
+        .post_cfg_cmds = (struct config_sequence_cmd[]) {
+            {
+                .name = "hdmi_5v_en",
+                .parent_ep_name = "ep_ioexp_tcal6408",
+                .num_msgs = 1,
+                .msgs = (struct endpoint_cmd_msg[]) {
+                    { .reg_addr = TCAL6408_REG_OUTPUT_PORT, .data = 0x1f }
+                },
+                .seq_delay_ms = 25
+            },
+            {
+                .name = "dac_mute",
+                .parent_ep_name = "ep_ioexp_tca9535-1",
+                .num_msgs = 1,
+                .msgs = (struct endpoint_cmd_msg[]) { 
+                    { .reg_addr = TCA9535_REG_OUTPUT_PORT0, .op_size = ENDPOINT_CMD_MSG_OP_16BIT, .data = 0x0030 } 
+                }
+            }
         }
     }
 };
