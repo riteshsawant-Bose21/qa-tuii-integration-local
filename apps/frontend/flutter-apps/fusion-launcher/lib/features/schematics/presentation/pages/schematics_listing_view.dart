@@ -797,55 +797,52 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
 
   /// Accessories content using CommonReorderableListView
   Widget _buildSwitchesContent() {
-    return Padding(
-      padding: const EdgeInsets.all(10.0),
-      child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-        builder: (BuildContext context, ProjectViewModelState state) {
-          final SelectedItem? hoveredDevice = _projectViewModel.hoveredDevice;
-          final SelectedItem? selectedDevice = _projectViewModel.selectedDevice;
+    return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+      builder: (BuildContext context, ProjectViewModelState state) {
+        final SelectedItem? hoveredDevice = _projectViewModel.hoveredDevice;
+        final SelectedItem? selectedDevice = _projectViewModel.selectedDevice;
 
-          return CommonReorderableListView<NetworkSwitch>(
-            items: _projectViewModel.networkSwitches,
-            emptyMessage: "No accessories added yet",
-            onReorder: (int oldIndex, int newIndex) {
-              setState(() {
-                if (newIndex > oldIndex) newIndex -= 1;
-                final NetworkSwitch item = _projectViewModel.networkSwitches.removeAt(oldIndex);
-                _projectViewModel.networkSwitches.insert(newIndex, item);
-                _projectViewModel.setSelectedDevice('accessory_$newIndex', SelectedItemType.switchs);
-              });
-            },
-            keyExtractor: (NetworkSwitch networkSwitch) => networkSwitch.id,
-            itemBuilder: (BuildContext context, NetworkSwitch networkSwitch, int index) {
-              final bool isHovered = hoveredDevice?.id == networkSwitch.id && hoveredDevice?.type == SelectedItemType.switchs;
-              final bool isSelected = selectedDevice?.id == networkSwitch.id && selectedDevice?.type == SelectedItemType.switchs;
+        return CommonReorderableListView<NetworkSwitch>(
+          items: _projectViewModel.networkSwitches,
+          emptyMessage: "No accessories added yet",
+          onReorder: (int oldIndex, int newIndex) {
+            setState(() {
+              if (newIndex > oldIndex) newIndex -= 1;
+              final NetworkSwitch item = _projectViewModel.networkSwitches.removeAt(oldIndex);
+              _projectViewModel.networkSwitches.insert(newIndex, item);
+              _projectViewModel.setSelectedDevice('accessory_$newIndex', SelectedItemType.switchs);
+            });
+          },
+          keyExtractor: (NetworkSwitch networkSwitch) => networkSwitch.id,
+          itemBuilder: (BuildContext context, NetworkSwitch networkSwitch, int index) {
+            final bool isHovered = hoveredDevice?.id == networkSwitch.id && hoveredDevice?.type == SelectedItemType.switchs;
+            final bool isSelected = selectedDevice?.id == networkSwitch.id && selectedDevice?.type == SelectedItemType.switchs;
 
-              return HardwareItemCard(
-                name: networkSwitch.name,
-                assetImagePath: networkSwitch.assetImagePath,
-                itemId: networkSwitch.id,
-                // zone: getZoneData(accessoryId),
-                location: getLocationName(networkSwitch.locationEntity.listeningAreaId) ?? "Add Location",
-                isHovered: isHovered,
-                isSelected: isSelected,
-                onTap: () => _projectViewModel.setSelectedDevice(networkSwitch.id, SelectedItemType.switchs),
-                onHover: () => _projectViewModel.setHoveredDevice(networkSwitch.id, SelectedItemType.switchs),
-                onExit: () => _projectViewModel.setHoveredDevice(null, null),
-                onDelete: (String id) {
-                  serviceLocator<ProjectViewModel>().removeHardware(hardwareId: id);
+            return HardwareItemCard(
+              name: networkSwitch.name,
+              assetImagePath: networkSwitch.assetImagePath,
+              itemId: networkSwitch.id,
+              // zone: getZoneData(accessoryId),
+              location: getLocationName(networkSwitch.locationEntity.listeningAreaId) ?? "Add Location",
+              isHovered: isHovered,
+              isSelected: isSelected,
+              onTap: () => _projectViewModel.setSelectedDevice(networkSwitch.id, SelectedItemType.switchs),
+              onHover: () => _projectViewModel.setHoveredDevice(networkSwitch.id, SelectedItemType.switchs),
+              onExit: () => _projectViewModel.setHoveredDevice(null, null),
+              onDelete: (String id) {
+                serviceLocator<ProjectViewModel>().removeHardware(hardwareId: id);
 
-                  FusionToast.error(
-                    context,
-                    message: 'Accessory "${networkSwitch.name}" deleted',
-                  );
-                },
-                onRename: (String id) => print('Rename accessory $id'),
-                onDuplicate: (String id) => print('Duplicate accessory $id'),
-              );
-            },
-          );
-        },
-      ),
+                FusionToast.error(
+                  context,
+                  message: 'Accessory "${networkSwitch.name}" deleted',
+                );
+              },
+              onRename: (String id) => print('Rename accessory $id'),
+              onDuplicate: (String id) => print('Duplicate accessory $id'),
+            );
+          },
+        );
+      },
     );
   }
 
