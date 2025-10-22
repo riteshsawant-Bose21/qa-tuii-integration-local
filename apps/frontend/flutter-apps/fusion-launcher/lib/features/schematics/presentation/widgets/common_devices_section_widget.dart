@@ -125,48 +125,6 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
     _toggleSearch();
   }
 
-  void _onListeningAreaSelectionChanged(List<String> selectedIds) {
-    setState(() {
-      _selectedListeningAreaIds = selectedIds;
-    });
-  }
-
-  void _onCreateNewListeningArea(String areaName, String venueType) {
-    // Create new listening area and add to selection
-    final ListeningArea newArea = ListeningArea(
-      name: areaName,
-      vertices: <Offset>[], // Empty for now
-      venuType: venueType,
-    );
-
-    // Add to the selection
-    setState(() {
-      _selectedListeningAreaIds.add(newArea.id);
-    });
-
-    // You might want to call a callback to actually create the area in your data model
-    print('Created new listening area: $areaName ($venueType)');
-  }
-
-  void _addDeviceToSelectedAreas() {
-    if (widget.selectedDeviceId != null && _selectedListeningAreaIds.isNotEmpty) {
-      widget.onAddDeviceToAreas?.call(widget.selectedDeviceId!, _selectedListeningAreaIds);
-
-      // Clear selections after adding
-      setState(() {
-        _selectedListeningAreaIds.clear();
-      });
-
-      // Show success message
-      FusionToast.show(
-        context,
-        message: 'Device added to ${_selectedListeningAreaIds.length} listening area(s)',
-        icon: Icons.check_circle_outline,
-        backgroundColor: Colors.green[600],
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Container(

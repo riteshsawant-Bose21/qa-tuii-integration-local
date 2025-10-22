@@ -55,16 +55,37 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
   }
 
   void _addDeviceToSelectedAreas() {
-    final FloorModel? floorData = projectViewModel.getFloorForListeningArea(areaId: _selectedListeningAreaIds.first);
+    print('Add device added - Device: $_selectedPopupDevice, Areas: $_selectedListeningAreaIds');
 
-    print('Add device called - Device: $_selectedPopupDevice, Areas: $_selectedListeningAreaIds'); // Debug print
-    if (_selectedPopupDevice != null && _selectedListeningAreaIds.isNotEmpty) {
-      widget.onTapAddDevice?.call(_selectedPopupDevice, _selectedListeningAreaIds.first, floorData?.id ?? "");
+    if (_selectedPopupDevice == null) {
+      FusionToast.error(context, message: "Please select a device first");
+      return;
+    }
+
+    if (_selectedListeningAreaIds.isEmpty) {
+      FusionToast.error(context, message: "Please select a listening area first");
+      return;
+    }
+
+    try {
+      final FloorModel? floorData = projectViewModel.getFloorForListeningArea(areaId: _selectedListeningAreaIds.first);
+
+      if (floorData == null) {
+        FusionToast.error(context, message: "Floor not found for selected listening area");
+        return;
+      }
+
+      widget.onTapAddDevice?.call(_selectedPopupDevice, _selectedListeningAreaIds.first, floorData.id);
+
+      /// Clear selections and close popup
       setState(() {
         _selectedPopupDevice = null;
         _selectedListeningAreaIds.clear();
       });
       Navigator.of(context).pop();
+    } catch (e) {
+      FusionToast.error(context, message: "Failed to add device: $e");
+      print('Error adding device: $e');
     }
   }
 
@@ -161,7 +182,7 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
           _buildExpandableSection<ProductQueryModel>(
             title: 'PROCESSORS',
             sectionKey: 'PROCESSORS',
-            items: ProductAPI.getControllers(),
+            items: ProductAPI.getDeviceProducts(),
             setMenuState: setMenuState,
           ),
           _buildExpandableSection<ProductQueryModel>(
@@ -194,16 +215,16 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
 
       case "Accessories":
         return <Widget>[
-          _buildExpandableSection<String>(
+          _buildExpandableSection<RackData>(
             title: 'RACKS',
             sectionKey: 'RACKS',
-            items: <String>['4U', '8U', '12U', '24U'],
+            items: RackData.demoRacks,
             setMenuState: setMenuState,
           ),
-          _buildExpandableSection<SourceData>(
-            title: 'OTHER DEVICES',
-            sectionKey: 'OTHER_DEVICES',
-            items: SourceData.microphoneItems,
+          _buildExpandableSection<SwitchData>(
+            title: 'SWITCHES',
+            sectionKey: 'SWITCHES',
+            items: SwitchData.demoSwitchs,
             setMenuState: setMenuState,
           ),
         ];
@@ -227,28 +248,20 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
       return selectedDevice.name == item.name;
     }
 
-    /// For String items (like racks)
-    if (selectedDevice is String && item is String) {
-      return selectedDevice == item;
+    /// For RackData, compare by name and ensure both are RackData
+    if (selectedDevice is RackData && item is RackData) {
+      return selectedDevice.id == item.id;
     }
 
-    /// If different types, compare by name if available
-    final String? selectedName = _getDeviceName(selectedDevice);
-    final String? itemName = _getDeviceName(item);
-
-    return selectedName != null && itemName != null && selectedName == itemName;
-  }
-
-  /// Helper method to get device name
-  String? _getDeviceName(dynamic item) {
-    if (item is SourceData) {
-      return item.name;
-    } else if (item is ProductQueryModel) {
-      return item.name;
-    } else if (item is String) {
-      return item;
+    /// for SwitchData, compare by name and ensure both are SwitchData
+    if (selectedDevice is SwitchData && item is SwitchData) {
+      return selectedDevice.id == item.id;
     }
-    return item?.toString();
+
+    /// If same types, compare by name if available
+    final String itemName = _getDisplayName(item);
+
+    return selectedDevice == itemName;
   }
 
   /// Builds an expandable section with a header and items
@@ -308,14 +321,26 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(4),
                   border: Border.all(
-                    color: _isDeviceSelected(_selectedPopupDevice, item) ? Colors.blue : Theme.of(context).colorScheme.grey,
-                    width: _isDeviceSelected(_selectedPopupDevice, item) ? 2 : 1,
+                    color: _isDeviceSelected(_selectedPopupDevice, item) ? Colors.black : Theme.of(context).colorScheme.grey,
+                    width: _isDeviceSelected(_selectedPopupDevice, item) ? 1 : 1,
                   ),
-                  color: _isDeviceSelected(_selectedPopupDevice, item) ? Colors.blue[100] : null,
+                  color: _isDeviceSelected(_selectedPopupDevice, item) ? Theme.of(context).colorScheme.grey : null,
                 ),
                 child: Row(
                   children: <Widget>[
                     if (item is SourceData)
+                      Image.asset(
+                        item.assetPath,
+                        height: 14,
+                        width: 14,
+                      )
+                    else if (item is RackData)
+                      Image.asset(
+                        item.assetPath,
+                        height: 14,
+                        width: 14,
+                      )
+                    else if (item is SwitchData)
                       Image.asset(
                         item.assetPath,
                         height: 14,
@@ -342,16 +367,16 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
                       child: FusionAppText(
                         text: _getDisplayName(item),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: _isDeviceSelected(_selectedPopupDevice, item) ? Colors.blue[800] : null,
+                          fontSize: 11,
                           fontWeight: _isDeviceSelected(_selectedPopupDevice, item) ? FontWeight.w600 : null,
                         ),
                       ),
                     ),
                     if (_isDeviceSelected(_selectedPopupDevice, item))
-                      Icon(
+                      const Icon(
                         Icons.check_circle,
                         size: 16,
-                        color: Colors.blue[700],
+                        color: Colors.black,
                       ),
                   ],
                 ),
@@ -472,9 +497,7 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
 
   /// Get display name for different item types
   String _getDisplayName(dynamic item) {
-    if (item is SourceData) {
-      return item.name;
-    } else if (item is ProductQueryModel) {
+    if (item is SourceData || item is RackData || item is SwitchData || item is ProductQueryModel) {
       return item.name;
     } else if (item is String) {
       return item;
