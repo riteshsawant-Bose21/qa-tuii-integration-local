@@ -799,8 +799,11 @@ class FloorCanvasState extends State<FloorCanvas> {
 
     final HardwareComponent originalHardware = originalHardwareList.firstWhere((comp) => comp.id == hardwareComponent.id);
 
+    print(
+      "Original hardware listeningAreaId: ${originalHardware.locationEntity.listeningAreaId}, New listeningAreaId: $newListeningAreaId, pos: ${hardwareComponent.pos} vs original pos: ${originalHardware.pos}",
+    );
     if (newListeningAreaId != originalHardware.locationEntity.listeningAreaId || hardwareComponent.pos != originalHardware.pos) {
-      print("Calling moveHardware with newListeningAreaId: $newListeningAreaId");
+      print("Calling moveHardware with listeningAreaId: $newListeningAreaId , && pos: ${hardwareComponent.pos}");
 
       //new logic
       widget.moveHardware(hardwareComponent, newListeningAreaId.isNotEmpty ? newListeningAreaId : null, widget.floor.id);

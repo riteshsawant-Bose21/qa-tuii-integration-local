@@ -366,6 +366,20 @@ class _ZoneCircuitConfigPageState extends State<ZoneCircuitConfigPage> {
                     color: Color(0xFF64748B),
                   ),
                 ),
+                Text(
+                  'Zone: ${serviceLocator<ProjectViewModel>().getZoneForHardware(hardwareId: circuitSpeakers.first.id)?.name}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
+                Text(
+                  'SubZone: ${serviceLocator<ProjectViewModel>().getSubZoneForHardware(hardwareId: circuitSpeakers.first.id)?.name}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
               ],
             ),
           ),
@@ -1166,8 +1180,10 @@ class _ZoneCircuitConfigPageState extends State<ZoneCircuitConfigPage> {
       selectedMixIndex: 0,
       zoneColor: color,
     );
+    serviceLocator<ProjectViewModel>().recordSnapshot();
     serviceLocator<ProjectViewModel>().addZone(zone: newZone, autoSave: false);
-    serviceLocator<ProjectViewModel>().updateListeningAreasInZone(zoneId: newZone.id, listeningAreaIds: listeningAreaIds);
+    serviceLocator<ProjectViewModel>().updateListeningAreasInZone(zoneId: newZone.id, listeningAreaIds: listeningAreaIds, autoSave: false);
+    serviceLocator<ProjectViewModel>().saveProject();
   }
 
   void updateZone(String zoneId, {String? name, String? color, List<String>? listeningAreaIds}) {
