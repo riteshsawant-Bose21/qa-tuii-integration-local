@@ -99,8 +99,9 @@ void FusionAudioBridge::sendGainToFusion(const std::string &gainID, double value
         // Create JSON message with correct format:
         // {"action": "set", "settings": {"audio": {"gainID": {"gain": value}}}}
         std::ostringstream jsonStream;
-        jsonStream << "{\"action\":\"set\",\"settings\":{\"audio\":{\""
-                   << gainID << "\":{\"gain\":" << std::fixed << std::setprecision(6) << value << "}}}}";
+        jsonStream << "{\"action\":\"set\",\"settings\":{\"settings\":{\"audio\":{\""
+                   << gainID << "\":{\"gain\":" << std::fixed << std::setprecision(6) << value
+                   << "}}}}}";
         std::string message = jsonStream.str();
 
         // Send to Fusion using singleton
@@ -245,8 +246,8 @@ void FusionAudioBridge::sendMuteToFusion(const std::string &gainID, bool muteSta
     {
         // Create JSON message: {"action":"set","settings":{"audio":{"gainID":{"mute": true/false}}}}
         std::ostringstream jsonStream;
-        jsonStream << "{\"action\":\"set\",\"settings\":{\"audio\":{\""
-                   << gainID << "\":{\"mute\":" << (muteState ? "true" : "false") << "}}}}";
+        jsonStream << "{\"action\":\"set\",\"settings\":{\"settings\":{\"audio\":{\""
+                   << gainID << "\":{\"mute\":" << (muteState ? "true" : "false") << "}}}}}";
         std::string message = jsonStream.str();
 
         // Send to Fusion using singleton
@@ -289,8 +290,8 @@ void FusionAudioBridge::sendSourceToFusion(const std::string &zoneID, ::OcaUint1
     {
         // Create JSON message: {"action":"set","settings":{"audio":{"zoneID":{"source": sourceIndex}}}}
         std::ostringstream jsonStream;
-        jsonStream << "{\"action\":\"set\",\"settings\":{\"audio\":{\""
-                   << zoneID << "\":{\"input\":" << sourceIndex << "}}}}";
+        jsonStream << "{\"action\":\"set\",\"settings\":{\"settings\":{\"audio\":{\""
+                   << zoneID << "\":{\"input\":" << sourceIndex << "}}}}}";
         std::string message = jsonStream.str();
 
         // Send to Fusion using singleton
