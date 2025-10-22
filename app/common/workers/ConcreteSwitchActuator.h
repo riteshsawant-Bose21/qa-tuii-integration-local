@@ -9,8 +9,6 @@
 #define CONCRETESWITCHACTUATOR_H
 
 #include <OCC/ControlClasses/Workers/Actuators/OcaLiteSwitch.h>
-#include <atomic>
-#include <mutex>
 
 /**
  * Concrete implementation of OcaLiteSwitch used for simple source selection.
@@ -33,17 +31,20 @@ public:
     virtual ~ConcreteSwitchActuator();
 
     /**
-     * Handle source selection message from Fusion system.
-     * This method is used to update the source selection from external Fusion commands
-     * without triggering feedback loops.
-     *
-     * @param[in] sourceIndex  The source index from Fusion.
+     * @brief Handle source selection messages received from Fusion server and propagate to AES70 clients after updating internal state
+     * @param[in] sourceIndex The source index from Fusion server
      */
     void handleFusionSourceMessage(::OcaUint16 sourceIndex);
 
 protected:
+    /**
+     * @brief Set switch position implementation that forwards AES70 client requests to Fusion server without updating internal state
+     * @param[in] position The switch position to set
+     * @return Indicates whether the operation succeeded
+     */
     virtual ::OcaLiteStatus SetPositionValue(::OcaUint16 position) override;
 
+    // unused methods below - required to implement pure virtuals from base class
     virtual ::OcaLiteStatus SetPositionNameValue(::OcaUint16 index, const ::OcaLiteString &name) override;
     virtual ::OcaLiteStatus SetPositionNamesValue(const ::OcaLiteList<::OcaLiteString> &names) override;
     virtual ::OcaLiteStatus SetPositionEnabledValue(::OcaUint16 index, ::OcaBoolean enabled) override;

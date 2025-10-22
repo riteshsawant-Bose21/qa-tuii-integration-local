@@ -7,11 +7,6 @@
  *
  */
 
-// ---- Include system wide include files ----
-#include <iostream>
-
-// ---- FileInfo Macro ----
-
 // ---- Include local include files ----
 #include "ConcreteMuteActuator.h"
 #include "../FusionAudioBridge.h"
@@ -79,6 +74,10 @@ ConcreteMuteActuator::~ConcreteMuteActuator()
 ::OcaLiteStatus ConcreteMuteActuator::SetStateValue(::OcaLiteMuteState muteState)
 {
 
+    // Set the mute state value called from some aes70 client
+    // This will make an update to Fusion and doesnt update internal state
+    // internal state is updated by fusion message handling
+
     try
     {
 
@@ -123,8 +122,8 @@ void ConcreteMuteActuator::handleFusionMuteMessage(bool muteState)
         OCA_LOG_INFO_PARAMS("[MUTE] Handling Fusion mute message: %s (Gain ID: %s)",
                             muteState ? "MUTED" : "UNMUTED", m_gainID.c_str());
 
-        // Set the mute state using the public SetState method with Fusion flag set
-        // This will update the internal state AND notify OCA clients properly
+        // Set the mute value using the base class method
+        // This will update the internal state AND notify AES70 clients, but won't send back to Fusion
 
         ::OcaLiteStatus status = SetStateFromFusion(ocaState);
 

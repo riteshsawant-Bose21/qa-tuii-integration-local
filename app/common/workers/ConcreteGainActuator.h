@@ -9,9 +9,6 @@
 #ifndef CONCRETEGAINACTUATOR_H
 #define CONCRETEGAINACTUATOR_H
 
-// ---- Include system wide include files ----
-#include <mutex>
-
 // ---- Include local include files ----
 #include <OCC/ControlClasses/Workers/Actuators/OcaLiteGain.h>
 
@@ -54,14 +51,16 @@ public:
     virtual ~ConcreteGainActuator();
 
     /**
-     * @brief Handle gain update message received from Fusion server
-     * @param gainValue The gain value received from Fusion
+     * @brief Handle gain update messages received from Fusion server and propagate to AES70 clients after updating internal state
+     * @param gainValue The gain value in dB received from Fusion server
      */
     void handleFusionGainMessage(::OcaDB gainValue);
 
 protected:
     /**
-     * Base class override - calls SetGainValue with default "aes70" source
+     * @brief Set gain value implementation that forwards AES70 client requests to Fusion server without updating internal state
+     * @param[in] gain The gain value in dB to set
+     * @return Indicates whether the operation succeeded
      */
     virtual ::OcaLiteStatus SetGainValue(::OcaDB gain) override;
 

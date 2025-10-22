@@ -40,6 +40,10 @@ ConcreteSwitchActuator::~ConcreteSwitchActuator()
 ::OcaLiteStatus ConcreteSwitchActuator::SetPositionValue(::OcaUint16 position)
 {
 
+    // Set the position value called from some aes70 client
+    // This will make an update to Fusion and doesnt update internal state
+    // internal state is updated by fusion message handling
+
     OCA_LOG_INFO_PARAMS("[SWITCH] SetPositionValue -> %u (Zone ID: %s)",
                         position, m_zoneID.empty() ? "N/A" : m_zoneID.c_str());
 
@@ -103,8 +107,8 @@ void ConcreteSwitchActuator::handleFusionSourceMessage(::OcaUint16 sourceIndex)
             return;
         }
 
-        // Set the position using the public SetPosition method
-        // This will update the internal state AND notify OCA clients properly
+        // Set the position value using the base class method
+        // This will update the internal state AND notify AES70 clients, but won't send back to Fusion
 
         ::OcaLiteStatus status = SetPositionFromFusion(sourceIndex);
 

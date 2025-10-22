@@ -123,21 +123,6 @@ void FusionAudioBridge::handleFusionGainUpdate(const std::string &gainID, double
         return;
     }
 
-    // // Validate gain value
-    // if (!std::isfinite(value))
-    // {
-    //     OCA_LOG_INFO_PARAMS("[FusionAudioBridge] Invalid gain value (NaN/Inf) for %s, ignoring update", gainID.c_str());
-    //     return;
-    // }
-
-    // Check if this is an echo of a message we recently sent
-    // OCA_LOG_INFO_PARAMS("[FusionAudioBridge] DEBUG: Checking echo for %s = %.6f dB", gainID.c_str(), value);
-    // if (isEchoMessage(gainID, value))
-    // {
-    //     OCA_LOG_INFO_PARAMS("[FusionAudioBridge] Suppressing echo for %s = %.6f dB", gainID.c_str(), value);
-    //     return;
-    // }
-
     OCA_LOG_INFO_PARAMS("[FusionAudioBridge] Processing Fusion gain update: %s = %.6f dB", gainID.c_str(), value);
 
     // Process the gain update

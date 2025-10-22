@@ -14,8 +14,6 @@
 
 // ---- Include local include files ----
 #include <OCC/ControlClasses/Workers/Actuators/OcaLiteMute.h>
-#include <atomic>
-#include <mutex>
 
 // ---- Referenced classes and types ----
 
@@ -54,21 +52,16 @@ public:
     virtual ~ConcreteMuteActuator();
 
     /**
-     * Handle mute message from Fusion system.
-     * This method is used to update the mute state from external Fusion commands
-     * without triggering feedback loops.
-     *
-     * @param[in] muteState  The mute state from Fusion (true = muted, false = unmuted).
+     * @brief Handle mute update messages received from Fusion server and propagate to AES70 clients after updating internal state
+     * @param[in] muteState The mute state from Fusion server (true = muted, false = unmuted)
      */
     void handleFusionMuteMessage(bool muteState);
 
 protected:
     /**
-     * Implementation of pure virtual SetStateValue from OcaLiteMute.
-     * This method is called to actually set the mute state in the hardware/software.
-     *
-     * @param[in] muteState  The mute state to set (OCAMUTESTATE_MUTED or OCAMUTESTATE_UNMUTED).
-     * @return              Status of the operation.
+     * @brief Set mute state implementation that forwards AES70 client requests to Fusion server without updating internal state
+     * @param[in] muteState The mute state to set (OCAMUTESTATE_MUTED or OCAMUTESTATE_UNMUTED)
+     * @return Indicates whether the operation succeeded
      */
     virtual ::OcaLiteStatus SetStateValue(::OcaLiteMuteState muteState);
 

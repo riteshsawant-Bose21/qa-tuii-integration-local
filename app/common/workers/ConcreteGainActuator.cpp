@@ -10,9 +10,6 @@
 // ---- Include system wide include files ----
 #include <iostream>
 #include <cmath>
-#include <string>
-#include <sstream>
-#include <mutex>
 
 // ---- FileInfo Macro ----
 
@@ -24,22 +21,6 @@
 // ---- Helper types and constants ----
 
 // ---- Helper functions ----
-
-/**
- * Convert dB to linear gain
- */
-inline double dbToLinear(double db)
-{
-    return pow(10.0, db / 20.0);
-}
-
-/**
- * Convert linear gain to dB
- */
-inline double linearToDb(double linear)
-{
-    return 20.0 * log10(linear);
-}
 
 // ---- Local data ----
 
@@ -84,18 +65,15 @@ ConcreteGainActuator::ConcreteGainActuator(::OcaONo objectNumber,
 
 ::OcaLiteStatus ConcreteGainActuator::SetGainValue(::OcaDB gain)
 {
+    // Set gain value called from some aes70 client
+    // This will make an update to Fusion and doesnt update internal state
+    // internal state is updated by fusion message handling
     try
     {
-        // Simulate setting the gain value in the actual audio processing hardware/software
-        // In a real implementation, this would interface with your DSP or audio hardware
-
         OCA_LOG_INFO_PARAMS("[GAIN] SetGainValue called with %.2f dB (Gain ID: %s)",
                             gain, m_gainID.empty() ? "N/A" : m_gainID.c_str());
         if (!m_gainID.empty())
         {
-
-            // Convert dB to linear for internal processing (if needed)
-            double linearGain = dbToLinear(gain);
 
             FusionAudioBridge &bridge = FusionAudioBridge::getInstance();
             if (bridge.isInitialized())
@@ -105,11 +83,12 @@ ConcreteGainActuator::ConcreteGainActuator(::OcaONo objectNumber,
             }
             else
             {
+                // todo: what to do if not initialized?
                 OCA_LOG_WARNING("[GAIN] FusionAudioBridge not initialized, skipping Fusion communication");
             }
 
-            OCA_LOG_INFO_PARAMS("[GAIN] ✓ Gain successfully set to %.2f dB (linear: %.6f) (Gain ID: %s)",
-                                gain, linearGain, m_gainID.empty() ? "N/A" : m_gainID.c_str());
+            OCA_LOG_INFO_PARAMS("[GAIN] ✓ Gain successfully set to %.2f dB (Gain ID: %s)",
+                                gain, m_gainID.empty() ? "N/A" : m_gainID.c_str());
 
             return OCASTATUS_OK;
         }
@@ -159,7 +138,6 @@ void ConcreteGainActuator::handleFusionGainMessage(::OcaDB gainValue)
 
         // Set the gain value using the base class method
         // This will update the internal state AND notify AES70 clients, but won't send back to Fusion
-        // due to the source parameter check in SetGainValue
 
         OCA_LOG_INFO_PARAMS("ConcreteGainActuator[%s]: About to call SetGain(%.2f)", m_gainID.c_str(), clampedGain);
         status = SetGainFromFusion(clampedGain);
