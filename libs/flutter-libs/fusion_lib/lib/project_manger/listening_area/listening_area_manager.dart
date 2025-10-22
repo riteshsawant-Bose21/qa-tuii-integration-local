@@ -83,4 +83,12 @@ extension ListeningAreaManager on ProjectManager {
 
     return projectService!.getListeningAreaById(listenAreaId)!;
   }
+
+  //get Available Listening Areas for Zone or subzone
+  List<ListeningArea> getAvailableListeningAreasForZoneOrSubZone({required String id}) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getAvailableListeningAreasForZone(id);
+  }
 }

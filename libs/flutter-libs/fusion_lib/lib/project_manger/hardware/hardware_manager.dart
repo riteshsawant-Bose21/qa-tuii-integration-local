@@ -35,7 +35,7 @@ extension HardwareManager on ProjectManager {
     if (projectService == null) {
       throw Exception('No project is currently open');
     }
-    return projectService!.hardware.getAll();
+    return projectService!.getAllHardware();
   }
 
   /// Move Hardware
@@ -93,5 +93,43 @@ extension HardwareManager on ProjectManager {
       throw Exception('No project is currently open');
     }
     projectService!.updateHardwareLocation(hardwareId, newLocation);
+  }
+
+  //add hardware to circuit
+  void addHardwareAndCreateCircuit(HardwareComponent hw, String circuitId) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    addHardware(hw);
+    projectService!.addHardwareToCircuit(hw.id, circuitId);
+  }
+
+  //get zone for hardware
+  Zone? getZoneForHardware(String hardwareId) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getZoneForHardware(hardwareId);
+  }
+
+  CircuitModel? getCircuitForHardware(String hardwareId) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getCircuitForHardware(hardwareId);
+  }
+
+  void reOrderHardware({required String hardwareIdToMove, required String hardwareAtNewIndex}) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    Map<String, HardwareComponent> reorderedList = projectService!.reOrderHardware(
+      hwToMoveId: hardwareIdToMove,
+      hwAtNewIndexId: hardwareAtNewIndex,
+    );
+
+    projectService = projectService!.copyWith(
+      hardware: projectService!.hardware.copyWith(reorderedList),
+    );
   }
 }

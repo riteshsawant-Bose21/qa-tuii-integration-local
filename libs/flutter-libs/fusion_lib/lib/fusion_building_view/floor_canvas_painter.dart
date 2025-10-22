@@ -1,6 +1,8 @@
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/api_data/speakers/speaker_catalog.dart';
+import 'package:fusion_lib/fusion_building_view/spl_panel.dart';
 import 'package:fusion_lib/fusion_utils/color_utils.dart';
 import 'package:fusion_lib/models/project_entities/zone_model.dart';
 
@@ -9,6 +11,7 @@ import '../fusion_acoustic_calculation_engine/spl_calculation_data.dart';
 import '../models/project_entities/floor_plan_model.dart';
 import '../models/project_entities/hardware_component_model.dart';
 import '../models/project_entities/listening_area_model.dart';
+import '../models/project_entities/speaker_model.dart';
 
 class FloorCanvasPainter extends CustomPainter {
   final double gridSize, zoomScale;
@@ -32,6 +35,10 @@ class FloorCanvasPainter extends CustomPainter {
   final List<String> selectedListeningAreaIds;
   final List<Zone> zones;
   Zone? currentlySelectingZone;
+  final SplPanelData splPanelData;
+
+  //key value pair for listening area and its zone
+  final Map<String, String> listeningAreaToZoneMap;
 
   FloorCanvasPainter({
     required this.gridSize,
@@ -54,6 +61,8 @@ class FloorCanvasPainter extends CustomPainter {
     this.previewPoint,
     this.highlightedIndex,
     this.selectedHardwareComponentId,
+    required this.splPanelData,
+    required this.listeningAreaToZoneMap,
   });
 
   @override
@@ -62,9 +71,15 @@ class FloorCanvasPainter extends CustomPainter {
     canvas.translate(panOffset.dx, panOffset.dy);
     canvas.scale(zoomScale);
 
-    _drawHeatMap(canvas);
-    _drawFloorPlanImage(canvas);
-    _drawGrid(canvas, size);
+    if (showSpl) {
+      _drawGrid(canvas, size);
+      _drawHeatMap(canvas);
+      _drawFloorPlanImage(canvas);
+    } else {
+      _drawFloorPlanImage(canvas);
+      _drawGrid(canvas, size);
+    }
+
     _drawFloorPlanImageHandles(canvas);
     _drawListeningAreas(canvas);
     _drawHardwareComponents(canvas);
@@ -163,8 +178,8 @@ class FloorCanvasPainter extends CustomPainter {
     // draw base image and inverted-luminance mask
     canvas.saveLayer(dst, Paint());
     canvas.drawImageRect(floorPlanImage!, src, dst, Paint());
-    const List<double> invLum = <double>[1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, -0.2126, -0.7152, -0.0722, 1, 0];
 
+    const List<double> invLum = <double>[1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, -0.2126, -0.7152, -0.0722, 1, 0];
     Paint floorPlanPaint = Paint();
 
     if (showSpl) {
@@ -225,9 +240,12 @@ class FloorCanvasPainter extends CustomPainter {
 
       bool selected = false;
 
-      late Zone? parentZone;
+      Zone? parentZone;
       try {
-        parentZone = zones.firstWhere((Zone z) => z.listeningAreasIds.contains(listeningAreas[i].id));
+        final String? zoneId = listeningAreaToZoneMap[listeningAreas[i].id];
+        if (zoneId != null) {
+          parentZone = zones.firstWhere((Zone z) => z.id == zoneId);
+        }
       } catch (e) {
         parentZone = null;
       }
@@ -418,25 +436,70 @@ class FloorCanvasPainter extends CustomPainter {
 
     for (int i = 0; i < hardwareComponents.length; i++) {
       final HardwareComponent comp = hardwareComponents[i];
+
       final Rect dst = Rect.fromCenter(
         center: comp.pos,
         width: comp is SpeakerModel ? iconSize / 1.5 : iconSize,
         height: comp is SpeakerModel ? iconSize / 1.5 : iconSize,
       );
 
-      final ui.Image? img = hardwareImages[comp.assetImagePath];
-      if (img != null) {
-        // draw the loaded image, scaling it into dst
-        final ui.Rect src = Rect.fromLTWH(0, 0, img.width.toDouble(), img.height.toDouble());
-        canvas.drawImageRect(img, src, dst, Paint());
+      if (comp is Speaker) {
+        final double radius = (dst.width / 2) * 0.5;
+        final SpeakerModel? speakerModel = SpeakerCatalog.findByModel(comp.speakerSKU);
+
+        if (speakerModel != null) {
+          final Paint fillPaint = Paint()
+            ..color = Colors.black
+            ..style = PaintingStyle.fill;
+
+          final Paint outlinePaint = Paint()
+            ..color = Colors.black
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1.5 / zoomScale;
+
+          // --- SURFACE-MOUNTED (Rectangle) ---
+          if (speakerModel.mountingType == 'surface') {
+            final Rect rect = Rect.fromCenter(
+              center: comp.pos,
+              width: radius * 1.5,
+              height: radius * 2,
+            );
+            canvas.drawRect(rect, fillPaint);
+            canvas.drawRect(rect, outlinePaint);
+          }
+          // --- PENDANT (Triangle) ---
+          else if (speakerModel.mountingType == 'pendant') {
+            final Path path = Path()
+              ..moveTo(comp.pos.dx, comp.pos.dy - radius)
+              ..lineTo(comp.pos.dx - radius * 0.866, comp.pos.dy + radius * 0.75)
+              ..lineTo(comp.pos.dx + radius * 0.866, comp.pos.dy + radius * 0.75)
+              ..close();
+            canvas.drawPath(path, fillPaint);
+            canvas.drawPath(path, outlinePaint);
+          }
+          // --- DEFAULT (Circle) ---
+          else {
+            canvas.drawCircle(comp.pos, radius, fillPaint);
+            canvas.drawCircle(comp.pos, radius, outlinePaint);
+          }
+        }
       } else {
-        // fallback: draw a grey box until the image is ready
-        canvas.drawRect(
-          dst,
-          Paint()
-            ..color = Colors.grey.shade700.withValues(alpha: 0.5)
-            ..style = PaintingStyle.fill,
-        );
+        if (!showSpl) {
+          final ui.Image? img = hardwareImages[comp.assetImagePath];
+          if (img != null) {
+            // draw the loaded image, scaling it into dst
+            final ui.Rect src = Rect.fromLTWH(0, 0, img.width.toDouble(), img.height.toDouble());
+            canvas.drawImageRect(img, src, dst, Paint());
+          } else {
+            // fallback: draw a grey box until the image is ready
+            canvas.drawRect(
+              dst,
+              Paint()
+                ..color = Colors.grey.shade700.withValues(alpha: 0.5)
+                ..style = PaintingStyle.fill,
+            );
+          }
+        }
       }
 
       // draw selection border
@@ -535,7 +598,13 @@ class FloorCanvasPainter extends CustomPainter {
     final int i0 = idx.floor().clamp(0, n - 1);
     final int i1 = idx.ceil().clamp(0, n - 1);
     final double f = idx - i0;
-    return Color.lerp(SPLCalculationData.legendColors[i0], SPLCalculationData.legendColors[i1], f)!;
+
+    List<Color> colors = SPLCalculationData.legendColors;
+    if (splPanelData.splInvertColor) {
+      colors = colors.reversed.toList();
+    }
+
+    return Color.lerp(colors[i0], colors[i1], f)!;
   }
 
   @override

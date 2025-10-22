@@ -14,29 +14,67 @@ extension HardwareService on ProjectService {
     if (loc.floorId != null) {
       relationships.link(RelationshipType.hardwareLocation, loc.floorId!, hw.id);
     }
-    if (loc.zoneId != null) {
-      relationships.link(RelationshipType.hardwareLocation, loc.zoneId!, hw.id);
-    }
+
     if (loc.listeningAreaId != null) {
       relationships.link(RelationshipType.hardwareLocation, loc.listeningAreaId!, hw.id);
     }
-
     // Optional persistence/notification hook
     // _onProjectChanged();
+  }
+
+  Zone? getZoneForHardware(String hardwareId) {
+    final hw = hardware.get(hardwareId);
+    if (hw == null) throw Exception('Hardware $hardwareId not found');
+    final loc = hw.locationEntity;
+    if (loc.listeningAreaId != null) {
+      final laId = loc.listeningAreaId!;
+      final parentZoneIds = relationships.getParents(RelationshipType.zoneAreas, laId);
+      if (parentZoneIds.isNotEmpty) {
+        final zoneId = parentZoneIds.first;
+        final zone = zones.get(zoneId);
+        return zone;
+      }
+    }
+    return null;
+  }
+
+  CircuitModel? getCircuitForHardware(String hardwareId) {
+    final circuitIds = relationships.getParents(RelationshipType.circuitHardware, hardwareId);
+    if (circuitIds.isNotEmpty) {
+      final circuitId = circuitIds.first;
+      final circuit = circuits.get(circuitId);
+      return circuit;
+    }
+    return null;
   }
 
   /// Remove hardware and all relationships to/from it.
   void removeHardware(String hardwareId) {
     if (!hardware.exists(hardwareId)) return;
 
+    //if hardware is part of any circuit, and circuit has only this hardware, remove circuit too
+    final circuitIds = relationships.getParents(RelationshipType.circuitHardware, hardwareId);
+    if (circuitIds.isNotEmpty) {
+      final String cId = circuitIds.first;
+      final hwIds = relationships.getChildren(RelationshipType.circuitHardware, cId);
+      if (hwIds.length == 1 && hwIds.contains(hardwareId)) {
+        //remove circuit
+        // Remove all relationships
+        relationships.removeAllRelationships(cId);
+        circuits.remove(cId);
+      }
+    }
+
+    final wireConnections = relationships.getChildren(RelationshipType.wireConnection, hardwareId);
+    for (final connId in wireConnections) {
+      removeWiringConnection(connId);
+    }
+
     // Remove relationship links
     relationships.removeAllRelationships(hardwareId);
 
     // Remove repo entry
     hardware.remove(hardwareId);
-
-    // Optional persistence/notification hook
-    // _onProjectChanged();
   }
 
   /// Update hardware component in repo.
@@ -58,12 +96,17 @@ extension HardwareService on ProjectService {
   ///  - Adds new hardwareLocation links for floor, listeningArea, and inferred zone (if any).
   void moveHardware(String hardwareId, {String? listeningAreaId, String? floorId}) {
     // Validation
+
     if (listeningAreaId == null && floorId == null) {
       throw ArgumentError('Either listeningAreaId or floorId must be provided');
     }
 
     final hw = hardware.get(hardwareId);
     if (hw == null) throw Exception('Hardware $hardwareId not found');
+
+    if (hw.lockListeningArea) {
+      throw Exception('Hardware $hardwareId is locked to its current listening area and cannot be moved.');
+    }
 
     final loc = hw.locationEntity;
 
@@ -74,7 +117,6 @@ extension HardwareService on ProjectService {
     }
 
     // 2) Clear existing location fields (we will populate new ones)
-    loc.zoneId = null;
     loc.listeningAreaId = null;
     loc.floorId = null;
 
@@ -91,22 +133,27 @@ extension HardwareService on ProjectService {
       relationships.link(RelationshipType.hardwareLocation, listeningAreaId, hardwareId);
 
       // infer and set floor if possible
-      final inferredFloorId = relationships.getParent(RelationshipType.floorListening, listeningAreaId);
+      final inferredFloorId = relationships.getParent(RelationshipType.floorAreas, listeningAreaId);
       if (inferredFloorId != null) {
         loc.floorId = inferredFloorId;
         relationships.link(RelationshipType.hardwareLocation, inferredFloorId, hardwareId);
       }
 
-      // if the listening area belongs to any zone(s), attach to the first one
-      final parentZoneIds = relationships.getParents(RelationshipType.zoneListening, listeningAreaId);
-      if (parentZoneIds.isNotEmpty) {
-        final chosenZoneId = parentZoneIds.first;
-        if (zones.exists(chosenZoneId)) {
-          loc.zoneId = chosenZoneId;
-          relationships.link(RelationshipType.hardwareLocation, chosenZoneId, hardwareId);
-        } else {
-          // if zone doesn't exist in repo, just ignore (but remove any dangling relation)
-          relationships.unlink(RelationshipType.zoneListening, chosenZoneId, listeningAreaId);
+      // validate circuit is valid for new listening area
+      final hardwareCircuit = relationships.getParents(RelationshipType.circuitHardware, hardwareId);
+      if (hardwareCircuit.isNotEmpty) {
+        final circuitId = hardwareCircuit.first;
+        List<ListeningArea> laInCircuit = getListeningAreasForCircuit(circuitId);
+        //check if new listening area is part of the circuit
+        bool isPartOfCircuit = laInCircuit.any((la) => la.id == listeningAreaId);
+        if (!isPartOfCircuit) {
+          relationships.unlink(RelationshipType.circuitHardware, circuitId, hardwareId);
+          final hwInCircuit = relationships.getChildren(RelationshipType.circuitHardware, circuitId);
+          if (hwInCircuit.isEmpty) {
+            //remove circuit if no hardware left
+            relationships.removeAllRelationships(circuitId);
+            circuits.remove(circuitId);
+          }
         }
       }
     } else if (floorId != null) {
@@ -118,18 +165,25 @@ extension HardwareService on ProjectService {
       loc.floorId = floorId;
       relationships.link(RelationshipType.hardwareLocation, floorId, hardwareId);
 
+      // updating Circuits after moving the hardware to floor only
+      final hardwareCircuit = relationships.getParents(RelationshipType.circuitHardware, hardwareId);
+      if (hardwareCircuit.isNotEmpty) {
+        final circuitId = hardwareCircuit.first;
+        relationships.unlink(RelationshipType.circuitHardware, circuitId, hardwareId);
+        final hwInCircuit = relationships.getChildren(RelationshipType.circuitHardware, circuitId);
+        if (hwInCircuit.isEmpty) {
+          //remove circuit if no hardware left
+          relationships.removeAllRelationships(circuitId);
+          circuits.remove(circuitId);
+        }
+      }
+
       // listeningAreaId and zoneId remain null
     }
+  }
 
-    // Optional: If you maintain any zone->hardware lists inside the zone model itself,
-    // make sure to update them here (not shown because in our design we keep relationships
-    // as the canonical source). If you do keep zone.model.hardwareIds, update them:
-    //
-    //  - Remove hardwareId from all zone.model.hardwareIds that previously contained it
-    //  - Add hardwareId to chosen zone.model.hardwareIds (if loc.zoneId != null)
-    //
-    // Finally: persist / notify if you have such a hook:
-    // _onProjectChanged();
+  List<HardwareComponent> getAllHardware() {
+    return hardware.getAll();
   }
 
   // returns hardware objects directly (if some IDs were removed, filters nulls)
@@ -155,12 +209,12 @@ extension HardwareService on ProjectService {
     resultIds.addAll(relationships.getChildren(RelationshipType.hardwareLocation, floorId));
 
     // all listening areas on this floor
-    final laIds = relationships.getChildren(RelationshipType.floorListening, floorId);
+    final laIds = relationships.getChildren(RelationshipType.floorAreas, floorId);
     for (final laId in laIds) {
       resultIds.addAll(relationships.getChildren(RelationshipType.hardwareLocation, laId));
 
       // zones that include this listening area
-      final zoneIds = relationships.getParents(RelationshipType.zoneListening, laId);
+      final zoneIds = relationships.getParents(RelationshipType.zoneAreas, laId);
       for (final zoneId in zoneIds) {
         resultIds.addAll(relationships.getChildren(RelationshipType.hardwareLocation, zoneId));
       }
@@ -188,12 +242,58 @@ extension HardwareService on ProjectService {
       if (newLocation.floorId == null && hw.locationEntity.floorId != null) {
         relationships.unlink(RelationshipType.hardwareLocation, hw.locationEntity.floorId!, hw.id);
       }
-      if (newLocation.zoneId == null && hw.locationEntity.zoneId != null) {
-        relationships.unlink(RelationshipType.hardwareLocation, hw.locationEntity.zoneId!, hw.id);
-      }
+      // if (newLocation.zoneId == null && hw.locationEntity.zoneId != null) {
+      //   relationships.unlink(RelationshipType.hardwareLocation, hw.locationEntity.zoneId!, hw.id);
+      // }
       if (newLocation.listeningAreaId == null && hw.locationEntity.listeningAreaId != null) {
         relationships.unlink(RelationshipType.hardwareLocation, hw.locationEntity.listeningAreaId!, hw.id);
       }
     }
+  }
+
+  // List<HardwareComponent> reOrderHardware({
+  //   required String hwToMoveId,
+  //   required String hwAtNewIndexId,
+  // }) {
+  //   final hardwareList = getAllHardware();
+  //
+  //   final currentIndex = hardwareList.indexWhere((h) => h.id == hwToMoveId);
+  //   final newIndex = hardwareList.indexWhere((h) => h.id == hwAtNewIndexId);
+  //
+  //   if (currentIndex == -1) {
+  //     throw Exception("Hardware to move not found");
+  //   }
+  //   if (newIndex == -1) {
+  //     throw Exception("Hardware at new index not found");
+  //   }
+  //
+  //   final updatedList = List<HardwareComponent>.from(hardwareList);
+  //   final item = updatedList.removeAt(currentIndex);
+  //   updatedList.insert(newIndex, item);
+  //
+  //   return updatedList;
+  // }
+
+  Map<String, HardwareComponent> reOrderHardware({
+    required String hwToMoveId,
+    required String hwAtNewIndexId,
+  }) {
+    List<HardwareComponent> items = hardware.getAll();
+
+    // Find indices
+    int fromIndex = items.indexWhere((hw) => hw.id == hwToMoveId);
+    int toIndex = items.indexWhere((hw) => hw.id == hwAtNewIndexId);
+
+    // Validate
+    if (fromIndex == -1 || toIndex == -1) {
+      throw ArgumentError('Invalid hardware IDs');
+    }
+
+    // Reorder using List operations
+    HardwareComponent item = items.removeAt(fromIndex);
+    items.insert(toIndex, item);
+
+    // Convert back to Map
+    return {for (var hw in items) hw.id: hw};
   }
 }

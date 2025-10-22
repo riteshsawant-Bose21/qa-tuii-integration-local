@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/form_fields/fusion_text_field.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
@@ -11,6 +12,11 @@ class CommonDevicesSectionWidget extends StatefulWidget {
   final String title;
   final Widget sectionContent;
   final Color backgroundColor;
+  final void Function(dynamic item, String areaId, String floorId)? onTapAddDevice;
+  final List<ListeningArea> listeningAreas;
+  final List<Zone> zones;
+  final String? selectedDeviceId;
+  final Function(String deviceId, List<String> listeningAreaIds)? onAddDeviceToAreas;
 
   const CommonDevicesSectionWidget({
     super.key,
@@ -19,6 +25,11 @@ class CommonDevicesSectionWidget extends StatefulWidget {
     required this.title,
     required this.sectionContent,
     required this.backgroundColor,
+    this.onTapAddDevice,
+    this.listeningAreas = const <ListeningArea>[],
+    this.zones = const <Zone>[],
+    this.selectedDeviceId,
+    this.onAddDeviceToAreas,
   });
 
   @override
@@ -36,6 +47,8 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
   late Animation<double> _searchAnimation;
   late Animation<double> _iconRotationAnimation;
   late Animation<double> _iconScaleAnimation;
+
+  List<String> _selectedListeningAreaIds = <String>[];
 
   @override
   void initState() {
@@ -112,6 +125,48 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
     _toggleSearch();
   }
 
+  void _onListeningAreaSelectionChanged(List<String> selectedIds) {
+    setState(() {
+      _selectedListeningAreaIds = selectedIds;
+    });
+  }
+
+  void _onCreateNewListeningArea(String areaName, String venueType) {
+    // Create new listening area and add to selection
+    final ListeningArea newArea = ListeningArea(
+      name: areaName,
+      vertices: <Offset>[], // Empty for now
+      venuType: venueType,
+    );
+
+    // Add to the selection
+    setState(() {
+      _selectedListeningAreaIds.add(newArea.id);
+    });
+
+    // You might want to call a callback to actually create the area in your data model
+    print('Created new listening area: $areaName ($venueType)');
+  }
+
+  void _addDeviceToSelectedAreas() {
+    if (widget.selectedDeviceId != null && _selectedListeningAreaIds.isNotEmpty) {
+      widget.onAddDeviceToAreas?.call(widget.selectedDeviceId!, _selectedListeningAreaIds);
+
+      // Clear selections after adding
+      setState(() {
+        _selectedListeningAreaIds.clear();
+      });
+
+      // Show success message
+      FusionToast.show(
+        context,
+        message: 'Device added to ${_selectedListeningAreaIds.length} listening area(s)',
+        icon: Icons.check_circle_outline,
+        backgroundColor: Colors.green[600],
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -160,8 +215,13 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
                                 ),
                                 const SizedBox(width: 4),
 
-                                /// Add button
-                                ExpandablePopupMenuWidget(sectionTitle: widget.title),
+                                /// Add button with listening areas support
+                                ExpandablePopupMenuWidget(
+                                  sectionTitle: widget.title,
+                                  onTapAddDevice: widget.onTapAddDevice,
+                                  listeningAreas: widget.listeningAreas,
+                                  zones: widget.zones,
+                                ),
                               ],
                             ),
                           ),
@@ -231,7 +291,6 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
             child: SingleChildScrollView(
               child: SizedBox(
                 width: widget.width,
-                // padding: const EdgeInsets.all(10),
                 child: SingleChildScrollView(
                   physics: const ClampingScrollPhysics(),
                   child: widget.sectionContent,

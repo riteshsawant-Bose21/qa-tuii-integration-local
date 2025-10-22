@@ -1,33 +1,40 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import 'package:fusion_lib/models/project_entities/location_model.dart';
-import 'package:fusion_lib/models/project_entities/source_model.dart';
 
 import '../../../../core/models/products_data.dart';
-import '../../../../core/service_locator.dart';
-import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../../product_query/presentation/pages/product_query.dart';
+import '../../../configuration/presentation/viewmodel/project_view_model.dart';
+import 'listening_area_dropdown_widget.dart';
 
 class ExpandablePopupMenuWidget extends StatefulWidget {
   final String sectionTitle;
+  final void Function(dynamic item, String areaId, String floorId)? onTapAddDevice;
+  final List<ListeningArea> listeningAreas;
+  final List<Zone> zones;
 
-  const ExpandablePopupMenuWidget({super.key, required this.sectionTitle});
+  const ExpandablePopupMenuWidget({
+    super.key,
+    required this.sectionTitle,
+    this.onTapAddDevice,
+    this.listeningAreas = const <ListeningArea>[],
+    this.zones = const <Zone>[],
+  });
 
   @override
   State<ExpandablePopupMenuWidget> createState() => _ExpandablePopupMenuWidgetState();
 }
 
 class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
-  bool _microphoneExpanded = false;
-  bool _mediaSourceExpanded = false;
-  bool _processorsExpanded = false;
-  bool _amplifiersExpanded = false;
-  bool _speakersExpanded = false;
-  bool _controllersExpanded = false;
-  bool _racksExpanded = false;
-  bool _endPointsExpanded = false;
-  bool _otherDevicesExpanded = false;
+  final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
+
+  /// Single variable to track which section is currently expanded
+  String? _expandedSection;
+
+  /// Local state for popup menu selections
+  dynamic _selectedPopupDevice;
+  List<String> _selectedListeningAreaIds = <String>[];
 
   /// Returns tooltip text based on the section title
   String getSectionToolTip() {
@@ -47,37 +54,58 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
     }
   }
 
+  void _addDeviceToSelectedAreas() {
+    final FloorModel? floorData = projectViewModel.getFloorForListeningArea(areaId: _selectedListeningAreaIds.first);
+
+    print('Add device called - Device: $_selectedPopupDevice, Areas: $_selectedListeningAreaIds'); // Debug print
+    if (_selectedPopupDevice != null && _selectedListeningAreaIds.isNotEmpty) {
+      widget.onTapAddDevice?.call(_selectedPopupDevice, _selectedListeningAreaIds.first, floorData?.id ?? "");
+      setState(() {
+        _selectedPopupDevice = null;
+        _selectedListeningAreaIds.clear();
+      });
+      Navigator.of(context).pop();
+    }
+  }
+
+  /// Toggle expansion state for a section
+  void _toggleSection(String sectionKey, StateSetter setMenuState) {
+    _expandedSection = _expandedSection == sectionKey ? null : sectionKey;
+    setMenuState(() {});
+  }
+
+  /// Check if a section is expanded
+  bool _isSectionExpanded(String sectionKey) {
+    return _expandedSection == sectionKey;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return PopupMenuButton<SourceData>(
+    return PopupMenuButton<dynamic>(
+      onCanceled: () {
+        /// Clear selections when menu is closed without adding
+        setState(() {
+          _selectedPopupDevice = null;
+          _selectedListeningAreaIds.clear();
+          _expandedSection = null;
+        });
+      },
       tooltip: getSectionToolTip(),
       constraints: const BoxConstraints(
-        maxHeight: 500,
-        maxWidth: 250,
+        maxHeight: 550,
+        maxWidth: 300,
       ),
-      onSelected: (SourceData selectedBlock) {
-        final Source source = Source(
-          name: selectedBlock.name,
-          pos: null,
-          type: selectedBlock.type,
-          assetImagePath: selectedBlock.assetPath,
-          locationEntity: LocationModel(),
-          sku: selectedBlock.id,
-          price: selectedBlock.price,
-        );
-        serviceLocator<ProjectViewModel>().addHardware(source);
-      },
       color: Colors.white,
       itemBuilder: (BuildContext context) {
-        return <PopupMenuEntry<SourceData>>[
-          PopupMenuItem<SourceData>(
+        return <PopupMenuItem<dynamic>>[
+          PopupMenuItem<dynamic>(
             enabled: false,
             padding: EdgeInsets.zero,
             child: Container(
-              width: 250,
+              width: 300,
               constraints: const BoxConstraints(
-                maxHeight: 480,
-                maxWidth: 250,
+                maxHeight: 520,
+                maxWidth: 300,
               ),
               child: StatefulBuilder(
                 builder: (BuildContext context, StateSetter setMenuState) {
@@ -103,28 +131,28 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
     );
   }
 
-  /// Builds sections based on the provided section title
+  /// Build add device expandable sections based on the section title
   List<Widget> _buildSectionsForTitle(StateSetter setMenuState) {
     switch (widget.sectionTitle) {
       case "Sources & Endpoints":
         return <Widget>[
           _buildExpandableSection<SourceData>(
             title: 'MICROPHONES',
-            isExpanded: _microphoneExpanded,
-            onTap: () => setMenuState(() => _microphoneExpanded = !_microphoneExpanded),
+            sectionKey: 'MICROPHONES',
             items: SourceData.microphoneItems,
+            setMenuState: setMenuState,
           ),
           _buildExpandableSection<SourceData>(
             title: 'MEDIA SOURCES',
-            isExpanded: _mediaSourceExpanded,
-            onTap: () => setMenuState(() => _mediaSourceExpanded = !_mediaSourceExpanded),
+            sectionKey: 'MEDIA_SOURCES',
             items: SourceData.mediaSourceItems,
+            setMenuState: setMenuState,
           ),
           _buildExpandableSection<ProductQueryModel>(
             title: 'END POINTS',
-            isExpanded: _endPointsExpanded,
-            onTap: () => setMenuState(() => _endPointsExpanded = !_endPointsExpanded),
+            sectionKey: 'END_POINTS',
             items: ProductAPI.getEndpoints(),
+            setMenuState: setMenuState,
           ),
         ];
 
@@ -132,15 +160,15 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
         return <Widget>[
           _buildExpandableSection<ProductQueryModel>(
             title: 'PROCESSORS',
-            isExpanded: _processorsExpanded,
-            onTap: () => setMenuState(() => _processorsExpanded = !_processorsExpanded),
+            sectionKey: 'PROCESSORS',
             items: ProductAPI.getControllers(),
+            setMenuState: setMenuState,
           ),
           _buildExpandableSection<ProductQueryModel>(
             title: 'AMPLIFIERS',
-            isExpanded: _amplifiersExpanded,
-            onTap: () => setMenuState(() => _amplifiersExpanded = !_amplifiersExpanded),
+            sectionKey: 'AMPLIFIERS',
             items: ProductAPI.getAmplifierProducts(),
+            setMenuState: setMenuState,
           ),
         ];
 
@@ -148,9 +176,9 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
         return <Widget>[
           _buildCreateZoneSection<ProductQueryModel>(
             title: 'SPEAKERS',
-            isExpanded: _speakersExpanded,
-            onTap: () => setMenuState(() => _speakersExpanded = !_speakersExpanded),
+            sectionKey: 'SPEAKERS',
             items: ProductAPI.getSpeakerProducts(),
+            setMenuState: setMenuState,
           ),
         ];
 
@@ -158,9 +186,9 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
         return <Widget>[
           _buildExpandableSection<ProductQueryModel>(
             title: 'CONTROLLERS',
-            isExpanded: _controllersExpanded,
-            onTap: () => setMenuState(() => _controllersExpanded = !_controllersExpanded),
+            sectionKey: 'CONTROLLERS',
             items: ProductAPI.getControllers(),
+            setMenuState: setMenuState,
           ),
         ];
 
@@ -168,15 +196,15 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
         return <Widget>[
           _buildExpandableSection<String>(
             title: 'RACKS',
-            isExpanded: _racksExpanded,
-            onTap: () => setMenuState(() => _racksExpanded = !_racksExpanded),
+            sectionKey: 'RACKS',
             items: <String>['4U', '8U', '12U', '24U'],
+            setMenuState: setMenuState,
           ),
           _buildExpandableSection<SourceData>(
             title: 'OTHER DEVICES',
-            isExpanded: _otherDevicesExpanded,
-            onTap: () => setMenuState(() => _otherDevicesExpanded = !_otherDevicesExpanded),
+            sectionKey: 'OTHER_DEVICES',
             items: SourceData.microphoneItems,
+            setMenuState: setMenuState,
           ),
         ];
 
@@ -185,22 +213,63 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
     }
   }
 
+  /// Helper method to check if a device is selected
+  bool _isDeviceSelected(dynamic selectedDevice, dynamic item) {
+    if (selectedDevice == null || item == null) return false;
+
+    /// For SourceData, use ID comparison
+    if (selectedDevice is SourceData && item is SourceData) {
+      return selectedDevice.id == item.id;
+    }
+
+    /// For ProductQueryModel, compare by NAME instead of ID
+    if (selectedDevice is ProductQueryModel && item is ProductQueryModel) {
+      return selectedDevice.name == item.name;
+    }
+
+    /// For String items (like racks)
+    if (selectedDevice is String && item is String) {
+      return selectedDevice == item;
+    }
+
+    /// If different types, compare by name if available
+    final String? selectedName = _getDeviceName(selectedDevice);
+    final String? itemName = _getDeviceName(item);
+
+    return selectedName != null && itemName != null && selectedName == itemName;
+  }
+
+  /// Helper method to get device name
+  String? _getDeviceName(dynamic item) {
+    if (item is SourceData) {
+      return item.name;
+    } else if (item is ProductQueryModel) {
+      return item.name;
+    } else if (item is String) {
+      return item;
+    }
+    return item?.toString();
+  }
+
   /// Builds an expandable section with a header and items
   Widget _buildExpandableSection<T>({
     required String title,
-    required bool isExpanded,
-    required VoidCallback onTap,
+    required String sectionKey,
     required List<T> items,
+    required StateSetter setMenuState,
   }) {
+    final bool isExpanded = _isSectionExpanded(sectionKey);
+    final bool canAddDevice = _selectedPopupDevice != null && _selectedListeningAreaIds.isNotEmpty;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         /// Section Header
         InkWell(
-          onTap: onTap,
+          onTap: () => _toggleSection(sectionKey, setMenuState),
           child: Container(
             height: 40,
-            width: 250,
+            width: 300,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               children: <Widget>[
@@ -222,40 +291,27 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
         ),
 
         /// Section Items (conditionally shown)
-        if (isExpanded)
+        if (isExpanded) ...<Widget>[
           ...items.map(
             (T item) => InkWell(
               onTap: () {
-                Navigator.of(context).pop();
-                if (item is SourceData) {
-                  final Source source = Source(
-                    name: item.name,
-                    pos: null,
-                    type: item.type,
-                    assetImagePath: item.assetPath,
-                    locationEntity: LocationModel(listeningAreaId: 'frf', floorId: 'dfd'),
-                    sku: item.id,
-                    price: item.price,
-                  );
-                  serviceLocator<ProjectViewModel>().addHardware(source);
-                } else if (item is ProductQueryModel) {
-                  // final FusionDevice fusionDevice = FusionDevice(
-                  //   name: item.name,
-                  //   price: item.price,
-                  //   locationEntity: LocationModel(listeningAreaId: 'frf', floorId: 'dfd'),
-                  //   status: FusionDeviceSetupStatus.notStarted,
-                  // );
-                  // serviceLocator<ProjectViewModel>().addHardware(fusionDevice);
-                }
+                setState(() {
+                  _selectedPopupDevice = item;
+                });
+                setMenuState(() {});
               },
               child: Container(
                 height: 30,
-                width: 218,
+                width: 268,
                 margin: const EdgeInsets.only(left: 16, right: 16, bottom: 2),
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: Theme.of(context).colorScheme.grey, width: 1),
+                  border: Border.all(
+                    color: _isDeviceSelected(_selectedPopupDevice, item) ? Colors.blue : Theme.of(context).colorScheme.grey,
+                    width: _isDeviceSelected(_selectedPopupDevice, item) ? 2 : 1,
+                  ),
+                  color: _isDeviceSelected(_selectedPopupDevice, item) ? Colors.blue[100] : null,
                 ),
                 child: Row(
                   children: <Widget>[
@@ -285,73 +341,131 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
                     Expanded(
                       child: FusionAppText(
                         text: _getDisplayName(item),
-                        style: Theme.of(context).textTheme.bodySmall,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: _isDeviceSelected(_selectedPopupDevice, item) ? Colors.blue[800] : null,
+                          fontWeight: _isDeviceSelected(_selectedPopupDevice, item) ? FontWeight.w600 : null,
+                        ),
                       ),
                     ),
+                    if (_isDeviceSelected(_selectedPopupDevice, item))
+                      Icon(
+                        Icons.check_circle,
+                        size: 16,
+                        color: Colors.blue[700],
+                      ),
                   ],
                 ),
               ),
             ),
           ),
+
+          /// Listening Area Selection Section
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                FusionAppText(
+                  text: "Select Listening Area",
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                SizedBox(
+                  width: double.infinity,
+                  child: ListeningAreaDropdownWidget(
+                    listeningAreas: widget.listeningAreas,
+                    zones: widget.zones,
+                    selectedListeningAreaIds: _selectedListeningAreaIds,
+                    onSelectionChanged: (List<String> selectedIds, String floorId) {
+                      setState(() {
+                        _selectedListeningAreaIds = selectedIds;
+                      });
+                      setMenuState(() {}); // Update popup menu UI
+                      print('Listening areas selected: $selectedIds'); // Debug print
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          Container(
+            margin: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
+            child: SizedBox(
+              width: double.infinity,
+              height: 36,
+              child: FusionButton(
+                label: "Add Device",
+                isActive: canAddDevice,
+                onTap: () {
+                  print('Add device button pressed'); // Debug print
+                  _addDeviceToSelectedAreas();
+                },
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 4),
+        ],
       ],
     );
   }
 
-  /// create zone section
+  /// Builds a create zone section for speakers
   Widget _buildCreateZoneSection<T>({
     required String title,
-    required bool isExpanded,
-    required VoidCallback onTap,
+    required String sectionKey,
     required List<T> items,
+    required StateSetter setMenuState,
   }) {
+    final bool isExpanded = _isSectionExpanded(sectionKey);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        /// Section Header with close button
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            border: Border(
-              bottom: BorderSide(width: 1, color: Theme.of(context).colorScheme.grey),
-            ),
-          ),
-          child: Row(
-            children: <Widget>[
-              const SizedBox(width: 16),
-              Expanded(
-                child: FusionAppText(
-                  text: "Create Zone",
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11),
-                ),
-              ),
-              IconButton(
-                icon: Icon(
-                  Icons.close,
+        /// Section Header
+        InkWell(
+          onTap: () => _toggleSection(sectionKey, setMenuState),
+          child: Container(
+            height: 40,
+            width: 300,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: <Widget>[
+                Icon(
+                  isExpanded ? Icons.arrow_drop_up_rounded : Icons.arrow_drop_down_rounded,
                   size: 22,
                   color: Theme.of(context).colorScheme.fusionTextViewColor,
                 ),
-                onPressed: () => Navigator.of(context).pop(),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
-            ],
+                const SizedBox(width: 6),
+                Expanded(
+                  child: FusionAppText(
+                    text: title,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
 
-        FusionAppText(
-          text: "Zone Name",
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 9),
-        ),
-        const SizedBox(height: 8),
-        FusionTextField(
-          hintText: "",
-          controller: TextEditingController(),
-          decoration: FusionInputDecoration.fusionDense(
-            colorScheme: Theme.of(context).colorScheme,
-            hintText: 'Enter zone name',
-            // errorText: "",
+        /// Section Items (conditionally shown)
+        if (isExpanded) ...<Widget>[
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: FusionAppText(
+              text: "Speakers require zone creation. Please create a zone first.",
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                fontSize: 10,
+                color: Colors.orange[600],
+                fontStyle: FontStyle.italic,
+              ),
+            ),
           ),
-        ),
+        ],
       ],
     );
   }
@@ -368,22 +482,19 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
     return item.toString();
   }
 
-  /// Get default image for ProductType
+  /// Get default image path for product types
   String _getDefaultImageForProductType(ProductType type) {
     switch (type) {
       case ProductType.speaker:
-        return "assets/images/speakers/DM_pendant.png";
+        return 'assets/images/speakers/default_speaker.png';
       case ProductType.amplifier:
-        return "assets/images/amps/default_amp.png";
+        return 'assets/images/amplifiers/default_amplifier.png';
       case ProductType.dsps:
-      case ProductType.endpoints:
-        return "assets/images/devices/default_device.png";
-      case ProductType.sources:
-        return "assets/images/products/mic1.png";
+        return 'assets/images/processors/default_processor.png';
       case ProductType.controllers:
-        return "assets/images/products/bose_dsp.png";
-      case ProductType.racks:
-        return "assets/images/products/rack.png";
+        return 'assets/images/controllers/default_controller.png';
+      default:
+        return 'assets/images/default_device.png';
     }
   }
 }

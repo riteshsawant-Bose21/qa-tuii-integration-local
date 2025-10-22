@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -148,14 +147,14 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
   }
 
   Widget _buildZoneCard(Zone zone) {
-    final List<ListeningArea> listeningAreas = serviceLocator<ProjectViewModel>().getListeningAreasForZone(zone.id);
+    final List<ListeningArea> listeningAreas = serviceLocator<ProjectViewModel>().getListeningAreasForZone(zoneId: zone.id);
     final bool isSelected = serviceLocator<ProjectViewModel>().isInZoneSelectionMode && serviceLocator<ProjectViewModel>().currentSelectedZoneId == zone.id;
     final bool isExpanded = _expandedZones.contains(zone.id);
 
     return DragTarget<ListeningArea>(
       onAcceptWithDetails: (DragTargetDetails<ListeningArea> details) {
         final ListeningArea listeningArea = details.data;
-        serviceLocator<ProjectViewModel>().addListeningAreaToZone(listeningArea.id, zone.id);
+        serviceLocator<ProjectViewModel>().addListeningAreaToZone(listeningAreaId: listeningArea.id, zoneId: zone.id);
       },
       builder: (BuildContext context, List<ListeningArea?> candidateItems, List<dynamic> rejectedItems) {
         final bool hasIncomingData = candidateItems.isNotEmpty && candidateItems.first != null;
@@ -230,17 +229,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
               if (hasIncomingData)
                 Positioned.fill(
                   child: Container(
-                    color: Colors.blue.withOpacity(0.3), // Semi-transparent background
-                    child: const Center(
-                      child: Text(
-                        'Drop here',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.blue,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
+                    color: Colors.blue.withValues(alpha: 0.3),
                   ),
                 ),
             ],
@@ -256,7 +245,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
       selectedColor: hexToColor(zone.zoneColor),
       availableColors: Zone.zoneColors.map((String color) => hexToColor(color)).toList(),
       onColorChanged: (Color color) {
-        serviceLocator<ProjectViewModel>().updateZone(zone.copyWith(zoneColor: colorToHex(color)));
+        serviceLocator<ProjectViewModel>().updateZone(zone: zone.copyWith(zoneColor: colorToHex(color)));
       },
       width: 18,
       height: 18,
@@ -299,11 +288,23 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
   }
 
   Widget _buildZoneTitle(Zone zone, bool isSelected) {
+    final TextEditingController controller = TextEditingController(text: zone.name);
+
+    void saveValue() {
+      final String trimmedValue = controller.text.trim();
+      if (trimmedValue.isNotEmpty && trimmedValue != zone.name) {
+        final Zone updated = zone.copyWith(name: trimmedValue);
+        serviceLocator<ProjectViewModel>().updateZone(zone: updated);
+      } else if (trimmedValue.isEmpty) {
+        controller.text = zone.name; // Revert to original name
+      }
+    }
+
     return Container(
       key: ValueKey<String>(zone.id),
       constraints: const BoxConstraints(),
       child: TextFormField(
-        initialValue: zone.name,
+        controller: controller,
         maxLength: 24,
         enabled: serviceLocator<ProjectViewModel>().currentSelectedZoneId == null,
         decoration: const InputDecoration(
@@ -318,23 +319,24 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
           fontSize: 12,
         ),
         scrollPadding: EdgeInsets.zero,
-
         maxLines: 1,
+        onTapOutside: (PointerDownEvent event) {
+          FocusManager.instance.primaryFocus?.unfocus();
+          saveValue();
+        },
         onFieldSubmitted: (String v) {
           final String trimmedValue = v.trim();
           if (trimmedValue.isEmpty) {
-            // Show a snackbar to inform user that zone name cannot be empty
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('Zone name cannot be empty'),
                 duration: Duration(seconds: 2),
               ),
             );
-            // Don't update zone name and revert to previous name
+            controller.text = zone.name; // Revert to original name
             return;
           }
-          final Zone updated = zone.copyWith(name: trimmedValue);
-          serviceLocator<ProjectViewModel>().updateZone(updated);
+          saveValue();
         },
       ),
     );
@@ -381,7 +383,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
   Widget _buildListeningAreaItem(ListeningArea area, Zone zone) {
     final bool isSelected = serviceLocator<ProjectViewModel>().currentSelectedListeningAreaId == area.id;
 
-    final String floorName = serviceLocator<ProjectViewModel>().getFloorForListeningArea(area.id)?.name ?? '';
+    final String floorName = serviceLocator<ProjectViewModel>().getFloorForListeningArea(areaId: area.id)?.name ?? '';
 
     return Draggable<ListeningArea>(
       data: area,
@@ -474,7 +476,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
     final Zone zone = Zone(
       name: 'Zone ${serviceLocator<ProjectViewModel>().zones.length + 1}',
     );
-    serviceLocator<ProjectViewModel>().addZone(zone);
+    serviceLocator<ProjectViewModel>().addZone(zone: zone);
   }
 
   void _showDeleteConfirmation(Zone zone) {
@@ -491,7 +493,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
             ),
             TextButton(
               onPressed: () {
-                serviceLocator<ProjectViewModel>().removeZone(zone.id);
+                serviceLocator<ProjectViewModel>().removeZone(zoneId: zone.id);
                 Navigator.of(context).pop();
               },
               style: TextButton.styleFrom(foregroundColor: Colors.red),

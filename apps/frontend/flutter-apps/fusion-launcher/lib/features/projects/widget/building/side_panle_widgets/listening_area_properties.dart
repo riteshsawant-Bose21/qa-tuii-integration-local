@@ -108,7 +108,7 @@ class ListeningAreaProperties extends StatelessWidget {
                       onFieldSubmitted: (String v) {
                         if (v.trim().isNotEmpty) {
                           final ListeningArea updatedLA = selectedListeningArea.copyWith(name: v.trim());
-                          viewModel.updateListeningArea(updatedLA);
+                          viewModel.updateListeningArea(area: updatedLA);
                         } else {
                           // Reset to previous value if empty
                           listeningAreaController.text = selectedListeningArea.name;
@@ -125,7 +125,7 @@ class ListeningAreaProperties extends StatelessWidget {
                       color: Theme.of(context).colorScheme.error,
                     ),
                     onPressed: () {
-                      viewModel.removeListeningArea(selectedListeningArea.id);
+                      viewModel.removeListeningArea(areaId: selectedListeningArea.id);
                     },
                   ),
                 ],
@@ -149,11 +149,11 @@ class ListeningAreaProperties extends StatelessWidget {
                   _buildLAPropertyRow(
                     context: context,
                     label: "Zone",
-                    value: viewModel.getZonesForListeningArea(selectedListeningArea.id)?.name ?? "N/A",
+                    value: viewModel.getZonesForListeningArea(areaId: selectedListeningArea.id)?.name ?? "N/A",
                     options: viewModel.zones.map((Zone zone) => zone.name).toList(),
                     onOptionSelected: (int selectedIndex) {
                       final Zone selectedZone = viewModel.zones[selectedIndex];
-                      viewModel.addListeningAreaToZone(selectedListeningArea.id, selectedZone.id);
+                      viewModel.addListeningAreaToZone(listeningAreaId: selectedListeningArea.id, zoneId: selectedZone.id);
                     },
                   ),
                   const SizedBox(height: 10),
@@ -165,7 +165,7 @@ class ListeningAreaProperties extends StatelessWidget {
                     onOptionSelected: (int selectedIndex) {
                       final String selectedType = venueOptions[selectedIndex];
                       final ListeningArea updatedLA = selectedListeningArea.copyWith(venuType: selectedType);
-                      viewModel.updateListeningArea(updatedLA);
+                      viewModel.updateListeningArea(area: updatedLA);
                     },
                   ),
                   const SizedBox(height: 10),
@@ -179,7 +179,7 @@ class ListeningAreaProperties extends StatelessWidget {
                       final double heightValue = listeningHeightValues[selectedOption] ?? 3.0;
 
                       final ListeningArea updatedLA = selectedListeningArea.copyWith(listeningHeight: heightValue);
-                      viewModel.updateListeningArea(updatedLA);
+                      viewModel.updateListeningArea(area: updatedLA);
                     },
                   ),
 
@@ -195,7 +195,7 @@ class ListeningAreaProperties extends StatelessWidget {
                         final double? customHeight = double.tryParse(newValue);
                         if (customHeight != null && customHeight > 0) {
                           final ListeningArea updatedLA = selectedListeningArea.copyWith(listeningHeight: customHeight);
-                          viewModel.updateListeningArea(updatedLA);
+                          viewModel.updateListeningArea(area: updatedLA);
                         }
                       },
                       viewModel: viewModel,
@@ -241,7 +241,7 @@ class ListeningAreaProperties extends StatelessWidget {
                         minSPL: minSPL,
                         maxSPL: maxSPL,
                       );
-                      viewModel.updateListeningArea(updatedLA);
+                      viewModel.updateListeningArea(area: updatedLA);
                     },
                   ),
                   const SizedBox(height: 10),
@@ -252,7 +252,7 @@ class ListeningAreaProperties extends StatelessWidget {
                     hintText: "e.g., 10 ft",
                     onSubmit: (String newValue) {
                       final ListeningArea updatedLA = selectedListeningArea.copyWith(ceilingHeight: newValue);
-                      viewModel.updateListeningArea(updatedLA);
+                      viewModel.updateListeningArea(area: updatedLA);
                     },
                   ),
                 ],

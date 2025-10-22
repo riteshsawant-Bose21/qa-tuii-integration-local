@@ -51,6 +51,6 @@ func NewSAPServer(groups []string, port string, handler *handler.Handler) (*SAPS
 	return sap, nil
 }
 
-func (s *SAPServer) BroadcastUpdate(msg *api.NotifyMessage) error {
+func (s *SAPServer) BroadcastMessage(msg *api.NotifyMessage) error {
 	return nil
 }

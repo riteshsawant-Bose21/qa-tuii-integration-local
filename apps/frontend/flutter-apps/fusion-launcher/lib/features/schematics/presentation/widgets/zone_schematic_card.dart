@@ -35,7 +35,7 @@ class ZoneSchematicCard extends StatelessWidget {
             margin: const EdgeInsets.only(left: 15),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: ShapeDecoration(
-              color: FusionUtils.hexToColor(zone.zoneColor).withValues(alpha: 0.6),
+              color: FusionUiUtils.hexToColor(zone.zoneColor).withValues(alpha: 0.6),
               shape: const RoundedRectangleBorder(
                 borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(5),
@@ -70,7 +70,7 @@ class ZoneSchematicCard extends StatelessWidget {
                   shape: RoundedRectangleBorder(
                     side: BorderSide(
                       width: 2,
-                      color: FusionUtils.hexToColor(zone.zoneColor).withValues(alpha: 0.5),
+                      color: FusionUiUtils.hexToColor(zone.zoneColor).withValues(alpha: 0.5),
                     ),
                     borderRadius: BorderRadius.circular(5),
                   ),
@@ -97,7 +97,7 @@ class ZoneSchematicCard extends StatelessWidget {
                             title: "Speakers",
                             hardwareComponents: hardwareComponents.whereType<Speaker>().toList(),
                             onDelete: (HardwareComponent component) {
-                              serviceLocator<ProjectViewModel>().removeHardware(component.id);
+                              serviceLocator<ProjectViewModel>().removeHardware(hardwareId: component.id);
                             },
                           ),
                         if (hardwareComponents.whereType<GenericHardwareComponent>().toList().isNotEmpty)
@@ -105,7 +105,7 @@ class ZoneSchematicCard extends StatelessWidget {
                             title: "Controllers",
                             hardwareComponents: hardwareComponents.whereType<GenericHardwareComponent>().toList(),
                             onDelete: (HardwareComponent component) {
-                              serviceLocator<ProjectViewModel>().removeHardware(component.id);
+                              serviceLocator<ProjectViewModel>().removeHardware(hardwareId: component.id);
                             },
                           ),
                       ],

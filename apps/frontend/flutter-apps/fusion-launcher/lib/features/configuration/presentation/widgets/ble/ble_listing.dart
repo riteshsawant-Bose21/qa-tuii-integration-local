@@ -93,7 +93,7 @@ class _BleDiscoveryState extends State<BleDiscovery> {
   }
 
   void establishConnection(BluetoothDevice device, BuildContext context) async {
-    FusionUtils.showLoader(context);
+    FusionUiUtils.showLoader(context);
     await BleConnectionManager.stopScan();
     connectionListener = bleConnectionController.stream.listen((BleConnectionStatus status) async {
       if (context.mounted) {
@@ -108,12 +108,12 @@ class _BleDiscoveryState extends State<BleDiscovery> {
             }
           } else {
             if (context.mounted) {
-              FusionUtils.hideLoader(context);
+              FusionUiUtils.hideLoader(context);
               Navigator.pop(context, isListed);
             }
           }
         } else if (status == BleConnectionStatus.disconnected) {
-          FusionUtils.hideLoader(context);
+          FusionUiUtils.hideLoader(context);
         }
       }
     });
@@ -144,10 +144,10 @@ class _BleDiscoveryState extends State<BleDiscovery> {
     //   Fluttertoast.showToast(msg: "Unable to send blink command!!");
     // }
 
-    FusionUtils.showLoader(context);
+    FusionUiUtils.showLoader(context);
     Future<void>.delayed(const Duration(milliseconds: 500), () async {
       if (context.mounted) {
-        FusionUtils.hideLoader(context);
+        FusionUiUtils.hideLoader(context);
         // FusionUtils.showToast(context: context, message: "DSP is Blinking now!!");
       }
     });

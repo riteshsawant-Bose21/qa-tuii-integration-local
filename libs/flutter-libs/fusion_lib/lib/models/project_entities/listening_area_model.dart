@@ -3,6 +3,8 @@ import 'dart:ui';
 
 import 'package:uuid/uuid.dart';
 
+import '../../fusion_utils/fusion_utilities.dart';
+
 class ListeningArea {
   final String id;
   final List<Offset> vertices;
@@ -26,7 +28,7 @@ class ListeningArea {
     this.minSPL = 60.0,
     this.maxSPL = 70.0,
     this.customListeningAreaHeight = 0.0,
-  }) : id = id ?? const Uuid().v4();
+  }) : id = id ?? "AREA${FusionUtils.shortStringUUID()}";
 
   List<Offset> getFieldPointsSet({int cols = 60, int rows = 60}) {
     if (vertices.isEmpty) return <Offset>[];
@@ -59,10 +61,10 @@ class ListeningArea {
   /// Returns all points inside the polygon on a uniform grid where
   /// the distance between adjacent points is approximately [spacing]
   /// world‐units (rather than a fixed cols×rows).
-  List<Offset> getFieldPoints() {
+  List<Offset> getFieldPoints(double spacing) {
     if (vertices.isEmpty) return <Offset>[];
 
-    final double spacing = 20.0;
+    // final double spacing = 20.0;
 
     // 1) compute axis‐aligned bounding box
     final Iterable<double> xs = vertices.map((Offset v) => v.dx);

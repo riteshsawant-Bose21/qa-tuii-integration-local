@@ -1,51 +1,33 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
+import 'package:fusion_lib/fusion_building_view/spl_panel.dart';
 
 /// Controller for managing bidirectional communication between SPL Panel and SPL Range Slider
 class SplRangeController extends ChangeNotifier {
-  double _upperLimit = 90.0;
-  double _lowerLimit = 45.0;
+  SplPanelData _panelData = const SplPanelData();
 
   /// Current upper limit value
-  double get upperLimit => _upperLimit;
+  double get upperLimit => _panelData.splUpperDb;
 
   /// Current lower limit value
-  double get lowerLimit => _lowerLimit;
-
-  /// Update upper limit (typically called by slider or panel)
-  void setUpperLimit(double value) {
-    if (_upperLimit != value && value >= _lowerLimit) {
-      _upperLimit = value;
-      notifyListeners();
-    }
-  }
-
-  /// Update lower limit (typically called by slider or panel)
-  void setLowerLimit(double value) {
-    if (_lowerLimit != value && value <= _upperLimit) {
-      _lowerLimit = value;
-      notifyListeners();
-    }
-  }
+  double get lowerLimit => _panelData.splLowerDb;
 
   /// Update both limits simultaneously (typically called by slider)
   void setRange(double lower, double upper) {
-    if (_lowerLimit != lower || _upperLimit != upper) {
-      _lowerLimit = lower;
-      _upperLimit = upper;
+    if (upperLimit != lower || lowerLimit != upper) {
+      _panelData = _panelData.copyWith(
+        splLowerDb: lower,
+        splUpperDb: upper,
+      );
       notifyListeners();
     }
   }
 
-  /// Reset to default values
-  void reset({double? defaultUpper, double? defaultLower}) {
-    setRange(
-      defaultLower ?? 45.0,
-      defaultUpper ?? 90.0,
-    );
+  /// onChanged callback for RangeSlider
+  void onMappingDataChanged(SplPanelData panelData) {
+    _panelData = panelData;
+    notifyListeners();
   }
 
-  @override
-  void dispose() {
-    super.dispose();
-  }
+  SplPanelData getPanelData() => _panelData;
 }

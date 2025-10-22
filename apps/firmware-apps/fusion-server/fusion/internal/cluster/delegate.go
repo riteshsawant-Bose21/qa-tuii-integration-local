@@ -201,7 +201,7 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 		}
 
 	case api.NotifyOpVersionUpdate:
-		if err := d.updater.PerformRemoteUpdate(*message.VersionMessage); err != nil {
+		if err := d.updater.PerformRemoteUpdate(*message.VersionUpdate); err != nil {
 			logger.Error("PerformRemoteUpdate error: %v", err)
 		}
 

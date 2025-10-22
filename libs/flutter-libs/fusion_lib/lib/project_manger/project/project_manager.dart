@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:mutex/mutex.dart';
+
 import '../../fusion_lib.dart';
 
 class ProjectManager {
@@ -7,6 +9,7 @@ class ProjectManager {
   final LocalProjectManager localProjectManager;
 
   static List<ProjectData> projects = [];
+  final Mutex _mutex = Mutex();
 
   ProjectService? projectService;
 
@@ -87,6 +90,9 @@ class ProjectManager {
       final ProjectData project = getProjectById(projectId);
       projectService = ProjectService.fromJson(project.projectRawData);
 
+      //initial state of project;
+      projectService!.recordChange();
+
       return ResponseCallback.success(project);
     } catch (e) {
       return ResponseCallback.failure("Error opening project: $e");
@@ -99,21 +105,24 @@ class ProjectManager {
       return ResponseCallback.failure("No project is currently loaded.");
     }
 
-    // Record the change before saving (for undo/redo functionality)
-    // We can add this before every change to the projectService to support step by step undo/redo
-    projectService!.recordChange();
+    //mutex lock to prevent concurrent saves
+    return await _mutex.protect(() async {
+      // Record the change before saving (for undo/redo functionality)
+      // We can add this before every change to the projectService to support step by step undo/redo
+      // projectService!.recordChange();
 
-    try {
-      final ProjectData currentProject = getProjectById(projectService!.id);
-      final ProjectData updatedProject = currentProject.copyWith(projectRawData: projectService!.toJson());
+      try {
+        final ProjectData currentProject = getProjectById(projectService!.id);
+        final ProjectData updatedProject = currentProject.copyWith(projectRawData: projectService!.toJson());
 
-      // Save to local storage
-      await localProjectManager.saveProject(updatedProject);
+        // Save to local storage
+        await localProjectManager.saveProject(updatedProject);
 
-      return ResponseCallback.success(true);
-    } catch (e) {
-      return ResponseCallback.failure("Error saving project: $e");
-    }
+        return ResponseCallback.success(true);
+      } catch (e) {
+        return ResponseCallback.failure("Error saving project: $e");
+      }
+    });
   }
 
   /// save image to current project directory

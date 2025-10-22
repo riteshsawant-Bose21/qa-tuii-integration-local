@@ -8,10 +8,12 @@ import '../../../../configuration/presentation/viewmodel/project_view_model.dart
 
 class HardwareComponentProperties extends StatefulWidget {
   final HardwareComponent selectedHardware;
+  final VoidCallback? onSpeakerParametersChanged;
 
   const HardwareComponentProperties({
     super.key,
     required this.selectedHardware,
+    this.onSpeakerParametersChanged,
   });
 
   @override
@@ -21,14 +23,12 @@ class HardwareComponentProperties extends StatefulWidget {
 class _HardwareComponentPropertiesState extends State<HardwareComponentProperties> {
   final TextEditingController gainController = TextEditingController();
 
+  final TextEditingController rollController = TextEditingController();
   final TextEditingController pitchController = TextEditingController();
   final TextEditingController yawController = TextEditingController();
-  final TextEditingController rollController = TextEditingController();
 
   final TextEditingController xController = TextEditingController();
-
   final TextEditingController yController = TextEditingController();
-
   final TextEditingController zController = TextEditingController();
 
   //dispose controllers
@@ -63,9 +63,11 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
         pitchController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).pitch.toString() : '0.0';
         yawController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).yaw.toString() : '0.0';
         rollController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).roll.toString() : '0.0';
-        xController.text = widget.selectedHardware.pos.dx.toStringAsFixed(2);
-        yController.text = widget.selectedHardware.pos.dy.toStringAsFixed(2);
-        zController.text = widget.selectedHardware.zAxis.toStringAsFixed(2);
+
+        // Divide by 100 for display
+        xController.text = (widget.selectedHardware.pos.dx / 100).toStringAsFixed(2);
+        yController.text = (widget.selectedHardware.pos.dy / 100).toStringAsFixed(2);
+        zController.text = (widget.selectedHardware.zAxis / 100).toStringAsFixed(2);
 
         return Container(
           padding: const EdgeInsets.all(20),
@@ -114,13 +116,11 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                       color: Theme.of(context).colorScheme.error,
                     ),
                     onPressed: () {
-                      viewModel.removeHardware(widget.selectedHardware.id);
+                      viewModel.removeHardware(hardwareId: widget.selectedHardware.id);
                     },
                   ),
                 ],
               ),
-
-              const SizedBox(height: 12),
 
               // Hardware name input field
               TextFormField(
@@ -140,7 +140,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                   final String trimmedName = v.trim();
                   if (trimmedName.isNotEmpty) {
                     final HardwareComponent updated = widget.selectedHardware.copyWith(name: trimmedName);
-                    viewModel.updateHardware(updated);
+                    viewModel.updateHardware(hardware: updated);
                   } else {
                     // Show a snackbar to inform user
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -152,8 +152,6 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                   }
                 },
               ),
-
-              const SizedBox(height: 10),
 
               // Coordinates section
               Column(
@@ -174,7 +172,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                           children: <Widget>[
                             Text("X", style: textStyleGrey),
                             const SizedBox(width: 4),
-                            Expanded(
+                            IntrinsicWidth(
                               child: TextFormField(
                                 controller: xController,
                                 maxLength: 24,
@@ -182,6 +180,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                   counterText: "",
                                   hintText: 'X',
                                   border: InputBorder.none,
+                                  suffixText: "m",
                                   isDense: true,
                                 ),
                                 style: textStyleBlack,
@@ -189,11 +188,17 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                 onFieldSubmitted: (String v) {
                                   final double? xValue = double.tryParse(v.trim());
                                   if (xValue != null) {
-                                    final HardwareComponent updated = widget.selectedHardware.copyWith(pos: Offset(xValue, widget.selectedHardware.pos.dy));
-                                    viewModel.updateHardware(updated);
+                                    // Multiply by 100 when submitting
+                                    final HardwareComponent updated = widget.selectedHardware.copyWith(
+                                      pos: Offset(xValue * 100, widget.selectedHardware.pos.dy),
+                                    );
+                                    viewModel.updateHardware(hardware: updated);
+                                    if (widget.selectedHardware is Speaker) {
+                                      widget.onSpeakerParametersChanged?.call();
+                                    }
                                   } else {
                                     // Reset to previous value if invalid
-                                    xController.text = widget.selectedHardware.pos.dx.toStringAsFixed(2);
+                                    xController.text = (widget.selectedHardware.pos.dx / 100).toStringAsFixed(2);
                                     // Show validation error
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
@@ -214,7 +219,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                           children: <Widget>[
                             Text("Y", style: textStyleGrey),
                             const SizedBox(width: 4),
-                            Expanded(
+                            IntrinsicWidth(
                               child: TextFormField(
                                 controller: yController,
                                 maxLength: 24,
@@ -223,17 +228,24 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                   hintText: 'Y',
                                   border: InputBorder.none,
                                   isDense: true,
+                                  suffixText: "m",
                                 ),
                                 style: textStyleBlack,
                                 keyboardType: TextInputType.number,
                                 onFieldSubmitted: (String v) {
                                   final double? yValue = double.tryParse(v.trim());
                                   if (yValue != null) {
-                                    final HardwareComponent updated = widget.selectedHardware.copyWith(pos: Offset(widget.selectedHardware.pos.dx, yValue));
-                                    viewModel.updateHardware(updated);
+                                    // Multiply by 100 when submitting
+                                    final HardwareComponent updated = widget.selectedHardware.copyWith(
+                                      pos: Offset(widget.selectedHardware.pos.dx, yValue * 100),
+                                    );
+                                    viewModel.updateHardware(hardware: updated);
+                                    if (widget.selectedHardware is Speaker) {
+                                      widget.onSpeakerParametersChanged?.call();
+                                    }
                                   } else {
                                     // Reset to previous value if invalid
-                                    yController.text = widget.selectedHardware.pos.dy.toStringAsFixed(2);
+                                    yController.text = (widget.selectedHardware.pos.dy / 100).toStringAsFixed(2);
                                     // Show validation error
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
@@ -254,7 +266,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                           children: <Widget>[
                             Text("Z", style: textStyleGrey),
                             const SizedBox(width: 4),
-                            Expanded(
+                            IntrinsicWidth(
                               child: TextFormField(
                                 controller: zController,
                                 maxLength: 24,
@@ -263,17 +275,22 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                   hintText: 'Z',
                                   border: InputBorder.none,
                                   isDense: true,
+                                  suffixText: "m",
                                 ),
                                 style: textStyleBlack,
                                 keyboardType: TextInputType.number,
                                 onFieldSubmitted: (String v) {
                                   final double? zValue = double.tryParse(v.trim());
                                   if (zValue != null) {
-                                    final HardwareComponent updated = widget.selectedHardware.copyWith(zAxis: zValue);
-                                    viewModel.updateHardware(updated);
+                                    // Multiply by 100 when submitting
+                                    final HardwareComponent updated = widget.selectedHardware.copyWith(zAxis: zValue * 100);
+                                    viewModel.updateHardware(hardware: updated);
+                                    if (widget.selectedHardware is Speaker) {
+                                      widget.onSpeakerParametersChanged?.call();
+                                    }
                                   } else {
                                     // Reset to previous value if invalid
-                                    zController.text = widget.selectedHardware.zAxis.toStringAsFixed(2);
+                                    zController.text = (widget.selectedHardware.zAxis / 100).toStringAsFixed(2);
                                     // Show validation error
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
@@ -296,214 +313,185 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
               if (widget.selectedHardware is Speaker) ...<Widget>[
                 const SizedBox(height: 16),
 
-                // Pitch field
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: Row(
-                    children: <Widget>[
-                      SizedBox(
-                        width: 80,
-                        child: Text("Pitch", style: textStyleGrey?.copyWith(fontSize: 11)),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Row(
-                          children: <Widget>[
-                            Expanded(
-                              child: TextFormField(
-                                controller: pitchController,
-                                maxLength: 24,
-                                decoration: const InputDecoration(
-                                  counterText: "",
-                                  hintText: 'Pitch',
-                                  border: InputBorder.none,
-                                  isDense: true,
-                                ),
-                                style: textStyleBlack,
-                                keyboardType: TextInputType.number,
-                                onFieldSubmitted: (String v) {
-                                  final double? pitch = double.tryParse(v.trim());
-                                  if (pitch != null) {
-                                    final Speaker updated = (widget.selectedHardware as Speaker).copyWith(pitch: pitch);
-                                    viewModel.updateHardware(updated);
-                                  } else {
-                                    // Reset to previous value if invalid
-                                    pitchController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).pitch.toString() : '0.0';
-                                    // Show validation error
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Pitch must be a valid decimal number'),
-                                        duration: Duration(seconds: 2),
-                                      ),
-                                    );
-                                  }
-                                },
-                              ),
-                            ),
-                          ],
+                // Roll field
+                Row(
+                  children: <Widget>[
+                    SizedBox(
+                      width: 80,
+                      child: Text("Roll", style: textStyleGrey?.copyWith(fontSize: 11)),
+                    ),
+                    const SizedBox(width: 8),
+                    IntrinsicWidth(
+                      child: TextFormField(
+                        controller: rollController,
+                        decoration: const InputDecoration(
+                          hintText: 'Roll',
+                          border: InputBorder.none,
+                          isDense: true,
+                          suffixText: "°",
                         ),
+                        style: textStyleBlack,
+                        keyboardType: TextInputType.number,
+                        onFieldSubmitted: (String v) {
+                          final double? roll = double.tryParse(v.trim());
+                          if (roll != null) {
+                            final Speaker updated = (widget.selectedHardware as Speaker).copyWith(roll: roll);
+                            viewModel.updateHardware(hardware: updated);
+                            widget.onSpeakerParametersChanged?.call();
+                          } else {
+                            // Reset to previous value if invalid
+                            rollController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).roll.toString() : '0.0';
+                            // Show validation error
+                            // Trigger SPL update for speaker orientation changes
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Roll must be a valid decimal number'),
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                          }
+                        },
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 12),
+
+                // Pitch field
+                Row(
+                  children: <Widget>[
+                    SizedBox(
+                      width: 80,
+                      child: Text("Pitch", style: textStyleGrey?.copyWith(fontSize: 11)),
+                    ),
+                    const SizedBox(width: 8),
+                    IntrinsicWidth(
+                      child: TextFormField(
+                        controller: pitchController,
+                        decoration: const InputDecoration(
+                          hintText: 'Pitch',
+                          border: InputBorder.none,
+                          isDense: true,
+                          suffixText: "°",
+                        ),
+                        style: textStyleBlack,
+                        keyboardType: TextInputType.number,
+                        onFieldSubmitted: (String v) {
+                          final double? pitch = double.tryParse(v.trim());
+                          if (pitch != null) {
+                            final Speaker updated = (widget.selectedHardware as Speaker).copyWith(pitch: pitch);
+                            viewModel.updateHardware(hardware: updated);
+                            widget.onSpeakerParametersChanged?.call();
+                          } else {
+                            // Reset to previous value if invalid
+                            pitchController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).pitch.toString() : '0.0';
+                            // Show validation error
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Pitch must be a valid decimal number'),
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                    ),
+                  ],
                 ),
 
                 const SizedBox(height: 12),
 
                 // Yaw field
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: Row(
-                    children: <Widget>[
-                      SizedBox(
-                        width: 80,
-                        child: Text("Yaw", style: textStyleGrey?.copyWith(fontSize: 11)),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Row(
-                          children: <Widget>[
-                            Expanded(
-                              child: TextFormField(
-                                controller: yawController,
-                                maxLength: 24,
-                                decoration: const InputDecoration(
-                                  counterText: "",
-                                  hintText: 'Yaw',
-                                  border: InputBorder.none,
-                                  isDense: true,
-                                ),
-                                style: textStyleBlack,
-                                keyboardType: TextInputType.number,
-                                onFieldSubmitted: (String v) {
-                                  final double? yaw = double.tryParse(v.trim());
-                                  if (yaw != null) {
-                                    final Speaker updated = (widget.selectedHardware as Speaker).copyWith(yaw: yaw);
-                                    viewModel.updateHardware(updated);
-                                  } else {
-                                    // Reset to previous value if invalid
-                                    yawController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).yaw.toString() : '0.0';
-                                    // Show validation error
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Yaw must be a valid decimal number'),
-                                        duration: Duration(seconds: 2),
-                                      ),
-                                    );
-                                  }
-                                },
-                              ),
-                            ),
-                          ],
+                Row(
+                  children: <Widget>[
+                    SizedBox(
+                      width: 80,
+                      child: Text("Yaw", style: textStyleGrey?.copyWith(fontSize: 11)),
+                    ),
+                    const SizedBox(width: 8),
+                    IntrinsicWidth(
+                      child: TextFormField(
+                        controller: yawController,
+                        decoration: const InputDecoration(
+                          hintText: 'Yaw',
+                          border: InputBorder.none,
+                          isDense: true,
+                          suffixText: "°",
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 12),
-
-                // Roll field
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: Row(
-                    children: <Widget>[
-                      SizedBox(
-                        width: 80,
-                        child: Text("Roll", style: textStyleGrey?.copyWith(fontSize: 11)),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Row(
-                          children: <Widget>[
-                            Expanded(
-                              child: TextFormField(
-                                controller: rollController,
-                                maxLength: 24,
-                                decoration: const InputDecoration(
-                                  counterText: "",
-                                  hintText: 'Roll',
-                                  border: InputBorder.none,
-                                  isDense: true,
-                                ),
-                                style: textStyleBlack,
-                                keyboardType: TextInputType.number,
-                                onFieldSubmitted: (String v) {
-                                  final double? roll = double.tryParse(v.trim());
-                                  if (roll != null) {
-                                    final Speaker updated = (widget.selectedHardware as Speaker).copyWith(roll: roll);
-                                    viewModel.updateHardware(updated);
-                                  } else {
-                                    // Reset to previous value if invalid
-                                    rollController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).roll.toString() : '0.0';
-                                    // Show validation error
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Roll must be a valid decimal number'),
-                                        duration: Duration(seconds: 2),
-                                      ),
-                                    );
-                                  }
-                                },
+                        style: textStyleBlack,
+                        keyboardType: TextInputType.number,
+                        onFieldSubmitted: (String v) {
+                          final double? yaw = double.tryParse(v.trim());
+                          if (yaw != null) {
+                            final Speaker updated = (widget.selectedHardware as Speaker).copyWith(yaw: yaw);
+                            viewModel.updateHardware(hardware: updated);
+                            widget.onSpeakerParametersChanged?.call();
+                          } else {
+                            // Reset to previous value if invalid
+                            yawController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).yaw.toString() : '0.0';
+                            // Show validation error
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Yaw must be a valid decimal number'),
+                                duration: Duration(seconds: 2),
                               ),
-                            ),
-                          ],
-                        ),
+                            );
+                          }
+                        },
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
 
                 const SizedBox(height: 12),
 
                 // Gain field
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: Row(
-                    children: <Widget>[
-                      SizedBox(
-                        width: 80,
-                        child: Text("Gain", style: textStyleGrey?.copyWith(fontSize: 11)),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Row(
-                          children: <Widget>[
-                            Expanded(
-                              child: TextFormField(
-                                controller: gainController,
-                                maxLength: 24,
-                                decoration: const InputDecoration(
-                                  counterText: "",
-                                  hintText: 'Gain',
-                                  border: InputBorder.none,
-                                  isDense: true,
-                                ),
-                                style: textStyleBlack,
-                                keyboardType: TextInputType.number,
-                                onFieldSubmitted: (String v) {
-                                  final double? gain = double.tryParse(v.trim());
-                                  if (gain != null) {
-                                    final Speaker updated = (widget.selectedHardware as Speaker).copyWith(gain: gain);
-                                    viewModel.updateHardware(updated);
-                                  } else {
-                                    // Reset to previous value if invalid
-                                    gainController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).gain.toString() : '0.0';
-                                    // Show validation error
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Gain must be a valid decimal number'),
-                                        duration: Duration(seconds: 2),
-                                      ),
-                                    );
-                                  }
-                                },
+                Row(
+                  children: <Widget>[
+                    SizedBox(
+                      width: 80,
+                      child: Text("Gain", style: textStyleGrey?.copyWith(fontSize: 11)),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Row(
+                        children: <Widget>[
+                          IntrinsicWidth(
+                            child: TextFormField(
+                              controller: gainController,
+                              decoration: const InputDecoration(
+                                hintText: 'Gain',
+                                border: InputBorder.none,
+                                isDense: true,
+                                suffixText: "dB",
                               ),
+                              style: textStyleBlack,
+                              keyboardType: TextInputType.number,
+                              onFieldSubmitted: (String v) {
+                                final double? gain = double.tryParse(v.trim());
+                                if (gain != null) {
+                                  final Speaker updated = (widget.selectedHardware as Speaker).copyWith(gain: gain);
+                                  viewModel.updateHardware(hardware: updated);
+                                  widget.onSpeakerParametersChanged?.call();
+                                } else {
+                                  // Reset to previous value if invalid
+                                  gainController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).gain.toString() : '0.0';
+                                  // Show validation error
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Gain must be a valid decimal number'),
+                                      duration: Duration(seconds: 2),
+                                    ),
+                                  );
+                                }
+                              },
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ],
 
@@ -512,22 +500,102 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   const SizedBox(height: 12),
-                  _buildHardwarePropertyRow(
-                    context: context,
-                    label: "Listening Area",
-                    value: viewModel.getListeningAreaForHardware(widget.selectedHardware.id)?.name ?? "N/A",
-                    options: viewModel.listeningAreas.map((ListeningArea listeningArea) => listeningArea.name).toList(),
-                    onOptionSelected: (int selectedIndex) {
-                      final ListeningArea? selectedArea = viewModel.listeningAreas.isNotEmpty ? viewModel.listeningAreas[selectedIndex] : null;
-                      if (selectedArea != null) {
-                        print("Selected Area: ${selectedArea.name}");
-                        final LocationModel updated = widget.selectedHardware.locationEntity.copyWith(
-                          listeningAreaId: selectedArea.id,
-                        );
-                        viewModel.updateHardwareLocation(widget.selectedHardware.id, updated);
-                      }
-                    },
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: <Widget>[
+                      if (widget.selectedHardware.lockListeningArea) ...<Widget>[
+                        Expanded(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: <Widget>[
+                              // Left: Label
+                              FusionAppText(
+                                text: "Area",
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  fontSize: 11,
+                                  color: Theme.of(context).colorScheme.fusionTextViewColor.withOpacity(0.5),
+                                ),
+                              ),
+                              // Right: Value + Arrow
+                              Tooltip(
+                                message: "Listening area is locked",
+                                child: Container(
+                                  alignment: Alignment.centerLeft,
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: <Widget>[
+                                      FusionAppText(
+                                        text: viewModel.getListeningAreaForHardware(hardwareId: widget.selectedHardware.id)?.name ?? "N/A",
+                                        textAlign: TextAlign.left,
+                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                          fontSize: 11,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ] else ...<Widget>[
+                        Expanded(
+                          child: _buildHardwarePropertyRow(
+                            context: context,
+                            label: "Area ",
+                            value: viewModel.getListeningAreaForHardware(hardwareId: widget.selectedHardware.id)?.name ?? "N/A",
+                            options:
+                                widget.selectedHardware.lockListeningArea
+                                    ? <String>[]
+                                    : viewModel.listeningAreas.map((ListeningArea listeningArea) => listeningArea.name).toList(),
+                            onOptionSelected: (int selectedIndex) {
+                              if (!widget.selectedHardware.lockListeningArea) {
+                                final ListeningArea? selectedArea = viewModel.listeningAreas.isNotEmpty ? viewModel.listeningAreas[selectedIndex] : null;
+                                if (selectedArea != null) {
+                                  print("Selected Area: ${selectedArea.name}");
+                                  final LocationModel updated = widget.selectedHardware.locationEntity.copyWith(
+                                    listeningAreaId: selectedArea.id,
+                                  );
+                                  viewModel.updateHardwareLocation(hardwareId: widget.selectedHardware.id, newLocation: updated);
+                                }
+                              }
+                            },
+                          ),
+                        ),
+                      ],
+                      const SizedBox(width: 8),
+                      Tooltip(
+                        message: "Lock Listening Area",
+                        child: GestureDetector(
+                          onTap: () {
+                            viewModel.updateHardware(
+                              hardware: widget.selectedHardware.copyWith(
+                                lockListeningArea: !widget.selectedHardware.lockListeningArea,
+                              ),
+                            );
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: widget.selectedHardware.lockListeningArea ? Theme.of(context).colorScheme.primary.withOpacity(0.1) : Colors.transparent,
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(
+                                color: widget.selectedHardware.lockListeningArea ? Theme.of(context).colorScheme.primary : Colors.grey.withOpacity(0.3),
+                                width: 1,
+                              ),
+                            ),
+                            child: Icon(
+                              widget.selectedHardware.lockListeningArea ? Icons.lock : Icons.lock_open,
+                              size: 16,
+                              color: widget.selectedHardware.lockListeningArea ? Theme.of(context).colorScheme.primary : Colors.grey,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
+
                   const SizedBox(height: 8),
                   _buildHardwarePropertyTextRow(
                     context: context,

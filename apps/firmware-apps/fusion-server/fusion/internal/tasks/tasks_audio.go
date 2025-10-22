@@ -45,7 +45,7 @@ func (tm *TaskManager) TriggerMessage(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// CreateApplySnapshotTask handles HTTP POST requests to add a new snapshot task.
+// CreatePlayAudioTask handles HTTP POST requests to add an audio playback task.
 func (tm *TaskManager) CreatePlayAudioTask(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequirePost(w, r) {
 		return

@@ -9,7 +9,7 @@ class CostCalculatorScreen extends StatefulWidget {
   final List<HardwareComponent> controllers;
   final List<HardwareComponent> racks;
   final List<Amplifier> amplifiers;
-  final List<FusionDevice> fusionDevices;
+  final List<FusionDsp> fusionDevices;
   final List<HardwareComponent> others;
 
   const CostCalculatorScreen({
@@ -378,7 +378,7 @@ class _CostCalculatorScreenState extends State<CostCalculatorScreen> with Ticker
     if (item is Source) return item.name ?? 'Unknown Source';
     if (item is HardwareComponent) return item.name ?? 'Unknown Component';
     if (item is Amplifier) return item.name ?? 'Unknown Amplifier';
-    if (item is FusionDevice) return item.name ?? 'Unknown Fusion Device';
+    if (item is FusionDsp) return item.name ?? 'Unknown Fusion Device';
     return 'Unknown Item';
   }
 
@@ -387,7 +387,7 @@ class _CostCalculatorScreenState extends State<CostCalculatorScreen> with Ticker
     if (item is Source) return item.sku;
     if (item is HardwareComponent) return item.hardwareName;
     if (item is Amplifier) return item.name;
-    if (item is FusionDevice) return item.name;
+    if (item is FusionDsp) return item.name;
     return null;
   }
 
@@ -396,7 +396,7 @@ class _CostCalculatorScreenState extends State<CostCalculatorScreen> with Ticker
     if (item is Source) return item.price;
     if (item is HardwareComponent) return item.price;
     if (item is Amplifier) return item.price;
-    if (item is FusionDevice) return item.price;
+    if (item is FusionDsp) return item.price;
     return 0.0;
   }
 
@@ -429,7 +429,7 @@ extension ListExtensions<T> on List<T> {
       if (item is Source) return sum + item.price;
       if (item is HardwareComponent) return sum + item.price;
       if (item is Amplifier) return sum + item.price;
-      if (item is FusionDevice) return sum + item.price;
+      if (item is FusionDsp) return sum + item.price;
       return sum;
     });
   }

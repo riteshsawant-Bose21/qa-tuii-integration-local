@@ -2,8 +2,10 @@ import 'dart:ui';
 
 import 'package:uuid/uuid.dart';
 
+import '../../fusion_lib.dart';
+
 class FloorPlanModel {
-  String? id;
+  String id;
   String imagePath;
   Offset position;
   Size size;
@@ -12,11 +14,23 @@ class FloorPlanModel {
 
   static FloorPlanModel defaultFloorPlan = FloorPlanModel(imagePath: "", position: Offset.zero, size: const Size(1000, 800));
 
-  FloorPlanModel({this.id, required this.imagePath, required this.position, required this.size, this.canvasZoom = 1.0, this.canvasPan = Offset.zero}) {
-    id ??= const Uuid().v4();
-  }
+  FloorPlanModel({
+    String? id,
+    required this.imagePath,
+    required this.position,
+    required this.size,
+    this.canvasZoom = 1.0,
+    this.canvasPan = Offset.zero,
+  }) : id = id ?? "FLOORPLAN${FusionUtils.shortStringUUID()}";
 
-  FloorPlanModel copyWith({String? id, String? imagePath, Offset? position, Size? size, double? canvasZoom, Offset? canvasPan}) {
+  FloorPlanModel copyWith({
+    String? id,
+    String? imagePath,
+    Offset? position,
+    Size? size,
+    double? canvasZoom,
+    Offset? canvasPan,
+  }) {
     return FloorPlanModel(
       id: id ?? this.id,
       imagePath: imagePath ?? this.imagePath,

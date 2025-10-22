@@ -7,6 +7,7 @@ class HardwareItemCard extends StatelessWidget {
   final String assetImagePath;
   final String? itemId;
   final String? location;
+  final Zone? zone;
   final bool isHovered;
   final bool isSelected;
   final VoidCallback? onTap;
@@ -30,6 +31,7 @@ class HardwareItemCard extends StatelessWidget {
     this.onDelete,
     this.onRename,
     this.onDuplicate,
+    this.zone,
   });
 
   @override
@@ -81,18 +83,47 @@ class HardwareItemCard extends StatelessWidget {
                     const SizedBox(height: 6),
 
                     /// device location
-                    if (location != null)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: isHovered ? Colors.white.withOpacity(0.5) : (isSelected ? Colors.transparent : Theme.of(context).colorScheme.white),
-                          border: Border.all(color: Theme.of(context).colorScheme.greyDark, width: 1),
+                    zone != null
+                        ? Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: isHovered ? Colors.white.withOpacity(0.5) : (isSelected ? Colors.transparent : Theme.of(context).colorScheme.white),
+                            // border: Border.all(color: Theme.of(context).colorScheme.greyDark, width: 1),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: <Widget>[
+                              Container(
+                                width: 8,
+                                height: 16, // Add explicit height
+                                decoration: BoxDecoration(
+                                  color: zone?.color ?? Colors.red, // Use zone color instead of hardcoded red
+                                  borderRadius: BorderRadius.circular(2), // Optional: add slight border radius
+                                ),
+                              ),
+                              const SizedBox(width: 4), // Add spacing between color indicator and text
+                              Expanded(
+                                // Wrap text in Expanded to prevent overflow
+                                child: FusionAppText(
+                                  text: zone?.name ?? "",
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 9),
+                                  maxLine: 1, // Prevent text overflow
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                        : Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: isHovered ? Colors.white.withOpacity(0.5) : (isSelected ? Colors.transparent : Theme.of(context).colorScheme.white),
+                            border: Border.all(color: Theme.of(context).colorScheme.greyDark, width: 1),
+                          ),
+                          child: FusionAppText(
+                            text: location!,
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 9),
+                          ),
                         ),
-                        child: FusionAppText(
-                          text: location!,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 9),
-                        ),
-                      ),
                   ],
                 ),
               ),
