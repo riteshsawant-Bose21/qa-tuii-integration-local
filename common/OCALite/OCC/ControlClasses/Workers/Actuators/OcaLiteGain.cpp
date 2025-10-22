@@ -51,66 +51,10 @@ OcaLiteGain::OcaLiteGain(::OcaONo objectNumber, ::OcaBoolean lockable, const ::O
     return GetGainValue(gain);
 }
 
-::OcaLiteStatus OcaLiteGain::SetGain(::OcaDB gain)
-{
-    ::OcaLiteStatus rc(OCASTATUS_PARAMETER_OUT_OF_RANGE);
-
-    if ((gain >= m_minGain) && (gain <= m_maxGain))
-    {
-        ::OcaDB oldGain;
-        rc = GetGainValue(oldGain);
-        if (OCASTATUS_OK == rc)
-        {
-            if (!CompareValue<::OcaDB>(oldGain, gain))
-            {
-                rc = SetGainValue(gain);
-                if (OCASTATUS_OK == rc)
-                {
-                    // m_gain = gain;
-                }
-            }
-        }
-    }
-    return rc;
-}
-
-::OcaLiteStatus OcaLiteGain::SetGainFromFusion(::OcaDB gain)
-{
-    ::OcaLiteStatus rc(OCASTATUS_PARAMETER_OUT_OF_RANGE);
-
-    if ((gain >= m_minGain) && (gain <= m_maxGain))
-    {
-        ::OcaDB oldGain;
-        rc = GetGainValue(oldGain);
-        if (OCASTATUS_OK == rc)
-        {
-            if (!CompareValue<::OcaDB>(oldGain, gain))
-            {
-
-                m_gain = gain;
-
-#ifndef OCA_LITE_CONTROLLER // Controllers should not generate events
-                ::OcaDB actualGain;
-                rc = GetGainValue(actualGain);
-                if (OCASTATUS_OK == rc)
-                {
-                    ::OcaLitePropertyID propertyID(CLASS_ID.GetFieldCount(), static_cast<::OcaUint16>(OCA_PROP_GAIN));
-                    ::OcaLitePropertyChangedEventData<::OcaDB> eventData(GetObjectNumber(),
-                                                                         propertyID,
-                                                                         actualGain,
-                                                                         OCAPROPERTYCHANGETYPE_CURRENT_CHANGED);
-                    PropertyChanged(eventData, propertyID);
-                }
-#endif
-            }
-        }
-    }
-    return rc;
-}
-
-// ::OcaLiteStatus OcaLiteGain::SetGain(::OcaDB gain)
-// {
-//     ::OcaLiteStatus rc(OCASTATUS_PARAMETER_OUT_OF_RANGE);
+// ORIGINAL
+//  ::OcaLiteStatus OcaLiteGain::SetGain(::OcaDB gain)
+//  {
+//      ::OcaLiteStatus rc(OCASTATUS_PARAMETER_OUT_OF_RANGE);
 
 //     if ((gain >= m_minGain) && (gain <= m_maxGain))
 //     {
@@ -144,6 +88,103 @@ OcaLiteGain::OcaLiteGain(::OcaONo objectNumber, ::OcaBoolean lockable, const ::O
 //     }
 //     return rc;
 // }
+
+#ifdef OCA_LITE_CONTROLLER
+::OcaLiteStatus OcaLiteGain::SetGain(::OcaDB gain)
+{
+    ::OcaLiteStatus rc(OCASTATUS_PARAMETER_OUT_OF_RANGE);
+
+    if ((gain >= m_minGain) && (gain <= m_maxGain))
+    {
+        ::OcaDB oldGain;
+        rc = GetGainValue(oldGain);
+        if (OCASTATUS_OK == rc)
+        {
+            if (!CompareValue<::OcaDB>(oldGain, gain))
+            {
+                rc = SetGainValue(gain);
+                if (OCASTATUS_OK == rc)
+                {
+                    m_gain = gain;
+
+                    // Controllers should not generate events
+                    // ::OcaDB actualGain;
+                    // rc = GetGainValue(actualGain);
+                    // if (OCASTATUS_OK == rc)
+                    // {
+                    //     ::OcaLitePropertyID propertyID(CLASS_ID.GetFieldCount(), static_cast<::OcaUint16>(OCA_PROP_GAIN));
+                    //     ::OcaLitePropertyChangedEventData<::OcaDB> eventData(GetObjectNumber(),
+                    //                                                          propertyID,
+                    //                                                          actualGain,
+                    //                                                          OCAPROPERTYCHANGETYPE_CURRENT_CHANGED);
+                    //     PropertyChanged(eventData, propertyID);
+                    // }
+                }
+            }
+        }
+    }
+    return rc;
+}
+#endif
+
+#ifndef OCA_LITE_CONTROLLER
+::OcaLiteStatus OcaLiteGain::SetGain(::OcaDB gain)
+{
+    ::OcaLiteStatus rc(OCASTATUS_PARAMETER_OUT_OF_RANGE);
+
+    if ((gain >= m_minGain) && (gain <= m_maxGain))
+    {
+        ::OcaDB oldGain;
+        rc = GetGainValue(oldGain);
+        if (OCASTATUS_OK == rc)
+        {
+            if (!CompareValue<::OcaDB>(oldGain, gain))
+            {
+                rc = SetGainValue(gain);
+                if (OCASTATUS_OK == rc)
+                {
+                    // Dont set m_gain here as SetGainFromFusion implementation will do it
+                    //  m_gain = gain;
+                }
+            }
+        }
+    }
+    return rc;
+}
+#endif
+
+#ifndef OCA_LITE_CONTROLLER
+::OcaLiteStatus OcaLiteGain::SetGainFromFusion(::OcaDB gain)
+{
+    ::OcaLiteStatus rc(OCASTATUS_PARAMETER_OUT_OF_RANGE);
+
+    if ((gain >= m_minGain) && (gain <= m_maxGain))
+    {
+        ::OcaDB oldGain;
+        rc = GetGainValue(oldGain);
+        if (OCASTATUS_OK == rc)
+        {
+            if (!CompareValue<::OcaDB>(oldGain, gain))
+            {
+
+                m_gain = gain;
+                ::OcaDB actualGain;
+                rc = GetGainValue(actualGain);
+                if (OCASTATUS_OK == rc)
+                {
+                    ::OcaLitePropertyID propertyID(CLASS_ID.GetFieldCount(), static_cast<::OcaUint16>(OCA_PROP_GAIN));
+                    ::OcaLitePropertyChangedEventData<::OcaDB> eventData(GetObjectNumber(),
+                                                                         propertyID,
+                                                                         actualGain,
+                                                                         OCAPROPERTYCHANGETYPE_CURRENT_CHANGED);
+                    PropertyChanged(eventData, propertyID);
+                }
+            }
+        }
+    }
+    return rc;
+}
+#endif
 
 ::OcaLiteStatus OcaLiteGain::Execute(const ::IOcaLiteReader &reader, const ::IOcaLiteWriter &writer, ::OcaSessionID sessionID, const ::OcaLiteMethodID &methodID,
                                      ::OcaUint32 parametersSize, const ::OcaUint8 *parameters, ::OcaUint8 **response)

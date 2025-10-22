@@ -51,20 +51,20 @@ OcaLiteMute::OcaLiteMute(::OcaONo objectNumber, ::OcaBoolean lockable, const ::O
 
     return rc;
 }
-
-// ::OcaLiteStatus OcaLiteMute::SetState(::OcaLiteMuteState state)
-// {
-//     ::OcaLiteStatus rc(OCASTATUS_PARAMETER_OUT_OF_RANGE);
-//     if(state < ::OcaLiteMuteState::OCAMUTESTATE_MAXIMUM)
-//     {
-//         ::OcaLiteMuteState oldState;
-//         rc = GetStateValue(oldState);
-//         if ((OCASTATUS_OK == rc) && !CompareValue< ::OcaLiteMuteState>(oldState, state))
-//         {
-//             rc = SetStateValue(state);
-//             if (OCASTATUS_OK == rc)
-//             {
-//                 m_state = state;
+// ORIGINAL
+//  ::OcaLiteStatus OcaLiteMute::SetState(::OcaLiteMuteState state)
+//  {
+//      ::OcaLiteStatus rc(OCASTATUS_PARAMETER_OUT_OF_RANGE);
+//      if(state < ::OcaLiteMuteState::OCAMUTESTATE_MAXIMUM)
+//      {
+//          ::OcaLiteMuteState oldState;
+//          rc = GetStateValue(oldState);
+//          if ((OCASTATUS_OK == rc) && !CompareValue< ::OcaLiteMuteState>(oldState, state))
+//          {
+//              rc = SetStateValue(state);
+//              if (OCASTATUS_OK == rc)
+//              {
+//                  m_state = state;
 
 //                 ::OcaLiteMuteState actualState;
 //                 rc = GetStateValue(actualState);
@@ -84,6 +84,7 @@ OcaLiteMute::OcaLiteMute(::OcaONo objectNumber, ::OcaBoolean lockable, const ::O
 //     return rc;
 // }
 
+#ifdef OCA_LITE_CONTROLLER
 ::OcaLiteStatus OcaLiteMute::SetState(::OcaLiteMuteState state)
 {
     ::OcaLiteStatus rc(OCASTATUS_PARAMETER_OUT_OF_RANGE);
@@ -96,14 +97,53 @@ OcaLiteMute::OcaLiteMute(::OcaONo objectNumber, ::OcaBoolean lockable, const ::O
             rc = SetStateValue(state);
             if (OCASTATUS_OK == rc)
             {
-                // m_state = state;
+                m_state = state;
+
+                // Controllers should not generate events
+                // ::OcaLiteMuteState actualState;
+                // rc = GetStateValue(actualState);
+                // if (OCASTATUS_OK == rc)
+                // {
+                //     ::OcaLitePropertyID propertyID(CLASS_ID.GetFieldCount(), static_cast<::OcaUint16>(OCA_PROP_STATE));
+                //     ::OcaLitePropertyChangedEventData<::OcaUint8> eventData(GetObjectNumber(), // ::OcaLiteMuteState cast to ::OcaUint8 according to OcaLiteWorkerDataTypes.h
+                //                                                             propertyID,
+                //                                                             actualState,
+                //                                                             OCAPROPERTYCHANGETYPE_CURRENT_CHANGED);
+                //     PropertyChanged(eventData, propertyID);
+                // }
             }
         }
     }
 
     return rc;
 }
+#endif
 
+#ifndef OCA_LITE_CONTROLLER
+
+::OcaLiteStatus OcaLiteMute::SetState(::OcaLiteMuteState state)
+{
+    ::OcaLiteStatus rc(OCASTATUS_PARAMETER_OUT_OF_RANGE);
+    if (state < ::OcaLiteMuteState::OCAMUTESTATE_MAXIMUM)
+    {
+        ::OcaLiteMuteState oldState;
+        rc = GetStateValue(oldState);
+        if ((OCASTATUS_OK == rc) && !CompareValue<::OcaLiteMuteState>(oldState, state))
+        {
+            rc = SetStateValue(state);
+            if (OCASTATUS_OK == rc)
+            {
+                // Dont set m_state here as SetStateFromFusion implementation will do it
+                //  m_state = state;
+            }
+        }
+    }
+
+    return rc;
+}
+#endif
+
+#ifndef OCA_LITE_CONTROLLER
 ::OcaLiteStatus OcaLiteMute::SetStateFromFusion(::OcaLiteMuteState state)
 {
     ::OcaLiteStatus rc(OCASTATUS_PARAMETER_OUT_OF_RANGE);
@@ -116,8 +156,6 @@ OcaLiteMute::OcaLiteMute(::OcaONo objectNumber, ::OcaBoolean lockable, const ::O
 
             m_state = state;
 
-#ifndef OCA_LITE_CONTROLLER // Controllers should not generate events
-
             ::OcaLiteMuteState actualState;
             rc = GetStateValue(actualState);
             if (OCASTATUS_OK == rc)
@@ -129,12 +167,12 @@ OcaLiteMute::OcaLiteMute(::OcaONo objectNumber, ::OcaBoolean lockable, const ::O
                                                                         OCAPROPERTYCHANGETYPE_CURRENT_CHANGED);
                 PropertyChanged(eventData, propertyID);
             }
-#endif
         }
     }
 
     return rc;
 }
+#endif
 
 ::OcaLiteStatus OcaLiteMute::Execute(const ::IOcaLiteReader &reader, const ::IOcaLiteWriter &writer, ::OcaSessionID sessionID, const ::OcaLiteMethodID &methodID,
                                      ::OcaUint32 parametersSize, const ::OcaUint8 *parameters, ::OcaUint8 **response)
