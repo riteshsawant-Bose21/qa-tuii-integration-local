@@ -95,9 +95,6 @@ int main(int argc, const char *argv[])
     std::thread uiThread = OcaLiteOcfThread_create(ControllerViewProc,
                                               static_cast<void *>(&msgQues));
 
-    // TODO: Add ready sychronization between OCA and UI tasks
-    std::cout << "Sleeping 5sec ... " << std::endl;
-    sleep(5);
     // Start OCA processing
     std::cout << "Starting ocaMain ... " << std::endl;
     return ocaMain(customNodeId, msgQues);
