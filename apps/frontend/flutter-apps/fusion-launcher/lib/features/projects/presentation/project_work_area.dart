@@ -20,6 +20,7 @@ import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../schematics/presentation/pages/schematics_page.dart';
 import '../../schematics/presentation/widgets/cost_calcuator_widget.dart';
 import '../widget/building/side_panle_widgets/coverage_panel.dart';
+import '../widget/building/side_panle_widgets/schematic_properties.dart';
 import '../widget/building/side_panle_widgets/zone_and_listening_area.dart';
 import '../widget/building/building_canvas.dart';
 import '../widget/building/side_panle_widgets/building_plan.dart';
@@ -490,7 +491,7 @@ class _TestLibraryScreenState extends State<ProjectWorkArea> with SingleTickerPr
                             title: "PROPERTIES",
                             side: "right",
                             alowUndock: false,
-                            dockItemWidget: () => const Properties(),
+                            dockItemWidget: () => const SchematicProperties(),
                           ),
                         ],
                       );
