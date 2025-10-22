@@ -383,7 +383,7 @@ int tca9544_handle_irq(struct endpoint_gpio *ep_gpio)
     // last 4 bits are irq mask
     irq_mask = *buf >> 4;
     for (int i = 0; i < tca9544->num_gpios; ++i) {
-        if (irq_mask >> i & 1) {
+        if ((irq_mask >> i) & 1) {
             if (tca9544->gpios[i].is_irq && tca9544->gpios[i].num != 0) {
                 if (tca9544->gpios[i].linked_gpio == NULL) {
                     continue;
@@ -425,7 +425,7 @@ int tcal6408_handle_irq(struct endpoint_gpio *ep_gpio)
     irq_mask = *rd_buf;
 
     for (int i = 0; i < tcal6408->num_gpios; ++i) {
-        if (irq_mask >> i & 1) {
+        if ((irq_mask >> i) & 1) {
             if (tcal6408->gpios[i].is_irq && tcal6408->gpios[i].num != 0) {
                 if (tcal6408->gpios[i].linked_gpio == NULL) {
                     continue;
@@ -470,7 +470,7 @@ int tca9535_handle_irq(struct endpoint_gpio *ep_gpio)
 
     // TODO account for different irq trigger_type polarities
     for (int i = 0; i < tca9535->num_gpios; ++i) {
-        if (irq_mask >> i & 1) {
+        if ((irq_mask >> i) & 1) {
             if (tca9535->gpios[i].is_irq && tca9535->gpios[i].num != 0) {
                 if (tca9535->gpios[i].linked_gpio == NULL) {
                     continue;
