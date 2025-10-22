@@ -5,8 +5,8 @@ go 1.23.1
 require (
 	github.com/gibson042/canonicaljson-go v1.0.3
 	github.com/go-ble/ble v0.0.0-20240122180141-8c5522f54333
-	github.com/goccy/go-json v0.10.5
 	github.com/go-ping/ping v1.2.0
+	github.com/goccy/go-json v0.10.5
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/websocket v1.5.3
 	github.com/hashicorp/memberlist v0.5.1
@@ -63,6 +63,6 @@ require (
 	github.com/hashicorp/golang-lru v1.0.2 // indirect
 	github.com/miekg/dns v1.1.62 // indirect
 	github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529 // indirect
-	golang.org/x/net v0.34.0
-	golang.org/x/sys v0.30.0 // indirect
+	golang.org/x/net v0.38.0
+	golang.org/x/sys v0.31.0 // indirect
 )
