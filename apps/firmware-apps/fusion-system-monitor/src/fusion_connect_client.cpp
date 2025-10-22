@@ -395,16 +395,6 @@ static std::string choose_ptp_device(const std::string& ifname) {
     return first_present_ptp();
 }
 
-// ---------- kernel status + realtime↔phc offset ----------
-static bool adjtimex_unsync(bool* unsync_out) {
-    if (!unsync_out) return false;
-    struct timex tx{};
-    int rc = adjtimex(&tx);           // TX_QUERY
-    if (rc < 0) return false;
-    *unsync_out = !!(tx.status & STA_UNSYNC);
-    return true;
-}
-
 // Use legacy-safe PTP_SYS_OFFSET (available everywhere) to estimate offset.
 // Returns median(system_time - phc_time) in *ns_out.
 static bool sys_phc_offset_ns(const char* ptp_dev, long long* ns_out) {
@@ -437,69 +427,191 @@ static bool sys_phc_offset_ns(const char* ptp_dev, long long* ns_out) {
     return ok;
 }
 
-static bool get_tai_offset_seconds(int* tai_sec) {
-    if (!tai_sec) return false;
-    struct timex tx{};
-    if (adjtimex(&tx) < 0) return false;   // TX_QUERY
-    *tai_sec = tx.tai;                      // e.g., 37
-    return true;
-}
-
 static bool set_ptp_sync(NetlinkClient& c)
 {
-    // Prefer by interface, then /dev/ptp1, then first-present.
-    std::string ptp_dev = choose_ptp_device("eth0");
+    // --- pick PHC (unchanged) ---
+    std::string ptp_dev = choose_ptp_device("lan3");
     if (ptp_dev.empty() && access("/dev/ptp1", R_OK | W_OK) == 0) ptp_dev = "/dev/ptp1";
     if (ptp_dev.empty()) ptp_dev = first_present_ptp();
-    if (ptp_dev.empty()) {
-        SPDLOG_WARN("PTP: no PHC found (eth0/ptp1/first-present)");
-        return false;
-    }
+    if (ptp_dev.empty()) { SPDLOG_WARN("PTP: no PHC found (lan3/ptp1/first-present)"); return false; }
 
+    const char* pmc = access("/usr/sbin/pmc", X_OK) == 0 ? "/usr/sbin/pmc" : "pmc";
+    auto trim = [](std::string s){ const char* ws=" \t\r\n"; size_t a=s.find_first_not_of(ws); size_t b=s.find_last_not_of(ws); return a==std::string::npos?std::string():s.substr(a,b-a+1); };
+
+    // gmPresent poller: returns 1 if true, 0 if false, -1 if unknown/error
+    auto poll_gm_present = [&](void) -> int {
+        char cmd[256];
+        std::snprintf(cmd, sizeof(cmd), "%s -u -b 0 -f /etc/linuxptp/ptp4l.conf 'GET TIME_STATUS_NP' 2>/dev/null", pmc);
+        FILE* fp = popen(cmd, "r");
+        if (!fp) return -1;
+
+        char buf[512];
+        int result = -1;
+        while (fgets(buf, sizeof(buf), fp)) {
+            std::string line(buf);
+            auto pos = line.find("gmPresent");
+            if (pos != std::string::npos) {
+                std::string v = trim(line.substr(pos + strlen("gmPresent")));
+                for (char& ch : v) ch = (char)tolower((unsigned char)ch);
+                if (v.find("true")  != std::string::npos) result = 1;
+                else if (v.find("false") != std::string::npos) result = 0;
+                break;
+            }
+        }
+        pclose(fp);
+        return result;
+    };
+
+    // --- Decide role using only gmPresent (unchanged) ---
+    constexpr int GM_FALSE_CONSEC = 25; 
+    constexpr int SAMPLE_MS       = 500;
+    constexpr int MAX_DECIDE_MS   = 15000;
+
+    int false_streak = 0;
+    int role_flag = -1; // 1=Follower, 0=GM, -1=unknown
+    for (int elapsed = 0; elapsed < MAX_DECIDE_MS; elapsed += SAMPLE_MS) {
+        const int r = poll_gm_present();
+        if (r == 1) { role_flag = 1; break; }                 // Follower on first TRUE
+        if (r == 0) { if (++false_streak >= GM_FALSE_CONSEC) { role_flag = 0; break; } }
+        std::this_thread::sleep_for(std::chrono::milliseconds(SAMPLE_MS));
+    }
+    if (role_flag == -1) role_flag = 1; // safer default → Follower
+    SPDLOG_INFO("PTP: startup role by gmPresent-only: {} false_streak {}", role_flag == 0 ? "GM" : "Follower", false_streak);
+
+    // --- Main wait loop ---
     const auto start = std::chrono::steady_clock::now();
+    auto last_reprobe = start;
+
+    // follower pre-step grace: allow escape if we’ve been near-TAI “too long” with small corrected error
+    constexpr long long OFFSET_OK_NS        = 200000;      // 200 µs (unchanged)
+    constexpr long long NEAR_TAI_TOL_NS     = 200000000LL; // ±200 ms band around whole seconds in [30..40]
+    constexpr int       PRESTEP_GRACE_MS    = 15000;       // after this many ms near-TAI, allow bypass if small
+    constexpr int       PRESTEP_GOOD_NEED   = 6;           // small best_abs samples required to bypass
+    int good_small_while_near_tai = 0;
+    bool in_near_tai             = false;
+    auto near_tai_enter          = start;
+
     int good = 0;
 
-    while (true) {
-        bool unsync = true;
-        (void)adjtimex_unsync(&unsync); // informational only
+    for (;;)
+    {
+        // Re-probe gmPresent periodically (role can change)
+        if (std::chrono::steady_clock::now() - last_reprobe > std::chrono::seconds(3)) {
+            const int r = poll_gm_present();
+            if (r == 1) { role_flag = 1; false_streak = 0; }
+            else if (r == 0) { if (role_flag != 0 && ++false_streak >= GM_FALSE_CONSEC) role_flag = 0; }
+            last_reprobe = std::chrono::steady_clock::now();
+        }
+        const bool i_am_gm = (role_flag == 0);
 
+        // --- Measure REALTIME↔PHC ---
         long long med_ns = 0;
         const bool have = sys_phc_offset_ns(ptp_dev.c_str(), &med_ns);
 
-        // Read kernel TAI-UTC; if available, allow either:
-        //   |offset| ≈ 0  OR  |offset - (TAI-UTC)| ≈ 0
-        int tai_sec = 0;
-        const bool have_tai = get_tai_offset_seconds(&tai_sec);
-        const long long tai_ns = static_cast<long long>(tai_sec) * 1000000000LL;
+        // TAI from kernel if present (for corrected offset calc)
+        int tai_sec = 0; bool have_tai = false;
+        { struct timex tx{}; if (adjtimex(&tx) >= 0) { tai_sec = tx.tai; have_tai = (tx.tai >= 10); } }
 
-        long long best_abs = LLONG_MAX;
+        // Heuristic TAI guess if raw is near 30..40 s within ±200 ms
+        long long raw_abs = LLONG_MAX;
+        int tai_guess_sec = 0; bool have_guess = false;
         if (have) {
-            const long long a = std::llabs(med_ns);
-            const long long b = have_tai ? std::llabs(med_ns - tai_ns) : LLONG_MAX;
-            best_abs = std::min(a, b);
+            raw_abs = std::llabs(med_ns);
+            const long long nearest_sec = (raw_abs + 500000000LL) / 1000000000LL;
+            if (nearest_sec >= 30 && nearest_sec <= 40) {
+                const long long nearest_ns = nearest_sec * 1000000000LL;
+                const long long err        = std::llabs(raw_abs - nearest_ns);
+                if (err <= NEAR_TAI_TOL_NS) { tai_guess_sec = (int)nearest_sec; have_guess = true; }
+            }
         }
 
-        SPDLOG_DEBUG("REALTIME-PHC({}) median offset={} ns, TAI-UTC={} s ({}), best_abs={} ns, UNSYNC={}",
-                     ptp_dev, med_ns, tai_sec, have_tai ? "have" : "n/a", best_abs,
-                     unsync ? "true" : "false");
+        // Best corrected offset: min(raw, ±TAI, ±guess)
+        long long best_abs = LLONG_MAX;
+        if (have) {
+            long long best = raw_abs;
+            if (have_tai) {
+                const long long corr = (long long)tai_sec * 1000000000LL;
+                const long long a = std::llabs(med_ns - corr);
+                const long long b = std::llabs(med_ns + corr);
+                if (a < best) best = a;
+                if (b < best) best = b;
+            }
+            if (have_guess) {
+                const long long corr = (long long)tai_guess_sec * 1000000000LL;
+                const long long a = std::llabs(med_ns - corr);
+                const long long b = std::llabs(med_ns + corr);
+                if (a < best) best = a;
+                if (b < best) best = b;
+            }
+            best_abs = best;
+        }
 
-        const bool good_now = (best_abs != LLONG_MAX) && (best_abs <= 500000);
+        // Detailed log
+        SPDLOG_DEBUG("REALTIME-PHC({}) med={} ns, raw_abs={} ns, TAI={} s ({}), guess={} s ({}), best_abs={} ns, role={}",
+                     ptp_dev, med_ns, raw_abs,
+                     tai_sec, have_tai ? "have" : "n/a",
+                     tai_guess_sec, have_guess ? "used" : "n/a",
+                     best_abs, i_am_gm ? "GM" : "Follower");
+
+        // Compute near-TAI band (whole seconds 30..40 ±200ms)
+        bool near_tai_now = false;
+        long long sec_err = 0;
+        if (have) {
+            const long long sec     = (raw_abs + 500000000LL) / 1000000000LL;
+            const long long nearest = sec * 1000000000LL;
+            sec_err = std::llabs(raw_abs - nearest);
+            near_tai_now = (sec >= 30 && sec <= 40 && sec_err <= NEAR_TAI_TOL_NS);
+        }
+
+        // Track how long we’ve been continuously in the near-TAI band.
+        if (!i_am_gm) {
+            if (near_tai_now) {
+                if (!in_near_tai) { in_near_tai = true; near_tai_enter = std::chrono::steady_clock::now(); good_small_while_near_tai = 0; }
+                if (best_abs != LLONG_MAX && best_abs <= OFFSET_OK_NS) ++good_small_while_near_tai;
+
+                const auto near_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                         std::chrono::steady_clock::now() - near_tai_enter).count();
+
+                // If we’ve lingered near-TAI for PRESTEP_GRACE_MS and we’ve seen enough small corrected offsets,
+                // bypass the pre-step block and proceed to the normal good>=3 gate.
+                const bool bypass_prestep = (near_ms >= PRESTEP_GRACE_MS) && (good_small_while_near_tai >= PRESTEP_GOOD_NEED);
+
+                if (!bypass_prestep) {
+                    // Still in pre-step; keep blocking and do not accumulate 'good'
+                    good = 0;
+                    // (optional one-liner log if you want it back:)
+                    // SPDLOG_DEBUG("PTP gate: raw_abs={} ns, sec_err={} ns, near_tai=true ({} ms), best_abs={} ns, bypass={} -> holding",
+                    //              raw_abs, sec_err, (int)near_ms, best_abs, bypass_prestep?"yes":"no");
+                    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                    continue;
+                }
+                // else: fall through → allow normal good accumulation
+            } else {
+                in_near_tai = false;
+                good_small_while_near_tai = 0;
+            }
+        }
+
+        // Tight corrected-offset gate (same as before)
+        const bool good_now = (best_abs != LLONG_MAX) && (best_abs <= OFFSET_OK_NS);
         good = good_now ? (good + 1) : 0;
 
         if (good >= 3) {
+            SPDLOG_INFO("PTP: enabling in kernel (role={}, best_abs={} ns)", i_am_gm ? "GM" : "Follower", best_abs);
             if (!nl_set_ptp_sync_raw(c, true)) {
-                SPDLOG_WARN("PTP: criteria met but SET_PTP_SYNC(true) failed");
+                SPDLOG_ERROR("PTP: criteria met but kernel refused SET_PTP_SYNC(true)");
                 return false;
             }
+            SPDLOG_INFO("PTP: kernel accepted SET_PTP_SYNC(true)");
             return true;
         }
 
-        if (std::chrono::steady_clock::now() - start >
-            std::chrono::milliseconds(30000)) {
-            SPDLOG_WARN("PTP: criteria not met within {} ms (last offset={} ns, TAI-UTC={} s, unsync={})",
-                        30000, med_ns, tai_sec, unsync);
+        if (std::chrono::steady_clock::now() - start > std::chrono::seconds(120)) {
+            SPDLOG_WARN("PTP: criteria not met within 120 s (role={}, last best_abs={} ns).",
+                        i_am_gm ? "GM" : "Follower", best_abs);
             return false;
         }
+
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
 }
@@ -513,10 +625,10 @@ static bool get_all_metrics(NetlinkClient &client,
         return false;
     }
 
-    SPDLOG_DEBUG("GET_METRICS: err={} payload={}B sizeof(record)={}B sizeof(snapshot)={}B",
-                 reply.err, reply.data_size,
-                 sizeof(fusion_cn_metrics_record),
-                 sizeof(fusion_cn_metrics_snapshot));
+    // SPDLOG_DEBUG("GET_METRICS: err={} payload={}B sizeof(record)={}B sizeof(snapshot)={}B",
+    //              reply.err, reply.data_size,
+    //              sizeof(fusion_cn_metrics_record),
+    //              sizeof(fusion_cn_metrics_snapshot));
 
     if (reply.err != 0) {
         SPDLOG_ERROR("GET_METRICS failed: err={}", reply.err);
@@ -552,7 +664,7 @@ static bool get_all_metrics(NetlinkClient &client,
     memcpy(out->data(), reply.data, reply.data_size);
     if (reply.data) free(reply.data);
 
-    SPDLOG_DEBUG("GET_METRICS: {} record(s)", n);
+    // SPDLOG_DEBUG("GET_METRICS: {} record(s)", n);
     return true;
 }
 
@@ -720,7 +832,7 @@ MODULE_REGISTER(FusionConnectClient, "fusion_connect_client");
 
 FusionConnectClient::FusionConnectClient(const bosepro::BlockConfiguration &configuration)
     : bosepro::Module(configuration), ptp_synchronized(0), mgr_started(false), device_id(""),
-      network_interface("eth0"), sap_announcer(get_system_ip()), announce_counter(0) {
+      network_interface("lan3"), sap_announcer(get_system_ip()), announce_counter(0) {
     system_ip = get_system_ip();
     if (system_ip.empty()) {
         SPDLOG_ERROR("Failed to initialize: No valid system IP found");
@@ -1263,42 +1375,42 @@ void FusionConnectClient::process() {
                     continue;
                 }
 
-                if (tx) {
-                    // TX: totals + TX timing EMAs (ns -> us)
-                    SPDLOG_DEBUG(
-                        "metrics TX stream={} ts={} "
-                        "tx: pkts={} bytes={} iat_min={}us p50={}us p99={}us sched_err_p50={}us",
-                        r.stream_name, s.ts_snapshot_ns,
-                        s.tx_packets_total, s.tx_bytes_total,
-                        s.tx_iat_min_ns / 1000,
-                        s.tx_iat_p50_ns / 1000,
-                        s.tx_iat_p99_ns / 1000,
-                        s.tx_sched_err_abs_p50_ns / 1000
-                    );
-                } else {
-                    // RX
-                    SPDLOG_DEBUG(
-                        "metrics RX stream={} ts={} "
-                        "rx: pkts={} bytes={} lost={} reo={} dup={} marked={} malf={} late_drop={} early_drop={} burst_max={} "
-                        "iat_min={}us p50={}us p99={}us jitter={}us "
-                        "jb: target={} cur={} min={} max={} avg={} "
-                        "sync: skew_ppb={} ptp_off={}ns rtp->phc={}ns "
-                        "lat: path={}ns e2e_playout={}ns "
-                        "audio: present={} fast_dbfs={} slow_dbfs={} silence={}%",
-                        r.stream_name, s.ts_snapshot_ns,
-                        s.packets_total, s.bytes_total,
-                        s.packets_lost, s.packets_reordered,
-                        s.packets_dup, s.packets_marked,
-                        s.malformed_count, s.late_drop_count,
-                        s.early_drop_count, s.burst_loss_max,
-                        s.iat_min_ns / 1000, s.iat_p50_ns / 1000, s.iat_p99_ns / 1000, s.rfc3550_jitter_ns / 1000,
-                        s.jb_target_samples, s.jb_depth_cur_samples, s.jb_depth_min_samples,
-                        s.jb_depth_max_samples, s.jb_depth_avg_samples,
-                        s.skew_ppb, s.ptp_offset_ns, s.rtp_to_phc_err_ns,
-                        s.path_latency_est_ns, s.e2e_playout_latency_ns,
-                        s.audio_present, s.level_fast_dbfs, s.level_slow_dbfs, s.silence_ratio_pct
-                    );
-                }
+                // if (tx) {
+                //     // TX: totals + TX timing EMAs (ns -> us)
+                //     SPDLOG_DEBUG(
+                //         "metrics TX stream={} ts={} "
+                //         "tx: pkts={} bytes={} iat_min={}us p50={}us p99={}us sched_err_p50={}us",
+                //         r.stream_name, s.ts_snapshot_ns,
+                //         s.tx_packets_total, s.tx_bytes_total,
+                //         s.tx_iat_min_ns / 1000,
+                //         s.tx_iat_p50_ns / 1000,
+                //         s.tx_iat_p99_ns / 1000,
+                //         s.tx_sched_err_abs_p50_ns / 1000
+                //     );
+                // } else {
+                //     // RX
+                //     SPDLOG_DEBUG(
+                //         "metrics RX stream={} ts={} "
+                //         "rx: pkts={} bytes={} lost={} reo={} dup={} marked={} malf={} late_drop={} early_drop={} burst_max={} "
+                //         "iat_min={}us p50={}us p99={}us jitter={}us "
+                //         "jb: target={} cur={} min={} max={} avg={} "
+                //         "sync: skew_ppb={} ptp_off={}ns rtp->phc={}ns "
+                //         "lat: path={}ns e2e_playout={}ns "
+                //         "audio: present={} fast_dbfs={} slow_dbfs={} silence={}%",
+                //         r.stream_name, s.ts_snapshot_ns,
+                //         s.packets_total, s.bytes_total,
+                //         s.packets_lost, s.packets_reordered,
+                //         s.packets_dup, s.packets_marked,
+                //         s.malformed_count, s.late_drop_count,
+                //         s.early_drop_count, s.burst_loss_max,
+                //         s.iat_min_ns / 1000, s.iat_p50_ns / 1000, s.iat_p99_ns / 1000, s.rfc3550_jitter_ns / 1000,
+                //         s.jb_target_samples, s.jb_depth_cur_samples, s.jb_depth_min_samples,
+                //         s.jb_depth_max_samples, s.jb_depth_avg_samples,
+                //         s.skew_ppb, s.ptp_offset_ns, s.rtp_to_phc_err_ns,
+                //         s.path_latency_est_ns, s.e2e_playout_latency_ns,
+                //         s.audio_present, s.level_fast_dbfs, s.level_slow_dbfs, s.silence_ratio_pct
+                //     );
+                // }
             }
         }
     }

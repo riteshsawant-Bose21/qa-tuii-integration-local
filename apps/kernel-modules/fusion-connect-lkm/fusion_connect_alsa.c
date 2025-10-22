@@ -13,10 +13,16 @@ static const struct snd_pcm_hw_constraint_list constraints_rates = {
     .list = supported_rates,
 };
 
-static const unsigned int supported_period_sizes[] = { 6, 12, 16, 48, 96, 192 };
+static const unsigned int supported_period_sizes[] = { 6, 12, 16, 32, 48, 96, 192, 256 };
 static const struct snd_pcm_hw_constraint_list constraints_period_sizes = {
     .count = ARRAY_SIZE(supported_period_sizes),
-    .list = supported_period_sizes,
+    .list  = supported_period_sizes
+};
+
+static const unsigned int supported_periods[] = { 2, 4, 8, 16, 32, 64, 128 };
+static const struct snd_pcm_hw_constraint_list constraints_periods = {
+    .count = ARRAY_SIZE(supported_periods),
+    .list  = supported_periods
 };
 
 static inline unsigned int hash_name(const char *name)
@@ -57,7 +63,6 @@ static int fusion_cn_pcm_hw_params(struct snd_pcm_substream *substream, struct s
     unsigned int channels = params_channels(params);
     unsigned int period_size = params_period_size(params);
     unsigned int buffer_bytes = params_buffer_bytes(params);
-    int err;
 
     if (fusion_cn_alsa_stream_disconnected(stream)) return -ENODEV;
 
@@ -67,28 +72,6 @@ static int fusion_cn_pcm_hw_params(struct snd_pcm_substream *substream, struct s
                stream->stream_name, rate, stream->rate, format, stream->format, channels, stream->channels);
         spin_unlock_irq(&stream->lock);
         return -EINVAL;
-    }
-
-    err = snd_pcm_hw_constraint_list(runtime, 0, SNDRV_PCM_HW_PARAM_RATE, &constraints_rates);
-    if (err < 0) {
-        printk(KERN_ERR "fusion_cn_alsa: hw_params: Rate constraint failed for stream %s, err=%d\n",
-               stream->stream_name, err);
-        spin_unlock_irq(&stream->lock);
-        return err;
-    }
-    err = snd_pcm_hw_constraint_list(runtime, 0, SNDRV_PCM_HW_PARAM_PERIOD_SIZE, &constraints_period_sizes);
-    if (err < 0) {
-        printk(KERN_ERR "fusion_cn_alsa: hw_params: Period size constraint failed for stream %s, err=%d\n",
-               stream->stream_name, err);
-        spin_unlock_irq(&stream->lock);
-        return err;
-    }
-    err = snd_pcm_hw_constraint_integer(runtime, SNDRV_PCM_HW_PARAM_PERIODS);
-    if (err < 0) {
-        printk(KERN_ERR "fusion_cn_alsa: hw_params: Periods constraint failed for stream %s, err=%d\n",
-               stream->stream_name, err);
-        spin_unlock_irq(&stream->lock);
-        return err;
     }
 
     runtime->buffer_size = buffer_bytes / (stream->sample_width * stream->channels);
@@ -131,7 +114,7 @@ int fusion_cn_alsa_pcm_interrupt(struct fusion_cn_chip *alsa_chip, struct fusion
     struct snd_pcm_runtime *rt;
 
     if (fusion_cn_alsa_stream_disconnected(stream))
-        return 0;
+        return -ENODEV;
 
     spin_lock_irq(&stream->lock);
     ss = READ_ONCE(stream->substream);
@@ -145,10 +128,9 @@ int fusion_cn_alsa_pcm_interrupt(struct fusion_cn_chip *alsa_chip, struct fusion
     if (stream->buffer_pos >= rt->buffer_size)
         stream->buffer_pos -= rt->buffer_size;
 
-    if (chip->debug) printk(KERN_DEBUG "fusion_cn_alsa: pcm_interrupt: stream %s, buffer_pos=%d\n", stream->stream_name, stream->buffer_pos);
+    if (chip->debug) printk(KERN_DEBUG "fusion_cn_alsa: pcm_interrupt: stream %s buffer_pos=%d interrupt_idx=%u\n", stream->stream_name, stream->buffer_pos, stream->interrupt_idx);
 
-    stream->interrupt_idx++;
-    if (stream->interrupt_idx >= stream->interrupts_per_period) {
+    if (++stream->interrupt_idx >= stream->interrupts_per_period) {
         stream->interrupt_idx = 0;
         snd_pcm_period_elapsed(stream->substream);
     }
@@ -182,47 +164,35 @@ static int fusion_cn_pcm_copy(struct snd_pcm_substream *substream,
 }
 
 static int fusion_cn_pcm_silence(struct snd_pcm_substream *substream,
-                                int channel, snd_pcm_uframes_t pos,
-                                snd_pcm_uframes_t count)
+                                 int channel, snd_pcm_uframes_t pos,
+                                 snd_pcm_uframes_t frames)
 {
-    struct fusion_cn_substream *stream = substream->runtime->private_data;
-    struct snd_pcm_runtime *runtime = substream->runtime;
-    size_t buffer_size_per_channel = runtime->buffer_size * stream->sample_width;
-    const unsigned char *silence = snd_pcm_format_silence_64(runtime->format);
-    unsigned char *dma_area = runtime->dma_area;
+    struct fusion_cn_substream *s = substream->runtime->private_data;
+    struct snd_pcm_runtime *rt = substream->runtime;
+    const unsigned int sample_bytes = s->sample_width;
+    const unsigned int frame_bytes  = sample_bytes * s->channels;
+    unsigned char *base = rt->dma_area + pos * frame_bytes;
+    const unsigned char *sil = snd_pcm_format_silence_64(rt->format);
 
-    if (fusion_cn_alsa_stream_disconnected(runtime->private_data)) return -ENODEV;
-
+    if (fusion_cn_alsa_stream_disconnected(rt->private_data)) return -ENODEV;
     if (substream->stream != SNDRV_PCM_STREAM_PLAYBACK) return 0;
 
-    if (pos + count > runtime->buffer_size) {
-        count = runtime->buffer_size - pos;
-    }
-    if (count == 0) return 0;
-
-    spin_lock_irq(&stream->lock);
-
     if (channel == -1) {
-        for (int ch = 0; ch < stream->channels; ch++) {
-            unsigned char *channel_buf = dma_area + ch * buffer_size_per_channel + pos * stream->sample_width;
-            for (snd_pcm_uframes_t i = 0; i < count; i++) {
-                memcpy(channel_buf + i * stream->sample_width, silence, stream->sample_width);
-            }
-        }
-    } else {
-        unsigned char *channel_buf = dma_area + channel * buffer_size_per_channel + pos * stream->sample_width;
-        if (channel >= stream->channels) {
-            spin_unlock_irq(&stream->lock);
-            return -EINVAL;
-        }
-        for (snd_pcm_uframes_t i = 0; i < count; i++) {
-            memcpy(channel_buf + i * stream->sample_width, silence, stream->sample_width);
-        }
+        /* all channels: whole interleaved region is silent → one memset per sample */
+        for (snd_pcm_uframes_t i = 0; i < frames; i++)
+            memset(base + i * frame_bytes, *sil, frame_bytes); // works for 0-silence formats
+        return (int)frames;
     }
 
-    spin_unlock_irq(&stream->lock);
-    return (int)count;
+    if (channel >= s->channels) return -EINVAL;
+
+    /* one specific channel: stride is frame_bytes */
+    for (snd_pcm_uframes_t i = 0; i < frames; i++)
+        memcpy(base + i * frame_bytes + channel * sample_bytes, sil, sample_bytes);
+
+    return (int)frames;
 }
+
 
 static int fusion_cn_pcm_fill_silence(struct snd_pcm_substream *substream,
                                      int channel, unsigned long pos,
@@ -353,9 +323,9 @@ static int fusion_cn_pcm_open(struct snd_pcm_substream *substream)
     hw.channels_max = stream->channels;
     hw.period_bytes_min = stream->rtp_frame_size * stream->channels * stream->sample_width;
     hw.period_bytes_max = (stream->rtp_frame_size * 4 * 4) * stream->channels * stream->sample_width;
-    hw.buffer_bytes_max = hw.period_bytes_max * 64 / 4;
+    hw.buffer_bytes_max = hw.period_bytes_max * 256 / 4;
     hw.periods_min = 2;
-    hw.periods_max = 64;
+    hw.periods_max = 128;
 
     runtime->hw = hw;
     runtime->private_data = stream;
@@ -376,7 +346,8 @@ static int fusion_cn_pcm_open(struct snd_pcm_substream *substream)
         return err;
     }
 
-    err = snd_pcm_hw_constraint_integer(runtime, SNDRV_PCM_HW_PARAM_PERIODS);
+    snd_pcm_hw_constraint_integer(runtime, SNDRV_PCM_HW_PARAM_PERIODS);
+    err = snd_pcm_hw_constraint_list(runtime, 0, SNDRV_PCM_HW_PARAM_PERIODS, &constraints_periods);
     if (err < 0) {
         stream->substream = NULL;
         read_unlock_irqrestore(&chip->lock, flags);
@@ -385,7 +356,7 @@ static int fusion_cn_pcm_open(struct snd_pcm_substream *substream)
     }
 
     err = snd_pcm_hw_constraint_minmax(runtime, SNDRV_PCM_HW_PARAM_BUFFER_SIZE, 
-                                       stream->rtp_frame_size * 2, stream->rtp_frame_size * 64);
+                                       stream->rtp_frame_size * 2, stream->rtp_frame_size * 256);
     if (err < 0) {
         stream->substream = NULL;
         read_unlock_irqrestore(&chip->lock, flags);
@@ -466,6 +437,8 @@ static int fusion_cn_pcm_prepare(struct snd_pcm_substream *substream)
     memset(runtime->dma_area, 0, runtime->buffer_size * stream->channels * stream->sample_width);
     spin_unlock_irq(&stream->lock);
 
+    printk(KERN_DEBUG "fusion_cn_alsa: pcm_prepare: stream %s interrupts_per_period=%u buffer_size_bytes=%u\n", stream->stream_name, stream->interrupts_per_period, stream->pcm_indirect.hw_buffer_size);
+
     return 0;
 }
 
@@ -475,7 +448,7 @@ static snd_pcm_uframes_t fusion_cn_pcm_pointer(struct snd_pcm_substream *substre
     struct snd_pcm_runtime *runtime = substream->runtime;
     snd_pcm_uframes_t offset;
 
-    if (fusion_cn_alsa_stream_disconnected(runtime->private_data)) return -ENODEV;
+    if (fusion_cn_alsa_stream_disconnected(runtime->private_data)) return 0;
 
     offset = stream->buffer_pos;
     if (offset >= runtime->buffer_size) offset %= runtime->buffer_size;

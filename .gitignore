@@ -11,3 +11,6 @@ dist
 
 # inteli j .idea
 .idea
+
+# vscode
+.vs*

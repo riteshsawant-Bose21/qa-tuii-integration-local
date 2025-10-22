@@ -8,81 +8,41 @@
 static unsigned int nf_hook_func(void *priv, struct sk_buff *skb, const struct nf_hook_state *state)
 {
     struct fusion_cn_rtp_manager *rtp_mgr = priv;
-    struct iphdr *iph;
-    struct udphdr *udph;
-    u8 *rtph;
-    u16 ip_tot_len;
-    int iphl;
+    struct iphdr *ip_header;
+    uint8_t *rtp_header;
+    struct fusion_cn_rtp_packet *packet;
 
-    if (!atomic_read(&rtp_mgr->nf->is_enabled))
+    ip_header = ip_hdr(skb);
+    if (!skb || !ip_header) {
         return NF_ACCEPT;
-
-    if (!skb)
-        return NF_ACCEPT;
-
-    /* Ensure we can read a minimal IP header */
-    if (!pskb_may_pull(skb, sizeof(struct iphdr)))
-        return NF_ACCEPT;
-
-    iph = ip_hdr(skb);
-    if (!iph || iph->version != 4)
-        return NF_ACCEPT;
-
-    /* Only IPv4/UDP */
-    if (iph->protocol != IPPROTO_UDP)
-        return NF_ACCEPT;
-
-    iphl = iph->ihl * 4;
-    ip_tot_len = be16_to_cpu(iph->tot_len);
-    if (ip_tot_len < iphl + sizeof(struct udphdr) + 12) /* need UDP + RTP hdr */
-        return NF_ACCEPT;
-
-    /* Make sure UDP header & a byte of RTP are available */
-    if (!pskb_may_pull(skb, iphl + sizeof(struct udphdr) + 1))
-        return NF_ACCEPT;
-
-    /* Point transport header to UDP */
-    skb_set_transport_header(skb, iphl);
-    udph = udp_hdr(skb);
-    if (!udph)
-        return NF_ACCEPT;
-
-    /* RTP header begins after UDP */
-    rtph = (u8 *)udph + sizeof(struct udphdr);
-
-    /* RTP v2 check (don’t assume Ethernet present; don’t add ETH_HLEN) */
-    if ( (rtph[0] & 0xC0) != 0x80 )
-        return NF_ACCEPT;
-
-    /* Build a contiguous “packet” buffer with a synthetic Ethernet header */
-    {
-        const int copy_len = ip_tot_len;                /* IP header + UDP + RTP + payload */
-        const int pkt_len  = ETH_HLEN + copy_len;       /* what process_packet expects */
-        struct fusion_cn_rtp_packet *pkt;
-        u8 *buf;
-
-        buf = kmalloc(pkt_len, GFP_ATOMIC);
-        if (!buf)
-            return NF_ACCEPT;
-
-        /* Fake Ethernet header: just EtherType IPv4; MACs unused by your parser */
-        memset(buf, 0, ETH_HLEN - 2);
-        buf[12] = 0x08; buf[13] = 0x00;                 /* ETH_P_IP */
-
-        /* Copy IP..payload from the skb */
-        if (skb_copy_bits(skb, skb_network_offset(skb), buf + ETH_HLEN, copy_len)) {
-            kfree(buf);
-            return NF_ACCEPT;
-        }
-
-        pkt = (struct fusion_cn_rtp_packet *)buf;
-
-        /* Hand to your existing parser */
-        fusion_cn_rtp_process_packet(rtp_mgr, pkt);
-
-        kfree(buf);
-        return NF_DROP; /* we consumed it */
     }
+
+    if (ip_header->ihl != 5) {
+        return NF_ACCEPT;
+    }
+
+    // Filter by UDP protocol
+    if (ip_header->protocol != IPPROTO_UDP) {
+        return NF_ACCEPT;
+    }
+
+    if (skb_is_nonlinear(skb) && skb_linearize(skb) < 0) {
+        return NF_ACCEPT;
+    }
+
+    if (skb->len + ETH_HLEN < sizeof(struct fusion_cn_rtp_packet)) {
+        return NF_ACCEPT;
+    }
+
+    packet = (void *)skb_mac_header(skb);
+
+    // Check RTP header: Version (first byte) should have 0x80 (Version 2)
+    rtp_header = (uint8_t *)packet + ETH_HLEN + (ip_header->ihl * 4) + sizeof(struct udphdr);
+    if (!(*rtp_header & 0xC0)) {
+        return NF_ACCEPT;
+    }
+
+    return fusion_cn_rtp_process_packet(rtp_mgr, packet);
 }
 
 
@@ -198,7 +158,6 @@ int fusion_cn_nf_tx_packet(void *rtp_mgr, struct sk_buff *skb, u32 data_size)
 
     skb->pkt_type = PACKET_OUTGOING;
     skb->dev = dev;
-    skb_reset_network_header(skb);
     skb_trim(skb, data_size);
 
     ret = dev_queue_xmit(skb);

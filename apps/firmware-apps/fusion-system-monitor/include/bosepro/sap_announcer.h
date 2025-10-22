@@ -58,7 +58,6 @@ private:
         {
             std::string line(buf);
             full_output += line;
-            SPDLOG_DEBUG("pmc output line: {}", line);
 
             auto pos = line.find("gmIdentity");
             if (pos != std::string::npos)
@@ -72,7 +71,6 @@ private:
         }
 
         pclose(fp);
-        SPDLOG_DEBUG("Full pmc output: {}", full_output);
 
         if (gmIdentity.empty())
         {

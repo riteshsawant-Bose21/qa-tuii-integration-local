@@ -105,18 +105,13 @@ static u32 fusion_cn_rtp_ops_get_buffer_offset(void *alsa_stream)
 static inline int rtp_compute_sink_interrupts(struct fusion_cn_rtp_stream *s, u64 now)
 { 
     int count = 0;
-    u32 packets_per_buf;
 
     spin_lock(&s->lock);
-    packets_per_buf = s->buf_size_in_frames / s->info.frames_per_packet;
 
-    if (s->playback_index < packets_per_buf) {
-        u64 window = (packets_per_buf / 4) * s->packet_time;
-        if (window == 0) {
-            window = s->packet_time;
-        }
+    if (s->playback_index < s->buf_size_in_packets) {
+        u64 window = 2 * s->packet_time;
 
-        while (count < packets_per_buf) {
+        while (count < s->buf_size_in_packets) {
             s64 delta = (s64)now - (s64)s->next_action_times[s->playback_index];
             if (delta < 0 && (u64)-(delta) > EARLY_SLACK_NS) {
                 break;
@@ -124,7 +119,9 @@ static inline int rtp_compute_sink_interrupts(struct fusion_cn_rtp_stream *s, u6
                 break;
             }
 
-            if (++s->playback_index >= packets_per_buf)
+            if (g_fusion_cn_mgr->debug) printk(KERN_DEBUG "fusion_cn: compute_sink: stream %s playback_idx=%u count=%u now=%llu\n", s->info.stream_name, s->playback_index, count, now);
+
+            if (++s->playback_index >= s->buf_size_in_packets)
                 s->playback_index = 0;
             count++;
         }
