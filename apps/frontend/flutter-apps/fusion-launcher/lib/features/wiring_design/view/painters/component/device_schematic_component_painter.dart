@@ -187,7 +187,7 @@ class DeviceSchematicComponentPainter extends ComponentDataPainter {
       /// Port Label
       final TextPainter tp = TextPainter(
         text: TextSpan(
-          text: port.data.label ?? port.data.type,
+          text: port.data.label ?? port.data.type.name,
           style: TextStyle(
             color:
                 hasConnection

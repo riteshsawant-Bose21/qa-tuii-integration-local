@@ -202,7 +202,6 @@ class CircuitController extends ChangeNotifier
       currentMap,
     );
 
-    print("state Changed: $changed");
     if (changed.containsKey('components')) {
       if (changed['components'] is! Map<dynamic, dynamic>) return;
       _saveComponentModification(changed['components'] ?? <dynamic, dynamic>{});

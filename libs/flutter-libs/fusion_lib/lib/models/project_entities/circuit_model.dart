@@ -23,6 +23,7 @@ class CircuitModel {
            PortData(
              name: "cirInput",
              position: PortPosition.topLeft,
+             description: PortType.circuitInput.description,
              portNumber: 1,
              compatibleTypes: [
                PortType.amplifierOutput,
@@ -53,7 +54,9 @@ class CircuitModel {
     return CircuitModel(
       id: json['id'],
       name: json['name'],
-      inputPort: json['inputPort'] != null ? PortData.fromJson(json['inputPort']) : null,
+      inputPort: json['inputPort'] != null
+          ? PortData.fromJson(json['inputPort'])
+          : null,
       impedance: json['impedance'],
       tapSetting: json['tapSetting'],
       wiringPos: json['wiringPos'] != null
@@ -72,7 +75,9 @@ class CircuitModel {
       'inputPort': inputPort.toJson(),
       'impedance': impedance,
       'tapSetting': tapSetting,
-      'wiringPos': wiringPos != null ? <String, double>{'dx': wiringPos!.dx, 'dy': wiringPos!.dy} : null,
+      'wiringPos': wiringPos != null
+          ? <String, double>{'dx': wiringPos!.dx, 'dy': wiringPos!.dy}
+          : null,
     };
   }
 }

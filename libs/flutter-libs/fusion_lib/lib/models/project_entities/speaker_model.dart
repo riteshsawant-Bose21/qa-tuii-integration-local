@@ -208,7 +208,7 @@ class Speaker extends HardwareComponent {
       id: json['id'] as String?,
       name: json['name'] as String,
       pos: Offset(json['pos']['dx'] as double, json['pos']['dy'] as double),
-      wiringPos: json['wiringPos'] != null ? Offset((json['wiringPos']['x'] as num).toDouble(), (json['wiringPos']['y'] as num).toDouble()) : null,
+      wiringPos: json['wiringPos'] != null ? Offset((json['wiringPos']['dx'] as num).toDouble(), (json['wiringPos']['dy'] as num).toDouble()) : null,
       rotation: (json['rotation'] as num).toDouble(),
       gain: (json['gain'] as num).toDouble(),
       assetImagePath: json['assetImagePath'] as String,
