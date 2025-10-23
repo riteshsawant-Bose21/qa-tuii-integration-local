@@ -598,7 +598,7 @@ class _ZoneCircuitConfigPageState extends State<ZoneCircuitConfigPage> {
     final List<ListeningArea> zoneAreas = getListeningAreasForZone(zone.id);
     final List<String> selectedListeningAreas = zoneAreas.map((ListeningArea e) => e.id).toList();
 
-    final List<ListeningArea> availableAreas = serviceLocator<ProjectViewModel>().getAvailableListeningAreasForZoneOrSubZone(id: zone.id);
+    final List<ListeningArea> availableAreas = serviceLocator<ProjectViewModel>().getAvailableListeningAreasForZone(id: zone.id);
 
     showDialog(
       context: context,
@@ -921,7 +921,7 @@ class _ZoneCircuitConfigPageState extends State<ZoneCircuitConfigPage> {
   void _showAddSubZoneDialog(Zone zone) {
     final TextEditingController nameController = TextEditingController();
     final List<String> selectedListeningAreas = <String>[];
-    final List<ListeningArea> listeningAreas = getListeningAreasForZone(zone.id);
+    final List<ListeningArea> listeningAreas = serviceLocator<ProjectViewModel>().getAvailableListeningAreasForSubZone(parentZoneId: zone.id);
     showDialog(
       context: context,
       builder:

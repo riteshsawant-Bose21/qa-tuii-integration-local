@@ -241,4 +241,31 @@ extension ListeningAreaService on ProjectService {
       ...availableAreas,
     ];
   }
+
+  //get Listing area available for zone, (ignore all listening area already assigned to other zones)
+  List<ListeningArea> getAvailableListeningAreasForSubZone({String? subZoneId, required String parentZone}) {
+    final zoneAreas = relationships.getChildren(RelationshipType.zoneAreas, parentZone).toSet();
+
+    Set<String> subZoneAreas = {};
+    if (subZoneId != null) {
+      subZoneAreas = relationships.getChildren(RelationshipType.zoneAreas, subZoneId).toSet();
+    }
+
+    //get all listening areas which are not added to any of zones sub zones, (listening areas with only parent zone  )
+    final availableAreas = zoneAreas.where((la) {
+      final parentZones = relationships.getParents(RelationshipType.zoneAreas, la);
+      //check if parentZones contains only main parentZone
+      return parentZones.length == 1 && parentZones.contains(parentZone);
+    }).toList();
+
+    final allAreas = [
+      ...subZoneAreas,
+      ...availableAreas,
+    ];
+
+    //return both zoneAreas and availableAreas
+    return [
+      ...allAreas.map((id) => listeningAreas.get(id)).whereType<ListeningArea>(),
+    ];
+  }
 }
