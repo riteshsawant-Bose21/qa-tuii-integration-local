@@ -102,6 +102,7 @@ OcaLiteGain::OcaLiteGain(::OcaONo objectNumber, ::OcaBoolean lockable, const ::O
         {
             if (!CompareValue<::OcaDB>(oldGain, gain))
             {
+                m_gain = gain;
                 rc = SetGainValue(gain);
                 if (OCASTATUS_OK == rc)
                 {
@@ -119,6 +120,7 @@ OcaLiteGain::OcaLiteGain(::OcaONo objectNumber, ::OcaBoolean lockable, const ::O
                     //                                                          OCAPROPERTYCHANGETYPE_CURRENT_CHANGED);
                     //     PropertyChanged(eventData, propertyID);
                     // }
+
                 }
             }
         }

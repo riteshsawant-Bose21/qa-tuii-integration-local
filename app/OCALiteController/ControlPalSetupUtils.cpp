@@ -17,7 +17,6 @@
 #include <OCP.1/Ocp1LiteNetwork.h>
 #include <OCP.1/Ocp1LiteNetworkSystemInterfaceID.h>
 #include <OCP.1/Ocp1LiteConnectParameters.h>
-#include <Proxy/GeneralProxy.h>
 #include <StandardLib/StandardLib.h>
 #include <OCC/ControlDataTypes/OcaLiteBlockMember.h>
 #include <OCC/ControlDataTypes/OcaLiteList.h>
@@ -28,10 +27,11 @@
 #include "../common/models/WallControllerConfigParser.h"  // For deserializing JSON configuration
 #include "../common/FusionOCAConstants.h" // For custom ONO constants
 #include "../common/workers/ZoneGroup.h"
-#include "ControlPalGainActuator.h"
-#include "ControlPalMuteActuator.h"
-#include "ControlPalSwitchActuator.h"
+#include "workers/ControlPalGainActuator.h"
+#include "workers/ControlPalMuteActuator.h"
+#include "workers/ControlPalSwitchActuator.h"
 #include "ControlPalSetupUtils.h"
+
 
 // Helper functions
 void DisplayDiscoveredDevices(
@@ -57,8 +57,6 @@ void DisplayDiscoveredDevices(
 
 ::OcaBoolean ConnectToDevice(
                      const OcaServiceDiscovery::DiscoveredDevice &device,
-                     ::Ocp1LiteNetwork *ocp1Network,
-                     const std::string &customNodeId,
                      ::OcaSessionID& sessionId)
 {
     ::OcaBoolean rc(true);
@@ -86,7 +84,7 @@ void DisplayDiscoveredDevices(
 }
 
 ::OcaLiteStatus GetControllerConfig(::OcaLiteString& controllerId,
-                                    ::GeneralProxy& proxy,
+                                    FusionProxy& proxy,
                                     Controller& controllerCfg)
 {
     Controller newController;
@@ -187,7 +185,7 @@ void DisplayDiscoveredDevices(
     return status;
 }
 
-::OcaBoolean AddSubscriptions(Zone& newZone, ::GeneralProxy& proxy)
+::OcaBoolean AddSubscriptions(Zone& newZone, GeneralProxy& proxy)
 {
     // These two do not need to be initialized, they are not used  in OcaLib
     OcaLiteNetworkAddress  sub_addr; // This is not used in RELIABLE mode
@@ -235,7 +233,7 @@ void DisplayDiscoveredDevices(
                                     sub_addr);
     }
 
-    //// TODO: Subscribe to Selector
+    //// Subscribe to Selector
     {
         // Set remote(device) event to subscribe to
         ::OcaLiteEvent sub_event(newZone.ono.sourceSelector,
@@ -258,12 +256,15 @@ void DisplayDiscoveredDevices(
     return status;
 }
 
-ZoneGroup* CreateZoneGroup(Zone& newZone)
+ZoneGroup* CreateZoneGroup(Zone& newZone, FusionProxy &fusion_proxy,
+                                                   void *commandQueue)
 {
     // Create a block/zone
     ZoneGroup* newZoneGrp = new ZoneGroup(newZone.ono.zone,
                                           static_cast<::OcaBoolean>(true),
-                                          ::OcaLiteString(newZone.id));
+                                          ::OcaLiteString(newZone.id),
+                                          ::OcaLiteString(newZone.name),
+                                          commandQueue);
 
     if (newZoneGrp)
     {
@@ -276,19 +277,22 @@ ZoneGroup* CreateZoneGroup(Zone& newZone)
                 emptyPorts,
                 -20.0,
                 60.0,
-                newZone.gain.gainID);
+                newZone.gain.gainID,
+                newZone.ono.zone,
+                commandQueue);
         if (newGainObj)
         {
             newZoneGrp->AddObject(*newGainObj);
         }
 
-        // Create Mute object
         ControlPalMuteActuator* newMuteObj = new ControlPalMuteActuator(
                 newZone.ono.mute,
                 static_cast<::OcaBoolean>(true),
                 static_cast<const ::OcaLiteString>("Mute"),
                 emptyPorts,
-                newZone.gain.gainID);
+                newZone.gain.gainID,
+                newZone.ono.zone,
+                commandQueue);
         if (newMuteObj)
         {
             newZoneGrp->AddObject(*newMuteObj);
@@ -322,21 +326,52 @@ ZoneGroup* CreateZoneGroup(Zone& newZone)
                 static_cast<::OcaUint16>(newZone.sources.size() - 1), // Max Pos.
                 label,
                 enable,
-                newZone.id);
+                newZone.id,
+                newZone.ono.zone,
+                commandQueue);
 
         // Add to block
         if (newSelectorObj)
         {
             newZoneGrp->AddObject(*newSelectorObj);
         }
+
+        // Send Zone Name to frontend
+        newZoneGrp->SendValue();
+
+        // Sync Control values (with Device)
+        // Get & Set Gain value
+        ::OcaDB gainVal;
+        fusion_proxy.ConcreteGainActuator_GetGain(
+                                     newGainObj->GetObjectNumber(),
+                                     gainVal);
+
+        // Also sends updated value to front-end
+        newGainObj->SetGain(gainVal);
+
+        // Get & Set Mute state
+        ::OcaLiteMuteState state;
+        fusion_proxy.ConcreteMuteActuator_GetMute(
+                                     newMuteObj->GetObjectNumber(),
+                                     state);
+
+        // Also sends updated value to front-end
+        newMuteObj->SetState(state);
+
+        // Get & Set Switch Position
+        ::OcaUint16 position;
+        fusion_proxy.ConcreteSwitchActuator_GetSwitch(
+                                newSelectorObj->GetObjectNumber(),
+                                position);
+
+        // Also sends updated value to front-end
+        newSelectorObj->SendConfigurationValue();
     }
 
     return newZoneGrp;
 }
 
-::OcaBoolean ControlPalSetupConnection(::Ocp1LiteNetwork *ocp1Network,
-                                     const std::string &customNodeId,
-                                     ::OcaSessionID&   sessionId)
+::OcaBoolean ControlPalSetupConnection(::OcaSessionID& sessionId)
 {
     ::OcaBoolean retVal(false);
 
@@ -358,12 +393,12 @@ ZoneGroup* CreateZoneGroup(Zone& newZone)
         //       It will however fail to establish connection when it tries
         //       to connect. This can be mitigated to some extent if aging
         //       and scavenging are enabled on the DNS server.
-        deviceCount = discovery.WaitForDevices(8000);
+        deviceCount = discovery.WaitForDevices(1000);
 
         // Retry loop
         while ( (deviceCount <= 0 ) && (retry_cnt++ < 10))
         {
-            deviceCount = discovery.WaitForDevices(8000);
+            deviceCount = discovery.WaitForDevices(1000);
         }
 
         if (deviceCount > 0)
@@ -377,8 +412,7 @@ ZoneGroup* CreateZoneGroup(Zone& newZone)
             OCA_LOG_INFO_PARAMS("Automatically selecting: %s",
                                 selectedDevice.name.c_str());
 
-            if (ConnectToDevice(selectedDevice, ocp1Network,
-                                customNodeId, sessionId))
+            if (ConnectToDevice(selectedDevice, sessionId))
             {
                 retVal = true;
             }
@@ -394,7 +428,9 @@ ZoneGroup* CreateZoneGroup(Zone& newZone)
 }
 
 ::OcaBoolean ControlPalSetupControls(::OcaLiteString& controllerId,
-                                        ::GeneralProxy& proxy,
+                                        ::GeneralProxy& gen_proxy,
+                                        FusionProxy& proxy,
+                                        void *commandQueue,
                                         std::vector<::OcaONo>& zoneONo)
 {
     ::OcaBoolean bSuccess(false);
@@ -404,21 +440,42 @@ ZoneGroup* CreateZoneGroup(Zone& newZone)
                                             proxy,
                                             controllerCfg))
     {
-        for (auto newZone : controllerCfg.zones)
+        if (controllerCfg.zones.size() > 0)
         {
-            // Create Worker Objects andd add to FusionBlock
-            ZoneGroup *newGroup = CreateZoneGroup(*newZone);
+            ControlPal_MsgQueue<ControllerCmdIntfc> *ocaQue =
+            static_cast<ControlPal_MsgQueue<ControllerCmdIntfc>*>(commandQueue);
+            ControllerCmdIntfc cfgCmd;
 
-            // Add 'ZoneGroup' to 'Root' block
-            bSuccess |= ::OcaLiteBlock::GetRootBlock().AddObject(*newGroup);
+            // Configuration start message to UI
+            cfgCmd.cmd          = CTRL_CMD_ZONE_CFG_START;
+            cfgCmd.ono          = 0;  // Don't care for message
+            strcpy(cfgCmd.val.char_val, controllerCfg.name.c_str()); // Controller Name
+            ocaQue->push(cfgCmd);
 
-            // Add event subscriptions
-            bSuccess |= AddSubscriptions(*newZone, proxy);
-
-            if (bSuccess)
+            for (auto newZone : controllerCfg.zones)
             {
-                zoneONo.push_back(newGroup->GetObjectNumber());
+                // Create Worker Objects andd add to FusionBlock
+                ZoneGroup *newGroup =
+                    CreateZoneGroup(*newZone, proxy, commandQueue);
+
+                // Add 'ZoneGroup' to 'Root' block
+                bSuccess |= ::OcaLiteBlock::GetRootBlock().AddObject(*newGroup);
+
+                // Add event subscriptions
+                bSuccess |= AddSubscriptions(*newZone, gen_proxy);
+
+                if (bSuccess)
+                {
+                    zoneONo.push_back(newGroup->GetObjectNumber());
+                }
             }
+
+            // Configuration done msg to UI
+            cfgCmd.cmd         = CTRL_CMD_ZONE_CFG_END;
+            cfgCmd.ono         = 0;  // Don't care for message
+            cfgCmd.val.int_val = 0;  // Don't care for message
+            ocaQue->push(cfgCmd);
+
         }
     }
 
@@ -427,36 +484,36 @@ ZoneGroup* CreateZoneGroup(Zone& newZone)
 
 void ControlPalTeardownControls(std::vector<::OcaONo>& zoneBlockONo)
 {
-    ::OcaBoolean bSuccess(true);
-
     for (auto tdownBlockONo : zoneBlockONo)
     {
         ::OcaLiteList<::OcaLiteObjectIdentification> tdownMembers;
         ::OcaLiteBlock* tdownBlock;
 
-        // TODO: Get Zone(Block) object
-        tdownBlock = static_cast<::OcaLiteBlock *>(::OcaLiteBlock::GetRootBlock().GetOCAObject(tdownBlockONo));
+        // Get Zone(Block) object
+        tdownBlock = static_cast<::OcaLiteBlock *>(
+                  ::OcaLiteBlock::GetRootBlock().GetOCAObject(tdownBlockONo));
 
         if (OCASTATUS_OK == tdownBlock->GetMembers(tdownMembers))
         {
             // Clear the ZoneBlock
             for (::OcaUint16 i = 0; i < tdownMembers.GetCount(); i++)
             {
-                // TODO: Get worker objects in zone
+                // Get worker objects in zone
                 ::OcaONo       workerONo   = tdownMembers.GetItem(i).GetONo();
-                ::OcaLiteRoot* tdownWorker = tdownBlock->GetOCAObject(workerONo);
+                ::OcaLiteRoot* tdownWorker =
+                                     tdownBlock->GetOCAObject(workerONo);
 
-                // TODO: Remove worker object from zone
+                // Remove worker object from zone
                 tdownBlock->RemoveObject(workerONo);
 
-                // TODO: Delete worker object
+                // Delete worker object
                 delete tdownWorker;
             }
 
-            // TODO: Remove Block object from Root block.
+            // Remove Block object from Root block.
             ::OcaLiteBlock::GetRootBlock().RemoveObject(tdownBlockONo);
 
-            // TODO: Delete Block object
+            // Delete Block object
             delete tdownBlock;
         }
     }

@@ -13,6 +13,8 @@
 
 // ---- Include local include files ----
 #include <OCC/ControlClasses/Workers/Actuators/OcaLiteGain.h>
+#include "../HostInterface/CommandInterface/CommandInterface.h"
+#include "../ControlPalMsgInterface.h"
 
 // ---- Referenced classes and types ----
 
@@ -25,7 +27,8 @@
  * ControlPal implementation of a gain actuator that actually performs gain adjustment.
  * This class inherits from OcaLiteGain and implements the pure virtual SetGainValue method.
  */
-class ControlPalGainActuator : public ::OcaLiteGain
+class ControlPalGainActuator : public ::OcaLiteGain,
+                               public ControlPalMsgInterface<ControllerCmdIntfc>
 {
 public:
     /**
@@ -38,6 +41,7 @@ public:
      * @param[in]  minGain      Lower limit of the gain in dB
      * @param[in]  maxGain      Upper limit of the gain in dB
      * @param[in]  gainID       The gain identifier from JSON configuration (required)
+     * @param[in]  commandQueue The pointer to the command queue object
      */
     ControlPalGainActuator(::OcaONo objectNumber,
                          ::OcaBoolean lockable,
@@ -45,12 +49,31 @@ public:
                          const ::OcaLiteList<::OcaLitePort> &ports,
                          ::OcaDB minGain,
                          ::OcaDB maxGain,
-                         const std::string &gainID);
+                         const std::string &gainID,
+                         const ::OcaONo zoneONo,
+                         void *commandQue);
 
     /**
      * Destructor.
      */
     virtual ~ControlPalGainActuator() {}
+
+    ::OcaONo GetZoneONo()
+    {
+        return m_zoneONo;
+    }
+
+    void SendValue();
+
+    ::OcaDB LastGainGet()
+    {
+        return m_lastGainSet;
+    }
+
+    void LastGainSet(::OcaDB val)
+    {
+        m_lastGainSet = val;
+    }
 
 protected:
     /**
@@ -65,6 +88,11 @@ protected:
 private:
     /** The gain identifier from JSON configuration */
     std::string m_gainID;
+
+    // ONo of the ZoneBlock
+    ::OcaONo    m_zoneONo;
+
+    ::OcaDB     m_lastGainSet;
 
     /** private copy constructor, no copying of object allowed */
     ControlPalGainActuator(const ControlPalGainActuator &);
