@@ -94,11 +94,10 @@ OcaLiteMute::OcaLiteMute(::OcaONo objectNumber, ::OcaBoolean lockable, const ::O
         rc = GetStateValue(oldState);
         if ((OCASTATUS_OK == rc) && !CompareValue<::OcaLiteMuteState>(oldState, state))
         {
-           m_state = state;
+            m_state = state;
             rc = SetStateValue(state);
             if (OCASTATUS_OK == rc)
             {
-                // m_state = state; //ask sudhanand where to set state for controller. 
 
                 // Controllers should not generate events
                 // ::OcaLiteMuteState actualState;
@@ -112,7 +111,6 @@ OcaLiteMute::OcaLiteMute(::OcaONo objectNumber, ::OcaBoolean lockable, const ::O
                 //                                                             OCAPROPERTYCHANGETYPE_CURRENT_CHANGED);
                 //     PropertyChanged(eventData, propertyID);
                 // }
-                                    
             }
         }
     }

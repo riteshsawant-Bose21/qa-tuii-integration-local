@@ -122,7 +122,6 @@ OcaLiteSwitch::OcaLiteSwitch(::OcaONo objectNumber, ::OcaBoolean lockable, const
             rc = SetPositionValue(position);
             if (OCASTATUS_OK == rc)
             {
-                // m_position = position; //ask sudhanand where to set state for controller.
 
                 // Controllers should not generate events
                 // ::OcaUint16 actualPosition;
