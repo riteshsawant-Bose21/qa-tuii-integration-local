@@ -26,8 +26,7 @@ class FusionDsp extends HardwareComponent {
     this.cloudId,
     this.isClaimed = false,
     super.lockListeningArea,
-    super.pos,
-    super.wiringPos,
+    x super.wiringPos,
     super.zAxis,
     String? hardwareName,
     super.assetImagePath = 'assets/images/fusion_device.png',
@@ -37,7 +36,10 @@ class FusionDsp extends HardwareComponent {
     super.outputPortsData,
     required super.locationEntity,
     this.sku = '',
-  }) : super(hardwareName: hardwareName ?? name);
+  }) : super(
+         hardwareName: hardwareName ?? name,
+         id: id ?? "FUSIONDSP${FusionUtils.shortStringUUID()}",
+       );
 
   @override
   String toString() {
