@@ -226,8 +226,12 @@ extension ListeningAreaService on ProjectService {
   }
 
   //get Listing area available for zone, (ignore all listening area already assigned to other zones)
-  List<ListeningArea> getAvailableListeningAreasForZone(String zoneId) {
-    final zoneAreas = relationships.getChildren(RelationshipType.zoneAreas, zoneId).toSet();
+  List<ListeningArea> getAvailableListeningAreasForZone(String? zoneId) {
+    Set<String> zoneAreas = {};
+
+    if (zoneId != null) {
+      zoneAreas = relationships.getChildren(RelationshipType.zoneAreas, zoneId).toSet();
+    }
 
     //get all listening areas which are not added to any of zoneListening, (listening areas with empty parents )
     final availableAreas = listeningAreas.getAll().where((la) {

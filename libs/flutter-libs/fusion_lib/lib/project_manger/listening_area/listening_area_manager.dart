@@ -85,7 +85,7 @@ extension ListeningAreaManager on ProjectManager {
   }
 
   //get Available Listening Areas for Zone or subzone
-  List<ListeningArea> getAvailableListeningAreasForZone({required String id}) {
+  List<ListeningArea> getAvailableListeningAreasForZone({required String? id}) {
     if (projectService == null) {
       throw Exception('No project is currently open');
     }

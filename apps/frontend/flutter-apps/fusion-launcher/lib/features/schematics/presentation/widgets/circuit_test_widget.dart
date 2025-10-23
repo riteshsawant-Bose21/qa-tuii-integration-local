@@ -598,7 +598,7 @@ class _ZoneCircuitConfigPageState extends State<ZoneCircuitConfigPage> {
     final List<ListeningArea> zoneAreas = getListeningAreasForZone(zone.id);
     final List<String> selectedListeningAreas = zoneAreas.map((ListeningArea e) => e.id).toList();
 
-    final List<ListeningArea> availableAreas = serviceLocator<ProjectViewModel>().getAvailableListeningAreasForZone(id: zone.id);
+    final List<ListeningArea> availableAreas = serviceLocator<ProjectViewModel>().getAvailableListeningAreasForZone(zoneId: zone.id);
 
     showDialog(
       context: context,
