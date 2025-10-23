@@ -24,6 +24,9 @@
 // ---- Forward declarations ----
 class UDPSender;
 class ConcreteGainActuator;
+class ConcreteMuteActuator;
+class ConcreteSwitchActuator;
+class OcaLiteRoot;
 
 // ---- Helper types and constants ----
 
@@ -148,6 +151,83 @@ private:
      * @return Shared pointer to the object tracker snapshot, or nullptr if not available
      */
     std::shared_ptr<const std::map<std::string, std::vector<::OcaONo>>> getObjectTrackerSnapshot() const;
+
+    /**
+     * @brief Check if bridge is initialized
+     * @return true if initialized, false otherwise
+     */
+    bool checkInitialized() const;
+
+    /**
+     * @brief Send message to Fusion with standardized error handling
+     * @param jsonMessage The JSON message to send
+     * @return true if sent successfully, false otherwise
+     */
+    bool sendMessageToFusion(const std::string &jsonMessage);
+
+    /**
+     * @brief Create JSON message for gain setting
+     * @param gainID The gain identifier
+     * @param value The gain value in dB
+     * @return JSON message string
+     */
+    static std::string createGainMessage(const std::string &gainID, double value);
+
+    /**
+     * @brief Create JSON message for mute setting
+     * @param gainID The gain identifier
+     * @param muteState The mute state
+     * @return JSON message string
+     */
+    static std::string createMuteMessage(const std::string &gainID, bool muteState);
+
+    /**
+     * @brief Create JSON message for source setting
+     * @param zoneID The zone identifier
+     * @param sourceIndex The source index
+     * @return JSON message string
+     */
+    static std::string createSourceMessage(const std::string &zoneID, ::OcaUint16 sourceIndex);
+
+    /**
+     * @brief Find gain actuator for given ID
+     * @param gainID The gain identifier
+     * @return Pointer to ConcreteGainActuator or nullptr if not found
+     */
+    ConcreteGainActuator *findGainActuator(const std::string &gainID) const;
+
+    /**
+     * @brief Find mute actuator for given ID
+     * @param gainID The gain identifier
+     * @return Pointer to ConcreteMuteActuator or nullptr if not found
+     */
+    ConcreteMuteActuator *findMuteActuator(const std::string &gainID) const;
+
+    /**
+     * @brief Find switch actuator for given ID
+     * @param zoneID The zone identifier
+     * @return Pointer to ConcreteSwitchActuator or nullptr if not found
+     */
+    ConcreteSwitchActuator *findSwitchActuator(const std::string &zoneID) const;
+
+    /**
+     * @brief Get object from tracker by ID and index
+     * @param id The object identifier
+     * @param objectIndex The index in the object vector
+     * @return Pointer to OcaLiteRoot or nullptr if not found
+     */
+    OcaLiteRoot *getObjectFromTracker(const std::string &id, size_t objectIndex) const;
+
+    // Object mapping indices
+    static constexpr size_t GAIN_OBJECT_INDEX = 0;
+    static constexpr size_t MUTE_OBJECT_INDEX = 1;
+    static constexpr size_t SWITCH_OBJECT_INDEX = 0;
+    static constexpr size_t MIN_GAIN_OBJECTS = 2; // gain + mute
+
+    // JSON field names
+    static constexpr const char *JSON_FIELD_GAIN = "gain";
+    static constexpr const char *JSON_FIELD_MUTE = "mute";
+    static constexpr const char *JSON_FIELD_INPUT = "input";
 
     // Shared pointer to object tracker for lock-free reads with snapshot semantics
     std::shared_ptr<const std::map<std::string, std::vector<::OcaONo>>> m_objectTrackerPtr;

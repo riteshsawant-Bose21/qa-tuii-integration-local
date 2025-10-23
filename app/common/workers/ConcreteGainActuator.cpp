@@ -139,10 +139,10 @@ void ConcreteGainActuator::handleFusionGainMessage(::OcaDB gainValue)
         // Set the gain value using the base class method
         // This will update the internal state AND notify AES70 clients, but won't send back to Fusion
 
-        OCA_LOG_INFO_PARAMS("ConcreteGainActuator[%s]: About to call SetGain(%.2f)", m_gainID.c_str(), clampedGain);
+        OCA_LOG_INFO_PARAMS("ConcreteGainActuator[%s]: About to call SetGainFromFusion(%.2f)", m_gainID.c_str(), clampedGain);
         status = SetGainFromFusion(clampedGain);
 
-        OCA_LOG_INFO_PARAMS("ConcreteGainActuator[%s]: SetGain returned with status %d", m_gainID.c_str(), static_cast<int>(status));
+        OCA_LOG_INFO_PARAMS("ConcreteGainActuator[%s]: SetGainFromFusion returned with status %d", m_gainID.c_str(), static_cast<int>(status));
 
         if (status == OCASTATUS_OK)
         {

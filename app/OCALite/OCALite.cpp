@@ -151,7 +151,7 @@ int main(int argc, const char *argv[])
 
     // Initialize FusionAudioBridge for centralized Fusion communication
     // g_bSuccess = InitializeFusionAudioBridge("192.168.0.19", 7947);
-    g_bSuccess = InitializeFusionAudioBridge("10.0.0.116", 7947);
+    g_bSuccess = InitializeFusionAudioBridge("10.1.123.30", 7947);
     if (!g_bSuccess)
     {
         OCA_LOG_ERROR("✗ FusionAudioBridge initialization failed");
