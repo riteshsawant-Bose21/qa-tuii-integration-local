@@ -52,6 +52,8 @@ class CircuitView extends StatelessWidget {
                 width: width,
                 child: PortConnectionOverlay(
                   port: port,
+                  componentDB: controller.componentDB,
+                  controller: controller,
                 ),
               );
             }

@@ -78,7 +78,7 @@ extension InitializationHandlerMixin on CircuitController {
     for (int i = 0; i < components.length; i++) {
       final HardwareComponent component = components[i];
       CircuitComponent? parent;
-      if (component is Speaker) {
+      if (component is Speaker || component is HardwareRack) {
         continue;
       }
       final ComponentData componentData = ComponentDataFactory.fromHardware(

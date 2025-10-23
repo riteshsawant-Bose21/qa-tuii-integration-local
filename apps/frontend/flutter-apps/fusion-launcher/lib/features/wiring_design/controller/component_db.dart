@@ -45,4 +45,15 @@ class ComponentDb {
     }
     return null;
   }
+
+  ComponentData? getComponentData(String id) {
+    return _dataMapping[id];
+  }
+
+
+  List<CircuitComponent> getAllComponents() {
+    return _mapping.values
+        .whereType<CircuitComponent>()
+        .toList(growable: false);
+  }
 }

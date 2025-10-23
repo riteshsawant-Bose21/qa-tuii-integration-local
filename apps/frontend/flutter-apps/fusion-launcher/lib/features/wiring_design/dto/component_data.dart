@@ -50,48 +50,48 @@ class DeviceSchematicComponentData extends ComponentData {
       comPorts:
           hardware.communicationPorts
               .map(
-                (PortData e) => ComponentPort(
-                  data: e.id,
-                  label: e.name,
-                  type: e.type.name,
-                  image: switch (e.type) {
-                    PortType.ethernet =>
-                      'assets/icons/wiring_ports/ethernet.png',
-                    PortType.wifi => 'assets/icons/wiring_ports/wifi.png',
-                    PortType.ble => 'assets/icons/wiring_ports/bluetooth.png',
-                    PortType.hdmi => 'assets/icons/wiring_ports/hdmi.png',
-                    PortType.usb => 'assets/icons/wiring_ports/usb.png',
-                    PortType.audioJack =>
-                      'assets/icons/wiring_ports/audio_jack.png',
-                    _ => null,
-                  },
-                  position: e.position,
-                  compatibleTypes:
-                      e.compatibleTypes.map((PortType t) => t.name).toList(),
+                (PortData e) => ComponentPort.fromPortData(
+                  e,
+                  // data: e.id,
+                  // label: e.name,
+                  // type: e.type,
+                  // image: switch (e.type) {
+                  //   PortType.ethernet =>
+                  //     'assets/icons/wiring_ports/ethernet.png',
+                  //   PortType.wifi => 'assets/icons/wiring_ports/wifi.png',
+                  //   PortType.ble => 'assets/icons/wiring_ports/bluetooth.png',
+                  //   PortType.hdmi => 'assets/icons/wiring_ports/hdmi.png',
+                  //   PortType.usb => 'assets/icons/wiring_ports/usb.png',
+                  //   PortType.audioJack =>
+                  //     'assets/icons/wiring_ports/audio_jack.png',
+                  //   _ => null,
+                  // },
+                  // position: e.position,
+                  // compatibleTypes: e.compatibleTypes,
                 ),
               )
               .toList(),
       inputPorts:
           hardware.inputPortsData
               .map(
-                (PortData e) => ComponentPort(
-                  data: e.id,
-                  label: e.name,
-                  type: e.type.name,
-                  compatibleTypes:
-                      e.compatibleTypes.map((PortType t) => t.name).toList(),
+                (PortData e) => ComponentPort.fromPortData(
+                  e,
+                  // data: e.id,
+                  // label: e.name,
+                  // type: e.type,
+                  // compatibleTypes: e.compatibleTypes,
                 ),
               )
               .toList(),
       outputPorts:
-          hardware.inputPortsData
+          hardware.outputPortsData
               .map(
-                (PortData e) => ComponentPort(
-                  data: e.id,
-                  label: e.name,
-                  type: e.type.name,
-                  compatibleTypes:
-                      e.compatibleTypes.map((PortType t) => t.name).toList(),
+                (PortData e) => ComponentPort.fromPortData(
+                  e,
+                  // data: e.id,
+                  // label: e.name,
+                  // type: e.type,
+                  // compatibleTypes: e.compatibleTypes,
                 ),
               )
               .toList(),
@@ -124,7 +124,7 @@ class DeviceSchematicComponentData extends ComponentData {
 
       cSize += Offset(
         0,
-        max(0, extraHeight - 1) * WiringViewConstants.portSpacing,
+        max(1, extraHeight - 1) * WiringViewConstants.portSpacing,
       );
       final int hasFooterLeft =
           comPorts
@@ -212,14 +212,14 @@ class SourceComponentData extends ComponentData {
       outputPorts:
           source.outputPortsData
               .map(
-                (PortData e) => ComponentPort(
-                  data: e.id,
-                  label: e.name,
-                  type: e.type.name,
-                  position: e.position,
-                  index: e.portNumber,
-                  compatibleTypes:
-                      e.compatibleTypes.map((PortType t) => t.name).toList(),
+                (PortData e) => ComponentPort.fromPortData(
+                  e,
+                  // data: e.id,
+                  // label: e.name,
+                  // type: e.type,
+                  // position: e.position,
+                  // index: e.portNumber,
+                  // compatibleTypes: e.compatibleTypes,
                 ),
               )
               .toList(),
@@ -334,14 +334,7 @@ class CircuitComponentData extends ComponentData {
       label: zone.name,
       comPorts: <ComponentPort>[],
       inputPorts: <ComponentPort>[
-        ComponentPort(
-          data: zone.inputPort.id,
-          type: zone.inputPort.type.name,
-          compatibleTypes:
-              zone.inputPort.compatibleTypes
-                  .map((PortType t) => t.name)
-                  .toList(),
-        ),
+        ComponentPort.fromPortData(zone.inputPort),
       ],
       outputPorts: <ComponentPort>[
         // ComponentPort(data: 0, label: "0"),
@@ -380,8 +373,34 @@ class SpeakerComponentData extends ComponentData {
       image: speaker.assetImagePath,
       label: speaker.name,
       comPorts: <ComponentPort>[],
-      inputPorts: <ComponentPort>[ComponentPort.input(data: "0", label: "0")],
-      outputPorts: <ComponentPort>[],
+      inputPorts:
+          speaker.inputPortsData
+              .map(
+                (PortData e) => ComponentPort.fromPortData(
+                  e,
+                  // data: e.id,
+                  // label: e.name,
+                  // type: e.type,
+                  // position: e.position,
+                  // index: e.portNumber,
+                  // compatibleTypes: e.compatibleTypes,
+                ),
+              )
+              .toList(),
+      outputPorts:
+          speaker.outputPortsData
+              .map(
+                (PortData e) => ComponentPort.fromPortData(
+                  e,
+                  // data: e.id,
+                  // label: e.name,
+                  // type: e.type,
+                  // position: e.position,
+                  // index: e.portNumber,
+                  // compatibleTypes: e.compatibleTypes,
+                ),
+              )
+              .toList(),
       speaker: speaker,
     );
   }
