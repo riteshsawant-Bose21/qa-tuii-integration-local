@@ -15,6 +15,7 @@ type AppConfig struct {
 	NodeName string
 	BindAddr string
 	BindPort int
+	NetIface string
 	Local    bool
 	Verbose  bool
 	Profile  bool
