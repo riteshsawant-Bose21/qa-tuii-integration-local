@@ -94,7 +94,7 @@ ConcreteGainActuator::ConcreteGainActuator(::OcaONo objectNumber,
         }
         else
         {
-            OCA_LOG_WARNING("[MUTE] No gain ID configured - mute state not sent to Fusion");
+            OCA_LOG_WARNING("[GAIN] No gain ID configured - gain state not sent to Fusion");
         }
     }
     catch (const std::exception &e)
