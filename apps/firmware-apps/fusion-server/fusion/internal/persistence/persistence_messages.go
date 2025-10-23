@@ -2,10 +2,11 @@ package persistence
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
+
+	json "github.com/goccy/go-json"
 
 	"go.etcd.io/bbolt"
 )

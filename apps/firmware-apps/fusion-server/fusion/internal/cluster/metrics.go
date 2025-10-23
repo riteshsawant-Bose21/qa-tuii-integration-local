@@ -1,7 +1,6 @@
 package cluster
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -10,6 +9,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	json "github.com/goccy/go-json"
 
 	"fusion/internal/api"
 	"fusion/internal/network"

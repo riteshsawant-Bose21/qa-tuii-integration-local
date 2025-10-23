@@ -1,11 +1,12 @@
 package persistence
 
 import (
-	"encoding/json"
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/logging"
 	"time"
+
+	json "github.com/goccy/go-json"
 
 	"go.etcd.io/bbolt"
 )

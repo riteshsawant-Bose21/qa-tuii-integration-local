@@ -3,7 +3,6 @@ package persistence
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"fusion/internal/api"
@@ -12,6 +11,8 @@ import (
 	"os"
 	"sync"
 	"time"
+
+	json "github.com/goccy/go-json"
 
 	"go.etcd.io/bbolt"
 )
