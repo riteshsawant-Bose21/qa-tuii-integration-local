@@ -12,6 +12,7 @@ import (
 	"runtime/debug"
 	"runtime/pprof"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -36,6 +37,15 @@ func parseFlags() *api.AppConfig {
 	verbose := flag.Bool("verbose", false, "Enable verbose logging")
 	profile := flag.Bool("profile", false, "Enable profile dump")
 	flag.Parse()
+
+	// Read environment override
+	if envVal := os.Getenv("FUSION_PROFILE"); envVal != "" {
+		if envVal == "1" || strings.EqualFold(envVal, "true") {
+			*profile = true
+		} else if envVal == "0" || strings.EqualFold(envVal, "false") {
+			*profile = false
+		}
+	}
 
 	if *versionFlag {
 		// This must be a log.Printf. The server logger is not running yet.
