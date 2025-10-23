@@ -117,7 +117,6 @@ int fusion_cn_nf_tx_packet(void *rtp_mgr, struct sk_buff *skb, u32 data_size)
     ip_header = ip_hdr(skb);
     if (!ip_header) {
         printk(KERN_ERR "fusion_cn: tx_packet: Invalid IP header\n");
-        kfree_skb(skb);
         return -EINVAL;
     }
 
@@ -126,7 +125,6 @@ int fusion_cn_nf_tx_packet(void *rtp_mgr, struct sk_buff *skb, u32 data_size)
         // Ensure skb is linear
         if (skb_is_nonlinear(skb) && skb_linearize(skb) < 0) {
             printk(KERN_ERR "fusion_cn: tx_packet: Failed to linearize skb\n");
-            kfree_skb(skb);
             return -ENOMEM;
         }
 
@@ -138,21 +136,18 @@ int fusion_cn_nf_tx_packet(void *rtp_mgr, struct sk_buff *skb, u32 data_size)
 
         // Process directly
         ret = fusion_cn_rtp_process_packet(mgr, packet);
-        kfree_skb(skb);  // Free the skb since we're done
         return ret == NF_DROP ? 0 : -1;
     }
 
     dev = dev_get_by_name(&init_net, nf->iface_name);
     if (!dev) {
         printk(KERN_ERR "fusion_cn: tx_packet: Interface %s not found\n", nf->iface_name);
-        kfree_skb(skb);
         return -ENODEV;
     }   
 
     if (data_size == 0) {
         printk(KERN_ERR "fusion_cn: tx_packet: Empty data\n");
         dev_put(dev);
-        kfree_skb(skb);
         return -EINVAL;
     }
 
@@ -166,5 +161,5 @@ int fusion_cn_nf_tx_packet(void *rtp_mgr, struct sk_buff *skb, u32 data_size)
     }
 
     dev_put(dev);
-    return ret;
+    return 0;
 }

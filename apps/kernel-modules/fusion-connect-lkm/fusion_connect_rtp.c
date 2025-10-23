@@ -558,15 +558,7 @@ __always_inline int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *r
                 } else {
                     reconstructed_phc_ns += NSEC_PER_MSEC;
                 }
-            } else {
-                if (!stream->rtp_phc_offset_valid) {
-                    stream->rtp_phc_offset_ns = current_phc_ns - reconstructed_phc_ns;
-                    stream->rtp_phc_offset_valid = true;
-                    printk(KERN_DEBUG "fusion_cn_rtp: process_packet: RTP timestamp anchor = %lld\n",
-                           stream->rtp_phc_offset_ns);
-                }
-                reconstructed_phc_ns += stream->rtp_phc_offset_ns;
-            }
+            } 
 
             if (stream->playback_index >= stream->buf_size_in_packets)
                 stream->playback_index = 0;
