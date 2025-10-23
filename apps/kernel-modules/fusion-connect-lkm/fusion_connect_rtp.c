@@ -720,10 +720,11 @@ __always_inline void fusion_cn_rtp_send_packet(struct fusion_cn_rtp_manager *rtp
     skb->ip_summed = CHECKSUM_NONE;
 
     if (rtp_mgr->debug) {
-        printk(KERN_DEBUG "fusion_cn_rtp: send_packet %s seq=%u len=%u off_frames=%u\n",
+        printk(KERN_DEBUG "fusion_cn_rtp: send_packet %s seq=%u len=%u off_frames=%u action_time=%llu \n",
                stream->info.stream_name,
                (u32)(be16_to_cpu(stream->rtp_packet_base.rtp.seq_num)),
-               total_len, off_frames);
+               total_len, off_frames,
+               stream->next_action_time);
     }
 
     spin_unlock(&stream->lock);

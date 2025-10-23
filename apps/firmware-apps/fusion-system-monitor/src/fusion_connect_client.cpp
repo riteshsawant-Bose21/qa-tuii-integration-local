@@ -352,97 +352,18 @@ static bool nl_set_ptp_sync_raw(NetlinkClient& c, bool sync) {
     return reply.err == 0;
 }
 
-static std::string ptp_for_interface(const std::string& ifname) {
-    if (ifname.empty()) return {};
-    char base[256];
-    // base is bounded by interface name length + constant; ifname is under kernel limit
-    std::snprintf(base, sizeof(base), "/sys/class/net/%s/device/ptp", ifname.c_str());
-
-    DIR* d = opendir(base);
-    if (!d) return {};
-
-    std::string dev;
-    for (dirent* de; (de = readdir(d)) != nullptr; ) {
-        // ignore . and ..
-        if (de->d_name[0] == '.' && (de->d_name[1] == '\0' ||
-                                     (de->d_name[1] == '.' && de->d_name[2] == '\0')))
-            continue;
-
-        // entries here are "ptpX"
-        if (std::strncmp(de->d_name, "ptp", 3) == 0) {
-            std::string cand = "/dev/";
-            cand += de->d_name;                  // no fixed-size buffer → no truncation
-            if (access(cand.c_str(), R_OK | W_OK) == 0) {
-                dev = std::move(cand);
-                break;
-            }
-        }
-    }
-    closedir(d);
-    return dev;
-}
-
-static std::string first_present_ptp() {
-    for (int i = 0; i < 16; ++i) {
-        std::string path = "/dev/ptp" + std::to_string(i);
-        if (access(path.c_str(), R_OK | W_OK) == 0) return path;
-    }
-    return {};
-}
-
-static std::string choose_ptp_device(const std::string& ifname) {
-    if (auto s = ptp_for_interface(ifname); !s.empty()) return s;
-    return first_present_ptp();
-}
-
-// Use legacy-safe PTP_SYS_OFFSET (available everywhere) to estimate offset.
-// Returns median(system_time - phc_time) in *ns_out.
-static bool sys_phc_offset_ns(const char* ptp_dev, long long* ns_out) {
-    if (!ptp_dev || !ns_out) return false;
-    int fd = open(ptp_dev, O_RDONLY | O_CLOEXEC);
-    if (fd < 0) return false;
-
-    // 5 measurements = 11 timestamps (sys, phc, sys)*5 → enough for a robust median
-    struct ptp_sys_offset req{};
-    req.n_samples = 5;
-
-    bool ok = false;
-    if (ioctl(fd, PTP_SYS_OFFSET, &req) == 0) {
-        // For each sample k:
-        //   sys1 = ts[3k], phc = ts[3k+1], sys2 = ts[3k+2]
-        // Approx offset ≈ ((sys1 + sys2)/2) - phc
-        long long offs[5]; int m = 0;
-        for (unsigned k = 0; k < req.n_samples; ++k) {
-            const long long sys1 = req.ts[3*k].sec  * 1000000000LL + req.ts[3*k].nsec;
-            const long long phc  = req.ts[3*k+1].sec* 1000000000LL + req.ts[3*k+1].nsec;
-            const long long sys2 = req.ts[3*k+2].sec* 1000000000LL + req.ts[3*k+2].nsec;
-            const long long sys_mid = (sys1/2 + sys2/2) + ((sys1&1) && (sys2&1)); // avoid overflow
-            offs[m++] = sys_mid - phc;
-        }
-        std::nth_element(offs, offs + m/2, offs + m);
-        *ns_out = offs[m/2];
-        ok = true;
-    }
-    close(fd);
-    return ok;
-}
-
 static bool set_ptp_sync(NetlinkClient& c)
 {
-    // --- pick PHC (unchanged) ---
-    std::string ptp_dev = choose_ptp_device("lan3");
-    if (ptp_dev.empty() && access("/dev/ptp1", R_OK | W_OK) == 0) ptp_dev = "/dev/ptp1";
-    if (ptp_dev.empty()) ptp_dev = first_present_ptp();
-    if (ptp_dev.empty()) { SPDLOG_WARN("PTP: no PHC found (lan3/ptp1/first-present)"); return false; }
-
-    const char* pmc = access("/usr/sbin/pmc", X_OK) == 0 ? "/usr/sbin/pmc" : "pmc";
-    auto trim = [](std::string s){ const char* ws=" \t\r\n"; size_t a=s.find_first_not_of(ws); size_t b=s.find_last_not_of(ws); return a==std::string::npos?std::string():s.substr(a,b-a+1); };
+    auto trim = [](std::string s){
+        const char* ws = " \t\r\n";
+        size_t a = s.find_first_not_of(ws);
+        size_t b = s.find_last_not_of(ws);
+        return a == std::string::npos ? std::string() : s.substr(a, b - a + 1);
+    };
 
     // gmPresent poller: returns 1 if true, 0 if false, -1 if unknown/error
-    auto poll_gm_present = [&](void) -> int {
-        char cmd[256];
-        std::snprintf(cmd, sizeof(cmd), "%s -u -b 0 -f /etc/linuxptp/ptp4l.conf 'GET TIME_STATUS_NP' 2>/dev/null", pmc);
-        FILE* fp = popen(cmd, "r");
+    auto poll_gm_present = [&]() -> int {
+        FILE* fp = popen("/usr/sbin/pmc -u -b 0 -f /etc/linuxptp/ptp4l.conf 'GET TIME_STATUS_NP'", "r");
         if (!fp) return -1;
 
         char buf[512];
@@ -451,9 +372,9 @@ static bool set_ptp_sync(NetlinkClient& c)
             std::string line(buf);
             auto pos = line.find("gmPresent");
             if (pos != std::string::npos) {
-                std::string v = trim(line.substr(pos + strlen("gmPresent")));
-                for (char& ch : v) ch = (char)tolower((unsigned char)ch);
-                if (v.find("true")  != std::string::npos) result = 1;
+                std::string v = trim(line.substr(pos + std::strlen("gmPresent")));
+                for (char& ch : v) ch = (char)std::tolower((unsigned char)ch);
+                if (v.find("true") != std::string::npos)      result = 1;
                 else if (v.find("false") != std::string::npos) result = 0;
                 break;
             }
@@ -462,8 +383,37 @@ static bool set_ptp_sync(NetlinkClient& c)
         return result;
     };
 
-    // --- Decide role using only gmPresent (unchanged) ---
-    constexpr int GM_FALSE_CONSEC = 25; 
+    // master_offset poller: returns true on success and fills ns (can be negative)
+    auto poll_master_offset_ns = [&](long long& ns_out) -> bool {
+        FILE* fp = popen("/usr/sbin/pmc -u -b 0 -f /etc/linuxptp/ptp4l.conf 'GET TIME_STATUS_NP'", "r");
+        if (!fp) return false;
+
+        bool ok = false;
+        char buf[512];
+        while (fgets(buf, sizeof(buf), fp)) {
+            std::string line(buf);
+            auto pos = line.find("master_offset");
+            if (pos != std::string::npos) {
+                std::string v = trim(line.substr(pos + std::strlen("master_offset")));
+                // v should be an integer (may have leading +/-, may be followed by junk-free newline)
+                // Be strict: parse continuous integer prefix only.
+                const char* s = v.c_str();
+                char* endp   = nullptr;
+                errno = 0;
+                long long val = std::strtoll(s, &endp, 10);
+                if (errno == 0 && endp != s) {
+                    ns_out = val;
+                    ok = true;
+                }
+                break;
+            }
+        }
+        pclose(fp);
+        return ok;
+    };
+
+    // --- Decide startup role using only gmPresent (unchanged) ---
+    constexpr int GM_FALSE_CONSEC = 25;  // you said you had to crank this up
     constexpr int SAMPLE_MS       = 500;
     constexpr int MAX_DECIDE_MS   = 15000;
 
@@ -471,31 +421,22 @@ static bool set_ptp_sync(NetlinkClient& c)
     int role_flag = -1; // 1=Follower, 0=GM, -1=unknown
     for (int elapsed = 0; elapsed < MAX_DECIDE_MS; elapsed += SAMPLE_MS) {
         const int r = poll_gm_present();
-        if (r == 1) { role_flag = 1; break; }                 // Follower on first TRUE
+        if (r == 1) { role_flag = 1; break; }                       // Follower on first TRUE
         if (r == 0) { if (++false_streak >= GM_FALSE_CONSEC) { role_flag = 0; break; } }
         std::this_thread::sleep_for(std::chrono::milliseconds(SAMPLE_MS));
     }
     if (role_flag == -1) role_flag = 1; // safer default → Follower
-    SPDLOG_INFO("PTP: startup role by gmPresent-only: {} false_streak {}", role_flag == 0 ? "GM" : "Follower", false_streak);
+    SPDLOG_INFO("PTP: startup role by gmPresent-only: {} false_streak {}",
+                role_flag == 0 ? "GM" : "Follower", false_streak);
 
-    // --- Main wait loop ---
+    // --- Main wait loop (now keyed only on master_offset) ---
+    constexpr long long OFFSET_OK_NS = 1000; // 1 µs window
     const auto start = std::chrono::steady_clock::now();
     auto last_reprobe = start;
-
-    // follower pre-step grace: allow escape if we’ve been near-TAI “too long” with small corrected error
-    constexpr long long OFFSET_OK_NS        = 200000;      // 200 µs (unchanged)
-    constexpr long long NEAR_TAI_TOL_NS     = 200000000LL; // ±200 ms band around whole seconds in [30..40]
-    constexpr int       PRESTEP_GRACE_MS    = 15000;       // after this many ms near-TAI, allow bypass if small
-    constexpr int       PRESTEP_GOOD_NEED   = 6;           // small best_abs samples required to bypass
-    int good_small_while_near_tai = 0;
-    bool in_near_tai             = false;
-    auto near_tai_enter          = start;
-
     int good = 0;
 
-    for (;;)
-    {
-        // Re-probe gmPresent periodically (role can change)
+    for (;;) {
+        // Re-probe gmPresent periodically to cope with late stabilization/role changes.
         if (std::chrono::steady_clock::now() - last_reprobe > std::chrono::seconds(3)) {
             const int r = poll_gm_present();
             if (r == 1) { role_flag = 1; false_streak = 0; }
@@ -504,111 +445,44 @@ static bool set_ptp_sync(NetlinkClient& c)
         }
         const bool i_am_gm = (role_flag == 0);
 
-        // --- Measure REALTIME↔PHC ---
-        long long med_ns = 0;
-        const bool have = sys_phc_offset_ns(ptp_dev.c_str(), &med_ns);
-
-        // TAI from kernel if present (for corrected offset calc)
-        int tai_sec = 0; bool have_tai = false;
-        { struct timex tx{}; if (adjtimex(&tx) >= 0) { tai_sec = tx.tai; have_tai = (tx.tai >= 10); } }
-
-        // Heuristic TAI guess if raw is near 30..40 s within ±200 ms
-        long long raw_abs = LLONG_MAX;
-        int tai_guess_sec = 0; bool have_guess = false;
-        if (have) {
-            raw_abs = std::llabs(med_ns);
-            const long long nearest_sec = (raw_abs + 500000000LL) / 1000000000LL;
-            if (nearest_sec >= 30 && nearest_sec <= 40) {
-                const long long nearest_ns = nearest_sec * 1000000000LL;
-                const long long err        = std::llabs(raw_abs - nearest_ns);
-                if (err <= NEAR_TAI_TOL_NS) { tai_guess_sec = (int)nearest_sec; have_guess = true; }
-            }
-        }
-
-        // Best corrected offset: min(raw, ±TAI, ±guess)
-        long long best_abs = LLONG_MAX;
-        if (have) {
-            long long best = raw_abs;
-            if (have_tai) {
-                const long long corr = (long long)tai_sec * 1000000000LL;
-                const long long a = std::llabs(med_ns - corr);
-                const long long b = std::llabs(med_ns + corr);
-                if (a < best) best = a;
-                if (b < best) best = b;
-            }
-            if (have_guess) {
-                const long long corr = (long long)tai_guess_sec * 1000000000LL;
-                const long long a = std::llabs(med_ns - corr);
-                const long long b = std::llabs(med_ns + corr);
-                if (a < best) best = a;
-                if (b < best) best = b;
-            }
-            best_abs = best;
-        }
-
-        // Detailed log
-        SPDLOG_DEBUG("REALTIME-PHC({}) med={} ns, raw_abs={} ns, TAI={} s ({}), guess={} s ({}), best_abs={} ns, role={}",
-                     ptp_dev, med_ns, raw_abs,
-                     tai_sec, have_tai ? "have" : "n/a",
-                     tai_guess_sec, have_guess ? "used" : "n/a",
-                     best_abs, i_am_gm ? "GM" : "Follower");
-
-        // Compute near-TAI band (whole seconds 30..40 ±200ms)
-        bool near_tai_now = false;
-        long long sec_err = 0;
-        if (have) {
-            const long long sec     = (raw_abs + 500000000LL) / 1000000000LL;
-            const long long nearest = sec * 1000000000LL;
-            sec_err = std::llabs(raw_abs - nearest);
-            near_tai_now = (sec >= 30 && sec <= 40 && sec_err <= NEAR_TAI_TOL_NS);
-        }
-
-        // Track how long we’ve been continuously in the near-TAI band.
-        if (!i_am_gm) {
-            if (near_tai_now) {
-                if (!in_near_tai) { in_near_tai = true; near_tai_enter = std::chrono::steady_clock::now(); good_small_while_near_tai = 0; }
-                if (best_abs != LLONG_MAX && best_abs <= OFFSET_OK_NS) ++good_small_while_near_tai;
-
-                const auto near_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                                         std::chrono::steady_clock::now() - near_tai_enter).count();
-
-                // If we’ve lingered near-TAI for PRESTEP_GRACE_MS and we’ve seen enough small corrected offsets,
-                // bypass the pre-step block and proceed to the normal good>=3 gate.
-                const bool bypass_prestep = (near_ms >= PRESTEP_GRACE_MS) && (good_small_while_near_tai >= PRESTEP_GOOD_NEED);
-
-                if (!bypass_prestep) {
-                    // Still in pre-step; keep blocking and do not accumulate 'good'
-                    good = 0;
-                    // (optional one-liner log if you want it back:)
-                    // SPDLOG_DEBUG("PTP gate: raw_abs={} ns, sec_err={} ns, near_tai=true ({} ms), best_abs={} ns, bypass={} -> holding",
-                    //              raw_abs, sec_err, (int)near_ms, best_abs, bypass_prestep?"yes":"no");
-                    std::this_thread::sleep_for(std::chrono::milliseconds(500));
-                    continue;
-                }
-                // else: fall through → allow normal good accumulation
-            } else {
-                in_near_tai = false;
-                good_small_while_near_tai = 0;
-            }
-        }
-
-        // Tight corrected-offset gate (same as before)
-        const bool good_now = (best_abs != LLONG_MAX) && (best_abs <= OFFSET_OK_NS);
-        good = good_now ? (good + 1) : 0;
-
-        if (good >= 3) {
-            SPDLOG_INFO("PTP: enabling in kernel (role={}, best_abs={} ns)", i_am_gm ? "GM" : "Follower", best_abs);
+        if (i_am_gm) {
+            SPDLOG_INFO("PTP: enabling in kernel (role=GM)");
             if (!nl_set_ptp_sync_raw(c, true)) {
                 SPDLOG_ERROR("PTP: criteria met but kernel refused SET_PTP_SYNC(true)");
                 return false;
             }
             SPDLOG_INFO("PTP: kernel accepted SET_PTP_SYNC(true)");
             return true;
-        }
+        } else {
+            // Read master_offset
+            long long mo = 0;
+            bool have_mo = poll_master_offset_ns(mo);
+            long long best_abs = (have_mo && mo) ? std::llabs(mo) : LLONG_MAX;
+
+            // Detailed log (kept)
+            SPDLOG_DEBUG("PTP master_offset={} ns, best_abs={} ns, role={}",
+                        have_mo ? mo : 0, best_abs, i_am_gm ? "GM" : "Follower");
+
+            // Gate on master_offset only:
+            //  - Follower: need |master_offset| ≤ 200µs (servo settled to GM)
+            //  - GM:      TIME_STATUS_NP shows gmPresent=false and master_offset typically 0 → same gate
+            const bool good_now = (best_abs != LLONG_MAX) && (best_abs <= OFFSET_OK_NS);
+            good = good_now ? (good + 1) : 0;
+
+            if (good >= 3) {
+                SPDLOG_INFO("PTP: enabling in kernel (role=Follower, master_offset={} ns, window={} ns)",
+                            have_mo ? mo : 0, OFFSET_OK_NS);
+                if (!nl_set_ptp_sync_raw(c, true)) {
+                    SPDLOG_ERROR("PTP: criteria met but kernel refused SET_PTP_SYNC(true)");
+                    return false;
+                }
+                SPDLOG_INFO("PTP: kernel accepted SET_PTP_SYNC(true)");
+                return true;
+            }
+        }        
 
         if (std::chrono::steady_clock::now() - start > std::chrono::seconds(120)) {
-            SPDLOG_WARN("PTP: criteria not met within 120 s (role={}, last best_abs={} ns).",
-                        i_am_gm ? "GM" : "Follower", best_abs);
+            SPDLOG_WARN("PTP: criteria not met within 120 s");
             return false;
         }
 
