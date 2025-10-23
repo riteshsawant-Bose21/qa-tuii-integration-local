@@ -3,6 +3,7 @@ import 'dart:ui';
 
 import 'package:fusion_launcher/features/wiring_design/dto/component_data.dart';
 import 'package:fusion_launcher/features/wiring_design/util/wiring_serialization_util.dart';
+import 'package:fusion_lib/models/project_entities/communication_ports.dart';
 
 import '../util/canvas_util.dart';
 import 'canvas_element.dart';
@@ -291,6 +292,11 @@ class CircuitComponent extends CanvasElement {
 
   void addOtherPort(CircuitPort port) {
     otherPorts.add(port);
+  }
+
+  void setParent(CircuitComponent parent) {
+    this.parent = parent;
+    parent.children.add(this);
   }
 
   CanvasElement? isHit(Offset position) {

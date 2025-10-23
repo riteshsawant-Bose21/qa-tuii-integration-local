@@ -47,98 +47,54 @@ class DeviceSchematicComponentData extends ComponentData {
     return DeviceSchematicComponentData(
       image: hardware.assetImagePath,
       label: hardware.name,
-      comPorts: <ComponentPort>[
-        ComponentPort(
-          image: 'assets/icons/wiring_ports/stereo.png',
-          data: 'stereo_1',
-          type: 'stereo',
-          label: "Stereo",
-          compatibleTypes: <String>['stereo'],
-          position: PortPosition.bottomLeft,
-          index: 0,
-        ),
-        ComponentPort(
-          image: 'assets/icons/wiring_ports/hdmi.png',
-          data: 'hdmi_1',
-          type: 'hdmi',
-          label: "HDMI",
-          compatibleTypes: <String>['hdmi'],
-          position: PortPosition.bottomLeft,
-          index: 1,
-        ),
-        ComponentPort(
-          image: 'assets/icons/wiring_ports/usb.png',
-          data: 'usb_1',
-          type: 'usb',
-          label: "USB",
-          compatibleTypes: <String>['usb'],
-          position: PortPosition.bottomLeft,
-          index: 2,
-        ),
-
-        // ComponentPort(
-        //   image: 'assets/icons/wiring_ports/ethernet.png',
-        //   data: 'ethernet_1',
-        //   type: 'ethernet',
-        //   label: "Ethernet 1",
-        //   compatibleTypes: <String>['ethernet'],
-        //   position: PortPosition.footerLeft,
-        // ),
-        // ComponentPort(
-        //   image: 'assets/icons/wiring_ports/ethernet.png',
-        //   data: 'ethernet_2',
-        //   type: 'ethernet',
-        //   label: "Ethernet 2",
-        //   compatibleTypes: <String>['ethernet'],
-        //   position: PortPosition.footerLeft,
-        // ),
-        ComponentPort(
-          image: 'assets/icons/wiring_ports/wifi.png',
-          data: 'wifi',
-          type: 'wifi',
-          label: "Wifi",
-          compatibleTypes: <String>['wifi'],
-          position: PortPosition.footerCenter,
-        ),
-        // ComponentPort(
-        //   image: 'assets/icons/wiring_ports/wifi.png',
-        //   data: 'wifi_!',
-        //   type: 'wifi',
-        //   label: "Wifi",
-        //   compatibleTypes: <String>['wifi'],
-        //   position: PortPosition.footerCenter,
-        // ),
-        // ComponentPort(
-        //   image: 'assets/icons/wiring_ports/bluetooth.png',
-        //   data: 'bluetooth',
-        //   type: 'bluetooth',
-        //   label: "Bluetooth",
-        //   compatibleTypes: <String>['bluetooth'],
-        //   position: PortPosition.footerRight,
-        // ),
-        // ComponentPort(
-        //   image: 'assets/icons/wiring_ports/bluetooth.png',
-        //   data: 'bluetooth_1',
-        //   type: 'bluetooth',
-        //   label: "Bluetooth",
-        //   compatibleTypes: <String>['bluetooth'],
-        //   position: PortPosition.footerRight,
-        // ),
-      ],
-      inputPorts: List<ComponentPort>.generate(
-        Random().nextInt(4) + 3,
-        (int index) => ComponentPort.input(
-          data: index.toString(),
-          label: (index + 1).toString(),
-        ),
-      ),
-      outputPorts: List<ComponentPort>.generate(
-        Random().nextInt(4) + 3,
-        (int index) => ComponentPort.output(
-          data: index.toString(),
-          label: (index + 1).toString(),
-        ),
-      ),
+      comPorts:
+          hardware.communicationPorts
+              .map(
+                (PortData e) => ComponentPort(
+                  data: e.id,
+                  label: e.name,
+                  type: e.type.name,
+                  image: switch (e.type) {
+                    PortType.ethernet =>
+                      'assets/icons/wiring_ports/ethernet.png',
+                    PortType.wifi => 'assets/icons/wiring_ports/wifi.png',
+                    PortType.ble => 'assets/icons/wiring_ports/bluetooth.png',
+                    PortType.hdmi => 'assets/icons/wiring_ports/hdmi.png',
+                    PortType.usb => 'assets/icons/wiring_ports/usb.png',
+                    PortType.audioJack =>
+                      'assets/icons/wiring_ports/audio_jack.png',
+                    _ => null,
+                  },
+                  position: e.position,
+                  compatibleTypes:
+                      e.compatibleTypes.map((PortType t) => t.name).toList(),
+                ),
+              )
+              .toList(),
+      inputPorts:
+          hardware.inputPortsData
+              .map(
+                (PortData e) => ComponentPort(
+                  data: e.id,
+                  label: e.name,
+                  type: e.type.name,
+                  compatibleTypes:
+                      e.compatibleTypes.map((PortType t) => t.name).toList(),
+                ),
+              )
+              .toList(),
+      outputPorts:
+          hardware.inputPortsData
+              .map(
+                (PortData e) => ComponentPort(
+                  data: e.id,
+                  label: e.name,
+                  type: e.type.name,
+                  compatibleTypes:
+                      e.compatibleTypes.map((PortType t) => t.name).toList(),
+                ),
+              )
+              .toList(),
 
       data: hardware,
     );
@@ -253,9 +209,20 @@ class SourceComponentData extends ComponentData {
       label: source.name,
       comPorts: <ComponentPort>[],
       inputPorts: <ComponentPort>[],
-      outputPorts: <ComponentPort>[
-        ComponentPort.output(data: "0", label: "0"),
-      ],
+      outputPorts:
+          source.outputPortsData
+              .map(
+                (PortData e) => ComponentPort(
+                  data: e.id,
+                  label: e.name,
+                  type: e.type.name,
+                  position: e.position,
+                  index: e.portNumber,
+                  compatibleTypes:
+                      e.compatibleTypes.map((PortType t) => t.name).toList(),
+                ),
+              )
+              .toList(),
       source: source,
     );
   }
@@ -303,7 +270,95 @@ class ZoneComponentData extends ComponentData {
   @override
   Offset get portOffset => Offset.zero;
   @override
+  Size get size => const Size(200, 30);
+  @override
+  double get portRadius => 0;
+  @override
+  String get type => 'zone';
+}
+
+class SubZoneComponentData extends ComponentData {
+  final SubZone zone;
+  SubZoneComponentData({
+    super.image,
+    required super.label,
+    required super.comPorts,
+    required super.inputPorts,
+    required super.outputPorts,
+    required this.zone,
+  });
+  static SubZoneComponentData from(SubZone zone) {
+    return SubZoneComponentData(
+      // image: source.assetImagePath,
+      label: zone.name,
+      comPorts: <ComponentPort>[],
+      inputPorts: <ComponentPort>[],
+      outputPorts: <ComponentPort>[
+        // ComponentPort(data: 0, label: "0"),
+      ],
+      zone: zone,
+    );
+  }
+
+  @override
+  String get id => zone.id;
+
+  @override
+  Offset get portOffset => Offset.zero;
+  @override
   Size get size => const Size(160, 30);
+  @override
+  double get portRadius => 0;
+  @override
+  String get type => 'zone';
+}
+
+class CircuitComponentData extends ComponentData {
+  final List<ComponentData> speakers;
+  final CircuitModel circuit;
+  CircuitComponentData({
+    super.image,
+    required super.label,
+    required super.comPorts,
+    required super.inputPorts,
+    required super.outputPorts,
+    required this.circuit,
+    required this.speakers,
+  });
+  static CircuitComponentData from(
+    CircuitModel zone,
+    List<ComponentData> speakers,
+  ) {
+    return CircuitComponentData(
+      // image: source.assetImagePath,
+      label: zone.name,
+      comPorts: <ComponentPort>[],
+      inputPorts: <ComponentPort>[
+        ComponentPort(
+          data: zone.inputPort.id,
+          type: zone.inputPort.type.name,
+          compatibleTypes:
+              zone.inputPort.compatibleTypes
+                  .map((PortType t) => t.name)
+                  .toList(),
+        ),
+      ],
+      outputPorts: <ComponentPort>[
+        // ComponentPort(data: 0, label: "0"),
+      ],
+      circuit: zone,
+      speakers: speakers,
+    );
+  }
+
+  @override
+  String get id => circuit.id;
+
+  @override
+  Offset get portOffset => Offset(0, size.height / 2 - portRadius);
+  @override
+  Size get size => const Size(100, 100);
+
   @override
   double get portRadius => 0;
   @override
@@ -342,12 +397,4 @@ class SpeakerComponentData extends ComponentData {
 
   @override
   String get type => 'speaker';
-}
-
-enum PortPosition {
-  bottomLeft,
-  bottomRight,
-  footerLeft,
-  footerRight,
-  footerCenter,
 }
