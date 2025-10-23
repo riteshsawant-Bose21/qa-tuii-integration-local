@@ -443,13 +443,21 @@ ZoneGroup* CreateZoneGroup(Zone& newZone, FusionProxy &fusion_proxy,
         if (controllerCfg.zones.size() > 0)
         {
             ControlPal_MsgQueue<ControllerCmdIntfc> *ocaQue =
-            static_cast<ControlPal_MsgQueue<ControllerCmdIntfc>*>(commandQueue);
+                static_cast<ControlPal_MsgQueue<ControllerCmdIntfc>*>(commandQueue);
             ControllerCmdIntfc cfgCmd;
 
             // Configuration start message to UI
             cfgCmd.cmd          = CTRL_CMD_ZONE_CFG_START;
             cfgCmd.ono          = 0;  // Don't care for message
-            strcpy(cfgCmd.val.char_val, controllerCfg.name.c_str()); // Controller Name
+            {
+                std::string temp;
+                temp.assign(controllerCfg.name);
+                if (temp.size() > (CMD_INTFC_MAX_STRING_LENGTH - 1))
+                {
+                    temp.assign(temp,0,(CMD_INTFC_MAX_STRING_LENGTH - 1));
+                }
+                strcpy(cfgCmd.val.char_val, temp.c_str()); // Controller Name
+            }
             ocaQue->push(cfgCmd);
 
             for (auto newZone : controllerCfg.zones)
