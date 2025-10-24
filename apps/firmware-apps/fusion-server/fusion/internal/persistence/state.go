@@ -26,7 +26,7 @@ const (
 
 // StateManagerInterface defines the interface for state management
 type StateManagerInterface interface {
-	GetFullState() VersionedState
+	GetFullStateDeepCopy() VersionedState
 }
 
 // VersionedState represents a version of instance state
