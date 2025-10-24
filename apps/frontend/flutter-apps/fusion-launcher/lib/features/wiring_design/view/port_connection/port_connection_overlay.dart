@@ -1,16 +1,62 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/theme/app_theme.dart';
-import 'package:fusion_launcher/features/wiring_design/model/circuit_port.dart';
+import 'package:fusion_launcher/features/wiring_design/controller/component_db.dart';
+import 'package:fusion_launcher/features/wiring_design/controller/helpers/connection_methods_extension.dart';
+import 'package:fusion_launcher/features/wiring_design/model/model.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
+import '../../controller/circuit_controller.dart';
+
 class PortConnectionOverlay extends StatefulWidget {
-  const PortConnectionOverlay({super.key, required this.port});
+  const PortConnectionOverlay({
+    super.key,
+    required this.port,
+    required this.componentDB,
+    required this.controller,
+  });
   final CircuitPort port;
+  final ComponentDb componentDB;
+  final CircuitController controller;
   @override
   State<PortConnectionOverlay> createState() => _PortConnectionOverlayState();
 }
 
 class _PortConnectionOverlayState extends State<PortConnectionOverlay> {
+  final Map<CircuitComponent, List<CircuitPort>> possibleConnections =
+      <CircuitComponent, List<CircuitPort>>{};
+  @override
+  void initState() {
+    super.initState();
+    _initializePossibleConnections();
+  }
+
+  @override
+  void didUpdateWidget(covariant PortConnectionOverlay oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _initializePossibleConnections();
+  }
+
+  void _initializePossibleConnections() {
+    possibleConnections.clear();
+    final List<CircuitComponent> allComponents =
+        widget.componentDB.getAllComponents();
+    for (final CircuitComponent component in allComponents) {
+      if (component.id == widget.port.parent.id) {
+        continue;
+      }
+      final List<CircuitPort> compatiblePorts = <CircuitPort>[];
+      for (final CircuitPort port in component.ports) {
+        if (widget.port.canConnect(port) &&
+            !widget.controller.hasConnection(port)) {
+          compatiblePorts.add(port);
+        }
+      }
+      if (compatiblePorts.isNotEmpty) {
+        possibleConnections[component] = compatiblePorts;
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -28,7 +74,7 @@ class _PortConnectionOverlayState extends State<PortConnectionOverlay> {
           child: Padding(
             padding: const EdgeInsets.all(8.0),
             child: Text(
-              "Connect Port ${widget.port.data.label} to ",
+              "Connect Port ${widget.port.data.label ?? ""} to ",
               style: context.textTheme.labelLarge?.copyWith(
                 color: context.colorScheme.portOverlayTitle,
               ),
@@ -39,7 +85,119 @@ class _PortConnectionOverlayState extends State<PortConnectionOverlay> {
         const SizedBox(
           height: 20,
         ),
+        for (final CircuitComponent component
+            in possibleConnections.keys) ...<Widget>[
+          FusionExpansionPanel(
+            titleBuilder:
+                (BuildContext context, bool isExpanded) => Row(
+                  children: <Widget>[
+                    Icon(
+                      isExpanded ? Icons.arrow_drop_down : Icons.arrow_drop_up,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        component.data.label,
+                        style: context.textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+            content: Column(
+              children: <Widget>[
+                for (final CircuitPort port
+                    in possibleConnections[component]!) ...<Widget>[
+                  InkWell(
+                    onTap: () {
+                      widget.controller.addWire(
+                        widget.port,
+                        port,
+                      );
+                    },
+                    child: Row(
+                      spacing: 5,
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: <Widget>[
+                        Container(
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: context.colorScheme.inactivePortBG,
+                              width: 2,
+                            ),
+                            shape: BoxShape.circle,
+                          ),
+                          padding: const EdgeInsets.all(10),
+                          child: Text(
+                            "${port.data.label}",
+                            style: context.textTheme.bodySmall,
+                          ),
+                        ),
+
+                        Text(
+                          port.data.description ?? port.data.type.description,
+                          style: context.textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+        const SizedBox(
+          height: 20,
+        ),
       ],
+    );
+  }
+}
+
+class FusionExpansionPanel extends StatefulWidget {
+  const FusionExpansionPanel({
+    super.key,
+    required this.content,
+    required this.titleBuilder,
+    this.initiallyExpanded = true,
+  });
+  final Widget Function(BuildContext context, bool isExpanded) titleBuilder;
+  final Widget content;
+  final bool initiallyExpanded;
+  @override
+  State<FusionExpansionPanel> createState() => _FusionExpansionPanelState();
+}
+
+class _FusionExpansionPanelState extends State<FusionExpansionPanel> {
+  bool isExpanded = false;
+  void toggleExpanded() {
+    setState(() {
+      isExpanded = !isExpanded;
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    isExpanded = widget.initiallyExpanded;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeInOut,
+      alignment: Alignment.topCenter,
+      child: Column(
+        children: <Widget>[
+          GestureDetector(
+            onTap: toggleExpanded,
+            child: widget.titleBuilder(context, isExpanded),
+          ),
+          if (isExpanded) widget.content,
+        ],
+      ),
     );
   }
 }

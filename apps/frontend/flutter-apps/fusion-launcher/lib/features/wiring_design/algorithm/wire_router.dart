@@ -220,10 +220,10 @@ class WireRouter {
           basePath[index - 1],
           basePath[index],
         );
-        final LineDirection currentLD = getLineDirection(
-          basePath[index],
-          basePath[index + 1],
-        );
+        // final LineDirection currentLD = getLineDirection(
+        //   basePath[index],
+        //   basePath[index + 1],
+        // );
         isShifingReverse = (prevLD == LineDirection.downToUp);
         // print("Prev Direction: $prevLD. CurrentLD: $currentLD");
       }

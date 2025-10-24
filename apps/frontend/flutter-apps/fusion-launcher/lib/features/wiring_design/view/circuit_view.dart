@@ -3,6 +3,7 @@ import 'package:fusion_launcher/features/wiring_design/controller/circuit_contro
 import 'package:fusion_launcher/features/wiring_design/controller/state/wiring_state.dart';
 import 'package:fusion_launcher/features/wiring_design/model/circuit_port.dart';
 import 'package:fusion_launcher/features/wiring_design/view/painters/circuit_painter.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:provider/provider.dart';
 
@@ -51,42 +52,52 @@ class CircuitView extends StatelessWidget {
                 width: width,
                 child: PortConnectionOverlay(
                   port: port,
+                  componentDB: controller.componentDB,
+                  controller: controller,
                 ),
               );
             }
           }
-          return CanvasControlWrapper(
-            circuitPainter: circuitPainter,
-            controller: controller,
-            child: Container(
-              color: context.colorScheme.canvasBG,
-              child: Stack(
-                children: <Widget>[
-                  CustomPaint(
-                    size: Size.infinite,
-                    painter: circuitPainter,
-                  ),
-                  if (overlay != null) overlay,
+          return FusionKeyboardWrapper(
+            onUndo: () {
+              controller.undo();
+            },
+            onRedo: () {
+              controller.redo();
+            },
+            child: CanvasControlWrapper(
+              circuitPainter: circuitPainter,
+              controller: controller,
+              child: Container(
+                color: context.colorScheme.canvasBG,
+                child: Stack(
+                  children: <Widget>[
+                    CustomPaint(
+                      size: Size.infinite,
+                      painter: circuitPainter,
+                    ),
+                    if (overlay != null) overlay,
 
-                  Row(
-                    children: <Widget>[
-                      if (controller.stack.canUndo)
-                        IconButton(
-                          onPressed: () {
-                            controller.undo();
-                          },
-                          icon: const Icon(Icons.undo),
-                        ),
-                      if (controller.stack.canRedo)
-                        IconButton(
-                          onPressed: () {
-                            controller.redo();
-                          },
-                          icon: const Icon(Icons.redo),
-                        ),
-                    ],
-                  ),
-                ],
+                    Row(
+                      children: <Widget>[
+                        if (controller.stack.canUndo)
+                          IconButton(
+                            onPressed: () {
+                              controller.undo();
+                            },
+                            icon: const Icon(Icons.undo),
+                          ),
+                        if (controller.stack.canRedo)
+                          IconButton(
+                            onPressed: () {
+                              controller.redo();
+                            },
+                            icon: const Icon(Icons.redo),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           );

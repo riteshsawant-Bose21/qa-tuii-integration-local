@@ -13,4 +13,15 @@ class ComponentDataFactory {
   static ZoneComponentData fromZone(Zone zone) {
     return ZoneComponentData.from(zone);
   }
+
+  static SubZoneComponentData fromSubZone(SubZone zone) {
+    return SubZoneComponentData.from(zone);
+  }
+
+  static CircuitComponentData fromCircuit(
+    CircuitModel zone,
+    List<HardwareComponent> speakers,
+  ) {
+    return CircuitComponentData.from(zone, speakers.map(fromHardware).toList());
+  }
 }

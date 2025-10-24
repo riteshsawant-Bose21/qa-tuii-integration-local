@@ -112,6 +112,13 @@ extension HardwareManager on ProjectManager {
     return projectService!.getZoneForHardware(hardwareId);
   }
 
+  SubZone? getSubZoneForHardware(String hardwareId) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getSubZoneForHardware(hardwareId);
+  }
+
   CircuitModel? getCircuitForHardware(String hardwareId) {
     if (projectService == null) {
       throw Exception('No project is currently open');

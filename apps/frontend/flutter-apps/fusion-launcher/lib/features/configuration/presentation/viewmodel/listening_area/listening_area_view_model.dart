@@ -110,9 +110,18 @@ extension ListeningAreaViewModel on ProjectViewModel {
     }
   }
 
-  List<ListeningArea> getAvailableListeningAreasForZoneOrSubZone({required String id}) {
+  List<ListeningArea> getAvailableListeningAreasForZone({String? zoneId}) {
     try {
-      return projectManager.getAvailableListeningAreasForZoneOrSubZone(id: id);
+      return projectManager.getAvailableListeningAreasForZone(id: zoneId);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get available listening areas for zone: $e");
+      return <ListeningArea>[];
+    }
+  }
+
+  List<ListeningArea> getAvailableListeningAreasForSubZone({required String parentZoneId, String? subZoneId}) {
+    try {
+      return projectManager.getAvailableListeningAreasForSubZone(subZoneId: subZoneId, parentZoneId: parentZoneId);
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to get available listening areas for zone: $e");
       return <ListeningArea>[];

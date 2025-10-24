@@ -6,11 +6,15 @@ import 'package:fusion_launcher/features/wiring_design/model/model.dart';
 import 'package:fusion_launcher/features/wiring_design/util/canvas_util.dart';
 import 'package:fusion_launcher/features/wiring_design/view/painters/base_painter.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/models/project_entities/communication_ports.dart'
+    show PortPosition;
 
 part './component/base_component_painter.dart';
+part './component/circuit_component_painter.dart';
 part './component/device_schematic_component_painter.dart';
 part './component/source_component_painter.dart';
 part './component/speaker_component_painter.dart';
+part './component/subzone_component_painter.dart';
 part './component/zone_component_painter.dart';
 
 class ComponentPainter extends BasePainter {
@@ -37,6 +41,14 @@ class ComponentPainter extends BasePainter {
         painter: this,
       ),
       ZoneComponentData() => ZoneComponentPainter(
+        component: component,
+        painter: this,
+      ),
+      SubZoneComponentData() => SubZoneComponentPainter(
+        component: component,
+        painter: this,
+      ),
+      CircuitComponentData() => CircuitComponentPainter(
         component: component,
         painter: this,
       ),

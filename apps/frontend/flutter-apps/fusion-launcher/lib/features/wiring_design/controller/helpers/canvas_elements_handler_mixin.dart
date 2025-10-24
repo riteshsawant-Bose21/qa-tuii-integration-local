@@ -44,38 +44,18 @@ mixin _CanvasElementsHandlerMixin on CanvasHandlerMixin {
     } else {
       onPanUpdate(delta);
     }
-    // if (selectedElement == null) {
-    //   onPanUpdate(delta);
-
-    //   return;
-    // }
-    // elementDragPosition =
-    //     (elementDragPosition ?? selectedElement?.position ?? Offset.zero) +
-    //     delta;
-    // if (selectedElement is CircuitComponent) {
-    //   final CircuitComponent component = selectedElement as CircuitComponent;
-    //   // component.position += delta;
-    //   component.changePosition(delta);
-    // }
-    // if (selectedElement is CircuitPort) {
-    // intermediateJoints = self.pathFinder.findPath(
-    //   (selectedElement as CircuitPort).absolutePositionWithOffset,
-    //   elementDragPosition!,
-    // );
-    // }
-    // notifyListeners();
   }
 
   void onMoveEnd(CanvasElement? element, Offset position) {
     if (element != null) {
       if (element is CircuitPort && state is ConnectionProgressWiringState) {
         self.addWire((state as ConnectionProgressWiringState).port, element);
-      } else {
-        self.setState(state.idle());
+        saveState();
+        return;
       }
-    } else {
-      self.setState(state.idle());
     }
+    self.setState(state.idle());
+
     saveState();
   }
 }

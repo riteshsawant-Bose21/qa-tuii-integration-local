@@ -149,5 +149,88 @@ class DeviceSchematicComponentPainter extends ComponentDataPainter {
         ),
       );
     }
+    for (final CircuitPort port in <CircuitPort>[
+      ...component.otherPorts,
+    ]) {
+      final Path portPath = Path();
+
+      /// Port
+      // portPath.add(
+      // Rect.fromCircle(
+      //   center: port.absolutePosition,
+      //   radius: WiringViewConstants.portRadius,
+      // ),
+      // );
+      // canvas.drawRect(
+      //   Rect.fromLTRB(
+      //     port.absolutePosition.dx - WiringViewConstants.comPortWidth / 2,
+      //     port.absolutePosition.dy - WiringViewConstants.portRadius,
+      //     port.absolutePosition.dx + WiringViewConstants.comPortWidth / 2,
+      //     port.absolutePosition.dy + WiringViewConstants.portRadius,
+      //   ),
+      //   freePortPaint,
+      // );
+      painter.drawImage(
+        canvas: canvas,
+        path: port.data.image!,
+        rect: Rect.fromCircle(
+          center: port.absolutePosition,
+          radius: WiringViewConstants.portRadius,
+        ),
+      );
+      final bool hasConnection = painter.hasConnection(port);
+      canvas.drawPath(
+        portPath,
+        hasConnection ? connectedPortPaint : freePortPaint,
+      );
+
+      /// Port Label
+      final TextPainter tp = TextPainter(
+        text: TextSpan(
+          text: port.data.label ?? port.data.type.name,
+          style: TextStyle(
+            color:
+                hasConnection
+                    ? painter.colorScheme.activePortFG
+                    : painter.colorScheme.inactivePortFG,
+            fontSize: WiringViewConstants.portRadius * 0.75,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout(
+        maxWidth: WiringViewConstants.comPortWidth,
+      );
+
+      final Offset labelPosition = switch (port.data.position) {
+        PortPosition.bottomRight => Offset(
+          port.absolutePosition.dx + WiringViewConstants.portRadius + 10,
+          port.absolutePosition.dy +
+              WiringViewConstants.portRadius -
+              tp.height / 2,
+        ),
+        PortPosition.footerLeft ||
+        PortPosition.footerCenter ||
+        PortPosition.footerRight => Offset(
+          port.absolutePosition.dx - tp.width / 2,
+          port.absolutePosition.dy -
+              WiringViewConstants.portRadius -
+              tp.height -
+              5,
+        ),
+        _ => Offset(
+          WiringViewConstants.portRadius * 2 +
+              10 +
+              port.absolutePosition.dx -
+              tp.width / 2,
+          port.absolutePosition.dy - tp.height / 2,
+        ),
+      };
+
+      // Align text to center
+      tp.paint(
+        canvas,
+        labelPosition,
+      );
+    }
   }
 }

@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -16,12 +14,20 @@ extension HardwareViewModel on ProjectViewModel {
     }
   }
 
-  void updateHardware({required HardwareComponent hardware, bool autoSave = true}) {
+  void updateHardware({
+    required HardwareComponent hardware,
+    bool autoSave = true,
+  }) {
+    print(
+      "Updating hardware: ${hardware.id}, pos: ${hardware.pos}, location: ${hardware.locationEntity.listeningAreaId}",
+    );
     try {
       if (autoSave) {
         recordSnapshot();
       }
-      final HardwareComponent oldHw = projectManager.getHardwareById(hardware.id);
+      final HardwareComponent oldHw = projectManager.getHardwareById(
+        hardware.id,
+      );
       if (oldHw != hardware) {
         projectManager.updateHardware(hardware);
         if (autoSave) {
@@ -29,15 +35,26 @@ extension HardwareViewModel on ProjectViewModel {
         }
         updateProject();
       } else {
-        FusionLogger.log(tag: LogTag.project, message: "No changes detected for hardware: ${hardware.id}, skipping update.");
+        FusionLogger.log(
+          tag: LogTag.project,
+          message:
+              "No changes detected for hardware: ${hardware.id}, skipping update.",
+        );
       }
     } catch (e) {
-      FusionLogger.log(tag: LogTag.project, message: "Failed to update hardware: $e");
+      FusionLogger.log(
+        tag: LogTag.project,
+        message: "Failed to update hardware: $e",
+      );
       throwError("Failed to update hardware: $e");
     }
   }
 
-  void addHardware({required HardwareComponent hardware, int count = 1, bool autoSave = true}) {
+  void addHardware({
+    required HardwareComponent hardware,
+    int count = 1,
+    bool autoSave = true,
+  }) {
     try {
       if (autoSave) {
         recordSnapshot();
@@ -53,7 +70,10 @@ extension HardwareViewModel on ProjectViewModel {
       }
       updateProject();
     } catch (e) {
-      FusionLogger.log(tag: LogTag.project, message: "Failed to add hardware: $e");
+      FusionLogger.log(
+        tag: LogTag.project,
+        message: "Failed to add hardware: $e",
+      );
     }
   }
 
@@ -68,7 +88,10 @@ extension HardwareViewModel on ProjectViewModel {
       }
       updateProject();
     } catch (e) {
-      FusionLogger.log(tag: LogTag.project, message: "Failed to remove hardware: $e");
+      FusionLogger.log(
+        tag: LogTag.project,
+        message: "Failed to remove hardware: $e",
+      );
     }
   }
 
@@ -76,16 +99,24 @@ extension HardwareViewModel on ProjectViewModel {
     try {
       return projectManager.getAllHardwareComponents();
     } catch (e) {
-      FusionLogger.log(tag: LogTag.project, message: "Failed to get all hardware: $e");
+      FusionLogger.log(
+        tag: LogTag.project,
+        message: "Failed to get all hardware: $e",
+      );
       return <HardwareComponent>[];
     }
   }
 
-  List<HardwareComponent> getHardwareForListeningArea({required String listeningAreaId}) {
+  List<HardwareComponent> getHardwareForListeningArea({
+    required String listeningAreaId,
+  }) {
     try {
       return projectManager.getHardwareForListeningArea(listeningAreaId);
     } catch (e) {
-      FusionLogger.log(tag: LogTag.project, message: "Failed to get hardware for listening area: $e");
+      FusionLogger.log(
+        tag: LogTag.project,
+        message: "Failed to get hardware for listening area: $e",
+      );
       return <HardwareComponent>[];
     }
   }
@@ -94,24 +125,40 @@ extension HardwareViewModel on ProjectViewModel {
     try {
       return projectManager.getHardwareForFloor(floorId);
     } catch (e) {
-      FusionLogger.log(tag: LogTag.project, message: "Failed to get hardware for floor: $e");
+      FusionLogger.log(
+        tag: LogTag.project,
+        message: "Failed to get hardware for floor: $e",
+      );
       return <HardwareComponent>[];
     }
   }
 
-  ResponseCallback<bool> moveHardware({required String hardwareId, String? listeningAreaId, String? floorId, bool autoSave = true}) {
+  ResponseCallback<bool> moveHardware({
+    required String hardwareId,
+    String? listeningAreaId,
+    String? floorId,
+    bool autoSave = true,
+  }) {
     try {
       if (autoSave) {
         recordSnapshot();
       }
-      final ResponseCallback<bool> responseCallback = projectManager.moveHardware(hardwareId, listeningAreaId: listeningAreaId, floorId: floorId);
+      final ResponseCallback<bool> responseCallback = projectManager
+          .moveHardware(
+            hardwareId,
+            listeningAreaId: listeningAreaId,
+            floorId: floorId,
+          );
       if (autoSave) {
         saveProject();
       }
       updateProject();
       return responseCallback;
     } catch (e) {
-      FusionLogger.log(tag: LogTag.project, message: "Failed to move hardware: $e");
+      FusionLogger.log(
+        tag: LogTag.project,
+        message: "Failed to move hardware: $e",
+      );
       return ResponseCallback<bool>.failure("Failed to move hardware: $e");
     }
   }
@@ -120,7 +167,10 @@ extension HardwareViewModel on ProjectViewModel {
     try {
       return projectManager.getHardwareInZone(zoneId);
     } catch (e) {
-      FusionLogger.log(tag: LogTag.project, message: "Failed to get speakers for zone: $e");
+      FusionLogger.log(
+        tag: LogTag.project,
+        message: "Failed to get speakers for zone: $e",
+      );
       return <HardwareComponent>[];
     }
   }
@@ -130,7 +180,23 @@ extension HardwareViewModel on ProjectViewModel {
     try {
       return projectManager.getZoneForHardware(hardwareId);
     } catch (e) {
-      FusionLogger.log(tag: LogTag.project, message: "Failed to get zone for hardware: $e");
+      FusionLogger.log(
+        tag: LogTag.project,
+        message: "Failed to get zone for hardware: $e",
+      );
+      return null;
+    }
+  }
+
+  // get zone for hardware
+  SubZone? getSubZoneForHardware({required String hardwareId}) {
+    try {
+      return projectManager.getSubZoneForHardware(hardwareId);
+    } catch (e) {
+      FusionLogger.log(
+        tag: LogTag.project,
+        message: "Failed to get subzone for hardware: $e",
+      );
       return null;
     }
   }
@@ -140,13 +206,20 @@ extension HardwareViewModel on ProjectViewModel {
     try {
       return projectManager.getCircuitForHardware(hardwareId);
     } catch (e) {
-      FusionLogger.log(tag: LogTag.project, message: "Failed to get circuit for hardware: $e");
+      FusionLogger.log(
+        tag: LogTag.project,
+        message: "Failed to get circuit for hardware: $e",
+      );
       return null;
     }
   }
 
   //add hardware and create circuit
-  void addHardwareAndCreateCircuit({required HardwareComponent hw, required String circuitId, bool autoSave = true}) {
+  void addHardwareAndCreateCircuit({
+    required HardwareComponent hw,
+    required String circuitId,
+    bool autoSave = true,
+  }) {
     try {
       if (autoSave) {
         recordSnapshot();
@@ -157,12 +230,19 @@ extension HardwareViewModel on ProjectViewModel {
       }
       updateProject();
     } catch (e) {
-      FusionLogger.log(tag: LogTag.project, message: "Failed to add hardware and create circuit: $e");
+      FusionLogger.log(
+        tag: LogTag.project,
+        message: "Failed to add hardware and create circuit: $e",
+      );
     }
   }
 
   // Update hardware location
-  void updateHardwareLocation({required String hardwareId, required LocationModel newLocation, bool autoSave = true}) {
+  void updateHardwareLocation({
+    required String hardwareId,
+    required LocationModel newLocation,
+    bool autoSave = true,
+  }) {
     try {
       if (autoSave) {
         recordSnapshot();
@@ -173,28 +253,45 @@ extension HardwareViewModel on ProjectViewModel {
       }
       updateProject();
     } catch (e) {
-      FusionLogger.log(tag: LogTag.project, message: "Failed to update hardware location: $e");
+      FusionLogger.log(
+        tag: LogTag.project,
+        message: "Failed to update hardware location: $e",
+      );
       throwError("Failed to update hardware location: $e");
     }
   }
 
-  void reOrderHardware({required String hardwareIdToMove, required String hardwareAtNewIndex, bool autoSave = true}) {
+  void reOrderHardware({
+    required String hardwareIdToMove,
+    required String hardwareAtNewIndex,
+    bool autoSave = true,
+  }) {
     try {
       if (autoSave) {
         recordSnapshot();
       }
-      projectManager.reOrderHardware(hardwareIdToMove: hardwareIdToMove, hardwareAtNewIndex: hardwareAtNewIndex);
+      projectManager.reOrderHardware(
+        hardwareIdToMove: hardwareIdToMove,
+        hardwareAtNewIndex: hardwareAtNewIndex,
+      );
       if (autoSave) {
         saveProject();
       }
       updateProject();
     } catch (e) {
-      FusionLogger.log(tag: LogTag.project, message: "Failed to reorder hardware: $e");
+      FusionLogger.log(
+        tag: LogTag.project,
+        message: "Failed to reorder hardware: $e",
+      );
       throwError("Failed to reorder hardware: $e");
     }
   }
 
-  void addSelectedProduct({required Offset position, String? listeningAreaId, bool autoSave = true}) {
+  void addSelectedProduct({
+    required Offset position,
+    String? listeningAreaId,
+    bool autoSave = true,
+  }) {
     if (selectedProductToAdd == null) return;
     try {
       if (autoSave) {
@@ -213,7 +310,10 @@ extension HardwareViewModel on ProjectViewModel {
       // Clear selected product after adding
       clearSelectedProduct();
     } catch (e) {
-      FusionLogger.log(tag: LogTag.project, message: "Failed to add selected product as hardware: $e");
+      FusionLogger.log(
+        tag: LogTag.project,
+        message: "Failed to add selected product as hardware: $e",
+      );
       clearSelectedProduct();
     }
   }
@@ -244,6 +344,7 @@ extension HardwareViewModel on ProjectViewModel {
               portNumber: 1,
               compatibleTypes: <PortType>[PortType.amplifierOutput],
               type: PortType.analogInput,
+              description: PortType.analogInput.description,
             ),
           ],
           outputPortsData: <PortData>[],
@@ -264,8 +365,12 @@ extension HardwareViewModel on ProjectViewModel {
               name: "Out",
               position: PortPosition.bottomRight,
               portNumber: 1,
-              compatibleTypes: <PortType>[PortType.dspAnalogInput],
+              compatibleTypes: <PortType>[
+                PortType.dspAnalogInput,
+                PortType.endpointInput,
+              ],
               type: PortType.analogOutput,
+              description: PortType.analogOutput.description,
             ),
           ],
         );
@@ -281,13 +386,26 @@ extension HardwareViewModel on ProjectViewModel {
           portData: HardwarePortData(
             inputPorts: 5,
             outputPorts: 5,
-            inputPortType: PortType.analogInput,
-            outputPortType: PortType.analogOutput,
-            compatibleInputTypes: <PortType>[PortType.analogInput, PortType.digitalInput],
-            compatibleOutputTypes: <PortType>[PortType.analogOutput, PortType.digitalOutput],
+            inputPortType: PortType.amplifierInput,
+            outputPortType: PortType.amplifierOutput,
+            compatibleInputTypes: <PortType>[
+              PortType.dspAnalogOutput,
+            ],
+            compatibleOutputTypes: <PortType>[
+              PortType.circuitInput,
+            ],
             portPosition: PortPosition.topLeft,
           ),
-          communicationPorts: <PortData>[],
+          communicationPorts: <PortData>[
+            PortData(
+              name: 'ethernet',
+              position: PortPosition.footerRight,
+              portNumber: 3,
+              type: PortType.networkSwitchOut,
+              description: PortType.ethernet.description,
+              compatibleTypes: <PortType>[PortType.networkSwitchIn],
+            ),
+          ],
           powerPerChannel: 100.0,
           color: Colors.blue,
           channels: 5,
@@ -302,35 +420,49 @@ extension HardwareViewModel on ProjectViewModel {
           price: product.price,
           hardwareName: product.name,
           inputPortsData: <PortData>[
-            PortData(
-              name: "In",
-              position: PortPosition.bottomRight,
-              portNumber: 1,
-              compatibleTypes: <PortType>[PortType.analogInput, PortType.ble],
-              type: PortType.analogInput,
-            ),
-            PortData(
-              name: "In",
-              position: PortPosition.bottomRight,
-              portNumber: 1,
-              compatibleTypes: <PortType>[PortType.analogInput, PortType.ble],
-              type: PortType.analogInput,
-            ),
+            // PortData(
+            //   name: "In",
+            //   position: PortPosition.bottomRight,
+            //   portNumber: 1,
+            //   compatibleTypes: <PortType>[PortType.analogInput, PortType.ble],
+            //   type: PortType.analogInput,
+            //   description: PortType.analogInput.description,
+            // ),
+            // PortData(
+            //   name: "In",
+            //   position: PortPosition.bottomRight,
+            //   portNumber: 1,
+            //   compatibleTypes: <PortType>[PortType.analogInput, PortType.ble],
+            //   type: PortType.analogInput,
+            //   description: PortType.analogInput.description,
+            // ),
           ],
           outputPortsData: <PortData>[
+            // PortData(
+            //   name: "Out",
+            //   position: PortPosition.bottomRight,
+            //   portNumber: 1,
+            //   compatibleTypes: <PortType>[PortType.dspAnalogInput],
+            //   type: PortType.analogOutput,
+            //   description: PortType.analogOutput.description,
+            // ),
+            // PortData(
+            //   name: "Out",
+            //   position: PortPosition.bottomRight,
+            //   portNumber: 1,
+            //   compatibleTypes: <PortType>[PortType.dspAnalogInput],
+            //   type: PortType.analogOutput,
+            //   description: PortType.analogOutput.description,
+            // ),
+          ],
+          communicationPorts: <PortData>[
             PortData(
-              name: "Out",
-              position: PortPosition.bottomRight,
-              portNumber: 1,
-              compatibleTypes: <PortType>[PortType.dspAnalogInput],
-              type: PortType.analogOutput,
-            ),
-            PortData(
-              name: "Out",
-              position: PortPosition.bottomRight,
-              portNumber: 1,
-              compatibleTypes: <PortType>[PortType.dspAnalogInput],
-              type: PortType.analogOutput,
+              name: 'ethernet',
+              position: PortPosition.footerCenter,
+              portNumber: 3,
+              type: PortType.networkSwitchOut,
+              description: PortType.networkSwitchOut.description,
+              compatibleTypes: <PortType>[PortType.networkSwitchIn],
             ),
           ],
         );
@@ -346,16 +478,41 @@ extension HardwareViewModel on ProjectViewModel {
           portData: HardwarePortData(
             inputPorts: 5,
             outputPorts: 5,
-            inputPortType: PortType.analogInput,
-            outputPortType: PortType.analogOutput,
-            compatibleInputTypes: <PortType>[PortType.analogInput, PortType.digitalInput],
-            compatibleOutputTypes: <PortType>[PortType.analogOutput, PortType.digitalOutput],
+            inputPortType: PortType.dspAnalogInput,
+            outputPortType: PortType.dspAnalogOutput,
+            compatibleInputTypes: <PortType>[
+              PortType.analogOutput,
+            ],
+            compatibleOutputTypes: <PortType>[
+              PortType.amplifierInput,
+            ],
             portPosition: PortPosition.topLeft,
           ),
           communicationPorts: <PortData>[
-            PortData(name: 'Wifi', position: PortPosition.footerRight, portNumber: 1, type: PortType.wifi, compatibleTypes: <PortType>[PortType.wifi]),
-            PortData(name: 'USB', position: PortPosition.footerRight, portNumber: 2, type: PortType.usb, compatibleTypes: <PortType>[PortType.usb]),
-            PortData(name: 'ble', position: PortPosition.footerRight, portNumber: 3, type: PortType.ble, compatibleTypes: <PortType>[PortType.ble]),
+            PortData(
+              name: 'Wifi',
+              position: PortPosition.footerRight,
+              portNumber: 1,
+              type: PortType.wifi,
+              description: PortType.wifi.description,
+              compatibleTypes: <PortType>[PortType.wifi],
+            ),
+            PortData(
+              name: 'USB',
+              position: PortPosition.footerRight,
+              portNumber: 2,
+              type: PortType.usb,
+              description: PortType.usb.description,
+              compatibleTypes: <PortType>[PortType.usb],
+            ),
+            PortData(
+              name: 'ble',
+              position: PortPosition.footerRight,
+              portNumber: 3,
+              type: PortType.ble,
+              description: PortType.ble.description,
+              compatibleTypes: <PortType>[PortType.ble],
+            ),
           ],
           location: '',
           status: FusionDeviceSetupStatus.notStarted,
@@ -371,6 +528,26 @@ extension HardwareViewModel on ProjectViewModel {
           price: product.price,
           hardwareName: product.name,
           ipAddress: '',
+          inputPortsData: <PortData>[
+            PortData(
+              name: "In",
+              position: PortPosition.bottomRight,
+              portNumber: 1,
+              compatibleTypes: <PortType>[PortType.analogOutput],
+              type: PortType.endpointInput,
+              description: PortType.endpointInput.description,
+            ),
+          ],
+          communicationPorts: <PortData>[
+            PortData(
+              name: 'ethernet',
+              position: PortPosition.footerRight,
+              portNumber: 3,
+              type: PortType.networkSwitchOut,
+              description: PortType.ethernet.description,
+              compatibleTypes: <PortType>[PortType.networkSwitchIn],
+            ),
+          ],
         );
       case ProductType.racks:
         return HardwareRack(

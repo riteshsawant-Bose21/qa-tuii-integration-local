@@ -29,7 +29,8 @@ class WirePainter extends BasePainter {
     _rebuildCacheIfNeeded();
     final Paint paint =
         Paint()
-          ..color = isSelected(wire) ? Colors.red : colorScheme.wireColor
+          ..color =
+              isSelected(wire) ? Colors.greenAccent : colorScheme.wireColor
           ..style = PaintingStyle.stroke
           ..strokeWidth = strokeWidth
           ..strokeCap = strokeCap

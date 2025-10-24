@@ -12,26 +12,33 @@ enum PortPosition {
 }
 
 enum PortType {
-  analogInput,
-  analogOutput,
-  ethernet,
-  usb,
-  serial,
-  ble,
-  wifi,
-  hdmi,
-  audioJack,
-  amplifierInput,
-  amplifierOutput,
-  dspAnalogInput,
-  dspAnalogOutput,
-  controllerInput,
-  controllerOutput,
-  sourceData,
-  speakerData,
-  digitalInput,
-  digitalOutput,
-  circuitInput,
+  analogInput('Analog Input'),
+  analogOutput('Analog Output'),
+  ethernet('Ethernet'),
+  networkSwitchIn('Ethernet'),
+  networkSwitchOut('Ethernet'),
+  usb('Usb'),
+  serial('Serial'),
+  ble('Ble'),
+  wifi('Wifi'),
+  hdmi('Hdmi'),
+  audioJack('Audio Jack'),
+  amplifierInput('Amplifier Input'),
+  amplifierOutput('Amplifier Output'),
+  dspAnalogInput('Dsp Analog Input'),
+  endpointInput('Endpoint Analog Input'),
+  dspAnalogOutput('Dsp Analog Output'),
+  controllerInput('Controller Input'),
+  controllerOutput('Controller Output'),
+  sourceData('Source Data'),
+  speakerData('Speaker Data'),
+  digitalInput('Digital Input'),
+  digitalOutput('Digital Output'),
+  circuitInput('Circuit Input');
+
+  const PortType(this.description);
+
+  final String description;
 }
 
 //DSP input port supported device port types
@@ -52,7 +59,7 @@ class PortData {
   PortData({
     String? id,
     required this.name,
-    this.description,
+    required this.description,
     required this.position,
     required this.portNumber,
     required this.type,
@@ -65,10 +72,14 @@ class PortData {
       id: json['id'] as String,
       name: json['name'] as String,
       description: json['description'] as String?,
-      position: PortPosition.values.firstWhere((e) => e.name == json['position']),
+      position: PortPosition.values.firstWhere(
+        (e) => e.name == json['position'],
+      ),
       portNumber: json['portNumber'] as int,
       type: PortType.values.firstWhere((e) => e.name == json['type']),
-      compatibleTypes: (json['compatibleTypes'] as List<dynamic>).map((e) => PortType.values.firstWhere((pt) => pt.name == e)).toList(),
+      compatibleTypes: (json['compatibleTypes'] as List<dynamic>)
+          .map((e) => PortType.values.firstWhere((pt) => pt.name == e))
+          .toList(),
     );
   }
 
