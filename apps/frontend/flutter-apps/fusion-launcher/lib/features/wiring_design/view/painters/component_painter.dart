@@ -56,6 +56,15 @@ class ComponentPainter extends BasePainter {
     };
 
     comPainter.paint(canvas, size);
+    drawText(
+      canvas: canvas,
+      text: component.data.location ?? "",
+      position: Offset(
+        component.position.dx,
+        component.position.dy + (component.size).height + 10,
+      ),
+      positionAlignment: Alignment.topLeft,
+    );
   }
 
   @override

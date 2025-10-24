@@ -155,7 +155,10 @@ extension WiringStateMutation on WiringState {
     if (element is CircuitPort) {
       return ConnectionProgressWiringState(
         components: components,
-        wires: wires,
+        wires:
+            wires
+                .where((Wire w) => w.from != element && w.to != element)
+                .toList(),
         port: element,
         canvasState: canvasState,
         destination: position,

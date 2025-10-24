@@ -288,9 +288,9 @@ class CircuitController extends ChangeNotifier
     }
 
     if (diffMap.containsKey('removed')) {
-      final Map<String, dynamic> removed = diffMap['removed'];
-      for (final String id in removed.keys) {
-        final dynamic connectionId = removed[id]['id'];
+      final List<dynamic> removed = diffMap['removed'];
+      for (final dynamic id in removed) {
+        final dynamic connectionId = id['id'];
         projectManager.removeWiringConnection(connectionId: connectionId);
       }
     }
