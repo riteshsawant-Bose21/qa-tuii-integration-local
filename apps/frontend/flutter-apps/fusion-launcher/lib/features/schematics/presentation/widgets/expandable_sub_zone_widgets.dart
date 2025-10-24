@@ -35,6 +35,7 @@ class ExpandableSubZoneWidget extends StatefulWidget {
 class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
   late ValueNotifier<bool> _isSubZoneExpanded;
   ProjectViewModel get _projectViewModel => serviceLocator<ProjectViewModel>();
+  bool _isHovered = false;
 
   @override
   void initState() {
@@ -55,20 +56,16 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
       builder: (BuildContext context, bool subZoneExpanded, Widget? child) {
         return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
           builder: (BuildContext context, ProjectViewModelState state) {
-            final SelectedItem? hoveredDevice = _projectViewModel.hoveredDevice;
-            final SelectedItem? selectedDevice = _projectViewModel.selectedDevice;
-            final bool isSubZoneHovered = hoveredDevice?.id == widget.subZoneId && hoveredDevice?.type == SelectedItemType.subzone;
-
             return Column(
               children: <Widget>[
                 MouseRegion(
-                  onHover: (_) => _projectViewModel.setHoveredDevice(widget.subZoneId, SelectedItemType.subzone),
-                  onExit: (_) => _projectViewModel.setHoveredDevice(null, null),
+                  onEnter: (_) => setState(() => _isHovered = true),
+                  onExit: (_) => setState(() => _isHovered = false),
                   child: Container(
                     padding: const EdgeInsets.only(left: 30, right: 14),
                     height: 36,
                     decoration: BoxDecoration(
-                      color: isSubZoneHovered ? Theme.of(context).colorScheme.greyLight.withAlpha(200) : Theme.of(context).colorScheme.greyLight,
+                      color: _isHovered ? Theme.of(context).colorScheme.grey.withAlpha(200) : Theme.of(context).colorScheme.greyLight,
                     ),
                     child: Row(
                       children: <Widget>[

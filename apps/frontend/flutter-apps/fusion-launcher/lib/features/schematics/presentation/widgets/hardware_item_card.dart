@@ -2,17 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
-class HardwareItemCard extends StatelessWidget {
+class HardwareItemCard extends StatefulWidget {
   final String name;
   final String assetImagePath;
   final String? itemId;
   final String? location;
   final Zone? zone;
-  final bool isHovered;
   final bool isSelected;
   final VoidCallback? onTap;
-  final VoidCallback? onHover;
-  final VoidCallback? onExit;
   final Function(String)? onDelete;
   final Function(String)? onRename;
   final Function(String)? onDuplicate;
@@ -23,11 +20,8 @@ class HardwareItemCard extends StatelessWidget {
     required this.assetImagePath,
     this.itemId,
     this.location,
-    required this.isHovered,
     required this.isSelected,
     this.onTap,
-    this.onHover,
-    this.onExit,
     this.onDelete,
     this.onRename,
     this.onDuplicate,
@@ -35,19 +29,25 @@ class HardwareItemCard extends StatelessWidget {
   });
 
   @override
+  State<HardwareItemCard> createState() => _HardwareItemCardState();
+}
+
+class _HardwareItemCardState extends State<HardwareItemCard> {
+  bool _isHovered = false;
+
+  @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: widget.onTap,
       child: MouseRegion(
-        onEnter: (_) => onHover?.call(),
-        onHover: (_) => onHover?.call(),
-        onExit: (_) => onExit?.call(),
+        onEnter: (_) => setState(() => _isHovered = true),
+        onExit: (_) => setState(() => _isHovered = false),
         child: Container(
           margin: const EdgeInsets.only(bottom: 4),
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
           decoration: BoxDecoration(
-            color: isHovered ? Colors.white.withOpacity(0.5) : (isSelected ? Colors.transparent : Colors.white),
-            border: Border.all(color: isSelected ? Colors.black : Colors.transparent, width: 1),
+            color: _isHovered ? Colors.white.withOpacity(0.5) : (widget.isSelected ? Colors.transparent : Colors.white),
+            border: Border.all(color: widget.isSelected ? Colors.black : Colors.transparent, width: 1),
             borderRadius: BorderRadius.circular(4),
           ),
           child: Row(
@@ -69,11 +69,11 @@ class HardwareItemCard extends StatelessWidget {
                     /// device name
                     Row(
                       children: <Widget>[
-                        FusionImage.asset(assetImagePath, width: 22, height: 22, fit: BoxFit.contain),
+                        FusionImage.asset(widget.assetImagePath, width: 22, height: 22, fit: BoxFit.contain),
                         const SizedBox(width: 6),
                         Expanded(
                           child: FusionAppText(
-                            text: name,
+                            text: widget.name,
                             maxLine: 1,
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 10),
                           ),
@@ -83,10 +83,9 @@ class HardwareItemCard extends StatelessWidget {
                     const SizedBox(height: 6),
 
                     /// device location
-                    zone != null
+                    widget.zone != null
                         ? Container(
                           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: <Widget>[
@@ -94,17 +93,16 @@ class HardwareItemCard extends StatelessWidget {
                                 width: 7,
                                 height: 16,
                                 decoration: BoxDecoration(
-                                  color: zone?.color ?? Colors.transparent,
+                                  color: widget.zone?.color ?? Colors.transparent,
                                   borderRadius: BorderRadius.circular(2),
                                 ),
                               ),
                               const SizedBox(width: 6),
                               Expanded(
-                                // Wrap text in Expanded to prevent overflow
                                 child: FusionAppText(
-                                  text: zone?.name ?? "",
+                                  text: widget.zone?.name ?? "",
                                   style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 9),
-                                  maxLine: 1, // Prevent text overflow
+                                  maxLine: 1,
                                 ),
                               ),
                             ],
@@ -113,12 +111,12 @@ class HardwareItemCard extends StatelessWidget {
                         : Container(
                           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                           decoration: BoxDecoration(
-                            color: isHovered ? Colors.white.withOpacity(0.5) : (isSelected ? Colors.transparent : Theme.of(context).colorScheme.white),
+                            color: _isHovered ? Colors.white.withOpacity(0.5) : (widget.isSelected ? Colors.transparent : Theme.of(context).colorScheme.white),
                             borderRadius: BorderRadius.circular(2),
                             border: Border.all(color: Theme.of(context).colorScheme.greyDark, width: 1),
                           ),
                           child: FusionAppText(
-                            text: location!,
+                            text: widget.location!,
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 9),
                           ),
                         ),
@@ -126,7 +124,7 @@ class HardwareItemCard extends StatelessWidget {
                 ),
               ),
 
-              if (isSelected && itemId != null) ...<Widget>[
+              if (widget.isSelected && widget.itemId != null) ...<Widget>[
                 const SizedBox(width: 4),
                 PopupMenuButton<ZoneMenuAction>(
                   style: const ButtonStyle(
@@ -144,7 +142,7 @@ class HardwareItemCard extends StatelessWidget {
                           height: 26,
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                           onTap: () {
-                            onDelete?.call(itemId!);
+                            widget.onDelete?.call(widget.itemId!);
                           },
                           child: FusionAppText(
                             text: "Delete",

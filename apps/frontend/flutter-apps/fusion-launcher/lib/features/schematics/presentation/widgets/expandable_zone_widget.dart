@@ -45,6 +45,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
   List<String> _selectedListeningAreaIds = <String>[];
   bool _showSubzonePopup = false;
   bool _isKebabMenuOpen = false;
+  bool isHovered = false;
 
   @override
   void initState() {
@@ -65,24 +66,14 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
       builder: (BuildContext context, bool zoneExpanded, Widget? child) {
         return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
           builder: (BuildContext context, ProjectViewModelState state) {
-            final SelectedItem? hoveredDevice = _projectViewModel.hoveredDevice;
             final SelectedItem? selectedDevice = _projectViewModel.selectedDevice;
-            final bool isHovered = hoveredDevice?.id == widget.zoneId && hoveredDevice?.type == SelectedItemType.zone;
             final bool isSelected = selectedDevice?.id == widget.zoneId && selectedDevice?.type == SelectedItemType.zone;
 
             return Column(
               children: <Widget>[
                 MouseRegion(
-                  onHover: (_) {
-                    if (widget.zoneId != null) {
-                      _projectViewModel.setHoveredDevice(widget.zoneId, SelectedItemType.zone);
-                    }
-                  },
-                  onExit: (_) {
-                    if (widget.zoneId != null) {
-                      _projectViewModel.setHoveredDevice(null, null);
-                    }
-                  },
+                  onEnter: (_) => setState(() => isHovered = true),
+                  onExit: (_) => setState(() => isHovered = false),
                   child: _buildZoneHeader(
                     context: context,
                     expanded: zoneExpanded,
