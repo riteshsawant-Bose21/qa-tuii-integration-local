@@ -6,8 +6,8 @@
 #include <thread>
 #include <functional>
 
-std::thread OcaLiteOcfThread_create(void (*threadFunction)(void*), void* arg);
+void *OcaLiteOcfThread_create(void (*threadFunction)(void*), void* arg);
 
-void OcaLiteOcfThread_delete();
+void OcaLiteOcfThread_Wait(void *threadPtr);
 
 #endif   //OCA_LITE_OCF_THREAD_H_

@@ -48,6 +48,8 @@ extern void Ocp1LiteServiceRunWithFdSet(fd_set *readSet);
 extern int Ocp1LiteServiceGetSocket();
 #endif
 
+extern bool terminateFlag;  // Defined in ControllerMenu.cpp
+
 bool ocaMain(std::string& customNodeId,
                 std::vector<ControlPal_MsgQueue<ControllerCmdIntfc>*> msgQues)
 {
@@ -136,7 +138,7 @@ bool ocaMain(std::string& customNodeId,
                                 ::OcaLiteCommandHandler::GetInstance().RegisterConnectionLostEventHandler(
                                         static_cast<::OcaLiteCommandHandler::IConnectionLostDelegate*>(connMonitor));
 
-                                while(true)
+                                while(!terminateFlag)
                                 {
                                     // Setup connection to the Device
                                     if (ControlPalSetupConnection(sessionId))
@@ -174,7 +176,7 @@ bool ocaMain(std::string& customNodeId,
                                         {
                                             ::OcaBoolean connectStatus(true);
 
-                                            while (connectStatus)
+                                            while (connectStatus  && !terminateFlag)
                                             {
                                                 // Wait for Events from Device
                                                 ::OcaLiteCommandHandler::GetInstance().RunWithTimeout(OCA_RUN_TIMEOUT_MSEC);

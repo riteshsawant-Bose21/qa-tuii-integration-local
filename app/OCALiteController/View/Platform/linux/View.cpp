@@ -3,12 +3,11 @@
 #include <iostream>
 #include "ControllerMenu.h"
 #include "../../../PlatformInterface/linux/OcaLiteOcfMsgQueue.h"
-#include "../../../PlatformInterface/linux/OcaLiteOcfThread.h"
 #include "../../../HostInterface/CommandInterface/CommandInterface.h"
 
 #define VIEW_GAIN_INCREMENT_STEP 0.5f
 
-void read_input_thread(void *arg);
+extern bool terminateFlag; // Defined in ControllerMenu.cpp
 
 void GetNewMessages(ControlPal_MsgQueue<ControllerCmdIntfc> *cmdQueue,
                     ControllerCmdIntfc& newCmd)
@@ -139,6 +138,7 @@ void ControllerViewProc(void *queue)
                     // New zone starting, save current zone
                     m.addZone(currZoneONo, zoneName, g_gain, g_mute,
                             sourceIndex, sourceCount, sourceNames);
+                    sourceNames.clear();
                 }
                 currZoneONo = newCmd.ono;  // Current zone being processed
                 zoneName = newCmd.val.char_val;
@@ -202,6 +202,7 @@ void ControllerViewProc(void *queue)
                 // Add last Zone
                 m.addZone(currZoneONo, zoneName, g_gain, g_mute,
                         sourceIndex, sourceCount, sourceNames);
+                sourceNames.clear();
                 cfgStart = false;
                 break;
 
@@ -210,9 +211,7 @@ void ControllerViewProc(void *queue)
 
     std::cout << "Configuration Done.\n";
 
-    std::thread readThread = OcaLiteOcfThread_create(read_input_thread, NULL);
-
-    while(true)
+    while(!terminateFlag)
     {
         if (ViewCheckNewMessages(ocaMsgQueue, newCmd))
         {

@@ -165,7 +165,7 @@ bool Ocp1LiteMessageNotification::Unmarshal(::OcaUint32& bytesLeft, const ::OcaU
    }
    else if (destClassIdf.GetClassID()== ::OcaLiteSwitch::CLASS_ID)
    {
-       ::OcaLitePropertyID propertyID(::OcaLiteMute::CLASS_ID.GetFieldCount(),
+       ::OcaLitePropertyID propertyID(::OcaLiteSwitch::CLASS_ID.GetFieldCount(),
                                       OCAPROPERTYCHANGETYPE_CURRENT_CHANGED);
 
        // Initalized with dummy values

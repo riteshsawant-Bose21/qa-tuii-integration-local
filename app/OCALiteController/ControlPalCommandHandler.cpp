@@ -89,12 +89,12 @@ void ProcessCommand(ControllerCmdIntfc& newCmd, FusionProxy& fusion_proxy)
             {
                 ::OcaDB currGain, minGain, maxGain;
                 ::ControlPalGainActuator *gainObj =
-                          static_cast<::ControlPalGainActuator*>(target);
+                    static_cast<::ControlPalGainActuator*>(target);
 
                 currGain = gainObj->LastGainGet();
 
-                // Verify no gain updates are in progress
-                if (currGain == 0.0)
+                // Verify no gain updates are currently in progress
+                if (gainObj->UpdatesDone())
                 {
                     // Get current Gain
                     static_cast<::ControlPalGainActuator*>(target)->GetGain(
@@ -102,12 +102,17 @@ void ProcessCommand(ControllerCmdIntfc& newCmd, FusionProxy& fusion_proxy)
                             minGain,
                             maxGain);
                 }
-                currGain += newCmd.val.flt_val;
-                gainObj->LastGainSet(currGain);
 
-                // Send message to Device
-                fusion_proxy.ConcreteGainActuator_SetGain(
-                                     target->GetObjectNumber(), currGain);
+                if ( ((currGain + newCmd.val.flt_val) >= minGain) &&
+                        ((currGain + newCmd.val.flt_val) <= maxGain))
+                {
+                    currGain += newCmd.val.flt_val;
+                    gainObj->LastGainSet(currGain);
+
+                    // Send message to Device
+                    fusion_proxy.ConcreteGainActuator_SetGain(
+                            target->GetObjectNumber(), currGain);
+                }
             }
             break;
 
