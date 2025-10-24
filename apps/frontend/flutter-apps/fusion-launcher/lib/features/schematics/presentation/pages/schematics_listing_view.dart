@@ -895,24 +895,12 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                   // });
                 },
                 onDelete: (String id) {
-                  // setState(() {
-                  //   _reorderableZones.removeWhere((Map<String, dynamic> zone) => zone['id'] == id);
-                  //   // Also remove associated subzones and devices
-                  //   _reorderableSubZones.remove(id);
-                  //   final List<String> subZoneIds = _reorderableSubZones[id]?.map((Map<String, dynamic> sz) => sz['id'] as String).toList() ?? <String>[];
-                  //   for (final String subZoneId in subZoneIds) {
-                  //     _reorderableDevices.remove(subZoneId);
-                  //   }
-                  // });
-                  // FusionToast.show(
-                  //   context,
-                  //   message: 'Zone "${zone['name']}" deleted',
-                  //   icon: Icons.delete_outline,
-                  //   backgroundColor: Colors.red[600],
-                  // );
+                  serviceLocator<ProjectViewModel>().removeZone(zoneId: zoneData.id);
+                  FusionToast.success(
+                    context,
+                    message: 'Zone "${zoneData.name}" deleted',
+                  );
                 },
-                onEdit: (String id) => print('Rename zone $id'),
-                onAddDevice: () => print('Add device to zone'),
               ),
             );
           },

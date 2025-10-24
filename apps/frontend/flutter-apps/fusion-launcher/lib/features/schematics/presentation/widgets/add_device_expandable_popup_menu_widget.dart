@@ -6,6 +6,7 @@ import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import '../../../../core/models/products_data.dart';
 import '../../../product_query/presentation/pages/product_query.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
+import 'create_new_location_widget.dart';
 import 'listening_area_dropdown_widget.dart';
 
 class AddDeviceExpandablePopupMenuWidget extends StatefulWidget {
@@ -116,7 +117,7 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
       tooltip: getSectionToolTip(),
       padding: EdgeInsets.zero,
       constraints: const BoxConstraints(
-        maxHeight: 550,
+        maxHeight: 500,
         maxWidth: 300,
       ),
       shape: RoundedRectangleBorder(
@@ -133,7 +134,7 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
             child: Container(
               width: 300,
               constraints: const BoxConstraints(
-                maxHeight: 520,
+                maxHeight: 460,
                 maxWidth: 300,
               ),
               child: StatefulBuilder(
@@ -456,6 +457,11 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
 
   /// Builds a create zone section for speakers
   Widget _buildCreateZoneSection(StateSetter setMenuState) {
+    bool isCreateAreaExpanded = false;
+    final String selectedFloor = '';
+    final String selectedFloorId = '';
+    final TextEditingController areaNameController = TextEditingController();
+
     return Padding(
       padding: const EdgeInsets.all(10.0),
       child: Column(
@@ -528,7 +534,7 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
                 // Handle popup close if needed
               },
               constraints: const BoxConstraints(
-                maxHeight: 250,
+                maxHeight: 500,
                 maxWidth: 280,
               ),
               shape: RoundedRectangleBorder(
@@ -545,7 +551,7 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
                       builder: (BuildContext context, StateSetter setPopupState) {
                         return Container(
                           width: 280,
-                          constraints: const BoxConstraints(maxHeight: 220),
+                          constraints: const BoxConstraints(maxHeight: 460),
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: <Widget>[
@@ -584,6 +590,7 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
                               /// Scrollable list of listening areas
                               Flexible(
                                 child: SingleChildScrollView(
+                                  physics: const ClampingScrollPhysics(),
                                   child: Column(
                                     children:
                                         serviceLocator<ProjectViewModel>().getAllListeningAreas().map((ListeningArea area) {
@@ -672,6 +679,230 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
                                         }).toList(),
                                   ),
                                 ),
+                              ),
+
+                              /// Create New Location Section
+                              /*Container(
+                                decoration: BoxDecoration(
+                                  border: Border(
+                                    top: BorderSide(color: Colors.grey[300]!),
+                                  ),
+                                ),
+                                child: Column(
+                                  children: <Widget>[
+                                    /// Create Location Header
+                                    InkWell(
+                                      onTap: () {
+                                        isCreateAreaExpanded = !isCreateAreaExpanded;
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.all(12),
+                                        child: Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: <Widget>[
+                                            Expanded(
+                                              child: FusionAppText(
+                                                text: "Create new location",
+                                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                            ),
+                                            Icon(
+                                              isCreateAreaExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                                              size: 20,
+                                              color: Colors.grey[600],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+
+                                    /// Create New Area Form
+                                    if (isCreateAreaExpanded)
+                                      Container(
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey[50],
+                                        ),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: <Widget>[
+                                            /// Floor Dropdown
+                                            FusionAppText(
+                                              text: "Floor",
+                                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Container(
+                                              height: 36,
+                                              decoration: BoxDecoration(
+                                                border: Border.all(color: Colors.grey[300]!),
+                                                borderRadius: BorderRadius.circular(4),
+                                              ),
+                                              child: DropdownButtonHideUnderline(
+                                                child: DropdownButton<String>(
+                                                  hint: const FusionAppText(text: "Select floor"),
+                                                  value: selectedFloor,
+                                                  isExpanded: true,
+                                                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                                                  items:
+                                                      serviceLocator<ProjectViewModel>().getAllFloors().map((FloorModel floor) {
+                                                        return DropdownMenuItem<String>(
+                                                          value: floor.name,
+                                                          child: FusionAppText(
+                                                            text: floor.name,
+                                                            style: Theme.of(context).textTheme.bodySmall,
+                                                          ),
+                                                        );
+                                                      }).toList(),
+                                                  onChanged: (String? newValue) {
+                                                    if (newValue != null) {
+                                                      selectedFloor = newValue;
+                                                      selectedFloorId =
+                                                          serviceLocator<ProjectViewModel>()
+                                                              .getAllFloors()
+                                                              .firstWhere((FloorModel floor) => floor.name == newValue)
+                                                              .id;
+                                                    }
+                                                  },
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 12),
+
+                                            /// Area Name Field
+                                            FusionAppText(
+                                              text: "Area Name",
+                                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            FusionTextField(
+                                              controller: areaNameController,
+                                              hintText: "Enter area name",
+                                              decoration: FusionInputDecoration.fusionDense(
+                                                colorScheme: Theme.of(context).colorScheme,
+                                                hintText: 'Enter area name',
+                                              ),
+                                              onChanged: (String value) {
+                                                // setDropdownState(() {}); // Update button state
+                                              },
+                                            ),
+
+                                            const SizedBox(height: 12),
+
+                                            /// Create and Select Button
+                                            FusionButton(
+                                              height: 36,
+                                              label: "Add",
+                                              isActive: areaNameController.text.trim().isNotEmpty && selectedFloorId.isNotEmpty,
+                                              onTap: () {
+                                                if (areaNameController.text.trim().isNotEmpty && selectedFloorId.isNotEmpty) {
+                                                  // todo: Replace with actual area creation logic (e.g., user-defined vertices)
+                                                  final ListeningArea newListeningArea = ListeningArea(
+                                                    name: areaNameController.text.trim(),
+                                                    vertices: <Offset>[
+                                                      const Offset(0, 0),
+                                                      const Offset(100, 0),
+                                                      const Offset(100, 100),
+                                                      const Offset(0, 100),
+                                                    ],
+                                                  );
+
+                                                  try {
+                                                    serviceLocator<ProjectViewModel>().addListeningArea(area: newListeningArea, floorId: selectedFloorId);
+
+                                                    /// Clear form and close expansion
+                                                    areaNameController.clear();
+                                                    setState(() {
+                                                      isCreateAreaExpanded = false;
+                                                    });
+
+                                                    /// Show success message
+                                                    FusionToast.success(
+                                                      context,
+                                                      message: "Listening area '${newListeningArea.name}' created successfully",
+                                                    );
+
+                                                    /// Automatically select the newly created area
+                                                    // widget.onSelectionChanged(<String>[newListeningArea.id], floorId);
+                                                    Navigator.of(context).pop();
+                                                  } catch (e) {
+                                                    FusionToast.error(
+                                                      context,
+                                                      message: "Failed to create listening area: $e",
+                                                    );
+                                                  }
+                                                } else {
+                                                  FusionToast.error(
+                                                    context,
+                                                    message: "Please enter area name and select a floor",
+                                                  );
+                                                }
+                                              },
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),*/
+                              CreateNewLocationWidget(
+                                areaNameController: areaNameController,
+                                isCreateAreaExpanded: isCreateAreaExpanded,
+                                setDropdownState: setPopupState,
+                                selectedFloor: selectedFloor,
+                                selectedFloorId: selectedFloorId,
+                                onCreateNewArea: ({required String floorId}) {
+                                  if (areaNameController.text.trim().isNotEmpty && floorId.isNotEmpty) {
+                                    // todo: Replace with actual area creation logic (e.g., user-defined vertices)
+                                    final ListeningArea newListeningArea = ListeningArea(
+                                      name: areaNameController.text.trim(),
+                                      vertices: <Offset>[
+                                        const Offset(0, 0),
+                                        const Offset(100, 0),
+                                        const Offset(100, 100),
+                                        const Offset(0, 100),
+                                      ],
+                                    );
+
+                                    try {
+                                      serviceLocator<ProjectViewModel>().addListeningArea(area: newListeningArea, floorId: floorId);
+
+                                      /// Clear form and close expansion
+                                      areaNameController.clear();
+                                      setState(() {
+                                        isCreateAreaExpanded = false;
+                                      });
+
+                                      /// Show success message
+                                      FusionToast.success(
+                                        context,
+                                        message: "Listening area '${newListeningArea.name}' created successfully",
+                                      );
+
+                                      /// Automatically select the newly created area
+                                      // widget.onSelectionChanged(<String>[newListeningArea.id], floorId);
+                                      // Navigator.of(context).pop();
+                                    } catch (e) {
+                                      FusionToast.error(
+                                        context,
+                                        message: "Failed to create listening area: $e",
+                                      );
+                                    }
+                                  } else {
+                                    FusionToast.error(
+                                      context,
+                                      message: "Please enter area name and select a floor",
+                                    );
+                                  }
+                                },
                               ),
                             ],
                           ),

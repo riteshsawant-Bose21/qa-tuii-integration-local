@@ -14,8 +14,6 @@ class ExpandableZoneWidget extends StatefulWidget {
   final String? zoneId;
   final Color bgColor;
   final Function(String)? onDelete;
-  final Function(String)? onEdit;
-  final Function()? onAddDevice;
   final bool initiallyExpanded;
   final List<CircuitModel> zoneDevices;
   final List<SubZone> subZones;
@@ -30,8 +28,6 @@ class ExpandableZoneWidget extends StatefulWidget {
     this.zoneId,
     required this.bgColor,
     this.onDelete,
-    this.onEdit,
-    this.onAddDevice,
     this.initiallyExpanded = false,
     required this.subZones,
     this.onZoneReorder,
@@ -284,23 +280,6 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
       menuPadding: EdgeInsets.zero,
       itemBuilder:
           (BuildContext context) => <PopupMenuEntry<ZoneMenuAction>>[
-            /// --- Edit ---
-            PopupMenuItem<ZoneMenuAction>(
-              height: 26,
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-              onTap: () {
-                setState(() => _showSubzonePopup = false);
-                widget.onEdit?.call(widget.zoneId!);
-              },
-              child: FusionAppText(
-                text: "Edit",
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontSize: 10,
-                  color: Theme.of(context).colorScheme.fusionTextViewColor,
-                ),
-              ),
-            ),
-
             /// --- Sub zone (with nested PopupMenuButton) ---
             PopupMenuItem<ZoneMenuAction>(
               height: 30,
@@ -380,6 +359,12 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
   Widget _buildSubzoneContent(BuildContext context, String? zoneId) {
     return StatefulBuilder(
       builder: (BuildContext context, StateSetter setDialogState) {
+        /// Single function to handle all state updates
+        void updateAllStates() {
+          setDialogState(() {});
+          setState(() {});
+        }
+
         return SizedBox(
           width: 268,
           child: Column(
@@ -398,7 +383,12 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                     ),
                   ),
                   InkWell(
-                    onTap: () => Navigator.of(context).pop(),
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      _zoneNameController.clear();
+                      _selectedListeningAreaIds.clear();
+                      setState(() {});
+                    },
                     child: Icon(
                       Icons.close,
                       size: 16,
@@ -429,11 +419,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                   colorScheme: Theme.of(context).colorScheme,
                   hintText: 'Enter subzone name',
                 ),
-                onChanged: (String value) {
-                  // Update both the dialog state and main widget state
-                  setDialogState(() {});
-                  setState(() {});
-                },
+                onChanged: (String value) => updateAllStates(),
               ),
 
               const SizedBox(height: 18),
@@ -447,7 +433,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                 ),
               ),
               const SizedBox(height: 4),
-              _buildLocationSelector(context, zoneId),
+              _buildLocationSelector(context, zoneId, updateAllStates),
 
               const SizedBox(height: 16),
 
@@ -491,7 +477,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
   }
 
   /// Location selector dropdown
-  Widget _buildLocationSelector(BuildContext context, String? zoneId) {
+  Widget _buildLocationSelector(BuildContext context, String? zoneId, VoidCallback onStateUpdate) {
     return Container(
       height: 28,
       decoration: BoxDecoration(
@@ -508,7 +494,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
               PopupMenuItem<String>(
                 enabled: false,
                 padding: EdgeInsets.zero,
-                child: _buildLocationList(context, zoneId),
+                child: _buildLocationList(context, zoneId, onStateUpdate),
               ),
             ],
         child: Container(
@@ -540,9 +526,14 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
   }
 
   /// Location list within the dropdown
-  Widget _buildLocationList(BuildContext context, String? zoneId) {
+  Widget _buildLocationList(BuildContext context, String? zoneId, VoidCallback onStateUpdate) {
     return StatefulBuilder(
       builder: (BuildContext context, StateSetter setPopupState) {
+        void updateStates() {
+          setPopupState(() {});
+          onStateUpdate();
+        }
+
         return SizedBox(
           width: 280,
           child: Column(
@@ -584,7 +575,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                     children:
                         serviceLocator<ProjectViewModel>()
                             .getListeningAreasForZone(zoneId: zoneId ?? "")
-                            .map((ListeningArea area) => _buildLocationItem(context, area, setPopupState, zoneId ?? ""))
+                            .map((ListeningArea area) => _buildLocationItem(context, area, zoneId ?? "", updateStates))
                             .toList(),
                   ),
                 ),
@@ -600,28 +591,25 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
   Widget _buildLocationItem(
     BuildContext context,
     ListeningArea area,
-    StateSetter setPopupState,
     String zoneId,
+    VoidCallback onStateUpdate,
   ) {
     final List<ListeningArea> availableAreas = _projectViewModel.getAvailableListeningAreasForZone(zoneId: zoneId);
-
     final FloorModel? floorName = _projectViewModel.getFloorForListeningArea(areaId: area.id);
     final Zone? zoneData = _projectViewModel.getZonesForListeningArea(areaId: area.id);
     final bool isAvailable = availableAreas.any((ListeningArea a) => a.id == area.id);
 
+    void toggleSelection() {
+      if (_selectedListeningAreaIds.contains(area.id)) {
+        _selectedListeningAreaIds.remove(area.id);
+      } else {
+        _selectedListeningAreaIds.add(area.id);
+      }
+      onStateUpdate();
+    }
+
     return InkWell(
-      onTap:
-          isAvailable
-              ? () {
-                if (_selectedListeningAreaIds.contains(area.id)) {
-                  _selectedListeningAreaIds.remove(area.id);
-                } else {
-                  _selectedListeningAreaIds.add(area.id);
-                }
-                setPopupState(() {});
-                setState(() {});
-              }
-              : null,
+      onTap: isAvailable ? toggleSelection : null,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
         child: Row(
@@ -632,18 +620,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
               child: Checkbox(
                 value: !isAvailable ? true : _selectedListeningAreaIds.contains(area.id),
                 activeColor: Theme.of(context).colorScheme.greyDark,
-                onChanged:
-                    isAvailable
-                        ? (bool? checked) {
-                          if (checked == true) {
-                            _selectedListeningAreaIds.add(area.id);
-                          } else {
-                            _selectedListeningAreaIds.remove(area.id);
-                          }
-                          setPopupState(() {});
-                          setState(() {});
-                        }
-                        : null,
+                onChanged: isAvailable ? (bool? checked) => toggleSelection() : null,
                 materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 visualDensity: VisualDensity.compact,
                 shape: const RoundedRectangleBorder(

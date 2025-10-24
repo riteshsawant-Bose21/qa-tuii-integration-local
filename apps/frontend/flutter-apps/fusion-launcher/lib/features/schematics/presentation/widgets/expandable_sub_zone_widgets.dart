@@ -191,30 +191,6 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
     );
   }
 
-  Widget _buildAddDeviceButton(BuildContext context) {
-    return GestureDetector(
-      onTap: () => print('Add device to ${widget.name}'),
-      child: Row(
-        children: <Widget>[
-          Icon(
-            Icons.add,
-            size: 10,
-            color: Colors.grey[800],
-          ),
-          const SizedBox(width: 4),
-          FusionAppText(
-            text: "Speaker",
-            style: TextStyle(
-              fontSize: 8,
-              fontWeight: FontWeight.w400,
-              color: Colors.grey[800],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   /// Kebab menu for subzone actions
   Widget _buildKebabMenu(BuildContext context) {
     return PopupMenuButton<ZoneMenuAction>(

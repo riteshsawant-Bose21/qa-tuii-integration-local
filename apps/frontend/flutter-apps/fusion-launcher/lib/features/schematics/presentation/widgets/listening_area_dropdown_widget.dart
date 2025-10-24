@@ -121,7 +121,7 @@ class _ListeningAreaDropdownWidgetState extends State<ListeningAreaDropdownWidge
   @override
   Widget build(BuildContext context) {
     return PopupMenuButton<void>(
-      tooltip: "Select Listening Areas",
+      tooltip: "Select Location",
       constraints: const BoxConstraints(
         maxHeight: 400,
         maxWidth: 300,
@@ -229,7 +229,7 @@ class _ListeningAreaDropdownWidgetState extends State<ListeningAreaDropdownWidge
                           ),
                         ),
 
-                      /// Create New Area Section
+                      /// Create New Location Section
                       if (!widget.hideAddLocationButton)
                         Container(
                           decoration: BoxDecoration(
@@ -239,7 +239,7 @@ class _ListeningAreaDropdownWidgetState extends State<ListeningAreaDropdownWidge
                           ),
                           child: Column(
                             children: <Widget>[
-                              /// Create New Area Header
+                              /// Create LoCATION Header
                               InkWell(
                                 onTap: () {
                                   setDropdownState(() {
@@ -253,7 +253,7 @@ class _ListeningAreaDropdownWidgetState extends State<ListeningAreaDropdownWidge
                                     children: <Widget>[
                                       Expanded(
                                         child: FusionAppText(
-                                          text: "Create New Listening Area",
+                                          text: "Create new location",
                                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                             fontWeight: FontWeight.w500,
                                           ),
