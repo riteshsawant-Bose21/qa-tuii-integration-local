@@ -88,20 +88,20 @@ class _ListeningAreaDropdownWidgetState extends State<ListeningAreaDropdownWidge
       } catch (e) {
         FusionToast.error(
           context,
-          message: "Failed to create listening area: $e",
+          message: "Failed to create location: $e",
         );
       }
     } else {
       FusionToast.error(
         context,
-        message: "Please enter area name and select a floor",
+        message: "Please enter location name and select a floor",
       );
     }
   }
 
   String _getSelectedAreaDisplayText() {
     if (widget.selectedListeningAreaIds.isEmpty) {
-      return "Select Areas";
+      return "Select location";
     }
 
     // Get the first selected area ID
@@ -156,7 +156,7 @@ class _ListeningAreaDropdownWidgetState extends State<ListeningAreaDropdownWidge
                           children: <Widget>[
                             Expanded(
                               child: FusionAppText(
-                                text: "Listening Areas",
+                                text: "Location",
                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -209,7 +209,7 @@ class _ListeningAreaDropdownWidgetState extends State<ListeningAreaDropdownWidge
                                             const SizedBox(width: 8),
                                             Expanded(
                                               child: FusionAppText(
-                                                text: area.name.isNotEmpty ? "${floorName?.name}/${area.name}" : 'Unnamed Area',
+                                                text: area.name.isNotEmpty ? "${floorName?.name}/${area.name}" : 'Unnamed Location',
                                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w500, fontSize: 10),
                                               ),
                                             ),
@@ -247,7 +247,7 @@ class _ListeningAreaDropdownWidgetState extends State<ListeningAreaDropdownWidge
                                   });
                                 },
                                 child: Container(
-                                  padding: const EdgeInsets.all(12),
+                                  padding: const EdgeInsets.only(top: 6, bottom: 6, left: 12, right: 12),
                                   child: Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: <Widget>[
@@ -269,7 +269,7 @@ class _ListeningAreaDropdownWidgetState extends State<ListeningAreaDropdownWidge
                                 ),
                               ),
 
-                              /// Create New Area Form
+                              /// Create location form
                               if (_isCreateAreaExpanded)
                                 Container(
                                   padding: const EdgeInsets.all(12),
@@ -289,13 +289,16 @@ class _ListeningAreaDropdownWidgetState extends State<ListeningAreaDropdownWidge
                                       ),
                                       const SizedBox(height: 4),
                                       Container(
-                                        height: 36,
+                                        height: 26,
                                         decoration: BoxDecoration(
+                                          color: Theme.of(context).colorScheme.white,
+
                                           border: Border.all(color: Colors.grey[300]!),
                                           borderRadius: BorderRadius.circular(4),
                                         ),
                                         child: DropdownButtonHideUnderline(
                                           child: DropdownButton<String>(
+                                            dropdownColor: Theme.of(context).colorScheme.white,
                                             hint: const FusionAppText(text: "Select floor"),
                                             value: _selectedFloor,
                                             isExpanded: true,
@@ -327,9 +330,9 @@ class _ListeningAreaDropdownWidgetState extends State<ListeningAreaDropdownWidge
                                       ),
                                       const SizedBox(height: 12),
 
-                                      /// Area Name Field
+                                      /// location Name Field
                                       FusionAppText(
-                                        text: "Area Name",
+                                        text: "Location Name",
                                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                           fontSize: 10,
                                           fontWeight: FontWeight.w500,
@@ -338,10 +341,10 @@ class _ListeningAreaDropdownWidgetState extends State<ListeningAreaDropdownWidge
                                       const SizedBox(height: 4),
                                       FusionTextField(
                                         controller: _areaNameController,
-                                        hintText: "Enter area name",
+                                        hintText: "Enter location name",
                                         decoration: FusionInputDecoration.fusionDense(
                                           colorScheme: Theme.of(context).colorScheme,
-                                          hintText: 'Enter area name',
+                                          hintText: 'Enter location name',
                                         ),
                                         onChanged: (String value) {
                                           setDropdownState(() {}); // Update button state
@@ -351,13 +354,16 @@ class _ListeningAreaDropdownWidgetState extends State<ListeningAreaDropdownWidge
                                       const SizedBox(height: 12),
 
                                       /// Create and Select Button
-                                      FusionButton(
-                                        height: 36,
-                                        label: "Add",
-                                        isActive: _areaNameController.text.trim().isNotEmpty && _selectedFloorId.isNotEmpty,
-                                        onTap: () {
-                                          _createNewArea(floorId: _selectedFloorId);
-                                        },
+                                      Align(
+                                        alignment: Alignment.centerRight,
+                                        child: FusionButton(
+                                          height: 32,
+                                          label: "Add",
+                                          isActive: _areaNameController.text.trim().isNotEmpty && _selectedFloorId.isNotEmpty,
+                                          onTap: () {
+                                            _createNewArea(floorId: _selectedFloorId);
+                                          },
+                                        ),
                                       ),
                                     ],
                                   ),

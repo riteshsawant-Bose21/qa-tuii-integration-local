@@ -58,7 +58,7 @@ class _CreateNewLocationWidgetState extends State<CreateNewLocationWidget> {
               });
             },
             child: Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.only(top: 6, bottom: 6, left: 12, right: 12),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: <Widget>[
@@ -100,14 +100,22 @@ class _CreateNewLocationWidgetState extends State<CreateNewLocationWidget> {
 
                   /// Floor dropdown
                   Container(
-                    height: 36,
+                    height: 26,
                     decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.white,
                       border: Border.all(color: Colors.grey[300]!),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
-                        hint: const FusionAppText(text: "Select floor"),
+                        dropdownColor: Theme.of(context).colorScheme.white,
+                        hint: FusionAppText(
+                          text: "Select floor",
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                         value: _selectedFloor,
                         isExpanded: true,
                         padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -134,9 +142,9 @@ class _CreateNewLocationWidgetState extends State<CreateNewLocationWidget> {
                   ),
                   const SizedBox(height: 12),
 
-                  /// Area Name
+                  /// Location Name
                   FusionAppText(
-                    text: "Area Name",
+                    text: "Location Name",
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       fontSize: 10,
                       fontWeight: FontWeight.w500,
@@ -146,10 +154,10 @@ class _CreateNewLocationWidgetState extends State<CreateNewLocationWidget> {
 
                   FusionTextField(
                     controller: widget.areaNameController,
-                    hintText: "Enter area name",
+                    hintText: "Enter location name",
                     decoration: FusionInputDecoration.fusionDense(
                       colorScheme: Theme.of(context).colorScheme,
-                      hintText: 'Enter area name',
+                      hintText: 'Enter location name',
                     ),
                     onChanged: (String value) {
                       widget.setDropdownState(() {});
@@ -158,16 +166,20 @@ class _CreateNewLocationWidgetState extends State<CreateNewLocationWidget> {
                   const SizedBox(height: 12),
 
                   /// Add Button
-                  FusionButton(
-                    height: 36,
-                    label: "Add",
-                    isActive: widget.areaNameController.text.trim().isNotEmpty && _selectedFloorId.isNotEmpty,
-                    onTap: () {
-                      widget.onCreateNewArea(floorId: _selectedFloorId);
-                      widget.setDropdownState(() {
-                        _isExpanded = !_isExpanded;
-                      });
-                    },
+                  Align(
+                    alignment: Alignment.centerRight,
+
+                    child: FusionButton(
+                      height: 32,
+                      label: "Add",
+                      isActive: widget.areaNameController.text.trim().isNotEmpty && _selectedFloorId.isNotEmpty,
+                      onTap: () {
+                        widget.onCreateNewArea(floorId: _selectedFloorId);
+                        widget.setDropdownState(() {
+                          _isExpanded = !_isExpanded;
+                        });
+                      },
+                    ),
                   ),
                 ],
               ),
