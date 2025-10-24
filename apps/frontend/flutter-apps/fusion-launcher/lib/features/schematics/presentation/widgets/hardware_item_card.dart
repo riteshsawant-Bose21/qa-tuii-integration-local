@@ -7,6 +7,7 @@ class HardwareItemCard extends StatelessWidget {
   final String assetImagePath;
   final String? itemId;
   final String? location;
+  final Zone? zone;
   final bool isHovered;
   final bool isSelected;
   final VoidCallback? onTap;
@@ -30,6 +31,7 @@ class HardwareItemCard extends StatelessWidget {
     this.onDelete,
     this.onRename,
     this.onDuplicate,
+    this.zone,
   });
 
   @override
@@ -81,81 +83,109 @@ class HardwareItemCard extends StatelessWidget {
                     const SizedBox(height: 6),
 
                     /// device location
-                    if (location != null)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: isHovered ? Colors.white.withOpacity(0.5) : (isSelected ? Colors.transparent : Theme.of(context).colorScheme.white),
-                          border: Border.all(color: Theme.of(context).colorScheme.greyDark, width: 1),
+                    zone != null
+                        ? Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: <Widget>[
+                              Container(
+                                width: 7,
+                                height: 16,
+                                decoration: BoxDecoration(
+                                  color: zone?.color ?? Colors.transparent,
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                // Wrap text in Expanded to prevent overflow
+                                child: FusionAppText(
+                                  text: zone?.name ?? "",
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 9),
+                                  maxLine: 1, // Prevent text overflow
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                        : Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: isHovered ? Colors.white.withOpacity(0.5) : (isSelected ? Colors.transparent : Theme.of(context).colorScheme.white),
+                            borderRadius: BorderRadius.circular(2),
+                            border: Border.all(color: Theme.of(context).colorScheme.greyDark, width: 1),
+                          ),
+                          child: FusionAppText(
+                            text: location!,
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 9),
+                          ),
                         ),
-                        child: FusionAppText(
-                          text: location!,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 9),
-                        ),
-                      ),
                   ],
                 ),
               ),
 
-              /// kebab menu
-              if ((isHovered || isSelected) && itemId != null) ...<Widget>[
-                const SizedBox(width: 4),
-                PopupMenuButton<String>(
-                  icon: Icon(
-                    Icons.more_vert,
-                    size: 14,
-                    color: Colors.grey[600],
+              if (isSelected && itemId != null) ...<Widget>[
+                if ((isHovered || isSelected) && itemId != null) ...<Widget>[
+                  const SizedBox(width: 4),
+                  PopupMenuButton<String>(
+                    icon: Icon(
+                      Icons.more_vert,
+                      size: 14,
+                      color: Colors.grey[600],
+                    ),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    color: Colors.white,
+                    itemBuilder:
+                        (BuildContext context) => <PopupMenuEntry<String>>[
+                          const PopupMenuItem<String>(
+                            value: 'rename',
+                            child: Row(
+                              children: <Widget>[
+                                Icon(Icons.edit, size: 12),
+                                SizedBox(width: 6),
+                                Text('Rename'),
+                              ],
+                            ),
+                          ),
+                          const PopupMenuItem<String>(
+                            value: 'duplicate',
+                            child: Row(
+                              children: <Widget>[
+                                Icon(Icons.copy, size: 16),
+                                SizedBox(width: 8),
+                                Text('Duplicate'),
+                              ],
+                            ),
+                          ),
+                          const PopupMenuItem<String>(
+                            value: 'delete',
+                            child: Row(
+                              children: <Widget>[
+                                Icon(Icons.delete_outline, size: 16, color: Colors.red),
+                                SizedBox(width: 8),
+                                Text('Delete', style: TextStyle(color: Colors.red)),
+                              ],
+                            ),
+                          ),
+                        ],
+                    onSelected: (String value) {
+                      switch (value) {
+                        case 'rename':
+                          onRename?.call(itemId!);
+                          break;
+                        case 'duplicate':
+                          onDuplicate?.call(itemId!);
+                          break;
+                        case 'delete':
+                          onDelete?.call(itemId!);
+                          break;
+                      }
+                    },
                   ),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  color: Colors.white,
-                  itemBuilder:
-                      (BuildContext context) => <PopupMenuEntry<String>>[
-                        const PopupMenuItem<String>(
-                          value: 'rename',
-                          child: Row(
-                            children: <Widget>[
-                              Icon(Icons.edit, size: 12),
-                              SizedBox(width: 6),
-                              Text('Rename'),
-                            ],
-                          ),
-                        ),
-                        const PopupMenuItem<String>(
-                          value: 'duplicate',
-                          child: Row(
-                            children: <Widget>[
-                              Icon(Icons.copy, size: 16),
-                              SizedBox(width: 8),
-                              Text('Duplicate'),
-                            ],
-                          ),
-                        ),
-                        const PopupMenuItem<String>(
-                          value: 'delete',
-                          child: Row(
-                            children: <Widget>[
-                              Icon(Icons.delete_outline, size: 16, color: Colors.red),
-                              SizedBox(width: 8),
-                              Text('Delete', style: TextStyle(color: Colors.red)),
-                            ],
-                          ),
-                        ),
-                      ],
-                  onSelected: (String value) {
-                    switch (value) {
-                      case 'rename':
-                        onRename?.call(itemId!);
-                        break;
-                      case 'duplicate':
-                        onDuplicate?.call(itemId!);
-                        break;
-                      case 'delete':
-                        onDelete?.call(itemId!);
-                        break;
-                    }
-                  },
-                ),
+                ],
               ],
             ],
           ),
