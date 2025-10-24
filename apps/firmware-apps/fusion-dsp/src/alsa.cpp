@@ -11,6 +11,7 @@
 #include <samplerate.h>
 #include <spdlog/spdlog.h>
 
+#include <algorithm>
 #include <cmath>
 #include <cstring>
 #include <string>
@@ -189,6 +190,7 @@ private:
     int min_depth;
     double min_ratio;
     double max_ratio;
+    static const int_fast32_t MIN_DEPTH = 128;
 
     ALGORITHM_DECLARE(AlsaIn);
 };
@@ -215,6 +217,7 @@ private:
     int min_depth;
     double min_ratio;
     double max_ratio;
+    static const int_fast32_t MIN_DEPTH = 128;
 
     ALGORITHM_DECLARE(AlsaOut);
 };
@@ -1034,19 +1037,19 @@ AlsaIn::AlsaIn(const bosepro::BlockConfiguration &configuration)
 
     read_samples = get_frame_size() + 1;
 
-    min_depth = 2 * get_frame_size();
+    min_depth = std::max(2 * get_frame_size(), MIN_DEPTH);
     if (min_depth % period_size != 0)
     {
         min_depth += period_size - (min_depth % period_size);
     }
 
-    max_depth = 6 * get_frame_size();
+    max_depth = std::max(6 * get_frame_size(), 3 * MIN_DEPTH);
     if (max_depth % period_size != 0)
     {
         max_depth += period_size - (max_depth % period_size);
     }
 
-    target_depth = 4 * get_frame_size();
+    target_depth = std::max(4 * get_frame_size(), 2 * MIN_DEPTH);
     if (target_depth % period_size != 0)
     {
         target_depth += period_size - (target_depth % period_size);
@@ -1144,19 +1147,19 @@ AlsaOut::AlsaOut(const bosepro::BlockConfiguration &configuration)
 
     max_write_samples = get_frame_size() + 1;
 
-    min_depth = 2 * get_frame_size();
+    min_depth = std::max(2 * get_frame_size(), MIN_DEPTH);
     if (min_depth % period_size != 0)
     {
         min_depth += period_size - (min_depth % period_size);
     }
 
-    max_depth = 6 * get_frame_size();
+    max_depth = std::max(6 * get_frame_size(), 3 * MIN_DEPTH);
     if (max_depth % period_size != 0)
     {
         max_depth += period_size - (max_depth % period_size);
     }
 
-    target_depth = 4 * get_frame_size();
+    target_depth = std::max(4 * get_frame_size(), 2 * MIN_DEPTH);
     if (target_depth % period_size != 0)
     {
         target_depth += period_size - (target_depth % period_size);

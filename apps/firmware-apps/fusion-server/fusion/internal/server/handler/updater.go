@@ -3,7 +3,6 @@ package handler
 import (
 	"bytes"
 	"crypto/sha256"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"fusion/internal/api"
@@ -18,6 +17,8 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	json "github.com/goccy/go-json"
 )
 
 const (

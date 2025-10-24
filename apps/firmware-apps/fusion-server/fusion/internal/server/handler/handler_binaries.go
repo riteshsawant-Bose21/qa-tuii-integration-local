@@ -3,7 +3,6 @@ package handler
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/logging"
@@ -14,6 +13,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"time"
+
+	json "github.com/goccy/go-json"
 
 	"github.com/hashicorp/memberlist"
 )
