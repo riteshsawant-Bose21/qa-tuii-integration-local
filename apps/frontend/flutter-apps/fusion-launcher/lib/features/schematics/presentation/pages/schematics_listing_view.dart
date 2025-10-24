@@ -468,7 +468,6 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
   Widget _buildSourcesContent() {
     return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
       builder: (BuildContext context, ProjectViewModelState state) {
-        final SelectedItem? hoveredDevice = _projectViewModel.hoveredDevice;
         final SelectedItem? selectedDevice = _projectViewModel.selectedDevice;
 
         return CommonReorderableListView<Source>(
@@ -485,9 +484,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
           },
           keyExtractor: (Source source) => source.id,
           itemBuilder: (BuildContext context, Source source, int index) {
-            final bool isHovered = hoveredDevice?.id == source.id && hoveredDevice?.type == SelectedItemType.source;
             final bool isSelected = selectedDevice?.id == source.id && selectedDevice?.type == SelectedItemType.source;
-            // print("Sourceeeeee ${source.id} is in location: $locationName, zone: ${zoneData?.name ?? "No Zone"}");
 
             return HardwareItemCard(
               name: source.name,
@@ -495,11 +492,8 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
               itemId: source.id,
               zone: getZoneData(source.id),
               location: getLocationName(source.locationEntity.listeningAreaId) ?? "Add Location",
-              isHovered: isHovered,
               isSelected: isSelected,
               onTap: () => _projectViewModel.setSelectedDevice(source.id, SelectedItemType.source),
-              onHover: () => _projectViewModel.setHoveredDevice(source.id, SelectedItemType.source),
-              onExit: () => _projectViewModel.setHoveredDevice(null, null),
               onDelete: (String id) {
                 serviceLocator<ProjectViewModel>().removeHardware(hardwareId: id);
                 FusionToast.error(
@@ -520,7 +514,6 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
   Widget _buildEndpointsContent() {
     return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
       builder: (BuildContext context, ProjectViewModelState state) {
-        final SelectedItem? hoveredDevice = _projectViewModel.hoveredDevice;
         final SelectedItem? selectedDevice = _projectViewModel.selectedDevice;
 
         return CommonReorderableListView<FusionEndpoints>(
@@ -537,7 +530,6 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
           },
           keyExtractor: (FusionEndpoints endpoint) => endpoint.id,
           itemBuilder: (BuildContext context, FusionEndpoints endpoint, int index) {
-            final bool isHovered = hoveredDevice?.id == endpoint.id && hoveredDevice?.type == SelectedItemType.endpoint;
             final bool isSelected = selectedDevice?.id == endpoint.id && selectedDevice?.type == SelectedItemType.endpoint;
 
             return HardwareItemCard(
@@ -546,11 +538,8 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
               itemId: endpoint.id,
               zone: getZoneData(endpoint.id),
               location: getLocationName(endpoint.locationEntity.listeningAreaId) ?? "Add Location",
-              isHovered: isHovered,
               isSelected: isSelected,
               onTap: () => _projectViewModel.setSelectedDevice(endpoint.id, SelectedItemType.endpoint),
-              onHover: () => _projectViewModel.setHoveredDevice(endpoint.id, SelectedItemType.endpoint),
-              onExit: () => _projectViewModel.setHoveredDevice(null, null),
               onDelete: (String id) {
                 serviceLocator<ProjectViewModel>().removeHardware(hardwareId: id);
                 FusionToast.error(
@@ -571,7 +560,6 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
   Widget _buildProcessorsContent() {
     return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
       builder: (BuildContext context, ProjectViewModelState state) {
-        final SelectedItem? hoveredDevice = _projectViewModel.hoveredDevice;
         final SelectedItem? selectedDevice = _projectViewModel.selectedDevice;
 
         return CommonReorderableListView<FusionDsp>(
@@ -588,20 +576,15 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
           },
           keyExtractor: (FusionDsp processor) => processor.id,
           itemBuilder: (BuildContext context, FusionDsp processor, int index) {
-            final bool isHovered = hoveredDevice?.id == processor.id && hoveredDevice?.type == SelectedItemType.processor;
             final bool isSelected = selectedDevice?.id == processor.id && selectedDevice?.type == SelectedItemType.processor;
 
             return HardwareItemCard(
               name: processor.name,
               assetImagePath: processor.assetImagePath,
               itemId: processor.id,
-              // zone: getZoneData(processor.id),
               location: getLocationName(processor.locationEntity.listeningAreaId) ?? "Add Location",
-              isHovered: isHovered,
               isSelected: isSelected,
               onTap: () => _projectViewModel.setSelectedDevice(processor.id, SelectedItemType.processor),
-              onHover: () => _projectViewModel.setHoveredDevice(processor.id, SelectedItemType.processor),
-              onExit: () => _projectViewModel.setHoveredDevice(null, null),
               onDelete: (String id) {
                 FusionToast.error(
                   context,
@@ -621,7 +604,6 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
   Widget _buildRacksContent() {
     return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
       builder: (BuildContext context, ProjectViewModelState state) {
-        final SelectedItem? hoveredDevice = _projectViewModel.hoveredDevice;
         final SelectedItem? selectedDevice = _projectViewModel.selectedDevice;
         return CommonReorderableListView<HardwareRack>(
           items: _projectViewModel.hardwareRacks,
@@ -637,20 +619,15 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
           },
           keyExtractor: (HardwareRack hardwareRack) => hardwareRack.id,
           itemBuilder: (BuildContext context, HardwareRack hardwareRack, int index) {
-            final bool isHovered = hoveredDevice?.id == hardwareRack.id && hoveredDevice?.type == SelectedItemType.racks;
             final bool isSelected = selectedDevice?.id == hardwareRack.id && selectedDevice?.type == SelectedItemType.racks;
 
             return HardwareItemCard(
               name: hardwareRack.name,
               assetImagePath: hardwareRack.assetImagePath,
               itemId: hardwareRack.id,
-              // zone: getZoneData(processor.id),
               location: getLocationName(hardwareRack.locationEntity.listeningAreaId) ?? "Add Location",
-              isHovered: isHovered,
               isSelected: isSelected,
               onTap: () => _projectViewModel.setSelectedDevice(hardwareRack.id, SelectedItemType.racks),
-              onHover: () => _projectViewModel.setHoveredDevice(hardwareRack.id, SelectedItemType.racks),
-              onExit: () => _projectViewModel.setHoveredDevice(null, null),
               onDelete: (String id) {
                 serviceLocator<ProjectViewModel>().removeHardware(hardwareId: id);
 
@@ -672,7 +649,6 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
   Widget _buildAmplifiersContent() {
     return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
       builder: (BuildContext context, ProjectViewModelState state) {
-        final SelectedItem? hoveredDevice = _projectViewModel.hoveredDevice;
         final SelectedItem? selectedDevice = _projectViewModel.selectedDevice;
 
         return CommonReorderableListView<Amplifier>(
@@ -689,20 +665,15 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
           },
           keyExtractor: (Amplifier amplifier) => amplifier.id,
           itemBuilder: (BuildContext context, Amplifier amplifier, int index) {
-            final bool isHovered = hoveredDevice?.id == amplifier.id && hoveredDevice?.type == SelectedItemType.amplifier;
             final bool isSelected = selectedDevice?.id == amplifier.id && selectedDevice?.type == SelectedItemType.amplifier;
 
             return HardwareItemCard(
               name: amplifier.name,
               assetImagePath: amplifier.assetImagePath,
               itemId: amplifier.id,
-              // zone: getZoneData(amplifier.id),
               location: getLocationName(amplifier.locationEntity.listeningAreaId) ?? "Add Location",
-              isHovered: isHovered,
               isSelected: isSelected,
               onTap: () => _projectViewModel.setSelectedDevice(amplifier.id, SelectedItemType.amplifier),
-              onHover: () => _projectViewModel.setHoveredDevice(amplifier.id, SelectedItemType.amplifier),
-              onExit: () => _projectViewModel.setHoveredDevice(null, null),
               onDelete: (String id) {
                 serviceLocator<ProjectViewModel>().removeHardware(hardwareId: id);
                 FusionToast.error(
@@ -725,7 +696,6 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
       padding: const EdgeInsets.all(10.0),
       child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
         builder: (BuildContext context, ProjectViewModelState state) {
-          final SelectedItem? hoveredDevice = _projectViewModel.hoveredDevice;
           final SelectedItem? selectedDevice = _projectViewModel.selectedDevice;
 
           return CommonReorderableListView<FusionController>(
@@ -742,7 +712,6 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
             },
             keyExtractor: (FusionController controller) => controller.id,
             itemBuilder: (BuildContext context, FusionController controller, int index) {
-              final bool isHovered = hoveredDevice?.id == controller.id && hoveredDevice?.type == SelectedItemType.controller;
               final bool isSelected = selectedDevice?.id == controller.id && selectedDevice?.type == SelectedItemType.controller;
 
               return HardwareItemCard(
@@ -751,11 +720,8 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                 itemId: controller.id,
                 zone: getZoneData(controller.id),
                 location: getLocationName(controller.locationEntity.listeningAreaId) ?? "Add Location",
-                isHovered: isHovered,
                 isSelected: isSelected,
                 onTap: () => _projectViewModel.setSelectedDevice(controller.id, SelectedItemType.controller),
-                onHover: () => _projectViewModel.setHoveredDevice(controller.id, SelectedItemType.controller),
-                onExit: () => _projectViewModel.setHoveredDevice(null, null),
                 onDelete: (String id) {
                   serviceLocator<ProjectViewModel>().removeHardware(hardwareId: id);
                   FusionToast.error(
@@ -777,23 +743,22 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
   Widget _buildSwitchesContent() {
     return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
       builder: (BuildContext context, ProjectViewModelState state) {
-        final SelectedItem? hoveredDevice = _projectViewModel.hoveredDevice;
         final SelectedItem? selectedDevice = _projectViewModel.selectedDevice;
 
         return CommonReorderableListView<NetworkSwitch>(
           items: _projectViewModel.networkSwitches,
           emptyMessage: "No accessories added yet",
           onReorder: (int oldIndex, int newIndex) {
-            setState(() {
-              if (newIndex > oldIndex) newIndex -= 1;
-              final NetworkSwitch item = _projectViewModel.networkSwitches.removeAt(oldIndex);
-              _projectViewModel.networkSwitches.insert(newIndex, item);
-              _projectViewModel.setSelectedDevice('accessory_$newIndex', SelectedItemType.switchs);
-            });
+            if (oldIndex < newIndex) {
+              newIndex -= 1;
+            }
+            final String hwToMove = _projectViewModel.networkSwitches[oldIndex].id;
+            final String hwAtNewIndex = _projectViewModel.networkSwitches[newIndex].id;
+            _projectViewModel.reOrderHardware(hardwareIdToMove: hwToMove, hardwareAtNewIndex: hwAtNewIndex);
+            _projectViewModel.setSelectedDevice(hwToMove, SelectedItemType.switchs);
           },
           keyExtractor: (NetworkSwitch networkSwitch) => networkSwitch.id,
           itemBuilder: (BuildContext context, NetworkSwitch networkSwitch, int index) {
-            final bool isHovered = hoveredDevice?.id == networkSwitch.id && hoveredDevice?.type == SelectedItemType.switchs;
             final bool isSelected = selectedDevice?.id == networkSwitch.id && selectedDevice?.type == SelectedItemType.switchs;
 
             return HardwareItemCard(
@@ -802,11 +767,9 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
               itemId: networkSwitch.id,
               // zone: getZoneData(accessoryId),
               location: getLocationName(networkSwitch.locationEntity.listeningAreaId) ?? "Add Location",
-              isHovered: isHovered,
               isSelected: isSelected,
               onTap: () => _projectViewModel.setSelectedDevice(networkSwitch.id, SelectedItemType.switchs),
-              onHover: () => _projectViewModel.setHoveredDevice(networkSwitch.id, SelectedItemType.switchs),
-              onExit: () => _projectViewModel.setHoveredDevice(null, null),
+
               onDelete: (String id) {
                 serviceLocator<ProjectViewModel>().removeHardware(hardwareId: id);
 
@@ -848,11 +811,13 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
           buildDefaultDragHandles: false,
           itemCount: _projectViewModel.zones.length,
           onReorder: (int oldIndex, int newIndex) {
-            // setState(() {
-            //   if (newIndex > oldIndex) newIndex -= 1;
-            //   final Map<String, dynamic> item = _reorderableZones.removeAt(oldIndex);
-            //   _reorderableZones.insert(newIndex, item);
-            // });
+            if (oldIndex < newIndex) {
+              newIndex -= 1;
+            }
+            final String zoneToMove = _projectViewModel.zones[oldIndex].id;
+            final String zoneAtNewIndex = _projectViewModel.zones[newIndex].id;
+            _projectViewModel.reorderZones(zoneIdToMove: zoneToMove, zoneIdAtNewIndex: zoneAtNewIndex);
+            _projectViewModel.setSelectedDevice(zoneToMove, SelectedItemType.zone);
           },
           itemBuilder: (BuildContext context, int index) {
             final Zone zoneData = _projectViewModel.zones[index];
@@ -865,15 +830,8 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                 zoneId: zoneData.id,
                 bgColor: zoneData.color,
                 initiallyExpanded: false,
-                zoneDevices: _projectViewModel.getCircuitsInZone(zoneData.id),
+                zoneCircuits: _projectViewModel.getCircuitsInZone(zoneData.id),
                 subZones: _projectViewModel.getSubZonesForZone(parentZoneId: zoneData.id),
-                onZoneReorder: (String zoneId, int oldIndex, int newIndex) {
-                  // setState(() {
-                  //   if (newIndex > oldIndex) newIndex -= 1;
-                  //   final Map<String, dynamic> item = _reorderableZones.removeAt(oldIndex);
-                  //   _reorderableZones.insert(newIndex, item);
-                  // });
-                },
                 onSubZoneReorder: (String zoneId, int oldIndex, int newIndex) {
                   // setState(() {
                   //   final List<Map<String, dynamic>>? subZones = _reorderableSubZones[zoneId];
@@ -895,24 +853,12 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                   // });
                 },
                 onDelete: (String id) {
-                  // setState(() {
-                  //   _reorderableZones.removeWhere((Map<String, dynamic> zone) => zone['id'] == id);
-                  //   // Also remove associated subzones and devices
-                  //   _reorderableSubZones.remove(id);
-                  //   final List<String> subZoneIds = _reorderableSubZones[id]?.map((Map<String, dynamic> sz) => sz['id'] as String).toList() ?? <String>[];
-                  //   for (final String subZoneId in subZoneIds) {
-                  //     _reorderableDevices.remove(subZoneId);
-                  //   }
-                  // });
-                  // FusionToast.show(
-                  //   context,
-                  //   message: 'Zone "${zone['name']}" deleted',
-                  //   icon: Icons.delete_outline,
-                  //   backgroundColor: Colors.red[600],
-                  // );
+                  serviceLocator<ProjectViewModel>().removeZone(zoneId: zoneData.id);
+                  FusionToast.success(
+                    context,
+                    message: 'Zone "${zoneData.name}" deleted',
+                  );
                 },
-                onEdit: (String id) => print('Rename zone $id'),
-                onAddDevice: () => print('Add device to zone'),
               ),
             );
           },

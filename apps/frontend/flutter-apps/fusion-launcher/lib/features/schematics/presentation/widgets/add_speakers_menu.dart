@@ -30,7 +30,6 @@ class AddSpeakersMenu extends StatefulWidget {
 }
 
 class _AddSpeakersMenuState extends State<AddSpeakersMenu> {
-  final TextEditingController nameController = TextEditingController();
   final TextEditingController numberOfSpeakers = TextEditingController(text: "1");
 
   String? selectedListeningAreaId;
@@ -249,6 +248,7 @@ class _AddSpeakersMenuState extends State<AddSpeakersMenu> {
                                     }
                                     speakerData = null;
                                     Navigator.pop(context);
+                                    numberOfSpeakers.text = '1';
                                     _selectedListeningAreaIds.clear();
                                   },
                                 ),
