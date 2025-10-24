@@ -38,7 +38,7 @@ static unsigned int nf_hook_func(void *priv, struct sk_buff *skb, const struct n
 
     // Check RTP header: Version (first byte) should have 0x80 (Version 2)
     rtp_header = (uint8_t *)packet + ETH_HLEN + (ip_header->ihl * 4) + sizeof(struct udphdr);
-    if (!(*rtp_header & 0xC0)) {
+    if (!(*rtp_header & 0x80)) {
         return NF_ACCEPT;
     }
 
