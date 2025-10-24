@@ -91,8 +91,7 @@ int main(int argc, const char *argv[])
     // TODO: Create User Interface task. This task handles UI,
     //       Physical Encoders etc.
     std::cout << "Starting uiThread ... " << std::endl;
-    //std::thread uiThread = OcaLiteOcfThread_create(uiThreadProc,
-    std::thread uiThread = OcaLiteOcfThread_create(ControllerViewProc,
+    void *uiThread = OcaLiteOcfThread_create(ControllerViewProc,
                                               static_cast<void *>(&msgQues));
 
     // Start OCA processing

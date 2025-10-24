@@ -8,6 +8,7 @@
 #include <stdexcept>
 #include <condition_variable>
 #include "ControllerMenu.h"
+#include "../../../PlatformInterface/linux/OcaLiteOcfThread.h"
 #include "../../../ControlPalMsgInterface.h"
 
 std::string global_input;
@@ -15,13 +16,16 @@ std::mutex mtx;
 std::condition_variable cv_read;
 bool input_received = false;
 
-void read_input_thread();
+void read_input_thread(void *arg);
+void *readThread;
+bool terminateFlag(false);
 
 ControllerMenu::ControllerMenu(std::string title, void *cmdQueue):
     ControlPalMsgInterface(cmdQueue),
     m_title(std::move(title)), m_exitLabel("Exit"),
     m_activeZone(NULL)
 {
+    readThread = OcaLiteOcfThread_create(read_input_thread, NULL);
 }
 
 void ControllerMenu::addOption(const std::string& label, Callback cb)
@@ -39,7 +43,7 @@ void read_input_thread(void *arg)
     (void) arg;
     std::string line;
 
-    while(1)
+    while(!terminateFlag)
     {
         std::getline(std::cin, line); // This will block
         {
@@ -49,6 +53,7 @@ void read_input_thread(void *arg)
         }
         cv_read.notify_one(); // Signal that input is received
     }
+    std::cout << "Exiting Read Thread.\n";
 }
 
 void ControllerMenu::drawControllerMenu()
@@ -56,8 +61,9 @@ void ControllerMenu::drawControllerMenu()
     static float prevGain    = 0.0;
     static uint32_t prevMute = 1;
     static uint32_t prevPos  = 0;
+    static uint32_t drawCnt = 0;
 
-    if ( (prevPos != m_activeZone->source) || (prevGain != m_activeZone->gain) || (prevMute != m_activeZone->mute))
+    if ( (prevPos != m_activeZone->source) || (prevGain != m_activeZone->gain) || (prevMute != m_activeZone->mute) || ((drawCnt++ % 1000) == 0))
     {
         // Clear the console screen in a cross-platform friendly way by
         // printing several newlines. (Avoid system("cls") for portability/safety.)
@@ -137,67 +143,75 @@ void ControllerMenu::addZone(uint32_t &ONo, std::string &name, float &gain,
 
 void ControllerMenu::run()
 {
-    //while (true) 
+    int sel = 0;
+
+    drawControllerMenu();
+
+    sel = getSelection();
+    if (sel ==-1)
     {
-        int sel = 0;
+        return;
+    }
+    else if (sel == 0) {
+        std::cout << "Exiting menu.\n";
+        terminateFlag = true;
+        return;
+    }
+    // valid selection: invoke callback
+    size_t idx = static_cast<size_t>(sel - 1);
+    try {
+        if (m_items[idx].cb) {
 
-        drawControllerMenu();
+            switch (idx)
+            {
+                case 0:
+                    // Cycle Zone
+                    cycleActiveZone();
+                    break;
 
-        sel = getSelection();
-        if (sel ==-1)
-        {
-            return;
-        }
-        else if (sel == 0) {
-            std::cout << "Exiting menu.\n";
-            return;
-        }
-        // valid selection: invoke callback
-        size_t idx = static_cast<size_t>(sel - 1);
-        try {
-            if (m_items[idx].cb) {
+                case 1:
+                    // Increase Gain
+                    m_uiMsg.ono = m_activeZone->ONo;
+                    break;
 
-                switch (idx)
-                {
-                    case 0:
-                        // Cycle Zone
-                        cycleActiveZone();
-                        break;
+                case 2:
+                    // Decrease Gain
+                    m_uiMsg.ono = m_activeZone->ONo;
+                    break;
 
-                    case 1:
-                        // Increase Gain
-                        m_uiMsg.ono = m_activeZone->ONo;
-                        break;
+                case 3:
+                    //Toggle Mute
+                    m_uiMsg.ono = m_activeZone->ONo;
+                    break;
 
-                    case 2:
-                        // Decrease Gain
-                        m_uiMsg.ono = m_activeZone->ONo;
-                        break;
+                case 4:
+                    // Cycle Source
+                    m_uiMsg.ono = m_activeZone->ONo;
+                    break;
 
-                    case 3:
-                        //Toggle Mute
-                        m_uiMsg.ono = m_activeZone->ONo;
-                        break;
+                default:
+                    throw std::runtime_error("Invalid Selection.");
+                    return;
+            }
 
-                    case 4:
-                        // Cycle Source
-                        m_uiMsg.ono = m_activeZone->ONo;
-                        break;
-
-                    default:
-                        throw std::runtime_error("Invalid Selection.");
-                        return;
-                }
+            // No callback or message to send for zone cycle command
+            if ( idx != 0)
+            {
                 m_items[idx].cb(m_uiMsg);
                 SendValue();
-
             }
-        } catch (const std::exception& e) {
-            std::cout << "Error in callback: " << e.what() << "\n";
-        } catch (...) {
-            std::cout << "Unknown error in callback.\n";
+
         }
-        // After callback returns, loop continues and menu is shown again
+    } catch (const std::exception& e) {
+        std::cout << "Error in callback: " << e.what() << "\n";
+    } catch (...) {
+        std::cout << "Unknown error in callback.\n";
+    }
+    // After callback returns, loop continues and menu is shown again
+
+    if (terminateFlag)
+    {
+        OcaLiteOcfThread_Wait(readThread);
     }
 }
 
@@ -208,7 +222,6 @@ void ControllerMenu::SendValue()
 
 void ControllerMenu::cycleActiveZone()
 {
-    //std::map<uint32_t, std::unique_ptr<zoneProperties>>::size_type
     auto zoneCnt = m_zoneMap.size();
 
     if (zoneCnt > 1)
@@ -218,9 +231,10 @@ void ControllerMenu::cycleActiveZone()
         int currIndex = std::distance(m_zoneMap.begin(), it);
         currIndex = (currIndex + 1) % zoneCnt;  // next zone
 
-        //it = m_zoneMap.begin();
-        //std::advance(it, currIndex);
-        m_activeZone = m_zoneMap[currIndex].get();
+        // Move to next item in the Map
+        it = m_zoneMap.begin();
+        std::advance(it, currIndex);
+        m_activeZone = it->second.get();
     }
 }
 

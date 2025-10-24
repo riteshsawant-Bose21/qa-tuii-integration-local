@@ -23,6 +23,9 @@
 // ---- Helper functions ----
 
 // ---- Class Definition ----
+#define LAST_GAIN_RESET_VAL (-999.0)  // A random large number unlikely to be
+                                      // set as gain level was selected to use
+                                      // for this purpose.
 /**
  * ControlPal implementation of a gain actuator that actually performs gain adjustment.
  * This class inherits from OcaLiteGain and implements the pure virtual SetGainValue method.
@@ -75,6 +78,10 @@ public:
         m_lastGainSet = val;
     }
 
+    bool UpdatesDone()
+    {
+        return (m_lastGainSet == LAST_GAIN_RESET_VAL);
+    }
 protected:
     /**
      * Set the value of the Gain property. This method performs the actual
