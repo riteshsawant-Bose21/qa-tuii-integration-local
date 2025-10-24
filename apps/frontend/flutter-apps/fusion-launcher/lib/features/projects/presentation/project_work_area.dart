@@ -282,35 +282,6 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                   ),
                 ),
               ), // List icon
-              // title: IntrinsicWidth(
-              //   child: TextField(
-              //     controller: _projectNameController,
-              //     textAlign: TextAlign.start,
-              //     style: const TextStyle(
-              //       color: Colors.white,
-              //       fontSize: 20,
-              //       fontWeight: FontWeight.normal,
-              //     ),
-              //     decoration: const InputDecoration(
-              //       border: InputBorder.none,
-              //       isDense: true,
-              //       contentPadding: EdgeInsets.zero,
-              //       hintText: 'Project Name',
-              //       suffixIcon: Icon(
-              //         Icons.edit,
-              //         size: 16,
-              //         color: Colors.grey,
-              //       ),
-              //       suffixIconConstraints: BoxConstraints(
-              //         minWidth: 0,
-              //         minHeight: 0,
-              //       ),
-              //     ),
-              //     onSubmitted: (String value) {
-              //       serviceLocator<ProjectViewModel>().setProjectName(value.trim());
-              //     },
-              //   ),
-              // ),
               actions: <Widget>[
                 const FusionProfileImage(
                   assetPath: "assets/images/fusion_default_icon.png",

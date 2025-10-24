@@ -107,7 +107,7 @@ class GenericHardwareComponent extends HardwareComponent {
       id: json['id'] as String?,
       name: json['name'] as String? ?? (throw FormatException('Missing "name" in CanvasProduct JSON: $json')),
       pos: Offset(dx, dy),
-      wiringPos: json['wiringPos'] != null ? Offset((json['wiringPos']['x'] as num).toDouble(), (json['wiringPos']['y'] as num).toDouble()) : null,
+      wiringPos: json['wiringPos'] != null ? Offset((json['wiringPos']['dx'] as num).toDouble(), (json['wiringPos']['dy'] as num).toDouble()) : null,
       type: productType,
       assetImagePath: json['assetImagePath'] as String,
       locationEntity: LocationModel.fromJson(json['locationEntity'] as Map<String, dynamic>),

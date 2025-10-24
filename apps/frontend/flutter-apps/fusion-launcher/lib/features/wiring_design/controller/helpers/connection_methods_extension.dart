@@ -7,7 +7,13 @@ extension ConnectionMethodsExtension on CircuitController {
   // }
 
   bool canHaveConnection(CircuitPort a, CircuitPort b) {
-    return a.data.compatibleTypes.contains(b.data.type) &&
-        b.data.compatibleTypes.contains(a.data.type);
+    return a.canConnect(b);
+  }
+}
+
+extension ConnectionHelperExtension on CircuitPort {
+  bool canConnect(CircuitPort otherPort) {
+    return data.compatibleTypes.contains(otherPort.data.type) &&
+        otherPort.data.compatibleTypes.contains(data.type);
   }
 }

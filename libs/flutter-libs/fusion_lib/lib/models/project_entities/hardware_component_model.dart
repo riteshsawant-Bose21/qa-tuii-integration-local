@@ -1,10 +1,7 @@
-import 'dart:math';
 import 'dart:ui';
 
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:uuid/uuid.dart';
-
-import 'location_model.dart';
 
 class HardwarePortData {
   final int inputPorts;
@@ -65,14 +62,19 @@ abstract class HardwareComponent {
            inputPortsData ??
            List<PortData>.generate(
              portData?.inputPorts ?? 0,
-             (index) => PortData(
-               id: FusionUtils.shortStringUUID(),
-               name: 'Input ${index + 1}',
-               type: portData?.inputPortType ?? PortType.analogInput,
-               portNumber: index + 1,
-               position: portData?.portPosition ?? PortPosition.topLeft,
-               compatibleTypes: portData?.compatibleInputTypes ?? [],
-             ),
+             (index) {
+               print("Port Data: ${portData?.inputPortType}");
+               return PortData(
+                 id: FusionUtils.shortStringUUID(),
+                 name: '${index + 1}',
+                 type: portData?.inputPortType ?? PortType.analogInput,
+                 portNumber: index + 1,
+                 description:
+                     "${(portData?.inputPortType ?? PortType.analogInput).description} ${index + 1}",
+                 position: portData?.portPosition ?? PortPosition.topLeft,
+                 compatibleTypes: portData?.compatibleInputTypes ?? [],
+               );
+             },
            ),
        outputPortsData =
            outputPortsData ??
@@ -80,24 +82,35 @@ abstract class HardwareComponent {
              portData?.outputPorts ?? 0,
              (index) => PortData(
                id: _uuid.v4(),
-               name: 'Output ${index + 1}',
+               name: '${index + 1}',
+               description:
+                   "${(portData?.inputPortType ?? PortType.analogOutput).description} ${index + 1}",
                type: portData?.outputPortType ?? PortType.analogOutput,
                portNumber: index + 1,
                position: portData?.portPosition ?? PortPosition.topRight,
                compatibleTypes: portData?.compatibleOutputTypes ?? [],
              ),
            );
-
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     if (other is! HardwareComponent) return false;
-    return id == other.id && name == other.name && pos == other.pos && assetImagePath == other.assetImagePath && locationEntity == other.locationEntity;
+    return id == other.id &&
+        name == other.name &&
+        pos == other.pos &&
+        wiringPos == other.wiringPos &&
+        assetImagePath == other.assetImagePath &&
+        locationEntity == other.locationEntity;
   }
 
   @override
   int get hashCode {
-    return id.hashCode ^ name.hashCode ^ pos.hashCode ^ assetImagePath.hashCode ^ locationEntity.hashCode;
+    return id.hashCode ^
+        name.hashCode ^
+        pos.hashCode ^
+        wiringPos.hashCode ^
+        assetImagePath.hashCode ^
+        locationEntity.hashCode;
   }
 
   HardwareComponent copyWith({
@@ -119,6 +132,10 @@ abstract class HardwareComponent {
 
 extension TotalPrice on List<HardwareComponent> {
   double get totalPrice {
-    return fold(0.0, (double previousValue, HardwareComponent element) => previousValue + element.price);
+    return fold(
+      0.0,
+      (double previousValue, HardwareComponent element) =>
+          previousValue + element.price,
+    );
   }
 }

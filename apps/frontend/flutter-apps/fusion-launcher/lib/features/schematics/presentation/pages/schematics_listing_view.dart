@@ -22,7 +22,6 @@ class SchematicsListingview extends StatefulWidget {
 class _SchematicsListingviewState extends State<SchematicsListingview> {
   List<Speaker> _reorderableSpeakers = <Speaker>[];
 
-  List<Map<String, dynamic>> _reorderableZones = <Map<String, dynamic>>[];
   final Map<String, List<Map<String, dynamic>>> _reorderableSubZones = <String, List<Map<String, dynamic>>>{};
   final Map<String, List<Map<String, dynamic>>> _reorderableDevices = <String, List<Map<String, dynamic>>>{};
 
@@ -39,20 +38,6 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
   }
 
   void _initializeReorderableLists() {
-    // Initialize zones with subzones and devices
-    _reorderableZones = <Map<String, dynamic>>[
-      <String, dynamic>{
-        'id': 'zone_1',
-        'name': 'Main Hall',
-        'color': Colors.lightBlueAccent[100],
-      },
-      <String, dynamic>{
-        'id': 'zone_2',
-        'name': 'Conference Room',
-        'color': Colors.lightGreenAccent[100],
-      },
-    ];
-
     // Initialize subzones for each zone
     _reorderableSubZones['zone_1'] = <Map<String, dynamic>>[
       <String, dynamic>{'id': 'subzone_1_1', 'name': 'Stage Area', 'zoneId': 'zone_1'},
@@ -110,28 +95,6 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
     return serviceLocator<ProjectViewModel>().getZoneForHardware(hardwareId: hardwareId);
   }
 
-  // Mock data for listening areas and zones - replace with actual data from your project
-  List<ListeningArea> get _listeningAreas => <ListeningArea>[
-    ListeningArea(
-      id: 'la_1',
-      name: 'Main Hall',
-      vertices: <Offset>[],
-      venuType: 'Indoor',
-    ),
-    ListeningArea(
-      id: 'la_2',
-      name: 'Conference Room A',
-      vertices: <Offset>[],
-      venuType: 'Indoor',
-    ),
-    ListeningArea(
-      id: 'la_3',
-      name: 'Outdoor Stage',
-      vertices: <Offset>[],
-      venuType: 'Outdoor',
-    ),
-  ];
-
   List<Zone> get _zones => <Zone>[
     Zone(
       id: 'zone_1',
@@ -164,7 +127,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                 height: double.infinity,
                 backgroundColor: Colors.grey[200]!,
                 sectionContent: _buildSourcesAndEndpointsContent(),
-                listeningAreas: _listeningAreas,
+                listeningAreas: _projectViewModel.listeningAreas,
                 zones: _zones,
                 selectedDeviceId: _projectViewModel.selectedDevice?.type == SelectedItemType.source ? _projectViewModel.selectedDevice?.id : null,
                 onTapAddDevice: (dynamic item, String areaId, String floorId) {
@@ -194,9 +157,24 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                           portNumber: 1,
                           type: PortType.wifi,
                           compatibleTypes: <PortType>[PortType.wifi],
+                          description: '',
                         ),
-                        PortData(name: 'USB', position: PortPosition.footerRight, portNumber: 2, type: PortType.usb, compatibleTypes: <PortType>[PortType.usb]),
-                        PortData(name: 'ble', position: PortPosition.footerRight, portNumber: 3, type: PortType.ble, compatibleTypes: <PortType>[PortType.ble]),
+                        PortData(
+                          name: 'USB',
+                          position: PortPosition.footerRight,
+                          portNumber: 2,
+                          type: PortType.usb,
+                          compatibleTypes: <PortType>[PortType.usb],
+                          description: '',
+                        ),
+                        PortData(
+                          name: 'ble',
+                          position: PortPosition.footerRight,
+                          portNumber: 3,
+                          type: PortType.ble,
+                          compatibleTypes: <PortType>[PortType.ble],
+                          description: '',
+                        ),
                       ],
                     );
                     serviceLocator<ProjectViewModel>().addHardware(hardware: source);
@@ -231,7 +209,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                 height: double.infinity,
                 backgroundColor: Colors.grey[200]!,
                 sectionContent: _buildProcessorsAndAmplifiers(),
-                listeningAreas: _listeningAreas,
+                listeningAreas: _projectViewModel.listeningAreas,
                 zones: _zones,
                 selectedDeviceId: _projectViewModel.selectedDevice?.type == SelectedItemType.processor ? _projectViewModel.selectedDevice?.id : null,
                 onTapAddDevice: (dynamic item, String areaId, String floorId) {
@@ -268,20 +246,20 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                 height: double.infinity,
                 backgroundColor: Colors.white,
                 sectionContent: _buildSpeakersContent(),
-                listeningAreas: _listeningAreas,
-                zones: _zones,
+                listeningAreas: _projectViewModel.listeningAreas,
+                zones: _projectViewModel.zones,
                 selectedDeviceId: _projectViewModel.selectedDevice?.type == SelectedItemType.zone ? _projectViewModel.selectedDevice?.id : null,
                 onTapAddDevice: (dynamic item, String areaId, String floorId) {
-                  if (item is ProductQueryModel) {
-                    final Map<String, dynamic> newZone = <String, dynamic>{
-                      'id': 'zone_${DateTime.now().millisecondsSinceEpoch}',
-                      'name': 'New Zone',
-                      'color': Colors.lightBlueAccent[100],
-                    };
-                    setState(() {
-                      _reorderableZones.add(newZone);
-                    });
-                  }
+                  // if (item is ProductQueryModel) {
+                  //   final Map<String, dynamic> newZone = <String, dynamic>{
+                  //     'id': 'zone_${DateTime.now().millisecondsSinceEpoch}',
+                  //     'name': 'New Zone',
+                  //     'color': Colors.lightBlueAccent[100],
+                  //   };
+                  //   setState(() {
+                  //     _reorderableZones.add(newZone);
+                  //   });
+                  // }
                 },
               ),
 
@@ -292,7 +270,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                 height: double.infinity,
                 backgroundColor: Colors.grey[200]!,
                 sectionContent: _buildControllersContent(),
-                listeningAreas: _listeningAreas,
+                listeningAreas: _projectViewModel.listeningAreas,
                 zones: _zones,
                 selectedDeviceId: _projectViewModel.selectedDevice?.type == SelectedItemType.controller ? _projectViewModel.selectedDevice?.id : null,
                 onTapAddDevice: (dynamic item, String areaId, String floorId) {
@@ -321,7 +299,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                 height: double.infinity,
                 backgroundColor: Colors.grey[200]!,
                 sectionContent: _buildAccessories(),
-                listeningAreas: _listeningAreas,
+                listeningAreas: _projectViewModel.listeningAreas,
                 zones: _zones,
                 selectedDeviceId: _projectViewModel.selectedDevice?.type == SelectedItemType.racks ? _projectViewModel.selectedDevice?.id : null,
                 onTapAddDevice: (dynamic item, String areaId, String floorId) {
@@ -849,7 +827,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
   Widget _buildSpeakersContent() {
     return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
       builder: (BuildContext context, ProjectViewModelState state) {
-        if (_reorderableZones.isEmpty) {
+        if (_projectViewModel.zones.isEmpty) {
           return Container(
             padding: const EdgeInsets.all(16),
             child: Center(
@@ -868,73 +846,72 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
           shrinkWrap: true,
           physics: const ClampingScrollPhysics(),
           buildDefaultDragHandles: false,
-          itemCount: _reorderableZones.length,
+          itemCount: _projectViewModel.zones.length,
           onReorder: (int oldIndex, int newIndex) {
-            setState(() {
-              if (newIndex > oldIndex) newIndex -= 1;
-              final Map<String, dynamic> item = _reorderableZones.removeAt(oldIndex);
-              _reorderableZones.insert(newIndex, item);
-            });
+            // setState(() {
+            //   if (newIndex > oldIndex) newIndex -= 1;
+            //   final Map<String, dynamic> item = _reorderableZones.removeAt(oldIndex);
+            //   _reorderableZones.insert(newIndex, item);
+            // });
           },
           itemBuilder: (BuildContext context, int index) {
-            final Map<String, dynamic> zone = _reorderableZones[index];
+            final Zone zoneData = _projectViewModel.zones[index];
             return ReorderableDragStartListener(
-              key: ValueKey<String>(zone['id'] as String),
+              key: ValueKey<String>(zoneData.id),
               index: index,
               child: ExpandableZoneWidget(
-                name: zone['name'] as String,
+                zoneName: zoneData.name,
                 assetImagePath: 'assets/speaker.png',
-                speakerId: zone['id'] as String,
-                bgColor: zone['color'] as Color,
+                zoneId: zoneData.id,
+                bgColor: zoneData.color,
                 initiallyExpanded: false,
-                subZones: _reorderableSubZones[zone['id']] ?? <Map<String, dynamic>>[],
-                devices: _reorderableDevices,
+                zoneDevices: _projectViewModel.getCircuitsInZone(zoneData.id),
+                subZones: _projectViewModel.getSubZonesForZone(parentZoneId: zoneData.id),
                 onZoneReorder: (String zoneId, int oldIndex, int newIndex) {
-                  setState(() {
-                    if (newIndex > oldIndex) newIndex -= 1;
-                    final Map<String, dynamic> item = _reorderableZones.removeAt(oldIndex);
-                    _reorderableZones.insert(newIndex, item);
-                  });
+                  // setState(() {
+                  //   if (newIndex > oldIndex) newIndex -= 1;
+                  //   final Map<String, dynamic> item = _reorderableZones.removeAt(oldIndex);
+                  //   _reorderableZones.insert(newIndex, item);
+                  // });
                 },
                 onSubZoneReorder: (String zoneId, int oldIndex, int newIndex) {
-                  setState(() {
-                    final List<Map<String, dynamic>>? subZones = _reorderableSubZones[zoneId];
-                    if (subZones != null) {
-                      if (newIndex > oldIndex) newIndex -= 1;
-                      final Map<String, dynamic> item = subZones.removeAt(oldIndex);
-                      subZones.insert(newIndex, item);
-                    }
-                  });
+                  // setState(() {
+                  //   final List<Map<String, dynamic>>? subZones = _reorderableSubZones[zoneId];
+                  //   if (subZones != null) {
+                  //     if (newIndex > oldIndex) newIndex -= 1;
+                  //     final Map<String, dynamic> item = subZones.removeAt(oldIndex);
+                  //     subZones.insert(newIndex, item);
+                  //   }
+                  // });
                 },
                 onDeviceReorder: (String subZoneId, int oldIndex, int newIndex) {
-                  setState(() {
-                    final List<Map<String, dynamic>>? devices = _reorderableDevices[subZoneId];
-                    if (devices != null) {
-                      if (newIndex > oldIndex) newIndex -= 1;
-                      final Map<String, dynamic> item = devices.removeAt(oldIndex);
-                      devices.insert(newIndex, item);
-                    }
-                  });
+                  // setState(() {
+                  //   final List<Map<String, dynamic>>? devices = _reorderableDevices[subZoneId];
+                  //   if (devices != null) {
+                  //     if (newIndex > oldIndex) newIndex -= 1;
+                  //     final Map<String, dynamic> item = devices.removeAt(oldIndex);
+                  //     devices.insert(newIndex, item);
+                  //   }
+                  // });
                 },
                 onDelete: (String id) {
-                  setState(() {
-                    _reorderableZones.removeWhere((Map<String, dynamic> zone) => zone['id'] == id);
-                    // Also remove associated subzones and devices
-                    _reorderableSubZones.remove(id);
-                    final List<String> subZoneIds = _reorderableSubZones[id]?.map((Map<String, dynamic> sz) => sz['id'] as String).toList() ?? <String>[];
-                    for (final String subZoneId in subZoneIds) {
-                      _reorderableDevices.remove(subZoneId);
-                    }
-                  });
-                  FusionToast.show(
-                    context,
-                    message: 'Zone "${zone['name']}" deleted',
-                    icon: Icons.delete_outline,
-                    backgroundColor: Colors.red[600],
-                  );
+                  // setState(() {
+                  //   _reorderableZones.removeWhere((Map<String, dynamic> zone) => zone['id'] == id);
+                  //   // Also remove associated subzones and devices
+                  //   _reorderableSubZones.remove(id);
+                  //   final List<String> subZoneIds = _reorderableSubZones[id]?.map((Map<String, dynamic> sz) => sz['id'] as String).toList() ?? <String>[];
+                  //   for (final String subZoneId in subZoneIds) {
+                  //     _reorderableDevices.remove(subZoneId);
+                  //   }
+                  // });
+                  // FusionToast.show(
+                  //   context,
+                  //   message: 'Zone "${zone['name']}" deleted',
+                  //   icon: Icons.delete_outline,
+                  //   backgroundColor: Colors.red[600],
+                  // );
                 },
-                onRename: (String id) => print('Rename zone $id'),
-                onDuplicate: (String id) => print('Duplicate zone $id'),
+                onEdit: (String id) => print('Rename zone $id'),
                 onAddDevice: () => print('Add device to zone'),
               ),
             );

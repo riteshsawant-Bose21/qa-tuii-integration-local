@@ -3,62 +3,71 @@ part of 'component_data.dart';
 class ComponentPort {
   final String? image;
   final String? label;
-  final String type;
-  final List<String> compatibleTypes;
+  final PortType type;
+  final List<PortType> compatibleTypes;
   final String data;
+  final PortPosition? position;
+  final int index;
+  final String? description;
   ComponentPort({
     required this.data,
     this.image,
     this.label,
     required this.type,
     required this.compatibleTypes,
+    this.position,
+    this.index = 0,
+    required this.description,
   });
-
-  static ComponentPort input({
-    required String data,
-    String? image,
-    String? label,
-  }) {
-    return ComponentPort(
-      data: data,
-      image: image,
-      label: label,
-      type: 'input',
-      compatibleTypes: const <String>['output'],
-    );
-  }
-
-  static ComponentPort output({
-    required String data,
-    String? image,
-    String? label,
-  }) {
-    return ComponentPort(
-      data: data,
-      image: image,
-      label: label,
-      type: 'output',
-      compatibleTypes: const <String>['input'],
-    );
-  }
 
   Map<String, dynamic> toMap() {
     return <String, dynamic>{
       'image': image,
       'label': label,
-      'type': type,
-      'compatibleTypes': compatibleTypes,
+      'type': type.name,
+      'compatibleTypes': compatibleTypes.map((PortType e) => e.name).toList(),
       'data': data,
     };
   }
 
+  factory ComponentPort.fromPortData(PortData portData) {
+    return ComponentPort(
+      description: portData.description ?? '',
+      image: switch (portData.type) {
+        PortType.ethernet ||
+        PortType.networkSwitchIn ||
+        PortType.networkSwitchOut => 'assets/icons/wiring_ports/ethernet.png',
+        PortType.wifi => 'assets/icons/wiring_ports/wifi.png',
+        PortType.ble => 'assets/icons/wiring_ports/bluetooth.png',
+        PortType.hdmi => 'assets/icons/wiring_ports/hdmi.png',
+        PortType.usb => 'assets/icons/wiring_ports/usb.png',
+        PortType.audioJack => 'assets/icons/wiring_ports/audio_jack.png',
+        _ => null,
+      },
+      position: portData.position,
+      index: portData.portNumber,
+      label: portData.name,
+      type: portData.type,
+      compatibleTypes: portData.compatibleTypes,
+      data: portData.id,
+    );
+  }
+
   factory ComponentPort.fromMap(Map<String, dynamic> map) {
     return ComponentPort(
+      description:
+          map['description'] != null ? map['description'] as String : '',
       image: map['image'] != null ? map['image'] as String : null,
       label: map['label'] != null ? map['label'] as String : null,
-      type: map['type'] as String,
-      compatibleTypes: List<String>.from(
-        (map['compatibleTypes'] as List<String>),
+      type: PortType.values.firstWhere(
+        (PortType e) => e.name == map['type'],
+      ),
+      compatibleTypes: List<PortType>.from(
+        (map['compatibleTypes'] as List<dynamic>).map<PortType>(
+          (dynamic e) => PortType.values.firstWhere(
+            (PortType pt) => pt.name == e,
+          ),
+        ),
       ),
       data: map['data'] as String,
     );

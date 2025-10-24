@@ -1,6 +1,3 @@
-import 'dart:convert';
-import 'dart:developer';
-
 class StateStack {
   final List<Map<String, dynamic>> _stack = <Map<String, dynamic>>[];
   int _currentIndex = -1;
@@ -11,10 +8,7 @@ class StateStack {
       _stack.removeRange(_currentIndex + 1, _stack.length);
     }
     _stack.add(Map<String, dynamic>.from(state));
-    log("*" * 20);
-    log("Add State");
-    log(jsonEncode(state));
-    log("*" * 20);
+
     _currentIndex++;
   }
 

@@ -29,3 +29,10 @@ enum ImpedanceLevel {
   low,
   high,
 }
+
+/// Zone and SubZone menu actions enum
+enum ZoneMenuAction {
+  edit,
+  subzone,
+  delete,
+}

@@ -6,6 +6,7 @@ import 'package:fusion_launcher/features/wiring_design/view/painters/base_painte
 import 'package:fusion_launcher/features/wiring_design/view/painters/component_painter.dart';
 import 'package:fusion_launcher/features/wiring_design/view/painters/wire_painter.dart';
 
+import 'dotted_grid_painter.dart';
 import 'intermediate_wire_painter.dart';
 
 class CircuitPainter extends CustomPainter {
@@ -21,6 +22,18 @@ class CircuitPainter extends CustomPainter {
     final Offset offset = controller.canvasState.offset;
     canvas.translate(offset.dx, offset.dy);
     canvas.scale(controller.canvasState.scale);
+
+    ///
+    ///
+    /// Background Dotted grid
+    ///
+    DottedGridPainter(color: colorScheme.outlineVariant.withAlpha(125)).paint(
+      canvas,
+      size,
+      offset,
+      controller.canvasState.scale,
+    );
+
     // Paint components
     for (final CircuitComponent component in controller.state.components) {
       final ComponentPainter componentPainter = ComponentPainter(
@@ -57,25 +70,7 @@ class CircuitPainter extends CustomPainter {
       intermediateWirePainter.paint(canvas, size);
     }
 
-    // for (final PathSide aKey in controller.wiewRoter.basePaths.keys) {
-    //   for (final PathSide bKey in controller.wiewRoter.basePaths[aKey]!.keys) {
-    //     final Path path = Path();
-    //     final List<Offset>? shortestPath =
-    //         controller.wiewRoter.basePaths[aKey]?[bKey];
-    //     if (shortestPath != null && shortestPath.isNotEmpty) {
-    //       path.moveTo(shortestPath.first.dx, shortestPath.first.dy);
-    //       for (final Offset point in shortestPath) {
-    //         path.lineTo(point.dx, point.dy);
-    //       }
-    //       final Paint paint =
-    //           Paint()
-    //             ..color = Colors.green
-    //             ..style = PaintingStyle.stroke
-    //             ..strokeWidth = 1.0;
-    //       canvas.drawPath(path, paint);
-    //     }
-    //   }
-    // }
+
     canvas.restore();
   }
 

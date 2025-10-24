@@ -8,12 +8,14 @@ class Zone {
   final String name;
   final int selectedMixIndex;
   final String zoneColor;
+  final Offset? wiringPos;
 
   Zone({
     String? id,
     required this.name,
     String? zoneColor,
     this.selectedMixIndex = 0,
+    this.wiringPos,
   }) : id = id ?? "ZONE${FusionUtils.shortStringUUID()}",
        zoneColor = zoneColor ?? getRandomColor();
 
@@ -34,6 +36,19 @@ class Zone {
     '#CDDC39', // Lime
     '#3F51B5', // Indigo
     '#009688', // Teal
+    '#FF5722', // Deep Orange
+    '#8BC34A', // Light Green
+    '#FFC107', // Amber
+    '#673AB7', // Deep Purple
+    '#03A9F4', // Light Blue
+    '#FFCDD2', // Light Pink
+    '#C5E1A5', // Pale Green
+    '#FFE082', // Pale Yellow
+    '#B39DDB', // Lavender
+    '#80DEEA', // Light Cyan
+    '#FFAB91', // Peach
+    '#AED581', // Mint Green
+    '#F48FB1', // Rose Pink
   ];
 
   static getRandomColor() {
@@ -46,12 +61,14 @@ class Zone {
     String? name,
     int? selectedMixIndex,
     String? zoneColor,
+    Offset? wiringPos,
   }) {
     return Zone(
       id: id ?? this.id,
       name: name ?? this.name,
       selectedMixIndex: selectedMixIndex ?? this.selectedMixIndex,
       zoneColor: zoneColor ?? this.zoneColor,
+      wiringPos: wiringPos ?? this.wiringPos,
     );
   }
 
@@ -60,6 +77,7 @@ class Zone {
     'name': name,
     'selectedMixIndex': selectedMixIndex,
     'zoneColor': zoneColor,
+    'wiringPos': wiringPos != null ? <String, double>{'dx': wiringPos!.dx, 'dy': wiringPos!.dy} : null,
   };
 
   factory Zone.fromJson(Map<String, dynamic> json) => Zone(
@@ -67,5 +85,6 @@ class Zone {
     name: json['name'] as String,
     selectedMixIndex: json['selectedMixIndex'] as int? ?? 0,
     zoneColor: json['zoneColor'] as String? ?? getRandomColor(),
+    wiringPos: json['wiringPos'] != null ? Offset((json['wiringPos']['dx'] as num).toDouble(), (json['wiringPos']['dy'] as num).toDouble()) : null,
   );
 }

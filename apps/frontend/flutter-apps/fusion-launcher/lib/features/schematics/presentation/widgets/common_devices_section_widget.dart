@@ -4,7 +4,7 @@ import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/form_fields/fusion_text_field.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 
-import 'expandable_popup_menu_widget.dart';
+import 'add_device_expandable_popup_menu_widget.dart';
 
 class CommonDevicesSectionWidget extends StatefulWidget {
   final double width;
@@ -128,6 +128,7 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
   @override
   Widget build(BuildContext context) {
     return Container(
+      clipBehavior: Clip.none,
       width: widget.width,
       height: widget.height,
       decoration: BoxDecoration(
@@ -174,7 +175,7 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
                                 const SizedBox(width: 4),
 
                                 /// Add button with listening areas support
-                                ExpandablePopupMenuWidget(
+                                AddDeviceExpandablePopupMenuWidget(
                                   sectionTitle: widget.title,
                                   onTapAddDevice: widget.onTapAddDevice,
                                   listeningAreas: widget.listeningAreas,
@@ -227,9 +228,9 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
                                 child: Container(
                                   padding: const EdgeInsets.all(4),
                                   child: Icon(
-                                    isSearchVisible ? Icons.close : Icons.search,
-                                    color: Colors.grey[400],
-                                    size: 16,
+                                    isSearchVisible ? Icons.close_sharp : Icons.search_sharp,
+                                    color: Theme.of(context).colorScheme.greyDark,
+                                    size: 17,
                                   ),
                                 ),
                               ),

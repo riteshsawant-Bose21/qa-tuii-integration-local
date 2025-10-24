@@ -3,6 +3,7 @@ import 'dart:ui';
 
 import 'package:fusion_launcher/features/wiring_design/dto/component_data.dart';
 import 'package:fusion_launcher/features/wiring_design/util/wiring_serialization_util.dart';
+import 'package:fusion_lib/models/project_entities/communication_ports.dart';
 
 import '../util/canvas_util.dart';
 import 'canvas_element.dart';
@@ -114,6 +115,169 @@ class CircuitComponent extends CanvasElement {
         ),
       );
     }
+    final double currentHeight = circuitComponent.ports.fold(
+      0.0,
+      (double a, CircuitPort b) => max(a, b.relativePosition.dy),
+    );
+
+    final List<ComponentPort> leftSidePorts =
+        data.comPorts
+            .where(
+              (ComponentPort e) => e.position == PortPosition.bottomLeft,
+            )
+            .toList()
+          ..sort(
+            (ComponentPort a, ComponentPort b) => a.index.compareTo(b.index),
+          );
+    final List<ComponentPort> rightSidePorts =
+        data.comPorts
+            .where(
+              (ComponentPort e) => e.position == PortPosition.bottomRight,
+            )
+            .toList()
+          ..sort(
+            (ComponentPort a, ComponentPort b) => a.index.compareTo(b.index),
+          );
+    final List<ComponentPort> footerLeft =
+        data.comPorts
+            .where(
+              (ComponentPort e) => e.position == PortPosition.footerLeft,
+            )
+            .toList()
+          ..sort(
+            (ComponentPort a, ComponentPort b) => a.index.compareTo(b.index),
+          );
+    final List<ComponentPort> footerCenter =
+        data.comPorts
+            .where(
+              (ComponentPort e) =>
+                  e.position == PortPosition.footerCenter || e.position == null,
+            )
+            .toList()
+          ..sort(
+            (ComponentPort a, ComponentPort b) => a.index.compareTo(b.index),
+          );
+    final List<ComponentPort> footerRight =
+        data.comPorts
+            .where(
+              (ComponentPort e) => e.position == PortPosition.footerRight,
+            )
+            .toList()
+          ..sort(
+            (ComponentPort a, ComponentPort b) => b.index.compareTo(a.index),
+          );
+    for (int i = 0; i < leftSidePorts.length; i++) {
+      final ComponentPort element = leftSidePorts[i];
+
+      circuitComponent.addOtherPort(
+        CircuitPort(
+          id: "${data.id}_other_$i",
+          relativePosition: Offset(
+            data.portRadius + WiringViewConstants.portSpacing,
+            currentHeight +
+                data.portOffset.dy +
+                data.portRadius +
+                (WiringViewConstants.portSpacing * (i + 1)) +
+                i * data.portRadius * 2,
+          ),
+          padding: Offset(50 + i * 10, 0),
+          parent: circuitComponent,
+          data: element,
+        ),
+      );
+    }
+    for (int i = 0; i < rightSidePorts.length; i++) {
+      final ComponentPort element = rightSidePorts[i];
+
+      circuitComponent.addOtherPort(
+        CircuitPort(
+          id: "${data.id}_other_$i",
+          relativePosition: Offset(
+            size.width - data.portRadius - WiringViewConstants.portSpacing,
+            data.portRadius +
+                data.portOffset.dy +
+                (WiringViewConstants.portSpacing * (i + 1)) +
+                i * data.portRadius * 2,
+          ),
+          padding: Offset(50 + i * 10, 0),
+          parent: circuitComponent,
+          data: element,
+        ),
+      );
+    }
+
+    // final int totalFooterItems =
+    //     footerLeft.length + footerCenter.length + footerRight.length;
+    double cuPortPosition =
+        WiringViewConstants.portSpacing + WiringViewConstants.comPortWidth / 2;
+    final double widthPerPort =
+        data.size.width /
+        max(
+          1,
+          max(1, footerLeft.length) +
+              max(1, footerCenter.length) +
+              max(1, footerRight.length),
+        );
+
+    /// For Footer Left Side
+    for (int i = 0; i < footerLeft.length; i++) {
+      final ComponentPort element = footerLeft[i];
+
+      circuitComponent.addOtherPort(
+        CircuitPort(
+          id: "${data.id}_other_footerLeft_$i",
+          relativePosition: Offset(
+            cuPortPosition,
+            size.height - data.portRadius - WiringViewConstants.portSpacing,
+          ),
+          padding: Offset(0, 50 + i * 10),
+          parent: circuitComponent,
+          data: element,
+        ),
+      );
+      cuPortPosition += widthPerPort;
+    }
+    if (footerLeft.isEmpty) {
+      cuPortPosition += WiringViewConstants.comPortWidth;
+    }
+
+    /// For Footer Center Side
+    for (int i = 0; i < footerCenter.length; i++) {
+      final ComponentPort element = footerCenter[i];
+      circuitComponent.addOtherPort(
+        CircuitPort(
+          id: "${data.id}_other_footerCenter_$i",
+          relativePosition: Offset(
+            cuPortPosition,
+            size.height - data.portRadius - WiringViewConstants.portSpacing,
+          ),
+          padding: Offset(0, 50 + i * 10),
+          parent: circuitComponent,
+          data: element,
+        ),
+      );
+      cuPortPosition += widthPerPort;
+    }
+    if (footerCenter.isEmpty) {
+      cuPortPosition += WiringViewConstants.comPortWidth;
+    }
+
+    for (int i = 0; i < footerRight.length; i++) {
+      final ComponentPort element = footerRight[i];
+      circuitComponent.addOtherPort(
+        CircuitPort(
+          id: "${data.id}_other_footerRight_$i",
+          relativePosition: Offset(
+            cuPortPosition,
+            size.height - data.portRadius - WiringViewConstants.portSpacing,
+          ),
+          padding: Offset(0, 50 + i * 10),
+          parent: circuitComponent,
+          data: element,
+        ),
+      );
+      cuPortPosition += widthPerPort;
+    }
 
     return circuitComponent;
   }
@@ -128,6 +292,11 @@ class CircuitComponent extends CanvasElement {
 
   void addOtherPort(CircuitPort port) {
     otherPorts.add(port);
+  }
+
+  void setParent(CircuitComponent parent) {
+    this.parent = parent;
+    parent.children.add(this);
   }
 
   CanvasElement? isHit(Offset position) {
