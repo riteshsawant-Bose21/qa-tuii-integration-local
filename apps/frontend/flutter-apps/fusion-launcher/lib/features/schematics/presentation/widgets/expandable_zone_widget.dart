@@ -188,7 +188,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                   child: CircuitDeviceWidget(
                     deviceId: deviceId,
                     circuitDeviceName: circuitData.name,
-                    // assetImagePath: speakers.first.assetImagePath,
+                    assetImagePath: speakers.first.assetImagePath,
                     location: location,
                     projectViewModel: _projectViewModel,
                     onDecrementHardwareInCircuit: () {

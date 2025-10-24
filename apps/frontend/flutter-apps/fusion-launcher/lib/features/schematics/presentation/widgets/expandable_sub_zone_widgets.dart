@@ -153,7 +153,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
               deviceId: deviceId,
               location: location,
               circuitDeviceName: device.name,
-              // assetImagePath: speakers.first.assetImagePath,
+              assetImagePath: speakers.first.assetImagePath,
               circuitDeviceCount: speakers.length,
               onDecrementHardwareInCircuit: () {
                 final Speaker speaker = speakers.last;

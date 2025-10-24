@@ -13,6 +13,7 @@ class CircuitDeviceWidget extends StatefulWidget {
   final List<ListeningArea> location;
   final String deviceId;
   final String circuitDeviceName;
+  final String assetImagePath;
   final int circuitDeviceCount;
   final ProjectViewModel projectViewModel;
   final VoidCallback onRename;
@@ -33,6 +34,7 @@ class CircuitDeviceWidget extends StatefulWidget {
     required this.circuitDeviceCount,
     required this.onDecrementHardwareInCircuit,
     required this.onIncrementHardwareInCircuit,
+    required this.assetImagePath,
   });
 
   @override
@@ -84,8 +86,8 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
                         /// Device name with circuit/device type label
                         Row(
                           children: <Widget>[
-                            const FusionImage.asset(
-                              "assets/images/speakers/designmax_dm8se.png",
+                            FusionImage.asset(
+                              widget.assetImagePath,
                               width: 22,
                               height: 22,
                               fit: BoxFit.contain,
