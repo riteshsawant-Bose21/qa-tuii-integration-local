@@ -103,8 +103,20 @@ void OcaLiteMessageNotification::UpdateNotificationValue(::OcaFloat32& parameter
     m_parametersSize = sizeof(parameter) + 1;
 }
 
-//FOr Mute object
+//For Mute object
 void OcaLiteMessageNotification::UpdateNotificationValue(::OcaUint8& parameter)
+{
+    ::Ocp1LiteWriter ntfWriter;
+    ::OcaUint8* bufPtr(m_pParameters);
+
+    ntfWriter.Write(static_cast<::OcaInt8>(1), &bufPtr);
+    ntfWriter.Write(parameter, &bufPtr);
+
+    m_parametersSize = sizeof(parameter) + 1;
+}
+
+//For Switch object
+void OcaLiteMessageNotification::UpdateNotificationValue(::OcaUint16& parameter)
 {
     ::Ocp1LiteWriter ntfWriter;
     ::OcaUint8* bufPtr(m_pParameters);

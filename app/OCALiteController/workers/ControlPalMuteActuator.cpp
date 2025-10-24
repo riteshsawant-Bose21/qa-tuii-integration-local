@@ -15,6 +15,8 @@
 // ---- Include local include files ----
 #include "ControlPalMuteActuator.h"
 #include <HostInterfaceLite/OCA/OCF/Logging/IOcfLiteLog.h>
+#include "../PlatformInterface/linux/OcaLiteOcfMsgQueue.h"
+#include "../ControlPalOcaUtils.h"
 
 // ---- Helper types and constants ----
 
@@ -44,9 +46,12 @@ ControlPalMuteActuator::ControlPalMuteActuator(::OcaONo objectNumber,
                                            ::OcaBoolean lockable,
                                            const ::OcaLiteString &role,
                                            const ::OcaLiteList<::OcaLitePort> &ports,
-                                           const std::string &gainID)
+                                           const std::string &gainID,
+                                           const ::OcaONo zoneONo,
+                                           void *cmdQueue)
     : ::OcaLiteMute(objectNumber, lockable, role, ports),
-      m_gainID(gainID)
+      ControlPalMsgInterface(cmdQueue),
+      m_gainID(gainID), m_zoneONo(zoneONo)
 {
     // Enhanced logging with dynamic information
     OCA_LOG_INFO("=== ControlPalMuteActuator Created ===");
@@ -74,21 +79,11 @@ ControlPalMuteActuator::ControlPalMuteActuator(::OcaONo objectNumber,
 {
     try
     {
-        // Simulate setting the mute state in the actual audio processing hardware/software
-        // In a real implementation, this would interface with your DSP or audio hardware
-
         OCA_LOG_INFO_PARAMS("[MUTE] Setting mute state to %s (Gain ID: %s)",
                             muteStateToString(muteState), m_gainID.empty() ? "N/A" : m_gainID.c_str());
 
-        // Here you would typically:
-        // 1. Send the mute command to your audio processing hardware/DSP
-        // 2. Update internal audio processing parameters
-        // 3. Validate that the setting was successful
-
-        // Example hardware interface calls (commented out):
-        // audioHardware.setChannelMute(channelId, muteState == OCAMUTESTATE_MUTED);
-        // dspLibrary.updateMuteParameter(muteState);
-        // registerWrite(MUTE_REGISTER, muteState == OCAMUTESTATE_MUTED ? 1 : 0);
+        // Call fn. to send MUTE value command to UI task
+        SendValue();
 
         OCA_LOG_INFO_PARAMS("[MUTE] ✓ Mute state successfully set to %s (Gain ID: %s)",
                             muteStateToString(muteState), m_gainID.empty() ? "N/A" : m_gainID.c_str());
@@ -102,3 +97,16 @@ ControlPalMuteActuator::ControlPalMuteActuator(::OcaONo objectNumber,
     }
 }
 
+void ControlPalMuteActuator::SendValue()
+{
+    ControllerCmdIntfc setMuteCmd;
+    OcaLiteMuteState muteState;
+
+    GetState(muteState);
+
+    setMuteCmd.cmd = CTRL_CMD_MUTE_SET;
+    setMuteCmd.ono = m_zoneONo; //Zone Ono
+    setMuteCmd.val.int_val = static_cast<uint32_t>(muteState);
+
+    PushToMsgQueue(setMuteCmd);
+}

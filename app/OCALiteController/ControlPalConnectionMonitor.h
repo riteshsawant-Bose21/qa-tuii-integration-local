@@ -34,18 +34,18 @@ class ControlPalConnectionMonitor :
 
         virtual ::OcaLiteStatus SetSettingValue(::OcaBoolean setting)
         {
+            (void) setting;
+
             // Do Nothing
             return OCASTATUS_OK;
         }
 
         virtual void OnConnectionLost(::OcaSessionID sessionID)
         {
-            // TODO: Signal connection Lost
+            (void) sessionID;
+
+            // Signal connection Lost
             SetSetting(static_cast<::OcaBoolean>(false));
-
-            // TODO: Cleanup zone blocks
-
-            // TODO: Start discovery, Connect and create
         }
 
     private:

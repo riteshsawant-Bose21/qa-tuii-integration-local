@@ -71,19 +71,29 @@ APP_COMMON_SOURCES       := ../common/FusionProxy.cpp \
                             ../common/workers/ZoneGroup.cpp
 
 # App-specific source files
-APP_SOURCES := OCALiteController.cpp \
+APP_SOURCES := main.cpp \
+	       OCALiteController.cpp \
                OcaServiceDiscovery.cpp \
-               ControlPalGainActuator.cpp \
-               ControlPalMuteActuator.cpp \
-               ControlPalSwitchActuator.cpp \
                ControlPalSetupUtils.cpp \
+               ControlPalOcaUtils.cpp \
+               ControlPalCommandHandler.cpp \
+               workers/ControlPalGainActuator.cpp \
+               workers/ControlPalMuteActuator.cpp \
+               workers/ControlPalSwitchActuator.cpp \
                $(shell find HostInterface -name "*.cpp")
+
+VIEW_SOURCES := View/Platform/linux/View.cpp \
+	    	View/Platform/linux/ControllerMenu.cpp
+
+PLATFORM_SOURCES := PlatformInterface/linux/OcaLiteOcfThread.cpp
 
 # Object files in build directory, preserving directory structure
 FRAMEWORK_COMMON_OBJECTS   := $(patsubst ../../common/%.cpp,$(BUILD_DIR)/framework-common/%.o,$(FRAMEWORK_COMMON_SOURCES))
 APP_COMMON_OBJECTS         := $(patsubst ../common/%.cpp,$(BUILD_DIR)/app-common/%.o,$(APP_COMMON_SOURCES))
 APP_OBJECTS                := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(APP_SOURCES))
-ALL_OBJECTS                := $(APP_OBJECTS) $(FRAMEWORK_COMMON_OBJECTS) $(APP_COMMON_OBJECTS)
+VIEW_OBJECTS               := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(VIEW_SOURCES))
+PLATFORM_OBJECTS           := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(PLATFORM_SOURCES))
+ALL_OBJECTS                := $(APP_OBJECTS) $(VIEW_OBJECTS) $(PLATFORM_OBJECTS) $(FRAMEWORK_COMMON_OBJECTS) $(APP_COMMON_OBJECTS)
 
 # Output executable
 TARGET := ocalitecontroller

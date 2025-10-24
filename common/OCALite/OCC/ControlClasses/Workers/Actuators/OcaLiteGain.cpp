@@ -102,10 +102,10 @@ OcaLiteGain::OcaLiteGain(::OcaONo objectNumber, ::OcaBoolean lockable, const ::O
         {
             if (!CompareValue<::OcaDB>(oldGain, gain))
             {
+                m_gain = gain;
                 rc = SetGainValue(gain);
                 if (OCASTATUS_OK == rc)
                 {
-                    m_gain = gain;
 
                     // Controllers should not generate events
                     // ::OcaDB actualGain;

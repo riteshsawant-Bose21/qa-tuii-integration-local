@@ -16,6 +16,8 @@
 // ---- Include local include files ----
 #include "ControlPalGainActuator.h"
 #include <HostInterfaceLite/OCA/OCF/Logging/IOcfLiteLog.h>
+#include "../PlatformInterface/linux/OcaLiteOcfMsgQueue.h"
+#include "../ControlPalOcaUtils.h"
 
 // ---- Helper types and constants ----
 
@@ -47,9 +49,12 @@ ControlPalGainActuator::ControlPalGainActuator(::OcaONo objectNumber,
                                            const ::OcaLiteList<::OcaLitePort> &ports,
                                            ::OcaDB minGain,
                                            ::OcaDB maxGain,
-                                           const std::string &gainID)
+                                           const std::string &gainID,
+                                           ::OcaONo zoneONo,
+                                           void *cmdQueue)
     : ::OcaLiteGain(objectNumber, lockable, role, ports, minGain, maxGain),
-      m_gainID(gainID)
+      ControlPalMsgInterface(cmdQueue),
+      m_gainID(gainID), m_zoneONo(zoneONo), m_lastGainSet(0.0)
 {
     // Enhanced logging with dynamic information
     OCA_LOG_INFO("=== ControlPalGainActuator Created ===");
@@ -77,26 +82,23 @@ ControlPalGainActuator::ControlPalGainActuator(::OcaONo objectNumber,
 {
     try
     {
-        // Simulate setting the gain value in the actual audio processing hardware/software
-        // In a real implementation, this would interface with your DSP or audio hardware
-
-        OCA_LOG_INFO_PARAMS("[GAIN] Setting gain to %.2f dB (Gain ID: %s)", gain, m_gainID.empty() ? "N/A" : m_gainID.c_str());
+        OCA_LOG_INFO_PARAMS("[GAIN] Setting gain to %.2f dB (Gain ID: %s)",
+                gain, m_gainID.empty() ? "N/A" : m_gainID.c_str());
 
         // Convert dB to linear for internal processing (if needed)
         double linearGain = dbToLinear(gain);
 
-        // Here you would typically:
-        // 1. Send the gain value to your audio processing hardware/DSP
-        // 2. Update internal audio processing parameters
-        // 3. Validate that the setting was successful
+        // Call fn. to send GAIN value command to frontend task
+        SendValue();
 
-        // Example hardware interface calls (commented out):
-        // audioHardware.setChannelGain(channelId, gain);
-        // dspLibrary.updateGainParameter(gain);
-        // registerWrite(GAIN_REGISTER, gainToRegisterValue(gain));
+        if (gain == LastGainGet())
+        {
+            // All gain notifications received, reset LastGain
+            LastGainSet(0.0);
+        }
 
         OCA_LOG_INFO_PARAMS("[GAIN] ✓ Gain successfully set to %.2f dB (linear: %.6f) (Gain ID: %s)",
-                            gain, linearGain, m_gainID.empty() ? "N/A" : m_gainID.c_str());
+                gain, linearGain, m_gainID.empty() ? "N/A" : m_gainID.c_str());
 
         return OCASTATUS_OK;
     }
@@ -105,5 +107,18 @@ ControlPalGainActuator::ControlPalGainActuator(::OcaONo objectNumber,
         OCA_LOG_ERROR_PARAMS("[GAIN] Error setting gain: %s", e.what());
         return OCASTATUS_PROCESSING_FAILED;
     }
+}
+
+void ControlPalGainActuator::SendValue()
+{
+    ::OcaDB gainVal, minVal, maxVal;
+    ControllerCmdIntfc setGainCmd;
+
+    GetGain(gainVal, minVal, maxVal);
+    setGainCmd.cmd = CTRL_CMD_GAIN_SET;
+    setGainCmd.ono = m_zoneONo;
+    setGainCmd.val.flt_val = gainVal;
+
+    PushToMsgQueue(setGainCmd);
 }
 

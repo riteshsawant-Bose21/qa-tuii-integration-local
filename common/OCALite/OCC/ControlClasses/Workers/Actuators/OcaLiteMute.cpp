@@ -94,10 +94,10 @@ OcaLiteMute::OcaLiteMute(::OcaONo objectNumber, ::OcaBoolean lockable, const ::O
         rc = GetStateValue(oldState);
         if ((OCASTATUS_OK == rc) && !CompareValue<::OcaLiteMuteState>(oldState, state))
         {
+            m_state = state;
             rc = SetStateValue(state);
             if (OCASTATUS_OK == rc)
             {
-                m_state = state;
 
                 // Controllers should not generate events
                 // ::OcaLiteMuteState actualState;

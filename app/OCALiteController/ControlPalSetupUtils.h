@@ -7,7 +7,9 @@
 #ifndef CONTROLPAL_SETUP_UTILS_H_
 #define CONTROLPAL_SETUP_UTILS_H_
 
+#include <Proxy/GeneralProxy.h>
 #include "OcaServiceDiscovery.h"
+#include "../common/FusionProxy.h"
 
 // Helper functions
 void DisplayDiscoveredDevices(
@@ -15,24 +17,23 @@ void DisplayDiscoveredDevices(
 
 ::OcaBoolean ConnectToDevice(
                      const OcaServiceDiscovery::DiscoveredDevice &device,
-                     ::Ocp1LiteNetwork *ocp1Network,
-                     const std::string &customNodeId,
                      ::OcaSessionID& sessionId);
 
 ::OcaLiteStatus GetControllerConfig(::OcaLiteString& controllerId,
-                                    ::GeneralProxy& proxy,
+                                    FusionProxy& proxy,
                                     Controller& controllerCfg);
 
-::OcaBoolean AddSubscriptions(Zone& newZone, ::GeneralProxy& proxy);
+::OcaBoolean AddSubscriptions(Zone& newZone, GeneralProxy& proxy);
 
-ZoneGroup* CreateZoneGroup(Zone& newZone);
+ZoneGroup* CreateZoneGroup(Zone& newZone, FusionProxy& proxy,
+                                             void *commandQueue);
 
-OcaBoolean ControlPalSetupConnection(::Ocp1LiteNetwork *ocp1Network,
-                                     const std::string &customNodeId,
-                                     ::OcaSessionID&   sessionId);
+OcaBoolean ControlPalSetupConnection(::OcaSessionID& sessionId);
 
 ::OcaBoolean ControlPalSetupControls(::OcaLiteString& controllerId,
-                                        ::GeneralProxy& proxy,
+                                        ::GeneralProxy& gen_proxy,
+                                        FusionProxy& proxy,
+                                        void *commandQueue,
                                         std::vector<::OcaONo>& zoneONo);
 
 void ControlPalTeardownControls(std::vector<::OcaONo>& zoneONo);

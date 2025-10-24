@@ -4,7 +4,7 @@
  *
  */
 
-// OCALiteController.cpp : Defines the entry point for the OCA Controller application.
+// OCALiteController.cpp : Defines the OCA Controller application.
 //
 
 #include <HostInterfaceLite/OCA/OCF/OcfLiteHostInterface.h>
@@ -30,11 +30,14 @@
 #include "../common/models/Models.h"  // For deserializing JSON configuration
 #include "../common/FusionOCAConstants.h" // For custom ONO constants
 #include "../common/workers/ZoneGroup.h"
-#include "ControlPalGainActuator.h"
-#include "ControlPalMuteActuator.h"
-#include "ControlPalSwitchActuator.h"
+#include "workers/ControlPalGainActuator.h"
+#include "workers/ControlPalMuteActuator.h"
+#include "workers/ControlPalSwitchActuator.h"
 #include "ControlPalSetupUtils.h"
 #include "ControlPalConnectionMonitor.h"
+#include "ControlPalCommandHandler.h"
+#include "HostInterface/CommandInterface/CommandInterface.h"
+#include "PlatformInterface/linux/OcaLiteOcfMsgQueue.h"
 
 #define OCA_RUN_TIMEOUT_MSEC    500
 
@@ -45,27 +48,20 @@ extern void Ocp1LiteServiceRunWithFdSet(fd_set *readSet);
 extern int Ocp1LiteServiceGetSocket();
 #endif
 
-
-// TODO: Add signal capturing to exit gracefully.
-
-void ShowUsage(const char *programName)
+bool ocaMain(std::string& customNodeId,
+                std::vector<ControlPal_MsgQueue<ControllerCmdIntfc>*> msgQues)
 {
-    std::cout << "Usage: " << programName << " [OPTIONS]\n";
-    std::cout << "Options:\n";
-    std::cout << "  -id <string>    Set custom node ID (default: auto-generated)\n";
-    std::cout << "  -h, --help      Show this help message\n";
-    std::cout << "\nExample:\n";
-    std::cout << "  " << programName << " -id \"MyController\"\n";
-}
+    // AES70 --> UI
+    ControlPal_MsgQueue<ControllerCmdIntfc> *ocaMsgQueue = msgQues.at(0);
+    // UI --> AES70
+    ControlPal_MsgQueue<ControllerCmdIntfc> *uiMsgQueue = msgQues.at(1);
 
-bool ocaMain(std::string& customNodeId)
-{
     // Initialize Oca Device
     static_cast<void>(::OcaLiteBlock::GetRootBlock());
 
     OCA_LOG_INFO("=== OCA Lite Controller with Service Discovery ===");
     // Set log level to show INFO messages (including client connection logs)
-    ::OcfLiteLogSetLogLevel(OCA_LOG_LVL_TRACE);
+    //::OcfLiteLogSetLogLevel(OCA_LOG_LVL_TRACE);
 
     // Initialize the host interfaces
     bool bSuccess = ::OcfLiteHostInterfaceInitialize();
@@ -94,11 +90,11 @@ bool ocaMain(std::string& customNodeId)
             if (!customNodeId.empty())
             {
                 nodeId = ::OcaLiteString(customNodeId);
-                OCA_LOG_INFO_PARAMS("Using custom node ID: %s", customNodeId.c_str());
+                OCA_LOG_INFO_PARAMS("Using custom node ID: %s",
+                                     customNodeId.c_str());
             }
             else
             {
-                // ::OcaLiteString nodeId = ::OcaLiteString("OCALiteController@" + OcfLiteConfigureGetDeviceName());
                 nodeId = ::OcaLiteString("OCALiteController@" + OcfLiteConfigureGetDeviceName());
                 OCA_LOG_INFO_PARAMS("Using auto-generated node ID: %s", nodeId.GetString().c_str());
             }
@@ -143,7 +139,7 @@ bool ocaMain(std::string& customNodeId)
                                 while(true)
                                 {
                                     // Setup connection to the Device
-                                    if (ControlPalSetupConnection(ocp1Network, customNodeId, sessionId))
+                                    if (ControlPalSetupConnection(sessionId))
                                     {
                                         // Set connected status to true
                                         connMonitor->SetSetting(static_cast<OcaBoolean>(true));
@@ -151,37 +147,55 @@ bool ocaMain(std::string& customNodeId)
                                         ::GeneralProxy proxy(
                                                 sessionId,
                                                 ocp1Network->GetObjectNumber());
-                                        OCA_LOG_INFO_PARAMS(
-                                                "Created proxy with session ID: %u, network ONO: %u",
+                                        OCA_LOG_INFO_PARAMS("Created proxy with session ID: %u, network ONO: %u",
                                                 sessionId, ocp1Network->GetObjectNumber());
 
-                                        // TODO: 'controllerID' should be read from Flash config partition
+                                        // TODO: 'controllerID' should be
+                                        // read from Flash config partition
                                         ::OcaLiteString controllerId =
                                             customNodeId.empty() ?
                                             ::OcaLiteString("ctrl1") :
                                             ::OcaLiteString(customNodeId);
 
-                                        // Holds ONo of each zone assigned to the controller
+                                        // Holds ONo of each zone assigned
+                                        // to the controller
                                         std::vector<::OcaONo> zoneONos;
 
+                                        FusionProxy fusion_proxy(
+                                                sessionId,
+                                                ocp1Network->GetObjectNumber());
                                         // Create and setup control objects
-                                        if (ControlPalSetupControls(controllerId, proxy, zoneONos))
+                                        if (ControlPalSetupControls(
+                                                 controllerId,
+                                                 proxy,
+                                                 fusion_proxy,
+                                                 static_cast<void *>(ocaMsgQueue),
+                                                 zoneONos))
                                         {
                                             ::OcaBoolean connectStatus(true);
+
                                             while (connectStatus)
                                             {
                                                 // Wait for Events from Device
                                                 ::OcaLiteCommandHandler::GetInstance().RunWithTimeout(OCA_RUN_TIMEOUT_MSEC);
 
-                                                //TODO: Check for local h/w events
+                                                //Check for local UI command
+                                                {
+                                                    ControlPalUICommandHandler(
+                                                                 uiMsgQueue,
+                                                                 zoneONos,
+                                                                 fusion_proxy);
+                                                }
 
                                                 // Check Connection status
-                                                connMonitor->GetSetting(connectStatus);
+                                                connMonitor->GetSetting(
+                                                                connectStatus);
                                             }
 
                                             // Connection lost, teardown all
                                             // the control objects
-                                            ControlPalTeardownControls(zoneONos);
+                                            ControlPalTeardownControls(
+                                                                    zoneONos);
                                         }
                                         else
                                         {
@@ -233,58 +247,5 @@ bool ocaMain(std::string& customNodeId)
     OCA_LOG_INFO("Controller application completed.");
 
     return bSuccess ? 0 : 1;
-}
-
-int main(int argc, const char *argv[])
-{
-    std::string customNodeId = "";
-
-    // Parse command line arguments
-    for (int i = 1; i < argc; i++)
-    {
-        std::string arg = argv[i];
-
-        if (arg == "-h" || arg == "--help")
-        {
-            ShowUsage(argv[0]);
-            return 0;
-        }
-        else if (arg == "-id")
-        {
-            if (i + 1 < argc)
-            {
-                // TODO: 'customNodeId' should be read from Flash config partition
-                customNodeId = argv[i + 1];
-                i++; // Skip the next argument since it's the ID value
-            }
-            else
-            {
-                std::cerr << "Error: -id option requires a value\n";
-                ShowUsage(argv[0]);
-                return 1;
-            }
-        }
-        else
-        {
-            std::cerr << "Error: Unknown option '" << arg << "'\n";
-            ShowUsage(argv[0]);
-            return 1;
-        }
-    }
-
-    //
-    // TODO: HW_Init()
-    //
-    // TODO: ControlInterface_Init();  // e.g. TochGFX, CLI interface etc
-    //
-    // IPC used to exchage upstream and
-    // downstream value changes.
-    // TODO: IPC_init();  // e.g. semaphores, mutex etc.
-    //
-    // TODO: Create User Interface task. THis task handles UI, Physical Encoders etc.
-    //
-
-    // Start OCA processing
-    return ocaMain(customNodeId);
 }
 
