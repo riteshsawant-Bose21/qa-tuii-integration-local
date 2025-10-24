@@ -11,13 +11,12 @@ import 'expandable_sub_zone_widgets.dart';
 class ExpandableZoneWidget extends StatefulWidget {
   final String zoneName;
   final String assetImagePath;
-  final String? zoneId;
+  final String zoneId;
   final Color bgColor;
   final Function(String)? onDelete;
   final bool initiallyExpanded;
   final List<CircuitModel> zoneCircuits;
   final List<SubZone> subZones;
-  final Function(String zoneId, int oldIndex, int newIndex)? onZoneReorder;
   final Function(String zoneId, int oldIndex, int newIndex)? onSubZoneReorder;
   final Function(String subZoneId, int oldIndex, int newIndex)? onDeviceReorder;
 
@@ -25,12 +24,11 @@ class ExpandableZoneWidget extends StatefulWidget {
     super.key,
     required this.zoneName,
     required this.assetImagePath,
-    this.zoneId,
+    required this.zoneId,
     required this.bgColor,
     this.onDelete,
     this.initiallyExpanded = false,
     required this.subZones,
-    this.onZoneReorder,
     this.onSubZoneReorder,
     this.onDeviceReorder,
     required this.zoneCircuits,
@@ -46,6 +44,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
   final TextEditingController _zoneNameController = TextEditingController();
   List<String> _selectedListeningAreaIds = <String>[];
   bool _showSubzonePopup = false;
+  bool _isKebabMenuOpen = false;
 
   @override
   void initState() {
@@ -128,8 +127,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
             child: GestureDetector(
               onTap: () {
                 /// Select zone on tap
-                if (widget.zoneId == null) return;
-                _projectViewModel.setSelectedDevice(widget.zoneId!, SelectedItemType.zone);
+                _projectViewModel.setSelectedDevice(widget.zoneId, SelectedItemType.zone);
               },
               // onTap: () => _isZoneExpanded.value = !_isZoneExpanded.value,
               child: _buildZoneName(
@@ -141,7 +139,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
 
           /// Add device button
           AddSpeakersMenu(
-            zoneId: widget.zoneId ?? "",
+            zoneId: widget.zoneId,
           ),
           const SizedBox(width: 8),
 
@@ -181,7 +179,11 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
               buildDefaultDragHandles: false,
               itemCount: widget.zoneCircuits.length,
               onReorder: (int oldIndex, int newIndex) {
-                // widget.onDeviceReorder?.call(widget.subZoneId, oldIndex, newIndex);
+                if (oldIndex < newIndex) {
+                  newIndex -= 1;
+                }
+                _projectViewModel.reOrderCircuitInZone(parentId: widget.zoneId, oldIndex: oldIndex, newIndex: newIndex);
+                _projectViewModel.setSelectedDevice(widget.zoneCircuits[oldIndex].id, SelectedItemType.circuit);
               },
               itemBuilder: (BuildContext context, int index) {
                 final CircuitModel circuitData = widget.zoneCircuits[index];
@@ -194,7 +196,8 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                   index: index,
                   child: CircuitDeviceWidget(
                     deviceId: deviceId,
-                    circuitDeviceName: speakers[index].name,
+                    circuitDeviceName: circuitData.name,
+                    // assetImagePath: speakers.first.assetImagePath,
                     location: location,
                     projectViewModel: _projectViewModel,
                     onDecrementHardwareInCircuit: () {
@@ -228,7 +231,13 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
             buildDefaultDragHandles: false,
             itemCount: widget.subZones.length,
             onReorder: (int oldIndex, int newIndex) {
-              widget.onSubZoneReorder?.call(widget.zoneId!, oldIndex, newIndex);
+              if (oldIndex < newIndex) {
+                newIndex -= 1;
+              }
+              // final String zoneToMove = _projectViewModel.subZones[oldIndex].id;
+              // final String zoneAtNewIndex = _projectViewModel.s[newIndex].id;
+              _projectViewModel.reOrderSubZoneInZone(parentId: widget.zoneId, oldIndex: oldIndex, newIndex: newIndex);
+              _projectViewModel.setSelectedDevice(widget.subZones[oldIndex].id, SelectedItemType.subzone);
             },
             itemBuilder: (BuildContext context, int index) {
               final SubZone subZone = widget.subZones[index];
@@ -239,7 +248,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                   name: subZone.name,
                   subZoneId: subZone.id,
                   zoneId: widget.zoneId!,
-                  subZoneDevices: _projectViewModel.getCircuitsInSubZone(subZoneId: subZone.id),
+                  subZoneCircuit: _projectViewModel.getCircuitsInSubZone(subZoneId: subZone.id),
                   onDeviceReorder: widget.onDeviceReorder,
                   onDelete: (String subZoneId) {
                     _projectViewModel.removeSubZoneFromZone(subZoneId: subZoneId, parentZoneId: widget.zoneId!);
@@ -280,7 +289,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
     );
   }
 
-  Widget _buildKebabMenu({required BuildContext context, String? zoneId}) {
+  Widget _buildKebabMenu({required BuildContext context, required String zoneId}) {
     return PopupMenuButton<ZoneMenuAction>(
       style: const ButtonStyle(
         overlayColor: WidgetStatePropertyAll<Color>(Colors.transparent),
@@ -290,6 +299,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
       constraints: const BoxConstraints(maxHeight: 550, maxWidth: 140),
       color: Theme.of(context).colorScheme.white,
       menuPadding: EdgeInsets.zero,
+
       itemBuilder:
           (BuildContext context) => <PopupMenuEntry<ZoneMenuAction>>[
             /// --- Sub zone (with nested PopupMenuButton) ---
@@ -305,8 +315,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
               height: 26,
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
               onTap: () {
-                setState(() => _showSubzonePopup = false);
-                widget.onDelete?.call(widget.zoneId!);
+                widget.onDelete?.call(widget.zoneId);
               },
               child: FusionAppText(
                 text: "Delete",
@@ -326,7 +335,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
   }
 
   /// Subzone menu item with nested popup
-  Widget _buildSubzoneMenuItem(BuildContext context, String? zoneId) {
+  Widget _buildSubzoneMenuItem(BuildContext context, String zoneId) {
     return PopupMenuButton<void>(
       tooltip: "",
       offset: const Offset(254, 16),
@@ -334,7 +343,10 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
       color: Theme.of(context).colorScheme.white,
       elevation: 8,
       padding: EdgeInsets.zero,
-      onCanceled: () => setState(() => _showSubzonePopup = false),
+      onOpened: () => setState(() => _showSubzonePopup = true),
+      onCanceled: () {
+        setState(() => _showSubzonePopup = false);
+      },
       itemBuilder:
           (BuildContext context) => <PopupMenuEntry<void>>[
             PopupMenuItem<void>(
@@ -369,7 +381,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
 
   /// Subzone creation popup content
   /// Includes name input, location selector, and action buttons
-  Widget _buildSubzoneContent(BuildContext context, String? zoneId) {
+  Widget _buildSubzoneContent(BuildContext context, String zoneId) {
     return StatefulBuilder(
       builder: (BuildContext context, StateSetter setDialogState) {
         /// Single function to handle all state updates
@@ -397,10 +409,12 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                   ),
                   InkWell(
                     onTap: () {
+                      // Close only the subzone popup by popping once
                       Navigator.of(context).pop();
+                      // Clear the state
                       _zoneNameController.clear();
                       _selectedListeningAreaIds.clear();
-                      setState(() {});
+                      setState(() => _showSubzonePopup = false);
                     },
                     child: Icon(
                       Icons.close,
@@ -460,10 +474,12 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                       label: "Cancel",
                       textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10),
                       onTap: () {
+                        // Close only the subzone popup
                         Navigator.of(context).pop();
+                        // Clear the state
                         _zoneNameController.clear();
                         _selectedListeningAreaIds.clear();
-                        setState(() {}); // Reset main widget state
+                        setState(() => _showSubzonePopup = false);
                       },
                     ),
                   ),
@@ -490,7 +506,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
   }
 
   /// Location selector dropdown
-  Widget _buildLocationSelector(BuildContext context, String? zoneId, VoidCallback onStateUpdate) {
+  Widget _buildLocationSelector(BuildContext context, String zoneId, VoidCallback onStateUpdate) {
     return Container(
       height: 28,
       decoration: BoxDecoration(
@@ -539,7 +555,8 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
   }
 
   /// Location list within the dropdown
-  Widget _buildLocationList(BuildContext context, String? zoneId, VoidCallback onStateUpdate) {
+  Widget _buildLocationList(BuildContext context, String zoneId, VoidCallback onStateUpdate) {
+    final List<ListeningArea> availableAreas = _projectViewModel.getAvailableListeningAreasForSubZone(parentZoneId: zoneId);
     return StatefulBuilder(
       builder: (BuildContext context, StateSetter setPopupState) {
         void updateStates() {
@@ -586,10 +603,21 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                 child: SingleChildScrollView(
                   child: Column(
                     children:
-                        serviceLocator<ProjectViewModel>()
-                            .getListeningAreasForZone(zoneId: zoneId ?? "")
-                            .map((ListeningArea area) => _buildLocationItem(context, area, zoneId ?? "", updateStates))
-                            .toList(),
+                        serviceLocator<ProjectViewModel>().getListeningAreasForZone(zoneId: zoneId).map((ListeningArea area) {
+                          final FloorModel? floorData = _projectViewModel.getFloorForListeningArea(areaId: area.id);
+                          final Zone? zoneData = _projectViewModel.getZonesForListeningArea(areaId: area.id);
+                          final bool isAvailable = availableAreas.any((ListeningArea a) => a.id == area.id);
+                          return _buildLocationItem(
+                            context: context,
+                            area: area,
+                            zoneId: zoneId,
+                            onStateUpdate: updateStates,
+                            availableAreas: availableAreas,
+                            zoneData: zoneData,
+                            isAvailable: isAvailable,
+                            floorData: floorData,
+                          );
+                        }).toList(),
                   ),
                 ),
               ),
@@ -601,17 +629,16 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
   }
 
   /// Individual location item with checkbox
-  Widget _buildLocationItem(
-    BuildContext context,
-    ListeningArea area,
-    String zoneId,
-    VoidCallback onStateUpdate,
-  ) {
-    final List<ListeningArea> availableAreas = _projectViewModel.getAvailableListeningAreasForZone(zoneId: zoneId);
-    final FloorModel? floorName = _projectViewModel.getFloorForListeningArea(areaId: area.id);
-    final Zone? zoneData = _projectViewModel.getZonesForListeningArea(areaId: area.id);
-    final bool isAvailable = availableAreas.any((ListeningArea a) => a.id == area.id);
-
+  Widget _buildLocationItem({
+    required BuildContext context,
+    required ListeningArea area,
+    required String zoneId,
+    required VoidCallback onStateUpdate,
+    required List<ListeningArea> availableAreas,
+    FloorModel? floorData,
+    Zone? zoneData,
+    required bool isAvailable,
+  }) {
     void toggleSelection() {
       if (_selectedListeningAreaIds.contains(area.id)) {
         _selectedListeningAreaIds.remove(area.id);
@@ -647,7 +674,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
             /// Location name and zone
             Expanded(
               child: FusionAppText(
-                text: area.name.isNotEmpty ? "${floorName?.name}/${area.name}" : 'Unnamed Area',
+                text: area.name.isNotEmpty ? "${floorData?.name}/${area.name}" : 'Unnamed Area',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   fontWeight: FontWeight.w500,
                   fontSize: 10,
@@ -691,10 +718,9 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
     );
     viewModel.saveProject();
 
-    Navigator.of(context).pop();
-    Navigator.of(context).pop();
+    Navigator.of(context).pop(); // Close subzone popup
+    Navigator.of(context).pop(); // Close kebab menu
     _zoneNameController.clear();
     _selectedListeningAreaIds.clear();
-    setState(() {});
   }
 }

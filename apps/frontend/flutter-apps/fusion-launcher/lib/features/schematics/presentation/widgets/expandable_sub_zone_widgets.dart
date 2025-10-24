@@ -12,7 +12,7 @@ class ExpandableSubZoneWidget extends StatefulWidget {
   final String name;
   final String subZoneId;
   final String zoneId;
-  final List<CircuitModel> subZoneDevices;
+  final List<CircuitModel> subZoneCircuit;
   final Function(String)? onDelete;
   final Function(String)? onEdit;
   final Function(String subZoneId, int oldIndex, int newIndex)? onDeviceReorder;
@@ -22,7 +22,7 @@ class ExpandableSubZoneWidget extends StatefulWidget {
     required this.name,
     required this.subZoneId,
     required this.zoneId,
-    required this.subZoneDevices,
+    required this.subZoneCircuit,
     this.onDelete,
     this.onEdit,
     this.onDeviceReorder,
@@ -58,7 +58,6 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
             final SelectedItem? hoveredDevice = _projectViewModel.hoveredDevice;
             final SelectedItem? selectedDevice = _projectViewModel.selectedDevice;
             final bool isSubZoneHovered = hoveredDevice?.id == widget.subZoneId && hoveredDevice?.type == SelectedItemType.subzone;
-            final bool isSubZoneSelected = selectedDevice?.id == widget.subZoneId && selectedDevice?.type == SelectedItemType.subzone;
 
             return Column(
               children: <Widget>[
@@ -114,7 +113,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
 
   /// SubZone content - properly contained within ReorderableListView
   Widget _buildSubZoneContent() {
-    if (widget.subZoneDevices.isEmpty) {
+    if (widget.subZoneCircuit.isEmpty) {
       print("no devices in subzone ${widget.subZoneId}");
       return Container(
         color: Theme.of(context).colorScheme.greyLight.withAlpha(50),
@@ -135,12 +134,16 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         buildDefaultDragHandles: false,
-        itemCount: widget.subZoneDevices.length,
+        itemCount: widget.subZoneCircuit.length,
         onReorder: (int oldIndex, int newIndex) {
-          widget.onDeviceReorder?.call(widget.subZoneId, oldIndex, newIndex);
+          if (oldIndex < newIndex) {
+            newIndex -= 1;
+          }
+          _projectViewModel.reOrderCircuitInZone(parentId: widget.subZoneId, oldIndex: oldIndex, newIndex: newIndex);
+          _projectViewModel.setSelectedDevice(widget.subZoneCircuit[oldIndex].id, SelectedItemType.circuit);
         },
         itemBuilder: (BuildContext context, int index) {
-          final CircuitModel device = widget.subZoneDevices[index];
+          final CircuitModel device = widget.subZoneCircuit[index];
           print('Building device widget for ${device.name} at index $index');
           final String deviceId = device.id;
           final List<Speaker> speakers = _projectViewModel.getHardwareForCircuit(circuitId: device.id).whereType<Speaker>().toList();
@@ -152,7 +155,8 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
             child: CircuitDeviceWidget(
               deviceId: deviceId,
               location: location,
-              circuitDeviceName: speakers[index].name,
+              circuitDeviceName: device.name,
+              // assetImagePath: speakers.first.assetImagePath,
               circuitDeviceCount: speakers.length,
               onDecrementHardwareInCircuit: () {
                 final Speaker speaker = speakers.last;

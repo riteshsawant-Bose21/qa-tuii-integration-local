@@ -285,9 +285,19 @@ extension ZoneViewModel on ProjectViewModel {
     }
   }
 
-  void reorderZones({required String zoneIdToMove, required String zoneIdAtNewIndex}) {
+  void reorderZones({
+    required String zoneIdToMove,
+    required String zoneIdAtNewIndex,
+    bool autoSave = true,
+  }) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.reOrderZones(zoneIdToMove: zoneIdToMove, zoneAtNewIndex: zoneIdAtNewIndex);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to reorder zones: $e");

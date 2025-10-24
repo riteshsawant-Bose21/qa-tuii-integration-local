@@ -784,12 +784,13 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
           items: _projectViewModel.networkSwitches,
           emptyMessage: "No accessories added yet",
           onReorder: (int oldIndex, int newIndex) {
-            setState(() {
-              if (newIndex > oldIndex) newIndex -= 1;
-              final NetworkSwitch item = _projectViewModel.networkSwitches.removeAt(oldIndex);
-              _projectViewModel.networkSwitches.insert(newIndex, item);
-              _projectViewModel.setSelectedDevice('accessory_$newIndex', SelectedItemType.switchs);
-            });
+            if (oldIndex < newIndex) {
+              newIndex -= 1;
+            }
+            final String hwToMove = _projectViewModel.networkSwitches[oldIndex].id;
+            final String hwAtNewIndex = _projectViewModel.networkSwitches[newIndex].id;
+            _projectViewModel.reOrderHardware(hardwareIdToMove: hwToMove, hardwareAtNewIndex: hwAtNewIndex);
+            _projectViewModel.setSelectedDevice(hwToMove, SelectedItemType.switchs);
           },
           keyExtractor: (NetworkSwitch networkSwitch) => networkSwitch.id,
           itemBuilder: (BuildContext context, NetworkSwitch networkSwitch, int index) {
@@ -848,11 +849,13 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
           buildDefaultDragHandles: false,
           itemCount: _projectViewModel.zones.length,
           onReorder: (int oldIndex, int newIndex) {
-            // setState(() {
-            //   if (newIndex > oldIndex) newIndex -= 1;
-            //   final Map<String, dynamic> item = _reorderableZones.removeAt(oldIndex);
-            //   _reorderableZones.insert(newIndex, item);
-            // });
+            if (oldIndex < newIndex) {
+              newIndex -= 1;
+            }
+            final String zoneToMove = _projectViewModel.zones[oldIndex].id;
+            final String zoneAtNewIndex = _projectViewModel.zones[newIndex].id;
+            _projectViewModel.reorderZones(zoneIdToMove: zoneToMove, zoneIdAtNewIndex: zoneAtNewIndex);
+            _projectViewModel.setSelectedDevice(zoneToMove, SelectedItemType.zone);
           },
           itemBuilder: (BuildContext context, int index) {
             final Zone zoneData = _projectViewModel.zones[index];
@@ -867,13 +870,6 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                 initiallyExpanded: false,
                 zoneCircuits: _projectViewModel.getCircuitsInZone(zoneData.id),
                 subZones: _projectViewModel.getSubZonesForZone(parentZoneId: zoneData.id),
-                onZoneReorder: (String zoneId, int oldIndex, int newIndex) {
-                  // setState(() {
-                  //   if (newIndex > oldIndex) newIndex -= 1;
-                  //   final Map<String, dynamic> item = _reorderableZones.removeAt(oldIndex);
-                  //   _reorderableZones.insert(newIndex, item);
-                  // });
-                },
                 onSubZoneReorder: (String zoneId, int oldIndex, int newIndex) {
                   // setState(() {
                   //   final List<Map<String, dynamic>>? subZones = _reorderableSubZones[zoneId];
